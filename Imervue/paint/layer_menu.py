@@ -22,9 +22,18 @@ from PySide6.QtGui import QKeySequence
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.gradient_map_presets import GRADIENT_MAP_PRESETS
 from Imervue.paint.paint_menu_bar import menu_for
+from Imervue.paint.shortcut_binding import tag_registry_shortcut
 
 if TYPE_CHECKING:
     from Imervue.paint.paint_workspace import PaintWorkspace
+
+
+# Layer-menu entries whose key the user can remap (``shortcut_registry``).
+_REGISTRY_IDS = {
+    "paint_layer_add_raster": "paint.layer.add",
+    "paint_layer_duplicate": "paint.layer.duplicate",
+    "paint_layer_merge_down": "paint.layer.merge_down",
+}
 
 
 def populate_layer_menu(workspace: PaintWorkspace) -> None:
@@ -85,6 +94,8 @@ def populate_layer_menu(workspace: PaintWorkspace) -> None:
         action = menu.addAction(lang.get(key, fallback))
         if shortcut:
             action.setShortcut(QKeySequence(shortcut))
+        if key in _REGISTRY_IDS:
+            tag_registry_shortcut(action, _REGISTRY_IDS[key])
         action.triggered.connect(slot)
     _populate_gradient_map_submenu(menu, bridge, lang)
 

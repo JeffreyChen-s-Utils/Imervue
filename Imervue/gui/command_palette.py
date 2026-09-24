@@ -15,9 +15,10 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QMenu,
+    QDialog, QVBoxLayout, QLineEdit, QListWidget, QListWidgetItem,
 )
 
+from Imervue.gui.menu_tree import iter_menu_actions, submenu_index
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -31,31 +32,21 @@ class _Entry:
     search: str    # lowercased display for matching
 
 
-def _collect_menu_actions(menu: QMenu, prefix: str) -> list[_Entry]:
-    entries: list[_Entry] = []
-    for action in menu.actions():
-        if action.isSeparator():
-            continue
-        text = action.text().replace("&", "").strip()
-        if not text:
-            continue
-        label = f"{prefix} > {text}" if prefix else text
-        sub = action.menu()
-        if sub is not None:
-            entries.extend(_collect_menu_actions(sub, label))
-            continue
-        entries.append(_Entry(action=action, display=label, search=label.lower()))
-    return entries
-
-
 def _collect_all_entries(ui: ImervueMainWindow) -> list[_Entry]:
+    """Flatten every menu action of ``ui`` into palette entries, in menu order.
+
+    Plain actions sitting directly on the menu bar (the Modify toggle) and
+    actions without text are left out. The walk goes through
+    :mod:`Imervue.gui.menu_tree`: resolving submenus with ``QAction.menu()``
+    invalidated menu wrappers cached elsewhere in the window.
+    """
     entries: list[_Entry] = []
-    for top_action in ui.menuBar().actions():
-        sub = top_action.menu()
-        if sub is None:
+    for path, action in iter_menu_actions(ui.menuBar(), submenu_index(ui)):
+        text = action.text().replace("&", "").strip()
+        if not path or not text:
             continue
-        top_text = top_action.text().replace("&", "").strip()
-        entries.extend(_collect_menu_actions(sub, top_text))
+        label = " > ".join(part for part in (*path, text) if part)
+        entries.append(_Entry(action=action, display=label, search=label.lower()))
     return entries
 
 

@@ -5,24 +5,20 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QProgressBar,
-    QPushButton,
     QSlider,
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
+from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.denoise import reduce_noise, sharpen
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -50,7 +46,7 @@ class _Worker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             if self._nr_strength > 1e-4:
                 arr = reduce_noise(
                     arr, self._nr_strength, preserve_color=not self._luma_only,
@@ -59,7 +55,7 @@ class _Worker(QThread):
                 arr = sharpen(arr, self._sharp_amount, self._sharp_radius)
             Image.fromarray(arr).save(self._out)
             self.done.emit(True, self._out)
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # A cv2-backed transform raises ImportError (opencv is optional) or
             # cv2.error, which the narrow except missed → done never fired and the
             # dialog hung with Apply disabled. Always report the failure.
@@ -90,13 +86,10 @@ class NoiseSharpenDialog(WorkerHostMixin, QDialog):
         form.addRow(lang.get("nr_sharpen_radius", "Sharpen radius (px):"),
                     self._sharp_radius)
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("nr_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("nr_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -129,12 +122,8 @@ class NoiseSharpenDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("nr_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.jpg *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("nr_output", "Output"), image_save_filter())
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

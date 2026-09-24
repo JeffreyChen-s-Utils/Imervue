@@ -4,12 +4,12 @@ Keyboard shortcut actions for GPUImageView.
 """
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
+from Imervue.system.best_effort import best_effort
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -41,6 +41,23 @@ def _toast(main_gui: GPUImageView, text: str, level: str = "info"):
     win = main_gui.main_window
     if hasattr(win, "toast"):
         getattr(win.toast, level, win.toast.info)(text)
+
+
+def _free_trash_name(files_dir: Path, name: str, info_dir: Path | None = None) -> Path:
+    """First of ``name``, ``stem_1.ext``, ``stem_2.ext`` … not taken in *files_dir*.
+
+    With *info_dir* (freedesktop trash) the name must also have no
+    ``.trashinfo`` there. A timestamp suffix used to collide when two files of
+    the same name were trashed within one second, and the move overwrote the
+    earlier one.
+    """
+    stem, suffix = Path(name).stem, Path(name).suffix
+    candidate, counter = name, 1
+    while (files_dir / candidate).exists() or (
+            info_dir is not None and (info_dir / f"{candidate}.trashinfo").exists()):
+        candidate = f"{stem}_{counter}{suffix}"
+        counter += 1
+    return files_dir / candidate
 
 
 def _send_to_trash(path: str) -> bool:
@@ -85,18 +102,12 @@ def _send_to_trash(path: str) -> bool:
             import shutil
             trash_dir = Path.home() / ".Trash"
             trash_dir.mkdir(parents=True, exist_ok=True)
-            dest = trash_dir / Path(path).name
-            # 避免覆蓋：加時間戳
-            if dest.exists():
-                import time
-                stem = dest.stem
-                dest = trash_dir / f"{stem}_{int(time.time())}{dest.suffix}"
+            dest = _free_trash_name(trash_dir, Path(path).name)
             shutil.move(path, str(dest))
             return True
         else:
             # Linux: freedesktop.org Trash spec
             import shutil
-            import time
             # 判斷是否在同一個 mount point
             home_trash = Path.home() / ".local" / "share" / "Trash"
             files_dir = home_trash / "files"
@@ -104,14 +115,8 @@ def _send_to_trash(path: str) -> bool:
             files_dir.mkdir(parents=True, exist_ok=True)
             info_dir.mkdir(parents=True, exist_ok=True)
 
-            base_name = Path(path).name
-            dest = files_dir / base_name
-            # 避免覆蓋
-            if dest.exists():
-                stem = Path(path).stem
-                ext = Path(path).suffix
-                dest = files_dir / f"{stem}_{int(time.time())}{ext}"
-                base_name = dest.name
+            dest = _free_trash_name(files_dir, Path(path).name, info_dir)
+            base_name = dest.name
 
             # 寫入 .trashinfo
             from datetime import datetime
@@ -125,7 +130,8 @@ def _send_to_trash(path: str) -> bool:
 
             shutil.move(path, str(dest))
             return True
-    except Exception:
+    except OSError:
+        # mkdir / write_text / move (shutil.Error is an OSError) on the fallback path.
         return False
 
 
@@ -172,7 +178,7 @@ def copy_image_to_clipboard(main_gui: GPUImageView):
         return
 
     path = images[main_gui.current_index]
-    with contextlib.suppress(Exception):
+    with best_effort("copy the image to the clipboard"):
         qimg = QImage(path)
         if qimg.isNull() and main_gui.deep_zoom is not None:
             # QImage 無法直接載入（例如 SVG），從 deep zoom 金字塔取得

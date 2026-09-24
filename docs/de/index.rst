@@ -964,7 +964,7 @@ verwendet ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_
 Toolbar **Output > Virtual camera** öffnet den Stream.
 
 DirectShow / AVFoundation / v4l2loopback sind nur RGB — kein Alphakanal — also
-füllt Imervue den Bereich außerhalb des Charakters mit **Magenta `#FF00FF`** als
+füllt Imervue den Bereich außerhalb des Charakters mit **Magenta #FF00FF** als
 Chroma-Key. Entfernen Sie es in OBS über den Color-Key-Filter:
 
 1. Rechtsklick auf die Video-Capture-Geräte-Quelle > **Filter**
@@ -2050,8 +2050,8 @@ Werkzeuge und Overlays
    * - ``S``
      - Diashow
 
-Animation
-^^^^^^^^^
+Animierte Bilder
+^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2336,6 +2336,8 @@ Rechteck. Doppelklick auf eine Zeile in der Liste, um einen Personennamen einzug
 beim Speichern werden die Tags in den ``extra['face_tags']``-Blob des Recipes
 geschrieben. Detection ist eine klassische Technik — die Genauigkeit reicht für
 "Zeige mir die Gesichter", ersetzt aber keine moderne CNN-basierte Erkennung.
+Benötigt OpenCV 4 (``pip install "opencv-python<5"``): OpenCV 5 enthält die
+Haar-Cascades nicht mehr, und der Dialog weist dann darauf hin, statt zu erkennen.
 
 Lokale Anpassungsmasken
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -2529,6 +2531,7 @@ Verfügbare Werkzeuge
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Pixel-Box-Crop, seitenverhältniserhaltendes Resize und verlustfreies
        90/180/270-Rotate oder Horizontal-/Vertikal-Flip.
+       Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild.
    * - ``collection_stats``
      - Ratings, Favoriten, Farbetiketten und Cull-Zustände eines Ordners
        zusammenfassen (Counts, 0–5-Sterne-Verteilung und Durchschnitt).

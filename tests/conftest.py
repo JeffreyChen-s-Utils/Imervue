@@ -5,6 +5,7 @@ Pytest configuration and shared fixtures for Imervue tests.
 import atexit
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Final
 
@@ -223,13 +224,32 @@ _bootstrap_tests_dir_on_path()
 # numeric suffix, and removes everything older than the most-recent
 # three. Each removal is best-effort — the same lock conditions that
 # bit pytest's own retention can bite us, but at least we keep trying.
+#
+# A directory whose ``.lock`` is fresh belongs to a pytest session that is
+# still running (pytest writes the lock when it creates the basetemp and
+# removes it at exit), so it is skipped: deleting it pulled ``tmp_path`` out
+# from under a concurrent full run and turned every later test into a setup
+# error. Like pytest, a lock older than three days is treated as dead.
 
-def _prune_old_pytest_basetemps(retain: int = 3) -> None:
+_BASETEMP_LOCK_TIMEOUT = 60 * 60 * 24 * 3  # pytest's own LOCK_TIMEOUT
+
+
+def _basetemp_in_use(path: Path, now: float) -> bool:
+    """True when ``path`` holds a pytest cleanup lock that has not expired."""
+    lock = path / ".lock"
+    try:
+        return lock.is_file() and lock.stat().st_mtime >= now - _BASETEMP_LOCK_TIMEOUT
+    except OSError:
+        return True  # unreadable lock: assume a live session owns the dir
+
+
+def _prune_old_pytest_basetemps(retain: int = 3, base: Path | None = None) -> None:
     import re
     import shutil
     import tempfile
+    import time
 
-    base = Path(tempfile.gettempdir())
+    base = Path(tempfile.gettempdir()) if base is None else base
     if not base.is_dir():
         return
     candidates: list[Path] = []
@@ -250,8 +270,10 @@ def _prune_old_pytest_basetemps(retain: int = 3) -> None:
             return -1
 
     candidates.sort(key=_suffix)
+    now = time.time()
     for old in candidates[:-retain]:
-        shutil.rmtree(old, ignore_errors=True)
+        if not _basetemp_in_use(old, now):
+            shutil.rmtree(old, ignore_errors=True)
 
 
 _prune_old_pytest_basetemps()
@@ -321,6 +343,128 @@ def qapp():
     # same session unable to recreate it on some platforms. The dedicated
     # ``_qt_session_teardown`` autouse fixture below handles end-of-session
     # cleanup once all tests have finished.
+
+
+@pytest.fixture
+def pump_until(qapp):
+    """Pump the Qt event loop until *predicate* holds, or *timeout* seconds pass.
+
+    Returns the predicate's final value. Use this instead of a fixed number of
+    ``processEvents()`` passes: how many passes a queued cross-thread signal
+    needs depends on machine load, so a fixed count makes the test flaky.
+    """
+    def _pump(predicate, timeout: float = 5.0) -> bool:
+        deadline = time.monotonic() + timeout
+        while True:
+            qapp.processEvents()
+            if predicate():
+                return True
+            if time.monotonic() >= deadline:
+                return bool(predicate())
+            time.sleep(0.01)
+
+    return _pump
+
+
+@pytest.fixture
+def fake_clipboard(qapp, monkeypatch):
+    """Replace ``QApplication.clipboard()`` with an in-process clipboard.
+
+    The real one is OS state shared with every other process: another program
+    can hold it open (so a set silently fails) or change it mid-test, and on
+    Windows ``dataChanged`` arrives asynchronously, so two quick sets can
+    coalesce into one signal. It also wiped the developer's own clipboard on
+    every run. The fake keeps one ``QMimeData`` and emits ``dataChanged``
+    synchronously on every change.
+    """
+    from PySide6.QtCore import QMimeData, QObject, Signal
+    from PySide6.QtGui import QImage
+    from PySide6.QtWidgets import QApplication
+
+    class _FakeClipboard(QObject):
+        dataChanged = Signal()  # noqa: N815 - mirrors QClipboard
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._mime = QMimeData()
+
+        def _replace(self, mime) -> None:
+            self._mime = mime
+            self.dataChanged.emit()
+
+        def setText(self, text, _mode=None) -> None:  # noqa: N802 - Qt API
+            mime = QMimeData()
+            mime.setText(text)
+            self._replace(mime)
+
+        def text(self, _mode=None) -> str:
+            return self._mime.text()
+
+        def setImage(self, image, _mode=None) -> None:  # noqa: N802 - Qt API
+            mime = QMimeData()
+            mime.setImageData(image)
+            self._replace(mime)
+
+        def image(self, _mode=None):
+            data = self._mime.imageData() if self._mime.hasImage() else None
+            return QImage(data) if data is not None else QImage()
+
+        def mimeData(self, _mode=None):  # noqa: N802 - Qt API
+            return self._mime
+
+        def setMimeData(self, mime, _mode=None) -> None:  # noqa: N802 - Qt API
+            self._replace(mime)
+
+        def clear(self, _mode=None) -> None:
+            self._replace(QMimeData())
+
+    fake = _FakeClipboard()
+    monkeypatch.setattr(QApplication, "clipboard", staticmethod(lambda: fake))
+    yield fake
+    fake.deleteLater()
+
+
+@pytest.fixture(autouse=True)
+def os_trash(monkeypatch):
+    """Replace ``send2trash.send2trash`` with an in-process trash for every test.
+
+    The real call is a shell operation on the OS Recycle Bin, which every other
+    process shares: under load it fails now and then (a delete test failed about
+    one run in three), and each run filled the developer's own Recycle Bin. The
+    fake takes a path or a list like the real one, removes each file or
+    directory, raises ``FileNotFoundError`` for a missing path, and records
+    every trashed path in the list it yields. Product code imports
+    ``send2trash`` at call time, so the patch reaches it; when the package is
+    not installed a stand-in module takes its place, so the native fallback
+    in ``keyboard_actions._send_to_trash`` is never reached either.
+    """
+    import os
+    import shutil
+    import sys
+    import types
+
+    trashed: list[str] = []
+
+    def _fake_send2trash(paths) -> None:
+        batch = [paths] if isinstance(paths, (str, bytes, os.PathLike)) else list(paths)
+        for path in (os.fspath(p) for p in batch):
+            if os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path)
+            elif os.path.lexists(path):
+                os.remove(path)
+            else:
+                raise FileNotFoundError(path)
+            trashed.append(path)
+
+    try:
+        import send2trash
+    except ImportError:
+        stand_in = types.ModuleType("send2trash")
+        stand_in.send2trash = _fake_send2trash
+        monkeypatch.setitem(sys.modules, "send2trash", stand_in)
+    else:
+        monkeypatch.setattr(send2trash, "send2trash", _fake_send2trash)
+    return trashed
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -479,6 +623,14 @@ def _drain_qt_deferred_delete():
     if QCoreApplication.instance() is None:
         return
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+
+@pytest.fixture(autouse=True)
+def _restore_app_appearance():
+    """Put back the QApplication font and stylesheet a test changed (see ``tests/_app_appearance.py``)."""
+    from tests._app_appearance import app_appearance_restored
+    with app_appearance_restored():
+        yield
 
 
 

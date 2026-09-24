@@ -36,6 +36,22 @@ def _make_mock_main_window():
     return mw
 
 
+@pytest.fixture(autouse=True)
+def _isolated_languages(monkeypatch):
+    """Give every test copies of the global language state.
+
+    Loading a plugin merges its strings into the built-in language dicts in
+    place and can register a new language on the shared ``language_wrapper``;
+    without copies those keys and languages outlive the test.
+    """
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    copies = {code: dict(words) for code, words in language_wrapper.choose_language_dict.items()}
+    monkeypatch.setattr(language_wrapper, "choose_language_dict", copies)
+    monkeypatch.setattr(language_wrapper, "plugin_languages", dict(language_wrapper.plugin_languages))
+    monkeypatch.setattr(language_wrapper, "language", language_wrapper.language)
+    monkeypatch.setattr(language_wrapper, "language_word_dict", copies[language_wrapper.language])
+
+
 # ===========================
 # ImervuePlugin base class
 # ===========================
@@ -305,8 +321,6 @@ class TestPluginManager:
         pm.discover_and_load([plugin_dir])
 
         assert language_wrapper.language_word_dict.get("trans_test_key") == "Test Value"
-        # Cleanup
-        language_wrapper.language_word_dict.pop("trans_test_key", None)
 
     def test_unload_all(self, tmp_path):
         """unload_all should call on_plugin_unloaded and clear the list."""
@@ -621,9 +635,17 @@ class TestPipInstallerTranslations:
             assert set(d.keys()) == en_keys, f"{lang} keys mismatch"
 
     def test_register_translations(self):
-        from Imervue.plugin.pip_installer import register_translations
-        # Should not raise
+        from Imervue.multi_language.language_wrapper import language_wrapper
+        from Imervue.plugin.pip_installer import _TRANSLATIONS, register_translations
+        english = language_wrapper.choose_language_dict["English"]
+        taken = next(iter(_TRANSLATIONS["English"]))
+        english[taken] = "already here"
         register_translations()
+        for code, words in _TRANSLATIONS.items():
+            target = language_wrapper.choose_language_dict[code]
+            assert all(key in target for key in words), code
+        # Existing strings win over the installer's own.
+        assert english[taken] == "already here"
 
 
 # ===========================
@@ -676,41 +698,34 @@ class TestFetchPluginListWorker:
         assert "network error" in errors[0]
 
     def test_worker_emits_results_on_success(self):
-        from Imervue.plugin.plugin_downloader import FetchPluginListWorker
+        from Imervue.plugin.plugin_downloader import RAW_BASE_URL, FetchPluginListWorker
 
-        mock_root = [
-            {"type": "dir", "name": "filters", "url": "https://api/filters"},
-        ]
-        mock_cat = [
-            {"type": "dir", "name": "blur_plugin", "url": "https://api/blur"},
-        ]
-        mock_files = [
-            {"type": "file", "name": "__init__.py", "download_url": "https://raw/init", "path": "filters/blur_plugin/__init__.py"},
-            {"type": "file", "name": "blur.py", "download_url": "https://raw/blur", "path": "filters/blur_plugin/blur.py"},
-        ]
-
-        def fake_get(url):
-            if "contents" in url:
-                return mock_root
-            elif "filters" in url and "blur" not in url:
-                return mock_cat
-            else:
-                return mock_files
+        # One recursive tree listing; only the plugins/languages categories count.
+        mock_tree = {"truncated": False, "tree": [
+            {"type": "tree", "path": "plugins"},
+            {"type": "tree", "path": "plugins/blur_plugin"},
+            {"type": "blob", "path": "plugins/blur_plugin/__init__.py"},
+            {"type": "blob", "path": "plugins/blur_plugin/blur.py"},
+            {"type": "tree", "path": "filters/other_plugin"},
+            {"type": "blob", "path": "filters/other_plugin/__init__.py"},
+        ]}
 
         worker = FetchPluginListWorker()
         results = []
         worker.result_ready.connect(results.append)
 
-        with patch("Imervue.plugin.plugin_downloader._github_get", side_effect=fake_get):
+        with patch("Imervue.plugin.plugin_downloader._github_get", return_value=mock_tree) as get:
             worker.run()
 
+        assert get.call_count == 1
         assert len(results) == 1
         data = results[0]
         assert len(data) == 1
         cat, name, files = data[0]
-        assert cat == "filters"
+        assert cat == "plugins"
         assert name == "blur_plugin"
-        assert len(files) == 2
+        assert [f["name"] for f in files] == ["__init__.py", "blur.py"]
+        assert files[0]["download_url"] == f"{RAW_BASE_URL}/plugins/blur_plugin/__init__.py"
 
 
 # ===========================

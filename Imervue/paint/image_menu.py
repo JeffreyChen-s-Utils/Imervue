@@ -233,7 +233,8 @@ def _reset_undo_stack(workspace) -> None:
     history and becomes an undo barrier. Guarded so a workspace without an undo
     stack (or one mid-teardown) is a safe no-op.
     """
-    with contextlib.suppress(Exception):
+    # No undo stack (AttributeError) or its canvas already deleted (RuntimeError).
+    with contextlib.suppress(AttributeError, RuntimeError):
         workspace._undo_stack.clear()  # noqa: SLF001
 
 

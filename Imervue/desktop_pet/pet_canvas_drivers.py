@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from Imervue.system.best_effort import best_effort
 from Imervue.puppet.idle_driver import IdleDriver
 from Imervue.puppet.idle_motion_cycler import IdleMotionCycler
 from Imervue.puppet.input_engine import InputEngine
@@ -158,11 +159,10 @@ class PetCanvasDrivers:
         Disables the drivers directly — no settings are persisted, so a respawn
         restores what the user had enabled.
         """
-        import contextlib
         for driver in (
             self.webcam_tracker, self.virtual_camera,
             self.idle_driver, self.idle_cycler, self.mouse_gaze,
         ):
             if driver is not None:
-                with contextlib.suppress(Exception):
+                with best_effort("disable a canvas driver"):
                     driver.set_enabled(False)

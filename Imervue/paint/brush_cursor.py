@@ -139,6 +139,60 @@ BRUSH_CURSOR_MAX_PX = 512
 _CROSSHAIR_LEN_PX = 4
 
 
+def _cursor_pen(color, width: int):
+    from PySide6.QtGui import QPen
+    pen = QPen(color)
+    pen.setWidth(width)
+    return pen
+
+
+def _draw_ring(painter, ring_centre: float, diameter: int) -> None:
+    """Black ring over a 1-pixel white "ghost", visible on dark and light pixels."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QColor
+    radius = diameter / 2.0
+    for color, width in (
+        (QColor(255, 255, 255, 220), 3),
+        (QColor(0, 0, 0, 220), 1),
+    ):
+        painter.setPen(_cursor_pen(color, width))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(
+            int(ring_centre - radius),
+            int(ring_centre - radius),
+            diameter,
+            diameter,
+        )
+
+
+def _draw_crosshair(painter, cx: int) -> None:
+    """Centre ``+`` so the hot-spot is locatable when the ring is too large
+    to imply where the dab will fall."""
+    from PySide6.QtCore import QPoint
+    from PySide6.QtGui import QColor
+    painter.setPen(_cursor_pen(QColor(0, 0, 0, 220), 1))
+    painter.drawLine(
+        QPoint(cx - _CROSSHAIR_LEN_PX, cx),
+        QPoint(cx + _CROSSHAIR_LEN_PX, cx),
+    )
+    painter.drawLine(
+        QPoint(cx, cx - _CROSSHAIR_LEN_PX),
+        QPoint(cx, cx + _CROSSHAIR_LEN_PX),
+    )
+
+
+def _draw_eraser_slash(painter, cx: int, diameter: int) -> None:
+    """Diagonal slash that tells the eraser cursor from the brush at a glance."""
+    from PySide6.QtCore import QPoint
+    from PySide6.QtGui import QColor
+    painter.setPen(_cursor_pen(QColor(0, 0, 0, 220), 1))
+    offset = int(diameter / 2.0 * 0.707)   # 45° on the ring
+    painter.drawLine(
+        QPoint(cx - offset, cx - offset),
+        QPoint(cx + offset, cx + offset),
+    )
+
+
 def make_brush_cursor(
     diameter_px: int, *, eraser: bool = False,
 ) -> tuple[object, int, int]:
@@ -159,8 +213,8 @@ def make_brush_cursor(
     Lazily imports PySide6 so this module can still be imported in
     test environments that drive only the numpy ring.
     """
-    from PySide6.QtCore import QPoint, Qt
-    from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QPainter, QPixmap
 
     if not BRUSH_CURSOR_MIN_PX <= int(diameter_px) <= BRUSH_CURSOR_MAX_PX:
         raise ValueError(
@@ -176,48 +230,11 @@ def make_brush_cursor(
     painter = QPainter(pixmap)
     try:
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        # Outer ring: black with a 1-pixel white "ghost" beneath so
-        # the cursor stays visible on dark and light layer pixels.
-        ring_centre = bitmap_size / 2.0
-        radius = diameter / 2.0
-        for color, width in (
-            (QColor(255, 255, 255, 220), 3),
-            (QColor(0, 0, 0, 220), 1),
-        ):
-            pen = QPen(color)
-            pen.setWidth(width)
-            painter.setPen(pen)
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawEllipse(
-                int(ring_centre - radius),
-                int(ring_centre - radius),
-                diameter,
-                diameter,
-            )
-        # Centre crosshair so the hot-spot is locatable when the
-        # ring is too large to imply where the dab will fall.
-        cross_pen = QPen(QColor(0, 0, 0, 220))
-        cross_pen.setWidth(1)
-        painter.setPen(cross_pen)
+        _draw_ring(painter, bitmap_size / 2.0, diameter)
         cx = bitmap_size // 2
-        painter.drawLine(
-            QPoint(cx - _CROSSHAIR_LEN_PX, cx),
-            QPoint(cx + _CROSSHAIR_LEN_PX, cx),
-        )
-        painter.drawLine(
-            QPoint(cx, cx - _CROSSHAIR_LEN_PX),
-            QPoint(cx, cx + _CROSSHAIR_LEN_PX),
-        )
+        _draw_crosshair(painter, cx)
         if eraser:
-            # Diagonal slash distinguishes eraser from brush at a glance.
-            slash_pen = QPen(QColor(0, 0, 0, 220))
-            slash_pen.setWidth(1)
-            painter.setPen(slash_pen)
-            offset = int(diameter / 2.0 * 0.707)   # 45° on the ring
-            painter.drawLine(
-                QPoint(cx - offset, cx - offset),
-                QPoint(cx + offset, cx + offset),
-            )
+            _draw_eraser_slash(painter, cx, diameter)
     finally:
         painter.end()
     return (pixmap, bitmap_size // 2, bitmap_size // 2)

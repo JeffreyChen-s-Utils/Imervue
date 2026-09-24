@@ -481,89 +481,89 @@ def _add_common(sub: argparse.ArgumentParser) -> None:
                      help="parallel workers (1=inline, 0=auto/all cores)")
 
 
+# Stands for ``_add_common(sub)`` (inputs, --out, --recursive, ...) in an argument list.
+_COMMON = None
+_JSON_FLAG = (("--json",), {"action": "store_true", "help": _EMIT_JSON})
+
+# subcommand, help, arguments in order: ``_COMMON`` or ``(flags, add_argument kwargs)``.
+_SUBCOMMANDS: tuple[tuple[str, str, tuple], ...] = (
+    ("info", "print image dimensions / format", (_COMMON, _JSON_FLAG)),
+    ("stats", "print no-reference quality metrics", (_COMMON, _JSON_FLAG)),
+    ("convert", "convert format", (
+        _COMMON,
+        (("--format",), {"default": "PNG", "help": "JPEG / PNG / WEBP"}),
+        (("--quality",), {"type": int, "default": 90, "help": "1-100 for lossy formats"}),
+    )),
+    ("resize", "resize to a maximum long edge", (
+        _COMMON, (("--max",), {"type": int, "default": 1600, "help": "max long edge in px"}),
+    )),
+    ("thumbnail", "make thumbnails", (
+        _COMMON, (("--size",), {"type": int, "default": 256, "help": "thumbnail box in px"}),
+    )),
+    ("watermark", "apply a text watermark", (
+        _COMMON,
+        (("--text",), {"required": True, "help": "watermark text"}),
+        (("--corner",), {"default": "bottom-right", "help": "placement corner"}),
+        (("--opacity",), {"type": float, "default": 0.6, "help": "0..1"}),
+    )),
+    ("optimize", "encode under a target file size", (
+        _COMMON,
+        (("--max-kb",), {"type": float, "required": True, "dest": "max_kb"}),
+        (("--format",), {"default": "JPEG", "help": "JPEG / WEBP"}),
+    )),
+    ("dehaze", "dark-channel-prior haze removal", (
+        _COMMON, (("--strength",), {"type": float, "default": 1.0, "help": "0..1"}),
+    )),
+    ("clahe", "contrast-limited adaptive equalization", (
+        _COMMON,
+        (("--clip",), {"type": float, "default": 2.0, "help": "clip limit"}),
+        (("--tiles",), {"type": int, "default": 8, "help": "tile grid size"}),
+    )),
+    ("dither", "ordered (Bayer) dithering", (
+        _COMMON, (("--levels",), {"type": int, "default": 2, "help": "levels per channel (2-8)"}),
+    )),
+    ("distort", "swirl / pinch / ripple", (
+        _COMMON,
+        (("--mode",), {"default": "swirl", "help": "swirl / pinch / ripple"}),
+        (("--strength",), {"type": float, "default": 0.5, "help": "-1..1"}),
+    )),
+    ("auto-orient", "bake EXIF orientation into pixels", (_COMMON,)),
+    ("strip", "re-save without metadata (EXIF/XMP/ICC)", (_COMMON,)),
+    ("collage", "composite many images into one grid", (
+        (("inputs",), {"nargs": "+", "help": "image files or folders"}),
+        (("--recursive",), {"action": "store_true"}),
+        (("--columns",), {"type": int, "default": 3, "help": "grid columns"}),
+        (("--out",), {"default": "collage.png", "help": "output image file"}),
+    )),
+    ("anaglyph", "red-cyan 3D from a stereo pair", (
+        (("left",), {"help": "left-eye image"}),
+        (("right",), {"help": "right-eye image"}),
+        (("--method",), {"default": "dubois", "help": "dubois / color / gray / true"}),
+        (("--out",), {"default": None, "help": "output image file"}),
+    )),
+    ("preset", "apply a saved develop preset by name", (
+        (("name",), {"help": "develop preset name"}), _COMMON,
+    )),
+    ("pipeline", "apply an ordered JSON pipeline of ops", (
+        (("file",), {"help": "pipeline JSON file ([{op, ...}] or {pipeline: [...]})"}), _COMMON,
+    )),
+    ("list-ops", "list available subcommands", (_JSON_FLAG,)),
+)
+
+
 def build_parser() -> argparse.ArgumentParser:
+    """The ``Imervue.cli`` parser: one subcommand per ``_SUBCOMMANDS`` row, in order."""
     parser = argparse.ArgumentParser(prog="Imervue.cli", description="Imervue headless image CLI")
     parser.add_argument("--version", action="version", version=f"Imervue CLI {_CLI_VERSION}")
     subs = parser.add_subparsers(dest="command", required=True)
-
-    info = subs.add_parser("info", help="print image dimensions / format")
-    _add_common(info)
-    info.add_argument("--json", action="store_true", help=_EMIT_JSON)
-
-    stats = subs.add_parser("stats", help="print no-reference quality metrics")
-    _add_common(stats)
-    stats.add_argument("--json", action="store_true", help=_EMIT_JSON)
-
-    convert = subs.add_parser("convert", help="convert format")
-    _add_common(convert)
-    convert.add_argument("--format", default="PNG", help="JPEG / PNG / WEBP")
-    convert.add_argument("--quality", type=int, default=90, help="1-100 for lossy formats")
-
-    resize = subs.add_parser("resize", help="resize to a maximum long edge")
-    _add_common(resize)
-    resize.add_argument("--max", type=int, default=1600, help="max long edge in px")
-
-    thumb = subs.add_parser("thumbnail", help="make thumbnails")
-    _add_common(thumb)
-    thumb.add_argument("--size", type=int, default=256, help="thumbnail box in px")
-
-    watermark = subs.add_parser("watermark", help="apply a text watermark")
-    _add_common(watermark)
-    watermark.add_argument("--text", required=True, help="watermark text")
-    watermark.add_argument("--corner", default="bottom-right", help="placement corner")
-    watermark.add_argument("--opacity", type=float, default=0.6, help="0..1")
-
-    optimize = subs.add_parser("optimize", help="encode under a target file size")
-    _add_common(optimize)
-    optimize.add_argument("--max-kb", type=float, required=True, dest="max_kb")
-    optimize.add_argument("--format", default="JPEG", help="JPEG / WEBP")
-
-    dehaze = subs.add_parser("dehaze", help="dark-channel-prior haze removal")
-    _add_common(dehaze)
-    dehaze.add_argument("--strength", type=float, default=1.0, help="0..1")
-
-    clahe = subs.add_parser("clahe", help="contrast-limited adaptive equalization")
-    _add_common(clahe)
-    clahe.add_argument("--clip", type=float, default=2.0, help="clip limit")
-    clahe.add_argument("--tiles", type=int, default=8, help="tile grid size")
-
-    dither = subs.add_parser("dither", help="ordered (Bayer) dithering")
-    _add_common(dither)
-    dither.add_argument("--levels", type=int, default=2, help="levels per channel (2-8)")
-
-    distort = subs.add_parser("distort", help="swirl / pinch / ripple")
-    _add_common(distort)
-    distort.add_argument("--mode", default="swirl", help="swirl / pinch / ripple")
-    distort.add_argument("--strength", type=float, default=0.5, help="-1..1")
-
-    orient = subs.add_parser("auto-orient", help="bake EXIF orientation into pixels")
-    _add_common(orient)
-
-    strip = subs.add_parser("strip", help="re-save without metadata (EXIF/XMP/ICC)")
-    _add_common(strip)
-
-    collage = subs.add_parser("collage", help="composite many images into one grid")
-    collage.add_argument("inputs", nargs="+", help="image files or folders")
-    collage.add_argument("--recursive", action="store_true")
-    collage.add_argument("--columns", type=int, default=3, help="grid columns")
-    collage.add_argument("--out", default="collage.png", help="output image file")
-
-    anaglyph = subs.add_parser("anaglyph", help="red-cyan 3D from a stereo pair")
-    anaglyph.add_argument("left", help="left-eye image")
-    anaglyph.add_argument("right", help="right-eye image")
-    anaglyph.add_argument("--method", default="dubois", help="dubois / color / gray / true")
-    anaglyph.add_argument("--out", default=None, help="output image file")
-
-    preset = subs.add_parser("preset", help="apply a saved develop preset by name")
-    preset.add_argument("name", help="develop preset name")
-    _add_common(preset)
-
-    pipeline = subs.add_parser("pipeline", help="apply an ordered JSON pipeline of ops")
-    pipeline.add_argument("file", help="pipeline JSON file ([{op, ...}] or {pipeline: [...]})")
-    _add_common(pipeline)
-
-    list_ops = subs.add_parser("list-ops", help="list available subcommands")
-    list_ops.add_argument("--json", action="store_true", help=_EMIT_JSON)
+    for name, help_text, arguments in _SUBCOMMANDS:
+        sub = subs.add_parser(name, help=help_text)
+        for argument in arguments:
+            if argument is _COMMON:
+                _add_common(sub)
+            else:
+                flags, kwargs = argument
+                sub.add_argument(*flags, **kwargs)
     return parser
 
 

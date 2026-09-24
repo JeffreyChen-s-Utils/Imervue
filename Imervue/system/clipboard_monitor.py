@@ -25,12 +25,12 @@ from __future__ import annotations
 import hashlib
 import logging
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtGui import QClipboard, QImage
+from PySide6.QtGui import QClipboard
 from PySide6.QtWidgets import QApplication
 
+from Imervue.system.qimage_convert import qimage_to_pil
 from Imervue.user_settings.user_setting_dict import (
     schedule_save, user_setting_dict,
 )
@@ -38,14 +38,6 @@ from Imervue.user_settings.user_setting_dict import (
 logger = logging.getLogger("Imervue.clipboard_monitor")
 
 SETTING_KEY = "annotation_clipboard_monitor_enabled"
-
-
-def _qimage_to_pil(qimg: QImage) -> Image.Image:
-    qimg = qimg.convertToFormat(QImage.Format.Format_RGBA8888)
-    w, h = qimg.width(), qimg.height()
-    ptr = qimg.constBits()
-    arr = np.frombuffer(ptr, dtype=np.uint8).reshape(h, w, 4).copy()
-    return Image.fromarray(arr, "RGBA")
 
 
 class ClipboardMonitor(QObject):
@@ -105,7 +97,7 @@ class ClipboardMonitor(QObject):
         if qimg is None or qimg.isNull():
             return None
         try:
-            return _qimage_to_pil(qimg)
+            return qimage_to_pil(qimg)
         except Exception:
             logger.exception("clipboard image conversion failed")
             return None
@@ -125,7 +117,7 @@ class ClipboardMonitor(QObject):
         if qimg is None or qimg.isNull():
             return
         try:
-            pil = _qimage_to_pil(qimg)
+            pil = qimage_to_pil(qimg)
         except Exception:
             logger.exception("clipboard image conversion failed")
             return

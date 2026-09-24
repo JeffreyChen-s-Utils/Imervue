@@ -88,24 +88,28 @@ def test_helper_skips_deleted_qmenu_wrappers(qapp):
         win.deleteLater()
 
 
-def test_safe_submenus_of_skips_deleted_actions(qapp):
-    """Direct unit coverage for the submenu-listing helper so we have
-    a focused regression test for the guard, independent of the
-    public walker."""
-    from Imervue.Imervue_main_window import _safe_submenus_of
+def test_helper_keeps_cached_menu_wrappers_valid(qapp):
+    """Walking the menus must not invalidate wrappers cached elsewhere.
+
+    The old walk went through ``QAction.menu()``, which re-parents the menu
+    wrapper under the temporary action wrapper; once that was collected the
+    cached ``language_menu`` raised "already deleted" and plugin languages
+    never reached the Language menu.
+    """
+    import gc
+
+    from Imervue.Imervue_main_window import ImervueMainWindow
 
     win = QMainWindow()
     try:
-        bar = win.menuBar()
-        live_menu = QMenu("Live", win)
-        bar.addMenu(live_menu)
-        dead_menu = QMenu("Dead", win)
-        bar.addMenu(dead_menu)
-        shiboken6.delete(dead_menu)
-
-        submenus = _safe_submenus_of(bar)
-
-        assert live_menu in submenus
-        assert all(shiboken6.isValid(m) for m in submenus)
+        cached = win.menuBar().addMenu("Language")
+        nested = cached.addMenu("More")
+        ImervueMainWindow._enable_tooltips_on_all_menus(win)
+        gc.collect()
+        assert shiboken6.isValid(cached)
+        assert shiboken6.isValid(nested)
+        assert cached.toolTipsVisible()
+        assert nested.toolTipsVisible()
+        cached.addSeparator()   # would raise on an invalidated wrapper
     finally:
         win.deleteLater()

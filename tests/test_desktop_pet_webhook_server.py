@@ -13,6 +13,7 @@ Three layers:
 """
 from __future__ import annotations
 
+import contextlib
 import http.client
 import json
 import socket
@@ -248,6 +249,28 @@ def test_e2e_trigger_emits_signal(qapp, running_receiver):
     assert captured == [("Wave", "")]
 
 
+def test_e2e_web_page_origin_is_refused(qapp, running_receiver):
+    receiver, port = running_receiver
+    captured: list = []
+    receiver.command_received.connect(lambda *args: captured.append(args))
+    status, body = _post_json(port, "/trigger", {"speech": "call this number"},
+                              headers={"Origin": "https://evil.example"})
+    assert status == 403
+    assert json.loads(body) == {"error": "forbidden origin"}
+    qapp.processEvents()
+    assert captured == []
+
+
+def test_e2e_local_origin_is_accepted(qapp, running_receiver):
+    receiver, port = running_receiver
+    captured: list = []
+    receiver.command_received.connect(lambda *args: captured.append(args))
+    status, _ = _post_json(port, "/trigger", {"group": "Wave"},
+                           headers={"Origin": "http://localhost:5173"})
+    assert status == 200
+    assert _wait_for(qapp, lambda: bool(captured))
+
+
 def test_e2e_invalid_path_returns_404(qapp, running_receiver):
     _, port = running_receiver
     status, _ = _post_json(port, "/wrong", {"group": "Wave"})
@@ -333,4 +356,49 @@ def test_e2e_start_handles_invalid_port(qapp):
         assert receiver.start() is False
         assert receiver.is_running() is False
     finally:
+        receiver.deleteLater()
+
+
+def _early_error_status_with_late_body(port: int, path: str) -> bytes | str:
+    """POST whose body arrives only after the server has read the headers.
+
+    Returns the status line, or the exception name when the connection died
+    before the reply could be read.
+    """
+    body = b'{"group": "Wave"}'
+    head = (f"POST {path} HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n"
+            f"Content-Length: {len(body)}\r\n\r\n").encode("ascii")
+    sock = socket.create_connection((DEFAULT_HOST, port), timeout=5)
+    try:
+        sock.sendall(head)
+        time.sleep(0.15)             # headers alone: the server decides to reject
+        with contextlib.suppress(OSError):
+            sock.sendall(body)       # without draining, this lands on a closed socket
+        time.sleep(0.15)             # read late, as a loaded client would
+        data = b""
+        while chunk := sock.recv(4096):
+            data += chunk
+        return data.split(b"\r\n", 1)[0]
+    except OSError as exc:
+        return type(exc).__name__
+    finally:
+        sock.close()
+
+
+@pytest.mark.parametrize("path, token, expected", [
+    ("/wrong", "", b"HTTP/1.0 404 Not Found"),
+    ("/trigger", "s3cret", b"HTTP/1.0 401 Unauthorized"),
+])
+def test_e2e_early_error_reply_survives_a_late_body(qapp, path, token, expected):
+    """A 404 / 401 used to be sent before the body was read; a body arriving
+    after the server closed the socket made Windows answer with RST, which
+    discarded the reply on the client (WinError 10053) — the long-standing
+    "flaky" e2e failure under load."""
+    receiver = WebhookReceiver()
+    port = _start_on_free_port(receiver, token=token)
+    try:
+        results = [_early_error_status_with_late_body(port, path) for _ in range(3)]
+        assert results == [expected] * 3
+    finally:
+        receiver.stop()
         receiver.deleteLater()

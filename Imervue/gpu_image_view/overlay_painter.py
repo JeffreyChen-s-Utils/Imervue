@@ -12,13 +12,12 @@ functions so they can be unit-tested without a GL context.
 from __future__ import annotations
 
 import logging
-import os
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer, QPointF
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -27,7 +26,6 @@ from PySide6.QtGui import (
     QPainterPath,
     QPen,
     QPixmap,
-    QPolygonF,
 )
 
 from Imervue.gpu_image_view.filmstrip import (
@@ -39,13 +37,34 @@ from Imervue.gpu_image_view.filmstrip import (
     fit_rect_centered,
 )
 from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN
+from Imervue.gpu_image_view.hud_geometry import (
+    LOUPE_BOX_PX,
+    loupe_source_rect,
+    place_hud_box,
+    visible_pixel_bounds,
+)
+from Imervue.gpu_image_view.osd_text import (
+    debug_hud_lines,
+    favorites_set,
+    format_exif_osd_lines,
+    osd_lines,
+)
 from Imervue.gpu_image_view.tile_wall_loading import (
     should_show_wall_loading,
     spinner_dots,
     spinner_phase,
     wall_spinner_geometry,
 )
-from Imervue.gpu_image_view.viewport_math import visible_image_rect
+from Imervue.gpu_image_view.tile_badges import (
+    mtime_date_label,
+    paint_bookmark_badge,
+    paint_color_strip,
+    paint_date_chip,
+    paint_favorite_badge,
+    paint_play_badge,
+    paint_rating_badge,
+    paint_stack_badge,
+)
 from Imervue.gpu_image_view.video_badge import video_badge_geometry
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS
 from Imervue.image.histogram import compute_clipping, compute_histogram
@@ -76,7 +95,7 @@ def _run_overlay_layers(p: QPainter, layers: list) -> list[str]:
     for layer in layers:
         try:
             layer(p)
-        except Exception:  # noqa: BLE001 - one bad layer must not drop the overlay
+        except Exception:  # one bad layer must not drop the overlay
             name = getattr(layer, "__name__", repr(layer))
             logger.exception("Overlay layer %s failed; skipped this frame", name)
             failed.append(name)
@@ -84,15 +103,8 @@ def _run_overlay_layers(p: QPainter, layers: list) -> list[str]:
 # Repaint cadence for the tile-wall placeholder spinner + fade-in pump.
 _PLACEHOLDER_TICK_MS = 80
 
-_BYTES_PER_MB = 1024 * 1024
-_BYTES_PER_KB = 1024
 _PIXEL_VIEW_ZOOM = 4.0
 _PIXEL_GRID_MAX_CELLS = 40000
-# Loupe magnifier (toggle with L in deep zoom).
-LOUPE_BOX_PX = 170
-LOUPE_MAGNIFICATION = 4
-_LOUPE_MAG_MIN = 2
-_LOUPE_MAG_MAX = 16
 _LOUPE_CURSOR_GAP = 24
 _LOUPE_BORDER_RGBA = (255, 255, 255, 210)
 _LOUPE_CROSSHAIR_RGBA = (255, 80, 80, 200)
@@ -110,8 +122,6 @@ _TILE_SPINNER_RATIO = 0.12
 _ERROR_PANEL_RGBA = (95, 28, 28, 210)
 _MISSING_PANEL_RGBA = (50, 50, 50, 215)
 # Video ▶ badge — translucent disc + opaque white play triangle.
-_VIDEO_BADGE_DISC_RGBA = (0, 0, 0, 150)
-_VIDEO_BADGE_TRI_RGBA = (255, 255, 255, 235)
 # Rubber-band zoom selection rectangle (deep zoom).
 _ZOOM_BAND_FILL_RGBA = (70, 140, 255, 40)
 _ZOOM_BAND_BORDER_RGBA = (70, 140, 255, 220)
@@ -129,167 +139,6 @@ def _rgba_to_pixmap(arr: np.ndarray) -> QPixmap:
     qimg = QImage(contiguous.data, width, height, width * 4,
                   QImage.Format.Format_RGBA8888).copy()
     return QPixmap.fromImage(qimg)
-
-
-def human_file_size(path: str) -> str:
-    """Return a human-readable size for ``path``, or "—" when unavailable."""
-    try:
-        size_bytes = os.path.getsize(path)
-    except OSError:
-        return "—"
-    if size_bytes >= _BYTES_PER_MB:
-        return f"{size_bytes / _BYTES_PER_MB:.2f} MB"
-    return f"{size_bytes / _BYTES_PER_KB:.1f} KB"
-
-
-def favorites_set(favorites) -> set:
-    """Coerce a stored favorites value (set/list/None) into a set."""
-    if isinstance(favorites, set):
-        return favorites
-    try:
-        return set(favorites)
-    except TypeError:
-        return set()
-
-
-def osd_lines(path: str, width: int, height: int) -> list[str]:
-    """Build the three OSD text lines for ``path`` at ``width`` x ``height``."""
-    suffix = Path(path).suffix.lstrip(".").upper() or "—"
-    return [
-        Path(path).name,
-        f"{width} × {height}",
-        f"{suffix}   {human_file_size(path)}",
-    ]
-
-
-def debug_hud_lines(stats: dict) -> list[str]:
-    """Build the Debug-HUD text lines from a stats dict.
-
-    Keys: vram_usage, vram_limit, tile_tex, tile_cache, prefetch,
-    prefetch_workers, active_threads, max_threads, generation, zoom.
-    """
-    vram_mb = stats["vram_usage"] / _BYTES_PER_MB
-    limit_mb = stats["vram_limit"] / _BYTES_PER_MB
-    pct = (stats["vram_usage"] / stats["vram_limit"] * 100) if stats["vram_limit"] else 0
-    return [
-        f"VRAM  {vram_mb:6.1f} / {limit_mb:6.1f} MB  ({pct:4.1f}%)",
-        f"Tile tex   {stats['tile_tex']:4d}   cache {stats['tile_cache']:4d}",
-        f"Prefetch   {stats['prefetch']:4d}   workers {stats['prefetch_workers']}",
-        f"Threads    {stats['active_threads']:4d} / {stats['max_threads']}",
-        f"Gen {stats['generation']}   Zoom {stats['zoom'] * 100:.1f}%",
-    ]
-
-
-def place_hud_box(sx: int, sy: int, size: int, box_w: int, box_h: int,
-                  view_w: int, view_h: int) -> tuple[int, int]:
-    """Pick a top-left for a hover HUD box that stays inside the viewport."""
-    hx = sx + size + 12
-    hy = sy
-    if hx + box_w > view_w:
-        hx = sx - box_w - 12
-    if hy + box_h > view_h:
-        hy = view_h - box_h - 4
-    return hx, max(hy, 0)
-
-
-def visible_pixel_bounds(zoom: float, off_x: float, off_y: float,
-                         view_w: int, view_h: int,
-                         img_w: int, img_h: int) -> tuple[int, int, int, int]:
-    """Clamp the visible image-pixel rectangle to the image bounds.
-
-    Delegates the screen->image geometry to ``viewport_math.visible_image_rect``
-    and applies this HUD's integer-pixel-coverage convention (floor the top-left,
-    round the bottom-right up by one).
-    """
-    x0, y0, x1, y1 = visible_image_rect(
-        (view_w, view_h), (img_w, img_h), (off_x, off_y), zoom)
-    return (
-        max(0, int(x0)), max(0, int(y0)),
-        min(img_w, int(x1) + 1), min(img_h, int(y1) + 1),
-    )
-
-
-def clamp_loupe_magnification(magnification: int, wheel_delta: float) -> int:
-    """Step the loupe magnification by one on a wheel notch, clamped to range.
-
-    A positive *wheel_delta* (scroll up) magnifies more; the result is held in
-    ``[2, 16]`` so the loupe stays usable.
-    """
-    step = 1 if wheel_delta > 0 else -1
-    return max(_LOUPE_MAG_MIN, min(_LOUPE_MAG_MAX, magnification + step))
-
-
-def loupe_source_rect(img_x: int, img_y: int, sample_w: int, sample_h: int,
-                      img_w: int, img_h: int) -> tuple[int, int, int, int]:
-    """Image-space crop rectangle the loupe samples, centred on the cursor.
-
-    The crop keeps its requested ``sample_w`` x ``sample_h`` size (shrinking
-    only when the image itself is smaller) and is clamped so it never runs off
-    the image edge, so the magnifier always shows a full square near the border.
-    """
-    width = min(sample_w, img_w)
-    height = min(sample_h, img_h)
-    left = int(round(img_x - width / 2))
-    top = int(round(img_y - height / 2))
-    left = max(0, min(left, img_w - width))
-    top = max(0, min(top, img_h - height))
-    return left, top, left + width, top + height
-
-
-def _exif_to_float(value) -> float | None:
-    """Coerce an EXIF value (IFDRational / (num, den) / number) to a float."""
-    if value is None:
-        return None
-    try:
-        if isinstance(value, tuple | list) and len(value) == 2:
-            num, den = value
-            return num / den if den else None
-        return float(value)
-    except (TypeError, ValueError, ZeroDivisionError):
-        return None
-
-
-def _format_exposure(value) -> str | None:
-    seconds = _exif_to_float(value)
-    if seconds is None or seconds <= 0:
-        return None
-    if seconds >= 1:  # NOSONAR S2583 - FP: _exif_to_float can return (0, 1), e.g. 1/200s
-        return f"{seconds:g}s"
-    return f"1/{round(1 / seconds)}s"
-
-
-def _format_iso(value) -> str | None:
-    if isinstance(value, tuple | list) and value:
-        value = value[0]
-    try:
-        return f"ISO {int(value)}"
-    except (TypeError, ValueError):
-        return None
-
-
-def format_exif_osd_lines(exif: dict) -> list[str]:
-    """Build compact OSD lines (exposure / f-number / ISO / focal + lens).
-
-    Returns an empty list when no shooting data is present, so non-photo images
-    leave the OSD unchanged. Each field is skipped individually when missing or
-    malformed, so partial EXIF still yields a useful line.
-    """
-    if not exif:
-        return []
-    fnumber = _exif_to_float(exif.get("FNumber"))
-    focal = _exif_to_float(exif.get("FocalLength"))
-    fields = [
-        _format_exposure(exif.get("ExposureTime")),
-        f"f/{fnumber:g}" if fnumber and fnumber > 0 else None,
-        _format_iso(exif.get("ISOSpeedRatings")),
-        f"{round(focal)}mm" if focal and focal > 0 else None,
-    ]
-    primary = [field for field in fields if field]
-    lines = ["   ".join(primary)] if primary else []
-    lens = exif.get("LensModel")
-    if lens and str(lens).strip():
-        lines.append(str(lens).strip())
-    return lines
 
 
 class OverlayPainter:
@@ -365,7 +214,7 @@ class OverlayPainter:
     def draw_video_badge(self, painter: QPainter):  # pragma: no cover - GL paint
         """Centre a play badge over a deep-zoom video poster."""
         view = self.view
-        _paint_play_badge(painter, video_badge_geometry(0, 0, view.width(), view.height()))
+        paint_play_badge(painter, video_badge_geometry(0, 0, view.width(), view.height()))
 
     def draw_tile_overlays(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw the tile-wall QPainter overlays (labels, badges, placeholders)."""
@@ -376,7 +225,7 @@ class OverlayPainter:
     def paint(self, painter: QPainter) -> None:  # pragma: no cover - GL compositing
         try:
             layers = self.collect_layers()
-        except Exception:  # noqa: BLE001 - layer selection must not drop the overlay
+        except Exception:  # layer selection must not drop the overlay
             logger.exception("Overlay layer collection failed this frame")
             return
         if not layers:
@@ -436,19 +285,19 @@ class OverlayPainter:
         last_date = None
         for x0, y0, x1, y1, path in self.view.tile_rects:
             color_name = color_store.get(path)
-            _paint_color_strip(painter, x0, y0, y1, color_name)
-            _paint_favorite_badge(painter, x0, y0, path in favs, color_name)
-            _paint_bookmark_badge(painter, y0, x1, path)
-            _paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
+            paint_color_strip(painter, x0, y0, y1, color_name)
+            paint_favorite_badge(painter, x0, y0, path in favs, color_name)
+            paint_bookmark_badge(painter, y0, x1, path)
+            paint_rating_badge(painter, x0, y1, ratings.get(path, 0))
             stack_count = len(getattr(self.view, "_stack_members", {}).get(path, []))
-            _paint_stack_badge(painter, x1, y1, stack_count)
+            paint_stack_badge(painter, x1, y1, stack_count)
             if getattr(self.view, "_timeline_grouping_enabled", False):
-                date_label = _mtime_date_label(path)
+                date_label = mtime_date_label(path)
                 if date_label and date_label != last_date:
-                    _paint_date_chip(painter, x0, y0, date_label)
+                    paint_date_chip(painter, x0, y0, date_label)
                     last_date = date_label
             if is_video_path(path):
-                _paint_play_badge(painter, video_badge_geometry(x0, y0, x1, y1))
+                paint_play_badge(painter, video_badge_geometry(x0, y0, x1, y1))
 
     def draw_tile_placeholders(self, painter: QPainter):  # pragma: no cover - GL paint
         """Draw a rotating dot spinner on tile slots without a thumbnail yet."""
@@ -1033,82 +882,6 @@ class OverlayPainter:
         painter.drawText(x + 24, y + 22 + fm.ascent(), title)
         painter.setPen(QColor(225, 225, 225))
         painter.drawText(x + 24, y + 22 + fm.height() + fm.ascent(), hint)
-
-
-def _paint_play_badge(painter, badge) -> None:  # pragma: no cover - GL paint
-    """Draw a translucent disc + white play triangle for a video badge."""
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(QColor(*_VIDEO_BADGE_DISC_RGBA))
-    painter.drawEllipse(QPointF(badge.cx, badge.cy), badge.radius, badge.radius)
-    painter.setBrush(QColor(*_VIDEO_BADGE_TRI_RGBA))
-    painter.drawPolygon(QPolygonF([QPointF(vx, vy) for vx, vy in badge.triangle]))
-
-
-def _paint_color_strip(painter, x0, y0, y1, color_name) -> None:  # pragma: no cover - GL paint
-    """Left-edge 6 px colour-label strip; skipped when no label is set."""
-    from Imervue.user_settings.color_labels import COLOR_RGB
-    if not color_name or color_name not in COLOR_RGB:
-        return
-    r, g, b = COLOR_RGB[color_name]
-    painter.fillRect(int(x0), int(y0), 6, int(y1 - y0), QColor(r, g, b, 230))
-
-
-def _paint_favorite_badge(painter, x0, y0, is_fav: bool,  # pragma: no cover - GL paint
-                          color_name) -> None:
-    if not is_fav:
-        return
-    offset = 10 if color_name else 4
-    painter.fillRect(int(x0 + offset), int(y0 + 4), 18, 18, QColor(0, 0, 0, 140))
-    painter.setPen(QColor(255, 90, 120))
-    painter.drawText(int(x0 + offset + 2), int(y0 + 18), "♥")
-
-
-def _paint_bookmark_badge(painter, y0, x1, path: str) -> None:  # pragma: no cover - GL paint
-    from Imervue.user_settings.bookmark import is_bookmarked
-    if not is_bookmarked(path):
-        return
-    painter.fillRect(int(x1 - 22), int(y0 + 4), 18, 18, QColor(0, 0, 0, 140))
-    painter.setPen(QColor(255, 210, 80))
-    painter.drawText(int(x1 - 20), int(y0 + 18), "★")
-
-
-def _paint_rating_badge(painter, x0, y1, rating: int) -> None:  # pragma: no cover - GL paint
-    if not rating or rating <= 0:
-        return
-    badge_text = "★" * int(rating)
-    fm = painter.fontMetrics()
-    tw = fm.horizontalAdvance(badge_text)
-    painter.fillRect(int(x0 + 4), int(y1 - 20), tw + 8, 18, QColor(0, 0, 0, 140))
-    painter.setPen(QColor(255, 210, 80))
-    painter.drawText(int(x0 + 8), int(y1 - 6), badge_text)
-
-
-def _paint_stack_badge(painter, x1, y1, count: int) -> None:  # pragma: no cover - GL paint
-    if count <= 1:
-        return
-    text = f"x{count}"
-    fm = painter.fontMetrics()
-    tw = fm.horizontalAdvance(text)
-    painter.fillRect(int(x1 - tw - 14), int(y1 - 20), tw + 10, 18, QColor(20, 80, 110, 190))
-    painter.setPen(QColor(230, 250, 255))
-    painter.drawText(int(x1 - tw - 9), int(y1 - 6), text)
-
-
-def _mtime_date_label(path: str) -> str:
-    try:
-        return time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(path)))
-    except OSError:
-        return ""
-
-
-def _paint_date_chip(painter, x0, y0, text: str) -> None:  # pragma: no cover - GL paint
-    fm = painter.fontMetrics()
-    tw = fm.horizontalAdvance(text)
-    x = int(x0 + 4)
-    y = int(y0 + 4)
-    painter.fillRect(x, y, tw + 12, 18, QColor(0, 0, 0, 165))
-    painter.setPen(QColor(210, 230, 255))
-    painter.drawText(x + 6, y + 13, text)
 
 
 def _draw_hover_pixel_outline(painter: QPainter,  # pragma: no cover - GL paint

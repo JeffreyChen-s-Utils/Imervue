@@ -5,6 +5,7 @@ Falls back gracefully if piexif is not installed.
 """
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (
@@ -18,12 +19,27 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
+logger = logging.getLogger("Imervue.exif_editor")
+
+
 def _try_import_piexif():
     try:
         import piexif
+        import piexif.helper  # a submodule ``import piexif`` does not load (UserComment)
         return piexif
     except ImportError:
         return None
+
+
+def _decode_user_comment(piexif, raw: bytes) -> str:
+    """Text of an EXIF UserComment, dropping its 8-byte character-code prefix.
+
+    A value without a recognised prefix (or too short for one) is shown as UTF-8.
+    """
+    try:
+        return piexif.helper.UserComment.load(raw)
+    except ValueError:
+        return raw.decode("utf-8", errors="replace")
 
 
 class ExifEditorDialog(QDialog):
@@ -98,7 +114,9 @@ class ExifEditorDialog(QDialog):
         if ifd_key is None:
             return
         raw = self._exif_dict.get(ifd_name, {}).get(ifd_key, b"")
-        if isinstance(raw, bytes):
+        if tag_name == "UserComment" and isinstance(raw, bytes):
+            edit.setText(_decode_user_comment(self._piexif, raw))
+        elif isinstance(raw, bytes):
             edit.setText(raw.decode("utf-8", errors="replace"))
         elif isinstance(raw, str):
             edit.setText(raw)
@@ -137,27 +155,33 @@ class ExifEditorDialog(QDialog):
             ifd = self._exif_dict.setdefault(ifd_name, {})
 
             if tag_name == "UserComment":
-                # UserComment 需要特殊編碼
-                ifd[ifd_key] = piexif.helper.UserComment.dump(text)
+                # UserComment 需要特殊編碼；非 ASCII 用 UNICODE，否則會被換成 "?"
+                encoding = "ascii" if text.isascii() else "unicode"
+                ifd[ifd_key] = piexif.helper.UserComment.dump(text, encoding=encoding)
             else:
                 ifd[ifd_key] = text.encode("utf-8")
 
+        main_window = self._gui.main_window
         try:
-            exif_bytes = piexif.dump(self._exif_dict)
-            piexif.insert(exif_bytes, self._path)
+            piexif.insert(piexif.dump(self._exif_dict), self._path)
+        # piexif's encoder fails in open-ended ways on a bad value: struct.error for
+        # an out-of-range number, KeyError for an unknown tag, even UnboundLocalError.
+        except Exception as e:  # noqa: BLE001 - piexif raises open-ended types
+            logger.warning("EXIF save failed for %s", self._path, exc_info=True)
+            if hasattr(main_window, "toast"):
+                lang = language_wrapper.language_word_dict
+                main_window.toast.error(
+                    lang.get("exif_save_failed", "EXIF save failed: {error}").format(error=e))
+            return
 
-            if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.success(
-                    language_wrapper.language_word_dict.get("exif_editor_saved", "EXIF saved!")
-                )
-            # 更新 sidebar
-            if hasattr(self._gui.main_window, "exif_sidebar"):
-                self._gui.main_window.exif_sidebar.update_info(self._path)
-
-            self.accept()
-        except Exception as e:
-            if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.error(f"EXIF save failed: {e}")
+        if hasattr(main_window, "toast"):
+            main_window.toast.success(
+                language_wrapper.language_word_dict.get("exif_editor_saved", "EXIF saved!")
+            )
+        # 更新 sidebar
+        if hasattr(main_window, "exif_sidebar"):
+            main_window.exif_sidebar.update_info(self._path)
+        self.accept()
 
 
 def open_exif_editor(main_gui: GPUImageView):

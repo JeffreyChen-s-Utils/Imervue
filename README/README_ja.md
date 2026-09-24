@@ -117,7 +117,7 @@ pip install .
 |---------|---------|
 | open_clip_torch + torch | CLIP セマンティック検索(自然言語による画像検索) |
 | onnxruntime | Real-ESRGAN AI アップスケール / CLIP ONNX 自動タグ付け |
-| opencv-python | HDR 合成、パノラマ合成、フォーカススタック、顔検出、ヒーリングブラシ |
+| opencv-python<5 | HDR 合成、パノラマ合成、フォーカススタック、顔検出、ヒーリングブラシ |
 | sounddevice | Puppet マイクによるリップシンク |
 | mediapipe | Puppet ウェブカメラによる顔追跡 |
 
@@ -184,6 +184,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 - **分離されたワーカープール** — サムネイルのバーストとディープズームのデコードは別プールで動くため、大きなフォルダを開いても今見ている画像が待たされません
 - **仮想化サムネイルグリッド** — 可視タイルのみレンダリング。サムネイルサイズは設定可能(128 / 256 / 512 / 1024 / auto)
 - **ディスクキャッシュ** — MD5 ベースの無効化付き圧縮 PNG サムネイル。`%LOCALAPPDATA%/Imervue/cache/thumbnails`(または `~/.cache/imervue/thumbnails`)に保存
+- **EXIF の向き** — スマートフォンやカメラが回転させずにタグだけ付けた縦位置写真を、ビューア・サムネイル・リスト表示・ホバープレビュー・Modify タブで正しい向きで表示。以前に保存した現像のトリミング / 回転は、作成時の向きのまま適用されます
 - **アニメーション再生** — GIF / APNG、再生 / 一時停止 / フレーム送り / 速度調整付き
 
 ### 閲覧モード
@@ -365,7 +366,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 
 暗室トーニングの 3 兄弟 — **覆い焼き(Dodge)**(明るく)、**焼き込み(Burn)**(暗く)、**スポンジ(Sponge)**(彩度を上げ / 下げ)— は、ブラシとシャドウ / 中間調 / ハイライトマスクで重み付けして、局所的な階調とクロマの調整を描き込みます。
 
-シングルキーショートカット: `B / E / G / I / V / T / U / R / P / S / C / Z / H`。`Shift+R/E/I/P` で図形バリアントを切り替え。
+シングルキーショートカット: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`。`Shift+R/E/I/P` で図形バリアントを切り替え。
 
 ### ブラシ
 
@@ -704,14 +705,17 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 | ショートカット | 動作 |
 |----------|--------|
 | B / E / G / I | ブラシ / 消しゴム / 塗りつぶし / スポイト |
-| V / T / U / R | 移動 / テキスト / グラデーション / 矩形選択 |
-| P / S / C / Z / H | ペン / 指先 / クローン / ズーム / ハンド |
+| V / T / U / R | 移動 / テキスト / グラデーション / 指先 |
+| M / L / W | 矩形選択 / なげなわ / 自動選択 |
+| P / S / C / Z / H | ペン / クローン / 切り抜き / ズーム / ハンド |
 | Q | クイックマスクモード切り替え |
 | Tab | すべてのドック切り替え |
 | Ctrl+Tab | Paint タブ循環 |
 | , / . | ブラシ種類循環 |
 | 0-9 | ブラシ不透明度 10% ステップ |
 | Alt+[ / Alt+] | アクティブレイヤーを下 / 上へ |
+| Ctrl+[ / Ctrl+] | アクティブレイヤーを重なり順で下 / 上へ移動 |
+| Ctrl+D | 選択を解除 |
 
 ---
 
@@ -770,7 +774,7 @@ Imervue はサードパーティプラグインをサポートします。完全
 |------|---------|
 | `on_plugin_loaded()` | プラグインがインスタンス化された後 |
 | `on_plugin_unloaded()` | アプリ終了時 |
-| `on_build_menu_bar(menu_bar)` | デフォルトメニューバー構築後 |
+| `on_build_menu_bar(plugin_menu)` | 共有の Plugins メニュー構築後 |
 | `on_build_main_tabs(tabs)` | 5 つの組み込みタブが追加された後 |
 | `on_build_context_menu(menu, viewer)` | 右クリックメニューを開いた時 |
 | `on_image_loaded(path, viewer)` | ディープズームで画像がロードされた後 |
@@ -811,7 +815,7 @@ python -m Imervue.mcp_server
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP(+ オプションで HEIC / AVIF / JXL)間で変換 |
 | `apply_watermark` / `apply_frame` | テキストウォーターマークを焼き込み、またはマット / ポラロイドフレーム + キャプションを追加 |
 | `build_collage` | 複数の画像をグリッドモンタージュに合成(進捗付き) |
-| `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、アスペクト比を保持したリサイズ、ロスレスな回転 / 反転 |
+| `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、アスペクト比を保持したリサイズ、ロスレスな回転 / 反転。サイズと座標は EXIF の向きを適用した画像が基準です。 |
 | `collection_stats` | フォルダのレーティング / お気に入り / カラーラベル / カリングのサマリー |
 | `search_images` | スマートアルバムのクエリ DSL でフォルダをフィルタ(パス / EXIF / サイズ / 寸法) |
 | `extract_gps` / `dominant_colors` | EXIF GPS 座標を読み取り(`reverse_geocode` に連鎖)、median-cut のカラーパレット(rgb / hex / 占有率) |

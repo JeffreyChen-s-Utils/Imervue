@@ -55,7 +55,7 @@ def _run_batch(input_list_file: str, output_dir: str, model_name: str,
     os.environ["U2NET_HOME"] = models_dir
     Path(models_dir).mkdir(parents=True, exist_ok=True)
 
-    with open(input_list_file, "r", encoding="utf-8") as f:
+    with open(input_list_file, encoding="utf-8") as f:
         paths = json.load(f)
 
     from rembg import remove, new_session
@@ -69,15 +69,15 @@ def _run_batch(input_list_file: str, output_dir: str, model_name: str,
     for i, src in enumerate(paths):
         try:
             print(f"BATCH_PROGRESS:{i}:{total}:{Path(src).name}", flush=True)
-            input_img = Image.open(src)
-            output_img = remove(
-                input_img,
-                session=session,
-                alpha_matting=alpha_matting,
-                alpha_matting_foreground_threshold=240,
-                alpha_matting_background_threshold=10,
-                alpha_matting_erode_size=10,
-            )
+            with Image.open(src) as input_img:
+                output_img = remove(
+                    input_img,
+                    session=session,
+                    alpha_matting=alpha_matting,
+                    alpha_matting_foreground_threshold=240,
+                    alpha_matting_background_threshold=10,
+                    alpha_matting_erode_size=10,
+                )
             out_name = Path(src).stem + "_nobg.png"
             out_path = Path(output_dir) / out_name
             counter = 1
@@ -87,7 +87,7 @@ def _run_batch(input_list_file: str, output_dir: str, model_name: str,
                 counter += 1
             output_img.save(str(out_path))
             success += 1
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - rembg/onnx fail in any way; report, go on
             print(f"BATCH_PROGRESS:{i}:{total}:Error: {Path(src).name}: {exc}", flush=True)
             failed += 1
 
@@ -121,6 +121,6 @@ if __name__ == "__main__":
         else:
             print(f"ERROR:Unknown mode: {mode}", flush=True)
             sys.exit(1)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - child-process boundary: report over the protocol
         print(f"ERROR:{exc}", flush=True)
         sys.exit(1)

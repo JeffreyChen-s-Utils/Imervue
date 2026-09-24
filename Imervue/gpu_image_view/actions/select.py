@@ -5,11 +5,34 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRectF
 
+from Imervue.system.best_effort import best_effort
 from Imervue.user_settings.user_setting_dict import user_setting_dict
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+
+def selected_in_view_order(viewer) -> list[str]:
+    """The selected tile paths, in the order the viewer lists its images.
+
+    ``selected_tiles`` is a set, so iterating it yields hash order: a slideshow,
+    contact sheet, GIF or numbered rename built from it came out shuffled.
+    Selected paths the model no longer lists follow, sorted.
+    """
+    selected = {p for p in getattr(viewer, "selected_tiles", ()) or () if isinstance(p, str)}
+    if not selected:
+        return []
+    images = getattr(getattr(viewer, "model", None), "images", None) or []
+    ordered = [p for p in images if p in selected]
+    return ordered + sorted(selected.difference(ordered))
+
+
+def selection_or_all(viewer) -> list[str]:
+    """The selection in view order, else every image the viewer lists; ``[]`` for no viewer."""
+    if viewer is None:
+        return []
+    return selected_in_view_order(viewer) or list(
+        getattr(getattr(viewer, "model", None), "images", None) or [])
 
 
 def _auto_loop_enabled() -> bool:
@@ -25,7 +48,7 @@ def _notify_switch(main_gui: GPUImageView, path: str) -> None:
     """Dispatch plugin hook for image switch (shared by prev/next)."""
     pm = getattr(main_gui.main_window, "plugin_manager", None)
     if pm is not None:
-        with contextlib.suppress(Exception):
+        with best_effort("notify plugins of the image switch"):
             pm.dispatch_image_switched(path, main_gui)
 
 
@@ -101,7 +124,7 @@ def _toast_loop(main_gui: GPUImageView, forward: bool) -> None:
     lang = mw.language_wrapper.language_word_dict
     key = "nav_loop_next" if forward else "nav_loop_prev"
     fallback = "Looped to first image" if forward else "Looped to last image"
-    with contextlib.suppress(Exception):
+    with best_effort("show the navigation toast"):
         mw.toast.info(lang.get(key, fallback))
 
 

@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QLabel,
+    QMenu,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -35,8 +36,10 @@ from ai_colorize.colorize import (
     heuristic_colorize,
     onnx_colorize,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
+from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -44,6 +47,9 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.ai_colorize")
+
+# The optional ONNX path needs onnxruntime; offered for install on first use.
+ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _MODELS_DIR = _PLUGIN_DIR / "models"
@@ -53,7 +59,7 @@ _PERCENT_STEPS = 100
 
 class AIColorizePlugin(ImervuePlugin):
     plugin_name = "AI Colorize"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.2"
     plugin_description = "Colour black-and-white photos via preset palettes or ONNX models."
     plugin_author = "Imervue"
 
@@ -126,21 +132,15 @@ class AIColorizePlugin(ImervuePlugin):
             },
         }
 
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
+    def on_build_menu_bar(self, plugin_menu) -> None:
         lang = language_wrapper.language_word_dict
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "develop_submenu", "Develop (Non-Destructive)",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get("ai_colorize_title", "AI Colorize"),
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
+        # Imervue names its Extra Tools submenus; a host that predates the
+        # names has none, so the entry falls back to the Plugins menu.
+        target = self.main_window.findChild(QMenu, "extra_tools.develop_submenu")
+        entry = (target if target is not None else plugin_menu).addAction(
+            lang.get("ai_colorize_title", "AI Colorize"),
+        )
+        entry.triggered.connect(self._open_dialog)
 
     def _open_dialog(self) -> None:
         viewer = getattr(self, "viewer", None)
@@ -225,6 +225,17 @@ class AIColorizeDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:
         if self._worker is not None:
             return
+        if str(self._method.currentData()).startswith("onnx:"):
+            # The ONNX path needs onnxruntime; offer to install it before running.
+            ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
+            return
+        self._start_worker()
+
+    def _start_worker(self) -> None:
+        # Also reached asynchronously after the dependency check, by which
+        # time the user may have closed the dialog.
+        if self._worker is not None or not self.isVisible():
+            return
         method_data = str(self._method.currentData())
         intensity = self._intensity.value() / _PERCENT_STEPS
         out_path = Path(self._path).with_name(
@@ -283,13 +294,6 @@ def _slider_with_label(slider: QSlider, label: QLabel) -> QWidget:
     label.setMinimumWidth(50)
     row.addWidget(label)
     return container
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 def _colorize_dispatch(arr: np.ndarray, method_data: str,

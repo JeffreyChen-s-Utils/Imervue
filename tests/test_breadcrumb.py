@@ -13,7 +13,10 @@ def bar(qapp):
     from Imervue.gui.breadcrumb_bar import BreadcrumbBar
     mw = MagicMock()
     bc = BreadcrumbBar(mw)
-    return bc
+    yield bc
+    # Parentless, so set_path shows it as a top-level window; close it with the test.
+    bc.close()
+    bc.deleteLater()
 
 
 def _count_segment_buttons(bar) -> int:

@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.library import reference_pins
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -153,10 +154,7 @@ class ReferencePanelDialog(QDialog):
 
     def _on_add_clicked(self) -> None:  # pragma: no cover - Qt UI
         lang = language_wrapper.language_word_dict
-        filter_str = lang.get(
-            "reference_panel_filter",
-            "Images (*.jpg *.jpeg *.png *.bmp *.gif *.tif *.tiff *.webp)",
-        )
+        filter_str = image_filter(sorted(_SUPPORTED_EXTS))
         paths, _ = QFileDialog.getOpenFileNames(
             self,
             lang.get("reference_panel_pick_files", "Select reference images"),

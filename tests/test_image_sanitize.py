@@ -22,6 +22,8 @@ from Imervue.gui.image_sanitize_dialog import (
     _compute_upscale_params,
     _PIL_FORMAT_MAP,
     _IMAGE_EXTS,
+    SanitizeSettings,
+    UpscaleSpec,
     sanitize_image,
     TARGET_RESOLUTIONS,
     _SanitizeWorker,
@@ -338,7 +340,7 @@ class TestSanitizeImage:
         os.makedirs(out_dir)
         _make_image(src, "PNG", size=(2000, 1500))
 
-        out = sanitize_image(src, out_dir, "same", target_long_edge=1920)
+        out = sanitize_image(src, out_dir, "same", upscale=UpscaleSpec(target_long_edge=1920))
         img = Image.open(out)
         assert img.size == (1500, 2000)
 
@@ -350,7 +352,7 @@ class TestSanitizeImage:
         _make_image(src, "PNG", size=(100, 80))
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=1920, ort_session=None)
+                             upscale=UpscaleSpec(target_long_edge=1920, ort_session=None))
         img = Image.open(out)
         assert img.size == (80, 100)  # unchanged
 
@@ -362,8 +364,8 @@ class TestSanitizeImage:
         _make_image(src, "PNG", size=(100, 80))  # numpy (h, w) → PIL (80, 100)
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=200,
-                             trad_resampling=Image.Resampling.LANCZOS)
+                             upscale=UpscaleSpec(target_long_edge=200,
+                                                 trad_resampling=Image.Resampling.LANCZOS))
         img = Image.open(out)
         # numpy (100,80) → PIL (w=80, h=100), long edge=100→200
         assert img.size == (160, 200)
@@ -377,8 +379,8 @@ class TestSanitizeImage:
         Image.fromarray(arr).save(src, format="PNG")
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=8,
-                             trad_resampling=Image.Resampling.NEAREST)
+                             upscale=UpscaleSpec(target_long_edge=8,
+                                                 trad_resampling=Image.Resampling.NEAREST))
         img = Image.open(out)
         assert img.size == (8, 8)
         arr = np.asarray(img)
@@ -393,8 +395,8 @@ class TestSanitizeImage:
         _make_image(src, "PNG", size=(200, 300))
 
         out = sanitize_image(src, out_dir, "same",
-                             target_long_edge=200,
-                             trad_resampling=Image.Resampling.LANCZOS)
+                             upscale=UpscaleSpec(target_long_edge=200,
+                                                 trad_resampling=Image.Resampling.LANCZOS))
         img = Image.open(out)
         assert img.size == (300, 200)  # unchanged
 
@@ -406,8 +408,8 @@ class TestSanitizeImage:
         _make_image(src, "JPEG", size=(50, 40), with_exif=True)
 
         out = sanitize_image(src, out_dir, ".png",
-                             target_long_edge=100,
-                             trad_resampling=Image.Resampling.LANCZOS)
+                             upscale=UpscaleSpec(target_long_edge=100,
+                                                 trad_resampling=Image.Resampling.LANCZOS))
         img = Image.open(out)
         assert len(img.getexif()) == 0
         assert img.size[0] == 100 or img.size[1] == 100
@@ -561,7 +563,7 @@ class TestSanitizeWorker:
             _make_image(p, "JPEG", with_exif=True)
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -579,7 +581,7 @@ class TestSanitizeWorker:
             _make_image(p, "JPEG", with_exif=True)
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         worker.run()
 
         for f in os.listdir(out_dir):
@@ -595,7 +597,7 @@ class TestSanitizeWorker:
             _make_image(p, "PNG")
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         worker.abort()
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
@@ -612,7 +614,7 @@ class TestSanitizeWorker:
             _make_image(p, "PNG")
             paths.append(p)
 
-        worker = _SanitizeWorker(paths, out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker(paths, out_dir, SanitizeSettings("same"))
         progress_log = []
         worker.progress.connect(
             lambda cur, tot, name: progress_log.append((cur, tot, name)))
@@ -628,7 +630,7 @@ class TestSanitizeWorker:
         p = str(tmp_path / "img.jpg")
         _make_image(p, "JPEG")
 
-        worker = _SanitizeWorker([p], out_dir, ".png", 8, 95, 6)
+        worker = _SanitizeWorker([p], out_dir, SanitizeSettings(".png"))
         worker.run()
 
         files = os.listdir(out_dir)
@@ -643,8 +645,8 @@ class TestSanitizeWorker:
         _make_image(p, "PNG", size=(50, 40))
 
         worker = _SanitizeWorker(
-            [p], out_dir, "same", 8, 95, 6,
-            target_long_edge=100, model_key="trad:lanczos")
+            [p], out_dir,
+            SanitizeSettings("same", target_long_edge=100, model_key="trad:lanczos"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -664,8 +666,8 @@ class TestSanitizeWorker:
         _make_image(p, "PNG", size=(10, 10))
 
         worker = _SanitizeWorker(
-            [p], out_dir, "same", 8, 95, 6,
-            target_long_edge=20, model_key="trad:nearest")
+            [p], out_dir,
+            SanitizeSettings("same", target_long_edge=20, model_key="trad:nearest"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -683,7 +685,7 @@ class TestSanitizeWorker:
         good = str(tmp_path / "good.png")
         _make_image(good, "PNG")
 
-        worker = _SanitizeWorker([bad, good], out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker([bad, good], out_dir, SanitizeSettings("same"))
         results = []
         worker.result_ready.connect(lambda s, f: results.append((s, f)))
         worker.run()
@@ -706,7 +708,7 @@ class TestSanitizeWorker:
         os.makedirs(out_dir)
         worker = _SanitizeWorker(
             [p_root, p_a, p_ab, p_c],
-            out_dir, "same", 8, 95, 6,
+            out_dir, SanitizeSettings("same"),
             src_root=str(src))
         worker.run()
 
@@ -727,7 +729,7 @@ class TestSanitizeWorker:
 
         out_dir = str(tmp_path / "out")
         os.makedirs(out_dir)
-        worker = _SanitizeWorker([p1, p2], out_dir, "same", 8, 95, 6)
+        worker = _SanitizeWorker([p1, p2], out_dir, SanitizeSettings("same"))
         worker.run()
 
         # Both files land directly under out_dir — no subfolders created.
@@ -825,7 +827,7 @@ class TestSanitizeWorker:
         out_dir = str(tmp_path / "out")
         os.makedirs(out_dir)
         worker = _SanitizeWorker(
-            [str(outside)], out_dir, "same", 8, 95, 6,
+            [str(outside)], out_dir, SanitizeSettings("same"),
             src_root=str(src))
         worker.run()
 
@@ -834,3 +836,60 @@ class TestSanitizeWorker:
         # Nothing should have been created as a sibling of out_dir.
         siblings = {p.name for p in tmp_path.iterdir()}
         assert siblings == {"src", "outside.png", "out"}
+
+
+class TestGetImageDateFailures:
+    def test_unreadable_file_falls_back_to_mtime(self, tmp_path):
+        import datetime as _dt
+        bad = tmp_path / "bad.jpg"
+        bad.write_bytes(b"not an image")
+        stamp = _dt.datetime(2020, 5, 6, 7, 8, 9).timestamp()
+        os.utime(bad, (stamp, stamp))
+        assert _get_image_date(str(bad)) == _dt.datetime.fromtimestamp(stamp)
+
+    def test_file_is_released(self, tmp_path):
+        path = tmp_path / "a.png"
+        Image.new("RGB", (4, 4)).save(path)
+        _get_image_date(str(path))
+        os.remove(path)   # fails on Windows while a handle is still open
+
+    def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
+        from Imervue.gui import image_sanitize_dialog as mod
+        path = tmp_path / "a.png"
+        Image.new("RGB", (4, 4)).save(path)
+
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(mod.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            _get_image_date(str(path))
+
+
+def _photo_with_original_date(path, when="2019:05:06 07:08:09"):
+    """A JPEG whose only date is DateTimeOriginal, in the Exif sub-IFD where cameras put it."""
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = when
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    return path
+
+
+def test_image_date_reads_date_time_original_from_the_exif_sub_ifd(tmp_path):
+    path = _photo_with_original_date(tmp_path / "a.jpg")
+    assert _get_image_date(str(path)) == datetime(2019, 5, 6, 7, 8, 9)
+
+
+def _tagged_portrait(path):
+    """40x20 stored pixels tagged 6, so shown (and expected out) as 20x40."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    return str(path)
+
+
+def test_sanitize_bakes_the_orientation_before_dropping_it(tmp_path):
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    out = sanitize_image(_tagged_portrait(tmp_path / "p.jpg"), str(out_dir), "same")
+    with Image.open(out) as saved:
+        assert saved.size == (20, 40)

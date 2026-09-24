@@ -63,7 +63,7 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
    * - 拖曳開啟
      - 直接把圖片或資料夾拖進視窗
    * - 從檔案總管開啟
-     - 右鍵圖片 > ``Open with Imervue``（需先註冊檔案關聯）
+     - 右鍵圖片 > ``Open with Imervue``\ （需先註冊檔案關聯）
    * - 最近開啟
      - ``檔案`` > ``最近開啟``，快速回到之前看過的資料夾
 
@@ -210,7 +210,7 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
    * - 加入最愛 ❤
      - ``0``
    * - 評 1～5 星
-     - ``1`` ``2`` ``3`` ``4`` ``5``（再按一次取消）
+     - ``1`` ``2`` ``3`` ``4`` ``5``\ （再按一次取消）
 
 色彩標籤 (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^
@@ -224,13 +224,13 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
    * - 操作
      - 按鍵
    * - 紅 / 黃 / 綠 / 藍 / 紫
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5``（再按同一鍵清除）
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5``\ （再按同一鍵清除）
    * - 批次套用到選取
      - 框選多張縮圖後按對應 F 鍵
    * - 依色彩篩選
      - ``篩選`` > ``依色彩標籤`` > 選擇顏色／任一色／無標籤
 
-狀態列會顯示目前圖片的色彩 chip；縮圖左邊緣顯示對應色條；**清單模式**有獨立的「標籤」與「星等」欄可排序，星等欄可直接點擊設定 0 – 5 星。
+狀態列會顯示目前圖片的色彩 chip；縮圖左邊緣顯示對應色條；**清單模式**\ 有獨立的「標籤」與「星等」欄可排序，星等欄可直接點擊設定 0 – 5 星。
 
 書籤
 ^^^^
@@ -294,7 +294,7 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
    * - 依評分篩選
      - ``篩選`` > ``依評分``
    * - 依色彩標籤篩選
-     - ``篩選`` > ``依色彩標籤``（全部／任一色／無標籤／紅／黃／綠／藍／紫）
+     - ``篩選`` > ``依色彩標籤``\ （全部／任一色／無標籤／紅／黃／綠／藍／紫）
    * - 進階過濾
      - ``篩選`` > ``進階過濾…`` — 解析度範圍、檔案大小範圍、方向（橫／直／正方）、修改日期區間
    * - 清除篩選
@@ -597,7 +597,7 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 **圖層 dock** 提供縮圖、可見性切換、就地重新命名、拖曳排序，以及作用層的混合
 模式 + 不透明度。``圖層`` 選單再加上：
 
-- **新增 / 向量 / 複製 / 向下合併**（``Ctrl + Shift + N`` / ``Ctrl + Shift + V`` /
+- **新增 / 向量 / 複製 / 向下合併**\ （``Ctrl + Shift + N`` / ``Ctrl + Shift + V`` /
   ``Ctrl + J`` / ``Ctrl + E``）
 - **遮罩** — 新增遮罩 / 由選取區產生 / 反向 / 套用 / 刪除
   （``Ctrl + Shift + M`` 新增；``Ctrl + Alt + Shift + M`` 由選取區產生）
@@ -622,7 +622,7 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 
 - ``新增影格`` 把目前圖層狀態存成一個關鍵影格。
 - 點擊縮圖跳到該影格。
-- ``洋蔥皮``（檢視選單）以低不透明度疊上相鄰影格。
+- ``洋蔥皮``\ （檢視選單）以低不透明度疊上相鄰影格。
 - 透過 **檔案 > 匯出頁面** 匯出（漫畫閱讀器用 CBZ；列印用 PDF），或
   **動畫匯出** 輸出 MP4 / GIF。
 
@@ -664,16 +664,16 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 檢視輔助
 ^^^^^^^^
 
-- **像素網格**（``Ctrl + Shift + '``）— 高倍率時顯示一像素網格
+- **像素網格**\ （``Ctrl + Shift + '``）— 高倍率時顯示一像素網格
 - **吸附像素 / 邊緣** — 將次像素位置鎖到整數座標
 - **洋蔥皮** — 動畫相鄰影格疊加
 - **出血標示** — 印刷出血 / 安全區指示線
-- **旋轉畫布**（``Ctrl + Shift + H``）— 不破壞像素的視角旋轉
+- **旋轉畫布**\ （``Ctrl + Shift + H``）— 不破壞像素的視角旋轉
 
 檔案 I/O
 ^^^^^^^^
 
-- **開啟 PSD…**（``Ctrl + O``）與 **另存為 PSD…**（``Ctrl + S``）— Photoshop
+- **開啟 PSD…**\ （``Ctrl + O``）與 **另存為 PSD…**\ （``Ctrl + S``）— Photoshop
   圖層往返，含遮罩、混合模式、圖層效果
 - **匯出影像…** — 拼合並儲存為 PNG / JPEG / WebP / BMP / TIFF
 - **匯出頁面 → CBZ** / **→ PDF** — 多影格的漫畫文件匯出
@@ -832,8 +832,8 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 尺寸不同時會自動以 Lanczos 將 B 重新取樣為 A 的尺寸。超大圖片內部會限制長邊 ≤ 2048 px 以保持即時反應。
 
 .. seealso::
-   若想直接在主視窗並排而不開啟對話框，請見 **分割檢視**（``Shift + S``）與
-   **雙頁閱讀**（``Shift + D`` / ``Ctrl + Shift + D``）。
+   若想直接在主視窗並排而不開啟對話框，請見 **分割檢視**\ （``Shift + S``）與
+   **雙頁閱讀**\ （``Shift + D`` / ``Ctrl + Shift + D``）。
 
 ----
 
@@ -852,7 +852,7 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 
 按 ``Ctrl + F`` 或 ``/``，輸入關鍵字即可搜尋當前資料夾中的圖片名稱。
 
-搜尋支援 **模糊匹配**（前綴 > 子字串 > 子序列 三級排名）與 **子字串高亮**。
+搜尋支援 **模糊匹配**\ （前綴 > 子字串 > 子序列 三級排名）與 **子字串高亮**。
 按 ``Enter`` 或雙擊結果跳至對應圖片。
 
 若想依 **編號** 跳轉，改按 ``Ctrl + G`` 開啟跳頁對話框。
@@ -952,7 +952,7 @@ RGB 直方圖
 尺寸與作用中的根資料夾以一個名稱擷取下來 — 然後讓你像 other XMP-aware photo managers 切換
 *Library* / *Develop* / *Export*、或 Adobe Bridge 切換 *Metadata* / *Filmstrip*
 那樣在已儲存的佈局間切換。對話框支援 Save Current、Load、Rename、Delete。工作
-區會保存在 ``user_settings.json``（``workspaces`` key 底下），並跨工作階段保留。
+區會保存在 ``user_settings.json``\ （``workspaces`` key 底下），並跨工作階段保留。
 
 .. tip::
    建立一個 **Browse** 工作區，顯示樹狀圖與縮圖網格；再建立一個獨立的
@@ -1180,20 +1180,20 @@ Imervue 支援外掛擴充功能。
 圖庫與中繼資料管理
 ------------------
 
-Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``（Windows）或
-``~/.cache/imervue/library.db``（POSIX）維護一個 SQLite 索引，用於跨資料夾
+Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
+``~/.cache/imervue/library.db``\ （POSIX）維護一個 SQLite 索引，用於跨資料夾
 搜尋、階層式標籤、智慧相簿、感知雜湊、筆記與分揀旗標。下列功能多半位於
-``Extra Tools``（額外功能）選單下。為了方便尋找，該選單依功能分為八個子選
-單：``Batch``（批次）、``Library & Metadata``（圖庫與中繼資料）、
-``Views``（檢視）、``Workflow``（工作流程）、``Export``（匯出）、
-``Develop (Non-Destructive)``（調整）、``Retouch & Transform``（修復與變形）、
-``Multi-Image``（多張合成），下列路徑皆以
+``Extra Tools``\ （額外功能）選單下。為了方便尋找，該選單依功能分為八個子選
+單：``Batch``\ （批次）、``Library & Metadata``\ （圖庫與中繼資料）、
+``Views``\ （檢視）、``Workflow``\ （工作流程）、``Export``\ （匯出）、
+``Develop (Non-Destructive)``\ （調整）、``Retouch & Transform``\ （修復與變形）、
+``Multi-Image``\ （多張合成），下列路徑皆以
 ``Extra Tools`` > ``<子選單>`` > ``<工具>`` 的形式呈現。
 
 圖庫搜尋
 ^^^^^^^^
 
-``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` 允許新增多個**根目錄**並在背景建立索引，
+``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` 允許新增多個\ **根目錄**\ 並在背景建立索引，
 之後可依副檔名、最小寬高、檔案大小或檔名片段查詢，並把結果當作虛擬相簿
 載入檢視器。
 
@@ -1219,8 +1219,8 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``（Windows）或
 回傳排序後的圖片。每張圖片會以 CLIP 視覺／語言編碼器嵌入並與其路徑一併儲
 存；文字查詢則嵌入同一向量空間，再以 cosine 相似度比對。
 
-嵌入向量會快取到 ``%LOCALAPPDATA%/Imervue/clip_cache.npz``（Windows）或
-``~/.cache/imervue/clip_cache.npz``（POSIX），存成單一精簡的 ``.npz`` 檔，
+嵌入向量會快取到 ``%LOCALAPPDATA%/Imervue/clip_cache.npz``\ （Windows）或
+``~/.cache/imervue/clip_cache.npz``\ （POSIX），存成單一精簡的 ``.npz`` 檔，
 下次啟動即可略過重新編碼。只有你掃描過的路徑可供查詢 — 用對話框裡的
 ``Scan Folder…`` 擴充索引。
 
@@ -1261,7 +1261,7 @@ Token 批次重新命名
 筆記。適合用於試算表或外部流程。
 
 XMP Sidecar（other XMP-aware photo managers 互通）
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Imervue 支援讀寫 Adobe XMP sidecar 檔（``photo.jpg`` ↔ ``photo.xmp``），
 讓星等、標題、描述、關鍵字與色彩標籤可與 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
@@ -1309,7 +1309,7 @@ XML 解析透過 ``defusedxml`` 進行，避免 XXE / billion-laughs 等攻擊�
 拖放至外部應用程式
 ^^^^^^^^^^^^^^^^^^
 
-由**已選取** tile 按住拖曳，可將檔案直接丟到檔案總管、Chrome、Discord 等
+由\ **已選取** tile 按住拖曳，可將檔案直接丟到檔案總管、Chrome、Discord 等
 支援檔案 URL 的應用程式；拖曳預覽為 tile 縮圖。
 
 單張圖片筆記
@@ -1378,7 +1378,7 @@ HDR 合成
 ^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` 提供四個純 numpy 滑桿：
-徑向失真 ``k1``（桶型 / 枕型）、暗角補光，以及紅 / 藍通道的色差
+徑向失真 ``k1``\ （桶型 / 枕型）、暗角補光，以及紅 / 藍通道的色差
 徑向縮放。因影像尺寸可能改變，結果輸出為新檔而非寫入 recipe。
 
 地圖檢視
@@ -1402,6 +1402,8 @@ HDR 合成
 偵測臉部並以矩形標示。在清單雙擊輸入人名，儲存後寫入 recipe 的
 ``extra['face_tags']``。此為經典技術，適合「找出臉的位置」，但非
 現代 CNN 辨識的替代品。
+需要 OpenCV 4（``pip install "opencv-python<5"``）：OpenCV 5 已移除 Haar
+分類器，此時對話框會顯示提示而不進行偵測。
 
 局部調整遮罩
 ^^^^^^^^^^^^
@@ -1503,19 +1505,19 @@ GPS 地理標記
 Puppet 工作區（Puppet 分頁）
 ----------------------------
 
-第四個頂層分頁 — **Puppet** — 是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D（網格變形綁骨、參數、動作、物理、表情、姿勢群組、對嘴、攝影機追蹤），但**不依賴任何專利 SDK**、**不使用** ``live2d-py``，採用完全開放的 ``.puppet`` 檔案格式。
+第四個頂層分頁 — **Puppet** — 是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D（網格變形綁骨、參數、動作、物理、表情、姿勢群組、對嘴、攝影機追蹤），但\ **不依賴任何專利 SDK**、**不使用** ``live2d-py``，採用完全開放的 ``.puppet`` 檔案格式。
 
 .. note::
 
    端到端教學 — 從全新安裝到 OBS 直播或產出 MP4 — 在倉庫根目錄的
-   ``puppet_guide.zh-TW.md``（英文版 ``puppet_guide.md``、簡體中文版 ``puppet_guide.zh-CN.md``）。
+   ``puppet_guide.zh-TW.md``\ （英文版 ``puppet_guide.md``、簡體中文版 ``puppet_guide.zh-CN.md``）。
    本章是參考手冊；那份是逐步走讀。
 
 端到端流程
 ^^^^^^^^^^
 
 1. **匯入 PNG** — 工具列 ``Import PNG…`` 跑 ``puppet.auto_mesh.puppet_from_png``：依 alpha 三角化、單一 drawable、可立即渲染。
-2. **加變形器** — ``Add Rotation Deformer``（錨點 + 角度）或 ``Add Warp Deformer``（rows × cols Bezier lattice；邊界外頂點直通）。
+2. **加變形器** — ``Add Rotation Deformer``\ （錨點 + 角度）或 ``Add Warp Deformer``\ （rows × cols Bezier lattice；邊界外頂點直通）。
 3. **加參數** — ``Add Parameter`` 在右側 **Parameters** 擺放欄加滑桿（自動命名 ``Param1``、``Param2`` …）。
 4. **設 keys** — 拖滑桿到極端值、編輯 deformer form、按 **Set key**。對中立值跟另一端重複。Runtime 接著會在滑桿移動時於相鄰 keys 之間 lerp 各欄位。
 5. **儲存** — ``Save As…`` 把 rig + 紋理 + 動作 + 表情 + 物理寫成單一 ``.puppet`` zip，可分享或之後用 ``Open Puppet…`` 重開。
@@ -1533,9 +1535,9 @@ Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7Th 或自己�
 
 1. **啟動 Imervue**。原始碼跑：``python -m Imervue``；裝好的版本：直接執行 ``Imervue`` 執行檔 / app bundle。``examples/`` 資料夾已經打包進 wheel 跟 Nuitka EXE，rig 檔案會在安裝目錄底下。
 2. 點視窗頂端的 **Puppet** 分頁。
-3. 工具列 → **File > Examples > March 7Th**（或工具列上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中載入，參數欄會填滿 203 個 Cubism 標準參數滑桿。
+3. 工具列 → **File > Examples > March 7Th**\ （或工具列上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中載入，參數欄會填滿 203 個 Cubism 標準參數滑桿。
 4. 在底部 **Motions** 擺放欄單擊任一個動作條目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即開始播放；再點一次停止，或選別的動作交叉淡入。
-5. 切換工具列上的即時輸入 toggle 讓 rig 跟著你動 — **Drag-track head**（頭跟著游標）、**Auto-blink**（自動眨眼）、**Auto idle** + **Idle motions**（呼吸 + 隨機 idle 動作）、**Mic lip-sync**（麥克風 RMS 帶動嘴型）、**Webcam tracking**（MediaPipe FaceLandmarker 驅動頭 / 眼 / 嘴）。
+5. 切換工具列上的即時輸入 toggle 讓 rig 跟著你動 — **Drag-track head**\ （頭跟著游標）、**Auto-blink**\ （自動眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 隨機 idle 動作）、**Mic lip-sync**\ （麥克風 RMS 帶動嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驅動頭 / 眼 / 嘴）。
 6. 工具列 **Reset to rest** 把所有動作停掉、所有即時驅動取消勾、清掉 expressions / pose 覆寫，所有參數復位 — 標準的「重新開始」按鈕。
 7. 之後要開別的 rig：**File > Open Puppet…** 從磁碟挑任何 ``.puppet`` zip；**File > Examples ▾** 永遠連到內附清單。
 
@@ -1583,7 +1585,7 @@ OBS 直播整合
 
 **A. Virtual Camera** — 在 OBS《視訊擷取裝置》來源清單裡以 webcam 形式出現。``pip install pyvirtualcam`` 加上平台驅動：OBS Studio 26+（Windows/macOS）會附 *OBS Virtual Camera* 驅動，第一次打開 OBS 點 *Start Virtual Camera* 註冊；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具列 **Output > Virtual camera** 開始串流。
 
-DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**，所以 Imervue 在角色以外的區域填**洋紅色 `#FF00FF`** 當色鍵。OBS 端去背：
+DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道**，所以 Imervue 在角色以外的區域填\ **洋紅色 #FF00FF** 當色鍵。OBS 端去背：
 
 1. 視訊擷取裝置來源右鍵 → **Filters**
 2. **Effect Filters > + > Color Key**
@@ -1630,7 +1632,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**
    * - Auto-blink
      - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上的 cosine close→open，每 ~4.5 秒一次（force-write 路徑繞過 canvas 的 no-change-skip，避免被其他 driver 卡住）
    * - Mic lip-sync
-     - 麥克風 RMS → ``ParamMouthOpenY``（需 ``sounddevice``）
+     - 麥克風 RMS → ``ParamMouthOpenY``\ （需 ``sounddevice``）
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → 頭部 yaw / pitch / roll + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``；開啟即時預覽 dialog 顯示偵測到的 landmark）
    * - Auto idle / Idle motions
@@ -1696,7 +1698,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**
 分頁提供三條載入途徑：
 
 * **Open Puppet…** — 從硬碟挑任何 ``.puppet`` 檔。
-* **Load bundled March 7th** — 開啟內附在 ``examples/puppet/march_7th.puppet`` 的 rig。Resolver 會先查 ``examples_dir()``（對 Nuitka 打包 / pip 安裝版本是 frozen-safe），找不到再退回 repo 根目錄相對路徑，所以這顆按鈕在兩種執行模式下都能用。
+* **Load bundled March 7th** — 開啟內附在 ``examples/puppet/march_7th.puppet`` 的 rig。Resolver 會先查 ``examples_dir()``\ （對 Nuitka 打包 / pip 安裝版本是 frozen-safe），找不到再退回 repo 根目錄相對路徑，所以這顆按鈕在兩種執行模式下都能用。
 * **上次的 rig** — Imervue 啟動時會從 ``last_rig_path`` 設定欄位自動還原上次載入的 rig；Desktop Pet 分頁會靜默重建浮層，所以你和上次離開時的狀態之間只差一個點擊。
 
 載入成功會自動勾起 **Show pet on desktop**，桌寵立刻現身。失敗時勾選框不會動，錯誤訊息會寫在分頁的狀態列上。
@@ -1772,7 +1774,7 @@ DirectShow / AVFoundation / v4l2loopback 都**只有 RGB、沒有 alpha 通道**
 系統匣圖示（僅在支援系統匣的平台上建立）提供第四個操作面，給最常用的動作：
 
 * 左鍵單擊切換桌寵顯示。
-* 右鍵開啟選單：**Show pet**（可勾選）、**Click-through**、**Open puppet…**、**Hide pet**。
+* 右鍵開啟選單：**Show pet**\ （可勾選）、**Click-through**、**Open puppet…**、**Hide pet**。
 * 可勾選的 Show / Click-through 項目透過 ``sync_visibility`` / ``sync_click_through`` 鏡像分頁的勾選狀態，所以不論使用者從哪邊切，狀態都會同步。
 
 Live driver
@@ -1856,7 +1858,7 @@ Schema（有版本 — 未來的欄位會向前相容）：
 持久化
 ^^^^^^
 
-所有 Desktop Pet 狀態都透過 ``user_setting_dict["desktop_pet"]``（Imervue 標準使用者設定檔裡的一個 slot）來回。每個欄位在載入時都有預設值 + 範圍夾取，所以損壞的設定檔不會讓啟動 crash。
+所有 Desktop Pet 狀態都透過 ``user_setting_dict["desktop_pet"]``\ （Imervue 標準使用者設定檔裡的一個 slot）來回。每個欄位在載入時都有預設值 + 範圍夾取，所以損壞的設定檔不會讓啟動 crash。
 
 .. list-table:: 持久化欄位
    :header-rows: 1
@@ -1924,9 +1926,9 @@ Schema（有版本 — 未來的欄位會向前相容）：
 疑難排解
 ^^^^^^^^
 
-**桌寵出現在灰色矩形裡，而不是完全透明。** OS 層級的半透明背景屬性需要 alpha-aware 的 GL surface 加上嵌入 GL widget 的對應屬性。確認沒有任何第三方視窗管理工具在浮層視窗上覆寫 ``WA_TranslucentBackground``（Linux 上某些自製視窗管理員會這樣做）。Windows / macOS 上應該「直接能用」。
+**桌寵出現在灰色矩形裡，而不是完全透明。** OS 層級的半透明背景屬性需要 alpha-aware 的 GL surface 加上嵌入 GL widget 的對應屬性。確認沒有任何第三方視窗管理工具在浮層視窗上覆寫 ``WA_TranslucentBackground``\ （Linux 上某些自製視窗管理員會這樣做）。Windows / macOS 上應該「直接能用」。
 
-**「Load bundled March 7th」說檔案找不到。** Resolver 先查 ``examples_dir()``（打包版用的 frozen-safe 位置），再退回 CWD 相對路徑。兩者都沒有 rig 時，狀態列會列出預期路徑。檢查你安裝中附的 ``examples/`` 資料夾 — 如果是從原始碼 checkout 執行，要從 repository 根目錄啟動 Imervue。
+**「Load bundled March 7th」說檔案找不到。** Resolver 先查 ``examples_dir()``\ （打包版用的 frozen-safe 位置），再退回 CWD 相對路徑。兩者都沒有 rig 時，狀態列會列出預期路徑。檢查你安裝中附的 ``examples/`` 資料夾 — 如果是從原始碼 checkout 執行，要從 repository 根目錄啟動 Imervue。
 
 **桌寵被點了不講話。** 三個檢查點：
 
@@ -1956,7 +1958,7 @@ Schema（有版本 — 未來的欄位會向前相容）：
 無介面批次 CLI
 ^^^^^^^^^^^^^^
 
-``Imervue.cli`` 可在 shell 中執行純影像運算,**完全不啟動 Qt**,
+``Imervue.cli`` 可在 shell 中執行純影像運算,\ **完全不啟動 Qt**,
 因此適合用於腳本、CI 步驟,以及沒有顯示裝置的伺服器::
 
    py -m Imervue.cli resize photos/ --max 1600 --out web/
@@ -1987,7 +1989,7 @@ Schema（有版本 — 未來的欄位會向前相容）：
    * - ``list-ops``
      - 列出所有子指令(``--json`` 輸出機器可讀格式)
 
-共用旗標:``--out``(輸出目錄)、``--recursive``、``--dry-run``(只列出動作、不寫入)、``--overwrite`` 與 ``--version``。
+共用旗標:``--out``\ (輸出目錄)、``--recursive``、``--dry-run``\ (只列出動作、不寫入)、``--overwrite`` 與 ``--version``。
 
 ----
 
@@ -2022,7 +2024,7 @@ Imervue 內建一個 `Model Context Protocol <https://modelcontextprotocol.io>`_
    * - ``convert_format``
      - 圖片格式轉換。目標格式由目標檔案的副檔名決定(``png`` /
        ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``)。
-       JPEG/WebP 可選擇 ``quality``(1–100)。
+       JPEG/WebP 可選擇 ``quality``\ (1–100)。
    * - ``puppet_from_png``
      - 用 puppet 插件的 auto-mesh 從 PNG 建出 ``.puppet`` 動畫檔。
        自動帶入 Cubism 標準參數,匯入後可直接被驅動。
@@ -2048,6 +2050,7 @@ Imervue 內建一個 `Model Context Protocol <https://modelcontextprotocol.io>`_
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - 像素框裁切、保留長寬比的縮放,以及無損 90/180/270 旋轉或水平 /
        垂直翻轉。
+       尺寸與座標以依 EXIF 方向轉正後的影像為準。
    * - ``collection_stats``
      - 彙整資料夾的評等、收藏、色標與挑片狀態(計數、0–5 星分佈與平均)。
    * - ``reverse_geocode`` / ``extract_video_frame``
@@ -2062,8 +2065,8 @@ Prompts
 ^^^^^^^
 
 伺服器透過 ``prompts/list`` / ``prompts/get`` 提供四個 prompt:
-``caption_image``、``suggest_edits``、``analyze_composition``(以
-saliency 為基礎的構圖評析)與 ``flag_issues``(銳利度 + 品質 + 裁切的
+``caption_image``、``suggest_edits``、``analyze_composition``\ (以
+saliency 為基礎的構圖評析)與 ``flag_issues``\ (銳利度 + 品質 + 裁切的
 分流檢查)。prompt 的引數可透過 ``completion/complete`` 自動補全。
 
 Claude Code(專案層級)

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sys
 import types
+from types import SimpleNamespace
 
 import pytest
 
@@ -283,3 +284,32 @@ def test_shutdown_alias_calls_stop(qapp, stub_obs):
     client.shutdown()
     assert client.is_running() is False
     assert stub_obs.instances[-1].disconnected is True
+
+
+class _Emitter:
+    def __init__(self):
+        self.groups = []
+
+    def emit(self, group):
+        self.groups.append(group)
+
+
+def test_malformed_event_type_is_logged_and_falls_back_to_payload(caplog):
+    def broken():
+        raise ValueError("malformed event")
+
+    fake = SimpleNamespace(group_triggered=_Emitter())
+    message = SimpleNamespace(getType=broken, input={"eventType": "StreamStateChanged"})
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        ObsEventClient._on_event(fake, message)
+    assert fake.group_triggered.groups == [obs_event_to_group("StreamStateChanged")]
+    assert any("Unreadable OBS event type" in r.getMessage() and r.exc_info
+               for r in caplog.records)
+
+
+def test_malformed_payload_is_logged_and_ignored(caplog):
+    fake = SimpleNamespace(group_triggered=_Emitter())
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        ObsEventClient._on_event(fake, SimpleNamespace(input=["not", "a", "dict"]))
+    assert fake.group_triggered.groups == []
+    assert any("Unreadable OBS event payload" in r.getMessage() for r in caplog.records)

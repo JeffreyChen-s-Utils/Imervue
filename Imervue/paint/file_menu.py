@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
+from Imervue.gui.file_filters import translated_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.brush_preset_io import (
     IMERVUE_BRUSH_EXTENSION,
@@ -55,7 +56,7 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
         ("paint_file_new_tab", "New Tab",
          bridge.new_tab, "Ctrl+N"),
         ("paint_file_new_project", "New Comic Project…",
-         bridge.new_comic_project, "Ctrl+Shift+N"),
+         bridge.new_comic_project, "Ctrl+Alt+N"),
         ("paint_file_close_tab", "Close Tab",
          bridge.close_active_tab, "Ctrl+W"),
         (None, None, None, None),
@@ -271,8 +272,10 @@ class _FileMenuBridge:
             title_key="paint_file_import_brush_preset",
             title_fallback="Import brush preset",
             filters=[
-                f"Imervue brush (*{IMERVUE_BRUSH_EXTENSION})",
-                f"raster paint apps brush (*{MEDIBANG_BRUSH_EXTENSION})",
+                translated_filter("file_filter_imervue_brush", "Imervue brush",
+                                  (IMERVUE_BRUSH_EXTENSION,)),
+                translated_filter("file_filter_other_brush", "Brush from other paint apps",
+                                  (MEDIBANG_BRUSH_EXTENSION,)),
             ],
         )
         if not path:
@@ -290,7 +293,8 @@ class _FileMenuBridge:
             title_key="paint_file_import_palette",
             title_fallback="Import palette",
             filters=[
-                f"external image editors palette (*{GPL_PALETTE_EXTENSION})",
+                translated_filter("file_filter_other_palette", "Palette from other image editors",
+                                  (GPL_PALETTE_EXTENSION,)),
                 f"Adobe Swatch (*{ADOBE_COLOR_EXTENSION})",
                 f"Adobe Swatch Exchange (*{ADOBE_SWATCH_EXCHANGE_EXTENSION})",
             ],
@@ -357,7 +361,7 @@ class _FileMenuBridge:
         path = self._pick_save_file(
             title_key="paint_file_export_pages_cbz",
             title_fallback="Export pages → CBZ",
-            name_filter="Comic Book Zip (*.cbz)",
+            name_filter=translated_filter("file_filter_comic_zip", "Comic book archive", ("cbz",)),
         )
         if not path:
             return

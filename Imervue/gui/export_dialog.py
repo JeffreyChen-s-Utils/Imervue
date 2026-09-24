@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSlider, QPushButton, QFileDialog, QLineEdit,
+    QSlider, QPushButton,
 )
-from PIL import Image
 
+from Imervue.gui.export_source import open_export_source
+from Imervue.gui.dialog_rows import path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
@@ -19,6 +20,7 @@ from Imervue.image.save_formats import (
     available_formats,
     save_image,
 )
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 import contextlib
 
@@ -41,11 +43,15 @@ class _SizeEstimateWorker(QThread):
     def run(self):
         try:
             import io
-            img = _open_image_for_export(self._source_path)
+            img = open_export_source(self._source_path)
             buf = io.BytesIO()
             save_image(img, buf, self._fmt, self._quality)
             self.result_ready.emit(buf.tell(), "")
+        except IMAGE_READ_ERRORS as exc:
+            self.result_ready.emit(0, str(exc))
         except Exception as exc:
+            # Worker boundary: the dialog waits on result_ready, so report even a bug.
+            logger.exception("Estimating the export size of %s failed", self._source_path)
             self.result_ready.emit(0, str(exc))
 
 
@@ -93,13 +99,10 @@ class ExportDialog(WorkerHostMixin, QDialog):
         layout.addWidget(self.quality_slider)
 
         # Output path row
-        path_layout = QHBoxLayout()
-        self.path_edit = QLineEdit()
-        self.path_edit.setPlaceholderText("Output path")
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse_output)
-        path_layout.addWidget(self.path_edit, 1)
-        path_layout.addWidget(browse_btn)
+        path_layout, self.path_edit, _browse = path_browse_row(
+            self._browse_output, browse_text=self._lang.get("export_browse", "Browse..."))
+        self.path_edit.setPlaceholderText(
+            self._lang.get("export_output_path_placeholder", "Output path"))
         layout.addLayout(path_layout)
 
         # Size estimate
@@ -182,14 +185,8 @@ class ExportDialog(WorkerHostMixin, QDialog):
     def _browse_output(self) -> None:
         fmt = self._selected_format()
         ext = FORMAT_EXTENSIONS.get(fmt, ".*")
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            self._lang.get("export_save", "Save"),
-            self.path_edit.text(),
-            f"{fmt} (*{ext})",
-        )
-        if path:
-            self.path_edit.setText(path)
+        save_path_into(
+            self, self.path_edit, self._lang.get("export_save", "Save"), f"{fmt} (*{ext})")
 
     # ------------------------------------------------------------ export
     def _do_export(self) -> None:
@@ -199,38 +196,12 @@ class ExportDialog(WorkerHostMixin, QDialog):
 
         fmt = self._selected_format()
         try:
-            img = _open_image_for_export(self.source_path)
+            img = open_export_source(self.source_path)
             save_image(img, output_path, fmt, self._quality_for(fmt))
             logger.info(f"Exported image to {output_path} as {fmt}")
             self.accept()
         except Exception as exc:
             logger.exception(f"Export failed: {exc}")
-
-
-def _open_image_for_export(path: str) -> Image.Image:
-    """Open an image file for export, handling SVG via QSvgRenderer.
-
-    Also applies the non-destructive Develop recipe (if any) so exports
-    include any adjustments the user has made — the whole point of a
-    recipe system is that the pixels follow the file regardless of which
-    code path is rendering them.
-    """
-    import numpy as np
-    from Imervue.image.recipe_store import recipe_store
-
-    if Path(path).suffix.lower() == ".svg":
-        from Imervue.gpu_image_view.images.image_loader import _load_svg
-        arr = _load_svg(path, thumbnail=False)
-        img = Image.fromarray(arr)
-    else:
-        img = Image.open(path)
-
-    recipe = recipe_store.get_for_path(path)
-    if recipe is not None and not recipe.is_identity():
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        img = Image.fromarray(recipe.apply(np.array(img)))
-    return img
 
 
 def open_export_dialog(main_gui: GPUImageView) -> None:

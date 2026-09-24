@@ -24,6 +24,7 @@ import pytest
 from Imervue.puppet.cubism_native_bridge import CubismBridgeError
 from Imervue.puppet.document import Drawable, PuppetDocument
 from Imervue.puppet import workspace as workspace_module
+from Imervue.puppet import workspace_import as workspace_import_module
 from Imervue.puppet.workspace import PuppetWorkspace
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -92,7 +93,7 @@ def test_moc3_without_active_document_creates_new_puppet(
         seen["model3"] = Path(model3_path)
         return converted
 
-    monkeypatch.setattr(workspace_module, "cubism_to_puppet", _fake_convert)
+    monkeypatch.setattr(workspace_import_module, "cubism_to_puppet", _fake_convert)
     ws = PuppetWorkspace()
     try:
         assert ws._canvas.document() is None   # noqa: SLF001
@@ -120,7 +121,7 @@ def test_model3_without_active_document_uses_full_converter(
         calls.append(Path(model3_path))
         return converted
 
-    monkeypatch.setattr(workspace_module, "cubism_to_puppet", _fake_convert)
+    monkeypatch.setattr(workspace_import_module, "cubism_to_puppet", _fake_convert)
     ws = PuppetWorkspace()
     try:
         ok = ws.import_cubism(model3)
@@ -150,9 +151,9 @@ def test_model3_with_active_document_merges_via_apply_bundle(
     def _fake_convert(*_args, **_kwargs):
         raise AssertionError("cubism_to_puppet should not be called here")
 
-    monkeypatch.setattr(workspace_module, "apply_bundle", _fake_apply_bundle)
-    monkeypatch.setattr(workspace_module, "load_model3", _fake_load_model3)
-    monkeypatch.setattr(workspace_module, "cubism_to_puppet", _fake_convert)
+    monkeypatch.setattr(workspace_import_module, "apply_bundle", _fake_apply_bundle)
+    monkeypatch.setattr(workspace_import_module, "load_model3", _fake_load_model3)
+    monkeypatch.setattr(workspace_import_module, "cubism_to_puppet", _fake_convert)
 
     ws = PuppetWorkspace()
     try:
@@ -193,7 +194,7 @@ def test_bridge_error_is_caught_and_surfaced(qapp, tmp_path, monkeypatch):
     def _fake_convert(*_args, **_kwargs):
         raise CubismBridgeError("Live2DCubismCore.dll not found")
 
-    monkeypatch.setattr(workspace_module, "cubism_to_puppet", _fake_convert)
+    monkeypatch.setattr(workspace_import_module, "cubism_to_puppet", _fake_convert)
     ws = PuppetWorkspace()
     try:
         ok = ws.import_cubism(model3)
@@ -322,7 +323,7 @@ def test_bridge_error_surfaces_via_dialog(qapp, tmp_path, monkeypatch):
     def _fake_convert(*_args, **_kwargs):
         raise CubismBridgeError("Live2DCubismCore.dll not found")
 
-    monkeypatch.setattr(workspace_module, "cubism_to_puppet", _fake_convert)
+    monkeypatch.setattr(workspace_import_module, "cubism_to_puppet", _fake_convert)
     ws = PuppetWorkspace()
     try:
         ok = ws.import_cubism(model3)

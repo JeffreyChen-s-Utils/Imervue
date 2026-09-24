@@ -86,6 +86,26 @@ class TestTrashBatch:
         assert failed == [paths[1]]
 
 
+    def test_missing_backend_falls_back_per_file(self, tmp_path, monkeypatch):
+        paths = _files(tmp_path, 2)
+
+        def _no_backend(_paths):
+            raise ImportError("send2trash backend unavailable")
+
+        monkeypatch.setattr(trash_ops, "_trash_many", _no_backend)
+        from Imervue.gpu_image_view.actions import keyboard_actions
+        monkeypatch.setattr(keyboard_actions, "_send_to_trash", lambda _p: True)
+        assert trash_batch(paths) == (paths, [])
+
+    def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
+        def _bug(_paths):
+            raise TypeError("bad path list")
+
+        monkeypatch.setattr(trash_ops, "_trash_many", _bug)
+        with pytest.raises(TypeError):
+            trash_batch(_files(tmp_path, 1))
+
+
 class TestPurgeBatch:
     def test_unlinks_files_and_reports_them(self, tmp_path, batch_spy):
         paths = _files(tmp_path, 3)
@@ -205,3 +225,35 @@ class TestFilePurgeWorker:
         worker.finished_with.connect(lambda ok, bad: results.append((ok, bad)))
         worker.run()
         assert results == [(paths, [])]
+
+
+class TestWorkerBoundary:
+    def test_delete_worker_reports_every_path_failed_on_an_unexpected_error(
+            self, qapp, tmp_path, monkeypatch, caplog):
+        paths = _files(tmp_path, 2)
+
+        def _bug(_paths):
+            raise TypeError("bad path list")
+
+        monkeypatch.setattr(trash_ops, "_trash_many", _bug)
+        worker = FileDeleteWorker(paths)
+        results: list = []
+        worker.finished_with.connect(lambda ok, bad: results.append((ok, bad)))
+        with caplog.at_level("DEBUG", logger="Imervue"):
+            worker.run()
+        assert results == [([], paths)]
+        assert any(r.exc_info and r.exc_info[0] is TypeError for r in caplog.records)
+
+    def test_purge_worker_reports_both_groups_failed_on_an_unexpected_error(
+            self, qapp, tmp_path, monkeypatch):
+        unlink, trash = _files(tmp_path, 2)
+
+        def _bug(*_args, **_kwargs):
+            raise TypeError("bad path list")
+
+        monkeypatch.setattr(trash_ops, "purge_batch", _bug)
+        worker = FilePurgeWorker([unlink], [trash])
+        results: list = []
+        worker.finished_with.connect(lambda ok, bad: results.append((ok, bad)))
+        worker.run()
+        assert results == [([], [unlink, trash])]

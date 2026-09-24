@@ -6,6 +6,8 @@ monkeypatched. ``ModelSettingsDialog`` is a plain QDialog — no skip marker.
 """
 from __future__ import annotations
 
+import pytest
+
 from safety_review import _class_config, _detection
 
 
@@ -144,3 +146,30 @@ def test_model_settings_dialog_blank_path_clears_custom_model(qapp, tmp_path):
     dlg._save()
     assert _detection.CUSTOM_MODEL_SETTING not in user_setting_dict
     dlg.deleteLater()
+
+
+def _raise(exc):
+    def _fail():
+        raise exc
+    return _fail
+
+
+def test_missing_settings_module_falls_back_to_defaults(monkeypatch):
+    monkeypatch.setattr(_class_config, "_settings", _raise(ImportError("no Imervue")))
+    assert _class_config.get_classes() == list(_class_config.DEFAULT_CLASSES)
+    assert _class_config.get_censor_classes() == list(_class_config.DEFAULT_CENSOR_CLASSES)
+
+
+def test_unexpected_settings_error_propagates(monkeypatch):
+    monkeypatch.setattr(_class_config, "_settings", _raise(RuntimeError("settings bug")))
+    with pytest.raises(RuntimeError):
+        _class_config.get_classes()
+    with pytest.raises(RuntimeError):
+        _class_config.get_censor_classes()
+
+
+def test_custom_model_path_without_settings_module_is_none(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "Imervue.user_settings.user_setting_dict", None)
+    assert _detection._custom_model_path() is None

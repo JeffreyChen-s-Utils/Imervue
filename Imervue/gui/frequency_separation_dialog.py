@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -24,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui._apply_save import load_rgba
 from Imervue.image.frequency_separation import (
     RADIUS_MAX,
     RADIUS_MIN,
@@ -87,7 +87,7 @@ class FrequencySeparationDialog(QDialog):
 
     def _commit(self) -> None:
         try:
-            arr = _load_image_as_rgba(self._path)
+            arr = load_rgba(self._path)
         except (OSError, ValueError) as exc:
             self._notify_failure(exc)
             return
@@ -120,13 +120,6 @@ class FrequencySeparationDialog(QDialog):
         )
         self._viewer.main_window.toast.error(f"{prefix}: {exc}")
 
-
-def _load_image_as_rgba(path: str) -> np.ndarray:
-    """Load ``path`` as an HxWx4 uint8 RGBA array."""
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 def _write_layer_files(

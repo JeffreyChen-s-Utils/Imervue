@@ -4,17 +4,16 @@ import logging
 from typing import TYPE_CHECKING
 
 
-from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
-from Imervue.gpu_image_view.minimap import point_in_rect
+from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.tile_focus import NO_FOCUS
-from Imervue.gpu_image_view.tile_layout import (
-    DEFAULT_THUMBNAIL_SIZE,
-    plan_tile_size_change,
-    resolve_thumbnail_size,
+from Imervue.gpu_image_view.tile_layout import plan_tile_size_change
+from Imervue.gpu_image_view.view_state_init import (
+    init_browse_state,
+    init_deep_zoom_state,
+    init_display_state,
+    init_grid_state,
+    init_interaction_state,
 )
-from Imervue.gpu_image_view.images.image_model import ImageModel
-from Imervue.image.browser_state import is_transient_load_error
-from Imervue.menu.right_click_menu import right_click_context_menu
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -34,224 +33,41 @@ from OpenGL.GL import (
     glOrtho,
     glViewport,
 )
-from PySide6.QtCore import QThreadPool, QMutex, Qt, QTimer
-from PySide6.QtGui import QUndoStack, QPainter
+from OpenGL.error import GLError
+from PySide6.QtCore import QThreadPool, QMutex
+from PySide6.QtGui import QPainter
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
-from pathlib import Path
 
 from Imervue.gpu_image_view.gl_renderer import GLRenderer
-from Imervue.image.tile_manager import TileManager
 import contextlib
+from Imervue.gpu_image_view.deep_zoom_loading import DeepZoomLoadingMixin
+from Imervue.gpu_image_view.view_fitting import ViewFittingMixin
+from Imervue.gpu_image_view.prefetch_memory import PrefetchMemoryMixin
+from Imervue.gpu_image_view.view_mouse import ViewMouseMixin
 
 logger = logging.getLogger("Imervue.gpu_image_view")
 
-# How many extra event-loop turns a deferred fit may wait for the canvas size
-# to stop changing (tab relayout, dock settling, a move to another monitor).
-_LAYOUT_SETTLE_RETRIES = 3
-# Screen-change settle watch: a cross-monitor move takes hundreds of ms (OS
-# re-maximise + compositor animation + the new screen's resizeGL), far longer
-# than the singleShot(0) layout-drain chain above can span.
-_SCREEN_SETTLE_INTERVAL_MS = 60
-_SCREEN_SETTLE_RETRIES = 8
-# Image-load settle watch: shorter than the screen one — the host frame draining
-# a queued layout settles far quicker than an OS-level monitor change — but
-# still on a real interval, which the singleShot(0) chain is not.
-_LOAD_SETTLE_INTERVAL_MS = 60
-_LOAD_SETTLE_RETRIES = 5
 
+class GPUImageView(
+        ViewMouseMixin, PrefetchMemoryMixin, ViewFittingMixin, DeepZoomLoadingMixin,
+        QOpenGLWidget):
+    """OpenGL image viewer: the thumbnail tile grid and the deep-zoom single-image view."""
 
-class GPUImageView(QOpenGLWidget):
     def __init__(self, main_window: ImervueMainWindow):
         super().__init__()
 
         self.main_window = main_window
 
-        # ===== Undo =====
-        self.undo_stack = []  # legacy delete undo
-        self.undo_manager = QUndoStack(self)
+        init_grid_state(self)
+        init_deep_zoom_state(self)
+        init_browse_state(self)
+        init_interaction_state(self)
+        self._init_workers()
+        self._init_collaborators()
+        init_display_state(self)
 
-        # ===== Tile Grid =====
-        self.tile_grid_mode = False
-        self.selected_image_path = None
-        self.tile_rects = []  # 用來存每個 tile 的 rectangle
-        self.grid_offset_x = 0
-        self.grid_offset_y = 0
-        self.tile_scale = 1.0
-        # Effective per-tile draw scale = tile_scale / devicePixelRatio,
-        # recomputed each ``paint_tile_grid`` so thumbnails keep a consistent
-        # physical size across monitors with different display scaling.
-        self._tile_draw_scale = 1.0
-        # Set when the thumbnail size changes while in deep zoom, so the grid
-        # is rebuilt at the new size when the user exits back to the wall.
-        self._tile_size_dirty = False
-        # Keyboard focus cursor — index into ``model.images`` of the tile
-        # highlighted for arrow-key navigation. NO_FOCUS (-1) means nothing is
-        # focused yet, so the highlight only shows once the user starts
-        # keyboard-browsing and never bothers mouse-only users.
-        self.focused_tile_index = NO_FOCUS
-        # The amber ring draws only while this is True — set by arrow-key
-        # navigation, cleared by mouse clicks and by (re)entering the wall,
-        # so the ring never greets the user uninvited.
-        self.focus_ring_visible = False
-        self.tile_textures = {}
-        self.tile_cache = {}  # path -> img_data
-        self.tile_errors: dict[str, str] = {}
-        self._tile_error_toasted: set[str] = set()
-        self._tile_retry_counts: dict[str, int] = {}
-        self.offline_paths: set[str] = set()
-        # 檔案存在檢查全部走背景掃描（tile_loader.OfflineScanWorker），
-        # paint 路徑只查 offline_paths 這個 set，不做任何檔案系統 I/O。
-        self._offline_scan_inflight = False
-        from Imervue.gpu_image_view.tile_loader import OFFLINE_SWEEP_INTERVAL_MS
-        self._offline_sweep_timer = QTimer(self)
-        self._offline_sweep_timer.setInterval(OFFLINE_SWEEP_INTERVAL_MS)
-        self._offline_sweep_timer.timeout.connect(self._tick_offline_sweep)
-        # path -> monotonic arrival time, for the thumbnail fade-in animation.
-        self._tile_load_times: dict[str, float] = {}
-        # path -> (size, mtime_ns, suffix), used to migrate tile cache on rename.
-        self._tile_file_signatures: dict[str, tuple[int, int, str]] = {}
-        # Async PBO streaming uploader; allocated in initializeGL once a
-        # GL context exists. Stays None (synchronous fallback) until then.
-        self._tile_uploader = None
-
-        # ===== DeepZoom =====
-        self.zoom = 1.0
-        self.dz_offset_x = 0
-        self.dz_offset_y = 0
-        self.last_pos = None
-        self.tile_manager = None
-        self.deep_zoom = None
-        # Path of the image whose full pyramid is loading in the background.
-        # While set (and ``deep_zoom`` is still None) the overlay shows a
-        # low-res preview + "Loading…" pill instead of a blank frame.
-        self._deep_zoom_loading: str | None = None
-        # Path of the image currently shown (or targeted) in deep zoom — the
-        # image whose view ``zoom`` / offsets are live. Used to save the view
-        # under the right key when navigating away (see ``save_view_state``).
-        self._deep_zoom_path: str | None = None
-        self._deep_zoom_error: tuple[str, str] | None = None
-        self._deep_zoom_request_id = 0
-        self._deep_zoom_retry_counts: dict[str, int] = {}
-        self._saved_tile_state = None
-        # True while the user is click-dragging inside the deep-zoom minimap
-        # to pan the viewport.
-        self._minimap_dragging = False
-        # When True, the user has zoomed / panned manually so the
-        # canvas should not auto-fit on resize. Cleared on every
-        # fresh image load via :meth:`_fit_to_window`.
-        self._user_locked_view = False
-        # Snapshot (taken before the per-load save) of whether the image being
-        # loaded had a genuinely remembered view, so a fresh entry always fits.
-        self._loading_was_remembered = False
-        # Base dims the remembered zoom was saved against — a mismatch on load
-        # (rotate/crop changed the geometry) forces a refit.
-        self._loading_remembered_dims = None
-        # Whether the remembered view being loaded was a deliberate zoom-in
-        # (kept) or a whole-image fit (re-fit to the current canvas).
-        self._loading_was_locked = False
-        # Most-recent ``resizeGL`` size — same role as the paint
-        # canvas's ``_last_resize_size``. Used by ``_fit_to_window``
-        # so the initial centre uses the GL-reported logical size
-        # rather than ``self.width()`` / ``height()`` which can lag
-        # the actual layout for the first frame or two.
-        self._last_resize_size: tuple[int, int] = (0, 0)
-        # Retires a screen-settle watch when a newer screen change starts.
-        self._screen_settle_generation = 0
-
-
-        # ===== 圖片切換控制 =====
-        self.model = ImageModel()
-        self.model.images = []  # 所有圖片路徑
-        self.current_index = 0
-        self.on_filename_changed = None
-        # Fired with the edited full-resolution base-level array once a deep-zoom
-        # image is on screen. The multi-monitor mirror uses it to show the same
-        # edited result the main viewer shows (not the raw file on disk).
-        self.on_deep_zoom_displayed = None
-        self.deep_zoom_tile_size = 512
-        self._slideshow_opacity = 1.0
-
-        # ===== 篩選前完整圖片列表 =====
-        self._unfiltered_images: list[str] = []
-
-        # ===== 縮圖排列密度 =====
-        # 0 (compact) / 8 (standard) / 16 (relaxed) — 縮圖間額外 padding 像素
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-        self.tile_padding = int(user_setting_dict.get("tile_padding", 8))
-        # Persisted thumbnail size — survives restarts (validated against the
-        # known sizes so a corrupt value can't break the grid).
-        self.thumbnail_size = resolve_thumbnail_size(
-            user_setting_dict.get("thumbnail_size", DEFAULT_THUMBNAIL_SIZE),
-        )
-
-        # ===== 底部縮圖膠卷（deep-zoom filmstrip）=====
-        # 在單張檢視時於畫面底部顯示鄰近縮圖，點選即可跳圖。可由設定關閉。
-        self._filmstrip_enabled = bool(
-            user_setting_dict.get("filmstrip_enabled", True),
-        )
-        # path -> QPixmap，膠卷與低解析載入預覽共用；換資料夾時清空。
-        self._filmstrip_thumb_cache: dict = {}
-        # 已排程但尚未完成的膠卷縮圖載入路徑，避免每幀重複丟 worker。
-        # 膠卷與載入預覽的縮圖只來自 tile_cache；某些進入單張檢視的路徑
-        # （直接開檔、單張檢視時的資料夾刷新）不會經過 tile wall 載入，
-        # tile_cache 因此是空的，於是改在繪製時按需補載入到這裡去重。
-        self._filmstrip_pending: set[str] = set()
-
-        # ===== 切換淡入轉場 =====
-        # 顯示新的單張圖時讓它淡入，連續翻圖更順。可由設定關閉。
-        self._transition_enabled = bool(
-            user_setting_dict.get("image_transition_enabled", True),
-        )
-        from Imervue.gpu_image_view.view_animator import ImageFadeController
-        self._image_fade = ImageFadeController(self)
-
-        # ===== Hover 預覽 =====
-        # Lazy-init 避免在沒有 QApplication 時匯入失敗
-        self._hover_controller = None
-        self._hover_last_path: str | None = None
-        self._hover_tile_path: str | None = None
-        self._timeline_grouping_enabled = True
-        self._quick_meta_hud: tuple[str, float] | None = None
-
-        # ===== 瀏覽歷史 =====
-        # 每次進入 deep zoom 的圖片會被 push 到 history controller。
-        # 前進/後退移動指標，不重寫 stack（除非使用者跳到新圖則 truncate）。
-        from Imervue.gpu_image_view.history_controller import HistoryController
-        self._history = HistoryController(self)
-
-        # ===== Tile Grid 選取模式 =====
-        self.tile_selection_mode = False  # 是否在選取模式
-        self.selected_tiles = set()  # 已選取的 tile path
-        self.long_press_threshold = 500  # 長按進入選取模式的毫秒
-        self._press_timer = None
-        self._drag_selecting = False  # 是否正在拖曳框選
-        self._drag_start_pos = None
-        self._drag_end_pos = None
-
-        # ===== Mouse =====
-        self._middle_dragging = False
-        self.press_pos = None
-
-        # ===== 框選放大（deep-zoom rubber-band zoom）=====
-        # 深縮放時左鍵拖一個方框 → 放大到該區域填滿畫面。
-        self._zoom_band_active = False
-        self._zoom_band_start = None
-        self._zoom_band_end = None
-
-        # ===== 平滑導覽：緩動縮放 + 慣性平移 =====
-        # 會改變操作手感，預設關閉；user_setting 開啟後生效。
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-        self._smooth_nav_enabled = bool(
-            user_setting_dict.get("smooth_navigation_enabled", False),
-        )
-        from Imervue.gpu_image_view.view_animator import (
-            PanMomentumController,
-            ZoomEaseController,
-        )
-        self._zoom_ease = ZoomEaseController(self)
-        self._pan_momentum = PanMomentumController(self)
-        self._last_pan_velocity = (0.0, 0.0)
-
+    def _init_workers(self) -> None:
+        """Worker pools, progress coalescing and in-flight tile workers."""
         # ===== Thread =====
         # Per-workload pools instead of a single oversubscribed
         # global pool — see ``worker_pools.worker_pool_sizes`` for
@@ -290,6 +106,8 @@ class GPUImageView(QOpenGLWidget):
         self.active_deep_zoom_worker = None  # 當前 DeepZoom 背景 worker
         self.active_deep_zoom_preview_worker = None
 
+    def _init_collaborators(self) -> None:
+        """View-state memory, prefetch, GL renderer and the drawing / input collaborators."""
         # ===== 記憶位置 & 縮放 =====
         self._view_memory: dict[str, dict] = {}  # path → {zoom, dx, dy}
 
@@ -329,61 +147,6 @@ class GPUImageView(QOpenGLWidget):
         # ===== Browse features (filmstrip / reading mode / pan clamp / fade) =====
         from Imervue.gpu_image_view.browse_features import BrowseFeatures
         self._browse = BrowseFeatures(self)
-
-        # ===== VRAM 管理 =====
-        # 保守預設 1.5 GB。initializeGL() 會嘗試用 NVX/ATI 擴充詢問 GPU 實際 VRAM，
-        # 抓到的話會覆寫成實體 VRAM 的 ~40%，在顯卡強的機器上可大幅放寬 tile cache。
-        self._vram_usage = 0  # 目前 tile grid 紋理佔用 bytes
-        self._vram_limit = int(1.5 * 1024 * 1024 * 1024)  # 1.5 GB fallback
-        self._vram_limit_default = self._vram_limit
-        self._tile_tex_sizes: dict[str, int] = {}  # path → texture bytes
-
-        # ===== 直方圖 =====
-        self._show_histogram = False
-        self._histogram_cache: tuple | None = None  # (path, Histogram, ClipStats)
-
-        # ===== OSD (On-Screen Display) =====
-        # F3 — 切換右上角顯示檔名 / 尺寸 / 格式 / 檔案大小
-        self._show_osd = False
-        # Ctrl+F3 — Debug HUD：VRAM、tile cache、執行緒池等技術資訊
-        self._show_debug_hud = False
-        # 目前滑鼠在圖片上的像素座標（update_status 用，paint_pixel_view 用）
-        self._hover_image_xy: tuple[int, int] | None = None
-        # OSD 的 EXIF 行快取：(path, lines)，避免每幀重讀檔案
-        self._exif_osd_cache: tuple | None = None
-        # Shift+P — 像素檢視模式：zoom >= 4x 時顯示像素網格 + RGB 值
-        self._pixel_view = False
-        # L — 放大鏡 loupe：跟著游標顯示局部放大，挑片/對焦確認用
-        self._loupe_enabled = False
-        # Shift+滾輪 在 loupe 開啟時調整放大倍率（見 overlay_painter）。
-        from Imervue.gpu_image_view.overlay_painter import LOUPE_MAGNIFICATION
-        self._loupe_magnification = LOUPE_MAGNIFICATION
-        # W — 閱讀模式：fit 寬度 + 垂直捲動，捲到底自動接下一張（webtoon/長圖）
-        self._reading_mode = False
-
-        # ===== 動畫播放 =====
-        self._animation: object | None = None  # AnimationPlayer instance
-
-        # ===== Minimap =====
-        self._minimap_tex = None  # GL texture id
-        self._minimap_dzi = None  # 對應的 DeepZoomImage，用來偵測是否需要重建
-
-        # 原本 deep zoom 模式下 5 秒不動就會自動藏起 menu/status/tree/exif — 使用者
-        # 反映會擋到檢視流程，移除此行為。保留 mouseTracking 讓 cursor 位置更新
-        # 等其他仰賴 mouse move 事件的功能繼續運作。
-        self.setMouseTracking(True)
-
-        # ===== Focus ======
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setFocus()
-
-        # ===== Drag & Drop =====
-        self.setAcceptDrops(True)
-
-        # ===== 觸控板手勢 =====
-        # Pinch → deep zoom 縮放；Swipe 左右 → 切換圖片
-        self.grabGesture(Qt.GestureType.PinchGesture)
-        self.grabGesture(Qt.GestureType.SwipeGesture)
 
     # ===========================
     # Modify panel (non-destructive editing)
@@ -505,175 +268,6 @@ class GPUImageView(QOpenGLWidget):
         # deliberate zoom-in so it can't be stranded off the smaller viewport.
         self._adapt_view_to_canvas()
 
-    def _adapt_view_to_canvas(self) -> None:
-        """Re-fit or re-clamp the deep-zoom view for the current canvas size.
-
-        Single entry point for every "the drawing area changed" trigger
-        (``resizeGL``, the deferred post-show settle, a screen change), so all
-        three agree on what happens to a whole-image view versus a deliberate
-        zoom-in. See :func:`fit_view.refit_action` for the decision itself.
-        """
-        from Imervue.gpu_image_view.fit_view import (
-            REFIT_CLAMP, REFIT_FIT, canvas_size, refit_action,
-        )
-        action = refit_action(self)
-        logger.debug("adapt-view: action=%s canvas=%s locked=%s zoom=%.4f",
-                     action, canvas_size(self), self._user_locked_view, self.zoom)
-        if action == REFIT_FIT:
-            self._fit_to_window()
-        elif action == REFIT_CLAMP:
-            self._browse.clamp_pan()
-
-    def _schedule_canvas_adapt(self, retries: int = _LAYOUT_SETTLE_RETRIES) -> None:
-        """Adapt the view to the canvas once Qt's layout queue has drained.
-
-        A single ``singleShot(0)`` can still land mid-relayout: a stacked page
-        only receives its real geometry after the queued layout request is
-        processed. Fitting against that intermediate size is exactly the "opens
-        at the wrong size" bug, so re-arm (bounded) while the canvas is still
-        moving — the last fit then uses the final size.
-
-        This chain drains Qt's *queued layout*, nothing slower: every hop is a
-        ``singleShot(0)``, so the whole retry budget is spent within a few
-        event-loop turns. A screen change needs
-        :meth:`_schedule_screen_settle_adapt` instead.
-        """
-        from PySide6.QtCore import QTimer
-        from Imervue.gpu_image_view.fit_view import canvas_size
-        before = canvas_size(self)
-
-        def _run() -> None:
-            self._adapt_view_to_canvas()
-            self.update()
-            if retries > 0 and canvas_size(self) != before:
-                self._schedule_canvas_adapt(retries - 1)
-
-        QTimer.singleShot(0, _run)
-
-    def _schedule_screen_settle_adapt(
-        self, retries: int = _SCREEN_SETTLE_RETRIES,
-        interval_ms: int = _SCREEN_SETTLE_INTERVAL_MS,
-    ) -> None:
-        """Keep re-adapting the view for ~half a second after a screen change.
-
-        :meth:`_schedule_canvas_adapt` chains ``singleShot(0)`` hops, so its
-        entire retry budget elapses in a few event-loop turns — microseconds.
-        Landing on another monitor takes orders of magnitude longer: the OS
-        re-maximises the window, the compositor animates the move, and the new
-        screen's ``resizeGL`` arrives well after those hops are done. The chain
-        therefore always sees an unchanged canvas, stops immediately, and
-        leaves the fit anchored to the screen the window just left.
-
-        Polling on a real interval spans the actual settle instead, so the last
-        pass runs against the final canvas whichever way the race went. Each
-        pass is pure math plus a repaint request, and
-        :func:`fit_view.refit_action` still honours a zoom the user takes
-        during the window, so the extra passes cost little and can't fight the
-        user.
-
-        Two guards keep the watch from writing a fit nobody asked for. A newer
-        screen change supersedes this one (dragging across three monitors must
-        not leave three chains fitting over each other), and a viewer hidden
-        mid-watch stops rather than measuring a background page's stale
-        pre-hide geometry — :meth:`_on_view_shown` re-fits on return anyway.
-        """
-        generation = self._screen_settle_generation
-        self._poll_settle(
-            self._adapt_and_update,
-            lambda: generation == self._screen_settle_generation,
-            retries, interval_ms,
-        )
-
-    def _schedule_load_settle_refit(
-        self, retries: int = _LOAD_SETTLE_RETRIES,
-        interval_ms: int = _LOAD_SETTLE_INTERVAL_MS,
-    ) -> None:
-        """Keep confirming a freshly-displayed image's fit on a real interval.
-
-        :meth:`_schedule_settle_refit` re-arms through ``singleShot(0)``, so its
-        whole budget elapses in a few event-loop turns. When the canvas settles
-        on a slower timescale — the window still landing on another monitor, a
-        dock or splitter animating, the host frame draining a queued layout —
-        that chain dies before the final size exists and the image keeps the
-        size it was fitted to.
-
-        Paging on does not rescue it: the next image runs its own fit against
-        the same unsettled canvas and lands on the same wrong size, so the error
-        looks like it is being carried over from image to image when in fact
-        each one re-derives it. This watch spans the settle so the last pass
-        runs against the final canvas.
-
-        Tagged with the deep-zoom request id like the fast chain, so paging on
-        retires it instead of letting it clobber the incoming image.
-        """
-        request_id = self._deep_zoom_request_id
-        self._poll_settle(
-            lambda: self._settle_refit(request_id),
-            lambda: request_id == self._deep_zoom_request_id,
-            retries, interval_ms,
-        )
-
-    def _adapt_and_update(self) -> None:
-        """One screen-settle pass: re-adapt the view, then request a repaint."""
-        self._adapt_view_to_canvas()
-        self.update()
-
-    def _poll_settle(self, step, still_current, retries: int,
-                     interval_ms: int) -> None:
-        """Run *step* every *interval_ms* while *still_current*, bounded by
-        *retries*.
-
-        Thin wrapper over :func:`gui.settle_poll.poll_settle` (see there for why
-        a real interval is required) that adds the one condition every viewer
-        watch shares: a hidden viewer drops out, because measuring a background
-        page's stale pre-hide geometry is exactly the mistake these watches
-        exist to prevent. *still_current* carries the caller's own supersession
-        test — the screen-settle generation or the deep-zoom request id.
-        """
-        from Imervue.gui.settle_poll import poll_settle
-        poll_settle(
-            step,
-            lambda: still_current() and self.isVisible(),
-            retries, interval_ms,
-        )
-
-    def request_screen_refit(self) -> None:
-        """Force a whole-image re-fit after the window changed screen.
-
-        Landing on another monitor means "show me the whole image at THIS
-        screen's size", so this deliberately overrides a user zoom-in. A
-        hidden viewer is skipped rather than fitted against a stale size: a
-        background stacked page keeps its pre-hide geometry, and coming back
-        into view re-fits the whole image anyway (see :meth:`_on_view_shown`).
-
-        The cached ``resizeGL`` size is dropped BEFORE the nothing-to-re-fit
-        early return below. Opening a folder lands on the tile wall, where
-        ``refit_action`` is ``REFIT_NONE``, so the return would otherwise leave
-        ``_last_resize_size`` describing the screen the window just left — and
-        :func:`fit_view.canvas_size` prefers that cache over live geometry.
-        Entering deep zoom before the new screen's ``resizeGL`` has been
-        delivered then fits the image to the OLD monitor ("it opens at the
-        other screen's size"). Invalidating here makes that fit read live
-        geometry instead; the next ``resizeGL`` repopulates the cache.
-        """
-        from Imervue.gpu_image_view.fit_view import (
-            REFIT_NONE, invalidate_canvas_size, refit_action,
-        )
-        if not self.isVisible():
-            return
-        invalidate_canvas_size(self)
-        if refit_action(self) == REFIT_NONE:
-            return
-        self._user_locked_view = False
-        # Two chains: the first drains Qt's queued layout immediately, the
-        # second keeps watching while the window actually settles on the new
-        # monitor (see :meth:`_schedule_screen_settle_adapt` for why the first
-        # cannot cover that on its own). Bumping the generation retires any
-        # watch still running from a previous screen change.
-        self._screen_settle_generation += 1
-        self._schedule_canvas_adapt()
-        self._schedule_screen_settle_adapt()
-
     def showEvent(self, event):
         """Return to a whole-image fit whenever the viewer comes back into view.
 
@@ -730,7 +324,7 @@ class GPUImageView(QOpenGLWidget):
 
         try:
             glClear(GL_COLOR_BUFFER_BIT)
-        except Exception:   # noqa: BLE001 - GL context torn down
+        except GLError:   # GL context torn down
             painter.endNativePainting()
             return
 
@@ -743,7 +337,7 @@ class GPUImageView(QOpenGLWidget):
             elif self.deep_zoom:
                 self._deep_zoom_renderer.paint()
                 self._deep_zoom_renderer.paint_minimap()
-        except Exception:   # noqa: BLE001 - keep the overlay alive; log the cause
+        except Exception:   # keep the overlay alive; log the cause
             logger.exception("Deep-zoom/tile GL render failed this frame")
 
         painter.endNativePainting()
@@ -754,7 +348,7 @@ class GPUImageView(QOpenGLWidget):
         # GL frame (which silently drops the minimap as well as the overlay).
         try:
             self._paint_overlay(painter)
-        except Exception:   # noqa: BLE001 - overlay failure must not leak the painter
+        except Exception:   # overlay failure must not leak the painter
             logger.exception("Overlay paint failed this frame")
         painter.end()
 
@@ -803,108 +397,6 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # Fit to Window — delegated to fit_view helpers
     # ---------------------------
-    def _fit_zoom(self) -> float:
-        """Zoom level that fits the whole image in the canvas (capped at 1.0)."""
-        from Imervue.gpu_image_view.fit_view import fit_zoom
-        return fit_zoom(self)
-
-    def _should_refit_on_load(self) -> bool:
-        """Content-fit on display unless the user has a genuine zoom-in saved
-        for this image (see :func:`fit_view.should_refit_on_load`)."""
-        from Imervue.gpu_image_view.fit_view import should_refit_on_load
-        return should_refit_on_load(
-            self._loading_was_remembered, self, self._loading_remembered_dims,
-            was_locked=self._loading_was_locked,
-        )
-
-    def _fit_to_window(self):
-        """Centre + fit the image. Called by the input controller and loaders."""
-        from Imervue.gpu_image_view.fit_view import fit_to_window
-        fit_to_window(self)
-
-    def _apply_initial_view(self) -> None:
-        """Set the zoom/offset for a freshly displayed full-res image.
-
-        A low-res progressive preview fits itself into ``view.zoom`` while the
-        full image loads, so by the time the full image lands ``view.zoom`` is
-        the preview's placeholder fit — not this image's remembered view. Re-
-        restore the image's own saved view first, so the fit-or-keep decision
-        and the kept zoom use the right values instead of the preview's fit.
-        A fresh image restores to defaults and then fits; a whole-image view
-        re-fits to the current canvas; a genuine zoom-in is preserved.
-        """
-        path = self._current_path()
-        if path is None:
-            return
-        self._restore_view_state(path)
-        if self._should_refit_on_load():
-            self._fit_to_window()
-            # Two chains, for the same reason request_screen_refit arms two:
-            # the first drains Qt's queued layout immediately, the second spans
-            # a canvas that settles on a slower timescale. Without the second,
-            # paging on before the correction lands just re-derives the same
-            # wrong fit from the same unsettled canvas.
-            self._schedule_settle_refit()
-            self._schedule_load_settle_refit()
-        else:
-            # Keeping a genuine remembered zoom-in: clamp its pan to the current
-            # (maybe smaller / different-DPI) canvas so it can't open off-screen,
-            # and lock the view so the next resize's settle re-fit doesn't snap
-            # the deliberate zoom away.
-            self._browse.clamp_pan()
-            self._user_locked_view = True
-
-    def _schedule_settle_refit(self, retries: int = _LAYOUT_SETTLE_RETRIES) -> None:
-        """Queue a confirmation re-fit for the next event-loop turn.
-
-        Tagged with the current deep-zoom request id so a fit queued for one
-        image can't fire after a quick keyboard switch to the next — which
-        would otherwise clobber the incoming image's remembered zoom-in.
-
-        Re-armed (bounded) while the canvas is still moving, for the same
-        reason :meth:`_schedule_canvas_adapt` retries: a single ``singleShot(0)``
-        can land mid-relayout — the window still settling on a new monitor, a
-        dock or splitter draining its queued layout request — and fitting
-        against that intermediate size is exactly the "opens at the wrong size"
-        bug. The last fit then uses the final size.
-        """
-        from PySide6.QtCore import QTimer
-        from Imervue.gpu_image_view.fit_view import canvas_size
-        request_id = self._deep_zoom_request_id
-        before = canvas_size(self)
-
-        def _run() -> None:
-            self._settle_refit(request_id)
-            if (retries > 0 and request_id == self._deep_zoom_request_id
-                    and canvas_size(self) != before):
-                self._schedule_settle_refit(retries - 1)
-
-        QTimer.singleShot(0, _run)
-
-    def _settle_refit(self, request_id: int) -> None:
-        """Confirm the fit after the event loop settles the deep-zoom layout.
-
-        Entering deep zoom from the tile wall makes the horizontal filmstrip
-        band appear and can realise the live canvas size a beat after the
-        synchronous fit, so the image could open at the wrong size / overlap
-        the strip. Re-fitting once here — only while the view is unlocked and
-        no newer image has been requested since — lands it in the correct
-        content area. A no-op when the first fit was already correct."""
-        if request_id != self._deep_zoom_request_id:
-            return  # a newer navigation superseded this fit
-        from Imervue.gpu_image_view.fit_view import should_settle_refit
-        if should_settle_refit(self):
-            self._fit_to_window()
-
-    def _fit_to_width(self):
-        """Fit image width — external contract (key dispatcher)."""
-        from Imervue.gpu_image_view.fit_view import fit_to_width
-        fit_to_width(self)
-
-    def _fit_to_height(self):
-        """Fit image height — external contract (key dispatcher)."""
-        from Imervue.gpu_image_view.fit_view import fit_to_height
-        fit_to_height(self)
 
     def _toggle_bookmark(self):
         """切換當前圖片的書籤狀態"""
@@ -970,7 +462,7 @@ class GPUImageView(QOpenGLWidget):
         # 清除 status bar 狀態槽 — 避免殘留上一張圖的資訊
         self._hover_image_xy = None
         if hasattr(self.main_window, "clear_status_info"):
-            with contextlib.suppress(Exception):
+            with best_effort("clear the status bar info", logger):
                 self.main_window.clear_status_info()
 
     def _set_modify_menu_visible(self, visible: bool) -> None:
@@ -982,7 +474,7 @@ class GPUImageView(QOpenGLWidget):
         action = getattr(self.main_window, "_modify_menu_action", None)
         if action is None:
             return
-        with contextlib.suppress(Exception):
+        with best_effort("toggle the Modify menu", logger):
             action.setVisible(bool(visible))
 
     # ---------------------------
@@ -1153,279 +645,6 @@ class GPUImageView(QOpenGLWidget):
         from Imervue.gpu_image_view.view_state import restore_view_state
         restore_view_state(self, path)
 
-    def load_deep_zoom_image(self, path):
-        self._deep_zoom_request_id += 1
-        request_id = self._deep_zoom_request_id
-        self._deep_zoom_error = None
-        # Whether this image was genuinely viewed before (has a remembered
-        # view). ``save_view_state`` keys on the *outgoing* image, so it no
-        # longer corrupts this incoming path's entry — but capture the flag
-        # up front anyway as the single source of truth for the fit decision.
-        self._loading_was_remembered = path in self._view_memory
-        # Dims the remembered zoom was saved against, so a geometry change
-        # since (rotate/crop) forces a refit instead of keeping a zoom that no
-        # longer fits the swapped dimensions.
-        self._loading_remembered_dims = (self._view_memory.get(path) or {}).get("dims")
-        # Whether the remembered view was a deliberate zoom-in (True) or a
-        # whole-image fit (False). A remembered fit re-fits to the current canvas
-        # so it can't open too big / cropped after a move to a smaller screen.
-        self._loading_was_locked = bool(
-            (self._view_memory.get(path) or {}).get("locked", False))
-        # 儲存「前一張」(目前顯示中的那張) 的狀態，key 為 _deep_zoom_path
-        self._save_view_state()
-
-        self._cancel_deep_zoom_worker()
-        self._clear_deep_zoom()
-        # From here on the deep-zoom target is `path`; a later save keys on it.
-        self._deep_zoom_path = path
-
-        self._push_history(path)
-        self._restore_view_state(path)
-
-        # 進入 deep zoom 模式 → 顯示「修改」選單。
-        self._set_modify_menu_visible(True)
-
-        if self.on_filename_changed:
-            self.on_filename_changed(Path(path).name)
-
-        # ===== 預載快取命中 → 立即顯示 =====
-        if self._prefetch.has(path):
-            dzi = self._prefetch.take(path)
-            self.deep_zoom = dzi
-            self.tile_manager = TileManager(dzi)
-            self._finalize_deep_zoom_display(path)
-            return
-
-        # ===== 快取未命中 → 背景載入（顯示載入指示，避免空白幀）=====
-        self._deep_zoom_loading = path
-        if self._prefetch.has_worker(path):
-            self.update()
-            return
-
-        if self._should_progressive_decode(path):
-            self._start_deep_zoom_preview_worker(path, request_id)
-            from PySide6.QtCore import QTimer
-            QTimer.singleShot(
-                300,
-                lambda p=path, req=request_id: self._start_deep_zoom_worker_if_current(p, req),
-            )
-        else:
-            self._start_deep_zoom_worker(path, request_id)
-
-        if hasattr(self.main_window, 'set_status'):
-            self.main_window.set_status(
-                self.main_window.language_wrapper.language_word_dict.get(
-                    "status_loading_image", "Loading image..."
-                )
-            )
-
-        self.update()
-
-    def _start_deep_zoom_worker_if_current(self, path: str, request_id: int) -> None:
-        if request_id != self._deep_zoom_request_id:
-            return
-        if self._deep_zoom_loading != path:
-            return
-        self._start_deep_zoom_worker(path, request_id)
-
-    def _start_deep_zoom_worker(self, path: str, request_id: int) -> None:
-        if self.active_deep_zoom_worker is not None:
-            return
-        from Imervue.image.recipe_store import recipe_store
-        worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
-        worker.signals.finished.connect(
-            lambda dzi, p, req=request_id: self._on_deep_zoom_loaded(dzi, p, req)
-        )
-        worker.signals.error.connect(
-            lambda p, msg, req=request_id: self._on_deep_zoom_failed(p, msg, req)
-        )
-        self.active_deep_zoom_worker = worker
-        self.deepzoom_pool.start(worker)
-
-    def _start_deep_zoom_preview_worker(self, path: str, request_id: int) -> None:
-        if self.active_deep_zoom_preview_worker is not None:
-            return
-        from Imervue.image.recipe_store import recipe_store
-        worker = LoadDeepZoomWorker(
-            path,
-            recipe=recipe_store.get_for_path(path),
-            preview=True,
-        )
-        worker.signals.finished.connect(
-            lambda dzi, p, req=request_id: self._on_deep_zoom_preview_loaded(dzi, p, req)
-        )
-        worker.signals.error.connect(lambda *_args: None)
-        self.active_deep_zoom_preview_worker = worker
-        self.deepzoom_pool.start(worker)
-
-    def _should_progressive_decode(self, path: str) -> bool:
-        from Imervue.gpu_image_view.images.image_loader import _RAW_EXTS
-        if Path(path).suffix.lower() in _RAW_EXTS:
-            return True
-        try:
-            # Justification: local image path picked in the browser.
-            return Path(path).stat().st_size >= 60 * 1024 * 1024  # NOSONAR
-        except OSError:
-            return False
-
-    def _finalize_deep_zoom_display(self, path: str) -> None:
-        """Shared finalization once ``deep_zoom`` + ``tile_manager`` are set for
-        *path* — reached from a prefetch cache hit, a background load, or a
-        promoted in-flight prefetch worker.
-
-        Centralised so the three display paths can't drift: a promoted prefetch
-        previously skipped animation start, the second-monitor mirror, the
-        status readout, and the image-issue clear purely because those calls
-        were never copied into its branch.
-        """
-        self._deep_zoom_loading = None
-        self._deep_zoom_error = None
-        self._deep_zoom_retry_counts.pop(path, None)
-        if hasattr(self.main_window, "clear_image_issue"):
-            self.main_window.clear_image_issue(path)
-        self.enforce_memory_pressure()
-        self._apply_initial_view()
-        self._init_animation(path)
-        self._prefetch_neighbors()
-        self._update_status_info()
-        self._notify_deep_zoom_displayed()
-        self._browse.begin_image_fade_in()
-        self.update()
-
-    def _on_deep_zoom_loaded(self, dzi, path, request_id: int | None = None):
-        if request_id is not None and request_id != self._deep_zoom_request_id:
-            return
-        if self._deep_zoom_loading != path:
-            return
-        from Imervue.gpu_image_view.view_state import resolve_loaded_index
-        idx = resolve_loaded_index(self.model.images, self.current_index, path)
-        if idx is None:
-            return
-        self.current_index = idx
-
-        if self.tile_manager is not None:
-            # Off-paintGL free — needs a current GL context or it leaks.
-            with self._current_gl_context():
-                self.tile_manager.clear()
-        self.deep_zoom = dzi
-        self.tile_manager = TileManager(dzi)
-        self.active_deep_zoom_worker = None
-        if self.active_deep_zoom_preview_worker is not None:
-            self.active_deep_zoom_preview_worker.abort()
-            self.active_deep_zoom_preview_worker = None
-
-        if hasattr(self.main_window, 'set_status'):
-            self.main_window.set_status(
-                self.main_window.language_wrapper.language_word_dict.get(
-                    "status_ready", "Ready"
-                )
-            )
-
-        # 顯示全解析度圖 → 還原記憶視圖或 fit（不受低解析度預覽的暫時 fit 影響）。
-        # 共用收尾（動畫偵測、副螢幕鏡像、狀態列、預載鄰圖）。
-        self._finalize_deep_zoom_display(path)
-
-    def _on_deep_zoom_preview_loaded(self, dzi, path, request_id: int | None = None):
-        if request_id is not None and request_id != self._deep_zoom_request_id:
-            return
-        if self._deep_zoom_loading != path:
-            return
-        self.active_deep_zoom_preview_worker = None
-        if self.deep_zoom is None:
-            self.deep_zoom = dzi
-            self.tile_manager = TileManager(dzi)
-            # The preview is a low-res placeholder — always fit it whole while
-            # the full image loads. The final view is applied on full load via
-            # ``_apply_initial_view`` (which re-restores the remembered zoom).
-            self._fit_to_window()
-        if hasattr(self.main_window, "set_status"):
-            lang = self.main_window.language_wrapper.language_word_dict
-            self.main_window.set_status(
-                lang.get("status_loading_full_image", "Loading full image...")
-            )
-        self.update()
-
-    def _on_deep_zoom_failed(self, path: str, message: str,
-                             request_id: int | None = None) -> None:
-        if request_id is not None and request_id != self._deep_zoom_request_id:
-            return
-        if self._deep_zoom_loading != path:
-            return
-        self._deep_zoom_loading = None
-        # "Load failed" matches no transient-error token, so the retry check
-        # below treats it exactly like an empty message.
-        message = message or "Load failed"
-        self._deep_zoom_error = (path, message)
-        self.active_deep_zoom_worker = None
-        self._maybe_retry_deep_zoom(path, message)
-        if hasattr(self.main_window, "record_image_issue"):
-            self.main_window.record_image_issue(path, message)
-        if path not in self.model.images:
-            self.offline_paths.add(path)
-        if hasattr(self.main_window, "toast"):
-            lang = self.main_window.language_wrapper.language_word_dict
-            self.main_window.toast.error(
-                lang.get("image_load_failed", "Couldn't load image: {name}").format(
-                    name=Path(path).name,
-                ),
-            )
-        if hasattr(self.main_window, "set_status"):
-            self.main_window.set_status(message or "Load failed")
-        self.update()
-
-    def _maybe_retry_deep_zoom(self, path: str, message: str) -> None:
-        if not is_transient_load_error(message):
-            return
-        count = self._deep_zoom_retry_counts.get(path, 0)
-        if count >= 2:
-            return
-        self._deep_zoom_retry_counts[path] = count + 1
-        request_id = self._deep_zoom_request_id
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(
-            250 * (count + 1),
-            lambda p=path, req=request_id: self._retry_deep_zoom_if_current(p, req),
-        )
-
-    def _retry_deep_zoom_if_current(self, path: str, request_id: int) -> None:
-        if request_id != self._deep_zoom_request_id:
-            return
-        if path not in self.model.images:
-            return
-        self.load_deep_zoom_image(path)
-
-    def _notify_deep_zoom_displayed(self) -> None:
-        """Push the edited base-level array to the deep-zoom-displayed hook."""
-        callback = self.on_deep_zoom_displayed
-        if callable(callback) and self.deep_zoom is not None:
-            # pylint: disable=not-callable  # guarded by callable() above
-            callback(self.deep_zoom.levels[0])
-        self._log_overlay_diagnostics()
-
-    def _log_overlay_diagnostics(self) -> None:
-        """Record (at DEBUG) the inputs that decide filmstrip / minimap /
-        letterbox visibility, so an 'overlays missing / image cropped' report
-        can be pinned from the log without a live debugger."""
-        if not logger.isEnabledFor(logging.DEBUG):
-            return
-        try:
-            from Imervue.gpu_image_view.fit_view import (
-                canvas_size,
-                content_size,
-                fit_zoom,
-                reserved_overlay_height,
-            )
-            logger.debug(
-                "overlay-state: images=%d filmstrip_enabled=%s grid=%s "
-                "canvas=%s content=%s reserved=%d zoom=%.4f fit=%.4f off_y=%.1f",
-                len(self.model.images), getattr(self, "_filmstrip_enabled", None),
-                self.tile_grid_mode, canvas_size(self), content_size(self),
-                reserved_overlay_height(self), self.zoom, fit_zoom(self),
-                self.dz_offset_y,
-            )
-        except Exception:  # noqa: BLE001 - diagnostics must never break display
-            logger.exception("overlay-state diagnostics failed")
-
     def _init_animation(self, path: str):
         """偵測並初始化動畫播放"""
         self._stop_animation()
@@ -1444,101 +663,6 @@ class GPUImageView(QOpenGLWidget):
     # ---------------------------
     # Prefetch（預載入前後 N 張）— delegated to PrefetchScheduler
     # ---------------------------
-    @property
-    def _prefetch_cache(self):
-        """Prefetch cache (path → DeepZoomImage). Read by the main-window
-        debug HUD and the overlay painter — external contract, keep stable."""
-        return self._prefetch.cache
-
-    @property
-    def _prefetch_workers(self):
-        """In-flight prefetch workers (path → worker). Read by the overlay
-        painter's debug HUD — external contract, keep stable."""
-        return self._prefetch.workers
-
-    def _prefetch_neighbors(self):
-        """載入當前圖片前後 ±N 張到記憶體快取"""
-        self._prefetch.schedule()
-
-    def _on_prefetch_loaded(self, dzi, path):
-        """預載 worker 完成回調"""
-        self._prefetch.pop_worker(path)
-
-        # 如果使用者正在等待這張圖（prefetch worker 被當作主載入用）
-        from Imervue.gpu_image_view.view_state import resolve_loaded_index
-        idx = resolve_loaded_index(self.model.images, self.current_index, path)
-        if (self.deep_zoom is None
-                and self._deep_zoom_loading == path
-                and idx is not None):
-            self.current_index = idx
-            self.deep_zoom = dzi
-            self.tile_manager = TileManager(dzi)
-            self._finalize_deep_zoom_display(path)
-            return
-
-        # 否則存入預載快取
-        self._prefetch.store(path, dzi)
-
-    def _on_prefetch_error(self, path: str, message: str) -> None:
-        """A prefetch worker failed. Drop it, and — if the user is waiting on it
-        as the primary load (``load_deep_zoom_image`` delegated to an already
-        in-flight prefetch worker) — route to the normal failure handling.
-
-        Without this the prefetch error only popped the worker, leaving
-        ``_deep_zoom_loading`` set and ``deep_zoom`` None: a permanent "Loading…"
-        overlay with no error toast and no retry.
-        """
-        self._prefetch.pop_worker(path)
-        if self.deep_zoom is None and self._deep_zoom_loading == path:
-            self._on_deep_zoom_failed(path, message, self._deep_zoom_request_id)
-
-    def enforce_memory_pressure(self) -> None:
-        """Trim deep-zoom auxiliary caches when image memory is large."""
-        base = self.deep_zoom.levels[0] if self.deep_zoom is not None else None
-        if base is None:
-            return
-        base_bytes = int(base.nbytes)
-        ram_bytes = self._process_rss_bytes()
-        if base_bytes > self._vram_limit * 0.35:
-            self._cancel_all_prefetch()
-        if base_bytes > self._vram_limit * 0.20:
-            self._filmstrip_thumb_cache.clear()
-            self._filmstrip_pending.clear()
-        manager = self.tile_manager
-        cache = getattr(manager, "cache", None)
-        if cache is not None and base_bytes > self._vram_limit * 0.50:
-            manager.max_cache = 64
-            from OpenGL.GL import glDeleteTextures
-            # Trim runs from the display path, off paintGL — free in-context.
-            with self._current_gl_context():
-                while len(cache) > 64:
-                    _, tex = cache.popitem(last=False)
-                    with contextlib.suppress(Exception):
-                        glDeleteTextures([tex])
-        elif manager is not None:
-            manager.max_cache = 256
-        if ram_bytes and ram_bytes > self._ram_pressure_limit_bytes():
-            self._cancel_all_prefetch()
-            self._filmstrip_thumb_cache.clear()
-            self._filmstrip_pending.clear()
-            self.tile_cache.clear()
-            if manager is not None:
-                manager.max_cache = min(getattr(manager, "max_cache", 256), 48)
-
-    @staticmethod
-    def _process_rss_bytes() -> int:
-        with contextlib.suppress(Exception):
-            import psutil
-            return int(psutil.Process().memory_info().rss)
-        return 0
-
-    @staticmethod
-    def _ram_pressure_limit_bytes() -> int:
-        with contextlib.suppress(Exception):
-            import psutil
-            total = int(psutil.virtual_memory().total)
-            return max(768 * 1024 * 1024, int(total * 0.70))
-        return 2 * 1024 * 1024 * 1024
 
     # ---------------------------
     # 清除 Tile Grid
@@ -1587,136 +711,6 @@ class GPUImageView(QOpenGLWidget):
     # ===========================
     # Event
     # ===========================
-    def wheelEvent(self, event):
-        delta = event.angleDelta().y()
-        if self.tile_grid_mode:
-            # 滾輪 → 上下捲動縮圖列表
-            scroll_amount = delta / 2  # angleDelta 通常 ±120，/2 → ±60 px
-            self.grid_offset_y += scroll_amount
-            self._clamp_grid_scroll()
-            self.update()
-            return
-        if (self.deep_zoom and self._loupe_enabled
-                and event.modifiers() & Qt.KeyboardModifier.ShiftModifier):
-            from Imervue.gpu_image_view.overlay_painter import (
-                clamp_loupe_magnification,
-            )
-            self._loupe_magnification = clamp_loupe_magnification(
-                self._loupe_magnification, delta)
-            self.update()
-            return
-        if self.deep_zoom and self._reading_mode:
-            self._browse.reading_wheel(delta)
-            return
-        if self.deep_zoom:
-            self._input.handle_deep_zoom_wheel(event, delta)
-
-    def _zoom_step(self, zoom_in: bool) -> None:
-        """Keyboard zoom in/out — called by the key-action dispatcher.
-        External contract, keep the name/signature stable."""
-        self._input.zoom_step(zoom_in)
-
-    def _fit_window_with_toast(self) -> None:
-        """Fit-to-window + toast — called by the key-action dispatcher.
-        External contract, keep the name/signature stable."""
-        if self.deep_zoom:
-            self._fit_to_window()
-            self.update()
-            self._toast("fit_window", "Fit to Window")
-
-    def mousePressEvent(self, event):
-        self.last_pos = event.position()
-        self._cancel_hover_preview()
-        # 任何按下都中止進行中的平滑動畫，使用者重新取得控制權。
-        self._zoom_ease.stop()
-        self._pan_momentum.stop()
-
-        # ===== 中鍵拖動 =====
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self._middle_dragging = True
-            self._last_pan_velocity = (0.0, 0.0)
-            return
-
-        # ===== 右鍵 → 顯示選單 =====
-        if event.button() == Qt.MouseButton.RightButton:
-            right_click_context_menu(
-                main_gui=self,
-                global_pos=event.globalPosition().toPoint(),
-                local_pos=event.position()
-            )
-            return
-
-        # ===== 左鍵 =====
-        if event.button() == Qt.MouseButton.LeftButton:
-            if self.tile_grid_mode:
-                # 改用滑鼠操作 → 收起鍵盤焦點框
-                self.focus_ring_visible = False
-                self._drag_start_pos = event.position()
-                self._drag_end_pos = event.position()
-                self._drag_selecting = False  # 先不啟動，等拖動才算框選
-            elif self.deep_zoom:
-                if self._browse.handle_deep_zoom_press(event.position()):
-                    return
-                self._input.begin_zoom_band(event.position())
-            return
-
-        super().mousePressEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        # Deep zoom: double-click toggles fit ↔ 100% centred on the cursor,
-        # except inside the minimap (which owns clicks for navigation).
-        if (event.button() == Qt.MouseButton.LeftButton
-                and self.deep_zoom and not self.tile_grid_mode):
-            pos = event.position()
-            rect = self._current_minimap_rect()
-            if rect is None or not point_in_rect(pos.x(), pos.y(), rect):
-                self._input.toggle_zoom_at(pos)
-                return
-        super().mouseDoubleClickEvent(event)
-
-    def mouseMoveEvent(self, event):
-        self._input.update_hover_state(event)
-
-        if self.last_pos is None:
-            self.last_pos = event.position()
-            return
-
-        delta = event.position() - self.last_pos
-        self.last_pos = event.position()
-
-        if self._middle_dragging:
-            self._input.handle_middle_drag(delta)
-            return
-
-        if self._minimap_dragging:
-            self._input.minimap_nav_to(event.position())
-            return
-
-        if self._zoom_band_active:
-            self._input.update_zoom_band(event)
-            return
-
-        self._input.handle_left_drag_select(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.MiddleButton:
-            self._middle_dragging = False
-            self._input.start_pan_momentum()
-            return
-        if event.button() == Qt.MouseButton.LeftButton and self._minimap_dragging:
-            self._minimap_dragging = False
-            return
-        if (event.button() == Qt.MouseButton.LeftButton
-                and self._zoom_band_active):
-            self._input.finish_zoom_band(event.position())
-            return
-        if (
-            self.tile_grid_mode
-            and event.button() == Qt.MouseButton.LeftButton
-            and self._input.handle_tile_release(event)
-        ):
-            return
-        super().mouseReleaseEvent(event)
 
     def keyPressEvent(self, event):
         self._key_input.handle(event)
@@ -1726,7 +720,6 @@ class GPUImageView(QOpenGLWidget):
         if hasattr(self.main_window, 'toast'):
             lang = self.main_window.language_wrapper.language_word_dict
             self.main_window.toast.info(lang.get(key, fallback))
-
 
     # ===========================
     # Touchpad / Touch gestures

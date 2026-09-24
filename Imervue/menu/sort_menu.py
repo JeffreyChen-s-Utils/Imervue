@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from PIL import Image
 from PySide6.QtGui import QActionGroup
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -52,7 +53,7 @@ def _sort_key_resolution(path: str):
         with Image.open(path) as img:
             w, h = img.size
             return w * h
-    except Exception:
+    except IMAGE_READ_ERRORS:
         return 0
 
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 
+import pytest
 from PIL import Image
 
 from Imervue.image.browser_state import (
@@ -142,3 +143,24 @@ def test_metadata_get_does_not_cache_a_transient_stat_failure(tmp_path):
     healed = index.get(str(p))
     assert (healed.width, healed.height) == (20, 10)
     assert str(p) in index._items
+
+
+def test_metadata_read_leaves_dimensions_unknown_for_a_non_image(tmp_path):
+    p = tmp_path / "notes.png"
+    p.write_bytes(b"not really a png")
+    meta, cacheable = ImageMetadataIndex()._read(str(p))
+    assert (meta.width, meta.height) == (None, None)
+    assert meta.size == len(b"not really a png")
+    assert cacheable is True
+
+
+def test_metadata_read_propagates_an_unexpected_reader_error(tmp_path, monkeypatch):
+    p = tmp_path / "img.png"
+    Image.new("RGB", (4, 4)).save(str(p))
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("reader bug")
+
+    monkeypatch.setattr(Image, "open", broken)
+    with pytest.raises(RuntimeError, match="reader bug"):
+        ImageMetadataIndex()._read(str(p))

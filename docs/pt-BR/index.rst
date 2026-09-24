@@ -962,7 +962,7 @@ o OBS Studio 26+ inclui o driver *OBS Virtual Camera* no Windows / macOS
 A barra de ferramentas **Output > Virtual camera** abre o stream.
 
 DirectShow / AVFoundation / v4l2loopback são apenas RGB — sem canal alfa — então
-o Imervue preenche a área fora do personagem com **magenta `#FF00FF`** como uma
+o Imervue preenche a área fora do personagem com **magenta #FF00FF** como uma
 chave de croma. Remova-o no OBS via o filtro Color Key:
 
 1. Clique com o botão direito na fonte Video Capture Device > **Filters**
@@ -1996,8 +1996,8 @@ Ferramentas e Sobreposições
    * - ``S``
      - Slideshow
 
-Animação
-^^^^^^^^
+Imagens animadas
+^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2283,6 +2283,8 @@ Clique duas vezes em uma linha da lista para digitar o nome de uma pessoa; ao sa
 são gravadas no blob ``extra['face_tags']`` da receita. A detecção é uma técnica clássica —
 a precisão é adequada para "mostre-me os rostos" mas não substitui o reconhecimento
 moderno baseado em CNN.
+Requer OpenCV 4 (``pip install "opencv-python<5"``): o OpenCV 5 removeu os cascades
+Haar, e nesse caso o diálogo avisa em vez de detectar.
 
 Máscaras de Ajuste Local
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2513,6 +2515,7 @@ Ferramentas Disponíveis
      - Recorte por caixa de pixels, redimensionamento preservando a
        proporção e rotação sem perdas de 90/180/270 ou espelhamento
        horizontal/vertical.
+       Tamanhos e coordenadas se referem à imagem endireitada pelo EXIF.
    * - ``collection_stats``
      - Resume avaliações, favoritos, rótulos de cor e estados de triagem de
        uma pasta (contagens, distribuição de 0–5 estrelas e média).

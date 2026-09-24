@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from PySide6.QtCore import QMarginsF, Qt
 from PySide6.QtGui import QFont, QPageLayout, QPageSize, QPainter, QPdfWriter
 
+from Imervue.export.pdf_output import begin_pdf_painter
 from Imervue.gui.shortcut_settings_dialog import (
     ACTION_DISPLAY_KEYS,
     ACTION_FALLBACKS,
@@ -142,10 +143,13 @@ def _format_key_combo(key: int, modifiers: int) -> str:
 
 
 def generate_cheat_sheet(out_path: str, options: CheatSheetOptions) -> str:
-    """Write a printable shortcut PDF to ``out_path``. Returns the path."""
+    """Write a printable shortcut PDF to ``out_path``. Returns the path.
+
+    Raises ``OSError`` if the file cannot be written.
+    """
     rows = collect_shortcut_rows()
     writer = _make_pdf_writer(out_path, options)
-    painter = QPainter(writer)
+    painter = begin_pdf_painter(writer, out_path)
     try:
         _render_pdf(painter, writer, rows, options)
     finally:

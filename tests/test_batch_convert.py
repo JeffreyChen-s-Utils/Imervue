@@ -192,3 +192,23 @@ class TestConvertWorker:
         out_files = list(out.iterdir())
         assert len(out_files) == 5
         assert all(f.suffix == ".webp" for f in out_files)
+
+
+def _tagged_portrait(path):
+    """40x20 stored pixels tagged 6, so shown (and expected out) as 20x40."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    return str(path)
+
+
+def test_converted_tagged_photo_is_upright(tmp_path):
+    """The output carries no EXIF; the stored sideways pixels stayed sideways."""
+    src = _tagged_portrait(tmp_path / "p.jpg")
+    out = tmp_path / "out"
+    out.mkdir()
+    worker = _ConvertWorker(paths=[src], output_dir=str(out), fmt="PNG", quality=85,
+                            delete_originals=False, skip_same_fmt=True)
+    worker._convert_one(src, ".png")
+    with Image.open(out / "p.png") as saved:
+        assert saved.size == (20, 40)

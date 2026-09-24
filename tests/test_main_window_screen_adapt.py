@@ -319,3 +319,32 @@ def test_screen_change_without_a_splitter_still_refits_the_viewer(qapp):
     assert (win.fast_passes, win.settle_watches) == ([], [])
     qapp.processEvents()
     assert win.viewer.fit_calls == 1
+
+
+def test_screen_signal_retry_stops_when_the_window_is_deleted(qapp, pump_until):
+    """The 50 ms retry used a bare lambda; after the window closed it raised
+    ``RuntimeError: Internal C++ object already deleted``."""
+    import shiboken6
+    from PySide6.QtCore import QObject
+    from PySide6.QtWidgets import QWidget
+
+    from Imervue.gui.main_window_screens import MainWindowScreensMixin
+
+    calls = []
+
+    class _Window(MainWindowScreensMixin, QWidget):
+        _screen_signal_connected = False
+
+        def _connect_screen_change_signal(self, _retries: int = 20) -> None:
+            calls.append(_retries)
+            MainWindowScreensMixin._connect_screen_change_signal(self, _retries)
+
+    window = _Window()   # never shown, so windowHandle() stays None and it retries
+    window._connect_screen_change_signal(3)
+    shiboken6.delete(window)
+    marker, done = QObject(), []
+    from Imervue.system.qt_timers import call_later
+    call_later(200, marker, lambda: done.append(1))
+    assert pump_until(lambda: done == [1])
+    shiboken6.delete(marker)
+    assert calls == [3]

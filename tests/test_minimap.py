@@ -46,15 +46,15 @@ class TestViewportBoxRect:
         # 1000x1000 image, 100x100 minimap at origin, zoom 1, no pan. Content
         # height 848 (152 band) → the box bottom is 848/1000 of the strip, not
         # the full height, so it doesn't claim the band-hidden rows are visible.
-        x0, y0, x1, y1 = viewport_box_rect((0, 0, 100, 100), 1000, 1000,
-                                           0.0, 0.0, 1.0, 1000, 848)
+        x0, y0, x1, y1 = viewport_box_rect((0, 0, 100, 100), (1000, 1000),
+                                           (0.0, 0.0), 1.0, (1000, 848))
         assert (x0, y0) == pytest.approx((0, 0))
         assert x1 == pytest.approx(100)      # full width visible
         assert y1 == pytest.approx(84.8)     # 848/1000 * 100
 
     def test_box_guards_degenerate_zoom_and_image(self):
         # Zero zoom / zero image dims must not raise (guarded divisors).
-        assert viewport_box_rect((0, 0, 50, 50), 0, 0, 0.0, 0.0, 0.0, 100, 80)
+        assert viewport_box_rect((0, 0, 50, 50), (0, 0), (0.0, 0.0), 0.0, (100, 80))
 
 
 class TestPointInRect:
@@ -74,13 +74,13 @@ class TestRecenterOffsets:
         rect = (0, 0, 100, 100)
         # Click the middle of the minimap on a 1000x1000 image at zoom 1 in a
         # 500x500 viewport → image centre (500,500) lands at viewport centre.
-        off_x, off_y = recenter_offsets(50, 50, rect, 1000, 1000, 500, 500, 1.0)
+        off_x, off_y = recenter_offsets((50, 50), rect, (1000, 1000), (500, 500), 1.0)
         assert off_x == pytest.approx(500 / 2 - 500 * 1.0)
         assert off_y == pytest.approx(500 / 2 - 500 * 1.0)
 
     def test_top_left_click_maps_to_origin(self):
         rect = (0, 0, 100, 100)
-        off_x, off_y = recenter_offsets(0, 0, rect, 1000, 1000, 400, 300, 2.0)
+        off_x, off_y = recenter_offsets((0, 0), rect, (1000, 1000), (400, 300), 2.0)
         # Image point (0,0) → centred: offset = view/2 - 0.
         assert off_x == pytest.approx(200)
         assert off_y == pytest.approx(150)
@@ -89,6 +89,6 @@ class TestRecenterOffsets:
         rect = (0, 0, 100, 100)
         # A click past the right/bottom edge clamps to the far image corner,
         # never beyond it.
-        off_x, off_y = recenter_offsets(999, 999, rect, 1000, 1000, 500, 500, 1.0)
-        clamped = recenter_offsets(100, 100, rect, 1000, 1000, 500, 500, 1.0)
+        off_x, off_y = recenter_offsets((999, 999), rect, (1000, 1000), (500, 500), 1.0)
+        clamped = recenter_offsets((100, 100), rect, (1000, 1000), (500, 500), 1.0)
         assert (off_x, off_y) == clamped

@@ -71,9 +71,42 @@ def test_pet_window_shutdown_stops_features_music_and_canvas_drivers():
         },
         _music_rhythm=SimpleNamespace(shutdown=lambda: calls.append("music")),
         _canvas_drivers=SimpleNamespace(shutdown=lambda: calls.append("drivers")),
+        _llm=SimpleNamespace(shutdown=lambda: calls.append("llm")),
     )
     PetWindow.shutdown(fake)
-    assert set(calls) == {"webhook", "hotkeys", "music", "drivers"}
+    assert set(calls) == {"webhook", "hotkeys", "music", "drivers", "llm"}
+
+
+def test_pet_window_shutdown_logs_a_failing_step_and_carries_on(caplog):
+    calls: list = []
+
+    def broken():
+        raise RuntimeError("port already closed")
+
+    fake = SimpleNamespace(
+        _features={"webhook": SimpleNamespace(shutdown=broken),
+                   "hotkeys": SimpleNamespace(shutdown=lambda: calls.append("hotkeys"))},
+        _music_rhythm=SimpleNamespace(shutdown=lambda: calls.append("music")),
+        _canvas_drivers=SimpleNamespace(shutdown=lambda: calls.append("drivers")),
+        _llm=SimpleNamespace(shutdown=lambda: calls.append("llm")),
+    )
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        PetWindow.shutdown(fake)
+    assert calls == ["hotkeys", "music", "drivers", "llm"]
+    (record,) = [r for r in caplog.records if r.exc_info]
+    assert "shut down a feature controller" in record.getMessage()
+    assert record.exc_info[0] is RuntimeError
+
+
+def test_integration_shutdown_logs_a_failing_stop(caplog):
+    def broken():
+        raise OSError("socket gone")
+
+    fake = SimpleNamespace(_client=SimpleNamespace(stop=broken))
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        IntegrationController.shutdown(fake)
+    assert [r.getMessage() for r in caplog.records] == [
+        "Best-effort step failed: stop the integration client"]
 
 
 def test_despawn_shuts_the_window_down_before_deleting():

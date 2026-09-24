@@ -13,19 +13,19 @@ module provides:
 """
 from __future__ import annotations
 
+import hashlib
 import importlib
 import io
 import logging
 import re
 import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 from urllib.request import urlopen, Request
-
-import contextlib
 
 from PySide6.QtCore import Qt, QObject, QThread, Signal
 from PySide6.QtWidgets import (
@@ -34,11 +34,24 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.pip_constraints import install_command, write_constraints_file
+# Plugins in Imervue_Plugins import ``_find_python`` from this module
+# (architecture.md §6), and tests reach the probe through it, so the finder's
+# names stay importable here.
+from Imervue.plugin.python_finder import (  # noqa: F401 - re-exported for plugins and tests
+    _PYTHON_EXE_NAME,
+    _VERIFY_TIMEOUT_S,
+    _embedded_python_dir,
+    _embedded_python_exe,
+    _find_python,
+    _subprocess_kwargs,
+    _verify_python,
+)
 from Imervue.system.app_paths import (
     is_frozen as _is_frozen,
-    embedded_python_dir as _embedded_python_dir_path,
     ensure_frozen_site_packages_on_path as _ensure_frozen_site_packages_on_path,
 )
+from Imervue.system.best_effort import best_effort
 
 
 def _https_urlopen(req: Request, timeout: int):
@@ -63,22 +76,6 @@ logger = logging.getLogger("Imervue.plugin.pip_installer")
 # subprocess 工具
 # ===========================
 
-def _subprocess_kwargs() -> dict:
-    """所有 subprocess 共用的參數，防止卡住。
-
-    - stdin=DEVNULL：阻止子程序讀取 stdin（pip 等待輸入）
-    - CREATE_NO_WINDOW：Windows 下不彈出黑色主控台
-    - encoding / errors：避免非 UTF-8 系統下的 UnicodeDecodeError
-    """
-    kwargs: dict = {
-        "stdin": subprocess.DEVNULL,
-        "encoding": "utf-8",
-        "errors": "replace",
-    }
-    if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-    return kwargs
-
 
 # ===========================
 # 環境偵測
@@ -95,28 +92,45 @@ _ensure_frozen_site_packages_on_path()
 # 內嵌 Python 自動下載
 # ===========================
 
-_EMBED_PYTHON_VERSION = "3.12.8"
+# The last 3.12 release that ships an embeddable zip (later 3.12 releases are
+# source-only). Keep the minor version equal to the frozen build's (release.yml):
+# packages installed here are imported by the frozen app, so their cp312
+# binaries must match its interpreter.
+_EMBED_PYTHON_VERSION = "3.12.10"
 _EMBED_PYTHON_URL = (
     f"https://www.python.org/ftp/python/{_EMBED_PYTHON_VERSION}/"
     f"python-{_EMBED_PYTHON_VERSION}-embed-amd64.zip"
 )
-_GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
+# SHA-256 of that zip: python.org publishes its MD5 (fe8ef205f2e9c3ba44d0cf9954e1abd3)
+# and size (11,133,606 bytes), and a download matching both hashed to this.
+_EMBED_PYTHON_SHA256 = "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"
+# pip is installed from a pinned wheel whose SHA-256 is PyPI's published digest,
+# not from get-pip.py: that script lives at a URL whose content changes with
+# every pip release, so it could not be verified before being run.
+_PIP_WHEEL_VERSION = "26.2.1"
+_PIP_WHEEL_NAME = f"pip-{_PIP_WHEEL_VERSION}-py3-none-any.whl"
+_PIP_WHEEL_URL = (
+    "https://files.pythonhosted.org/packages/f3/6e/"
+    f"1736e5b4ae2b778ef2f81c47d797de9f891d4d8acb047a24ca37a60294dd/{_PIP_WHEEL_NAME}"
+)
+_PIP_WHEEL_SHA256 = "71138adf1f4ca900cdb7d289c21b7494329f2332b6d85f0e1c42108c0384ed3e"
+# Runs pip straight from its wheel, as ``python -m pip`` would: pip refuses to
+# replace itself when started through any other entry point on Windows, and the
+# embeddable Python ignores PYTHONPATH because of its ._pth file.
+_PIP_FROM_WHEEL = (
+    "import runpy, sys; wheel = sys.argv[1]; sys.path.insert(0, wheel); "
+    "sys.argv = ['pip', 'install', '--no-index', '--no-warn-script-location', wheel]; "
+    "runpy.run_module('pip', run_name='__main__', alter_sys=True)"
+)
 _USER_AGENT = "Imervue/1.0"
 _UA_HEADERS = {"User-Agent": _USER_AGENT}
 _PROCESS_TIMEOUT_MSG = "Process timed out"
-_PYTHON_EXE_NAME = "python.exe"
 _PTH_NAME_RE = re.compile(r"python[0-9._]*\._pth")
 
 
-def _embedded_python_dir() -> Path:
-    """內嵌 Python 的安裝路徑"""
-    return _embedded_python_dir_path()
-
-
-def _embedded_python_exe() -> Path | None:
-    """回傳內嵌 Python 的 python.exe 路徑（若已安裝）"""
-    exe = _embedded_python_dir() / _PYTHON_EXE_NAME
-    return exe if exe.is_file() else None
+def _matches_sha256(data: bytes, expected: str) -> bool:
+    """True if *data* hashes to the pinned hex SHA-256 *expected*."""
+    return hashlib.sha256(data).hexdigest() == expected
 
 
 class _DownloadPythonWorker(QThread):
@@ -157,15 +171,24 @@ class _DownloadPythonWorker(QThread):
             logger.exception(f"Download Python failed: {exc}")
             self.result_ready.emit(False, str(exc))
 
+    def _download_verified(self, url: str, sha256: str, what: str) -> bytes | None:
+        """Download *url*; emit a failure and return None unless its SHA-256 matches."""
+        try:
+            req = Request(url, headers=_UA_HEADERS)
+            with _https_urlopen(req, timeout=120) as resp:
+                data = resp.read()
+        except OSError as e:
+            self.result_ready.emit(False, f"Failed to download {what}: {e}")
+            return None
+        if not _matches_sha256(data, sha256):
+            self.result_ready.emit(False, f"{what} does not match its checksum; not using it")
+            return None
+        return data
+
     def _download_embed_zip(self) -> bytes | None:
         self.log.emit(f"Downloading Python {_EMBED_PYTHON_VERSION} embeddable ...")
-        try:
-            req = Request(_EMBED_PYTHON_URL, headers=_UA_HEADERS)
-            resp = _https_urlopen(req, timeout=120)
-            return resp.read()
-        except OSError as e:
-            self.result_ready.emit(False, f"Download failed: {e}")
-            return None
+        return self._download_verified(
+            _EMBED_PYTHON_URL, _EMBED_PYTHON_SHA256, f"Python {_EMBED_PYTHON_VERSION}")
 
     def _extract_safely(self, data: bytes, dest_dir: Path) -> bool:
         """Extract the embeddable zip to *dest_dir*, rejecting zip-slip entries."""
@@ -202,31 +225,28 @@ class _DownloadPythonWorker(QThread):
             )
 
     def _bootstrap_pip(self, dest_dir: Path, python_exe: Path) -> bool:
-        """Download get-pip.py, run it, return True on success."""
-        self.log.emit("Downloading get-pip.py ...")
-        try:
-            req = Request(_GET_PIP_URL, headers=_UA_HEADERS)
-            resp = _https_urlopen(req, timeout=120)
-            get_pip_data = resp.read()
-        except OSError as e:
-            self.result_ready.emit(False, f"Failed to download get-pip.py: {e}")
+        """Install pip from its pinned, checksum-verified wheel; True on success."""
+        self.log.emit(f"Downloading pip {_PIP_WHEEL_VERSION} ...")
+        wheel_data = self._download_verified(
+            _PIP_WHEEL_URL, _PIP_WHEEL_SHA256, f"pip {_PIP_WHEEL_VERSION}")
+        if wheel_data is None:
             return False
 
-        get_pip_path = dest_dir / "get-pip.py"
-        get_pip_path.write_bytes(get_pip_data)
+        wheel_path = dest_dir / _PIP_WHEEL_NAME
+        wheel_path.write_bytes(wheel_data)
         try:
             self.log.emit("Installing pip ...")
             returncode = self._run_with_live_output(
-                [str(python_exe), str(get_pip_path)],
+                [str(python_exe), "-c", _PIP_FROM_WHEEL, str(wheel_path)],
                 cwd=str(dest_dir),
                 timeout=300,
             )
             if returncode != 0:
                 self.result_ready.emit(
-                    False, f"get-pip.py failed (exit code {returncode})")
+                    False, f"pip installation failed (exit code {returncode})")
                 return False
         finally:
-            get_pip_path.unlink(missing_ok=True)
+            wheel_path.unlink(missing_ok=True)
         return True
 
     def _run_with_live_output(
@@ -266,157 +286,13 @@ class _FindPythonWorker(QThread):
     def run(self):
         try:
             result = _find_python()
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # Registry / filesystem probes (e.g. iterdir on a locked dir) can
             # raise; without this result_ready never fires and the install dialog
             # hangs with its progress bar spinning. Report "no Python found".
             logger.exception("Python search failed: %s", exc)
             result = None
         self.result_ready.emit(result)
-
-
-def _find_python_windows_install_paths() -> str | None:
-    """Scan common Windows Python install locations for a working interpreter."""
-    import shutil
-    import os
-    localappdata = os.environ.get("LOCALAPPDATA", "")
-    appdata_programs = os.environ.get("PROGRAMFILES", "C:\\Program Files")
-    candidates: list[str] = []
-    py_launcher = shutil.which("py")
-    if py_launcher:
-        candidates.append(py_launcher)
-    for base in [localappdata + "\\Programs\\Python",
-                  appdata_programs + "\\Python"]:
-        if Path(base).is_dir():
-            for d in sorted(Path(base).iterdir(), reverse=True):
-                exe = d / _PYTHON_EXE_NAME
-                if exe.is_file():
-                    candidates.append(str(exe))
-    for c in candidates:
-        if _verify_python(c):
-            return c
-    return None
-
-
-def _find_python_unix_paths() -> str | None:
-    """Scan conventional Unix Python locations for a working interpreter."""
-    for p in ("/usr/bin/python3", "/usr/local/bin/python3",
-              "/usr/bin/python", "/usr/local/bin/python"):
-        if Path(p).is_file() and _verify_python(p):
-            return p
-    return None
-
-
-def _find_python() -> str | None:
-    """找到可用的 Python 直譯器路徑。
-
-    - 一般環境：直接用 sys.executable
-    - PyInstaller 環境：sys.executable 是 .exe 本身，需另外搜尋
-
-    注意：此函式會執行多個 subprocess，不應在 UI 主執行緒呼叫。
-    """
-    import shutil
-
-    if not _is_frozen():
-        return sys.executable
-
-    # 1) PATH 搜尋
-    for name in ("python", "python3", "py"):
-        found = shutil.which(name)
-        if found and _verify_python(found):
-            return found
-
-    # 2) Windows：查 registry 找已安裝的 Python
-    if sys.platform == "win32":
-        reg_python = _find_python_from_registry()
-        if reg_python:
-            return reg_python
-        win_install = _find_python_windows_install_paths()
-        if win_install:
-            return win_install
-    else:
-        unix = _find_python_unix_paths()
-        if unix:
-            return unix
-
-    # 3) 內嵌 Python（之前自動下載的）
-    embed_exe = _embedded_python_exe()
-    if embed_exe and _verify_python(str(embed_exe)):
-        return str(embed_exe)
-
-    return None
-
-
-_REG_SUBKEYS = (
-    r"Software\Python\PythonCore",
-    r"Software\WOW6432Node\Python\PythonCore",
-)
-
-
-def _find_python_from_registry() -> str | None:
-    """Windows：從 registry 搜尋已安裝的 Python"""
-    try:
-        import winreg
-    except ImportError:
-        return None
-    hives = (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE)
-    for hive in hives:
-        for sub in _REG_SUBKEYS:
-            path = _scan_registry_branch(winreg, hive, sub)
-            if path:
-                return path
-    return None
-
-
-def _scan_registry_branch(winreg, hive, sub: str) -> str | None:
-    try:
-        key = winreg.OpenKey(hive, sub)
-    except OSError:
-        return None
-    try:
-        return _enumerate_python_versions(winreg, key)
-    except OSError:
-        return None
-
-
-def _enumerate_python_versions(winreg, key) -> str | None:
-    i = 0
-    while True:
-        try:
-            ver = winreg.EnumKey(key, i)
-        except OSError:
-            return None
-        i += 1
-        path = _read_install_path(winreg, key, ver)
-        if path:
-            return path
-
-
-def _read_install_path(winreg, key, ver: str) -> str | None:
-    try:
-        install_key = winreg.OpenKey(key, ver + r"\InstallPath")
-        path, _ = winreg.QueryValueEx(install_key, "ExecutablePath")
-    except OSError:
-        return None
-    if Path(path).is_file() and _verify_python(path):
-        return path
-    return None
-
-
-def _verify_python(path: str) -> bool:
-    """驗證該路徑確實是可用的 Python 且有 pip"""
-    try:
-        kw = _subprocess_kwargs()
-        result = subprocess.run(
-            [path, "-m", "pip", "--version"],
-            capture_output=True,
-            timeout=10,
-            check=False,
-            **kw,
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
 
 
 # ===========================
@@ -445,7 +321,9 @@ def check_missing_packages(
             logger.info("check_missing_packages: trying import '%s'", import_name)
             importlib.import_module(import_name)
             logger.info("check_missing_packages: '%s' OK", import_name)
-        except Exception as e:
+        # An optional package's import runs its native init (DLL loads, CUDA
+        # probes), which can raise anything; every failure means "missing".
+        except Exception as e:  # noqa: BLE001 - any import failure means "missing"
             logger.info(
                 "check_missing_packages: '%s' missing (%s: %s)",
                 import_name, type(e).__name__, e,
@@ -511,7 +389,8 @@ class _ImportWorker(QThread):
 
     def run(self):
         for name in self._names:
-            with contextlib.suppress(Exception):
+            # A freshly installed package can fail at import time in any way.
+            with best_effort(f"import the installed package {name}", logger):
                 importlib.import_module(name)
         self.result_ready.emit()
 
@@ -531,41 +410,47 @@ class _InstallWorker(QThread):
         self._python = python_path
 
     def run(self):
-        extra_args: list[str] = []
-        if _is_frozen():
-            from Imervue.system.app_paths import frozen_site_packages as _frozen_site_packages
-            target_dir = str(_frozen_site_packages())
-            extra_args = ["--target", target_dir]
-            self.log.emit(f"Frozen mode: installing to {target_dir}")
-            Path(target_dir).mkdir(parents=True, exist_ok=True)
-            if target_dir not in sys.path:
-                sys.path.insert(0, target_dir)
+        extra_args = self._frozen_target_args()
+        try:
+            with tempfile.TemporaryDirectory(
+                    prefix="imervue_pip_", ignore_cleanup_errors=True) as tmp:
+                constraints = write_constraints_file(Path(tmp))
+                ok, message = self._install_all(constraints, extra_args)
+        except OSError as exc:
+            ok, message = False, str(exc)
+        self.result_ready.emit(ok, message)
 
+    def _frozen_target_args(self) -> list[str]:
+        """Return ``--target`` args for a frozen build (creating the dir), else none."""
+        if not _is_frozen():
+            return []
+        from Imervue.system.app_paths import frozen_site_packages as _frozen_site_packages
+        target_dir = str(_frozen_site_packages())
+        self.log.emit(f"Frozen mode: installing to {target_dir}")
+        Path(target_dir).mkdir(parents=True, exist_ok=True)
+        if target_dir not in sys.path:
+            sys.path.insert(0, target_dir)
+        return ["--target", target_dir]
+
+    def _install_all(self, constraints: Path, extra_args: list[str]) -> tuple[bool, str]:
+        """Install every package in turn under *constraints*; stop at the first failure."""
         for name in self._pip_names:
             self.log.emit(f"Installing {name} ...")
+            cmd = install_command(self._python, name, constraints, extra_args)
             try:
-                cmd = [
-                    self._python, "-m", "pip", "install",
-                    "--no-input",
-                    "--disable-pip-version-check",
-                    name,
-                ] + extra_args
-
                 returncode = self._run_with_live_output(cmd, timeout=600)
-                if returncode != 0:
-                    self.result_ready.emit(
-                        False,
-                        f"Failed to install {name} (exit code {returncode})",
-                    )
-                    return
             except FileNotFoundError:
-                self.result_ready.emit(False, f"Python not found: {self._python}")
-                return
+                return False, f"Python not found: {self._python}"
+            except (OSError, ValueError, subprocess.SubprocessError) as exc:
+                return False, str(exc)
             except Exception as exc:
-                self.result_ready.emit(False, str(exc))
-                return
-
-        self.result_ready.emit(True, "All packages installed successfully!")
+                # Worker boundary: the dialog waits on result_ready, so even a
+                # bug must be reported rather than escape the thread.
+                logger.exception("Installing %s failed unexpectedly", name)
+                return False, str(exc)
+            if returncode != 0:
+                return False, f"Failed to install {name} (exit code {returncode})"
+        return True, "All packages installed successfully!"
 
     def _run_with_live_output(self, cmd: list[str], timeout: int = 600) -> int:
         """執行子程序並即時 emit 每一行輸出"""

@@ -1,6 +1,7 @@
 """Tests for the cheat-sheet PDF exporter."""
 from __future__ import annotations
 
+import pytest
 from PySide6.QtCore import Qt
 
 from Imervue.export.cheat_sheet import (
@@ -109,3 +110,11 @@ def test_generate_cheat_sheet_unknown_page_size_falls_back(qapp, tmp_path):
     out = tmp_path / "fallback.pdf"
     generate_cheat_sheet(str(out), CheatSheetOptions(page_size="A8-but-fake"))
     assert out.exists()
+
+
+def test_generate_cheat_sheet_raises_when_the_pdf_cannot_be_written(qapp, tmp_path):
+    """An unwritable target used to return the path as if the PDF were saved."""
+    out = tmp_path / "missing_dir" / "shortcuts.pdf"
+    with pytest.raises(OSError, match="missing_dir"):
+        generate_cheat_sheet(str(out), CheatSheetOptions())
+    assert not out.exists()

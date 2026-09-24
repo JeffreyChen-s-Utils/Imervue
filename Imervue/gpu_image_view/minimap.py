@@ -45,13 +45,10 @@ def minimap_geometry(
 
 def viewport_box_rect(
     rect: tuple[float, float, float, float],
-    img_w: float,
-    img_h: float,
-    dz_offset_x: float,
-    dz_offset_y: float,
+    img_size: tuple[float, float],
+    dz_offset: tuple[float, float],
     zoom: float,
-    canvas_w: float,
-    content_h: float,
+    content_size: tuple[float, float],
 ) -> tuple[float, float, float, float]:
     """Return the ``(x0, y0, x1, y1)`` "you are here" box inside the minimap.
 
@@ -61,6 +58,9 @@ def viewport_box_rect(
     visible whenever the bottom rows sit hidden behind the band.
     """
     mm_x, mm_y, mm_w, mm_h = rect
+    img_w, img_h = img_size
+    dz_offset_x, dz_offset_y = dz_offset
+    canvas_w, content_h = content_size
     z = max(zoom, 1e-9)
     vp_left = -dz_offset_x / z
     vp_top = -dz_offset_y / z
@@ -83,13 +83,10 @@ def point_in_rect(px: float, py: float, rect: tuple[float, float, float, float])
 
 
 def recenter_offsets(
-    click_x: float,
-    click_y: float,
+    click: tuple[float, float],
     rect: tuple[float, float, float, float],
-    img_w: float,
-    img_h: float,
-    view_w: float,
-    view_h: float,
+    img_size: tuple[float, float],
+    view_size: tuple[float, float],
     zoom: float,
 ) -> tuple[float, float]:
     """Map a click inside the minimap to deep-zoom pan offsets.
@@ -98,6 +95,9 @@ def recenter_offsets(
     Returns ``(dz_offset_x, dz_offset_y)``; the click fraction is clamped to
     ``[0, 1]`` so a click on the minimap border can't pan past the image.
     """
+    click_x, click_y = click
+    img_w, img_h = img_size
+    view_w, view_h = view_size
     mm_x, mm_y, mm_w, mm_h = rect
     fx = min(1.0, max(0.0, (click_x - mm_x) / max(mm_w, 1e-9)))
     fy = min(1.0, max(0.0, (click_y - mm_y) / max(mm_h, 1e-9)))

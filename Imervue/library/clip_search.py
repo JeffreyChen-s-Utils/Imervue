@@ -21,10 +21,11 @@ The feature degrades gracefully when no backend is available — the UI checks
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
-import pickle
 import sys
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -283,29 +284,42 @@ class ClipSearchIndex:
     # ---- persistence ------------------------------------------------
 
     def save(self, path: Path | str | None = None) -> Path:
-        """Write the index to an ``.npz`` archive — returns the final path."""
+        """Write the index to an ``.npz`` archive — returns the final path.
+
+        The paths are stored as UTF-8 JSON bytes rather than an object array,
+        so :meth:`load` never has to unpickle anything.
+        """
         target = Path(path) if path else self._cache_path
         target.parent.mkdir(parents=True, exist_ok=True)
-        paths_arr = np.array(self._paths, dtype=object)
+        paths_json = np.frombuffer(json.dumps(self._paths).encode("utf-8"), dtype=np.uint8)
         np.savez(
             target,
-            paths=paths_arr,
+            paths_json=paths_json,
             matrix=self._matrix,
             dim=np.array([self._matrix.shape[1]], dtype=np.int32),
         )
         return target
 
     def load(self, path: Path | str | None = None) -> bool:
-        """Replace the in-memory index from disk. False if no cache exists."""
+        """Replace the in-memory index from disk. False if no usable cache exists.
+
+        Loads with ``allow_pickle=False``, so a tampered cache cannot run code.
+        A cache written before the paths moved to JSON (an object array) is
+        rejected like a corrupt one, and the index is rebuilt.
+        """
         source = Path(path) if path else self._cache_path
         if not source.exists():
             return False
         try:
-            data = np.load(source, allow_pickle=True)
-            paths = [str(p) for p in data["paths"].tolist()]
-            matrix = np.asarray(data["matrix"], dtype=np.float32)
-        except (OSError, ValueError, KeyError, EOFError, pickle.UnpicklingError) as exc:
+            with np.load(source, allow_pickle=False) as data:
+                paths = json.loads(data["paths_json"].tobytes().decode("utf-8"))
+                matrix = np.asarray(data["matrix"], dtype=np.float32)
+        # ValueError also covers bad JSON / UTF-8 and a pickled object array.
+        except (OSError, ValueError, KeyError, EOFError, zipfile.BadZipFile) as exc:
             logger.warning("Failed to load CLIP cache %s: %s", source, exc)
+            return False
+        if not (isinstance(paths, list) and all(isinstance(p, str) for p in paths)):
+            logger.warning("Malformed CLIP cache at %s", source)
             return False
         if matrix.ndim != 2 or matrix.shape[0] != len(paths):
             logger.warning("Malformed CLIP cache at %s", source)

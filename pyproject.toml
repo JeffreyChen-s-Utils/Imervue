@@ -11,7 +11,7 @@ authors = [
     { name = "JE-Chen", email = "jechenmailman@gmail.com" },
 ]
 dependencies = [
-    "PySide6==6.11.1", "qt-material", "Pillow", "PyOpenGL", "numpy", "rawpy",
+    "PySide6==6.11.2", "qt-material", "Pillow>=12.3.0", "PyOpenGL", "numpy", "rawpy",
     "imageio", "imageio-ffmpeg", "PyOpenGL_accelerate", "defusedxml", "watchdog",
 ]
 description = "GPU-accelerated image viewer with non-destructive develop, RAW/HDR/panorama support, AI upscale, XMP sidecars, and a plugin system."
@@ -75,6 +75,9 @@ target-version = "py310"
 # of the shipped package; tuning ruff for procedural-art helpers
 # would just add noise without affecting production code.
 extend-exclude = ["build", "dist", ".venv", "venv", "docs/_build", "examples"]
+# ``/plugins/`` is gitignored (its files are force-added), so honouring
+# .gitignore would silently skip the bundled plugins in ``ruff check .``.
+respect-gitignore = false
 
 [tool.ruff.lint]
 select = [
@@ -86,6 +89,7 @@ select = [
     "S",             # flake8-bandit (security)
     "C90",           # mccabe complexity
     "N",             # pep8-naming
+    "BLE",           # flake8-blind-except
 ]
 ignore = [
     # Qt override methods must be camelCase (mousePressEvent, paintEvent, ...)
@@ -111,15 +115,16 @@ ignore = [
     "S310",
     # os.startfile / Popen without shell is intentional for "reveal in folder"
     "S606",
-    # Function-shape complexity limits — Qt GUI setup naturally has many
-    # statements / args; enforce cognitive complexity (C901) instead.
+    # Function-shape limits: C901 caps complexity instead of branch / statement
+    # counts. PLR0913 counts keyword-only options too; the project caps
+    # positional parameters at 7 instead (tests/test_code_size_limits.py, see
+    # CLAUDE.md for the keyword-only exception).
     "PLR0911", "PLR0912", "PLR0913", "PLR0915",
 ]
-# McCabe ≤ 16 matches SonarQube's default cognitive-complexity threshold, and
-# keeps paint_tile_grid / _draw_freehand_qt (both 16) within budget while
-# still flagging runaway functions like mouseMoveEvent (23) and
-# keyPressEvent (87) that are suppressed per-file below.
-mccabe.max-complexity = 16
+# McCabe ≤ 15 is the workspace-wide ceiling (D:\Codes\CLAUDE.md, "可讀性"),
+# which a project may tighten but not relax. No module needs a per-file C901
+# exemption.
+mccabe.max-complexity = 15
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101", "PLR2004", "PLR0913", "PLR0915", "E501"]
@@ -128,11 +133,9 @@ mccabe.max-complexity = 16
 # strings (CJK + Korean) routinely exceed 100 chars and splitting them
 # mid-character hurts readability.
 "plugins/**/*.py" = ["E501"]
-"Imervue/gpu_image_view/gl_renderer.py" = ["E501", "F403", "F405", "E702"]  # OpenGL.GL wildcard + GLSL strings + glTexCoord/glVertex pairs
-"Imervue/gpu_image_view/gpu_image_view.py" = ["F403", "F405", "C901"]  # OpenGL.GL wildcard + Qt keyPressEvent dispatcher
+"Imervue/gpu_image_view/gl_renderer.py" = ["E501", "E702"]  # GLSL strings + glTexCoord/glVertex pairs
 "Imervue/paint/canvas.py" = ["E702"]  # glTexCoord/glVertex pairs are clearer on one line
-"Imervue/gui/annotation_dialog.py" = ["C901"]        # mouseMoveEvent Qt event state machine
-"Imervue/menu/tip_menu.py" = ["E501"]                # translated help strings
+"Imervue/paint/canvas_overlays.py" = ["E702"]  # same glTexCoord/glVertex pairs, moved from canvas.py
 
 [tool.bandit]
 # Mirror of .bandit — kept here so tooling that only reads pyproject.toml picks
@@ -142,6 +145,7 @@ exclude_dirs = ["tests"]
 
 [dependency-groups]
 dev = [
+    "bandit[toml]>=1.9.4",
     "pytest>=9.1.1",
     "ruff>=0.15.20",
 ]

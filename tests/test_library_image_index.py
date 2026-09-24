@@ -52,11 +52,11 @@ class TestImagesCRUD:
     def test_search_by_ext_and_name(self, tmp_path):
         for name in ("cat.png", "dog.png", "cat.jpg"):
             image_index.upsert_image(str(tmp_path / name))
-        hits = image_index.search_images(exts=["png"])
+        hits = image_index.search_images(image_index.ImageQuery(exts=["png"]))
         assert sorted(hits) == sorted([
             str(tmp_path / "cat.png"), str(tmp_path / "dog.png"),
         ])
-        name_hits = image_index.search_images(name_contains="cat")
+        name_hits = image_index.search_images(image_index.ImageQuery(name_contains="cat"))
         assert sorted(name_hits) == sorted([
             str(tmp_path / "cat.png"), str(tmp_path / "cat.jpg"),
         ])
@@ -252,3 +252,16 @@ class TestCloseRunsOptimize:
         # PRAGMA-optimize close hook.
         image_index.set_db_path(tmp_path / "library.db")
         assert image_index.get_image(p) is not None
+
+
+def test_query_where_terms_and_values():
+    from Imervue.library.image_index import ImageQuery, _query_where
+    assert _query_where(ImageQuery()) == ([], [])
+    where, args = _query_where(ImageQuery(
+        parents=["C:/a", "C:/b"], exts=[".PNG", "jpg"], min_width=10, min_height=20,
+        min_size=1, max_size=2, name_contains="Cat"))
+    assert where == ["parent IN (?,?)", "ext IN (?,?)", "width >= ?", "height >= ?",
+                     "size >= ?", "size <= ?", "LOWER(name) LIKE ?"]
+    assert args == ["C:/a", "C:/b", "png", "jpg", 10, 20, 1, 2, "%cat%"]
+    # Zero is a real bound, not "off"; empty sequences are off.
+    assert _query_where(ImageQuery(min_width=0, exts=[])) == (["width >= ?"], [0])

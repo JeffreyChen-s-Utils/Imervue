@@ -406,9 +406,9 @@ def test_integration_library_index_query_returns_matching_paths(tmp_path):
             size=8_000_000, width=4096, height=2160, mtime=3.0,
         )
         # JPG-only + at least 1080p — only ``big.jpg`` qualifies.
-        hits = image_index.search_images(
+        hits = image_index.search_images(image_index.ImageQuery(
             exts=("jpg",), min_width=1920, min_height=1080,
-        )
+        ))
         assert "/library/big.jpg".replace("/", "\\") in [
             str(p).replace("/", "\\") for p in hits
         ] or "/library/big.jpg" in hits

@@ -27,27 +27,22 @@ from PIL import Image
 from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QUndoStack
 from PySide6.QtWidgets import (
-    QButtonGroup,
     QColorDialog,
-    QComboBox,
-    QFontComboBox,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
     QMenu,
-    QPushButton,
     QScrollArea,
-    QSlider,
-    QSpinBox,
     QSplitter,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
+from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
+from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.gui.modify_splitter import ModifySplitterMixin
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.best_effort import best_effort
 import contextlib
 
 if TYPE_CHECKING:
@@ -55,31 +50,6 @@ if TYPE_CHECKING:
     from Imervue.gui.annotation_dialog import AnnotationCanvas
 
 logger = logging.getLogger("Imervue.develop_panel")
-
-# Preferred width of the right properties panel; also its minimum (see
-# build_right_panel). The canvas takes whatever width is left.
-_RIGHT_PANEL_WIDTH = 260
-# Screen-change settle watch for the Modify splitter. A cross-monitor move takes
-# hundreds of ms, far longer than the singleShot(0) chain in
-# ``_size_modify_splitter`` can span, and ``setSizes`` has no self-healing net.
-_SPLITTER_SETTLE_INTERVAL_MS = 60
-_SPLITTER_SETTLE_RETRIES = 8
-
-
-def _splitter_is_alive(splitter) -> bool:
-    """True while *splitter* still has a live C++ object behind it.
-
-    A deferred settle pass can outlive the Modify tab being torn down; touching
-    a freed QSplitter raises ``RuntimeError`` rather than returning anything.
-    """
-    try:
-        splitter.count()
-    except RuntimeError:
-        return False
-    return True
-# Floor for the centre canvas so it never collapses to nothing on a narrow
-# window — matches the AnnotationCanvas minimum.
-_MIN_CANVAS_WIDTH = 400
 
 
 def _rebind_target_after_delete(images: list[str], current_index: int) -> str | None:
@@ -94,23 +64,7 @@ def _rebind_target_after_delete(images: list[str], current_index: int) -> str | 
     return None
 
 
-def _canvas_splitter_sizes(
-    total: int, left: int, right: int, min_canvas: int = _MIN_CANVAS_WIDTH,
-) -> list[int]:
-    """Modify-splitter pane sizes ``[left, canvas, right]``.
-
-    Gives the centre annotation canvas all the width left over after the fixed
-    tool strip and the properties panel, floored at *min_canvas*. Without this
-    the canvas — inserted between two panes that already shared the full
-    width — is squeezed to its minimum and the image opens tiny.
-    """
-    left = max(0, left)
-    right = max(0, right)
-    canvas = max(min_canvas, total - left - right)
-    return [left, canvas, right]
-
-
-class DevelopPanel(QWidget):
+class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
     """Controller that builds the left/right panels for the Modify tab.
 
     Emits ``recipe_committed(path, old_recipe, new_recipe)`` whenever a
@@ -198,7 +152,8 @@ class DevelopPanel(QWidget):
         # high-frequency operation; without this every debounce tick would
         # re-open and re-decode the full-resolution file from disk. We keep at
         # most one entry (the current path) so memory stays bounded.
-        self._decoded_source_path: str | None = None
+        # (path, EXIF-upright?) of the cached decode — see _decode_source.
+        self._decoded_source_key: tuple[str, bool] | None = None
         self._decoded_source: Image.Image | None = None
 
     # ------------------------------------------------------------------
@@ -266,300 +221,11 @@ class DevelopPanel(QWidget):
         scroll.setFixedWidth(self._TOOL_BTN_SIZE.width() + 24)
         parent_splitter.addWidget(scroll)
 
-    def build_right_panel(self, parent_splitter: QSplitter) -> None:
-        """Build the right panel (drawing props + develop sliders) into *parent_splitter*."""
-        lang = language_wrapper.language_word_dict
-
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(6)
-
-        # ============================================================
-        # Crop controls (hidden until crop tool selected)
-        # ============================================================
-        self._crop_widget = QWidget()
-        crop_layout = QVBoxLayout(self._crop_widget)
-        crop_layout.setContentsMargins(0, 0, 0, 0)
-        crop_layout.setSpacing(4)
-
-        crop_title = QLabel(lang.get("annotation_tool_crop", "Crop"))
-        crop_title_font = QFont(crop_title.font())
-        crop_title_font.setBold(True)
-        crop_title.setFont(crop_title_font)
-        crop_layout.addWidget(crop_title)
-
-        self._crop_ratio_combo = QComboBox()
-        for label_key, fallback, rw, rh in self._CROP_RATIOS:
-            self._crop_ratio_combo.addItem(
-                lang.get(label_key, fallback), (rw, rh))
-        self._crop_ratio_combo.currentIndexChanged.connect(self._on_crop_ratio_changed)
-        crop_layout.addWidget(self._crop_ratio_combo)
-
-        crop_btn_row = QHBoxLayout()
-        self._crop_apply_btn = QPushButton(lang.get("crop_apply", "Apply"))
-        self._crop_apply_btn.clicked.connect(self._apply_crop)
-        self._crop_cancel_btn = QPushButton(lang.get("crop_cancel", "Cancel"))
-        self._crop_cancel_btn.clicked.connect(self._cancel_crop)
-        crop_btn_row.addWidget(self._crop_apply_btn)
-        crop_btn_row.addWidget(self._crop_cancel_btn)
-        crop_layout.addLayout(crop_btn_row)
-
-        layout.addWidget(self._crop_widget)
-        self._crop_widget.hide()
-
-        # ============================================================
-        # Drawing properties
-        # ============================================================
-
-        # --- Color ---
-        self._color_btn = QToolButton()
-        self._color_btn.setText(lang.get("annotation_color", "Color"))
-        self._color_btn.setFixedHeight(36)
-        from PySide6.QtWidgets import QSizePolicy
-        self._color_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        self._color_btn.clicked.connect(self._pick_color)
-        self._update_color_button_style()
-        layout.addWidget(self._color_btn)
-        self._interactive_widgets.append(self._color_btn)
-
-        # --- Stroke width ---
-        sw_label = QLabel(lang.get("annotation_stroke_width_label", "Stroke Width"))
-        layout.addWidget(sw_label)
-
-        sw_row = QHBoxLayout()
-        sw_row.setContentsMargins(0, 0, 0, 0)
-        sw_row.setSpacing(4)
-        self._width_slider = QSlider(Qt.Orientation.Horizontal)
-        self._width_slider.setRange(1, 40)
-        self._width_slider.setValue(3)
-        sw_row.addWidget(self._width_slider, 1)
-        self._width_spin = QSpinBox()
-        self._width_spin.setRange(1, 40)
-        self._width_spin.setValue(3)
-        self._width_spin.setFixedWidth(60)
-        sw_row.addWidget(self._width_spin)
-        layout.addLayout(sw_row)
-        self._interactive_widgets.extend([self._width_slider, self._width_spin])
-
-        self._width_slider.valueChanged.connect(self._on_stroke_slider)
-        self._width_spin.valueChanged.connect(self._on_stroke_spin)
-
-        # --- Brush type ---
-        brush_label = QLabel(lang.get("annotation_brush_section", "Brush"))
-        layout.addWidget(brush_label)
-        brush_grid = QGridLayout()
-        brush_grid.setContentsMargins(0, 0, 0, 0)
-        brush_grid.setSpacing(3)
-        self._brush_buttons: dict[str, QToolButton] = {}
-        self._brush_group = QButtonGroup(self)
-        self._brush_group.setExclusive(True)
-        brush_defs = [
-            ("pen",         "✒",  lang.get("annotation_brush_pen",         "Pen")),
-            ("marker",      "🖊", lang.get("annotation_brush_marker",      "Marker")),
-            ("pencil",      "✏",  lang.get("annotation_brush_pencil",      "Pencil")),
-            ("highlighter", "🖍", lang.get("annotation_brush_highlighter", "Highlighter")),
-            ("spray",       "💨", lang.get("annotation_brush_spray",       "Spray")),
-            ("calligraphy", "🖋", lang.get("annotation_brush_calligraphy", "Calligraphy")),
-            ("watercolor",  "🎨", lang.get("annotation_brush_watercolor",  "Watercolor")),
-            ("charcoal",    "▪",  lang.get("annotation_brush_charcoal",    "Charcoal")),
-            ("crayon",      "🖍", lang.get("annotation_brush_crayon",      "Crayon")),
-        ]
-        for idx, (key, glyph, label) in enumerate(brush_defs):
-            btn = QToolButton()
-            btn.setText(f"{glyph} {label}")
-            btn.setCheckable(True)
-            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            btn.setFixedHeight(26)
-            btn.clicked.connect(lambda _=False, k=key: self._on_brush_selected(k))
-            row, col = divmod(idx, 2)
-            brush_grid.addWidget(btn, row, col)
-            self._brush_buttons[key] = btn
-            self._brush_group.addButton(btn)
-            self._interactive_widgets.append(btn)
-        self._brush_buttons["pen"].setChecked(True)
-        layout.addLayout(brush_grid)
-
-        # --- Opacity ---
-        op_label = QLabel(lang.get("annotation_opacity", "Opacity"))
-        layout.addWidget(op_label)
-        op_row = QHBoxLayout()
-        op_row.setContentsMargins(0, 0, 0, 0)
-        op_row.setSpacing(4)
-        self._opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._opacity_slider.setRange(0, 100)
-        self._opacity_slider.setValue(100)
-        op_row.addWidget(self._opacity_slider, 1)
-        self._opacity_spin = QSpinBox()
-        self._opacity_spin.setRange(0, 100)
-        self._opacity_spin.setValue(100)
-        self._opacity_spin.setSuffix(" %")
-        self._opacity_spin.setFixedWidth(60)
-        op_row.addWidget(self._opacity_spin)
-        layout.addLayout(op_row)
-        self._interactive_widgets.extend([self._opacity_slider, self._opacity_spin])
-
-        self._opacity_slider.valueChanged.connect(self._on_opacity_slider)
-        self._opacity_spin.valueChanged.connect(self._on_opacity_spin)
-
-        # --- Font (text tool) ---
-        font_label = QLabel(lang.get("annotation_font_section", "Font"))
-        layout.addWidget(font_label)
-
-        self._font_combo = QFontComboBox()
-        self._font_combo.currentFontChanged.connect(self._on_font_changed)
-        layout.addWidget(self._font_combo)
-        self._interactive_widgets.append(self._font_combo)
-
-        fs_row = QHBoxLayout()
-        fs_row.setContentsMargins(0, 0, 0, 0)
-        fs_row.setSpacing(4)
-        fs_lbl = QLabel(lang.get("annotation_font_size", "Size"))
-        fs_row.addWidget(fs_lbl)
-        self._font_size_spin = QSpinBox()
-        self._font_size_spin.setRange(6, 200)
-        self._font_size_spin.setValue(24)
-        self._font_size_spin.setSuffix(" px")
-        self._font_size_spin.valueChanged.connect(self._on_font_size_changed)
-        fs_row.addWidget(self._font_size_spin, 1)
-        layout.addLayout(fs_row)
-        self._interactive_widgets.append(self._font_size_spin)
-
-        # --- Annotation Save ---
-        ann_btn_row = QHBoxLayout()
-        self._btn_ann_save = QPushButton(lang.get("annotation_save", "Save"))
-        self._btn_ann_save.clicked.connect(self._save_annotation)
-        ann_btn_row.addWidget(self._btn_ann_save)
-        self._interactive_widgets.append(self._btn_ann_save)
-
-        self._btn_ann_undo = QPushButton(lang.get("annotation_undo", "Undo"))
-        self._btn_ann_undo.clicked.connect(self._canvas_undo_stack.undo)
-        ann_btn_row.addWidget(self._btn_ann_undo)
-        self._interactive_widgets.append(self._btn_ann_undo)
-
-        self._btn_ann_redo = QPushButton(lang.get("annotation_redo", "Redo"))
-        self._btn_ann_redo.clicked.connect(self._canvas_undo_stack.redo)
-        ann_btn_row.addWidget(self._btn_ann_redo)
-        self._interactive_widgets.append(self._btn_ann_redo)
-
-        layout.addLayout(ann_btn_row)
-
-        # ============================================================
-        # Develop sliders (recipe)
-        # ============================================================
-        layout.addSpacing(8)
-        dev_label = QLabel(lang.get("modify_menu_develop", "Develop"))
-        dev_font = QFont(dev_label.font())
-        dev_font.setBold(True)
-        dev_label.setFont(dev_font)
-        layout.addWidget(dev_label)
-
-        self._exposure, exp_label = self._make_slider(
-            lang.get("develop_exposure", "Exposure"),
-            self._EXPOSURE_RANGE,
-            self._on_exposure,
-        )
-        layout.addLayout(self._label_over_slider(exp_label, self._exposure))
-        self._exposure_label = exp_label
-
-        self._brightness, br_label = self._make_slider(
-            lang.get("develop_brightness", "Brightness"),
-            self._COLOR_RANGE,
-            self._on_brightness,
-        )
-        layout.addLayout(self._label_over_slider(br_label, self._brightness))
-        self._brightness_label = br_label
-
-        self._contrast, ct_label = self._make_slider(
-            lang.get("develop_contrast", "Contrast"),
-            self._COLOR_RANGE,
-            self._on_contrast,
-        )
-        layout.addLayout(self._label_over_slider(ct_label, self._contrast))
-        self._contrast_label = ct_label
-
-        self._saturation, sat_label = self._make_slider(
-            lang.get("develop_saturation", "Saturation"),
-            self._COLOR_RANGE,
-            self._on_saturation,
-        )
-        layout.addLayout(self._label_over_slider(sat_label, self._saturation))
-        self._saturation_label = sat_label
-
-        # --- Advanced sliders (white balance, tonal regions, vibrance) ---
-        self._adv_sliders: dict[str, QSlider] = {}
-        self._adv_labels: dict[str, QLabel] = {}
-        for field_name, i18n_key, fallback in self._ADVANCED_SLIDERS:
-            title = lang.get(i18n_key, fallback)
-            slider, label = self._make_slider(
-                title,
-                self._COLOR_RANGE,
-                self._make_advanced_handler(field_name),
-            )
-            layout.addLayout(self._label_over_slider(label, slider))
-            self._adv_sliders[field_name] = slider
-            self._adv_labels[field_name] = label
-
-        # --- Recipe Reset / Undo / Redo ---
-        btn_row = QHBoxLayout()
-        self._btn_reset = QPushButton(lang.get("develop_reset", "Reset"))
-        self._btn_reset.clicked.connect(self._reset)
-        btn_row.addWidget(self._btn_reset)
-        self._interactive_widgets.append(self._btn_reset)
-
-        self._btn_undo = QPushButton(lang.get("develop_undo", "Undo"))
-        self._btn_undo.clicked.connect(self._undo_stack.undo)
-        btn_row.addWidget(self._btn_undo)
-        self._interactive_widgets.append(self._btn_undo)
-
-        self._btn_redo = QPushButton(lang.get("develop_redo", "Redo"))
-        self._btn_redo.clicked.connect(self._undo_stack.redo)
-        btn_row.addWidget(self._btn_redo)
-        self._interactive_widgets.append(self._btn_redo)
-
-        layout.addLayout(btn_row)
-        layout.addStretch(1)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(panel)
-        scroll.setMinimumWidth(_RIGHT_PANEL_WIDTH)
-        parent_splitter.addWidget(scroll)
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
-    def _make_slider(
-        self,
-        title: str,
-        limit: int,
-        on_change: Callable[[int], None],
-    ) -> tuple[QSlider, QLabel]:
-        label = QLabel(f"{title}: 0")
-        slider = QSlider(Qt.Orientation.Horizontal)
-        slider.setRange(-limit, limit)
-        slider.setValue(0)
-        slider.valueChanged.connect(on_change)
-        slider.setProperty("_title", title)
-        # Tooltip carries the title + range so hover surfaces the
-        # adjustment direction even when narrow panels clip the
-        # surrounding label.
-        slider.setToolTip(
-            f"{title} — drag left for −{limit}, right for +{limit}",
-        )
-        self._interactive_widgets.append(slider)
-        return slider, label
-
-    @staticmethod
-    def _label_over_slider(label: QLabel, slider: QSlider) -> QVBoxLayout:
-        v = QVBoxLayout()
-        v.setSpacing(2)
-        v.addWidget(label)
-        v.addWidget(slider)
-        return v
 
     # ------------------------------------------------------------------
     # Public API — called by GPUImageView / ImervueMainWindow
@@ -615,12 +281,18 @@ class DevelopPanel(QWidget):
         so repeated recipe previews for the same image reuse it instead of
         re-reading and re-decoding the file on every debounce tick. Only the
         current path is retained; binding to a different path discards it.
+
+        The source is turned upright by its EXIF orientation, as the viewer
+        loads it, unless the working recipe's geometry predates that
+        (``Recipe.base_is_oriented``).
         """
-        if self._decoded_source_path == path and self._decoded_source is not None:
+        orient = self._current.base_is_oriented()
+        if self._decoded_source_key == (path, orient) and self._decoded_source is not None:
             return self._decoded_source
 
         try:
             img = Image.open(path)
+            code = exif_orientation(img) if orient else 1
             if img.mode not in ("RGB", "RGBA", "L"):
                 img = img.convert("RGBA")
             else:
@@ -632,14 +304,15 @@ class DevelopPanel(QWidget):
 
         if img.mode != "RGBA":
             img = img.convert("RGBA")
+        img = transpose_for(img, code)
 
-        self._decoded_source_path = path
+        self._decoded_source_key = (path, orient)
         self._decoded_source = img
         return img
 
     def _invalidate_decoded_source(self) -> None:
         """Drop the cached decoded source so the next load re-decodes."""
-        self._decoded_source_path = None
+        self._decoded_source_key = None
         self._decoded_source = None
 
     def _load_image_with_recipe(self, path: str) -> Image.Image | None:
@@ -699,78 +372,6 @@ class DevelopPanel(QWidget):
         # rather than a develop slider that ignores them.
         self._canvas.setFocus()
 
-    @staticmethod
-    def _apply_modify_splitter_sizes(splitter) -> int:
-        """Give the centre canvas the leftover width. Returns the width used.
-
-        Returns ``0`` when the sizing could not be applied — fewer than three
-        panes, a splitter destroyed before a deferred pass ran, or a
-        not-yet-laid-out zero width — so callers can tell "done" from "retry".
-        """
-        try:
-            if splitter.count() < 3:
-                return 0
-            total = splitter.width()
-        except RuntimeError:
-            return 0  # splitter destroyed before this deferred pass
-        if total <= 0:
-            return 0
-        left = splitter.widget(0).sizeHint().width()
-        right = max(_RIGHT_PANEL_WIDTH, splitter.widget(2).sizeHint().width())
-        splitter.setSizes(_canvas_splitter_sizes(total, left, right))
-        return total
-
-    def _size_modify_splitter(
-            self, splitter, _retries: int = 8, _last_total: int = -1) -> None:
-        """Give the centre canvas the leftover width so the image isn't tiny.
-
-        The right panel grabbed the full non-tool-strip width while the
-        splitter had only two panes, so the freshly-inserted canvas would keep
-        just its minimum. Entering Modify right after startup can also read an
-        intermediate width before the window/tab has settled, locking in a
-        wrong size that no later resize corrects. So re-run on the next turn
-        until the width stops changing (bounded), and no-op if the splitter was
-        destroyed before a deferred pass ran.
-
-        This chain drains Qt's queued layout and nothing slower — every hop is a
-        ``singleShot(0)``. A screen change needs
-        :meth:`schedule_modify_splitter_settle` as well.
-        """
-        total = self._apply_modify_splitter_sizes(splitter)
-        if total <= 0:
-            if _retries > 0:
-                QTimer.singleShot(
-                    0, lambda: self._size_modify_splitter(splitter, _retries - 1))
-            return
-        # Layout may still be settling — re-run until the width is stable so an
-        # intermediate startup width isn't locked in.
-        if total != _last_total and _retries > 0:
-            QTimer.singleShot(
-                0, lambda: self._size_modify_splitter(splitter, _retries - 1, total))
-
-    def schedule_modify_splitter_settle(
-            self, splitter, retries: int = _SPLITTER_SETTLE_RETRIES,
-            interval_ms: int = _SPLITTER_SETTLE_INTERVAL_MS) -> None:
-        """Keep re-sizing the splitter while the window settles on a new screen.
-
-        ``setSizes`` is one-shot: a later resize rescales whatever proportions
-        are already in place rather than recomputing them, so — as this method's
-        sibling docstring says — an intermediate width is "locked in wrong and
-        no later resize corrects" it. The sibling's ``singleShot(0)`` chain
-        cannot prevent that on a screen change, because its whole budget elapses
-        in a few event-loop turns while the window takes hundreds of
-        milliseconds to land on the new monitor. Polling on a real interval
-        spans the settle, so the last pass reads the final width.
-
-        Unlike the deep-zoom canvas there is no per-paint net behind this, which
-        is why the watch matters more here than anywhere else.
-        """
-        from Imervue.gui.settle_poll import poll_settle
-        poll_settle(
-            lambda: self._apply_modify_splitter_sizes(splitter),
-            lambda: _splitter_is_alive(splitter),
-            retries, interval_ms,
-        )
 
     def _cleanup_old_canvas(self) -> None:
         """Disconnect signals, clear undo stack, and detach the old canvas.
@@ -798,13 +399,12 @@ class DevelopPanel(QWidget):
                 self._canvas.context_menu_requested.disconnect(self._show_canvas_menu)
             # Cancel any in-flight text editor (its deleteLater would
             # otherwise outlive the canvas).
-            with contextlib.suppress(Exception):
+            with best_effort("cancel the canvas text edit", logger):
                 self._canvas._cancel_text_edit()
             # Release shiboken-tracked objects held by the canvas so they
             # are freed deterministically right now.
-            with contextlib.suppress(Exception):
-                self._canvas._base_qimg = None
-                self._canvas._preview_qimg = None
+            self._canvas._base_qimg = None
+            self._canvas._preview_qimg = None
             self._canvas.hide()
             self._canvas.setParent(None)
             self._canvas = None
@@ -981,37 +581,11 @@ class DevelopPanel(QWidget):
             f"border: 1px solid #555; border-radius: 3px; }}"
         )
 
-    def _on_stroke_slider(self, v: int) -> None:
-        self._width_spin.blockSignals(True)
-        self._width_spin.setValue(v)
-        self._width_spin.blockSignals(False)
-        if self._canvas is not None:
-            self._canvas.set_stroke_width(v)
-
-    def _on_stroke_spin(self, v: int) -> None:
-        self._width_slider.blockSignals(True)
-        self._width_slider.setValue(v)
-        self._width_slider.blockSignals(False)
-        if self._canvas is not None:
-            self._canvas.set_stroke_width(v)
 
     def _on_brush_selected(self, key: str) -> None:
         if self._canvas is not None:
             self._canvas.set_brush_type(key)
 
-    def _on_opacity_slider(self, v: int) -> None:
-        self._opacity_spin.blockSignals(True)
-        self._opacity_spin.setValue(v)
-        self._opacity_spin.blockSignals(False)
-        if self._canvas is not None:
-            self._canvas.set_brush_opacity(v)
-
-    def _on_opacity_spin(self, v: int) -> None:
-        self._opacity_slider.blockSignals(True)
-        self._opacity_slider.setValue(v)
-        self._opacity_slider.blockSignals(False)
-        if self._canvas is not None:
-            self._canvas.set_brush_opacity(v)
 
     def _on_font_changed(self, font: QFont) -> None:
         if self._canvas is not None:
@@ -1091,12 +665,12 @@ class DevelopPanel(QWidget):
         images = list(getattr(viewer.model, "images", []) or [])
         if not (0 <= viewer.current_index < len(images)):
             return
-        with contextlib.suppress(Exception):
+        with best_effort("make the viewer GL context current", logger):
             viewer.makeCurrent()
         try:
             delete_current_image(viewer)
         finally:
-            with contextlib.suppress(Exception):
+            with best_effort("release the viewer GL context", logger):
                 viewer.doneCurrent()
         target = _rebind_target_after_delete(
             list(viewer.model.images), viewer.current_index)

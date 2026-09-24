@@ -23,7 +23,9 @@ as the paint thread, so no visible lag from the user's perspective.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Signal
+
+from Imervue.system.qt_timers import call_later
 
 DEFAULT_INTERVAL_MS: int = 16
 """One frame at 60 Hz. Updates land in time for the next paint, the
@@ -60,7 +62,8 @@ class SignalCoalescer(QObject):
         if self._pending:
             return
         self._pending = True
-        QTimer.singleShot(self._interval_ms, self._flush)
+        # Fires on this object's thread, and is dropped if the coalescer is destroyed.
+        call_later(self._interval_ms, self, self._flush)
 
     def is_pending(self) -> bool:
         """``True`` when a flush is scheduled but hasn't fired

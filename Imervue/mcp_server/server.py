@@ -108,7 +108,7 @@ class MCPServer:
             return handler(self, msg_id, params)
         except _MCPError as exc:
             return _error_response(msg_id, exc.code, exc.message)
-        except Exception as exc:   # noqa: BLE001 - protocol must never crash
+        except Exception as exc:   # protocol must never crash
             logger.exception("MCP handler crashed: %s", exc)
             return _error_response(msg_id, -32603, f"internal error: {exc}")
 
@@ -235,7 +235,7 @@ class MCPServer:
             # Bad argument shape — surface to client as a tool error
             # rather than a protocol error, so the client can retry.
             return _success(msg_id, _tool_error(f"argument error: {exc}"))
-        except Exception as exc:   # noqa: BLE001 - tools handle their own errors
+        except Exception as exc:   # tools handle their own errors
             logger.exception("tool %s crashed", name)
             return _success(msg_id, _tool_error(str(exc)))
         return _success(msg_id, _tool_success(raw_result))

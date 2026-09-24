@@ -10,28 +10,22 @@ rebuilt (matches the recent-folder behaviour in
 """
 from __future__ import annotations
 
-import contextlib
 import logging
 from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QCheckBox,
     QFileDialog,
     QInputDialog,
     QLabel,
     QMainWindow,
-    QMenu,
-    QMenuBar,
-    QMessageBox,
     QStatusBar,
-    QToolBar,
 )
 
+from Imervue.gui.file_filters import translated_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
-from Imervue.puppet.auto_mesh import DEFAULT_CELL_SIZE, puppet_from_png
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document_io import PuppetFormatError, load_puppet, save_puppet
 from Imervue.puppet.operations import (
@@ -42,30 +36,14 @@ from Imervue.puppet.operations import (
     set_key_at_value,
     snapshot_current_forms,
 )
-from Imervue.puppet.cubism_import import (
-    CubismFormatError,
-    apply_bundle,
-    load_cdi3,
-    load_exp3,
-    load_model3,
-    load_motion3,
-    load_physics3,
-    load_pose3,
-)
-from Imervue.puppet.cubism_native_bridge import CubismBridgeError
-from Imervue.puppet.cubism_native_convert import cubism_to_puppet
 from Imervue.puppet.expression_dock import ExpressionDock
 from Imervue.puppet.idle_driver import IdleDriver
 from Imervue.puppet.idle_motion_cycler import IdleMotionCycler
 from Imervue.puppet.batch_export import BatchMotionExporter, SUPPORTED_EXTENSIONS
 from Imervue.puppet.bone_tree_dock import BoneTreeDock
 from Imervue.puppet.ndi_output import NDIOutput
-from Imervue.puppet.psd_import import puppet_from_psd
 from Imervue.puppet.requirements import (
     LIPSYNC_PACKAGES,
-    NDI_PACKAGES,
-    VIRTUAL_CAMERA_PACKAGES,
-    WEBCAM_PACKAGES,
     all_optional_packages,
     missing_packages,
 )
@@ -78,57 +56,22 @@ from Imervue.puppet.motion_dock import MotionDock
 from Imervue.puppet.motion_recorder import MotionRecorder, append_motion
 from Imervue.puppet.motion_timeline import MotionTimelineDialog
 from Imervue.puppet.parameter_dock import ParameterDock
-from Imervue.puppet.recorder import RecordingSession, save_canvas_png
+from Imervue.puppet.recorder import RecordingSession
 from Imervue.puppet.webcam_tracker import WebcamTracker
+from Imervue.puppet.workspace_import import PuppetImportMixin
+from Imervue.puppet.workspace_live import PuppetLiveMixin
+from Imervue.puppet.workspace_menus import RECENT_KEY, PuppetMenusMixin
+from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.plugin.puppet.workspace")
 
-_RECENT_KEY = "puppet_recent_files"
 _RECENT_LIMIT = 10
 
-# Persisted suppression flag for the Cubism format / SDK advisory. Set
-# to True via the "Don't show this again" checkbox on the notice.
-_CUBISM_NOTICE_KEY = "puppet_cubism_notice_suppressed"
-
-# Fallback text used when a language pack hasn't translated the key
-# yet. Lives at module scope (rather than inline) so the i18n lookup
-# stays cheap and the wording is easy to grep / review.
-_CUBISM_NOTICE_BODY_FALLBACK = (
-    "Cubism imports work in two modes — please read before continuing:\n"
-    "\n"
-    "• .moc3 / .model3.json — Full rig conversion. Builds a fresh\n"
-    "  puppet from the Cubism rig. Requires Live2D's Cubism Native\n"
-    "  SDK (Live2DCubismCore.dll on Windows). Drop the extracted\n"
-    "  SDK under <project>/sdk/ or set the LIVE2D_CUBISM_CORE\n"
-    "  environment variable. The DLL is NOT redistributed with\n"
-    "  Imervue — Live2D's EULA forbids it.\n"
-    "\n"
-    "• .moc3 alone won't work — Cubism's full-rig importer needs\n"
-    "  the sibling .model3.json next to it for textures, groups,\n"
-    "  and hit areas.\n"
-    "\n"
-    "• .motion3.json / .exp3.json / .physics3.json / .pose3.json /\n"
-    "  .cdi3.json — Layered onto an already-open puppet. Open a\n"
-    "  puppet first, then import these. No SDK needed."
-)
-
-_CUBISM_SDK_HINT_FALLBACK = (
-    "Cubism Native SDK not found. To enable .moc3 / .model3.json\n"
-    "imports, do one of:\n"
-    "\n"
-    "  • Extract the Cubism SDK under <project>/sdk/ (e.g.\n"
-    "    <project>/sdk/CubismSdkForNative-5-r.5/).\n"
-    "  • Set the LIVE2D_CUBISM_CORE environment variable to the\n"
-    "    library file's absolute path.\n"
-    "\n"
-    "Get the SDK from https://www.live2d.com/en/sdk/download/native/.\n"
-    "Live2D's EULA forbids us from redistributing the DLL.\n"
-    "\n"
-    "Original error:\n{error}"
-)
 
 
-class PuppetWorkspace(QMainWindow):
+
+
+class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMainWindow):
     """Top-level QMainWindow hosted by the Puppet plugin tab.
 
     Inherits from QMainWindow so QToolBar / QDockWidget / QStatusBar
@@ -153,6 +96,13 @@ class PuppetWorkspace(QMainWindow):
             Qt.ToolBarArea.TopToolBarArea, self._build_toggle_toolbar(),
         )
 
+        self._build_docks()
+        self._build_controllers()
+        self._build_status_bar()
+        self._refresh_status_for_no_document()
+
+    def _build_docks(self) -> None:
+        """Parameters / Expressions / Bones tabbed on the right, Motions at the bottom."""
         self._parameter_dock = ParameterDock(self._canvas, self, workspace=self)
         self.addDockWidget(
             Qt.DockWidgetArea.RightDockWidgetArea, self._parameter_dock,
@@ -193,6 +143,8 @@ class PuppetWorkspace(QMainWindow):
             Qt.DockWidgetArea.BottomDockWidgetArea, self._motion_dock,
         )
 
+    def _build_controllers(self) -> None:
+        """Input, idle, streaming, export and recording controllers bound to the canvas."""
         self._input_engine = InputEngine(self._canvas, self)
         self._idle_driver = IdleDriver(self._canvas, self)
         self._idle_motion_cycler = IdleMotionCycler(
@@ -215,11 +167,12 @@ class PuppetWorkspace(QMainWindow):
         self._motion_recorder.finished.connect(self._on_motion_recorded)
         self._canvas.hit_area_triggered.connect(self._on_hit_area_triggered)
 
+    def _build_status_bar(self) -> None:
+        """Status bar with the stretching message label."""
         self._status_label = QLabel("")
         bar = QStatusBar()
         bar.addWidget(self._status_label, stretch=1)
         self.setStatusBar(bar)
-        self._refresh_status_for_no_document()
 
     def canvas(self) -> PuppetCanvas:
         return self._canvas
@@ -235,256 +188,6 @@ class PuppetWorkspace(QMainWindow):
 
     # ---- menu bar + toolbar -------------------------------------------
 
-    def _build_actions(self) -> None:
-        """Create every QAction up front so the menu bar and the
-        toggle toolbar can both reference the same object — toggling
-        from one updates the other automatically."""
-        lang = language_wrapper.language_word_dict
-
-        # File
-        self._open_action = QAction(lang.get("puppet_open", "Open Puppet…"), self)
-        self._open_action.triggered.connect(self._open_via_dialog)
-        self._save_action = QAction(lang.get("puppet_save_as", "Save As…"), self)
-        self._save_action.triggered.connect(self._save_via_dialog)
-        self._import_png_action = QAction(
-            lang.get("puppet_import_png", "Import PNG…"), self,
-        )
-        self._import_png_action.triggered.connect(self._import_png_via_dialog)
-        self._import_psd_action = QAction(
-            lang.get("puppet_import_psd", "Import PSD…"), self,
-        )
-        self._import_psd_action.triggered.connect(self._import_psd_via_dialog)
-        self._import_cubism_action = QAction(
-            lang.get("puppet_import_cubism", "Import Cubism…"), self,
-        )
-        self._import_cubism_action.triggered.connect(self._import_cubism_via_dialog)
-        self._install_deps_action = QAction(
-            lang.get("puppet_install_deps", "Install dependencies…"), self,
-        )
-        self._install_deps_action.triggered.connect(self._install_all_optional_deps)
-
-        # Recent submenu
-        self._recent_menu = QMenu(lang.get("puppet_recent", "Recent"), self)
-        self._recent_menu.aboutToShow.connect(self._rebuild_recent_menu)
-
-        # Examples submenu — auto-populated from <app_dir>/examples/puppet/*.puppet
-        self._examples_menu = QMenu(
-            lang.get("puppet_examples", "Examples"), self,
-        )
-        self._examples_menu.aboutToShow.connect(self._rebuild_examples_menu)
-
-        # Edit
-        self._add_rot_action = QAction(
-            lang.get("puppet_add_rotation", "Add Rotation Deformer"), self,
-        )
-        self._add_rot_action.triggered.connect(self._add_rotation_deformer)
-        self._add_warp_action = QAction(
-            lang.get("puppet_add_warp", "Add Warp Deformer"), self,
-        )
-        self._add_warp_action.triggered.connect(self._add_warp_deformer)
-        self._add_param_action = QAction(
-            lang.get("puppet_add_parameter", "Add Parameter"), self,
-        )
-        self._add_param_action.triggered.connect(self._add_parameter)
-        self._mirror_action = QAction(
-            lang.get("puppet_mirror_drawable", "Mirror drawable…"), self,
-        )
-        self._mirror_action.triggered.connect(self._mirror_drawable_via_dialog)
-        self._edit_motion_action = QAction(
-            lang.get("puppet_edit_motion", "Edit motion…"), self,
-        )
-        self._edit_motion_action.triggered.connect(self._edit_active_motion)
-        self._mesh_edit_toggle = QAction(
-            lang.get("puppet_mesh_edit", "Edit mesh"), self,
-        )
-        self._mesh_edit_toggle.setCheckable(True)
-        self._mesh_edit_toggle.toggled.connect(self._toggle_mesh_edit)
-
-        # Live toggles
-        self._drag_toggle = QAction(
-            lang.get("puppet_drag_track", "Drag-track head"), self,
-        )
-        self._drag_toggle.setCheckable(True)
-        self._drag_toggle.toggled.connect(self._toggle_drag)
-        self._blink_toggle = QAction(
-            lang.get("puppet_auto_blink", "Auto-blink"), self,
-        )
-        self._blink_toggle.setCheckable(True)
-        self._blink_toggle.toggled.connect(self._toggle_blink)
-        self._lipsync_toggle = QAction(
-            lang.get("puppet_lipsync", "Mic lip-sync"), self,
-        )
-        self._lipsync_toggle.setCheckable(True)
-        self._lipsync_toggle.toggled.connect(self._toggle_lipsync)
-        self._webcam_toggle = QAction(
-            lang.get("puppet_webcam", "Webcam tracking"), self,
-        )
-        self._webcam_toggle.setCheckable(True)
-        self._webcam_toggle.toggled.connect(self._toggle_webcam)
-        self._idle_toggle = QAction(
-            lang.get("puppet_auto_idle", "Auto idle"), self,
-        )
-        self._idle_toggle.setCheckable(True)
-        self._idle_toggle.toggled.connect(self._toggle_idle)
-        self._idle_motion_toggle = QAction(
-            lang.get("puppet_idle_motions", "Idle motions"), self,
-        )
-        self._idle_motion_toggle.setCheckable(True)
-        self._idle_motion_toggle.toggled.connect(self._toggle_idle_motions)
-
-        # Output / capture
-        self._capture_action = QAction(
-            lang.get("puppet_capture", "Capture frame…"), self,
-        )
-        self._capture_action.triggered.connect(self._capture_via_dialog)
-        self._record_action = QAction(lang.get("puppet_record", "Record…"), self)
-        self._record_action.setCheckable(True)
-        self._record_action.toggled.connect(self._toggle_recording)
-        self._motion_record_toggle = QAction(
-            lang.get("puppet_record_motion", "Record motion"), self,
-        )
-        self._motion_record_toggle.setCheckable(True)
-        self._motion_record_toggle.toggled.connect(self._toggle_motion_record)
-        self._batch_export_action = QAction(
-            lang.get("puppet_batch_export", "Export all motions…"), self,
-        )
-        self._batch_export_action.triggered.connect(self._batch_export_via_dialog)
-        self._virtual_camera_toggle = QAction(
-            lang.get("puppet_virtual_camera", "Virtual camera"), self,
-        )
-        self._virtual_camera_toggle.setCheckable(True)
-        self._virtual_camera_toggle.toggled.connect(self._toggle_virtual_camera)
-        self._ndi_toggle = QAction(
-            lang.get("puppet_ndi_output", "NDI output"), self,
-        )
-        self._ndi_toggle.setCheckable(True)
-        self._ndi_toggle.toggled.connect(self._toggle_ndi)
-        self._vts_toggle = QAction(
-            lang.get("puppet_vts_api", "VTS API"), self,
-        )
-        self._vts_toggle.setCheckable(True)
-        self._vts_toggle.toggled.connect(self._toggle_vts_api)
-
-        # Tools
-        self._validate_action = QAction(
-            lang.get("puppet_validate", "Validate"), self,
-        )
-        self._validate_action.triggered.connect(self._run_validator)
-        self._fit_action = QAction(
-            lang.get("puppet_fit_view", "Fit to Window"), self,
-        )
-        self._fit_action.triggered.connect(self._canvas_reset_view)
-
-        # Reset-to-rest — single shortcut for "wipe every live-state
-        # toggle, stop the motion player, clear expressions / pose
-        # group overrides, and snap parameters back to their authored
-        # defaults". Without this the rig stays frozen in whatever
-        # pose the last motion finished on.
-        self._reset_action = QAction(
-            lang.get("puppet_reset_to_rest", "Reset to rest"), self,
-        )
-        self._reset_action.triggered.connect(self._reset_to_rest)
-
-    def _build_menu_bar(self) -> QMenuBar:
-        """Move every non-toggle (and the toggles themselves, for
-        keyboard discoverability) into a proper QMenuBar so the
-        toolbar only carries the live-state visualisation."""
-        lang = language_wrapper.language_word_dict
-        bar = QMenuBar(self)
-
-        file_menu = bar.addMenu(lang.get("puppet_menu_file", "File"))
-        file_menu.addAction(self._open_action)
-        file_menu.addMenu(self._examples_menu)
-        file_menu.addMenu(self._recent_menu)
-        file_menu.addAction(self._save_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._import_png_action)
-        file_menu.addAction(self._import_psd_action)
-        file_menu.addAction(self._import_cubism_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self._install_deps_action)
-
-        edit_menu = bar.addMenu(lang.get("puppet_menu_edit", "Edit"))
-        edit_menu.addAction(self._add_rot_action)
-        edit_menu.addAction(self._add_warp_action)
-        edit_menu.addAction(self._add_param_action)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._mirror_action)
-        edit_menu.addAction(self._edit_motion_action)
-        edit_menu.addAction(self._mesh_edit_toggle)
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._reset_action)
-
-        live_menu = bar.addMenu(lang.get("puppet_menu_live", "Live"))
-        live_menu.addAction(self._drag_toggle)
-        live_menu.addAction(self._blink_toggle)
-        live_menu.addAction(self._lipsync_toggle)
-        live_menu.addAction(self._webcam_toggle)
-        live_menu.addSeparator()
-        live_menu.addAction(self._idle_toggle)
-        live_menu.addAction(self._idle_motion_toggle)
-
-        output_menu = bar.addMenu(lang.get("puppet_menu_output", "Output"))
-        output_menu.addAction(self._capture_action)
-        output_menu.addAction(self._record_action)
-        output_menu.addAction(self._motion_record_toggle)
-        output_menu.addAction(self._batch_export_action)
-        output_menu.addSeparator()
-        output_menu.addAction(self._virtual_camera_toggle)
-        output_menu.addAction(self._ndi_toggle)
-        output_menu.addAction(self._vts_toggle)
-
-        tools_menu = bar.addMenu(lang.get("puppet_menu_tools", "Tools"))
-        tools_menu.addAction(self._validate_action)
-        tools_menu.addAction(self._fit_action)
-
-        return bar
-
-    def _build_toggle_toolbar(self) -> QToolBar:
-        """Slim toolbar carrying the live on/off toggles plus two
-        affordances that needed surfacing out of the File / Edit
-        menus: a one-click "Reset" (snap the rig back to neutral)
-        and an "Examples" dropdown that exposes the bundled demo
-        rigs without forcing the user to dig through File >
-        Examples."""
-        from PySide6.QtWidgets import QToolButton
-
-        lang = language_wrapper.language_word_dict
-        bar = QToolBar(lang.get("puppet_toolbar_title", "Puppet"), self)
-        bar.setMovable(False)
-
-        # Examples — QToolButton with an attached menu so a single
-        # click pops the bundled-puppet list right next to the
-        # toolbar instead of buried under the File menu.
-        examples_btn = QToolButton(bar)
-        examples_btn.setText(lang.get("puppet_examples", "Examples"))
-        examples_btn.setMenu(self._examples_menu)
-        examples_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        examples_btn.setToolTip(
-            lang.get(
-                "puppet_examples_tooltip",
-                "Open one of the bundled example rigs",
-            ),
-        )
-        bar.addWidget(examples_btn)
-        bar.addSeparator()
-
-        for action in (
-            self._drag_toggle,
-            self._blink_toggle,
-            self._lipsync_toggle,
-            self._webcam_toggle,
-            self._idle_toggle,
-            self._idle_motion_toggle,
-            self._mesh_edit_toggle,
-            self._record_action,
-        ):
-            bar.addAction(action)
-
-        bar.addSeparator()
-        bar.addAction(self._reset_action)
-        return bar
-
     # ---- file ops -------------------------------------------------------
 
     def _open_via_dialog(self) -> None:
@@ -493,7 +196,7 @@ class PuppetWorkspace(QMainWindow):
             self,
             lang.get("puppet_open_dialog_title", "Open Puppet"),
             "",
-            "Puppet (*.puppet)",
+            translated_filter("file_filter_puppet", "Puppet files", ("puppet",)),
         )
         if not path:
             return
@@ -598,7 +301,7 @@ class PuppetWorkspace(QMainWindow):
             self,
             lang.get("puppet_save_dialog_title", "Save Puppet As"),
             "",
-            "Puppet (*.puppet)",
+            translated_filter("file_filter_puppet", "Puppet files", ("puppet",)),
         )
         if not path:
             return
@@ -770,7 +473,7 @@ class PuppetWorkspace(QMainWindow):
         until process exit, and the mic's ``_on_audio_block`` fired on the now
         deleted ``PuppetCanvas`` (``RuntimeError: Internal C++ object already
         deleted``). Each ``shutdown`` is guarded so one failing driver still lets
-        the rest stop.
+        the rest stop; the failure is logged with the driver's class name.
         """
         for driver in (
             getattr(self, "_webcam", None),
@@ -779,7 +482,7 @@ class PuppetWorkspace(QMainWindow):
             getattr(self, "_ndi_output", None),
         ):
             if driver is not None:
-                with contextlib.suppress(Exception):
+                with best_effort(f"shut down {type(driver).__name__}", logger):
                     driver.shutdown()
 
     def closeEvent(self, event):  # noqa: N802 - Qt naming
@@ -826,128 +529,7 @@ class PuppetWorkspace(QMainWindow):
 
     # ---- capture / record ----------------------------------------------
 
-    def _capture_via_dialog(self) -> None:
-        if self._canvas.document() is None:
-            return
-        lang = language_wrapper.language_word_dict
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            lang.get("puppet_capture_dialog_title", "Capture Frame"),
-            "",
-            "PNG (*.png)",
-        )
-        if not path:
-            return
-        if not path.lower().endswith(".png"):
-            path = f"{path}.png"
-        ok = save_canvas_png(self._canvas, path)
-        if ok:
-            self._announce(
-                "puppet_capture_saved", "Saved frame to {name}",
-                name=Path(path).name,
-            )
-        else:
-            self._announce(
-                "puppet_capture_failed",
-                "Capture failed (canvas not yet rendered)",
-            )
-
-    def _toggle_recording(self, enabled: bool) -> None:
-        if enabled:
-            self._start_recording()
-        else:
-            self._recorder.stop()
-
-    def _start_recording(self) -> None:
-        if self._canvas.document() is None:
-            self._record_action.setChecked(False)
-            return
-        lang = language_wrapper.language_word_dict
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            lang.get("puppet_record_dialog_title", "Record Animation"),
-            "",
-            "GIF (*.gif);;WebM (*.webm);;MP4 (*.mp4)",
-        )
-        if not path:
-            self._record_action.setChecked(False)
-            return
-        ok = self._recorder.start(path)
-        if not ok:
-            self._record_action.setChecked(False)
-
-    def _on_recording_finished(self, path: str) -> None:
-        self._announce(
-            "puppet_record_saved", "Recording saved to {name}",
-            name=Path(path).name,
-        )
-        self._record_action.blockSignals(True)
-        self._record_action.setChecked(False)
-        self._record_action.blockSignals(False)
-
-    def _on_recording_failed(self, reason: str) -> None:
-        self._announce(
-            "puppet_record_failed", "Recording failed: {error}",
-            error=reason,
-        )
-        self._record_action.blockSignals(True)
-        self._record_action.setChecked(False)
-        self._record_action.blockSignals(False)
-
     # ---- webcam tracking ----------------------------------------------
-
-    def _toggle_webcam(self, enabled: bool) -> None:
-        if enabled and missing_packages(WEBCAM_PACKAGES):
-            self._prompt_install(
-                WEBCAM_PACKAGES,
-                # Re-fire the toggle once pip is done; the dependency
-                # check on the second pass returns an empty list, so we
-                # fall through into the real enable path.
-                on_ready=lambda: self._webcam_toggle.setChecked(True),
-            )
-            self._reset_toggle(self._webcam_toggle)
-            return
-        ok = self._webcam.set_enabled(enabled)
-        if enabled and not ok:
-            self._reset_toggle(self._webcam_toggle)
-            self._announce(
-                "puppet_webcam_unavailable",
-                "Webcam tracking unavailable (install opencv-python + mediapipe)",
-            )
-            return
-        # Pop a live preview window so the user can see what the
-        # camera is producing. The dialog polls the tracker via timer;
-        # we keep one instance around to avoid re-creating it every
-        # time the user re-toggles.
-        if enabled:
-            self._show_webcam_preview()
-        else:
-            self._hide_webcam_preview()
-
-    def _show_webcam_preview(self) -> None:
-        from Imervue.puppet.webcam_preview_dialog import WebcamPreviewDialog
-        if getattr(self, "_webcam_preview_dialog", None) is None:
-            dlg = WebcamPreviewDialog(self._webcam, self)
-            # Closing the dialog (X button or "Stop tracking") needs to
-            # also untick the toolbar toggle — otherwise the toggle
-            # stays "on" while the tracker is actually stopped.
-            dlg.finished.connect(self._on_webcam_preview_finished)
-            self._webcam_preview_dialog = dlg
-        self._webcam_preview_dialog.show()
-        self._webcam_preview_dialog.raise_()
-        self._webcam_preview_dialog.activateWindow()
-
-    def _hide_webcam_preview(self) -> None:
-        dlg = getattr(self, "_webcam_preview_dialog", None)
-        if dlg is not None:
-            dlg.hide()
-
-    def _on_webcam_preview_finished(self, _result: int) -> None:
-        # User closed the preview dialog directly. ``set_enabled`` is
-        # idempotent so the back-and-forth between this slot and the
-        # dialog's ``closeEvent`` settles after one round.
-        if self._webcam_toggle.isChecked():
-            self._reset_toggle(self._webcam_toggle)
 
     # ---- idle driver ---------------------------------------------------
 
@@ -1040,7 +622,6 @@ class PuppetWorkspace(QMainWindow):
                 "Load a puppet with drawables first.",
             )
             return
-        from PySide6.QtWidgets import QInputDialog
         lang = language_wrapper.language_word_dict
         names = [d.id for d in doc.drawables]
         source, ok = QInputDialog.getItem(
@@ -1095,7 +676,6 @@ class PuppetWorkspace(QMainWindow):
             return
         # Format pick — use a simple input dialog rather than a custom
         # dialog so the workspace stays small. Defaults to MP4.
-        from PySide6.QtWidgets import QInputDialog
         ext_choices = list(SUPPORTED_EXTENSIONS)
         ext, ok = QInputDialog.getItem(
             self,
@@ -1129,85 +709,9 @@ class PuppetWorkspace(QMainWindow):
 
     # ---- virtual camera ------------------------------------------------
 
-    def _toggle_virtual_camera(self, enabled: bool) -> None:
-        if enabled and missing_packages(VIRTUAL_CAMERA_PACKAGES):
-            self._prompt_install(
-                VIRTUAL_CAMERA_PACKAGES,
-                on_ready=lambda: self._virtual_camera_toggle.setChecked(True),
-            )
-            self._reset_toggle(self._virtual_camera_toggle)
-            return
-        ok = self._virtual_camera.set_enabled(enabled)
-        if enabled and not ok:
-            self._reset_toggle(self._virtual_camera_toggle)
-            self._announce(
-                "puppet_virtual_camera_failed",
-                "Virtual camera unavailable (install pyvirtualcam + OBS Virtual Camera).",
-            )
-            return
-        if enabled:
-            # Once a frame has flown, the camera object knows which
-            # device name pyvirtualcam handed back (OBS Virtual
-            # Camera / Unity Capture / v4l2loopback). Echo it so the
-            # user knows exactly what to pick in OBS's source list.
-            cam = getattr(self._virtual_camera, "_camera", None)
-            device = getattr(cam, "device", None) if cam is not None else None
-            self._announce(
-                "puppet_virtual_camera_on",
-                'Streaming as "{device}" — add it as a Video Capture Device in OBS.',
-                device=device or "OBS Virtual Camera",
-            )
-        else:
-            self._announce(
-                "puppet_virtual_camera_off", "Virtual camera off",
-            )
-
     # ---- NDI output ----------------------------------------------------
 
-    def _toggle_ndi(self, enabled: bool) -> None:
-        if enabled and missing_packages(NDI_PACKAGES):
-            self._prompt_install(
-                NDI_PACKAGES,
-                on_ready=lambda: self._ndi_toggle.setChecked(True),
-            )
-            self._reset_toggle(self._ndi_toggle)
-            return
-        ok = self._ndi_output.set_enabled(enabled)
-        if enabled and not ok:
-            self._reset_toggle(self._ndi_toggle)
-            self._announce(
-                "puppet_ndi_failed",
-                "NDI unavailable (install ndi-python + the NDI Runtime).",
-            )
-            return
-        if enabled:
-            self._announce(
-                "puppet_ndi_on",
-                'NDI source "{name}" broadcasting — add an "NDI Source" '
-                "in OBS (requires the obs-ndi plugin).",
-                name=self._ndi_output.source_name(),
-            )
-        else:
-            self._announce("puppet_ndi_off", "NDI stopped")
-
     # ---- VTube Studio API ---------------------------------------------
-
-    def _toggle_vts_api(self, enabled: bool) -> None:
-        ok = self._vts_server.set_enabled(enabled)
-        if enabled and not ok:
-            self._vts_toggle.blockSignals(True)
-            self._vts_toggle.setChecked(False)
-            self._vts_toggle.blockSignals(False)
-            self._announce(
-                "puppet_vts_unavailable",
-                "VTS API unavailable (install PySide6 with QtWebSockets)",
-            )
-            return
-        self._announce(
-            "puppet_vts_on" if enabled else "puppet_vts_off",
-            "VTS API listening on 127.0.0.1:{port}"
-            if enabled else "VTS API stopped",
-        )
 
     # ---- mesh-edit toggle ---------------------------------------------
 
@@ -1256,7 +760,6 @@ class PuppetWorkspace(QMainWindow):
     def _start_motion_recording(self) -> bool:
         if self._canvas.document() is None:
             return False
-        from PySide6.QtWidgets import QInputDialog
         lang = language_wrapper.language_word_dict
         name, ok = QInputDialog.getText(
             self,
@@ -1313,345 +816,14 @@ class PuppetWorkspace(QMainWindow):
 
     # ---- import PNG -----------------------------------------------------
 
-    def _import_png_via_dialog(self) -> None:
-        lang = language_wrapper.language_word_dict
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            lang.get("puppet_import_png_title", "Import PNG"),
-            "",
-            "PNG (*.png);;Images (*.png *.jpg *.jpeg *.bmp *.tiff)",
-        )
-        if not path:
-            return
-        cell_size = self._prompt_cell_size()
-        if cell_size is None:
-            return
-        self.import_png(path, cell_size=cell_size)
-
-    def _prompt_cell_size(self) -> int | None:
-        lang = language_wrapper.language_word_dict
-        value, ok = QInputDialog.getInt(
-            self,
-            lang.get("puppet_cell_size_title", "Mesh density"),
-            lang.get(
-                "puppet_cell_size_prompt",
-                "Cell size in pixels (smaller = denser mesh):",
-            ),
-            DEFAULT_CELL_SIZE, 4, 1024, 4,
-        )
-        return value if ok else None
-
     # ---- import PSD -----------------------------------------------------
-
-    def _import_psd_via_dialog(self) -> None:
-        lang = language_wrapper.language_word_dict
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            lang.get("puppet_import_psd_title", "Import PSD"),
-            "",
-            "PSD (*.psd)",
-        )
-        if not path:
-            return
-        self.import_psd(path)
-
-    def import_psd(self, path: str | Path) -> bool:
-        """Load ``path`` (a PSD) as a multi-drawable puppet. Returns
-        ``True`` on success."""
-        try:
-            doc = puppet_from_psd(path)
-        except (ValueError, OSError) as exc:
-            logger.warning("PSD import failed for %s: %s", path, exc)
-            self._status_label.setText(
-                language_wrapper.language_word_dict.get(
-                    "puppet_psd_import_failed",
-                    "PSD import failed: {error}",
-                ).format(error=str(exc)),
-            )
-            return False
-        self._canvas.load_document(doc)
-        self._status_label.setText(
-            language_wrapper.language_word_dict.get(
-                "puppet_status_psd_imported",
-                "Imported {name} ({w}×{h}, {n} drawables)",
-            ).format(
-                name=Path(str(path)).name,
-                w=doc.size[0], h=doc.size[1],
-                n=len(doc.drawables),
-            ),
-        )
-        return True
 
     # ---- import Cubism ------------------------------------------------
 
-    def _import_cubism_via_dialog(self) -> None:
-        # The advisory comes BEFORE the file picker so a user who's
-        # missing the SDK can back out without hunting for the model
-        # file first. Suppressed runs go straight to the picker.
-        if not self._show_cubism_import_notice():
-            return
-        lang = language_wrapper.language_word_dict
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            lang.get("puppet_import_cubism_title", "Import Cubism file"),
-            "",
-            "Cubism (*.moc3 *.model3.json *.motion3.json *.exp3.json "
-            "*.physics3.json *.pose3.json *.cdi3.json)",
-        )
-        if not path:
-            return
-        self.import_cubism(path)
-
-    def _show_cubism_import_notice(self) -> bool:
-        """Display the format / SDK advisory before launching the file
-        picker. The checkbox persists the suppression so repeat users
-        don't have to dismiss it every time.
-
-        Returns ``True`` when the user proceeds, ``False`` when they
-        cancel or close the dialog.
-        """
-        if user_setting_dict.get(_CUBISM_NOTICE_KEY):
-            return True
-        lang = language_wrapper.language_word_dict
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Information)
-        box.setWindowTitle(
-            lang.get("puppet_cubism_notice_title", "Importing Cubism files"),
-        )
-        box.setText(
-            lang.get("puppet_cubism_notice_body", _CUBISM_NOTICE_BODY_FALLBACK),
-        )
-        box.setStandardButtons(
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-        )
-        box.setDefaultButton(QMessageBox.StandardButton.Ok)
-        suppress = QCheckBox(
-            lang.get(
-                "puppet_cubism_notice_dont_show", "Don't show this again",
-            ),
-        )
-        box.setCheckBox(suppress)
-        result = box.exec()
-        if suppress.isChecked():
-            user_setting_dict[_CUBISM_NOTICE_KEY] = True
-        return result == QMessageBox.StandardButton.Ok
-
-    def _show_cubism_error_dialog(self, exc: Exception) -> None:
-        """Surface a Cubism import error as a dialog so users actually
-        see it. Status bar updates alone get missed on big screens or
-        with the bar covered by docks. The bridge error already carries
-        useful install instructions; we just re-wrap it with the
-        SDK-hint fallback so the wording stays consistent under any
-        language pack.
-        """
-        lang = language_wrapper.language_word_dict
-        is_sdk_missing = isinstance(exc, CubismBridgeError)
-        title_key = (
-            "puppet_cubism_sdk_missing_title" if is_sdk_missing
-            else "puppet_cubism_failed_title"
-        )
-        title_default = (
-            "Cubism SDK not found" if is_sdk_missing
-            else "Cubism import failed"
-        )
-        if is_sdk_missing:
-            body = lang.get(
-                "puppet_cubism_sdk_missing_body",
-                _CUBISM_SDK_HINT_FALLBACK,
-            ).format(error=str(exc))
-        else:
-            body = str(exc)
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle(lang.get(title_key, title_default))
-        box.setText(body)
-        box.exec()
-
-    def import_cubism(self, path: str | Path) -> bool:
-        """Route by filename suffix.
-
-        ``.moc3`` always triggers a full conversion via the Cubism
-        Native SDK — drawables, textures, parameter morphs are sampled
-        and a fresh :class:`PuppetDocument` is built. Any existing
-        document is replaced.
-
-        ``.model3.json`` behaves the same way when no document is
-        active (full conversion through the bundled ``.moc3``); when a
-        document is already loaded, it merges the JSON-only metadata
-        (motions, expressions, physics, …) onto it.
-
-        Other Cubism JSON files (``.motion3.json``, ``.exp3.json``,
-        ``.physics3.json``, ``.pose3.json``, ``.cdi3.json``) append a
-        single asset to the active document; without an active
-        document they bail with a friendly status message.
-
-        Returns ``True`` on success."""
-        path_str = str(path)
-        doc = self._canvas.document()
-        lower = path_str.lower()
-        wants_full_conversion = (
-            lower.endswith(".moc3")
-            or (lower.endswith(".model3.json") and doc is None)
-        )
-        if doc is None and not wants_full_conversion:
-            self._announce(
-                "puppet_cubism_no_document",
-                "Open or import a puppet first before adding Cubism assets.",
-            )
-            return False
-        try:
-            new_doc = self._dispatch_cubism_import(doc, path_str)
-        except (
-            CubismFormatError,
-            CubismBridgeError,
-            OSError,
-        ) as exc:
-            logger.warning("Cubism import failed for %s: %s", path_str, exc)
-            self._status_label.setText(
-                language_wrapper.language_word_dict.get(
-                    "puppet_cubism_failed", "Cubism import failed: {error}",
-                ).format(error=str(exc)),
-            )
-            self._show_cubism_error_dialog(exc)
-            return False
-        target_doc = new_doc if new_doc is not None else doc
-        self._canvas.load_document(target_doc)
-        self._announce(
-            "puppet_cubism_imported", "Imported Cubism asset {name}",
-            name=Path(path_str).name,
-        )
-        return True
-
-    def _dispatch_cubism_import(self, doc, path_str: str):
-        """Apply one Cubism file. Returns a fresh :class:`PuppetDocument`
-        when the import built one from scratch (``.moc3``, or
-        ``.model3.json`` without an active document); otherwise mutates
-        ``doc`` in place and returns ``None``."""
-        lower = path_str.lower()
-        if lower.endswith(".moc3"):
-            model3 = self._guess_model3_for_moc3(path_str)
-            return cubism_to_puppet(model3)
-        if lower.endswith(".model3.json"):
-            if doc is None:
-                return cubism_to_puppet(path_str)
-            apply_bundle(doc, load_model3(path_str))
-            return None
-        if lower.endswith(".motion3.json"):
-            doc.motions.append(load_motion3(path_str))
-        elif lower.endswith(".exp3.json"):
-            doc.expressions.append(load_exp3(path_str))
-        elif lower.endswith(".physics3.json"):
-            doc.physics_rigs.extend(load_physics3(path_str))
-        elif lower.endswith(".pose3.json"):
-            doc.pose_groups.extend(load_pose3(path_str))
-        elif lower.endswith(".cdi3.json"):
-            doc.display_names.update(load_cdi3(path_str))
-        else:
-            raise CubismFormatError(
-                f"unrecognised Cubism file extension on {path_str}",
-            )
-        return None
-
-    @staticmethod
-    def _guess_model3_for_moc3(moc3_path: str) -> str:
-        """Cubism's full-conversion entry point reads ``.model3.json``
-        (it carries the texture list, hit areas, group metadata …),
-        not the raw ``.moc3``. Most Cubism distributions ship the two
-        side-by-side: ``Foo.moc3`` next to ``Foo.model3.json``. Find
-        that sibling — or raise ``CubismFormatError`` so the caller
-        can surface a readable message."""
-        moc = Path(moc3_path)
-        base = moc.stem  # strips just ``.moc3``
-        candidate = moc.with_name(f"{base}.model3.json")
-        if candidate.is_file():
-            return str(candidate)
-        for sibling in moc.parent.glob("*.model3.json"):
-            return str(sibling)
-        raise CubismFormatError(
-            f"no .model3.json sibling next to {moc.name} — Cubism's "
-            "full-model import needs the manifest, not just the .moc3",
-        )
-
-    def import_png(self, path: str | Path, *, cell_size: int = DEFAULT_CELL_SIZE) -> bool:
-        """Build a single-drawable puppet from ``path``'s PNG and load
-        it into the canvas. Returns ``True`` on success."""
-        try:
-            doc = puppet_from_png(path, cell_size=cell_size)
-        except (ValueError, OSError) as exc:
-            logger.warning("PNG import failed for %s: %s", path, exc)
-            self._status_label.setText(
-                language_wrapper.language_word_dict.get(
-                    "puppet_import_failed",
-                    "PNG import failed: {error}",
-                ).format(error=str(exc)),
-            )
-            return False
-        self._canvas.load_document(doc)
-        n_verts = len(doc.drawables[0].vertices)
-        n_tris = len(doc.drawables[0].indices) // 3
-        self._status_label.setText(
-            language_wrapper.language_word_dict.get(
-                "puppet_status_imported",
-                "Imported {name} ({w}×{h}, {v} vertices, {t} triangles)",
-            ).format(
-                name=Path(str(path)).name,
-                w=doc.size[0], h=doc.size[1],
-                v=n_verts, t=n_tris,
-            ),
-        )
-        return True
-
     # ---- examples menu --------------------------------------------------
-
-    def _rebuild_examples_menu(self) -> None:
-        """Scan ``<app_dir>/examples/puppet/*.puppet`` and rebuild the
-        Examples submenu with one entry per bundled rig.
-
-        Re-scanned every time the menu opens so the user can drop new
-        ``.puppet`` files into the examples directory without
-        restarting Imervue. ``app_dir()`` is frozen-safe — it returns
-        the EXE's containing directory under PyInstaller / Nuitka and
-        the project root in dev."""
-        from Imervue.system.app_paths import examples_dir
-
-        self._examples_menu.clear()
-        lang = language_wrapper.language_word_dict
-        root = examples_dir() / "puppet"
-        bundled = sorted(root.glob("*.puppet")) if root.is_dir() else []
-        if not bundled:
-            empty = self._examples_menu.addAction(
-                lang.get("puppet_examples_empty", "(No bundled examples)"),
-            )
-            empty.setEnabled(False)
-            return
-        for path in bundled:
-            label = path.stem.replace("_", " ").title()
-            action = self._examples_menu.addAction(label)
-            action.setToolTip(str(path))
-            action.triggered.connect(
-                lambda _checked=False, p=str(path): self.open_puppet(p),
-            )
 
     # ---- recent menu ----------------------------------------------------
 
-    def _rebuild_recent_menu(self) -> None:
-        self._recent_menu.clear()
-        lang = language_wrapper.language_word_dict
-        valid: list[str] = []
-        for path in user_setting_dict.get(_RECENT_KEY, []):
-            if Path(path).is_file():
-                valid.append(path)
-                action = self._recent_menu.addAction(Path(path).name)
-                action.setToolTip(path)
-                action.triggered.connect(
-                    lambda _checked=False, p=path: self.open_puppet(p),
-                )
-        user_setting_dict[_RECENT_KEY] = valid
-        if not valid:
-            empty = self._recent_menu.addAction(
-                lang.get("puppet_recent_empty", "(No recent puppets)"),
-            )
-            empty.setEnabled(False)
 
     # ---- status ---------------------------------------------------------
 
@@ -1674,6 +846,6 @@ class PuppetWorkspace(QMainWindow):
 def _push_recent(path: str) -> None:
     """Move ``path`` to the front of the recent-files list, dedupe,
     truncate to ``_RECENT_LIMIT``."""
-    existing = [p for p in user_setting_dict.get(_RECENT_KEY, []) if p != path]
+    existing = [p for p in user_setting_dict.get(RECENT_KEY, []) if p != path]
     existing.insert(0, path)
-    user_setting_dict[_RECENT_KEY] = existing[:_RECENT_LIMIT]
+    user_setting_dict[RECENT_KEY] = existing[:_RECENT_LIMIT]

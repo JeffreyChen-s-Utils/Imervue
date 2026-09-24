@@ -33,6 +33,10 @@ from Imervue.image.recipe import Recipe, file_identity
 
 logger = logging.getLogger("Imervue.recipe_store")
 
+# What ``Recipe.from_dict`` raises on malformed stored data: wrong types
+# (``int(None)``, a non-mapping ``extra``), unparsable numbers, short curve points.
+_RECIPE_DECODE_ERRORS = (TypeError, ValueError, IndexError)
+
 _STORE_FILENAME = "recipes.json"
 
 
@@ -116,7 +120,8 @@ class RecipeStore:
             return None
         try:
             Recipe.from_dict(recipe_data)
-        except Exception:
+        except _RECIPE_DECODE_ERRORS:
+            logger.debug("Dropping undecodable recipe store entry", exc_info=True)
             return None
         return {
             "recipe": recipe_data,
@@ -178,8 +183,9 @@ class RecipeStore:
                 return None
             try:
                 return Recipe.from_dict(entry["recipe"])
-            except Exception:
-                logger.debug(f"Recipe store entry for {identity} failed to decode")
+            except _RECIPE_DECODE_ERRORS:
+                logger.debug("Recipe store entry for %s failed to decode", identity,
+                             exc_info=True)
                 return None
 
     def set(self, identity: str, recipe: Recipe, last_path: str = "") -> None:
@@ -250,7 +256,9 @@ class RecipeStore:
                 return None
             try:
                 return Recipe.from_dict(data)
-            except Exception:
+            except _RECIPE_DECODE_ERRORS:
+                logger.debug("Variant %r of %s failed to decode", name, identity,
+                             exc_info=True)
                 return None
 
     def save_variant(

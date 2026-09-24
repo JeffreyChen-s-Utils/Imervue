@@ -10,6 +10,7 @@ from __future__ import annotations
 from PySide6.QtGui import QKeySequence, QShortcut
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.paint.shortcut_binding import apply_registry_bindings, registry_shortcut
 
 BRUSH_SIZE_MIN = 1
 BRUSH_SIZE_MAX = 500
@@ -62,8 +63,8 @@ class ShortcutMixin:
                 str(digit),
                 lambda d=digit: self.set_brush_opacity_from_digit(d),
             )
-        self._shortcut("[", lambda: self.step_brush_size(-1))
-        self._shortcut("]", lambda: self.step_brush_size(+1))
+        self._registry_shortcut("paint.brush.size_dec", lambda: self.step_brush_size(-1))
+        self._registry_shortcut("paint.brush.size_inc", lambda: self.step_brush_size(+1))
         self._shortcut(
             "Shift+[", lambda: self.step_brush_size(-_BRUSH_SIZE_BIG_STEP),
         )
@@ -74,28 +75,17 @@ class ShortcutMixin:
     def _bind_layer_shortcuts(self) -> None:
         self._shortcut("Alt+[", lambda: self.cycle_active_layer(-1))
         self._shortcut("Alt+]", lambda: self.cycle_active_layer(+1))
+        self._registry_shortcut("paint.layer.move_up", lambda: self._move_active_layer(up=True))
+        self._registry_shortcut("paint.layer.move_down", lambda: self._move_active_layer(up=False))
 
     def _bind_view_colour_tab_shortcuts(self) -> None:
-        """View (fit / actual-size), colour (swap / reset) and tab-cycle
-        shortcuts, resolving any user remaps from the registry."""
-        from Imervue.paint.shortcut_registry import load_shortcuts
-        registry = load_shortcuts()
-        self._shortcut(
-            _registry_key(registry, "paint.view.fit", "Ctrl+0"),
-            self._fit_view,
-        )
-        self._shortcut(
-            _registry_key(registry, "paint.view.actual_size", "Ctrl+1"),
-            self._actual_size_view,
-        )
-        self._shortcut(
-            _registry_key(registry, "paint.color.swap", "X"),
-            self._state.swap_colors,
-        )
-        self._shortcut(
-            _registry_key(registry, "paint.color.reset", "D"),
-            self._state.reset_colors,
-        )
+        """View (fit / actual-size), colour (swap / reset), deselect and
+        tab-cycle shortcuts, then the user's remaps from the registry."""
+        self._registry_shortcut("paint.view.fit", self._fit_view)
+        self._registry_shortcut("paint.view.actual_size", self._actual_size_view)
+        self._registry_shortcut("paint.color.swap", self._state.swap_colors)
+        self._registry_shortcut("paint.color.reset", self._state.reset_colors)
+        self._registry_shortcut("paint.edit.deselect", self._deselect_canvas)
         self._shortcut("Ctrl+Tab", lambda: self.cycle_active_tab(+1))
         self._shortcut("Ctrl+Shift+Tab", lambda: self.cycle_active_tab(-1))
 
@@ -103,6 +93,29 @@ class ShortcutMixin:
         shortcut = QShortcut(QKeySequence(sequence), self)
         shortcut.activated.connect(slot)
         return shortcut
+
+    def _registry_shortcut(self, action_id: str, slot) -> QShortcut:
+        shortcut = registry_shortcut(self, action_id)
+        shortcut.activated.connect(slot)
+        return shortcut
+
+    def apply_shortcut_registry(self, registry) -> None:
+        """Rebind every remappable action to ``registry`` (a ``ShortcutRegistry``)
+        and refresh the tooltips that name those keys."""
+        bindings = dict(registry.items())
+        apply_registry_bindings(self, bindings)
+        tool_bar = getattr(self, "_tool_bar", None)
+        if tool_bar is not None:
+            tool_bar.show_tool_keys(bindings)
+        layer_dock = getattr(self, "_layer_dock", None)
+        if layer_dock is not None and hasattr(layer_dock, "show_shortcuts"):
+            layer_dock.show_shortcuts(registry)
+
+    def _move_active_layer(self, *, up: bool) -> None:
+        canvas = getattr(self, "_canvas", None)
+        if canvas is None:
+            return
+        canvas.document().move_active_layer(up=up)
 
     def _fit_view(self) -> None:
         canvas = getattr(self, "_canvas", None)
@@ -275,14 +288,6 @@ class ShortcutMixin:
         if hasattr(bridge, "open_psd_at"):
             bridge.open_psd_at(path)
         self._dismiss_welcome_hint()
-
-
-def _registry_key(registry, name: str, fallback: str) -> str:
-    """Resolve a shortcut from the registry, falling back on a missing key."""
-    try:
-        return registry.get(name)
-    except KeyError:
-        return fallback
 
 
 def _welcome_translations(lang: dict) -> dict:

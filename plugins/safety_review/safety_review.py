@@ -28,6 +28,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMenu
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -78,7 +79,7 @@ logger = logging.getLogger("Imervue.plugin.safety_review")
 
 class SafetyReviewPlugin(ImervuePlugin):
     plugin_name = "Safety Review"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     plugin_description = (
         "Auto-detect and mosaic exposed genitalia using NudeNet. "
         "Nipples are never mosaiced."
@@ -92,14 +93,15 @@ class SafetyReviewPlugin(ImervuePlugin):
     def on_build_menu_bar(self, plugin_menu) -> None:
         lang = language_wrapper.language_word_dict
 
-        # Try to reuse AI Tools submenu
-        ai_menu = None
-        for action in plugin_menu.actions():
-            m = action.menu()
-            if m and action.text().replace("&", "") == lang.get(
-                    "bg_remove_menu", "AI Tools"):
-                ai_menu = m
-                break
+        # Try to reuse AI Tools submenu. Look it up among the menu's children:
+        # QAction.menu() would invalidate wrappers other plugins keep of it.
+        title = lang.get("bg_remove_menu", "AI Tools")
+        ai_menu = next(
+            (m for m in plugin_menu.findChildren(
+                QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly)
+             if m.title().replace("&", "") == title),
+            None,
+        )
         if ai_menu is None:
             ai_menu = plugin_menu.addMenu(
                 lang.get("bg_remove_menu", "AI Tools"))

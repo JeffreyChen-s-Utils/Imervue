@@ -208,7 +208,7 @@ class DeflickerWorker(QThread):
         written = 0
         try:
             written = self._write_corrected(self._load_frames())
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # Otherwise finished_with_count never fires and the dialog hangs.
             logger.exception("Deflicker failed: %s", exc)
         self.finished_with_count.emit(written)

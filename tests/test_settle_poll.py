@@ -88,3 +88,16 @@ def test_default_interval_is_a_real_delay():
     # A zero default would silently reintroduce the singleShot(0) bug this
     # helper exists to fix.
     assert DEFAULT_INTERVAL_MS > 0
+
+
+def test_chain_ends_when_its_owner_is_destroyed(qapp, pump_until):
+    """``still_current`` would otherwise run against a deleted widget."""
+    import shiboken6
+    from PySide6.QtCore import QObject
+    owner, calls = QObject(), []
+    poll_settle(lambda: calls.append(1), lambda: True, retries=5, interval_ms=30, owner=owner)
+    shiboken6.delete(owner)
+    done = []
+    poll_settle(lambda: done.append(1), lambda: True, retries=1, interval_ms=200)
+    assert pump_until(lambda: done == [1])
+    assert calls == []

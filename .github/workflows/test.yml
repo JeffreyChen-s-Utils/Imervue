@@ -10,6 +10,44 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint (ruff + bandit)
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+    - name: Set up Python 3.12
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: "3.12"
+    - name: Install linters
+      # ruff matches uv.lock. Keep the pin: a newer ruff can promote rules to
+      # stable (0.16 adds PLR0917) and turn an unchanged tree red.
+      run: python -m pip install "ruff==0.15.20" "bandit[toml]==1.9.4"
+    - name: ruff
+      run: python -m ruff check . --output-format=github
+    - name: bandit
+      # ``-c pyproject.toml`` is required, or bandit ignores the documented skips.
+      run: python -m bandit -c pyproject.toml -r Imervue/ plugins/
+
+  docs:
+    runs-on: ubuntu-latest
+    name: Docs (Sphinx, warnings are errors)
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+    - name: Set up Python 3.12
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: "3.12"
+    - name: Install Sphinx
+      # The same requirements Read the Docs installs (.readthedocs.yaml).
+      run: python -m pip install -r docs/requirements.txt
+    - name: Build
+      # ``-W`` turns every docutils / Sphinx warning into a failure, so a
+      # translation that breaks inline markup next to CJK text is caught here.
+      run: python -m sphinx -W --keep-going -b html docs docs/_build/html
+
   fast:
     runs-on: windows-latest
     # ``experimental`` toggles continue-on-error so a Python release with
@@ -27,9 +65,9 @@ jobs:
     name: Fast / Python ${{ matrix.python-version }}${{ matrix.experimental && ' (experimental)' || '' }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: ${{ matrix.python-version }}
         allow-prereleases: true
@@ -71,9 +109,9 @@ jobs:
         layer: [gui, integration]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
     - name: Set up Python 3.12
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: "3.12"
     - name: Install dependencies

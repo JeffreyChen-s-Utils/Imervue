@@ -42,7 +42,7 @@ from Imervue.paint.manga_menu import populate_manga_menu
 from Imervue.paint.paint_menu_bar import build_paint_menu_bar
 from Imervue.paint.settings_menu import populate_settings_menu
 from Imervue.paint.tool_bar import PaintOptionsBar, PaintToolBar
-from Imervue.paint.tool_dispatcher import ToolDispatcher
+from Imervue.paint.tool_dispatcher import DispatcherHooks, ToolDispatcher
 from Imervue.paint.tools_menu import populate_tools_menu
 from Imervue.paint.view_menu import populate_view_menu
 from Imervue.paint.workspace_autosave import AutosaveMixin
@@ -51,6 +51,7 @@ from Imervue.paint.workspace_docks import DockBuilder, DockLayoutMixin
 from Imervue.paint.workspace_shortcuts import ShortcutMixin
 from Imervue.paint.workspace_status import StatusLineMixin
 from Imervue.paint.workspace_tabs import TabManagerMixin
+from Imervue.system.best_effort import best_effort
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -217,13 +218,16 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         self._dispatcher = ToolDispatcher(
             self._state,
             image_provider=lambda: self._canvas.current_image(),
-            selection_provider=lambda: self._canvas.current_selection(),
-            set_selection=lambda mask: self._canvas.set_selection(mask),
-            parent_widget=self,
-            reference_provider=lambda: self._canvas.document().reference_layer_image(),
-            composite_provider=lambda: self._canvas.document().composite(),
-            overlay_setter=lambda overlay: self._canvas.set_tool_overlay(overlay),
-            commit_undo=self._on_dispatcher_commit,
+            hooks=DispatcherHooks(
+                selection_provider=lambda: self._canvas.current_selection(),
+                set_selection=lambda mask: self._canvas.set_selection(mask),
+                parent_widget=self,
+                reference_provider=(
+                    lambda: self._canvas.document().reference_layer_image()),
+                composite_provider=lambda: self._canvas.document().composite(),
+                overlay_setter=lambda overlay: self._canvas.set_tool_overlay(overlay),
+                commit_undo=self._on_dispatcher_commit,
+            ),
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
         self._attach_workspace_aware_tools()
@@ -253,6 +257,8 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         self._build_welcome_hint()
         self._maybe_offer_autosave_recovery()
         self._build_brush_kind_shortcuts()
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        self.apply_shortcut_registry(load_shortcuts())
 
     # ---- public ----------------------------------------------------------
 
@@ -277,7 +283,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         import contextlib
         # Stop the autosave timer so a queued tick can't fire on the torn-down
         # canvas after close.
-        with contextlib.suppress(Exception):
+        with best_effort("stop the autosave timer", logger):
             self.stop_autosave()
         with contextlib.suppress(RuntimeError, OSError):
             self._save_dock_state()

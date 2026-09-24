@@ -1,24 +1,23 @@
 from __future__ import annotations
 
 import logging
-import contextlib
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
-from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
-from Imervue.image.jxl_support import JXL_EXTENSIONS, ensure_jxl_opener
+from Imervue.system.best_effort import best_effort
+from Imervue.image.heif_support import ensure_heif_opener
+from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-import imageio
 import numpy as np
-import rawpy
 from PIL import Image
 
 logger = logging.getLogger("Imervue.image_loader")
@@ -33,7 +32,6 @@ def _maybe_collapse_stacks(images: list[str]) -> tuple[list[str], dict[str, list
     return collapse_stacks(list(images))
 
 
-_RAW_EXTS = frozenset({".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"})
 
 
 def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
@@ -53,6 +51,10 @@ def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
 
 
 def _load_raw_thumbnail(raw) -> np.ndarray:
+    # Imported here: rawpy and imageio cost ~190 ms at startup, and only a
+    # RAW file needs them.
+    import imageio
+    import rawpy
     try:
         thumb = raw.extract_thumb()
         if thumb.format == rawpy.ThumbFormat.JPEG:
@@ -68,21 +70,23 @@ def _load_raw_thumbnail(raw) -> np.ndarray:
         )
 
 
-def _load_raster(path: str) -> np.ndarray:
+def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     img = Image.open(path)
+    code = exif_orientation(img) if orient else 1
     # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
     # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
     # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
     if img.mode not in ("RGB", "RGBA", "L"):
         img = img.convert("RGBA")
-    return np.array(img)
+    return np.array(transpose_for(img, code))
 
 
-def _load_raster_thumbnail(path: str, max_edge: int = 1600) -> np.ndarray:
+def _load_raster_thumbnail(path: str, max_edge: int = 1600, *, orient: bool = True) -> np.ndarray:
     with Image.open(path) as img:
+        code = exif_orientation(img) if orient else 1
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
         thumb = img.convert("RGBA") if img.mode not in ("RGB", "RGBA", "L") else img
-        return np.array(thumb)
+        return np.array(transpose_for(thumb, code))
 
 
 def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
@@ -94,14 +98,6 @@ def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
     return img_data
 
 
-def _ensure_optional_opener(ext: str) -> None:
-    """Register an optional Pillow codec (HEIF/AVIF or JPEG-XL) on demand."""
-    if ext in HEIF_EXTENSIONS:
-        ensure_heif_opener()
-    elif ext in JXL_EXTENSIONS:
-        ensure_jxl_opener()
-
-
 def load_image_file(path, thumbnail=False, recipe=None):
     """
     支援一般圖片 + RAW 檔案
@@ -111,17 +107,22 @@ def load_image_file(path, thumbnail=False, recipe=None):
     ``recipe`` 是可選的 :class:`Imervue.image.recipe.Recipe`: 若提供, 非 identity
     的部分會在回傳前套到 RGBA 陣列上. 呼叫端也可以先自行查 recipe_store 再決定
     要不要傳進來, 這個函式不強制依賴 store.
+
+    點陣圖依 EXIF Orientation 轉正; 例外是 recipe 的幾何是在轉正之前設定的
+    (``Recipe.base_is_oriented``), 那種 recipe 仍套在原始方向上.
     """
     ext = Path(path).suffix.lower()
-    if ext in _RAW_EXTS:
+    orient = recipe is None or recipe.base_is_oriented()
+    if ext in RAW_EXTENSIONS:
         img_data = _load_raw(path, thumbnail)
     elif ext == ".svg":
         img_data = _load_svg(path, thumbnail=thumbnail)
     elif ext in VIDEO_EXTENSIONS:
         img_data = poster_frame(path)
     else:
-        _ensure_optional_opener(ext)
-        img_data = _load_raster_thumbnail(path) if thumbnail else _load_raster(path)
+        ensure_pillow_opener(ext)
+        img_data = (_load_raster_thumbnail(path, orient=orient) if thumbnail
+                    else _load_raster(path, orient=orient))
 
     img_data = _ensure_rgba(img_data)
 
@@ -217,7 +218,7 @@ class FolderScanWorker(QRunnable):
                     if not entry.is_file(follow_symlinks=False):
                         continue
                     ext = os.path.splitext(entry.name)[1].lower()
-                    if ext not in _SUPPORTED_EXTS:
+                    if ext not in VIEWER_EXTENSIONS:
                         continue
                     batch.append(entry.path)
                     found.append(entry.path)
@@ -237,11 +238,6 @@ class FolderScanWorker(QRunnable):
 # 開啟路徑（資料夾或檔案）
 # ================================================================
 
-_SUPPORTED_EXTS = {
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-    ".gif", ".apng", ".svg",
-    ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-} | VIDEO_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS
 
 
 def _load_svg(path: str, thumbnail: bool = False) -> np.ndarray:
@@ -296,7 +292,7 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
             for entry in it:
                 if entry.is_file(follow_symlinks=False):
                     ext = os.path.splitext(entry.name)[1].lower()
-                    if ext in _SUPPORTED_EXTS:
+                    if ext in VIEWER_EXTENSIONS:
                         result.append(entry.path)
     except OSError:
         return []
@@ -352,7 +348,7 @@ def open_path(main_gui: GPUImageView, path: str):
     # positives for that threat model.
     if path_obj.is_dir():  # NOSONAR
         _open_folder(main_gui, path_obj)
-    elif path_obj.is_file() and path_obj.suffix.lower() in _SUPPORTED_EXTS:  # NOSONAR
+    elif path_obj.is_file() and path_obj.suffix.lower() in VIEWER_EXTENSIONS:  # NOSONAR
         _open_file(main_gui, path_obj)
 
 
@@ -382,7 +378,7 @@ def _open_folder_progressive(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.recent_image import add_recent_folder
     old_worker = getattr(main_gui, "_folder_scan_worker", None)
     if old_worker is not None:
-        with contextlib.suppress(Exception):
+        with best_effort("abort the previous folder scan"):
             old_worker.abort()
     main_gui._folder_scan_generation = getattr(main_gui, "_folder_scan_generation", 0) + 1
     generation = main_gui._folder_scan_generation

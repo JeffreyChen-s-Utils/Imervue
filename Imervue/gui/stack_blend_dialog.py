@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QProgressBar,
     QPushButton,
@@ -27,6 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.file_filters import image_filter
+from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.stack_blend import (
     STACK_MAX,
@@ -90,9 +91,9 @@ class StackBlendDialog(WorkerHostMixin, QDialog):
         for mode, key, fallback in _MODE_LABELS:
             self._mode_combo.addItem(lang.get(key, fallback), mode)
 
-        self._out_edit = QLineEdit()
-        out_browse = QPushButton(lang.get("export_browse", "Browse..."))
-        out_browse.clicked.connect(self._pick_out)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("fstack_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -115,11 +116,6 @@ class StackBlendDialog(WorkerHostMixin, QDialog):
         mode_row.addWidget(QLabel(lang.get("stack_mode_label", "Mode:")))
         mode_row.addWidget(self._mode_combo, 1)
 
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("fstack_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(out_browse)
-
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(lang.get(
             "stack_blend_hint",
@@ -136,19 +132,16 @@ class StackBlendDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         files, _ = QFileDialog.getOpenFileNames(
             self, lang.get("fstack_add", "Add images..."), "",
-            "Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)",
+            image_filter(("jpg", "jpeg", "png", "tif", "tiff", "webp")),
         )
         for f in files:
             self._list.addItem(f)
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("fstack_output", "Output"), "stacked.png",
-            "Images (*.png *.jpg *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("fstack_output", "Output"), image_save_filter(),
+            start="stacked.png")
 
     def _collected_paths(self) -> list[str]:
         return [self._list.item(i).text() for i in range(self._list.count())]

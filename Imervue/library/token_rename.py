@@ -32,6 +32,9 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.dimensions import image_dimensions
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 _TOKEN_RE = re.compile(r"\{([a-zA-Z_]+)(?::([^{}]+))?\}")
 
 
@@ -165,15 +168,15 @@ def _gather_metadata(path: str, counter: int) -> dict[str, str]:
 
     width = height = 0
     camera = ""
+    width, height = image_dimensions(path) or (0, 0)
     try:
         with Image.open(path) as im:
-            width, height = im.size
             exif = im.getexif()
             if exif:
                 make = (exif.get(271) or "").strip()  # Make
                 model = (exif.get(272) or "").strip()  # Model
                 camera = (f"{make} {model}").strip() or ""
-    except Exception:  # noqa: BLE001, S110  # nosec B110 - EXIF optional; fallback to mtime
+    except (*IMAGE_READ_ERRORS, AttributeError):   # unreadable file or a non-text Make/Model tag
         pass
 
     dt = _safe_fromtimestamp(mtime)

@@ -49,6 +49,12 @@ class TestKey:
         assert tdc.ThumbnailDiskCache._key(source_image, 128) != \
                tdc.ThumbnailDiskCache._key(source_image, 256)
 
+    def test_depends_on_the_key_version(self, source_image, monkeypatch):
+        """Bumping the version retires entries baked the old way (v2: EXIF-upright)."""
+        before = tdc.ThumbnailDiskCache._key(source_image, 128)
+        monkeypatch.setattr(tdc, "_KEY_VERSION", tdc._KEY_VERSION + 1)
+        assert tdc.ThumbnailDiskCache._key(source_image, 128) != before
+
     def test_depends_on_recipe_hash(self, source_image):
         assert tdc.ThumbnailDiskCache._key(source_image, 128, "rA") != \
                tdc.ThumbnailDiskCache._key(source_image, 128, "rB")
@@ -201,3 +207,41 @@ class TestCacheDirResolution:
         # Ends with the documented subpath on Windows, or the XDG-ish one
         # on other platforms — either way the parent chain reflects Imervue.
         assert "Imervue" in str(result) or "imervue" in str(result)
+
+
+# ---------------------------------------------------------------------------
+# Narrowed failure handling — expected failures are skipped, bugs propagate
+# ---------------------------------------------------------------------------
+
+
+class TestPutFailures:
+    @pytest.mark.parametrize("bad", [
+        "not an array",                                   # no dtype -> AttributeError
+        np.zeros((4,), dtype=np.uint8),                   # 1-D -> IndexError on shape[2]
+        pytest.param(np.zeros((4, 4, 2), dtype=np.uint8),  # 2 channels -> ValueError
+                     marks=pytest.mark.filterwarnings(
+                         "ignore:'mode' parameter:DeprecationWarning")),
+    ])
+    def test_non_image_array_is_ignored(self, cache_dir, source_image, bad):
+        c = tdc.ThumbnailDiskCache()
+        c.put(source_image, 128, bad)
+        assert c.get(source_image, 128) is None
+        assert c.total_bytes() == 0
+
+    def test_write_failure_is_ignored(self, cache_dir, source_image, monkeypatch):
+        def fail_save(self, *_a, **_k):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(Image.Image, "save", fail_save)
+        c = tdc.ThumbnailDiskCache()
+        c.put(source_image, 128, _thumb())
+        assert c.total_bytes() == 0
+
+    def test_unexpected_write_error_propagates(self, cache_dir, source_image, monkeypatch):
+        def boom(self, *_a, **_k):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(Image.Image, "save", boom)
+        c = tdc.ThumbnailDiskCache()
+        with pytest.raises(RuntimeError):
+            c.put(source_image, 128, _thumb())

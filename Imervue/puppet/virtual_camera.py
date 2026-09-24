@@ -18,6 +18,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from OpenGL.error import GLError
 from PySide6.QtCore import QObject, QTimer, Signal
 
 
@@ -176,7 +177,7 @@ class VirtualCameraOutput(QObject):
                 self._camera.width, self._camera.height,
                 background_rgba=CHROMA_KEY_MAGENTA_RGBA,
             )
-        except Exception:   # noqa: BLE001 - GL surfaces vary
+        except (GLError, RuntimeError):   # no GL context this tick, or the canvas is gone
             return
         if image is None:
             return

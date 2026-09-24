@@ -52,10 +52,10 @@ def list_resources(root: str | None, cursor: str | None = None) -> dict[str, Any
     base = Path(root) if root else None
     if base is None or not base.is_dir():
         return {"resources": []}
-    from Imervue.mcp_server.tools import _IMAGE_EXTENSIONS
+    from Imervue.mcp_server.tool_support import IMAGE_EXTENSIONS
     paths = sorted(
         str(p) for p in base.iterdir()
-        if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
     )
     offset = _decode_cursor(cursor)
     page = paths[offset:offset + _PAGE_SIZE]

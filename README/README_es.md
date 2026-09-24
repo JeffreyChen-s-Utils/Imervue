@@ -117,7 +117,7 @@ Opcionales (gestionados por funcionalidad; si no se instalan, la función se des
 |---------|---------|
 | open_clip_torch + torch | Búsqueda semántica con CLIP (consultas en lenguaje natural) |
 | onnxruntime | Escalado por IA con Real-ESRGAN / etiquetado automático con CLIP ONNX |
-| opencv-python | Fusión HDR, costura de panoramas, apilamiento de foco, detección de rostros, pincel de saneamiento |
+| opencv-python<5 | Fusión HDR, costura de panoramas, apilamiento de foco, detección de rostros, pincel de saneamiento |
 | sounddevice | Sincronización labial en Puppet desde el micrófono |
 | mediapipe | Seguimiento facial por webcam en Puppet |
 
@@ -184,6 +184,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Pools de trabajo separados** — las ráfagas de miniaturas y las decodificaciones de zoom profundo usan pools distintos, así abrir una carpeta grande nunca deja sin recursos a la imagen que estás mirando
 - **Cuadrícula de miniaturas virtualizada** — sólo se renderizan los mosaicos visibles; el tamaño de miniatura es configurable (128 / 256 / 512 / 1024 / auto)
 - **Caché en disco** — miniaturas PNG comprimidas con invalidación basada en MD5 en `%LOCALAPPDATA%/Imervue/cache/thumbnails` (o `~/.cache/imervue/thumbnails`)
+- **Orientación EXIF** — las fotos verticales que el móvil o la cámara solo marcaron en lugar de girarlas se muestran derechas en el visor, las miniaturas, la vista de lista, la vista previa al pasar el cursor y la pestaña Modify; un recorte / giro de revelado guardado antes sigue aplicándose a la orientación sobre la que se hizo
 - **Reproducción de animaciones** — GIF / APNG con controles de reproducir / pausar / fotograma a fotograma / velocidad
 
 ### Modos de exploración
@@ -365,7 +366,7 @@ Pincel · Borrador · Relleno · Cuentagotas · Rect / Lazo / Varita / Selecció
 
 El trío de tonificación de cuarto oscuro — **Dodge** (aclarar), **Burn** (oscurecer) y **Sponge** (saturar / desaturar) — pinta ajustes locales de tono y croma, ponderados por el pincel y una máscara de sombras / medios tonos / luces.
 
-Atajos de una letra: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
+Atajos de una letra: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
 ### Pinceles
 
@@ -752,14 +753,17 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | Atajo | Acción |
 |----------|--------|
 | B / E / G / I | Pincel / Borrador / Relleno / Cuentagotas |
-| V / T / U / R | Mover / Texto / Gradiente / Selección rectangular |
-| P / S / C / Z / H | Pluma / Difuminar / Clonar / Zoom / Mano |
+| V / T / U / R | Mover / Texto / Gradiente / Difuminar |
+| M / L / W | Selección rectangular / Lazo / Varita mágica |
+| P / S / C / Z / H | Pluma / Clonar / Recortar / Zoom / Mano |
 | Q | Alternar modo máscara rápida |
 | Tab | Alternar todos los docks |
 | Ctrl+Tab | Recorrer pestañas Paint |
 | , / . | Recorrer tipos de pincel |
 | 0-9 | Opacidad de pincel en pasos del 10 % |
 | Alt+[ / Alt+] | Bajar / subir un paso la capa activa |
+| Ctrl+[ / Ctrl+] | Mover la capa activa hacia abajo / arriba en la pila |
+| Ctrl+D | Deseleccionar |
 
 ---
 
@@ -818,8 +822,8 @@ Imervue soporta plugins de terceros. Consulta [PLUGIN_DEV_GUIDE.md](../PLUGIN_DE
 |------|---------|
 | `on_plugin_loaded()` | Tras instanciar el plugin |
 | `on_plugin_unloaded()` | Al cerrar la aplicación |
-| `on_build_menu_bar(menu_bar)` | Tras construir la barra de menú predeterminada |
-| `on_build_main_tabs(tabs)` | Tras añadir las cuatro pestañas integradas |
+| `on_build_menu_bar(plugin_menu)` | Tras construir el menú Plugins compartido |
+| `on_build_main_tabs(tabs)` | Tras añadir las cinco pestañas integradas |
 | `on_build_context_menu(menu, viewer)` | Al abrirse el menú del clic derecho |
 | `on_image_loaded(path, viewer)` | Tras cargar imagen en deep zoom |
 | `on_folder_opened(path, images, viewer)` | Tras abrir carpeta en cuadrícula |
@@ -859,7 +863,7 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 | `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL opcionales) |
 | `apply_watermark` / `apply_frame` | Estampar una marca de agua de texto o un marco mate / Polaroid + leyenda |
 | `build_collage` | Componer imágenes en un montaje en cuadrícula (con progreso) |
-| `crop_image` / `resize_image` / `rotate_image` | Recorte por píxeles, redimensión que preserva el aspecto, rotación / volteo sin pérdida |
+| `crop_image` / `resize_image` / `rotate_image` | Recorte por píxeles, redimensión que preserva el aspecto, rotación / volteo sin pérdida. Los tamaños y las coordenadas se refieren a la imagen enderezada según EXIF. |
 | `collection_stats` | Resumen de calificación / favorito / etiqueta de color / culling de una carpeta |
 | `search_images` | Filtra una carpeta con el DSL de consultas de álbumes inteligentes (ruta / EXIF / tamaño / dimensiones) |
 | `extract_gps` / `dominant_colors` | Lee coordenadas GPS de EXIF (encadena con `reverse_geocode`); paleta de colores por median-cut (rgb / hex / proporción) |

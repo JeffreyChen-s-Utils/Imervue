@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -32,9 +31,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import folder_picker_row
+from Imervue.image.dimensions import image_dimensions
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -156,7 +158,7 @@ class _ScanWorker(QThread):
             key = (self._file_hash(path) if self._method == _METHOD_EXACT
                    else self._perceptual_hash(path))
             return key, size
-        except Exception:
+        except IMAGE_READ_ERRORS:
             logger.debug("Skipping %s", path, exc_info=True)
             return None
 
@@ -198,8 +200,8 @@ class _ScanWorker(QThread):
 
     @staticmethod
     def _perceptual_hash(path: str) -> str:
-        img = Image.open(path)
-        return str(_dhash(img))
+        with Image.open(path) as img:
+            return str(_dhash(img))
 
     def _cluster_perceptual(
         self,
@@ -233,18 +235,17 @@ class _ScanWorker(QThread):
 
 def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
     """Create a small QPixmap thumbnail for display in the tree."""
+    import numpy as np
     try:
-        img = Image.open(path)
-        img.thumbnail((size, size), Image.Resampling.LANCZOS)
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-        import numpy as np
-        arr = np.array(img)
-        h, w = arr.shape[:2]
-        qimg = QImage(arr.data, w, h, w * 4, QImage.Format.Format_RGBA8888).copy()
-        return QPixmap.fromImage(qimg)
-    except Exception:
+        with Image.open(path) as src:
+            src.thumbnail((size, size), Image.Resampling.LANCZOS)
+            img = src.convert("RGBA")
+    except IMAGE_READ_ERRORS:
         return QPixmap()
+    arr = np.array(img)
+    h, w = arr.shape[:2]
+    qimg = QImage(arr.data, w, h, w * 4, QImage.Format.Format_RGBA8888).copy()
+    return QPixmap.fromImage(qimg)
 
 
 # ---------------------------------------------------------------------------
@@ -282,16 +283,24 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         layout = QVBoxLayout(self)
 
         # Source folder
-        folder_row = QHBoxLayout()
-        folder_row.addWidget(QLabel(lang.get("duplicate_source", "Source folder:")))
-        self._folder_edit = QLineEdit()
-        folder_row.addWidget(self._folder_edit, 1)
-        browse_btn = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse_folder)
-        folder_row.addWidget(browse_btn)
+        folder_row, self._folder_edit = folder_picker_row(
+            lang.get("duplicate_source", "Source folder:"), self._browse_folder)
         layout.addLayout(folder_row)
+        layout.addLayout(self._build_options_row(lang))
 
-        # Options row
+        # Progress
+        self._progress = QProgressBar()
+        self._progress.hide()
+        layout.addWidget(self._progress)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+        layout.addWidget(self._build_results_tree(lang), 1)
+        layout.addLayout(self._build_button_row(lang))
+
+    def _build_options_row(self, lang: dict) -> QHBoxLayout:
+        """Method combo, sensitivity spin (perceptual only) and the subfolder box."""
         opts_row = QHBoxLayout()
         opts_row.addWidget(QLabel(lang.get("duplicate_method", "Method:")))
         self._method_combo = QComboBox()
@@ -316,17 +325,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         self._recursive_check = QCheckBox(
             lang.get("duplicate_recursive", "Include subfolders"))
         opts_row.addWidget(self._recursive_check)
-        layout.addLayout(opts_row)
+        return opts_row
 
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.hide()
-        layout.addWidget(self._progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        # Results tree
+    def _build_results_tree(self, lang: dict) -> QTreeWidget:
+        """Thumbnail / filename / path / size columns, multi-select."""
         self._tree = QTreeWidget()
         self._tree.setHeaderLabels([
             "",  # thumbnail
@@ -339,9 +341,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         header = self._tree.header()
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self._tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
-        layout.addWidget(self._tree, 1)
+        return self._tree
 
-        # Buttons
+    def _build_button_row(self, lang: dict) -> QHBoxLayout:
+        """Scan, Delete Selected and Select Redundant (both disabled until a scan), then Close."""
         btn_row = QHBoxLayout()
         self._scan_btn = QPushButton(lang.get("duplicate_scan", "Scan"))
         self._scan_btn.clicked.connect(self._start_scan)
@@ -364,7 +367,7 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         close_btn = QPushButton(lang.get("export_cancel", "Close"))
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
-        layout.addLayout(btn_row)
+        return btn_row
 
     def _browse_folder(self):
         folder = QFileDialog.getExistingDirectory(
@@ -537,12 +540,8 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
 
     @staticmethod
     def _probe_dims(path: str) -> tuple[int, int]:
-        """Pixel dimensions via PIL's header-only ``size``; (0, 0) if unreadable."""
-        try:
-            with Image.open(path) as im:
-                return im.size
-        except (OSError, ValueError):
-            return (0, 0)
+        """Pixel dimensions read from the header; (0, 0) if unreadable."""
+        return image_dimensions(path) or (0, 0)
 
     @staticmethod
     def _format_size(size: int) -> str:

@@ -26,6 +26,21 @@ _CULL_VALUES = ("", "pick", "reject", "unflagged")
 _SMART_ALBUMS_TITLE = "Smart Albums"
 
 
+def _placeholder_edit(lang: dict, key: str, default: str) -> QLineEdit:
+    """Line edit showing the translated *key* (or *default*) as its placeholder."""
+    edit = QLineEdit()
+    edit.setPlaceholderText(lang.get(key, default))
+    return edit
+
+
+def _prefixed_spin(maximum: int, prefix: str) -> QSpinBox:
+    """0..*maximum* spin box whose value reads after *prefix*."""
+    spin = QSpinBox()
+    spin.setRange(0, maximum)
+    spin.setPrefix(prefix)
+    return spin
+
+
 class SmartAlbumsDialog(QDialog):
     def __init__(self, ui: ImervueMainWindow):
         super().__init__(ui)
@@ -40,56 +55,61 @@ class SmartAlbumsDialog(QDialog):
         self._list = QListWidget()
         self._list.itemClicked.connect(self._on_album_clicked)
         layout.addWidget(self._list)
-
-        row = QHBoxLayout()
-        self._name_edit = QLineEdit()
-        self._name_edit.setPlaceholderText(lang.get("smart_albums_name", "Name"))
-        row.addWidget(self._name_edit)
-        save_btn = QPushButton(lang.get("smart_albums_save", "Save"))
-        save_btn.clicked.connect(self._save)
-        apply_btn = QPushButton(lang.get("smart_albums_apply", "Apply"))
-        apply_btn.clicked.connect(self._apply)
-        del_btn = QPushButton(lang.get("smart_albums_delete", "Delete"))
-        del_btn.clicked.connect(self._delete)
-        auto_btn = QPushButton(lang.get("smart_albums_auto", "Auto by location"))
-        auto_btn.clicked.connect(self._auto_by_location)
-        export_btn = QPushButton(lang.get("smart_albums_export", "Export…"))
-        export_btn.clicked.connect(self._export)
-        import_btn = QPushButton(lang.get("smart_albums_import", "Import…"))
-        import_btn.clicked.connect(self._import)
-        for b in (save_btn, apply_btn, del_btn, auto_btn, export_btn, import_btn):
-            row.addWidget(b)
-        layout.addLayout(row)
+        layout.addLayout(self._build_action_row(lang))
 
         layout.addWidget(QLabel(lang.get("smart_albums_rules", "Rules")))
-        self._ext_edit = QLineEdit()
-        self._ext_edit.setPlaceholderText(
-            lang.get("smart_albums_exts", "extensions comma-sep (jpg,png)")
-        )
+        self._ext_edit = _placeholder_edit(
+            lang, "smart_albums_exts", "extensions comma-sep (jpg,png)")
         layout.addWidget(self._ext_edit)
-
-        self._name_contains_edit = QLineEdit()
-        self._name_contains_edit.setPlaceholderText(
-            lang.get("smart_albums_name_contains", "name contains…")
-        )
+        self._name_contains_edit = _placeholder_edit(
+            lang, "smart_albums_name_contains", "name contains…")
         layout.addWidget(self._name_contains_edit)
+        layout.addLayout(self._build_minimum_row(lang))
+        layout.addLayout(self._build_label_row(lang))
+        self._tags_edit = _placeholder_edit(
+            lang, "smart_albums_tags", "tags comma-sep (ALL must match)")
+        layout.addWidget(self._tags_edit)
+        self._place_edit = _placeholder_edit(
+            lang, "smart_albums_place", "place (City, Country)")
+        layout.addWidget(self._place_edit)
 
-        row2 = QHBoxLayout()
-        self._min_w = QSpinBox()
-        self._min_w.setRange(0, 20000)
-        self._min_w.setPrefix(lang.get("smart_albums_min_w_prefix", "min w "))
-        self._min_h = QSpinBox()
-        self._min_h.setRange(0, 20000)
-        self._min_h.setPrefix(lang.get("smart_albums_min_h_prefix", "min h "))
-        self._min_rating = QSpinBox()
-        self._min_rating.setRange(0, 5)
-        self._min_rating.setPrefix(lang.get("smart_albums_min_rating_prefix", "min★ "))
-        row2.addWidget(self._min_w)
-        row2.addWidget(self._min_h)
-        row2.addWidget(self._min_rating)
-        layout.addLayout(row2)
+        close_btn = QPushButton(lang.get("common_close", "Close"))
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn)
 
-        row3 = QHBoxLayout()
+        self._refresh_list()
+
+    def _build_action_row(self, lang: dict) -> QHBoxLayout:
+        """Album name field, then Save / Apply / Delete / Auto / Export / Import."""
+        row = QHBoxLayout()
+        self._name_edit = _placeholder_edit(lang, "smart_albums_name", "Name")
+        row.addWidget(self._name_edit)
+        for key, default, slot in (
+            ("smart_albums_save", "Save", self._save),
+            ("smart_albums_apply", "Apply", self._apply),
+            ("smart_albums_delete", "Delete", self._delete),
+            ("smart_albums_auto", "Auto by location", self._auto_by_location),
+            ("smart_albums_export", "Export…", self._export),
+            ("smart_albums_import", "Import…", self._import),
+        ):
+            button = QPushButton(lang.get(key, default))
+            button.clicked.connect(slot)
+            row.addWidget(button)
+        return row
+
+    def _build_minimum_row(self, lang: dict) -> QHBoxLayout:
+        """Minimum width, height and rating."""
+        row = QHBoxLayout()
+        self._min_w = _prefixed_spin(20000, lang.get("smart_albums_min_w_prefix", "min w "))
+        self._min_h = _prefixed_spin(20000, lang.get("smart_albums_min_h_prefix", "min h "))
+        self._min_rating = _prefixed_spin(5, lang.get("smart_albums_min_rating_prefix", "min★ "))
+        for spin in (self._min_w, self._min_h, self._min_rating):
+            row.addWidget(spin)
+        return row
+
+    def _build_label_row(self, lang: dict) -> QHBoxLayout:
+        """Colour label and cull state (each with an "any" entry), favourites only."""
+        row = QHBoxLayout()
         self._color_combo = QComboBox()
         self._color_combo.addItem(lang.get("smart_albums_any_color", "-- any color --"), "")
         for c in _COLORS:
@@ -100,28 +120,9 @@ class SmartAlbumsDialog(QDialog):
                 v or lang.get("smart_albums_any_cull", "-- any cull --"), v,
             )
         self._fav_check = QCheckBox(lang.get("smart_albums_favorites", "Favorites only"))
-        row3.addWidget(self._color_combo)
-        row3.addWidget(self._cull_combo)
-        row3.addWidget(self._fav_check)
-        layout.addLayout(row3)
-
-        self._tags_edit = QLineEdit()
-        self._tags_edit.setPlaceholderText(
-            lang.get("smart_albums_tags", "tags comma-sep (ALL must match)")
-        )
-        layout.addWidget(self._tags_edit)
-
-        self._place_edit = QLineEdit()
-        self._place_edit.setPlaceholderText(
-            lang.get("smart_albums_place", "place (City, Country)")
-        )
-        layout.addWidget(self._place_edit)
-
-        close_btn = QPushButton(lang.get("common_close", "Close"))
-        close_btn.clicked.connect(self.accept)
-        layout.addWidget(close_btn)
-
-        self._refresh_list()
+        for widget in (self._color_combo, self._cull_combo, self._fav_check):
+            row.addWidget(widget)
+        return row
 
     # ---------- Helpers ----------
 

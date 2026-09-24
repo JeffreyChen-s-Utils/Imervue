@@ -21,13 +21,13 @@ def terminate_process(proc: subprocess.Popen | None) -> None:
 
     A no-op when *proc* is ``None`` or has already exited (``poll()`` is not
     ``None``). ``terminate()`` is given a short grace period to let the child
-    flush and exit cleanly; if it overruns, ``kill()`` forces it down. Any
-    error from the child (already-reaped race, permission) is suppressed — the
-    goal is best-effort reaping, never to raise out of a cancel path.
+    flush and exit cleanly; if it overruns, ``kill()`` forces it down. An
+    ``OSError`` from the child (already-reaped race, permission) is suppressed —
+    the goal is best-effort reaping, never to raise out of a cancel path.
     """
     if proc is None or proc.poll() is not None:
         return
-    with contextlib.suppress(Exception):
+    with contextlib.suppress(OSError):
         proc.terminate()
         try:
             proc.wait(timeout=_TERMINATE_GRACE_SECONDS)

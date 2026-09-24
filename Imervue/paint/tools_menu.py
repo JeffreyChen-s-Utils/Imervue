@@ -5,9 +5,16 @@ can switch tools without reaching for the mouse. The action
 catalogue is a hand-curated subset of :data:`TOOLS` because most
 users never touch tools like ``blur`` directly; the toolbar still
 exposes them for power users.
+
+This menu is the only owner of the tool keys. The toolbar reads them
+through :func:`tool_shortcut` for its tooltips but never binds them:
+two actions on one key in the same window are ambiguous to Qt, which
+then fires neither. The menu, not the toolbar, holds them because the
+user can hide the toolbar and a hidden widget's shortcuts stop working.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -15,6 +22,7 @@ from PySide6.QtGui import QKeySequence
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.paint_menu_bar import menu_for
+from Imervue.paint.shortcut_binding import tag_registry_shortcut
 
 if TYPE_CHECKING:
     from Imervue.paint.paint_workspace import PaintWorkspace
@@ -37,6 +45,9 @@ TOOL_ENTRIES: tuple[ToolEntry, ...] = (
     ToolEntry("eyedropper", "paint_tool_eyedropper", "I"),
     ToolEntry("fill", "paint_tool_fill", "G"),
     ToolEntry("move", "paint_tool_move", "V"),
+    ToolEntry("select_rect", "paint_tool_select_rect", "M"),
+    ToolEntry("select_lasso", "paint_tool_select_lasso", "L"),
+    ToolEntry("select_wand", "paint_tool_select_wand", "W"),
     ToolEntry("text", "paint_tool_text", "T"),
     ToolEntry("gradient", "paint_tool_gradient", "U"),
     ToolEntry("smudge", "paint_tool_smudge", "R"),
@@ -59,6 +70,9 @@ _FALLBACKS: dict[str, str] = {
     "paint_tool_eyedropper": "Eyedropper",
     "paint_tool_fill": "Fill",
     "paint_tool_move": "Move",
+    "paint_tool_select_rect": "Rectangular Select",
+    "paint_tool_select_lasso": "Lasso Select",
+    "paint_tool_select_wand": "Magic Wand",
     "paint_tool_text": "Text",
     "paint_tool_gradient": "Gradient",
     "paint_tool_smudge": "Smudge",
@@ -74,6 +88,20 @@ _FALLBACKS: dict[str, str] = {
     "paint_tool_hand": "Hand",
     "paint_tool_zoom": "Zoom",
 }
+
+
+_REGISTRY_PREFIX = "paint.tool."
+_SHORTCUT_BY_TOOL: dict[str, str] = {entry.tool_id: entry.shortcut for entry in TOOL_ENTRIES}
+
+
+def tool_shortcut(tool_id: str, bindings: Mapping[str, str] | None = None) -> str:
+    """Return the key that picks ``tool_id``, or ``""`` for a tool without one.
+
+    ``bindings`` are the user's remaps (``ShortcutRegistry.items()`` as a dict);
+    a tool the registry covers reports its remapped key.
+    """
+    remapped = (bindings or {}).get(f"{_REGISTRY_PREFIX}{tool_id}")
+    return remapped or _SHORTCUT_BY_TOOL.get(tool_id, "")
 
 
 def populate_tools_menu(workspace: PaintWorkspace) -> None:
@@ -92,6 +120,7 @@ def populate_tools_menu(workspace: PaintWorkspace) -> None:
         action.triggered.connect(
             lambda _checked=False, t=entry.tool_id: bridge.activate(t),
         )
+        tag_registry_shortcut(action, f"{_REGISTRY_PREFIX}{entry.tool_id}")
         bridge._actions[entry.tool_id] = action   # noqa: SLF001
     bridge.refresh_check_states()
     # Update the check state whenever the user picks a different tool

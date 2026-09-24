@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -9,10 +10,15 @@ from PIL.ExifTags import TAGS
 from PySide6.QtWidgets import QMessageBox
 
 from Imervue.gpu_image_view.images.image_loader import load_image_file
+from Imervue.image.dimensions import image_dimensions
+from Imervue.image.exif_merge import merged_exif
+from Imervue.image.formats import ensure_pillow_opener
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+logger = logging.getLogger("Imervue.image.info")
 
 
 # ==========================================================
@@ -59,12 +65,11 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
         # Read the true dimensions from the header (cheap, no full decode), NOT
         # the tile cache / a thumbnail load — those are downscaled, so the dialog
         # used to report the thumbnail size instead of the real image size.
-        try:
-            from PIL import Image
-            with Image.open(path) as pil_img:
-                w, h = pil_img.size
-        except Exception:
-            # Formats PIL can't header-read (some RAW) — fall back to the decoded
+        dims = image_dimensions(path)
+        if dims is not None:
+            w, h = dims
+        else:
+            # A file no header reader understands: fall back to the decoded
             # thumbnail's shape rather than failing the whole dialog.
             cache_key = str(path)
             img = (main_gui.tile_cache[cache_key]
@@ -78,7 +83,8 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
         exif = get_exif_data(path)
         info["exif_text"] = format_exif_info(exif)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - any decoder failure is shown in the dialog, logged below
+        logger.warning("Building image info for %s failed", path, exc_info=True)
         info["error"] = str(e)
 
     return info
@@ -93,7 +99,11 @@ def show_image_info_dialog(main_gui: GPUImageView, info: dict[str, Any]):
         return
 
     if "error" in info:
-        QMessageBox.warning(main_gui, "Image Info Error", info["error"])
+        QMessageBox.warning(
+            main_gui,
+            language_wrapper.language_word_dict.get("image_info_error_title", "Image Info Error"),
+            info["error"],
+        )
         return
 
     lang = language_wrapper.language_word_dict
@@ -128,7 +138,8 @@ def get_file_times(path: Path):
 
     try:
         ctime = datetime.fromtimestamp(stat.st_ctime)
-    except Exception:
+    except (OSError, OverflowError, ValueError):
+        # Out-of-range or platform-rejected timestamp.
         ctime = None
 
     return ctime, mtime
@@ -139,9 +150,11 @@ def get_file_times(path: Path):
 # ==========================================================
 
 def get_exif_data(path: Path):
+    """Return ``{tag name: value}`` for *path*, or ``{}`` when it has no EXIF or cannot be read."""
+    ensure_pillow_opener(Path(path).suffix)
     try:
         with Image.open(path) as img:
-            exif_raw = img._getexif()
+            exif_raw = merged_exif(img)
 
         if not exif_raw:
             return {}
@@ -151,7 +164,8 @@ def get_exif_data(path: Path):
             for tag, value in exif_raw.items()
         }
 
-    except Exception:
+    except Exception:  # noqa: BLE001 - PIL's EXIF parser fails in open-ended ways; logged below
+        logger.debug("EXIF read failed for %s", path, exc_info=True)
         return {}
 
 

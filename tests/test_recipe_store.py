@@ -191,3 +191,43 @@ class TestStoreUnknownFields:
         s = RecipeStore(store_path=path)
         assert s.get("abc") is None
         assert s.get("def") is not None
+
+
+# ======================================================================
+# Malformed stored recipes — known decode errors are dropped, bugs propagate
+# ======================================================================
+
+_BAD_RECIPES = [
+    {"crop": ["a", 0, 1, 1]},                     # ValueError: int("a")
+    {"tone_curve_rgb": [[0.5]]},                  # IndexError: short curve point
+    {"extra": 5},                                 # TypeError: non-mapping extra
+]
+
+
+def _write_store(path, entries):
+    path.write_text(json.dumps(entries), encoding="utf-8")
+
+
+@pytest.mark.parametrize("bad", _BAD_RECIPES)
+def test_undecodable_entry_is_dropped_on_load(tmp_path, bad):
+    path = tmp_path / "recipes.json"
+    _write_store(path, {"id1": {"recipe": bad, "last_path": ""}})
+    assert RecipeStore(store_path=path).get("id1") is None
+
+
+@pytest.mark.parametrize("bad", _BAD_RECIPES)
+def test_undecodable_variant_returns_none(store, bad):
+    store.save_variant("id1", "v", Recipe(exposure=0.5))
+    store._entries["id1"]["variants"]["v"] = bad  # noqa: SLF001 - corrupt it in place
+    assert store.get_variant("id1", "v") is None
+
+
+def test_unexpected_decode_error_is_not_swallowed(store, monkeypatch):
+    store.set("id1", Recipe(exposure=0.5))
+
+    def boom(_data):
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(Recipe, "from_dict", staticmethod(boom))
+    with pytest.raises(RuntimeError):
+        store.get("id1")

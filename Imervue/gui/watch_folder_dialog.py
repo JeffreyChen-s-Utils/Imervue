@@ -15,12 +15,12 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
+from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.image.develop_presets import DevelopPresetStore, apply_recipe_to_paths
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -47,13 +47,8 @@ class WatchFolderDialog(QDialog):
         self._build_ui(lang)
 
     def _build_ui(self, lang: dict) -> None:
-        self._folder_edit = QLineEdit()
-        browse = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse.clicked.connect(self._browse)
-        folder_row = QHBoxLayout()
-        folder_row.addWidget(QLabel(lang.get("duplicate_source", "Source folder:")))
-        folder_row.addWidget(self._folder_edit, 1)
-        folder_row.addWidget(browse)
+        folder_row, self._folder_edit = folder_picker_row(
+            lang.get("duplicate_source", "Source folder:"), self._browse)
 
         self._preset_combo = QComboBox()
         self._preset_combo.addItems(self._preset_store.names())

@@ -158,10 +158,8 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
         for tx, ty in prioritize_tiles(
             tiles,
             tile_size=tile_size,
-            scale_x=scale_x,
-            scale_y=scale_y,
-            offset_x=view.dz_offset_x,
-            offset_y=view.dz_offset_y,
+            scale=(scale_x, scale_y),
+            offset=(view.dz_offset_x, view.dz_offset_y),
             canvas=canvas,
             cursor=cursor,
         ):
@@ -239,15 +237,14 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
                 return
             canvas_w, canvas_h = canvas_size(view)
             x0, y0, x1, y1 = letterbox_band_rect(canvas_w, canvas_h, reserved)
-            view.renderer.draw_colored_rect(x0, y0, x1, y1, *_LETTERBOX_RGBA)
-        except Exception:  # noqa: BLE001 - never let the band break the overlays
+            view.renderer.draw_colored_rect((x0, y0, x1, y1), _LETTERBOX_RGBA)
+        except Exception:  # never let the band break the overlays
             logger.exception("Letterbox band draw failed; skipping it this frame")
 
     def _draw_minimap_background(self, rect: tuple[int, int, int, int]) -> None:
         mm_x, mm_y, mm_w, mm_h = rect
         self._view.renderer.draw_colored_rect(
-            mm_x - 2, mm_y - 2, mm_x + mm_w + 2, mm_y + mm_h + 2,
-            0.0, 0.0, 0.0, 0.5,
+            (mm_x - 2, mm_y - 2, mm_x + mm_w + 2, mm_y + mm_h + 2), (0.0, 0.0, 0.0, 0.5),
         )
 
     def _draw_minimap_thumbnail(self, rect: tuple[int, int, int, int]) -> None:
@@ -272,9 +269,9 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
         # Bound the box by the content area (canvas minus the reserved band), not
         # the full canvas, so it doesn't claim the band-hidden rows are visible.
         canvas_w, content_h = content_size(view)
-        rx0, ry0, rx1, ry1 = viewport_box_rect(
-            rect, img_w, img_h, view.dz_offset_x, view.dz_offset_y, view.zoom,
-            canvas_w, content_h,
+        box = viewport_box_rect(
+            rect, (img_w, img_h), (view.dz_offset_x, view.dz_offset_y), view.zoom,
+            (canvas_w, content_h),
         )
-        view.renderer.draw_colored_rect(rx0, ry0, rx1, ry1, 1.0, 1.0, 1.0, 0.8, filled=False)
+        view.renderer.draw_colored_rect(box, (1.0, 1.0, 1.0, 0.8), filled=False)
         glDisable(GL_BLEND)

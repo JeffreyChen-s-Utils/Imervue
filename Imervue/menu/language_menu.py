@@ -12,6 +12,11 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 
+# Object name of the Language menu; plugin init finds the menu by it rather
+# than through a cached wrapper (see Imervue/gui/menu_tree.py).
+LANGUAGE_MENU_OBJECT_NAME = "language_menu"
+
+
 def build_language_menu(ui_we_want_to_set: ImervueMainWindow):
     """
     建立語言選單
@@ -20,6 +25,7 @@ def build_language_menu(ui_we_want_to_set: ImervueMainWindow):
     language_menu = ui_we_want_to_set.menuBar().addMenu(
         language_wrapper.language_word_dict.get("menu_bar_language")
     )
+    language_menu.setObjectName(LANGUAGE_MENU_OBJECT_NAME)
     ui_we_want_to_set.language_menu = language_menu
 
     # 內建語言清單 (label_key, 語言代碼)

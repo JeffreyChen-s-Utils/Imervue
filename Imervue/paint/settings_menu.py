@@ -70,14 +70,22 @@ class _SettingsMenuBridge:
             state.pressure_curve = dialog.curve()
 
     def open_shortcuts(self) -> None:
+        from Imervue.paint.shortcut_binding import fixed_shortcut_keys
         from Imervue.paint.shortcut_dialog import ShortcutDialog
         from Imervue.paint.shortcut_registry import (
             load_shortcuts, save_shortcuts,
         )
         registry = load_shortcuts()
-        dialog = ShortcutDialog(registry=registry, parent=self._workspace)
+        other = language_wrapper.language_word_dict.get(
+            "paint_shortcut_other_action", "another shortcut",
+        )
+        dialog = ShortcutDialog(
+            registry=registry, parent=self._workspace,
+            reserved=fixed_shortcut_keys(self._workspace, other),
+        )
         if dialog.exec() == QDialog.DialogCode.Accepted:
             save_shortcuts(dialog.registry())
+            self._workspace.apply_shortcut_registry(dialog.registry())
 
     def open_shortcut_cheatsheet(self) -> None:
         """Read-only listing of every menu shortcut bound on the

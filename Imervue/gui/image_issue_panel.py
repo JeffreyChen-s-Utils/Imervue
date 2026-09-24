@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.file_filters import viewer_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -121,8 +122,7 @@ class ImageIssuePanel(QWidget):
             self,
             lang.get("missing_relocate", "Relocate Missing File..."),
             str(Path(old_path).parent),
-            "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp *.gif *.svg "
-            "*.cr2 *.nef *.arw *.dng *.raf *.orf)",
+            viewer_filter(),
         )
         if not new_path:
             return

@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -19,17 +18,17 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
-    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
-    QPushButton,
     QSlider,
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
+from Imervue.image.dimensions import image_dimensions
+from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.crop_geometry import (
     ASPECT_PRESETS,
@@ -59,14 +58,14 @@ class _Worker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             if abs(self._angle) > 1e-4:
                 arr = straighten(arr, self._angle)
             if self._rect is not None:
                 arr = apply_crop(arr, self._rect)
             Image.fromarray(arr).save(self._out)
             self.done.emit(True, self._out)
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # A cv2-backed straighten raises ImportError (opencv is optional) or
             # cv2.error, which the narrow except missed → done never fired and the
             # dialog hung with Apply disabled. Always report the failure.
@@ -111,13 +110,10 @@ class CropStraightenDialog(WorkerHostMixin, QDialog):
         form.addRow(lang.get("crop_w", "Crop width (0..1):"), self._crop_w)
         form.addRow(lang.get("crop_h", "Crop height (0..1):"), self._crop_h)
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("crop_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("crop_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -147,14 +143,13 @@ class CropStraightenDialog(WorkerHostMixin, QDialog):
         return s
 
     def _probe_image_aspect(self) -> float:
-        """Image width/height for aspect framing; 1.0 if the size can't be read.
+        """Upright image width/height for aspect framing; 1.0 if the size can't be read.
 
-        Uses PIL's lazy ``size`` (header only, no pixel decode)."""
-        try:
-            with Image.open(self._path) as im:
-                w, h = im.size
-        except (OSError, ValueError):
+        Reads the header only (no pixel decode)."""
+        dims = image_dimensions(self._path)
+        if dims is None:
             return 1.0
+        w, h = dims
         return w / h if h else 1.0
 
     def _apply_aspect_preset(self, label: str) -> None:
@@ -178,12 +173,8 @@ class CropStraightenDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("crop_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.jpg *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("crop_output", "Output"), image_save_filter())
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

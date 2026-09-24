@@ -20,13 +20,14 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QProgressBar,
     QPushButton,
     QVBoxLayout,
 )
 
+from Imervue.gui.file_filters import image_filter
+from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.panorama import PanoramaOptions, stitch_panorama
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -77,9 +78,9 @@ class PanoramaDialog(WorkerHostMixin, QDialog):
         self._crop_check = QCheckBox(lang.get("pano_crop", "Crop black borders"))
         self._crop_check.setChecked(True)
 
-        self._out_edit = QLineEdit()
-        out_browse = QPushButton(lang.get("export_browse", "Browse..."))
-        out_browse.clicked.connect(self._pick_out)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("pano_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -103,11 +104,6 @@ class PanoramaDialog(WorkerHostMixin, QDialog):
         mode_row.addWidget(self._mode_combo, 1)
         mode_row.addWidget(self._crop_check)
 
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("pano_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(out_browse)
-
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(lang.get(
             "pano_hint",
@@ -124,19 +120,17 @@ class PanoramaDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         files, _ = QFileDialog.getOpenFileNames(
             self, lang.get("pano_add", "Add images..."), "",
-            "Images (*.jpg *.jpeg *.png *.tif *.tiff *.webp)",
+            image_filter(("jpg", "jpeg", "png", "tif", "tiff", "webp")),
         )
         for f in files:
             self._list.addItem(f)
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("pano_output", "Output"), "panorama.jpg",
-            "Images (*.jpg *.png *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("pano_output", "Output"),
+            image_filter(("jpg", "png", "tif")),
+            start="panorama.jpg")
 
     def _collected_paths(self) -> list[str]:
         return [self._list.item(i).text() for i in range(self._list.count())]

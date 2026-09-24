@@ -84,8 +84,8 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
             return
         renderer = self._view.renderer
-        renderer.draw_colored_rect(x0, y0, x1, y1, 0.14, 0.14, 0.14, 1.0, filled=True)
-        renderer.draw_colored_rect(x0, y0, x1, y1, 0.28, 0.28, 0.28, 1.0, filled=False)
+        renderer.draw_colored_rect((x0, y0, x1, y1), (0.14, 0.14, 0.14, 1.0), filled=True)
+        renderer.draw_colored_rect((x0, y0, x1, y1), (0.28, 0.28, 0.28, 1.0), filled=False)
         self._view.placeholder_rects.append((x0, y0, x1, y1))
 
     def _draw_single(self, i: int, path: str, cols: int, cell: float,
@@ -138,7 +138,7 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         glDisable(GL_TEXTURE_2D)
         glLineWidth(1)
         for x0, y0, x1, y1, _path in view.tile_rects:
-            view.renderer.draw_colored_rect(x0, y0, x1, y1, 0.3, 0.3, 0.3, 1.0, filled=False)
+            view.renderer.draw_colored_rect((x0, y0, x1, y1), (0.3, 0.3, 0.3, 1.0), filled=False)
         glEnable(GL_TEXTURE_2D)
 
     def _draw_selection_marker(self, x0, y0, x1, y1) -> None:

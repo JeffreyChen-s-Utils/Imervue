@@ -412,6 +412,42 @@ class TestPointSegmentDistance:
 # Dialog smoke test
 # ---------------------------------------------------------------------------
 
+class TestRightPanelControls:
+    """The linked slider / spin pairs drive the canvas brush settings."""
+
+    @pytest.fixture
+    def dlg(self, qapp, base_pil):
+        dialog = AnnotationDialog(base_pil, source_path="")
+        yield dialog
+        dialog.deleteLater()
+
+    def test_defaults(self, dlg):
+        assert (dlg._width_slider.value(), dlg._width_spin.value()) == (3, 3)
+        assert (dlg._opacity_slider.value(), dlg._opacity_spin.value()) == (100, 100)
+        assert dlg._opacity_spin.suffix() == " %"
+        assert (dlg._spacing_slider.value(), dlg._spacing_spin.value()) == (8, 8)
+
+    def test_width_slider_sets_spin_and_canvas(self, dlg):
+        dlg._width_slider.setValue(12)
+        assert dlg._width_spin.value() == 12
+        assert dlg._canvas._stroke_width == 12
+
+    def test_width_spin_sets_slider_and_canvas(self, dlg):
+        dlg._width_spin.setValue(5)
+        assert dlg._width_slider.value() == 5
+        assert dlg._canvas._stroke_width == 5
+
+    def test_opacity_pair_sets_canvas(self, dlg):
+        dlg._opacity_spin.setValue(40)
+        assert dlg._opacity_slider.value() == 40
+        assert dlg._canvas._brush_opacity == 40
+
+    def test_spacing_pair_sets_canvas(self, dlg):
+        dlg._spacing_slider.setValue(20)
+        assert dlg._spacing_spin.value() == 20
+        assert dlg._canvas._brush_spacing == 20
+
+
 class TestAnnotationDialogSmoke:
     def test_constructs_without_crash(self, qapp, base_pil):
         dlg = AnnotationDialog(base_pil, source_path="")
@@ -559,3 +595,152 @@ class TestDialogSaveBehavior:
                 dlg2.deleteLater()
         finally:
             dlg.deleteLater()
+
+
+class TestFileActions:
+    """Save / save-as / project / clipboard paths, pinned before they moved to a mixin."""
+
+    @staticmethod
+    def _dialog(base_pil, source=""):
+        from Imervue.gui.annotation_dialog import AnnotationDialog
+        dlg = AnnotationDialog(base_pil, source_path=source)
+        dlg._canvas._annotations = [Annotation(kind="rect", points=[(5, 5), (25, 25)])]
+        return dlg
+
+    @staticmethod
+    def _save_to(monkeypatch, path):
+        from PySide6.QtWidgets import QFileDialog
+        monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_a, **_k: (str(path), ""))
+
+    @staticmethod
+    def _open_from(monkeypatch, path):
+        from PySide6.QtWidgets import QFileDialog
+        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *_a, **_k: (str(path), ""))
+
+    @staticmethod
+    def _boxes(monkeypatch):
+        from PySide6.QtWidgets import QMessageBox
+        shown = []
+        monkeypatch.setattr(QMessageBox, "critical", lambda *a, **_k: shown.append(("critical", a[-1])))
+        monkeypatch.setattr(QMessageBox, "warning", lambda *a, **_k: shown.append(("warning", a[-1])))
+        return shown
+
+    def test_save_without_source_asks_for_a_path(self, qapp, base_pil, tmp_path, monkeypatch):
+        target = tmp_path / "out.png"
+        self._save_to(monkeypatch, target)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save()
+            assert Image.open(target).size == (200, 100)
+        finally:
+            dlg.deleteLater()
+
+    def test_save_with_source_writes_it(self, qapp, base_pil, tmp_path, monkeypatch):
+        source = tmp_path / "src.png"
+        base_pil.save(source)
+        self._save_to(monkeypatch, tmp_path / "never.png")
+        dlg = self._dialog(base_pil, str(source))
+        try:
+            dlg._save()
+            assert not (tmp_path / "never.png").exists()
+            assert Image.open(source).getpixel((5, 5)) != (255, 255, 255, 255)
+        finally:
+            dlg.deleteLater()
+
+    def test_save_as_cancelled_writes_nothing(self, qapp, base_pil, tmp_path, monkeypatch):
+        self._save_to(monkeypatch, "")
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save_as()
+            assert list(tmp_path.iterdir()) == []
+        finally:
+            dlg.deleteLater()
+
+    @pytest.mark.parametrize("chosen, written", [("proj.json", "proj.json"),
+                                                 ("proj", "proj.imervue_annot.json")])
+    def test_save_project(self, qapp, base_pil, tmp_path, monkeypatch, chosen, written):
+        from Imervue.gui.annotation_models import AnnotationProject
+        self._save_to(monkeypatch, tmp_path / chosen)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save_project()
+            project = AnnotationProject.load(tmp_path / written)
+            assert project.source_size == (200, 100)
+            assert [a.kind for a in project.annotations] == ["rect"]
+        finally:
+            dlg.deleteLater()
+
+    def test_save_project_cancelled(self, qapp, base_pil, tmp_path, monkeypatch):
+        self._save_to(monkeypatch, "")
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save_project()
+            assert list(tmp_path.iterdir()) == []
+        finally:
+            dlg.deleteLater()
+
+    @pytest.mark.parametrize("size, warned", [((200, 100), False), ((0, 0), False), ((50, 50), True)])
+    def test_load_project(self, qapp, base_pil, tmp_path, monkeypatch, size, warned):
+        from Imervue.gui.annotation_models import AnnotationProject
+        path = tmp_path / "p.json"
+        AnnotationProject(source_path="", source_size=size,
+                          annotations=[Annotation(kind="text", points=[(1, 1)], text="hi")]).save(path)
+        self._open_from(monkeypatch, path)
+        shown = self._boxes(monkeypatch)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._load_project()
+            assert [a.text for a in dlg._canvas.get_annotations()] == ["hi"]
+            assert [kind for kind, _msg in shown] == (["warning"] if warned else [])
+            if warned:
+                assert "50x50" in shown[0][1] and "200x100" in shown[0][1]
+        finally:
+            dlg.deleteLater()
+
+    def test_load_corrupt_project_keeps_annotations(self, qapp, base_pil, tmp_path, monkeypatch):
+        path = tmp_path / "bad.json"
+        path.write_text("{not json", encoding="utf-8")
+        self._open_from(monkeypatch, path)
+        shown = self._boxes(monkeypatch)
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._load_project()
+            assert [a.kind for a in dlg._canvas.get_annotations()] == ["rect"]
+            assert [kind for kind, _msg in shown] == ["critical"]
+        finally:
+            dlg.deleteLater()
+
+    def test_copy_to_clipboard(self, qapp, base_pil, fake_clipboard):
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._copy_to_clipboard()
+            image = fake_clipboard.image()
+            assert (image.width(), image.height()) == (200, 100)
+        finally:
+            dlg.deleteLater()
+
+
+def test_open_for_path_hands_the_dialog_an_upright_image(qapp, tmp_path, monkeypatch):
+    """Save writes no EXIF, so a sideways base would be saved sideways for good."""
+    from unittest.mock import MagicMock
+
+    from PIL import Image as PILImage
+
+    import Imervue.gui.annotation_dialog as mod
+    exif = PILImage.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "portrait.jpg"
+    PILImage.new("RGB", (40, 20)).save(path, exif=exif)
+    seen = []
+
+    class _Dialog:
+        def __init__(self, img, **_kwargs):
+            seen.append(img.size)
+
+        def __getattr__(self, _name):
+            return MagicMock()
+
+    monkeypatch.setattr(mod, "AnnotationDialog", _Dialog)
+    mod.open_annotation_for_path(MagicMock(), str(path))
+    assert seen == [(20, 40)]
+

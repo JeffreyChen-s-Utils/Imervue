@@ -18,6 +18,7 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
+import zlib
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 import contextlib
@@ -50,6 +51,28 @@ ALL_KINDS: tuple[AnnotationKind, ...] = (
     "rect", "ellipse", "line", "arrow",
     "freehand", "text", "mosaic", "blur",
 )
+
+# Kind, brush and canvas-tool names the annotation canvas compares against —
+# named once so a typo surfaces as a NameError instead of a silent mismatch.
+KIND_FREEHAND: AnnotationKind = "freehand"
+KIND_TEXT: AnnotationKind = "text"
+KIND_MOSAIC: AnnotationKind = "mosaic"
+KIND_BLUR: AnnotationKind = "blur"
+KIND_LINE: AnnotationKind = "line"
+KIND_ARROW: AnnotationKind = "arrow"
+TOOL_CROP = "crop"
+TOOL_SELECT = "select"
+TOOL_MOVE = "move"
+
+def jitter_seed(annotation_id: str) -> int:
+    """Stable 32-bit RNG seed for an annotation's brush jitter.
+
+    Spray, charcoal and crayon strokes scatter their marks from a seeded RNG so
+    the same annotation always looks the same. ``hash()`` cannot seed it: Python
+    randomises ``str`` hashes per process, so a reopened project would change.
+    """
+    return zlib.crc32(annotation_id.encode("utf-8"))
+
 
 # Kinds that destructively modify pixels (applied before overlay pass).
 _DESTRUCTIVE: frozenset[str] = frozenset({"mosaic", "blur"})
@@ -458,7 +481,7 @@ def _draw_freehand_spray(draw: ImageDraw.ImageDraw, ann: Annotation) -> None:
     radius = max(1, ann.stroke_width)
     spread = max(2, ann.stroke_width * 3)
     spacing = max(1, int(ann.spacing))
-    rng = random.Random(hash(ann.id) & 0xFFFFFFFF)
+    rng = random.Random(jitter_seed(ann.id))
 
     # Walk the polyline at approximately ``spacing`` pixel intervals so that
     # stroke speed does not change the dot density.
@@ -524,7 +547,7 @@ def _draw_freehand_watercolor(draw: ImageDraw.ImageDraw, ann: Annotation) -> Non
     base = (r, g, b, int(a * 0.2))
     color = _apply_opacity(base, ann.opacity)
     width = max(1, int(ann.stroke_width * 2.5))
-    rng = random.Random(hash(ann.id) & 0xFFFFFFFF)
+    rng = random.Random(jitter_seed(ann.id))
     # Draw multiple slightly offset passes for a wet-edge look
     for _ in range(3):
         offset_pts = [
@@ -538,7 +561,7 @@ def _draw_freehand_charcoal(draw: ImageDraw.ImageDraw, ann: Annotation) -> None:
     """Charcoal: rough, textured stroke with scattered dots along the path."""
     color = _apply_opacity(ann.color, ann.opacity)
     width = max(1, int(ann.stroke_width * 1.2))
-    rng = random.Random(hash(ann.id) & 0xFFFFFFFF)
+    rng = random.Random(jitter_seed(ann.id))
     # Main stroke
     draw.line(list(ann.points), fill=color, width=width, joint="curve")
     # Scatter texture dots along the path
@@ -560,7 +583,7 @@ def _draw_freehand_crayon(draw: ImageDraw.ImageDraw, ann: Annotation) -> None:
     base = (r, g, b, int(a * 0.8))
     color = _apply_opacity(base, ann.opacity)
     width = max(1, int(ann.stroke_width * 1.5))
-    rng = random.Random(hash(ann.id) & 0xFFFFFFFF)
+    rng = random.Random(jitter_seed(ann.id))
     # Draw multiple thin lines with slight offsets for a waxy texture
     for offset in range(3):
         jittered = [

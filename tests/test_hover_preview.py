@@ -25,6 +25,19 @@ class TestLoadPreview:
     def test_returns_none_for_missing_file(self, hover_mod, tmp_path):
         assert hover_mod._load_preview(str(tmp_path / "ghost.png")) is None
 
+    def test_returns_none_for_non_image(self, hover_mod, tmp_path):
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not a png")
+        assert hover_mod._load_preview(str(bad)) is None
+
+    def test_unexpected_error_propagates(self, hover_mod, sample_png, monkeypatch):
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(hover_mod.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            hover_mod._load_preview(sample_png)
+
     def test_loads_pixmap_for_valid_image(self, hover_mod, sample_png):
         pm = hover_mod._load_preview(sample_png, max_edge=256)
         assert pm is not None
@@ -39,6 +52,30 @@ class TestLoadPreview:
         # Original dimensions preserved
         assert pm.width() == 40
         assert pm.height() == 30
+
+
+class TestUprightAndCaption:
+    def test_tagged_photo_previews_upright(self, hover_mod, tmp_path):
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        p = tmp_path / "portrait.jpg"
+        Image.new("RGB", (40, 20)).save(p, exif=exif)
+        pm = hover_mod._load_preview(str(p), max_edge=512)
+        assert (pm.width(), pm.height()) == (20, 40)
+
+    def test_caption_shows_the_image_size_not_the_scaled_preview(self, hover_mod, tmp_path):
+        """It printed the pixmap's size: a 900x600 image showed as its 512x341 preview."""
+        big = tmp_path / "big.png"
+        Image.new("RGB", (900, 600)).save(big)
+        popup = hover_mod.HoverPreviewPopup()
+        try:
+            from PySide6.QtCore import QPoint
+            popup.show_for(str(big), QPoint(0, 0))
+            assert popup._image_label.pixmap().width() == 512
+            assert "900×600" in popup._caption.text()
+        finally:
+            popup.hide()
+            popup.deleteLater()
 
 
 class TestController:

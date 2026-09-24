@@ -19,7 +19,7 @@ from Imervue.paint.tool_dispatcher import (
     EraserTool,
     FillTool,
     MoveTool,
-    ToolDispatcher,
+    DispatcherHooks, ToolDispatcher,
     translate_selection,
 )
 from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -251,8 +251,10 @@ def test_dispatcher_brush_respects_selection(state):
     disp = ToolDispatcher(
         state,
         image_provider=lambda: canvas,
-        selection_provider=lambda: sel,
-        set_selection=lambda m: None,
+        hooks=DispatcherHooks(
+            selection_provider=lambda: sel,
+            set_selection=lambda m: None,
+        ),
     )
     disp(_press(0, 10))     # outside the selection
     disp(_release(0, 10))
@@ -274,8 +276,10 @@ def test_dispatcher_routes_move_tool(state):
     disp = ToolDispatcher(
         state,
         image_provider=lambda: canvas,
-        selection_provider=lambda: holder[0],
-        set_selection=lambda m: holder.__setitem__(0, m),
+        hooks=DispatcherHooks(
+            selection_provider=lambda: holder[0],
+            set_selection=lambda m: holder.__setitem__(0, m),
+        ),
     )
     disp(_press(3, 3))
     assert disp(_release(5, 4)) is True

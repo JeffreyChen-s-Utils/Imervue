@@ -101,6 +101,16 @@ def _requirement_names() -> set[str]:
     return names
 
 
+def _requirement_pins() -> dict[str, str]:
+    """Packages requirements.txt pins with ``==``, mapped to their version."""
+    pins = {}
+    for raw in _REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        name, sep, version = raw.split("#", 1)[0].partition("==")
+        if sep:
+            pins[_normalise(name.strip())] = version.strip()
+    return pins
+
+
 def test_install_parser_ignores_a_trailing_shell_comment():
     # A NOSONAR justification sits on the same line as the command; its words
     # must not be read as package specs.
@@ -128,9 +138,14 @@ def test_workflow_installs_nothing_beyond_requirements_and_build_tools():
 
 
 def test_pinned_version_matches_when_requirements_also_pins_it():
-    # PySide6 is pinned in requirements.txt too; the two must agree or the
-    # EXE ships a different Qt than the wheel was tested against.
-    assert _workflow_pins()["pyside6"] == "6.11.1"
+    # A package requirements.txt pins (PySide6) must get the same version in
+    # the workflow, or the EXE ships a different Qt than the wheel was tested
+    # against.
+    pins = _requirement_pins()
+    assert "pyside6" in pins
+    workflow = _workflow_pins()
+    for name, version in pins.items():
+        assert workflow.get(name) == version, name
 
 
 def test_every_installed_package_carries_an_exact_version():
@@ -203,3 +218,30 @@ def test_requirements_still_carries_the_self_reference():
         if line.strip()
     ]
     assert _SELF_REFS & set(lines)
+
+
+def _requirement_specifiers() -> dict[str, str]:
+    """Version specifiers requirements.txt declares (``>=12.3.0`` and so on)."""
+    from packaging.requirements import InvalidRequirement, Requirement
+    specs = {}
+    for raw in _REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        line = raw.split("#", 1)[0].strip()
+        try:
+            req = Requirement(line)
+        except InvalidRequirement:
+            continue
+        if req.specifier:
+            specs[_normalise(req.name)] = str(req.specifier)
+    return specs
+
+
+def test_workflow_pins_satisfy_every_requirement_floor():
+    # Pillow carries a security floor (>=12.3.0); the frozen build must not
+    # ship an older version than end users installing from PyPI would get.
+    from packaging.specifiers import SpecifierSet
+    specs = _requirement_specifiers()
+    assert "pillow" in specs
+    workflow = _workflow_pins()
+    for name, spec in specs.items():
+        assert workflow[name] in SpecifierSet(spec), f"{name}=={workflow[name]} fails {spec}"
+

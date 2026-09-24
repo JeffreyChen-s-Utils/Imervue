@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QDialog, QLabel, QSpinBox, QVBoxLayout, QWidget
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import apply_save_buttons, finalize_worker, load_rgba, notify_saved
 from Imervue.image.collage import build_collage
+from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -81,8 +82,6 @@ class CollageDialog(WorkerHostMixin, QDialog):
 
 
 def open_collage(viewer: GPUImageView) -> None:
-    paths = list(getattr(viewer, "selected_tiles", []) or [])
-    if not paths:
-        paths = list(getattr(getattr(viewer, "model", None), "images", []) or [])
+    paths = selection_or_all(viewer)
     if paths:
         CollageDialog(viewer, [str(p) for p in paths]).exec()

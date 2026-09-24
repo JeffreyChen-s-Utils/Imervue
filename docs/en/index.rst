@@ -963,7 +963,7 @@ Toolbar **Output > Virtual camera** opens the stream.
 
 DirectShow / AVFoundation / v4l2loopback are RGB-only — no alpha
 channel — so Imervue fills the area outside the character with
-**magenta `#FF00FF`** as a chroma key. Remove it in OBS via the
+**magenta #FF00FF** as a chroma key. Remove it in OBS via the
 Color Key filter:
 
 1. Right-click the Video Capture Device source > **Filters**
@@ -1984,8 +1984,8 @@ Tools & Overlays
    * - ``S``
      - Slideshow
 
-Animation
-^^^^^^^^^
+Animated Images
+^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2270,6 +2270,8 @@ Double-click a row in the list to type a person name; on Save, the tags
 are written into the recipe's ``extra['face_tags']`` blob. Detection is a
 classical technique — accuracy is adequate for "show me the faces" but
 not a replacement for modern CNN-based recognition.
+It needs OpenCV 4 (``pip install "opencv-python<5"``): OpenCV 5 dropped the Haar
+cascades, and the dialog then says so instead of detecting.
 
 Local Adjustment Masks
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -2500,6 +2502,7 @@ Available Tools
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Pixel-box crop, aspect-preserving resize, and lossless 90/180/270
        rotation or horizontal/vertical flip.
+       Sizes and coordinates refer to the EXIF-upright image.
    * - ``collection_stats``
      - Summarise a folder's ratings, favourites, colour labels and cull
        states (counts, 0–5 star distribution and average).

@@ -1,8 +1,8 @@
 """
 Tests for ClipboardMonitor — clipboard listening + dedup + enable gate.
 
-Uses the session-scoped ``qapp`` fixture from conftest. Each test cleans up
-its own clipboard state in case the test runner shares the system clipboard.
+Uses the session-scoped ``qapp`` fixture from conftest. Clipboard traffic goes
+through the in-process ``fake_clipboard`` fixture, never the OS clipboard.
 """
 from __future__ import annotations
 
@@ -10,10 +10,9 @@ import numpy as np
 import pytest
 from PIL import Image
 from PySide6.QtGui import QImage
-from PySide6.QtWidgets import QApplication
 
 from Imervue.system.clipboard_monitor import (
-    SETTING_KEY, ClipboardMonitor, _qimage_to_pil,
+    SETTING_KEY, ClipboardMonitor,
 )
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -28,15 +27,9 @@ def _pil_to_qimage(img: Image.Image) -> QImage:
 
 
 @pytest.fixture
-def fresh_clipboard(qapp):
-    """Snapshot and restore clipboard state around each test."""
-    cb = QApplication.clipboard()
-    saved = cb.image() if cb is not None else None
-    cb.clear()
-    yield cb
-    cb.clear()
-    if saved is not None and not saved.isNull():
-        cb.setImage(saved)
+def fresh_clipboard(fake_clipboard):
+    """An empty in-process clipboard the monitor under test listens to."""
+    return fake_clipboard
 
 
 @pytest.fixture
@@ -49,26 +42,6 @@ def reset_setting():
         user_setting_dict.pop(SETTING_KEY, None)
     else:
         user_setting_dict[SETTING_KEY] = saved
-
-
-class TestQImagePilConversion:
-    def test_round_trip_preserves_pixels(self, qapp):
-        arr = np.zeros((20, 30, 4), dtype=np.uint8)
-        arr[..., 0] = 200  # red
-        arr[..., 3] = 255
-        original = Image.fromarray(arr, "RGBA")
-        q = _pil_to_qimage(original)
-        restored = _qimage_to_pil(q)
-        assert restored.size == original.size
-        assert restored.mode == "RGBA"
-        assert np.array_equal(np.array(restored), arr)
-
-    def test_handles_solid_color(self, qapp):
-        arr = np.full((10, 10, 4), 128, dtype=np.uint8)
-        arr[..., 3] = 255
-        q = _pil_to_qimage(Image.fromarray(arr, "RGBA"))
-        restored = _qimage_to_pil(q)
-        assert (np.array(restored)[..., 0] == 128).all()
 
 
 class TestClipboardMonitorState:

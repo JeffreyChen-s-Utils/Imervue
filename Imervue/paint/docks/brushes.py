@@ -5,10 +5,12 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDockWidget,
     QFormLayout,
     QPushButton,
+    QSlider,
     QSpinBox,
     QWidget,
 )
@@ -20,8 +22,25 @@ if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
 
 from Imervue.paint.docks._helpers import (
+    _blend_mode_combo,
     _slider,
 )
+
+
+def _tipped_slider(lo: int, hi: int, value: int, on_change, tooltip: str) -> QSlider:
+    """Slider over ``[lo, hi]`` at ``value`` that calls ``on_change`` on every move."""
+    slider = _slider(lo, hi, value)
+    slider.valueChanged.connect(on_change)
+    slider.setToolTip(tooltip)
+    return slider
+
+
+def _tipped_check(text: str, on_toggle, tooltip: str) -> QCheckBox:
+    """Checkbox that calls ``on_toggle(checked)`` whenever it flips."""
+    box = QCheckBox(text)
+    box.toggled.connect(on_toggle)
+    box.setToolTip(tooltip)
+    return box
 
 
 class BrushDock(QDockWidget):
@@ -35,128 +54,11 @@ class BrushDock(QDockWidget):
 
         body = QWidget()
         form = QFormLayout(body)
-
-        self._kind = QComboBox()
-        # Tall enough to host the brush-kind preview thumbnail; the
-        # combo's icon size has to be set before the items go in or
-        # the icons render at QStyle's default ~16px.
-        from PySide6.QtCore import QSize
-        from Imervue.paint.brush_kind_preview import (
-            DEFAULT_THUMBNAIL_H,
-            DEFAULT_THUMBNAIL_W,
-            render_brush_kind_pixmap,
-        )
-        self._kind.setIconSize(QSize(DEFAULT_THUMBNAIL_W, DEFAULT_THUMBNAIL_H))
-        for kind in ts.BRUSH_KINDS:
-            try:
-                icon = QIcon(render_brush_kind_pixmap(kind))
-            except (RuntimeError, ValueError):
-                icon = QIcon()
-            self._kind.addItem(
-                icon,
-                lang.get(f"paint_brush_kind_{kind}", kind.capitalize()),
-                userData=kind,
-            )
-        self._kind.currentIndexChanged.connect(self._on_kind_changed)
-        self._kind.setToolTip(lang.get(
-            "paint_brush_kind_tooltip",
-            "Brush family — pen / pencil / marker / airbrush / watercolor",
-        ))
-
-        self._size = QSpinBox()
-        self._size.setRange(ts.BRUSH_SIZE_MIN, ts.BRUSH_SIZE_MAX)
-        self._size.valueChanged.connect(self._on_size_changed)
-        self._size.setToolTip(lang.get(
-            "paint_brush_size_tooltip",
-            "Brush diameter in canvas pixels — [ smaller, ] larger",
-        ))
-
-        self._opacity = _slider(0, 100, 100)
-        self._opacity.valueChanged.connect(self._on_opacity_changed)
-        self._opacity.setToolTip(lang.get(
-            "paint_brush_opacity_tooltip",
-            "Per-dab paint coverage (0–100%)",
-        ))
-
-        self._hardness = _slider(0, 100, 80)
-        self._hardness.valueChanged.connect(self._on_hardness_changed)
-        self._hardness.setToolTip(lang.get(
-            "paint_brush_hardness_tooltip",
-            "Edge falloff — 0% soft, 100% hard disc",
-        ))
-
-        self._density = _slider(0, 100, 100)
-        self._density.valueChanged.connect(self._on_density_changed)
-        self._density.setToolTip(lang.get(
-            "paint_brush_density_tooltip",
-            "Per-dab opacity multiplier — lower deposits less ink per stamp",
-        ))
-
-        # Stabilizer / scatter / colour-jitter / follow-tilt — engine
-        # already supports these via brush_dynamics + brush_random;
-        # surfacing them as live controls here matches raster paint apps's
-        # brush-options panel.
-        self._stabilizer = _slider(0, 100, 0)
-        self._stabilizer.valueChanged.connect(self._on_stabilizer_changed)
-        self._stabilizer.setToolTip(lang.get(
-            "paint_brush_stabilizer_tooltip",
-            "Smooth jittery input — 0 off, 100 maximum lag for a clean line",
-        ))
-
-        self._scatter = _slider(0, 100, 0)
-        self._scatter.valueChanged.connect(self._on_scatter_changed)
-        self._scatter.setToolTip(lang.get(
-            "paint_brush_scatter_tooltip",
-            "Random per-dab offset, as a fraction of brush size",
-        ))
-
-        self._color_jitter = _slider(0, 100, 0)
-        self._color_jitter.valueChanged.connect(self._on_color_jitter_changed)
-        self._color_jitter.setToolTip(lang.get(
-            "paint_brush_color_jitter_tooltip",
-            "Random hue / luma drift along the stroke",
-        ))
-
-        from PySide6.QtWidgets import QCheckBox
-        self._follow_tilt = QCheckBox(
-            lang.get("paint_brush_follow_tilt", "Follow pen tilt"),
-        )
-        self._follow_tilt.toggled.connect(self._on_follow_tilt_changed)
-        self._follow_tilt.setToolTip(lang.get(
-            "paint_brush_follow_tilt_tooltip",
-            "Stretch the brush kernel along the tablet pen tilt direction",
-        ))
-
-        self._blend = QComboBox()
-        for mode in ts.BLEND_MODES:
-            self._blend.addItem(
-                lang.get(f"paint_blend_{mode}", mode.replace("_", " ").title()),
-                userData=mode,
-            )
-        self._blend.currentIndexChanged.connect(self._on_blend_changed)
-        self._blend.setToolTip(lang.get(
-            "paint_brush_blend_tooltip",
-            "Compositing mode applied at every dab — Normal is alpha-over",
-        ))
-
-        form.addRow(lang.get("paint_brush_kind", "Kind:"), self._kind)
-        form.addRow(lang.get("paint_brush_size", "Size:"), self._size)
-        form.addRow(lang.get("paint_brush_opacity", "Opacity:"), self._opacity)
-        form.addRow(lang.get("paint_brush_hardness", "Hardness:"), self._hardness)
-        form.addRow(lang.get("paint_brush_density", "Density:"), self._density)
-        form.addRow(
-            lang.get("paint_brush_stabilizer", "Stabilizer:"),
-            self._stabilizer,
-        )
-        form.addRow(
-            lang.get("paint_brush_scatter", "Scatter:"), self._scatter,
-        )
-        form.addRow(
-            lang.get("paint_brush_color_jitter", "Colour jitter:"),
-            self._color_jitter,
-        )
-        form.addRow("", self._follow_tilt)
-        form.addRow(lang.get("paint_brush_blend", "Blend:"), self._blend)
+        self._kind = self._build_kind_combo(lang)
+        self._build_dab_controls(lang)
+        self._build_dynamics_controls(lang)
+        self._blend = self._build_blend_combo(lang)
+        self._add_form_rows(form, lang)
 
         # full-featured sub-tool / preset manager. The button opens a
         # modal dialog that drives ``state.add_sub_tool`` /
@@ -173,6 +75,118 @@ class BrushDock(QDockWidget):
         self._refresh_from_state()
         self._unsubscribe = state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())
+
+    @staticmethod
+    def _percent_slider(value: int, on_change, tooltip: str) -> QSlider:
+        """A 0–100 slider starting at ``value`` that calls ``on_change`` on every move."""
+        return _tipped_slider(0, 100, value, on_change, tooltip)
+
+    def _build_kind_combo(self, lang) -> QComboBox:
+        """Brush-kind combo with a preview thumbnail per kind."""
+        combo = QComboBox()
+        # Tall enough to host the brush-kind preview thumbnail; the
+        # combo's icon size has to be set before the items go in or
+        # the icons render at QStyle's default ~16px.
+        from PySide6.QtCore import QSize
+        from Imervue.paint.brush_kind_preview import (
+            DEFAULT_THUMBNAIL_H,
+            DEFAULT_THUMBNAIL_W,
+            render_brush_kind_pixmap,
+        )
+        combo.setIconSize(QSize(DEFAULT_THUMBNAIL_W, DEFAULT_THUMBNAIL_H))
+        for kind in ts.BRUSH_KINDS:
+            try:
+                icon = QIcon(render_brush_kind_pixmap(kind))
+            except (RuntimeError, ValueError):
+                icon = QIcon()
+            combo.addItem(
+                icon,
+                lang.get(f"paint_brush_kind_{kind}", kind.capitalize()),
+                userData=kind,
+            )
+        combo.currentIndexChanged.connect(self._on_kind_changed)
+        combo.setToolTip(lang.get(
+            "paint_brush_kind_tooltip",
+            "Brush family — pen / pencil / marker / airbrush / watercolor",
+        ))
+        return combo
+
+    def _build_dab_controls(self, lang) -> None:
+        """Size spin box and the opacity / hardness / density sliders."""
+        self._size = QSpinBox()
+        self._size.setRange(ts.BRUSH_SIZE_MIN, ts.BRUSH_SIZE_MAX)
+        self._size.valueChanged.connect(self._on_size_changed)
+        self._size.setToolTip(lang.get(
+            "paint_brush_size_tooltip",
+            "Brush diameter in canvas pixels — [ smaller, ] larger",
+        ))
+        self._opacity = self._percent_slider(100, self._on_opacity_changed, lang.get(
+            "paint_brush_opacity_tooltip",
+            "Per-dab paint coverage (0–100%)",
+        ))
+        self._hardness = self._percent_slider(80, self._on_hardness_changed, lang.get(
+            "paint_brush_hardness_tooltip",
+            "Edge falloff — 0% soft, 100% hard disc",
+        ))
+        self._density = self._percent_slider(100, self._on_density_changed, lang.get(
+            "paint_brush_density_tooltip",
+            "Per-dab opacity multiplier — lower deposits less ink per stamp",
+        ))
+
+    def _build_dynamics_controls(self, lang) -> None:
+        """Stabilizer / scatter / colour-jitter sliders and the follow-tilt box.
+
+        The engine already supports these via brush_dynamics + brush_random;
+        surfacing them as live controls here matches raster paint apps's
+        brush-options panel.
+        """
+        self._stabilizer = self._percent_slider(0, self._on_stabilizer_changed, lang.get(
+            "paint_brush_stabilizer_tooltip",
+            "Smooth jittery input — 0 off, 100 maximum lag for a clean line",
+        ))
+        self._scatter = self._percent_slider(0, self._on_scatter_changed, lang.get(
+            "paint_brush_scatter_tooltip",
+            "Random per-dab offset, as a fraction of brush size",
+        ))
+        self._color_jitter = self._percent_slider(0, self._on_color_jitter_changed, lang.get(
+            "paint_brush_color_jitter_tooltip",
+            "Random hue / luma drift along the stroke",
+        ))
+        self._follow_tilt = _tipped_check(
+            lang.get("paint_brush_follow_tilt", "Follow pen tilt"),
+            self._on_follow_tilt_changed,
+            lang.get(
+                "paint_brush_follow_tilt_tooltip",
+                "Stretch the brush kernel along the tablet pen tilt direction",
+            ),
+        )
+
+    def _build_blend_combo(self, lang) -> QComboBox:
+        """Blend-mode combo listing every mode the dab compositor knows."""
+        combo = _blend_mode_combo(lang)
+        combo.currentIndexChanged.connect(self._on_blend_changed)
+        combo.setToolTip(lang.get(
+            "paint_brush_blend_tooltip",
+            "Compositing mode applied at every dab — Normal is alpha-over",
+        ))
+        return combo
+
+    def _add_form_rows(self, form: QFormLayout, lang) -> None:
+        """Lay the controls out in the dock's fixed row order."""
+        rows = [
+            (lang.get("paint_brush_kind", "Kind:"), self._kind),
+            (lang.get("paint_brush_size", "Size:"), self._size),
+            (lang.get("paint_brush_opacity", "Opacity:"), self._opacity),
+            (lang.get("paint_brush_hardness", "Hardness:"), self._hardness),
+            (lang.get("paint_brush_density", "Density:"), self._density),
+            (lang.get("paint_brush_stabilizer", "Stabilizer:"), self._stabilizer),
+            (lang.get("paint_brush_scatter", "Scatter:"), self._scatter),
+            (lang.get("paint_brush_color_jitter", "Colour jitter:"), self._color_jitter),
+            ("", self._follow_tilt),
+            (lang.get("paint_brush_blend", "Blend:"), self._blend),
+        ]
+        for label, widget in rows:
+            form.addRow(label, widget)
 
     def _on_presets_clicked(self) -> None:
         from Imervue.paint.brush_preset_dialog import open_brush_preset_dialog
@@ -276,7 +290,6 @@ class FillDock(QDockWidget):
     """
 
     def __init__(self, state: ToolState, parent=None):
-        from PySide6.QtWidgets import QCheckBox
         lang = language_wrapper.language_word_dict
         super().__init__(lang.get("paint_dock_fill", "Bucket"), parent)
         self._state = state
@@ -284,80 +297,8 @@ class FillDock(QDockWidget):
 
         body = QWidget()
         form = QFormLayout(body)
-
-        self._tolerance = _slider(0, 255, 32)
-        self._tolerance.valueChanged.connect(self._on_tolerance_changed)
-        self._tolerance.setToolTip(lang.get(
-            "paint_fill_tolerance_tooltip",
-            "Per-channel colour distance accepted as the same region "
-            "(0 exact, 255 anything)",
-        ))
-
-        self._contiguous = QCheckBox(
-            lang.get("paint_fill_contiguous", "Contiguous (only adjacent pixels)"),
-        )
-        self._contiguous.toggled.connect(self._on_contiguous_changed)
-        self._contiguous.setToolTip(lang.get(
-            "paint_fill_contiguous_tooltip",
-            "On: only pixels reachable from the click. Off: every "
-            "matching pixel canvas-wide.",
-        ))
-
-        self._sample_all = QCheckBox(
-            lang.get("paint_fill_sample_all", "Sample all layers"),
-        )
-        self._sample_all.toggled.connect(self._on_sample_all_changed)
-        self._sample_all.setToolTip(lang.get(
-            "paint_fill_sample_all_tooltip",
-            "Match colours against the visible composite instead of "
-            "just the active layer",
-        ))
-
-        self._use_reference = QCheckBox(
-            lang.get(
-                "paint_fill_use_reference",
-                "Use reference layer for boundaries",
-            ),
-        )
-        self._use_reference.toggled.connect(self._on_use_reference_changed)
-        self._use_reference.setToolTip(lang.get(
-            "paint_fill_use_reference_tooltip",
-            "Read connectivity from the document's pinned reference "
-            "layer (e.g. line art) so fill stops at ink boundaries "
-            "regardless of the active layer's colour",
-        ))
-
-        self._expand = _slider(ts.FILL_EXPAND_MIN, ts.FILL_EXPAND_MAX, 0)
-        self._expand.valueChanged.connect(self._on_expand_changed)
-        self._expand.setToolTip(lang.get(
-            "paint_fill_expand_tooltip",
-            "Dilate the fill by N pixels after computing it — bridges "
-            "the anti-aliased halo around lineart",
-        ))
-
-        self._gap_close = _slider(
-            ts.FILL_GAP_CLOSE_MIN, ts.FILL_GAP_CLOSE_MAX, 0,
-        )
-        self._gap_close.valueChanged.connect(self._on_gap_close_changed)
-        self._gap_close.setToolTip(lang.get(
-            "paint_fill_gap_close_tooltip",
-            "Bridge gaps in the lineart up to N pixels wide so fill "
-            "doesn't leak through broken pen strokes",
-        ))
-
-        form.addRow(
-            lang.get("paint_fill_tolerance", "Tolerance:"), self._tolerance,
-        )
-        form.addRow("", self._contiguous)
-        form.addRow("", self._sample_all)
-        form.addRow("", self._use_reference)
-        form.addRow(
-            lang.get("paint_fill_expand", "Expand (px):"), self._expand,
-        )
-        form.addRow(
-            lang.get("paint_fill_gap_close", "Close gap (px):"),
-            self._gap_close,
-        )
+        self._build_fill_controls(lang)
+        self._add_fill_rows(form, lang)
 
         # full-featured "fill every closed region in one click". Goes
         # to a workspace-level action so it can read the active layer
@@ -374,6 +315,71 @@ class FillDock(QDockWidget):
         self._refresh_from_state()
         self._unsubscribe = state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())
+
+    def _build_fill_controls(self, lang) -> None:
+        """Tolerance, the three region checkboxes, expand and gap-close."""
+        self._tolerance = _tipped_slider(0, 255, 32, self._on_tolerance_changed, lang.get(
+            "paint_fill_tolerance_tooltip",
+            "Per-channel colour distance accepted as the same region "
+            "(0 exact, 255 anything)",
+        ))
+        self._contiguous = _tipped_check(
+            lang.get("paint_fill_contiguous", "Contiguous (only adjacent pixels)"),
+            self._on_contiguous_changed,
+            lang.get(
+                "paint_fill_contiguous_tooltip",
+                "On: only pixels reachable from the click. Off: every "
+                "matching pixel canvas-wide.",
+            ),
+        )
+        self._sample_all = _tipped_check(
+            lang.get("paint_fill_sample_all", "Sample all layers"),
+            self._on_sample_all_changed,
+            lang.get(
+                "paint_fill_sample_all_tooltip",
+                "Match colours against the visible composite instead of "
+                "just the active layer",
+            ),
+        )
+        self._use_reference = _tipped_check(
+            lang.get(
+                "paint_fill_use_reference",
+                "Use reference layer for boundaries",
+            ),
+            self._on_use_reference_changed,
+            lang.get(
+                "paint_fill_use_reference_tooltip",
+                "Read connectivity from the document's pinned reference "
+                "layer (e.g. line art) so fill stops at ink boundaries "
+                "regardless of the active layer's colour",
+            ),
+        )
+        self._expand = _tipped_slider(
+            ts.FILL_EXPAND_MIN, ts.FILL_EXPAND_MAX, 0, self._on_expand_changed, lang.get(
+                "paint_fill_expand_tooltip",
+                "Dilate the fill by N pixels after computing it — bridges "
+                "the anti-aliased halo around lineart",
+            ))
+        self._gap_close = _tipped_slider(
+            ts.FILL_GAP_CLOSE_MIN, ts.FILL_GAP_CLOSE_MAX, 0, self._on_gap_close_changed,
+            lang.get(
+                "paint_fill_gap_close_tooltip",
+                "Bridge gaps in the lineart up to N pixels wide so fill "
+                "doesn't leak through broken pen strokes",
+            ))
+
+    def _add_fill_rows(self, form: QFormLayout, lang) -> None:
+        """Lay the fill controls out in the dock's fixed row order."""
+        rows = [
+            (lang.get("paint_fill_tolerance", "Tolerance:"), self._tolerance),
+            ("", self._contiguous),
+            ("", self._sample_all),
+            ("", self._use_reference),
+            (lang.get("paint_fill_expand", "Expand (px):"), self._expand),
+            (lang.get("paint_fill_gap_close", "Close gap (px):"), self._gap_close),
+        ]
+        for label, widget in rows:
+            form.addRow(label, widget)
 
     def set_auto_fill_callback(self, callback) -> None:
         """Wire the workspace's auto-fill verb to the dock's button."""

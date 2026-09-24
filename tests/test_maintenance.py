@@ -1,6 +1,8 @@
 """Tests for library maintenance (index vs filesystem reconciliation)."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from Imervue.library import image_index
@@ -54,3 +56,10 @@ def test_run_maintenance_reports_and_prunes(tmp_path):
 
     run_maintenance([str(tmp_path)], prune=True)
     assert image_index.get_image(gone) is None
+
+
+def test_scan_covers_every_still_format_and_no_video(tmp_path):
+    for name in ("a.heic", "b.avif", "c.jxl", "d.svg", "e.cr2", "f.PNG", "g.mp4"):
+        (tmp_path / name).write_bytes(b"\x00")
+    found = {Path(p).name for p in scan_image_files([str(tmp_path)])}
+    assert found == {"a.heic", "b.avif", "c.jxl", "d.svg", "e.cr2", "f.PNG"}

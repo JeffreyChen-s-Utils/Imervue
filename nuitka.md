@@ -86,13 +86,14 @@ python -m nuitka ^
   --windows-console-mode=disable ^
   --enable-plugin=pyside6 ^
   --python-flag=-m ^
+  --include-package=Imervue ^
   --include-package=qt_material ^
   --include-package=imageio ^
   --include-package=rawpy ^
   --include-package-data=qt_material ^
   --include-package-data=imageio ^
   --include-package-data=rawpy ^
-  --include-data-dir=plugins=plugins ^
+  "--include-data-files=plugins=plugins/=**/*.py" ^
   --include-data-dir=examples=examples ^
   --noinclude-data-files=plugins/*/models/* ^
   --noinclude-data-files=examples/**/__pycache__/* ^
@@ -126,13 +127,14 @@ python -m nuitka `
   --windows-console-mode=disable `
   --enable-plugin=pyside6 `
   --python-flag=-m `
+  --include-package=Imervue `
   --include-package=qt_material `
   --include-package=imageio `
   --include-package=rawpy `
   --include-package-data=qt_material `
   --include-package-data=imageio `
   --include-package-data=rawpy `
-  --include-data-dir=plugins=plugins `
+  "--include-data-files=plugins=plugins/=**/*.py" `
   --include-data-dir=examples=examples `
   --noinclude-data-files=plugins/*/models/* `
   --noinclude-data-files=examples/**/__pycache__/* `
@@ -161,7 +163,7 @@ python -m nuitka `
 **一行版（任何 shell 都能用，最保險）**：
 
 ```
-python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy --include-data-dir=plugins=plugins --include-data-dir=examples=examples --noinclude-data-files=plugins/*/models/* --noinclude-data-files=examples/**/__pycache__/* --noinclude-data-files=*.onnx --noinclude-data-files=*.pt --noinclude-data-files=*.pth --noinclude-data-files=*.safetensors --noinclude-data-files=*.gguf --noinclude-data-files=exe/*.log --noinclude-data-files=exe/*.json --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --module-parameter=torch-disable-jit=yes --nofollow-import-to=pytest --nofollow-import-to=doctest --nofollow-import-to=rembg --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
+python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=pyside6 --python-flag=-m --include-package=Imervue --include-package=qt_material --include-package=imageio --include-package=rawpy --include-package-data=qt_material --include-package-data=imageio --include-package-data=rawpy "--include-data-files=plugins=plugins/=**/*.py" --include-data-dir=examples=examples --noinclude-data-files=plugins/*/models/* --noinclude-data-files=examples/**/__pycache__/* --noinclude-data-files=*.onnx --noinclude-data-files=*.pt --noinclude-data-files=*.pth --noinclude-data-files=*.safetensors --noinclude-data-files=*.gguf --noinclude-data-files=exe/*.log --noinclude-data-files=exe/*.json --include-data-dir=exe=exe --include-data-files=THIRD_PARTY_LICENSES.md=THIRD_PARTY_LICENSES.md --include-data-files=LICENSE=LICENSE --module-parameter=torch-disable-jit=yes --nofollow-import-to=pytest --nofollow-import-to=doctest --nofollow-import-to=rembg --windows-icon-from-ico=exe\Imervue.ico --output-filename=Imervue.exe --output-dir=build_nuitka --remove-output --assume-yes-for-downloads Imervue
 ```
 
 產物：`build_nuitka\Imervue.dist\Imervue.exe`（standalone）或 `build_nuitka\Imervue.exe`（onefile）。
@@ -188,13 +190,14 @@ python -m nuitka \
   --disable-console \
   --enable-plugin=pyside6 \
   --python-flag=-m \
+  --include-package=Imervue \
   --include-package=qt_material \
   --include-package=imageio \
   --include-package=rawpy \
   --include-package-data=qt_material \
   --include-package-data=imageio \
   --include-package-data=rawpy \
-  --include-data-dir=plugins=plugins \
+  "--include-data-files=plugins=plugins/=**/*.py" \
   --include-data-dir=examples=examples \
   --noinclude-data-files=plugins/*/models/* \
   --noinclude-data-files=examples/**/__pycache__/* \
@@ -236,13 +239,14 @@ python -m nuitka \
   --macos-create-app-bundle \
   --enable-plugin=pyside6 \
   --python-flag=-m \
+  --include-package=Imervue \
   --include-package=qt_material \
   --include-package=imageio \
   --include-package=rawpy \
   --include-package-data=qt_material \
   --include-package-data=imageio \
   --include-package-data=rawpy \
-  --include-data-dir=plugins=plugins \
+  "--include-data-files=plugins=plugins/=**/*.py" \
   --include-data-dir=examples=examples \
   --noinclude-data-files=plugins/*/models/* \
   --noinclude-data-files=examples/**/__pycache__/* \
@@ -302,9 +306,9 @@ xcrun stapler staple build_nuitka/Imervue.app
   - Linux：`--disable-console`（實際上 GUI 應用本來就沒 console，這行無害）
   - macOS：`--macos-create-app-bundle`（.app 沒有 console，自動處理）
 - `--enable-plugin=pyside6`：啟用 Nuitka 的 PySide6 plugin，自動處理 Qt 的 resource、plugin 目錄、translations。
-- 為什麼**沒有** `--include-package=Imervue`：當 `Imervue` 本身就是編譯目標（package-as-entry-point 模式），Nuitka 會自動 walk 整個套件，再加上 `--include-package=Imervue` 反而會跳 `Not allowed to include module 'Imervue.__main__' due to 'Main program is already included in package mode.'` 的警告——它試圖把已經是 entry point 的 `__main__` 再 include 一次。如果哪天 Imervue 內部出現「靜態分析看不到的動態 import」，補單一模組用 `--include-module=Imervue.foo` 即可，不要對整個 `Imervue` 用 `--include-package`。
+- `--include-package=Imervue`：**必要**。以套件為編譯目標時 Nuitka 只會跟著 import 走，不是「整包都收」，所以只有外掛才 import 的模組不會進產物。2026-09-23 實測：沒有這個旗標時，EXE 啟動後 17 個內建外掛有 10 個掛掉，`imervue.log` 印的是 `No module named 'Imervue.plugin.model_dir'`、`'Imervue.image.inpaint'`、`'Imervue.plugin.subprocess_util'`；加上旗標後 17 個全部載入、產物只多 2 MB（687 → 689 MB）。外掛是執行期從磁碟載入的（見上一點），Nuitka 的靜態分析看不到它們的 import，所以逐一補 `--include-module=Imervue.foo` 只會在下一個外掛新增 import 時再壞一次。加上旗標後會跳 `Not allowed to include module 'Imervue.__main__' due to 'Main program is already included in package mode.'`，那只是說 entry point 不會被重複 include，可以忽略。
 - `--include-package-data=...`：把 `qt_material`、`imageio`、`rawpy` 的非 `.py` 資源（QSS、entry-point、原生 DLL / `.so` / `.dylib`）一起帶上。
-- `--include-data-dir=plugins=plugins`：把整個 `plugins/` 目錄當作**純資料**鏡射進產物。**不要**對 `plugins` 用 `--include-package`——`plugins/` 底下沒有 `__init__.py`，不是 Python 套件；而且每個 plugin 的 `__init__.py` 是以「頂層模組」的方式自我 import（例如 `from ai_background_remover.ai_background_remover import ...`），把它們編譯成 `plugins.xxx` 子模組反而會破壞這條路徑。執行期 `plugin_manager.py` 會把 `<app_dir>/plugins` 插到 `sys.path`，再透過標準 `FileFinder` 從資料夾載入 `.py` 檔，因此 plugin 永遠是走 interpreter 路線，**不經過 Nuitka 的 frozen importer**。這同時也保留了使用者後續從 plugin 下載器新增 / 更新 plugin 的能力（不需要重新編譯整個 app）。**注意**：Puppet 已經不在這條路線上——它從 plugin 升格成內建分頁（`Imervue/puppet/`），會跟其他 `Imervue.*` 子套件一樣被 Nuitka 自動 walk 進去，不需要任何特別處理。
+- `--include-data-files=plugins=plugins/=**/*.py`：把 `plugins/` 底下的 `.py` 當作**純資料**鏡射進產物，並保留目錄結構。**不要**改用 `--include-data-dir=plugins=plugins`：該選項只收「非程式碼檔」，而 plugin 全是 `.py`，結果一個檔都不會進產物，只會印 `Nuitka-Options:WARNING: No data files in directory 'plugins'`，做出來的 EXE 連 `plugins/` 目錄都沒有。**不要**對 `plugins` 用 `--include-package`——`plugins/` 底下沒有 `__init__.py`，不是 Python 套件；而且每個 plugin 的 `__init__.py` 是以「頂層模組」的方式自我 import（例如 `from ai_background_remover.ai_background_remover import ...`），把它們編譯成 `plugins.xxx` 子模組反而會破壞這條路徑。執行期 `plugin_manager.py` 會把 `<app_dir>/plugins` 插到 `sys.path`，再透過標準 `FileFinder` 從資料夾載入 `.py` 檔，因此 plugin 永遠是走 interpreter 路線，**不經過 Nuitka 的 frozen importer**。這同時也保留了使用者後續從 plugin 下載器新增 / 更新 plugin 的能力（不需要重新編譯整個 app）。**注意**：Puppet 已經不在這條路線上——它從 plugin 升格成內建分頁（`Imervue/puppet/`），會跟其他 `Imervue.*` 子套件一樣被 Nuitka 自動 walk 進去，不需要任何特別處理。
 - `--include-data-dir=examples=examples`：把 `examples/` 目錄鏡射進產物。目前只放 `examples/puppet/march_7th.puppet`（轉換好的 Cubism Live2D 示範 rig）+ README。讓使用者第一次點 Puppet 分頁的「Open Puppet…」時就有東西可開。`--noinclude-data-files=examples/**/__pycache__/*` 過濾掉本機開發跑出來的 pycache，避免汙染發佈品。
 - **Cubism Native SDK DLL 永遠不打包**：Live2D 的 Free Material License 禁止散佈 SDK 二進位。`Imervue/puppet/cubism_native_bridge.py` 執行期會探測 `<cwd>/sdk/` 與 `CUBISM_CORE_DLL` 環境變數，使用者自備 DLL；找不到時 `.moc3 → .puppet` 的轉換功能會優雅停用，但已轉好的 `.puppet` rig 還是能正常播放。
 - `--python-flag=-m` + 結尾的 `Imervue`（套件目錄）：對含有 `__main__.py` 的套件，這是 Nuitka 官方推薦寫法，等同於 `python -m Imervue`。直接寫 `Imervue/__main__.py` 會跳警告。
@@ -352,13 +356,14 @@ python -m nuitka ^
   --windows-console-mode=disable ^
   --enable-plugin=pyside6 ^
   --python-flag=-m ^
+  --include-package=Imervue ^
   --include-package=qt_material ^
   --include-package=imageio ^
   --include-package=rawpy ^
   --include-package-data=qt_material ^
   --include-package-data=imageio ^
   --include-package-data=rawpy ^
-  --include-data-dir=plugins=plugins ^
+  "--include-data-files=plugins=plugins/=**/*.py" ^
   --include-data-dir=examples=examples ^
   --noinclude-data-files=plugins/*/models/* ^
   --noinclude-data-files=examples/**/__pycache__/* ^
@@ -396,13 +401,15 @@ COMMON_ARGS=(
   --standalone
   --enable-plugin=pyside6
   --python-flag=-m
+  --include-package=Imervue
+
   --include-package=qt_material
   --include-package=imageio
   --include-package=rawpy
   --include-package-data=qt_material
   --include-package-data=imageio
   --include-package-data=rawpy
-  --include-data-dir=plugins=plugins
+  "--include-data-files=plugins=plugins/=**/*.py"
   --include-data-dir=examples=examples
   --noinclude-data-files=plugins/*/models/*
   --noinclude-data-files=examples/**/__pycache__/*
@@ -466,6 +473,7 @@ esac
 | 打包非常慢 | 全平台 | 正常現象。第一次冷編 10+ 分鐘；`--jobs=<N>` 增加平行度、`ccache`（Linux / macOS）可以讓重編快很多；`--lto=yes` 會更慢但產物更小 |
 | 執行檔超大 | 全平台 | `--standalone` 產物 300MB+ 是正常的（Qt + numpy + rawpy）。`--onefile` + `zstandard` 可再壓一些 |
 | `FATAL: Error, file '^' is not found.` | Windows | `^` 是 cmd / `.bat` 專用行續字元，你在 PowerShell / Git Bash 跑就會這樣。用 §2.1 的 PowerShell 版（反引號）、一行版，或存成 `.bat` 檔跑 |
+| `Nuitka-Inclusion:WARNING: Not allowed to include module 'Imervue.__main__' due to 'Main program is already included in package mode.'` | 全平台 | 預期行為，不用理會：`--include-package=Imervue` 是刻意加的（外掛需要那些模組，見 §2.4），這行只是說已經是 entry point 的 `__main__` 不會再被 include 一次 |
 | `WARNING: To compile a package with a '__main__' module, specify its containing directory but, not the '__main__.py' itself` | 全平台 | 結尾改成套件目錄 `Imervue`（而不是 `Imervue/__main__.py`），並加 `--python-flag=-m`。見 §2.1 命令範例 |
 | `Nuitka-Options:WARNING: No data files in directory 'Imervue\multi_language'.` | 全平台 | 拿掉 `--include-data-dir=Imervue/multi_language=...`。那目錄裡只有 `.py`，不是資料，Nuitka 會透過靜態 import 分析自動帶進去 |
 | `Nuitka-Inclusion:WARNING: Not allowed to include module 'Imervue.__main__' due to 'Main program is already included in package mode.'` | 全平台 | 拿掉 `--include-package=Imervue`。當 `Imervue` 本身是編譯目標時，Nuitka 已經自動 walk 整個套件，再 `--include-package=Imervue` 會試著重複 include `__main__` 而觸發此警告 |

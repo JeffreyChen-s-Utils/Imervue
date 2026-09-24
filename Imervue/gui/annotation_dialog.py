@@ -22,8 +22,6 @@ Layout
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 from collections.abc import Callable
 
@@ -33,9 +31,9 @@ from PySide6.QtGui import (
     QAction, QColor, QFont, QKeySequence, QUndoStack,
 )
 from PySide6.QtWidgets import (
-    QApplication, QButtonGroup, QColorDialog, QDialog, QFileDialog, QFrame,
-    QGridLayout, QHBoxLayout, QLabel, QMenuBar, QMessageBox, QSizePolicy,
-    QSlider, QSpinBox, QStatusBar, QToolButton, QVBoxLayout, QWidget,
+    QButtonGroup, QColorDialog, QDialog, QFrame,
+    QGridLayout, QHBoxLayout, QLabel, QMenu, QMenuBar, QSizePolicy,
+    QStatusBar, QToolButton, QVBoxLayout, QWidget,
     QWidgetAction,
 )
 
@@ -43,26 +41,29 @@ from Imervue.gui.annotation_canvas import (
     _MODE_RGBA,
     AnnotationCanvas,
     _AddAnnotationCommand,
-    _BakeDestructiveCommand,
     _DeleteAnnotationCommand,
     _ModifyAnnotationCommand,
     _point_segment_distance,
-    pil_to_qimage,
-    qimage_to_pil,
 )
-from Imervue.gui.annotation_models import (
-    AnnotationProject, bake,
+from Imervue.gui.annotation_destructive import _BakeDestructiveCommand
+from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.gui.annotation_file_actions import (
+    _LOAD_PROJECT_FALLBACK,
+    AnnotationFileActionsMixin,
 )
+from Imervue.gui.slider_spin import make_slider_spin
 from Imervue.multi_language.language_wrapper import language_wrapper
-import contextlib
+from Imervue.system.qimage_convert import pil_to_qimage, qimage_to_pil
+from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.annotation")
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-# The annotation canvas, its undo commands, and the PIL<->QImage helpers now
-# live in ``annotation_canvas``; these names are re-exported here so existing
+# The annotation canvas and its undo commands live in ``annotation_canvas`` and
+# the PIL<->QImage helpers in ``system.qimage_convert``; these names are
+# re-exported here so existing
 # ``from annotation_dialog import AnnotationCanvas / _AddAnnotationCommand /
 # pil_to_qimage`` call sites and tests keep working unchanged.
 __all__ = [
@@ -82,7 +83,6 @@ __all__ = [
 
 # Dialog-only UI constants (the canvas owns the drawing constants).
 _QSS_PANEL_SECTION = "panelSection"
-_LOAD_PROJECT_FALLBACK = "Load Project..."
 
 # ---------------------------------------------------------------------------
 # Editor widget — reusable QWidget form of the annotation editor.
@@ -94,7 +94,54 @@ _LOAD_PROJECT_FALLBACK = "Load Project..."
 # the main viewer instead of a separate top-level window.
 # ---------------------------------------------------------------------------
 
-class AnnotationEditorWidget(QWidget):
+# Dark panel styling for the editor's toolbox, right panel and canvas surround. Scoped to
+# those object names so it doesn't fight the application theme elsewhere.
+_EDITOR_STYLE_SHEET = """
+QFrame#annotationCanvasFrame {
+    background-color: #1e1e1e;
+}
+QFrame#annotationLeftToolbox,
+QFrame#annotationRightPanel {
+    background-color: #2d2d30;
+    color: #e0e0e0;
+    border-right: 1px solid #3f3f42;
+}
+QFrame#annotationRightPanel {
+    border-right: none;
+    border-left: 1px solid #3f3f42;
+}
+QFrame#annotationLeftToolbox QToolButton,
+QFrame#annotationRightPanel QToolButton {
+    background-color: #3c3c3c;
+    color: #e0e0e0;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 2px;
+}
+QFrame#annotationLeftToolbox QToolButton:hover,
+QFrame#annotationRightPanel QToolButton:hover {
+    background-color: #4a4a4a;
+}
+QFrame#annotationLeftToolbox QToolButton:checked {
+    background-color: #0a6cbc;
+    border: 1px solid #3e95d6;
+}
+QFrame#annotationRightPanel QLabel {
+    color: #e0e0e0;
+}
+QFrame#annotationRightPanel QLabel#panelSection {
+    color: #9cdcfe;
+    font-weight: bold;
+    padding-top: 6px;
+}
+QFrame#annotationRightPanel QSpinBox,
+QFrame#annotationRightPanel QSlider {
+    background-color: #3c3c3c;
+    color: #e0e0e0;
+}
+"""
+
+class AnnotationEditorWidget(AnnotationFileActionsMixin, QWidget):
     """Professional-editor QWidget: menubar + toolbox + canvas + right panel.
 
     Parameters
@@ -149,28 +196,7 @@ class AnnotationEditorWidget(QWidget):
         root.setMenuBar(self._menu_bar)
 
         # 2) 中段主要內容：左工具箱 / 中央 canvas / 右屬性面板。
-        body = QHBoxLayout()
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(0)
-
-        self._left_toolbox = self._build_left_toolbox()
-        body.addWidget(self._left_toolbox)
-
-        # Canvas 外面再包一層 QFrame 做暗色背景，模擬 Photoshop / external image editors
-        # 在 canvas 四周的 "workspace" 深灰空間感。
-        canvas_frame = QFrame(self)
-        canvas_frame.setObjectName("annotationCanvasFrame")
-        canvas_frame.setFrameShape(QFrame.Shape.NoFrame)
-        canvas_layout = QVBoxLayout(canvas_frame)
-        canvas_layout.setContentsMargins(8, 8, 8, 8)
-        canvas_layout.setSpacing(0)
-        canvas_layout.addWidget(self._canvas, 1)
-        body.addWidget(canvas_frame, 1)
-
-        self._right_panel = self._build_right_panel()
-        body.addWidget(self._right_panel)
-
-        root.addLayout(body, 1)
+        root.addLayout(self._build_body(), 1)
 
         # 3) 底部狀態列 — 顯示當前工具 / 座標 / 影像尺寸。
         self._status_bar = self._build_status_bar()
@@ -179,52 +205,7 @@ class AnnotationEditorWidget(QWidget):
         # ---------- Style ----------
         # 不強制黑底（會跟使用者整體 theme 打架），只對幾個關鍵區塊加背景色
         # 與邊框，讓它看起來有 "多面板編輯器" 的分區感。
-        self.setStyleSheet(
-            """
-            QFrame#annotationCanvasFrame {
-                background-color: #1e1e1e;
-            }
-            QFrame#annotationLeftToolbox,
-            QFrame#annotationRightPanel {
-                background-color: #2d2d30;
-                color: #e0e0e0;
-                border-right: 1px solid #3f3f42;
-            }
-            QFrame#annotationRightPanel {
-                border-right: none;
-                border-left: 1px solid #3f3f42;
-            }
-            QFrame#annotationLeftToolbox QToolButton,
-            QFrame#annotationRightPanel QToolButton {
-                background-color: #3c3c3c;
-                color: #e0e0e0;
-                border: 1px solid #555;
-                border-radius: 3px;
-                padding: 2px;
-            }
-            QFrame#annotationLeftToolbox QToolButton:hover,
-            QFrame#annotationRightPanel QToolButton:hover {
-                background-color: #4a4a4a;
-            }
-            QFrame#annotationLeftToolbox QToolButton:checked {
-                background-color: #0a6cbc;
-                border: 1px solid #3e95d6;
-            }
-            QFrame#annotationRightPanel QLabel {
-                color: #e0e0e0;
-            }
-            QFrame#annotationRightPanel QLabel#panelSection {
-                color: #9cdcfe;
-                font-weight: bold;
-                padding-top: 6px;
-            }
-            QFrame#annotationRightPanel QSpinBox,
-            QFrame#annotationRightPanel QSlider {
-                background-color: #3c3c3c;
-                color: #e0e0e0;
-            }
-            """
-        )
+        self.setStyleSheet(_EDITOR_STYLE_SHEET)
 
         # Connect canvas signals to status bar / property panel updates.
         self._canvas.cursor_image_pos.connect(self._on_cursor_moved)
@@ -236,6 +217,33 @@ class AnnotationEditorWidget(QWidget):
         # Apply default tool if requested (e.g. open directly to mosaic/blur)
         if self._default_tool:
             self._canvas.set_tool(self._default_tool)
+
+    def _build_body(self) -> QHBoxLayout:
+        """Left toolbox, the framed canvas (stretching) and the right properties panel."""
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(0)
+        self._left_toolbox = self._build_left_toolbox()
+        body.addWidget(self._left_toolbox)
+        body.addWidget(self._build_canvas_frame(), 1)
+        self._right_panel = self._build_right_panel()
+        body.addWidget(self._right_panel)
+        return body
+
+    def _build_canvas_frame(self) -> QFrame:
+        """Dark surround for the canvas.
+
+        Canvas 外面再包一層 QFrame 做暗色背景，模擬 Photoshop / external image editors
+        在 canvas 四周的 "workspace" 深灰空間感。
+        """
+        canvas_frame = QFrame(self)
+        canvas_frame.setObjectName("annotationCanvasFrame")
+        canvas_frame.setFrameShape(QFrame.Shape.NoFrame)
+        canvas_layout = QVBoxLayout(canvas_frame)
+        canvas_layout.setContentsMargins(8, 8, 8, 8)
+        canvas_layout.setSpacing(0)
+        canvas_layout.addWidget(self._canvas, 1)
+        return canvas_frame
 
     # ========================================================================
     # Professional editor layout — menubar / left toolbox / right panel /
@@ -293,52 +301,42 @@ class AnnotationEditorWidget(QWidget):
         """
         lang = language_wrapper.language_word_dict
         mb = QMenuBar(self)
+        self._add_file_menu(mb, lang)
+        self._add_edit_menu(mb, lang)
+        self._add_modify_menu(mb, lang)
+        return mb
 
-        # ---- File ----
+    def _menu_action(self, menu: QMenu, text: str, slot, shortcut=None) -> QAction:
+        """Add an editor-owned action to ``menu``, wired to ``slot``, with an optional shortcut."""
+        action = QAction(text, self)
+        if shortcut is not None:
+            action.setShortcut(QKeySequence(shortcut))
+        action.triggered.connect(slot)
+        menu.addAction(action)
+        return action
+
+    def _add_file_menu(self, mb: QMenuBar, lang) -> None:
+        """Save / Save As / Copy, project save and load, then Close."""
         file_menu = mb.addMenu(lang.get("annotation_menu_file", "File"))
-
-        act_save = QAction(lang.get("annotation_save", "Save"), self)
-        act_save.setShortcut(QKeySequence("Ctrl+S"))
-        act_save.triggered.connect(self._save)
-        file_menu.addAction(act_save)
-
-        act_save_as = QAction(lang.get("annotation_save_as", "Save As..."), self)
-        act_save_as.setShortcut(QKeySequence("Ctrl+Shift+S"))
-        act_save_as.triggered.connect(self._save_as)
-        file_menu.addAction(act_save_as)
-
-        act_copy = QAction(
-            lang.get("annotation_copy_clipboard", "Copy to Clipboard"), self
-        )
-        act_copy.setShortcut(QKeySequence("Ctrl+C"))
-        act_copy.triggered.connect(self._copy_to_clipboard)
-        file_menu.addAction(act_copy)
-
+        self._menu_action(file_menu, lang.get("annotation_save", "Save"), self._save, "Ctrl+S")
+        self._menu_action(file_menu, lang.get("annotation_save_as", "Save As..."),
+                          self._save_as, "Ctrl+Shift+S")
+        self._menu_action(file_menu, lang.get("annotation_copy_clipboard", "Copy to Clipboard"),
+                          self._copy_to_clipboard, "Ctrl+C")
         file_menu.addSeparator()
-
-        act_save_proj = QAction(
-            lang.get("annotation_save_project", "Save Project..."), self
-        )
-        act_save_proj.triggered.connect(self._save_project)
-        file_menu.addAction(act_save_proj)
-
-        act_load_proj = QAction(
-            lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK), self
-        )
-        act_load_proj.triggered.connect(self._load_project)
-        file_menu.addAction(act_load_proj)
-
+        self._menu_action(file_menu, lang.get("annotation_save_project", "Save Project..."),
+                          self._save_project)
+        self._menu_action(file_menu, lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
+                          self._load_project)
         file_menu.addSeparator()
-
-        act_close = QAction(lang.get("annotation_menu_close", "Close"), self)
-        act_close.setShortcut(QKeySequence("Ctrl+W"))
         # Emit a signal instead of calling ``self.close``: the editor widget
         # may be embedded in a dialog, tab, or dock — each host decides what
         # "close" means (dialog.accept, tab removal, panel hide, ...).
-        act_close.triggered.connect(self.close_requested.emit)
-        file_menu.addAction(act_close)
+        self._menu_action(file_menu, lang.get("annotation_menu_close", "Close"),
+                          self.close_requested.emit, "Ctrl+W")
 
-        # ---- Edit ----
+    def _add_edit_menu(self, mb: QMenuBar, lang) -> None:
+        """Undo / Redo bound to the editor's undo stack, then Delete Selection."""
         edit_menu = mb.addMenu(lang.get("annotation_menu_edit", "Edit"))
 
         act_undo = self._undo_stack.createUndoAction(
@@ -354,35 +352,31 @@ class AnnotationEditorWidget(QWidget):
         edit_menu.addAction(act_redo)
 
         edit_menu.addSeparator()
+        self._menu_action(
+            edit_menu, lang.get("annotation_menu_delete_selection", "Delete Selection"),
+            self._delete_selected, Qt.Key.Key_Delete)
 
-        act_delete = QAction(
-            lang.get("annotation_menu_delete_selection", "Delete Selection"),
-            self,
+    def _add_modify_menu(self, mb: QMenuBar, lang) -> None:
+        """Develop / Rotate / Flip / Reset for the main viewer's image.
+
+        Only built when a ``modify_target`` (GPUImageView) was supplied,
+        because these operate on the main viewer's current image, not on the
+        in-editor PIL copy. Tests and the clipboard-capture flow don't pass a
+        target, so the menu is simply absent there.
+        """
+        if self._modify_target is None:
+            return
+        from Imervue.gui.modify_actions_widget import ModifyActionsWidget
+
+        modify_menu = mb.addMenu(lang.get("modify_menu_title", "Modify"))
+        modify_widget_action = QWidgetAction(modify_menu)
+        modify_widget = ModifyActionsWidget(
+            main_gui=self._modify_target,
+            parent=modify_menu,
+            on_triggered=modify_menu.close,
         )
-        act_delete.setShortcut(QKeySequence(Qt.Key.Key_Delete))
-        act_delete.triggered.connect(self._delete_selected)
-        edit_menu.addAction(act_delete)
-
-        # ---- Modify ----
-        # Only built when a ``modify_target`` (GPUImageView) was supplied,
-        # because Develop / Rotate / Flip / Reset operate on the main
-        # viewer's current image, not on the in-editor PIL copy. Tests
-        # and the clipboard-capture flow don't pass a target, so the menu
-        # is simply absent there.
-        if self._modify_target is not None:
-            from Imervue.gui.modify_actions_widget import ModifyActionsWidget
-
-            modify_menu = mb.addMenu(lang.get("modify_menu_title", "Modify"))
-            modify_widget_action = QWidgetAction(modify_menu)
-            modify_widget = ModifyActionsWidget(
-                main_gui=self._modify_target,
-                parent=modify_menu,
-                on_triggered=modify_menu.close,
-            )
-            modify_widget_action.setDefaultWidget(modify_widget)
-            modify_menu.addAction(modify_widget_action)
-
-        return mb
+        modify_widget_action.setDefaultWidget(modify_widget)
+        modify_menu.addAction(modify_widget_action)
 
     # ---------- Left toolbox ----------
 
@@ -419,6 +413,26 @@ class AnnotationEditorWidget(QWidget):
 
     # ---------- Right properties panel ----------
 
+    @staticmethod
+    def _section_label(frame: QFrame, text: str) -> QLabel:
+        """A right-panel section heading, styled through ``_QSS_PANEL_SECTION``."""
+        label = QLabel(text, frame)
+        label.setObjectName(_QSS_PANEL_SECTION)
+        return label
+
+    def _on_stroke_width_changed(self, width: int) -> None:
+        self._canvas.set_stroke_width(width)
+        self._refresh_status_bar()
+
+    @staticmethod
+    def _wide_button(frame: QFrame, text: str, height: int) -> QToolButton:
+        """A tool button that stretches across its row at a fixed height."""
+        btn = QToolButton(frame)
+        btn.setText(text)
+        btn.setFixedHeight(height)
+        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        return btn
+
     def _build_right_panel(self) -> QFrame:
         lang = language_wrapper.language_word_dict
         frame = QFrame(self)
@@ -429,7 +443,57 @@ class AnnotationEditorWidget(QWidget):
         lay = QVBoxLayout(frame)
         lay.setContentsMargins(12, 12, 12, 12)
         lay.setSpacing(6)
+        self._add_panel_header(frame, lay, lang)
+        lay.addSpacing(6)
 
+        # ---- Color section ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_color", "Color")))
+        lay.addWidget(self._build_color_button(frame, lang))
+        lay.addSpacing(4)
+
+        # ---- Stroke width section ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_stroke_width_label", "Stroke Width")))
+        self._width_slider, self._width_spin, sw_row = make_slider_spin(
+            frame, 1, 40, 3, on_change=self._on_stroke_width_changed)
+        lay.addLayout(sw_row)
+        lay.addSpacing(8)
+
+        # ---- History quick actions (Undo / Redo) ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_history_section", "History")))
+        lay.addLayout(self._build_history_row(frame, lang))
+        lay.addSpacing(8)
+
+        # ---- Brush section (freehand only) ----
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_brush_section", "Brush")))
+        lay.addLayout(self._build_brush_grid(frame, lang))
+        lay.addSpacing(4)
+
+        # Opacity slider + spin
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_opacity", "Opacity")))
+        self._opacity_slider, self._opacity_spin, op_row = make_slider_spin(
+            frame, 0, 100, 100, suffix=" %",
+            on_change=lambda v: self._canvas.set_brush_opacity(v))
+        lay.addLayout(op_row)
+        lay.addSpacing(4)
+
+        # Spacing slider + spin (spray only, but always visible for clarity)
+        lay.addWidget(self._section_label(
+            frame, lang.get("annotation_spacing", "Spacing")))
+        self._spacing_slider, self._spacing_spin, sp_row = make_slider_spin(
+            frame, 1, 40, 8,
+            on_change=lambda v: self._canvas.set_brush_spacing(v))
+        lay.addLayout(sp_row)
+
+        lay.addStretch(1)
+        return frame
+
+    def _add_panel_header(self, frame: QFrame, lay: QVBoxLayout, lang) -> None:
+        """Bold "Properties" title and the current-tool readout under it."""
         title = QLabel(lang.get("annotation_properties", "Properties"), frame)
         title_font = QFont(title.font())
         title_font.setPointSize(12)
@@ -446,113 +510,35 @@ class AnnotationEditorWidget(QWidget):
         self._current_tool_label.setStyleSheet("color: #cccccc;")
         lay.addWidget(self._current_tool_label)
 
-        lay.addSpacing(6)
-
-        # ---- Color section ----
-        color_section = QLabel(
-            lang.get("annotation_color", "Color"), frame
-        )
-        color_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(color_section)
-
+    def _build_color_button(self, frame: QFrame, lang) -> QToolButton:
+        """Swatch button showing the stroke colour; clicking opens the picker."""
         self._color = (255, 0, 0, 255)
-        self._color_btn = QToolButton(frame)
-        self._color_btn.setText(lang.get("annotation_color", "Color"))
-        self._color_btn.setFixedHeight(44)
-        self._color_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self._color_btn = self._wide_button(
+            frame, lang.get("annotation_color", "Color"), 44)
         self._color_btn.setAutoRaise(False)
         self._color_btn.clicked.connect(self._pick_color)
         self._update_color_button_style()
-        lay.addWidget(self._color_btn)
+        return self._color_btn
 
-        lay.addSpacing(4)
-
-        # ---- Stroke width section ----
-        sw_section = QLabel(
-            lang.get("annotation_stroke_width_label", "Stroke Width"), frame
-        )
-        sw_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(sw_section)
-
-        sw_row = QHBoxLayout()
-        sw_row.setContentsMargins(0, 0, 0, 0)
-        sw_row.setSpacing(6)
-
-        self._width_slider = QSlider(Qt.Orientation.Horizontal, frame)
-        self._width_slider.setRange(1, 40)
-        self._width_slider.setValue(3)
-        sw_row.addWidget(self._width_slider, 1)
-
-        self._width_spin = QSpinBox(frame)
-        self._width_spin.setRange(1, 40)
-        self._width_spin.setValue(3)
-        self._width_spin.setFixedWidth(70)
-        sw_row.addWidget(self._width_spin)
-
-        lay.addLayout(sw_row)
-
-        # Two-way sync between slider and spin, and propagate to canvas.
-        def on_slider(v: int) -> None:
-            self._width_spin.blockSignals(True)
-            self._width_spin.setValue(v)
-            self._width_spin.blockSignals(False)
-            self._canvas.set_stroke_width(v)
-            self._refresh_status_bar()
-
-        def on_spin(v: int) -> None:
-            self._width_slider.blockSignals(True)
-            self._width_slider.setValue(v)
-            self._width_slider.blockSignals(False)
-            self._canvas.set_stroke_width(v)
-            self._refresh_status_bar()
-
-        self._width_slider.valueChanged.connect(on_slider)
-        self._width_spin.valueChanged.connect(on_spin)
-
-        lay.addSpacing(8)
-
-        # ---- History quick actions (Undo / Redo) ----
-        hist_section = QLabel(
-            lang.get("annotation_history_section", "History"), frame
-        )
-        hist_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(hist_section)
-
+    def _build_history_row(self, frame: QFrame, lang) -> QHBoxLayout:
+        """Undo / Redo buttons bound to the dialog's undo stack."""
         hist_row = QHBoxLayout()
         hist_row.setContentsMargins(0, 0, 0, 0)
         hist_row.setSpacing(6)
 
-        undo_btn = QToolButton(frame)
-        undo_btn.setText("↶ " + lang.get("annotation_undo", "Undo"))
-        undo_btn.setFixedHeight(36)
-        undo_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        undo_btn = self._wide_button(
+            frame, "↶ " + lang.get("annotation_undo", "Undo"), 36)
         undo_btn.clicked.connect(self._undo_stack.undo)
         hist_row.addWidget(undo_btn)
 
-        redo_btn = QToolButton(frame)
-        redo_btn.setText("↷ " + lang.get("annotation_redo", "Redo"))
-        redo_btn.setFixedHeight(36)
-        redo_btn.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        redo_btn = self._wide_button(
+            frame, "↷ " + lang.get("annotation_redo", "Redo"), 36)
         redo_btn.clicked.connect(self._undo_stack.redo)
         hist_row.addWidget(redo_btn)
+        return hist_row
 
-        lay.addLayout(hist_row)
-
-        lay.addSpacing(8)
-
-        # ---- Brush section (freehand only) ----
-        brush_section = QLabel(
-            lang.get("annotation_brush_section", "Brush"), frame
-        )
-        brush_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(brush_section)
-
+    def _build_brush_grid(self, frame: QFrame, lang) -> QGridLayout:
+        """Two-column grid of exclusive brush buttons, Pen checked."""
         brush_grid = QGridLayout()
         brush_grid.setContentsMargins(0, 0, 0, 0)
         brush_grid.setSpacing(4)
@@ -568,100 +554,15 @@ class AnnotationEditorWidget(QWidget):
             ("spray",       "💨", lang.get("annotation_brush_spray",       "Spray")),
         ]
         for idx, (key, glyph, label) in enumerate(brush_defs):
-            btn = QToolButton(frame)
-            btn.setText(f"{glyph} {label}")
+            btn = self._wide_button(frame, f"{glyph} {label}", 30)
             btn.setCheckable(True)
-            btn.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-            )
-            btn.setFixedHeight(30)
             btn.clicked.connect(lambda _=False, k=key: self._on_brush_selected(k))
             row, col = divmod(idx, 2)
             brush_grid.addWidget(btn, row, col)
             self._brush_buttons[key] = btn
             self._brush_button_group.addButton(btn)
         self._brush_buttons["pen"].setChecked(True)
-        lay.addLayout(brush_grid)
-
-        lay.addSpacing(4)
-
-        # Opacity slider + spin
-        op_section = QLabel(
-            lang.get("annotation_opacity", "Opacity"), frame
-        )
-        op_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(op_section)
-
-        op_row = QHBoxLayout()
-        op_row.setContentsMargins(0, 0, 0, 0)
-        op_row.setSpacing(6)
-        self._opacity_slider = QSlider(Qt.Orientation.Horizontal, frame)
-        self._opacity_slider.setRange(0, 100)
-        self._opacity_slider.setValue(100)
-        op_row.addWidget(self._opacity_slider, 1)
-        self._opacity_spin = QSpinBox(frame)
-        self._opacity_spin.setRange(0, 100)
-        self._opacity_spin.setValue(100)
-        self._opacity_spin.setSuffix(" %")
-        self._opacity_spin.setFixedWidth(70)
-        op_row.addWidget(self._opacity_spin)
-        lay.addLayout(op_row)
-
-        def on_opacity_slider(v: int) -> None:
-            self._opacity_spin.blockSignals(True)
-            self._opacity_spin.setValue(v)
-            self._opacity_spin.blockSignals(False)
-            self._canvas.set_brush_opacity(v)
-
-        def on_opacity_spin(v: int) -> None:
-            self._opacity_slider.blockSignals(True)
-            self._opacity_slider.setValue(v)
-            self._opacity_slider.blockSignals(False)
-            self._canvas.set_brush_opacity(v)
-
-        self._opacity_slider.valueChanged.connect(on_opacity_slider)
-        self._opacity_spin.valueChanged.connect(on_opacity_spin)
-
-        lay.addSpacing(4)
-
-        # Spacing slider + spin (spray only, but always visible for clarity)
-        sp_section = QLabel(
-            lang.get("annotation_spacing", "Spacing"), frame
-        )
-        sp_section.setObjectName(_QSS_PANEL_SECTION)
-        lay.addWidget(sp_section)
-
-        sp_row = QHBoxLayout()
-        sp_row.setContentsMargins(0, 0, 0, 0)
-        sp_row.setSpacing(6)
-        self._spacing_slider = QSlider(Qt.Orientation.Horizontal, frame)
-        self._spacing_slider.setRange(1, 40)
-        self._spacing_slider.setValue(8)
-        sp_row.addWidget(self._spacing_slider, 1)
-        self._spacing_spin = QSpinBox(frame)
-        self._spacing_spin.setRange(1, 40)
-        self._spacing_spin.setValue(8)
-        self._spacing_spin.setFixedWidth(70)
-        sp_row.addWidget(self._spacing_spin)
-        lay.addLayout(sp_row)
-
-        def on_spacing_slider(v: int) -> None:
-            self._spacing_spin.blockSignals(True)
-            self._spacing_spin.setValue(v)
-            self._spacing_spin.blockSignals(False)
-            self._canvas.set_brush_spacing(v)
-
-        def on_spacing_spin(v: int) -> None:
-            self._spacing_slider.blockSignals(True)
-            self._spacing_slider.setValue(v)
-            self._spacing_slider.blockSignals(False)
-            self._canvas.set_brush_spacing(v)
-
-        self._spacing_slider.valueChanged.connect(on_spacing_slider)
-        self._spacing_spin.valueChanged.connect(on_spacing_spin)
-
-        lay.addStretch(1)
-        return frame
+        return brush_grid
 
     def _on_brush_selected(self, brush: str) -> None:
         if brush not in self._brush_buttons:
@@ -780,156 +681,6 @@ class AnnotationEditorWidget(QWidget):
 
     # ---------- Save / export ----------
 
-    def _baked_image(self) -> Image.Image:
-        return bake(self._canvas.get_base_pil(), self._canvas.get_annotations())
-
-    def _save(self) -> None:
-        if not self._source_path:
-            self._save_as()
-            return
-        self._write(self._source_path)
-
-    def _save_as(self) -> None:
-        lang = language_wrapper.language_word_dict
-        start_dir = str(Path(self._source_path).parent) if self._source_path else ""
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            lang.get("annotation_save_as", "Save As..."),
-            start_dir,
-            "PNG (*.png);;JPEG (*.jpg *.jpeg);;BMP (*.bmp);;TIFF (*.tiff)",
-        )
-        if path:
-            self._write(path)
-
-    def _write(self, path: str) -> None:
-        """Atomically save the baked image to ``path``.
-
-        Writes to a sibling .tmp file then ``os.replace`` to avoid leaving
-        a half-written file if the process is interrupted mid-save. This
-        also matters because the source path may be open in the main
-        viewer — replacing the file in one atomic step is friendlier than
-        truncating the original.
-        """
-        img = self._baked_image()
-        ext = Path(path).suffix.lower()
-        target = Path(path)
-        tmp = target.with_name(target.name + ".tmp")
-        # Pass ``format=`` explicitly because the .tmp extension would
-        # otherwise stop PIL from inferring the encoder.
-        fmt_by_ext = {
-            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-            ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
-            ".webp": "WEBP",
-        }
-        fmt = fmt_by_ext.get(ext, "PNG")
-        try:
-            if ext in (".jpg", ".jpeg"):
-                img.convert("RGB").save(tmp, format="JPEG", quality=95)
-            else:
-                img.save(tmp, format=fmt)
-            os.replace(tmp, target)
-            self._notify_success(
-                language_wrapper.language_word_dict.get("annotation_saved", "Saved")
-            )
-            if self._on_saved is not None and str(target) == self._source_path:
-                try:
-                    self._on_saved(str(target))
-                except Exception:
-                    logger.exception("on_saved callback raised")
-        except Exception as exc:
-            logger.exception("annotation save failed: %s", path)
-            try:
-                if tmp.exists():
-                    tmp.unlink()
-            except OSError:
-                pass
-            QMessageBox.critical(self, "Error", str(exc))
-
-    def _copy_to_clipboard(self) -> None:
-        img = self._baked_image()
-        qimg = pil_to_qimage(img)
-        QApplication.clipboard().setImage(qimg)
-        self._notify_success(
-            language_wrapper.language_word_dict.get(
-                "annotation_copy_success", "Copied to clipboard"
-            )
-        )
-
-    def _save_project(self) -> None:
-        lang = language_wrapper.language_word_dict
-        start_dir = str(Path(self._source_path).parent) if self._source_path else ""
-        suggested = ""
-        if self._source_path:
-            suggested = str(
-                Path(start_dir) / (Path(self._source_path).stem + ".imervue_annot.json")
-            )
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            lang.get("annotation_save_project", "Save Project..."),
-            suggested or start_dir,
-            "Imervue Annotation Project (*.imervue_annot.json *.json)",
-        )
-        if not path:
-            return
-        if not path.endswith(".json"):
-            path += ".imervue_annot.json"
-        base = self._canvas.get_base_pil()
-        project = AnnotationProject(
-            source_path=self._source_path,
-            source_size=(base.width, base.height),
-            annotations=self._canvas.get_annotations(),
-        )
-        try:
-            project.save(path)
-            self._notify_success(
-                lang.get("annotation_saved", "Saved")
-            )
-        except Exception as exc:
-            logger.exception("project save failed: %s", path)
-            QMessageBox.critical(self, "Error", str(exc))
-
-    def _load_project(self) -> None:
-        lang = language_wrapper.language_word_dict
-        start_dir = str(Path(self._source_path).parent) if self._source_path else ""
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
-            start_dir,
-            "Imervue Annotation Project (*.json)",
-        )
-        if not path:
-            return
-        try:
-            project = AnnotationProject.load(path)
-        except Exception as exc:
-            logger.exception("project load failed: %s", path)
-            QMessageBox.critical(self, "Error", str(exc))
-            return
-
-        base = self._canvas.get_base_pil()
-        if project.source_size not in {(0, 0), (base.width, base.height)}:
-            warning = lang.get(
-                "annotation_project_size_mismatch",
-                "Project was saved against a {pw}x{ph} image; current image "
-                "is {cw}x{ch}. Annotation positions may be off.",
-            ).format(
-                pw=project.source_size[0], ph=project.source_size[1],
-                cw=base.width, ch=base.height,
-            )
-            QMessageBox.warning(
-                self,
-                lang.get("annotation_load_project", _LOAD_PROJECT_FALLBACK),
-                warning,
-            )
-        self._canvas.set_annotations(project.annotations)
-
-    def _notify_success(self, message: str) -> None:
-        parent = self.parent()
-        if parent is not None and hasattr(parent, "toast"):
-            parent.toast.success(message)
-        else:
-            logger.info(message)
-
 
 # ---------------------------------------------------------------------------
 # Legacy dialog wrapper
@@ -1014,21 +765,27 @@ def open_annotation_for_path(
     """
     try:
         img = Image.open(path)
+        code = exif_orientation(img)
         if img.mode not in ("RGB", "RGBA", "L"):
             img = img.convert(_MODE_RGBA)
         else:
             img.load()  # force decode now so errors surface before the dialog
+        # Upright, as the viewer shows it. The save writes no EXIF, so pixels
+        # left sideways would lose their orientation tag and stay sideways.
+        img = transpose_for(img, code)
     except Exception as exc:
         logger.exception("annotation load failed: %s", path)
         if hasattr(main_gui.main_window, "toast"):
-            main_gui.main_window.toast.error(f"Load failed: {exc}")
+            lang = language_wrapper.language_word_dict
+            main_gui.main_window.toast.error(
+                lang.get("annotation_load_failed", "Load failed: {error}").format(error=exc))
         return
 
     def _reload(saved_path: str) -> None:
         # Lazy import to avoid a top-level dependency on the viewer module
         # for the offline-testable parts of this file.
         from Imervue.gpu_image_view.images.image_loader import open_path
-        with contextlib.suppress(Exception):
+        with best_effort("clear the deep-zoom view before reopening", logger):
             main_gui._clear_deep_zoom()
         try:
             open_path(main_gui=main_gui, path=saved_path)

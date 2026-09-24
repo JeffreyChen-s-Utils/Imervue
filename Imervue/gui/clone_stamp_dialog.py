@@ -12,18 +12,16 @@ from PySide6.QtGui import QImage, QMouseEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
-    QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
-    QPushButton,
     QSlider,
     QVBoxLayout,
     QWidget,
 )
 
+from Imervue.gui._apply_save import load_rgba
+from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.clone_stamp import CloneStamp, apply_clone_stamp
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -107,7 +105,7 @@ class _StampWorker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             result = apply_clone_stamp(arr, self._stamps)
             Image.fromarray(result).save(self._out)
             self.done.emit(True, self._out)
@@ -125,7 +123,7 @@ class CloneStampDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("stamp_title", "Clone Stamp"))
 
-        img = Image.open(path).convert("RGBA")
+        img = Image.fromarray(load_rgba(path))
         iw, ih = img.size
         scale = min(1.0, _PREVIEW_MAX / max(iw, ih))
         preview = img.resize((int(iw * scale), int(ih * scale)))
@@ -148,13 +146,10 @@ class CloneStampDialog(WorkerHostMixin, QDialog):
         ))
         hint.setWordWrap(True)
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("stamp_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("stamp_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -182,12 +177,8 @@ class CloneStampDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("stamp_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.jpg *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("stamp_output", "Output"), image_save_filter())
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

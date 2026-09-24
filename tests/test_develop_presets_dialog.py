@@ -94,3 +94,21 @@ def test_no_selection_apply_is_noop(qapp):
     dlg = DevelopPresetsDialog(_viewer([]))
     # Nothing selected in the list → no recipe → apply does nothing, no raise.
     dlg._apply_current()
+
+
+def test_delete_confirmation_is_translated(qapp, monkeypatch):
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    from Imervue.multi_language.traditional_chinese import traditional_chinese_word_dict
+
+    _seed()
+    monkeypatch.setattr(language_wrapper, "language_word_dict", traditional_chinese_word_dict)
+    asked: list = []
+    monkeypatch.setattr(QMessageBox, "question",
+                        lambda _parent, title, text: asked.append((title, text))
+                        or QMessageBox.StandardButton.No)
+    dlg = DevelopPresetsDialog(_viewer([]))
+    dlg._list.setCurrentRow(0)
+    name = dlg._selected_name()
+    dlg._delete()
+    assert asked == [("刪除預設集", f"要刪除「{name}」嗎？")]
+

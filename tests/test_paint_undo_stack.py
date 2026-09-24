@@ -99,6 +99,29 @@ def test_reset_undo_stack_clears_and_is_guarded():
     _reset_undo_stack(SimpleNamespace())
 
 
+def test_reset_undo_stack_tolerates_a_deleted_canvas():
+    from Imervue.paint.image_menu import _reset_undo_stack
+
+    class _Dead:
+        @property
+        def _undo_stack(self):
+            raise RuntimeError("Internal C++ object already deleted")
+
+    _reset_undo_stack(_Dead())   # canvas gone mid-teardown -> no-op
+
+
+def test_reset_undo_stack_propagates_an_unexpected_error():
+    from types import SimpleNamespace
+
+    from Imervue.paint.image_menu import _reset_undo_stack
+
+    def broken():
+        raise ValueError("history bug")
+
+    with pytest.raises(ValueError, match="history bug"):
+        _reset_undo_stack(SimpleNamespace(_undo_stack=SimpleNamespace(clear=broken)))
+
+
 def test_undo_returns_false_when_stack_empty():
     document = _doc()
     stack = UndoStack(document)

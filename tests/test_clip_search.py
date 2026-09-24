@@ -199,3 +199,46 @@ class TestHelpers:
     def test_l2_normalise_zero_vector_stays_zero(self):
         out = _l2_normalise(np.zeros(4, dtype=np.float32))
         assert np.all(out == 0)
+
+
+_UNPICKLED: list[str] = []
+
+
+def _record_unpickle() -> str:
+    _UNPICKLED.append("ran")
+    return "payload"
+
+
+class _Tripwire:
+    """Records if it is ever unpickled — a stand-in for a malicious payload."""
+
+    def __reduce__(self):
+        return (_record_unpickle, ())
+
+
+class TestCacheIsPickleFree:
+    def test_saved_cache_loads_without_pickle(self, tmp_path):
+        src = ClipSearchIndex(FakeEmbedder())
+        src.add_many(["cat::一.jpg", "dog::b.jpg"])
+        saved = src.save(tmp_path / "cache.npz")
+        with np.load(saved, allow_pickle=False) as data:
+            assert all(data[name].dtype != object for name in data.files)
+        restored = ClipSearchIndex(FakeEmbedder())
+        assert restored.load(saved) is True
+        assert restored.contains("cat::一.jpg")
+
+    def test_legacy_object_array_cache_is_rejected_unread(self, tmp_path):
+        _UNPICKLED.clear()
+        legacy = tmp_path / "legacy.npz"
+        np.savez(legacy, paths=np.array([_Tripwire()], dtype=object),
+                 matrix=np.zeros((1, 8), np.float32), dim=np.array([8], np.int32))
+        idx = ClipSearchIndex(FakeEmbedder())
+        assert idx.load(legacy) is False
+        assert _UNPICKLED == []
+        assert idx.size == 0
+
+    def test_non_list_paths_are_rejected(self, tmp_path):
+        bad = tmp_path / "bad.npz"
+        blob = np.frombuffer(b'{"not": "a list"}', dtype=np.uint8)
+        np.savez(bad, paths_json=blob, matrix=np.zeros((1, 8), np.float32))
+        assert ClipSearchIndex(FakeEmbedder()).load(bad) is False

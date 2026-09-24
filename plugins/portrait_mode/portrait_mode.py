@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QLabel,
+    QMenu,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -32,7 +33,9 @@ from portrait_mode.portrait_blur import (
     PortraitBlurOptions,
     apply_portrait_blur,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -41,10 +44,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.plugin.portrait_mode")
 
+# (import name, pip name); installed on first use through the host's pip installer.
+REQUIRED_PACKAGES = [("rembg", "rembg"), ("onnxruntime", "onnxruntime")]
+
 
 class PortraitModePlugin(ImervuePlugin):
     plugin_name = "Portrait Mode"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     plugin_description = "Subject-isolated background blur via rembg."
     plugin_author = "Imervue"
 
@@ -92,21 +98,15 @@ class PortraitModePlugin(ImervuePlugin):
             },
         }
 
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
+    def on_build_menu_bar(self, plugin_menu) -> None:
         lang = language_wrapper.language_word_dict
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "retouch_submenu", "Retouch & Transform",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get("portrait_mode_title", "Portrait Mode"),
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
+        # Imervue names its Extra Tools submenus; a host that predates the
+        # names has none, so the entry falls back to the Plugins menu.
+        target = self.main_window.findChild(QMenu, "extra_tools.retouch_submenu")
+        entry = (target if target is not None else plugin_menu).addAction(
+            lang.get("portrait_mode_title", "Portrait Mode"),
+        )
+        entry.triggered.connect(self._open_dialog)
 
     def _open_dialog(self) -> None:
         viewer = getattr(self, "viewer", None)
@@ -116,7 +116,11 @@ class PortraitModePlugin(ImervuePlugin):
         idx = getattr(viewer, "current_index", -1)
         if not (0 <= idx < len(images)):
             return
-        PortraitModeDialog(viewer, str(images[idx])).exec()
+        path = str(images[idx])
+        ensure_dependencies(
+            self.main_window, REQUIRED_PACKAGES,
+            lambda: PortraitModeDialog(viewer, path).exec(),
+        )
 
 
 class PortraitModeDialog(WorkerHostMixin, QDialog):
@@ -215,13 +219,6 @@ class PortraitModeDialog(WorkerHostMixin, QDialog):
                     "portrait_mode_done", "Saved {path}",
                 ).format(path=out_path.name),
             )
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 def _extract_subject_mask(arr: np.ndarray) -> np.ndarray:

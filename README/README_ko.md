@@ -117,7 +117,7 @@ pip install .
 |---------|---------|
 | open_clip_torch + torch | CLIP 시맨틱 검색 (자연어 이미지 쿼리) |
 | onnxruntime | Real-ESRGAN AI 업스케일 / CLIP ONNX 자동 태그 |
-| opencv-python | HDR 병합, 파노라마 스티칭, 포커스 스태킹, 얼굴 검출, 힐링 브러시 |
+| opencv-python<5 | HDR 병합, 파노라마 스티칭, 포커스 스태킹, 얼굴 검출, 힐링 브러시 |
 | sounddevice | Puppet 마이크 입싱크 |
 | mediapipe | Puppet 웹캠 얼굴 추적 |
 
@@ -184,6 +184,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 - **분리된 워커 풀** — 썸네일 폭주와 딥 줌 디코딩이 서로 다른 풀에서 동작하므로, 큰 폴더를 열어도 지금 보고 있는 이미지가 밀리지 않습니다
 - **가상화된 썸네일 그리드** — 화면에 보이는 타일만 렌더링; 썸네일 크기 설정 가능 (128 / 256 / 512 / 1024 / 자동)
 - **디스크 캐시** — MD5 기반 무효화를 사용하는 압축 PNG 썸네일, `%LOCALAPPDATA%/Imervue/cache/thumbnails` (또는 `~/.cache/imervue/thumbnails`)에 저장
+- **EXIF 방향** — 휴대폰이나 카메라가 회전하지 않고 태그만 붙인 세로 사진을 뷰어, 썸네일, 목록 보기, 호버 미리보기, Modify 탭에서 바로 세워 표시. 이전에 저장한 현상 자르기 / 회전은 만들어진 방향 그대로 적용됩니다
 - **애니메이션 재생** — GIF / APNG, 재생 / 일시정지 / 프레임 단위 / 속도 제어 지원
 
 ### 브라우징 모드
@@ -365,7 +366,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 암실 토닝 3종 — **닷지(Dodge)**(밝게), **번(Burn)**(어둡게), **스펀지(Sponge)**(채도 증가 / 감소) — 은 브러시와 그림자 / 미드톤 / 하이라이트 마스크로 가중치를 적용하여 로컬 톤 및 채도 조정을 칠합니다.
 
-단일 키 단축키: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; 도형 변형은 `Shift+R/E/I/P`.
+단일 키 단축키: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; 도형 변형은 `Shift+R/E/I/P`.
 
 ### 브러시
 
@@ -702,14 +703,17 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | 단축키 | 동작 |
 |----------|--------|
 | B / E / G / I | 브러시 / 지우개 / 채우기 / 스포이드 |
-| V / T / U / R | 이동 / 텍스트 / 그라데이션 / 사각형 선택 |
-| P / S / C / Z / H | 펜 / 스머지 / 클론 / 줌 / 핸드 |
+| V / T / U / R | 이동 / 텍스트 / 그라데이션 / 스머지 |
+| M / L / W | 사각형 선택 / 올가미 / 자동 선택 |
+| P / S / C / Z / H | 펜 / 클론 / 자르기 / 줌 / 핸드 |
 | Q | 퀵 마스크 모드 토글 |
 | Tab | 모든 도크 토글 |
 | Ctrl+Tab | Paint 탭 순환 |
 | , / . | 브러시 종류 순환 |
 | 0-9 | 브러시 불투명도 10% 단계 |
 | Alt+[ / Alt+] | 활성 레이어 아래 / 위로 이동 |
+| Ctrl+[ / Ctrl+] | 활성 레이어를 스택에서 아래 / 위로 옮기기 |
+| Ctrl+D | 선택 해제 |
 
 ---
 
@@ -768,7 +772,7 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 |------|---------|
 | `on_plugin_loaded()` | 플러그인 인스턴스화 후 |
 | `on_plugin_unloaded()` | 앱 종료 시 |
-| `on_build_menu_bar(menu_bar)` | 기본 메뉴 바가 빌드된 후 |
+| `on_build_menu_bar(plugin_menu)` | 공유 Plugins 메뉴가 빌드된 후 |
 | `on_build_main_tabs(tabs)` | 내장 5개 탭이 추가된 후 |
 | `on_build_context_menu(menu, viewer)` | 우클릭 메뉴 열릴 때 |
 | `on_image_loaded(path, viewer)` | 딥 줌에서 이미지 로드 후 |
@@ -809,7 +813,7 @@ python -m Imervue.mcp_server
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP 간 변환 (+ 선택적 HEIC / AVIF / JXL) |
 | `apply_watermark` / `apply_frame` | 텍스트 워터마크 또는 매트 / 폴라로이드 프레임 + 캡션 굽기 |
 | `build_collage` | 이미지를 그리드 몽타주로 합성 (진행률 포함) |
-| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전 |
+| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전. 크기와 좌표는 EXIF 방향을 적용한 이미지를 기준으로 합니다. |
 | `collection_stats` | 폴더 별점 / 즐겨찾기 / 컬러 라벨 / 컬링 요약 |
 | `search_images` | 스마트 앨범 쿼리 DSL로 폴더 필터링 (경로 / EXIF / 크기 / 해상도) |
 | `extract_gps` / `dominant_colors` | EXIF GPS 좌표 읽기(`reverse_geocode`로 연결); median-cut 색상 팔레트 (rgb / hex / 비율) |

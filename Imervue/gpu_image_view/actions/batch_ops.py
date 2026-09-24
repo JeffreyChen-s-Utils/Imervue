@@ -4,6 +4,7 @@ Batch operations — rename, move/copy, rotate for selected tiles.
 """
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,10 +15,15 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QGroupBox, QRadioButton,
 )
 
+from Imervue.image.orientation import upright
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+logger = logging.getLogger("Imervue.batch_ops")
 
 
 # ===========================
@@ -260,14 +266,16 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
     rotated: list[str] = []
     for path in paths:
         try:
-            img = Image.open(path)
+            # Rotate what is shown: the re-save drops the EXIF orientation.
+            img = upright(Image.open(path))
             img = img.rotate(-degrees, expand=True)
             img.save(path)
             count += 1
             # 清除快取
             main_gui.tile_cache.pop(path, None)
             rotated.append(path)
-        except Exception:
+        except IMAGE_READ_ERRORS:
+            logger.debug("Rotating %s failed", path, exc_info=True)
             failed += 1
     # Free the now-stale rotated textures under the GL context (with accounting).
     free_tile_textures(main_gui, rotated)
@@ -279,7 +287,9 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
         main_gui.load_tile_grid_async(main_gui.model.images)
 
     if hasattr(main_gui.main_window, "toast"):
-        msg = f"Rotated {count}/{count + failed} file(s)"
+        msg = language_wrapper.language_word_dict.get(
+            "batch_rotate_done", "Rotated {done}/{total} file(s)",
+        ).format(done=count, total=count + failed)
         if failed:
             main_gui.main_window.toast.info(msg)
         else:
@@ -291,7 +301,7 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
 # ===========================
 
 def open_batch_rename(main_gui: GPUImageView):
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths:
         return
     dlg = BatchRenameDialog(main_gui, paths)
@@ -299,7 +309,7 @@ def open_batch_rename(main_gui: GPUImageView):
 
 
 def open_batch_move(main_gui: GPUImageView):
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths:
         return
     dlg = BatchMoveDialog(main_gui, paths)

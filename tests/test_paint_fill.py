@@ -612,3 +612,17 @@ def test_fill_blank_layer_seed_fills_entire_layer():
     flood_fill(arr, 2, 2, (0, 128, 255), tolerance=0, contiguous=True)
     assert (arr[..., :3] == (0, 128, 255)).all()
     assert (arr[..., 3] == 255).all()
+
+
+def test_paint_mask_writes_opaque_colour_and_reports_the_box():
+    import numpy as np
+
+    from Imervue.paint.fill import FillResult, _paint_mask
+    canvas = np.zeros((6, 8, 4), dtype=np.uint8)
+    mask = np.zeros((6, 8), dtype=bool)
+    assert _paint_mask(canvas, mask, (1, 2, 3)) == FillResult(0, 0, 0, 0, 0)
+    assert not canvas.any()
+    mask[2:4, 3:7] = True
+    assert _paint_mask(canvas, mask, (10, 20, 30)) == FillResult(3, 2, 4, 2, 8)
+    assert (canvas[mask] == (10, 20, 30, 255)).all()
+    assert not canvas[~mask].any()

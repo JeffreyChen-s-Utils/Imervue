@@ -117,7 +117,7 @@ Optional (Feature-Gated; weglassen, um das Feature sauber zu deaktivieren):
 |---------|---------|
 | open_clip_torch + torch | CLIP-Semantiksuche (Bildabfragen in natürlicher Sprache) |
 | onnxruntime | Real-ESRGAN AI-Upscale / CLIP-ONNX-Auto-Tag |
-| opencv-python | HDR-Merge, Panorama-Stitch, Focus-Stacking, Gesichtserkennung, Healing-Brush |
+| opencv-python<5 | HDR-Merge, Panorama-Stitch, Focus-Stacking, Gesichtserkennung, Healing-Brush |
 | sounddevice | Puppet-Lip-Sync per Mikrofon |
 | mediapipe | Puppet-Webcam-Gesichtserkennung |
 
@@ -184,6 +184,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Getrennte Worker-Pools** — Thumbnail-Schübe und Deep-Zoom-Dekodierungen laufen in verschiedenen Pools, sodass das Öffnen eines großen Ordners nie das Bild aushungert, das du gerade ansiehst
 - **Virtualisiertes Thumbnail-Grid** — Nur sichtbare Tiles werden gerendert; Thumbnail-Größe konfigurierbar (128 / 256 / 512 / 1024 / auto)
 - **Festplatten-Cache** — Komprimierte PNG-Thumbnails mit MD5-basierter Invalidierung unter `%LOCALAPPDATA%/Imervue/cache/thumbnails` (oder `~/.cache/imervue/thumbnails`)
+- **EXIF-Ausrichtung** — Hochformatfotos, die Handy oder Kamera nur markiert statt gedreht haben, erscheinen aufrecht in Viewer, Thumbnails, Listenansicht, Hover-Vorschau und Modify-Tab; ein zuvor gespeicherter Develop-Zuschnitt / eine Drehung gilt weiter für die Ausrichtung, auf der er erstellt wurde
 - **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung
 
 ### Browse-Modi
@@ -365,7 +366,7 @@ Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · M
 
 Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Sättigen / Entsättigen) — malt lokale Tonwert- und Chroma-Anpassungen, gewichtet durch den Brush und eine Schatten- / Mitten- / Lichter-Maske.
 
-Einzelbuchstaben-Shortcuts: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
+Einzelbuchstaben-Shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
 
 ### Brushes
 
@@ -754,14 +755,17 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | Shortcut | Aktion |
 |----------|--------|
 | B / E / G / I | Brush / Eraser / Fill / Eyedropper |
-| V / T / U / R | Move / Text / Gradient / Rechteck-Auswahl |
-| P / S / C / Z / H | Pen / Smudge / Clone / Zoom / Hand |
+| V / T / U / R | Move / Text / Gradient / Smudge |
+| M / L / W | Rechteck-Auswahl / Lasso / Zauberstab |
+| P / S / C / Z / H | Pen / Clone / Zuschneiden / Zoom / Hand |
 | Q | Quick Mask Mode umschalten |
 | Tab | Alle Docks umschalten |
 | Ctrl+Tab | Paint-Tabs zyklieren |
 | , / . | Brush-Arten zyklieren |
 | 0-9 | Brush-Opazität in 10-%-Schritten |
 | Alt+[ / Alt+] | Aktiven Layer ab- / aufwärts schalten |
+| Ctrl+[ / Ctrl+] | Aktiven Layer im Stapel nach unten / oben verschieben |
+| Ctrl+D | Auswahl aufheben |
 
 ---
 
@@ -820,8 +824,8 @@ Imervue unterstützt Third-Party-Plugins. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 |------|---------|
 | `on_plugin_loaded()` | Nachdem das Plugin instanziiert wurde |
 | `on_plugin_unloaded()` | Beim App-Shutdown |
-| `on_build_menu_bar(menu_bar)` | Nachdem die Standard-Menüleiste gebaut wurde |
-| `on_build_main_tabs(tabs)` | Nachdem die vier eingebauten Tabs hinzugefügt wurden |
+| `on_build_menu_bar(plugin_menu)` | Nachdem das gemeinsame Plugins-Menü gebaut wurde |
+| `on_build_main_tabs(tabs)` | Nachdem die fünf eingebauten Tabs hinzugefügt wurden |
 | `on_build_context_menu(menu, viewer)` | Beim Öffnen des Rechtsklickmenüs |
 | `on_image_loaded(path, viewer)` | Nachdem ein Bild im Deep Zoom geladen wurde |
 | `on_folder_opened(path, images, viewer)` | Nachdem ein Ordner im Grid geöffnet wurde |
@@ -861,7 +865,7 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `convert_format` | Zwischen PNG / JPEG / WebP / TIFF / BMP konvertieren (+ optional HEIC / AVIF / JXL) |
 | `apply_watermark` / `apply_frame` | Ein Text-Wasserzeichen oder einen Passepartout- / Polaroid-Rahmen + Caption einbrennen |
 | `build_collage` | Bilder zu einer Grid-Montage komponieren (mit Fortschritt) |
-| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip. Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild. |
 | `collection_stats` | Ordner-Zusammenfassung von Rating / Favorit / Color-Label / Cull |
 | `search_images` | Einen Ordner mit der Smart-Album-Query-DSL filtern (Pfad / EXIF / Größe / Maße) |
 | `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / Anteil) |

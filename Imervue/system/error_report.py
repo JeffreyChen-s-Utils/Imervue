@@ -71,9 +71,41 @@ def _imervue_version() -> str:
         return "unknown"
 
 
+# A settings key, at any depth, whose name marks a credential: the desktop pet's
+# ``webhook_token``, ``obs_password`` and ``twitch_oauth`` live inside the nested
+# ``desktop_pet`` dict, where the top-level list above cannot reach them. Name
+# parts are matched whole, so ``token_rename_template`` is kept.
+_SECRET_PARTS = frozenset({"password", "passwd", "secret", "oauth", "credential", "credentials"})
+
+
+def is_credential_key(name: str) -> bool:
+    """True if a settings key's name marks a credential, judged by ``_``-separated parts."""
+    parts = str(name).lower().split("_")
+    return (bool(_SECRET_PARTS.intersection(parts)) or parts[-1] == "token"
+            or parts[-2:] in (["api", "key"], ["client", "id"]) or parts[-1] == "apikey")
+
+
+REDACTED = "<redacted>"
+
+
+def _redact(value):
+    """Copy *value*, masking every credential-named key at any depth."""
+    if isinstance(value, dict):
+        return {k: (REDACTED if value[k] and is_credential_key(k) else _redact(value[k]))
+                for k in value}
+    if isinstance(value, list):
+        return [_redact(item) for item in value]
+    return value
+
+
 def sanitise_settings(settings: dict) -> dict:
-    """Return a copy of ``settings`` with personal-data keys removed."""
-    return {k: v for k, v in settings.items() if k not in _SENSITIVE_KEYS}
+    """Return a copy of ``settings`` fit to leave the machine.
+
+    Personal-data keys (:data:`_SENSITIVE_KEYS`) are removed. Any key at any
+    depth whose name marks a credential keeps its name, so a maintainer can see
+    that it was set, but a non-empty value becomes :data:`REDACTED`.
+    """
+    return _redact({k: v for k, v in settings.items() if k not in _SENSITIVE_KEYS})
 
 
 def build_report(out_path: Path | str | None = None) -> Path:

@@ -55,3 +55,18 @@ class TestLosslessRotate:
         # After 90° CCW, top-left → bottom-left
         assert result[9, 0, 0] == 255
         assert result[0, 0, 0] == 0
+
+
+def test_pil_rotate_turns_a_tagged_image_from_what_is_shown(tmp_path):
+    """Rotating the stored pixels while the re-save dropped the tag cancelled out."""
+    from Imervue.gpu_image_view.actions.lossless_rotate import _rotate_via_pil
+    from Imervue.image.orientation import upright
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "tagged.png"
+    Image.fromarray(np.zeros((20, 40, 3), dtype=np.uint8)).save(path, exif=exif)
+    with Image.open(path) as before:
+        shown = upright(before).size            # (20, 40): portrait on screen
+    assert _rotate_via_pil(str(path), clockwise=True) is True
+    with Image.open(path) as after:
+        assert upright(after).size == (shown[1], shown[0])   # a real quarter turn

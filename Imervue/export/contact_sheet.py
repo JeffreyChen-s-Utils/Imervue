@@ -17,6 +17,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QMarginsF, QRect
 from PySide6.QtGui import QPdfWriter, QPainter, QImage, QPageSize, QPageLayout, QFont
 
+from Imervue.export.pdf_output import begin_pdf_painter
+
 logger = logging.getLogger("Imervue.export.contact_sheet")
 
 # Common paper sizes — mapped to QPageSize IDs.
@@ -128,7 +130,11 @@ def generate_contact_sheet(
     output_path: str | Path,
     opts: ContactSheetOptions | None = None,
 ) -> Path:
-    """Render ``images`` into a multi-page PDF contact sheet at ``output_path``."""
+    """Render ``images`` into a multi-page PDF contact sheet at ``output_path``.
+
+    Raises ``ValueError`` for no images or a non-positive grid, ``OSError`` if the
+    file cannot be written.
+    """
     if not images:
         raise ValueError("generate_contact_sheet requires at least one image")
     options = opts or ContactSheetOptions()
@@ -140,7 +146,7 @@ def generate_contact_sheet(
 
     writer = QPdfWriter(str(out))
     _configure_pdf(writer, options)
-    painter = QPainter(writer)
+    painter = begin_pdf_painter(writer, out)
     try:
         _render_pages(painter, writer, images, options)
     finally:

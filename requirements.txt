@@ -1,6 +1,6 @@
-PySide6==6.11.1
+PySide6==6.11.2
 qt-material
-Pillow
+Pillow>=12.3.0
 PyOpenGL
 numpy
 rawpy

@@ -40,8 +40,10 @@ from ai_object_remove.object_removal import (
     remove_object,
 )
 from ai_object_remove.sam import discover_sam_models, sam_mask
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
+from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -49,6 +51,9 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.ai_object_remove")
+
+# SAM and the ONNX inpaint path need onnxruntime; offered for install on first use.
+ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
 
 _MODELS_DIR = Path(__file__).resolve().parent / "models"
 _PREVIEW_W = 480
@@ -63,7 +68,7 @@ _OVERLAY_ALPHA = 0.55
 
 class AIObjectRemovePlugin(ImervuePlugin):
     plugin_name = "AI Object Remove"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     plugin_description = "Click an object to flood-select and inpaint it away."
     plugin_author = "Imervue"
 
@@ -227,8 +232,14 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
         if self._seed is not None and self._selection.currentData() != "sam":
             self._debounce.start(_PREVIEW_DEBOUNCE_MS)
 
-    def _run_sam(self, coord: tuple[int, int]) -> None:  # pragma: no cover - Qt UI
+    def _run_sam(self, coord: tuple[int, int]) -> None:
         if self._sam_worker is not None:
+            return
+        # SAM runs on onnxruntime; offer to install it before the first click.
+        ensure_dependencies(self, ONNX_PACKAGES, lambda: self._start_sam(coord))
+
+    def _start_sam(self, coord: tuple[int, int]) -> None:  # pragma: no cover - Qt UI
+        if self._sam_worker is not None or not self.isVisible():
             return
         self._sam_worker = _SamMaskWorker(
             self._arr, coord, self._sam_encoder, self._sam_decoder,
@@ -289,9 +300,18 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
 
     # -- apply --------------------------------------------------------------
 
-    def _commit(self) -> None:  # pragma: no cover - Qt UI
+    def _commit(self) -> None:
         if self._mask is None or not self._mask.any() or self._worker is not None:
             self._notify("object_remove_no_selection", "Click the object first")
+            return
+        if self._method.currentData():
+            # An ONNX inpaint model is selected; it needs onnxruntime.
+            ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
+            return
+        self._start_worker()
+
+    def _start_worker(self) -> None:  # pragma: no cover - Qt UI
+        if self._worker is not None or self._mask is None or not self.isVisible():
             return
         out_path = Path(self._path).with_name(f"{Path(self._path).stem}_edited.png")
         self._worker = _RemoveWorker(
@@ -396,13 +416,6 @@ class _SamMaskWorker(QThread):
             self.done.emit(False, str(exc))
             return
         self.done.emit(True, mask)
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 _TRANSLATIONS: dict[str, dict[str, str]] = {

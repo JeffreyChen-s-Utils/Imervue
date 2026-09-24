@@ -116,7 +116,7 @@ pip install .
 |---------|---------|
 | open_clip_torch + torch | CLIP 語意搜尋 |
 | onnxruntime | Real-ESRGAN AI 放大 / CLIP ONNX 自動標籤 |
-| opencv-python | HDR 合成、全景拼接、焦點堆疊、人臉偵測、修復筆刷 |
+| opencv-python<5 | HDR 合成、全景拼接、焦點堆疊、人臉偵測、修復筆刷 |
 | sounddevice | Puppet 麥克風對嘴 |
 | mediapipe | Puppet 攝影機臉部追蹤 |
 
@@ -183,6 +183,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - **獨立工作執行緒池** — 縮圖爆量與深度縮放解碼分屬不同池，開啟大資料夾時不會餓死你正在看的那張圖
 - **虛擬化縮圖網格** — 只渲染可見磁磚；縮圖尺寸可選（128 / 256 / 512 / 1024 / 自動）
 - **磁碟快取** — MD5 失效檢測的壓縮 PNG 縮圖，存於 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
+- **EXIF 方向** — 手機或相機只標註方向、沒有真的旋轉的直拍照片，在檢視器、縮圖、清單檢視、懸停預覽和 Modify 分頁都會轉正顯示；之前儲存的顯影裁切 / 旋轉仍套用在當初的方向上
 - **動畫播放** — GIF / APNG，含播放 / 暫停 / 逐格 / 速度控制
 
 ### 瀏覽模式
@@ -364,7 +365,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 暗房調色三件組 — **Dodge**（提亮）、**Burn**（加深）與 **Sponge**（加 / 減飽和度）— 在局部繪製色調與彩度調整，依筆刷與陰影 / 中間調 / 高光遮罩加權。
 
-單鍵快捷：`B / E / G / I / V / T / U / R / P / S / C / Z / H`；`Shift+R/E/I/P` 切形狀變體。
+單鍵快捷：`B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`；`Shift+R/E/I/P` 切形狀變體。
 
 ### 筆刷
 
@@ -703,14 +704,17 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | 快捷鍵 | 動作 |
 |----------|--------|
 | B / E / G / I | 筆刷 / 橡皮擦 / 填色 / 滴管 |
-| V / T / U / R | 移動 / 文字 / 漸層 / 矩形選取 |
-| P / S / C / Z / H | 鋼筆 / 塗抹 / 仿製 / 縮放 / 抓手 |
+| V / T / U / R | 移動 / 文字 / 漸層 / 塗抹 |
+| M / L / W | 矩形選取 / 套索 / 魔術棒 |
+| P / S / C / Z / H | 鋼筆 / 仿製 / 裁切 / 縮放 / 抓手 |
 | Q | 切換快速遮罩模式 |
 | Tab | 切換所有擺放欄 |
 | Ctrl+Tab | 循環 Paint 分頁 |
 | , / . | 循環筆刷種類 |
 | 0-9 | 筆刷不透明度 10% 步進 |
 | Alt+[ / Alt+] | 下 / 上切換作用圖層 |
+| Ctrl+[ / Ctrl+] | 在堆疊中下移 / 上移作用圖層 |
+| Ctrl+D | 取消選取 |
 
 ---
 
@@ -769,7 +773,7 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 |------|---------|
 | `on_plugin_loaded()` | 外掛實例化後 |
 | `on_plugin_unloaded()` | App 關閉時 |
-| `on_build_menu_bar(menu_bar)` | 預設選單列建好後 |
+| `on_build_menu_bar(plugin_menu)` | 共用的 Plugins 選單建好後 |
 | `on_build_main_tabs(tabs)` | 內建 5 個分頁加完之後 |
 | `on_build_context_menu(menu, viewer)` | 右鍵選單開啟時 |
 | `on_image_loaded(path, viewer)` | 影像在深度縮放載入後 |
@@ -809,7 +813,7 @@ python -m Imervue.mcp_server
 | `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP（+ 選用 HEIC / AVIF / JXL） |
 | `apply_watermark` / `apply_frame` | 燒入文字浮水印，或加 matte / 拍立得相框 + 說明文字 |
 | `build_collage` | 把多張圖片合成成網格拼貼（含進度） |
-| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保留長寬比縮放、無損旋轉 / 翻轉 |
+| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保留長寬比縮放、無損旋轉 / 翻轉。尺寸與座標以依 EXIF 方向轉正後的影像為準。 |
 | `collection_stats` | 資料夾的評等 / 收藏 / 色標 / 挑片彙整 |
 | `search_images` | 以 smart-album 查詢 DSL 篩選資料夾（路徑 / EXIF / 大小 / 尺寸） |
 | `extract_gps` / `dominant_colors` | 讀取 EXIF GPS 座標（可接 `reverse_geocode`）；median-cut 調色盤（rgb / hex / 占比） |

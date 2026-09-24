@@ -14,11 +14,13 @@ stateful glue between those helpers and the live view.
 
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 
+from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.qt_timers import call_later
+from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.actions.select import (
     select_tiles_in_rect,
     switch_to_next_image,
@@ -112,12 +114,10 @@ class InputController:
         view._zoom_limit_shown = True
         if hasattr(view.main_window, "toast"):
             limit = "5000%" if new_zoom >= ZOOM_MAX else "5%"
-            view.main_window.toast.info(f"Zoom limit: {limit}")
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(
-            _ZOOM_LIMIT_REARM_MS,
-            lambda: setattr(view, "_zoom_limit_shown", False),
-        )
+            lang = language_wrapper.language_word_dict
+            view.main_window.toast.info(
+                lang.get("zoom_limit_toast", "Zoom limit: {limit}").format(limit=limit))
+        call_later(_ZOOM_LIMIT_REARM_MS, view, lambda: setattr(view, "_zoom_limit_shown", False))
 
     def toggle_zoom_at(self, pos) -> None:
         """Toggle between fit-to-window and 100%.
@@ -166,8 +166,8 @@ class InputController:
         # band), not the full canvas, so the target doesn't land ~band/2 low.
         content_w, content_h = content_size(view)
         view.dz_offset_x, view.dz_offset_y = recenter_offsets(
-            pos.x(), pos.y(), rect, base.shape[1], base.shape[0],
-            content_w, content_h, zoom,
+            (pos.x(), pos.y()), rect, (base.shape[1], base.shape[0]),
+            (content_w, content_h), zoom,
         )
         view._browse.clamp_pan()
         view._user_locked_view = True
@@ -408,7 +408,7 @@ class InputController:
         center = pinch.centerPoint()
         cx = center.x() if center is not None else view.width() / 2
         cy = center.y() if center is not None else view.height() / 2
-        with contextlib.suppress(Exception):
+        with best_effort("map the gesture centre to the view"):
             local = view.mapFromGlobal(center.toPoint())
             cx, cy = local.x(), local.y()
         return cx, cy

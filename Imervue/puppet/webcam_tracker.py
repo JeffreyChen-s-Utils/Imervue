@@ -259,6 +259,17 @@ _FACE_LANDMARKER_MODEL_URL: str = (
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/"
     "face_landmarker/float16/1/face_landmarker.task"
 )
+# SHA-256 of that file (3,758,596 bytes, unchanged on the server since
+# 2023-05-03; its MD5 matches the bucket's ETag). A download or a cached copy
+# that does not match is never handed to MediaPipe.
+_FACE_LANDMARKER_SHA256: str = (
+    "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+)
+
+
+def _sha256_of(data: bytes) -> str:
+    import hashlib
+    return hashlib.sha256(data).hexdigest()
 
 
 class _WebcamSetupError(RuntimeError):
@@ -289,25 +300,43 @@ def _https_urlopen(url: str):   # noqa: ANN201 - urllib return type
 
 
 def _face_landmarker_model_path():
-    """Return the on-disk path to ``face_landmarker.task``. Downloads
-    on first use; returns the path even on download failure so the
-    caller can raise a clean ``_WebcamSetupError`` with the failure
-    reason rather than a deep ``urllib`` traceback."""
+    """Return the on-disk path to a verified ``face_landmarker.task``.
+
+    A cached copy is used only if its SHA-256 matches
+    :data:`_FACE_LANDMARKER_SHA256`; otherwise the model is downloaded, checked
+    against the same hash, and written through a ``.part`` file so a failed
+    write never leaves a truncated model behind. Any failure raises
+    :class:`_WebcamSetupError` with a readable reason rather than a deep
+    ``urllib`` traceback.
+    """
+    import os
+
     from Imervue.system.app_paths import app_dir
 
     target = app_dir() / "models" / "face_landmarker.task"
-    if target.is_file() and target.stat().st_size > 0:
-        return target
+    if target.is_file():
+        if _sha256_of(target.read_bytes()) == _FACE_LANDMARKER_SHA256:
+            return target
+        logger.warning("cached %s does not match its checksum; downloading again", target)
     target.parent.mkdir(parents=True, exist_ok=True)
     logger.info("downloading face_landmarker.task to %s", target)
     try:
         with _https_urlopen(_FACE_LANDMARKER_MODEL_URL) as resp:
             data = resp.read()
-        target.write_bytes(data)
     except OSError as exc:
         raise _WebcamSetupError(
             f"failed to download face_landmarker.task: {exc}",
         ) from exc
+    if _sha256_of(data) != _FACE_LANDMARKER_SHA256:
+        raise _WebcamSetupError(
+            "downloaded face_landmarker.task does not match its checksum; not using it",
+        )
+    partial = target.with_name(target.name + ".part")
+    try:
+        partial.write_bytes(data)
+        os.replace(partial, target)
+    except OSError as exc:
+        raise _WebcamSetupError(f"failed to save face_landmarker.task: {exc}") from exc
     return target
 
 

@@ -14,6 +14,8 @@ import logging
 import os
 import secrets
 import string
+from collections.abc import Callable
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -28,16 +30,17 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QProgressBar,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
 )
 
+from Imervue.image.orientation import upright
+from Imervue.gui.dialog_rows import folder_picker_row
+from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -123,33 +126,10 @@ def _scandir_images(folder: str) -> list[str]:
 # Core sanitize logic (pure, testable)
 # ---------------------------------------------------------------------------
 
-_EXIF_TAG_DATETIME_ORIGINAL = 36867
-_EXIF_TAG_DATETIME = 306
-_EXIF_DATE_FORMATS = ("%Y:%m:%d %H:%M:%S", "%Y-%m-%d %H:%M:%S")
-
-
-def _parse_exif_date(val: str) -> datetime | None:
-    for fmt in _EXIF_DATE_FORMATS:
-        try:
-            return datetime.strptime(val, fmt)
-        except (ValueError, TypeError):
-            continue
-    return None
-
-
 def _get_image_date(path: str) -> datetime:
-    """Extract the best date for an image: EXIF DateTimeOriginal > file mtime."""
-    with contextlib.suppress(Exception):
-        exif = Image.open(path).getexif()
-        for tag in (_EXIF_TAG_DATETIME_ORIGINAL, _EXIF_TAG_DATETIME):
-            val = exif.get(tag)
-            parsed = _parse_exif_date(val) if val else None
-            if parsed is not None:
-                return parsed
-    try:
-        return datetime.fromtimestamp(os.path.getmtime(path))
-    except OSError:
-        return datetime.now()
+    """Extract the best date for an image: EXIF capture time > file mtime > now."""
+    taken = capture_datetime(path)
+    return datetime.now() if taken == UNKNOWN_DATETIME else taken
 
 
 def _generate_name(dt: datetime, rand_len: int, ext: str) -> str:
@@ -226,20 +206,34 @@ def _ai_upscale(clean: Image.Image, final_w: int, final_h: int,
     return upscaled.resize((final_w, final_h), Image.Resampling.LANCZOS)
 
 
-def _maybe_upscale(clean: Image.Image, target_long_edge: int,
-                   trad_resampling, ort_session, ort_scale: int,
-                   tile_progress_cb) -> Image.Image:
-    if target_long_edge <= 0:
+@dataclass(frozen=True)
+class UpscaleSpec:
+    """How :func:`sanitize_image` enlarges an image smaller than ``target_long_edge``.
+
+    ``target_long_edge`` 0 means never upscale. ``trad_resampling`` (a PIL
+    ``Resampling``) wins over the ONNX path (``ort_session`` at ``ort_scale``,
+    reporting tiles to ``tile_progress_cb``); with neither the image is kept.
+    """
+
+    target_long_edge: int = 0
+    trad_resampling: Image.Resampling | None = None
+    ort_session: object = None
+    ort_scale: int = 0
+    tile_progress_cb: Callable[[int, int], None] | None = None
+
+
+def _maybe_upscale(clean: Image.Image, spec: UpscaleSpec) -> Image.Image:
+    if spec.target_long_edge <= 0:
         return clean
     w, h = clean.size
-    if max(w, h) >= target_long_edge:
+    if max(w, h) >= spec.target_long_edge:
         return clean
-    final_w, final_h = _final_dims(w, h, target_long_edge)
-    if trad_resampling is not None:
-        return clean.resize((final_w, final_h), trad_resampling)
-    if ort_session is not None and ort_scale > 0:
-        return _ai_upscale(clean, final_w, final_h, ort_session, ort_scale,
-                           tile_progress_cb)
+    final_w, final_h = _final_dims(w, h, spec.target_long_edge)
+    if spec.trad_resampling is not None:
+        return clean.resize((final_w, final_h), spec.trad_resampling)
+    if spec.ort_session is not None and spec.ort_scale > 0:
+        return _ai_upscale(clean, final_w, final_h, spec.ort_session, spec.ort_scale,
+                           spec.tile_progress_cb)
     return clean
 
 
@@ -262,24 +256,20 @@ def _save_kwargs_for(fmt: str, jpeg_quality: int,
     return kwargs
 
 
-def sanitize_image(path: str, output_dir: str, output_ext: str,
+def sanitize_image(path: str, output_dir: str, output_ext: str, *,
                    rand_len: int = 8, jpeg_quality: int = 95,
                    png_compress: int = 6,
-                   target_long_edge: int = 0,
-                   ort_session=None,
-                   ort_scale: int = 0,
-                   tile_progress_cb=None,
-                   trad_resampling=None) -> str:
+                   upscale: UpscaleSpec | None = None) -> str:
     """Re-render an image from raw pixels, removing ALL hidden data.
 
-    If *target_long_edge* > 0 and the image is smaller, it is upscaled
-    using either *trad_resampling* (a PIL Resampling enum) or the
-    provided *ort_session* (ONNX Real-ESRGAN), then resized to exactly
-    fit the target while keeping aspect ratio.
+    With an *upscale* whose ``target_long_edge`` is above the image's long
+    edge, the image is enlarged with its traditional resampling or its ONNX
+    (Real-ESRGAN) session, then resized to exactly fit the target while
+    keeping aspect ratio (see :class:`UpscaleSpec`).
 
     Returns the output path on success. Raises on failure.
     """
-    img = Image.open(path)
+    img = upright(Image.open(path))   # the EXIF (and its orientation) is dropped below
     ext, fmt = _resolve_output_ext(path, output_ext)
 
     # Re-create image from raw bytes — no metadata survives, no list copy
@@ -289,8 +279,7 @@ def sanitize_image(path: str, output_dir: str, output_ext: str,
     if fmt == _FMT_JPEG and clean.mode != _MODE_RGB:
         clean = clean.convert(_MODE_RGB)
 
-    clean = _maybe_upscale(clean, target_long_edge, trad_resampling,
-                           ort_session, ort_scale, tile_progress_cb)
+    clean = _maybe_upscale(clean, upscale or UpscaleSpec())
 
     # Disrupt LSB steganography (e.g. NovelAI stealth pnginfo embeds
     # prompt/seed/parameters in the least-significant bit of RGB/alpha
@@ -357,25 +346,29 @@ def _scramble_lsb(img: Image.Image) -> Image.Image:
 # Worker thread
 # ---------------------------------------------------------------------------
 
+@dataclass(frozen=True)
+class SanitizeSettings:
+    """Output format, file naming, encoder quality and optional upscale for a batch."""
+
+    output_ext: str
+    rand_len: int = 8
+    jpeg_quality: int = 95
+    png_compress: int = 6
+    target_long_edge: int = 0
+    model_key: str = ""
+
+
 class _SanitizeWorker(QThread):
     progress = Signal(int, int, str)     # current, total, filename
     tile_progress = Signal(int, int)     # tile_done, tile_total
     result_ready = Signal(int, int)      # success, failed
 
-    def __init__(self, paths: list[str], output_dir: str, output_ext: str,
-                 rand_len: int, jpeg_quality: int, png_compress: int,
-                 target_long_edge: int = 0, model_key: str = "",
-                 src_root: str | None = None,
-                 parent=None):
+    def __init__(self, paths: list[str], output_dir: str, settings: SanitizeSettings, *,
+                 src_root: str | None = None, parent=None):
         super().__init__(parent)
         self._paths = paths
         self._output_dir = output_dir
-        self._output_ext = output_ext
-        self._rand_len = rand_len
-        self._jpeg_quality = jpeg_quality
-        self._png_compress = png_compress
-        self._target_long_edge = target_long_edge
-        self._model_key = model_key
+        self._settings = settings
         self._src_root = src_root
         self._abort = False
 
@@ -409,15 +402,15 @@ class _SanitizeWorker(QThread):
         self.result_ready.emit(success, failed)
 
     def _prepare_upscale(self, total: int):
-        if self._target_long_edge <= 0 or not self._model_key:
+        if self._settings.target_long_edge <= 0 or not self._settings.model_key:
             return None, None, 0
-        if self._model_key.startswith("trad:"):
+        if self._settings.model_key.startswith("trad:"):
             return self._resolve_trad_resampling(), None, 0
         return None, *self._load_ai_session(total)
 
     def _resolve_trad_resampling(self):
         from Imervue.gui.ai_upscale_dialog import _TRAD_RESAMPLING
-        resampling_name = _TRAD_RESAMPLING.get(self._model_key)
+        resampling_name = _TRAD_RESAMPLING.get(self._settings.model_key)
         if not resampling_name:
             return None
         return getattr(Image.Resampling, resampling_name)
@@ -429,13 +422,13 @@ class _SanitizeWorker(QThread):
             )
             import onnxruntime as ort
             self.progress.emit(0, total, "Downloading AI model...")
-            model_path = _download_model(self._model_key)
+            model_path = _download_model(self._settings.model_key)
             self.progress.emit(0, total, "Loading AI model...")
             providers = self._preferred_ort_providers(ort)
             session = ort.InferenceSession(model_path, providers=providers)
-            scale = UPSCALE_MODELS[self._model_key]["scale"]
+            scale = UPSCALE_MODELS[self._settings.model_key]["scale"]
             return session, scale
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("Failed to load AI upscale model")
             return None, 0
 
@@ -459,16 +452,20 @@ class _SanitizeWorker(QThread):
             self.progress.emit(i + 1, total, os.path.basename(path))
             try:
                 sanitize_image(
-                    path, self._target_dir_for(path), self._output_ext,
-                    self._rand_len, self._jpeg_quality, self._png_compress,
-                    target_long_edge=self._target_long_edge,
-                    ort_session=session,
-                    ort_scale=scale,
-                    tile_progress_cb=self.tile_progress.emit if session else None,
-                    trad_resampling=trad_resampling,
+                    path, self._target_dir_for(path), self._settings.output_ext,
+                    rand_len=self._settings.rand_len,
+                    jpeg_quality=self._settings.jpeg_quality,
+                    png_compress=self._settings.png_compress,
+                    upscale=UpscaleSpec(
+                        target_long_edge=self._settings.target_long_edge,
+                        trad_resampling=trad_resampling,
+                        ort_session=session,
+                        ort_scale=scale,
+                        tile_progress_cb=self.tile_progress.emit if session else None,
+                    ),
                 )
                 success += 1
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("Failed to sanitize %s", path)
                 failed += 1
         return success, failed
@@ -508,32 +505,62 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
 
         layout.addSpacing(4)
 
-        # Source folder
-        src_row = QHBoxLayout()
-        src_row.addWidget(QLabel(lang.get("sanitize_source", "Source folder:")))
-        self._src_edit = QLineEdit()
-        src_row.addWidget(self._src_edit, 1)
-        browse_src = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_src.clicked.connect(self._browse_src)
-        src_row.addWidget(browse_src)
+        src_row, self._src_edit = folder_picker_row(
+            lang.get("sanitize_source", "Source folder:"), self._browse_src)
         layout.addLayout(src_row)
 
-        # Recursive
         self._recursive_check = QCheckBox(
             lang.get("duplicate_recursive", "Include subfolders"))
         layout.addWidget(self._recursive_check)
 
-        # Output folder
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("organizer_output", "Output folder:")))
-        self._out_edit = QLineEdit()
-        out_row.addWidget(self._out_edit, 1)
-        browse_out = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_out.clicked.connect(self._browse_out)
-        out_row.addWidget(browse_out)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("organizer_output", "Output folder:"), self._browse_out)
         layout.addLayout(out_row)
 
-        # Output format
+        layout.addLayout(self._build_format_row())
+
+        rand_row, self._rand_spin = self._spin_row(
+            lang.get("sanitize_rand_len", "Random string length:"), 4, 32, 8)
+        layout.addLayout(rand_row)
+
+        quality_row, self._quality_spin = self._spin_row(
+            lang.get("sanitize_jpeg_quality", "JPEG quality:"), 1, 100, 95)
+        layout.addLayout(quality_row)
+
+        layout.addWidget(self._build_upscale_group())
+
+        # Progress
+        self._progress = QProgressBar()
+        self._progress.hide()
+        layout.addWidget(self._progress)
+
+        self._tile_progress = QProgressBar()
+        self._tile_progress.setFormat("Tile: %v / %m  (%p%)")
+        self._tile_progress.hide()
+        layout.addWidget(self._tile_progress)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+        layout.addStretch()
+        layout.addLayout(self._build_button_row())
+
+    @staticmethod
+    def _spin_row(label: str, minimum: int, maximum: int,
+                  value: int) -> tuple[QHBoxLayout, QSpinBox]:
+        """Label and a left-aligned spin box with the given range and start value."""
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label))
+        spin = QSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setValue(value)
+        row.addWidget(spin)
+        row.addStretch()
+        return row, spin
+
+    def _build_format_row(self) -> QHBoxLayout:
+        """Output-format combo: "same as source" followed by the fixed formats."""
+        lang = self._lang
         fmt_row = QHBoxLayout()
         fmt_row.addWidget(QLabel(
             lang.get("sanitize_output_format", "Output format:")))
@@ -546,31 +573,11 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         self._fmt_combo.addItem("BMP (.bmp)", _EXT_BMP)
         self._fmt_combo.addItem("TIFF (.tiff)", _EXT_TIFF)
         fmt_row.addWidget(self._fmt_combo, 1)
-        layout.addLayout(fmt_row)
+        return fmt_row
 
-        # Random string length
-        rand_row = QHBoxLayout()
-        rand_row.addWidget(QLabel(
-            lang.get("sanitize_rand_len", "Random string length:")))
-        self._rand_spin = QSpinBox()
-        self._rand_spin.setRange(4, 32)
-        self._rand_spin.setValue(8)
-        rand_row.addWidget(self._rand_spin)
-        rand_row.addStretch()
-        layout.addLayout(rand_row)
-
-        # JPEG quality
-        quality_row = QHBoxLayout()
-        quality_row.addWidget(QLabel(
-            lang.get("sanitize_jpeg_quality", "JPEG quality:")))
-        self._quality_spin = QSpinBox()
-        self._quality_spin.setRange(1, 100)
-        self._quality_spin.setValue(95)
-        quality_row.addWidget(self._quality_spin)
-        quality_row.addStretch()
-        layout.addLayout(quality_row)
-
-        # --- AI Upscale group ---
+    def _build_upscale_group(self) -> QGroupBox:
+        """Target-resolution and model combos with the hint that tracks them."""
+        lang = self._lang
         upscale_group = QGroupBox(
             lang.get("sanitize_upscale_group", "Upscale (optional)"))
         upscale_layout = QVBoxLayout(upscale_group)
@@ -598,17 +605,8 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         model_row.addWidget(QLabel(
             lang.get("upscale_model", "Model:")))
         self._model_combo = QComboBox()
-        from Imervue.gui.ai_upscale_dialog import (
-            UPSCALE_MODELS, TRADITIONAL_METHODS,
-        )
-        # Traditional methods first (no dependencies needed)
-        for mkey, minfo in TRADITIONAL_METHODS.items():
-            label = lang.get(minfo["desc_key"], minfo["desc_default"])
-            self._model_combo.addItem(label, mkey)
-        # AI models
-        for mkey, minfo in UPSCALE_MODELS.items():
-            label = lang.get(minfo["desc_key"], minfo["desc_default"])
-            self._model_combo.addItem(label, mkey)
+        from Imervue.gui.ai_upscale_dialog import fill_upscale_model_combo
+        fill_upscale_model_combo(self._model_combo, lang)
         model_row.addWidget(self._model_combo, 1)
         upscale_layout.addLayout(model_row)
 
@@ -618,34 +616,19 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         upscale_layout.addWidget(self._model_hint)
         self._res_combo.currentIndexChanged.connect(self._on_res_changed)
         self._on_res_changed()
+        return upscale_group
 
-        layout.addWidget(upscale_group)
-
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.hide()
-        layout.addWidget(self._progress)
-
-        self._tile_progress = QProgressBar()
-        self._tile_progress.setFormat("Tile: %v / %m  (%p%)")
-        self._tile_progress.hide()
-        layout.addWidget(self._tile_progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        layout.addStretch()
-
-        # Buttons
+    def _build_button_row(self) -> QHBoxLayout:
+        """Start on the left, Close on the right."""
         btn_row = QHBoxLayout()
-        self._start_btn = QPushButton(lang.get("organizer_start", "Start"))
+        self._start_btn = QPushButton(self._lang.get("organizer_start", "Start"))
         self._start_btn.clicked.connect(self._do_start)
         btn_row.addWidget(self._start_btn)
         btn_row.addStretch()
-        close_btn = QPushButton(lang.get("export_cancel", "Close"))
+        close_btn = QPushButton(self._lang.get("export_cancel", "Close"))
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
-        layout.addLayout(btn_row)
+        return btn_row
 
     # --- Resolution hint ---
 
@@ -706,6 +689,8 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
         # recursive scanning was used.
         src_root = src if recursive else None
 
+        settings = SanitizeSettings(output_ext, rand_len=rand_len, jpeg_quality=jpeg_quality,
+                                    target_long_edge=target_long_edge, model_key=model_key)
         # If upscale requested with AI model, install deps first
         is_traditional = model_key.startswith("trad:")
         if target_long_edge > 0 and not is_traditional:
@@ -721,31 +706,26 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
             try:
                 ensure_dependencies(
                     self._gui.main_window, REQUIRED_PACKAGES,
-                    lambda: self._launch_worker(
-                        paths, out, output_ext, rand_len, jpeg_quality,
-                        target_long_edge, model_key, src_root))
+                    lambda: self._launch_worker(paths, out, settings, src_root=src_root))
             except Exception:
                 logger.exception("ensure_dependencies failed")
                 self._start_btn.setEnabled(True)
             return
 
-        self._launch_worker(paths, out, output_ext, rand_len, jpeg_quality,
-                            target_long_edge if is_traditional else 0,
-                            model_key if is_traditional else "",
-                            src_root)
+        if not is_traditional:   # no upscale requested (target 0): drop the model choice
+            settings = replace(settings, target_long_edge=0, model_key="")
+        self._launch_worker(paths, out, settings, src_root=src_root)
 
-    def _launch_worker(self, paths, out, output_ext, rand_len, jpeg_quality,
-                       target_long_edge, model_key, src_root=None):
+    def _launch_worker(self, paths: list[str], out: str, settings: SanitizeSettings, *,
+                       src_root: str | None = None) -> None:
         self._start_btn.setEnabled(False)
         self._progress.setValue(0)
         self._progress.show()
-        if target_long_edge > 0:
+        if settings.target_long_edge > 0:
             self._tile_progress.setValue(0)
             self._tile_progress.show()
 
-        self._worker = _SanitizeWorker(
-            paths, out, output_ext, rand_len, jpeg_quality, 6,
-            target_long_edge, model_key, src_root, self)
+        self._worker = _SanitizeWorker(paths, out, settings, src_root=src_root, parent=self)
         self._worker.progress.connect(self._on_progress)
         self._worker.tile_progress.connect(self._on_tile_progress)
         self._worker.result_ready.connect(self._on_result)

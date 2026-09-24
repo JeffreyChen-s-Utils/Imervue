@@ -38,15 +38,14 @@ def polar_distort(arr: np.ndarray, to_polar: bool = True, invert: bool = False) 
     yy, xx = np.mgrid[0:height, 0:width].astype(np.float64)
     cx, cy = (width - 1) / 2.0, (height - 1) / 2.0
     max_radius = max(1.0, min(cx, cy))
-    if to_polar:
-        sx, sy = _to_polar_coords(xx, yy, cx, cy, max_radius, width, height, invert)
-    else:
-        sx, sy = _from_polar_coords(xx, yy, cx, cy, max_radius, width, height, invert)
+    mapping = _to_polar_coords if to_polar else _from_polar_coords
+    sx, sy = mapping((xx, yy), (cx, cy), max_radius, (width, height), invert)
     return sample_bilinear(rgba, sx, sy)
 
 
-def _to_polar_coords(xx, yy, cx, cy, max_radius, width, height, invert):
+def _to_polar_coords(grid, centre, max_radius, size, invert):
     """Disc output -> rectangular source: angle picks the column, radius the row."""
+    (xx, yy), (cx, cy), (width, height) = grid, centre, size
     angle = np.arctan2(yy - cy, xx - cx)
     radius = np.hypot(xx - cx, yy - cy) / max_radius
     src_x = (angle + np.pi) / _TWO_PI * (width - 1)
@@ -54,8 +53,9 @@ def _to_polar_coords(xx, yy, cx, cy, max_radius, width, height, invert):
     return src_x, radial * (height - 1)
 
 
-def _from_polar_coords(xx, yy, cx, cy, max_radius, width, height, invert):
+def _from_polar_coords(grid, centre, max_radius, size, invert):
     """Rectangular output -> disc source: column is the angle, row the radius."""
+    (xx, yy), (cx, cy), (width, height) = grid, centre, size
     angle = xx / (width - 1) * _TWO_PI - np.pi
     radial = yy / (height - 1)
     radial = 1.0 - radial if invert else radial

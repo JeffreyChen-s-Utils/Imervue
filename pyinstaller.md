@@ -107,7 +107,7 @@ pyinstaller ^
   --paths .venv ^
   --collect-all imageio ^
   --collect-all rawpy ^
-  --collect-submodules PySide6 ^
+  --collect-submodules Imervue --collect-submodules PySide6 ^
   --collect-data qt_material ^
   --add-data "Imervue\multi_language;Imervue\multi_language" ^
   --add-data "plugins;plugins" ^
@@ -129,7 +129,7 @@ pyinstaller `
   --paths .venv `
   --collect-all imageio `
   --collect-all rawpy `
-  --collect-submodules PySide6 `
+  --collect-submodules Imervue --collect-submodules PySide6 `
   --collect-data qt_material `
   --add-data "Imervue\multi_language;Imervue\multi_language" `
   --add-data "plugins;plugins" `
@@ -143,7 +143,7 @@ pyinstaller `
 **一行版**（任何 shell 都能用）：
 
 ```
-pyinstaller --noconfirm --windowed --name Imervue --icon exe\Imervue.ico --paths .venv --collect-all imageio --collect-all rawpy --collect-submodules PySide6 --collect-data qt_material --add-data "Imervue\multi_language;Imervue\multi_language" --add-data "plugins;plugins" --add-data "examples;examples" --add-data "exe;exe" --add-data "THIRD_PARTY_LICENSES.md;." --add-data "LICENSE;." Imervue\__main__.py
+pyinstaller --noconfirm --windowed --name Imervue --icon exe\Imervue.ico --paths .venv --collect-all imageio --collect-all rawpy --collect-submodules Imervue --collect-submodules PySide6 --collect-data qt_material --add-data "Imervue\multi_language;Imervue\multi_language" --add-data "plugins;plugins" --add-data "examples;examples" --add-data "exe;exe" --add-data "THIRD_PARTY_LICENSES.md;." --add-data "LICENSE;." Imervue\__main__.py
 ```
 
 產物：`dist\Imervue\Imervue.exe`。
@@ -159,7 +159,7 @@ pyinstaller \
   --paths .venv \
   --collect-all imageio \
   --collect-all rawpy \
-  --collect-submodules PySide6 \
+  --collect-submodules Imervue --collect-submodules PySide6 \
   --collect-data qt_material \
   --add-data "Imervue/multi_language:Imervue/multi_language" \
   --add-data "plugins:plugins" \
@@ -196,7 +196,7 @@ pyinstaller \
   --paths .venv \
   --collect-all imageio \
   --collect-all rawpy \
-  --collect-submodules PySide6 \
+  --collect-submodules Imervue --collect-submodules PySide6 \
   --collect-data qt_material \
   --add-data "Imervue/multi_language:Imervue/multi_language" \
   --add-data "plugins:plugins" \
@@ -243,6 +243,7 @@ xcrun stapler staple dist/Imervue.app
 - `--paths .venv`：確保虛擬環境中的套件可被搜尋到。
 - `--collect-all imageio`、`--collect-all rawpy`：這兩個套件內含動態載入的 plugin / 原生函式庫，必須整包收集。
 - `--collect-submodules PySide6`：避免少數 Qt 子模組漏掉。
+- `--collect-submodules Imervue`：**必要**。plugin 是執行期從 `<app_dir>/plugins` 載入的，靜態分析看不到它們 `from Imervue.plugin.model_dir import ...` 之類的 import，只跟著主程式走的話那些模組不會進產物，plugin 就會以 `ModuleNotFoundError` 載入失敗（Nuitka 那邊實測掛掉 17 個裡的 10 個，見 `nuitka.md` §2.4）。
 - `--collect-data qt_material`：qt-material 的 QSS / 資源。
 - `--add-data`：語言檔、`plugins/`（外部 plugin 目錄）、`examples/`（內附 `examples/puppet/march_7th.puppet` 示範 rig 讓使用者第一次點 Puppet 分頁的「Open Puppet…」就有東西可開）。**Windows 用 `;`，Linux / macOS 用 `:`** 分隔來源與目的。**注意**：Puppet 從 plugin 升格為內建分頁（`Imervue/puppet/`），會跟其他 `Imervue.*` 子套件一起被 PyInstaller 的靜態分析自動帶進來，不需要任何 `--add-data` 或 `--collect-all=Imervue.puppet`。
 - **Cubism Native SDK DLL 永遠不打包**：Live2D 的 Free Material License 禁止散佈 SDK 二進位。`Imervue/puppet/cubism_native_bridge.py` 執行期會探測 `<cwd>/sdk/` 與 `CUBISM_CORE_DLL` 環境變數，使用者自備 DLL；找不到時 `.moc3 → .puppet` 的轉換功能會優雅停用，但已轉好的 `.puppet` rig 還是能正常播放。
@@ -274,6 +275,7 @@ auto-py-to-exe 只支援 Windows；Linux / macOS 請直接用命令列或 `.spec
 | 讀 RAW 檔（CR2/NEF/ARW）失敗 | 全平台 | 加 `--collect-all rawpy` |
 | GIF / WEBP 無法播放 | 全平台 | 加 `--collect-all imageio` |
 | plugin 不見 | 全平台 | `--add-data plugins` 分隔符寫錯（Windows `;` vs Unix `:`） |
+| plugin 載入時 `ModuleNotFoundError: Imervue.plugin.model_dir` 之類 | 全平台 | 少了 `--collect-submodules Imervue`（spec 裡是 `hiddenimports += collect_submodules('Imervue')`）。plugin 是執行期從磁碟載入的，靜態分析看不到它們 import 的 `Imervue.*` 模組；Nuitka 那邊對應的是 `--include-package=Imervue`（`nuitka.md` §2.4） |
 | CJK 字串顯示成問號 | Windows | 用 `--windowed`，並確保 `PYTHONIOENCODING=utf-8` |
 | 遞迴深度錯誤 | 全平台 | 在 `.spec` 裡加 `import sys; sys.setrecursionlimit(5000)` |
 | 啟動時 `libGL.so.1 not found` | Linux | 裝 `libgl1`（§1.2 的 apt 列表） |

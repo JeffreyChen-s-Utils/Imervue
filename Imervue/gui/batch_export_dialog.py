@@ -5,21 +5,23 @@ Batch export — convert, resize, and compress multiple images at once.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
     QSlider, QPushButton, QFileDialog, QLineEdit, QSpinBox,
     QProgressBar, QGroupBox,
 )
-import numpy as np
 from PIL import Image
 
+from Imervue.system.qt_timers import call_later
+from Imervue.gui.export_source import open_export_source
+from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image import export_presets
-from Imervue.image.recipe_store import recipe_store
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
     QUALITY_FORMATS,
@@ -46,26 +48,33 @@ def _watermark_corners(lang):
     ]
 
 
+@dataclass(frozen=True)
+class ExportSettings:
+    """Format, quality, optional resize / square crop / DPI and watermark for a batch export.
+
+    ``max_w`` / ``max_h`` of 0 leave that side unbounded; nothing is resized
+    unless ``resize`` is set.
+    """
+
+    fmt: str
+    quality: int
+    resize: bool = False
+    max_w: int = 0
+    max_h: int = 0
+    square_crop: bool = False
+    dpi: int = 0
+    watermark: WatermarkOptions = field(default_factory=WatermarkOptions)
+
+
 class _ExportWorker(QThread):
     progress = Signal(int, int)  # current, total
     result_ready = Signal(int, int)  # success, failed
 
-    def __init__(
-        self, paths, output_dir, fmt, quality, resize_enabled, max_w, max_h,
-        square_crop: bool = False, dpi: int = 0,
-        watermark: WatermarkOptions | None = None,
-    ):
+    def __init__(self, paths: list[str], output_dir: str, settings: ExportSettings):
         super().__init__()
         self._paths = paths
         self._output_dir = output_dir
-        self._fmt = fmt
-        self._quality = quality
-        self._resize = resize_enabled
-        self._max_w = max_w
-        self._max_h = max_h
-        self._square_crop = square_crop
-        self._dpi = dpi
-        self._watermark = watermark or WatermarkOptions()
+        self._settings = settings
         self._abort = False
 
     def abort(self) -> None:
@@ -86,42 +95,33 @@ class _ExportWorker(QThread):
         self.result_ready.emit(success, failed)
 
     def _process_one(self, src: str) -> bool:
+        s = self._settings
         try:
-            img = _open_for_export(src)
-            img = _apply_recipe(src, img)
-            if self._square_crop:
+            img = open_export_source(src)
+            if s.square_crop:
                 img = export_presets.square_crop(img)
             img = self._resize_if_needed(img)
-            img = apply_watermark(img, self._watermark)
+            img = apply_watermark(img, s.watermark)
             out_path = _build_output_path(
-                Path(src), self._output_dir, FORMAT_EXTENSIONS.get(self._fmt, ".png"),
+                Path(src), self._output_dir, FORMAT_EXTENSIONS.get(s.fmt, ".png"),
             )
-            extra = {"dpi": (self._dpi, self._dpi)} if self._dpi > 0 else None
-            save_image(img, str(out_path), self._fmt, self._quality, extra)
+            extra = {"dpi": (s.dpi, s.dpi)} if s.dpi > 0 else None
+            save_image(img, str(out_path), s.fmt, s.quality, extra)
             return True
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception(f"Batch export failed for {src}: {exc}")
             return False
 
     def _resize_if_needed(self, img):
-        if not self._resize or (self._max_w <= 0 and self._max_h <= 0):
+        s = self._settings
+        if not s.resize or (s.max_w <= 0 and s.max_h <= 0):
             return img
         w, h = img.size
-        max_w = self._max_w if self._max_w > 0 else w
-        max_h = self._max_h if self._max_h > 0 else h
+        max_w = s.max_w if s.max_w > 0 else w
+        max_h = s.max_h if s.max_h > 0 else h
         if w > max_w or h > max_h:
             img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
         return img
-
-
-def _apply_recipe(src: str, img: Image.Image) -> Image.Image:
-    """Bake the stored non-destructive recipe onto ``img`` if one exists."""
-    recipe = recipe_store.get_for_path(src)
-    if recipe is None or recipe.is_identity():
-        return img
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return Image.fromarray(recipe.apply(np.array(img)))
 
 
 def _build_output_path(src: Path, output_dir: str, ext: str) -> Path:
@@ -156,8 +156,51 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             self._lang.get("batch_export_count", "{count} image(s) selected").format(
                 count=len(self._paths))
         ))
+        layout.addLayout(self._build_preset_row())
 
-        # Presets
+        # Format
+        fmt_row = QHBoxLayout()
+        fmt_row.addWidget(QLabel(self._lang.get("export_format", "Format:")))
+        self._fmt_combo = QComboBox()
+        self._fmt_combo.addItems(available_formats())
+        self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
+        fmt_row.addWidget(self._fmt_combo, 1)
+        layout.addLayout(fmt_row)
+
+        # Quality
+        self._quality_label, self._quality_slider = quality_slider(self._lang)
+        layout.addWidget(self._quality_label)
+        layout.addWidget(self._quality_slider)
+
+        layout.addWidget(self._build_resize_group())
+        layout.addWidget(self._build_watermark_group())
+
+        # Output dir
+        dir_row, self._dir_edit, _browse = path_browse_row(
+            self._browse, browse_text=self._lang.get("export_browse", "Browse..."))
+        if self._paths:
+            self._dir_edit.setText(str(Path(self._paths[0]).parent))
+        layout.addLayout(dir_row)
+
+        # Progress
+        self._progress = QProgressBar()
+        self._progress.setVisible(False)
+        layout.addWidget(self._progress)
+
+        self._status_label = QLabel("")
+        layout.addWidget(self._status_label)
+
+        # Buttons
+        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
+        cancel_btn.clicked.connect(self._on_cancel)
+        self._export_btn = QPushButton(self._lang.get("batch_export_start", "Export"))
+        self._export_btn.clicked.connect(self._do_export)
+        layout.addLayout(action_button_row(cancel_btn, self._export_btn))
+
+        self._on_format_changed()
+
+    def _build_preset_row(self) -> QHBoxLayout:
+        """Preset combo: "Custom" (no data) followed by every built-in preset."""
         preset_row = QHBoxLayout()
         preset_row.addWidget(QLabel(
             self._lang.get("batch_export_preset", "Preset:")
@@ -170,50 +213,34 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             self._preset_combo.addItem(preset.label, preset.key)
         self._preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         preset_row.addWidget(self._preset_combo, 1)
-        layout.addLayout(preset_row)
+        return preset_row
 
-        # Format
-        fmt_row = QHBoxLayout()
-        fmt_row.addWidget(QLabel(self._lang.get("export_format", "Format:")))
-        self._fmt_combo = QComboBox()
-        self._fmt_combo.addItems(available_formats())
-        self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
-        fmt_row.addWidget(self._fmt_combo, 1)
-        layout.addLayout(fmt_row)
+    @staticmethod
+    def _max_side_spin(value: int) -> QSpinBox:
+        """0–99999 px limit where 0 reads as "--" (no limit)."""
+        spin = QSpinBox()
+        spin.setRange(0, 99999)
+        spin.setValue(value)
+        spin.setSpecialValueText("--")
+        return spin
 
-        # Quality
-        self._quality_label = QLabel(self._lang.get("export_quality", "Quality:") + " 85")
-        self._quality_slider = QSlider(Qt.Orientation.Horizontal)
-        self._quality_slider.setRange(0, 100)
-        self._quality_slider.setValue(85)
-        self._quality_slider.valueChanged.connect(
-            lambda v: self._quality_label.setText(
-                self._lang.get("export_quality", "Quality:") + f" {v}")
-        )
-        layout.addWidget(self._quality_label)
-        layout.addWidget(self._quality_slider)
-
-        # Resize
+    def _build_resize_group(self) -> QGroupBox:
+        """Checkable (off) group holding the max width / height limits."""
         resize_grp = QGroupBox(self._lang.get("batch_export_resize", "Resize"))
         resize_grp.setCheckable(True)
         resize_grp.setChecked(False)
         self._resize_grp = resize_grp
         rlay = QHBoxLayout(resize_grp)
         rlay.addWidget(QLabel(self._lang.get("batch_export_max_width", "Max Width:")))
-        self._max_w = QSpinBox()
-        self._max_w.setRange(0, 99999)
-        self._max_w.setValue(1920)
-        self._max_w.setSpecialValueText("--")
+        self._max_w = self._max_side_spin(1920)
         rlay.addWidget(self._max_w)
         rlay.addWidget(QLabel(self._lang.get("batch_export_max_height", "Max Height:")))
-        self._max_h = QSpinBox()
-        self._max_h.setRange(0, 99999)
-        self._max_h.setValue(1080)
-        self._max_h.setSpecialValueText("--")
+        self._max_h = self._max_side_spin(1080)
         rlay.addWidget(self._max_h)
-        layout.addWidget(resize_grp)
+        return resize_grp
 
-        # Watermark
+    def _build_watermark_group(self) -> QGroupBox:
+        """Checkable (off) group: watermark text, corner (bottom-right) and opacity."""
         wm_grp = QGroupBox(self._lang.get("watermark_title", "Watermark"))
         wm_grp.setCheckable(True)
         wm_grp.setChecked(False)
@@ -222,7 +249,8 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         wm_text_row = QHBoxLayout()
         wm_text_row.addWidget(QLabel(self._lang.get("watermark_text", "Text:")))
         self._wm_text = QLineEdit()
-        self._wm_text.setPlaceholderText("\u00a9 Your name")
+        self._wm_text.setPlaceholderText(
+            self._lang.get("watermark_text_placeholder", "© Your name"))
         wm_text_row.addWidget(self._wm_text, 1)
         wm_layout.addLayout(wm_text_row)
         wm_opts_row = QHBoxLayout()
@@ -238,39 +266,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         self._wm_opacity.setValue(60)
         wm_opts_row.addWidget(self._wm_opacity, 1)
         wm_layout.addLayout(wm_opts_row)
-        layout.addWidget(wm_grp)
-
-        # Output dir
-        dir_row = QHBoxLayout()
-        self._dir_edit = QLineEdit()
-        if self._paths:
-            self._dir_edit.setText(str(Path(self._paths[0]).parent))
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse)
-        dir_row.addWidget(self._dir_edit, 1)
-        dir_row.addWidget(browse_btn)
-        layout.addLayout(dir_row)
-
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.setVisible(False)
-        layout.addWidget(self._progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        # Buttons
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
-        cancel_btn.clicked.connect(self._on_cancel)
-        self._export_btn = QPushButton(self._lang.get("batch_export_start", "Export"))
-        self._export_btn.clicked.connect(self._do_export)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self._export_btn)
-        layout.addLayout(btn_row)
-
-        self._on_format_changed()
+        return wm_grp
 
     def _on_format_changed(self, _text=None):
         visible = self._fmt_combo.currentText() in QUALITY_FORMATS
@@ -309,24 +305,30 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         self._progress.setMaximum(len(self._paths))
         self._progress.setValue(0)
 
-        preset = getattr(self, "_active_preset", None)
-        preset_active = self._preset_combo.currentData() is not None
-        self._worker = _ExportWorker(
-            self._paths,
-            output_dir,
-            self._fmt_combo.currentText(),
-            self._quality_slider.value(),
-            self._resize_grp.isChecked(),
-            self._max_w.value(),
-            self._max_h.value(),
-            square_crop=preset.square_crop if preset_active and preset else False,
-            dpi=preset.dpi if preset_active and preset else 0,
-            watermark=self._collect_watermark(),
-        )
+        self._worker = _ExportWorker(self._paths, output_dir, self._collect_settings())
         self._worker.progress.connect(self._on_progress)
         self._worker.result_ready.connect(self._on_finished)
         self._worker.finished.connect(self._cleanup_worker)
         self._worker.start()
+
+    def _collect_settings(self) -> ExportSettings:
+        """Read the controls into an :class:`ExportSettings`.
+
+        Square crop and DPI come from the active preset only; editing the
+        controls after choosing one keeps them until the preset is cleared.
+        """
+        preset = getattr(self, "_active_preset", None)
+        preset_active = self._preset_combo.currentData() is not None
+        return ExportSettings(
+            fmt=self._fmt_combo.currentText(),
+            quality=self._quality_slider.value(),
+            resize=self._resize_grp.isChecked(),
+            max_w=self._max_w.value(),
+            max_h=self._max_h.value(),
+            square_crop=preset.square_crop if preset_active and preset else False,
+            dpi=preset.dpi if preset_active and preset else 0,
+            watermark=self._collect_watermark(),
+        )
 
     def _collect_watermark(self) -> WatermarkOptions:
         """Read the watermark group's current controls into a value object."""
@@ -373,15 +375,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             else:
                 self._gui.main_window.toast.success(msg)
 
-        QTimer.singleShot(0, self.accept)
-
-
-def _open_for_export(path: str) -> Image.Image:
-    if Path(path).suffix.lower() == ".svg":
-        from Imervue.gpu_image_view.images.image_loader import _load_svg
-        arr = _load_svg(path, thumbnail=False)
-        return Image.fromarray(arr)
-    return Image.open(path)
+        call_later(0, self, self.accept)
 
 
 def open_batch_export(main_gui: GPUImageView):

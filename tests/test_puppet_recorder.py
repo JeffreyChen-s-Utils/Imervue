@@ -13,6 +13,7 @@ piled up. The recorder only needs ``grabFramebuffer()`` and
 """
 from __future__ import annotations
 
+import pytest
 from PySide6.QtCore import QSize
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QWidget
@@ -151,3 +152,38 @@ def test_recorder_emits_finished_on_clean_stop(qapp, tmp_path):
     finally:
         rec.deleteLater()
         canvas.deleteLater()
+
+
+def test_save_canvas_png_reports_an_uncreatable_folder(qapp, tmp_path, caplog):
+    blocker = tmp_path / "file.txt"
+    blocker.write_text("x", encoding="utf-8")
+    canvas = _stub_with_real_image()
+    try:
+        with caplog.at_level("DEBUG", logger="Imervue"):
+            assert save_canvas_png(canvas, blocker / "sub" / "frame.png") is False
+        assert any("png save failed" in r.getMessage() for r in caplog.records)
+    finally:
+        canvas.deleteLater()
+
+
+def test_save_canvas_png_reports_a_failed_write(qapp, tmp_path, caplog):
+    canvas = _stub_with_real_image()
+    target = tmp_path / "taken.png"
+    target.mkdir()   # a directory where the file should go: QImage.save returns False
+    try:
+        with caplog.at_level("DEBUG", logger="Imervue"):
+            assert save_canvas_png(canvas, target) is False
+        assert any("png save failed" in r.getMessage() for r in caplog.records)
+    finally:
+        canvas.deleteLater()
+
+
+def test_save_canvas_png_propagates_an_unexpected_capture_error(qapp, tmp_path, monkeypatch):
+    from Imervue.puppet import recorder as recorder_mod
+
+    def broken(_canvas):
+        raise TypeError("bad canvas")
+
+    monkeypatch.setattr(recorder_mod, "capture_canvas_image", broken)
+    with pytest.raises(TypeError):
+        save_canvas_png(object(), tmp_path / "frame.png")

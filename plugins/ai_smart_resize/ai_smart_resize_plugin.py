@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -20,6 +19,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QLabel,
+    QMenu,
     QSlider,
     QSpinBox,
     QVBoxLayout,
@@ -31,6 +31,7 @@ from ai_smart_resize.seam_carving import (
     SmartResizeOptions,
     smart_resize,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -46,7 +47,7 @@ _DEFAULT_BOOST = 100  # 1.0x
 
 class AISmartResizePlugin(ImervuePlugin):
     plugin_name = "AI Smart Resize"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     plugin_description = "Content-aware resize via seam carving."
     plugin_author = "Imervue"
 
@@ -106,21 +107,15 @@ class AISmartResizePlugin(ImervuePlugin):
             },
         }
 
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
+    def on_build_menu_bar(self, plugin_menu) -> None:
         lang = language_wrapper.language_word_dict
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "retouch_submenu", "Retouch & Transform",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get("smart_resize_title", "AI Smart Resize"),
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
+        # Imervue names its Extra Tools submenus; a host that predates the
+        # names has none, so the entry falls back to the Plugins menu.
+        target = self.main_window.findChild(QMenu, "extra_tools.retouch_submenu")
+        entry = (target if target is not None else plugin_menu).addAction(
+            lang.get("smart_resize_title", "AI Smart Resize"),
+        )
+        entry.triggered.connect(self._open_dialog)
 
     def _open_dialog(self) -> None:
         viewer = getattr(self, "viewer", None)
@@ -246,13 +241,6 @@ class AISmartResizeDialog(WorkerHostMixin, QDialog):
                     "smart_resize_done", "Saved {path}",
                 ).format(path=out_path.name),
             )
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 class _SmartResizeWorker(QThread):

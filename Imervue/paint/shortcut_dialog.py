@@ -5,9 +5,14 @@ columns: action label / current binding / Reset. Clicking a binding
 cell turns it into a :class:`QKeySequenceEdit` so the user can press
 the new combination; conflicts highlight the colliding row in red
 but never block the save (the registry tolerates duplicate bindings,
-the user gets to decide).
+the user gets to decide). A conflict is another row on the same key,
+or a key in ``reserved`` — one an action outside the registry already
+holds, named in the row's tooltip. Qt fires neither of two shortcuts
+on one key, so either kind leaves both dead.
 """
 from __future__ import annotations
+
+from collections.abc import Mapping
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -45,8 +50,15 @@ def _humanise(action_id: str) -> str:
 class ShortcutDialog(QDialog):
     """Editable shortcut table backed by a :class:`ShortcutRegistry`."""
 
-    def __init__(self, registry: ShortcutRegistry | None = None, parent=None):
+    def __init__(
+        self,
+        registry: ShortcutRegistry | None = None,
+        parent=None,
+        *,
+        reserved: Mapping[str, str] | None = None,
+    ):
         super().__init__(parent)
+        self._reserved = dict(reserved or {})
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("paint_shortcut_title", "Shortcuts"))
         self.resize(500, 480)
@@ -151,12 +163,18 @@ class ShortcutDialog(QDialog):
         self._refresh_conflict_marks()
 
     def _refresh_conflict_marks(self) -> None:
-        """Highlight rows whose binding collides with another row."""
+        """Highlight rows whose binding collides with another row or a reserved key."""
+        lang = language_wrapper.language_word_dict
         for row, entry in enumerate(DEFAULT_SHORTCUTS):
             current = self._working.get(entry.action_id)
-            colliding = self._working.conflicts(entry.action_id, current)
+            taken_by = self._reserved.get(current)
+            colliding = self._working.conflicts(entry.action_id, current) or taken_by
             colour = QColor("#5a1f1f") if colliding else QColor("transparent")
+            tooltip = lang.get(
+                "paint_shortcut_in_use", "Already used by {action}",
+            ).format(action=taken_by) if taken_by else ""
             for col in range(self._table.columnCount()):
                 item = self._table.item(row, col)
                 if item is not None:
                     item.setBackground(colour)
+                    item.setToolTip(tooltip)

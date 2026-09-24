@@ -8,6 +8,8 @@ upload — a blank tile wall. These tests pin the corrected accounting.
 """
 from __future__ import annotations
 
+import pytest
+
 from Imervue.gui.file_tree_view import _FileTreeView
 
 
@@ -88,3 +90,30 @@ def test_context_gone_skips_delete_but_still_accounts(monkeypatch):
     assert freed == []                       # delete skipped (no live context)
     assert "a" not in viewer.tile_textures
     assert viewer._vram_usage == 500         # 600 - 100, still accounted
+
+
+def test_torn_down_context_still_accounts(monkeypatch):
+    from OpenGL.error import GLError
+
+    def dead(_handles):
+        raise GLError(1282, None)
+
+    freed: list[int] = []
+    _patch_gl(monkeypatch, freed)
+    monkeypatch.setattr("OpenGL.GL.glDeleteTextures", dead)
+    viewer = _FakeViewer()
+    _FileTreeView._release_tile_textures(viewer, ["a"])
+    assert "a" not in viewer.tile_textures
+    assert viewer._vram_usage == 500
+    assert viewer.done == 1
+
+
+def test_unexpected_gl_error_propagates(monkeypatch):
+    def broken(_handles):
+        raise TypeError("bad handle list")
+
+    freed: list[int] = []
+    _patch_gl(monkeypatch, freed)
+    monkeypatch.setattr("OpenGL.GL.glDeleteTextures", broken)
+    with pytest.raises(TypeError):
+        _FileTreeView._release_tile_textures(_FakeViewer(), ["a"])

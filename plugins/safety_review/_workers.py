@@ -21,6 +21,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
+from Imervue.plugin.pip_installer import _subprocess_kwargs
 from Imervue.plugin.subprocess_util import terminate_process as _terminate_process
 from safety_review._constants import (
     MIN_CONFIDENCE,
@@ -35,7 +36,6 @@ from safety_review._detection import (
     _get_anime_model,
     _get_detector,
     _process_single_image,
-    _subprocess_kwargs,
 )
 
 logger = logging.getLogger("Imervue.plugin.safety_review")
@@ -179,7 +179,7 @@ class _SingleWorker(QThread):
 
     def __init__(self, input_path: str, output_path: str,
                  block_size: int, padding: int,
-                 mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
+                 *, mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, shape: str = SHAPE_RECT):
         super().__init__()
@@ -200,7 +200,7 @@ class _SingleWorker(QThread):
             detector = _resolve_detector(self._mode)
             self.progress.emit(1, "Detecting regions...")
             count = _process_single_image(
-                detector, self._input, self._output, self._bs, self._pad,
+                detector, self._input, self._output, block_size=self._bs, padding=self._pad,
                 confidence=self._conf,
                 expand_pct=self._expand_pct, mode=self._mode,
                 style=self._style, categories=self._categories,
@@ -222,7 +222,7 @@ class _BatchWorker(QThread):
 
     def __init__(self, paths: list[str], output_dir: str | None,
                  block_size: int, padding: int, overwrite: bool,
-                 mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
+                 *, mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
                  only_censored: bool = False, shape: str = SHAPE_RECT,
@@ -282,7 +282,7 @@ class _BatchWorker(QThread):
 
             def _run(shp, _src=src, _dst=dst):
                 return _process_single_image(
-                    detector, _src, _dst, self._bs, self._pad,
+                    detector, _src, _dst, block_size=self._bs, padding=self._pad,
                     confidence=self._conf, expand_pct=self._expand_pct,
                     mode=self._mode, style=self._style,
                     categories=self._categories,
@@ -315,7 +315,7 @@ class _SubprocessSingleWorker(QThread):
     def __init__(self, python: str, site_packages: str,
                  input_path: str, output_path: str,
                  block_size: int, padding: int,
-                 mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
+                 *, mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, shape: str = SHAPE_RECT):
         super().__init__()
@@ -394,7 +394,7 @@ class _SubprocessBatchWorker(QThread):
     def __init__(self, python: str, site_packages: str,
                  paths: list[str], output_dir: str | None,
                  block_size: int, padding: int, overwrite: bool,
-                 mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
+                 *, mode: str = MODE_REAL, confidence: float = MIN_CONFIDENCE,
                  expand_pct: int = 0, style: str = STYLE_MOSAIC,
                  categories=None, source_root: str | None = None,
                  only_censored: bool = False, shape: str = SHAPE_RECT,

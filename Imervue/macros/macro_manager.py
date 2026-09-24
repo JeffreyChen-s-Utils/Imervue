@@ -237,7 +237,7 @@ class MacroManager:
             try:
                 func(ui, path_list, step.kwargs)
                 executed += 1
-            except Exception as exc:  # noqa: BLE001 - replay must not kill UI
+            except Exception as exc:  # replay must not kill UI
                 logger.exception("Macro step %s failed: %s", step.action, exc)
         return executed
 

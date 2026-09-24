@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.file_filters import image_filter
 from Imervue.image.layers import (
     BLEND_MODES,
     DEFAULT_OPACITY,
@@ -352,7 +353,7 @@ class LayersDialog(QDialog):
             self,
             language_wrapper.language_word_dict.get("layers_pick_image", "Choose image"),
             "",
-            "Images (*.png *.jpg *.jpeg *.webp *.bmp *.tiff)",
+            image_filter(("png", "jpg", "jpeg", "webp", "bmp", "tiff")),
         )
         if path:
             layer.params["path"] = path

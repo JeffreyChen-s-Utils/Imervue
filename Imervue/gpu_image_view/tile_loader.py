@@ -9,14 +9,15 @@ for the signal callbacks and the public ``load_tile_grid_async`` /
 
 from __future__ import annotations
 
-import contextlib
 import os
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QMutexLocker, QObject, QRunnable, QThreadPool, QTimer, Signal
+from PySide6.QtCore import QMutexLocker, QObject, QRunnable, QThreadPool, Signal
 
+from Imervue.system.qt_timers import call_later
+from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 from Imervue.image.browser_state import is_missing_file_error, is_transient_load_error
 
@@ -63,7 +64,7 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
         view.main_window.show_progress(0, view._tile_load_total)
     # 同步 list view（若處於 list 模式或之後會切換）
     if hasattr(view.main_window, "refresh_list_view"):
-        with contextlib.suppress(Exception):
+        with best_effort("refresh the list view"):
             view.main_window.refresh_list_view()
     view.update()
 
@@ -222,8 +223,8 @@ def _maybe_retry_thumbnail(view: GPUImageView, path: str, message: str, generati
     if count >= 2:
         return
     retry_counts[path] = count + 1
-    QTimer.singleShot(
-        200 * (count + 1),
+    call_later(
+        200 * (count + 1), view,
         lambda p=path, gen=generation: _retry_thumbnail(view, p, gen),
     )
 
@@ -408,7 +409,7 @@ def sync_tile_grid_incremental(view: GPUImageView, image_paths: list[str]) -> No
     _spawn_thumbnail_workers(view, missing, gen)
     start_offline_sweep(view)
     if hasattr(view.main_window, "refresh_list_view"):
-        with contextlib.suppress(Exception):
+        with best_effort("refresh the list view"):
             view.main_window.refresh_list_view()
     view.update()
 

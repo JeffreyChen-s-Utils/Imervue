@@ -110,7 +110,7 @@ def _make_canvas(qapp):
     try:
         from Imervue.paint.canvas import PaintCanvas
         return PaintCanvas()
-    except Exception:  # pragma: no cover - headless / no GL
+    except Exception:  # noqa: BLE001  # pragma: no cover - headless GL fails in open-ended ways
         return None
 
 
@@ -355,7 +355,7 @@ def test_tablet_phase_map_covers_press_move_release():
     """Regression: tabletEvent must map QEvent.TabletPress / TabletMove /
     TabletRelease onto the corresponding PointerEvent phase. Without the
     map the tablet path silently dropped events ("下筆後沒顏色")."""
-    from Imervue.paint.canvas import _TABLET_PHASE
+    from Imervue.paint.canvas_input import _TABLET_PHASE
     from PySide6.QtCore import QEvent
     assert _TABLET_PHASE[QEvent.Type.TabletPress] == "press"
     assert _TABLET_PHASE[QEvent.Type.TabletMove] == "move"

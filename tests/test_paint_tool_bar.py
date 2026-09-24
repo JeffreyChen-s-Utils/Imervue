@@ -32,7 +32,9 @@ def state():
 
 
 def test_tool_order_lists_every_documented_tool():
-    listed = {entry[0] for entry in TOOL_ORDER if entry is not None}
+    listed = [entry for entry in TOOL_ORDER if entry is not None]
+    assert len(listed) == len(set(listed))
+    listed = set(listed)
     assert listed == set(ts.TOOLS)
 
 
@@ -42,9 +44,20 @@ def test_tool_order_separators_are_none():
     assert any(entry is None for entry in TOOL_ORDER)
 
 
-def test_tool_order_shortcuts_unique_when_present():
-    shortcuts = [entry[1] for entry in TOOL_ORDER if entry is not None and entry[1]]
-    assert len(shortcuts) == len(set(shortcuts))
+def test_toolbar_buttons_show_the_menu_key_without_binding_it(qapp, state):
+    """The Tools menu owns the tool keys; a second QAction on the same key
+    would make Qt see the key as ambiguous and fire neither."""
+    from Imervue.paint.tools_menu import tool_shortcut
+
+    bar = PaintToolBar(state)
+    try:
+        for tool in ts.TOOLS:
+            action = bar.action_for(tool)
+            assert action.shortcut().isEmpty(), tool
+            key = tool_shortcut(tool)
+            assert action.toolTip().endswith(f"({key})") == bool(key), (tool, action.toolTip())
+    finally:
+        bar.deleteLater()
 
 
 # ---------------------------------------------------------------------------

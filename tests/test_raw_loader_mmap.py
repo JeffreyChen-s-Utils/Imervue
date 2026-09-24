@@ -36,3 +36,20 @@ def test_region_and_fd_close_even_if_rawpy_close_raises():
     with pytest.raises(RuntimeError):
         wrapped.close()
     assert closed == ["region", "fd"]   # still released via finally
+
+
+def test_region_close_failure_is_logged_and_fd_still_closes(caplog):
+    closed: list = []
+
+    def busy():
+        raise BufferError("cannot close exported pointers exist")
+
+    raw = SimpleNamespace(close=lambda: closed.append("raw"))
+    region = SimpleNamespace(close=busy)
+    fd = SimpleNamespace(close=lambda: closed.append("fd"))
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        _wrap_close_to_release(raw, region, fd).close()
+    assert closed == ["raw", "fd"]
+    (record,) = caplog.records
+    assert "unmap the RAW file" in record.getMessage()
+    assert record.exc_info[0] is BufferError

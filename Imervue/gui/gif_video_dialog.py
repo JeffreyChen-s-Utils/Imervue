@@ -8,15 +8,18 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSpinBox, QPushButton, QFileDialog, QLineEdit, QProgressBar,
+    QSpinBox, QPushButton, QProgressBar,
     QListWidget, QListWidgetItem, QGroupBox, QCheckBox,
 )
 from PIL import Image
 
+from Imervue.system.qt_timers import call_later
+from Imervue.gui.dialog_rows import action_button_row, path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -185,81 +188,16 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
         layout.addWidget(QLabel(
             self._lang.get("gif_video_order", "Drag to reorder (top = first frame):")
         ))
-        self._list = QListWidget()
-        self._list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
-        for p in self._paths:
-            item = QListWidgetItem(Path(p).name)
-            item.setData(Qt.ItemDataRole.UserRole, p)
-            self._list.addItem(item)
-        layout.addWidget(self._list)
-
-        # Move up/down buttons
-        order_row = QHBoxLayout()
-        up_btn = QPushButton(self._lang.get("gif_video_move_up", "Move Up"))
-        up_btn.clicked.connect(self._move_up)
-        down_btn = QPushButton(self._lang.get("gif_video_move_down", "Move Down"))
-        down_btn.clicked.connect(self._move_down)
-        order_row.addWidget(up_btn)
-        order_row.addWidget(down_btn)
-        order_row.addStretch()
-        layout.addLayout(order_row)
-
-        # Settings
-        settings = QGroupBox(self._lang.get("gif_video_settings", "Settings"))
-        slay = QVBoxLayout(settings)
-
-        # Format
-        fmt_row = QHBoxLayout()
-        fmt_row.addWidget(QLabel(self._lang.get("export_format", "Format:")))
-        self._fmt_combo = QComboBox()
-        self._fmt_combo.addItems(["GIF", "MP4"])
-        self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
-        fmt_row.addWidget(self._fmt_combo)
-        slay.addLayout(fmt_row)
-
-        # FPS
-        fps_row = QHBoxLayout()
-        fps_row.addWidget(QLabel(self._lang.get("gif_video_fps", "FPS:")))
-        self._fps_spin = QSpinBox()
-        self._fps_spin.setRange(1, 60)
-        self._fps_spin.setValue(5)
-        fps_row.addWidget(self._fps_spin)
-        fps_row.addStretch()
-        slay.addLayout(fps_row)
-
-        # Size
-        size_row = QHBoxLayout()
-        size_row.addWidget(QLabel(self._lang.get("gif_video_width", "Width:")))
-        self._width_spin = QSpinBox()
-        self._width_spin.setRange(0, 99999)
-        self._width_spin.setValue(0)
-        self._width_spin.setSpecialValueText(self._lang.get("gif_video_auto", "Auto"))
-        size_row.addWidget(self._width_spin)
-        size_row.addWidget(QLabel(self._lang.get("gif_video_height", "Height:")))
-        self._height_spin = QSpinBox()
-        self._height_spin.setRange(0, 99999)
-        self._height_spin.setValue(0)
-        self._height_spin.setSpecialValueText(self._lang.get("gif_video_auto", "Auto"))
-        size_row.addWidget(self._height_spin)
-        slay.addLayout(size_row)
-
-        # Loop (GIF only)
-        self._loop_check = QCheckBox(self._lang.get("gif_video_loop", "Loop forever"))
-        self._loop_check.setChecked(True)
-        slay.addWidget(self._loop_check)
-
-        layout.addWidget(settings)
+        layout.addWidget(self._build_frame_list())
+        layout.addLayout(self._build_order_row())
+        layout.addWidget(self._build_settings_group())
 
         # Output path
-        path_row = QHBoxLayout()
-        self._path_edit = QLineEdit()
+        path_row, self._path_edit, _browse = path_browse_row(
+            self._browse, browse_text=self._lang.get("export_browse", "Browse..."))
         if self._paths:
             default = Path(self._paths[0]).parent / "output.gif"
             self._path_edit.setText(str(default))
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse)
-        path_row.addWidget(self._path_edit, 1)
-        path_row.addWidget(browse_btn)
         layout.addLayout(path_row)
 
         # Progress
@@ -270,15 +208,78 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
         layout.addWidget(self._status_label)
 
         # Buttons
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
         cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
         cancel_btn.clicked.connect(self._on_cancel)
         self._create_btn = QPushButton(self._lang.get("gif_video_create", "Create"))
         self._create_btn.clicked.connect(self._do_create)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self._create_btn)
-        layout.addLayout(btn_row)
+        layout.addLayout(action_button_row(cancel_btn, self._create_btn))
+
+    def _build_frame_list(self) -> QListWidget:
+        """Drag-reorderable frame list; each item carries its path as user data."""
+        self._list = QListWidget()
+        self._list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        for p in self._paths:
+            item = QListWidgetItem(Path(p).name)
+            item.setData(Qt.ItemDataRole.UserRole, p)
+            self._list.addItem(item)
+        return self._list
+
+    def _build_order_row(self) -> QHBoxLayout:
+        """Move Up / Move Down for the selected frame."""
+        order_row = QHBoxLayout()
+        up_btn = QPushButton(self._lang.get("gif_video_move_up", "Move Up"))
+        up_btn.clicked.connect(self._move_up)
+        down_btn = QPushButton(self._lang.get("gif_video_move_down", "Move Down"))
+        down_btn.clicked.connect(self._move_down)
+        order_row.addWidget(up_btn)
+        order_row.addWidget(down_btn)
+        order_row.addStretch()
+        return order_row
+
+    def _auto_size_spin(self) -> QSpinBox:
+        """0–99999 px where 0 reads "Auto" (keep the source size)."""
+        spin = QSpinBox()
+        spin.setRange(0, 99999)
+        spin.setValue(0)
+        spin.setSpecialValueText(self._lang.get("gif_video_auto", "Auto"))
+        return spin
+
+    def _build_settings_group(self) -> QGroupBox:
+        """Format, FPS, output size and the GIF-only loop box."""
+        settings = QGroupBox(self._lang.get("gif_video_settings", "Settings"))
+        slay = QVBoxLayout(settings)
+
+        fmt_row = QHBoxLayout()
+        fmt_row.addWidget(QLabel(self._lang.get("export_format", "Format:")))
+        self._fmt_combo = QComboBox()
+        self._fmt_combo.addItems(["GIF", "MP4"])
+        self._fmt_combo.currentTextChanged.connect(self._on_format_changed)
+        fmt_row.addWidget(self._fmt_combo)
+        slay.addLayout(fmt_row)
+
+        fps_row = QHBoxLayout()
+        fps_row.addWidget(QLabel(self._lang.get("gif_video_fps", "FPS:")))
+        self._fps_spin = QSpinBox()
+        self._fps_spin.setRange(1, 60)
+        self._fps_spin.setValue(5)
+        fps_row.addWidget(self._fps_spin)
+        fps_row.addStretch()
+        slay.addLayout(fps_row)
+
+        size_row = QHBoxLayout()
+        size_row.addWidget(QLabel(self._lang.get("gif_video_width", "Width:")))
+        self._width_spin = self._auto_size_spin()
+        size_row.addWidget(self._width_spin)
+        size_row.addWidget(QLabel(self._lang.get("gif_video_height", "Height:")))
+        self._height_spin = self._auto_size_spin()
+        size_row.addWidget(self._height_spin)
+        slay.addLayout(size_row)
+
+        # Loop (GIF only)
+        self._loop_check = QCheckBox(self._lang.get("gif_video_loop", "Loop forever"))
+        self._loop_check.setChecked(True)
+        slay.addWidget(self._loop_check)
+        return settings
 
     def _on_format_changed(self, text):
         is_gif = text == "GIF"
@@ -307,13 +308,8 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
     def _browse(self):
         fmt = self._fmt_combo.currentText()
         ext = ".gif" if fmt == "GIF" else ".mp4"
-        path, _ = QFileDialog.getSaveFileName(
-            self, self._lang.get("gif_video_save", "Save As"),
-            self._path_edit.text(),
-            f"{fmt} (*{ext})",
-        )
-        if path:
-            self._path_edit.setText(path)
+        save_path_into(
+            self, self._path_edit, self._lang.get("gif_video_save", "Save As"), f"{fmt} (*{ext})")
 
     def _get_ordered_paths(self) -> list[str]:
         paths = []
@@ -376,15 +372,16 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
             self._status_label.setText(msg)
             if hasattr(self._gui.main_window, "toast"):
                 self._gui.main_window.toast.success(msg)
-            QTimer.singleShot(0, self.accept)
+            call_later(0, self, self.accept)
         else:
-            self._status_label.setText(f"Error: {message}")
+            text = self._lang.get("generic_error", "Error: {error}").format(error=message)
+            self._status_label.setText(text)
             if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.info(f"Error: {message}")
+                self._gui.main_window.toast.info(text)
 
 
 def open_gif_video_dialog(main_gui: GPUImageView):
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths:
         return
     dlg = GifVideoDialog(main_gui, paths)

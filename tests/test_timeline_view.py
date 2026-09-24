@@ -146,3 +146,83 @@ class TestTwoPhaseGrouping:
         applied = next(e for e in m._entries if e.path == path)
         assert applied.fetched is True          # not re-decoded after the regroup
         assert applied.icon is not None
+
+
+def test_extract_date_falls_back_to_mtime_for_a_corrupt_webp(tmp_path):
+    import os
+    from datetime import datetime
+
+    from test_read_errors import corrupt_exif_webp
+
+    from Imervue.gui import timeline_view as tv
+
+    p = tmp_path / "bad.webp"
+    p.write_bytes(corrupt_exif_webp())
+    stamp = datetime(2015, 6, 7, 8, 9, 10).timestamp()
+    os.utime(p, (stamp, stamp))
+    assert tv._extract_date(str(p)) == datetime.fromtimestamp(stamp)
+
+
+def test_extract_date_propagates_an_unexpected_reader_error(tmp_path, monkeypatch):
+    from Imervue.gui import timeline_view as tv
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("reader bug")
+
+    monkeypatch.setattr(tv.Image, "open", broken)
+    with pytest.raises(RuntimeError, match="reader bug"):
+        tv._extract_date(str(tmp_path / "a.png"))
+
+
+def _run_timeline_thumb(path):
+    from Imervue.gui.timeline_view import _TimelineThumbWorker
+
+    worker = _TimelineThumbWorker(path)
+    emitted: list = []
+    worker.signals.done.connect(lambda *args: emitted.append(args))
+    worker.run()   # the QRunnable body, inline
+    return emitted
+
+
+def test_timeline_thumb_missing_file_emits_failure_quietly(qapp, tmp_path, caplog):
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        (args,) = _run_timeline_thumb(str(tmp_path / "gone.png"))
+    assert args[-1] is False
+    assert caplog.records == []
+
+
+def test_timeline_thumb_bug_is_logged_and_still_emits(qapp, tmp_path, monkeypatch, caplog):
+    from Imervue.gui import timeline_view
+
+    path = tmp_path / "a.png"
+    path.write_bytes(b"x")
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("decoder bug")
+
+    monkeypatch.setattr(timeline_view.Image, "open", broken)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        (args,) = _run_timeline_thumb(str(path))
+    assert args[-1] is False
+    (record,) = caplog.records
+    assert record.exc_info[0] is RuntimeError
+
+
+def test_extract_date_reads_date_time_original_from_the_exif_sub_ifd(tmp_path):
+    from datetime import datetime
+
+    from PIL import Image
+
+    import Imervue.gui.timeline_view as tv
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = "2019:05:06 07:08:09"
+    path = tmp_path / "a.jpg"
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    assert tv._extract_date(str(path)) == datetime(2019, 5, 6, 7, 8, 9)
+
+
+def test_extract_date_of_a_missing_file_is_the_epoch(tmp_path):
+    from datetime import datetime
+
+    import Imervue.gui.timeline_view as tv
+    assert tv._extract_date(str(tmp_path / "gone.jpg")) == datetime.fromtimestamp(0)

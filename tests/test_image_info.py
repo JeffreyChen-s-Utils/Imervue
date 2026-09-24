@@ -7,23 +7,13 @@ running ``GPUImageView``.
 """
 from __future__ import annotations
 
-import sys
-import types
 from datetime import datetime
 
 import numpy as np
 import pytest
 from PIL import Image
 
-
-# ``Imervue.image.info`` pulls in ``image_loader``, which imports the optional
-# ``rawpy`` dependency (only needed for CR2/NEF/ARW/etc. RAW support). Stub it
-# out so this test file can exercise the pure helpers without forcing rawpy on
-# the CI/dev environment.
-if "rawpy" not in sys.modules:
-    sys.modules["rawpy"] = types.ModuleType("rawpy")
-
-from Imervue.image import info as info_mod  # noqa: E402
+from Imervue.image import info as info_mod
 
 
 @pytest.fixture
@@ -135,3 +125,76 @@ class TestBuildImageInfoDimensions:
         assert result.get("width") == 800
         assert result.get("height") == 600
         assert "error" not in result
+
+
+# ---------------------------------------------------------------------------
+# Narrowed failure handling
+# ---------------------------------------------------------------------------
+
+
+def test_png_exif_read_does_not_log_a_traceback(png_file, caplog):
+    """PNG has no ``_getexif``; that is the normal no-EXIF path, not an error."""
+    with caplog.at_level("DEBUG", logger="Imervue.image.info"):
+        assert info_mod.get_exif_data(png_file) == {}
+    assert "EXIF read failed" not in caplog.text
+
+
+def test_corrupt_exif_is_logged_and_empty(tmp_path, caplog):
+    bad = tmp_path / "bad.jpg"
+    bad.write_bytes(b"\xff\xd8\xff\xe1\x00\x10Exif\x00\x00garbage-garbage")
+    with caplog.at_level("DEBUG", logger="Imervue.image.info"):
+        assert info_mod.get_exif_data(bad) == {}
+
+
+def test_out_of_range_ctime_becomes_none(tmp_path, monkeypatch):
+    path = tmp_path / "f.bin"
+    path.write_bytes(b"x")
+
+    class _Stat:
+        st_mtime = 1_700_000_000
+        st_ctime = 10 ** 20
+
+    monkeypatch.setattr(type(path), "stat", lambda self: _Stat())
+    ctime, mtime = info_mod.get_file_times(path)
+    assert ctime is None
+    assert isinstance(mtime, datetime)
+
+
+def _camera_exif():
+    from PIL.TiffImagePlugin import IFDRational
+    exif = Image.Exif()
+    exif[271] = "Apple"
+    exif.get_ifd(0x8769)[36867] = "2019:05:06 07:08:09"
+    exif.get_ifd(0x8769)[33434] = IFDRational(1, 250)
+    gps = exif.get_ifd(0x8825)
+    gps[1], gps[2] = "N", (IFDRational(25), IFDRational(2), IFDRational(0))
+    gps[3], gps[4] = "E", (IFDRational(121), IFDRational(30), IFDRational(0))
+    return exif
+
+
+def test_jpeg_exif_matches_pillows_own_merged_view(tmp_path):
+    path = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 8)).save(path, exif=_camera_exif())
+    from PIL.ExifTags import TAGS
+    with Image.open(path) as img:
+        expected = {TAGS.get(tag, tag): value for tag, value in img._getexif().items()}
+    assert info_mod.get_exif_data(path) == expected
+
+
+def test_heic_exif_is_read(tmp_path):
+    """HEIC has no ``_getexif``, so iPhone photos used to show no EXIF at all."""
+    pillow_heif = pytest.importorskip("pillow_heif")
+    pillow_heif.register_heif_opener()
+    path = tmp_path / "a.heic"
+    Image.new("RGB", (16, 16)).save(path, exif=_camera_exif())
+    exif = info_mod.get_exif_data(path)
+    assert exif["Make"] == "Apple"
+    assert exif["DateTimeOriginal"] == "2019:05:06 07:08:09"
+    assert exif["GPSInfo"][1] == "N"
+
+
+def test_exif_read_registers_the_codec_first(tmp_path, monkeypatch):
+    seen = []
+    monkeypatch.setattr(info_mod, "ensure_pillow_opener", seen.append)
+    info_mod.get_exif_data(tmp_path / "missing.HEIC")
+    assert seen == [".HEIC"]

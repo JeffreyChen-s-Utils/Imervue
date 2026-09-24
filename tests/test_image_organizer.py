@@ -20,6 +20,7 @@ from Imervue.gui.image_organizer_dialog import (
     _scan_folder,
     plan_organization,
     _OrganizerWorker,
+    _get_resolution_bucket,
     _get_type_bucket,
     RULE_DATE,
     RULE_RESOLUTION,
@@ -53,6 +54,13 @@ class TestScanFolder:
     def test_finds_images(self, img_folder):
         paths = _scan_folder(img_folder)
         assert len(paths) == 4
+
+    def test_takes_every_still_format_but_not_video(self, tmp_path):
+        """iPhone HEIC and camera RAW photos used to be left behind by the organizer."""
+        for name in ("a.heic", "b.cr2", "c.NEF", "d.jxl", "e.avif", "f.png", "g.mp4", "h.txt"):
+            (tmp_path / name).write_bytes(b"x")
+        names = [os.path.basename(p) for p in _scan_folder(str(tmp_path))]
+        assert names == ["a.heic", "b.cr2", "c.NEF", "d.jxl", "e.avif", "f.png"]
 
     def test_ignores_non_images(self, tmp_path):
         (tmp_path / "readme.txt").write_text("hi")
@@ -327,3 +335,92 @@ class TestPlanInvalidation:
         )
         ImageOrganizerDialog._on_rule_changed(fake, 3)
         assert calls == ["invalidate"]
+
+
+class TestGetResolutionBucket:
+    @pytest.mark.parametrize("size, bucket", [
+        ((3840, 10), "4K+"), ((10, 1920), "1080p+"), ((1280, 720), "720p+"), ((1279, 1), "small"),
+    ])
+    def test_buckets_by_long_edge(self, tmp_path, size, bucket):
+        path = tmp_path / "a.png"
+        Image.new("L", size).save(path)
+        assert _get_resolution_bucket(str(path)) == bucket
+
+    def test_unreadable_files_are_unknown(self, tmp_path):
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not a png")
+        assert _get_resolution_bucket(str(bad)) == "unknown"
+        assert _get_resolution_bucket(str(tmp_path / "gone.png")) == "unknown"
+
+    def test_unexpected_error_propagates(self, monkeypatch):
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            _get_resolution_bucket("x.png")
+
+
+class TestImageDateBucket:
+    def test_exif_date_wins_then_mtime(self, tmp_path):
+        from Imervue.gui.image_organizer_dialog import _get_image_date
+        path = tmp_path / "a.jpg"
+        exif = Image.Exif()
+        exif[36867] = "2019:02:03 04:05:06"
+        Image.new("RGB", (4, 4)).save(path, exif=exif)
+        assert _get_image_date(str(path), year_only=False) == "2019-02"
+        bad = tmp_path / "bad.jpg"
+        bad.write_bytes(b"not an image")
+        stamp = datetime(2021, 7, 1, 12).timestamp()
+        os.utime(bad, (stamp, stamp))
+        assert _get_image_date(str(bad), year_only=True) == "2021"
+
+    def test_corrupt_webp_exif_falls_back_to_mtime(self, tmp_path):
+        from test_read_errors import corrupt_exif_webp
+
+        from Imervue.gui.image_organizer_dialog import _get_image_date
+        path = tmp_path / "a.webp"
+        path.write_bytes(corrupt_exif_webp())
+        stamp = datetime(2017, 5, 1, 12).timestamp()
+        os.utime(path, (stamp, stamp))
+        assert _get_image_date(str(path), year_only=True) == "2017"
+
+    def test_unparsable_exif_date_falls_back(self, tmp_path):
+        from Imervue.gui.image_organizer_dialog import _get_image_date
+        path = tmp_path / "a.jpg"
+        exif = Image.Exif()
+        exif[36867] = "not a date"
+        Image.new("RGB", (4, 4)).save(path, exif=exif)
+        stamp = datetime(2018, 1, 1, 12).timestamp()
+        os.utime(path, (stamp, stamp))
+        assert _get_image_date(str(path), year_only=True) == "2018"
+
+    def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
+        from Imervue.gui import image_organizer_dialog as mod
+
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            mod._get_image_date(str(tmp_path / "a.jpg"), year_only=True)
+
+
+def _photo_with_original_date(path, when="2019:05:06 07:08:09"):
+    """A JPEG whose only date is DateTimeOriginal, in the Exif sub-IFD where cameras put it."""
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[36867] = when
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    return path
+
+
+def test_date_bucket_reads_date_time_original_from_the_exif_sub_ifd(tmp_path):
+    """It read IFD0 only, so a camera's DateTimeOriginal was never seen."""
+    from Imervue.gui.image_organizer_dialog import _get_image_date
+    path = _photo_with_original_date(tmp_path / "a.jpg")
+    assert _get_image_date(str(path), year_only=False) == "2019-05"
+
+
+def test_date_bucket_of_a_missing_file_is_unknown(tmp_path):
+    from Imervue.gui.image_organizer_dialog import _get_image_date
+    assert _get_image_date(str(tmp_path / "gone.jpg"), year_only=True) == "unknown"

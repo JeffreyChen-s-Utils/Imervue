@@ -963,7 +963,7 @@ en *Start Virtual Camera* en OBS para registrarlo); Linux usa ``v4l2loopback-dkm
 La barra de herramientas **Output > Virtual camera** abre el flujo.
 
 DirectShow / AVFoundation / v4l2loopback son sólo-RGB — sin canal alfa — por lo que Imervue
-rellena el área fuera del personaje con **magenta `#FF00FF`** como croma. Elimínelo en OBS
+rellena el área fuera del personaje con **magenta #FF00FF** como croma. Elimínelo en OBS
 mediante el filtro Color Key:
 
 1. Clic derecho en la fuente Video Capture Device > **Filters**
@@ -2017,8 +2017,8 @@ Herramientas y superposiciones
    * - ``S``
      - Presentación
 
-Animación
-^^^^^^^^^
+Imágenes animadas
+^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2298,6 +2298,8 @@ doble clic en una fila de la lista para escribir el nombre de una persona; al gu
 etiquetas se escriben en el blob ``extra['face_tags']`` de la receta. La detección es una
 técnica clásica — la precisión es adecuada para "muéstrame las caras" pero no es un
 reemplazo del reconocimiento moderno basado en CNN.
+Requiere OpenCV 4 (``pip install "opencv-python<5"``): OpenCV 5 eliminó los cascades
+Haar, y en ese caso el diálogo lo indica en lugar de detectar.
 
 Máscaras de ajuste local
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2523,6 +2525,7 @@ Herramientas disponibles
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Recorte por caja de píxeles, redimensión que preserva el aspecto y rotación
        sin pérdida de 90/180/270 o volteo horizontal/vertical.
+       Los tamaños y las coordenadas se refieren a la imagen enderezada según EXIF.
    * - ``collection_stats``
      - Resume las calificaciones, favoritos, etiquetas de color y estados de culling de
        una carpeta (conteos, distribución de 0–5 estrellas y promedio).

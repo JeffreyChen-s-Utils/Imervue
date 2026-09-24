@@ -18,6 +18,9 @@ from pathlib import Path
 
 from PIL import ExifTags, Image
 
+from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
 logger = logging.getLogger("Imervue.gps")
 
 
@@ -39,10 +42,11 @@ def _rationals_to_degrees(parts) -> float | None:
 
 def extract_gps(path: str | Path) -> tuple[float, float] | None:
     """Return (lat, lon) in signed decimal degrees, or ``None`` if absent."""
+    ensure_pillow_opener(Path(path).suffix)
     try:
         with Image.open(path) as im:
             exif = im.getexif()
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         return None
     if not exif:
         return None

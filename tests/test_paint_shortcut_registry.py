@@ -7,6 +7,7 @@ from Imervue.paint.shortcut_registry import (
     DEFAULT_SHORTCUTS,
     ShortcutEntry,
     ShortcutRegistry,
+    default_key,
 )
 
 
@@ -21,6 +22,12 @@ def test_default_set_includes_core_paint_actions():
         "paint.tool.brush", "paint.tool.eraser", "paint.tool.eyedropper",
         "paint.layer.add", "paint.edit.undo",
     } <= ids
+
+
+def test_default_key_looks_up_the_documented_default():
+    for entry in DEFAULT_SHORTCUTS:
+        assert default_key(entry.action_id) == entry.default_key
+    assert default_key("paint.no_such_action") is None
 
 
 def test_default_action_ids_are_unique():
@@ -247,6 +254,27 @@ def test_dialog_changes_dont_mutate_input_registry(qapp):
         dialog.registry().set("paint.tool.brush", "Q")
         # Original is unchanged because the dialog kept a copy.
         assert original.get("paint.tool.brush") == "B"
+    finally:
+        dialog.deleteLater()
+
+
+def test_dialog_flags_a_key_another_action_holds(qapp):
+    from PySide6.QtGui import QColor
+
+    from Imervue.paint.shortcut_dialog import ShortcutDialog
+    dialog = ShortcutDialog(reserved={"Ctrl+S": "Save as PSD…"})
+    try:
+        row = [e.action_id for e in DEFAULT_SHORTCUTS].index("paint.tool.brush")
+        item = dialog._table.item(row, 0)   # noqa: SLF001
+        assert item.toolTip() == ""
+        dialog.registry().set("paint.tool.brush", "Ctrl+S")
+        dialog._refresh_conflict_marks()   # noqa: SLF001
+        assert "Save as PSD…" in item.toolTip()
+        assert item.background().color() == QColor("#5a1f1f")
+        dialog.registry().set("paint.tool.brush", "F8")
+        dialog._refresh_conflict_marks()   # noqa: SLF001
+        assert item.toolTip() == ""
+        assert item.background().color() == QColor("transparent")
     finally:
         dialog.deleteLater()
 

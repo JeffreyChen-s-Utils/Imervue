@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.system.qt_timers import call_later
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.puppet.document import MotionTrack
 
@@ -266,10 +267,10 @@ class _EndpointHandle(QGraphicsEllipseItem):
             # Defer the model update: it rebuilds the scene, which deletes THIS
             # handle — doing it synchronously would return into super().itemChange
             # on a freed C++ object. singleShot(0) runs it after we return.
-            from PySide6.QtCore import QPointF, QTimer
+            from PySide6.QtCore import QPointF
             seg, is_start, pos = self._segment_index, self._is_start, QPointF(value)
-            QTimer.singleShot(
-                0, lambda: self._view.update_endpoint(seg, pos, is_start=is_start))
+            view = self._view
+            call_later(0, view, lambda: view.update_endpoint(seg, pos, is_start=is_start))
         return super().itemChange(change, value)
 
 
@@ -301,10 +302,9 @@ class _ControlHandle(QGraphicsEllipseItem):
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionHasChanged:
             # Defer the rebuild — see _EndpointHandle.itemChange (it deletes this
             # handle, so a synchronous call is a use-after-free).
-            from PySide6.QtCore import QPointF, QTimer
+            from PySide6.QtCore import QPointF
             seg, field, pos = self._segment_index, self._field, QPointF(value)
-            QTimer.singleShot(
-                0, lambda: self._view.update_control(seg, field, pos))
+            call_later(0, self._view, lambda: self._view.update_control(seg, field, pos))
         return super().itemChange(change, value)
 
 

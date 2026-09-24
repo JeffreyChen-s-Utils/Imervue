@@ -196,14 +196,14 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
 
 
     def _run_search(self) -> None:
-        paths = image_index.search_images(
+        paths = image_index.search_images(image_index.ImageQuery(
             name_contains=self._name_edit.text().strip() or None,
             min_width=self._min_w.value() or None,
             min_height=self._min_h.value() or None,
             min_size=(self._min_size.value() * 1024) or None,
             max_size=(self._max_size.value() * 1024) or None,
             limit=2000,
-        )
+        ))
         self._results_list.clear()
         for p in paths:
             self._results_list.addItem(p)

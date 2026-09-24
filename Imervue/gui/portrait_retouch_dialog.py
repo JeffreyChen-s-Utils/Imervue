@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -18,6 +17,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui._apply_save import load_rgba
 from Imervue.image.portrait_retouch import (
     SMOOTH_RADIUS_MAX,
     SMOOTH_RADIUS_MIN,
@@ -105,7 +105,7 @@ class PortraitRetouchDialog(QDialog):
 
     def _commit(self) -> None:
         try:
-            arr = _load_rgba(self._path)
+            arr = load_rgba(self._path)
         except (OSError, ValueError) as exc:
             self._notify_failure(exc)
             return
@@ -161,9 +161,3 @@ def open_portrait_retouch_dialog(viewer: GPUImageView) -> None:
         return
     PortraitRetouchDialog(viewer, str(images[idx])).exec()
 
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)

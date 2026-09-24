@@ -768,3 +768,49 @@ def test_bone_rotation_deformer_round_trips():
     assert deformer.type == "bone_rotation"
     assert deformer.form["bone_id"] == "arm"
     assert deformer.form["anchor"] == [10.0, 20.0]
+
+
+# ---------------------------------------------------------------------------
+# Decompression ceiling
+# ---------------------------------------------------------------------------
+
+
+def _bomb_bytes(payload_size: int) -> bytes:
+    """A valid-looking puppet whose extra entry expands to *payload_size* bytes."""
+    buf = io.BytesIO(to_zip_bytes(new_blank()))
+    with zipfile.ZipFile(buf, "a", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("textures/huge.png", b"\0" * payload_size)
+    return buf.getvalue()
+
+
+def test_archive_over_the_uncompressed_limit_is_refused(monkeypatch):
+    from Imervue.puppet import document_io
+    monkeypatch.setattr(document_io, "_MAX_UNCOMPRESSED_BYTES", 64 * 1024)
+    data = _bomb_bytes(1024 * 1024)
+    assert len(data) < 64 * 1024          # small on disk, large once expanded
+    with pytest.raises(PuppetFormatError, match="limit"):
+        from_zip_bytes(data)
+
+
+def test_archive_under_the_limit_still_loads(monkeypatch):
+    from Imervue.puppet import document_io
+    monkeypatch.setattr(document_io, "_MAX_UNCOMPRESSED_BYTES", 4 * 1024 * 1024)
+    doc = from_zip_bytes(_bomb_bytes(1024 * 1024))
+    assert doc is not None
+
+
+def test_limit_is_checked_before_any_entry_is_read(monkeypatch):
+    from Imervue.puppet import document_io
+    monkeypatch.setattr(document_io, "_MAX_UNCOMPRESSED_BYTES", 64 * 1024)
+    data = _bomb_bytes(1024 * 1024)       # built before reads are tracked
+    reads: list[str] = []
+    real_open = zipfile.ZipFile.open
+
+    def tracking_open(self, name, *args, **kwargs):
+        reads.append(getattr(name, "filename", name))
+        return real_open(self, name, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipFile, "open", tracking_open)
+    with pytest.raises(PuppetFormatError):
+        from_zip_bytes(data)
+    assert reads == []

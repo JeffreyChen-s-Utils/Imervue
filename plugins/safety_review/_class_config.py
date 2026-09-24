@@ -33,7 +33,7 @@ def get_classes() -> list[str]:
     """The configured class list (index = class id), or the EraX default."""
     try:
         value = _settings().get(CLASSES_SETTING)
-    except Exception:  # noqa: BLE001 — settings unavailable → default
+    except ImportError:   # running without Imervue's settings → default
         return list(DEFAULT_CLASSES)
     if isinstance(value, list) and value:
         return [str(name) for name in value]
@@ -51,7 +51,7 @@ def get_censor_classes() -> list[str]:
     """Names of the classes to censor, or the default genitalia+anus set."""
     try:
         value = _settings().get(CENSOR_SETTING)
-    except Exception:  # noqa: BLE001
+    except ImportError:   # running without Imervue's settings → default
         return list(DEFAULT_CENSOR_CLASSES)
     if isinstance(value, list):
         return [str(name) for name in value]

@@ -90,6 +90,17 @@ class TestGenerateContactSheetRoundtrip:
         )
         assert nested.exists()
 
+    def test_unwritable_target_raises(self, sample_images, tmp_path, qapp):
+        """A directory at the target path used to return as if the PDF were saved."""
+        target = tmp_path / "taken.pdf"
+        target.mkdir()
+        with pytest.raises(OSError, match="taken.pdf"):
+            contact_sheet.generate_contact_sheet(
+                sample_images, str(target),
+                contact_sheet.ContactSheetOptions(rows=1, cols=1, dpi=72),
+            )
+        assert target.is_dir()
+
     def test_missing_image_does_not_abort(self, tmp_path, sample_images, qapp):
         paths = sample_images + [str(tmp_path / "does_not_exist.png")]
         out = tmp_path / "sheet.pdf"

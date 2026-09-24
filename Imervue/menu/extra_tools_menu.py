@@ -7,10 +7,21 @@ if TYPE_CHECKING:
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 
+# Plugins place their entries with ``main_window.findChild(QMenu, name)`` using
+# these object names, so they are a contract with Imervue_Plugins
+# (architecture.md section 6): add new ones freely, never rename or drop one.
+EXTRA_TOOLS_OBJECT_NAME = "extra_tools"
+
+
+def submenu_object_name(key: str) -> str:
+    """Return the Qt object name of the Extra Tools submenu titled by ``key``."""
+    return f"{EXTRA_TOOLS_OBJECT_NAME}.{key}"
+
 
 def build_extra_tools_menu(ui: ImervueMainWindow):
     lang = language_wrapper.language_word_dict
     menu = ui.menuBar().addMenu(lang.get("extra_tools_menu", "Extra Tools"))
+    menu.setObjectName(EXTRA_TOOLS_OBJECT_NAME)
 
     _build_batch_submenu(menu, ui, lang)
     _build_library_submenu(menu, ui, lang)
@@ -22,6 +33,13 @@ def build_extra_tools_menu(ui: ImervueMainWindow):
     _build_multi_image_submenu(menu, ui, lang)
 
 
+def _add_submenu(menu, lang: dict, key: str, fallback: str):
+    """Add the submenu titled ``lang[key]`` and give it a stable object name."""
+    sub = menu.addMenu(lang.get(key, fallback))
+    sub.setObjectName(submenu_object_name(key))
+    return sub
+
+
 def _add_action(submenu, lang: dict, key: str, fallback: str, callback) -> None:
     action = submenu.addAction(lang.get(key, fallback))
     action.triggered.connect(callback)
@@ -30,7 +48,7 @@ def _add_action(submenu, lang: dict, key: str, fallback: str, callback) -> None:
 # --- Submenus ---------------------------------------------------------------
 
 def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("batch_submenu", "Batch"))
+    sub = _add_submenu(menu, lang, "batch_submenu", "Batch")
     _add_action(sub, lang, "batch_convert_title", "Batch Format Conversion",
                 lambda: _open_batch_convert(ui))
     _add_action(sub, lang, "exif_strip_title", "Batch EXIF Strip",
@@ -58,7 +76,7 @@ def _build_batch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
 
 
 def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("library_submenu", "Library & Metadata"))
+    sub = _add_submenu(menu, lang, "library_submenu", "Library & Metadata")
     _add_action(sub, lang, "library_search_title", "Library Search",
                 lambda: _open_library_search(ui))
     _add_action(sub, lang, "smart_albums_title", "Smart Albums",
@@ -85,7 +103,7 @@ def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
 
 
 def _build_views_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("views_submenu", "Views"))
+    sub = _add_submenu(menu, lang, "views_submenu", "Views")
     timeline_menu = sub.addMenu(lang.get("timeline_title", "Timeline View"))
     for gran_key, fallback in (
         ("day", "By day"), ("month", "By month"), ("year", "By year"),
@@ -135,7 +153,7 @@ def _set_cvd_mode(ui: ImervueMainWindow, mode: str | None) -> None:
 
 
 def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("workflow_submenu", "Workflow"))
+    sub = _add_submenu(menu, lang, "workflow_submenu", "Workflow")
     _add_action(sub, lang, "culling_title", "Culling",
                 lambda: _open_culling(ui))
     _add_action(sub, lang, "staging_tray_title", "Staging Tray",
@@ -153,7 +171,7 @@ def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
 
 
 def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("export_submenu", "Export"))
+    sub = _add_submenu(menu, lang, "export_submenu", "Export")
     _add_action(sub, lang, "contact_sheet_title", "Contact Sheet PDF",
                 lambda: _open_contact_sheet(ui))
     _add_action(sub, lang, "web_gallery_title", "Web Gallery",
@@ -169,7 +187,7 @@ def _build_export_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
 
 
 def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("develop_submenu", "Develop (Non-Destructive)"))
+    sub = _add_submenu(menu, lang, "develop_submenu", "Develop (Non-Destructive)")
     _add_action(sub, lang, "before_after_title", "Before / After Compare",
                 lambda: _open_before_after(ui))
     _add_action(sub, lang, "develop_presets_title", "Develop Presets…",
@@ -247,7 +265,7 @@ def _build_develop_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
 
 
 def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("retouch_submenu", "Retouch & Transform"))
+    sub = _add_submenu(menu, lang, "retouch_submenu", "Retouch & Transform")
     _add_action(sub, lang, "upscale_title", "AI Image Upscale",
                 lambda: _open_ai_upscale(ui))
     _add_action(sub, lang, "nr_title", "Noise Reduction / Sharpening",
@@ -278,7 +296,7 @@ def _build_retouch_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
 
 
 def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
-    sub = menu.addMenu(lang.get("multi_image_submenu", "Multi-Image"))
+    sub = _add_submenu(menu, lang, "multi_image_submenu", "Multi-Image")
     _add_action(sub, lang, "hdr_title", "HDR Merge",
                 lambda: _open_hdr_merge(ui))
     _add_action(sub, lang, "pano_title", "Panorama Stitch",

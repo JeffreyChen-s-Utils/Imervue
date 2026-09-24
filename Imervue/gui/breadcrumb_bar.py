@@ -118,7 +118,7 @@ class BreadcrumbBar(QScrollArea):
             # Delegate to the one shared navigator so the breadcrumb behaves
             # exactly like the file tree — including updating the path bar.
             mw.navigate_to_path(folder)
-        except Exception:   # noqa: BLE001 — navigation raises across many types
+        except Exception:   # navigation raises across many types
             import logging
             logging.getLogger("Imervue").exception(
                 "breadcrumb navigate to %s failed", folder

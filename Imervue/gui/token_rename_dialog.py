@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.library.token_rename import apply_plan, preview, RenamePlan
+from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -115,8 +116,7 @@ class TokenRenameDialog(QDialog):
 
 
 def open_token_rename(ui: ImervueMainWindow) -> None:
-    selected = list(ui.viewer.selected_tiles)
-    paths = selected or list(ui.viewer.model.images)
+    paths = selection_or_all(ui.viewer)
     if not paths:
         return
     TokenRenameDialog(ui, paths).exec()

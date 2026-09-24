@@ -36,7 +36,7 @@ class _AutoTagWorker(QObject):
                 self._paths,
                 progress_cb=lambda c, t, p: self.progress.emit(c, t, p),
             )
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # auto_tag_batch writes to SQLite, which can raise (e.g. database
             # locked while a scan runs); without this the progress bar hung
             # forever and the thread was never quit.

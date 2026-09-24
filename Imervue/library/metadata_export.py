@@ -8,12 +8,21 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
+import numbers
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from PIL import Image
 from PIL.ExifTags import TAGS
+
+from Imervue.image.exif_merge import merged_exif
+from Imervue.image.dimensions import image_dimensions
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
+logger = logging.getLogger("Imervue.library.metadata_export")
 
 _EXIF_FIELDS = (
     "DateTimeOriginal", "Make", "Model", "LensModel",
@@ -80,17 +89,20 @@ def _build_one(path: str) -> dict[str, Any]:
 
 
 def _populate_image_fields(path: str, rec: dict[str, Any]) -> None:
+    dims = image_dimensions(path)   # also registers the HEIF / JXL codec
+    if dims is None:   # unreadable file: export the row without image fields
+        return
+    rec["width"], rec["height"] = dims
     try:
         with Image.open(path) as im:
-            rec["width"], rec["height"] = im.size
-            exif_raw = im.getexif()
+            exif_raw = merged_exif(im)   # the camera fields live in the Exif sub-IFD
             if exif_raw:
                 for tag_id, value in exif_raw.items():
                     tag = TAGS.get(tag_id, str(tag_id))
                     if tag in _EXIF_FIELDS:
                         rec[f"exif_{tag}"] = _coerce_value(value)
-    except Exception:  # noqa: BLE001, S110  # nosec B110 - export should continue past one bad file
-        pass
+    except IMAGE_READ_ERRORS:   # unreadable file: export the row without image fields
+        return
 
 
 def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:
@@ -102,8 +114,8 @@ def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:
         rec["rating"] = int(ratings.get(path, 0))
         favs = user_setting_dict.get("image_favorites", [])
         rec["favorite"] = bool(path in favs) if isinstance(favs, list | set | tuple) else False
-    except Exception:  # noqa: BLE001, S110  # nosec B110 - user fields optional; skip lookup errors
-        pass
+    except (TypeError, ValueError):   # a corrupt rating in the settings file
+        logger.warning("Skipping user fields of %s in the metadata export", path, exc_info=True)
     try:
         from Imervue.library import image_index
         rec["note"] = image_index.get_note(path)
@@ -113,16 +125,16 @@ def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:
         cs = image_index.get_cull_state(path)
         if cs != image_index.CULL_UNFLAGGED:
             rec["cull"] = cs
-    except Exception:  # noqa: BLE001, S110 - library index is optional; export continues without it
-        pass
+    except (sqlite3.Error, OSError):   # library index unavailable: export without it
+        logger.warning("Skipping library fields of %s in the metadata export", path, exc_info=True)
 
 
 def _coerce_value(v: Any) -> Any:
+    if isinstance(v, numbers.Rational) and not isinstance(v, int):
+        # ExposureTime / FNumber / FocalLength arrive as IFDRational; x/0 is "unknown".
+        return float(v) if v.denominator else None
     if isinstance(v, bytes):
-        try:
-            return v.decode("utf-8", errors="replace")
-        except Exception:  # noqa: BLE001
-            return repr(v)
+        return v.decode("utf-8", errors="replace")
     if isinstance(v, tuple | list):
         return str(v)
     return v

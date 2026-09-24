@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.menu_tree import iter_menu_actions, submenu_index
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -77,31 +78,19 @@ def collect_shortcut_rows(workspace) -> list[tuple[str, str]]:
     (label, key) so the same QAction registered to both a menu and
     a toolbar appears once. Sort is stable: menu order is preserved
     so related shortcuts (File ▸ ..., then Edit ▸ ...) cluster.
+
+    Submenus are resolved through :mod:`Imervue.gui.menu_tree`, not
+    ``QAction.menu()``, which invalidated the workspace's cached
+    ``_<key>_menu`` wrappers.
     """
     seen: set[tuple[str, str]] = set()
     rows: list[tuple[str, str]] = []
     menu_bar = workspace.menuBar() if hasattr(workspace, "menuBar") else None
     if menu_bar is None:
         return rows
-    for action in menu_bar.actions():
-        menu = action.menu()
-        if menu is None:
-            continue
-        rows.extend(_collect_from_menu(menu, seen))
-    return rows
-
-
-def _collect_from_menu(menu, seen) -> list[tuple[str, str]]:
-    rows: list[tuple[str, str]] = []
-    for action in menu.actions():
-        if action.isSeparator():
-            continue
-        sub = action.menu()
-        if sub is not None:
-            rows.extend(_collect_from_menu(sub, seen))
-            continue
+    for path, action in iter_menu_actions(menu_bar, submenu_index(workspace)):
         seq = action.shortcut()
-        if seq.isEmpty():
+        if not path or seq.isEmpty():
             continue
         label = action.text().replace("&", "")
         key = seq.toString(seq.SequenceFormat.NativeText) or seq.toString()

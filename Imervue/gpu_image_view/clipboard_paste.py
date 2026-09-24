@@ -31,6 +31,9 @@ def paste_image_from_clipboard(view: GPUImageView) -> None:
         return
 
     save_path = _save_clipboard_image(qimg, folder)
+    if save_path is None:
+        _toast(view, "error", f"Could not save the pasted image to {folder}")
+        return
     _load_pasted_image(view, save_path)
 
 
@@ -60,12 +63,19 @@ def _resolve_paste_target_folder(view: GPUImageView) -> str | None:
     return folder
 
 
-def _save_clipboard_image(qimg, folder: str) -> str:
-    """Persist ``qimg`` under ``folder`` with a timestamped name."""
-    name = f"pasted_{int(time.time())}.png"
-    save_path = str(Path(folder) / name)
-    qimg.save(save_path, "PNG")
-    return save_path
+def _save_clipboard_image(qimg, folder: str) -> str | None:
+    """Persist ``qimg`` under ``folder`` with a timestamped name; ``None`` if the write fails.
+
+    A second paste within the same second gets a ``-1`` / ``-2`` suffix instead
+    of overwriting the first. ``QImage.save`` never raises; it returns ``False``.
+    """
+    stem = f"pasted_{int(time.time())}"
+    save_path = Path(folder) / f"{stem}.png"
+    counter = 1
+    while save_path.exists():
+        save_path = Path(folder) / f"{stem}-{counter}.png"
+        counter += 1
+    return str(save_path) if qimg.save(str(save_path), "PNG") else None
 
 
 def _load_pasted_image(view: GPUImageView, save_path: str) -> None:
@@ -78,5 +88,9 @@ def _load_pasted_image(view: GPUImageView, save_path: str) -> None:
     from Imervue.gpu_image_view.images.image_loader import open_path
     open_path(main_gui=view, path=save_path)
 
+    _toast(view, "info", f"Pasted: {Path(save_path).name}")
+
+
+def _toast(view: GPUImageView, level: str, text: str) -> None:
     if hasattr(view.main_window, "toast"):
-        view.main_window.toast.info(f"Pasted: {Path(save_path).name}")
+        getattr(view.main_window.toast, level)(text)

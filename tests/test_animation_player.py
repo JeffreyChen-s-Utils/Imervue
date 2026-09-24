@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -243,3 +244,32 @@ class TestPyramidMemoization:
         pl.stop()
         assert pl._pyramid_cache == {}
         assert pl._pyramid_bytes == 0
+
+
+class TestLoadFailures:
+    def test_truncated_gif_keeps_the_frames_that_decode(self, tmp_path, qapp):
+        full = _make_gif(tmp_path / "anim.gif", n_frames=4)
+        data = Path(full).read_bytes()
+        cut = tmp_path / "cut.gif"
+        cut.write_bytes(data[: len(data) * 3 // 4])
+        player = ap.AnimationPlayer(_FakeGui(), str(cut))
+        loaded = player.load()
+        assert player.total_frames < 4
+        assert loaded is (player.total_frames > 1)
+
+    def test_load_releases_the_file(self, tmp_path, qapp):
+        import os
+        p = _make_gif(tmp_path / "anim.gif", n_frames=3)
+        assert ap.AnimationPlayer(_FakeGui(), p).load() is True
+        assert ap.is_animated_file(p) is True
+        os.remove(p)  # fails on Windows while a handle is still open
+
+    def test_unexpected_open_error_propagates(self, tmp_path, qapp, monkeypatch):
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(ap.Image, "open", boom)
+        with pytest.raises(RuntimeError):
+            ap.AnimationPlayer(_FakeGui(), str(tmp_path / "a.gif")).load()
+        with pytest.raises(RuntimeError):
+            ap.is_animated_file(str(tmp_path / "a.gif"))

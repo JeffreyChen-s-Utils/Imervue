@@ -3,10 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import urllib.request
-import urllib.error
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 
 from PySide6.QtCore import Qt, QThread, Signal
@@ -37,8 +36,29 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.plugin.downloader")
 
-REPO_API_URL = "https://api.github.com/repos/Jeffrey-Plugin-Repos/Imervue_Plugins/contents"
-RAW_BASE_URL = "https://raw.githubusercontent.com/Jeffrey-Plugin-Repos/Imervue_Plugins/main"
+# Failures a fetch or download is expected to meet: network and HTTP errors and
+# disk errors (``OSError``), bad JSON or a truncated listing (``ValueError``), a
+# listing of the wrong shape (``TypeError``, ``KeyError``). Anything else is a bug
+# and is logged with its traceback.
+_EXPECTED_FETCH_ERRORS = (OSError, ValueError, TypeError, KeyError)
+
+REPO_BRANCH = "main"
+# One recursive tree listing replaces a Contents API call per directory, which
+# spent ~20 of the 60 requests per hour GitHub allows an unauthenticated client
+# every time the dialog opened. File downloads go through raw.githubusercontent,
+# which is not charged against that API limit.
+REPO_TREE_URL = (
+    "https://api.github.com/repos/Jeffrey-Plugin-Repos/Imervue_Plugins"
+    f"/git/trees/{REPO_BRANCH}?recursive=1"
+)
+RAW_BASE_URL = (
+    f"https://raw.githubusercontent.com/Jeffrey-Plugin-Repos/Imervue_Plugins/{REPO_BRANCH}"
+)
+# Only these top-level directories of the distribution repository hold plugins;
+# anything else there (docs, CI config) is not offered for download.
+PLUGIN_CATEGORIES: tuple[str, ...] = ("plugins", "languages")
+
+PluginListing = tuple[str, str, list[dict]]
 
 
 def _get_plugin_dir() -> Path:
@@ -51,6 +71,64 @@ def _github_get(url: str) -> list | dict:
         return json.loads(resp.read().decode())
 
 
+def _is_hidden(name: str) -> bool:
+    return name.startswith((".", "__"))
+
+
+# Characters Windows refuses or treats as a separator in a file name. A git tree
+# path is split on "/" only, so a name pushed from Linux can still carry a
+# backslash (``..\evil.py``) and step outside the plugin directory on Windows.
+_UNSAFE_NAME_CHARS = frozenset('\\/:*?"<>|')
+
+
+def is_safe_path_component(name: str) -> bool:
+    """True if *name* can be one plain file or directory name on every platform.
+
+    Rejects empty names, ``.`` and ``..``, separators and characters Windows
+    forbids, control characters, and a trailing dot or space (Windows drops
+    them, so the name would resolve to a different file).
+    """
+    if not name or name in (".", "..") or name[-1] in ". ":
+        return False
+    return not any(ch in _UNSAFE_NAME_CHARS or ord(ch) < 32 for ch in name)
+
+
+def parse_plugin_tree(tree: dict) -> list[PluginListing]:
+    """Group a recursive git tree listing into ``(category, plugin, files)``.
+
+    A plugin is a directory directly inside one of :data:`PLUGIN_CATEGORIES`;
+    only the files directly inside it are listed, because nested directories
+    (``models/``, ``assets/``) are never downloaded. Hidden and dunder
+    directories (``.git``, ``__pycache__``) are skipped. Plugins come back in
+    category order, then by name; each file carries ``name``, ``path`` and a
+    raw ``download_url``. Raises ``ValueError`` if GitHub truncated the listing.
+    """
+    if tree.get("truncated"):
+        raise ValueError("The plugin repository listing was truncated by GitHub")
+    grouped: dict[tuple[str, str], list[dict]] = {}
+    for entry in tree.get("tree", []):
+        path = entry.get("path", "")
+        parts = path.split("/")
+        if len(parts) not in (2, 3) or parts[0] not in PLUGIN_CATEGORIES:
+            continue
+        if _is_hidden(parts[1]) or not all(is_safe_path_component(p) for p in parts[1:]):
+            continue
+        key = (parts[0], parts[1])
+        if len(parts) == 2 and entry.get("type") == "tree":
+            grouped.setdefault(key, [])
+        elif len(parts) == 3 and entry.get("type") == "blob":
+            grouped.setdefault(key, []).append({
+                "name": parts[2],
+                "path": path,
+                "download_url": f"{RAW_BASE_URL}/{quote(path)}",
+            })
+    ordered = sorted(grouped, key=lambda k: (PLUGIN_CATEGORIES.index(k[0]), k[1]))
+    return [
+        (category, name, sorted(grouped[(category, name)], key=lambda f: f["name"]))
+        for category, name in ordered
+    ]
+
+
 # ================================================================
 # Worker: fetch available plugins list from GitHub
 # ================================================================
@@ -61,38 +139,15 @@ class FetchPluginListWorker(QThread):
 
     def run(self):
         try:
-            results = []
-            root_items = _github_get(REPO_API_URL)
-
-            categories = [
-                item for item in root_items
-                if item["type"] == "dir" and not item["name"].startswith(".")
-            ]
-
-            for cat in categories:
-                cat_name = cat["name"]
-                cat_items = _github_get(cat["url"])
-
-                plugins = [
-                    item for item in cat_items
-                    if item["type"] == "dir"
-                ]
-
-                for plugin in plugins:
-                    plugin_name = plugin["name"]
-                    files = _github_get(plugin["url"])
-                    file_infos = [
-                        {
-                            "name": f["name"],
-                            "download_url": f["download_url"],
-                            "path": f["path"],
-                        }
-                        for f in files if f["type"] == "file"
-                    ]
-                    results.append((cat_name, plugin_name, file_infos))
-
-            self.result_ready.emit(results)
+            tree = _github_get(REPO_TREE_URL)
+            if not isinstance(tree, dict):
+                raise TypeError("Unexpected plugin repository listing")
+            self.result_ready.emit(parse_plugin_tree(tree))
+        except _EXPECTED_FETCH_ERRORS as e:
+            self.error.emit(str(e))
         except Exception as e:
+            # Worker boundary: the dialog waits on a signal, so report even a bug.
+            logger.exception("Fetching the plugin list failed unexpectedly")
             self.error.emit(str(e))
 
 
@@ -114,6 +169,10 @@ class DownloadPluginWorker(QThread):
         import os
         import shutil
         try:
+            names = [self.plugin_name, *(info["name"] for info in self.file_infos)]
+            unsafe = [n for n in names if not is_safe_path_component(n)]
+            if unsafe:
+                raise ValueError(f"Refusing unsafe plugin path: {unsafe[0]!r}")
             plugin_root = _get_plugin_dir()
             plugin_root.mkdir(parents=True, exist_ok=True)
             final_dir = plugin_root / self.plugin_name
@@ -141,7 +200,10 @@ class DownloadPluginWorker(QThread):
                 shutil.rmtree(tmp_dir, ignore_errors=True)
                 raise
             self.result_ready.emit(self.plugin_name)
+        except _EXPECTED_FETCH_ERRORS as e:
+            self.error.emit(str(e))
         except Exception as e:
+            logger.exception("Downloading plugin %s failed unexpectedly", self.plugin_name)
             self.error.emit(str(e))
 
 

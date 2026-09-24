@@ -164,6 +164,14 @@ class ShortcutRegistry:
 # ---------------------------------------------------------------------------
 
 
+def default_key(action_id: str) -> str | None:
+    """Return the documented default key of ``action_id``, or ``None`` for an unknown id."""
+    for entry in DEFAULT_SHORTCUTS:
+        if entry.action_id == action_id:
+            return entry.default_key
+    return None
+
+
 def load_shortcuts() -> ShortcutRegistry:
     """Load the user's customised shortcuts from settings storage."""
     return ShortcutRegistry.from_dict(user_setting_dict.get(_USER_SETTING_KEY))

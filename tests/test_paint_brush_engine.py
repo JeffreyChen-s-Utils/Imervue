@@ -519,3 +519,32 @@ def test_combined_start_and_end_taper(blank_canvas):
     tail_alpha = int(blank_canvas[30, 54, 3])
     assert mid_alpha > head_alpha
     assert mid_alpha > tail_alpha
+
+
+class TestDabBbox:
+    """``dab_bbox``: the one clipping rule every dab-based tool shares."""
+
+    def test_centred_odd_kernel(self):
+        from Imervue.paint.brush_engine import dab_bbox
+        assert dab_bbox((20, 30), (5, 5), 10, 8) == (8, 6, 13, 11, 0, 0, 5, 5)
+
+    def test_even_kernel_is_biased_left_and_up(self):
+        from Imervue.paint.brush_engine import dab_bbox
+        assert dab_bbox((20, 30), (4, 4), 10, 8) == (8, 6, 12, 10, 0, 0, 4, 4)
+
+    def test_rounds_the_centre(self):
+        from Imervue.paint.brush_engine import dab_bbox
+        assert dab_bbox((20, 30), (3, 3), 10.6, 7.4)[:4] == (10, 6, 13, 9)
+
+    def test_partial_clip_slices_the_kernel_to_match(self):
+        from Imervue.paint.brush_engine import dab_bbox
+        # 5x5 kernel centred at (0, 19) on a 20x30 canvas: left and bottom cut off.
+        cx0, cy0, cx1, cy1, kx0, ky0, kx1, ky1 = dab_bbox((20, 30), (5, 5), 0, 19)
+        assert (cx0, cy0, cx1, cy1) == (0, 17, 3, 20)
+        assert (kx0, ky0, kx1, ky1) == (2, 0, 5, 3)
+        assert (cx1 - cx0, cy1 - cy0) == (kx1 - kx0, ky1 - ky0)
+
+    def test_fully_off_canvas_is_none(self):
+        from Imervue.paint.brush_engine import dab_bbox
+        for cx, cy in ((-10, 5), (40, 5), (5, -10), (5, 30)):
+            assert dab_bbox((20, 30), (5, 5), cx, cy) is None

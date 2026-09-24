@@ -11,14 +11,14 @@ from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
-    QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
+from Imervue.gui.file_filters import translated_filter
+from Imervue.gui.dialog_rows import folder_picker_row, open_path_into
 from Imervue.image.soft_proof import simulate_profile
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -42,13 +42,9 @@ class SoftProofDialog(QDialog):
         self.setWindowTitle(lang.get("proof_title", "Soft Proof"))
         self.setMinimumWidth(560)
 
-        self._profile_edit = QLineEdit()
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_profile)
-        prof_row = QHBoxLayout()
-        prof_row.addWidget(QLabel(lang.get("proof_profile", "ICC profile:")))
-        prof_row.addWidget(self._profile_edit, 1)
-        prof_row.addWidget(browse)
+        prof_row, self._profile_edit = folder_picker_row(
+            lang.get("proof_profile", "ICC profile:"), self._pick_profile,
+            browse_text=lang.get("export_browse", "Browse..."))
 
         self._preview = QLabel()
         self._preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -71,12 +67,9 @@ class SoftProofDialog(QDialog):
 
     def _pick_profile(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getOpenFileName(
-            self, lang.get("proof_profile", "ICC profile"), "",
-            "ICC Profiles (*.icc *.icm)",
-        )
-        if fn:
-            self._profile_edit.setText(fn)
+        open_path_into(
+            self, self._profile_edit, lang.get("proof_profile", "ICC profile"),
+            translated_filter("file_filter_icc_profiles", "ICC profiles", ("icc", "icm")))
 
     def _preview_profile(self) -> None:
         lang = language_wrapper.language_word_dict
@@ -85,7 +78,7 @@ class SoftProofDialog(QDialog):
             self._status.setText(lang.get("proof_pick", "Select an ICC profile."))
             return
         try:
-            img = Image.open(self._path).convert("RGBA")
+            img = Image.fromarray(load_rgba(self._path))
             img.thumbnail((_PREVIEW_MAX, _PREVIEW_MAX))
             arr = np.asarray(img)
         except (OSError, ValueError) as err:

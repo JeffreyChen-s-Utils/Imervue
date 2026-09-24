@@ -18,9 +18,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from Imervue.gpu_image_view.gpu_image_view import (
-    _LAYOUT_SETTLE_RETRIES, GPUImageView,
-)
+from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+from Imervue.gpu_image_view.view_fitting import _LAYOUT_SETTLE_RETRIES
 
 _START_SIZE = (800, 600)
 _SETTLED_SIZE = (1280, 720)

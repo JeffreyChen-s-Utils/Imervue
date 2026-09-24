@@ -117,7 +117,7 @@ Optionnel (sous condition ; ne pas installer désactive proprement la fonctionna
 |---------|---------|
 | open_clip_torch + torch | Recherche sémantique CLIP (requêtes en langage naturel) |
 | onnxruntime | Agrandissement IA Real-ESRGAN / auto-étiquetage CLIP ONNX |
-| opencv-python | Fusion HDR, assemblage panoramique, focus stacking, détection de visages, pinceau correcteur |
+| opencv-python<5 | Fusion HDR, assemblage panoramique, focus stacking, détection de visages, pinceau correcteur |
 | sounddevice | Synchronisation labiale via micro pour Puppet |
 | mediapipe | Suivi facial par webcam pour Puppet |
 
@@ -184,6 +184,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Pools de workers séparés** — les rafales de vignettes et les décodages de zoom profond tournent sur des pools distincts, si bien qu'ouvrir un grand dossier n'affame jamais l'image que vous regardez
 - **Grille de vignettes virtualisée** — seules les tuiles visibles sont rendues ; taille de vignette configurable (128 / 256 / 512 / 1024 / auto)
 - **Cache disque** — vignettes PNG compressées avec invalidation basée sur MD5 sous `%LOCALAPPDATA%/Imervue/cache/thumbnails` (ou `~/.cache/imervue/thumbnails`)
+- **Orientation EXIF** — les photos en portrait que le téléphone ou l'appareil a seulement marquées au lieu de les pivoter s'affichent droites dans la visionneuse, les vignettes, la vue liste, l'aperçu au survol et l'onglet Modify ; un recadrage / une rotation de développement enregistré auparavant continue de s'appliquer à l'orientation sur laquelle il a été tracé
 - **Lecture d'animations** — GIF / APNG avec lecture / pause / défilement image par image / contrôle de vitesse
 
 ### Modes de navigation
@@ -365,7 +366,7 @@ Pinceau · Gomme · Remplissage · Pipette · Rect / Lasso / Baguette / Sélecti
 
 Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (saturer / désaturer) — peint des ajustements locaux de tonalité et de chrominance, pondérés par le pinceau et un masque ombres / tons moyens / hautes lumières.
 
-Raccourcis à une lettre : `B / E / G / I / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.
+Raccourcis à une lettre : `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.
 
 ### Pinceaux
 
@@ -707,14 +708,17 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | Raccourci | Action |
 |----------|--------|
 | B / E / G / I | Pinceau / Gomme / Remplissage / Pipette |
-| V / T / U / R | Déplacer / Texte / Dégradé / Sélection rectangulaire |
-| P / S / C / Z / H | Stylo / Doigt / Clone / Zoom / Main |
+| V / T / U / R | Déplacer / Texte / Dégradé / Doigt |
+| M / L / W | Sélection rectangulaire / Lasso / Baguette magique |
+| P / S / C / Z / H | Stylo / Clone / Recadrer / Zoom / Main |
 | Q | Basculer le mode masque rapide |
 | Tab | Basculer tous les docks |
 | Ctrl+Tab | Cycler les onglets Paint |
 | , / . | Cycler les types de pinceaux |
 | 0-9 | Opacité du pinceau par pas de 10 % |
 | Alt+[ / Alt+] | Descendre / monter le calque actif |
+| Ctrl+[ / Ctrl+] | Déplacer le calque actif vers le bas / le haut de la pile |
+| Ctrl+D | Désélectionner |
 
 ---
 
@@ -773,8 +777,8 @@ Imervue prend en charge les plugins tiers. Voir [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 |------|---------|
 | `on_plugin_loaded()` | Après l'instanciation du plugin |
 | `on_plugin_unloaded()` | À la fermeture de l'application |
-| `on_build_menu_bar(menu_bar)` | Après construction de la barre de menus par défaut |
-| `on_build_main_tabs(tabs)` | Après ajout des quatre onglets intégrés |
+| `on_build_menu_bar(plugin_menu)` | Après construction du menu Plugins partagé |
+| `on_build_main_tabs(tabs)` | Après ajout des cinq onglets intégrés |
 | `on_build_context_menu(menu, viewer)` | À l'ouverture du menu clic droit |
 | `on_image_loaded(path, viewer)` | Après chargement d'une image en deep zoom |
 | `on_folder_opened(path, images, viewer)` | Après ouverture d'un dossier dans la grille |
@@ -814,7 +818,7 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 | `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL optionnels) |
 | `apply_watermark` / `apply_frame` | Incruster un filigrane texte ou un cadre passe-partout / Polaroid + légende |
 | `build_collage` | Composer des images en une mosaïque en grille (avec progression) |
-| `crop_image` / `resize_image` / `rotate_image` | Recadrage en pixels, redimensionnement préservant le rapport, rotation / retournement sans perte |
+| `crop_image` / `resize_image` / `rotate_image` | Recadrage en pixels, redimensionnement préservant le rapport, rotation / retournement sans perte. Les tailles et coordonnées se rapportent à l'image redressée selon l'EXIF. |
 | `collection_stats` | Synthèse note / favori / étiquette de couleur / tri d'un dossier |
 | `search_images` | Filtrer un dossier avec le DSL de requête des albums intelligents (chemin / EXIF / taille / dimensions) |
 | `extract_gps` / `dominant_colors` | Lire les coordonnées GPS EXIF (chaîné dans `reverse_geocode`) ; palette de couleurs median-cut (rgb / hex / part) |

@@ -16,7 +16,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -26,14 +25,17 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QSlider,
     QVBoxLayout,
     QWidget,
 )
 
 from ai_style_transfer.style_transfer import StyleTransferOptions, stylise
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
+from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -41,6 +43,9 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.ai_style_transfer")
+
+# Style transfer runs on onnxruntime; offered for install on first use.
+ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
 
 _PLUGIN_DIR = Path(__file__).resolve().parent
 _MODELS_DIR = _PLUGIN_DIR / "models"
@@ -50,7 +55,7 @@ _PERCENT_STEPS = 100
 
 class AIStyleTransferPlugin(ImervuePlugin):
     plugin_name = "AI Style Transfer"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.2"
     plugin_description = "ONNX fast neural style transfer (Johnson et al.)."
     plugin_author = "Imervue"
 
@@ -103,21 +108,15 @@ class AIStyleTransferPlugin(ImervuePlugin):
             },
         }
 
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
+    def on_build_menu_bar(self, plugin_menu) -> None:
         lang = language_wrapper.language_word_dict
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "develop_submenu", "Develop (Non-Destructive)",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get("style_transfer_title", "AI Style Transfer"),
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
+        # Imervue names its Extra Tools submenus; a host that predates the
+        # names has none, so the entry falls back to the Plugins menu.
+        target = self.main_window.findChild(QMenu, "extra_tools.develop_submenu")
+        entry = (target if target is not None else plugin_menu).addAction(
+            lang.get("style_transfer_title", "AI Style Transfer"),
+        )
+        entry.triggered.connect(self._open_dialog)
 
     def _open_dialog(self) -> None:
         viewer = getattr(self, "viewer", None)
@@ -205,6 +204,15 @@ class StyleTransferDialog(WorkerHostMixin, QDialog):
             return
         if self._worker is not None:
             return
+        # Style transfer is ONNX only, so it always needs onnxruntime.
+        ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
+
+    def _start_worker(self) -> None:
+        # Reached asynchronously after the dependency check, by which time
+        # the user may have closed the dialog.
+        model_path = str(self._model.currentData() or "")
+        if self._worker is not None or not model_path or not self.isVisible():
+            return
         # ONNX style-transfer inference is slow — run it on a worker thread.
         options = StyleTransferOptions(
             model_path=model_path,
@@ -262,13 +270,6 @@ def _slider_with_label(slider: QSlider, label: QLabel) -> QWidget:
     label.setMinimumWidth(50)
     row.addWidget(label)
     return container
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 class _StyleTransferWorker(QThread):

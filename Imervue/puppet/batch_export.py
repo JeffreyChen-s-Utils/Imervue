@@ -14,8 +14,9 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, Signal
 
+from Imervue.system.qt_timers import call_later
 from Imervue.puppet.recorder import RecordingSession
 
 if TYPE_CHECKING:
@@ -143,8 +144,8 @@ class BatchMotionExporter(QObject):
         # current sequence so a stale one from a cancelled run is ignored.
         self._record_seq += 1
         seq = self._record_seq
-        QTimer.singleShot(
-            int(motion.duration * 1000) + 250,
+        call_later(
+            int(motion.duration * 1000) + 250, self,
             lambda: self._stop_current_recording(seq),
         )
 

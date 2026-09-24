@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from collections.abc import Iterable
-import contextlib
 import hashlib
 import os
 from pathlib import Path
@@ -99,10 +98,9 @@ class ImageMetadataIndex:
             cacheable = False
         width = height = None
         if size:
-            with contextlib.suppress(Exception):
-                from PIL import Image
-                with Image.open(path) as img:
-                    width, height = img.size
+            from Imervue.image.dimensions import image_dimensions
+            # Not a readable image: the dimensions stay unknown.
+            width, height = image_dimensions(path) or (None, None)
         return ImageMeta(
             path=path,
             name=p.name.lower(),

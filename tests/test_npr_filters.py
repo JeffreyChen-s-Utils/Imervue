@@ -196,3 +196,14 @@ def test_line_art_clamps_threshold_to_range(sample_rgba_array):
     under = line_art(rgb, threshold=LINE_THRESHOLD_MIN - 50)
     boundary = line_art(rgb, threshold=LINE_THRESHOLD_MIN)
     np.testing.assert_array_equal(under, boundary)
+
+
+def test_translations_are_a_fresh_copy_per_call():
+    from npr_filters.npr_filters_plugin import NPRFiltersPlugin
+
+    first = NPRFiltersPlugin.get_translations(None)
+    assert {"English", "Chinese", "Japanese"} <= set(first)
+    assert first["English"]["npr_filters_title"] == "NPR Style Filters"
+    first["English"]["npr_filters_title"] = "changed by a caller"
+    assert NPRFiltersPlugin.get_translations(None)["English"]["npr_filters_title"] == (
+        "NPR Style Filters")

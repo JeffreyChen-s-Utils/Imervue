@@ -2,7 +2,8 @@
 Face detection and per-image people tags.
 
 Uses OpenCV's Haar frontal-face cascade — a classical detector that ships
-with cv2, needs no extra download, and runs in real-time on a laptop CPU.
+with the OpenCV 4 wheels (OpenCV 5 dropped it), needs no extra download,
+and runs in real-time on a laptop CPU.
 Results are not as accurate as modern CNN detectors but perfectly
 adequate for a "show me faces in this photo" assist feature.
 
@@ -15,6 +16,7 @@ scope here — we provide detection + manual naming only.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 
 import numpy as np
@@ -56,10 +58,28 @@ class DetectorOptions:
     max_faces: int = 64
 
 
+_CASCADE_FILE = "haarcascade_frontalface_default.xml"
+
+
+class FaceDetectorUnavailableError(RuntimeError):
+    """The installed OpenCV has no Haar face detector.
+
+    OpenCV 5 moved ``CascadeClassifier`` to opencv_contrib and no longer ships
+    the cascade XML files in any wheel, so detection needs OpenCV 4.
+    """
+
+
 def _load_cascade():
     import cv2
-    cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    cascade = cv2.CascadeClassifier(cascade_path)
+    classifier = getattr(cv2, "CascadeClassifier", None)
+    data_dir = getattr(getattr(cv2, "data", None), "haarcascades", None)
+    cascade_path = os.path.join(data_dir, _CASCADE_FILE) if data_dir else ""
+    if classifier is None or not os.path.isfile(cascade_path):
+        raise FaceDetectorUnavailableError(
+            f"OpenCV {getattr(cv2, '__version__', '?')} has no Haar face "
+            f"cascade; install OpenCV 4 (pip install \"opencv-python<5\")",
+        )
+    cascade = classifier(cascade_path)
     if cascade.empty():
         raise RuntimeError(f"failed to load Haar cascade from {cascade_path}")
     return cascade
@@ -68,7 +88,11 @@ def _load_cascade():
 def detect_faces(
     arr: np.ndarray, options: DetectorOptions | None = None,
 ) -> list[FaceTag]:
-    """Detect faces in an HxWx{3,4} uint8 array. Returns ``FaceTag`` list."""
+    """Detect faces in an HxWx{3,4} uint8 array. Returns ``FaceTag`` list.
+
+    Raises ``ImportError`` without cv2 and :class:`FaceDetectorUnavailableError`
+    when the installed OpenCV has no Haar cascade (OpenCV 5).
+    """
     if arr.ndim != 3 or arr.shape[2] not in (3, 4):
         raise ValueError("detect_faces expects HxWx3 RGB or HxWx4 RGBA uint8")
     opts = options or DetectorOptions()

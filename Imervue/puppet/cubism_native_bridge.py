@@ -147,95 +147,65 @@ def load_library(path: str | Path | None = None) -> ctypes.CDLL:
     return lib
 
 
+_MODEL = (ctypes.c_void_p,)          # every per-model array getter takes the model only
+_MOC_BUFFER = (ctypes.c_void_p, ctypes.c_uint)
+_FLOATS = ctypes.POINTER(ctypes.c_float)
+_INTS = ctypes.POINTER(ctypes.c_int)
+_BYTES = ctypes.POINTER(ctypes.c_ubyte)
+_NAMES = ctypes.POINTER(ctypes.c_char_p)
+
+# exported function -> (restype, argtypes), grouped as the Cubism Core header does.
+_SIGNATURES: dict[str, tuple] = {
+    "csmGetVersion": (ctypes.c_uint, ()),
+    "csmGetMocVersion": (ctypes.c_uint, _MOC_BUFFER),
+    "csmHasMocConsistency": (ctypes.c_int, _MOC_BUFFER),
+    "csmReviveMocInPlace": (ctypes.c_void_p, _MOC_BUFFER),
+    "csmGetSizeofModel": (ctypes.c_uint, _MODEL),
+    "csmInitializeModelInPlace": (
+        ctypes.c_void_p, (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint)),
+    "csmUpdateModel": (None, _MODEL),
+    # Canvas info
+    "csmReadCanvasInfo": (None, (
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_float * 2),
+        ctypes.POINTER(ctypes.c_float * 2),
+        _FLOATS,
+    )),
+    # Parameters
+    "csmGetParameterCount": (ctypes.c_int, _MODEL),
+    "csmGetParameterIds": (_NAMES, _MODEL),
+    "csmGetParameterMinimumValues": (_FLOATS, _MODEL),
+    "csmGetParameterMaximumValues": (_FLOATS, _MODEL),
+    "csmGetParameterDefaultValues": (_FLOATS, _MODEL),
+    "csmGetParameterValues": (_FLOATS, _MODEL),
+    # Drawables
+    "csmGetDrawableCount": (ctypes.c_int, _MODEL),
+    "csmGetDrawableIds": (_NAMES, _MODEL),
+    "csmGetDrawableTextureIndices": (_INTS, _MODEL),
+    "csmGetDrawableDrawOrders": (_INTS, _MODEL),
+    "csmGetRenderOrders": (_INTS, _MODEL),
+    "csmGetDrawableDynamicFlags": (_BYTES, _MODEL),
+    "csmGetDrawableVertexCounts": (_INTS, _MODEL),
+    "csmGetDrawableVertexPositions": (ctypes.POINTER(_FLOATS), _MODEL),
+    "csmGetDrawableVertexUvs": (ctypes.POINTER(_FLOATS), _MODEL),
+    "csmGetDrawableIndexCounts": (_INTS, _MODEL),
+    "csmGetDrawableIndices": (ctypes.POINTER(ctypes.POINTER(ctypes.c_ushort)), _MODEL),
+    "csmGetDrawableOpacities": (_FLOATS, _MODEL),
+    "csmGetDrawableConstantFlags": (_BYTES, _MODEL),
+    "csmGetDrawableBlendModes": (_INTS, _MODEL),
+    "csmGetDrawableMaskCounts": (_INTS, _MODEL),
+    "csmGetDrawableMasks": (ctypes.POINTER(_INTS), _MODEL),
+}
+
+
 def _bind_signatures(lib: ctypes.CDLL) -> None:
     """Tell ctypes the calling-convention shapes for every exported
     function we'll touch. Without this, ctypes assumes ``int``
     arguments / return on Windows which mangles pointers on 64-bit."""
-    lib.csmGetVersion.restype = ctypes.c_uint
-    lib.csmGetVersion.argtypes = []
-
-    lib.csmGetMocVersion.restype = ctypes.c_uint
-    lib.csmGetMocVersion.argtypes = [ctypes.c_void_p, ctypes.c_uint]
-
-    lib.csmHasMocConsistency.restype = ctypes.c_int
-    lib.csmHasMocConsistency.argtypes = [ctypes.c_void_p, ctypes.c_uint]
-
-    lib.csmReviveMocInPlace.restype = ctypes.c_void_p
-    lib.csmReviveMocInPlace.argtypes = [ctypes.c_void_p, ctypes.c_uint]
-
-    lib.csmGetSizeofModel.restype = ctypes.c_uint
-    lib.csmGetSizeofModel.argtypes = [ctypes.c_void_p]
-
-    lib.csmInitializeModelInPlace.restype = ctypes.c_void_p
-    lib.csmInitializeModelInPlace.argtypes = [
-        ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint,
-    ]
-
-    lib.csmUpdateModel.restype = None
-    lib.csmUpdateModel.argtypes = [ctypes.c_void_p]
-
-    # Canvas info
-    lib.csmReadCanvasInfo.restype = None
-    lib.csmReadCanvasInfo.argtypes = [
-        ctypes.c_void_p,
-        ctypes.POINTER(ctypes.c_float * 2),
-        ctypes.POINTER(ctypes.c_float * 2),
-        ctypes.POINTER(ctypes.c_float),
-    ]
-
-    # Parameters
-    lib.csmGetParameterCount.restype = ctypes.c_int
-    lib.csmGetParameterCount.argtypes = [ctypes.c_void_p]
-    lib.csmGetParameterIds.restype = ctypes.POINTER(ctypes.c_char_p)
-    lib.csmGetParameterIds.argtypes = [ctypes.c_void_p]
-    lib.csmGetParameterMinimumValues.restype = ctypes.POINTER(ctypes.c_float)
-    lib.csmGetParameterMinimumValues.argtypes = [ctypes.c_void_p]
-    lib.csmGetParameterMaximumValues.restype = ctypes.POINTER(ctypes.c_float)
-    lib.csmGetParameterMaximumValues.argtypes = [ctypes.c_void_p]
-    lib.csmGetParameterDefaultValues.restype = ctypes.POINTER(ctypes.c_float)
-    lib.csmGetParameterDefaultValues.argtypes = [ctypes.c_void_p]
-    lib.csmGetParameterValues.restype = ctypes.POINTER(ctypes.c_float)
-    lib.csmGetParameterValues.argtypes = [ctypes.c_void_p]
-
-    # Drawables
-    lib.csmGetDrawableCount.restype = ctypes.c_int
-    lib.csmGetDrawableCount.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableIds.restype = ctypes.POINTER(ctypes.c_char_p)
-    lib.csmGetDrawableIds.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableTextureIndices.restype = ctypes.POINTER(ctypes.c_int)
-    lib.csmGetDrawableTextureIndices.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableDrawOrders.restype = ctypes.POINTER(ctypes.c_int)
-    lib.csmGetDrawableDrawOrders.argtypes = [ctypes.c_void_p]
-    lib.csmGetRenderOrders.restype = ctypes.POINTER(ctypes.c_int)
-    lib.csmGetRenderOrders.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableDynamicFlags.restype = ctypes.POINTER(ctypes.c_ubyte)
-    lib.csmGetDrawableDynamicFlags.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableVertexCounts.restype = ctypes.POINTER(ctypes.c_int)
-    lib.csmGetDrawableVertexCounts.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableVertexPositions.restype = ctypes.POINTER(
-        ctypes.POINTER(ctypes.c_float),
-    )
-    lib.csmGetDrawableVertexPositions.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableVertexUvs.restype = ctypes.POINTER(
-        ctypes.POINTER(ctypes.c_float),
-    )
-    lib.csmGetDrawableVertexUvs.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableIndexCounts.restype = ctypes.POINTER(ctypes.c_int)
-    lib.csmGetDrawableIndexCounts.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableIndices.restype = ctypes.POINTER(
-        ctypes.POINTER(ctypes.c_ushort),
-    )
-    lib.csmGetDrawableIndices.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableOpacities.restype = ctypes.POINTER(ctypes.c_float)
-    lib.csmGetDrawableOpacities.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableConstantFlags.restype = ctypes.POINTER(ctypes.c_ubyte)
-    lib.csmGetDrawableConstantFlags.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableBlendModes.restype = ctypes.POINTER(ctypes.c_int)
-    lib.csmGetDrawableBlendModes.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableMaskCounts.restype = ctypes.POINTER(ctypes.c_int)
-    lib.csmGetDrawableMaskCounts.argtypes = [ctypes.c_void_p]
-    lib.csmGetDrawableMasks.restype = ctypes.POINTER(ctypes.POINTER(ctypes.c_int))
-    lib.csmGetDrawableMasks.argtypes = [ctypes.c_void_p]
+    for name, (restype, argtypes) in _SIGNATURES.items():
+        function = getattr(lib, name)
+        function.restype = restype
+        function.argtypes = list(argtypes)
 
 
 # ---------------------------------------------------------------------------

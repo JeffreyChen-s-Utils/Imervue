@@ -293,3 +293,26 @@ class TestFileIdentity:
         # Second call hits the in-process cache
         id2 = file_identity(p)
         assert id1 == id2
+
+
+class TestExifOrientedBase:
+    def test_new_recipe_is_authored_on_the_upright_image(self):
+        assert Recipe(crop=(0, 0, 4, 4)).base_is_oriented() is True
+
+    def test_saved_recipe_without_the_key_is_legacy(self):
+        legacy = Recipe.from_dict({"crop": [0, 0, 4, 4]})
+        assert legacy.exif_oriented is False
+        assert legacy.base_is_oriented() is False
+
+    @pytest.mark.parametrize("data", [{"brightness": 0.3}, {}, {"rotate_steps": 4}])
+    def test_legacy_recipe_without_geometry_still_applies_upright(self, data):
+        assert Recipe.from_dict(data).base_is_oriented() is True
+
+    @pytest.mark.parametrize("flag", [True, False])
+    def test_flag_round_trips(self, flag):
+        r = Recipe(rotate_steps=1, exif_oriented=flag)
+        assert Recipe.from_dict(r.to_dict()).exif_oriented is flag
+        assert r.normalized().exif_oriented is flag
+
+    def test_flag_is_not_an_edit(self):
+        assert Recipe(exif_oriented=False).is_identity()

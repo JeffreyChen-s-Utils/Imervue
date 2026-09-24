@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
-from Imervue.menu.plugin_menu import build_plugin_menu
+from PySide6.QtWidgets import QMenu
+
+from Imervue.menu.language_menu import LANGUAGE_MENU_OBJECT_NAME
+from Imervue.menu.plugin_menu import build_plugin_menu, dispatch_plugin_menus
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import register_translations as _register_pip_translations
 from Imervue.plugin.plugin_manager import PluginManager
@@ -32,26 +35,26 @@ def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
     main_window.plugin_manager = manager
 
     # If plugins registered new languages, append them to the existing language menu.
-    # The QMenu wrapper stored on ``main_window.language_menu`` can outlive its C++
-    # peer in some PySide6 / Python combinations (same shiboken-teardown hazard
-    # handled in ``Imervue_main_window._safe_submenus_of`` and
-    # ``paint_workspace._safe_set_checked``); skip the plugin entries instead of
-    # aborting plugin init when that happens.
+    # The QMenu wrapper stored on ``main_window.language_menu`` goes stale once
+    # anything walks the menus with ``QAction.menu()`` (Imervue/gui/menu_tree.py),
+    # so the menu is re-resolved by object name; if it still cannot be reached the
+    # plugin entries are skipped instead of aborting plugin init.
     if language_wrapper.plugin_languages and hasattr(main_window, "language_menu"):
         _append_plugin_languages(main_window)
 
     # Let plugins contribute top-level tabs to the main window's tab strip.
     # ``_main_tabs`` is the QTabWidget owned by ImervueMainWindow that already
-    # carries Imervue / Modify / Paint; plugin tabs append after Paint in
-    # plugin discovery order. Each call is wrapped so a single bad plugin
-    # can't tear down construction.
+    # carries Imervue / Modify / Paint / Puppet / Desktop Pet; plugin tabs
+    # append after Desktop Pet in plugin discovery order. Each call is
+    # wrapped so a single bad plugin can't tear down construction.
     tabs = getattr(main_window, "_main_tabs", None)
     if tabs is not None:
         _dispatch_main_tab_hook(manager, tabs)
 
     # Build the plugin management menu first, then let plugins add items into it
+    # (recording them so Reload Plugins can take them out again).
     plugin_menu = build_plugin_menu(main_window)
-    manager.dispatch_build_menu_bar(plugin_menu)
+    dispatch_plugin_menus(main_window, manager, plugin_menu)
 
 
 def _dispatch_main_tab_hook(manager: PluginManager, tabs) -> None:
@@ -69,7 +72,7 @@ def _dispatch_main_tab_hook(manager: PluginManager, tabs) -> None:
                 "plugin %r raised RuntimeError in on_build_main_tabs; skipping",
                 getattr(plugin, "plugin_name", type(plugin).__name__),
             )
-        except Exception:  # noqa: BLE001 - plugin sandboxing
+        except Exception:  # plugin sandboxing
             logger.exception(
                 "plugin %r raised in on_build_main_tabs",
                 getattr(plugin, "plugin_name", type(plugin).__name__),
@@ -79,27 +82,18 @@ def _dispatch_main_tab_hook(manager: PluginManager, tabs) -> None:
 def _append_plugin_languages(main_window: ImervueMainWindow) -> None:
     from Imervue.menu.language_menu import set_language
     from PySide6.QtGui import QAction
-    # ``main_window.language_menu`` is the wrapper captured during
-    # ``build_language_menu`` — on some PySide6 builds the C++ peer
-    # gets re-allocated by the menubar before plugin init runs, so the
-    # cached wrapper points at a freed pointer. Re-resolve via the
-    # menubar so we always have a live wrapper, then refresh the
-    # cached attribute so subsequent code sees the same one we used.
     menu = _resolve_language_menu(main_window)
     if menu is None:
-        logger.debug(
-            "language menu not reachable from menubar; skipping plugin "
-            "language entries (rare shiboken teardown — handled)"
+        logger.warning(
+            "language menu not reachable; plugin languages %s are not listed",
+            sorted(language_wrapper.plugin_languages),
         )
         return
     main_window.language_menu = menu
     try:
         menu.addSeparator()
     except RuntimeError:
-        logger.debug(
-            "fresh language_menu wrapper still raised RuntimeError on "
-            "addSeparator; skipping plugin language entries"
-        )
+        logger.warning("language menu went stale; plugin languages are not listed")
         return
     for lang_code, display_name in language_wrapper.plugin_languages.items():
         action = QAction(display_name, menu)
@@ -109,56 +103,33 @@ def _append_plugin_languages(main_window: ImervueMainWindow) -> None:
         try:
             menu.addAction(action)
         except RuntimeError:
-            logger.debug(
-                "language_menu wrapper went stale mid-append; "
-                "stopping plugin language entries"
-            )
+            logger.warning("language menu went stale mid-append; stopping plugin languages")
             return
 
 
 def _resolve_language_menu(main_window: ImervueMainWindow):
-    """Return a live :class:`QMenu` for the Language menu by walking
-    the menubar's actions, falling back to the cached
-    ``main_window.language_menu`` if the walk fails.
+    """Return a live Language :class:`QMenu`, or ``None``.
 
-    The menubar walk is the load-bearing path: each call to
-    ``action.menu()`` produces a *fresh* shiboken wrapper around the
-    underlying ``QMenu*``, so even if the cached attribute holds a
-    dead wrapper the menubar can hand us a live one.
+    The cached ``main_window.language_menu`` is used while its wrapper is
+    valid. Otherwise the menu is found by the object name
+    ``build_language_menu`` gives it, and failing that by its localised title
+    among the window's menus. It is never looked up through
+    ``QAction.menu()``, which is what invalidates the cached wrapper in the
+    first place (Imervue/gui/menu_tree.py).
     """
-    cached = getattr(main_window, "language_menu", None)
-    bar = main_window.menuBar()
-    try:
-        actions = bar.actions()
-    except RuntimeError:
-        return _verify_alive(cached)
-    # Prefer matching by identity against the cached pointer so we
-    # always pick the same menu the user already saw.
-    for action in actions:
-        try:
-            sub = action.menu()
-        except RuntimeError:
-            continue
-        if sub is None:
-            continue
-        if sub is cached:
-            return sub
-    # Fallback — match by visible title against the localised
-    # ``menu_bar_language`` string so a stale cached wrapper doesn't
-    # block us.
+    cached = _verify_alive(getattr(main_window, "language_menu", None))
+    if cached is not None:
+        return cached
+    named = _verify_alive(main_window.findChild(QMenu, LANGUAGE_MENU_OBJECT_NAME))
+    if named is not None:
+        return named
     expected_title = language_wrapper.language_word_dict.get(
         "menu_bar_language", "Language",
     )
-    for action in actions:
-        try:
-            sub = action.menu()
-            if sub is None:
-                continue
-            if action.text() == expected_title:
-                return sub
-        except RuntimeError:
-            continue
-    return _verify_alive(cached)
+    for menu in main_window.findChildren(QMenu):
+        if _verify_alive(menu) is not None and menu.title().replace("&", "") == expected_title:
+            return menu
+    return None
 
 
 def _verify_alive(menu):

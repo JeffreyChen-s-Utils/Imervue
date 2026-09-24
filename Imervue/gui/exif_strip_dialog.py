@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.image.orientation import upright
+from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -65,7 +67,9 @@ def strip_exif(path: str, *, remove_all: bool = True,
     Returns the output path on success.
     Raises on failure.
     """
-    img = Image.open(path)
+    # The orientation tag goes with the rest of the EXIF, so bake it into the
+    # pixels first; otherwise a portrait phone photo comes out sideways for good.
+    img = upright(Image.open(path))
 
     # Preserve ICC profile if user only wants GPS removed
     icc = img.info.get("icc_profile") if not remove_all else None
@@ -171,13 +175,8 @@ class ExifStripDialog(WorkerHostMixin, QDialog):
         layout = QVBoxLayout(self)
 
         # Source folder
-        src_row = QHBoxLayout()
-        src_row.addWidget(QLabel(lang.get("exif_strip_source", "Source folder:")))
-        self._src_edit = QLineEdit()
-        src_row.addWidget(self._src_edit, 1)
-        browse_btn = QPushButton(lang.get("batch_convert_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse_folder)
-        src_row.addWidget(browse_btn)
+        src_row, self._src_edit = folder_picker_row(
+            lang.get("exif_strip_source", "Source folder:"), self._browse_folder)
         layout.addLayout(src_row)
 
         # Info

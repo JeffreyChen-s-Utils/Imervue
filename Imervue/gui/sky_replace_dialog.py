@@ -5,23 +5,20 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QProgressBar,
-    QPushButton,
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import load_rgba
+from Imervue.gui.file_filters import image_filter
+from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.segmentation import remove_background, replace_sky
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -45,7 +42,7 @@ class _Worker(QThread):
 
     def run(self):
         try:
-            arr = np.asarray(Image.open(self._src).convert("RGBA"))
+            arr = load_rgba(self._src)
             if self._mode == "sky_gradient":
                 arr = replace_sky(arr)
             elif self._mode == "bg_white":
@@ -54,7 +51,7 @@ class _Worker(QThread):
                 arr = remove_background(arr, bg_color=(0, 0, 0, 0))
             Image.fromarray(arr).save(self._out)
             self.done.emit(True, self._out)
-        except Exception as exc:  # noqa: BLE001 - worker must always report
+        except Exception as exc:  # worker must always report
             # A cv2-backed segmentation raises ImportError (opencv is optional)
             # or cv2.error, which the narrow except missed → done never fired and
             # the dialog hung with Apply disabled. Always report the failure.
@@ -85,13 +82,10 @@ class SkyReplaceDialog(WorkerHostMixin, QDialog):
         form = QFormLayout()
         form.addRow(lang.get("sky_mode", "Operation:"), self._mode)
 
-        self._out_edit = QLineEdit(self._default_output_path())
-        browse = QPushButton(lang.get("export_browse", "Browse..."))
-        browse.clicked.connect(self._pick_out)
-        out_row = QHBoxLayout()
-        out_row.addWidget(QLabel(lang.get("sky_output", "Output:")))
-        out_row.addWidget(self._out_edit, 1)
-        out_row.addWidget(browse)
+        out_row, self._out_edit = folder_picker_row(
+            lang.get("sky_output", "Output:"), self._pick_out,
+            browse_text=lang.get("export_browse", "Browse..."))
+        self._out_edit.setText(self._default_output_path())
 
         self._progress = QProgressBar()
         self._progress.setRange(0, 0)
@@ -117,12 +111,8 @@ class SkyReplaceDialog(WorkerHostMixin, QDialog):
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict
-        fn, _ = QFileDialog.getSaveFileName(
-            self, lang.get("sky_output", "Output"), self._out_edit.text(),
-            "Images (*.png *.tif)",
-        )
-        if fn:
-            self._out_edit.setText(fn)
+        save_path_into(
+            self, self._out_edit, lang.get("sky_output", "Output"), image_filter(("png", "tif")))
 
     def _run(self) -> None:
         out = self._out_edit.text().strip()

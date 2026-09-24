@@ -106,3 +106,21 @@ def test_dialog_uses_worker_host_mixin():
     from Imervue.plugin.worker_host import WorkerHostMixin
     assert issubclass(SemanticSearchDialog, WorkerHostMixin)
     assert "closeEvent" not in SemanticSearchDialog.__dict__
+
+
+def test_unavailable_notice_is_translated(qapp, monkeypatch):
+    from PySide6.QtWidgets import QMessageBox
+
+    from Imervue.gui import semantic_search_dialog as mod
+    from Imervue.multi_language.japanese import japanese_word_dict
+    from Imervue.multi_language.language_wrapper import language_wrapper
+
+    monkeypatch.setattr(language_wrapper, "language_word_dict", japanese_word_dict)
+    shown: list = []
+    monkeypatch.setattr(QMessageBox, "information",
+                        lambda _parent, title, text: shown.append((title, text)))
+    mod._warn_unavailable(None)
+    assert shown == [(japanese_word_dict["semantic_search_title"],
+                      japanese_word_dict["semantic_search_unavailable"])]
+    assert "open_clip_torch" in shown[0][1]
+

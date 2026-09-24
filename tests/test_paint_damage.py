@@ -1,6 +1,9 @@
 """Tests for the damage-rectangle helper."""
 from __future__ import annotations
 
+import pytest
+
+from Imervue.paint import damage
 from Imervue.paint.damage import EMPTY, DamageRect, from_dab_result
 
 
@@ -150,3 +153,38 @@ def test_from_dab_result_empty_dab_yields_empty_rect():
     from Imervue.paint.brush_engine import DabResult
     rect = from_dab_result(DabResult(0, 0, 0, 0))
     assert rect.is_empty
+
+
+# ---------------------------------------------------------------------------
+# Tuple helpers — used by the retouch tools while a stroke accumulates damage
+# ---------------------------------------------------------------------------
+
+
+def test_union_rects_merges_overlapping_tuples():
+    assert damage.union_rects((0, 0, 4, 4), (2, 2, 4, 4)) == (0, 0, 6, 6)
+
+
+def test_union_rects_merges_disjoint_tuples():
+    assert damage.union_rects((0, 0, 2, 2), (10, 10, 2, 2)) == (0, 0, 12, 12)
+
+
+@pytest.mark.parametrize("empty", [(0, 0, 0, 0), (5, 5, 0, 3), (5, 5, 3, 0)])
+def test_union_rects_with_an_empty_side_returns_the_other(empty):
+    other = (1, 2, 3, 4)
+    assert damage.union_rects(empty, other) == other
+    assert damage.union_rects(other, empty) == other
+
+
+def test_union_rects_two_empty_stays_empty():
+    assert damage.union_rects((0, 0, 0, 0), (1, 1, 0, 0)) == (1, 1, 0, 0)
+
+
+def test_from_rect_builds_a_damage_rect():
+    rect = damage.from_rect((3, 4, 5, 6))
+    assert (rect.x, rect.y, rect.w, rect.h) == (3, 4, 5, 6)
+    assert not rect.is_empty
+
+
+@pytest.mark.parametrize("empty", [(0, 0, 0, 0), (1, 1, -2, 5), (1, 1, 5, 0)])
+def test_from_rect_of_an_empty_tuple_is_the_shared_empty(empty):
+    assert damage.from_rect(empty) is damage.EMPTY

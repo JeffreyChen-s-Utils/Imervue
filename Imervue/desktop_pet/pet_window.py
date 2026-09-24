@@ -32,17 +32,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.system.qt_timers import call_later
+from Imervue.system.best_effort import best_effort
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet import pet_placement
 from Imervue.desktop_pet.fullscreen_detector import FullscreenDetector
-from Imervue.desktop_pet.click_sfx import EVENT_NOTIFY as SFX_NOTIFY
 from Imervue.desktop_pet.pet_context_menu import build_context_menu
-from Imervue.desktop_pet.hotkey_manager import (
-    ACTION_SPEAK_NOW,
-    ACTION_TOGGLE_CLICK_THROUGH,
-    ACTION_TOGGLE_LOCK,
-    ACTION_TOGGLE_VISIBLE,
-)
 from Imervue.desktop_pet.pet_drivers import (
     ClickSfxController,
     IdleMinigameController,
@@ -53,6 +48,8 @@ from Imervue.desktop_pet.pet_canvas_drivers import PetCanvasDrivers
 from Imervue.desktop_pet.pet_interaction import PetInteraction, llm_situation_tag
 from Imervue.desktop_pet.pet_shadow_controller import PetShadowController
 from Imervue.desktop_pet.pet_features import build_integration_controllers
+from Imervue.desktop_pet.pet_feature_toggles import PetFeatureTogglesMixin
+from Imervue.desktop_pet.pet_window_flags import PetWindowFlagsMixin
 from Imervue.desktop_pet.pet_script import (
     PetScript,
     PetScriptEngine,
@@ -145,7 +142,7 @@ keep working. The authoritative copy lives in
 :mod:`Imervue.desktop_pet.pet_script` alongside the engine."""
 
 
-class PetWindow(QWidget):
+class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
     """The on-desktop puppet overlay.
 
     Long-lived: constructed once per Imervue session, the pet
@@ -331,117 +328,6 @@ class PetWindow(QWidget):
     def _virtual_camera(self) -> VirtualCameraOutput | None:
         return self._canvas_drivers.virtual_camera
 
-    # =====================================================================
-    # Window flags + visibility
-    # =====================================================================
-
-    def _configure_window_flags(
-        self, *, click_through: bool, on_bottom: bool,
-    ) -> None:
-        """Build the frameless / on-top-or-bottom / tool /
-        optionally-transparent-for-input flag combo and apply it.
-        ``WindowDoesNotAcceptFocus`` runs in tandem with on-bottom
-        so the pet doesn't steal focus when running as a desktop
-        widget under other apps."""
-        flags = (
-            Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.Tool   # no taskbar entry, no Alt-Tab
-        )
-        if on_bottom:
-            # WindowStaysOnBottomHint is the explicit "behind
-            # everything" hint Qt exposes; DoesNotAcceptFocus
-            # keeps clicks from raising the pet to the foreground.
-            flags |= Qt.WindowType.WindowStaysOnBottomHint
-            flags |= Qt.WindowType.WindowDoesNotAcceptFocus
-        else:
-            flags |= Qt.WindowType.WindowStaysOnTopHint
-        if click_through:
-            flags |= Qt.WindowType.WindowTransparentForInput
-        self.setWindowFlags(flags)
-
-    def set_click_through(self, enabled: bool) -> None:
-        """Toggle whether clicks pass through to the desktop.
-        Re-applying the flag bitmask forces Qt to re-create the
-        native window, so we preserve geometry across the cycle."""
-        enabled = bool(enabled)
-        if enabled == self._click_through:
-            return
-        self._click_through = enabled
-        self._reapply_flags()
-        self._persist(click_through=enabled)
-
-    def click_through_enabled(self) -> bool:
-        return self._click_through
-
-    def set_always_on_bottom(self, enabled: bool) -> None:
-        """Switch between on-top and on-bottom Z-order. On-bottom
-        gives the pet the "desktop widget" feel — it sits behind
-        every other window and doesn't steal focus."""
-        enabled = bool(enabled)
-        if enabled == self._always_on_bottom:
-            return
-        self._always_on_bottom = enabled
-        self._reapply_flags()
-        self._persist(always_on_bottom=enabled)
-
-    def always_on_bottom(self) -> bool:
-        return self._always_on_bottom
-
-    def set_anchor_locked(self, locked: bool) -> None:
-        """Disable / re-enable drag-to-move. Lock survives across
-        restarts via the settings file."""
-        self._anchor_locked = bool(locked)
-        self._persist(anchor_locked=self._anchor_locked)
-
-    def anchor_locked(self) -> bool:
-        return self._anchor_locked
-
-    def set_snap_threshold(self, px: int) -> None:
-        self._snap_threshold = max(0, min(200, int(px)))
-        self._persist(snap_threshold=self._snap_threshold)
-
-    def snap_threshold(self) -> int:
-        return self._snap_threshold
-
-    def _reapply_flags(self) -> None:
-        """Common path for any flag-change toggle: snapshot the
-        current geometry, re-set flags, restore geometry, and
-        re-show if we were visible (Qt hides on flag change).
-
-        Qt's ``setWindowFlags`` re-creates the underlying native
-        window on Windows, which silently drops every widget
-        attribute (including the translucent-background flags we
-        rely on). We re-apply them here, plus force a fresh canvas
-        repaint after the re-show — otherwise the first post-toggle
-        frame can render with an opaque (black) backdrop until the
-        next QTimer tick."""
-        geom = self.geometry()
-        was_visible = self.isVisible()
-        self._configure_window_flags(
-            click_through=self._click_through,
-            on_bottom=self._always_on_bottom,
-        )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
-        self.setGeometry(geom)
-        if was_visible:
-            self.show()
-            self._canvas.update()
-
-    # ---- opacity -----------------------------------------------
-
-    def set_pet_opacity(self, value: float) -> None:
-        """Window-level opacity, 0.1 - 1.0. ``setWindowOpacity``
-        composites the entire overlay (puppet + WA translucent
-        background) so the pet fades gracefully rather than just
-        the puppet pixels."""
-        value = max(0.1, min(1.0, float(value)))
-        self.setWindowOpacity(value)
-        self._persist(opacity=value)
-
-    def pet_opacity(self) -> float:
-        return float(self.windowOpacity())
-
     # ---- visibility hooks --------------------------------------
 
     def showEvent(self, event) -> None:   # pragma: no cover - Qt UI
@@ -459,7 +345,7 @@ class PetWindow(QWidget):
         # mid-show — without it, the first visible frame can flash
         # white silhouettes on a black backdrop while the GL thread
         # is still wiring up the texture cache.
-        QTimer.singleShot(50, self._canvas.update)
+        call_later(50, self._canvas, self._canvas.update)
         self.visibility_changed.emit(True)
 
     def hideEvent(self, event) -> None:   # pragma: no cover - Qt UI
@@ -483,15 +369,14 @@ class PetWindow(QWidget):
         threads / OS hooks outlive the destroyed C++ QObject. Nothing is
         persisted, so re-spawning restores whatever the user had enabled.
         """
-        import contextlib
         for controller in self._features.values():
-            with contextlib.suppress(Exception):
+            with best_effort("shut down a feature controller"):
                 controller.shutdown()
-        with contextlib.suppress(Exception):
+        with best_effort("shut down music rhythm"):
             self._music_rhythm.shutdown()
-        with contextlib.suppress(Exception):
+        with best_effort("shut down the canvas drivers"):
             self._canvas_drivers.shutdown()
-        with contextlib.suppress(Exception):
+        with best_effort("shut down the LLM client"):
             # An in-flight LLM request can still be blocked in urlopen; mark it
             # dead so its late reply doesn't emit on this soon-deleted window.
             self._llm.shutdown()
@@ -528,7 +413,7 @@ class PetWindow(QWidget):
         # 50 ms is "next event loop tick + a couple of paint frames" —
         # enough for the texture cache to populate without making the
         # rig load feel laggy.
-        QTimer.singleShot(50, self._canvas.update)
+        call_later(50, self._canvas, self._canvas.update)
 
     def document(self) -> PuppetDocument | None:
         return self._canvas.document()
@@ -652,203 +537,11 @@ class PetWindow(QWidget):
     # Live drivers
     # =====================================================================
 
-    def set_auto_blink_enabled(self, enabled: bool) -> None:
-        self._input_engine.set_blink_enabled(bool(enabled))
-        self._persist_driver("auto_blink", bool(enabled))
-
-    def set_auto_idle_enabled(self, enabled: bool) -> None:
-        self._canvas_drivers.set_auto_idle_enabled(bool(enabled))
-        self._persist_driver("auto_idle", bool(enabled))
-
     def set_idle_motion_enabled(self, enabled: bool) -> None:
         self._canvas_drivers.set_idle_motion_enabled(
             bool(enabled), PET_IDLE_CYCLE_DURATION_S,
         )
         self._persist_driver("idle_motion", bool(enabled))
-
-    def set_mic_lipsync_enabled(self, enabled: bool) -> bool:
-        ok = bool(self._input_engine.set_lipsync_enabled(bool(enabled)))
-        self._persist_driver("mic_lipsync", bool(enabled and ok))
-        return ok
-
-    def set_webcam_tracking_enabled(self, enabled: bool) -> bool:
-        ok = self._canvas_drivers.set_webcam_tracking_enabled(bool(enabled))
-        self._persist_driver("webcam_tracking", bool(enabled and ok))
-        return ok
-
-    def set_drag_track_enabled(self, enabled: bool) -> None:
-        self._input_engine.set_drag_enabled(bool(enabled))
-        self._persist_driver("drag_track", bool(enabled))
-
-    def set_hotkeys_enabled(self, enabled: bool, bindings: dict | None = None) -> bool:
-        """Toggle the global-hotkey listener (see HotkeyController).
-        ``bindings`` overrides the persisted map; ``None`` reads
-        settings. ``False`` when the dep / OS hook is unavailable."""
-        return self._features["hotkeys"].set_enabled(enabled, bindings)
-
-    def hotkeys_enabled(self) -> bool:
-        return self._features["hotkeys"].is_enabled()
-
-    def _persisted_bindings(self) -> dict[str, str]:
-        """Merge persisted overrides on top of the module defaults
-        so a user who saved only one custom binding keeps the others."""
-        return self._features["hotkeys"].persisted_bindings()
-
-    def _on_hotkey_action(self, action: str) -> None:
-        """Route a hotkey hit to the matching toggle. Lives in
-        :class:`PetWindow` because every action needs window-state
-        access (visibility, click-through, anchor)."""
-        if action == ACTION_TOGGLE_VISIBLE:
-            if self.isVisible():
-                self.hide()
-            else:
-                self.show()
-        elif action == ACTION_TOGGLE_LOCK:
-            self.set_anchor_locked(not self._anchor_locked)
-        elif action == ACTION_TOGGLE_CLICK_THROUGH:
-            self.set_click_through(not self._click_through)
-        elif action == ACTION_SPEAK_NOW:
-            line = (
-                self._script_engine.pick_time_of_day_greeting()
-                or self._script_engine.pick_greeting()
-            )
-            if line and self._speech_enabled:
-                self._show_speech(line)
-
-    def set_obs_hook_enabled(self, enabled: bool) -> bool:
-        """Connect / disconnect the OBS event listener (see
-        ObsHookController). ``False`` when the dep / connection failed."""
-        return self._features["obs"].set_enabled(enabled)
-
-    def obs_hook_enabled(self) -> bool:
-        return self._features["obs"].is_enabled()
-
-    def set_twitch_hook_enabled(self, enabled: bool) -> bool:
-        """Connect / disconnect the Twitch chat listener (see
-        TwitchHookController). ``False`` when config / handshake failed."""
-        return self._features["twitch"].set_enabled(enabled)
-
-    def twitch_hook_enabled(self) -> bool:
-        return self._features["twitch"].is_enabled()
-
-    def set_virtual_camera_enabled(self, enabled: bool) -> bool:
-        """Toggle the system virtual camera output. ``False`` when
-        ``pyvirtualcam`` / a driver is missing (see PetCanvasDrivers)."""
-        if enabled:
-            ok = self._canvas_drivers.set_virtual_camera_enabled(True)
-            self._persist(virtual_camera_enabled=bool(ok))
-            return ok
-        self._canvas_drivers.set_virtual_camera_enabled(False)
-        self._persist(virtual_camera_enabled=False)
-        return True
-
-    def virtual_camera_enabled(self) -> bool:
-        return self._canvas_drivers.virtual_camera_enabled()
-
-    def set_llm_dialogue_enabled(self, enabled: bool) -> bool:
-        """Toggle LLM-backed speech generation (see
-        LlmDialogueController). ``False`` when the saved base URL is
-        invalid; connection failures only surface later, per request."""
-        return self._llm.set_enabled(enabled)
-
-    def llm_dialogue_enabled(self) -> bool:
-        return self._llm.is_enabled()
-
-    def _on_llm_line(self, line: str) -> None:   # pragma: no cover - Qt UI
-        """Surface a fresh LLM line only if the user still wants LLM
-        speech — a stale in-flight reply after disable is discarded."""
-        if not self._speech_enabled or not self.llm_dialogue_enabled():
-            return
-        if not line:
-            return
-        self._show_speech(line)
-
-    def _on_llm_failed(self, reason: str) -> None:   # pragma: no cover - Qt UI
-        """Log + fall through — the scripted line already showed
-        synchronously on click, so the pet just keeps it."""
-        logger.info("llm dialogue failed (%s); keeping scripted line", reason)
-
-    def set_music_rhythm_enabled(self, enabled: bool) -> bool:
-        """Toggle the system-audio rhythm driver (see
-        MusicRhythmController). ``False`` when the dep / loopback is
-        unavailable."""
-        return self._music_rhythm.set_enabled(enabled)
-
-    def music_rhythm_enabled(self) -> bool:
-        return self._music_rhythm.is_enabled()
-
-    def set_idle_minigame_enabled(self, enabled: bool) -> None:
-        """Toggle the idle minigame (phantom curiosity + yawn /
-        sleep escalation). Independent of other drivers."""
-        self._idle_minigame.set_enabled(enabled)
-
-    def idle_minigame_enabled(self) -> bool:
-        return self._idle_minigame.is_enabled()
-
-    def _notify_user_activity(self) -> None:   # pragma: no cover - Qt UI
-        """Reset the idle clock — pet window mouse / drag handlers
-        call this so the minigame knows the user is still there."""
-        self._idle_minigame.notify_activity()
-
-    def set_windows_notifications_enabled(self, enabled: bool) -> bool:
-        """Toggle the Windows toast notification listener (see
-        WindowsNotificationController). ``False`` covers missing winrt,
-        non-Windows, denied permission, or registration failure."""
-        return self._features["windows_notifications"].set_enabled(enabled)
-
-    def windows_notifications_enabled(self) -> bool:
-        return self._features["windows_notifications"].is_enabled()
-
-    def speak_notification(self, line: str) -> None:   # pragma: no cover - Qt UI
-        """Route a notification's title through the speech bubble +
-        SFX. Called by the notification controller; bypasses the
-        script engine because the notification text already carries
-        its own content (no generic-greeting fallback)."""
-        if not self._speech_enabled or not line:
-            return
-        self._show_speech(line)
-        self._play_sfx(SFX_NOTIFY)
-
-    def set_webhook_enabled(self, enabled: bool) -> bool:
-        """Toggle the localhost HTTP webhook receiver (see
-        WebhookController). ``False`` when the bind failed (port in
-        use, OS refusal)."""
-        return self._features["webhook"].set_enabled(enabled)
-
-    def webhook_enabled(self) -> bool:
-        return self._features["webhook"].is_enabled()
-
-    def set_pet_shadow_enabled(self, enabled: bool) -> None:
-        """Toggle the drop shadow + persist. Live update — the next
-        canvas paint reflects the new state."""
-        self._shadow.set_enabled(enabled)
-
-    def pet_shadow_enabled(self) -> bool:
-        return self._shadow.is_enabled()
-
-    def set_pet_shadow_opacity(self, value: float) -> None:
-        self._shadow.set_opacity(value)
-
-    def set_pet_shadow_scale(self, value: float) -> None:
-        self._shadow.set_scale(value)
-
-    def set_click_sfx_enabled(self, enabled: bool) -> None:
-        """Toggle the click SFX subsystem. Paths and volume are
-        read from settings each time the player is configured —
-        the workspace edit roundtrips through here."""
-        self._click_sfx_ctl.set_enabled(enabled)
-
-    def click_sfx_enabled(self) -> bool:
-        return self._click_sfx_ctl.is_enabled()
-
-    def _play_sfx(self, event: str) -> None:
-        """Best-effort SFX play. No-op when the subsystem is off
-        or the event has no configured path."""
-        self._click_sfx_ctl.play(event)
-
-    def set_mouse_gaze_enabled(self, enabled: bool) -> None:
-        self._canvas_drivers.set_mouse_gaze_enabled(bool(enabled))
-        self._persist_driver("mouse_gaze", bool(enabled))
 
     def _persist_driver(self, key: str, value: bool) -> None:
         drivers = dict(self._settings.get("drivers", {}))
@@ -1015,8 +708,11 @@ class PetWindow(QWidget):
     def speech_enabled(self) -> bool:
         return self._speech_enabled
 
-    def _show_speech(self, text: str) -> None:   # pragma: no cover - Qt UI
-        if not self._speech_enabled or not text:
+    def _show_speech(self, text: str) -> None:
+        # Webhook, notification and hotkey lines keep arriving while the pet is
+        # hidden (hotkey, tray, hide-on-fullscreen); a bubble then would float
+        # alone over whatever the pet was hidden for.
+        if not self._speech_enabled or not text or not self.isVisible():
             return
         if self._speech is None:
             self._speech = SpeechBubble()
@@ -1105,49 +801,6 @@ class PetWindow(QWidget):
         line = self._script_engine.due_scheduled_message()
         if line:
             self._show_speech(line)
-
-    # =====================================================================
-    # Fullscreen hide / restore
-    # =====================================================================
-
-    def set_hide_on_fullscreen(self, enabled: bool) -> None:
-        enabled = bool(enabled)
-        self._hide_on_fullscreen = enabled
-        self._persist(hide_on_fullscreen=enabled)
-        if enabled:
-            if self._fullscreen_detector is None:
-                self._fullscreen_detector = FullscreenDetector(
-                    self._screen_rect_for_detector, parent=self,
-                )
-                self._fullscreen_detector.state_changed.connect(
-                    self._on_fullscreen_state_changed,
-                )
-            if self.isVisible():
-                self._fullscreen_detector.start()
-        elif self._fullscreen_detector is not None:
-            self._fullscreen_detector.stop()
-            # If the pet was forcibly hidden by a previous fullscreen
-            # event, bring it back so the user isn't left looking at a
-            # missing pet after toggling the option off.
-            if self._hidden_by_fullscreen:
-                self._hidden_by_fullscreen = False
-                self.show()
-
-    def hide_on_fullscreen(self) -> bool:
-        return self._hide_on_fullscreen
-
-    def _screen_rect_for_detector(self):   # pragma: no cover - Qt geometry
-        return pet_placement.screen_rect_for_detector(self)
-
-    def _on_fullscreen_state_changed(   # pragma: no cover - Qt UI
-        self, is_fullscreen: bool,
-    ) -> None:
-        if is_fullscreen and self.isVisible():
-            self._hidden_by_fullscreen = True
-            self.hide()
-        elif not is_fullscreen and self._hidden_by_fullscreen:
-            self._hidden_by_fullscreen = False
-            self.show()
 
     # =====================================================================
     # Size presets

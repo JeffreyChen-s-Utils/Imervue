@@ -26,10 +26,15 @@ module still exercise the protocol handler.
 
 Security: the server binds ``127.0.0.1`` only (never ``0.0.0.0``).
 The auto-issued token grants full parameter-write access — this is
-a developer puppet plugin, not a public service.
+a developer puppet plugin, not a public service. Binding to localhost
+does not keep out web pages: a browser lets any site open a WebSocket to
+``127.0.0.1``, so connections whose ``Origin`` is a remote ``http(s)``
+site are refused (see :mod:`Imervue.system.local_origin`). Messages are capped at
+:data:`MAX_MESSAGE_BYTES`.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import secrets
@@ -37,7 +42,8 @@ import time
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-import contextlib
+
+from Imervue.system.local_origin import is_allowed_origin
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -49,6 +55,8 @@ LOCALHOST: str = "127.0.0.1"
 API_NAME: str = "VTubeStudioPublicAPI"
 API_VERSION: str = "1.0"
 _NOT_AUTHENTICATED_MSG: str = "not authenticated"
+# Parameter injection sends a few dozen floats; nothing legitimate comes close.
+MAX_MESSAGE_BYTES: int = 1024 * 1024
 
 
 class VTubeStudioHandler:
@@ -339,11 +347,19 @@ class VTubeStudioServer(QObject):
                 socket.close()
         self._sessions.clear()
 
-    def _on_new_connection(self) -> None:  # pragma: no cover - needs network
+    def _on_new_connection(self) -> None:
         if self._server is None:
             return
         while self._server.hasPendingConnections():
             socket = self._server.nextPendingConnection()
+            origin = socket.origin()
+            if not is_allowed_origin(origin):
+                logger.warning("VTS API refused a connection from web origin %s", origin)
+                socket.close()
+                socket.deleteLater()
+                continue
+            socket.setMaxAllowedIncomingMessageSize(MAX_MESSAGE_BYTES)
+            socket.setMaxAllowedIncomingFrameSize(MAX_MESSAGE_BYTES)
             handler = VTubeStudioHandler(self._canvas)
             self._sessions[socket] = handler
             socket.textMessageReceived.connect(

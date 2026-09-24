@@ -2,8 +2,8 @@
 
 The plugin lives outside the main package because OpenCV is an optional
 runtime dependency. ``cv2`` is imported lazily inside the algorithm
-helpers so the plugin's import / discovery path stays cheap and only
-fails at "Apply" time if OpenCV is missing.
+helpers so the plugin's import / discovery path stays cheap; opening the
+dialog first offers to install OpenCV when it is missing.
 """
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
@@ -20,6 +19,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QLabel,
+    QMenu,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -38,7 +38,9 @@ from npr_filters.filters import (
     NPRFilterOptions,
     apply_npr_filter,
 )
+from Imervue.gui._apply_save import load_rgba as _load_rgba
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -46,6 +48,9 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.plugin.npr_filters")
+
+# (import name, pip name); installed on first use through the host's pip installer.
+REQUIRED_PACKAGES = [("cv2", "opencv-python")]
 
 _PERCENT_STEPS = 100
 _DEFAULT_INTENSITY = 100
@@ -55,111 +60,108 @@ _DEFAULT_OIL_LEVELS = 8
 _DEFAULT_LINE_THRESHOLD = 80
 
 
+_TRANSLATIONS: dict[str, dict[str, str]] = {
+    "English": {
+        "npr_filters_title": "NPR Style Filters",
+        "npr_filters_style": "Style:",
+        "npr_filters_style_pencil_sketch": "Pencil sketch",
+        "npr_filters_style_oil_painting": "Oil painting",
+        "npr_filters_style_watercolor": "Watercolour",
+        "npr_filters_style_line_art": "Line art",
+        "npr_filters_intensity": "Blend with original:",
+        "npr_filters_sigma_s": "Spatial scale:",
+        "npr_filters_sigma_r": "Detail / range:",
+        "npr_filters_oil_levels": "Posterise levels:",
+        "npr_filters_line_threshold": "Edge threshold:",
+        "npr_filters_hint": "Writes <name>_npr.png next to the source. Requires opencv-python.",
+        "npr_filters_done": "Saved {path}",
+        "npr_filters_failed": "NPR filter failed",
+    },
+    "Traditional_Chinese": {
+        "npr_filters_title": "NPR 風格濾鏡",
+        "npr_filters_style": "風格：",
+        "npr_filters_style_pencil_sketch": "鉛筆素描",
+        "npr_filters_style_oil_painting": "油畫",
+        "npr_filters_style_watercolor": "水彩",
+        "npr_filters_style_line_art": "線稿",
+        "npr_filters_intensity": "與原圖混合：",
+        "npr_filters_sigma_s": "空間尺度：",
+        "npr_filters_sigma_r": "細節 / 範圍：",
+        "npr_filters_oil_levels": "色階數：",
+        "npr_filters_line_threshold": "邊緣門檻：",
+        "npr_filters_hint": "在來源檔旁寫出 <名稱>_npr.png。需要 opencv-python。",
+        "npr_filters_done": "已儲存 {path}",
+        "npr_filters_failed": "NPR 濾鏡失敗",
+    },
+    "Chinese": {
+        "npr_filters_title": "NPR 风格滤镜",
+        "npr_filters_style": "风格：",
+        "npr_filters_style_pencil_sketch": "铅笔素描",
+        "npr_filters_style_oil_painting": "油画",
+        "npr_filters_style_watercolor": "水彩",
+        "npr_filters_style_line_art": "线稿",
+        "npr_filters_intensity": "与原图混合：",
+        "npr_filters_sigma_s": "空间尺度：",
+        "npr_filters_sigma_r": "细节 / 范围：",
+        "npr_filters_oil_levels": "色阶数：",
+        "npr_filters_line_threshold": "边缘阈值：",
+        "npr_filters_hint": "在源文件旁写出 <名称>_npr.png。需要 opencv-python。",
+        "npr_filters_done": "已保存 {path}",
+        "npr_filters_failed": "NPR 滤镜失败",
+    },
+    "Japanese": {
+        "npr_filters_title": "NPR スタイルフィルター",
+        "npr_filters_style": "スタイル:",
+        "npr_filters_style_pencil_sketch": "鉛筆スケッチ",
+        "npr_filters_style_oil_painting": "油絵",
+        "npr_filters_style_watercolor": "水彩",
+        "npr_filters_style_line_art": "線画",
+        "npr_filters_intensity": "オリジナルとブレンド:",
+        "npr_filters_sigma_s": "空間スケール:",
+        "npr_filters_sigma_r": "ディテール / レンジ:",
+        "npr_filters_oil_levels": "ポスタリゼーション階調:",
+        "npr_filters_line_threshold": "エッジ閾値:",
+        "npr_filters_hint": "ソースの隣に <名前>_npr.png を書き出します。opencv-python が必要です。",
+        "npr_filters_done": "保存しました: {path}",
+        "npr_filters_failed": "NPR フィルター失敗",
+    },
+    "Korean": {
+        "npr_filters_title": "NPR 스타일 필터",
+        "npr_filters_style": "스타일:",
+        "npr_filters_style_pencil_sketch": "연필 스케치",
+        "npr_filters_style_oil_painting": "유화",
+        "npr_filters_style_watercolor": "수채화",
+        "npr_filters_style_line_art": "라인 아트",
+        "npr_filters_intensity": "원본과 혼합:",
+        "npr_filters_sigma_s": "공간 스케일:",
+        "npr_filters_sigma_r": "디테일 / 범위:",
+        "npr_filters_oil_levels": "포스터화 레벨:",
+        "npr_filters_line_threshold": "에지 임계값:",
+        "npr_filters_hint": "원본 옆에 <이름>_npr.png를 저장합니다. opencv-python이 필요합니다.",
+        "npr_filters_done": "{path}에 저장됨",
+        "npr_filters_failed": "NPR 필터 실패",
+    },
+}
+
+
 class NPRFiltersPlugin(ImervuePlugin):
     plugin_name = "NPR Filters"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     plugin_description = "Pencil sketch, oil painting, watercolour and line-art styles."
     plugin_author = "Imervue"
 
     def get_translations(self) -> dict[str, dict[str, str]]:
-        return {
-            "English": {
-                "npr_filters_title": "NPR Style Filters",
-                "npr_filters_style": "Style:",
-                "npr_filters_style_pencil_sketch": "Pencil sketch",
-                "npr_filters_style_oil_painting": "Oil painting",
-                "npr_filters_style_watercolor": "Watercolour",
-                "npr_filters_style_line_art": "Line art",
-                "npr_filters_intensity": "Blend with original:",
-                "npr_filters_sigma_s": "Spatial scale:",
-                "npr_filters_sigma_r": "Detail / range:",
-                "npr_filters_oil_levels": "Posterise levels:",
-                "npr_filters_line_threshold": "Edge threshold:",
-                "npr_filters_hint": "Writes <name>_npr.png next to the source. Requires opencv-python.",
-                "npr_filters_done": "Saved {path}",
-                "npr_filters_failed": "NPR filter failed",
-            },
-            "Traditional_Chinese": {
-                "npr_filters_title": "NPR 風格濾鏡",
-                "npr_filters_style": "風格：",
-                "npr_filters_style_pencil_sketch": "鉛筆素描",
-                "npr_filters_style_oil_painting": "油畫",
-                "npr_filters_style_watercolor": "水彩",
-                "npr_filters_style_line_art": "線稿",
-                "npr_filters_intensity": "與原圖混合：",
-                "npr_filters_sigma_s": "空間尺度：",
-                "npr_filters_sigma_r": "細節 / 範圍：",
-                "npr_filters_oil_levels": "色階數：",
-                "npr_filters_line_threshold": "邊緣門檻：",
-                "npr_filters_hint": "在來源檔旁寫出 <名稱>_npr.png。需要 opencv-python。",
-                "npr_filters_done": "已儲存 {path}",
-                "npr_filters_failed": "NPR 濾鏡失敗",
-            },
-            "Chinese": {
-                "npr_filters_title": "NPR 风格滤镜",
-                "npr_filters_style": "风格：",
-                "npr_filters_style_pencil_sketch": "铅笔素描",
-                "npr_filters_style_oil_painting": "油画",
-                "npr_filters_style_watercolor": "水彩",
-                "npr_filters_style_line_art": "线稿",
-                "npr_filters_intensity": "与原图混合：",
-                "npr_filters_sigma_s": "空间尺度：",
-                "npr_filters_sigma_r": "细节 / 范围：",
-                "npr_filters_oil_levels": "色阶数：",
-                "npr_filters_line_threshold": "边缘阈值：",
-                "npr_filters_hint": "在源文件旁写出 <名称>_npr.png。需要 opencv-python。",
-                "npr_filters_done": "已保存 {path}",
-                "npr_filters_failed": "NPR 滤镜失败",
-            },
-            "Japanese": {
-                "npr_filters_title": "NPR スタイルフィルター",
-                "npr_filters_style": "スタイル:",
-                "npr_filters_style_pencil_sketch": "鉛筆スケッチ",
-                "npr_filters_style_oil_painting": "油絵",
-                "npr_filters_style_watercolor": "水彩",
-                "npr_filters_style_line_art": "線画",
-                "npr_filters_intensity": "オリジナルとブレンド:",
-                "npr_filters_sigma_s": "空間スケール:",
-                "npr_filters_sigma_r": "ディテール / レンジ:",
-                "npr_filters_oil_levels": "ポスタリゼーション階調:",
-                "npr_filters_line_threshold": "エッジ閾値:",
-                "npr_filters_hint": "ソースの隣に <名前>_npr.png を書き出します。opencv-python が必要です。",
-                "npr_filters_done": "保存しました: {path}",
-                "npr_filters_failed": "NPR フィルター失敗",
-            },
-            "Korean": {
-                "npr_filters_title": "NPR 스타일 필터",
-                "npr_filters_style": "스타일:",
-                "npr_filters_style_pencil_sketch": "연필 스케치",
-                "npr_filters_style_oil_painting": "유화",
-                "npr_filters_style_watercolor": "수채화",
-                "npr_filters_style_line_art": "라인 아트",
-                "npr_filters_intensity": "원본과 혼합:",
-                "npr_filters_sigma_s": "공간 스케일:",
-                "npr_filters_sigma_r": "디테일 / 범위:",
-                "npr_filters_oil_levels": "포스터화 레벨:",
-                "npr_filters_line_threshold": "에지 임계값:",
-                "npr_filters_hint": "원본 옆에 <이름>_npr.png를 저장합니다. opencv-python이 필요합니다.",
-                "npr_filters_done": "{path}에 저장됨",
-                "npr_filters_failed": "NPR 필터 실패",
-            },
-        }
+        return {language: dict(words) for language, words in _TRANSLATIONS.items()}
 
-    def on_build_menu_bar(self, menu_bar) -> None:  # pragma: no cover - Qt UI
+    def on_build_menu_bar(self, plugin_menu) -> None:
         lang = language_wrapper.language_word_dict
-        for action in menu_bar.actions():
-            if action.menu() and action.text().strip() == lang.get(
-                "extra_tools_menu", "Extra Tools",
-            ):
-                for sub_action in action.menu().actions():
-                    if sub_action.menu() and sub_action.text().strip() == lang.get(
-                        "retouch_submenu", "Retouch & Transform",
-                    ):
-                        entry = sub_action.menu().addAction(
-                            lang.get("npr_filters_title", "NPR Style Filters"),
-                        )
-                        entry.triggered.connect(self._open_dialog)
-                        return
+        # Imervue names its Extra Tools submenus; a host that predates the
+        # names has none, so the entry falls back to the Plugins menu.
+        target = self.main_window.findChild(QMenu, "extra_tools.retouch_submenu")
+        entry = (target if target is not None else plugin_menu).addAction(
+            lang.get("npr_filters_title", "NPR Style Filters"),
+        )
+        entry.triggered.connect(self._open_dialog)
 
     def _open_dialog(self) -> None:
         viewer = getattr(self, "viewer", None)
@@ -169,7 +171,11 @@ class NPRFiltersPlugin(ImervuePlugin):
         idx = getattr(viewer, "current_index", -1)
         if not (0 <= idx < len(images)):
             return
-        NPRFiltersDialog(viewer, str(images[idx])).exec()
+        path = str(images[idx])
+        ensure_dependencies(
+            self.main_window, REQUIRED_PACKAGES,
+            lambda: NPRFiltersDialog(viewer, path).exec(),
+        )
 
 
 class NPRFiltersDialog(WorkerHostMixin, QDialog):
@@ -303,13 +309,6 @@ class NPRFiltersDialog(WorkerHostMixin, QDialog):
                     "npr_filters_done", "Saved {path}",
                 ).format(path=out_path.name),
             )
-
-
-def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
 
 
 class _NPRFilterWorker(QThread):

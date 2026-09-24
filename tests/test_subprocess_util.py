@@ -71,3 +71,12 @@ def test_any_exited_return_code_is_a_noop(poll_val):
     proc = _FakeProc(poll_val=poll_val)
     terminate_process(proc)
     assert proc.calls == []
+
+
+def test_an_unexpected_error_propagates():
+    class _Broken(_FakeProc):
+        def terminate(self):
+            raise RuntimeError("fake Popen bug")
+
+    with pytest.raises(RuntimeError):
+        terminate_process(_Broken(poll_val=None))

@@ -117,7 +117,7 @@ Opcionais (com feature gating; omita para desativar o recurso sem erros):
 |---------|---------|
 | open_clip_torch + torch | Busca semântica CLIP (consultas em linguagem natural) |
 | onnxruntime | Upscale por IA Real-ESRGAN / auto-tag CLIP ONNX |
-| opencv-python | Composição HDR, costura de panorama, focus stacking, detecção facial, pincel de cura |
+| opencv-python<5 | Composição HDR, costura de panorama, focus stacking, detecção facial, pincel de cura |
 | sounddevice | Sincronia labial do Puppet via microfone |
 | mediapipe | Rastreamento facial por webcam do Puppet |
 
@@ -184,6 +184,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Pools de workers separados** — rajadas de miniaturas e decodificações de zoom profundo rodam em pools distintos, então abrir uma pasta grande nunca deixa sem recursos a imagem que você está vendo
 - **Grade virtualizada de miniaturas** — apenas tiles visíveis são renderizados; o tamanho das miniaturas é configurável (128 / 256 / 512 / 1024 / auto)
 - **Cache em disco** — miniaturas PNG comprimidas com invalidação baseada em MD5 em `%LOCALAPPDATA%/Imervue/cache/thumbnails` (ou `~/.cache/imervue/thumbnails`)
+- **Orientação EXIF** — fotos em retrato que o celular ou a câmera apenas marcaram em vez de girar aparecem na posição certa no visualizador, nas miniaturas, na lista, na prévia ao passar o mouse e na aba Modify; um recorte / giro de revelação salvo antes continua valendo para a orientação em que foi feito
 - **Reprodução de animação** — GIF / APNG com controles de play / pause / passo por quadro / velocidade
 
 ### Modos de navegação
@@ -365,7 +366,7 @@ Pincel · Borracha · Preenchimento · Conta-gotas · Retângulo / Laço / Varin
 
 O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (saturar / dessaturar) — pinta ajustes locais de tom e croma, ponderados pelo pincel e por uma máscara de sombras / meios-tons / realces.
 
-Atalhos de tecla única: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
+Atalhos de tecla única: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
 ### Pincéis
 
@@ -728,14 +729,17 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 | Atalho | Ação |
 |----------|--------|
 | B / E / G / I | Pincel / Borracha / Preenchimento / Conta-gotas |
-| V / T / U / R | Mover / Texto / Gradiente / Seleção retangular |
-| P / S / C / Z / H | Caneta / Smudge / Clone / Zoom / Mão |
+| V / T / U / R | Mover / Texto / Gradiente / Smudge |
+| M / L / W | Seleção retangular / Laço / Varinha mágica |
+| P / S / C / Z / H | Caneta / Clone / Recortar / Zoom / Mão |
 | Q | Alternar Modo Quick Mask |
 | Tab | Alternar todos os docks |
 | Ctrl+Tab | Ciclar abas Paint |
 | , / . | Ciclar tipos de pincel |
 | 0-9 | Opacidade do pincel em passos de 10% |
 | Alt+[ / Alt+] | Mover camada ativa para baixo / cima |
+| Ctrl+[ / Ctrl+] | Mover a camada ativa para baixo / cima na pilha |
+| Ctrl+D | Desmarcar seleção |
 
 ---
 
@@ -794,8 +798,8 @@ Imervue suporta plugins de terceiros. Veja [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_G
 |------|---------|
 | `on_plugin_loaded()` | Após o plugin ser instanciado |
 | `on_plugin_unloaded()` | No encerramento do app |
-| `on_build_menu_bar(menu_bar)` | Depois que a barra de menus padrão é construída |
-| `on_build_main_tabs(tabs)` | Depois que as quatro abas embutidas são adicionadas |
+| `on_build_menu_bar(plugin_menu)` | Depois que o menu Plugins compartilhado é construído |
+| `on_build_main_tabs(tabs)` | Depois que as cinco abas embutidas são adicionadas |
 | `on_build_context_menu(menu, viewer)` | Quando o menu de clique direito é aberto |
 | `on_image_loaded(path, viewer)` | Após a imagem carregar em deep zoom |
 | `on_folder_opened(path, images, viewer)` | Após a pasta abrir na grade |
@@ -835,7 +839,7 @@ longa duração transmitem `notifications/progress`.
 | `convert_format` | Converter entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL opcionais) |
 | `apply_watermark` / `apply_frame` | Gravar uma marca d'água de texto ou uma moldura passe-partout / Polaroid + legenda |
 | `build_collage` | Compor imagens em uma montagem em grade (com progresso) |
-| `crop_image` / `resize_image` / `rotate_image` | Recorte por pixel, redimensionamento preservando proporção, rotação / espelhamento sem perdas |
+| `crop_image` / `resize_image` / `rotate_image` | Recorte por pixel, redimensionamento preservando proporção, rotação / espelhamento sem perdas. Tamanhos e coordenadas se referem à imagem endireitada pelo EXIF. |
 | `collection_stats` | Resumo de avaliação / favorito / etiqueta de cor / triagem da pasta |
 | `search_images` | Filtra uma pasta com a DSL de consulta dos smart albums (caminho / EXIF / tamanho / dimensões) |
 | `extract_gps` / `dominant_colors` | Lê coordenadas GPS do EXIF (encadeia com `reverse_geocode`); paleta de cores por median-cut (rgb / hex / proporção) |

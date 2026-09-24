@@ -117,7 +117,7 @@ Optional (feature-gated; omit to disable the feature cleanly):
 |---------|---------|
 | open_clip_torch + torch | CLIP semantic search (natural-language image queries) |
 | onnxruntime | Real-ESRGAN AI upscale / CLIP ONNX auto-tag |
-| opencv-python | HDR merge, panorama stitch, focus stacking, face detection, healing brush |
+| opencv-python<5 | HDR merge, panorama stitch, focus stacking, face detection, healing brush |
 | sounddevice | Puppet lip-sync from microphone |
 | mediapipe | Puppet webcam face tracking |
 
@@ -186,6 +186,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Separate worker pools** — thumbnail bursts and deep-zoom decodes run on different pools, so opening a large folder never starves the image you are actually looking at
 - **Virtualized thumbnail grid** — only visible tiles are rendered; thumbnail size is configurable (128 / 256 / 512 / 1024 / auto)
 - **Disk cache** — compressed PNG thumbnails with MD5-based invalidation under `%LOCALAPPDATA%/Imervue/cache/thumbnails` (or `~/.cache/imervue/thumbnails`)
+- **EXIF orientation** — portrait shots that a phone or camera tagged instead of turning are shown upright in the viewer, thumbnails, list view, hover preview and Modify tab; a develop crop / rotate saved before this keeps applying to the orientation it was drawn on
 - **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls
 
 ### Browsing modes
@@ -367,7 +368,7 @@ Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · M
 
 The darkroom-toning trio — **Dodge** (lighten), **Burn** (darken) and **Sponge** (saturate / desaturate) — paint local tonal and chroma adjustments, weighted by the brush and a shadows / midtones / highlights mask.
 
-Single-letter shortcuts: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.
+Single-letter shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.
 
 ### Brushes
 
@@ -754,14 +755,17 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | Shortcut | Action |
 |----------|--------|
 | B / E / G / I | Brush / Eraser / Fill / Eyedropper |
-| V / T / U / R | Move / Text / Gradient / Rectangle select |
-| P / S / C / Z / H | Pen / Smudge / Clone / Zoom / Hand |
+| V / T / U / R | Move / Text / Gradient / Smudge |
+| M / L / W | Rectangle / Lasso / Magic Wand select |
+| P / S / C / Z / H | Pen / Clone / Crop / Zoom / Hand |
 | Q | Toggle Quick Mask Mode |
 | Tab | Toggle all docks |
 | Ctrl+Tab | Cycle Paint tabs |
 | , / . | Cycle brush kinds |
 | 0-9 | Brush opacity 10% steps |
 | Alt+[ / Alt+] | Step active layer down / up |
+| Ctrl+[ / Ctrl+] | Move active layer down / up the stack |
+| Ctrl+D | Deselect |
 
 ---
 
@@ -820,7 +824,7 @@ Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE
 |------|---------|
 | `on_plugin_loaded()` | After plugin is instantiated |
 | `on_plugin_unloaded()` | At app shutdown |
-| `on_build_menu_bar(menu_bar)` | After default menu bar is built |
+| `on_build_menu_bar(plugin_menu)` | After the shared Plugins menu is built |
 | `on_build_main_tabs(tabs)` | After the five built-in tabs are added |
 | `on_build_context_menu(menu, viewer)` | When right-click menu opens |
 | `on_image_loaded(path, viewer)` | After image loads in deep zoom |
@@ -861,7 +865,7 @@ result as `structuredContent`, and long-running tools stream
 | `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP (+ optional HEIC / AVIF / JXL) |
 | `apply_watermark` / `apply_frame` | Burn in a text watermark or a matte / Polaroid frame + caption |
 | `build_collage` | Composite images into a grid montage (with progress) |
-| `crop_image` / `resize_image` / `rotate_image` | Pixel crop, aspect-preserving resize, lossless rotate / flip |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel crop, aspect-preserving resize, lossless rotate / flip. Sizes and coordinates refer to the EXIF-upright image. |
 | `collection_stats` | Folder rating / favourite / colour-label / cull summary |
 | `search_images` | Filter a folder with the smart-album query DSL (path / EXIF / size / dimensions) |
 | `extract_gps` / `dominant_colors` | Read EXIF GPS coordinates (chains into `reverse_geocode`); median-cut colour palette (rgb / hex / share) |

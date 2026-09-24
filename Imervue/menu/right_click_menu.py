@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import contextlib
+import logging
 import os
-import subprocess
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,7 +15,9 @@ from Imervue.gui.modify_actions_widget import ModifyActionsWidget
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.slideshow import open_slideshow_dialog
 from Imervue.gui.export_dialog import open_export_dialog
+from Imervue.gui.file_filters import viewer_filter
 from Imervue.gui.batch_export_dialog import open_batch_export
+from Imervue.system.wallpaper import set_desktop_wallpaper
 from Imervue.gui.gif_video_dialog import open_gif_video_dialog
 from Imervue.gui.tag_album_dialog import (
     build_tag_submenu, build_album_submenu, build_batch_tag_album_submenu,
@@ -28,9 +28,12 @@ from Imervue.gpu_image_view.actions.delete import (
 from Imervue.gpu_image_view.actions.keyboard_actions import (
     copy_image_to_clipboard,
 )
-from Imervue.gpu_image_view.actions.select import switch_to_previous_image, switch_to_next_image
+from Imervue.gpu_image_view.actions.select import (
+    selected_in_view_order, switch_to_next_image, switch_to_previous_image,
+)
 from Imervue.image.info import get_image_info_at_pos, show_image_info_dialog
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_manager import reveal_in_file_manager
 from Imervue.menu.recent_menu import build_recent_menu
 
 if TYPE_CHECKING:
@@ -129,13 +132,11 @@ def _show_in_explorer_action(main_gui: GPUImageView, menu: QMenu):
 
 
 def _open_in_explorer(path: str):
-    with contextlib.suppress(Exception):
-        if sys.platform == "win32":
-            subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
-        elif sys.platform == "darwin":
-            subprocess.Popen(["open", "-R", path])
-        else:
-            subprocess.Popen(["xdg-open", str(Path(path).parent)])
+    try:
+        reveal_in_file_manager(path)
+    except (OSError, ValueError):   # file manager missing, or it refused the path
+        logging.getLogger("Imervue.right_click_menu").warning(
+            "Could not reveal %s in the file manager", path, exc_info=True)
 
 
 # ===========================
@@ -176,8 +177,7 @@ def _relocate_missing(main_gui: GPUImageView, old_path: str) -> None:
         main_gui,
         lang.get("missing_relocate", "Relocate Missing File..."),
         str(Path(old_path).parent),
-        "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp *.gif *.svg "
-        "*.cr2 *.nef *.arw *.dng *.raf *.orf)",
+        viewer_filter(),
     )
     if not new_path:
         return
@@ -445,7 +445,7 @@ def _staging_tray_actions(main_gui: GPUImageView, menu: QMenu) -> None:
 
 def _add_to_staging_tray(main_gui: GPUImageView) -> None:
     from Imervue.library import staging_tray
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)
     if not paths and main_gui.deep_zoom and main_gui.model.images:
         paths = [main_gui.model.images[main_gui.current_index]]
     if not paths:
@@ -490,7 +490,7 @@ def _import_by_date(main_gui: GPUImageView) -> None:
 def _combine_multipage(main_gui: GPUImageView) -> None:
     from PySide6.QtWidgets import QFileDialog
     from Imervue.image.multipage import combine_to_multipage
-    paths = list(main_gui.selected_tiles)
+    paths = selected_in_view_order(main_gui)  # page order
     if not paths:
         return
     lang = language_wrapper.language_word_dict
@@ -621,33 +621,7 @@ def _set_wallpaper_action(main_gui: GPUImageView, menu: QMenu):
 
     lang = language_wrapper.language_word_dict
     action = menu.addAction(lang.get("right_click_set_wallpaper", "Set as Wallpaper"))
-    action.triggered.connect(lambda: _set_wallpaper(path))
-
-
-def _set_wallpaper(path: str):
-    with contextlib.suppress(Exception):
-        if sys.platform == "win32":
-            import ctypes
-            SPI_SETDESKWALLPAPER = 0x0014
-            SPIF_UPDATEINIFILE = 0x01
-            SPIF_SENDCHANGE = 0x02
-            ctypes.windll.user32.SystemParametersInfoW(
-                SPI_SETDESKWALLPAPER, 0, os.path.normpath(path),
-                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
-            )
-        elif sys.platform == "darwin":
-            script = f'''
-            tell application "Finder"
-                set desktop picture to POSIX file "{path}"
-            end tell
-            '''
-            subprocess.Popen(["osascript", "-e", script])
-        else:
-            # GNOME
-            subprocess.Popen([
-                "gsettings", "set", "org.gnome.desktop.background",
-                "picture-uri", f"file://{path}"
-            ])
+    action.triggered.connect(lambda: set_desktop_wallpaper(path))
 
 
 # ===========================

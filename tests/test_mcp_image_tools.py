@@ -6,7 +6,6 @@ import pytest
 from PIL import Image
 
 from Imervue.mcp_server.tools import (
-    _resize_dims,
     apply_frame,
     apply_watermark,
     build_collage,
@@ -21,6 +20,7 @@ from Imervue.mcp_server.tools import (
     resize_image,
     rotate_image,
 )
+from Imervue.mcp_server.tools_edit import _resize_dims
 
 
 def _save(path, value=128, h=24, w=24):
@@ -556,3 +556,36 @@ def test_apply_frame_missing_destination_parent_raises(tmp_path):
     src = _save(tmp_path / "src.png")
     with pytest.raises(ValueError, match="destination parent"):
         apply_frame(src, str(tmp_path / "nope" / "out.png"))
+
+
+def _tagged_portrait(path):
+    """40x20 stored pixels, left half red, tagged 6: shown 20x40 with red on top."""
+    arr = np.zeros((20, 40, 3), dtype=np.uint8)
+    arr[:, :20] = (255, 0, 0)
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.fromarray(arr).save(path, exif=exif, quality=100)
+    return str(path)
+
+
+def test_metadata_reports_the_upright_size(tmp_path):
+    from Imervue.mcp_server.tools_read import read_image_metadata
+    out = read_image_metadata(_tagged_portrait(tmp_path / "p.jpg"))
+    assert (out["width"], out["height"]) == (20, 40)
+
+
+def test_crop_box_is_in_upright_coordinates(tmp_path):
+    """A client picks the box from the reported (upright) size; the crop must agree."""
+    from Imervue.mcp_server.tools_edit import crop_image
+    dst = tmp_path / "top.png"
+    crop_image(_tagged_portrait(tmp_path / "p.jpg"), str(dst), x=0, y=0, width=20, height=15)
+    with Image.open(dst) as out:
+        assert out.size == (20, 15)
+        red, green, _ = out.convert("RGB").getpixel((10, 7))
+        assert red > 200 and green < 60
+
+
+def test_rgba_loader_is_upright(tmp_path):
+    from Imervue.mcp_server.tool_support import load_rgba_array
+    assert load_rgba_array(_tagged_portrait(tmp_path / "p.jpg")).shape == (40, 20, 4)
+

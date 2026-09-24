@@ -27,9 +27,10 @@ JPEG-only sessions don't pull rawpy at all.
 """
 from __future__ import annotations
 
-import contextlib
 import logging
 from pathlib import Path
+
+from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.image.raw_loader")
 
@@ -50,10 +51,36 @@ def open_raw_efficient(path: str | Path):
         # Close to release the libraw context if we successfully
         # opened the file but ``unpack`` failed — otherwise the
         # caller's ``with`` block never runs.
-        with contextlib.suppress(Exception):
+        with best_effort("close the RAW file after a failed unpack", logger):
             raw.close()
         raise
     return raw
+
+
+# libraw ``flip`` values that turn the developed image a quarter turn.
+_QUARTER_TURN_FLIPS = frozenset({5, 6})
+
+
+def raw_dimensions(path: str | Path) -> tuple[int, int] | None:
+    """Return the developed image's ``(width, height)``, or ``None`` if libraw can't read it.
+
+    Reads libraw's header parse only (``open_file`` without ``unpack``), a few
+    milliseconds even for a large file. Pillow is no substitute: it opens CR2 /
+    NEF / DNG as TIFF and reports the size of the embedded preview. A
+    quarter-turn orientation swaps the sides, as the developed image does.
+    """
+    import rawpy
+    raw = rawpy.RawPy()
+    try:
+        raw.open_file(str(path))
+        sizes = raw.sizes
+    except rawpy.LibRawError:
+        return None
+    finally:
+        raw.close()
+    if sizes.flip in _QUARTER_TURN_FLIPS:
+        return sizes.height, sizes.width
+    return sizes.width, sizes.height
 
 
 def _wrap_close_to_release(raw, region, fd):
@@ -67,9 +94,9 @@ def _wrap_close_to_release(raw, region, fd):
         try:
             original_close()
         finally:
-            with contextlib.suppress(Exception):
+            with best_effort("unmap the RAW file", logger):
                 region.close()
-            with contextlib.suppress(Exception):
+            with best_effort("close the RAW file handle", logger):
                 fd.close()
 
     raw.close = _close_all
@@ -101,7 +128,7 @@ def open_raw_via_mmap(path: str | Path):
         raw.open_buffer(region)
         raw.unpack()
     except Exception:
-        with contextlib.suppress(Exception):
+        with best_effort("close the RAW buffer after a failed unpack", logger):
             raw.close()
         region.close()
         fd.close()

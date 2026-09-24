@@ -7,6 +7,7 @@ DateTimeOriginal when present, else file mtime.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -20,10 +21,14 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap
 from PySide6.QtWidgets import QListView
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
+
+logger = logging.getLogger("Imervue.gui.timeline_view")
 
 _THUMB_SIZE = 96
 # A row whose thumbnail fails to decode (file mid-move/delete or briefly locked)
@@ -66,33 +71,23 @@ class _TimelineThumbWorker(QRunnable):
                 # .copy() detaches from the soon-freed `data` buffer; the GUI
                 # thread turns this QImage into a QPixmap in _on_thumb.
                 img = qimg.copy()
-        except Exception:  # noqa: BLE001 — any decode failure must still emit so
-            # the model clears the in-flight marker and can retry the entry. A
-            # null QImage tells the slot to build the placeholder on the GUI thread.
+        # Any failure must still emit so the model clears the in-flight marker
+        # and can retry the entry. A null QImage tells the slot to build the
+        # placeholder on the GUI thread.
+        except IMAGE_READ_ERRORS:   # missing or unreadable file: expected
+            self.signals.done.emit(self.path, QImage(), False)
+            return
+        except Exception:  # noqa: BLE001 - worker boundary: log the bug, still emit
+            logger.exception("Timeline thumbnail worker failed for %s", self.path)
             self.signals.done.emit(self.path, QImage(), False)
             return
         self.signals.done.emit(self.path, img, True)
 
 
 def _extract_date(path: str) -> datetime:
-    """Prefer EXIF DateTimeOriginal; fall back to file mtime."""
-    try:
-        with Image.open(path) as im:
-            exif = im.getexif()
-            if exif:
-                raw = exif.get(36867) or exif.get(306)  # DateTimeOriginal or DateTime
-                if raw:
-                    try:
-                        return datetime.strptime(str(raw), "%Y:%m:%d %H:%M:%S")
-                    except ValueError:
-                        pass
-    except Exception:  # noqa: BLE001, S110 - any EXIF parse failure falls back to mtime below
-        pass
-    try:
-        mtime = Path(path).stat().st_mtime
-        return datetime.fromtimestamp(mtime)
-    except OSError:
-        return datetime.fromtimestamp(0)
+    """Prefer the EXIF capture time; fall back to file mtime, then the epoch."""
+    taken = capture_datetime(path)
+    return datetime.fromtimestamp(0) if taken == UNKNOWN_DATETIME else taken
 
 
 def _extract_date_fast(path: str) -> datetime:

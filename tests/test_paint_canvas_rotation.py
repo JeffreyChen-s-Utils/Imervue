@@ -4,7 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Imervue.paint.canvas import PaintCanvas, _wrap_rotation
+from Imervue.paint.canvas import PaintCanvas
+from Imervue.paint.canvas_view import wrap_rotation
 
 from _qt_skip import pytestmark  # noqa: E402,F401
 
@@ -15,28 +16,28 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 
 
 def test_wrap_rotation_preserves_canonical_value():
-    assert _wrap_rotation(45.0) == pytest.approx(45.0)
+    assert wrap_rotation(45.0) == pytest.approx(45.0)
 
 
 def test_wrap_rotation_handles_full_turn():
-    assert _wrap_rotation(360.0) == pytest.approx(0.0)
+    assert wrap_rotation(360.0) == pytest.approx(0.0)
 
 
 def test_wrap_rotation_negative_minus_180_lifted_to_positive_180():
     """``-180`` and ``180`` both denote the same direction; pick the
     positive boundary so a slider's labelling stays stable."""
-    assert _wrap_rotation(-180.0) == pytest.approx(180.0)
+    assert wrap_rotation(-180.0) == pytest.approx(180.0)
 
 
 def test_wrap_rotation_drift_past_360_does_not_accumulate():
-    assert _wrap_rotation(720.0 + 30.0) == pytest.approx(30.0)
+    assert wrap_rotation(720.0 + 30.0) == pytest.approx(30.0)
 
 
 def test_wrap_rotation_large_negative_wraps():
     """A monotonically decreasing rotation must fall back into the
     canonical range without exposing a negative angle bigger in
     magnitude than 180°."""
-    wrapped = _wrap_rotation(-540.0)
+    wrapped = wrap_rotation(-540.0)
     assert -180.0 < wrapped <= 180.0
 
 

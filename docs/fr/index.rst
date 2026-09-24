@@ -955,7 +955,7 @@ La barre d'outils **Output > Virtual camera** ouvre le flux.
 
 DirectShow / AVFoundation / v4l2loopback sont uniquement RGB — pas de canal alpha —
 donc Imervue remplit la zone hors du personnage avec
-**magenta `#FF00FF`** comme clé chromatique. Retirez-la dans OBS via le
+**magenta #FF00FF** comme clé chromatique. Retirez-la dans OBS via le
 filtre Color Key :
 
 1. Clic droit sur la source Video Capture Device > **Filters**
@@ -2015,8 +2015,8 @@ Outils et superpositions
    * - ``S``
      - Diaporama
 
-Animation
-^^^^^^^^^
+Images animées
+^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2298,6 +2298,8 @@ Double-cliquez sur une ligne de la liste pour saisir un nom de personne ; à l'e
 sont écrits dans le blob ``extra['face_tags']`` de la recette. La détection est une
 technique classique — la précision est adéquate pour "montre-moi les visages" mais
 n'est pas un substitut à la reconnaissance moderne basée sur CNN.
+Nécessite OpenCV 4 (``pip install "opencv-python<5"``) : OpenCV 5 a supprimé les cascades
+de Haar, et le dialogue le signale alors au lieu de détecter.
 
 Masques d'ajustement local
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2527,6 +2529,7 @@ Outils disponibles
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
      - Recadrage en boîte de pixels, redimensionnement préservant le rapport, et
        rotation 90/180/270 sans perte ou retournement horizontal/vertical.
+       Les tailles et coordonnées se rapportent à l'image redressée selon l'EXIF.
    * - ``collection_stats``
      - Synthétise les notes, favoris, étiquettes de couleur et états de tri d'un
        dossier (comptes, distribution 0–5 étoiles et moyenne).

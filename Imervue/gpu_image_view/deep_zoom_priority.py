@@ -8,10 +8,8 @@ def prioritize_tiles(
     tiles: list[tuple[int, int]],
     *,
     tile_size: int,
-    scale_x: float,
-    scale_y: float,
-    offset_x: float,
-    offset_y: float,
+    scale: tuple[float, float],
+    offset: tuple[float, float],
     canvas: tuple[int, int],
     cursor: tuple[float, float] | None = None,
 ) -> list[tuple[int, int]]:
@@ -24,6 +22,8 @@ def prioritize_tiles(
     """
     if not tiles:
         return []
+    scale_x, scale_y = scale
+    offset_x, offset_y = offset
     cx = canvas[0] / 2
     cy = canvas[1] / 2
     cursor = cursor if cursor is not None else (cx, cy)

@@ -42,6 +42,26 @@ class TestModelRegistry:
         assert "realesrgan-x4plus-anime" in UPSCALE_MODELS
         assert "realesrgan-x2plus" in UPSCALE_MODELS
 
+    def test_every_model_pins_a_commit(self):
+        # bandit B615: an unpinned download follows whatever "main" becomes.
+        import re
+        for key, info in UPSCALE_MODELS.items():
+            assert re.fullmatch(r"[0-9a-f]{40}", info.get("revision", "")), key
+
+    def test_download_passes_the_pinned_revision(self, monkeypatch):
+        import sys
+        import types
+
+        from Imervue.gui import ai_upscale_dialog
+
+        calls: list[dict] = []
+        fake = types.SimpleNamespace(hf_hub_download=lambda **kw: calls.append(kw) or "x.onnx")
+        monkeypatch.setitem(sys.modules, "huggingface_hub", fake)
+        for key, info in UPSCALE_MODELS.items():
+            assert ai_upscale_dialog._download_model(key) == "x.onnx"
+            assert calls[-1] == {"repo_id": info["repo"], "filename": info["file"],
+                                 "revision": info["revision"]}
+
     def test_repos_are_valid_huggingface_ids(self):
         for key, info in UPSCALE_MODELS.items():
             repo = info["repo"]
@@ -204,6 +224,22 @@ class TestTraditionalMethods:
             TRADITIONAL_METHODS, _TRAD_RESAMPLING,
         )
         assert set(_TRAD_RESAMPLING.keys()) == set(TRADITIONAL_METHODS.keys())
+
+    def test_tagged_photo_is_upscaled_upright(self, tmp_path):
+        """The output carries no EXIF, so the stored sideways pixels stayed sideways."""
+        from PIL import Image
+        from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        src = tmp_path / "p.jpg"
+        Image.new("RGB", (10, 8)).save(src, exif=exif)
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        _UpscaleWorker([str(src)], str(out_dir), "trad:nearest", False, scale_override=2).run()
+        (result,) = out_dir.iterdir()
+        with Image.open(result) as out:
+            assert out.size == (16, 20)
 
     def test_lanczos_upscale(self, tmp_path):
         """Lanczos resize should produce exact expected dimensions."""

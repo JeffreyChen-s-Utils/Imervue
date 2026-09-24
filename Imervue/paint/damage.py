@@ -120,3 +120,32 @@ def from_dab_result(result) -> DamageRect:
     just a constructor — but keeping it as an explicit helper lets
     the caller stay decoupled from the brush engine module."""
     return DamageRect(x=int(result.x), y=int(result.y), w=int(result.w), h=int(result.h))
+
+Rect = tuple[int, int, int, int]
+
+
+def union_rects(a: Rect, b: Rect) -> Rect:
+    """Union two ``(x, y, w, h)`` tuples; an empty one returns the other.
+
+    Tuple form of :meth:`DamageRect.union`, used by the tools that accumulate
+    a stroke's damage before converting it once.
+    """
+    if a[2] <= 0 or a[3] <= 0:
+        return b
+    if b[2] <= 0 or b[3] <= 0:
+        return a
+    x0 = min(a[0], b[0])
+    y0 = min(a[1], b[1])
+    x1 = max(a[0] + a[2], b[0] + b[2])
+    y1 = max(a[1] + a[3], b[1] + b[3])
+    return (x0, y0, x1 - x0, y1 - y0)
+
+
+def from_rect(rect: Rect) -> DamageRect:
+    """Convert an ``(x, y, w, h)`` tuple to a :class:`DamageRect`.
+
+    An empty tuple (non-positive extent) yields the shared :data:`EMPTY`.
+    """
+    if rect[2] <= 0 or rect[3] <= 0:
+        return EMPTY
+    return DamageRect(x=rect[0], y=rect[1], w=rect[2], h=rect[3])

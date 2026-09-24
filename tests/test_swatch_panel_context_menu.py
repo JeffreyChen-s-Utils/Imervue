@@ -65,7 +65,7 @@ def _drive_context_menu(panel, rgb, action_index):
             panel.remove_at(history.index(rgb))
 
 
-def test_copy_hex_lands_on_clipboard(qapp, panel):
+def test_copy_hex_lands_on_clipboard(qapp, panel, fake_clipboard):
     from PySide6.QtWidgets import QApplication
     _drive_context_menu(panel, (255, 0, 0), "copy")
     assert QApplication.clipboard().text() == "#FF0000"

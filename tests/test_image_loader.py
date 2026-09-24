@@ -108,8 +108,8 @@ def _write_sample_video(path, frame_count=5):
 
 class TestVideoInGrid:
     def test_video_ext_supported(self):
-        from Imervue.gpu_image_view.images.image_loader import _SUPPORTED_EXTS
-        assert ".mp4" in _SUPPORTED_EXTS
+        from Imervue.image.formats import VIEWER_EXTENSIONS
+        assert ".mp4" in VIEWER_EXTENSIONS
 
     def test_scan_finds_video(self, tmp_path):
         _write_sample_video(tmp_path / "clip.mp4")
@@ -127,9 +127,9 @@ class TestVideoInGrid:
 
 class TestHeifInGrid:
     def test_heif_exts_supported(self):
-        from Imervue.gpu_image_view.images.image_loader import _SUPPORTED_EXTS
-        assert ".heic" in _SUPPORTED_EXTS
-        assert ".avif" in _SUPPORTED_EXTS
+        from Imervue.image.formats import VIEWER_EXTENSIONS
+        assert ".heic" in VIEWER_EXTENSIONS
+        assert ".avif" in VIEWER_EXTENSIONS
 
     def test_scan_finds_heic(self, tmp_path):
         pillow_heif = pytest.importorskip("pillow_heif")
@@ -142,8 +142,8 @@ class TestHeifInGrid:
 
 class TestJxlInGrid:
     def test_jxl_ext_supported(self):
-        from Imervue.gpu_image_view.images.image_loader import _SUPPORTED_EXTS
-        assert ".jxl" in _SUPPORTED_EXTS
+        from Imervue.image.formats import VIEWER_EXTENSIONS
+        assert ".jxl" in VIEWER_EXTENSIONS
 
     def test_load_jxl_returns_rgba(self, tmp_path):
         pytest.importorskip("pillow_jxl")
@@ -153,3 +153,60 @@ class TestJxlInGrid:
         result = load_image_file(str(out))
         assert result.ndim == 3
         assert result.shape[2] == 4
+
+
+def test_opening_the_viewer_does_not_import_raw_decoders():
+    # rawpy and imageio cost ~90 ms of startup and only RAW files need them,
+    # so the loaders import them where a RAW file is decoded. Checked in a
+    # fresh interpreter, since this test session has imported everything.
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parent.parent
+    code = ("import sys; import Imervue.Imervue_main_window; "
+            "print(sorted(m for m in ('rawpy', 'imageio') if m in sys.modules))")
+    result = subprocess.run(  # noqa: S603 - fixed argv: this interpreter
+        [sys.executable, "-c", code], capture_output=True, text=True, cwd=repo,
+        timeout=120, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "[]"
+
+
+def _portrait_jpeg(path):
+    """40x20 stored pixels, left half red, tagged 'rotate 90 CW to view' (6)."""
+    arr = np.zeros((20, 40, 3), dtype=np.uint8)
+    arr[:, :20] = (255, 0, 0)
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.fromarray(arr).save(path, exif=exif, quality=100)
+    return str(path)
+
+
+class TestExifOrientation:
+    """Phones and cameras tag portrait shots instead of turning the pixels."""
+
+    @pytest.mark.parametrize("thumbnail", [False, True])
+    def test_tagged_photo_loads_upright(self, tmp_path, thumbnail):
+        img = load_image_file(_portrait_jpeg(tmp_path / "p.jpg"), thumbnail=thumbnail)
+        assert img.shape[:2] == (40, 20)
+        assert img[5, 10, 0] > 200 and img[35, 10, 0] < 60   # red half is on top
+
+    def test_new_recipe_applies_to_the_upright_image(self, tmp_path):
+        from Imervue.image.recipe import Recipe
+        img = load_image_file(_portrait_jpeg(tmp_path / "p.jpg"), recipe=Recipe(crop=(0, 0, 20, 10)))
+        assert img.shape[:2] == (10, 20)
+
+    def test_legacy_geometry_recipe_keeps_the_stored_orientation(self, tmp_path):
+        """A crop saved before images loaded upright was drawn on the sideways pixels."""
+        from Imervue.image.recipe import Recipe
+        legacy = Recipe.from_dict({"crop": [0, 0, 30, 20]})
+        img = load_image_file(_portrait_jpeg(tmp_path / "p.jpg"), recipe=legacy)
+        assert img.shape[:2] == (20, 30)
+
+    def test_legacy_tone_only_recipe_still_loads_upright(self, tmp_path):
+        from Imervue.image.recipe import Recipe
+        legacy = Recipe.from_dict({"brightness": 0.2})
+        img = load_image_file(_portrait_jpeg(tmp_path / "p.jpg"), recipe=legacy)
+        assert img.shape[:2] == (40, 20)

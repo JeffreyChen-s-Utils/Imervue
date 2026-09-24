@@ -16,6 +16,19 @@ from Imervue.library import image_index
 
 
 @pytest.fixture(autouse=True)
+def _inline_worker_only(monkeypatch):
+    """Keep ``FilePurgeWorker.start`` from spawning its thread.
+
+    ``_drain`` runs the worker body inline; if the dialog's ``start()`` also
+    launched the real thread, both would delete the same files and whichever
+    lost the race logged ``Batch delete failed`` and reported the path as
+    failed — the flake these tests used to show about one run in three.
+    """
+    from Imervue.system import trash_ops
+    monkeypatch.setattr(trash_ops.FilePurgeWorker, "start", lambda self, *_a: None)
+
+
+@pytest.fixture(autouse=True)
 def _isolated_db(tmp_path):
     image_index.set_db_path(tmp_path / "library.db")
     try:

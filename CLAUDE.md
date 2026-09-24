@@ -2,17 +2,16 @@
 
 ## Session Progress Log — CHECK THIS FIRST
 
-`.claude/PROGRESS.md` is the hand-off file between sessions. Gitignored scratch space: never a
-deliverable, never referenced from code or shipped docs.
+`progress.md` at the repo root is the outstanding-work list and the hand-off between sessions.
+It is tracked, so keep it free of anything that should not be public.
 
-- **Read it at the start of every session.** If `## Pending` lists items, say so and offer to
+- **Read it at the start of every session.** If `## Open` lists items, say so and offer to
   continue them before starting anything new. If it's empty, proceed and don't mention the file.
-- **Write to it the moment something is left unfinished** — uncommitted work, an unpushed commit,
-  a failing gate, a deferred follow-up, a decision waiting on an answer. One line of *what*, one
-  line of the *next concrete step*. Design notes belong in the code, the commit, or the PR.
-- **Delete each item the moment it lands.** A finished item left behind is worse than no file.
-- When the last item is done, reset the file to `# Progress Log` + an empty `## Pending` section
-  (`_(nothing pending)_`) + `## Notes`. Recreate it from that shape if it's missing.
+- **Write to it the moment something is left unfinished** — a failing gate, a deferred follow-up,
+  a decision waiting on an answer. One line of *what*, one line of the *next concrete step*.
+  Design notes belong in the code, the commit, or the PR.
+- **Delete each item the moment it lands** and record it in `docs/updates/` in the same commit
+  (see "Stage commits" below). A finished item left behind is worse than no file.
 
 ## Definition of Done (HARD REQUIREMENT)
 
@@ -22,9 +21,10 @@ can be committed. No exceptions — incomplete work stays on the working copy un
 1. **Unit tests are written and they pass.** New code without new tests is incomplete. See
    **Unit Tests** below for the coverage expectations.
 2. `py -m pytest tests/` runs clean (or only skips that already existed before the change).
-3. `py -m ruff check .` reports no new errors.
-4. `py -m bandit -c pyproject.toml -r Imervue/` reports `No issues identified` (`-c` is REQUIRED;
-   without it bandit ignores the skip config).
+3. `py -m ruff check .` reports no new errors. It covers the bundled `plugins/` too:
+   `respect-gitignore = false` in `pyproject.toml`, because `/plugins/` is gitignored.
+4. `py -m bandit -c pyproject.toml -r Imervue/ plugins/` reports `No issues identified` (`-c` is
+   REQUIRED; without it bandit ignores the skip config).
 5. `architecture_explore.md` is updated in the same commit — see **Architecture Map**.
 6. The commit message contains no AI tool/model names and no `Co-Authored-By` line.
 
@@ -34,7 +34,7 @@ it. Skipping tests "to come back later" is not allowed because later never happe
 ## Architecture Map — `architecture_explore.md` (HARD REQUIREMENT)
 
 `architecture_explore.md` at the repo root maps the whole tree: every package, a one-line purpose
-for every module, the cross-cutting patterns, the known traps. Unlike `.claude/PROGRESS.md` it
+for every module, the cross-cutting patterns, the known traps. Like `progress.md`, it
 **is** a tracked deliverable. A map that lags the code is worse than no map — it sends people to
 the wrong file with confidence — so it is updated **in the same commit**, never in a follow-up.
 
@@ -65,6 +65,19 @@ for r,d,fs in os.walk('Imervue'):
 print(f'Imervue: {f} files, {t} lines')"
 ```
 
+## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`
+
+Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes\CLAUDE.md`).
+
+- **Commit at every stage.** A stage is the smallest piece of work that leaves the repository consistent and passes this project's checks (definition of done, tests, lint): one finished `progress.md` item, or one self-contained step of a larger one. Commit it before starting the next stage, before switching to another repository, and before the session ends. Do not leave work uncommitted across sessions; if a stage cannot be finished, commit the consistent part and record the rest in `progress.md`.
+  - Stage only the files that stage touched (`git add <path>`, never `git add -A`), follow this file's commit-message rules, and never add AI attribution.
+  - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
+- **`progress.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
+- **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
+- **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those. `architecture_explore.md` stays the detailed per-module map under its own rule in this file.
+- **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. No test here protects them, so never rename or remove one without changing its consumers in the same round, and update §6 whenever a contract is added or changes.
+- The update log of the plugin distribution repository `Imervue_Plugins` also lives here, tagged `#Imervue_Plugins`: a `docs/` directory there would show up as a plugin category in the downloader.
+
 ## No AI Attribution (HARD REQUIREMENT)
 
 NEVER mention "Claude", "Claude Code", "AI-generated", "GPT", "Copilot", or any AI tool/model
@@ -87,14 +100,35 @@ gh pr view <N> --json title,body --jq '.title + "\n" + .body' \
 ## Code Quality
 
 **The tool config is the source of truth, not prose.** `pyproject.toml` (`[tool.ruff]`,
-`[tool.bandit]`) and `.bandit` define the enforced rule set — ruff runs `E,F,W,B,SIM,UP,PL,S,C90,N`
-with `mccabe.max-complexity = 16` and a documented ignore list. Do not restate those rules here or
+`[tool.bandit]`) and `.bandit` define the enforced rule set — ruff runs `E,F,W,B,SIM,UP,PL,S,C90,N,BLE`
+with `mccabe.max-complexity = 15` and a documented ignore list. Do not restate those rules here or
 assume limits the config has deliberately relaxed. If a rule should change, change the config.
 
 Rules the tools do **not** catch, which still apply:
 
 - **File length ≤ 1000 lines** (SonarQube `python:S104`). Split large modules. The current
-  over-budget list lives in §12 of `architecture_explore.md`.
+  over-budget list lives in §12 of `architecture_explore.md`; `tests/test_code_size_limits.py`
+  enforces it across `Imervue/` and `plugins/` (translation data is exempt: the `multi_language`
+  dictionaries and the `plugins/*_translation/` language plugins).
+- **Function length ≤ 80 lines**, docstring included — enforced by the same test file. Split a
+  long function into named steps before it crosses.
+- **At most 7 positional parameters** (`self` / `cls` not counted), also enforced there. Reasoned
+  exception to the workspace's 7-parameter rule: options past that must be keyword-only with
+  defaults (`def render(canvas, center, *, fill=None, ...)`), since a named option cannot land in
+  the wrong slot. Related values still travel together — a point is `(x, y)`, a colour one RGBA
+  tuple, a group of settings a frozen dataclass (`SanitizeSettings`, `ExportSettings`, `ImageQuery`).
+- **Every module is imported by production code** — `tests/test_unwired_modules.py` fails on a
+  new module nothing in `Imervue/` or `plugins/` imports (the pre-existing ones are listed there).
+- **No silently swallowed exceptions** — `tests/test_no_silent_suppress.py` rejects, in `Imervue/`
+  and `plugins/`, any `contextlib.suppress(Exception)` (ruff's `BLE` misses this form) and any
+  broad `except` whose body neither raises, logs, nor uses the bound exception (a
+  `# noqa: BLE001` silences ruff, not this test). Catch what the block can actually meet
+  (`GLError`, `IMAGE_READ_ERRORS`, `sqlite3.Error`, `OSError`), or use
+  `Imervue.system.best_effort.best_effort("step", logger)` to carry on and log the traceback. A
+  worker boundary that must always emit catches the expected errors first, then logs the rest.
+- **Never unpickle a file** — bandit flags `pickle` and `yaml.load`; `tests/test_no_unsafe_deserialization.py`
+  also rejects `np.load(..., allow_pickle=True)` and a `torch.load` without `weights_only=True`.
+  Store strings as JSON bytes or fixed-width arrays instead of object arrays.
 - **No duplication** — don't copy a block of ≥ 3 statements across functions or files, and don't
   repeat a string literal ≥ 3 times (extract a module-level constant). Codacy and SonarCloud
   flag both; ruff does not.
@@ -140,6 +174,17 @@ Use the shared fixtures in `tests/conftest.py` (`qapp`, `tmp_path`, `sample_*_ar
 `user_setting.json` — the autouse `_isolate_user_settings` fixture redirects the path, so just
 mutate `user_setting_dict` directly. A test that was already skipping for a missing optional
 dependency may keep skipping, but every NEW test must actually run.
+
+Waiting on a queued Qt signal (a worker thread's `done`, a `QTimer`) goes through the
+`pump_until(predicate, timeout=5.0)` fixture — never a fixed number of `processEvents()`
+passes, which depends on machine load and flakes under a parallel build. When the test
+started a real `QThread`, join it in a `finally`: destroying a running thread aborts the
+whole process, so a failed assertion would otherwise take the suite down with it.
+
+A test that runs a worker's body inline (`worker.run()`) must stop the code under test from
+also calling `worker.start()` — patch the worker class's `start` to a no-op. Otherwise the
+real thread and the inline call do the same work twice and race (two deletes of one file,
+one of them logged as failed).
 
 ### Qt / OpenGL tests on headless CI
 
@@ -216,11 +261,23 @@ are skipped; **only files directly inside the plugin directory are fetched** —
    won't commit.
 3. Copy the directory into the matching category of `D:\Codes\Imervue_Plugins` (delete it there
    for a removed plugin), then commit and push **to `main`**.
-4. Confirm parity — an empty list means in sync. Note this compares directory names only, so it
-   cannot catch file-level drift; diff the files too when a plugin was edited rather than added:
+4. Confirm parity — no output means in sync. The check compares plugin directories *and* the
+   content of every flat file in them (line endings ignored), so an edited file that was never
+   copied shows up as `content differs`:
 
 ```bash
-py -c "import os;d=lambda p:{e.name for e in os.scandir(p) if e.is_dir()};a=d(r'D:\Codes\Imervue\plugins');b=d(r'D:\Codes\Imervue_Plugins\plugins')|d(r'D:\Codes\Imervue_Plugins\languages');print(sorted(a^b))"
+py -c "import os
+A=r'D:\Codes\Imervue\plugins';B=r'D:\Codes\Imervue_Plugins'
+rd=lambda p:open(p,'rb').read().replace(b'\r\n',b'\n')
+fs=lambda p:{e.name for e in os.scandir(p) if e.is_file() and not e.name.endswith('.pyc')}
+m={e.name:e.path for c in ('plugins','languages') for e in os.scandir(os.path.join(B,c)) if e.is_dir()}
+s={e.name:e.path for e in os.scandir(A) if e.is_dir() and not e.name.startswith(('.','_'))}
+for n in sorted(s.keys()^m.keys()):print('plugin on one side only:',n)
+for n in sorted(s.keys()&m.keys()):
+    a,b=fs(s[n]),fs(m[n])
+    for x in sorted(a^b):print('file on one side only:',n,x)
+    for x in sorted(a&b):
+        if rd(os.path.join(s[n],x))!=rd(os.path.join(m[n],x)):print('content differs:',n,x)"
 ```
 
 The no-AI-attribution rules apply to the plugins repo exactly as they do here.
@@ -259,7 +316,7 @@ Systemic false positives are skipped at config level, never per line. `.bandit` 
 (YAML, one `# B<NNN>: reason` comment per rule); `pyproject.toml` `[tool.bandit]` mirrors it —
 **keep both in sync**. `.codacy.yaml` excludes `tests/**` (pytest `assert` is B101, narrow
 `except/pass` is B110) and `Imervue/multi_language/**` (translator strings like "API key" trip
-B105). After adding a skip, verify `py -m bandit -c pyproject.toml -r Imervue/` returns
+B105). After adding a skip, verify `py -m bandit -c pyproject.toml -r Imervue/ plugins/` returns
 `No issues identified`.
 
 ## Local CI & Dashboards
@@ -300,10 +357,20 @@ before — the failure mode is a command that *appears* to succeed.
 - **The full test suite exits with `STATUS_ACCESS_VIOLATION` (`0xC0000005`, surfaced as a large
   negative exit code) *after* printing a passing summary.** Pre-existing, verified against a
   stashed tree. Read the reported counts, not the exit code.
-- **Clipboard tests flake in full runs and pass in isolation.** `QClipboard.dataChanged` arrives
-  asynchronously via `WM_CLIPBOARDUPDATE`, so two `setImage` calls separated by one
-  `processEvents` can coalesce into a single signal. Before blaming a change, re-run the test
-  isolated *and* repeat the full run on the unchanged dependency set.
+- **Tests never touch the OS clipboard — take the `fake_clipboard` fixture.** The real one is
+  shared with every other process: `QClipboard.dataChanged` arrives asynchronously via
+  `WM_CLIPBOARDUPDATE` (two quick `setImage` calls coalesce into one signal), another program
+  can hold it open so a set silently fails, and each run used to overwrite the developer's own
+  clipboard. The fixture patches `QApplication.clipboard()` with an in-process clipboard that
+  emits `dataChanged` synchronously; product code must keep going through
+  `QApplication.clipboard()` for it to take effect.
+- **Tests never touch the OS Recycle Bin — the autouse `os_trash` fixture replaces
+  `send2trash.send2trash`.** The real shell operation is OS state shared with every other
+  process, costs ~0.27 s per call, and filled the developer's own Recycle Bin on every run.
+  The fake removes each path, raises `FileNotFoundError` for a missing one, and
+  yields the list of trashed paths for assertions. Product code must keep importing
+  `send2trash` at call time (`from send2trash import send2trash` inside the function) for the
+  patch to reach it.
 - **`send2trash` costs ~0.27 s per call regardless of how few files it carries**, versus
   ~0.016 s/file when a whole list goes over in one call (measured 2026-07-30). Every delete path
   must batch through `Imervue/system/trash_ops.py` — never a per-file loop.

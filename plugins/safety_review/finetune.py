@@ -24,11 +24,12 @@ import argparse
 import os
 import shutil
 
-# Duplicated (like _runner.py) so this stays runnable as a standalone script
-# without the plugin package on sys.path.
-_ERAX_REPO = "erax-ai/EraX-Anti-NSFW-V1.1"
-_ERAX_MODEL = "erax-anti-nsfw-yolo11m-v1.1.pt"
-_ERAX_REVISION = "90878ab981060833413ae1a24df72f5e1fff66bc"
+# Runnable as a standalone script without the plugin package on sys.path, like
+# _runner.py: the pinned model then comes from the sibling _constants.py.
+if __package__:
+    from safety_review._constants import _ERAX_MODEL, _ERAX_REPO, _ERAX_REVISION
+else:
+    from _constants import _ERAX_MODEL, _ERAX_REPO, _ERAX_REVISION
 
 DEFAULT_EPOCHS = 100
 DEFAULT_IMGSZ = 640

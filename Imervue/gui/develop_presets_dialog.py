@@ -25,6 +25,7 @@ from Imervue.image.develop_presets import (
 )
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
+from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
 
 logger = logging.getLogger("Imervue.gui.develop_presets_dialog")
@@ -120,7 +121,10 @@ class DevelopPresetsDialog(QDialog):
         name = self._selected_name()
         if name is None:
             return
-        confirm = QMessageBox.question(self, "Delete Preset", f"Delete '{name}'?")
+        lang = language_wrapper.language_word_dict
+        confirm = QMessageBox.question(
+            self, lang.get("develop_preset_delete_title", "Delete Preset"),
+            lang.get("develop_preset_delete_confirm", "Delete '{name}'?").format(name=name))
         if confirm == QMessageBox.StandardButton.Yes:
             self._store.delete(name)
             schedule_save()

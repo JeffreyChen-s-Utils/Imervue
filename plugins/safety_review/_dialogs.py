@@ -128,7 +128,7 @@ def _reload_grid_or_deepzoom(gui) -> None:
             if images and 0 <= gui.current_index < len(images):
                 gui._clear_deep_zoom()
                 gui.load_deep_zoom_image(images[gui.current_index])
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort refresh of the host viewer; logged
         logger.debug("Viewer reload failed", exc_info=True)
 
 
@@ -555,7 +555,7 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
         base = Path(root)
         return str(base.parent / f"{base.name or 'scan'}_censor_failed")
 
-    def _make_worker(self, output_dir, overwrite, mode, conf, expand, style,
+    def _make_worker(self, output_dir, overwrite, *, mode, conf, expand, style,
                      categories, shape):
         # source_root and only-censored are only meaningful for a separate-
         # output run; on overwrite each file is written back in place.
@@ -610,8 +610,8 @@ class ScanAllDialog(_WorkerHostMixin, QDialog):
             self._progress.setVisible(True)
             self._status_label.setText("")
             self._worker = self._make_worker(
-                output_dir, overwrite, mode, conf, expand, style, categories,
-                shape)
+                output_dir, overwrite, mode=mode, conf=conf, expand=expand,
+                style=style, categories=categories, shape=shape)
             self._worker.progress.connect(self._on_progress)
             self._worker.result_ready.connect(self._on_finished)
             self._worker.finished.connect(self._cleanup)

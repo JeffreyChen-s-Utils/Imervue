@@ -4,9 +4,6 @@ The QTreeView subclass with keyboard shortcuts and right-click menu, plus the
 duplicate-name helper. Extracted from ``Imervue_main_window``; re-exported
 there for backwards compatibility.
 """
-import os
-import subprocess  # nosec B404  # NOSONAR - static arg lists for trusted OS file managers
-import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from functools import partial
@@ -25,7 +22,9 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_manager import reveal_in_file_manager
 import contextlib
+import logging
 
 
 def _next_duplicate_name(source: Path) -> Path:
@@ -95,6 +94,9 @@ def _dedupe_paths(paths: Iterable[str]) -> list[str]:
             seen.add(path)
             out.append(path)
     return out
+
+
+_logger = logging.getLogger("Imervue.file_tree")
 
 
 class _FileTreeView(QTreeView):
@@ -613,28 +615,10 @@ class _FileTreeView(QTreeView):
 
     @staticmethod
     def _open_in_explorer(path: str, select: bool = True):
-        # Static command + a local filesystem path from the file tree — no
-        # untrusted input, shell=False. Bandit B603/B607 and Semgrep flag any
-        # subprocess use; suppressed inline (rules are also config-skipped).
-        with contextlib.suppress(Exception):
-            if sys.platform == "win32":
-                if select and Path(path).is_file():
-                    subprocess.Popen(  # nosec B603,B607  # nosemgrep
-                        ["explorer", "/select,", os.path.normpath(path)],
-                    )
-                else:
-                    subprocess.Popen(  # nosec B603,B607  # nosemgrep
-                        ["explorer", os.path.normpath(path)],
-                    )
-            elif sys.platform == "darwin":
-                subprocess.Popen(  # nosec B603,B607  # nosemgrep
-                    ["open", "-R" if select else "", path],
-                )
-            else:
-                target = path if Path(path).is_dir() else str(Path(path).parent)
-                subprocess.Popen(  # nosec B603,B607  # nosemgrep
-                    ["xdg-open", target],
-                )
+        try:
+            reveal_in_file_manager(path, select=select)
+        except (OSError, ValueError):   # file manager missing, or it refused the path
+            _logger.warning("Could not reveal %s in the file manager", path, exc_info=True)
 
     def _open_with_default_app(self, path: str) -> None:
         """Open ``path`` with the OS's default application via Qt's
@@ -861,6 +845,7 @@ class _FileTreeView(QTreeView):
                 freed_bytes += sizes.pop(p, 0)
         if not textures:
             return
+        from OpenGL.error import GLError
         from OpenGL.GL import glDeleteTextures
         from PySide6.QtGui import QOpenGLContext
         try:
@@ -868,7 +853,7 @@ class _FileTreeView(QTreeView):
                 viewer.makeCurrent()
             if QOpenGLContext.currentContext() is not None:
                 glDeleteTextures(textures)
-        except Exception:   # nosec B110  # noqa: BLE001, S110 — GL context torn down; nothing to log
+        except (GLError, RuntimeError):   # context or widget already torn down; nothing to free
             pass
         finally:
             if hasattr(viewer, "doneCurrent"):

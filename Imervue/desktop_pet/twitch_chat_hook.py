@@ -254,7 +254,7 @@ class TwitchChatClient(QObject):
             # The loop ended — from stop() or a dropped connection. Close the
             # socket (don't leave it dangling until GC) and, unless this was an
             # explicit stop(), signal the drop so any bound UI reflects it.
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(OSError):   # socket already dead
                 if self._sock is not None:
                     self._sock.close()
             if not self._stop_flag.is_set():

@@ -231,7 +231,9 @@ def test_size_combo_offers_each_preset(qapp, preset):
     silently leave the user's pick unapplied."""
     ws = PetWorkspace()
     try:
-        idx = ws._size_combo.findText(preset)   # noqa: SLF001
+        idx = ws._size_combo.findData(preset)   # noqa: SLF001
         assert idx >= 0
+        # The label is the translated name, not the raw preset id.
+        assert ws._size_combo.itemText(idx) == preset.title()   # noqa: SLF001
     finally:
         ws.deleteLater()

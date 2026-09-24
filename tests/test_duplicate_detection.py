@@ -264,3 +264,48 @@ class TestScanWorkerRun:
         worker.run()
         # Aborted — no result emitted
         assert len(results) == 0
+
+
+class TestScanWorkerUnreadable:
+    """A file that cannot be read is skipped; a bug is not."""
+
+    @pytest.mark.parametrize("method", ["exact", "perceptual"])
+    def test_missing_file_is_skipped(self, tmp_path, method):
+        worker = _ScanWorker(str(tmp_path), method, 5, recursive=False)
+        assert worker._hash_one(str(tmp_path / "gone.png")) is None
+
+    def test_non_image_is_skipped_for_perceptual(self, tmp_path):
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not a png")
+        worker = _ScanWorker(str(tmp_path), "perceptual", 5, recursive=False)
+        assert worker._hash_one(str(bad)) is None
+
+    def test_unexpected_error_propagates(self, dup_folder, monkeypatch):
+        worker = _ScanWorker(dup_folder, "perceptual", 5, recursive=False)
+
+        def boom(_path):
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(_ScanWorker, "_perceptual_hash", staticmethod(boom))
+        with pytest.raises(RuntimeError):
+            worker._hash_one(os.path.join(dup_folder, "dup1.png"))
+
+    def test_perceptual_hash_releases_the_file(self, dup_folder):
+        path = os.path.join(dup_folder, "dup1.png")
+        _ScanWorker._perceptual_hash(path)
+        os.remove(path)  # fails on Windows while a handle is still open
+        assert not os.path.exists(path)
+
+
+class TestMakeThumbnail:
+    def test_valid_image(self, qapp, dup_folder):
+        from Imervue.gui.duplicate_detection_dialog import _make_thumbnail
+        pm = _make_thumbnail(os.path.join(dup_folder, "unique.png"), size=16)
+        assert not pm.isNull() and max(pm.width(), pm.height()) <= 16
+
+    def test_unreadable_gives_null_pixmap(self, qapp, tmp_path):
+        from Imervue.gui.duplicate_detection_dialog import _make_thumbnail
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"not a png")
+        assert _make_thumbnail(str(bad)).isNull()
+        assert _make_thumbnail(str(tmp_path / "gone.png")).isNull()

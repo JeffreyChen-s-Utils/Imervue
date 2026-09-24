@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QSizePolicy, QTabWidget, QSlider, QMessageBox,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -271,7 +272,7 @@ def _load_rgba_array(path: str, max_edge: int = 2048) -> np.ndarray | None:
                     Image.Resampling.LANCZOS,
                 )
             return np.asarray(im, dtype=np.uint8)
-    except Exception:
+    except IMAGE_READ_ERRORS:
         return None
 
 
@@ -333,13 +334,23 @@ class CompareDialog(QDialog):
         self.resize(1280, 820)
 
         root = QHBoxLayout(self)
+        root.addLayout(self._build_picker_panel(main_gui.model.images), stretch=1)
 
-        # ===== Left panel — picker + mode buttons =====
+        # ===== Right — tabbed display =====
+        self._tabs = QTabWidget()
+        root.addWidget(self._tabs, stretch=3)
+        self._add_side_by_side_tab()
+        self._add_overlay_tab()
+        self._add_difference_tab()
+        self._add_split_tab()
+
+    def _build_picker_panel(self, paths: list[str]) -> QVBoxLayout:
+        """Multi-select image list over the mode buttons."""
         left = QVBoxLayout()
 
         self._list = QListWidget()
         self._list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        for path in main_gui.model.images:
+        for path in paths:
             item = QListWidgetItem(Path(path).name)
             item.setData(Qt.ItemDataRole.UserRole, path)
             self._list.addItem(item)
@@ -355,83 +366,85 @@ class CompareDialog(QDialog):
         sbs_row.addWidget(btn_4)
         left.addLayout(sbs_row)
 
-        # Overlay / Difference (both need exactly 2 selections)
-        btn_overlay = QPushButton(self._lang.get("compare_overlay", "Overlay (2)"))
-        btn_overlay.clicked.connect(self._run_overlay)
-        left.addWidget(btn_overlay)
+        # Overlay / Difference / Split (each needs exactly 2 selections)
+        for key, fallback, slot in (
+            ("compare_overlay", "Overlay (2)", self._run_overlay),
+            ("compare_difference", "Difference (2)", self._run_difference),
+            ("compare_split", "A|B Split (2)", self._run_split),
+        ):
+            button = QPushButton(self._lang.get(key, fallback))
+            button.clicked.connect(slot)
+            left.addWidget(button)
+        return left
 
-        btn_diff = QPushButton(self._lang.get("compare_difference", "Difference (2)"))
-        btn_diff.clicked.connect(self._run_difference)
-        left.addWidget(btn_diff)
+    @staticmethod
+    def _slider(lo: int, hi: int, value: int, on_change) -> QSlider:
+        """Horizontal slider over ``[lo, hi]`` at ``value``, calling ``on_change`` on moves."""
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(lo, hi)
+        slider.setValue(value)
+        slider.valueChanged.connect(on_change)
+        return slider
 
-        btn_split = QPushButton(self._lang.get("compare_split", "A|B Split (2)"))
-        btn_split.clicked.connect(self._run_split)
-        left.addWidget(btn_split)
+    @staticmethod
+    def _slider_row(*widgets) -> QHBoxLayout:
+        """Row of ``widgets``; the slider among them takes the stretch."""
+        row = QHBoxLayout()
+        for widget in widgets:
+            row.addWidget(widget, stretch=1 if isinstance(widget, QSlider) else 0)
+        return row
 
-        root.addLayout(left, stretch=1)
+    def _add_view_tab(self, label: QWidget, controls: QHBoxLayout, title: str) -> QWidget:
+        """Tab page with ``label`` stretching over its ``controls`` row."""
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.addWidget(label, stretch=1)
+        layout.addLayout(controls)
+        self._tabs.addTab(page, title)
+        return page
 
-        # ===== Right — tabbed display =====
-        self._tabs = QTabWidget()
-        root.addWidget(self._tabs, stretch=3)
-
+    def _add_side_by_side_tab(self) -> None:
+        """Grid the side-by-side labels are placed into when a comparison runs."""
         self._sbs_widget = QWidget()
         self._sbs_layout = QGridLayout(self._sbs_widget)
         self._sbs_layout.setSpacing(4)
         self._tabs.addTab(self._sbs_widget, self._lang.get("compare_tab_sbs", "Side-by-side"))
         self._sbs_labels: list[_ImageLabel] = []
 
-        # Overlay tab
-        self._overlay_widget = QWidget()
-        overlay_layout = QVBoxLayout(self._overlay_widget)
+    def _add_overlay_tab(self) -> None:
+        """A / B blend with a 0–100 mix slider starting at 50."""
         self._overlay_label = _ImageLabel()
-        overlay_layout.addWidget(self._overlay_label, stretch=1)
-        self._overlay_slider = QSlider(Qt.Orientation.Horizontal)
-        self._overlay_slider.setRange(0, 100)
-        self._overlay_slider.setValue(50)
-        self._overlay_slider.valueChanged.connect(self._on_overlay_slider)
-        slider_row = QHBoxLayout()
-        slider_row.addWidget(QLabel("A"))
-        slider_row.addWidget(self._overlay_slider, stretch=1)
-        slider_row.addWidget(QLabel("B"))
-        overlay_layout.addLayout(slider_row)
-        self._tabs.addTab(self._overlay_widget, self._lang.get("compare_tab_overlay", "Overlay"))
+        self._overlay_slider = self._slider(0, 100, 50, self._on_overlay_slider)
+        self._overlay_widget = self._add_view_tab(
+            self._overlay_label,
+            self._slider_row(QLabel("A"), self._overlay_slider, QLabel("B")),
+            self._lang.get("compare_tab_overlay", "Overlay"),
+        )
         self._overlay_arrs: tuple[np.ndarray, np.ndarray] | None = None
 
-        # Difference tab
-        self._diff_widget = QWidget()
-        diff_layout = QVBoxLayout(self._diff_widget)
+    def _add_difference_tab(self) -> None:
+        """|A - B| view with a gain slider (0.10× … 20×) and its readout."""
         self._diff_label = _ImageLabel()
-        diff_layout.addWidget(self._diff_label, stretch=1)
-        self._diff_slider = QSlider(Qt.Orientation.Horizontal)
-        self._diff_slider.setRange(10, 2000)  # 0.10× … 20× gain
-        self._diff_slider.setValue(100)
-        self._diff_slider.valueChanged.connect(self._on_diff_slider)
-        gain_row = QHBoxLayout()
-        gain_row.addWidget(QLabel(self._lang.get("compare_gain", "Gain")))
-        gain_row.addWidget(self._diff_slider, stretch=1)
+        self._diff_slider = self._slider(10, 2000, 100, self._on_diff_slider)
         self._diff_gain_label = QLabel("1.0×")
-        gain_row.addWidget(self._diff_gain_label)
-        diff_layout.addLayout(gain_row)
-        self._tabs.addTab(self._diff_widget, self._lang.get("compare_tab_difference", "Difference"))
+        self._diff_widget = self._add_view_tab(
+            self._diff_label,
+            self._slider_row(
+                QLabel(self._lang.get("compare_gain", "Gain")),
+                self._diff_slider, self._diff_gain_label,
+            ),
+            self._lang.get("compare_tab_difference", "Difference"),
+        )
         self._diff_arrs: tuple[np.ndarray, np.ndarray] | None = None
 
-        # Split tab — Before/After divider
-        self._split_widget = QWidget()
-        split_layout = QVBoxLayout(self._split_widget)
+    def _add_split_tab(self) -> None:
+        """Before / after divider, draggable on the image or via the slider."""
         self._split_label = _SplitLabel()
-        split_layout.addWidget(self._split_label, stretch=1)
-        self._split_slider = QSlider(Qt.Orientation.Horizontal)
-        self._split_slider.setRange(0, 100)
-        self._split_slider.setValue(50)
-        self._split_slider.valueChanged.connect(self._on_split_slider)
+        self._split_slider = self._slider(0, 100, 50, self._on_split_slider)
         self._split_label.split_changed.connect(self._on_split_widget_changed)
-        split_slider_row = QHBoxLayout()
-        split_slider_row.addWidget(QLabel("A"))
-        split_slider_row.addWidget(self._split_slider, stretch=1)
-        split_slider_row.addWidget(QLabel("B"))
-        split_layout.addLayout(split_slider_row)
-        self._tabs.addTab(
-            self._split_widget,
+        self._split_widget = self._add_view_tab(
+            self._split_label,
+            self._slider_row(QLabel("A"), self._split_slider, QLabel("B")),
             self._lang.get("compare_tab_split", "A|B Split"),
         )
 
