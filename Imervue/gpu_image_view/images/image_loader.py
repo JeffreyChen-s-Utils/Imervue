@@ -39,49 +39,9 @@ _THUMBNAIL_EDGE = 1600   # long side of a thumbnail decode of a raster
 
 
 def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
-    """Develop the camera RAW at *path*; ``OSError`` when libraw can't read it.
-
-    libraw's own ``LibRawError`` is not an ``OSError``, so every caller that
-    handles an unreadable file through ``IMAGE_READ_ERRORS`` would miss a
-    corrupt or unsupported RAW; it is re-raised as one.
-    """
-    import rawpy
-    # ``open_raw_efficient`` uses libraw's native file API instead of
-    # rawpy's convenience ``imread`` which would otherwise pre-load
-    # the whole file into a Python ``bytes`` object. For 50 MB+ CR3
-    # / NEF files that's a meaningful peak-memory saving.
-    from Imervue.image.raw_loader import open_raw_efficient
-    try:
-        with open_raw_efficient(path) as raw:
-            if thumbnail:
-                return _load_raw_thumbnail(raw)
-            return raw.postprocess(
-                use_camera_wb=True,
-                no_auto_bright=False,
-                output_bps=8,
-            )
-    except rawpy.LibRawError as err:
-        raise OSError(f"libraw can't decode {path}: {err}") from err
-
-
-def _load_raw_thumbnail(raw) -> np.ndarray:
-    # Imported here: rawpy and imageio cost ~190 ms at startup, and only a
-    # RAW file needs them.
-    import imageio
-    import rawpy
-    try:
-        thumb = raw.extract_thumb()
-        if thumb.format == rawpy.ThumbFormat.JPEG:
-            return imageio.v3.imread(thumb.data)
-        if thumb.format == rawpy.ThumbFormat.BITMAP:
-            return thumb.data
-        raise ValueError("No valid embedded preview")
-    except (ValueError, OSError, RuntimeError):
-        return raw.postprocess(
-            half_size=True,
-            use_camera_wb=True,
-            output_bps=8,
-        )
+    """Develop the camera RAW at *path* (:func:`Imervue.image.raw_loader.develop_raw`)."""
+    from Imervue.image.raw_loader import develop_raw
+    return develop_raw(path, thumbnail=thumbnail)
 
 
 def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:

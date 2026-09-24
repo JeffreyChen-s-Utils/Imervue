@@ -149,3 +149,47 @@ def file_size_supports_mmap(file_size: int, minimum_bytes: int = 1_048_576) -> b
     if file_size <= 0:
         return False
     return int(file_size) >= int(minimum_bytes)
+
+
+def develop_raw(path: str | Path, *, thumbnail: bool = False):
+    """Develop the camera RAW at *path* to an HxWx3 uint8 array; ``OSError`` when libraw can't.
+
+    Camera white balance, 8 bits. With *thumbnail* the embedded preview
+    (JPEG or bitmap) is used when there is one, else a half-size develop.
+    libraw's own ``LibRawError`` is not an ``OSError``, so every caller that
+    handles an unreadable file through ``IMAGE_READ_ERRORS`` would miss a
+    corrupt or unsupported RAW; it is re-raised as one. Qt-free, so the MCP
+    server and the CLI can use it as well as the viewer.
+    """
+    import rawpy
+    try:
+        with open_raw_efficient(path) as raw:
+            if thumbnail:
+                return _embedded_preview(raw)
+            return raw.postprocess(
+                use_camera_wb=True,
+                no_auto_bright=False,
+                output_bps=8,
+            )
+    except rawpy.LibRawError as err:
+        raise OSError(f"libraw can't decode {path}: {err}") from err
+
+
+def _embedded_preview(raw):
+    # Imported here: rawpy and imageio cost ~190 ms at startup, and only a
+    # RAW file needs them.
+    import imageio
+    import rawpy
+    try:
+        thumb = raw.extract_thumb()
+        if thumb.format == rawpy.ThumbFormat.JPEG:
+            return imageio.v3.imread(thumb.data)
+        if thumb.format == rawpy.ThumbFormat.BITMAP:
+            return thumb.data
+        raise ValueError("No valid embedded preview")
+    except (ValueError, OSError, RuntimeError):
+        return raw.postprocess(
+            half_size=True,
+            use_camera_wb=True,
+            output_bps=8,
+        )
