@@ -35,6 +35,7 @@ from defusedxml import ElementTree as DefusedET
 from defusedxml.common import DefusedXmlException
 
 from Imervue.user_settings.color_labels import COLORS
+from Imervue.system.atomic_write import write_text_atomically
 
 # NOTE: the values below are XML *namespace identifiers*, not network URLs.
 # XML namespaces (W3C REC-xml-names) are opaque strings that uniquely identify
@@ -459,7 +460,9 @@ def _merge_into(tree: ET.ElementTree, data: XmpData) -> bool:
 def _write_tree(path: Path, tree: ET.ElementTree) -> None:
     ET.indent(tree, space="  ")
     xml_bytes = ET.tostring(tree.getroot(), encoding="UTF-8")
-    path.write_text(_XML_DECLARATION + xml_bytes.decode("utf-8"), encoding="utf-8")
+    # In one step: the file may hold a raw developer's edits, and a write cut
+    # short (full disk, crash) would leave it unreadable, those edits with it.
+    write_text_atomically(path, _XML_DECLARATION + xml_bytes.decode("utf-8"))
 
 
 def save(image_path: str | Path, data: XmpData) -> Path:

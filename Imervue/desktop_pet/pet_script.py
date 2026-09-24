@@ -72,6 +72,7 @@ from Imervue.desktop_pet.schedule_rules import (
     rule_from_dict,
     rule_to_dict,
 )
+from Imervue.system.atomic_write import write_text_atomically
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_script")
 
@@ -214,10 +215,7 @@ def save_script(script: PetScript, path: str | Path) -> None:
     can hand-edit the result."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(
-        json.dumps(script.to_dict(), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_text_atomically(p, json.dumps(script.to_dict(), indent=2, ensure_ascii=False) + "\n")
 
 
 def _coerce_script(raw: dict[str, Any]) -> PetScript:

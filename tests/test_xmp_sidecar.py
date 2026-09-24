@@ -482,3 +482,19 @@ def test_a_hierarchy_is_read_and_a_save_keeps_it(xmp, image_path):
     xmp.save(image_path, xmp.XmpData(rating=2))
     assert xmp.load(image_path).hierarchical_keywords == ["Places|Taiwan"]
     assert "lr:hierarchicalSubject" in path.read_text(encoding="utf-8")
+
+
+def test_a_save_cut_short_keeps_the_raw_developers_sidecar(xmp, image_path, monkeypatch):
+    """The sidecar was rewritten in place; a write cut short lost Lightroom's settings with it."""
+    from Imervue.system import atomic_write
+    path = _write_sidecar(image_path, _LIGHTROOM_SIDECAR)
+    before = path.read_text(encoding="utf-8")
+
+    def disk_full(_src, _dst):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(atomic_write.os, "replace", disk_full)
+    with pytest.raises(OSError, match="disk full"):
+        xmp.save(image_path, xmp.XmpData(rating=5))
+    assert path.read_text(encoding="utf-8") == before
+    assert sorted(p.name for p in path.parent.iterdir()) == ["photo.jpg", "photo.xmp"]

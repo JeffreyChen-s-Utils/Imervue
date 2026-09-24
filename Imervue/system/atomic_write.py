@@ -26,3 +26,8 @@ def replace_atomically(path: str | Path, write: Callable[[Path], None]) -> None:
         os.replace(tmp, target)
     finally:
         tmp.unlink(missing_ok=True)
+
+
+def write_text_atomically(path: str | Path, text: str) -> None:
+    """Replace *path* with *text* (UTF-8) in one step; see :func:`replace_atomically`."""
+    replace_atomically(path, lambda tmp: tmp.write_text(text, encoding="utf-8"))

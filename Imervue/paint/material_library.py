@@ -35,6 +35,8 @@ from pathlib import Path
 
 import numpy as np
 
+from Imervue.system.atomic_write import write_text_atomically
+
 MATERIAL_CATEGORIES = (
     "texture",
     "tone",
@@ -210,7 +212,7 @@ class MaterialIndex:
     def save_to(self, path: str | Path) -> None:
         """Persist the index to ``path`` as JSON."""
         out = {"entries": [entry.to_dict() for entry in self.entries]}
-        Path(path).write_text(json.dumps(out, indent=2), encoding="utf-8")
+        write_text_atomically(path, json.dumps(out, indent=2))
 
     @classmethod
     def load_from(
