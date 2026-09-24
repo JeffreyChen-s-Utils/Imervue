@@ -282,7 +282,7 @@ Se accede desde el menú **Tools**; organizadas en submenús agrupados por funci
 
 ## Modify — Revelado no destructivo
 
-La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **recipe** por imagen almacenada junto al archivo — los píxeles originales en disco nunca se sobrescriben hasta que uses explícitamente **Export** o **Save As**.
+La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **recipe** por imagen almacenada junto al archivo — los píxeles originales en disco nunca se sobrescriben hasta que uses explícitamente **Export** o **Save As**. **Apply Crop** y el **Save** de anotaciones son las dos excepciones: escriben el resultado sobre el archivo y conservan su EXIF (cámara, fecha de captura, GPS), XMP y DPI. Un RAW de cámara, un HEIC o un archivo animado / de varias páginas nunca se sobrescribe: el recorte te pide exportar y el guardado de anotaciones te pide un archivo nuevo.
 
 ### Controles deslizantes de revelado
 

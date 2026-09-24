@@ -637,12 +637,12 @@ class TestCropSave:
         p._current = Recipe(brightness=0.4)
         p._canvas._crop_rect = (0, 0, 40, 30)
 
-        import Imervue.gui.develop_panel as mod
+        import Imervue.image.in_place_save as mod_save
 
         def _boom(_src, _dst):
             raise OSError("disk full")
 
-        monkeypatch.setattr(mod.os, "replace", _boom)
+        monkeypatch.setattr(mod_save.os, "replace", _boom)
 
         p._apply_crop()
 
@@ -718,18 +718,107 @@ class TestAnnotationSave:
             [Annotation(kind="rect", points=[(5, 5), (40, 30)])]
         )
 
-        import Imervue.gui.develop_panel as mod
+        import Imervue.image.in_place_save as mod_save
 
         def _boom(_src, _dst):
             raise OSError("permission denied")
 
-        monkeypatch.setattr(mod.os, "replace", _boom)
+        monkeypatch.setattr(mod_save.os, "replace", _boom)
 
         p._save_annotation()
 
         assert not (real_image.parent / (real_image.name + ".tmp")).exists()
         # Recipe untouched because the save never completed.
         assert p._current.brightness == pytest.approx(0.3)
+
+    def test_save_annotation_on_a_raw_saves_a_copy_instead(self, panel, tmp_path, monkeypatch):
+        """With no in-place check it wrote PNG bytes into the .cr2."""
+        import numpy as np
+        from PIL import Image
+        from PySide6.QtWidgets import QFileDialog
+
+        from Imervue.gpu_image_view.images import image_loader
+        from Imervue.gui.annotation_models import Annotation
+        monkeypatch.setattr(image_loader, "_load_raw",
+                            lambda _p, thumbnail: np.zeros((40, 60, 3), dtype=np.uint8))
+        raw = tmp_path / "shot.cr2"
+        raw.write_bytes(b"RAW-DATA-THAT-MUST-SURVIVE")
+        monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                            staticmethod(lambda *_a, **_k: (str(tmp_path / "shot_notes"), "")))
+        p, _ = panel
+        p.bind_to_path(str(raw))
+        p._current = Recipe(brightness=0.2)
+        p._canvas.set_annotations([Annotation(kind="rect", points=[(5, 5), (30, 25)])])
+
+        p._save_annotation()
+
+        assert raw.read_bytes() == b"RAW-DATA-THAT-MUST-SURVIVE"
+        with Image.open(tmp_path / "shot_notes.png") as copy:   # an unwritable name gets .png
+            assert copy.size == (60, 40)
+        assert p._current.brightness == pytest.approx(0.2)       # the source's edit stays
+
+    def test_cancelled_copy_writes_nothing(self, panel, tmp_path, monkeypatch):
+        from PIL import Image
+        from PySide6.QtWidgets import QFileDialog
+        anim = tmp_path / "anim.gif"
+        frames = [Image.new("RGB", (8, 4), c) for c in ((255, 0, 0), (0, 255, 0))]
+        frames[0].save(anim, save_all=True, append_images=frames[1:])
+        before = anim.read_bytes()
+        monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                            staticmethod(lambda *_a, **_k: ("", "")))
+        p, _ = panel
+        p.bind_to_path(str(anim))
+        p._save_annotation()
+        assert anim.read_bytes() == before
+        assert [f.name for f in tmp_path.iterdir()] == ["anim.gif"]
+
+
+class TestSavesKeepMetadata:
+    """Crop and annotation saves re-encoded the file and dropped its EXIF."""
+
+    @staticmethod
+    def _photo(tmp_path, orientation=1):
+        from PIL import Image
+        exif = Image.Exif()
+        exif[0x010F] = "Canon"
+        exif[0x0112] = orientation
+        exif.get_ifd(0x8769)[0x9003] = "2020:01:02 03:04:05"
+        exif.get_ifd(0x8825)[1] = "N"
+        path = tmp_path / "photo.jpg"
+        Image.new("RGB", (60, 40), (90, 140, 200)).save(path, quality=92, exif=exif)
+        return path
+
+    @staticmethod
+    def _assert_kept(path):
+        from PIL import Image
+        with Image.open(path) as img:
+            exif = img.getexif()
+            assert exif[0x010F] == "Canon"
+            assert exif.get_ifd(0x8769)[0x9003] == "2020:01:02 03:04:05"
+            assert exif.get_ifd(0x8825)[1] == "N"
+            assert 0x0112 not in exif           # the saved pixels are upright
+            return img.size
+
+    def test_crop_keeps_exif_and_drops_the_orientation(self, panel, tmp_path):
+        from Imervue.image.recipe import clear_identity_cache
+        path = self._photo(tmp_path, orientation=6)     # shown 40x60
+        clear_identity_cache()
+        p, _ = panel
+        p.bind_to_path(str(path))
+        p._canvas._crop_rect = (0, 0, 30, 50)
+        p._apply_crop()
+        assert self._assert_kept(path) == (30, 50)
+
+    def test_annotation_save_keeps_exif(self, panel, tmp_path):
+        from Imervue.gui.annotation_models import Annotation
+        from Imervue.image.recipe import clear_identity_cache
+        path = self._photo(tmp_path)
+        clear_identity_cache()
+        p, _ = panel
+        p.bind_to_path(str(path))
+        p._canvas.set_annotations([Annotation(kind="rect", points=[(5, 5), (30, 25)])])
+        p._save_annotation()
+        assert self._assert_kept(path) == (60, 40)
 
 
 def test_navigate_image_delegates_to_on_navigate(panel, monkeypatch):
@@ -777,7 +866,7 @@ def test_save_failure_shows_warning_toast(panel, real_image, monkeypatch):
     calls = _spy_toasts(monkeypatch)
     p.bind_to_path(str(real_image))
 
-    import Imervue.gui.develop_panel as mod
+    import Imervue.image.in_place_save as mod
 
     def _boom(_src, _dst):
         raise OSError("disk full")

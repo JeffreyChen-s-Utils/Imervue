@@ -664,6 +664,55 @@ class TestFileActions:
         finally:
             dlg.deleteLater()
 
+    def test_save_as_to_an_unwritable_extension_appends_png(
+        self, qapp, base_pil, tmp_path, monkeypatch,
+    ):
+        """A PNG written under a .heic name was unreadable as either."""
+        self._save_to(monkeypatch, tmp_path / "notes.heic")
+        dlg = self._dialog(base_pil)
+        try:
+            dlg._save_as()
+            with Image.open(tmp_path / "notes.heic.png") as img:
+                assert img.format == "PNG"
+            assert not (tmp_path / "notes.heic").exists()
+        finally:
+            dlg.deleteLater()
+
+    def test_save_over_the_source_keeps_its_exif(self, qapp, base_pil, tmp_path, monkeypatch):
+        exif = Image.Exif()
+        exif[0x010F] = "Canon"
+        exif.get_ifd(0x8769)[0x9003] = "2020:01:02 03:04:05"
+        source = tmp_path / "src.jpg"
+        base_pil.convert("RGB").save(source, exif=exif)
+        dlg = self._dialog(base_pil, str(source))
+        try:
+            dlg._save()
+            with Image.open(source) as img:
+                assert img.getexif()[0x010F] == "Canon"
+                assert img.getexif().get_ifd(0x8769)[0x9003] == "2020:01:02 03:04:05"
+        finally:
+            dlg.deleteLater()
+
+    def test_failed_write_reports_and_keeps_the_source(self, qapp, base_pil, tmp_path, monkeypatch):
+        from Imervue.image import in_place_save
+        source = tmp_path / "src.png"
+        base_pil.save(source)
+        before = source.read_bytes()
+        shown = self._boxes(monkeypatch)
+
+        def disk_full(_src, _dst):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(in_place_save.os, "replace", disk_full)
+        dlg = self._dialog(base_pil, str(source))
+        try:
+            dlg._save()
+            assert source.read_bytes() == before
+            assert shown == [("critical", "disk full")]
+            assert [f.name for f in tmp_path.iterdir()] == ["src.png"]
+        finally:
+            dlg.deleteLater()
+
     def test_save_as_cancelled_writes_nothing(self, qapp, base_pil, tmp_path, monkeypatch):
         self._save_to(monkeypatch, "")
         dlg = self._dialog(base_pil)

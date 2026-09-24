@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `4f6c60e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `d066ad0` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 845 | 138,010 |
+| `tests/` | 845 | 138,148 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,120 |
-| `Imervue/gui/` | 163 | 32,889 |
+| `Imervue/gui/` | 163 | 32,910 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 120 | 13,470 |
+| `Imervue/image/` | 120 | 13,500 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,908 |
 | `Imervue/multi_language/` | 8 | 14,029 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,672** | **316,600** |
+| **總計** | **1,672** | **316,789** |
 
-其中 `Imervue/` 套件本身 763 檔 / 164,339 行。
+其中 `Imervue/` 套件本身 763 檔 / 164,390 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-120 個模組、13,470 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+120 個模組、13,500 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -365,7 +365,7 @@ ImervueMainWindow
 
 #### I/O、格式與快取
 
-`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `in_place_save.py`(148) `can_rewrite_in_place(path)` / `in_place_format(path)`：能否把編輯後的像素寫回原檔（RAW、HEIC、JXL、SVG、多影格一律否）；旋轉、Modify 套用裁切、註解儲存都先問它；`replace_atomically(path, write)` 經 `.tmp` 兄弟檔一步替換；`carried_save_kwargs(source, fmt, path)` 把原檔的描述性 EXIF（`descriptive_exif`，白名單、不帶轉向與 TIFF 版面標籤）/ ICC / DPI / XMP / PNG 文字 / 壓縮設定（`webp_is_lossless`）轉成重存參數 · `jpeg_orientation.py`(118) `set_jpeg_orientation(data, code)`：只改 JPEG 的 EXIF 轉向值（有標籤就原地改 2 bytes，沒有才重組 EXIF 或新增 APP1 段），像素與其他 metadata 不動 · `dimensions.py`(32) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
+`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `in_place_save.py`(178) `can_rewrite_in_place(path)` / `in_place_format(path)`：能否把編輯後的像素寫回原檔（RAW、HEIC、JXL、SVG、多影格一律否）；旋轉、Modify 套用裁切、註解儲存都先問它；`replace_atomically(path, write)` 經 `.tmp` 兄弟檔一步替換；`carried_save_kwargs(source, fmt, path)` 把原檔的描述性 EXIF（`descriptive_exif`，白名單、不帶轉向與 TIFF 版面標籤）/ ICC / DPI / XMP / PNG 文字 / 壓縮設定（`webp_is_lossless`）轉成重存參數；`save_over_source(path, edited)` 把編輯後（已轉正、sRGB）的影像原子寫回原檔並帶回這些 metadata（不帶 ICC 與轉向），Modify 套用裁切／儲存註解與註解編輯器的 Save 都走它 · `jpeg_orientation.py`(118) `set_jpeg_orientation(data, code)`：只改 JPEG 的 EXIF 轉向值（有標籤就原地改 2 bytes，沒有才重組 EXIF 或新增 APP1 段），像素與其他 metadata 不動 · `dimensions.py`(32) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
 `formats.py`(35) 能開的副檔名唯一來源：`RAW_EXTENSIONS`、`STILL_IMAGE_EXTENSIONS`（媒體庫）、`VIEWER_EXTENSIONS`（再加影片；檢視器、檔案樹、拖放、開啟對話框）、`ensure_pillow_opener(ext)` ·
 `save_formats.py`(96) 輸出格式中繼資料 · `optimize.py`(73) 目標檔案大小編碼 ·
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
@@ -525,13 +525,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-163 個檔、32,889 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+163 個檔、32,910 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 910 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
+| `develop_panel.py` | 911 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
 | `develop_right_panel.py` | 327 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 131 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
 | `annotation_canvas.py` | 845 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
@@ -539,7 +539,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 809 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
-| `annotation_file_actions.py` | 181 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入）、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
+| `annotation_file_actions.py` | 201 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入；寫回原檔時經 `save_over_source` 保留 metadata）；模組層 `ask_save_as_path`（無法寫出的副檔名補 `.png`）/ `write_annotated` 也供 Modify 分頁在 RAW／HEIC／多影格上改存副本、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
 | `dialog_rows.py` | 98 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框）、`image_save_filter()`（PNG / JPEG / TIFF 存檔篩選）；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
 | `slider_spin.py` | 75 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-845 個檔、138,010 行。`pyproject.toml` 定義三個互斥層級 marker：
+845 個檔、138,148 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -16,13 +16,57 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.annotation_models import AnnotationProject, bake
-from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
+from Imervue.image.in_place_save import (
+    can_rewrite_in_place, in_place_format, replace_atomically, save_over_source,
+)
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.qimage_convert import pil_to_qimage
 
 logger = logging.getLogger("Imervue.annotation")
 
 _LOAD_PROJECT_FALLBACK = "Load Project..."
+_SAVE_AS_FILTER = "PNG (*.png);;JPEG (*.jpg *.jpeg);;BMP (*.bmp);;TIFF (*.tiff)"
+
+
+def ask_save_as_path(parent, source_path: str | None) -> str:
+    """Ask where to save an annotated image; ``""`` when cancelled.
+
+    The dialog starts in *source_path*'s folder. A name whose extension
+    Imervue can't write (``.cr2``, ``.heic``, none) gets ``.png`` appended so
+    the bytes match the name.
+    """
+    start_dir = str(Path(source_path).parent) if source_path else ""
+    path, _ = QFileDialog.getSaveFileName(
+        parent,
+        language_wrapper.language_word_dict.get("annotation_save_as", "Save As..."),
+        start_dir,
+        _SAVE_AS_FILTER,
+    )
+    if path and in_place_format(path) is None:
+        path += ".png"
+    return path
+
+
+def write_annotated(img: Image.Image, path: str, source_path: str | None) -> None:
+    """Save the baked annotated *img* to *path* in one step.
+
+    Over its own source the file keeps its metadata (``save_over_source``);
+    a new file is written plainly. Raises what Pillow raises on failure
+    (``IMAGE_READ_ERRORS``), and ``ValueError`` for a source that can't be
+    written back whole.
+    """
+    if source_path and _same_file(path, source_path):
+        save_over_source(path, img)
+        return
+    fmt = in_place_format(path) or "PNG"
+    out = img.convert("RGB") if fmt == "JPEG" and img.mode not in ("RGB", "L") else img
+    kwargs = {"quality": 95} if fmt == "JPEG" else {}
+    replace_atomically(path, lambda tmp: out.save(tmp, format=fmt, **kwargs))
+
+
+def _same_file(a: str, b: str) -> bool:
+    return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
 
 
 def _project_filter(extensions: tuple[str, ...]) -> str:
@@ -46,54 +90,30 @@ class AnnotationFileActionsMixin:
         self._write(self._source_path)
 
     def _save_as(self) -> None:
-        lang = language_wrapper.language_word_dict
-        start_dir = str(Path(self._source_path).parent) if self._source_path else ""
-        path, _ = QFileDialog.getSaveFileName(
-            self,
-            lang.get("annotation_save_as", "Save As..."),
-            start_dir,
-            "PNG (*.png);;JPEG (*.jpg *.jpeg);;BMP (*.bmp);;TIFF (*.tiff)",
-        )
+        path = ask_save_as_path(self, self._source_path)
         if path:
             self._write(path)
 
     def _write(self, path: str) -> None:
-        """Atomically save the baked image to ``path``.
+        """Save the baked image to *path*, replacing the file in one step.
 
-        Writes to a sibling .tmp file then ``os.replace`` to avoid leaving
-        a half-written file if the process is interrupted mid-save. This
-        also matters because the source path may be open in the main
-        viewer — replacing the file in one atomic step is friendlier than
-        truncating the original.
+        A crash mid-save can't leave a half-written file, which matters
+        because the source may be open in the main viewer.
         """
-        img = self._baked_image()
-        target = Path(path)
-        tmp = target.with_name(target.name + ".tmp")
-        # Pass ``format=`` explicitly because the .tmp extension would
-        # otherwise stop PIL from inferring the encoder.
-        fmt = in_place_format(path) or "PNG"
         try:
-            if fmt == "JPEG":
-                img.convert("RGB").save(tmp, format="JPEG", quality=95)
-            else:
-                img.save(tmp, format=fmt)
-            os.replace(tmp, target)
-            self._notify_success(
-                language_wrapper.language_word_dict.get("annotation_saved", "Saved")
-            )
-            if self._on_saved is not None and str(target) == self._source_path:
-                try:
-                    self._on_saved(str(target))
-                except Exception:
-                    logger.exception("on_saved callback raised")
-        except Exception as exc:
+            write_annotated(self._baked_image(), path, self._source_path)
+        except IMAGE_READ_ERRORS as exc:
             logger.exception("annotation save failed: %s", path)
-            try:
-                if tmp.exists():
-                    tmp.unlink()
-            except OSError:
-                pass
             QMessageBox.critical(self, "Error", str(exc))
+            return
+        self._notify_success(
+            language_wrapper.language_word_dict.get("annotation_saved", "Saved")
+        )
+        if self._on_saved is not None and _same_file(path, self._source_path or ""):
+            try:
+                self._on_saved(path)
+            except Exception:
+                logger.exception("on_saved callback raised")
 
     def _copy_to_clipboard(self) -> None:
         img = self._baked_image()

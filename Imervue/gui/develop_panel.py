@@ -17,8 +17,6 @@ three-column layout:
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 from collections.abc import Callable
 
@@ -39,7 +37,8 @@ from PySide6.QtWidgets import (
 from Imervue.gpu_image_view.images.image_loader import decode_image_file
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
 from Imervue.gui.modify_splitter import ModifySplitterMixin
-from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
+from Imervue.image.in_place_save import can_rewrite_in_place, save_over_source
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -63,6 +62,11 @@ def _rebind_target_after_delete(images: list[str], current_index: int) -> str | 
     if images and 0 <= current_index < len(images):
         return images[current_index]
     return None
+
+_CROP_CANNOT_OVERWRITE = (
+    "This file can't be overwritten in place (camera RAW, HEIC, animated or "
+    "multi-page). Export the crop instead."
+)
 
 
 class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
@@ -312,10 +316,17 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         if toast is None:
             return
         toast.info(language_wrapper.language_word_dict.get(
-            "modify_crop_cannot_overwrite",
-            "This file can't be overwritten in place (camera RAW, HEIC, animated or "
-            "multi-page). Export the crop instead.",
-        ))
+            "modify_crop_cannot_overwrite", _CROP_CANNOT_OVERWRITE))
+
+    @staticmethod
+    def _write_over_source(path: str, img: Image.Image) -> bool:
+        """Save edited *img* over *path*, keeping its metadata; False when the save failed."""
+        try:
+            save_over_source(path, img)
+        except IMAGE_READ_ERRORS:
+            logger.exception("Failed to save the edit over %s", path)
+            return False
+        return True
 
     def _invalidate_decoded_source(self) -> None:
         """Drop the cached decoded source so the next load re-decodes."""
@@ -515,25 +526,12 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
             return
         base = self._canvas.get_base_pil()
         cropped = base.crop((x, y, x + w, y + h))
-        # Save atomically
         path = self._canvas_source_path
         if not can_rewrite_in_place(path):
             # RAW, HEIC, animated or multi-page: a save over it would destroy it.
             self._warn_cannot_overwrite()
             return
-        target = Path(path)
-        tmp = target.with_name(target.name + ".tmp")
-        fmt = in_place_format(path)
-        try:
-            save_img = cropped
-            if fmt == "JPEG" and save_img.mode == "RGBA":
-                save_img = save_img.convert("RGB")
-            save_img.save(str(tmp), format=fmt)
-            os.replace(tmp, target)
-        except Exception:
-            logger.exception("Failed to save crop to %s", path)
-            if tmp.exists():
-                tmp.unlink(missing_ok=True)
+        if not self._write_over_source(path, cropped):
             return
         # The recipe adjustments are now baked into the saved file — reset
         # the recipe so they won't be applied again by the viewer.
@@ -705,25 +703,12 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
 
         path = self._canvas_source_path
         img = bake(self._canvas.get_base_pil(), self._canvas.get_annotations())
-        ext = Path(path).suffix.lower()
-        target = Path(path)
-        tmp = target.with_name(target.name + ".tmp")
-        fmt_map = {
-            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-            ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
-            ".webp": "WEBP",
-        }
-        fmt = fmt_map.get(ext, "PNG")
-        try:
-            save_img = img
-            if fmt == "JPEG" and save_img.mode == "RGBA":
-                save_img = save_img.convert("RGB")
-            save_img.save(str(tmp), format=fmt)
-            os.replace(tmp, target)
-        except Exception:
-            logger.exception("Failed to save annotation to %s", path)
-            if tmp.exists():
-                tmp.unlink(missing_ok=True)
+        if not can_rewrite_in_place(path):
+            # RAW, HEIC, animated or multi-page: a save over it would destroy
+            # it, so the annotated image goes to a new file instead.
+            self._save_annotation_copy(path, img)
+            return
+        if not self._write_over_source(path, img):
             self._toast(
                 language_wrapper.language_word_dict.get(
                     "annotation_save_failed", "Save failed"),
@@ -753,6 +738,22 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         self._toast(
             language_wrapper.language_word_dict.get("annotation_saved", "Saved"),
             "success")
+
+    def _save_annotation_copy(self, source_path: str, img: Image.Image) -> None:
+        """Save the annotated *img* to a file the user picks, leaving the source as it is."""
+        from Imervue.gui.annotation_file_actions import ask_save_as_path, write_annotated
+
+        target = ask_save_as_path(self, source_path)
+        if not target:
+            return
+        lang = language_wrapper.language_word_dict
+        try:
+            write_annotated(img, target, source_path)
+        except IMAGE_READ_ERRORS:
+            logger.exception("Failed to save the annotated copy to %s", target)
+            self._toast(lang.get("annotation_save_failed", "Save failed"), "warning")
+            return
+        self._toast(lang.get("annotation_saved", "Saved"), "success")
 
     # ------------------------------------------------------------------
     # Slider → recipe mapping

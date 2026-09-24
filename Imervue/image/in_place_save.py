@@ -4,8 +4,10 @@ Pillow opens more than it can faithfully write back. It reads a camera RAW
 (CR2 / NEF / DNG …) as its small embedded TIFF preview, and an animated GIF /
 WebP / APNG or a multi-page TIFF as its first frame. Saving the edited pixels
 back over such a file destroys it: a 9 MB CR2 became a 0.8 MB preview-sized
-TIFF. Every in-place writer (rotate, Modify's apply-crop, the annotation
-editor's Save) asks :func:`can_rewrite_in_place` first.
+TIFF. Every in-place writer (rotate, Modify's apply-crop and annotation save,
+the annotation editor's Save) asks :func:`can_rewrite_in_place` first, and
+writes through :func:`save_over_source` or :func:`carried_save_kwargs` so the
+file keeps its metadata.
 """
 from __future__ import annotations
 
@@ -28,6 +30,7 @@ _IN_PLACE_FORMATS: dict[str, str] = {
     ".gif": "GIF",
 }
 
+_JPEG_COLOUR_TABLES = 2   # luma + chroma quantisation tables
 _XMP_TAG = 700
 _INTEROP_POINTER = 0xA005
 _SUB_IFDS = (0x8769, 0x8825)   # Exif, GPS
@@ -146,3 +149,30 @@ def carried_save_kwargs(source: Image.Image, fmt: str, file_path: str) -> dict:
         # a bigger file beats losing the capture date and location for good.
         kwargs["compression"] = "raw"
     return kwargs
+
+
+def save_over_source(path: str | Path, edited: Image.Image) -> None:
+    """Write *edited* over the file at *path*, keeping the file's descriptive metadata.
+
+    *edited* holds pixels as the viewer decodes them — upright and in sRGB —
+    so the source's orientation and ICC profile are not carried; its EXIF
+    (camera, capture date, GPS), DPI, XMP, PNG text and compression are. The
+    file is replaced in one step, so a failed save leaves it whole. Raises
+    ``ValueError`` for a file :func:`can_rewrite_in_place` refuses, and what
+    Pillow raises (``IMAGE_READ_ERRORS``) when the save fails.
+    """
+    if not can_rewrite_in_place(path):
+        raise ValueError(f"{path} can't be saved back whole")
+    fmt = in_place_format(path)
+    with Image.open(path) as source:
+        kwargs = carried_save_kwargs(source, fmt, str(path))
+    kwargs.pop("icc_profile", None)
+    out = edited
+    if fmt == "JPEG":
+        if out.mode not in ("RGB", "L", "CMYK"):
+            out = out.convert("RGB")
+        if len(kwargs["qtables"]) < _JPEG_COLOUR_TABLES and out.mode != "L":
+            # A greyscale source has no chroma table for colour pixels to use.
+            del kwargs["qtables"], kwargs["subsampling"]
+            kwargs["quality"] = 95
+    replace_atomically(path, lambda tmp: out.save(tmp, format=fmt, **kwargs))
