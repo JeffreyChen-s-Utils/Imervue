@@ -1543,6 +1543,7 @@ Right-click an image > ``Export / Save As``.
 
 - Choose format: PNG, JPEG, WebP, BMP, TIFF
 - Adjust quality (for lossy formats)
+- Choose the metadata to keep: all, all but the location (default) or none. Camera, lens and capture date come along; the choice is remembered and Batch Export offers the same
 - Preview estimated file size
 - Pick a save location
 

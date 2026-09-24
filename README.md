@@ -344,7 +344,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Watermark overlay** — text or image, 9 anchor positions, opacity, scale; applied on export only
 - **Export presets** — Web 1600 / Print 300 dpi / Instagram 1080 one-click pipelines
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF with quality slider for lossy formats
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none)
 - **Batch operations** — rename, move/copy, rotate selected images
 - **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
 - **Web Gallery HTML** — self-contained folder with `index.html` + JPEG thumbs + inline lightbox

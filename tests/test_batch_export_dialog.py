@@ -49,7 +49,7 @@ def _describe(x):
 def test_top_level_order(dialog):
     assert [_describe(x) for x in _items(dialog)] == [
         ("QLabel", "2 image(s) selected"), "QHBoxLayout", "QHBoxLayout",
-        ("QLabel", "Quality: 85"), "QSlider", ("QGroupBox", "Resize"),
+        ("QLabel", "Quality: 85"), "QSlider", "QHBoxLayout", ("QGroupBox", "Resize"),
         ("QGroupBox", "Watermark"), "QHBoxLayout", "QProgressBar", ("QLabel", ""),
         "QHBoxLayout",
     ]
@@ -79,7 +79,7 @@ def test_format_row_and_quality(dialog):
 
 
 def test_resize_group(dialog):
-    group = _items(dialog)[5]
+    group = _items(dialog)[6]
     assert group is dialog._resize_grp  # noqa: SLF001
     assert group.isCheckable() and not group.isChecked()
     lay = group.layout()
@@ -92,7 +92,7 @@ def test_resize_group(dialog):
 
 
 def test_watermark_group(dialog):
-    group = _items(dialog)[6]
+    group = _items(dialog)[7]
     assert group is dialog._wm_grp  # noqa: SLF001
     assert group.isCheckable() and not group.isChecked()
     text_row, opts_row = (group.layout().itemAt(i).layout() for i in range(2))
@@ -110,7 +110,7 @@ def test_watermark_group(dialog):
 
 
 def test_output_row(dialog, monkeypatch, tmp_path):
-    row = _items(dialog)[7]
+    row = _items(dialog)[8]
     edit, browse = _row(row)
     assert edit is dialog._dir_edit and edit.text() == str(tmp_path)  # noqa: SLF001
     assert browse.text() == "Browse..." and row.stretch(0) == 1
@@ -123,9 +123,9 @@ def test_output_row(dialog, monkeypatch, tmp_path):
 
 
 def test_progress_and_buttons(dialog):
-    bar = _items(dialog)[8]
+    bar = _items(dialog)[9]
     assert bar is dialog._progress and bar.isHidden()  # noqa: SLF001
-    stretch, cancel, export = _row(_items(dialog)[10])
+    stretch, cancel, export = _row(_items(dialog)[11])
     assert stretch is None and cancel.text() == "Cancel"
     assert export is dialog._export_btn and export.text() == "Export"  # noqa: SLF001
     dialog.show()
@@ -238,3 +238,39 @@ def test_worker_square_crops_and_stamps_dpi(qapp, tmp_path):
     _results, img = _run_worker(tmp_path, mod.ExportSettings("PNG", 90, square_crop=True, dpi=300))
     assert img.size == (100, 100)
     assert tuple(round(v) for v in img.info["dpi"]) == (300, 300)
+
+
+def test_metadata_row_sits_under_quality(dialog):
+    label, combo = _row(_items(dialog)[5])
+    assert label.text() == "Metadata:" and combo is dialog._metadata_combo  # noqa: SLF001
+
+
+def test_export_passes_the_metadata_policy(dialog, export):
+    combo = dialog._metadata_combo  # noqa: SLF001
+    combo.setCurrentIndex(combo.findData("all"))
+    assert export()._settings.metadata == "all"  # noqa: SLF001
+
+
+@pytest.mark.parametrize(("policy", "has_gps", "has_date"), [
+    ("all", True, True), ("no_location", False, True), ("none", False, False),
+])
+def test_worker_writes_the_metadata_the_policy_allows(qapp, tmp_path, policy, has_gps, has_date):
+    from PIL import Image
+    exif = Image.Exif()
+    exif.get_ifd(0x8769)[0x9003] = "2020:01:02 03:04:05"
+    exif[0x8769] = 0
+    exif.get_ifd(0x8825)[1] = "N"
+    exif[0x8825] = 0
+    src = tmp_path / "src.jpg"
+    Image.new("RGB", (20, 10)).save(src, exif=exif)
+    out = tmp_path / "out"
+    out.mkdir()
+    worker = mod._ExportWorker([str(src)], str(out), mod.ExportSettings(  # noqa: SLF001
+        "JPEG", 90, dpi=300, metadata=policy))
+    worker.run()
+    worker.deleteLater()
+    with Image.open(out / "src.jpg") as img:
+        written = img.getexif()
+        assert bool(written.get_ifd(0x8825)) is has_gps
+        assert bool(written.get_ifd(0x8769).get(0x9003)) is has_date
+        assert tuple(round(v) for v in img.info["dpi"]) == (300, 300)

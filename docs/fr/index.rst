@@ -1575,6 +1575,7 @@ Clic droit sur une image > ``Exporter / Enregistrer sous``.
 
 - Choisissez le format : PNG, JPEG, WebP, BMP, TIFF
 - Ajustez la qualité (pour les formats avec perte)
+- Choisissez les métadonnées à conserver : toutes, toutes sauf la localisation (par défaut) ou aucune. L'appareil, l'objectif et la date de prise de vue sont conservés ; le choix est mémorisé et l'export par lot propose la même option
 - Aperçu de la taille de fichier estimée
 - Choisissez un emplacement d'enregistrement
 

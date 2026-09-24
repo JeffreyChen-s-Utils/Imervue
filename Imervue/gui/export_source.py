@@ -1,6 +1,7 @@
 """Open an image the way the viewer shows it, as the source of an exported file.
 
-The exporters write the new file without EXIF or ICC, so anything the viewer
+The exporters write the new file without an ICC profile or orientation tag
+(its EXIF is only what ``export_metadata`` lets through), so anything the viewer
 takes from the file's metadata has to be baked into the pixels here: the EXIF
 orientation, the colour profile and the non-destructive Develop recipe. Camera
 RAW is developed at full size and SVG rasterised, through the viewer's decode.

@@ -2742,4 +2742,8 @@ traditional_chinese_word_dict = {
     "file_filter_other_brush": "其他繪圖軟體的筆刷",
     "file_filter_other_palette": "其他影像編輯器的色票",
     "modify_crop_cannot_overwrite": "這個檔案無法直接覆寫（相機 RAW、HEIC、動畫或多頁檔）。請改用匯出儲存裁切結果。",
+    "export_metadata": "中繼資料：",
+    "export_metadata_all": "全部保留（相機、日期、位置）",
+    "export_metadata_no_location": "保留位置以外的全部",
+    "export_metadata_none": "全部移除",
 }

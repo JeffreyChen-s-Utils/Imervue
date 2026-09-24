@@ -43,3 +43,28 @@ def test_unexpected_error_is_reported_with_traceback(qapp, tmp_path, caplog, mon
     assert (size, err) == (0, "bug")
     (record,) = tracebacks
     assert record.exc_info[0] is RuntimeError
+
+
+def test_export_writes_the_metadata_the_chosen_policy_allows(qapp, tmp_path, monkeypatch):
+    """Export dropped every EXIF tag, capture date included."""
+    from Imervue.gui import export_metadata_combo
+    monkeypatch.setattr(export_metadata_combo, "schedule_save", lambda: None)
+    monkeypatch.setattr(mod._SizeEstimateWorker, "start", lambda self: None)  # noqa: SLF001
+    exif = Image.Exif()
+    exif[0x010F] = "Canon"
+    exif.get_ifd(0x8825)[1] = "N"
+    exif[0x8825] = 0
+    src = tmp_path / "src.jpg"
+    Image.new("RGB", (20, 10)).save(src, exif=exif)
+    dlg = mod.ExportDialog(str(src))
+    try:
+        dlg.format_combo.setCurrentText("PNG")
+        dlg.path_edit.setText(str(tmp_path / "out.png"))
+        combo = dlg.metadata_combo
+        combo.setCurrentIndex(combo.findData("no_location"))
+        dlg._do_export()  # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+    with Image.open(tmp_path / "out.png") as out:
+        assert out.getexif()[0x010F] == "Canon"
+        assert not out.getexif().get_ifd(0x8825)

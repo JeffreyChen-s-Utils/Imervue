@@ -342,7 +342,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 
 - **Filigrane superposé** — texte ou image, 9 positions d'ancrage, opacité, échelle ; appliqué uniquement à l'export
 - **Préréglages d'export** — pipelines en un clic Web 1600 / Print 300 dpi / Instagram 1080
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF avec curseur de qualité pour les formats avec perte
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF avec curseur de qualité pour les formats avec perte ; conserve les EXIF d'appareil, d'objectif et de date de prise de vue, la localisation étant facultative (**Métadonnées** : toutes / toutes sauf localisation / aucune)
 - **Opérations par lots** — renommer, déplacer/copier, faire pivoter les images sélectionnées
 - **PDF planche-contact** — grille multi-pages avec légendes (A4 / A3 / Letter / Legal)
 - **Galerie web HTML** — dossier autonome avec `index.html` + miniatures JPEG + lightbox en ligne

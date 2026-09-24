@@ -342,7 +342,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **워터마크 오버레이** — 텍스트 또는 이미지, 9개 앵커 위치, 불투명도, 스케일; 내보내기 시에만 적용
 - **내보내기 프리셋** — Web 1600 / Print 300 dpi / Instagram 1080 원클릭 파이프라인
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF, 손실 포맷에는 품질 슬라이더
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF, 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음)
 - **일괄 작업** — 이름 변경, 이동/복사, 선택한 이미지 회전
 - **컨택트 시트 PDF** — 캡션이 있는 다중 페이지 그리드 (A4 / A3 / Letter / Legal)
 - **웹 갤러리 HTML** — `index.html` + JPEG 썸네일 + 인라인 라이트박스가 포함된 자체 완결 폴더

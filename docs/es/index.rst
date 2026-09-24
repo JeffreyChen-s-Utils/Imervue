@@ -1568,6 +1568,7 @@ Clic derecho en una imagen > ``Export / Save As``.
 
 - Elija el formato: PNG, JPEG, WebP, BMP, TIFF
 - Ajuste la calidad (para formatos con pérdida)
+- Elija qué metadatos conservar: todos, todos salvo la ubicación (predeterminado) o ninguno. Se conservan cámara, objetivo y fecha de captura; la elección se recuerda y la exportación por lotes ofrece la misma opción
 - Vista previa del tamaño estimado del archivo
 - Elija una ubicación de guardado
 

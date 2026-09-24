@@ -342,7 +342,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 - **Watermark-Overlay** — Text oder Bild, 9 Anker-Positionen, Opazität, Skalierung; nur beim Export angewendet
 - **Export-Presets** — Web 1600 / Print 300 dpi / Instagram 1080 Ein-Klick-Pipelines
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF mit Qualitäts-Slider für verlustbehaftete Formate
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF mit Qualitäts-Slider für verlustbehaftete Formate; übernimmt Kamera-, Objektiv- und Aufnahmedatum-EXIF, der Standort ist optional (**Metadaten**: alle / alle außer Standort / keine)
 - **Batch-Operationen** — Umbenennen, Verschieben/Kopieren, ausgewählte Bilder drehen
 - **Contact Sheet PDF** — mehrseitiges Grid mit Untertiteln (A4 / A3 / Letter / Legal)
 - **Web Gallery HTML** — eigenständiger Ordner mit `index.html` + JPEG-Thumbs + Inline-Lightbox

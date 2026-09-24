@@ -33,6 +33,8 @@ _IN_PLACE_FORMATS: dict[str, str] = {
 _JPEG_COLOUR_TABLES = 2   # luma + chroma quantisation tables
 _XMP_TAG = 700
 _INTEROP_POINTER = 0xA005
+# Exif IFD tags a rewrite makes wrong: the Interop pointer's offset, PixelX/YDimension.
+_STALE_SUB_IFD_TAGS = frozenset({_INTEROP_POINTER, 0xA002, 0xA003})
 _SUB_IFDS = (0x8769, 0x8825)   # Exif, GPS
 # IFD0 tags that describe the picture rather than lay out its pixels:
 # DocumentName, ImageDescription, Make, Model, PageName, Software, DateTime,
@@ -95,21 +97,26 @@ def webp_is_lossless(file_path: str) -> bool:
     return False
 
 
-def descriptive_exif(source: Image.Image) -> Image.Exif:
+def descriptive_exif(source: Image.Image, *, keep_location: bool = True) -> Image.Exif:
     """Copy *source*'s descriptive EXIF — IFD0 text tags plus the Exif and GPS IFDs.
 
     A TIFF's ``getexif()`` is its whole tag directory, width, strip offsets and
     all; handed back to the save, those tags overwrite the new layout (a turned
-    40x20 TIFF came back 40x40). The orientation is left out: the turn is baked
-    into the pixels.
+    40x20 TIFF came back 40x40). Also left out: the orientation (the turn is
+    baked into the pixels) and the Exif IFD's pixel dimensions, which an edit
+    changes. Without *keep_location* the GPS IFD and the XMP packet (which can
+    repeat the position) are dropped too.
     """
     exif = source.getexif()
     kept = Image.Exif()
     for tag in _DESCRIPTIVE_IFD0_TAGS & exif.keys():
+        if tag == _XMP_TAG and not keep_location:
+            continue
         value = exif[tag]
         kept[tag] = strip_xmp_orientation(value) if tag == _XMP_TAG else value
-    for pointer in _SUB_IFDS:
-        entries = {k: v for k, v in exif.get_ifd(pointer).items() if k != _INTEROP_POINTER}
+    for pointer in _SUB_IFDS if keep_location else _SUB_IFDS[:1]:
+        entries = {k: v for k, v in exif.get_ifd(pointer).items()
+                   if k not in _STALE_SUB_IFD_TAGS}
         if entries:
             kept.get_ifd(pointer).update(entries)
             kept[pointer] = 0   # the save writes the IFD and its real offset

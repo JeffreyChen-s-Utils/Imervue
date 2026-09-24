@@ -2777,4 +2777,8 @@ english_word_dict = {
     "file_filter_other_brush": "Brush from other paint apps",
     "file_filter_other_palette": "Palette from other image editors",
     "modify_crop_cannot_overwrite": "This file can't be overwritten in place (camera RAW, HEIC, animated or multi-page). Export the crop instead.",
+    "export_metadata": "Metadata:",
+    "export_metadata_all": "Keep all (camera, date, location)",
+    "export_metadata_no_location": "Keep all but the location",
+    "export_metadata_none": "Remove all",
 }

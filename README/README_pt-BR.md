@@ -342,7 +342,7 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 
 - **Sobreposição de marca d'água** — texto ou imagem, 9 posições de âncora, opacidade, escala; aplicado apenas na exportação
 - **Presets de exportação** — pipelines de um clique Web 1600 / Print 300 dpi / Instagram 1080
-- **Salvar Como / Exportar** — PNG / JPEG / WebP / BMP / TIFF com slider de qualidade para formatos com perdas
+- **Salvar Como / Exportar** — PNG / JPEG / WebP / BMP / TIFF com slider de qualidade para formatos com perdas; mantém o EXIF de câmera, lente e data de captura, com a localização opcional (**Metadados**: todos / todos menos localização / nenhum)
 - **Operações em lote** — renomear, mover/copiar, rotacionar imagens selecionadas
 - **PDF de Contact Sheet** — grade em várias páginas com legendas (A4 / A3 / Letter / Legal)
 - **HTML de Galeria Web** — pasta autocontida com `index.html` + miniaturas JPEG + lightbox embutido

@@ -1,0 +1,62 @@
+"""Which of the source file's metadata an exported copy carries.
+
+Export writes a new file from the decoded pixels, so nothing of the source's
+EXIF reaches it unless it is handed to the save. The user picks a policy:
+everything descriptive, everything but the location, or nothing. Pure logic
+(the Pillow read aside); the export dialogs own the choice and its setting.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from PIL import Image
+
+from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.in_place_save import descriptive_exif
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+
+METADATA_ALL = "all"
+METADATA_NO_LOCATION = "no_location"
+METADATA_NONE = "none"
+METADATA_POLICIES: tuple[str, ...] = (METADATA_ALL, METADATA_NO_LOCATION, METADATA_NONE)
+DEFAULT_METADATA_POLICY = METADATA_NO_LOCATION
+"""Camera, lens and capture date survive; GPS does not leak into a shared copy by default."""
+
+SETTING_KEY = "export_metadata"
+
+
+def policy_or_default(value: object) -> str:
+    """Return *value* when it names a policy, else the default (settings are external input)."""
+    return value if value in METADATA_POLICIES else DEFAULT_METADATA_POLICY
+
+
+def export_exif(source_path: str | Path, policy: str) -> Image.Exif | None:
+    """Return the EXIF an export of *source_path* should carry under *policy*.
+
+    ``None`` for :data:`METADATA_NONE`, a source Pillow can't read, or one
+    without descriptive EXIF. :data:`METADATA_NO_LOCATION` drops the GPS IFD
+    and the XMP packet, which can hold the position too. The orientation is
+    never carried: exported pixels are already upright.
+    """
+    policy = policy_or_default(policy)
+    if policy == METADATA_NONE:
+        return None
+    ensure_pillow_opener(Path(source_path).suffix.lower())
+    try:
+        with Image.open(source_path) as source:
+            exif = descriptive_exif(source, keep_location=policy != METADATA_NO_LOCATION)
+    except IMAGE_READ_ERRORS:
+        return None
+    if not len(exif):
+        return None
+    return exif
+
+
+def export_save_options(source_path: str | Path, policy: str) -> dict:
+    """``save_image`` extras for *policy*: ``{"exif": <bytes>}``, or ``{}`` when nothing is carried.
+
+    Bytes rather than an ``Image.Exif``: every writer takes them, the
+    pillow-heif and JPEG XL plugins included.
+    """
+    exif = export_exif(source_path, policy)
+    return {} if exif is None else {"exif": exif.tobytes()}

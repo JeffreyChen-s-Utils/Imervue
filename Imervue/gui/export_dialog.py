@@ -11,7 +11,9 @@ from PySide6.QtWidgets import (
     QSlider, QPushButton,
 )
 
+from Imervue.gui.export_metadata_combo import metadata_row
 from Imervue.gui.export_source import open_export_source
+from Imervue.image.export_metadata import export_save_options
 from Imervue.gui.dialog_rows import path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
@@ -97,6 +99,9 @@ class ExportDialog(WorkerHostMixin, QDialog):
         self.quality_slider.setValue(85)
         layout.addWidget(self.quality_label)
         layout.addWidget(self.quality_slider)
+
+        metadata_layout, self.metadata_combo = metadata_row()
+        layout.addLayout(metadata_layout)
 
         # Output path row
         path_layout, self.path_edit, _browse = path_browse_row(
@@ -197,7 +202,8 @@ class ExportDialog(WorkerHostMixin, QDialog):
         fmt = self._selected_format()
         try:
             img = open_export_source(self.source_path)
-            save_image(img, output_path, fmt, self._quality_for(fmt))
+            extra = export_save_options(self.source_path, self.metadata_combo.currentData())
+            save_image(img, output_path, fmt, self._quality_for(fmt), extra)
             logger.info(f"Exported image to {output_path} as {fmt}")
             self.accept()
         except Exception as exc:

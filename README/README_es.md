@@ -342,7 +342,7 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 
 - **Marca de agua superpuesta** — texto o imagen, 9 posiciones de anclaje, opacidad, escala; se aplica solo al exportar
 - **Predefinidos de exportación** — flujos de un solo clic Web 1600 / Print 300 dpi / Instagram 1080
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF con control de calidad para formatos con pérdida
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF con control de calidad para formatos con pérdida; conserva el EXIF de cámara, objetivo y fecha de captura, con la ubicación opcional (**Metadatos**: todos / todos salvo ubicación / ninguno)
 - **Operaciones por lotes** — renombrar, mover/copiar, rotar imágenes seleccionadas
 - **PDF de hoja de contactos** — cuadrícula multipágina con leyendas (A4 / A3 / Letter / Legal)
 - **Galería web HTML** — carpeta autocontenida con `index.html` + miniaturas JPEG + lightbox en línea

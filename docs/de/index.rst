@@ -1600,6 +1600,7 @@ Rechtsklick auf ein Bild > ``Exportieren / Speichern unter``.
 
 - Format wählen: PNG, JPEG, WebP, BMP, TIFF
 - Qualität anpassen (für verlustbehaftete Formate)
+- Metadaten wählen: alle, alle außer dem Standort (Standard) oder keine. Kamera, Objektiv und Aufnahmedatum bleiben erhalten; die Wahl wird gespeichert, und der Batch-Export bietet dieselbe Option
 - Geschätzte Dateigröße in der Vorschau
 - Speicherort wählen
 

@@ -2754,4 +2754,8 @@ korean_word_dict = {
     "file_filter_other_brush": "다른 페인트 앱의 브러시",
     "file_filter_other_palette": "다른 이미지 편집기의 팔레트",
     "modify_crop_cannot_overwrite": "이 파일은 덮어쓸 수 없습니다(카메라 RAW, HEIC, 애니메이션 또는 여러 페이지). 자르기 결과는 내보내기로 저장하세요.",
+    "export_metadata": "메타데이터:",
+    "export_metadata_all": "모두 유지(카메라, 날짜, 위치)",
+    "export_metadata_no_location": "위치 정보만 제외하고 유지",
+    "export_metadata_none": "모두 제거",
 }
