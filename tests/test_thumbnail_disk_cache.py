@@ -218,15 +218,24 @@ class TestPutFailures:
     @pytest.mark.parametrize("bad", [
         "not an array",                                   # no dtype -> AttributeError
         np.zeros((4,), dtype=np.uint8),                   # 1-D -> IndexError on shape[2]
-        pytest.param(np.zeros((4, 4, 2), dtype=np.uint8),  # 2 channels -> ValueError
-                     marks=pytest.mark.filterwarnings(
-                         "ignore:'mode' parameter:DeprecationWarning")),
+        np.zeros((4, 4, 2), dtype=np.uint8),              # 2 channels -> ValueError
+        np.zeros((4, 4, 5), dtype=np.uint8),              # 5 channels -> ValueError
     ])
     def test_non_image_array_is_ignored(self, cache_dir, source_image, bad):
         c = tdc.ThumbnailDiskCache()
         c.put(source_image, 128, bad)
         assert c.get(source_image, 128) is None
         assert c.total_bytes() == 0
+
+    @pytest.mark.parametrize("shape", [(8, 8), (8, 8, 3), (8, 8, 4)])
+    @pytest.mark.filterwarnings("error:'mode' parameter:DeprecationWarning")
+    def test_supported_shapes_are_cached_as_rgba(self, cache_dir, source_image, shape):
+        """No Pillow-13-removed ``mode`` conversion on the way in."""
+        c = tdc.ThumbnailDiskCache()
+        c.put(source_image, 128, np.full(shape, 200, dtype=np.uint8))
+        got = c.get(source_image, 128)
+        assert got.shape == (8, 8, 4)
+        assert got[0, 0].tolist() == [200, 200, 200, 255 if len(shape) < 3 or shape[2] == 3 else 200]
 
     def test_write_failure_is_ignored(self, cache_dir, source_image, monkeypatch):
         def fail_save(self, *_a, **_k):
