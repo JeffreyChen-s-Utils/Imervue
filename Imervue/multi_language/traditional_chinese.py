@@ -2714,4 +2714,11 @@ traditional_chinese_word_dict = {
     "tone_eq_shadows": "陰影：",
     "tone_eq_whites": "白色：",
     "velvia_failed": "Velvia 效果失敗",
+    "develop_slider_range_tooltip": "{title} — 往左拖到 −{limit}，往右拖到 +{limit}",
+    "memory_tooltip_click": "點一下清除圖塊快取。",
+    "memory_tooltip_prefetched": "已預先載入圖片：{count}",
+    "memory_tooltip_tiles": "已載入圖塊：{count}",
+    "memory_tooltip_vram": "圖塊快取 VRAM：{used} MB / {limit} MB",
+    "puppet_idle_off": "自動待機動作已關閉",
+    "puppet_idle_on": "自動待機動作已開啟",
 }

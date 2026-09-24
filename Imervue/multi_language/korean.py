@@ -2726,4 +2726,11 @@ korean_word_dict = {
     "tone_eq_shadows": "그림자:",
     "tone_eq_whites": "흰색:",
     "velvia_failed": "Velvia 효과 실패",
+    "develop_slider_range_tooltip": "{title} — 왼쪽으로 끌면 −{limit}, 오른쪽으로 끌면 +{limit}",
+    "memory_tooltip_click": "클릭하면 타일 캐시를 비웁니다.",
+    "memory_tooltip_prefetched": "미리 불러온 이미지: {count}",
+    "memory_tooltip_tiles": "불러온 타일: {count}",
+    "memory_tooltip_vram": "타일 캐시 VRAM: {used} MB / {limit} MB",
+    "puppet_idle_off": "자동 대기 동작 꺼짐",
+    "puppet_idle_on": "자동 대기 동작 켜짐",
 }

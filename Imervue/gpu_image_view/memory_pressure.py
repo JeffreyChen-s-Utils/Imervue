@@ -24,6 +24,8 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPaintEvent
 from PySide6.QtWidgets import QLabel, QSizePolicy, QWidget
 
+from Imervue.multi_language.language_wrapper import language_wrapper
+
 DEFAULT_POLL_INTERVAL_MS: int = 1000
 """How often the indicator polls the source. One second matches
 the Debug HUD's natural update rate; finer polling is wasted CPU
@@ -100,16 +102,20 @@ def format_tooltip(
     """Multi-line tooltip body for the indicator. ``tile_count`` /
     ``prefetch_count`` are optional — when the caller doesn't have
     them, just the byte totals are shown."""
+    lang = language_wrapper.language_word_dict
     used_mb = used_bytes / (1024 * 1024)
     limit_mb = limit_bytes / (1024 * 1024) if limit_bytes > 0 else 0.0
     lines = [
-        f"Tile-cache VRAM: {used_mb:.1f} MB / {limit_mb:.1f} MB",
+        lang.get("memory_tooltip_vram", "Tile-cache VRAM: {used} MB / {limit} MB").format(
+            used=f"{used_mb:.1f}", limit=f"{limit_mb:.1f}"),
     ]
     if tile_count is not None:
-        lines.append(f"Loaded tiles: {tile_count}")
+        lines.append(lang.get("memory_tooltip_tiles", "Loaded tiles: {count}").format(
+            count=tile_count))
     if prefetch_count is not None:
-        lines.append(f"Prefetched images: {prefetch_count}")
-    lines.append("Click to clear the tile cache.")
+        lines.append(lang.get("memory_tooltip_prefetched", "Prefetched images: {count}").format(
+            count=prefetch_count))
+    lines.append(lang.get("memory_tooltip_click", "Click to clear the tile cache."))
     return "\n".join(lines)
 
 

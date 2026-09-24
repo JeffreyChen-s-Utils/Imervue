@@ -238,9 +238,15 @@ class PetWorkspace(QWidget):
         row = QHBoxLayout()
         row.addWidget(QLabel(_tr("desktop_pet_size_label", "Size:")))
         self._size_combo = QComboBox()
-        self._size_combo.addItems(["small", "medium", "large"])
-        self._size_combo.setCurrentText(str(settings["size_preset"]))
-        self._size_combo.currentTextChanged.connect(self._on_size_changed)
+        # Shown in the UI language; the item data is the preset name PetWindow takes.
+        for preset, fallback in (("small", "Small"), ("medium", "Medium"), ("large", "Large")):
+            self._size_combo.addItem(_tr(f"desktop_pet_size_{preset}", fallback), preset)
+        self._size_combo.setCurrentIndex(
+            max(0, self._size_combo.findData(str(settings["size_preset"]))),
+        )
+        self._size_combo.currentIndexChanged.connect(
+            lambda _index: self._on_size_changed(self._size_combo.currentData()),
+        )
         row.addWidget(self._size_combo)
         row.addStretch(1)
         return row

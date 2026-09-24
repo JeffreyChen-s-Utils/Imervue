@@ -97,8 +97,9 @@ def test_size_row(workspace):
     label, combo, stretch = _row(_items(_window_group(workspace))[6])
     assert label.text() == "Size:" and stretch is None
     assert isinstance(combo, QComboBox) and combo is workspace._size_combo  # noqa: SLF001
-    assert [combo.itemText(i) for i in range(combo.count())] == ["small", "medium", "large"]
-    assert combo.currentText() == str(pet_settings.load()["size_preset"])
+    assert [combo.itemData(i) for i in range(combo.count())] == ["small", "medium", "large"]
+    assert [combo.itemText(i) for i in range(combo.count())] == ["Small", "Medium", "Large"]
+    assert combo.currentData() == str(pet_settings.load()["size_preset"])
 
 
 def test_opacity_row(workspace):
@@ -128,8 +129,8 @@ def test_rows_drive_their_handlers(qapp, monkeypatch):
                             lambda self, value, h=handler: calls.append((h, value)))
     ws = PetWorkspace()
     try:
-        ws._size_combo.setCurrentText("large" if ws._size_combo.currentText() != "large"  # noqa: SLF001
-                                      else "small")
+        combo = ws._size_combo  # noqa: SLF001
+        combo.setCurrentIndex(combo.findData("large" if combo.currentData() != "large" else "small"))
         ws._opacity_slider.setValue(42 if ws._opacity_slider.value() != 42 else 43)  # noqa: SLF001
         ws._snap_spin.setValue(7 if ws._snap_spin.value() != 7 else 8)  # noqa: SLF001
         assert [h for h, _v in calls] == ["_on_size_changed", "_on_opacity_changed",

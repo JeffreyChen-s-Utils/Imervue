@@ -2728,4 +2728,11 @@ japanese_word_dict = {
     "tone_eq_shadows": "シャドウ：",
     "tone_eq_whites": "白レベル：",
     "velvia_failed": "Velvia 効果に失敗しました",
+    "develop_slider_range_tooltip": "{title} — 左へドラッグで −{limit}、右へで +{limit}",
+    "memory_tooltip_click": "クリックでタイルキャッシュを消去します。",
+    "memory_tooltip_prefetched": "先読み済み画像：{count}",
+    "memory_tooltip_tiles": "読み込み済みタイル：{count}",
+    "memory_tooltip_vram": "タイルキャッシュ VRAM：{used} MB / {limit} MB",
+    "puppet_idle_off": "自動アイドル オフ",
+    "puppet_idle_on": "自動アイドル オン",
 }

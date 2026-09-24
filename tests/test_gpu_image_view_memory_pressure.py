@@ -286,3 +286,16 @@ def test_indicator_source_bug_propagates(qapp):
     finally:
         indicator.shutdown()
         indicator.deleteLater()
+
+
+def test_tooltip_follows_the_ui_language():
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    previous = language_wrapper.language
+    language_wrapper.reset_language("Traditional_Chinese")
+    try:
+        out = format_tooltip(100 * 1024 * 1024, 1024 * 1024 * 1024, tile_count=5, prefetch_count=2)
+    finally:
+        language_wrapper.reset_language(previous)
+    assert out.splitlines() == [
+        "圖塊快取 VRAM：100.0 MB / 1024.0 MB", "已載入圖塊：5", "已預先載入圖片：2", "點一下清除圖塊快取。",
+    ]

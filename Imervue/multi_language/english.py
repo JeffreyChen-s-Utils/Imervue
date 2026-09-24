@@ -2749,4 +2749,11 @@ english_word_dict = {
     "tone_eq_shadows": "Shadows:",
     "tone_eq_whites": "Whites:",
     "velvia_failed": "Velvia failed",
+    "develop_slider_range_tooltip": "{title} — drag left for −{limit}, right for +{limit}",
+    "memory_tooltip_click": "Click to clear the tile cache.",
+    "memory_tooltip_prefetched": "Prefetched images: {count}",
+    "memory_tooltip_tiles": "Loaded tiles: {count}",
+    "memory_tooltip_vram": "Tile-cache VRAM: {used} MB / {limit} MB",
+    "puppet_idle_off": "Auto idle off",
+    "puppet_idle_on": "Auto idle on",
 }

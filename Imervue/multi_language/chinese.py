@@ -2715,4 +2715,11 @@ chinese_word_dict = {
     "tone_eq_shadows": "阴影：",
     "tone_eq_whites": "白色：",
     "velvia_failed": "Velvia 效果失败",
+    "develop_slider_range_tooltip": "{title} — 向左拖到 −{limit}，向右拖到 +{limit}",
+    "memory_tooltip_click": "点击清除图块缓存。",
+    "memory_tooltip_prefetched": "已预加载图片：{count}",
+    "memory_tooltip_tiles": "已加载图块：{count}",
+    "memory_tooltip_vram": "图块缓存 VRAM：{used} MB / {limit} MB",
+    "puppet_idle_off": "自动待机动作已关闭",
+    "puppet_idle_on": "自动待机动作已开启",
 }

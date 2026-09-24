@@ -303,9 +303,10 @@ class DevelopRightPanelMixin:
         # Tooltip carries the title + range so hover surfaces the
         # adjustment direction even when narrow panels clip the
         # surrounding label.
-        slider.setToolTip(
-            f"{title} — drag left for −{limit}, right for +{limit}",
-        )
+        slider.setToolTip(language_wrapper.language_word_dict.get(
+            "develop_slider_range_tooltip",
+            "{title} — drag left for −{limit}, right for +{limit}",
+        ).format(title=title, limit=limit))
         self._interactive_widgets.append(slider)
         return slider, label
 
