@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-03 | 2026-09-25 | XMP sidecar save merges instead of replacing: another editor's RAW settings survive | #fix #data-loss #xmp | [2026-09](2026-09.md) |
 | U-20260925-02 | 2026-09-25 | Batch Convert: trash (not delete) only fully converted originals; full-size RAW; keep EXIF | #fix #data-loss #metadata | [2026-09](2026-09.md) |
 | U-20260925-01 | 2026-09-25 | Unreadable camera RAW raises OSError, not libraw's own error | #fix #raw | [2026-09](2026-09.md) |
 | U-20260924-99 | 2026-09-24 | Lossless Rotate and Rotate All keep JPEG bytes and file metadata | #fix #metadata #rotate | [2026-09](2026-09.md) |

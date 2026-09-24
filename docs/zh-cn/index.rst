@@ -1239,6 +1239,8 @@ Imervue 支持读写 Adobe XMP sidecar 文件（``photo.jpg`` ↔ ``photo.xmp``�
 让星级、标题、描述、关键字与颜色标签可与 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
 等 XMP 感知工具双向同步。
 
+保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。
+
 - **为当前图片导入 XMP** — 从 sidecar 读取星级 / 标题 / 关键字 / 颜色标签
   写入内部数据库。
 - **为当前图片导出 XMP** — 将当前星级 / 标题 / 关键字 / 颜色标签写入

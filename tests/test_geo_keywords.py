@@ -57,3 +57,15 @@ def test_tag_paths_by_location_writes_and_is_idempotent(tmp_path, monkeypatch):
 
     # Re-running leaves the sidecar unchanged.
     assert tag_paths_by_location([str(geotagged)]) == 0
+
+
+def test_unreadable_sidecar_is_skipped_and_left_alone(tmp_path, monkeypatch, caplog):
+    photo = tmp_path / "a.jpg"
+    photo.write_bytes(b"\x00")
+    sidecar = xmp_sidecar.sidecar_path_for(str(photo))
+    sidecar.write_text("<not xml", encoding="utf-8")
+    monkeypatch.setattr(gps, "extract_gps", lambda _p: (48.85, 2.35))
+    with caplog.at_level("WARNING", logger="Imervue"):
+        assert tag_paths_by_location([str(photo)]) == 0
+    assert sidecar.read_text(encoding="utf-8") == "<not xml"
+    assert any("Could not tag" in r.getMessage() for r in caplog.records)

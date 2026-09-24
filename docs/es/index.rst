@@ -2141,6 +2141,8 @@ para que valoraciones, títulos, descripciones, palabras clave y etiquetas de co
 y vuelta limpiamente con otros gestores de fotos con soporte XMP, Bridge, y otras
 herramientas con soporte XMP.
 
+Al guardar se fusiona con el sidecar existente: solo cambian estos campos, así que los ajustes de revelado, el recorte y el historial de otro programa se conservan, y un sidecar ilegible nunca se sobrescribe.
+
 - **Import XMP for current image** — extrae valoración / título / palabras clave /
   etiqueta de color del archivo secundario a la base de datos interna.
 - **Export XMP for current image** — escribe la valoración / título / palabras clave /

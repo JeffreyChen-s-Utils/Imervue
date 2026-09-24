@@ -252,22 +252,26 @@ def _make_seq(parent, tag: str, items: list[str]) -> None:
         li.text = item
 
 
-def _build_tree(data: XmpData) -> ET.ElementTree:
-    """Build an ``xmpmeta`` ElementTree from a ``XmpData`` value."""
-    for prefix, uri in _NS.items():
-        # Skip "xml" \u2014 it is reserved by the XML spec and already bound; if
+class UnreadableSidecarError(OSError):
+    """An existing sidecar can't be parsed, so it is left alone rather than overwritten."""
+
+
+def _register_namespaces(extra: dict[str, str] | None = None) -> None:
+    """Bind the prefixes the written XML uses: Imervue's own plus a parsed file's."""
+    for prefix, uri in {**_NS, **(extra or {})}.items():
+        # Skip "xml" — it is reserved by the XML spec and already bound; if
         # we re-registered it with an empty prefix we would end up declaring
         # ``xmlns=""`` on the root which hides all default-namespaced children.
-        if prefix == "xml":
+        if prefix in ("xml", ""):
             continue
-        ET.register_namespace(prefix, uri)
+        try:
+            ET.register_namespace(prefix, uri)
+        except ValueError:   # a prefix ElementTree reserves (ns0, ns1, ...)
+            continue
 
-    xmpmeta = ET.Element(f"{{{_NS['x']}}}xmpmeta")
-    xmpmeta.set(f"{{{_NS['x']}}}xmptk", "Imervue XMP")
-    rdf = ET.SubElement(xmpmeta, f"{{{_NS['rdf']}}}RDF")
-    desc = ET.SubElement(rdf, f"{{{_NS['rdf']}}}Description")
-    desc.set(f"{{{_NS['rdf']}}}about", "")
 
+def _write_fields(desc, data: XmpData) -> None:
+    """Put *data*'s non-empty fields onto the ``rdf:Description`` *desc*."""
     if data.rating:
         desc.set(f"{{{_NS['xmp']}}}Rating", str(int(data.rating)))
     if data.color_label:
@@ -277,28 +281,100 @@ def _build_tree(data: XmpData) -> ET.ElementTree:
     _make_bag(desc, "subject", data.keywords)
     _make_seq(desc, "creator", [data.creator])
 
+
+def _build_tree(data: XmpData) -> ET.ElementTree:
+    """Build an ``xmpmeta`` ElementTree from a ``XmpData`` value."""
+    _register_namespaces()
+    xmpmeta = ET.Element(f"{{{_NS['x']}}}xmpmeta")
+    xmpmeta.set(f"{{{_NS['x']}}}xmptk", "Imervue XMP")
+    rdf = ET.SubElement(xmpmeta, f"{{{_NS['rdf']}}}RDF")
+    desc = ET.SubElement(rdf, f"{{{_NS['rdf']}}}Description")
+    desc.set(f"{{{_NS['rdf']}}}about", "")
+    _write_fields(desc, data)
     return ET.ElementTree(xmpmeta)
 
 
-def save(image_path: str | Path, data: XmpData) -> Path:
-    """Write the sidecar for ``image_path``. Empty data deletes the file.
+# The properties Imervue owns; everything else in a sidecar belongs to another
+# editor (a raw developer's settings, crop, history, regions) and is kept.
+_MANAGED = frozenset({
+    f"{{{_NS['xmp']}}}Rating", f"{{{_NS['xmp']}}}Label",
+    f"{{{_NS['dc']}}}title", f"{{{_NS['dc']}}}description",
+    f"{{{_NS['dc']}}}subject", f"{{{_NS['dc']}}}creator",
+})
+_RDF_ABOUT = f"{{{_NS['rdf']}}}about"
 
-    Returns the sidecar ``Path`` either way, so callers can report what was
-    written.
-    """
-    path = sidecar_path_for(image_path)
-    if data.is_empty():
-        if path.is_file():
-            path.unlink()
-        return path
 
-    tree = _build_tree(data)
+def _strip_managed(descs: list) -> None:
+    """Remove Imervue's properties, in attribute or element form, from every Description."""
+    for desc in descs:
+        for name in [key for key in desc.attrib if key in _MANAGED]:
+            del desc.attrib[name]
+        for child in [child for child in desc if child.tag in _MANAGED]:
+            desc.remove(child)
+
+
+def _holds_foreign_data(descs: list) -> bool:
+    """Whether any Description still carries a property Imervue doesn't manage."""
+    return any(len(desc) or any(key != _RDF_ABOUT for key in desc.attrib) for desc in descs)
+
+
+def _existing_tree(path: Path) -> ET.ElementTree | None:
+    """The parsed sidecar at *path* with its namespace prefixes registered; None if absent."""
+    if not path.is_file():
+        return None
+    try:
+        prefixes = {prefix: uri for _event, (prefix, uri)
+                    in DefusedET.iterparse(str(path), events=("start-ns",))}
+        tree = DefusedET.parse(str(path))
+    except (ET.ParseError, DefusedXmlException) as exc:
+        raise UnreadableSidecarError(f"{path} is not readable XMP; leaving it as it is") from exc
+    _register_namespaces(prefixes)
+    return tree
+
+
+def _merge_into(tree: ET.ElementTree, data: XmpData) -> bool:
+    """Swap Imervue's properties in *tree* for *data*'s; False when nothing is left in it."""
+    root = tree.getroot()
+    descs = _find_descriptions(root)
+    _strip_managed(descs)
+    foreign = _holds_foreign_data(descs)
+    if not descs:
+        rdf = root.find(f"{{{_NS['rdf']}}}RDF")
+        if rdf is None:
+            rdf = ET.SubElement(root, f"{{{_NS['rdf']}}}RDF")
+        desc = ET.SubElement(rdf, f"{{{_NS['rdf']}}}Description")
+        desc.set(_RDF_ABOUT, "")
+        descs = [desc]
+    _write_fields(descs[0], data)
+    return foreign
+
+
+def _write_tree(path: Path, tree: ET.ElementTree) -> None:
     ET.indent(tree, space="  ")
     xml_bytes = ET.tostring(tree.getroot(), encoding="UTF-8")
-    path.write_text(
-        _XML_DECLARATION + xml_bytes.decode("utf-8"),
-        encoding="utf-8",
-    )
+    path.write_text(_XML_DECLARATION + xml_bytes.decode("utf-8"), encoding="utf-8")
+
+
+def save(image_path: str | Path, data: XmpData) -> Path:
+    """Write Imervue's fields into the sidecar for ``image_path``.
+
+    An existing sidecar is merged into, not replaced: only rating, label,
+    title, description, keywords and creator change, so what another editor
+    wrote there (a raw developer's settings, crop, history, face regions)
+    survives. The file is deleted only when nothing is left in it. Raises
+    :class:`UnreadableSidecarError` (an ``OSError``) instead of overwriting a
+    sidecar that can't be parsed. Returns the sidecar ``Path`` either way.
+    """
+    path = sidecar_path_for(image_path)
+    tree = _existing_tree(path)
+    if tree is None:
+        if not data.is_empty():
+            _write_tree(path, _build_tree(data))
+        return path
+    if _merge_into(tree, data) or not data.is_empty():
+        _write_tree(path, tree)
+    else:
+        path.unlink()
     return path
 
 

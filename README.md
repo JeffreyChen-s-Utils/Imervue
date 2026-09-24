@@ -262,7 +262,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **EXIF editor** dialog — description, artist, copyright, camera and comment (Unicode included) written into a JPEG or WebP with no extra package, pixels and other tags untouched
 - **Keyword editor** — title / creator / description / keywords, with **related-tag suggestions** drawn from tag co-occurrence and **controlled-vocabulary expansion** (a leaf keyword auto-applies its ancestors + synonyms from an editable hierarchical vocabulary)
 - **Image info** dialog (dimensions / size / dates)
-- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`)
+- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`). Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten.
 - **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon into a JPEG or WebP with no extra package, leaving its pixels, other tags and thumbnail untouched
 - **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — one row per image including cull / rating / tags / notes

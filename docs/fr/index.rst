@@ -2139,6 +2139,8 @@ Imervue peut lire et écrire des fichiers annexes Adobe XMP (``photo.jpg`` ↔
 couleur fassent l'aller-retour proprement avec d'autres gestionnaires de photos compatibles
 XMP, d'autres gestionnaires de photos compatibles XMP, Bridge et autres outils XMP.
 
+L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé.
+
 - **Importer XMP pour l'image courante** — tire la note / le titre / les mots-clés /
   l'étiquette de couleur depuis le fichier annexe vers la base de données interne.
 - **Exporter XMP pour l'image courante** — écrit la note / le titre / les

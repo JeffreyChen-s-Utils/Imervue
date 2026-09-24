@@ -164,3 +164,99 @@ class TestXmpData:
 
     def test_is_empty_false_with_keywords(self, xmp):
         assert xmp.XmpData(keywords=["x"]).is_empty() is False
+
+
+_LIGHTROOM_SIDECAR = """<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 7.0">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about=""
+    xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+    xmlns:tiff="http://ns.adobe.com/tiff/1.0/"
+   xmp:Rating="3" tiff:Make="Canon"
+   crs:Exposure2012="+0.65" crs:HasCrop="True">
+   <crs:ToneCurvePV2012><rdf:Seq><rdf:li>0, 0</rdf:li><rdf:li>255, 255</rdf:li></rdf:Seq></crs:ToneCurvePV2012>
+   <dc:subject><rdf:Bag><rdf:li>old</rdf:li></rdf:Bag></dc:subject>
+  </rdf:Description>
+ </rdf:RDF>
+</x:xmpmeta>
+"""
+_CRS = "{http://ns.adobe.com/camera-raw-settings/1.0/}"
+_RDF = "{http://www.w3.org/1999/02/22-rdf-syntax-ns#}"
+
+
+def _write_sidecar(image_path, text):
+    from Imervue.image.xmp_sidecar import sidecar_path_for
+    path = sidecar_path_for(image_path)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def _descriptions(path):
+    from defusedxml import ElementTree
+    return list(ElementTree.parse(str(path)).getroot().iter(f"{_RDF}Description"))
+
+
+class TestSaveMergesIntoAnExistingSidecar:
+    """save() rebuilt the file from Imervue's six fields, wiping a raw developer's edits."""
+
+    def test_raw_developer_settings_survive(self, xmp, image_path):
+        path = _write_sidecar(image_path, _LIGHTROOM_SIDECAR)
+        xmp.save(image_path, xmp.XmpData(rating=5, keywords=["Taipei"]))
+        (desc,) = _descriptions(path)
+        assert desc.get(f"{_CRS}Exposure2012") == "+0.65"
+        assert desc.get(f"{_CRS}HasCrop") == "True"
+        assert desc.get("{http://ns.adobe.com/tiff/1.0/}Make") == "Canon"
+        curve = desc.find(f"{_CRS}ToneCurvePV2012/{_RDF}Seq")
+        assert [li.text for li in curve] == ["0, 0", "255, 255"]
+        assert xmp.load(image_path).rating == 5
+        assert xmp.load(image_path).keywords == ["Taipei"]
+
+    def test_the_files_own_prefixes_are_kept(self, xmp, image_path):
+        path = _write_sidecar(image_path, _LIGHTROOM_SIDECAR)
+        xmp.save(image_path, xmp.XmpData(rating=1))
+        text = path.read_text(encoding="utf-8")
+        assert "crs:Exposure2012" in text and "ns0:" not in text
+
+    def test_element_form_fields_are_replaced_not_duplicated(self, xmp, image_path):
+        path = _write_sidecar(image_path, """<x:xmpmeta xmlns:x="adobe:ns:meta/">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:Rating>2</xmp:Rating>
+   <xmp:Label>Blue</xmp:Label></rdf:Description>
+  <rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/">
+   <dc:title><rdf:Alt><rdf:li>old title</rdf:li></rdf:Alt></dc:title></rdf:Description>
+ </rdf:RDF></x:xmpmeta>""")
+        xmp.save(image_path, xmp.XmpData(rating=4, title="new"))
+        text = path.read_text(encoding="utf-8")
+        assert text.count("Rating") == 1 and "Blue" not in text and "old title" not in text
+        loaded = xmp.load(image_path)
+        assert (loaded.rating, loaded.title, loaded.color_label) == (4, "new", "")
+
+    def test_clearing_imervue_fields_keeps_a_sidecar_with_other_data(self, xmp, image_path):
+        path = _write_sidecar(image_path, _LIGHTROOM_SIDECAR)
+        xmp.save(image_path, xmp.XmpData())
+        assert path.is_file()
+        (desc,) = _descriptions(path)
+        assert desc.get(f"{_CRS}Exposure2012") == "+0.65"
+        assert xmp.load(image_path).is_empty()
+
+    def test_a_sidecar_left_empty_is_removed(self, xmp, image_path):
+        path = _write_sidecar(image_path, """<x:xmpmeta xmlns:x="adobe:ns:meta/">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:Rating="2"/>
+ </rdf:RDF></x:xmpmeta>""")
+        xmp.save(image_path, xmp.XmpData())
+        assert not path.exists()
+
+    def test_a_sidecar_without_description_gets_one(self, xmp, image_path):
+        _write_sidecar(image_path, '<x:xmpmeta xmlns:x="adobe:ns:meta/"/>')
+        xmp.save(image_path, xmp.XmpData(rating=3))
+        assert xmp.load(image_path).rating == 3
+
+    @pytest.mark.parametrize("text", ["<not xml", '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY e "boom">]><x>&e;</x>'])
+    def test_an_unreadable_sidecar_is_not_overwritten(self, xmp, image_path, text):
+        path = _write_sidecar(image_path, text)
+        with pytest.raises(xmp.UnreadableSidecarError):
+            xmp.save(image_path, xmp.XmpData(rating=5))
+        assert path.read_text(encoding="utf-8") == text
+        assert issubclass(xmp.UnreadableSidecarError, OSError)

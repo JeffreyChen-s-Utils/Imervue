@@ -2121,6 +2121,8 @@ O Imervue pode ler e gravar arquivos sidecar XMP da Adobe (``photo.jpg`` ↔
 rótulos de cor façam round-trip de forma limpa com outros gerenciadores de fotos
 com suporte a XMP, Bridge e outras ferramentas com suporte a XMP.
 
+Salvar mescla no sidecar existente: só estes campos mudam, então as configurações de revelação, o recorte e o histórico de outro programa são mantidos, e um sidecar ilegível nunca é sobrescrito.
+
 - **Importar XMP da imagem atual** — extrai avaliação / título / palavras-chave /
   rótulo de cor do sidecar para o banco de dados interno.
 - **Exportar XMP da imagem atual** — grava a avaliação / título /

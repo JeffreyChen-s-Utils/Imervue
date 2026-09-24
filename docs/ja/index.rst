@@ -1277,6 +1277,8 @@ Imervue は Adobe XMP sidecar ファイル（``photo.jpg`` ↔ ``photo.xmp``）�
 読み書きに対応しており、評価・タイトル・説明・キーワード・カラーラベルを
 other XMP-aware photo managers、other XMP-aware photo managers、Bridge などの XMP 対応ツールと双方向に同期できます。
 
+保存時は既存の sidecar にマージします。変わるのはこれらの項目だけなので、RAW 現像ソフトが保存した現像設定・切り抜き・履歴は残り、解析できない sidecar は上書きしません。
+
 - **現在の画像の XMP をインポート** — sidecar から評価 / タイトル / キーワード
   / カラーラベルを内部 DB に取り込みます。
 - **現在の画像の XMP をエクスポート** — 現在の評価 / タイトル / キーワード /

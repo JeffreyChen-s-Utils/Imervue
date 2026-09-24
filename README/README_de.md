@@ -260,7 +260,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **EXIF-Editor**-Dialog — Beschreibung, Künstler, Copyright, Kamera und Kommentar (auch Unicode) ohne Zusatzpaket in ein JPEG oder WebP schreiben, Pixel und übrige Tags bleiben unverändert
 - **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz und Controlled-Vocabulary-Erweiterung (ein Blatt-Keyword wendet automatisch seine Vorfahren + Synonyme aus einem editierbaren hierarchischen Vokabular an)
 - **Image-Info**-Dialog (Maße / Größe / Datums)
-- **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip zu anderen XMP-bewussten Foto-Managern (sicheres XML via `defusedxml`)
+- **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip zu anderen XMP-bewussten Foto-Managern (sicheres XML via `defusedxml`). Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben.
 - **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon ohne Zusatzpaket in JPEGs und WebPs schreiben, Pixel, übrige Tags und Vorschaubild bleiben unverändert
 - **Token Batch Rename** — Live-Preview-Templates wie `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — eine Zeile pro Bild inkl. Cull / Rating / Tags / Notes

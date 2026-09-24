@@ -2108,6 +2108,8 @@ Imervue can read and write Adobe XMP sidecar files (``photo.jpg`` ↔
 labels round-trip cleanly with other XMP-aware photo managers, other XMP-aware photo managers, Bridge, and other
 XMP-aware tools.
 
+Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten.
+
 - **Import XMP for current image** — pulls rating / title / keywords /
   color label from the sidecar into the internal database.
 - **Export XMP for current image** — writes the current rating / title /

@@ -2175,6 +2175,8 @@ schreiben, sodass Bewertungen, Titel, Beschreibungen, Stichwörter und Farbetike
 mit anderen XMP-fähigen Foto-Managern, Bridge und anderen XMP-fähigen Tools sauber
 hin- und herwandern.
 
+Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben.
+
 - **XMP für aktuelles Bild importieren** — zieht Bewertung / Titel / Stichwörter /
   Farbetikett aus dem Sidecar in die interne Datenbank.
 - **XMP für aktuelles Bild exportieren** — schreibt die aktuelle Bewertung / Titel /
