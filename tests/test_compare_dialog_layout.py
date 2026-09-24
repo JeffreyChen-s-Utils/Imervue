@@ -24,8 +24,9 @@ def _english(monkeypatch):
     monkeypatch.setattr(mod.language_wrapper, "language_word_dict", {})
 
 
-def _gui(paths=_PATHS):
-    return SimpleNamespace(main_window=None, model=SimpleNamespace(images=list(paths)))
+def _gui(paths=None):
+    chosen = _PATHS if paths is None else paths
+    return SimpleNamespace(main_window=None, model=SimpleNamespace(images=list(chosen)))
 
 
 @pytest.fixture
