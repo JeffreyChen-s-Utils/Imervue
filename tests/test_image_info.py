@@ -158,3 +158,43 @@ def test_out_of_range_ctime_becomes_none(tmp_path, monkeypatch):
     ctime, mtime = info_mod.get_file_times(path)
     assert ctime is None
     assert isinstance(mtime, datetime)
+
+
+def _camera_exif():
+    from PIL.TiffImagePlugin import IFDRational
+    exif = Image.Exif()
+    exif[271] = "Apple"
+    exif.get_ifd(0x8769)[36867] = "2019:05:06 07:08:09"
+    exif.get_ifd(0x8769)[33434] = IFDRational(1, 250)
+    gps = exif.get_ifd(0x8825)
+    gps[1], gps[2] = "N", (IFDRational(25), IFDRational(2), IFDRational(0))
+    gps[3], gps[4] = "E", (IFDRational(121), IFDRational(30), IFDRational(0))
+    return exif
+
+
+def test_jpeg_exif_matches_pillows_own_merged_view(tmp_path):
+    path = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 8)).save(path, exif=_camera_exif())
+    from PIL.ExifTags import TAGS
+    with Image.open(path) as img:
+        expected = {TAGS.get(tag, tag): value for tag, value in img._getexif().items()}
+    assert info_mod.get_exif_data(path) == expected
+
+
+def test_heic_exif_is_read(tmp_path):
+    """HEIC has no ``_getexif``, so iPhone photos used to show no EXIF at all."""
+    pillow_heif = pytest.importorskip("pillow_heif")
+    pillow_heif.register_heif_opener()
+    path = tmp_path / "a.heic"
+    Image.new("RGB", (16, 16)).save(path, exif=_camera_exif())
+    exif = info_mod.get_exif_data(path)
+    assert exif["Make"] == "Apple"
+    assert exif["DateTimeOriginal"] == "2019:05:06 07:08:09"
+    assert exif["GPSInfo"][1] == "N"
+
+
+def test_exif_read_registers_the_codec_first(tmp_path, monkeypatch):
+    seen = []
+    monkeypatch.setattr(info_mod, "ensure_pillow_opener", seen.append)
+    info_mod.get_exif_data(tmp_path / "missing.HEIC")
+    assert seen == [".HEIC"]

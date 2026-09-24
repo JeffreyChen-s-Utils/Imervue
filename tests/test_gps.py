@@ -95,3 +95,24 @@ def test_corrupt_webp_exif_has_no_gps(tmp_path):
     p = tmp_path / "bad.webp"
     p.write_bytes(corrupt_exif_webp())
     assert gps.extract_gps(str(p)) is None
+
+
+def test_heic_coordinates_are_read(tmp_path):
+    pillow_heif = pytest.importorskip("pillow_heif")
+    pillow_heif.register_heif_opener()
+    from PIL.TiffImagePlugin import IFDRational
+    exif = Image.Exif()
+    info = exif.get_ifd(0x8825)
+    info[1], info[2] = "S", (IFDRational(33), IFDRational(30), IFDRational(0))
+    info[3], info[4] = "E", (IFDRational(151), IFDRational(12), IFDRational(0))
+    path = tmp_path / "a.heic"
+    Image.new("RGB", (16, 16)).save(path, exif=exif)
+    lat, lon = gps.extract_gps(path)
+    assert (lat, lon) == pytest.approx((-33.5, 151.2))
+
+
+def test_gps_read_registers_the_codec_first(tmp_path, monkeypatch):
+    seen = []
+    monkeypatch.setattr(gps, "ensure_pillow_opener", seen.append)
+    assert gps.extract_gps(tmp_path / "missing.jxl") is None
+    assert seen == [".jxl"]
