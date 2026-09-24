@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-97 | 2026-09-24 | Stop in-place rotate, crop and annotation saves from destroying RAW and multi-frame files | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260924-96 | 2026-09-24 | Export and feed tools the full-size developed RAW | #fix #raw | [2026-09](2026-09.md) |
 | U-20260924-95 | 2026-09-24 | Decode Modify and Paint sources like the viewer: full-size RAW, sRGB, upright | #fix #raw | [2026-09](2026-09.md) |
 | U-20260924-94 | 2026-09-24 | Colour-manage every preview, tool input and export like the viewer | #fix #color | [2026-09](2026-09.md) |

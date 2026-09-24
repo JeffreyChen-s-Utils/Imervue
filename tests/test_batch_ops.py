@@ -98,6 +98,21 @@ class TestBatchRotate:
         with Image.open(path) as img:
             assert as_shown(img).size == (40, 20)   # a real quarter turn of the 20x40 shown
 
+    def test_raw_and_animated_files_are_skipped_untouched(self, tmp_path):
+        from PIL import Image
+
+        from Imervue.gpu_image_view.actions.batch_ops import batch_rotate
+        raw = tmp_path / "shot.nef"
+        Image.new("RGB", (30, 20)).save(raw, format="TIFF")   # how Pillow sees a RAW
+        anim = tmp_path / "anim.gif"
+        frames = [Image.new("RGB", (8, 4), c) for c in ((255, 0, 0), (0, 255, 0), (0, 0, 255))]
+        frames[0].save(anim, save_all=True, append_images=frames[1:])
+        before = {p: p.read_bytes() for p in (raw, anim)}
+        gui = self._gui([str(raw), str(anim)])
+        batch_rotate(gui, [str(raw), str(anim)], 90)
+        assert {p: p.read_bytes() for p in (raw, anim)} == before
+        assert gui.main_window.toast.calls == [("info", "Rotated 0/2 file(s)")]
+
     def test_result_toast_follows_the_ui_language(self, tmp_path):
         from PIL import Image
 

@@ -2755,4 +2755,5 @@ japanese_word_dict = {
     "file_filter_imervue_brush": "Imervue ブラシ",
     "file_filter_other_brush": "他のペイントアプリのブラシ",
     "file_filter_other_palette": "他の画像エディタのパレット",
+    "modify_crop_cannot_overwrite": "このファイルは上書きできません（カメラ RAW、HEIC、アニメーション、複数ページ）。トリミング結果はエクスポートで保存してください。",
 }

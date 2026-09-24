@@ -1,5 +1,6 @@
 """Tests for lossless rotation via PIL."""
 import numpy as np
+import pytest
 from PIL import Image
 
 
@@ -70,3 +71,50 @@ def test_pil_rotate_turns_a_tagged_image_from_what_is_shown(tmp_path):
     assert _rotate_via_pil(str(path), clockwise=True) is True
     with Image.open(path) as after:
         assert as_shown(after).size == (shown[1], shown[0])   # a real quarter turn
+
+
+def _fake_raw(tmp_path):
+    """Bytes Pillow reads as a TIFF, as it reads a CR2 / NEF / DNG (their embedded preview)."""
+    path = tmp_path / "shot.cr2"
+    Image.new("RGB", (30, 20)).save(path, format="TIFF")
+    return path
+
+
+def test_raw_is_refused_and_left_untouched(tmp_path):
+    """The Pillow fallback replaced a 9 MB CR2 with a 0.8 MB preview-sized TIFF."""
+    from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+    path = _fake_raw(tmp_path)
+    before = path.read_bytes()
+    assert lossless_rotate(str(path), clockwise=True) is False
+    assert path.read_bytes() == before
+
+
+def test_animated_gif_is_refused_and_keeps_its_frames(tmp_path):
+    from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+    path = tmp_path / "anim.gif"
+    frames = [Image.new("RGB", (8, 4), c) for c in ((255, 0, 0), (0, 255, 0), (0, 0, 255))]
+    frames[0].save(path, save_all=True, append_images=frames[1:])
+    assert lossless_rotate(str(path), clockwise=True) is False
+    with Image.open(path) as img:
+        assert img.n_frames == 3 and img.size == (8, 4)
+
+
+@pytest.mark.parametrize(("name", "expected"), [
+    ("a.png", True), ("a.jpg", True), ("a.tiff", True), ("a.webp", True),
+    ("a.heic", False), ("a.svg", False), ("a.mp4", False),
+])
+def test_can_rewrite_in_place_by_format(tmp_path, name, expected):
+    from Imervue.image.in_place_save import can_rewrite_in_place
+    path = tmp_path / name
+    fmt = {"a.jpg": "JPEG", "a.tiff": "TIFF", "a.webp": "WEBP"}.get(name, "PNG")
+    Image.new("RGB", (4, 4)).save(path, format=fmt)
+    assert can_rewrite_in_place(str(path)) is expected
+
+
+def test_multi_page_tiff_and_missing_files_cannot_be_rewritten(tmp_path):
+    from Imervue.image.in_place_save import can_rewrite_in_place
+    path = tmp_path / "pages.tif"
+    Image.new("RGB", (4, 4)).save(path, save_all=True, append_images=[Image.new("RGB", (4, 4))])
+    assert can_rewrite_in_place(str(path)) is False
+    assert can_rewrite_in_place(str(tmp_path / "gone.png")) is False
+

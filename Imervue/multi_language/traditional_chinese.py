@@ -2741,4 +2741,5 @@ traditional_chinese_word_dict = {
     "file_filter_imervue_brush": "Imervue 筆刷",
     "file_filter_other_brush": "其他繪圖軟體的筆刷",
     "file_filter_other_palette": "其他影像編輯器的色票",
+    "modify_crop_cannot_overwrite": "這個檔案無法直接覆寫（相機 RAW、HEIC、動畫或多頁檔）。請改用匯出儲存裁切結果。",
 }

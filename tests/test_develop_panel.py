@@ -587,6 +587,26 @@ class TestCropSave:
         # Recipe is reset because the edit is now baked into the pixels.
         assert p._current.is_identity()
 
+    def test_apply_crop_refuses_to_overwrite_a_raw(self, panel, tmp_path, monkeypatch):
+        """With the full RAW now in Modify, a crop would have written PNG bytes into the .cr2."""
+        import numpy as np
+
+        from Imervue.gpu_image_view.images import image_loader
+        monkeypatch.setattr(image_loader, "_load_raw",
+                            lambda _p, thumbnail: np.zeros((40, 60, 3), dtype=np.uint8))
+        raw = tmp_path / "shot.cr2"
+        raw.write_bytes(b"RAW-DATA-THAT-MUST-SURVIVE")
+        p, _ = panel
+        shown = []
+        from types import SimpleNamespace
+        monkeypatch.setattr(p._main_gui.main_window, "toast",
+                            SimpleNamespace(info=shown.append), raising=False)
+        p.bind_to_path(str(raw))
+        p._canvas._crop_rect = (0, 0, 30, 20)
+        p._apply_crop()
+        assert raw.read_bytes() == b"RAW-DATA-THAT-MUST-SURVIVE"
+        assert shown and "overwritten" in shown[0]
+
     def test_apply_crop_jpeg_converts_rgba_to_rgb(self, panel, tmp_path):
         from PIL import Image
 

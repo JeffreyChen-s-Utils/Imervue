@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.in_place_save import can_rewrite_in_place
 from Imervue.image.shown import as_shown
 
 
@@ -32,6 +33,8 @@ _JPEG_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".jpe", ".jfif"}
 
 def _is_jpeg(file_path: str) -> bool:
     return Path(file_path).suffix.lower() in _JPEG_EXTENSIONS
+
+
 
 
 def _rotate_via_exif(file_path: str, clockwise: bool) -> bool:
@@ -116,7 +119,9 @@ def lossless_rotate(file_path: str, clockwise: bool = True) -> bool:
 
     For JPEG files, attempts a truly lossless rotation by modifying the EXIF
     Orientation tag via *piexif*.  Falls back to PIL transpose + re-save when
-    piexif is not installed or for non-JPEG formats.
+    piexif is not installed or for non-JPEG formats, and refuses (returns
+    False, file untouched) when a re-save can't keep the file whole: camera
+    RAW, HEIC / JXL / SVG, or a multi-frame file (see ``in_place_save.can_rewrite_in_place``).
 
     Args:
         file_path: Absolute path to the image file.
@@ -133,5 +138,9 @@ def lossless_rotate(file_path: str, clockwise: bool = True) -> bool:
     # if piexif is unavailable or the EXIF-only rotation fails.
     if _is_jpeg(file_path) and _rotate_via_exif(file_path, clockwise):
         return True
+    if not can_rewrite_in_place(file_path):
+        logger.warning("Refusing to rewrite %s: its format or frames can't be saved back whole",
+                       file_path)
+        return False
 
     return _rotate_via_pil(file_path, clockwise)

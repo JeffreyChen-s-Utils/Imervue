@@ -2776,4 +2776,5 @@ english_word_dict = {
     "file_filter_imervue_brush": "Imervue brush",
     "file_filter_other_brush": "Brush from other paint apps",
     "file_filter_other_palette": "Palette from other image editors",
+    "modify_crop_cannot_overwrite": "This file can't be overwritten in place (camera RAW, HEIC, animated or multi-page). Export the crop instead.",
 }

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QGroupBox, QRadioButton,
 )
 
+from Imervue.image.in_place_save import can_rewrite_in_place
 from Imervue.image.shown import as_shown
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
@@ -265,6 +266,10 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
     failed = 0
     rotated: list[str] = []
     for path in paths:
+        if not can_rewrite_in_place(path):   # RAW, animated, multi-page: a re-save would destroy it
+            logger.warning("Not rotating %s: it can't be saved back whole", path)
+            failed += 1
+            continue
         try:
             # Rotate what is shown: the re-save drops the EXIF orientation.
             img = as_shown(Image.open(path))

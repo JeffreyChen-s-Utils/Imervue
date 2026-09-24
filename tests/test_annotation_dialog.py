@@ -647,6 +647,23 @@ class TestFileActions:
         finally:
             dlg.deleteLater()
 
+    def test_save_over_a_raw_asks_for_a_new_path_and_leaves_the_raw(
+        self, qapp, base_pil, tmp_path, monkeypatch,
+    ):
+        """Save used to write PNG bytes into the .cr2 itself, destroying the RAW."""
+        raw = tmp_path / "shot.cr2"
+        Image.new("RGB", (30, 20)).save(raw, format="TIFF")   # how Pillow sees a RAW
+        before = raw.read_bytes()
+        target = tmp_path / "annotated.png"
+        self._save_to(monkeypatch, target)
+        dlg = self._dialog(base_pil, str(raw))
+        try:
+            dlg._save()
+            assert raw.read_bytes() == before
+            assert Image.open(target).size == (200, 100)
+        finally:
+            dlg.deleteLater()
+
     def test_save_as_cancelled_writes_nothing(self, qapp, base_pil, tmp_path, monkeypatch):
         self._save_to(monkeypatch, "")
         dlg = self._dialog(base_pil)

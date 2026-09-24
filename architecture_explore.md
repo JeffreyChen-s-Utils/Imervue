@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ce508e4` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `f62188b` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 843 | 137,520 |
+| `tests/` | 844 | 137,636 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,120 |
-| `Imervue/gui/` | 163 | 32,872 |
+| `Imervue/gui/` | 163 | 32,878 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 118 | 13,204 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,951 |
-| `Imervue/multi_language/` | 8 | 14,024 |
+| `Imervue/image/` | 119 | 13,251 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,965 |
+| `Imervue/multi_language/` | 8 | 14,029 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
 | `Imervue/library/` | 32 | 4,177 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,668** | **315,865** |
+| **總計** | **1,670** | **316,053** |
 
-其中 `Imervue/` 套件本身 761 檔 / 164,094 行。
+其中 `Imervue/` 套件本身 762 檔 / 164,166 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -255,11 +255,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,779 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,744 | 繁體中文 |
-| `chinese.py` | 2,745 | 簡體中文 |
-| `japanese.py` | 2,758 | 日文 |
-| `korean.py` | 2,756 | 韓文 |
+| `english.py` | 2,780 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,745 | 繁體中文 |
+| `chinese.py` | 2,746 | 簡體中文 |
+| `japanese.py` | 2,759 | 日文 |
+| `korean.py` | 2,757 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-118 個模組、13,204 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+119 個模組、13,251 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -365,7 +365,7 @@ ImervueMainWindow
 
 #### I/O、格式與快取
 
-`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `dimensions.py`(32) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
+`raw_loader.py`(151) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸 · `in_place_save.py`(47) `can_rewrite_in_place(path)` / `in_place_format(path)`：能否把編輯後的像素寫回原檔（RAW、HEIC、JXL、SVG、多影格一律否）；旋轉、Modify 套用裁切、註解儲存都先問它 · `dimensions.py`(32) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）· `heif_support.py`(60) · `jxl_support.py`(50) ·
 `formats.py`(35) 能開的副檔名唯一來源：`RAW_EXTENSIONS`、`STILL_IMAGE_EXTENSIONS`（媒體庫）、`VIEWER_EXTENSIONS`（再加影片；檢視器、檔案樹、拖放、開啟對話框）、`ensure_pillow_opener(ext)` ·
 `save_formats.py`(96) 輸出格式中繼資料 · `optimize.py`(73) 目標檔案大小編碼 ·
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
@@ -472,14 +472,14 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `delete.py` | 221 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
-| `batch_ops.py` | 316 | 批次重新命名 / 移動 / 複製 / 旋轉 |
+| `batch_ops.py` | 321 | 批次重新命名 / 移動 / 複製 / 旋轉 |
 | `compare_dialog.py` | 583 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
 | `search_dialog.py` | 280 | 檔名即時搜尋 |
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 309 | 鍵盤快捷動作實作 |
-| `lossless_rotate.py` | 137 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose（從轉正後的影像轉，因為重存會丟掉 EXIF） |
+| `lossless_rotate.py` | 146 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose（從檢視器看到的影像轉；RAW、多影格等無法完整寫回的檔案拒絕處理） |
 | `drag_out.py` | 75 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
 | `recipe_commands.py` | 60 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
@@ -525,13 +525,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-163 個檔、32,872 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+163 個檔、32,878 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 901 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
+| `develop_panel.py` | 910 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
 | `develop_right_panel.py` | 327 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 131 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
 | `annotation_canvas.py` | 845 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
@@ -539,7 +539,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 809 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
-| `annotation_file_actions.py` | 184 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入）、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
+| `annotation_file_actions.py` | 181 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入）、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
 | `dialog_rows.py` | 98 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框）、`image_save_filter()`（PNG / JPEG / TIFF 存檔篩選）；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
 | `slider_spin.py` | 75 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-843 個檔、137,520 行。`pyproject.toml` 定義三個互斥層級 marker：
+844 個檔、137,636 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

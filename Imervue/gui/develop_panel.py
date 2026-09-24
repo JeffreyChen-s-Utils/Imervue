@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
 from Imervue.gpu_image_view.images.image_loader import decode_image_file
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
 from Imervue.gui.modify_splitter import ModifySplitterMixin
+from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -306,6 +307,16 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         self._decoded_source = img
         return img
 
+    def _warn_cannot_overwrite(self) -> None:
+        toast = getattr(getattr(self._main_gui, "main_window", None), "toast", None)
+        if toast is None:
+            return
+        toast.info(language_wrapper.language_word_dict.get(
+            "modify_crop_cannot_overwrite",
+            "This file can't be overwritten in place (camera RAW, HEIC, animated or "
+            "multi-page). Export the crop instead.",
+        ))
+
     def _invalidate_decoded_source(self) -> None:
         """Drop the cached decoded source so the next load re-decodes."""
         self._decoded_source_key = None
@@ -506,15 +517,13 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         cropped = base.crop((x, y, x + w, y + h))
         # Save atomically
         path = self._canvas_source_path
+        if not can_rewrite_in_place(path):
+            # RAW, HEIC, animated or multi-page: a save over it would destroy it.
+            self._warn_cannot_overwrite()
+            return
         target = Path(path)
         tmp = target.with_name(target.name + ".tmp")
-        ext = target.suffix.lower()
-        fmt_map = {
-            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-            ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
-            ".webp": "WEBP",
-        }
-        fmt = fmt_map.get(ext, "PNG")
+        fmt = in_place_format(path)
         try:
             save_img = cropped
             if fmt == "JPEG" and save_img.mode == "RGBA":

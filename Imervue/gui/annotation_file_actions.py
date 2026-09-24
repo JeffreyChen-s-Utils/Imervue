@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.annotation_models import AnnotationProject, bake
+from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.qimage_convert import pil_to_qimage
 
@@ -37,7 +38,9 @@ class AnnotationFileActionsMixin:
         return bake(self._canvas.get_base_pil(), self._canvas.get_annotations())
 
     def _save(self) -> None:
-        if not self._source_path:
+        # A file that can't be written back whole (camera RAW, HEIC, animated,
+        # multi-page) goes to Save As instead of being overwritten.
+        if not self._source_path or not can_rewrite_in_place(self._source_path):
             self._save_as()
             return
         self._write(self._source_path)
@@ -64,19 +67,13 @@ class AnnotationFileActionsMixin:
         truncating the original.
         """
         img = self._baked_image()
-        ext = Path(path).suffix.lower()
         target = Path(path)
         tmp = target.with_name(target.name + ".tmp")
         # Pass ``format=`` explicitly because the .tmp extension would
         # otherwise stop PIL from inferring the encoder.
-        fmt_by_ext = {
-            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-            ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
-            ".webp": "WEBP",
-        }
-        fmt = fmt_by_ext.get(ext, "PNG")
+        fmt = in_place_format(path) or "PNG"
         try:
-            if ext in (".jpg", ".jpeg"):
+            if fmt == "JPEG":
                 img.convert("RGB").save(tmp, format="JPEG", quality=95)
             else:
                 img.save(tmp, format=fmt)
