@@ -116,10 +116,10 @@ def main() -> int:
 
     # 從命令列開啟指定檔案/資料夾
     if args.file and os.path.exists(args.file):
-        from PySide6.QtCore import QTimer
         from Imervue.gpu_image_view.images.image_loader import open_path
+        from Imervue.system.qt_timers import call_later
         path = os.path.abspath(args.file)
-        QTimer.singleShot(100, lambda: open_path(main_gui=window.viewer, path=path))
+        call_later(100, window, lambda: open_path(main_gui=window.viewer, path=path))
 
     return app.exec()
 

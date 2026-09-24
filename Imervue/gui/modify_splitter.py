@@ -8,7 +8,7 @@ carries the retry and settle-poll logic for :class:`DevelopPanel`.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import QTimer
+from Imervue.system.qt_timers import call_later
 
 # Preferred width of the right properties panel; also its minimum (see
 # build_right_panel). The canvas takes whatever width is left.
@@ -99,14 +99,12 @@ class ModifySplitterMixin:
         total = self._apply_modify_splitter_sizes(splitter)
         if total <= 0:
             if _retries > 0:
-                QTimer.singleShot(
-                    0, lambda: self._size_modify_splitter(splitter, _retries - 1))
+                call_later(0, self, lambda: self._size_modify_splitter(splitter, _retries - 1))
             return
         # Layout may still be settling — re-run until the width is stable so an
         # intermediate startup width isn't locked in.
         if total != _last_total and _retries > 0:
-            QTimer.singleShot(
-                0, lambda: self._size_modify_splitter(splitter, _retries - 1, total))
+            call_later(0, self, lambda: self._size_modify_splitter(splitter, _retries - 1, total))
 
     def schedule_modify_splitter_settle(
             self, splitter, retries: int = _SPLITTER_SETTLE_RETRIES,
@@ -129,5 +127,5 @@ class ModifySplitterMixin:
         poll_settle(
             lambda: self._apply_modify_splitter_sizes(splitter),
             lambda: splitter_is_alive(splitter),
-            retries, interval_ms,
+            retries, interval_ms, owner=splitter,
         )

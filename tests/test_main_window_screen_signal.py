@@ -15,26 +15,26 @@ import Imervue.gui.main_window_screens as screens_mod
 from Imervue.Imervue_main_window import ImervueMainWindow
 
 
-class _FakeTimer:
-    """QTimer stand-in that records what each test scheduled.
+class _FakeScheduler:
+    """``call_later`` stand-in that records what each test scheduled.
 
     Instance state, not class attributes: a shared class-level list would have
     to be reset by hand in every test and leaks schedules between them.
     """
 
     def __init__(self) -> None:
-        self.calls: list[tuple[int, object]] = []
+        self.calls: list[tuple[int, object, object]] = []
 
-    def singleShot(self, ms, fn):   # noqa: N802 - mirrors Qt's API  # NOSONAR — mirrors QTimer.singleShot
-        self.calls.append((ms, fn))
+    def __call__(self, ms, owner, fn) -> None:
+        self.calls.append((ms, owner, fn))
 
 
 @pytest.fixture
 def fake_timer(monkeypatch):
-    """Swap the window module's QTimer for a fresh per-test recorder."""
-    timer = _FakeTimer()
-    monkeypatch.setattr(screens_mod, "QTimer", timer)
-    return timer
+    """Swap the window module's ``call_later`` for a fresh per-test recorder."""
+    scheduler = _FakeScheduler()
+    monkeypatch.setattr(screens_mod, "call_later", scheduler)
+    return scheduler
 
 
 def test_retries_when_window_handle_missing(fake_timer):
@@ -44,6 +44,7 @@ def test_retries_when_window_handle_missing(fake_timer):
 
     assert len(fake_timer.calls) == 1     # scheduled a retry
     assert fake_timer.calls[0][0] == 50   # ...on a 50ms timer
+    assert fake_timer.calls[0][1] is fake  # ...owned by the window, so it dies with it
     assert fake._screen_signal_connected is False
 
 

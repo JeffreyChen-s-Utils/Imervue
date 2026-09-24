@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 
-from PySide6.QtCore import QTimer
+from Imervue.system.qt_timers import call_later
 
 
 logger = logging.getLogger("Imervue.gpu_image_view")
@@ -75,7 +75,7 @@ class ViewFittingMixin:
             if retries > 0 and canvas_size(self) != before:
                 self._schedule_canvas_adapt(retries - 1)
 
-        QTimer.singleShot(0, _run)
+        call_later(0, self, _run)
 
     def _schedule_screen_settle_adapt(
         self, retries: int = _SCREEN_SETTLE_RETRIES,
@@ -161,7 +161,7 @@ class ViewFittingMixin:
         poll_settle(
             step,
             lambda: still_current() and self.isVisible(),
-            retries, interval_ms,
+            retries, interval_ms, owner=self,
         )
 
     def request_screen_refit(self) -> None:
@@ -276,7 +276,7 @@ class ViewFittingMixin:
                     and canvas_size(self) != before):
                 self._schedule_settle_refit(retries - 1)
 
-        QTimer.singleShot(0, _run)
+        call_later(0, self, _run)
 
     def _settle_refit(self, request_id: int) -> None:
         """Confirm the fit after the event loop settles the deep-zoom layout.

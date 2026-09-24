@@ -12,6 +12,7 @@ import contextlib
 from PySide6.QtCore import QByteArray, QTimer
 from PySide6.QtWidgets import QApplication
 
+from Imervue.system.qt_timers import call_later
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 from Imervue.system.best_effort import best_effort
 
@@ -64,8 +65,7 @@ class MainWindowScreensMixin:
         handle = self.windowHandle()
         if handle is None:
             if _retries > 0:
-                QTimer.singleShot(
-                    50, lambda: self._connect_screen_change_signal(_retries - 1))
+                call_later(50, self, lambda: self._connect_screen_change_signal(_retries - 1))
             return
         handle.screenChanged.connect(self._on_screen_changed)
         self._screen_signal_connected = True

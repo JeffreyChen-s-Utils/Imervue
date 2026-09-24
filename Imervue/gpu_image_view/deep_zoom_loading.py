@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
 
+from Imervue.system.qt_timers import call_later
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
 from Imervue.image.browser_state import is_transient_load_error
 from Imervue.image.tile_manager import TileManager
@@ -75,9 +75,8 @@ class DeepZoomLoadingMixin:
 
         if self._should_progressive_decode(path):
             self._start_deep_zoom_preview_worker(path, request_id)
-            from PySide6.QtCore import QTimer
-            QTimer.singleShot(
-                300,
+            call_later(
+                300, self,
                 lambda p=path, req=request_id: self._start_deep_zoom_worker_if_current(p, req),
             )
         else:
@@ -252,8 +251,8 @@ class DeepZoomLoadingMixin:
             return
         self._deep_zoom_retry_counts[path] = count + 1
         request_id = self._deep_zoom_request_id
-        QTimer.singleShot(
-            250 * (count + 1),
+        call_later(
+            250 * (count + 1), self,
             lambda p=path, req=request_id: self._retry_deep_zoom_if_current(p, req),
         )
 

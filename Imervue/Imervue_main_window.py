@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
+from Imervue.system.qt_timers import call_later
 from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.system.app_paths import icon_path as _app_icon_path
 from Imervue.system.best_effort import best_effort
@@ -83,10 +84,7 @@ class ImervueMainWindow(
         last_folder = user_setting_dict.get("user_last_folder", "")
 
         if last_folder and Path(last_folder).is_dir():
-            QTimer.singleShot(
-                0,
-                lambda: self._open_startup_folder(last_folder)
-            )
+            call_later(0, self, lambda: self._open_startup_folder(last_folder))
 
         self._init_language_and_icon()
 

@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
 
+from Imervue.system.qt_timers import call_later
 from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.actions.select import (
     select_tiles_in_rect,
@@ -113,11 +114,7 @@ class InputController:
         if hasattr(view.main_window, "toast"):
             limit = "5000%" if new_zoom >= ZOOM_MAX else "5%"
             view.main_window.toast.info(f"Zoom limit: {limit}")
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(
-            _ZOOM_LIMIT_REARM_MS,
-            lambda: setattr(view, "_zoom_limit_shown", False),
-        )
+        call_later(_ZOOM_LIMIT_REARM_MS, view, lambda: setattr(view, "_zoom_limit_shown", False))
 
     def toggle_zoom_at(self, pos) -> None:
         """Toggle between fit-to-window and 100%.

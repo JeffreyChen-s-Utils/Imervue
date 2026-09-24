@@ -10,8 +10,8 @@ from __future__ import annotations
 import contextlib
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
 
+from Imervue.system.qt_timers import call_later
 from Imervue.image.browser_state import detect_renamed_paths, filter_paths, migrate_view_path_state
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import write_user_setting, user_setting_dict
@@ -111,7 +111,7 @@ class MainWindowFoldersMixin:
             self.set_browse_mode(state["browse_mode"])
         scroll = int(state.get("scroll") or 0)
         if self._browse_mode == "list" and hasattr(self, "image_list_view"):
-            QTimer.singleShot(0, lambda: self.image_list_view.verticalScrollBar().setValue(scroll))
+            call_later(0, self, lambda: self.image_list_view.verticalScrollBar().setValue(scroll))
         elif hasattr(self.viewer, "scroll_y"):
             self.viewer.scroll_y = scroll
 
@@ -136,8 +136,8 @@ class MainWindowFoldersMixin:
             viewer.load_deep_zoom_image(target)
             return
         if _retries > 0 and should_retry_deep_zoom_restore(state, viewer.model.images):
-            QTimer.singleShot(
-                _DEEP_ZOOM_RESTORE_RETRY_MS,
+            call_later(
+                _DEEP_ZOOM_RESTORE_RETRY_MS, self,
                 lambda: self._restore_deep_zoom_if_saved(state, _retries - 1),
             )
 

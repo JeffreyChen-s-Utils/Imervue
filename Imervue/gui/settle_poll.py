@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from Imervue.system.qt_timers import call_later
+
 # Long enough that a pass costs nothing, short enough that the correction is
 # not perceived as a second layout jump.
 DEFAULT_INTERVAL_MS = 60
@@ -31,6 +33,8 @@ def poll_settle(
     still_current: Callable[[], bool],
     retries: int,
     interval_ms: int = DEFAULT_INTERVAL_MS,
+    *,
+    owner: object = None,
 ) -> None:
     """Run *step* every *interval_ms* while *still_current*, at most *retries* times.
 
@@ -38,9 +42,10 @@ def poll_settle(
     ``retries * interval_ms``. A non-positive *retries* schedules nothing, and
     the first pass where *still_current* returns ``False`` ends the chain
     without running *step* — that is how a superseded or torn-down target
-    drops out instead of writing a layout nobody asked for.
+    drops out instead of writing a layout nobody asked for. Passing the
+    ``QObject`` the chain belongs to as *owner* also ends it when that object
+    is destroyed, before *still_current* could touch a deleted widget.
     """
-    from PySide6.QtCore import QTimer
     if retries <= 0:
         return
 
@@ -48,6 +53,6 @@ def poll_settle(
         if not still_current():
             return
         step()
-        poll_settle(step, still_current, retries - 1, interval_ms)
+        poll_settle(step, still_current, retries - 1, interval_ms, owner=owner)
 
-    QTimer.singleShot(interval_ms, _run)
+    call_later(interval_ms, owner, _run)

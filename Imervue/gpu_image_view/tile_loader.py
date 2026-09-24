@@ -14,8 +14,9 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QMutexLocker, QObject, QRunnable, QThreadPool, QTimer, Signal
+from PySide6.QtCore import QMutexLocker, QObject, QRunnable, QThreadPool, Signal
 
+from Imervue.system.qt_timers import call_later
 from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 from Imervue.image.browser_state import is_missing_file_error, is_transient_load_error
@@ -222,8 +223,8 @@ def _maybe_retry_thumbnail(view: GPUImageView, path: str, message: str, generati
     if count >= 2:
         return
     retry_counts[path] = count + 1
-    QTimer.singleShot(
-        200 * (count + 1),
+    call_later(
+        200 * (count + 1), view,
         lambda p=path, gen=generation: _retry_thumbnail(view, p, gen),
     )
 
