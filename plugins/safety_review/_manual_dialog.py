@@ -50,6 +50,7 @@ from safety_review._constants import (
     _MODE_DEFAULTS,
 )
 from safety_review._detection import _process_manual_image
+from safety_review._runner import _batch_destination
 from safety_review._manual import (
     clamp_region,
     fit_scale,
@@ -513,8 +514,9 @@ class ManualReviewDialog(QDialog):
     def _output_path(self) -> str:
         if self._overwrite_check.isChecked():
             return self._image_path
-        src = Path(self._image_path)
-        return str(src.with_name(f"{src.stem}_censored{src.suffix}"))
+        # Numbered like a batch run's output, so a second pass keeps the first result.
+        return _batch_destination(self._image_path, str(Path(self._image_path).parent),
+                                  False, None)
 
     def _apply(self):
         regions = self._canvas.regions()

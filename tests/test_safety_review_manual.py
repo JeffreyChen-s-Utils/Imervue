@@ -122,6 +122,17 @@ def test_apply_censors_drawn_regions_to_a_censored_copy(qapp, tmp_path):
     dlg.deleteLater()
 
 
+def test_a_second_pass_keeps_the_first_censored_copy(qapp, tmp_path):
+    """The manual censor saved over img_censored.png on every Apply."""
+    dlg, _src = _dialog(qapp, tmp_path)
+    (tmp_path / "img_censored.png").write_bytes(b"first pass")
+    dlg._canvas._regions = [(10, 10, 40, 30)]
+    dlg._apply()
+    assert (tmp_path / "img_censored.png").read_bytes() == b"first pass"
+    assert (tmp_path / "img_censored_1.png").exists()
+    dlg.deleteLater()
+
+
 def test_apply_with_no_regions_writes_nothing(qapp, tmp_path):
     dlg, _src = _dialog(qapp, tmp_path)
     dlg._apply()

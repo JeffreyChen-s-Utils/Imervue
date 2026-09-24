@@ -41,6 +41,12 @@ from ai_object_remove.object_removal import (
 )
 from ai_object_remove.sam import discover_sam_models, sam_mask
 from Imervue.gui._apply_save import load_rgba as _load_rgba
+try:
+    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
+    from Imervue.gui._apply_save import output_path as _output_path
+except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
+    def _output_path(source: str, suffix: str) -> str:
+        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -313,7 +319,7 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
     def _start_worker(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None or self._mask is None or not self.isVisible():
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_edited.png")
+        out_path = Path(_output_path(self._path, "edited"))
         self._worker = _RemoveWorker(
             self._arr, self._mask, str(out_path), self._method.currentData(),
         )

@@ -37,6 +37,12 @@ from ai_denoise.denoise import (
     onnx_denoise,
 )
 from Imervue.gui._apply_save import load_rgba as _load_rgba
+try:
+    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
+    from Imervue.gui._apply_save import output_path as _output_path
+except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
+    def _output_path(source: str, suffix: str) -> str:
+        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -243,9 +249,7 @@ class AIDenoiseDialog(WorkerHostMixin, QDialog):
                 intensity_sigma=float(self._sigma.value()),
                 blend=blend,
             )
-        out_path = Path(self._path).with_name(
-            f"{Path(self._path).stem}_denoised.png",
-        )
+        out_path = Path(_output_path(self._path, "denoised"))
         # Bilateral is numpy-heavy and ONNX inference is slow — run on a worker.
         self._worker = _DenoiseWorker(
             self._path, method, blend, bilateral_opts, str(out_path),

@@ -23,6 +23,12 @@ from PySide6.QtWidgets import (
 
 from ai_outpaint.outpaint import outpaint
 from Imervue.gui._apply_save import load_rgba as _load_rgba
+try:
+    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
+    from Imervue.gui._apply_save import output_path as _output_path
+except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
+    def _output_path(source: str, suffix: str) -> str:
+        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -93,7 +99,7 @@ class OutpaintDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_outpaint.png")
+        out_path = Path(_output_path(self._path, "outpaint"))
         self._worker = _OutpaintWorker(self._path, self._padding.value(), str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()

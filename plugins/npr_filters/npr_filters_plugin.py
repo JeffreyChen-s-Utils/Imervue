@@ -39,6 +39,12 @@ from npr_filters.filters import (
     apply_npr_filter,
 )
 from Imervue.gui._apply_save import load_rgba as _load_rgba
+try:
+    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
+    from Imervue.gui._apply_save import output_path as _output_path
+except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
+    def _output_path(source: str, suffix: str) -> str:
+        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
@@ -275,9 +281,7 @@ class NPRFiltersDialog(WorkerHostMixin, QDialog):
             oil_levels=int(self._oil_levels.value()),
             line_threshold=int(self._line_threshold.value()),
         )
-        out_path = Path(self._path).with_name(
-            f"{Path(self._path).stem}_npr.png",
-        )
+        out_path = Path(_output_path(self._path, "npr"))
         # OpenCV stylisation filters are slow on large frames — run on a worker.
         self._worker = _NPRFilterWorker(self._path, options, str(out_path))
         self._worker.done.connect(self._on_done)
