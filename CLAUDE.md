@@ -65,6 +65,21 @@ for r,d,fs in os.walk('Imervue'):
 print(f'Imervue: {f} files, {t} lines')"
 ```
 
+## README & Translations (HARD REQUIREMENT)
+
+**`README.md` and every translated README must stay in sync with the code.** This repo ships a
+ten-language README set: `README.md` plus `README/README_de.md`, `README/README_es.md`,
+`README/README_fr.md`, `README/README_ja.md`, `README/README_ko.md`, `README/README_pt-BR.md`,
+`README/README_ru.md`, `README/README_zh-CN.md` and `README/README_zh-TW.md`.
+
+- Any user-facing change — features, commands, CLI flags, install/setup, configuration or
+  requirements — updates `README.md` **and every language variant in the same commit**, with
+  structure and content aligned.
+- **Never update one language and leave the others stale.** A change that lands in English but not
+  the nine translations (or vice versa) is incomplete.
+- There is no README-parity guard, so this is a **manual check** across the ten files above.
+  (`examples/puppet/README.md` documents that example only and is not part of this translation set.)
+
 ## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`
 
 Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes\CLAUDE.md`).
