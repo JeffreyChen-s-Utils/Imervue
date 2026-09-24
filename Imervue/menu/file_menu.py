@@ -193,8 +193,9 @@ def _add_tile_size_entries(ui_we_want_to_set: ImervueMainWindow, view_menu: QMen
     for size in thumbnail_size:
         if size != "None":
             action = view_menu.addAction(f"{size} x {size}")
-        else:
-            action = view_menu.addAction(size)
+        else:   # "None" is the viewer's value for full-resolution tiles
+            action = view_menu.addAction(language_wrapper.language_word_dict.get(
+                "thumbnail_size_original", "Original size"))
         action.setCheckable(True)
 
         if is_active_thumbnail_choice(size, ui_we_want_to_set.viewer.thumbnail_size):

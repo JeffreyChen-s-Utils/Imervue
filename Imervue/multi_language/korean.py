@@ -2733,4 +2733,5 @@ korean_word_dict = {
     "memory_tooltip_vram": "타일 캐시 VRAM: {used} MB / {limit} MB",
     "puppet_idle_off": "자동 대기 동작 꺼짐",
     "puppet_idle_on": "자동 대기 동작 켜짐",
+    "thumbnail_size_original": "원본 크기",
 }

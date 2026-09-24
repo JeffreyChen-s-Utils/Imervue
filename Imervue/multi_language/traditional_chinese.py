@@ -2721,4 +2721,5 @@ traditional_chinese_word_dict = {
     "memory_tooltip_vram": "圖塊快取 VRAM：{used} MB / {limit} MB",
     "puppet_idle_off": "自動待機動作已關閉",
     "puppet_idle_on": "自動待機動作已開啟",
+    "thumbnail_size_original": "原始大小",
 }

@@ -124,7 +124,8 @@ def _view_menu(window):
 
 def test_view_menu_tile_sizes_then_submenus(window):
     texts = _texts(_view_menu(window))
-    assert texts == ["128 x 128", "256 x 256", "512 x 512", "1024 x 1024", "None", "",
+    assert texts == ["128 x 128", "256 x 256", "512 x 512", "1024 x 1024",
+                     _lang("thumbnail_size_original", "Original size"), "",
                      _lang("view_browse_mode", "Browse Mode"), "",
                      _lang("view_tile_density", "Thumbnail Density")]
 

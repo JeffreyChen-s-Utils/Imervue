@@ -2735,4 +2735,5 @@ japanese_word_dict = {
     "memory_tooltip_vram": "タイルキャッシュ VRAM：{used} MB / {limit} MB",
     "puppet_idle_off": "自動アイドル オフ",
     "puppet_idle_on": "自動アイドル オン",
+    "thumbnail_size_original": "元のサイズ",
 }

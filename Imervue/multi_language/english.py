@@ -2756,4 +2756,5 @@ english_word_dict = {
     "memory_tooltip_vram": "Tile-cache VRAM: {used} MB / {limit} MB",
     "puppet_idle_off": "Auto idle off",
     "puppet_idle_on": "Auto idle on",
+    "thumbnail_size_original": "Original size",
 }
