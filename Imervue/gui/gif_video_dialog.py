@@ -374,9 +374,10 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
                 self._gui.main_window.toast.success(msg)
             call_later(0, self, self.accept)
         else:
-            self._status_label.setText(f"Error: {message}")
+            text = self._lang.get("generic_error", "Error: {error}").format(error=message)
+            self._status_label.setText(text)
             if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.info(f"Error: {message}")
+                self._gui.main_window.toast.info(text)
 
 
 def open_gif_video_dialog(main_gui: GPUImageView):

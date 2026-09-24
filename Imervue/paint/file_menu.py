@@ -272,8 +272,10 @@ class _FileMenuBridge:
             title_key="paint_file_import_brush_preset",
             title_fallback="Import brush preset",
             filters=[
-                f"Imervue brush (*{IMERVUE_BRUSH_EXTENSION})",
-                f"raster paint apps brush (*{MEDIBANG_BRUSH_EXTENSION})",
+                translated_filter("file_filter_imervue_brush", "Imervue brush",
+                                  (IMERVUE_BRUSH_EXTENSION,)),
+                translated_filter("file_filter_other_brush", "Brush from other paint apps",
+                                  (MEDIBANG_BRUSH_EXTENSION,)),
             ],
         )
         if not path:
@@ -291,7 +293,8 @@ class _FileMenuBridge:
             title_key="paint_file_import_palette",
             title_fallback="Import palette",
             filters=[
-                f"external image editors palette (*{GPL_PALETTE_EXTENSION})",
+                translated_filter("file_filter_other_palette", "Palette from other image editors",
+                                  (GPL_PALETTE_EXTENSION,)),
                 f"Adobe Swatch (*{ADOBE_COLOR_EXTENSION})",
                 f"Adobe Swatch Exchange (*{ADOBE_SWATCH_EXCHANGE_EXTENSION})",
             ],

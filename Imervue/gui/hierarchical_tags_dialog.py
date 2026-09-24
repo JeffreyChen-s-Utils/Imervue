@@ -163,7 +163,9 @@ class HierarchicalTagsDialog(QDialog):
             image_index.add_image_tag(p, tag)
         self._refresh_images()
         if hasattr(self._ui, "toast"):
-            self._ui.toast.success(f"Tagged {len(paths)} image(s) as {tag}")
+            self._ui.toast.success(language_wrapper.language_word_dict.get(
+                "tag_added_to_images", "Tagged {count} image(s) as {tag}",
+            ).format(count=len(paths), tag=tag))
 
     def _remove_from_selected(self) -> None:
         tag = self._selected_tag_path()
@@ -177,7 +179,9 @@ class HierarchicalTagsDialog(QDialog):
                 removed += 1
         self._refresh_images()
         if hasattr(self._ui, "toast"):
-            self._ui.toast.info(f"Untagged {removed} image(s) from {tag}")
+            self._ui.toast.info(language_wrapper.language_word_dict.get(
+                "tag_removed_from_images", "Untagged {count} image(s) from {tag}",
+            ).format(count=removed, tag=tag))
 
 
 def open_hierarchical_tags(ui: ImervueMainWindow) -> None:

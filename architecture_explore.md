@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `db3aa4c` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `185cc46` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,17 +66,17 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 838 | 136,870 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,118 |
-| `Imervue/gui/` | 163 | 32,858 |
+| `tests/` | 838 | 136,958 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
+| `Imervue/gui/` | 163 | 32,867 |
 | `Imervue/puppet/` | 57 | 15,286 |
 | `Imervue/image/` | 116 | 13,108 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,921 |
-| `Imervue/multi_language/` | 8 | 13,959 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,929 |
+| `Imervue/multi_language/` | 8 | 14,024 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,174 |
-| `Imervue/menu/` | 11 | 3,578 |
+| `Imervue/menu/` | 11 | 3,579 |
 | `Imervue/` 根層 | 5 | 1,552 |
 | `Imervue/plugin/` | 10 | 2,243 |
 | `Imervue/system/` | 22 | 2,140 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,661** | **314,944** |
+| **總計** | **1,661** | **315,118** |
 
-其中 `Imervue/` 套件本身 759 檔 / 163,868 行。
+其中 `Imervue/` 套件本身 759 檔 / 163,954 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -255,11 +255,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,766 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,731 | 繁體中文 |
-| `chinese.py` | 2,732 | 簡體中文 |
-| `japanese.py` | 2,745 | 日文 |
-| `korean.py` | 2,743 | 韓文 |
+| `english.py` | 2,779 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,744 | 繁體中文 |
+| `chinese.py` | 2,745 | 簡體中文 |
+| `japanese.py` | 2,758 | 日文 |
+| `korean.py` | 2,756 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -430,9 +430,9 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `input_controller.py` | 426 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
+| `input_controller.py` | 429 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
 | `key_input_handler.py` | 268 | 鍵盤事件路由（F8 HUD、F1-F5 色標籤、Esc、方向鍵） |
-| `key_action_dispatcher.py` | 350 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
+| `key_action_dispatcher.py` | 353 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
 | `drop_handler.py` | 75 | 拖放檔案/資料夾開啟 |
@@ -472,7 +472,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `delete.py` | 221 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
-| `batch_ops.py` | 314 | 批次重新命名 / 移動 / 複製 / 旋轉 |
+| `batch_ops.py` | 316 | 批次重新命名 / 移動 / 複製 / 旋轉 |
 | `compare_dialog.py` | 582 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
@@ -525,7 +525,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-163 個檔、32,858 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+163 個檔、32,867 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -538,7 +538,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_drawing.py` | 417 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
-| `annotation_dialog.py` | 809 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
+| `annotation_dialog.py` | 811 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
 | `annotation_file_actions.py` | 184 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入）、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
 | `dialog_rows.py` | 98 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框）、`image_save_filter()`（PNG / JPEG / TIFF 存檔篩選）；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
@@ -609,7 +609,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 批次 / 匯出 / 管理
 
 `batch_convert_dialog.py`(364) · `batch_export_dialog.py`(386) · `export_dialog.py`(218) · `export_source.py`(36) `open_export_source()`：兩個匯出共用的來源（SVG 點陣化、依 EXIF 轉正、套 recipe；輸出不帶 EXIF，所以轉向烘進像素）·
-`optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(387) · `contact_sheet_dialog.py`(187) ·
+`optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(388) · `contact_sheet_dialog.py`(187) ·
 `web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(517) ·
 `duplicate_detection_dialog.py`(561) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(303) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
@@ -619,8 +619,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `library_search_dialog.py`(227) · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(176) ·
 `similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(531) ·
-`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(184) · `auto_tag_dialog.py`(172) ·
-`keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(191) ·
+`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(188) · `auto_tag_dialog.py`(172) ·
+`keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(193) ·
 `gps_geotag_dialog.py`(90) · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
 `events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(120) ·
 `bookmark_dialog.py`(349) · `staging_tray_dialog.py`(184) · `reference_panel_dialog.py`(295) ·
@@ -642,7 +642,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | --- | ---: | --- |
 | `extra_tools_menu.py` | 828 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
 | `right_click_menu.py` | 870 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
-| `file_menu.py` | 521 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
+| `file_menu.py` | 522 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 334 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
@@ -653,7 +653,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,118 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,121 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -764,7 +764,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 273 + `export_utils.py`(231) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(540)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(127)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(543)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(127)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,863 行）
 
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-838 個檔、136,870 行。`pyproject.toml` 定義三個互斥層級 marker：
+838 個檔、136,958 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

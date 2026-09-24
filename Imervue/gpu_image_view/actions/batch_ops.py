@@ -287,7 +287,9 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
         main_gui.load_tile_grid_async(main_gui.model.images)
 
     if hasattr(main_gui.main_window, "toast"):
-        msg = f"Rotated {count}/{count + failed} file(s)"
+        msg = language_wrapper.language_word_dict.get(
+            "batch_rotate_done", "Rotated {done}/{total} file(s)",
+        ).format(done=count, total=count + failed)
         if failed:
             main_gui.main_window.toast.info(msg)
         else:

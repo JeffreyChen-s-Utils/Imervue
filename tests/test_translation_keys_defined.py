@@ -123,3 +123,63 @@ def test_every_looked_up_key_is_in_the_english_dictionary():
         if key not in english_word_dict
     )
     assert missing == []
+
+
+_TOAST_LEVELS = {"success", "info", "error", "warning"}
+
+
+def _string_text(node) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        return "".join(v.value for v in node.values if isinstance(v, ast.Constant))
+    return None
+
+
+def _hard_coded_toasts(source: str) -> list[tuple[int, str]]:
+    """Return ``(line, text)`` for each toast given literal English, directly or via a local."""
+    found = []
+    for fn in ast.walk(ast.parse(source)):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        locals_ = {
+            n.targets[0].id: _string_text(n.value)
+            for n in ast.walk(fn)
+            if isinstance(n, ast.Assign) and len(n.targets) == 1
+            and isinstance(n.targets[0], ast.Name) and _string_text(n.value) is not None
+        }
+        for n in ast.walk(fn):
+            if not (isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute)
+                    and n.func.attr in _TOAST_LEVELS and n.args
+                    and "toast" in ast.unparse(n.func.value)):
+                continue
+            arg = n.args[0]
+            text = _string_text(arg)
+            if text is None and isinstance(arg, ast.Name):
+                text = locals_.get(arg.id)
+            if text and re.search(r"[A-Za-z]{3,}", text):
+                found.append((n.lineno, text))
+    return found
+
+
+def test_toast_detector():
+    source = "\n".join((
+        "def f(ui, lang, n):",
+        "    ui.toast.info(f'Rotated {n} file(s)')",
+        "    msg = 'Done'",
+        "    ui.toast.success(msg)",
+        "    ui.toast.info(lang.get('k', 'Fine'))",
+        "    ui.toast.info(f'{n}%')",
+    ))
+    assert [line for line, _ in _hard_coded_toasts(source)] == [2, 4]
+
+
+def test_no_toast_shows_hard_coded_english():
+    """A toast with a literal (or f-string) message shows English in every language."""
+    found = sorted(
+        f"{path.relative_to(_ROOT.parent).as_posix()}:{line} {text!r}"
+        for path, source in _sources()
+        for line, text in _hard_coded_toasts(source)
+    )
+    assert found == []
+

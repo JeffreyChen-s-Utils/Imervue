@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 
+from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.gpu_image_view.actions.delete import (
     delete_current_image,
     delete_selected_tiles,
@@ -347,4 +348,6 @@ class KeyActionDispatcher:
             anim.set_speed(anim.speed * factor)
             mw = view.main_window
             if hasattr(mw, "toast"):
-                mw.toast.info(f"Speed: {anim.speed:.2f}x")
+                lang = language_wrapper.language_word_dict
+                mw.toast.info(lang.get("anim_speed_toast", "Speed: {speed}x").format(
+                    speed=f"{anim.speed:.2f}"))

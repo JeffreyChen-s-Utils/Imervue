@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QFileDialog, QMenu
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.tile_layout import is_active_thumbnail_choice
 from Imervue.gpu_image_view.images.image_loader import open_path
-from Imervue.gui.file_filters import viewer_filter
+from Imervue.gui.file_filters import translated_filter, viewer_filter
 from Imervue.menu.recent_menu import rebuild_recent_menu, build_recent_menu
 from Imervue.user_settings.recent_image import add_recent_folder, add_recent_image
 from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -348,7 +348,7 @@ def _register_assoc(ui: ImervueMainWindow):
         if hasattr(ui, "toast"):
             ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
     elif hasattr(ui, "toast"):
-        ui.toast.info(f"Error: {msg}")
+        ui.toast.info(lang.get("generic_error", "Error: {error}").format(error=msg))
 
 
 def _paste_from_clipboard(ui: ImervueMainWindow) -> None:
@@ -405,7 +405,7 @@ def _unregister_assoc(ui: ImervueMainWindow):
         if hasattr(ui, "toast"):
             ui.toast.info(lang.get("file_assoc_need_admin", "Administrator privileges required"))
     elif hasattr(ui, "toast"):
-        ui.toast.info(f"Error: {msg}")
+        ui.toast.info(lang.get("generic_error", "Error: {error}").format(error=msg))
 
 
 def _open_shortcut_settings(ui: ImervueMainWindow):
@@ -436,7 +436,7 @@ def _save_session(ui: ImervueMainWindow) -> None:
         ui,
         lang.get("session_save", "Save Session"),
         start,
-        f"Imervue session (*{SESSION_EXT})",
+        translated_filter("file_filter_session", "Imervue session", (SESSION_EXT,)),
     )
     if not file_path:
         return
@@ -457,7 +457,7 @@ def _load_session(ui: ImervueMainWindow) -> None:
         ui,
         lang.get("session_load", "Load Session"),
         start,
-        f"Imervue session (*{SESSION_EXT})",
+        translated_filter("file_filter_session", "Imervue session", (SESSION_EXT,)),
     )
     if not file_path:
         return
@@ -465,7 +465,8 @@ def _load_session(ui: ImervueMainWindow) -> None:
         data = load_session_from_path(file_path)
     except (OSError, ValueError) as exc:
         if hasattr(ui, "toast"):
-            ui.toast.info(f"Session load failed: {exc}")
+            ui.toast.info(language_wrapper.language_word_dict.get(
+                "session_load_failed", "Session load failed: {error}").format(error=exc))
         return
     counts = restore_session(ui, data)
     if hasattr(ui, "toast"):

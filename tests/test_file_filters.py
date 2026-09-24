@@ -58,9 +58,21 @@ def test_open_image_dialog_offers_heif_and_jxl(monkeypatch):
     assert "*.heic" in seen[0] and "*.jxl" in seen[0]
 
 
-# Labels that are format or product names, the same in every language.
+# Labels that are format or product names, the same in every language; "{}" is
+# an f-string label that is itself a placeholder (a format name).
 _NAME_LABELS = {"BMP", "CSV", "Cube LUT", "Cubism", "GIF", "JPEG", "JSON", "MP4", "PDF", "PNG",
-                "PSD", "Photoshop", "TIFF", "WebM", "WebP"}
+                "PSD", "Photoshop", "TIFF", "WebM", "WebP", "Adobe Swatch",
+                "Adobe Swatch Exchange", "{}"}
+
+
+def _literal_text(node):
+    """The text of a string literal; an f-string's placeholders become ``{}``."""
+    import ast
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        return "".join(v.value if isinstance(v, ast.Constant) else "{}" for v in node.values)
+    return None
 
 
 def test_no_hard_coded_filter_label_outside_format_names():
@@ -69,13 +81,13 @@ def test_no_hard_coded_filter_label_outside_format_names():
     import re
     from pathlib import Path
     root = Path(__file__).resolve().parent.parent / "Imervue"
-    label = re.compile(r"(?:^|;;)([^;()]+?) \(\*\.")
+    label = re.compile(r"(?:^|;;)([^;()]+?) \(\*(?:\.|\{\})")
     found = sorted(
         f"{path.relative_to(root.parent).as_posix()}: {text}"
         for path in root.rglob("*.py")
         if "multi_language" not in path.parts and path.name != "file_filters.py"
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
-        if isinstance(node, ast.Constant) and isinstance(node.value, str)
-        for text in label.findall(node.value) if text not in _NAME_LABELS
+        if _literal_text(node) is not None
+        for text in label.findall(_literal_text(node)) if text not in _NAME_LABELS
     )
     assert found == []

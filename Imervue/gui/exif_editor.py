@@ -169,7 +169,9 @@ class ExifEditorDialog(QDialog):
         except Exception as e:  # noqa: BLE001 - piexif raises open-ended types
             logger.warning("EXIF save failed for %s", self._path, exc_info=True)
             if hasattr(main_window, "toast"):
-                main_window.toast.error(f"EXIF save failed: {e}")
+                lang = language_wrapper.language_word_dict
+                main_window.toast.error(
+                    lang.get("exif_save_failed", "EXIF save failed: {error}").format(error=e))
             return
 
         if hasattr(main_window, "toast"):

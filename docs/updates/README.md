@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-85 | 2026-09-24 | Translate twelve hard-coded toasts and four f-string file filters | #i18n | [2026-09](2026-09.md) |
 | U-20260924-84 | 2026-09-24 | Tie every deferred bound-method call to its owner | #fix #qt | [2026-09](2026-09.md) |
 | U-20260924-83 | 2026-09-24 | Keep batch-rotated, upscaled and retouched copies upright | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-82 | 2026-09-24 | Keep converted, exported, stripped and sanitised copies upright | #fix #exif | [2026-09](2026-09.md) |

@@ -98,6 +98,22 @@ class TestBatchRotate:
         with Image.open(path) as img:
             assert upright(img).size == (40, 20)   # a real quarter turn of the 20x40 shown
 
+    def test_result_toast_follows_the_ui_language(self, tmp_path):
+        from PIL import Image
+
+        from Imervue.gpu_image_view.actions.batch_ops import batch_rotate
+        from Imervue.multi_language.language_wrapper import language_wrapper
+        good = tmp_path / "good.png"
+        Image.new("RGB", (4, 2)).save(good)
+        gui = self._gui([str(good)])
+        previous = language_wrapper.language
+        language_wrapper.reset_language("Traditional_Chinese")
+        try:
+            batch_rotate(gui, [str(good)], 90)
+        finally:
+            language_wrapper.reset_language(previous)
+        assert gui.main_window.toast.calls == [("success", "已旋轉 1/1 個檔案")]
+
     def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
         from Imervue.gpu_image_view.actions import batch_ops
 

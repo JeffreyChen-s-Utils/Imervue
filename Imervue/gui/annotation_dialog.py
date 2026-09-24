@@ -776,7 +776,9 @@ def open_annotation_for_path(
     except Exception as exc:
         logger.exception("annotation load failed: %s", path)
         if hasattr(main_gui.main_window, "toast"):
-            main_gui.main_window.toast.error(f"Load failed: {exc}")
+            lang = language_wrapper.language_word_dict
+            main_gui.main_window.toast.error(
+                lang.get("annotation_load_failed", "Load failed: {error}").format(error=exc))
         return
 
     def _reload(saved_path: str) -> None:
