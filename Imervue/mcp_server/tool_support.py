@@ -26,7 +26,15 @@ def open_upright(image_path: Path):
     """
     from PIL import Image
 
+    from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
     from Imervue.image.shown import as_shown
+    ext = Path(image_path).suffix.lower()
+    if ext in RAW_EXTENSIONS:
+        # Developed like the viewer does; Pillow would open the small embedded
+        # preview (or nothing at all for a CR3).
+        from Imervue.image.raw_loader import develop_raw
+        return Image.fromarray(develop_raw(image_path))
+    ensure_pillow_opener(ext)   # HEIC / AVIF / JPEG XL: "cannot identify image file" without it
     with Image.open(image_path) as opened:
         opened.load()
         shown = as_shown(opened)

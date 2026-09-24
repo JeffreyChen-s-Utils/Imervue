@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-29 | 2026-09-25 | MCP tools open HEIC and develop camera RAW like the viewer | #fix #mcp | [2026-09](2026-09.md) |
 | U-20260925-28 | 2026-09-25 | Refactor: RAW development moves to the Qt-free raw_loader.develop_raw | #refactor | [2026-09](2026-09.md) |
 | U-20260925-27 | 2026-09-25 | XMP / annotation sidecars, material library, sessions and pet scripts are written in one step | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260925-26 | 2026-09-25 | Refactor: replace_atomically moves to system/atomic_write | #refactor | [2026-09](2026-09.md) |

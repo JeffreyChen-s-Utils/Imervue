@@ -84,20 +84,29 @@ def read_image_metadata(path: str) -> dict[str, Any]:
 def _populate_basic_image_info(image_path: Path, out: dict[str, Any]) -> None:
     from PIL import Image
 
-    from Imervue.image.orientation import QUARTER_TURN_CODES, exif_orientation
+    from Imervue.image.dimensions import image_dimensions
+    from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    ext = image_path.suffix.lower()
+    if ext in RAW_EXTENSIONS:
+        # libraw's size, not the embedded preview's Pillow would report.
+        size = image_dimensions(image_path)
+        if size is None:
+            out["error"] = "image probe failed: libraw can't read this RAW file"
+            return
+        out["width"], out["height"] = size
+        out["format"], out["mode"] = ext.lstrip(".").upper(), "RGB"
+        return
+    ensure_pillow_opener(ext)   # HEIC / AVIF / JPEG XL
     try:
         with Image.open(image_path) as img:
-            # The upright size the other tools (crop, resize, …) work in.
-            width, height = img.size
-            if exif_orientation(img) in QUARTER_TURN_CODES:
-                width, height = height, width
-            out["width"] = int(width)
-            out["height"] = int(height)
             out["format"] = img.format or ""
             out["mode"] = img.mode
     except IMAGE_READ_ERRORS as exc:
         out["error"] = f"image probe failed: {exc}"
+        return
+    # The upright size the other tools (crop, resize, …) work in.
+    out["width"], out["height"] = image_dimensions(image_path) or (0, 0)
 
 
 def _populate_exif(image_path: Path, out: dict[str, Any]) -> None:
