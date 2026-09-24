@@ -47,6 +47,34 @@ _QUANTIZE_LEVEL_BITS = 8 - _QUANTIZE_BITS
 _MERGE_GAP_FRAC = 0.4  # bridge boxes within 40% of the median box edge
 
 
+def _nudenet_corners(box) -> tuple[int, int, int, int]:
+    """Convert a NudeNet ``box`` to the ``(x1, y1, x2, y2)`` corners every censor step takes.
+
+    NudeNet 3 reports ``[x, y, width, height]``. Used as corners, a region at
+    (300, 400) sized 100 x 80 became the inverted box (300, 400) -> (100, 80),
+    and the detected region was left uncensored.
+    """
+    x, y, w, h = (int(v) for v in box[:4])
+    return x, y, x + w, y + h
+
+
+def _open_upright(src: str):
+    """Open *src* for censoring, turned upright by its EXIF orientation.
+
+    The detectors read the file with OpenCV, which applies the EXIF
+    orientation, so their boxes are in upright coordinates. Censoring the
+    stored pixels of a tagged photo (a portrait phone shot is stored sideways)
+    put every box in the wrong place and left the detected region uncovered.
+    The saved result carries no EXIF, so upright pixels are also what it needs.
+    """
+    from PIL import Image, ImageOps
+    with Image.open(src) as opened:
+        img = ImageOps.exif_transpose(opened)
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGBA")
+    return img
+
+
 def _detect_image_mode(src: str) -> str:
     """Heuristic: anime/illustration images have fewer unique quantized colors."""
     import numpy as np
