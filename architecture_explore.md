@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `d9bf8df` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `a0fcd8f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,10 +66,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 865 | 141,766 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
+| `tests/` | 865 | 141,832 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,136 |
 | `Imervue/gui/` | 165 | 33,058 |
-| `Imervue/puppet/` | 57 | 15,286 |
+| `Imervue/puppet/` | 57 | 15,292 |
 | `Imervue/image/` | 125 | 14,427 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,929 |
 | `Imervue/multi_language/` | 8 | 14,079 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,130 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,304 |
-| **總計** | **1,701** | **322,135** |
+| **總計** | **1,701** | **322,222** |
 
-其中 `Imervue/` 套件本身 772 檔 / 166,065 行。
+其中 `Imervue/` 套件本身 772 檔 / 166,086 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -655,7 +655,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,121 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,136 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -673,8 +673,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `compositing.py` | 438 | 純 NumPy 圖層合成 |
 | `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
-| `document_io.py` | 445 | 原生 `.imervue` NPZ bundle 存讀 |
-| `psd_io.py` | 866 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
+| `document_io.py` | 450 | 原生 `.imervue` NPZ bundle 存讀 |
+| `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
 | `undo_stack.py` | 192 | 每文件的 undo / redo |
 | `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
 | `blend_modes.py` | 63 | 共用 RGB 混色模式數學 |
@@ -725,7 +725,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `comic_stamps.py`(266) + `stamp_dock.py`(88) · `comic_formats.py`(161) · `flash_effect.py`(132) 爆炸效果 ·
 `frame_splitter.py`(137) · `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
 `page_numbering.py`(156) · `page_dock.py`(348) 頁面瀏覽 · `paint_project.py`(147) 多頁專案 +
-`paint_project_io.py`(111) + `paint_project_export.py`(130) · `new_project_dialog.py`(105)
+`paint_project_io.py`(114) + `paint_project_export.py`(130) · `new_project_dialog.py`(105)
 
 #### 動畫
 
@@ -782,7 +782,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-57 個檔、15,286 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+57 個檔、15,292 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -791,7 +791,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `document.py` | 395 | `.puppet` v1 檔案格式的純 Python 資料模型（`Drawable` / `Deformer` / `Parameter` / `Motion` / `HitArea`） |
-| `document_io.py` | 878 | `.puppet` zip 容器讀寫 |
+| `document_io.py` | 884 | `.puppet` zip 容器讀寫 |
 | `cubism_import.py` | 549 | Live2D Cubism v3 檔案格式匯入 |
 | `cubism_native_bridge.py` | 443 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
 | `cubism_native_convert.py` | 641 | `.moc3` → `PuppetDocument` 轉換 |
@@ -965,7 +965,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-865 個檔、141,766 行。`pyproject.toml` 定義三個互斥層級 marker：
+865 個檔、141,832 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

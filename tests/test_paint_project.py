@@ -294,3 +294,19 @@ def test_load_manifest_no_pages_raises(tmp_path):
         zf.writestr("manifest.json", json.dumps(manifest))
     with pytest.raises(ValueError, match="no pages"):
         load_project(path)
+
+
+def test_a_project_save_that_fails_midway_keeps_the_old_bundle(tmp_path, monkeypatch):
+    from Imervue.paint import paint_project_io
+    path = tmp_path / "comic.imervue-proj"
+    save_project(_three_page_project(), path)
+    before = path.read_bytes()
+
+    def boom(_document):
+        raise MemoryError("out of memory")
+
+    monkeypatch.setattr(paint_project_io, "save_document_to_buffer", boom)
+    with pytest.raises(MemoryError):
+        save_project(_three_page_project(), path)
+    assert path.read_bytes() == before
+    assert [p.name for p in tmp_path.iterdir()] == ["comic.imervue-proj"]

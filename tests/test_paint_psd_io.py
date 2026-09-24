@@ -430,3 +430,20 @@ def test_parse_image_data_section_decodes_rle_compression():
     assert np.array_equal(out[..., 1], planes[1])
     assert np.array_equal(out[..., 2], planes[2])
     assert np.array_equal(out[..., 3], planes[-1])
+
+
+def test_a_save_that_fails_midway_keeps_the_old_file(tmp_path, monkeypatch):
+    """Ctrl+S truncated the open PSD first; an error mid-save left nothing usable."""
+    from Imervue.paint import psd_io
+    path = tmp_path / "art.psd"
+    save_psd(_make_doc(), path)
+    before = path.read_bytes()
+
+    def boom(*_args, **_kwargs):
+        raise MemoryError("out of memory while packing the layers")
+
+    monkeypatch.setattr(psd_io, "_pack_layer_and_mask_section", boom)
+    with pytest.raises(MemoryError):
+        save_psd(_make_doc(), path)
+    assert path.read_bytes() == before
+    assert [p.name for p in tmp_path.iterdir()] == ["art.psd"]      # no .tmp left behind

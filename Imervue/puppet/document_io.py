@@ -12,6 +12,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from Imervue.image.in_place_save import replace_atomically
 from Imervue.puppet.document import (
     BLEND_MODES,
     DEFORMER_TYPES,
@@ -89,11 +90,16 @@ def load_puppet(path: str | Path) -> PuppetDocument:
 def save_puppet(doc: PuppetDocument, path: str | Path) -> None:
     """Write ``doc`` to ``path`` as a ``.puppet`` zip archive.
 
-    Overwrites if the file already exists. Creates parent directories
+    Overwrites if the file already exists — in one step, so a failure
+    mid-write leaves the previous file whole. Creates parent directories
     on demand.
     """
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
+    replace_atomically(p, lambda tmp: _write_puppet(doc, tmp))
+
+
+def _write_puppet(doc: PuppetDocument, p: Path) -> None:
     with zipfile.ZipFile(p, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(_PUPPET_JSON, _puppet_json_bytes(doc))
         for tex_path, tex_bytes in doc.textures.items():
