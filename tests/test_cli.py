@@ -5,6 +5,7 @@ import argparse
 import json
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.cli import (
@@ -952,6 +953,84 @@ _EXPECTED = {'info': ('print image dimensions / format',
                 '_StoreAction')]),
  'list-ops': ('list available subcommands',
               [(('--json',), 'json', False, None, False, 0, 'emit JSON', '_StoreTrueAction')])}
+
+
+# --- decode like the viewer: upright, sRGB, every format it opens ----------
+
+def _portrait_jpeg(path):
+    """40x20 stored, EXIF orientation 6: shown 20x40, marker in the shown top-right."""
+    arr = np.zeros((20, 40, 3), dtype=np.uint8)
+    arr[0, 0] = (255, 0, 0)                      # stored top-left
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.fromarray(arr).save(path, exif=exif, quality=100, subsampling=0)
+    return path
+
+
+@pytest.mark.parametrize(("command", "extra", "name"), [
+    ("convert", ["--format", "PNG"], "p.png"),
+    ("resize", ["--max", "400"], "p.jpg"),
+    ("thumbnail", ["--size", "400"], "p.png"),
+    ("watermark", ["--text", "x"], "p.png"),
+    ("strip", [], "p.jpg"),
+    ("auto-orient", [], "p.png"),
+    ("dehaze", [], "p.png"),
+])
+def test_tagged_photo_comes_out_upright(tmp_path, command, extra, name):
+    """The outputs carry no EXIF, so a portrait phone photo came out sideways."""
+    src = _portrait_jpeg(tmp_path / "p.jpg")
+    out_dir = tmp_path / "out"
+    assert main([command, str(src), *extra, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / name) as out:
+        assert out.size == (20, 40)
+        assert 0x0112 not in out.getexif()
+
+
+def test_colour_profile_is_converted_to_srgb(tmp_path):
+    """Dropping a Display P3 profile without converting washed the colours out."""
+    from _icc_profiles import DISPLAY_P3
+    src = tmp_path / "p3.png"
+    Image.new("RGB", (4, 4), (0, 255, 0)).save(src, icc_profile=DISPLAY_P3)
+    out_dir = tmp_path / "out"
+    assert main(["convert", str(src), "--format", "PNG", "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / "p3.png") as out:
+        red, green, _blue, _alpha = out.getpixel((0, 0))
+        assert "icc_profile" not in out.info
+        assert red == 0 and green == 255      # P3 green is outside sRGB: clipped, not faded
+
+
+def test_heic_input_is_opened(tmp_path, capsys):
+    """HEIC was listed as an input but its opener never registered, so info crashed."""
+    pytest.importorskip("pillow_heif")
+    from Imervue.image.heif_support import ensure_heif_opener
+    ensure_heif_opener()
+    src = tmp_path / "a.heic"
+    Image.new("RGB", (64, 32)).save(src)
+    assert main(["info", str(src), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)[0]["width"] == 64
+
+
+def test_info_reports_the_upright_size(tmp_path, capsys):
+    src = _portrait_jpeg(tmp_path / "p.jpg")
+    assert main(["info", str(src), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)[0]
+    assert (payload["width"], payload["height"]) == (20, 40)
+
+
+def test_an_unreadable_file_is_reported_and_the_rest_still_run(tmp_path, capsys):
+    good = _save(tmp_path / "a.png", size=(10, 10))
+    (tmp_path / "b.png").write_bytes(b"not a png")
+    assert main(["info", str(good), str(tmp_path / "b.png"), "--json"]) == 1
+    captured = capsys.readouterr()
+    assert [item["width"] for item in json.loads(captured.out)] == [10]
+    assert "b.png" in captured.err
+
+
+def test_a_writer_counts_an_unreadable_file_as_an_error(tmp_path, capsys):
+    (tmp_path / "bad.png").write_bytes(b"not a png")
+    assert main(["convert", str(tmp_path / "bad.png"), "--format", "PNG",
+                 "--out", str(tmp_path / "out")]) == 1
+    assert "1 errors" in capsys.readouterr().err
 
 
 def _describe(parser: argparse.ArgumentParser) -> dict:

@@ -168,6 +168,8 @@ py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
 | `preset` / `pipeline` | Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen |
 | `list-ops` | Alle Unterbefehle auflisten (`--json` für maschinenlesbare Ausgabe) |
 
+Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; HEIC- / AVIF- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet.
+
 Gemeinsame Flags: `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `--version`.
 
 ---

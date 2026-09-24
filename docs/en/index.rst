@@ -2433,6 +2433,8 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
    * - ``list-ops``
      - List every subcommand (``--json`` for machine-readable output)
 
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, and HEIC / AVIF / JPEG XL inputs are read when their optional backend is installed. A file that can't be read is reported and the rest still run.
+
 Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
 (list actions, write nothing), ``--overwrite`` and ``--version``.
 

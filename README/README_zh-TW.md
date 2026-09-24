@@ -167,6 +167,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 | `preset` / `pipeline` | 依名稱套用已存的顯影預設；執行有序的 JSON 運算管線 |
 | `list-ops` | 列出所有子指令（`--json` 輸出機器可讀格式） |
 
+每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；安裝了選用後端時也能讀取 HEIC / AVIF / JPEG XL。無法讀取的檔案會被回報，其餘檔案照常處理。
+
 共用旗標：`--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite`、`--version`。
 
 ---

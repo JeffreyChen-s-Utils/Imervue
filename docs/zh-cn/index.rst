@@ -2037,6 +2037,8 @@ Windows 上：确认 **Hide when other app is fullscreen**
    * - ``list-ops``
      - 列出所有子命令(``--json`` 输出机器可读格式)
 
+每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；安装了可选后端时也能读取 HEIC / AVIF / JPEG XL。无法读取的文件会被报告，其余文件照常处理。
+
 共用标志:``--out``\ (输出目录)、``--recursive``、``--dry-run``\ (只列出动作、不写入)、``--overwrite`` 与 ``--version``。
 
 ----

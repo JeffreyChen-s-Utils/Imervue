@@ -121,10 +121,3 @@ def read_orientation(path: str) -> int:
             return exif_orientation(img)
     except IMAGE_READ_ERRORS:
         return _TOP_LEFT
-
-
-def oriented_array(path: str) -> np.ndarray:
-    """Load *path* as RGBA and apply its EXIF orientation."""
-    with Image.open(path) as img:
-        rgba = np.array(img.convert("RGBA"))
-    return transform_for_orientation(rgba, read_orientation(path))

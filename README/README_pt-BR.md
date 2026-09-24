@@ -168,6 +168,8 @@ py -m Imervue.cli list-ops          # imprime todos os subcomandos disponíveis
 | `preset` / `pipeline` | Aplicar uma predefinição de revelação salva pelo nome; executar um pipeline JSON ordenado |
 | `list-ops` | Listar todos os subcomandos (`--json` para saída legível por máquina) |
 
+Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, e entradas HEIC / AVIF / JPEG XL são lidas quando o backend opcional está instalado. Um arquivo ilegível é relatado e o restante é processado mesmo assim.
+
 Flags compartilhadas: `--out` (diretório de saída), `--recursive`, `--dry-run` (listar ações sem escrever nada), `--overwrite` e `--version`.
 
 ---

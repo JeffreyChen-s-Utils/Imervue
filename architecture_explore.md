@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `c174a3f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `0b729c6` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 847 | 138,496 |
+| `tests/` | 848 | 138,637 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,120 |
 | `Imervue/gui/` | 164 | 32,975 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 121 | 13,602 |
+| `Imervue/image/` | 121 | 13,595 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,908 |
 | `Imervue/multi_language/` | 8 | 14,049 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
 | `Imervue/library/` | 32 | 4,177 |
-| `Imervue/menu/` | 11 | 3,579 |
-| `Imervue/` 根層 | 5 | 1,551 |
+| `Imervue/menu/` | 11 | 3,583 |
+| `Imervue/` 根層 | 5 | 1,576 |
 | `Imervue/plugin/` | 10 | 2,243 |
 | `Imervue/system/` | 22 | 2,140 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,674** | **317,175** |
+| **總計** | **1,676** | **317,425** |
 
-其中 `Imervue/` 套件本身 765 檔 / 164,577 行。
+其中 `Imervue/` 套件本身 765 檔 / 164,599 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -206,7 +206,7 @@ ImervueMainWindow
 | --- | ---: | --- |
 | `__main__.py` | 128 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
 | `Imervue_main_window.py` | 701 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
-| `cli.py` | 577 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑 |
+| `cli.py` | 602 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `_open_shown`（註冊 HEIC/AVIF/JXL opener、`as_shown` 轉正與轉 sRGB），讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
 ### 6.2 `Imervue/system/`
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-121 個模組、13,602 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+121 個模組、13,595 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -336,7 +336,7 @@ ImervueMainWindow
 `auto_straighten.py`(92) Hough 水平線偵測 · `lens_correction.py`(150) 畸變/暗角/色差 ·
 `distort.py`(65) swirl/pinch/ripple · `polar.py`(68) 極座標 · `kaleidoscope.py`(66) ·
 `equirectangular.py`(77) 360° tiny planet · `resample.py`(43) 共用反向映射重採樣 ·
-`orientation.py`(130) EXIF orientation：`QUARTER_TURN_CODES`、`exif_orientation`、`transpose_for`（轉完會清掉結果上的 EXIF / XMP 轉向標籤，避免再轉一次）與 `oriented_array` 烘焙
+`orientation.py`(123) EXIF orientation：`QUARTER_TURN_CODES`、`exif_orientation`、`transpose_for`（轉完會清掉結果上的 EXIF / XMP 轉向標籤，避免再轉一次）與 `strip_xmp_orientation`
 
 #### 藝術效果 / 疊加
 
@@ -641,7 +641,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `extra_tools_menu.py` | 828 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
-| `right_click_menu.py` | 870 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
+| `right_click_menu.py` | 874 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
 | `file_menu.py` | 522 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-845 個檔、138,347 行。`pyproject.toml` 定義三個互斥層級 marker：
+847 個檔、138,575 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

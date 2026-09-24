@@ -2444,6 +2444,8 @@ o Qt**, o que o torna utilizável em scripts, etapas de CI e servidores sem disp
    * - ``list-ops``
      - Listar todos os subcomandos (``--json`` para saída legível por máquina)
 
+Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, e entradas HEIC / AVIF / JPEG XL são lidas quando o backend opcional está instalado. Um arquivo ilegível é relatado e o restante é processado mesmo assim.
+
 Flags compartilhadas: ``--out`` (diretório de saída), ``--recursive``, ``--dry-run`` (listar ações sem escrever nada), ``--overwrite`` e ``--version``.
 
 ----
