@@ -36,6 +36,22 @@ def _make_mock_main_window():
     return mw
 
 
+@pytest.fixture(autouse=True)
+def _isolated_languages(monkeypatch):
+    """Give every test copies of the global language state.
+
+    Loading a plugin merges its strings into the built-in language dicts in
+    place and can register a new language on the shared ``language_wrapper``;
+    without copies those keys and languages outlive the test.
+    """
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    copies = {code: dict(words) for code, words in language_wrapper.choose_language_dict.items()}
+    monkeypatch.setattr(language_wrapper, "choose_language_dict", copies)
+    monkeypatch.setattr(language_wrapper, "plugin_languages", dict(language_wrapper.plugin_languages))
+    monkeypatch.setattr(language_wrapper, "language", language_wrapper.language)
+    monkeypatch.setattr(language_wrapper, "language_word_dict", copies[language_wrapper.language])
+
+
 # ===========================
 # ImervuePlugin base class
 # ===========================
@@ -305,8 +321,6 @@ class TestPluginManager:
         pm.discover_and_load([plugin_dir])
 
         assert language_wrapper.language_word_dict.get("trans_test_key") == "Test Value"
-        # Cleanup
-        language_wrapper.language_word_dict.pop("trans_test_key", None)
 
     def test_unload_all(self, tmp_path):
         """unload_all should call on_plugin_unloaded and clear the list."""
@@ -621,9 +635,17 @@ class TestPipInstallerTranslations:
             assert set(d.keys()) == en_keys, f"{lang} keys mismatch"
 
     def test_register_translations(self):
-        from Imervue.plugin.pip_installer import register_translations
-        # Should not raise
+        from Imervue.multi_language.language_wrapper import language_wrapper
+        from Imervue.plugin.pip_installer import _TRANSLATIONS, register_translations
+        english = language_wrapper.choose_language_dict["English"]
+        taken = next(iter(_TRANSLATIONS["English"]))
+        english[taken] = "already here"
         register_translations()
+        for code, words in _TRANSLATIONS.items():
+            target = language_wrapper.choose_language_dict[code]
+            assert all(key in target for key in words), code
+        # Existing strings win over the installer's own.
+        assert english[taken] == "already here"
 
 
 # ===========================
