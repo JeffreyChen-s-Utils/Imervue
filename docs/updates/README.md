@@ -60,6 +60,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---|---|---|
 | U-20260924-100 | 2026-09-24 | Move the metadata-carrying save helpers into in_place_save | #refactor #metadata | [2026-09](2026-09.md) |
 | U-20260924-101 | 2026-09-24 | Keep metadata when Modify and the annotation editor save over a file; never write PNG into a RAW | #fix #metadata #data-loss | [2026-09](2026-09.md) |
+| U-20260924-102 | 2026-09-24 | AI Upscale: full-size RAW input, no PNG bytes under a .cr2 name, EXIF kept | #fix #metadata #data-loss | [2026-09](2026-09.md) |
 | U-20260924-99 | 2026-09-24 | Lossless Rotate and Rotate All keep JPEG bytes and file metadata | #fix #metadata #rotate | [2026-09](2026-09.md) |
 | U-20260924-98 | 2026-09-24 | Keep AI Upscale overwrite and EXIF Strip from truncating animated or multi-page files | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260924-97 | 2026-09-24 | Stop in-place rotate, crop and annotation saves from destroying RAW and multi-frame files | #fix #data-loss | [2026-09](2026-09.md) |

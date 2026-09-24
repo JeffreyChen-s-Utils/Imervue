@@ -27,8 +27,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.image.in_place_save import can_rewrite_in_place
-from Imervue.image.shown import as_shown
+from Imervue.gui.export_source import recipe_base_image
+from Imervue.image.in_place_save import (
+    can_rewrite_in_place, in_place_format, save_edited_copy, save_over_source,
+)
 from Imervue.gui.dialog_rows import action_button_row, folder_picker_row, path_browse_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -271,7 +273,8 @@ class _UpscaleWorker(QThread):
         if overwrite:
             return src
         stem = Path(src).stem
-        suffix = Path(src).suffix or ".png"
+        # A RAW / HEIC / SVG source can't be written back in its own format.
+        suffix = Path(src).suffix if in_place_format(src) else ".png"
         dst = str(Path(output_dir) / f"{stem}_x{scale}{suffix}")
         counter = 1
         while os.path.exists(dst):
@@ -281,17 +284,19 @@ class _UpscaleWorker(QThread):
         return dst
 
     @staticmethod
-    def _save(img, dst: str) -> None:
-        fmt_map = {
-            ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-            ".webp": "WEBP", ".bmp": "BMP",
-            ".tif": "TIFF", ".tiff": "TIFF",
-        }
-        ext = Path(dst).suffix.lower()
-        fmt = fmt_map.get(ext, "PNG")
-        if fmt == "JPEG" and img.mode == "RGBA":
+    def _decode(src: str):
+        """*src* as the viewer shows it: full-size RAW, sRGB, upright; opaque alpha dropped."""
+        img = recipe_base_image(src, None)
+        if img.getextrema()[3] == (255, 255):
             img = img.convert("RGB")
-        img.save(dst, format=fmt)
+        return img
+
+    def _save(self, src: str, img, dst: str) -> None:
+        """Write the upscaled *img* to *dst* in one step, keeping *src*'s EXIF."""
+        if self._overwrite:
+            save_over_source(src, img)
+        else:
+            save_edited_copy(src, img, dst)
 
     # -- run -----------------------------------------------------------------
 
@@ -326,12 +331,12 @@ class _UpscaleWorker(QThread):
                 failed += 1
                 continue
             try:
-                img = as_shown(Image.open(src))   # the output carries no EXIF
+                img = self._decode(src)
                 new_size = (img.width * scale, img.height * scale)
                 out_img = img.resize(new_size, resample)
                 dst = self._output_path(
                     src, self._output_dir, scale, self._overwrite)
-                self._save(out_img, dst)
+                self._save(src, out_img, dst)
                 success += 1
             except Exception as exc:
                 logger.exception("Upscale failed for %s: %s", src, exc,
@@ -373,7 +378,7 @@ class _UpscaleWorker(QThread):
                 failed += 1
                 continue
             try:
-                img = as_shown(Image.open(src))   # the output carries no EXIF
+                img = self._decode(src)
                 if img.mode not in ("RGB", "RGBA"):
                     img = img.convert("RGB")
 
@@ -398,7 +403,7 @@ class _UpscaleWorker(QThread):
 
                 dst = self._output_path(
                     src, self._output_dir, scale, self._overwrite)
-                self._save(out_img, dst)
+                self._save(src, out_img, dst)
                 success += 1
             except Exception as exc:
                 logger.exception("Upscale failed for %s: %s", src, exc,

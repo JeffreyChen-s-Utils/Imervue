@@ -163,16 +163,49 @@ def save_over_source(path: str | Path, edited: Image.Image) -> None:
     """
     if not can_rewrite_in_place(path):
         raise ValueError(f"{path} can't be saved back whole")
-    fmt = in_place_format(path)
-    with Image.open(path) as source:
-        kwargs = carried_save_kwargs(source, fmt, str(path))
-    kwargs.pop("icc_profile", None)
+    save_edited_copy(path, edited, path)
+
+
+def save_edited_copy(source_path: str | Path, edited: Image.Image, target: str | Path) -> None:
+    """Write *edited*, made from *source_path*, to *target* with the source's metadata.
+
+    The format follows *target*'s extension. A target in the source's own
+    format gets everything :func:`save_over_source` keeps; another format
+    gets the descriptive EXIF and DPI, which every writable format can hold.
+    An unreadable source just contributes nothing. Written in one step.
+    Raises ``ValueError`` for a *target* extension Imervue can't write, and
+    what Pillow raises when the save fails.
+    """
+    fmt = in_place_format(target)
+    if fmt is None:
+        raise ValueError(f"can't write {target}: unsupported extension")
+    kwargs = _edited_save_kwargs(source_path, fmt)
     out = edited
     if fmt == "JPEG":
         if out.mode not in ("RGB", "L", "CMYK"):
             out = out.convert("RGB")
-        if len(kwargs["qtables"]) < _JPEG_COLOUR_TABLES and out.mode != "L":
-            # A greyscale source has no chroma table for colour pixels to use.
-            del kwargs["qtables"], kwargs["subsampling"]
+        if len(kwargs.get("qtables", ())) < _JPEG_COLOUR_TABLES and out.mode != "L":
+            # No source tables, or a greyscale source's lone luma table.
+            kwargs.pop("qtables", None)
+            kwargs.pop("subsampling", None)
             kwargs["quality"] = 95
-    replace_atomically(path, lambda tmp: out.save(tmp, format=fmt, **kwargs))
+    replace_atomically(target, lambda tmp: out.save(tmp, format=fmt, **kwargs))
+
+
+def _edited_save_kwargs(source_path: str | Path, fmt: str) -> dict:
+    """Save options carrying *source_path*'s metadata into edited pixels written as *fmt*."""
+    try:
+        with Image.open(source_path) as source:
+            if in_place_format(source_path) == fmt:
+                kwargs = carried_save_kwargs(source, fmt, str(source_path))
+            else:
+                exif = descriptive_exif(source)
+                kwargs = {"exif": exif} if len(exif) else {}
+                if source.info.get("dpi"):
+                    kwargs["dpi"] = source.info["dpi"]
+    except IMAGE_READ_ERRORS:
+        return {"quality": 90} if fmt == "WEBP" else {}
+    kwargs.pop("icc_profile", None)   # the edited pixels are sRGB
+    if fmt == "WEBP" and "lossless" not in kwargs:
+        kwargs.setdefault("quality", 90)
+    return kwargs

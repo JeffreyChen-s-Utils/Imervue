@@ -256,6 +256,76 @@ class TestTraditionalMethods:
         with Image.open(path) as img:
             assert img.n_frames == 3 and img.size == (8, 4)
 
+    @staticmethod
+    def _photo_exif():
+        from PIL import Image
+        exif = Image.Exif()
+        exif[0x010F] = "Canon"
+        exif.get_ifd(0x8769)[0x9003] = "2020:01:02 03:04:05"
+        return exif
+
+    def test_overwrite_keeps_the_exif_and_replaces_in_one_step(self, tmp_path):
+        """The overwrite re-encoded at quality 75 and dropped the camera and capture date."""
+        from PIL import Image
+        from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+
+        path = tmp_path / "p.jpg"
+        Image.new("RGB", (10, 8), (30, 90, 160)).save(path, quality=95, exif=self._photo_exif())
+        _UpscaleWorker([str(path)], "", "trad:nearest", True, scale_override=2).run()
+        with Image.open(path) as img:
+            assert img.size == (20, 16)
+            assert img.getexif()[0x010F] == "Canon"
+            assert img.getexif().get_ifd(0x8769)[0x9003] == "2020:01:02 03:04:05"
+        assert [f.name for f in tmp_path.iterdir()] == ["p.jpg"]
+
+    def test_new_file_keeps_the_source_exif(self, tmp_path):
+        from PIL import Image
+        from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+
+        src = tmp_path / "p.png"
+        Image.new("RGB", (10, 8)).save(src, exif=self._photo_exif())
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        _UpscaleWorker([str(src)], str(out_dir), "trad:nearest", False, scale_override=2).run()
+        with Image.open(out_dir / "p_x2.png") as out:
+            assert out.getexif().get_ifd(0x8769)[0x9003] == "2020:01:02 03:04:05"
+
+    def test_raw_source_is_developed_full_size_and_written_as_png(self, tmp_path, monkeypatch):
+        """A .cr2 source produced 'shot_x2.cr2' holding PNG bytes, from the small preview."""
+        import numpy as np
+        from PIL import Image
+        from Imervue.gpu_image_view.images import image_loader
+        from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+
+        monkeypatch.setattr(image_loader, "_load_raw",
+                            lambda _p, thumbnail: np.full((12, 18, 3), 70, dtype=np.uint8))
+        raw = tmp_path / "shot.cr2"
+        Image.new("RGB", (6, 4)).save(raw, format="TIFF")   # Pillow sees only a preview
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        _UpscaleWorker([str(raw)], str(out_dir), "trad:nearest", False, scale_override=2).run()
+        assert [f.name for f in out_dir.iterdir()] == ["shot_x2.png"]
+        with Image.open(out_dir / "shot_x2.png") as out:
+            assert out.format == "PNG"
+            assert out.size == (36, 24)                    # 2x the developed RAW, not the preview
+
+    def test_transparency_survives_and_opaque_alpha_is_dropped(self, tmp_path):
+        from PIL import Image
+        from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+
+        clear = tmp_path / "clear.png"
+        Image.new("RGBA", (4, 4), (255, 0, 0, 0)).save(clear)
+        solid = tmp_path / "solid.png"
+        Image.new("RGBA", (4, 4), (255, 0, 0, 255)).save(solid)
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        _UpscaleWorker([str(clear), str(solid)], str(out_dir), "trad:nearest", False,
+                       scale_override=2).run()
+        with Image.open(out_dir / "clear_x2.png") as out:
+            assert out.mode == "RGBA" and out.getpixel((0, 0))[3] == 0
+        with Image.open(out_dir / "solid_x2.png") as out:
+            assert out.mode == "RGB"
+
     def test_lanczos_upscale(self, tmp_path):
         """Lanczos resize should produce exact expected dimensions."""
         from PIL import Image
