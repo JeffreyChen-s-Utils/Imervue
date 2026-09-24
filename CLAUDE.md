@@ -75,9 +75,16 @@ ten-language README set: `README.md` plus `README/README_de.md`, `README/README_
 - Any user-facing change — features, commands, CLI flags, install/setup, configuration or
   requirements — updates `README.md` **and every language variant in the same commit**, with
   structure and content aligned.
-- **Never update one language and leave the others stale.** A change that lands in English but not
-  the nine translations (or vice versa) is incomplete.
-- There is no README-parity guard, so this is a **manual check** across the ten files above.
+- **Never update one language, or `README.md` alone, and leave the other languages or the docs
+  stale.** A change that lands in English but not the nine translations (or vice versa), or that
+  updates a README but not the docs, is incomplete. Each translation must reflect the English
+  README's actual content, not merely share its headings.
+- **The docs travel with the READMEs.** The same user-facing change updates the Sphinx docs under
+  `docs/` in the same commit — the English `docs/en/` pages plus every translated locale tree
+  (`zh-cn`, `zh-tw`, `de`, `es`, `fr`, `ja`, `ko`, `pt-BR`, `ru`) — structure and content aligned
+  across languages.
+- There is no README- or docs-parity guard, so this is a **manual check** across the ten README
+  files above and the docs trees.
   (`examples/puppet/README.md` documents that example only and is not part of this translation set.)
 
 ## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`
