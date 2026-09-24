@@ -139,9 +139,10 @@ Public interfaces other code or users depend on:
   get an interpreter with pip, and import `_subprocess_kwargs` from the same module for their child
   processes. Both live in `Imervue/plugin/python_finder.py`; `pip_installer` re-exports them, and
   `tests/test_python_finder.py` checks the re-export. Ten image plugins load their input with
-  `from Imervue.gui._apply_save import load_rgba`, which returns the EXIF-upright HxWx4 array. Keep
-  these import paths working, or change the plugins in the same round. Each has shipped since
-  v1.0.56 or earlier, so a newly downloaded plugin still runs on older installs.
+  `from Imervue.gui._apply_save import load_rgba`, which returns an HxWx4 RGBA array as the viewer
+  shows it: RAW developed at full size, sRGB, EXIF-upright. Keep these import paths working, or
+  change the plugins in the same round. Each has shipped since v1.0.56 or earlier, so a newly
+  downloaded plugin still runs on older installs.
 - **External services.** Every download made by the plugin downloader and pip installer goes through
   an HTTPS-only guard; model downloads from Hugging Face must pin a revision. Codacy and SonarCloud
   analyse only the `main` branch.

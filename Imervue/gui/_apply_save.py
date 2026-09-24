@@ -17,7 +17,6 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
-from Imervue.image.shown import as_shown
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 logger = logging.getLogger("Imervue.apply_save")
@@ -113,14 +112,14 @@ def output_path(source: str, suffix: str) -> str:
 def load_rgba(path: str) -> np.ndarray:
     """Load *path* as an HxWx4 RGBA uint8 array, closing the file before returning.
 
-    The pixels are as the viewer shows them: converted from an embedded colour
-    profile to sRGB and turned upright by the EXIF orientation. The tools save
+    The pixels are as the viewer shows them: camera RAW developed at full size,
+    converted from an embedded colour profile to sRGB and turned upright by
+    the EXIF orientation. The tools save
     their result without EXIF or ICC, so anything else would be saved wrong for
     good. Plugins in Imervue_Plugins import this (``architecture.md`` §6).
     """
-    with Image.open(path) as img:
-        shown = as_shown(img)
-        return np.array(shown if shown.mode == "RGBA" else shown.convert("RGBA"))
+    from Imervue.gpu_image_view.images.image_loader import decode_image_file
+    return decode_image_file(path)   # RAW developed at full size, SVG rasterised
 
 
 def current_image_path(viewer) -> str | None:

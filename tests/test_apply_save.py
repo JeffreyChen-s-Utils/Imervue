@@ -121,3 +121,14 @@ def test_tools_load_the_current_image_through_load_rgba():
     inline = re.compile(r'Image\.open\([\w.]+\)\.convert\("RGBA"\)')
     assert sorted(p.name for p in root.glob("*.py") if inline.search(p.read_text(encoding="utf-8"))) == []
 
+
+def test_load_rgba_develops_raw_and_rasterises_svg(tmp_path, monkeypatch):
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.gui._apply_save import load_rgba
+    monkeypatch.setattr(image_loader, "_load_raw",
+                        lambda _p, thumbnail: np.zeros((30, 45, 3), dtype=np.uint8))
+    assert load_rgba(str(tmp_path / "shot.nef")).shape == (30, 45, 4)
+    svg = tmp_path / "a.svg"
+    svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8">'
+                   '<rect width="12" height="8" fill="red"/></svg>', encoding="utf-8")
+    assert load_rgba(str(svg)).shape == (8, 12, 4)
