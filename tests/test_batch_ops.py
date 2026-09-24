@@ -84,6 +84,20 @@ class TestBatchRotate:
             assert img.size == (2, 4)
         assert gui.main_window.toast.calls == [("info", "Rotated 1/3 file(s)")]
 
+    def test_tagged_photo_turns_from_what_is_shown(self, tmp_path):
+        """Rotating the stored pixels while the re-save dropped the tag cancelled out."""
+        from PIL import Image
+
+        from Imervue.gpu_image_view.actions.batch_ops import batch_rotate
+        from Imervue.image.orientation import upright
+        exif = Image.Exif()
+        exif[0x0112] = 6   # 40x20 stored, shown 20x40
+        path = tmp_path / "p.jpg"
+        Image.new("RGB", (40, 20)).save(path, exif=exif)
+        batch_rotate(self._gui([str(path)]), [str(path)], 90)
+        with Image.open(path) as img:
+            assert upright(img).size == (40, 20)   # a real quarter turn of the 20x40 shown
+
     def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
         from Imervue.gpu_image_view.actions import batch_ops
 
