@@ -5,7 +5,6 @@ Batch operations — rename, move/copy, rotate for selected tiles.
 from __future__ import annotations
 
 import logging
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,6 +16,7 @@ from PySide6.QtWidgets import (
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_transfer import transfer_into
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -208,37 +208,24 @@ class BatchMoveDialog(QDialog):
         if not dest or not Path(dest).is_dir():
             return
         is_move = self._move_radio.isChecked()
-        count, failed = self._transfer_files(dest, is_move)
-        if is_move and count:
-            self._remove_moved_from_model()
-        self._toast_transfer_result("Moved" if is_move else "Copied", count, failed)
+        # Renames instead of overwriting: two cards both hold IMG_0001.JPG.
+        result = transfer_into(self._paths, dest, move=is_move)
+        moved = [source for source, _target in result.done]
+        if is_move and moved:
+            self._remove_moved_from_model(moved)
+        self._toast_transfer_result(
+            "Moved" if is_move else "Copied", len(result.done), len(result.failed))
         self.accept()
 
-    def _transfer_files(self, dest: str, is_move: bool) -> tuple[int, int]:
-        count = 0
-        failed = 0
-        for src in self._paths:
-            target = Path(dest) / Path(src).name
-            try:
-                if is_move:
-                    shutil.move(src, str(target))
-                else:
-                    shutil.copy2(src, str(target))
-                count += 1
-            except OSError:
-                # shutil.Error already inherits from OSError on every supported
-                # platform, so listing it explicitly is redundant.
-                failed += 1
-        return count, failed
-
-    def _remove_moved_from_model(self) -> None:
+    def _remove_moved_from_model(self, moved: list[str]) -> None:
+        """Drop the files that did move from the grid; a failed one stays where it is."""
         from Imervue.gpu_image_view.tile_textures import free_tile_textures
         images = self._gui.model.images
-        for src in self._paths:
+        for src in moved:
             if src in images:
                 images.remove(src)
             self._gui.tile_cache.pop(src, None)
-        free_tile_textures(self._gui, list(self._paths))
+        free_tile_textures(self._gui, moved)
         self._gui.selected_tiles.clear()
         self._gui.tile_selection_mode = False
         self._gui.clear_tile_grid()

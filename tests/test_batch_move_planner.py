@@ -121,3 +121,15 @@ def test_move_plan_is_frozen():
     plan = MovePlan("/a/x.png", "/out/x.png", ACTION_MOVE, "no collision")
     with pytest.raises((AttributeError, TypeError)):
         plan.action = ACTION_SKIP  # type: ignore[misc]
+
+
+def test_names_compare_as_the_file_system_does():
+    """On Windows IMG_0001.jpg lands on IMG_0001.JPG; the plan called it free."""
+    import os
+
+    from Imervue.image.batch_move_planner import plan_batch_move, resolve_name_collision
+    case_blind = os.path.normcase("A") == os.path.normcase("a")
+    (plan,) = plan_batch_move(["/card/img_0001.jpg"], "/album", {"IMG_0001.JPG"})
+    assert plan.action == ("rename" if case_blind else "move")
+    expected = "img_0001_1.jpg" if case_blind else "img_0001.jpg"
+    assert resolve_name_collision("img_0001.jpg", {"IMG_0001.JPG"}) == expected

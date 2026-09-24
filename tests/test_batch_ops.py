@@ -1,5 +1,4 @@
-"""Tests for batch_ops helper functions (non-GUI parts)."""
-import shutil
+"""Tests for batch_ops: rename, move / copy and rotate."""
 from pathlib import Path
 
 import pytest
@@ -22,27 +21,74 @@ class TestBatchRename:
 
 
 class TestBatchMoveCopy:
-    """Test move/copy file operations."""
+    """The Move / Copy dialog: nothing in the destination is overwritten."""
 
-    def test_copy_file(self, image_folder, tmp_path):
-        folder = Path(image_folder)
-        src = next(iter(folder.glob("*.png")))
-        dst_dir = tmp_path / "dest"
-        dst_dir.mkdir()
-        dst = dst_dir / src.name
-        shutil.copy2(str(src), str(dst))
-        assert dst.exists()
-        assert src.exists()  # original still present
+    @staticmethod
+    def _dialog(qapp, paths, dest, *, move):
+        from types import SimpleNamespace
 
-    def test_move_file(self, image_folder, tmp_path):
-        folder = Path(image_folder)
-        src = next(iter(folder.glob("*.png")))
-        dst_dir = tmp_path / "dest"
-        dst_dir.mkdir()
-        dst = dst_dir / src.name
-        shutil.move(str(src), str(dst))
-        assert dst.exists()
-        assert not src.exists()
+        from Imervue.gpu_image_view.actions.batch_ops import BatchMoveDialog
+        toasts = []
+        gui = SimpleNamespace(
+            main_window=None, model=SimpleNamespace(images=list(paths)), tile_cache={},
+            selected_tiles=set(paths), tile_selection_mode=True,
+            clear_tile_grid=lambda: None, load_tile_grid_async=lambda _imgs: None,
+        )
+        dlg = BatchMoveDialog(gui, list(paths))
+        dlg._gui.main_window = SimpleNamespace(toast=SimpleNamespace(  # noqa: SLF001
+            info=toasts.append, success=toasts.append))
+        dlg._dest.setText(str(dest))  # noqa: SLF001
+        (dlg._move_radio if move else dlg._copy_radio).setChecked(True)  # noqa: SLF001
+        return dlg, gui, toasts
+
+    @pytest.fixture(autouse=True)
+    def _no_gl(self, monkeypatch):
+        from Imervue.gpu_image_view import tile_textures
+        monkeypatch.setattr(tile_textures, "free_tile_textures", lambda *_a: None)
+
+    def test_move_renames_instead_of_overwriting(self, qapp, tmp_path):
+        """Moving a card's IMG_0001.JPG replaced the album's own IMG_0001.JPG."""
+        card, album = tmp_path / "card", tmp_path / "album"
+        card.mkdir()
+        album.mkdir()
+        (card / "IMG_0001.JPG").write_text("new", encoding="utf-8")
+        (album / "IMG_0001.JPG").write_text("kept", encoding="utf-8")
+        dlg, gui, toasts = self._dialog(qapp, [str(card / "IMG_0001.JPG")], album, move=True)
+        try:
+            dlg._apply()  # noqa: SLF001
+        finally:
+            dlg.deleteLater()
+        assert (album / "IMG_0001.JPG").read_text(encoding="utf-8") == "kept"
+        assert (album / "IMG_0001_1.JPG").read_text(encoding="utf-8") == "new"
+        assert gui.model.images == []
+        assert toasts == ["Moved 1/1 file(s)"]
+
+    def test_a_file_that_failed_to_move_stays_in_the_grid(self, qapp, tmp_path):
+        album = tmp_path / "album"
+        album.mkdir()
+        good = tmp_path / "good.jpg"
+        good.write_text("g", encoding="utf-8")
+        missing = str(tmp_path / "missing.jpg")
+        dlg, gui, toasts = self._dialog(qapp, [str(good), missing], album, move=True)
+        try:
+            dlg._apply()  # noqa: SLF001
+        finally:
+            dlg.deleteLater()
+        assert gui.model.images == [missing]
+        assert toasts == ["Moved 1/2 file(s)"]
+
+    def test_copy_keeps_the_sources(self, qapp, tmp_path):
+        album = tmp_path / "album"
+        album.mkdir()
+        src = tmp_path / "a.jpg"
+        src.write_text("a", encoding="utf-8")
+        dlg, gui, _toasts = self._dialog(qapp, [str(src)], album, move=False)
+        try:
+            dlg._apply()  # noqa: SLF001
+        finally:
+            dlg.deleteLater()
+        assert src.exists() and (album / "a.jpg").exists()
+        assert gui.model.images == [str(src)]
 
 
 class TestBatchRotate:

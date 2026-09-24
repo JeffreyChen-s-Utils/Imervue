@@ -7,7 +7,6 @@ across folders without leaving Imervue.
 """
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_transfer import transfer_into
 from Imervue.user_settings.user_setting_dict import (
     schedule_save,
     user_setting_dict,
@@ -145,19 +145,8 @@ class DualPaneDialog(QDialog):
                 ),
             )
             return
-        ok = failed = 0
-        for p in paths:
-            target = dest_dir / Path(p).name
-            try:
-                if move:
-                    shutil.move(p, str(target))
-                elif Path(p).is_dir():
-                    shutil.copytree(p, str(target))
-                else:
-                    shutil.copy2(p, str(target))
-                ok += 1
-            except OSError:
-                failed += 1
+        result = transfer_into(paths, dest_dir, move=move)
+        ok, failed = len(result.done), len(result.failed)
         self._left.refresh()
         self._right.refresh()
         if hasattr(self._ui, "toast"):

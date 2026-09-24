@@ -35,17 +35,25 @@ class MovePlan:
     reason: str
 
 
+def _key(name: str) -> str:
+    """*name* as the file system compares it: case-folded where names ignore case."""
+    return os.path.normcase(name)
+
+
 def resolve_name_collision(name: str, existing: set[str]) -> str:
     """Return *name* if free, else a numbered variant unique within *existing*.
 
     ``photo.jpg`` becomes ``photo_1.jpg`` (then ``photo_2.jpg`` …); the
-    extension is preserved and dot-files keep their leading dot.
+    extension is preserved and dot-files keep their leading dot. Names are
+    compared the way the file system does: on Windows ``PHOTO.JPG`` takes
+    ``photo.jpg``'s place.
     """
-    if name not in existing:
+    taken = {_key(existing_name) for existing_name in existing}
+    if _key(name) not in taken:
         return name
     stem, ext = os.path.splitext(name)
     counter = 1
-    while f"{stem}_{counter}{ext}" in existing:
+    while _key(f"{stem}_{counter}{ext}") in taken:
         counter += 1
     return f"{stem}_{counter}{ext}"
 
@@ -59,7 +67,8 @@ def plan_batch_move(
 ) -> list[MovePlan]:
     """Plan moving *sources* into *dest_dir*, resolving name collisions.
 
-    *existing* is the set of filenames already in *dest_dir*. Collisions (with
+    *existing* is the set of filenames already in *dest_dir*; names compare as
+    the file system does (case-insensitively on Windows). Collisions (with
     existing files or with earlier sources in the batch) are handled by
     *strategy*: ``"number"`` renames to a unique variant, ``"skip"`` drops the
     move, ``"replace"`` overwrites. Raises :class:`ValueError` for an unknown
@@ -72,13 +81,14 @@ def plan_batch_move(
     # ``existing`` (names already on disk) so ``replace`` can overwrite a
     # pre-existing file while still renumbering when two sources in the batch
     # share a basename — otherwise the second source silently overwrote the
-    # first's target and a file was lost.
+    # first's target and a file was lost. Both hold file-system keys (_key).
+    existing = {_key(name) for name in existing}
     produced: set[str] = set()
     plans: list[MovePlan] = []
     for source in sources:
         name = Path(source).name
-        if name not in existing and name not in produced:
-            produced.add(name)
+        if _key(name) not in existing and _key(name) not in produced:
+            produced.add(_key(name))
             plans.append(MovePlan(source, str(dest / name), ACTION_MOVE, "no collision"))
         else:
             plans.append(
@@ -92,13 +102,13 @@ def _resolve_collision(
 ) -> MovePlan:
     if strategy == STRATEGY_SKIP:
         return MovePlan(source, None, ACTION_SKIP, f"{name} already exists")
-    if strategy == STRATEGY_REPLACE and name not in produced:
+    if strategy == STRATEGY_REPLACE and _key(name) not in produced:
         # Overwrites a pre-existing destination file. Safe: no earlier source in
         # this batch has claimed this name, so nothing in the batch is clobbered.
-        produced.add(name)
+        produced.add(_key(name))
         return MovePlan(source, str(dest / name), ACTION_REPLACE, f"overwrites {name}")
     # NUMBER strategy, or REPLACE where a sibling source already took the name:
     # renumber so an earlier source in the batch is never overwritten.
     unique = resolve_name_collision(name, existing | produced)
-    produced.add(unique)
+    produced.add(_key(unique))
     return MovePlan(source, str(dest / unique), ACTION_RENAME, f"renamed to {unique}")

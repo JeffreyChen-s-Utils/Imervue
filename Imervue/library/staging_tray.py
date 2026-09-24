@@ -6,16 +6,11 @@ treat the tray as an ordered, de-duplicated list of absolute paths.
 """
 from __future__ import annotations
 
-import logging
-import os
-import shutil
 from collections.abc import Iterable
 from pathlib import Path
 
-from Imervue.image.batch_move_planner import resolve_name_collision
+from Imervue.system.file_transfer import transfer_into
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
-
-logger = logging.getLogger("Imervue.library.staging_tray")
 
 
 def _tray() -> list[str]:
@@ -90,35 +85,14 @@ def _apply_file_op(dest: str, *, move: bool) -> tuple[int, int]:
     dest_path = Path(dest)
     if not dest_path.is_dir():
         raise NotADirectoryError(dest)
-    try:
-        claimed = set(os.listdir(dest_path))
-    except OSError:
-        claimed = set()
-    ok = failed = 0
-    moved_paths: list[str] = []
-    for src in _tray():
-        # The tray is a cross-folder basket, so two entries can legitimately
-        # share a basename. Resolve collisions (with files already in dest AND
-        # with earlier entries in this batch) to a numbered variant so a copy /
-        # move never silently overwrites another file.
-        name = resolve_name_collision(Path(src).name, claimed)
-        claimed.add(name)
-        target = dest_path / name
-        try:
-            if move:
-                shutil.move(src, str(target))
-                moved_paths.append(src)
-            else:
-                shutil.copy2(src, str(target))
-            ok += 1
-        except OSError:
-            logger.warning("Could not %s %s to %s", "move" if move else "copy", src, target,
-                           exc_info=True)
-            failed += 1
-    if move and moved_paths:
+    # The tray is a cross-folder basket, so two entries can share a basename;
+    # transfer_into renames instead of overwriting (another entry, or a file
+    # already in dest).
+    result = transfer_into(list(_tray()), dest_path, move=move)
+    if move and result.done:
         tray = _tray()
-        for p in moved_paths:
-            if p in tray:
-                tray.remove(p)
+        for source, _target in result.done:
+            if source in tray:
+                tray.remove(source)
         schedule_save()
-    return ok, failed
+    return len(result.done), len(result.failed)
