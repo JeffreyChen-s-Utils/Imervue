@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.gui.file_filters import image_filter
 from Imervue.library import reference_pins
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -269,7 +270,7 @@ def _load_thumb_icon(path: str):
 def _load_preview_pixmap(path: str, target: QSize) -> QPixmap | None:
     try:
         with Image.open(path) as src:
-            rgba = src.convert("RGBA")
+            rgba = transpose_for(src.convert("RGBA"), exif_orientation(src))
             rgba.thumbnail(
                 (max(8, target.width()), max(8, target.height())),
                 Image.Resampling.LANCZOS,

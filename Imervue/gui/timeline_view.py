@@ -21,6 +21,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QColor, QFont, QIcon, QImage, QPixmap
 from PySide6.QtWidgets import QListView
 
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -64,8 +65,9 @@ class _TimelineThumbWorker(QRunnable):
     def run(self) -> None:
         try:
             with Image.open(self.path) as src:
+                code = exif_orientation(src)
                 src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
-                im = src.convert("RGBA")
+                im = transpose_for(src.convert("RGBA"), code)
                 data = im.tobytes("raw", "RGBA")
                 qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
                 # .copy() detaches from the soon-freed `data` buffer; the GUI
