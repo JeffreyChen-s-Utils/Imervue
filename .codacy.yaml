@@ -37,6 +37,15 @@ engines:
       - 'Imervue/gui/annotation_models.py'
       - 'Imervue/library/metadata_export.py'
       - 'Imervue/library/clip_search.py'
+      # "Reveal in file manager": static argv (explorer /select, / open /
+      # xdg-open) + a normpath'd local path, never shell=True.
+      - 'Imervue/system/file_manager.py'
+      # Set desktop wallpaper: fixed argv per platform (never shell=True); the
+      # only variable is a local image path.
+      - 'Imervue/system/wallpaper.py'
+      # Interpreter discovery: runs `<python> -m pip --version` (static argv, no
+      # shell) to verify a candidate interpreter found on PATH / the registry.
+      - 'Imervue/plugin/python_finder.py'
       # pip install runs in a controlled subprocess (no shell, _https_urlopen
       # guard); the B404/B603 hits are the accepted installer pattern.
       - 'Imervue/plugin/pip_installer.py'
@@ -66,6 +75,7 @@ engines:
       - 'Imervue/gui/duplicate_detection_dialog.py'
       - 'Imervue/plugin/pip_installer.py'
       - 'Imervue/plugin/plugin_manager.py'
+      - 'Imervue/plugin/python_finder.py'
       - 'Imervue/system/clipboard_monitor.py'
       # MD5 used only for cache keys / content identity (usedforsecurity=False),
       # never for security — semgrep's hash-md5 rule flags it regardless.
