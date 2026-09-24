@@ -12,6 +12,8 @@ from pathlib import Path
 logger = logging.getLogger("Imervue.gps_geotag")
 
 _DEG_TO_SEC = 3600.0
+# EXIF requires GPSVersionID whenever a GPS IFD is present; 2.3.0.0 is the EXIF 2.3 value.
+_GPS_VERSION = (2, 3, 0, 0)
 
 
 def _to_rational(value: float) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
@@ -30,7 +32,12 @@ def write_gps(path: str | Path, latitude: float, longitude: float) -> bool:
 
     Returns True on success. Returns False if ``piexif`` is unavailable or
     the file format does not support EXIF writes (PNG, TIFF via piexif).
+    Raises ``ValueError`` for a latitude outside [-90, 90] or a longitude
+    outside [-180, 180]: written as-is they are unreadable, so every GPS
+    reader would drop them.
     """
+    if not (-90.0 <= latitude <= 90.0 and -180.0 <= longitude <= 180.0):
+        raise ValueError(f"coordinates out of range: {latitude}, {longitude}")
     try:
         import piexif
     except ImportError:
@@ -47,6 +54,7 @@ def write_gps(path: str | Path, latitude: float, longitude: float) -> bool:
     lat_ref = b"N" if latitude >= 0 else b"S"
     lon_ref = b"E" if longitude >= 0 else b"W"
     gps_ifd = {
+        piexif.GPSIFD.GPSVersionID: _GPS_VERSION,
         piexif.GPSIFD.GPSLatitudeRef: lat_ref,
         piexif.GPSIFD.GPSLatitude: _to_rational(latitude),
         piexif.GPSIFD.GPSLongitudeRef: lon_ref,

@@ -19,6 +19,27 @@ def _make_jpeg(tmp_path: Path) -> Path:
 
 
 class TestWriteGps:
+    def test_writes_the_required_gps_version(self, tmp_path):
+        import piexif
+        path = _make_jpeg(tmp_path)
+        assert gps_geotag.write_gps(path, 1.0, 2.0) is True
+        assert piexif.load(str(path))["GPS"][piexif.GPSIFD.GPSVersionID] == (2, 3, 0, 0)
+
+    @pytest.mark.parametrize(("lat", "lon"), [
+        (90.0001, 0.0), (-90.0001, 0.0), (0.0, 180.0001), (0.0, -180.0001), (float("nan"), 0.0),
+    ])
+    def test_out_of_range_coordinates_are_rejected(self, tmp_path, lat, lon):
+        path = _make_jpeg(tmp_path)
+        with pytest.raises(ValueError, match="out of range"):
+            gps_geotag.write_gps(path, lat, lon)
+
+    @pytest.mark.parametrize(("lat", "lon"), [(90.0, 180.0), (-90.0, -180.0)])
+    def test_the_range_limits_themselves_are_written(self, tmp_path, lat, lon):
+        from Imervue.image.gps import extract_gps
+        path = _make_jpeg(tmp_path)
+        assert gps_geotag.write_gps(path, lat, lon) is True
+        assert extract_gps(path) == pytest.approx((lat, lon))
+
     def test_returns_false_for_missing_file(self, tmp_path):
         assert gps_geotag.write_gps(tmp_path / "missing.jpg", 10.0, 20.0) is False
 
