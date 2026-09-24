@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-89 | 2026-09-24 | Read tagged photos upright for OCR, CLIP search and the multi-image merges | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-88 | 2026-09-24 | Compute smart crops on the recipe's base and show the last previews upright | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-87 | 2026-09-24 | Translate the plugins' hard-coded error toasts | #i18n #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-86 | 2026-09-24 | Run the MCP image tools on the EXIF-upright image | #fix #exif #mcp | [2026-09](2026-09.md) |

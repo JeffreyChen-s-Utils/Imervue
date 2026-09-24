@@ -119,6 +119,12 @@ def upright(img: Image.Image) -> Image.Image:
     return transpose_for(img, exif_orientation(img))
 
 
+def load_upright_rgb(path) -> np.ndarray:
+    """Load *path* as an upright HxWx3 uint8 RGB array (the multi-image merges' input)."""
+    with Image.open(path) as img:
+        return np.asarray(transpose_for(img.convert("RGB"), exif_orientation(img)), dtype=np.uint8)
+
+
 def read_orientation(path: str) -> int:
     """Return the EXIF orientation code of *path* (1 when absent / unreadable)."""
     try:

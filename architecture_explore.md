@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `7d4f1fd` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `4e778b9` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,16 +66,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 839 | 137,091 |
+| `tests/` | 839 | 137,139 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
 | `Imervue/gui/` | 163 | 32,884 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 116 | 13,108 |
+| `Imervue/image/` | 116 | 13,118 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,932 |
 | `Imervue/multi_language/` | 8 | 14,024 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
-| `Imervue/library/` | 32 | 4,174 |
+| `Imervue/library/` | 32 | 4,177 |
 | `Imervue/menu/` | 11 | 3,579 |
 | `Imervue/` 根層 | 5 | 1,552 |
 | `Imervue/plugin/` | 10 | 2,243 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,209 |
-| **總計** | **1,662** | **315,290** |
+| **總計** | **1,662** | **315,351** |
 
-其中 `Imervue/` 套件本身 759 檔 / 163,990 行。
+其中 `Imervue/` 套件本身 759 檔 / 164,003 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-116 個模組、13,108 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+116 個模組、13,118 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -336,7 +336,7 @@ ImervueMainWindow
 `auto_straighten.py`(92) Hough 水平線偵測 · `lens_correction.py`(150) 畸變/暗角/色差 ·
 `distort.py`(65) swirl/pinch/ripple · `polar.py`(68) 極座標 · `kaleidoscope.py`(66) ·
 `equirectangular.py`(77) 360° tiny planet · `resample.py`(43) 共用反向映射重採樣 ·
-`orientation.py`(135) EXIF orientation：`QUARTER_TURN_CODES`、`exif_orientation` / `transpose_for` / `upright`（轉完會清掉結果上的 EXIF / XMP 轉向標籤，避免再轉一次；檢視器、縮圖、清單、懸停預覽、Modify、註解都用它轉正）與 `oriented_array` 烘焙
+`orientation.py`(141) EXIF orientation：`QUARTER_TURN_CODES`、`exif_orientation` / `transpose_for` / `upright`（轉完會清掉結果上的 EXIF / XMP 轉向標籤，避免再轉一次；檢視器、縮圖、清單、懸停預覽、Modify、註解都用它轉正）、`load_upright_rgb`（對焦堆疊、HDR、全景、堆疊混合的輸入）與 `oriented_array` 烘焙
 
 #### 藝術效果 / 疊加
 
@@ -347,8 +347,8 @@ ImervueMainWindow
 
 #### 多影像合成
 
-`hdr_merge.py`(118) · `panorama.py`(83)（包 OpenCV `Stitcher`） · `focus_stack.py`(121) ·
-`stack_blend.py`(118) 統計堆疊 · `collage.py`(64) · `anaglyph.py`(79) 紅藍 3D ·
+`hdr_merge.py`(117) · `panorama.py`(83)（包 OpenCV `Stitcher`） · `focus_stack.py`(122) ·
+`stack_blend.py`(119) 統計堆疊 · `collage.py`(64) · `anaglyph.py`(79) 紅藍 3D ·
 `deflicker.py`(108) 縮時去閃 · `id_photo_sheet.py`(72) 證件照拼版 · `print_layout.py`(111) ·
 `multipage.py`(72) 多頁 PDF/TIFF 合併與拆分
 
@@ -390,7 +390,7 @@ ImervueMainWindow
 
 `browser_state.py`(400) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
 `batch_move_planner.py`(104) 無碰撞批次搬移規劃 · `animation_edit.py`(95) GIF/APNG 反轉/回力鏢/速度 ·
-`caption.py`(91) 本地視覺 LLM 產生 alt-text · `ocr.py`(156) Tesseract · `portrait_retouch.py`(177) ·
+`caption.py`(91) 本地視覺 LLM 產生 alt-text · `ocr.py`(159) Tesseract · `portrait_retouch.py`(177) ·
 `speech_*`／`text_*` 相關在 `paint/`
 
 ### 6.10 `Imervue/gpu_image_view/`
@@ -497,7 +497,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `smart_album.py` | 347 | Smart Albums：保存查詢並重新套用 |
 | `search_query.py` | 215 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
-| `clip_search.py` | 378 | CLIP 語意搜尋（「找出符合這句話的照片」） |
+| `clip_search.py` | 381 | CLIP 語意搜尋（「找出符合這句話的照片」） |
 | `auto_tag.py` | 111 | 啟發式內容分類 + 選用 CLIP ONNX |
 | `phash.py` | 83 | 64-bit DCT pHash |
 | `bloom_filter.py` | 150 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-839 個檔、137,091 行。`pyproject.toml` 定義三個互斥層級 marker：
+839 個檔、137,139 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

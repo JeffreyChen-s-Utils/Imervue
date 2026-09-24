@@ -106,3 +106,29 @@ def test_turned_image_no_longer_carries_the_tag(tmp_path):
     assert turned.size == (20, 40)
     assert exif_orientation(turned) == 1
     assert b"tiff:Orientation" not in turned.info.get("xmp", b"")
+
+
+def _portrait_file(tmp_path):
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "p.jpg"
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    return str(path)
+
+
+def test_load_upright_rgb(tmp_path):
+    from Imervue.image.orientation import load_upright_rgb
+    arr = load_upright_rgb(_portrait_file(tmp_path))
+    assert arr.shape == (40, 20, 3) and arr.dtype == np.uint8
+
+
+@pytest.mark.parametrize(("module", "loader"), [
+    ("focus_stack", "_load_rgb"), ("stack_blend", "_load_rgb"),
+    ("hdr_merge", "_load_bgr"), ("panorama", "_load_bgr"),
+])
+def test_multi_image_merges_load_upright_frames(tmp_path, module, loader):
+    """Their result is saved without EXIF, and every frame must share one orientation."""
+    import importlib
+    load = getattr(importlib.import_module(f"Imervue.image.{module}"), loader)
+    assert load(_portrait_file(tmp_path)).shape[:2] == (40, 20)
+

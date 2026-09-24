@@ -211,3 +211,25 @@ def test_extract_words_from_a_path_closes_the_image(monkeypatch, tmp_path):
         assert seen[0].fp is None
     finally:
         ocr._probe_tesseract.cache_clear()
+
+
+def test_extract_words_reads_a_tagged_photo_upright(tmp_path, monkeypatch):
+    """Tesseract got the stored sideways pixels of a phone portrait shot."""
+    import sys
+    import types
+
+    from PIL import Image
+
+    from Imervue.image import ocr as ocr_module
+    seen = []
+    fake = types.ModuleType("pytesseract")
+    fake.image_to_data = lambda img: seen.append(img.size) or ""
+    monkeypatch.setitem(sys.modules, "pytesseract", fake)
+    monkeypatch.setattr(ocr_module, "ocr_available", lambda: True)
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "doc.jpg"
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    ocr_module.extract_words(str(path))
+    assert seen == [(20, 40)]
+
