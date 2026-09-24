@@ -473,6 +473,8 @@ per-image; press ``Reset`` at any time to restore the original, or ``Ctrl + Z`` 
 backwards through individual changes. Recipes survive restarts and can be exported / synced
 via the XMP sidecar flow described in the Metadata section.
 
+The file on disk changes only when you ask for it. **Apply Crop** and the annotation **Save** write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten: the crop asks you to export instead, and the annotation save asks for a new file.
+
 Save & Undo
 ^^^^^^^^^^^^
 

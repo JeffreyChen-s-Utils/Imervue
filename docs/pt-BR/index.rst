@@ -477,6 +477,8 @@ por imagem; pressione ``Reset`` a qualquer momento para restaurar o original, ou
 para voltar passo a passo nas alterações individuais. As receitas sobrevivem a reinicializações
 e podem ser exportadas / sincronizadas via o fluxo de sidecar XMP descrito na seção Metadados.
 
+O arquivo em disco só muda quando você pede. **Apply Crop** e o **Save** de anotações gravam o resultado sobre o arquivo e mantêm seu EXIF (câmera, data de captura, GPS), XMP e DPI. Um RAW de câmera, um HEIC ou um arquivo animado / de várias páginas nunca é sobrescrito: o recorte pede que você exporte e o salvamento de anotações pede um arquivo novo.
+
 Salvar e Desfazer
 ^^^^^^^^^^^^^^^^^
 

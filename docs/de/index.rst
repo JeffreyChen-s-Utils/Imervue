@@ -477,6 +477,8 @@ Edit-Recipe; mit ``Zurücksetzen`` jederzeit den Originalzustand wiederherstelle
 und können über den im Metadaten-Abschnitt beschriebenen XMP-Sidecar-Workflow exportiert /
 synchronisiert werden.
 
+Die Datei auf der Festplatte ändert sich nur auf Ihre Anweisung. **Apply Crop** und das **Speichern** von Anmerkungen schreiben das Ergebnis zurück in die Datei und behalten ihre EXIF-Daten (Kamera, Aufnahmedatum, GPS), XMP und DPI. Eine Kamera-RAW-, HEIC- oder animierte / mehrseitige Datei wird nie überschrieben: beim Zuschneiden werden Sie zum Export aufgefordert, beim Speichern von Anmerkungen nach einer neuen Datei gefragt.
+
 Speichern und rückgängig
 ^^^^^^^^^^^^^^^^^^^^^^^^
 

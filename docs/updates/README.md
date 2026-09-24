@@ -66,6 +66,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-105 | 2026-09-24 | Thumbnail cache: drop the fromarray mode conversion Pillow 13 removes | #fix #compat #pillow | [2026-09](2026-09.md) |
 | U-20260924-106 | 2026-09-24 | GPS geotag writes JPEGs without piexif; EXIF rewrites keep the thumbnail | #fix #metadata #gps | [2026-09](2026-09.md) |
 | U-20260924-107 | 2026-09-24 | Deep-zoom screen-refit test: isolate the immediate chain from the interval watch | #test #flaky | [2026-09](2026-09.md) |
+| U-20260924-108 | 2026-09-24 | Docs: Modify's Apply Crop and annotation Save write back, in all ten doc trees | #docs | [2026-09](2026-09.md) |
 | U-20260924-99 | 2026-09-24 | Lossless Rotate and Rotate All keep JPEG bytes and file metadata | #fix #metadata #rotate | [2026-09](2026-09.md) |
 | U-20260924-98 | 2026-09-24 | Keep AI Upscale overwrite and EXIF Strip from truncating animated or multi-page files | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260924-97 | 2026-09-24 | Stop in-place rotate, crop and annotation saves from destroying RAW and multi-frame files | #fix #data-loss | [2026-09](2026-09.md) |
