@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `74672b9` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `59738b8` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 862 | 141,134 |
+| `tests/` | 862 | 141,170 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
 | `Imervue/gui/` | 165 | 32,995 |
 | `Imervue/puppet/` | 57 | 15,286 |
 | `Imervue/image/` | 125 | 14,340 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,930 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,929 |
 | `Imervue/multi_language/` | 8 | 14,079 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,130 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,258 |
-| **總計** | **1,698** | **321,236** |
+| **總計** | **1,698** | **321,271** |
 
-其中 `Imervue/` 套件本身 772 檔 / 165,844 行。
+其中 `Imervue/` 套件本身 772 檔 / 165,843 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -472,7 +472,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `delete.py` | 221 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
+| `delete.py` | 220 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
 | `batch_ops.py` | 300 | 批次重新命名 / 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
 | `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
@@ -965,7 +965,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-862 個檔、141,134 行。`pyproject.toml` 定義三個互斥層級 marker：
+862 個檔、141,170 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
