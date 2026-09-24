@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `1d89376` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `178637e` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,15 +66,15 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 863 | 141,469 |
+| `tests/` | 864 | 141,603 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
-| `Imervue/gui/` | 165 | 33,009 |
+| `Imervue/gui/` | 165 | 33,015 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 125 | 14,363 |
+| `Imervue/image/` | 125 | 14,418 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,929 |
 | `Imervue/multi_language/` | 8 | 14,079 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
-| `Imervue/mcp_server/` | 16 | 4,682 |
+| `Imervue/mcp_server/` | 16 | 4,684 |
 | `Imervue/library/` | 32 | 4,233 |
 | `Imervue/menu/` | 11 | 3,583 |
 | `Imervue/` 根層 | 5 | 1,576 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,130 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,258 |
-| **總計** | **1,699** | **321,654** |
+| **總計** | **1,700** | **321,851** |
 
-其中 `Imervue/` 套件本身 772 檔 / 165,927 行。
+其中 `Imervue/` 套件本身 772 檔 / 165,990 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -302,7 +302,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-125 個模組、14,363 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+125 個模組、14,418 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -377,7 +377,7 @@ ImervueMainWindow
 
 #### 中繼資料
 
-`xmp_sidecar.py`(531) XMP sidecar 讀寫（跨編輯器互通）；找 `foo.xmp`（Adobe），只有 `foo.jpg.xmp`（darktable／digiKam）時讀寫它；`label_color` 把 Lightroom（`Red`）與 Bridge（`Select`）的標籤對到 Imervue 顏色，匯出照 Lightroom 寫法並保留同色的既有用字；`xmp:Rating` -1（Lightroom／Bridge／darktable 的拒絕）與圖庫的挑片 reject 雙向對應；`save` 合併進既有檔：只換評分／標籤／標題／描述／關鍵字／作者，其他編輯器寫的內容（RAW 顯影設定等）與命名空間前綴保留，無法解析的檔丟 `UnreadableSidecarError`（`OSError`）不覆寫 · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
+`xmp_sidecar.py`(586) XMP sidecar 讀寫（跨編輯器互通）；`load` 沒有 sidecar 時讀檔案內嵌的 XMP 封包（JPEG／PNG／WebP／TIFF）再以 EXIF `Rating`／`RatingPercent` 補評分（`load_embedded`，經 `metadata_sync.percent_to_rating`）；找 `foo.xmp`（Adobe），只有 `foo.jpg.xmp`（darktable／digiKam）時讀寫它；`label_color` 把 Lightroom（`Red`）與 Bridge（`Select`）的標籤對到 Imervue 顏色，匯出照 Lightroom 寫法並保留同色的既有用字；`xmp:Rating` -1（Lightroom／Bridge／darktable 的拒絕）與圖庫的挑片 reject 雙向對應；`save` 合併進既有檔：只換評分／標籤／標題／描述／關鍵字／作者，其他編輯器寫的內容（RAW 顯影設定等）與命名空間前綴保留，無法解析的檔丟 `UnreadableSidecarError`（`OSError`）不覆寫 · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
 `gps.py`(90) EXIF GPS 擷取 · `gps_geotag.py`(84) 寫入（JPEG / WebP 經 `in_place_save.rewrite_exif`，不需 piexif） · `reverse_geocode.py`(151) 離線逆地理編碼 ·
 `geo_keywords.py`(52) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
 `annotations.py`(270) JSON sidecar 註解 · `shown.py`(45) `as_shown(img, code=None)`：檢視器看到的樣子（先依內嵌描述檔轉 sRGB、再依 EXIF 轉正），`load_shown_rgb(path)` / `load_shown_rgba(path)`（先註冊 HEIC / JXL opener）；預覽、工具輸入、匯出、Modify、註解、合成、OCR、CLIP、MCP、Paint 的姿勢圖／素材／參考圖都走它 · `color_profile.py`(55) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB，無描述檔或 sRGB 原樣回傳，transform 依描述檔快取 · `exif_merge.py`(25) `merged_exif(img)`：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(194) 圖片資訊組裝與對話框；`get_exif_data()` 經 `exif_merge` 讀，HEIC / JXL 也讀得到
@@ -527,7 +527,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-165 個檔、33,009 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+165 個檔、33,015 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -624,7 +624,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(188) · `auto_tag_dialog.py`(172) ·
 `keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(139) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明） ·
 `gps_geotag_dialog.py`(90) · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
-`events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(120) ·
+`events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(126) ·
 `bookmark_dialog.py`(349) · `staging_tray_dialog.py`(184) · `reference_panel_dialog.py`(296) ·
 `image_statistics_dialog.py`(90) · `quality_report_dialog.py`(61) · `image_inspector_dialog.py`(84) 波形/parade/false colour/focus peaking ·
 `ocr_dialog.py`(114)
@@ -916,7 +916,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `tools_read.py` | 656 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
 | `tools_edit.py` | 883 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
 | `tool_support.py` | 82 | 兩組處理器共用：`IMAGE_EXTENSIONS`、`NO_ALPHA_FORMATS`、`open_upright` / `load_rgba_array`（每個工具都在依 EXIF 轉正後的影像上運作，尺寸與座標也以它為準）、`validated_dir`／`validated_file`、`json_safe` |
-| `tool_defs_read.py` | 349 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
+| `tool_defs_read.py` | 351 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
 | `tool_defs_edit.py` | 929 | `EDIT_TOOL_DEFINITIONS`：寫出類工具的同上資料 |
 | `tool_schemas.py` | 578 | 每個工具的輸出 schema 與 annotation（有 parity test 強制與 `_TOOL_DEFINITIONS` 對齊） |
 | `prompts.py` | 228 | 影像助理的 prompt 範本 |
@@ -965,7 +965,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-863 個檔、141,469 行。`pyproject.toml` 定義三個互斥層級 marker：
+864 個檔、141,603 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1188,7 +1188,7 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 58 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+11. **有 57 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
     34 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單；`paint/watercolor.py`、`paint/comic_formats.py`、`paint/speech_bubbles.py`
     另有已接上的實作。新增模組若沒被 import，該測試會失敗；要接上或刪除由擁有者決定（`progress.md` #22）。

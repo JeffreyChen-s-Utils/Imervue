@@ -260,7 +260,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 - **EXIF 편집기** 다이얼로그 — 설명·작성자·저작권·카메라·코멘트(유니코드 포함)를 추가 패키지 없이 JPEG / WebP에 기록하며 픽셀과 다른 태그는 그대로
 - **키워드 편집기** — 제목 / 작성자 / 설명 / 키워드, 태그 동시 출현에서 도출한 **연관 태그 제안** 포함, 그리고 **통제 어휘 확장**(리프 키워드가 편집 가능한 계층 어휘에서 그 조상 + 동의어를 자동으로 적용)
 - **이미지 정보** 다이얼로그 (크기 / 용량 / 날짜)
-- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 인식 사진 관리자와 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다.
+- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 인식 사진 관리자와 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
 - **GPS 지오태그 편집기** — EXIF GPS 위도/경도 읽기/쓰기. JPEG / WebP는 추가 패키지 없이 픽셀·다른 태그·썸네일을 그대로 두고 기록
 - **토큰 일괄 이름 변경** — 라이브 미리보기 템플릿 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **메타데이터 CSV / JSON 내보내기** — 컬링 / 별점 / 태그 / 메모를 포함한 이미지당 한 행
@@ -810,7 +810,7 @@ python -m Imervue.mcp_server
 | 도구 | 용도 |
 |------|---------|
 | `list_images` | 폴더의 이미지 파일 목록 (재귀 옵션) |
-| `read_image_metadata` / `read_xmp_tags` | 크기, 포맷, EXIF, XMP 사이드카 (별점, 라벨, 키워드) |
+| `read_image_metadata` / `read_xmp_tags` | 크기, 포맷, EXIF, XMP: 사이드카, 없으면 파일에 포함된 것 (별점, 라벨, 키워드) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 무참조 분석: 채널별 통계, 색채도/엔트로피/대비, 히스토그램 + 클리핑, 블러 점수 |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 미리보기, Tesseract 텍스트, perceptual-hash 근접 중복 그룹 (진행률 포함) |
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP 간 변환 (+ 선택적 HEIC / AVIF / JXL) |

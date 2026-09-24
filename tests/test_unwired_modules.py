@@ -26,7 +26,7 @@ _KNOWN_UNWIRED = {
     "Imervue.desktop_pet.pet_registry",
     "Imervue.export.contact_sheet_layouts", "Imervue.export.gallery_sort",
     "Imervue.gpu_image_view.actions.undo_coalescer",
-    "Imervue.image.annotations", "Imervue.image.caption", "Imervue.image.metadata_sync",
+    "Imervue.image.annotations", "Imervue.image.caption",
     "Imervue.library.capture_time", "Imervue.library.face_clustering",
     "Imervue.library.gpx_geotag",
     "Imervue.multi_language.translation_validation",

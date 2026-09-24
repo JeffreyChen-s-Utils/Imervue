@@ -68,8 +68,8 @@ def list_images(folder: str, *, recursive: bool = False) -> dict[str, Any]:
 
 
 def read_image_metadata(path: str) -> dict[str, Any]:
-    """Return dimensions, format, EXIF tags, and XMP sidecar fields for
-    an image. Missing data is reported as the appropriate empty value
+    """Return dimensions, format, EXIF tags, and XMP fields (the sidecar,
+    else what the file embeds) for an image. Missing data is reported as the appropriate empty value
     rather than raising — a JPEG with no EXIF still returns its
     dimensions.
     """
@@ -125,8 +125,8 @@ def _populate_xmp(image_path: Path, out: dict[str, Any]) -> None:
 
 
 def read_xmp_tags(path: str) -> dict[str, Any]:
-    """Return only the XMP sidecar fields for ``path`` — handy when
-    the caller wants tags / rating without paying the EXIF parse."""
+    """Return only the XMP fields for ``path`` (the sidecar, else what the
+    file embeds) — handy when the caller wants tags / rating alone."""
     image_path = validated_file(path)
     from Imervue.image import xmp_sidecar
     xmp = xmp_sidecar.load(image_path)

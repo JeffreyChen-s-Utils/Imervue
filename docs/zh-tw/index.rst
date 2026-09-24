@@ -1296,6 +1296,10 @@ Lightroom 的寫法（``Red`` … ``Purple``）與 Bridge 的寫法（``Select``
 **拒絕**\ 且不帶星等，**拒絕**\ 匯出時寫成 -1。sidecar 不是拒絕時會解除「拒絕」，
 「選用」則不受影響。
 
+沒有 sidecar 的檔案會讀取（並匯入）檔案本身內嵌的資料：先讀 XMP（JPEG、PNG、WebP、
+TIFF），再讀 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的評等與關鍵字
+存在這裡，Windows 檔案總管與部分相機的星等也在這裡。有 sidecar 時以 sidecar 為準。
+
 - **為當前圖片匯入 XMP** — 從 sidecar 讀取星等 / 標題 / 關鍵字 / 色彩標籤
   寫入內部資料庫。
 - **為當前圖片匯出 XMP** — 將當前星等 / 標題 / 關鍵字 / 色彩標籤寫入
@@ -2051,10 +2055,10 @@ Imervue 內建一個 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 列出資料夾內的圖片(路徑、大小、修改時間)。傳
        ``recursive=true`` 可遞迴遍歷子資料夾。
    * - ``read_image_metadata``
-     - 單張圖片的尺寸、格式、EXIF、XMP sidecar。缺資料就回對應的
+     - 單張圖片的尺寸、格式、EXIF、XMP（sidecar，沒有時讀檔案內嵌的）。缺資料就回對應的
        空值,不會 raise。
    * - ``read_xmp_tags``
-     - 僅讀 XMP 的快速路徑 — 評等、色標、關鍵字、標題、描述。
+     - 僅讀 XMP 的快速路徑（sidecar，沒有時讀檔案內嵌的）— 評等、色標、關鍵字、標題、描述。
    * - ``convert_format``
      - 圖片格式轉換。目標格式由目標檔案的副檔名決定(``png`` /
        ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``)。

@@ -99,14 +99,20 @@ def run_export(paths: list[str]) -> tuple[int, int, int]:
 
 
 def run_import(paths: list[str]) -> tuple[int, int, int]:
-    """Merge sidecars into settings. Returns (imported, missing, failed)."""
+    """Merge sidecars into settings. Returns (imported, missing, failed).
+
+    A file without a sidecar is imported from the metadata embedded in it
+    (a JPEG Lightroom or Windows Explorer rated); it is *missing* only when
+    it has neither.
+    """
     imported = missing = failed = 0
     for p in paths:
-        if not xmp_sidecar.has_sidecar(p):
+        data = xmp_sidecar.load(p)
+        if data.is_empty() and not xmp_sidecar.has_sidecar(p):
             missing += 1
             continue
         try:
-            xmp_sidecar.import_for(p)
+            xmp_sidecar.apply_to_settings(p, data)
             imported += 1
         except (OSError, ValueError):
             failed += 1

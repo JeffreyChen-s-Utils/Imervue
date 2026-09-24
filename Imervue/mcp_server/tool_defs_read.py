@@ -49,7 +49,8 @@ READ_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "read_image_metadata",
         "description": (
-            "Read dimensions, format, EXIF, and XMP sidecar fields for one image."
+            "Read dimensions, format, EXIF, and XMP fields (the sidecar, else what the "
+            "file embeds) for one image."
         ),
         "input_schema": {
             "type": "object",
@@ -62,7 +63,8 @@ READ_TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "read_xmp_tags",
-        "description": "Return only the XMP sidecar tags / rating / label for an image.",
+        "description": ("Return only the XMP tags / rating / label for an image: the "
+                        "sidecar, else what the file embeds."),
         "input_schema": {
             "type": "object",
             "properties": {"path": {"type": "string"}},

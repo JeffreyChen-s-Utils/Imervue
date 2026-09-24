@@ -2208,6 +2208,12 @@ wird als Culling-**Reject** ohne Sterne importiert, und ein Reject wird als -1
 exportiert. Eine nicht abgelehnte Sidecar-Datei hebt ein Reject auf; ein Pick
 bleibt unberührt.
 
+Eine Datei ohne Sidecar wird aus dem gelesen — und importiert —, was sie selbst
+einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF), dann ihrem EXIF-``Rating`` /
+``RatingPercent``. Dort speichert Lightroom Bewertung und Stichwörter eines JPEG,
+und dort legen der Windows-Explorer und manche Kameras ihre Sterne ab. Eine
+vorhandene Sidecar-Datei hat Vorrang.
+
 - **XMP für aktuelles Bild importieren** — zieht Bewertung / Titel / Stichwörter /
   Farbetikett aus dem Sidecar in die interne Datenbank.
 - **XMP für aktuelles Bild exportieren** — schreibt die aktuelle Bewertung / Titel /
@@ -2535,11 +2541,11 @@ Verfügbare Werkzeuge
      - Bilddateien in einem Ordner auflisten (Pfad, Größe, mtime). Mit
        ``recursive=true`` werden Unterordner durchlaufen.
    * - ``read_image_metadata``
-     - Abmessungen, Format, EXIF-Tags und XMP-Sidecar-Felder für ein Bild.
+     - Abmessungen, Format, EXIF-Tags und XMP-Felder (Sidecar, sonst eingebettet) für ein Bild.
        Fehlende Daten werden als entsprechender leerer Wert gemeldet, statt
        eine Ausnahme auszulösen.
    * - ``read_xmp_tags``
-     - Schneller Pfad, der nur den XMP-Sidecar liest — Bewertung, Farbetikett,
+     - Schneller Pfad, der nur das XMP liest (Sidecar, sonst eingebettet) — Bewertung, Farbetikett,
        Stichwörter, Titel, Beschreibung.
    * - ``convert_format``
      - Ein Bild in ein anderes Format konvertieren. Das Zielformat wird vom

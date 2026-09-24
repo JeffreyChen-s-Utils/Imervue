@@ -388,3 +388,80 @@ class TestSaveMergesIntoAnExistingSidecar:
             xmp.save(image_path, xmp.XmpData(rating=5))
         assert path.read_text(encoding="utf-8") == text
         assert issubclass(xmp.UnreadableSidecarError, OSError)
+
+
+_PACKET = (b'<?xpacket begin="\xef\xbb\xbf" id="W5M0MpCehiHzreSzNTczkc9d"?>'
+           b'<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF '
+           b'xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" '
+           b'xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:dc="http://purl.org/dc/elements/1.1/" '
+           b'xmp:Rating="4" xmp:Label="Red"><dc:subject><rdf:Bag><rdf:li>Taipei</rdf:li>'
+           b'</rdf:Bag></dc:subject></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>')
+
+
+class TestEmbeddedMetadata:
+    """Lightroom writes a JPEG's rating into the file, never a sidecar; Imervue read sidecars only."""
+
+    @staticmethod
+    def _image(tmp_path, name="photo.jpg", *, packet=_PACKET, exif=None):
+        from PIL import Image
+        path = tmp_path / name
+        kwargs = {}
+        if packet is not None and name.endswith(".tif"):
+            kwargs["tiffinfo"] = {700: packet}         # Pillow's TIFF writer takes XMP as tag 700
+        elif packet is not None:
+            kwargs["xmp"] = packet
+        if exif is not None:
+            kwargs["exif"] = exif
+        Image.new("RGB", (8, 8)).save(path, **kwargs)
+        return str(path)
+
+    @pytest.mark.parametrize("name", ["photo.jpg", "photo.webp", "photo.tif"])
+    def test_the_packet_inside_the_file_is_read(self, xmp, tmp_path, name):
+        loaded = xmp.load(self._image(tmp_path, name))
+        assert (loaded.rating, loaded.keywords, loaded.color_label) == (4, ["Taipei"], "Red")
+
+    def test_a_png_packet_is_read(self, xmp, tmp_path):
+        from PIL import Image, PngImagePlugin
+        info = PngImagePlugin.PngInfo()
+        info.add_itxt("XML:com.adobe.xmp", _PACKET.decode("utf-8"))
+        path = tmp_path / "photo.png"
+        Image.new("RGB", (8, 8)).save(path, pnginfo=info)
+        assert xmp.load(str(path)).keywords == ["Taipei"]
+
+    def test_a_sidecar_wins_over_the_packet(self, xmp, tmp_path):
+        image = self._image(tmp_path)
+        xmp.save(image, xmp.XmpData(rating=1))
+        assert xmp.load(image).rating == 1
+
+    @pytest.mark.parametrize(("tag", "value", "stars"), [
+        (0x4746, 3, 3),          # Rating, as Windows Explorer and some cameras write it
+        (0x4749, 50, 3),         # RatingPercent only
+        (0x4746, 9, 5),          # out of range: clamped
+    ])
+    def test_an_exif_rating_fills_in(self, xmp, tmp_path, tag, value, stars):
+        from PIL import Image
+        exif = Image.Exif()
+        exif[tag] = value
+        assert xmp.load(self._image(tmp_path, packet=None, exif=exif)).rating == stars
+
+    def test_the_packets_rating_beats_the_exif_one(self, xmp, tmp_path):
+        from PIL import Image
+        exif = Image.Exif()
+        exif[0x4746] = 1
+        assert xmp.load(self._image(tmp_path, exif=exif)).rating == 4
+
+    def test_a_malformed_packet_still_lets_the_exif_rating_through(self, xmp, tmp_path):
+        from PIL import Image
+        exif = Image.Exif()
+        exif[0x4746] = 2
+        loaded = xmp.load(self._image(tmp_path, packet=b"<not xml", exif=exif))
+        assert (loaded.rating, loaded.keywords) == (2, [])
+
+    @pytest.mark.parametrize("content", [b"", b"not an image at all"])
+    def test_an_unreadable_file_gives_nothing(self, xmp, tmp_path, content):
+        path = tmp_path / "broken.jpg"
+        path.write_bytes(content)
+        assert xmp.load(str(path)).is_empty()
+
+    def test_a_plain_file_gives_nothing(self, xmp, tmp_path):
+        assert xmp.load(self._image(tmp_path, packet=None)).is_empty()

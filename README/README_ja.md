@@ -260,7 +260,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 - **EXIF エディタ** ダイアログ — 説明・作者・著作権・カメラ・コメント（Unicode 可）を追加パッケージなしで JPEG / WebP に書き込み、画素と他のタグはそのまま
 - **キーワードエディタ** — タイトル / 作成者 / 説明 / キーワード。タグの共起から導いた **関連タグの提案** 付き、さらに **統制語彙の展開**(リーフキーワードが、編集可能な階層語彙からその祖先 + 同義語を自動的に適用)
 - **画像情報** ダイアログ(寸法 / サイズ / 日付)
-- **XMP サイドカー**(`.xmp` コンパニオン)— レーティング / タイトル / 説明 / キーワード / カラーラベルを other XMP-aware photo managers と双方向同期(`defusedxml` で安全に解析)。保存時は既存の sidecar にマージします。変わるのはこれらの項目だけなので、RAW 現像ソフトが保存した現像設定・切り抜き・履歴は残り、解析できない sidecar は上書きしません。`photo.xmp`（Lightroom、Bridge）のほか、darktable と digiKam が書く `photo.jpg.xmp` も、それが唯一の sidecar なら読み込んで更新します。カラーラベルは Lightroom の表記（`Red` … `Purple`）と Bridge の表記（`Select`、`Second`、`Approved`、`Review`、`To Do`）を理解し、エクスポート時は Lightroom の表記で書き込みます。除外された写真(Lightroom、Bridge、darktable の `xmp:Rating` -1)は選別の「除外」になり、「除外」は -1 としてエクスポートします。
+- **XMP サイドカー**(`.xmp` コンパニオン)— レーティング / タイトル / 説明 / キーワード / カラーラベルを other XMP-aware photo managers と双方向同期(`defusedxml` で安全に解析)。保存時は既存の sidecar にマージします。変わるのはこれらの項目だけなので、RAW 現像ソフトが保存した現像設定・切り抜き・履歴は残り、解析できない sidecar は上書きしません。`photo.xmp`（Lightroom、Bridge）のほか、darktable と digiKam が書く `photo.jpg.xmp` も、それが唯一の sidecar なら読み込んで更新します。カラーラベルは Lightroom の表記（`Red` … `Purple`）と Bridge の表記（`Select`、`Second`、`Approved`、`Review`、`To Do`）を理解し、エクスポート時は Lightroom の表記で書き込みます。除外された写真(Lightroom、Bridge、darktable の `xmp:Rating` -1)は選別の「除外」になり、「除外」は -1 としてエクスポートします。サイドカーのないファイルは、ファイル自体に埋め込まれた XMP と EXIF レーティング(JPEG、PNG、WebP、TIFF)を読み込み・取り込みます。Lightroom は JPEG の評価とキーワードを、Windows エクスプローラーは星をこの形で保存します。
 - **GPS ジオタグエディタ** — EXIF GPS の緯度経度を読み書き。JPEG / WebP は追加パッケージ不要で、画素・他のタグ・サムネイルはそのまま
 - **トークンバッチリネーム** — `{date:yyyymmdd}_{camera}_{counter:04}{ext}` のようなテンプレートをライブプレビュー
 - **メタデータ CSV / JSON エクスポート** — 画像 1 枚あたり 1 行で、カリング / レーティング / タグ / メモを含む
@@ -812,7 +812,7 @@ python -m Imervue.mcp_server
 | ツール | 用途 |
 |------|---------|
 | `list_images` | フォルダ内の画像をリスト(再帰オプション付き) |
-| `read_image_metadata` / `read_xmp_tags` | 寸法、フォーマット、EXIF、XMP サイドカー(レーティング、ラベル、キーワード) |
+| `read_image_metadata` / `read_xmp_tags` | 寸法、フォーマット、EXIF、XMP:サイドカー、なければファイル埋め込み(レーティング、ラベル、キーワード) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 参照なし解析: チャンネルごとの統計、colourfulness / entropy / contrast、ヒストグラム + クリッピング、ブラースコア |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 プレビュー、Tesseract テキスト、知覚ハッシュによる近似重複グループ(進捗付き) |
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP(+ オプションで HEIC / AVIF / JXL)間で変換 |

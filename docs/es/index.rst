@@ -2173,6 +2173,12 @@ Una foto rechazada — ``xmp:Rating`` -1 en Lightroom, Bridge y darktable — se
 importa como **Reject** de la selección sin estrellas, y un Reject se exporta como
 -1. Un sidecar no rechazado quita un Reject; un Pick no cambia.
 
+Un archivo sin sidecar se lee — y se importa — desde lo que él mismo incrusta: su
+paquete XMP (JPEG, PNG, WebP, TIFF) y luego su ``Rating`` / ``RatingPercent``
+EXIF. Ahí guarda Lightroom la valoración y las palabras clave de un JPEG, y ahí
+guardan sus estrellas el Explorador de Windows y algunas cámaras. Si hay sidecar,
+manda el sidecar.
+
 - **Import XMP for current image** — extrae valoración / título / palabras clave /
   etiqueta de color del archivo secundario a la base de datos interna.
 - **Export XMP for current image** — escribe la valoración / título / palabras clave /
@@ -2528,11 +2534,11 @@ Herramientas disponibles
      - Lista los archivos de imagen de una carpeta (ruta, tamaño, mtime). Pase
        ``recursive=true`` para recorrer subcarpetas.
    * - ``read_image_metadata``
-     - Dimensiones, formato, etiquetas EXIF y campos del archivo secundario XMP para una
+     - Dimensiones, formato, etiquetas EXIF y campos XMP (sidecar o, si no, incrustados) para una
        imagen. Los datos que falten se reportan como el valor vacío apropiado en lugar
        de lanzar una excepción.
    * - ``read_xmp_tags``
-     - Ruta rápida que sólo lee el archivo secundario XMP — valoración, etiqueta de color,
+     - Ruta rápida que sólo lee el XMP (sidecar o, si no, incrustado) — valoración, etiqueta de color,
        palabras clave, título, descripción.
    * - ``convert_format``
      - Convierte una imagen a otro formato. El formato de destino se infiere del sufijo

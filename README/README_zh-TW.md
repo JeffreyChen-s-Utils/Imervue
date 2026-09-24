@@ -259,7 +259,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - **EXIF 編輯器** 對話框 — 描述、作者、版權、相機與註解（支援 Unicode）不需額外套件即可寫入 JPEG / WebP，像素與其他標籤不變
 - **關鍵字編輯器** — 標題 / 創作者 / 描述 / 關鍵字，並從標籤共現提供 **相關標籤建議**，以及 **受控詞彙展開**（輸入葉節點關鍵字會自動套用其祖先＋同義詞，詞彙為可編輯的階層結構）
 - **影像資訊** 對話框（尺寸 / 大小 / 日期）
-- **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤雙向同步 other XMP-aware photo managers（透過 `defusedxml` 安全解析）。儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。除了 `photo.xmp`（Lightroom、Bridge），darktable 與 digiKam 寫的 `photo.jpg.xmp` 在它是唯一的 sidecar 時也會讀取並更新；顏色標籤看得懂 Lightroom 的寫法（`Red` … `Purple`）與 Bridge 的寫法（`Select`、`Second`、`Approved`、`Review`、`To Do`），匯出時照 Lightroom 的寫法寫入。被拒絕的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）會成為篩選的「拒絕」，「拒絕」匯出時寫成 -1。
+- **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤雙向同步 other XMP-aware photo managers（透過 `defusedxml` 安全解析）。儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。除了 `photo.xmp`（Lightroom、Bridge），darktable 與 digiKam 寫的 `photo.jpg.xmp` 在它是唯一的 sidecar 時也會讀取並更新；顏色標籤看得懂 Lightroom 的寫法（`Red` … `Purple`）與 Bridge 的寫法（`Select`、`Second`、`Approved`、`Review`、`To Do`），匯出時照 Lightroom 的寫法寫入。被拒絕的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）會成為篩選的「拒絕」，「拒絕」匯出時寫成 -1。沒有 sidecar 的檔案會讀取並匯入檔案本身內嵌的 XMP 與 EXIF 評等（JPEG、PNG、WebP、TIFF）：Lightroom 就是這樣保存 JPEG 的評等與關鍵字，Windows 檔案總管的星等也是。
 - **GPS 地理標記編輯器** — 讀寫 EXIF GPS 經緯度；JPEG / WebP 不需額外套件，像素、其他標籤與縮圖都不變
 - **權杖批次重新命名** — 即時預覽範本 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **匯出元資料 CSV / JSON** — 每張影像一列含挑片 / 評等 / 標籤 / 筆記
@@ -810,7 +810,7 @@ python -m Imervue.mcp_server
 | 工具 | 用途 |
 |------|---------|
 | `list_images` | 列出資料夾中的影像（可選遞迴） |
-| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP 邊車檔（評等、色標、關鍵字） |
+| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP：sidecar，沒有時讀檔案內嵌的（評等、色標、關鍵字） |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 無參考分析：各通道統計、colourfulness/entropy/對比、直方圖 + 裁切、模糊分數 |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 預覽、Tesseract 文字、perceptual-hash 近重複分組（含進度） |
 | `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP（+ 選用 HEIC / AVIF / JXL） |

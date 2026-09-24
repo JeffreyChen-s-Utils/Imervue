@@ -53,6 +53,8 @@ _NS = {
 _RATING_MIN = -1
 _RATING_MAX = 5
 _REJECTED = -1         # xmp:Rating of a rejected photo in Lightroom, Bridge and darktable
+_EXIF_RATING = 0x4746          # 0-5 stars, written by Windows Explorer and some cameras
+_EXIF_RATING_PERCENT = 0x4749  # the same as a 0-100 percentage
 _XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 # Adobe Bridge (and Lightroom's "Bridge Default" label set) labels with a
 # workflow word per colour; Lightroom writes the colour's own name.
@@ -208,15 +210,18 @@ def _parse_bag(elem) -> list[str]:
 
 
 def load(image_path: str | Path) -> XmpData:
-    """Read the sidecar for ``image_path`` and return an ``XmpData``.
+    """Read the metadata for ``image_path`` and return an ``XmpData``.
 
-    Returns a default (empty) ``XmpData`` if the sidecar is missing or the
-    XML is malformed \u2014 we never raise on bad user files, because losing the
-    image view because of a broken sidecar would be a poor UX.
+    The sidecar when there is one; otherwise what the image file carries
+    itself (:func:`load_embedded`) \u2014 Lightroom writes a JPEG's rating and
+    keywords into the file rather than a sidecar, and so does Windows
+    Explorer. Returns a default (empty) ``XmpData`` if there is nothing or
+    the XML is malformed \u2014 we never raise on bad user files, because losing
+    the image view because of a broken sidecar would be a poor UX.
     """
     path = _existing_sidecar(image_path)
     if path is None:
-        return XmpData()
+        return load_embedded(image_path)
     try:
         tree = DefusedET.parse(str(path))
         root = tree.getroot()
@@ -227,6 +232,56 @@ def load(image_path: str | Path) -> XmpData:
         # old (ParseError, OSError) tuple and crashed keyword indexing /
         # smart-album evaluation instead of degrading to an empty sidecar.
         return XmpData()
+    return _from_root(root)
+
+
+def load_embedded(image_path: str | Path) -> XmpData:
+    """The metadata the image file carries itself: its XMP packet, then its EXIF rating.
+
+    The XMP packet is the one Pillow finds in a JPEG's APP1, a PNG's iTXt, a
+    WebP chunk or TIFF tag 700. A photo rated in Windows Explorer or in camera
+    may only have the EXIF ``Rating`` (0x4746) or ``RatingPercent`` (0x4749);
+    that fills in the rating when the packet has none. Empty for a file
+    Pillow can't open or one without either.
+    """
+    packet, exif_rating = _embedded_metadata(image_path)
+    data = XmpData()
+    if packet:
+        try:
+            data = _from_root(DefusedET.fromstring(packet))
+        except (ET.ParseError, DefusedXmlException):
+            data = XmpData()
+    if not data.rating and exif_rating:
+        data.rating = exif_rating
+    return data
+
+
+def _embedded_metadata(image_path: str | Path) -> tuple[bytes | None, int]:
+    """``(XMP packet, EXIF stars)`` stored inside *image_path*; ``(None, 0)`` when unreadable."""
+    from PIL import Image
+
+    from Imervue.image.metadata_sync import percent_to_rating
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    try:
+        with Image.open(image_path) as img:
+            packet = img.info.get("xmp")
+            exif = img.getexif()
+    except IMAGE_READ_ERRORS:
+        return None, 0
+    if isinstance(packet, str):
+        packet = packet.encode("utf-8")
+    rating = exif.get(_EXIF_RATING)
+    if rating is None and exif.get(_EXIF_RATING_PERCENT) is not None:
+        rating = percent_to_rating(exif[_EXIF_RATING_PERCENT])
+    try:
+        stars = max(0, min(_RATING_MAX, int(rating or 0)))
+    except (TypeError, ValueError):
+        stars = 0
+    return (packet if isinstance(packet, bytes) and packet.strip() else None), stars
+
+
+def _from_root(root) -> XmpData:
+    """The fields Imervue tracks, read from a parsed XMP document."""
     descs = _find_descriptions(root)
     if not descs:
         return XmpData()

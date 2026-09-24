@@ -259,7 +259,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 - **EXIF 编辑器** 对话框 — 描述、作者、版权、相机与注释（支持 Unicode）无需额外套件即可写入 JPEG / WebP，像素与其他标签不变
 - **关键字编辑器** — 标题 / 创作者 / 描述 / 关键字，含从标签共现得出的 **相关标签建议**，以及 **受控词汇展开**（输入叶节点关键字会自动套用其祖先＋同义词，词汇为可编辑的层级结构）
 - **图像信息** 对话框（尺寸 / 大小 / 日期）
-- **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 other XMP-aware photo managers（通过 `defusedxml` 安全解析）。保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。除了 `photo.xmp`（Lightroom、Bridge），darktable 与 digiKam 写的 `photo.jpg.xmp` 在它是唯一的 sidecar 时也会读取并更新；颜色标签看得懂 Lightroom 的写法（`Red` … `Purple`）与 Bridge 的写法（`Select`、`Second`、`Approved`、`Review`、`To Do`），导出时按 Lightroom 的写法写入。被拒绝的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）会成为筛选的「拒绝」，「拒绝」导出时写成 -1。
+- **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 other XMP-aware photo managers（通过 `defusedxml` 安全解析）。保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。除了 `photo.xmp`（Lightroom、Bridge），darktable 与 digiKam 写的 `photo.jpg.xmp` 在它是唯一的 sidecar 时也会读取并更新；颜色标签看得懂 Lightroom 的写法（`Red` … `Purple`）与 Bridge 的写法（`Select`、`Second`、`Approved`、`Review`、`To Do`），导出时按 Lightroom 的写法写入。被拒绝的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）会成为筛选的「拒绝」，「拒绝」导出时写成 -1。没有 sidecar 的文件会读取并导入文件本身内嵌的 XMP 与 EXIF 评级（JPEG、PNG、WebP、TIFF）：Lightroom 就是这样保存 JPEG 的评级与关键字，Windows 文件资源管理器的星级也是。
 - **GPS 地理标记编辑器** — 读写 EXIF GPS 经纬度；JPEG / WebP 无需额外套件，像素、其他标签与缩略图都不变
 - **令牌批量重命名** — 实时预览模板 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **导出元数据 CSV / JSON** — 每张图一行含挑片 / 评级 / 标签 / 笔记
@@ -810,7 +810,7 @@ python -m Imervue.mcp_server
 | 工具 | 用途 |
 |------|---------|
 | `list_images` | 列出文件夹中的图片（可选递归） |
-| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP 边车（评级、标签、关键字） |
+| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP：sidecar，没有时读文件内嵌的（评级、标签、关键字） |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 无参考分析：每通道统计、色彩度 / 熵 / 对比度、直方图 + 裁剪、模糊评分 |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 预览、Tesseract 文字、感知哈希近重复分组（带进度） |
 | `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP（+ 可选 HEIC / AVIF / JXL） |
