@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_in_file_manager
+from Imervue.system.file_transfer import is_same_file
 import contextlib
 import logging
 
@@ -567,7 +568,7 @@ class _FileTreeView(QTreeView):
         if not new_name or new_name == target.name:
             return
         new_path = target.with_name(new_name)
-        if new_path.exists():
+        if new_path.exists() and not is_same_file(target, new_path):   # case-only is fine
             if hasattr(self._main_window, "toast"):
                 self._main_window.toast.warning(
                     lang.get("tree_rename_exists", "A file with that name already exists"),

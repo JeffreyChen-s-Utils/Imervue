@@ -34,6 +34,7 @@ from PIL import Image
 
 from Imervue.image.dimensions import image_dimensions
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.system.file_transfer import is_same_file
 
 _TOKEN_RE = re.compile(r"\{([a-zA-Z_]+)(?::([^{}]+))?\}")
 
@@ -82,7 +83,9 @@ def preview(
         # as a conflict and apply_plan skipped it, so cross-folder renames lost
         # every folder after the first.
         key = os.path.normcase(dst)
-        conflict = key in dest_paths or (dst != src and os.path.exists(dst))
+        # A destination that is the source itself (a case-only change on a
+        # case-insensitive file system) is no conflict.
+        conflict = key in dest_paths or (os.path.exists(dst) and not is_same_file(src, dst))
         dest_paths.add(key)
         plans.append(RenamePlan(src=src, dst=dst, conflict=conflict))
     return plans
@@ -92,7 +95,7 @@ def apply_plan(plans: list[RenamePlan]) -> tuple[int, int]:
     """Rename everything in the plan. Returns (successes, failures)."""
     ok = failed = 0
     for plan in plans:
-        if plan.conflict or plan.src == plan.dst:
+        if plan.conflict or os.path.abspath(plan.src) == os.path.abspath(plan.dst):
             failed += 1
             continue
         try:

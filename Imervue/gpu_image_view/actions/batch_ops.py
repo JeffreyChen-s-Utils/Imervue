@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_transfer import transfer_into
+from Imervue.system.file_transfer import is_same_file, transfer_into
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -121,7 +121,9 @@ class BatchRenameDialog(QDialog):
             p = Path(old_path)
             new_path = p.parent / self._build_name(old_path, start + i)
             try:
-                if new_path != p and not new_path.exists():
+                # str(), not Path ==: WindowsPath equality ignores case, which hid
+                # a case-only rename as "no change".
+                if str(new_path) != str(p) and (not new_path.exists() or is_same_file(p, new_path)):
                     p.rename(new_path)
                     renamed.append((old_path, str(new_path)))
                 else:

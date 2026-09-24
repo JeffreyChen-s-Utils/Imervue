@@ -78,3 +78,15 @@ def transfer_into(sources: Sequence[str], dest_dir: str | Path, *, move: bool) -
             continue
         result.done.append((plan.source, str(target)))
     return result
+
+
+def is_same_file(a: str | Path, b: str | Path) -> bool:
+    """Whether *a* and *b* name one existing file — ``img.jpg`` and ``IMG.JPG`` on Windows.
+
+    A rename to *b* then only changes the name's case (or nothing at all), so
+    *b* "already existing" is no conflict.
+    """
+    try:
+        return os.path.samefile(a, b)
+    except OSError:   # either side missing or unreadable
+        return False
