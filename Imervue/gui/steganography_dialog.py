@@ -23,7 +23,13 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.gui._apply_save import current_image_path, finalize_worker, load_rgba, notify_saved
+from Imervue.gui._apply_save import (
+    current_image_path,
+    finalize_worker,
+    load_rgba,
+    notify_saved,
+    output_path,
+)
 from Imervue.image.steganography import capacity_bytes, hide_message, reveal_message
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -100,7 +106,7 @@ class SteganographyDialog(WorkerHostMixin, QDialog):
     def _hide(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_stego.png")
+        out_path = Path(output_path(self._path, "stego"))
         self._worker = _HideWorker(self._path, self._message.toPlainText(), str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()

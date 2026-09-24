@@ -284,7 +284,7 @@ Accessibles depuis le menu **Tools** ; organisés en sous-menus groupés par fon
 
 ## Modify — Développement non destructif
 
-L'onglet **Modify** est la station de développement. Chaque ajustement vit dans une **recette** par image stockée à côté du fichier — les pixels d'origine sur disque ne sont jamais écrasés tant que vous n'avez pas explicitement choisi **Export** ou **Save As**. **Apply Crop** et le **Save** des annotations sont les deux exceptions : ils réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier.
+L'onglet **Modify** est la station de développement. Chaque ajustement vit dans une **recette** par image stockée à côté du fichier — les pixels d'origine sur disque ne sont jamais écrasés tant que vous n'avez pas explicitement choisi **Export** ou **Save As**. **Apply Crop** et le **Save** des annotations sont les deux exceptions : ils réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier. Les outils à usage unique (CLAHE, mélangeur TSL, cadre photo, redressement automatique…) enregistrent leur résultat à côté de l'original sous `photo_clahe.png` ; une nouvelle exécution enregistre `photo_clahe_1.png` au lieu de remplacer le dernier résultat.
 
 ### Curseurs de développement
 

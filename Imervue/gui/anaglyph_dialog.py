@@ -23,11 +23,12 @@ from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import open_path_into, path_browse_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.anaglyph import METHODS, anaglyph
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -92,7 +93,7 @@ class AnaglyphDialog(WorkerHostMixin, QDialog):
         right = self._right_edit.text().strip()
         if self._worker is not None or not right:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_anaglyph.png")
+        out_path = Path(output_path(self._path, "anaglyph"))
         self._worker = _AnaglyphWorker(
             self._path, right, self._method.currentData(), str(out_path))
         self._worker.done.connect(self._on_done)

@@ -474,7 +474,10 @@ par image ; appuyez sur ``Réinitialiser`` à tout moment pour restaurer l'origi
 parmi les modifications individuelles. Les recettes survivent aux redémarrages et peuvent être exportées / synchronisées
 via le flux de fichiers annexes XMP décrit dans la section Métadonnées.
 
-Le fichier sur disque ne change que si vous le demandez. **Apply Crop** et le **Save** des annotations réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier.
+Le fichier sur disque ne change que si vous le demandez. **Apply Crop** et le **Save** des annotations réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier. Les outils à usage unique (CLAHE, mélangeur TSL, cadre photo, redressement
+automatique…) enregistrent leur résultat à côté de l'original sous
+``photo_clahe.png`` ; une nouvelle exécution enregistre ``photo_clahe_1.png`` au
+lieu de remplacer le dernier résultat.
 
 Enregistrer et annuler
 ^^^^^^^^^^^^^^^^^^^^^^

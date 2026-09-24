@@ -286,7 +286,7 @@ Accessed from **Tools** menu; organised into function-grouped submenus:
 
 ## Modify — Non-destructive develop
 
-The **Modify** tab is the develop workstation. Every adjustment lives on a per-image **recipe** stored alongside the file — the original pixels on disk are never overwritten until you explicitly **Export** or **Save As**. **Apply Crop** and the annotation **Save** are the two exceptions: they write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten — the crop asks you to export instead, and the annotation save asks for a new file.
+The **Modify** tab is the develop workstation. Every adjustment lives on a per-image **recipe** stored alongside the file — the original pixels on disk are never overwritten until you explicitly **Export** or **Save As**. **Apply Crop** and the annotation **Save** are the two exceptions: they write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten — the crop asks you to export instead, and the annotation save asks for a new file. The one-shot tools (CLAHE, HSL Mixer, Photo Frame, Auto Straighten …) save their result beside the original as `photo_clahe.png`; running one again saves `photo_clahe_1.png` rather than replacing the last result.
 
 ### Develop sliders
 

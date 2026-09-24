@@ -9,6 +9,7 @@ only carries its own widgets and transform call.
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -103,10 +104,32 @@ def labeled_slider(
     return slider, label, slider_row(slider, label)
 
 
-def output_path(source: str, suffix: str) -> str:
-    """Return a sibling PNG path of *source* tagged with *suffix* (e.g. ``_emboss``)."""
+def output_paths(source: str, suffixes: list[str], ext: str = ".png") -> list[str]:
+    """Sibling paths of *source* tagged with each of *suffixes*, none of which exists yet.
+
+    ``photo_clahe.png``; if that is taken, ``photo_clahe_1.png`` and on — a
+    second run of a tool used to save over the first one's result, and over
+    any retouching done to it since. A group (frequency separation's low and
+    high layers) shares one number so the pair stays recognisable. Names are
+    compared the way the file system does.
+    """
     path = Path(source)
-    return str(path.with_name(f"{path.stem}_{suffix}.png"))
+    try:
+        taken = {os.path.normcase(name) for name in os.listdir(path.parent)}
+    except OSError:
+        taken = set()
+    counter = 0
+    while True:
+        tail = f"_{counter}" if counter else ""
+        names = [f"{path.stem}_{suffix}{tail}{ext}" for suffix in suffixes]
+        if not any(os.path.normcase(name) in taken for name in names):
+            return [str(path.with_name(name)) for name in names]
+        counter += 1
+
+
+def output_path(source: str, suffix: str, ext: str = ".png") -> str:
+    """A free sibling path of *source* tagged with *suffix*: ``photo_emboss.png``, then ``_1``."""
+    return output_paths(source, [suffix], ext)[0]
 
 
 def load_rgba(path: str) -> np.ndarray:

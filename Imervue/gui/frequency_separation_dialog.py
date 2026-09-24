@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui._apply_save import load_rgba
+from Imervue.gui._apply_save import load_rgba, output_paths
 from Imervue.image.frequency_separation import (
     RADIUS_MAX,
     RADIUS_MIN,
@@ -126,11 +126,9 @@ def _write_layer_files(
     source_path: str,
     result,
 ) -> tuple[Path, Path]:
-    """Save the low/high layers next to ``source_path`` as PNG sidecars."""
-    src = Path(source_path)
-    stem = src.stem
-    low_path = src.with_name(f"{stem}_low.png")
-    high_path = src.with_name(f"{stem}_high.png")
+    """Save the low/high layers beside ``source_path`` as a pair that overwrites nothing."""
+    low_name, high_name = output_paths(source_path, ["low", "high"])
+    low_path, high_path = Path(low_name), Path(high_name)
     Image.fromarray(result.low_frequency, mode="RGBA").save(str(low_path))
     Image.fromarray(result.high_frequency, mode="RGBA").save(str(high_path))
     return low_path, high_path

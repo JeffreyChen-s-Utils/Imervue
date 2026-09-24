@@ -284,7 +284,7 @@ Acessadas a partir do menu **Tools**; organizadas em submenus agrupados por fun�
 
 ## Modify — Revelação não destrutiva
 
-A aba **Modify** é a estação de revelação. Toda alteração vive em uma **recipe** por imagem armazenada ao lado do arquivo — os pixels originais em disco nunca são sobrescritos até você **Exportar** ou usar **Salvar Como** explicitamente. **Apply Crop** e o **Save** de anotações são as duas exceções: gravam o resultado sobre o arquivo e mantêm seu EXIF (câmera, data de captura, GPS), XMP e DPI. Um RAW de câmera, um HEIC ou um arquivo animado / de várias páginas nunca é sobrescrito — o recorte pede que você exporte e o salvamento de anotações pede um arquivo novo.
+A aba **Modify** é a estação de revelação. Toda alteração vive em uma **recipe** por imagem armazenada ao lado do arquivo — os pixels originais em disco nunca são sobrescritos até você **Exportar** ou usar **Salvar Como** explicitamente. **Apply Crop** e o **Save** de anotações são as duas exceções: gravam o resultado sobre o arquivo e mantêm seu EXIF (câmera, data de captura, GPS), XMP e DPI. Um RAW de câmera, um HEIC ou um arquivo animado / de várias páginas nunca é sobrescrito — o recorte pede que você exporte e o salvamento de anotações pede um arquivo novo. As ferramentas de uso único (CLAHE, mixer HSL, moldura, endireitamento automático…) salvam o resultado ao lado do original como `photo_clahe.png`; executá-las de novo salva `photo_clahe_1.png` em vez de substituir o último resultado.
 
 ### Sliders de revelação
 

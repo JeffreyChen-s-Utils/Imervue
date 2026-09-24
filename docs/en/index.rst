@@ -473,7 +473,9 @@ per-image; press ``Reset`` at any time to restore the original, or ``Ctrl + Z`` 
 backwards through individual changes. Recipes survive restarts and can be exported / synced
 via the XMP sidecar flow described in the Metadata section.
 
-The file on disk changes only when you ask for it. **Apply Crop** and the annotation **Save** write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten: the crop asks you to export instead, and the annotation save asks for a new file.
+The file on disk changes only when you ask for it. **Apply Crop** and the annotation **Save** write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten: the crop asks you to export instead, and the annotation save asks for a new file. The one-shot tools (CLAHE, HSL Mixer, Photo Frame, Auto Straighten …) save their
+result beside the original as ``photo_clahe.png``; running one again saves
+``photo_clahe_1.png`` rather than replacing the last result.
 
 Save & Undo
 ^^^^^^^^^^^^

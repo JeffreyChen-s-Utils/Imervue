@@ -16,11 +16,12 @@ from PySide6.QtWidgets import QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.equirectangular import DEFAULT_SIZE, tiny_planet
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -84,7 +85,7 @@ class TinyPlanetDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_planet.png")
+        out_path = Path(output_path(self._path, "planet"))
         self._worker = _TinyPlanetWorker(self._path, self._size.value(), str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()

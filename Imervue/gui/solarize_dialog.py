@@ -23,11 +23,12 @@ from PySide6.QtWidgets import (
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.solarize import apply_solarize
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -106,7 +107,7 @@ class SolarizeDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_solarize.png")
+        out_path = Path(output_path(self._path, "solarize"))
         self._worker = _SolarizeWorker(
             self._path,
             self._threshold.value() / _PERCENT,

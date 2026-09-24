@@ -22,11 +22,12 @@ from PySide6.QtWidgets import (
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.scale_bar import add_scale_bar
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -87,7 +88,7 @@ class ScaleBarDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_scalebar.png")
+        out_path = Path(output_path(self._path, "scalebar"))
         unit = self._unit.text().strip() or "px"
         self._worker = _ScaleBarWorker(self._path, self._ppu.value(), unit, str(out_path))
         self._worker.done.connect(self._on_done)

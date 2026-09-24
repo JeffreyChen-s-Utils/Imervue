@@ -483,7 +483,10 @@ almacenada por imagen; pulse ``Reset`` en cualquier momento para restaurar el or
 reinicios y se pueden exportar / sincronizar mediante el flujo de archivos secundarios XMP
 descrito en la sección Metadatos.
 
-El archivo en disco solo cambia cuando lo pides. **Apply Crop** y el **Save** de anotaciones escriben el resultado sobre el archivo y conservan su EXIF (cámara, fecha de captura, GPS), XMP y DPI. Un RAW de cámara, un HEIC o un archivo animado / de varias páginas nunca se sobrescribe: el recorte te pide exportar y el guardado de anotaciones te pide un archivo nuevo.
+El archivo en disco solo cambia cuando lo pides. **Apply Crop** y el **Save** de anotaciones escriben el resultado sobre el archivo y conservan su EXIF (cámara, fecha de captura, GPS), XMP y DPI. Un RAW de cámara, un HEIC o un archivo animado / de varias páginas nunca se sobrescribe: el recorte te pide exportar y el guardado de anotaciones te pide un archivo nuevo. Las herramientas de un solo paso (CLAHE, mezclador HSL, marco de foto, enderezado
+automático…) guardan el resultado junto al original como ``photo_clahe.png``;
+volver a ejecutarlas guarda ``photo_clahe_1.png`` en vez de reemplazar el último
+resultado.
 
 Guardar y deshacer
 ^^^^^^^^^^^^^^^^^^

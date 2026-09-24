@@ -1,15 +1,18 @@
 """Tests for the shared apply-and-save helpers (EffectWorker, sliders, paths)."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.gui._apply_save import (
     EffectWorker,
     labeled_slider,
     output_path,
+    output_paths,
 )
 
 
@@ -17,6 +20,39 @@ def test_output_path_tags_sibling_png():
     out = output_path("/photos/raw/IMG_001.jpg", "emboss")
     assert Path(out).name == "IMG_001_emboss.png"
     assert Path(out).parent == Path("/photos/raw")
+
+
+def test_output_path_never_names_an_existing_file(tmp_path):
+    """A second run of a tool saved over the first result (and any retouching done to it)."""
+    source = tmp_path / "IMG.jpg"
+    (tmp_path / "IMG_clahe.png").write_bytes(b"first run")
+    (tmp_path / "IMG_clahe_1.png").write_bytes(b"second run")
+    assert Path(output_path(str(source), "clahe")).name == "IMG_clahe_2.png"
+
+
+def test_output_path_keeps_a_requested_extension(tmp_path):
+    source = tmp_path / "IMG.jpg"
+    (tmp_path / "IMG_straight.jpg").write_bytes(b"x")
+    assert Path(output_path(str(source), "straight", ".jpg")).name == "IMG_straight_1.jpg"
+
+
+@pytest.mark.skipif(os.path.normcase("A") != os.path.normcase("a"),
+                    reason="the file system here tells cases apart")
+def test_output_path_compares_names_as_the_file_system_does(tmp_path):
+    (tmp_path / "img_CLAHE.PNG").write_bytes(b"x")
+    assert Path(output_path(str(tmp_path / "img.jpg"), "clahe")).name == "img_clahe_1.png"
+
+
+def test_output_paths_numbers_a_group_together(tmp_path):
+    """Frequency separation's low / high layers keep a shared number."""
+    source = str(tmp_path / "IMG.jpg")
+    (tmp_path / "IMG_high.png").write_bytes(b"x")       # only one half taken
+    assert [Path(p).name for p in output_paths(source, ["low", "high"])] == [
+        "IMG_low_1.png", "IMG_high_1.png"]
+
+
+def test_output_path_in_a_missing_folder_is_the_plain_name(tmp_path):
+    assert Path(output_path(str(tmp_path / "gone" / "a.jpg"), "x")).name == "a_x.png"
 
 
 def test_labeled_slider_initial_and_tracking(qapp):

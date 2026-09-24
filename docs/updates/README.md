@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-23 | 2026-09-25 | One-shot tools number their result instead of saving over the last one | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260925-22 | 2026-09-25 | Lightroom / darktable keyword hierarchies become library tag paths | #fix #xmp #interop | [2026-09](2026-09.md) |
 | U-20260925-21 | 2026-09-25 | XMP: read the rating and keywords a JPEG carries itself (Lightroom, Windows Explorer) | #fix #xmp #interop | [2026-09](2026-09.md) |
 | U-20260925-20 | 2026-09-25 | XMP: Lightroom / Bridge / darktable rejects map to the culling Reject both ways | #fix #xmp #interop | [2026-09](2026-09.md) |

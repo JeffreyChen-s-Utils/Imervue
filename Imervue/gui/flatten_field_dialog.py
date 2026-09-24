@@ -15,11 +15,12 @@ from PySide6.QtWidgets import QCheckBox, QDialog, QLabel, QSlider, QVBoxLayout, 
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.flatten_field import flatten_background
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -76,7 +77,7 @@ class FlattenFieldDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_flat.png")
+        out_path = Path(output_path(self._path, "flat"))
         self._worker = _FlattenWorker(
             self._path, self._degree.value(), self._divide.isChecked(), str(out_path))
         self._worker.done.connect(self._on_done)

@@ -284,7 +284,7 @@ Aufrufbar im **Tools**-Menü; in funktionsgruppierte Untermenüs organisiert:
 
 ## Modify — Nicht-destruktive Entwicklung
 
-Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem **Rezept** pro Bild, das neben der Datei abgelegt wird — die Originalpixel auf der Festplatte werden erst überschrieben, wenn Sie explizit **Exportieren** oder **Speichern unter** verwenden. Zwei Ausnahmen: **Apply Crop** und das **Speichern** von Anmerkungen schreiben das Ergebnis zurück in die Datei und behalten ihre EXIF-Daten (Kamera, Aufnahmedatum, GPS), XMP und DPI. Eine Kamera-RAW-, HEIC- oder animierte / mehrseitige Datei wird nie überschrieben — beim Zuschneiden werden Sie zum Export aufgefordert, beim Speichern von Anmerkungen nach einer neuen Datei gefragt.
+Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem **Rezept** pro Bild, das neben der Datei abgelegt wird — die Originalpixel auf der Festplatte werden erst überschrieben, wenn Sie explizit **Exportieren** oder **Speichern unter** verwenden. Zwei Ausnahmen: **Apply Crop** und das **Speichern** von Anmerkungen schreiben das Ergebnis zurück in die Datei und behalten ihre EXIF-Daten (Kamera, Aufnahmedatum, GPS), XMP und DPI. Eine Kamera-RAW-, HEIC- oder animierte / mehrseitige Datei wird nie überschrieben — beim Zuschneiden werden Sie zum Export aufgefordert, beim Speichern von Anmerkungen nach einer neuen Datei gefragt. Die Einmal-Werkzeuge (CLAHE, HSL-Mixer, Fotorahmen, Auto-Begradigen …) speichern ihr Ergebnis neben dem Original als `photo_clahe.png`; ein erneuter Lauf speichert `photo_clahe_1.png`, statt das letzte Ergebnis zu ersetzen.
 
 ### Entwicklungs-Slider
 
