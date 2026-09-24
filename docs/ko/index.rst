@@ -946,6 +946,9 @@ Imervue에서 이름을 바꾸거나 이동한 사진(일괄 이름 변경, 토�
 ``IMG.xmp``, ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json``. RAW + JPEG
 쌍에서 RAW가 아직 쓰는 ``IMG.xmp``\ 는 이동하지 않고 복사합니다.
 
+폴더가 Imervue에 열려 있는 동안 다른 프로그램에서 이름을 바꾼 사진도 같은
+데이터를 유지합니다. 새 이름에 이미 있던 데이터는 그대로 둡니다.
+
 ----
 
 RGB 히스토그램

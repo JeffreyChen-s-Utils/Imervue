@@ -932,6 +932,9 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 帶走：``IMG.xmp``、``IMG.JPG.xmp`` 與 ``IMG.JPG.annotations.json``。RAW + JPEG
 成對時，RAW 仍在使用的 ``IMG.xmp`` 會複製而不是移動。
 
+資料夾在 Imervue 中開著時，用其他程式重新命名的照片也會保留這些資料；新名稱原本
+就有的資料則維持不變。
+
 ----
 
 RGB 直方圖

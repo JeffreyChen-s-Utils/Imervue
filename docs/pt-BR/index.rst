@@ -1768,6 +1768,9 @@ seleção (uma pasta renomeada ou movida, as de todas as suas fotos). Os sidecar
 vão junto: ``IMG.xmp``, ``IMG.JPG.xmp`` e ``IMG.JPG.annotations.json``. Um
 ``IMG.xmp`` que o RAW de um par RAW + JPEG ainda usa é copiado em vez de movido.
 
+Uma foto renomeada em outro programa enquanto a pasta está aberta no Imervue
+mantém os mesmos dados; os dados que o novo nome já tinha ficam como estão.
+
 ----
 
 Histograma RGB

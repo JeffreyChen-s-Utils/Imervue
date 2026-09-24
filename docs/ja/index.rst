@@ -951,6 +951,9 @@ sidecar も一緒に移ります:``IMG.xmp``、``IMG.JPG.xmp``、
 ``IMG.JPG.annotations.json``。RAW + JPEG のペアで RAW がまだ使っている
 ``IMG.xmp`` は、移動ではなくコピーします。
 
+フォルダを Imervue で開いている間に他のプログラムでリネームした写真も、同じ
+データを保ちます。新しい名前にすでにあったデータはそのままです。
+
 ----
 
 RGB ヒストグラム

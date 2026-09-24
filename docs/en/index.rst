@@ -1757,6 +1757,9 @@ Its sidecars go with it: ``IMG.xmp``, ``IMG.JPG.xmp`` and
 ``IMG.JPG.annotations.json``. An ``IMG.xmp`` that the RAW of a RAW + JPEG pair
 still uses is copied rather than moved.
 
+A photo renamed in another program while its folder is open in Imervue keeps
+the same data; data the new name already had is left as it is.
+
 ----
 
 RGB Histogram

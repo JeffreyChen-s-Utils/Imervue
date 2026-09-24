@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `10daaf7` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `74672b9` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 862 | 141,102 |
+| `tests/` | 862 | 141,134 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
-| `Imervue/gui/` | 165 | 32,989 |
+| `Imervue/gui/` | 165 | 32,995 |
 | `Imervue/puppet/` | 57 | 15,286 |
 | `Imervue/image/` | 125 | 14,340 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,930 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,130 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,258 |
-| **總計** | **1,698** | **321,198** |
+| **總計** | **1,698** | **321,236** |
 
-其中 `Imervue/` 套件本身 772 檔 / 165,838 行。
+其中 `Imervue/` 套件本身 772 檔 / 165,844 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -527,7 +527,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-165 個檔、32,989 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+165 個檔、32,995 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -547,7 +547,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `slider_spin.py` | 75 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
 | `main_window_filter.py` | 262 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
-| `main_window_folders.py` | 301 | `MainWindowFoldersMixin`：監看目前資料夾、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
+| `main_window_folders.py` | 307 | `MainWindowFoldersMixin`：監看目前資料夾、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
 | `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
 | `main_window_screens.py` | 205 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
 | `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
@@ -965,7 +965,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-862 個檔、141,102 行。`pyproject.toml` 定義三個互斥層級 marker：
+862 個檔、141,134 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

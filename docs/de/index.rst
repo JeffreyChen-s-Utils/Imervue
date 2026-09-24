@@ -1824,6 +1824,10 @@ wandern mit: ``IMG.xmp``, ``IMG.JPG.xmp`` und ``IMG.JPG.annotations.json``. Ein
 ``IMG.xmp``, das das RAW eines RAW-+-JPEG-Paars noch nutzt, wird kopiert statt
 verschoben.
 
+Ein Foto, das in einem anderen Programm umbenannt wird, während sein Ordner in
+Imervue geöffnet ist, behält dieselben Daten; Daten, die der neue Name schon hatte,
+bleiben unverändert.
+
 ----
 
 RGB-Histogramm

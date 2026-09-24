@@ -1789,6 +1789,10 @@ sidecars la acompañan: ``IMG.xmp``, ``IMG.JPG.xmp`` e
 ``IMG.JPG.annotations.json``. Un ``IMG.xmp`` que todavía usa el RAW de un par
 RAW + JPEG se copia en lugar de moverse.
 
+Una foto renombrada en otro programa mientras su carpeta está abierta en Imervue
+conserva los mismos datos; los datos que ya tenía el nombre nuevo se dejan como
+están.
+
 ----
 
 Histograma RGB
