@@ -257,7 +257,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 ### Métadonnées
 
 - **Barre latérale EXIF** avec groupes repliables + bande de notation 0-5 étoiles intégrée
-- Boîte de dialogue **Éditeur EXIF**
+- Boîte de dialogue **Éditeur EXIF** — description, artiste, copyright, appareil et commentaire (Unicode compris) écrits dans un JPEG sans paquet supplémentaire, sans toucher aux pixels ni aux autres tags (WebP nécessite `piexif`)
 - **Éditeur de mots-clés** — titre / créateur / description / mots-clés, avec **suggestions d'étiquettes liées** issues de la cooccurrence des étiquettes et expansion de vocabulaire contrôlé (un mot-clé feuille applique automatiquement ses ancêtres + synonymes depuis un vocabulaire hiérarchique éditable)
 - Boîte de dialogue **Informations sur l'image** (dimensions / taille / dates)
 - **Fichiers annexes XMP** (compagnons `.xmp`) — aller-retour de la note / titre / description / mots-clés / étiquette de couleur pour l'interopérabilité avec d'autres gestionnaires photo XMP (XML sécurisé via `defusedxml`)

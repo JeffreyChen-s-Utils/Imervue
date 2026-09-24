@@ -345,7 +345,7 @@ english_word_dict = {
     # EXIF editor
     "exif_edit_button": "Edit EXIF",
     "exif_editor_title": "Edit EXIF Metadata",
-    "exif_editor_no_piexif": "piexif package required.\nInstall: pip install piexif",
+    "exif_editor_unsupported": "EXIF can be edited in JPEG files (WebP files need the piexif package).",
     "exif_editor_fields": "Metadata Fields",
     "exif_editor_save": _ENGLISH_SAVE,
     "exif_editor_cancel": _ENGLISH_CANCEL,

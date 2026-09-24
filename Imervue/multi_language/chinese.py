@@ -322,7 +322,7 @@ chinese_word_dict = {
     # EXIF 编辑器
     "exif_edit_button": "编辑 EXIF",
     "exif_editor_title": "编辑 EXIF 元数据",
-    "exif_editor_no_piexif": "需要 piexif 包。\n安装：pip install piexif",
+    "exif_editor_unsupported": "可以编辑 JPEG 文件的 EXIF（WebP 文件需要 piexif 包）。",
     "exif_editor_fields": "元数据字段",
     "exif_editor_save": "保存",
     "exif_editor_cancel": "取消",

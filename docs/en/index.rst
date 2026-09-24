@@ -2378,6 +2378,8 @@ lets you edit or set new decimal-degree coordinates. A JPEG is written in place 
 extra package: only its EXIF block changes, so the pixels, the other tags and the thumbnail
 stay as they were. Other formats need ``piexif``.
 
+The **EXIF editor** (the ``Edit EXIF`` button in the EXIF sidebar) changes the description, artist, copyright, camera make / model and user comment. A JPEG needs no extra package and only its EXIF block is rewritten; a WebP needs ``piexif``, and other formats show why they can't be edited.
+
 Print Layout
 ^^^^^^^^^^^^
 

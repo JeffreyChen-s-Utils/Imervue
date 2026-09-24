@@ -2409,6 +2409,8 @@ vous laisse modifier ou définir de nouvelles coordonnées en degrés décimaux.
 sur place sans paquet supplémentaire : seul son bloc EXIF change, les pixels, les autres tags et
 la vignette restent intacts. Les autres formats nécessitent ``piexif``.
 
+L'**éditeur EXIF** (bouton ``Edit EXIF`` de la barre latérale EXIF) modifie la description, l'artiste, le copyright, la marque / le modèle de l'appareil et le commentaire. Un JPEG ne nécessite aucun paquet supplémentaire et seul son bloc EXIF est réécrit ; WebP nécessite ``piexif`` et les autres formats indiquent pourquoi ils ne sont pas modifiables.
+
 Mise en page d'impression
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

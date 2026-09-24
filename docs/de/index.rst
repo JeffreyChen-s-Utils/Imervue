@@ -2416,6 +2416,8 @@ EXIF-GPS-Tags und lässt Sie neue Dezimalgrad-Koordinaten bearbeiten oder setzen
 Ein JPEG wird ohne Zusatzpaket direkt beschrieben: nur sein EXIF-Block ändert sich, Pixel,
 übrige Tags und Vorschaubild bleiben erhalten. Andere Formate benötigen ``piexif``.
 
+Der **EXIF-Editor** (Schaltfläche ``Edit EXIF`` in der EXIF-Seitenleiste) ändert Beschreibung, Künstler, Copyright, Kamerahersteller / -modell und Kommentar. Ein JPEG braucht kein Zusatzpaket, nur sein EXIF-Block wird neu geschrieben; WebP benötigt ``piexif``, andere Formate zeigen an, warum sie nicht bearbeitbar sind.
+
 Druck-Layout
 ^^^^^^^^^^^^
 

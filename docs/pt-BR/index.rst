@@ -2393,6 +2393,8 @@ permite editar ou definir novas coordenadas em graus decimais. Um JPEG é gravad
 sem pacote extra: só o bloco EXIF muda, então os pixels, as outras tags e a miniatura
 continuam iguais. Outros formatos precisam de ``piexif``.
 
+O **editor EXIF** (botão ``Edit EXIF`` do painel lateral EXIF) altera descrição, artista, copyright, marca / modelo da câmera e comentário. Um JPEG não precisa de pacote extra e só o bloco EXIF é reescrito; WebP precisa de ``piexif`` e os outros formatos mostram por que não podem ser editados.
+
 Layout de Impressão
 ^^^^^^^^^^^^^^^^^^^
 

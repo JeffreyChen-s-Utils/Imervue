@@ -259,7 +259,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 ### Metadata
 
 - **EXIF sidebar** with collapsible groups + inline 0-5 star strip
-- **EXIF editor** dialog
+- **EXIF editor** dialog — description, artist, copyright, camera and comment (Unicode included) written into a JPEG with no extra package, pixels and other tags untouched (WebP needs `piexif`)
 - **Keyword editor** — title / creator / description / keywords, with **related-tag suggestions** drawn from tag co-occurrence and **controlled-vocabulary expansion** (a leaf keyword auto-applies its ancestors + synonyms from an editable hierarchical vocabulary)
 - **Image info** dialog (dimensions / size / dates)
 - **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`)

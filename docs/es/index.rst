@@ -2409,6 +2409,8 @@ de EXIF y le permite editar o establecer nuevas coordenadas en grados decimales.
 escribe in situ sin paquetes extra: solo cambia su bloque EXIF, así que los píxeles, las demás
 etiquetas y la miniatura quedan igual. Otros formatos necesitan ``piexif``.
 
+El **editor EXIF** (botón ``Edit EXIF`` de la barra lateral EXIF) cambia la descripción, el artista, el copyright, la marca / modelo de la cámara y el comentario. Un JPEG no necesita paquetes extra y solo se reescribe su bloque EXIF; WebP necesita ``piexif`` y los demás formatos explican por qué no se pueden editar.
+
 Diseño de impresión
 ^^^^^^^^^^^^^^^^^^^
 
