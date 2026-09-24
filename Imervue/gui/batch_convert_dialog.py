@@ -21,9 +21,11 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
-from PIL import Image
-
-from Imervue.image.shown import as_shown
+from Imervue.gui.export_source import upright_image
+from Imervue.image.export_metadata import METADATA_ALL, export_save_options
+from Imervue.image.formats import RAW_EXTENSIONS, STILL_IMAGE_EXTENSIONS
+from Imervue.image.in_place_save import frame_count
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
@@ -34,7 +36,6 @@ from Imervue.image.save_formats import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -81,6 +82,7 @@ class _ConvertWorker(QThread):
         success = 0
         failed = 0
         skipped = 0
+        converted: list[str] = []
         total = len(self._paths)
         for i, src in enumerate(self._paths):
             if self.isInterruptionRequested():
@@ -90,11 +92,14 @@ class _ConvertWorker(QThread):
                 if self._should_skip(src, target_ext):
                     skipped += 1
                     continue
-                self._convert_one(src, target_ext)
+                out_path = self._convert_one(src, target_ext)
                 success += 1
-            except (OSError, ValueError) as exc:
+                if self._may_delete(src, out_path):
+                    converted.append(src)
+            except IMAGE_READ_ERRORS as exc:
                 logger.exception("Batch convert failed for %s: %s", src, exc)
                 failed += 1
+        self._trash_originals(converted)
         self.result_ready.emit(success, failed, skipped)
 
     def _should_skip(self, src: str, target_ext: str) -> bool:
@@ -105,13 +110,19 @@ class _ConvertWorker(QThread):
             return True
         return src_ext in _JPEG_EXTS and target_ext in _JPEG_EXTS
 
-    def _convert_one(self, src: str, target_ext: str) -> None:
-        # The converted file carries no EXIF, so its orientation goes into the pixels.
-        img = as_shown(Image.open(src))
+    def _convert_one(self, src: str, target_ext: str) -> str:
+        """Write *src* in the target format and return the new file's path.
+
+        The viewer's decode — camera RAW developed at full size, sRGB, upright —
+        with the source's EXIF carried over (without the orientation, which is
+        baked into the pixels).
+        """
+        img = upright_image(src)
         out_path = self._resolve_output_path(src, target_ext)
         quality = self._quality if self._fmt in QUALITY_FORMATS else None
-        save_image(img, str(out_path), self._fmt, quality)
-        self._maybe_delete_original(src, str(out_path))
+        save_image(img, str(out_path), self._fmt, quality,
+                   export_save_options(src, METADATA_ALL))
+        return str(out_path)
 
     def _resolve_output_path(self, src: str, target_ext: str) -> Path:
         out_path = Path(self._output_dir) / (Path(src).stem + target_ext)
@@ -123,13 +134,38 @@ class _ConvertWorker(QThread):
             counter += 1
         return out_path
 
-    def _maybe_delete_original(self, src: str, out_path: str) -> None:
-        if not self._delete_originals:
+    def _may_delete(self, src: str, out_path: str) -> bool:
+        """Whether the original may go to the trash once *out_path* holds its conversion.
+
+        Not when the conversion replaced it; not for an SVG or a video, which
+        come out as one raster frame; and not for an animated or multi-page
+        original, of which only the first frame was converted.
+        """
+        if not self._delete_originals or os.path.normpath(out_path) == os.path.normpath(src):
+            return False
+        ext = Path(src).suffix.lower()
+        if ext == ".svg" or ext not in STILL_IMAGE_EXTENSIONS:
+            logger.info("Keeping %s: its conversion is a single raster image", src)
+            return False
+        try:
+            frames = frame_count(src)
+        except IMAGE_READ_ERRORS:
+            # Converted through another decoder: libraw reads a RAW Pillow can't.
+            return ext in RAW_EXTENSIONS
+        if frames > 1:
+            logger.info("Keeping %s: only its first frame was converted", src)
+            return False
+        return True
+
+    @staticmethod
+    def _trash_originals(paths: list[str]) -> None:
+        """Send the converted originals to the recycle bin in one batch."""
+        if not paths:
             return
-        if os.path.normpath(out_path) == os.path.normpath(src):
-            return
-        with contextlib.suppress(OSError):
-            os.remove(src)
+        from Imervue.system.trash_ops import trash_batch
+        _trashed, failed = trash_batch(paths)
+        for path in failed:
+            logger.warning("Could not move the converted original %s to the trash", path)
 
 
 class BatchConvertDialog(WorkerHostMixin, QDialog):

@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui.export_source import recipe_base_image
+from Imervue.gui.export_source import upright_image
 from Imervue.image.in_place_save import (
     can_rewrite_in_place, in_place_format, save_edited_copy, save_over_source,
 )
@@ -283,14 +283,6 @@ class _UpscaleWorker(QThread):
             counter += 1
         return dst
 
-    @staticmethod
-    def _decode(src: str):
-        """*src* as the viewer shows it: full-size RAW, sRGB, upright; opaque alpha dropped."""
-        img = recipe_base_image(src, None)
-        if img.getextrema()[3] == (255, 255):
-            img = img.convert("RGB")
-        return img
-
     def _save(self, src: str, img, dst: str) -> None:
         """Write the upscaled *img* to *dst* in one step, keeping *src*'s EXIF."""
         if self._overwrite:
@@ -331,7 +323,7 @@ class _UpscaleWorker(QThread):
                 failed += 1
                 continue
             try:
-                img = self._decode(src)
+                img = upright_image(src)
                 new_size = (img.width * scale, img.height * scale)
                 out_img = img.resize(new_size, resample)
                 dst = self._output_path(
@@ -378,7 +370,7 @@ class _UpscaleWorker(QThread):
                 failed += 1
                 continue
             try:
-                img = self._decode(src)
+                img = upright_image(src)
                 if img.mode not in ("RGB", "RGBA"):
                     img = img.convert("RGB")
 

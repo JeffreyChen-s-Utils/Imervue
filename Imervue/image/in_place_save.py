@@ -19,6 +19,7 @@ from pathlib import Path
 from PIL import Image, JpegImagePlugin, PngImagePlugin
 
 from Imervue.image.exif_types import restore_types
+from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.jpeg_exif import update_jpeg_exif
 from Imervue.image.orientation import strip_xmp_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
@@ -80,10 +81,20 @@ def can_rewrite_in_place(path: str | Path) -> bool:
     if in_place_format(path) is None:
         return False
     try:
-        with Image.open(path) as img:
-            return getattr(img, "n_frames", 1) == 1
+        return frame_count(path) == 1
     except IMAGE_READ_ERRORS:
         return False
+
+
+def frame_count(path: str | Path) -> int:
+    """Frames or pages Pillow reads in *path*: 1 for a single image.
+
+    Registers the HEIC / JPEG XL opener the extension needs; raises what
+    Pillow raises for an unreadable file (``IMAGE_READ_ERRORS``).
+    """
+    ensure_pillow_opener(Path(path).suffix.lower())
+    with Image.open(path) as img:
+        return getattr(img, "n_frames", 1)
 
 
 def webp_is_lossless(file_path: str) -> bool:

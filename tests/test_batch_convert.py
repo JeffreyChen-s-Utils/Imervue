@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.gui.batch_convert_dialog import _scan_folder, _ConvertWorker
@@ -203,7 +204,7 @@ def _tagged_portrait(path):
 
 
 def test_converted_tagged_photo_is_upright(tmp_path):
-    """The output carries no EXIF; the stored sideways pixels stayed sideways."""
+    """The orientation tag is not carried, so the turn has to be in the pixels."""
     src = _tagged_portrait(tmp_path / "p.jpg")
     out = tmp_path / "out"
     out.mkdir()
@@ -212,3 +213,120 @@ def test_converted_tagged_photo_is_upright(tmp_path):
     worker._convert_one(src, ".png")
     with Image.open(out / "p.png") as saved:
         assert saved.size == (20, 40)
+
+
+def _worker(paths, out, fmt="JPEG", delete=False):
+    worker = _ConvertWorker(paths=[str(p) for p in paths], output_dir=str(out), fmt=fmt,
+                            quality=90, delete_originals=delete, skip_same_fmt=False)
+    results = []
+    worker.result_ready.connect(lambda s, f, sk: results.append((s, f, sk)))
+    return worker, results
+
+
+class TestConvertKeepsWhatItShould:
+    def test_originals_go_to_the_recycle_bin_in_one_batch(self, tmp_path, os_trash):
+        """The tooltip promised the recycle bin; the code called os.remove."""
+        paths = []
+        for index in range(3):
+            path = tmp_path / f"a{index}.png"
+            Image.new("RGB", (8, 8), (index, 0, 0)).save(path)
+            paths.append(path)
+        out = tmp_path / "out"
+        out.mkdir()
+        worker, results = _worker(paths, out, delete=True)
+        worker.run()
+        assert results == [(3, 0, 0)]
+        assert sorted(os_trash) == sorted(str(p) for p in paths)
+
+    def test_exif_is_carried_without_the_orientation(self, tmp_path):
+        """A converted file lost the camera, capture date and location for good."""
+        exif = Image.Exif()
+        exif[0x010F] = "Canon"
+        exif[0x0112] = 6
+        exif.get_ifd(0x8769)[0x9003] = "2020:01:02 03:04:05"
+        exif.get_ifd(0x8825)[1] = "N"
+        src = tmp_path / "p.jpg"
+        Image.new("RGB", (40, 20)).save(src, exif=exif)
+        out = tmp_path / "out"
+        out.mkdir()
+        worker, _results = _worker([src], out, fmt="PNG")
+        worker.run()
+        with Image.open(out / "p.png") as saved:
+            written = saved.getexif()
+            assert saved.size == (20, 40)
+            assert written[0x010F] == "Canon"
+            assert 0x0112 not in written
+            assert written.get_ifd(0x8769)[0x9003] == "2020:01:02 03:04:05"
+            assert written.get_ifd(0x8825)[1] == "N"
+
+    def test_raw_is_developed_at_full_size_and_then_trashed(self, tmp_path, monkeypatch, os_trash):
+        """A CR2 became a small preview-sized JPEG, and the RAW was then deleted."""
+        from Imervue.gpu_image_view.images import image_loader
+        monkeypatch.setattr(image_loader, "_load_raw",
+                            lambda _p, thumbnail: np.full((30, 50, 3), 90, dtype=np.uint8))
+        raw = tmp_path / "shot.cr2"
+        Image.new("RGB", (5, 3)).save(raw, format="TIFF")          # how Pillow sees a RAW
+        out = tmp_path / "out"
+        out.mkdir()
+        worker, results = _worker([raw], out, delete=True)
+        worker.run()
+        assert results == [(1, 0, 0)]
+        with Image.open(out / "shot.jpg") as saved:
+            assert saved.size == (50, 30)
+        assert os_trash == [str(raw)]
+
+    def test_animated_original_is_kept(self, tmp_path, os_trash):
+        anim = tmp_path / "anim.gif"
+        frames = [Image.new("RGB", (8, 4), c) for c in ((255, 0, 0), (0, 255, 0))]
+        frames[0].save(anim, save_all=True, append_images=frames[1:])
+        out = tmp_path / "out"
+        out.mkdir()
+        worker, results = _worker([anim], out, fmt="PNG", delete=True)
+        worker.run()
+        assert results == [(1, 0, 0)]
+        assert anim.exists() and os_trash == []
+
+    def test_unreadable_file_is_counted_and_kept(self, tmp_path, os_trash):
+        """A corrupt RAW raised libraw's own error and took the worker thread down."""
+        bad_raw = tmp_path / "broken.cr2"
+        bad_raw.write_bytes(b"not a raw" * 20)
+        bad_png = tmp_path / "broken.png"
+        bad_png.write_bytes(b"not a png")
+        out = tmp_path / "out"
+        out.mkdir()
+        worker, results = _worker([bad_raw, bad_png], out, delete=True)
+        worker.run()
+        assert results == [(0, 2, 0)]
+        assert bad_raw.exists() and bad_png.exists() and os_trash == []
+
+    def test_failed_trash_is_logged(self, tmp_path, monkeypatch, caplog):
+        from Imervue.system import trash_ops
+        src = tmp_path / "a.png"
+        Image.new("RGB", (4, 4)).save(src)
+        out = tmp_path / "out"
+        out.mkdir()
+        monkeypatch.setattr(trash_ops, "trash_batch", lambda paths: ([], list(paths)))
+        worker, _results = _worker([src], out, delete=True)
+        with caplog.at_level("WARNING", logger="Imervue"):
+            worker.run()
+        assert src.exists()
+        assert any("Could not move the converted original" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.parametrize(("name", "deletable"), [
+    ("a.svg", False), ("a.mp4", False), ("a.txt", False), ("a.png", True),
+])
+def test_only_raster_stills_are_trashed(tmp_path, name, deletable):
+    """An SVG or a video comes out as one raster frame; its original must stay."""
+    src = tmp_path / name
+    Image.new("RGB", (4, 4)).save(tmp_path / "real.png")
+    src.write_bytes((tmp_path / "real.png").read_bytes())
+    worker, _results = _worker([src], tmp_path / "out", delete=True)
+    assert worker._may_delete(str(src), str(tmp_path / "out" / "a.jpg")) is deletable  # noqa: SLF001
+
+
+def test_nothing_is_trashed_when_the_output_replaced_the_source(tmp_path):
+    src = tmp_path / "a.jpg"
+    Image.new("RGB", (4, 4)).save(src)
+    worker, _results = _worker([src], tmp_path, delete=True)
+    assert worker._may_delete(str(src), str(src)) is False  # noqa: SLF001
