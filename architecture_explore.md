@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `443f705` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `85be76d` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 853 | 139,355 |
+| `tests/` | 853 | 139,368 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,120 |
 | `Imervue/gui/` | 164 | 32,921 |
 | `Imervue/puppet/` | 57 | 15,286 |
 | `Imervue/image/` | 125 | 14,158 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,908 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,918 |
 | `Imervue/multi_language/` | 8 | 14,049 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,686** | **318,714** |
+| **總計** | **1,686** | **318,737** |
 
-其中 `Imervue/` 套件本身 769 檔 / 165,108 行。
+其中 `Imervue/` 套件本身 769 檔 / 165,118 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-853 個檔、139,355 行。`pyproject.toml` 定義三個互斥層級 marker：
+853 個檔、139,368 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

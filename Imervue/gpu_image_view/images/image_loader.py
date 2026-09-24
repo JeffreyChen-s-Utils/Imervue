@@ -36,19 +36,29 @@ def _maybe_collapse_stacks(images: list[str]) -> tuple[list[str], dict[str, list
 
 
 def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
+    """Develop the camera RAW at *path*; ``OSError`` when libraw can't read it.
+
+    libraw's own ``LibRawError`` is not an ``OSError``, so every caller that
+    handles an unreadable file through ``IMAGE_READ_ERRORS`` would miss a
+    corrupt or unsupported RAW; it is re-raised as one.
+    """
+    import rawpy
     # ``open_raw_efficient`` uses libraw's native file API instead of
     # rawpy's convenience ``imread`` which would otherwise pre-load
     # the whole file into a Python ``bytes`` object. For 50 MB+ CR3
     # / NEF files that's a meaningful peak-memory saving.
     from Imervue.image.raw_loader import open_raw_efficient
-    with open_raw_efficient(path) as raw:
-        if thumbnail:
-            return _load_raw_thumbnail(raw)
-        return raw.postprocess(
-            use_camera_wb=True,
-            no_auto_bright=False,
-            output_bps=8,
-        )
+    try:
+        with open_raw_efficient(path) as raw:
+            if thumbnail:
+                return _load_raw_thumbnail(raw)
+            return raw.postprocess(
+                use_camera_wb=True,
+                no_auto_bright=False,
+                output_bps=8,
+            )
+    except rawpy.LibRawError as err:
+        raise OSError(f"libraw can't decode {path}: {err}") from err
 
 
 def _load_raw_thumbnail(raw) -> np.ndarray:

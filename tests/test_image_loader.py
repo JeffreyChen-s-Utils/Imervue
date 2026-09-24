@@ -223,6 +223,19 @@ class TestDecodeImageFile:
         out = image_loader.decode_image_file(str(tmp_path / "shot.CR2"))
         assert out.shape == (30, 45, 4)
 
+    @pytest.mark.parametrize("thumbnail", [False, True])
+    def test_unreadable_raw_is_an_oserror(self, tmp_path, thumbnail):
+        """libraw's LibRawError slipped past every ``IMAGE_READ_ERRORS`` handler."""
+        from Imervue.gpu_image_view.images.image_loader import decode_image_file
+        from Imervue.image.read_errors import IMAGE_READ_ERRORS
+        path = tmp_path / "broken.cr2"
+        path.write_bytes(b"not a raw file" * 20)
+        with pytest.raises(OSError, match="libraw can't decode") as caught:
+            decode_image_file(str(path), thumbnail=thumbnail)
+        assert isinstance(caught.value, IMAGE_READ_ERRORS)
+        import rawpy
+        assert isinstance(caught.value.__cause__, rawpy.LibRawError)
+
     def test_view_time_simulation_is_not_baked_in(self, tmp_path, monkeypatch):
         from Imervue.gpu_image_view import cvd_view_mode
         from Imervue.gpu_image_view.images.image_loader import decode_image_file

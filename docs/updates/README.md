@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-01 | 2026-09-25 | Unreadable camera RAW raises OSError, not libraw's own error | #fix #raw | [2026-09](2026-09.md) |
 | U-20260924-99 | 2026-09-24 | Lossless Rotate and Rotate All keep JPEG bytes and file metadata | #fix #metadata #rotate | [2026-09](2026-09.md) |
 | U-20260924-98 | 2026-09-24 | Keep AI Upscale overwrite and EXIF Strip from truncating animated or multi-page files | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260924-97 | 2026-09-24 | Stop in-place rotate, crop and annotation saves from destroying RAW and multi-frame files | #fix #data-loss | [2026-09](2026-09.md) |
