@@ -27,14 +27,13 @@ def load_material_image(path: str | Path) -> np.ndarray:
     it consistently. Pure helper so callers other than the materials
     dock (export presets, recipe pipeline) can reuse it.
     """
-    from PIL import Image
+    from Imervue.image.shown import load_shown_rgba
 
     target = Path(path)
     if not target.exists():
         raise FileNotFoundError(f"material file does not exist: {target}")
-    with Image.open(target) as img:
-        arr = np.asarray(img.convert("RGBA"), dtype=np.uint8)
-    return np.ascontiguousarray(arr)
+    # As the viewer shows it: upright by its EXIF orientation, in sRGB.
+    return np.ascontiguousarray(load_shown_rgba(target))
 
 
 def paste_material_at(

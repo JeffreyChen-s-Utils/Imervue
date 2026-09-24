@@ -66,15 +66,10 @@ class _CreateWorker(QThread):
             self.result_ready.emit(True, self._output)
 
     def _load_and_resize(self, path: str) -> Image.Image:
-        if Path(path).suffix.lower() == ".svg":
-            from Imervue.gpu_image_view.images.image_loader import _load_svg
-            arr = _load_svg(path, thumbnail=False)
-            img = Image.fromarray(arr)
-        else:
-            img = Image.open(path)
-
-        if img.mode not in ("RGB", "RGBA"):
-            img = img.convert("RGB")
+        # The viewer's decode — upright, sRGB, SVG rasterised, RAW / HEIC
+        # developed. Image.open left a portrait phone photo on its side.
+        from Imervue.gpu_image_view.images.image_loader import decode_image
+        img = decode_image(path)
 
         if self._width > 0 and self._height > 0:
             img = img.resize((self._width, self._height), Image.Resampling.LANCZOS)

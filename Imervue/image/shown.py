@@ -7,10 +7,13 @@ copy that is saved without EXIF or ICC.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 from PIL import Image
 
 from Imervue.image.color_profile import to_srgb
+from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.orientation import exif_orientation, transpose_for
 
 
@@ -26,7 +29,17 @@ def as_shown(img: Image.Image, code: int | None = None) -> Image.Image:
     return transpose_for(to_srgb(img), code)
 
 
-def load_shown_rgb(path) -> np.ndarray:
-    """Load *path* as an HxWx3 uint8 RGB array, as the viewer shows it."""
+def _load_shown(path, mode: str) -> np.ndarray:
+    ensure_pillow_opener(Path(path).suffix.lower())
     with Image.open(path) as img:
-        return np.asarray(as_shown(img).convert("RGB"), dtype=np.uint8)
+        return np.array(as_shown(img).convert(mode), dtype=np.uint8)
+
+
+def load_shown_rgb(path) -> np.ndarray:
+    """Load *path* as an HxWx3 uint8 RGB array, as the viewer shows it (HEIC / JXL too)."""
+    return _load_shown(path, "RGB")
+
+
+def load_shown_rgba(path) -> np.ndarray:
+    """Load *path* as an HxWx4 uint8 RGBA array, as the viewer shows it (HEIC / JXL too)."""
+    return _load_shown(path, "RGBA")

@@ -37,9 +37,7 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 
-from Imervue.image.shown import as_shown
 from Imervue.gui.annotation_canvas import (
-    _MODE_RGBA,
     AnnotationCanvas,
     _AddAnnotationCommand,
     _DeleteAnnotationCommand,
@@ -764,13 +762,11 @@ def open_annotation_for_path(
     click away and back.
     """
     try:
-        img = Image.open(path)
-        img.load()  # force decode now so errors surface before the dialog
-        # As the viewer shows it (sRGB, upright). The save writes no EXIF or ICC,
-        # so anything else would be saved sideways or in the wrong colours.
-        img = as_shown(img)
-        if img.mode not in ("RGB", "RGBA", "L"):
-            img = img.convert(_MODE_RGBA)
+        # As the viewer shows it: sRGB, upright, a RAW developed at full size
+        # (Pillow alone reads its small embedded preview). Decoded now so
+        # errors surface before the dialog opens.
+        from Imervue.gpu_image_view.images.image_loader import decode_image
+        img = decode_image(path)
     except Exception as exc:
         logger.exception("annotation load failed: %s", path)
         if hasattr(main_gui.main_window, "toast"):

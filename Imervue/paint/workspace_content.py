@@ -363,11 +363,11 @@ class ContentOpsMixin:
             except (ValueError, RuntimeError):
                 return None
         else:
-            from PIL import Image
+            from Imervue.image.read_errors import IMAGE_READ_ERRORS
+            from Imervue.image.shown import load_shown_rgba
             try:
-                with Image.open(entry.path) as img:
-                    tile = np.array(img.convert("RGBA"))
-            except (OSError, ValueError):
+                tile = load_shown_rgba(entry.path)   # upright and sRGB, like the viewer
+            except IMAGE_READ_ERRORS:
                 return None
         if (
             tile is None
