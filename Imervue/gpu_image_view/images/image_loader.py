@@ -10,6 +10,7 @@ from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
+from Imervue.image.color_profile import to_srgb
 from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
@@ -73,6 +74,7 @@ def _load_raw_thumbnail(raw) -> np.ndarray:
 def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     img = Image.open(path)
     code = exif_orientation(img) if orient else 1
+    img = to_srgb(img)   # embedded colour profile -> the sRGB the screen shows
     # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
     # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
     # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
@@ -85,7 +87,8 @@ def _load_raster_thumbnail(path: str, max_edge: int = 1600, *, orient: bool = Tr
     with Image.open(path) as img:
         code = exif_orientation(img) if orient else 1
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
-        thumb = img.convert("RGBA") if img.mode not in ("RGB", "RGBA", "L") else img
+        shown = to_srgb(img)   # after the downscale: converting fewer pixels
+        thumb = shown.convert("RGBA") if shown.mode not in ("RGB", "RGBA", "L") else shown
         return np.array(transpose_for(thumb, code))
 
 

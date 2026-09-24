@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-93 | 2026-09-24 | Show embedded colour profiles in their real colours in the viewer and thumbnails | #feature #color | [2026-09](2026-09.md) |
 | U-20260924-92 | 2026-09-24 | Write GPSVersionID and reject out-of-range coordinates in the geotag writer | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-91 | 2026-09-24 | Turn tagged photos upright in the background remover, object splitter, icon and resize plugins | #fix #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-90 | 2026-09-24 | Censor the region Safety Review detected: NudeNet box format and EXIF orientation | #fix #security #Imervue_Plugins | [2026-09](2026-09.md) |

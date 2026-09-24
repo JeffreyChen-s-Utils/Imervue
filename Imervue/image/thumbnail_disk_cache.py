@@ -46,8 +46,8 @@ logger = logging.getLogger("Imervue.thumbnail_cache")
 
 _CACHE_EXT = ".png"
 # Bump when the cached pixels change meaning, so older entries stop matching.
-# 2: thumbnails are EXIF-upright.
-_KEY_VERSION = 2
+# 2: thumbnails are EXIF-upright. 3: embedded colour profiles are converted to sRGB.
+_KEY_VERSION = 3
 _LEGACY_EXTS = (".npy",)  # formats we quietly clean up at startup
 
 
