@@ -143,6 +143,9 @@ class ImervueMainWindow(
         # Language support
         self.language_wrapper = language_wrapper
         self.language_wrapper.reset_language(user_setting_dict.get("language", "English"))
+        # Qt 自己的字串（確定 / 取消、檔案對話框…）也跟著語言走
+        from Imervue.system.qt_translations import install_qt_translations
+        install_qt_translations(QApplication.instance(), self.language_wrapper.language)
         self._image_metadata_index = ImageMetadataIndex()
         self._folder_view_sessions: dict[str, dict] = dict(
             user_setting_dict.get("folder_view_sessions") or {}
