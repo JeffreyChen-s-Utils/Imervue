@@ -101,6 +101,30 @@ def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
     return img_data
 
 
+def decode_image_file(path, *, thumbnail: bool = False, orient: bool = True) -> np.ndarray:
+    """Decode *path* into an HxWx4 RGBA array, the pixels as the viewer shows them.
+
+    Handles camera RAW (developed through libraw), SVG, a video's poster frame,
+    HEIC / JPEG XL and every Pillow format. Rasters are converted to sRGB from
+    an embedded colour profile and, with *orient*, turned upright by their EXIF
+    orientation. No recipe and no view-time simulation: this is the base an
+    editor (Modify, Paint) works on. *thumbnail* favours a fast, downscaled
+    decode (RAW embedded preview, 1600 px rasters).
+    """
+    ext = Path(path).suffix.lower()
+    if ext in RAW_EXTENSIONS:
+        img_data = _load_raw(path, thumbnail)
+    elif ext == ".svg":
+        img_data = _load_svg(path, thumbnail=thumbnail)
+    elif ext in VIDEO_EXTENSIONS:
+        img_data = poster_frame(path)
+    else:
+        ensure_pillow_opener(ext)
+        img_data = (_load_raster_thumbnail(path, orient=orient) if thumbnail
+                    else _load_raster(path, orient=orient))
+    return _ensure_rgba(img_data)
+
+
 def load_image_file(path, thumbnail=False, recipe=None):
     """
     支援一般圖片 + RAW 檔案
@@ -114,20 +138,9 @@ def load_image_file(path, thumbnail=False, recipe=None):
     點陣圖依 EXIF Orientation 轉正; 例外是 recipe 的幾何是在轉正之前設定的
     (``Recipe.base_is_oriented``), 那種 recipe 仍套在原始方向上.
     """
-    ext = Path(path).suffix.lower()
-    orient = recipe is None or recipe.base_is_oriented()
-    if ext in RAW_EXTENSIONS:
-        img_data = _load_raw(path, thumbnail)
-    elif ext == ".svg":
-        img_data = _load_svg(path, thumbnail=thumbnail)
-    elif ext in VIDEO_EXTENSIONS:
-        img_data = poster_frame(path)
-    else:
-        ensure_pillow_opener(ext)
-        img_data = (_load_raster_thumbnail(path, orient=orient) if thumbnail
-                    else _load_raster(path, orient=orient))
-
-    img_data = _ensure_rgba(img_data)
+    img_data = decode_image_file(
+        path, thumbnail=thumbnail, orient=recipe is None or recipe.base_is_oriented(),
+    )
 
     if recipe is not None and not recipe.is_identity():
         try:

@@ -547,6 +547,17 @@ class TestExifOrientedSource:
         p._current = Recipe()
         assert p._decode_source(self._portrait(tmp_path)).size == (20, 40)
 
+    def test_raw_source_is_the_developed_image(self, panel, tmp_path, monkeypatch):
+        """Pillow alone decoded a RAW's small embedded preview for the Modify tab."""
+        import numpy as np
+
+        from Imervue.gpu_image_view.images import image_loader
+        monkeypatch.setattr(image_loader, "_load_raw",
+                            lambda _p, thumbnail: np.zeros((30, 45, 3), dtype=np.uint8))
+        p, _ = panel
+        p._current = Recipe()
+        assert p._decode_source(str(tmp_path / "shot.nef")).size == (45, 30)
+
     def test_legacy_geometry_recipe_decodes_the_stored_orientation(self, panel, tmp_path):
         p, _ = panel
         path = self._portrait(tmp_path)

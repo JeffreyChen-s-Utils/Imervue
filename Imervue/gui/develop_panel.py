@@ -36,9 +36,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.image.shown import as_shown
+from Imervue.gpu_image_view.images.image_loader import decode_image_file
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
-from Imervue.image.orientation import exif_orientation
 from Imervue.gui.modify_splitter import ModifySplitterMixin
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
@@ -292,10 +291,9 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
             return self._decoded_source
 
         try:
-            img = Image.open(path)
-            code = exif_orientation(img) if orient else 1
-            img.load()
-            img = as_shown(img, code)   # sRGB, and upright unless a legacy recipe says not
+            # The viewer's decode: RAW developed (Pillow alone reads a RAW's small
+            # embedded preview), sRGB, and upright unless a legacy recipe says not.
+            img = Image.fromarray(decode_image_file(path, orient=orient), "RGBA")
         except Exception:
             logger.exception("Failed to load image: %s", path)
             self._invalidate_decoded_source()

@@ -210,3 +210,33 @@ class TestExifOrientation:
         legacy = Recipe.from_dict({"brightness": 0.2})
         img = load_image_file(_portrait_jpeg(tmp_path / "p.jpg"), recipe=legacy)
         assert img.shape[:2] == (40, 20)
+
+
+class TestDecodeImageFile:
+    """The editors' base: the viewer's decode without recipe or view-time simulation."""
+
+    def test_raw_is_developed_through_libraw(self, tmp_path, monkeypatch):
+        """Pillow opens a CR2 as TIFF and returns its small embedded preview."""
+        from Imervue.gpu_image_view.images import image_loader
+        developed = np.zeros((30, 45, 3), dtype=np.uint8)
+        monkeypatch.setattr(image_loader, "_load_raw", lambda _p, thumbnail: developed)
+        out = image_loader.decode_image_file(str(tmp_path / "shot.CR2"))
+        assert out.shape == (30, 45, 4)
+
+    def test_view_time_simulation_is_not_baked_in(self, tmp_path, monkeypatch):
+        from Imervue.gpu_image_view import cvd_view_mode
+        from Imervue.gpu_image_view.images.image_loader import decode_image_file
+        monkeypatch.setattr(cvd_view_mode, "apply_if_active", lambda _a: 1 / 0)
+        path = tmp_path / "a.png"
+        Image.new("RGB", (5, 3), (10, 20, 30)).save(path)
+        out = decode_image_file(str(path))
+        assert out.shape == (3, 5, 4) and tuple(out[0, 0]) == (10, 20, 30, 255)
+
+    @pytest.mark.parametrize(("orient", "shape"), [(True, (40, 20)), (False, (20, 40))])
+    def test_orientation_can_be_skipped_for_a_legacy_recipe(self, tmp_path, orient, shape):
+        from Imervue.gpu_image_view.images.image_loader import decode_image_file
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        path = tmp_path / "p.jpg"
+        Image.new("RGB", (40, 20)).save(path, exif=exif)
+        assert decode_image_file(str(path), orient=orient).shape[:2] == shape

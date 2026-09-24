@@ -350,9 +350,8 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
                 return
         # Plain raster: load via Pillow, push into the active canvas.
         try:
-            from PIL import Image
-            with Image.open(path) as img:
-                rgba = np.array(img.convert("RGBA"), dtype=np.uint8)
+            from Imervue.gpu_image_view.images.image_loader import decode_image_file
+            rgba = decode_image_file(path)   # RAW developed, sRGB, upright, like the viewer
             # Route through the wrapper (not self._canvas.load_image) so the layer
             # dock is rebound to the new document; the bare canvas call left the
             # dock showing / mutating the replaced document.

@@ -310,11 +310,10 @@ class ImervueMainWindow(
             return
         path = images[self.viewer.current_index]
         try:
-            from PIL import Image
-            import numpy as np
-            with Image.open(path) as src:
-                rgba = src.convert("RGBA")
-                arr = np.array(rgba)
+            # The viewer's decode: RAW developed, sRGB, upright. Pillow alone reads
+            # a RAW's small embedded preview and ignores orientation and profile.
+            from Imervue.gpu_image_view.images.image_loader import decode_image_file
+            arr = decode_image_file(path)
             self.paint_workspace.load_image(arr)
         except (OSError, ValueError):
             self.paint_workspace.load_image(None)
