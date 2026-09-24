@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from Imervue.image.in_place_save import replace_atomically
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.puppet.document import (
     BLEND_MODES,
     DEFORMER_TYPES,

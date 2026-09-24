@@ -17,8 +17,9 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.annotation_models import AnnotationProject, bake
 from Imervue.image.in_place_save import (
-    can_rewrite_in_place, in_place_format, replace_atomically, save_over_source,
+    can_rewrite_in_place, in_place_format, save_over_source,
 )
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.qimage_convert import pil_to_qimage

@@ -637,7 +637,7 @@ class TestCropSave:
         p._current = Recipe(brightness=0.4)
         p._canvas._crop_rect = (0, 0, 40, 30)
 
-        import Imervue.image.in_place_save as mod_save
+        import Imervue.system.atomic_write as mod_save
 
         def _boom(_src, _dst):
             raise OSError("disk full")
@@ -718,7 +718,7 @@ class TestAnnotationSave:
             [Annotation(kind="rect", points=[(5, 5), (40, 30)])]
         )
 
-        import Imervue.image.in_place_save as mod_save
+        import Imervue.system.atomic_write as mod_save
 
         def _boom(_src, _dst):
             raise OSError("permission denied")
@@ -866,7 +866,7 @@ def test_save_failure_shows_warning_toast(panel, real_image, monkeypatch):
     calls = _spy_toasts(monkeypatch)
     p.bind_to_path(str(real_image))
 
-    import Imervue.image.in_place_save as mod
+    import Imervue.system.atomic_write as mod
 
     def _boom(_src, _dst):
         raise OSError("disk full")

@@ -11,7 +11,6 @@ file keeps its metadata.
 """
 from __future__ import annotations
 
-import os
 import struct
 from collections.abc import Callable
 from pathlib import Path
@@ -24,6 +23,7 @@ from Imervue.image.jpeg_exif import update_jpeg_exif
 from Imervue.image.orientation import strip_xmp_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.webp_exif import update_webp_exif
+from Imervue.system.atomic_write import replace_atomically
 
 _IN_PLACE_FORMATS: dict[str, str] = {
     ".png": "PNG",
@@ -52,22 +52,6 @@ _DESCRIPTIVE_IFD0_TAGS = frozenset({
 def in_place_format(path: str | Path) -> str | None:
     """Return the Pillow format to write *path* back in, or ``None`` if it can't be."""
     return _IN_PLACE_FORMATS.get(Path(path).suffix.lower())
-
-
-def replace_atomically(path: str | Path, write: Callable[[Path], None]) -> None:
-    """Replace *path* with what *write* puts in a ``.tmp`` sibling, in one step.
-
-    A crash or an error mid-write leaves the original whole: the sibling is
-    removed and the error propagates. *write* gets the sibling's path, whose
-    extension is ``.tmp``, so a Pillow save must name its ``format=``.
-    """
-    target = Path(path)
-    tmp = target.with_name(target.name + ".tmp")
-    try:
-        write(tmp)
-        os.replace(tmp, target)
-    finally:
-        tmp.unlink(missing_ok=True)
 
 
 def can_rewrite_in_place(path: str | Path) -> bool:

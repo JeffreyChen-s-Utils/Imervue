@@ -36,7 +36,7 @@ from pathlib import Path
 import numpy as np
 
 from Imervue.paint.adjustments import Adjustment
-from Imervue.image.in_place_save import replace_atomically
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.paint.compositing import LAYER_BLEND_MODES
 from Imervue.paint.document import (
     GROUP_BLEND_MODES,

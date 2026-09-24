@@ -24,7 +24,7 @@ import json
 import zipfile
 from pathlib import Path
 
-from Imervue.image.in_place_save import replace_atomically
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.paint.document_io import (
     load_document_from_buffer,
     save_document_to_buffer,

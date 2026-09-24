@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-26 | 2026-09-25 | Refactor: replace_atomically moves to system/atomic_write | #refactor | [2026-09](2026-09.md) |
 | U-20260925-25 | 2026-09-25 | PSD, puppet and paint saves replace the file in one step: a failed save keeps the old one | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260925-24 | 2026-09-25 | Image plugins number their result too, and still load on older installs | #fix #data-loss #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260925-23 | 2026-09-25 | One-shot tools number their result instead of saving over the last one | #fix #data-loss | [2026-09](2026-09.md) |

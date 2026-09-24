@@ -15,8 +15,9 @@ from pathlib import Path
 from PIL import Image
 
 from Imervue.image.in_place_save import (
-    can_rewrite_in_place, carried_save_kwargs, in_place_format, replace_atomically,
+    can_rewrite_in_place, carried_save_kwargs, in_place_format,
 )
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.image.jpeg_orientation import set_jpeg_orientation
 from Imervue.image.orientation import (
     exif_orientation, read_orientation, transpose_for,

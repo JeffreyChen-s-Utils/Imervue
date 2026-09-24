@@ -694,7 +694,7 @@ class TestFileActions:
             dlg.deleteLater()
 
     def test_failed_write_reports_and_keeps_the_source(self, qapp, base_pil, tmp_path, monkeypatch):
-        from Imervue.image import in_place_save
+        from Imervue.system import atomic_write
         source = tmp_path / "src.png"
         base_pil.save(source)
         before = source.read_bytes()
@@ -703,7 +703,7 @@ class TestFileActions:
         def disk_full(_src, _dst):
             raise OSError("disk full")
 
-        monkeypatch.setattr(in_place_save.os, "replace", disk_full)
+        monkeypatch.setattr(atomic_write.os, "replace", disk_full)
         dlg = self._dialog(base_pil, str(source))
         try:
             dlg._save()
