@@ -11,7 +11,6 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -31,7 +30,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.dimensions import image_dimensions
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -83,19 +82,17 @@ def _get_image_date(path: str, year_only: bool) -> str:
 
 def _get_resolution_bucket(path: str) -> str:
     """Classify image by its longer edge."""
-    try:
-        with Image.open(path) as img:
-            w, h = img.size
-        longest = max(w, h)
-        if longest >= 3840:
-            return "4K+"
-        if longest >= 1920:
-            return "1080p+"
-        if longest >= 1280:
-            return "720p+"
-        return "small"
-    except IMAGE_READ_ERRORS:
+    dims = image_dimensions(path)
+    if dims is None:
         return "unknown"
+    longest = max(dims)
+    if longest >= 3840:
+        return "4K+"
+    if longest >= 1920:
+        return "1080p+"
+    if longest >= 1280:
+        return "720p+"
+    return "small"
 
 
 def _get_type_bucket(path: str) -> str:

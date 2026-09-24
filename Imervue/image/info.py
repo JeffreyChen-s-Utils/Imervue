@@ -10,9 +10,9 @@ from PIL.ExifTags import TAGS
 from PySide6.QtWidgets import QMessageBox
 
 from Imervue.gpu_image_view.images.image_loader import load_image_file
+from Imervue.image.dimensions import image_dimensions
 from Imervue.image.exif_merge import merged_exif
 from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -65,12 +65,11 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
         # Read the true dimensions from the header (cheap, no full decode), NOT
         # the tile cache / a thumbnail load — those are downscaled, so the dialog
         # used to report the thumbnail size instead of the real image size.
-        try:
-            from PIL import Image
-            with Image.open(path) as pil_img:
-                w, h = pil_img.size
-        except IMAGE_READ_ERRORS:
-            # Formats PIL can't header-read (some RAW) — fall back to the decoded
+        dims = image_dimensions(path)
+        if dims is not None:
+            w, h = dims
+        else:
+            # A file no header reader understands: fall back to the decoded
             # thumbnail's shape rather than failing the whole dialog.
             cache_key = str(path)
             img = (main_gui.tile_cache[cache_key]

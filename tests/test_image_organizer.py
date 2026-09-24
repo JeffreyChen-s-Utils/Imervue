@@ -346,12 +346,10 @@ class TestGetResolutionBucket:
         assert _get_resolution_bucket(str(tmp_path / "gone.png")) == "unknown"
 
     def test_unexpected_error_propagates(self, monkeypatch):
-        from Imervue.gui import image_organizer_dialog as mod
-
         def boom(_path):
             raise RuntimeError("bug")
 
-        monkeypatch.setattr(mod.Image, "open", boom)
+        monkeypatch.setattr(Image, "open", boom)
         with pytest.raises(RuntimeError):
             _get_resolution_bucket("x.png")
 
@@ -396,7 +394,7 @@ class TestImageDateBucket:
         def boom(_path):
             raise RuntimeError("bug")
 
-        monkeypatch.setattr(mod.Image, "open", boom)
+        monkeypatch.setattr(Image, "open", boom)
         with pytest.raises(RuntimeError):
             mod._get_image_date(str(tmp_path / "a.jpg"), year_only=True)
 

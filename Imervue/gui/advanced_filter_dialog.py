@@ -13,13 +13,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from collections.abc import Iterable
 
-from PIL import Image
 from PySide6.QtCore import QDate
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDateEdit, QDialog, QDialogButtonBox, QFormLayout,
     QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout,
 )
 
+from Imervue.image.dimensions import image_dimensions
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -89,11 +89,7 @@ def _needs_dimensions(criteria: FilterCriteria) -> bool:
 
 
 def _read_dimensions(path: str) -> tuple[int, int] | None:
-    try:
-        with Image.open(path) as img:
-            return img.size
-    except (OSError, ValueError):
-        return None
+    return image_dimensions(path)
 
 
 def _matches_dimensions(dims: tuple[int, int], criteria: FilterCriteria) -> bool:

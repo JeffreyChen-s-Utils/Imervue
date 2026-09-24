@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-74 | 2026-09-24 | Read RAW pixel dimensions through libraw instead of the embedded preview | #fix #raw | [2026-09](2026-09.md) |
 | U-20260924-73 | 2026-09-24 | Export the camera EXIF columns from the Exif sub-IFD | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-72 | 2026-09-24 | Show EXIF and GPS for HEIC and JPEG XL photos | #fix #exif #formats | [2026-09](2026-09.md) |
 | U-20260924-71 | 2026-09-24 | Read the capture date from the Exif sub-IFD in Organizer, Timeline and Sanitize | #fix #exif | [2026-09](2026-09.md) |

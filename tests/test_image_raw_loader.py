@@ -16,6 +16,7 @@ from Imervue.image.raw_loader import (
     file_size_supports_mmap,
     open_raw_efficient,
     open_raw_via_mmap,
+    raw_dimensions,
 )
 
 
@@ -201,3 +202,60 @@ def test_efficient_close_failure_is_logged_and_keeps_the_unpack_error(
     (record,) = caplog.records
     assert "close the RAW file after a failed unpack" in record.getMessage()
     assert record.exc_info[0] is OSError
+
+
+# ---------------------------------------------------------------
+# raw_dimensions
+# ---------------------------------------------------------------
+
+
+class _LibRawError(Exception):
+    pass
+
+
+def _sizes_rawpy(monkeypatch, *, width=6000, height=4000, flip=0, error=None):
+    """A rawpy stand-in whose open_file either fails or exposes ``sizes``; records the calls."""
+    calls = []
+
+    class _Raw:
+        def open_file(self, path):
+            calls.append(("open_file", path))
+            if error is not None:
+                raise error
+            self.sizes = types.SimpleNamespace(width=width, height=height, flip=flip)
+
+        def unpack(self):
+            calls.append(("unpack",))
+
+        def close(self):
+            calls.append(("close",))
+
+    fake = types.ModuleType("rawpy")
+    fake.RawPy = _Raw   # type: ignore[attr-defined]
+    fake.LibRawError = _LibRawError   # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "rawpy", fake)
+    return calls
+
+
+@pytest.mark.parametrize(("flip", "expected"), [
+    (0, (6000, 4000)), (3, (6000, 4000)), (5, (4000, 6000)), (6, (4000, 6000)),
+])
+def test_raw_dimensions_reads_the_header_only_and_follows_the_orientation(
+    monkeypatch, tmp_path, flip, expected,
+):
+    calls = _sizes_rawpy(monkeypatch, flip=flip)
+    assert raw_dimensions(tmp_path / "a.cr2") == expected
+    assert [c[0] for c in calls] == ["open_file", "close"]   # no unpack: header only
+
+
+def test_raw_dimensions_of_an_unreadable_file_is_none_and_still_closes(monkeypatch, tmp_path):
+    calls = _sizes_rawpy(monkeypatch, error=_LibRawError("unsupported"))
+    assert raw_dimensions(tmp_path / "a.cr2") is None
+    assert calls[-1] == ("close",)
+
+
+def test_raw_dimensions_lets_an_unexpected_error_through(monkeypatch, tmp_path):
+    _sizes_rawpy(monkeypatch, error=RuntimeError("bug"))
+    with pytest.raises(RuntimeError, match="bug"):
+        raw_dimensions(tmp_path / "a.cr2")
+

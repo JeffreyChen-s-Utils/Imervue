@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.dialog_rows import folder_picker_row
+from Imervue.image.dimensions import image_dimensions
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
@@ -539,12 +540,8 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
 
     @staticmethod
     def _probe_dims(path: str) -> tuple[int, int]:
-        """Pixel dimensions via PIL's header-only ``size``; (0, 0) if unreadable."""
-        try:
-            with Image.open(path) as im:
-                return im.size
-        except (OSError, ValueError):
-            return (0, 0)
+        """Pixel dimensions read from the header; (0, 0) if unreadable."""
+        return image_dimensions(path) or (0, 0)
 
     @staticmethod
     def _format_size(size: int) -> str:

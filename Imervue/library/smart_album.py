@@ -307,14 +307,13 @@ def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
     if not any(rules.get(key) for key in _DIMENSION_KEYS):
         return paths
     min_aspect, max_aspect = rules.get("min_aspect"), rules.get("max_aspect")
-    from PIL import Image
+    from Imervue.image.dimensions import image_dimensions
     out: list[str] = []
     for p in paths:
-        try:
-            with Image.open(p) as im:
-                width, height = im.size
-        except OSError:
+        dims = image_dimensions(p)
+        if dims is None:
             continue
+        width, height = dims
         if _dims_ok(width, height, rules) and _aspect_ok(
             width, height, min_aspect, max_aspect,
         ):

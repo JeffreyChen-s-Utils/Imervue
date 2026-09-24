@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from collections.abc import Iterable
-import contextlib
 import hashlib
 import os
 from pathlib import Path
@@ -99,12 +98,9 @@ class ImageMetadataIndex:
             cacheable = False
         width = height = None
         if size:
-            from PIL import Image
-
-            from Imervue.image.read_errors import IMAGE_READ_ERRORS
-            # Not an image Pillow can read: the dimensions stay unknown.
-            with contextlib.suppress(*IMAGE_READ_ERRORS), Image.open(path) as img:
-                width, height = img.size
+            from Imervue.image.dimensions import image_dimensions
+            # Not a readable image: the dimensions stay unknown.
+            width, height = image_dimensions(path) or (None, None)
         return ImageMeta(
             path=path,
             name=p.name.lower(),

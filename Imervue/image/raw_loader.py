@@ -57,6 +57,32 @@ def open_raw_efficient(path: str | Path):
     return raw
 
 
+# libraw ``flip`` values that turn the developed image a quarter turn.
+_QUARTER_TURN_FLIPS = frozenset({5, 6})
+
+
+def raw_dimensions(path: str | Path) -> tuple[int, int] | None:
+    """Return the developed image's ``(width, height)``, or ``None`` if libraw can't read it.
+
+    Reads libraw's header parse only (``open_file`` without ``unpack``), a few
+    milliseconds even for a large file. Pillow is no substitute: it opens CR2 /
+    NEF / DNG as TIFF and reports the size of the embedded preview. A
+    quarter-turn orientation swaps the sides, as the developed image does.
+    """
+    import rawpy
+    raw = rawpy.RawPy()
+    try:
+        raw.open_file(str(path))
+        sizes = raw.sizes
+    except rawpy.LibRawError:
+        return None
+    finally:
+        raw.close()
+    if sizes.flip in _QUARTER_TURN_FLIPS:
+        return sizes.height, sizes.width
+    return sizes.width, sizes.height
+
+
 def _wrap_close_to_release(raw, region, fd):
     """Make ``raw.close()`` also close the mmap *region* and *fd*.
 

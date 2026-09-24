@@ -19,7 +19,7 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 
 from Imervue.image.exif_merge import merged_exif
-from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.dimensions import image_dimensions
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
 logger = logging.getLogger("Imervue.library.metadata_export")
@@ -89,10 +89,12 @@ def _build_one(path: str) -> dict[str, Any]:
 
 
 def _populate_image_fields(path: str, rec: dict[str, Any]) -> None:
-    ensure_pillow_opener(Path(path).suffix)
+    dims = image_dimensions(path)   # also registers the HEIF / JXL codec
+    if dims is None:   # unreadable file: export the row without image fields
+        return
+    rec["width"], rec["height"] = dims
     try:
         with Image.open(path) as im:
-            rec["width"], rec["height"] = im.size
             exif_raw = merged_exif(im)   # the camera fields live in the Exif sub-IFD
             if exif_raw:
                 for tag_id, value in exif_raw.items():

@@ -13,8 +13,8 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from Imervue.image.dimensions import image_dimensions
 from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.library import image_index
 from Imervue.library.maintenance import scan_image_files
 from Imervue.library.bloom_filter import BloomFilter, fingerprint
@@ -80,14 +80,10 @@ def _index_one(
     if _can_skip_via_bloom(path, stat, bloom):
         return False
     width = height = None
-    ensure_pillow_opener(path.suffix)   # Pillow reads HEIC / JXL once the codec is registered
+    ensure_pillow_opener(path.suffix)   # compute_phash reads HEIC / JXL only with the codec
     if with_phash:
-        try:
-            from PIL import Image
-            with Image.open(path) as im:
-                width, height = im.size
-        except IMAGE_READ_ERRORS:   # size is optional; an unreadable file is indexed without it
-            pass
+        # Size is optional; an unreadable file is indexed without it.
+        width, height = image_dimensions(path) or (None, None)
     phash = compute_phash(path) if with_phash else None
     image_index.upsert_image(
         str(path),
