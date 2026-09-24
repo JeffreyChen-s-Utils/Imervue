@@ -5,6 +5,12 @@ can switch tools without reaching for the mouse. The action
 catalogue is a hand-curated subset of :data:`TOOLS` because most
 users never touch tools like ``blur`` directly; the toolbar still
 exposes them for power users.
+
+This menu is the only owner of the tool keys. The toolbar reads them
+through :func:`tool_shortcut` for its tooltips but never binds them:
+two actions on one key in the same window are ambiguous to Qt, which
+then fires neither. The menu, not the toolbar, holds them because the
+user can hide the toolbar and a hidden widget's shortcuts stop working.
 """
 from __future__ import annotations
 
@@ -37,6 +43,9 @@ TOOL_ENTRIES: tuple[ToolEntry, ...] = (
     ToolEntry("eyedropper", "paint_tool_eyedropper", "I"),
     ToolEntry("fill", "paint_tool_fill", "G"),
     ToolEntry("move", "paint_tool_move", "V"),
+    ToolEntry("select_rect", "paint_tool_select_rect", "M"),
+    ToolEntry("select_lasso", "paint_tool_select_lasso", "L"),
+    ToolEntry("select_wand", "paint_tool_select_wand", "W"),
     ToolEntry("text", "paint_tool_text", "T"),
     ToolEntry("gradient", "paint_tool_gradient", "U"),
     ToolEntry("smudge", "paint_tool_smudge", "R"),
@@ -59,6 +68,9 @@ _FALLBACKS: dict[str, str] = {
     "paint_tool_eyedropper": "Eyedropper",
     "paint_tool_fill": "Fill",
     "paint_tool_move": "Move",
+    "paint_tool_select_rect": "Rectangular Select",
+    "paint_tool_select_lasso": "Lasso Select",
+    "paint_tool_select_wand": "Magic Wand",
     "paint_tool_text": "Text",
     "paint_tool_gradient": "Gradient",
     "paint_tool_smudge": "Smudge",
@@ -74,6 +86,14 @@ _FALLBACKS: dict[str, str] = {
     "paint_tool_hand": "Hand",
     "paint_tool_zoom": "Zoom",
 }
+
+
+_SHORTCUT_BY_TOOL: dict[str, str] = {entry.tool_id: entry.shortcut for entry in TOOL_ENTRIES}
+
+
+def tool_shortcut(tool_id: str) -> str:
+    """Return the key that picks ``tool_id``, or ``""`` for a tool without one."""
+    return _SHORTCUT_BY_TOOL.get(tool_id, "")
 
 
 def populate_tools_menu(workspace: PaintWorkspace) -> None:

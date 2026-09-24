@@ -365,7 +365,7 @@ Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · M
 
 Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Sättigen / Entsättigen) — malt lokale Tonwert- und Chroma-Anpassungen, gewichtet durch den Brush und eine Schatten- / Mitten- / Lichter-Maske.
 
-Einzelbuchstaben-Shortcuts: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
+Einzelbuchstaben-Shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
 
 ### Brushes
 
@@ -754,8 +754,9 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | Shortcut | Aktion |
 |----------|--------|
 | B / E / G / I | Brush / Eraser / Fill / Eyedropper |
-| V / T / U / R | Move / Text / Gradient / Rechteck-Auswahl |
-| P / S / C / Z / H | Pen / Smudge / Clone / Zoom / Hand |
+| V / T / U / R | Move / Text / Gradient / Smudge |
+| M / L / W | Rechteck-Auswahl / Lasso / Zauberstab |
+| P / S / C / Z / H | Pen / Clone / Zuschneiden / Zoom / Hand |
 | Q | Quick Mask Mode umschalten |
 | Tab | Alle Docks umschalten |
 | Ctrl+Tab | Paint-Tabs zyklieren |

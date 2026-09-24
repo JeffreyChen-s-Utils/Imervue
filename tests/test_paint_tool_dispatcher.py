@@ -723,7 +723,7 @@ def test_every_toolbar_tool_has_dispatcher_or_canvas_handler(state, canvas):
     from Imervue.paint.tool_bar import TOOL_ORDER
 
     toolbar_tools = {
-        entry[0] for entry in TOOL_ORDER if entry is not None
+        entry for entry in TOOL_ORDER if entry is not None
     }
     disp = ToolDispatcher(state, image_provider=lambda: canvas)
     handler_keys = set(disp._handlers.keys())  # noqa: SLF001

@@ -24,7 +24,7 @@ from Imervue.paint.tool_bar import TOOL_ORDER
 
 
 def _tools() -> list[str]:
-    return [t[0] if isinstance(t, (tuple, list)) else t for t in TOOL_ORDER if t]
+    return [t for t in TOOL_ORDER if t]
 
 
 _FAMILIES = {

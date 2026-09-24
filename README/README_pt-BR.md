@@ -365,7 +365,7 @@ Pincel · Borracha · Preenchimento · Conta-gotas · Retângulo / Laço / Varin
 
 O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (saturar / dessaturar) — pinta ajustes locais de tom e croma, ponderados pelo pincel e por uma máscara de sombras / meios-tons / realces.
 
-Atalhos de tecla única: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
+Atalhos de tecla única: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
 ### Pincéis
 
@@ -728,8 +728,9 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 | Atalho | Ação |
 |----------|--------|
 | B / E / G / I | Pincel / Borracha / Preenchimento / Conta-gotas |
-| V / T / U / R | Mover / Texto / Gradiente / Seleção retangular |
-| P / S / C / Z / H | Caneta / Smudge / Clone / Zoom / Mão |
+| V / T / U / R | Mover / Texto / Gradiente / Smudge |
+| M / L / W | Seleção retangular / Laço / Varinha mágica |
+| P / S / C / Z / H | Caneta / Clone / Recortar / Zoom / Mão |
 | Q | Alternar Modo Quick Mask |
 | Tab | Alternar todos os docks |
 | Ctrl+Tab | Ciclar abas Paint |

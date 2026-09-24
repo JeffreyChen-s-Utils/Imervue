@@ -178,11 +178,16 @@ class ImervueMainWindow(
 
         # ===== 分頁快捷鍵 =====
         # Ctrl+T 新分頁 / Ctrl+W 關閉 / Ctrl+Tab 下一個 / Ctrl+Shift+Tab 上一個。
-        # 模仿瀏覽器行為，註冊在 main window 範圍內。
-        QShortcut(QKeySequence("Ctrl+T"), self, activated=self._new_tab)
-        QShortcut(QKeySequence("Ctrl+W"), self, activated=self._close_current_tab)
-        QShortcut(QKeySequence("Ctrl+Tab"), self, activated=self._next_tab)
-        QShortcut(QKeySequence("Ctrl+Shift+Tab"), self, activated=self._prev_tab)
+        # 模仿瀏覽器行為，註冊在 main window 範圍內。資料夾分頁列只在 Imervue
+        # 分頁，其他分頁（Paint 的 Ctrl+T 變形、Ctrl+W 關閉畫布分頁）有自己的
+        # 同鍵動作；同一視窗兩個同鍵快捷鍵 Qt 視為歧義、兩個都不觸發，所以
+        # 離開 Imervue 分頁時停用（_on_main_tab_changed）。
+        self._folder_tab_shortcuts = [
+            QShortcut(QKeySequence("Ctrl+T"), self, activated=self._new_tab),
+            QShortcut(QKeySequence("Ctrl+W"), self, activated=self._close_current_tab),
+            QShortcut(QKeySequence("Ctrl+Tab"), self, activated=self._next_tab),
+            QShortcut(QKeySequence("Ctrl+Shift+Tab"), self, activated=self._prev_tab),
+        ]
         QShortcut(QKeySequence("Ctrl+L"), self, activated=self.toggle_browse_mode)
 
         # ===== 資料夾監控 =====
@@ -280,6 +285,8 @@ class ImervueMainWindow(
 
     def _on_main_tab_changed(self, idx: int) -> None:
         """Switch between Imervue (viewer), Modify and Paint tabs."""
+        for shortcut in self._folder_tab_shortcuts:
+            shortcut.setEnabled(idx == 0)
         if idx == 1:
             # 切到修改分頁 → 綁定圖片，canvas 會自動插入 splitter 中間
             images = self.viewer.model.images

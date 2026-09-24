@@ -365,7 +365,7 @@ Pinceau · Gomme · Remplissage · Pipette · Rect / Lasso / Baguette / Sélecti
 
 Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (saturer / désaturer) — peint des ajustements locaux de tonalité et de chrominance, pondérés par le pinceau et un masque ombres / tons moyens / hautes lumières.
 
-Raccourcis à une lettre : `B / E / G / I / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.
+Raccourcis à une lettre : `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.
 
 ### Pinceaux
 
@@ -707,8 +707,9 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | Raccourci | Action |
 |----------|--------|
 | B / E / G / I | Pinceau / Gomme / Remplissage / Pipette |
-| V / T / U / R | Déplacer / Texte / Dégradé / Sélection rectangulaire |
-| P / S / C / Z / H | Stylo / Doigt / Clone / Zoom / Main |
+| V / T / U / R | Déplacer / Texte / Dégradé / Doigt |
+| M / L / W | Sélection rectangulaire / Lasso / Baguette magique |
+| P / S / C / Z / H | Stylo / Clone / Recadrer / Zoom / Main |
 | Q | Basculer le mode masque rapide |
 | Tab | Basculer tous les docks |
 | Ctrl+Tab | Cycler les onglets Paint |

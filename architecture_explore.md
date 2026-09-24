@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `97c579b` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `e32fecc` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 827 | 135,121 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,925 |
+| `tests/` | 827 | 135,148 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,924 |
 | `Imervue/gui/` | 161 | 32,851 |
 | `Imervue/puppet/` | 57 | 15,283 |
 | `Imervue/image/` | 113 | 12,892 |
@@ -77,16 +77,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,174 |
 | `Imervue/menu/` | 11 | 3,576 |
-| `Imervue/` 根層 | 5 | 1,549 |
+| `Imervue/` 根層 | 5 | 1,556 |
 | `Imervue/plugin/` | 10 | 2,243 |
 | `Imervue/system/` | 20 | 2,053 |
 | `Imervue/export/` | 9 | 1,078 |
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,642** | **312,087** |
+| **總計** | **1,642** | **312,120** |
 
-其中 `Imervue/` 套件本身 751 檔 / 162,760 行。
+其中 `Imervue/` 套件本身 751 檔 / 162,766 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -205,7 +205,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 128 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 699 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 706 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 577 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -649,7 +649,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-189 個檔、45,925 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+189 個檔、45,924 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -746,7 +746,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `paint_workspace.py` | 755 | 頂層 `PaintWorkspace` widget |
 | `tool_dispatcher.py` | 448 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
 | `tool_state.py` | 896 | **無 Qt** 的工具狀態模型 |
-| `tool_bar.py` | 425 | 工具列 |
+| `tool_bar.py` | 404 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔 |
 | `workspace_tabs.py` | 327 | 多文件分頁 |
 | `workspace_docks.py` | 418 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 433 | 文件內容命令 |
@@ -760,7 +760,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 273 + `export_utils.py`(231) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(539)、`edit_menu.py`(256)、`image_menu.py`(265)、`layer_menu.py`(312)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(129)、`settings_menu.py`(119)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(539)、`edit_menu.py`(256)、`image_menu.py`(265)、`layer_menu.py`(312)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(149)、`settings_menu.py`(119)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,863 行）
 
@@ -959,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-827 個檔、135,121 行。`pyproject.toml` 定義三個互斥層級 marker：
+827 個檔、135,148 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1171,6 +1171,12 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
     34 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單；`paint/watercolor.py`、`paint/comic_formats.py`、`paint/speech_bubbles.py`
     另有已接上的實作。新增模組若沒被 import，該測試會失敗；要接上或刪除由擁有者決定（`progress.md` #22）。
+
+12. **同一視窗裡同一個按鍵只能有一個啟用中的快捷鍵。** 兩個 `WindowShortcut` 範圍的 `QAction` / `QShortcut`
+    綁同一鍵，Qt 視為歧義、兩個都不觸發，也不會報錯。Paint 分頁嵌在主視窗裡，所以它的按鍵和主視窗自己的
+    `QShortcut`、選單列共用一張表：工具鍵只綁在 Tools 選單（工具列只顯示），主視窗的資料夾分頁鍵
+    （`Ctrl+T/W/Tab/Shift+Tab`）離開 Imervue 分頁就停用。`tests/test_main_window_shortcut_conflicts.py`
+    逐分頁檢查。
 
 
 

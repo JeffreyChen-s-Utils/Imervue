@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
+from Imervue.paint.tools_menu import tool_shortcut
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -46,36 +47,16 @@ if TYPE_CHECKING:
 # breakpoints to mirror raster paint apps's visual grouping.
 # ---------------------------------------------------------------------------
 TOOL_ORDER = (
-    ("brush",         "B"),
-    ("eraser",        "E"),
-    ("fill",          "F"),
-    ("eyedropper",    "I"),
+    "brush", "eraser", "fill", "eyedropper",
     None,             # ── group break
-    ("select_rect",   "M"),
-    ("select_lasso",  "L"),
-    ("select_wand",   "W"),
-    ("select_quick",  "Q"),
-    ("move",          "V"),
+    "select_rect", "select_lasso", "select_wand", "select_quick", "move",
     None,             # ── group break
-    ("text",          "T"),
-    ("gradient",      "G"),
-    ("blur",          ""),
-    ("smudge",        ""),
-    ("dodge",         ""),
-    ("burn",          ""),
-    ("sponge",        ""),
-    ("bezier_pen",    "P"),
-    ("clone_stamp",   "S"),
-    ("speech_bubble", "Ctrl+B"),
-    ("shape_rect",    "Shift+R"),
-    ("shape_ellipse", "Shift+E"),
-    ("shape_line",    "Shift+I"),
-    ("shape_polygon", "Shift+P"),
-    ("crop",          "C"),
-    ("transform",     "Ctrl+T"),
+    "text", "gradient", "blur", "smudge", "dodge", "burn", "sponge",
+    "bezier_pen", "clone_stamp", "speech_bubble",
+    "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
+    "crop", "transform",
     None,             # ── group break
-    ("hand",          "H"),
-    ("zoom",          "Z"),
+    "hand", "zoom",
 )
 
 
@@ -104,8 +85,7 @@ class PaintToolBar(QToolBar):
             if entry is None:
                 self.addSeparator()
                 continue
-            tool, shortcut = entry
-            self._add_tool_action(tool, shortcut, lang)
+            self._add_tool_action(entry, lang)
 
         self.set_active_tool(state.tool)
         self._unsubscribe = state.subscribe(self._on_state_event)
@@ -122,16 +102,15 @@ class PaintToolBar(QToolBar):
 
     # ---- internals -------------------------------------------------------
 
-    def _add_tool_action(self, tool: str, shortcut: str, lang: dict) -> None:
+    def _add_tool_action(self, tool: str, lang: dict) -> None:
         label = lang.get(f"paint_tool_{tool}", tool.replace("_", " ").title())
         action = QAction(label, self)
         action.setCheckable(True)
         action.setActionGroup(self._group)
-        if shortcut:
-            action.setShortcut(shortcut)
-            action.setToolTip(f"{label} ({shortcut})")
-        else:
-            action.setToolTip(label)
+        # The Tools menu owns the key (a second QAction on the same key makes
+        # Qt treat it as ambiguous and fire neither); the button only shows it.
+        shortcut = tool_shortcut(tool)
+        action.setToolTip(f"{label} ({shortcut})" if shortcut else label)
         action.triggered.connect(lambda checked=False, t=tool: self._on_tool_clicked(t))
         self.addAction(action)
         self._actions[tool] = action

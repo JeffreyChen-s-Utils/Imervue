@@ -55,7 +55,7 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
         ("paint_file_new_tab", "New Tab",
          bridge.new_tab, "Ctrl+N"),
         ("paint_file_new_project", "New Comic Project…",
-         bridge.new_comic_project, "Ctrl+Shift+N"),
+         bridge.new_comic_project, "Ctrl+Alt+N"),
         ("paint_file_close_tab", "Close Tab",
          bridge.close_active_tab, "Ctrl+W"),
         (None, None, None, None),

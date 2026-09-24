@@ -8,7 +8,7 @@ from Imervue.paint import tool_state as ts
 from Imervue.paint.canvas import PointerEvent
 from Imervue.paint.paint_menu_bar import menu_for
 from Imervue.paint.paint_workspace import PaintWorkspace
-from Imervue.paint.tools_menu import TOOL_ENTRIES, _ToolsMenuBridge
+from Imervue.paint.tools_menu import TOOL_ENTRIES, _ToolsMenuBridge, tool_shortcut
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 from _qt_skip import pytestmark  # noqa: E402,F401
@@ -41,6 +41,19 @@ def test_tool_entries_unique_tool_ids():
 def test_tool_entries_unique_shortcuts():
     shortcuts = [entry.shortcut for entry in TOOL_ENTRIES]
     assert len(shortcuts) == len(set(shortcuts))
+
+
+def test_tool_entries_are_known_tools():
+    assert [e.tool_id for e in TOOL_ENTRIES if e.tool_id not in ts.TOOLS] == []
+
+
+def test_tool_shortcut_looks_up_the_menu_key():
+    assert tool_shortcut("brush") == "B"
+    assert tool_shortcut("fill") == "G"
+    assert tool_shortcut("gradient") == "U"
+    assert tool_shortcut("select_rect") == "M"
+    assert tool_shortcut("blur") == ""
+    assert tool_shortcut("no_such_tool") == ""
 
 
 # ---------------------------------------------------------------------------

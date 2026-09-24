@@ -365,7 +365,7 @@ Pincel · Borrador · Relleno · Cuentagotas · Rect / Lazo / Varita / Selecció
 
 El trío de tonificación de cuarto oscuro — **Dodge** (aclarar), **Burn** (oscurecer) y **Sponge** (saturar / desaturar) — pinta ajustes locales de tono y croma, ponderados por el pincel y una máscara de sombras / medios tonos / luces.
 
-Atajos de una letra: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
+Atajos de una letra: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
 ### Pinceles
 
@@ -752,8 +752,9 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | Atajo | Acción |
 |----------|--------|
 | B / E / G / I | Pincel / Borrador / Relleno / Cuentagotas |
-| V / T / U / R | Mover / Texto / Gradiente / Selección rectangular |
-| P / S / C / Z / H | Pluma / Difuminar / Clonar / Zoom / Mano |
+| V / T / U / R | Mover / Texto / Gradiente / Difuminar |
+| M / L / W | Selección rectangular / Lazo / Varita mágica |
+| P / S / C / Z / H | Pluma / Clonar / Recortar / Zoom / Mano |
 | Q | Alternar modo máscara rápida |
 | Tab | Alternar todos los docks |
 | Ctrl+Tab | Recorrer pestañas Paint |

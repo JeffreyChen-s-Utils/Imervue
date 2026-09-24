@@ -367,7 +367,7 @@ Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · M
 
 The darkroom-toning trio — **Dodge** (lighten), **Burn** (darken) and **Sponge** (saturate / desaturate) — paint local tonal and chroma adjustments, weighted by the brush and a shadows / midtones / highlights mask.
 
-Single-letter shortcuts: `B / E / G / I / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.
+Single-letter shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.
 
 ### Brushes
 
@@ -754,8 +754,9 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | Shortcut | Action |
 |----------|--------|
 | B / E / G / I | Brush / Eraser / Fill / Eyedropper |
-| V / T / U / R | Move / Text / Gradient / Rectangle select |
-| P / S / C / Z / H | Pen / Smudge / Clone / Zoom / Hand |
+| V / T / U / R | Move / Text / Gradient / Smudge |
+| M / L / W | Rectangle / Lasso / Magic Wand select |
+| P / S / C / Z / H | Pen / Clone / Crop / Zoom / Hand |
 | Q | Toggle Quick Mask Mode |
 | Tab | Toggle all docks |
 | Ctrl+Tab | Cycle Paint tabs |
