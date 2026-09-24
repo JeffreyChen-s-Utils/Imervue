@@ -90,6 +90,88 @@ class TestBatchMoveCopy:
         assert src.exists() and (album / "a.jpg").exists()
         assert gui.model.images == [str(src)]
 
+    @pytest.mark.parametrize(("move", "expected"), [
+        (True, "已移動 1/1 個檔案"), (False, "已複製 1/1 個檔案")])
+    def test_result_toast_and_count_follow_the_ui_language(self, qapp, tmp_path, move, expected):
+        """The toast and the "N file(s) selected" label stayed English in every language."""
+        from PySide6.QtWidgets import QLabel
+
+        from Imervue.multi_language.language_wrapper import language_wrapper
+        album = tmp_path / "album"
+        album.mkdir()
+        src = tmp_path / "a.jpg"
+        src.write_text("a", encoding="utf-8")
+        previous = language_wrapper.language
+        language_wrapper.reset_language("Traditional_Chinese")
+        try:
+            dlg, _gui, toasts = self._dialog(qapp, [str(src)], album, move=move)
+            try:
+                labels = [w.text() for w in dlg.findChildren(QLabel)]
+                dlg._apply()  # noqa: SLF001
+            finally:
+                dlg.deleteLater()
+        finally:
+            language_wrapper.reset_language(previous)
+        assert "已選取 1 個檔案" in labels
+        assert toasts == [expected]
+
+
+class TestBatchRenameDialog:
+    """The Batch Rename dialog's result toast."""
+
+    def _dialog(self, qapp, paths):
+        from types import SimpleNamespace
+
+        from Imervue.gpu_image_view.actions.batch_ops import BatchRenameDialog
+        toasts = []
+        gui = SimpleNamespace(
+            main_window=None, model=SimpleNamespace(images=list(paths)), tile_cache={},
+            selected_tiles=set(paths), tile_selection_mode=True,
+            clear_tile_grid=lambda: None, load_tile_grid_async=lambda _imgs: None,
+        )
+        dlg = BatchRenameDialog(gui, list(paths))
+        gui.main_window = SimpleNamespace(toast=SimpleNamespace(
+            info=lambda m: toasts.append(("info", m)),
+            success=lambda m: toasts.append(("success", m))))
+        return dlg, gui, toasts
+
+    @pytest.fixture(autouse=True)
+    def _no_gl(self, monkeypatch):
+        from Imervue.gpu_image_view import tile_textures
+        monkeypatch.setattr(tile_textures, "free_tile_textures", lambda *_a: None)
+
+    def test_toast_counts_renamed_and_failed(self, qapp, tmp_path):
+        a = tmp_path / "a.jpg"
+        a.write_text("a", encoding="utf-8")
+        taken = tmp_path / "b.jpg"
+        taken.write_text("b", encoding="utf-8")
+        (tmp_path / "shot_2.jpg").write_text("already here", encoding="utf-8")
+        dlg, gui, toasts = self._dialog(qapp, [str(a), str(taken)])
+        dlg._template.setText("shot_{n}{ext}")  # noqa: SLF001
+        try:
+            dlg._apply()  # noqa: SLF001
+        finally:
+            dlg.deleteLater()
+        assert (tmp_path / "shot_1.jpg").read_text(encoding="utf-8") == "a"
+        assert (tmp_path / "shot_2.jpg").read_text(encoding="utf-8") == "already here"
+        assert gui.model.images == [str(tmp_path / "shot_1.jpg"), str(taken)]
+        assert toasts == [("info", "Renamed 1/2 file(s)")]
+
+    def test_toast_follows_the_ui_language(self, qapp, tmp_path):
+        from Imervue.multi_language.language_wrapper import language_wrapper
+        a = tmp_path / "a.jpg"
+        a.write_text("a", encoding="utf-8")
+        dlg, _gui, toasts = self._dialog(qapp, [str(a)])
+        dlg._template.setText("shot_{n}{ext}")  # noqa: SLF001
+        previous = language_wrapper.language
+        language_wrapper.reset_language("Traditional_Chinese")
+        try:
+            dlg._apply()  # noqa: SLF001
+        finally:
+            language_wrapper.reset_language(previous)
+            dlg.deleteLater()
+        assert toasts == [("success", "已重新命名 1/1 個檔案")]
+
 
 class TestBatchRotate:
     class _Toast:

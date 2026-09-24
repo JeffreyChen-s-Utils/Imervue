@@ -224,6 +224,11 @@ spanish_word_dict.update({
     "batch_move_copy": "Copiar",
     "batch_move_apply": "Aplicar",
     "batch_move_cancel": "Cancelar",
+    "batch_rename_done": "Renombrados {done}/{total} archivo(s)",
+    "batch_move_done": "Movidos {done}/{total} archivo(s)",
+    "batch_copy_done": "Copiados {done}/{total} archivo(s)",
+    "batch_rotate_done": "Girados {done}/{total} archivo(s)",
+    "batch_move_selected": "{count} archivo(s) seleccionado(s)",
     "batch_rotate_cw": "Rotar todas en sentido horario",
     "batch_rotate_ccw": "Rotar todas en sentido antihorario",
     # ----- Image editor / EXIF editor / export -----

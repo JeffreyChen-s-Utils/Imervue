@@ -24,6 +24,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.batch_ops")
 
 
+def _toast_result(main_gui: GPUImageView, key: str, default: str, done: int, failed: int) -> None:
+    """Toast "<verb> done/total file(s)" in the UI language: info when some failed, else success."""
+    toast = getattr(main_gui.main_window, "toast", None)
+    if toast is None:
+        return
+    msg = language_wrapper.language_word_dict.get(key, default).format(
+        done=done, total=done + failed)
+    (toast.info if failed else toast.success)(msg)
+
+
 # ===========================
 # 批次重新命名
 # ===========================
@@ -106,7 +116,8 @@ class BatchRenameDialog(QDialog):
         renamed, failed = self._rename_all(start)
         if renamed:
             self._apply_renames_to_model(renamed)
-        self._show_batch_toast("Renamed", len(renamed), failed)
+        _toast_result(self._gui, "batch_rename_done", "Renamed {done}/{total} file(s)",
+                      len(renamed), failed)
         if renamed:
             self._gui.selected_tiles.clear()
             self._gui.tile_selection_mode = False
@@ -144,13 +155,6 @@ class BatchRenameDialog(QDialog):
         # aren't orphaned on the GPU and the VRAM budget stays accurate.
         free_tile_textures(self._gui, [old for old, _new in renamed])
 
-    def _show_batch_toast(self, op: str, succeeded: int, failed: int) -> None:
-        if not hasattr(self._gui.main_window, "toast"):
-            return
-        msg = f"{op} {succeeded}/{succeeded + failed} file(s)"
-        toast = self._gui.main_window.toast
-        (toast.info if failed else toast.success)(msg)
-
 
 # ===========================
 # 批次移動/複製
@@ -169,7 +173,8 @@ class BatchMoveDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        layout.addWidget(QLabel(f"{len(paths)} file(s) selected"))
+        layout.addWidget(QLabel(lang.get(
+            "batch_move_selected", "{count} file(s) selected").format(count=len(paths))))
 
         # 模式
         mode_grp = QGroupBox(lang.get("batch_move_mode", "Mode"))
@@ -201,7 +206,9 @@ class BatchMoveDialog(QDialog):
         layout.addLayout(btn_row)
 
     def _browse(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        lang = language_wrapper.language_word_dict
+        folder = QFileDialog.getExistingDirectory(
+            self, lang.get("main_window_select_folder", "Select Folder"))
         if folder:
             self._dest.setText(folder)
 
@@ -215,8 +222,12 @@ class BatchMoveDialog(QDialog):
         moved = [source for source, _target in result.done]
         if is_move and moved:
             self._remove_moved_from_model(moved)
-        self._toast_transfer_result(
-            "Moved" if is_move else "Copied", len(result.done), len(result.failed))
+        if is_move:
+            _toast_result(self._gui, "batch_move_done", "Moved {done}/{total} file(s)",
+                          len(result.done), len(result.failed))
+        else:
+            _toast_result(self._gui, "batch_copy_done", "Copied {done}/{total} file(s)",
+                          len(result.done), len(result.failed))
         self.accept()
 
     def _remove_moved_from_model(self, moved: list[str]) -> None:
@@ -232,13 +243,6 @@ class BatchMoveDialog(QDialog):
         self._gui.tile_selection_mode = False
         self._gui.clear_tile_grid()
         self._gui.load_tile_grid_async(images)
-
-    def _toast_transfer_result(self, op: str, count: int, failed: int) -> None:
-        if not hasattr(self._gui.main_window, "toast"):
-            return
-        msg = f"{op} {count}/{count + failed} file(s)"
-        toast = self._gui.main_window.toast
-        (toast.info if failed else toast.success)(msg)
 
 
 # ===========================
@@ -270,14 +274,7 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
         main_gui.clear_tile_grid()
         main_gui.load_tile_grid_async(main_gui.model.images)
 
-    if hasattr(main_gui.main_window, "toast"):
-        msg = language_wrapper.language_word_dict.get(
-            "batch_rotate_done", "Rotated {done}/{total} file(s)",
-        ).format(done=count, total=count + failed)
-        if failed:
-            main_gui.main_window.toast.info(msg)
-        else:
-            main_gui.main_window.toast.success(msg)
+    _toast_result(main_gui, "batch_rotate_done", "Rotated {done}/{total} file(s)", count, failed)
 
 
 # ===========================
