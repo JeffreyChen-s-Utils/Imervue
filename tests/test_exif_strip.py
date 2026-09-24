@@ -15,7 +15,6 @@ from Imervue.gui.exif_strip_dialog import (
     _scan_folder,
     strip_exif,
     _StripWorker,
-    _pil_format,
 )
 
 
@@ -80,27 +79,6 @@ class TestScanFolder:
             Image.fromarray(arr).save(str(tmp_path / n), format="JPEG")
         names = [os.path.basename(p) for p in _scan_folder(str(tmp_path))]
         assert names == ["a.jpg", "b.jpg", "c.jpg"]
-
-
-# ---------------------------------------------------------------------------
-# _pil_format
-# ---------------------------------------------------------------------------
-
-class TestPilFormat:
-    def test_jpg(self):
-        assert _pil_format("photo.jpg") == "JPEG"
-
-    def test_jpeg(self):
-        assert _pil_format("photo.jpeg") == "JPEG"
-
-    def test_png(self):
-        assert _pil_format("image.png") == "PNG"
-
-    def test_webp(self):
-        assert _pil_format("image.webp") == "WebP"
-
-    def test_unknown(self):
-        assert _pil_format("file.xyz") is None
 
 
 # ---------------------------------------------------------------------------
@@ -228,3 +206,16 @@ def test_strip_bakes_the_orientation_before_dropping_it(tmp_path):
     with Image.open(path) as out:
         assert out.size == (20, 40)
         assert out.getexif().get(0x0112) is None
+
+
+def test_overwrite_refuses_an_animated_webp_and_keeps_its_frames(tmp_path):
+    """Stripping in place (the default) re-saved the first frame only."""
+    path = tmp_path / "anim.webp"
+    frames = [Image.new("RGB", (8, 4), c) for c in ((255, 0, 0), (0, 255, 0), (0, 0, 255))]
+    frames[0].save(path, save_all=True, append_images=frames[1:])
+    import pytest
+    with pytest.raises(ValueError, match="losing frames"):
+        strip_exif(str(path))
+    with Image.open(path) as img:
+        assert img.n_frames == 3
+

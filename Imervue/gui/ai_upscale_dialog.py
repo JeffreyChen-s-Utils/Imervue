@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.in_place_save import can_rewrite_in_place
 from Imervue.image.shown import as_shown
 from Imervue.gui.dialog_rows import action_button_row, folder_picker_row, path_browse_row
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -256,6 +257,14 @@ class _UpscaleWorker(QThread):
 
     # -- helpers -------------------------------------------------------------
 
+    def _skip_unwritable(self, src: str) -> bool:
+        """In overwrite mode, whether *src* must be left alone: a save over it
+        would drop an animation's or a multi-page file's other frames."""
+        if self._overwrite and not can_rewrite_in_place(src):
+            logger.warning("Not overwriting %s: it can't be saved back whole", src)
+            return True
+        return False
+
     @staticmethod
     def _output_path(src: str, output_dir: str, scale: int,
                      overwrite: bool) -> str:
@@ -313,6 +322,9 @@ class _UpscaleWorker(QThread):
             if self.isInterruptionRequested():
                 break
             self.progress.emit(i, total, Path(src).name)
+            if self._skip_unwritable(src):
+                failed += 1
+                continue
             try:
                 img = as_shown(Image.open(src))   # the output carries no EXIF
                 new_size = (img.width * scale, img.height * scale)
@@ -357,6 +369,9 @@ class _UpscaleWorker(QThread):
                 break
             name = Path(src).name
             self.progress.emit(i, total, name)
+            if self._skip_unwritable(src):
+                failed += 1
+                continue
             try:
                 img = as_shown(Image.open(src))   # the output carries no EXIF
                 if img.mode not in ("RGB", "RGBA"):

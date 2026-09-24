@@ -241,6 +241,21 @@ class TestTraditionalMethods:
         with Image.open(result) as out:
             assert out.size == (16, 20)
 
+    def test_overwrite_skips_an_animated_file(self, tmp_path):
+        from PIL import Image
+        from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+
+        path = tmp_path / "anim.webp"
+        frames = [Image.new("RGB", (8, 4), c) for c in ((255, 0, 0), (0, 255, 0), (0, 0, 255))]
+        frames[0].save(path, save_all=True, append_images=frames[1:])
+        results = []
+        worker = _UpscaleWorker([str(path)], "", "trad:nearest", True, scale_override=2)
+        worker.result_ready.connect(lambda ok, bad: results.append((ok, bad)))
+        worker.run()
+        assert results == [(0, 1)]
+        with Image.open(path) as img:
+            assert img.n_frames == 3 and img.size == (8, 4)
+
     def test_lanczos_upscale(self, tmp_path):
         """Lanczos resize should produce exact expected dimensions."""
         from PIL import Image

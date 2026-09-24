@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
 from Imervue.image.shown import as_shown
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -65,8 +66,11 @@ def strip_exif(path: str, *, remove_all: bool = True,
     """Strip metadata from an image file.
 
     Returns the output path on success.
-    Raises on failure.
+    Raises on failure, including ``ValueError`` when *overwrite* is set and
+    the file can't be saved back whole (an animated or multi-page file).
     """
+    if overwrite and not can_rewrite_in_place(path):
+        raise ValueError(f"{path} can't be overwritten without losing frames")
     # The orientation tag goes with the rest of the EXIF, so bake it into the
     # pixels first; otherwise a portrait phone photo comes out sideways for good.
     img = as_shown(Image.open(path))
@@ -88,7 +92,7 @@ def strip_exif(path: str, *, remove_all: bool = True,
 
     # Save kwargs
     save_kwargs: dict = {}
-    fmt = _pil_format(path)
+    fmt = in_place_format(path)
     if fmt:
         save_kwargs["format"] = fmt
     if icc:
@@ -102,14 +106,6 @@ def strip_exif(path: str, *, remove_all: bool = True,
     return out_path
 
 
-def _pil_format(path: str) -> str | None:
-    """Map file extension to Pillow format string."""
-    ext = Path(path).suffix.lower()
-    return {
-        ".jpg": "JPEG", ".jpeg": "JPEG",
-        ".png": "PNG", ".tiff": "TIFF", ".tif": "TIFF",
-        ".webp": "WebP",
-    }.get(ext)
 
 
 # ---------------------------------------------------------------------------
