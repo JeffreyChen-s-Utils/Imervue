@@ -1230,6 +1230,11 @@ Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ``animal/cat/british``）。选择节点即显示该节点与全部子节点下的图片；可一
 键为所选图片添加或移除标签。与右键菜单的扁平标签并行。
 
+右键 ``Index Keywords`` 会把所选图片的 XMP 关键字加入图库。Lightroom 或 darktable
+写的关键字层级（``lr:hierarchicalSubject``，如 ``Places|Taiwan|Taipei``）会成为
+标签路径 ``Places/Taiwan/Taipei``；只是重复这些层级的 ``Places``／``Taiwan``／
+``Taipei`` 零散关键字不会再另外加入。
+
 Token 批量重命名
 ^^^^^^^^^^^^^^^^
 

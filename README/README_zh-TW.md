@@ -224,7 +224,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）
 - **顏色標籤** — other XMP-aware photo managers 式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
 - **挑片**（Culling）— other XMP-aware photo managers 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕；**自動挑片** 會在每組近重複中挑出最清晰的一張保留、其餘標為拒絕
-- **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫
+- **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫；右鍵 **Index Keywords** 會把 Lightroom／darktable 的關鍵字階層（`Places|Taiwan|Taipei`）歸到對應的父標籤下
 - **Tags & Albums** 含多標籤 AND / OR 過濾
 - **智慧相簿** — 儲存規則式查詢並一鍵重新套用；過濾條件涵蓋副檔名、解析度與 **長寬比**、**檔案大小**、評等 **下限 / 上限**、顏色、挑片、標籤（含 **排除**）、**相機 / 鏡頭**、**檔名 regex / glob** 以及 **檔案年齡**，並可 **匯出 / 匯入** 成可攜的 JSON 檔
 - **疊合 RAW+JPEG 對** — 將同檔名擷取折疊成單一磁磚；RAW 仍可從手足存取

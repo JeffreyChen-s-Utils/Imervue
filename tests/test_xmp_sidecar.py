@@ -465,3 +465,20 @@ class TestEmbeddedMetadata:
 
     def test_a_plain_file_gives_nothing(self, xmp, tmp_path):
         assert xmp.load(self._image(tmp_path, packet=None)).is_empty()
+
+
+def test_a_hierarchy_is_read_and_a_save_keeps_it(xmp, image_path):
+    """Imervue reads lr:hierarchicalSubject and never rewrites another editor's list."""
+    path = xmp.sidecar_path_for(image_path)
+    path.write_text("""<x:xmpmeta xmlns:x="adobe:ns:meta/">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="" xmlns:lr="http://ns.adobe.com/lightroom/1.0/">
+   <lr:hierarchicalSubject><rdf:Bag><rdf:li>Places|Taiwan</rdf:li></rdf:Bag></lr:hierarchicalSubject>
+  </rdf:Description>
+ </rdf:RDF>
+</x:xmpmeta>""", encoding="utf-8")
+    loaded = xmp.load(image_path)
+    assert loaded.hierarchical_keywords == ["Places|Taiwan"] and not loaded.is_empty()
+    xmp.save(image_path, xmp.XmpData(rating=2))
+    assert xmp.load(image_path).hierarchical_keywords == ["Places|Taiwan"]
+    assert "lr:hierarchicalSubject" in path.read_text(encoding="utf-8")

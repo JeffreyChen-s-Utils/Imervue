@@ -2132,6 +2132,12 @@ Tags hiérarchiques
 Les tags hiérarchiques vivent dans l'index de la bibliothèque et sont complémentaires du système
 de tags plat dans le menu contextuel.
 
+``Index Keywords`` (clic droit) ajoute à la bibliothèque les mots-clés XMP de la
+sélection. Une hiérarchie de mots-clés écrite par Lightroom ou darktable
+(``lr:hierarchicalSubject``, ``Places|Taiwan|Taipei``) est rangée sous le chemin de
+tag ``Places/Taiwan/Taipei``, et les mots-clés isolés ``Places`` / ``Taiwan`` /
+``Taipei`` qui ne font que répéter ses niveaux ne sont pas ajoutés une seconde fois.
+
 Renommage par lots avec jetons
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

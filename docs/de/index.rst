@@ -2168,6 +2168,12 @@ Tags wie ``animal/cat/british``. Wählen Sie ein Tag, um jedes Bild unter diesem
 Hierarchische Tags leben im Bibliotheksindex und ergänzen das flache Tag-System im
 Rechtsklick-Menü.
 
+``Index Keywords`` im Rechtsklick-Menü übernimmt die XMP-Stichwörter der Auswahl in
+die Bibliothek. Eine von Lightroom oder darktable geschriebene Stichwort-Hierarchie
+(``lr:hierarchicalSubject``, ``Places|Taiwan|Taipei``) wird als Tag-Pfad
+``Places/Taiwan/Taipei`` abgelegt; lose Stichwörter ``Places`` / ``Taiwan`` /
+``Taipei``, die nur ihre Ebenen wiederholen, kommen nicht noch einmal hinzu.
+
 Token-Stapel-Umbenennen
 ^^^^^^^^^^^^^^^^^^^^^^^
 

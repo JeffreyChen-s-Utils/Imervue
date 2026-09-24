@@ -1264,6 +1264,11 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 이미지 목록을 볼 수 있으며, 현재 선택을 한 번에 태그/해제할 수 있습니다.
 우클릭 메뉴의 평면 태그와 공존합니다.
 
+우클릭 ``Index Keywords``\ 는 선택한 이미지의 XMP 키워드를 라이브러리에 추가합니다.
+Lightroom이나 darktable이 쓴 키워드 계층(``lr:hierarchicalSubject``,
+``Places|Taiwan|Taipei``)은 태그 경로 ``Places/Taiwan/Taipei``\ 로 등록되며, 그 계층을
+반복할 뿐인 ``Places`` / ``Taiwan`` / ``Taipei`` 키워드는 다시 추가하지 않습니다.
+
 Token 일괄 이름 변경
 ^^^^^^^^^^^^^^^^^^^^
 

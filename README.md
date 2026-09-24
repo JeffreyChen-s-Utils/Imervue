@@ -227,7 +227,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Ratings** — 0-5 stars (`1`–`5`) + favorite heart (`0`)
 - **Color labels** — flag-based red/yellow/green/blue/purple (`F1`–`F5`)
 - **Culling** — other XMP-aware photo managers 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects; **auto-cull** picks the sharpest frame per near-duplicate group and rejects the rest
-- **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically
+- **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically; right-click **Index Keywords** files a Lightroom / darktable keyword hierarchy (`Places|Taiwan|Taipei`) under its parents
 - **Tags & Albums** with multi-tag AND/OR filtering
 - **Smart Albums** — save rule-based queries and reapply with one click; filters span extension, resolution & **aspect**, **file size**, rating **floor / ceiling**, colour, cull, tags (incl. **exclusion**), **camera / lens**, **filename regex / glob** and **file age**, plus **export / import** to a portable JSON file
 - **Stack RAW+JPEG pairs** — collapse same-stem captures into one tile; RAW stays accessible as a sibling

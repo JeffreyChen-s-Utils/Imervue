@@ -53,6 +53,8 @@ _NS = {
 _RATING_MIN = -1
 _RATING_MAX = 5
 _REJECTED = -1         # xmp:Rating of a rejected photo in Lightroom, Bridge and darktable
+# Lightroom's (and darktable's) keyword hierarchy: a Bag of "Parent|Child|Leaf".
+_LR_HIERARCHY = "{http://ns.adobe.com/lightroom/1.0/}hierarchicalSubject"  # NOSONAR
 _EXIF_RATING = 0x4746          # 0-5 stars, written by Windows Explorer and some cameras
 _EXIF_RATING_PERCENT = 0x4749  # the same as a 0-100 percentage
 _XML_DECLARATION = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -72,6 +74,9 @@ class XmpData:
     keywords: list[str] = field(default_factory=list)
     color_label: str = ""
     creator: str = ""
+    # lr:hierarchicalSubject as written ("Places|Taiwan|Taipei"); read only,
+    # a save leaves the file's own list alone.
+    hierarchical_keywords: list[str] = field(default_factory=list)
 
     def is_empty(self) -> bool:
         """Return True if every tracked field carries no information."""
@@ -82,6 +87,7 @@ class XmpData:
             and not self.keywords
             and not self.color_label
             and not self.creator
+            and not self.hierarchical_keywords
         )
 
 
@@ -291,6 +297,7 @@ def _from_root(root) -> XmpData:
     title = description = label = ""
     keywords: list[str] = []
     creators: list[str] = []
+    hierarchy: list[str] = []
     for desc in descs:
         rating = rating or _parse_rating(desc)
         title = title or _parse_alt_default(desc.find(f"{{{_NS['dc']}}}title"))
@@ -299,6 +306,7 @@ def _from_root(root) -> XmpData:
         keywords = keywords or _parse_bag(desc.find(f"{{{_NS['dc']}}}subject"))
         creators = creators or _parse_bag(desc.find(f"{{{_NS['dc']}}}creator"))
         label = label or _extract_label(desc)
+        hierarchy = hierarchy or _parse_bag(desc.find(_LR_HIERARCHY))
 
     return XmpData(
         rating=rating,
@@ -307,6 +315,7 @@ def _from_root(root) -> XmpData:
         keywords=keywords,
         color_label=label,
         creator=creators[0] if creators else "",
+        hierarchical_keywords=hierarchy,
     )
 
 

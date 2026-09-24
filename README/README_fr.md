@@ -225,7 +225,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Notes** — 0-5 étoiles (`1`–`5`) + cœur favori (`0`)
 - **Étiquettes de couleur** — drapeaux rouge/jaune/vert/bleu/violet (`F1`–`F5`)
 - **Tri (Culling)** — drapeau à 3 états compatible avec d'autres gestionnaires photo XMP (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés ; le tri automatique garde l'image la plus nette de chaque groupe de quasi-doublons et rejette le reste
-- **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus
+- **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus ; **Index Keywords** (clic droit) range une hiérarchie de mots-clés Lightroom / darktable (`Places|Taiwan|Taipei`) sous ses parents
 - **Tags & Albums** avec filtrage multi-étiquettes AND/OR
 - **Albums intelligents** — enregistrer des requêtes basées sur des règles et les réappliquer en un clic ; les filtres couvrent l'extension, la résolution et le **rapport d'aspect**, la **taille de fichier**, la note **plancher / plafond**, la couleur, le tri, les étiquettes (y compris l'**exclusion**), le **boîtier / objectif**, le **regex / glob de nom de fichier** et l'**ancienneté du fichier**, plus l'**export / import** vers un fichier JSON portable
 - **Empilement des paires RAW+JPEG** — regrouper les captures de même base en une seule tuile ; le RAW reste accessible comme frère

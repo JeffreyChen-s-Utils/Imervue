@@ -2099,6 +2099,12 @@ Hierarchical Tags
 Hierarchical tags live in the library index and are complementary to the flat
 tag system in the right-click menu.
 
+Right-click ``Index Keywords`` adds the selection's XMP keywords to the library.
+A keyword hierarchy Lightroom or darktable wrote (``lr:hierarchicalSubject``,
+``Places|Taiwan|Taipei``) is filed as the tag path ``Places/Taiwan/Taipei``, and
+the loose ``Places`` / ``Taiwan`` / ``Taipei`` keywords that only repeat its
+levels are not added again.
+
 Token Batch Rename
 ^^^^^^^^^^^^^^^^^^
 

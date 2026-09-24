@@ -225,7 +225,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Avaliações** — 0 a 5 estrelas (`1`–`5`) + coração de favorito (`0`)
 - **Etiquetas de cor** — bandeiras vermelho/amarelo/verde/azul/roxo (`F1`–`F5`)
 - **Triagem (Culling)** — flag de 3 estados compatível com outros gerenciadores de fotos XMP-aware (`P` = manter, `Shift+X` = rejeitar, `U` = remover marca); filtrar por estado; exclusão em lote de rejeitados; a triagem automática escolhe o quadro mais nítido de cada grupo de quase duplicatas e rejeita os demais
-- **Tags hierárquicas** — caminhos em árvore como `animal/cat/british`; descendentes são correspondidos automaticamente
+- **Tags hierárquicas** — caminhos em árvore como `animal/cat/british`; descendentes são correspondidos automaticamente; **Index Keywords** no menu de clique direito arquiva uma hierarquia de palavras-chave do Lightroom / darktable (`Places|Taiwan|Taipei`) sob os pais
 - **Tags & Albums** com filtragem multi-tag AND/OR
 - **Smart Albums** — salva consultas baseadas em regras e reaplica com um clique; os filtros abrangem extensão, resolução e **proporção**, **tamanho de arquivo**, **piso / teto** de avaliação, cor, triagem, tags (incl. **exclusão**), **câmera / lente**, **regex / glob de nome de arquivo** e **idade do arquivo**, além de **exportar / importar** para um arquivo JSON portável
 - **Empilhar pares RAW+JPEG** — colapsa capturas de mesmo nome em um único tile; o RAW continua acessível como irmão

@@ -1271,6 +1271,11 @@ Imervue は ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）または
 画像一覧が表示され、現在の選択をワンクリックでタグ付け／解除できます。
 右クリックメニューのフラットタグと併存します。
 
+右クリックの ``Index Keywords`` は、選択画像の XMP キーワードをライブラリに追加します。
+Lightroom や darktable が書いたキーワード階層(``lr:hierarchicalSubject``、
+``Places|Taiwan|Taipei``)はタグパス ``Places/Taiwan/Taipei`` として登録され、
+その階層を繰り返すだけの ``Places``／``Taiwan``／``Taipei`` は重ねて追加しません。
+
 Token 一括リネーム
 ^^^^^^^^^^^^^^^^^^
 

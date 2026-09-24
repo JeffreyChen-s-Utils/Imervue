@@ -2135,6 +2135,12 @@ imágenes bajo esa rama (descendientes incluidos). Etiquete o desetiquete la sel
 con un clic. Las etiquetas jerárquicas viven en el índice de la biblioteca y son
 complementarias al sistema de etiquetas planas del menú contextual.
 
+``Index Keywords`` del menú contextual añade a la biblioteca las palabras clave XMP de
+la selección. Una jerarquía de palabras clave escrita por Lightroom o darktable
+(``lr:hierarchicalSubject``, ``Places|Taiwan|Taipei``) se archiva como la ruta de
+etiqueta ``Places/Taiwan/Taipei``, y las palabras sueltas ``Places`` / ``Taiwan`` /
+``Taipei`` que solo repiten sus niveles no se añaden otra vez.
+
 Renombrado por lotes con tokens
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
