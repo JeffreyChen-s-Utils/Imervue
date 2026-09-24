@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.dimensions import image_dimensions
+from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -38,11 +39,6 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.image_organizer")
-
-_IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-    ".gif", ".apng",
-})
 
 RULE_DATE = "date"
 RULE_RESOLUTION = "resolution"
@@ -60,7 +56,7 @@ def _scan_folder(folder: str) -> list[str]:
     result: list[str] = []
     try:
         for entry in os.scandir(folder):
-            if entry.is_file() and Path(entry.name).suffix.lower() in _IMAGE_EXTS:
+            if entry.is_file() and Path(entry.name).suffix.lower() in STILL_IMAGE_EXTENSIONS:
                 result.append(entry.path)
     except OSError:
         pass

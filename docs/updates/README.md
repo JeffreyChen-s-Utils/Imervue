@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-75 | 2026-09-24 | Let Image Organizer sort HEIC, JPEG XL and RAW photos | #feature #formats | [2026-09](2026-09.md) |
 | U-20260924-74 | 2026-09-24 | Read RAW pixel dimensions through libraw instead of the embedded preview | #fix #raw | [2026-09](2026-09.md) |
 | U-20260924-73 | 2026-09-24 | Export the camera EXIF columns from the Exif sub-IFD | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-72 | 2026-09-24 | Show EXIF and GPS for HEIC and JPEG XL photos | #fix #exif #formats | [2026-09](2026-09.md) |

@@ -55,6 +55,13 @@ class TestScanFolder:
         paths = _scan_folder(img_folder)
         assert len(paths) == 4
 
+    def test_takes_every_still_format_but_not_video(self, tmp_path):
+        """iPhone HEIC and camera RAW photos used to be left behind by the organizer."""
+        for name in ("a.heic", "b.cr2", "c.NEF", "d.jxl", "e.avif", "f.png", "g.mp4", "h.txt"):
+            (tmp_path / name).write_bytes(b"x")
+        names = [os.path.basename(p) for p in _scan_folder(str(tmp_path))]
+        assert names == ["a.heic", "b.cr2", "c.NEF", "d.jxl", "e.avif", "f.png"]
+
     def test_ignores_non_images(self, tmp_path):
         (tmp_path / "readme.txt").write_text("hi")
         arr = np.full((10, 10, 3), 128, dtype=np.uint8)
