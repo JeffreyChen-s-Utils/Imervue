@@ -269,9 +269,17 @@ class _SmartResizeWorker(QThread):
         self.done.emit(True, self._out_path)
 
 
+# EXIF orientations that turn the image a quarter turn, swapping its width and height.
+_QUARTER_TURN_ORIENTATIONS = frozenset({5, 6, 7, 8})
+
+
 def _peek_image_size(path: str) -> tuple[int, int]:
+    """The size of the image as shown (and as ``load_rgba`` returns it): upright."""
     try:
         with Image.open(path) as img:
-            return img.size
+            width, height = img.size
+            if img.getexif().get(0x0112) in _QUARTER_TURN_ORIENTATIONS:
+                return height, width
+            return width, height
     except OSError:
         return (1024, 1024)

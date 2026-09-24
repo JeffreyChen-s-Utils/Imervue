@@ -32,7 +32,7 @@ def _run(input_path: str, output_dir: str, model_name: str,
     # Phase 1: load rembg
     print("STEP:0:4:Loading rembg...", flush=True)
     from rembg import remove, new_session
-    from PIL import Image
+    from PIL import Image, ImageOps
     import numpy as np
 
     # Phase 2: load model
@@ -41,7 +41,8 @@ def _run(input_path: str, output_dir: str, model_name: str,
 
     # Phase 3: remove background
     print("STEP:2:4:Removing background...", flush=True)
-    input_img = Image.open(input_path).convert("RGBA")
+    # Upright, as the viewer shows it: the split objects are saved without EXIF.
+    input_img = ImageOps.exif_transpose(Image.open(input_path)).convert("RGBA")
     output_img = remove(input_img, session=session)
 
     # Phase 4: find objects

@@ -161,3 +161,18 @@ def test_translations_share_the_english_keys():
     english = set(translations["English"])
     for language, words in translations.items():
         assert set(words) == english, language
+
+
+def test_icon_of_a_tagged_photo_is_upright(tmp_path):
+    """The stored left half is red; tag 6 (rotate 90 CW to view) puts it on top."""
+    from png_to_icon.icon_converter_plugin import write_icon_set
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    src = tmp_path / "portrait.png"
+    img = Image.new("RGB", (40, 20), (0, 0, 255))
+    img.paste((255, 0, 0), (0, 0, 20, 20))
+    img.save(src, exif=exif)
+    png = next(p for p in write_icon_set(src, sizes=(16,)) if p.suffix == ".png")
+    with Image.open(png) as icon:
+        top, bottom = icon.convert("RGB").getpixel((8, 2)), icon.convert("RGB").getpixel((8, 13))
+    assert top[0] > 200 and bottom[2] > 200

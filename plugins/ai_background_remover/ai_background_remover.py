@@ -287,12 +287,13 @@ class _RemoveBackgroundWorker(QThread):
 
     @staticmethod
     def _load_image(path: str):
-        from PIL import Image
+        from PIL import Image, ImageOps
         if Path(path).suffix.lower() == ".svg":
             from Imervue.gpu_image_view.images.image_loader import _load_svg
             arr = _load_svg(path, thumbnail=False)
             return Image.fromarray(arr)
-        return Image.open(path)
+        # Upright, as the viewer shows it: the cut-out is saved without EXIF.
+        return ImageOps.exif_transpose(Image.open(path))
 
 
 class _BatchRemoveWorker(QThread):
@@ -310,7 +311,7 @@ class _BatchRemoveWorker(QThread):
     def run(self):
         _MODELS_DIR.mkdir(parents=True, exist_ok=True)
         from rembg import remove, new_session
-        from PIL import Image
+        from PIL import Image, ImageOps
 
         session = new_session(self._model)
         success = 0
@@ -328,7 +329,7 @@ class _BatchRemoveWorker(QThread):
                     arr = _load_svg(src, thumbnail=False)
                     input_img = Image.fromarray(arr)
                 else:
-                    input_img = Image.open(src)
+                    input_img = ImageOps.exif_transpose(Image.open(src))
 
                 output_img = remove(
                     input_img,

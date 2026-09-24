@@ -28,13 +28,14 @@ def _run_single(input_path: str, output_path: str, model_name: str,
 
     print("PROGRESS:Loading rembg...", flush=True)
     from rembg import remove, new_session
-    from PIL import Image
+    from PIL import Image, ImageOps
 
     print(f"PROGRESS:Loading model: {model_name}...", flush=True)
     session = new_session(model_name)
 
     print("PROGRESS:Processing image...", flush=True)
-    input_img = Image.open(input_path)
+    # Upright, as the viewer shows it: the cut-out is saved without EXIF.
+    input_img = ImageOps.exif_transpose(Image.open(input_path))
 
     output_img = remove(
         input_img,
@@ -59,7 +60,7 @@ def _run_batch(input_list_file: str, output_dir: str, model_name: str,
         paths = json.load(f)
 
     from rembg import remove, new_session
-    from PIL import Image
+    from PIL import Image, ImageOps
 
     session = new_session(model_name)
     success = 0
@@ -69,9 +70,9 @@ def _run_batch(input_list_file: str, output_dir: str, model_name: str,
     for i, src in enumerate(paths):
         try:
             print(f"BATCH_PROGRESS:{i}:{total}:{Path(src).name}", flush=True)
-            with Image.open(src) as input_img:
+            with Image.open(src) as opened:
                 output_img = remove(
-                    input_img,
+                    ImageOps.exif_transpose(opened),
                     session=session,
                     alpha_matting=alpha_matting,
                     alpha_matting_foreground_threshold=240,

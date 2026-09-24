@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
+from PIL import Image, ImageOps
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -43,7 +43,7 @@ def write_icon_set(source: str | Path, sizes: tuple[int, ...] = SIZES) -> list[P
     if not sizes or any(size <= 0 for size in sizes):
         raise ValueError(f"icon sizes must be positive, got {sizes!r}")
     with Image.open(source) as opened:
-        image = opened.convert("RGBA")
+        image = ImageOps.exif_transpose(opened).convert("RGBA")   # upright, as shown
     output_dir = icon_output_dir(source)
     output_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
