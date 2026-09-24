@@ -15,7 +15,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QTabWidget, QVBoxLayout, QWidget
 
-from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.image.shown import as_shown
 from Imervue.image.copy_move import copy_move_map
 from Imervue.image.ela import error_level_analysis
 from Imervue.image.false_color import false_color
@@ -41,8 +41,7 @@ def _ndarray_to_qimage(arr: np.ndarray) -> QImage:
 
 def _load_preview_rgba(path: str) -> np.ndarray:
     with Image.open(path) as src:   # upright, as the viewer shows it
-        img = transpose_for(src if src.mode == "RGBA" else src.convert("RGBA"),
-                            exif_orientation(src))
+        img = as_shown(src).convert("RGBA")
         img.thumbnail((_PREVIEW_MAX, _PREVIEW_MAX), Image.Resampling.LANCZOS)
         return np.array(img)
 

@@ -11,7 +11,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.image.shown import as_shown
+from Imervue.image.orientation import exif_orientation
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 
@@ -19,15 +20,15 @@ from Imervue.image.recipe_store import recipe_store
 def recipe_base_image(path: str, recipe: Recipe | None) -> Image.Image:
     """Return the pixels *recipe* applies to: *path* upright, as the viewer loads it.
 
-    The exception is a recipe whose geometry predates EXIF-upright loading
+    Converted to sRGB from an embedded colour profile, like the viewer. The
+    exception to the turn is a recipe whose geometry predates EXIF-upright loading
     (``Recipe.base_is_oriented``): its rotate / flip / crop was drawn on the
     stored orientation, so that is what it gets. Anything that stores
     coordinates in a recipe (a crop, face boxes) must compute them on this image.
     """
     img = Image.open(path)
-    if recipe is None or recipe.base_is_oriented():
-        img = transpose_for(img, exif_orientation(img))
-    return img
+    code = exif_orientation(img) if recipe is None or recipe.base_is_oriented() else 1
+    return as_shown(img, code)   # sRGB always: the colours don't depend on the recipe
 
 
 def open_export_source(path: str) -> Image.Image:

@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QSizePolicy, QTabWidget, QSlider, QMessageBox,
 )
 
-from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.image.shown import as_shown
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -263,7 +263,7 @@ def _load_rgba_array(path: str, max_edge: int = 2048) -> np.ndarray | None:
     """
     try:
         with Image.open(path) as src:
-            im = transpose_for(src.convert("RGBA"), exif_orientation(src))
+            im = as_shown(src).convert("RGBA")
             w, h = im.size
             long_edge = max(w, h)
             if long_edge > max_edge:

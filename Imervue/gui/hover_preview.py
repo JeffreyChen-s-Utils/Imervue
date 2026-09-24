@@ -14,9 +14,9 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.shown import as_shown
 from Imervue.image.dimensions import image_dimensions
 from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from PySide6.QtCore import Qt, QTimer, QPoint, QSize
 from PySide6.QtGui import QPixmap, QImage, QGuiApplication, QFont
@@ -110,7 +110,7 @@ def _load_preview(path: str, max_edge: int = PREVIEW_MAX_EDGE) -> QPixmap | None
     ensure_pillow_opener(Path(path).suffix)
     try:
         with Image.open(path) as src:
-            im = transpose_for(src.convert("RGBA"), exif_orientation(src))
+            im = as_shown(src).convert("RGBA")
             w, h = im.size
             long_edge = max(w, h)
             if long_edge > max_edge:

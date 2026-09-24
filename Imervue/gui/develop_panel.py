@@ -36,8 +36,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.shown import as_shown
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
-from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.image.orientation import exif_orientation
 from Imervue.gui.modify_splitter import ModifySplitterMixin
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
@@ -293,10 +294,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         try:
             img = Image.open(path)
             code = exif_orientation(img) if orient else 1
-            if img.mode not in ("RGB", "RGBA", "L"):
-                img = img.convert("RGBA")
-            else:
-                img.load()
+            img.load()
+            img = as_shown(img, code)   # sRGB, and upright unless a legacy recipe says not
         except Exception:
             logger.exception("Failed to load image: %s", path)
             self._invalidate_decoded_source()
@@ -304,7 +303,6 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
 
         if img.mode != "RGBA":
             img = img.convert("RGBA")
-        img = transpose_for(img, code)
 
         self._decoded_source_key = (path, orient)
         self._decoded_source = img

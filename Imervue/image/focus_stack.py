@@ -24,7 +24,7 @@ from pathlib import Path
 
 import numpy as np
 
-from Imervue.image.orientation import load_upright_rgb
+from Imervue.image.shown import load_shown_rgb
 
 logger = logging.getLogger("Imervue.focus_stack")
 
@@ -40,7 +40,7 @@ class FocusStackOptions:
 
 def _load_rgb(path: str | Path) -> np.ndarray:
     # Upright: the result is saved without EXIF, and every frame must share one frame.
-    return load_upright_rgb(path)
+    return load_shown_rgb(path)
 
 
 def _align_ecc(

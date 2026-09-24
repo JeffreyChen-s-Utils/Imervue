@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.image.orientation import upright
+from Imervue.image.shown import as_shown
 from Imervue.gui.dialog_rows import action_button_row, folder_picker_row, path_browse_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -314,7 +314,7 @@ class _UpscaleWorker(QThread):
                 break
             self.progress.emit(i, total, Path(src).name)
             try:
-                img = upright(Image.open(src))   # the output carries no EXIF
+                img = as_shown(Image.open(src))   # the output carries no EXIF
                 new_size = (img.width * scale, img.height * scale)
                 out_img = img.resize(new_size, resample)
                 dst = self._output_path(
@@ -358,7 +358,7 @@ class _UpscaleWorker(QThread):
             name = Path(src).name
             self.progress.emit(i, total, name)
             try:
-                img = upright(Image.open(src))   # the output carries no EXIF
+                img = as_shown(Image.open(src))   # the output carries no EXIF
                 if img.mode not in ("RGB", "RGBA"):
                     img = img.convert("RGB")
 

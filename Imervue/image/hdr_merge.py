@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-from Imervue.image.orientation import load_upright_rgb
+from Imervue.image.shown import load_shown_rgb
 
 logger = logging.getLogger("Imervue.hdr_merge")
 
@@ -37,7 +37,7 @@ class HdrOptions:
 
 def _load_bgr(path: str | Path) -> np.ndarray:
     """Return an upright HxWx3 uint8 BGR image — cv2 format."""
-    return load_upright_rgb(path)[..., ::-1].copy()
+    return load_shown_rgb(path)[..., ::-1].copy()
 
 
 def _align(images: list[np.ndarray]):

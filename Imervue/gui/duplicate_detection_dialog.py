@@ -31,7 +31,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.image.shown import as_shown
+from Imervue.image.orientation import exif_orientation
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.image.dimensions import image_dimensions
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -241,7 +242,7 @@ def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
         with Image.open(path) as src:
             code = exif_orientation(src)
             src.thumbnail((size, size), Image.Resampling.LANCZOS)
-            img = transpose_for(src.convert("RGBA"), code)
+            img = as_shown(src, code).convert("RGBA")
     except IMAGE_READ_ERRORS:
         return QPixmap()
     arr = np.array(img)

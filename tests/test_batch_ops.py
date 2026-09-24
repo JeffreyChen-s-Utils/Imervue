@@ -89,14 +89,14 @@ class TestBatchRotate:
         from PIL import Image
 
         from Imervue.gpu_image_view.actions.batch_ops import batch_rotate
-        from Imervue.image.orientation import upright
+        from Imervue.image.shown import as_shown
         exif = Image.Exif()
         exif[0x0112] = 6   # 40x20 stored, shown 20x40
         path = tmp_path / "p.jpg"
         Image.new("RGB", (40, 20)).save(path, exif=exif)
         batch_rotate(self._gui([str(path)]), [str(path)], 90)
         with Image.open(path) as img:
-            assert upright(img).size == (40, 20)   # a real quarter turn of the 20x40 shown
+            assert as_shown(img).size == (40, 20)   # a real quarter turn of the 20x40 shown
 
     def test_result_toast_follows_the_ui_language(self, tmp_path):
         from PIL import Image

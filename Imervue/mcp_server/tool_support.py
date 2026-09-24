@@ -19,18 +19,18 @@ NO_ALPHA_FORMATS = frozenset({"jpg", "jpeg", "bmp"})
 
 
 def open_upright(image_path: Path):
-    """Open *image_path* decoded and turned upright by its EXIF orientation.
+    """Open *image_path* decoded, converted to sRGB and turned upright.
 
     Every tool works on the image as a viewer shows it: sizes, crop boxes and
-    the written copies (which carry no EXIF) all use the upright pixels.
+    the written copies (which carry no EXIF or ICC) all use these pixels.
     """
     from PIL import Image
 
-    from Imervue.image.orientation import exif_orientation, transpose_for
+    from Imervue.image.shown import as_shown
     with Image.open(image_path) as opened:
         opened.load()
-        turned = transpose_for(opened, exif_orientation(opened))
-        return turned if turned is not opened else opened.copy()
+        shown = as_shown(opened)
+        return shown if shown is not opened else opened.copy()
 
 
 def load_rgba_array(image_path: Path):

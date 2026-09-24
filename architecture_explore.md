@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `be440e3` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `7194fa7` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 842 | 137,395 |
+| `tests/` | 843 | 137,447 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,121 |
-| `Imervue/gui/` | 163 | 32,884 |
+| `Imervue/gui/` | 163 | 32,882 |
 | `Imervue/puppet/` | 57 | 15,286 |
-| `Imervue/image/` | 117 | 13,181 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,936 |
+| `Imervue/image/` | 118 | 13,204 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,938 |
 | `Imervue/multi_language/` | 8 | 14,024 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,682 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,251 |
-| **總計** | **1,666** | **315,716** |
+| **總計** | **1,668** | **315,791** |
 
-其中 `Imervue/` 套件本身 760 檔 / 164,070 行。
+其中 `Imervue/` 套件本身 761 檔 / 164,093 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -300,7 +300,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-117 個模組、13,181 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+118 個模組、13,204 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -336,7 +336,7 @@ ImervueMainWindow
 `auto_straighten.py`(92) Hough 水平線偵測 · `lens_correction.py`(150) 畸變/暗角/色差 ·
 `distort.py`(65) swirl/pinch/ripple · `polar.py`(68) 極座標 · `kaleidoscope.py`(66) ·
 `equirectangular.py`(77) 360° tiny planet · `resample.py`(43) 共用反向映射重採樣 ·
-`orientation.py`(141) EXIF orientation：`QUARTER_TURN_CODES`、`exif_orientation` / `transpose_for` / `upright`（轉完會清掉結果上的 EXIF / XMP 轉向標籤，避免再轉一次；檢視器、縮圖、清單、懸停預覽、Modify、註解都用它轉正）、`load_upright_rgb`（對焦堆疊、HDR、全景、堆疊混合的輸入）與 `oriented_array` 烘焙
+`orientation.py`(130) EXIF orientation：`QUARTER_TURN_CODES`、`exif_orientation`、`transpose_for`（轉完會清掉結果上的 EXIF / XMP 轉向標籤，避免再轉一次）與 `oriented_array` 烘焙
 
 #### 藝術效果 / 疊加
 
@@ -347,8 +347,8 @@ ImervueMainWindow
 
 #### 多影像合成
 
-`hdr_merge.py`(117) · `panorama.py`(83)（包 OpenCV `Stitcher`） · `focus_stack.py`(122) ·
-`stack_blend.py`(119) 統計堆疊 · `collage.py`(64) · `anaglyph.py`(79) 紅藍 3D ·
+`hdr_merge.py`(117) · `panorama.py`(84)（包 OpenCV `Stitcher`） · `focus_stack.py`(122) ·
+`stack_blend.py`(120) 統計堆疊 · `collage.py`(64) · `anaglyph.py`(79) 紅藍 3D ·
 `deflicker.py`(108) 縮時去閃 · `id_photo_sheet.py`(72) 證件照拼版 · `print_layout.py`(111) ·
 `multipage.py`(72) 多頁 PDF/TIFF 合併與拆分
 
@@ -378,7 +378,7 @@ ImervueMainWindow
 `xmp_sidecar.py`(386) XMP sidecar 讀寫（跨編輯器互通） · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
 `gps.py`(90) EXIF GPS 擷取 · `gps_geotag.py`(70) 寫入 · `reverse_geocode.py`(151) 離線逆地理編碼 ·
 `geo_keywords.py`(45) 地點寫進 XMP 關鍵字 · `face_detection.py`(133) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`） ·
-`annotations.py`(270) JSON sidecar 註解 · `color_profile.py`(55) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB，無描述檔或 sRGB 原樣回傳，transform 依描述檔快取 · `exif_merge.py`(25) `merged_exif(img)`：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(194) 圖片資訊組裝與對話框；`get_exif_data()` 經 `exif_merge` 讀，HEIC / JXL 也讀得到
+`annotations.py`(270) JSON sidecar 註解 · `shown.py`(32) `as_shown(img, code=None)`：檢視器看到的樣子（先依內嵌描述檔轉 sRGB、再依 EXIF 轉正），`load_shown_rgb(path)`；預覽、工具輸入、匯出、Modify、註解、合成、OCR、CLIP、MCP 都走它 · `color_profile.py`(55) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB，無描述檔或 sRGB 原樣回傳，transform 依描述檔快取 · `exif_merge.py`(25) `merged_exif(img)`：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(194) 圖片資訊組裝與對話框；`get_exif_data()` 經 `exif_merge` 讀，HEIC / JXL 也讀得到
 
 #### 分析 / 品質
 
@@ -479,8 +479,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `search_dialog.py` | 280 | 檔名即時搜尋 |
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 309 | 鍵盤快捷動作實作 |
-| `lossless_rotate.py` | 136 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose（從轉正後的影像轉，因為重存會丟掉 EXIF） |
-| `drag_out.py` | 74 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
+| `lossless_rotate.py` | 137 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose（從轉正後的影像轉，因為重存會丟掉 EXIF） |
+| `drag_out.py` | 75 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
 | `recipe_commands.py` | 60 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
 | `undo_coalescer.py` | 61 | 把滑桿拖曳產生的密集編輯合併成單一 undo 步驟 |
@@ -525,20 +525,20 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-163 個檔、32,884 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+163 個檔、32,882 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 905 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
+| `develop_panel.py` | 903 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
 | `develop_right_panel.py` | 327 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 131 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
 | `annotation_canvas.py` | 845 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
 | `annotation_drawing.py` | 417 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 251 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
-| `annotation_dialog.py` | 811 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
+| `annotation_dialog.py` | 809 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
 | `annotation_file_actions.py` | 184 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入）、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
 | `dialog_rows.py` | 98 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框）、`image_save_filter()`（PNG / JPEG / TIFF 存檔篩選）；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
@@ -556,11 +556,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_tree_view.py` | 932 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 182 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
-| `image_list_view.py` | 606 | 清單檢視（`QTableView`，縮圖牆的替代） |
+| `image_list_view.py` | 607 | 清單檢視（`QTableView`，縮圖牆的替代） |
 | `dual_image_view.py` | 195 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
 | `exif_sidebar.py` | 438 | 可收合的 EXIF 側邊欄（含星等元件） |
 | `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
-| `timeline_view.py` | 361 | 時間軸檢視（年/月/日分組） |
+| `timeline_view.py` | 362 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
 | `hover_preview.py` | 192 | 縮圖懸停放大彈窗（預覽依 EXIF 轉正，標題列顯示圖片本身尺寸） |
 | `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
@@ -573,7 +573,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `settle_poll.py` | 58 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題）；`owner=` 讓鏈隨物件銷毀而停 |
 | `workspace_manager.py` | 154 | 具名工作區預設（幾何 + 佈局快照） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
-| `_apply_save.py` | 162 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用；`load_rgba()` 回傳依 EXIF 轉正的陣列（外掛也 import，見 architecture.md §6） |
+| `_apply_save.py` | 161 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用；`load_rgba()` 回傳依 EXIF 轉正的陣列（外掛也 import，見 architecture.md §6） |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
 
@@ -608,10 +608,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 批次 / 匯出 / 管理
 
-`batch_convert_dialog.py`(364) · `batch_export_dialog.py`(386) · `export_dialog.py`(218) · `export_source.py`(45) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`open_export_source()`：兩個匯出共用的來源（SVG 點陣化、依 EXIF 轉正、套 recipe；輸出不帶 EXIF，所以轉向烘進像素）·
+`batch_convert_dialog.py`(364) · `batch_export_dialog.py`(386) · `export_dialog.py`(218) · `export_source.py`(46) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`open_export_source()`：兩個匯出共用的來源（SVG 點陣化、依 EXIF 轉正、套 recipe；輸出不帶 EXIF，所以轉向烘進像素）·
 `optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(388) · `contact_sheet_dialog.py`(187) ·
 `web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(517) ·
-`duplicate_detection_dialog.py`(563) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
+`duplicate_detection_dialog.py`(564) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(303) · `token_rename_dialog.py`(122) · `culling_dialog.py`(256) 挑片 ·
 `ai_upscale_dialog.py`(724) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
@@ -624,7 +624,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `gps_geotag_dialog.py`(90) · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
 `events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(120) ·
 `bookmark_dialog.py`(349) · `staging_tray_dialog.py`(184) · `reference_panel_dialog.py`(296) ·
-`image_statistics_dialog.py`(90) · `quality_report_dialog.py`(61) · `image_inspector_dialog.py`(85) 波形/parade/false colour/focus peaking ·
+`image_statistics_dialog.py`(90) · `quality_report_dialog.py`(61) · `image_inspector_dialog.py`(84) 波形/parade/false colour/focus peaking ·
 `ocr_dialog.py`(114)
 
 #### 設定 / 系統
@@ -963,7 +963,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-842 個檔、137,395 行。`pyproject.toml` 定義三個互斥層級 marker：
+843 個檔、137,447 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

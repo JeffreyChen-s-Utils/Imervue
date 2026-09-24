@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QGroupBox, QRadioButton,
 )
 
-from Imervue.image.orientation import upright
+from Imervue.image.shown import as_shown
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -267,7 +267,7 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
     for path in paths:
         try:
             # Rotate what is shown: the re-save drops the EXIF orientation.
-            img = upright(Image.open(path))
+            img = as_shown(Image.open(path))
             img = img.rotate(-degrees, expand=True)
             img.save(path)
             count += 1

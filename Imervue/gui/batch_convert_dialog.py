@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 from PIL import Image
 
-from Imervue.image.orientation import upright
+from Imervue.image.shown import as_shown
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
@@ -107,7 +107,7 @@ class _ConvertWorker(QThread):
 
     def _convert_one(self, src: str, target_ext: str) -> None:
         # The converted file carries no EXIF, so its orientation goes into the pixels.
-        img = upright(Image.open(src))
+        img = as_shown(Image.open(src))
         out_path = self._resolve_output_path(src, target_ext)
         quality = self._quality if self._fmt in QUALITY_FORMATS else None
         save_image(img, str(out_path), self._fmt, quality)

@@ -149,10 +149,10 @@ class OpenClipEmbedder:
         self._ensure_loaded()
         try:
             from PIL import Image
-            from Imervue.image.orientation import exif_orientation, transpose_for
+            from Imervue.image.shown import as_shown
             with Image.open(path) as im:
                 # A sideways photo embeds as a different picture; turn it as it is shown.
-                shown = transpose_for(im.convert("RGB"), exif_orientation(im))
+                shown = as_shown(im).convert("RGB")
                 tensor = self._preprocess(shown).unsqueeze(0)
         except (OSError, ValueError) as exc:
             logger.debug("CLIP image decode failed for %s: %s", path, exc)

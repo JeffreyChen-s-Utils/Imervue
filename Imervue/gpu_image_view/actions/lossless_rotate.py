@@ -5,7 +5,8 @@ from pathlib import Path
 
 from PIL import Image
 
-from Imervue.image.orientation import upright
+from Imervue.image.shown import as_shown
+
 
 logger = logging.getLogger("Imervue.lossless_rotate")
 
@@ -77,7 +78,7 @@ def _rotate_via_pil(file_path: str, clockwise: bool) -> bool:
         img = Image.open(file_path)
         # Turn from what the viewer shows: the re-save drops the EXIF orientation,
         # and rotating the stored pixels of a tagged image would cancel out.
-        shown = upright(img)
+        shown = as_shown(img)
 
         if clockwise:
             rotated = shown.transpose(Image.Transpose.ROTATE_270)
