@@ -11,6 +11,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.exif_types import restore_types
 from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.in_place_save import descriptive_exif
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
@@ -38,6 +39,26 @@ def export_exif(source_path: str | Path, policy: str) -> Image.Exif | None:
     and the XMP packet, which can hold the position too. The orientation is
     never carried: exported pixels are already upright.
     """
+    carried = _carried(source_path, policy)
+    return None if carried is None else carried[0]
+
+
+def export_save_options(source_path: str | Path, policy: str) -> dict:
+    """``save_image`` extras for *policy*: ``{"exif": <bytes>}``, or ``{}`` when nothing is carried.
+
+    Bytes rather than an ``Image.Exif``: every writer takes them, the
+    pillow-heif and JPEG XL plugins included. The entry types Pillow's
+    serialiser gets wrong are put back from the source.
+    """
+    carried = _carried(source_path, policy)
+    if carried is None:
+        return {}
+    exif, original = carried
+    return {"exif": restore_types(exif.tobytes(), original)}
+
+
+def _carried(source_path: str | Path, policy: str) -> tuple[Image.Exif, bytes | None] | None:
+    """The EXIF to carry and the source's raw EXIF block; None when nothing is carried."""
     policy = policy_or_default(policy)
     if policy == METADATA_NONE:
         return None
@@ -45,18 +66,9 @@ def export_exif(source_path: str | Path, policy: str) -> Image.Exif | None:
     try:
         with Image.open(source_path) as source:
             exif = descriptive_exif(source, keep_location=policy != METADATA_NO_LOCATION)
+            original = source.info.get("exif")
     except IMAGE_READ_ERRORS:
         return None
     if not len(exif):
         return None
-    return exif
-
-
-def export_save_options(source_path: str | Path, policy: str) -> dict:
-    """``save_image`` extras for *policy*: ``{"exif": <bytes>}``, or ``{}`` when nothing is carried.
-
-    Bytes rather than an ``Image.Exif``: every writer takes them, the
-    pillow-heif and JPEG XL plugins included.
-    """
-    exif = export_exif(source_path, policy)
-    return {} if exif is None else {"exif": exif.tobytes()}
+    return exif, original if isinstance(original, bytes) else None

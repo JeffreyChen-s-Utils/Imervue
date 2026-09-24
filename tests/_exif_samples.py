@@ -44,3 +44,39 @@ def thumbnail_of(data: bytes) -> bytes | None:
         return None
     tiff = payload[6:]
     return tiff[ifd1[513]:ifd1[513] + ifd1[514]]
+
+
+def exif_block(order: str, exif_entries: list[tuple[int, int, bytes]],
+           ifd0_entries: list[tuple[int, int, bytes]] = ()) -> bytes:
+    """A hand-built EXIF payload: IFD0 (+ entries) pointing at an Exif IFD."""
+    head = (b"II" if order == "<" else b"MM") + struct.pack(order + "HI", 42, 8)
+    ifd0_count = len(ifd0_entries) + 1
+    exif_at = 8 + 2 + 12 * ifd0_count + 4
+    exif_size = 2 + 12 * len(exif_entries) + 4
+    data_at = exif_at + exif_size
+    data = b""
+
+    def entry(tag, kind, value):
+        nonlocal data
+        size = {1: 1, 2: 1, 5: 8, 7: 1, 10: 8}[kind]
+        count = len(value) // size
+        if len(value) <= 4:
+            return struct.pack(order + "HHI", tag, kind, count) + value.ljust(4, b"\0")
+        offset = data_at + len(data)
+        data += value
+        return struct.pack(order + "HHII", tag, kind, count, offset)
+
+    ifd0 = struct.pack(order + "H", ifd0_count)
+    for tag, kind, value in ifd0_entries:
+        ifd0 += entry(tag, kind, value)
+    ifd0 += struct.pack(order + "HHII", 0x8769, 4, 1, exif_at) + struct.pack(order + "I", 0)
+    exif = struct.pack(order + "H", len(exif_entries))
+    for tag, kind, value in exif_entries:
+        exif += entry(tag, kind, value)
+    exif += struct.pack(order + "I", 0)
+    return b"Exif\x00\x00" + head + ifd0 + exif + data
+
+
+def rational_bytes(order: str, num: int, den: int) -> bytes:
+    """A (S)RATIONAL value's 8 bytes."""
+    return struct.pack(order + "ii" if num < 0 else order + "II", num, den)

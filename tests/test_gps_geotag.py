@@ -125,3 +125,21 @@ class TestToRational:
         assert deg == (1, 1)
         assert minutes == (30, 1)
         assert seconds[0] >= 0
+
+
+def test_geotag_keeps_the_camera_tag_types(tmp_path, no_piexif):
+    """Pillow's writer turned UNDEFINED UserComment / MakerNote into BYTE and SRATIONAL into RATIONAL."""
+    from _exif_samples import exif_block, rational_bytes
+
+    from Imervue.image.exif_types import entry_types
+    from Imervue.image.jpeg_exif import exif_segment
+    block = exif_block(">", [
+        (0x9286, 7, b"ASCII\0\0\0hi"), (0x927C, 7, b"maker-note-bytes"),
+        (0x9204, 10, rational_bytes(">", 0, 1)),
+    ])
+    path = _make_jpeg(tmp_path, exif=block)
+    assert gps_geotag.write_gps(path, 1.0, 2.0) is True
+    data = path.read_bytes()
+    start, end = exif_segment(data)
+    types = entry_types(data[start + 4:end])
+    assert (types[("exif", 0x9286)], types[("exif", 0x927C)], types[("exif", 0x9204)]) == (7, 7, 10)

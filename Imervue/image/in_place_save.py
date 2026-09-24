@@ -18,6 +18,7 @@ from pathlib import Path
 
 from PIL import Image, JpegImagePlugin, PngImagePlugin
 
+from Imervue.image.exif_types import restore_types
 from Imervue.image.orientation import strip_xmp_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
@@ -123,6 +124,18 @@ def descriptive_exif(source: Image.Image, *, keep_location: bool = True) -> Imag
     return kept
 
 
+def _exif_for(exif: Image.Exif, fmt: str, source: Image.Image) -> Image.Exif | bytes:
+    """*exif* as the ``exif=`` save option for *fmt*.
+
+    Bytes with the entry types Pillow gets wrong put back from *source*'s raw
+    block; a TIFF writer re-parses the block into tags, so it gets the object.
+    """
+    if fmt == "TIFF":
+        return exif
+    original = source.info.get("exif")
+    return restore_types(exif.tobytes(), original if isinstance(original, bytes) else None)
+
+
 def carried_save_kwargs(source: Image.Image, fmt: str, file_path: str) -> dict:
     """Pillow save options that carry *source*'s metadata and compression into a rewrite.
 
@@ -135,7 +148,9 @@ def carried_save_kwargs(source: Image.Image, fmt: str, file_path: str) -> dict:
     kwargs: dict = {}
     exif = descriptive_exif(source)
     if len(exif):
-        kwargs["exif"] = exif
+        # Bytes with Pillow's wrong entry types put back, except for TIFF: its
+        # writer re-parses the block into tags and needs the Exif object.
+        kwargs["exif"] = _exif_for(exif, fmt, source)
     for key in ("icc_profile", "dpi"):
         if source.info.get(key):
             kwargs[key] = source.info[key]
@@ -207,7 +222,7 @@ def _edited_save_kwargs(source_path: str | Path, fmt: str) -> dict:
                 kwargs = carried_save_kwargs(source, fmt, str(source_path))
             else:
                 exif = descriptive_exif(source)
-                kwargs = {"exif": exif} if len(exif) else {}
+                kwargs = {"exif": _exif_for(exif, fmt, source)} if len(exif) else {}
                 if source.info.get("dpi"):
                     kwargs["dpi"] = source.info["dpi"]
     except IMAGE_READ_ERRORS:

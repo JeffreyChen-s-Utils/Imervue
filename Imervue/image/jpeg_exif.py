@@ -17,6 +17,8 @@ from collections.abc import Callable
 
 from PIL import ExifTags, Image, TiffImagePlugin
 
+from Imervue.image.exif_types import restore_types
+
 _SOI = b"\xff\xd8"
 _APP0 = 0xE0
 _APP1 = 0xE1
@@ -104,9 +106,10 @@ def serialize_exif(exif: Image.Exif, original: bytes | None = None) -> bytes:
 
     ``Image.Exif.tobytes`` writes IFD0 and its sub-IFDs but not IFD1; the
     thumbnail directory and image are copied from *original* (a payload as
-    stored in the file) and chained after IFD0.
+    stored in the file) and chained after IFD0. The entry types Pillow gets
+    wrong are put back (:func:`exif_types.restore_types`).
     """
-    payload = exif.tobytes()
+    payload = restore_types(exif.tobytes(), original)
     thumbnail = _thumbnail_of(original)
     if thumbnail is None:
         return payload

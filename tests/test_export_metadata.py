@@ -89,3 +89,14 @@ def test_save_options_round_trip_through_every_writer(tmp_path, fmt):
             assert not len(img.getexif())
         else:
             assert img.getexif().get_ifd(0x8769)[0x9003] == _DATE
+
+
+def test_carried_exif_keeps_the_camera_tag_types(tmp_path):
+    from _exif_samples import exif_block
+
+    from Imervue.image.exif_types import entry_types
+    src = tmp_path / "cam.jpg"
+    Image.new("RGB", (8, 8)).save(src, exif=exif_block(">", [(0x9286, 7, b"ASCII\0\0\0hi")],
+                                                        [(0x010F, 2, b"Canon\0")]))
+    exif = export_save_options(src, METADATA_ALL)["exif"]
+    assert entry_types(exif)[("exif", 0x9286)] == 7

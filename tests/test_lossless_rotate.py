@@ -280,3 +280,16 @@ def test_failed_write_leaves_the_original_whole(tmp_path, monkeypatch):
 def test_missing_file_is_reported_not_raised(tmp_path):
     from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
     assert lossless_rotate(str(tmp_path / "gone.jpg")) is False
+
+
+def test_re_saved_png_keeps_the_camera_tag_types(tmp_path):
+    from _exif_samples import exif_block
+
+    from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+    from Imervue.image.exif_types import entry_types
+    path = tmp_path / "a.png"
+    _marked().save(path, exif=exif_block(">", [(0x9286, 7, b"ASCII\0\0\0hi")],
+                                         [(0x010F, 2, b"Canon\0")]))
+    assert lossless_rotate(str(path), clockwise=True) is True
+    with Image.open(path) as img:
+        assert entry_types(img.info["exif"])[("exif", 0x9286)] == 7
