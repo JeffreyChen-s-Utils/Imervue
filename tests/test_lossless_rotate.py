@@ -221,25 +221,26 @@ def test_compressed_tiff_keeps_its_compression(tmp_path):
 
 def test_tiff_with_exif_ifds_is_stored_uncompressed_to_keep_them(tmp_path):
     """Pillow's libtiff writer raises on the Exif / GPS IFDs, so they win over compression."""
-    from Imervue.gpu_image_view.actions.lossless_rotate import _metadata_kwargs
+    from Imervue.image.in_place_save import carried_save_kwargs
     path = tmp_path / "a.tif"
     _marked().save(path, exif=_described_exif())
     with Image.open(path) as source:
-        kwargs = _metadata_kwargs(source, "TIFF", str(path))
+        kwargs = carried_save_kwargs(source, "TIFF", str(path))
     assert kwargs["compression"] == "raw"
     assert kwargs["exif"].get_ifd(0x8769)[0x9003] == "2020:01:02 03:04:05"
 
 
 def test_lossy_webp_stays_lossy_and_lossless_stays_lossless(tmp_path):
-    from Imervue.gpu_image_view.actions.lossless_rotate import _webp_is_lossless, lossless_rotate
+    from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+    from Imervue.image.in_place_save import webp_is_lossless
     lossy = tmp_path / "lossy.webp"
     lossless = tmp_path / "lossless.webp"
     _marked().save(lossy, quality=80)
     _marked().save(lossless, lossless=True, exif=_described_exif())   # extended (VP8X) layout
     for path in (lossy, lossless):
         assert lossless_rotate(str(path), clockwise=False) is True
-    assert _webp_is_lossless(str(lossy)) is False
-    assert _webp_is_lossless(str(lossless)) is True
+    assert webp_is_lossless(str(lossy)) is False
+    assert webp_is_lossless(str(lossless)) is True
 
 
 def test_icc_profile_and_png_text_survive_without_the_xmp_orientation(tmp_path):

@@ -10,15 +10,16 @@ RAW, HEIC, multi-frame) are refused. Every write replaces the file in one step.
 from __future__ import annotations
 
 import logging
-import struct
 from pathlib import Path
 
-from PIL import Image, JpegImagePlugin, PngImagePlugin
+from PIL import Image
 
-from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format, replace_atomically
+from Imervue.image.in_place_save import (
+    can_rewrite_in_place, carried_save_kwargs, in_place_format, replace_atomically,
+)
 from Imervue.image.jpeg_orientation import set_jpeg_orientation
 from Imervue.image.orientation import (
-    exif_orientation, read_orientation, strip_xmp_orientation, transpose_for,
+    exif_orientation, read_orientation, transpose_for,
 )
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
@@ -40,18 +41,6 @@ CW_ORIENTATION_MAP: dict[int, int] = {
 # Counter-clockwise is the inverse of clockwise.
 CCW_ORIENTATION_MAP: dict[int, int] = {v: k for k, v in CW_ORIENTATION_MAP.items()}
 
-_XMP_TAG = 700
-_INTEROP_POINTER = 0xA005
-_SUB_IFDS = (0x8769, 0x8825)   # Exif, GPS
-# IFD0 tags that describe the picture rather than lay out its pixels:
-# DocumentName, ImageDescription, Make, Model, PageName, Software, DateTime,
-# Artist, HostComputer, XMP, Rating, RatingPercent, Copyright, IPTC, XP*.
-_DESCRIPTIVE_IFD0_TAGS = frozenset({
-    269, 270, 271, 272, 285, 305, 306, 315, 316, _XMP_TAG, 18246, 18249,
-    33432, 33723, 40091, 40092, 40093, 40094, 40095,
-})
-
-
 def _rotate_jpeg_tag(file_path: str, clockwise: bool) -> bool:
     """Turn a JPEG by rewriting only its EXIF orientation; False if the file won't take it."""
     rotation_map = CW_ORIENTATION_MAP if clockwise else CCW_ORIENTATION_MAP
@@ -68,69 +57,6 @@ def _rotate_jpeg_tag(file_path: str, clockwise: bool) -> bool:
     return True
 
 
-def _webp_is_lossless(file_path: str) -> bool:
-    """Whether the WebP at *file_path* holds a lossless (VP8L) bitstream."""
-    with open(file_path, "rb") as handle:
-        data = handle.read()
-    pos = 12   # past "RIFF" <size> "WEBP"
-    while pos + 8 <= len(data):
-        fourcc = data[pos:pos + 4]
-        if fourcc in (b"VP8L", b"VP8 "):
-            return fourcc == b"VP8L"
-        (size,) = struct.unpack("<I", data[pos + 4:pos + 8])
-        pos += 8 + size + (size & 1)
-    return False
-
-
-def _descriptive_exif(source: Image.Image) -> Image.Exif:
-    """Copy *source*'s descriptive EXIF — IFD0 text tags plus the Exif and GPS IFDs.
-
-    A TIFF's ``getexif()`` is its whole tag directory, width, strip offsets and
-    all; handed back to the save, those tags overwrite the new layout (a turned
-    40x20 TIFF came back 40x40). The orientation is left out: the turn is baked
-    into the pixels.
-    """
-    exif = source.getexif()
-    kept = Image.Exif()
-    for tag in _DESCRIPTIVE_IFD0_TAGS & exif.keys():
-        value = exif[tag]
-        kept[tag] = strip_xmp_orientation(value) if tag == _XMP_TAG else value
-    for pointer in _SUB_IFDS:
-        entries = {k: v for k, v in exif.get_ifd(pointer).items() if k != _INTEROP_POINTER}
-        if entries:
-            kept.get_ifd(pointer).update(entries)
-            kept[pointer] = 0   # the save writes the IFD and its real offset
-    return kept
-
-
-def _metadata_kwargs(source: Image.Image, fmt: str, file_path: str) -> dict:
-    """Save options that carry *source*'s metadata and compression into the rewrite."""
-    kwargs: dict = {}
-    exif = _descriptive_exif(source)
-    if len(exif):
-        kwargs["exif"] = exif
-    for key in ("icc_profile", "dpi"):
-        if source.info.get(key):
-            kwargs[key] = source.info[key]
-    if source.info.get("xmp") and fmt in ("JPEG", "WEBP"):
-        kwargs["xmp"] = strip_xmp_orientation(source.info["xmp"])
-    if fmt == "JPEG":
-        kwargs["qtables"] = source.quantization
-        kwargs["subsampling"] = JpegImagePlugin.get_sampling(source)
-    elif fmt == "PNG" and getattr(source, "text", None):
-        text = PngImagePlugin.PngInfo()
-        for key, value in source.text.items():
-            text.add_itxt(key, strip_xmp_orientation(value))
-        kwargs["pnginfo"] = text
-    elif fmt == "WEBP":
-        kwargs.update({"lossless": True} if _webp_is_lossless(file_path) else {"quality": 90})
-    elif fmt == "TIFF" and any(pointer in exif for pointer in _SUB_IFDS):
-        # Pillow's compressing (libtiff) writer can't write the Exif / GPS IFDs;
-        # a bigger file beats losing the capture date and location for good.
-        kwargs["compression"] = "raw"
-    return kwargs
-
-
 def _rotate_via_pil(file_path: str, clockwise: bool) -> bool:
     """Decode, turn from what is shown, and save back with the source's metadata."""
     fmt = in_place_format(file_path)
@@ -143,7 +69,7 @@ def _rotate_via_pil(file_path: str, clockwise: bool) -> bool:
             upright = transpose_for(img, exif_orientation(img))
             rotated = upright.transpose(
                 Image.Transpose.ROTATE_270 if clockwise else Image.Transpose.ROTATE_90)
-            save_kwargs = _metadata_kwargs(img, fmt, file_path)
+            save_kwargs = carried_save_kwargs(img, fmt, file_path)
         replace_atomically(file_path, lambda tmp: rotated.save(tmp, format=fmt, **save_kwargs))
     except IMAGE_READ_ERRORS:
         logger.warning("PIL rotation failed for %s", file_path, exc_info=True)
