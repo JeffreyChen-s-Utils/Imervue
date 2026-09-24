@@ -1425,6 +1425,8 @@ japanese_word_dict = {
     "token_rename_col_new": "新しい名前",
     "token_rename_col_original": "元の名前",
     "token_rename_col_status": "ステータス",
+    "token_rename_status_ok": "OK",
+    "token_rename_status_conflict": "競合",
     # メタデータエクスポート
     "metadata_export_title": "メタデータを書き出し（CSV / JSON）",
     "metadata_export_format": "形式：",

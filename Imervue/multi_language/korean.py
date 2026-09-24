@@ -1423,6 +1423,8 @@ korean_word_dict = {
     "token_rename_col_new": "새 이름",
     "token_rename_col_original": "원본",
     "token_rename_col_status": "상태",
+    "token_rename_status_ok": "가능",
+    "token_rename_status_conflict": "충돌",
     # 메타데이터 내보내기
     "metadata_export_title": "메타데이터 내보내기 (CSV / JSON)",
     "metadata_export_format": "형식:",

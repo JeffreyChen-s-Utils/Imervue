@@ -1412,6 +1412,8 @@ chinese_word_dict = {
     "token_rename_col_new": "新文件名",
     "token_rename_col_original": "原始名称",
     "token_rename_col_status": "状态",
+    "token_rename_status_ok": "可重命名",
+    "token_rename_status_conflict": "冲突",
     # Metadata 导出
     "metadata_export_title": "导出 Metadata（CSV / JSON）",
     "metadata_export_format": "格式：",

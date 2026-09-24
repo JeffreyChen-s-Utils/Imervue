@@ -1412,6 +1412,8 @@ traditional_chinese_word_dict = {
     "token_rename_col_new": "新檔名",
     "token_rename_col_original": "原始名稱",
     "token_rename_col_status": "狀態",
+    "token_rename_status_ok": "可重新命名",
+    "token_rename_status_conflict": "衝突",
     # Metadata 匯出
     "metadata_export_title": "匯出 Metadata（CSV / JSON）",
     "metadata_export_format": "格式：",

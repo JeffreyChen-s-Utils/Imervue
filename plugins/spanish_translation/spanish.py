@@ -798,6 +798,8 @@ spanish_word_dict.update({
     "token_rename_col_new": "Nuevo nombre",
     "token_rename_col_original": "Original",
     "token_rename_col_status": "Estado",
+    "token_rename_status_ok": "OK",
+    "token_rename_status_conflict": "Conflicto",
     # ----- Metadata export / XMP / Culling / Staging Tray / Dual-pane -----
     "metadata_export_title": "Exportar metadatos (CSV / JSON)",
     "metadata_export_format": "Formato:",

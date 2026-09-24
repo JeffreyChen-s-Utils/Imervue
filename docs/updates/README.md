@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-13 | 2026-09-25 | Token Batch Rename no longer crashes after renaming; failed renames keep their path | #fix #rename #i18n | [2026-09](2026-09.md) |
 | U-20260925-12 | 2026-09-25 | Renamed and moved photos keep their ratings, tags, library notes and sidecars | #fix #data-loss #rename | [2026-09](2026-09.md) |
 | U-20260925-11 | 2026-09-25 | XMP sidecars: darktable / digiKam photo.jpg.xmp and Lightroom / Bridge colour labels | #fix #xmp #interop | [2026-09](2026-09.md) |
 | U-20260925-10 | 2026-09-25 | Batch Rename and Move / Copy report their results in the UI language | #fix #i18n | [2026-09](2026-09.md) |

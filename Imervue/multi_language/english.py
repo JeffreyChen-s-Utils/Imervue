@@ -1438,6 +1438,8 @@ english_word_dict = {
     "token_rename_col_new": "New name",
     "token_rename_col_original": "Original",
     "token_rename_col_status": "Status",
+    "token_rename_status_ok": "OK",
+    "token_rename_status_conflict": "Conflict",
     # Metadata Export
     "metadata_export_title": "Export Metadata (CSV / JSON)",
     "metadata_export_format": "Format:",

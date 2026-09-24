@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QSpinBox, QTableWidget, QTableWidgetItem, QHeaderView,
 )
 
-from Imervue.library.token_rename import apply_plan, preview, RenamePlan
+from Imervue.library.token_rename import RenamePlan, preview, rename_plans
 from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -88,24 +88,26 @@ class TokenRenameDialog(QDialog):
         )
         self._table.setRowCount(len(self._plans))
         from pathlib import Path
+        lang = language_wrapper.language_word_dict
+        ok_text = lang.get("token_rename_status_ok", "OK")
+        conflict_text = lang.get("token_rename_status_conflict", "Conflict")
         for i, plan in enumerate(self._plans):
             self._table.setItem(i, 0, QTableWidgetItem(Path(plan.src).name))
             self._table.setItem(i, 1, QTableWidgetItem(Path(plan.dst).name))
-            status = "CONFLICT" if plan.conflict else "OK"
-            self._table.setItem(i, 2, QTableWidgetItem(status))
+            self._table.setItem(i, 2, QTableWidgetItem(conflict_text if plan.conflict else ok_text))
 
     def _apply(self) -> None:
         lang = language_wrapper.language_word_dict
-        ok, failed = apply_plan(self._plans)
+        renamed, failed = rename_plans(self._plans)
         if hasattr(self._ui, "toast"):
-            self._ui.toast.success(
-                lang.get("token_rename_done", "Renamed {ok}, failed {failed}").format(
-                    ok=ok, failed=failed,
-                )
-            )
-        # 更新 viewer model
+            # Every translation spells the failure count {f}; formatting with
+            # failed= raised KeyError after the files were already renamed.
+            msg = lang.get("token_rename_done", "Renamed {ok}, failed {f}").format(
+                ok=len(renamed), f=failed)
+            (self._ui.toast.info if failed else self._ui.toast.success)(msg)
+        # Only the renames that happened: a failed one keeps its old path.
         viewer = self._ui.viewer
-        mapping = {plan.src: plan.dst for plan in self._plans if not plan.conflict}
+        mapping = dict(renamed)
         images = viewer.model.images
         for i, p in enumerate(images):
             if p in mapping:

@@ -91,13 +91,15 @@ def preview(
     return plans
 
 
-def apply_plan(plans: list[RenamePlan]) -> tuple[int, int]:
-    """Rename everything in the plan. Returns (successes, failures).
+def rename_plans(plans: list[RenamePlan]) -> tuple[list[tuple[str, str]], int]:
+    """Rename everything in the plan; returns the ``(src, dst)`` pairs renamed and the failures.
 
-    Each renamed file's sidecars and saved rating / tags / labels follow it
-    (:func:`Imervue.system.file_transfer.carry_along`).
+    A conflict, an unchanged name or a rename the OS refuses counts as a
+    failure. Each renamed file's sidecars and saved rating / tags / labels
+    follow it (:func:`Imervue.system.file_transfer.carry_along`).
     """
-    ok = failed = 0
+    renamed: list[tuple[str, str]] = []
+    failed = 0
     for plan in plans:
         if plan.conflict or os.path.abspath(plan.src) == os.path.abspath(plan.dst):
             failed += 1
@@ -107,9 +109,15 @@ def apply_plan(plans: list[RenamePlan]) -> tuple[int, int]:
         except OSError:
             failed += 1
             continue
-        ok += 1
+        renamed.append((plan.src, plan.dst))
         carry_along([(plan.src, plan.dst)], move=True)
-    return ok, failed
+    return renamed, failed
+
+
+def apply_plan(plans: list[RenamePlan]) -> tuple[int, int]:
+    """Rename everything in the plan. Returns (successes, failures); see :func:`rename_plans`."""
+    renamed, failed = rename_plans(plans)
+    return len(renamed), failed
 
 
 def _apply_template(template: str, metadata: dict[str, str]) -> str:
