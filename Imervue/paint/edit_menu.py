@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.paint_menu_bar import menu_for
+from Imervue.paint.shortcut_binding import tag_registry_shortcut
 from Imervue.paint.stroke_selection import (
     DEFAULT_PLACEMENT,
     MAX_STROKE_WIDTH,
@@ -41,6 +42,7 @@ def populate_edit_menu(workspace: PaintWorkspace) -> None:
     undo_action = menu.addAction(lang.get("paint_edit_undo", "Undo"))
     undo_action.setShortcut(QKeySequence.StandardKey.Undo)
     undo_action.triggered.connect(bridge.undo)
+    tag_registry_shortcut(undo_action, "paint.edit.undo")
     redo_action = menu.addAction(lang.get("paint_edit_redo", "Redo"))
     # Bind both Ctrl+Y and Ctrl+Shift+Z so users from either Windows
     # / Linux (Ctrl+Y) or macOS-style (Ctrl+Shift+Z) muscle memory
@@ -49,6 +51,7 @@ def populate_edit_menu(workspace: PaintWorkspace) -> None:
         [QKeySequence("Ctrl+Y"), QKeySequence("Ctrl+Shift+Z")],
     )
     redo_action.triggered.connect(bridge.redo)
+    tag_registry_shortcut(redo_action, "paint.edit.redo")
     menu.addSeparator()
 
     quick_mask_action = menu.addAction(

@@ -14,6 +14,7 @@ user can hide the toolbar and a hidden widget's shortcuts stop working.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,7 @@ from PySide6.QtGui import QKeySequence
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.paint_menu_bar import menu_for
+from Imervue.paint.shortcut_binding import tag_registry_shortcut
 
 if TYPE_CHECKING:
     from Imervue.paint.paint_workspace import PaintWorkspace
@@ -88,12 +90,18 @@ _FALLBACKS: dict[str, str] = {
 }
 
 
+_REGISTRY_PREFIX = "paint.tool."
 _SHORTCUT_BY_TOOL: dict[str, str] = {entry.tool_id: entry.shortcut for entry in TOOL_ENTRIES}
 
 
-def tool_shortcut(tool_id: str) -> str:
-    """Return the key that picks ``tool_id``, or ``""`` for a tool without one."""
-    return _SHORTCUT_BY_TOOL.get(tool_id, "")
+def tool_shortcut(tool_id: str, bindings: Mapping[str, str] | None = None) -> str:
+    """Return the key that picks ``tool_id``, or ``""`` for a tool without one.
+
+    ``bindings`` are the user's remaps (``ShortcutRegistry.items()`` as a dict);
+    a tool the registry covers reports its remapped key.
+    """
+    remapped = (bindings or {}).get(f"{_REGISTRY_PREFIX}{tool_id}")
+    return remapped or _SHORTCUT_BY_TOOL.get(tool_id, "")
 
 
 def populate_tools_menu(workspace: PaintWorkspace) -> None:
@@ -112,6 +120,7 @@ def populate_tools_menu(workspace: PaintWorkspace) -> None:
         action.triggered.connect(
             lambda _checked=False, t=entry.tool_id: bridge.activate(t),
         )
+        tag_registry_shortcut(action, f"{_REGISTRY_PREFIX}{entry.tool_id}")
         bridge._actions[entry.tool_id] = action   # noqa: SLF001
     bridge.refresh_check_states()
     # Update the check state whenever the user picks a different tool

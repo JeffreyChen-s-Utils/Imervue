@@ -716,6 +716,8 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | , / . | Cycler les types de pinceaux |
 | 0-9 | Opacité du pinceau par pas de 10 % |
 | Alt+[ / Alt+] | Descendre / monter le calque actif |
+| Ctrl+[ / Ctrl+] | Déplacer le calque actif vers le bas / le haut de la pile |
+| Ctrl+D | Désélectionner |
 
 ---
 

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `e32fecc` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `1c1d4af` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 827 | 135,148 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,924 |
+| `tests/` | 828 | 135,248 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 189 | 45,980 |
 | `Imervue/gui/` | 161 | 32,851 |
 | `Imervue/puppet/` | 57 | 15,283 |
 | `Imervue/image/` | 113 | 12,892 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,642** | **312,120** |
+| **總計** | **1,643** | **312,276** |
 
-其中 `Imervue/` 套件本身 751 檔 / 162,766 行。
+其中 `Imervue/` 套件本身 751 檔 / 162,822 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -649,7 +649,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-189 個檔、45,924 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+189 個檔、45,980 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -743,28 +743,28 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 755 | 頂層 `PaintWorkspace` widget |
+| `paint_workspace.py` | 757 | 頂層 `PaintWorkspace` widget |
 | `tool_dispatcher.py` | 448 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
 | `tool_state.py` | 896 | **無 Qt** 的工具狀態模型 |
-| `tool_bar.py` | 404 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔 |
+| `tool_bar.py` | 414 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔 |
 | `workspace_tabs.py` | 327 | 多文件分頁 |
 | `workspace_docks.py` | 418 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 433 | 文件內容命令 |
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
-| `workspace_shortcuts.py` | 308 | 快捷鍵、筆刷調整、歡迎提示 |
+| `workspace_shortcuts.py` | 313 | 快捷鍵（登錄表管理的鍵經 `shortcut_binding` 建立，`apply_shortcut_registry` 套用重新指定）、筆刷調整、歡迎提示 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(317) | 具名 dock 佈局預設 |
 | `workspace_autosave.py` | 142 + `auto_save.py`(242) | 自動存檔與當機復原 |
 | `action_recorder.py` | 240 + `action_recorder_dialog.py`(197) | 動作錄製 / 重播 |
-| `shortcut_registry.py` | 175 + `shortcut_dialog.py`(162) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄 |
+| `shortcut_registry.py` | 183 + `shortcut_binding.py`(70) + `shortcut_dialog.py`(162) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名） |
 | `tablet_mapping.py` | 230 | 數位板按鍵 → 動作對應 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 273 + `export_utils.py`(231) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(539)、`edit_menu.py`(256)、`image_menu.py`(265)、`layer_menu.py`(312)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(149)、`settings_menu.py`(119)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(539)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(120)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,863 行）
 
-`brushes.py`(445) 筆刷與填色 dock · `layers.py`(424) 圖層 dock · `color.py`(369) 顏色 dock ·
+`brushes.py`(445) 筆刷與填色 dock · `layers.py`(431) 圖層 dock · `color.py`(369) 顏色 dock ·
 `materials.py`(265) 素材庫 dock · `navigators.py`(247) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
@@ -959,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-827 個檔、135,148 行。`pyproject.toml` 定義三個互斥層級 marker：
+828 個檔、135,248 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

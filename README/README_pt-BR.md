@@ -737,6 +737,8 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 | , / . | Ciclar tipos de pincel |
 | 0-9 | Opacidade do pincel em passos de 10% |
 | Alt+[ / Alt+] | Mover camada ativa para baixo / cima |
+| Ctrl+[ / Ctrl+] | Mover a camada ativa para baixo / cima na pilha |
+| Ctrl+D | Desmarcar seleção |
 
 ---
 

@@ -17,6 +17,7 @@ keys so translations follow the rest of the app.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
@@ -100,6 +101,11 @@ class PaintToolBar(QToolBar):
     def action_for(self, tool: str) -> QAction | None:
         return self._actions.get(tool)
 
+    def show_tool_keys(self, bindings: Mapping[str, str]) -> None:
+        """Name the user's remapped keys (``ShortcutRegistry`` items) in the tooltips."""
+        for tool, action in self._actions.items():
+            _show_key(action, tool_shortcut(tool, bindings))
+
     # ---- internals -------------------------------------------------------
 
     def _add_tool_action(self, tool: str, lang: dict) -> None:
@@ -109,8 +115,7 @@ class PaintToolBar(QToolBar):
         action.setActionGroup(self._group)
         # The Tools menu owns the key (a second QAction on the same key makes
         # Qt treat it as ambiguous and fire neither); the button only shows it.
-        shortcut = tool_shortcut(tool)
-        action.setToolTip(f"{label} ({shortcut})" if shortcut else label)
+        _show_key(action, tool_shortcut(tool))
         action.triggered.connect(lambda checked=False, t=tool: self._on_tool_clicked(t))
         self.addAction(action)
         self._actions[tool] = action
@@ -122,6 +127,11 @@ class PaintToolBar(QToolBar):
     def _on_state_event(self, channel: str) -> None:
         if channel == ts.EVENT_TOOL:
             self.set_active_tool(self._state.tool)
+
+
+def _show_key(action: QAction, key: str) -> None:
+    label = action.text()
+    action.setToolTip(f"{label} ({key})" if key else label)
 
 
 # ---------------------------------------------------------------------------

@@ -148,6 +148,7 @@ class LayerDock(QDockWidget):
         # ``Add layer (Ctrl+Shift+N)`` rather than just the glyph.
         from Imervue.paint.shortcut_registry import load_shortcuts
         shortcuts = load_shortcuts()
+        self._shortcut_buttons: list[tuple[QToolButton, str, str]] = []
         for key, fallback, slot, tooltip_key, tooltip_fallback, action_id in (
             ("paint_layers_add", "+", self._on_add,
              "paint_layers_add_tooltip", "Add layer", "paint.layer.add"),
@@ -165,6 +166,7 @@ class LayerDock(QDockWidget):
             btn.setText(lang.get(key, fallback))
             label = lang.get(tooltip_key, tooltip_fallback)
             btn.setToolTip(_with_shortcut(label, shortcuts, action_id))
+            self._shortcut_buttons.append((btn, label, action_id))
             btn.clicked.connect(slot)
             row.addWidget(btn)
         # Dedicated "add adjustment layer" entry — raster paint apps's Layer
@@ -382,6 +384,11 @@ class LayerDock(QDockWidget):
         if self._document is None:
             return
         self._document.duplicate_active_layer()
+
+    def show_shortcuts(self, shortcuts) -> None:
+        """Re-label the button tooltips with ``shortcuts`` (a ``ShortcutRegistry``)."""
+        for button, label, action_id in self._shortcut_buttons:
+            button.setToolTip(_with_shortcut(label, shortcuts, action_id))
 
     def _on_move(self, *, up: bool) -> None:
         if self._document is None:

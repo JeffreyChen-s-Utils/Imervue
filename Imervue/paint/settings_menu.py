@@ -78,6 +78,7 @@ class _SettingsMenuBridge:
         dialog = ShortcutDialog(registry=registry, parent=self._workspace)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             save_shortcuts(dialog.registry())
+            self._workspace.apply_shortcut_registry(dialog.registry())
 
     def open_shortcut_cheatsheet(self) -> None:
         """Read-only listing of every menu shortcut bound on the

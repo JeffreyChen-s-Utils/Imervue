@@ -763,6 +763,8 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | , / . | Cycle brush kinds |
 | 0-9 | Brush opacity 10% steps |
 | Alt+[ / Alt+] | Step active layer down / up |
+| Ctrl+[ / Ctrl+] | Move active layer down / up the stack |
+| Ctrl+D | Deselect |
 
 ---
 

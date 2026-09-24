@@ -257,6 +257,8 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         self._build_welcome_hint()
         self._maybe_offer_autosave_recovery()
         self._build_brush_kind_shortcuts()
+        from Imervue.paint.shortcut_registry import load_shortcuts
+        self.apply_shortcut_registry(load_shortcuts())
 
     # ---- public ----------------------------------------------------------
 

@@ -763,6 +763,8 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | , / . | Brush-Arten zyklieren |
 | 0-9 | Brush-Opazität in 10-%-Schritten |
 | Alt+[ / Alt+] | Aktiven Layer ab- / aufwärts schalten |
+| Ctrl+[ / Ctrl+] | Aktiven Layer im Stapel nach unten / oben verschieben |
+| Ctrl+D | Auswahl aufheben |
 
 ---
 

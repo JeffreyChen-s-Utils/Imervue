@@ -761,6 +761,8 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | , / . | Recorrer tipos de pincel |
 | 0-9 | Opacidad de pincel en pasos del 10 % |
 | Alt+[ / Alt+] | Bajar / subir un paso la capa activa |
+| Ctrl+[ / Ctrl+] | Mover la capa activa hacia abajo / arriba en la pila |
+| Ctrl+D | Deseleccionar |
 
 ---
 

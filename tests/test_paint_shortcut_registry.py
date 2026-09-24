@@ -7,6 +7,7 @@ from Imervue.paint.shortcut_registry import (
     DEFAULT_SHORTCUTS,
     ShortcutEntry,
     ShortcutRegistry,
+    default_key,
 )
 
 
@@ -21,6 +22,12 @@ def test_default_set_includes_core_paint_actions():
         "paint.tool.brush", "paint.tool.eraser", "paint.tool.eyedropper",
         "paint.layer.add", "paint.edit.undo",
     } <= ids
+
+
+def test_default_key_looks_up_the_documented_default():
+    for entry in DEFAULT_SHORTCUTS:
+        assert default_key(entry.action_id) == entry.default_key
+    assert default_key("paint.no_such_action") is None
 
 
 def test_default_action_ids_are_unique():
