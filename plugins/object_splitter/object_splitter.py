@@ -390,9 +390,10 @@ class ObjectSplitterDialog(WorkerHostMixin, QDialog):
             # before the dialog is destroyed (avoids use-after-free crash).
             QTimer.singleShot(0, self.accept)
         else:
-            self._status_label.setText(f"Error: {result}")
+            text = self._lang.get("generic_error", "Error: {error}").format(error=result)
+            self._status_label.setText(text)
             if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.info(f"Error: {result}")
+                self._gui.main_window.toast.info(text)
 
 
 # ===========================
