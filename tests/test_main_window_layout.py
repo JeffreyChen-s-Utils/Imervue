@@ -128,3 +128,10 @@ def test_layout_builders_come_from_the_mixin():
     for name in ("_build_file_tree", "_build_viewer_column", "_build_image_tab_bar",
                  "_build_view_stack", "_build_workspace_tabs", "_build_status_bar"):
         assert getattr(ImervueMainWindow, name) is getattr(MainWindowLayoutMixin, name), name
+
+
+def test_file_tree_shows_every_format_the_viewer_opens(window):
+    """The tree used to hide HEIC, AVIF, JPEG XL and video files."""
+    from Imervue.image.formats import VIEWER_EXTENSIONS
+    filters = set(window.model.sourceModel().nameFilters())
+    assert filters == {f"*{ext}" for ext in VIEWER_EXTENSIONS}

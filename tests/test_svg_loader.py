@@ -7,8 +7,8 @@ pytest.importorskip("rawpy")
 
 class TestSVGLoader:
     def test_svg_in_supported_exts(self):
-        from Imervue.gpu_image_view.images.image_loader import SUPPORTED_EXTENSIONS
-        assert ".svg" in SUPPORTED_EXTENSIONS
+        from Imervue.image.formats import VIEWER_EXTENSIONS
+        assert ".svg" in VIEWER_EXTENSIONS
 
     def test_load_svg_file(self, tmp_path):
         """A minimal SVG should load as RGBA numpy array."""

@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
 from Imervue.system.best_effort import best_effort
-from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
-from Imervue.image.jxl_support import JXL_EXTENSIONS, ensure_jxl_opener
+from Imervue.image.heif_support import ensure_heif_opener
+from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
 
@@ -31,7 +31,6 @@ def _maybe_collapse_stacks(images: list[str]) -> tuple[list[str], dict[str, list
     return collapse_stacks(list(images))
 
 
-_RAW_EXTS = frozenset({".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"})
 
 
 def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
@@ -96,14 +95,6 @@ def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
     return img_data
 
 
-def _ensure_optional_opener(ext: str) -> None:
-    """Register an optional Pillow codec (HEIF/AVIF or JPEG-XL) on demand."""
-    if ext in HEIF_EXTENSIONS:
-        ensure_heif_opener()
-    elif ext in JXL_EXTENSIONS:
-        ensure_jxl_opener()
-
-
 def load_image_file(path, thumbnail=False, recipe=None):
     """
     支援一般圖片 + RAW 檔案
@@ -115,14 +106,14 @@ def load_image_file(path, thumbnail=False, recipe=None):
     要不要傳進來, 這個函式不強制依賴 store.
     """
     ext = Path(path).suffix.lower()
-    if ext in _RAW_EXTS:
+    if ext in RAW_EXTENSIONS:
         img_data = _load_raw(path, thumbnail)
     elif ext == ".svg":
         img_data = _load_svg(path, thumbnail=thumbnail)
     elif ext in VIDEO_EXTENSIONS:
         img_data = poster_frame(path)
     else:
-        _ensure_optional_opener(ext)
+        ensure_pillow_opener(ext)
         img_data = _load_raster_thumbnail(path) if thumbnail else _load_raster(path)
 
     img_data = _ensure_rgba(img_data)
@@ -219,7 +210,7 @@ class FolderScanWorker(QRunnable):
                     if not entry.is_file(follow_symlinks=False):
                         continue
                     ext = os.path.splitext(entry.name)[1].lower()
-                    if ext not in SUPPORTED_EXTENSIONS:
+                    if ext not in VIEWER_EXTENSIONS:
                         continue
                     batch.append(entry.path)
                     found.append(entry.path)
@@ -239,12 +230,6 @@ class FolderScanWorker(QRunnable):
 # 開啟路徑（資料夾或檔案）
 # ================================================================
 
-SUPPORTED_EXTENSIONS: frozenset[str] = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-    ".gif", ".apng", ".svg",
-    ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-}) | VIDEO_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS
-"""Every extension the viewer opens; the Open and Relocate dialogs filter on it too."""
 
 
 def _load_svg(path: str, thumbnail: bool = False) -> np.ndarray:
@@ -299,7 +284,7 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
             for entry in it:
                 if entry.is_file(follow_symlinks=False):
                     ext = os.path.splitext(entry.name)[1].lower()
-                    if ext in SUPPORTED_EXTENSIONS:
+                    if ext in VIEWER_EXTENSIONS:
                         result.append(entry.path)
     except OSError:
         return []
@@ -355,7 +340,7 @@ def open_path(main_gui: GPUImageView, path: str):
     # positives for that threat model.
     if path_obj.is_dir():  # NOSONAR
         _open_folder(main_gui, path_obj)
-    elif path_obj.is_file() and path_obj.suffix.lower() in SUPPORTED_EXTENSIONS:  # NOSONAR
+    elif path_obj.is_file() and path_obj.suffix.lower() in VIEWER_EXTENSIONS:  # NOSONAR
         _open_file(main_gui, path_obj)
 
 

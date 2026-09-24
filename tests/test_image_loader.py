@@ -108,8 +108,8 @@ def _write_sample_video(path, frame_count=5):
 
 class TestVideoInGrid:
     def test_video_ext_supported(self):
-        from Imervue.gpu_image_view.images.image_loader import SUPPORTED_EXTENSIONS
-        assert ".mp4" in SUPPORTED_EXTENSIONS
+        from Imervue.image.formats import VIEWER_EXTENSIONS
+        assert ".mp4" in VIEWER_EXTENSIONS
 
     def test_scan_finds_video(self, tmp_path):
         _write_sample_video(tmp_path / "clip.mp4")
@@ -127,9 +127,9 @@ class TestVideoInGrid:
 
 class TestHeifInGrid:
     def test_heif_exts_supported(self):
-        from Imervue.gpu_image_view.images.image_loader import SUPPORTED_EXTENSIONS
-        assert ".heic" in SUPPORTED_EXTENSIONS
-        assert ".avif" in SUPPORTED_EXTENSIONS
+        from Imervue.image.formats import VIEWER_EXTENSIONS
+        assert ".heic" in VIEWER_EXTENSIONS
+        assert ".avif" in VIEWER_EXTENSIONS
 
     def test_scan_finds_heic(self, tmp_path):
         pillow_heif = pytest.importorskip("pillow_heif")
@@ -142,8 +142,8 @@ class TestHeifInGrid:
 
 class TestJxlInGrid:
     def test_jxl_ext_supported(self):
-        from Imervue.gpu_image_view.images.image_loader import SUPPORTED_EXTENSIONS
-        assert ".jxl" in SUPPORTED_EXTENSIONS
+        from Imervue.image.formats import VIEWER_EXTENSIONS
+        assert ".jxl" in VIEWER_EXTENSIONS
 
     def test_load_jxl_returns_rgba(self, tmp_path):
         pytest.importorskip("pillow_jxl")

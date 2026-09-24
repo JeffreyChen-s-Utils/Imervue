@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -172,3 +173,22 @@ def test_index_one_propagates_an_unexpected_reader_error(tmp_path, monkeypatch):
     monkeypatch.setattr(Image, "open", broken)
     with pytest.raises(RuntimeError, match="reader bug"):
         scanner._index_one(img, with_phash=True)
+
+
+def test_scanner_walks_exactly_what_maintenance_diffs_against(tmp_path):
+    """Maintenance counted HEIC / JXL as new files that no rescan ever indexed."""
+    from Imervue.library.maintenance import scan_image_files
+    for name in ("a.heic", "b.jxl", "c.svg", "d.png", "e.mp4", "f.txt"):
+        (tmp_path / name).write_bytes(b"\x00")
+    walked = {str(p) for p in scanner._iter_images(str(tmp_path))}
+    assert walked == set(scan_image_files([str(tmp_path)]))
+    assert {Path(p).name for p in walked} == {"a.heic", "b.jxl", "c.svg", "d.png"}
+
+
+def test_index_one_registers_the_codec_before_reading(tmp_path, monkeypatch):
+    seen = []
+    monkeypatch.setattr(scanner, "ensure_pillow_opener", seen.append)
+    img = tmp_path / "a.heic"
+    img.write_bytes(b"not decodable")
+    assert scanner._index_one(img, with_phash=True) is True
+    assert seen == [".heic"]

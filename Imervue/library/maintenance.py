@@ -11,11 +11,7 @@ import os
 from collections.abc import Iterable
 from pathlib import Path
 
-_SCAN_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng",
-    ".heic", ".heif", ".avif", ".jxl",
-    ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-})
+from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
 
 
 def diff_index_vs_fs(indexed: Iterable[str], fs: Iterable[str]) -> dict:
@@ -34,7 +30,7 @@ def scan_image_files(folders: Iterable[str]) -> list[str]:
         for root, _dirs, files in os.walk(folder):
             found.extend(
                 os.path.join(root, name) for name in files
-                if Path(name).suffix.lower() in _SCAN_EXTS
+                if Path(name).suffix.lower() in STILL_IMAGE_EXTENSIONS
             )
     return found
 

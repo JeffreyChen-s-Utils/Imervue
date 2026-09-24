@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from Imervue.gpu_image_view.images.image_loader import SUPPORTED_EXTENSIONS
+from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.gui.file_filters import image_filter, name_filter, translated_filter, viewer_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -43,7 +43,7 @@ def test_viewer_filter_lists_every_format_the_viewer_opens():
     text = viewer_filter()
     assert text.startswith("Images and videos (")
     patterns = set(text[text.index("(") + 1:-1].split())
-    assert patterns == {f"*{ext}" for ext in SUPPORTED_EXTENSIONS}
+    assert patterns == {f"*{ext}" for ext in VIEWER_EXTENSIONS}
     assert {"*.heic", "*.avif", "*.jxl", "*.mp4", "*.cr2", "*.svg"} <= patterns
 
 

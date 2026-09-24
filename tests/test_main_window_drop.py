@@ -22,6 +22,8 @@ from tests._toast_spy import ToastSpy as _ToastSpy
 @pytest.mark.parametrize("ext", [
     ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp",
     ".gif", ".cr2", ".nef", ".arw", ".dng",
+    # These used to be refused although the viewer opens them.
+    ".heic", ".avif", ".jxl", ".mp4",
 ])
 def test_supported_drop_accepts_image_extensions(tmp_path: Path, ext: str):
     fake = tmp_path / f"x{ext}"
@@ -29,7 +31,7 @@ def test_supported_drop_accepts_image_extensions(tmp_path: Path, ext: str):
     assert ImervueMainWindow._is_supported_drop(str(fake))
 
 
-@pytest.mark.parametrize("ext", [".txt", ".mp3", ".pdf", ".exe"])
+@pytest.mark.parametrize("ext", [".txt", ".mp3", ".pdf", ".exe", ""])
 def test_supported_drop_rejects_other_extensions(tmp_path: Path, ext: str):
     fake = tmp_path / f"x{ext}"
     fake.write_bytes(b"")

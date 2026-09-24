@@ -20,6 +20,7 @@ from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.file_tree_sort import FileTreeSortProxy
 from Imervue.gui.file_tree_view import _FileTreeView
 from Imervue.gui.folder_thumbnail_model import DEFAULT_ICON_SIZE, FolderThumbnailModel
+from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -35,11 +36,7 @@ class MainWindowLayoutMixin:
         # QFileSystemModel 介面，所以其餘程式照舊把它當檔案系統 model 用。
         self.model = FileTreeSortProxy(FolderThumbnailModel())
         # 只篩選圖片格式 + 資料夾，隱藏不符合的檔案
-        self.model.setNameFilters([
-            "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff", "*.tif", "*.webp",
-            "*.gif", "*.apng", "*.svg",
-            "*.cr2", "*.nef", "*.arw", "*.dng", "*.raf", "*.orf",
-        ])
+        self.model.setNameFilters([f"*{ext}" for ext in sorted(VIEWER_EXTENSIONS)])
         self.model.setNameFilterDisables(False)
 
         # 設定起始路徑：有上次資料夾就用，否則從根開始

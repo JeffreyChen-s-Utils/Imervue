@@ -8,14 +8,15 @@ has tens of thousands of images we throttle by yielding every N files.
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Iterable
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, Signal
 
+from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.library import image_index
+from Imervue.library.maintenance import scan_image_files
 from Imervue.library.bloom_filter import BloomFilter, fingerprint
 from Imervue.library.phash import compute_phash
 
@@ -25,19 +26,10 @@ logger = logging.getLogger("Imervue.library.scanner")
 # commit overhead, small enough to keep progress durable and transactions short.
 _SCAN_COMMIT_CHUNK = 256
 
-_IMAGE_EXTS = {
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-    ".gif", ".apng", ".svg",
-    ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-}
-
-
 def _iter_images(root: str) -> Iterable[Path]:
-    for dirpath, _dirnames, filenames in os.walk(root):
-        for fn in filenames:
-            p = Path(dirpath) / fn
-            if p.suffix.lower() in _IMAGE_EXTS:
-                yield p
+    # The same walk Library Maintenance diffs against, so a file it reports as
+    # new is one a rescan indexes.
+    return (Path(p) for p in scan_image_files([root]))
 
 
 def _build_skip_bloom() -> BloomFilter:
@@ -88,6 +80,7 @@ def _index_one(
     if _can_skip_via_bloom(path, stat, bloom):
         return False
     width = height = None
+    ensure_pillow_opener(path.suffix)   # Pillow reads HEIC / JXL once the codec is registered
     if with_phash:
         try:
             from PIL import Image

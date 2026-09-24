@@ -63,12 +63,12 @@ class LoadThumbnailWorker(QRunnable):
         return img_data
 
     def _load_by_extension(self):
+        from Imervue.image.formats import RAW_EXTENSIONS
         from Imervue.image.heif_support import ensure_heif_opener, is_heif_path
         from Imervue.image.jxl_support import ensure_jxl_opener, is_jxl_path
         from Imervue.image.video_frames import is_video_path
         ext = Path(self.path).suffix.lower()
-        raw_exts = {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"}
-        if ext in raw_exts:
+        if ext in RAW_EXTENSIONS:
             return self._load_raw()
         if ext == ".svg":
             return self._load_svg()

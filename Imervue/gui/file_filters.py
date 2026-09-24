@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from Imervue.gpu_image_view.images.image_loader import SUPPORTED_EXTENSIONS
+from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
@@ -30,9 +30,9 @@ def image_filter(extensions: Iterable[str]) -> str:
 def viewer_filter() -> str:
     """Return a filter for every format the viewer opens, videos included.
 
-    Built from the loader's own extension set, so a format the viewer learns
+    Built from ``formats.VIEWER_EXTENSIONS``, so a format the viewer learns
     to open shows up in the Open and Relocate dialogs without another edit.
     """
     return translated_filter(
-        "file_filter_viewer", "Images and videos", sorted(SUPPORTED_EXTENSIONS),
+        "file_filter_viewer", "Images and videos", sorted(VIEWER_EXTENSIONS),
     )

@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
+from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.system.app_paths import icon_path as _app_icon_path
 from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
@@ -529,12 +530,6 @@ class ImervueMainWindow(
 
     # ===== Drag-and-drop on the main window =====
 
-    _SUPPORTED_DROP_EXTS = (
-        ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp",
-        ".gif", ".apng", ".svg",
-        ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-    )
-
     @classmethod
     def _is_supported_drop(cls, path: str) -> bool:
         """Return True iff the dropped path is a folder or an image with
@@ -542,7 +537,7 @@ class ImervueMainWindow(
         p = Path(path)
         if p.is_dir():
             return True
-        return p.suffix.lower() in cls._SUPPORTED_DROP_EXTS
+        return p.suffix.lower() in VIEWER_EXTENSIONS
 
     def dragEnterEvent(self, event):  # noqa: N802 — Qt naming
         urls = event.mimeData().urls() if event.mimeData() else []

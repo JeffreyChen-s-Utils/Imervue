@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 
+from Imervue.image.formats import RAW_EXTENSIONS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -22,7 +23,7 @@ _EXT_GROUPS = {
     "bmp": {".bmp"},
     "tiff": {".tiff", ".tif"},
     "svg": {".svg"},
-    "raw": {".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"},
+    "raw": RAW_EXTENSIONS,
 }
 
 
