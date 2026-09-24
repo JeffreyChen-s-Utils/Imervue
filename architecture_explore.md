@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `1c1d4af` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `ca5deee` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 829 | 135,452 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,050 |
+| `tests/` | 829 | 135,518 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,116 |
 | `Imervue/gui/` | 161 | 32,851 |
 | `Imervue/puppet/` | 57 | 15,283 |
 | `Imervue/image/` | 113 | 12,892 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,912 |
-| `Imervue/multi_language/` | 8 | 13,379 |
+| `Imervue/multi_language/` | 8 | 13,389 |
 | `Imervue/desktop_pet/` | 34 | 8,253 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,174 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,645** | **312,550** |
+| **總計** | **1,645** | **312,692** |
 
-其中 `Imervue/` 套件本身 752 檔 / 162,892 行。
+其中 `Imervue/` 套件本身 752 檔 / 162,968 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -253,11 +253,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,650 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,615 | 繁體中文 |
-| `chinese.py` | 2,616 | 簡體中文 |
-| `japanese.py` | 2,629 | 日文 |
-| `korean.py` | 2,627 | 韓文 |
+| `english.py` | 2,652 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,617 | 繁體中文 |
+| `chinese.py` | 2,618 | 簡體中文 |
+| `japanese.py` | 2,631 | 日文 |
+| `korean.py` | 2,629 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -649,7 +649,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,050 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,116 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -755,12 +755,12 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(317) | 具名 dock 佈局預設 |
 | `workspace_autosave.py` | 142 + `auto_save.py`(242) | 自動存檔與當機復原 |
 | `action_recorder.py` | 240 + `action_recorder_dialog.py`(197) | 動作錄製 / 重播 |
-| `shortcut_registry.py` | 183 + `shortcut_binding.py`(70) + `shortcut_dialog.py`(162) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名） |
+| `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
 | `tablet_mapping.py` | 230 | 數位板按鍵 → 動作對應 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 273 + `export_utils.py`(231) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(539)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(120)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(539)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(127)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,863 行）
 
@@ -959,7 +959,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-829 個檔、135,452 行。`pyproject.toml` 定義三個互斥層級 marker：
+829 個檔、135,518 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

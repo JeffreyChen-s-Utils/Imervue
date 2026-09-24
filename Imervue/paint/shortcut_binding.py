@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
+from PySide6.QtWidgets import QMainWindow, QWidget
 
 from Imervue.paint.shortcut_registry import default_key
 
@@ -54,6 +55,46 @@ def apply_registry_bindings(root: QObject, bindings: Mapping[str, str]) -> int:
         _rebind(obj, bound, key)
         changed += 1
     return changed
+
+
+def fixed_shortcut_keys(root: QWidget, other_label: str) -> dict[str, str]:
+    """Return the keys that actions outside the registry hold, each mapped to a label.
+
+    Covers everything under ``root`` plus what its window binds for every tab
+    (the window's own ``QShortcut`` objects and its menu bar), so a remap that would
+    make a key ambiguous can be flagged. Disabled and widget-scoped shortcuts
+    are skipped; a ``QShortcut`` has no text, so it reports ``other_label``.
+    """
+    owners = [*root.findChildren(QAction), *root.findChildren(QShortcut)]
+    window = root.window()
+    if window is not root:
+        owners += [s for s in window.findChildren(QShortcut) if s.parent() is window]
+        if isinstance(window, QMainWindow):
+            owners += window.menuBar().findChildren(QAction)
+    taken: dict[str, str] = {}
+    for obj in owners:
+        if obj.property(_BOUND_KEY) is not None or not obj.isEnabled():
+            continue
+        for key in _live_keys(obj):
+            taken.setdefault(key, _label(obj, other_label))
+    return taken
+
+
+def _live_keys(obj: QAction | QShortcut) -> list[str]:
+    if isinstance(obj, QShortcut):
+        if obj.context() == Qt.ShortcutContext.WidgetShortcut:
+            return []
+        keys = [obj.key()]
+    else:
+        if obj.shortcutContext() == Qt.ShortcutContext.WidgetShortcut:
+            return []
+        keys = obj.shortcuts()
+    return [k.toString() for k in keys if k.toString()]
+
+
+def _label(obj: QAction | QShortcut, other_label: str) -> str:
+    text = obj.text().replace("&", "") if isinstance(obj, QAction) else ""
+    return text or other_label
 
 
 def _rebind(obj: QAction | QShortcut, old: str, new: str) -> None:

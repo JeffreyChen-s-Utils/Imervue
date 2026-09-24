@@ -2612,4 +2612,6 @@ traditional_chinese_word_dict = {
     "timeline_by_month": "依月",
     "timeline_by_year": "依年",
     "paint_untitled_tab": "未命名",
+    "paint_shortcut_in_use": "已被「{action}」使用",
+    "paint_shortcut_other_action": "其他快捷鍵",
 }

@@ -9,12 +9,14 @@ brush-size keys did nothing, and Ctrl+[ / Ctrl+] (move layer) and Ctrl+D
 from __future__ import annotations
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import QDialog, QWidget
 
 from Imervue.paint import tool_state as ts
 from Imervue.paint.shortcut_binding import (
     apply_registry_bindings,
+    fixed_shortcut_keys,
     registry_shortcut,
     tag_registry_shortcut,
 )
@@ -174,10 +176,13 @@ def test_saved_remaps_apply_when_the_workspace_is_built(qapp):
 def test_accepting_the_shortcut_dialog_rebinds_at_once(workspace, monkeypatch):
     import Imervue.paint.shortcut_dialog as dialog_mod
 
+    seen = {}
+
     class _Accepting:
-        def __init__(self, registry, parent=None):
+        def __init__(self, registry, parent=None, *, reserved=None):
             registry.set("paint.tool.hand", "Shift+H")
             self._registry = registry
+            seen["reserved"] = reserved
 
         def exec(self):
             return QDialog.DialogCode.Accepted
@@ -188,6 +193,46 @@ def test_accepting_the_shortcut_dialog_rebinds_at_once(workspace, monkeypatch):
     monkeypatch.setattr(dialog_mod, "ShortcutDialog", _Accepting)
     workspace._settings_menu_bridge.open_shortcuts()   # noqa: SLF001
     assert _keys(_tagged(workspace)["paint.tool.hand"][0]) == ["Shift+H"]
+    # The dialog is told which keys other actions already hold.
+    assert seen["reserved"]["Ctrl+S"] == "Save as PSD…"
+    assert "B" not in seen["reserved"]   # a registry key, not a reserved one
+
+
+# ---------------------------------------------------------------------------
+# Keys held outside the registry
+# ---------------------------------------------------------------------------
+
+
+def test_fixed_keys_skip_tagged_disabled_and_widget_scoped(host):
+    tagged = QAction("Brush", host)
+    tagged.setShortcut(QKeySequence("B"))
+    tag_registry_shortcut(tagged, "paint.tool.brush")
+    save = QAction("&Save", host)
+    save.setShortcut(QKeySequence("Ctrl+S"))
+    disabled = QAction("Off", host)
+    disabled.setShortcut(QKeySequence("F2"))
+    disabled.setEnabled(False)
+    local = QAction("Local", host)
+    local.setShortcut(QKeySequence("F3"))
+    local.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+    QShortcut(QKeySequence("1"), host)
+    scoped = QShortcut(QKeySequence("F4"), host)
+    scoped.setContext(Qt.ShortcutContext.WidgetShortcut)
+    QAction("No key", host)
+    assert fixed_shortcut_keys(host, "other") == {"Ctrl+S": "Save", "1": "other"}
+
+
+def test_fixed_keys_include_what_the_window_binds(qapp):
+    from PySide6.QtWidgets import QMainWindow
+    window = QMainWindow()
+    try:
+        page = QWidget()
+        window.setCentralWidget(page)
+        QShortcut(QKeySequence("Ctrl+L"), window)
+        window.menuBar().addMenu("File").addAction("Quit").setShortcut(QKeySequence("Ctrl+Q"))
+        assert fixed_shortcut_keys(page, "other") == {"Ctrl+L": "other", "Ctrl+Q": "Quit"}
+    finally:
+        window.deleteLater()
 
 
 def test_new_layer_and_deselect_shortcuts_drive_the_document(workspace):

@@ -2624,4 +2624,6 @@ korean_word_dict = {
     "timeline_by_month": "월별",
     "timeline_by_year": "연도별",
     "paint_untitled_tab": "제목 없음",
+    "paint_shortcut_in_use": "'{action}'에서 이미 사용 중",
+    "paint_shortcut_other_action": "다른 단축키",
 }

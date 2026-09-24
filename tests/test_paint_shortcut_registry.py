@@ -258,6 +258,27 @@ def test_dialog_changes_dont_mutate_input_registry(qapp):
         dialog.deleteLater()
 
 
+def test_dialog_flags_a_key_another_action_holds(qapp):
+    from PySide6.QtGui import QColor
+
+    from Imervue.paint.shortcut_dialog import ShortcutDialog
+    dialog = ShortcutDialog(reserved={"Ctrl+S": "Save as PSD…"})
+    try:
+        row = [e.action_id for e in DEFAULT_SHORTCUTS].index("paint.tool.brush")
+        item = dialog._table.item(row, 0)   # noqa: SLF001
+        assert item.toolTip() == ""
+        dialog.registry().set("paint.tool.brush", "Ctrl+S")
+        dialog._refresh_conflict_marks()   # noqa: SLF001
+        assert "Save as PSD…" in item.toolTip()
+        assert item.background().color() == QColor("#5a1f1f")
+        dialog.registry().set("paint.tool.brush", "F8")
+        dialog._refresh_conflict_marks()   # noqa: SLF001
+        assert item.toolTip() == ""
+        assert item.background().color() == QColor("transparent")
+    finally:
+        dialog.deleteLater()
+
+
 def test_dialog_reset_all_restores_defaults_in_working_copy(qapp):
     from Imervue.paint.shortcut_dialog import ShortcutDialog
     dialog = ShortcutDialog()

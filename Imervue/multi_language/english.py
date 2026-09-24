@@ -2647,4 +2647,6 @@ english_word_dict = {
     "timeline_by_month": "By month",
     "timeline_by_year": "By year",
     "paint_untitled_tab": "Untitled",
+    "paint_shortcut_in_use": "Already used by {action}",
+    "paint_shortcut_other_action": "another shortcut",
 }

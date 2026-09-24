@@ -2626,4 +2626,6 @@ japanese_word_dict = {
     "timeline_by_month": "月別",
     "timeline_by_year": "年別",
     "paint_untitled_tab": "無題",
+    "paint_shortcut_in_use": "「{action}」で使用中",
+    "paint_shortcut_other_action": "別のショートカット",
 }
