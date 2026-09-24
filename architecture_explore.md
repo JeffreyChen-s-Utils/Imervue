@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `7cd7b87` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-24 · 對應 commit `3221561` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 837 | 136,591 |
+| `tests/` | 837 | 136,621 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,117 |
 | `Imervue/gui/` | 162 | 32,875 |
 | `Imervue/puppet/` | 57 | 15,286 |
@@ -84,7 +84,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 9 | 993 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 933 |
 | `plugins/`（17 個外掛） | 64 | 14,206 |
-| **總計** | **1,659** | **314,630** |
+| **總計** | **1,659** | **314,660** |
 
 其中 `Imervue/` 套件本身 758 檔 / 163,833 行。
 
@@ -479,7 +479,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `search_dialog.py` | 280 | 檔名即時搜尋 |
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 309 | 鍵盤快捷動作實作 |
-| `lossless_rotate.py` | 131 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose |
+| `lossless_rotate.py` | 136 | JPEG 改 EXIF Orientation 真無損旋轉，其他格式退回 PIL transpose（從轉正後的影像轉，因為重存會丟掉 EXIF） |
 | `drag_out.py` | 72 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
 | `recipe_commands.py` | 60 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
@@ -573,7 +573,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `settle_poll.py` | 58 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題）；`owner=` 讓鏈隨物件銷毀而停 |
 | `workspace_manager.py` | 154 | 具名工作區預設（幾何 + 佈局快照） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
-| `_apply_save.py` | 156 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用 |
+| `_apply_save.py` | 162 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用；`load_rgba()` 回傳依 EXIF 轉正的陣列（外掛也 import，見 architecture.md §6） |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
 

@@ -97,3 +97,18 @@ def test_load_rgba_keeps_an_rgba_image_as_is(tmp_path):
     path = tmp_path / "rgba.png"
     Image.new("RGBA", (2, 2), (1, 2, 3, 4)).save(path)
     assert tuple(load_rgba(str(path))[1, 1]) == (1, 2, 3, 4)
+
+
+def test_load_rgba_returns_the_exif_upright_pixels(tmp_path):
+    """The tools save without EXIF; a sideways array would be saved sideways for good."""
+    from Imervue.gui._apply_save import load_rgba
+    arr = np.zeros((20, 40, 3), dtype=np.uint8)
+    arr[:, :20] = (255, 0, 0)   # left half of the stored pixels is red
+    exif = Image.Exif()
+    exif[0x0112] = 6            # rotate 90 CW to view: the red half ends on top
+    path = tmp_path / "portrait.png"
+    Image.fromarray(arr).save(path, exif=exif)
+    out = load_rgba(str(path))
+    assert out.shape == (40, 20, 4)
+    assert tuple(out[5, 10, :3]) == (255, 0, 0)
+    assert tuple(out[35, 10, :3]) == (0, 0, 0)

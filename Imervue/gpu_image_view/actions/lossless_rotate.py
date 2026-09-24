@@ -5,6 +5,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.image.orientation import upright
+
 logger = logging.getLogger("Imervue.lossless_rotate")
 
 # EXIF Orientation tag value after a 90-degree clockwise rotation.
@@ -73,11 +75,14 @@ def _rotate_via_pil(file_path: str, clockwise: bool) -> bool:
     """Rotate an image using PIL transpose and re-save (lossy for compressed formats)."""
     try:
         img = Image.open(file_path)
+        # Turn from what the viewer shows: the re-save drops the EXIF orientation,
+        # and rotating the stored pixels of a tagged image would cancel out.
+        shown = upright(img)
 
         if clockwise:
-            rotated = img.transpose(Image.Transpose.ROTATE_270)
+            rotated = shown.transpose(Image.Transpose.ROTATE_270)
         else:
-            rotated = img.transpose(Image.Transpose.ROTATE_90)
+            rotated = shown.transpose(Image.Transpose.ROTATE_90)
 
         # Preserve original format
         fmt = img.format or Path(file_path).suffix.lstrip(".").upper()

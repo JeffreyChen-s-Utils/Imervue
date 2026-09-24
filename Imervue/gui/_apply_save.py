@@ -17,6 +17,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
+from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 logger = logging.getLogger("Imervue.apply_save")
@@ -112,10 +113,15 @@ def output_path(source: str, suffix: str) -> str:
 def load_rgba(path: str) -> np.ndarray:
     """Load *path* as an HxWx4 RGBA uint8 array, closing the file before returning.
 
-    Plugins in Imervue_Plugins import this (``architecture.md`` §6).
+    The pixels are turned upright by the file's EXIF orientation, as the viewer
+    shows them: the tools save their result without EXIF, so a sideways array
+    would be saved sideways for good. Plugins in Imervue_Plugins import this
+    (``architecture.md`` §6).
     """
     with Image.open(path) as img:
-        return np.array(img if img.mode == "RGBA" else img.convert("RGBA"))
+        code = exif_orientation(img)
+        rgba = img if img.mode == "RGBA" else img.convert("RGBA")
+        return np.array(transpose_for(rgba, code))
 
 
 def current_image_path(viewer) -> str | None:
