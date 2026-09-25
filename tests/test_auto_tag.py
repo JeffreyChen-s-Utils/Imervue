@@ -124,3 +124,36 @@ def test_heuristic_propagates_an_unexpected_error(tmp_path, monkeypatch):
     monkeypatch.setattr(auto_tag.Image, "open", broken)
     with pytest.raises(RuntimeError, match="reader bug"):
         auto_tag.classify_heuristic(tmp_path / "x.png")
+
+
+
+def _jpeg(path, size, orientation=None):
+    rng = np.random.default_rng(0)
+    exif = Image.Exif()
+    if orientation:
+        exif[0x0112] = orientation
+    Image.fromarray(rng.integers(0, 255, (size[1], size[0], 3), dtype=np.uint8)).save(path, exif=exif)
+    return str(path)
+
+
+def test_a_wide_picture_is_tagged_landscape_and_a_tall_one_portrait(tmp_path):
+    """The aspect was measured on the 64 x 64 sample, so neither tag was ever given."""
+    assert "landscape" in auto_tag.classify_heuristic(_jpeg(tmp_path / "wide.jpg", (80, 40)))
+    assert "portrait" in auto_tag.classify_heuristic(_jpeg(tmp_path / "tall.jpg", (40, 80)))
+    square = auto_tag.classify_heuristic(_jpeg(tmp_path / "square.jpg", (60, 60)))
+    assert not {"landscape", "portrait"} & set(square)
+
+
+def test_a_portrait_phone_photo_is_tagged_portrait(tmp_path):
+    """Stored on its side with an EXIF turn, as phones save an upright shot."""
+    tags = auto_tag.classify_heuristic(_jpeg(tmp_path / "phone.jpg", (80, 40), orientation=6))
+    assert "portrait" in tags and "landscape" not in tags
+
+
+def test_a_sixteen_bit_scan_is_tagged_like_its_eight_bit_copy(tmp_path):
+    """Clipped almost white, a 16-bit grey ramp read as a blank document page."""
+    ramp = np.tile(np.linspace(0, 65535, 64, dtype=np.uint16), (48, 1))
+    sixteen, eight = tmp_path / "scan16.png", tmp_path / "scan8.png"
+    Image.fromarray(ramp).save(sixteen)
+    Image.fromarray((ramp // 257).astype(np.uint8)).save(eight)
+    assert auto_tag.classify_heuristic(sixteen) == auto_tag.classify_heuristic(eight)

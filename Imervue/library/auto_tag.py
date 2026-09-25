@@ -16,7 +16,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.orientation import exif_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.shown import as_shown_8bit
 from Imervue.library import image_index
 
 logger = logging.getLogger("Imervue.library.auto_tag")
@@ -29,12 +32,32 @@ _DEFAULT_PROMPTS = (
 )
 
 
+_SAMPLE_EDGE = 64
+_PREVIEW_EDGE = 256
+
+
+def _shown_sample(path: str | Path) -> tuple[np.ndarray, float]:
+    """A 64x64 RGB sample of *path* as the viewer shows it, and its upright width / height.
+
+    Turned upright first, so a portrait phone photo (stored landscape with an
+    EXIF turn) measures as portrait, with 16-bit and float grey scaled and
+    colour profiles applied like on screen. The aspect is taken before the
+    square sample, which has none. Raises ``IMAGE_READ_ERRORS``.
+    """
+    ensure_pillow_opener(Path(path).suffix)
+    with Image.open(path) as im:
+        code = exif_orientation(im)
+        im.thumbnail((_PREVIEW_EDGE, _PREVIEW_EDGE))
+        shown = as_shown_8bit(im, code, mode="RGB")
+    aspect = shown.width / max(shown.height, 1)
+    small = shown.resize((_SAMPLE_EDGE, _SAMPLE_EDGE), Image.Resampling.BILINEAR)
+    return np.asarray(small, dtype=np.float32) / 255.0, aspect
+
+
 def classify_heuristic(path: str | Path) -> list[str]:
     """Return coarse tags based on image stats; ``[]`` for an image Pillow cannot read."""
     try:
-        with Image.open(path) as im:
-            small = im.convert("RGB").resize((64, 64), Image.Resampling.BILINEAR)
-            arr = np.asarray(small, dtype=np.float32) / 255.0
+        arr, w_over_h = _shown_sample(path)
     except IMAGE_READ_ERRORS:
         return []
 
@@ -62,7 +85,6 @@ def classify_heuristic(path: str | Path) -> list[str]:
     else:
         tags.append("graphic")
 
-    w_over_h = arr.shape[1] / max(arr.shape[0], 1)
     if w_over_h > 1.25:
         tags.append("landscape")
     elif w_over_h < 0.8:
