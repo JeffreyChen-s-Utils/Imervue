@@ -60,6 +60,9 @@ def _install_fake_ml_modules(monkeypatch):
     fake_pil = types.ModuleType("PIL")
     fake_pil.Image = types.SimpleNamespace(
         open=lambda *a, **k: None, fromarray=lambda *a, **k: None)
+    # Without it the worker's "from PIL import ImageOps" only worked when an
+    # earlier test had already imported the real PIL.ImageOps.
+    fake_pil.ImageOps = types.SimpleNamespace(exif_transpose=lambda image: image)
     monkeypatch.setitem(sys.modules, "rembg", fake_rembg)
     monkeypatch.setitem(sys.modules, "PIL", fake_pil)
 
@@ -82,3 +85,24 @@ def test_batch_worker_breaks_on_interruption(qapp, monkeypatch):
     worker.run()
 
     assert results == [(0, 0)]   # broke before processing any image
+
+
+def test_batch_worker_reports_a_model_that_fails_to_load(qapp, monkeypatch, caplog):
+    """No network on the first run: new_session raised, result_ready never came
+    and the dialog's Run button stayed disabled."""
+    from ai_background_remover.ai_background_remover import _BatchRemoveWorker
+    _install_fake_ml_modules(monkeypatch)
+
+    def no_model(*_args, **_kwargs):
+        raise RuntimeError("model download failed")
+
+    monkeypatch.setattr(sys.modules["rembg"], "new_session", no_model)
+    worker = _BatchRemoveWorker(
+        ["/a.png", "/b.png"], output_dir="/out", model_name="u2net", alpha_matting=False)
+    results: list = []
+    worker.result_ready.connect(lambda s, f: results.append((s, f)))
+    with caplog.at_level("ERROR", logger="Imervue"):
+        worker.run()
+    worker.deleteLater()
+    assert results == [(0, 2)]
+    assert any(r.exc_info for r in caplog.records)

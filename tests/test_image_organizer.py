@@ -233,6 +233,23 @@ class TestOrganizerWorker:
         # Source still exists (copy mode)
         assert (src / "a.png").exists()
 
+    def test_an_unwritable_output_folder_is_reported_not_fatal(self, tmp_path):
+        """os.makedirs raised outside any try: result_ready never came and the dialog hung."""
+        src = tmp_path / "src"
+        src.mkdir()
+        for name in ["a.png", "b.png"]:
+            Image.fromarray(np.full((4, 4, 3), 9, dtype=np.uint8)).save(str(src / name))
+        out = tmp_path / "out"
+        out.mkdir()
+        (out / "blocked").write_bytes(b"a file where the group folder should go")
+        plan = {"blocked": [str(src / "a.png")], "fine": [str(src / "b.png")]}
+        worker = _OrganizerWorker(plan, str(out), move=False)
+        results = []
+        worker.result_ready.connect(lambda s, f: results.append((s, f)))
+        worker.run()
+        assert results == [(1, 1)]
+        assert (out / "fine" / "b.png").exists()
+
     def test_move_removes_source(self, tmp_path):
         src = tmp_path / "src"
         src.mkdir()

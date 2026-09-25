@@ -309,11 +309,16 @@ class _BatchRemoveWorker(QThread):
         self._alpha_matting = alpha_matting
 
     def run(self):
-        _MODELS_DIR.mkdir(parents=True, exist_ok=True)
-        from rembg import remove, new_session
+        try:
+            _MODELS_DIR.mkdir(parents=True, exist_ok=True)
+            from rembg import remove, new_session
+            session = new_session(self._model)   # downloads the model on first use
+        except Exception:  # a worker must always report: no network, no onnxruntime
+            logger.exception("Loading the background-removal model %s failed", self._model)
+            self.result_ready.emit(0, len(self._paths))
+            return
         from PIL import Image, ImageOps
 
-        session = new_session(self._model)
         success = 0
         failed = 0
         total = len(self._paths)

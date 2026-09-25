@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-65 | 2026-09-25 | Batch workers report a model or folder that fails before the first image | #fix #workers | [2026-09-b](2026-09-b.md) |
 | U-20260925-64 | 2026-09-25 | Every image decode catches a picture over the pixel limit | #fix #robustness | [2026-09-b](2026-09-b.md) |
 | U-20260925-63 | 2026-09-25 | Tool workers report every failure instead of leaving their dialog stuck | #fix #workers | [2026-09-b](2026-09-b.md) |
 | U-20260925-62 | 2026-09-25 | AVIF opens and saves without pillow-heif; the install hint is for HEIC only | #fix #formats #avif | [2026-09-b](2026-09-b.md) |
@@ -345,4 +346,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 3 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 4 |

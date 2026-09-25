@@ -173,7 +173,15 @@ class _OrganizerWorker(QThread):
         state = {"done": 0, "success": 0, "failed": 0}
         for subfolder, paths in self._plan.items():
             dest_dir = os.path.join(self._output_dir, subfolder)
-            os.makedirs(dest_dir, exist_ok=True)
+            try:
+                os.makedirs(dest_dir, exist_ok=True)
+            except OSError:
+                # An unwritable output folder fails the group; escaping, the error
+                # left the dialog waiting for a result that never came.
+                logger.exception("Could not create %s", dest_dir)
+                state["done"] += len(paths)
+                state["failed"] += len(paths)
+                continue
             if self._process_group(paths, dest_dir, total, state):
                 break
         if self._moved:
