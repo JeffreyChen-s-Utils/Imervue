@@ -1,6 +1,8 @@
 """Tests for watched-folder automation (detection + dispatch)."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from Imervue.system.watch_folder import (
     WatchFolderService,
     is_image,
@@ -24,6 +26,17 @@ def test_scan_images_lists_only_images(tmp_path):
     assert any(p.endswith("a.png") for p in found)
     assert any(p.endswith("b.jpg") for p in found)
     assert not any(p.endswith("c.txt") for p in found)
+
+
+def test_a_tethered_raw_is_an_image():
+    """A camera drops RAW into a watched folder; it used to be ignored."""
+    for name in ("IMG_0001.CR3", "DSC_1.NEF", "P1.RW2", "shot.dng", "photo.heic", "a.avif"):
+        assert is_image(name), name
+
+
+def test_scan_images_finds_raw(tmp_path):
+    (tmp_path / "IMG_0001.CR3").write_bytes(b"x")
+    assert {Path(p).name for p in scan_images(str(tmp_path))} == {"IMG_0001.CR3"}
 
 
 def test_scan_images_missing_dir_is_empty():

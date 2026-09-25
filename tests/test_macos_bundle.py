@@ -22,6 +22,17 @@ def test_raw_formats_map_to_camera_raw():
     assert content_types_for([".cr2", ".nef"]) == ["public.camera-raw-image"]
 
 
+def test_every_raw_the_viewer_opens_is_camera_raw():
+    from Imervue.image.formats import RAW_EXTENSIONS
+    assert content_types_for(sorted(RAW_EXTENSIONS)) == ["public.camera-raw-image"]
+
+
+def test_every_associated_extension_has_a_uti():
+    """Finder offered Imervue for no CR3, JPEG XL or SVG."""
+    assert [e for e in ASSOC_EXTENSIONS if not content_types_for([e])] == []
+    assert content_types_for([".jxl", ".svg", ".apng"]) == ["public.jpeg-xl", "public.svg-image", "public.png"]
+
+
 def test_image_document_types_structure():
     docs = image_document_types([".png"])
     assert len(docs) == 1

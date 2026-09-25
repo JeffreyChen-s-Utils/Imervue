@@ -27,6 +27,25 @@ class TestAssocExtensions:
     def test_no_duplicates(self):
         assert len(fa.ASSOC_EXTENSIONS) == len(set(fa.ASSOC_EXTENSIONS))
 
+    def test_is_every_still_format_the_viewer_opens(self):
+        """Only 15 of them were registered: no CR3, RW2, HEIC, AVIF or JPEG XL."""
+        from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+        assert set(fa.ASSOC_EXTENSIONS) == STILL_IMAGE_EXTENSIONS
+        for ext in (".cr3", ".rw2", ".pef", ".heic", ".avif", ".jxl"):
+            assert ext in fa.ASSOC_EXTENSIONS
+
+    def test_order_is_stable(self):
+        assert sorted(fa.ASSOC_EXTENSIONS) == fa.ASSOC_EXTENSIONS
+
+    def test_every_extension_has_a_mime_type(self):
+        """The Linux desktop entry skips an extension it has no MIME type for."""
+        missing = [e for e in fa.ASSOC_EXTENSIONS if not fa.mime_types_for_extensions([e])]
+        assert missing == []
+
+    def test_raw_mime_types_are_the_freedesktop_names(self):
+        assert fa.mime_types_for_extensions([".cr3", ".rw2", ".rwl", ".heic", ".hif"]) == [
+            "image/x-canon-cr3", "image/x-panasonic-rw2", "image/heif"]
+
 
 class TestPureHelpers:
     def test_mime_mapping_dedupes_jpeg(self):

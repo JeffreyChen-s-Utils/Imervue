@@ -218,11 +218,11 @@ ImervueMainWindow
 | `app_paths.py` | 109 | 凍結環境安全的路徑解析（icon / plugins / 設定檔），PyInstaller & Nuitka 都適用 |
 | `clipboard_monitor.py` | 136 | ShareX 式剪貼簿監聽：PrintScreen 截圖 → 自動開啟註解視窗 |
 | `error_report.py` | 177 | 一鍵支援包產生器（日誌 + 環境資訊打包） |
-| `file_association.py` | 239 | 跨平台檔案關聯「用 Imervue 開啟」註冊 / 取消 |
+| `file_association.py` | 246 | 跨平台檔案關聯「用 Imervue 開啟」註冊 / 取消；副檔名即 `formats.STILL_IMAGE_EXTENSIONS`（排序），MIME 用 freedesktop shared-mime-info 的名稱 |
 | `file_tree_watcher.py` | 171 | watchdog 遞迴監看樹根，跨執行緒 signal 回 UI 觸發 model refresh |
 | `qimage_convert.py` | 33 | `pil_to_qimage()` / `qimage_to_pil()`：經 RGBA8888 並複製緩衝區的雙向轉換（標註與剪貼簿共用） |
 | `log_setup.py` | 83 | 集中式 logging 設定：`setup_logging()`（可重複呼叫；`app_dir()` 不可寫時退到使用者目錄；凍結時不掛 stderr handler）與 `install_exception_logging()` |
-| `macos_bundle.py` | 66 | macOS `.app` Info.plist 文件型別關聯 |
+| `macos_bundle.py` | 67 | macOS `.app` Info.plist 文件型別關聯；每種相機 RAW 對到 `public.camera-raw-image` |
 | `onboarding.py` | 81 | 首次啟動導覽步驟註冊表 |
 | `release_notes.py` | 111 | What's-New 對話框的版本說明資料 |
 | `theme_color_math.py` | 91 | WCAG 對比度數學，供主題撰寫與無障礙稽核 |
@@ -241,7 +241,7 @@ ImervueMainWindow
 | `free_names.py` | 33 | `free_names(directory, stems, ext)`：資料夾裡還沒被占用的檔名（`photo_clahe.png`，被占用就 `_1`、`_2`…；一組檔案共用一個編號；依檔案系統的大小寫規則比對，列不出內容的資料夾視為空的），寫新檔在使用者檔案旁邊的工具都經由它挑名（`_apply_save.output_path(s)`、Export 與 GIF／影片對話框的預設檔名、多頁拆分、EXIF 清除的副本；右鍵「依 EXIF 自動旋轉」經 `output_path`） |
 | `natural_sort.py` | 29 | `natural_key(name)`：和檔案總管一樣的自然排序鍵（`img2` 在 `img10` 之前，不分大小寫，全形數字也算數字；相等時依小寫、原名定序）；檢視器的名稱排序（縮圖格、上下張、資料夾快取）、`sort_menu`、網頁相簿與各批次對話框的清單都用它，和檔案樹的 numeric `QCollator` 一致 |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
-| `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
+| `watch_folder.py` | 141 | 監控資料夾自動化：新檔案進來自動套用動作；預設收檢視器能開的每種靜態格式（連線拍攝的 RAW 也算） |
 
 ### 6.3 `Imervue/user_settings/`
 

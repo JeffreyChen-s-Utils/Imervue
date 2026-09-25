@@ -18,28 +18,35 @@ import logging
 import sys
 from pathlib import Path
 
+from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
 from Imervue.system.app_paths import app_dir, icon_path as _app_icon_path, is_frozen
 
 logger = logging.getLogger("Imervue.file_assoc")
 
-# 支援關聯的副檔名
-ASSOC_EXTENSIONS = [
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif",
-    ".webp", ".gif", ".apng",
-    ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
-]
+# Every still format the viewer opens, sorted so the registry writes and the
+# desktop entry come out the same on every run.
+ASSOC_EXTENSIONS: list[str] = sorted(STILL_IMAGE_EXTENSIONS)
 
 _APP_ID = "Imervue.ImageViewer"
 _SHELL_LABEL = "Open with Imervue"
 _DESKTOP_FILE = "imervue.desktop"
 
+# The freedesktop.org shared-mime-info names.
 _MIME_BY_EXT = {
     ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
     ".bmp": "image/bmp", ".tiff": "image/tiff", ".tif": "image/tiff",
     ".webp": "image/webp", ".gif": "image/gif", ".apng": "image/apng",
-    ".cr2": "image/x-canon-cr2", ".nef": "image/x-nikon-nef",
-    ".arw": "image/x-sony-arw", ".dng": "image/x-adobe-dng",
-    ".raf": "image/x-fuji-raf", ".orf": "image/x-olympus-orf",
+    ".svg": "image/svg+xml", ".avif": "image/avif", ".jxl": "image/jxl",
+    ".heic": "image/heif", ".heif": "image/heif", ".hif": "image/heif",
+    ".cr2": "image/x-canon-cr2", ".cr3": "image/x-canon-cr3", ".crw": "image/x-canon-crw",
+    ".nef": "image/x-nikon-nef", ".nrw": "image/x-nikon-nrw",
+    ".arw": "image/x-sony-arw", ".srf": "image/x-sony-srf", ".sr2": "image/x-sony-sr2",
+    ".dng": "image/x-adobe-dng", ".raf": "image/x-fuji-raf", ".orf": "image/x-olympus-orf",
+    ".rw2": "image/x-panasonic-rw2", ".rwl": "image/x-panasonic-rw2",
+    ".pef": "image/x-pentax-pef", ".srw": "image/x-samsung-srw",
+    ".3fr": "image/x-hasselblad-3fr", ".iiq": "image/x-phaseone-iiq",
+    ".mef": "image/x-mamiya-mef", ".mos": "image/x-leaf-mos", ".erf": "image/x-epson-erf",
+    ".mrw": "image/x-minolta-mrw", ".kdc": "image/x-kodak-kdc", ".dcr": "image/x-kodak-dcr",
 }
 
 

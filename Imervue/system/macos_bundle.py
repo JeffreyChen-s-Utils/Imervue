@@ -9,12 +9,15 @@ Pure data helpers — unit-tested without building a bundle.
 """
 from __future__ import annotations
 
+from Imervue.image.formats import RAW_EXTENSIONS
+
 BUNDLE_IDENTIFIER = "com.imervue.viewer"
 
 # Extension → Uniform Type Identifier for the formats Imervue opens.
 _RAW_UTI = "public.camera-raw-image"
 _UTI_BY_EXT: dict[str, str] = {
     ".png": "public.png",
+    ".apng": "public.png",
     ".jpg": "public.jpeg",
     ".jpeg": "public.jpeg",
     ".bmp": "com.microsoft.bmp",
@@ -22,15 +25,13 @@ _UTI_BY_EXT: dict[str, str] = {
     ".tiff": "public.tiff",
     ".webp": "org.webmproject.webp",
     ".gif": "com.compuserve.gif",
+    ".svg": "public.svg-image",
     ".heic": "public.heic",
     ".heif": "public.heif",
+    ".hif": "public.heif",
     ".avif": "public.avif",
-    ".cr2": _RAW_UTI,
-    ".nef": _RAW_UTI,
-    ".arw": _RAW_UTI,
-    ".dng": _RAW_UTI,
-    ".raf": _RAW_UTI,
-    ".orf": _RAW_UTI,
+    ".jxl": "public.jpeg-xl",
+    **dict.fromkeys(RAW_EXTENSIONS, _RAW_UTI),
 }
 
 

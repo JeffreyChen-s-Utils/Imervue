@@ -18,13 +18,14 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+
 logger = logging.getLogger("Imervue.watch_folder")
 
 _DEBOUNCE_MS = 500
-DEFAULT_EXTENSIONS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
-    ".heic", ".heif", ".avif", ".jxl",
-})
+# Every still format the viewer opens: camera RAW above all, what a tethered
+# camera drops into the folder.
+DEFAULT_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS
 
 
 def is_image(path: str, extensions: Iterable[str] = DEFAULT_EXTENSIONS) -> bool:
