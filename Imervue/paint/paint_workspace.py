@@ -31,6 +31,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QMainWindow, QStatusBar, QTabWidget
 
+from Imervue.image.formats import JPEG_EXTENSIONS
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
@@ -292,10 +293,8 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     # ---- drag-and-drop file open ---------------------------------------
 
-    SUPPORTED_DROP_EXTS = (
-        ".psd", ".png", ".jpg", ".jpeg", ".tif", ".tiff",
-        ".bmp", ".webp",
-    )
+    SUPPORTED_DROP_EXTS = tuple(sorted(
+        {".psd", ".png", ".tif", ".tiff", ".bmp", ".webp"} | JPEG_EXTENSIONS))
 
     def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
         """Accept file URL drops the workspace knows how to open."""

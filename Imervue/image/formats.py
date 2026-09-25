@@ -32,9 +32,16 @@ Sigma's ``.x3f`` is left out: LibRaw reads it only when built with
 which too many non-camera files share.
 """
 
+JPEG_EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".jpe", ".jfif", ".jif"})
+"""Every name a JPEG goes by.
+
+Chrome and Edge on Windows often save a downloaded JPEG as ``.jfif``; Pillow
+reads the file by its content, so each of these opens as a JPEG.
+"""
+
 STILL_IMAGE_EXTENSIONS: frozenset[str] = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng", ".svg",
-}) | RAW_EXTENSIONS | HEIF_EXTENSIONS | AVIF_EXTENSIONS | JXL_EXTENSIONS
+    ".png", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng", ".svg",
+}) | JPEG_EXTENSIONS | RAW_EXTENSIONS | HEIF_EXTENSIONS | AVIF_EXTENSIONS | JXL_EXTENSIONS
 """Every still-image format the viewer opens; what the library indexes."""
 
 VIEWER_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS | VIDEO_EXTENSIONS

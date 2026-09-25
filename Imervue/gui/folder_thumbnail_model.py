@@ -20,14 +20,15 @@ from PySide6.QtWidgets import QFileSystemModel
 
 from Imervue.gui.shown_qimage import shown_qimage
 from Imervue.system.image_listing import list_images
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 logger = logging.getLogger("Imervue.gui.folder_thumbnail_model")
 
 # Rasters that decode quickly: a folder icon is not worth developing a RAW or
 # rasterising an SVG, so the preview is the first of these the folder holds.
 PREVIEW_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
-})
+    ".png", ".bmp", ".tiff", ".tif", ".webp", ".gif",
+}) | JPEG_EXTENSIONS
 DEFAULT_ICON_SIZE = 32
 MIN_ICON_SIZE = 16
 MAX_ICON_SIZE = 128

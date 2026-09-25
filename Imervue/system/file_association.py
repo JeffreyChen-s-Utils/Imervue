@@ -18,7 +18,7 @@ import logging
 import sys
 from pathlib import Path
 
-from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+from Imervue.image.formats import JPEG_EXTENSIONS, STILL_IMAGE_EXTENSIONS
 from Imervue.system.app_paths import app_dir, icon_path as _app_icon_path, is_frozen
 
 logger = logging.getLogger("Imervue.file_assoc")
@@ -33,7 +33,7 @@ _DESKTOP_FILE = "imervue.desktop"
 
 # The freedesktop.org shared-mime-info names.
 _MIME_BY_EXT = {
-    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".png": "image/png", **dict.fromkeys(JPEG_EXTENSIONS, "image/jpeg"),
     ".bmp": "image/bmp", ".tiff": "image/tiff", ".tif": "image/tiff",
     ".webp": "image/webp", ".gif": "image/gif", ".apng": "image/apng",
     ".svg": "image/svg+xml", ".avif": "image/avif", ".jxl": "image/jxl",

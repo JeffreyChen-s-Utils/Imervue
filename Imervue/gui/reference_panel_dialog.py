@@ -35,6 +35,7 @@ from Imervue.image.shown import as_shown_8bit
 from Imervue.gui.file_filters import image_filter
 from Imervue.library import reference_pins
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -42,8 +43,8 @@ if TYPE_CHECKING:
 _THUMB_SIZE = 96
 _PREVIEW_HINT = (640, 480)
 _SUPPORTED_EXTS = {
-    ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp",
-}
+    ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp",
+} | JPEG_EXTENSIONS
 
 
 class ReferencePanelDialog(QDialog):

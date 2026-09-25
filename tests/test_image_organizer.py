@@ -110,6 +110,10 @@ class TestGetTypeBucket:
     def test_jpeg(self):
         assert _get_type_bucket("photo.jpeg") == "JPG"
 
+    @pytest.mark.parametrize("name", ["download.jfif", "photo.JPE", "old.jif"])
+    def test_every_jpeg_name_is_jpg(self, name):
+        assert _get_type_bucket(name) == "JPG"
+
     def test_png(self):
         assert _get_type_bucket("image.png") == "PNG"
 

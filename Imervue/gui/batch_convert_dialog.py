@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 from Imervue.system.image_listing import list_images
 from Imervue.gui.export_source import upright_image
 from Imervue.image.export_metadata import METADATA_ALL, export_save_options
-from Imervue.image.formats import RAW_EXTENSIONS, STILL_IMAGE_EXTENSIONS
+from Imervue.image.formats import JPEG_EXTENSIONS, RAW_EXTENSIONS, STILL_IMAGE_EXTENSIONS
 from Imervue.image.in_place_save import frame_count
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
@@ -44,13 +44,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.batch_convert")
 
-_JPEG_EXT = ".jpeg"
-
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", _JPEG_EXT, ".bmp", ".tiff", ".tif", ".webp",
-    ".gif", ".apng",
-})
-_JPEG_EXTS = (".jpg", _JPEG_EXT)
+    ".png", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng",
+}) | JPEG_EXTENSIONS
 
 
 def _scan_folder(folder: str) -> list[str]:
@@ -107,7 +103,7 @@ class _ConvertWorker(QThread):
         src_ext = Path(src).suffix.lower()
         if src_ext == target_ext:
             return True
-        return src_ext in _JPEG_EXTS and target_ext in _JPEG_EXTS
+        return src_ext in JPEG_EXTENSIONS and target_ext in JPEG_EXTENSIONS
 
     def _convert_one(self, src: str, target_ext: str) -> str:
         """Write *src* in the target format and return the new file's path.

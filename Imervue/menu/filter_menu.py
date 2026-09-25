@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 
-from Imervue.image.formats import RAW_EXTENSIONS
+from Imervue.image.formats import JPEG_EXTENSIONS, RAW_EXTENSIONS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 # 支援的分類
 _EXT_GROUPS = {
     "all": None,
-    "jpg": {".jpg", ".jpeg"},
+    "jpg": set(JPEG_EXTENSIONS),
     "png": {".png"},
     "bmp": {".bmp"},
     "tiff": {".tiff", ".tif"},

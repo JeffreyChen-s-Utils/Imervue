@@ -37,13 +37,14 @@ from Imervue.image.deflicker import (
     frame_luminance_means,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.deflicker_dialog")
 
-_SUPPORTED_EXTS = (".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".webp")
+_SUPPORTED_EXTS = tuple(sorted({".png", ".tiff", ".bmp", ".webp"} | JPEG_EXTENSIONS))
 
 
 class DeflickerDialog(WorkerHostMixin, QDialog):

@@ -22,6 +22,24 @@ def test_sets_nest():
     assert not STILL_IMAGE_EXTENSIONS & VIDEO_EXTENSIONS
 
 
+@pytest.mark.parametrize("ext", [".jpg", ".jpeg", ".jpe", ".jfif", ".jif"])
+def test_every_name_a_jpeg_goes_by_opens(ext):
+    """Chrome and Edge on Windows save downloads as .jfif, which never showed up."""
+    assert ext in formats.JPEG_EXTENSIONS
+    assert ext in STILL_IMAGE_EXTENSIONS
+    assert ext in formats.RASTER_EXTENSIONS
+
+
+def test_a_jfif_decodes_and_is_listed(tmp_path):
+    from PIL import Image
+
+    from Imervue.gpu_image_view.images.image_loader import _scan_images, decode_image_file
+    path = tmp_path / "download.jfif"
+    Image.new("RGB", (6, 4), (200, 30, 30)).save(path, format="JPEG")
+    assert _scan_images(str(tmp_path)) == [str(path)]
+    assert decode_image_file(str(path)).shape == (4, 6, 4)
+
+
 def test_extensions_are_lowercase_with_a_dot():
     assert all(e.startswith(".") and e == e.lower() for e in VIEWER_EXTENSIONS)
 

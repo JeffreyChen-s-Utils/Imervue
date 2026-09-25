@@ -70,7 +70,7 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
 支援的圖片格式
 ^^^^^^^^^^^^^^
 
-- **常見格式**：PNG、JPEG、BMP、TIFF、WebP、GIF、APNG、SVG
+- **常見格式**：PNG、JPEG（.jpg、.jpeg、.jpe、.jfif、.jif）、BMP、TIFF、WebP、GIF、APNG、SVG
 - **RAW 格式**：CR2 / CR3 / CRW（Canon）、NEF / NRW（Nikon）、ARW / SRF / SR2（Sony）、DNG（Adobe）、RAF（Fujifilm）、ORF（Olympus / OM System）、RW2（Panasonic）、RWL（Leica）、PEF（Pentax）、SRW（Samsung）、3FR（Hasselblad）、IIQ（Phase One）、MEF（Mamiya）、MOS（Leaf）、ERF（Epson）、MRW（Minolta）、KDC / DCR（Kodak）
 - **新式格式**：AVIF（內建）；HEIC / HEIF 需要選用的 ``pillow-heif``；JPEG XL 需要選用的 ``pillow-jxl-plugin``
 

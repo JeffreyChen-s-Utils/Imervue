@@ -123,3 +123,8 @@ def test_stack_toggle_starts_from_the_setting(qapp, monkeypatch, saved):
         assert calls == [("stack", not saved)]
     finally:
         window.deleteLater()
+
+
+def test_the_jpg_filter_takes_every_jpeg_name():
+    from Imervue.menu.filter_menu import _EXT_GROUPS
+    assert {".jpg", ".jpeg", ".jpe", ".jfif", ".jif"} <= _EXT_GROUPS["jpg"]

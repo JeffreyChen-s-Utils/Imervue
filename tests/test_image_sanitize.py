@@ -71,6 +71,12 @@ class TestConstants:
         for ext in (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif"):
             assert ext in _PIL_FORMAT_MAP
 
+    @pytest.mark.parametrize("ext", [".jfif", ".jpe", ".jif"])
+    def test_every_jpeg_name_is_listed_and_kept_as_jpeg(self, ext, tmp_path):
+        Image.new("RGB", (4, 4)).save(tmp_path / f"a{ext}", format="JPEG")
+        assert _scan_folder(str(tmp_path)) == [str(tmp_path / f"a{ext}")]
+        assert _PIL_FORMAT_MAP[ext] == "JPEG"
+
     def test_pil_format_map_values_are_valid(self):
         valid_fmts = {"JPEG", "PNG", "TIFF", "WebP", "BMP"}
         for fmt in _PIL_FORMAT_MAP.values():

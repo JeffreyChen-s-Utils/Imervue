@@ -42,6 +42,7 @@ from Imervue.image.perceptual_hash import upright
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -49,9 +50,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.duplicate_detection")
 
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-    ".gif", ".apng",
-})
+    ".png", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng",
+}) | JPEG_EXTENSIONS
 
 
 _METHOD_EXACT = "exact"

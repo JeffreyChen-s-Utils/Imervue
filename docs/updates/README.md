@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-87 | 2026-09-25 | A JPEG named .jfif, .jpe or .jif opens like any other | #fix #formats #browse #batch | [2026-09-b](2026-09-b.md) |
 | U-20260925-86 | 2026-09-25 | The MCP server's folder tools leave out hidden files like the viewer | #fix #mcp #browse | [2026-09-b](2026-09-b.md) |
 | U-20260925-85 | 2026-09-25 | Next / previous folder follows the folder tree's order | #fix #browse #sort | [2026-09-b](2026-09-b.md) |
 | U-20260925-84 | 2026-09-25 | Hidden files and macOS ._ companions stay out of the wall and the batch tools | #fix #browse #batch #library | [2026-09-b](2026-09-b.md) |
@@ -367,4 +368,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 25 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 26 |

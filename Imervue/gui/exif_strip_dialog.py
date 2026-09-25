@@ -33,6 +33,7 @@ from Imervue.system.free_names import free_names
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -40,8 +41,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.exif_strip")
 
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".webp",
-})
+    ".png", ".tiff", ".tif", ".webp",
+}) | JPEG_EXTENSIONS
 
 
 # ---------------------------------------------------------------------------

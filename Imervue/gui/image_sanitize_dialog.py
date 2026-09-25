@@ -37,6 +37,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.system.image_listing import list_images
+from Imervue.image.formats import JPEG_EXTENSIONS
 from Imervue.image.shown import as_shown
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
@@ -73,18 +74,17 @@ _FMT_BMP = "BMP"
 
 _EXT_PNG = ".png"
 _EXT_JPG = ".jpg"
-_EXT_JPEG = ".jpeg"
 _EXT_TIFF = ".tiff"
 _EXT_TIF = ".tif"
 _EXT_WEBP = ".webp"
 _EXT_BMP = ".bmp"
 
 _IMAGE_EXTS = frozenset({
-    _EXT_PNG, _EXT_JPG, _EXT_JPEG, _EXT_TIFF, _EXT_TIF, _EXT_WEBP, _EXT_BMP,
-})
+    _EXT_PNG, _EXT_TIFF, _EXT_TIF, _EXT_WEBP, _EXT_BMP,
+}) | JPEG_EXTENSIONS
 
 _PIL_FORMAT_MAP = {
-    _EXT_JPG: _FMT_JPEG, _EXT_JPEG: _FMT_JPEG,
+    **dict.fromkeys(JPEG_EXTENSIONS, _FMT_JPEG),
     _EXT_PNG: _FMT_PNG, _EXT_TIFF: _FMT_TIFF, _EXT_TIF: _FMT_TIFF,
     _EXT_WEBP: _FMT_WEBP, _EXT_BMP: _FMT_BMP,
 }

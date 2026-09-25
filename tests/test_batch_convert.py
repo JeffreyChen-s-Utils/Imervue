@@ -372,3 +372,12 @@ def test_nothing_is_trashed_when_the_output_replaced_the_source(tmp_path):
     Image.new("RGB", (4, 4)).save(src)
     worker, _results = _worker([src], tmp_path, delete=True)
     assert worker._may_delete(str(src), str(src)) is False  # noqa: SLF001
+
+
+@pytest.mark.parametrize("name", ["download.jfif", "photo.jpe", "old.jif"])
+def test_a_jpeg_under_any_name_is_listed_and_skipped_as_already_jpeg(tmp_path, name):
+    Image.new("RGB", (4, 4)).save(tmp_path / name, format="JPEG")
+    assert _scan_folder(str(tmp_path)) == [str(tmp_path / name)]
+    worker = _ConvertWorker(paths=[], output_dir=str(tmp_path), fmt="JPEG", quality=90,
+                            delete_originals=False, skip_same_fmt=True)
+    assert worker._should_skip(str(tmp_path / name), ".jpg")

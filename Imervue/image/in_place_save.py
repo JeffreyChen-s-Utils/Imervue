@@ -19,7 +19,7 @@ from PIL import Image, JpegImagePlugin, PngImagePlugin
 
 from Imervue.image.exif_merge import read_exif
 from Imervue.image.exif_types import restore_types
-from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.formats import JPEG_EXTENSIONS, ensure_pillow_opener
 from Imervue.image.jpeg_exif import update_jpeg_exif
 from Imervue.image.orientation import strip_xmp_orientation
 from Imervue.image.raw_exif import RAW_EXIF_EXTENSIONS
@@ -30,7 +30,7 @@ from Imervue.system.atomic_write import replace_atomically
 
 _IN_PLACE_FORMATS: dict[str, str] = {
     ".png": "PNG",
-    ".jpg": "JPEG", ".jpeg": "JPEG", ".jpe": "JPEG", ".jfif": "JPEG",
+    **dict.fromkeys(JPEG_EXTENSIONS, "JPEG"),
     ".bmp": "BMP",
     ".tif": "TIFF", ".tiff": "TIFF",
     ".webp": "WEBP",

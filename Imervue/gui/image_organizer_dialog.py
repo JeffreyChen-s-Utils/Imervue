@@ -32,7 +32,7 @@ from Imervue.system.image_listing import list_images
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.dimensions import image_dimensions
-from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+from Imervue.image.formats import JPEG_EXTENSIONS, STILL_IMAGE_EXTENSIONS
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_transfer import carry_sidecars, follow_saved_data
@@ -88,7 +88,7 @@ def _get_resolution_bucket(path: str) -> str:
 def _get_type_bucket(path: str) -> str:
     """Return a normalised extension group name."""
     ext = Path(path).suffix.lower()
-    if ext in (".jpg", ".jpeg"):
+    if ext in JPEG_EXTENSIONS:
         return "JPG"
     return ext.lstrip(".").upper() or "OTHER"
 

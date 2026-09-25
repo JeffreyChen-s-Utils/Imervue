@@ -35,6 +35,7 @@ from pathlib import Path
 
 import numpy as np
 
+from Imervue.image.formats import JPEG_EXTENSIONS
 from Imervue.system.atomic_write import write_text_atomically
 
 MATERIAL_CATEGORIES = (
@@ -46,7 +47,7 @@ MATERIAL_CATEGORIES = (
 )
 DEFAULT_CATEGORY = "texture"
 
-_SUPPORTED_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff")
+_SUPPORTED_EXTENSIONS = frozenset({".png", ".bmp", ".tif", ".tiff"}) | JPEG_EXTENSIONS
 _INDEX_FILENAME = "index.json"
 
 

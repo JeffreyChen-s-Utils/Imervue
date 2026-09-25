@@ -7,7 +7,8 @@ from Imervue.image.in_place_save import in_place_format
 
 
 @pytest.mark.parametrize(("name", "fmt"), [
-    ("a.PNG", "PNG"), ("a.jpg", "JPEG"), ("a.jfif", "JPEG"), ("a.tif", "TIFF"),
+    ("a.PNG", "PNG"), ("a.jpg", "JPEG"), ("a.jfif", "JPEG"), ("a.JIF", "JPEG"),
+    ("a.jpe", "JPEG"), ("a.tif", "TIFF"),
     ("a.webp", "WEBP"), ("a.gif", "GIF"), ("a.bmp", "BMP"),
     ("a.cr2", None), ("a.dng", None), ("a.heic", None), ("a.jxl", None), ("a.svg", None),
     ("noext", None),

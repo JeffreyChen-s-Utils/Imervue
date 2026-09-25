@@ -37,6 +37,7 @@ from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.system.best_effort import best_effort
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -122,8 +123,8 @@ def fill_upscale_model_combo(combo: QComboBox, lang: dict) -> None:
 
 
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-})
+    ".png", ".bmp", ".tiff", ".tif", ".webp",
+}) | JPEG_EXTENSIONS
 
 
 def _scan_folder(folder: str, recursive: bool = False) -> list[str]:

@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from Imervue.image.formats import JPEG_EXTENSIONS
+
 # Bound the cache so a user who tries hundreds of tips doesn't grow
 # resident memory unbounded; a typical session uses 1–4 tips, so the
 # bound is comfortable. Each entry is a small float32 kernel
@@ -91,5 +93,5 @@ def _kernel_from_rgba(arr: np.ndarray) -> np.ndarray:
 def is_supported_extension(path: str | Path) -> bool:
     """Return ``True`` if ``path`` looks like a brush-tip image we can read."""
     return Path(path).suffix.lower() in {
-        ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-    }
+        ".png", ".bmp", ".tiff", ".tif", ".webp",
+    } | JPEG_EXTENSIONS
