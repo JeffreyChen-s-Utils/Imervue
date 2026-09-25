@@ -297,7 +297,7 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 ### Curvas y LUT
 
 - **Editor de curva tonal** — curva RGB arrastrable más R / G / B por canal con interpolación cúbica monótona
-- **Aplicar LUT .cube** — carga cualquier LUT 3D de Adobe (hasta 64³), interpola trilinealmente, mezcla con un control de intensidad
+- **Aplicar LUT .cube** — carga cualquier LUT 3D de Adobe (hasta 64³, incluido el `LUT_3D_INPUT_RANGE` de DaVinci Resolve), interpola trilinealmente, mezcla con un control de intensidad
 - **Split Toning** — matiz + saturación de sombras / luces basado en banderas con pivote de balance
 
 ### Efectos creativos

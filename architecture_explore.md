@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `b5b9429` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `9fb8c4a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 870 | 142,997 |
+| `tests/` | 870 | 143,028 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,139 |
 | `Imervue/gui/` | 166 | 33,115 |
 | `Imervue/puppet/` | 57 | 15,295 |
-| `Imervue/image/` | 125 | 14,598 |
+| `Imervue/image/` | 125 | 14,619 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,894 |
 | `Imervue/multi_language/` | 8 | 14,089 |
 | `Imervue/desktop_pet/` | 34 | 8,260 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,710** | **323,927** |
+| **總計** | **1,710** | **323,979** |
 
-其中 `Imervue/` 套件本身 776 檔 / 166,589 行。
+其中 `Imervue/` 套件本身 776 檔 / 166,610 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -305,7 +305,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-125 個模組、14,598 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+125 個模組、14,619 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -323,7 +323,7 @@ ImervueMainWindow
 `curves.py`(245) 曲線 · `tone_curve.py`(152) flag-based 曲線 · `levels.py`(95) 黑白場+gamma ·
 `channel_mixer.py`(129) 3×3 矩陣 · `hsl_mixer.py`(109) 分頻 HSL · `split_toning.py`(67) ·
 `gradient_map.py`(169) · `gradient_perceptual.py`(144) OkLab/OkLCH 感知混色 ·
-`colormap.py`(63) 科學色階 · `lut.py`(237) Adobe `.cube` 讀取與套用 ·
+`colormap.py`(63) 科學色階 · `lut.py`(258) Adobe `.cube` 讀取與套用（含 Resolve 的 `LUT_*_INPUT_RANGE`、BOM）·
 `auto_color_balance.py`(190) 四種自動白平衡 · `posterize.py`(130) · `solarize.py`(51) ·
 `velvia.py`(65) 亮度加權飽和 · `film_negative.py`(67) 負片轉正 · `filmic_tonemap.py`(94) ·
 `tone_equalizer.py`(80) 分區曝光 · `soft_proof.py`(65) ICC 軟打樣 + 色域外標示
@@ -969,7 +969,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-870 個檔、142,997 行。`pyproject.toml` 定義三個互斥層級 marker：
+870 個檔、143,028 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

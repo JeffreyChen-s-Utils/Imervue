@@ -2272,7 +2272,9 @@ Aplicar LUT .cube
 ^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` le permite elegir
-cualquier archivo Adobe ``.cube`` (1D o 3D, hasta 64³). La LUT se parsea con un ``lru_cache``
+cualquier archivo Adobe ``.cube`` (1D o 3D, hasta 64³). ``LUT_1D_INPUT_RANGE`` /
+``LUT_3D_INPUT_RANGE`` de DaVinci Resolve fija el rango de entrada igual que
+``DOMAIN_MIN`` / ``DOMAIN_MAX``, y también se lee un archivo guardado con BOM. La LUT se parsea con un ``lru_cache``
 clave por ruta + mtime, se evalúa con interpolación trilineal, y se mezcla contra el original
 mediante un deslizador de intensidad. La ruta de la LUT y la intensidad viven en la receta.
 

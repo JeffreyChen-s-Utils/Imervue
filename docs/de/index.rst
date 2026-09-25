@@ -2308,7 +2308,9 @@ angewendet wird.
 ^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` lässt Sie eine
-beliebige Adobe-``.cube``-Datei (1D oder 3D, bis zu 64³) wählen. Die LUT wird mit
+beliebige Adobe-``.cube``-Datei (1D oder 3D, bis zu 64³) wählen. ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE``
+von DaVinci Resolve legt den Eingabebereich wie ``DOMAIN_MIN`` / ``DOMAIN_MAX``
+fest, und auch eine Datei mit BOM wird gelesen. Die LUT wird mit
 einem ``lru_cache`` mit Schlüssel Pfad + mtime geparst, mit trilinearer Interpolation
 ausgewertet und über einen Intensitäts-Schieberegler gegen das Original gemischt.
 Der LUT-Pfad und die Intensität leben im Recipe.

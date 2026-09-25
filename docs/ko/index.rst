@@ -1390,7 +1390,9 @@ EXIF 사이드바에는 자유 텍스트 **Notes** 필드가 있습니다. 입�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 에서 Adobe ``.cube`` 파일(1D / 3D,
-최대 64³)을 선택할 수 있습니다. LUT 는 경로 + mtime 키로
+최대 64³)을 선택할 수 있습니다. DaVinci Resolve의
+``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE`` 지시어는 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 와
+같이 입력 범위를 정하며, BOM이 붙은 파일도 읽을 수 있습니다. LUT 는 경로 + mtime 키로
 ``lru_cache`` 에 유지되고, 삼선형 보간으로 적용되며 강도 슬라이더로
 원본과 블렌딩됩니다. LUT 경로와 강도는 recipe 에 저장됩니다.
 

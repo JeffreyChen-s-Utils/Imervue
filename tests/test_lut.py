@@ -143,3 +143,34 @@ class TestApply:
         arr[..., 3] = 128
         out = lut_mod.apply_cube_lut(arr, path)
         assert (out[..., 3] == 128).all()
+
+
+class TestResolveAndEditorFiles:
+    """.cube files as DaVinci Resolve and BOM-adding editors write them."""
+
+    def test_resolve_input_range_is_the_domain(self, tmp_path):
+        """LUT_3D_INPUT_RANGE read as a data row and failed the whole LUT."""
+        body = _identity_3d_cube(2).replace(
+            "LUT_3D_SIZE 2", "# Created by: DaVinci Resolve\nLUT_3D_SIZE 2\nLUT_3D_INPUT_RANGE 0.0 0.5")
+        lut = lut_mod.parse_cube(_write(tmp_path, "resolve.cube", body))
+        assert lut.domain_min == (0.0, 0.0, 0.0)
+        assert lut.domain_max == (0.5, 0.5, 0.5)
+
+    def test_resolve_1d_input_range_is_the_domain(self, tmp_path):
+        body = "LUT_1D_SIZE 2\nLUT_1D_INPUT_RANGE -0.25 1.25\n0 0 0\n1 1 1\n"
+        lut = lut_mod.parse_cube(_write(tmp_path, "resolve_1d.cube", body))
+        assert not lut.is_3d
+        assert lut.domain_min == (-0.25, -0.25, -0.25)
+        assert lut.domain_max == (1.25, 1.25, 1.25)
+
+    @pytest.mark.parametrize("line", ["LUT_3D_INPUT_RANGE 0.0", "LUT_3D_INPUT_RANGE low high"])
+    def test_a_bad_input_range_raises_valueerror(self, tmp_path, line):
+        body = _identity_3d_cube(2).replace("LUT_3D_SIZE 2", f"LUT_3D_SIZE 2\n{line}")
+        with pytest.raises(ValueError, match="INPUT_RANGE"):
+            lut_mod.parse_cube(_write(tmp_path, "bad.cube", body))
+
+    def test_a_bom_before_the_size_directive(self, tmp_path):
+        """The BOM hid LUT_3D_SIZE, so the LUT had no size."""
+        path = tmp_path / "bom.cube"
+        path.write_bytes(b"\xef\xbb\xbf" + _identity_3d_cube(2).encode("utf-8"))
+        assert lut_mod.parse_cube(str(path)).size == 2

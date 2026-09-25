@@ -2348,7 +2348,9 @@ Bridge (``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``) и эксп
 ^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT``
-позволяет выбрать любой файл Adobe ``.cube`` (1D или 3D, до 64³).
+позволяет выбрать любой файл Adobe ``.cube`` (1D или 3D, до 64³). ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE``
+из DaVinci Resolve задаёт входной диапазон так же, как ``DOMAIN_MIN`` /
+``DOMAIN_MAX``, а файл, сохранённый с BOM, тоже читается.
 LUT парсится с ``lru_cache`` по ключу пути + mtime, оценивается
 трилинейной интерполяцией и смешивается с оригиналом через слайдер
 интенсивности. Путь к LUT и интенсивность живут в рецепте.

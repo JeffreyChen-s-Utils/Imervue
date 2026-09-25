@@ -2236,7 +2236,9 @@ Apply .cube LUT
 ^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` lets you pick any Adobe ``.cube`` file
-(1D or 3D, up to 64³). The LUT is parsed with an ``lru_cache`` keyed by
+(1D or 3D, up to 64³). DaVinci Resolve's ``LUT_1D_INPUT_RANGE`` /
+``LUT_3D_INPUT_RANGE`` sets the input domain the way ``DOMAIN_MIN`` /
+``DOMAIN_MAX`` do, and a file saved with a BOM loads too. The LUT is parsed with an ``lru_cache`` keyed by
 path + mtime, evaluated with trilinear interpolation, and blended against
 the original via an intensity slider. The LUT path and intensity live on
 the recipe.

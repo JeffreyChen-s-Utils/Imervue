@@ -297,7 +297,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 ### Kurven & LUTs
 
 - **Tone-Curve-Editor** — ziehbare RGB-Kurve plus per-Kanal R / G / B mit monotone-cubic Interpolation
-- **Apply .cube LUT** — beliebige Adobe-3D-LUT laden (bis 64³), trilinear interpolieren, mit Intensitäts-Slider mischen
+- **Apply .cube LUT** — beliebige Adobe-3D-LUT laden (bis 64³, auch mit DaVinci Resolves `LUT_3D_INPUT_RANGE`), trilinear interpolieren, mit Intensitäts-Slider mischen
 - **Split Toning** — Flag-basiert Schatten- / Lichter-Hue + Sättigung mit Balance-Pivot
 
 ### Kreative Effekte

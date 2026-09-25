@@ -1377,7 +1377,9 @@ R、G、B 四條通道。點擊空白處新增控制點、拖曳移動、右鍵�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 可選擇任意 Adobe ``.cube`` 檔案
-（1D / 3D，最大 64³）。LUT 以 ``lru_cache`` 依路徑 + mtime 快取，使用
+（1D / 3D，最大 64³）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
+``LUT_3D_INPUT_RANGE`` 會像 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 一樣設定輸入範圍，帶 BOM
+的檔案也能讀取。LUT 以 ``lru_cache`` 依路徑 + mtime 快取，使用
 三線性插值套用，並透過強度滑桿與原始影像混合。LUT 路徑與強度儲存在
 recipe。
 

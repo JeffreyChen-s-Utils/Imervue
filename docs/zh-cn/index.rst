@@ -1346,7 +1346,9 @@ R、G、B 四条通道。点击空白处新增控制点、拖拽移动、右键�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 可载入任意 Adobe ``.cube`` 文件
-（1D / 3D，最高 64³）。LUT 以 ``lru_cache`` 按路径 + mtime 缓存，使用
+（1D / 3D，最高 64³）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
+``LUT_3D_INPUT_RANGE`` 会像 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 一样设定输入范围，带 BOM
+的文件也能读取。LUT 以 ``lru_cache`` 按路径 + mtime 缓存，使用
 三线性插值并通过强度滑块与原图混合，LUT 路径与强度存入 recipe。
 
 虚拟副本（Virtual Copies）

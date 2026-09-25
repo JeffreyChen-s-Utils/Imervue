@@ -1398,7 +1398,9 @@ monotone cubic で補間され、カーブは recipe に保存されて非破壊
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` で任意の Adobe ``.cube`` ファイル
-（1D / 3D、最大 64³）を選択できます。LUT はパス+mtime キーで
+（1D / 3D、最大 64³）を選択できます。DaVinci Resolve の
+``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE`` は ``DOMAIN_MIN`` / ``DOMAIN_MAX`` と同じく
+入力範囲を決め、BOM 付きのファイルも読み込めます。LUT はパス+mtime キーで
 ``lru_cache`` に保持され、トリリニア補間で適用、強度スライダーで原画
 とブレンドします。LUT パスと強度は recipe に保存されます。
 

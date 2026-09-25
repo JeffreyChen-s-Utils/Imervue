@@ -297,7 +297,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 ### Courbes et LUT
 
 - **Éditeur de courbe tonale** — courbe RGB déplaçable plus canaux R / G / B individuels avec interpolation cubique monotone
-- **Appliquer un LUT .cube** — charger n'importe quel LUT 3D Adobe (jusqu'à 64³), interpolation trilinéaire, mélange via curseur d'intensité
+- **Appliquer un LUT .cube** — charger n'importe quel LUT 3D Adobe (jusqu'à 64³, y compris le `LUT_3D_INPUT_RANGE` de DaVinci Resolve), interpolation trilinéaire, mélange via curseur d'intensité
 - **Split Toning** — teinte + saturation par drapeau pour les ombres / hautes lumières avec pivot d'équilibre
 
 ### Effets créatifs
