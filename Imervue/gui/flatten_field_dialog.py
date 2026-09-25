@@ -46,7 +46,7 @@ class _FlattenWorker(QThread):
             result = flatten_background(load_rgba(self._path), self._degree, divide=self._divide)
             Image.fromarray(result, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Background flatten failed: %s", exc)
             self.done.emit(False, str(exc))
 

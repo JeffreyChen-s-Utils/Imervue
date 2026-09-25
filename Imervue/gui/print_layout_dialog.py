@@ -45,7 +45,7 @@ class _Worker(QThread):
         try:
             export_print_pdf(self._layout, self._out)
             self.done.emit(True, self._out)
-        except (ImportError, OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Print export failed: %s", exc)
             self.done.emit(False, str(exc))
 

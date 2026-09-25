@@ -109,7 +109,7 @@ class _StampWorker(QThread):
             result = apply_clone_stamp(arr, self._stamps)
             Image.fromarray(result).save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError, RuntimeError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Clone stamp failed: %s", exc)
             self.done.emit(False, str(exc))
 

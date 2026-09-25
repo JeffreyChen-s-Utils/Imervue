@@ -45,7 +45,7 @@ class _FrameWorker(QThread):
             arr = add_frame(load_rgba(self._path), self._options)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Frame failed: %s", exc)
             self.done.emit(False, str(exc))
 

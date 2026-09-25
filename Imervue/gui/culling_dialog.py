@@ -50,7 +50,7 @@ class _AutoCullWorker(QThread):
                 group_fn=lambda paths: find_similar(paths, self._threshold),
                 score_fn=lambda path: sharpness_score(load_rgba(path)),
             )
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Auto-cull failed: %s", exc)
             picks, rejects = [], []
         self.done.emit(picks, rejects)

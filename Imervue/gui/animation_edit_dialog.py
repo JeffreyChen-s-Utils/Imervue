@@ -45,7 +45,7 @@ class _AnimationWorker(QThread):
         try:
             edit_animation(self._path, self._operation, self._out, speed=self._speed)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Animation edit failed: %s", exc)
             self.done.emit(False, str(exc))
 

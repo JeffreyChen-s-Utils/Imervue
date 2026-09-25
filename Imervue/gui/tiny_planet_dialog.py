@@ -49,7 +49,7 @@ class _TinyPlanetWorker(QThread):
             arr = tiny_planet(load_rgba(self._path), self._size)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Tiny planet failed: %s", exc)
             self.done.emit(False, str(exc))
 

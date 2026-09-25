@@ -46,7 +46,7 @@ class _MemeWorker(QThread):
             arr = make_meme(load_rgba(self._path), self._top, self._bottom)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Meme failed: %s", exc)
             self.done.emit(False, str(exc))
 

@@ -45,7 +45,7 @@ class _DitherWorker(QThread):
             Image.fromarray(ordered_dither(load_rgba(self._path), self._levels),
                             mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Dither failed: %s", exc)
             self.done.emit(False, str(exc))
 

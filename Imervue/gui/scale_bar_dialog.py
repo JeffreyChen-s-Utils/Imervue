@@ -55,7 +55,7 @@ class _ScaleBarWorker(QThread):
             arr = add_scale_bar(load_rgba(self._path), self._ppu, self._unit)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Scale bar failed: %s", exc)
             self.done.emit(False, str(exc))
 

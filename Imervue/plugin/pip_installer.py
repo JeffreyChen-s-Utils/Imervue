@@ -418,6 +418,9 @@ class _InstallWorker(QThread):
                 ok, message = self._install_all(constraints, extra_args)
         except OSError as exc:
             ok, message = False, str(exc)
+        except Exception as exc:  # a worker must always report
+            logger.exception("Installing packages failed")
+            ok, message = False, str(exc)
         self.result_ready.emit(ok, message)
 
     def _frozen_target_args(self) -> list[str]:

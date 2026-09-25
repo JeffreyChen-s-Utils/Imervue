@@ -56,7 +56,7 @@ class _OptimizeWorker(QThread):
             with open(self._out, "wb") as handle:
                 handle.write(data)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Optimize failed: %s", exc)
             self.done.emit(False, str(exc))
 

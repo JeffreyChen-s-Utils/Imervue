@@ -54,7 +54,7 @@ class _AnaglyphWorker(QThread):
             arr = anaglyph(load_rgba(self._left), load_rgba(self._right), self._method)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Anaglyph failed: %s", exc)
             self.done.emit(False, str(exc))
 

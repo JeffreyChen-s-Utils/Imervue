@@ -48,7 +48,7 @@ class _ClaheWorker(QThread):
             arr = apply_clahe(load_rgba(self._path), self._clip, self._tiles)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("CLAHE failed: %s", exc)
             self.done.emit(False, str(exc))
 
