@@ -238,26 +238,20 @@ def test_context_menu_no_op_on_empty_selection(qapp):
         view.deleteLater()
 
 
-def test_reveal_path_handles_unknown_target(qapp, tmp_path, monkeypatch):
-    """Reveal delegates to QDesktopServices. The opener is stubbed so the
-    test never launches a real file-manager window (which would otherwise
-    pop open — and stay open — on every test run)."""
-    from PySide6.QtGui import QDesktopServices
+def test_reveal_in_folder_selects_the_photo(qapp, tmp_path, monkeypatch):
+    """Reveal used to open the folder with nothing selected; Show in Explorer elsewhere selects.
 
-    from Imervue.gui.image_list_view import ImageListView
-    opened: list = []
-
-    def _stub_open_url(url):
-        opened.append(url)
-        return True
-
-    monkeypatch.setattr(QDesktopServices, "openUrl", _stub_open_url)
-    view = ImageListView(main_window=None)
+    The file manager is stubbed so the test never opens a real window.
+    """
+    from Imervue.gui import image_list_view
+    revealed: list = []
+    monkeypatch.setattr(image_list_view, "reveal_or_warn", revealed.append)
+    view = image_list_view.ImageListView(main_window=None)
     try:
-        view._reveal_path(str(tmp_path / "nope.png"))  # noqa: SLF001
+        view._reveal_path(str(tmp_path / "a.png"))  # noqa: SLF001
     finally:
         view.deleteLater()
-    assert opened, "reveal should delegate to QDesktopServices.openUrl"
+    assert revealed == [str(tmp_path / "a.png")]
 
 
 class TestThumbFetchRetry:

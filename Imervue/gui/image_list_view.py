@@ -33,6 +33,7 @@ from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.orientation import exif_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_manager import reveal_or_warn
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -581,16 +582,10 @@ class ImageListView(QTableView):
         elif chosen is reveal_action:
             self._reveal_path(paths[0])
 
-    def _reveal_path(self, path: str) -> None:
-        """Open the OS file manager at ``path``'s containing folder.
-
-        Falls back gracefully when the platform has no opener so a
-        kiosk-style deployment doesn't crash the table view.
-        """
-        from PySide6.QtCore import QUrl
-        from PySide6.QtGui import QDesktopServices
-        folder = str(Path(path).parent)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+    @staticmethod
+    def _reveal_path(path: str) -> None:
+        """Open the OS file manager with ``path`` selected, as Show in Explorer does."""
+        reveal_or_warn(path)
 
     def _relocate_missing(self, old_path: str) -> None:
         from PySide6.QtWidgets import QFileDialog

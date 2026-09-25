@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 from Imervue.gui.dialog_rows import confirm
 from Imervue.gui.menu_tree import submenu_index, submenu_of
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_manager import reveal_in_file_manager
+from Imervue.system.file_manager import reveal_or_warn
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 if TYPE_CHECKING:
@@ -330,4 +330,4 @@ def _open_plugin_folder():
     plugin_dir = _get_plugin_dir()
     plugin_dir.mkdir(exist_ok=True)
 
-    reveal_in_file_manager(str(plugin_dir), select=False)
+    reveal_or_warn(str(plugin_dir), select=False)

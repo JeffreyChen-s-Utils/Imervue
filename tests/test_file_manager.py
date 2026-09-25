@@ -98,8 +98,21 @@ def test_plugin_folder_is_opened_not_selected(monkeypatch, tmp_path):
     from Imervue.menu import plugin_menu
     calls = []
     monkeypatch.setattr(plugin_menu, "_get_plugin_dir", lambda: tmp_path / "plugins")
-    monkeypatch.setattr(plugin_menu, "reveal_in_file_manager",
+    monkeypatch.setattr(plugin_menu, "reveal_or_warn",
                         lambda path, *, select=True: calls.append((path, select)))
     plugin_menu._open_plugin_folder()  # noqa: SLF001
     assert calls == [(str(tmp_path / "plugins"), False)]
     assert (tmp_path / "plugins").is_dir()
+
+
+def test_a_plugin_folder_the_file_manager_cant_open_is_logged(monkeypatch, caplog, tmp_path):
+    from Imervue.menu import plugin_menu
+
+    def missing(*_a, **_k):
+        raise FileNotFoundError("explorer")
+
+    monkeypatch.setattr(plugin_menu, "_get_plugin_dir", lambda: tmp_path / "plugins")
+    monkeypatch.setattr(fm.subprocess, "Popen", missing)
+    with caplog.at_level("DEBUG", logger="Imervue"):
+        plugin_menu._open_plugin_folder()  # noqa: SLF001
+    assert [r.levelname for r in caplog.records if "reveal" in r.getMessage()] == ["WARNING"]
