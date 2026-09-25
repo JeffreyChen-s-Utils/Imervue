@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `aaf6c29` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `f456805` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 889 | 148,574 |
+| `tests/` | 890 | 148,810 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
-| `Imervue/gui/` | 167 | 33,370 |
+| `Imervue/gui/` | 167 | 33,443 |
 | `Imervue/puppet/` | 57 | 15,296 |
-| `Imervue/image/` | 128 | 15,355 |
+| `Imervue/image/` | 128 | 15,368 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,279 |
-| `Imervue/multi_language/` | 8 | 14,204 |
+| `Imervue/multi_language/` | 8 | 14,244 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
@@ -83,10 +83,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（17 個外掛） | 64 | 14,374 |
-| **總計** | **1,740** | **331,580** |
+| `plugins/`（17 個外掛） | 64 | 14,382 |
+| **總計** | **1,741** | **331,950** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,632 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,758 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -311,7 +311,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-128 個模組、15,355 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+128 個模組、15,368 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -360,7 +360,7 @@ ImervueMainWindow
 
 `hdr_merge.py`(117) · `panorama.py`(84)（包 OpenCV `Stitcher`） · `focus_stack.py`(122) ·
 `stack_blend.py`(120) 統計堆疊 · `collage.py`(64) · `anaglyph.py`(79) 紅藍 3D ·
-`deflicker.py`(108) 縮時去閃 · `id_photo_sheet.py`(72) 證件照拼版 · `print_layout.py`(118) 列印拼版 PDF（reportlab；影像經 `decode_image`） ·
+`deflicker.py`(108) 縮時去閃 · `id_photo_sheet.py`(72) 證件照拼版 · `print_layout.py`(131) 列印拼版 PDF（reportlab；影像經 `decode_image`） ·
 `multipage.py`(116) 多頁 PDF/TIFF 合併與拆分（`page_count`：頁數是影格數，但 PSD 的影格是同一張圖的圖層、相機 JPEG 的 MPF 預覽（Pillow 開成 MPO）不是一頁，都算 1 頁，只有 MPF 標成立體／多角度／全景的才有多頁；`in_place_save.frame_count` 也照這個算，右鍵「拆分頁面」也用它；合併時每頁經檢視器的 `decode_image` 轉正、轉 sRGB，以 `replace_atomically` 寫入；拆出的頁面經 `free_names` 一組挑名，不蓋掉上次拆出的頁面）
 
 #### 遮罩 / 修補 / 圖層
@@ -537,7 +537,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-167 個檔、33,370 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+167 個檔、33,443 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -618,7 +618,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `portrait_retouch_dialog.py`(162) · `noise_sharpen_dialog.py`(156) · `face_detection_dialog.py`(236) ·
 `hdr_merge_dialog.py`(151) · `panorama_dialog.py`(162) · `focus_stack_dialog.py`(150) ·
 `stack_blend_dialog.py`(170) · `collage_dialog.py`(87) · `deflicker_dialog.py`(237) 縮時去閃（檢視器解碼；輸出到 `deflickered/`，可寫回的格式沿用並帶 EXIF，RAW 存 PNG） ·
-`id_photo_sheet_dialog.py`(106) · `print_layout_dialog.py`(168)
+`id_photo_sheet_dialog.py`(106) · `print_layout_dialog.py`(222)
 
 #### 批次 / 匯出 / 管理
 
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-889 個檔、148,574 行。`pyproject.toml` 定義三個互斥層級 marker：
+890 個檔、148,810 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

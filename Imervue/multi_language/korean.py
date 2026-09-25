@@ -1986,6 +1986,14 @@ korean_word_dict = {
     "print_crop_marks": "재단 표시",
     "print_output": "출력 PDF:",
     "print_export": "PDF 내보내기",
+    "print_margin": "여백:",
+    "print_margin_tooltip": "페이지 네 면의 빈 공간 너비 (밀리미터)",
+    "print_gutter": "간격:",
+    "print_gutter_tooltip": "이웃한 이미지 사이의 거리 (밀리미터)",
+    "print_no_images": "인쇄할 이미지를 하나 이상 추가하세요.",
+    "print_no_room": "여백과 간격이 너무 커서 이미지를 놓을 공간이 없습니다. 줄이거나 행·열 수를 줄이세요.",
+    "print_error": "내보내기 실패: {err}",
+    "print_done": "인쇄 레이아웃 저장됨: {path}",
 
     # --- GPS Geotag ---
     "geotag_title": "GPS 지오태그",

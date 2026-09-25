@@ -2009,6 +2009,14 @@ english_word_dict = {
     "print_crop_marks": "Crop marks",
     "print_output": "Output PDF:",
     "print_export": "Export PDF",
+    "print_margin": "Margin:",
+    "print_margin_tooltip": "Blank border on every side of the page, in millimetres",
+    "print_gutter": "Gutter:",
+    "print_gutter_tooltip": "Space between neighbouring pictures, in millimetres",
+    "print_no_images": "Add at least one picture to print.",
+    "print_no_room": "The margins and gutter leave no room for the pictures. Make them smaller, or use fewer rows or columns.",
+    "print_error": "Export failed: {err}",
+    "print_done": "Print layout written: {path}",
 
     # --- GPS Geotag ---
     "geotag_title": "GPS Geotag",

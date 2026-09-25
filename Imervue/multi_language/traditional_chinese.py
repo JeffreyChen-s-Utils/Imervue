@@ -1974,6 +1974,14 @@ traditional_chinese_word_dict = {
     "print_crop_marks": "裁切標記",
     "print_output": "輸出 PDF：",
     "print_export": "匯出 PDF",
+    "print_margin": "邊界：",
+    "print_margin_tooltip": "頁面四周留白的寬度（公釐）",
+    "print_gutter": "間距：",
+    "print_gutter_tooltip": "相鄰兩張圖片之間的距離（公釐）",
+    "print_no_images": "請至少加入一張要列印的圖片。",
+    "print_no_room": "邊界與間距太大，已經放不下圖片。請調小它們，或減少列數、欄數。",
+    "print_error": "匯出失敗：{err}",
+    "print_done": "已寫入列印排版：{path}",
 
     # --- GPS Geotag ---
     "geotag_title": "GPS 地理標記",

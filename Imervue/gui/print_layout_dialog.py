@@ -11,10 +11,12 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QListWidget,
+    QMessageBox,
     QProgressBar,
     QPushButton,
     QSpinBox,
@@ -23,14 +25,28 @@ from PySide6.QtWidgets import (
 
 from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
+from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.image.print_layout import PAGE_SIZES, PrintLayout, export_print_pdf
+from Imervue.image.print_layout import (
+    PAGE_SIZES, PT_PER_MM, PrintLayout, export_print_pdf, leaves_room,
+)
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 logger = logging.getLogger("Imervue.print_layout_dialog")
+
+_TITLE = ("print_title", "Print Layout")
+# attribute, (min, max) mm, default in points, label key / fallback, tooltip key / fallback
+_SPACING_ROWS = (
+    ("_margin", (0.0, 50.0), PrintLayout.margin_pt,
+     ("print_margin", "Margin:"),
+     ("print_margin_tooltip", "Blank border on every side of the page, in millimetres")),
+    ("_gutter", (0.0, 30.0), PrintLayout.gutter_pt,
+     ("print_gutter", "Gutter:"),
+     ("print_gutter_tooltip", "Space between neighbouring pictures, in millimetres")),
+)
 
 
 class _Worker(QThread):
@@ -56,7 +72,7 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
         self._ui = ui
         self._worker: _Worker | None = None
         lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get("print_title", "Print Layout"))
+        self.setWindowTitle(lang.get(*_TITLE))
         self.setMinimumWidth(520)
 
         self._files = QListWidget()
@@ -87,6 +103,7 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
         form.addRow("", self._landscape)
         form.addRow(lang.get("print_rows", "Rows:"), self._rows)
         form.addRow(lang.get("print_cols", "Columns:"), self._cols)
+        self._add_spacing_rows(form, lang)
         form.addRow("", self._crop_marks)
 
         out_row, self._out_edit = folder_picker_row(
@@ -114,14 +131,22 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
         layout.addWidget(self._progress)
         layout.addWidget(buttons)
 
+    def _add_spacing_rows(self, form: QFormLayout, lang: dict) -> None:
+        """Margin and gutter spins in millimetres, stored as ``self.<attribute>``."""
+        for attr, (lo, hi), default_pt, label, tooltip in _SPACING_ROWS:
+            spin = QDoubleSpinBox()
+            spin.setRange(lo, hi)
+            spin.setDecimals(1)
+            spin.setSingleStep(0.5)
+            spin.setSuffix(" mm")
+            spin.setValue(round(default_pt / PT_PER_MM, 1))
+            spin.setToolTip(lang.get(*tooltip))
+            setattr(self, attr, spin)
+            form.addRow(lang.get(*label), spin)
+
     def _populate_from_viewer(self) -> None:
-        viewer = getattr(self._ui, "viewer", None)
-        model = getattr(viewer, "model", None) if viewer else None
-        images = getattr(model, "images", None) if model else None
-        if not images:
-            return
-        for img in images[:64]:
-            path = getattr(img, "path", None) or str(img)
+        """Start with the selected pictures, or every picture in the folder."""
+        for path in selection_or_all(getattr(self._ui, "viewer", None)):
             self._files.addItem(str(path))
 
     def _add_files(self) -> None:
@@ -138,18 +163,39 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
         save_path_into(
             self, self._out_edit, lang.get("print_output", "Output PDF"), "PDF (*.pdf)")
 
-    def _run(self) -> None:
-        paths = [self._files.item(i).text() for i in range(self._files.count())]
-        out = self._out_edit.text().strip()
-        if not out:
-            return
-        layout = PrintLayout(
+    def _layout(self) -> PrintLayout:
+        """The layout the form describes, for the pictures in the list."""
+        return PrintLayout(
             page_size=self._page_combo.currentText(),
             landscape=self._landscape.isChecked(),
             rows=self._rows.value(), cols=self._cols.value(),
+            margin_pt=self._margin.value() * PT_PER_MM,
+            gutter_pt=self._gutter.value() * PT_PER_MM,
             crop_marks=self._crop_marks.isChecked(),
-            image_paths=paths,
+            image_paths=[self._files.item(i).text() for i in range(self._files.count())],
         )
+
+    def _refusal(self, layout: PrintLayout) -> str:
+        """Why *layout* can't be exported, or ``""`` when it can."""
+        lang = language_wrapper.language_word_dict
+        if not layout.image_paths:
+            return lang.get("print_no_images", "Add at least one picture to print.")
+        if not leaves_room(layout):
+            return lang.get(
+                "print_no_room",
+                "The margins and gutter leave no room for the pictures. "
+                "Make them smaller, or use fewer rows or columns.")
+        return ""
+
+    def _run(self) -> None:
+        out = self._out_edit.text().strip()
+        if not out:
+            return
+        layout = self._layout()
+        refusal = self._refusal(layout)
+        if refusal:
+            QMessageBox.information(self, language_wrapper.language_word_dict.get(*_TITLE), refusal)
+            return
         self._run_btn.setEnabled(False)
         self._progress.setVisible(True)
         self._worker = _Worker(layout, out)
@@ -157,11 +203,19 @@ class PrintLayoutDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, info: str) -> None:
-        _ = info
+        """*info* is the written PDF on success, else the error to show."""
         self._progress.setVisible(False)
         self._run_btn.setEnabled(True)
-        if ok:
-            self.accept()
+        lang = language_wrapper.language_word_dict
+        if not ok:
+            QMessageBox.warning(self, lang.get(*_TITLE),
+                                lang.get("print_error", "Export failed: {err}").format(err=info))
+            return
+        toast = getattr(self._ui, "toast", None)
+        if toast is not None:
+            toast.info(lang.get("print_done", "Print layout written: {path}").format(
+                path=Path(info).name))
+        self.accept()
 
 
 def open_print_layout(ui: ImervueMainWindow) -> None:

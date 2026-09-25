@@ -1988,6 +1988,14 @@ japanese_word_dict = {
     "print_crop_marks": "トンボ",
     "print_output": "出力 PDF：",
     "print_export": "PDF を書き出し",
+    "print_margin": "余白：",
+    "print_margin_tooltip": "ページの四辺に空ける幅（ミリメートル）",
+    "print_gutter": "間隔：",
+    "print_gutter_tooltip": "隣り合う画像どうしの間隔（ミリメートル）",
+    "print_no_images": "印刷する画像を 1 枚以上追加してください。",
+    "print_no_room": "余白と間隔が大きすぎて画像を置く場所がありません。小さくするか、行数・列数を減らしてください。",
+    "print_error": "書き出しに失敗しました：{err}",
+    "print_done": "印刷レイアウトを書き出しました：{path}",
 
     # --- GPS Geotag ---
     "geotag_title": "GPS ジオタグ",

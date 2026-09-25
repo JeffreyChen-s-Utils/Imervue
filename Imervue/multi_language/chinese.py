@@ -1975,6 +1975,14 @@ chinese_word_dict = {
     "print_crop_marks": "裁切标记",
     "print_output": "输出 PDF：",
     "print_export": "导出 PDF",
+    "print_margin": "边距：",
+    "print_margin_tooltip": "页面四周留白的宽度（毫米）",
+    "print_gutter": "间距：",
+    "print_gutter_tooltip": "相邻两张图片之间的距离（毫米）",
+    "print_no_images": "请至少添加一张要打印的图片。",
+    "print_no_room": "边距与间距太大，已经放不下图片。请调小它们，或减少行数、列数。",
+    "print_error": "导出失败：{err}",
+    "print_done": "已写入打印排版：{path}",
 
     # --- GPS Geotag ---
     "geotag_title": "GPS 地理标记",
