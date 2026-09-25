@@ -1620,7 +1620,7 @@ Selecione várias imagens, depois clique com o botão direito > ``Criar GIF / V�
 - Arraste para reordenar quadros
 - Defina quadros por segundo (FPS)
 - Dimensões personalizadas
-- Opção de loop
+- Opção de loop: repetir sem fim ou, se desligada, tocar uma vez
 - O arquivo sugerido é ``output.gif`` ao lado do primeiro quadro, numerado (``output_1.gif``) se esse nome estiver ocupado; um nome digitado que já existe só é substituído após confirmação
 
 ----

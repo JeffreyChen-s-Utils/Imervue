@@ -1634,7 +1634,7 @@ Seleccione varias imágenes, después clic derecho > ``Create GIF / Video``.
 - Arrastrar para reordenar fotogramas
 - Establecer fotogramas por segundo (FPS)
 - Dimensiones personalizadas
-- Opción de bucle
+- Opción de bucle: repetir sin fin o, si está desactivada, reproducir una vez
 - Se propone ``output.gif`` junto al primer fotograma, numerado (``output_1.gif``) si ese nombre está ocupado; un nombre escrito que ya existe solo se reemplaza tras confirmarlo
 
 ----

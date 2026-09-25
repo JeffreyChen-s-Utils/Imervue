@@ -207,3 +207,38 @@ def test_a_file_picked_through_browse_is_not_asked_twice(
     assert replace_answers["asked"] == []
     assert dlg._worker is not None  # noqa: SLF001
     dlg._worker = None  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# GIF looping
+# ---------------------------------------------------------------------------
+
+
+def _made_gif(tmp_path, loop):
+    from PIL import Image
+    frames = []
+    for i, colour in enumerate(("red", "blue")):
+        frame = tmp_path / f"f{i}.png"
+        Image.new("RGB", (8, 8), colour).save(frame)
+        frames.append(str(frame))
+    out = tmp_path / "out.gif"
+    results = []
+    worker = mod._CreateWorker(frames, str(out), "GIF", 10, 0, 0, loop)  # noqa: SLF001
+    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
+    worker.run()
+    worker.deleteLater()
+    assert results == [(True, str(out))]
+    return out.read_bytes()
+
+
+def test_a_looping_gif_loops_forever(qapp, tmp_path):
+    data = _made_gif(tmp_path, loop=True)
+    netscape = data.find(b"NETSCAPE2.0")
+    assert netscape >= 0
+    # Block size 3, sub-block id 1, then the little-endian loop count: 0 = forever.
+    assert data[netscape + 11:netscape + 15] == b"\x03\x01\x00\x00"
+
+
+def test_a_gif_without_loop_plays_once(qapp, tmp_path):
+    """Loop count 1 was written, which browsers play twice (one repeat)."""
+    assert b"NETSCAPE2.0" not in _made_gif(tmp_path, loop=False)

@@ -1666,7 +1666,7 @@ Mehrere Bilder auswählen, dann Rechtsklick > ``GIF / Video erstellen``.
 - Per Drag Frames neu anordnen
 - Bilder pro Sekunde (FPS) festlegen
 - Eigene Abmessungen
-- Loop-Option
+- Loop-Option: endlos wiederholen oder, wenn aus, einmal abspielen
 - Vorgeschlagen wird ``output.gif`` neben dem ersten Bild, nummeriert (``output_1.gif``), wenn der Name vergeben ist; ein eingetippter, bereits vorhandener Name wird erst nach Rückfrage ersetzt
 
 ----

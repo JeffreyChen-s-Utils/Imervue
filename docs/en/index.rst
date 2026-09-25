@@ -1608,7 +1608,7 @@ Select multiple images, then right-click > ``Create GIF / Video``.
 - Drag to reorder frames
 - Set frames per second (FPS)
 - Custom dimensions
-- Loop option
+- Loop option: loop forever, or play once when it is off
 - The suggested file is ``output.gif`` beside the first frame, numbered (``output_1.gif``) when that name is taken; a typed name that already exists is replaced only after you confirm
 
 ----

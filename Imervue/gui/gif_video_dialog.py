@@ -98,17 +98,17 @@ class _CreateWorker(QThread):
         if not frames:
             return
 
-        duration = int(1000 / max(self._fps, 1))
-        loop_val = 0 if self._loop else 1
-
+        # Loop count 0 is forever. Without a loop count the GIF plays once; a
+        # count of 1 means one repeat, which browsers play twice.
+        looping = {"loop": 0} if self._loop else {}
         frames[0].save(
             self._output,
             format="GIF",
             save_all=True,
             append_images=frames[1:],
-            duration=duration,
-            loop=loop_val,
+            duration=int(1000 / max(self._fps, 1)),
             optimize=True,
+            **looping,
         )
 
     def _create_video(self):
