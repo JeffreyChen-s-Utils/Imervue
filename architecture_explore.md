@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `02fb3c1` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `ab3a945` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 877 | 145,072 |
+| `tests/` | 878 | 145,199 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,144 |
 | `Imervue/gui/` | 167 | 33,279 |
 | `Imervue/puppet/` | 57 | 15,296 |
-| `Imervue/image/` | 126 | 14,799 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,988 |
+| `Imervue/image/` | 126 | 14,843 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,991 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
-| `Imervue/mcp_server/` | 16 | 4,671 |
-| `Imervue/library/` | 32 | 4,255 |
+| `Imervue/mcp_server/` | 16 | 4,673 |
+| `Imervue/library/` | 32 | 4,230 |
 | `Imervue/menu/` | 11 | 3,595 |
-| `Imervue/` 根層 | 5 | 1,567 |
+| `Imervue/` 根層 | 5 | 1,571 |
 | `Imervue/plugin/` | 10 | 2,246 |
-| `Imervue/system/` | 28 | 2,825 |
+| `Imervue/system/` | 29 | 2,912 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,361 |
-| **總計** | **1,721** | **326,650** |
+| **總計** | **1,723** | **326,892** |
 
-其中 `Imervue/` 套件本身 780 檔 / 167,217 行。
+其中 `Imervue/` 套件本身 781 檔 / 167,332 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -104,7 +104,7 @@ py -m Imervue [--debug] [--software_opengl] [file]
    ├─ 1. 凍結環境偵測 → 關閉 OpenGL_accelerate（Nuitka 打包後 Cython 擴充會壞）
    ├─ 2. Windows：強制 UTF-8 I/O（避免 CJK 顯示成 ?）
    ├─ 3. main()：setup_logging() + install_exception_logging()（在 import PySide6 之前，
-   │      所以連啟動期的例外也會進 imervue.log）
+   │      所以連啟動期的例外也會進 imervue.log）→ raise_pixel_limit()（Pillow 像素上限依記憶體放寬）
    ├─ 3b. _set_windows_app_user_model_id() → 工作列圖示身分
    ├─ 4. QApplication + setQuitOnLastWindowClosed(False)
    ├─ 5. read_user_setting()  ← 必須在任何 widget 之前
@@ -121,8 +121,8 @@ py -m Imervue [--debug] [--software_opengl] [file]
 
 | 入口 | 檔案 | 用途 |
 | --- | --- | --- |
-| `py -m Imervue.cli …` | `Imervue/cli.py` | headless 批次：resize / watermark / info / convert，只用純 NumPy+Pillow 路徑，完全不起 Qt |
-| `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | stdio JSON-RPC 2.0 MCP server |
+| `py -m Imervue.cli …` | `Imervue/cli.py` | headless 批次：resize / watermark / info / convert，只用純 NumPy+Pillow 路徑，完全不起 Qt；直接執行時先 `raise_pixel_limit()` |
+| `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | stdio JSON-RPC 2.0 MCP server（啟動前 `raise_pixel_limit()`） |
 | `exe/start_Imervue.py` | — | PyInstaller / auto-py-to-exe 的啟動 shim |
 
 ---
@@ -204,9 +204,9 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `__main__.py` | 128 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
+| `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
 | `Imervue_main_window.py` | 706 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
-| `cli.py` | 588 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
+| `cli.py` | 590 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
 ### 6.2 `Imervue/system/`
@@ -240,6 +240,7 @@ ImervueMainWindow
 | `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict`、`recipe_store` 使用） |
 | `free_names.py` | 33 | `free_names(directory, stems, ext)`：資料夾裡還沒被占用的檔名（`photo_clahe.png`，被占用就 `_1`、`_2`…；一組檔案共用一個編號；依檔案系統的大小寫規則比對，列不出內容的資料夾視為空的），寫新檔在使用者檔案旁邊的工具都經由它挑名（`_apply_save.output_path(s)`、Export 與 GIF／影片對話框的預設檔名、多頁拆分、EXIF 清除的副本；右鍵「依 EXIF 自動旋轉」經 `output_path`） |
 | `natural_sort.py` | 29 | `natural_key(name)`：和檔案總管一樣的自然排序鍵（`img2` 在 `img10` 之前，不分大小寫，全形數字也算數字；相等時依小寫、原名定序）；檢視器的名稱排序（縮圖格、上下張、資料夾快取）、`sort_menu`、網頁相簿與各批次對話框的清單都用它，和檔案樹的 numeric `QCollator` 一致 |
+| `pixel_limit.py` | 87 | `raise_pixel_limit()`：把 Pillow 的 `MAX_IMAGE_PIXELS` 依實體記憶體放寬（`total_memory_bytes()`；拒絕點落在解碼需要全部記憶體處，16 GB 約 13 億像素，不低於 Pillow 預設），GUI、CLI、MCP 的進入點呼叫；`decode_slot(pixels)`：超過 Pillow 預設的巨圖一次只解一張（`image_loader` 的點陣解碼與縮圖使用），避免縮圖 worker 同時解多張全景圖耗盡記憶體 |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 141 | 監控資料夾自動化：新檔案進來自動套用動作；預設收檢視器能開的每種靜態格式（連線拍攝的 RAW 也算） |
 
@@ -307,7 +308,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-126 個模組、14,799 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+126 個模組、14,843 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -468,7 +469,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 516 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
+| `image_loader.py` | 519 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
 | `load_thumbnail_worker.py` | 151 | 單張縮圖解碼 `QRunnable`（與 `load_image_file` 同一條 EXIF 轉正規則；RAW 取 `raw_loader.develop_raw(thumbnail=True)` 的轉正預覽） |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
@@ -972,7 +973,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-877 個檔、145,072 行。`pyproject.toml` 定義三個互斥層級 marker：
+878 個檔、145,199 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
