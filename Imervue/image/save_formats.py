@@ -12,12 +12,14 @@ written with the ``HEIF`` plugin id, hence :func:`pil_format`.
 """
 from __future__ import annotations
 
+import os
 from typing import BinaryIO
 
 from PIL import Image
 
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.jxl_support import ensure_jxl_opener
+from Imervue.system.atomic_write import replace_atomically
 
 # Display name → file extension.
 FORMAT_EXTENSIONS: dict[str, str] = {
@@ -69,7 +71,7 @@ def prepare_for_format(img: Image.Image, format_name: str) -> Image.Image:
 
 def save_image(
     img: Image.Image,
-    fp: str | BinaryIO,
+    fp: str | os.PathLike | BinaryIO,
     format_name: str,
     quality: int | None = None,
     extra: dict | None = None,
@@ -79,7 +81,10 @@ def save_image(
     ``extra`` carries format-agnostic save options (e.g. ``dpi``) merged after
     the quality handling. Registers the HEIF/AVIF backend on demand and raises
     ``ValueError`` when a HEIC/AVIF save is requested without ``pillow-heif``
-    installed, so callers can report it at the boundary.
+    installed, so callers can report it at the boundary. A path is replaced
+    in one step (:func:`~Imervue.system.atomic_write.replace_atomically`):
+    Pillow opens it with ``w+b``, so a save that failed over an existing file
+    — an export over its own source, say — left that file truncated.
     """
     if format_name in _HEIF_FORMATS and not ensure_heif_opener():
         raise ValueError(
@@ -93,4 +98,8 @@ def save_image(
         kwargs["quality"] = int(quality)
     if extra:
         kwargs.update(extra)
-    prepared.save(fp, format=pil_format(format_name), **kwargs)
+    fmt = pil_format(format_name)
+    if isinstance(fp, (str, os.PathLike)):
+        replace_atomically(fp, lambda tmp: prepared.save(tmp, format=fmt, **kwargs))
+    else:
+        prepared.save(fp, format=fmt, **kwargs)

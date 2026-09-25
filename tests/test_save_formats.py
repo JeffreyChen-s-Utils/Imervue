@@ -132,3 +132,38 @@ def test_save_image_heif_roundtrip(tmp_path, fmt, ext):
     with Image.open(out) as reopened:
         reopened.load()
         assert reopened.size == (16, 16)
+
+
+class TestSavingOverAnExistingFile:
+    """Pillow opens a path with w+b: a failed save used to leave the old file truncated."""
+
+    def test_a_failed_save_leaves_the_old_file_whole(self, tmp_path, monkeypatch):
+        target = tmp_path / "photo.jpg"
+        Image.new("RGB", (4, 4), (10, 20, 30)).save(target)
+        before = target.read_bytes()
+
+        def half_written(self, fp, *args, **kwargs):
+            with open(fp, "wb") as fh:
+                fh.write(b"\xff\xd8 partial")
+            raise OSError("disk full")
+
+        monkeypatch.setattr(Image.Image, "save", half_written)
+        with pytest.raises(OSError, match="disk full"):
+            save_image(Image.new("RGB", (4, 4)), str(target), "JPEG", 90)
+        assert target.read_bytes() == before
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["photo.jpg"]
+
+    def test_a_save_over_an_existing_file_replaces_it(self, tmp_path):
+        target = tmp_path / "photo.png"
+        Image.new("RGB", (4, 4), (0, 0, 0)).save(target)
+        save_image(Image.new("RGB", (6, 2), (255, 0, 0)), target, "PNG")
+        with Image.open(target) as saved:
+            assert saved.size == (6, 2)
+            assert saved.getpixel((0, 0)) == (255, 0, 0)
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["photo.png"]
+
+    def test_a_file_object_is_written_in_place(self):
+        import io
+        buffer = io.BytesIO()
+        save_image(Image.new("RGB", (3, 3)), buffer, "PNG")
+        assert buffer.getvalue().startswith(b"\x89PNG")
