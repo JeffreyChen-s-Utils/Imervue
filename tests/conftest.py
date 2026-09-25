@@ -318,8 +318,8 @@ def _isolate_user_settings(tmp_path, monkeypatch):
         lambda: tmp_path / "user_setting.json",
     )
     # A test that loads a broken settings file must not make the next one's saves keep copies.
-    monkeypatch.setattr(mod, "_unreadable_at_start", False)
-    monkeypatch.setattr(mod, "_unreadable_path", None)
+    from Imervue.system.unreadable_guard import UnreadableFileGuard
+    monkeypatch.setattr(mod, "_unreadable_guard", UnreadableFileGuard(mod._settings_logger))
     try:
         yield
     finally:

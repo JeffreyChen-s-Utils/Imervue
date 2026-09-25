@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `f67b819` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `e08c3ad` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 868 | 142,695 |
+| `tests/` | 869 | 142,771 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,138 |
 | `Imervue/gui/` | 166 | 33,114 |
 | `Imervue/puppet/` | 57 | 15,292 |
@@ -79,14 +79,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/menu/` | 11 | 3,583 |
 | `Imervue/` 根層 | 5 | 1,579 |
 | `Imervue/plugin/` | 10 | 2,243 |
-| `Imervue/system/` | 25 | 2,608 |
+| `Imervue/system/` | 26 | 2,671 |
 | `Imervue/export/` | 9 | 1,081 |
-| `Imervue/user_settings/` | 10 | 1,190 |
+| `Imervue/user_settings/` | 10 | 1,154 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,707** | **323,572** |
+| **總計** | **1,709** | **323,675** |
 
-其中 `Imervue/` 套件本身 775 檔 / 166,536 行。
+其中 `Imervue/` 套件本身 776 檔 / 166,563 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -237,6 +237,7 @@ ImervueMainWindow
 | `file_transfer.py` | 244 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
 | `atomic_write.py` | 33 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本） |
+| `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict` 使用） |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
 
@@ -244,7 +245,7 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `user_setting_dict.py` | 398 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔，第一次存檔前先另存成 `user_setting.json.unreadable-<時間>`，存不了副本就不覆蓋（所有寫設定檔的路徑都走 `_save_settings`）；`unreadable_settings_file()` 給啟動時的警告用 |
+| `user_setting_dict.py` | 362 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔交給 `UnreadableFileGuard` 看守（所有寫設定檔的路徑都走 `_save_settings`）；`unreadable_settings_file()` 給啟動時的警告用 |
 | `bookmark.py` | 90 | 跨資料夾書籤 / 收藏集合 |
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
@@ -968,7 +969,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-868 個檔、142,695 行。`pyproject.toml` 定義三個互斥層級 marker：
+869 個檔、142,771 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1095,7 +1096,7 @@ HuggingFace 下載必須釘 `revision=`（bandit `B615`）。
 
 ### 10.9 設定寫入
 
-一律透過 `user_settings/user_setting_dict.py`：去抖非同步存檔 + atomic `.tmp` → `os.replace()`。
+一律透過 `user_settings/user_setting_dict.py`：去抖非同步存檔 + atomic `.tmp` → `os.replace()`。啟動時讀不到的設定檔由 `system/unreadable_guard.UnreadableFileGuard` 看守：第一次覆寫前先另存 `<檔名>.unreadable-<時間>`，存不了副本就不覆寫，啟動後再以 `gui/settings_notice.py` 告知使用者。
 關閉前呼叫 `cancel_pending_save()` 再立即 flush。
 
 ### 10.10 選單走訪不可用 `QAction.menu()`
