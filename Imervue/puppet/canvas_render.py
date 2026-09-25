@@ -502,9 +502,10 @@ class PuppetCanvasRenderMixin:
     def _upload_texture(self, png_bytes: bytes) -> int | None:
         from PIL import Image
         import io
+        from Imervue.image.read_errors import IMAGE_READ_ERRORS
         try:
             img = Image.open(io.BytesIO(png_bytes)).convert("RGBA")
-        except (OSError, ValueError) as exc:
+        except IMAGE_READ_ERRORS as exc:
             logger.warning("texture decode failed: %s", exc)
             return None
         arr = np.array(img, dtype=np.uint8)

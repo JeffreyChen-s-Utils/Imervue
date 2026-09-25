@@ -14,6 +14,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     apply_save_buttons,
@@ -102,7 +103,7 @@ def _safe_is_equirect(path: str) -> bool:
         with Image.open(path) as img:
             w, h = img.size
         return h > 0 and abs(w / (2.0 * h) - 1.0) <= 0.05
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         return False
 
 

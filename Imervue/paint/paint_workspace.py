@@ -31,6 +31,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QMainWindow, QStatusBar, QTabWidget
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
 from Imervue.paint.canvas import PaintCanvas, cursor_for_tool
@@ -361,7 +362,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             bridge = getattr(self, "_file_menu_bridge", None)
             if bridge is not None and hasattr(bridge, "refresh_recent_menu"):
                 bridge.refresh_recent_menu()
-        except (OSError, ValueError) as exc:
+        except IMAGE_READ_ERRORS as exc:
             logger.warning("dropped file %r could not be opened: %s", path, exc)
 
     # ---- undo / redo + history feedback --------------------------------

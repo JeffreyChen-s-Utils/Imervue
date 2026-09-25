@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.system.qt_timers import call_later
 from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.system.app_paths import icon_path as _app_icon_path
@@ -319,7 +320,7 @@ class ImervueMainWindow(
             from Imervue.gpu_image_view.images.image_loader import decode_image_file
             arr = decode_image_file(path)
             self.paint_workspace.load_image(arr)
-        except (OSError, ValueError):
+        except IMAGE_READ_ERRORS:
             self.paint_workspace.load_image(None)
 
     def eventFilter(self, obj, event):

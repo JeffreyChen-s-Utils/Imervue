@@ -27,6 +27,7 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.shown import as_shown
 
 logger = logging.getLogger("Imervue.layers")
@@ -177,7 +178,7 @@ def _render_image_layer(base: np.ndarray, params: dict) -> np.ndarray | None:
     try:
         with Image.open(path) as src:   # upright, as the viewer shows it
             overlay = as_shown(src).convert("RGBA")
-    except OSError as exc:
+    except IMAGE_READ_ERRORS as exc:
         logger.warning("Image layer load failed (%s): %s", path, exc)
         return None
     target = (base.shape[1], base.shape[0])

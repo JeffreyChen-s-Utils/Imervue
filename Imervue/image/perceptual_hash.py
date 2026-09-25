@@ -12,6 +12,7 @@ from collections.abc import Callable, Iterable, Sequence
 
 from PIL import Image
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.orientation import exif_orientation, transpose_for
 
 DEFAULT_HASH_SIZE = 8
@@ -91,7 +92,7 @@ def hash_paths(
         try:
             with Image.open(path) as img:
                 hashed.append((str(path), hash_fn(upright(img))))
-        except (OSError, ValueError):
+        except IMAGE_READ_ERRORS:
             pass
         if on_progress is not None:
             on_progress(processed, total)

@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     current_image_path,
@@ -96,7 +97,7 @@ class SteganographyDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         try:
             text = reveal_message(load_rgba(self._path))
-        except (OSError, ValueError):
+        except IMAGE_READ_ERRORS:
             text = ""
         self._message.setPlainText(text)
         toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)

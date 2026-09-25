@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gui._apply_save import load_rgba, output_paths
 from Imervue.image.frequency_separation import (
     RADIUS_MAX,
@@ -88,7 +89,7 @@ class FrequencySeparationDialog(QDialog):
     def _commit(self) -> None:
         try:
             arr = load_rgba(self._path)
-        except (OSError, ValueError) as exc:
+        except IMAGE_READ_ERRORS as exc:
             self._notify_failure(exc)
             return
 

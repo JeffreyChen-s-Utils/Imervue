@@ -285,5 +285,5 @@ def _peek_image_size(path: str) -> tuple[int, int]:
             if img.getexif().get(0x0112) in _QUARTER_TURN_ORIENTATIONS:
                 return height, width
             return width, height
-    except OSError:
+    except (OSError, ValueError, SyntaxError, Image.DecompressionBombError):   # any unreadable image
         return (1024, 1024)

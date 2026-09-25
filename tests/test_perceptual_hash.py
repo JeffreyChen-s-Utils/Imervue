@@ -158,3 +158,15 @@ def test_an_untagged_image_hashes_as_before(tmp_path):
     with Image.open(path) as img:
         expected = dhash(img)
     assert hash_paths([str(path)]) == [(str(path), expected)]
+
+
+def test_hash_paths_skips_a_picture_over_the_pixel_limit(tmp_path, monkeypatch):
+    """One huge panorama raised DecompressionBombError and ended Find Similar."""
+    from PIL import Image
+
+    from Imervue.image.perceptual_hash import hash_paths
+    small, huge = tmp_path / "small.png", tmp_path / "huge.png"
+    Image.new("RGB", (8, 8)).save(small)
+    Image.new("RGB", (64, 64)).save(huge)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 100)
+    assert [p for p, _ in hash_paths([str(huge), str(small)])] == [str(small)]

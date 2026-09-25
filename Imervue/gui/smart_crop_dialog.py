@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gui.export_source import recipe_base_image
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
@@ -112,7 +113,7 @@ def open_smart_crop_dialog(viewer: GPUImageView) -> None:
     path = str(images[idx])
     try:
         arr = _load_rgba(path)
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         logger.exception("Smart crop failed to load %s", path)
         return
     suggestions = suggest_crops(arr)
