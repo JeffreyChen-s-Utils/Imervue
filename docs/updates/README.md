@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-16 | 2026-09-26 | Ratings, favourite, cull flags and colour labels work in the List view | #fix #list-view #rating #culling #keyboard | [2026-09-b](2026-09-b.md) |
 | U-20260926-15 | 2026-09-26 | Rating and favourite keys on the wall rate the photo you point at, not the last one opened | #fix #rating #culling #keyboard #browse | [2026-09-b](2026-09-b.md) |
 | U-20260926-14 | 2026-09-26 | Delete and Ctrl+Z work in the List view, as on the thumbnail wall | #fix #list-view #delete #keyboard | [2026-09-b](2026-09-b.md) |
 | U-20260926-13 | 2026-09-26 | The shown picture is measured, not Qt-watched, so an editor's save is never refused | #fix #viewer #external-editor #windows #data-loss | [2026-09-b](2026-09-b.md) |
@@ -388,4 +389,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 46 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 47 |
