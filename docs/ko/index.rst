@@ -80,6 +80,7 @@ Imervue를 실행하면 세 가지 영역이 표시됩니다:
 - **일반**: PNG, JPEG (.jpg, .jpeg, .jpe, .jfif, .jif), BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **최신 포맷**: AVIF (기본 지원), HEIC / HEIF (선택적 ``pillow-heif`` 필요), JPEG XL (선택적 ``pillow-jxl-plugin`` 필요)
+- **기타**: ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX — 보기용입니다. 제자리 회전 같은 되쓰기는 거부되므로 편집은 다른 이름으로 저장 / 내보내기로 저장합니다
 
 ----
 

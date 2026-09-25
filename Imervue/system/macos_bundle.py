@@ -30,6 +30,13 @@ _UTI_BY_EXT: dict[str, str] = {
     ".hif": "public.heif",
     ".avif": "public.avif",
     ".jxl": "public.jpeg-xl",
+    ".ico": "com.microsoft.ico",
+    ".tga": "com.truevision.tga-image",
+    ".dds": "com.microsoft.dds",
+    ".pbm": "public.pbm",
+    **dict.fromkeys((".jp2", ".j2k", ".jpf", ".jpx"), "public.jpeg-2000"),
+    # No system type of their own: declared as plain images.
+    **dict.fromkeys((".qoi", ".ppm", ".pgm", ".pnm", ".pcx"), "public.image"),
     **dict.fromkeys(RAW_EXTENSIONS, _RAW_UTI),
 }
 

@@ -40,6 +40,46 @@ def test_a_jfif_decodes_and_is_listed(tmp_path):
     assert decode_image_file(str(path)).shape == (4, 6, 4)
 
 
+_EXTRA_SAMPLES = [
+    (".ico", "ICO", "RGBA"), (".tga", "TGA", "RGB"), (".dds", "DDS", "RGBA"), (".qoi", "QOI", "RGB"),
+    (".jp2", "JPEG2000", "RGB"), (".j2k", "JPEG2000", "RGB"), (".jpf", "JPEG2000", "RGB"),
+    (".jpx", "JPEG2000", "RGB"), (".ppm", "PPM", "RGB"), (".pgm", "PPM", "L"), (".pbm", "PPM", "1"),
+    (".pnm", "PPM", "RGB"), (".pcx", "PCX", "RGB"),
+]
+
+
+def test_every_extra_format_has_a_sample():
+    assert {ext for ext, _fmt, _mode in _EXTRA_SAMPLES} == formats.PILLOW_EXTRA_EXTENSIONS
+    assert formats.PILLOW_EXTRA_EXTENSIONS <= STILL_IMAGE_EXTENSIONS
+
+
+@pytest.mark.parametrize(("ext", "fmt", "mode"), _EXTRA_SAMPLES)
+def test_pillows_own_extra_formats_open_for_viewing(tmp_path, ext, fmt, mode):
+    """An icon, a texture, a JPEG 2000 scan or a Netpbm frame never showed up."""
+    from PIL import Image, features
+
+    from Imervue.gpu_image_view.images.image_loader import _scan_images, decode_image_file
+    from Imervue.image.in_place_save import in_place_format
+    if fmt == "JPEG2000" and not features.check("jpg_2000"):
+        pytest.skip("this Pillow was built without OpenJPEG")
+    path = tmp_path / f"picture{ext}"
+    Image.new(mode, (32, 32), 1 if mode == "1" else None).save(path, format=fmt)
+    assert _scan_images(str(tmp_path)) == [str(path)]
+    assert decode_image_file(str(path)).shape == (32, 32, 4)
+    assert in_place_format(str(path)) is None   # viewing only: nothing writes it back
+
+
+def test_rotating_an_extra_format_in_place_is_refused(tmp_path):
+    from PIL import Image
+
+    from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+    path = tmp_path / "texture.tga"
+    Image.new("RGB", (8, 4), (9, 9, 9)).save(path)
+    before = path.read_bytes()
+    assert lossless_rotate(str(path), clockwise=True) is False
+    assert path.read_bytes() == before
+
+
 def test_extensions_are_lowercase_with_a_dot():
     assert all(e.startswith(".") and e == e.lower() for e in VIEWER_EXTENSIONS)
 

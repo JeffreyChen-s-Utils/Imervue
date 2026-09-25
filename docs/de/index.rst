@@ -81,6 +81,7 @@ Unterstützte Formate
 - **Standard**: PNG, JPEG (.jpg, .jpeg, .jpe, .jfif, .jif), BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **Moderne Formate**: AVIF (eingebaut); HEIC / HEIF mit dem optionalen ``pillow-heif``; JPEG XL mit dem optionalen ``pillow-jxl-plugin``
+- **Weitere**: ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX — zum Ansehen; Drehen an Ort und Stelle und anderes Zurückschreiben werden abgelehnt, Änderungen gehen über Speichern unter / Export
 
 ----
 
