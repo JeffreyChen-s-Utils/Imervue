@@ -279,7 +279,7 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
         self._mask_worker.ready.connect(self._on_mask_ready)
         self._mask_worker.start()
 
-    def _on_mask_ready(self, mask: np.ndarray) -> None:
+    def _on_mask_ready(self, mask: np.ndarray | None) -> None:
         if self._mask_worker is not None:
             self._mask_worker.wait()
             self._mask_worker = None
@@ -351,7 +351,7 @@ class _MaskWorker(QThread):
     """Run the flood-fill mask build off the UI thread — on a large image the
     fill is slow enough to stall the interactive preview."""
 
-    ready = Signal(object)   # np.ndarray mask
+    ready = Signal(object)   # np.ndarray mask, or None when it could not be built
 
     def __init__(self, arr: np.ndarray, sx: int, sy: int,
                  tolerance: int, grow: int):
@@ -363,8 +363,12 @@ class _MaskWorker(QThread):
         self._grow = grow
 
     def run(self) -> None:
-        self.ready.emit(
-            build_mask(self._arr, self._sx, self._sy, self._tolerance, self._grow))
+        try:
+            mask = build_mask(self._arr, self._sx, self._sy, self._tolerance, self._grow)
+        except Exception:  # a worker must always report, or no later click is ever filled
+            logger.exception("Building the object mask failed")
+            mask = None
+        self.ready.emit(mask)
 
 
 class _RemoveWorker(QThread):
