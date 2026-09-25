@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `1701db3` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `e56afb3` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -741,7 +741,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 素材 / 參考 / 姿勢
 
 `material_library.py`(300) · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(121) ·
-`save_region_as_material.py`(107) · `reference_dock.py`(257) + `reference_panel.py`(283) ·
+`save_region_as_material.py`(107) · `reference_dock.py`(258) Paint 參考圖 dock（經 `decode_image_file` 以檢視器的樣子顯示：轉正、sRGB、RAW 顯像） + `reference_panel.py`(283) ·
 `pose_skeleton.py`(210) + `pose_dock.py`(185) + `pose_drop.py`(128) 2D 火柴人姿勢參考
 
 #### 輔助線 / 檢視

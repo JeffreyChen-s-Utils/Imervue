@@ -179,6 +179,59 @@ def test_dock_clear_drops_image_and_emits_empty(qapp, tmp_path):
         dock.deleteLater()
 
 
+def _shown(dock):
+    return dock.view()._pixmap.toImage()  # noqa: SLF001
+
+
+def test_dock_shows_a_phone_photo_upright(qapp, tmp_path):
+    """Image.open kept the stored orientation: a portrait reference lay on its side."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "portrait.jpg"
+    Image.new("RGB", (40, 20), "white").save(path, exif=exif)
+    dock = ReferenceDock()
+    try:
+        assert dock.load_image_from_path(path) is True
+        image = _shown(dock)
+        assert (image.width(), image.height()) == (20, 40)
+    finally:
+        dock.deleteLater()
+
+
+def test_dock_shows_a_wide_gamut_photo_in_srgb(qapp, tmp_path):
+    from _icc_profiles import DISPLAY_P3
+    path = tmp_path / "p3.png"
+    Image.new("RGB", (8, 8), (180, 120, 60)).save(path, icc_profile=DISPLAY_P3)
+    dock = ReferenceDock()
+    try:
+        assert dock.load_image_from_path(path) is True
+        pixel = _shown(dock).pixelColor(0, 0)
+        # The same colour in sRGB numbers; shown unconverted it stayed (180, 120, 60).
+        assert (pixel.red(), pixel.green(), pixel.blue()) == (190, 117, 45)
+    finally:
+        dock.deleteLater()
+
+
+@pytest.mark.parametrize("content", [b"not an image", None])
+def test_dock_refuses_what_it_cannot_decode(qapp, tmp_path, content):
+    path = tmp_path / "bad.png"
+    if content is None:          # a picture over Pillow's pixel limit
+        Image.new("RGB", (64, 64)).save(path)
+    else:
+        path.write_bytes(content)
+    dock = ReferenceDock()
+    try:
+        if content is None:
+            with pytest.MonkeyPatch.context() as mp:
+                mp.setattr(Image, "MAX_IMAGE_PIXELS", 100)
+                assert dock.load_image_from_path(path) is False
+        else:
+            assert dock.load_image_from_path(path) is False
+        assert dock.has_image() is False
+    finally:
+        dock.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # Workspace integration
 # ---------------------------------------------------------------------------
