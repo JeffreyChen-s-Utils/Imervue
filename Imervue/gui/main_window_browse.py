@@ -89,6 +89,14 @@ class MainWindowBrowseMixin:
             apply_cull_state(viewer, cull_state_for(action), targets=paths)
         self.image_list_view.viewport().update()   # the Rating and Label columns
 
+    def escape_from_list(self) -> None:
+        """Esc in the list: leave fullscreen first, else go back to the thumbnail wall."""
+        if self.isFullScreen():
+            from Imervue.gpu_image_view.actions.keyboard_actions import toggle_fullscreen
+            toggle_fullscreen(self.viewer)
+            return
+        self.set_browse_mode("grid")
+
     def undo_from_list(self) -> None:
         """The viewer's undo (the last edit, else the last delete), then show what came back."""
         self.viewer.run_shortcut_action("undo")

@@ -772,3 +772,37 @@ def test_clicking_the_rating_column_rates_the_row(qapp, tmp_path):
     finally:
         view.deleteLater()
     assert window.marked == [("rate_5", [str(tmp_path / "b.png")]), ("rate_3", [str(tmp_path / "a.png")])]
+
+
+
+def test_escape_in_the_list_asks_the_window_to_leave_it(qapp, tmp_path):
+    """The docs say Esc closes the List mode; the key went nowhere."""
+    class _Window(_MarkWindow):
+        escapes = 0
+
+        def escape_from_list(self):
+            self.escapes += 1
+
+    window = _Window()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        event = _press(view, Qt.Key.Key_Escape)
+        _press(view, Qt.Key.Key_Escape, Qt.KeyboardModifier.ShiftModifier)
+    finally:
+        view.deleteLater()
+    assert window.escapes == 1
+    assert event.isAccepted()
+
+
+@pytest.mark.parametrize(("fullscreen", "expected"), [(True, ["fullscreen"]), (False, ["grid"])])
+def test_escape_leaves_fullscreen_before_the_list(monkeypatch, fullscreen, expected):
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.actions import keyboard_actions
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    done: list = []
+    monkeypatch.setattr(keyboard_actions, "toggle_fullscreen", lambda _viewer: done.append("fullscreen"))
+    window = SimpleNamespace(viewer=object(), isFullScreen=lambda: fullscreen,
+                             set_browse_mode=lambda mode: done.append(mode))
+    MainWindowBrowseMixin.escape_from_list(window)
+    assert done == expected

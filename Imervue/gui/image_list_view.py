@@ -615,6 +615,10 @@ class ImageListView(QTableView):
         window = self._main_window
         if window is None:
             return False
+        if event.key() == Qt.Key.Key_Escape and not event.modifiers():
+            window.escape_from_list()
+            event.accept()
+            return True
         bound = shortcut_manager.get_action(event.key(), event.modifiers())
         action = self._list_action(event, bound)
         if action in LIST_MARK_ACTIONS and self.selected_paths():
