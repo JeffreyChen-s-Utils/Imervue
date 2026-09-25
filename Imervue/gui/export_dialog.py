@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSlider, QPushButton, QMessageBox, QWidget,
+    QSlider, QPushButton,
 )
 
 from Imervue.gui.export_metadata_combo import metadata_row
 from Imervue.gui.export_source import open_export_source
 from Imervue.image.export_metadata import export_save_options
-from Imervue.gui.dialog_rows import path_browse_row, save_path_into
+from Imervue.gui.dialog_rows import ask_to_replace, may_replace, path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
@@ -57,16 +57,6 @@ class _SizeEstimateWorker(QThread):
             # Worker boundary: the dialog waits on result_ready, so report even a bug.
             logger.exception("Estimating the export size of %s failed", self._source_path)
             self.result_ready.emit(0, str(exc))
-
-
-def _ask_to_replace(parent: QWidget | None, text: str) -> bool:
-    """Ask whether to replace an existing file; No is the default answer."""
-    title = language_wrapper.language_word_dict.get("export_replace_title", "Replace File?")
-    answer = QMessageBox.question(
-        parent, title, text,
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No)
-    return answer == QMessageBox.StandardButton.Yes
 
 
 class ExportDialog(WorkerHostMixin, QDialog):
@@ -219,21 +209,14 @@ class ExportDialog(WorkerHostMixin, QDialog):
         way: the copy has its edits written into the pixels and keeps only the
         metadata chosen here.
         """
-        if not os.path.exists(output_path):
-            return True
-        name = Path(output_path).name
         if is_same_file(output_path, self.source_path):
             text = self._lang.get(
                 "export_replace_source",
                 "“{name}” is the photo being exported. Replace the original with this "
                 "copy? The copy has the photo's edits applied and keeps only the metadata "
                 "chosen above.")
-            return _ask_to_replace(self, text.format(name=name))
-        if self._browsed_path and is_same_file(output_path, self._browsed_path):
-            return True
-        text = self._lang.get(
-            "export_replace", "“{name}” already exists. Replace it?")
-        return _ask_to_replace(self, text.format(name=name))
+            return ask_to_replace(self, text.format(name=Path(output_path).name))
+        return may_replace(self, output_path, self._browsed_path)
 
     # ------------------------------------------------------------ export
     def _do_export(self) -> None:

@@ -233,3 +233,55 @@ def test_open_path_into_explicit_start(qapp, monkeypatch):
         assert edit.text() == "/keep.cube"
     finally:
         edit.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# ask_to_replace / may_replace
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def questions(monkeypatch):
+    """Record every QMessageBox.question and answer it with ``answers["reply"]``."""
+    from PySide6.QtWidgets import QMessageBox
+    answers = {"reply": QMessageBox.StandardButton.No, "asked": []}
+
+    def question(_parent, title, text, buttons, default):
+        answers["asked"].append((title, text, buttons, default))
+        return answers["reply"]
+
+    monkeypatch.setattr(QMessageBox, "question", question)
+    return answers
+
+
+def test_ask_to_replace_defaults_to_no(qapp, questions):
+    from PySide6.QtWidgets import QMessageBox
+    assert dialog_rows.ask_to_replace(None, "x.png exists") is False
+    ((title, text, _buttons, default),) = questions["asked"]
+    assert (title, text) == ("Replace File?", "x.png exists")
+    assert default == QMessageBox.StandardButton.No
+    questions["reply"] = QMessageBox.StandardButton.Yes
+    assert dialog_rows.ask_to_replace(None, "x.png exists") is True
+
+
+def test_may_replace_a_missing_file_without_asking(qapp, questions, tmp_path):
+    assert dialog_rows.may_replace(None, str(tmp_path / "new.gif"), None) is True
+    assert questions["asked"] == []
+
+
+def test_may_replace_what_the_save_dialog_confirmed(qapp, questions, tmp_path):
+    taken = tmp_path / "out.gif"
+    taken.write_bytes(b"x")
+    assert dialog_rows.may_replace(None, str(taken), str(taken)) is True
+    assert questions["asked"] == []
+
+
+def test_may_replace_asks_about_any_other_existing_file(qapp, questions, tmp_path):
+    taken = tmp_path / "out.gif"
+    taken.write_bytes(b"x")
+    other = tmp_path / "other.gif"
+    other.write_bytes(b"y")
+    assert dialog_rows.may_replace(None, str(taken), str(other)) is False
+    assert dialog_rows.may_replace(None, str(taken), None) is False
+    assert [asked[1] for asked in questions["asked"]] == [
+        "“out.gif” already exists. Replace it?"] * 2

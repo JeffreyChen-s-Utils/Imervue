@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from Imervue.gui import export_dialog as mod
 
@@ -94,11 +94,11 @@ def replace_answers(monkeypatch):
     """Record every "replace it?" question and answer it with ``answers["reply"]``."""
     answers = {"reply": False, "asked": []}
 
-    def ask(_parent, text):
+    def question(_parent, _title, text, *_rest):
         answers["asked"].append(text)
-        return answers["reply"]
+        return QMessageBox.StandardButton.Yes if answers["reply"] else QMessageBox.StandardButton.No
 
-    monkeypatch.setattr(mod, "_ask_to_replace", ask)
+    monkeypatch.setattr(QMessageBox, "question", question)
     return answers
 
 
@@ -193,15 +193,3 @@ def test_a_browse_that_is_cancelled_confirms_nothing(
     dlg._do_export()  # noqa: SLF001
     assert len(replace_answers["asked"]) == 1
 
-
-def test_ask_to_replace_defaults_to_no(qapp, monkeypatch):
-    seen = {}
-
-    def question(_parent, _title, text, buttons, default):
-        seen.update(text=text, buttons=buttons, default=default)
-        return default
-
-    monkeypatch.setattr(mod.QMessageBox, "question", question)
-    assert mod._ask_to_replace(None, "x.png exists") is False  # noqa: SLF001
-    assert seen["default"] == mod.QMessageBox.StandardButton.No
-    assert seen["text"] == "x.png exists"
