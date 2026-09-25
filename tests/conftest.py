@@ -326,6 +326,22 @@ def _isolate_user_settings(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _isolate_recipe_store(tmp_path, monkeypatch):
+    """Point the recipe store singleton at a throw-away file, never the real ``recipes.json``.
+
+    Dialog tests save Modify recipes through the global ``recipe_store``; without
+    this they landed in the developer's own store under ``%LOCALAPPDATA%``.
+    """
+    from Imervue.image.recipe_store import recipe_store
+    monkeypatch.setattr(recipe_store, "_path", tmp_path / "recipes" / "recipes.json")
+    recipe_store._reset_for_tests()  # noqa: SLF001 - drop state loaded from elsewhere
+    try:
+        yield
+    finally:
+        recipe_store._reset_for_tests()  # noqa: SLF001
+
+
+@pytest.fixture(autouse=True)
 def _isolate_library_db(tmp_path):
     """Point the library index at a throw-away DB, never the real ``library.db``.
 
