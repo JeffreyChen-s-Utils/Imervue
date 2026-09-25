@@ -356,12 +356,19 @@ changes nothing on either dashboard until it merges — so "the numbers didn't m
 to `dev` is expected, not a failure. Querying a branch that was never analysed returns an empty
 result set, which reads like a clean report; check the branch exists before trusting a zero.
 
-API tokens live in the environment — never hardcode or echo them:
+When a PR or commit fails a SonarCloud or Codacy check, look the findings up through their APIs instead of
+guessing. The SonarCloud key is in the environment; Codacy answers this public repository without one (the
+`CODACY_PROJECT_TOKEN` in the environment is a project token valid only for its own project, and sent here it
+answers "Bad credentials"):
 
 ```bash
-curl -u "$SonarCloudToken:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=JeffreyChen-s-Utils_Imervue"
-curl -H "project-token: $CODACY_PROJECT_TOKEN" "https://app.codacy.com/api/v3/analysis/organizations/gh/JeffreyChen-s-Utils/repositories/Imervue"
+curl -s -u "$SonarCloudToken:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=JeffreyChen-s-Utils_Imervue"
+curl -s "https://app.codacy.com/api/v3/analysis/organizations/gh/JeffreyChen-s-Utils/repositories/Imervue/pull-requests/<n>/issues?status=new"
 ```
+
+**Never reveal a key or any personal credential while doing so**: refer to the variables by name only, never
+hardcode, echo or print their values, and never put them in files, commit messages, PR or issue text, logs, or
+any output that leaves the machine.
 
 Codacy reports `"analyzed": false` while a run is still in flight.
 
