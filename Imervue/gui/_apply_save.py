@@ -9,7 +9,6 @@ only carries its own widgets and transform call.
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -19,6 +18,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.free_names import free_names
 
 logger = logging.getLogger("Imervue.apply_save")
 
@@ -114,17 +114,8 @@ def output_paths(source: str, suffixes: list[str], ext: str = ".png") -> list[st
     compared the way the file system does.
     """
     path = Path(source)
-    try:
-        taken = {os.path.normcase(name) for name in os.listdir(path.parent)}
-    except OSError:
-        taken = set()
-    counter = 0
-    while True:
-        tail = f"_{counter}" if counter else ""
-        names = [f"{path.stem}_{suffix}{tail}{ext}" for suffix in suffixes]
-        if not any(os.path.normcase(name) in taken for name in names):
-            return [str(path.with_name(name)) for name in names]
-        counter += 1
+    stems = [f"{path.stem}_{suffix}" for suffix in suffixes]
+    return [str(name) for name in free_names(path.parent, stems, ext)]
 
 
 def output_path(source: str, suffix: str, ext: str = ".png") -> str:
