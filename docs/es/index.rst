@@ -1646,6 +1646,7 @@ Reproducción de animaciones
 Al abrir archivos GIF, APNG o WebP animado, la animación se reproduce automáticamente. Una animación que decodificada
 ocuparía más de 512 MB se decodifica fotograma a fotograma mientras se reproduce, así
 que abrirla no congela la ventana ni llena la memoria.
+Un fotograma de 10 ms o menos se muestra 100 ms, como en los navegadores: muchos GIF cuentan con ello.
 
 .. list-table::
    :header-rows: 1

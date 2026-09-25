@@ -190,7 +190,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Disk cache** — compressed PNG thumbnails with MD5-based invalidation under `%LOCALAPPDATA%/Imervue/cache/thumbnails` (or `~/.cache/imervue/thumbnails`)
 - **EXIF orientation** — portrait shots that a phone or camera tagged instead of turning are shown upright in the viewer, thumbnails, list view, hover preview and Modify tab; a develop crop / rotate saved before this keeps applying to the orientation it was drawn on
 - **Colour management** — photos with an embedded colour profile (Display P3 from phones, Adobe RGB from cameras, CMYK) are converted to sRGB for the viewer and thumbnails; untagged and sRGB images are shown as stored
-- **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls; an animation too large to hold decoded (over 512 MB) decodes each frame as it plays instead of all up front
+- **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls; an animation too large to hold decoded (over 512 MB) decodes each frame as it plays instead of all up front; a frame of 10 ms or less plays for 100 ms, as in browsers
 
 ### Browsing modes
 

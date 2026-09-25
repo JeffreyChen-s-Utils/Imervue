@@ -188,7 +188,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Festplatten-Cache** — Komprimierte PNG-Thumbnails mit MD5-basierter Invalidierung unter `%LOCALAPPDATA%/Imervue/cache/thumbnails` (oder `~/.cache/imervue/thumbnails`)
 - **EXIF-Ausrichtung** — Hochformatfotos, die Handy oder Kamera nur markiert statt gedreht haben, erscheinen aufrecht in Viewer, Thumbnails, Listenansicht, Hover-Vorschau und Modify-Tab; ein zuvor gespeicherter Develop-Zuschnitt / eine Drehung gilt weiter für die Ausrichtung, auf der er erstellt wurde
 - **Farbmanagement** — Fotos mit eingebettetem Farbprofil (Display P3 vom Handy, Adobe RGB von Kameras, CMYK) werden für Viewer und Thumbnails nach sRGB umgerechnet; Bilder ohne Profil oder mit sRGB werden unverändert gezeigt
-- **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung; eine Animation, die dekodiert mehr als 512 MB bräuchte, wird beim Abspielen Bild für Bild dekodiert statt vorab komplett
+- **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung; eine Animation, die dekodiert mehr als 512 MB bräuchte, wird beim Abspielen Bild für Bild dekodiert statt vorab komplett; ein Bild mit 10 ms oder weniger wird wie in Browsern 100 ms lang gezeigt
 
 ### Browse-Modi
 

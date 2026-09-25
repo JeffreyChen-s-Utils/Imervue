@@ -1632,6 +1632,7 @@ Reprodução de Animação
 Ao abrir arquivos GIF, APNG ou WebP animados, a animação é reproduzida automaticamente. Uma animação que ocuparia
 mais de 512 MB decodificada é decodificada quadro a quadro durante a reprodução, então
 abri-la não congela a janela nem enche a memória.
+Um quadro de 10 ms ou menos é exibido por 100 ms, como nos navegadores: muitos GIFs contam com isso.
 
 .. list-table::
    :header-rows: 1

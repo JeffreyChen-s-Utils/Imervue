@@ -34,12 +34,17 @@ _PYRAMID_CACHE_BUDGET = 128 * 1024 * 1024
 # 1080p animated WebP of 600 frames to ~5 GB and froze the window meanwhile.
 _DECODED_FRAMES_BUDGET = 512 * 1024 * 1024
 _DEFAULT_FRAME_MS = 100
+# Browsers play a frame of 10 ms or less for 100 ms (Chrome follows Firefox):
+# plenty of GIFs say 0 or 1 centisecond and are only right at that speed.
+_FASTEST_HONOURED_MS = 10
 
 
 def _frame_duration(info: dict) -> int:
-    """A frame's display time in ms; a missing or non-positive one plays as 100 ms."""
+    """A frame's display time in ms; a missing one, or one of 10 ms or less, plays as 100 ms."""
     duration = info.get("duration", _DEFAULT_FRAME_MS)
-    return int(duration) if duration and duration > 0 else _DEFAULT_FRAME_MS
+    if not duration or duration <= _FASTEST_HONOURED_MS:
+        return _DEFAULT_FRAME_MS
+    return int(duration)
 
 
 def can_cache_pyramid(current_bytes: int, new_bytes: int, budget: int) -> bool:

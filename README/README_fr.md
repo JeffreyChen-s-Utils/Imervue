@@ -188,7 +188,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Cache disque** — vignettes PNG compressées avec invalidation basée sur MD5 sous `%LOCALAPPDATA%/Imervue/cache/thumbnails` (ou `~/.cache/imervue/thumbnails`)
 - **Orientation EXIF** — les photos en portrait que le téléphone ou l'appareil a seulement marquées au lieu de les pivoter s'affichent droites dans la visionneuse, les vignettes, la vue liste, l'aperçu au survol et l'onglet Modify ; un recadrage / une rotation de développement enregistré auparavant continue de s'appliquer à l'orientation sur laquelle il a été tracé
 - **Gestion des couleurs** — les photos avec un profil colorimétrique intégré (Display P3 des téléphones, Adobe RGB des appareils, CMJN) sont converties en sRGB pour la visionneuse et les vignettes ; les images sans profil ou en sRGB sont affichées telles quelles
-- **Lecture d'animations** — GIF / APNG avec lecture / pause / défilement image par image / contrôle de vitesse ; une animation qui occuperait plus de 512 Mo décodée est décodée image par image pendant la lecture plutôt qu'entièrement au départ
+- **Lecture d'animations** — GIF / APNG avec lecture / pause / défilement image par image / contrôle de vitesse ; une animation qui occuperait plus de 512 Mo décodée est décodée image par image pendant la lecture plutôt qu'entièrement au départ ; une image de 10 ms ou moins s'affiche 100 ms, comme dans les navigateurs
 
 ### Modes de navigation
 

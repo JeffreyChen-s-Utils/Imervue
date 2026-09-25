@@ -1678,6 +1678,7 @@ Animations-Wiedergabe
 Beim Öffnen von GIF-, APNG- oder animierten WebP-Dateien wird die Animation automatisch abgespielt. Eine Animation, die dekodiert mehr als
 512 MB bräuchte, wird beim Abspielen Bild für Bild dekodiert; das Öffnen friert das
 Fenster also nicht ein und füllt nicht den Speicher.
+Ein Bild mit 10 ms oder weniger wird wie in Browsern 100 ms lang gezeigt – viele GIFs sind darauf ausgelegt.
 
 .. list-table::
    :header-rows: 1

@@ -290,6 +290,14 @@ class TestFrameDuration:
     def test_missing_or_non_positive_plays_as_100_ms(self, info, expected):
         assert ap._frame_duration(info) == expected
 
+    @pytest.mark.parametrize(("info", "expected"), [
+        ({"duration": 10}, 100), ({"duration": 1}, 100), ({"duration": 10.0}, 100),
+        ({"duration": 11}, 11), ({"duration": 20}, 20),
+    ])
+    def test_ten_ms_or_less_plays_as_100_ms_like_browsers(self, info, expected):
+        """A GIF of 1-centisecond frames ran ten times faster here than in a browser."""
+        assert ap._frame_duration(info) == expected
+
 
 class TestStreamingLargeAnimations:
     """Past the decoded-frames budget, frames decode one at a time as they are shown."""

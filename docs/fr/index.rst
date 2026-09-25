@@ -1654,6 +1654,7 @@ Lecture d'animations
 À l'ouverture de fichiers GIF, APNG ou WebP animés, l'animation se lit automatiquement. Une animation qui occuperait
 plus de 512 Mo une fois décodée est décodée image par image pendant la lecture : l'ouvrir
 ne fige pas la fenêtre et ne remplit pas la mémoire.
+Une image de 10 ms ou moins s'affiche 100 ms, comme dans les navigateurs : beaucoup de GIF comptent dessus.
 
 .. list-table::
    :header-rows: 1
