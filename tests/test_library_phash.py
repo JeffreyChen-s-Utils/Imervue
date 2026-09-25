@@ -99,3 +99,13 @@ def test_a_tagged_photo_and_its_upright_copy_hash_alike(tmp_path):
     from Imervue.library.phash import compute_phash
     plain, tagged = upright_and_tagged_copies(tmp_path)
     assert hamming_distance(compute_phash(plain), compute_phash(tagged)) <= 4
+
+
+
+def test_two_different_sixteen_bit_scans_get_different_hashes(tmp_path):
+    """Both were clipped almost white and hashed identically: one picture to similar search."""
+    ramp = np.tile(np.linspace(0, 65535, 64, dtype=np.uint16), (48, 1))
+    rising, falling = tmp_path / "rising.png", tmp_path / "falling.png"
+    Image.fromarray(ramp).save(rising)
+    Image.fromarray(ramp[:, ::-1].copy()).save(falling)
+    assert hamming(compute_phash(rising), compute_phash(falling)) > 20

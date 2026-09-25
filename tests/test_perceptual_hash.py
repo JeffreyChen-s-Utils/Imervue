@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.image.perceptual_hash import (
@@ -170,3 +171,27 @@ def test_hash_paths_skips_a_picture_over_the_pixel_limit(tmp_path, monkeypatch):
     Image.new("RGB", (64, 64)).save(huge)
     monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 100)
     assert [p for p, _ in hash_paths([str(huge), str(small)])] == [str(small)]
+
+
+
+def _sixteen_bit_ramps():
+    """Two different 16-bit grey pictures: dark to bright, and bright to dark."""
+    ramp = np.tile(np.linspace(0, 65535, 64, dtype=np.uint16), (48, 1))
+    return Image.fromarray(ramp), Image.fromarray(ramp[:, ::-1].copy())
+
+
+def _eight_bit(img):
+    return Image.fromarray((np.asarray(img) // 257).astype(np.uint8))
+
+
+@pytest.mark.parametrize("hasher", [dhash, ahash])
+def test_two_different_sixteen_bit_scans_hash_as_far_apart_as_in_eight_bits(hasher):
+    """Clipped to 255 they were almost white alike: 24 of 64 dHash bits apart instead of 64."""
+    rising, falling = _sixteen_bit_ramps()
+    expected = hamming_distance(hasher(_eight_bit(rising)), hasher(_eight_bit(falling)))
+    assert hamming_distance(hasher(rising), hasher(falling)) == expected
+
+
+def test_a_sixteen_bit_scan_hashes_like_its_eight_bit_copy():
+    rising, _falling = _sixteen_bit_ramps()
+    assert hamming_distance(dhash(rising), dhash(_eight_bit(rising))) <= 2

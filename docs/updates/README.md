@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-18 | 2026-09-26 | Two different 16-bit scans are no longer hashed as the same picture | #fix #duplicates #similar-search #formats #data-loss | [2026-09-b](2026-09-b.md) |
 | U-20260926-17 | 2026-09-26 | Grey thumbnails cached before the 16-bit and grey-profile fixes are made again | #fix #thumbnails #cache #color-management | [2026-09-b](2026-09-b.md) |
 | U-20260926-16 | 2026-09-26 | Ratings, favourite, cull flags and colour labels work in the List view | #fix #list-view #rating #culling #keyboard | [2026-09-b](2026-09-b.md) |
 | U-20260926-15 | 2026-09-26 | Rating and favourite keys on the wall rate the photo you point at, not the last one opened | #fix #rating #culling #keyboard #browse | [2026-09-b](2026-09-b.md) |
@@ -390,4 +391,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 48 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 49 |

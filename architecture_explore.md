@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `1c73a03` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `6d02ce6` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 889 | 147,928 |
+| `tests/` | 889 | 147,977 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
 | `Imervue/gui/` | 167 | 33,250 |
 | `Imervue/puppet/` | 57 | 15,296 |
-| `Imervue/image/` | 128 | 15,343 |
+| `Imervue/image/` | 128 | 15,355 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,210 |
 | `Imervue/multi_language/` | 8 | 14,149 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,740** | **330,574** |
+| **總計** | **1,740** | **330,635** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,281 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,293 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -311,7 +311,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-128 個模組、15,343 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+128 個模組、15,355 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -395,7 +395,7 @@ ImervueMainWindow
 
 `histogram.py`(103) · `statistics.py`(65) 逐通道統計 + CSV · `scopes.py`(66) 波形/RGB parade ·
 `quality_metrics.py`(88) 無參考品質 · `quality_score.py`(62) 篩選用技術評分 ·
-`perceptual_hash.py`(147) pHash 與近似重複分組（`upright`：先依 EXIF 轉正再雜湊，未帶標籤者雜湊值不變）
+`perceptual_hash.py`(157) pHash 與近似重複分組（`upright`：先依 EXIF 轉正再雜湊，未帶標籤者雜湊值不變；`grey_levels`：16 位元與浮點灰階先經 `to_eight_bit` 縮放再轉 8 位元灰階，dHash、aHash 與圖庫的 pHash 共用）
 
 #### 其他
 
@@ -511,7 +511,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
 | `clip_search.py` | 382 | CLIP 語意搜尋（「找出符合這句話的照片」） |
 | `auto_tag.py` | 111 | 啟發式內容分類 + 選用 CLIP ONNX |
-| `phash.py` | 85 | 64-bit DCT pHash |
+| `phash.py` | 85 | 64-bit DCT pHash（轉正後經 `perceptual_hash.grey_levels` 取灰階） |
 | `bloom_filter.py` | 150 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
 | `dedupe_resolver.py` | 60 | 從一組重複中挑出該保留的那張 |
 | `stacks.py` | 89 | RAW + JPEG 配對堆疊 |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-889 個檔、147,928 行。`pyproject.toml` 定義三個互斥層級 marker：
+889 個檔、147,977 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
