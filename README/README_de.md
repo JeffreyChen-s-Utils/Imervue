@@ -181,7 +181,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 ### Viewer
 
 - **GPU-beschleunigtes Rendering** via OpenGL (GLSL-1.20-Shader mit VBO)
-- **Deep-Zoom-Pyramide** — mehrstufige 512×512-Kacheln mit LANCZOS-Resampling; der Kachel-LRU hält 256 Einträge (harte Obergrenze 512). Das VRAM-Budget wird beim Start vom GL-Treiber ermittelt und fällt auf 1,5 GB zurück, überschreibbar über die Einstellung `vram_limit_mb` (wird geklemmt, nie stillschweigend verworfen). Anisotrope Filterung bis 8×
+- **Deep-Zoom-Pyramide** — mehrstufige 512×512-Kacheln mit LANCZOS-Resampling; der Kachel-LRU hält 256 Einträge (harte Obergrenze 512). Das VRAM-Budget wird beim Start vom GL-Treiber ermittelt und fällt auf 1,5 GB zurück, überschreibbar über die Einstellung `vram_limit_mb` (wird geklemmt, nie stillschweigend verworfen). Anisotrope Filterung bis 8×; auch Panoramen weit über Pillows Sicherheitsgrenze von 179 MP öffnen sich (die Grenze folgt dem Arbeitsspeicher: bei 16 GB etwa 1,3 Gigapixel)
 - **Asynchrones Laden** — Multithread-Dekodierung mit adaptivem Prefetch-Fenster: ±3 Bilder beim Blättern, erweitert auf 5 voraus / 1 zurück, sobald du konsequent in eine Richtung blätterst
 - **Getrennte Worker-Pools** — Thumbnail-Schübe und Deep-Zoom-Dekodierungen laufen in verschiedenen Pools, sodass das Öffnen eines großen Ordners nie das Bild aushungert, das du gerade ansiehst
 - **Virtualisiertes Thumbnail-Grid** — Nur sichtbare Tiles werden gerendert; Thumbnail-Größe konfigurierbar (128 / 256 / 512 / 1024 / auto)

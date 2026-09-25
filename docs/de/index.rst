@@ -133,6 +133,8 @@ Deep-Zoom-Modus
 
 Klicken Sie auf eine Miniaturansicht, um in den Deep-Zoom-Modus für hochwertige Einzelbildbetrachtung zu wechseln.
 
+Auch Panoramen weit über Pillows Sicherheitsgrenze von 179 Megapixeln öffnen sich: Die Grenze richtet sich nach dem Arbeitsspeicher (bei 16 GB etwa 1,3 Gigapixel), und solche Riesen werden nacheinander dekodiert.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

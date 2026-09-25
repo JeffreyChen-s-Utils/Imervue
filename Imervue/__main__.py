@@ -81,6 +81,8 @@ def main() -> int:
     from Imervue.system.log_setup import install_exception_logging, setup_logging
     setup_logging()
     install_exception_logging()
+    from Imervue.system.pixel_limit import raise_pixel_limit
+    raise_pixel_limit()   # a 200 MP panorama opens; Pillow's server limit refused it
 
     args = parse_args()
 

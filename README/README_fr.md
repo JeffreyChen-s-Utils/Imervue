@@ -181,7 +181,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 ### Visualiseur
 
 - **Rendu accéléré par GPU** via OpenGL (shaders GLSL 1.20 avec VBO)
-- **Pyramide de zoom profond** — tuiles multi-niveaux 512×512 avec rééchantillonnage LANCZOS ; le LRU de tuiles conserve 256 entrées (plafond dur 512). Le budget VRAM est sondé auprès du pilote GL au démarrage et retombe à 1,5 Go en cas d'échec, redéfinissable via le réglage `vram_limit_mb` (borné, jamais ignoré silencieusement). Filtrage anisotrope jusqu'à 8×
+- **Pyramide de zoom profond** — tuiles multi-niveaux 512×512 avec rééchantillonnage LANCZOS ; le LRU de tuiles conserve 256 entrées (plafond dur 512). Le budget VRAM est sondé auprès du pilote GL au démarrage et retombe à 1,5 Go en cas d'échec, redéfinissable via le réglage `vram_limit_mb` (borné, jamais ignoré silencieusement). Filtrage anisotrope jusqu'à 8× ; les panoramas bien au-delà de la limite de sécurité de 179 Mpx de Pillow s'ouvrent aussi (la limite suit la mémoire : environ 1,3 gigapixel avec 16 Go)
 - **Chargement asynchrone** — décodage multithread avec une fenêtre de préchargement adaptative : ±3 images en navigation, élargie à 5 en avant / 1 en arrière dès que vous feuilletez régulièrement dans une direction
 - **Pools de workers séparés** — les rafales de vignettes et les décodages de zoom profond tournent sur des pools distincts, si bien qu'ouvrir un grand dossier n'affame jamais l'image que vous regardez
 - **Grille de vignettes virtualisée** — seules les tuiles visibles sont rendues ; taille de vignette configurable (128 / 256 / 512 / 1024 / auto)

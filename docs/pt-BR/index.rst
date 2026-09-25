@@ -134,6 +134,8 @@ Modo Deep Zoom
 
 Clique em uma miniatura para entrar no modo Deep Zoom para visualização individual de alta qualidade.
 
+Panoramas muito acima do limite de segurança de 179 megapixels do Pillow também abrem: o limite acompanha a memória do computador (com 16 GB, cerca de 1,3 gigapixel) e essas imagens gigantes são decodificadas uma de cada vez.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

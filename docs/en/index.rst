@@ -132,6 +132,8 @@ Deep Zoom Mode
 
 Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
 
+Panoramas far larger than Pillow's 179-megapixel safety limit open too: the limit follows the computer's memory (with 16 GB, about 1.3 gigapixels), and such giants decode one at a time.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

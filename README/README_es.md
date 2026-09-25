@@ -181,7 +181,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Visor
 
 - **Renderizado acelerado por GPU** mediante OpenGL (shaders GLSL 1.20 con VBO)
-- **Pirámide de zoom profundo** — teselas multinivel de 512×512 con remuestreo LANCZOS; la LRU de teselas guarda 256 entradas (techo duro 512). El presupuesto de VRAM se sondea del controlador GL al arrancar y cae a 1,5 GB si falla, redefinible con el ajuste `vram_limit_mb` (se acota, nunca se descarta en silencio). Filtrado anisotrópico hasta 8×
+- **Pirámide de zoom profundo** — teselas multinivel de 512×512 con remuestreo LANCZOS; la LRU de teselas guarda 256 entradas (techo duro 512). El presupuesto de VRAM se sondea del controlador GL al arrancar y cae a 1,5 GB si falla, redefinible con el ajuste `vram_limit_mb` (se acota, nunca se descarta en silencio). Filtrado anisotrópico hasta 8×; también se abren panoramas muy por encima del límite de seguridad de 179 MP de Pillow (el límite sigue la memoria del equipo: unos 1,3 gigapíxeles con 16 GB)
 - **Carga asíncrona** — decodificación multihilo con una ventana de precarga adaptativa: ±3 imágenes al navegar, ampliándose a 5 por delante / 1 por detrás en cuanto avanzas de forma constante en una dirección
 - **Pools de trabajo separados** — las ráfagas de miniaturas y las decodificaciones de zoom profundo usan pools distintos, así abrir una carpeta grande nunca deja sin recursos a la imagen que estás mirando
 - **Cuadrícula de miniaturas virtualizada** — sólo se renderizan los mosaicos visibles; el tamaño de miniatura es configurable (128 / 256 / 512 / 1024 / auto)

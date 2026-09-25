@@ -315,3 +315,23 @@ def test_a_folder_sorted_by_resolution_still_uses_the_cache(tmp_path, monkeypatc
     monkeypatch.setitem(user_setting_dict, "sort_by", "resolution")
     monkeypatch.setattr(folder_index, "load", lambda *_a, **_k: ["cached.png"])
     assert image_loader._scan_images_for_user(str(tmp_path)) == ["cached.png"]
+
+
+@pytest.mark.parametrize("thumbnail", [False, True])
+def test_a_raster_decode_takes_the_giant_slot_for_its_pixel_count(tmp_path, monkeypatch, thumbnail):
+    """Several workers decoding panoramas at once could add their gigabytes up."""
+    from contextlib import contextmanager
+
+    from Imervue.gpu_image_view.images import image_loader
+    asked = []
+
+    @contextmanager
+    def slot(pixels):
+        asked.append(pixels)
+        yield
+
+    monkeypatch.setattr(image_loader, "decode_slot", slot)
+    path = tmp_path / "a.png"
+    Image.new("RGB", (30, 20)).save(path)
+    image_loader.decode_image_file(str(path), thumbnail=thumbnail)
+    assert asked == [600]

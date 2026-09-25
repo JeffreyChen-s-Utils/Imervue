@@ -137,6 +137,8 @@ Modo Deep Zoom
 Haga clic en una miniatura para entrar en el modo Deep Zoom y ver imágenes individuales en
 alta calidad.
 
+También se abren panoramas muy por encima del límite de seguridad de 179 megapíxeles de Pillow: el límite depende de la memoria del equipo (con 16 GB, unos 1,3 gigapíxeles) y esas imágenes gigantes se decodifican de una en una.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

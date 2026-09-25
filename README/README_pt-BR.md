@@ -181,7 +181,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 ### Visualizador
 
 - **Renderização acelerada por GPU** via OpenGL (shaders GLSL 1.20 com VBO)
-- **Pirâmide de zoom profundo** — ladrilhos multinível de 512×512 com reamostragem LANCZOS; o LRU de ladrilhos guarda 256 entradas (teto rígido 512). O orçamento de VRAM é sondado do driver GL na inicialização e recua para 1,5 GB, substituível pela configuração `vram_limit_mb` (é limitado, nunca descartado em silêncio). Filtragem anisotrópica até 8×
+- **Pirâmide de zoom profundo** — ladrilhos multinível de 512×512 com reamostragem LANCZOS; o LRU de ladrilhos guarda 256 entradas (teto rígido 512). O orçamento de VRAM é sondado do driver GL na inicialização e recua para 1,5 GB, substituível pela configuração `vram_limit_mb` (é limitado, nunca descartado em silêncio). Filtragem anisotrópica até 8×; panoramas muito acima do limite de segurança de 179 MP do Pillow também abrem (o limite acompanha a memória: cerca de 1,3 gigapixel com 16 GB)
 - **Carregamento assíncrono** — decodificação multithread com uma janela de pré-carregamento adaptativa: ±3 imagens ao navegar, ampliando para 5 à frente / 1 atrás assim que você avança de forma consistente numa direção
 - **Pools de workers separados** — rajadas de miniaturas e decodificações de zoom profundo rodam em pools distintos, então abrir uma pasta grande nunca deixa sem recursos a imagem que você está vendo
 - **Grade virtualizada de miniaturas** — apenas tiles visíveis são renderizados; o tamanho das miniaturas é configurável (128 / 256 / 512 / 1024 / auto)

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
 from Imervue.system.natural_sort import natural_key
+from Imervue.system.pixel_limit import decode_slot
 from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
@@ -48,19 +49,21 @@ def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
 def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     img = Image.open(path)
     code = exif_orientation(img) if orient else 1
-    img = to_srgb(img)   # embedded colour profile -> the sRGB the screen shows
-    # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
-    # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
-    # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
-    if img.mode not in ("RGB", "RGBA", "L"):
-        img = img.convert("RGBA")
-    return np.array(transpose_for(img, code))
+    with decode_slot(img.width * img.height):   # one giant panorama at a time
+        img = to_srgb(img)   # embedded colour profile -> the sRGB the screen shows
+        # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
+        # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
+        # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
+        if img.mode not in ("RGB", "RGBA", "L"):
+            img = img.convert("RGBA")
+        return np.array(transpose_for(img, code))
 
 
 def _load_raster_thumbnail(path: str, max_edge: int = _THUMBNAIL_EDGE, *,
                            orient: bool = True) -> np.ndarray:
-    with Image.open(path) as img:
+    with Image.open(path) as img, decode_slot(img.width * img.height):
         code = exif_orientation(img) if orient else 1
+        # Past JPEG's draft decode this reads every pixel: a giant waits its turn.
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
         shown = to_srgb(img)   # after the downscale: converting fewer pixels
         thumb = shown.convert("RGBA") if shown.mode not in ("RGB", "RGBA", "L") else shown
