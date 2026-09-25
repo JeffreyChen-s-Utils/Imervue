@@ -40,6 +40,12 @@ STILL_IMAGE_EXTENSIONS: frozenset[str] = frozenset({
 VIEWER_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
 """Everything the viewer opens, videos included (shown by their poster frame)."""
 
+RASTER_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS - {".svg"}
+"""The still formats a tool without Qt decodes (the CLI, the MCP server).
+
+SVG is left out: it needs Qt to rasterise.
+"""
+
 
 def ensure_pillow_opener(ext: str) -> None:
     """Register the optional Pillow codec ``ext`` needs (HEIC / HEIF or JPEG XL), if any.

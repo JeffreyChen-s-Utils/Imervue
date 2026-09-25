@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-69 | 2026-09-25 | HDR merge, panorama, focus stack, stack blend, paint drops and the CLI develop camera RAW | #fix #raw | [2026-09-b](2026-09-b.md) |
 | U-20260925-68 | 2026-09-25 | Animation frames of 10 ms or less play for 100 ms, as in browsers | #fix #animation | [2026-09-b](2026-09-b.md) |
 | U-20260925-67 | 2026-09-25 | Sorting by name puts img2 before img10, like the file tree and Explorer | #fix #sort | [2026-09-b](2026-09-b.md) |
 | U-20260925-66 | 2026-09-25 | Canon CR3, Panasonic RW2, Pentax PEF and 14 more RAW formats open | #fix #raw #formats | [2026-09-b](2026-09-b.md) |
@@ -349,4 +350,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 7 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 8 |

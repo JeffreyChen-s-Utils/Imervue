@@ -1068,3 +1068,64 @@ def test_load_pipeline_reads_a_file_saved_with_a_bom(tmp_path):
     f = tmp_path / "pipeline.json"
     f.write_bytes(b"\xef\xbb\xbf" + json.dumps([{"op": "invert"}]).encode("utf-8"))
     assert load_pipeline(str(f)) == [{"op": "invert"}]
+
+
+# ---------------------------------------------------------------------------
+# camera RAW: developed like the viewer, listed in folders, written as PNG
+# ---------------------------------------------------------------------------
+
+
+def _nef_with_a_small_preview(path):
+    """What Pillow sees in a NEF: the 160x120 thumbnail in IFD0."""
+    Image.new("RGB", (160, 120), (0, 0, 255)).save(path, format="TIFF")
+    return path
+
+
+@pytest.fixture
+def developed_raw(monkeypatch):
+    from Imervue.image import dimensions, shown
+    frame = np.full((300, 450, 3), 90, dtype=np.uint8)
+    monkeypatch.setattr(shown, "develop_raw", lambda _p, thumbnail=False: frame)
+    monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: (450, 300))
+    return frame
+
+
+@pytest.mark.parametrize(("command", "extra", "name", "size"), [
+    ("convert", ["--format", "PNG"], "shot.png", (450, 300)),
+    ("resize", ["--max", "90"], "shot.png", (90, 60)),
+    ("strip", [], "shot.png", (450, 300)),
+    ("auto-orient", [], "shot.png", (450, 300)),
+])
+def test_a_raw_is_developed_not_its_preview(tmp_path, developed_raw, command, extra, name, size):
+    """Every subcommand read a NEF as its 160x120 thumbnail, and kept .nef on a PNG."""
+    src = _nef_with_a_small_preview(tmp_path / "shot.nef")
+    out_dir = tmp_path / "out"
+    assert main([command, str(src), *extra, "--out", str(out_dir)]) == 0
+    assert sorted(p.name for p in out_dir.iterdir()) == [name]
+    with Image.open(out_dir / name) as out:
+        assert (out.format, out.size) == ("PNG", size)
+
+
+def test_info_reports_what_libraw_develops(tmp_path, developed_raw, capsys):
+    src = _nef_with_a_small_preview(tmp_path / "shot.NEF")
+    assert main(["info", str(src), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)[0]
+    assert (payload["format"], payload["mode"], payload["width"], payload["height"]) == ("NEF", "RGB", 450, 300)
+
+
+def test_an_unreadable_raw_is_reported(tmp_path, capsys):
+    (tmp_path / "broken.cr3").write_bytes(b"not a raw file" * 20)
+    assert main(["info", str(tmp_path / "broken.cr3"), "--json"]) == 1
+    assert "broken.cr3" in capsys.readouterr().err
+
+
+def test_a_folder_lists_raw_and_avif_but_not_svg(tmp_path):
+    for name in ("a.CR3", "b.rw2", "c.avif", "d.jxl", "e.svg", "f.txt"):
+        (tmp_path / name).write_bytes(b"x")
+    names = [p.name for p in iter_image_paths([str(tmp_path)], recursive=False)]
+    assert names == ["a.CR3", "b.rw2", "c.avif", "d.jxl"]
+
+
+def test_output_path_writes_a_raw_as_png(tmp_path):
+    assert output_path(tmp_path / "IMG_1.CR3", None, "_resized", None).name == "IMG_1_resized.png"
+    assert output_path(tmp_path / "a.jpg", None, "_resized", None).name == "a_resized.jpg"

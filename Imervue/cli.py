@@ -24,15 +24,16 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.orientation import QUARTER_TURN_CODES, exif_orientation
+from Imervue.image.dimensions import probe_image
+from Imervue.image.formats import RASTER_EXTENSIONS, RAW_EXTENSIONS
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import load_shown_rgba, open_shown
 
-_IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
-    ".heic", ".heif", ".avif", ".jxl",
-})
+# The outputs are written without EXIF or ICC, so every input is decoded as the
+# viewer shows it (shown.open_shown): sRGB, turned upright, a camera RAW
+# developed. Otherwise a portrait phone photo comes out sideways, a Display P3
+# one washed out and a NEF as its 160x120 embedded preview.
+
 _FORMAT_EXT = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
 _BYTES_PER_KB = 1024.0
 _CLI_VERSION = "1.0"
@@ -48,37 +49,26 @@ def iter_image_paths(inputs: Iterable[str], *, recursive: bool) -> list[Path]:
         if path.is_dir():
             walker = path.rglob("*") if recursive else path.glob("*")
             found.extend(p for p in walker
-                         if p.is_file() and p.suffix.lower() in _IMAGE_EXTS)
+                         if p.is_file() and p.suffix.lower() in RASTER_EXTENSIONS)
         elif path.is_file():
             found.append(path)
     return sorted(set(found))
 
 
 def output_path(src: Path, out_dir: str | None, suffix: str, ext: str | None) -> Path:
-    """Resolve the destination path for *src* given --out / suffix / new extension."""
-    new_ext = ext if ext is not None else src.suffix
+    """Resolve the destination path for *src* given --out / suffix / new extension.
+
+    ``ext=None`` keeps the source's extension, except that a developed camera
+    RAW is written as PNG: Pillow can't write RAW, and the bytes must match the name.
+    """
+    new_ext = ext if ext is not None else _kept_extension(src)
     if out_dir:
         return Path(out_dir) / f"{src.stem}{new_ext}"
     return src.with_name(f"{src.stem}{suffix}{new_ext}")
 
 
-def _open_shown(path: Path) -> Image.Image:
-    """Decode *path* as the viewer shows it: sRGB, turned upright by its EXIF orientation.
-
-    The outputs are written without EXIF or ICC, so both have to be baked into
-    the pixels: otherwise a portrait phone photo comes out sideways and a
-    Display P3 one washed out. Registers the HEIC / AVIF / JPEG XL opener the
-    extension needs. The file is closed on return; raises ``IMAGE_READ_ERRORS``.
-    """
-    ensure_pillow_opener(path.suffix.lower())
-    with Image.open(path) as img:
-        shown = as_shown(img)
-        shown.load()
-    return shown
-
-
-def _load_rgba(path: Path) -> np.ndarray:
-    return np.array(_open_shown(path).convert("RGBA"))
+def _kept_extension(src: Path) -> str:
+    return ".png" if src.suffix.lower() in RAW_EXTENSIONS else src.suffix
 
 
 # --- operations -------------------------------------------------------------
@@ -91,59 +81,61 @@ def _resize_to(img: Image.Image, max_edge: int) -> Image.Image:
 
 def op_convert(src: Path, target: Path, args) -> None:
     fmt = args.format.upper()
-    img = _open_shown(src)
+    img = open_shown(src)
     rgb = img.convert("RGB") if fmt == "JPEG" else img.convert("RGBA")
     rgb.save(target, format=fmt, quality=args.quality)
 
 
 def op_resize(src: Path, target: Path, args) -> None:
-    _resize_to(_open_shown(src), args.max).save(target)
+    _resize_to(open_shown(src), args.max).save(target)
 
 
 def op_thumbnail(src: Path, target: Path, args) -> None:
-    _resize_to(_open_shown(src).convert("RGBA"), args.size).save(target)
+    _resize_to(open_shown(src).convert("RGBA"), args.size).save(target)
 
 
 def op_watermark(src: Path, target: Path, args) -> None:
     from Imervue.image.watermark import WatermarkOptions, apply_watermark
-    apply_watermark(_open_shown(src).convert("RGBA"), WatermarkOptions(
+    apply_watermark(open_shown(src).convert("RGBA"), WatermarkOptions(
         text=args.text, corner=args.corner, opacity=args.opacity)).save(target)
 
 
 def op_optimize(src: Path, target: Path, args) -> None:
     from Imervue.image.optimize import encode_to_budget
-    data, _quality = encode_to_budget(_load_rgba(src), args.max_kb, args.format.upper())
+    data, _quality = encode_to_budget(load_shown_rgba(src), args.max_kb, args.format.upper())
     target.write_bytes(data)
 
 
 def op_dehaze(src: Path, target: Path, args) -> None:
     from Imervue.image.dehaze import dehaze
-    Image.fromarray(dehaze(_load_rgba(src), args.strength), mode="RGBA").save(target)
+    Image.fromarray(dehaze(load_shown_rgba(src), args.strength), mode="RGBA").save(target)
 
 
 def op_clahe(src: Path, target: Path, args) -> None:
     from Imervue.image.clahe import apply_clahe
-    Image.fromarray(apply_clahe(_load_rgba(src), args.clip, args.tiles), mode="RGBA").save(target)
+    clahe = apply_clahe(load_shown_rgba(src), args.clip, args.tiles)
+    Image.fromarray(clahe, mode="RGBA").save(target)
 
 
 def op_dither(src: Path, target: Path, args) -> None:
     from Imervue.image.dither import ordered_dither
-    Image.fromarray(ordered_dither(_load_rgba(src), args.levels), mode="RGBA").save(target)
+    Image.fromarray(ordered_dither(load_shown_rgba(src), args.levels), mode="RGBA").save(target)
 
 
 def op_distort(src: Path, target: Path, args) -> None:
     from Imervue.image.distort import distort
-    Image.fromarray(distort(_load_rgba(src), args.mode, args.strength), mode="RGBA").save(target)
+    distorted = distort(load_shown_rgba(src), args.mode, args.strength)
+    Image.fromarray(distorted, mode="RGBA").save(target)
 
 
 def op_autoorient(src: Path, target: Path, _args) -> None:
-    Image.fromarray(_load_rgba(src), mode="RGBA").save(target)
+    Image.fromarray(load_shown_rgba(src), mode="RGBA").save(target)
 
 
 def op_strip(src: Path, target: Path, _args) -> None:
     # Re-save without forwarding exif/icc/xmp — Pillow omits metadata by default.
     # The orientation and colour profile go with them, so bake both in first.
-    _open_shown(src).save(target)
+    open_shown(src).save(target)
 
 
 # --- pipeline (chain several operations from a JSON file) -------------------
@@ -234,29 +226,23 @@ def validate_pipeline(steps: list) -> list[str]:
 
 
 def op_pipeline(src: Path, target: Path, args) -> None:
-    arr = _load_rgba(src)
+    arr = load_shown_rgba(src)
     for step in args.pipeline_steps:
         arr = _PIPELINE_OPS[step["op"]](arr, step)
     Image.fromarray(arr, mode="RGBA").save(target)
 
 
 def op_info(src: Path, _args) -> dict:
-    ensure_pillow_opener(src.suffix.lower())
-    with Image.open(src) as img:
-        width, height = img.size
-        if exif_orientation(img) in QUARTER_TURN_CODES:   # report the upright size
-            width, height = height, width
-        info = {
-            "path": str(src), "format": img.format, "mode": img.mode,
-            "width": width, "height": height,
-        }
-    info["size_kb"] = round(src.stat().st_size / _BYTES_PER_KB, 1)
-    return info
+    fmt, mode, width, height = probe_image(src)   # the upright size; libraw's for a RAW
+    return {
+        "path": str(src), "format": fmt, "mode": mode, "width": width, "height": height,
+        "size_kb": round(src.stat().st_size / _BYTES_PER_KB, 1),
+    }
 
 
 def op_stats(src: Path, _args) -> dict:
     from Imervue.image.quality_metrics import quality_metrics
-    metrics = quality_metrics(_load_rgba(src))
+    metrics = quality_metrics(load_shown_rgba(src))
     return {"path": str(src), **{k: round(v, 3) for k, v in metrics.items()}}
 
 
@@ -403,7 +389,7 @@ def cmd_collage(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     from Imervue.image.collage import build_collage
-    images = [_load_rgba(p) for p in paths]
+    images = [load_shown_rgba(p) for p in paths]
     _ensure_parent(out)
     Image.fromarray(build_collage(images, args.columns), mode="RGBA").save(out)
     print(f"{len(paths)} images -> {out}")
@@ -423,7 +409,7 @@ def cmd_anaglyph(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     from Imervue.image.anaglyph import anaglyph
-    result = anaglyph(_load_rgba(left), _load_rgba(right), args.method)
+    result = anaglyph(load_shown_rgba(left), load_shown_rgba(right), args.method)
     _ensure_parent(out)
     Image.fromarray(result, mode="RGBA").save(out)
     print(f"{left} + {right} -> {out}")
@@ -431,7 +417,7 @@ def cmd_anaglyph(args) -> int:
 
 
 def op_preset(src: Path, target: Path, args) -> None:
-    Image.fromarray(args.recipe.apply(_load_rgba(src)), mode="RGBA").save(target)
+    Image.fromarray(args.recipe.apply(load_shown_rgba(src)), mode="RGBA").save(target)
 
 
 def cmd_preset(args) -> int:
