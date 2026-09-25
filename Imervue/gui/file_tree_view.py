@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QApplication, QTreeView, QFileSystemModel, QMenu,
 )
 
+from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gui.folder_thumbnail_model import clamp_icon_size
 
 if TYPE_CHECKING:
@@ -743,16 +744,19 @@ class _FileTreeView(QTreeView):
                            done: list[str], failed: list[str]) -> None:
         self._trash_workers.discard(worker)
         worker.deleteLater()
-        landed = set(done)
+        # What the Recycle Bin could not take (a memory card, a network share)
+        # goes for good only if the user says so.
+        landed = set(done) | set(offer_permanent_delete(self, failed))
         for request in batch:
             request.on_done([p for p in request.paths if p in landed])
-        if failed and hasattr(self._main_window, "toast"):
+        still_there = [path for path in failed if path not in landed]
+        if still_there and hasattr(self._main_window, "toast"):
             lang = language_wrapper.language_word_dict
             self._main_window.toast.warning(
                 lang.get(
                     "tree_delete_failed_count",
                     "Couldn't delete {count} item(s)",
-                ).format(count=len(failed)),
+                ).format(count=len(still_there)),
             )
         self._pump_trash_queue()
 

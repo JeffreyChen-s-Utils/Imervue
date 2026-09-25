@@ -394,6 +394,11 @@ before — the failure mode is a command that *appears* to succeed.
   yields the list of trashed paths for assertions. Product code must keep importing
   `send2trash` at call time (`from send2trash import send2trash` inside the function) for the
   patch to reach it.
+- **The "delete permanently?" question never blocks a test — the autouse
+  `_keep_what_the_bin_refused` fixture answers "Keep Them".** Files the Recycle Bin refuses
+  (a drive without one, a locked file) reach `gui/trash_failure_notice.offer_permanent_delete`,
+  whose `QMessageBox.exec` would otherwise wait forever under a stub worker that reports
+  failures. A test that needs the other answer sets `_ask_to_delete_permanently` itself.
 - **`send2trash` costs ~0.27 s per call regardless of how few files it carries**, versus
   ~0.016 s/file when a whole list goes over in one call (measured 2026-07-30). Every delete path
   must batch through `Imervue/system/trash_ops.py` — never a per-file loop.

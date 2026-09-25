@@ -345,6 +345,19 @@ def _isolate_recipe_store(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _keep_what_the_bin_refused(monkeypatch):
+    """Answer "Keep Them" to the permanent-delete question, so no test blocks on its modal.
+
+    A failed trash in a test (a stub worker reporting failures) would otherwise
+    open ``QMessageBox.exec`` and wait forever. Tests that need the other
+    answer set ``_ask_to_delete_permanently`` themselves.
+    """
+    from Imervue.gui import trash_failure_notice
+    monkeypatch.setattr(trash_failure_notice, "_ask_to_delete_permanently",
+                        lambda _parent, _paths: False)
+
+
+@pytest.fixture(autouse=True)
 def _isolate_library_db(tmp_path):
     """Point the library index at a throw-away DB, never the real ``library.db``.
 

@@ -6,6 +6,9 @@ from PySide6.QtWidgets import QMessageBox
 
 from Imervue.gui import trash_failure_notice as notice
 
+# The real question: conftest answers it with "Keep Them" for every other test.
+_ASK = notice._ask_to_delete_permanently
+
 
 def _files(tmp_path, *names):
     paths = []
@@ -56,18 +59,18 @@ class TestTheQuestion:
 
     def test_delete_forever_is_a_yes(self, qapp, answer):
         answer(QMessageBox.ButtonRole.DestructiveRole)
-        assert notice._ask_to_delete_permanently(None, ["E:/DCIM/a.jpg"]) is True
+        assert _ASK(None, ["E:/DCIM/a.jpg"]) is True
 
     def test_keep_them_is_a_no_and_the_default(self, qapp, answer):
         seen = answer(QMessageBox.ButtonRole.RejectRole)
-        assert notice._ask_to_delete_permanently(None, ["E:/DCIM/a.jpg"]) is False
+        assert _ASK(None, ["E:/DCIM/a.jpg"]) is False
         box = seen["box"]
         assert box.buttonRole(box.defaultButton()) == QMessageBox.ButtonRole.RejectRole
 
     def test_the_message_names_the_files_and_cuts_a_long_list(self, qapp, answer):
         seen = answer(QMessageBox.ButtonRole.RejectRole)
         paths = [f"E:/DCIM/IMG_{i:04}.JPG" for i in range(12)]
-        notice._ask_to_delete_permanently(None, paths)
+        _ASK(None, paths)
         text = seen["box"].text()
         assert text.startswith("12 deleted file(s) could not go to the Recycle Bin")
         assert "IMG_0009.JPG" in text
