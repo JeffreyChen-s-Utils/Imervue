@@ -1,8 +1,10 @@
 """Tests for face detection."""
 from __future__ import annotations
 
+import os
 import sys
 import types
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -24,16 +26,32 @@ requires_haar = pytest.mark.skipif(
 
 
 class _FakeCascade:
-    def __init__(self, path: str, *, empty: bool = False):
-        self.path = path
+    def __init__(self, *, empty: bool = False, readable: bool = True):
+        self.xml = None
         self._empty = empty
+        self._readable = readable
+
+    def read(self, node) -> bool:
+        self.xml = node
+        return self._readable
 
     def empty(self) -> bool:
-        return self._empty
+        return self._empty or self.xml is None
 
     @staticmethod
     def detectMultiScale(gray, **_kwargs):  # noqa: N802 - mirrors the cv2 name
         return [(0, 0, 10, 10), (5, 5, 30, 40)] if gray.any() else ()
+
+
+class _FakeStorage:
+    """``cv2.FileStorage`` reading from memory: its top node is the XML text itself."""
+
+    def __init__(self, source: str, flags: int):
+        assert flags == 4
+        self._source = source
+
+    def getFirstTopLevelNode(self):  # noqa: N802 - mirrors the cv2 name
+        return self._source
 
 
 def _fake_cv2(monkeypatch, *, classifier=_FakeCascade, data_dir=None):
@@ -42,6 +60,8 @@ def _fake_cv2(monkeypatch, *, classifier=_FakeCascade, data_dir=None):
     cv2.__version__ = "9.9.9"
     cv2.COLOR_RGB2GRAY = 7
     cv2.cvtColor = lambda arr, _code: arr[..., 0]
+    cv2.FILE_STORAGE_READ, cv2.FILE_STORAGE_MEMORY = 0, 4
+    cv2.FileStorage = _FakeStorage
     if classifier is not None:
         cv2.CascadeClassifier = classifier
     if data_dir is not None:
@@ -60,7 +80,7 @@ class TestLoadCascade:
     def test_loads_the_frontal_face_cascade(self, monkeypatch, cascade_dir):
         _fake_cv2(monkeypatch, data_dir=cascade_dir)
         cascade = fd._load_cascade()
-        assert cascade.path.endswith(fd._CASCADE_FILE)
+        assert cascade.xml == "<opencv_storage/>"
 
     def test_no_classifier_is_unavailable(self, monkeypatch, cascade_dir):
         # OpenCV 5 without contrib: CascadeClassifier is gone.
@@ -82,12 +102,36 @@ class TestLoadCascade:
     def test_unreadable_cascade_is_a_plain_runtime_error(self, monkeypatch, cascade_dir):
         _fake_cv2(
             monkeypatch,
-            classifier=lambda path: _FakeCascade(path, empty=True),
+            classifier=lambda: _FakeCascade(empty=True),
             data_dir=cascade_dir,
         )
         with pytest.raises(RuntimeError, match="failed to load") as info:
             fd._load_cascade()
         assert not isinstance(info.value, fd.FaceDetectorUnavailableError)
+
+    def test_a_cascade_opencv_cannot_parse_is_a_runtime_error(self, monkeypatch, cascade_dir):
+        _fake_cv2(monkeypatch, classifier=lambda: _FakeCascade(readable=False),
+                  data_dir=cascade_dir)
+        with pytest.raises(RuntimeError, match="failed to load"):
+            fd._load_cascade()
+
+    def test_a_cascade_that_is_not_text_is_a_runtime_error(self, monkeypatch, tmp_path):
+        (tmp_path / fd._CASCADE_FILE).write_bytes(b"\xff\xfe\x00")
+        _fake_cv2(monkeypatch, data_dir=tmp_path)
+        with pytest.raises(RuntimeError, match="failed to load"):
+            fd._load_cascade()
+
+    @requires_haar
+    def test_opencv_under_a_non_ascii_folder_still_loads(self, monkeypatch, tmp_path):
+        """cv2.CascadeClassifier(path) came back empty for such a path on Windows."""
+        import shutil
+
+        import cv2
+        folder = tmp_path / "使用者"
+        folder.mkdir()
+        shutil.copy(Path(cv2.data.haarcascades) / fd._CASCADE_FILE, folder)
+        monkeypatch.setattr(cv2.data, "haarcascades", str(folder) + os.sep)
+        assert not fd._load_cascade().empty()
 
     def test_unavailable_is_a_runtime_error(self):
         assert issubclass(fd.FaceDetectorUnavailableError, RuntimeError)
