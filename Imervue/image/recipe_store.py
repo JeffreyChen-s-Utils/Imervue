@@ -30,7 +30,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from Imervue.image.recipe import Recipe, file_identity
+from Imervue.image.recipe import Recipe, file_identities, file_identity
 from Imervue.system.unreadable_guard import UnreadableFileGuard
 
 logger = logging.getLogger("Imervue.recipe_store")
@@ -361,43 +361,61 @@ class RecipeStore:
             self._save_locked()
             return True
 
+    def identity_for(self, path: str | Path) -> str:
+        """*path*'s identity, first moving a recipe stored under its pre-2 identity to it.
+
+        Identities used to hash only the first 4 KB and the size, which two
+        scanned pages of one size (BMP, uncompressed TIFF) shared: every page
+        showed one recipe. An entry still under a file's old identity moves to
+        the new one the first time the file is looked up, so nobody's edits
+        disappear with the upgrade; a second file that shared it starts clean.
+        """
+        identity, legacy = file_identities(path)
+        if not identity:
+            return ""
+        self._ensure_loaded()
+        with self._lock:
+            if identity not in self._entries and legacy in self._entries:
+                self._entries[identity] = self._entries.pop(legacy)
+                self._save_locked()
+        return identity
+
     def list_variants_for_path(self, path: str) -> list[str]:
-        return self.list_variants(file_identity(path))
+        return self.list_variants(self.identity_for(path))
 
     def get_variant_for_path(self, path: str, name: str) -> Recipe | None:
-        return self.get_variant(file_identity(path), name)
+        return self.get_variant(self.identity_for(path), name)
 
     def save_variant_for_path(
         self, path: str, name: str, recipe: Recipe,
     ) -> None:
-        identity = file_identity(path)
+        identity = self.identity_for(path)
         if identity:
             self.save_variant(identity, name, recipe, last_path=str(path))
 
     def delete_variant_for_path(self, path: str, name: str) -> None:
-        self.delete_variant(file_identity(path), name)
+        self.delete_variant(self.identity_for(path), name)
 
     def rename_variant_for_path(
         self, path: str, old_name: str, new_name: str,
     ) -> bool:
-        return self.rename_variant(file_identity(path), old_name, new_name)
+        return self.rename_variant(self.identity_for(path), old_name, new_name)
 
     # ------------------------------------------------------------------
     # Public API — path-based convenience wrappers
     # ------------------------------------------------------------------
 
     def get_for_path(self, path: str) -> Recipe | None:
-        identity = file_identity(path)
-        return self.get(identity)
+        return self.get(self.identity_for(path))
 
     def set_for_path(self, path: str, recipe: Recipe) -> None:
-        identity = file_identity(path)
+        identity = self.identity_for(path)
         if not identity:
             return
         self.set(identity, recipe, last_path=str(path))
 
     def delete_for_path(self, path: str) -> None:
-        identity = file_identity(path)
+        identity = self.identity_for(path)
         if identity:
             self.delete(identity)
 
@@ -452,7 +470,7 @@ def carry_recipe(path: str | Path, change: Callable[[], bool],
     is re-keyed to the file's new identity (see :meth:`RecipeStore.rekey`).
     Returns what *change* returned; its exceptions propagate untouched.
     """
-    old = file_identity(path)
+    old = recipe_store.identity_for(path)   # a pre-2 entry moves first, or it would be left behind
     done = change()
     if done and old:
         recipe_store.rekey(old, file_identity(path), transform)

@@ -295,6 +295,56 @@ class TestFileIdentity:
         assert id1 == id2
 
 
+class TestIdentityBeyondTheHeader:
+    """The first 4 KB and the size alone gave same-size uncompressed scans one identity."""
+
+    @staticmethod
+    def _page(path, fmt, ink):
+        from PIL import Image
+        page = np.full((1000, 800), 255, np.uint8)       # white margins, like a scanned page
+        page[400:600, 100:700] = ink                      # different text in the middle
+        Image.fromarray(page).save(path, format=fmt)
+        return path
+
+    @pytest.mark.parametrize("fmt", ["BMP", "TIFF"])
+    def test_two_scanned_pages_of_one_size_differ(self, tmp_path, fmt):
+        first = self._page(tmp_path / f"p1.{fmt.lower()}", fmt, 40)
+        second = self._page(tmp_path / f"p2.{fmt.lower()}", fmt, 140)
+        assert first.stat().st_size == second.stat().st_size
+        clear_identity_cache()
+        assert file_identity(first) != file_identity(second)
+
+    @pytest.mark.parametrize("where", ["middle", "end"])
+    def test_a_change_past_the_first_4_kb_changes_it(self, tmp_path, where):
+        data = bytearray(b"a" * 50_000)
+        p = tmp_path / "a.bin"
+        p.write_bytes(bytes(data))
+        clear_identity_cache()
+        before = file_identity(p)
+        data[25_000 if where == "middle" else -1] = ord("b")
+        p.write_bytes(bytes(data))
+        clear_identity_cache()
+        assert file_identity(p) != before
+
+    def test_the_pre_2_identity_is_the_first_4_kb_and_the_size(self, tmp_path):
+        import hashlib
+        from Imervue.image.recipe import file_identities
+        data = bytes(range(256)) * 40
+        p = tmp_path / "a.bin"
+        p.write_bytes(data)
+        clear_identity_cache()
+        identity, legacy = file_identities(p)
+        expected = hashlib.md5(data[:4096] + len(data).to_bytes(8, "big"), usedforsecurity=False)
+        assert legacy == expected.hexdigest()
+        assert identity != legacy and len(identity) == 32
+
+    def test_a_file_smaller_than_one_chunk(self, tmp_path):
+        p = tmp_path / "tiny.bin"
+        p.write_bytes(b"xyz")
+        clear_identity_cache()
+        assert file_identity(p) == file_identity(p) != ""
+
+
 class TestExifOrientedBase:
     def test_new_recipe_is_authored_on_the_upright_image(self):
         assert Recipe(crop=(0, 0, 4, 4)).base_is_oriented() is True

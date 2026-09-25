@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-74 | 2026-09-25 | Same-size scans no longer share one Modify recipe | #fix #recipe #data-loss | [2026-09-b](2026-09-b.md) |
 | U-20260925-73 | 2026-09-25 | A portrait camera RAW's thumbnail stands upright; a RAW without an embedded preview gets one | #fix #raw #orientation | [2026-09-b](2026-09-b.md) |
 | U-20260925-72 | 2026-09-25 | Opening a folder sorts from the listing, without a system call per file | #perf #sort | [2026-09-b](2026-09-b.md) |
 | U-20260924-100 | 2026-09-24 | Move the metadata-carrying save helpers into in_place_save | #refactor #metadata | [2026-09](2026-09.md) |
@@ -354,4 +355,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 12 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 13 |
