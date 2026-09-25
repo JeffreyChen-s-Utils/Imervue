@@ -11,6 +11,7 @@ from collections.abc import Callable, Iterable
 
 import numpy as np
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.sharpness import (
     DEFAULT_BLUR_THRESHOLD,
     select_blurry,
@@ -28,18 +29,21 @@ def score_paths(
     for path in paths:
         try:
             arr = loader(path)
-        except (OSError, ValueError):
+        except IMAGE_READ_ERRORS:   # a huge file (DecompressionBombError) must not end the batch
             continue
         scores.append((path, sharpness_score(arr)))
     return scores
 
 
 def _load_for_scoring(path: str) -> np.ndarray:
-    from PIL import Image
-    with Image.open(path) as src:
-        gray = src.convert("L")
-        gray.thumbnail((_MAX_SIDE, _MAX_SIDE))
-        return np.asarray(gray, dtype=np.float64)
+    """*path* as the viewer decodes it, at most 512 px on the long side.
+
+    Upright, a camera RAW through its embedded preview, HEIC / JPEG XL read:
+    ``Image.open`` scored a RAW by its tiny TIFF thumbnail, or not at all.
+    """
+    from Imervue.gpu_image_view.images.image_loader import decode_image
+    gray = decode_image(path, max_edge=_MAX_SIDE).convert("L")
+    return np.asarray(gray, dtype=np.float64)
 
 
 def auto_cull_blurry(
