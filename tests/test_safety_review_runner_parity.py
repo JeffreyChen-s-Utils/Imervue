@@ -26,7 +26,7 @@ _PLUGIN_DIR = Path(_runner.__file__).resolve().parent
 
 _RUNNER_FILES = ("_runner.py", "_censor_core.py", "_constants.py")
 
-SHARED = ["_AnyPathDetector", "_censor_region", "_detect_image_mode", "_ensure_parent", "_expand_box",
+SHARED = ["_AnyPathDetector", "_censor_region", "_save_as", "_detect_image_mode", "_ensure_parent", "_expand_box",
           "_junction_bridges", "_merge_gap", "_shrink_box_center"]
 
 

@@ -40,6 +40,7 @@ if __package__:   # imported as part of the plugin package (tests)
         _merge_gap,
         _nudenet_corners,
         _open_upright,
+        _save_as,
         _shrink_box_center,
     )
     from safety_review._constants import (
@@ -64,6 +65,7 @@ else:             # run as a script next to its siblings
         _merge_gap,
         _nudenet_corners,
         _open_upright,
+        _save_as,
         _shrink_box_center,
     )
     from _constants import (
@@ -205,18 +207,7 @@ def _process_one(detector, src, dst, *, block_size, padding,
     for bridge in bridges:
         _censor_region(img, *bridge, block_size, style=style, shape=shape)
 
-    ext = Path(dst).suffix.lower()
-    fmt_map = {
-        ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-        ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
-        ".webp": "WEBP",
-    }
-    fmt = fmt_map.get(ext, "PNG")
-    save_img = img
-    if fmt == "JPEG" and save_img.mode == "RGBA":
-        save_img = save_img.convert("RGB")
-    _ensure_parent(dst)
-    save_img.save(dst, format=fmt)
+    _save_as(img, dst)
     return len(regions) + len(bridges)
 
 

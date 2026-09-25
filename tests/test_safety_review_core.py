@@ -1157,3 +1157,36 @@ def test_runner_batch_destination_increments_on_clash(tmp_path):
     Path(first).write_text("x", encoding="utf-8")
     second = _runner._batch_destination(src, str(out), False, str(root))
     assert Path(second).name == "pic_censored_1.png"
+
+
+class TestSaveAs:
+    """Overwrite mode saves over the photo itself; a failed save used to truncate it."""
+
+    def test_a_failed_save_leaves_the_original_whole(self, tmp_path, monkeypatch):
+        photo = tmp_path / "photo.jpg"
+        Image.new("RGB", (4, 4), (1, 2, 3)).save(photo)
+        before = photo.read_bytes()
+
+        def half_written(self, fp, *args, **kwargs):
+            with open(fp, "wb") as fh:
+                fh.write(b"partial")
+            raise OSError("disk full")
+
+        monkeypatch.setattr(Image.Image, "save", half_written)
+        with pytest.raises(OSError, match="disk full"):
+            _censor_core._save_as(Image.new("RGB", (4, 4)), str(photo))
+        assert photo.read_bytes() == before
+        assert [p.name for p in tmp_path.iterdir()] == ["photo.jpg"]
+
+    def test_rgba_is_flattened_for_jpeg(self, tmp_path):
+        out = tmp_path / "sub" / "out.jpg"
+        _censor_core._save_as(Image.new("RGBA", (3, 3), (255, 0, 0, 128)), str(out))
+        with Image.open(out) as saved:
+            assert saved.format == "JPEG"
+            assert saved.mode == "RGB"
+
+    def test_an_unknown_extension_is_saved_as_png(self, tmp_path):
+        out = tmp_path / "out.xyz"
+        _censor_core._save_as(Image.new("RGB", (3, 3)), str(out))
+        with Image.open(out) as saved:
+            assert saved.format == "PNG"

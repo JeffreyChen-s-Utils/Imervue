@@ -20,6 +20,7 @@ if __package__:   # imported as part of the plugin package
         STYLE_BLACK,
         STYLE_BLUR,
         STYLE_MOSAIC,
+        _FMT_MAP,
     )
 else:             # loaded next to _runner.py by the external Python
     from _constants import (
@@ -32,6 +33,7 @@ else:             # loaded next to _runner.py by the external Python
         STYLE_BLACK,
         STYLE_BLUR,
         STYLE_MOSAIC,
+        _FMT_MAP,
     )
 
 # Anime-color heuristic threshold — fewer unique quantized colours than this
@@ -247,6 +249,27 @@ def _ensure_parent(dst: str) -> None:
     parent = os.path.dirname(dst)
     if parent:
         os.makedirs(parent, exist_ok=True)
+
+
+def _save_as(img, dst: str) -> None:
+    """Save *img* to *dst* in the format its extension names, replacing *dst* in one step.
+
+    With "overwrite originals" *dst* is the photo itself, and Pillow opens a
+    path with ``w+b``: a save that failed midway (a full disk, an encoder
+    error) left the original truncated. The result goes to a ``.tmp`` sibling
+    first and is swapped in with ``os.replace``.
+    """
+    _ensure_parent(dst)
+    fmt = _FMT_MAP.get(os.path.splitext(dst)[1].lower(), "PNG")
+    if fmt == "JPEG" and img.mode == "RGBA":
+        img = img.convert("RGB")
+    tmp = dst + ".tmp"
+    try:
+        img.save(tmp, format=fmt)
+        os.replace(tmp, dst)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 def _boxes_touch(a, b, gap: int) -> bool:

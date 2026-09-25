@@ -15,7 +15,6 @@ from safety_review._constants import (
     _ERAX_MODEL,
     _ERAX_REPO,
     _ERAX_REVISION,
-    _FMT_MAP,
     _IMAGE_EXTS,
     ANIME_MOSAIC_CLASSES,
     MIN_CONFIDENCE,
@@ -38,6 +37,7 @@ from safety_review._censor_core import (
     _merge_gap,
     _nudenet_corners,
     _open_upright,
+    _save_as,
     _shrink_box_center,
 )
 
@@ -342,14 +342,6 @@ def _copy_unchanged(src: str, dst: str) -> None:
         shutil.copy2(src, dst)
 
 
-def _save_image(img, dst: str) -> None:
-    _ensure_parent(dst)
-    fmt = _FMT_MAP.get(Path(dst).suffix.lower(), "PNG")
-    if fmt == "JPEG" and img.mode == "RGBA":
-        img = img.convert("RGB")
-    img.save(dst, format=fmt)
-
-
 def _process_single_image(
     detector,
     src: str,
@@ -404,7 +396,7 @@ def _process_single_image(
         # censored region (precise has no mask for a bridge → ellipse fallback).
         _censor_region(img, *bridge, block_size, style=style, shape=shape)
 
-    _save_image(img, dst)
+    _save_as(img, dst)
     return len(regions) + len(bridges)
 
 
@@ -418,7 +410,7 @@ def _process_manual_image(src: str, dst: str, regions, block_size: int,
     img = _open_upright(src)   # the manual editor shows the upright image
     for region in regions:
         _censor_region(img, *region, block_size, style=style, shape=shape)
-    _save_image(img, dst)
+    _save_as(img, dst)
     return len(regions)
 
 
