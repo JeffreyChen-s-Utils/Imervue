@@ -142,6 +142,8 @@ Speichert ein anderes Programm über ein Bild — ein externer Editor, direkt od
 
 Ein 16-Bit-Graustufen-PNG oder -TIFF — ein Scan, eine Tiefenkarte, eine wissenschaftliche oder astronomische Aufnahme — und ein Gleitkomma-TIFF zeigen im Viewer, in Miniaturen, Vorschauen und Werkzeugen ihre echte Helligkeit statt fast weiß oder schwarz: 16-Bit-Werte werden über ihren ganzen Bereich skaliert, Gleitkommawerte von 0 bis 1 von Schwarz bis Weiß abgebildet und jeder andere Bereich gestreckt.
 
+Bilder mit eingebettetem Farbprofil – Display P3 vom Handy, Adobe RGB von Kameras, CMYK sowie die Graustufenprofile, die Photoshop in Graustufenbilder einbettet, etwa Dot Gain 20 % oder Gray Gamma 1.8 – werden für Viewer und Thumbnails nach sRGB umgerechnet; ein Graustufenbild bleibt dabei ein Graustufenbild. Bilder ohne Profil oder mit sRGB werden unverändert gezeigt.
+
 Dateien, die Windows als versteckt markiert — auch im Explorer und im Ordnerbaum ausgeblendet —, und Namen mit führendem Punkt, etwa die ``._foto.jpg``, die macOS auf Speicherkarten und Netzlaufwerken neben jedes Foto schreibt, erscheinen nicht in der Miniaturansicht, den Ordnersymbolen, den Ordnerlisten der Stapelwerkzeuge, überwachten Ordnern, Bibliotheksscans, der CLI und den Ordnerwerkzeugen des MCP-Servers; rekursive Scans überspringen versteckte Ordner wie ``$RECYCLE.BIN`` und ``.Trashes`` vom Mac. Ein absichtlich geöffnetes verstecktes Bild öffnet sich trotzdem.
 
 .. list-table::

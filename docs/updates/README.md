@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-06 | 2026-09-26 | A greyscale picture's grey profile is applied like a colour one | #fix #color-management #viewer #thumbnails | [2026-09-b](2026-09-b.md) |
 | U-20260926-05 | 2026-09-26 | The List view follows files that another program saves over, deletes or restores | #fix #browse #list-view | [2026-09-b](2026-09-b.md) |
 | U-20260926-04 | 2026-09-26 | A camera JPEG with an MPF preview can be saved over, converted and split like any JPEG | #fix #formats #save | [2026-09-b](2026-09-b.md) |
 | U-20260926-03 | 2026-09-26 | A camera JPEG's preview no longer flickers in, and TIFF pages turn instead of playing | #fix #viewer #animation #formats | [2026-09-b](2026-09-b.md) |
@@ -378,4 +379,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 36 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 37 |
