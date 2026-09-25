@@ -1407,7 +1407,7 @@ traditional_chinese_word_dict = {
     "auto_tag_all": "標籤整個資料夾",
     "auto_tag_selected": "標籤選取項目",
     "auto_tag_run": "執行自動標籤",
-    "auto_tag_explain": "在 'auto/...' 下套用啟發式標籤（photo/document/screenshot/landscape/portrait 等）。若已安裝會使用 CLIP ONNX。",
+    "auto_tag_explain": "在 'auto/...' 下套用啟發式標籤（photo/document/screenshot/landscape/portrait 等）。依每張圖片的色彩、邊緣與形狀判斷。",
     # Token 批次重新命名
     "token_rename_title": "Token 批次重新命名",
     "token_rename_template": "範本：",

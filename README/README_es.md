@@ -116,7 +116,7 @@ Opcionales (gestionados por funcionalidad; si no se instalan, la función se des
 | Paquete | Propósito |
 |---------|---------|
 | open_clip_torch + torch | Búsqueda semántica con CLIP (consultas en lenguaje natural) |
-| onnxruntime | Escalado por IA con Real-ESRGAN / etiquetado automático con CLIP ONNX |
+| onnxruntime | Escalado por IA con Real-ESRGAN |
 | opencv-python<5 | Fusión HDR, costura de panoramas, apilamiento de foco, detección de rostros, pincel de saneamiento |
 | sounddevice | Sincronización labial en Puppet desde el micrófono |
 | mediapipe | Seguimiento facial por webcam en Puppet |
@@ -255,10 +255,11 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 - **Búsqueda difusa de nombres** con resaltado de subcadenas
 - **Encontrar imágenes similares** — pHash (DCT de 64 bits) con distancia de Hamming ajustable
-- **Búsqueda en biblioteca** — índice SQLite multi-raíz con un DSL de consulta compacto: palabras clave, etiquetas (incl. negación), calificaciones, color, extensión, lugar, culling, favoritos, relación de aspecto, antigüedad, tamaño, dimensiones, cámara / objetivo, y regex / glob de nombre de archivo; `place:` coincide con una ciudad, un país o ambos, y un valor con espacios va entre comillas dobles (`place:"Rio de Janeiro"`)
+- **Búsqueda en biblioteca** — índice SQLite multi-raíz, con búsqueda por nombre de archivo, ancho / alto mínimo y tamaño de archivo (hasta 2000 resultados; doble clic en uno para abrirlo)
+- **Búsqueda por consulta** (clic derecho) — un lenguaje de consulta compacto sobre la carpeta abierta: palabras clave, etiquetas (incl. negación), calificaciones, color, extensión, lugar, culling, favoritos, relación de aspecto, antigüedad, tamaño, dimensiones, cámara / objetivo, y regex / glob de nombre de archivo; `place:` coincide con una ciudad, un país o ambos, y un valor con espacios va entre comillas dobles (`place:"Rio de Janeiro"`)
 - **Encontrar similares (average hash)** — pHash y dHash se complementan con un average-hash (aHash) opcional como métrica adicional de casi-duplicados
 - **Búsqueda semántica (CLIP)** — consultas en lenguaje natural ("golden retriever en la nieve") vía embeddings en caché; se desactiva con gracia si `open_clip_torch` + `torch` no están instalados
-- **Auto-etiquetado** — clasificación heurística con upgrade opcional CLIP ONNX
+- **Auto-etiquetado** — etiquetas heurísticas a partir del color, los bordes y la forma: documento / captura de pantalla / foto / gráfico, horizontal / vertical
 
 ### Metadatos
 
@@ -348,8 +349,8 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 
 ### Salida
 
-- **Marca de agua superpuesta** — texto o imagen, 9 posiciones de anclaje, opacidad, escala; se aplica solo al exportar
-- **Predefinidos de exportación** — flujos de un solo clic Web 1600 / Print 300 dpi / Instagram 1080
+- **Predefinidos de exportación** — en la exportación por lotes: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 cuadrado / Thumbnail 400 px, o Personalizado
+- **Marca de agua** — en la exportación por lotes: una marca de agua de texto en una esquina o en el centro, con su opacidad; se aplica solo a las copias exportadas
 - **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (y HEIC con `pillow-heif` y JPEG XL con `pillow-jxl-plugin`) con control de calidad para formatos con pérdida; conserva el EXIF de cámara, objetivo y fecha de captura, con la ubicación opcional (**Metadatos**: todos / todos salvo ubicación / ninguno); el nombre propuesto es uno aún libre (`photo_1.png` junto a `photo.png`) y un archivo existente —sobre todo la propia foto— solo se reemplaza tras confirmarlo
 - **Operaciones por lotes** — renombrar, mover/copiar, rotar imágenes seleccionadas. Mover o copiar nunca sobrescribe un archivo con el mismo nombre (llega como `name_1`), y una foto renombrada o movida en Imervue (renombrado por lotes, renombrado por tokens, árbol de carpetas, Mover / Copiar, doble panel, bandeja de preparación, organizador de imágenes) conserva su valoración, favorito, etiquetas, etiqueta de color, título, notas y marca de selección; sus sidecars `.xmp` y de anotaciones la acompañan; lo mismo ocurre con una foto renombrada en otro programa mientras su carpeta está abierta en Imervue. Un nombre nuevo que ahora tiene otra foto seleccionada (renumerar, intercambiar dos nombres) renombra toda la selección en el orden correcto en vez de solo una parte
 - **PDF de hoja de contactos** — cuadrícula multipágina con leyendas (A4 / A3 / Letter / Legal)
@@ -689,8 +690,7 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 
 | Atajo | Acción |
 |----------|--------|
-| Teclas de flecha | Desplazar cuadrícula / Cambiar imagen (Izq/Der en deep zoom) |
-| Shift + Flecha | Desplazamiento fino (medio paso) |
+| Teclas de flecha | Cuadrícula: mover el recuadro de foco (Enter abre la imagen) / Deep zoom: Izq/Der cambian de imagen |
 | Ctrl+Shift+←/→ | Saltar a la carpeta hermana anterior / siguiente con imágenes |
 | Alt+← / Alt+→ | Historial atrás / adelante |
 | Ctrl+G | Ir a imagen por índice |

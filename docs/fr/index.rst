@@ -114,8 +114,8 @@ Une fois un dossier ouvert, toutes les images s'affichent sous forme de vignette
      - Laissez le curseur 500 ms sur une vignette pour voir un aperçu agrandi
    * - Sélectionner plusieurs images
      - Clic gauche maintenu et glisser pour tracer un rectangle de sélection
-   * - Panoramique au clavier
-     - Touches fléchées ; ``Shift`` pour un mouvement fin
+   * - Passer d'une vignette à l'autre au clavier
+     - Les touches fléchées déplacent un cadre de focus et le font défiler dans la vue ; ``Enter`` ouvre l'image
 
 Chaque vignette affiche des badges de statut : une bande colorée sur le bord gauche (étiquette de couleur),
 un cœur en haut à gauche (favori), une étoile en haut à droite (signet) et des étoiles de notation
@@ -1609,37 +1609,31 @@ Clic droit sur une image > ``Exporter / Enregistrer sous``.
 Préréglages d'export
 ^^^^^^^^^^^^^^^^^^^^
 
-Pour les cibles de livraison courantes que vous ne souhaitez pas re-régler à chaque fois, utilisez
-``Fichier`` > ``Exporter avec préréglage``. Un clic applique le bon pipeline de redimensionnement, format
-et qualité :
+L'export par lots (ci-dessous) propose une liste **Preset** qui remplit la taille, le format et la
+qualité pour les cibles courantes ; avec **Custom**, c'est vous qui les choisissez :
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 80
+   :widths: 30 70
 
    * - Préréglage
-     - Pipeline
-   * - **Web 1600**
-     - Ajuste le côté le plus long à 1600 px, JPEG qualité 85, sRGB ; pour les téléversements sur blog / forum où la qualité visuelle compte plus que le nombre de pixels.
-   * - **Print 300 dpi**
-     - TIFF pleine résolution / JPEG haute qualité avec métadonnées 300 dpi, sortie gérée en couleur pour les labos et imprimeurs.
-   * - **Instagram 1080**
-     - Recadrage carré (1080 × 1080) ou portrait (1080 × 1350), ratio d'aspect original préservé à l'intérieur, JPEG qualité 90.
+     - Sortie
+   * - **Web — 1600 px JPEG**
+     - Côté long jusqu'à 1600 px, JPEG qualité 85.
+   * - **4K Web — 3840 px JPEG**
+     - Côté long jusqu'à 3840 px, JPEG qualité 90.
+   * - **Print — 300 DPI PNG**
+     - Pleine résolution, PNG, 300 dpi.
+   * - **Instagram — 1080×1080 square**
+     - Recadrage carré centré, 1080 × 1080, JPEG qualité 90.
+   * - **Thumbnail — 400 px JPEG**
+     - Côté long jusqu'à 400 px, JPEG qualité 80.
 
-Les préréglages se composent avec la superposition filigrane (ci-dessous) — activez le filigrane une fois et
-chaque sortie de préréglage le contient.
+Filigrane
+^^^^^^^^^
 
-Superposition de filigrane
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``Fichier`` > ``Filigrane…`` ouvre un configurateur de superposition non destructif. Les paramètres
-s'appliquent uniquement à l'export — les pixels originaux sur le disque ne sont jamais touchés.
-
-- **Mode** : texte ou image. Les filigranes image prennent en charge le PNG avec alpha.
-- **Position** : grille à 9 ancres (coins, bords, centre).
-- **Opacité** : 0 – 100 %.
-- **Échelle** : pourcentage du côté long exporté ; le filigrane se redimensionne automatiquement
-  lorsque vous redimensionnez pour différents préréglages.
+L'export par lots peut aussi dessiner un filigrane texte sur chaque copie exportée : le texte,
+sa position (un coin ou le centre) et son opacité. Les fichiers d'origine ne sont jamais modifiés.
 
 Export par lots
 ^^^^^^^^^^^^^^^
@@ -1961,9 +1955,7 @@ Navigation
    * - ``Gauche`` / ``Droite``
      - Image précédente / suivante
    * - Touches fléchées
-     - Panoramique en mode vignettes
-   * - ``Shift + Flèche``
-     - Panoramique fin
+     - Déplacer le cadre de focus d'une vignette à l'autre
    * - ``Ctrl + Shift + Gauche`` / ``Droite``
      - Aller au dossier frère précédent / suivant contenant des images
    * - ``Alt + Gauche`` / ``Alt + Droite``
@@ -2111,9 +2103,9 @@ Recherche dans la bibliothèque
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` vous permet d'ajouter un ou plusieurs **dossiers racine**
-à un index global parcouru en arrière-plan. Une fois une racine indexée, vous pouvez l'interroger
-par extension, largeur/hauteur minimale, plage de taille ou sous-chaîne de nom, et déposer
-les résultats dans la visionneuse comme album virtuel.
+à un index global parcouru en arrière-plan. Une fois une racine indexée, vous pouvez y chercher
+par nom de fichier, largeur / hauteur minimales et taille de fichier (jusqu'à 2000 résultats) ;
+double-cliquez sur un résultat pour l'ouvrir.
 
 Clic droit > ``Search by Query…`` filtre le dossier courant avec un langage de requête compact, par exemple ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` accepte une ville, un pays ou les deux (``Paris``, ``France``, ``Paris, France``) ; une valeur avec des espaces se met entre guillemets doubles (``place:"Rio de Janeiro"``).
 
@@ -2154,9 +2146,8 @@ Tag automatique
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` applique des tags heuristiques sous
 ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
-``portrait``). Si ``onnxruntime`` et un modèle CLIP à
-``models/clip_vit_b32.onnx`` sont disponibles, il ajoute également des étiquettes de contenu
-basées sur CLIP. S'exécute sur un thread de travail avec une barre de progression en direct.
+``portrait``), déduits de la saturation des couleurs, des contours et de la forme de l'image telle
+que la visionneuse l'affiche. S'exécute sur un thread de travail avec une barre de progression en direct.
 
 Tags hiérarchiques
 ^^^^^^^^^^^^^^^^^^
@@ -2221,16 +2212,15 @@ EXIF. C'est là que Lightroom garde la note et les mots-clés d'un JPEG, et que
 l'Explorateur Windows et certains appareils gardent leurs étoiles. Un sidecar,
 s'il existe, l'emporte.
 
-- **Importer XMP pour l'image courante** — tire la note / le titre / les mots-clés /
-  l'étiquette de couleur depuis le fichier annexe vers la base de données interne.
-- **Exporter XMP pour l'image courante** — écrit la note / le titre / les
-  mots-clés / l'étiquette de couleur courants dans un fichier annexe à côté de l'image.
-- **Import / export par lots** — applique la même opération à la sélection active
-  ou à tout le dossier.
+``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` comporte deux boutons qui s'appliquent
+à toutes les images de la vue courante :
+
+- **Export sidecars** — écrit la note / le titre / la description / les mots-clés /
+  l'étiquette de couleur de chaque image dans son fichier annexe.
+- **Import sidecars** — les relit dans les enregistrements propres à Imervue.
 
 L'analyse XML utilise ``defusedxml`` afin que des fichiers annexes malformés ou malveillants
-ne puissent pas déclencher d'attaques XXE / billion-laughs. Si ``defusedxml`` n'est pas installé,
-les entrées de menu XMP sont masquées et aucun fichier annexe n'est écrit.
+ne puissent pas déclencher d'attaques XXE / billion-laughs.
 
 La **barre latérale EXIF** expose également une **bande de notation par étoiles** cliquable —
 la note qu'elle définit est ce que l'export XMP écrira.

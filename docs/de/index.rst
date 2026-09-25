@@ -113,8 +113,8 @@ Nach dem Öffnen eines Ordners werden alle Bilder als Miniaturansichten angezeig
      - Cursor 500 ms auf einer Miniaturansicht ruhen lassen für eine größere Vorschau
    * - Mehrere Bilder auswählen
      - Linksklicken und ziehen, um ein Auswahlrechteck aufzuziehen
-   * - Mit Tastatur schwenken
-     - Pfeiltasten; ``Shift`` halten für Feinbewegung
+   * - Mit der Tastatur zwischen Miniaturansichten wechseln
+     - Pfeiltasten bewegen einen Fokusrahmen und scrollen ihn in den sichtbaren Bereich; ``Enter`` öffnet das Bild
 
 Jede Miniaturansicht zeigt Status-Badges: einen farbigen Streifen am linken Rand (Farbetikett),
 ein Herz oben links (Favorit), einen Stern oben rechts (Lesezeichen) und Bewertungssterne
@@ -1632,38 +1632,32 @@ Rechtsklick auf ein Bild > ``Exportieren / Speichern unter``.
 Export-Presets
 ^^^^^^^^^^^^^^
 
-Für die üblichen Lieferziele, die Sie nicht jedes Mal neu einstellen wollen,
-verwenden Sie ``Datei`` > ``Mit Preset exportieren``. Ein Klick wendet die
-richtige Resize-, Format- und Qualitäts-Pipeline an:
+Der Stapelexport (unten) hat eine **Preset**-Liste, die Größe, Format und Qualität für
+gängige Ziele einträgt; bei **Custom** legen Sie die Werte selbst fest:
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 80
+   :widths: 30 70
 
    * - Preset
-     - Pipeline
-   * - **Web 1600**
-     - Lange Kante auf 1600 px anpassen, JPEG-Qualität 85, sRGB; für Blog- / Forum-Uploads, bei denen visuelle Qualität wichtiger ist als Pixelanzahl.
-   * - **Print 300 dpi**
-     - TIFF in voller Auflösung / hochwertiges JPEG mit 300-dpi-Metadaten, farbverwaltete Ausgabe für Labors und Druckereien.
-   * - **Instagram 1080**
-     - Quadratischer (1080 × 1080) oder Hochformat-Zuschnitt (1080 × 1350) mit innen erhaltenem Original-Seitenverhältnis, JPEG-Qualität 90.
+     - Ausgabe
+   * - **Web — 1600 px JPEG**
+     - Lange Kante bis 1600 px, JPEG-Qualität 85.
+   * - **4K Web — 3840 px JPEG**
+     - Lange Kante bis 3840 px, JPEG-Qualität 90.
+   * - **Print — 300 DPI PNG**
+     - Volle Auflösung, PNG, 300 dpi.
+   * - **Instagram — 1080×1080 square**
+     - Quadratischer Zuschnitt aus der Mitte, 1080 × 1080, JPEG-Qualität 90.
+   * - **Thumbnail — 400 px JPEG**
+     - Lange Kante bis 400 px, JPEG-Qualität 80.
 
-Presets lassen sich mit dem Wasserzeichen-Overlay (unten) kombinieren — Wasserzeichen
-einmal aktivieren und jede Preset-Ausgabe trägt es.
+Wasserzeichen
+^^^^^^^^^^^^^
 
-Wasserzeichen-Overlay
-^^^^^^^^^^^^^^^^^^^^^
-
-``Datei`` > ``Wasserzeichen…`` öffnet einen nicht-destruktiven Overlay-Konfigurator.
-Einstellungen werden nur beim Export angewendet — die Originalpixel auf der Festplatte
-werden nie berührt.
-
-- **Modus**: Text oder Bild. Bildwasserzeichen unterstützen PNG mit Alpha.
-- **Position**: 9-Anker-Raster (Ecken, Kanten, Mitte).
-- **Deckkraft**: 0 – 100 %.
-- **Skalierung**: Prozent der exportierten Langseite; das Wasserzeichen skaliert
-  sich automatisch neu, wenn Sie für verschiedene Presets neu skalieren.
+Der Stapelexport kann außerdem ein Text-Wasserzeichen auf jede exportierte Kopie zeichnen:
+den Text, seine Position (eine Ecke oder die Mitte) und seine Deckkraft. Die Originaldateien
+werden nie verändert.
 
 Stapelexport
 ^^^^^^^^^^^^
@@ -1994,9 +1988,7 @@ Durchsuchen
    * - ``Links`` / ``Rechts``
      - Vorheriges / nächstes Bild
    * - Pfeiltasten
-     - Schwenken im Miniaturansicht-Modus
-   * - ``Shift + Pfeil``
-     - Fein-Schwenken
+     - Fokusrahmen über die Miniaturansichten bewegen
    * - ``Ctrl + Shift + Links`` / ``Rechts``
      - Zum vorherigen / nächsten Geschwisterordner mit Bildern springen
    * - ``Alt + Links`` / ``Alt + Rechts``
@@ -2145,9 +2137,9 @@ Bibliothekssuche
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` ermöglicht das Hinzufügen
 eines oder mehrerer **Root-Ordner** zu einem globalen Index, der in einem Hintergrundthread
-gecrawlt wird. Sobald ein Root indiziert ist, können Sie ihn nach Erweiterung,
-Mindestbreite/-höhe, Größenbereich oder Namens-Teilstring abfragen und die Ergebnisse
-als virtuelles Album in den Betrachter laden.
+gecrawlt wird. Sobald ein Root indiziert ist, können Sie ihn nach Dateiname,
+Mindestbreite / -höhe und Dateigröße durchsuchen (bis zu 2000 Treffer); ein Doppelklick
+auf einen Treffer öffnet ihn.
 
 Rechtsklick > ``Search by Query…`` filtert den aktuellen Ordner mit einer kompakten Abfragesprache, zum Beispiel ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` nimmt eine Stadt, ein Land oder beides (``Paris``, ``France``, ``Paris, France``); ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (``place:"Rio de Janeiro"``).
 
@@ -2188,9 +2180,8 @@ Auto-Tag
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` wendet heuristische Tags
 unter ``auto/...`` an (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
-``portrait``). Wenn ``onnxruntime`` und ein CLIP-Modell unter
-``models/clip_vit_b32.onnx`` verfügbar sind, werden auch CLIP-basierte Inhaltslabels
-hinzugefügt. Läuft in einem Worker-Thread mit Live-Fortschrittsbalken.
+``portrait``), abgeleitet aus Farbsättigung, Kanten und Form des Bildes, so wie der
+Betrachter es anzeigt. Läuft in einem Worker-Thread mit Live-Fortschrittsbalken.
 
 Hierarchische Tags
 ^^^^^^^^^^^^^^^^^^
@@ -2256,16 +2247,15 @@ einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), dann ihr
 und dort legen der Windows-Explorer und manche Kameras ihre Sterne ab. Eine
 vorhandene Sidecar-Datei hat Vorrang.
 
-- **XMP für aktuelles Bild importieren** — zieht Bewertung / Titel / Stichwörter /
-  Farbetikett aus dem Sidecar in die interne Datenbank.
-- **XMP für aktuelles Bild exportieren** — schreibt die aktuelle Bewertung / Titel /
-  Stichwörter / Farbetikett in einen Sidecar neben dem Bild.
-- **Stapelimport / -export** — wendet dieselbe Operation auf die aktive Auswahl
-  oder den gesamten Ordner an.
+``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` hat zwei Schaltflächen, die für jedes
+Bild in der aktuellen Ansicht gelten:
+
+- **Export sidecars** — schreibt Bewertung / Titel / Beschreibung / Stichwörter /
+  Farbetikett jedes Bildes in seinen Sidecar.
+- **Import sidecars** — liest sie zurück in Imervues eigene Datensätze.
 
 XML-Parsing verwendet ``defusedxml``, sodass fehlerhafte oder bösartige Sidecars
-keine XXE- / Billion-Laughs-Angriffe auslösen können. Wenn ``defusedxml`` nicht
-installiert ist, werden die XMP-Menüeinträge ausgeblendet und keine Sidecars geschrieben.
+keine XXE- / Billion-Laughs-Angriffe auslösen können.
 
 Die **EXIF-Seitenleiste** zeigt außerdem einen anklickbaren **Sterne-Bewertungsstreifen** —
 die dort gesetzte Bewertung ist die, die der XMP-Export schreibt.

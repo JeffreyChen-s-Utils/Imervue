@@ -113,8 +113,8 @@ After opening a folder, all images are displayed as thumbnails.
      - Rest the cursor on a thumbnail for 500 ms to see a larger preview
    * - Select multiple images
      - Left-click and drag to draw a selection rectangle
-   * - Pan with keyboard
-     - Arrow keys; hold ``Shift`` for fine movement
+   * - Move between thumbnails with the keyboard
+     - Arrow keys move a focus ring and scroll it into view; ``Enter`` opens the picture
 
 Each thumbnail shows status badges: a coloured strip on the left edge (colour label),
 a heart at the top-left (favourite), a star at the top-right (bookmark), and rating stars
@@ -1575,37 +1575,31 @@ Right-click an image > ``Export / Save As``.
 Export Presets
 ^^^^^^^^^^^^^^
 
-For the common delivery targets you don't want to retune every time, use
-``File`` > ``Export with Preset``. One click applies the right resize, format,
-and quality pipeline:
+Batch Export (below) has a **Preset** list that fills in the size, format and quality for
+common targets; **Custom** leaves them to you:
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 80
+   :widths: 30 70
 
    * - Preset
-     - Pipeline
-   * - **Web 1600**
-     - Fit long edge to 1600 px, JPEG quality 85, sRGB; for blog / forum uploads where visual quality matters more than pixel count.
-   * - **Print 300 dpi**
-     - Full-resolution TIFF / high-quality JPEG with 300 dpi metadata, color-managed output for labs and print shops.
-   * - **Instagram 1080**
-     - Square (1080 × 1080) or portrait (1080 × 1350) crop with the original aspect ratio preserved inside, quality 90 JPEG.
+     - Output
+   * - **Web — 1600 px JPEG**
+     - Long edge up to 1600 px, JPEG quality 85.
+   * - **4K Web — 3840 px JPEG**
+     - Long edge up to 3840 px, JPEG quality 90.
+   * - **Print — 300 DPI PNG**
+     - Full resolution, PNG, 300 dpi.
+   * - **Instagram — 1080×1080 square**
+     - Centre square crop, 1080 × 1080, JPEG quality 90.
+   * - **Thumbnail — 400 px JPEG**
+     - Long edge up to 400 px, JPEG quality 80.
 
-Presets compose with the watermark overlay (below) — enable the watermark once and
-every preset output carries it.
+Watermark
+^^^^^^^^^
 
-Watermark Overlay
-^^^^^^^^^^^^^^^^^
-
-``File`` > ``Watermark…`` opens a non-destructive overlay configurator. Settings
-apply on export only — the original pixels on disk are never touched.
-
-- **Mode**: text or image. Image watermarks support PNG with alpha.
-- **Position**: 9-anchor grid (corners, edges, centre).
-- **Opacity**: 0 – 100 %.
-- **Scale**: percent of the exported long edge; the watermark rescales automatically
-  as you resize for different presets.
+Batch Export can also draw a text watermark on every exported copy: the text, its position
+(a corner or the centre) and its opacity. The original files are never changed.
 
 Batch Export
 ^^^^^^^^^^^^
@@ -1926,9 +1920,7 @@ Browsing
    * - ``Left`` / ``Right``
      - Previous / next image
    * - Arrow keys
-     - Pan in thumbnail mode
-   * - ``Shift + Arrow``
-     - Fine pan
+     - Move the focus ring across the thumbnails
    * - ``Ctrl + Shift + Left`` / ``Right``
      - Jump to previous / next sibling folder with images
    * - ``Alt + Left`` / ``Alt + Right``
@@ -2077,8 +2069,8 @@ Library Search
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` lets you add one or more **root folders**
 to a global index that is crawled in a background thread. Once a root is
-indexed you can query it by extension, min width/height, size range, or name
-substring and drop the results into the viewer as a virtual album.
+indexed you can search it by file name, minimum width / height and file size
+(up to 2000 results); double-click a result to open it.
 
 Right-click > ``Search by Query…`` filters the current folder with a compact query language, for example ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` takes a city, a country or both (``Paris``, ``France``, ``Paris, France``); a value with spaces goes in double quotes (``place:"Rio de Janeiro"``).
 
@@ -2119,9 +2111,8 @@ Auto-Tag
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` applies heuristic tags under
 ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
-``portrait``). If ``onnxruntime`` and a CLIP model at
-``models/clip_vit_b32.onnx`` are available, it also adds CLIP-based content
-labels. Runs on a worker thread with a live progress bar.
+``portrait``), read from the colour saturation, edges and shape of the picture as the
+viewer shows it. Runs on a worker thread with a live progress bar.
 
 Hierarchical Tags
 ^^^^^^^^^^^^^^^^^
@@ -2183,16 +2174,15 @@ XMP packet (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), then its EXIF ``Rating``
 That is where Lightroom keeps a JPEG's rating and keywords, and where Windows
 Explorer and some cameras keep their stars. A sidecar, when there is one, wins.
 
-- **Import XMP for current image** — pulls rating / title / keywords /
-  color label from the sidecar into the internal database.
-- **Export XMP for current image** — writes the current rating / title /
-  keywords / color label into a sidecar next to the image.
-- **Batch import / export** — applies the same operation to the active
-  selection or the whole folder.
+``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` has two buttons that apply to every
+image in the current view:
+
+- **Export sidecars** — writes each image's rating / title / description / keywords /
+  color label into its sidecar.
+- **Import sidecars** — reads them back into Imervue's own records.
 
 XML parsing uses ``defusedxml`` so malformed or malicious sidecars cannot
-trigger XXE / billion-laughs attacks. If ``defusedxml`` is not installed
-the XMP menu entries are hidden and no sidecars are written.
+trigger XXE / billion-laughs attacks.
 
 The **EXIF sidebar** also exposes a clickable **star-rating strip** — the
 rating it sets is what XMP export will write.

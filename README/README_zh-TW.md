@@ -115,7 +115,7 @@ pip install .
 | 套件 | 用途 |
 |---------|---------|
 | open_clip_torch + torch | CLIP 語意搜尋 |
-| onnxruntime | Real-ESRGAN AI 放大 / CLIP ONNX 自動標籤 |
+| onnxruntime | Real-ESRGAN AI 放大 |
 | opencv-python<5 | HDR 合成、全景拼接、焦點堆疊、人臉偵測、修復筆刷 |
 | sounddevice | Puppet 麥克風對嘴 |
 | mediapipe | Puppet 攝影機臉部追蹤 |
@@ -254,10 +254,11 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - **模糊檔名搜尋** 含子字串高亮
 - **找相似** — pHash（64-bit DCT）含可調 Hamming 距離
-- **圖庫搜尋** — SQLite 多根索引，搭配精簡的查詢 DSL：關鍵字、標籤（含否定）、評等、顏色、副檔名、地點、挑片、收藏、長寬比、年齡、大小、尺寸、相機 / 鏡頭，以及檔名 regex / glob；`place:` 可填城市、國家或兩者，含空格的值用雙引號括起（`place:"Rio de Janeiro"`）
+- **圖庫搜尋** — SQLite 多根索引，可依檔名、最小寬 / 高與檔案大小搜尋（最多 2000 筆結果；按兩下即可開啟）
+- **查詢搜尋**（右鍵）— 以精簡的查詢語言篩選目前開啟的資料夾：關鍵字、標籤（含否定）、評等、顏色、副檔名、地點、挑片、收藏、長寬比、年齡、大小、尺寸、相機 / 鏡頭，以及檔名 regex / glob；`place:` 可填城市、國家或兩者，含空格的值用雙引號括起（`place:"Rio de Janeiro"`）
 - **找相似（average hash）** — pHash 與 dHash 再搭配選用的 average-hash（aHash），提供互補的近重複度量
 - **語意搜尋（CLIP）** — 自然語言查詢（如「雪中的黃金獵犬」）透過快取的 embedding；`open_clip_torch` + `torch` 未安裝時優雅停用
-- **自動標籤** — 啟發式分類 + 選用 CLIP ONNX 升級
+- **自動標籤** — 依顏色、邊緣與形狀給出啟發式標籤：document / screenshot / photo / graphic、landscape / portrait
 
 ### 元資料
 
@@ -347,8 +348,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 ### 輸出
 
-- **浮水印疊加** — 文字或圖片，9 個錨點、不透明度、縮放；只在匯出時套用
-- **匯出預設** — Web 1600 / Print 300 dpi / Instagram 1080 一鍵流水線
+- **匯出預設** — 在批次匯出中：Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 正方形 / Thumbnail 400 px，或自訂
+- **浮水印** — 在批次匯出中：在四個角落之一或置中加上文字浮水印，可設定不透明度；只套用在匯出的副本上
 - **另存新檔 / 匯出** — PNG / JPEG / WebP / BMP / TIFF / AVIF（裝了 `pillow-heif` 還有 HEIC，裝了 `pillow-jxl-plugin` 還有 JPEG XL），有損格式提供品質滑桿；保留相機、鏡頭與拍攝時間的 EXIF，位置可選（**中繼資料**：全部／位置以外／無）；建議的檔名一定是還沒被占用的（`photo.png` 旁邊就是 `photo_1.png`），已存在的檔案（尤其是原圖本身）要確認後才會被取代
 - **批次操作** — 重命名、移動 / 複製、旋轉選取影像。移動或複製不會覆蓋同名檔案（會以 `name_1` 存入）；在 Imervue 裡重新命名或移動的照片（批次重新命名、Token 批次重新命名、資料夾樹、移動 / 複製、雙窗格、暫存區、影像整理）會保留評等、收藏、標籤、顏色標籤、標題、備註與篩選標記，`.xmp` 與註解 sidecar 也會一起帶走；資料夾在 Imervue 中開著時，用其他程式重新命名的照片也一樣；改成另一張選取照片現在的名稱（重新編號、互換兩個名稱）時，會依正確順序把整批重新命名，而不是只改一部分
 - **聯絡單 PDF** — 多頁網格含說明（A4 / A3 / Letter / Legal）
@@ -640,8 +641,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 | 快捷鍵 | 動作 |
 |----------|--------|
-| 方向鍵 | 滾動網格 / 切換影像（深度縮放中左 / 右） |
-| Shift + 方向 | 細微滾動（半步） |
+| 方向鍵 | 網格：移動焦點框（Enter 開啟該影像）/ 深度縮放：左 / 右切換影像 |
 | Ctrl+Shift+←/→ | 跳到前 / 下個含影像的手足資料夾 |
 | Alt+← / Alt+→ | 歷史返回 / 前進 |
 | Ctrl+G | 跳到第 N 張 |

@@ -115,7 +115,7 @@ pip install .
 | 包 | 用途 |
 |---------|---------|
 | open_clip_torch + torch | CLIP 语义搜索 |
-| onnxruntime | Real-ESRGAN AI 放大 / CLIP ONNX 自动标签 |
+| onnxruntime | Real-ESRGAN AI 放大 |
 | opencv-python<5 | HDR 合成、全景拼接、焦点堆叠、人脸检测、修复笔刷 |
 | sounddevice | Puppet 麦克风对嘴 |
 | mediapipe | Puppet 摄像头脸部追踪 |
@@ -254,10 +254,11 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 - **模糊文件名搜索** 含子字符串高亮
 - **找相似** — pHash（64-bit DCT）含可调 Hamming 距离
-- **图库搜索** — SQLite 多根索引，含紧凑的查询 DSL：关键字、标签（含取反）、评级、颜色、扩展名、地点、挑片、收藏、长宽比、年龄、大小、尺寸、相机 / 镜头，以及文件名正则 / glob；`place:` 可填城市、国家或两者，含空格的值用双引号括起（`place:"Rio de Janeiro"`）
+- **图库搜索** — SQLite 多根索引，可按文件名、最小宽 / 高与文件大小搜索（最多 2000 条结果；双击即可打开）
+- **查询搜索**（右键）— 以精简的查询语言筛选当前打开的文件夹：关键字、标签（含取反）、评级、颜色、扩展名、地点、挑片、收藏、长宽比、年龄、大小、尺寸、相机 / 镜头，以及文件名正则 / glob；`place:` 可填城市、国家或两者，含空格的值用双引号括起（`place:"Rio de Janeiro"`）
 - **找相似（average hash）** — pHash 与 dHash 再加上可选的 average-hash（aHash），提供互补的近重复度量
 - **语义搜索（CLIP）** — 自然语言查询（如"雪中的金毛犬"）通过缓存的 embedding；`open_clip_torch` + `torch` 未安装时优雅停用
-- **自动标签** — 启发式分类 + 可选 CLIP ONNX 升级
+- **自动标签** — 根据颜色、边缘与形状给出启发式标签：document / screenshot / photo / graphic、landscape / portrait
 
 ### 元数据
 
@@ -347,8 +348,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 ### 输出
 
-- **水印叠加** — 文字或图片，9 个锚点、不透明度、缩放；只在导出时套用
-- **导出预设** — Web 1600 / Print 300 dpi / Instagram 1080 一键流水线
+- **导出预设** — 在批量导出中：Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 正方形 / Thumbnail 400 px，或自定义
+- **水印** — 在批量导出中：在四角之一或居中加上文字水印，可设置不透明度；只应用于导出的副本
 - **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF / AVIF（装了 `pillow-heif` 还有 HEIC，装了 `pillow-jxl-plugin` 还有 JPEG XL），有损格式提供质量滑块；保留相机、镜头与拍摄时间的 EXIF，位置可选（**元数据**：全部／位置以外／无）；建议的文件名一定是还没被占用的（`photo.png` 旁边就是 `photo_1.png`），已存在的文件（尤其是原图本身）要确认后才会被替换
 - **批量操作** — 重命名、移动 / 复制、旋转选中图片。移动或复制不会覆盖同名文件（会以 `name_1` 存入）；在 Imervue 里重命名或移动的照片（批量重命名、Token 批量重命名、文件夹树、移动 / 复制、双窗格、暂存区、图片整理）会保留评级、收藏、标签、颜色标签、标题、备注与筛选标记，`.xmp` 与标注 sidecar 也会一起带走；文件夹在 Imervue 中打开时，用其他程序重命名的照片也一样；改成另一张选中照片现在的名称（重新编号、互换两个名称）时，会按正确顺序把整批重命名，而不是只改一部分
 - **联系表 PDF** — 多页网格含说明（A4 / A3 / Letter / Legal）
@@ -640,8 +641,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 | 快捷键 | 动作 |
 |----------|--------|
-| 方向键 | 滚动网格 / 切换图片（深度缩放中左 / 右） |
-| Shift + 方向 | 细微滚动（半步） |
+| 方向键 | 网格：移动焦点框（Enter 打开该图片）/ 深度缩放：左 / 右切换图片 |
 | Ctrl+Shift+←/→ | 跳到前 / 下个含图片的同级文件夹 |
 | Alt+← / Alt+→ | 历史后退 / 前进 |
 | Ctrl+G | 跳到第 N 张 |

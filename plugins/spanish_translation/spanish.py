@@ -788,7 +788,7 @@ spanish_word_dict.update({
     "auto_tag_all": "Etiquetar carpeta entera",
     "auto_tag_selected": "Etiquetar seleccionadas",
     "auto_tag_run": "Ejecutar auto-etiquetado",
-    "auto_tag_explain": "Aplica etiquetas heurísticas bajo 'auto/...' (foto/documento/captura/paisaje/retrato, etc.). Usa CLIP ONNX si está instalado.",
+    "auto_tag_explain": "Aplica etiquetas heurísticas bajo 'auto/...' (foto/documento/captura/paisaje/retrato, etc.). Se deducen de los colores, bordes y forma de cada imagen.",
     "token_rename_title": "Renombrado por plantilla en lote",
     "token_rename_template": "Plantilla:",
     "token_rename_apply": "Aplicar renombrado",

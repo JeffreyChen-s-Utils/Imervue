@@ -1433,7 +1433,7 @@ english_word_dict = {
     "auto_tag_all": "Tag entire folder",
     "auto_tag_selected": "Tag selected",
     "auto_tag_run": "Run auto-tag",
-    "auto_tag_explain": "Applies heuristic tags under 'auto/...' (photo/document/screenshot/landscape/portrait etc.). Uses CLIP ONNX if installed.",
+    "auto_tag_explain": "Applies heuristic tags under 'auto/...' (photo/document/screenshot/landscape/portrait etc.). Read from the colours, edges and shape of each picture.",
     # Token Rename
     "token_rename_title": "Token Batch Rename",
     "token_rename_template": "Template:",

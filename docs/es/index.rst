@@ -115,8 +115,8 @@ Tras abrir una carpeta, todas las imágenes se muestran como miniaturas.
      - Deje el cursor sobre una miniatura durante 500 ms para ver una vista previa ampliada
    * - Seleccionar varias imágenes
      - Clic izquierdo y arrastrar para dibujar un rectángulo de selección
-   * - Encuadrar con el teclado
-     - Teclas de flecha; mantenga ``Shift`` para un movimiento fino
+   * - Moverse entre miniaturas con el teclado
+     - Las teclas de flecha mueven un recuadro de foco y lo desplazan a la vista; ``Enter`` abre la imagen
 
 Cada miniatura muestra distintivos de estado: una franja de color en el borde izquierdo
 (etiqueta de color), un corazón en la esquina superior izquierda (favorito), una estrella
@@ -1601,37 +1601,32 @@ Clic derecho en una imagen > ``Export / Save As``.
 Presets de exportación
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Para los destinos de entrega comunes que no quiere reajustar cada vez, use
-``File`` > ``Export with Preset``. Un clic aplica el pipeline correcto de redimensionado,
-formato y calidad:
+La exportación por lotes (más abajo) tiene una lista **Preset** que rellena el tamaño, el formato
+y la calidad para los destinos habituales; con **Custom** los elige usted:
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 80
+   :widths: 30 70
 
    * - Preset
-     - Pipeline
-   * - **Web 1600**
-     - Ajusta el lado largo a 1600 px, JPEG calidad 85, sRGB; para subidas a blogs / foros donde la calidad visual importa más que el recuento de píxeles.
-   * - **Print 300 dpi**
-     - TIFF a resolución completa / JPEG de alta calidad con metadatos de 300 dpi, salida con gestión de color para laboratorios y imprentas.
-   * - **Instagram 1080**
-     - Recorte cuadrado (1080 × 1080) o vertical (1080 × 1350) con la relación de aspecto original preservada en el interior, JPEG calidad 90.
+     - Salida
+   * - **Web — 1600 px JPEG**
+     - Lado largo de hasta 1600 px, JPEG calidad 85.
+   * - **4K Web — 3840 px JPEG**
+     - Lado largo de hasta 3840 px, JPEG calidad 90.
+   * - **Print — 300 DPI PNG**
+     - Resolución completa, PNG, 300 dpi.
+   * - **Instagram — 1080×1080 square**
+     - Recorte cuadrado centrado, 1080 × 1080, JPEG calidad 90.
+   * - **Thumbnail — 400 px JPEG**
+     - Lado largo de hasta 400 px, JPEG calidad 80.
 
-Los presets se componen con la superposición de marca de agua (más abajo) — habilite la
-marca de agua una vez y todas las salidas con preset la incluirán.
+Marca de agua
+^^^^^^^^^^^^^
 
-Superposición de marca de agua
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``File`` > ``Watermark…`` abre un configurador de superposición no destructiva. Los ajustes
-se aplican sólo en la exportación — los píxeles originales en el disco nunca se tocan.
-
-- **Modo**: texto o imagen. Las marcas de agua de imagen admiten PNG con alfa.
-- **Posición**: cuadrícula de 9 anclas (esquinas, bordes, centro).
-- **Opacidad**: 0 – 100 %.
-- **Escala**: porcentaje del lado largo exportado; la marca de agua se reescala automáticamente
-  conforme cambia el tamaño para distintos presets.
+La exportación por lotes también puede dibujar una marca de agua de texto en cada copia exportada:
+el texto, su posición (una esquina o el centro) y su opacidad. Los archivos originales nunca se
+modifican.
 
 Exportación por lotes
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1961,9 +1956,7 @@ Navegación
    * - ``Left`` / ``Right``
      - Imagen anterior / siguiente
    * - Teclas de flecha
-     - Encuadre en modo miniaturas
-   * - ``Shift + Arrow``
-     - Encuadre fino
+     - Mover el recuadro de foco por las miniaturas
    * - ``Ctrl + Shift + Left`` / ``Right``
      - Saltar a la carpeta hermana anterior / siguiente con imágenes
    * - ``Alt + Left`` / ``Alt + Right``
@@ -2113,8 +2106,8 @@ Búsqueda en la biblioteca
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` le permite añadir una o más
 **carpetas raíz** a un índice global que se rastrea en un hilo en segundo plano. Una vez que
-una raíz está indexada puede consultarla por extensión, ancho/alto mínimo, rango de tamaño o
-subcadena de nombre y soltar los resultados en el visor como un álbum virtual.
+una raíz está indexada puede buscar en ella por nombre de archivo, ancho / alto mínimo y tamaño
+de archivo (hasta 2000 resultados); haga doble clic en un resultado para abrirlo.
 
 Clic derecho > ``Search by Query…`` filtra la carpeta actual con un lenguaje de consulta compacto, por ejemplo ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` admite una ciudad, un país o ambos (``Paris``, ``France``, ``Paris, France``); un valor con espacios va entre comillas dobles (``place:"Rio de Janeiro"``).
 
@@ -2154,10 +2147,9 @@ Auto-Tag
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` aplica etiquetas heurísticas
-bajo ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` / ``portrait``).
-Si ``onnxruntime`` y un modelo CLIP en ``models/clip_vit_b32.onnx`` están disponibles,
-también añade etiquetas de contenido basadas en CLIP. Se ejecuta en un hilo de trabajo con
-una barra de progreso en vivo.
+bajo ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` / ``portrait``),
+deducidas de la saturación del color, los bordes y la forma de la imagen tal como la muestra el
+visor. Se ejecuta en un hilo de trabajo con una barra de progreso en vivo.
 
 Etiquetas jerárquicas
 ^^^^^^^^^^^^^^^^^^^^^
@@ -2221,16 +2213,15 @@ EXIF. Ahí guarda Lightroom la valoración y las palabras clave de un JPEG, y ah
 guardan sus estrellas el Explorador de Windows y algunas cámaras. Si hay sidecar,
 manda el sidecar.
 
-- **Import XMP for current image** — extrae valoración / título / palabras clave /
-  etiqueta de color del archivo secundario a la base de datos interna.
-- **Export XMP for current image** — escribe la valoración / título / palabras clave /
-  etiqueta de color actuales en un archivo secundario junto a la imagen.
-- **Importar / exportar por lotes** — aplica la misma operación a la selección activa
-  o a toda la carpeta.
+``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` tiene dos botones que se aplican a
+todas las imágenes de la vista actual:
+
+- **Export sidecars** — escribe la valoración / título / descripción / palabras clave /
+  etiqueta de color de cada imagen en su archivo secundario.
+- **Import sidecars** — los vuelve a leer en los registros propios de Imervue.
 
 El parseo XML usa ``defusedxml`` para que los archivos secundarios mal formados o maliciosos
-no puedan disparar ataques XXE / billion-laughs. Si ``defusedxml`` no está instalado, las
-entradas del menú XMP se ocultan y no se escriben archivos secundarios.
+no puedan disparar ataques XXE / billion-laughs.
 
 La **barra lateral EXIF** también expone una **tira de valoración por estrellas** clicable —
 la valoración que establece es la que escribirá la exportación XMP.

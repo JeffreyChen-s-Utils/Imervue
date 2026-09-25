@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-27 | 2026-09-26 | The docs describe the arrow keys, presets, watermark, Library Search, Auto-Tag and XMP as they work | #docs #fix #i18n #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
 | U-20260926-26 | 2026-09-26 | Esc in the List view leaves fullscreen or goes back to the thumbnails | #fix #list-view #keyboard | [2026-09-b](2026-09-b.md) |
 | U-20260926-25 | 2026-09-26 | Semantic search keeps its embeddings, re-embedding only pictures that changed | #fix #semantic-search #performance #cache | [2026-09-b](2026-09-b.md) |
 | U-20260926-24 | 2026-09-26 | Clicking a star in the List view rates the row, as the docs said | #fix #list-view #rating | [2026-09-b](2026-09-b.md) |
@@ -399,4 +400,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 57 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 58 |

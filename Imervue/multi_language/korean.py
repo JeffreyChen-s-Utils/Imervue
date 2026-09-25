@@ -1418,7 +1418,7 @@ korean_word_dict = {
     "auto_tag_all": "폴더 전체 태그",
     "auto_tag_selected": "선택 항목 태그",
     "auto_tag_run": "자동 태그 실행",
-    "auto_tag_explain": "'auto/...' 아래에 휴리스틱 태그 적용 (photo/document/screenshot/landscape/portrait 등). CLIP ONNX 설치 시 사용.",
+    "auto_tag_explain": "'auto/...' 아래에 휴리스틱 태그 적용 (photo/document/screenshot/landscape/portrait 등). 각 이미지의 색상, 가장자리, 형태로 판단합니다.",
     # 토큰 일괄 이름 변경
     "token_rename_title": "토큰 일괄 이름 변경",
     "token_rename_template": "템플릿:",

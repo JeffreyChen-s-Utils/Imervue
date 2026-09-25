@@ -1420,7 +1420,7 @@ japanese_word_dict = {
     "auto_tag_all": "フォルダ全体にタグ付け",
     "auto_tag_selected": "選択にタグ付け",
     "auto_tag_run": "自動タグを実行",
-    "auto_tag_explain": "'auto/...' 配下にヒューリスティックタグを適用（photo/document/screenshot/landscape/portrait など）。CLIP ONNX があれば使用します。",
+    "auto_tag_explain": "'auto/...' 配下にヒューリスティックタグを適用（photo/document/screenshot/landscape/portrait など）。各画像の色・エッジ・形状から判断します。",
     # トークン一括リネーム
     "token_rename_title": "トークン一括リネーム",
     "token_rename_template": "テンプレート：",

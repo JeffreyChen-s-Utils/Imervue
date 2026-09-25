@@ -116,7 +116,7 @@ Opcionais (com feature gating; omita para desativar o recurso sem erros):
 | Pacote | Finalidade |
 |---------|---------|
 | open_clip_torch + torch | Busca semântica CLIP (consultas em linguagem natural) |
-| onnxruntime | Upscale por IA Real-ESRGAN / auto-tag CLIP ONNX |
+| onnxruntime | Upscale por IA Real-ESRGAN |
 | opencv-python<5 | Composição HDR, costura de panorama, focus stacking, detecção facial, pincel de cura |
 | sounddevice | Sincronia labial do Puppet via microfone |
 | mediapipe | Rastreamento facial por webcam do Puppet |
@@ -255,10 +255,11 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 - **Busca fuzzy por nome de arquivo** com destaque de substring
 - **Buscar Imagens Similares** — pHash (DCT 64 bits) com distância de Hamming ajustável
-- **Library Search** — índice multi-raiz SQLite com uma DSL de consulta compacta: palavras-chave, tags (incl. negação), avaliações, cor, extensão, lugar, triagem, favoritos, proporção, idade, tamanho, dimensões, câmera / lente e regex / glob de nome de arquivo; `place:` corresponde a uma cidade, um país ou ambos, e um valor com espaços vai entre aspas duplas (`place:"Rio de Janeiro"`)
+- **Library Search** — índice multi-raiz SQLite, pesquisado por nome de arquivo, largura / altura mínima e tamanho de arquivo (até 2000 resultados; clique duas vezes em um para abri-lo)
+- **Search by Query** (clique direito) — uma linguagem de consulta compacta sobre a pasta aberta: palavras-chave, tags (incl. negação), avaliações, cor, extensão, lugar, triagem, favoritos, proporção, idade, tamanho, dimensões, câmera / lente e regex / glob de nome de arquivo; `place:` corresponde a uma cidade, um país ou ambos, e um valor com espaços vai entre aspas duplas (`place:"Rio de Janeiro"`)
 - **Find Similar (average hash)** — pHash e dHash são acompanhados por um average-hash (aHash) opcional para uma métrica complementar de quase duplicatas
 - **Busca Semântica (CLIP)** — consultas em linguagem natural ("golden retriever na neve") via embeddings em cache; degrada graciosamente quando `open_clip_torch` + `torch` não estão instalados
-- **Auto-Tag** — classificação heurística com upgrade opcional CLIP ONNX
+- **Auto-Tag** — tags heurísticas a partir de cor, bordas e forma: document / screenshot / photo / graphic, landscape / portrait
 
 ### Metadados
 
@@ -348,8 +349,8 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 
 ### Saída
 
-- **Sobreposição de marca d'água** — texto ou imagem, 9 posições de âncora, opacidade, escala; aplicado apenas na exportação
-- **Presets de exportação** — pipelines de um clique Web 1600 / Print 300 dpi / Instagram 1080
+- **Presets de exportação** — na Exportação em Lote: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 quadrado / Thumbnail 400 px, ou Custom
+- **Marca d'água** — na Exportação em Lote: uma marca d'água de texto em um canto ou no centro, com sua opacidade; aplicada apenas às cópias exportadas
 - **Salvar Como / Exportar** — PNG / JPEG / WebP / BMP / TIFF / AVIF (e HEIC com `pillow-heif` e JPEG XL com `pillow-jxl-plugin`) com slider de qualidade para formatos com perdas; mantém o EXIF de câmera, lente e data de captura, com a localização opcional (**Metadados**: todos / todos menos localização / nenhum); o nome sugerido é um ainda livre (`photo_1.png` ao lado de `photo.png`), e um arquivo existente — sobretudo a própria foto — só é substituído após confirmação
 - **Operações em lote** — renomear, mover/copiar, rotacionar imagens selecionadas. Mover ou copiar nunca sobrescreve um arquivo de mesmo nome (ele chega como `name_1`), e uma foto renomeada ou movida no Imervue (renomeação em lote, renomeação por tokens, árvore de pastas, Mover / Copiar, painel duplo, bandeja de preparação, organizador de imagens) mantém a avaliação, o favorito, as tags, o rótulo de cor, o título, as notas e a marcação de seleção; os sidecars `.xmp` e de anotações vão junto; o mesmo vale para uma foto renomeada em outro programa enquanto a pasta está aberta no Imervue. Um nome novo que outra foto selecionada tem agora (renumerar, trocar dois nomes) renomeia a seleção inteira na ordem certa em vez de só uma parte
 - **PDF de Contact Sheet** — grade em várias páginas com legendas (A4 / A3 / Letter / Legal)
@@ -665,8 +666,7 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 
 | Atalho | Ação |
 |----------|--------|
-| Teclas de seta | Rolar grade / Trocar imagens (Esquerda/Direita em deep zoom) |
-| Shift + Seta | Rolagem fina (meio passo) |
+| Teclas de seta | Grade: mover o anel de foco (Enter o abre) / Deep zoom: Esquerda/Direita trocam imagens |
 | Ctrl+Shift+←/→ | Ir para a pasta irmã anterior / próxima com imagens |
 | Alt+← / Alt+→ | Voltar / avançar no histórico |
 | Ctrl+G | Ir para imagem por índice |

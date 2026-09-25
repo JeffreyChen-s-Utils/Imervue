@@ -1407,7 +1407,7 @@ chinese_word_dict = {
     "auto_tag_all": "标签整个文件夹",
     "auto_tag_selected": "标签所选项",
     "auto_tag_run": "执行自动标签",
-    "auto_tag_explain": "在 'auto/...' 下应用启发式标签（photo/document/screenshot/landscape/portrait 等）。若已安装将使用 CLIP ONNX。",
+    "auto_tag_explain": "在 'auto/...' 下应用启发式标签（photo/document/screenshot/landscape/portrait 等）。根据每张图片的色彩、边缘与形状判断。",
     # Token 批量重命名
     "token_rename_title": "Token 批量重命名",
     "token_rename_template": "模板：",

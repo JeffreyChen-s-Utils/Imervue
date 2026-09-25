@@ -116,7 +116,7 @@ Optional (Feature-Gated; weglassen, um das Feature sauber zu deaktivieren):
 | Paket | Zweck |
 |---------|---------|
 | open_clip_torch + torch | CLIP-Semantiksuche (Bildabfragen in natürlicher Sprache) |
-| onnxruntime | Real-ESRGAN AI-Upscale / CLIP-ONNX-Auto-Tag |
+| onnxruntime | Real-ESRGAN AI-Upscale |
 | opencv-python<5 | HDR-Merge, Panorama-Stitch, Focus-Stacking, Gesichtserkennung, Healing-Brush |
 | sounddevice | Puppet-Lip-Sync per Mikrofon |
 | mediapipe | Puppet-Webcam-Gesichtserkennung |
@@ -255,10 +255,11 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 - **Fuzzy-Dateinamensuche** mit Substring-Highlighting
 - **Find Similar Images** — pHash (64-Bit DCT) mit einstellbarer Hamming-Distanz
-- **Library Search** — SQLite-Multi-Root-Index mit einer kompakten Query-DSL: Keywords, Tags (inkl. Negation), Ratings, Farbe, Endung, Ort, Cull, Favoriten, Seitenverhältnis, Alter, Größe, Maße, Kamera / Objektiv sowie Dateiname-Regex / -Glob; `place:` passt auf Stadt, Land oder beides, und ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (`place:"Rio de Janeiro"`)
+- **Library Search** — SQLite-Multi-Root-Index, durchsucht nach Dateiname, Mindestbreite / -höhe und Dateigröße (bis zu 2000 Treffer; ein Doppelklick öffnet einen)
+- **Search by Query** (Rechtsklick) — eine kompakte Query-Sprache über dem geöffneten Ordner: Keywords, Tags (inkl. Negation), Ratings, Farbe, Endung, Ort, Cull, Favoriten, Seitenverhältnis, Alter, Größe, Maße, Kamera / Objektiv sowie Dateiname-Regex / -Glob; `place:` passt auf Stadt, Land oder beides, und ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (`place:"Rio de Janeiro"`)
 - **Find Similar (Average Hash)** — pHash und dHash werden durch einen optionalen Average-Hash (aHash) zu einer komplementären Near-Duplicate-Metrik verbunden
 - **Semantic Search (CLIP)** — Natural-Language-Queries („Golden Retriever im Schnee") über gecachte Embeddings; deaktiviert sich elegant, wenn `open_clip_torch` + `torch` nicht installiert sind
-- **Auto-Tag** — Heuristische Klassifikation mit optionalem CLIP-ONNX-Upgrade
+- **Auto-Tag** — Heuristische Tags aus Farbe, Kanten und Form: Dokument / Screenshot / Foto / Grafik, Querformat / Hochformat
 
 ### Metadaten
 
@@ -348,8 +349,8 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 ### Ausgabe
 
-- **Watermark-Overlay** — Text oder Bild, 9 Anker-Positionen, Opazität, Skalierung; nur beim Export angewendet
-- **Export-Presets** — Web 1600 / Print 300 dpi / Instagram 1080 Ein-Klick-Pipelines
+- **Export-Presets** — im Batch-Export: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 quadratisch / Thumbnail 400 px oder Custom
+- **Wasserzeichen** — im Batch-Export: ein Text-Wasserzeichen in einer Ecke oder der Mitte, mit einstellbarer Opazität; nur auf die exportierten Kopien angewendet
 - **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (dazu HEIC mit `pillow-heif` und JPEG XL mit `pillow-jxl-plugin`) mit Qualitäts-Slider für verlustbehaftete Formate; übernimmt Kamera-, Objektiv- und Aufnahmedatum-EXIF, der Standort ist optional (**Metadaten**: alle / alle außer Standort / keine); der vorgeschlagene Dateiname ist noch frei (`photo_1.png` neben `photo.png`), und eine vorhandene Datei – vor allem das Foto selbst – wird erst nach Rückfrage ersetzt
 - **Batch-Operationen** — Umbenennen, Verschieben/Kopieren, ausgewählte Bilder drehen. Verschieben oder Kopieren überschreibt nie eine gleichnamige Datei (sie kommt als `name_1` an), und ein in Imervue umbenanntes oder verschobenes Foto (Stapel-Umbenennen, Token-Stapel-Umbenennen, Ordnerbaum, Verschieben / Kopieren, Zwei-Fenster-Ansicht, Staging-Ablage, Bild-Organizer) behält Bewertung, Favorit, Tags, Farbetikett, Titel, Notizen und Auswahl-Markierung; seine `.xmp`- und Anmerkungs-Sidecars wandern mit; ebenso ein Foto, das in einem anderen Programm umbenannt wird, während sein Ordner in Imervue geöffnet ist. Ein neuer Name, den gerade ein anderes ausgewähltes Foto trägt (Neunummerieren, zwei Namen tauschen), benennt die ganze Auswahl in der richtigen Reihenfolge um statt nur einen Teil davon
 - **Contact Sheet PDF** — mehrseitiges Grid mit Untertiteln (A4 / A3 / Letter / Legal)
@@ -691,8 +692,7 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 
 | Shortcut | Aktion |
 |----------|--------|
-| Pfeiltasten | Grid scrollen / Bilder wechseln (Links/Rechts in Deep Zoom) |
-| Shift + Pfeil | Feines Scrollen (halber Schritt) |
+| Pfeiltasten | Grid: Fokusrahmen bewegen (Enter öffnet das Bild) / Deep Zoom: Links/Rechts wechselt das Bild |
 | Ctrl+Shift+←/→ | Zum vorherigen / nächsten Geschwisterordner mit Bildern springen |
 | Alt+← / Alt+→ | History zurück / vor |
 | Ctrl+G | Zu Bild per Index springen |

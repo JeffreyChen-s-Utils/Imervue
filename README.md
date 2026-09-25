@@ -116,7 +116,7 @@ Optional (feature-gated; omit to disable the feature cleanly):
 | Package | Purpose |
 |---------|---------|
 | open_clip_torch + torch | CLIP semantic search (natural-language image queries) |
-| onnxruntime | Real-ESRGAN AI upscale / CLIP ONNX auto-tag |
+| onnxruntime | Real-ESRGAN AI upscale |
 | opencv-python<5 | HDR merge, panorama stitch, focus stacking, face detection, healing brush |
 | sounddevice | Puppet lip-sync from microphone |
 | mediapipe | Puppet webcam face tracking |
@@ -257,10 +257,11 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - **Fuzzy filename search** with substring highlighting
 - **Find Similar Images** — pHash (64-bit DCT) with adjustable Hamming distance
-- **Library Search** — SQLite multi-root index with a compact query DSL: keywords, tags (incl. negation), ratings, colour, extension, place, cull, favourites, aspect, age, size, dimensions, camera / lens, and filename regex / glob; `place:` matches a city, a country or both, and a value with spaces goes in double quotes (`place:"Rio de Janeiro"`)
+- **Library Search** — SQLite multi-root index, searched by file name, minimum width / height and file size (up to 2000 results; double-click one to open it)
+- **Search by Query** (right-click) — a compact query language over the open folder: keywords, tags (incl. negation), ratings, colour, extension, place, cull, favourites, aspect, age, size, dimensions, camera / lens, and filename regex / glob; `place:` matches a city, a country or both, and a value with spaces goes in double quotes (`place:"Rio de Janeiro"`)
 - **Find Similar (average hash)** — pHash and dHash are joined by an optional average-hash (aHash) for a complementary near-duplicate metric
 - **Semantic Search (CLIP)** — natural-language queries ("golden retriever in snow") via cached embeddings; gracefully unavailable when `open_clip_torch` + `torch` aren't installed
-- **Auto-Tag** — heuristic classification with optional CLIP ONNX upgrade
+- **Auto-Tag** — heuristic tags from colour, edges and shape: document / screenshot / photo / graphic, landscape / portrait
 
 ### Metadata
 
@@ -350,8 +351,8 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 ### Output
 
-- **Watermark overlay** — text or image, 9 anchor positions, opacity, scale; applied on export only
-- **Export presets** — Web 1600 / Print 300 dpi / Instagram 1080 one-click pipelines
+- **Export presets** — in Batch Export: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 square / Thumbnail 400 px, or Custom
+- **Watermark** — in Batch Export: a text watermark in a corner or the centre, with its opacity; applied to the exported copies only
 - **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (plus HEIC with `pillow-heif` and JPEG XL with `pillow-jxl-plugin`) with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none); the suggested file name is one not yet taken (`photo_1.png` beside `photo.png`), and an existing file — above all the photo itself — is replaced only after you confirm
 - **Batch operations** — rename, move/copy, rotate selected images. A move or copy never overwrites a file of the same name (it arrives as `name_1`), and a photo renamed or moved in Imervue (Batch Rename, Token Batch Rename, the folder tree, Move / Copy, Dual Pane, Staging Tray, Image Organizer) keeps its rating, favourite, tags, colour label, title, notes and cull flag; its `.xmp` and annotation sidecars go with it; so does a photo renamed in another program while its folder is open in Imervue. Renaming to a name another selected photo has now (renumbering a folder, swapping two names) renames the whole selection in the right order instead of only part of it
 - **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
@@ -691,8 +692,7 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 
 | Shortcut | Action |
 |----------|--------|
-| Arrow Keys | Scroll grid / Switch images (Left/Right in deep zoom) |
-| Shift + Arrow | Fine-grained scrolling (half step) |
+| Arrow Keys | Grid: move the focus ring (Enter opens it) / Deep zoom: Left/Right switch images |
 | Ctrl+Shift+←/→ | Jump to previous / next sibling folder with images |
 | Alt+← / Alt+→ | History back / forward |
 | Ctrl+G | Go to image by index |
