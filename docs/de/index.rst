@@ -1609,7 +1609,7 @@ Rechtsklick auf ein Bild > ``Exportieren / Speichern unter``.
 - Qualität anpassen (für verlustbehaftete Formate)
 - Metadaten wählen: alle, alle außer dem Standort (Standard) oder keine. Kamera, Objektiv und Aufnahmedatum bleiben erhalten; die Wahl wird gespeichert, und der Batch-Export bietet dieselbe Option
 - Geschätzte Dateigröße in der Vorschau
-- Speicherort wählen
+- Speicherort wählen. Der vorgeschlagene Name ist noch frei (``photo_1.png`` neben ``photo.png``); eine vorhandene Datei – vor allem das Foto selbst – wird erst nach Rückfrage ersetzt
 
 Export-Presets
 ^^^^^^^^^^^^^^

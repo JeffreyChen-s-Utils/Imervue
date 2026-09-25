@@ -1586,7 +1586,7 @@ Clic droit sur une image > ``Exporter / Enregistrer sous``.
 - Ajustez la qualité (pour les formats avec perte)
 - Choisissez les métadonnées à conserver : toutes, toutes sauf la localisation (par défaut) ou aucune. L'appareil, l'objectif et la date de prise de vue sont conservés ; le choix est mémorisé et l'export par lot propose la même option
 - Aperçu de la taille de fichier estimée
-- Choisissez un emplacement d'enregistrement
+- Choisissez un emplacement d'enregistrement. Le nom proposé est encore libre (``photo_1.png`` à côté de ``photo.png``) ; un fichier existant — surtout la photo elle-même — n'est remplacé qu'après confirmation
 
 Préréglages d'export
 ^^^^^^^^^^^^^^^^^^^^

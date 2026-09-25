@@ -184,8 +184,9 @@ def test_save_path_into(qapp, monkeypatch, picked, expected):
         lambda *args: calls.append(args) or (picked, "")))
     edit = QLineEdit("/old.png")
     try:
-        dialog_rows.save_path_into(None, edit, "Output", dialog_rows.image_save_filter())
+        returned = dialog_rows.save_path_into(None, edit, "Output", dialog_rows.image_save_filter())
         assert edit.text() == expected
+        assert returned == (picked or None)
         assert calls == [(None, "Output", "/old.png", "Images (*.png *.jpg *.tif)")]
     finally:
         edit.deleteLater()

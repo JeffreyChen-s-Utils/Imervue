@@ -1563,7 +1563,7 @@ Clique com o botão direito em uma imagem > ``Exportar / Salvar Como``.
 - Ajuste a qualidade (para formatos com perdas)
 - Escolha os metadados a manter: todos, todos menos a localização (padrão) ou nenhum. Câmera, lente e data de captura são mantidas; a escolha é lembrada e a exportação em lote oferece a mesma opção
 - Pré-visualize o tamanho estimado do arquivo
-- Escolha um local para salvar
+- Escolha um local para salvar. O nome sugerido é um ainda livre (``photo_1.png`` ao lado de ``photo.png``); um arquivo existente — sobretudo a própria foto — só é substituído após confirmação
 
 Presets de Exportação
 ^^^^^^^^^^^^^^^^^^^^^

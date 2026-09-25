@@ -1,8 +1,11 @@
-"""Tests for the export dialog's size-estimate worker: what it reports back."""
+"""Tests for the export dialog: the size estimate, and never replacing a file unasked."""
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 from PIL import Image
+from PySide6.QtWidgets import QFileDialog
 
 from Imervue.gui import export_dialog as mod
 
@@ -68,3 +71,137 @@ def test_export_writes_the_metadata_the_chosen_policy_allows(qapp, tmp_path, mon
     with Image.open(tmp_path / "out.png") as out:
         assert out.getexif()[0x010F] == "Canon"
         assert not out.getexif().get_ifd(0x8825)
+
+
+@pytest.fixture
+def export_dialog(qapp, monkeypatch):
+    """An ExportDialog factory whose size estimate never starts; closed after the test."""
+    monkeypatch.setattr(mod._SizeEstimateWorker, "start", lambda self: None)  # noqa: SLF001
+    made = []
+
+    def make(src):
+        dlg = mod.ExportDialog(str(src))
+        made.append(dlg)
+        return dlg
+
+    yield make
+    for dlg in made:
+        dlg.deleteLater()
+
+
+@pytest.fixture
+def replace_answers(monkeypatch):
+    """Record every "replace it?" question and answer it with ``answers["reply"]``."""
+    answers = {"reply": False, "asked": []}
+
+    def ask(_parent, text):
+        answers["asked"].append(text)
+        return answers["reply"]
+
+    monkeypatch.setattr(mod, "_ask_to_replace", ask)
+    return answers
+
+
+def _png(path, colour="red"):
+    Image.new("RGB", (8, 8), colour).save(path)
+    return path
+
+
+def test_the_default_output_is_never_the_photo_itself(export_dialog, tmp_path):
+    """A PNG exported as PNG defaulted to its own path and was replaced without a word."""
+    src = _png(tmp_path / "photo.png")
+    dlg = export_dialog(src)
+    dlg.format_combo.setCurrentText("PNG")
+    assert Path(dlg.path_edit.text()) == tmp_path / "photo_1.png"
+
+
+def test_the_default_output_passes_over_a_sibling_sharing_the_name(export_dialog, tmp_path):
+    """photo.jpg exported as PNG defaulted to photo.png, a different picture beside it."""
+    src = tmp_path / "photo.jpg"
+    Image.new("RGB", (8, 8)).save(src)
+    _png(tmp_path / "photo.png", "blue")
+    dlg = export_dialog(src)
+    dlg.format_combo.setCurrentText("JPEG")
+    dlg.format_combo.setCurrentText("PNG")
+    assert Path(dlg.path_edit.text()) == tmp_path / "photo_1.png"
+
+
+def test_a_free_default_exports_without_asking(export_dialog, replace_answers, tmp_path):
+    src = _png(tmp_path / "photo.png")
+    dlg = export_dialog(src)
+    dlg.format_combo.setCurrentText("PNG")
+    dlg._do_export()  # noqa: SLF001
+    assert (tmp_path / "photo_1.png").is_file()
+    assert replace_answers["asked"] == []
+
+
+def test_a_typed_existing_path_is_kept_unless_the_user_agrees(
+        export_dialog, replace_answers, tmp_path):
+    src = _png(tmp_path / "photo.png")
+    other = _png(tmp_path / "other.png", "blue")
+    before = other.read_bytes()
+    dlg = export_dialog(src)
+    dlg.format_combo.setCurrentText("PNG")
+    dlg.path_edit.setText(str(other))
+    dlg._do_export()  # noqa: SLF001
+    assert other.read_bytes() == before
+    assert len(replace_answers["asked"]) == 1 and "other.png" in replace_answers["asked"][0]
+    replace_answers["reply"] = True
+    dlg._do_export()  # noqa: SLF001
+    assert other.read_bytes() != before
+
+
+def test_exporting_over_the_photo_itself_asks_even_after_browse(
+        export_dialog, replace_answers, tmp_path, monkeypatch):
+    """Browse's Save dialog asks generically; the photo itself gets its own question."""
+    src = _png(tmp_path / "photo.png")
+    before = src.read_bytes()
+    monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                        lambda *_a, **_k: (str(src), ""))
+    dlg = export_dialog(src)
+    dlg.format_combo.setCurrentText("PNG")
+    dlg._browse_output()  # noqa: SLF001
+    dlg._do_export()  # noqa: SLF001
+    assert src.read_bytes() == before
+    assert len(replace_answers["asked"]) == 1
+
+
+def test_an_existing_file_picked_through_browse_is_not_asked_twice(
+        export_dialog, replace_answers, tmp_path, monkeypatch):
+    src = _png(tmp_path / "photo.png")
+    other = _png(tmp_path / "other.png", "blue")
+    before = other.read_bytes()
+    monkeypatch.setattr(QFileDialog, "getSaveFileName",
+                        lambda *_a, **_k: (str(other), ""))
+    dlg = export_dialog(src)
+    dlg.format_combo.setCurrentText("PNG")
+    dlg._browse_output()  # noqa: SLF001
+    dlg._do_export()  # noqa: SLF001
+    assert replace_answers["asked"] == []
+    assert other.read_bytes() != before
+
+
+def test_a_browse_that_is_cancelled_confirms_nothing(
+        export_dialog, replace_answers, tmp_path, monkeypatch):
+    src = _png(tmp_path / "photo.png")
+    other = _png(tmp_path / "other.png", "blue")
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_a, **_k: ("", ""))
+    dlg = export_dialog(src)
+    dlg.format_combo.setCurrentText("PNG")
+    dlg.path_edit.setText(str(other))
+    dlg._browse_output()  # noqa: SLF001
+    dlg._do_export()  # noqa: SLF001
+    assert len(replace_answers["asked"]) == 1
+
+
+def test_ask_to_replace_defaults_to_no(qapp, monkeypatch):
+    seen = {}
+
+    def question(_parent, _title, text, buttons, default):
+        seen.update(text=text, buttons=buttons, default=default)
+        return default
+
+    monkeypatch.setattr(mod.QMessageBox, "question", question)
+    assert mod._ask_to_replace(None, "x.png exists") is False  # noqa: SLF001
+    assert seen["default"] == mod.QMessageBox.StandardButton.No
+    assert seen["text"] == "x.png exists"

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSlider, QPushButton,
+    QSlider, QPushButton, QMessageBox, QWidget,
 )
 
 from Imervue.gui.export_metadata_combo import metadata_row
@@ -24,6 +24,8 @@ from Imervue.image.save_formats import (
 )
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_transfer import is_same_file
+from Imervue.system.free_names import free_names
 import contextlib
 
 if TYPE_CHECKING:
@@ -57,6 +59,16 @@ class _SizeEstimateWorker(QThread):
             self.result_ready.emit(0, str(exc))
 
 
+def _ask_to_replace(parent: QWidget | None, text: str) -> bool:
+    """Ask whether to replace an existing file; No is the default answer."""
+    title = language_wrapper.language_word_dict.get("export_replace_title", "Replace File?")
+    answer = QMessageBox.question(
+        parent, title, text,
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No)
+    return answer == QMessageBox.StandardButton.Yes
+
+
 class ExportDialog(WorkerHostMixin, QDialog):
     """Dialog for exporting/converting images to different formats."""
 
@@ -68,6 +80,9 @@ class ExportDialog(WorkerHostMixin, QDialog):
         self.source_path = source_path
         self._lang = language_wrapper.language_word_dict
         self._size_worker: _SizeEstimateWorker | None = None
+        # The path last picked through Browse…: its Save dialog already asked
+        # before picking an existing file.
+        self._browsed_path: str | None = None
 
         self.setWindowTitle(self._lang.get("export_title", "Export Image"))
         self.setMinimumWidth(420)
@@ -150,11 +165,12 @@ class ExportDialog(WorkerHostMixin, QDialog):
         self.quality_slider.setVisible(visible)
 
     def _update_default_output_path(self) -> None:
+        # A free name: the source's own name exported over the photo itself
+        # (a PNG exported as PNG), and ``photo.png`` beside ``photo.jpg`` is
+        # another picture.
         src = Path(self.source_path)
         ext = FORMAT_EXTENSIONS.get(self._selected_format(), ".png")
-        default_name = src.stem + ext
-        default_path = src.parent / default_name
-        self.path_edit.setText(str(default_path))
+        self.path_edit.setText(str(free_names(src.parent, [src.stem], ext)[0]))
 
     def _update_size_estimate(self) -> None:
         """Kick off an async in-memory save to estimate output file size."""
@@ -190,13 +206,39 @@ class ExportDialog(WorkerHostMixin, QDialog):
     def _browse_output(self) -> None:
         fmt = self._selected_format()
         ext = FORMAT_EXTENSIONS.get(fmt, ".*")
-        save_path_into(
+        picked = save_path_into(
             self, self.path_edit, self._lang.get("export_save", "Save"), f"{fmt} (*{ext})")
+        if picked:
+            self._browsed_path = picked
+
+    def _may_write(self, output_path: str) -> bool:
+        """Whether writing *output_path* replaces nothing the user has not agreed to replace.
+
+        Browse…'s Save dialog asks before picking an existing file; a typed path
+        was never asked about. The photo being exported is asked about either
+        way: the copy has its edits written into the pixels and keeps only the
+        metadata chosen here.
+        """
+        if not os.path.exists(output_path):
+            return True
+        name = Path(output_path).name
+        if is_same_file(output_path, self.source_path):
+            text = self._lang.get(
+                "export_replace_source",
+                "“{name}” is the photo being exported. Replace the original with this "
+                "copy? The copy has the photo's edits applied and keeps only the metadata "
+                "chosen above.")
+            return _ask_to_replace(self, text.format(name=name))
+        if self._browsed_path and is_same_file(output_path, self._browsed_path):
+            return True
+        text = self._lang.get(
+            "export_replace", "“{name}” already exists. Replace it?")
+        return _ask_to_replace(self, text.format(name=name))
 
     # ------------------------------------------------------------ export
     def _do_export(self) -> None:
         output_path = self.path_edit.text().strip()
-        if not output_path:
+        if not output_path or not self._may_write(output_path):
             return
 
         fmt = self._selected_format()
