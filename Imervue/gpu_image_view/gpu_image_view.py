@@ -741,6 +741,11 @@ class GPUImageView(
         if ev.type() == QEvent.Type.Gesture:
             self._input.handle_gesture_event(ev)
             return True
+        if ev.type() == QEvent.Type.KeyPress:
+            from Imervue.gpu_image_view.key_input_handler import claims_tab
+            if claims_tab(ev):   # QWidget spends Tab / Shift+Tab on focus before keyPressEvent
+                self.keyPressEvent(ev)
+                return True
         return super().event(ev)
 
     # ===========================

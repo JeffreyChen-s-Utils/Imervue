@@ -55,6 +55,28 @@ _ARROW_DIRECTIONS = {
 _ENTER_KEYS = (Qt.Key.Key_Return, Qt.Key.Key_Enter)
 
 
+def shortcut_combo(event) -> tuple[int, int]:
+    """``(key, modifiers)`` of *event* as Shortcut Settings stores them.
+
+    Qt reports Shift+Tab as ``Key_Backtab``, while the settings (and the
+    Theater Mode default) say Tab with Shift: the two are made the same.
+    """
+    key = event.key()
+    modifiers = event.modifiers()
+    mods = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+    key = key.value if hasattr(key, "value") else int(key)
+    if key == Qt.Key.Key_Backtab.value:
+        return Qt.Key.Key_Tab.value, mods | Qt.KeyboardModifier.ShiftModifier.value
+    return key, mods
+
+
+def claims_tab(event) -> bool:
+    """Whether a Tab / Shift+Tab press is bound to an action, so it isn't spent moving focus."""
+    from Imervue.gui.shortcut_settings_dialog import shortcut_manager
+    key, mods = shortcut_combo(event)
+    return key == Qt.Key.Key_Tab.value and shortcut_manager.get_action(key, mods) is not None
+
+
 class KeyInputHandler:
     """Route key presses to viewer behaviour."""
 
@@ -76,8 +98,7 @@ class KeyInputHandler:
         if self._handle_builtin(key, modifiers):
             return
 
-        mods_int = modifiers.value if hasattr(modifiers, "value") else int(modifiers)
-        action = shortcut_manager.get_action(key, mods_int)
+        action = shortcut_manager.get_action(*shortcut_combo(event))
         if action is None:
             return
         view._key_dispatch.dispatch(action, modifiers)

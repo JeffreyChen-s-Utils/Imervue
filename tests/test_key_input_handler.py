@@ -292,3 +292,46 @@ class TestRestoreGridState:
         KeyInputHandler(view)._restore_grid_state()
         assert view._reloads == []
         assert view.tile_grid_mode is True
+
+
+
+def _key_event(key, modifiers=Qt.KeyboardModifier.NoModifier):
+    from PySide6.QtCore import QEvent
+    from PySide6.QtGui import QKeyEvent
+    return QKeyEvent(QEvent.Type.KeyPress, key, modifiers)
+
+
+def test_shift_tab_is_read_as_tab_with_shift(qapp):
+    """Qt reports Shift+Tab as Backtab; the settings store Tab + Shift."""
+    from Imervue.gpu_image_view.key_input_handler import shortcut_combo
+    shift = Qt.KeyboardModifier.ShiftModifier.value
+    assert shortcut_combo(_key_event(Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)) == (
+        Qt.Key.Key_Tab.value, shift)
+    assert shortcut_combo(_key_event(Qt.Key.Key_Tab)) == (Qt.Key.Key_Tab.value, 0)
+    assert shortcut_combo(_key_event(Qt.Key.Key_R)) == (Qt.Key.Key_R.value, 0)
+
+
+def test_only_a_bound_tab_is_kept_from_focus_navigation(qapp):
+    from Imervue.gpu_image_view.key_input_handler import claims_tab
+    assert claims_tab(_key_event(Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier))   # Theater Mode
+    assert not claims_tab(_key_event(Qt.Key.Key_Tab))     # unbound: still moves the focus
+    assert not claims_tab(_key_event(Qt.Key.Key_T))
+
+
+def test_shift_tab_toggles_theater_mode(qapp):
+    """The press Qt delivers as Backtab found no binding, so Theater Mode never came."""
+    view = _view()
+    actions: list = []
+    view._key_dispatch = SimpleNamespace(dispatch=lambda action, _mods: actions.append(action))
+    KeyInputHandler(view).handle(_key_event(Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier))
+    assert actions == ["theater"]
+
+
+def test_the_viewer_keeps_a_bound_tab_from_qt_focus_handling(qapp):
+    """QWidget.event spent Shift+Tab moving the focus before keyPressEvent could see it."""
+    from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+    pressed: list = []
+    view = SimpleNamespace(keyPressEvent=pressed.append)
+    event = _key_event(Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
+    assert GPUImageView.event(view, event) is True
+    assert pressed == [event]
