@@ -229,7 +229,7 @@ Organizando Imagens
 Avaliação e Favoritos
 ^^^^^^^^^^^^^^^^^^^^^
 
-No modo Deep Zoom você pode avaliar imagens rapidamente:
+As teclas avaliam a imagem mostrada no Deep Zoom. Na grade avaliam as miniaturas selecionadas, senão a escolhida com as setas, senão a que está sob o mouse — as mesmas fotos que um rótulo de cor ou uma marcação de seleção tomaria. Se todas já têm essa avaliação, a tecla a remove.
 
 .. list-table::
    :header-rows: 1

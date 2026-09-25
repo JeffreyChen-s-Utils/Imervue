@@ -234,7 +234,7 @@ Organizar imágenes
 Valoración y favoritos
 ^^^^^^^^^^^^^^^^^^^^^^
 
-En el modo Deep Zoom puede valorar imágenes rápidamente:
+Las teclas valoran la imagen mostrada en Deep Zoom. En la cuadrícula valoran las miniaturas seleccionadas, si no la elegida con las flechas, si no la que está bajo el ratón: las mismas fotos que tomaría una etiqueta de color o una marca de selección. Si todas tienen ya esa valoración, la tecla la borra.
 
 .. list-table::
    :header-rows: 1

@@ -228,7 +228,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 ### Organisation
 
 - **Bookmarks** — Bis zu 5000 Pfade
-- **Ratings** — 0–5 Sterne (`1`–`5`) + Favoriten-Herz (`0`)
+- **Ratings** — 0–5 Sterne (`1`–`5`) + Favoriten-Herz (`0`); im Grid gelten sie für die markierten Miniaturen, sonst für die mit den Pfeiltasten gewählte, sonst für die unter der Maus
 - **Color Labels** — Flag-basiert rot/gelb/grün/blau/lila (`F1`–`F5`)
 - **Culling** — Wie andere XMP-bewusste Foto-Manager 3-Zustands-Flag (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects; Auto-Cull wählt das schärfste Bild pro Near-Duplicate-Gruppe und verwirft den Rest
 - **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht; **Index Keywords** im Rechtsklick-Menü legt eine Stichwort-Hierarchie aus Lightroom / darktable (`Places|Taiwan|Taipei`) unter ihren Eltern ab

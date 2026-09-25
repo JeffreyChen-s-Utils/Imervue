@@ -1,7 +1,7 @@
 """Tests for cull_actions.resolve_cull_targets — target resolution order.
 
 The action helpers themselves toggle persistent state and toast, but the
-priority resolution (multi-select → deep-zoom → hover → none) is pure and
+priority resolution (multi-select → deep-zoom → arrow-key focus → hover → none) is pure and
 covered here with a fake view.
 """
 from __future__ import annotations
@@ -72,3 +72,33 @@ def test_empty_selection_set_falls_through_to_hover():
         _hover_last_path="hov.png",
     )
     assert resolve_cull_targets(view) == ["hov.png"]
+
+
+
+def test_the_tile_the_arrow_keys_are_on_beats_the_hovered_one():
+    view = _view(tile_grid_mode=True, model=SimpleNamespace(images=["a", "b", "c"]),
+                 focused_tile_index=1, focus_ring_visible=True, _hover_last_path="c")
+    assert resolve_cull_targets(view) == ["b"]
+
+
+def test_a_hidden_focus_ring_leaves_the_hovered_tile():
+    """Moving the mouse hides the ring: the mouse is what the user is pointing with now."""
+    view = _view(tile_grid_mode=True, model=SimpleNamespace(images=["a", "b", "c"]),
+                 focused_tile_index=1, focus_ring_visible=False, _hover_last_path="c")
+    assert resolve_cull_targets(view) == ["c"]
+
+
+def test_a_focus_past_the_last_tile_falls_through_to_hover():
+    view = _view(tile_grid_mode=True, model=SimpleNamespace(images=["a"]),
+                 focused_tile_index=4, focus_ring_visible=True, _hover_last_path="a")
+    assert resolve_cull_targets(view) == ["a"]
+
+
+def test_selection_and_deep_zoom_still_come_before_the_focus():
+    images = SimpleNamespace(images=["a", "b", "c"])
+    selected = _view(tile_grid_mode=True, tile_selection_mode=True, selected_tiles={"c"},
+                     model=images, focused_tile_index=0, focus_ring_visible=True)
+    zoomed = _view(deep_zoom=object(), model=images, current_index=2,
+                   focused_tile_index=0, focus_ring_visible=True)
+    assert resolve_cull_targets(selected) == ["c"]
+    assert resolve_cull_targets(zoomed) == ["c"]

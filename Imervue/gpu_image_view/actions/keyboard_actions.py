@@ -215,36 +215,39 @@ def _shown_image(main_gui: GPUImageView, path: str) -> QImage:
 # ===========================
 
 def rate_current_image(main_gui: GPUImageView, rating: int):
-    """為當前圖片設定 1~5 評分（存入 user_setting）"""
-    images = main_gui.model.images
-    if not images or main_gui.current_index >= len(images):
-        return
+    """Give the photos the key acts on a 1-5 *rating*; when they all have it already, clear it.
 
-    path = images[main_gui.current_index]
+    The photos are the ones a colour label or a cull flag would take
+    (:func:`~Imervue.gpu_image_view.cull_actions.resolve_cull_targets`): the
+    selected tiles, the deep-zoom image, the tile the arrow keys are on, or
+    the hovered tile.
+    """
+    from Imervue.gpu_image_view.cull_actions import resolve_cull_targets
+    targets = resolve_cull_targets(main_gui)
+    if not targets:
+        return
 
     from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
     ratings = user_setting_dict.get("image_ratings", {})
-
-    current = ratings.get(path)
-    if current == rating:
-        # 相同評分 → 取消
-        ratings.pop(path, None)
-    else:
-        ratings[path] = rating
+    result = 0 if all(ratings.get(path) == rating for path in targets) else rating
+    for path in targets:
+        if result:
+            ratings[path] = result
+        else:
+            ratings.pop(path, None)   # 相同評分 → 取消
 
     user_setting_dict["image_ratings"] = ratings
     schedule_save()
 
     # Macro recording — capture the resulting rating (0 means "cleared").
     from Imervue.macros.macro_manager import manager as _macro_manager
-    _macro_manager.record("set_rating", rating=ratings.get(path, 0))
+    _macro_manager.record("set_rating", rating=result)
 
     # 通知 UI 更新
     from Imervue.multi_language.language_wrapper import language_wrapper
     lang = language_wrapper.language_word_dict
-    if path in ratings:
-        star = "\u2605" * ratings[path]
-        msg = lang.get("rating_set", "Rating: {star}").format(star=star)
+    if result:
+        msg = lang.get("rating_set", "Rating: {star}").format(star="\u2605" * result)
     else:
         msg = lang.get("rating_cleared", "Rating cleared")
 
@@ -257,31 +260,33 @@ def rate_current_image(main_gui: GPUImageView, rating: int):
 # ===========================
 
 def toggle_favorite(main_gui: GPUImageView):
-    """切換愛心收藏狀態"""
-    images = main_gui.model.images
-    if not images or main_gui.current_index >= len(images):
-        return
+    """Favourite the photos the key acts on; when they all are already, unfavourite them.
 
-    path = images[main_gui.current_index]
+    The photos are resolved like a rating's (:func:`rate_current_image`).
+    """
+    from Imervue.gpu_image_view.cull_actions import resolve_cull_targets
+    targets = resolve_cull_targets(main_gui)
+    if not targets:
+        return
 
     from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
     favorites = set(user_setting_dict.get("image_favorites", []))
-
-    if path in favorites:
-        favorites.discard(path)
+    favourite = not all(path in favorites for path in targets)
+    if favourite:
+        favorites.update(targets)
     else:
-        favorites.add(path)
+        favorites.difference_update(targets)
 
     user_setting_dict["image_favorites"] = list(favorites)
     schedule_save()
 
     # Macro recording — record the resulting favorite state.
     from Imervue.macros.macro_manager import manager as _macro_manager
-    _macro_manager.record("toggle_favorite", value=path in favorites)
+    _macro_manager.record("toggle_favorite", value=favourite)
 
     from Imervue.multi_language.language_wrapper import language_wrapper
     lang = language_wrapper.language_word_dict
-    if path in favorites:
+    if favourite:
         msg = lang.get("favorite_added", "\u2764 Favorited")
     else:
         msg = lang.get("favorite_removed", "Favorite removed")

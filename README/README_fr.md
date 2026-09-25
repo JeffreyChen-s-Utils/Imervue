@@ -228,7 +228,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 ### Organisation
 
 - **Marque-pages** — jusqu'à 5000 chemins
-- **Notes** — 0-5 étoiles (`1`–`5`) + cœur favori (`0`)
+- **Notes** — 0-5 étoiles (`1`–`5`) + cœur favori (`0`); dans la grille, elles s'appliquent aux vignettes sélectionnées, sinon à celle choisie aux flèches, sinon à celle sous la souris
 - **Étiquettes de couleur** — drapeaux rouge/jaune/vert/bleu/violet (`F1`–`F5`)
 - **Tri (Culling)** — drapeau à 3 états compatible avec d'autres gestionnaires photo XMP (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés ; le tri automatique garde l'image la plus nette de chaque groupe de quasi-doublons et rejette le reste
 - **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus ; **Index Keywords** (clic droit) range une hiérarchie de mots-clés Lightroom / darktable (`Places|Taiwan|Taipei`) sous ses parents

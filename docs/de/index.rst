@@ -229,7 +229,7 @@ Bilder organisieren
 Bewertungen und Favoriten
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Im Deep-Zoom-Modus können Sie Bilder schnell bewerten:
+Die Tasten bewerten das in Deep Zoom gezeigte Bild. Im Grid bewerten sie die markierten Miniaturen, sonst die mit den Pfeiltasten gewählte, sonst die unter der Maus – dieselben Fotos, die ein Farbetikett oder eine Culling-Markierung nehmen würde. Haben alle schon diese Bewertung, entfernt die Taste sie.
 
 .. list-table::
    :header-rows: 1

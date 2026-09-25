@@ -1,14 +1,18 @@
 """Colour-label and cull-state actions for :class:`GPUImageView`.
 
 Resolves the active target(s) — multi-selected tiles, the deep-zoomed
-image, or the hovered tile — and applies a colour label or a cull state
-(pick / reject / unflag), surfacing a localized toast. Extracted so the
-view keeps only thin forwarders for the key + menu entry points.
+image, the tile the arrow keys are on, or the hovered tile — and applies a
+colour label or a cull state (pick / reject / unflag), surfacing a localized
+toast. The rating and favourite keys resolve their targets the same way.
+Extracted so the view keeps only thin forwarders for the key + menu entry
+points.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
+from Imervue.gpu_image_view.tile_focus import NO_FOCUS, focus_ring_active
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -21,9 +25,11 @@ _CULL_FALLBACKS = {
 
 
 def resolve_cull_targets(view: GPUImageView) -> list[str]:
-    """Resolve the image path(s) a label / cull action should affect.
+    """Resolve the image path(s) a label / cull / rating action should affect.
 
-    Priority: multi-selected tiles → deep-zoom image → hovered tile.
+    Priority: multi-selected tiles → deep-zoom image → the tile the arrow
+    keys are on (while its focus ring shows: moving the mouse hides it) →
+    hovered tile.
     """
     if view.tile_grid_mode and view.tile_selection_mode and view.selected_tiles:
         return list(view.selected_tiles)
@@ -31,9 +37,13 @@ def resolve_cull_targets(view: GPUImageView) -> list[str]:
         images = view.model.images
         if images and 0 <= view.current_index < len(images):
             return [images[view.current_index]]
-    if view.tile_grid_mode and view._hover_last_path:
-        return [view._hover_last_path]
-    return []
+    if not view.tile_grid_mode:
+        return []
+    images = view.model.images
+    focus = getattr(view, "focused_tile_index", NO_FOCUS)
+    if focus_ring_active(getattr(view, "focus_ring_visible", False), focus, len(images)):
+        return [images[focus]]
+    return [view._hover_last_path] if view._hover_last_path else []
 
 
 def apply_color_label(view: GPUImageView, color: str) -> None:

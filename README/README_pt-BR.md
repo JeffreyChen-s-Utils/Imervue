@@ -228,7 +228,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 ### Organização
 
 - **Favoritos** — até 5000 caminhos
-- **Avaliações** — 0 a 5 estrelas (`1`–`5`) + coração de favorito (`0`)
+- **Avaliações** — 0 a 5 estrelas (`1`–`5`) + coração de favorito (`0`); na grade valem para as miniaturas selecionadas, senão para a escolhida com as setas, senão para a que está sob o mouse
 - **Etiquetas de cor** — bandeiras vermelho/amarelo/verde/azul/roxo (`F1`–`F5`)
 - **Triagem (Culling)** — flag de 3 estados compatível com outros gerenciadores de fotos XMP-aware (`P` = manter, `Shift+X` = rejeitar, `U` = remover marca); filtrar por estado; exclusão em lote de rejeitados; a triagem automática escolhe o quadro mais nítido de cada grupo de quase duplicatas e rejeita os demais
 - **Tags hierárquicas** — caminhos em árvore como `animal/cat/british`; descendentes são correspondidos automaticamente; **Index Keywords** no menu de clique direito arquiva uma hierarquia de palavras-chave do Lightroom / darktable (`Places|Taiwan|Taipei`) sob os pais

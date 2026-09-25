@@ -227,7 +227,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 ### 整理
 
 - **書籤** — 最多 5000 個路徑
-- **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）
+- **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）；在網格中作用於選取的縮圖，沒有就作用於方向鍵所在的那張，再沒有就是滑鼠下的那張
 - **顏色標籤** — other XMP-aware photo managers 式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
 - **挑片**（Culling）— other XMP-aware photo managers 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕；**自動挑片** 會在每組近重複中挑出最清晰的一張保留、其餘標為拒絕
 - **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫；右鍵 **Index Keywords** 會把 Lightroom／darktable 的關鍵字階層（`Places|Taiwan|Taipei`）歸到對應的父標籤下

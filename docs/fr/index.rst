@@ -228,7 +228,7 @@ Organiser les images
 Notation et favoris
 ^^^^^^^^^^^^^^^^^^^
 
-En mode Deep Zoom, vous pouvez noter rapidement les images :
+Les touches notent l'image affichée en Deep Zoom. Dans la grille, elles notent les vignettes sélectionnées, sinon celle choisie aux flèches, sinon celle sous la souris : les photos que prendrait une étiquette de couleur ou un marquage de tri. Si toutes ont déjà cette note, la touche l'efface.
 
 .. list-table::
    :header-rows: 1

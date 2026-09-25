@@ -228,7 +228,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Organización
 
 - **Marcadores** — hasta 5000 rutas
-- **Calificaciones** — 0-5 estrellas (`1`–`5`) + corazón de favorito (`0`)
+- **Calificaciones** — 0-5 estrellas (`1`–`5`) + corazón de favorito (`0`); en la cuadrícula se aplican a las miniaturas seleccionadas, si no a la elegida con las flechas, si no a la que está bajo el ratón
 - **Etiquetas de color** — rojo/amarillo/verde/azul/púrpura basado en banderas (`F1`–`F5`)
 - **Culling** — bandera de 3 estados compatible con otros gestores de fotos XMP-aware (`P` = elegir, `Shift+X` = rechazar, `U` = quitar bandera); filtra por estado; borrado masivo de rechazadas; el culling automático elige el fotograma más nítido de cada grupo de casi-duplicados y rechaza el resto
 - **Etiquetas jerárquicas** — rutas en árbol como `animal/cat/british`; los descendientes se emparejan automáticamente; **Index Keywords** del menú contextual archiva una jerarquía de palabras clave de Lightroom / darktable (`Places|Taiwan|Taipei`) bajo sus padres

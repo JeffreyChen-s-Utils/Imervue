@@ -227,7 +227,7 @@ Organising Images
 Rating & Favourites
 ^^^^^^^^^^^^^^^^^^^
 
-In Deep Zoom mode you can quickly rate images:
+The keys rate the picture shown in Deep Zoom. On the thumbnail wall they rate the selected thumbnails, else the one the arrow keys are on, else the one under the mouse — the photos a colour label or a cull flag would take. When every one of them has that rating already, the key clears it.
 
 .. list-table::
    :header-rows: 1
