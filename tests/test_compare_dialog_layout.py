@@ -153,3 +153,57 @@ def test_empty_model(qapp):
         assert isinstance(dlg._overlay_slider, QSlider)  # noqa: SLF001
     finally:
         dlg.deleteLater()
+
+
+
+def _selected_gui(paths, selected, mode=True):
+    return SimpleNamespace(main_window=None, model=SimpleNamespace(images=list(paths)),
+                           tile_selection_mode=mode, selected_tiles=set(selected))
+
+
+def _chosen(dialog):
+    return [item.data(Qt.ItemDataRole.UserRole) for item in dialog._list.selectedItems()]  # noqa: SLF001
+
+
+def test_the_wall_selection_is_preselected_in_folder_order():
+    gui = _selected_gui(_PATHS, {_PATHS[2], _PATHS[0]})
+    assert mod.preselected_paths(gui) == [_PATHS[0], _PATHS[2]]
+    assert mod.preselected_paths(_selected_gui(_PATHS, {_PATHS[0]}, mode=False)) == []
+    assert mod.preselected_paths(_gui()) == []
+
+
+def test_two_selected_thumbnails_open_side_by_side(qapp, tmp_path):
+    """The dialog listed the folder with nothing selected: the choice was made twice."""
+    from PIL import Image
+    paths = []
+    for name in ("a.png", "b.png", "c.png"):
+        Image.new("RGB", (8, 8), "red").save(tmp_path / name)
+        paths.append(str(tmp_path / name))
+    dlg = CompareDialog(_selected_gui(paths, {paths[0], paths[2]}))
+    try:
+        assert sorted(_chosen(dlg)) == [paths[0], paths[2]]
+        assert len(dlg._sbs_labels) == 2  # noqa: SLF001
+        assert dlg._tabs.currentWidget() is dlg._sbs_widget  # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+
+
+def test_three_selected_thumbnails_are_preselected_only(qapp):
+    dlg = CompareDialog(_selected_gui(_PATHS, set(_PATHS)))
+    try:
+        assert sorted(_chosen(dlg)) == sorted(_PATHS)
+        assert dlg._sbs_labels == []  # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+
+
+def test_the_too_few_message_says_how_many(qapp, monkeypatch):
+    """It showed a literal {n}."""
+    shown = []
+    monkeypatch.setattr(mod.QMessageBox, "information", lambda _p, _t, text: shown.append(text))
+    dlg = CompareDialog(_gui())
+    try:
+        dlg._run_side_by_side(4)  # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+    assert shown == ["Select at least 4 images."]

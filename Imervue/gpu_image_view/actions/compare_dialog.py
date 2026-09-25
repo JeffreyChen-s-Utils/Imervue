@@ -346,6 +346,14 @@ class CompareDialog(QDialog):
         self._add_difference_tab()
         self._add_split_tab()
 
+        # Select 2 - 4 thumbnails, then Compare: the dialog opens on them.
+        chosen = preselected_paths(main_gui)
+        for i in range(self._list.count()):
+            item = self._list.item(i)
+            item.setSelected(item.data(Qt.ItemDataRole.UserRole) in chosen)
+        if len(chosen) in (2, 4):
+            self._run_side_by_side(len(chosen))
+
     def _build_picker_panel(self, paths: list[str]) -> QVBoxLayout:
         """Multi-select image list over the mode buttons."""
         left = QVBoxLayout()
@@ -459,11 +467,11 @@ class CompareDialog(QDialog):
             for item in self._list.selectedItems()
         ]
 
-    def _warn(self, msg_key: str, fallback: str) -> None:
+    def _warn(self, msg_key: str, fallback: str, **values) -> None:
         QMessageBox.information(
             self,
             self._lang.get("compare_title", "Compare Images"),
-            self._lang.get(msg_key, fallback),
+            self._lang.get(msg_key, fallback).format(**values),
         )
 
     def _load_pair(self) -> tuple[np.ndarray, np.ndarray] | None:
@@ -487,6 +495,7 @@ class CompareDialog(QDialog):
             self._warn(
                 "compare_need_n",
                 "Select at least {n} images.",
+                n=count,
             )
             return
         paths = paths[:count]
@@ -577,6 +586,14 @@ class CompareDialog(QDialog):
         self._split_slider.blockSignals(True)
         self._split_slider.setValue(int(round(fraction * 100)))
         self._split_slider.blockSignals(False)
+
+
+def preselected_paths(main_gui) -> list[str]:
+    """The thumbnails selected on the wall, in folder order: what the user asked to compare."""
+    if not getattr(main_gui, "tile_selection_mode", False):
+        return []
+    chosen = set(getattr(main_gui, "selected_tiles", ()))
+    return [path for path in main_gui.model.images if path in chosen]
 
 
 def open_compare_dialog(main_gui: GPUImageView) -> None:
