@@ -149,8 +149,8 @@ READ_TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "convert_format",
         "description": (
             "Convert one image to another format. Destination format is taken from "
-            "the destination suffix (png / jpg / jpeg / webp / tiff / bmp, plus "
-            "heic / avif / jxl when their optional backends are installed)."
+            "the destination suffix (png / jpg / jpeg / webp / tiff / bmp / avif, "
+            "plus heic / jxl when their optional backends are installed)."
         ),
         "input_schema": {
             "type": "object",

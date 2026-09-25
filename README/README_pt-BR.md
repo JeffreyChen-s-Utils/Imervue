@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # imprime todos os subcomandos disponíveis
 | `preset` / `pipeline` | Aplicar uma predefinição de revelação salva pelo nome; executar um pipeline JSON ordenado |
 | `list-ops` | Listar todos os subcomandos (`--json` para saída legível por máquina) |
 
-Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, e entradas HEIC / AVIF / JPEG XL são lidas quando o backend opcional está instalado. Um arquivo ilegível é relatado e o restante é processado mesmo assim.
+Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um arquivo ilegível é relatado e o restante é processado mesmo assim.
 
 Flags compartilhadas: `--out` (diretório de saída), `--recursive`, `--dry-run` (listar ações sem escrever nada), `--overwrite` e `--version`.
 
@@ -344,7 +344,7 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 
 - **Sobreposição de marca d'água** — texto ou imagem, 9 posições de âncora, opacidade, escala; aplicado apenas na exportação
 - **Presets de exportação** — pipelines de um clique Web 1600 / Print 300 dpi / Instagram 1080
-- **Salvar Como / Exportar** — PNG / JPEG / WebP / BMP / TIFF com slider de qualidade para formatos com perdas; mantém o EXIF de câmera, lente e data de captura, com a localização opcional (**Metadados**: todos / todos menos localização / nenhum); o nome sugerido é um ainda livre (`photo_1.png` ao lado de `photo.png`), e um arquivo existente — sobretudo a própria foto — só é substituído após confirmação
+- **Salvar Como / Exportar** — PNG / JPEG / WebP / BMP / TIFF / AVIF (e HEIC com `pillow-heif` e JPEG XL com `pillow-jxl-plugin`) com slider de qualidade para formatos com perdas; mantém o EXIF de câmera, lente e data de captura, com a localização opcional (**Metadados**: todos / todos menos localização / nenhum); o nome sugerido é um ainda livre (`photo_1.png` ao lado de `photo.png`), e um arquivo existente — sobretudo a própria foto — só é substituído após confirmação
 - **Operações em lote** — renomear, mover/copiar, rotacionar imagens selecionadas. Mover ou copiar nunca sobrescreve um arquivo de mesmo nome (ele chega como `name_1`), e uma foto renomeada ou movida no Imervue (renomeação em lote, renomeação por tokens, árvore de pastas, Mover / Copiar, painel duplo, bandeja de preparação, organizador de imagens) mantém a avaliação, o favorito, as tags, o rótulo de cor, o título, as notas e a marcação de seleção; os sidecars `.xmp` e de anotações vão junto; o mesmo vale para uma foto renomeada em outro programa enquanto a pasta está aberta no Imervue. Um nome novo que outra foto selecionada tem agora (renumerar, trocar dois nomes) renomeia a seleção inteira na ordem certa em vez de só uma parte
 - **PDF de Contact Sheet** — grade em várias páginas com legendas (A4 / A3 / Letter / Legal)
 - **HTML de Galeria Web** — pasta autocontida com `index.html` + miniaturas JPEG + lightbox embutido
@@ -839,7 +839,7 @@ longa duração transmitem `notifications/progress`.
 | `read_image_metadata` / `read_xmp_tags` | Dimensões, formato, EXIF, XMP: o sidecar ou, sem ele, o embutido no arquivo (avaliação, etiqueta, palavras-chave) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | Análise sem referência: estatísticas por canal, colorfulness/entropia/contraste, histograma + clipping, pontuação de desfoque |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Prévia em base64, texto via Tesseract, grupos de quase duplicatas por hash perceptual (com progresso) |
-| `convert_format` | Converter entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL opcionais) |
+| `convert_format` | Converter entre PNG / JPEG / WebP / TIFF / BMP / AVIF (+ HEIC / JXL opcionais) |
 | `apply_watermark` / `apply_frame` | Gravar uma marca d'água de texto ou uma moldura passe-partout / Polaroid + legenda |
 | `build_collage` | Compor imagens em uma montagem em grade (com progresso) |
 | `crop_image` / `resize_image` / `rotate_image` | Recorte por pixel, redimensionamento preservando proporção, rotação / espelhamento sem perdas. Tamanhos e coordenadas se referem à imagem endireitada pelo EXIF. |

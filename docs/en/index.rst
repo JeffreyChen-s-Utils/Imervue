@@ -80,6 +80,7 @@ Supported Formats
 
 - **Standard**: PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW**: CR2 (Canon), NEF (Nikon), ARW (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus)
+- **Modern**: AVIF (built in); HEIC / HEIF with the optional ``pillow-heif``; JPEG XL with the optional ``pillow-jxl-plugin``
 
 ----
 
@@ -1548,7 +1549,7 @@ Single Export
 
 Right-click an image > ``Export / Save As``.
 
-- Choose format: PNG, JPEG, WebP, BMP, TIFF
+- Choose format: PNG, JPEG, WebP, BMP, TIFF, AVIF; HEIC and JPEG XL too when ``pillow-heif`` / ``pillow-jxl-plugin`` is installed
 - Adjust quality (for lossy formats)
 - Choose the metadata to keep: all, all but the location (default) or none. Camera, lens and capture date come along; the choice is remembered and Batch Export offers the same
 - Preview estimated file size
@@ -2493,7 +2494,7 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
    * - ``list-ops``
      - List every subcommand (``--json`` for machine-readable output)
 
-Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, and HEIC / AVIF / JPEG XL inputs are read when their optional backend is installed. A file that can't be read is reported and the rest still run.
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A file that can't be read is reported and the rest still run.
 
 Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
 (list actions, write nothing), ``--overwrite`` and ``--version``.
@@ -2535,8 +2536,9 @@ Available Tools
    * - ``convert_format``
      - Convert one image to another format. Destination format is
        inferred from the destination suffix (``png`` / ``jpg`` /
-       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). Optional
-       ``quality`` (1–100) applies to JPEG/WebP.
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``, plus ``heic`` /
+       ``jxl`` when their optional backend is installed). Optional
+       ``quality`` (1–100) applies to JPEG / WebP / AVIF / HEIC / JXL.
    * - ``puppet_from_png``
      - Build a ``.puppet`` rig from a PNG using the puppet plugin's
        auto-mesh. Seeds the Cubism-standard parameter catalogue so

@@ -72,6 +72,7 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
 
 - **常见格式**：PNG、JPEG、BMP、TIFF、WebP、GIF、APNG、SVG
 - **RAW 格式**：CR2（Canon）、NEF（Nikon）、ARW（Sony）、DNG（Adobe）、RAF（Fujifilm）、ORF（Olympus）
+- **新式格式**：AVIF（内置）；HEIC / HEIF 需要选用的 ``pillow-heif``；JPEG XL 需要选用的 ``pillow-jxl-plugin``
 
 ----
 
@@ -731,7 +732,7 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 
 右键图片 > ``导出 / 另存为``
 
-- 选择格式：PNG、JPEG、WebP、BMP、TIFF
+- 选择格式：PNG、JPEG、WebP、BMP、TIFF、AVIF；装了 ``pillow-heif`` / ``pillow-jxl-plugin`` 还有 HEIC / JPEG XL
 - 调整质量（有损格式可调）
 - 选择保留的元数据：全部、位置以外的全部（默认）或全部移除。相机、镜头与拍摄时间会一并保留；选择会被记住，批量导出也提供相同选项
 - 预览文件大小
@@ -2087,7 +2088,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
    * - ``list-ops``
      - 列出所有子命令(``--json`` 输出机器可读格式)
 
-每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；安装了可选后端时也能读取 HEIC / AVIF / JPEG XL。无法读取的文件会被报告，其余文件照常处理。
+每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。无法读取的文件会被报告，其余文件照常处理。
 
 共用标志:``--out``\ (输出目录)、``--recursive``、``--dry-run``\ (只列出动作、不写入)、``--overwrite`` 与 ``--version``。
 
@@ -2123,8 +2124,9 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 仅读 XMP 的快速路径（sidecar，没有时读文件内嵌的）— 评级、色标、关键字、标题、描述。
    * - ``convert_format``
      - 图片格式转换。目标格式由目标文件的后缀决定（``png`` /
-       ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``）。
-       JPEG/WebP 可选择 ``quality``\ （1–100）。
+       ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``，
+       装了可选后端时还有 ``heic`` / ``jxl``）。
+       JPEG / WebP / AVIF / HEIC / JXL 可选择 ``quality``\ （1–100）。
    * - ``puppet_from_png``
      - 用 puppet 插件的 auto-mesh 从 PNG 建出 ``.puppet`` 动画文件。
        自动注入 Cubism 标准参数，导入后可直接被驱动。

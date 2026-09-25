@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # affiche toutes les sous-commandes disponib
 | `preset` / `pipeline` | Appliquer un préréglage de développement enregistré par son nom ; exécuter un pipeline JSON ordonné |
 | `list-ops` | Lister toutes les sous-commandes (`--json` pour une sortie exploitable par machine) |
 
-Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, et les entrées HEIC / AVIF / JPEG XL sont lues lorsque leur backend optionnel est installé. Un fichier illisible est signalé et les autres sont tout de même traités.
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un fichier illisible est signalé et les autres sont tout de même traités.
 
 Options communes : `--out` (répertoire de sortie), `--recursive`, `--dry-run` (lister les actions sans rien écrire), `--overwrite` et `--version`.
 
@@ -344,7 +344,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 
 - **Filigrane superposé** — texte ou image, 9 positions d'ancrage, opacité, échelle ; appliqué uniquement à l'export
 - **Préréglages d'export** — pipelines en un clic Web 1600 / Print 300 dpi / Instagram 1080
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF avec curseur de qualité pour les formats avec perte ; conserve les EXIF d'appareil, d'objectif et de date de prise de vue, la localisation étant facultative (**Métadonnées** : toutes / toutes sauf localisation / aucune) ; le nom proposé est encore libre (`photo_1.png` à côté de `photo.png`), et un fichier existant — surtout la photo elle-même — n'est remplacé qu'après confirmation
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (plus HEIC avec `pillow-heif` et JPEG XL avec `pillow-jxl-plugin`) avec curseur de qualité pour les formats avec perte ; conserve les EXIF d'appareil, d'objectif et de date de prise de vue, la localisation étant facultative (**Métadonnées** : toutes / toutes sauf localisation / aucune) ; le nom proposé est encore libre (`photo_1.png` à côté de `photo.png`), et un fichier existant — surtout la photo elle-même — n'est remplacé qu'après confirmation
 - **Opérations par lots** — renommer, déplacer/copier, faire pivoter les images sélectionnées. Déplacer ou copier n'écrase jamais un fichier du même nom (il arrive sous `name_1`), et une photo renommée ou déplacée dans Imervue (renommage par lots, renommage par jetons, arborescence, Déplacer / Copier, double volet, bac de préparation, organisateur d'images) garde sa note, son favori, ses tags, son étiquette de couleur, son titre, ses notes et son marquage de tri ; ses sidecars `.xmp` et d'annotations la suivent ; de même pour une photo renommée dans un autre programme pendant que son dossier est ouvert dans Imervue. Un nouveau nom que porte actuellement une autre photo sélectionnée (renuméroter, échanger deux noms) renomme toute la sélection dans le bon ordre au lieu d'une partie seulement
 - **PDF planche-contact** — grille multi-pages avec légendes (A4 / A3 / Letter / Legal)
 - **Galerie web HTML** — dossier autonome avec `index.html` + miniatures JPEG + lightbox en ligne
@@ -818,7 +818,7 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 | `read_image_metadata` / `read_xmp_tags` | Dimensions, format, EXIF, XMP : le sidecar, sinon ce que le fichier embarque (note, étiquette, mots-clés) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | Analyse sans référence : statistiques par canal, colorimétrie/entropie/contraste, histogramme + écrêtage, score de flou |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Aperçu base64, texte Tesseract, groupes de quasi-doublons par hachage perceptuel (avec progression) |
-| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL optionnels) |
+| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP / AVIF (+ HEIC / JXL optionnels) |
 | `apply_watermark` / `apply_frame` | Incruster un filigrane texte ou un cadre passe-partout / Polaroid + légende |
 | `build_collage` | Composer des images en une mosaïque en grille (avec progression) |
 | `crop_image` / `resize_image` / `rotate_image` | Recadrage en pixels, redimensionnement préservant le rapport, rotation / retournement sans perte. Les tailles et coordonnées se rapportent à l'image redressée selon l'EXIF. |

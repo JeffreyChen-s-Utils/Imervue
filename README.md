@@ -169,7 +169,7 @@ py -m Imervue.cli list-ops          # print every available subcommand
 | `preset` / `pipeline` | Apply a saved develop preset by name; run an ordered JSON pipeline of ops |
 | `list-ops` | List every subcommand (`--json` for machine output) |
 
-Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, and HEIC / AVIF / JPEG XL inputs are read when their optional backend is installed. A file that can't be read is reported and the rest still run.
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A file that can't be read is reported and the rest still run.
 
 Shared flags: `--out` (output directory), `--recursive`, `--dry-run` (list actions, write
 nothing), `--overwrite`, and `--version`.
@@ -346,7 +346,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Watermark overlay** — text or image, 9 anchor positions, opacity, scale; applied on export only
 - **Export presets** — Web 1600 / Print 300 dpi / Instagram 1080 one-click pipelines
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none); the suggested file name is one not yet taken (`photo_1.png` beside `photo.png`), and an existing file — above all the photo itself — is replaced only after you confirm
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (plus HEIC with `pillow-heif` and JPEG XL with `pillow-jxl-plugin`) with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none); the suggested file name is one not yet taken (`photo_1.png` beside `photo.png`), and an existing file — above all the photo itself — is replaced only after you confirm
 - **Batch operations** — rename, move/copy, rotate selected images. A move or copy never overwrites a file of the same name (it arrives as `name_1`), and a photo renamed or moved in Imervue (Batch Rename, Token Batch Rename, the folder tree, Move / Copy, Dual Pane, Staging Tray, Image Organizer) keeps its rating, favourite, tags, colour label, title, notes and cull flag; its `.xmp` and annotation sidecars go with it; so does a photo renamed in another program while its folder is open in Imervue. Renaming to a name another selected photo has now (renumbering a folder, swapping two names) renames the whole selection in the right order instead of only part of it
 - **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
 - **Web Gallery HTML** — self-contained folder with `index.html` + JPEG thumbs + inline lightbox
@@ -865,7 +865,7 @@ result as `structuredContent`, and long-running tools stream
 | `read_image_metadata` / `read_xmp_tags` | Dimensions, format, EXIF, XMP — the sidecar, else what the file embeds (rating, label, keywords) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | No-reference analysis: per-channel stats, colourfulness/entropy/contrast, histogram + clipping, blur score |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 preview, Tesseract text, perceptual-hash near-duplicate groups (with progress) |
-| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP (+ optional HEIC / AVIF / JXL) |
+| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP / AVIF (+ optional HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | Burn in a text watermark or a matte / Polaroid frame + caption |
 | `build_collage` | Composite images into a grid montage (with progress) |
 | `crop_image` / `resize_image` / `rotate_image` | Pixel crop, aspect-preserving resize, lossless rotate / flip. Sizes and coordinates refer to the EXIF-upright image. |

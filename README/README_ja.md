@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 | `preset` / `pipeline` | 保存済み現像プリセットを名前で適用、順序付き JSON パイプラインを実行 |
 | `list-ops` | 全サブコマンドを一覧表示(`--json` で機械可読出力) |
 
-すべてのサブコマンドはビューアーと同じくデコードします：出力は EXIF の向きで正立させ、埋め込みカラープロファイルから sRGB に変換します。HEIC / AVIF / JPEG XL の入力は、対応するオプションのバックエンドがインストールされていれば読み込めます。読めないファイルは報告され、残りはそのまま処理されます。
+すべてのサブコマンドはビューアーと同じくデコードします：出力は EXIF の向きで正立させ、埋め込みカラープロファイルから sRGB に変換します。AVIF の入力は Pillow 自身が読み込み、HEIC / JPEG XL の入力は、対応するオプションのバックエンドがインストールされていれば読み込めます。読めないファイルは報告され、残りはそのまま処理されます。
 
 共通フラグ: `--out`(出力ディレクトリ)、`--recursive`、`--dry-run`(アクションを列挙するだけで書き込まない)、`--overwrite`、`--version`。
 
@@ -344,7 +344,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 
 - **ウォーターマークオーバーレイ** — テキストまたは画像、9 アンカー、不透明度、スケール。エクスポート時にのみ適用
 - **エクスポートプリセット** — Web 1600 / Print 300 dpi / Instagram 1080 のワンクリックパイプライン
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF。ロッシー形式には品質スライダー。カメラ・レンズ・撮影日時の EXIF を引き継ぎ、位置情報は任意（**メタデータ**：すべて／位置情報以外／なし）。提案されるファイル名は未使用の名前（`photo.png` の隣なら `photo_1.png`）で、既存のファイル（特に元の写真そのもの）は確認してから置き換え
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF（`pillow-heif` があれば HEIC、`pillow-jxl-plugin` があれば JPEG XL も）。ロッシー形式には品質スライダー。カメラ・レンズ・撮影日時の EXIF を引き継ぎ、位置情報は任意（**メタデータ**：すべて／位置情報以外／なし）。提案されるファイル名は未使用の名前（`photo.png` の隣なら `photo_1.png`）で、既存のファイル（特に元の写真そのもの）は確認してから置き換え
 - **バッチ操作** — 選択画像のリネーム、移動 / コピー、回転。移動・コピーは同名ファイルを上書きせず `name_1` として置きます。Imervue でリネーム・移動した写真(バッチリネーム、トークンバッチリネーム、フォルダツリー、移動 / コピー、デュアルペイン、ステージングトレイ、画像整理)は評価・お気に入り・タグ・カラーラベル・タイトル・メモ・選別フラグを保ち、`.xmp` と注釈の sidecar も一緒に移ります。フォルダを Imervue で開いている間に他のプログラムでリネームした写真も同様です。選択中の別の写真が今使っている名前へのリネーム(番号の振り直し、2 つの名前の入れ替え)も、一部だけで止まらず正しい順序で選択全体をリネームします
 - **コンタクトシート PDF** — キャプション付きマルチページグリッド(A4 / A3 / Letter / Legal)
 - **Web ギャラリー HTML** — `index.html` + JPEG サムネイル + インラインライトボックスを含む自己完結型フォルダ
@@ -815,7 +815,7 @@ python -m Imervue.mcp_server
 | `read_image_metadata` / `read_xmp_tags` | 寸法、フォーマット、EXIF、XMP:サイドカー、なければファイル埋め込み(レーティング、ラベル、キーワード) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 参照なし解析: チャンネルごとの統計、colourfulness / entropy / contrast、ヒストグラム + クリッピング、ブラースコア |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 プレビュー、Tesseract テキスト、知覚ハッシュによる近似重複グループ(進捗付き) |
-| `convert_format` | PNG / JPEG / WebP / TIFF / BMP(+ オプションで HEIC / AVIF / JXL)間で変換 |
+| `convert_format` | PNG / JPEG / WebP / TIFF / BMP / AVIF(+ オプションで HEIC / JXL)間で変換 |
 | `apply_watermark` / `apply_frame` | テキストウォーターマークを焼き込み、またはマット / ポラロイドフレーム + キャプションを追加 |
 | `build_collage` | 複数の画像をグリッドモンタージュに合成(進捗付き) |
 | `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、アスペクト比を保持したリサイズ、ロスレスな回転 / 反転。サイズと座標は EXIF の向きを適用した画像が基準です。 |

@@ -10,13 +10,14 @@ from Imervue.image.formats import (
     VIEWER_EXTENSIONS,
     ensure_pillow_opener,
 )
+from Imervue.image.avif_support import AVIF_EXTENSIONS
 from Imervue.image.heif_support import HEIF_EXTENSIONS
 from Imervue.image.jxl_support import JXL_EXTENSIONS
 from Imervue.image.video_frames import VIDEO_EXTENSIONS
 
 
 def test_sets_nest():
-    assert RAW_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS <= STILL_IMAGE_EXTENSIONS
+    assert RAW_EXTENSIONS | HEIF_EXTENSIONS | AVIF_EXTENSIONS | JXL_EXTENSIONS <= STILL_IMAGE_EXTENSIONS
     assert VIEWER_EXTENSIONS == STILL_IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
     assert not STILL_IMAGE_EXTENSIONS & VIDEO_EXTENSIONS
 
@@ -26,7 +27,7 @@ def test_extensions_are_lowercase_with_a_dot():
 
 
 @pytest.mark.parametrize(("ext", "expected"), [
-    (".heic", ["heif"]), (".AVIF", ["heif"]), (".jxl", ["jxl"]),
+    (".heic", ["heif"]), (".HEIF", ["heif"]), (".AVIF", []), (".jxl", ["jxl"]),
     (".png", []), (".mp4", []), ("", []),
 ])
 def test_ensure_pillow_opener_registers_only_the_codec_needed(monkeypatch, ext, expected):

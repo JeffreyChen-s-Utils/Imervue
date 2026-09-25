@@ -167,7 +167,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 | `preset` / `pipeline` | 按名称应用已保存的显影预设；执行有序的 JSON 运算管线 |
 | `list-ops` | 列出所有子命令（`--json` 输出机器可读格式） |
 
-每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；安装了可选后端时也能读取 HEIC / AVIF / JPEG XL。无法读取的文件会被报告，其余文件照常处理。
+每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。无法读取的文件会被报告，其余文件照常处理。
 
 共用标志：`--out`（输出目录）、`--recursive`、`--dry-run`（只列出动作、不写入）、`--overwrite`、`--version`。
 
@@ -343,7 +343,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 - **水印叠加** — 文字或图片，9 个锚点、不透明度、缩放；只在导出时套用
 - **导出预设** — Web 1600 / Print 300 dpi / Instagram 1080 一键流水线
-- **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF，有损格式提供质量滑块；保留相机、镜头与拍摄时间的 EXIF，位置可选（**元数据**：全部／位置以外／无）；建议的文件名一定是还没被占用的（`photo.png` 旁边就是 `photo_1.png`），已存在的文件（尤其是原图本身）要确认后才会被替换
+- **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF / AVIF（装了 `pillow-heif` 还有 HEIC，装了 `pillow-jxl-plugin` 还有 JPEG XL），有损格式提供质量滑块；保留相机、镜头与拍摄时间的 EXIF，位置可选（**元数据**：全部／位置以外／无）；建议的文件名一定是还没被占用的（`photo.png` 旁边就是 `photo_1.png`），已存在的文件（尤其是原图本身）要确认后才会被替换
 - **批量操作** — 重命名、移动 / 复制、旋转选中图片。移动或复制不会覆盖同名文件（会以 `name_1` 存入）；在 Imervue 里重命名或移动的照片（批量重命名、Token 批量重命名、文件夹树、移动 / 复制、双窗格、暂存区、图片整理）会保留评级、收藏、标签、颜色标签、标题、备注与筛选标记，`.xmp` 与标注 sidecar 也会一起带走；文件夹在 Imervue 中打开时，用其他程序重命名的照片也一样；改成另一张选中照片现在的名称（重新编号、互换两个名称）时，会按正确顺序把整批重命名，而不是只改一部分
 - **联系表 PDF** — 多页网格含说明（A4 / A3 / Letter / Legal）
 - **网页画廊 HTML** — 自包含文件夹含 `index.html` + JPEG 缩图 + 内嵌灯箱
@@ -813,7 +813,7 @@ python -m Imervue.mcp_server
 | `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP：sidecar，没有时读文件内嵌的（评级、标签、关键字） |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 无参考分析：每通道统计、色彩度 / 熵 / 对比度、直方图 + 裁剪、模糊评分 |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 预览、Tesseract 文字、感知哈希近重复分组（带进度） |
-| `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP（+ 可选 HEIC / AVIF / JXL） |
+| `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP / AVIF（+ 可选 HEIC / JXL） |
 | `apply_watermark` / `apply_frame` | 烧入文字水印或衬边 / 拍立得相框 + 说明文字 |
 | `build_collage` | 将多张图片合成为网格拼贴（带进度） |
 | `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保持长宽比的缩放、无损旋转 / 翻转。尺寸与坐标以依 EXIF 方向摆正后的图像为准。 |

@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 | `preset` / `pipeline` | 저장된 현상 프리셋을 이름으로 적용, 순서가 있는 JSON 파이프라인 실행 |
 | `list-ops` | 모든 서브커맨드 출력(`--json`으로 기계 판독 출력) |
 
-모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, HEIC / AVIF / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다.
+모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다.
 
 공용 플래그: `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `--version`.
 
@@ -344,7 +344,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **워터마크 오버레이** — 텍스트 또는 이미지, 9개 앵커 위치, 불투명도, 스케일; 내보내기 시에만 적용
 - **내보내기 프리셋** — Web 1600 / Print 300 dpi / Instagram 1080 원클릭 파이프라인
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF, 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음). 제안되는 파일 이름은 아직 쓰이지 않은 이름(`photo.png` 옆이면 `photo_1.png`)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF(`pillow-heif`가 있으면 HEIC, `pillow-jxl-plugin`이 있으면 JPEG XL도), 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음). 제안되는 파일 이름은 아직 쓰이지 않은 이름(`photo.png` 옆이면 `photo_1.png`)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
 - **일괄 작업** — 이름 변경, 이동/복사, 선택한 이미지 회전. 이동·복사는 같은 이름의 파일을 덮어쓰지 않고 `name_1`로 둡니다. Imervue에서 이름을 바꾸거나 이동한 사진(일괄 이름 변경, 토큰 일괄 이름 변경, 폴더 트리, 이동 / 복사, 듀얼 창, 스테이징 트레이, 이미지 정리)은 별점·즐겨찾기·태그·컬러 라벨·제목·메모·선별 표시를 유지하며, `.xmp`와 주석 sidecar도 함께 옮겨집니다. 폴더가 Imervue에 열려 있는 동안 다른 프로그램에서 이름을 바꾼 사진도 마찬가지입니다. 선택한 다른 사진이 지금 쓰고 있는 이름으로 바꾸는 경우(번호 다시 매기기, 두 이름 맞바꾸기)에도 일부만 바뀌지 않고 올바른 순서로 선택 전체의 이름을 바꿉니다
 - **컨택트 시트 PDF** — 캡션이 있는 다중 페이지 그리드 (A4 / A3 / Letter / Legal)
 - **웹 갤러리 HTML** — `index.html` + JPEG 썸네일 + 인라인 라이트박스가 포함된 자체 완결 폴더
@@ -813,7 +813,7 @@ python -m Imervue.mcp_server
 | `read_image_metadata` / `read_xmp_tags` | 크기, 포맷, EXIF, XMP: 사이드카, 없으면 파일에 포함된 것 (별점, 라벨, 키워드) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 무참조 분석: 채널별 통계, 색채도/엔트로피/대비, 히스토그램 + 클리핑, 블러 점수 |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 미리보기, Tesseract 텍스트, perceptual-hash 근접 중복 그룹 (진행률 포함) |
-| `convert_format` | PNG / JPEG / WebP / TIFF / BMP 간 변환 (+ 선택적 HEIC / AVIF / JXL) |
+| `convert_format` | PNG / JPEG / WebP / TIFF / BMP / AVIF 간 변환 (+ 선택적 HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | 텍스트 워터마크 또는 매트 / 폴라로이드 프레임 + 캡션 굽기 |
 | `build_collage` | 이미지를 그리드 몽타주로 합성 (진행률 포함) |
 | `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전. 크기와 좌표는 EXIF 방향을 적용한 이미지를 기준으로 합니다. |

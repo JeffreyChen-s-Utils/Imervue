@@ -360,7 +360,7 @@ def open_path(main_gui: GPUImageView, path: str):
 
 
 def _maybe_hint_heif(main_gui: GPUImageView, images: list[str]) -> None:
-    """Toast once per window when a folder has HEIC/AVIF but no decoder."""
+    """Toast once per window when a folder has HEIC but no decoder."""
     from Imervue.image.heif_support import needs_heif_hint
     if not needs_heif_hint(images, ensure_heif_opener()):
         return
@@ -372,7 +372,7 @@ def _maybe_hint_heif(main_gui: GPUImageView, images: list[str]) -> None:
     from Imervue.multi_language.language_wrapper import language_wrapper
     toast.info(language_wrapper.language_word_dict.get(
         "heif_install_hint",
-        "Install pillow-heif to view HEIC/AVIF images.",
+        "Install pillow-heif to view HEIC images.",
     ))
 
 

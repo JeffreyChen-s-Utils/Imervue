@@ -19,7 +19,7 @@ _NO_EXPORT_IMAGES = '書き出せる画像がありません。'
 _EXPORT_FAILED = '書き出しに失敗：{err}'
 
 japanese_word_dict = {
-    "heif_install_hint": "HEIC/AVIF 画像を表示するには pillow-heif をインストールしてください。",
+    "heif_install_hint": "HEIC 画像を表示するには pillow-heif をインストールしてください。",
     "exif_location": "場所",
     "exif_coordinates": "座標",
     "exif_video_label": "動画",

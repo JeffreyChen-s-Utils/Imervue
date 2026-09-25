@@ -167,7 +167,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 | `preset` / `pipeline` | 依名稱套用已存的顯影預設；執行有序的 JSON 運算管線 |
 | `list-ops` | 列出所有子指令（`--json` 輸出機器可讀格式） |
 
-每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；安裝了選用後端時也能讀取 HEIC / AVIF / JPEG XL。無法讀取的檔案會被回報，其餘檔案照常處理。
+每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；AVIF 由 Pillow 自己讀取，安裝了選用後端時也能讀取 HEIC / JPEG XL。無法讀取的檔案會被回報，其餘檔案照常處理。
 
 共用旗標：`--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite`、`--version`。
 
@@ -343,7 +343,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - **浮水印疊加** — 文字或圖片，9 個錨點、不透明度、縮放；只在匯出時套用
 - **匯出預設** — Web 1600 / Print 300 dpi / Instagram 1080 一鍵流水線
-- **另存新檔 / 匯出** — PNG / JPEG / WebP / BMP / TIFF，有損格式提供品質滑桿；保留相機、鏡頭與拍攝時間的 EXIF，位置可選（**中繼資料**：全部／位置以外／無）；建議的檔名一定是還沒被占用的（`photo.png` 旁邊就是 `photo_1.png`），已存在的檔案（尤其是原圖本身）要確認後才會被取代
+- **另存新檔 / 匯出** — PNG / JPEG / WebP / BMP / TIFF / AVIF（裝了 `pillow-heif` 還有 HEIC，裝了 `pillow-jxl-plugin` 還有 JPEG XL），有損格式提供品質滑桿；保留相機、鏡頭與拍攝時間的 EXIF，位置可選（**中繼資料**：全部／位置以外／無）；建議的檔名一定是還沒被占用的（`photo.png` 旁邊就是 `photo_1.png`），已存在的檔案（尤其是原圖本身）要確認後才會被取代
 - **批次操作** — 重命名、移動 / 複製、旋轉選取影像。移動或複製不會覆蓋同名檔案（會以 `name_1` 存入）；在 Imervue 裡重新命名或移動的照片（批次重新命名、Token 批次重新命名、資料夾樹、移動 / 複製、雙窗格、暫存區、影像整理）會保留評等、收藏、標籤、顏色標籤、標題、備註與篩選標記，`.xmp` 與註解 sidecar 也會一起帶走；資料夾在 Imervue 中開著時，用其他程式重新命名的照片也一樣；改成另一張選取照片現在的名稱（重新編號、互換兩個名稱）時，會依正確順序把整批重新命名，而不是只改一部分
 - **聯絡單 PDF** — 多頁網格含說明（A4 / A3 / Letter / Legal）
 - **網頁圖庫 HTML** — 自包含資料夾含 `index.html` + JPEG 縮圖 + 內嵌燈箱
@@ -813,7 +813,7 @@ python -m Imervue.mcp_server
 | `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP：sidecar，沒有時讀檔案內嵌的（評等、色標、關鍵字） |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 無參考分析：各通道統計、colourfulness/entropy/對比、直方圖 + 裁切、模糊分數 |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 預覽、Tesseract 文字、perceptual-hash 近重複分組（含進度） |
-| `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP（+ 選用 HEIC / AVIF / JXL） |
+| `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP / AVIF（+ 選用 HEIC / JXL） |
 | `apply_watermark` / `apply_frame` | 燒入文字浮水印，或加 matte / 拍立得相框 + 說明文字 |
 | `build_collage` | 把多張圖片合成成網格拼貼（含進度） |
 | `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保留長寬比縮放、無損旋轉 / 翻轉。尺寸與座標以依 EXIF 方向轉正後的影像為準。 |

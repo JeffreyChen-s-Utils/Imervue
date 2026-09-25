@@ -81,6 +81,7 @@ Formats pris en charge
 
 - **Standards** : PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW** : CR2 (Canon), NEF (Nikon), ARW (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus)
+- **Modernes** : AVIF (intégré) ; HEIC / HEIF avec le paquet optionnel ``pillow-heif`` ; JPEG XL avec le paquet optionnel ``pillow-jxl-plugin``
 
 ----
 
@@ -1582,7 +1583,7 @@ Export individuel
 
 Clic droit sur une image > ``Exporter / Enregistrer sous``.
 
-- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF
+- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF, AVIF ; aussi HEIC et JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` est installé
 - Ajustez la qualité (pour les formats avec perte)
 - Choisissez les métadonnées à conserver : toutes, toutes sauf la localisation (par défaut) ou aucune. L'appareil, l'objectif et la date de prise de vue sont conservés ; le choix est mémorisé et l'export par lot propose la même option
 - Aperçu de la taille de fichier estimée
@@ -2528,7 +2529,7 @@ affichage::
    * - ``list-ops``
      - Lister toutes les sous-commandes (``--json`` pour une sortie exploitable par machine)
 
-Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, et les entrées HEIC / AVIF / JPEG XL sont lues lorsque leur backend optionnel est installé. Un fichier illisible est signalé et les autres sont tout de même traités.
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un fichier illisible est signalé et les autres sont tout de même traités.
 
 Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
 
@@ -2569,8 +2570,9 @@ Outils disponibles
    * - ``convert_format``
      - Convertit une image vers un autre format. Le format de destination est
        déduit du suffixe de destination (``png`` / ``jpg`` /
-       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). L'option
-       ``quality`` (1–100) s'applique à JPEG/WebP.
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``, plus ``heic`` /
+       ``jxl`` lorsque leur backend optionnel est installé). L'option
+       ``quality`` (1–100) s'applique à JPEG / WebP / AVIF / HEIC / JXL.
    * - ``puppet_from_png``
      - Construit un rig ``.puppet`` à partir d'un PNG en utilisant l'auto-mesh
        du plugin Puppet. Ensemence le catalogue de paramètres standard Cubism afin

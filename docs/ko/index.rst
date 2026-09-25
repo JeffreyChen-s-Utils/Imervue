@@ -79,6 +79,7 @@ Imervue를 실행하면 세 가지 영역이 표시됩니다:
 
 - **일반**: PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW**: CR2 (Canon), NEF (Nikon), ARW (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus)
+- **최신 포맷**: AVIF (기본 지원), HEIC / HEIF (선택적 ``pillow-heif`` 필요), JPEG XL (선택적 ``pillow-jxl-plugin`` 필요)
 
 ----
 
@@ -740,7 +741,7 @@ PSD 가져오기/내보내기를 지원합니다. 탭 막대에서 전환하거�
 
 이미지 우클릭 > ``내보내기 / 다른 이름으로 저장``
 
-- 형식 선택: PNG, JPEG, WebP, BMP, TIFF
+- 형식 선택: PNG, JPEG, WebP, BMP, TIFF, AVIF. ``pillow-heif`` / ``pillow-jxl-plugin`` 이 설치되어 있으면 HEIC / JPEG XL 도
 - 품질 조정 (손실 형식의 경우)
 - 유지할 메타데이터 선택: 모두, 위치 정보만 제외(기본값), 모두 제거. 카메라·렌즈·촬영 일시가 함께 저장되며, 선택은 기억되고 일괄 내보내기에도 같은 옵션이 있습니다
 - 파일 크기 미리보기
@@ -2155,7 +2156,7 @@ API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
    * - ``list-ops``
      - 모든 서브커맨드 출력(``--json``\ 으로 기계 판독 출력)
 
-모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, HEIC / AVIF / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다.
+모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다.
 
 공용 플래그: ``--out``\ (출력 디렉터리), ``--recursive``, ``--dry-run``\ (동작만 나열하고 쓰지 않음), ``--overwrite``, ``--version``.
 
@@ -2195,8 +2196,9 @@ Cline, …) 가 GUI 를 실행하지 않고도 프로젝트의 순수 로직 헬
    * - ``convert_format``
      - 한 이미지를 다른 포맷으로 변환. 대상 포맷은 대상 확장자에서
        추론됨 (``png`` / ``jpg`` /
-       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). 선택적
-       ``quality`` (1–100) 는 JPEG/WebP 에 적용.
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``, 선택적 백엔드가
+       설치되어 있으면 ``heic`` / ``jxl`` 도). 선택적
+       ``quality`` (1–100) 는 JPEG / WebP / AVIF / HEIC / JXL 에 적용.
    * - ``puppet_from_png``
      - puppet 플러그인의 auto-mesh 를 사용해 PNG 에서 ``.puppet`` rig 를
        생성. Cubism 표준 파라미터 카탈로그를 초기화하여 rig 를

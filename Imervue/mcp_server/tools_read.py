@@ -21,7 +21,7 @@ from Imervue.mcp_server.tool_support import (
 _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
     "png", "jpeg", "jpg", "webp", "tiff", "tif", "bmp",
 })
-# Optional-backend output formats, routed through save_formats (HEIF / JXL).
+# Output formats a Pillow may lack, routed through save_formats (HEIC / AVIF / JXL).
 _EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "JXL"}
 _SHARPNESS_MAX_SIDE = 512
 
@@ -270,7 +270,7 @@ def puppet_inspect(path: str) -> dict[str, Any]:
 
 
 def _convert_via_save_formats(src: Path, dst: Path, fmt: str, quality: int) -> dict[str, Any]:
-    """Convert through save_formats for the optional HEIC/AVIF/JXL backends."""
+    """Convert through save_formats, which knows whether HEIC / AVIF / JXL can be written."""
     from Imervue.image.save_formats import save_image
     with open_upright(src) as opened:
         save_image(opened, str(dst), _EXTRA_FORMAT_NAMES[fmt], max(1, min(100, int(quality))))

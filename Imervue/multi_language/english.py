@@ -31,7 +31,7 @@ _EXPORT_FAILED = 'Export failed: {err}'
 _ENGLISH_INTENSITY_LABEL = 'Intensity:'
 
 english_word_dict = {
-    "heif_install_hint": "Install pillow-heif to view HEIC/AVIF images.",
+    "heif_install_hint": "Install pillow-heif to view HEIC images.",
     "exif_location": "Location",
     "exif_coordinates": "GPS",
     "exif_video_label": "Video",
