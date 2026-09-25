@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
 | `preset` / `pipeline` | Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen |
 | `list-ops` | Alle Unterbefehle auflisten (`--json` für maschinenlesbare Ausgabe) |
 
-Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet.
+Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; `resize` und `strip` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet.
 
 Gemeinsame Flags: `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `--version`.
 
@@ -240,7 +240,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 ### Sortieren & Filtern
 
-- Sortieren nach Name / Geändert / Erstellt / Größe / Auflösung (auf- oder absteigend)
+- Sortieren nach Name (natürliche Reihenfolge wie im Explorer: `img2` vor `img10`) / Geändert / Erstellt / Größe / Auflösung (auf- oder absteigend)
 - Filter nach Endung, Color Label, Rating, Tag/Album, Cull-Zustand
 - **Erweiterter Filter** — Auflösung / Dateigröße / Orientierung / Modified-Date-Range
 - **Multi-Tag-Filter**-Dialog mit boolescher AND-/OR-Logik

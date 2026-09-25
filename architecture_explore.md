@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `bf364bf` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `fef0ae7` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 876 | 144,559 |
+| `tests/` | 877 | 144,782 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,144 |
-| `Imervue/gui/` | 167 | 33,273 |
+| `Imervue/gui/` | 167 | 33,279 |
 | `Imervue/puppet/` | 57 | 15,296 |
-| `Imervue/image/` | 126 | 14,684 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,974 |
+| `Imervue/image/` | 126 | 14,728 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,976 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,700 |
 | `Imervue/library/` | 32 | 4,255 |
-| `Imervue/menu/` | 11 | 3,592 |
-| `Imervue/` 根層 | 5 | 1,581 |
+| `Imervue/menu/` | 11 | 3,593 |
+| `Imervue/` 根層 | 5 | 1,567 |
 | `Imervue/plugin/` | 10 | 2,246 |
-| `Imervue/system/` | 27 | 2,787 |
-| `Imervue/export/` | 9 | 1,081 |
+| `Imervue/system/` | 28 | 2,816 |
+| `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,361 |
-| **總計** | **1,719** | **326,003** |
+| **總計** | **1,721** | **326,295** |
 
-其中 `Imervue/` 套件本身 779 檔 / 167,083 行。
+其中 `Imervue/` 套件本身 780 檔 / 167,152 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -239,6 +239,7 @@ ImervueMainWindow
 | `atomic_write.py` | 33 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件、`save_image` 的匯出與轉檔、Paint 匯出預設）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本、註解專案） |
 | `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict`、`recipe_store` 使用） |
 | `free_names.py` | 33 | `free_names(directory, stems, ext)`：資料夾裡還沒被占用的檔名（`photo_clahe.png`，被占用就 `_1`、`_2`…；一組檔案共用一個編號；依檔案系統的大小寫規則比對，列不出內容的資料夾視為空的），寫新檔在使用者檔案旁邊的工具都經由它挑名（`_apply_save.output_path(s)`、Export 與 GIF／影片對話框的預設檔名、多頁拆分、EXIF 清除的副本；右鍵「依 EXIF 自動旋轉」經 `output_path`） |
+| `natural_sort.py` | 29 | `natural_key(name)`：和檔案總管一樣的自然排序鍵（`img2` 在 `img10` 之前，不分大小寫，全形數字也算數字；相等時依小寫、原名定序）；檢視器的名稱排序（縮圖格、上下張、資料夾快取）、`sort_menu`、網頁相簿與各批次對話框的清單都用它，和檔案樹的 numeric `QCollator` 一致 |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
 
@@ -298,7 +299,7 @@ ImervueMainWindow
 | `contact_sheet.py` | 189 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab）；格子影像經 `decode_image` |
 | `contact_sheet_layouts.py` | 55 | 具名版面預設（紙張 / 格線 / 邊界 / 說明文字） |
 | `web_gallery.py` | 262 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依）；縮圖經 `decode_image`（轉正、sRGB、RAW 可讀） |
-| `gallery_sort.py` | 75 | 匯出前的排序 / 過濾 / 分組（依名稱、時間、大小、副檔名、資料夾、拍攝日） |
+| `gallery_sort.py` | 76 | 匯出前的排序 / 過濾 / 分組（依名稱、時間、大小、副檔名、資料夾、拍攝日） |
 | `slideshow_mp4.py` | 140 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
 | `slideshow_effects.py` | 101 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
 | `cheat_sheet.py` | 237 | 可列印的快捷鍵速查表 PDF，隨當前語言產生 |
@@ -306,7 +307,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-126 個模組、14,684 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+126 個模組、14,728 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -376,7 +377,7 @@ ImervueMainWindow
 `save_formats.py`(106) 輸出格式中繼資料與 `save_image`（寫到路徑一律原子替換）；HEIC、JXL 依選用套件，AVIF 依 Pillow 有無 libavif 決定是否提供· `optimize.py`(73) 目標檔案大小編碼 ·
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
 `pyramid.py`(38) `DeepZoomImage` 金字塔 · `tile_manager.py`(94) 圖磚 LRU 快取與淘汰 ·
-`thumbnail_disk_cache.py`(236) 縮圖磁碟快取（鍵含 `_KEY_VERSION`，快取像素的意義改變時遞增） · `folder_index.py`(59) 每資料夾圖片清單快取 ·
+`thumbnail_disk_cache.py`(236) 縮圖磁碟快取（鍵含 `_KEY_VERSION`，快取像素的意義改變時遞增） · `folder_index.py`(64) 每資料夾圖片清單快取 ·
 `read_errors.py`(15) `IMAGE_READ_ERRORS`：Pillow 讀圖失敗會丟的例外（`OSError`、`ValueError`、`SyntaxError`（損壞的 WebP EXIF）、`DecompressionBombError`）
 
 #### 中繼資料
@@ -442,7 +443,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
 | `drop_handler.py` | 75 | 拖放檔案/資料夾開啟 |
-| `clipboard_paste.py` | 96 | 剪貼簿貼上圖片並插入模型 |
+| `clipboard_paste.py` | 97 | 剪貼簿貼上圖片並插入模型 |
 | `hover_preview_binding.py` | 55 | 縮圖懸停預覽彈窗綁定 |
 | `cull_actions.py` | 109 | 色標籤與 pick/reject 挑片狀態套用 |
 | `status_info.py` | 76 | 狀態列欄位組裝 |
@@ -467,7 +468,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 488 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
+| `image_loader.py` | 489 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
 | `load_thumbnail_worker.py` | 171 | 單張縮圖解碼 `QRunnable`（與 `load_image_file` 同一條 EXIF 轉正規則） |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
@@ -531,7 +532,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-167 個檔、33,273 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+167 個檔、33,279 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -616,12 +617,12 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 批次 / 匯出 / 管理
 
-`batch_convert_dialog.py`(413) 批次格式轉換（經 `upright_image` 解碼、帶回全部 EXIF；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(395) · `export_dialog.py`(256) 單張匯出（預設檔名經 `free_names` 挑還沒被占用的；目標就是原圖本身時另外詢問，其他既有檔案經 `dialog_rows.may_replace`，預設不取代） · `export_source.py`(49) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（`image_loader.decode_image` 的別名入口；AI 放大與批次轉換共用） · `shown_qimage.py`(33) `shown_qimage(path, *, max_edge)`：檢視器解碼成 QImage，讀不到回傳空 QImage（比較、雙圖、多螢幕、資料夾縮圖取代 `QPixmap(path)`）、`open_export_source()`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再套 recipe；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
+`batch_convert_dialog.py`(414) 批次格式轉換（經 `upright_image` 解碼、帶回全部 EXIF；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(395) · `export_dialog.py`(256) 單張匯出（預設檔名經 `free_names` 挑還沒被占用的；目標就是原圖本身時另外詢問，其他既有檔案經 `dialog_rows.may_replace`，預設不取代） · `export_source.py`(49) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（`image_loader.decode_image` 的別名入口；AI 放大與批次轉換共用） · `shown_qimage.py`(33) `shown_qimage(path, *, max_edge)`：檢視器解碼成 QImage，讀不到回傳空 QImage（比較、雙圖、多螢幕、資料夾縮圖取代 `QPixmap(path)`）、`open_export_source()`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再套 recipe；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
 `optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(399) 多張圖做 GIF／MP4（預設輸出經 `free_names` 挑沒被占用的 `output.gif`；既有檔案經 `dialog_rows.may_replace` 詢問） · `contact_sheet_dialog.py`(187) ·
-`web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(540) ·
-`duplicate_detection_dialog.py`(570) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(765) 淨化重繪（剝除所有隱藏資料）·
-`exif_strip_dialog.py`(315) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(124) · `culling_dialog.py`(256) 挑片 ·
-`ai_upscale_dialog.py`(736) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
+`web_gallery_dialog.py`(150) · `slideshow_mp4_dialog.py`(175) · `image_organizer_dialog.py`(541) ·
+`duplicate_detection_dialog.py`(571) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(766) 淨化重繪（剝除所有隱藏資料）·
+`exif_strip_dialog.py`(316) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(124) · `culling_dialog.py`(256) 挑片 ·
+`ai_upscale_dialog.py`(737) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
 #### 相片庫 / 中繼資料 / 搜尋
 
@@ -655,7 +656,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 334 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
-| `sort_menu.py` | 175 | 依名稱 / 日期 / 大小 / 解析度排序 |
+| `sort_menu.py` | 176 | 依名稱 / 日期 / 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
 | `modify_menu.py` | 29 | Deep-Zoom 專用的「修改」選單動作 |
 
@@ -971,7 +972,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-876 個檔、144,559 行。`pyproject.toml` 定義三個互斥層級 marker：
+877 個檔、144,782 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

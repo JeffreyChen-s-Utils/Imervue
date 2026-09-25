@@ -103,3 +103,8 @@ def test_group_by_date(tmp_path):
 def test_group_unknown_key_raises():
     with pytest.raises(ValueError, match="unknown group key"):
         group_images(["/a.png"], "colour")
+
+
+def test_sort_by_name_is_natural():
+    assert sort_images(["/g/p10.jpg", "/g/p9.jpg", "/g/P1.jpg"], "name") == [
+        "/g/P1.jpg", "/g/p9.jpg", "/g/p10.jpg"]

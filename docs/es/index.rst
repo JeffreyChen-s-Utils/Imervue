@@ -304,7 +304,7 @@ Ordenación y filtrado
 
    * - Función
      - Ubicación en el menú
-   * - Ordenar por nombre
+   * - Ordenar por nombre (orden natural: ``img2`` antes que ``img10``)
      - ``Sort`` > ``By Name``
    * - Ordenar por fecha de modificación
      - ``Sort`` > ``By Modified Date``
@@ -2526,7 +2526,7 @@ Qt**, lo que lo hace utilizable desde scripts, pasos de CI y servidores sin pant
    * - ``list-ops``
      - Listar todos los subcomandos (``--json`` para salida legible por máquina)
 
-Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un archivo ilegible se informa y el resto se procesa igualmente.
+Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; ``resize`` y ``strip`` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente.
 
 Opciones compartidas: ``--out`` (directorio de salida), ``--recursive``, ``--dry-run`` (listar acciones sin escribir nada), ``--overwrite`` y ``--version``.
 

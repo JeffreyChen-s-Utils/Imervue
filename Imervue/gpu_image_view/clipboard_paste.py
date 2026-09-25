@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
+from Imervue.system.natural_sort import natural_key
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -83,7 +84,7 @@ def _load_pasted_image(view: GPUImageView, save_path: str) -> None:
     images = view.model.images
     if save_path not in images:
         images.append(save_path)
-        images.sort(key=lambda p: os.path.basename(p).lower())
+        images.sort(key=lambda p: natural_key(os.path.basename(p)))
 
     from Imervue.gpu_image_view.images.image_loader import open_path
     open_path(main_gui=view, path=save_path)

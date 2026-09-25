@@ -11,6 +11,7 @@ import fnmatch
 from collections.abc import Callable, Iterable
 from datetime import datetime
 from pathlib import Path
+from Imervue.system.natural_sort import natural_key
 
 _SORT_ORDERS = ("name", "mtime", "size")
 _GROUP_KEYS = ("ext", "parent", "date")
@@ -33,7 +34,7 @@ def sort_images(
     Unreadable files sort as if name-empty / zero-stat rather than raising.
     """
     keys: dict[str, Callable[[str], object]] = {
-        "name": lambda p: Path(p).name.lower(),
+        "name": lambda p: natural_key(Path(p).name),
         "mtime": lambda p: _stat_attr(p, "st_mtime"),
         "size": lambda p: _stat_attr(p, "st_size"),
     }

@@ -169,7 +169,7 @@ py -m Imervue.cli list-ops          # print every available subcommand
 | `preset` / `pipeline` | Apply a saved develop preset by name; run an ordered JSON pipeline of ops |
 | `list-ops` | List every subcommand (`--json` for machine output) |
 
-Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A file that can't be read is reported and the rest still run.
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; `resize` and `strip` write it as PNG. A file that can't be read is reported and the rest still run.
 
 Shared flags: `--out` (output directory), `--recursive`, `--dry-run` (list actions, write
 nothing), `--overwrite`, and `--version`.
@@ -242,7 +242,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 ### Sort & filter
 
-- Sort by name / modified / created / size / resolution (asc or desc)
+- Sort by name (natural order, like Explorer: `img2` before `img10`) / modified / created / size / resolution (asc or desc)
 - Filter by extension, color label, rating, tag/album, cull state
 - **Advanced filter** — resolution / file size / orientation / modified-date range
 - **Multi-tag filter** dialog with AND / OR boolean logic

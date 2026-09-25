@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.image.shown import as_shown
 from Imervue.image.orientation import exif_orientation
@@ -169,7 +170,7 @@ class _ScanWorker(QThread):
     def _collect_paths(self) -> list[str]:
         result = (self._walk_images() if self._recursive
                   else self._scandir_images())
-        result.sort(key=lambda p: os.path.basename(p).lower())
+        result.sort(key=lambda p: natural_key(os.path.basename(p)))
         return result
 
     def _walk_images(self) -> list[str]:

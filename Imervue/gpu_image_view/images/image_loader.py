@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
@@ -306,7 +307,7 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
 
     if sort_by == "name":
         # Fast default path — avoid the import of sort_menu for the common case.
-        result.sort(key=lambda p: os.path.basename(p).lower(), reverse=not ascending)
+        result.sort(key=lambda p: natural_key(os.path.basename(p)), reverse=not ascending)
     else:
         from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
         key_fn = _SORT_KEYS.get(sort_by, _sort_key_name)
@@ -338,7 +339,7 @@ def _sort_for_user(paths: list[str]) -> list[str]:
     ascending = user_setting_dict.get("sort_ascending", True)
     result = list(paths)
     if sort_by == "name":
-        result.sort(key=lambda p: os.path.basename(p).lower(), reverse=not ascending)
+        result.sort(key=lambda p: natural_key(os.path.basename(p)), reverse=not ascending)
     else:
         from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
         result.sort(

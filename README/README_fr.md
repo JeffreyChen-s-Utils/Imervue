@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # affiche toutes les sous-commandes disponib
 | `preset` / `pipeline` | Appliquer un préréglage de développement enregistré par son nom ; exécuter un pipeline JSON ordonné |
 | `list-ops` | Lister toutes les sous-commandes (`--json` pour une sortie exploitable par machine) |
 
-Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un fichier illisible est signalé et les autres sont tout de même traités.
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; `resize` et `strip` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités.
 
 Options communes : `--out` (répertoire de sortie), `--recursive`, `--dry-run` (lister les actions sans rien écrire), `--overwrite` et `--version`.
 
@@ -240,7 +240,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 ### Tri et filtrage
 
-- Tri par nom / modifié / créé / taille / résolution (croissant ou décroissant)
+- Tri par nom (ordre naturel, comme l'Explorateur : `img2` avant `img10`) / modifié / créé / taille / résolution (croissant ou décroissant)
 - Filtrage par extension, étiquette de couleur, note, étiquette/album, état de tri
 - **Filtre avancé** — plage de résolution / taille de fichier / orientation / date de modification
 - Boîte de dialogue **Filtre multi-étiquettes** avec logique booléenne AND / OR

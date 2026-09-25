@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
 from Imervue.image.recipe_store import carry_recipe
 from Imervue.image.shown import as_shown
@@ -56,7 +57,7 @@ def _scan_folder(folder: str) -> list[str]:
                 result.append(entry.path)
     except OSError:
         pass
-    result.sort(key=lambda p: os.path.basename(p).lower())
+    result.sort(key=lambda p: natural_key(os.path.basename(p)))
     return result
 
 

@@ -296,7 +296,7 @@ Tri et filtrage
 
    * - Fonctionnalité
      - Emplacement dans le menu
-   * - Trier par nom
+   * - Trier par nom (ordre naturel : ``img2`` avant ``img10``)
      - ``Trier`` > ``Par nom``
    * - Trier par date de modification
      - ``Trier`` > ``Par date de modification``
@@ -2529,7 +2529,7 @@ affichage::
    * - ``list-ops``
      - Lister toutes les sous-commandes (``--json`` pour une sortie exploitable par machine)
 
-Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un fichier illisible est signalé et les autres sont tout de même traités.
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités.
 
 Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
 

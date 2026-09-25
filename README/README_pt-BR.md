@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # imprime todos os subcomandos disponíveis
 | `preset` / `pipeline` | Aplicar uma predefinição de revelação salva pelo nome; executar um pipeline JSON ordenado |
 | `list-ops` | Listar todos os subcomandos (`--json` para saída legível por máquina) |
 
-Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um arquivo ilegível é relatado e o restante é processado mesmo assim.
+Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um RAW de câmera é revelado como no visualizador, em vez de lido pela pequena prévia embutida; `resize` e `strip` o gravam como PNG. Um arquivo ilegível é relatado e o restante é processado mesmo assim.
 
 Flags compartilhadas: `--out` (diretório de saída), `--recursive`, `--dry-run` (listar ações sem escrever nada), `--overwrite` e `--version`.
 
@@ -240,7 +240,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 ### Ordenação e filtragem
 
-- Ordenar por nome / modificação / criação / tamanho / resolução (asc ou desc)
+- Ordenar por nome (ordem natural, como o Explorer: `img2` antes de `img10`) / modificação / criação / tamanho / resolução (asc ou desc)
 - Filtrar por extensão, etiqueta de cor, avaliação, tag/álbum, estado de triagem
 - **Filtro avançado** — resolução / tamanho de arquivo / orientação / intervalo de data de modificação
 - Diálogo de **filtro multi-tag** com lógica booleana AND / OR

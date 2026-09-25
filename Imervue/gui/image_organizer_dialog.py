@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.dimensions import image_dimensions
@@ -61,7 +62,7 @@ def _scan_folder(folder: str) -> list[str]:
                 result.append(entry.path)
     except OSError:
         pass
-    result.sort(key=lambda p: os.path.basename(p).lower())
+    result.sort(key=lambda p: natural_key(os.path.basename(p)))
     return result
 
 

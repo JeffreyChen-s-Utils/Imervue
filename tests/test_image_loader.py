@@ -261,3 +261,14 @@ class TestDecodeImageFile:
         path = tmp_path / "p.jpg"
         Image.new("RGB", (40, 20)).save(path, exif=exif)
         assert decode_image_file(str(path), orient=orient).shape[:2] == shape
+
+
+def test_scanning_a_folder_by_name_puts_page2_before_page10(tmp_path):
+    """Next / previous went page1, page10, page11, page2 while the file tree showed page1, page2."""
+    from Imervue.gpu_image_view.images.image_loader import _scan_images
+    for name in ("page10.png", "page2.png", "page1.png"):
+        (tmp_path / name).write_bytes(b"x")
+    names = [os.path.basename(p) for p in _scan_images(str(tmp_path))]
+    assert names == ["page1.png", "page2.png", "page10.png"]
+    backwards = [os.path.basename(p) for p in _scan_images(str(tmp_path), ascending=False)]
+    assert backwards == ["page10.png", "page2.png", "page1.png"]

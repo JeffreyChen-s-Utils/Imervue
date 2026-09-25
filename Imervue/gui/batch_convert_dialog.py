@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from Imervue.system.natural_sort import natural_key
 from Imervue.gui.export_source import upright_image
 from Imervue.image.export_metadata import METADATA_ALL, export_save_options
 from Imervue.image.formats import RAW_EXTENSIONS, STILL_IMAGE_EXTENSIONS
@@ -60,7 +61,7 @@ def _scan_folder(folder: str) -> list[str]:
                 result.append(entry.path)
     except OSError:
         pass
-    result.sort(key=lambda p: os.path.basename(p).lower())
+    result.sort(key=lambda p: natural_key(os.path.basename(p)))
     return result
 
 

@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.gui.export_source import upright_image
 from Imervue.image.in_place_save import (
     can_rewrite_in_place, in_place_format, save_edited_copy, save_over_source,
@@ -143,7 +144,7 @@ def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
             e.path for e in entries
             if e.is_file() and Path(e.name).suffix.lower() in _IMAGE_EXTS
         ]
-    result.sort(key=lambda p: os.path.basename(p).lower())
+    result.sort(key=lambda p: natural_key(os.path.basename(p)))
     return result
 
 # Tile size for tiled inference (prevents OOM on large images)

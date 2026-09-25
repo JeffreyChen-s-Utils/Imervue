@@ -298,7 +298,7 @@ Sortieren und Filtern
 
    * - Funktion
      - Menü
-   * - Nach Name sortieren
+   * - Nach Name sortieren (natürliche Reihenfolge: ``img2`` vor ``img10``)
      - ``Sortieren`` > ``Nach Name``
    * - Nach Änderungsdatum sortieren
      - ``Sortieren`` > ``Nach Änderungsdatum``
@@ -2534,7 +2534,7 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
    * - ``list-ops``
      - Alle Unterbefehle auflisten (``--json`` für maschinenlesbare Ausgabe)
 
-Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet.
+Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; ``resize`` und ``strip`` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet.
 
 Gemeinsame Flags: ``--out`` (Ausgabeverzeichnis), ``--recursive``, ``--dry-run`` (Aktionen nur auflisten, nichts schreiben), ``--overwrite`` und ``--version``.
 

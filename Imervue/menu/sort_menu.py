@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from PIL import Image
 from PySide6.QtGui import QActionGroup
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
 # ===========================
 
 def _sort_key_name(path: str):
-    return Path(path).name.lower()
+    return natural_key(Path(path).name)   # img2 before img10, like the file tree
 
 
 def _sort_key_modified(path: str):

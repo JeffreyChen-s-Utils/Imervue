@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.image.shown import as_shown
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
@@ -98,7 +99,7 @@ _RANDOM_CHARS = string.ascii_lowercase + string.digits
 def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
     """Return image paths sorted by name."""
     result = _walk_images(folder) if recursive else _scandir_images(folder)
-    result.sort(key=lambda p: os.path.basename(p).lower())
+    result.sort(key=lambda p: natural_key(os.path.basename(p)))
     return result
 
 
