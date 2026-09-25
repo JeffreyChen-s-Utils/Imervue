@@ -214,16 +214,16 @@ def _shown_image(main_gui: GPUImageView, path: str) -> QImage:
 # 1~5 — 快速評分標記
 # ===========================
 
-def rate_current_image(main_gui: GPUImageView, rating: int):
+def rate_current_image(main_gui: GPUImageView, rating: int, targets: list[str] | None = None):
     """Give the photos the key acts on a 1-5 *rating*; when they all have it already, clear it.
 
     The photos are the ones a colour label or a cull flag would take
     (:func:`~Imervue.gpu_image_view.cull_actions.resolve_cull_targets`): the
     selected tiles, the deep-zoom image, the tile the arrow keys are on, or
-    the hovered tile.
+    the hovered tile - unless *targets* names them (the List view's rows).
     """
     from Imervue.gpu_image_view.cull_actions import resolve_cull_targets
-    targets = resolve_cull_targets(main_gui)
+    targets = resolve_cull_targets(main_gui) if targets is None else targets
     if not targets:
         return
 
@@ -259,13 +259,13 @@ def rate_current_image(main_gui: GPUImageView, rating: int):
 # 0 — 愛心收藏
 # ===========================
 
-def toggle_favorite(main_gui: GPUImageView):
+def toggle_favorite(main_gui: GPUImageView, targets: list[str] | None = None):
     """Favourite the photos the key acts on; when they all are already, unfavourite them.
 
     The photos are resolved like a rating's (:func:`rate_current_image`).
     """
     from Imervue.gpu_image_view.cull_actions import resolve_cull_targets
-    targets = resolve_cull_targets(main_gui)
+    targets = resolve_cull_targets(main_gui) if targets is None else targets
     if not targets:
         return
 

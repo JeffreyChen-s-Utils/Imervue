@@ -128,7 +128,7 @@ Preview · Label · Name · Resolution · Size · Type · Modified. Double-click
 Deep Zoom; press ``Esc`` to return to the list. Thumbnails and metadata are loaded lazily on a worker thread
 so very large folders stay responsive.
 
-``Delete`` removes the selected rows and ``Ctrl + Z`` brings them back, as on the thumbnail wall; the keys follow Shortcut Settings.
+``Delete`` removes the selected rows and ``Ctrl + Z`` brings them back, and the rating (``0`` – ``5``), cull (``P`` / ``Shift + X`` / ``U``) and colour (``F1`` – ``F5``) keys mark them, as on the thumbnail wall; the keys follow Shortcut Settings.
 
 Deep Zoom Mode
 ^^^^^^^^^^^^^^

@@ -593,3 +593,105 @@ def test_undo_from_the_list_runs_the_viewers_undo_and_shows_the_rows(monkeypatch
     MainWindowBrowseMixin.undo_from_list(window)
     assert actions == ["undo"]
     assert refreshed == [True]
+
+
+
+class _MarkWindow(_EditWindow):
+    def __init__(self):
+        super().__init__()
+        self.marked: list = []
+
+    def mark_list_selection(self, action, paths):
+        self.marked.append((action, list(paths)))
+
+
+@pytest.mark.parametrize(("key", "modifiers", "action"), [
+    (Qt.Key.Key_3, Qt.KeyboardModifier.NoModifier, "rate_3"),
+    (Qt.Key.Key_0, Qt.KeyboardModifier.NoModifier, "favorite"),
+    (Qt.Key.Key_P, Qt.KeyboardModifier.NoModifier, "cull_pick"),
+    (Qt.Key.Key_X, Qt.KeyboardModifier.ShiftModifier, "cull_reject"),
+    (Qt.Key.Key_F2, Qt.KeyboardModifier.NoModifier, "label_yellow"),
+])
+def test_marking_keys_act_on_the_selected_rows(qapp, tmp_path, key, modifiers, action):
+    """In the List view these keys went to the table and did nothing."""
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png", "b.png"], window)
+    try:
+        view.selectRow(1)
+        event = _press(view, key, modifiers)
+    finally:
+        view.deleteLater()
+    assert window.marked == [(action, [str(tmp_path / "b.png")])]
+    assert event.isAccepted()
+
+
+def test_a_colour_key_with_ctrl_is_not_a_label(qapp, tmp_path):
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.selectRow(0)
+        _press(view, Qt.Key.Key_F1, Qt.KeyboardModifier.ControlModifier)
+    finally:
+        view.deleteLater()
+    assert window.marked == []
+
+
+def test_marking_keys_without_a_selection_are_left_to_the_table(qapp, tmp_path):
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.clearSelection()
+        _press(view, Qt.Key.Key_3)
+    finally:
+        view.deleteLater()
+    assert window.marked == []
+
+
+class _Toast:
+    def __init__(self):
+        self.messages: list = []
+
+    def info(self, message):
+        self.messages.append(message)
+
+
+def _browse_window():
+    from types import SimpleNamespace
+
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    repaints: list = []
+    main = SimpleNamespace(toast=_Toast(), language_wrapper=language_wrapper)
+    viewer = SimpleNamespace(
+        main_window=main, deep_zoom=None, model=SimpleNamespace(images=[]), current_index=0,
+        tile_grid_mode=True, tile_selection_mode=False, selected_tiles=set(),
+        _hover_last_path=None, update=lambda: None)
+    list_view = SimpleNamespace(viewport=lambda: SimpleNamespace(update=lambda: repaints.append(True)))
+    return SimpleNamespace(viewer=viewer, image_list_view=list_view), repaints
+
+
+def test_the_main_window_rates_and_favourites_the_rows(monkeypatch):
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    user_setting_dict["image_ratings"] = {}
+    user_setting_dict["image_favorites"] = []
+    window, repaints = _browse_window()
+    MainWindowBrowseMixin.mark_list_selection(window, "rate_4", ["a.png", "b.png"])
+    MainWindowBrowseMixin.mark_list_selection(window, "favorite", ["b.png"])
+    assert user_setting_dict["image_ratings"] == {"a.png": 4, "b.png": 4}
+    assert user_setting_dict["image_favorites"] == ["b.png"]
+    assert repaints == [True, True]
+
+
+def test_the_main_window_labels_and_culls_the_rows(monkeypatch):
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    from Imervue.library import image_index
+    from Imervue.user_settings import color_labels
+    culled, labelled = [], []
+    monkeypatch.setattr(image_index, "set_cull_state", lambda path, state: culled.append((path, state)))
+    monkeypatch.setattr(color_labels, "set_color_label", lambda path, color: labelled.append((path, color)))
+    window, _repaints = _browse_window()
+    MainWindowBrowseMixin.mark_list_selection(window, "cull_reject", ["a.png", "b.png"])
+    MainWindowBrowseMixin.mark_list_selection(window, "label_green", ["a.png", "b.png"])
+    assert culled == [("a.png", "reject"), ("b.png", "reject")]
+    assert labelled == [("a.png", "green"), ("b.png", "green")]
+    assert window.viewer.main_window.toast.messages   # the same toasts as on the wall

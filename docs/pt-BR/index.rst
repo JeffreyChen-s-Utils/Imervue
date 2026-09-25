@@ -130,7 +130,7 @@ Clique duas vezes em uma linha (ou pressione ``Enter``) para entrar no Deep Zoom
 para retornar à lista. Miniaturas e metadados são carregados de forma lazy em uma thread de trabalho
 para que pastas muito grandes permaneçam responsivas.
 
-``Delete`` remove as linhas selecionadas e ``Ctrl + Z`` as traz de volta, como na grade; as teclas seguem as configurações de atalhos.
+``Delete`` remove as linhas selecionadas e ``Ctrl + Z`` as traz de volta, e as teclas de avaliação (``0`` – ``5``), seleção (``P`` / ``Shift + X`` / ``U``) e cor (``F1`` – ``F5``) as marcam, como na grade; as teclas seguem as configurações de atalhos.
 
 Modo Deep Zoom
 ^^^^^^^^^^^^^^

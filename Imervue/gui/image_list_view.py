@@ -41,6 +41,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.gui.image_list_view")
 
 _THUMB_SIZE = 48
+# Keys that mark the selected rows: ratings, favourite, cull flags, colour labels (F1-F5).
+LIST_MARK_ACTIONS = frozenset({
+    "rate_1", "rate_2", "rate_3", "rate_4", "rate_5", "favorite",
+    "cull_pick", "cull_reject", "cull_unflag",
+    "label_red", "label_yellow", "label_green", "label_blue", "label_purple",
+})
 # A row whose thumbnail fails to load (stat/decode error — usually the file is
 # mid-move/delete or briefly locked) is retried up to this many times before it
 # falls back to a placeholder, so a transient read race can't permanently blank
@@ -547,8 +553,18 @@ class ImageListView(QTableView):
                 return
         super().keyPressEvent(event)
 
+    @staticmethod
+    def _list_action(event, action: str | None) -> str | None:
+        """The Shortcut Settings action, or ``label_<colour>`` for the fixed F1-F5 keys."""
+        from Imervue.gpu_image_view.key_input_handler import COLOR_LABEL_KEYS
+        no_ctrl_alt = not (event.modifiers() & (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier))
+        if event.key() in COLOR_LABEL_KEYS and no_ctrl_alt:
+            return f"label_{COLOR_LABEL_KEYS[event.key()]}"
+        return action
+
     def _handle_edit_key(self, event) -> bool:
-        """Delete and Undo, as bound in Shortcut Settings, act on the list like on the wall.
+        """Delete, Undo, ratings, favourite, cull flags and colours act on the list as on the wall.
 
         Delete removes the selected rows (undoable, sent to the Recycle Bin
         later) and puts the cursor on the row that takes their place.
@@ -557,8 +573,11 @@ class ImageListView(QTableView):
         window = self._main_window
         if window is None:
             return False
-        action = shortcut_manager.get_action(event.key(), event.modifiers())
-        if action == "undo":
+        bound = shortcut_manager.get_action(event.key(), event.modifiers())
+        action = self._list_action(event, bound)
+        if action in LIST_MARK_ACTIONS and self.selected_paths():
+            window.mark_list_selection(action, self.selected_paths())
+        elif action == "undo":
             window.undo_from_list()
         elif action == "delete" and self.selected_paths():
             row = min(index.row() for index in self.selectionModel().selectedRows())

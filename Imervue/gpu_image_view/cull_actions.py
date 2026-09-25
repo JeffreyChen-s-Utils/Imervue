@@ -46,11 +46,11 @@ def resolve_cull_targets(view: GPUImageView) -> list[str]:
     return [view._hover_last_path] if view._hover_last_path else []
 
 
-def apply_color_label(view: GPUImageView, color: str) -> None:
-    """Toggle ``color`` on the currently-active target(s)."""
+def apply_color_label(view: GPUImageView, color: str, targets: list[str] | None = None) -> None:
+    """Toggle ``color`` on *targets*, by default the currently-active target(s)."""
     from Imervue.user_settings.color_labels import set_color_label, toggle_color_label
 
-    targets = resolve_cull_targets(view)
+    targets = resolve_cull_targets(view) if targets is None else targets
     if not targets:
         return
 
@@ -68,15 +68,15 @@ def apply_color_label(view: GPUImageView, color: str) -> None:
     view.update()
 
 
-def apply_cull_state(view: GPUImageView, state: str) -> None:
-    """Apply a cull ``state`` to the currently-active target(s).
+def apply_cull_state(view: GPUImageView, state: str, targets: list[str] | None = None) -> None:
+    """Apply a cull ``state`` to *targets*, by default the currently-active target(s).
 
     Mirrors :func:`apply_color_label` resolution order: multi-selected tiles
     → deep-zoom image → hovered tile.
     """
     from Imervue.library import image_index
 
-    targets = resolve_cull_targets(view)
+    targets = resolve_cull_targets(view) if targets is None else targets
     if not targets:
         return
 

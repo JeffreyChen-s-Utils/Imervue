@@ -70,6 +70,25 @@ class MainWindowBrowseMixin:
         delete.delete_selected_tiles(self.viewer)
         self.refresh_list_view()
 
+    def mark_list_selection(self, action: str, paths: list[str]) -> None:
+        """Rate, favourite, cull-flag or colour-label the list's selected rows, as on the wall."""
+        from Imervue.gpu_image_view.actions.keyboard_actions import (
+            rate_current_image,
+            toggle_favorite,
+        )
+        from Imervue.gpu_image_view.cull_actions import apply_color_label, apply_cull_state
+        from Imervue.gpu_image_view.key_action_dispatcher import cull_state_for
+        viewer = self.viewer
+        if action.startswith("rate_"):
+            rate_current_image(viewer, int(action[-1]), targets=paths)
+        elif action == "favorite":
+            toggle_favorite(viewer, targets=paths)
+        elif action.startswith("label_"):
+            apply_color_label(viewer, action.removeprefix("label_"), targets=paths)
+        elif cull_state_for(action) is not None:
+            apply_cull_state(viewer, cull_state_for(action), targets=paths)
+        self.image_list_view.viewport().update()   # the Rating and Label columns
+
     def undo_from_list(self) -> None:
         """The viewer's undo (the last edit, else the last delete), then show what came back."""
         self.viewer.run_shortcut_action("undo")
