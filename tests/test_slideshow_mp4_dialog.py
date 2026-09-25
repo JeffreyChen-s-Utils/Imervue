@@ -24,8 +24,8 @@ _ROWS = [
      "Frames per second — 24 is cinematic, 30 / 60 are common for screen playback"),
     ("_hold_spin", "Hold per image", QDoubleSpinBox, (0.2, 30.0), 3.0, 0.1, " s",
      "Seconds each image stays on-screen before the fade"),
-    ("_fade_spin", "Fade duration", QDoubleSpinBox, (0.0, 5.0), 0.5, 0.1, " s",
-     "Cross-fade duration between consecutive images. Set to 0 for hard cuts."),
+    ("_fade_spin", "Transition duration", QDoubleSpinBox, (0.0, 5.0), 0.5, 0.1, " s",
+     "Length of the transition between consecutive images. Set to 0 for hard cuts."),
     ("_quality_spin", "Quality", QSpinBox, (1, 10), 8, 1, "",
      "Encoder quality (1 worst / smallest, 10 best / largest)"),
 ]
@@ -58,7 +58,7 @@ def test_top_level_order_and_title(dialog):
 
 def test_settings_rows(dialog):
     form = _items(dialog.layout())[1]
-    assert form.rowCount() == len(_ROWS)
+    assert form.rowCount() == len(_ROWS) + 1   # the spins, then the transition
     for row, (attr, label, kind, (lo, hi), default, step, suffix, tip) in enumerate(_ROWS):
         field = form.itemAt(row, QFormLayout.ItemRole.FieldRole).widget()
         assert form.itemAt(row, QFormLayout.ItemRole.LabelRole).widget().text() == label
@@ -101,3 +101,33 @@ def test_resolve_images_prefers_the_selection(qapp):
         assert dlg._resolve_images() == ["a.png"]  # noqa: SLF001
     finally:
         dlg.deleteLater()
+
+
+
+def test_the_transition_row_offers_every_rendered_transition(dialog):
+    """The renderer had eight transitions; the dialog passed none, so every video faded."""
+    from Imervue.export.slideshow_effects import TRANSITIONS
+    form = _items(dialog.layout())[1]
+    row = form.rowCount() - 1
+    combo = form.itemAt(row, QFormLayout.ItemRole.FieldRole).widget()
+    assert form.itemAt(row, QFormLayout.ItemRole.LabelRole).widget().text() == "Transition"
+    assert combo is dialog._transition_combo  # noqa: SLF001
+    assert [combo.itemData(i) for i in range(combo.count())] == list(TRANSITIONS)
+    assert [combo.itemText(i) for i in range(combo.count())][:3] == ["Fade", "Dissolve", "Slide left"]
+    assert combo.currentData() == "fade"
+
+
+def test_the_chosen_transition_goes_to_the_renderer(qapp, tmp_path, monkeypatch):
+    started = []
+    monkeypatch.setattr(mod.QFileDialog, "getSaveFileName",
+                        lambda *_a, **_k: (str(tmp_path / "show.mp4"), ""))
+    monkeypatch.setattr(mod.QThreadPool, "globalInstance",
+                        staticmethod(lambda: type("P", (), {"start": lambda _self, w: started.append(w)})()))
+    dlg = SlideshowMp4Dialog(None)
+    try:
+        dlg._transition_combo.setCurrentIndex(dlg._transition_combo.findData("wipe_left"))  # noqa: SLF001
+        dlg._export(["a.png", "b.png"])  # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+    (worker,) = started
+    assert worker.opts.transition == "wipe_left"
