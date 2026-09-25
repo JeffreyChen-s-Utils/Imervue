@@ -890,8 +890,8 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 ### Prompts
 
 Cuatro prompts reutilizables: `caption_image`, `suggest_edits`, `analyze_composition`
-(crítica de composición guiada por saliencia) y `flag_issues` (triaje de nitidez + calidad
-+ recorte). Los argumentos de los prompts se pueden autocompletar vía `completion/complete`.
+(crítica de composición guiada por saliencia) y `flag_issues` (triaje de nitidez + calidad +
+recorte). Los argumentos de los prompts se pueden autocompletar vía `completion/complete`.
 
 ### Cableado
 
