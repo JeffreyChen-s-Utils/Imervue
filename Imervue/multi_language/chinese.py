@@ -358,6 +358,7 @@ chinese_word_dict = {
     "anim_frame_prev": "上一帧",
     "anim_frame_next": "下一帧",
     "anim_frame_indicator": "帧 {current}/{total}",
+    "multipage_page_indicator": "第 {current}/{total} 页",
     "anim_speed": "速度: {speed}x",
     # 文件关联
     "file_assoc_menu": "文件关联",

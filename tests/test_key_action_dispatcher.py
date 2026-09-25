@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from Imervue.gpu_image_view.key_action_dispatcher import (
     KeyActionDispatcher,
     anim_speed_factor,
@@ -175,3 +177,39 @@ def test_reading_mode_toggles_and_fits_via_dispatcher():
     dispatcher._dispatch_toggle("reading_mode", None)                # noqa: SLF001
     assert view._reading_mode is False
     assert view.window_fits == 1    # leaving fits back to window
+
+
+class _PagedAnim:
+    """A multi-page TIFF's player: records what the frame keys asked of it."""
+
+    def __init__(self, *, paged: bool):
+        self.paged = paged
+        self.is_animated = True
+        self.speed = 1.0
+        self.calls: list[str] = []
+
+    def toggle(self):
+        self.calls.append("toggle")
+
+    def prev_frame(self):
+        self.calls.append("prev")
+
+    def next_frame(self):
+        self.calls.append("next")
+
+    def set_speed(self, speed):
+        self.calls.append("speed")
+        self.speed = speed
+
+
+@pytest.mark.parametrize("paged, expected", [
+    (True, ["prev", "next"]),
+    (False, ["toggle", "prev", "next", "speed"]),
+])
+def test_a_documents_pages_only_step(paged, expected):
+    anim = _PagedAnim(paged=paged)
+    view = SimpleNamespace(_animation=anim, main_window=SimpleNamespace())
+    dispatcher = KeyActionDispatcher(view)
+    for action in ("anim_toggle", "anim_prev", "anim_next", "anim_faster"):
+        dispatcher._dispatch_anim(action)   # noqa: SLF001
+    assert anim.calls == expected

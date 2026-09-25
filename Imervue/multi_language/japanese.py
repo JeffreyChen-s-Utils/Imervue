@@ -369,6 +369,7 @@ japanese_word_dict = {
     "anim_frame_prev": "前のフレーム",
     "anim_frame_next": "次のフレーム",
     "anim_frame_indicator": "フレーム {current}/{total}",
+    "multipage_page_indicator": "{current}/{total} ページ",
     "anim_speed": "速度：{speed}x",
     # ファイルの関連付け
     "file_assoc_menu": "ファイルの関連付け",

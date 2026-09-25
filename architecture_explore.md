@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `dee788a` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `ab6bb50` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 888 | 146,831 |
+| `tests/` | 888 | 146,939 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
 | `Imervue/gui/` | 167 | 33,155 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,291 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,153 |
-| `Imervue/multi_language/` | 8 | 14,139 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,179 |
+| `Imervue/multi_language/` | 8 | 14,144 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,226 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,739** | **329,158** |
+| **總計** | **1,739** | **329,297** |
 
-其中 `Imervue/` 套件本身 787 檔 / 167,962 行。
+其中 `Imervue/` 套件本身 787 檔 / 167,993 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -266,11 +266,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,802 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,767 | 繁體中文 |
-| `chinese.py` | 2,768 | 簡體中文 |
-| `japanese.py` | 2,781 | 日文 |
-| `korean.py` | 2,779 | 韓文 |
+| `english.py` | 2,803 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,768 | 繁體中文 |
+| `chinese.py` | 2,769 | 簡體中文 |
+| `japanese.py` | 2,782 | 日文 |
+| `korean.py` | 2,780 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -423,7 +423,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `gl_renderer.py` | 349 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
 | `tile_grid_renderer.py` | 279 | 縮圖牆 GL 繪製 |
 | `deep_zoom_renderer.py` | 277 | Deep-zoom 圖磚 + minimap GL 繪製 |
-| `overlay_painter.py` | 893 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
+| `overlay_painter.py` | 885 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
 | `tile_badges.py` | 93 | 圖磚徽章繪製：色彩標籤條、收藏、書籤、星等、堆疊數、日期、影片播放圓鈕（純 `QPainter`，不需 GL） |
 | `texture_upload.py` | 162 | 統一 RGBA 材質上傳（含 RGB→RGBA padding） |
 | `pbo_uploader.py` | 243 | Pixel-Buffer-Object 串流上傳，避免 GUI 執行緒卡在驅動 staging copy |
@@ -444,7 +444,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `input_controller.py` | 429 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
 | `key_input_handler.py` | 268 | 鍵盤事件路由（F8 HUD、F1-F5 色標籤、Esc、方向鍵） |
-| `key_action_dispatcher.py` | 353 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
+| `key_action_dispatcher.py` | 355 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
 | `drop_handler.py` | 75 | 拖放檔案/資料夾開啟 |
@@ -487,7 +487,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `batch_ops.py` | 289 | 批次重新命名（經 `batch_rename.rename_files`）/ 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
 | `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
-| `animation_player.py` | 310 | GIF / APNG / Animated WebP 播放器；解碼後超過 `_DECODED_FRAMES_BUDGET`（512 MB）就改為串流：留住檔案位元組（BytesIO，不鎖檔），播到哪格才解哪格，只快取最後一格 |
+| `animation_player.py` | 347 | GIF / APNG / Animated WebP 播放器；只有 `_ANIMATED_FORMATS`（GIF、PNG、WebP、AVIF、JXL）會播放，多頁 TIFF（`_PAGED_FORMATS`）是 `paged`：不播放、用逐格鍵翻頁、OSD 顯示「第 2/5 頁」（`anim_indicator_text`），其他 Pillow 回報多格的檔案（相機 JPEG 的 MPF 預覽被開成 MPO、PSD 的圖層）不當動畫；每格和靜態圖一樣經 `to_eight_bit` 與 `to_srgb`；解碼後超過 `_DECODED_FRAMES_BUDGET`（512 MB）就改為串流：留住檔案位元組（BytesIO，不鎖檔），播到哪格才解哪格，只快取最後一格 |
 | `search_dialog.py` | 280 | 檔名即時搜尋 |
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 318 | 鍵盤快捷動作實作（Ctrl+C 複製檢視器顯示的金字塔底層，沒有時才解碼檔案） |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-888 個檔、146,831 行。`pyproject.toml` 定義三個互斥層級 marker：
+888 個檔、146,939 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

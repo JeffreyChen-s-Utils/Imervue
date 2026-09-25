@@ -1667,6 +1667,8 @@ plus de 512 Mo une fois décodée est décodée image par image pendant la lectu
 ne fige pas la fenêtre et ne remplit pas la mémoire.
 Une image de 10 ms ou moins s'affiche 100 ms, comme dans les navigateurs : beaucoup de GIF comptent dessus.
 
+Un TIFF multipage — un document numérisé — n'est pas lu comme une animation : il affiche une page à la fois, tournée avec ``,`` et ``.``, et l'indicateur donne le numéro de page. Les images qui ne sont pas une animation ne défilent jamais non plus : l'aperçu qu'un appareil photo intègre à un JPEG (MPF) et les calques d'un PSD.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

@@ -381,6 +381,7 @@ english_word_dict = {
     "anim_frame_prev": "Previous Frame",
     "anim_frame_next": "Next Frame",
     "anim_frame_indicator": "Frame {current}/{total}",
+    "multipage_page_indicator": "Page {current}/{total}",
     "anim_speed": "Speed: {speed}x",
     # File association
     "file_assoc_menu": "File Association",

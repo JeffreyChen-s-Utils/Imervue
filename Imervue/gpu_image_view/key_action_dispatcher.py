@@ -335,6 +335,8 @@ class KeyActionDispatcher:
     def _dispatch_anim(self, action: str) -> None:
         view = self.view
         anim = view._animation
+        if anim.paged and action not in ("anim_prev", "anim_next"):
+            return   # a document's pages step; they don't play at a speed
         if action == "anim_toggle":
             anim.toggle()
         elif action == "anim_prev":

@@ -1659,6 +1659,8 @@ ocuparía más de 512 MB se decodifica fotograma a fotograma mientras se reprodu
 que abrirla no congela la ventana ni llena la memoria.
 Un fotograma de 10 ms o menos se muestra 100 ms, como en los navegadores: muchos GIF cuentan con ello.
 
+Un TIFF de varias páginas — un documento escaneado — no se reproduce: muestra una página cada vez, que se pasa con ``,`` y ``.``, y la indicación muestra el número de página. Tampoco se reproducen los fotogramas que no son una animación: la vista previa que la cámara incrusta en un JPEG (MPF) y las capas de un PSD.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

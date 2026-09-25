@@ -366,6 +366,7 @@ korean_word_dict = {
     "anim_frame_prev": "이전 프레임",
     "anim_frame_next": "다음 프레임",
     "anim_frame_indicator": "프레임 {current}/{total}",
+    "multipage_page_indicator": "{current}/{total} 페이지",
     "anim_speed": "속도: {speed}x",
     # 파일 연결
     "file_assoc_menu": "파일 연결",

@@ -371,3 +371,73 @@ class TestStreamingLargeAnimations:
         assert not pl.streaming
         assert pl.total_frames == 0
         assert pl.get_current_frame_data() is None
+
+
+class TestFramesThatAreNotAnAnimation:
+    """Pillow reports frames for files whose extra frames must never play."""
+
+    @staticmethod
+    def _tiff(path, pages=3):
+        images = [Image.new("RGB", (8, 6), colour) for colour in ("red", "green", "blue")[:pages]]
+        images[0].save(str(path), save_all=True, append_images=images[1:])
+        return str(path)
+
+    def test_a_camera_jpegs_mpf_preview_is_not_a_second_frame(self, tmp_path, qapp):
+        """A JPEG carrying an MPF preview opens as MPO: it flipped to the preview every 100 ms."""
+        path = tmp_path / "DSC_0001.JPG"
+        Image.new("RGB", (40, 30), "red").save(
+            str(path), format="MPO", save_all=True, append_images=[Image.new("RGB", (20, 15), "gray")])
+        with Image.open(path) as img:
+            assert img.format == "MPO" and img.n_frames == 2
+        player = ap.AnimationPlayer(None, str(path))
+        assert player.load() is False
+        assert not player.is_animated
+
+    def test_a_multi_page_tiff_is_paged_not_played(self, tmp_path, qapp):
+        """A scanned document flipped its pages at ten a second."""
+        player = ap.AnimationPlayer(_FakeGui(), self._tiff(tmp_path / "scan.tif"))
+        assert player.load() is True
+        assert player.paged and player.total_frames == 3
+        player.play()
+        assert player.playing is False
+        player.toggle()
+        assert player.playing is False
+        player.next_frame()
+        assert player.current_frame == 1
+        assert player.get_current_frame_data()[0, 0].tolist() == [0, 128, 0, 255]
+
+    def test_a_gif_still_plays(self, tmp_path, qapp):
+        player = ap.AnimationPlayer(_FakeGui(), _make_gif(tmp_path / "a.gif"))
+        assert player.load() is True
+        assert not player.paged
+        player.play()
+        assert player.playing is True
+        player.pause()
+
+    def test_sixteen_bit_pages_are_scaled_like_a_still(self, tmp_path, qapp):
+        path = tmp_path / "scan16.tif"
+        pages = [Image.fromarray(np.full((4, 4), value, dtype=np.uint16)) for value in (0, 32768, 65535)]
+        pages[0].save(str(path), save_all=True, append_images=pages[1:])
+        player = ap.AnimationPlayer(_FakeGui(), str(path))
+        assert player.load() is True
+        assert [int(frame[0, 0, 0]) for frame in player.frames] == [0, 128, 255]
+
+
+class TestIndicatorText:
+    @staticmethod
+    def _anim(**fields):
+        from types import SimpleNamespace
+        defaults = {"current_frame": 1, "total_frames": 5, "paged": False, "playing": True, "speed": 1.0}
+        return SimpleNamespace(**{**defaults, **fields})
+
+    def test_a_document_shows_its_page(self):
+        assert ap.anim_indicator_text(self._anim(paged=True), {}) == "Page 2/5"
+
+    def test_an_animation_shows_state_frame_and_speed(self):
+        assert ap.anim_indicator_text(self._anim(), {}) == "Pause  |  Frame 2/5  |  Speed: 1.0x"
+        assert ap.anim_indicator_text(self._anim(playing=False), {}).startswith("Play  |")
+
+    def test_the_page_readout_is_translated(self):
+        from Imervue.multi_language.traditional_chinese import traditional_chinese_word_dict
+        text = ap.anim_indicator_text(self._anim(paged=True), traditional_chinese_word_dict)
+        assert text == "第 2/5 頁"
