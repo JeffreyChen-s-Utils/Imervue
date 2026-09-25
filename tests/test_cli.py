@@ -1171,3 +1171,37 @@ def test_resize_and_strip_keep_a_sixteen_bit_source_sixteen_bit(tmp_path, comman
     with Image.open(out_dir / "g.png") as out:
         assert out.mode == "I;16"
         assert int(np.asarray(out).max()) > 60000
+
+
+
+def test_collage_reports_an_unreadable_input_and_keeps_the_rest(tmp_path, capsys):
+    """One bad input ended the run in a traceback with no collage written."""
+    _save(tmp_path / "a.png", size=(40, 40))
+    (tmp_path / "broken.png").write_bytes(b"not a picture")
+    _save(tmp_path / "b.png", size=(40, 40))
+    out = tmp_path / "grid.png"
+    code = main(["collage", str(tmp_path / "a.png"), str(tmp_path / "broken.png"),
+                 str(tmp_path / "b.png"), "--columns", "2", "--out", str(out)])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert out.exists()
+    assert "broken.png" in captured.err
+    assert "2 images" in captured.out
+
+
+def test_collage_with_nothing_readable_writes_nothing(tmp_path, capsys):
+    (tmp_path / "broken.png").write_bytes(b"not a picture")
+    out = tmp_path / "grid.png"
+    assert main(["collage", str(tmp_path / "broken.png"), "--out", str(out)]) == 1
+    assert not out.exists()
+    assert "broken.png" in capsys.readouterr().err
+
+
+def test_anaglyph_reports_an_unreadable_side(tmp_path, capsys):
+    (tmp_path / "left.png").write_bytes(b"not a picture")
+    _save(tmp_path / "right.png", size=(40, 40))
+    out = tmp_path / "ana.png"
+    assert main(["anaglyph", str(tmp_path / "left.png"), str(tmp_path / "right.png"),
+                 "--out", str(out)]) == 1
+    assert not out.exists()
+    assert "error:" in capsys.readouterr().err

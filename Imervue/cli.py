@@ -394,11 +394,19 @@ def cmd_collage(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     from Imervue.image.collage import build_collage
-    images = [load_shown_rgba(p) for p in paths]
+    images, errors = [], 0
+    for path in paths:
+        try:
+            images.append(load_shown_rgba(path))
+        except IMAGE_READ_ERRORS as exc:   # one unreadable file must not end the run
+            print(f"error: {path}: {exc}", file=sys.stderr)
+            errors += 1
+    if not images:
+        return 1
     _ensure_parent(out)
     Image.fromarray(build_collage(images, args.columns), mode="RGBA").save(out)
-    print(f"{len(paths)} images -> {out}")
-    return 0
+    print(f"{len(images)} images -> {out}")
+    return 1 if errors else 0
 
 
 def cmd_anaglyph(args) -> int:
@@ -414,7 +422,12 @@ def cmd_anaglyph(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     from Imervue.image.anaglyph import anaglyph
-    result = anaglyph(load_shown_rgba(left), load_shown_rgba(right), args.method)
+    try:
+        pair = load_shown_rgba(left), load_shown_rgba(right)
+    except IMAGE_READ_ERRORS as exc:   # reported like every other subcommand, no traceback
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    result = anaglyph(*pair, args.method)
     _ensure_parent(out)
     Image.fromarray(result, mode="RGBA").save(out)
     print(f"{left} + {right} -> {out}")
