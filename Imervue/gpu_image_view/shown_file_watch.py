@@ -7,12 +7,17 @@ file itself sees both. The reload waits until the writes have stopped for
 :data:`SETTLE_MS`, and only happens when the file's size or modification time
 really moved, so a save of the viewer's own that already reloaded the picture
 is not repeated.
+
+Qt on Windows tells a changed file by its modification time alone, so a save
+that keeps the old time (a tool preserving file dates) sends no signal: the
+file is also measured again whenever Imervue comes back to the front, which
+is when someone returning from the editor looks.
 """
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import QFileSystemWatcher, QObject, QTimer
+from PySide6.QtCore import QCoreApplication, QFileSystemWatcher, QObject, Qt, QTimer
 
 from Imervue.gpu_image_view.tile_loader import file_signature
 
@@ -37,6 +42,9 @@ class ShownFileWatch(QObject):
         self._settle.setSingleShot(True)
         self._settle.setInterval(SETTLE_MS)
         self._settle.timeout.connect(self._check)
+        app = QCoreApplication.instance()
+        if app is not None and hasattr(app, "applicationStateChanged"):
+            app.applicationStateChanged.connect(self._on_application_state)
 
     @property
     def path(self) -> str | None:
@@ -61,6 +69,10 @@ class ShownFileWatch(QObject):
     def _on_file_changed(self, path: str) -> None:
         if path == self._path:
             self._settle.start()   # every write restarts the wait
+
+    def _on_application_state(self, state: Qt.ApplicationState) -> None:
+        if state == Qt.ApplicationState.ApplicationActive and self._path is not None:
+            self._settle.start()   # back from the editor: measure the file again
 
     def _check(self) -> None:
         path = self._path

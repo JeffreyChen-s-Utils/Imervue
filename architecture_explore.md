@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `686f551` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `20c560b` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 886 | 146,642 |
+| `tests/` | 886 | 146,672 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,146 |
 | `Imervue/gui/` | 167 | 33,189 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,291 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,129 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,141 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,737** | **328,962** |
+| **總計** | **1,737** | **329,004** |
 
-其中 `Imervue/` 套件本身 787 檔 / 167,955 行。
+其中 `Imervue/` 套件本身 787 檔 / 167,967 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -416,7 +416,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `gpu_image_view.py` | 756 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
 | `view_state_init.py` | 278 | 建構子呼叫的狀態初始化函式（tile grid、deep zoom、瀏覽、互動、顯示），只設定屬性、不碰 GL |
 | `deep_zoom_loading.py` | 299 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知） |
-| `shown_file_watch.py` | 75 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看（`QFileSystemWatcher`，`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間）；外部編輯器就地覆寫、寫副本再改名蓋過去都看得到，寫入停止 0.5 秒後、大小或修改時間確實變了才經 `_reload_rewritten_image` 重新載入並重解縮圖（資料夾監看只看得到清單變動，看不到這兩種存檔） |
+| `shown_file_watch.py` | 87 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看（`QFileSystemWatcher`，`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間）；外部編輯器就地覆寫、寫副本再改名蓋過去都看得到，寫入停止 0.5 秒後、大小或修改時間確實變了才經 `_reload_rewritten_image` 重新載入並重解縮圖（資料夾監看只看得到清單變動，看不到這兩種存檔）；Qt 在 Windows 只比修改時間，保留原時間的存檔送不出訊號，所以 Imervue 回到前景（`applicationStateChanged` → Active）時也重新量一次 |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
 | `prefetch_memory.py` | 123 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
 | `view_mouse.py` | 148 | `ViewMouseMixin`：滾輪縮放（含放大鏡倍率、格線與閱讀模式捲動）、按壓／拖曳／放開、雙擊切換 |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-886 個檔、146,642 行。`pyproject.toml` 定義三個互斥層級 marker：
+886 個檔、146,672 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

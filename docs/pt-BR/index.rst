@@ -139,7 +139,7 @@ Panoramas muito acima do limite de segurança de 179 megapixels do Pillow també
 
 Um JPEG, PNG, TIFF, GIF ou BMP incompleto — um download ou cópia interrompidos, uma foto recuperada de um cartão de memória com defeito — abre com a parte que foi lida, como no navegador, em vez de não abrir.
 
-Quando outro programa salva por cima de uma imagem — um editor externo, direto no arquivo ou renomeando uma cópia por cima —, o visualizador mostra a versão nova: a imagem aberta no zoom profundo meio segundo após a última gravação, as miniaturas da grade em poucos segundos.
+Quando outro programa salva por cima de uma imagem — um editor externo, direto no arquivo ou renomeando uma cópia por cima —, o visualizador mostra a versão nova: a imagem aberta no zoom profundo meio segundo após a última gravação (e de novo quando o Imervue volta ao primeiro plano), as miniaturas da grade em poucos segundos.
 
 Um PNG ou TIFF em cinza de 16 bits — um escaneamento, um mapa de profundidade, uma imagem científica ou astronômica — e um TIFF de ponto flutuante mostram seu brilho real no visualizador, nas miniaturas, nas prévias e nas ferramentas, em vez de quase branco ou preto: valores de 16 bits são escalados em toda a faixa, valores de ponto flutuante de 0 a 1 vão do preto ao branco e qualquer outra faixa é esticada.
 

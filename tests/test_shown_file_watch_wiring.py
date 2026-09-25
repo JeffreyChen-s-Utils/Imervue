@@ -1,6 +1,7 @@
 """The viewer's wiring of :class:`ShownFileWatch`: an external save reloads the deep-zoom picture."""
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -29,7 +30,9 @@ def test_an_external_save_of_the_shown_picture_reloads_it_and_its_thumbnail(
                         lambda _view, p, _gen: thumbnails.append(p))
     view._deep_zoom_path = str(path)
     view._shown_file_watch.follow(str(path))
+    later = path.stat().st_mtime + 2   # Qt tells a change by the time alone: a real save is later
     path.write_bytes(b"y" * 300)
+    os.utime(path, (later, later))
     assert pump_until(lambda: reloads == [str(path)])
     assert thumbnails == [str(path)]
 

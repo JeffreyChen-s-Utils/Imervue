@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 
 import pytest
+from PySide6.QtCore import Qt
 
 from Imervue.gpu_image_view import shown_file_watch
 from Imervue.gpu_image_view.shown_file_watch import ShownFileWatch
@@ -26,6 +27,17 @@ def _picture(tmp_path, name="a.png", size=100):
     path = tmp_path / name
     path.write_bytes(b"x" * size)
     return str(path)
+
+
+def _dated_after(target, previous) -> None:
+    """Give *target* a modification time 2 s after *previous*'s, as a real later save has.
+
+    Qt on Windows tells a changed file by its modification time alone, and two
+    writes inside one tick of the system clock (up to 15.6 ms) share it: a test
+    that saves straight after creating the file would go unnoticed.
+    """
+    stamp = os.stat(previous).st_mtime + 2
+    os.utime(target, (stamp, stamp))
 
 
 def test_follow_watches_the_file_and_none_stops(watch, tmp_path):
@@ -60,6 +72,7 @@ def test_an_in_place_rewrite_reloads(watch, tmp_path, pump_until):
     watch.follow(path)
     with open(path, "r+b") as handle:
         handle.write(b"y" * 300)
+    _dated_after(path, path)
     assert pump_until(lambda: watch.reloads == [path])
 
 
@@ -68,6 +81,7 @@ def test_a_copy_renamed_over_the_file_reloads(watch, tmp_path, pump_until):
     watch.follow(path)
     copy = tmp_path / "a.png.tmp"
     copy.write_bytes(b"z" * 300)
+    _dated_after(copy, path)
     os.replace(copy, path)
     assert pump_until(lambda: watch.reloads == [path])
 
@@ -77,9 +91,11 @@ def test_a_second_rewrite_reloads_again(watch, tmp_path, pump_until):
     watch.follow(path)
     with open(path, "r+b") as handle:
         handle.write(b"y" * 300)
+    _dated_after(path, path)
     assert pump_until(lambda: len(watch.reloads) == 1)
     with open(path, "ab") as handle:
         handle.write(b"more")
+    _dated_after(path, path)
     assert pump_until(lambda: len(watch.reloads) == 2)
 
 
@@ -105,3 +121,32 @@ def test_a_removed_file_is_left_to_the_folder_refresh(watch, tmp_path):
     os.remove(path)
     watch._check()
     assert watch.reloads == []
+
+
+def test_coming_back_to_the_front_catches_a_save_that_kept_the_old_time(watch, qapp, tmp_path, pump_until):
+    path = _picture(tmp_path)
+    watch.follow(path)
+    watch._watcher.removePaths(watch._watcher.files())   # Qt misses this save
+    stamp = os.stat(path).st_mtime
+    with open(path, "r+b") as handle:
+        handle.write(b"y" * 300)
+    os.utime(path, (stamp, stamp))   # a tool that preserves file dates
+    qapp.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    assert pump_until(lambda: watch.reloads == [path])
+
+
+def test_coming_back_with_nothing_changed_reloads_nothing(watch, qapp, tmp_path, pump_until):
+    path = _picture(tmp_path)
+    watch.follow(path)
+    qapp.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    assert watch._settle.isActive()
+    assert pump_until(lambda: not watch._settle.isActive())
+    assert watch.reloads == []
+
+
+def test_going_to_the_background_or_watching_nothing_measures_nothing(watch, qapp, tmp_path):
+    qapp.applicationStateChanged.emit(Qt.ApplicationState.ApplicationActive)
+    assert not watch._settle.isActive()   # no picture followed
+    watch.follow(_picture(tmp_path))
+    qapp.applicationStateChanged.emit(Qt.ApplicationState.ApplicationInactive)
+    assert not watch._settle.isActive()

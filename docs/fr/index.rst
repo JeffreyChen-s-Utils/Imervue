@@ -138,7 +138,7 @@ Les panoramas bien au-delà de la limite de sécurité de 179 mégapixels de Pil
 
 Un JPEG, PNG, TIFF, GIF ou BMP tronqué — un téléchargement ou une copie interrompus, une photo récupérée sur une carte mémoire défaillante — s'ouvre avec la partie lue, comme dans un navigateur, au lieu de ne pas s'ouvrir du tout.
 
-Quand un autre programme enregistre par-dessus une image — un éditeur externe, sur place ou en renommant une copie par-dessus —, la visionneuse affiche la nouvelle version : l'image ouverte en zoom profond une demi-seconde après la dernière écriture, les vignettes de la grille en quelques secondes.
+Quand un autre programme enregistre par-dessus une image — un éditeur externe, sur place ou en renommant une copie par-dessus —, la visionneuse affiche la nouvelle version : l'image ouverte en zoom profond une demi-seconde après la dernière écriture (et de nouveau quand Imervue revient au premier plan), les vignettes de la grille en quelques secondes.
 
 Un PNG ou TIFF en gris 16 bits — un scan, une carte de profondeur, une image scientifique ou astronomique — et un TIFF à virgule flottante montrent leur vraie luminosité dans la visionneuse, les vignettes, les aperçus et les outils, au lieu de presque blanc ou noir : les valeurs 16 bits sont mises à l'échelle sur toute leur plage, les valeurs flottantes de 0 à 1 vont du noir au blanc et toute autre plage est étirée.
 
