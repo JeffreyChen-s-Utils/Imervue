@@ -193,3 +193,31 @@ def test_a_browse_that_is_cancelled_confirms_nothing(
     dlg._do_export()  # noqa: SLF001
     assert len(replace_answers["asked"]) == 1
 
+
+
+def test_a_failed_export_says_so_and_keeps_the_dialog_open(
+        export_dialog, tmp_path, monkeypatch):
+    """A failed save was only logged: Save seemed to do nothing at all."""
+    warnings = []
+    monkeypatch.setattr(QMessageBox, "warning",
+                        lambda _parent, title, text, *_rest: warnings.append((title, text)))
+
+    def disk_full(*_args, **_kwargs):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(mod, "save_image", disk_full)
+    src = _png(tmp_path / "photo.png")
+    dlg = export_dialog(src)
+    dlg._do_export()  # noqa: SLF001
+    ((title, text),) = warnings
+    assert title == "Export Image" and "No space left on device" in text
+    assert dlg.result() != dlg.DialogCode.Accepted
+
+
+def test_a_successful_export_warns_nothing(export_dialog, tmp_path, monkeypatch):
+    warnings = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *a: warnings.append(a))
+    dlg = export_dialog(_png(tmp_path / "photo.png"))
+    dlg._do_export()  # noqa: SLF001
+    assert warnings == []
+    assert dlg.result() == dlg.DialogCode.Accepted

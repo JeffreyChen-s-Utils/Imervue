@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSlider, QPushButton,
+    QSlider, QPushButton, QMessageBox,
 )
 
 from Imervue.gui.export_metadata_combo import metadata_row
@@ -229,10 +229,17 @@ class ExportDialog(WorkerHostMixin, QDialog):
             img = open_export_source(self.source_path)
             extra = export_save_options(self.source_path, self.metadata_combo.currentData())
             save_image(img, output_path, fmt, self._quality_for(fmt), extra)
-            logger.info(f"Exported image to {output_path} as {fmt}")
-            self.accept()
         except Exception as exc:
-            logger.exception(f"Export failed: {exc}")
+            # Whatever the cause (a full disk, a codec error, an unreadable
+            # source), say so: a failure that is only logged looks like a Save
+            # button that does nothing. The dialog stays open to try again.
+            logger.exception("Exporting %s to %s failed", self.source_path, output_path)
+            QMessageBox.warning(
+                self, self._lang.get("export_title", "Export Image"),
+                self._lang.get("generic_error", "Error: {error}").format(error=exc))
+            return
+        logger.info("Exported image to %s as %s", output_path, fmt)
+        self.accept()
 
 
 def open_export_dialog(main_gui: GPUImageView) -> None:
