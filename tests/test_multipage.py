@@ -9,7 +9,7 @@ from Imervue.image.multipage import (
     combine_to_multipage,
     multipage_format,
     split_multipage,
-    split_page_name,
+    split_page_stem,
 )
 
 
@@ -30,9 +30,9 @@ def test_multipage_format():
     assert multipage_format(".png") is None
 
 
-def test_split_page_name_zero_padded():
-    assert split_page_name("/a/doc.tiff", 2, ".png") == "doc_page002.png"
-    assert split_page_name("doc.tiff", 0, "jpg") == "doc_page000.jpg"
+def test_split_page_stem_zero_padded():
+    assert split_page_stem("/a/doc.tiff", 2) == "doc_page002"
+    assert split_page_stem("my.doc.tiff", 0) == "my.doc_page000"
 
 
 def test_combine_rejects_bad_destination(tmp_path):
@@ -68,3 +68,28 @@ def test_combine_pdf_writes_file(tmp_path):
     combine_to_multipage(paths, str(dst))
     assert dst.exists()
     assert dst.stat().st_size > 0
+
+
+def _three_page_tiff(tmp_path):
+    paths = [_png(tmp_path / f"p{i}.png", v) for i, v in enumerate((10, 128, 250))]
+    dst = tmp_path / "doc.tiff"
+    combine_to_multipage(paths, str(dst))
+    return dst
+
+
+def test_split_names_pages_with_the_extension_lowercased(tmp_path):
+    pages = split_multipage(str(_three_page_tiff(tmp_path)), str(tmp_path / "out"), "JPG")
+    assert [p.name for p in pages] == ["doc_page000.jpg", "doc_page001.jpg", "doc_page002.jpg"]
+
+
+def test_splitting_again_keeps_the_earlier_pages(tmp_path):
+    """A second split into the same folder replaced the first one's pages without a word."""
+    src = _three_page_tiff(tmp_path)
+    out = tmp_path / "out"
+    split_multipage(str(src), str(out))
+    retouched = out / "doc_page001.png"
+    retouched.write_bytes(b"retouched since")
+    again = split_multipage(str(src), str(out))
+    assert retouched.read_bytes() == b"retouched since"
+    assert [p.name for p in again] == ["doc_page000_1.png", "doc_page001_1.png", "doc_page002_1.png"]
+    assert all(p.is_file() for p in again)

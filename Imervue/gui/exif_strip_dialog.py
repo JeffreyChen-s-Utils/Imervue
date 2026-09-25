@@ -28,6 +28,7 @@ from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
 from Imervue.image.recipe_store import carry_recipe
 from Imervue.image.shown import as_shown
 from Imervue.system.atomic_write import replace_atomically
+from Imervue.system.free_names import free_names
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -89,10 +90,11 @@ def strip_exif(path: str, *, remove_all: bool = True,
     if overwrite:
         out_path = path
     else:
-        stem = Path(path).stem
-        ext = Path(path).suffix
-        out_dir = output_dir or str(Path(path).parent)
-        out_path = os.path.join(out_dir, f"{stem}_clean{ext}")
+        # A free name: an earlier run's copy, or a same-named photo from another
+        # folder cleaned into the same output folder, is kept.
+        source = Path(path)
+        out_dir = output_dir or str(source.parent)
+        out_path = str(free_names(out_dir, [f"{source.stem}_clean"], source.suffix)[0])
 
     # Save kwargs
     save_kwargs: dict = {}

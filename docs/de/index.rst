@@ -479,7 +479,7 @@ synchronisiert werden.
 
 Die Datei auf der Festplatte ändert sich nur auf Ihre Anweisung. **Apply Crop** und das **Speichern** von Anmerkungen schreiben das Ergebnis zurück in die Datei und behalten ihre EXIF-Daten (Kamera, Aufnahmedatum, GPS), XMP und DPI. Eine Kamera-RAW-, HEIC- oder animierte / mehrseitige Datei wird nie überschrieben: beim Zuschneiden werden Sie zum Export aufgefordert, beim Speichern von Anmerkungen nach einer neuen Datei gefragt. Die Einmal-Werkzeuge (CLAHE, HSL-Mixer, Fotorahmen, Auto-Begradigen …) speichern
 ihr Ergebnis neben dem Original als ``photo_clahe.png``; ein erneuter Lauf speichert
-``photo_clahe_1.png``, statt das letzte Ergebnis zu ersetzen. Rezept und virtuelle Kopien eines Fotos bleiben bei ihm, wenn
+``photo_clahe_1.png``, statt das letzte Ergebnis zu ersetzen. **Auto-Rotate by EXIF**, die Kopien von **Batch EXIF Strip** und **Split Pages…** nummerieren ihre Dateien genauso. Rezept und virtuelle Kopien eines Fotos bleiben bei ihm, wenn
 Imervue es verlustfrei dreht (der Zuschnitt dreht mit) oder sein EXIF neu schreibt
 (GPS-Geotag, EXIF-Editor); ein Rezept mit lokalen Masken, Ebenen, Linsenreflex oder
 Gesichtstags bleibt bei der ungedrehten Fassung, bis sie zurückgedreht wird.

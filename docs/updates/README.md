@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-54 | 2026-09-25 | Auto-rotate, EXIF Strip copies and Split Pages number their files instead of replacing | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260925-53 | 2026-09-25 | Export never replaces a file, the photo itself above all, without asking | #fix #export #data-loss | [2026-09](2026-09.md) |
 | U-20260925-52 | 2026-09-25 | Picking a free file name moves to system/free_names (refactor) | #refactor #files | [2026-09](2026-09.md) |
 | U-20260925-51 | 2026-09-25 | Paint export presets and annotation projects save in one step | #bugfix #paint #annotation #data-loss | [2026-09](2026-09.md) |

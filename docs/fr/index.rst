@@ -477,7 +477,7 @@ via le flux de fichiers annexes XMP décrit dans la section Métadonnées.
 Le fichier sur disque ne change que si vous le demandez. **Apply Crop** et le **Save** des annotations réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier. Les outils à usage unique (CLAHE, mélangeur TSL, cadre photo, redressement
 automatique…) enregistrent leur résultat à côté de l'original sous
 ``photo_clahe.png`` ; une nouvelle exécution enregistre ``photo_clahe_1.png`` au
-lieu de remplacer le dernier résultat. La recette et les copies virtuelles d'une photo la suivent quand Imervue la fait
+lieu de remplacer le dernier résultat. **Auto-Rotate by EXIF**, les copies de **Batch EXIF Strip** et **Split Pages…** numérotent leurs fichiers de la même façon. La recette et les copies virtuelles d'une photo la suivent quand Imervue la fait
 pivoter sans perte (le recadrage pivote avec elle) ou réécrit son EXIF (géomarquage
 GPS, éditeur EXIF) ; une recette avec des masques locaux, des calques, un reflet
 d'objectif ou des étiquettes de visages reste avec la version non pivotée jusqu'à ce

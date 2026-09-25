@@ -60,3 +60,28 @@ def test_auto_orient_skips_unreadable_files_and_says_so(qapp, tmp_path, caplog):
     assert gui.main_window.toast.calls == [("info", "No images to orient")]
     assert any("Auto-orient failed" in r.getMessage() for r in caplog.records)
     assert list(tmp_path.iterdir()) == [bad]
+
+
+def test_auto_orient_keeps_an_earlier_copy(qapp, tmp_path):
+    """Running it again replaced the last copy, retouching done to it since included."""
+    src = tmp_path / "p.png"
+    Image.new("RGB", (8, 4)).save(src)
+    earlier = tmp_path / "p_oriented.png"
+    earlier.write_bytes(b"retouched since")
+    right_click_menu._auto_orient(_gui([str(src)]))  # noqa: SLF001
+    assert earlier.read_bytes() == b"retouched since"
+    with Image.open(tmp_path / "p_oriented_1.png") as out:
+        assert out.size == (8, 4)
+
+
+def test_auto_orient_gives_same_stem_photos_their_own_copies(qapp, tmp_path):
+    """p.jpg and p.png in one selection both wrote p_oriented.png; the second won."""
+    jpg, png = tmp_path / "p.jpg", tmp_path / "p.png"
+    Image.new("RGB", (8, 4)).save(jpg)
+    Image.new("RGB", (6, 2)).save(png)
+    gui = _gui([str(jpg), str(png)])
+    right_click_menu._auto_orient(gui)  # noqa: SLF001
+    with Image.open(tmp_path / "p_oriented.png") as first, \
+            Image.open(tmp_path / "p_oriented_1.png") as second:
+        assert (first.size, second.size) == ((8, 4), (6, 2))
+    assert gui.main_window.toast.calls == [("success", "Oriented 2 photo(s)")]

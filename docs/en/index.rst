@@ -475,7 +475,7 @@ via the XMP sidecar flow described in the Metadata section.
 
 The file on disk changes only when you ask for it. **Apply Crop** and the annotation **Save** write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten: the crop asks you to export instead, and the annotation save asks for a new file. The one-shot tools (CLAHE, HSL Mixer, Photo Frame, Auto Straighten …) save their
 result beside the original as ``photo_clahe.png``; running one again saves
-``photo_clahe_1.png`` rather than replacing the last result. A photo's recipe and virtual copies stay with it when Imervue
+``photo_clahe_1.png`` rather than replacing the last result. **Auto-Rotate by EXIF**, the copies from **Batch EXIF Strip** and **Split Pages…** number their files the same way. A photo's recipe and virtual copies stay with it when Imervue
 rotates it losslessly (the crop turns with the photo) or rewrites its EXIF (GPS
 Geotag, the EXIF editor); a recipe with local masks, layers, a lens flare or face
 tags stays with the unrotated version until it is turned back.

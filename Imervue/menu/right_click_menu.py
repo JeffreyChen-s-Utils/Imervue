@@ -576,7 +576,8 @@ def _auto_cull_low_quality(main_gui: GPUImageView) -> None:
 
 
 def _auto_orient(main_gui: GPUImageView) -> None:
-    """Write an upright PNG copy (``<stem>_oriented.png``) of each selected image."""
+    """Write an upright PNG copy (``<stem>_oriented.png``, then ``_1``…) of each selected image."""
+    from Imervue.gui._apply_save import output_path
     from Imervue.gui.export_source import recipe_base_image
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
     paths = list(main_gui.selected_tiles)
@@ -584,10 +585,12 @@ def _auto_orient(main_gui: GPUImageView) -> None:
     toast = getattr(main_gui.main_window, "toast", None)
     count = 0
     for path in paths:
-        out_path = Path(path).with_name(f"{Path(path).stem}_oriented.png")
         try:
             # The viewer's decode: upright, sRGB (the copy has no ICC), full-size RAW.
-            recipe_base_image(path, None).save(str(out_path))
+            image = recipe_base_image(path, None)
+            # A free name: an earlier copy may have been retouched since, and
+            # p.jpg and p.png in one selection both want p_oriented.png.
+            image.save(output_path(path, "oriented"))
         except IMAGE_READ_ERRORS:
             logging.getLogger("Imervue.right_click_menu").warning(
                 "Auto-orient failed for %s", path, exc_info=True)

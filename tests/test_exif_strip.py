@@ -118,6 +118,27 @@ class TestStripExif:
         out_path = strip_exif(src, overwrite=False, output_dir=out_dir)
         assert "photo_clean.jpg" in out_path
 
+    def test_a_second_copy_keeps_the_first(self, tmp_path):
+        """photo.jpg from two folders cleaned into one output folder: the second replaced the first."""
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        firsts = []
+        for folder in ("a", "b"):
+            (tmp_path / folder).mkdir()
+            src = str(tmp_path / folder / "photo.jpg")
+            _make_jpeg_with_exif(src)
+            firsts.append(strip_exif(src, overwrite=False, output_dir=str(out_dir)))
+        assert [Path(p).name for p in firsts] == ["photo_clean.jpg", "photo_clean_1.jpg"]
+        assert all(os.path.isfile(p) for p in firsts)
+
+    def test_a_copy_beside_the_original_is_numbered_too(self, tmp_path):
+        src = str(tmp_path / "photo.jpg")
+        _make_jpeg_with_exif(src)
+        (tmp_path / "photo_clean.jpg").write_bytes(b"cleaned and retouched")
+        out_path = strip_exif(src, overwrite=False)
+        assert Path(out_path).name == "photo_clean_1.jpg"
+        assert (tmp_path / "photo_clean.jpg").read_bytes() == b"cleaned and retouched"
+
     def test_png_no_crash(self, tmp_path):
         path = str(tmp_path / "img.png")
         arr = np.full((10, 10, 3), 128, dtype=np.uint8)

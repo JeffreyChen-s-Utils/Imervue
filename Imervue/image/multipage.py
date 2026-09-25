@@ -14,6 +14,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.system.free_names import free_names
+
 _FORMAT_BY_EXT: dict[str, str] = {".pdf": "PDF", ".tif": "TIFF", ".tiff": "TIFF"}
 _PAGE_NUMBER_WIDTH = 3
 # Formats that cannot carry alpha / palette — flatten to RGB before saving.
@@ -25,10 +27,13 @@ def multipage_format(ext: str) -> str | None:
     return _FORMAT_BY_EXT.get(ext.lower())
 
 
-def split_page_name(source: str, index: int, ext: str) -> str:
-    """Deterministic output filename for one split page (zero-padded index)."""
-    suffix = ext if ext.startswith(".") else f".{ext}"
-    return f"{Path(source).stem}_page{index:0{_PAGE_NUMBER_WIDTH}d}{suffix.lower()}"
+def split_page_stem(source: str, index: int) -> str:
+    """Name of one split page without its extension: ``doc_page002`` (zero-padded index)."""
+    return f"{Path(source).stem}_page{index:0{_PAGE_NUMBER_WIDTH}d}"
+
+
+def _suffix(ext: str) -> str:
+    return (ext if ext.startswith(".") else f".{ext}").lower()
 
 
 def _prepare(img: Image.Image, fmt: str) -> Image.Image:
@@ -57,16 +62,22 @@ def combine_to_multipage(paths: list[str], destination: str) -> dict:
 
 
 def split_multipage(source: str, out_dir: str, ext: str = ".png") -> list[Path]:
-    """Split a raster multi-page file (TIFF/GIF/APNG) into one image per page."""
+    """Split a raster multi-page file (TIFF/GIF/APNG) into one image per page.
+
+    The pages are ``doc_page000.png`` … in *out_dir*; when any of those names
+    is taken (an earlier split, perhaps retouched since) the whole set moves
+    to ``doc_page000_1.png`` … instead of replacing it.
+    """
     out_root = Path(out_dir)
     out_root.mkdir(parents=True, exist_ok=True)
-    mode = "RGBA" if ext.lower() == ".png" else "RGB"
+    suffix = _suffix(ext)
+    mode = "RGBA" if suffix == ".png" else "RGB"
     saved: list[Path] = []
     with Image.open(source) as img:
         frames = getattr(img, "n_frames", 1)
-        for index in range(frames):
+        stems = [split_page_stem(source, index) for index in range(frames)]
+        for index, out_path in enumerate(free_names(out_root, stems, suffix)):
             img.seek(index)
-            out_path = out_root / split_page_name(source, index, ext)
             img.convert(mode).save(str(out_path))
             saved.append(out_path)
     return saved
