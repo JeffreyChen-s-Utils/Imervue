@@ -73,7 +73,7 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
 - **常見格式**：PNG、JPEG（.jpg、.jpeg、.jpe、.jfif、.jif）、BMP、TIFF、WebP、GIF、APNG、SVG
 - **RAW 格式**：CR2 / CR3 / CRW（Canon）、NEF / NRW（Nikon）、ARW / SRF / SR2（Sony）、DNG（Adobe）、RAF（Fujifilm）、ORF（Olympus / OM System）、RW2（Panasonic）、RWL（Leica）、PEF（Pentax）、SRW（Samsung）、3FR（Hasselblad）、IIQ（Phase One）、MEF（Mamiya）、MOS（Leaf）、ERF（Epson）、MRW（Minolta）、KDC / DCR（Kodak）
 - **新式格式**：AVIF（內建）；HEIC / HEIF 需要選用的 ``pillow-heif``；JPEG XL 需要選用的 ``pillow-jxl-plugin``
-- **其他**：ICO、TGA、DDS、QOI、JPEG 2000（.jp2／.j2k／.jpf／.jpx）、Netpbm（PPM／PGM／PBM／PNM）、PCX——僅供檢視；原地旋轉等寫回操作會被拒絕，編輯請用「另存新檔」／「匯出」儲存
+- **其他**：ICO、TGA、DDS、QOI、JPEG 2000（.jp2／.j2k／.jpf／.jpx）、Netpbm（PPM／PGM／PBM／PNM）、PCX、PSD（合併後的影像）——僅供檢視；原地旋轉等寫回操作會被拒絕，編輯請用「另存新檔」／「匯出」儲存
 
 ----
 

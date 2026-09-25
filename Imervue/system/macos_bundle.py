@@ -34,6 +34,7 @@ _UTI_BY_EXT: dict[str, str] = {
     ".tga": "com.truevision.tga-image",
     ".dds": "com.microsoft.dds",
     ".pbm": "public.pbm",
+    ".psd": "com.adobe.photoshop-image",
     **dict.fromkeys((".jp2", ".j2k", ".jpf", ".jpx"), "public.jpeg-2000"),
     # No system type of their own: declared as plain images.
     **dict.fromkeys((".qoi", ".ppm", ".pgm", ".pnm", ".pcx"), "public.image"),

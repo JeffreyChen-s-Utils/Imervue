@@ -8,6 +8,7 @@ from PIL import Image
 from Imervue.image.multipage import (
     combine_to_multipage,
     multipage_format,
+    page_count,
     split_multipage,
     split_page_stem,
 )
@@ -151,3 +152,38 @@ def test_combine_can_replace_one_of_its_own_pages(tmp_path):
     with Image.open(dst) as doc:
         assert doc.n_frames == 2
         assert doc.convert("RGB").getpixel((0, 0)) == (200, 0, 0)
+
+
+def _layered_psd(tmp_path):
+    import numpy as np
+
+    from Imervue.paint.document import PaintDocument
+    from Imervue.paint.psd_io import save_psd
+    doc = PaintDocument()
+    base = np.zeros((8, 10, 4), dtype=np.uint8)
+    base[...] = (200, 100, 50, 255)
+    doc.load_image(base)
+    doc.add_layer(name="Above").image[2:6, 2:6] = (10, 200, 30, 255)
+    path = tmp_path / "layered.psd"
+    save_psd(doc, path)
+    return path
+
+
+def test_a_psds_layers_are_not_pages(tmp_path):
+    """Pillow counts a PSD's layers as frames from 1; splitting raised EOFError on frame 0."""
+    path = _layered_psd(tmp_path)
+    with Image.open(path) as img:
+        assert getattr(img, "n_frames", 1) == 2
+        assert page_count(img) == 1
+    pages = split_multipage(str(path), str(tmp_path / "pages"))
+    assert [p.name for p in pages] == ["layered_page000.png"]
+    with Image.open(pages[0]) as page:
+        assert page.getpixel((3, 3))[:3] == (10, 200, 30)   # the merged picture
+
+
+def test_page_count_of_a_multi_page_tiff_is_its_frames(tmp_path):
+    frames = [Image.new("RGB", (4, 4), colour) for colour in ("red", "green", "blue")]
+    path = tmp_path / "doc.tif"
+    frames[0].save(path, save_all=True, append_images=frames[1:])
+    with Image.open(path) as img:
+        assert page_count(img) == 3

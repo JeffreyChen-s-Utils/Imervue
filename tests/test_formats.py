@@ -49,7 +49,8 @@ _EXTRA_SAMPLES = [
 
 
 def test_every_extra_format_has_a_sample():
-    assert {ext for ext, _fmt, _mode in _EXTRA_SAMPLES} == formats.PILLOW_EXTRA_EXTENSIONS
+    # Pillow writes no PSD: test_a_layered_psd_shows_its_composite writes one with Paint's writer.
+    assert {ext for ext, _fmt, _mode in _EXTRA_SAMPLES} | {".psd"} == formats.PILLOW_EXTRA_EXTENSIONS
     assert formats.PILLOW_EXTRA_EXTENSIONS <= STILL_IMAGE_EXTENSIONS
 
 
@@ -67,6 +68,31 @@ def test_pillows_own_extra_formats_open_for_viewing(tmp_path, ext, fmt, mode):
     assert _scan_images(str(tmp_path)) == [str(path)]
     assert decode_image_file(str(path)).shape == (32, 32, 4)
     assert in_place_format(str(path)) is None   # viewing only: nothing writes it back
+
+
+def test_a_layered_psd_shows_its_composite(tmp_path):
+    """The viewer shows the merged picture a PSD stores, never its layers as frames."""
+    import numpy as np
+
+    from Imervue.gpu_image_view.actions.animation_player import is_animated_file
+    from Imervue.gpu_image_view.images.image_loader import _scan_images, decode_image_file
+    from Imervue.image.in_place_save import in_place_format
+    from Imervue.paint.document import PaintDocument
+    from Imervue.paint.psd_io import save_psd
+    doc = PaintDocument()
+    base = np.zeros((40, 60, 4), dtype=np.uint8)
+    base[...] = (200, 100, 50, 255)
+    doc.load_image(base)
+    doc.add_layer(name="Above").image[10:30, 10:30] = (10, 200, 30, 255)
+    path = tmp_path / "layered.psd"
+    save_psd(doc, path)
+    assert _scan_images(str(tmp_path)) == [str(path)]
+    shown = decode_image_file(str(path))
+    assert shown.shape == (40, 60, 4)
+    assert shown[2, 2].tolist() == [200, 100, 50, 255]
+    assert shown[20, 20].tolist() == [10, 200, 30, 255]
+    assert not is_animated_file(str(path))
+    assert in_place_format(str(path)) is None
 
 
 def test_rotating_an_extra_format_in_place_is_refused(tmp_path):

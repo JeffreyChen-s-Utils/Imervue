@@ -82,7 +82,7 @@ Formats pris en charge
 - **Standards** : PNG, JPEG (.jpg, .jpeg, .jpe, .jfif, .jif), BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW** : CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **Modernes** : AVIF (intégré) ; HEIC / HEIF avec le paquet optionnel ``pillow-heif`` ; JPEG XL avec le paquet optionnel ``pillow-jxl-plugin``
-- **Autres** : ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX — en lecture ; les faire pivoter sur place et les autres réécritures sont refusés, une modification passe par Enregistrer sous / Exporter
+- **Autres** : ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX, PSD (l'image fusionnée) — en lecture ; les faire pivoter sur place et les autres réécritures sont refusés, une modification passe par Enregistrer sous / Exporter
 
 ----
 

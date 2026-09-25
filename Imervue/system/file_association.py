@@ -43,6 +43,7 @@ _MIME_BY_EXT = {
     ".jpf": "image/jpx", ".jpx": "image/jpx", ".ppm": "image/x-portable-pixmap",
     ".pgm": "image/x-portable-graymap", ".pbm": "image/x-portable-bitmap",
     ".pnm": "image/x-portable-anymap", ".pcx": "image/vnd.zbrush.pcx",
+    ".psd": "image/vnd.adobe.photoshop",
     ".cr2": "image/x-canon-cr2", ".cr3": "image/x-canon-cr3", ".crw": "image/x-canon-crw",
     ".nef": "image/x-nikon-nef", ".nrw": "image/x-nikon-nrw",
     ".arw": "image/x-sony-arw", ".srf": "image/x-sony-srf", ".sr2": "image/x-sony-sr2",

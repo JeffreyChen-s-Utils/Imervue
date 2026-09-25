@@ -47,6 +47,7 @@ PILLOW_EXTRA_EXTENSIONS: frozenset[str] = frozenset({
     ".jp2", ".j2k", ".jpf", ".jpx",  # JPEG 2000 (Pillow's OpenJPEG)
     ".ppm", ".pgm", ".pbm", ".pnm",  # Netpbm
     ".pcx",                          # ZSoft PCX
+    ".psd",                          # Photoshop: the merged composite it stores
 })
 """Formats Pillow reads by itself that the viewer shows, for viewing.
 

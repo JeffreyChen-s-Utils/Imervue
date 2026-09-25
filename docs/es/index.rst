@@ -83,7 +83,7 @@ Formatos compatibles
 - **Estándar**: PNG, JPEG (.jpg, .jpeg, .jpe, .jfif, .jif), BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **Modernos**: AVIF (integrado); HEIC / HEIF con el opcional ``pillow-heif``; JPEG XL con el opcional ``pillow-jxl-plugin``
-- **Otros**: ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX — para ver; girar uno en su sitio y otras reescrituras se rechazan, así que una edición sale por Guardar como / Exportar
+- **Otros**: ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX, PSD (la imagen combinada) — para ver; girar uno en su sitio y otras reescrituras se rechazan, así que una edición sale por Guardar como / Exportar
 
 ----
 

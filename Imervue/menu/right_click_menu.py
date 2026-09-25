@@ -318,7 +318,7 @@ def _split_pages_action(main_gui: GPUImageView, menu: QMenu):
 def _split_multipage(main_gui: GPUImageView) -> None:
     from PySide6.QtWidgets import QFileDialog
     from PIL import Image
-    from Imervue.image.multipage import split_multipage
+    from Imervue.image.multipage import page_count, split_multipage
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
     path = _current_image_path(main_gui)
     if not path:
@@ -327,7 +327,7 @@ def _split_multipage(main_gui: GPUImageView) -> None:
     toast = getattr(main_gui.main_window, "toast", None)
     try:
         with Image.open(path) as img:
-            frames = getattr(img, "n_frames", 1)
+            frames = page_count(img)
     except IMAGE_READ_ERRORS:
         frames = 1
     if frames <= 1:

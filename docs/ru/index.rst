@@ -88,7 +88,7 @@
 - **Стандартные**: PNG, JPEG (.jpg, .jpeg, .jpe, .jfif, .jif), BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **Современные**: AVIF (встроенная поддержка); HEIC / HEIF — с необязательным ``pillow-heif``; JPEG XL — с необязательным ``pillow-jxl-plugin``
-- **Другие**: ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX — для просмотра; поворот на месте и другая перезапись отклоняются, поэтому правки сохраняются через «Сохранить как» / «Экспорт»
+- **Другие**: ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX, PSD (сведённое изображение) — для просмотра; поворот на месте и другая перезапись отклоняются, поэтому правки сохраняются через «Сохранить как» / «Экспорт»
 
 ----
 
