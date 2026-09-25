@@ -84,7 +84,8 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
         self._query.setPlaceholderText(language_wrapper.language_word_dict.get(
             "semantic_search_placeholder", "Describe the photo — e.g. 'beach at sunset'"))
         self._query.returnPressed.connect(self._search)
-        self._search_btn = QPushButton("Search")
+        self._search_btn = QPushButton(
+            language_wrapper.language_word_dict.get("library_search", "Search"))
         self._search_btn.clicked.connect(self._search)
         top = QHBoxLayout()
         top.addWidget(self._query, 1)

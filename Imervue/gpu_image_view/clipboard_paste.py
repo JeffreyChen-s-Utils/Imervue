@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QApplication
+from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.natural_sort import natural_key
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -24,31 +25,37 @@ def paste_image_from_clipboard(view: GPUImageView) -> None:
     clipboard = QApplication.clipboard()
     qimg = clipboard.image()
     if qimg.isNull():
-        _open_clipboard_url_if_any(view, clipboard)
+        if not _open_clipboard_url_if_any(view, clipboard):
+            _toast(view, "info", _text("file_menu_paste_clipboard_empty",
+                                       "Clipboard does not contain an image"))
         return
 
     folder = _resolve_paste_target_folder(view)
     if folder is None:
+        _toast(view, "info", _text("paste_no_folder",
+                                   "Open a folder first: a pasted image is saved into it"))
         return
 
     save_path = _save_clipboard_image(qimg, folder)
     if save_path is None:
-        _toast(view, "error", f"Could not save the pasted image to {folder}")
+        _toast(view, "error", _text("paste_save_failed",
+                                    "Could not save the pasted image to {folder}", folder=folder))
         return
     _load_pasted_image(view, save_path)
 
 
-def _open_clipboard_url_if_any(view: GPUImageView, clipboard) -> None:
-    """If the clipboard holds a file URL, open it in the viewer."""
+def _open_clipboard_url_if_any(view: GPUImageView, clipboard) -> bool:
+    """If the clipboard holds a file URL, open it in the viewer; True when one was opened."""
     mime = clipboard.mimeData()
     if not (mime and mime.hasUrls()):
-        return
+        return False
     for url in mime.urls():
         local_path = url.toLocalFile()
         if local_path and Path(local_path).is_file():
             from Imervue.gpu_image_view.images.image_loader import open_path
             open_path(main_gui=view, path=local_path)
-            return
+            return True
+    return False
 
 
 def _resolve_paste_target_folder(view: GPUImageView) -> str | None:
@@ -89,7 +96,12 @@ def _load_pasted_image(view: GPUImageView, save_path: str) -> None:
     from Imervue.gpu_image_view.images.image_loader import open_path
     open_path(main_gui=view, path=save_path)
 
-    _toast(view, "info", f"Pasted: {Path(save_path).name}")
+    _toast(view, "info", _text("paste_saved", "Pasted: {name}", name=Path(save_path).name))
+
+
+def _text(key: str, fallback: str, **fields: str) -> str:
+    """The toast text *key* in the current language, *fields* filled in."""
+    return language_wrapper.language_word_dict.get(key, fallback).format(**fields)
 
 
 def _toast(view: GPUImageView, level: str, text: str) -> None:

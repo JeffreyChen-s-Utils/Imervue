@@ -139,9 +139,14 @@ class HierarchicalTagsDialog(QDialog):
         tag = self._selected_tag_path()
         if not tag:
             return
-        if QMessageBox.question(
-            self, "",
-            f"Delete '{tag}' and all descendants?",
+        lang = language_wrapper.language_word_dict
+        no = QMessageBox.StandardButton.No
+        if QMessageBox.question(   # a whole branch goes: No is the default, as for any deletion
+            self, lang.get("htags_delete", "Delete"),
+            lang.get("htags_delete_confirm",
+                     "Delete the tag '{tag}' and every tag under it? The pictures stay; "
+                     "only these tags come off them.").format(tag=tag),
+            QMessageBox.StandardButton.Yes | no, no,
         ) != QMessageBox.StandardButton.Yes:
             return
         image_index.delete_tag_path(tag)
