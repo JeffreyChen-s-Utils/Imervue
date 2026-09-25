@@ -45,26 +45,6 @@ class _FakeGui:
         self.updates += 1
 
 
-class TestIsAnimatedFile:
-    def test_true_for_multiframe_gif(self, tmp_path):
-        p = _make_gif(tmp_path / "anim.gif", n_frames=4)
-        assert ap.is_animated_file(p) is True
-
-    def test_false_for_single_frame_png(self, tmp_path):
-        p = _make_static_png(tmp_path / "still.png")
-        assert ap.is_animated_file(p) is False
-
-    def test_false_for_unsupported_extension(self, tmp_path):
-        p = tmp_path / "photo.jpg"
-        Image.fromarray(np.zeros((8, 8, 3), dtype=np.uint8)).save(str(p), "JPEG")
-        assert ap.is_animated_file(str(p)) is False
-
-    def test_false_for_unreadable_file(self, tmp_path):
-        p = tmp_path / "broken.gif"
-        p.write_bytes(b"not a gif")
-        assert ap.is_animated_file(str(p)) is False
-
-
 class TestLoad:
     def test_static_file_returns_false(self, tmp_path, qapp):
         p = _make_static_png(tmp_path / "still.png")
@@ -183,11 +163,6 @@ class TestStop:
         assert pl.playing is False
 
 
-class TestAnimatedExts:
-    def test_covers_common_formats(self):
-        assert {".gif", ".apng", ".webp", ".png"} <= ap.ANIMATED_EXTS
-
-
 class TestPyramidMemoization:
     def test_can_cache_pyramid_budget(self):
         assert can_cache_pyramid(0, 999, 100) is True   # first entry always fits
@@ -261,7 +236,6 @@ class TestLoadFailures:
         import os
         p = _make_gif(tmp_path / "anim.gif", n_frames=3)
         assert ap.AnimationPlayer(_FakeGui(), p).load() is True
-        assert ap.is_animated_file(p) is True
         os.remove(p)  # fails on Windows while a handle is still open
 
     def test_unexpected_open_error_propagates(self, tmp_path, qapp, monkeypatch):
@@ -271,8 +245,6 @@ class TestLoadFailures:
         monkeypatch.setattr(ap.Image, "open", boom)
         with pytest.raises(RuntimeError):
             ap.AnimationPlayer(_FakeGui(), str(tmp_path / "a.gif")).load()
-        with pytest.raises(RuntimeError):
-            ap.is_animated_file(str(tmp_path / "a.gif"))
 
 
 def _make_timed_gif(path, durations):

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `497b93d` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `81fba97` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 888 | 147,588 |
+| `tests/` | 888 | 147,560 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
 | `Imervue/gui/` | 167 | 33,174 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,343 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,203 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,190 |
 | `Imervue/multi_language/` | 8 | 14,149 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,739** | **330,151** |
+| **總計** | **1,739** | **330,110** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,198 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,185 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -487,7 +487,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `batch_ops.py` | 289 | 批次重新命名（經 `batch_rename.rename_files`）/ 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
 | `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
-| `animation_player.py` | 354 | GIF / APNG / Animated WebP 播放器；只有 `_ANIMATED_FORMATS`（GIF、PNG、WebP、AVIF、JXL）會播放，多頁 TIFF（`_PAGED_FORMATS`）是 `paged`：不播放、用逐格鍵翻頁、OSD 顯示「第 2/5 頁」（`anim_indicator_text`），其他 Pillow 回報多格的檔案（相機 JPEG 的 MPF 預覽被開成 MPO、PSD 的圖層）不當動畫；APNG 的預設影像（Pillow 的第 0 格、`default_image`）不播放，逐格與串流都從第 1 格起算（`_first`），載入後先把第一格放上畫面；每格和靜態圖一樣經 `to_eight_bit` 與 `to_srgb`；解碼後超過 `_DECODED_FRAMES_BUDGET`（512 MB）就改為串流：留住檔案位元組（BytesIO，不鎖檔），播到哪格才解哪格，只快取最後一格 |
+| `animation_player.py` | 341 | GIF / APNG / Animated WebP 播放器；只有 `_ANIMATED_FORMATS`（GIF、PNG、WebP、AVIF、JXL）會播放，多頁 TIFF（`_PAGED_FORMATS`）是 `paged`：不播放、用逐格鍵翻頁、OSD 顯示「第 2/5 頁」（`anim_indicator_text`），其他 Pillow 回報多格的檔案（相機 JPEG 的 MPF 預覽被開成 MPO、PSD 的圖層）不當動畫；APNG 的預設影像（Pillow 的第 0 格、`default_image`）不播放，逐格與串流都從第 1 格起算（`_first`），載入後先把第一格放上畫面；每格和靜態圖一樣經 `to_eight_bit` 與 `to_srgb`；解碼後超過 `_DECODED_FRAMES_BUDGET`（512 MB）就改為串流：留住檔案位元組（BytesIO，不鎖檔），播到哪格才解哪格，只快取最後一格 |
 | `search_dialog.py` | 280 | 檔名即時搜尋 |
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 318 | 鍵盤快捷動作實作（Ctrl+C 複製檢視器顯示的金字塔底層，沒有時才解碼檔案） |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-888 個檔、147,588 行。`pyproject.toml` 定義三個互斥層級 marker：
+888 個檔、147,560 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

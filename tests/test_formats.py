@@ -74,7 +74,7 @@ def test_a_layered_psd_shows_its_composite(tmp_path):
     """The viewer shows the merged picture a PSD stores, never its layers as frames."""
     import numpy as np
 
-    from Imervue.gpu_image_view.actions.animation_player import is_animated_file
+    from Imervue.gpu_image_view.actions.animation_player import AnimationPlayer
     from Imervue.gpu_image_view.images.image_loader import _scan_images, decode_image_file
     from Imervue.image.in_place_save import in_place_format
     from Imervue.paint.document import PaintDocument
@@ -91,7 +91,7 @@ def test_a_layered_psd_shows_its_composite(tmp_path):
     assert shown.shape == (40, 60, 4)
     assert shown[2, 2].tolist() == [200, 100, 50, 255]
     assert shown[20, 20].tolist() == [10, 200, 30, 255]
-    assert not is_animated_file(str(path))
+    assert not AnimationPlayer(None, str(path)).load()   # its layers are no animation
     assert in_place_format(str(path)) is None
 
 

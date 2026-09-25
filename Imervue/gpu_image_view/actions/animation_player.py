@@ -27,8 +27,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.animation")
 
-# 支援動畫的副檔名
-ANIMATED_EXTS = {".gif", ".apng", ".webp", ".png"}
 # Pillow formats whose frames are an animation, played on their own.
 _ANIMATED_FORMATS = frozenset({"GIF", "PNG", "WEBP", "AVIF", "JXL"})
 # Formats whose frames are the pages of a document: stepped through, never played.
@@ -341,14 +339,3 @@ class AnimationPlayer:
             self._pyramid_bytes += new_bytes
         return dzi
 
-
-def is_animated_file(path: str) -> bool:
-    """快速檢查檔案是否為動畫格式"""
-    ext = Path(path).suffix.lower()
-    if ext not in ANIMATED_EXTS:
-        return False
-    try:
-        with Image.open(path) as img:
-            return getattr(img, "n_frames", 1) > 1
-    except IMAGE_READ_ERRORS:
-        return False
