@@ -2172,14 +2172,11 @@ Semantische Suche (CLIP)
 
 ``Extra Tools`` > ``Semantic Search`` ermöglicht das Eintippen einer natürlichsprachigen
 Phrase (zum Beispiel *"golden retriever in snow"* oder *"neon street at night"*) und
-gibt geordnete Bilder aus der indizierten Bibliothek zurück. Jedes Bild wird mit einem
+gibt die Bilder des geöffneten Ordners geordnet zurück. Jedes Bild wird mit einem
 CLIP-Vision-/Language-Encoder eingebettet und neben seinem Pfad gespeichert; eine
 Textabfrage wird in denselben Vektorraum eingebettet und per Kosinus-Ähnlichkeit verglichen.
 
-Embeddings werden in ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) bzw.
-``~/.cache/imervue/clip_cache.npz`` (POSIX) als einzelne kompakte ``.npz``-Archiv gecacht,
-sodass der nächste Start das erneute Encoding überspringt. Nur die Pfade, die Sie gescannt
-haben, sind abfragbar — verwenden Sie ``Scan Folder…`` im Dialog, um den Index zu erweitern.
+Embeddings werden in ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) bzw. ``~/.cache/imervue/clip_cache.npz`` (POSIX) als einzelnes kompaktes ``.npz``-Archiv gecacht. Der Dialog durchsucht den geöffneten Ordner: Er bettet nur die Bilder ein, die der Cache noch nicht hat oder die sich seitdem geändert haben (Größe oder Änderungszeit), sodass eine erneute Suche im selben Ordner sofort beginnt; die Ergebnisse stammen nur aus diesem Ordner.
 
 .. note::
    Semantische Suche erfordert die optionalen Pakete ``open_clip_torch`` und ``torch``.

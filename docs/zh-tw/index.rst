@@ -1263,14 +1263,11 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Semantic Search`` 讓你輸入自然語言片語（例如
-*"golden retriever in snow"* 或 *"neon street at night"*），從已索引的圖庫
+*"golden retriever in snow"* 或 *"neon street at night"*），從目前開啟的資料夾
 回傳排序後的圖片。每張圖片會以 CLIP 視覺／語言編碼器嵌入並與其路徑一併儲
 存；文字查詢則嵌入同一向量空間，再以 cosine 相似度比對。
 
-嵌入向量會快取到 ``%LOCALAPPDATA%/Imervue/clip_cache.npz``\ （Windows）或
-``~/.cache/imervue/clip_cache.npz``\ （POSIX），存成單一精簡的 ``.npz`` 檔，
-下次啟動即可略過重新編碼。只有你掃描過的路徑可供查詢 — 用對話框裡的
-``Scan Folder…`` 擴充索引。
+嵌入向量會快取到 ``%LOCALAPPDATA%/Imervue/clip_cache.npz``\ （Windows）或 ``~/.cache/imervue/clip_cache.npz``\ （POSIX），存成單一精簡的 ``.npz`` 檔。對話框搜尋的是目前開啟的資料夾：只替快取裡還沒有、或之後改過（大小或修改時間）的圖片計算向量，所以同一個資料夾再搜一次會立刻開始，結果也只來自這個資料夾。
 
 .. note::
    語意搜尋需要選用套件 ``open_clip_torch`` 與 ``torch``。若未安裝，選單項目

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -242,3 +243,62 @@ class TestCacheIsPickleFree:
         blob = np.frombuffer(b'{"not": "a list"}', dtype=np.uint8)
         np.savez(bad, paths_json=blob, matrix=np.zeros((1, 8), np.float32))
         assert ClipSearchIndex(FakeEmbedder()).load(bad) is False
+
+
+
+class TestFreshness:
+    """Embeddings are kept between runs and re-made only for files that changed."""
+
+    @staticmethod
+    def _photo(tmp_path, name="beach::a.png", data=b"x" * 10):
+        path = tmp_path / name.replace("::", "__")
+        path.write_bytes(data)
+        return str(path)
+
+    def test_an_embedded_file_is_current_until_it_changes(self, tmp_path):
+        import os
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=tmp_path / "c.npz")
+        path = self._photo(tmp_path)
+        assert not index.is_current(path)
+        index.add(path)
+        assert index.is_current(path)
+        later = os.stat(path).st_mtime + 5
+        Path(path).write_bytes(b"y" * 20)
+        os.utime(path, (later, later))
+        assert not index.is_current(path)
+
+    def test_freshness_survives_a_save_and_load(self, tmp_path):
+        cache = tmp_path / "c.npz"
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=cache)
+        path = self._photo(tmp_path)
+        index.add(path)
+        index.save()
+        reloaded = ClipSearchIndex(FakeEmbedder(), cache_path=cache)
+        assert reloaded.load()
+        assert reloaded.is_current(path)
+
+    def test_a_cache_without_freshness_is_embedded_again(self, tmp_path):
+        """A cache written before signatures were kept loads, but nothing counts as current."""
+        import json
+        cache = tmp_path / "old.npz"
+        path = self._photo(tmp_path)
+        paths_json = np.frombuffer(json.dumps([path]).encode("utf-8"), dtype=np.uint8)
+        np.savez(cache, paths_json=paths_json, matrix=np.ones((1, 8), np.float32),
+                 dim=np.array([8], dtype=np.int32))
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=cache)
+        assert index.load() and index.contains(path)
+        assert not index.is_current(path)
+
+    def test_removing_forgets_the_freshness(self, tmp_path):
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=tmp_path / "c.npz")
+        path = self._photo(tmp_path)
+        index.add(path)
+        index.remove(path)
+        assert not index.is_current(path)
+
+    def test_a_query_can_be_kept_to_some_paths(self, fake_index):
+        for path in ("beach::a.png", "beach::b.png", "city::c.png"):
+            fake_index.add(path)
+        hits = fake_index.query_text("beach", within={"beach::b.png", "city::c.png"})
+        assert [hit.path for hit in hits] == ["beach::b.png", "city::c.png"]
+        assert fake_index.query_text("beach", within=set()) == []

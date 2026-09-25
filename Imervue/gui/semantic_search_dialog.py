@@ -46,15 +46,23 @@ class _IndexBuildWorker(QThread):
         self._paths = paths
 
     def run(self) -> None:
+        """Embed the paths the index doesn't hold as they are now, then keep the cache on disk."""
         total = len(self._paths)
+        embedded = 0
         for done_count, path in enumerate(self._paths, start=1):
             if self.isInterruptionRequested():
                 break               # cancelled: stop embedding, let wait() return
-            try:
-                self._index.add(path)
-            except Exception:  # one bad image must not abort the build
-                logger.exception("Failed to embed %s", path)
+            if not self._index.is_current(path):
+                try:
+                    embedded += bool(self._index.add(path))
+                except Exception:  # one bad image must not abort the build
+                    logger.exception("Failed to embed %s", path)
             self.progress.emit(done_count, total)
+        if embedded:
+            try:
+                self._index.save()
+            except OSError:
+                logger.warning("Could not save the semantic search cache", exc_info=True)
         self.done.emit()
 
 
@@ -72,6 +80,8 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
         self._viewer = viewer
         self._index = index
         self._worker: _IndexBuildWorker | None = None
+        # Results come from the folder being searched, not every folder cached before.
+        self._scope: set[str] | None = set(build_paths) if build_paths else None
         self.setWindowTitle(language_wrapper.language_word_dict.get(
             "semantic_search_title", "Semantic Search"))
         self.resize(520, 560)
@@ -119,7 +129,10 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
     def _on_index_ready(self) -> None:
         self._progress.setVisible(False)
         self._set_search_enabled(True)
-        self._status.setText(f"Indexed {self._index.size} image(s) — ready to search")
+        count = len(self._scope) if self._scope is not None else self._index.size
+        ready = language_wrapper.language_word_dict.get(
+            "semantic_search_ready", "{count} image(s) indexed — ready to search")
+        self._status.setText(ready.format(count=count))
 
     def _set_search_enabled(self, enabled: bool) -> None:
         self._query.setEnabled(enabled)
@@ -132,7 +145,7 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
         if not text:
             return
         try:
-            hits = self._index.query_text(text, top_k=_TOP_K)
+            hits = self._index.query_text(text, top_k=_TOP_K, within=self._scope)
         except (RuntimeError, ValueError) as exc:
             self._status.setText(str(exc))
             return
@@ -167,11 +180,11 @@ def _warn_unavailable(parent) -> None:
 
 def open_semantic_search_dialog(viewer) -> None:
     """Open natural-language search over the viewer's current folder."""
-    from Imervue.library.clip_search import OpenClipEmbedder, is_available
+    from Imervue.library.clip_search import get_default_index, is_available
     parent = getattr(viewer, "main_window", viewer)
     if not is_available():
         _warn_unavailable(parent)
         return
     images = [str(p) for p in getattr(viewer.model, "images", [])]
-    index = ClipSearchIndex(OpenClipEmbedder())
+    index = get_default_index()   # the embeddings cached by earlier searches
     SemanticSearchDialog(viewer, index, build_paths=images, parent=parent).exec()

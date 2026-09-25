@@ -2542,6 +2542,7 @@ traditional_chinese_word_dict = {
     "semantic_search_title": "語意搜尋",
     "semantic_search_placeholder": "描述照片內容，例如「夕陽下的海灘」",
     "semantic_search_building": "正在建立索引…",
+    "semantic_search_ready": "已建立 {count} 張圖片的索引，可以搜尋",
     "semantic_search_unavailable": "自然語言搜尋需要選用的「open_clip_torch」後端。\n請安裝它（pip install open_clip_torch torch）以啟用此功能。",
     "develop_preset_delete_title": "刪除預設集",
     "develop_preset_delete_confirm": "要刪除「{name}」嗎？",

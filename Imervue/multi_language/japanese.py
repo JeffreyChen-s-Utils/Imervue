@@ -2556,6 +2556,7 @@ japanese_word_dict = {
     "semantic_search_title": "セマンティック検索",
     "semantic_search_placeholder": "写真の内容を入力（例：「夕暮れのビーチ」）",
     "semantic_search_building": "インデックスを作成中…",
+    "semantic_search_ready": "{count} 枚のインデックスを作成しました。検索できます",
     "semantic_search_unavailable": "自然言語検索にはオプションの「open_clip_torch」バックエンドが必要です。\nこの機能を使うにはインストールしてください（pip install open_clip_torch torch）。",
     "develop_preset_delete_title": "プリセットを削除",
     "develop_preset_delete_confirm": "「{name}」を削除しますか？",

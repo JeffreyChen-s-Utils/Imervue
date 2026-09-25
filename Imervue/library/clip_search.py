@@ -65,6 +65,23 @@ class SemanticEmbedder(Protocol):
         """Return an L2-normalised 1-D float32 vector, or ``None`` on failure."""
 
 
+def _signature(path: str) -> list[int] | None:
+    """``[size, mtime_ns]`` of *path*, None when it can't be stat'ed: an embedding's freshness."""
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    return [stat.st_size, stat.st_mtime_ns]
+
+
+def _valid_signatures(raw, count: int) -> list[list[int] | None]:
+    """The cached signatures, or all None (stale) for a cache written before they were kept."""
+    if not isinstance(raw, list) or len(raw) != count:
+        return [None] * count
+    return [sig if isinstance(sig, list) and len(sig) == 2 and all(isinstance(v, int) for v in sig)
+            else None for sig in raw]
+
+
 def _l2_normalise(vec: np.ndarray) -> np.ndarray:
     """Return a unit-norm copy of ``vec`` (or the same zero vector unchanged)."""
     vec = np.asarray(vec, dtype=np.float32).reshape(-1)
@@ -196,6 +213,8 @@ class ClipSearchIndex:
         self._paths: list[str] = []
         self._index: dict[str, int] = {}
         self._matrix: np.ndarray = np.zeros((0, 0), dtype=np.float32)
+        # path -> [size, mtime_ns] when it was embedded; None: unknown, embed again
+        self._signatures: dict[str, list[int] | None] = {}
 
     # ---- state inspection -------------------------------------------
 
@@ -213,6 +232,12 @@ class ClipSearchIndex:
 
     def contains(self, path: str | Path) -> bool:
         return str(path) in self._index
+
+    def is_current(self, path: str | Path) -> bool:
+        """Whether *path* is indexed from the file as it is now (same size and modified time)."""
+        key = str(path)
+        recorded = self._signatures.get(key)
+        return key in self._index and recorded is not None and recorded == _signature(key)
 
     # ---- mutation ---------------------------------------------------
 
@@ -233,6 +258,7 @@ class ClipSearchIndex:
         if vec.size == 0:
             return False
         self._append_or_replace(key, vec)
+        self._signatures[key] = _signature(key)
         return True
 
     def add_many(self, paths: list[str] | list[Path]) -> int:
@@ -248,6 +274,7 @@ class ClipSearchIndex:
         idx = self._index.pop(key, None)
         if idx is None:
             return False
+        self._signatures.pop(key, None)
         self._paths.pop(idx)
         self._matrix = np.delete(self._matrix, idx, axis=0)
         # Re-index trailing entries shifted up by one row.
@@ -258,12 +285,14 @@ class ClipSearchIndex:
     def clear(self) -> None:
         self._paths.clear()
         self._index.clear()
+        self._signatures.clear()
         self._matrix = np.zeros((0, 0), dtype=np.float32)
 
     # ---- query ------------------------------------------------------
 
-    def query_text(self, text: str, top_k: int = 50) -> list[SearchHit]:
-        """Rank stored images by cosine similarity to ``text``."""
+    def query_text(self, text: str, top_k: int = 50,
+                   within: set[str] | None = None) -> list[SearchHit]:
+        """Rank stored images by cosine similarity to ``text``, only those in *within* if given."""
         if self._embedder is None:
             raise RuntimeError("Semantic search has no embedder configured")
         if not text or not text.strip():
@@ -277,8 +306,15 @@ class ClipSearchIndex:
                 f"Query dim {query.size} does not match index dim "
                 f"{self._matrix.shape[1]}"
             )
-        scores = self._matrix @ query
-        count = min(top_k, scores.shape[0])
+        if within is None:
+            rows = np.arange(len(self._paths))
+        else:
+            rows = np.array([i for i, p in enumerate(self._paths) if p in within], dtype=np.int64)
+        if rows.size == 0:
+            return []
+        scores = np.full(len(self._paths), -np.inf, dtype=np.float32)
+        scores[rows] = self._matrix[rows] @ query
+        count = min(top_k, int(rows.size))
         # argpartition is O(N) vs argsort's O(N log N) — matters for big libs.
         partition = np.argpartition(-scores, count - 1)[:count]
         ordered = partition[np.argsort(-scores[partition])]
@@ -296,9 +332,12 @@ class ClipSearchIndex:
         target = Path(path) if path else self._cache_path
         target.parent.mkdir(parents=True, exist_ok=True)
         paths_json = np.frombuffer(json.dumps(self._paths).encode("utf-8"), dtype=np.uint8)
+        signatures = [self._signatures.get(p) for p in self._paths]
+        sigs_json = np.frombuffer(json.dumps(signatures).encode("utf-8"), dtype=np.uint8)
         np.savez(
             target,
             paths_json=paths_json,
+            sigs_json=sigs_json,
             matrix=self._matrix,
             dim=np.array([self._matrix.shape[1]], dtype=np.int32),
         )
@@ -318,6 +357,8 @@ class ClipSearchIndex:
             with np.load(source, allow_pickle=False) as data:
                 paths = json.loads(data["paths_json"].tobytes().decode("utf-8"))
                 matrix = np.asarray(data["matrix"], dtype=np.float32)
+                sigs = (json.loads(data["sigs_json"].tobytes().decode("utf-8"))
+                        if "sigs_json" in data.files else None)
         # ValueError also covers bad JSON / UTF-8 and a pickled object array.
         except (OSError, ValueError, KeyError, EOFError, zipfile.BadZipFile) as exc:
             logger.warning("Failed to load CLIP cache %s: %s", source, exc)
@@ -331,6 +372,7 @@ class ClipSearchIndex:
         self._paths = paths
         self._matrix = matrix
         self._index = {p: i for i, p in enumerate(paths)}
+        self._signatures = dict(zip(paths, _valid_signatures(sigs, len(paths)), strict=True))
         return True
 
     # ---- helpers ----------------------------------------------------

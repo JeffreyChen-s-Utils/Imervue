@@ -2554,6 +2554,7 @@ korean_word_dict = {
     "semantic_search_title": "의미 기반 검색",
     "semantic_search_placeholder": "사진을 설명하세요 — 예: '해 질 녘 해변'",
     "semantic_search_building": "인덱스를 만드는 중…",
+    "semantic_search_ready": "이미지 {count}장의 인덱스를 만들었습니다. 검색할 수 있습니다",
     "semantic_search_unavailable": "자연어 검색에는 선택 사항인 'open_clip_torch' 백엔드가 필요합니다.\n이 기능을 사용하려면 설치하세요 (pip install open_clip_torch torch).",
     "develop_preset_delete_title": "프리셋 삭제",
     "develop_preset_delete_confirm": "'{name}'을(를) 삭제할까요?",

@@ -6,6 +6,7 @@ deterministic. Plain QDialog — no QOpenGLWidget, so no headless-CI skip.
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -124,3 +125,87 @@ def test_unavailable_notice_is_translated(qapp, monkeypatch):
                       japanese_word_dict["semantic_search_unavailable"])]
     assert "open_clip_torch" in shown[0][1]
 
+
+
+class _CountingEmbedder(_FakeEmbedder):
+    def __init__(self):
+        self.embedded: list = []
+
+    def embed_image(self, path) -> np.ndarray:
+        self.embedded.append(str(path))
+        return super().embed_image(path)
+
+
+def _folder(tmp_path, names):
+    paths = []
+    for name in names:
+        path = tmp_path / name
+        path.write_bytes(name.encode())
+        paths.append(str(path))
+    return paths
+
+
+def test_a_second_search_of_a_folder_embeds_nothing_again(qapp, tmp_path):
+    """Every dialog embedded the whole folder again: minutes of CLIP per open."""
+    from Imervue.gui.semantic_search_dialog import _IndexBuildWorker
+    embedder = _CountingEmbedder()
+    index = ClipSearchIndex(embedder, cache_path=tmp_path / "cache.npz")
+    paths = _folder(tmp_path, ["a.png", "b.png"])
+    _IndexBuildWorker(index, paths).run()
+    assert sorted(embedder.embedded) == sorted(paths)
+    assert (tmp_path / "cache.npz").is_file()           # kept for the next run
+
+    embedder.embedded.clear()
+    reloaded = ClipSearchIndex(embedder, cache_path=tmp_path / "cache.npz")
+    assert reloaded.load()
+    _IndexBuildWorker(reloaded, paths).run()
+    assert embedder.embedded == []
+
+
+def test_only_a_changed_file_is_embedded_again(qapp, tmp_path):
+    import os
+
+    from Imervue.gui.semantic_search_dialog import _IndexBuildWorker
+    embedder = _CountingEmbedder()
+    index = ClipSearchIndex(embedder, cache_path=tmp_path / "cache.npz")
+    paths = _folder(tmp_path, ["a.png", "b.png"])
+    _IndexBuildWorker(index, paths).run()
+    embedder.embedded.clear()
+    later = os.stat(paths[1]).st_mtime + 5
+    Path(paths[1]).write_bytes(b"edited")
+    os.utime(paths[1], (later, later))
+    _IndexBuildWorker(index, paths).run()
+    assert embedder.embedded == [paths[1]]
+
+
+def test_results_come_from_the_folder_searched(qapp, tmp_path, monkeypatch):
+    """The cache holds earlier folders too; the dialog ranks only the one it was opened on."""
+    from Imervue.gui import semantic_search_dialog as mod
+    monkeypatch.setattr(mod._IndexBuildWorker, "start", lambda self: self.run())
+    index = ClipSearchIndex(_FakeEmbedder(), cache_path=tmp_path / "cache.npz")
+    index.add("beach::elsewhere.png")
+    dlg = SemanticSearchDialog(SimpleNamespace(main_window=None), index,
+                               build_paths=["beach::here.png", "city::here.png"])
+    try:
+        dlg._query.setText("beach")
+        dlg._search()
+        found = _result_paths(dlg)
+        status = dlg._status.text()
+    finally:
+        dlg.deleteLater()
+    assert found == ["beach::here.png", "city::here.png"]
+    assert "2" in status
+
+
+def test_the_dialog_uses_the_cached_index(qapp, monkeypatch):
+    from Imervue.gui import semantic_search_dialog as mod
+    from Imervue.library import clip_search
+    shared = ClipSearchIndex(_FakeEmbedder())
+    opened: list = []
+    monkeypatch.setattr(clip_search, "is_available", lambda: True)
+    monkeypatch.setattr(clip_search, "get_default_index", lambda: shared)
+    monkeypatch.setattr(mod.SemanticSearchDialog, "exec", lambda self: opened.append(self._index))
+    monkeypatch.setattr(mod._IndexBuildWorker, "start", lambda self: None)
+    viewer = SimpleNamespace(main_window=None, model=SimpleNamespace(images=["a.png"]))
+    mod.open_semantic_search_dialog(viewer)
+    assert opened == [shared]
