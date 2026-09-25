@@ -114,3 +114,48 @@ def test_rewrite_exif_refuses_other_formats(tmp_path):
     assert can_rewrite_exif(path) is False
     with pytest.raises(ValueError, match="can't rewrite the EXIF"):
         rewrite_exif(path, lambda _exif: None)
+
+
+def _exif_with_maker_note():
+    exif = _exif_with_date()
+    exif.get_ifd(0x8769)[0x927C] = b"Canon" + b"m" * 200
+    exif[0x8769] = 0
+    return exif
+
+
+def test_descriptive_exif_keeps_the_maker_note_unless_told(tmp_path):
+    from PIL import Image
+
+    from Imervue.image.in_place_save import descriptive_exif
+    src = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 6)).save(src, exif=_exif_with_maker_note())
+    with Image.open(src) as img:
+        assert 0x927C in descriptive_exif(img).get_ifd(0x8769)
+        dropped = descriptive_exif(img, keep_maker_note=False).get_ifd(0x8769)
+    assert 0x927C not in dropped
+    assert dropped[0x9003] == "2020:01:02 03:04:05"
+
+
+def test_an_edited_copy_in_another_format_leaves_the_maker_note_out(tmp_path):
+    from PIL import Image
+
+    from Imervue.image.in_place_save import save_edited_copy
+    src = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 6)).save(src, exif=_exif_with_maker_note())
+    target = tmp_path / "b.png"
+    save_edited_copy(src, Image.new("RGB", (8, 6)), target)
+    with Image.open(target) as out:
+        sub = out.getexif().get_ifd(0x8769)
+        assert sub[0x9003] == "2020:01:02 03:04:05"
+        assert 0x927C not in sub
+
+
+def test_saving_over_the_source_keeps_its_maker_note(tmp_path):
+    from PIL import Image
+
+    from Imervue.image.in_place_save import save_over_source
+    src = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 6)).save(src, exif=_exif_with_maker_note())
+    save_over_source(src, Image.new("RGB", (8, 6), (5, 5, 5)))
+    with Image.open(src) as out:
+        assert out.getexif().get_ifd(0x8769)[0x927C].startswith(b"Canon")

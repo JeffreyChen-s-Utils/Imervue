@@ -37,7 +37,8 @@ def export_exif(source_path: str | Path, policy: str) -> Image.Exif | None:
     ``None`` for :data:`METADATA_NONE`, a source Pillow can't read, or one
     without descriptive EXIF. :data:`METADATA_NO_LOCATION` drops the GPS IFD
     and the XMP packet, which can hold the position too. The orientation is
-    never carried: exported pixels are already upright.
+    never carried: exported pixels are already upright; nor is the camera
+    maker note, which a NEF or ORF has too large for a JPEG.
     """
     carried = _carried(source_path, policy)
     return None if carried is None else carried[0]
@@ -65,7 +66,8 @@ def _carried(source_path: str | Path, policy: str) -> tuple[Image.Exif, bytes | 
     ensure_pillow_opener(Path(source_path).suffix.lower())
     try:
         with Image.open(source_path) as source:
-            exif = descriptive_exif(source, keep_location=policy != METADATA_NO_LOCATION)
+            exif = descriptive_exif(source, keep_location=policy != METADATA_NO_LOCATION,
+                                    keep_maker_note=False)
             original = source.info.get("exif")
     except IMAGE_READ_ERRORS:
         return None

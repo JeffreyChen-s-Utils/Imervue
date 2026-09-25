@@ -40,6 +40,10 @@ _XMP_TAG = 700
 _INTEROP_POINTER = 0xA005
 # Exif IFD tags a rewrite makes wrong: the Interop pointer's offset, PixelX/YDimension.
 _STALE_SUB_IFD_TAGS = frozenset({_INTEROP_POINTER, 0xA002, 0xA003})
+# The camera maker's private block: its internal offsets point into the
+# source's layout, and a NEF's (121 KB) or an ORF's (1.4 MB) is past the
+# 64 KB a JPEG's EXIF segment holds.
+_MAKER_NOTE = 0x927C
 _SUB_IFDS = (0x8769, 0x8825)   # Exif, GPS
 # IFD0 tags that describe the picture rather than lay out its pixels:
 # DocumentName, ImageDescription, Make, Model, PageName, Software, DateTime,
@@ -96,7 +100,8 @@ def webp_is_lossless(file_path: str) -> bool:
     return False
 
 
-def descriptive_exif(source: Image.Image, *, keep_location: bool = True) -> Image.Exif:
+def descriptive_exif(source: Image.Image, *, keep_location: bool = True,
+                     keep_maker_note: bool = True) -> Image.Exif:
     """Copy *source*'s descriptive EXIF — IFD0 text tags plus the Exif and GPS IFDs.
 
     A TIFF's ``getexif()`` is its whole tag directory, width, strip offsets and
@@ -104,7 +109,9 @@ def descriptive_exif(source: Image.Image, *, keep_location: bool = True) -> Imag
     40x20 TIFF came back 40x40). Also left out: the orientation (the turn is
     baked into the pixels) and the Exif IFD's pixel dimensions, which an edit
     changes. Without *keep_location* the GPS IFD and the XMP packet (which can
-    repeat the position) are dropped too.
+    repeat the position) are dropped too. Without *keep_maker_note* the
+    maker note is left out as well: a new file, where its offsets no longer
+    hold and it may not even fit.
     """
     exif = source.getexif()
     kept = Image.Exif()
@@ -113,9 +120,9 @@ def descriptive_exif(source: Image.Image, *, keep_location: bool = True) -> Imag
             continue
         value = exif[tag]
         kept[tag] = strip_xmp_orientation(value) if tag == _XMP_TAG else value
+    dropped = _STALE_SUB_IFD_TAGS if keep_maker_note else _STALE_SUB_IFD_TAGS | {_MAKER_NOTE}
     for pointer in _SUB_IFDS if keep_location else _SUB_IFDS[:1]:
-        entries = {k: v for k, v in exif.get_ifd(pointer).items()
-                   if k not in _STALE_SUB_IFD_TAGS}
+        entries = {k: v for k, v in exif.get_ifd(pointer).items() if k not in dropped}
         if entries:
             kept.get_ifd(pointer).update(entries)
             kept[pointer] = 0   # the save writes the IFD and its real offset
@@ -219,7 +226,7 @@ def _edited_save_kwargs(source_path: str | Path, fmt: str) -> dict:
             if in_place_format(source_path) == fmt:
                 kwargs = carried_save_kwargs(source, fmt, str(source_path))
             else:
-                exif = descriptive_exif(source)
+                exif = descriptive_exif(source, keep_maker_note=False)
                 kwargs = {"exif": _exif_for(exif, fmt, source)} if len(exif) else {}
                 if source.info.get("dpi"):
                     kwargs["dpi"] = source.info["dpi"]

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-77 | 2026-09-25 | A NEF exports to JPEG again: copies leave the camera maker note out | #fix #export #metadata | [2026-09-b](2026-09-b.md) |
 | U-20260925-76 | 2026-09-25 | Object Remove's mask worker reports a failed build instead of jamming the tool | #fix #workers #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
 | U-20260925-75 | 2026-09-25 | Panoramas past Pillow's 179 MP limit open, one giant decode at a time | #fix #formats #memory | [2026-09-b](2026-09-b.md) |
 | U-20260925-74 | 2026-09-25 | Same-size scans no longer share one Modify recipe | #fix #recipe #data-loss | [2026-09-b](2026-09-b.md) |
@@ -357,4 +358,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 15 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 16 |
