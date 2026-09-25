@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import QObject, QTimer
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 from Imervue.system.best_effort import best_effort
@@ -251,8 +252,9 @@ def rate_current_image(main_gui: GPUImageView, rating: int, targets: list[str] |
     else:
         msg = lang.get("rating_cleared", "Rating cleared")
 
-    main_gui._quick_meta_hud = (msg, __import__("time").monotonic() + 1.2)
+    main_gui._quick_meta_hud = (msg, __import__("time").monotonic() + _HUD_SECONDS)
     _show_status(main_gui, msg)
+    _repaint(main_gui, hud=True)
 
 
 # ===========================
@@ -292,6 +294,24 @@ def toggle_favorite(main_gui: GPUImageView, targets: list[str] | None = None):
         msg = lang.get("favorite_removed", "Favorite removed")
 
     _show_status(main_gui, msg)
+    _repaint(main_gui)
+
+
+_HUD_SECONDS = 1.2
+
+
+def _repaint(main_gui, *, hud: bool = False) -> None:
+    """Show the new stars / heart now, and with *hud* take the rating HUD down when it expires.
+
+    Nothing else repaints the view on a key press: the HUD appeared only with
+    the next mouse move and stayed on screen past its time.
+    """
+    update = getattr(main_gui, "update", None)
+    if not callable(update):
+        return
+    update()
+    if hud and isinstance(main_gui, QObject):
+        QTimer.singleShot(int(_HUD_SECONDS * 1000) + 50, main_gui, update)
 
 
 def _show_status(main_gui: GPUImageView, text: str):

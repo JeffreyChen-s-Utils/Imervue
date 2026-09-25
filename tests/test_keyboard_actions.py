@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QObject
 
 from Imervue.gpu_image_view.actions import keyboard_actions as mod
 
@@ -156,3 +157,31 @@ def test_the_favourite_key_favourites_a_selection_then_unfavourites_it(ratings):
     assert sorted(ratings["image_favorites"]) == ["a.jpg", "c.jpg"]
     mod.toggle_favorite(wall)
     assert ratings["image_favorites"] == []
+
+
+
+class _PaintedWall(QObject):
+    """A wall that counts its repaints, as the view would."""
+
+    def __init__(self, **kw):
+        super().__init__()
+        self.__dict__.update(_wall(**kw).__dict__)
+        self.updates = 0
+
+    def update(self):
+        self.updates += 1
+
+
+def test_a_rating_repaints_now_and_again_when_its_hud_expires(ratings, qapp, pump_until, monkeypatch):
+    """Nothing repainted on a key: the stars and the HUD waited for the next mouse move."""
+    monkeypatch.setattr(mod, "_HUD_SECONDS", 0.05)
+    wall = _PaintedWall(_hover_last_path="c.jpg")
+    mod.rate_current_image(wall, 3)
+    assert wall.updates == 1
+    assert pump_until(lambda: wall.updates == 2, timeout=3.0)
+
+
+def test_the_favourite_key_repaints(ratings, qapp):
+    wall = _PaintedWall(_hover_last_path="b.jpg")
+    mod.toggle_favorite(wall)
+    assert wall.updates == 1
