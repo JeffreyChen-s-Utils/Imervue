@@ -133,3 +133,28 @@ def test_staging_tray_adds_in_view_order(monkeypatch):
     monkeypatch.setattr(staging_tray, "add_many", received.append)
     rcm._add_to_staging_tray(_viewer(_PICKED))  # noqa: SLF001
     assert received == [_PICKED]
+
+
+def _viewer_in(folder):
+    return SimpleNamespace(model=SimpleNamespace(images=[str(folder / "a.png")]))
+
+
+def test_sibling_folders_follow_the_trees_natural_order(tmp_path):
+    """Next folder went Day 1, Day 10, Day 11, Day 2 while the tree showed Day 1, Day 2."""
+    from Imervue.gpu_image_view.actions.select import _sibling_folders
+    for name in ("Day 10", "Day 2", "Day 1"):
+        (tmp_path / name).mkdir()
+    assert [p.name for p in _sibling_folders(_viewer_in(tmp_path / "Day 1"))] == ["Day 1", "Day 2", "Day 10"]
+
+
+def test_sibling_folders_leave_out_hidden_ones_but_keep_the_current(tmp_path):
+    from Imervue.gpu_image_view.actions.select import _sibling_folders
+    for name in ("a", ".git", ".stash", "b"):
+        (tmp_path / name).mkdir()
+    assert [p.name for p in _sibling_folders(_viewer_in(tmp_path / "a"))] == ["a", "b"]
+    assert [p.name for p in _sibling_folders(_viewer_in(tmp_path / ".stash"))] == [".stash", "a", "b"]
+
+
+def test_sibling_folders_of_an_empty_view_are_none():
+    from Imervue.gpu_image_view.actions.select import _sibling_folders
+    assert _sibling_folders(SimpleNamespace(model=SimpleNamespace(images=[]))) == []

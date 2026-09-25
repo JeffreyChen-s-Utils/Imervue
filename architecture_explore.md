@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `9e513a3` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `d252f39` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 886 | 146,430 |
+| `tests/` | 886 | 146,455 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,144 |
 | `Imervue/gui/` | 167 | 33,188 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,254 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,121 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,129 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,673 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,737** | **328,696** |
+| **總計** | **1,737** | **328,729** |
 
-其中 `Imervue/` 套件本身 787 檔 / 167,901 行。
+其中 `Imervue/` 套件本身 787 檔 / 167,909 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -483,7 +483,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `delete.py` | 227 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops`，回傳留在原處的檔案 |
-| `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
+| `select.py` | 239 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾（和資料夾樹同一個順序：自然排序、略過隱藏資料夾）、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
 | `batch_ops.py` | 289 | 批次重新命名（經 `batch_rename.rename_files`）/ 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
 | `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-886 個檔、146,430 行。`pyproject.toml` 定義三個互斥層級 marker：
+886 個檔、146,455 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

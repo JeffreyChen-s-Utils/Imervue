@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-85 | 2026-09-25 | Next / previous folder follows the folder tree's order | #fix #browse #sort | [2026-09-b](2026-09-b.md) |
 | U-20260925-84 | 2026-09-25 | Hidden files and macOS ._ companions stay out of the wall and the batch tools | #fix #browse #batch #library | [2026-09-b](2026-09-b.md) |
 | U-20260925-83 | 2026-09-25 | Refactor: the batch tools share one folder listing | #refactor #batch | [2026-09-b](2026-09-b.md) |
 | U-20260925-82 | 2026-09-25 | 16-bit and float greyscale pictures show their real brightness | #fix #formats #viewer #thumbnails | [2026-09-b](2026-09-b.md) |
@@ -365,4 +366,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 23 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 24 |

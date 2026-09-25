@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QRectF
 
 from Imervue.system.best_effort import best_effort
+from Imervue.system.hidden_files import is_hidden
+from Imervue.system.natural_sort import natural_key
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 if TYPE_CHECKING:
@@ -139,7 +141,7 @@ def switch_to_previous_folder(main_gui: GPUImageView) -> None:
 
 
 def _switch_sibling_folder(main_gui: GPUImageView, direction: int) -> None:
-    """Scan sibling directories in alphabetical order and open the first that has images."""
+    """Scan sibling directories in the folder tree's order and open the first that has images."""
     siblings = _sibling_folders(main_gui)
     if not siblings:
         return
@@ -158,19 +160,25 @@ def _switch_sibling_folder(main_gui: GPUImageView, direction: int) -> None:
 
 
 def _sibling_folders(main_gui: GPUImageView) -> list[Path]:
+    """The current folder and its siblings as the folder tree lists them.
+
+    Natural order (``Day 2`` before ``Day 10``) with hidden folders left out
+    (``$RECYCLE.BIN``, ``.git``) - the tree hides them. The current folder
+    stays in even when it is hidden itself, so the next one is found from it.
+    """
     images = main_gui.model.images
     if not images:
         return []
-    parent = Path(images[0]).parent.parent
+    current = Path(images[0]).parent
+    parent = current.parent
     if not parent.exists():
         return []
     try:
-        return sorted(
-            (p for p in parent.iterdir() if p.is_dir()),
-            key=lambda p: p.name.lower(),
-        )
+        folders = [p for p in parent.iterdir()
+                   if p.is_dir() and (p == current or not is_hidden(p))]
     except OSError:
         return []
+    return sorted(folders, key=lambda p: natural_key(p.name))
 
 
 def _open_sibling(
