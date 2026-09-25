@@ -45,6 +45,17 @@ def test_iter_image_paths_recursive(tmp_path):
     assert any(p.name == "b.jpg" for p in deep)
 
 
+def test_iter_image_paths_skips_hidden_files_in_a_folder_but_not_one_named(tmp_path):
+    _save(tmp_path / "a.png")
+    _save(tmp_path / "._a.png")
+    trash = tmp_path / ".Trashes"
+    trash.mkdir()
+    _save(trash / "deleted.png")
+    assert [p.name for p in iter_image_paths([str(tmp_path)], recursive=True)] == ["a.png"]
+    named = iter_image_paths([str(tmp_path / "._a.png")], recursive=False)
+    assert [p.name for p in named] == ["._a.png"]
+
+
 def test_output_path_with_and_without_out_dir(tmp_path):
     src = tmp_path / "pic.jpg"
     assert output_path(src, None, "_resized", None).name == "pic_resized.jpg"

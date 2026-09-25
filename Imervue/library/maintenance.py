@@ -7,11 +7,10 @@ touches the filesystem and the index.
 """
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
-from pathlib import Path
 
 from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+from Imervue.system.image_listing import list_images
 
 
 def diff_index_vs_fs(indexed: Iterable[str], fs: Iterable[str]) -> dict:
@@ -24,15 +23,12 @@ def diff_index_vs_fs(indexed: Iterable[str], fs: Iterable[str]) -> dict:
 
 
 def scan_image_files(folders: Iterable[str]) -> list[str]:
-    """Recursively collect image files under *folders*."""
-    found: list[str] = []
-    for folder in folders:
-        for root, _dirs, files in os.walk(folder):
-            found.extend(
-                os.path.join(root, name) for name in files
-                if Path(name).suffix.lower() in STILL_IMAGE_EXTENSIONS
-            )
-    return found
+    """Recursively collect image files under *folders*, hidden files and folders left out.
+
+    So indexing a drive's root skips ``$RECYCLE.BIN`` and a Mac's ``.Trashes``.
+    """
+    return [path for folder in folders
+            for path in list_images(folder, STILL_IMAGE_EXTENSIONS, recursive=True)]
 
 
 def run_maintenance(folders: Iterable[str], *, prune: bool = False) -> dict:

@@ -29,6 +29,7 @@ from Imervue.image.formats import RASTER_EXTENSIONS, RAW_EXTENSIONS
 from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.shown import load_shown_rgba, open_shown
+from Imervue.system.image_listing import list_images
 
 # The outputs are written without EXIF or ICC, so every input is decoded as the
 # viewer shows it (shown.open_shown): sRGB, turned upright, a camera RAW
@@ -43,14 +44,17 @@ _EMIT_JSON = "emit JSON"
 
 
 def iter_image_paths(inputs: Iterable[str], *, recursive: bool) -> list[Path]:
-    """Expand *inputs* (files or directories) into a sorted list of image paths."""
+    """Expand *inputs* (files or directories) into a sorted list of image paths.
+
+    A directory contributes its images without hidden files or, recursing,
+    hidden folders (``list_images``); a file named outright is always kept.
+    """
     found: list[Path] = []
     for item in inputs:
         path = Path(item)
         if path.is_dir():
-            walker = path.rglob("*") if recursive else path.glob("*")
-            found.extend(p for p in walker
-                         if p.is_file() and p.suffix.lower() in RASTER_EXTENSIONS)
+            found.extend(Path(p) for p in list_images(str(path), RASTER_EXTENSIONS,
+                                                      recursive=recursive))
         elif path.is_file():
             found.append(path)
     return sorted(set(found))

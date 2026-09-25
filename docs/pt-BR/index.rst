@@ -142,6 +142,8 @@ Quando outro programa salva por cima de uma imagem — um editor externo, direto
 
 Um PNG ou TIFF em cinza de 16 bits — um escaneamento, um mapa de profundidade, uma imagem científica ou astronômica — e um TIFF de ponto flutuante mostram seu brilho real no visualizador, nas miniaturas, nas prévias e nas ferramentas, em vez de quase branco ou preto: valores de 16 bits são escalados em toda a faixa, valores de ponto flutuante de 0 a 1 vão do preto ao branco e qualquer outra faixa é esticada.
 
+Arquivos que o Windows marca como ocultos — ocultos também no Explorer e na árvore de pastas — e nomes que começam com ponto, como o ``._foto.jpg`` que o macOS grava ao lado de cada foto em cartões de memória e unidades de rede, ficam fora da grade de miniaturas, dos ícones de pasta, das listas das ferramentas em lote, das pastas monitoradas, das varreduras da biblioteca e da CLI; varreduras recursivas pulam pastas ocultas como ``$RECYCLE.BIN`` e a ``.Trashes`` de um Mac. Uma imagem oculta aberta de propósito abre mesmo assim.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

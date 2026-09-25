@@ -13,13 +13,13 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
-from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import QFileSystemModel
 
 from Imervue.gui.shown_qimage import shown_qimage
+from Imervue.system.image_listing import list_images
 
 logger = logging.getLogger("Imervue.gui.folder_thumbnail_model")
 
@@ -43,20 +43,14 @@ def clamp_icon_size(px: int) -> int:
 
 
 def folder_preview_path(folder: str, exts: Iterable[str] = PREVIEW_EXTS) -> str | None:
-    """First (name-sorted) directly-contained image of *folder*, or None.
+    """The first image the folder's thumbnail wall shows, or None.
 
-    Non-recursive; an unreadable / missing directory yields None rather than
+    Natural name order, hidden files (a macOS ``._`` companion) left out, not
+    recursive. An unreadable / missing directory yields None rather than
     raising, so a transient permission error just means "no preview".
     """
-    allowed = {e.lower() for e in exts}
-    try:
-        images = sorted(
-            entry for entry in Path(folder).iterdir()
-            if entry.is_file() and entry.suffix.lower() in allowed
-        )
-    except OSError:
-        return None
-    return str(images[0]) if images else None
+    images = list_images(folder, {e.lower() for e in exts})
+    return images[0] if images else None
 
 
 class _PreviewSignals(QObject):

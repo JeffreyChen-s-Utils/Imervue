@@ -335,3 +335,39 @@ def test_a_raster_decode_takes_the_giant_slot_for_its_pixel_count(tmp_path, monk
     Image.new("RGB", (30, 20)).save(path)
     image_loader.decode_image_file(str(path), thumbnail=thumbnail)
     assert asked == [600]
+
+
+def test_the_wall_leaves_out_hidden_files_and_mac_companions(tmp_path):
+    """A card from a Mac showed a broken ._ thumbnail beside every photo."""
+    from Imervue.gpu_image_view.images.image_loader import _scan_images
+    for name in ("a.png", "._a.png", ".b.png"):
+        (tmp_path / name).write_bytes(b"x")
+    assert [os.path.basename(p) for p in _scan_images(str(tmp_path))] == ["a.png"]
+
+
+def test_the_progressive_scan_leaves_out_hidden_files(qapp, tmp_path):
+    from Imervue.gpu_image_view.images.image_loader import FolderScanWorker
+    for name in ("a.png", "._a.png"):
+        (tmp_path / name).write_bytes(b"x")
+    finished = []
+    worker = FolderScanWorker(str(tmp_path))
+    worker.signals.finished.connect(lambda _folder, images: finished.append(images))
+    worker.run()
+    assert [[os.path.basename(p) for p in images] for images in finished] == [["a.png"]]
+
+
+def test_a_hidden_picture_opened_on_purpose_joins_its_folders_list(tmp_path):
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.images import image_loader
+    for name in ("a.png", ".b.png", "c.png"):
+        (tmp_path / name).write_bytes(b"x")
+    loaded = []
+    model = SimpleNamespace(images=[])
+    model.set_images = lambda images: setattr(model, "images", list(images))
+    viewer = SimpleNamespace(model=model, current_index=-1, tile_grid_mode=True,
+                             load_deep_zoom_image=loaded.append, main_window=SimpleNamespace())
+    image_loader._open_file(viewer, tmp_path / ".b.png")
+    assert [os.path.basename(p) for p in model.images] == [".b.png", "a.png", "c.png"]
+    assert viewer.current_index == 0
+    assert loaded == [str(tmp_path / ".b.png")]

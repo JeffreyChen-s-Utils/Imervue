@@ -141,6 +141,8 @@ Quand un autre programme enregistre par-dessus une image — un éditeur externe
 
 Un PNG ou TIFF en gris 16 bits — un scan, une carte de profondeur, une image scientifique ou astronomique — et un TIFF à virgule flottante montrent leur vraie luminosité dans la visionneuse, les vignettes, les aperçus et les outils, au lieu de presque blanc ou noir : les valeurs 16 bits sont mises à l'échelle sur toute leur plage, les valeurs flottantes de 0 à 1 vont du noir au blanc et toute autre plage est étirée.
 
+Les fichiers que Windows marque cachés — cachés aussi dans l'Explorateur et l'arborescence — et les noms commençant par un point, comme le ``._photo.jpg`` que macOS écrit à côté de chaque photo sur les cartes mémoire et lecteurs réseau, sont exclus de la grille de vignettes, des icônes de dossier, des listes des outils par lots, des dossiers surveillés, des analyses de la bibliothèque et de la CLI ; les analyses récursives sautent les dossiers cachés comme ``$RECYCLE.BIN`` et le ``.Trashes`` d'un Mac. Une image cachée ouverte volontairement s'ouvre quand même.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

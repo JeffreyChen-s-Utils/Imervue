@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
+from Imervue.system.hidden_files import is_hidden
 from Imervue.system.natural_sort import natural_key
 from Imervue.system.pixel_limit import decode_slot
 from Imervue.system.best_effort import best_effort
@@ -205,6 +206,13 @@ class _FolderScanSignals(QObject):
     finished = Signal(str, list)
 
 
+def _is_listed(entry: os.DirEntry) -> bool:
+    """A folder entry the viewer lists: a file it opens that is not hidden (``hidden_files``)."""
+    return (entry.is_file(follow_symlinks=False)
+            and os.path.splitext(entry.name)[1].lower() in VIEWER_EXTENSIONS
+            and not is_hidden(entry))
+
+
 class FolderScanWorker(QRunnable):
     """Scan a folder in chunks so very large folders can appear progressively."""
 
@@ -227,10 +235,7 @@ class FolderScanWorker(QRunnable):
                 for entry in it:
                     if self._abort:
                         return
-                    if not entry.is_file(follow_symlinks=False):
-                        continue
-                    ext = os.path.splitext(entry.name)[1].lower()
-                    if ext not in VIEWER_EXTENSIONS:
+                    if not _is_listed(entry):
                         continue
                     batch.append(entry.path)
                     found.append(entry.path)
@@ -318,11 +323,7 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
         # (file-open dialog / breadcrumb), not untrusted remote input — no
         # privilege boundary is crossed, so the taint warning is a false positive.
         with os.scandir(directory) as it:  # NOSONAR
-            for entry in it:
-                if entry.is_file(follow_symlinks=False):
-                    ext = os.path.splitext(entry.name)[1].lower()
-                    if ext in VIEWER_EXTENSIONS:
-                        entries.append(entry)
+            entries = [entry for entry in it if _is_listed(entry)]
     except OSError:
         return []
 
@@ -488,8 +489,10 @@ def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.recent_image import add_recent_image
     dir_path = path_obj.parent
     images = _scan_images_for_user(str(dir_path))
-    if not images:
-        return
+    target = os.path.normpath(str(path_obj))
+    if all(os.path.normpath(p) != target for p in images):
+        # A hidden picture opened on purpose joins its folder's list.
+        images = _sort_for_user([*images, str(path_obj)])
     main_gui._unfiltered_images = list(images)
     images, stacks = _maybe_collapse_stacks(images)
     main_gui._stack_members = stacks

@@ -12,13 +12,13 @@ seen) is pure and unit-tested; only the live Observer wiring needs Qt.
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+from Imervue.system.image_listing import list_images
 
 logger = logging.getLogger("Imervue.watch_folder")
 
@@ -34,15 +34,12 @@ def is_image(path: str, extensions: Iterable[str] = DEFAULT_EXTENSIONS) -> bool:
 
 
 def scan_images(root: str, extensions: Iterable[str] = DEFAULT_EXTENSIONS) -> set[str]:
-    """Return the set of image file paths directly inside *root*."""
-    exts = set(extensions)
-    try:
-        return {
-            entry.path for entry in os.scandir(root)
-            if entry.is_file() and Path(entry.name).suffix.lower() in exts
-        }
-    except OSError:
-        return set()
+    """Return the set of image file paths directly inside *root*, hidden files left out.
+
+    A macOS ``._`` companion copied in beside each photo is not an image, so
+    it never reaches the watch's actions.
+    """
+    return set(list_images(root, extensions))
 
 
 def select_new(seen: Iterable[str], current: Iterable[str]) -> list[str]:

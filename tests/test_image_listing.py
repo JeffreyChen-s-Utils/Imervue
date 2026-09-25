@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import os
 
+from _hidden_attr import hide, windows_only
+
 from Imervue.system.image_listing import list_images
 
 _EXTS = {".png", ".jpg"}
@@ -61,3 +63,27 @@ def test_should_stop_ends_a_recursive_walk_early(tmp_path):
 def test_extensions_can_be_any_iterable(tmp_path):
     _touch(tmp_path, "a.png")
     assert _names(list_images(str(tmp_path), [".png"])) == ["a.png"]
+
+
+def test_hidden_files_and_mac_companions_are_left_out(tmp_path):
+    _touch(tmp_path, "a.png", "._a.png", ".cover.png")
+    assert _names(list_images(str(tmp_path), _EXTS)) == ["a.png"]
+
+
+def test_a_recursive_walk_skips_hidden_folders(tmp_path):
+    _touch(tmp_path, "a.png", ".Trashes/501/deleted.png", "sub/b.png", "sub/._b.png")
+    assert _names(list_images(str(tmp_path), _EXTS, recursive=True)) == ["a.png", "b.png"]
+
+
+@windows_only
+def test_windows_hidden_files_and_folders_are_left_out(tmp_path):
+    _touch(tmp_path, "a.png", "secret.png", "$RECYCLE.BIN/deleted.png")
+    hide(tmp_path / "secret.png")
+    hide(tmp_path / "$RECYCLE.BIN")
+    assert _names(list_images(str(tmp_path), _EXTS)) == ["a.png"]
+    assert _names(list_images(str(tmp_path), _EXTS, recursive=True)) == ["a.png"]
+
+
+def test_a_hidden_folder_picked_on_purpose_is_listed(tmp_path):
+    _touch(tmp_path, ".stash/a.png")
+    assert _names(list_images(str(tmp_path / ".stash"), _EXTS)) == ["a.png"]

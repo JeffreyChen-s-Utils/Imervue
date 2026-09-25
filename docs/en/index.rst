@@ -140,6 +140,8 @@ When another program saves over a picture — an external editor, in place or by
 
 A 16-bit grey PNG or TIFF — a scan, a depth map, a scientific or astronomy frame — and a floating-point TIFF show their real brightness in the viewer, thumbnails, previews and tools, instead of almost white or black: 16-bit values are scaled over their full range, floating-point values of 0 to 1 map onto black to white and any other range is stretched.
 
+Files Windows marks hidden — hidden in Explorer and the folder tree too — and names starting with a dot, such as the ``._photo.jpg`` companion macOS writes beside every photo on a memory card or network drive, are left out of the thumbnail wall, folder icons, the batch tools' folder lists, watch folders, library scans and the CLI; recursive scans skip hidden folders such as ``$RECYCLE.BIN`` and a Mac's ``.Trashes``. A hidden picture opened on purpose still opens.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

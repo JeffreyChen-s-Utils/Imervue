@@ -145,6 +145,8 @@ Cuando otro programa guarda sobre una imagen — un editor externo, directamente
 
 Un PNG o TIFF en gris de 16 bits — un escaneo, un mapa de profundidad, una toma científica o astronómica — y un TIFF de coma flotante muestran su brillo real en el visor, las miniaturas, las vistas previas y las herramientas, en lugar de casi blanco o negro: los valores de 16 bits se escalan en todo su rango, los valores de coma flotante de 0 a 1 van de negro a blanco y cualquier otro rango se estira.
 
+Los archivos que Windows marca como ocultos — también ocultos en el Explorador y en el árbol de carpetas — y los nombres que empiezan por punto, como el ``._foto.jpg`` que macOS escribe junto a cada foto en tarjetas de memoria y unidades de red, quedan fuera de la cuadrícula de miniaturas, los iconos de carpeta, las listas de las herramientas por lotes, las carpetas vigiladas, los escaneos de la biblioteca y la CLI; los escaneos recursivos se saltan carpetas ocultas como ``$RECYCLE.BIN`` y la ``.Trashes`` de un Mac. Una imagen oculta abierta a propósito se abre igualmente.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

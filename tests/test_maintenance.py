@@ -44,6 +44,15 @@ def test_scan_image_files_recurses(tmp_path):
     assert not any(p.endswith("notes.txt") for p in found)
 
 
+def test_scan_image_files_skips_hidden_files_and_folders(tmp_path):
+    (tmp_path / "a.png").write_bytes(b"\x00")
+    (tmp_path / "._a.png").write_bytes(b"\x00")
+    trash = tmp_path / ".Trashes" / "501"
+    trash.mkdir(parents=True)
+    (trash / "deleted.png").write_bytes(b"\x00")
+    assert scan_image_files([str(tmp_path)]) == [str(tmp_path / "a.png")]
+
+
 def test_run_maintenance_reports_and_prunes(tmp_path):
     gone = str(tmp_path / "gone.png")  # indexed but never written to disk
     image_index.upsert_image(gone, size=1)

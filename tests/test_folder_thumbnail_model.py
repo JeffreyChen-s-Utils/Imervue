@@ -47,6 +47,17 @@ class TestFolderPreviewPath:
         (tmp_path / "a.cr2").write_bytes(b"raw")
         assert folder_preview_path(str(tmp_path), {".cr2"}) == str(tmp_path / "a.cr2")
 
+    def test_a_mac_companion_is_not_the_preview(self, tmp_path):
+        # "._a.jpg" sorts first and never decodes: the folder had no icon at all.
+        (tmp_path / "._a.jpg").write_bytes(b"\x00\x05\x16\x07")
+        _png(tmp_path / "a.jpg")
+        assert folder_preview_path(str(tmp_path)) == str(tmp_path / "a.jpg")
+
+    def test_the_preview_is_the_first_picture_the_wall_shows(self, tmp_path):
+        _png(tmp_path / "img10.png")
+        _png(tmp_path / "img2.png")
+        assert folder_preview_path(str(tmp_path)) == str(tmp_path / "img2.png")
+
 
 class TestPreviewWorker:
     def test_emits_scaled_thumbnail_for_folder_with_image(self, qapp, tmp_path):

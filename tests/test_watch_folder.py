@@ -28,6 +28,13 @@ def test_scan_images_lists_only_images(tmp_path):
     assert not any(p.endswith("c.txt") for p in found)
 
 
+def test_scan_images_leaves_out_mac_companions(tmp_path):
+    # A Mac copies "._a.png" in beside "a.png"; running the watch's action on it fails.
+    (tmp_path / "a.png").write_bytes(b"\x00")
+    (tmp_path / "._a.png").write_bytes(b"\x00")
+    assert scan_images(str(tmp_path)) == {str(tmp_path / "a.png")}
+
+
 def test_a_tethered_raw_is_an_image():
     """A camera drops RAW into a watched folder; it used to be ignored."""
     for name in ("IMG_0001.CR3", "DSC_1.NEF", "P1.RW2", "shot.dng", "photo.heic", "a.avif"):
