@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
 
@@ -152,17 +153,15 @@ class BrushPresetDialog(QDialog):
     def _confirm_overwrite(self, name: str) -> bool:  # pragma: no cover - Qt UI
         """Ask before replacing an existing brush preset."""
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
+        agreed = confirm(
             self,
             lang.get(_SAVE_PRESET_TITLE_KEY, _SAVE_PRESET_TITLE_FALLBACK),
             lang.get(
                 "paint_brush_presets_overwrite_confirm",
                 "A preset named '{name}' already exists. Overwrite it?",
             ).format(name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
-        return reply == QMessageBox.StandardButton.Yes
+        return agreed
 
     def _on_apply(self) -> None:
         name = self._selected_name()
@@ -226,17 +225,15 @@ class BrushPresetDialog(QDialog):
         the work. Tests bypass the modal by monkeypatching this method.
         """
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
+        agreed = confirm(
             self,
             lang.get("paint_brush_presets_delete", "Delete preset"),
             lang.get(
                 "paint_brush_presets_delete_confirm",
                 "Delete preset '{name}'? This cannot be undone.",
             ).format(name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
-        return reply == QMessageBox.StandardButton.Yes
+        return agreed
 
     def _on_double_clicked(self, _item: QListWidgetItem) -> None:
         self._on_apply()

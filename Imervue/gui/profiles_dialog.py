@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import (
     DEFAULT_PROFILE,
@@ -169,17 +170,15 @@ class ProfilesDialog(QDialog):
                 "You cannot delete the default or active profile.",
             ))
             return
-        confirm = QMessageBox.question(
+        agreed = confirm(
             self,
             lang.get("profiles_delete", "Delete"),
             lang.get(
                 "profiles_delete_confirm",
                 "Permanently delete profile '{name}'? This cannot be undone.",
             ).format(name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
-        if confirm != QMessageBox.StandardButton.Yes:
+        if not agreed:
             return
         if delete_profile(name):
             self._refresh()

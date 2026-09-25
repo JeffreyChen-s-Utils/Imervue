@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -165,9 +166,8 @@ class SwatchPanel(QDockWidget):
 
     def _confirm_clear(self) -> bool:  # pragma: no cover - Qt UI
         """Ask before wiping the entire swatch history."""
-        from PySide6.QtWidgets import QMessageBox
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
+        agreed = confirm(
             self,
             lang.get("paint_swatch_clear", "Clear"),
             lang.get(
@@ -175,10 +175,8 @@ class SwatchPanel(QDockWidget):
                 "Drop every recent colour from the history? "
                 "This cannot be undone.",
             ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
-        return reply == QMessageBox.StandardButton.Yes
+        return agreed
 
     def _clear_grid(self) -> None:
         while self._grid.count():

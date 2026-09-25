@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QHeaderView, QTextEdit, QMenu,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.gui.menu_tree import submenu_index, submenu_of
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_in_file_manager
@@ -293,17 +294,15 @@ def _reload_plugins(ui: ImervueMainWindow):
     if not hasattr(ui, "plugin_manager"):
         return
 
-    reply = QMessageBox.question(
+    agreed = confirm(
         ui,
         lang.get("plugin_menu_reload", "Reload Plugins"),
         lang.get(
             "plugin_reload_confirm",
             "Reload all plugins? This will unload current plugins and re-discover them.",
         ),
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No,
     )
-    if reply != QMessageBox.StandardButton.Yes:
+    if not agreed:
         return
 
     manager = ui.plugin_manager

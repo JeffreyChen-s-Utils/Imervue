@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.workspace_presets import (
     BUILT_IN_PRESETS,
@@ -304,14 +305,12 @@ class WorkspacePresetDialog(QDialog):
         by monkey-patching the prompt rather than running QMessageBox.
         """
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
+        agreed = confirm(
             self,
             lang.get("paint_workspace_preset_delete", "Delete preset"),
             lang.get(
                 "paint_workspace_preset_delete_confirm",
                 "Delete preset '{name}'? This cannot be undone.",
             ).format(name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
-        return reply == QMessageBox.StandardButton.Yes
+        return agreed

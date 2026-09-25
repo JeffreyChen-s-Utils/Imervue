@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `4a31bbd` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `dee788a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -67,8 +67,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
 | `tests/` | 888 | 146,831 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,146 |
-| `Imervue/gui/` | 167 | 33,158 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
+| `Imervue/gui/` | 167 | 33,155 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,291 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,153 |
@@ -76,7 +76,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,226 |
-| `Imervue/menu/` | 11 | 3,590 |
+| `Imervue/menu/` | 11 | 3,589 |
 | `Imervue/` 根層 | 5 | 1,576 |
 | `Imervue/plugin/` | 10 | 2,246 |
 | `Imervue/system/` | 32 | 3,052 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,739** | **329,168** |
+| **總計** | **1,739** | **329,158** |
 
-其中 `Imervue/` 套件本身 787 檔 / 167,972 行。
+其中 `Imervue/` 套件本身 787 檔 / 167,962 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -537,7 +537,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-167 個檔、33,158 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+167 個檔、33,155 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -643,8 +643,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 設定 / 系統
 
-`preferences_dialog.py`(268) · `shortcut_settings_dialog.py`(404) · `profiles_dialog.py`(207) 多帳號 ·
-`workspace_dialog.py`(231) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(367) 軟刪除回收桶 ·
+`preferences_dialog.py`(268) · `shortcut_settings_dialog.py`(404) · `profiles_dialog.py`(206) 多帳號 ·
+`workspace_dialog.py`(231) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(365) 軟刪除回收桶 ·
 `cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(334) ·
 `dual_pane_dialog.py`(167) 雙窗格檔案管理 · `onboarding_dialog.py`(135) 首次導覽 · `whats_new_dialog.py`(143)
 
@@ -659,7 +659,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_menu.py` | 524 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
-| `plugin_menu.py` | 334 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
+| `plugin_menu.py` | 333 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 176 | 依名稱 / 日期 / 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
@@ -667,7 +667,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,146 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,140 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -697,7 +697,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `brush_engine.py`(650) 純 NumPy 光柵化 · `gpu_brush.py`(681) OpenGL FBO+GLSL 加速 ·
 `brush_dynamics.py`(150) · `brush_random.py`(143) 散佈/色彩抖動/傾斜旋轉 · `brush_cursor.py`(515) 筆跡游標預覽 ·
 `brush_presets.py`(349) · `default_brush_presets.py`(164) · `brush_preset_io.py`(240) 含外部格式匯入 ·
-`brush_preset_dialog.py`(267) · `brush_kind_preview.py`(89) · `brush_tip_capture.py`(137) 從選區擷取筆尖 ·
+`brush_preset_dialog.py`(264) · `brush_kind_preview.py`(89) · `brush_tip_capture.py`(137) 從選區擷取筆尖 ·
 `custom_brush.py`(97) · `pressure_curve.py`(146) + `pressure_curve_dialog.py`(255) 筆壓曲線 ·
 `stabilizer.py`(84) 筆畫穩定器 · `catmull_rom_spline.py`(80) 平滑重採樣 · `symmetry.py`(85) 對稱繪製 ·
 `smudge.py`(120) 塗抹/混色筆 · `blur.py`(74) · `dodge_burn.py`(100) · `sponge.py`(68) ·
@@ -725,7 +725,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 顏色
 
 `color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) · `color_palette.py`(168) +
-`color_palette_io.py`(303) 外部調色盤格式 · `color_sampler.py`(174) 取樣點 · `swatch_panel.py`(247) ·
+`color_palette_io.py`(303) 外部調色盤格式 · `color_sampler.py`(174) 取樣點 · `swatch_panel.py`(245) ·
 `palette_extract.py`(168) median-cut 抽色 · `match_color.py`(96) · `match_palette.py`(108) ·
 `color_management.py`(181) ICC · `color_blindness.py`(118) CVD 模擬 · `auto_correct.py`(79) ·
 `adjustments.py`(739) 純 NumPy 非破壞性調整種類與套用管線 · `histogram.py`(128) + `histogram_dock.py`(141)
@@ -770,7 +770,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_content.py` | 433 | 文件內容命令 |
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
 | `workspace_shortcuts.py` | 313 | 快捷鍵（登錄表管理的鍵經 `shortcut_binding` 建立，`apply_shortcut_registry` 套用重新指定）、筆刷調整、歡迎提示 |
-| `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(317) | 具名 dock 佈局預設 |
+| `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(316) | 具名 dock 佈局預設 |
 | `workspace_autosave.py` | 142 + `auto_save.py`(242) | 自動存檔與當機復原 |
 | `action_recorder.py` | 240 + `action_recorder_dialog.py`(197) | 動作錄製 / 重播 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
