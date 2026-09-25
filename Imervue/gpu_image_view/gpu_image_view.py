@@ -564,6 +564,11 @@ class GPUImageView(
         from Imervue.gpu_image_view.tile_loader import on_offline_scan_finished
         on_offline_scan_finished(self, missing, generation, rewritten)
 
+    def run_shortcut_action(self, action: str) -> None:
+        """Run a Shortcut Settings action (``"undo"``, ``"delete"``…) as if its key was pressed."""
+        from PySide6.QtCore import Qt
+        self._key_dispatch.dispatch(action, Qt.KeyboardModifier.NoModifier)
+
     def _reload_rewritten_image(self, path: str) -> None:
         """Show *path* again, thumbnail and list row too: another program saved over it."""
         from Imervue.gpu_image_view.tile_loader import refetch_list_rows, refresh_rewritten_tile

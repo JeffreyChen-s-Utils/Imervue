@@ -452,3 +452,144 @@ def test_the_main_window_passes_changed_paths_to_the_list():
     window = SimpleNamespace(image_list_view=SimpleNamespace(refetch=got.append))
     MainWindowBrowseMixin.refetch_list_rows(window, {"a.png"})
     assert got == [{"a.png"}]
+
+
+
+class _EditWindow:
+    """Records what the list asks the main window to delete or undo."""
+
+    def __init__(self):
+        self.deleted: list = []
+        self.undos = 0
+
+    def delete_list_selection(self, paths):
+        self.deleted.append(list(paths))
+
+    def undo_from_list(self):
+        self.undos += 1
+
+
+def _press(view, key, modifiers=Qt.KeyboardModifier.NoModifier):
+    from PySide6.QtCore import QEvent
+    from PySide6.QtGui import QKeyEvent
+    event = QKeyEvent(QEvent.Type.KeyPress, key, modifiers)
+    event.ignore()   # a new event starts accepted: make the handler say so itself
+    view.keyPressEvent(event)
+    return event
+
+
+def _list_with(qapp, tmp_path, names, window):
+    from PySide6.QtCore import QItemSelectionModel
+
+    from Imervue.gui.image_list_view import ImageListView
+    view = ImageListView(main_window=window)
+    view.set_paths([str(tmp_path / name) for name in names])
+    return view, QItemSelectionModel
+
+
+def test_delete_in_the_list_deletes_the_selected_rows(qapp, tmp_path):
+    """Delete did nothing in the List view: only the wall and Deep Zoom listened for it."""
+    window = _EditWindow()
+    view, selection = _list_with(qapp, tmp_path, ["a.png", "b.png", "c.png"], window)
+    try:
+        model = view.model()
+        flags = selection.SelectionFlag.Select | selection.SelectionFlag.Rows
+        view.selectionModel().select(model.index(0, 0), flags)
+        view.selectionModel().select(model.index(1, 0), flags)
+        event = _press(view, Qt.Key.Key_Delete)
+    finally:
+        view.deleteLater()
+    assert window.deleted == [[str(tmp_path / "a.png"), str(tmp_path / "b.png")]]
+    assert event.isAccepted()
+
+
+def test_delete_moves_the_cursor_to_the_row_that_takes_their_place(qapp, tmp_path):
+    names = ["a.png", "b.png", "c.png"]
+    view, selection = _list_with(qapp, tmp_path, names, None)
+
+    class _Window(_EditWindow):
+        def delete_list_selection(self, paths):
+            super().delete_list_selection(paths)
+            view.set_paths([str(tmp_path / n) for n in names if str(tmp_path / n) not in paths])
+
+    view._main_window = _Window()  # noqa: SLF001
+    try:
+        view.selectRow(1)
+        _press(view, Qt.Key.Key_Delete)
+        assert view.selected_paths() == [str(tmp_path / "c.png")]
+    finally:
+        view.deleteLater()
+
+
+def test_ctrl_z_in_the_list_undoes(qapp, tmp_path):
+    window = _EditWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        event = _press(view, Qt.Key.Key_Z, Qt.KeyboardModifier.ControlModifier)
+    finally:
+        view.deleteLater()
+    assert window.undos == 1
+    assert event.isAccepted()
+
+
+def test_delete_with_nothing_selected_does_nothing(qapp, tmp_path):
+    window = _EditWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.clearSelection()
+        _press(view, Qt.Key.Key_Delete)
+    finally:
+        view.deleteLater()
+    assert window.deleted == []
+
+
+def test_a_rebound_delete_key_is_followed(qapp, tmp_path, monkeypatch):
+    from Imervue.gui.shortcut_settings_dialog import shortcut_manager
+    window = _EditWindow()
+    monkeypatch.setattr(shortcut_manager, "get_action",
+                        lambda key, _mods: "delete" if key == Qt.Key.Key_X else None)
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.selectRow(0)
+        _press(view, Qt.Key.Key_Delete)
+        assert window.deleted == []
+        _press(view, Qt.Key.Key_X)
+    finally:
+        view.deleteLater()
+    assert window.deleted == [[str(tmp_path / "a.png")]]
+
+
+def test_a_list_without_a_main_window_ignores_delete(qapp, tmp_path):
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], None)
+    try:
+        view.selectRow(0)
+        _press(view, Qt.Key.Key_Delete)   # must not raise
+    finally:
+        view.deleteLater()
+
+
+def test_the_main_window_deletes_the_list_rows_like_the_wall(monkeypatch):
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.actions import delete
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    seen, refreshed = [], []
+    monkeypatch.setattr(delete, "delete_selected_tiles",
+                        lambda viewer: seen.append(set(viewer.selected_tiles)))
+    viewer = SimpleNamespace(selected_tiles={"stale.png"})
+    window = SimpleNamespace(viewer=viewer, refresh_list_view=lambda: refreshed.append(True))
+    MainWindowBrowseMixin.delete_list_selection(window, ["a.png", "b.png"])
+    assert seen == [{"a.png", "b.png"}]
+    assert refreshed == [True]
+
+
+def test_undo_from_the_list_runs_the_viewers_undo_and_shows_the_rows(monkeypatch):
+    from types import SimpleNamespace
+
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    actions, refreshed = [], []
+    viewer = SimpleNamespace(run_shortcut_action=actions.append)
+    window = SimpleNamespace(viewer=viewer, refresh_list_view=lambda: refreshed.append(True))
+    MainWindowBrowseMixin.undo_from_list(window)
+    assert actions == ["undo"]
+    assert refreshed == [True]

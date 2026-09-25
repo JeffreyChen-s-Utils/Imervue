@@ -129,6 +129,8 @@ Aperçu · Étiquette · Nom · Résolution · Taille · Type · Modifié. Doubl
 en Deep Zoom ; appuyez sur ``Esc`` pour revenir à la liste. Les vignettes et les métadonnées sont chargées paresseusement sur un fil d'exécution
 de travail, afin que les très grands dossiers restent réactifs.
 
+``Delete`` retire les lignes sélectionnées et ``Ctrl + Z`` les rétablit, comme dans la grille ; les touches suivent les réglages des raccourcis.
+
 Mode Deep Zoom
 ^^^^^^^^^^^^^^
 

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-14 | 2026-09-26 | Delete and Ctrl+Z work in the List view, as on the thumbnail wall | #fix #list-view #delete #keyboard | [2026-09-b](2026-09-b.md) |
 | U-20260926-13 | 2026-09-26 | The shown picture is measured, not Qt-watched, so an editor's save is never refused | #fix #viewer #external-editor #windows #data-loss | [2026-09-b](2026-09-b.md) |
 | U-20260926-12 | 2026-09-26 | Refactor: drop animation_player.is_animated_file, which nothing but tests called | #refactor #dead-code #animation | [2026-09-b](2026-09-b.md) |
 | U-20260926-11 | 2026-09-26 | Sort by Date Taken, the time the camera recorded | #feature #sort #exif #browse | [2026-09-b](2026-09-b.md) |
@@ -386,4 +387,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 44 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 45 |

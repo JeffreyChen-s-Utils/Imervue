@@ -199,7 +199,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 ### Modos de navegação
 
 - **Grade** (padrão) — grade de tiles virtualizada com popup de pré-visualização ao passar o mouse (atraso de 500 ms)
-- **Lista (detalhe)** — alternar com `Ctrl+L`; colunas: Preview · Etiqueta · Nome · Resolução · Tamanho · Tipo · Modificação
+- **Lista (detalhe)** — alternar com `Ctrl+L`; colunas: Preview · Etiqueta · Nome · Resolução · Tamanho · Tipo · Modificação; `Delete` remove as linhas selecionadas e `Ctrl+Z` as traz de volta, como na grade
 - **Deep Zoom** — duplo clique em um tile; pan/zoom suave por GPU com overlay de minimapa
 - **Vista dividida** (`Shift+S`) — duas imagens lado a lado
 - **Leitura em página dupla** (`Shift+D`, `Ctrl+Shift+D` para mangá da direita para a esquerda) — leitor de páginas opostas

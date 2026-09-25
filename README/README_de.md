@@ -199,7 +199,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 ### Browse-Modi
 
 - **Grid** (Standard) — Virtualisiertes Tile-Grid mit Hover-Preview-Popup (500 ms Verzögerung)
-- **Liste (Detail)** — Umschalten mit `Ctrl+L`; Spalten: Preview · Label · Name · Auflösung · Größe · Typ · Geändert
+- **Liste (Detail)** — Umschalten mit `Ctrl+L`; Spalten: Preview · Label · Name · Auflösung · Größe · Typ · Geändert; `Delete` entfernt die markierten Zeilen und `Ctrl+Z` holt sie zurück, wie im Grid
 - **Deep Zoom** — Doppelklick auf ein Tile; weiches GPU-Pan/Zoom mit Minimap-Overlay
 - **Split View** (`Shift+S`) — Zwei Bilder nebeneinander
 - **Dual-Page-Reading** (`Shift+D`, `Ctrl+Shift+D` für Right-to-Left-Manga) — Doppelseiten-Reader

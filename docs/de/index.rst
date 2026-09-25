@@ -129,6 +129,8 @@ Doppelklicken Sie eine Zeile (oder drücken Sie ``Enter``), um Deep Zoom zu öff
 zurück zur Liste. Miniaturansichten und Metadaten werden in einem Worker-Thread verzögert geladen,
 sodass auch sehr große Ordner reaktionsfähig bleiben.
 
+``Delete`` entfernt die markierten Zeilen und ``Ctrl + Z`` holt sie zurück, wie im Grid; die Tasten folgen den Tastenkürzel-Einstellungen.
+
 Deep-Zoom-Modus
 ^^^^^^^^^^^^^^^
 

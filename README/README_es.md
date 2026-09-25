@@ -199,7 +199,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Modos de exploración
 
 - **Cuadrícula** (predeterminado) — cuadrícula virtualizada de mosaicos con previsualización al pasar el cursor (retraso de 500 ms)
-- **Lista (detalle)** — se alterna con `Ctrl+L`; columnas: Vista previa · Etiqueta · Nombre · Resolución · Tamaño · Tipo · Modificado
+- **Lista (detalle)** — se alterna con `Ctrl+L`; columnas: Vista previa · Etiqueta · Nombre · Resolución · Tamaño · Tipo · Modificado; `Delete` quita las filas seleccionadas y `Ctrl+Z` las recupera, como en la cuadrícula
 - **Deep Zoom** — doble clic en un mosaico; paneo/zoom fluido en GPU con superposición de minimapa
 - **Vista dividida** (`Shift+S`) — dos imágenes lado a lado
 - **Lectura de doble página** (`Shift+D`, `Ctrl+Shift+D` para manga de derecha a izquierda) — lector de páginas enfrentadas

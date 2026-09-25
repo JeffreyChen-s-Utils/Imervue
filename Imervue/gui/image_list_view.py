@@ -523,6 +523,8 @@ class ImageListView(QTableView):
             self.image_activated.emit(path)
 
     def keyPressEvent(self, event):
+        if self._handle_edit_key(event):
+            return
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             idx = self.currentIndex()
             if idx.isValid():
@@ -544,6 +546,29 @@ class ImageListView(QTableView):
                 event.accept()
                 return
         super().keyPressEvent(event)
+
+    def _handle_edit_key(self, event) -> bool:
+        """Delete and Undo, as bound in Shortcut Settings, act on the list like on the wall.
+
+        Delete removes the selected rows (undoable, sent to the Recycle Bin
+        later) and puts the cursor on the row that takes their place.
+        """
+        from Imervue.gui.shortcut_settings_dialog import shortcut_manager
+        window = self._main_window
+        if window is None:
+            return False
+        action = shortcut_manager.get_action(event.key(), event.modifiers())
+        if action == "undo":
+            window.undo_from_list()
+        elif action == "delete" and self.selected_paths():
+            row = min(index.row() for index in self.selectionModel().selectedRows())
+            window.delete_list_selection(self.selected_paths())
+            if self._model.rowCount():
+                self.selectRow(min(row, self._model.rowCount() - 1))
+        else:
+            return False
+        event.accept()
+        return True
 
     def contextMenuEvent(self, event):  # noqa: N802 - Qt override
         """Right-click → quick actions: Open / Reveal / Copy path.

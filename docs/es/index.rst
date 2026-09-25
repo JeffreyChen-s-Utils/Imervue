@@ -132,6 +132,8 @@ ordenable con estas columnas: Vista previa · Etiqueta · Nombre · Resolución 
 ``Esc`` para volver a la lista. Las miniaturas y los metadatos se cargan de forma diferida en
 un hilo de trabajo, de modo que las carpetas muy grandes mantienen la capacidad de respuesta.
 
+``Delete`` quita las filas seleccionadas y ``Ctrl + Z`` las recupera, como en la cuadrícula; las teclas siguen la configuración de atajos.
+
 Modo Deep Zoom
 ^^^^^^^^^^^^^^
 

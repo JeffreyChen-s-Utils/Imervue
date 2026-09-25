@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `e49fa49` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `493e899` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 888 | 147,565 |
+| `tests/` | 889 | 147,722 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
-| `Imervue/gui/` | 167 | 33,174 |
+| `Imervue/gui/` | 167 | 33,212 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,343 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,190 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,195 |
 | `Imervue/multi_language/` | 8 | 14,149 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,739** | **330,115** |
+| **總計** | **1,740** | **330,315** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,185 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,228 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -413,7 +413,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `gpu_image_view.py` | 757 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
+| `gpu_image_view.py` | 762 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin；`run_shortcut_action(action)` 讓別的元件以按鍵的方式執行快捷鍵動作 |
 | `view_state_init.py` | 278 | 建構子呼叫的狀態初始化函式（tile grid、deep zoom、瀏覽、互動、顯示），只設定屬性、不碰 GL |
 | `deep_zoom_loading.py` | 299 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知） |
 | `shown_file_watch.py` | 87 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看；`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間，之後每 `POLL_MS`（500 ms）用 `os.stat` 量一次，變了之後又連續一次沒變（寫完了）才經 `_reload_rewritten_image` 重新載入並重解縮圖；外部編輯器就地覆寫、寫副本再改名蓋過去、保留原修改時間的存檔都看得到。刻意不用 `QFileSystemWatcher` 監看檔案：在 Windows 上它讓其他程式改名蓋過去的存檔約一成被拒絕存取（實測 600 次 54 次），資料夾監看與 `os.stat` 都不會 |
@@ -537,7 +537,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-167 個檔、33,174 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+167 個檔、33,212 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -563,12 +563,12 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
 | `main_window_layout.py` | 296 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
-| `main_window_browse.py` | 107 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視 |
+| `main_window_browse.py` | 120 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單 |
 | `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 929 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 173 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（`folder_preview_path` 經 `list_images`：自然排序、跳過 `._` 等隱藏檔，和縮圖牆的第一張一致；取代不穩定的 Windows shell 縮圖） |
-| `image_list_view.py` | 633 | 清單檢視（`QTableView`，縮圖牆的替代）；`refetch(paths)` 讓外部改寫、刪除或復原的列重新讀取（舊縮圖留到新的到為止，讀取中途檔案變了就丟掉那次結果重讀） |
+| `image_list_view.py` | 658 | 清單檢視（`QTableView`，縮圖牆的替代）；`refetch(paths)` 讓外部改寫、刪除或復原的列重新讀取（舊縮圖留到新的到為止，讀取中途檔案變了就丟掉那次結果重讀）；Delete／Undo 照「快捷鍵設定」解讀（`_handle_edit_key`），刪除選取列、復原都交給主視窗 |
 | `dual_image_view.py` | 196 | 雙圖檢視：Split / Manga / Manga RTL 三種模式 |
 | `exif_sidebar.py` | 438 | 可收合的 EXIF 側邊欄（含星等元件） |
 | `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-888 個檔、147,565 行。`pyproject.toml` 定義三個互斥層級 marker：
+889 個檔、147,722 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

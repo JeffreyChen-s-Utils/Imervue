@@ -62,6 +62,19 @@ class MainWindowBrowseMixin:
         """Have the list view read *paths* again: they were rewritten, removed or restored."""
         self.image_list_view.refetch(paths)
 
+    def delete_list_selection(self, paths: list[str]) -> None:
+        """Delete the list's selected rows as Delete does on the wall: undoable, trashed later."""
+        from Imervue.gpu_image_view.actions import delete
+        self.viewer.selected_tiles.clear()
+        self.viewer.selected_tiles.update(paths)
+        delete.delete_selected_tiles(self.viewer)
+        self.refresh_list_view()
+
+    def undo_from_list(self) -> None:
+        """The viewer's undo (the last edit, else the last delete), then show what came back."""
+        self.viewer.run_shortcut_action("undo")
+        self.refresh_list_view()
+
     def _on_list_activated(self, path: str) -> None:
         """Double-clicking a row opens that image in the deep-zoom viewer.
 
