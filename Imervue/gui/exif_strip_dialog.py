@@ -25,7 +25,9 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
+from Imervue.image.recipe_store import carry_recipe
 from Imervue.image.shown import as_shown
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -73,7 +75,9 @@ def strip_exif(path: str, *, remove_all: bool = True,
         raise ValueError(f"{path} can't be overwritten without losing frames")
     # The orientation tag goes with the rest of the EXIF, so bake it into the
     # pixels first; otherwise a portrait phone photo comes out sideways for good.
-    img = as_shown(Image.open(path))
+    with Image.open(path) as opened:
+        img = as_shown(opened)
+        img.load()
 
     # Preserve ICC profile if user only wants GPS removed
     icc = img.info.get("icc_profile") if not remove_all else None
@@ -102,6 +106,16 @@ def strip_exif(path: str, *, remove_all: bool = True,
     if fmt == "JPEG":
         save_kwargs.setdefault("quality", 95)
 
+    if overwrite:
+        # In one step, so a failed save keeps the original; and the photo's
+        # Modify recipe stays with it (it applies to the upright pixels baked
+        # in here, and the rewrite changes the identity it is keyed by).
+        def write() -> bool:
+            replace_atomically(path, lambda tmp: clean.save(tmp, **save_kwargs))
+            return True
+
+        carry_recipe(path, write)
+        return path
     clean.save(out_path, **save_kwargs)
     return out_path
 

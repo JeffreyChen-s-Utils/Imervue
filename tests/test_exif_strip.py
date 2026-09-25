@@ -7,8 +7,10 @@ Worker tests call .run() directly and require ``qapp``.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.gui.exif_strip_dialog import (
@@ -124,6 +126,33 @@ class TestStripExif:
         # Should still be a valid image
         img = Image.open(path)
         assert img.size == (10, 10)
+
+    def test_a_failed_overwrite_keeps_the_original(self, tmp_path, monkeypatch):
+        """The overwrite saved straight over the photo; a failure mid-save lost it."""
+        from Imervue.system import atomic_write
+        path = str(tmp_path / "photo.jpg")
+        _make_jpeg_with_exif(path)
+        before = Path(path).read_bytes()
+
+        def disk_full(_src, _dst):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(atomic_write.os, "replace", disk_full)
+        with pytest.raises(OSError, match="disk full"):
+            strip_exif(path, overwrite=True)
+        assert Path(path).read_bytes() == before
+        assert sorted(os.listdir(tmp_path)) == ["photo.jpg"]
+
+    def test_the_photos_recipe_stays_with_it(self, tmp_path):
+        from Imervue.image.recipe import Recipe, clear_identity_cache
+        from Imervue.image.recipe_store import recipe_store
+        path = str(tmp_path / "photo.jpg")
+        _make_jpeg_with_exif(path)
+        clear_identity_cache()
+        recipe_store.set_for_path(path, Recipe(exposure=0.6))
+        strip_exif(path, overwrite=True)
+        kept = recipe_store.get_for_path(path)
+        assert kept is not None and kept.exposure == pytest.approx(0.6)
 
     def test_preserves_pixel_data(self, tmp_path):
         path = str(tmp_path / "photo.png")
