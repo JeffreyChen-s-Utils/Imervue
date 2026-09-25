@@ -139,3 +139,21 @@ def test_empty_query_is_empty_rules():
 
 def test_bare_words_only():
     assert parse_query("cat dog")["name_contains"] == "cat dog"
+
+
+
+def test_a_quoted_value_keeps_its_spaces():
+    rules = parse_query('place:"Rio de Janeiro" ext:jpg sunset')
+    assert rules["place"] == "Rio de Janeiro"
+    assert rules["exts"] == ["jpg"]
+    assert rules["name_contains"] == "sunset"
+
+
+def test_quotes_around_a_single_word_are_dropped():
+    """The module's own example, place:"Paris", kept its quotes and matched nothing."""
+    assert parse_query('place:"Paris"')["place"] == "Paris"
+
+
+def test_an_unclosed_quote_still_parses_the_rest():
+    rules = parse_query('name:"half ext:png')
+    assert rules["exts"] == ["png"]

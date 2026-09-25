@@ -1266,6 +1266,8 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 크기 범위, 파일명 부분 일치로 검색하고 결과를 가상 앨범으로 뷰어에
 불러올 수 있습니다.
 
+우클릭 > ``쿼리 검색…``\ 으로 현재 폴더를 간결한 쿼리 언어로 걸러 냅니다. 예: ``kw:beach rating:>=4 type:video place:Paris``. ``place:``\ 에는 도시, 국가 또는 둘 다(``Paris``, ``France``, ``Paris, France``)를 쓸 수 있고, 공백이 있는 값은 큰따옴표로 묶습니다(``place:"Rio de Janeiro"``).
+
 스마트 앨범
 ^^^^^^^^^^^
 

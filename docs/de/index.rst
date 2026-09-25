@@ -2149,6 +2149,8 @@ gecrawlt wird. Sobald ein Root indiziert ist, können Sie ihn nach Erweiterung,
 Mindestbreite/-höhe, Größenbereich oder Namens-Teilstring abfragen und die Ergebnisse
 als virtuelles Album in den Betrachter laden.
 
+Rechtsklick > ``Search by Query…`` filtert den aktuellen Ordner mit einer kompakten Abfragesprache, zum Beispiel ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` nimmt eine Stadt, ein Land oder beides (``Paris``, ``France``, ``Paris, France``); ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (``place:"Rio de Janeiro"``).
+
 Smart-Alben
 ^^^^^^^^^^^
 

@@ -2116,6 +2116,8 @@ Búsqueda en la biblioteca
 una raíz está indexada puede consultarla por extensión, ancho/alto mínimo, rango de tamaño o
 subcadena de nombre y soltar los resultados en el visor como un álbum virtual.
 
+Clic derecho > ``Search by Query…`` filtra la carpeta actual con un lenguaje de consulta compacto, por ejemplo ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` admite una ciudad, un país o ambos (``Paris``, ``France``, ``Paris, France``); un valor con espacios va entre comillas dobles (``place:"Rio de Janeiro"``).
+
 Álbumes inteligentes
 ^^^^^^^^^^^^^^^^^^^^
 

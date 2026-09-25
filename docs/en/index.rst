@@ -2080,6 +2080,8 @@ to a global index that is crawled in a background thread. Once a root is
 indexed you can query it by extension, min width/height, size range, or name
 substring and drop the results into the viewer as a virtual album.
 
+Right-click > ``Search by Query…`` filters the current folder with a compact query language, for example ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` takes a city, a country or both (``Paris``, ``France``, ``Paris, France``); a value with spaces goes in double quotes (``place:"Rio de Janeiro"``).
+
 Smart Albums
 ^^^^^^^^^^^^
 

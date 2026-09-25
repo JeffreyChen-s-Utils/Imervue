@@ -1243,6 +1243,8 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 之後可依副檔名、最小寬高、檔案大小或檔名片段查詢，並把結果當作虛擬相簿
 載入檢視器。
 
+右鍵 > ``查詢搜尋…`` 以精簡的查詢語言篩選目前的資料夾，例如 ``kw:beach rating:>=4 type:video place:Paris``。``place:`` 可填城市、國家或兩者（``Paris``、``France``、``Paris, France``），含空格的值用雙引號括起（``place:"Rio de Janeiro"``）。
+
 智慧相簿
 ^^^^^^^^
 

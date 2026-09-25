@@ -2093,6 +2093,8 @@ a um índice global que é varrido em uma thread em segundo plano. Uma vez que u
 indexada você pode consultá-la por extensão, largura/altura mínima, faixa de tamanho ou
 substring de nome e jogar os resultados no visualizador como um álbum virtual.
 
+Clique direito > ``Search by Query…`` filtra a pasta atual com uma linguagem de consulta compacta, por exemplo ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` aceita uma cidade, um país ou ambos (``Paris``, ``France``, ``Paris, France``); um valor com espaços vai entre aspas duplas (``place:"Rio de Janeiro"``).
+
 Álbuns Inteligentes
 ^^^^^^^^^^^^^^^^^^^
 

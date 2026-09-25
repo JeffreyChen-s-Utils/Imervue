@@ -254,7 +254,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 - **模糊文件名搜索** 含子字符串高亮
 - **找相似** — pHash（64-bit DCT）含可调 Hamming 距离
-- **图库搜索** — SQLite 多根索引，含紧凑的查询 DSL：关键字、标签（含取反）、评级、颜色、扩展名、地点、挑片、收藏、长宽比、年龄、大小、尺寸、相机 / 镜头，以及文件名正则 / glob
+- **图库搜索** — SQLite 多根索引，含紧凑的查询 DSL：关键字、标签（含取反）、评级、颜色、扩展名、地点、挑片、收藏、长宽比、年龄、大小、尺寸、相机 / 镜头，以及文件名正则 / glob；`place:` 可填城市、国家或两者，含空格的值用双引号括起（`place:"Rio de Janeiro"`）
 - **找相似（average hash）** — pHash 与 dHash 再加上可选的 average-hash（aHash），提供互补的近重复度量
 - **语义搜索（CLIP）** — 自然语言查询（如"雪中的金毛犬"）通过缓存的 embedding；`open_clip_torch` + `torch` 未安装时优雅停用
 - **自动标签** — 启发式分类 + 可选 CLIP ONNX 升级

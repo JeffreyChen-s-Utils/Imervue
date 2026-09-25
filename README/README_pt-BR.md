@@ -255,7 +255,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 - **Busca fuzzy por nome de arquivo** com destaque de substring
 - **Buscar Imagens Similares** — pHash (DCT 64 bits) com distância de Hamming ajustável
-- **Library Search** — índice multi-raiz SQLite com uma DSL de consulta compacta: palavras-chave, tags (incl. negação), avaliações, cor, extensão, lugar, triagem, favoritos, proporção, idade, tamanho, dimensões, câmera / lente e regex / glob de nome de arquivo
+- **Library Search** — índice multi-raiz SQLite com uma DSL de consulta compacta: palavras-chave, tags (incl. negação), avaliações, cor, extensão, lugar, triagem, favoritos, proporção, idade, tamanho, dimensões, câmera / lente e regex / glob de nome de arquivo; `place:` corresponde a uma cidade, um país ou ambos, e um valor com espaços vai entre aspas duplas (`place:"Rio de Janeiro"`)
 - **Find Similar (average hash)** — pHash e dHash são acompanhados por um average-hash (aHash) opcional para uma métrica complementar de quase duplicatas
 - **Busca Semântica (CLIP)** — consultas em linguagem natural ("golden retriever na neve") via embeddings em cache; degrada graciosamente quando `open_clip_torch` + `torch` não estão instalados
 - **Auto-Tag** — classificação heurística com upgrade opcional CLIP ONNX

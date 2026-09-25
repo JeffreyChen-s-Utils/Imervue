@@ -123,8 +123,22 @@ def _apply_exif_filters(paths: list[str], rules: dict) -> list[str]:
     return out
 
 
+def place_matches(found: str | None, wanted: str) -> bool:
+    """Whether the geocoded *found* (``"City, Country"``) is the *wanted* place.
+
+    *wanted* names the city, the country or both, in any case: ``Paris``,
+    ``france`` and ``Paris, France`` all match ``"Paris, France"``. A typed
+    ``place:Paris`` compared the whole string and never matched.
+    """
+    if not found:
+        return False
+    parts = [part.strip().lower() for part in found.split(",")]
+    asked = [part.strip().lower() for part in wanted.split(",") if part.strip()]
+    return asked == parts or (len(asked) == 1 and asked[0] in parts)
+
+
 def _apply_place_filter(paths: list[str], place: str) -> list[str]:
-    """Keep paths whose GPS reverse-geocodes to the nearest-city *place*.
+    """Keep paths whose GPS reverse-geocodes to *place* (see :func:`place_matches`).
 
     Runs last (after the cheap filters narrow the set) because it extracts EXIF
     GPS per file. Untagged images can't match a place, so they drop out.
@@ -134,7 +148,7 @@ def _apply_place_filter(paths: list[str], place: str) -> list[str]:
     out: list[str] = []
     for path in paths:
         coords = extract_gps(path)
-        if coords is not None and reverse_geocode(coords[0], coords[1]) == place:
+        if coords is not None and place_matches(reverse_geocode(coords[0], coords[1]), place):
             out.append(path)
     return out
 

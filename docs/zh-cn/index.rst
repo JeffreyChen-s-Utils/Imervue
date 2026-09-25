@@ -1230,6 +1230,8 @@ Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 之后可按扩展名、最小宽高、文件大小或文件名片段查询，并将结果作为虚拟
 相册载入查看器。
 
+右键 > ``查询搜索…`` 以精简的查询语言筛选当前文件夹，例如 ``kw:beach rating:>=4 type:video place:Paris``。``place:`` 可填城市、国家或两者（``Paris``、``France``、``Paris, France``），含空格的值用双引号括起（``place:"Rio de Janeiro"``）。
+
 智能相册
 ^^^^^^^^
 

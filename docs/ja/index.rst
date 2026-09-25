@@ -1272,6 +1272,8 @@ Imervue は ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）または
 幅高／サイズ範囲／ファイル名部分一致で検索し、結果を仮想アルバムとして
 ビューアーへ読み込めます。
 
+右クリック > ``クエリ検索…`` で、現在のフォルダーをコンパクトなクエリ言語で絞り込めます。例：``kw:beach rating:>=4 type:video place:Paris``。``place:`` には都市・国・その両方（``Paris``、``France``、``Paris, France``）を指定でき、空白を含む値はダブルクォートで囲みます（``place:"Rio de Janeiro"``）。
+
 スマートアルバム
 ^^^^^^^^^^^^^^^^
 

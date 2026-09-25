@@ -257,7 +257,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - **Fuzzy filename search** with substring highlighting
 - **Find Similar Images** — pHash (64-bit DCT) with adjustable Hamming distance
-- **Library Search** — SQLite multi-root index with a compact query DSL: keywords, tags (incl. negation), ratings, colour, extension, place, cull, favourites, aspect, age, size, dimensions, camera / lens, and filename regex / glob
+- **Library Search** — SQLite multi-root index with a compact query DSL: keywords, tags (incl. negation), ratings, colour, extension, place, cull, favourites, aspect, age, size, dimensions, camera / lens, and filename regex / glob; `place:` matches a city, a country or both, and a value with spaces goes in double quotes (`place:"Rio de Janeiro"`)
 - **Find Similar (average hash)** — pHash and dHash are joined by an optional average-hash (aHash) for a complementary near-duplicate metric
 - **Semantic Search (CLIP)** — natural-language queries ("golden retriever in snow") via cached embeddings; gracefully unavailable when `open_clip_torch` + `torch` aren't installed
 - **Auto-Tag** — heuristic classification with optional CLIP ONNX upgrade

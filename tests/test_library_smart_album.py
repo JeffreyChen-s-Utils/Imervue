@@ -305,3 +305,31 @@ class TestLocationAlbums:
         assert count == 2
         names = {row["name"] for row in smart_album.list_all()}
         assert {"Paris, France", "Tokyo, Japan"} <= names
+
+
+
+class TestPlaceMatches:
+    """place:Paris compared the whole "Paris, France" and never matched."""
+
+    @pytest.mark.parametrize("wanted", ["Paris", "paris", "France", "Paris, France", "paris,france"])
+    def test_the_city_the_country_or_both_match(self, wanted):
+        from Imervue.library.smart_album import place_matches
+        assert place_matches("Paris, France", wanted)
+
+    @pytest.mark.parametrize("wanted", ["Par", "Lyon", "Paris, Italy", "", " , "])
+    def test_anything_else_does_not(self, wanted):
+        from Imervue.library.smart_album import place_matches
+        assert not place_matches("Paris, France", wanted)
+
+    def test_an_untagged_photo_matches_no_place(self):
+        from Imervue.library.smart_album import place_matches
+        assert not place_matches(None, "Paris")
+
+    def test_a_typed_city_filters_the_photos_taken_there(self, monkeypatch):
+        from Imervue.image import gps, reverse_geocode
+        from Imervue.library import smart_album
+        coords = {"/a.jpg": (48.85, 2.35), "/b.jpg": (41.9, 12.5), "/c.jpg": None}
+        monkeypatch.setattr(gps, "extract_gps", coords.get)
+        monkeypatch.setattr(reverse_geocode, "reverse_geocode",
+                            lambda lat, _lon: "Paris, France" if lat > 45 else "Rome, Italy")
+        assert smart_album._apply_place_filter(list(coords), "paris") == ["/a.jpg"]

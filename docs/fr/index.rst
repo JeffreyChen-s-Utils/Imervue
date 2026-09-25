@@ -2115,6 +2115,8 @@ Recherche dans la bibliothèque
 par extension, largeur/hauteur minimale, plage de taille ou sous-chaîne de nom, et déposer
 les résultats dans la visionneuse comme album virtuel.
 
+Clic droit > ``Search by Query…`` filtre le dossier courant avec un langage de requête compact, par exemple ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` accepte une ville, un pays ou les deux (``Paris``, ``France``, ``Paris, France``) ; une valeur avec des espaces se met entre guillemets doubles (``place:"Rio de Janeiro"``).
+
 Albums intelligents
 ^^^^^^^^^^^^^^^^^^^
 

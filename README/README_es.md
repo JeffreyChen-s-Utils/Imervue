@@ -255,7 +255,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 - **Búsqueda difusa de nombres** con resaltado de subcadenas
 - **Encontrar imágenes similares** — pHash (DCT de 64 bits) con distancia de Hamming ajustable
-- **Búsqueda en biblioteca** — índice SQLite multi-raíz con un DSL de consulta compacto: palabras clave, etiquetas (incl. negación), calificaciones, color, extensión, lugar, culling, favoritos, relación de aspecto, antigüedad, tamaño, dimensiones, cámara / objetivo, y regex / glob de nombre de archivo
+- **Búsqueda en biblioteca** — índice SQLite multi-raíz con un DSL de consulta compacto: palabras clave, etiquetas (incl. negación), calificaciones, color, extensión, lugar, culling, favoritos, relación de aspecto, antigüedad, tamaño, dimensiones, cámara / objetivo, y regex / glob de nombre de archivo; `place:` coincide con una ciudad, un país o ambos, y un valor con espacios va entre comillas dobles (`place:"Rio de Janeiro"`)
 - **Encontrar similares (average hash)** — pHash y dHash se complementan con un average-hash (aHash) opcional como métrica adicional de casi-duplicados
 - **Búsqueda semántica (CLIP)** — consultas en lenguaje natural ("golden retriever en la nieve") vía embeddings en caché; se desactiva con gracia si `open_clip_torch` + `torch` no están instalados
 - **Auto-etiquetado** — clasificación heurística con upgrade opcional CLIP ONNX
