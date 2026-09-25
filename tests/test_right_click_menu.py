@@ -85,3 +85,38 @@ def test_auto_orient_gives_same_stem_photos_their_own_copies(qapp, tmp_path):
             Image.open(tmp_path / "p_oriented_1.png") as second:
         assert (first.size, second.size) == ((8, 4), (6, 2))
     assert gui.main_window.toast.calls == [("success", "Oriented 2 photo(s)")]
+
+
+def _combine(monkeypatch, paths, dest):
+    from PySide6.QtWidgets import QFileDialog
+    monkeypatch.setattr(right_click_menu, "selected_in_view_order", lambda _gui: list(paths))
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_a, **_k: (str(dest), ""))
+    toast = _Toast()
+    toast.error = lambda msg: toast.calls.append(("error", msg))
+    right_click_menu._combine_multipage(  # noqa: SLF001
+        SimpleNamespace(main_window=SimpleNamespace(toast=toast)))
+    return toast.calls
+
+
+def test_combine_pages_reports_the_document(qapp, tmp_path, monkeypatch):
+    pages = []
+    for i in range(2):
+        page = tmp_path / f"p{i}.png"
+        Image.new("RGB", (8, 8)).save(page)
+        pages.append(page)
+    calls = _combine(monkeypatch, pages, tmp_path / "doc.pdf")
+    assert calls == [("success", "Combined 2 pages → doc.pdf")]
+    assert (tmp_path / "doc.pdf").stat().st_size > 0
+
+
+def test_combine_pages_reports_an_image_over_the_pixel_limit(qapp, tmp_path, monkeypatch, caplog):
+    """DecompressionBombError is no OSError: it escaped the slot instead of being reported."""
+    page = tmp_path / "huge.png"
+    Image.new("RGB", (64, 64)).save(page)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 100)
+    with caplog.at_level("WARNING", logger="Imervue"):
+        calls = _combine(monkeypatch, [page], tmp_path / "doc.pdf")
+    ((kind, _msg),) = calls
+    assert kind == "error"
+    assert not (tmp_path / "doc.pdf").exists()
+    assert any("Combining 1 pages" in r.getMessage() for r in caplog.records)

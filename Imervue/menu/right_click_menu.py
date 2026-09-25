@@ -490,6 +490,7 @@ def _import_by_date(main_gui: GPUImageView) -> None:
 def _combine_multipage(main_gui: GPUImageView) -> None:
     from PySide6.QtWidgets import QFileDialog
     from Imervue.image.multipage import combine_to_multipage
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
     paths = selected_in_view_order(main_gui)  # page order
     if not paths:
         return
@@ -503,7 +504,9 @@ def _combine_multipage(main_gui: GPUImageView) -> None:
     toast = getattr(main_gui.main_window, "toast", None)
     try:
         result = combine_to_multipage(paths, dest)
-    except (OSError, ValueError) as exc:
+    except IMAGE_READ_ERRORS as exc:   # a page that can't be decoded, or a failed save
+        logging.getLogger("Imervue.right_click_menu").warning(
+            "Combining %d pages into %s failed", len(paths), dest, exc_info=True)
         if toast is not None:
             toast.error(str(exc))
         return

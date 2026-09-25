@@ -14,6 +14,7 @@ from pathlib import Path
 
 from PIL import Image
 
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.system.free_names import free_names
 
 _FORMAT_BY_EXT: dict[str, str] = {".pdf": "PDF", ".tif": "TIFF", ".tiff": "TIFF"}
@@ -45,19 +46,23 @@ def _prepare(img: Image.Image, fmt: str) -> Image.Image:
 
 
 def combine_to_multipage(paths: list[str], destination: str) -> dict:
-    """Combine *paths* into one multi-page file at *destination* (.pdf/.tif)."""
+    """Combine *paths* into one multi-page file at *destination* (.pdf/.tif).
+
+    Each page is the viewer's decode: upright, sRGB, a camera RAW developed.
+    A page keeps no EXIF or colour profile (a PDF page can't), so anything
+    else would lie on its side or show the wrong colours. *destination* is
+    replaced in one step: a failed save leaves an existing file whole, even
+    when it is one of the pages.
+    """
+    from Imervue.gpu_image_view.images.image_loader import decode_image
     fmt = multipage_format(Path(destination).suffix)
     if fmt is None:
         raise ValueError(f"destination must be .pdf/.tif/.tiff, got {destination!r}")
     if not paths:
         raise ValueError("no input images to combine")
-    pages: list[Image.Image] = []
-    for path in paths:
-        with Image.open(path) as img:
-            img.load()
-            pages.append(_prepare(img.copy(), fmt))
-    pages[0].save(str(destination), format=fmt, save_all=True,
-                  append_images=pages[1:])
+    pages = [_prepare(decode_image(path), fmt) for path in paths]
+    replace_atomically(destination, lambda tmp: pages[0].save(
+        tmp, format=fmt, save_all=True, append_images=pages[1:]))
     return {"destination": str(destination), "format": fmt, "pages": len(paths)}
 
 
