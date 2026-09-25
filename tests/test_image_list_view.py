@@ -355,3 +355,106 @@ def test_list_thumb_bug_is_logged_and_still_emits(qapp, tmp_path, monkeypatch, c
     assert args[-1] is False
     (record,) = caplog.records
     assert record.exc_info[0] is RuntimeError
+
+
+class TestRefetch:
+    """A row whose file another program rewrote, removed or restored is read again."""
+
+    @staticmethod
+    def _fetched_model(model_cls, paths, monkeypatch):
+        m = model_cls(paths)
+        started: list = []
+        monkeypatch.setattr(m._pool, "start", started.append)  # noqa: SLF001
+        for p in paths:
+            m._on_fetched(p, TestThumbFetchRetry._image(), 100, 80, 1.0, 1.0, True)  # noqa: SLF001
+        return m, started
+
+    def test_a_refetched_row_keeps_its_thumbnail_until_read_again(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        a, b = str(tmp_path / "a.png"), str(tmp_path / "b.png")
+        m, started = self._fetched_model(model_cls, [a, b], monkeypatch)
+        old_icon = m._row_index(b)[1].icon  # noqa: SLF001
+        changed: list = []
+        m.dataChanged.connect(lambda top, bottom, roles: changed.append((top.row(), bottom.row(), roles)))
+        m.refetch({b})
+        row = m._row_index(b)[1]  # noqa: SLF001
+        assert row.fetched is False
+        assert row.icon is old_icon
+        assert changed == [(1, 1, [Qt.ItemDataRole.DecorationRole])]
+        assert m._row_index(a)[1].fetched is True  # noqa: SLF001
+        assert started == []          # nothing read until the row is painted
+        m.data(m.index(1, m.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert len(started) == 1
+
+    def test_a_read_under_way_is_dropped_and_done_again(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m = model_cls([p])
+        started: list = []
+        monkeypatch.setattr(m._pool, "start", started.append)  # noqa: SLF001
+        m.data(m.index(0, m.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert len(started) == 1
+        m.refetch([p])                # the file changed while it was being read
+        m._on_fetched(p, TestThumbFetchRetry._image(), 100, 80, 1.0, 1.0, True)  # noqa: SLF001
+        row = m._row_index(p)[1]  # noqa: SLF001
+        assert row.fetched is False
+        assert row.width is None      # the old read's result was not applied
+        assert len(started) == 2
+        m._on_fetched(p, TestThumbFetchRetry._image(), 120, 90, 1.0, 1.0, True)  # noqa: SLF001
+        assert (row.fetched, row.width) == (True, 120)
+
+    def test_refetch_resets_the_retry_budget(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, _started = self._fetched_model(model_cls, [p], monkeypatch)
+        m._retry[p] = 2  # noqa: SLF001
+        m.refetch([p])
+        assert p not in m._retry  # noqa: SLF001
+
+    def test_paths_outside_the_list_are_ignored(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, _started = self._fetched_model(model_cls, [p], monkeypatch)
+        m.refetch([str(tmp_path / "elsewhere.png")])
+        assert m._row_index(p)[1].fetched is True  # noqa: SLF001
+
+    def test_a_new_folder_forgets_stale_reads(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m = model_cls([p])
+        monkeypatch.setattr(m._pool, "start", lambda _worker: None)  # noqa: SLF001
+        m.data(m.index(0, m.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        m.refetch([p])
+        m.set_paths([p])
+        assert m._stale == set()  # noqa: SLF001
+
+
+def test_an_external_save_shows_in_the_list(qapp, tmp_path, pump_until):
+    from PIL import Image
+
+    from Imervue.gui.image_list_view import ImageListView
+    path = tmp_path / "a.png"
+    Image.new("RGB", (40, 30), "red").save(path)
+    view = ImageListView(main_window=None)
+    try:
+        model = view.model()
+        view.set_paths([str(path)])
+        index = model.index(0, model.COL_RES)
+        model.data(model.index(0, model.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert pump_until(lambda: model.data(index) == "40×30")
+        Image.new("RGB", (64, 48), "blue").save(path)   # another program saves over it
+        view.refetch({str(path)})
+        model.data(model.index(0, model.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert pump_until(lambda: model.data(index) == "64×48")
+    finally:
+        view.deleteLater()
+
+
+def test_the_main_window_passes_changed_paths_to_the_list():
+    from types import SimpleNamespace
+
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    got: list = []
+    window = SimpleNamespace(image_list_view=SimpleNamespace(refetch=got.append))
+    MainWindowBrowseMixin.refetch_list_rows(window, {"a.png"})
+    assert got == [{"a.png"}]

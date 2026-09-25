@@ -138,7 +138,7 @@ Auch Panoramen weit über Pillows Sicherheitsgrenze von 179 Megapixeln öffnen s
 
 Ein abgeschnittenes JPEG, PNG, TIFF, GIF oder BMP — ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto — öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen.
 
-Speichert ein anderes Programm über ein Bild — ein externer Editor, direkt oder indem es eine Kopie darüber umbenennt —, zeigt der Viewer die neue Fassung: das in Deep Zoom geöffnete Bild eine halbe Sekunde nach dem letzten Schreibvorgang (und erneut, wenn Imervue wieder in den Vordergrund kommt), Miniaturen im Grid innerhalb weniger Sekunden.
+Speichert ein anderes Programm über ein Bild — ein externer Editor, direkt oder indem es eine Kopie darüber umbenennt —, zeigt der Viewer die neue Fassung: das in Deep Zoom geöffnete Bild eine halbe Sekunde nach dem letzten Schreibvorgang (und erneut, wenn Imervue wieder in den Vordergrund kommt), Miniaturen im Grid und Zeilen der Liste innerhalb weniger Sekunden.
 
 Ein 16-Bit-Graustufen-PNG oder -TIFF — ein Scan, eine Tiefenkarte, eine wissenschaftliche oder astronomische Aufnahme — und ein Gleitkomma-TIFF zeigen im Viewer, in Miniaturen, Vorschauen und Werkzeugen ihre echte Helligkeit statt fast weiß oder schwarz: 16-Bit-Werte werden über ihren ganzen Bereich skaliert, Gleitkommawerte von 0 bis 1 von Schwarz bis Weiß abgebildet und jeder andere Bereich gestreckt.
 

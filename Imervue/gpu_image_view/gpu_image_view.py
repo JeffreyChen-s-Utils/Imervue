@@ -565,9 +565,10 @@ class GPUImageView(
         on_offline_scan_finished(self, missing, generation, rewritten)
 
     def _reload_rewritten_image(self, path: str) -> None:
-        """Show *path* again, thumbnail and all: another program saved over it."""
-        from Imervue.gpu_image_view.tile_loader import refresh_rewritten_tile
+        """Show *path* again, thumbnail and list row too: another program saved over it."""
+        from Imervue.gpu_image_view.tile_loader import refetch_list_rows, refresh_rewritten_tile
         refresh_rewritten_tile(self, path, self._load_generation)
+        refetch_list_rows(self, (path,))
         self.reload_current_image_with_recipe(path)
 
     # 保持向後相容（undo_delete 使用）

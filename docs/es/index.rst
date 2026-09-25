@@ -142,7 +142,7 @@ También se abren panoramas muy por encima del límite de seguridad de 179 megap
 
 Un JPEG, PNG, TIFF, GIF o BMP incompleto — una descarga o copia interrumpida, una foto recuperada de una tarjeta de memoria dañada — se abre con la parte que se pudo leer, como en un navegador, en lugar de no abrirse.
 
-Cuando otro programa guarda sobre una imagen — un editor externo, directamente o renombrando una copia encima —, el visor muestra la versión nueva: la imagen abierta en zoom profundo medio segundo después de la última escritura (y de nuevo cuando Imervue vuelve al primer plano), las miniaturas de la cuadrícula en pocos segundos.
+Cuando otro programa guarda sobre una imagen — un editor externo, directamente o renombrando una copia encima —, el visor muestra la versión nueva: la imagen abierta en zoom profundo medio segundo después de la última escritura (y de nuevo cuando Imervue vuelve al primer plano), las miniaturas de la cuadrícula y las filas de la Lista en pocos segundos.
 
 Un PNG o TIFF en gris de 16 bits — un escaneo, un mapa de profundidad, una toma científica o astronómica — y un TIFF de coma flotante muestran su brillo real en el visor, las miniaturas, las vistas previas y las herramientas, en lugar de casi blanco o negro: los valores de 16 bits se escalan en todo su rango, los valores de coma flotante de 0 a 1 van de negro a blanco y cualquier otro rango se estira.
 

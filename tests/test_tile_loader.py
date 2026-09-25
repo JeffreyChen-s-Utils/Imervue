@@ -606,6 +606,24 @@ class TestRewrittenFiles:
         on_offline_scan_finished(view, set(), 99, {"a.png"})
         assert _FakeWorker.created == []
 
+    def test_the_list_view_reads_the_changed_rows_again_in_one_batch(self):
+        view = self._view(["a.png", "b.png", "c.png", "d.png"])
+        view.offline_paths = {"c.png"}
+        batches: list = []
+        view.main_window = SimpleNamespace(refetch_list_rows=batches.append)
+        on_offline_scan_finished(view, {"b.png"}, 1, {"a.png", "stray.png"})
+        # a rewritten, b newly gone, c back on disk; d unchanged.
+        assert batches == [{"a.png", "b.png", "c.png"}]
+
+    def test_an_unchanged_folder_leaves_the_list_alone(self):
+        view = self._view(["a.png", "gone.png"])
+        view.offline_paths = {"gone.png"}
+        batches: list = []
+        view.main_window = SimpleNamespace(refetch_list_rows=batches.append)
+        on_offline_scan_finished(view, {"gone.png"}, 1)
+        on_offline_scan_finished(view, set(), 99, {"a.png"})
+        assert batches == []
+
     def test_refresh_works_on_a_view_without_a_prefetch_cache(self):
         view = _fake_view(["a.png"])
         refresh_rewritten_tile(view, "a.png", 1)

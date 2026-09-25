@@ -58,6 +58,10 @@ class MainWindowBrowseMixin:
             metadata_index=getattr(self, "_image_metadata_index", None),
         )
 
+    def refetch_list_rows(self, paths) -> None:
+        """Have the list view read *paths* again: they were rewritten, removed or restored."""
+        self.image_list_view.refetch(paths)
+
     def _on_list_activated(self, path: str) -> None:
         """Double-clicking a row opens that image in the deep-zoom viewer.
 

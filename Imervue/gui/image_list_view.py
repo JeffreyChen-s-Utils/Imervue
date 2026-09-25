@@ -134,6 +134,8 @@ class ImageListModel(QAbstractTableModel):
         self._in_flight: set[str] = set()
         # path -> transient fetch-failure retry count (see _MAX_THUMB_RETRIES)
         self._retry: dict[str, int] = {}
+        # In-flight reads that began before the file changed on disk (see refetch)
+        self._stale: set[str] = set()
 
     # --- QAbstractItemModel API ---
     def rowCount(self, parent: QModelIndex | None = None) -> int:
@@ -309,7 +311,27 @@ class ImageListModel(QAbstractTableModel):
         self._rows = [self._row_for_path(p) for p in paths]
         self._in_flight.clear()
         self._retry.clear()
+        self._stale.clear()
         self.endResetModel()
+
+    def refetch(self, paths) -> None:
+        """Read *paths* again: another program rewrote, removed or restored them.
+
+        Each row keeps its old thumbnail until the new read lands, and is read
+        again only once it is on screen. A read already under way may have
+        seen the old file, so its result is dropped and the row read afresh.
+        """
+        wanted = set(paths)
+        for i, row in enumerate(self._rows):
+            if row.path not in wanted:
+                continue
+            self._retry.pop(row.path, None)
+            if row.path in self._in_flight:
+                self._stale.add(row.path)
+                continue
+            row.fetched = False
+            self.dataChanged.emit(self.index(i, self.COL_THUMB), self.index(i, self.COL_THUMB),
+                                  [Qt.ItemDataRole.DecorationRole])
 
     def path_at(self, row: int) -> str | None:
         if 0 <= row < len(self._rows):
@@ -384,6 +406,11 @@ class ImageListModel(QAbstractTableModel):
         if found is None:
             return
         i, row = found
+        if path in self._stale:
+            # Read before another program saved over the file: read it again.
+            self._stale.discard(path)
+            self._ensure_fetched(row)
+            return
         if not ok and self._bump_retry(path):
             # Transient stat/decode failure (file mid-move/locked) — retry
             # instead of caching a permanent placeholder.
@@ -476,6 +503,10 @@ class ImageListView(QTableView):
     # --- Public API ---
     def set_paths(self, paths: list[str], metadata_index=None) -> None:
         self._model.set_paths(paths, metadata_index=metadata_index)
+
+    def refetch(self, paths) -> None:
+        """Read *paths* again: they changed on disk (see :meth:`ImageListModel.refetch`)."""
+        self._model.refetch(paths)
 
     def selected_paths(self) -> list[str]:
         return [

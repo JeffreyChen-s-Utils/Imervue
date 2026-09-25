@@ -523,11 +523,13 @@ def on_offline_scan_finished(view: GPUImageView, missing, generation: int, rewri
         return
     current = set(view.model.images)
     missing = set(missing) & current
-    for path in (set(rewritten) & current) - missing:
+    rewritten = (set(rewritten) & current) - missing
+    for path in rewritten:
         refresh_rewritten_tile(view, path, generation)
     offline = getattr(view, "offline_paths", set())
     recovered = (offline & current) - missing
     newly_missing = missing - offline
+    refetch_list_rows(view, rewritten | recovered | newly_missing)
     if not recovered and not newly_missing:
         return
     offline.difference_update(recovered)
@@ -565,6 +567,16 @@ def refresh_rewritten_tile(view: GPUImageView, path: str, generation: int) -> No
     if prefetch is not None:
         prefetch.discard(path)
     _retry_thumbnail(view, path, generation)
+
+
+def refetch_list_rows(view: GPUImageView, paths) -> None:
+    """Have the list view read *paths* again: rewritten, gone, or back on disk.
+
+    One call per batch: the list finds its rows in a single pass.
+    """
+    refetch = getattr(view.main_window, "refetch_list_rows", None)
+    if refetch is not None and paths:
+        refetch(set(paths))
 
 
 def _detect_renamed_cached_paths(view: GPUImageView, old_images, new_images) -> dict[str, str]:

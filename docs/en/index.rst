@@ -137,7 +137,7 @@ Panoramas far larger than Pillow's 179-megapixel safety limit open too: the limi
 
 A JPEG, PNG, TIFF, GIF or BMP cut short — an interrupted download or copy, a photo recovered from a failing memory card — opens with the part that was read, as in a browser, instead of not opening at all.
 
-When another program saves over a picture — an external editor, in place or by renaming a copy over it — the viewer shows the new version: the picture open in Deep Zoom half a second after the last write (and again when Imervue comes back to the front), grid thumbnails within a few seconds.
+When another program saves over a picture — an external editor, in place or by renaming a copy over it — the viewer shows the new version: the picture open in Deep Zoom half a second after the last write (and again when Imervue comes back to the front), grid thumbnails and the rows of the List view within a few seconds.
 
 A 16-bit grey PNG or TIFF — a scan, a depth map, a scientific or astronomy frame — and a floating-point TIFF show their real brightness in the viewer, thumbnails, previews and tools, instead of almost white or black: 16-bit values are scaled over their full range, floating-point values of 0 to 1 map onto black to white and any other range is stretched.
 

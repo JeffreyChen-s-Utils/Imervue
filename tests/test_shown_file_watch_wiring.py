@@ -24,10 +24,11 @@ def test_an_external_save_of_the_shown_picture_reloads_it_and_its_thumbnail(
         view, tmp_path, monkeypatch, pump_until):
     path = tmp_path / "a.png"
     path.write_bytes(b"x" * 100)
-    reloads, thumbnails = [], []
+    reloads, thumbnails, rows = [], [], []
     monkeypatch.setattr(view, "reload_current_image_with_recipe", reloads.append)
     monkeypatch.setattr("Imervue.gpu_image_view.tile_loader.refresh_rewritten_tile",
                         lambda _view, p, _gen: thumbnails.append(p))
+    view.main_window.refetch_list_rows = rows.append
     view._deep_zoom_path = str(path)
     view._shown_file_watch.follow(str(path))
     later = path.stat().st_mtime + 2   # Qt tells a change by the time alone: a real save is later
@@ -35,6 +36,7 @@ def test_an_external_save_of_the_shown_picture_reloads_it_and_its_thumbnail(
     os.utime(path, (later, later))
     assert pump_until(lambda: reloads == [str(path)])
     assert thumbnails == [str(path)]
+    assert rows == [{str(path)}]
 
 
 def test_a_picture_the_viewer_has_left_is_not_reloaded(view, tmp_path, monkeypatch):
