@@ -941,7 +941,10 @@ install can carry separate setups (e.g. *Work* and *Personal*). Switch, create, 
 profiles under **File > Profiles…**. A v1 single-profile file left over from an older release is
 migrated to the `default` profile automatically on first read. Writes are debounced a few seconds
 after the last change and land atomically (`.tmp` sibling + `os.replace`), so an interrupted save
-never truncates the file.
+never truncates the file. If the file can't be read at start-up (broken JSON, or another program
+holding it), Imervue starts with default settings and, before its first save, keeps the file next
+to it as `user_setting.json.unreadable-<date>-<time>`; it never saves over a file it could not
+keep that copy of.
 
 Key entries in the active profile:
 

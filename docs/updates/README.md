@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-37 | 2026-09-25 | An unreadable settings file is kept before it is saved over | #bugfix #settings #data-loss | [2026-09](2026-09.md) |
 | U-20260925-36 | 2026-09-25 | Face Detection works when OpenCV is installed under a non-ASCII path | #bugfix #face-detection #windows | [2026-09](2026-09.md) |
 | U-20260925-35 | 2026-09-25 | Safety Review reads photos in folders with non-ASCII names | #bugfix #plugin #safety_review #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260925-34 | 2026-09-25 | Batch renames that reuse names within the selection land as a whole | #bugfix #rename #file-ops | [2026-09](2026-09.md) |

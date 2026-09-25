@@ -1,7 +1,9 @@
 import json
 import logging
 import os
+import shutil
 import threading
+import time
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -29,6 +31,12 @@ _profile_state: dict[str, Any] = {
 }
 
 _lock = Lock()
+
+# The settings file existed at start-up but could not be read (broken JSON, or
+# held by another program). Saving would replace it — every rating, tag and
+# album in it — with this session's defaults, so a copy is kept first.
+_unreadable_at_start = False
+_unreadable_lock = Lock()
 
 # ---------------------------------------------------------------------------
 # Debounced background save
@@ -108,7 +116,7 @@ def write_user_setting() -> Path:
         "current_profile": current,
         "profiles": existing_profiles,
     }
-    write_json(str(user_setting_file), payload)
+    _save_settings(user_setting_file, payload)
     return user_setting_file
 
 
@@ -122,6 +130,7 @@ def read_user_setting() -> Path:
         return user_setting_file
     data = read_json(str(user_setting_file))
     if not isinstance(data, dict):
+        _note_unreadable(user_setting_file)
         return user_setting_file
 
     if _looks_like_multi_profile(data):
@@ -129,6 +138,50 @@ def read_user_setting() -> Path:
     else:
         _load_legacy_profile(data)
     return user_setting_file
+
+
+def _note_unreadable(path: Path) -> None:
+    global _unreadable_at_start
+    with _unreadable_lock:
+        _unreadable_at_start = True
+    _settings_logger.warning(
+        "Could not read %s; starting from default settings. A copy of it is kept "
+        "before it is saved over.", path)
+
+
+def _keep_unreadable_copy(path: Path) -> bool:
+    """Copy aside the settings file this session could not read, before its first save.
+
+    Returns whether saving over *path* is safe now: nothing to keep, or the
+    copy (``user_setting.json.unreadable-<time>``) was made. The copy is made
+    once per session.
+    """
+    global _unreadable_at_start
+    with _unreadable_lock:
+        if not _unreadable_at_start or not path.exists():
+            return True
+        backup = path.with_name(f"{path.name}.unreadable-{time.strftime('%Y%m%d-%H%M%S')}")
+        try:
+            shutil.copy2(path, backup)
+        except OSError:
+            _settings_logger.exception(
+                "Could not keep a copy of the unreadable %s; not saving over it", path)
+            return False
+        _unreadable_at_start = False
+    _settings_logger.warning("Kept the settings file Imervue could not read as %s", backup)
+    return True
+
+
+def _save_settings(path: Path, payload: dict) -> bool:
+    """Write *payload* as the settings file at *path*; False if it was left alone.
+
+    A settings file this session could not read is only saved over once a
+    copy of it is kept (:func:`_keep_unreadable_copy`).
+    """
+    if not _keep_unreadable_copy(path):
+        return False
+    write_json(str(path), payload)
+    return True
 
 
 def _looks_like_multi_profile(data: dict) -> bool:
@@ -205,7 +258,7 @@ def create_profile(name: str, copy_from_current: bool = False) -> bool:
         payload = {"current_profile": current_profile(), "profiles": {}}
     seed = dict(user_setting_dict) if copy_from_current else {}
     payload["profiles"][name] = seed
-    write_json(str(path), payload)
+    _save_settings(path, payload)
     _profile_state["available"].append(name)
     return True
 
@@ -223,7 +276,7 @@ def delete_profile(name: str) -> bool:
         payload = read_json(str(path))
         if isinstance(payload, dict) and "profiles" in payload:
             payload["profiles"].pop(name, None)
-            write_json(str(path), payload)
+            _save_settings(path, payload)
     _profile_state["available"].remove(name)
     return True
 
@@ -253,7 +306,7 @@ def rename_profile(old: str, new: str) -> bool:
     if payload.get("current_profile") == old:
         payload["current_profile"] = new
         _profile_state["current"] = new
-    write_json(str(path), payload)
+    _save_settings(path, payload)
     available = _profile_state["available"]
     available[available.index(old)] = new
     return True

@@ -135,3 +135,92 @@ class TestReadJson:
             mod.read_json(str(path))
         assert mod._lock.acquire(blocking=False)  # noqa: SLF001
         mod._lock.release()  # noqa: SLF001
+
+
+class TestUnreadableSettingsFile:
+    """A settings file that could not be read at start-up was replaced by the first save."""
+
+    BROKEN = '{"current_profile": "default", "profiles": {"default": {"image_ratings": {"a.jpg": 5}'
+
+    @staticmethod
+    def _path(tmp_path):
+        return tmp_path / "user_setting.json"
+
+    @staticmethod
+    def _copies(tmp_path):
+        return sorted(tmp_path.glob("user_setting.json.unreadable-*"))
+
+    def test_a_copy_is_kept_before_the_first_save(self, tmp_path):
+        from Imervue.user_settings import user_setting_dict as mod
+        path = self._path(tmp_path)
+        path.write_text(self.BROKEN, encoding="utf-8")
+        mod.read_user_setting()
+        mod.user_setting_dict["language"] = "Japanese"
+        mod.write_user_setting()
+        (copy,) = self._copies(tmp_path)
+        assert copy.read_text(encoding="utf-8") == self.BROKEN
+        saved = json.loads(path.read_text(encoding="utf-8"))
+        assert saved["profiles"]["default"]["language"] == "Japanese"
+
+    def test_only_the_first_save_keeps_a_copy(self, tmp_path):
+        from Imervue.user_settings import user_setting_dict as mod
+        self._path(tmp_path).write_text(self.BROKEN, encoding="utf-8")
+        mod.read_user_setting()
+        mod.write_user_setting()
+        mod.write_user_setting()
+        assert len(self._copies(tmp_path)) == 1
+
+    def test_a_readable_file_keeps_no_copy(self, tmp_path):
+        from Imervue.user_settings import user_setting_dict as mod
+        mod.write_user_setting()
+        mod.read_user_setting()
+        mod.write_user_setting()
+        assert self._copies(tmp_path) == []
+
+    def test_no_file_at_start_keeps_no_copy(self, tmp_path):
+        from Imervue.user_settings import user_setting_dict as mod
+        mod.read_user_setting()
+        mod.write_user_setting()
+        assert self._path(tmp_path).exists()
+        assert self._copies(tmp_path) == []
+
+    def test_a_file_held_at_start_is_kept_before_it_is_saved_over(self, tmp_path, monkeypatch):
+        """Unreadable only for a moment (another program held it): its ratings survive in the copy."""
+        from Imervue.user_settings import user_setting_dict as mod
+        path = self._path(tmp_path)
+        good = {"current_profile": "default",
+                "profiles": {"default": {"image_ratings": {"a.jpg": 5}}}}
+        path.write_text(json.dumps(good), encoding="utf-8")
+        real_read_json = mod.read_json
+        monkeypatch.setattr(mod, "read_json", lambda _p: None)
+        mod.read_user_setting()
+        monkeypatch.setattr(mod, "read_json", real_read_json)
+        mod.write_user_setting()
+        (copy,) = self._copies(tmp_path)
+        assert json.loads(copy.read_text(encoding="utf-8")) == good
+
+    def test_nothing_is_saved_over_it_when_no_copy_can_be_kept(self, tmp_path, monkeypatch):
+        import shutil
+
+        from Imervue.user_settings import user_setting_dict as mod
+        path = self._path(tmp_path)
+        path.write_text(self.BROKEN, encoding="utf-8")
+        mod.read_user_setting()
+        real_copy2 = shutil.copy2
+        disk_full = True
+
+        def copy2(src, dst, **kwargs):
+            if disk_full:
+                raise PermissionError("disk full")
+            return real_copy2(src, dst, **kwargs)
+
+        monkeypatch.setattr(shutil, "copy2", copy2)
+        mod.write_user_setting()
+        assert mod._save_settings(path, {"profiles": {}}) is False   # the profile actions' writer
+        assert path.read_text(encoding="utf-8") == self.BROKEN
+        assert self._copies(tmp_path) == []
+        disk_full = False
+        mod.write_user_setting()                  # a later save, once the copy can be made
+        (copy,) = self._copies(tmp_path)
+        assert copy.read_text(encoding="utf-8") == self.BROKEN
+        assert json.loads(path.read_text(encoding="utf-8"))["current_profile"] == "default"

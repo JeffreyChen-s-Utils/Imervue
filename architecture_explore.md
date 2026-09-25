@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `2565fd0` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `c28462b` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 867 | 142,544 |
+| `tests/` | 867 | 142,635 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,138 |
 | `Imervue/gui/` | 165 | 33,074 |
 | `Imervue/puppet/` | 57 | 15,292 |
@@ -81,12 +81,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/plugin/` | 10 | 2,243 |
 | `Imervue/system/` | 25 | 2,608 |
 | `Imervue/export/` | 9 | 1,081 |
-| `Imervue/user_settings/` | 10 | 1,130 |
+| `Imervue/user_settings/` | 10 | 1,183 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,705** | **323,308** |
+| **總計** | **1,705** | **323,452** |
 
-其中 `Imervue/` 套件本身 774 檔 / 166,423 行。
+其中 `Imervue/` 套件本身 774 檔 / 166,476 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -244,7 +244,7 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `user_setting_dict.py` | 338 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`） |
+| `user_setting_dict.py` | 391 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔，第一次存檔前先另存成 `user_setting.json.unreadable-<時間>`，存不了副本就不覆蓋（所有寫設定檔的路徑都走 `_save_settings`） |
 | `bookmark.py` | 90 | 跨資料夾書籤 / 收藏集合 |
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
@@ -967,7 +967,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-867 個檔、142,544 行。`pyproject.toml` 定義三個互斥層級 marker：
+867 個檔、142,635 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
