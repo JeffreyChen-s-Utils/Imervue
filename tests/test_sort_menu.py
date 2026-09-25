@@ -37,3 +37,13 @@ def test_sorting_by_name_puts_img2_before_img10():
     paths = ["/p/IMG10.jpg", "/p/img2.jpg", "/p/img1.jpg"]
     assert sorted(paths, key=sort_menu._sort_key_name) == [  # noqa: SLF001
         "/p/img1.jpg", "/p/img2.jpg", "/p/IMG10.jpg"]
+
+
+def test_created_is_the_creation_time(tmp_path):
+    import os
+    path = tmp_path / "a.png"
+    path.write_bytes(b"x")
+    st = os.stat(path)
+    expected = getattr(st, "st_birthtime", st.st_ctime)
+    assert sort_menu._sort_key_created(str(path)) == pytest.approx(expected)  # noqa: SLF001
+    assert sort_menu._sort_key_created(str(tmp_path / "gone.png")) == 0  # noqa: SLF001

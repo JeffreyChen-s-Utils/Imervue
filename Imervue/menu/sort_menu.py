@@ -37,9 +37,11 @@ def _sort_key_modified(path: str):
 
 def _sort_key_created(path: str):
     try:
-        return os.path.getctime(path)
+        st = os.stat(path)
     except OSError:
         return 0
+    # The creation time: st_ctime is the metadata change time outside Windows.
+    return getattr(st, "st_birthtime", st.st_ctime)
 
 
 def _sort_key_size(path: str):

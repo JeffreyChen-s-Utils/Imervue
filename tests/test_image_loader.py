@@ -272,3 +272,46 @@ def test_scanning_a_folder_by_name_puts_page2_before_page10(tmp_path):
     assert names == ["page1.png", "page2.png", "page10.png"]
     backwards = [os.path.basename(p) for p in _scan_images(str(tmp_path), ascending=False)]
     assert backwards == ["page10.png", "page2.png", "page1.png"]
+
+
+def test_scanning_by_modified_time_or_size_uses_the_listing(tmp_path, monkeypatch):
+    """The per-path stat is gone: the order comes from what scandir already returned."""
+    from Imervue.gpu_image_view.images import image_loader
+    for name, size, stamp in (("a.png", 30, 300), ("b.png", 10, 100), ("c.png", 20, 200)):
+        path = tmp_path / name
+        path.write_bytes(b"x" * size)
+        os.utime(path, (stamp, stamp))
+
+    def no_stat(*_args, **_kwargs):
+        raise AssertionError("a stat per path")
+
+    monkeypatch.setattr(os.path, "getmtime", no_stat)
+    monkeypatch.setattr(os.path, "getsize", no_stat)
+    by_date = [os.path.basename(p) for p in image_loader._scan_images(str(tmp_path), sort_by="modified")]
+    by_size = [os.path.basename(p) for p in image_loader._scan_images(str(tmp_path), sort_by="size",
+                                                                      ascending=False)]
+    assert by_date == ["b.png", "c.png", "a.png"]
+    assert by_size == ["a.png", "c.png", "b.png"]
+    by_created = image_loader._scan_images(str(tmp_path), sort_by="created")
+    assert sorted(by_created) == sorted(str(p) for p in tmp_path.iterdir())
+
+
+def test_a_folder_sorted_by_name_is_scanned_not_read_from_the_cache(tmp_path, monkeypatch):
+    """Checking every cached path cost 9x a fresh scan (5000 files: 349 ms against 38 ms)."""
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.image import folder_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    (tmp_path / "a.png").write_bytes(b"x")
+    monkeypatch.setitem(user_setting_dict, "sort_by", "name")
+    monkeypatch.setattr(folder_index, "load", lambda *_a, **_k: pytest.fail("cache read"))
+    monkeypatch.setattr(folder_index, "save", lambda *_a, **_k: pytest.fail("cache written"))
+    assert image_loader._scan_images_for_user(str(tmp_path)) == [str(tmp_path / "a.png")]
+
+
+def test_a_folder_sorted_by_resolution_still_uses_the_cache(tmp_path, monkeypatch):
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.image import folder_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    monkeypatch.setitem(user_setting_dict, "sort_by", "resolution")
+    monkeypatch.setattr(folder_index, "load", lambda *_a, **_k: ["cached.png"])
+    assert image_loader._scan_images_for_user(str(tmp_path)) == ["cached.png"]
