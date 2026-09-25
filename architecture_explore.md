@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `d252f39` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `33c6d6f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 886 | 146,455 |
+| `tests/` | 886 | 146,479 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,144 |
 | `Imervue/gui/` | 167 | 33,188 |
 | `Imervue/puppet/` | 57 | 15,296 |
@@ -74,7 +74,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,129 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
-| `Imervue/mcp_server/` | 16 | 4,673 |
+| `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,226 |
 | `Imervue/menu/` | 11 | 3,593 |
 | `Imervue/` 根層 | 5 | 1,576 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,737** | **328,729** |
+| **總計** | **1,737** | **328,746** |
 
-其中 `Imervue/` 套件本身 787 檔 / 167,909 行。
+其中 `Imervue/` 套件本身 787 檔 / 167,902 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -240,7 +240,7 @@ ImervueMainWindow
 | `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict`、`recipe_store` 使用） |
 | `free_names.py` | 33 | `free_names(directory, stems, ext)`：資料夾裡還沒被占用的檔名（`photo_clahe.png`，被占用就 `_1`、`_2`…；一組檔案共用一個編號；依檔案系統的大小寫規則比對，列不出內容的資料夾視為空的），寫新檔在使用者檔案旁邊的工具都經由它挑名（`_apply_save.output_path(s)`、Export 與 GIF／影片對話框的預設檔名、多頁拆分、EXIF 清除的副本；右鍵「依 EXIF 自動旋轉」經 `output_path`） |
 | `hidden_files.py` | 37 | `is_hidden(entry)`：資料夾列舉要跳過的檔案，名稱以點開頭（macOS 在記憶卡與網路磁碟上寫的 `._photo.jpg`、`.Trashes`、`.Spotlight-V100`）或帶 Windows 隱藏屬性（檔案總管與資料夾樹也不顯示，`$RECYCLE.BIN`）；`DirEntry` 用列舉時已讀到的屬性，路徑則多一次 `stat`；讀不到的檔案不算隱藏 |
-| `image_listing.py` | 61 | `list_images(folder, extensions, *, recursive=False, should_stop=None)`：批次工具、CLI 的資料夾參數、圖庫掃描、監看資料夾、樹狀圖示共用的資料夾列舉（依副檔名、自然排序、跳過隱藏檔，遞迴時不進隱藏資料夾，遞迴時每個資料夾前問 `should_stop`，讀不了的資料夾只列出讀到的部分）；Batch Convert、EXIF 清除、影像整理、影像淨化、AI 放大、重複偵測、`cli.iter_image_paths`、`maintenance.scan_image_files`、`watch_folder.scan_images`、`folder_preview_path` 都用它 |
+| `image_listing.py` | 61 | `list_images(folder, extensions, *, recursive=False, should_stop=None)`：批次工具、CLI 的資料夾參數、圖庫掃描、監看資料夾、樹狀圖示共用的資料夾列舉（依副檔名、自然排序、跳過隱藏檔，遞迴時不進隱藏資料夾，遞迴時每個資料夾前問 `should_stop`，讀不了的資料夾只列出讀到的部分）；Batch Convert、EXIF 清除、影像整理、影像淨化、AI 放大、重複偵測、`cli.iter_image_paths`、`maintenance.scan_image_files`、`watch_folder.scan_images`、`folder_preview_path`、MCP 的 `list_images`／`find_similar`／`collection_stats`／smart album、resource 清單（`tools_read._folder_images`、`resources.list_resources`）都用它 |
 | `natural_sort.py` | 29 | `natural_key(name)`：和檔案總管一樣的自然排序鍵（`img2` 在 `img10` 之前，不分大小寫，全形數字也算數字；相等時依小寫、原名定序）；檢視器的名稱排序（縮圖格、上下張、資料夾快取）、`sort_menu`、網頁相簿與各批次對話框的清單都用它，和檔案樹的 numeric `QCollator` 一致 |
 | `pillow_setup.py` | 25 | `configure_pillow()`：GUI（`__main__.main`）、直接執行的 CLI、MCP server 啟動時套用的 Pillow 設定：`raise_pixel_limit()` 加上 `ImageFile.LOAD_TRUNCATED_IMAGES`，中途截斷的 JPEG／PNG／TIFF／GIF／BMP（下載或複製中斷、從故障記憶卡救回）像瀏覽器一樣讀到截斷處，不再整張打不開；整個行程生效，測試不經過這裡，所以測試裡仍是 Pillow 預設 |
 | `pixel_limit.py` | 87 | `raise_pixel_limit()`：把 Pillow 的 `MAX_IMAGE_PIXELS` 依實體記憶體放寬（`total_memory_bytes()`；拒絕點落在解碼需要全部記憶體處，16 GB 約 13 億像素，不低於 Pillow 預設），由 `pillow_setup.configure_pillow()` 呼叫；`decode_slot(pixels)`：超過 Pillow 預設的巨圖一次只解一張（`image_loader` 的點陣解碼與縮圖使用），避免縮圖 worker 同時解多張全景圖耗盡記憶體 |
@@ -925,7 +925,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | --- | ---: | --- |
 | `server.py` | 439 | JSON-RPC 2.0 over stdio 的協定迴圈 |
 | `tools.py` | 172 | 工具集的對外門面：re-export 全部 56 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
-| `tools_read.py` | 665 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
+| `tools_read.py` | 639 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
 | `tools_edit.py` | 883 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
 | `tool_support.py` | 77 | 兩組處理器共用：`IMAGE_EXTENSIONS`（即 `formats.RASTER_EXTENSIONS`）、`NO_ALPHA_FORMATS`、`open_upright` / `load_rgba_array`（委派 `shown.open_shown` / `load_shown_rgba`，RAW 經 libraw 顯像；每個工具都在依 EXIF 轉正後的影像上運作，尺寸與座標也以它為準）、`validated_dir`／`validated_file`、`json_safe` |
 | `tool_defs_read.py` | 351 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-886 個檔、146,455 行。`pyproject.toml` 定義三個互斥層級 marker：
+886 個檔、146,479 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

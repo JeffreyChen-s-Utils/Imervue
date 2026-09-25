@@ -251,6 +251,14 @@ def test_list_images_recursive_walks_subdirs(tmp_path, sample_image):
     assert "nested.png" in found
 
 
+def test_list_images_recursive_skips_hidden_folders(tmp_path, sample_image):
+    trash = tmp_path / ".Trashes" / "501"
+    trash.mkdir(parents=True)
+    (trash / "deleted.png").write_bytes(sample_image.read_bytes())
+    found = [Path(e["path"]).name for e in list_images(str(tmp_path), recursive=True)["images"]]
+    assert found == ["sample.png"]
+
+
 def test_list_images_lists_what_the_viewer_opens(tmp_path, sample_image):
     """AVIF, JPEG XL and CR3 were missing; SVG stays out, the server can't rasterise it."""
     for name in ("shot.avif", "shot.jxl", "IMG_1.CR3", "P1.rw2", "logo.svg"):

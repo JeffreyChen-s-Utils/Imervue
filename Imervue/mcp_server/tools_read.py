@@ -17,6 +17,7 @@ from Imervue.mcp_server.tool_support import (
     validated_dir,
     validated_file,
 )
+from Imervue.system.image_listing import list_images as _list_folder
 
 _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
     "png", "jpeg", "jpg", "webp", "tiff", "tif", "bmp",
@@ -31,34 +32,36 @@ _SHARPNESS_MAX_SIDE = 512
 # ---------------------------------------------------------------------------
 
 
+def _folder_images(base: Path, recursive: bool) -> list[str]:
+    """The images under *base* in path order, left out what the viewer leaves out.
+
+    Hidden files (a leading dot, such as a macOS ``._`` companion, or
+    Windows' hidden attribute) are skipped, and a recursive walk does not
+    enter a hidden folder such as ``$RECYCLE.BIN`` (``list_images``).
+    """
+    return sorted(_list_folder(str(base), IMAGE_EXTENSIONS, recursive=recursive))
+
+
 def list_images(folder: str, *, recursive: bool = False) -> dict[str, Any]:
     """Return image files under ``folder`` with their basic stats.
 
-    Set ``recursive`` to walk subdirectories. Non-image files and
-    hidden files (leading dot) are skipped. Each entry has ``path``,
-    ``size_bytes`` and ``mtime`` so an AI client can quickly find the
-    latest / largest images without a separate fs call.
+    Set ``recursive`` to walk subdirectories. Non-image files, hidden
+    files and hidden folders are skipped (:func:`_folder_images`). Each
+    entry has ``path``, ``size_bytes`` and ``mtime`` so an AI client can
+    quickly find the latest / largest images without a separate fs call.
     """
     base = validated_dir(folder)
-    iterator = base.rglob("*") if recursive else base.iterdir()
     entries: list[dict[str, Any]] = []
-    for path in iterator:
-        if not path.is_file():
-            continue
-        if path.name.startswith("."):
-            continue
-        if path.suffix.lower() not in IMAGE_EXTENSIONS:
-            continue
+    for path in _folder_images(base, recursive):
         try:
-            stat = path.stat()
+            stat = Path(path).stat()
         except OSError:
             continue
         entries.append({
-            "path": str(path),
+            "path": path,
             "size_bytes": int(stat.st_size),
             "mtime": stat.st_mtime,
         })
-    entries.sort(key=lambda e: e["path"])
     return {"folder": str(base), "count": len(entries), "images": entries}
 
 
@@ -466,18 +469,14 @@ def find_similar(
     image advances it.
     """
     base = validated_dir(folder)
-    iterator = base.rglob("*") if recursive else base.iterdir()
-    paths = [
-        str(p) for p in iterator
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    ]
+    paths = _folder_images(base, recursive)
     from Imervue.image.perceptual_hash import find_similar as _find
     on_progress = None
     if progress is not None:
         def report_progress(done: int, total: int) -> None:
             progress.report(done, total=total, message=f"hashed {done}/{total}")
         on_progress = report_progress
-    groups = _find(sorted(paths), int(threshold), on_progress=on_progress)
+    groups = _find(paths, int(threshold), on_progress=on_progress)
     return {
         "folder": str(base),
         "threshold": int(threshold),
@@ -500,11 +499,7 @@ def collection_stats(folder: str, *, recursive: bool = False) -> dict[str, Any]:
     states from the library index.
     """
     base = validated_dir(folder)
-    iterator = base.rglob("*") if recursive else base.iterdir()
-    paths = sorted(
-        str(p) for p in iterator
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    )
+    paths = _folder_images(base, recursive)
     from Imervue.library.collection_stats import summarize
     return {"folder": str(base), **summarize(paths)}
 
@@ -636,11 +631,7 @@ def search_images(
             "query uses fields unavailable in the standalone server: "
             + ", ".join(unsupported),
         )
-    iterator = base.rglob("*") if recursive else base.iterdir()
-    paths = sorted(
-        str(p) for p in iterator
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    )
+    paths = _folder_images(base, recursive)
     matches = apply_to_paths(paths, rules)
     return {
         "folder": str(base), "query": query,
