@@ -70,6 +70,12 @@ def shortcut_combo(event) -> tuple[int, int]:
     return key, mods
 
 
+def _bound_in_settings(key, modifiers) -> bool:
+    """Whether Shortcut Settings binds this key combination to an action."""
+    from Imervue.gui.shortcut_settings_dialog import shortcut_manager
+    return shortcut_manager.get_action(key, modifiers) is not None
+
+
 def claims_tab(event) -> bool:
     """Whether a Tab / Shift+Tab press is bound to an action, so it isn't spent moving focus."""
     from Imervue.gui.shortcut_settings_dialog import shortcut_manager
@@ -117,8 +123,12 @@ class KeyInputHandler:
             return True
         if key in _ENTER_KEYS and self._activate_focused_tile():
             return True
+        if key not in _ARROW_KEYS or _bound_in_settings(key, modifiers):
+            # An arrow chord bound in Shortcut Settings (Alt+Left = History Back)
+            # goes to its action; the wall / image movement took every arrow.
+            return False
         shift = modifiers & Qt.KeyboardModifier.ShiftModifier
-        return key in _ARROW_KEYS and self._handle_arrow_keys(key, modifiers, shift)
+        return self._handle_arrow_keys(key, modifiers, shift)
 
     def _toggle_hud(self, modifiers) -> None:
         view = self._view

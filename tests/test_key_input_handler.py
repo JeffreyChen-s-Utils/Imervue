@@ -335,3 +335,49 @@ def test_the_viewer_keeps_a_bound_tab_from_qt_focus_handling(qapp):
     event = _key_event(Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier)
     assert GPUImageView.event(view, event) is True
     assert pressed == [event]
+
+
+
+def _history_view(**kw):
+    view = _view(**kw)
+    view.actions = []
+    view._key_dispatch = SimpleNamespace(dispatch=lambda action, _mods: view.actions.append(action))
+    return view
+
+
+def test_alt_arrows_go_back_and_forward_on_the_wall(qapp):
+    """Alt+Left / Alt+Right (History Back / Forward) moved the wall's focus cursor instead."""
+    view = _history_view(tile_grid_mode=True, images=[f"{i}.png" for i in range(6)])
+    handler = KeyInputHandler(view)
+    handler.handle(_key_event(Qt.Key.Key_Left, Qt.KeyboardModifier.AltModifier))
+    handler.handle(_key_event(Qt.Key.Key_Right, Qt.KeyboardModifier.AltModifier))
+    assert view.actions == ["history_back", "history_forward"]
+    assert view.focused_tile_index == -1
+
+
+def test_alt_arrows_go_back_and_forward_in_deep_zoom(qapp, monkeypatch):
+    """In an opened image they switched to the previous / next picture instead."""
+    from Imervue.gpu_image_view import key_input_handler as mod
+    switched = []
+    monkeypatch.setattr(mod, "switch_to_previous_image", lambda main_gui: switched.append("prev"))
+    monkeypatch.setattr(mod, "switch_to_next_image", lambda main_gui: switched.append("next"))
+    view = _history_view(deep_zoom=object(), images=["a.png", "b.png"])
+    handler = KeyInputHandler(view)
+    handler.handle(_key_event(Qt.Key.Key_Left, Qt.KeyboardModifier.AltModifier))
+    handler.handle(_key_event(Qt.Key.Key_Right, Qt.KeyboardModifier.AltModifier))
+    assert view.actions == ["history_back", "history_forward"]
+    assert switched == []
+
+
+def test_plain_arrows_still_move_and_switch(qapp, monkeypatch):
+    from Imervue.gpu_image_view import key_input_handler as mod
+    switched = []
+    monkeypatch.setattr(mod, "switch_to_next_image", lambda main_gui: switched.append("next"))
+    view = _history_view(deep_zoom=object(), images=["a.png", "b.png"])
+    KeyInputHandler(view).handle(_key_event(Qt.Key.Key_Right))
+    assert switched == ["next"]
+    assert view.actions == []
+    wall = _history_view(tile_grid_mode=True, images=[f"{i}.png" for i in range(6)])
+    KeyInputHandler(wall).handle(_key_event(Qt.Key.Key_Right))
+    assert wall.focused_tile_index == 0
+    assert wall.actions == []
