@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-01 | 2026-09-26 | Deleting, clearing and overwriting ask with No as the default | #fix #safety #data-loss | [2026-09-b](2026-09-b.md) |
 | U-20260925-92 | 2026-09-25 | Paste, tag deletion and semantic search speak the interface language | #fix #i18n #clipboard | [2026-09-b](2026-09-b.md) |
 | U-20260925-91 | 2026-09-25 | Show in Explorer finds a photo whose path has a comma | #fix #windows | [2026-09-b](2026-09-b.md) |
 | U-20260925-90 | 2026-09-25 | The shown picture is measured again when Imervue comes back to the front | #fix #viewer #external-editor #tests | [2026-09-b](2026-09-b.md) |
@@ -373,4 +374,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 31 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 32 |

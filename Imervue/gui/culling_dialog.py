@@ -19,6 +19,7 @@ from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import finalize_worker
 from Imervue.library import image_index
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.gui.dialog_rows import confirm
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -185,14 +186,10 @@ class CullingDialog(WorkerHostMixin, QDialog):
                 )
             )
             return
-        confirm = QMessageBox.question(
-            self, "",
-            language_wrapper.language_word_dict.get(
+        if not confirm(self, "", language_wrapper.language_word_dict.get(
                 "culling_confirm_delete",
                 "Permanently delete {n} rejected image(s) from disk?"
-            ).format(n=len(rejects)),
-        )
-        if confirm != QMessageBox.StandardButton.Yes:
+        ).format(n=len(rejects))):
             return
         self._start_reject_delete(rejects, base)
 

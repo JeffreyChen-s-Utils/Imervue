@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
-    QPushButton, QLabel, QMessageBox, QInputDialog, QTabWidget, QWidget,
+    QPushButton, QLabel, QInputDialog, QTabWidget, QWidget,
     QMenu,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.tags import (
     get_all_tags, get_tags_for_image, add_tag, remove_tag,
@@ -178,13 +179,9 @@ class TagAlbumDialog(QDialog):
         if not item:
             return
         tag_name = item.data(Qt.ItemDataRole.UserRole)
-        reply = QMessageBox.question(
-            self,
-            self._lang.get("tag_delete_confirm_title", "Delete Tag"),
-            self._lang.get("tag_delete_confirm", "Delete tag '{name}'?").format(name=tag_name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        question = self._lang.get(
+            "tag_delete_confirm", "Delete tag '{name}'?").format(name=tag_name)
+        if confirm(self, self._lang.get("tag_delete_confirm_title", "Delete Tag"), question):
             delete_tag(tag_name)
             self._refresh_tags()
 
@@ -332,14 +329,9 @@ class TagAlbumDialog(QDialog):
         if not item:
             return
         album_name = item.data(Qt.ItemDataRole.UserRole)
-        reply = QMessageBox.question(
-            self,
-            self._lang.get("album_delete_confirm_title", "Delete Album"),
-            self._lang.get("album_delete_confirm", "Delete album '{name}'?")
-                .format(name=album_name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        if confirm(self, self._lang.get("album_delete_confirm_title", "Delete Album"),
+                   self._lang.get("album_delete_confirm", "Delete album '{name}'?")
+                   .format(name=album_name)):
             delete_album(album_name)
             self._refresh_albums()
 

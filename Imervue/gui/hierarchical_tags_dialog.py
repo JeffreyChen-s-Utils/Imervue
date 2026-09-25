@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.library import image_index
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.gui.dialog_rows import confirm
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -140,14 +141,10 @@ class HierarchicalTagsDialog(QDialog):
         if not tag:
             return
         lang = language_wrapper.language_word_dict
-        no = QMessageBox.StandardButton.No
-        if QMessageBox.question(   # a whole branch goes: No is the default, as for any deletion
-            self, lang.get("htags_delete", "Delete"),
-            lang.get("htags_delete_confirm",
-                     "Delete the tag '{tag}' and every tag under it? The pictures stay; "
-                     "only these tags come off them.").format(tag=tag),
-            QMessageBox.StandardButton.Yes | no, no,
-        ) != QMessageBox.StandardButton.Yes:
+        if not confirm(self, lang.get("htags_delete", "Delete"), lang.get(
+                "htags_delete_confirm",
+                "Delete the tag '{tag}' and every tag under it? The pictures stay; "
+                "only these tags come off them.").format(tag=tag)):
             return
         image_index.delete_tag_path(tag)
         self._refresh_tree()

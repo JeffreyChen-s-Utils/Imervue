@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.gui.workspace_manager import (
     Workspace,
     decode_bytes,
@@ -171,18 +172,13 @@ class WorkspaceDialog(QDialog):
         name = self._prompt_name("workspace_save", "Save Current")
         if name is None:
             return
-        existing = workspace_manager.get(name)
-        if existing is not None:
-            reply = QMessageBox.question(
-                self,
-                lang.get("workspace_overwrite_title", "Overwrite workspace?"),
-                lang.get(
-                    "workspace_overwrite_msg",
-                    "A workspace named '{name}' already exists. Overwrite it?",
-                ).format(name=name),
-            )
-            if reply != QMessageBox.StandardButton.Yes:
-                return
+        question = lang.get(
+            "workspace_overwrite_msg",
+            "A workspace named '{name}' already exists. Overwrite it?",
+        ).format(name=name)
+        if workspace_manager.get(name) is not None and not confirm(
+                self, lang.get("workspace_overwrite_title", "Overwrite workspace?"), question):
+            return
         workspace = capture_current_workspace(self._ui, name)
         workspace_manager.save(workspace)
         self._refresh()
@@ -222,15 +218,8 @@ class WorkspaceDialog(QDialog):
         if name is None:
             return
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
-            self,
-            lang.get("workspace_delete", "Delete"),
-            lang.get(
-                "workspace_delete_confirm",
-                "Delete workspace '{name}'?",
-            ).format(name=name),
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        if not confirm(self, lang.get("workspace_delete", "Delete"), lang.get(
+                "workspace_delete_confirm", "Delete workspace '{name}'?").format(name=name)):
             return
         workspace_manager.delete(name)
         self._refresh()

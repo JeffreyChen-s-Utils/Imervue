@@ -278,7 +278,6 @@ def _maintenance_action(main_gui: GPUImageView, menu: QMenu):
 
 
 def _library_maintenance(main_gui: GPUImageView) -> None:
-    from PySide6.QtWidgets import QMessageBox
     from Imervue.library import image_index
     from Imervue.library.maintenance import run_maintenance
     folders = image_index.list_library_roots()
@@ -291,12 +290,10 @@ def _library_maintenance(main_gui: GPUImageView) -> None:
     toast = getattr(main_gui.main_window, "toast", None)
     result = run_maintenance(folders)
     if result["missing"]:
-        reply = QMessageBox.question(
-            main_gui, lang.get("maintenance_menu", "Library Maintenance…"),
-            lang.get("maintenance_prune_q",
-                     "Remove {n} missing file(s) from the index?").format(
-                         n=result["missing"]))
-        if reply == QMessageBox.StandardButton.Yes:
+        from Imervue.gui.dialog_rows import confirm
+        question = lang.get("maintenance_prune_q", "Remove {n} missing file(s) from the index?")
+        question = question.format(n=result["missing"])
+        if confirm(main_gui, lang.get("maintenance_menu", "Library Maintenance…"), question):
             run_maintenance(folders, prune=True)
             if toast is not None:
                 toast.success(lang.get("maintenance_pruned",

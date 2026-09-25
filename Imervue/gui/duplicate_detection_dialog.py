@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QMessageBox,
     QProgressBar,
     QPushButton,
     QSpinBox,
@@ -30,6 +29,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.system.image_listing import list_images
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.image.shown import as_shown_8bit
@@ -441,16 +441,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
                 paths.append((item, path))
         if not paths:
             return
-        reply = QMessageBox.question(
-            self,
-            self._lang.get("duplicate_confirm_title", "Confirm Delete"),
-            self._lang.get(
-                "duplicate_confirm_msg",
-                "Move {count} file(s) to trash?"
-            ).replace(_COUNT_PLACEHOLDER, str(len(paths))),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        question = self._lang.get(
+            "duplicate_confirm_msg", "Move {count} file(s) to trash?",
+        ).replace(_COUNT_PLACEHOLDER, str(len(paths)))
+        if not confirm(self, self._lang.get("duplicate_confirm_title", "Confirm Delete"), question):
             return
         # 移到垃圾桶是逐檔的 shell 呼叫，大量重複檔在 UI 執行緒跑會凍住
         # 整個視窗 — 交給背景 worker，完成後再更新樹與狀態列。

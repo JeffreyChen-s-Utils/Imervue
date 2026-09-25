@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.library import staging_tray
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.gui.dialog_rows import confirm
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -123,13 +124,8 @@ class StagingTrayDialog(QDialog):
     def _clear(self) -> None:
         if staging_tray.count() == 0:
             return
-        confirm = QMessageBox.question(
-            self, "",
-            language_wrapper.language_word_dict.get(
-                "staging_tray_confirm_clear", "Clear the staging tray?"
-            ),
-        )
-        if confirm != QMessageBox.StandardButton.Yes:
+        if not confirm(self, "", language_wrapper.language_word_dict.get(
+                "staging_tray_confirm_clear", "Clear the staging tray?")):
             return
         staging_tray.clear()
         self._refresh()

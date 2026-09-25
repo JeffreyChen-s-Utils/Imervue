@@ -104,7 +104,7 @@ def test_delete_confirmation_is_translated(qapp, monkeypatch):
     monkeypatch.setattr(language_wrapper, "language_word_dict", traditional_chinese_word_dict)
     asked: list = []
     monkeypatch.setattr(QMessageBox, "question",
-                        lambda _parent, title, text: asked.append((title, text))
+                        lambda _parent, title, text, *_buttons: asked.append((title, text))
                         or QMessageBox.StandardButton.No)
     dlg = DevelopPresetsDialog(_viewer([]))
     dlg._list.setCurrentRow(0)
