@@ -8,11 +8,10 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
 from PySide6.QtGui import QActionGroup
 
 from Imervue.system.natural_sort import natural_key
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.dimensions import image_dimensions
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -52,12 +51,11 @@ def _sort_key_size(path: str):
 
 
 def _sort_key_resolution(path: str):
-    try:
-        with Image.open(path) as img:
-            w, h = img.size
-            return w * h
-    except IMAGE_READ_ERRORS:
-        return 0
+    # From the header, like the file info: a camera RAW by the size libraw
+    # develops (Pillow reads its small embedded preview, and no CR3 at all),
+    # HEIC / JPEG XL with their codec registered.
+    dims = image_dimensions(path)
+    return dims[0] * dims[1] if dims else 0
 
 
 _SORT_KEYS = {

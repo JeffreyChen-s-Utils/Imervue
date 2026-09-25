@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `ab3a945` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `17c927d` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 878 | 145,199 |
+| `tests/` | 878 | 145,306 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,144 |
 | `Imervue/gui/` | 167 | 33,279 |
 | `Imervue/puppet/` | 57 | 15,296 |
-| `Imervue/image/` | 126 | 14,843 |
+| `Imervue/image/` | 126 | 14,852 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,991 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,673 |
 | `Imervue/library/` | 32 | 4,230 |
-| `Imervue/menu/` | 11 | 3,595 |
+| `Imervue/menu/` | 11 | 3,593 |
 | `Imervue/` 根層 | 5 | 1,571 |
 | `Imervue/plugin/` | 10 | 2,246 |
 | `Imervue/system/` | 29 | 2,912 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（17 個外掛） | 64 | 14,361 |
-| **總計** | **1,723** | **326,892** |
+| `plugins/`（17 個外掛） | 64 | 14,365 |
+| **總計** | **1,723** | **327,010** |
 
-其中 `Imervue/` 套件本身 781 檔 / 167,332 行。
+其中 `Imervue/` 套件本身 781 檔 / 167,339 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -308,7 +308,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-126 個模組、14,843 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+126 個模組、14,852 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -657,7 +657,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 334 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
-| `sort_menu.py` | 178 | 依名稱 / 日期 / 大小 / 解析度排序 |
+| `sort_menu.py` | 176 | 依名稱 / 日期 / 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
 | `modify_menu.py` | 29 | Deep-Zoom 專用的「修改」選單動作 |
 
@@ -973,7 +973,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-878 個檔、145,199 行。`pyproject.toml` 定義三個互斥層級 marker：
+878 個檔、145,306 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
