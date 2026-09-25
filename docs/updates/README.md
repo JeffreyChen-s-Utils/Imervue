@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-20 | 2026-09-26 | The List view keeps the sort you chose and orders names naturally | #fix #list-view #sort | [2026-09-b](2026-09-b.md) |
 | U-20260926-19 | 2026-09-26 | Auto-tagging reads a photo as shown and finally tags landscape and portrait | #fix #library #tags #orientation #formats | [2026-09-b](2026-09-b.md) |
 | U-20260926-18 | 2026-09-26 | Two different 16-bit scans are no longer hashed as the same picture | #fix #duplicates #similar-search #formats #data-loss | [2026-09-b](2026-09-b.md) |
 | U-20260926-17 | 2026-09-26 | Grey thumbnails cached before the 16-bit and grey-profile fixes are made again | #fix #thumbnails #cache #color-management | [2026-09-b](2026-09-b.md) |
@@ -392,4 +393,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 50 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 51 |

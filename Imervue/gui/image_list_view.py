@@ -34,6 +34,7 @@ from Imervue.image.orientation import exif_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_or_warn
+from Imervue.system.natural_sort import natural_key
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -266,8 +267,12 @@ class ImageListModel(QAbstractTableModel):
         """Sort rows in-place by the chosen column.
 
         Uses already-fetched metadata where available; unfetched rows compare
-        by path so they stay stable until their data arrives.
+        by path so they stay stable until their data arrives. Names sort
+        naturally (``img2`` before ``img10``), like the wall and the folder tree.
+        Column -1 (no sort chosen) keeps the rows as they are.
         """
+        if column < 0:
+            return
         def _color_key(r):
             from Imervue.user_settings.color_labels import get_color_label, COLORS
             c = get_color_label(r.path)
@@ -279,12 +284,12 @@ class ImageListModel(QAbstractTableModel):
                 return (1, c)
 
         key_funcs = {
-            self.COL_NAME: lambda r: Path(r.path).name.lower(),
+            self.COL_NAME: lambda r: natural_key(Path(r.path).name),
             self.COL_RES: lambda r: ((r.width or 0) * (r.height or 0)),
             self.COL_SIZE: lambda r: (r.size_kb or 0),
             self.COL_TYPE: lambda r: Path(r.path).suffix.lower(),
             self.COL_MTIME: lambda r: (r.mtime or 0),
-            self.COL_THUMB: lambda r: Path(r.path).name.lower(),
+            self.COL_THUMB: lambda r: natural_key(Path(r.path).name),
             self.COL_LABEL: _color_key,
             self.COL_RATING: lambda r: _rating_for(r.path),
         }
@@ -488,6 +493,8 @@ class ImageListView(QTableView):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setSortingEnabled(True)
+        # No column sorted until the user clicks one: the rows keep the viewer's order.
+        self.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
         self.setShowGrid(False)
         self.setWordWrap(False)
         self.verticalHeader().setVisible(False)
@@ -509,7 +516,15 @@ class ImageListView(QTableView):
 
     # --- Public API ---
     def set_paths(self, paths: list[str], metadata_index=None) -> None:
+        """Show *paths*, sorted again by the column the user chose, if any.
+
+        The list is rebuilt after a delete, a folder refresh or a new folder;
+        the header kept its sort arrow while the rows came back in the
+        viewer's order.
+        """
         self._model.set_paths(paths, metadata_index=metadata_index)
+        header = self.horizontalHeader()
+        self._model.sort(header.sortIndicatorSection(), header.sortIndicatorOrder())
 
     def refetch(self, paths) -> None:
         """Read *paths* again: they changed on disk (see :meth:`ImageListModel.refetch`)."""

@@ -695,3 +695,47 @@ def test_the_main_window_labels_and_culls_the_rows(monkeypatch):
     assert culled == [("a.png", "reject"), ("b.png", "reject")]
     assert labelled == [("a.png", "green"), ("b.png", "green")]
     assert window.viewer.main_window.toast.messages   # the same toasts as on the wall
+
+
+
+def test_the_name_column_sorts_naturally(list_mod, tmp_path):
+    """A plain string sort put img10 before img2, unlike the wall and the folder tree."""
+    model_cls, _ = list_mod
+    m = model_cls([str(tmp_path / n) for n in ("img10.png", "img2.png", "img1.png")])
+    m.sort(m.COL_NAME, Qt.SortOrder.AscendingOrder)
+    assert [Path(m.path_at(i)).name for i in range(3)] == ["img1.png", "img2.png", "img10.png"]
+
+
+def test_no_sort_column_keeps_the_rows(list_mod, tmp_path):
+    model_cls, _ = list_mod
+    names = ["b.png", "c.png", "a.png"]
+    m = model_cls([str(tmp_path / n) for n in names])
+    m.sort(-1, Qt.SortOrder.DescendingOrder)
+    assert [Path(m.path_at(i)).name for i in range(3)] == names
+
+
+def test_a_new_list_keeps_the_viewers_order_with_no_sort_arrow(qapp, tmp_path):
+    from Imervue.gui.image_list_view import ImageListView
+    view = ImageListView(main_window=None)
+    try:
+        view.set_paths([str(tmp_path / n) for n in ("b.png", "c.png", "a.png")])
+        order = [Path(view.model().path_at(i)).name for i in range(3)]
+        section = view.horizontalHeader().sortIndicatorSection()
+    finally:
+        view.deleteLater()
+    assert order == ["b.png", "c.png", "a.png"]
+    assert section == -1
+
+
+def test_the_chosen_sort_survives_a_rebuild(qapp, tmp_path):
+    """After a delete or a folder refresh the rows came back unsorted under the sort arrow."""
+    from Imervue.gui.image_list_view import ImageListModel, ImageListView
+    view = ImageListView(main_window=None)
+    try:
+        view.set_paths([str(tmp_path / n) for n in ("b.png", "c.png", "a.png")])
+        view.sortByColumn(ImageListModel.COL_NAME, Qt.SortOrder.DescendingOrder)
+        view.set_paths([str(tmp_path / n) for n in ("b.png", "d.png", "a.png")])
+        order = [Path(view.model().path_at(i)).name for i in range(3)]
+    finally:
+        view.deleteLater()
+    assert order == ["d.png", "b.png", "a.png"]
