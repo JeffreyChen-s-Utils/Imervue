@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui._apply_save import load_rgba, output_path
+from Imervue.gui._apply_save import load_rgba, notify_saved, output_path
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.auto_straighten import detect_horizon_angle
@@ -32,7 +32,7 @@ logger = logging.getLogger("Imervue.auto_straighten_dialog")
 
 
 class _DetectWorker(QThread):
-    done = Signal(bool, float)
+    done = Signal(bool, float, str)   # ok, angle, error
 
     def __init__(self, path: str):
         super().__init__()
@@ -42,13 +42,13 @@ class _DetectWorker(QThread):
         try:
             arr = load_rgba(self._path)
             angle = detect_horizon_angle(arr)
-            self.done.emit(True, float(angle))
+            self.done.emit(True, float(angle), "")
         except Exception as exc:  # worker must always report
             # A cv2-backed detect raises ImportError (opencv is optional) or
             # cv2.error, which the narrow except missed → done never fired and the
             # dialog hung. Always report the failure.
             logger.exception("Auto-straighten detect failed: %s", exc)
-            self.done.emit(False, 0.0)
+            self.done.emit(False, 0.0, str(exc))
 
 
 class _ApplyWorker(QThread):
@@ -154,11 +154,14 @@ class AutoStraightenDialog(WorkerHostMixin, QDialog):
         self._worker.done.connect(self._on_detect_done)
         self._worker.start()
 
-    def _on_detect_done(self, ok: bool, angle: float) -> None:
+    def _on_detect_done(self, ok: bool, angle: float, error: str) -> None:
         self._progress.setVisible(False)
         self._set_running(False)
         if ok:
             self._angle.setValue(float(angle))
+            return
+        notify_saved(self._viewer, False, error,
+                     "autostr_detect_failed", "Couldn't measure the tilt")
 
     def _apply(self) -> None:
         if self._worker_busy():
@@ -174,9 +177,9 @@ class AutoStraightenDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_apply_done(self, ok: bool, info: str) -> None:
-        _ = info
         self._progress.setVisible(False)
         self._set_running(False)
+        notify_saved(self._viewer, ok, info, "autostr_failed", "Auto-straighten failed")
         if ok:
             self.accept()
 

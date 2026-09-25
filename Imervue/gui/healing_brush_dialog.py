@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui._apply_save import load_rgba, output_path
+from Imervue.gui._apply_save import finish_save, load_rgba, output_path
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.healing import HealingSpot, apply_healing
@@ -231,11 +231,7 @@ class HealingBrushDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, info: str) -> None:
-        _ = info
-        self._progress.setVisible(False)
-        self._run_btn.setEnabled(True)
-        if ok:
-            self.accept()
+        finish_save(self, ok, info, "heal_failed", "Healing failed")
 
 
 def open_healing_brush(viewer: GPUImageView) -> None:

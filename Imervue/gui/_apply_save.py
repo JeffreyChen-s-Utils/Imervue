@@ -159,6 +159,19 @@ def apply_save_buttons(reject: Callable[[], None], apply_: Callable[[], None]) -
     return row
 
 
+def finish_save(dialog, ok: bool, message: str, failed_key: str, failed_fallback: str) -> None:
+    """End a one-shot save: hide the progress bar, re-arm Run, toast the outcome, close on success.
+
+    *dialog* carries ``_progress``, ``_run_btn`` and ``_viewer``; *message* is the
+    written path on success, else the error (see :func:`notify_saved`).
+    """
+    dialog._progress.setVisible(False)
+    dialog._run_btn.setEnabled(True)
+    notify_saved(dialog._viewer, ok, message, failed_key, failed_fallback)
+    if ok:
+        dialog.accept()
+
+
 def notify_saved(
     viewer, ok: bool, message: str, failed_key: str, failed_fallback: str,
 ) -> None:

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-38 | 2026-09-26 | Eleven one-shot tools say where they saved, or why they failed | #fix #dialogs #i18n #refactor #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
 | U-20260926-37 | 2026-09-26 | The docs give the E key, the Develop sliders and the batch menu as they are | #docs #develop #export #batch | [2026-09-b](2026-09-b.md) |
 | U-20260926-36 | 2026-09-26 | Develop's Whites slider dims white and its Blacks slider lifts black | #fix #develop #recipe | [2026-09-b](2026-09-b.md) |
 | U-20260926-35 | 2026-09-26 | The monitor mirror is frameless on a second display and its shortcut closes it | #fix #multi-monitor #shortcuts | [2026-09-b](2026-09-b.md) |
@@ -410,4 +411,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 68 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 69 |
