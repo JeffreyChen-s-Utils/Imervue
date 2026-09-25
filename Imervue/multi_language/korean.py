@@ -246,6 +246,7 @@ korean_word_dict = {
     "sort_by_name": "이름순",
     "sort_by_modified": "수정일순",
     "sort_by_created": "생성일순",
+    "sort_by_taken": "촬영일순",
     "sort_by_size": "파일 크기순",
     "sort_by_resolution": "해상도순",
     "sort_ascending": "오름차순",

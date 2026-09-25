@@ -1,6 +1,6 @@
 """
 排序選單
-Sort menu — allows sorting images by name, date, size, resolution.
+Sort menu — allows sorting images by name, date, date taken, size, resolution.
 """
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from PySide6.QtGui import QActionGroup
 
 from Imervue.system.natural_sort import natural_key
 from Imervue.image.dimensions import image_dimensions
+from Imervue.library.calendar_index import capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -43,6 +44,12 @@ def _sort_key_created(path: str):
     return getattr(st, "st_birthtime", st.st_ctime)
 
 
+def _sort_key_taken(path: str):
+    # When the camera took it (EXIF DateTimeOriginal, RAW and HEIC too), else
+    # the modified time; a burst shot within one second keeps its name order.
+    return capture_datetime(path), natural_key(Path(path).name)
+
+
 def _sort_key_size(path: str):
     try:
         return os.path.getsize(path)
@@ -62,6 +69,7 @@ _SORT_KEYS = {
     "name": _sort_key_name,
     "modified": _sort_key_modified,
     "created": _sort_key_created,
+    "taken": _sort_key_taken,
     "size": _sort_key_size,
     "resolution": _sort_key_resolution,
 }
@@ -70,6 +78,7 @@ _SORT_LANG_KEYS = {
     "name": "sort_by_name",
     "modified": "sort_by_modified",
     "created": "sort_by_created",
+    "taken": "sort_by_taken",
     "size": "sort_by_size",
     "resolution": "sort_by_resolution",
 }
@@ -129,7 +138,7 @@ def build_sort_menu(ui: ImervueMainWindow):
     current_sort = user_setting_dict.get("sort_by", "name")
     current_asc = user_setting_dict.get("sort_ascending", True)
 
-    for key in ("name", "modified", "created", "size", "resolution"):
+    for key in ("name", "modified", "created", "taken", "size", "resolution"):
         lang_key = _SORT_LANG_KEYS[key]
         default = key.capitalize()
         action = sort_menu.addAction(lang.get(lang_key, default))

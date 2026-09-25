@@ -246,7 +246,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 ### Sortieren & Filtern
 
-- Sortieren nach Name (natürliche Reihenfolge wie im Explorer: `img2` vor `img10`) / Geändert / Erstellt / Größe / Auflösung (auf- oder absteigend)
+- Sortieren nach Name (natürliche Reihenfolge wie im Explorer: `img2` vor `img10`) / Geändert / Erstellt / Aufnahmedatum (EXIF-Zeit der Kamera, sonst Geändert) / Größe / Auflösung (auf- oder absteigend)
 - Filter nach Endung, Color Label, Rating, Tag/Album, Cull-Zustand
 - **Erweiterter Filter** — Auflösung / Dateigröße / Orientierung / Modified-Date-Range
 - **Multi-Tag-Filter**-Dialog mit boolescher AND-/OR-Logik

@@ -246,7 +246,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 ### Ordenación y filtrado
 
-- Ordena por nombre (orden natural, como el Explorador: `img2` antes que `img10`) / modificado / creado / tamaño / resolución (asc o desc)
+- Ordena por nombre (orden natural, como el Explorador: `img2` antes que `img10`) / modificado / creado / fecha de captura (la hora EXIF de la cámara; si no, modificado) / tamaño / resolución (asc o desc)
 - Filtra por extensión, etiqueta de color, calificación, etiqueta/álbum, estado de culling
 - **Filtro avanzado** — resolución / tamaño de archivo / orientación / rango de fecha de modificación
 - Diálogo de **filtro multietiqueta** con lógica booleana AND / OR

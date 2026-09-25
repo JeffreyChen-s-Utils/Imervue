@@ -1,5 +1,7 @@
-"""Tests for ``sort_menu``'s resolution sort key."""
+"""Tests for ``sort_menu``: its sort keys and its menu."""
 from __future__ import annotations
+
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -64,3 +66,57 @@ def test_created_is_the_creation_time(tmp_path):
     expected = getattr(st, "st_birthtime", st.st_ctime)
     assert sort_menu._sort_key_created(str(path)) == pytest.approx(expected)  # noqa: SLF001
     assert sort_menu._sort_key_created(str(tmp_path / "gone.png")) == 0  # noqa: SLF001
+
+
+
+def _shot(path, taken: str | None, mtime: float):
+    """A JPEG taken at *taken* (EXIF DateTimeOriginal), last modified at *mtime*."""
+    import os
+    exif = Image.Exif()
+    if taken is not None:
+        exif.get_ifd(0x8769)[0x9003] = taken
+    Image.new("RGB", (4, 4)).save(path, exif=exif)
+    os.utime(path, (mtime, mtime))
+    return str(path)
+
+
+def test_date_taken_follows_the_camera_not_the_file(tmp_path):
+    """A photo copied or edited later has a newer file date than when it was taken."""
+    early = _shot(tmp_path / "b.jpg", "2024:05:01 09:00:00", mtime=2_000_000_000)
+    late = _shot(tmp_path / "a.jpg", "2024:05:02 09:00:00", mtime=1_000_000_000)
+    assert sorted([late, early], key=sort_menu._sort_key_taken) == [early, late]  # noqa: SLF001
+    assert sorted([late, early], key=sort_menu._sort_key_modified) == [late, early]  # noqa: SLF001
+
+
+def test_a_picture_without_a_date_taken_sorts_by_its_modified_time(tmp_path):
+    import datetime as dt
+    stamp = dt.datetime(2024, 5, 1, 12, 0).timestamp()
+    screenshot = _shot(tmp_path / "screenshot.jpg", None, mtime=stamp)
+    photo = _shot(tmp_path / "photo.jpg", "2024:05:01 10:00:00", mtime=stamp + 99_999)
+    assert sorted([screenshot, photo], key=sort_menu._sort_key_taken) == [photo, screenshot]  # noqa: SLF001
+
+
+def test_a_burst_within_one_second_keeps_its_name_order(tmp_path):
+    shots = [_shot(tmp_path / f"IMG_{n}.jpg", "2024:05:01 09:00:00", mtime=1_000_000_000 - n)
+             for n in (10, 2, 1)]
+    assert [Path(p).name for p in sorted(shots, key=sort_menu._sort_key_taken)] == [  # noqa: SLF001
+        "IMG_1.jpg", "IMG_2.jpg", "IMG_10.jpg"]
+
+
+def test_a_missing_file_sorts_first(tmp_path):
+    present = _shot(tmp_path / "a.jpg", "2024:05:01 09:00:00", mtime=1_000_000_000)
+    gone = str(tmp_path / "gone.jpg")
+    assert sorted([present, gone], key=sort_menu._sort_key_taken) == [gone, present]  # noqa: SLF001
+
+
+def test_the_sort_menu_offers_date_taken(qapp):
+    from PySide6.QtWidgets import QMainWindow
+
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    window = QMainWindow()
+    try:
+        menu = sort_menu.build_sort_menu(window)
+        texts = [action.text() for action in menu.actions()]
+    finally:
+        window.deleteLater()
+    assert language_wrapper.language_word_dict["sort_by_taken"] in texts

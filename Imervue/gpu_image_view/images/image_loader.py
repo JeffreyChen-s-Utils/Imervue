@@ -342,12 +342,16 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
     return result
 
 
+# Sorts that open every file's header (its size, its EXIF date): worth the cache.
+_HEADER_SORTS = frozenset({"resolution", "taken"})
+
+
 def _scan_images_for_user(directory: str) -> list[str]:
     """Scan + sort a folder using the user's current sort settings (single pass)."""
     from Imervue.user_settings.user_setting_dict import user_setting_dict
     sort_by = user_setting_dict.get("sort_by", "name")
     ascending = user_setting_dict.get("sort_ascending", True)
-    if sort_by != "resolution":
+    if sort_by not in _HEADER_SORTS:
         # Scanning is the fast path here: the cache checks every listed file
         # still exists, one system call each, while scandir lists them in
         # batches (5000 files by name: 38 ms scanned, 349 ms from the cache).

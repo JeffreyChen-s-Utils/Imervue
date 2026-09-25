@@ -248,7 +248,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 ### Sort & filter
 
-- Sort by name (natural order, like Explorer: `img2` before `img10`) / modified / created / size / resolution (asc or desc)
+- Sort by name (natural order, like Explorer: `img2` before `img10`) / modified / created / date taken (the camera's EXIF time, else modified) / size / resolution (asc or desc)
 - Filter by extension, color label, rating, tag/album, cull state
 - **Advanced filter** — resolution / file size / orientation / modified-date range
 - **Multi-tag filter** dialog with AND / OR boolean logic

@@ -312,6 +312,8 @@ Sorting & Filtering
      - ``Sort`` > ``By Name``
    * - Sort by date modified
      - ``Sort`` > ``By Modified Date``
+   * - Sort by date taken (the camera's EXIF time; the modified date when there is none)
+     - ``Sort`` > ``By Date Taken``
    * - Sort by file size
      - ``Sort`` > ``By File Size``
    * - Sort by resolution

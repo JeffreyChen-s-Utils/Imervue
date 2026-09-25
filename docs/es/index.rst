@@ -321,6 +321,8 @@ Ordenación y filtrado
      - ``Sort`` > ``By Name``
    * - Ordenar por fecha de modificación
      - ``Sort`` > ``By Modified Date``
+   * - Ordenar por fecha de captura (la hora EXIF de la cámara; sin ella, la fecha de modificación)
+     - ``Sort`` > ``By Date Taken``
    * - Ordenar por tamaño de archivo
      - ``Sort`` > ``By File Size``
    * - Ordenar por resolución

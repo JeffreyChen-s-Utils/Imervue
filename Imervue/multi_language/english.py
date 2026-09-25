@@ -261,6 +261,7 @@ english_word_dict = {
     "sort_by_name": "By Name",
     "sort_by_modified": "By Modified Date",
     "sort_by_created": "By Created Date",
+    "sort_by_taken": "By Date Taken",
     "sort_by_size": "By File Size",
     "sort_by_resolution": "By Resolution",
     "sort_ascending": "Ascending",

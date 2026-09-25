@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `5013d94` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `497b93d` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,17 +66,17 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 888 | 147,508 |
+| `tests/` | 888 | 147,588 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
 | `Imervue/gui/` | 167 | 33,174 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,343 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,199 |
-| `Imervue/multi_language/` | 8 | 14,144 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,203 |
+| `Imervue/multi_language/` | 8 | 14,149 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,226 |
-| `Imervue/menu/` | 11 | 3,585 |
+| `Imervue/menu/` | 11 | 3,594 |
 | `Imervue/` 根層 | 5 | 1,576 |
 | `Imervue/plugin/` | 10 | 2,246 |
 | `Imervue/system/` | 32 | 3,152 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,739** | **330,053** |
+| **總計** | **1,739** | **330,151** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,180 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,198 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -266,11 +266,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,803 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,768 | 繁體中文 |
-| `chinese.py` | 2,769 | 簡體中文 |
-| `japanese.py` | 2,782 | 日文 |
-| `korean.py` | 2,780 | 韓文 |
+| `english.py` | 2,804 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,769 | 繁體中文 |
+| `chinese.py` | 2,770 | 簡體中文 |
+| `japanese.py` | 2,783 | 日文 |
+| `korean.py` | 2,781 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -473,7 +473,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 523 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾；兩種掃描都經 `_is_listed` 跳過隱藏檔，直接開啟的隱藏檔仍加進清單）、`open_path()` 對外入口；點陣圖（大圖與縮圖）先經 `to_eight_bit` 把 16 位元與浮點灰階縮成 8 位元、再轉 sRGB，並依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
+| `image_loader.py` | 527 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾；兩種掃描都經 `_is_listed` 跳過隱藏檔，直接開啟的隱藏檔仍加進清單；依解析度或拍攝日期這類要逐檔讀標頭的排序（`_HEADER_SORTS`）走 `folder_index` 快取）、`open_path()` 對外入口；點陣圖（大圖與縮圖）先經 `to_eight_bit` 把 16 位元與浮點灰階縮成 8 位元、再轉 sRGB，並依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
 | `load_thumbnail_worker.py` | 149 | 單張縮圖解碼 `QRunnable`（點陣圖交給 `image_loader._load_raster_thumbnail`／`_load_raster`，和檢視器同一條解碼：EXIF 轉正、sRGB、16 位元灰階縮放、巨圖一次一張的 `decode_slot`；RAW 取 `raw_loader.develop_raw(thumbnail=True)` 的轉正預覽） |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
@@ -661,7 +661,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 333 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
-| `sort_menu.py` | 176 | 依名稱 / 日期 / 大小 / 解析度排序 |
+| `sort_menu.py` | 185 | 依名稱 / 修改日期 / 建立日期 / 拍攝日期（`library.calendar_index.capture_datetime`：EXIF 拍攝時間，沒有就用修改時間；同一秒的連拍依檔名）/ 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
 | `modify_menu.py` | 29 | Deep-Zoom 專用的「修改」選單動作 |
 
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-888 個檔、147,508 行。`pyproject.toml` 定義三個互斥層級 marker：
+888 個檔、147,588 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

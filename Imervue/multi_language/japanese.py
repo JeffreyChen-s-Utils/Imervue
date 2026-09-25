@@ -249,6 +249,7 @@ japanese_word_dict = {
     "sort_by_name": "名前順",
     "sort_by_modified": "更新日順",
     "sort_by_created": "作成日順",
+    "sort_by_taken": "撮影日時順",
     "sort_by_size": "ファイルサイズ順",
     "sort_by_resolution": "解像度順",
     "sort_ascending": "昇順",

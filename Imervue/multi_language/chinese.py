@@ -238,6 +238,7 @@ chinese_word_dict = {
     "sort_by_name": "按文件名",
     "sort_by_modified": "按修改日期",
     "sort_by_created": "按创建日期",
+    "sort_by_taken": "按拍摄日期",
     "sort_by_size": "按文件大小",
     "sort_by_resolution": "按分辨率",
     "sort_ascending": "升序",

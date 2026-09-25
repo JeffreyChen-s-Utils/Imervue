@@ -316,6 +316,8 @@ Classificação e Filtragem
      - ``Ordenar`` > ``Por Nome``
    * - Ordenar por data de modificação
      - ``Ordenar`` > ``Por Data de Modificação``
+   * - Ordenar por data da foto (horário EXIF da câmera; sem ele, a data de modificação)
+     - ``Ordenar`` > ``Por Data da Foto``
    * - Ordenar por tamanho do arquivo
      - ``Ordenar`` > ``Por Tamanho do Arquivo``
    * - Ordenar por resolução

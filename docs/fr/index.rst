@@ -313,6 +313,8 @@ Tri et filtrage
      - ``Trier`` > ``Par nom``
    * - Trier par date de modification
      - ``Trier`` > ``Par date de modification``
+   * - Trier par date de prise de vue (heure EXIF de l'appareil ; à défaut, la date de modification)
+     - ``Trier`` > ``Par date de prise de vue``
    * - Trier par taille de fichier
      - ``Trier`` > ``Par taille de fichier``
    * - Trier par résolution

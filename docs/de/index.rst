@@ -315,6 +315,8 @@ Sortieren und Filtern
      - ``Sortieren`` > ``Nach Name``
    * - Nach Änderungsdatum sortieren
      - ``Sortieren`` > ``Nach Änderungsdatum``
+   * - Nach Aufnahmedatum sortieren (EXIF-Zeit der Kamera; ohne sie das Änderungsdatum)
+     - ``Sortieren`` > ``Nach Aufnahmedatum``
    * - Nach Dateigröße sortieren
      - ``Sortieren`` > ``Nach Dateigröße``
    * - Nach Auflösung sortieren

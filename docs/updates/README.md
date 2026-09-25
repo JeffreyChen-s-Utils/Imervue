@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-11 | 2026-09-26 | Sort by Date Taken, the time the camera recorded | #feature #sort #exif #browse | [2026-09-b](2026-09-b.md) |
 | U-20260926-10 | 2026-09-26 | An APNG's default image is not played as the first frame | #fix #viewer #animation #formats | [2026-09-b](2026-09-b.md) |
 | U-20260926-09 | 2026-09-26 | Set as Wallpaper hands the desktop a JPEG it can show, not a RAW or PSD it turns black | #fix #wallpaper #formats #windows | [2026-09-b](2026-09-b.md) |
 | U-20260926-08 | 2026-09-26 | Reveal in folder in the List view selects the photo, like Show in Explorer | #fix #list-view #windows | [2026-09-b](2026-09-b.md) |
@@ -383,4 +384,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 41 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 42 |

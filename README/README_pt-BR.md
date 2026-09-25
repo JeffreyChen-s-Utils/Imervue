@@ -246,7 +246,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 ### Ordenação e filtragem
 
-- Ordenar por nome (ordem natural, como o Explorer: `img2` antes de `img10`) / modificação / criação / tamanho / resolução (asc ou desc)
+- Ordenar por nome (ordem natural, como o Explorer: `img2` antes de `img10`) / modificação / criação / data da foto (horário EXIF da câmera; senão, modificação) / tamanho / resolução (asc ou desc)
 - Filtrar por extensão, etiqueta de cor, avaliação, tag/álbum, estado de triagem
 - **Filtro avançado** — resolução / tamanho de arquivo / orientação / intervalo de data de modificação
 - Diálogo de **filtro multi-tag** com lógica booleana AND / OR

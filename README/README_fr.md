@@ -246,7 +246,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 ### Tri et filtrage
 
-- Tri par nom (ordre naturel, comme l'Explorateur : `img2` avant `img10`) / modifié / créé / taille / résolution (croissant ou décroissant)
+- Tri par nom (ordre naturel, comme l'Explorateur : `img2` avant `img10`) / modifié / créé / date de prise de vue (heure EXIF de l'appareil, sinon modifié) / taille / résolution (croissant ou décroissant)
 - Filtrage par extension, étiquette de couleur, note, étiquette/album, état de tri
 - **Filtre avancé** — plage de résolution / taille de fichier / orientation / date de modification
 - Boîte de dialogue **Filtre multi-étiquettes** avec logique booléenne AND / OR

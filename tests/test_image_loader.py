@@ -317,6 +317,30 @@ def test_a_folder_sorted_by_resolution_still_uses_the_cache(tmp_path, monkeypatc
     assert image_loader._scan_images_for_user(str(tmp_path)) == ["cached.png"]
 
 
+
+def test_a_folder_sorted_by_date_taken_uses_the_cache(tmp_path, monkeypatch):
+    """Sorting by date taken reads every file's EXIF, like sorting by resolution reads its size."""
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.image import folder_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    monkeypatch.setitem(user_setting_dict, "sort_by", "taken")
+    monkeypatch.setattr(folder_index, "load", lambda *_a, **_k: ["cached.png"])
+    assert image_loader._scan_images_for_user(str(tmp_path)) == ["cached.png"]
+
+
+def test_a_folder_scan_can_sort_by_date_taken(tmp_path):
+    import os
+
+    from Imervue.gpu_image_view.images import image_loader
+    for name, taken in (("a.jpg", "2024:05:03 09:00:00"), ("b.jpg", "2024:05:01 09:00:00"),
+                        ("c.jpg", "2024:05:02 09:00:00")):
+        exif = Image.Exif()
+        exif.get_ifd(0x8769)[0x9003] = taken
+        Image.new("RGB", (4, 4)).save(tmp_path / name, exif=exif)
+        os.utime(tmp_path / name, (1_000_000_000, 1_000_000_000))
+    found = image_loader._scan_images(str(tmp_path), sort_by="taken")
+    assert [os.path.basename(p) for p in found] == ["b.jpg", "c.jpg", "a.jpg"]
+
 @pytest.mark.parametrize("thumbnail", [False, True])
 def test_a_raster_decode_takes_the_giant_slot_for_its_pixel_count(tmp_path, monkeypatch, thumbnail):
     """Several workers decoding panoramas at once could add their gigabytes up."""
