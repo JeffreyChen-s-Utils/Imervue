@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
-from Imervue.system.natural_sort import natural_key
+from Imervue.system.image_listing import list_images
 from Imervue.gui.export_source import upright_image
 from Imervue.image.export_metadata import METADATA_ALL, export_save_options
 from Imervue.image.formats import RAW_EXTENSIONS, STILL_IMAGE_EXTENSIONS
@@ -54,15 +54,8 @@ _JPEG_EXTS = (".jpg", _JPEG_EXT)
 
 
 def _scan_folder(folder: str) -> list[str]:
-    result = []
-    try:
-        for entry in os.scandir(folder):
-            if entry.is_file() and Path(entry.name).suffix.lower() in _IMAGE_EXTS:
-                result.append(entry.path)
-    except OSError:
-        pass
-    result.sort(key=lambda p: natural_key(os.path.basename(p)))
-    return result
+    """The images in *folder* this tool converts, in natural name order."""
+    return list_images(folder, _IMAGE_EXTS)
 
 
 class _ConvertWorker(QThread):

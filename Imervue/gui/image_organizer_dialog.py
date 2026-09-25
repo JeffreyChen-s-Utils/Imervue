@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.system.natural_sort import natural_key
+from Imervue.system.image_listing import list_images
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.dimensions import image_dimensions
@@ -54,16 +54,8 @@ RULE_COUNT = "count"
 # ---------------------------------------------------------------------------
 
 def _scan_folder(folder: str) -> list[str]:
-    """Return image paths in *folder* (non-recursive), sorted by name."""
-    result: list[str] = []
-    try:
-        for entry in os.scandir(folder):
-            if entry.is_file() and Path(entry.name).suffix.lower() in STILL_IMAGE_EXTENSIONS:
-                result.append(entry.path)
-    except OSError:
-        pass
-    result.sort(key=lambda p: natural_key(os.path.basename(p)))
-    return result
+    """Return image paths in *folder* (non-recursive), in natural name order."""
+    return list_images(folder, STILL_IMAGE_EXTENSIONS)
 
 
 # ---------------------------------------------------------------------------

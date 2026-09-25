@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.system.natural_sort import natural_key
+from Imervue.system.image_listing import list_images
 from Imervue.gui.export_source import upright_image
 from Imervue.image.in_place_save import (
     can_rewrite_in_place, in_place_format, save_edited_copy, save_over_source,
@@ -127,25 +127,8 @@ _IMAGE_EXTS = frozenset({
 
 
 def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
-    """Collect image paths from *folder*, sorted by name."""
-    if recursive:
-        result = [
-            os.path.join(root, f)
-            for root, _dirs, files in os.walk(folder)
-            for f in files
-            if Path(f).suffix.lower() in _IMAGE_EXTS
-        ]
-    else:
-        try:
-            entries = list(os.scandir(folder))
-        except OSError:
-            entries = []
-        result = [
-            e.path for e in entries
-            if e.is_file() and Path(e.name).suffix.lower() in _IMAGE_EXTS
-        ]
-    result.sort(key=lambda p: natural_key(os.path.basename(p)))
-    return result
+    """Collect image paths from *folder*, in natural name order."""
+    return list_images(folder, _IMAGE_EXTS, recursive=recursive)
 
 # Tile size for tiled inference (prevents OOM on large images)
 _TILE_SIZE = 512

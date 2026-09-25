@@ -8,7 +8,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
@@ -31,7 +30,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.system.natural_sort import natural_key
+from Imervue.system.image_listing import list_images
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.image.shown import as_shown_8bit
 from Imervue.image.orientation import exif_orientation
@@ -168,31 +167,9 @@ class _ScanWorker(QThread):
             return None
 
     def _collect_paths(self) -> list[str]:
-        result = (self._walk_images() if self._recursive
-                  else self._scandir_images())
-        result.sort(key=lambda p: natural_key(os.path.basename(p)))
-        return result
-
-    def _walk_images(self) -> list[str]:
-        result: list[str] = []
-        for root, _dirs, files in os.walk(self._folder):
-            if self._abort:
-                break
-            result.extend(
-                os.path.join(root, f) for f in files
-                if Path(f).suffix.lower() in _IMAGE_EXTS
-            )
-        return result
-
-    def _scandir_images(self) -> list[str]:
-        try:
-            return [
-                entry.path for entry in os.scandir(self._folder)
-                if entry.is_file()
-                and Path(entry.name).suffix.lower() in _IMAGE_EXTS
-            ]
-        except OSError:
-            return []
+        """The folder's images in natural name order; a cancel ends a recursive walk early."""
+        return list_images(self._folder, _IMAGE_EXTS, recursive=self._recursive,
+                           should_stop=lambda: self._abort)
 
     @staticmethod
     def _file_hash(path: str) -> str:
