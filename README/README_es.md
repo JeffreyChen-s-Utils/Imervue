@@ -296,7 +296,7 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 ### Controles deslizantes de revelado
 
 - Balance de blancos — temperatura / tinte
-- Regiones tonales — sombras / medios tonos / luces
+- Regiones tonales — luces / sombras / blancos / negros
 - Exposición / contraste / saturación / vibrancia
 - Recorte, rotación, volteo horizontal / vertical
 - Todos los ajustes permanecen no destructivos y se almacenan en la recipe
@@ -710,7 +710,7 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | F | Alternar pantalla completa |
 | Shift+Tab | Alternar modo cine (ocultar toda la interfaz) |
 | R / Shift+R | Rotar horario / antihorario |
-| E | Abrir editor de imagen (pestaña Modify) |
+| E | Abrir la imagen actual en el editor de anotaciones |
 | W / Shift+W | Ajustar a ancho / alto |
 | H | Alternar superposición de histograma RGB |
 | F8 / Ctrl+F8 | Superposición OSD / HUD de depuración |

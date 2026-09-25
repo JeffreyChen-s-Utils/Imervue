@@ -349,7 +349,8 @@ Basculez le navigateur d'images entre la grille de vignettes et une liste détai
 --------------------------------
 
 Passez à l'onglet **Modify** en haut de la fenêtre pour entrer en mode édition.
-Vous pouvez également appuyer sur ``E`` ou faire un clic droit > ``Modify`` en mode Deep Zoom.
+En mode Deep Zoom, un clic droit > ``Modify`` > ``Develop`` ouvre aussi l'image courante dans cet onglet ;
+``E`` (ou clic droit > ``Modify`` > ``Annotate``) l'ouvre plutôt dans l'éditeur d'annotation séparé.
 
 ::
 
@@ -478,18 +479,20 @@ Ajustements d'image (panneau de droite, partie basse)
      - Décalage chaud / froid (bleu → jaune) ; utile pour les éclairages mixtes ou les prises de vue en intérieur
    * - Balance des blancs — Teinte
      - Décalage magenta / vert ; corrige les dominantes fluorescentes
-   * - Ombres
-     - Relevez ou écrasez les détails dans les zones tonales sombres
-   * - Tons moyens
-     - Ajustez la plage tonale médiane sans affecter les noirs et les blancs
    * - Hautes lumières
      - Récupérez les hautes lumières brûlées ou poussez davantage les zones claires
+   * - Ombres
+     - Relevez ou écrasez les détails dans les zones tonales sombres
+   * - Blancs
+     - Poussez à droite pour étirer les tons les plus clairs jusqu'au blanc ; à gauche pour ramener le blanc à un gris
+   * - Noirs
+     - Poussez à gauche pour écraser les tons les plus sombres jusqu'au noir ; à droite pour relever le noir vers un gris délavé
    * - Vibrance
      - Renforcement intelligent de la saturation — protège les tons chair et les couleurs déjà saturées
 
 Ces ajustements sont **non destructifs**. Chaque curseur écrit dans une recette d'édition stockée
-par image ; appuyez sur ``Réinitialiser`` à tout moment pour restaurer l'original, ou sur ``Ctrl + Z`` pour reculer
-parmi les modifications individuelles. Les recettes survivent aux redémarrages et peuvent être exportées / synchronisées
+par image ; appuyez sur ``Réinitialiser`` à tout moment pour restaurer l'original, ou sur ``Annuler`` / ``Rétablir``
+sous les curseurs pour parcourir les modifications une à une. Les recettes survivent aux redémarrages et peuvent être exportées / synchronisées
 via le flux de fichiers annexes XMP décrit dans la section Métadonnées.
 
 Le fichier sur disque ne change que si vous le demandez. **Apply Crop** et le **Save** des annotations réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier. Les outils à usage unique (CLAHE, mélangeur TSL, cadre photo, redressement
@@ -1598,7 +1601,7 @@ Exporter des images
 Export individuel
 ^^^^^^^^^^^^^^^^^
 
-Clic droit sur une image > ``Exporter / Enregistrer sous``.
+Ouvrez une image (Deep Zoom), puis clic droit > ``Exporter / Enregistrer sous``.
 
 - Choisissez le format : PNG, JPEG, WebP, BMP, TIFF, AVIF ; aussi HEIC et JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` est installé
 - Ajustez la qualité (pour les formats avec perte)
@@ -1638,7 +1641,7 @@ sa position (un coin ou le centre) et son opacité. Les fichiers d'origine ne so
 Export par lots
 ^^^^^^^^^^^^^^^
 
-Sélectionnez plusieurs images, puis clic droit > ``Export par lots``.
+Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``Export par lots``.
 
 - Conversion de format uniforme
 - Définir largeur / hauteur maximales (mise à l'échelle automatique du ratio d'aspect)
@@ -1648,7 +1651,7 @@ Sélectionnez plusieurs images, puis clic droit > ``Export par lots``.
 Créer un GIF / une vidéo
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Sélectionnez plusieurs images, puis clic droit > ``Créer GIF / Vidéo``.
+Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``Créer GIF / Vidéo``.
 
 - Sortie GIF et MP4
 - Glisser pour réordonner les images
@@ -1792,7 +1795,7 @@ que l'appareil écrit sous le même nom.
 Opérations par lots
 -------------------
 
-En mode vignettes, sélectionnez plusieurs images puis clic droit :
+En mode vignettes, sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` :
 
 .. list-table::
    :header-rows: 1
@@ -1808,6 +1811,23 @@ En mode vignettes, sélectionnez plusieurs images puis clic droit :
      - Faire pivoter toutes les images sélectionnées en une fois
    * - Export par lots
      - Convertir le format et redimensionner en masse
+   * - Créer GIF / Vidéo
+     - Animer la sélection en GIF ou en MP4 (voir *Créer un GIF / une vidéo*)
+   * - Taguer par lieu
+     - Ajouter aux mots-clés XMP de chaque photo géolocalisée la ville et le pays les plus proches
+   * - Indexer les mots-clés
+     - Ajouter à la bibliothèque les mots-clés XMP de la sélection
+   * - Tri automatique : photos floues
+     - Marquer les photos floues comme rejetées
+   * - Tri automatique : faible qualité
+     - Marquer comme rejeté le quart le plus faible de la sélection (netteté, exposition, contraste)
+   * - Rotation automatique selon l'EXIF
+     - Enregistrer une copie PNG redressée de chaque photo sous ``<name>_oriented.png``
+   * - Combiner en PDF / TIFF…
+     - Réunir la sélection, dans l'ordre d'affichage, en un seul PDF ou TIFF multipage
+   * - Importer dans des dossiers datés…
+     - Copier la sélection dans des dossiers ``YYYY/MM`` selon la date de prise de vue (EXIF, sinon la date
+       du fichier) ; un fichier déjà présent garde son nom et le nouveau venu reçoit ``_1``
    * - Ajouter au tag
      - Appliquer le même tag à toutes les images sélectionnées
    * - Ajouter à un album
@@ -2001,7 +2021,7 @@ Navigation
    * - Touche
      - Action
    * - ``E``
-     - Ouvrir l'onglet Modify
+     - Ouvrir l'éditeur d'annotation
    * - ``R``
      - Rotation horaire
    * - ``Shift + R``

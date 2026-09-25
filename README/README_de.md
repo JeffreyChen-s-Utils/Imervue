@@ -296,7 +296,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 ### Entwicklungs-Slider
 
 - Weißabgleich — Temperatur / Tint
-- Tonale Bereiche — Schatten / Mitten / Lichter
+- Tonale Bereiche — Lichter / Schatten / Weiß / Schwarz
 - Belichtung / Kontrast / Sättigung / Vibrance
 - Crop, Rotation, Horizontal-/Vertikal-Flip
 - Alle Bearbeitungen bleiben nicht-destruktiv und gehen durch den Rezeptspeicher
@@ -712,7 +712,7 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | F | Vollbild umschalten |
 | Shift+Tab | Theater-Modus umschalten (Chrome verbergen) |
 | R / Shift+R | Drehen CW / CCW |
-| E | Bildeditor öffnen (Modify-Tab) |
+| E | Aktuelles Bild im Annotationseditor öffnen |
 | W / Shift+W | An Breite / Höhe anpassen |
 | H | RGB-Histogramm-Overlay umschalten |
 | F8 / Ctrl+F8 | OSD-Overlay / Debug-HUD |

@@ -351,7 +351,8 @@ Bilder bearbeiten (Modify-Tab)
 ------------------------------
 
 Wechseln Sie oben im Fenster zum **Modify**-Tab, um in den Bearbeitungsmodus zu gelangen.
-Sie können auch ``E`` drücken oder im Deep-Zoom-Modus per Rechtsklick > ``Modify`` einsteigen.
+Im Deep-Zoom-Modus öffnet auch Rechtsklick > ``Modify`` > ``Develop`` das aktuelle Bild hier;
+``E`` (oder Rechtsklick > ``Modify`` > ``Annotate``) öffnet es stattdessen im separaten Annotationseditor.
 
 ::
 
@@ -480,20 +481,22 @@ Bildanpassungen (rechtes Panel, unten)
      - Warm- / Kalttonverschiebung (blau → gelb); nützlich für Mischlicht oder Innenaufnahmen
    * - Weißabgleich — Tönung
      - Magenta- / Grünverschiebung; korrigiert Leuchtstoffstiche
-   * - Schatten
-     - Details in dunklen Tonbereichen anheben oder stauchen
-   * - Mitteltöne
-     - Mittlere Tonwerte anpassen, ohne Schwarz und Weiß zu beeinflussen
    * - Lichter
      - Ausgefressene Lichter retten oder helle Bereiche weiter pushen
+   * - Schatten
+     - Details in dunklen Tonbereichen anheben oder stauchen
+   * - Weiß
+     - Nach rechts die hellsten Töne bis zum Weiß strecken; nach links Weiß zu einem Grau abdunkeln
+   * - Schwarz
+     - Nach links die dunkelsten Töne bis zum Schwarz drücken; nach rechts Schwarz zu einem blassen Grau anheben
    * - Dynamik (Vibrance)
      - Sättigungsbewusste Verstärkung — schützt Hauttöne und bereits gesättigte Farben
 
 Diese Anpassungen sind **nicht-destruktiv**. Jeder Schieberegler schreibt in ein bildbezogenes
 Edit-Recipe; mit ``Zurücksetzen`` jederzeit den Originalzustand wiederherstellen oder mit
-``Ctrl + Z`` einzelne Änderungen schrittweise rückgängig machen. Recipes überleben Neustarts
-und können über den im Metadaten-Abschnitt beschriebenen XMP-Sidecar-Workflow exportiert /
-synchronisiert werden.
+``Rückgängig`` / ``Wiederholen`` unter den Schiebereglern einzelne Änderungen schrittweise
+durchgehen. Recipes überleben Neustarts und können über den im Metadaten-Abschnitt
+beschriebenen XMP-Sidecar-Workflow exportiert / synchronisiert werden.
 
 Die Datei auf der Festplatte ändert sich nur auf Ihre Anweisung. **Apply Crop** und das **Speichern** von Anmerkungen schreiben das Ergebnis zurück in die Datei und behalten ihre EXIF-Daten (Kamera, Aufnahmedatum, GPS), XMP und DPI. Eine Kamera-RAW-, HEIC- oder animierte / mehrseitige Datei wird nie überschrieben: beim Zuschneiden werden Sie zum Export aufgefordert, beim Speichern von Anmerkungen nach einer neuen Datei gefragt. Die Einmal-Werkzeuge (CLAHE, HSL-Mixer, Fotorahmen, Auto-Begradigen …) speichern
 ihr Ergebnis neben dem Original als ``photo_clahe.png``; ein erneuter Lauf speichert
@@ -1621,7 +1624,7 @@ Bilder exportieren
 Einzelexport
 ^^^^^^^^^^^^
 
-Rechtsklick auf ein Bild > ``Exportieren / Speichern unter``.
+Ein Bild öffnen (Deep Zoom), dann Rechtsklick > ``Exportieren / Speichern unter``.
 
 - Format wählen: PNG, JPEG, WebP, BMP, TIFF, AVIF; HEIC und JPEG XL, wenn ``pillow-heif`` / ``pillow-jxl-plugin`` installiert ist
 - Qualität anpassen (für verlustbehaftete Formate)
@@ -1662,7 +1665,7 @@ werden nie verändert.
 Stapelexport
 ^^^^^^^^^^^^
 
-Mehrere Bilder auswählen, dann Rechtsklick > ``Stapelexport``.
+Mehrere Bilder auswählen, dann Rechtsklick > ``Stapeloperationen`` > ``Stapelexport``.
 
 - Einheitliche Formatkonvertierung
 - Maximale Breite / Höhe setzen (automatische Seitenverhältnisskalierung)
@@ -1672,7 +1675,7 @@ Mehrere Bilder auswählen, dann Rechtsklick > ``Stapelexport``.
 GIF / Video erstellen
 ^^^^^^^^^^^^^^^^^^^^^
 
-Mehrere Bilder auswählen, dann Rechtsklick > ``GIF / Video erstellen``.
+Mehrere Bilder auswählen, dann Rechtsklick > ``Stapeloperationen`` > ``GIF / Video erstellen``.
 
 - GIF- und MP4-Ausgabe
 - Per Drag Frames neu anordnen
@@ -1824,7 +1827,7 @@ zurückgelassene Sidecar-Datei würde Bewertung und Bearbeitung an das nächste
 Stapeloperationen
 -----------------
 
-Im Miniaturansichten-Modus mehrere Bilder auswählen, dann Rechtsklick:
+Im Miniaturansichten-Modus mehrere Bilder auswählen, dann Rechtsklick > ``Stapeloperationen``:
 
 .. list-table::
    :header-rows: 1
@@ -1840,6 +1843,23 @@ Im Miniaturansichten-Modus mehrere Bilder auswählen, dann Rechtsklick:
      - Alle ausgewählten Bilder auf einmal drehen
    * - Stapelexport
      - Format konvertieren und in großen Mengen skalieren
+   * - GIF / Video erstellen
+     - Die Auswahl als GIF oder MP4 animieren (siehe *GIF / Video erstellen*)
+   * - Nach Ort taggen
+     - Die nächstgelegene Stadt samt Land jedes geotaggten Fotos in seine XMP-Stichwörter aufnehmen
+   * - Stichwörter indizieren
+     - Die XMP-Stichwörter der Auswahl in die Bibliothek übernehmen
+   * - Auto-Culling: unscharf
+     - Die unscharfen Fotos als Reject markieren
+   * - Auto-Culling: geringe Qualität
+     - Das schwächste Viertel der Auswahl (Schärfe, Belichtung, Kontrast) als Reject markieren
+   * - Automatisch nach EXIF drehen
+     - Von jedem Foto eine aufrecht gedrehte PNG-Kopie als ``<name>_oriented.png`` speichern
+   * - Zu PDF / TIFF kombinieren…
+     - Die Auswahl in Ansichtsreihenfolge zu einer mehrseitigen PDF- oder TIFF-Datei zusammenfügen
+   * - In datierte Ordner importieren…
+     - Die Auswahl nach Aufnahmedatum (EXIF, sonst Dateidatum) in ``YYYY/MM``-Ordner kopieren;
+       eine dort bereits vorhandene Datei behält ihren Namen, die neue erhält ``_1``
    * - Zu Tag hinzufügen
      - Dasselbe Tag auf alle ausgewählten Bilder anwenden
    * - Zu Album hinzufügen
@@ -2034,7 +2054,7 @@ Bearbeiten
    * - Taste
      - Aktion
    * - ``E``
-     - Modify-Tab öffnen
+     - Annotationseditor öffnen
    * - ``R``
      - Im Uhrzeigersinn drehen
    * - ``Shift + R``

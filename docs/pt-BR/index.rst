@@ -352,7 +352,8 @@ Editando Imagens (Aba Modify)
 -----------------------------
 
 Mude para a aba **Modify** na parte superior da janela para entrar no modo de edição.
-Você também pode pressionar ``E`` ou clicar com o botão direito > ``Modify`` no modo Deep Zoom.
+No modo Deep Zoom, o clique com o botão direito > ``Modify`` > ``Develop`` também abre a imagem atual aqui;
+já ``E`` (ou clique com o botão direito > ``Modify`` > ``Annotate``) a abre no editor de anotações separado.
 
 ::
 
@@ -481,18 +482,20 @@ Ajustes de Imagem (Painel Direito, Inferior)
      - Deslocamento quente / frio (azul → amarelo); útil para luz mista ou fotos em ambientes fechados
    * - Balanço de Branco — Matiz
      - Deslocamento magenta / verde; corrige dominância fluorescente
-   * - Sombras
-     - Levantar ou esmagar detalhes em regiões de tons escuros
-   * - Meios-Tons
-     - Ajustar a faixa tonal intermediária sem afetar pretos e brancos
    * - Realces
      - Recuperar realces estourados ou empurrar áreas claras ainda mais
+   * - Sombras
+     - Levantar ou esmagar detalhes em regiões de tons escuros
+   * - Brancos
+     - Para a direita, estica os tons mais claros até o branco; para a esquerda, escurece o branco até um cinza
+   * - Pretos
+     - Para a esquerda, esmaga os tons mais escuros até o preto; para a direita, clareia o preto até um cinza desbotado
    * - Vibração
      - Reforço de saturação consciente — protege tons de pele e cores já saturadas
 
 Esses ajustes são **não destrutivos**. Cada slider grava em uma receita de edição armazenada
-por imagem; pressione ``Reset`` a qualquer momento para restaurar o original, ou ``Ctrl + Z``
-para voltar passo a passo nas alterações individuais. As receitas sobrevivem a reinicializações
+por imagem; pressione ``Reset`` a qualquer momento para restaurar o original, ou ``Undo`` / ``Redo``
+abaixo dos sliders para percorrer as alterações individuais. As receitas sobrevivem a reinicializações
 e podem ser exportadas / sincronizadas via o fluxo de sidecar XMP descrito na seção Metadados.
 
 O arquivo em disco só muda quando você pede. **Apply Crop** e o **Save** de anotações gravam o resultado sobre o arquivo e mantêm seu EXIF (câmera, data de captura, GPS), XMP e DPI. Um RAW de câmera, um HEIC ou um arquivo animado / de várias páginas nunca é sobrescrito: o recorte pede que você exporte e o salvamento de anotações pede um arquivo novo. As ferramentas de uso único (CLAHE, mixer HSL, moldura, endireitamento
@@ -1575,7 +1578,7 @@ Exportando Imagens
 Exportação Única
 ^^^^^^^^^^^^^^^^
 
-Clique com o botão direito em uma imagem > ``Exportar / Salvar Como``.
+Abra uma imagem (Deep Zoom) e clique com o botão direito > ``Exportar / Salvar Como``.
 
 - Escolha o formato: PNG, JPEG, WebP, BMP, TIFF, AVIF; também HEIC e JPEG XL quando ``pillow-heif`` / ``pillow-jxl-plugin`` está instalado
 - Ajuste a qualidade (para formatos com perdas)
@@ -1616,7 +1619,7 @@ alterados.
 Exportação em Lote
 ^^^^^^^^^^^^^^^^^^
 
-Selecione várias imagens, depois clique com o botão direito > ``Exportação em Lote``.
+Selecione várias imagens, depois clique com o botão direito > ``Operações em Lote`` > ``Exportação em Lote``.
 
 - Conversão uniforme de formato
 - Definir largura / altura máximas (escala automática de proporção)
@@ -1626,7 +1629,7 @@ Selecione várias imagens, depois clique com o botão direito > ``Exportação e
 Criar GIF / Vídeo
 ^^^^^^^^^^^^^^^^^
 
-Selecione várias imagens, depois clique com o botão direito > ``Criar GIF / Vídeo``.
+Selecione várias imagens, depois clique com o botão direito > ``Operações em Lote`` > ``Criar GIF / Vídeo``.
 
 - Saída GIF e MP4
 - Arraste para reordenar quadros
@@ -1770,7 +1773,7 @@ que a câmera gravar com o mesmo nome.
 Operações em Lote
 -----------------
 
-No modo de miniaturas, selecione várias imagens e clique com o botão direito:
+No modo de miniaturas, selecione várias imagens e clique com o botão direito > ``Operações em Lote``:
 
 .. list-table::
    :header-rows: 1
@@ -1786,6 +1789,23 @@ No modo de miniaturas, selecione várias imagens e clique com o botão direito:
      - Rotacionar todas as imagens selecionadas de uma vez
    * - Exportação em Lote
      - Converter formato e redimensionar em massa
+   * - Criar GIF / Vídeo
+     - Animar a seleção como GIF ou MP4 (veja *Criar GIF / Vídeo*)
+   * - Marcar por Localização
+     - Adicionar a cidade e o país mais próximos de cada foto georreferenciada às palavras-chave XMP dela
+   * - Indexar Palavras-chave
+     - Adicionar as palavras-chave XMP da seleção à biblioteca
+   * - Descarte Automático de Desfocadas
+     - Marcar as fotos desfocadas como Reject
+   * - Descarte Automático de Baixa Qualidade
+     - Marcar o quarto mais fraco da seleção (nitidez, exposição, contraste) como Reject
+   * - Rotação Automática por EXIF
+     - Salvar uma cópia PNG na orientação correta de cada foto como ``<name>_oriented.png``
+   * - Combinar em PDF / TIFF…
+     - Colocar a seleção, na ordem de exibição, em um único PDF ou TIFF de várias páginas
+   * - Importar para Pastas por Data…
+     - Copiar a seleção para pastas ``YYYY/MM`` pela data de captura (EXIF, senão a data do arquivo);
+       um arquivo que já está lá mantém o nome e o recém-chegado recebe ``_1``
    * - Adicionar à Tag
      - Aplicar a mesma tag a todas as imagens selecionadas
    * - Adicionar ao Álbum
@@ -1979,7 +1999,7 @@ Edição
    * - Tecla
      - Ação
    * - ``E``
-     - Abrir aba Modify
+     - Abrir o editor de anotações
    * - ``R``
      - Rotacionar no sentido horário
    * - ``Shift + R``

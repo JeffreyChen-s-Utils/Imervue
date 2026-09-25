@@ -300,7 +300,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 ### Develop sliders
 
 - White balance — temperature / tint
-- Tonal regions — shadows / midtones / highlights
+- Tonal regions — highlights / shadows / whites / blacks
 - Exposure / contrast / saturation / vibrance
 - Crop, rotation, horizontal / vertical flip
 - All edits remain non-destructive and round-trip through the recipe store
@@ -714,7 +714,7 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | F | Toggle fullscreen |
 | Shift+Tab | Toggle theater mode (hide all chrome) |
 | R / Shift+R | Rotate CW / CCW |
-| E | Open image editor (Modify tab) |
+| E | Open the current image in the annotation editor |
 | W / Shift+W | Fit to width / height |
 | H | Toggle RGB histogram overlay |
 | F8 / Ctrl+F8 | OSD overlay / debug HUD |

@@ -296,7 +296,7 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 ### Sliders de revelação
 
 - Balanço de branco — temperatura / matiz
-- Regiões tonais — sombras / meios-tons / realces
+- Regiões tonais — realces / sombras / brancos / pretos
 - Exposição / contraste / saturação / vibrância
 - Recorte, rotação, espelhamento horizontal / vertical
 - Todas as edições permanecem não destrutivas e fazem round-trip pelo armazenamento de recipes
@@ -686,7 +686,7 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 | F | Alternar tela cheia |
 | Shift+Tab | Alternar modo cinema (esconder todo o chrome) |
 | R / Shift+R | Rotacionar CW / CCW |
-| E | Abrir editor de imagem (aba Modify) |
+| E | Abrir a imagem atual no editor de anotações |
 | W / Shift+W | Ajustar à largura / altura |
 | H | Alternar overlay de histograma RGB |
 | F8 / Ctrl+F8 | Overlay OSD / HUD de depuração |

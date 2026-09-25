@@ -296,7 +296,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 ### Curseurs de développement
 
 - Balance des blancs — température / teinte
-- Régions tonales — ombres / tons moyens / hautes lumières
+- Régions tonales — hautes lumières / ombres / blancs / noirs
 - Exposition / contraste / saturation / vibrance
 - Recadrage, rotation, retournement horizontal / vertical
 - Toutes les modifications restent non destructives et passent par le magasin de recettes
@@ -665,7 +665,7 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | F | Basculer en plein écran |
 | Shift+Tab | Basculer le mode théâtre (masquer toute l'interface) |
 | R / Shift+R | Rotation horaire / antihoraire |
-| E | Ouvrir l'éditeur d'image (onglet Modify) |
+| E | Ouvrir l'image courante dans l'éditeur d'annotation |
 | W / Shift+W | Adapter à la largeur / hauteur |
 | H | Basculer la superposition d'histogramme RGB |
 | F8 / Ctrl+F8 | Superposition OSD / HUD de débogage |

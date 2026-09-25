@@ -348,7 +348,8 @@ Editing Images (Modify Tab)
 ---------------------------
 
 Switch to the **Modify** tab at the top of the window to enter editing mode.
-You can also press ``E`` or right-click > ``Modify`` in Deep Zoom mode.
+In Deep Zoom, right-click > ``Modify`` > ``Develop`` also opens the current image here;
+``E`` (or right-click > ``Modify`` > ``Annotate``) opens it in the separate annotation editor instead.
 
 ::
 
@@ -477,18 +478,20 @@ Image Adjustments (Right Panel, Lower)
      - Warm / cool shift (blue → yellow); useful for mixed-light or indoor shots
    * - White Balance — Tint
      - Magenta / green shift; corrects fluorescent casts
-   * - Shadows
-     - Lift or crush detail in dark tonal regions
-   * - Midtones
-     - Adjust the middle tonal range without affecting blacks and whites
    * - Highlights
      - Recover blown highlights or push bright areas further
+   * - Shadows
+     - Lift or crush detail in dark tonal regions
+   * - Whites
+     - Right stretches the brightest tones up to white; left dims white to a grey
+   * - Blacks
+     - Left crushes the darkest tones down to black; right lifts black to a faded grey
    * - Vibrance
      - Saturation-aware boost — protects skin tones and already-saturated colours
 
 These adjustments are **non-destructive**. Every slider writes into an edit recipe stored
-per-image; press ``Reset`` at any time to restore the original, or ``Ctrl + Z`` to step
-backwards through individual changes. Recipes survive restarts and can be exported / synced
+per-image; press ``Reset`` at any time to restore the original, or ``Undo`` / ``Redo`` under the
+sliders to step through individual changes. Recipes survive restarts and can be exported / synced
 via the XMP sidecar flow described in the Metadata section.
 
 The file on disk changes only when you ask for it. **Apply Crop** and the annotation **Save** write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten: the crop asks you to export instead, and the annotation save asks for a new file. The one-shot tools (CLAHE, HSL Mixer, Photo Frame, Auto Straighten …) save their
@@ -1564,7 +1567,7 @@ Exporting Images
 Single Export
 ^^^^^^^^^^^^^
 
-Right-click an image > ``Export / Save As``.
+Open an image (Deep Zoom), then right-click > ``Export / Save As``.
 
 - Choose format: PNG, JPEG, WebP, BMP, TIFF, AVIF; HEIC and JPEG XL too when ``pillow-heif`` / ``pillow-jxl-plugin`` is installed
 - Adjust quality (for lossy formats)
@@ -1604,7 +1607,7 @@ Batch Export can also draw a text watermark on every exported copy: the text, it
 Batch Export
 ^^^^^^^^^^^^
 
-Select multiple images, then right-click > ``Batch Export``.
+Select multiple images, then right-click > ``Batch Operations`` > ``Batch Export``.
 
 - Uniform format conversion
 - Set maximum width / height (auto aspect-ratio scaling)
@@ -1614,7 +1617,7 @@ Select multiple images, then right-click > ``Batch Export``.
 Create GIF / Video
 ^^^^^^^^^^^^^^^^^^^
 
-Select multiple images, then right-click > ``Create GIF / Video``.
+Select multiple images, then right-click > ``Batch Operations`` > ``Create GIF / Video``.
 
 - GIF and MP4 output
 - Drag to reorder frames
@@ -1758,7 +1761,7 @@ camera writes under the same name.
 Batch Operations
 ----------------
 
-In thumbnail mode, select multiple images then right-click:
+In thumbnail mode, select multiple images, then right-click > ``Batch Operations``:
 
 .. list-table::
    :header-rows: 1
@@ -1774,6 +1777,23 @@ In thumbnail mode, select multiple images then right-click:
      - Rotate all selected images at once
    * - Batch Export
      - Convert format and resize in bulk
+   * - Create GIF / Video
+     - Animate the selection as a GIF or an MP4 (see *Create GIF / Video*)
+   * - Tag by Location
+     - Add the nearest city and country of each geotagged photo to its XMP keywords
+   * - Index Keywords
+     - Add the selection's XMP keywords to the library
+   * - Auto-cull Blurry
+     - Flag the blurry photos as Reject
+   * - Auto-cull Low Quality
+     - Flag the weakest quarter of the selection (sharpness, exposure, contrast) as Reject
+   * - Auto-Rotate by EXIF
+     - Save an upright PNG copy of each photo as ``<name>_oriented.png``
+   * - Combine to PDF / TIFF…
+     - Put the selection, in view order, into one multi-page PDF or TIFF
+   * - Import to Dated Folders…
+     - Copy the selection into ``YYYY/MM`` folders by capture date (EXIF, else the file date);
+       a file already there keeps its name and the newcomer gets ``_1``
    * - Add to Tag
      - Apply the same tag to all selected images
    * - Add to Album
@@ -1966,7 +1986,7 @@ Editing
    * - Key
      - Action
    * - ``E``
-     - Open Modify tab
+     - Open the annotation editor
    * - ``R``
      - Rotate clockwise
    * - ``Shift + R``
