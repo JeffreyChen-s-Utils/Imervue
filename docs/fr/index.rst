@@ -2542,7 +2542,7 @@ affichage::
 
 Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités. Un fichier tronqué est lu aussi loin qu'il va, comme dans la visionneuse. Les niveaux de gris 16 bits et à virgule flottante sont ramenés à 8 bits comme dans la visionneuse ; ``resize`` et ``strip`` gardent la profondeur de bits de la source.
 
-Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
+Les sous-commandes qui prennent des fichiers ou des dossiers (toutes sauf ``collage``, ``anaglyph`` et ``list-ops``) partagent ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``-j`` / ``--jobs`` (workers parallèles ; ``0`` utilise tous les cœurs). ``collage`` et ``anaglyph`` écrivent l'unique fichier désigné par ``--out``. ``--version`` affiche la version de la CLI.
 
 ----
 
@@ -2610,7 +2610,8 @@ Outils disponibles
      - Compose plusieurs images en une mosaïque en grille (colonnes, taille de
        cellule, espacement, marge, arrière-plan configurables). Rapporte la progression.
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - Recadrage en boîte de pixels, redimensionnement préservant le rapport, et
+     - Recadrage en boîte de pixels, redimensionnement (un seul côté conserve le rapport
+       d'aspect, les deux donnent une taille exacte), et
        rotation 90/180/270 sans perte ou retournement horizontal/vertical.
        Les tailles et coordonnées se rapportent à l'image redressée selon l'EXIF.
    * - ``collection_stats``
@@ -2632,8 +2633,8 @@ Prompts
 Le serveur expose quatre prompts via ``prompts/list`` / ``prompts/get`` :
 ``caption_image``, ``suggest_edits``, ``analyze_composition`` (une critique de
 composition pilotée par la saillance) et ``flag_issues`` (un triage netteté
-+ qualité + écrêtage). Les arguments des prompts peuvent être complétés via
-``completion/complete``.
++ qualité + écrêtage). ``completion/complete`` suggère des valeurs pour le ``style``
+de ``suggest_edits`` et le ``focus`` de ``analyze_composition``.
 
 Claude Code (niveau projet)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -169,7 +169,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；AVIF 由 Pillow 自己讀取，安裝了選用後端時也能讀取 HEIC / JPEG XL。相機 RAW 會像檢視器一樣顯像，而不是讀成內嵌的小預覽；`resize` 與 `strip` 會寫成 PNG。無法讀取的檔案會被回報，其餘檔案照常處理。中途截斷的檔案會像檢視器一樣，讀取到能讀的位置為止。16 位元與浮點灰階會像檢視器一樣縮放成 8 位元；`resize` 與 `strip` 保留來源的位元深度。
 
-共用旗標：`--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite`、`--version`。
+接受檔案或資料夾的子指令（`collage`、`anaglyph`、`list-ops` 以外的全部）共用 `--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite` 與 `-j` / `--jobs`（平行工作數；`0` 表示使用所有核心）。`collage` 與 `anaglyph` 會寫入 `--out` 指定的單一檔案。`--version` 顯示 CLI 版本。
 
 ---
 
@@ -822,10 +822,10 @@ python -m Imervue.mcp_server
 | `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP / AVIF（+ 選用 HEIC / JXL） |
 | `apply_watermark` / `apply_frame` | 燒入文字浮水印，或加 matte / 拍立得相框 + 說明文字 |
 | `build_collage` | 把多張圖片合成成網格拼貼（含進度） |
-| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保留長寬比縮放、無損旋轉 / 翻轉。尺寸與座標以依 EXIF 方向轉正後的影像為準。 |
+| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、縮放（只指定一邊時保留長寬比，兩邊都指定時縮成精確尺寸）、無損旋轉 / 翻轉。尺寸與座標以依 EXIF 方向轉正後的影像為準。 |
 | `collection_stats` | 資料夾的評等 / 收藏 / 色標 / 挑片彙整 |
 | `search_images` | 以 smart-album 查詢 DSL 篩選資料夾（路徑 / EXIF / 大小 / 尺寸） |
-| `extract_gps` / `dominant_colors` | 讀取 EXIF GPS 座標（可接 `reverse_geocode`）；median-cut 調色盤（rgb / hex / 占比） |
+| `extract_gps` / `dominant_colors` | 讀取 EXIF GPS 座標（可接 `reverse_geocode`）；median-cut 調色盤（rgb / hex / pixel_count） |
 | `error_level_analysis` | JPEG 重壓的竄改鑑識圖（PNG data URI） |
 | `solarize_image` / `glow_image` | 套用曝色反轉或柔光暈染並存檔 |
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia 飽和度提升、方向光浮雕、邊緣色邊去飽和 |
@@ -847,7 +847,8 @@ python -m Imervue.mcp_server
 
 四個可重用的 prompt：`caption_image`、`suggest_edits`、`analyze_composition`
 （以 saliency 為基礎的構圖評析）與 `flag_issues`（銳利度 + 品質 + 裁切的
-分流檢查）。prompt 的引數可透過 `completion/complete` 自動補全。
+分流檢查）。`completion/complete` 會為 `suggest_edits` 的 `style` 與
+`analyze_composition` 的 `focus` 提供建議值。
 
 ### 配置
 

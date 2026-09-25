@@ -171,8 +171,10 @@ py -m Imervue.cli list-ops          # print every available subcommand
 
 Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; `resize` and `strip` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer. 16-bit and floating-point greyscale is scaled to 8 bits as in the viewer; `resize` and `strip` keep the source's bit depth.
 
-Shared flags: `--out` (output directory), `--recursive`, `--dry-run` (list actions, write
-nothing), `--overwrite`, and `--version`.
+The subcommands that take files or folders (all but `collage`, `anaglyph` and `list-ops`) share `--out`
+(output directory), `--recursive`, `--dry-run` (list actions, write nothing), `--overwrite` and `-j` /
+`--jobs` (parallel workers; `0` uses every core). `collage` and `anaglyph` write the one file `--out`
+names. `--version` prints the CLI version.
 
 ---
 
@@ -874,10 +876,10 @@ result as `structuredContent`, and long-running tools stream
 | `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP / AVIF (+ optional HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | Burn in a text watermark or a matte / Polaroid frame + caption |
 | `build_collage` | Composite images into a grid montage (with progress) |
-| `crop_image` / `resize_image` / `rotate_image` | Pixel crop, aspect-preserving resize, lossless rotate / flip. Sizes and coordinates refer to the EXIF-upright image. |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel crop, resize (one edge keeps the aspect ratio, both give an exact size), lossless rotate / flip. Sizes and coordinates refer to the EXIF-upright image. |
 | `collection_stats` | Folder rating / favourite / colour-label / cull summary |
 | `search_images` | Filter a folder with the smart-album query DSL (path / EXIF / size / dimensions) |
-| `extract_gps` / `dominant_colors` | Read EXIF GPS coordinates (chains into `reverse_geocode`); median-cut colour palette (rgb / hex / share) |
+| `extract_gps` / `dominant_colors` | Read EXIF GPS coordinates (chains into `reverse_geocode`); median-cut colour palette (rgb / hex / pixel_count) |
 | `error_level_analysis` | JPEG-recompression tamper map as a PNG data URI |
 | `solarize_image` / `glow_image` | Apply a solarize tone reversal or diffuse-glow bloom and save |
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia saturation boost, directional-light emboss, edge-fringe desaturation |
@@ -899,7 +901,8 @@ result as `structuredContent`, and long-running tools stream
 
 Four reusable prompts: `caption_image`, `suggest_edits`, `analyze_composition`
 (saliency-driven composition critique) and `flag_issues` (sharpness + quality +
-clipping triage). Prompt arguments are completable via `completion/complete`.
+clipping triage). `completion/complete` suggests values for `suggest_edits`' `style` and
+`analyze_composition`'s `focus`.
 
 ### Wiring
 

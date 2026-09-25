@@ -170,7 +170,7 @@ py -m Imervue.cli list-ops          # imprime todos los subcomandos disponibles
 
 Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; `resize` y `strip` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente. Un archivo incompleto se lee hasta donde llega, como en el visor. Los grises de 16 bits y de coma flotante se escalan a 8 bits como en el visor; `resize` y `strip` conservan la profundidad de bits del original.
 
-Opciones compartidas: `--out` (directorio de salida), `--recursive`, `--dry-run` (listar acciones sin escribir nada), `--overwrite` y `--version`.
+Los subcomandos que reciben archivos o carpetas (todos salvo `collage`, `anaglyph` y `list-ops`) comparten `--out` (directorio de salida), `--recursive`, `--dry-run` (listar acciones sin escribir nada), `--overwrite` y `-j` / `--jobs` (workers en paralelo; `0` usa todos los núcleos). `collage` y `anaglyph` escriben el único archivo que indica `--out`. `--version` muestra la versión de la CLI.
 
 ---
 
@@ -872,10 +872,10 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 | `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP / AVIF (+ HEIC / JXL opcionales) |
 | `apply_watermark` / `apply_frame` | Estampar una marca de agua de texto o un marco mate / Polaroid + leyenda |
 | `build_collage` | Componer imágenes en un montaje en cuadrícula (con progreso) |
-| `crop_image` / `resize_image` / `rotate_image` | Recorte por píxeles, redimensión que preserva el aspecto, rotación / volteo sin pérdida. Los tamaños y las coordenadas se refieren a la imagen enderezada según EXIF. |
+| `crop_image` / `resize_image` / `rotate_image` | Recorte por píxeles, redimensión (con un lado se conserva la relación de aspecto, con ambos se obtiene un tamaño exacto), rotación / volteo sin pérdida. Los tamaños y las coordenadas se refieren a la imagen enderezada según EXIF. |
 | `collection_stats` | Resumen de calificación / favorito / etiqueta de color / culling de una carpeta |
 | `search_images` | Filtra una carpeta con el DSL de consultas de álbumes inteligentes (ruta / EXIF / tamaño / dimensiones) |
-| `extract_gps` / `dominant_colors` | Lee coordenadas GPS de EXIF (encadena con `reverse_geocode`); paleta de colores por median-cut (rgb / hex / proporción) |
+| `extract_gps` / `dominant_colors` | Lee coordenadas GPS de EXIF (encadena con `reverse_geocode`); paleta de colores por median-cut (rgb / hex / pixel_count) |
 | `error_level_analysis` | Mapa de manipulación por recompresión JPEG como un PNG data URI |
 | `solarize_image` / `glow_image` | Aplica una inversión tonal solarize o un resplandor difuso y guarda |
 | `velvia_image` / `emboss_image` / `defringe_image` | Refuerzo de saturación Velvia, relieve de luz direccional, desaturación de flecos de borde |
@@ -897,7 +897,8 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 
 Cuatro prompts reutilizables: `caption_image`, `suggest_edits`, `analyze_composition`
 (crítica de composición guiada por saliencia) y `flag_issues` (triaje de nitidez + calidad +
-recorte). Los argumentos de los prompts se pueden autocompletar vía `completion/complete`.
+recorte). `completion/complete` sugiere valores para el `style` de `suggest_edits` y el `focus` de
+`analyze_composition`.
 
 ### Cableado
 

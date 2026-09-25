@@ -170,7 +170,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 
 すべてのサブコマンドはビューアーと同じくデコードします：出力は EXIF の向きで正立させ、埋め込みカラープロファイルから sRGB に変換します。AVIF の入力は Pillow 自身が読み込み、HEIC / JPEG XL の入力は、対応するオプションのバックエンドがインストールされていれば読み込めます。カメラ RAW は小さな埋め込みプレビューではなく、ビューアーと同じく現像して読み込みます。`resize` と `strip` は PNG で書き出します。読めないファイルは報告され、残りはそのまま処理されます。途中で切れたファイルは、ビューアーと同じく読める所まで読み込みます。16 ビット・浮動小数点のグレースケールはビューアーと同じく 8 ビットにスケーリングします。`resize` と `strip` は元のビット深度を保ちます。
 
-共通フラグ: `--out`(出力ディレクトリ)、`--recursive`、`--dry-run`(アクションを列挙するだけで書き込まない)、`--overwrite`、`--version`。
+ファイルやフォルダを受け取るサブコマンド(`collage`、`anaglyph`、`list-ops` 以外のすべて)は、`--out`(出力ディレクトリ)、`--recursive`、`--dry-run`(アクションを列挙するだけで書き込まない)、`--overwrite`、`-j` / `--jobs`(並列ワーカー数。`0` ですべてのコアを使用)を共通で受け付けます。`collage` と `anaglyph` は `--out` で指定した 1 つのファイルに書き出します。`--version` は CLI のバージョンを表示します。
 
 ---
 
@@ -824,10 +824,10 @@ python -m Imervue.mcp_server
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP / AVIF(+ オプションで HEIC / JXL)間で変換 |
 | `apply_watermark` / `apply_frame` | テキストウォーターマークを焼き込み、またはマット / ポラロイドフレーム + キャプションを追加 |
 | `build_collage` | 複数の画像をグリッドモンタージュに合成(進捗付き) |
-| `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、アスペクト比を保持したリサイズ、ロスレスな回転 / 反転。サイズと座標は EXIF の向きを適用した画像が基準です。 |
+| `crop_image` / `resize_image` / `rotate_image` | ピクセル単位のクロップ、リサイズ(辺を 1 つ指定するとアスペクト比を保持、2 辺とも指定すると正確なサイズ)、ロスレスな回転 / 反転。サイズと座標は EXIF の向きを適用した画像が基準です。 |
 | `collection_stats` | フォルダのレーティング / お気に入り / カラーラベル / カリングのサマリー |
 | `search_images` | スマートアルバムのクエリ DSL でフォルダをフィルタ(パス / EXIF / サイズ / 寸法) |
-| `extract_gps` / `dominant_colors` | EXIF GPS 座標を読み取り(`reverse_geocode` に連鎖)、median-cut のカラーパレット(rgb / hex / 占有率) |
+| `extract_gps` / `dominant_colors` | EXIF GPS 座標を読み取り(`reverse_geocode` に連鎖)、median-cut のカラーパレット(rgb / hex / pixel_count) |
 | `error_level_analysis` | JPEG 再圧縮の改ざんマップを PNG データ URI として出力 |
 | `solarize_image` / `glow_image` | ソラリゼーションの階調反転、またはディフューズグローのブルームを適用して保存 |
 | `velvia_image` / `emboss_image` / `defringe_image` | ベルビアの彩度ブースト、方向光のエンボス、エッジフリンジの脱色 |
@@ -849,7 +849,8 @@ python -m Imervue.mcp_server
 
 4 つの再利用可能なプロンプト: `caption_image`、`suggest_edits`、`analyze_composition`
 (saliency 駆動の構図批評)、`flag_issues`(sharpness + quality + clipping の
-トリアージ)。プロンプトの引数は `completion/complete` で補完できます。
+トリアージ)。`completion/complete` は `suggest_edits` の `style` と
+`analyze_composition` の `focus` の値を候補として提示します。
 
 ### 設定
 

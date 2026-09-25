@@ -2105,7 +2105,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
 
 每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。相机 RAW 会像查看器一样显像，而不是读成内嵌的小预览；``resize`` 与 ``strip`` 会写成 PNG。无法读取的文件会被报告，其余文件照常处理。中途截断的文件会像查看器一样，读取到能读的位置为止。16 位与浮点灰阶会像查看器一样缩放成 8 位；``resize`` 与 ``strip`` 保留来源的位深度。
 
-共用标志:``--out``\ (输出目录)、``--recursive``、``--dry-run``\ (只列出动作、不写入)、``--overwrite`` 与 ``--version``。
+接受文件或文件夹的子命令（除 ``collage``、``anaglyph`` 与 ``list-ops`` 外的全部）共用 ``--out``\ （输出目录）、``--recursive``、``--dry-run``\ （只列出动作、不写入）、``--overwrite`` 与 ``-j`` / ``--jobs``\ （并行任务数；``0`` 表示使用全部核心）。``collage`` 与 ``anaglyph`` 写入 ``--out`` 指定的单个文件。``--version`` 显示 CLI 版本。
 
 ----
 
@@ -2165,7 +2165,8 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 将多张图片合成为网格拼贴（可配置列数、单元尺寸、间距、边距、
        背景）。汇报进度。
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - 像素框裁切、保持长宽比的缩放，以及无损 90/180/270 旋转或
+     - 像素框裁切、缩放（只指定一边时保持长宽比，
+       两边都指定时缩放为精确尺寸），以及无损 90/180/270 旋转或
        水平 / 垂直翻转。
        尺寸与坐标以依 EXIF 方向摆正后的图像为准。
    * - ``collection_stats``
@@ -2186,7 +2187,8 @@ Prompts（提示词）
 服务器通过 ``prompts/list`` / ``prompts/get`` 公开四个提示词：
 ``caption_image``、``suggest_edits``、``analyze_composition``
 （显著性驱动的构图评析）与 ``flag_issues``\ （锐度 + 质量 + 裁剪分流）。
-提示词参数可通过 ``completion/complete`` 自动补全。
+``completion/complete`` 会为 ``suggest_edits`` 的 ``style`` 与
+``analyze_composition`` 的 ``focus`` 提供候选值。
 
 Claude Code（项目级）
 ^^^^^^^^^^^^^^^^^^^^^

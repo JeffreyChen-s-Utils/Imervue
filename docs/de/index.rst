@@ -2547,7 +2547,7 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
 
 Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; ``resize`` und ``strip`` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht. 16-Bit- und Gleitkomma-Graustufen werden wie im Viewer auf 8 Bit skaliert; ``resize`` und ``strip`` behalten die Bittiefe der Quelle.
 
-Gemeinsame Flags: ``--out`` (Ausgabeverzeichnis), ``--recursive``, ``--dry-run`` (Aktionen nur auflisten, nichts schreiben), ``--overwrite`` und ``--version``.
+Die Unterbefehle, die Dateien oder Ordner entgegennehmen (alle außer ``collage``, ``anaglyph`` und ``list-ops``), teilen sich ``--out`` (Ausgabeverzeichnis), ``--recursive``, ``--dry-run`` (Aktionen nur auflisten, nichts schreiben), ``--overwrite`` und ``-j`` / ``--jobs`` (parallele Worker; ``0`` nutzt alle Kerne). ``collage`` und ``anaglyph`` schreiben die eine Datei, die ``--out`` angibt. ``--version`` gibt die CLI-Version aus.
 
 ----
 
@@ -2611,7 +2611,8 @@ Verfügbare Werkzeuge
      - Mehrere Bilder zu einer Grid-Montage komponieren (konfigurierbare Spalten,
        Zellengröße, Abstand, Rand, Hintergrund). Meldet Fortschritt.
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - Pixel-Box-Crop, seitenverhältniserhaltendes Resize und verlustfreies
+     - Pixel-Box-Crop, Resize (bei einer Kante bleibt das Seitenverhältnis erhalten,
+       bei beiden entsteht genau diese Größe) und verlustfreies
        90/180/270-Rotate oder Horizontal-/Vertikal-Flip.
        Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild.
    * - ``collection_stats``
@@ -2633,8 +2634,8 @@ Prompts
 Der Server stellt vier Prompts über ``prompts/list`` / ``prompts/get`` bereit:
 ``caption_image``, ``suggest_edits``, ``analyze_composition`` (eine
 saliency-getriebene Kompositionskritik) und ``flag_issues`` (eine Schärfe- +
-Qualitäts- + Clipping-Triage). Prompt-Argumente sind über
-``completion/complete`` vervollständigbar.
+Qualitäts- + Clipping-Triage). ``completion/complete`` schlägt Werte für das
+Argument ``style`` von ``suggest_edits`` und ``focus`` von ``analyze_composition`` vor.
 
 Claude Code (Projekt-Ebene)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

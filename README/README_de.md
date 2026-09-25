@@ -170,7 +170,7 @@ py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
 
 Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; `resize` und `strip` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht. 16-Bit- und Gleitkomma-Graustufen werden wie im Viewer auf 8 Bit skaliert; `resize` und `strip` behalten die Bittiefe der Quelle.
 
-Gemeinsame Flags: `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `--version`.
+Die Unterbefehle, die Dateien oder Ordner entgegennehmen (alle außer `collage`, `anaglyph` und `list-ops`), teilen sich `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `-j` / `--jobs` (parallele Worker; `0` nutzt alle Kerne). `collage` und `anaglyph` schreiben die eine Datei, die `--out` angibt. `--version` gibt die CLI-Version aus.
 
 ---
 
@@ -874,10 +874,10 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `convert_format` | Zwischen PNG / JPEG / WebP / TIFF / BMP / AVIF konvertieren (+ optional HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | Ein Text-Wasserzeichen oder einen Passepartout- / Polaroid-Rahmen + Caption einbrennen |
 | `build_collage` | Bilder zu einer Grid-Montage komponieren (mit Fortschritt) |
-| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip. Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild. |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, Resize (bei einer Kante bleibt das Seitenverhältnis erhalten, bei beiden entsteht genau diese Größe), verlustfreies Rotate / Flip. Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild. |
 | `collection_stats` | Ordner-Zusammenfassung von Rating / Favorit / Color-Label / Cull |
 | `search_images` | Einen Ordner mit der Smart-Album-Query-DSL filtern (Pfad / EXIF / Größe / Maße) |
-| `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / Anteil) |
+| `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / pixel_count) |
 | `error_level_analysis` | JPEG-Rekompressions-Manipulationskarte als PNG-Data-URI |
 | `solarize_image` / `glow_image` | Eine Solarisations-Tonumkehr oder einen Diffuse-Glow-Bloom anwenden und speichern |
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia-Sättigungsboost, Relief aus gerichtetem Licht, Entsättigung von Kanten-Farbsäumen |
@@ -899,7 +899,8 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 
 Vier wiederverwendbare Prompts: `caption_image`, `suggest_edits`, `analyze_composition`
 (saliency-getriebene Kompositionskritik) und `flag_issues` (Schärfe- + Qualitäts- +
-Clipping-Triage). Prompt-Argumente sind via `completion/complete` vervollständigbar.
+Clipping-Triage). `completion/complete` schlägt Werte für das Argument `style` von `suggest_edits`
+und `focus` von `analyze_composition` vor.
 
 ### Verdrahtung
 

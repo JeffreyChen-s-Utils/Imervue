@@ -2520,7 +2520,7 @@ o Qt**, o que o torna utilizável em scripts, etapas de CI e servidores sem disp
 
 Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um RAW de câmera é revelado como no visualizador, em vez de lido pela pequena prévia embutida; ``resize`` e ``strip`` o gravam como PNG. Um arquivo ilegível é relatado e o restante é processado mesmo assim. Um arquivo incompleto é lido até onde vai, como no visualizador. Tons de cinza de 16 bits e de ponto flutuante são escalados para 8 bits como no visualizador; ``resize`` e ``strip`` mantêm a profundidade de bits da origem.
 
-Flags compartilhadas: ``--out`` (diretório de saída), ``--recursive``, ``--dry-run`` (listar ações sem escrever nada), ``--overwrite`` e ``--version``.
+Os subcomandos que recebem arquivos ou pastas (todos exceto ``collage``, ``anaglyph`` e ``list-ops``) compartilham ``--out`` (diretório de saída), ``--recursive``, ``--dry-run`` (listar ações sem escrever nada), ``--overwrite`` e ``-j`` / ``--jobs`` (workers paralelos; ``0`` usa todos os núcleos). ``collage`` e ``anaglyph`` gravam o único arquivo indicado por ``--out``. ``--version`` mostra a versão da CLI.
 
 ----
 
@@ -2590,9 +2590,9 @@ Ferramentas Disponíveis
        célula, espaçamento, margem e fundo configuráveis). Reporta o
        progresso.
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - Recorte por caixa de pixels, redimensionamento preservando a
-       proporção e rotação sem perdas de 90/180/270 ou espelhamento
-       horizontal/vertical.
+     - Recorte por caixa de pixels, redimensionamento (informar um lado mantém a
+       proporção; informar os dois dá um tamanho exato) e rotação sem perdas de
+       90/180/270 ou espelhamento horizontal/vertical.
        Tamanhos e coordenadas se referem à imagem endireitada pelo EXIF.
    * - ``collection_stats``
      - Resume avaliações, favoritos, rótulos de cor e estados de triagem de
@@ -2602,7 +2602,7 @@ Ferramentas Disponíveis
        decodifica um frame de um vídeo em uma imagem estática.
    * - ``extract_gps`` / ``dominant_colors``
      - Lê latitude/longitude GPS do EXIF (encadeia com ``reverse_geocode``);
-       extrai uma paleta de cores por median-cut (rgb / hex / proporção de pixels).
+       extrai uma paleta de cores por median-cut (rgb / hex / contagem de pixels).
    * - ``error_level_analysis``
      - Mapa de adulteração por Error-Level-Analysis de recompressão JPEG como um
        PNG data URI (regiões editadas se destacam contra o fundo).
@@ -2663,8 +2663,8 @@ Prompts
 O servidor expõe quatro prompts via ``prompts/list`` / ``prompts/get``:
 ``caption_image``, ``suggest_edits``, ``analyze_composition`` (uma crítica
 de composição guiada por saliência) e ``flag_issues`` (uma triagem de
-nitidez + qualidade + clipping). Os argumentos dos prompts podem ser
-completados através de ``completion/complete``.
+nitidez + qualidade + clipping). ``completion/complete`` sugere valores para o ``style`` de
+``suggest_edits`` e o ``focus`` de ``analyze_composition``.
 
 Claude Code (Nível de Projeto)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

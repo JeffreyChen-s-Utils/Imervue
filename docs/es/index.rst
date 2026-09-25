@@ -2540,7 +2540,7 @@ Qt**, lo que lo hace utilizable desde scripts, pasos de CI y servidores sin pant
 
 Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; ``resize`` y ``strip`` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente. Un archivo incompleto se lee hasta donde llega, como en el visor. Los grises de 16 bits y de coma flotante se escalan a 8 bits como en el visor; ``resize`` y ``strip`` conservan la profundidad de bits del original.
 
-Opciones compartidas: ``--out`` (directorio de salida), ``--recursive``, ``--dry-run`` (listar acciones sin escribir nada), ``--overwrite`` y ``--version``.
+Los subcomandos que reciben archivos o carpetas (todos salvo ``collage``, ``anaglyph`` y ``list-ops``) comparten ``--out`` (directorio de salida), ``--recursive``, ``--dry-run`` (listar acciones sin escribir nada), ``--overwrite`` y ``-j`` / ``--jobs`` (workers en paralelo; ``0`` usa todos los núcleos). ``collage`` y ``anaglyph`` escriben el único archivo que indica ``--out``. ``--version`` muestra la versión de la CLI.
 
 ----
 
@@ -2605,7 +2605,8 @@ Herramientas disponibles
      - Compone varias imágenes en un montaje en cuadrícula (columnas, tamaño de celda,
        separación, margen y fondo configurables). Reporta el progreso.
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - Recorte por caja de píxeles, redimensión que preserva el aspecto y rotación
+     - Recorte por caja de píxeles, redimensión (con un lado se conserva la relación de
+       aspecto, con ambos se obtiene un tamaño exacto) y rotación
        sin pérdida de 90/180/270 o volteo horizontal/vertical.
        Los tamaños y las coordenadas se refieren a la imagen enderezada según EXIF.
    * - ``collection_stats``
@@ -2626,8 +2627,9 @@ Prompts
 
 El servidor expone cuatro prompts vía ``prompts/list`` / ``prompts/get``:
 ``caption_image``, ``suggest_edits``, ``analyze_composition`` (una crítica de composición
-guiada por saliencia) y ``flag_issues`` (un triaje de nitidez + calidad + recorte). Los
-argumentos de los prompts se pueden autocompletar a través de ``completion/complete``.
+guiada por saliencia) y ``flag_issues`` (un triaje de nitidez + calidad + recorte).
+``completion/complete`` sugiere valores para el ``style`` de ``suggest_edits`` y el ``focus`` de
+``analyze_composition``.
 
 Claude Code (a nivel de proyecto)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

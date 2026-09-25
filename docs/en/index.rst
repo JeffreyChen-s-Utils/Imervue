@@ -2507,8 +2507,10 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
 
 Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer. 16-bit and floating-point greyscale is scaled to 8 bits as in the viewer; ``resize`` and ``strip`` keep the source's bit depth.
 
-Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
-(list actions, write nothing), ``--overwrite`` and ``--version``.
+The subcommands that take files or folders (all but ``collage``, ``anaglyph`` and ``list-ops``) share
+``--out`` (output directory), ``--recursive``, ``--dry-run`` (list actions, write nothing),
+``--overwrite`` and ``-j`` / ``--jobs`` (parallel workers; ``0`` uses every core). ``collage`` and
+``anaglyph`` write the one file ``--out`` names. ``--version`` prints the CLI version.
 
 ----
 
@@ -2576,7 +2578,8 @@ Available Tools
      - Composite several images into a grid montage (configurable
        columns, cell size, gap, margin, background). Reports progress.
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - Pixel-box crop, aspect-preserving resize, and lossless 90/180/270
+     - Pixel-box crop, resize (one edge keeps the aspect ratio, both give an exact size), and
+       lossless 90/180/270
        rotation or horizontal/vertical flip.
        Sizes and coordinates refer to the EXIF-upright image.
    * - ``collection_stats``
@@ -2587,7 +2590,7 @@ Available Tools
        one frame of a video to a still image.
    * - ``extract_gps`` / ``dominant_colors``
      - Read EXIF GPS latitude/longitude (chains into ``reverse_geocode``);
-       extract a median-cut colour palette (rgb / hex / pixel share).
+       extract a median-cut colour palette (rgb / hex / pixel count).
    * - ``error_level_analysis``
      - JPEG-recompression Error-Level-Analysis tamper map as a PNG data
        URI (edited regions light up against the background).
@@ -2647,8 +2650,8 @@ Prompts
 The server exposes four prompts via ``prompts/list`` / ``prompts/get``:
 ``caption_image``, ``suggest_edits``, ``analyze_composition`` (a
 saliency-driven composition critique) and ``flag_issues`` (a sharpness
-+ quality + clipping triage). Prompt arguments are completable through
-``completion/complete``.
++ quality + clipping triage). ``completion/complete`` suggests values for the ``style`` of
+``suggest_edits`` and the ``focus`` of ``analyze_composition``.
 
 Claude Code (Project-Level)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -170,7 +170,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 카메라 RAW는 작은 내장 미리보기가 아니라 뷰어처럼 현상해서 읽으며, `resize` 와 `strip` 은 PNG로 저장합니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다. 잘린 파일은 뷰어처럼 읽을 수 있는 곳까지 읽습니다. 16비트·부동소수점 그레이스케일은 뷰어처럼 8비트로 스케일하며, `resize` 와 `strip` 은 원본의 비트 깊이를 유지합니다.
 
-공용 플래그: `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `--version`.
+파일이나 폴더를 받는 하위 명령(`collage`, `anaglyph`, `list-ops`를 제외한 전부)은 `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `-j` / `--jobs`(병렬 워커 수, `0`이면 모든 코어 사용)를 공용으로 받습니다. `collage`와 `anaglyph`는 `--out`으로 지정한 파일 하나에 씁니다. `--version`은 CLI 버전을 출력합니다.
 
 ---
 
@@ -822,10 +822,10 @@ python -m Imervue.mcp_server
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP / AVIF 간 변환 (+ 선택적 HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | 텍스트 워터마크 또는 매트 / 폴라로이드 프레임 + 캡션 굽기 |
 | `build_collage` | 이미지를 그리드 몽타주로 합성 (진행률 포함) |
-| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전. 크기와 좌표는 EXIF 방향을 적용한 이미지를 기준으로 합니다. |
+| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 리사이즈(한 변만 지정하면 종횡비 유지, 두 변을 모두 지정하면 정확한 크기), 무손실 회전 / 반전. 크기와 좌표는 EXIF 방향을 적용한 이미지를 기준으로 합니다. |
 | `collection_stats` | 폴더 별점 / 즐겨찾기 / 컬러 라벨 / 컬링 요약 |
 | `search_images` | 스마트 앨범 쿼리 DSL로 폴더 필터링 (경로 / EXIF / 크기 / 해상도) |
-| `extract_gps` / `dominant_colors` | EXIF GPS 좌표 읽기(`reverse_geocode`로 연결); median-cut 색상 팔레트 (rgb / hex / 비율) |
+| `extract_gps` / `dominant_colors` | EXIF GPS 좌표 읽기(`reverse_geocode`로 연결); median-cut 색상 팔레트 (rgb / hex / pixel_count) |
 | `error_level_analysis` | JPEG 재압축 변조 맵을 PNG 데이터 URI로 출력 |
 | `solarize_image` / `glow_image` | 솔라리제이션 톤 반전 또는 디퓨즈 글로우 블룸을 적용하고 저장 |
 | `velvia_image` / `emboss_image` / `defringe_image` | 벨비아 채도 부스트, 방향광 엠보스, 가장자리 프린지 탈색 |
@@ -847,8 +847,8 @@ python -m Imervue.mcp_server
 
 네 가지 재사용 가능한 프롬프트: `caption_image`, `suggest_edits`,
 `analyze_composition`(saliency 기반 구도 비평), `flag_issues`(샤프니스 +
-품질 + 클리핑 분류). 프롬프트 인자는 `completion/complete`를 통해 자동
-완성할 수 있습니다.
+품질 + 클리핑 분류). `completion/complete`는 `suggest_edits`의 `style`과
+`analyze_composition`의 `focus`에 대해 값을 제안합니다.
 
 ### 연결
 
