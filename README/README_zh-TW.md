@@ -883,7 +883,7 @@ python -m Imervue.mcp_server
 
 儲存在應用程式旁的 `user_setting.json` —— 原始碼版本為專案根目錄，凍結版本則是含 `.exe` 的資料夾（PyInstaller 與 Nuitka 皆同）。
 
-此檔是**多帳號容器**：每個 profile 各自持有獨立的設定字典，因此同一份安裝可以同時保有不同組態（例如 *Work* 與 *Personal*）。在 **File > Profiles…** 可切換、建立、重新命名與刪除 profile。舊版留下的 v1 單帳號檔案會在首次讀取時自動遷移為 `default` profile。寫入會在最後一次變更後延遲數秒才批次落地，且以原子方式寫入（`.tmp` 同層檔 + `os.replace`），因此存檔中途被中斷也不會截斷檔案。啟動時若讀不到這個檔案（JSON 損壞，或被其他程式占用），Imervue 會以預設設定啟動，並在第一次存檔前把它另存為旁邊的 `user_setting.json.unreadable-<日期>-<時間>`；無法保留副本時絕不覆蓋它。
+此檔是**多帳號容器**：每個 profile 各自持有獨立的設定字典，因此同一份安裝可以同時保有不同組態（例如 *Work* 與 *Personal*）。在 **File > Profiles…** 可切換、建立、重新命名與刪除 profile。舊版留下的 v1 單帳號檔案會在首次讀取時自動遷移為 `default` profile。寫入會在最後一次變更後延遲數秒才批次落地，且以原子方式寫入（`.tmp` 同層檔 + `os.replace`），因此存檔中途被中斷也不會截斷檔案。啟動時若讀不到這個檔案（JSON 損壞，或被其他程式占用），Imervue 會以預設設定啟動，並在第一次存檔前把它另存為旁邊的 `user_setting.json.unreadable-<日期>-<時間>`；無法保留副本時絕不覆蓋它。啟動時會跳出警告，寫明是哪個檔案以及如何取回原本的設定。
 
 目前 profile 的關鍵欄位：
 

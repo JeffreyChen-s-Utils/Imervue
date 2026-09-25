@@ -2787,4 +2787,6 @@ english_word_dict = {
     "export_metadata_all": "Keep all (camera, date, location)",
     "export_metadata_no_location": "Keep all but the location",
     "export_metadata_none": "Remove all",
+    "settings_unreadable_title": "Settings could not be read",
+    "settings_unreadable": "Imervue could not read its settings file:\n{path}\n\nIt started with default settings. Before the file is saved over, a copy is kept next to it as {name}.unreadable-<date>-<time>. To get your earlier settings back, quit Imervue and rename that copy to {name}.",
 }

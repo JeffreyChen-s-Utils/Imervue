@@ -2753,4 +2753,6 @@ chinese_word_dict = {
     "export_metadata_all": "全部保留（相机、日期、位置）",
     "export_metadata_no_location": "保留位置以外的全部",
     "export_metadata_none": "全部移除",
+    "settings_unreadable_title": "无法读取设置文件",
+    "settings_unreadable": "Imervue 无法读取设置文件：\n{path}\n\n已改用默认设置启动。覆盖这个文件之前，会先在旁边另存一份 {name}.unreadable-<日期>-<时间>。要取回原来的设置，请先关闭 Imervue，再把那份副本重命名为 {name}。",
 }

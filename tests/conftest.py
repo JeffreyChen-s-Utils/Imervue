@@ -319,6 +319,7 @@ def _isolate_user_settings(tmp_path, monkeypatch):
     )
     # A test that loads a broken settings file must not make the next one's saves keep copies.
     monkeypatch.setattr(mod, "_unreadable_at_start", False)
+    monkeypatch.setattr(mod, "_unreadable_path", None)
     try:
         yield
     finally:

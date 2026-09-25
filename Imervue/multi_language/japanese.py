@@ -2766,4 +2766,6 @@ japanese_word_dict = {
     "export_metadata_all": "すべて保持（カメラ・日時・位置）",
     "export_metadata_no_location": "位置情報以外を保持",
     "export_metadata_none": "すべて削除",
+    "settings_unreadable_title": "設定ファイルを読み込めません",
+    "settings_unreadable": "Imervue は設定ファイルを読み込めませんでした:\n{path}\n\n既定の設定で起動しました。このファイルを上書きする前に、隣に {name}.unreadable-<日付>-<時刻> としてコピーを残します。以前の設定に戻すには、Imervue を終了してからそのコピーの名前を {name} に変更してください。",
 }

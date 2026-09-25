@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `c28462b` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `f67b819` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 867 | 142,635 |
+| `tests/` | 868 | 142,695 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,138 |
-| `Imervue/gui/` | 165 | 33,074 |
+| `Imervue/gui/` | 166 | 33,114 |
 | `Imervue/puppet/` | 57 | 15,292 |
 | `Imervue/image/` | 125 | 14,579 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,894 |
-| `Imervue/multi_language/` | 8 | 14,079 |
+| `Imervue/multi_language/` | 8 | 14,089 |
 | `Imervue/desktop_pet/` | 34 | 8,259 |
 | `Imervue/mcp_server/` | 16 | 4,701 |
 | `Imervue/library/` | 32 | 4,251 |
 | `Imervue/menu/` | 11 | 3,583 |
-| `Imervue/` 根層 | 5 | 1,576 |
+| `Imervue/` 根層 | 5 | 1,579 |
 | `Imervue/plugin/` | 10 | 2,243 |
 | `Imervue/system/` | 25 | 2,608 |
 | `Imervue/export/` | 9 | 1,081 |
-| `Imervue/user_settings/` | 10 | 1,183 |
+| `Imervue/user_settings/` | 10 | 1,190 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,705** | **323,452** |
+| **總計** | **1,707** | **323,572** |
 
-其中 `Imervue/` 套件本身 774 檔 / 166,476 行。
+其中 `Imervue/` 套件本身 775 檔 / 166,536 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -205,7 +205,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 128 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 701 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 704 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 602 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `_open_shown`（註冊 HEIC/AVIF/JXL opener、`as_shown` 轉正與轉 sRGB），讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -244,7 +244,7 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `user_setting_dict.py` | 391 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔，第一次存檔前先另存成 `user_setting.json.unreadable-<時間>`，存不了副本就不覆蓋（所有寫設定檔的路徑都走 `_save_settings`） |
+| `user_setting_dict.py` | 398 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔，第一次存檔前先另存成 `user_setting.json.unreadable-<時間>`，存不了副本就不覆蓋（所有寫設定檔的路徑都走 `_save_settings`）；`unreadable_settings_file()` 給啟動時的警告用 |
 | `bookmark.py` | 90 | 跨資料夾書籤 / 收藏集合 |
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
@@ -529,7 +529,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-165 個檔、33,074 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+166 個檔、33,114 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -566,6 +566,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
 | `timeline_view.py` | 362 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
+| `settings_notice.py` | 40 | `warn_if_settings_unreadable(parent)`：啟動時設定檔讀不到，就用非阻塞 `QMessageBox` 說明已改用預設值、副本會存在哪、怎麼取回（主視窗啟動後 800 ms 呼叫） |
 | `hover_preview.py` | 192 | 縮圖懸停放大彈窗（預覽依 EXIF 轉正，標題列顯示圖片本身尺寸） |
 | `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
 | `multi_monitor_window.py` | 276 | 多螢幕鏡像視窗 |
@@ -967,7 +968,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-867 個檔、142,635 行。`pyproject.toml` 定義三個互斥層級 marker：
+868 個檔、142,695 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

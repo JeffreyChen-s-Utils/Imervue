@@ -36,6 +36,7 @@ _lock = Lock()
 # held by another program). Saving would replace it — every rating, tag and
 # album in it — with this session's defaults, so a copy is kept first.
 _unreadable_at_start = False
+_unreadable_path: Path | None = None       # that file, for telling the user
 _unreadable_lock = Lock()
 
 # ---------------------------------------------------------------------------
@@ -140,10 +141,16 @@ def read_user_setting() -> Path:
     return user_setting_file
 
 
+def unreadable_settings_file() -> Path | None:
+    """The settings file that existed at start-up but could not be read, or None."""
+    return _unreadable_path
+
+
 def _note_unreadable(path: Path) -> None:
-    global _unreadable_at_start
+    global _unreadable_at_start, _unreadable_path
     with _unreadable_lock:
         _unreadable_at_start = True
+        _unreadable_path = path
     _settings_logger.warning(
         "Could not read %s; starting from default settings. A copy of it is kept "
         "before it is saved over.", path)

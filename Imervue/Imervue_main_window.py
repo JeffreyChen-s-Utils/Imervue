@@ -16,6 +16,7 @@ from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
+from Imervue.gui.settings_notice import warn_if_settings_unreadable
 from Imervue.gui.toast import ToastManager
 from Imervue.image.browser_state import (
     ImageMetadataIndex,
@@ -177,6 +178,8 @@ class ImervueMainWindow(
         # ===== What's New 自動彈出（升級後第一次啟動）=====
         # 延遲到主視窗顯示後再跑,避免遮住啟動畫面
         call_later(800, self, self._maybe_show_whats_new)
+        # A settings file that could not be read left ratings and tags looking lost.
+        call_later(800, self, lambda: warn_if_settings_unreadable(self))
 
         # ===== 分頁快捷鍵 =====
         # Ctrl+T 新分頁 / Ctrl+W 關閉 / Ctrl+Tab 下一個 / Ctrl+Shift+Tab 上一個。

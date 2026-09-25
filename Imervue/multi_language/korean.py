@@ -2764,4 +2764,6 @@ korean_word_dict = {
     "export_metadata_all": "모두 유지(카메라, 날짜, 위치)",
     "export_metadata_no_location": "위치 정보만 제외하고 유지",
     "export_metadata_none": "모두 제거",
+    "settings_unreadable_title": "설정 파일을 읽을 수 없습니다",
+    "settings_unreadable": "Imervue가 설정 파일을 읽지 못했습니다:\n{path}\n\n기본 설정으로 시작했습니다. 이 파일을 덮어쓰기 전에 옆에 {name}.unreadable-<날짜>-<시각> 사본을 남깁니다. 이전 설정을 되찾으려면 Imervue를 종료한 뒤 그 사본의 이름을 {name}(으)로 바꾸세요.",
 }

@@ -944,7 +944,8 @@ after the last change and land atomically (`.tmp` sibling + `os.replace`), so an
 never truncates the file. If the file can't be read at start-up (broken JSON, or another program
 holding it), Imervue starts with default settings and, before its first save, keeps the file next
 to it as `user_setting.json.unreadable-<date>-<time>`; it never saves over a file it could not
-keep that copy of.
+keep that copy of. A warning at start-up names the file and how to get the
+earlier settings back.
 
 Key entries in the active profile:
 
