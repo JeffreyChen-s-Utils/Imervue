@@ -2,27 +2,28 @@
 
 An external editor saves either in place or by writing a copy and renaming it
 over the original. A folder watcher sees neither as a change - the file list
-stays the same - so the viewer kept showing the old pixels. A watcher on the
-file itself sees both. The reload waits until the writes have stopped for
-:data:`SETTLE_MS`, and only happens when the file's size or modification time
-really moved, so a save of the viewer's own that already reloaded the picture
-is not repeated.
+stays the same - so the viewer kept showing the old pixels. The shown file's
+size and modification time are therefore read every :data:`POLL_MS`; once they
+have moved away from the version on screen and then held still for one poll
+(the editor has finished writing), the picture is reloaded. A save of the
+viewer's own that already reloaded the picture changes nothing it compares, so
+it is not reloaded twice.
 
-Qt on Windows tells a changed file by its modification time alone, so a save
-that keeps the old time (a tool preserving file dates) sends no signal: the
-file is also measured again whenever Imervue comes back to the front, which
-is when someone returning from the editor looks.
+The file is read rather than handed to ``QFileSystemWatcher``: on Windows a
+file Qt watches made another program's rename-over save fail with "access
+denied" about once in ten saves (54 of 600 measured, none while unwatched),
+which neither a folder watch nor ``os.stat`` ever did.
 """
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from PySide6.QtCore import QCoreApplication, QFileSystemWatcher, QObject, Qt, QTimer
+from PySide6.QtCore import QObject, QTimer
 
 from Imervue.gpu_image_view.tile_loader import file_signature
 
-#: Quiet time after the last write before the picture is reloaded.
-SETTLE_MS = 500
+#: How often the shown file is measured; a save shows within two of these.
+POLL_MS = 500
 
 
 class ShownFileWatch(QObject):
@@ -35,53 +36,52 @@ class ShownFileWatch(QObject):
         self._is_shown = is_shown
         self._on_rewritten = on_rewritten
         self._path: str | None = None
-        self._signature = None
-        self._watcher = QFileSystemWatcher(self)
-        self._watcher.fileChanged.connect(self._on_file_changed)
-        self._settle = QTimer(self)
-        self._settle.setSingleShot(True)
-        self._settle.setInterval(SETTLE_MS)
-        self._settle.timeout.connect(self._check)
-        app = QCoreApplication.instance()
-        if app is not None and hasattr(app, "applicationStateChanged"):
-            app.applicationStateChanged.connect(self._on_application_state)
+        self._signature = None   # the file as it was loaded
+        self._seen = None        # the file at the last poll
+        self._poll = QTimer(self)
+        self._poll.setInterval(POLL_MS)
+        self._poll.timeout.connect(self._tick)
 
     @property
     def path(self) -> str | None:
         """The file being watched, or None."""
         return self._path
 
+    @property
+    def polling(self) -> bool:
+        """Whether the file is being measured."""
+        return self._poll.isActive()
+
     def follow(self, path: str | None) -> None:
         """Watch *path*, the picture now loading, instead of the previous one; None stops watching.
 
         Records the file's size and modification time as they are now: a
-        later change is measured against this load.
+        later change is measured against this load. A file that isn't there
+        is not watched.
         """
-        self._settle.stop()
-        watched = self._watcher.files()
-        if watched:
-            self._watcher.removePaths(watched)
         self._path = path
-        self._signature = file_signature(path) if path else None
-        if self._signature is not None:
-            self._watcher.addPath(path)
+        self._signature = self._seen = file_signature(path) if path else None
+        if self._signature is None:
+            self._poll.stop()
+        else:
+            self._poll.start()
 
-    def _on_file_changed(self, path: str) -> None:
-        if path == self._path:
-            self._settle.start()   # every write restarts the wait
-
-    def _on_application_state(self, state: Qt.ApplicationState) -> None:
-        if state == Qt.ApplicationState.ApplicationActive and self._path is not None:
-            self._settle.start()   # back from the editor: measure the file again
-
-    def _check(self) -> None:
+    def _tick(self) -> None:
         path = self._path
-        if path is None or not self._is_shown(path):
+        if path is None:
             return
-        signature = file_signature(path)
-        if signature is None or signature == self._signature:
+        seen = file_signature(path)
+        held_still = seen == self._seen
+        self._seen = seen
+        if held_still:
+            self._check(seen)
+
+    def _check(self, signature) -> None:
+        """Reload when *signature* - the file now - differs from the loaded one."""
+        path = self._path
+        if path is None or signature is None or signature == self._signature:
             return   # removed (the folder refresh handles that) or not really changed
-        if path not in self._watcher.files():
-            self._watcher.addPath(path)
+        if not self._is_shown(path):
+            return
         self._signature = signature
         self._on_rewritten(path)
