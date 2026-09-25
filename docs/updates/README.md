@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-41 | 2026-09-25 | JSON files saved with a BOM or invalid UTF-8 no longer fail to load | #bugfix #robustness #encoding | [2026-09](2026-09.md) |
 | U-20260925-40 | 2026-09-25 | The recipe store never loses edits to a file it could not read | #bugfix #recipe #data-loss | [2026-09](2026-09.md) |
 | U-20260925-39 | 2026-09-25 | Refactor: the unreadable-settings guard becomes a shared UnreadableFileGuard | #refactor #settings | [2026-09](2026-09.md) |
 | U-20260925-38 | 2026-09-25 | A start-up warning says the settings file could not be read | #feature #settings #ui | [2026-09](2026-09.md) |

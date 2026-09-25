@@ -544,6 +544,7 @@ def _read_json(path: Path) -> dict:
     if not path.exists():
         raise FileNotFoundError(path)
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
+        # utf-8-sig: exports and hand edits that start with a BOM are still Cubism JSON.
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except ValueError as exc:   # bad JSON, or bytes that aren't UTF-8
         raise CubismFormatError(f"{path}: malformed JSON ({exc})") from exc

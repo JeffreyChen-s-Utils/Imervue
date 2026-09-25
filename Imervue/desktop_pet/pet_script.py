@@ -197,8 +197,9 @@ def load_script(path: str | Path) -> PetScript:
     script."""
     p = Path(path)
     try:
-        text = p.read_text(encoding="utf-8")
-    except OSError as exc:
+        # utf-8-sig: a script saved with a BOM (older Notepad) is still valid JSON to us.
+        text = p.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeDecodeError) as exc:
         raise PetScriptError(f"can't read {p}: {exc}") from exc
     try:
         raw = json.loads(text)

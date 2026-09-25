@@ -228,3 +228,10 @@ def test_load_directory_continues_past_corrupt_file(tmp_path):
     export_preset(BrushPreset(name="OK", size=4), tmp_path / "ok.imv-brush")
     out = load_directory(tmp_path)
     assert [p.name for p in out] == ["OK"]
+
+
+def test_import_reads_a_preset_saved_with_a_bom(tmp_path):
+    target = tmp_path / "bom.imv-brush"
+    export_preset(BrushPreset(name="Bom", size=5), target)
+    target.write_bytes(b"\xef\xbb\xbf" + target.read_bytes())
+    assert import_preset(target).name == "Bom"

@@ -224,3 +224,17 @@ class TestUnreadableSettingsFile:
         (copy,) = self._copies(tmp_path)
         assert copy.read_text(encoding="utf-8") == self.BROKEN
         assert json.loads(path.read_text(encoding="utf-8"))["current_profile"] == "default"
+
+
+class TestByteOrderMark:
+    """A settings file saved by an editor that adds a BOM (older Notepad) read as unreadable."""
+
+    def test_a_settings_file_with_a_bom_is_read(self, tmp_path):
+        from Imervue.user_settings import user_setting_dict as mod
+        payload = {"current_profile": "default",
+                   "profiles": {"default": {"language": "Japanese"}}}
+        (tmp_path / "user_setting.json").write_bytes(
+            b"\xef\xbb\xbf" + json.dumps(payload).encode("utf-8"))
+        mod.read_user_setting()
+        assert mod.user_setting_dict["language"] == "Japanese"
+        assert mod.unreadable_settings_file() is None

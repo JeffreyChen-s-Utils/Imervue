@@ -79,6 +79,12 @@ class TestSaveLoad:
         data = sm.load_session_from_path(written)
         assert data["current_image"] == "/a.jpg"
 
+    def test_load_reads_a_file_saved_with_a_bom(self, sm, tmp_path):
+        ui = _FakeUI(_FakeViewer(images=["/a.jpg"], current_index=0))
+        written = sm.save_session_to_path(ui, tmp_path / "work")
+        written.write_bytes(b"\xef\xbb\xbf" + written.read_bytes())
+        assert sm.load_session_from_path(written)["current_image"] == "/a.jpg"
+
     def test_load_rejects_wrong_version(self, sm, tmp_path):
         bad = tmp_path / "wrong.json"
         bad.write_text(json.dumps({"version": 999}))

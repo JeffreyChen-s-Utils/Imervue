@@ -131,7 +131,7 @@ def _sanitize_loaded(data: dict[str, Any]) -> dict[str, Any]:
 
 def load_session_from_path(path: str | Path) -> dict[str, Any]:
     """Read + validate a session file. Raises ValueError on schema mismatch."""
-    raw = Path(path).read_text(encoding="utf-8")
+    raw = Path(path).read_text(encoding="utf-8-sig")   # a BOM from a text editor is fine
     data = json.loads(raw)
     if not isinstance(data, dict) or data.get("version") != SESSION_VERSION:
         raise ValueError(f"Unsupported session version: {data.get('version')!r}")

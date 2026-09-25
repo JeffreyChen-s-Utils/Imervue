@@ -380,3 +380,13 @@ class TestCarryRecipe:
         recipe_store.set_for_path(jpeg, Recipe(exposure=0.8))
         assert carry_recipe(jpeg, lambda: False) is False
         assert recipe_store.get_for_path(jpeg) is not None
+
+
+def test_a_store_file_with_a_bom_is_read(tmp_path):
+    path = tmp_path / "recipes.json"
+    path.write_bytes(b"\xef\xbb\xbf" + json.dumps(
+        {"id1": {"recipe": {"exposure": 0.5}}}).encode("utf-8"))
+    store = RecipeStore(store_path=path)
+    assert store.get("id1").exposure == pytest.approx(0.5)
+    store.set("id2", Recipe(exposure=0.1))
+    assert sorted(tmp_path.glob("recipes.json.unreadable-*")) == []

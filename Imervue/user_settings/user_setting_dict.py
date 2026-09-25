@@ -322,7 +322,8 @@ def read_json(json_file_path: str) -> Any | None:
     try:
         file_path = Path(json_file_path)
         if file_path.exists() and file_path.is_file():
-            with open(json_file_path, encoding="utf-8") as read_file:
+            # utf-8-sig: a file saved by an editor that adds a BOM (older Notepad) still reads.
+            with open(json_file_path, encoding="utf-8-sig") as read_file:
                 return json.loads(read_file.read())
     except (OSError, ValueError, RecursionError) as e:
         _settings_logger.debug(f"Failed to read {json_file_path}: {e}")

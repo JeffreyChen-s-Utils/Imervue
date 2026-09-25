@@ -226,7 +226,8 @@ class MaterialIndex:
         hand-edited file should never crash workspace boot.
         """
         try:
-            raw = json.loads(Path(path).read_text(encoding="utf-8"))
+            # utf-8-sig: a hand-edited index saved with a BOM still loads.
+            raw = json.loads(Path(path).read_text(encoding="utf-8-sig"))
         except (OSError, ValueError):
             return cls()
         if not isinstance(raw, dict):

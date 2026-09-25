@@ -224,7 +224,7 @@ def load_directory(root: str | Path) -> list[BrushPreset]:
 
 
 def _read_json(path: str | Path) -> dict:
-    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    raw = json.loads(Path(path).read_text(encoding="utf-8-sig"))   # shared presets may carry a BOM
     if not isinstance(raw, dict):
         raise ValueError(f"{path}: top-level must be an object")
     return raw

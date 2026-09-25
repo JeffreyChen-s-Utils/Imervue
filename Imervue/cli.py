@@ -212,7 +212,7 @@ _PIPELINE_OPS = {
 
 def load_pipeline(file: str) -> list[dict]:
     """Read a pipeline JSON file (a list of steps, or ``{"pipeline": [...]}``)."""
-    raw = json.loads(Path(file).read_text(encoding="utf-8"))
+    raw = json.loads(Path(file).read_text(encoding="utf-8-sig"))   # a BOM from an editor is fine
     steps = raw["pipeline"] if isinstance(raw, dict) and "pipeline" in raw else raw
     if not isinstance(steps, list):
         raise ValueError('pipeline must be a list, or {"pipeline": [...]}')

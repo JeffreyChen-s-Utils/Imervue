@@ -63,7 +63,7 @@ def import_albums(src_path: str | Path, *, overwrite: bool = False) -> int:
 
     Albums whose name already exists are skipped unless *overwrite* is set.
     """
-    text = Path(src_path).read_text(encoding="utf-8")
+    text = Path(src_path).read_text(encoding="utf-8-sig")   # a BOM from a text editor is fine
     existing = {a["name"] for a in smart_album.list_all()}
     saved = 0
     for entry in parse_albums(text):

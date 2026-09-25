@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `128329b` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `b5b9429` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,14 +66,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 869 | 142,838 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,138 |
-| `Imervue/gui/` | 166 | 33,114 |
-| `Imervue/puppet/` | 57 | 15,292 |
+| `tests/` | 870 | 142,997 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,139 |
+| `Imervue/gui/` | 166 | 33,115 |
+| `Imervue/puppet/` | 57 | 15,295 |
 | `Imervue/image/` | 125 | 14,598 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,894 |
 | `Imervue/multi_language/` | 8 | 14,089 |
-| `Imervue/desktop_pet/` | 34 | 8,259 |
+| `Imervue/desktop_pet/` | 34 | 8,260 |
 | `Imervue/mcp_server/` | 16 | 4,701 |
 | `Imervue/library/` | 32 | 4,251 |
 | `Imervue/menu/` | 11 | 3,583 |
@@ -81,12 +81,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/plugin/` | 10 | 2,243 |
 | `Imervue/system/` | 26 | 2,671 |
 | `Imervue/export/` | 9 | 1,081 |
-| `Imervue/user_settings/` | 10 | 1,154 |
+| `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,709** | **323,761** |
+| **總計** | **1,710** | **323,927** |
 
-其中 `Imervue/` 套件本身 776 檔 / 166,582 行。
+其中 `Imervue/` 套件本身 776 檔 / 166,589 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -245,7 +245,7 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `user_setting_dict.py` | 362 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔交給 `UnreadableFileGuard` 看守（所有寫設定檔的路徑都走 `_save_settings`）；`unreadable_settings_file()` 給啟動時的警告用 |
+| `user_setting_dict.py` | 363 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔交給 `UnreadableFileGuard` 看守（所有寫設定檔的路徑都走 `_save_settings`）；`unreadable_settings_file()` 給啟動時的警告用 |
 | `bookmark.py` | 90 | 跨資料夾書籤 / 收藏集合 |
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
@@ -530,7 +530,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-166 個檔、33,114 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+166 個檔、33,115 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -557,7 +557,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
 | `main_window_layout.py` | 296 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
 | `main_window_browse.py` | 103 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距 |
-| `annotation_models.py` | 602 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
+| `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 936 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 178 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（取代不穩定的 Windows shell 縮圖） |
@@ -659,7 +659,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,138 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,139 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -738,7 +738,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 素材 / 參考 / 姿勢
 
-`material_library.py`(299) · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(121) ·
+`material_library.py`(300) · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(121) ·
 `save_region_as_material.py`(107) · `reference_dock.py`(257) + `reference_panel.py`(283) ·
 `pose_skeleton.py`(210) + `pose_dock.py`(185) + `pose_drop.py`(128) 2D 火柴人姿勢參考
 
@@ -786,7 +786,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-57 個檔、15,292 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+57 個檔、15,295 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -796,9 +796,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | --- | ---: | --- |
 | `document.py` | 395 | `.puppet` v1 檔案格式的純 Python 資料模型（`Drawable` / `Deformer` / `Parameter` / `Motion` / `HitArea`） |
 | `document_io.py` | 884 | `.puppet` zip 容器讀寫 |
-| `cubism_import.py` | 549 | Live2D Cubism v3 檔案格式匯入 |
+| `cubism_import.py` | 550 | Live2D Cubism v3 檔案格式匯入 |
 | `cubism_native_bridge.py` | 443 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
-| `cubism_native_convert.py` | 641 | `.moc3` → `PuppetDocument` 轉換 |
+| `cubism_native_convert.py` | 643 | `.moc3` → `PuppetDocument` 轉換 |
 | `psd_import.py` | 186 | PSD 多圖層 → `PuppetDocument` |
 | `auto_mesh.py` | 172 | 從單張 PNG 自動生成網格 |
 | `auto_rig.py` | 402 | 依圖層命名慣例自動推導 Cubism 式綁定 |
@@ -848,7 +848,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-34 個檔、8,259 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+34 個檔、8,260 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
@@ -890,7 +890,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 個性與行為
 
-`pet_script.py`(435) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(521) 內建編輯器 ·
+`pet_script.py`(436) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(521) 內建編輯器 ·
 `schedule_rules.py`(101) 時段 / 星期閘門 · `idle_minigame.py`(278) 閒置好奇 / 打呵欠 ·
 `llm_dialogue.py`(242) 本地 LLM（預設 Ollama）對話 · `music_rhythm.py`(463) WASAPI loopback 抓系統音訊隨節奏擺動 ·
 `click_sfx.py`(168) 事件音效
@@ -969,7 +969,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-869 個檔、142,838 行。`pyproject.toml` 定義三個互斥層級 marker：
+870 個檔、142,997 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

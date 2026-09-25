@@ -1062,3 +1062,9 @@ def test_top_level_parser():
     assert version.version == f"Imervue CLI {_CLI_VERSION}"
     sub = next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))  # noqa: SLF001
     assert (sub.dest, sub.required) == ("command", True)
+
+
+def test_load_pipeline_reads_a_file_saved_with_a_bom(tmp_path):
+    f = tmp_path / "pipeline.json"
+    f.write_bytes(b"\xef\xbb\xbf" + json.dumps([{"op": "invert"}]).encode("utf-8"))
+    assert load_pipeline(str(f)) == [{"op": "invert"}]

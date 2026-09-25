@@ -276,9 +276,9 @@ class BookmarkDialog(WorkerHostMixin, QDialog):
         if not path:
             return
         try:
-            with open(path, encoding="utf-8") as f:
+            with open(path, encoding="utf-8-sig") as f:   # a BOM from a text editor is fine
                 data = json.load(f)
-        except (OSError, json.JSONDecodeError) as e:
+        except (OSError, ValueError) as e:   # ValueError: bad JSON or bad UTF-8
             logger.exception(f"Bookmark import failed: {e}")
             QMessageBox.warning(
                 self,

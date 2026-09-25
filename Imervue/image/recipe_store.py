@@ -93,7 +93,7 @@ class RecipeStore:
         try:
             if not self._path.exists():
                 return None
-            with open(self._path, encoding="utf-8") as f:
+            with open(self._path, encoding="utf-8-sig") as f:   # a BOM from a text editor is fine
                 data = json.load(f)
         except (OSError, ValueError, RecursionError) as exc:   # ValueError: bad JSON or UTF-8
             logger.warning(f"Recipe store read failed ({self._path}): {exc}")
