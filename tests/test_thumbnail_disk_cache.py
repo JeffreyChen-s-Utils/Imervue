@@ -266,3 +266,17 @@ class TestPutFailures:
         c = tdc.ThumbnailDiskCache()
         with pytest.raises(RuntimeError):
             c.put(source_image, 128, _thumb())
+
+
+def test_a_grey_thumbnail_baked_before_the_grey_fixes_is_not_served(cache_dir, tmp_path, monkeypatch):
+    """A 16-bit grey scan was cached almost white; the fix must not keep serving that copy."""
+    scan = tmp_path / "scan.png"
+    Image.new("I;16", (32, 32), 32896).save(scan)
+    shipped = tdc._KEY_VERSION
+    monkeypatch.setattr(tdc, "_KEY_VERSION", 3)          # the version those were baked under
+    cache = tdc.ThumbnailDiskCache()
+    cache.put(str(scan), 128, np.full((32, 32, 4), 255, dtype=np.uint8))
+    assert cache.get(str(scan), 128) is not None
+    monkeypatch.setattr(tdc, "_KEY_VERSION", shipped)   # the cache folder stays the test's
+    assert shipped > 3
+    assert tdc.ThumbnailDiskCache().get(str(scan), 128) is None

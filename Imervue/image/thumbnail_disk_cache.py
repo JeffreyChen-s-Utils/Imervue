@@ -48,7 +48,9 @@ logger = logging.getLogger("Imervue.thumbnail_cache")
 _CACHE_EXT = ".png"
 # Bump when the cached pixels change meaning, so older entries stop matching.
 # 2: thumbnails are EXIF-upright. 3: embedded colour profiles are converted to sRGB.
-_KEY_VERSION = 3
+# 4: 16-bit and float greyscale is scaled over its range (it was clipped almost white) and a
+#    greyscale picture's grey profile is applied.
+_KEY_VERSION = 4
 # Camera RAW entries only, so the rest of the cache stays valid.
 # 4: a portrait RAW's embedded preview is turned upright.
 _RAW_KEY_VERSION = 4
