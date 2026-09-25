@@ -102,6 +102,9 @@ class AnimationPlayer:
         self._source: Image.Image | None = None
         self._frame_count = 0
         self._decoded: tuple[int, np.ndarray] | None = None
+        # 1 for an APNG whose frame 0 is its default image: the picture shown by
+        # programs without APNG support, not part of the animation.
+        self._first = 0
         self.current_frame = 0
         self.playing = False
         self.speed = 1.0
@@ -135,9 +138,12 @@ class AnimationPlayer:
             if img.format not in _ANIMATED_FORMATS | _PAGED_FORMATS:
                 return False   # an MPO preview, PSD layers: one picture, not frames
             self.paged = img.format in _PAGED_FORMATS
-            if self._too_big_to_hold(img):
-                return self._open_streaming()
-            return self._load_frames(img)
+            self._first = 1 if img.format == "PNG" and img.info.get("default_image") else 0
+            streamed = self._too_big_to_hold(img)
+            loaded = self._open_streaming() if streamed else self._load_frames(img)
+        if loaded and self._first:
+            self._apply_frame()   # the still on screen is the default image, not frame 1
+        return loaded
 
     @staticmethod
     def _too_big_to_hold(img: Image.Image) -> bool:
@@ -151,7 +157,8 @@ class AnimationPlayer:
         """Keep the file's bytes (not the file, which Windows would lock) and decode lazily."""
         try:
             source = Image.open(io.BytesIO(Path(self.path).read_bytes()))
-            count = source.n_frames
+            count = source.n_frames - self._first
+            source.seek(self._first)
             first = _frame_rgba(source)
         except (*IMAGE_READ_ERRORS, EOFError) as e:
             logger.warning(f"Failed to open {self.path} for streaming: {e}")
@@ -169,7 +176,7 @@ class AnimationPlayer:
         if self._decoded is not None and self._decoded[0] == index:
             return self._decoded[1]
         try:
-            self._source.seek(index)
+            self._source.seek(index + self._first)
             frame = _frame_rgba(self._source)
         except (*IMAGE_READ_ERRORS, EOFError) as e:
             logger.warning(f"Frame {index} of {self.path} failed: {e}")
@@ -181,13 +188,13 @@ class AnimationPlayer:
     def _load_frames(self, img: Image.Image) -> bool:
         """Decode every frame of the open *img*; ``False`` unless two or more decode."""
         n_frames = getattr(img, "n_frames", 1)
-        if n_frames <= 1:
+        if n_frames - self._first <= 1:
             return False
 
         self.frames.clear()
         self.durations.clear()
 
-        for i in range(n_frames):
+        for i in range(self._first, n_frames):
             try:
                 img.seek(i)
                 self.frames.append(_frame_rgba(img))

@@ -441,3 +441,69 @@ class TestIndicatorText:
         from Imervue.multi_language.traditional_chinese import traditional_chinese_word_dict
         text = ap.anim_indicator_text(self._anim(paged=True), traditional_chinese_word_dict)
         assert text == "第 2/5 頁"
+
+
+# --- An APNG's default image ----------------------------------------------------------------
+
+_APNG_FRAMES = ((255, 0, 0), (0, 255, 0), (0, 0, 255))
+
+
+def _make_apng(path, *, default_image: bool) -> str:
+    """White default image, then red / green / blue animation frames of 40 / 50 / 60 ms."""
+    frames = [Image.new("RGB", (8, 8), colour) for colour in _APNG_FRAMES]
+    if default_image:
+        Image.new("RGB", (8, 8), "white").save(
+            path, save_all=True, append_images=frames, default_image=True, duration=[40, 50, 60], loop=0)
+    else:
+        frames[0].save(path, save_all=True, append_images=frames[1:], duration=[40, 50, 60], loop=0)
+    return str(path)
+
+
+def _colours(player) -> list[tuple[int, ...]]:
+    out = []
+    for index in range(player.total_frames):
+        player.current_frame = index
+        out.append(tuple(int(v) for v in player.get_current_frame_data()[0, 0, :3]))
+    return out
+
+
+class TestApngDefaultImage:
+    """The picture shown to programs without APNG support is not an animation frame."""
+
+    def test_the_default_image_is_left_out_of_the_animation(self, tmp_path):
+        pl = ap.AnimationPlayer(_FakeGui(), _make_apng(tmp_path / "a.png", default_image=True))
+        assert pl.load() is True
+        assert pl.total_frames == 3
+        assert _colours(pl) == list(_APNG_FRAMES)
+        assert pl.durations == [40, 50, 60]
+
+    def test_an_apng_whose_first_frame_is_its_image_keeps_it(self, tmp_path):
+        pl = ap.AnimationPlayer(_FakeGui(), _make_apng(tmp_path / "a.png", default_image=False))
+        assert pl.load() is True
+        assert _colours(pl) == list(_APNG_FRAMES)
+
+    def test_a_streamed_animation_leaves_it_out_too(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(ap, "_DECODED_FRAMES_BUDGET", 1)
+        pl = ap.AnimationPlayer(_FakeGui(), _make_apng(tmp_path / "a.png", default_image=True))
+        assert pl.load() is True
+        assert pl.streaming and pl.total_frames == 3
+        assert _colours(pl) == list(_APNG_FRAMES)
+        assert pl.durations[0] == 40
+
+    def test_the_first_frame_replaces_the_default_image_on_screen(self, tmp_path, monkeypatch):
+        """The still on screen is the default image, so frame 1 must be put up at once."""
+        applied = []
+        monkeypatch.setattr(ap.AnimationPlayer, "_apply_frame",
+                            lambda self: applied.append(self.current_frame))
+        pl = ap.AnimationPlayer(_FakeGui(), _make_apng(tmp_path / "a.png", default_image=True))
+        pl.load()
+        assert applied == [0]
+        applied.clear()
+        ap.AnimationPlayer(_FakeGui(), _make_apng(tmp_path / "b.png", default_image=False)).load()
+        assert applied == []
+
+    def test_one_frame_after_the_default_image_is_not_an_animation(self, tmp_path):
+        path = tmp_path / "a.png"
+        Image.new("RGB", (8, 8), "white").save(
+            path, save_all=True, append_images=[Image.new("RGB", (8, 8), "red")], default_image=True)
+        assert ap.AnimationPlayer(_FakeGui(), str(path)).load() is False

@@ -1635,7 +1635,7 @@ more than 512 MB decoded is decoded one frame at a time as it plays, so opening 
 neither freezes the window nor fills memory.
 A frame of 10 ms or less plays for 100 ms, as browsers do: many GIFs rely on it.
 
-A multi-page TIFF — a scanned document — is not played: it shows one page at a time, turned with ``,`` and ``.``, and the readout says "Page 2/5". Frames that are not an animation never play either: the preview a camera embeds in a JPEG (MPF) and the layers of a PSD.
+A multi-page TIFF — a scanned document — is not played: it shows one page at a time, turned with ``,`` and ``.``, and the readout says "Page 2/5". Frames that are not an animation never play either: the preview a camera embeds in a JPEG (MPF), the layers of a PSD, and an APNG's default image — the still shown by programs without APNG support.
 
 .. list-table::
    :header-rows: 1

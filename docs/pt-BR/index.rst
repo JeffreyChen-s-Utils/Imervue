@@ -1647,7 +1647,7 @@ mais de 512 MB decodificada é decodificada quadro a quadro durante a reproduç�
 abri-la não congela a janela nem enche a memória.
 Um quadro de 10 ms ou menos é exibido por 100 ms, como nos navegadores: muitos GIFs contam com isso.
 
-Um TIFF de várias páginas — um documento digitalizado — não é reproduzido: mostra uma página por vez, virada com ``,`` e ``.``, e o indicador mostra o número da página. Quadros que não são animação também nunca são reproduzidos: a prévia que a câmera embute no JPEG (MPF) e as camadas de um PSD.
+Um TIFF de várias páginas — um documento digitalizado — não é reproduzido: mostra uma página por vez, virada com ``,`` e ``.``, e o indicador mostra o número da página. Quadros que não são animação também nunca são reproduzidos: a prévia que a câmera embute no JPEG (MPF), as camadas de um PSD e a imagem padrão de um APNG, a imagem estática para programas sem suporte a APNG.
 
 .. list-table::
    :header-rows: 1

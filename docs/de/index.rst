@@ -1693,7 +1693,7 @@ Beim Öffnen von GIF-, APNG- oder animierten WebP-Dateien wird die Animation aut
 Fenster also nicht ein und füllt nicht den Speicher.
 Ein Bild mit 10 ms oder weniger wird wie in Browsern 100 ms lang gezeigt – viele GIFs sind darauf ausgelegt.
 
-Ein mehrseitiges TIFF – ein gescanntes Dokument – wird nicht abgespielt: Es zeigt eine Seite nach der anderen, geblättert mit ``,`` und ``.``, und die Anzeige nennt die Seitenzahl. Bilder, die keine Animation sind, laufen ebenfalls nie ab: die Vorschau, die eine Kamera in ein JPEG einbettet (MPF), und die Ebenen einer PSD.
+Ein mehrseitiges TIFF – ein gescanntes Dokument – wird nicht abgespielt: Es zeigt eine Seite nach der anderen, geblättert mit ``,`` und ``.``, und die Anzeige nennt die Seitenzahl. Bilder, die keine Animation sind, laufen ebenfalls nie ab: die Vorschau, die eine Kamera in ein JPEG einbettet (MPF), die Ebenen einer PSD und das Standardbild eines APNG – das Standbild für Programme ohne APNG-Unterstützung.
 
 .. list-table::
    :header-rows: 1
