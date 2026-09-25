@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-04 | 2026-09-26 | A camera JPEG with an MPF preview can be saved over, converted and split like any JPEG | #fix #formats #save | [2026-09-b](2026-09-b.md) |
 | U-20260926-03 | 2026-09-26 | A camera JPEG's preview no longer flickers in, and TIFF pages turn instead of playing | #fix #viewer #animation #formats | [2026-09-b](2026-09-b.md) |
 | U-20260926-02 | 2026-09-26 | Refactor: the remaining Yes / No confirmations call dialog_rows.confirm | #refactor #dialogs | [2026-09-b](2026-09-b.md) |
 | U-20260926-01 | 2026-09-26 | Deleting, clearing and overwriting ask with No as the default | #fix #safety #data-loss | [2026-09-b](2026-09-b.md) |
@@ -376,4 +377,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 34 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 35 |

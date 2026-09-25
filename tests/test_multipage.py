@@ -187,3 +187,27 @@ def test_page_count_of_a_multi_page_tiff_is_its_frames(tmp_path):
     frames[0].save(path, save_all=True, append_images=frames[1:])
     with Image.open(path) as img:
         assert page_count(img) == 3
+
+
+def _mpo(tmp_path, second_type=None):
+    path = tmp_path / "photo.jpg"
+    Image.new("RGB", (8, 6), "red").save(str(path), format="MPO", save_all=True,
+                                         append_images=[Image.new("RGB", (8, 6), "blue")])
+    img = Image.open(path)
+    if second_type is not None:
+        img.mpinfo[0xB002][1]["Attribute"]["MPType"] = second_type
+    return img
+
+
+@pytest.mark.parametrize("second_type", [None, "Large Thumbnail (VGA Equivalent)", "Unknown"])
+def test_an_mpo_with_a_preview_is_one_page(tmp_path, second_type):
+    """A camera's large preview (or a depth / gain map) is not a page of the photo."""
+    with _mpo(tmp_path, second_type) as img:
+        assert img.n_frames == 2
+        assert page_count(img) == 1
+
+
+@pytest.mark.parametrize("second_type", ["Multi-Frame Image: (Disparity)", "Multi-Frame Image (Panorama)"])
+def test_an_mpo_of_stereo_or_panorama_frames_has_pages(tmp_path, second_type):
+    with _mpo(tmp_path, second_type) as img:
+        assert page_count(img) == 2

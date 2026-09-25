@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+from PIL import Image
 
 from Imervue.image.in_place_save import in_place_format
 
@@ -160,3 +161,26 @@ def test_saving_over_the_source_keeps_its_maker_note(tmp_path):
     save_over_source(src, Image.new("RGB", (8, 6), (5, 5, 5)))
     with Image.open(src) as out:
         assert out.getexif().get_ifd(0x8769)[0x927C].startswith(b"Canon")
+
+
+def _camera_jpeg_with_a_preview(path):
+    """A JPEG with an MPF second picture, as cameras write their large preview: Pillow opens it as MPO."""
+    exif = Image.Exif()
+    exif[0x010F] = "NIKON CORPORATION"   # Make
+    Image.new("RGB", (40, 30), (200, 20, 20)).save(
+        path, format="MPO", save_all=True, exif=exif,
+        append_images=[Image.new("RGB", (20, 15), (90, 90, 90))])
+    return path
+
+
+def test_a_camera_jpeg_with_an_mpf_preview_can_be_saved_over(tmp_path):
+    """The preview counted as a second frame, so Save refused every such photo."""
+    from Imervue.image.in_place_save import can_rewrite_in_place, frame_count, save_over_source
+    path = _camera_jpeg_with_a_preview(tmp_path / "DSC_0001.JPG")
+    assert frame_count(path) == 1
+    assert can_rewrite_in_place(path)
+    save_over_source(path, Image.new("RGB", (40, 30), (10, 200, 10)))
+    with Image.open(path) as saved:
+        assert saved.format in ("JPEG", "MPO")
+        assert saved.getpixel((20, 15))[1] > 150
+        assert saved.getexif()[0x010F] == "NIKON CORPORATION"
