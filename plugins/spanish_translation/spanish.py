@@ -1372,6 +1372,8 @@ spanish_word_dict.update({
     "web_gallery_thumb_size": "Tamaño de miniatura",
     "web_gallery_quality": "Calidad de miniatura",
     "web_gallery_copy": "Copiar los originales a tamaño completo (portátil)",
+    "web_gallery_review": "Revisión del cliente: un cuadro de comentario bajo cada imagen",
+    "web_gallery_review_tooltip": "Los revisores escriben una nota bajo cada imagen. La página guarda las notas en su navegador y las descarga todas como un archivo JSON con su botón Export comments; no hace falta servidor.",
     "web_gallery_export": "Exportar…",
     "web_gallery_close": "Cerrar",
     "web_gallery_pick_dir": "Elegir carpeta de salida",

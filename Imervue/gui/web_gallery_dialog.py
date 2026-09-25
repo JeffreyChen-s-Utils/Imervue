@@ -89,6 +89,15 @@ class WebGalleryDialog(QDialog):
         self._copy_check.setChecked(True)
         form.addRow("", self._copy_check)
 
+        self._review_check = QCheckBox(lang.get(
+            "web_gallery_review", "Client review: a comment box under each picture"))
+        self._review_check.setToolTip(lang.get(
+            "web_gallery_review_tooltip",
+            "Reviewers type a note under each picture. The page keeps the notes in their "
+            "browser and saves them all as a JSON file with its Export comments button; "
+            "no server is needed."))
+        form.addRow("", self._review_check)
+
         layout.addLayout(form)
 
         btn_row = QHBoxLayout()
@@ -127,6 +136,7 @@ class WebGalleryDialog(QDialog):
             copy_originals=self._copy_check.isChecked(),
             title=self._title_edit.text().strip() or "Imervue Gallery",
             thumbnail_quality=self._quality_spin.value(),
+            review_mode=self._review_check.isChecked(),
         )
         self._export_btn.setEnabled(False)
         worker = _GalleryWorker(list(images), out_dir, opts)

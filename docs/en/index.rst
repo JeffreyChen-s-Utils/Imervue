@@ -2467,6 +2467,18 @@ stay as they were. A WebP is handled the same way; other formats can't be tagged
 
 The **EXIF editor** (the ``Edit EXIF`` button in the EXIF sidebar) changes the description, artist, copyright, camera make / model and user comment. A JPEG or WebP needs no extra package and only its EXIF block is rewritten; other formats show why they can't be edited.
 
+Web Gallery
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Web Gallery`` writes the selected pictures (or the whole folder)
+as a self-contained site: ``index.html`` with a lightbox, JPEG thumbnails, and copies of the
+originals unless you untick **Copy full-size originals**. You set the page title and the
+thumbnail size and quality. The page needs no server: open it from disk or put it on any static host.
+
+Tick **Client review** to send the gallery out for feedback. Each picture gets a comment box; the
+notes stay in the reviewer's browser, and the page's **Export comments** button saves them all as
+one JSON file.
+
 Print Layout
 ^^^^^^^^^^^^
 

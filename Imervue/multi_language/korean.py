@@ -1597,6 +1597,8 @@ korean_word_dict = {
     "web_gallery_thumb_size": "썸네일 크기",
     "web_gallery_quality": "썸네일 품질",
     "web_gallery_copy": "원본 이미지 복사 (이식 가능)",
+    "web_gallery_review": "클라이언트 검토: 각 이미지 아래에 댓글 상자 추가",
+    "web_gallery_review_tooltip": "검토자는 각 이미지 아래에 메모를 남길 수 있습니다. 메모는 검토자의 브라우저에 저장되고, 페이지의 ‘Export comments’ 버튼으로 모두 하나의 JSON 파일로 저장합니다. 서버가 필요 없습니다.",
     "web_gallery_export": "내보내기\u2026",
     "web_gallery_close": "닫기",
     "web_gallery_pick_dir": "출력 폴더 선택",

@@ -1619,6 +1619,8 @@ english_word_dict = {
     "web_gallery_thumb_size": "Thumbnail size",
     "web_gallery_quality": "Thumbnail quality",
     "web_gallery_copy": "Copy full-size originals (portable)",
+    "web_gallery_review": "Client review: a comment box under each picture",
+    "web_gallery_review_tooltip": "Reviewers type a note under each picture. The page keeps the notes in their browser and saves them all as a JSON file with its Export comments button; no server is needed.",
     "web_gallery_export": "Export\u2026",
     "web_gallery_close": _ENGLISH_CLOSE,
     "web_gallery_pick_dir": "Pick output folder",

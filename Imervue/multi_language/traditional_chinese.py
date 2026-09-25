@@ -1585,6 +1585,8 @@ traditional_chinese_word_dict = {
     "web_gallery_thumb_size": "縮圖尺寸",
     "web_gallery_quality": "縮圖品質",
     "web_gallery_copy": "複製原始檔案（可攜式）",
+    "web_gallery_review": "客戶審閱：每張圖片下方加一個留言框",
+    "web_gallery_review_tooltip": "審閱者可以在每張圖片下方留言。頁面會把留言存在他們的瀏覽器裡，按頁面上的「Export comments」就能把所有留言存成一個 JSON 檔；不需要伺服器。",
     "web_gallery_export": "匯出\u2026",
     "web_gallery_close": "關閉",
     "web_gallery_pick_dir": "選擇輸出資料夾",

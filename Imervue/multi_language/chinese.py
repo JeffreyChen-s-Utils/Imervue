@@ -1586,6 +1586,8 @@ chinese_word_dict = {
     "web_gallery_thumb_size": "缩略图尺寸",
     "web_gallery_quality": "缩略图质量",
     "web_gallery_copy": "复制原始文件（可移植）",
+    "web_gallery_review": "客户审阅：每张图片下方加一个留言框",
+    "web_gallery_review_tooltip": "审阅者可以在每张图片下方留言。页面会把留言保存在他们的浏览器里，点击页面上的“Export comments”即可把所有留言保存为一个 JSON 文件；无需服务器。",
     "web_gallery_export": "导出\u2026",
     "web_gallery_close": "关闭",
     "web_gallery_pick_dir": "选择输出文件夹",

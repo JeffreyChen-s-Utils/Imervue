@@ -1599,6 +1599,8 @@ japanese_word_dict = {
     "web_gallery_thumb_size": "サムネイルサイズ",
     "web_gallery_quality": "サムネイル品質",
     "web_gallery_copy": "元画像をコピー（ポータブル）",
+    "web_gallery_review": "クライアントレビュー：各画像の下にコメント欄を付ける",
+    "web_gallery_review_tooltip": "レビュー担当者は各画像の下にコメントを書けます。コメントはその人のブラウザーに保存され、ページの「Export comments」ボタンですべてを 1 つの JSON ファイルに書き出せます。サーバーは不要です。",
     "web_gallery_export": "書き出し\u2026",
     "web_gallery_close": _JAPANESE_TR95893058308B,
     "web_gallery_pick_dir": "出力フォルダを選択",

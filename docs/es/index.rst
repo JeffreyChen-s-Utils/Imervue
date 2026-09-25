@@ -2505,6 +2505,19 @@ etiquetas y la miniatura quedan igual. Un WebP se trata igual; los demás format
 
 El **editor EXIF** (botón ``Edit EXIF`` de la barra lateral EXIF) cambia la descripción, el artista, el copyright, la marca / modelo de la cámara y el comentario. Un JPEG o WebP no necesita paquetes extra y solo se reescribe su bloque EXIF; los demás formatos explican por qué no se pueden editar.
 
+Galería web
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Web Gallery`` guarda las imágenes seleccionadas (o toda la
+carpeta) como un sitio autocontenido: ``index.html`` con lightbox, miniaturas JPEG y copias de los
+originales, salvo que desmarque **Copiar los originales a tamaño completo**. Puede elegir el título
+de la página y el tamaño y la calidad de las miniaturas. La página no necesita servidor: ábrala
+desde el disco o súbala a cualquier alojamiento estático.
+
+Marque **Revisión del cliente** para enviar la galería y recoger opiniones. Cada imagen recibe un
+cuadro de comentario; las notas se quedan en el navegador del revisor y el botón
+**Export comments** de la página las guarda todas en un único archivo JSON.
+
 Diseño de impresión
 ^^^^^^^^^^^^^^^^^^^
 

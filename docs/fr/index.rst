@@ -2505,6 +2505,19 @@ la vignette restent intacts. Un WebP est traité de la même façon ; les autres
 
 L'**éditeur EXIF** (bouton ``Edit EXIF`` de la barre latérale EXIF) modifie la description, l'artiste, le copyright, la marque / le modèle de l'appareil et le commentaire. Un JPEG ou un WebP ne nécessite aucun paquet supplémentaire et seul son bloc EXIF est réécrit ; les autres formats indiquent pourquoi ils ne sont pas modifiables.
 
+Galerie web
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Web Gallery`` enregistre les images sélectionnées (ou tout le
+dossier) sous forme de site autonome : ``index.html`` avec une lightbox, des vignettes JPEG et des
+copies des originaux, sauf si vous décochez **Copier les originaux en pleine taille**. Vous
+choisissez le titre de la page ainsi que la taille et la qualité des vignettes. La page n'a besoin
+d'aucun serveur : ouvrez-la depuis le disque ou déposez-la sur n'importe quel hébergement statique.
+
+Cochez **Revue client** pour soumettre la galerie à l'avis de vos clients. Chaque image reçoit une
+zone de commentaire ; les notes restent dans le navigateur du relecteur, et le bouton
+**Export comments** de la page les enregistre toutes dans un seul fichier JSON.
+
 Mise en page d'impression
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

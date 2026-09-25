@@ -2511,6 +2511,19 @@ Ein JPEG wird ohne Zusatzpaket direkt beschrieben: nur sein EXIF-Block ändert s
 
 Der **EXIF-Editor** (Schaltfläche ``Edit EXIF`` in der EXIF-Seitenleiste) ändert Beschreibung, Künstler, Copyright, Kamerahersteller / -modell und Kommentar. Ein JPEG oder WebP braucht kein Zusatzpaket, nur sein EXIF-Block wird neu geschrieben; andere Formate zeigen an, warum sie nicht bearbeitbar sind.
 
+Web-Galerie
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Web Gallery`` schreibt die ausgewählten Bilder (oder den ganzen
+Ordner) als eigenständige Website: ``index.html`` mit Lightbox, JPEG-Miniaturansichten und Kopien
+der Originale, sofern Sie **Originale in voller Größe kopieren** nicht abwählen. Seitentitel sowie
+Größe und Qualität der Miniaturansichten legen Sie selbst fest. Die Seite braucht keinen Server:
+Öffnen Sie sie direkt von der Festplatte oder legen Sie sie auf einen beliebigen statischen Host.
+
+Aktivieren Sie **Kunden-Review**, wenn Sie Feedback zur Galerie einholen möchten. Unter jedem Bild
+erscheint ein Kommentarfeld; die Notizen bleiben im Browser des Prüfers, und die Schaltfläche
+**Export comments** der Seite speichert sie alle in einer einzigen JSON-Datei.
+
 Druck-Layout
 ^^^^^^^^^^^^
 
