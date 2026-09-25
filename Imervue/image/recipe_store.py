@@ -26,6 +26,7 @@ import logging
 import os
 import sys
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -313,6 +314,36 @@ class RecipeStore:
             self._save_locked()
             return True
 
+    # ------------------------------------------------------------------
+    # Keeping a recipe with a file whose identity bytes changed
+    # ------------------------------------------------------------------
+
+    def rekey(self, old_identity: str, new_identity: str,
+              transform: Callable[[Recipe], Recipe | None] | None = None) -> bool:
+        """Move *old_identity*'s recipe and variants to *new_identity*; True if they moved.
+
+        For a file Imervue rewrote without touching its pixels — new EXIF,
+        a quarter turn — whose identity (its first bytes) changed. With
+        *transform* every recipe, the variants included, is passed through
+        it first; if it returns ``None`` for any of them nothing moves, so
+        the recipe stays where it was rather than half-adapted.
+        """
+        if not old_identity or not new_identity or old_identity == new_identity:
+            return False
+        self._ensure_loaded()
+        with self._lock:
+            entry = self._entries.get(old_identity)
+            if entry is None:
+                return False
+            if transform is not None:
+                entry = _transformed_entry(entry, transform)
+                if entry is None:
+                    return False
+            self._entries[new_identity] = entry
+            del self._entries[old_identity]
+            self._save_locked()
+            return True
+
     def list_variants_for_path(self, path: str) -> list[str]:
         return self.list_variants(file_identity(path))
 
@@ -372,3 +403,38 @@ class RecipeStore:
 # Module-level singleton. Tests that need an isolated store should instantiate
 # RecipeStore directly with a tmp path instead of poking at this global.
 recipe_store = RecipeStore()
+
+
+def _transformed_entry(entry: dict[str, Any],
+                       transform: Callable[[Recipe], Recipe | None]) -> dict[str, Any] | None:
+    """*entry* with its recipe and each variant passed through *transform*; None if one can't be."""
+    try:
+        recipe = transform(Recipe.from_dict(entry["recipe"]))
+        variants = {name: (transform(Recipe.from_dict(data)) if isinstance(data, dict) else data)
+                    for name, data in (entry.get("variants") or {}).items()}
+    except _RECIPE_DECODE_ERRORS:
+        logger.debug("A recipe failed to decode while following its file", exc_info=True)
+        return None
+    if recipe is None or any(variant is None for variant in variants.values()):
+        return None
+    return {**entry, "recipe": recipe.normalized().to_dict(),
+            "variants": {name: (variant.normalized().to_dict()
+                                if isinstance(variant, Recipe) else variant)
+                         for name, variant in variants.items()}}
+
+
+def carry_recipe(path: str | Path, change: Callable[[], bool],
+                 transform: Callable[[Recipe], Recipe | None] | None = None) -> bool:
+    """Run *change*, which rewrites *path* in place, and keep *path*'s recipe with the file.
+
+    The identity is the file's first bytes, where EXIF lives, so a metadata
+    rewrite or a lossless quarter turn used to orphan the photo's Modify
+    edits and virtual copies. After a *change* that returns True the recipe
+    is re-keyed to the file's new identity (see :meth:`RecipeStore.rekey`).
+    Returns what *change* returned; its exceptions propagate untouched.
+    """
+    old = file_identity(path)
+    done = change()
+    if done and old:
+        recipe_store.rekey(old, file_identity(path), transform)
+    return done

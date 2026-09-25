@@ -22,6 +22,7 @@ from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.jpeg_exif import update_jpeg_exif
 from Imervue.image.orientation import strip_xmp_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.recipe_store import carry_recipe
 from Imervue.image.webp_exif import update_webp_exif
 from Imervue.system.atomic_write import replace_atomically
 
@@ -247,10 +248,16 @@ def rewrite_exif(path: str | Path, update: Callable[[Image.Exif], None]) -> None
     chunk is swapped, so the image data, the other metadata and the embedded
     thumbnail stay byte for byte. Raises ``ValueError`` for a format
     :func:`can_rewrite_exif` refuses or a malformed file, ``OSError`` when the
-    read or write fails.
+    read or write fails. The photo's Modify recipe stays with it: the new
+    EXIF changes the file identity it is keyed by (``recipe_store.carry_recipe``).
     """
     rewriter = _EXIF_REWRITERS.get(in_place_format(path) or "")
     if rewriter is None:
         raise ValueError(f"can't rewrite the EXIF of {path}")
     rewritten = rewriter(Path(path).read_bytes(), update)
-    replace_atomically(path, lambda tmp: tmp.write_bytes(rewritten))
+
+    def write() -> bool:
+        replace_atomically(path, lambda tmp: tmp.write_bytes(rewritten))
+        return True
+
+    carry_recipe(path, write)

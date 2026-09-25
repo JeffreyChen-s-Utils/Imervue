@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-32 | 2026-09-25 | Modify recipes follow a photo through lossless rotations and EXIF rewrites | #fix #data-loss #recipe | [2026-09](2026-09.md) |
 | U-20260925-31 | 2026-09-25 | Tests never write the real recipe store | #test | [2026-09](2026-09.md) |
 | U-20260925-30 | 2026-09-25 | Refactor: get_exif_data moves to the Qt-free exif_merge; the MCP server stays Qt-free | #refactor #mcp | [2026-09](2026-09.md) |
 | U-20260925-29 | 2026-09-25 | MCP tools open HEIC and develop camera RAW like the viewer | #fix #mcp | [2026-09](2026-09.md) |

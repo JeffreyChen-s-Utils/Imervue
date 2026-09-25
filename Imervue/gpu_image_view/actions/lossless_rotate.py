@@ -23,6 +23,9 @@ from Imervue.image.orientation import (
     exif_orientation, read_orientation, transpose_for,
 )
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.dimensions import image_dimensions
+from Imervue.image.recipe import Recipe, turned_with_file
+from Imervue.image.recipe_store import carry_recipe
 
 logger = logging.getLogger("Imervue.lossless_rotate")
 
@@ -86,11 +89,23 @@ def lossless_rotate(file_path: str, clockwise: bool = True) -> bool:
     formats (and a JPEG whose segments can't be parsed) are re-saved with
     their metadata; a file a re-save can't keep whole — camera RAW, HEIC /
     JXL / SVG, multi-frame (see ``in_place_save.can_rewrite_in_place``) — is
-    refused and left untouched.
+    refused and left untouched. The photo's Modify recipe turns with it
+    (``recipe.turned_with_file``) and stays keyed to the file.
     """
     if not Path(file_path).is_file():
         logger.error("File not found: %s", file_path)
         return False
+    size = image_dimensions(file_path)          # upright, before the turn
+
+    def keep_recipe(recipe: Recipe) -> Recipe | None:
+        if size is None:
+            return None
+        return turned_with_file(recipe, clockwise=clockwise, size=size)
+
+    return carry_recipe(file_path, lambda: _turn(file_path, clockwise), keep_recipe)
+
+
+def _turn(file_path: str, clockwise: bool) -> bool:
     if in_place_format(file_path) == "JPEG" and _rotate_jpeg_tag(file_path, clockwise):
         return True
     if not can_rewrite_in_place(file_path):

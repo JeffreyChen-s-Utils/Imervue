@@ -231,3 +231,85 @@ def test_unexpected_decode_error_is_not_swallowed(store, monkeypatch):
     monkeypatch.setattr(Recipe, "from_dict", staticmethod(boom))
     with pytest.raises(RuntimeError):
         store.get("id1")
+
+
+class TestRekey:
+    def test_the_recipe_and_its_variants_move(self, store):
+        store.set("old", Recipe(exposure=1.0), last_path="a.jpg")
+        store.save_variant("old", "bw", Recipe(saturation=-1.0))
+        assert store.rekey("old", "new") is True
+        assert store.get("old") is None
+        assert store.get("new").exposure == pytest.approx(1.0)
+        assert store.get_variant("new", "bw").saturation == pytest.approx(-1.0)
+
+    def test_a_transform_applies_to_every_recipe(self, store):
+        store.set("old", Recipe(exposure=1.0))
+        store.save_variant("old", "v", Recipe(exposure=0.5))
+        store.rekey("old", "new", lambda r: Recipe(exposure=r.exposure * 2))
+        assert store.get("new").exposure == pytest.approx(2.0)
+        assert store.get_variant("new", "v").exposure == pytest.approx(1.0)
+
+    def test_nothing_moves_when_one_recipe_cannot_follow(self, store):
+        store.set("old", Recipe(exposure=1.0))
+        store.save_variant("old", "masked", Recipe(exposure=0.5))
+        assert store.rekey("old", "new", lambda r: None if r.exposure < 1 else r) is False
+        assert store.get("old").exposure == pytest.approx(1.0) and store.get("new") is None
+
+    @pytest.mark.parametrize(("old", "new"), [("", "new"), ("old", ""), ("old", "old"), ("gone", "new")])
+    def test_nothing_to_move(self, store, old, new):
+        store.set("old", Recipe(exposure=1.0))
+        assert store.rekey(old, new) is False
+        assert store.get("old") is not None
+
+    def test_the_move_is_saved(self, store, tmp_path):
+        store.set("old", Recipe(exposure=1.0))
+        store.rekey("old", "new")
+        reloaded = RecipeStore(store._path)  # noqa: SLF001
+        assert reloaded.get("new").exposure == pytest.approx(1.0)
+
+
+class TestCarryRecipe:
+    """An EXIF rewrite or a lossless turn changed the identity and orphaned the edits."""
+
+    @pytest.fixture
+    def jpeg(self, tmp_path):
+        from PIL import Image
+        path = tmp_path / "p.jpg"
+        Image.new("RGB", (60, 40), (10, 120, 200)).save(path, quality=95)
+        clear_identity_cache()
+        return str(path)
+
+    def test_a_gps_write_keeps_the_recipe(self, jpeg):
+        from Imervue.image.gps_geotag import write_gps
+        from Imervue.image.recipe_store import recipe_store
+        recipe_store.set_for_path(jpeg, Recipe(exposure=0.8, crop=(1, 2, 30, 20)))
+        assert write_gps(jpeg, 25.03, 121.56)
+        kept = recipe_store.get_for_path(jpeg)
+        assert kept is not None and kept.crop == (1, 2, 30, 20)
+
+    def test_a_lossless_turn_turns_the_recipe(self, jpeg):
+        from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+        from Imervue.image.recipe_store import recipe_store
+        recipe_store.set_for_path(jpeg, Recipe(exposure=0.8, crop=(0, 0, 30, 20)))
+        assert lossless_rotate(jpeg, clockwise=True)
+        turned = recipe_store.get_for_path(jpeg)
+        assert turned is not None and turned.exposure == pytest.approx(0.8)
+        assert turned.crop == (20, 0, 20, 30)           # the top-left box, now top-right
+
+    def test_a_recipe_with_masks_stays_under_the_old_identity(self, jpeg):
+        from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+        from Imervue.image.recipe import file_identity
+        from Imervue.image.recipe_store import recipe_store
+        recipe = Recipe(exposure=0.8)
+        recipe.extra["masks"] = [{"type": "radial", "params": {"cx": 5}}]
+        recipe_store.set_for_path(jpeg, recipe)
+        before = file_identity(jpeg)
+        lossless_rotate(jpeg, clockwise=True)
+        assert recipe_store.get(before) is not None       # turning back finds it again
+        assert recipe_store.get_for_path(jpeg) is None
+
+    def test_a_change_that_did_nothing_moves_nothing(self, jpeg):
+        from Imervue.image.recipe_store import carry_recipe, recipe_store
+        recipe_store.set_for_path(jpeg, Recipe(exposure=0.8))
+        assert carry_recipe(jpeg, lambda: False) is False
+        assert recipe_store.get_for_path(jpeg) is not None

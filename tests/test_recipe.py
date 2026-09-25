@@ -316,3 +316,50 @@ class TestExifOrientedBase:
 
     def test_flag_is_not_an_edit(self):
         assert Recipe(exif_oriented=False).is_identity()
+
+
+class TestTurnedWithFile:
+    """A lossless quarter turn of the file must turn the recipe's result the same way."""
+
+    @staticmethod
+    def _base(w=6, h=4):
+        return np.arange(w * h * 3, dtype=np.uint8).reshape(h, w, 3)
+
+    @pytest.mark.parametrize("clockwise", [True, False])
+    @pytest.mark.parametrize("recipe_kwargs", [
+        {},
+        {"crop": (1, 0, 3, 2)},
+        {"flip_h": True, "crop": (0, 1, 4, 2)},
+        {"flip_v": True},
+        {"rotate_steps": 1, "crop": (0, 1, 3, 4)},
+        {"rotate_steps": 3, "flip_h": True, "crop": (1, 2, 2, 3)},
+    ])
+    def test_the_new_result_is_the_old_one_turned(self, clockwise, recipe_kwargs):
+        from Imervue.image.recipe import Recipe, _apply_geometry, turned_with_file
+        base = self._base()
+        recipe = Recipe(**recipe_kwargs)
+        old = _apply_geometry(base, recipe)
+        turned_base = np.rot90(base, k=-1 if clockwise else 1)      # what the file now shows
+        new_recipe = turned_with_file(recipe, clockwise=clockwise, size=(6, 4))
+        new = _apply_geometry(turned_base, new_recipe)
+        assert np.array_equal(new, np.rot90(old, k=-1 if clockwise else 1))
+        assert new_recipe.rotate_steps == recipe.rotate_steps
+
+    @pytest.mark.parametrize("extra", ["masks", "layers", "lens_flare", "face_tags"])
+    def test_positioned_extras_cannot_follow(self, extra):
+        from Imervue.image.recipe import Recipe, turned_with_file
+        recipe = Recipe(exposure=0.5)
+        recipe.extra[extra] = [{"x": 1}]
+        assert turned_with_file(recipe, clockwise=True, size=(6, 4)) is None
+
+    def test_a_recipe_set_on_sideways_pixels_cannot_follow(self):
+        from Imervue.image.recipe import Recipe, turned_with_file
+        recipe = Recipe(exposure=0.5, exif_oriented=False)
+        assert turned_with_file(recipe, clockwise=True, size=(6, 4)) is None
+
+    def test_global_adjustments_come_along_untouched(self):
+        from Imervue.image.recipe import Recipe, turned_with_file
+        recipe = Recipe(exposure=0.7, contrast=-0.2)
+        recipe.extra["levels"] = {"enabled": True}
+        turned = turned_with_file(recipe, clockwise=False, size=(6, 4))
+        assert (turned.exposure, turned.contrast, turned.extra) == (0.7, -0.2, recipe.extra)
