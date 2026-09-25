@@ -18,10 +18,7 @@ import datetime as _dt
 import logging
 from pathlib import Path
 
-from PIL import Image
-
-from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.exif_merge import read_exif
 
 logger = logging.getLogger("Imervue.calendar_index")
 
@@ -83,12 +80,7 @@ def _exif_datetime(exif) -> _dt.datetime | None:
 def capture_datetime(path: str | Path) -> _dt.datetime:
     """Return the capture datetime (EXIF original → digitised → top → mtime)."""
     p = Path(path)
-    ensure_pillow_opener(p.suffix)   # HEIC / JXL carry EXIF too, once their codec is registered
-    try:
-        with Image.open(p) as im:
-            exif = im.getexif()
-    except IMAGE_READ_ERRORS:
-        exif = None
+    exif = read_exif(p)   # HEIC / JXL and the RAW containers Pillow can't open too
     if exif:
         dt = _exif_datetime(exif)
         if dt is not None:

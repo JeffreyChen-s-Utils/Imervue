@@ -146,6 +146,7 @@ def test_heic_capture_time_is_read(tmp_path):
 
 def test_codec_is_registered_before_reading(tmp_path, monkeypatch):
     seen = []
-    monkeypatch.setattr(ci, "ensure_pillow_opener", seen.append)
+    from Imervue.image import exif_merge
+    monkeypatch.setattr(exif_merge, "ensure_pillow_opener", seen.append)
     ci.capture_datetime(str(tmp_path / "missing.jxl"))
     assert seen == [".jxl"]

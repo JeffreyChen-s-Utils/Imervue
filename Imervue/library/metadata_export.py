@@ -15,12 +15,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
 from PIL.ExifTags import TAGS
 
-from Imervue.image.exif_merge import merged_exif
+from Imervue.image.exif_merge import merged_exif, read_exif
 from Imervue.image.dimensions import image_dimensions
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
 logger = logging.getLogger("Imervue.library.metadata_export")
 
@@ -93,16 +91,11 @@ def _populate_image_fields(path: str, rec: dict[str, Any]) -> None:
     if dims is None:   # unreadable file: export the row without image fields
         return
     rec["width"], rec["height"] = dims
-    try:
-        with Image.open(path) as im:
-            exif_raw = merged_exif(im)   # the camera fields live in the Exif sub-IFD
-            if exif_raw:
-                for tag_id, value in exif_raw.items():
-                    tag = TAGS.get(tag_id, str(tag_id))
-                    if tag in _EXIF_FIELDS:
-                        rec[f"exif_{tag}"] = _coerce_value(value)
-    except IMAGE_READ_ERRORS:   # unreadable file: export the row without image fields
-        return
+    # The camera fields live in the Exif sub-IFD; CR3 / RW2 / ORF / RAF too.
+    for tag_id, value in merged_exif(read_exif(path)).items():
+        tag = TAGS.get(tag_id, str(tag_id))
+        if tag in _EXIF_FIELDS:
+            rec[f"exif_{tag}"] = _coerce_value(value)
 
 
 def _populate_user_fields(path: str, rec: dict[str, Any]) -> None:

@@ -17,10 +17,12 @@ from pathlib import Path
 
 from PIL import Image, JpegImagePlugin, PngImagePlugin
 
+from Imervue.image.exif_merge import read_exif
 from Imervue.image.exif_types import restore_types
 from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.jpeg_exif import update_jpeg_exif
 from Imervue.image.orientation import strip_xmp_orientation
+from Imervue.image.raw_exif import RAW_EXIF_EXTENSIONS
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.recipe_store import carry_recipe
 from Imervue.image.webp_exif import update_webp_exif
@@ -100,9 +102,12 @@ def webp_is_lossless(file_path: str) -> bool:
     return False
 
 
-def descriptive_exif(source: Image.Image, *, keep_location: bool = True,
+def descriptive_exif(source: Image.Image | Image.Exif, *, keep_location: bool = True,
                      keep_maker_note: bool = True) -> Image.Exif:
     """Copy *source*'s descriptive EXIF — IFD0 text tags plus the Exif and GPS IFDs.
+
+    *source* is an open image, or an EXIF from :func:`~Imervue.image.exif_merge.read_exif`
+    (a camera RAW container Pillow can't open).
 
     A TIFF's ``getexif()`` is its whole tag directory, width, strip offsets and
     all; handed back to the save, those tags overwrite the new layout (a turned
@@ -113,7 +118,7 @@ def descriptive_exif(source: Image.Image, *, keep_location: bool = True,
     maker note is left out as well: a new file, where its offsets no longer
     hold and it may not even fit.
     """
-    exif = source.getexif()
+    exif = source if isinstance(source, Image.Exif) else source.getexif()
     kept = Image.Exif()
     for tag in _DESCRIPTIVE_IFD0_TAGS & exif.keys():
         if tag == _XMP_TAG and not keep_location:
@@ -129,15 +134,15 @@ def descriptive_exif(source: Image.Image, *, keep_location: bool = True,
     return kept
 
 
-def _exif_for(exif: Image.Exif, fmt: str, source: Image.Image) -> Image.Exif | bytes:
+def _exif_for(exif: Image.Exif, fmt: str, original: object) -> Image.Exif | bytes:
     """*exif* as the ``exif=`` save option for *fmt*.
 
-    Bytes with the entry types Pillow gets wrong put back from *source*'s raw
-    block; a TIFF writer re-parses the block into tags, so it gets the object.
+    Bytes with the entry types Pillow gets wrong put back from the source's
+    raw block *original* (``None`` without one); a TIFF writer re-parses the
+    block into tags, so it gets the object.
     """
     if fmt == "TIFF":
         return exif
-    original = source.info.get("exif")
     return restore_types(exif.tobytes(), original if isinstance(original, bytes) else None)
 
 
@@ -155,7 +160,7 @@ def carried_save_kwargs(source: Image.Image, fmt: str, file_path: str) -> dict:
     if len(exif):
         # Bytes with Pillow's wrong entry types put back, except for TIFF: its
         # writer re-parses the block into tags and needs the Exif object.
-        kwargs["exif"] = _exif_for(exif, fmt, source)
+        kwargs["exif"] = _exif_for(exif, fmt, source.info.get("exif"))
     for key in ("icc_profile", "dpi"):
         if source.info.get(key):
             kwargs[key] = source.info[key]
@@ -221,17 +226,23 @@ def save_edited_copy(source_path: str | Path, edited: Image.Image, target: str |
 
 def _edited_save_kwargs(source_path: str | Path, fmt: str) -> dict:
     """Save options carrying *source_path*'s metadata into edited pixels written as *fmt*."""
-    try:
-        with Image.open(source_path) as source:
-            if in_place_format(source_path) == fmt:
-                kwargs = carried_save_kwargs(source, fmt, str(source_path))
-            else:
-                exif = descriptive_exif(source, keep_maker_note=False)
-                kwargs = {"exif": _exif_for(exif, fmt, source)} if len(exif) else {}
-                if source.info.get("dpi"):
-                    kwargs["dpi"] = source.info["dpi"]
-    except IMAGE_READ_ERRORS:
-        return {"quality": 90} if fmt == "WEBP" else {}
+    if Path(source_path).suffix.lower() in RAW_EXIF_EXTENSIONS:
+        # A CR3 / RW2 / ORF / RAF: Pillow can't open it, its EXIF is read directly.
+        exif = descriptive_exif(read_exif(source_path), keep_maker_note=False)
+        kwargs = {"exif": _exif_for(exif, fmt, None)} if len(exif) else {}
+    else:
+        try:
+            with Image.open(source_path) as source:
+                if in_place_format(source_path) == fmt:
+                    kwargs = carried_save_kwargs(source, fmt, str(source_path))
+                else:
+                    exif = descriptive_exif(source, keep_maker_note=False)
+                    original = source.info.get("exif")
+                    kwargs = {"exif": _exif_for(exif, fmt, original)} if len(exif) else {}
+                    if source.info.get("dpi"):
+                        kwargs["dpi"] = source.info["dpi"]
+        except IMAGE_READ_ERRORS:
+            return {"quality": 90} if fmt == "WEBP" else {}
     kwargs.pop("icc_profile", None)   # the edited pixels are sRGB
     if fmt == "WEBP" and "lossless" not in kwargs:
         kwargs.setdefault("quality", 90)
