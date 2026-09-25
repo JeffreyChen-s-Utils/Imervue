@@ -130,7 +130,7 @@ class _PreviewPanel(QLabel):
 
 
 class MultiMonitorWindow(QWidget):
-    """Frameless, full-screen-on-secondary mirror of the main viewer."""
+    """Mirror of the main viewer: frameless and full screen on a secondary display."""
 
     closed = Signal()
 
@@ -177,11 +177,27 @@ class MultiMonitorWindow(QWidget):
             user_setting_dict.get("multi_monitor_screen"),
         )
         target = screens[idx]
-        self.setGeometry(target.availableGeometry())
-        self.showMaximized()
+        self._show_on(target)
         # Remember the monitor so reopening lands on the same one.
         user_setting_dict["multi_monitor_screen"] = target.name()
         return idx != primary_index
+
+    def _show_on(self, screen) -> None:
+        """Frameless full screen on a secondary *screen*, a maximised window on the primary.
+
+        The primary display also holds the main window, which a frameless full-screen
+        mirror would bury; there the mirror keeps its frame.
+        """
+        secondary = screen is not QGuiApplication.primaryScreen()
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint, secondary)
+        if not secondary:
+            self.setGeometry(screen.availableGeometry())
+            self.showMaximized()
+            return
+        self.winId()  # the native window must exist to be told its screen
+        self.windowHandle().setScreen(screen)
+        self.setGeometry(screen.geometry())
+        self.showFullScreen()
 
     def _move_to_adjacent_screen(self, forward: bool) -> None:
         """Cycle the mirror to the next / previous screen and remember it."""
@@ -194,14 +210,17 @@ class MultiMonitorWindow(QWidget):
             (i for i, s in enumerate(screens) if s is current), 0,
         )
         target = screens[next_screen_index(cur_index, len(screens), forward=forward)]
-        self.setGeometry(target.availableGeometry())
-        self.showMaximized()
+        self._show_on(target)
         user_setting_dict["multi_monitor_screen"] = target.name()
 
     # -------- Events --------
     def keyPressEvent(self, event: QKeyEvent) -> None:
+        from Imervue.gpu_image_view.key_input_handler import shortcut_combo
+        from Imervue.gui.shortcut_settings_dialog import shortcut_manager
         key = event.key()
-        if key == Qt.Key.Key_Escape:
+        # The mirror has the focus once shown, so the key that opened it has to close it here.
+        if (key == Qt.Key.Key_Escape
+                or shortcut_manager.get_action(*shortcut_combo(event)) == "multi_monitor"):
             self.close()
             return
         if key in (Qt.Key.Key_Right, Qt.Key.Key_Left):

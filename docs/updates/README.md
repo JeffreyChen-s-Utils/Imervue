@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-35 | 2026-09-26 | The monitor mirror is frameless on a second display and its shortcut closes it | #fix #multi-monitor #shortcuts | [2026-09-b](2026-09-b.md) |
 | U-20260926-34 | 2026-09-26 | Print Layout sets its margin and gutter and says when an export fails | #fix #print #export #i18n #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
 | U-20260926-33 | 2026-09-26 | Slideshow MP4 offers the transitions the renderer already has | #fix #slideshow #i18n #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
 | U-20260926-32 | 2026-09-26 | Develop's Undo and Redo buttons step through the slider edits | #fix #develop #undo | [2026-09-b](2026-09-b.md) |
@@ -407,4 +408,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 65 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 66 |
