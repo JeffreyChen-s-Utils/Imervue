@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-32 | 2026-09-26 | Develop's Undo and Redo buttons step through the slider edits | #fix #develop #undo | [2026-09-b](2026-09-b.md) |
 | U-20260926-31 | 2026-09-26 | Compare opens on the thumbnails you selected | #fix #compare #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-30 | 2026-09-26 | Rating and favourite keys show their stars at once and the rating HUD leaves on time | #fix #viewer #rating #keyboard | [2026-09-b](2026-09-b.md) |
 | U-20260926-29 | 2026-09-26 | The docs give the CLI's shared flags and the MCP resize, palette and completion as they are | #docs #fix #cli #mcp #i18n | [2026-09-b](2026-09-b.md) |
@@ -404,4 +405,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 62 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 63 |

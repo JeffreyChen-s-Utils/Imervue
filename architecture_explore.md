@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `f4247eb` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `9322f61` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 889 | 148,494 |
+| `tests/` | 889 | 148,544 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
-| `Imervue/gui/` | 167 | 33,320 |
+| `Imervue/gui/` | 167 | 33,351 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,355 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,274 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,279 |
 | `Imervue/multi_language/` | 8 | 14,159 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,740** | **331,391** |
+| **總計** | **1,740** | **331,477** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,532 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,568 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -494,7 +494,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `lossless_rotate.py` | 115 | 90° 旋轉檔案：JPEG 只改 EXIF 轉向標籤（`jpeg_orientation`，不需 piexif、其餘位元組不變）；其他格式從檢視器看到的影像轉後原子重存，以 `in_place_save.carried_save_kwargs` 帶回 metadata 與壓縮設定；RAW、多影格等無法完整寫回的檔案拒絕處理；經 `recipe_store.carry_recipe` 讓 Modify recipe 跟著轉（`recipe.turned_with_file`） |
 | `drag_out.py` | 75 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
-| `recipe_commands.py` | 60 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
+| `recipe_commands.py` | 65 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
 | `undo_coalescer.py` | 61 | 把滑桿拖曳產生的密集編輯合併成單一 undo 步驟 |
 
 ### 6.11 `Imervue/library/`
@@ -537,13 +537,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-167 個檔、33,320 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+167 個檔、33,351 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 911 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
+| `develop_panel.py` | 941 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
 | `develop_right_panel.py` | 327 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 131 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
 | `annotation_canvas.py` | 845 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
@@ -562,7 +562,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_screens.py` | 205 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
 | `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
-| `main_window_layout.py` | 296 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
+| `main_window_layout.py` | 297 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
 | `main_window_browse.py` | 147 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
 | `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 929 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-889 個檔、148,494 行。`pyproject.toml` 定義三個互斥層級 marker：
+889 個檔、148,544 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

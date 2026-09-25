@@ -135,3 +135,9 @@ def test_file_tree_shows_every_format_the_viewer_opens(window):
     from Imervue.image.formats import VIEWER_EXTENSIONS
     filters = set(window.model.sourceModel().nameFilters())
     assert filters == {f"*{ext}" for ext in VIEWER_EXTENSIONS}
+
+
+
+def test_the_modify_panel_undoes_through_the_viewers_stack(window):
+    """Slider edits are pushed to the viewer's undo manager; the panel's buttons must step it."""
+    assert window.modify_panel.undo_stack() is window.viewer.undo_manager

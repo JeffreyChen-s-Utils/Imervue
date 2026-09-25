@@ -189,6 +189,7 @@ class MainWindowLayoutMixin:
         self.modify_panel.recipe_committed.connect(
             self.viewer._on_recipe_committed,
         )
+        self.modify_panel.use_undo_stack(self.viewer.undo_manager)
 
         modify_page = QWidget()
         modify_layout = QHBoxLayout(modify_page)

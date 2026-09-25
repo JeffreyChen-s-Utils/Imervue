@@ -277,12 +277,12 @@ class DevelopRightPanelMixin:
         self._interactive_widgets.append(self._btn_reset)
 
         self._btn_undo = QPushButton(lang.get("develop_undo", "Undo"))
-        self._btn_undo.clicked.connect(self._undo_stack.undo)
+        self._btn_undo.clicked.connect(lambda: self.step_edit(backwards=True))
         btn_row.addWidget(self._btn_undo)
         self._interactive_widgets.append(self._btn_undo)
 
         self._btn_redo = QPushButton(lang.get("develop_redo", "Redo"))
-        self._btn_redo.clicked.connect(self._undo_stack.redo)
+        self._btn_redo.clicked.connect(lambda: self.step_edit(backwards=False))
         btn_row.addWidget(self._btn_redo)
         self._interactive_widgets.append(self._btn_redo)
 

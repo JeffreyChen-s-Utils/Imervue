@@ -275,6 +275,36 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
     def undo_stack(self) -> QUndoStack:
         return self._undo_stack
 
+    def use_undo_stack(self, stack: QUndoStack) -> None:
+        """Step Undo / Redo through *stack*: the viewer's, where committed recipe edits are pushed.
+
+        The panel's own stack never received a command, so its Undo and Redo
+        buttons did nothing.
+        """
+        self._undo_stack = stack
+
+    def step_edit(self, backwards: bool) -> None:
+        """Undo (or redo) this picture's last committed edit and show the recipe it leaves.
+
+        An edit still waiting for the debounce is committed first, so it is
+        what Undo takes back. A command for another picture on top of the
+        stack is left alone.
+        """
+        self._debounce.stop()
+        self._commit_recipe()
+        stack = self._undo_stack
+        command = stack.command(stack.index() - 1 if backwards else stack.index())
+        if self._path is None or getattr(command, "path", None) != self._path:
+            return
+        if backwards:
+            stack.undo()
+        else:
+            stack.redo()
+        self._current = recipe_store.get_for_path(self._path) or Recipe()
+        self._committed = Recipe.from_dict(self._current.to_dict())
+        self._sync_sliders()
+        self._refresh_canvas_base()
+
     # ------------------------------------------------------------------
     # Inline AnnotationCanvas management
     # ------------------------------------------------------------------
