@@ -76,24 +76,25 @@ def apply_highlights_shadows(
 def apply_whites_blacks(
     arr: np.ndarray, whites: float, blacks: float,
 ) -> np.ndarray:
-    """Push the endpoints of the histogram.
+    """Move the two ends of the tonal range.
 
-    ``whites`` > 0 stretches bright pixels toward 255; ``blacks`` < 0
-    crushes dark pixels toward 0. Both apply as a linear remap so mid-tones
-    are only minimally affected.
+    ``whites`` > 0 stretches bright pixels up to 255 and < 0 dims white to a
+    grey; ``blacks`` < 0 crushes dark pixels down to 0 and > 0 lifts black to
+    a faded grey. Both apply as one linear remap, so mid-tones move least.
     """
     if is_zero(whites) and is_zero(blacks):
         return arr
-    rgb = arr[..., :3].astype(np.float32) / _MAX_BYTE
-    black_point = max(0.0, blacks * -0.2)  # blacks<0 raises black_point
-    # whites>0 lowers the white point so highlights stretch toward 255. The
-    # earlier ``- whites * -0.2`` added instead of subtracted, pushing the point
-    # to >1.0 for every positive value, so ``min(1.0, …)`` pinned it at 1.0 and
-    # the slider did nothing.
-    white_point = min(1.0, 1.0 - whites * 0.2)
-    if white_point - black_point <= 0.01:
+    # The input tones that land on the ends: a stretch (whites > 0) or a crush (blacks < 0).
+    black_in = max(0.0, blacks * -0.2)
+    white_in = min(1.0, 1.0 - whites * 0.2)
+    # Where the ends land: dimmed (whites < 0) or lifted (blacks > 0). Without
+    # these the left half of Whites and the right half of Blacks did nothing.
+    black_out = max(0.0, blacks * 0.2)
+    white_out = min(1.0, 1.0 + whites * 0.2)
+    if white_in - black_in <= 0.01:
         return arr
-    rgb = (rgb - black_point) / (white_point - black_point)
+    rgb = arr[..., :3].astype(np.float32) / _MAX_BYTE
+    rgb = black_out + (rgb - black_in) * ((white_out - black_out) / (white_in - black_in))
     np.clip(rgb, 0.0, 1.0, out=rgb)
     out = arr.copy()
     out[..., :3] = (rgb * _MAX_BYTE).astype(np.uint8)

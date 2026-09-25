@@ -91,6 +91,42 @@ class TestWhitesBlacks:
         out = adj.apply_whites_blacks(gradient_rgba, 0.5, -0.5)
         assert np.array_equal(out[..., 3], gradient_rgba[..., 3])
 
+    @staticmethod
+    def _levels(adj, whites, blacks, values=(0, 30, 128, 220, 255)):
+        arr = np.zeros((1, len(values), 4), dtype=np.uint8)
+        arr[0, :, :3] = np.array(values, dtype=np.uint8)[:, None]
+        arr[..., 3] = 255
+        return [int(v) for v in adj.apply_whites_blacks(arr, whites, blacks)[0, :, 0]]
+
+    def test_negative_whites_dims_white_and_keeps_black(self, adj):
+        """The left half of the Whites slider used to leave the picture as it was."""
+        levels = self._levels(adj, -1.0, 0.0)
+        assert levels[-1] == 204                 # white lands on 80 % grey
+        assert levels[0] == 0
+        assert levels[2] < 128
+
+    def test_positive_blacks_lifts_black_and_keeps_white(self, adj):
+        """The right half of the Blacks slider used to leave the picture as it was."""
+        levels = self._levels(adj, 0.0, 1.0)
+        assert levels[0] == 51                   # black lands on 20 % grey
+        assert levels[-1] == 255
+        assert levels[2] > 128
+
+    def test_positive_whites_and_negative_blacks_still_stretch(self, adj):
+        levels = self._levels(adj, 1.0, -1.0)
+        assert levels[0] == 0 and levels[1] == 0     # 30 was under the new black point
+        assert levels[3] == 255 and levels[-1] == 255  # 220 was over the new white point
+
+    def test_a_small_step_moves_the_ends_a_little(self, adj):
+        assert self._levels(adj, -0.01, 0.0)[-1] == 254
+        assert self._levels(adj, 0.0, 0.01)[0] == 0   # 0.2 % of 255 still truncates to 0
+        assert self._levels(adj, 0.0, 0.02)[0] == 1
+
+    @pytest.mark.parametrize(("whites", "blacks"), [(-1.0, 1.0), (-0.5, -0.5), (0.5, 0.5), (1.0, -1.0)])
+    def test_tones_keep_their_order(self, adj, whites, blacks):
+        levels = self._levels(adj, whites, blacks, values=tuple(range(0, 256, 5)))
+        assert levels == sorted(levels)
+
 
 class TestVibrance:
     def test_zero_is_identity(self, adj, gray_rgba):
