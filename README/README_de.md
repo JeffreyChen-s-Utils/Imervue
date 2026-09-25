@@ -189,6 +189,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **EXIF-Ausrichtung** — Hochformatfotos, die Handy oder Kamera nur markiert statt gedreht haben, erscheinen aufrecht in Viewer, Thumbnails, Listenansicht, Hover-Vorschau und Modify-Tab; ein zuvor gespeicherter Develop-Zuschnitt / eine Drehung gilt weiter für die Ausrichtung, auf der er erstellt wurde
 - **Farbmanagement** — Fotos mit eingebettetem Farbprofil (Display P3 vom Handy, Adobe RGB von Kameras, CMYK) werden für Viewer und Thumbnails nach sRGB umgerechnet; Bilder ohne Profil oder mit sRGB werden unverändert gezeigt
 - **Abgeschnittene Dateien** — ein JPEG, PNG, TIFF, GIF oder BMP, das vorzeitig endet (ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto), öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen
+- **Von anderen Programmen geänderte Dateien** — speichert ein anderes Programm über ein Bild (ein externer Editor, direkt oder indem es eine Kopie darüber umbenennt), zeigt der Viewer die neue Fassung: das in Deep Zoom geöffnete Bild eine halbe Sekunde nach dem letzten Schreibvorgang, Miniaturen im Grid innerhalb weniger Sekunden
 - **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung; eine Animation, die dekodiert mehr als 512 MB bräuchte, wird beim Abspielen Bild für Bild dekodiert statt vorab komplett; ein Bild mit 10 ms oder weniger wird wie in Browsern 100 ms lang gezeigt
 
 ### Browse-Modi
@@ -356,7 +357,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 ### Externe Editoren
 
-Programme (Ihr Bildeditor / … / …) unter **File > External Editors…** registrieren und über **File > Open in External Editor** mit dem aktuellen Bild starten.
+Programme (Ihr Bildeditor / … / …) unter **File > External Editors…** registrieren und über **File > Open in External Editor** mit dem aktuellen Bild starten. Speichert der Editor, zeigt der Viewer die neue Fassung von selbst.
 
 ---
 

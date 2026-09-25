@@ -141,6 +141,8 @@ También se abren panoramas muy por encima del límite de seguridad de 179 megap
 
 Un JPEG, PNG, TIFF, GIF o BMP incompleto — una descarga o copia interrumpida, una foto recuperada de una tarjeta de memoria dañada — se abre con la parte que se pudo leer, como en un navegador, en lugar de no abrirse.
 
+Cuando otro programa guarda sobre una imagen — un editor externo, directamente o renombrando una copia encima —, el visor muestra la versión nueva: la imagen abierta en zoom profundo medio segundo después de la última escritura, las miniaturas de la cuadrícula en pocos segundos.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

@@ -138,6 +138,8 @@ Panoramas muito acima do limite de segurança de 179 megapixels do Pillow també
 
 Um JPEG, PNG, TIFF, GIF ou BMP incompleto — um download ou cópia interrompidos, uma foto recuperada de um cartão de memória com defeito — abre com a parte que foi lida, como no navegador, em vez de não abrir.
 
+Quando outro programa salva por cima de uma imagem — um editor externo, direto no arquivo ou renomeando uma cópia por cima —, o visualizador mostra a versão nova: a imagem aberta no zoom profundo meio segundo após a última gravação, as miniaturas da grade em poucos segundos.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

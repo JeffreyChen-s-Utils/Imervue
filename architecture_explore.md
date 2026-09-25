@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `42adafa` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `170e2c2` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 880 | 145,719 |
+| `tests/` | 882 | 145,989 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,144 |
 | `Imervue/gui/` | 167 | 33,279 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 127 | 15,174 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,991 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,119 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,673 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,727** | **327,770** |
+| **總計** | **1,730** | **328,168** |
 
-其中 `Imervue/` 套件本身 783 檔 / 167,686 行。
+其中 `Imervue/` 套件本身 784 檔 / 167,814 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -411,9 +411,10 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `gpu_image_view.py` | 750 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
-| `view_state_init.py` | 274 | 建構子呼叫的狀態初始化函式（tile grid、deep zoom、瀏覽、互動、顯示），只設定屬性、不碰 GL |
-| `deep_zoom_loading.py` | 296 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知） |
+| `gpu_image_view.py` | 756 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin |
+| `view_state_init.py` | 278 | 建構子呼叫的狀態初始化函式（tile grid、deep zoom、瀏覽、互動、顯示），只設定屬性、不碰 GL |
+| `deep_zoom_loading.py` | 299 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知） |
+| `shown_file_watch.py` | 75 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看（`QFileSystemWatcher`，`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間）；外部編輯器就地覆寫、寫副本再改名蓋過去都看得到，寫入停止 0.5 秒後、大小或修改時間確實變了才經 `_reload_rewritten_image` 重新載入並重解縮圖（資料夾監看只看得到清單變動，看不到這兩種存檔） |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
 | `prefetch_memory.py` | 123 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
 | `view_mouse.py` | 148 | `ViewMouseMixin`：滾輪縮放（含放大鏡倍率、格線與閱讀模式捲動）、按壓／拖曳／放開、雙擊切換 |
@@ -454,7 +455,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `tile_loader.py` | 551 | 縮圖牆非同步載入：距離感知優先權、grid mutex 下收集結果、進度合併 |
+| `tile_loader.py` | 591 | 縮圖牆非同步載入：距離感知優先權、grid mutex 下收集結果、進度合併；每 4 秒的背景 stat 掃描（`scan_folder_paths`）標出消失的檔案，也找出縮圖解碼後被其他程式改寫（大小或修改時間變了）的檔案，重解它的縮圖（`refresh_rewritten_tile`：新縮圖到之前照畫舊的，到了換掉舊材質；filmstrip 與預取也丟掉） |
 | `tile_textures.py` | 138 | 圖磚 GPU 材質配置與 VRAM 預算淘汰 |
 | `tile_wall_loading.py` | 99 | 牆面 loading 狀態與轉圈幾何（大資料夾/網路磁碟不再空白） |
 | `prefetch_scheduler.py` | 176 | Deep-zoom 鄰居預載排程、取消過期 worker、淘汰快取 |
@@ -974,7 +975,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-880 個檔、145,719 行。`pyproject.toml` 定義三個互斥層級 marker：
+882 個檔、145,989 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

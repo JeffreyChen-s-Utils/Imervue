@@ -24,9 +24,9 @@ from Imervue.image.browser_state import is_missing_file_error, is_transient_load
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-# Low-frequency file-existence sweep — keeps every stat call off the GL paint
-# path. 4 s notices an unplugged drive promptly without hammering network
-# shares the way a per-frame check would.
+# Low-frequency file sweep — keeps every stat call off the GL paint path. 4 s
+# notices an unplugged drive, or a picture another program rewrote, promptly
+# without hammering network shares the way a per-frame check would.
 OFFLINE_SWEEP_INTERVAL_MS = 4000
 
 
@@ -130,6 +130,10 @@ def on_thumbnail_loaded(view: GPUImageView, img_data, path, generation) -> None:
         return
     if path not in view.model.images:
         return
+    if path in view.tile_cache and path in getattr(view, "tile_textures", {}):
+        # A fresh decode of a rewritten file: the texture still holds the old pixels.
+        from Imervue.gpu_image_view.tile_textures import free_tile_textures
+        free_tile_textures(view, (path,))
     with QMutexLocker(view.grid_mutex):
         view.tile_cache[path] = img_data
     getattr(view, "tile_errors", {}).pop(path, None)
@@ -139,7 +143,7 @@ def on_thumbnail_loaded(view: GPUImageView, img_data, path, generation) -> None:
     if hasattr(view.main_window, "clear_image_issue"):
         view.main_window.clear_image_issue(path)
     view._tile_load_times[path] = time.monotonic()
-    sig = _file_signature(path)
+    sig = file_signature(path)
     if sig is not None:
         signatures = getattr(view, "_tile_file_signatures", None)
         if not isinstance(signatures, dict):
@@ -429,7 +433,8 @@ def _drop_tile_path(view: GPUImageView, path: str) -> None:
     free_tile_textures(view, (path,))
 
 
-def _file_signature(path: str) -> tuple[int, int, str] | None:
+def file_signature(path: str) -> tuple[int, int, str] | None:
+    """``(size, mtime_ns, suffix)`` of *path*, or None when it can't be stat'ed."""
     try:
         st = os.stat(path)
     except OSError:
@@ -438,25 +443,42 @@ def _file_signature(path: str) -> tuple[int, int, str] | None:
 
 
 class _OfflineScanSignals(QObject):
-    finished = Signal(object, int)  # missing-path set, load generation
+    finished = Signal(object, int, object)  # missing set, load generation, rewritten set
 
 
 class OfflineScanWorker(QRunnable):
-    """Stat every folder path off the GUI thread and report the missing set."""
+    """Stat every folder path off the GUI thread; report the missing and the rewritten ones."""
 
-    def __init__(self, paths: list[str], generation: int) -> None:
+    def __init__(self, paths: list[str], generation: int,
+                 known: dict[str, tuple[int, int, str]] | None = None) -> None:
         super().__init__()
         self._paths = paths
         self._generation = generation
+        self._known = known or {}
         self.signals = _OfflineScanSignals()
 
     def run(self) -> None:
-        self.signals.finished.emit(scan_missing_paths(self._paths), self._generation)
+        missing, rewritten = scan_folder_paths(self._paths, self._known)
+        self.signals.finished.emit(missing, self._generation, rewritten)
 
 
-def scan_missing_paths(paths) -> set[str]:
-    """Pure sweep body: the subset of *paths* that no longer exist on disk."""
-    return {path for path in paths if not os.path.exists(path)}
+def scan_folder_paths(paths, known) -> tuple[set[str], set[str]]:
+    """Pure sweep body: ``(missing, rewritten)`` among *paths*, one stat each.
+
+    Missing: no longer on disk. Rewritten: still there, but its size or
+    modification time moved away from the signature *known* recorded when its
+    thumbnail was decoded - another program saved over it. A path *known*
+    has no signature for is never rewritten.
+    """
+    missing: set[str] = set()
+    rewritten: set[str] = set()
+    for path in paths:
+        signature = file_signature(path)
+        if signature is None:
+            missing.add(path)
+        elif path in known and known[path] != signature:
+            rewritten.add(path)
+    return missing, rewritten
 
 
 def start_offline_sweep(view: GPUImageView) -> None:
@@ -488,18 +510,21 @@ def tick_offline_sweep(view: GPUImageView) -> None:
     if not paths:
         return
     view._offline_scan_inflight = True
-    worker = OfflineScanWorker(paths, view._load_generation)
+    known = dict(getattr(view, "_tile_file_signatures", {}))   # a snapshot for the worker thread
+    worker = OfflineScanWorker(paths, view._load_generation, known)
     worker.signals.finished.connect(view._on_offline_scan_finished)
     QThreadPool.globalInstance().start(worker)
 
 
-def on_offline_scan_finished(view: GPUImageView, missing, generation: int) -> None:
-    """Apply one sweep result: flip offline states and reload recovered tiles."""
+def on_offline_scan_finished(view: GPUImageView, missing, generation: int, rewritten=()) -> None:
+    """Apply one sweep result: flip offline states, reload recovered and rewritten tiles."""
     view._offline_scan_inflight = False
     if generation != view._load_generation:
         return
     current = set(view.model.images)
     missing = set(missing) & current
+    for path in (set(rewritten) & current) - missing:
+        refresh_rewritten_tile(view, path, generation)
     offline = getattr(view, "offline_paths", set())
     recovered = (offline & current) - missing
     newly_missing = missing - offline
@@ -527,6 +552,21 @@ def _report_offline_changes(view: GPUImageView, newly_missing: set[str],
             _retry_thumbnail(view, path, generation)
 
 
+def refresh_rewritten_tile(view: GPUImageView, path: str, generation: int) -> None:
+    """Decode *path*'s thumbnail again: another program rewrote the file.
+
+    The old thumbnail stays on screen until the new one lands (which also
+    replaces its texture). The filmstrip copy and a prefetched full decode go
+    now, so paging to the picture shows the new pixels.
+    """
+    getattr(view, "_tile_file_signatures", {}).pop(path, None)   # the new decode records it again
+    getattr(view, "_filmstrip_thumb_cache", {}).pop(path, None)
+    prefetch = getattr(view, "_prefetch", None)
+    if prefetch is not None:
+        prefetch.discard(path)
+    _retry_thumbnail(view, path, generation)
+
+
 def _detect_renamed_cached_paths(view: GPUImageView, old_images, new_images) -> dict[str, str]:
     signatures = getattr(view, "_tile_file_signatures", {})
     if not isinstance(signatures, dict):
@@ -535,13 +575,13 @@ def _detect_renamed_cached_paths(view: GPUImageView, old_images, new_images) -> 
     new_only = [p for p in new_images if p not in old_images]
     by_sig: dict[tuple[int, int, str], list[str]] = {}
     for old in old_only:
-        sig = signatures.get(old) or _file_signature(old)
+        sig = signatures.get(old) or file_signature(old)
         if sig is not None:
             by_sig.setdefault(sig, []).append(old)
     out: dict[str, str] = {}
     used: set[str] = set()
     for new in new_only:
-        sig = _file_signature(new)
+        sig = file_signature(new)
         candidates = [p for p in by_sig.get(sig, []) if p not in used]
         if not candidates:
             continue

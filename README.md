@@ -191,6 +191,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **EXIF orientation** — portrait shots that a phone or camera tagged instead of turning are shown upright in the viewer, thumbnails, list view, hover preview and Modify tab; a develop crop / rotate saved before this keeps applying to the orientation it was drawn on
 - **Colour management** — photos with an embedded colour profile (Display P3 from phones, Adobe RGB from cameras, CMYK) are converted to sRGB for the viewer and thumbnails; untagged and sRGB images are shown as stored
 - **Files cut short** — a JPEG, PNG, TIFF, GIF or BMP that ends early (an interrupted download or copy, a photo recovered from a failing memory card) opens with the part that was read, as in a browser, instead of not opening at all
+- **Files changed by other programs** — when another program saves over a picture (an external editor, in place or by renaming a copy over it), the viewer shows the new version: the picture open in Deep Zoom half a second after the last write, grid thumbnails within a few seconds
 - **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls; an animation too large to hold decoded (over 512 MB) decodes each frame as it plays instead of all up front; a frame of 10 ms or less plays for 100 ms, as in browsers
 
 ### Browsing modes
@@ -358,7 +359,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 ### External editors
 
-Register programs (your image editor /  / …) under **File > External Editors…** and launch them on the current image via **File > Open in External Editor**.
+Register programs (your image editor /  / …) under **File > External Editors…** and launch them on the current image via **File > Open in External Editor**. When the editor saves, the viewer shows the new version by itself.
 
 ---
 

@@ -137,6 +137,8 @@ Auch Panoramen weit über Pillows Sicherheitsgrenze von 179 Megapixeln öffnen s
 
 Ein abgeschnittenes JPEG, PNG, TIFF, GIF oder BMP — ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto — öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen.
 
+Speichert ein anderes Programm über ein Bild — ein externer Editor, direkt oder indem es eine Kopie darüber umbenennt —, zeigt der Viewer die neue Fassung: das in Deep Zoom geöffnete Bild eine halbe Sekunde nach dem letzten Schreibvorgang, Miniaturen im Grid innerhalb weniger Sekunden.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

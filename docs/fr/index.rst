@@ -137,6 +137,8 @@ Les panoramas bien au-delà de la limite de sécurité de 179 mégapixels de Pil
 
 Un JPEG, PNG, TIFF, GIF ou BMP tronqué — un téléchargement ou une copie interrompus, une photo récupérée sur une carte mémoire défaillante — s'ouvre avec la partie lue, comme dans un navigateur, au lieu de ne pas s'ouvrir du tout.
 
+Quand un autre programme enregistre par-dessus une image — un éditeur externe, sur place ou en renommant une copie par-dessus —, la visionneuse affiche la nouvelle version : l'image ouverte en zoom profond une demi-seconde après la dernière écriture, les vignettes de la grille en quelques secondes.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

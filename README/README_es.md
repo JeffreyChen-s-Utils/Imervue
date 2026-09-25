@@ -189,6 +189,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Orientación EXIF** — las fotos verticales que el móvil o la cámara solo marcaron en lugar de girarlas se muestran derechas en el visor, las miniaturas, la vista de lista, la vista previa al pasar el cursor y la pestaña Modify; un recorte / giro de revelado guardado antes sigue aplicándose a la orientación sobre la que se hizo
 - **Gestión del color** — las fotos con un perfil de color incrustado (Display P3 de móviles, Adobe RGB de cámaras, CMYK) se convierten a sRGB en el visor y las miniaturas; las imágenes sin perfil o en sRGB se muestran tal cual
 - **Archivos incompletos** — un JPEG, PNG, TIFF, GIF o BMP que termina antes de tiempo (una descarga o copia interrumpida, una foto recuperada de una tarjeta de memoria dañada) se abre con la parte que se pudo leer, como en un navegador, en lugar de no abrirse
+- **Archivos cambiados por otros programas** — cuando otro programa guarda sobre una imagen (un editor externo, directamente o renombrando una copia encima), el visor muestra la versión nueva: la imagen abierta en zoom profundo medio segundo después de la última escritura, las miniaturas de la cuadrícula en pocos segundos
 - **Reproducción de animaciones** — GIF / APNG con controles de reproducir / pausar / fotograma a fotograma / velocidad; una animación que decodificada ocuparía más de 512 MB se decodifica fotograma a fotograma mientras se reproduce, no toda de antemano; un fotograma de 10 ms o menos se muestra 100 ms, como en los navegadores
 
 ### Modos de exploración
@@ -356,7 +357,7 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 
 ### Editores externos
 
-Registra programas (tu editor de imágenes / … / …) en **File > External Editors…** y lánzalos sobre la imagen actual desde **File > Open in External Editor**.
+Registra programas (tu editor de imágenes / … / …) en **File > External Editors…** y lánzalos sobre la imagen actual desde **File > Open in External Editor**. Cuando el editor guarda, el visor muestra la versión nueva por sí solo.
 
 ---
 

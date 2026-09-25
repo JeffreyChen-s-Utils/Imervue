@@ -23,7 +23,8 @@ from Imervue.gpu_image_view.tile_loader import (
     on_thumbnail_error,
     on_filmstrip_thumbnail_loaded,
     reset_view_memory_on_switch,
-    scan_missing_paths,
+    refresh_rewritten_tile,
+    scan_folder_paths,
     start_offline_sweep,
     sync_tile_grid_incremental,
     tick_offline_sweep,
@@ -387,15 +388,37 @@ class TestResetViewMemoryOnSwitch:
 # ---------------------------------------------------------------
 # Offline sweep — file-existence checks live here, never on the paint path.
 # ---------------------------------------------------------------
-class TestScanMissingPaths:
+class TestScanFolderPaths:
     def test_flags_only_the_vanished_files(self, tmp_path):
         present = tmp_path / "here.png"
         present.write_bytes(b"x")
         gone = str(tmp_path / "gone.png")
-        assert scan_missing_paths([str(present), gone]) == {gone}
+        assert scan_folder_paths([str(present), gone], {}) == ({gone}, set())
 
     def test_empty_input_scans_nothing(self):
-        assert scan_missing_paths([]) == set()
+        assert scan_folder_paths([], {}) == (set(), set())
+
+    def test_a_file_saved_over_since_its_thumbnail_is_rewritten(self, tmp_path):
+        path = tmp_path / "a.png"
+        path.write_bytes(b"x")
+        known = {str(path): tile_loader.file_signature(str(path))}
+        path.write_bytes(b"xyz")
+        assert scan_folder_paths([str(path)], known) == (set(), {str(path)})
+
+    def test_an_untouched_file_is_not_rewritten(self, tmp_path):
+        path = tmp_path / "a.png"
+        path.write_bytes(b"x")
+        known = {str(path): tile_loader.file_signature(str(path))}
+        assert scan_folder_paths([str(path)], known) == (set(), set())
+
+    def test_a_file_without_a_recorded_signature_is_never_rewritten(self, tmp_path):
+        path = tmp_path / "a.png"
+        path.write_bytes(b"x")
+        assert scan_folder_paths([str(path)], {}) == (set(), set())
+
+    def test_a_removed_file_is_missing_not_rewritten(self, tmp_path):
+        gone = str(tmp_path / "gone.png")
+        assert scan_folder_paths([gone], {gone: (1, 2, ".png")}) == ({gone}, set())
 
 
 class _FakePoolClass:
@@ -421,8 +444,8 @@ class TestTickOfflineSweep:
         view = _fake_view(images)
         view.tile_grid_mode = kw.pop("tile_grid_mode", True)
         view._offline_scan_inflight = kw.pop("inflight", False)
-        view._on_offline_scan_finished = lambda missing, gen: on_offline_scan_finished(
-            view, missing, gen,
+        view._on_offline_scan_finished = lambda missing, gen, rewritten=(): on_offline_scan_finished(
+            view, missing, gen, rewritten,
         )
         return view
 
@@ -455,6 +478,26 @@ class TestTickOfflineSweep:
         _FakePoolClass.started[0].run()
         assert view.offline_paths == {gone}
         assert view._offline_scan_inflight is False
+
+    def test_the_worker_gets_a_snapshot_of_the_known_signatures(self, qapp):
+        view = self._sweep_view(["a.png"])
+        view._tile_file_signatures["a.png"] = (1, 2, ".png")
+        tick_offline_sweep(view)
+        known = _FakePoolClass.started[0]._known
+        assert known == {"a.png": (1, 2, ".png")}
+        assert known is not view._tile_file_signatures
+
+    def test_worker_round_trip_reloads_a_rewritten_thumbnail(self, qapp, tmp_path):
+        path = tmp_path / "a.png"
+        path.write_bytes(b"x")
+        view = self._sweep_view([str(path)])
+        view._tile_file_signatures[str(path)] = tile_loader.file_signature(str(path))
+        view.tile_cache[str(path)] = "old thumbnail"
+        path.write_bytes(b"saved over by another program")
+        tick_offline_sweep(view)
+        _FakePoolClass.started[0].run()
+        assert [w.path for w in _FakeWorker.created] == [str(path)]
+        assert view.tile_cache[str(path)] == "old thumbnail"   # until the new one lands
 
 
 class TestStartStopOfflineSweep:
@@ -525,6 +568,78 @@ class TestOnOfflineScanFinished:
         on_offline_scan_finished(view, {"gone.png"}, 1)
         assert view.offline_paths == {"gone.png"}
         assert view._updates == 0
+
+
+class TestRewrittenFiles:
+    @staticmethod
+    def _view(images):
+        view = _fake_view(images)
+        view._offline_scan_inflight = True
+        view._prefetch = SimpleNamespace(discarded=[])
+        view._prefetch.discard = view._prefetch.discarded.append
+        return view
+
+    def test_a_rewritten_file_is_decoded_again(self):
+        view = self._view(["a.png"])
+        view._tile_file_signatures["a.png"] = (1, 2, ".png")
+        view._filmstrip_thumb_cache["a.png"] = "old strip"
+        on_offline_scan_finished(view, set(), 1, {"a.png"})
+        assert [w.path for w in _FakeWorker.created] == ["a.png"]
+        assert "a.png" not in view._tile_file_signatures
+        assert "a.png" not in view._filmstrip_thumb_cache
+        assert view._prefetch.discarded == ["a.png"]
+        assert view._offline_scan_inflight is False
+
+    def test_a_rewritten_path_no_longer_in_the_folder_is_ignored(self):
+        view = self._view(["a.png"])
+        on_offline_scan_finished(view, set(), 1, {"stray.png"})
+        assert _FakeWorker.created == []
+
+    def test_a_path_both_missing_and_rewritten_counts_as_missing(self):
+        view = self._view(["a.png"])
+        on_offline_scan_finished(view, {"a.png"}, 1, {"a.png"})
+        assert _FakeWorker.created == []
+        assert view.offline_paths == {"a.png"}
+
+    def test_a_stale_generation_reloads_nothing(self):
+        view = self._view(["a.png"])
+        on_offline_scan_finished(view, set(), 99, {"a.png"})
+        assert _FakeWorker.created == []
+
+    def test_refresh_works_on_a_view_without_a_prefetch_cache(self):
+        view = _fake_view(["a.png"])
+        refresh_rewritten_tile(view, "a.png", 1)
+        assert [w.path for w in _FakeWorker.created] == ["a.png"]
+
+
+class TestThumbnailLanding:
+    @staticmethod
+    def _view(images):
+        from PySide6.QtCore import QMutex
+        view = _fake_view(images)
+        view.grid_mutex = QMutex()
+        view._tile_load_total = len(images)
+        return view
+
+    def test_a_new_decode_of_a_rewritten_file_frees_the_old_texture(self, qapp, monkeypatch):
+        from Imervue.gpu_image_view import tile_textures
+        freed = []
+        monkeypatch.setattr(tile_textures, "free_tile_textures", lambda _view, paths: freed.extend(paths))
+        view = self._view(["a.png"])
+        view.tile_cache["a.png"] = "old"
+        view.tile_textures["a.png"] = 7
+        tile_loader.on_thumbnail_loaded(view, "new", "a.png", 1)
+        assert freed == ["a.png"]
+        assert view.tile_cache["a.png"] == "new"
+
+    def test_a_first_decode_frees_nothing(self, qapp, monkeypatch):
+        from Imervue.gpu_image_view import tile_textures
+        freed = []
+        monkeypatch.setattr(tile_textures, "free_tile_textures", lambda _view, paths: freed.extend(paths))
+        view = self._view(["a.png"])
+        tile_loader.on_thumbnail_loaded(view, "new", "a.png", 1)
+        assert freed == []
+        assert view.tile_cache["a.png"] == "new"
 
 
 class TestTileWorkerSelfEviction:

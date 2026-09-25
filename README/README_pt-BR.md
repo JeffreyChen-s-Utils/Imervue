@@ -189,6 +189,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Orientação EXIF** — fotos em retrato que o celular ou a câmera apenas marcaram em vez de girar aparecem na posição certa no visualizador, nas miniaturas, na lista, na prévia ao passar o mouse e na aba Modify; um recorte / giro de revelação salvo antes continua valendo para a orientação em que foi feito
 - **Gerenciamento de cor** — fotos com perfil de cor embutido (Display P3 de celulares, Adobe RGB de câmeras, CMYK) são convertidas para sRGB no visualizador e nas miniaturas; imagens sem perfil ou em sRGB aparecem como estão
 - **Arquivos incompletos** — um JPEG, PNG, TIFF, GIF ou BMP que termina antes da hora (um download ou cópia interrompidos, uma foto recuperada de um cartão de memória com defeito) abre com a parte que foi lida, como no navegador, em vez de não abrir
+- **Arquivos alterados por outros programas** — quando outro programa salva por cima de uma imagem (um editor externo, direto no arquivo ou renomeando uma cópia por cima), o visualizador mostra a versão nova: a imagem aberta no zoom profundo meio segundo após a última gravação, as miniaturas da grade em poucos segundos
 - **Reprodução de animação** — GIF / APNG com controles de play / pause / passo por quadro / velocidade; uma animação que ocuparia mais de 512 MB decodificada é decodificada quadro a quadro durante a reprodução, não toda de antemão; um quadro de 10 ms ou menos é exibido por 100 ms, como nos navegadores
 
 ### Modos de navegação
@@ -356,7 +357,7 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 
 ### Editores externos
 
-Registre programas (seu editor de imagem / … / …) em **File > External Editors…** e abra-os com a imagem atual via **File > Open in External Editor**.
+Registre programas (seu editor de imagem / … / …) em **File > External Editors…** e abra-os com a imagem atual via **File > Open in External Editor**. Quando o editor salva, o visualizador mostra a versão nova sozinho.
 
 ---
 

@@ -115,6 +115,10 @@ def init_deep_zoom_state(view: GPUImageView) -> None:
     view._last_resize_size: tuple[int, int] = (0, 0)
     # Retires a screen-settle watch when a newer screen change starts.
     view._screen_settle_generation = 0
+    # Reloads the deep-zoom picture when another program saves over its file.
+    from Imervue.gpu_image_view.shown_file_watch import ShownFileWatch
+    view._shown_file_watch = ShownFileWatch(
+        lambda path: view._deep_zoom_path == path, view._reload_rewritten_image, view)
 
 
 def init_browse_state(view: GPUImageView) -> None:

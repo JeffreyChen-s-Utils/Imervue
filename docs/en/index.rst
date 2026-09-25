@@ -136,6 +136,8 @@ Panoramas far larger than Pillow's 179-megapixel safety limit open too: the limi
 
 A JPEG, PNG, TIFF, GIF or BMP cut short — an interrupted download or copy, a photo recovered from a failing memory card — opens with the part that was read, as in a browser, instead of not opening at all.
 
+When another program saves over a picture — an external editor, in place or by renaming a copy over it — the viewer shows the new version: the picture open in Deep Zoom half a second after the last write, grid thumbnails within a few seconds.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70

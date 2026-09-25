@@ -560,9 +560,15 @@ class GPUImageView(
         from Imervue.gpu_image_view.tile_loader import tick_offline_sweep
         tick_offline_sweep(self)
 
-    def _on_offline_scan_finished(self, missing, generation) -> None:
+    def _on_offline_scan_finished(self, missing, generation, rewritten=()) -> None:
         from Imervue.gpu_image_view.tile_loader import on_offline_scan_finished
-        on_offline_scan_finished(self, missing, generation)
+        on_offline_scan_finished(self, missing, generation, rewritten)
+
+    def _reload_rewritten_image(self, path: str) -> None:
+        """Show *path* again, thumbnail and all: another program saved over it."""
+        from Imervue.gpu_image_view.tile_loader import refresh_rewritten_tile
+        refresh_rewritten_tile(self, path, self._load_generation)
+        self.reload_current_image_with_recipe(path)
 
     # 保持向後相容（undo_delete 使用）
     def add_thumbnail(self, img_data, path, generation=None):

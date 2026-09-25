@@ -49,6 +49,9 @@ class DeepZoomLoadingMixin:
         self._clear_deep_zoom()
         # From here on the deep-zoom target is `path`; a later save keys on it.
         self._deep_zoom_path = path
+        watch = getattr(self, "_shown_file_watch", None)
+        if watch is not None:
+            watch.follow(path)   # measured from this load: a later external save reloads it
 
         self._push_history(path)
         self._restore_view_state(path)

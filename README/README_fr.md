@@ -189,6 +189,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Orientation EXIF** — les photos en portrait que le téléphone ou l'appareil a seulement marquées au lieu de les pivoter s'affichent droites dans la visionneuse, les vignettes, la vue liste, l'aperçu au survol et l'onglet Modify ; un recadrage / une rotation de développement enregistré auparavant continue de s'appliquer à l'orientation sur laquelle il a été tracé
 - **Gestion des couleurs** — les photos avec un profil colorimétrique intégré (Display P3 des téléphones, Adobe RGB des appareils, CMJN) sont converties en sRGB pour la visionneuse et les vignettes ; les images sans profil ou en sRGB sont affichées telles quelles
 - **Fichiers tronqués** — un JPEG, PNG, TIFF, GIF ou BMP qui s'arrête trop tôt (un téléchargement ou une copie interrompus, une photo récupérée sur une carte mémoire défaillante) s'ouvre avec la partie lue, comme dans un navigateur, au lieu de ne pas s'ouvrir du tout
+- **Fichiers modifiés par d'autres programmes** — quand un autre programme enregistre par-dessus une image (un éditeur externe, sur place ou en renommant une copie par-dessus), la visionneuse affiche la nouvelle version : l'image ouverte en zoom profond une demi-seconde après la dernière écriture, les vignettes de la grille en quelques secondes
 - **Lecture d'animations** — GIF / APNG avec lecture / pause / défilement image par image / contrôle de vitesse ; une animation qui occuperait plus de 512 Mo décodée est décodée image par image pendant la lecture plutôt qu'entièrement au départ ; une image de 10 ms ou moins s'affiche 100 ms, comme dans les navigateurs
 
 ### Modes de navigation
@@ -356,7 +357,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 
 ### Éditeurs externes
 
-Enregistrez les programmes (votre éditeur d'image / … ) sous **File > External Editors…** et lancez-les sur l'image actuelle via **File > Open in External Editor**.
+Enregistrez les programmes (votre éditeur d'image / … ) sous **File > External Editors…** et lancez-les sur l'image actuelle via **File > Open in External Editor**. Quand l'éditeur enregistre, la visionneuse affiche d'elle-même la nouvelle version.
 
 ---
 
