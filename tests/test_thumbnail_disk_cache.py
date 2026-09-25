@@ -55,6 +55,18 @@ class TestKey:
         monkeypatch.setattr(tdc, "_KEY_VERSION", tdc._KEY_VERSION + 1)
         assert tdc.ThumbnailDiskCache._key(source_image, 128) != before
 
+    def test_a_raw_entry_has_its_own_version(self, tmp_path, monkeypatch):
+        """Portrait RAW previews were cached on their side: only RAW entries are retired."""
+        raw = tmp_path / "IMG_1.CR3"
+        raw.write_bytes(b"x")
+        raw_before = tdc.ThumbnailDiskCache._key(str(raw), 128)
+        png = tmp_path / "a.png"
+        Image.fromarray(np.zeros((4, 4, 3), np.uint8)).save(str(png))
+        png_before = tdc.ThumbnailDiskCache._key(str(png), 128)
+        monkeypatch.setattr(tdc, "_RAW_KEY_VERSION", tdc._RAW_KEY_VERSION + 1)
+        assert tdc.ThumbnailDiskCache._key(str(raw), 128) != raw_before
+        assert tdc.ThumbnailDiskCache._key(str(png), 128) == png_before
+
     def test_depends_on_recipe_hash(self, source_image):
         assert tdc.ThumbnailDiskCache._key(source_image, 128, "rA") != \
                tdc.ThumbnailDiskCache._key(source_image, 128, "rB")

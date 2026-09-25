@@ -128,30 +128,10 @@ class LoadThumbnailWorker(QRunnable):
         return _load_svg(self.path, thumbnail=(self.size is not None))
 
     def _load_raw(self) -> np.ndarray:
-        """載入 RAW 圖片"""
-        # Imported here so the viewer's startup does not pay for them.
-        import imageio
-        import rawpy
-        with rawpy.imread(self.path) as raw:
-            try:
-                thumb = raw.extract_thumb()
-
-                if thumb.format == rawpy.ThumbFormat.JPEG:
-                    img_data = imageio.v3.imread(thumb.data)
-                elif thumb.format == rawpy.ThumbFormat.BITMAP:
-                    img_data = thumb.data
-                else:
-                    raise ValueError("No valid embedded preview")
-
-            # No or unsupported embedded preview (LibRawError), or one that
-            # does not decode (OSError / ValueError from imageio).
-            except (rawpy.LibRawError, OSError, ValueError):
-                # fallback: 用 half_size 降低記憶體
-                img_data = raw.postprocess(
-                    half_size=(self.size is not None),
-                    use_camera_wb=True,
-                    output_bps=8
-                )
+        """Decode a camera RAW's embedded preview, upright; a half-size develop without one."""
+        # Imported here so the viewer's startup does not pay for rawpy.
+        from Imervue.image.raw_loader import develop_raw
+        img_data = develop_raw(self.path, thumbnail=True)
 
         # 自動限制最大尺寸（避免爆 VRAM）
         if self.size is None:

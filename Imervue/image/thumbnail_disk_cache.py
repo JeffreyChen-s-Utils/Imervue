@@ -40,6 +40,7 @@ import numpy as np
 from PIL import Image
 import contextlib
 
+from Imervue.image.formats import RAW_EXTENSIONS
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
 logger = logging.getLogger("Imervue.thumbnail_cache")
@@ -48,6 +49,9 @@ _CACHE_EXT = ".png"
 # Bump when the cached pixels change meaning, so older entries stop matching.
 # 2: thumbnails are EXIF-upright. 3: embedded colour profiles are converted to sRGB.
 _KEY_VERSION = 3
+# Camera RAW entries only, so the rest of the cache stays valid.
+# 4: a portrait RAW's embedded preview is turned upright.
+_RAW_KEY_VERSION = 4
 _LEGACY_EXTS = (".npy",)  # formats we quietly clean up at startup
 
 
@@ -133,7 +137,9 @@ class ThumbnailDiskCache:
     def _key(path: str, size: int, recipe_hash: str = "") -> str:
         try:
             st = Path(path).stat()
-            raw = f"{_KEY_VERSION}|{path}|{st.st_mtime_ns}|{st.st_size}|{size}|{recipe_hash}"
+            is_raw = Path(path).suffix.lower() in RAW_EXTENSIONS
+            version = _RAW_KEY_VERSION if is_raw else _KEY_VERSION
+            raw = f"{version}|{path}|{st.st_mtime_ns}|{st.st_size}|{size}|{recipe_hash}"
         except OSError:
             return ""
         return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()
