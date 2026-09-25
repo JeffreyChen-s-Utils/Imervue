@@ -216,6 +216,73 @@ def test_undecodable_entry_is_dropped_on_load(tmp_path, bad):
 
 
 @pytest.mark.parametrize("bad", _BAD_RECIPES)
+def test_an_undecodable_entry_is_written_back_as_it_was(tmp_path, bad):
+    """Saving another photo's recipe used to drop it from the file for good."""
+    path = tmp_path / "recipes.json"
+    _write_store(path, {"id1": {"recipe": bad, "last_path": "/a.jpg"}})
+    store = RecipeStore(store_path=path)
+    store.set("id2", Recipe(exposure=0.5))
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert saved["id1"] == {"recipe": bad, "last_path": "/a.jpg"}
+    assert saved["id2"]["recipe"]["exposure"] == pytest.approx(0.5)
+
+
+def test_a_new_recipe_replaces_an_undecodable_one(tmp_path):
+    path = tmp_path / "recipes.json"
+    _write_store(path, {"id1": {"recipe": _BAD_RECIPES[0]}})
+    store = RecipeStore(store_path=path)
+    store.set("id1", Recipe(exposure=0.25))
+    saved = json.loads(path.read_text(encoding="utf-8"))
+    assert saved["id1"]["recipe"]["exposure"] == pytest.approx(0.25)
+
+
+class TestUnreadableStoreFile:
+    """A recipes.json that could not be read was replaced by the next save."""
+
+    @staticmethod
+    def _copies(path):
+        return sorted(path.parent.glob(f"{path.name}.unreadable-*"))
+
+    @pytest.mark.parametrize("content", [b"not valid json{{{", b"[1, 2, 3]", b"\xff\xfe{}"])
+    def test_a_copy_is_kept_before_the_first_save(self, tmp_path, content):
+        path = tmp_path / "recipes.json"
+        path.write_bytes(content)
+        store = RecipeStore(store_path=path)
+        store.set("id1", Recipe(exposure=0.5))
+        (copy,) = self._copies(path)
+        assert copy.read_bytes() == content
+        saved = json.loads(path.read_text(encoding="utf-8"))
+        assert saved["id1"]["recipe"]["exposure"] == pytest.approx(0.5)
+
+    def test_a_readable_store_keeps_no_copy(self, store):
+        store.set("id1", Recipe(exposure=0.5))
+        RecipeStore(store_path=store.path).set("id2", Recipe(exposure=0.1))
+        assert self._copies(store.path) == []
+
+    def test_the_file_is_left_alone_while_no_copy_can_be_made(self, tmp_path, monkeypatch):
+        import shutil
+        path = tmp_path / "recipes.json"
+        path.write_text("not valid json{{{", encoding="utf-8")
+
+        def refuse(*_args, **_kwargs):
+            raise PermissionError("disk full")
+
+        monkeypatch.setattr(shutil, "copy2", refuse)
+        RecipeStore(store_path=path).set("id1", Recipe(exposure=0.5))
+        assert path.read_text(encoding="utf-8") == "not valid json{{{"
+
+    def test_reset_forgets_the_failed_read(self, tmp_path):
+        path = tmp_path / "recipes.json"
+        path.write_text("not valid json{{{", encoding="utf-8")
+        store = RecipeStore(store_path=path)
+        assert len(store) == 0
+        path.write_text("{}", encoding="utf-8")
+        store._reset_for_tests()  # noqa: SLF001
+        store.set("id1", Recipe(exposure=0.5))
+        assert self._copies(path) == []
+
+
+@pytest.mark.parametrize("bad", _BAD_RECIPES)
 def test_undecodable_variant_returns_none(store, bad):
     store.save_variant("id1", "v", Recipe(exposure=0.5))
     store._entries["id1"]["variants"]["v"] = bad  # noqa: SLF001 - corrupt it in place

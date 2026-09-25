@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `e08c3ad` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `128329b` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 869 | 142,771 |
+| `tests/` | 869 | 142,838 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,138 |
 | `Imervue/gui/` | 166 | 33,114 |
 | `Imervue/puppet/` | 57 | 15,292 |
-| `Imervue/image/` | 125 | 14,579 |
+| `Imervue/image/` | 125 | 14,598 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,894 |
 | `Imervue/multi_language/` | 8 | 14,089 |
 | `Imervue/desktop_pet/` | 34 | 8,259 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,154 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,709** | **323,675** |
+| **總計** | **1,709** | **323,761** |
 
-其中 `Imervue/` 套件本身 776 檔 / 166,563 行。
+其中 `Imervue/` 套件本身 776 檔 / 166,582 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -237,7 +237,7 @@ ImervueMainWindow
 | `file_transfer.py` | 244 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
 | `atomic_write.py` | 33 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本） |
-| `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict` 使用） |
+| `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict`、`recipe_store` 使用） |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
 
@@ -305,7 +305,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-125 個模組、14,579 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+125 個模組、14,598 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -313,7 +313,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `recipe.py` | 639 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`、`exif_oriented` / `base_is_oriented()`（舊存檔缺這個鍵、又帶幾何時，仍套在未轉正的像素上），以及 `file_identity()`（md5(前 4KB \| 檔案大小)，避免 mtime 改變就失效）；`turned_with_file(recipe, clockwise, size)`：檔案轉 90° 後的 recipe（翻轉互換、裁切框隨之旋轉；帶位置的 extra 不轉） |
-| `recipe_store.py` | 440 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案 |
+| `recipe_store.py` | 459 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案；讀不到的 store 檔由 `UnreadableFileGuard` 看守，解不開的單筆原樣寫回 |
 | `recipe_adjustments.py` | 124 | `Recipe.apply` 用到的逐通道色調調整 |
 | `recipe_diff.py` | 63 | 兩個 recipe 的 diff 與選擇性合併 |
 | `develop_presets.py` | 102 | 具名顯影預設與批次 recipe 同步 |
@@ -969,7 +969,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-869 個檔、142,771 行。`pyproject.toml` 定義三個互斥層級 marker：
+869 個檔、142,838 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

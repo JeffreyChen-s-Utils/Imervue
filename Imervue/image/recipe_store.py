@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from Imervue.image.recipe import Recipe, file_identity
+from Imervue.system.unreadable_guard import UnreadableFileGuard
 
 logger = logging.getLogger("Imervue.recipe_store")
 
@@ -63,6 +64,12 @@ class RecipeStore:
         # identity -> {"recipe": {...}, "last_path": str}
         # "last_path" is informational — helps humans poke at the file.
         self._entries: dict[str, dict[str, Any]] = {}
+        # Entries this version can't decode, written back untouched: dropping
+        # them on the next save lost them for good, even for a newer Imervue.
+        self._undecodable: dict[str, Any] = {}
+        # A store file that could not be read is copied aside before a save
+        # replaces it (and every photo's edits in it) with what this session has.
+        self._guard = UnreadableFileGuard(logger)
         self._loaded = False
 
     # ------------------------------------------------------------------
@@ -88,11 +95,13 @@ class RecipeStore:
                 return None
             with open(self._path, encoding="utf-8") as f:
                 data = json.load(f)
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, ValueError, RecursionError) as exc:   # ValueError: bad JSON or UTF-8
             logger.warning(f"Recipe store read failed ({self._path}): {exc}")
+            self._guard.note_unreadable(self._path)
             return None
         if not isinstance(data, dict):
             logger.warning(f"Recipe store at {self._path} is not a dict; ignoring")
+            self._guard.note_unreadable(self._path)
             return None
         return data
 
@@ -132,6 +141,7 @@ class RecipeStore:
 
     def _load_locked(self) -> None:
         self._entries = {}
+        self._undecodable = {}
         data = self._read_store_file()
         if data is None:
             self._loaded = True
@@ -139,13 +149,20 @@ class RecipeStore:
         for identity, entry in data.items():
             parsed = self._parse_entry(entry)
             if parsed is None:
-                logger.debug(f"Dropping unreadable recipe entry for {identity}")
+                logger.debug(f"Keeping undecodable recipe entry for {identity} as it is")
+                self._undecodable[identity] = entry
                 continue
             self._entries[identity] = parsed
         self._loaded = True
 
     def _save_locked(self) -> None:
-        """Atomic write via tmp + os.replace. Caller must hold the lock."""
+        """Atomic write via tmp + os.replace. Caller must hold the lock.
+
+        Undecodable entries go back as they were read; a store file that
+        could not be read is only replaced once a copy of it is kept.
+        """
+        if not self._guard.clear_to_save(self._path):
+            return
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
@@ -155,7 +172,7 @@ class RecipeStore:
         try:
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(
-                    self._entries,
+                    {**self._undecodable, **self._entries},
                     f,
                     ensure_ascii=False,
                     indent=2,
@@ -392,6 +409,8 @@ class RecipeStore:
         """Discard cached state so the next call re-reads from disk."""
         with self._lock:
             self._entries = {}
+            self._undecodable = {}
+            self._guard = UnreadableFileGuard(logger)
             self._loaded = False
 
     def __len__(self) -> int:
