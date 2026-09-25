@@ -1,4 +1,4 @@
-"""Tests for right-click menu actions that write files."""
+"""Tests for right-click menu actions that write files, and Show in Explorer."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -120,3 +120,19 @@ def test_combine_pages_reports_an_image_over_the_pixel_limit(qapp, tmp_path, mon
     assert kind == "error"
     assert not (tmp_path / "doc.pdf").exists()
     assert any("Combining 1 pages" in r.getMessage() for r in caplog.records)
+
+
+def test_show_in_explorer_reveals_the_shown_picture(qapp, monkeypatch, tmp_path):
+    from PySide6.QtWidgets import QMenu
+    revealed = []
+    monkeypatch.setattr(right_click_menu, "reveal_or_warn", revealed.append)
+    path = str(tmp_path / "a.png")
+    view = SimpleNamespace(model=SimpleNamespace(images=[path]), deep_zoom=True, current_index=0)
+    menu = QMenu()
+    try:
+        right_click_menu._show_in_explorer_action(view, menu)  # noqa: SLF001
+        (action,) = menu.actions()
+        action.trigger()
+    finally:
+        menu.deleteLater()
+    assert revealed == [path]

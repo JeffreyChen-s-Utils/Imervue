@@ -23,10 +23,9 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_manager import reveal_in_file_manager
+from Imervue.system.file_manager import reveal_or_warn
 from Imervue.system.file_transfer import carry_along, carry_sidecars, is_same_file
 import contextlib
-import logging
 
 
 def _next_duplicate_name(source: Path) -> Path:
@@ -96,9 +95,6 @@ def _dedupe_paths(paths: Iterable[str]) -> list[str]:
             seen.add(path)
             out.append(path)
     return out
-
-
-_logger = logging.getLogger("Imervue.file_tree")
 
 
 class _FileTreeView(QTreeView):
@@ -293,7 +289,7 @@ class _FileTreeView(QTreeView):
         action_explorer = menu.addAction(
             lang.get("tree_open_in_explorer", "Open in Explorer")
         )
-        action_explorer.triggered.connect(lambda: self._open_in_explorer(paths[0]))
+        action_explorer.triggered.connect(lambda: reveal_or_warn(paths[0]))
 
         action_copy = menu.addAction(lang.get("tree_copy_paths", "Copy Paths"))
         action_copy.triggered.connect(
@@ -322,7 +318,7 @@ class _FileTreeView(QTreeView):
         action_explorer = menu.addAction(
             lang.get("tree_open_in_explorer", "Open in Explorer")
         )
-        action_explorer.triggered.connect(lambda: self._open_in_explorer(path))
+        action_explorer.triggered.connect(lambda: reveal_or_warn(path))
 
         # Open containing folder
         if Path(path).is_file():
@@ -330,7 +326,7 @@ class _FileTreeView(QTreeView):
                 lang.get("tree_open_folder", "Open Containing Folder")
             )
             action_folder.triggered.connect(
-                lambda: self._open_in_explorer(str(Path(path).parent), select=False)
+                lambda: reveal_or_warn(str(Path(path).parent), select=False)
             )
 
         # Open with system default application — useful when the user
@@ -617,13 +613,6 @@ class _FileTreeView(QTreeView):
                     name=candidate.name,
                 ),
             )
-
-    @staticmethod
-    def _open_in_explorer(path: str, select: bool = True):
-        try:
-            reveal_in_file_manager(path, select=select)
-        except (OSError, ValueError):   # file manager missing, or it refused the path
-            _logger.warning("Could not reveal %s in the file manager", path, exc_info=True)
 
     def _open_with_default_app(self, path: str) -> None:
         """Open ``path`` with the OS's default application via Qt's

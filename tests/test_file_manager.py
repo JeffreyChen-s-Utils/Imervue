@@ -1,4 +1,4 @@
-"""Tests for ``reveal_in_file_manager``: the command each platform runs."""
+"""Tests for ``reveal_in_file_manager`` (the command each platform runs) and ``reveal_or_warn``."""
 from __future__ import annotations
 
 import os
@@ -67,16 +67,31 @@ def test_macos_reveal_or_open(monkeypatch, popen, tmp_path, select, expected):
     assert popen == [[*expected, str(tmp_path)]]
 
 
-def test_right_click_reveal_logs_a_failure(monkeypatch, caplog, tmp_path):
-    from Imervue.menu import right_click_menu
+@pytest.mark.parametrize("error", [FileNotFoundError("explorer"), ValueError("embedded null character")])
+def test_reveal_or_warn_logs_a_file_manager_that_wont_start(monkeypatch, caplog, tmp_path, error):
+    def fail(*_a, **_k):
+        raise error
 
-    def missing(*_a, **_k):
-        raise FileNotFoundError("explorer")
-
-    monkeypatch.setattr(fm.subprocess, "Popen", missing)
+    monkeypatch.setattr(fm.subprocess, "Popen", fail)
     with caplog.at_level("DEBUG", logger="Imervue"):
-        right_click_menu._open_in_explorer(str(tmp_path / "a.png"))  # noqa: SLF001
-    assert [r.levelname for r in caplog.records if "reveal" in r.getMessage()] == ["WARNING"]
+        fm.reveal_or_warn(str(tmp_path / "a.png"))
+    (record,) = [r for r in caplog.records if "reveal" in r.getMessage()]
+    assert record.levelname == "WARNING" and record.exc_info[1] is error
+
+
+def test_reveal_or_warn_lets_a_bug_through(monkeypatch, tmp_path):
+    def bug(*_a, **_k):
+        raise RuntimeError("bug")
+
+    monkeypatch.setattr(fm.subprocess, "Popen", bug)
+    with pytest.raises(RuntimeError):
+        fm.reveal_or_warn(str(tmp_path))
+
+
+def test_reveal_or_warn_passes_select_through(monkeypatch, popen, tmp_path):
+    monkeypatch.setattr(sys, "platform", "darwin")
+    fm.reveal_or_warn(str(tmp_path), select=False)
+    assert popen == [["open", str(tmp_path)]]
 
 
 def test_plugin_folder_is_opened_not_selected(monkeypatch, tmp_path):
