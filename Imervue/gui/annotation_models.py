@@ -21,6 +21,8 @@ from typing import Any, Literal
 import zlib
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
+
+from Imervue.system.atomic_write import write_text_atomically
 import contextlib
 
 AnnotationKind = Literal[
@@ -180,10 +182,8 @@ class AnnotationProject:
         )
 
     def save(self, path: str | Path) -> None:
-        Path(path).write_text(
-            json.dumps(self.to_dict(), indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        """Write the project to *path* in one step, so a failed save keeps the previous one."""
+        write_text_atomically(path, json.dumps(self.to_dict(), indent=2, ensure_ascii=False))
 
     @classmethod
     def load(cls, path: str | Path) -> AnnotationProject:

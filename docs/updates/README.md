@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-51 | 2026-09-25 | Paint export presets and annotation projects save in one step | #bugfix #paint #annotation #data-loss | [2026-09](2026-09.md) |
 | U-20260925-50 | 2026-09-25 | Safety Review overwriting originals replaces each in one step | #bugfix #plugin #safety_review #Imervue_Plugins #data-loss | [2026-09](2026-09.md) |
 | U-20260925-49 | 2026-09-25 | Exporting over an existing file replaces it in one step | #bugfix #export #data-loss | [2026-09](2026-09.md) |
 | U-20260925-48 | 2026-09-25 | The file tree offers to delete for good what the Recycle Bin refused | #bugfix #delete #file-tree | [2026-09](2026-09.md) |
