@@ -1,7 +1,7 @@
 """Photo frame / caption dialog.
 
 Pure drawing in :mod:`Imervue.image.photo_frame`; this is the Qt shell (border
-and Polaroid-bottom sliders, caption field, background worker).
+and Polaroid-bottom sliders, caption field, frame and caption colours, background worker).
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QSlider, QVBoxLayout, QWidget
 
+from Imervue.gui.color_swatch import ColorSwatchButton
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
     apply_save_buttons,
@@ -65,6 +66,11 @@ class PhotoFrameDialog(WorkerHostMixin, QDialog):
         self._border = self._make_slider(0, 200, 40)
         self._bottom = self._make_slider(0, 300, 0)
         self._caption = QLineEdit()
+        defaults = FrameOptions()
+        self._frame_color = ColorSwatchButton(
+            defaults.color, title=lang.get("frame_color", "Frame colour:"))
+        self._text_color = ColorSwatchButton(
+            defaults.text_color, title=lang.get("frame_text_color", "Caption colour:"))
 
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(lang.get("frame_border", "Border (px):")))
@@ -73,6 +79,10 @@ class PhotoFrameDialog(WorkerHostMixin, QDialog):
         layout.addWidget(self._bottom)
         layout.addWidget(QLabel(lang.get("frame_caption", "Caption:")))
         layout.addWidget(self._caption)
+        layout.addWidget(QLabel(lang.get("frame_color", "Frame colour:")))
+        layout.addWidget(self._frame_color)
+        layout.addWidget(QLabel(lang.get("frame_text_color", "Caption colour:")))
+        layout.addWidget(self._text_color)
         layout.addLayout(apply_save_buttons(self.reject, self._commit))
 
     @staticmethod
@@ -89,6 +99,8 @@ class PhotoFrameDialog(WorkerHostMixin, QDialog):
             border=self._border.value(),
             bottom_extra=self._bottom.value(),
             caption=self._caption.text(),
+            color=self._frame_color.rgb(),
+            text_color=self._text_color.rgb(),
         )
         out_path = Path(output_path(self._path, "framed"))
         self._worker = _FrameWorker(self._path, options, str(out_path))

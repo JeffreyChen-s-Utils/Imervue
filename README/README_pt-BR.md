@@ -324,6 +324,7 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 - **Polar Coordinates** — envolve um quadro em um disco ou o desenrola (planeta-miniatura / inversão polar)
 - **Kaleidoscope** — espelha uma cunha angular em simetria de ordem n
 - **Frosted Glass** — espalhamento local de pixels determinístico com semente fixa
+- **Frame & Caption** — uma borda passe-partout em qualquer cor, uma faixa inferior opcional no estilo Polaroid e uma legenda com cor própria
 - **Presets de revelação** — salve uma recipe e depois aplique-a por inteiro ou mescle apenas seus ajustes ativos sobre outras imagens (preservando o recorte próprio de cada imagem, etc.)
 
 ### Ajustes locais

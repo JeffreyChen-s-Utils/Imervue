@@ -1791,6 +1791,8 @@ traditional_chinese_word_dict = {
     "frame_border": "邊框（像素）：",
     "frame_bottom": "拍立得下緣（像素）：",
     "frame_caption": "說明文字：",
+    "frame_color": "邊框顏色：",
+    "frame_text_color": "說明文字顏色：",
     "frame_failed": "外框失敗",
     "dither_title": "有序抖動",
     "dither_levels": "每通道色階數：",

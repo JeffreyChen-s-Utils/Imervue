@@ -324,6 +324,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 - **Polar Coordinates** — enrouler une image en disque ou la dérouler (planète miniature / inversion polaire)
 - **Kaleidoscope** — réfléchir un secteur angulaire en symétrie d'ordre n
 - **Frosted Glass** — dispersion locale de pixels déterministe à graine fixe
+- **Frame & Caption** — une bordure passe-partout de n'importe quelle couleur, un bandeau inférieur façon Polaroid en option et une légende dans sa propre couleur
 - **Préréglages de développement** — enregistrer une recette, puis l'appliquer en bloc ou n'en fusionner que les ajustements actifs sur d'autres images (en conservant le recadrage propre à chaque image, etc.)
 
 ### Ajustements locaux

@@ -2494,6 +2494,8 @@ herramienta MCP):
 - **Kaleidoscope** — refleja una cuña angular en simetría de ``n`` pliegues.
 - **Frosted Glass** — una dispersión local de píxeles determinista y reproducible por
   semilla.
+- **Frame & Caption** — un borde mate de cualquier color, una franja inferior opcional
+  más gruesa estilo Polaroid y una leyenda incrustada en ella con su propio color.
 
 Geoetiqueta GPS
 ^^^^^^^^^^^^^^^

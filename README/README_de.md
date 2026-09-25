@@ -324,6 +324,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 - **Polar Coordinates (Polar Coordinates)** — ein Bild in eine Scheibe wickeln oder es abrollen (Tiny-Planet / Polar-Inversion)
 - **Kaleidoscope (Kaleidoscope)** — einen Winkel-Keil in n-fache Symmetrie spiegeln
 - **Frosted Glass (Frosted Glass)** — deterministisches seed-basiertes lokales Pixel-Streuen
+- **Frame & Caption (Frame & Caption)** — ein Passepartout-Rand in beliebiger Farbe, ein optionaler unterer Streifen im Polaroid-Stil und eine Bildunterschrift in eigener Farbe
 - **Develop-Presets** — ein Rezept speichern und es dann komplett anwenden oder nur seine aktiven Anpassungen auf andere Bilder mergen (wobei der eigene Crop usw. jedes Bildes erhalten bleibt)
 
 ### Lokale Anpassungen

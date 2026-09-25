@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-42 | 2026-09-26 | Frame & Caption lets you pick the frame and caption colours | #feature #frame #i18n #docs | [2026-09-b](2026-09-b.md) |
 | U-20260926-41 | 2026-09-26 | Ten plugins and Deflicker wait for their thread before letting it go | #fix #crash #threads #plugins #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
 | U-20260926-40 | 2026-09-26 | Web Gallery can build the client-review page | #feature #export #web-gallery #i18n #docs #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
 | U-20260926-39 | 2026-09-26 | Undoing a rotate key press no longer crashes the viewer | #fix #crash #undo #shortcuts | [2026-09-b](2026-09-b.md) |
@@ -414,4 +415,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 72 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 73 |

@@ -2456,6 +2456,8 @@ apply-and-save effects, each a thin slider dialog over a pure-NumPy transform
   tiny-planet / polar-inversion look).
 - **Kaleidoscope** — mirror one angular wedge into ``n``-fold symmetry.
 - **Frosted Glass** — a deterministic, seed-reproducible local pixel scatter.
+- **Frame & Caption** — a matte border in any colour, an optional thicker
+  Polaroid-style bottom band, and a caption burned into it in its own colour.
 
 GPS Geotag
 ^^^^^^^^^^

@@ -2473,6 +2473,9 @@ ferramenta MCP):
 - **Kaleidoscope** — espelha uma cunha angular em simetria de ordem ``n``.
 - **Frosted Glass** — um espalhamento local de pixels determinístico e
   reproduzível por semente.
+- **Frame & Caption** — uma borda passe-partout em qualquer cor, uma faixa
+  inferior opcional mais grossa no estilo Polaroid e uma legenda gravada nela
+  com cor própria.
 
 Geotag GPS
 ^^^^^^^^^^

@@ -328,6 +328,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 - **Polar Coordinates** — wrap a frame into a disc or unroll it (tiny-planet / polar inversion)
 - **Kaleidoscope** — mirror one angular wedge into n-fold symmetry
 - **Frosted Glass** — deterministic seeded local pixel scatter
+- **Frame & Caption** — a matte border in any colour, an optional Polaroid-style bottom band and a caption in its own colour
 - **Develop Presets** — save a recipe, then **apply** it wholesale or **merge** just its active adjustments onto other images (keeping each image's own crop, etc.)
 
 ### Local adjustments

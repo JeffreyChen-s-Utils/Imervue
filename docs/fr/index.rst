@@ -2494,6 +2494,9 @@ est aussi exposée comme outil MCP) :
 - **Kaleidoscope** — réfléchit un secteur angulaire en symétrie d'ordre ``n``.
 - **Frosted Glass** — une dispersion locale de pixels déterministe et reproductible
   par graine.
+- **Frame & Caption** — une bordure passe-partout de n'importe quelle couleur, un
+  bandeau inférieur plus épais façon Polaroid en option et une légende incrustée
+  dans ce bandeau, dans sa propre couleur.
 
 Géolocalisation GPS
 ^^^^^^^^^^^^^^^^^^^

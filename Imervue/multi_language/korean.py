@@ -1803,6 +1803,8 @@ korean_word_dict = {
     "frame_border": "테두리(px):",
     "frame_bottom": "폴라로이드 하단(px):",
     "frame_caption": "캡션:",
+    "frame_color": "테두리 색:",
+    "frame_text_color": "캡션 색:",
     "frame_failed": "프레임 실패",
     "dither_title": "정렬 디더링",
     "dither_levels": "채널당 레벨:",

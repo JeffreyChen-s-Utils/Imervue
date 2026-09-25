@@ -1825,6 +1825,8 @@ english_word_dict = {
     "frame_border": "Border (px):",
     "frame_bottom": "Polaroid bottom (px):",
     "frame_caption": "Caption:",
+    "frame_color": "Frame colour:",
+    "frame_text_color": "Caption colour:",
     "frame_failed": "Frame failed",
     "dither_title": "Ordered Dither",
     "dither_levels": "Levels per channel:",

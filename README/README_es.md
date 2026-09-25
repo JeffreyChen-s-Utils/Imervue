@@ -324,6 +324,7 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 - **Coordenadas polares (Polar Coordinates)** — envuelve un fotograma en un disco o lo desenrolla (tiny-planet / inversión polar)
 - **Caleidoscopio (Kaleidoscope)** — refleja una cuña angular en simetría de n pliegues
 - **Vidrio esmerilado (Frosted Glass)** — dispersión local de píxeles determinista basada en semilla
+- **Marco y leyenda (Frame & Caption)** — un borde mate de cualquier color, una franja inferior opcional estilo Polaroid y una leyenda con su propio color
 - **Predefinidos de revelado** — guarda una recipe y luego aplícala por completo o fusiona solo sus ajustes activos sobre otras imágenes (conservando el recorte propio de cada imagen, etc.)
 
 ### Ajustes locales

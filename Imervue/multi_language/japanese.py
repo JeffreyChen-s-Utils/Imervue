@@ -1805,6 +1805,8 @@ japanese_word_dict = {
     "frame_border": "枠（px）：",
     "frame_bottom": "ポラロイド下部（px）：",
     "frame_caption": "キャプション：",
+    "frame_color": "フレームの色：",
+    "frame_text_color": "キャプションの色：",
     "frame_failed": "フレームに失敗しました",
     "dither_title": "オーダードディザ",
     "dither_levels": "チャンネルあたりの階調数：",
