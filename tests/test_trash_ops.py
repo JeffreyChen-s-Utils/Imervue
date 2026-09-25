@@ -155,6 +155,20 @@ class TestPurgeBatch:
         assert failed == [str(stubborn)]
         assert stubborn.exists()
 
+    def test_a_trash_path_without_a_recycle_bin_is_removed_outright(self, tmp_path, batch_spy,
+                                                                     monkeypatch):
+        """The user confirmed a permanent delete; on a memory card the bin can't take it."""
+        on_card = tmp_path / "card_folder"
+        on_card.mkdir()
+        on_disk = _files(tmp_path, 1)
+        monkeypatch.setattr(trash_ops, "recycle_bin_holds",
+                            lambda path: path != str(on_card))
+        removed, failed = purge_batch([], [str(on_card), *on_disk])
+        assert sorted(removed) == sorted([str(on_card), *on_disk])
+        assert failed == []
+        assert not on_card.exists()
+        assert batch_spy == [on_disk]                # only the fixed-disk file went to the bin
+
 
 class TestFileDeleteWorker:
     def test_run_emits_progress_then_result(self, qapp, tmp_path, batch_spy):
@@ -397,3 +411,33 @@ class TestPerFileRetry:
         assert trashed == [paths[0], paths[2]]
         assert failed == [paths[1]]
         assert Path(paths[1]).exists()
+
+
+class TestDeleteOutright:
+    """Only on the user's word: files the Recycle Bin could not take."""
+
+    def test_a_folder_goes_with_everything_in_it(self, tmp_path):
+        folder = tmp_path / "shoot"
+        (folder / "raw").mkdir(parents=True)
+        (folder / "raw" / "a.CR2").write_bytes(b"x")
+        assert trash_ops.delete_outright([str(folder)]) == ([str(folder)], [])
+        assert not folder.exists()
+
+    def test_a_file_takes_its_sidecars(self, tmp_path):
+        (photo,) = _files(tmp_path, 1)
+        Path(photo + ".xmp").write_text("edits", encoding="utf-8")
+        assert trash_ops.delete_outright([photo]) == ([photo], [])
+        assert list(tmp_path.iterdir()) == []
+
+    def test_a_refusal_fails_alone(self, tmp_path, monkeypatch):
+        good, stubborn = _files(tmp_path, 2)
+        real_remove = trash_ops._remove_outright  # noqa: SLF001
+
+        def refuse(path):
+            if path == stubborn:
+                raise PermissionError("in use")
+            real_remove(path)
+
+        monkeypatch.setattr(trash_ops, "_remove_outright", refuse)
+        assert trash_ops.delete_outright([stubborn, good]) == ([good], [stubborn])
+        assert Path(stubborn).exists()

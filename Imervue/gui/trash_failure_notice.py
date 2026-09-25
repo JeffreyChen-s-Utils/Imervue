@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.trash_ops import purge_batch
+from Imervue.system.trash_ops import delete_outright
 
 logger = logging.getLogger("Imervue.trash_failure_notice")
 
@@ -47,13 +47,13 @@ def _ask_to_delete_permanently(parent: QWidget | None, paths: Sequence[str]) -> 
 def offer_permanent_delete(parent: QWidget | None, paths: Sequence[str]) -> list[str]:
     """List the files left in place and delete them for good if the user says so.
 
-    Returns the paths removed (their sidecars go too); nothing is asked when
-    *paths* is empty.
+    Returns the paths removed (a folder with its contents, a file with its
+    sidecars); nothing is asked when *paths* is empty.
     """
     paths = list(paths)
     if not paths or not _ask_to_delete_permanently(parent, paths):
         return []
-    removed, failed = purge_batch(paths)
+    removed, failed = delete_outright(paths)
     for path in failed:
         logger.warning("Couldn't delete %s permanently either; it is still on disk", path)
     return removed

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+import shutil
 import sys
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
@@ -93,18 +94,37 @@ def _trash_chunk(paths: Sequence[str]) -> tuple[list[str], list[str]]:
         return succeeded, failed
 
 
-def _unlink_chunk(paths: Sequence[str]) -> tuple[list[str], list[str]]:
-    """Permanently remove one chunk; each failure is isolated to its path."""
+def _remove_outright(path: str) -> None:
+    """Delete *path* for good: a folder with everything in it, or a file (or link)."""
+    target = Path(path)
+    if target.is_dir() and not target.is_symlink():
+        shutil.rmtree(target)
+    else:
+        target.unlink()
+
+
+def _each(paths: Sequence[str], remove: Callable[[str], None]) -> tuple[list[str], list[str]]:
+    """Apply *remove* to each path; ``(succeeded, failed)``, each failure isolated to its path."""
     succeeded: list[str] = []
     failed: list[str] = []
     for path in paths:
         try:
-            Path(path).unlink()
+            remove(path)
         except OSError:
             failed.append(path)
         else:
             succeeded.append(path)
     return succeeded, failed
+
+
+def _unlink_chunk(paths: Sequence[str]) -> tuple[list[str], list[str]]:
+    """Permanently remove one chunk of files; a folder fails (culling must never empty one)."""
+    return _each(paths, lambda path: Path(path).unlink())
+
+
+def _remove_chunk(paths: Sequence[str]) -> tuple[list[str], list[str]]:
+    """Permanently remove one chunk, a folder with everything in it; only on the user's word."""
+    return _each(paths, _remove_outright)
 
 
 class _ProgressReporter:
@@ -206,21 +226,44 @@ def purge_batch(
     Callers that commit a soft delete hold both kinds at once: viewer-list
     images were already removed from the list and are unlinked, while
     folders / file-tree entries were only hidden, so they go to the OS bin
-    and stay recoverable from there. Both groups share one progress count so
-    the caller shows a single bar. Returns ``(removed, failed)`` over both.
-    Each file's sidecars go the way the file went (not counted).
+    and stay recoverable from there. A trash path on a drive without a
+    Recycle Bin (:func:`recycle_bin_holds`) is deleted outright instead: the
+    caller has the user's word for a permanent delete. Both groups share one
+    progress count so the caller shows a single bar. Returns ``(removed,
+    failed)`` over both. Each file's sidecars go the way the file went (not
+    counted).
     """
     unlink_paths = list(unlink_paths)
-    trash_paths = list(trash_paths)
-    reporter = _ProgressReporter(len(unlink_paths) + len(trash_paths), on_progress)
-    files = _files_only(unlink_paths + trash_paths)
-    removed, failed = _apply_in_chunks(
-        unlink_paths, _unlink_chunk, chunk_size, reporter)
-    trashed, trash_failed = _apply_in_chunks(
-        trash_paths, _trash_chunk, chunk_size, reporter)
-    _sidecars_along(removed, files, _unlink_chunk, chunk_size)
+    stranded = [path for path in trash_paths if not recycle_bin_holds(path)]
+    kept_out = set(stranded)
+    trash_paths = [path for path in trash_paths if path not in kept_out]
+    reporter = _ProgressReporter(
+        len(unlink_paths) + len(stranded) + len(trash_paths), on_progress)
+    files = _files_only(unlink_paths + stranded + trash_paths)
+    removed, failed = _apply_in_chunks(unlink_paths, _unlink_chunk, chunk_size, reporter)
+    gone, gone_failed = _apply_in_chunks(stranded, _remove_chunk, chunk_size, reporter)
+    trashed, trash_failed = _apply_in_chunks(trash_paths, _trash_chunk, chunk_size, reporter)
+    _sidecars_along(removed + gone, files, _unlink_chunk, chunk_size)
     _sidecars_along(trashed, files, _trash_chunk, chunk_size)
-    return removed + trashed, failed + trash_failed
+    return removed + gone + trashed, failed + gone_failed + trash_failed
+
+
+def delete_outright(
+    paths: Sequence[str],
+    on_progress: ProgressCallback | None = None,
+    chunk_size: int = TRASH_CHUNK_SIZE,
+) -> tuple[list[str], list[str]]:
+    """Delete *paths* for good, a folder with everything in it; ``(removed, failed)``.
+
+    Only on the user's explicit word (the Recycle Bin could not take them).
+    Each file's sidecars go too (not counted).
+    """
+    paths = list(paths)
+    files = _files_only(paths)
+    removed, failed = _apply_in_chunks(
+        paths, _remove_chunk, chunk_size, _ProgressReporter(len(paths), on_progress))
+    _sidecars_along(removed, files, _unlink_chunk, chunk_size)
+    return removed, failed
 
 
 class _BatchFileWorker(QThread):

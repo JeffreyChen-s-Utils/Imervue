@@ -73,3 +73,13 @@ class TestTheQuestion:
         assert "IMG_0009.JPG" in text
         assert "IMG_0010.JPG" not in text
         assert "…" in text
+
+
+def test_a_folder_left_in_place_is_deleted_with_its_contents(tmp_path, monkeypatch):
+    """Folders soft-deleted in the file tree are among the pending deletions too."""
+    folder = tmp_path / "card" / "DCIM"
+    folder.mkdir(parents=True)
+    (folder / "IMG_0001.JPG").write_bytes(b"x")
+    monkeypatch.setattr(notice, "_ask_to_delete_permanently", lambda *_args: True)
+    assert notice.offer_permanent_delete(None, [str(folder)]) == [str(folder)]
+    assert not folder.exists()

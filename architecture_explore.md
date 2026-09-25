@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `cc61f80` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `f0a5ce0` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 871 | 143,291 |
+| `tests/` | 871 | 143,345 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,139 |
 | `Imervue/gui/` | 167 | 33,173 |
 | `Imervue/puppet/` | 57 | 15,295 |
@@ -79,14 +79,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/menu/` | 11 | 3,585 |
 | `Imervue/` 根層 | 5 | 1,580 |
 | `Imervue/plugin/` | 10 | 2,243 |
-| `Imervue/system/` | 26 | 2,711 |
+| `Imervue/system/` | 26 | 2,754 |
 | `Imervue/export/` | 9 | 1,081 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,712** | **324,439** |
+| **總計** | **1,712** | **324,536** |
 
-其中 `Imervue/` 套件本身 777 檔 / 166,807 行。
+其中 `Imervue/` 套件本身 777 檔 / 166,850 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -233,7 +233,7 @@ ImervueMainWindow
 | `file_manager.py` | 40 | `reveal_in_file_manager(path, select=)`：用 OS 的檔案總管開啟路徑（Windows `explorer`、macOS `open [-R]`、Linux `xdg-open`）；檔案樹、右鍵選單、外掛選單共用 |
 | `wallpaper.py` | 73 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；失敗只記錄；右鍵選單使用 |
 | `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
-| `trash_ops.py` | 284 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果）；`recycle_bin_holds`：Windows 上只有固定磁碟才交給 shell（記憶卡、USB 隨身碟、網路磁碟會被直接永久刪除），其餘留在原處算失敗 |
+| `trash_ops.py` | 327 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果）；`recycle_bin_holds`：Windows 上只有固定磁碟才交給 shell（記憶卡、USB 隨身碟、網路磁碟會被直接永久刪除），其餘留在原處算失敗；`purge_batch` 裡這類「送回收筒」的項目改為直接刪除（使用者已確認永久刪除）；`delete_outright(paths)`：確認後直接刪，資料夾連內容一起（`_unlink_chunk` 仍只刪檔案，culling 不會清空資料夾） |
 | `file_transfer.py` | 244 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
 | `atomic_write.py` | 33 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本） |
@@ -568,7 +568,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `timeline_view.py` | 362 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
 | `settings_notice.py` | 40 | `warn_if_settings_unreadable(parent)`：啟動時設定檔讀不到，就用非阻塞 `QMessageBox` 說明已改用預設值、副本會存在哪、怎麼取回（主視窗啟動後 800 ms 呼叫） |
-| `trash_failure_notice.py` | 59 | `offer_permanent_delete(parent, paths)`：提交刪除後送不進回收筒、留在原處的檔案，列出來問使用者要不要永久刪除（預設保留；確定就 `purge_batch` 連 sidecar 一起刪）；關閉時與 File 選單的立即提交都會呼叫 |
+| `trash_failure_notice.py` | 59 | `offer_permanent_delete(parent, paths)`：提交刪除後送不進回收筒、留在原處的檔案，列出來問使用者要不要永久刪除（預設保留；確定就 `delete_outright`，資料夾連內容、檔案連 sidecar 一起刪）；關閉時與 File 選單的立即提交都會呼叫 |
 | `hover_preview.py` | 192 | 縮圖懸停放大彈窗（預覽依 EXIF 轉正，標題列顯示圖片本身尺寸） |
 | `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
 | `multi_monitor_window.py` | 276 | 多螢幕鏡像視窗 |
@@ -970,7 +970,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-871 個檔、143,291 行。`pyproject.toml` 定義三個互斥層級 marker：
+871 個檔、143,345 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
