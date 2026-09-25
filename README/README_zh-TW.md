@@ -104,7 +104,7 @@ pip install .
 | PyOpenGL | OpenGL 綁定 |
 | PyOpenGL_accelerate | OpenGL 效能最佳化 |
 | numpy | 陣列運算與縮圖快取 |
-| rawpy | RAW 影像解碼 |
+| rawpy | RAW 影像解碼（CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG 等） |
 | imageio | 圖片 I/O |
 | imageio-ffmpeg | 幻燈片 MP4 匯出（H.264 透過 ffmpeg） |
 | defusedxml | 安全 XML 解析（XMP 邊車檔） |

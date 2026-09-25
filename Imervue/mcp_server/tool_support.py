@@ -8,12 +8,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-# Image extensions the listing helper considers (lower-case, with dot).
-IMAGE_EXTENSIONS: frozenset[str] = frozenset({
-    ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff",
-    ".gif", ".heic", ".heif", ".dng", ".cr2", ".cr3", ".nef",
-    ".arw", ".raf", ".orf", ".rw2", ".pef", ".srw",
-})
+from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+
+# Image extensions the listing tools consider: the viewer's still formats but
+# SVG, which needs Qt to rasterise and the server is Qt-free.
+IMAGE_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS - {".svg"}
 # Destination formats that can't carry alpha — flatten to RGB before saving.
 NO_ALPHA_FORMATS = frozenset({"jpg", "jpeg", "bmp"})
 

@@ -223,6 +223,14 @@ class TestDecodeImageFile:
         out = image_loader.decode_image_file(str(tmp_path / "shot.CR2"))
         assert out.shape == (30, 45, 4)
 
+    @pytest.mark.parametrize("name", ["IMG_1.CR3", "P1.RW2", "DSCN1.nrw", "nx.SRW", "IMGP1.pef"])
+    def test_every_libraw_format_is_developed(self, tmp_path, monkeypatch, name):
+        """Only six RAW formats reached libraw; a CR3 or RW2 went to Pillow and failed."""
+        from Imervue.gpu_image_view.images import image_loader
+        developed = np.zeros((30, 45, 3), dtype=np.uint8)
+        monkeypatch.setattr(image_loader, "_load_raw", lambda _p, thumbnail: developed)
+        assert image_loader.decode_image_file(str(tmp_path / name)).shape == (30, 45, 4)
+
     @pytest.mark.parametrize("thumbnail", [False, True])
     def test_unreadable_raw_is_an_oserror(self, tmp_path, thumbnail):
         """libraw's LibRawError slipped past every ``IMAGE_READ_ERRORS`` handler."""

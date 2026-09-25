@@ -105,7 +105,7 @@ pip install .
 | PyOpenGL | Привязки к OpenGL |
 | PyOpenGL_accelerate | Оптимизация производительности OpenGL |
 | numpy | Операции с массивами и кэш миниатюр |
-| rawpy | Декодирование RAW-изображений |
+| rawpy | Декодирование RAW-изображений (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG и другие) |
 | imageio | Ввод-вывод изображений |
 | imageio-ffmpeg | Экспорт слайд-шоу в MP4 (H.264 через ffmpeg) |
 | defusedxml | Безопасный разбор XML (sidecar-файлы XMP) |

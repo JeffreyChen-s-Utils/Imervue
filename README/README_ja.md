@@ -105,7 +105,7 @@ pip install .
 | PyOpenGL | OpenGL バインディング |
 | PyOpenGL_accelerate | OpenGL パフォーマンス最適化 |
 | numpy | 配列演算とサムネイルキャッシュ |
-| rawpy | RAW 画像のデコード |
+| rawpy | RAW 画像のデコード（CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG など） |
 | imageio | 画像 I/O |
 | imageio-ffmpeg | スライドショー MP4 エクスポート(ffmpeg 経由の H.264) |
 | defusedxml | 安全な XML 解析(XMP サイドカー) |

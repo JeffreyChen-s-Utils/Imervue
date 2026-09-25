@@ -12,8 +12,25 @@ from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
 from Imervue.image.jxl_support import JXL_EXTENSIONS, ensure_jxl_opener
 from Imervue.image.video_frames import VIDEO_EXTENSIONS
 
-RAW_EXTENSIONS: frozenset[str] = frozenset({".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"})
-"""Camera RAW formats, decoded through rawpy."""
+RAW_EXTENSIONS: frozenset[str] = frozenset({
+    ".cr2", ".cr3", ".crw",            # Canon
+    ".nef", ".nrw",                    # Nikon
+    ".arw", ".srf", ".sr2",            # Sony
+    ".dng",                            # Adobe DNG (phones, Leica, Pentax, Ricoh...)
+    ".raf",                            # Fujifilm
+    ".orf",                            # Olympus / OM System
+    ".rw2", ".rwl",                    # Panasonic, Leica
+    ".pef",                            # Pentax
+    ".srw",                            # Samsung
+    ".3fr", ".iiq", ".mef", ".mos",    # Hasselblad, Phase One, Mamiya, Leaf
+    ".erf", ".mrw", ".kdc", ".dcr",    # Epson, Minolta, Kodak
+})
+"""Camera RAW formats, decoded through rawpy (LibRaw).
+
+Sigma's ``.x3f`` is left out: LibRaw reads it only when built with
+``USE_X3FTOOLS``, which rawpy's wheels are not. So is the bare ``.raw``,
+which too many non-camera files share.
+"""
 
 STILL_IMAGE_EXTENSIONS: frozenset[str] = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng", ".svg",

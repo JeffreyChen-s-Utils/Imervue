@@ -105,7 +105,7 @@ pip install .
 | PyOpenGL | OpenGL-Bindings |
 | PyOpenGL_accelerate | OpenGL-Performance-Optimierung |
 | numpy | Array-Operationen und Thumbnail-Cache |
-| rawpy | RAW-Bilddekodierung |
+| rawpy | RAW-Bilddekodierung (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG und weitere) |
 | imageio | Bild-I/O |
 | imageio-ffmpeg | Slideshow-MP4-Export (H.264 via ffmpeg) |
 | defusedxml | Sicheres XML-Parsing (XMP-Sidecars) |

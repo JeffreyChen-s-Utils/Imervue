@@ -26,6 +26,22 @@ def test_extensions_are_lowercase_with_a_dot():
     assert all(e.startswith(".") and e == e.lower() for e in VIEWER_EXTENSIONS)
 
 
+@pytest.mark.parametrize("ext", [
+    ".cr3",     # every Canon body since 2018
+    ".rw2", ".nrw", ".pef", ".srw", ".crw", ".3fr", ".iiq",
+    ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
+])
+def test_libraw_formats_are_camera_raw(ext):
+    """Only six RAW formats used to open: a Canon CR3 or Panasonic RW2 never showed up."""
+    assert ext in RAW_EXTENSIONS
+    assert ext in VIEWER_EXTENSIONS
+
+
+@pytest.mark.parametrize("ext", [".x3f", ".raw"])
+def test_formats_libraw_cannot_be_trusted_with_are_left_out(ext):
+    assert ext not in VIEWER_EXTENSIONS
+
+
 @pytest.mark.parametrize(("ext", "expected"), [
     (".heic", ["heif"]), (".HEIF", ["heif"]), (".AVIF", []), (".jxl", ["jxl"]),
     (".png", []), (".mp4", []), ("", []),

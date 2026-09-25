@@ -251,6 +251,14 @@ def test_list_images_recursive_walks_subdirs(tmp_path, sample_image):
     assert "nested.png" in found
 
 
+def test_list_images_lists_what_the_viewer_opens(tmp_path, sample_image):
+    """AVIF, JPEG XL and CR3 were missing; SVG stays out, the server can't rasterise it."""
+    for name in ("shot.avif", "shot.jxl", "IMG_1.CR3", "P1.rw2", "logo.svg"):
+        (tmp_path / name).write_bytes(sample_image.read_bytes())
+    names = {Path(e["path"]).name for e in list_images(str(tmp_path))["images"]}
+    assert names == {"sample.png", "shot.avif", "shot.jxl", "IMG_1.CR3", "P1.rw2"}
+
+
 def test_list_images_raises_for_missing_folder():
     with pytest.raises(ValueError):
         list_images("does/not/exist")
@@ -524,6 +532,23 @@ def test_a_camera_raw_is_developed_not_its_preview(tmp_path, monkeypatch):
     convert_format(str(src), str(out))
     with Image.open(out) as converted:
         assert converted.size == (450, 300)
+
+
+def test_a_cr3_is_developed_too(tmp_path, monkeypatch):
+    """A CR3 was listed but went to Pillow, which can't open one."""
+    from Imervue.image import dimensions, raw_loader
+    src = tmp_path / "IMG_1.CR3"
+    src.write_bytes(b"ftypcrx " * 8)
+    developed = np.full((20, 30, 3), 90, dtype=np.uint8)
+    monkeypatch.setattr(raw_loader, "develop_raw", lambda _p, thumbnail=False: developed)
+    monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: (30, 20))
+    info = read_image_metadata(str(src))
+    assert (info["width"], info["height"], info["format"]) == (30, 20, "CR3")
+    out = tmp_path / "IMG_1.png"
+    convert_format(str(src), str(out))
+    from PIL import Image
+    with Image.open(out) as converted:
+        assert converted.size == (30, 20)
 
 
 def test_an_unreadable_raw_reports_a_probe_error(tmp_path, monkeypatch):

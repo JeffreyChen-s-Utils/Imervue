@@ -79,7 +79,7 @@ Unterstützte Formate
 ^^^^^^^^^^^^^^^^^^^^
 
 - **Standard**: PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
-- **RAW**: CR2 (Canon), NEF (Nikon), ARW (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus)
+- **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **Moderne Formate**: AVIF (eingebaut); HEIC / HEIF mit dem optionalen ``pillow-heif``; JPEG XL mit dem optionalen ``pillow-jxl-plugin``
 
 ----

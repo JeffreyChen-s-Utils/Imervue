@@ -105,7 +105,7 @@ pip install .
 | PyOpenGL | Bindings OpenGL |
 | PyOpenGL_accelerate | Optimisation des performances OpenGL |
 | numpy | Opérations sur tableaux et cache de vignettes |
-| rawpy | Décodage d'images RAW |
+| rawpy | Décodage d'images RAW (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG et d'autres) |
 | imageio | E/S d'images |
 | imageio-ffmpeg | Export MP4 du diaporama (H.264 via ffmpeg) |
 | defusedxml | Analyse XML sécurisée (fichiers annexes XMP) |

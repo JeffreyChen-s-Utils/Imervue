@@ -105,7 +105,7 @@ pip install .
 | PyOpenGL | OpenGL 바인딩 |
 | PyOpenGL_accelerate | OpenGL 성능 최적화 |
 | numpy | 배열 연산 및 썸네일 캐시 |
-| rawpy | RAW 이미지 디코딩 |
+| rawpy | RAW 이미지 디코딩 (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG 등) |
 | imageio | 이미지 입출력 |
 | imageio-ffmpeg | 슬라이드쇼 MP4 내보내기 (ffmpeg을 통한 H.264) |
 | defusedxml | 안전한 XML 파싱 (XMP 사이드카) |
