@@ -274,8 +274,11 @@ class KeyActionDispatcher:
         view = self.view
         if not view.deep_zoom:
             return
-        from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
-        view.undo_manager.push(RotateCommand(view, clockwise=clockwise))
+        # rotate_current_image pushes its own recipe command. Wrapped in another
+        # command it ran inside that command's redo / undo, a push within a push:
+        # two entries per key press, and undo, redo, undo corrupted the stack.
+        from Imervue.gpu_image_view.actions.keyboard_actions import rotate_current_image
+        rotate_current_image(view, clockwise=clockwise)
 
     def _reset_view(self) -> None:
         """Home key — back to the "whole image visible" baseline.

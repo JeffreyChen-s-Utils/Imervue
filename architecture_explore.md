@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `294ae7f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `6edb949` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 890 | 148,973 |
+| `tests/` | 889 | 148,948 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
 | `Imervue/gui/` | 167 | 33,426 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,369 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,279 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,200 |
 | `Imervue/multi_language/` | 8 | 14,304 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,394 |
-| **總計** | **1,741** | **332,169** |
+| **總計** | **1,739** | **332,065** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,802 行。
+其中 `Imervue/` 套件本身 786 檔 / 168,723 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -444,7 +444,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `input_controller.py` | 429 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
 | `key_input_handler.py` | 289 | 鍵盤事件路由（F8 HUD、F1-F5 色標籤、Esc、方向鍵） |
-| `key_action_dispatcher.py` | 356 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
+| `key_action_dispatcher.py` | 359 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
 | `drop_handler.py` | 75 | 拖放檔案/資料夾開啟 |
@@ -493,7 +493,6 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `keyboard_actions.py` | 343 | 鍵盤快捷動作實作（Ctrl+C 複製檢視器顯示的金字塔底層，沒有時才解碼檔案；評分 `rate_current_image` 與我的最愛 `toggle_favorite` 作用在 `resolve_cull_targets` 的照片上，全都已是那個狀態時清除；兩者都可用 `targets=` 指定照片） |
 | `lossless_rotate.py` | 115 | 90° 旋轉檔案：JPEG 只改 EXIF 轉向標籤（`jpeg_orientation`，不需 piexif、其餘位元組不變）；其他格式從檢視器看到的影像轉後原子重存，以 `in_place_save.carried_save_kwargs` 帶回 metadata 與壓縮設定；RAW、多影格等無法完整寫回的檔案拒絕處理；經 `recipe_store.carry_recipe` 讓 Modify recipe 跟著轉（`recipe.turned_with_file`） |
 | `drag_out.py` | 75 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
-| `undo_commands.py` | 82 | `RotateCommand` / `RatingCommand` / `FavoriteCommand` |
 | `recipe_commands.py` | 65 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
 | `undo_coalescer.py` | 61 | 把滑桿拖曳產生的密集編輯合併成單一 undo 步驟 |
 
@@ -977,7 +976,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-890 個檔、148,973 行。`pyproject.toml` 定義三個互斥層級 marker：
+889 個檔、148,948 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

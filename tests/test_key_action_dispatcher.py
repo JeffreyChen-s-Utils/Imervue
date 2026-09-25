@@ -235,3 +235,64 @@ def test_dual_page_keys_open_their_reading_direction(key, modifiers, mode):
     view = SimpleNamespace(main_window=SimpleNamespace(activate_dual_view=opened.append))
     assert KeyActionDispatcher(view)._dispatch_toggle(action) is True   # noqa: SLF001
     assert opened == [mode]
+
+
+
+# ---------------------------------------------------------------
+# R / Shift+R — one recipe command per press
+# ---------------------------------------------------------------
+@pytest.fixture
+def rotate_view(qapp, tmp_path, monkeypatch):
+    """A deep-zoom view on one file, with a real undo stack and a scratch recipe store."""
+    from PySide6.QtGui import QUndoStack
+
+    from Imervue.gpu_image_view.actions import recipe_commands
+    from Imervue.image import recipe_store as store_mod
+    store = store_mod.RecipeStore(store_path=tmp_path / "recipes.json")
+    monkeypatch.setattr(recipe_commands, "recipe_store", store)
+    monkeypatch.setattr(store_mod, "recipe_store", store)
+    image = tmp_path / "a.png"
+    image.write_bytes(b"x")
+    view = SimpleNamespace(deep_zoom=object(), model=SimpleNamespace(images=[str(image)]),
+                           current_index=0, undo_manager=QUndoStack())
+
+    def steps():
+        recipe = store.get_for_path(str(image))
+        return 0 if recipe is None else recipe.rotate_steps
+
+    return view, steps
+
+
+def test_a_rotate_key_is_one_undo_step(rotate_view):
+    """R pushed a command whose redo pushed a second one: undo, redo, undo crashed the app."""
+    view, steps = rotate_view
+    stack = view.undo_manager
+    KeyActionDispatcher(view)._push_rotate(True)  # noqa: SLF001
+    assert (stack.count(), stack.index(), steps()) == (1, 1, 1)
+    stack.undo()
+    assert (stack.count(), stack.index(), steps()) == (1, 0, 0)
+    stack.redo()
+    assert (stack.count(), stack.index(), steps()) == (1, 1, 1)
+    stack.undo()
+    assert (stack.count(), stack.index(), steps()) == (1, 0, 0)
+
+
+def test_rotate_keys_step_back_one_press_at_a_time(rotate_view):
+    view, steps = rotate_view
+    stack = view.undo_manager
+    dispatcher = KeyActionDispatcher(view)
+    dispatcher._push_rotate(True)  # noqa: SLF001
+    dispatcher._push_rotate(True)  # noqa: SLF001
+    dispatcher._push_rotate(False)  # noqa: SLF001
+    assert (stack.count(), steps()) == (3, 1)
+    stack.undo()
+    assert steps() == 2
+    stack.undo()
+    assert steps() == 1
+
+
+def test_rotate_keys_do_nothing_outside_deep_zoom(rotate_view):
+    view, steps = rotate_view
+    view.deep_zoom = None
+    KeyActionDispatcher(view)._push_rotate(True)  # noqa: SLF001
+    assert (view.undo_manager.count(), steps()) == (0, 0)
