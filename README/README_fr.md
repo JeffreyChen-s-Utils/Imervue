@@ -845,8 +845,8 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 ### Prompts
 
 Quatre prompts réutilisables : `caption_image`, `suggest_edits`, `analyze_composition`
-(critique de composition pilotée par la saillance) et `flag_issues` (triage netteté + qualité
-+ écrêtage). Les arguments des prompts peuvent être complétés via `completion/complete`.
+(critique de composition pilotée par la saillance) et `flag_issues` (triage netteté + qualité +
+écrêtage). Les arguments des prompts peuvent être complétés via `completion/complete`.
 
 ### Câblage
 
