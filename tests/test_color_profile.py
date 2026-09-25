@@ -63,7 +63,7 @@ def test_transforms_are_built_once_per_profile_and_mode():
     color_profile._transform.cache_clear()
     to_srgb(_p3_image())
     to_srgb(_p3_image())
-    assert color_profile._transform.cache_info().hits >= 1
+    assert color_profile._transform.cache_info().hits >= 1  # pylint: disable=no-value-for-parameter
 
 
 _WINDOWS_CMYK = Path(r"C:\Windows\System32\spool\drivers\color\RSWOP.icm")

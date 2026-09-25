@@ -892,8 +892,8 @@ result as `structuredContent`, and long-running tools stream
 ### Prompts
 
 Four reusable prompts: `caption_image`, `suggest_edits`, `analyze_composition`
-(saliency-driven composition critique) and `flag_issues` (sharpness + quality
-+ clipping triage). Prompt arguments are completable via `completion/complete`.
+(saliency-driven composition critique) and `flag_issues` (sharpness + quality +
+clipping triage). Prompt arguments are completable via `completion/complete`.
 
 ### Wiring
 
