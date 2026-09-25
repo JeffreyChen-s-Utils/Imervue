@@ -124,6 +124,8 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
 
 遠超過 Pillow 安全上限（1.79 億像素）的全景圖也能開啟：上限依電腦記憶體而定（16 GB 約 13 億像素），這類超大圖一次只解碼一張。
 
+中途截斷的 JPEG、PNG、TIFF、GIF、BMP（下載或複製中斷、從故障記憶卡救回的照片）會像瀏覽器一樣顯示已讀到的部分，而不是完全打不開。
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -1314,7 +1316,7 @@ Lightroom 的寫法（``Red`` … ``Purple``）與 Bridge 的寫法（``Select``
 「選用」則不受影響。
 
 沒有 sidecar 的檔案會讀取（並匯入）檔案本身內嵌的資料：先讀 XMP（JPEG、PNG、WebP、
-TIFF），再讀 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的評等與關鍵字
+TIFF、CR3、RW2、ORF、RAF），再讀 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的評等與關鍵字
 存在這裡，Windows 檔案總管與部分相機的星等也在這裡。有 sidecar 時以 sidecar 為準。
 
 - **為當前圖片匯入 XMP** — 從 sidecar 讀取星等 / 標題 / 關鍵字 / 色彩標籤
@@ -2044,7 +2046,7 @@ Schema（有版本 — 未來的欄位會向前相容）：
    * - ``list-ops``
      - 列出所有子指令(``--json`` 輸出機器可讀格式)
 
-每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；AVIF 由 Pillow 自己讀取，安裝了選用後端時也能讀取 HEIC / JPEG XL。相機 RAW 會像檢視器一樣顯像，而不是讀成內嵌的小預覽；``resize`` 與 ``strip`` 會寫成 PNG。無法讀取的檔案會被回報，其餘檔案照常處理。
+每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；AVIF 由 Pillow 自己讀取，安裝了選用後端時也能讀取 HEIC / JPEG XL。相機 RAW 會像檢視器一樣顯像，而不是讀成內嵌的小預覽；``resize`` 與 ``strip`` 會寫成 PNG。無法讀取的檔案會被回報，其餘檔案照常處理。中途截斷的檔案會像檢視器一樣，讀取到能讀的位置為止。
 
 共用旗標:``--out``\ (輸出目錄)、``--recursive``、``--dry-run``\ (只列出動作、不寫入)、``--overwrite`` 與 ``--version``。
 

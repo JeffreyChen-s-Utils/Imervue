@@ -167,7 +167,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 | `preset` / `pipeline` | 按名称应用已保存的显影预设；执行有序的 JSON 运算管线 |
 | `list-ops` | 列出所有子命令（`--json` 输出机器可读格式） |
 
-每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。相机 RAW 会像查看器一样显像，而不是读成内嵌的小预览；`resize` 与 `strip` 会写成 PNG。无法读取的文件会被报告，其余文件照常处理。
+每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。相机 RAW 会像查看器一样显像，而不是读成内嵌的小预览；`resize` 与 `strip` 会写成 PNG。无法读取的文件会被报告，其余文件照常处理。中途截断的文件会像查看器一样，读取到能读的位置为止。
 
 共用标志：`--out`（输出目录）、`--recursive`、`--dry-run`（只列出动作、不写入）、`--overwrite`、`--version`。
 
@@ -187,6 +187,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 - **磁盘缓存** — MD5 失效检测的压缩 PNG 缩图，存于 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
 - **EXIF 方向** — 手机或相机只打了方向标签、没有真正旋转的竖拍照片，在检视器、缩图、列表视图、悬停预览和 Modify 分页中都会摆正显示；之前保存的显影裁剪 / 旋转仍按当初的方向套用
 - **色彩管理** — 内嵌色彩描述文件的照片（手机的 Display P3、相机的 Adobe RGB、CMYK）在检视器与缩图中会转换为 sRGB 显示；没有描述文件或本身是 sRGB 的图像照原样显示
+- **不完整的文件** — 中途截断的 JPEG、PNG、TIFF、GIF、BMP（下载或复制中断、从故障存储卡救回的照片）会像浏览器一样显示已读到的部分，而不是完全打不开
 - **动画播放** — GIF / APNG，含播放 / 暂停 / 逐帧 / 速度控制；解码后超过 512 MB 的动画会边播放边逐帧解码，而不是一开始全部解码；10 ms 以下的帧会和浏览器一样显示 100 ms
 
 ### 浏览模式
@@ -259,7 +260,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 - **EXIF 编辑器** 对话框 — 描述、作者、版权、相机与注释（支持 Unicode）无需额外套件即可写入 JPEG / WebP，像素与其他标签不变
 - **关键字编辑器** — 标题 / 创作者 / 描述 / 关键字，含从标签共现得出的 **相关标签建议**，以及 **受控词汇展开**（输入叶节点关键字会自动套用其祖先＋同义词，词汇为可编辑的层级结构）
 - **图像信息** 对话框（尺寸 / 大小 / 日期）
-- **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 other XMP-aware photo managers（通过 `defusedxml` 安全解析）。保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。除了 `photo.xmp`（Lightroom、Bridge），darktable 与 digiKam 写的 `photo.jpg.xmp` 在它是唯一的 sidecar 时也会读取并更新；颜色标签看得懂 Lightroom 的写法（`Red` … `Purple`）与 Bridge 的写法（`Select`、`Second`、`Approved`、`Review`、`To Do`），导出时按 Lightroom 的写法写入。被拒绝的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）会成为筛选的「拒绝」，「拒绝」导出时写成 -1。没有 sidecar 的文件会读取并导入文件本身内嵌的 XMP 与 EXIF 评级（JPEG、PNG、WebP、TIFF）：Lightroom 就是这样保存 JPEG 的评级与关键字，Windows 文件资源管理器的星级也是。
+- **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 other XMP-aware photo managers（通过 `defusedxml` 安全解析）。保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。除了 `photo.xmp`（Lightroom、Bridge），darktable 与 digiKam 写的 `photo.jpg.xmp` 在它是唯一的 sidecar 时也会读取并更新；颜色标签看得懂 Lightroom 的写法（`Red` … `Purple`）与 Bridge 的写法（`Select`、`Second`、`Approved`、`Review`、`To Do`），导出时按 Lightroom 的写法写入。被拒绝的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）会成为筛选的「拒绝」，「拒绝」导出时写成 -1。没有 sidecar 的文件会读取并导入文件本身内嵌的 XMP 与 EXIF 评级（JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF）：Lightroom 就是这样保存 JPEG 的评级与关键字，Windows 文件资源管理器的星级也是。
 - **GPS 地理标记编辑器** — 读写 EXIF GPS 经纬度；JPEG / WebP 无需额外套件，像素、其他标签与缩略图都不变
 - **令牌批量重命名** — 实时预览模板 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **导出元数据 CSV / JSON** — 每张图一行含挑片 / 评级 / 标签 / 笔记

@@ -585,6 +585,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    from Imervue.system.pixel_limit import raise_pixel_limit
-    raise_pixel_limit()   # a panorama past Pillow's server limit converts too
+    from Imervue.system.pillow_setup import configure_pillow
+    configure_pillow()   # a giant panorama and a file cut short convert too
     sys.exit(main())

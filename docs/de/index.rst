@@ -135,6 +135,8 @@ Klicken Sie auf eine Miniaturansicht, um in den Deep-Zoom-Modus für hochwertige
 
 Auch Panoramen weit über Pillows Sicherheitsgrenze von 179 Megapixeln öffnen sich: Die Grenze richtet sich nach dem Arbeitsspeicher (bei 16 GB etwa 1,3 Gigapixel), und solche Riesen werden nacheinander dekodiert.
 
+Ein abgeschnittenes JPEG, PNG, TIFF, GIF oder BMP — ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto — öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2233,7 +2235,7 @@ exportiert. Eine nicht abgelehnte Sidecar-Datei hebt ein Reject auf; ein Pick
 bleibt unberührt.
 
 Eine Datei ohne Sidecar wird aus dem gelesen — und importiert —, was sie selbst
-einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF), dann ihrem EXIF-``Rating`` /
+einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), dann ihrem EXIF-``Rating`` /
 ``RatingPercent``. Dort speichert Lightroom Bewertung und Stichwörter eines JPEG,
 und dort legen der Windows-Explorer und manche Kameras ihre Sterne ab. Eine
 vorhandene Sidecar-Datei hat Vorrang.
@@ -2537,7 +2539,7 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
    * - ``list-ops``
      - Alle Unterbefehle auflisten (``--json`` für maschinenlesbare Ausgabe)
 
-Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; ``resize`` und ``strip`` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet.
+Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; ``resize`` und ``strip`` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht.
 
 Gemeinsame Flags: ``--out`` (Ausgabeverzeichnis), ``--recursive``, ``--dry-run`` (Aktionen nur auflisten, nichts schreiben), ``--overwrite`` und ``--version``.
 

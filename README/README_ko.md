@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 | `preset` / `pipeline` | 저장된 현상 프리셋을 이름으로 적용, 순서가 있는 JSON 파이프라인 실행 |
 | `list-ops` | 모든 서브커맨드 출력(`--json`으로 기계 판독 출력) |
 
-모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 카메라 RAW는 작은 내장 미리보기가 아니라 뷰어처럼 현상해서 읽으며, `resize` 와 `strip` 은 PNG로 저장합니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다.
+모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 카메라 RAW는 작은 내장 미리보기가 아니라 뷰어처럼 현상해서 읽으며, `resize` 와 `strip` 은 PNG로 저장합니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다. 잘린 파일은 뷰어처럼 읽을 수 있는 곳까지 읽습니다.
 
 공용 플래그: `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `--version`.
 
@@ -188,6 +188,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 - **디스크 캐시** — MD5 기반 무효화를 사용하는 압축 PNG 썸네일, `%LOCALAPPDATA%/Imervue/cache/thumbnails` (또는 `~/.cache/imervue/thumbnails`)에 저장
 - **EXIF 방향** — 휴대폰이나 카메라가 회전하지 않고 태그만 붙인 세로 사진을 뷰어, 썸네일, 목록 보기, 호버 미리보기, Modify 탭에서 바로 세워 표시. 이전에 저장한 현상 자르기 / 회전은 만들어진 방향 그대로 적용됩니다
 - **색상 관리** — 색상 프로필이 포함된 사진(휴대폰의 Display P3, 카메라의 Adobe RGB, CMYK)은 뷰어와 썸네일에서 sRGB로 변환해 표시. 프로필이 없거나 sRGB인 이미지는 그대로 표시합니다
+- **잘린 파일** — 중간에 끊긴 JPEG, PNG, TIFF, GIF, BMP(다운로드나 복사가 중단된 파일, 고장 난 메모리 카드에서 복구한 사진)도 열리지 않는 대신 브라우저처럼 읽은 부분까지 표시합니다
 - **애니메이션 재생** — GIF / APNG, 재생 / 일시정지 / 프레임 단위 / 속도 제어 지원; 디코딩하면 512 MB를 넘는 애니메이션은 처음에 모두 디코딩하지 않고 재생하면서 한 프레임씩 디코딩. 10 ms 이하인 프레임은 브라우저처럼 100 ms 동안 표시
 
 ### 브라우징 모드
@@ -260,7 +261,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 - **EXIF 편집기** 다이얼로그 — 설명·작성자·저작권·카메라·코멘트(유니코드 포함)를 추가 패키지 없이 JPEG / WebP에 기록하며 픽셀과 다른 태그는 그대로
 - **키워드 편집기** — 제목 / 작성자 / 설명 / 키워드, 태그 동시 출현에서 도출한 **연관 태그 제안** 포함, 그리고 **통제 어휘 확장**(리프 키워드가 편집 가능한 계층 어휘에서 그 조상 + 동의어를 자동으로 적용)
 - **이미지 정보** 다이얼로그 (크기 / 용량 / 날짜)
-- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 인식 사진 관리자와 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
+- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 인식 사진 관리자와 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
 - **GPS 지오태그 편집기** — EXIF GPS 위도/경도 읽기/쓰기. JPEG / WebP는 추가 패키지 없이 픽셀·다른 태그·썸네일을 그대로 두고 기록
 - **토큰 일괄 이름 변경** — 라이브 미리보기 템플릿 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **메타데이터 CSV / JSON 내보내기** — 컬링 / 별점 / 태그 / 메모를 포함한 이미지당 한 행

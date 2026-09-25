@@ -136,6 +136,8 @@ Clique em uma miniatura para entrar no modo Deep Zoom para visualização indivi
 
 Panoramas muito acima do limite de segurança de 179 megapixels do Pillow também abrem: o limite acompanha a memória do computador (com 16 GB, cerca de 1,3 gigapixel) e essas imagens gigantes são decodificadas uma de cada vez.
 
+Um JPEG, PNG, TIFF, GIF ou BMP incompleto — um download ou cópia interrompidos, uma foto recuperada de um cartão de memória com defeito — abre com a parte que foi lida, como no navegador, em vez de não abrir.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2175,7 +2177,7 @@ importada como **Reject** da seleção, sem estrelas, e um Reject é exportado c
 -1. Um sidecar não rejeitado remove um Reject; um Pick fica como está.
 
 Um arquivo sem sidecar é lido — e importado — a partir do que ele mesmo embute: o
-pacote XMP (JPEG, PNG, WebP, TIFF) e depois o ``Rating`` / ``RatingPercent`` EXIF.
+pacote XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) e depois o ``Rating`` / ``RatingPercent`` EXIF.
 É ali que o Lightroom guarda a avaliação e as palavras-chave de um JPEG, e onde o
 Explorador do Windows e algumas câmeras guardam as estrelas. Havendo sidecar, ele
 prevalece.
@@ -2510,7 +2512,7 @@ o Qt**, o que o torna utilizável em scripts, etapas de CI e servidores sem disp
    * - ``list-ops``
      - Listar todos os subcomandos (``--json`` para saída legível por máquina)
 
-Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um RAW de câmera é revelado como no visualizador, em vez de lido pela pequena prévia embutida; ``resize`` e ``strip`` o gravam como PNG. Um arquivo ilegível é relatado e o restante é processado mesmo assim.
+Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um RAW de câmera é revelado como no visualizador, em vez de lido pela pequena prévia embutida; ``resize`` e ``strip`` o gravam como PNG. Um arquivo ilegível é relatado e o restante é processado mesmo assim. Um arquivo incompleto é lido até onde vai, como no visualizador.
 
 Flags compartilhadas: ``--out`` (diretório de saída), ``--recursive``, ``--dry-run`` (listar ações sem escrever nada), ``--overwrite`` e ``--version``.
 

@@ -139,6 +139,8 @@ alta calidad.
 
 También se abren panoramas muy por encima del límite de seguridad de 179 megapíxeles de Pillow: el límite depende de la memoria del equipo (con 16 GB, unos 1,3 gigapíxeles) y esas imágenes gigantes se decodifican de una en una.
 
+Un JPEG, PNG, TIFF, GIF o BMP incompleto — una descarga o copia interrumpida, una foto recuperada de una tarjeta de memoria dañada — se abre con la parte que se pudo leer, como en un navegador, en lugar de no abrirse.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2198,7 +2200,7 @@ importa como **Reject** de la selección sin estrellas, y un Reject se exporta c
 -1. Un sidecar no rechazado quita un Reject; un Pick no cambia.
 
 Un archivo sin sidecar se lee — y se importa — desde lo que él mismo incrusta: su
-paquete XMP (JPEG, PNG, WebP, TIFF) y luego su ``Rating`` / ``RatingPercent``
+paquete XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) y luego su ``Rating`` / ``RatingPercent``
 EXIF. Ahí guarda Lightroom la valoración y las palabras clave de un JPEG, y ahí
 guardan sus estrellas el Explorador de Windows y algunas cámaras. Si hay sidecar,
 manda el sidecar.
@@ -2529,7 +2531,7 @@ Qt**, lo que lo hace utilizable desde scripts, pasos de CI y servidores sin pant
    * - ``list-ops``
      - Listar todos los subcomandos (``--json`` para salida legible por máquina)
 
-Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; ``resize`` y ``strip`` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente.
+Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; ``resize`` y ``strip`` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente. Un archivo incompleto se lee hasta donde llega, como en el visor.
 
 Opciones compartidas: ``--out`` (directorio de salida), ``--recursive``, ``--dry-run`` (listar acciones sin escribir nada), ``--overwrite`` y ``--version``.
 

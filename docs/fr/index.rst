@@ -135,6 +135,8 @@ Cliquez sur une vignette pour passer en mode Deep Zoom et obtenir un affichage d
 
 Les panoramas bien au-delà de la limite de sécurité de 179 mégapixels de Pillow s'ouvrent aussi : la limite suit la mémoire de l'ordinateur (avec 16 Go, environ 1,3 gigapixel) et ces images géantes sont décodées une à une.
 
+Un JPEG, PNG, TIFF, GIF ou BMP tronqué — un téléchargement ou une copie interrompus, une photo récupérée sur une carte mémoire défaillante — s'ouvre avec la partie lue, comme dans un navigateur, au lieu de ne pas s'ouvrir du tout.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2198,7 +2200,7 @@ importée comme **Reject** du tri, sans étoiles, et un Reject est exporté en -
 Un sidecar non rejeté lève un Reject ; un Pick reste tel quel.
 
 Un fichier sans sidecar est lu — et importé — depuis ce qu'il embarque lui-même :
-son paquet XMP (JPEG, PNG, WebP, TIFF), puis son ``Rating`` / ``RatingPercent``
+son paquet XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), puis son ``Rating`` / ``RatingPercent``
 EXIF. C'est là que Lightroom garde la note et les mots-clés d'un JPEG, et que
 l'Explorateur Windows et certains appareils gardent leurs étoiles. Un sidecar,
 s'il existe, l'emporte.
@@ -2532,7 +2534,7 @@ affichage::
    * - ``list-ops``
      - Lister toutes les sous-commandes (``--json`` pour une sortie exploitable par machine)
 
-Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités.
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités. Un fichier tronqué est lu aussi loin qu'il va, comme dans la visionneuse.
 
 Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
 

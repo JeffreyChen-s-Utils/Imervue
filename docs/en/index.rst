@@ -134,6 +134,8 @@ Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
 
 Panoramas far larger than Pillow's 179-megapixel safety limit open too: the limit follows the computer's memory (with 16 GB, about 1.3 gigapixels), and such giants decode one at a time.
 
+A JPEG, PNG, TIFF, GIF or BMP cut short — an interrupted download or copy, a photo recovered from a failing memory card — opens with the part that was read, as in a browser, instead of not opening at all.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2161,7 +2163,7 @@ imported as a culling **Reject** with no stars, and a Reject is exported as -1.
 A sidecar that isn't rejected lifts a Reject; a Pick is left alone.
 
 A file without a sidecar is read — and imported — from what it embeds itself: its
-XMP packet (JPEG, PNG, WebP, TIFF), then its EXIF ``Rating`` / ``RatingPercent``.
+XMP packet (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), then its EXIF ``Rating`` / ``RatingPercent``.
 That is where Lightroom keeps a JPEG's rating and keywords, and where Windows
 Explorer and some cameras keep their stars. A sidecar, when there is one, wins.
 
@@ -2497,7 +2499,7 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
    * - ``list-ops``
      - List every subcommand (``--json`` for machine-readable output)
 
-Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run.
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer.
 
 Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
 (list actions, write nothing), ``--overwrite`` and ``--version``.

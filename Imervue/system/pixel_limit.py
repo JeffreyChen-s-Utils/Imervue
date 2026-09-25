@@ -71,7 +71,7 @@ def pixel_limit_for(memory_bytes: int | None) -> int:
 
 
 def raise_pixel_limit() -> int:
-    """Set Pillow's pixel limit for this machine and return it; for the app's entry points."""
+    """Set Pillow's pixel limit for this machine and return it (``configure_pillow`` calls it)."""
     limit = pixel_limit_for(total_memory_bytes())
     Image.MAX_IMAGE_PIXELS = limit
     return limit
