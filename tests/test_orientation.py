@@ -60,7 +60,7 @@ def test_corrupt_webp_exif_reads_as_upright(tmp_path):
 import pytest  # noqa: E402
 from PIL import Image  # noqa: E402
 
-from Imervue.image.orientation import exif_orientation, transpose_for, upright  # noqa: E402
+from Imervue.image.orientation import exif_orientation, transpose_for  # noqa: E402
 
 
 def _tagged(code, size=(6, 4)):
@@ -89,11 +89,6 @@ def test_exif_orientation_reads_the_tag_and_defaults_to_upright():
     assert exif_orientation(Image.new("RGB", (2, 2))) == 1
 
 
-def test_upright_turns_by_the_images_own_tag():
-    assert upright(_tagged(6, size=(6, 4))).size == (4, 6)
-    assert upright(_tagged(3, size=(6, 4))).size == (6, 4)
-
-
 def test_turned_image_no_longer_carries_the_tag(tmp_path):
     """``transpose`` copies ``info``; a second reader would turn the pixels again."""
     exif = Image.Exif()
@@ -102,7 +97,27 @@ def test_turned_image_no_longer_carries_the_tag(tmp_path):
     path = tmp_path / "p.jpg"
     Image.new("RGB", (40, 20)).save(path, exif=exif, xmp=xmp)
     with Image.open(path) as img:
-        turned = upright(img)
+        turned = transpose_for(img, exif_orientation(img))
     assert turned.size == (20, 40)
     assert exif_orientation(turned) == 1
     assert b"tiff:Orientation" not in turned.info.get("xmp", b"")
+
+
+def _portrait_file(tmp_path):
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "p.jpg"
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    return str(path)
+
+
+@pytest.mark.parametrize(("module", "loader"), [
+    ("focus_stack", "_load_rgb"), ("stack_blend", "_load_rgb"),
+    ("hdr_merge", "_load_bgr"), ("panorama", "_load_bgr"),
+])
+def test_multi_image_merges_load_upright_frames(tmp_path, module, loader):
+    """Their result is saved without EXIF, and every frame must share one orientation."""
+    import importlib
+    load = getattr(importlib.import_module(f"Imervue.image.{module}"), loader)
+    assert load(_portrait_file(tmp_path)).shape[:2] == (40, 20)
+

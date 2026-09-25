@@ -24,6 +24,7 @@ import json
 import zipfile
 from pathlib import Path
 
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.paint.document_io import (
     load_document_from_buffer,
     save_document_to_buffer,
@@ -48,11 +49,13 @@ def save_project(project: PaintProject, path: str | Path) -> None:
         "active_page_index": int(project.active_page_index),
         "pages": [{"name": page.name} for page in project.pages],
     }
-    with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(_MANIFEST_NAME, json.dumps(manifest))
-        for i, page in enumerate(project.pages):
-            blob = save_document_to_buffer(page.document)
-            zf.writestr(f"page_{i}.imervue", blob)
+    def write(tmp: Path) -> None:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(_MANIFEST_NAME, json.dumps(manifest))
+            for i, page in enumerate(project.pages):
+                zf.writestr(f"page_{i}.imervue", save_document_to_buffer(page.document))
+
+    replace_atomically(target, write)   # a failed save leaves the old bundle whole
 
 
 def load_project(path: str | Path) -> PaintProject:

@@ -15,11 +15,12 @@ from PySide6.QtWidgets import QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.dither import ordered_dither
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -44,7 +45,7 @@ class _DitherWorker(QThread):
             Image.fromarray(ordered_dither(load_rgba(self._path), self._levels),
                             mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Dither failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -73,7 +74,7 @@ class DitherDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_dither.png")
+        out_path = Path(output_path(self._path, "dither"))
         self._worker = _DitherWorker(self._path, self._levels.value(), str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()

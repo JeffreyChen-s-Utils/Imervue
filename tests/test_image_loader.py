@@ -210,3 +210,65 @@ class TestExifOrientation:
         legacy = Recipe.from_dict({"brightness": 0.2})
         img = load_image_file(_portrait_jpeg(tmp_path / "p.jpg"), recipe=legacy)
         assert img.shape[:2] == (40, 20)
+
+
+class TestDecodeImageFile:
+    """The editors' base: the viewer's decode without recipe or view-time simulation."""
+
+    def test_raw_is_developed_through_libraw(self, tmp_path, monkeypatch):
+        """Pillow opens a CR2 as TIFF and returns its small embedded preview."""
+        from Imervue.gpu_image_view.images import image_loader
+        developed = np.zeros((30, 45, 3), dtype=np.uint8)
+        monkeypatch.setattr(image_loader, "_load_raw", lambda _p, thumbnail: developed)
+        out = image_loader.decode_image_file(str(tmp_path / "shot.CR2"))
+        assert out.shape == (30, 45, 4)
+
+    @pytest.mark.parametrize("name", ["IMG_1.CR3", "P1.RW2", "DSCN1.nrw", "nx.SRW", "IMGP1.pef"])
+    def test_every_libraw_format_is_developed(self, tmp_path, monkeypatch, name):
+        """Only six RAW formats reached libraw; a CR3 or RW2 went to Pillow and failed."""
+        from Imervue.gpu_image_view.images import image_loader
+        developed = np.zeros((30, 45, 3), dtype=np.uint8)
+        monkeypatch.setattr(image_loader, "_load_raw", lambda _p, thumbnail: developed)
+        assert image_loader.decode_image_file(str(tmp_path / name)).shape == (30, 45, 4)
+
+    @pytest.mark.parametrize("thumbnail", [False, True])
+    def test_unreadable_raw_is_an_oserror(self, tmp_path, thumbnail):
+        """libraw's LibRawError slipped past every ``IMAGE_READ_ERRORS`` handler."""
+        from Imervue.gpu_image_view.images.image_loader import decode_image_file
+        from Imervue.image.read_errors import IMAGE_READ_ERRORS
+        path = tmp_path / "broken.cr2"
+        path.write_bytes(b"not a raw file" * 20)
+        with pytest.raises(OSError, match="libraw can't decode") as caught:
+            decode_image_file(str(path), thumbnail=thumbnail)
+        assert isinstance(caught.value, IMAGE_READ_ERRORS)
+        import rawpy
+        assert isinstance(caught.value.__cause__, rawpy.LibRawError)
+
+    def test_view_time_simulation_is_not_baked_in(self, tmp_path, monkeypatch):
+        from Imervue.gpu_image_view import cvd_view_mode
+        from Imervue.gpu_image_view.images.image_loader import decode_image_file
+        monkeypatch.setattr(cvd_view_mode, "apply_if_active", lambda _a: 1 / 0)
+        path = tmp_path / "a.png"
+        Image.new("RGB", (5, 3), (10, 20, 30)).save(path)
+        out = decode_image_file(str(path))
+        assert out.shape == (3, 5, 4) and tuple(out[0, 0]) == (10, 20, 30, 255)
+
+    @pytest.mark.parametrize(("orient", "shape"), [(True, (40, 20)), (False, (20, 40))])
+    def test_orientation_can_be_skipped_for_a_legacy_recipe(self, tmp_path, orient, shape):
+        from Imervue.gpu_image_view.images.image_loader import decode_image_file
+        exif = Image.Exif()
+        exif[0x0112] = 6
+        path = tmp_path / "p.jpg"
+        Image.new("RGB", (40, 20)).save(path, exif=exif)
+        assert decode_image_file(str(path), orient=orient).shape[:2] == shape
+
+
+def test_scanning_a_folder_by_name_puts_page2_before_page10(tmp_path):
+    """Next / previous went page1, page10, page11, page2 while the file tree showed page1, page2."""
+    from Imervue.gpu_image_view.images.image_loader import _scan_images
+    for name in ("page10.png", "page2.png", "page1.png"):
+        (tmp_path / name).write_bytes(b"x")
+    names = [os.path.basename(p) for p in _scan_images(str(tmp_path))]
+    assert names == ["page1.png", "page2.png", "page10.png"]
+    backwards = [os.path.basename(p) for p in _scan_images(str(tmp_path), ascending=False)]
+    assert backwards == ["page10.png", "page2.png", "page1.png"]

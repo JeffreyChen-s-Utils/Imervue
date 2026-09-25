@@ -399,3 +399,11 @@ def test_material_dock_emits_path_on_thumbnail_click(qapp, tmp_path):
         assert emitted == [str(p)]
     finally:
         dock.deleteLater()
+
+
+def test_load_from_reads_an_index_saved_with_a_bom(tmp_path):
+    original = _populated_index(tmp_path)
+    target = tmp_path / "library.json"
+    original.save_to(target)
+    target.write_bytes(b"\xef\xbb\xbf" + target.read_bytes())
+    assert len(MaterialIndex.load_from(target)) == len(original)

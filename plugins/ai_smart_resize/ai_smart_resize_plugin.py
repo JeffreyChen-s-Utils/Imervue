@@ -32,6 +32,12 @@ from ai_smart_resize.seam_carving import (
     smart_resize,
 )
 from Imervue.gui._apply_save import load_rgba as _load_rgba
+try:
+    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
+    from Imervue.gui._apply_save import output_path as _output_path
+except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
+    def _output_path(source: str, suffix: str) -> str:
+        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -207,9 +213,7 @@ class AISmartResizeDialog(WorkerHostMixin, QDialog):
             energy_boost=self._boost.value() / _BOOST_SLIDER_STEPS,
             protect_alpha=self._protect_alpha.isChecked(),
         )
-        out_path = Path(self._path).with_name(
-            f"{Path(self._path).stem}_smart.png",
-        )
+        out_path = Path(_output_path(self._path, "smart"))
         # Seam carving removes/adds seams one scanline at a time — slow; worker it.
         self._worker = _SmartResizeWorker(self._path, options, str(out_path))
         self._worker.done.connect(self._on_done)
@@ -269,9 +273,17 @@ class _SmartResizeWorker(QThread):
         self.done.emit(True, self._out_path)
 
 
+# EXIF orientations that turn the image a quarter turn, swapping its width and height.
+_QUARTER_TURN_ORIENTATIONS = frozenset({5, 6, 7, 8})
+
+
 def _peek_image_size(path: str) -> tuple[int, int]:
+    """The size of the image as shown (and as ``load_rgba`` returns it): upright."""
     try:
         with Image.open(path) as img:
-            return img.size
-    except OSError:
+            width, height = img.size
+            if img.getexif().get(0x0112) in _QUARTER_TURN_ORIENTATIONS:
+                return height, width
+            return width, height
+    except (OSError, ValueError, SyntaxError, Image.DecompressionBombError):   # any unreadable image
         return (1024, 1024)

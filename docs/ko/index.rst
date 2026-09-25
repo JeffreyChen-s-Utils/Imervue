@@ -78,7 +78,8 @@ Imervue를 실행하면 세 가지 영역이 표시됩니다:
 ^^^^^^^^^^^^^^^^
 
 - **일반**: PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
-- **RAW**: CR2 (Canon), NEF (Nikon), ARW (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus)
+- **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
+- **최신 포맷**: AVIF (기본 지원), HEIC / HEIF (선택적 ``pillow-heif`` 필요), JPEG XL (선택적 ``pillow-jxl-plugin`` 필요)
 
 ----
 
@@ -292,7 +293,7 @@ Compare 대화상자를 열지 않고도 메인 창에서 두 이미지를 나�
 
    * - 기능
      - 메뉴 위치
-   * - 이름순 정렬
+   * - 이름순 정렬(자연 순서: ``img2``\ 가 ``img10``\ 보다 앞)
      - ``정렬`` > ``이름순``
    * - 수정일순 정렬
      - ``정렬`` > ``수정일순``
@@ -459,6 +460,13 @@ Compare 대화상자를 열지 않고도 메인 창에서 두 이미지를 나�
 이러한 조정은 **비파괴적** 입니다. 각 슬라이더는 이미지별 Edit Recipe에 기록되며
 ``초기화`` 또는 ``Ctrl + Z``\ 로 언제든지 복구할 수 있습니다. Recipe는 재시작 후에도
 유지되며 XMP sidecar를 통해 내보내기 / 동기화할 수 있습니다 (메타데이터 섹션 참조).
+
+디스크의 파일은 요청할 때만 바뀝니다. **Apply Crop**\ 과 주석 **Save**\ 는 결과를 원본 파일에 다시 쓰되 EXIF(카메라, 촬영 일시, GPS), XMP, DPI는 유지합니다. 카메라 RAW, HEIC, 애니메이션 / 다중 페이지 파일은 절대 덮어쓰지 않으며, 자르기는 내보내기를 안내하고 주석 저장은 새 파일을 묻습니다. 한 번 적용하는 도구(CLAHE, HSL 믹서, 사진 프레임, 자동 수평 보정 등)는 결과를
+원본 옆에 ``photo_clahe.png``\ 로 저장하며, 다시 실행하면 이전 결과를 바꾸지 않고
+``photo_clahe_1.png``\ 로 저장합니다. **EXIF로 자동 회전**, **EXIF 일괄 제거**\ 의 사본, **페이지 분할…**\ 도 같은 방식으로 번호를 붙입니다. Imervue가 사진을 무손실 회전하거나(자르기 영역도 함께
+회전) EXIF를 다시 쓰면(GPS 지오태그, EXIF 편집기) 사진의 레시피와 가상 사본이 함께
+따라갑니다. 로컬 마스크, 레이어, 렌즈 플레어, 얼굴 태그가 있는 레시피는 회전 전
+버전에 남으며 되돌리면 다시 쓸 수 있습니다.
 
 저장 및 실행취소
 ^^^^^^^^^^^^^^^^
@@ -733,10 +741,11 @@ PSD 가져오기/내보내기를 지원합니다. 탭 막대에서 전환하거�
 
 이미지 우클릭 > ``내보내기 / 다른 이름으로 저장``
 
-- 형식 선택: PNG, JPEG, WebP, BMP, TIFF
+- 형식 선택: PNG, JPEG, WebP, BMP, TIFF, AVIF. ``pillow-heif`` / ``pillow-jxl-plugin`` 이 설치되어 있으면 HEIC / JPEG XL 도
 - 품질 조정 (손실 형식의 경우)
+- 유지할 메타데이터 선택: 모두, 위치 정보만 제외(기본값), 모두 제거. 카메라·렌즈·촬영 일시가 함께 저장되며, 선택은 기억되고 일괄 내보내기에도 같은 옵션이 있습니다
 - 파일 크기 미리보기
-- 저장 위치 선택
+- 저장 위치 선택. 제안되는 이름은 아직 쓰이지 않은 이름(``photo.png`` 옆이면 ``photo_1.png``)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
 
 내보내기 프리셋
 ^^^^^^^^^^^^^^^
@@ -790,14 +799,17 @@ GIF / 동영상 만들기
 - 드래그로 프레임 순서 변경
 - 초당 프레임 수 (FPS) 설정
 - 사용자 지정 크기
-- 반복 재생 옵션
+- 반복 재생 옵션(끄면 한 번만 재생)
+- 첫 프레임 옆의 ``output.gif``\ 를 제안하며, 그 이름이 이미 있으면 번호를 붙입니다(``output_1.gif``). 직접 입력한 이름의 파일이 이미 있으면 확인한 뒤에만 바뀜
 
 ----
 
 애니메이션 재생
 ---------------
 
-GIF, APNG, 애니메이션 WebP를 열면 자동으로 애니메이션이 재생됩니다.
+GIF, APNG, 애니메이션 WebP를 열면 자동으로 애니메이션이 재생됩니다. 디코딩하면 512 MB를 넘는
+애니메이션은 재생하면서 한 프레임씩 디코딩하므로, 열어도 창이 멈추거나 메모리를
+다 쓰지 않습니다.
 
 .. list-table::
    :header-rows: 1
@@ -907,7 +919,14 @@ GIF, APNG, 애니메이션 WebP를 열면 자동으로 애니메이션이 재생
    * - 선택한 여러 이미지 삭제
      - 선택 후 ``Delete`` 또는 우클릭 > ``선택한 이미지 삭제``
 
-이미지는 시스템 휴지통으로 이동되며, 거기에서 복원할 수 있습니다.
+이미지는 시스템 휴지통으로 이동되며, 거기에서 복원할 수 있습니다. 휴지통이 없는
+드라이브(메모리 카드, USB 메모리, 네트워크 드라이브 — Windows라면 영구 삭제됨)의 파일은
+그대로 두고, 종료할 때 목록을 보여 주며 영구 삭제할지 묻습니다.
+
+sidecar도 함께 옮겨집니다: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json``,
+``IMG.xmp``. 단, RAW + JPEG 쌍에서 RAW가 아직 쓰는 ``IMG.xmp``\ 는 남깁니다. 남은
+sidecar는 카메라가 같은 이름으로 다음에 쓰는 ``IMG.*``\ 에 별점과 편집을 붙이기
+때문입니다.
 
 ----
 
@@ -934,6 +953,17 @@ GIF, APNG, 애니메이션 WebP를 열면 자동으로 애니메이션이 재생
      - 선택한 모든 이미지에 같은 태그 부여
    * - 앨범에 추가
      - 선택한 모든 이미지를 앨범에 추가
+
+이동·복사는 같은 이름의 파일을 덮어쓰지 않고 ``name_1.ext``\ 로 둡니다.
+Imervue에서 이름을 바꾸거나 이동한 사진(일괄 이름 변경, 토큰 일괄 이름 변경,
+폴더 트리, 이동/복사, 듀얼 창, 스테이징 트레이, 이미지 정리)은 별점·즐겨찾기·
+태그·색상 라벨·제목·설명·라이브러리 메모·선별 표시를 유지합니다(폴더의 이름을
+바꾸거나 이동하면 그 안의 모든 사진도 마찬가지). sidecar도 함께 옮겨집니다:
+``IMG.xmp``, ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json``. RAW + JPEG
+쌍에서 RAW가 아직 쓰는 ``IMG.xmp``\ 는 이동하지 않고 복사합니다.
+
+폴더가 Imervue에 열려 있는 동안 다른 프로그램에서 이름을 바꾼 사진도 같은
+데이터를 유지합니다. 새 이름에 이미 있던 데이터는 그대로 둡니다.
 
 ----
 
@@ -1245,6 +1275,11 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 이미지 목록을 볼 수 있으며, 현재 선택을 한 번에 태그/해제할 수 있습니다.
 우클릭 메뉴의 평면 태그와 공존합니다.
 
+우클릭 ``Index Keywords``\ 는 선택한 이미지의 XMP 키워드를 라이브러리에 추가합니다.
+Lightroom이나 darktable이 쓴 키워드 계층(``lr:hierarchicalSubject``,
+``Places|Taiwan|Taipei``)은 태그 경로 ``Places/Taiwan/Taipei``\ 로 등록되며, 그 계층을
+반복할 뿐인 ``Places`` / ``Taiwan`` / ``Taipei`` 키워드는 다시 추가하지 않습니다.
+
 Token 일괄 이름 변경
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -1252,7 +1287,9 @@ Token 일괄 이름 변경
 ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 같은 템플릿을 입력하면 각
 파일의 새 이름이 즉시 표시되며 충돌은 강조됩니다. 지원 토큰: ``{name}
 {ext} {counter[:NN]} {date[:fmt]} {width} {height} {wxh} {size_kb} {camera}
-{year} {month} {day} {hour} {minute}``.
+{year} {month} {day} {hour} {minute}``. 선택한 다른 파일이 지금 쓰는 이름은 충돌이
+아닙니다. 번호 다시 매기기(``002`` → ``003``, ``003`` → ``004``)나 두 이름 맞바꾸기도
+선택 전체의 이름을 바꿉니다. Batch Rename도 마찬가지입니다.
 
 메타데이터 내보내기
 ^^^^^^^^^^^^^^^^^^^
@@ -1267,6 +1304,23 @@ XMP Sidecar (other XMP-aware photo managers 연동)
 Imervue는 Adobe XMP sidecar 파일 (``photo.jpg`` ↔ ``photo.xmp``) 읽기/쓰기를
 지원하여 평점, 제목, 설명, 키워드, 색상 라벨을 other XMP-aware photo managers, other XMP-aware photo managers, Bridge
 등 XMP 인식 도구와 양방향으로 동기화할 수 있습니다.
+
+저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다.
+
+``photo.xmp``\ (Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는
+``photo.jpg.xmp``\ 도 그것이 유일한 sidecar이면 읽고 갱신합니다. 색상 라벨은
+Lightroom 표기(``Red`` … ``Purple``)와 Bridge 표기(``Select``, ``Second``,
+``Approved``, ``Review``, ``To Do``)를 이해하며, 내보낼 때는 Lightroom 표기로
+씁니다. 색상에 대응하지 않는 사용자 라벨은 sidecar에 남겨 둡니다.
+
+거부된 사진(Lightroom, Bridge, darktable의 ``xmp:Rating`` -1)은 별점 없는 선별
+**거부**\ 로 가져오고, **거부**\ 는 -1로 내보냅니다. 거부가 아닌 sidecar는 '거부'를
+해제하며, '선택'은 그대로 둡니다.
+
+사이드카가 없는 파일은 파일 자체에 포함된 내용을 읽고 가져옵니다. 먼저 XMP
+패킷(JPEG, PNG, WebP, TIFF), 다음으로 EXIF ``Rating``/``RatingPercent``\ 입니다.
+Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기와 일부 카메라는 별점을 여기에
+저장합니다. 사이드카가 있으면 사이드카가 우선입니다.
 
 - **현재 이미지용 XMP 가져오기** — sidecar에서 평점 / 제목 / 키워드 / 색상
   라벨을 내부 DB로 가져옵니다.
@@ -1342,7 +1396,9 @@ EXIF 사이드바에는 자유 텍스트 **Notes** 필드가 있습니다. 입�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 에서 Adobe ``.cube`` 파일(1D / 3D,
-최대 64³)을 선택할 수 있습니다. LUT 는 경로 + mtime 키로
+최대 64³)을 선택할 수 있습니다. DaVinci Resolve의
+``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE`` 지시어는 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 와
+같이 입력 범위를 정하며, BOM이 붙은 파일도 읽을 수 있습니다. LUT 는 경로 + mtime 키로
 ``lru_cache`` 에 유지되고, 삼선형 보간으로 적용되며 강도 슬라이더로
 원본과 블렌딩됩니다. LUT 경로와 강도는 recipe 에 저장됩니다.
 
@@ -1485,8 +1541,10 @@ GPS 지오태그
 ^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` 은 기존 EXIF GPS 를 읽고 10 진도
-단위로 편집 / 설정합니다. ``piexif`` 가 필요하며 JPEG 에 직접
-기록합니다.
+단위로 편집 / 설정합니다. JPEG 는 추가 패키지 없이 직접 기록하며 EXIF 블록만
+바뀌므로 픽셀·다른 태그·썸네일은 그대로입니다. WebP 도 같은 방식으로 처리하며, 다른 형식은 태그할 수 없습니다.
+
+**EXIF 편집기**\ (EXIF 사이드바의 ``Edit EXIF`` 버튼)는 설명·작성자·저작권·카메라 제조사 / 모델·코멘트를 바꿉니다. JPEG와 WebP는 추가 패키지 없이 EXIF 블록만 다시 쓰며, 다른 형식은 편집할 수 없는 이유를 보여 줍니다.
 
 인쇄 레이아웃
 ^^^^^^^^^^^^^
@@ -2098,6 +2156,8 @@ API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
    * - ``list-ops``
      - 모든 서브커맨드 출력(``--json``\ 으로 기계 판독 출력)
 
+모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 카메라 RAW는 작은 내장 미리보기가 아니라 뷰어처럼 현상해서 읽으며, ``resize`` 와 ``strip`` 은 PNG로 저장합니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다.
+
 공용 플래그: ``--out``\ (출력 디렉터리), ``--recursive``, ``--dry-run``\ (동작만 나열하고 쓰지 않음), ``--overwrite``, ``--version``.
 
 ----
@@ -2128,16 +2188,17 @@ Cline, …) 가 GUI 를 실행하지 않고도 프로젝트의 순수 로직 헬
      - 폴더 내 이미지 파일 목록 (경로, 크기, mtime). 하위 폴더까지
        탐색하려면 ``recursive=true`` 를 전달.
    * - ``read_image_metadata``
-     - 한 이미지의 크기, 포맷, EXIF 태그 및 XMP 사이드카 필드. 누락된
+     - 한 이미지의 크기, 포맷, EXIF 태그 및 XMP 필드(사이드카, 없으면 파일에 포함된 것). 누락된
        데이터는 예외를 발생시키지 않고 적절한 빈 값으로 보고됨.
    * - ``read_xmp_tags``
-     - XMP 사이드카만 읽는 빠른 경로 — 별점, 색 라벨, 키워드, 제목,
+     - XMP(사이드카, 없으면 파일에 포함된 것)만 읽는 빠른 경로 — 별점, 색 라벨, 키워드, 제목,
        설명.
    * - ``convert_format``
      - 한 이미지를 다른 포맷으로 변환. 대상 포맷은 대상 확장자에서
        추론됨 (``png`` / ``jpg`` /
-       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). 선택적
-       ``quality`` (1–100) 는 JPEG/WebP 에 적용.
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``, 선택적 백엔드가
+       설치되어 있으면 ``heic`` / ``jxl`` 도). 선택적
+       ``quality`` (1–100) 는 JPEG / WebP / AVIF / HEIC / JXL 에 적용.
    * - ``puppet_from_png``
      - puppet 플러그인의 auto-mesh 를 사용해 PNG 에서 ``.puppet`` rig 를
        생성. Cubism 표준 파라미터 카탈로그를 초기화하여 rig 를

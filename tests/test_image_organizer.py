@@ -233,6 +233,23 @@ class TestOrganizerWorker:
         # Source still exists (copy mode)
         assert (src / "a.png").exists()
 
+    def test_an_unwritable_output_folder_is_reported_not_fatal(self, tmp_path):
+        """os.makedirs raised outside any try: result_ready never came and the dialog hung."""
+        src = tmp_path / "src"
+        src.mkdir()
+        for name in ["a.png", "b.png"]:
+            Image.fromarray(np.full((4, 4, 3), 9, dtype=np.uint8)).save(str(src / name))
+        out = tmp_path / "out"
+        out.mkdir()
+        (out / "blocked").write_bytes(b"a file where the group folder should go")
+        plan = {"blocked": [str(src / "a.png")], "fine": [str(src / "b.png")]}
+        worker = _OrganizerWorker(plan, str(out), move=False)
+        results = []
+        worker.result_ready.connect(lambda s, f: results.append((s, f)))
+        worker.run()
+        assert results == [(1, 1)]
+        assert (out / "fine" / "b.png").exists()
+
     def test_move_removes_source(self, tmp_path):
         src = tmp_path / "src"
         src.mkdir()
@@ -248,6 +265,73 @@ class TestOrganizerWorker:
 
         assert (out / "moved" / "img.png").exists()
         assert not (src / "img.png").exists()
+
+    def test_move_takes_the_sidecar_and_reports_the_moves(self, tmp_path):
+        """The organizer moved IMG.CR2 and left IMG.xmp (and its rating) behind."""
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "IMG.CR2").write_bytes(b"raw")
+        (src / "IMG.xmp").write_text("edits", encoding="utf-8")
+        out = tmp_path / "out"
+        out.mkdir()
+        worker = _OrganizerWorker({"raw": [str(src / "IMG.CR2")]}, str(out), move=True)
+        moves = []
+        worker.files_moved.connect(moves.append)
+        worker.run()
+        assert (out / "raw" / "IMG.xmp").read_text(encoding="utf-8") == "edits"
+        assert moves == [{str(src / "IMG.CR2"): str(out / "raw" / "IMG.CR2")}]
+
+    def test_copy_copies_the_sidecar_and_reports_no_moves(self, tmp_path):
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "IMG.JPG").write_bytes(b"jpg")
+        (src / "IMG.JPG.xmp").write_text("edits", encoding="utf-8")
+        out = tmp_path / "out"
+        out.mkdir()
+        worker = _OrganizerWorker({"jpg": [str(src / "IMG.JPG")]}, str(out), move=False)
+        moves = []
+        worker.files_moved.connect(moves.append)
+        worker.run()
+        assert (src / "IMG.JPG.xmp").exists()
+        assert (out / "jpg" / "IMG.JPG.xmp").exists()
+        assert moves == []
+
+    def test_the_dialog_re_keys_saved_data_on_its_own_thread(
+            self, qapp, tmp_path, pump_until, monkeypatch):
+        """Settings must not be changed from the worker thread while the GUI reads them."""
+        import threading
+        from types import SimpleNamespace
+
+        from Imervue.gui import image_organizer_dialog as mod
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "a.png").write_bytes(b"png")
+        out = tmp_path / "out"
+        out.mkdir()
+        user_setting_dict["image_ratings"] = {str(src / "a.png"): 4}
+        threads = []
+        real_follow = mod.follow_saved_data
+
+        def follow(moved):
+            threads.append(threading.current_thread() is threading.main_thread())
+            real_follow(moved)
+
+        monkeypatch.setattr(mod, "follow_saved_data", follow)
+        gui = SimpleNamespace(main_window=None, model=SimpleNamespace(folder_path=str(src)))
+        dlg = mod.ImageOrganizerDialog(gui, str(src))
+        worker = mod._OrganizerWorker({"g": [str(src / "a.png")]}, str(out), move=True)
+        dlg._worker = worker  # noqa: SLF001
+        worker.files_moved.connect(dlg._on_files_moved)  # noqa: SLF001
+        try:
+            worker.start()
+            pump_until(lambda: threads)
+        finally:
+            worker.wait(5000)
+            dlg._worker = None  # noqa: SLF001
+            dlg.deleteLater()
+        assert threads == [True]
+        assert user_setting_dict["image_ratings"] == {str(out / "g" / "a.png"): 4}
 
     def test_name_collision_handled(self, tmp_path):
         src = tmp_path / "src"

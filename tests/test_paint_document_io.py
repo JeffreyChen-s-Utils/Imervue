@@ -460,3 +460,20 @@ def test_invalid_color_label_round_trips_to_none(tmp_path):
     save_document(doc, target)
     loaded = load_document(target)
     assert loaded.active_layer().color_label is None
+
+
+def test_a_save_that_fails_midway_keeps_the_old_document(tmp_path, monkeypatch):
+    import numpy
+
+    path = tmp_path / "art.imervue"
+    save_document(_make_doc(), path)
+    before = path.read_bytes()
+
+    def boom(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(numpy, "savez_compressed", boom)
+    with pytest.raises(OSError, match="disk full"):
+        save_document(_make_doc(), path)
+    assert path.read_bytes() == before
+    assert [p.name for p in tmp_path.iterdir()] == ["art.imervue"]

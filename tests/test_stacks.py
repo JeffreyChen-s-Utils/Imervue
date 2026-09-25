@@ -14,6 +14,19 @@ class TestIsRaw:
     def test_cr2_is_raw(self, stacks):
         assert stacks.is_raw("/x/IMG_0001.CR2") is True
 
+    @pytest.mark.parametrize("name", ["IMG_0001.CR3", "P1000475.RW2", "IMGP8550.PEF"])
+    def test_every_raw_the_viewer_opens_stacks(self, stacks, name):
+        assert stacks.is_raw(f"/x/{name}") is True
+
+    def test_uses_the_viewers_raw_formats(self, stacks):
+        from Imervue.image.formats import RAW_EXTENSIONS
+        assert stacks.RAW_EXTENSIONS is RAW_EXTENSIONS
+
+    def test_a_cr3_and_its_jpeg_collapse_into_one_tile(self, stacks):
+        out, members = stacks.collapse_stacks(["/a/IMG_1.CR3", "/a/IMG_1.JPG"])
+        assert out == ["/a/IMG_1.JPG"]
+        assert "/a/IMG_1.CR3" in members["/a/IMG_1.JPG"]
+
     def test_jpg_is_not_raw(self, stacks):
         assert stacks.is_raw("/x/IMG_0001.jpg") is False
 

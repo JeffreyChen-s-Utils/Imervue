@@ -66,3 +66,15 @@ class TestDualImageView:
         # Logical pair stays the same
         assert dual._left_path == a
         assert dual._right_path == b
+
+
+def test_panel_shows_a_tagged_photo_upright(qapp, tmp_path):
+    """QPixmap(path) left a portrait phone photo on its side."""
+    from _decode_samples import tagged_portrait
+    from Imervue.gui.dual_image_view import _Panel
+    panel = _Panel()
+    try:
+        panel.load(str(tagged_portrait(tmp_path / "p.jpg")))
+        assert (panel._pixmap.width(), panel._pixmap.height()) == (20, 40)  # noqa: SLF001
+    finally:
+        panel.deleteLater()

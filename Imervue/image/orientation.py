@@ -99,24 +99,19 @@ def _drop_orientation_tag(img: Image.Image) -> None:
         img.info["exif"] = exif.tobytes()
     for key in ("XML:com.adobe.xmp", "xmp"):
         if key in img.info:
-            img.info[key] = _strip_xmp_orientation(img.info[key])
+            img.info[key] = strip_xmp_orientation(img.info[key])
 
 
-def _strip_xmp_orientation(value):
-    """Return *value* (str, bytes or a tuple of bytes) without its orientation attribute."""
+def strip_xmp_orientation(value: str | bytes | tuple) -> str | bytes | tuple:
+    """Return XMP *value* (str, bytes or a tuple of bytes) without its orientation attribute."""
     if isinstance(value, tuple):
-        return tuple(_strip_xmp_orientation(part) for part in value)
+        return tuple(strip_xmp_orientation(part) for part in value)
     for pattern in _XMP_ORIENTATION:
         if isinstance(value, str):
             value = re.sub(pattern, "", value)
         else:
             value = re.sub(pattern.encode(), b"", value)
     return value
-
-
-def upright(img: Image.Image) -> Image.Image:
-    """Return *img* turned upright by its own EXIF orientation."""
-    return transpose_for(img, exif_orientation(img))
 
 
 def read_orientation(path: str) -> int:
@@ -126,10 +121,3 @@ def read_orientation(path: str) -> int:
             return exif_orientation(img)
     except IMAGE_READ_ERRORS:
         return _TOP_LEFT
-
-
-def oriented_array(path: str) -> np.ndarray:
-    """Load *path* as RGBA and apply its EXIF orientation."""
-    with Image.open(path) as img:
-        rgba = np.array(img.convert("RGBA"))
-    return transform_for_orientation(rgba, read_orientation(path))

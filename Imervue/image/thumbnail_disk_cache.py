@@ -46,8 +46,8 @@ logger = logging.getLogger("Imervue.thumbnail_cache")
 
 _CACHE_EXT = ".png"
 # Bump when the cached pixels change meaning, so older entries stop matching.
-# 2: thumbnails are EXIF-upright.
-_KEY_VERSION = 2
+# 2: thumbnails are EXIF-upright. 3: embedded colour profiles are converted to sRGB.
+_KEY_VERSION = 3
 _LEGACY_EXTS = (".npy",)  # formats we quietly clean up at startup
 
 
@@ -186,12 +186,11 @@ class ThumbnailDiskCache:
             arr = img_data
             if arr.dtype != np.uint8:
                 arr = arr.astype(np.uint8, copy=False)
-            if arr.ndim == 2:
-                img = Image.fromarray(arr, mode="L").convert("RGBA")
-            elif arr.shape[2] == 3:
-                img = Image.fromarray(arr, mode="RGB").convert("RGBA")
-            else:
-                img = Image.fromarray(arr, mode="RGBA")
+            if arr.ndim != 2 and arr.shape[2] not in (3, 4):
+                raise ValueError(f"{arr.shape[2]} channels")
+            # Pillow infers L / RGB / RGBA from the shape; passing a ``mode`` that
+            # differs from it is removed in Pillow 13.
+            img = Image.fromarray(arr).convert("RGBA")
         except (AttributeError, IndexError, TypeError, ValueError) as e:
             # Not an image-shaped array (no dtype / ndim, too few dims, odd channels).
             shape = getattr(img_data, "shape", None)

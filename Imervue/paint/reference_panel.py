@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 
+from Imervue.image.shown import as_shown
 from Imervue.user_settings.user_setting_dict import (
     schedule_save,
     user_setting_dict,
@@ -257,7 +258,8 @@ def load_thumbnail(
             img.load()
         except UnidentifiedImageError as exc:
             raise ValueError(f"could not decode {target!s}: {exc}") from exc
-        rgba = img.convert("RGBA")
+        # As the viewer shows it: a phone photo lay on its side otherwise.
+        rgba = as_shown(img).convert("RGBA")
         rgba.thumbnail((int(max_side), int(max_side)), Image.LANCZOS)
         return np.asarray(rgba, dtype=np.uint8).copy()
 

@@ -17,7 +17,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui._apply_save import load_rgba
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gui._apply_save import load_rgba, output_path
 from Imervue.image.portrait_retouch import (
     SMOOTH_RADIUS_MAX,
     SMOOTH_RADIUS_MIN,
@@ -106,7 +107,7 @@ class PortraitRetouchDialog(QDialog):
     def _commit(self) -> None:
         try:
             arr = load_rgba(self._path)
-        except (OSError, ValueError) as exc:
+        except IMAGE_READ_ERRORS as exc:
             self._notify_failure(exc)
             return
 
@@ -122,9 +123,7 @@ class PortraitRetouchDialog(QDialog):
             self._notify_failure(exc)
             return
 
-        out_path = Path(self._path).with_name(
-            f"{Path(self._path).stem}_retouched.png",
-        )
+        out_path = Path(output_path(self._path, "retouched"))
         try:
             Image.fromarray(out_arr, mode="RGBA").save(str(out_path))
         except OSError as exc:

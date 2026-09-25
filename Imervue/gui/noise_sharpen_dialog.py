@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui._apply_save import load_rgba
+from Imervue.gui._apply_save import load_rgba, output_path
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.denoise import reduce_noise, sharpen
@@ -118,7 +118,7 @@ class NoiseSharpenDialog(WorkerHostMixin, QDialog):
 
     def _default_output_path(self) -> str:
         p = Path(self._path)
-        return str(p.with_name(f"{p.stem}_nr{p.suffix or '.png'}"))
+        return output_path(str(p), "nr", p.suffix or ".png")
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict

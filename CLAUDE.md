@@ -75,9 +75,16 @@ ten-language README set: `README.md` plus `README/README_de.md`, `README/README_
 - Any user-facing change — features, commands, CLI flags, install/setup, configuration or
   requirements — updates `README.md` **and every language variant in the same commit**, with
   structure and content aligned.
-- **Never update one language and leave the others stale.** A change that lands in English but not
-  the nine translations (or vice versa) is incomplete.
-- There is no README-parity guard, so this is a **manual check** across the ten files above.
+- **Never update one language, or `README.md` alone, and leave the other languages or the docs
+  stale.** A change that lands in English but not the nine translations (or vice versa), or that
+  updates a README but not the docs, is incomplete. Each translation must reflect the English
+  README's actual content, not merely share its headings.
+- **The docs travel with the READMEs.** The same user-facing change updates the Sphinx docs under
+  `docs/` in the same commit — the English `docs/en/` pages plus every translated locale tree
+  (`zh-cn`, `zh-tw`, `de`, `es`, `fr`, `ja`, `ko`, `pt-BR`, `ru`) — structure and content aligned
+  across languages.
+- There is no README- or docs-parity guard, so this is a **manual check** across the ten README
+  files above and the docs trees.
   (`examples/puppet/README.md` documents that example only and is not part of this translation set.)
 
 ## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`
@@ -87,6 +94,7 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
 - **Commit at every stage.** A stage is the smallest piece of work that leaves the repository consistent and passes this project's checks (definition of done, tests, lint): one finished `progress.md` item, or one self-contained step of a larger one. Commit it before starting the next stage, before switching to another repository, and before the session ends. Do not leave work uncommitted across sessions; if a stage cannot be finished, commit the consistent part and record the rest in `progress.md`.
   - Stage only the files that stage touched (`git add <path>`, never `git add -A`), follow this file's commit-message rules, and never add AI attribution.
   - Committing is not pushing: push or open a PR only as this project's branch flow says or when asked.
+  - **Commit and push frequently.** After each big feature — a self-contained stage that passes this project's checks — commit and push to the remote; do not pile up a large batch of work before committing or pushing. Smaller batches collide less with other sessions, let CI catch problems earlier, and are easier to revert. Follow this project's normal branch flow (usually `dev`).
 - **`progress.md`** (repository root, tracked) holds outstanding work only: no finished items, no history, no rules.
 - **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
 - **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those. `architecture_explore.md` stays the detailed per-module map under its own rule in this file.
@@ -386,6 +394,11 @@ before — the failure mode is a command that *appears* to succeed.
   yields the list of trashed paths for assertions. Product code must keep importing
   `send2trash` at call time (`from send2trash import send2trash` inside the function) for the
   patch to reach it.
+- **The "delete permanently?" question never blocks a test — the autouse
+  `_keep_what_the_bin_refused` fixture answers "Keep Them".** Files the Recycle Bin refuses
+  (a drive without one, a locked file) reach `gui/trash_failure_notice.offer_permanent_delete`,
+  whose `QMessageBox.exec` would otherwise wait forever under a stub worker that reports
+  failures. A test that needs the other answer sets `_ask_to_delete_permanently` itself.
 - **`send2trash` costs ~0.27 s per call regardless of how few files it carries**, versus
   ~0.016 s/file when a whole list goes over in one call (measured 2026-07-30). Every delete path
   must batch through `Imervue/system/trash_ops.py` — never a per-file loop.

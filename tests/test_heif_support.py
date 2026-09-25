@@ -1,4 +1,4 @@
-"""Tests for HEIF/AVIF decode support (Imervue.image.heif_support)."""
+"""Tests for HEIC / HEIF decode support (Imervue.image.heif_support)."""
 from __future__ import annotations
 
 import sys
@@ -22,12 +22,16 @@ from Imervue.image.heif_support import (
 def test_known_extensions_present():
     assert ".heic" in HEIF_EXTENSIONS
     assert ".heif" in HEIF_EXTENSIONS
-    assert ".avif" in HEIF_EXTENSIONS
+
+
+def test_avif_is_not_left_to_pillow_heif():
+    """pillow-heif 1.x has no AVIF opener: Pillow reads AVIF itself."""
+    assert ".avif" not in HEIF_EXTENSIONS
 
 
 def test_is_heif_path():
     assert is_heif_path("IMG_1234.HEIC") is True
-    assert is_heif_path("shot.avif") is True
+    assert is_heif_path("shot.avif") is False
     assert is_heif_path("photo.png") is False
 
 
@@ -46,6 +50,11 @@ def test_hint_needed_when_missing_and_heif_present():
 
 def test_hint_not_needed_without_heif():
     assert needs_heif_hint(["a.png", "b.jpg"], opener_available=False) is False
+
+
+def test_hint_not_needed_for_avif_alone():
+    """Installing pillow-heif would not change anything for an AVIF file."""
+    assert needs_heif_hint(["a.avif", "b.AVIF"], opener_available=False) is False
 
 
 def test_hint_not_needed_for_empty_folder():
@@ -106,7 +115,7 @@ def _write_heif(path, ext):
     Image.fromarray(arr).save(str(path.with_suffix(ext)))
 
 
-@pytest.mark.parametrize("ext", [".heic", ".avif"])
+@pytest.mark.parametrize("ext", [".heic"])
 def test_load_heif_via_image_loader(tmp_path, ext):
     heif_support._register_heif_opener.cache_clear()
     _write_heif(tmp_path / "shot", ext)

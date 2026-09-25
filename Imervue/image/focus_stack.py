@@ -23,7 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+
+from Imervue.image.shown import load_shown_rgb
 
 logger = logging.getLogger("Imervue.focus_stack")
 
@@ -38,8 +39,8 @@ class FocusStackOptions:
 
 
 def _load_rgb(path: str | Path) -> np.ndarray:
-    with Image.open(path) as im:
-        return np.asarray(im.convert("RGB"), dtype=np.uint8)
+    # Upright: the result is saved without EXIF, and every frame must share one frame.
+    return load_shown_rgb(path)
 
 
 def _align_ecc(

@@ -16,7 +16,7 @@ _EXPORT_FAILED = '내보내기 실패: {err}'
 _KOREAN_OPEN_FOLDER = '폴더 열기'
 
 korean_word_dict = {
-    "heif_install_hint": "HEIC/AVIF 이미지를 보려면 pillow-heif를 설치하세요.",
+    "heif_install_hint": "HEIC 이미지를 보려면 pillow-heif를 설치하세요.",
     "exif_location": "위치",
     "exif_coordinates": "좌표",
     "exif_video_label": "동영상",
@@ -330,7 +330,7 @@ korean_word_dict = {
     # EXIF 편집기
     "exif_edit_button": "EXIF 편집",
     "exif_editor_title": "EXIF 메타데이터 편집",
-    "exif_editor_no_piexif": "piexif 패키지가 필요합니다.\n설치: pip install piexif",
+    "exif_editor_unsupported": "EXIF는 JPEG와 WebP 파일에서만 편집할 수 있습니다.",
     "exif_editor_fields": "메타데이터 필드",
     "exif_editor_save": "저장",
     "exif_editor_cancel": "취소",
@@ -1423,6 +1423,8 @@ korean_word_dict = {
     "token_rename_col_new": "새 이름",
     "token_rename_col_original": "원본",
     "token_rename_col_status": "상태",
+    "token_rename_status_ok": "가능",
+    "token_rename_status_conflict": "충돌",
     # 메타데이터 내보내기
     "metadata_export_title": "메타데이터 내보내기 (CSV / JSON)",
     "metadata_export_format": "형식:",
@@ -2741,6 +2743,10 @@ korean_word_dict = {
     "file_filter_icc_profiles": "ICC 프로파일",
     "file_filter_comic_zip": "만화 압축 파일",
     "batch_rotate_done": "{done}/{total}개 파일을 회전했습니다",
+    "batch_rename_done": "{done}/{total}개 파일의 이름을 바꿨습니다",
+    "batch_move_done": "{done}/{total}개 파일을 이동했습니다",
+    "batch_copy_done": "{done}/{total}개 파일을 복사했습니다",
+    "batch_move_selected": "{count}개 파일 선택됨",
     "zoom_limit_toast": "확대/축소 한계: {limit}",
     "anim_speed_toast": "속도: {speed}x",
     "annotation_load_failed": "불러오기 실패: {error}",
@@ -2753,4 +2759,17 @@ korean_word_dict = {
     "file_filter_imervue_brush": "Imervue 브러시",
     "file_filter_other_brush": "다른 페인트 앱의 브러시",
     "file_filter_other_palette": "다른 이미지 편집기의 팔레트",
+    "modify_crop_cannot_overwrite": "이 파일은 덮어쓸 수 없습니다(카메라 RAW, HEIC, 애니메이션 또는 여러 페이지). 자르기 결과는 내보내기로 저장하세요.",
+    "export_metadata": "메타데이터:",
+    "export_replace_title": "파일을 바꿀까요?",
+    "export_replace": "“{name}” 파일이 이미 있습니다. 바꿀까요?",
+    "export_replace_source": "“{name}”은(는) 내보내는 원본 사진입니다. 이 사본으로 원본을 바꿀까요? 사본에는 사진의 편집이 적용되고, 위에서 선택한 메타데이터만 남습니다.",
+    "export_metadata_all": "모두 유지(카메라, 날짜, 위치)",
+    "export_metadata_no_location": "위치 정보만 제외하고 유지",
+    "export_metadata_none": "모두 제거",
+    "settings_unreadable_title": "설정 파일을 읽을 수 없습니다",
+    "settings_unreadable": "Imervue가 설정 파일을 읽지 못했습니다:\n{path}\n\n기본 설정으로 시작했습니다. 이 파일을 덮어쓰기 전에 옆에 {name}.unreadable-<날짜>-<시각> 사본을 남깁니다. 이전 설정을 되찾으려면 Imervue를 종료한 뒤 그 사본의 이름을 {name}(으)로 바꾸세요.",
+    "trash_left_in_place_title": "휴지통으로 이동하지 못함",
+    "trash_left_in_place": "삭제한 파일 {count}개를 휴지통으로 옮기지 못해 디스크에 그대로 남아 있습니다. 드라이브에 휴지통이 없거나(메모리 카드, USB 메모리, 네트워크 드라이브) 다른 프로그램이 사용 중입니다.\n\n{paths}\n\n영구적으로 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
+    "trash_keep_files": "보관",
 }

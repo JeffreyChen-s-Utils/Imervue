@@ -147,11 +147,15 @@ class OpenClipEmbedder:
 
     def embed_image(self, path: str | Path) -> np.ndarray | None:
         self._ensure_loaded()
+        from Imervue.image.read_errors import IMAGE_READ_ERRORS
         try:
             from PIL import Image
+            from Imervue.image.shown import as_shown
             with Image.open(path) as im:
-                tensor = self._preprocess(im.convert("RGB")).unsqueeze(0)
-        except (OSError, ValueError) as exc:
+                # A sideways photo embeds as a different picture; turn it as it is shown.
+                shown = as_shown(im).convert("RGB")
+                tensor = self._preprocess(shown).unsqueeze(0)
+        except IMAGE_READ_ERRORS as exc:
             logger.debug("CLIP image decode failed for %s: %s", path, exc)
             return None
         tensor = tensor.to(self._device)

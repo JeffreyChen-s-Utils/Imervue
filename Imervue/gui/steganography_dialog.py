@@ -22,8 +22,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.gui._apply_save import current_image_path, finalize_worker, load_rgba, notify_saved
+from Imervue.gui._apply_save import (
+    current_image_path,
+    finalize_worker,
+    load_rgba,
+    notify_saved,
+    output_path,
+)
 from Imervue.image.steganography import capacity_bytes, hide_message, reveal_message
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -47,7 +54,7 @@ class _HideWorker(QThread):
             arr = hide_message(load_rgba(self._path), self._message)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Hide message failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -90,7 +97,7 @@ class SteganographyDialog(WorkerHostMixin, QDialog):
         lang = language_wrapper.language_word_dict
         try:
             text = reveal_message(load_rgba(self._path))
-        except (OSError, ValueError):
+        except IMAGE_READ_ERRORS:
             text = ""
         self._message.setPlainText(text)
         toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
@@ -100,7 +107,7 @@ class SteganographyDialog(WorkerHostMixin, QDialog):
     def _hide(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_stego.png")
+        out_path = Path(output_path(self._path, "stego"))
         self._worker = _HideWorker(self._path, self._message.toPlainText(), str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()

@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gui._apply_save import load_rgba
 from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.dialog_rows import folder_picker_row, open_path_into
@@ -81,7 +82,7 @@ class SoftProofDialog(QDialog):
             img = Image.fromarray(load_rgba(self._path))
             img.thumbnail((_PREVIEW_MAX, _PREVIEW_MAX))
             arr = np.asarray(img)
-        except (OSError, ValueError) as err:
+        except IMAGE_READ_ERRORS as err:
             self._status.setText(str(err))
             return
         result = simulate_profile(arr, profile)

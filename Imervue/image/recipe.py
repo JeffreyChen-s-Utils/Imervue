@@ -30,7 +30,7 @@ import hashlib
 import json
 import logging
 import math
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any
 
@@ -576,10 +576,11 @@ def _apply_saturation(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
 def file_identity(path: str | Path) -> str:
     """Stable per-content identity: md5(first 4 KB | file size).
 
-    A pure mtime/path key would invalidate on every touch (backup tools,
-    lossless rotate, metadata edits). We want the identity to change *only*
-    when the pixels change, so we hash the first 4 KB of the file bytes
-    plus the file size. Collisions are possible in theory but extremely
+    A pure mtime/path key would invalidate on every touch (backup tools, a
+    copy, a rename), so we hash the first 4 KB of the file bytes plus the file
+    size. Those bytes hold a JPEG's EXIF, so a metadata rewrite or a lossless
+    rotate does change the identity: Imervue's own rewrites carry the recipe
+    over with ``recipe_store.carry_recipe``. Collisions are possible in theory but extremely
     unlikely in practice for photo libraries, and the downside of a
     collision is merely the wrong recipe being applied — easily fixed by
     resetting it in the Develop panel.
@@ -611,3 +612,29 @@ def file_identity(path: str | Path) -> str:
 def clear_identity_cache() -> None:
     """Drop the in-process identity cache. Used by tests."""
     _IDENTITY_CACHE.clear()
+
+
+# Extras that hold positions on the image. A quarter turn of the file would
+# have to move each of them, so a recipe carrying one does not follow the turn.
+_POSITIONED_EXTRAS = ("masks", "layers", "lens_flare", "face_tags")
+
+
+def turned_with_file(recipe: Recipe, *, clockwise: bool, size: tuple[int, int]) -> Recipe | None:
+    """*recipe* for the photo after its file turned a quarter; *size* = upright size before.
+
+    The new result is the old one turned the same way: the recipe's own
+    rotation stays, the flips trade axes and the crop box turns within the
+    rotated frame. ``None`` when the recipe can't follow: it was set on the
+    sideways pixels (``exif_oriented`` False), or it holds masks, layers, a
+    lens flare or face tags, whose positions would all need moving.
+    """
+    if not recipe.exif_oriented or any(recipe.extra.get(key) for key in _POSITIONED_EXTRAS):
+        return None
+    width, height = size
+    if recipe.rotate_steps % 2:
+        width, height = height, width          # the frame the crop is measured in
+    crop = recipe.crop
+    if crop is not None:
+        x, y, w, h = crop
+        crop = (height - y - h, x, h, w) if clockwise else (y, width - x - w, h, w)
+    return replace(recipe, flip_h=recipe.flip_v, flip_v=recipe.flip_h, crop=crop)

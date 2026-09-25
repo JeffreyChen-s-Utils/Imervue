@@ -19,10 +19,12 @@ from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import QFileSystemModel
 
+from Imervue.gui.shown_qimage import shown_qimage
+
 logger = logging.getLogger("Imervue.gui.folder_thumbnail_model")
 
-# QImage-decodable raster formats only — RAW/SVG need extra backends and would
-# just yield a null preview, so we skip straight to the first one we can show.
+# Rasters that decode quickly: a folder icon is not worth developing a RAW or
+# rasterising an SVG, so the preview is the first of these the folder holds.
 PREVIEW_EXTS = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
 })
@@ -80,13 +82,7 @@ class _PreviewWorker(QRunnable):
         path = folder_preview_path(self._folder, self._exts)
         had_candidate = path is not None
         if path is not None:
-            image = QImage(path)
-            if not image.isNull():
-                thumb = image.scaled(
-                    self._size, self._size,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
+            thumb = shown_qimage(path, max_edge=self._size)
         self.signals.done.emit(self._folder, thumb, had_candidate)
 
 

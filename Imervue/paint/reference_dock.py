@@ -211,18 +211,19 @@ class ReferenceDock(QDockWidget):
     # ---- public API -----------------------------------------------------
 
     def load_image_from_path(self, path: str | Path) -> bool:
-        """Load and display ``path``. Returns ``True`` on success."""
+        """Load and display ``path`` as the viewer shows it. Returns ``True`` on success.
+
+        Upright, sRGB, a camera RAW developed and HEIC read: through
+        ``Image.open`` a portrait phone photo lay on its side.
+        """
+        from Imervue.gpu_image_view.images.image_loader import decode_image_file
+        from Imervue.image.read_errors import IMAGE_READ_ERRORS
         try:
-            from PIL import Image
-            with Image.open(str(path)) as img:
-                rgba = img.convert("RGBA")
-                w, h = rgba.size
-                qimg = QImage(
-                    rgba.tobytes(), w, h, w * 4,
-                    QImage.Format.Format_RGBA8888,
-                )
-        except (OSError, ValueError):
+            rgba = decode_image_file(str(path))
+        except IMAGE_READ_ERRORS:
             return False
+        h, w = rgba.shape[:2]
+        qimg = QImage(rgba.tobytes(), w, h, w * 4, QImage.Format.Format_RGBA8888)
         self._view.set_image(QPixmap.fromImage(qimg.copy()))
         self.image_loaded.emit(str(path))
         return True

@@ -328,6 +328,10 @@ class _ExtractWorker(QThread):
         except (VideoBackendError, OSError, ValueError) as exc:
             self.done.emit(False, str(exc))
             return
+        except Exception as exc:  # a worker must always report
+            logger.exception("Extracting frames from %s failed", self._video_path)
+            self.done.emit(False, str(exc))
+            return
         self.done.emit(True, str(len(saved)))
 
 

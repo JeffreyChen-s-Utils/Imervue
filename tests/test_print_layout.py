@@ -49,3 +49,46 @@ class TestPrintLayout:
         out_pdf = tmp_path / "empty.pdf"
         result = print_layout.export_print_pdf(layout, out_pdf)
         assert result.exists()
+
+
+class TestDecodeLikeTheViewer:
+    """ReportLab read the path itself: portrait phone photos printed sideways."""
+
+    @staticmethod
+    def _drawn_sizes(monkeypatch):
+        from reportlab.pdfgen import canvas as pdf_canvas
+        sizes = []
+        real = pdf_canvas.Canvas.drawImage
+
+        def spy(self, image, *args, **kwargs):
+            sizes.append(image.getSize())
+            return real(self, image, *args, **kwargs)
+
+        monkeypatch.setattr(pdf_canvas.Canvas, "drawImage", spy)
+        return sizes
+
+    def test_tagged_photo_is_placed_upright(self, tmp_path, monkeypatch):
+        from _decode_samples import tagged_portrait
+        sizes = self._drawn_sizes(monkeypatch)
+        layout = print_layout.PrintLayout(image_paths=[str(tagged_portrait(tmp_path / "p.jpg"))])
+        print_layout.export_print_pdf(layout, tmp_path / "out.pdf")
+        assert sizes == [(20, 40)]
+
+    def test_raw_is_developed(self, tmp_path, monkeypatch):
+        import numpy as np
+
+        from Imervue.gpu_image_view.images import image_loader
+        monkeypatch.setattr(image_loader, "_load_raw",
+                            lambda _p, thumbnail: np.full((30, 50, 3), 90, dtype=np.uint8))
+        sizes = self._drawn_sizes(monkeypatch)
+        layout = print_layout.PrintLayout(image_paths=[str(tmp_path / "shot.cr2")])
+        print_layout.export_print_pdf(layout, tmp_path / "out.pdf")
+        assert sizes == [(50, 30)]
+
+    def test_unreadable_image_is_skipped(self, tmp_path, monkeypatch):
+        bad = tmp_path / "bad.jpg"
+        bad.write_bytes(b"nope")
+        sizes = self._drawn_sizes(monkeypatch)
+        layout = print_layout.PrintLayout(image_paths=[str(bad), str(_make_jpeg(tmp_path / "ok.jpg"))])
+        assert print_layout.export_print_pdf(layout, tmp_path / "out.pdf").exists()
+        assert sizes == [(40, 30)]

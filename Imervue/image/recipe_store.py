@@ -26,10 +26,12 @@ import logging
 import os
 import sys
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 from Imervue.image.recipe import Recipe, file_identity
+from Imervue.system.unreadable_guard import UnreadableFileGuard
 
 logger = logging.getLogger("Imervue.recipe_store")
 
@@ -62,6 +64,12 @@ class RecipeStore:
         # identity -> {"recipe": {...}, "last_path": str}
         # "last_path" is informational — helps humans poke at the file.
         self._entries: dict[str, dict[str, Any]] = {}
+        # Entries this version can't decode, written back untouched: dropping
+        # them on the next save lost them for good, even for a newer Imervue.
+        self._undecodable: dict[str, Any] = {}
+        # A store file that could not be read is copied aside before a save
+        # replaces it (and every photo's edits in it) with what this session has.
+        self._guard = UnreadableFileGuard(logger)
         self._loaded = False
 
     # ------------------------------------------------------------------
@@ -85,13 +93,15 @@ class RecipeStore:
         try:
             if not self._path.exists():
                 return None
-            with open(self._path, encoding="utf-8") as f:
+            with open(self._path, encoding="utf-8-sig") as f:   # a BOM from a text editor is fine
                 data = json.load(f)
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, ValueError, RecursionError) as exc:   # ValueError: bad JSON or UTF-8
             logger.warning(f"Recipe store read failed ({self._path}): {exc}")
+            self._guard.note_unreadable(self._path)
             return None
         if not isinstance(data, dict):
             logger.warning(f"Recipe store at {self._path} is not a dict; ignoring")
+            self._guard.note_unreadable(self._path)
             return None
         return data
 
@@ -131,6 +141,7 @@ class RecipeStore:
 
     def _load_locked(self) -> None:
         self._entries = {}
+        self._undecodable = {}
         data = self._read_store_file()
         if data is None:
             self._loaded = True
@@ -138,13 +149,20 @@ class RecipeStore:
         for identity, entry in data.items():
             parsed = self._parse_entry(entry)
             if parsed is None:
-                logger.debug(f"Dropping unreadable recipe entry for {identity}")
+                logger.debug(f"Keeping undecodable recipe entry for {identity} as it is")
+                self._undecodable[identity] = entry
                 continue
             self._entries[identity] = parsed
         self._loaded = True
 
     def _save_locked(self) -> None:
-        """Atomic write via tmp + os.replace. Caller must hold the lock."""
+        """Atomic write via tmp + os.replace. Caller must hold the lock.
+
+        Undecodable entries go back as they were read; a store file that
+        could not be read is only replaced once a copy of it is kept.
+        """
+        if not self._guard.clear_to_save(self._path):
+            return
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
@@ -154,7 +172,7 @@ class RecipeStore:
         try:
             with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(
-                    self._entries,
+                    {**self._undecodable, **self._entries},
                     f,
                     ensure_ascii=False,
                     indent=2,
@@ -313,6 +331,36 @@ class RecipeStore:
             self._save_locked()
             return True
 
+    # ------------------------------------------------------------------
+    # Keeping a recipe with a file whose identity bytes changed
+    # ------------------------------------------------------------------
+
+    def rekey(self, old_identity: str, new_identity: str,
+              transform: Callable[[Recipe], Recipe | None] | None = None) -> bool:
+        """Move *old_identity*'s recipe and variants to *new_identity*; True if they moved.
+
+        For a file Imervue rewrote without touching its pixels — new EXIF,
+        a quarter turn — whose identity (its first bytes) changed. With
+        *transform* every recipe, the variants included, is passed through
+        it first; if it returns ``None`` for any of them nothing moves, so
+        the recipe stays where it was rather than half-adapted.
+        """
+        if not old_identity or not new_identity or old_identity == new_identity:
+            return False
+        self._ensure_loaded()
+        with self._lock:
+            entry = self._entries.get(old_identity)
+            if entry is None:
+                return False
+            if transform is not None:
+                entry = _transformed_entry(entry, transform)
+                if entry is None:
+                    return False
+            self._entries[new_identity] = entry
+            del self._entries[old_identity]
+            self._save_locked()
+            return True
+
     def list_variants_for_path(self, path: str) -> list[str]:
         return self.list_variants(file_identity(path))
 
@@ -361,6 +409,8 @@ class RecipeStore:
         """Discard cached state so the next call re-reads from disk."""
         with self._lock:
             self._entries = {}
+            self._undecodable = {}
+            self._guard = UnreadableFileGuard(logger)
             self._loaded = False
 
     def __len__(self) -> int:
@@ -372,3 +422,38 @@ class RecipeStore:
 # Module-level singleton. Tests that need an isolated store should instantiate
 # RecipeStore directly with a tmp path instead of poking at this global.
 recipe_store = RecipeStore()
+
+
+def _transformed_entry(entry: dict[str, Any],
+                       transform: Callable[[Recipe], Recipe | None]) -> dict[str, Any] | None:
+    """*entry* with its recipe and each variant passed through *transform*; None if one can't be."""
+    try:
+        recipe = transform(Recipe.from_dict(entry["recipe"]))
+        variants = {name: (transform(Recipe.from_dict(data)) if isinstance(data, dict) else data)
+                    for name, data in (entry.get("variants") or {}).items()}
+    except _RECIPE_DECODE_ERRORS:
+        logger.debug("A recipe failed to decode while following its file", exc_info=True)
+        return None
+    if recipe is None or any(variant is None for variant in variants.values()):
+        return None
+    return {**entry, "recipe": recipe.normalized().to_dict(),
+            "variants": {name: (variant.normalized().to_dict()
+                                if isinstance(variant, Recipe) else variant)
+                         for name, variant in variants.items()}}
+
+
+def carry_recipe(path: str | Path, change: Callable[[], bool],
+                 transform: Callable[[Recipe], Recipe | None] | None = None) -> bool:
+    """Run *change*, which rewrites *path* in place, and keep *path*'s recipe with the file.
+
+    The identity is the file's first bytes, where EXIF lives, so a metadata
+    rewrite or a lossless quarter turn used to orphan the photo's Modify
+    edits and virtual copies. After a *change* that returns True the recipe
+    is re-keyed to the file's new identity (see :meth:`RecipeStore.rekey`).
+    Returns what *change* returned; its exceptions propagate untouched.
+    """
+    old = file_identity(path)
+    done = change()
+    if done and old:
+        recipe_store.rekey(old, file_identity(path), transform)
+    return done

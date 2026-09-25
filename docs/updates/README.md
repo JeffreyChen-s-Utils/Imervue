@@ -58,6 +58,97 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260924-100 | 2026-09-24 | Move the metadata-carrying save helpers into in_place_save | #refactor #metadata | [2026-09](2026-09.md) |
+| U-20260924-101 | 2026-09-24 | Keep metadata when Modify and the annotation editor save over a file; never write PNG into a RAW | #fix #metadata #data-loss | [2026-09](2026-09.md) |
+| U-20260924-102 | 2026-09-24 | AI Upscale: full-size RAW input, no PNG bytes under a .cr2 name, EXIF kept | #fix #metadata #data-loss | [2026-09](2026-09.md) |
+| U-20260924-103 | 2026-09-24 | Export keeps camera, lens and capture date, with a metadata policy | #feature #metadata #export | [2026-09](2026-09.md) |
+| U-20260924-104 | 2026-09-24 | CLI and Auto-Orient decode like the viewer: upright, sRGB, HEIC readable | #fix #cli #orientation #colour | [2026-09](2026-09.md) |
+| U-20260924-105 | 2026-09-24 | Thumbnail cache: drop the fromarray mode conversion Pillow 13 removes | #fix #compat #pillow | [2026-09](2026-09.md) |
+| U-20260924-106 | 2026-09-24 | GPS geotag writes JPEGs without piexif; EXIF rewrites keep the thumbnail | #fix #metadata #gps | [2026-09](2026-09.md) |
+| U-20260924-107 | 2026-09-24 | Deep-zoom screen-refit test: isolate the immediate chain from the interval watch | #test #flaky | [2026-09](2026-09.md) |
+| U-20260924-108 | 2026-09-24 | Docs: Modify's Apply Crop and annotation Save write back, in all ten doc trees | #docs | [2026-09](2026-09.md) |
+| U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
+| U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-67 | 2026-09-25 | Sorting by name puts img2 before img10, like the file tree and Explorer | #fix #sort | [2026-09-b](2026-09-b.md) |
+| U-20260925-66 | 2026-09-25 | Canon CR3, Panasonic RW2, Pentax PEF and 14 more RAW formats open | #fix #raw #formats | [2026-09-b](2026-09-b.md) |
+| U-20260925-65 | 2026-09-25 | Batch workers report a model or folder that fails before the first image | #fix #workers | [2026-09-b](2026-09-b.md) |
+| U-20260925-64 | 2026-09-25 | Every image decode catches a picture over the pixel limit | #fix #robustness | [2026-09-b](2026-09-b.md) |
+| U-20260925-63 | 2026-09-25 | Tool workers report every failure instead of leaving their dialog stuck | #fix #workers | [2026-09-b](2026-09-b.md) |
+| U-20260925-62 | 2026-09-25 | AVIF opens and saves without pillow-heif; the install hint is for HEIC only | #fix #formats #avif | [2026-09-b](2026-09-b.md) |
+| U-20260925-61 | 2026-09-25 | Auto-cull scores a camera RAW by its preview, and a huge file no longer ends the batch | #fix #cull #raw | [2026-09](2026-09.md) |
+| U-20260925-60 | 2026-09-25 | Paint's Reference dock shows a photo upright and colour-managed | #fix #paint #color | [2026-09](2026-09.md) |
+| U-20260925-59 | 2026-09-25 | Combine to PDF / TIFF lays pages upright in sRGB and replaces a file in one step | #fix #data-loss #color | [2026-09](2026-09.md) |
+| U-20260925-58 | 2026-09-25 | A failed Export says why instead of doing nothing | #fix #export | [2026-09](2026-09.md) |
+| U-20260925-57 | 2026-09-25 | A GIF made without Loop forever plays once, not twice | #fix #animation | [2026-09](2026-09.md) |
+| U-20260925-56 | 2026-09-25 | Create GIF / Video suggests a free name and asks before replacing a file | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260925-55 | 2026-09-25 | The replace-existing-file question moves to dialog_rows (refactor) | #refactor #export | [2026-09](2026-09.md) |
+| U-20260925-54 | 2026-09-25 | Auto-rotate, EXIF Strip copies and Split Pages number their files instead of replacing | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260925-53 | 2026-09-25 | Export never replaces a file, the photo itself above all, without asking | #fix #export #data-loss | [2026-09](2026-09.md) |
+| U-20260925-52 | 2026-09-25 | Picking a free file name moves to system/free_names (refactor) | #refactor #files | [2026-09](2026-09.md) |
+| U-20260925-51 | 2026-09-25 | Paint export presets and annotation projects save in one step | #bugfix #paint #annotation #data-loss | [2026-09](2026-09.md) |
+| U-20260925-50 | 2026-09-25 | Safety Review overwriting originals replaces each in one step | #bugfix #plugin #safety_review #Imervue_Plugins #data-loss | [2026-09](2026-09.md) |
+| U-20260925-49 | 2026-09-25 | Exporting over an existing file replaces it in one step | #bugfix #export #data-loss | [2026-09](2026-09.md) |
+| U-20260925-48 | 2026-09-25 | The file tree offers to delete for good what the Recycle Bin refused | #bugfix #delete #file-tree | [2026-09](2026-09.md) |
+| U-20260925-47 | 2026-09-25 | Duplicate Finder offers to delete for good what the Recycle Bin refused | #bugfix #delete #duplicates | [2026-09](2026-09.md) |
+| U-20260925-46 | 2026-09-25 | Confirmed permanent deletes remove folders and files the Recycle Bin can't take | #bugfix #delete | [2026-09](2026-09.md) |
+| U-20260925-45 | 2026-09-25 | Deleting on a drive without a Recycle Bin never destroys the file unasked | #bugfix #delete #data-loss | [2026-09](2026-09.md) |
+| U-20260925-44 | 2026-09-25 | Refactor: clear the SonarCloud findings still open on dev | #refactor #sonarcloud | [2026-09](2026-09.md) |
+| U-20260925-43 | 2026-09-25 | A very large animation decodes frame by frame instead of all at once | #bugfix #animation #memory | [2026-09](2026-09.md) |
+| U-20260925-42 | 2026-09-25 | The .cube reader accepts DaVinci Resolve's INPUT_RANGE and a leading BOM | #bugfix #lut #interop | [2026-09](2026-09.md) |
+| U-20260925-41 | 2026-09-25 | JSON files saved with a BOM or invalid UTF-8 no longer fail to load | #bugfix #robustness #encoding | [2026-09](2026-09.md) |
+| U-20260925-40 | 2026-09-25 | The recipe store never loses edits to a file it could not read | #bugfix #recipe #data-loss | [2026-09](2026-09.md) |
+| U-20260925-39 | 2026-09-25 | Refactor: the unreadable-settings guard becomes a shared UnreadableFileGuard | #refactor #settings | [2026-09](2026-09.md) |
+| U-20260925-38 | 2026-09-25 | A start-up warning says the settings file could not be read | #feature #settings #ui | [2026-09](2026-09.md) |
+| U-20260925-37 | 2026-09-25 | An unreadable settings file is kept before it is saved over | #bugfix #settings #data-loss | [2026-09](2026-09.md) |
+| U-20260925-36 | 2026-09-25 | Face Detection works when OpenCV is installed under a non-ASCII path | #bugfix #face-detection #windows | [2026-09](2026-09.md) |
+| U-20260925-35 | 2026-09-25 | Safety Review reads photos in folders with non-ASCII names | #bugfix #plugin #safety_review #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-34 | 2026-09-25 | Batch renames that reuse names within the selection land as a whole | #bugfix #rename #file-ops | [2026-09](2026-09.md) |
+| U-20260925-33 | 2026-09-25 | EXIF Strip overwrites in one step and keeps the photo's recipe | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260925-32 | 2026-09-25 | Modify recipes follow a photo through lossless rotations and EXIF rewrites | #fix #data-loss #recipe | [2026-09](2026-09.md) |
+| U-20260925-31 | 2026-09-25 | Tests never write the real recipe store | #test | [2026-09](2026-09.md) |
+| U-20260925-30 | 2026-09-25 | Refactor: get_exif_data moves to the Qt-free exif_merge; the MCP server stays Qt-free | #refactor #mcp | [2026-09](2026-09.md) |
+| U-20260925-29 | 2026-09-25 | MCP tools open HEIC and develop camera RAW like the viewer | #fix #mcp | [2026-09](2026-09.md) |
+| U-20260925-28 | 2026-09-25 | Refactor: RAW development moves to the Qt-free raw_loader.develop_raw | #refactor | [2026-09](2026-09.md) |
+| U-20260925-27 | 2026-09-25 | XMP / annotation sidecars, material library, sessions and pet scripts are written in one step | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260925-26 | 2026-09-25 | Refactor: replace_atomically moves to system/atomic_write | #refactor | [2026-09](2026-09.md) |
+| U-20260925-25 | 2026-09-25 | PSD, puppet and paint saves replace the file in one step: a failed save keeps the old one | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260925-24 | 2026-09-25 | Image plugins number their result too, and still load on older installs | #fix #data-loss #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-23 | 2026-09-25 | One-shot tools number their result instead of saving over the last one | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260925-22 | 2026-09-25 | Lightroom / darktable keyword hierarchies become library tag paths | #fix #xmp #interop | [2026-09](2026-09.md) |
+| U-20260925-21 | 2026-09-25 | XMP: read the rating and keywords a JPEG carries itself (Lightroom, Windows Explorer) | #fix #xmp #interop | [2026-09](2026-09.md) |
+| U-20260925-20 | 2026-09-25 | XMP: Lightroom / Bridge / darktable rejects map to the culling Reject both ways | #fix #xmp #interop | [2026-09](2026-09.md) |
+| U-20260925-19 | 2026-09-25 | Test: every formatted translation gets the placeholders its text uses | #test #i18n | [2026-09](2026-09.md) |
+| U-20260925-18 | 2026-09-25 | Batch Convert hands a replaced original's ratings to its conversion; tree Duplicate copies sidecars | #fix #convert | [2026-09](2026-09.md) |
+| U-20260925-17 | 2026-09-25 | Deleted photos take their .xmp and annotation sidecars along | #fix #delete #xmp | [2026-09](2026-09.md) |
+| U-20260925-16 | 2026-09-25 | Deleted photos go to the Recycle Bin at shutdown instead of being unlinked | #fix #data-loss #delete | [2026-09](2026-09.md) |
+| U-20260925-15 | 2026-09-25 | Photos renamed outside Imervue keep their ratings, tags and library notes | #fix #rename | [2026-09](2026-09.md) |
+| U-20260925-14 | 2026-09-25 | Japanese and Korean manuals: three bold spans rendered as literal asterisks | #docs | [2026-09](2026-09.md) |
+| U-20260925-13 | 2026-09-25 | Token Batch Rename no longer crashes after renaming; failed renames keep their path | #fix #rename #i18n | [2026-09](2026-09.md) |
+| U-20260925-12 | 2026-09-25 | Renamed and moved photos keep their ratings, tags, library notes and sidecars | #fix #data-loss #rename | [2026-09](2026-09.md) |
+| U-20260925-11 | 2026-09-25 | XMP sidecars: darktable / digiKam photo.jpg.xmp and Lightroom / Bridge colour labels | #fix #xmp #interop | [2026-09](2026-09.md) |
+| U-20260925-10 | 2026-09-25 | Batch Rename and Move / Copy report their results in the UI language | #fix #i18n | [2026-09](2026-09.md) |
+| U-20260925-09 | 2026-09-25 | Case-only renames work on Windows: tree, Batch Rename and Token Rename | #fix #rename | [2026-09](2026-09.md) |
+| U-20260925-08 | 2026-09-25 | Paint drops, GIF/video maker and annotation editor decode like the viewer | #fix #orientation #colour | [2026-09](2026-09.md) |
+| U-20260925-07 | 2026-09-25 | Perceptual hashes see a tagged photo upright: duplicates across orientation are found | #fix #duplicates #orientation | [2026-09](2026-09.md) |
+| U-20260925-06 | 2026-09-25 | Deflicker writes JPEG time-lapses (it failed every frame); RAW developed, EXIF kept | #fix #timelapse | [2026-09](2026-09.md) |
+| U-20260925-05 | 2026-09-25 | Gallery, contact sheet, print layout, compare, side panels and Ctrl+C decode like the viewer | #fix #orientation #colour | [2026-09](2026-09.md) |
+| U-20260925-04 | 2026-09-25 | Move / Copy never overwrites: numbered names, case-aware, re-checked before writing | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260925-03 | 2026-09-25 | XMP sidecar save merges instead of replacing: another editor's RAW settings survive | #fix #data-loss #xmp | [2026-09](2026-09.md) |
+| U-20260925-02 | 2026-09-25 | Batch Convert: trash (not delete) only fully converted originals; full-size RAW; keep EXIF | #fix #data-loss #metadata | [2026-09](2026-09.md) |
+| U-20260925-01 | 2026-09-25 | Unreadable camera RAW raises OSError, not libraw's own error | #fix #raw | [2026-09](2026-09.md) |
+| U-20260924-99 | 2026-09-24 | Lossless Rotate and Rotate All keep JPEG bytes and file metadata | #fix #metadata #rotate | [2026-09](2026-09.md) |
+| U-20260924-98 | 2026-09-24 | Keep AI Upscale overwrite and EXIF Strip from truncating animated or multi-page files | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260924-97 | 2026-09-24 | Stop in-place rotate, crop and annotation saves from destroying RAW and multi-frame files | #fix #data-loss | [2026-09](2026-09.md) |
+| U-20260924-96 | 2026-09-24 | Export and feed tools the full-size developed RAW | #fix #raw | [2026-09](2026-09.md) |
+| U-20260924-95 | 2026-09-24 | Decode Modify and Paint sources like the viewer: full-size RAW, sRGB, upright | #fix #raw | [2026-09](2026-09.md) |
+| U-20260924-94 | 2026-09-24 | Colour-manage every preview, tool input and export like the viewer | #fix #color | [2026-09](2026-09.md) |
+| U-20260924-93 | 2026-09-24 | Show embedded colour profiles in their real colours in the viewer and thumbnails | #feature #color | [2026-09](2026-09.md) |
+| U-20260924-92 | 2026-09-24 | Write GPSVersionID and reject out-of-range coordinates in the geotag writer | #fix #exif | [2026-09](2026-09.md) |
+| U-20260924-91 | 2026-09-24 | Turn tagged photos upright in the background remover, object splitter, icon and resize plugins | #fix #exif #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260924-90 | 2026-09-24 | Censor the region Safety Review detected: NudeNet box format and EXIF orientation | #fix #security #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260924-89 | 2026-09-24 | Read tagged photos upright for OCR, CLIP search and the multi-image merges | #fix #exif | [2026-09](2026-09.md) |
+| U-20260924-88 | 2026-09-24 | Compute smart crops on the recipe's base and show the last previews upright | #fix #exif | [2026-09](2026-09.md) |
 | U-20260924-87 | 2026-09-24 | Translate the plugins' hard-coded error toasts | #i18n #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-86 | 2026-09-24 | Run the MCP image tools on the EXIF-upright image | #fix #exif #mcp | [2026-09](2026-09.md) |
 | U-20260924-85 | 2026-09-24 | Translate twelve hard-coded toasts and four f-string file filters | #i18n | [2026-09](2026-09.md) |
@@ -257,3 +348,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 6 |

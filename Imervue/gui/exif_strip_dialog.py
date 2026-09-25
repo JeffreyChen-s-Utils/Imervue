@@ -24,7 +24,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.image.orientation import upright
+from Imervue.system.natural_sort import natural_key
+from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
+from Imervue.image.recipe_store import carry_recipe
+from Imervue.image.shown import as_shown
+from Imervue.system.atomic_write import replace_atomically
+from Imervue.system.free_names import free_names
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -52,7 +57,7 @@ def _scan_folder(folder: str) -> list[str]:
                 result.append(entry.path)
     except OSError:
         pass
-    result.sort(key=lambda p: os.path.basename(p).lower())
+    result.sort(key=lambda p: natural_key(os.path.basename(p)))
     return result
 
 
@@ -65,11 +70,16 @@ def strip_exif(path: str, *, remove_all: bool = True,
     """Strip metadata from an image file.
 
     Returns the output path on success.
-    Raises on failure.
+    Raises on failure, including ``ValueError`` when *overwrite* is set and
+    the file can't be saved back whole (an animated or multi-page file).
     """
+    if overwrite and not can_rewrite_in_place(path):
+        raise ValueError(f"{path} can't be overwritten without losing frames")
     # The orientation tag goes with the rest of the EXIF, so bake it into the
     # pixels first; otherwise a portrait phone photo comes out sideways for good.
-    img = upright(Image.open(path))
+    with Image.open(path) as opened:
+        img = as_shown(opened)
+        img.load()
 
     # Preserve ICC profile if user only wants GPS removed
     icc = img.info.get("icc_profile") if not remove_all else None
@@ -81,14 +91,15 @@ def strip_exif(path: str, *, remove_all: bool = True,
     if overwrite:
         out_path = path
     else:
-        stem = Path(path).stem
-        ext = Path(path).suffix
-        out_dir = output_dir or str(Path(path).parent)
-        out_path = os.path.join(out_dir, f"{stem}_clean{ext}")
+        # A free name: an earlier run's copy, or a same-named photo from another
+        # folder cleaned into the same output folder, is kept.
+        source = Path(path)
+        out_dir = output_dir or str(source.parent)
+        out_path = str(free_names(out_dir, [f"{source.stem}_clean"], source.suffix)[0])
 
     # Save kwargs
     save_kwargs: dict = {}
-    fmt = _pil_format(path)
+    fmt = in_place_format(path)
     if fmt:
         save_kwargs["format"] = fmt
     if icc:
@@ -98,18 +109,20 @@ def strip_exif(path: str, *, remove_all: bool = True,
     if fmt == "JPEG":
         save_kwargs.setdefault("quality", 95)
 
+    if overwrite:
+        # In one step, so a failed save keeps the original; and the photo's
+        # Modify recipe stays with it (it applies to the upright pixels baked
+        # in here, and the rewrite changes the identity it is keyed by).
+        def write() -> bool:
+            replace_atomically(path, lambda tmp: clean.save(tmp, **save_kwargs))
+            return True
+
+        carry_recipe(path, write)
+        return path
     clean.save(out_path, **save_kwargs)
     return out_path
 
 
-def _pil_format(path: str) -> str | None:
-    """Map file extension to Pillow format string."""
-    ext = Path(path).suffix.lower()
-    return {
-        ".jpg": "JPEG", ".jpeg": "JPEG",
-        ".png": "PNG", ".tiff": "TIFF", ".tif": "TIFF",
-        ".webp": "WebP",
-    }.get(ext)
 
 
 # ---------------------------------------------------------------------------

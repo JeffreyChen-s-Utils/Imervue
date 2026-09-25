@@ -14,13 +14,15 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QDialog, QLabel, QSlider, QVBoxLayout, QWidget
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.equirectangular import DEFAULT_SIZE, tiny_planet
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -48,7 +50,7 @@ class _TinyPlanetWorker(QThread):
             arr = tiny_planet(load_rgba(self._path), self._size)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Tiny planet failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -84,7 +86,7 @@ class TinyPlanetDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_planet.png")
+        out_path = Path(output_path(self._path, "planet"))
         self._worker = _TinyPlanetWorker(self._path, self._size.value(), str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()
@@ -101,7 +103,7 @@ def _safe_is_equirect(path: str) -> bool:
         with Image.open(path) as img:
             w, h = img.size
         return h > 0 and abs(w / (2.0 * h) - 1.0) <= 0.05
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         return False
 
 

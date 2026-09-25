@@ -7,15 +7,16 @@ Worker tests call .run() directly and require ``qapp``.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.gui.exif_strip_dialog import (
     _scan_folder,
     strip_exif,
     _StripWorker,
-    _pil_format,
 )
 
 
@@ -83,27 +84,6 @@ class TestScanFolder:
 
 
 # ---------------------------------------------------------------------------
-# _pil_format
-# ---------------------------------------------------------------------------
-
-class TestPilFormat:
-    def test_jpg(self):
-        assert _pil_format("photo.jpg") == "JPEG"
-
-    def test_jpeg(self):
-        assert _pil_format("photo.jpeg") == "JPEG"
-
-    def test_png(self):
-        assert _pil_format("image.png") == "PNG"
-
-    def test_webp(self):
-        assert _pil_format("image.webp") == "WebP"
-
-    def test_unknown(self):
-        assert _pil_format("file.xyz") is None
-
-
-# ---------------------------------------------------------------------------
 # strip_exif (core logic)
 # ---------------------------------------------------------------------------
 
@@ -138,6 +118,27 @@ class TestStripExif:
         out_path = strip_exif(src, overwrite=False, output_dir=out_dir)
         assert "photo_clean.jpg" in out_path
 
+    def test_a_second_copy_keeps_the_first(self, tmp_path):
+        """photo.jpg from two folders cleaned into one output folder: the second replaced the first."""
+        out_dir = tmp_path / "out"
+        out_dir.mkdir()
+        firsts = []
+        for folder in ("a", "b"):
+            (tmp_path / folder).mkdir()
+            src = str(tmp_path / folder / "photo.jpg")
+            _make_jpeg_with_exif(src)
+            firsts.append(strip_exif(src, overwrite=False, output_dir=str(out_dir)))
+        assert [Path(p).name for p in firsts] == ["photo_clean.jpg", "photo_clean_1.jpg"]
+        assert all(os.path.isfile(p) for p in firsts)
+
+    def test_a_copy_beside_the_original_is_numbered_too(self, tmp_path):
+        src = str(tmp_path / "photo.jpg")
+        _make_jpeg_with_exif(src)
+        (tmp_path / "photo_clean.jpg").write_bytes(b"cleaned and retouched")
+        out_path = strip_exif(src, overwrite=False)
+        assert Path(out_path).name == "photo_clean_1.jpg"
+        assert (tmp_path / "photo_clean.jpg").read_bytes() == b"cleaned and retouched"
+
     def test_png_no_crash(self, tmp_path):
         path = str(tmp_path / "img.png")
         arr = np.full((10, 10, 3), 128, dtype=np.uint8)
@@ -146,6 +147,33 @@ class TestStripExif:
         # Should still be a valid image
         img = Image.open(path)
         assert img.size == (10, 10)
+
+    def test_a_failed_overwrite_keeps_the_original(self, tmp_path, monkeypatch):
+        """The overwrite saved straight over the photo; a failure mid-save lost it."""
+        from Imervue.system import atomic_write
+        path = str(tmp_path / "photo.jpg")
+        _make_jpeg_with_exif(path)
+        before = Path(path).read_bytes()
+
+        def disk_full(_src, _dst):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(atomic_write.os, "replace", disk_full)
+        with pytest.raises(OSError, match="disk full"):
+            strip_exif(path, overwrite=True)
+        assert Path(path).read_bytes() == before
+        assert sorted(os.listdir(tmp_path)) == ["photo.jpg"]
+
+    def test_the_photos_recipe_stays_with_it(self, tmp_path):
+        from Imervue.image.recipe import Recipe, clear_identity_cache
+        from Imervue.image.recipe_store import recipe_store
+        path = str(tmp_path / "photo.jpg")
+        _make_jpeg_with_exif(path)
+        clear_identity_cache()
+        recipe_store.set_for_path(path, Recipe(exposure=0.6))
+        strip_exif(path, overwrite=True)
+        kept = recipe_store.get_for_path(path)
+        assert kept is not None and kept.exposure == pytest.approx(0.6)
 
     def test_preserves_pixel_data(self, tmp_path):
         path = str(tmp_path / "photo.png")
@@ -228,3 +256,16 @@ def test_strip_bakes_the_orientation_before_dropping_it(tmp_path):
     with Image.open(path) as out:
         assert out.size == (20, 40)
         assert out.getexif().get(0x0112) is None
+
+
+def test_overwrite_refuses_an_animated_webp_and_keeps_its_frames(tmp_path):
+    """Stripping in place (the default) re-saved the first frame only."""
+    path = tmp_path / "anim.webp"
+    frames = [Image.new("RGB", (8, 4), c) for c in ((255, 0, 0), (0, 255, 0), (0, 0, 255))]
+    frames[0].save(path, save_all=True, append_images=frames[1:])
+    import pytest
+    with pytest.raises(ValueError, match="losing frames"):
+        strip_exif(str(path))
+    with Image.open(path) as img:
+        assert img.n_frames == 3
+

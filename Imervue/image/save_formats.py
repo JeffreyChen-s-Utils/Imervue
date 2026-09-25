@@ -4,20 +4,24 @@ The export and batch-convert dialogs previously each carried their own format
 tables and ``Image.save`` calls. This module is the single source of truth so
 adding a format (e.g. HEIC / AVIF) touches one place.
 
-HEIC/AVIF output rides on the optional ``pillow-heif`` backend: it is offered
-only when the backend is installed (:func:`available_formats`) and the save
-registers the opener on demand. A single ``register_heif_opener`` covers both
-HEIF and AVIF; the only Pillow-side wrinkle is that the ``.heic`` container is
+HEIC output rides on the optional ``pillow-heif`` backend and JPEG XL on
+``pillow-jxl-plugin``: each is offered only when its backend is installed
+(:func:`available_formats`) and the save registers the opener on demand.
+AVIF is Pillow's own and is offered whenever this Pillow was built with
+libavif. The only Pillow-side wrinkle is that the ``.heic`` container is
 written with the ``HEIF`` plugin id, hence :func:`pil_format`.
 """
 from __future__ import annotations
 
+import os
 from typing import BinaryIO
 
 from PIL import Image
 
+from Imervue.image.avif_support import avif_available
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.jxl_support import ensure_jxl_opener
+from Imervue.system.atomic_write import replace_atomically
 
 # Display name → file extension.
 FORMAT_EXTENSIONS: dict[str, str] = {
@@ -34,9 +38,6 @@ FORMAT_EXTENSIONS: dict[str, str] = {
 QUALITY_FORMATS: frozenset[str] = frozenset({"JPEG", "WebP", "HEIC", "AVIF", "JXL"})
 
 _BASE_FORMATS: tuple[str, ...] = ("PNG", "JPEG", "WebP", "BMP", "TIFF")
-# Ordered so the menu shows HEIC before AVIF deterministically.
-_HEIF_FORMATS_ORDER: tuple[str, ...] = ("HEIC", "AVIF")
-_HEIF_FORMATS: frozenset[str] = frozenset(_HEIF_FORMATS_ORDER)
 # Formats that cannot carry an alpha channel.
 _NO_ALPHA_FORMATS: frozenset[str] = frozenset({"JPEG", "BMP"})
 # Display name → Pillow format id (only HEIC differs).
@@ -44,10 +45,12 @@ _PIL_FORMAT_OVERRIDE: dict[str, str] = {"HEIC": "HEIF"}
 
 
 def available_formats() -> list[str]:
-    """Output formats offered to the user; HEIC/AVIF only if the backend exists."""
+    """Output formats offered to the user: HEIC, AVIF and JXL only when they can be written."""
     formats = list(_BASE_FORMATS)
     if ensure_heif_opener():
-        formats.extend(_HEIF_FORMATS_ORDER)
+        formats.append("HEIC")
+    if avif_available():
+        formats.append("AVIF")
     if ensure_jxl_opener():
         formats.append("JXL")
     return formats
@@ -69,7 +72,7 @@ def prepare_for_format(img: Image.Image, format_name: str) -> Image.Image:
 
 def save_image(
     img: Image.Image,
-    fp: str | BinaryIO,
+    fp: str | os.PathLike | BinaryIO,
     format_name: str,
     quality: int | None = None,
     extra: dict | None = None,
@@ -77,14 +80,17 @@ def save_image(
     """Save ``img`` as ``format_name`` to a path or file object.
 
     ``extra`` carries format-agnostic save options (e.g. ``dpi``) merged after
-    the quality handling. Registers the HEIF/AVIF backend on demand and raises
-    ``ValueError`` when a HEIC/AVIF save is requested without ``pillow-heif``
-    installed, so callers can report it at the boundary.
+    the quality handling. Registers the HEIC / JPEG XL backend on demand and
+    raises ``ValueError`` when HEIC, AVIF or JXL is requested and this install
+    can't write it, so callers can report it at the boundary. A path is replaced
+    in one step (:func:`~Imervue.system.atomic_write.replace_atomically`):
+    Pillow opens it with ``w+b``, so a save that failed over an existing file
+    — an export over its own source, say — left that file truncated.
     """
-    if format_name in _HEIF_FORMATS and not ensure_heif_opener():
-        raise ValueError(
-            f"{format_name} output requires the pillow-heif package.",
-        )
+    if format_name == "HEIC" and not ensure_heif_opener():
+        raise ValueError("HEIC output requires the pillow-heif package.")
+    if format_name == "AVIF" and not avif_available():
+        raise ValueError("AVIF output requires a Pillow built with libavif.")
     if format_name == "JXL" and not ensure_jxl_opener():
         raise ValueError("JXL output requires the pillow-jxl-plugin package.")
     prepared = prepare_for_format(img, format_name)
@@ -93,4 +99,8 @@ def save_image(
         kwargs["quality"] = int(quality)
     if extra:
         kwargs.update(extra)
-    prepared.save(fp, format=pil_format(format_name), **kwargs)
+    fmt = pil_format(format_name)
+    if isinstance(fp, (str, os.PathLike)):
+        replace_atomically(fp, lambda tmp: prepared.save(tmp, format=fmt, **kwargs))
+    else:
+        prepared.save(fp, format=fmt, **kwargs)

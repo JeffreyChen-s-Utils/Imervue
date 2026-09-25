@@ -24,6 +24,7 @@ from pathlib import Path
 
 import numpy as np
 
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.user_settings.user_setting_dict import (
     schedule_save,
     user_setting_dict,
@@ -270,4 +271,6 @@ def _write_with_format(
         save_kwargs = {"compression": "tiff_deflate"}
     else:   # bmp
         save_kwargs = {}
-    pil_image.save(path, format=format_tag.upper(), **save_kwargs)
+    # One step: a failed save over an existing export must not leave it truncated.
+    replace_atomically(
+        path, lambda tmp: pil_image.save(tmp, format=format_tag.upper(), **save_kwargs))

@@ -15,7 +15,6 @@ from safety_review._constants import (
     _ERAX_MODEL,
     _ERAX_REPO,
     _ERAX_REVISION,
-    _FMT_MAP,
     _IMAGE_EXTS,
     ANIME_MOSAIC_CLASSES,
     MIN_CONFIDENCE,
@@ -29,12 +28,16 @@ from safety_review._constants import (
     _categories_to_real_labels,
 )
 from safety_review._censor_core import (
+    _AnyPathDetector,
     _censor_region,
     _detect_image_mode,
     _ensure_parent,
     _expand_box,
     _junction_bridges,
     _merge_gap,
+    _nudenet_corners,
+    _open_upright,
+    _save_as,
     _shrink_box_center,
 )
 
@@ -70,7 +73,7 @@ def _get_detector():
     with _cached_detector_lock:
         if _cached_detector is None:
             from nudenet import NudeDetector
-            _cached_detector = NudeDetector()
+            _cached_detector = _AnyPathDetector(NudeDetector())
         return _cached_detector
 
 
@@ -158,12 +161,12 @@ def _scan_folder_recursive(folder: str) -> list[str]:
 
 def _detect_regions_real(detector, src: str, confidence: float,
                           labels: frozenset[str]):
-    """NudeNet detection → list of (x1, y1, x2, y2)."""
+    """NudeNet detection → list of (x1, y1, x2, y2); NudeNet itself reports (x, y, w, h)."""
     detections = detector.detect(src)
     boxes = []
     for d in detections:
         if d["class"] in labels and d["score"] >= confidence:
-            boxes.append(tuple(d["box"]))
+            boxes.append(_nudenet_corners(d["box"]))
     return boxes
 
 
@@ -265,9 +268,8 @@ def _segment_boxes(src: str, boxes, mode: str):
     precise run must degrade gracefully, not crash the batch.
     """
     try:
-        from PIL import Image as _Img
         model = _get_fastsam()
-        with _Img.open(src) as im:
+        with _open_upright(src) as im:   # FastSAM reads the file upright, like the detectors
             iw, ih = im.size
         masks = [_fastsam_box_mask(model, src, box, iw, ih) for box in boxes]
         if any(m is not None for m in masks):
@@ -328,7 +330,7 @@ def _detect_labeled(detector, src, confidence, mode):
             continue
         name = _NUDENET_LABEL_TO_CLASS.get(d["class"])
         if name in classes:
-            out.append((tuple(d["box"]), classes.index(name)))
+            out.append((_nudenet_corners(d["box"]), classes.index(name)))
     return out
 
 
@@ -338,14 +340,6 @@ def _copy_unchanged(src: str, dst: str) -> None:
         import shutil
         _ensure_parent(dst)
         shutil.copy2(src, dst)
-
-
-def _save_image(img, dst: str) -> None:
-    _ensure_parent(dst)
-    fmt = _FMT_MAP.get(Path(dst).suffix.lower(), "PNG")
-    if fmt == "JPEG" and img.mode == "RGBA":
-        img = img.convert("RGB")
-    img.save(dst, format=fmt)
 
 
 def _process_single_image(
@@ -377,7 +371,6 @@ def _process_single_image(
     between two detected regions (a penetration junction) is censored instead
     of being left in the gap between their boxes.
     """
-    from PIL import Image
 
     boxes = _detect_boxes(detector, src, confidence, mode, categories)
     if not boxes:
@@ -385,9 +378,7 @@ def _process_single_image(
             _copy_unchanged(src, dst)
         return 0
 
-    img = Image.open(src)
-    if img.mode not in ("RGB", "RGBA"):
-        img = img.convert("RGBA")
+    img = _open_upright(src)
 
     iw, ih = img.width, img.height
     regions = [_expand_box(*box, padding, expand_pct, iw=iw, ih=ih) for box in boxes]
@@ -405,7 +396,7 @@ def _process_single_image(
         # censored region (precise has no mask for a bridge → ellipse fallback).
         _censor_region(img, *bridge, block_size, style=style, shape=shape)
 
-    _save_image(img, dst)
+    _save_as(img, dst)
     return len(regions) + len(bridges)
 
 
@@ -416,13 +407,10 @@ def _process_manual_image(src: str, dst: str, regions, block_size: int,
     No detection — the regions come straight from the manual editor, censored
     with the chosen style and shape. Returns the number of regions censored.
     """
-    from PIL import Image
-    img = Image.open(src)
-    if img.mode not in ("RGB", "RGBA"):
-        img = img.convert("RGBA")
+    img = _open_upright(src)   # the manual editor shows the upright image
     for region in regions:
         _censor_region(img, *region, block_size, style=style, shape=shape)
-    _save_image(img, dst)
+    _save_as(img, dst)
     return len(regions)
 
 

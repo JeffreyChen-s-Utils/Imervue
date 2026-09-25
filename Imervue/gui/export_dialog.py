@@ -8,11 +8,13 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QSlider, QPushButton,
+    QSlider, QPushButton, QMessageBox,
 )
 
+from Imervue.gui.export_metadata_combo import metadata_row
 from Imervue.gui.export_source import open_export_source
-from Imervue.gui.dialog_rows import path_browse_row, save_path_into
+from Imervue.image.export_metadata import export_save_options
+from Imervue.gui.dialog_rows import ask_to_replace, may_replace, path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
@@ -22,6 +24,8 @@ from Imervue.image.save_formats import (
 )
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_transfer import is_same_file
+from Imervue.system.free_names import free_names
 import contextlib
 
 if TYPE_CHECKING:
@@ -66,6 +70,9 @@ class ExportDialog(WorkerHostMixin, QDialog):
         self.source_path = source_path
         self._lang = language_wrapper.language_word_dict
         self._size_worker: _SizeEstimateWorker | None = None
+        # The path last picked through Browse…: its Save dialog already asked
+        # before picking an existing file.
+        self._browsed_path: str | None = None
 
         self.setWindowTitle(self._lang.get("export_title", "Export Image"))
         self.setMinimumWidth(420)
@@ -97,6 +104,9 @@ class ExportDialog(WorkerHostMixin, QDialog):
         self.quality_slider.setValue(85)
         layout.addWidget(self.quality_label)
         layout.addWidget(self.quality_slider)
+
+        metadata_layout, self.metadata_combo = metadata_row()
+        layout.addLayout(metadata_layout)
 
         # Output path row
         path_layout, self.path_edit, _browse = path_browse_row(
@@ -145,11 +155,12 @@ class ExportDialog(WorkerHostMixin, QDialog):
         self.quality_slider.setVisible(visible)
 
     def _update_default_output_path(self) -> None:
+        # A free name: the source's own name exported over the photo itself
+        # (a PNG exported as PNG), and ``photo.png`` beside ``photo.jpg`` is
+        # another picture.
         src = Path(self.source_path)
         ext = FORMAT_EXTENSIONS.get(self._selected_format(), ".png")
-        default_name = src.stem + ext
-        default_path = src.parent / default_name
-        self.path_edit.setText(str(default_path))
+        self.path_edit.setText(str(free_names(src.parent, [src.stem], ext)[0]))
 
     def _update_size_estimate(self) -> None:
         """Kick off an async in-memory save to estimate output file size."""
@@ -185,23 +196,50 @@ class ExportDialog(WorkerHostMixin, QDialog):
     def _browse_output(self) -> None:
         fmt = self._selected_format()
         ext = FORMAT_EXTENSIONS.get(fmt, ".*")
-        save_path_into(
+        picked = save_path_into(
             self, self.path_edit, self._lang.get("export_save", "Save"), f"{fmt} (*{ext})")
+        if picked:
+            self._browsed_path = picked
+
+    def _may_write(self, output_path: str) -> bool:
+        """Whether writing *output_path* replaces nothing the user has not agreed to replace.
+
+        Browse…'s Save dialog asks before picking an existing file; a typed path
+        was never asked about. The photo being exported is asked about either
+        way: the copy has its edits written into the pixels and keeps only the
+        metadata chosen here.
+        """
+        if is_same_file(output_path, self.source_path):
+            text = self._lang.get(
+                "export_replace_source",
+                "“{name}” is the photo being exported. Replace the original with this "
+                "copy? The copy has the photo's edits applied and keeps only the metadata "
+                "chosen above.")
+            return ask_to_replace(self, text.format(name=Path(output_path).name))
+        return may_replace(self, output_path, self._browsed_path)
 
     # ------------------------------------------------------------ export
     def _do_export(self) -> None:
         output_path = self.path_edit.text().strip()
-        if not output_path:
+        if not output_path or not self._may_write(output_path):
             return
 
         fmt = self._selected_format()
         try:
             img = open_export_source(self.source_path)
-            save_image(img, output_path, fmt, self._quality_for(fmt))
-            logger.info(f"Exported image to {output_path} as {fmt}")
-            self.accept()
+            extra = export_save_options(self.source_path, self.metadata_combo.currentData())
+            save_image(img, output_path, fmt, self._quality_for(fmt), extra)
         except Exception as exc:
-            logger.exception(f"Export failed: {exc}")
+            # Whatever the cause (a full disk, a codec error, an unreadable
+            # source), say so: a failure that is only logged looks like a Save
+            # button that does nothing. The dialog stays open to try again.
+            logger.exception("Exporting %s to %s failed", self.source_path, output_path)
+            QMessageBox.warning(
+                self, self._lang.get("export_title", "Export Image"),
+                self._lang.get("generic_error", "Error: {error}").format(error=exc))
+            return
+        logger.info("Exported image to %s as %s", output_path, fmt)
+        self.accept()
 
 
 def open_export_dialog(main_gui: GPUImageView) -> None:

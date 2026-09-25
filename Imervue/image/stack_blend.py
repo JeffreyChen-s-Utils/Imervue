@@ -28,7 +28,9 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+
+from Imervue.image.shown import load_shown_rgb
+
 
 STACK_MEAN = "mean"
 STACK_MEDIAN = "median"
@@ -101,8 +103,8 @@ def _sigma_clip(frames: Sequence[np.ndarray]) -> np.ndarray:
 
 
 def _load_rgb(path: str | Path) -> np.ndarray:
-    with Image.open(path) as im:
-        return np.asarray(im.convert("RGB"), dtype=np.uint8)
+    # Upright: the result is saved without EXIF, and every frame must share one frame.
+    return load_shown_rgb(path)
 
 
 def stack_images(paths: Sequence[str | Path], mode: str) -> np.ndarray:

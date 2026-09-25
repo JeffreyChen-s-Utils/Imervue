@@ -95,3 +95,15 @@ def test_undo_proceeds_when_no_button_held():
     PaintWorkspace.undo(ws)
     assert undo_calls == [True]
     assert actions == ["undo"]
+
+
+def test_dropped_tagged_photo_opens_upright(tmp_path):
+    """Pillow alone ignored the EXIF orientation (and a RAW's real resolution)."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    path = tmp_path / "portrait.jpg"
+    Image.new("RGB", (40, 20)).save(path, exif=exif)
+    loaded: list = []
+    ws = SimpleNamespace(load_image=loaded.append, _file_menu_bridge=None)
+    PaintWorkspace._open_dropped_path(ws, str(path))
+    assert loaded[0].shape == (40, 20, 4)

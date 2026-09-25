@@ -118,7 +118,7 @@ def stub_obs(monkeypatch):
     fake_module = types.ModuleType("obswebsocket")
     fake_module.obsws = _StubObsClient   # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "obswebsocket", fake_module)
-    yield _StubObsClient
+    return _StubObsClient
 
 
 def test_client_starts_with_endpoint(qapp, stub_obs):

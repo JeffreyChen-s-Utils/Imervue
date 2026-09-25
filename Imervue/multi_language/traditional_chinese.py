@@ -8,7 +8,7 @@ _NO_EXPORT_IMAGES = '沒有可匯出的圖片。'
 _EXPORT_FAILED = '匯出失敗：{err}'
 
 traditional_chinese_word_dict = {
-    "heif_install_hint": "安裝 pillow-heif 以檢視 HEIC/AVIF 影像。",
+    "heif_install_hint": "安裝 pillow-heif 以檢視 HEIC 影像。",
     "exif_location": "地點",
     "exif_coordinates": "座標",
     "exif_video_label": "影片",
@@ -322,7 +322,7 @@ traditional_chinese_word_dict = {
     # EXIF 編輯器
     "exif_edit_button": "編輯 EXIF",
     "exif_editor_title": "編輯 EXIF 元資料",
-    "exif_editor_no_piexif": "需要 piexif 套件。\n安裝：pip install piexif",
+    "exif_editor_unsupported": "只能編輯 JPEG 與 WebP 檔的 EXIF。",
     "exif_editor_fields": "元資料欄位",
     "exif_editor_save": "儲存",
     "exif_editor_cancel": "取消",
@@ -1412,6 +1412,8 @@ traditional_chinese_word_dict = {
     "token_rename_col_new": "新檔名",
     "token_rename_col_original": "原始名稱",
     "token_rename_col_status": "狀態",
+    "token_rename_status_ok": "可重新命名",
+    "token_rename_status_conflict": "衝突",
     # Metadata 匯出
     "metadata_export_title": "匯出 Metadata（CSV / JSON）",
     "metadata_export_format": "格式：",
@@ -2729,6 +2731,10 @@ traditional_chinese_word_dict = {
     "file_filter_icc_profiles": "ICC 色彩描述檔",
     "file_filter_comic_zip": "漫畫壓縮檔",
     "batch_rotate_done": "已旋轉 {done}/{total} 個檔案",
+    "batch_rename_done": "已重新命名 {done}/{total} 個檔案",
+    "batch_move_done": "已移動 {done}/{total} 個檔案",
+    "batch_copy_done": "已複製 {done}/{total} 個檔案",
+    "batch_move_selected": "已選取 {count} 個檔案",
     "zoom_limit_toast": "縮放上限：{limit}",
     "anim_speed_toast": "速度：{speed}x",
     "annotation_load_failed": "載入失敗：{error}",
@@ -2741,4 +2747,17 @@ traditional_chinese_word_dict = {
     "file_filter_imervue_brush": "Imervue 筆刷",
     "file_filter_other_brush": "其他繪圖軟體的筆刷",
     "file_filter_other_palette": "其他影像編輯器的色票",
+    "modify_crop_cannot_overwrite": "這個檔案無法直接覆寫（相機 RAW、HEIC、動畫或多頁檔）。請改用匯出儲存裁切結果。",
+    "export_metadata": "中繼資料：",
+    "export_replace_title": "取代檔案？",
+    "export_replace": "「{name}」已經存在，要取代它嗎？",
+    "export_replace_source": "「{name}」就是正在匯出的原圖。要用這份副本取代原圖嗎？副本已套用這張照片的編輯，也只保留上面選擇的中繼資料。",
+    "export_metadata_all": "全部保留（相機、日期、位置）",
+    "export_metadata_no_location": "保留位置以外的全部",
+    "export_metadata_none": "全部移除",
+    "settings_unreadable_title": "無法讀取設定檔",
+    "settings_unreadable": "Imervue 無法讀取設定檔：\n{path}\n\n已改用預設設定啟動。覆寫這個檔案之前，會先在旁邊另存一份 {name}.unreadable-<日期>-<時間>。要取回原本的設定，請先關閉 Imervue，再把那份副本改名為 {name}。",
+    "trash_left_in_place_title": "未移到資源回收筒",
+    "trash_left_in_place": "有 {count} 個已刪除的檔案無法移到資源回收筒，仍然留在磁碟上：它們所在的磁碟沒有資源回收筒（記憶卡、USB 隨身碟或網路磁碟），或正被其他程式使用。\n\n{paths}\n\n要永久刪除它們嗎？此動作無法復原。",
+    "trash_keep_files": "保留",
 }

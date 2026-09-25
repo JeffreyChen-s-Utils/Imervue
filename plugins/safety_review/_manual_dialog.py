@@ -20,7 +20,7 @@ import contextlib
 import os
 
 from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QImage, QImageReader, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -50,6 +50,7 @@ from safety_review._constants import (
     _MODE_DEFAULTS,
 )
 from safety_review._detection import _process_manual_image
+from safety_review._runner import _batch_destination
 from safety_review._manual import (
     clamp_region,
     fit_scale,
@@ -68,15 +69,21 @@ _MAX_CANVAS_H = 720
 
 
 def _load_pixmap(path: str) -> QPixmap:
-    """Load *path* as a QPixmap, falling back to Pillow for formats Qt can't
-    decode natively (so RAW/HEIF etc. still open for manual review)."""
-    pixmap = QPixmap(path)
-    if not pixmap.isNull():
-        return pixmap
+    """Load *path* upright as a QPixmap, falling back to Pillow for formats Qt
+    can't decode natively (so RAW/HEIF etc. still open for manual review).
+
+    Upright on both paths: the drawn boxes are censored on the upright image,
+    and the auto-detect boxes come in upright coordinates.
+    """
+    reader = QImageReader(path)
+    reader.setAutoTransform(True)   # Qt leaves the EXIF orientation unapplied by default
+    image = reader.read()
+    if not image.isNull():
+        return QPixmap.fromImage(image)
     try:
-        from PIL import Image
+        from PIL import Image, ImageOps
         with Image.open(path) as im:
-            rgba = im.convert("RGBA")
+            rgba = ImageOps.exif_transpose(im).convert("RGBA")
             qim = QImage(rgba.tobytes("raw", "RGBA"), rgba.width, rgba.height,
                          QImage.Format.Format_RGBA8888)
             return QPixmap.fromImage(qim.copy())
@@ -507,8 +514,9 @@ class ManualReviewDialog(QDialog):
     def _output_path(self) -> str:
         if self._overwrite_check.isChecked():
             return self._image_path
-        src = Path(self._image_path)
-        return str(src.with_name(f"{src.stem}_censored{src.suffix}"))
+        # Numbered like a batch run's output, so a second pass keeps the first result.
+        return _batch_destination(self._image_path, str(Path(self._image_path).parent),
+                                  False, None)
 
     def _apply(self):
         regions = self._canvas.regions()

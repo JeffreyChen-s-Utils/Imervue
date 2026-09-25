@@ -7,6 +7,7 @@ restructuring ``_build_ui`` cannot drop, reorder or rewire a control.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -117,3 +118,127 @@ def test_progress_status_and_buttons(qapp, monkeypatch):
         assert calls == ["cancel", "create"]
     finally:
         dlg.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Output path: a free suggestion, and no replacing unasked
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def frames_in(qapp, tmp_path):
+    """A dialog over two frames in *tmp_path* (made after any files the test creates)."""
+    made = []
+
+    def make():
+        dlg = GifVideoDialog(SimpleNamespace(main_window=None),
+                             [str(tmp_path / "a.png"), str(tmp_path / "b.png")])
+        made.append(dlg)
+        return dlg
+
+    yield make
+    for dlg in made:
+        dlg.deleteLater()
+
+
+@pytest.fixture
+def replace_answers(monkeypatch):
+    """Record every "replace it?" question and answer it with ``answers["reply"]``."""
+    from PySide6.QtWidgets import QMessageBox
+    answers = {"reply": False, "asked": []}
+
+    def question(_parent, _title, text, *_rest):
+        answers["asked"].append(text)
+        return QMessageBox.StandardButton.Yes if answers["reply"] else QMessageBox.StandardButton.No
+
+    monkeypatch.setattr(QMessageBox, "question", question)
+    return answers
+
+
+def test_the_suggested_output_keeps_an_earlier_result(frames_in, tmp_path):
+    """Every GIF made from one folder was suggested as output.gif and replaced the last."""
+    (tmp_path / "output.gif").write_bytes(b"made last week")
+    dlg = frames_in()
+    assert Path(dlg._path_edit.text()) == tmp_path / "output_1.gif"  # noqa: SLF001
+
+
+def test_switching_format_renames_the_suggestion_freely(frames_in, tmp_path):
+    (tmp_path / "output.gif").write_bytes(b"x")
+    dlg = frames_in()
+    dlg._fmt_combo.setCurrentText("MP4")  # noqa: SLF001
+    assert Path(dlg._path_edit.text()) == tmp_path / "output.mp4"  # noqa: SLF001
+    dlg._fmt_combo.setCurrentText("GIF")  # noqa: SLF001
+    assert Path(dlg._path_edit.text()) == tmp_path / "output_1.gif"  # noqa: SLF001
+
+
+def test_switching_format_keeps_a_typed_name(frames_in, tmp_path):
+    dlg = frames_in()
+    dlg._path_edit.setText(str(tmp_path / "trip.gif"))  # noqa: SLF001
+    dlg._fmt_combo.setCurrentText("MP4")  # noqa: SLF001
+    assert Path(dlg._path_edit.text()) == tmp_path / "trip.mp4"  # noqa: SLF001
+
+
+def test_creating_over_a_typed_existing_file_asks_first(
+        frames_in, replace_answers, tmp_path, monkeypatch):
+    monkeypatch.setattr(mod._CreateWorker, "start", lambda self: None)  # noqa: SLF001
+    taken = tmp_path / "trip.gif"
+    taken.write_bytes(b"made last week")
+    dlg = frames_in()
+    dlg._path_edit.setText(str(taken))  # noqa: SLF001
+    dlg._do_create()  # noqa: SLF001
+    assert dlg._worker is None  # noqa: SLF001
+    assert len(replace_answers["asked"]) == 1 and "trip.gif" in replace_answers["asked"][0]
+    replace_answers["reply"] = True
+    dlg._do_create()  # noqa: SLF001
+    assert dlg._worker is not None  # noqa: SLF001
+    dlg._worker = None  # noqa: SLF001
+
+
+def test_a_file_picked_through_browse_is_not_asked_twice(
+        frames_in, replace_answers, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog
+    monkeypatch.setattr(mod._CreateWorker, "start", lambda self: None)  # noqa: SLF001
+    taken = tmp_path / "trip.gif"
+    taken.write_bytes(b"made last week")
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_a, **_k: (str(taken), ""))
+    dlg = frames_in()
+    dlg._browse()  # noqa: SLF001
+    dlg._do_create()  # noqa: SLF001
+    assert replace_answers["asked"] == []
+    assert dlg._worker is not None  # noqa: SLF001
+    dlg._worker = None  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# GIF looping
+# ---------------------------------------------------------------------------
+
+
+def _made_gif(tmp_path, loop):
+    from PIL import Image
+    frames = []
+    for i, colour in enumerate(("red", "blue")):
+        frame = tmp_path / f"f{i}.png"
+        Image.new("RGB", (8, 8), colour).save(frame)
+        frames.append(str(frame))
+    out = tmp_path / "out.gif"
+    results = []
+    worker = mod._CreateWorker(frames, str(out), "GIF", 10, 0, 0, loop)  # noqa: SLF001
+    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
+    worker.run()
+    worker.deleteLater()
+    assert results == [(True, str(out))]
+    return out.read_bytes()
+
+
+def test_a_looping_gif_loops_forever(qapp, tmp_path):
+    data = _made_gif(tmp_path, loop=True)
+    netscape = data.find(b"NETSCAPE2.0")
+    assert netscape >= 0
+    # Block size 3, sub-block id 1, then the little-endian loop count: 0 = forever.
+    assert data[netscape + 11:netscape + 15] == b"\x03\x01\x00\x00"
+
+
+def test_a_gif_without_loop_plays_once(qapp, tmp_path):
+    """Loop count 1 was written, which browsers play twice (one repeat)."""
+    assert b"NETSCAPE2.0" not in _made_gif(tmp_path, loop=False)

@@ -60,11 +60,14 @@ def _build_preview_pixmap(_main_gui: GPUImageView, path: str) -> QPixmap | None:
     from PIL import Image
     from PySide6.QtGui import QImage
 
+    from Imervue.image.orientation import exif_orientation
+    from Imervue.image.shown import as_shown
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
     try:
         with Image.open(path) as src:
+            code = exif_orientation(src)
             src.thumbnail((96, 96), Image.Resampling.LANCZOS)
-            im = src.convert("RGBA")
+            im = as_shown(src, code).convert("RGBA")
             data = im.tobytes("raw", "RGBA")
             qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
             return QPixmap.fromImage(qimg.copy())

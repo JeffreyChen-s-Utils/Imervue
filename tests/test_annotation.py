@@ -107,6 +107,27 @@ class TestAnnotationProject:
         assert loaded.annotations[0].kind == "ellipse"
         assert loaded.annotations[0].points == [(10, 10), (50, 60)]
 
+    def test_a_project_saved_with_a_bom_loads(self, tmp_path):
+        path = tmp_path / "proj.imervue_annot.json"
+        AnnotationProject(source_size=(40, 30), annotations=[]).save(path)
+        path.write_bytes(b"\xef\xbb\xbf" + path.read_bytes())
+        assert AnnotationProject.load(path).source_size == (40, 30)
+
+    def test_a_failed_save_keeps_the_previous_project(self, tmp_path, monkeypatch):
+        from Imervue.system import atomic_write
+        path = tmp_path / "proj.json"
+        AnnotationProject(source_size=(10, 10), annotations=[]).save(path)
+        before = path.read_text(encoding="utf-8")
+
+        def refuse(_src, _dst):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(atomic_write.os, "replace", refuse)
+        with pytest.raises(OSError, match="disk full"):
+            AnnotationProject(source_size=(99, 99), annotations=[]).save(path)
+        assert path.read_text(encoding="utf-8") == before
+        assert [p.name for p in tmp_path.iterdir()] == ["proj.json"]
+
     def test_loaded_json_has_version_field(self, tmp_path):
         path = tmp_path / "proj.json"
         AnnotationProject(annotations=[]).save(path)

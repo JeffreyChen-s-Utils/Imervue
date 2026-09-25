@@ -444,3 +444,19 @@ def test_scheduled_without_rule_omits_it_from_dict():
     data = PetScript(scheduled=[ScheduledEvent(
         every_seconds=60, messages=["x"])]).to_dict()
     assert "rule" not in data["scheduled"][0]
+
+
+def test_loader_reads_a_script_saved_with_a_bom(tmp_path):
+    """A script edited in a Notepad that adds a BOM was rejected as invalid JSON."""
+    out = tmp_path / "bom.petscript.json"
+    save_script(PetScript.default(), out)
+    out.write_bytes(b"\xef\xbb\xbf" + out.read_bytes())
+    assert load_script(out).to_dict() == PetScript.default().to_dict()
+
+
+def test_loader_raises_its_own_error_for_bytes_that_are_not_utf8(tmp_path):
+    """UnicodeDecodeError escaped, and restoring the script ended pet start-up."""
+    bad = tmp_path / "bad.petscript.json"
+    bad.write_bytes(b"\xff\xfe{}")
+    with pytest.raises(PetScriptError):
+        load_script(bad)

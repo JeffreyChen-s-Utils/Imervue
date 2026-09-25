@@ -17,8 +17,8 @@ from PIL import Image
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
-from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.free_names import free_names
 
 logger = logging.getLogger("Imervue.apply_save")
 
@@ -104,24 +104,36 @@ def labeled_slider(
     return slider, label, slider_row(slider, label)
 
 
-def output_path(source: str, suffix: str) -> str:
-    """Return a sibling PNG path of *source* tagged with *suffix* (e.g. ``_emboss``)."""
+def output_paths(source: str, suffixes: list[str], ext: str = ".png") -> list[str]:
+    """Sibling paths of *source* tagged with each of *suffixes*, none of which exists yet.
+
+    ``photo_clahe.png``; if that is taken, ``photo_clahe_1.png`` and on — a
+    second run of a tool used to save over the first one's result, and over
+    any retouching done to it since. A group (frequency separation's low and
+    high layers) shares one number so the pair stays recognisable. Names are
+    compared the way the file system does.
+    """
     path = Path(source)
-    return str(path.with_name(f"{path.stem}_{suffix}.png"))
+    stems = [f"{path.stem}_{suffix}" for suffix in suffixes]
+    return [str(name) for name in free_names(path.parent, stems, ext)]
+
+
+def output_path(source: str, suffix: str, ext: str = ".png") -> str:
+    """A free sibling path of *source* tagged with *suffix*: ``photo_emboss.png``, then ``_1``."""
+    return output_paths(source, [suffix], ext)[0]
 
 
 def load_rgba(path: str) -> np.ndarray:
     """Load *path* as an HxWx4 RGBA uint8 array, closing the file before returning.
 
-    The pixels are turned upright by the file's EXIF orientation, as the viewer
-    shows them: the tools save their result without EXIF, so a sideways array
-    would be saved sideways for good. Plugins in Imervue_Plugins import this
-    (``architecture.md`` §6).
+    The pixels are as the viewer shows them: camera RAW developed at full size,
+    converted from an embedded colour profile to sRGB and turned upright by
+    the EXIF orientation. The tools save
+    their result without EXIF or ICC, so anything else would be saved wrong for
+    good. Plugins in Imervue_Plugins import this (``architecture.md`` §6).
     """
-    with Image.open(path) as img:
-        code = exif_orientation(img)
-        rgba = img if img.mode == "RGBA" else img.convert("RGBA")
-        return np.array(transpose_for(rgba, code))
+    from Imervue.gpu_image_view.images.image_loader import decode_image_file
+    return decode_image_file(path)   # RAW developed at full size, SVG rasterised
 
 
 def current_image_path(viewer) -> str | None:

@@ -7,15 +7,18 @@ persistence stay with the caller.
 """
 from __future__ import annotations
 
+import os
 from collections.abc import Callable
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSlider, QWidget,
+    QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QSlider, QWidget,
 )
 
 from Imervue.gui.file_filters import image_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_transfer import is_same_file
 
 def image_save_filter() -> str:
     """Save-dialog filter shared by the single-image tool dialogs that write PNG / JPEG / TIFF."""
@@ -58,15 +61,42 @@ def folder_picker_row(
 def save_path_into(
     parent: QWidget, edit: QLineEdit, title: str, file_filter: str,
     *, start: str | None = None,
-) -> None:
-    """Ask for a save path; a picked path replaces ``edit``'s text.
+) -> str | None:
+    """Ask for a save path; a picked path replaces ``edit``'s text and is returned.
 
     The dialog starts at ``start`` when given, else at the edit's current text.
+    It asks before picking an existing file. Returns None when cancelled.
     """
     directory = edit.text() if start is None else start
     path, _ = QFileDialog.getSaveFileName(parent, title, directory, file_filter)
-    if path:
-        edit.setText(path)
+    if not path:
+        return None
+    edit.setText(path)
+    return path
+
+
+def ask_to_replace(parent: QWidget | None, text: str) -> bool:
+    """Ask whether to replace an existing file; No is the default answer."""
+    title = language_wrapper.language_word_dict.get("export_replace_title", "Replace File?")
+    answer = QMessageBox.question(
+        parent, title, text,
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        QMessageBox.StandardButton.No)
+    return answer == QMessageBox.StandardButton.Yes
+
+
+def may_replace(parent: QWidget | None, path: str, confirmed: str | None) -> bool:
+    """Whether writing *path* replaces nothing the user has not agreed to replace.
+
+    A missing file replaces nothing. *confirmed* is the path last picked through
+    ``save_path_into``, whose Save dialog asked before picking an existing file;
+    any other existing file (a typed path, a default) is asked about here.
+    """
+    if not os.path.exists(path) or (confirmed and is_same_file(path, confirmed)):
+        return True
+    text = language_wrapper.language_word_dict.get(
+        "export_replace", "“{name}” already exists. Replace it?")
+    return ask_to_replace(parent, text.format(name=Path(path).name))
 
 
 def open_path_into(

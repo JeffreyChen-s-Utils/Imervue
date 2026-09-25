@@ -31,12 +31,16 @@ from pathlib import Path
 # the Qt plugin package, so it loads them as sibling modules instead.
 if __package__:   # imported as part of the plugin package (tests)
     from safety_review._censor_core import (
+        _AnyPathDetector,
         _censor_region,
         _detect_image_mode,
         _ensure_parent,
         _expand_box,
         _junction_bridges,
         _merge_gap,
+        _nudenet_corners,
+        _open_upright,
+        _save_as,
         _shrink_box_center,
     )
     from safety_review._constants import (
@@ -52,12 +56,16 @@ if __package__:   # imported as part of the plugin package (tests)
     )
 else:             # run as a script next to its siblings
     from _censor_core import (
+        _AnyPathDetector,
         _censor_region,
         _detect_image_mode,
         _ensure_parent,
         _expand_box,
         _junction_bridges,
         _merge_gap,
+        _nudenet_corners,
+        _open_upright,
+        _save_as,
         _shrink_box_center,
     )
     from _constants import (
@@ -133,7 +141,7 @@ def _bootstrap_site_packages(site_packages: str) -> None:
 def _detect_boxes_real(detector, src, confidence, labels):
     detections = detector.detect(src)
     return [
-        tuple(d["box"])
+        _nudenet_corners(d["box"])
         for d in detections
         if d["class"] in labels and d["score"] >= confidence
     ]
@@ -170,7 +178,6 @@ def _process_one(detector, src, dst, *, block_size, padding,
     With *only_censored* True a clean image (no detections) is left alone —
     nothing is written to *dst*. *merge_regions* unions overlapping/adjacent
     boxes so a junction between two detected regions is censored."""
-    from PIL import Image
 
     actual_mode = det_mode
     if det_mode == "auto":
@@ -190,9 +197,7 @@ def _process_one(detector, src, dst, *, block_size, padding,
             shutil.copy2(src, dst)
         return 0
 
-    img = Image.open(src)
-    if img.mode not in ("RGB", "RGBA"):
-        img = img.convert("RGBA")
+    img = _open_upright(src)   # the detectors' boxes are in upright coordinates
 
     iw, ih = img.width, img.height
     regions = [_expand_box(*box, padding, expand_pct, iw=iw, ih=ih) for box in boxes]
@@ -202,18 +207,7 @@ def _process_one(detector, src, dst, *, block_size, padding,
     for bridge in bridges:
         _censor_region(img, *bridge, block_size, style=style, shape=shape)
 
-    ext = Path(dst).suffix.lower()
-    fmt_map = {
-        ".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG",
-        ".bmp": "BMP", ".tif": "TIFF", ".tiff": "TIFF",
-        ".webp": "WEBP",
-    }
-    fmt = fmt_map.get(ext, "PNG")
-    save_img = img
-    if fmt == "JPEG" and save_img.mode == "RGBA":
-        save_img = save_img.convert("RGB")
-    _ensure_parent(dst)
-    save_img.save(dst, format=fmt)
+    _save_as(img, dst)
     return len(regions) + len(bridges)
 
 
@@ -230,13 +224,13 @@ def _load_detectors(det_mode):
     if det_mode == "auto":
         print("PROGRESS:Loading both detectors (auto mode)...", flush=True)
         from nudenet import NudeDetector
-        return NudeDetector(), _load_anime_model()
+        return _AnyPathDetector(NudeDetector()), _load_anime_model()
     if det_mode == "anime":
         print("PROGRESS:Loading EraX anime detector...", flush=True)
         return None, _load_anime_model()
     from nudenet import NudeDetector
     print("PROGRESS:Loading NudeNet detector...", flush=True)
-    return NudeDetector(), None
+    return _AnyPathDetector(NudeDetector()), None
 
 
 def _process_one_with_fallback(run_for_shape, shape, retries=1):

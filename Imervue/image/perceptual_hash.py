@@ -12,8 +12,21 @@ from collections.abc import Callable, Iterable, Sequence
 
 from PIL import Image
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.orientation import exif_orientation, transpose_for
+
 DEFAULT_HASH_SIZE = 8
 DEFAULT_THRESHOLD = 5
+
+
+def upright(img: Image.Image) -> Image.Image:
+    """*img* turned by its EXIF orientation, so a hash describes what the viewer shows.
+
+    A phone photo stores its pixels on their side plus a turn tag; hashed as
+    stored, it and an upright copy of the same shot were 25 bits apart and
+    never grouped. An untagged image is returned as is, so its hash is unchanged.
+    """
+    return transpose_for(img, exif_orientation(img))
 
 
 def dhash(img: Image.Image, hash_size: int = DEFAULT_HASH_SIZE) -> int:
@@ -78,8 +91,8 @@ def hash_paths(
     for processed, path in enumerate(items, start=1):
         try:
             with Image.open(path) as img:
-                hashed.append((str(path), hash_fn(img)))
-        except (OSError, ValueError):
+                hashed.append((str(path), hash_fn(upright(img))))
+        except IMAGE_READ_ERRORS:
             pass
         if on_progress is not None:
             on_progress(processed, total)

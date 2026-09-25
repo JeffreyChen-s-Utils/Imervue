@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui._apply_save import load_rgba
+from Imervue.gui._apply_save import load_rgba, output_path
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.auto_straighten import detect_horizon_angle
@@ -123,7 +123,7 @@ class AutoStraightenDialog(WorkerHostMixin, QDialog):
 
     def _default_output_path(self) -> str:
         p = Path(self._path)
-        return str(p.with_name(f"{p.stem}_straight{p.suffix or '.png'}"))
+        return output_path(str(p), "straight", p.suffix or ".png")
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict

@@ -118,3 +118,31 @@ class TestPageSizesTable:
 
     def test_core_sizes_present(self):
         assert {"A4", "A3", "Letter", "Legal"} <= set(contact_sheet.PAGE_SIZES)
+
+
+class TestThumbnailDecode:
+    """Cells were QImage loads: no EXIF turn, no colour management, no RAW."""
+
+    def test_tagged_photo_is_upright(self, tmp_path, qapp):
+        from _decode_samples import tagged_portrait
+        thumb = contact_sheet._load_thumbnail(  # noqa: SLF001
+            str(tagged_portrait(tmp_path / "p.jpg", size=(800, 400))), 200)
+        assert (thumb.width(), thumb.height()) == (100, 200)
+
+    def test_a_large_cell_gets_a_full_decode(self, tmp_path, qapp):
+        """Past the 1600 px thumbnail decode the source is read at full size."""
+        src = tmp_path / "big.png"
+        Image.new("RGB", (3000, 1000)).save(src)
+        thumb = contact_sheet._load_thumbnail(str(src), 2400)  # noqa: SLF001
+        assert (thumb.width(), thumb.height()) == (2400, 800)
+
+    def test_colour_profile_is_converted(self, tmp_path, qapp):
+        from _decode_samples import p3_green
+        thumb = contact_sheet._load_thumbnail(str(p3_green(tmp_path / "g.png")), 50)  # noqa: SLF001
+        colour = thumb.pixelColor(4, 4)
+        assert colour.red() == 0 and colour.green() == 255
+
+    def test_unreadable_source_is_none(self, tmp_path, qapp):
+        bad = tmp_path / "bad.png"
+        bad.write_bytes(b"nope")
+        assert contact_sheet._load_thumbnail(str(bad), 100) is None  # noqa: SLF001

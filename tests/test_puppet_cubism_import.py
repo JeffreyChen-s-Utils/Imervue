@@ -64,6 +64,22 @@ def test_load_motion3_parses_meta(tmp_path):
     assert motion.fade_out_duration == pytest.approx(0.3)
 
 
+def test_a_motion_saved_with_a_bom_loads(tmp_path):
+    """json.loads rejects a leading BOM, so the import failed as malformed JSON."""
+    p = tmp_path / "idle.motion3.json"
+    _write_motion3(p)
+    p.write_bytes(b"\xef\xbb\xbf" + p.read_bytes())
+    assert load_motion3(p).duration == pytest.approx(1.0)
+
+
+def test_bytes_that_are_not_utf8_are_a_format_error(tmp_path):
+    """UnicodeDecodeError escaped the importer's handler."""
+    p = tmp_path / "idle.motion3.json"
+    p.write_bytes(b"\xff\xfe{}")
+    with pytest.raises(CubismFormatError):
+        load_motion3(p)
+
+
 def test_load_motion3_translates_linear_segments(tmp_path):
     p = tmp_path / "linear.motion3.json"
     _write_motion3(p)

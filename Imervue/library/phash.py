@@ -13,6 +13,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from Imervue.image.perceptual_hash import upright
+
 logger = logging.getLogger("Imervue.phash")
 
 _HASH_SIZE = 8      # Result is _HASH_SIZE * _HASH_SIZE bits (64).
@@ -42,7 +44,7 @@ def compute_phash(path: str | Path) -> int | None:
     """Return a 64-bit perceptual hash of ``path`` or None on failure."""
     try:
         with Image.open(path) as im:
-            sampled = im.convert("L").resize(
+            sampled = upright(im).convert("L").resize(
                 (_SAMPLE_SIZE, _SAMPLE_SIZE), Image.Resampling.LANCZOS
             )
             arr = np.asarray(sampled, dtype=np.float32)

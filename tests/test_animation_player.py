@@ -273,3 +273,93 @@ class TestLoadFailures:
             ap.AnimationPlayer(_FakeGui(), str(tmp_path / "a.gif")).load()
         with pytest.raises(RuntimeError):
             ap.is_animated_file(str(tmp_path / "a.gif"))
+
+
+def _make_timed_gif(path, durations):
+    frames = [Image.fromarray(np.full((8, 8, 3), i * 40, dtype=np.uint8))
+              for i in range(len(durations))]
+    frames[0].save(str(path), save_all=True, append_images=frames[1:],
+                   duration=list(durations), loop=0)
+    return str(path)
+
+
+class TestFrameDuration:
+    @pytest.mark.parametrize(("info", "expected"), [
+        ({"duration": 70}, 70), ({"duration": 0}, 100), ({"duration": None}, 100), ({}, 100),
+    ])
+    def test_missing_or_non_positive_plays_as_100_ms(self, info, expected):
+        assert ap._frame_duration(info) == expected
+
+
+class TestStreamingLargeAnimations:
+    """Past the decoded-frames budget, frames decode one at a time as they are shown."""
+
+    @pytest.fixture
+    def tiny_budget(self, monkeypatch):
+        monkeypatch.setattr(ap, "_DECODED_FRAMES_BUDGET", 8 * 8 * 4 * 2)   # two 8x8 frames
+
+    def test_an_animation_over_the_budget_streams(self, tmp_path, qapp, tiny_budget):
+        pl = ap.AnimationPlayer(_FakeGui(), _make_gif(tmp_path / "big.gif", n_frames=5))
+        assert pl.load() is True
+        assert pl.streaming
+        assert pl.frames == []
+        assert pl.total_frames == 5
+
+    def test_one_within_the_budget_is_decoded_up_front(self, tmp_path, qapp):
+        pl = ap.AnimationPlayer(_FakeGui(), _make_gif(tmp_path / "small.gif", n_frames=5))
+        pl.load()
+        assert not pl.streaming
+        assert len(pl.frames) == 5
+
+    def test_streamed_frames_match_decoded_ones(self, tmp_path, qapp, monkeypatch):
+        path = _make_gif(tmp_path / "anim.gif", n_frames=5)
+        whole = ap.AnimationPlayer(_FakeGui(), path)
+        whole.load()
+        monkeypatch.setattr(ap, "_DECODED_FRAMES_BUDGET", 1)
+        streamed = ap.AnimationPlayer(_FakeGui(), path)
+        streamed.load()
+        for index in (0, 1, 4, 3, 0, 2):                 # forward, back, around
+            streamed.go_to_frame(index)
+            assert np.array_equal(streamed.get_current_frame_data(), whole.frames[index])
+        streamed.go_to_frame(0)
+        streamed.prev_frame()
+        assert streamed.current_frame == 4
+        assert np.array_equal(streamed.get_current_frame_data(), whole.frames[4])
+
+    def test_durations_fill_in_as_frames_are_shown(self, tmp_path, qapp, tiny_budget):
+        pl = ap.AnimationPlayer(_FakeGui(), _make_timed_gif(tmp_path / "t.gif", [50, 120, 30]))
+        pl.load()
+        assert pl.durations == [50, 100, 100]
+        pl.go_to_frame(1)
+        pl.go_to_frame(2)
+        assert pl.durations == [50, 120, 30]
+
+    def test_the_file_is_not_held_open(self, tmp_path, qapp, tiny_budget):
+        """Windows can't delete or rename a file an open handle holds."""
+        path = Path(_make_gif(tmp_path / "anim.gif", n_frames=5))
+        pl = ap.AnimationPlayer(_FakeGui(), str(path))
+        pl.load()
+        path.unlink()
+        pl.go_to_frame(3)
+        assert pl.get_current_frame_data() is not None
+
+    def test_a_frame_that_fails_to_decode_keeps_the_last_one(self, tmp_path, qapp, tiny_budget,
+                                                             monkeypatch):
+        pl = ap.AnimationPlayer(_FakeGui(), _make_gif(tmp_path / "anim.gif", n_frames=5))
+        pl.load()
+        first = pl.get_current_frame_data()
+
+        def broken(_index):
+            raise OSError("truncated")
+
+        monkeypatch.setattr(pl._source, "seek", broken)  # noqa: SLF001
+        pl.go_to_frame(2)
+        assert pl.get_current_frame_data() is first
+
+    def test_stop_lets_go_of_the_stream(self, tmp_path, qapp, tiny_budget):
+        pl = ap.AnimationPlayer(_FakeGui(), _make_gif(tmp_path / "anim.gif", n_frames=5))
+        pl.load()
+        pl.stop()
+        assert not pl.streaming
+        assert pl.total_frames == 0
+        assert pl.get_current_frame_data() is None

@@ -5,7 +5,7 @@ files are kept on disk until ``commit_pending_deletions`` runs at app
 shutdown. Until then a deletion is reversible. This dialog surfaces every
 *pending* deletion so users can:
 
-* See exactly what will be unlinked at shutdown.
+* See exactly what will go to the system Recycle Bin at shutdown.
 * Restore individual items (puts the path back at its saved index and
   reloads the thumbnail).
 * Permanently delete individual items right now — the entry leaves the undo

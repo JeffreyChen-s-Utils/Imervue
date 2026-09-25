@@ -89,3 +89,13 @@ class TestToSigned64:
         h = compute_phash(noise_png)
         assert h >= (1 << 63)
         assert -(1 << 63) <= to_signed64(h) < (1 << 63)
+
+
+def test_a_tagged_photo_and_its_upright_copy_hash_alike(tmp_path):
+    """Similar Search compared the stored, sideways pixels of a tagged photo."""
+    from _decode_samples import upright_and_tagged_copies
+
+    from Imervue.image.perceptual_hash import hamming_distance
+    from Imervue.library.phash import compute_phash
+    plain, tagged = upright_and_tagged_copies(tmp_path)
+    assert hamming_distance(compute_phash(plain), compute_phash(tagged)) <= 4

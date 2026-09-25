@@ -28,6 +28,8 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.image.in_place_save import in_place_format, save_edited_copy
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.deflicker import (
     DeflickerOptions,
     apply_gain,
@@ -163,7 +165,7 @@ class DeflickerWorker(QThread):
         for idx, path in enumerate(self._paths):
             try:
                 frames.append(_load_rgba(path))
-            except (OSError, ValueError):
+            except IMAGE_READ_ERRORS:
                 logger.warning("Skipping unreadable frame: %s", path)
                 frames.append(None)
             self.progress.emit(idx + 1)
@@ -191,17 +193,24 @@ class DeflickerWorker(QThread):
 
     @staticmethod
     def _write_one(path: str, corrected: np.ndarray) -> bool:
-        """Write one corrected frame into the sibling ``deflickered`` folder."""
-        out_dir = Path(path).parent / "deflickered"
-        out_path = out_dir / Path(path).name
+        """Write one corrected frame into the sibling ``deflickered`` folder.
+
+        In the source's own format when Imervue can write it — a JPEG frame
+        stays a JPEG, its EXIF (capture time included) carried over — else as
+        a PNG (a RAW frame). Saving the RGBA array under the source's name
+        failed for every JPEG ("cannot write mode RGBA as JPEG").
+        """
+        source = Path(path)
+        name = source.name if in_place_format(source) else source.stem + ".png"
+        out_path = source.parent / "deflickered" / name
         try:
             # mkdir is inside the try too — a read-only folder must skip this
             # frame, not abort the whole run.
-            out_dir.mkdir(exist_ok=True)
-            Image.fromarray(corrected, mode="RGBA").save(str(out_path))
+            out_path.parent.mkdir(exist_ok=True)
+            save_edited_copy(source, Image.fromarray(corrected, mode="RGBA"), out_path)
             return True
-        except OSError:
-            logger.warning("Failed to write %s", out_path)
+        except IMAGE_READ_ERRORS:
+            logger.warning("Failed to write %s", out_path, exc_info=True)
             return False
 
     def run(self) -> None:  # pragma: no cover - thread entry
@@ -222,7 +231,6 @@ def open_deflicker_dialog(viewer: GPUImageView) -> None:
 
 
 def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
+    """*path* as the viewer decodes it: RGBA, upright, sRGB, a RAW frame developed."""
+    from Imervue.gpu_image_view.images.image_loader import decode_image_file
+    return decode_image_file(path)

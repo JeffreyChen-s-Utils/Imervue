@@ -33,6 +33,7 @@ from pathlib import Path
 
 import numpy as np
 
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.paint.compositing import LAYER_BLEND_MODES
 from Imervue.paint.document import Layer, LayerGroup, PaintDocument
 
@@ -88,7 +89,7 @@ _SECTION_END_NAME = "</Layer group>"
 
 
 def save_psd(document: PaintDocument, path: str | Path) -> None:
-    """Write ``document`` to a Photoshop ``.psd`` file (subset)."""
+    """Write ``document`` to a Photoshop ``.psd`` file (subset); a failure keeps the old file."""
     layers = document.layers()
     if not layers:
         raise ValueError("cannot save an empty PaintDocument as PSD")
@@ -99,14 +100,20 @@ def save_psd(document: PaintDocument, path: str | Path) -> None:
 
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    with open(target, "wb") as fh:
-        fh.write(_pack_header(h, w))
-        fh.write(_pack_color_mode_section())
-        fh.write(_pack_image_resources_section())
-        fh.write(_pack_layer_and_mask_section(
-            layers, h, w, groups={g.name: g for g in document.groups()},
-        ))
-        fh.write(_pack_image_data_section(document, h, w))
+
+    def write(tmp: Path) -> None:
+        with open(tmp, "wb") as fh:
+            fh.write(_pack_header(h, w))
+            fh.write(_pack_color_mode_section())
+            fh.write(_pack_image_resources_section())
+            fh.write(_pack_layer_and_mask_section(
+                layers, h, w, groups={g.name: g for g in document.groups()},
+            ))
+            fh.write(_pack_image_data_section(document, h, w))
+
+    # Ctrl+S saves over the open PSD: writing it in place truncated the file
+    # first, so an error mid-save left the painting's only copy broken.
+    replace_atomically(target, write)
 
 
 def _pack_header(h: int, w: int) -> bytes:

@@ -231,6 +231,10 @@ def test_screen_refit_drops_the_stale_size_while_an_image_is_loading(qapp):
 
 def test_screen_refit_drops_the_stale_size_in_deep_zoom(qapp):
     view = _FakeView()
+    # Only the immediate chain is under test. The interval watch's first pass
+    # could also land inside the processEvents below on a loaded machine and
+    # fit a second time (seen in a full run with 0.2 GB of RAM free).
+    view._schedule_screen_settle_adapt = lambda: None
     view.request_screen_refit()
     assert view._last_resize_size == _INVALIDATED
     qapp.processEvents()

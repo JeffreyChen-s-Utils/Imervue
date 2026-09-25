@@ -522,3 +522,16 @@ def test_image_layer_is_placed_upright(tmp_path):
     out = _render_image_layer(np.zeros((40, 20, 4), dtype=np.uint8), {"path": str(path)})
     assert out[5, 10, 0] > 200 and out[35, 10, 0] < 60
 
+
+
+def test_an_image_layer_over_the_pixel_limit_is_skipped(tmp_path, monkeypatch, caplog):
+    """DecompressionBombError is no OSError: it escaped the recipe render of the photo."""
+    from PIL import Image
+
+    from Imervue.image.layers import _render_image_layer
+    path = tmp_path / "huge.png"
+    Image.new("RGBA", (64, 64)).save(path)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 100)
+    with caplog.at_level("WARNING", logger="Imervue"):
+        assert _render_image_layer(np.zeros((8, 8, 4), dtype=np.uint8), {"path": str(path)}) is None
+    assert any("Image layer load failed" in r.getMessage() for r in caplog.records)

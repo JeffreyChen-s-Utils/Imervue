@@ -8,6 +8,7 @@ from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import QFileDialog, QMenu
 
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
+from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gpu_image_view.tile_layout import is_active_thumbnail_choice
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.file_filters import translated_filter, viewer_filter
@@ -88,7 +89,8 @@ def _add_delete_and_clipboard_entries(
 
     # 立即清空所有待刪除（保留原行為以便從選單觸發 commit）
     delete_action = file_menu.addAction(lang.get("main_window_remove_undo_stack"))
-    delete_action.triggered.connect(lambda: commit_pending_deletions(ui_we_want_to_set.viewer))
+    delete_action.triggered.connect(lambda: offer_permanent_delete(
+        ui_we_want_to_set, commit_pending_deletions(ui_we_want_to_set.viewer)))
 
     file_menu.addSeparator()
 

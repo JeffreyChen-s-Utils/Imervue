@@ -73,9 +73,29 @@ def _parse_domain_token(line: str) -> list[float]:
         raise ValueError(f"bad DOMAIN value: {line!r}") from err
 
 
+def _parse_range_token(line: str) -> tuple[float, float]:
+    """Return the two floats of a ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE`` directive."""
+    parts = line.split()[1:3]
+    if len(parts) < 2:
+        raise ValueError(f"INPUT_RANGE directive needs two values: {line!r}")
+    try:
+        return float(parts[0]), float(parts[1])
+    except ValueError as err:
+        raise ValueError(f"bad INPUT_RANGE value: {line!r}") from err
+
+
 def _apply_header_directive(line: str, upper: str, header: _CubeHeader) -> bool:
-    """Apply a header directive to *header*; return True if the line was handled."""
+    """Apply a header directive to *header*; return True if the line was handled.
+
+    ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE min max`` is DaVinci
+    Resolve's spelling of one domain for all three channels. Unknown, it
+    read as a data row, and ``float("LUT_3D_INPUT_RANGE")`` failed the LUT.
+    """
     if upper.startswith("TITLE"):
+        return True
+    if upper.startswith(("LUT_1D_INPUT_RANGE", "LUT_3D_INPUT_RANGE")):
+        low, high = _parse_range_token(line)
+        header.domain_min, header.domain_max = [low] * 3, [high] * 3
         return True
     if upper.startswith("LUT_3D_SIZE"):
         header.size = _parse_size_token(line)
@@ -109,7 +129,8 @@ def parse_cube(path: str | Path) -> CubeLut:
     p = Path(path)
     header = _CubeHeader()
     values: list[tuple[float, float, float]] = []
-    with p.open("r", encoding="utf-8", errors="replace") as fh:
+    # utf-8-sig: a BOM would otherwise hide a first-line LUT_3D_SIZE directive.
+    with p.open("r", encoding="utf-8-sig", errors="replace") as fh:
         for raw in fh:
             line = raw.split("#", 1)[0].strip()
             if not line:

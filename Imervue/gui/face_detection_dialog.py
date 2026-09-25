@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.export_source import recipe_base_image
 from Imervue.image.face_detection import (
     FaceDetectorUnavailableError,
     FaceTag,
@@ -96,7 +97,7 @@ class FaceDetectionDialog(QDialog):
 
         self._recipe = recipe_store.get_for_path(path) or Recipe()
 
-        pixmap, img_size, arr = self._build_preview(path)
+        pixmap, img_size, arr = self._build_preview(path, self._recipe)
         self._preview = _FacePreview(pixmap, img_size)
 
         # Start with any tags already stored in the recipe.
@@ -149,8 +150,10 @@ class FaceDetectionDialog(QDialog):
         self._refresh()
 
     @staticmethod
-    def _build_preview(path: str):
-        img = Image.open(path).convert("RGB")
+    def _build_preview(path: str, recipe: Recipe):
+        # Face boxes are stored in the recipe, so detect on the image it applies to.
+        with recipe_base_image(path, recipe) as base:
+            img = base.convert("RGB")
         w, h = img.size
         scale = min(1.0, _PREVIEW_MAX / max(w, h))
         pw, ph = max(1, int(w * scale)), max(1, int(h * scale))

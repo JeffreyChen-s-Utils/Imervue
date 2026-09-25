@@ -33,6 +33,12 @@ from ai_portrait_relight.relight import (
     onnx_relight,
 )
 from Imervue.gui._apply_save import load_rgba as _load_rgba
+try:
+    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
+    from Imervue.gui._apply_save import output_path as _output_path
+except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
+    def _output_path(source: str, suffix: str) -> str:
+        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -302,9 +308,7 @@ class AIPortraitRelightDialog(WorkerHostMixin, QDialog):
             blend=self._blend.value() / _PERCENT_STEPS,
         )
         transform = _build_relight_transform(method, options)
-        out_path = Path(self._path).with_name(
-            f"{Path(self._path).stem}_relit.png",
-        )
+        out_path = Path(_output_path(self._path, "relit"))
         self._worker = _RelightWorker(self._path, transform, str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()

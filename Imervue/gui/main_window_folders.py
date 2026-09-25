@@ -13,6 +13,7 @@ from pathlib import Path
 
 from Imervue.system.qt_timers import call_later
 from Imervue.image.browser_state import detect_renamed_paths, filter_paths, migrate_view_path_state
+from Imervue.system.file_transfer import follow_saved_data
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import write_user_setting, user_setting_dict
 
@@ -213,6 +214,11 @@ class MainWindowFoldersMixin:
             migrate_view_path_state(viewer, rename_map)
             for old, new in rename_map.items():
                 self._image_metadata_index.move(old, new)
+            # A rename made outside Imervue: the rating, tags and library notes
+            # follow. keep_existing, because Imervue's own renames show up here
+            # too, after carry_along already moved everything (and the new path
+            # may carry data of its own).
+            follow_saved_data(rename_map, keep_existing=True)
         old_index = viewer.current_index
         # A deep-zoom load in flight (`_deep_zoom_loading`) has `deep_zoom` still
         # None, but the user is already committed to that image — treat it as an

@@ -8,29 +8,36 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-# Image extensions the listing helper considers (lower-case, with dot).
-IMAGE_EXTENSIONS: frozenset[str] = frozenset({
-    ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff",
-    ".gif", ".heic", ".heif", ".dng", ".cr2", ".cr3", ".nef",
-    ".arw", ".raf", ".orf", ".rw2", ".pef", ".srw",
-})
+from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+
+# Image extensions the listing tools consider: the viewer's still formats but
+# SVG, which needs Qt to rasterise and the server is Qt-free.
+IMAGE_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS - {".svg"}
 # Destination formats that can't carry alpha — flatten to RGB before saving.
 NO_ALPHA_FORMATS = frozenset({"jpg", "jpeg", "bmp"})
 
 
 def open_upright(image_path: Path):
-    """Open *image_path* decoded and turned upright by its EXIF orientation.
+    """Open *image_path* decoded, converted to sRGB and turned upright.
 
     Every tool works on the image as a viewer shows it: sizes, crop boxes and
-    the written copies (which carry no EXIF) all use the upright pixels.
+    the written copies (which carry no EXIF or ICC) all use these pixels.
     """
     from PIL import Image
 
-    from Imervue.image.orientation import exif_orientation, transpose_for
+    from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
+    from Imervue.image.shown import as_shown
+    ext = Path(image_path).suffix.lower()
+    if ext in RAW_EXTENSIONS:
+        # Developed like the viewer does; Pillow would open the small embedded
+        # preview (or nothing at all for a CR3).
+        from Imervue.image.raw_loader import develop_raw
+        return Image.fromarray(develop_raw(image_path))
+    ensure_pillow_opener(ext)   # HEIC / AVIF / JPEG XL: "cannot identify image file" without it
     with Image.open(image_path) as opened:
         opened.load()
-        turned = transpose_for(opened, exif_orientation(opened))
-        return turned if turned is not opened else opened.copy()
+        shown = as_shown(opened)
+        return shown if shown is not opened else opened.copy()
 
 
 def load_rgba_array(image_path: Path):

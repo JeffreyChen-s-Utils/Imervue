@@ -50,6 +50,7 @@ def _tr(key: str, default: str) -> str:
     return language_wrapper.language_word_dict.get(key, default)
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_workspace")
+_PET_SCRIPT = "Pet script"
 _MUTED_LABEL_STYLE = "color: #888;"
 
 DEFAULT_EXAMPLE_PUPPET = "examples/puppet/march_7th.puppet"
@@ -340,7 +341,7 @@ class PetWorkspace(QWidget):
         lines + scheduled chimes. The actual JSON schema lives in
         :mod:`Imervue.desktop_pet.pet_script`; this group is just
         the load / reset surface."""
-        group = QGroupBox(_tr("desktop_pet_group_script", "Pet script"))
+        group = QGroupBox(_tr("desktop_pet_group_script", _PET_SCRIPT))
         layout = QVBoxLayout(group)
         settings = pet_settings.load()
 
@@ -518,7 +519,7 @@ class PetWorkspace(QWidget):
             self,
             _tr("desktop_pet_load_script_title", "Load pet script"),
             "",
-            translated_filter("file_filter_pet_script", "Pet script", ("json", "petscript.json")),
+            translated_filter("file_filter_pet_script", _PET_SCRIPT, ("json", "petscript.json")),
         )
         if path:
             self.load_script(path)
@@ -566,7 +567,7 @@ class PetWorkspace(QWidget):
             self,
             _tr("desktop_pet_save_script_title", "Save pet script"),
             start_dir,
-            translated_filter("file_filter_pet_script", "Pet script", ("json", "petscript.json")),
+            translated_filter("file_filter_pet_script", _PET_SCRIPT, ("json", "petscript.json")),
         )
         if not path:
             return

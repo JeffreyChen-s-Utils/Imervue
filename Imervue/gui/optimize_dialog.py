@@ -26,6 +26,7 @@ from Imervue.gui._apply_save import (
     finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.optimize import encode_to_budget
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -55,7 +56,7 @@ class _OptimizeWorker(QThread):
             with open(self._out, "wb") as handle:
                 handle.write(data)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Optimize failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -91,7 +92,7 @@ class OptimizeDialog(WorkerHostMixin, QDialog):
         if self._worker is not None:
             return
         fmt, suffix = self._format.currentData()
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_opt{suffix}")
+        out_path = Path(output_path(self._path, "opt", suffix))
         self._worker = _OptimizeWorker(
             self._path, fmt, suffix, self._budget.value(), str(out_path))
         self._worker.done.connect(self._on_done)

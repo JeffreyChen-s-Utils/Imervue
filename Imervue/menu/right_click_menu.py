@@ -319,6 +319,7 @@ def _split_multipage(main_gui: GPUImageView) -> None:
     from PySide6.QtWidgets import QFileDialog
     from PIL import Image
     from Imervue.image.multipage import split_multipage
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
     path = _current_image_path(main_gui)
     if not path:
         return
@@ -327,7 +328,7 @@ def _split_multipage(main_gui: GPUImageView) -> None:
     try:
         with Image.open(path) as img:
             frames = getattr(img, "n_frames", 1)
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         frames = 1
     if frames <= 1:
         if toast is not None:
@@ -490,6 +491,7 @@ def _import_by_date(main_gui: GPUImageView) -> None:
 def _combine_multipage(main_gui: GPUImageView) -> None:
     from PySide6.QtWidgets import QFileDialog
     from Imervue.image.multipage import combine_to_multipage
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
     paths = selected_in_view_order(main_gui)  # page order
     if not paths:
         return
@@ -503,7 +505,9 @@ def _combine_multipage(main_gui: GPUImageView) -> None:
     toast = getattr(main_gui.main_window, "toast", None)
     try:
         result = combine_to_multipage(paths, dest)
-    except (OSError, ValueError) as exc:
+    except IMAGE_READ_ERRORS as exc:   # a page that can't be decoded, or a failed save
+        logging.getLogger("Imervue.right_click_menu").warning(
+            "Combining %d pages into %s failed", len(paths), dest, exc_info=True)
         if toast is not None:
             toast.error(str(exc))
         return
@@ -576,19 +580,26 @@ def _auto_cull_low_quality(main_gui: GPUImageView) -> None:
 
 
 def _auto_orient(main_gui: GPUImageView) -> None:
-    from PIL import Image
-    from Imervue.image.orientation import oriented_array
+    """Write an upright PNG copy (``<stem>_oriented.png``, then ``_1``…) of each selected image."""
+    from Imervue.gui._apply_save import output_path
+    from Imervue.gui.export_source import recipe_base_image
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
     paths = list(main_gui.selected_tiles)
     lang = language_wrapper.language_word_dict
     toast = getattr(main_gui.main_window, "toast", None)
     count = 0
     for path in paths:
         try:
-            out_path = Path(path).with_name(f"{Path(path).stem}_oriented.png")
-            Image.fromarray(oriented_array(path), mode="RGBA").save(str(out_path))
-            count += 1
-        except (OSError, ValueError):
+            # The viewer's decode: upright, sRGB (the copy has no ICC), full-size RAW.
+            image = recipe_base_image(path, None)
+            # A free name: an earlier copy may have been retouched since, and
+            # p.jpg and p.png in one selection both want p_oriented.png.
+            image.save(output_path(path, "oriented"))
+        except IMAGE_READ_ERRORS:
+            logging.getLogger("Imervue.right_click_menu").warning(
+                "Auto-orient failed for %s", path, exc_info=True)
             continue
+        count += 1
     if toast is None:
         return
     if count:

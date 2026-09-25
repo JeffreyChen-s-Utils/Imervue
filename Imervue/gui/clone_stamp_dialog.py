@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui._apply_save import load_rgba
+from Imervue.gui._apply_save import load_rgba, output_path
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.clone_stamp import CloneStamp, apply_clone_stamp
@@ -109,7 +109,7 @@ class _StampWorker(QThread):
             result = apply_clone_stamp(arr, self._stamps)
             Image.fromarray(result).save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError, RuntimeError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Clone stamp failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -173,7 +173,7 @@ class CloneStampDialog(WorkerHostMixin, QDialog):
 
     def _default_output_path(self) -> str:
         p = Path(self._path)
-        return str(p.with_name(f"{p.stem}_clone{p.suffix or '.png'}"))
+        return output_path(str(p), "clone", p.suffix or ".png")
 
     def _pick_out(self) -> None:
         lang = language_wrapper.language_word_dict

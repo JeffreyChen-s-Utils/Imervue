@@ -137,3 +137,36 @@ def test_find_similar_with_ahash_groups_identical(tmp_path):
     assert len(groups) == 1
     assert {p.rsplit("\\", 1)[-1].rsplit("/", 1)[-1] for p in groups[0]} == {
         "a.png", "b.png"}
+
+
+def test_a_tagged_photo_and_its_upright_copy_are_grouped(tmp_path):
+    """Hashed as stored, the two were 25 bits apart and never reported as duplicates."""
+    from _decode_samples import upright_and_tagged_copies
+
+    from Imervue.image.perceptual_hash import find_similar
+    plain, tagged = upright_and_tagged_copies(tmp_path)
+    groups = find_similar([plain, tagged])
+    assert [sorted(group) for group in groups] == [sorted([plain, tagged])]
+
+
+def test_an_untagged_image_hashes_as_before(tmp_path):
+    from PIL import Image
+
+    from Imervue.image.perceptual_hash import dhash, hash_paths
+    path = tmp_path / "a.png"
+    Image.effect_noise((40, 30), 50).convert("RGB").save(path)
+    with Image.open(path) as img:
+        expected = dhash(img)
+    assert hash_paths([str(path)]) == [(str(path), expected)]
+
+
+def test_hash_paths_skips_a_picture_over_the_pixel_limit(tmp_path, monkeypatch):
+    """One huge panorama raised DecompressionBombError and ended Find Similar."""
+    from PIL import Image
+
+    from Imervue.image.perceptual_hash import hash_paths
+    small, huge = tmp_path / "small.png", tmp_path / "huge.png"
+    Image.new("RGB", (8, 8)).save(small)
+    Image.new("RGB", (64, 64)).save(huge)
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 100)
+    assert [p for p, _ in hash_paths([str(huge), str(small)])] == [str(small)]

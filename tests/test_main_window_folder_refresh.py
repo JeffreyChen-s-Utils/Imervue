@@ -425,3 +425,35 @@ def test_image_filter_matches_rating():
             user_setting_dict.pop("image_ratings", None)
         else:
             user_setting_dict["image_ratings"] = old
+
+
+def _renamed_outside(tmp_path):
+    """A window browsing a.jpg, which Explorer then renames to b.jpg."""
+    old, new = tmp_path / "a.jpg", tmp_path / "b.jpg"
+    old.write_bytes(b"photo")
+    win = _StubMainWindow([str(old)])
+    win.viewer.deep_zoom = None
+    win._image_metadata_index.get(str(old))        # the signature seen while browsing
+    old.rename(new)
+    return win, str(old), str(new)
+
+
+def test_a_rename_made_outside_brings_the_saved_data_along(tmp_path):
+    """The watcher matched the rename for the thumbnails but left the rating behind."""
+    from Imervue.library import image_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    win, old, new = _renamed_outside(tmp_path)
+    user_setting_dict["image_ratings"] = {old: 5}
+    image_index.set_note(old, "print this")
+    win._apply_refreshed_image_list([new])
+    assert user_setting_dict["image_ratings"] == {new: 5}
+    assert image_index.get_note(new) == "print this"
+
+
+def test_an_own_rename_seen_again_by_the_watcher_changes_nothing(tmp_path):
+    """carry_along already moved the data; the watcher's echo must not drop it as stale."""
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    win, old, new = _renamed_outside(tmp_path)
+    user_setting_dict["image_ratings"] = {new: 5}
+    win._apply_refreshed_image_list([new])
+    assert user_setting_dict["image_ratings"] == {new: 5}

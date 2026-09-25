@@ -21,9 +21,12 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
-from PIL import Image
-
-from Imervue.image.orientation import upright
+from Imervue.system.natural_sort import natural_key
+from Imervue.gui.export_source import upright_image
+from Imervue.image.export_metadata import METADATA_ALL, export_save_options
+from Imervue.image.formats import RAW_EXTENSIONS, STILL_IMAGE_EXTENSIONS
+from Imervue.image.in_place_save import frame_count
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
@@ -34,7 +37,7 @@ from Imervue.image.save_formats import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
-import contextlib
+from Imervue.system.file_transfer import follow_saved_data
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -58,13 +61,15 @@ def _scan_folder(folder: str) -> list[str]:
                 result.append(entry.path)
     except OSError:
         pass
-    result.sort(key=lambda p: os.path.basename(p).lower())
+    result.sort(key=lambda p: natural_key(os.path.basename(p)))
     return result
 
 
 class _ConvertWorker(QThread):
     progress = Signal(int, int, str)  # current, total, filename
     result_ready = Signal(int, int, int)  # success, failed, skipped
+    # {trashed original: its conversion}, for the saved data to follow on the GUI thread
+    originals_replaced = Signal(dict)
 
     def __init__(self, paths: list[str], output_dir: str, fmt: str,
                  quality: int, delete_originals: bool, skip_same_fmt: bool):
@@ -81,6 +86,7 @@ class _ConvertWorker(QThread):
         success = 0
         failed = 0
         skipped = 0
+        converted: dict[str, str] = {}
         total = len(self._paths)
         for i, src in enumerate(self._paths):
             if self.isInterruptionRequested():
@@ -90,11 +96,16 @@ class _ConvertWorker(QThread):
                 if self._should_skip(src, target_ext):
                     skipped += 1
                     continue
-                self._convert_one(src, target_ext)
+                out_path = self._convert_one(src, target_ext)
                 success += 1
-            except (OSError, ValueError) as exc:
+                if self._may_delete(src, out_path):
+                    converted[src] = out_path
+            except IMAGE_READ_ERRORS as exc:
                 logger.exception("Batch convert failed for %s: %s", src, exc)
                 failed += 1
+        trashed = self._trash_originals(list(converted))
+        if trashed:
+            self.originals_replaced.emit({src: converted[src] for src in trashed})
         self.result_ready.emit(success, failed, skipped)
 
     def _should_skip(self, src: str, target_ext: str) -> bool:
@@ -105,13 +116,19 @@ class _ConvertWorker(QThread):
             return True
         return src_ext in _JPEG_EXTS and target_ext in _JPEG_EXTS
 
-    def _convert_one(self, src: str, target_ext: str) -> None:
-        # The converted file carries no EXIF, so its orientation goes into the pixels.
-        img = upright(Image.open(src))
+    def _convert_one(self, src: str, target_ext: str) -> str:
+        """Write *src* in the target format and return the new file's path.
+
+        The viewer's decode — camera RAW developed at full size, sRGB, upright —
+        with the source's EXIF carried over (without the orientation, which is
+        baked into the pixels).
+        """
+        img = upright_image(src)
         out_path = self._resolve_output_path(src, target_ext)
         quality = self._quality if self._fmt in QUALITY_FORMATS else None
-        save_image(img, str(out_path), self._fmt, quality)
-        self._maybe_delete_original(src, str(out_path))
+        save_image(img, str(out_path), self._fmt, quality,
+                   export_save_options(src, METADATA_ALL))
+        return str(out_path)
 
     def _resolve_output_path(self, src: str, target_ext: str) -> Path:
         out_path = Path(self._output_dir) / (Path(src).stem + target_ext)
@@ -123,13 +140,39 @@ class _ConvertWorker(QThread):
             counter += 1
         return out_path
 
-    def _maybe_delete_original(self, src: str, out_path: str) -> None:
-        if not self._delete_originals:
-            return
-        if os.path.normpath(out_path) == os.path.normpath(src):
-            return
-        with contextlib.suppress(OSError):
-            os.remove(src)
+    def _may_delete(self, src: str, out_path: str) -> bool:
+        """Whether the original may go to the trash once *out_path* holds its conversion.
+
+        Not when the conversion replaced it; not for an SVG or a video, which
+        come out as one raster frame; and not for an animated or multi-page
+        original, of which only the first frame was converted.
+        """
+        if not self._delete_originals or os.path.normpath(out_path) == os.path.normpath(src):
+            return False
+        ext = Path(src).suffix.lower()
+        if ext == ".svg" or ext not in STILL_IMAGE_EXTENSIONS:
+            logger.info("Keeping %s: its conversion is a single raster image", src)
+            return False
+        try:
+            frames = frame_count(src)
+        except IMAGE_READ_ERRORS:
+            # Converted through another decoder: libraw reads a RAW Pillow can't.
+            return ext in RAW_EXTENSIONS
+        if frames > 1:
+            logger.info("Keeping %s: only its first frame was converted", src)
+            return False
+        return True
+
+    @staticmethod
+    def _trash_originals(paths: list[str]) -> list[str]:
+        """Send the converted originals to the recycle bin in one batch; returns those trashed."""
+        if not paths:
+            return []
+        from Imervue.system.trash_ops import trash_batch
+        trashed, failed = trash_batch(paths)
+        for path in failed:
+            logger.warning("Could not move the converted original %s to the trash", path)
+        return trashed
 
 
 class BatchConvertDialog(WorkerHostMixin, QDialog):
@@ -323,6 +366,7 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
         )
         self._worker.progress.connect(self._on_progress)
         self._worker.result_ready.connect(self._on_finished)
+        self._worker.originals_replaced.connect(self._on_originals_replaced)
         self._worker.finished.connect(self._cleanup)
         self._worker.start()
 
@@ -332,6 +376,12 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
 
     def _cleanup(self):
         self._worker = None
+
+    def _on_originals_replaced(self, replaced: dict) -> None:
+        # A bound method, so the queued signal runs this on the GUI thread. The
+        # conversion took the trashed original's place: its rating, tags and
+        # library notes move over, as a rename would carry them.
+        follow_saved_data(replaced)
 
     def _on_finished(self, success, failed, skipped):
         self._progress.setValue(len(self._paths))

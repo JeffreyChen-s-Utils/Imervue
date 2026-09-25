@@ -67,7 +67,7 @@ class _StackWorker(QThread):
             rgba = stack_images(self._paths, self._mode)
             Image.fromarray(rgba).save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Image stack failed: %s", exc)
             self.done.emit(False, str(exc))
 

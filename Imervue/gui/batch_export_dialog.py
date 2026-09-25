@@ -18,7 +18,9 @@ from PySide6.QtWidgets import (
 from PIL import Image
 
 from Imervue.system.qt_timers import call_later
+from Imervue.gui.export_metadata_combo import metadata_row
 from Imervue.gui.export_source import open_export_source
+from Imervue.image.export_metadata import DEFAULT_METADATA_POLICY, export_save_options
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image import export_presets
@@ -50,7 +52,7 @@ def _watermark_corners(lang):
 
 @dataclass(frozen=True)
 class ExportSettings:
-    """Format, quality, optional resize / square crop / DPI and watermark for a batch export.
+    """Format, quality, optional resize / square crop / DPI, watermark and metadata policy.
 
     ``max_w`` / ``max_h`` of 0 leave that side unbounded; nothing is resized
     unless ``resize`` is set.
@@ -64,6 +66,7 @@ class ExportSettings:
     square_crop: bool = False
     dpi: int = 0
     watermark: WatermarkOptions = field(default_factory=WatermarkOptions)
+    metadata: str = DEFAULT_METADATA_POLICY
 
 
 class _ExportWorker(QThread):
@@ -105,7 +108,9 @@ class _ExportWorker(QThread):
             out_path = _build_output_path(
                 Path(src), self._output_dir, FORMAT_EXTENSIONS.get(s.fmt, ".png"),
             )
-            extra = {"dpi": (s.dpi, s.dpi)} if s.dpi > 0 else None
+            extra = export_save_options(src, s.metadata)
+            if s.dpi > 0:
+                extra["dpi"] = (s.dpi, s.dpi)
             save_image(img, str(out_path), s.fmt, s.quality, extra)
             return True
         except Exception as exc:
@@ -171,6 +176,9 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         self._quality_label, self._quality_slider = quality_slider(self._lang)
         layout.addWidget(self._quality_label)
         layout.addWidget(self._quality_slider)
+
+        metadata_layout, self._metadata_combo = metadata_row()
+        layout.addLayout(metadata_layout)
 
         layout.addWidget(self._build_resize_group())
         layout.addWidget(self._build_watermark_group())
@@ -328,6 +336,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             square_crop=preset.square_crop if preset_active and preset else False,
             dpi=preset.dpi if preset_active and preset else 0,
             watermark=self._collect_watermark(),
+            metadata=self._metadata_combo.currentData(),
         )
 
     def _collect_watermark(self) -> WatermarkOptions:

@@ -80,7 +80,8 @@ Formats pris en charge
 ^^^^^^^^^^^^^^^^^^^^^^
 
 - **Standards** : PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
-- **RAW** : CR2 (Canon), NEF (Nikon), ARW (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus)
+- **RAW** : CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
+- **Modernes** : AVIF (intégré) ; HEIC / HEIF avec le paquet optionnel ``pillow-heif`` ; JPEG XL avec le paquet optionnel ``pillow-jxl-plugin``
 
 ----
 
@@ -295,7 +296,7 @@ Tri et filtrage
 
    * - Fonctionnalité
      - Emplacement dans le menu
-   * - Trier par nom
+   * - Trier par nom (ordre naturel : ``img2`` avant ``img10``)
      - ``Trier`` > ``Par nom``
    * - Trier par date de modification
      - ``Trier`` > ``Par date de modification``
@@ -473,6 +474,15 @@ Ces ajustements sont **non destructifs**. Chaque curseur écrit dans une recette
 par image ; appuyez sur ``Réinitialiser`` à tout moment pour restaurer l'original, ou sur ``Ctrl + Z`` pour reculer
 parmi les modifications individuelles. Les recettes survivent aux redémarrages et peuvent être exportées / synchronisées
 via le flux de fichiers annexes XMP décrit dans la section Métadonnées.
+
+Le fichier sur disque ne change que si vous le demandez. **Apply Crop** et le **Save** des annotations réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier. Les outils à usage unique (CLAHE, mélangeur TSL, cadre photo, redressement
+automatique…) enregistrent leur résultat à côté de l'original sous
+``photo_clahe.png`` ; une nouvelle exécution enregistre ``photo_clahe_1.png`` au
+lieu de remplacer le dernier résultat. **Auto-Rotate by EXIF**, les copies de **Batch EXIF Strip** et **Split Pages…** numérotent leurs fichiers de la même façon. La recette et les copies virtuelles d'une photo la suivent quand Imervue la fait
+pivoter sans perte (le recadrage pivote avec elle) ou réécrit son EXIF (géomarquage
+GPS, éditeur EXIF) ; une recette avec des masques locaux, des calques, un reflet
+d'objectif ou des étiquettes de visages reste avec la version non pivotée jusqu'à ce
+qu'on la repivote.
 
 Enregistrer et annuler
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -1573,10 +1583,11 @@ Export individuel
 
 Clic droit sur une image > ``Exporter / Enregistrer sous``.
 
-- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF
+- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF, AVIF ; aussi HEIC et JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` est installé
 - Ajustez la qualité (pour les formats avec perte)
+- Choisissez les métadonnées à conserver : toutes, toutes sauf la localisation (par défaut) ou aucune. L'appareil, l'objectif et la date de prise de vue sont conservés ; le choix est mémorisé et l'export par lot propose la même option
 - Aperçu de la taille de fichier estimée
-- Choisissez un emplacement d'enregistrement
+- Choisissez un emplacement d'enregistrement. Le nom proposé est encore libre (``photo_1.png`` à côté de ``photo.png``) ; un fichier existant — surtout la photo elle-même — n'est remplacé qu'après confirmation
 
 Préréglages d'export
 ^^^^^^^^^^^^^^^^^^^^
@@ -1632,14 +1643,17 @@ Sélectionnez plusieurs images, puis clic droit > ``Créer GIF / Vidéo``.
 - Glisser pour réordonner les images
 - Définir les images par seconde (FPS)
 - Dimensions personnalisées
-- Option de boucle
+- Option de boucle : boucler indéfiniment ou, si elle est désactivée, lire une seule fois
+- Le fichier proposé est ``output.gif`` à côté de la première image, numéroté (``output_1.gif``) si ce nom est pris ; un nom saisi qui existe déjà n'est remplacé qu'après confirmation
 
 ----
 
 Lecture d'animations
 --------------------
 
-À l'ouverture de fichiers GIF, APNG ou WebP animés, l'animation se lit automatiquement.
+À l'ouverture de fichiers GIF, APNG ou WebP animés, l'animation se lit automatiquement. Une animation qui occuperait
+plus de 512 Mo une fois décodée est décodée image par image pendant la lecture : l'ouvrir
+ne fige pas la fenêtre et ne remplit pas la mémoire.
 
 .. list-table::
    :header-rows: 1
@@ -1749,7 +1763,15 @@ Supprimer des images
    * - Supprimer les images sélectionnées
      - Sélectionner plusieurs, puis ``Delete`` ou clic droit > ``Supprimer la sélection``
 
-Les images sont déplacées vers la Corbeille du système et peuvent y être récupérées.
+Les images sont déplacées vers la Corbeille du système et peuvent y être récupérées. Sur un
+lecteur sans corbeille — carte mémoire, clé USB ou partage réseau, où Windows les
+supprimerait définitivement — le fichier est conservé : à la fermeture, Imervue liste ces
+fichiers et demande s'il faut les supprimer définitivement.
+
+Leurs sidecars les suivent : ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` et
+``IMG.xmp``, sauf si le RAW d'une paire RAW + JPEG utilise encore ce dernier. Un
+sidecar laissé derrière collerait sa note et ses retouches au prochain ``IMG.*``
+que l'appareil écrit sous le même nom.
 
 ----
 
@@ -1776,6 +1798,20 @@ En mode vignettes, sélectionnez plusieurs images puis clic droit :
      - Appliquer le même tag à toutes les images sélectionnées
    * - Ajouter à un album
      - Placer toutes les images sélectionnées dans un album
+
+Déplacer ou copier n'écrase jamais un fichier du même nom : il arrive sous
+``name_1.ext``. Une photo renommée ou déplacée dans Imervue — renommage par lots,
+renommage par jetons, arborescence, Déplacer / Copier, double volet, bac de
+préparation, organisateur d'images — garde sa note, son favori, ses tags, son
+étiquette de couleur, son titre, sa description, sa note de bibliothèque et son
+marquage de tri (un dossier renommé ou déplacé, ceux de toutes ses photos). Ses
+sidecars la suivent : ``IMG.xmp``, ``IMG.JPG.xmp`` et
+``IMG.JPG.annotations.json``. Un ``IMG.xmp`` encore utilisé par le RAW d'une
+paire RAW + JPEG est copié plutôt que déplacé.
+
+Une photo renommée dans un autre programme pendant que son dossier est ouvert dans
+Imervue garde les mêmes données ; celles que le nouveau nom avait déjà restent
+telles quelles.
 
 ----
 
@@ -2110,6 +2146,12 @@ Tags hiérarchiques
 Les tags hiérarchiques vivent dans l'index de la bibliothèque et sont complémentaires du système
 de tags plat dans le menu contextuel.
 
+``Index Keywords`` (clic droit) ajoute à la bibliothèque les mots-clés XMP de la
+sélection. Une hiérarchie de mots-clés écrite par Lightroom ou darktable
+(``lr:hierarchicalSubject``, ``Places|Taiwan|Taipei``) est rangée sous le chemin de
+tag ``Places/Taiwan/Taipei``, et les mots-clés isolés ``Places`` / ``Taiwan`` /
+``Taipei`` qui ne font que répéter ses niveaux ne sont pas ajoutés une seconde fois.
+
 Renommage par lots avec jetons
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2118,7 +2160,10 @@ saisissez un modèle comme ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` et voy
 exactement comment chaque fichier sera renommé. Les conflits sont mis en évidence afin que
 rien ne soit écrasé. Jetons pris en charge : ``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``.
+{hour} {minute}``. Un nouveau nom que porte actuellement un autre
+fichier sélectionné n'est pas un conflit : renuméroter (``002`` → ``003`` pendant que
+``003`` → ``004``) ou échanger deux noms renomme toute la sélection. Batch Rename fait
+de même.
 
 Export des métadonnées
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -2135,6 +2180,25 @@ Imervue peut lire et écrire des fichiers annexes Adobe XMP (``photo.jpg`` ↔
 ``photo.xmp``) afin que les notes, titres, descriptions, mots-clés et étiquettes de
 couleur fassent l'aller-retour proprement avec d'autres gestionnaires de photos compatibles
 XMP, d'autres gestionnaires de photos compatibles XMP, Bridge et autres outils XMP.
+
+L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé.
+
+Outre ``photo.xmp`` (Lightroom, Bridge), le ``photo.jpg.xmp`` qu'écrivent
+darktable et digiKam est lu et mis à jour lorsqu'il est le seul sidecar. Les
+étiquettes de couleur sont comprises dans les mots de Lightroom (``Red`` …
+``Purple``) et de Bridge (``Select``, ``Second``, ``Approved``, ``Review``,
+``To Do``), et exportées comme Lightroom les écrit ; une étiquette sans couleur
+(personnalisée) reste dans le sidecar.
+
+Une photo rejetée — ``xmp:Rating`` -1 dans Lightroom, Bridge et darktable — est
+importée comme **Reject** du tri, sans étoiles, et un Reject est exporté en -1.
+Un sidecar non rejeté lève un Reject ; un Pick reste tel quel.
+
+Un fichier sans sidecar est lu — et importé — depuis ce qu'il embarque lui-même :
+son paquet XMP (JPEG, PNG, WebP, TIFF), puis son ``Rating`` / ``RatingPercent``
+EXIF. C'est là que Lightroom garde la note et les mots-clés d'un JPEG, et que
+l'Explorateur Windows et certains appareils gardent leurs étoiles. Un sidecar,
+s'il existe, l'emporte.
 
 - **Importer XMP pour l'image courante** — tire la note / le titre / les mots-clés /
   l'étiquette de couleur depuis le fichier annexe vers la base de données interne.
@@ -2214,7 +2278,9 @@ Appliquer un LUT .cube
 ^^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` vous permet de choisir n'importe quel fichier Adobe ``.cube``
-(1D ou 3D, jusqu'à 64³). Le LUT est analysé avec un ``lru_cache`` clé par
+(1D ou 3D, jusqu'à 64³). ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE``
+de DaVinci Resolve fixe le domaine d'entrée comme ``DOMAIN_MIN`` / ``DOMAIN_MAX``,
+et un fichier enregistré avec un BOM se charge aussi. Le LUT est analysé avec un ``lru_cache`` clé par
 chemin + mtime, évalué par interpolation trilinéaire, et mélangé à l'original
 via un curseur d'intensité. Le chemin du LUT et l'intensité vivent sur
 la recette.
@@ -2402,8 +2468,11 @@ Géolocalisation GPS
 ^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` lit les tags GPS EXIF existants et
-vous laisse modifier ou définir de nouvelles coordonnées en degrés décimaux. Nécessite l'installation
-de ``piexif`` ; écrit dans le JPEG sur place.
+vous laisse modifier ou définir de nouvelles coordonnées en degrés décimaux. Un JPEG est écrit
+sur place sans paquet supplémentaire : seul son bloc EXIF change, les pixels, les autres tags et
+la vignette restent intacts. Un WebP est traité de la même façon ; les autres formats ne peuvent pas être géotagués.
+
+L'**éditeur EXIF** (bouton ``Edit EXIF`` de la barre latérale EXIF) modifie la description, l'artiste, le copyright, la marque / le modèle de l'appareil et le commentaire. Un JPEG ou un WebP ne nécessite aucun paquet supplémentaire et seul son bloc EXIF est réécrit ; les autres formats indiquent pourquoi ils ne sont pas modifiables.
 
 Mise en page d'impression
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2460,6 +2529,8 @@ affichage::
    * - ``list-ops``
      - Lister toutes les sous-commandes (``--json`` pour une sortie exploitable par machine)
 
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités.
+
 Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
 
 ----
@@ -2490,17 +2561,18 @@ Outils disponibles
      - Liste les fichiers image d'un dossier (chemin, taille, mtime). Passez
        ``recursive=true`` pour parcourir les sous-dossiers.
    * - ``read_image_metadata``
-     - Dimensions, format, tags EXIF et champs du fichier annexe XMP pour une
+     - Dimensions, format, tags EXIF et champs XMP (sidecar, sinon embarqués) pour une
        image. Les données manquantes sont rapportées comme la valeur vide appropriée
        plutôt que de lever une exception.
    * - ``read_xmp_tags``
-     - Chemin rapide qui ne lit que le fichier annexe XMP — note, étiquette
+     - Chemin rapide qui ne lit que le XMP (sidecar, sinon embarqué) — note, étiquette
        de couleur, mots-clés, titre, description.
    * - ``convert_format``
      - Convertit une image vers un autre format. Le format de destination est
        déduit du suffixe de destination (``png`` / ``jpg`` /
-       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). L'option
-       ``quality`` (1–100) s'applique à JPEG/WebP.
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``, plus ``heic`` /
+       ``jxl`` lorsque leur backend optionnel est installé). L'option
+       ``quality`` (1–100) s'applique à JPEG / WebP / AVIF / HEIC / JXL.
    * - ``puppet_from_png``
      - Construit un rig ``.puppet`` à partir d'un PNG en utilisant l'auto-mesh
        du plugin Puppet. Ensemence le catalogue de paramètres standard Cubism afin

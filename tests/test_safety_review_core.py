@@ -418,9 +418,9 @@ def test_anime_make_love_is_shrunk_to_its_centre(monkeypatch):
 
 def test_detect_regions_real_filters_by_label_and_confidence():
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [1, 2, 3, 4]},
-        {"class": "FEMALE_BREAST_EXPOSED", "score": 0.9, "box": [5, 6, 7, 8]},
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.1, "box": [9, 9, 9, 9]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [1, 2, 2, 2]},
+        {"class": "FEMALE_BREAST_EXPOSED", "score": 0.9, "box": [5, 6, 2, 2]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.1, "box": [9, 9, 0, 0]},
     ])
     labels = frozenset({"MALE_GENITALIA_EXPOSED"})
     boxes = _detection._detect_regions_real(detector, "x.png", 0.25, labels)
@@ -460,7 +460,7 @@ def test_process_single_image_censors_detected_box(tmp_path):
     src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
     dst = tmp_path / "out.png"
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 30, 30]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 20, 20]},
     ])
     count = _detection._process_single_image(
         detector, str(src), str(dst), block_size=4, padding=0,
@@ -471,14 +471,171 @@ def test_process_single_image_censors_detected_box(tmp_path):
     assert out.getpixel((45, 45)) == (255, 0, 0)        # outside untouched
 
 
+def test_nudenet_box_is_x_y_width_height():
+    assert _censor_core._nudenet_corners([300, 400, 100, 80]) == (300, 400, 400, 480)
+    assert _censor_core._nudenet_corners((0, 0, 0, 0)) == (0, 0, 0, 0)
+    assert _censor_core._nudenet_corners([1.9, 2, 3, 4]) == (1, 2, 4, 6)
+
+
+def test_a_region_away_from_the_origin_is_censored(tmp_path):
+    """Read as corners, NudeNet's (300, 400, 100, 80) became an inverted box: nothing covered."""
+    src = tmp_path / "in.png"
+    Image.new("RGB", (600, 600), (255, 0, 0)).save(src)
+    dst = tmp_path / "out.png"
+    detector = _FakeDetector([
+        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [300, 400, 100, 80]},
+    ])
+    _detection._process_single_image(
+        detector, str(src), str(dst), block_size=8, padding=0,
+        mode=_constants.MODE_REAL, style=_constants.STYLE_BLACK, merge_regions=False)
+    out = Image.open(dst).convert("RGB")
+    for point in ((305, 405), (350, 440), (395, 475)):
+        assert out.getpixel(point) == (0, 0, 0)
+    assert out.getpixel((200, 440)) == (255, 0, 0)
+
+
+def test_runner_reads_nudenet_boxes_as_x_y_width_height():
+    class _Det:
+        def detect(self, _src):
+            return [{"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [300, 400, 100, 80]}]
+    labels = frozenset({"MALE_GENITALIA_EXPOSED"})
+    assert _runner._detect_boxes_real(_Det(), "x.png", 0.25, labels) == [(300, 400, 400, 480)]
+
+
+class _RecordingNudeDetector:
+    """Stands in for ``nudenet.NudeDetector``; keeps what each ``detect`` got."""
+
+    def __init__(self):
+        self.seen = []
+
+    def detect(self, image):
+        self.seen.append(image)
+        return []
+
+
+@pytest.fixture
+def fake_nudenet(monkeypatch):
+    import sys
+    import types
+    module = types.ModuleType("nudenet")
+    module.NudeDetector = _RecordingNudeDetector
+    monkeypatch.setitem(sys.modules, "nudenet", module)
+    monkeypatch.setattr(_detection, "_cached_detector", None)
+    return module
+
+
+def test_read_bgr_opens_a_path_with_a_non_ascii_folder(tmp_path):
+    """NudeNet's cv2.imread returned None here, so every such photo failed."""
+    pytest.importorskip("cv2")
+    src = tmp_path / "照片" / "a.png"
+    src.parent.mkdir()
+    Image.new("RGB", (6, 4), (255, 0, 0)).save(src)
+    image = _censor_core._read_bgr(str(src))
+    assert image.shape == (4, 6, 3)
+    assert tuple(image[0, 0]) == (0, 0, 255)          # BGR, as imread gives it
+
+
+def test_read_bgr_matches_imread_including_exif_orientation(tmp_path):
+    cv2 = pytest.importorskip("cv2")
+    src = tmp_path / "tagged.jpg"
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    rng = np.random.default_rng(7)
+    Image.fromarray(rng.integers(0, 256, (20, 40, 3), dtype=np.uint8)).save(src, exif=exif)
+    image = _censor_core._read_bgr(str(src))
+    assert image.shape == (40, 20, 3)
+    assert np.array_equal(image, cv2.imread(str(src)))
+
+
+@pytest.mark.parametrize("content", [b"", b"not an image"])
+def test_read_bgr_refuses_what_opencv_cannot_decode(tmp_path, content):
+    pytest.importorskip("cv2")
+    src = tmp_path / "bad.jpg"
+    src.write_bytes(content)
+    with pytest.raises(ValueError, match="cannot decode"):
+        _censor_core._read_bgr(str(src))
+
+
+def test_any_path_detector_hands_nudenet_the_decoded_image(tmp_path):
+    pytest.importorskip("cv2")
+    src = tmp_path / "照片.png"
+    Image.new("RGB", (3, 2), (0, 0, 255)).save(src)
+    inner = _RecordingNudeDetector()
+    assert _censor_core._AnyPathDetector(inner).detect(str(src)) == []
+    (image,) = inner.seen
+    assert isinstance(image, np.ndarray)
+    assert image.shape == (2, 3, 3)
+
+
+def test_in_app_detector_opens_any_path(fake_nudenet):
+    detector = _detection._get_detector()
+    assert isinstance(detector, _censor_core._AnyPathDetector)
+    assert _detection._get_detector() is detector
+
+
+@pytest.mark.parametrize("mode", ["real", "auto"])
+def test_runner_detector_opens_any_path(fake_nudenet, monkeypatch, mode):
+    monkeypatch.setattr(_runner, "_load_anime_model", lambda: "anime")
+    detector, _anime = _runner._load_detectors(mode)
+    assert isinstance(detector, _censor_core._AnyPathDetector)
+
+
+def _tagged_portrait_png(path: Path) -> Path:
+    """80x40 stored red pixels tagged 6: shown (and read by OpenCV) as 40 wide, 80 tall."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    Image.new("RGB", (80, 40), (255, 0, 0)).save(path, format="PNG", exif=exif)
+    return path
+
+
+def test_detected_box_is_censored_where_the_detector_saw_it_on_a_tagged_photo(tmp_path):
+    """The detectors read the file upright; censoring the stored pixels missed the region."""
+    src = _tagged_portrait_png(tmp_path / "in.png")
+    dst = tmp_path / "out.png"
+    detector = _FakeDetector([   # upright coordinates, low in the portrait frame
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 60, 20, 15]},
+    ])
+    count = _detection._process_single_image(
+        detector, str(src), str(dst), block_size=4, padding=0,
+        mode=_constants.MODE_REAL, style=_constants.STYLE_BLACK, merge_regions=False)
+    assert count == 1
+    out = Image.open(dst).convert("RGB")
+    assert out.size == (40, 80)
+    assert out.getpixel((15, 67)) == (0, 0, 0)      # the detected region is covered
+    assert out.getpixel((20, 10)) == (255, 0, 0)    # the rest is untouched
+
+
+def test_manual_regions_are_censored_on_the_upright_image(tmp_path):
+    src = _tagged_portrait_png(tmp_path / "in.png")
+    dst = tmp_path / "out.png"
+    _detection._process_manual_image(str(src), str(dst), [(5, 60, 25, 75)], 4,
+                                     style=_constants.STYLE_BLACK, shape=_constants.SHAPE_RECT)
+    out = Image.open(dst).convert("RGB")
+    assert out.size == (40, 80)
+    assert out.getpixel((15, 67)) == (0, 0, 0)
+
+
+def test_runner_censors_a_tagged_photo_where_the_detector_saw_it(tmp_path, monkeypatch):
+    src = _tagged_portrait_png(tmp_path / "in.png")
+    dst = tmp_path / "out.png"
+    monkeypatch.setattr(_runner, "_detect_boxes_real", lambda *_a: [(5, 60, 25, 75)])
+    count = _runner._process_one(
+        object(), str(src), str(dst), block_size=4, padding=0,
+        det_mode="real", style=_constants.STYLE_BLACK, merge_regions=False)
+    assert count == 1
+    out = Image.open(dst).convert("RGB")
+    assert out.size == (40, 80)
+    assert out.getpixel((15, 67)) == (0, 0, 0)
+
+
 def test_process_single_image_merges_adjacent_detections(tmp_path):
     # Two adjacent genitalia boxes with a gap between them (the junction).
     # With merge on, the gap between them is censored as one region.
     src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
     dst = tmp_path / "out.png"
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 20, 30]},
-        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 15, 10]},
+        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 16, 10]},
     ])
     count = _detection._process_single_image(
         detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL,
@@ -494,8 +651,8 @@ def test_junction_bridge_honours_the_selected_shape(tmp_path):
     src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
     dst = tmp_path / "out.png"
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 20, 30]},
-        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 15, 10]},
+        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 16, 10]},
     ])
     _detection._process_single_image(
         detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL,
@@ -510,8 +667,8 @@ def test_process_single_image_without_merge_keeps_regions_separate(tmp_path):
     src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
     dst = tmp_path / "out.png"
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 20, 30]},
-        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 40, 30]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 20, 15, 10]},
+        {"class": "FEMALE_GENITALIA_EXPOSED", "score": 0.9, "box": [24, 20, 16, 10]},
     ])
     count = _detection._process_single_image(
         detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL,
@@ -526,7 +683,7 @@ def test_process_single_image_ellipse_shape_spares_box_corner(tmp_path):
     src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
     dst = tmp_path / "out.png"
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 40, 40]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 30, 30]},
     ])
     count = _detection._process_single_image(
         detector, str(src), str(dst), block_size=4, padding=0,
@@ -543,7 +700,7 @@ def test_process_single_image_jpeg_dst_from_rgba_source(tmp_path):
     Image.new("RGBA", (40, 40), (10, 20, 30, 255)).save(src, format="PNG")
     dst = tmp_path / "out.jpg"
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 5, 15, 15]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [5, 5, 10, 10]},
     ])
     count = _detection._process_single_image(
         detector, str(src), str(dst), block_size=4, padding=0, mode=_constants.MODE_REAL)
@@ -571,7 +728,7 @@ def test_process_single_image_only_censored_still_writes_detections(tmp_path):
     src = _write_png(tmp_path / "in.png", color=(255, 0, 0))
     dst = tmp_path / "out" / "sub" / "in_censored.png"
     detector = _FakeDetector([
-        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 30, 30]},
+        {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [10, 10, 20, 20]},
     ])
     count = _detection._process_single_image(
         detector, str(src), str(dst), block_size=4, padding=0,
@@ -1000,3 +1157,36 @@ def test_runner_batch_destination_increments_on_clash(tmp_path):
     Path(first).write_text("x", encoding="utf-8")
     second = _runner._batch_destination(src, str(out), False, str(root))
     assert Path(second).name == "pic_censored_1.png"
+
+
+class TestSaveAs:
+    """Overwrite mode saves over the photo itself; a failed save used to truncate it."""
+
+    def test_a_failed_save_leaves_the_original_whole(self, tmp_path, monkeypatch):
+        photo = tmp_path / "photo.jpg"
+        Image.new("RGB", (4, 4), (1, 2, 3)).save(photo)
+        before = photo.read_bytes()
+
+        def half_written(self, fp, *args, **kwargs):
+            with open(fp, "wb") as fh:
+                fh.write(b"partial")
+            raise OSError("disk full")
+
+        monkeypatch.setattr(Image.Image, "save", half_written)
+        with pytest.raises(OSError, match="disk full"):
+            _censor_core._save_as(Image.new("RGB", (4, 4)), str(photo))
+        assert photo.read_bytes() == before
+        assert [p.name for p in tmp_path.iterdir()] == ["photo.jpg"]
+
+    def test_rgba_is_flattened_for_jpeg(self, tmp_path):
+        out = tmp_path / "sub" / "out.jpg"
+        _censor_core._save_as(Image.new("RGBA", (3, 3), (255, 0, 0, 128)), str(out))
+        with Image.open(out) as saved:
+            assert saved.format == "JPEG"
+            assert saved.mode == "RGB"
+
+    def test_an_unknown_extension_is_saved_as_png(self, tmp_path):
+        out = tmp_path / "out.xyz"
+        _censor_core._save_as(Image.new("RGB", (3, 3)), str(out))
+        with Image.open(out) as saved:
+            assert saved.format == "PNG"

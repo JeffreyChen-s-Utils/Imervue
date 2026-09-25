@@ -24,6 +24,11 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.orientation import QUARTER_TURN_CODES, exif_orientation
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.shown import as_shown
+
 _IMAGE_EXTS = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
     ".heic", ".heif", ".avif", ".jxl",
@@ -57,9 +62,23 @@ def output_path(src: Path, out_dir: str | None, suffix: str, ext: str | None) ->
     return src.with_name(f"{src.stem}{suffix}{new_ext}")
 
 
-def _load_rgba(path: Path) -> np.ndarray:
+def _open_shown(path: Path) -> Image.Image:
+    """Decode *path* as the viewer shows it: sRGB, turned upright by its EXIF orientation.
+
+    The outputs are written without EXIF or ICC, so both have to be baked into
+    the pixels: otherwise a portrait phone photo comes out sideways and a
+    Display P3 one washed out. Registers the HEIC / AVIF / JPEG XL opener the
+    extension needs. The file is closed on return; raises ``IMAGE_READ_ERRORS``.
+    """
+    ensure_pillow_opener(path.suffix.lower())
     with Image.open(path) as img:
-        return np.array(img.convert("RGBA"))
+        shown = as_shown(img)
+        shown.load()
+    return shown
+
+
+def _load_rgba(path: Path) -> np.ndarray:
+    return np.array(_open_shown(path).convert("RGBA"))
 
 
 # --- operations -------------------------------------------------------------
@@ -72,26 +91,23 @@ def _resize_to(img: Image.Image, max_edge: int) -> Image.Image:
 
 def op_convert(src: Path, target: Path, args) -> None:
     fmt = args.format.upper()
-    with Image.open(src) as img:
-        rgb = img.convert("RGB") if fmt == "JPEG" else img.convert("RGBA")
-        rgb.save(target, format=fmt, quality=args.quality)
+    img = _open_shown(src)
+    rgb = img.convert("RGB") if fmt == "JPEG" else img.convert("RGBA")
+    rgb.save(target, format=fmt, quality=args.quality)
 
 
 def op_resize(src: Path, target: Path, args) -> None:
-    with Image.open(src) as img:
-        _resize_to(img, args.max).save(target)
+    _resize_to(_open_shown(src), args.max).save(target)
 
 
 def op_thumbnail(src: Path, target: Path, args) -> None:
-    with Image.open(src) as img:
-        _resize_to(img.convert("RGBA"), args.size).save(target)
+    _resize_to(_open_shown(src).convert("RGBA"), args.size).save(target)
 
 
 def op_watermark(src: Path, target: Path, args) -> None:
     from Imervue.image.watermark import WatermarkOptions, apply_watermark
-    with Image.open(src) as img:
-        apply_watermark(img.convert("RGBA"), WatermarkOptions(
-            text=args.text, corner=args.corner, opacity=args.opacity)).save(target)
+    apply_watermark(_open_shown(src).convert("RGBA"), WatermarkOptions(
+        text=args.text, corner=args.corner, opacity=args.opacity)).save(target)
 
 
 def op_optimize(src: Path, target: Path, args) -> None:
@@ -121,14 +137,13 @@ def op_distort(src: Path, target: Path, args) -> None:
 
 
 def op_autoorient(src: Path, target: Path, _args) -> None:
-    from Imervue.image.orientation import oriented_array
-    Image.fromarray(oriented_array(str(src)), mode="RGBA").save(target)
+    Image.fromarray(_load_rgba(src), mode="RGBA").save(target)
 
 
 def op_strip(src: Path, target: Path, _args) -> None:
     # Re-save without forwarding exif/icc/xmp — Pillow omits metadata by default.
-    with Image.open(src) as img:
-        img.save(target)
+    # The orientation and colour profile go with them, so bake both in first.
+    _open_shown(src).save(target)
 
 
 # --- pipeline (chain several operations from a JSON file) -------------------
@@ -197,7 +212,7 @@ _PIPELINE_OPS = {
 
 def load_pipeline(file: str) -> list[dict]:
     """Read a pipeline JSON file (a list of steps, or ``{"pipeline": [...]}``)."""
-    raw = json.loads(Path(file).read_text(encoding="utf-8"))
+    raw = json.loads(Path(file).read_text(encoding="utf-8-sig"))   # a BOM from an editor is fine
     steps = raw["pipeline"] if isinstance(raw, dict) and "pipeline" in raw else raw
     if not isinstance(steps, list):
         raise ValueError('pipeline must be a list, or {"pipeline": [...]}')
@@ -226,8 +241,11 @@ def op_pipeline(src: Path, target: Path, args) -> None:
 
 
 def op_info(src: Path, _args) -> dict:
+    ensure_pillow_opener(src.suffix.lower())
     with Image.open(src) as img:
         width, height = img.size
+        if exif_orientation(img) in QUARTER_TURN_CODES:   # report the upright size
+            width, height = height, width
         info = {
             "path": str(src), "format": img.format, "mode": img.mode,
             "width": width, "height": height,
@@ -273,13 +291,20 @@ def run(args) -> int:
 
 
 def _report(args, paths: Sequence[Path], operation) -> int:
-    results = [operation(path, args) for path in paths]
+    results = []
+    errors = 0
+    for path in paths:
+        try:
+            results.append(operation(path, args))
+        except IMAGE_READ_ERRORS as exc:   # one unreadable file must not end the run
+            print(f"error: {path}: {exc}", file=sys.stderr)
+            errors += 1
     if getattr(args, "json", False):
         print(json.dumps(results, indent=2))
     else:
         for item in results:
             print("  ".join(f"{k}={v}" for k, v in item.items()))
-    return 0
+    return 1 if errors else 0
 
 
 def _validated_out_dir(raw: str | None) -> Path | None:
@@ -309,7 +334,7 @@ def _process_one(src: Path, out_dir, operation, suffix: str, ext_fn, args) -> tu
         if target.exists() and not args.overwrite:
             return ("skip", f"skip (exists): {target}")
         operation(src, target, args)
-    except (OSError, ValueError) as exc:
+    except IMAGE_READ_ERRORS as exc:
         return ("error", f"error: {src}: {exc}")
     return ("ok", f"{src} -> {target}")
 

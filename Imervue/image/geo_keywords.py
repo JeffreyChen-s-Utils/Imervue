@@ -2,14 +2,17 @@
 
 For each geotagged photo, reverse-geocode the nearest city and merge
 ``[city, country]`` into the image's XMP sidecar ``dc:subject`` keywords. This
-is portable (other XMP-aware tools read it) and reversible (delete the sidecar).
+is portable (other XMP-aware tools read it); the rest of an existing sidecar is kept.
 
 Builds on :mod:`Imervue.image.reverse_geocode` and :mod:`Imervue.image.xmp_sidecar`.
 The merge logic is pure and unit-tested; the orchestrator does the file I/O.
 """
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
+
+logger = logging.getLogger("Imervue.geo_keywords")
 
 
 def merge_keywords(existing: list[str], new: list[str]) -> list[str]:
@@ -40,6 +43,10 @@ def tag_paths_by_location(paths: Iterable[str]) -> int:
         merged = merge_keywords(data.keywords, keywords)
         if merged != data.keywords:
             data.keywords = merged
-            xmp_sidecar.save(path, data)
+            try:
+                xmp_sidecar.save(path, data)
+            except OSError:   # an unreadable sidecar is left alone, a locked one too
+                logger.warning("Could not tag %s by location", path, exc_info=True)
+                continue
             tagged += 1
     return tagged

@@ -130,7 +130,7 @@ def ocr_available() -> bool:
         # No pytesseract, no binary (TesseractNotFoundError is an OSError), or
         # ``tesseract --version`` exited non-zero.
         return False
-    except SystemExit:
+    except SystemExit:  # NOSONAR - pytesseract exits on an old Tesseract; the app must not
         # pytesseract raises SystemExit, not an Exception, for a Tesseract
         # older than it supports; letting it through would quit the app.
         logger.warning("Tesseract is installed but too old for pytesseract", exc_info=True)
@@ -146,8 +146,11 @@ def extract_words(image, min_confidence: float = 0.0) -> list[OcrWord]:
     if isinstance(image, Image.Image):
         tsv = pytesseract.image_to_data(image)
     else:
+        from Imervue.image.shown import as_shown
         with Image.open(image) as opened:
-            tsv = pytesseract.image_to_data(opened)
+            # Tesseract reads sideways text badly; phones tag portrait shots instead
+            # of turning them. The word boxes are then in the upright frame the viewer shows.
+            tsv = pytesseract.image_to_data(as_shown(opened))
     return parse_tsv(tsv, min_confidence)
 
 

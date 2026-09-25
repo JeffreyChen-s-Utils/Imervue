@@ -1,3 +1,12 @@
+"""Quarter-turn an image file on disk, losing as little as the format allows.
+
+A JPEG only has its EXIF orientation changed (``jpeg_orientation``), so its
+pixels and every metadata tag stay byte-exact. Other formats are decoded,
+turned and saved back over themselves with their metadata — EXIF (minus the
+orientation, which the turn bakes in), ICC profile, DPI, PNG text — and their
+compression settings carried over. Files a re-save can't keep whole (camera
+RAW, HEIC, multi-frame) are refused. Every write replaces the file in one step.
+"""
 from __future__ import annotations
 
 import logging
@@ -5,7 +14,18 @@ from pathlib import Path
 
 from PIL import Image
 
-from Imervue.image.orientation import upright
+from Imervue.image.in_place_save import (
+    can_rewrite_in_place, carried_save_kwargs, in_place_format,
+)
+from Imervue.system.atomic_write import replace_atomically
+from Imervue.image.jpeg_orientation import set_jpeg_orientation
+from Imervue.image.orientation import (
+    exif_orientation, read_orientation, transpose_for,
+)
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.dimensions import image_dimensions
+from Imervue.image.recipe import Recipe, turned_with_file
+from Imervue.image.recipe_store import carry_recipe
 
 logger = logging.getLogger("Imervue.lossless_rotate")
 
@@ -25,112 +45,71 @@ CW_ORIENTATION_MAP: dict[int, int] = {
 # Counter-clockwise is the inverse of clockwise.
 CCW_ORIENTATION_MAP: dict[int, int] = {v: k for k, v in CW_ORIENTATION_MAP.items()}
 
-# JPEG file signatures (SOI marker)
-_JPEG_EXTENSIONS: set[str] = {".jpg", ".jpeg", ".jpe", ".jfif"}
-
-
-def _is_jpeg(file_path: str) -> bool:
-    return Path(file_path).suffix.lower() in _JPEG_EXTENSIONS
-
-
-def _rotate_via_exif(file_path: str, clockwise: bool) -> bool:
-    """Rotate a JPEG by modifying its EXIF Orientation tag (truly lossless).
-
-    Returns True on success, False if piexif is unavailable or an error occurs.
-    """
+def _rotate_jpeg_tag(file_path: str, clockwise: bool) -> bool:
+    """Turn a JPEG by rewriting only its EXIF orientation; False if the file won't take it."""
+    rotation_map = CW_ORIENTATION_MAP if clockwise else CCW_ORIENTATION_MAP
+    current = read_orientation(file_path)
+    new_orientation = rotation_map.get(current, 6 if clockwise else 8)
     try:
-        import piexif
-    except ImportError:
-        logger.debug("piexif not available; falling back to PIL rotation")
+        rotated = set_jpeg_orientation(Path(file_path).read_bytes(), new_orientation)
+        replace_atomically(file_path, lambda tmp: tmp.write_bytes(rotated))
+    except (ValueError, OSError):
+        logger.warning("EXIF rotation failed for %s", file_path, exc_info=True)
         return False
-
-    try:
-        exif_dict = piexif.load(file_path)
-
-        # Read current orientation (default to 1 = normal if absent)
-        current_orientation = exif_dict.get("0th", {}).get(
-            piexif.ImageIFD.Orientation, 1
-        )
-
-        rotation_map = CW_ORIENTATION_MAP if clockwise else CCW_ORIENTATION_MAP
-        new_orientation = rotation_map.get(current_orientation, 6 if clockwise else 8)
-
-        exif_dict.setdefault("0th", {})[piexif.ImageIFD.Orientation] = new_orientation
-
-        exif_bytes = piexif.dump(exif_dict)
-        piexif.insert(exif_bytes, file_path)
-
-        direction = "CW" if clockwise else "CCW"
-        logger.info(
-            f"Lossless EXIF rotate {direction}: orientation {current_orientation} -> "
-            f"{new_orientation} for {file_path}"
-        )
-        return True
-    except Exception as exc:
-        logger.exception(f"EXIF rotation failed for {file_path}: {exc}")
-        return False
+    logger.info("Lossless EXIF rotate %s: orientation %s -> %s for %s",
+                "CW" if clockwise else "CCW", current, new_orientation, file_path)
+    return True
 
 
 def _rotate_via_pil(file_path: str, clockwise: bool) -> bool:
-    """Rotate an image using PIL transpose and re-save (lossy for compressed formats)."""
-    try:
-        img = Image.open(file_path)
-        # Turn from what the viewer shows: the re-save drops the EXIF orientation,
-        # and rotating the stored pixels of a tagged image would cancel out.
-        shown = upright(img)
-
-        if clockwise:
-            rotated = shown.transpose(Image.Transpose.ROTATE_270)
-        else:
-            rotated = shown.transpose(Image.Transpose.ROTATE_90)
-
-        # Preserve original format
-        fmt = img.format or Path(file_path).suffix.lstrip(".").upper()
-        if fmt == "JPG":
-            fmt = "JPEG"
-
-        save_kwargs: dict = {}
-        if fmt == "PNG":
-            save_kwargs["compress_level"] = 6
-        elif fmt == "JPEG":
-            save_kwargs["quality"] = 95
-            # Ensure RGB mode for JPEG
-            if rotated.mode in ("RGBA", "P"):
-                rotated = rotated.convert("RGB")
-        elif fmt == "WEBP":
-            save_kwargs["quality"] = 90
-
-        rotated.save(file_path, format=fmt, **save_kwargs)
-
-        direction = "CW" if clockwise else "CCW"
-        logger.info(f"PIL rotate {direction}: {file_path}")
-        return True
-    except Exception as exc:
-        logger.exception(f"PIL rotation failed for {file_path}: {exc}")
+    """Decode, turn from what is shown, and save back with the source's metadata."""
+    fmt = in_place_format(file_path)
+    if fmt is None:
         return False
+    try:
+        with Image.open(file_path) as img:
+            # Turn from what the viewer shows: the rewrite drops the orientation
+            # tag, and rotating the stored pixels of a tagged image would cancel out.
+            upright = transpose_for(img, exif_orientation(img))
+            rotated = upright.transpose(
+                Image.Transpose.ROTATE_270 if clockwise else Image.Transpose.ROTATE_90)
+            save_kwargs = carried_save_kwargs(img, fmt, file_path)
+        replace_atomically(file_path, lambda tmp: rotated.save(tmp, format=fmt, **save_kwargs))
+    except IMAGE_READ_ERRORS:
+        logger.warning("PIL rotation failed for %s", file_path, exc_info=True)
+        return False
+    logger.info("PIL rotate %s: %s", "CW" if clockwise else "CCW", file_path)
+    return True
 
 
 def lossless_rotate(file_path: str, clockwise: bool = True) -> bool:
-    """Rotate an image file by 90 degrees.
+    """Rotate an image file by 90 degrees; True when the file on disk was turned.
 
-    For JPEG files, attempts a truly lossless rotation by modifying the EXIF
-    Orientation tag via *piexif*.  Falls back to PIL transpose + re-save when
-    piexif is not installed or for non-JPEG formats.
-
-    Args:
-        file_path: Absolute path to the image file.
-        clockwise: If True rotate 90 degrees clockwise; otherwise counter-clockwise.
-
-    Returns:
-        True if the rotation was applied successfully, False otherwise.
+    A JPEG gets a new EXIF orientation and nothing else changes. Other
+    formats (and a JPEG whose segments can't be parsed) are re-saved with
+    their metadata; a file a re-save can't keep whole — camera RAW, HEIC /
+    JXL / SVG, multi-frame (see ``in_place_save.can_rewrite_in_place``) — is
+    refused and left untouched. The photo's Modify recipe turns with it
+    (``recipe.turned_with_file``) and stays keyed to the file.
     """
     if not Path(file_path).is_file():
-        logger.error(f"File not found: {file_path}")
+        logger.error("File not found: %s", file_path)
         return False
+    size = image_dimensions(file_path)          # upright, before the turn
 
-    # Attempt lossless EXIF rotation for JPEG files first; fall through to PIL
-    # if piexif is unavailable or the EXIF-only rotation fails.
-    if _is_jpeg(file_path) and _rotate_via_exif(file_path, clockwise):
+    def keep_recipe(recipe: Recipe) -> Recipe | None:
+        if size is None:
+            return None
+        return turned_with_file(recipe, clockwise=clockwise, size=size)
+
+    return carry_recipe(file_path, lambda: _turn(file_path, clockwise), keep_recipe)
+
+
+def _turn(file_path: str, clockwise: bool) -> bool:
+    if in_place_format(file_path) == "JPEG" and _rotate_jpeg_tag(file_path, clockwise):
         return True
-
+    if not can_rewrite_in_place(file_path):
+        logger.warning("Refusing to rewrite %s: its format or frames can't be saved back whole",
+                       file_path)
+        return False
     return _rotate_via_pil(file_path, clockwise)

@@ -7,6 +7,10 @@ import os
 import sys
 from pathlib import Path
 
+# Bumped when the order a cache holds changes meaning: 2 = names in natural
+# order (img2 before img10). An older cache is ignored and rewritten.
+_FORMAT = 2
+
 
 def _cache_dir() -> Path:
     if sys.platform == "win32":
@@ -27,7 +31,7 @@ def load(folder: str, *, sort_by: str, ascending: bool) -> list[str] | None:
         data = json.loads(_cache_path(folder).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    if data.get("folder_mtime_ns") != st.st_mtime_ns:
+    if data.get("format") != _FORMAT or data.get("folder_mtime_ns") != st.st_mtime_ns:
         return None
     if data.get("sort_by") != sort_by or data.get("ascending") != ascending:
         return None
@@ -45,6 +49,7 @@ def save(folder: str, images: list[str], *, sort_by: str, ascending: bool) -> No
         out.write_text(
             json.dumps(
                 {
+                    "format": _FORMAT,
                     "folder_mtime_ns": st.st_mtime_ns,
                     "sort_by": sort_by,
                     "ascending": ascending,

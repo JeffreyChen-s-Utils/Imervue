@@ -47,6 +47,8 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from Imervue.system.atomic_write import write_text_atomically
+
 logger = logging.getLogger("Imervue.image.annotations")
 
 SCHEMA_VERSION: int = 1
@@ -148,10 +150,7 @@ def save(image_path: str | Path, layer: AnnotationLayer) -> Path:
             except OSError as exc:
                 logger.warning("can't remove empty sidecar %s: %s", path, exc)
         return path
-    path.write_text(
-        json.dumps(layer.to_dict(), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_text_atomically(path, json.dumps(layer.to_dict(), indent=2, ensure_ascii=False) + "\n")
     return path
 
 

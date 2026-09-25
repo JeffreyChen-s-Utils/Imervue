@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QApplication, QTreeView, QFileSystemModel, QMenu,
 )
 
+from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gui.folder_thumbnail_model import clamp_icon_size
 
 if TYPE_CHECKING:
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_in_file_manager
+from Imervue.system.file_transfer import carry_along, carry_sidecars, is_same_file
 import contextlib
 import logging
 
@@ -567,7 +569,7 @@ class _FileTreeView(QTreeView):
         if not new_name or new_name == target.name:
             return
         new_path = target.with_name(new_name)
-        if new_path.exists():
+        if new_path.exists() and not is_same_file(target, new_path):   # case-only is fine
             if hasattr(self._main_window, "toast"):
                 self._main_window.toast.warning(
                     lang.get("tree_rename_exists", "A file with that name already exists"),
@@ -581,6 +583,8 @@ class _FileTreeView(QTreeView):
                     f"{lang.get('tree_rename_failed', 'Rename failed')}: {exc}",
                 )
             return
+        # Sidecars and saved ratings / tags follow (every file's, for a folder).
+        carry_along([(str(target), str(new_path))], move=True)
         self._refresh_tree()
         if hasattr(self._main_window, "toast"):
             self._main_window.toast.success(
@@ -590,7 +594,7 @@ class _FileTreeView(QTreeView):
             )
 
     def _duplicate_file(self, path: str) -> None:
-        """Copy ``path`` to a sibling with a "(copy)" suffix."""
+        """Copy ``path`` to a sibling with a "(copy)" suffix, its sidecars with it."""
         import shutil
         lang = language_wrapper.language_word_dict
         source = Path(path)
@@ -605,6 +609,7 @@ class _FileTreeView(QTreeView):
                     f"{lang.get('tree_duplicate_failed', 'Duplicate failed')}: {exc}",
                 )
             return
+        carry_sidecars([(str(source), str(candidate))], move=False)
         self._refresh_tree()
         if hasattr(self._main_window, "toast"):
             self._main_window.toast.success(
@@ -739,16 +744,19 @@ class _FileTreeView(QTreeView):
                            done: list[str], failed: list[str]) -> None:
         self._trash_workers.discard(worker)
         worker.deleteLater()
-        landed = set(done)
+        # What the Recycle Bin could not take (a memory card, a network share)
+        # goes for good only if the user says so.
+        landed = set(done) | set(offer_permanent_delete(self, failed))
         for request in batch:
             request.on_done([p for p in request.paths if p in landed])
-        if failed and hasattr(self._main_window, "toast"):
+        still_there = [path for path in failed if path not in landed]
+        if still_there and hasattr(self._main_window, "toast"):
             lang = language_wrapper.language_word_dict
             self._main_window.toast.warning(
                 lang.get(
                     "tree_delete_failed_count",
                     "Couldn't delete {count} item(s)",
-                ).format(count=len(failed)),
+                ).format(count=len(still_there)),
             )
         self._pump_trash_queue()
 

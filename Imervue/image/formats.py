@@ -7,16 +7,34 @@ takes its set from here instead.
 """
 from __future__ import annotations
 
+from Imervue.image.avif_support import AVIF_EXTENSIONS
 from Imervue.image.heif_support import HEIF_EXTENSIONS, ensure_heif_opener
 from Imervue.image.jxl_support import JXL_EXTENSIONS, ensure_jxl_opener
 from Imervue.image.video_frames import VIDEO_EXTENSIONS
 
-RAW_EXTENSIONS: frozenset[str] = frozenset({".cr2", ".nef", ".arw", ".dng", ".raf", ".orf"})
-"""Camera RAW formats, decoded through rawpy."""
+RAW_EXTENSIONS: frozenset[str] = frozenset({
+    ".cr2", ".cr3", ".crw",            # Canon
+    ".nef", ".nrw",                    # Nikon
+    ".arw", ".srf", ".sr2",            # Sony
+    ".dng",                            # Adobe DNG (phones, Leica, Pentax, Ricoh...)
+    ".raf",                            # Fujifilm
+    ".orf",                            # Olympus / OM System
+    ".rw2", ".rwl",                    # Panasonic, Leica
+    ".pef",                            # Pentax
+    ".srw",                            # Samsung
+    ".3fr", ".iiq", ".mef", ".mos",    # Hasselblad, Phase One, Mamiya, Leaf
+    ".erf", ".mrw", ".kdc", ".dcr",    # Epson, Minolta, Kodak
+})
+"""Camera RAW formats, decoded through rawpy (LibRaw).
+
+Sigma's ``.x3f`` is left out: LibRaw reads it only when built with
+``USE_X3FTOOLS``, which rawpy's wheels are not. So is the bare ``.raw``,
+which too many non-camera files share.
+"""
 
 STILL_IMAGE_EXTENSIONS: frozenset[str] = frozenset({
     ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng", ".svg",
-}) | RAW_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS
+}) | RAW_EXTENSIONS | HEIF_EXTENSIONS | AVIF_EXTENSIONS | JXL_EXTENSIONS
 """Every still-image format the viewer opens; what the library indexes."""
 
 VIEWER_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
@@ -24,9 +42,10 @@ VIEWER_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
 
 
 def ensure_pillow_opener(ext: str) -> None:
-    """Register the optional Pillow codec ``ext`` needs (HEIF / AVIF or JPEG XL), if any.
+    """Register the optional Pillow codec ``ext`` needs (HEIC / HEIF or JPEG XL), if any.
 
-    A no-op for every other extension, and when the codec package is missing.
+    A no-op for every other extension (AVIF included: Pillow reads it
+    itself), and when the codec package is missing.
     """
     ext = ext.lower()
     if ext in HEIF_EXTENSIONS:

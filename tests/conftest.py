@@ -317,12 +317,59 @@ def _isolate_user_settings(tmp_path, monkeypatch):
         mod, "_user_settings_path",
         lambda: tmp_path / "user_setting.json",
     )
+    # A test that loads a broken settings file must not make the next one's saves keep copies.
+    from Imervue.system.unreadable_guard import UnreadableFileGuard
+    monkeypatch.setattr(mod, "_unreadable_guard", UnreadableFileGuard(mod._settings_logger))
     try:
         yield
     finally:
         mod.cancel_pending_save()
         mod.user_setting_dict.clear()
         mod.user_setting_dict.update(original)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_recipe_store(tmp_path, monkeypatch):
+    """Point the recipe store singleton at a throw-away file, never the real ``recipes.json``.
+
+    Dialog tests save Modify recipes through the global ``recipe_store``; without
+    this they landed in the developer's own store under ``%LOCALAPPDATA%``.
+    """
+    from Imervue.image.recipe_store import recipe_store
+    monkeypatch.setattr(recipe_store, "_path", tmp_path / "recipes" / "recipes.json")
+    recipe_store._reset_for_tests()  # noqa: SLF001 - drop state loaded from elsewhere
+    try:
+        yield
+    finally:
+        recipe_store._reset_for_tests()  # noqa: SLF001
+
+
+@pytest.fixture(autouse=True)
+def _keep_what_the_bin_refused(monkeypatch):
+    """Answer "Keep Them" to the permanent-delete question, so no test blocks on its modal.
+
+    A failed trash in a test (a stub worker reporting failures) would otherwise
+    open ``QMessageBox.exec`` and wait forever. Tests that need the other
+    answer set ``_ask_to_delete_permanently`` themselves.
+    """
+    from Imervue.gui import trash_failure_notice
+    monkeypatch.setattr(trash_failure_notice, "_ask_to_delete_permanently",
+                        lambda _parent, _paths: False)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_library_db(tmp_path):
+    """Point the library index at a throw-away DB, never the real ``library.db``.
+
+    Renames and moves re-point the library's rows (notes, cull flags, tags), so
+    a test that moves a file would otherwise open the developer's own catalog.
+    """
+    from Imervue.library import image_index
+    image_index.set_db_path(tmp_path / "library.db")
+    try:
+        yield
+    finally:
+        image_index.close()
 
 
 # ===========================
@@ -338,7 +385,7 @@ def qapp():
     """
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
     # Don't quit the app here — quitting it makes subsequent tests in the
     # same session unable to recreate it on some platforms. The dedicated
     # ``_qt_session_teardown`` autouse fixture below handles end-of-session

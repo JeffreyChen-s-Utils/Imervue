@@ -16,11 +16,12 @@ from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QSlider, QVBoxLayout, 
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.hsl_mixer import BANDS, apply_hsl
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -47,7 +48,7 @@ class _HslWorker(QThread):
             arr = apply_hsl(load_rgba(self._path), self._adjustments)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("HSL mix failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -112,7 +113,7 @@ class HslMixerDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_hsl.png")
+        out_path = Path(output_path(self._path, "hsl"))
         self._worker = _HslWorker(self._path, self._adjustments(), str(out_path))
         self._worker.done.connect(self._on_done)
         self._worker.start()

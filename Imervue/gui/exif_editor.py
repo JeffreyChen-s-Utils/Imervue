@@ -1,18 +1,26 @@
 """
 EXIF 元資料編輯對話框
-Edit EXIF metadata fields and save back to file using piexif.
-Falls back gracefully if piexif is not installed.
+Edit a handful of EXIF text fields and save them back to the file.
+
+The reading, encoding and writing live in :mod:`Imervue.image.exif_fields`:
+a JPEG or WebP is edited through Pillow alone (only its EXIF block is
+rewritten), and other formats get an explanation instead.
 """
 from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
 
+from PIL import Image
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QPushButton, QLabel, QGroupBox,
 )
 
+from Imervue.image.exif_fields import (
+    EDITABLE_FIELDS, can_edit, load_exif, read_fields, save_fields,
+)
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -21,38 +29,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.exif_editor")
 
-
-def _try_import_piexif():
-    try:
-        import piexif
-        import piexif.helper  # a submodule ``import piexif`` does not load (UserComment)
-        return piexif
-    except ImportError:
-        return None
-
-
-def _decode_user_comment(piexif, raw: bytes) -> str:
-    """Text of an EXIF UserComment, dropping its 8-byte character-code prefix.
-
-    A value without a recognised prefix (or too short for one) is shown as UTF-8.
-    """
-    try:
-        return piexif.helper.UserComment.load(raw)
-    except ValueError:
-        return raw.decode("utf-8", errors="replace")
+_GPS_IFD = 0x8825
 
 
 class ExifEditorDialog(QDialog):
-
-    # 可編輯的欄位 (IFD, tag_name, label_key, default_label)
-    _EDITABLE = [
-        ("0th", "ImageDescription", "exif_edit_description", "Description"),
-        ("0th", "Artist", "exif_edit_artist", "Artist"),
-        ("0th", "Copyright", "exif_edit_copyright", "Copyright"),
-        ("0th", "Make", "exif_edit_make", "Make"),
-        ("0th", "Model", "exif_edit_model", "Model"),
-        ("Exif", "UserComment", "exif_edit_user_comment", "User Comment"),
-    ]
+    """Edit the description / artist / copyright / camera / comment tags of one file."""
 
     def __init__(self, main_gui: GPUImageView, path: str):
         super().__init__(main_gui.main_window)
@@ -64,65 +45,48 @@ class ExifEditorDialog(QDialog):
         self.setMinimumWidth(450)
 
         layout = QVBoxLayout(self)
-
-        self._piexif = _try_import_piexif()
-        if not self._piexif:
-            self._build_missing_piexif_ui(layout, lang)
+        self._fields: dict[int, QLineEdit] = {}
+        if not can_edit(path):
+            self._build_unsupported_ui(layout, lang)
             return
 
-        self._exif_dict = self._load_exif_dict(path)
-        self._fields: dict[tuple[str, str], QLineEdit] = {}
-        layout.addWidget(self._build_fields_group(lang))
-        self._append_gps_label(layout)
+        exif = self._load_exif(path)
+        layout.addWidget(self._build_fields_group(lang, read_fields(exif)))
+        self._append_gps_label(layout, exif)
         layout.addLayout(self._build_button_row(lang))
 
-    def _build_missing_piexif_ui(self, layout, lang) -> None:
+    def _build_unsupported_ui(self, layout, lang) -> None:
         layout.addWidget(QLabel(
             lang.get(
-                "exif_editor_no_piexif",
-                "piexif package is required for EXIF editing.\n"
-                "Install with: pip install piexif",
+                "exif_editor_unsupported",
+                "EXIF can be edited in JPEG and WebP files.",
             )
         ))
         close_btn = QPushButton(lang.get("exif_editor_close", "Close"))
         close_btn.clicked.connect(self.reject)
         layout.addWidget(close_btn)
 
-    def _load_exif_dict(self, path: str) -> dict:
+    @staticmethod
+    def _load_exif(path: str) -> Image.Exif:
         try:
-            return self._piexif.load(path)
-        except (ValueError, OSError):
-            return {
-                "0th": {}, "Exif": {}, "GPS": {},
-                "1st": {}, "Interop": {}, "thumbnail": None,
-            }
+            return load_exif(path)
+        except IMAGE_READ_ERRORS:
+            logger.warning("Could not read EXIF of %s", path, exc_info=True)
+            return Image.Exif()
 
-    def _build_fields_group(self, lang) -> QGroupBox:
+    def _build_fields_group(self, lang, values: dict[int, str]) -> QGroupBox:
         form = QFormLayout()
-        for ifd_name, tag_name, label_key, default_label in self._EDITABLE:
-            edit = QLineEdit()
-            self._prefill_field(edit, ifd_name, tag_name)
-            self._fields[(ifd_name, tag_name)] = edit
-            form.addRow(lang.get(label_key, default_label) + ":", edit)
+        for field in EDITABLE_FIELDS:
+            edit = QLineEdit(values.get(field.tag, ""))
+            self._fields[field.tag] = edit
+            form.addRow(lang.get(field.label_key, field.label) + ":", edit)
         grp = QGroupBox(lang.get("exif_editor_fields", "Metadata Fields"))
         grp.setLayout(form)
         return grp
 
-    def _prefill_field(self, edit: QLineEdit, ifd_name: str, tag_name: str) -> None:
-        ifd_key = getattr(self._piexif.ImageIFD, tag_name, None) \
-            or getattr(self._piexif.ExifIFD, tag_name, None)
-        if ifd_key is None:
-            return
-        raw = self._exif_dict.get(ifd_name, {}).get(ifd_key, b"")
-        if tag_name == "UserComment" and isinstance(raw, bytes):
-            edit.setText(_decode_user_comment(self._piexif, raw))
-        elif isinstance(raw, bytes):
-            edit.setText(raw.decode("utf-8", errors="replace"))
-        elif isinstance(raw, str):
-            edit.setText(raw)
-
-    def _append_gps_label(self, layout) -> None:
-        gps = self._exif_dict.get("GPS", {})
+    @staticmethod
+    def _append_gps_label(layout, exif: Image.Exif) -> None:
+        gps = exif.get_ifd(_GPS_IFD)
         if not gps:
             return
         gps_label = QLabel(f"GPS: {len(gps)} tag(s) present")
@@ -140,33 +104,14 @@ class ExifEditorDialog(QDialog):
         return btn_row
 
     def _save(self):
-        piexif = self._piexif
-        if not piexif:
-            return
-
-        for (ifd_name, tag_name), edit in self._fields.items():
-            text = edit.text()
-            ifd_key = getattr(piexif.ImageIFD, tag_name, None)
-            if ifd_key is None:
-                ifd_key = getattr(piexif.ExifIFD, tag_name, None)
-            if ifd_key is None:
-                continue
-
-            ifd = self._exif_dict.setdefault(ifd_name, {})
-
-            if tag_name == "UserComment":
-                # UserComment 需要特殊編碼；非 ASCII 用 UNICODE，否則會被換成 "?"
-                encoding = "ascii" if text.isascii() else "unicode"
-                ifd[ifd_key] = piexif.helper.UserComment.dump(text, encoding=encoding)
-            else:
-                ifd[ifd_key] = text.encode("utf-8")
-
         main_window = self._gui.main_window
+        values = {tag: edit.text() for tag, edit in self._fields.items()}
         try:
-            piexif.insert(piexif.dump(self._exif_dict), self._path)
-        # piexif's encoder fails in open-ended ways on a bad value: struct.error for
-        # an out-of-range number, KeyError for an unknown tag, even UnboundLocalError.
-        except Exception as e:  # noqa: BLE001 - piexif raises open-ended types
+            save_fields(self._path, values)
+        # Pillow's EXIF writer fails in open-ended ways on a bad value:
+        # struct.error for an out-of-range number, KeyError / TypeError for an
+        # odd tag, on top of the ValueError / OSError of a malformed or locked file.
+        except Exception as e:  # noqa: BLE001 - EXIF encoders raise open-ended types
             logger.warning("EXIF save failed for %s", self._path, exc_info=True)
             if hasattr(main_window, "toast"):
                 lang = language_wrapper.language_word_dict
@@ -185,6 +130,7 @@ class ExifEditorDialog(QDialog):
 
 
 def open_exif_editor(main_gui: GPUImageView):
+    """Open the EXIF editor on the image the viewer is showing."""
     images = main_gui.model.images
     if not images or main_gui.current_index >= len(images):
         return

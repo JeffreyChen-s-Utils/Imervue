@@ -21,7 +21,7 @@ from Imervue.mcp_server.tool_support import (
 _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
     "png", "jpeg", "jpg", "webp", "tiff", "tif", "bmp",
 })
-# Optional-backend output formats, routed through save_formats (HEIF / JXL).
+# Output formats a Pillow may lack, routed through save_formats (HEIC / AVIF / JXL).
 _EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "JXL"}
 _SHARPNESS_MAX_SIDE = 512
 
@@ -68,8 +68,8 @@ def list_images(folder: str, *, recursive: bool = False) -> dict[str, Any]:
 
 
 def read_image_metadata(path: str) -> dict[str, Any]:
-    """Return dimensions, format, EXIF tags, and XMP sidecar fields for
-    an image. Missing data is reported as the appropriate empty value
+    """Return dimensions, format, EXIF tags, and XMP fields (the sidecar,
+    else what the file embeds) for an image. Missing data is reported as the appropriate empty value
     rather than raising — a JPEG with no EXIF still returns its
     dimensions.
     """
@@ -84,24 +84,33 @@ def read_image_metadata(path: str) -> dict[str, Any]:
 def _populate_basic_image_info(image_path: Path, out: dict[str, Any]) -> None:
     from PIL import Image
 
-    from Imervue.image.orientation import QUARTER_TURN_CODES, exif_orientation
+    from Imervue.image.dimensions import image_dimensions
+    from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    ext = image_path.suffix.lower()
+    if ext in RAW_EXTENSIONS:
+        # libraw's size, not the embedded preview's Pillow would report.
+        size = image_dimensions(image_path)
+        if size is None:
+            out["error"] = "image probe failed: libraw can't read this RAW file"
+            return
+        out["width"], out["height"] = size
+        out["format"], out["mode"] = ext.lstrip(".").upper(), "RGB"
+        return
+    ensure_pillow_opener(ext)   # HEIC / AVIF / JPEG XL
     try:
         with Image.open(image_path) as img:
-            # The upright size the other tools (crop, resize, …) work in.
-            width, height = img.size
-            if exif_orientation(img) in QUARTER_TURN_CODES:
-                width, height = height, width
-            out["width"] = int(width)
-            out["height"] = int(height)
             out["format"] = img.format or ""
             out["mode"] = img.mode
     except IMAGE_READ_ERRORS as exc:
         out["error"] = f"image probe failed: {exc}"
+        return
+    # The upright size the other tools (crop, resize, …) work in.
+    out["width"], out["height"] = image_dimensions(image_path) or (0, 0)
 
 
 def _populate_exif(image_path: Path, out: dict[str, Any]) -> None:
-    from Imervue.image.info import get_exif_data
+    from Imervue.image.exif_merge import get_exif_data
     exif = get_exif_data(image_path) or {}   # {} for an unreadable file or EXIF block
     # EXIF values include byte strings / IFDRational; coerce to JSON-friendly types.
     out["exif"] = {str(k): json_safe(v) for k, v in exif.items()}
@@ -125,8 +134,8 @@ def _populate_xmp(image_path: Path, out: dict[str, Any]) -> None:
 
 
 def read_xmp_tags(path: str) -> dict[str, Any]:
-    """Return only the XMP sidecar fields for ``path`` — handy when
-    the caller wants tags / rating without paying the EXIF parse."""
+    """Return only the XMP fields for ``path`` (the sidecar, else what the
+    file embeds) — handy when the caller wants tags / rating alone."""
     image_path = validated_file(path)
     from Imervue.image import xmp_sidecar
     xmp = xmp_sidecar.load(image_path)
@@ -261,7 +270,7 @@ def puppet_inspect(path: str) -> dict[str, Any]:
 
 
 def _convert_via_save_formats(src: Path, dst: Path, fmt: str, quality: int) -> dict[str, Any]:
-    """Convert through save_formats for the optional HEIC/AVIF/JXL backends."""
+    """Convert through save_formats, which knows whether HEIC / AVIF / JXL can be written."""
     from Imervue.image.save_formats import save_image
     with open_upright(src) as opened:
         save_image(opened, str(dst), _EXTRA_FORMAT_NAMES[fmt], max(1, min(100, int(quality))))

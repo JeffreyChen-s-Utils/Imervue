@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 
 from Imervue.paint.adjustments import Adjustment
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.paint.compositing import LAYER_BLEND_MODES
 from Imervue.paint.document import (
     GROUP_BLEND_MODES,
@@ -50,15 +51,19 @@ FILE_EXTENSION = ".imervue"
 
 
 def save_document(document: PaintDocument, path: str | Path) -> None:
-    """Write ``document`` to a ``.imervue`` NPZ bundle on disk."""
+    """Write ``document`` to a ``.imervue`` NPZ bundle; a failure keeps the old file whole."""
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     arrays = _document_to_arrays(document)
-    # Pass a file object to bypass numpy's auto-".npz" suffix munging —
-    # the project uses ``.imervue`` as the user-facing extension and
-    # ``np.savez_compressed`` would otherwise append ``.npz`` silently.
-    with open(target, "wb") as fh:
-        np.savez_compressed(fh, **arrays)
+
+    def write(tmp: Path) -> None:
+        # Pass a file object to bypass numpy's auto-".npz" suffix munging —
+        # the project uses ``.imervue`` as the user-facing extension and
+        # ``np.savez_compressed`` would otherwise append ``.npz`` silently.
+        with open(tmp, "wb") as fh:
+            np.savez_compressed(fh, **arrays)
+
+    replace_atomically(target, write)
 
 
 def save_document_to_buffer(document: PaintDocument) -> bytes:

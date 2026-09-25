@@ -99,3 +99,10 @@ def test_export_empty_library_writes_zero(tmp_path):
     dest = tmp_path / "empty.json"
     assert album_io.export_albums(dest) == 0
     assert album_io.parse_albums(dest.read_text(encoding="utf-8")) == []
+
+
+def test_import_reads_a_file_saved_with_a_bom(tmp_path):
+    src = tmp_path / "albums.json"
+    src.write_bytes(b"\xef\xbb\xbf" + json.dumps(
+        {"albums": [{"name": "Best", "rules": {"min_rating": 5}}]}).encode("utf-8"))
+    assert album_io.import_albums(src) == 1

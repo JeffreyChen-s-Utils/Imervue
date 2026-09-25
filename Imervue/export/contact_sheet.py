@@ -46,17 +46,19 @@ def _resolve_page_size(key: str) -> QPageSize.PageSizeId:
 
 
 def _load_thumbnail(path: str, max_side: int) -> QImage | None:
-    """Load ``path`` as a QImage scaled so its long side <= ``max_side``."""
-    img = QImage(path)
-    if img.isNull():
+    """Load ``path`` as a QImage scaled so its long side <= ``max_side``; None if unreadable.
+
+    Decoded as the viewer shows it — upright, sRGB, RAW / HEIC included; a
+    plain QImage load ignored the EXIF orientation and the colour profile.
+    """
+    from Imervue.gpu_image_view.images.image_loader import decode_image
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    from Imervue.system.qimage_convert import pil_to_qimage
+    try:
+        return pil_to_qimage(decode_image(path, max_edge=max_side))
+    except IMAGE_READ_ERRORS:
+        logger.debug("Thumbnail of %s failed", path, exc_info=True)
         return None
-    if max(img.width(), img.height()) <= max_side:
-        return img
-    return img.scaled(
-        max_side, max_side,
-        Qt.AspectRatioMode.KeepAspectRatio,
-        Qt.TransformationMode.SmoothTransformation,
-    )
 
 
 def _draw_title(painter: QPainter, rect: QRect, title: str) -> int:

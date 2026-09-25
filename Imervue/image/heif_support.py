@@ -1,9 +1,9 @@
-"""HEIF / AVIF decode support via the optional ``pillow-heif`` backend.
+"""HEIC / HEIF decode support via the optional ``pillow-heif`` backend.
 
-iPhone photos default to HEIC and modern screenshots increasingly use AVIF;
-neither is decodable by stock Pillow. ``pillow-heif`` registers a Pillow
-opener so the normal raster load path handles both transparently — a single
-``register_heif_opener()`` call covers HEIF *and* AVIF in pillow-heif 1.x.
+iPhone photos default to HEIC, which stock Pillow can't decode.
+``pillow-heif`` registers a Pillow opener so the normal raster load path
+handles it transparently. AVIF is not part of it: pillow-heif 1.0 dropped
+its AVIF opener because Pillow reads AVIF itself (:mod:`Imervue.image.avif_support`).
 
 The dependency is optional (it bundles libheif binaries we don't want to force
 on every install). When it is absent these files simply fail to load and the
@@ -17,11 +17,11 @@ from pathlib import Path
 
 logger = logging.getLogger("Imervue.image.heif_support")
 
-HEIF_EXTENSIONS: frozenset[str] = frozenset({".heic", ".heif", ".hif", ".avif"})
+HEIF_EXTENSIONS: frozenset[str] = frozenset({".heic", ".heif", ".hif"})
 
 
 def is_heif_path(path: str) -> bool:
-    """Return True when ``path`` has a HEIF/AVIF extension."""
+    """Return True when ``path`` has a HEIC / HEIF extension."""
     return Path(path).suffix.lower() in HEIF_EXTENSIONS
 
 
@@ -49,12 +49,12 @@ def ensure_heif_opener() -> bool:
     try:
         return _register_heif_opener()
     except ImportError:
-        logger.info("pillow-heif not installed — HEIC/AVIF files cannot be decoded.")
+        logger.info("pillow-heif not installed — HEIC / HEIF files cannot be decoded.")
         return False
 
 
 def needs_heif_hint(paths: list[str], opener_available: bool) -> bool:
-    """True when a HEIF/AVIF file is present but no decoder is available."""
+    """True when a HEIC / HEIF file is present but no decoder is available."""
     if opener_available:
         return False
     return any(is_heif_path(p) for p in paths)

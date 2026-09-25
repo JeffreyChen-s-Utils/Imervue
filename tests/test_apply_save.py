@@ -1,15 +1,18 @@
 """Tests for the shared apply-and-save helpers (EffectWorker, sliders, paths)."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from Imervue.gui._apply_save import (
     EffectWorker,
     labeled_slider,
     output_path,
+    output_paths,
 )
 
 
@@ -17,6 +20,39 @@ def test_output_path_tags_sibling_png():
     out = output_path("/photos/raw/IMG_001.jpg", "emboss")
     assert Path(out).name == "IMG_001_emboss.png"
     assert Path(out).parent == Path("/photos/raw")
+
+
+def test_output_path_never_names_an_existing_file(tmp_path):
+    """A second run of a tool saved over the first result (and any retouching done to it)."""
+    source = tmp_path / "IMG.jpg"
+    (tmp_path / "IMG_clahe.png").write_bytes(b"first run")
+    (tmp_path / "IMG_clahe_1.png").write_bytes(b"second run")
+    assert Path(output_path(str(source), "clahe")).name == "IMG_clahe_2.png"
+
+
+def test_output_path_keeps_a_requested_extension(tmp_path):
+    source = tmp_path / "IMG.jpg"
+    (tmp_path / "IMG_straight.jpg").write_bytes(b"x")
+    assert Path(output_path(str(source), "straight", ".jpg")).name == "IMG_straight_1.jpg"
+
+
+@pytest.mark.skipif(os.path.normcase("A") != os.path.normcase("a"),
+                    reason="the file system here tells cases apart")
+def test_output_path_compares_names_as_the_file_system_does(tmp_path):
+    (tmp_path / "img_CLAHE.PNG").write_bytes(b"x")
+    assert Path(output_path(str(tmp_path / "img.jpg"), "clahe")).name == "img_clahe_1.png"
+
+
+def test_output_paths_numbers_a_group_together(tmp_path):
+    """Frequency separation's low / high layers keep a shared number."""
+    source = str(tmp_path / "IMG.jpg")
+    (tmp_path / "IMG_high.png").write_bytes(b"x")       # only one half taken
+    assert [Path(p).name for p in output_paths(source, ["low", "high"])] == [
+        "IMG_low_1.png", "IMG_high_1.png"]
+
+
+def test_output_path_in_a_missing_folder_is_the_plain_name(tmp_path):
+    assert Path(output_path(str(tmp_path / "gone" / "a.jpg"), "x")).name == "a_x.png"
 
 
 def test_labeled_slider_initial_and_tracking(qapp):
@@ -121,3 +157,14 @@ def test_tools_load_the_current_image_through_load_rgba():
     inline = re.compile(r'Image\.open\([\w.]+\)\.convert\("RGBA"\)')
     assert sorted(p.name for p in root.glob("*.py") if inline.search(p.read_text(encoding="utf-8"))) == []
 
+
+def test_load_rgba_develops_raw_and_rasterises_svg(tmp_path, monkeypatch):
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.gui._apply_save import load_rgba
+    monkeypatch.setattr(image_loader, "_load_raw",
+                        lambda _p, thumbnail: np.zeros((30, 45, 3), dtype=np.uint8))
+    assert load_rgba(str(tmp_path / "shot.nef")).shape == (30, 45, 4)
+    svg = tmp_path / "a.svg"
+    svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8">'
+                   '<rect width="12" height="8" fill="red"/></svg>', encoding="utf-8")
+    assert load_rgba(str(svg)).shape == (8, 12, 4)

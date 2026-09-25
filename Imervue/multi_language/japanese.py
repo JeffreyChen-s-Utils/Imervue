@@ -19,7 +19,7 @@ _NO_EXPORT_IMAGES = '書き出せる画像がありません。'
 _EXPORT_FAILED = '書き出しに失敗：{err}'
 
 japanese_word_dict = {
-    "heif_install_hint": "HEIC/AVIF 画像を表示するには pillow-heif をインストールしてください。",
+    "heif_install_hint": "HEIC 画像を表示するには pillow-heif をインストールしてください。",
     "exif_location": "場所",
     "exif_coordinates": "座標",
     "exif_video_label": "動画",
@@ -333,7 +333,7 @@ japanese_word_dict = {
     # EXIF エディター
     "exif_edit_button": "EXIF を編集",
     "exif_editor_title": "EXIF メタデータを編集",
-    "exif_editor_no_piexif": "piexif パッケージが必要です。\nインストール：pip install piexif",
+    "exif_editor_unsupported": "EXIF を編集できるのは JPEG と WebP ファイルです。",
     "exif_editor_fields": "メタデータフィールド",
     "exif_editor_save": "保存",
     "exif_editor_cancel": _JAPANESE_TR30AD30E330F330BB,
@@ -1425,6 +1425,8 @@ japanese_word_dict = {
     "token_rename_col_new": "新しい名前",
     "token_rename_col_original": "元の名前",
     "token_rename_col_status": "ステータス",
+    "token_rename_status_ok": "OK",
+    "token_rename_status_conflict": "競合",
     # メタデータエクスポート
     "metadata_export_title": "メタデータを書き出し（CSV / JSON）",
     "metadata_export_format": "形式：",
@@ -2743,6 +2745,10 @@ japanese_word_dict = {
     "file_filter_icc_profiles": "ICC プロファイル",
     "file_filter_comic_zip": "コミックアーカイブ",
     "batch_rotate_done": "{done}/{total} 件のファイルを回転しました",
+    "batch_rename_done": "{done}/{total} 件のファイル名を変更しました",
+    "batch_move_done": "{done}/{total} 件のファイルを移動しました",
+    "batch_copy_done": "{done}/{total} 件のファイルをコピーしました",
+    "batch_move_selected": "{count} 件のファイルを選択中",
     "zoom_limit_toast": "ズーム限界：{limit}",
     "anim_speed_toast": "速度：{speed}x",
     "annotation_load_failed": "読み込みに失敗しました：{error}",
@@ -2755,4 +2761,17 @@ japanese_word_dict = {
     "file_filter_imervue_brush": "Imervue ブラシ",
     "file_filter_other_brush": "他のペイントアプリのブラシ",
     "file_filter_other_palette": "他の画像エディタのパレット",
+    "modify_crop_cannot_overwrite": "このファイルは上書きできません（カメラ RAW、HEIC、アニメーション、複数ページ）。トリミング結果はエクスポートで保存してください。",
+    "export_metadata": "メタデータ：",
+    "export_replace_title": "ファイルを置き換えますか？",
+    "export_replace": "「{name}」は既に存在します。置き換えますか？",
+    "export_replace_source": "「{name}」はエクスポート中の元の写真です。このコピーで元の写真を置き換えますか？コピーには写真の編集が適用され、上で選んだメタデータだけが残ります。",
+    "export_metadata_all": "すべて保持（カメラ・日時・位置）",
+    "export_metadata_no_location": "位置情報以外を保持",
+    "export_metadata_none": "すべて削除",
+    "settings_unreadable_title": "設定ファイルを読み込めません",
+    "settings_unreadable": "Imervue は設定ファイルを読み込めませんでした:\n{path}\n\n既定の設定で起動しました。このファイルを上書きする前に、隣に {name}.unreadable-<日付>-<時刻> としてコピーを残します。以前の設定に戻すには、Imervue を終了してからそのコピーの名前を {name} に変更してください。",
+    "trash_left_in_place_title": "ごみ箱に移動できませんでした",
+    "trash_left_in_place": "削除した {count} 個のファイルをごみ箱に移動できず、ディスクに残っています。ドライブにごみ箱がない(メモリーカード、USB メモリ、ネットワークドライブ)か、ほかのプログラムが使用中です。\n\n{paths}\n\n完全に削除しますか？この操作は元に戻せません。",
+    "trash_keep_files": "残す",
 }

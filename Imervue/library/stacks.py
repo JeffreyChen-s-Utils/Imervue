@@ -11,12 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# RAW extensions we know about. Lowercase, with leading dot.
-RAW_EXTENSIONS = frozenset({
-    ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".srf", ".sr2",
-    ".dng", ".raf", ".orf", ".rw2", ".pef", ".raw", ".x3f",
-    ".erf", ".mef", ".mrw", ".kdc", ".dcr",
-})
+from Imervue.image.formats import RAW_EXTENSIONS
 
 # Preview-style extensions that pair with RAW. Order matters — higher-index
 # extensions win when multiple previews exist for the same stem.

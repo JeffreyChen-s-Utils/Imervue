@@ -15,11 +15,12 @@ from PySide6.QtWidgets import QComboBox, QDialog, QLabel, QSlider, QVBoxLayout, 
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.distort import MODES, distort
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -47,7 +48,7 @@ class _DistortWorker(QThread):
             arr = distort(load_rgba(self._path), self._mode, self._strength)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Distort failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -81,7 +82,7 @@ class DistortDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_distort.png")
+        out_path = Path(output_path(self._path, "distort"))
         self._worker = _DistortWorker(
             self._path, self._mode.currentData(),
             self._strength.value() / _STRENGTH_RANGE, str(out_path))

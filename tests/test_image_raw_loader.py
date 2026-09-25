@@ -63,7 +63,7 @@ def stub_rawpy(monkeypatch):
     fake = types.ModuleType("rawpy")
     fake.RawPy = _StubRaw   # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "rawpy", fake)
-    yield _StubRaw
+    return _StubRaw
 
 
 # ---------------------------------------------------------------
@@ -259,3 +259,33 @@ def test_raw_dimensions_lets_an_unexpected_error_through(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError, match="bug"):
         raw_dimensions(tmp_path / "a.cr2")
 
+
+
+# ---------------------------------------------------------------
+# develop_raw (real libraw)
+# ---------------------------------------------------------------
+
+
+@pytest.mark.parametrize("thumbnail", [False, True])
+def test_develop_raw_turns_libraw_errors_into_oserror(tmp_path, thumbnail):
+    """Qt-free, so the MCP server can develop RAW; its failures stay IMAGE_READ_ERRORS."""
+    rawpy = pytest.importorskip("rawpy")
+    from Imervue.image.raw_loader import develop_raw
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    path = tmp_path / "broken.nef"
+    path.write_bytes(b"not a raw file" * 20)
+    with pytest.raises(OSError, match="libraw can't decode") as caught:
+        develop_raw(path, thumbnail=thumbnail)
+    assert isinstance(caught.value, IMAGE_READ_ERRORS)
+    assert isinstance(caught.value.__cause__, rawpy.LibRawError)
+
+
+def test_develop_raw_pulls_in_no_qt():
+    """The MCP server imports it and must stay Qt-free."""
+    import subprocess
+    from pathlib import Path
+    code = ("import sys; import Imervue.image.raw_loader; "
+            "print(any(m.startswith('PySide6') for m in sys.modules))")
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,  # noqa: S603 - fixed argv
+                            check=True, cwd=str(Path(__file__).parent.parent))
+    assert result.stdout.strip() == "False"

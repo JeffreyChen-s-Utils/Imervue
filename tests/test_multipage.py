@@ -9,7 +9,7 @@ from Imervue.image.multipage import (
     combine_to_multipage,
     multipage_format,
     split_multipage,
-    split_page_name,
+    split_page_stem,
 )
 
 
@@ -30,9 +30,9 @@ def test_multipage_format():
     assert multipage_format(".png") is None
 
 
-def test_split_page_name_zero_padded():
-    assert split_page_name("/a/doc.tiff", 2, ".png") == "doc_page002.png"
-    assert split_page_name("doc.tiff", 0, "jpg") == "doc_page000.jpg"
+def test_split_page_stem_zero_padded():
+    assert split_page_stem("/a/doc.tiff", 2) == "doc_page002"
+    assert split_page_stem("my.doc.tiff", 0) == "my.doc_page000"
 
 
 def test_combine_rejects_bad_destination(tmp_path):
@@ -68,3 +68,86 @@ def test_combine_pdf_writes_file(tmp_path):
     combine_to_multipage(paths, str(dst))
     assert dst.exists()
     assert dst.stat().st_size > 0
+
+
+def _three_page_tiff(tmp_path):
+    paths = [_png(tmp_path / f"p{i}.png", v) for i, v in enumerate((10, 128, 250))]
+    dst = tmp_path / "doc.tiff"
+    combine_to_multipage(paths, str(dst))
+    return dst
+
+
+def test_split_names_pages_with_the_extension_lowercased(tmp_path):
+    pages = split_multipage(str(_three_page_tiff(tmp_path)), str(tmp_path / "out"), "JPG")
+    assert [p.name for p in pages] == ["doc_page000.jpg", "doc_page001.jpg", "doc_page002.jpg"]
+
+
+def test_splitting_again_keeps_the_earlier_pages(tmp_path):
+    """A second split into the same folder replaced the first one's pages without a word."""
+    src = _three_page_tiff(tmp_path)
+    out = tmp_path / "out"
+    split_multipage(str(src), str(out))
+    retouched = out / "doc_page001.png"
+    retouched.write_bytes(b"retouched since")
+    again = split_multipage(str(src), str(out))
+    assert retouched.read_bytes() == b"retouched since"
+    assert [p.name for p in again] == ["doc_page000_1.png", "doc_page001_1.png", "doc_page002_1.png"]
+    assert all(p.is_file() for p in again)
+
+
+# ---------------------------------------------------------------------------
+# combine: pages as the viewer shows them, written in one step
+# ---------------------------------------------------------------------------
+
+
+def test_combine_turns_a_phone_photo_upright(tmp_path):
+    """Image.open kept the stored orientation: a portrait photo lay on its side in the PDF/TIFF."""
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    src = tmp_path / "portrait.jpg"
+    Image.new("RGB", (40, 20), "white").save(src, exif=exif)
+    dst = tmp_path / "doc.tiff"
+    combine_to_multipage([str(src)], str(dst))
+    with Image.open(dst) as page:
+        assert page.size == (20, 40)
+
+
+def test_combine_converts_a_wide_gamut_page_to_srgb(tmp_path):
+    """A PDF page carries no colour profile, so a Display P3 photo came out washed out."""
+    from _icc_profiles import DISPLAY_P3
+    src = tmp_path / "p3.png"
+    Image.new("RGB", (8, 8), (0, 255, 0)).save(src, icc_profile=DISPLAY_P3)
+    dst = tmp_path / "doc.tiff"
+    combine_to_multipage([str(src)], str(dst))
+    with Image.open(dst) as page:
+        assert "icc_profile" not in page.info
+        assert page.convert("RGB").getpixel((0, 0))[:2] == (0, 255)
+
+
+def test_a_failed_combine_keeps_the_file_it_would_replace(tmp_path, monkeypatch):
+    """Saving straight to the target truncated it first: a failure lost the old document."""
+    page = _png(tmp_path / "a.png", 1)
+    dst = tmp_path / "doc.tiff"
+    dst.write_bytes(b"the document from last week")
+
+    def fail_midway(self, fp, *args, **kwargs):
+        with open(fp, "wb") as handle:
+            handle.write(b"half a page")
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(Image.Image, "save", fail_midway)
+    with pytest.raises(OSError):
+        combine_to_multipage([page], str(dst))
+    assert dst.read_bytes() == b"the document from last week"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["a.png", "doc.tiff"]
+
+
+def test_combine_can_replace_one_of_its_own_pages(tmp_path):
+    first = _png(tmp_path / "a.png", 10)
+    dst = tmp_path / "a.tiff"
+    Image.new("RGB", (16, 16), (200, 0, 0)).save(dst)
+    result = combine_to_multipage([str(dst), first], str(dst))
+    assert result["pages"] == 2
+    with Image.open(dst) as doc:
+        assert doc.n_frames == 2
+        assert doc.convert("RGB").getpixel((0, 0)) == (200, 0, 0)

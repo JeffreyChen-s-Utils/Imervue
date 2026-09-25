@@ -31,10 +31,15 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.system.natural_sort import natural_key
+from Imervue.gui.trash_failure_notice import offer_permanent_delete
+from Imervue.image.shown import as_shown
+from Imervue.image.orientation import exif_orientation
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.image.dimensions import image_dimensions
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.perceptual_hash import dhash as _dhash
+from Imervue.image.perceptual_hash import upright
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -165,7 +170,7 @@ class _ScanWorker(QThread):
     def _collect_paths(self) -> list[str]:
         result = (self._walk_images() if self._recursive
                   else self._scandir_images())
-        result.sort(key=lambda p: os.path.basename(p).lower())
+        result.sort(key=lambda p: natural_key(os.path.basename(p)))
         return result
 
     def _walk_images(self) -> list[str]:
@@ -201,7 +206,7 @@ class _ScanWorker(QThread):
     @staticmethod
     def _perceptual_hash(path: str) -> str:
         with Image.open(path) as img:
-            return str(_dhash(img))
+            return str(_dhash(upright(img)))
 
     def _cluster_perceptual(
         self,
@@ -238,8 +243,9 @@ def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
     import numpy as np
     try:
         with Image.open(path) as src:
+            code = exif_orientation(src)
             src.thumbnail((size, size), Image.Resampling.LANCZOS)
-            img = src.convert("RGBA")
+            img = as_shown(src, code).convert("RGBA")
     except IMAGE_READ_ERRORS:
         return QPixmap()
     arr = np.array(img)
@@ -486,7 +492,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
     def _on_delete_finished(self, trashed: list, failed: list):
         import contextlib
         pending = getattr(self, "_pending_delete_items", {})
-        for path in trashed:
+        # What the Recycle Bin could not take (a memory card, a network share)
+        # goes for good only if the user says so.
+        removed = offer_permanent_delete(self, failed)
+        for path in [*trashed, *removed]:
             item = pending.pop(path, None)
             if item is None:
                 continue
@@ -497,7 +506,8 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
                 if parent is not None:
                     parent.removeChild(item)
         for path in failed:
-            logger.warning("Failed to delete %s", path)
+            if path not in removed:
+                logger.warning("Failed to delete %s", path)
         self._pending_delete_items = {}
         if self._delete_worker is not None:
             self._delete_worker.deleteLater()
@@ -507,7 +517,7 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         self._select_redundant_btn.setEnabled(True)
         self._status_label.setText(
             self._lang.get("duplicate_deleted", "{count} file(s) deleted").replace(
-                _COUNT_PLACEHOLDER, str(len(trashed))
+                _COUNT_PLACEHOLDER, str(len(trashed) + len(removed))
             ))
 
     def _select_redundant(self):

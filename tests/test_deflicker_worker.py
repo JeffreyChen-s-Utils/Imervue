@@ -95,3 +95,46 @@ def test_write_one_reports_failure_instead_of_raising(tmp_path, qapp, monkeypatc
     monkeypatch.setattr(deflicker_dialog.Path, "mkdir", _deny)
     assert worker._write_one(paths[0], frame) is False
     assert worker._write_corrected([frame]) == 0
+
+
+def test_jpeg_time_lapse_is_written_as_jpeg_with_its_exif(tmp_path, qapp):
+    """Every JPEG frame failed: an RGBA array can't be saved under a .jpg name."""
+    from PIL import Image
+    paths = []
+    for index, level in enumerate((100, 140, 90)):
+        exif = Image.Exif()
+        exif.get_ifd(0x8769)[0x9003] = f"2020:01:02 03:04:0{index}"
+        path = tmp_path / f"f{index}.jpg"
+        Image.new("RGB", (16, 8), (level,) * 3).save(path, quality=95, exif=exif)
+        paths.append(str(path))
+    worker = DeflickerWorker(paths, _opts())
+    assert worker._write_corrected(worker._load_frames()) == 3
+    for index in range(3):
+        with Image.open(tmp_path / "deflickered" / f"f{index}.jpg") as out:
+            assert out.format == "JPEG"
+            assert out.getexif().get_ifd(0x8769)[0x9003] == f"2020:01:02 03:04:0{index}"
+
+
+def test_raw_frames_are_developed_and_written_as_png(tmp_path, qapp, monkeypatch):
+    import numpy as np
+    from PIL import Image
+
+    from Imervue.gpu_image_view.images import image_loader
+    monkeypatch.setattr(image_loader, "_load_raw",
+                        lambda _p, thumbnail: np.full((30, 50, 3), 90, dtype=np.uint8))
+    paths = [str(tmp_path / f"f{i}.cr2") for i in range(2)]
+    worker = DeflickerWorker(paths, _opts())
+    assert worker._write_corrected(worker._load_frames()) == 2
+    with Image.open(tmp_path / "deflickered" / "f0.png") as out:
+        assert out.size == (50, 30)
+
+
+def test_tagged_frames_are_corrected_upright(tmp_path, qapp):
+    from PIL import Image
+
+    from _decode_samples import tagged_portrait
+    paths = [str(tagged_portrait(tmp_path / f"f{i}.png")) for i in range(2)]
+    worker = DeflickerWorker(paths, _opts())
+    worker._write_corrected(worker._load_frames())
+    with Image.open(tmp_path / "deflickered" / "f0.png") as out:
+        assert out.size == (20, 40)

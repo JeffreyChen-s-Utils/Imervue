@@ -46,3 +46,26 @@ def test_untagged_photo_is_returned_as_is(store, tmp_path):
     path = tmp_path / "plain.png"
     Image.new("RGB", (7, 5)).save(path)
     assert export_source.open_export_source(str(path)).size == (7, 5)
+
+
+def test_recipe_base_is_upright_for_a_new_or_missing_recipe(tmp_path):
+    path = _tagged_portrait(tmp_path)
+    assert export_source.recipe_base_image(path, None).size == (20, 40)
+    assert export_source.recipe_base_image(path, Recipe(crop=(0, 0, 5, 5))).size == (20, 40)
+
+
+def test_recipe_base_is_stored_for_a_legacy_geometry_recipe(tmp_path):
+    """Coordinates stored in such a recipe were computed on the sideways pixels."""
+    path = _tagged_portrait(tmp_path)
+    legacy = Recipe.from_dict({"crop": [0, 0, 5, 5]})
+    assert export_source.recipe_base_image(path, legacy).size == (40, 20)
+
+
+def test_raw_is_exported_from_the_developed_image(store, tmp_path, monkeypatch):
+    """Pillow alone read a RAW's small embedded preview, so the export came out preview-sized."""
+    import numpy as np
+
+    from Imervue.gpu_image_view.images import image_loader
+    monkeypatch.setattr(image_loader, "_load_raw",
+                        lambda _p, thumbnail: np.zeros((30, 45, 3), dtype=np.uint8))
+    assert export_source.open_export_source(str(tmp_path / "shot.CR2")).size == (45, 30)

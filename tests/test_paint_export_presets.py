@@ -253,3 +253,21 @@ def test_all_export_presets_lists_built_in_then_user():
     expected_built_in = [p.name for p in BUILT_IN_EXPORT_PRESETS]
     assert names[: len(expected_built_in)] == expected_built_in
     assert "Mine" in names
+
+
+def test_a_failed_export_over_an_earlier_one_keeps_it(tmp_path, monkeypatch):
+    """Pillow opens the path with w+b: a failed save used to leave the old export truncated."""
+    preset = ExportPreset(name="x", format="png")
+    out = preset.apply_to_image(_solid_image(), tmp_path, name="hero", index=3)
+    before = out.read_bytes()
+
+    def half_written(self, fp, *args, **kwargs):
+        with open(fp, "wb") as fh:
+            fh.write(b"partial")
+        raise OSError("disk full")
+
+    monkeypatch.setattr(Image.Image, "save", half_written)
+    with pytest.raises(OSError, match="disk full"):
+        preset.apply_to_image(_solid_image(), tmp_path, name="hero", index=3)
+    assert out.read_bytes() == before
+    assert [p.name for p in tmp_path.iterdir()] == [out.name]

@@ -20,6 +20,7 @@ if __package__:   # imported as part of the plugin package
         STYLE_BLACK,
         STYLE_BLUR,
         STYLE_MOSAIC,
+        _FMT_MAP,
     )
 else:             # loaded next to _runner.py by the external Python
     from _constants import (
@@ -32,6 +33,7 @@ else:             # loaded next to _runner.py by the external Python
         STYLE_BLACK,
         STYLE_BLUR,
         STYLE_MOSAIC,
+        _FMT_MAP,
     )
 
 # Anime-color heuristic threshold — fewer unique quantized colours than this
@@ -45,6 +47,68 @@ _QUANTIZE_BITS = 3
 _QUANTIZE_LEVEL_BITS = 8 - _QUANTIZE_BITS
 
 _MERGE_GAP_FRAC = 0.4  # bridge boxes within 40% of the median box edge
+
+
+def _nudenet_corners(box) -> tuple[int, int, int, int]:
+    """Convert a NudeNet ``box`` to the ``(x1, y1, x2, y2)`` corners every censor step takes.
+
+    NudeNet 3 reports ``[x, y, width, height]``. Used as corners, a region at
+    (300, 400) sized 100 x 80 became the inverted box (300, 400) -> (100, 80),
+    and the detected region was left uncensored.
+    """
+    x, y, w, h = (int(v) for v in box[:4])
+    return x, y, x + w, y + h
+
+
+def _read_bgr(src: str):
+    """*src* decoded as OpenCV's ``imread`` decodes it — BGR, EXIF orientation applied — for any path.
+
+    ``cv2.imread`` can't open a path with non-ASCII characters on Windows
+    (a photo under ``照片/``) and returns None; reading the bytes and
+    decoding them with ``cv2.imdecode`` gives the same array for every path.
+    Raises ``ValueError`` for a file OpenCV can't decode (an empty one
+    included: ``imdecode`` asserts on an empty buffer).
+    """
+    import cv2
+    import numpy as np
+    data = np.fromfile(src, dtype=np.uint8)
+    image = cv2.imdecode(data, cv2.IMREAD_COLOR) if data.size else None
+    if image is None:
+        raise ValueError(f"OpenCV cannot decode {src}")
+    return image
+
+
+class _AnyPathDetector:
+    """A NudeNet detector that opens any path.
+
+    NudeNet reads a path with ``cv2.imread``, so on Windows every photo in a
+    folder with a non-ASCII name failed with ``'NoneType' object has no
+    attribute 'shape'``. This one hands it the decoded image instead.
+    """
+
+    def __init__(self, detector) -> None:
+        self._detector = detector
+
+    def detect(self, src: str):
+        """NudeNet's detections for the image at *src*."""
+        return self._detector.detect(_read_bgr(src))
+
+
+def _open_upright(src: str):
+    """Open *src* for censoring, turned upright by its EXIF orientation.
+
+    The detectors read the file with OpenCV, which applies the EXIF
+    orientation, so their boxes are in upright coordinates. Censoring the
+    stored pixels of a tagged photo (a portrait phone shot is stored sideways)
+    put every box in the wrong place and left the detected region uncovered.
+    The saved result carries no EXIF, so upright pixels are also what it needs.
+    """
+    from PIL import Image, ImageOps
+    with Image.open(src) as opened:
+        img = ImageOps.exif_transpose(opened)
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGBA")
+    return img
 
 
 def _detect_image_mode(src: str) -> str:
@@ -185,6 +249,27 @@ def _ensure_parent(dst: str) -> None:
     parent = os.path.dirname(dst)
     if parent:
         os.makedirs(parent, exist_ok=True)
+
+
+def _save_as(img, dst: str) -> None:
+    """Save *img* to *dst* in the format its extension names, replacing *dst* in one step.
+
+    With "overwrite originals" *dst* is the photo itself, and Pillow opens a
+    path with ``w+b``: a save that failed midway (a full disk, an encoder
+    error) left the original truncated. The result goes to a ``.tmp`` sibling
+    first and is swapped in with ``os.replace``.
+    """
+    _ensure_parent(dst)
+    fmt = _FMT_MAP.get(os.path.splitext(dst)[1].lower(), "PNG")
+    if fmt == "JPEG" and img.mode == "RGBA":
+        img = img.convert("RGB")
+    tmp = dst + ".tmp"
+    try:
+        img.save(tmp, format=fmt)
+        os.replace(tmp, dst)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 def _boxes_touch(a, b, gap: int) -> bool:

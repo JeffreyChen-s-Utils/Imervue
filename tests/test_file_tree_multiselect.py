@@ -512,3 +512,28 @@ def test_menu_routes_single_when_one_row_selected(qapp, tmp_path, monkeypatch):
     seen = _route(tree, model, monkeypatch, selected_rows=[0], clicked_row=0)
     assert seen == [("single", str(files[0]))]
     tree.deleteLater()
+
+
+def test_what_the_bin_refused_goes_for_good_when_the_user_agrees(qapp, tmp_path, monkeypatch):
+    """On a memory card the trash can't take a file; the tree only warned it couldn't delete."""
+    from Imervue.gui import trash_failure_notice
+
+    tree, main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 2, worker_cls=FailingDeleteWorker)
+    asked = []
+    monkeypatch.setattr(trash_failure_notice, "_ask_to_delete_permanently",
+                        lambda _parent, paths: asked.append(list(paths)) or True)
+    tree._delete_paths(files)  # noqa: SLF001
+    assert asked == [files]
+    assert not any(Path(path).exists() for path in files)
+    assert "warning" not in [kind for kind, _msg in main.toast.calls]
+    tree.deleteLater()
+
+
+def test_kept_files_still_get_the_warning(qapp, tmp_path, monkeypatch):
+    tree, main, files = _big_batch_tree(
+        tmp_path, monkeypatch, 2, worker_cls=FailingDeleteWorker)
+    tree._delete_paths(files)  # noqa: SLF001 - conftest answers "Keep Them"
+    assert all(Path(path).exists() for path in files)
+    assert ("warning", "Couldn't delete 2 item(s)") in main.toast.calls
+    tree.deleteLater()

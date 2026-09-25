@@ -69,9 +69,9 @@ def test_detect_labeled_maps_nudenet_labels_to_class_ids():
     class _Det:
         def detect(self, src):
             return [
-                {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [1, 2, 3, 4]},
-                {"class": "FEMALE_BREAST_EXPOSED", "score": 0.9, "box": [5, 6, 7, 8]},
-                {"class": "SOMETHING_ELSE", "score": 0.9, "box": [9, 9, 9, 9]},
+                {"class": "MALE_GENITALIA_EXPOSED", "score": 0.9, "box": [1, 2, 2, 2]},
+                {"class": "FEMALE_BREAST_EXPOSED", "score": 0.9, "box": [5, 6, 2, 2]},
+                {"class": "SOMETHING_ELSE", "score": 0.9, "box": [9, 9, 0, 0]},
                 {"class": "ANUS_EXPOSED", "score": 0.1, "box": [0, 0, 1, 1]},
             ]
 

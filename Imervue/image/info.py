@@ -5,14 +5,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PIL import Image
-from PIL.ExifTags import TAGS
 from PySide6.QtWidgets import QMessageBox
 
 from Imervue.gpu_image_view.images.image_loader import load_image_file
 from Imervue.image.dimensions import image_dimensions
-from Imervue.image.exif_merge import merged_exif
-from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.exif_merge import get_exif_data
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -83,7 +80,7 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
         exif = get_exif_data(path)
         info["exif_text"] = format_exif_info(exif)
 
-    except Exception as e:  # noqa: BLE001 - any decoder failure is shown in the dialog, logged below
+    except Exception as e:  # noqa: BLE001 - any decoder failure is logged below and shown in the dialog
         logger.warning("Building image info for %s failed", path, exc_info=True)
         info["error"] = str(e)
 
@@ -148,26 +145,6 @@ def get_file_times(path: Path):
 # ==========================================================
 # EXIF
 # ==========================================================
-
-def get_exif_data(path: Path):
-    """Return ``{tag name: value}`` for *path*, or ``{}`` when it has no EXIF or cannot be read."""
-    ensure_pillow_opener(Path(path).suffix)
-    try:
-        with Image.open(path) as img:
-            exif_raw = merged_exif(img)
-
-        if not exif_raw:
-            return {}
-
-        return {
-            TAGS.get(tag, tag): value
-            for tag, value in exif_raw.items()
-        }
-
-    except Exception:  # noqa: BLE001 - PIL's EXIF parser fails in open-ended ways; logged below
-        logger.debug("EXIF read failed for %s", path, exc_info=True)
-        return {}
-
 
 def format_exif_info(exif: dict):
     if not exif:

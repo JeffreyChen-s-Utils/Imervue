@@ -7,6 +7,7 @@ from threading import Lock
 from typing import Any
 
 from Imervue.system.app_paths import user_settings_path as _user_settings_path
+from Imervue.system.unreadable_guard import UnreadableFileGuard
 
 # 使用者設定的全域字典
 # Global dictionary for user settings — always reflects the *current* profile.
@@ -41,6 +42,11 @@ _SAVE_DEBOUNCE_SEC = 2.0
 _save_timer: threading.Timer | None = None
 _save_timer_lock = threading.Lock()
 _settings_logger = logging.getLogger("Imervue.settings")
+
+# The settings file existed at start-up but could not be read (broken JSON, or
+# held by another program). Saving would replace it — every rating, tag and
+# album in it — with this session's defaults, so a copy is kept first.
+_unreadable_guard = UnreadableFileGuard(_settings_logger)
 
 
 def schedule_save() -> None:
@@ -108,7 +114,7 @@ def write_user_setting() -> Path:
         "current_profile": current,
         "profiles": existing_profiles,
     }
-    write_json(str(user_setting_file), payload)
+    _save_settings(user_setting_file, payload)
     return user_setting_file
 
 
@@ -122,6 +128,7 @@ def read_user_setting() -> Path:
         return user_setting_file
     data = read_json(str(user_setting_file))
     if not isinstance(data, dict):
+        _unreadable_guard.note_unreadable(user_setting_file)
         return user_setting_file
 
     if _looks_like_multi_profile(data):
@@ -129,6 +136,23 @@ def read_user_setting() -> Path:
     else:
         _load_legacy_profile(data)
     return user_setting_file
+
+
+def unreadable_settings_file() -> Path | None:
+    """The settings file that existed at start-up but could not be read, or None."""
+    return _unreadable_guard.unreadable_path
+
+
+def _save_settings(path: Path, payload: dict) -> bool:
+    """Write *payload* as the settings file at *path*; False if it was left alone.
+
+    A settings file this session could not read is only saved over once a
+    copy of it is kept (:class:`~Imervue.system.unreadable_guard.UnreadableFileGuard`).
+    """
+    if not _unreadable_guard.clear_to_save(path):
+        return False
+    write_json(str(path), payload)
+    return True
 
 
 def _looks_like_multi_profile(data: dict) -> bool:
@@ -205,7 +229,7 @@ def create_profile(name: str, copy_from_current: bool = False) -> bool:
         payload = {"current_profile": current_profile(), "profiles": {}}
     seed = dict(user_setting_dict) if copy_from_current else {}
     payload["profiles"][name] = seed
-    write_json(str(path), payload)
+    _save_settings(path, payload)
     _profile_state["available"].append(name)
     return True
 
@@ -223,7 +247,7 @@ def delete_profile(name: str) -> bool:
         payload = read_json(str(path))
         if isinstance(payload, dict) and "profiles" in payload:
             payload["profiles"].pop(name, None)
-            write_json(str(path), payload)
+            _save_settings(path, payload)
     _profile_state["available"].remove(name)
     return True
 
@@ -253,7 +277,7 @@ def rename_profile(old: str, new: str) -> bool:
     if payload.get("current_profile") == old:
         payload["current_profile"] = new
         _profile_state["current"] = new
-    write_json(str(path), payload)
+    _save_settings(path, payload)
     available = _profile_state["available"]
     available[available.index(old)] = new
     return True
@@ -298,7 +322,8 @@ def read_json(json_file_path: str) -> Any | None:
     try:
         file_path = Path(json_file_path)
         if file_path.exists() and file_path.is_file():
-            with open(json_file_path, encoding="utf-8") as read_file:
+            # utf-8-sig: a file saved by an editor that adds a BOM (older Notepad) still reads.
+            with open(json_file_path, encoding="utf-8-sig") as read_file:
                 return json.loads(read_file.read())
     except (OSError, ValueError, RecursionError) as e:
         _settings_logger.debug(f"Failed to read {json_file_path}: {e}")

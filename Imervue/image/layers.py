@@ -27,7 +27,8 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from Imervue.image.orientation import exif_orientation, transpose_for
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.shown import as_shown
 
 logger = logging.getLogger("Imervue.layers")
 
@@ -176,8 +177,8 @@ def _render_image_layer(base: np.ndarray, params: dict) -> np.ndarray | None:
         return None
     try:
         with Image.open(path) as src:   # upright, as the viewer shows it
-            overlay = transpose_for(src.convert("RGBA"), exif_orientation(src))
-    except OSError as exc:
+            overlay = as_shown(src).convert("RGBA")
+    except IMAGE_READ_ERRORS as exc:
         logger.warning("Image layer load failed (%s): %s", path, exc)
         return None
     target = (base.shape[1], base.shape[0])

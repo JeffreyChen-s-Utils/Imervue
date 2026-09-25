@@ -265,3 +265,72 @@ def test_query_where_terms_and_values():
     assert args == ["C:/a", "C:/b", "png", "jpg", 10, 20, 1, 2, "%cat%"]
     # Zero is a real bound, not "off"; empty sequences are off.
     assert _query_where(ImageQuery(min_width=0, exts=[])) == (["width >= ?"], [0])
+
+
+class TestMovePaths:
+    """A renamed or moved file kept its note, cull flag and tags under the old path."""
+
+    @staticmethod
+    def _catalog(path):
+        image_index.upsert_image(path, width=4, height=3, phash=7)
+        image_index.set_note(path, "print this")
+        image_index.set_cull_state(path, "pick")
+        image_index.add_image_tag(path, "trip/japan")
+
+    @staticmethod
+    def _rows(path):
+        return (image_index.get_image(path) is not None, image_index.get_note(path),
+                image_index.get_cull_state(path), image_index.tags_of_image(path))
+
+    def test_every_table_follows_the_file(self, tmp_path):
+        old, new = str(tmp_path / "a" / "IMG.JPG"), str(tmp_path / "b" / "shot.png")
+        self._catalog(old)
+        image_index.move_paths({old: new})
+        assert self._rows(new) == (True, "print this", "pick", ["trip/japan"])
+        assert self._rows(old) == (False, "", "unflagged", [])
+        row = image_index.get_image(new)
+        assert (row["parent"], row["name"], row["ext"]) == (
+            str(tmp_path / "b"), "shot.png", "png")
+        assert row["phash"] == 7 and row["width"] == 4
+
+    def test_rows_a_former_file_left_under_the_new_path_are_dropped(self, tmp_path):
+        old, new = str(tmp_path / "a.jpg"), str(tmp_path / "b.jpg")
+        image_index.upsert_image(old)
+        image_index.set_note(new, "about a deleted photo")
+        image_index.add_image_tag(new, "stale")
+        image_index.move_paths({old: new})
+        assert image_index.get_note(new) == ""
+        assert image_index.tags_of_image(new) == []
+
+    def test_keep_existing_leaves_a_tables_rows_for_the_new_path(self, tmp_path):
+        old, new = str(tmp_path / "gone.jpg"), str(tmp_path / "found.jpg")
+        self._catalog(old)
+        image_index.set_note(new, "written after relocating")
+        image_index.move_paths({old: new}, keep_existing=True)
+        assert image_index.get_note(new) == "written after relocating"
+        assert image_index.get_note(old) == "print this"          # left alone
+        assert image_index.get_cull_state(new) == "pick"          # no rows there: moved
+        assert image_index.tags_of_image(new) == ["trip/japan"]
+
+    @pytest.mark.parametrize("order", [("b", "a"), ("a", "b")])
+    def test_a_chain_moves_each_row_once(self, tmp_path, order):
+        a, b, c = (str(tmp_path / f"{n}.jpg") for n in "abc")
+        image_index.set_note(a, "A")
+        image_index.set_note(b, "B")
+        steps = {"a": (a, b), "b": (b, c)}
+        image_index.move_paths(dict(steps[k] for k in order))
+        assert (image_index.get_note(b), image_index.get_note(c)) == ("A", "B")
+
+    def test_no_library_means_no_database_is_created(self, tmp_path):
+        image_index.close()
+        image_index.set_db_path(tmp_path / "never" / "library.db")
+        image_index.move_paths({"a": "b"})
+        assert image_index.stored_paths() == []
+        assert not (tmp_path / "never").exists()
+
+    def test_stored_paths_spans_every_table(self, tmp_path):
+        image_index.upsert_image("i")
+        image_index.set_note("n", "x")
+        image_index.set_cull_state("c", "reject")
+        image_index.add_image_tag("t", "tag")
+        assert sorted(image_index.stored_paths()) == ["c", "i", "n", "t"]

@@ -8,7 +8,7 @@ _NO_EXPORT_IMAGES = '没有可导出的图片。'
 _EXPORT_FAILED = '导出失败：{err}'
 
 chinese_word_dict = {
-    "heif_install_hint": "安装 pillow-heif 以查看 HEIC/AVIF 图像。",
+    "heif_install_hint": "安装 pillow-heif 以查看 HEIC 图像。",
     "exif_location": "地点",
     "exif_coordinates": "坐标",
     "exif_video_label": "视频",
@@ -322,7 +322,7 @@ chinese_word_dict = {
     # EXIF 编辑器
     "exif_edit_button": "编辑 EXIF",
     "exif_editor_title": "编辑 EXIF 元数据",
-    "exif_editor_no_piexif": "需要 piexif 包。\n安装：pip install piexif",
+    "exif_editor_unsupported": "只能编辑 JPEG 与 WebP 文件的 EXIF。",
     "exif_editor_fields": "元数据字段",
     "exif_editor_save": "保存",
     "exif_editor_cancel": "取消",
@@ -1412,6 +1412,8 @@ chinese_word_dict = {
     "token_rename_col_new": "新文件名",
     "token_rename_col_original": "原始名称",
     "token_rename_col_status": "状态",
+    "token_rename_status_ok": "可重命名",
+    "token_rename_status_conflict": "冲突",
     # Metadata 导出
     "metadata_export_title": "导出 Metadata（CSV / JSON）",
     "metadata_export_format": "格式：",
@@ -2730,6 +2732,10 @@ chinese_word_dict = {
     "file_filter_icc_profiles": "ICC 配置文件",
     "file_filter_comic_zip": "漫画压缩包",
     "batch_rotate_done": "已旋转 {done}/{total} 个文件",
+    "batch_rename_done": "已重命名 {done}/{total} 个文件",
+    "batch_move_done": "已移动 {done}/{total} 个文件",
+    "batch_copy_done": "已复制 {done}/{total} 个文件",
+    "batch_move_selected": "已选择 {count} 个文件",
     "zoom_limit_toast": "缩放上限：{limit}",
     "anim_speed_toast": "速度：{speed}x",
     "annotation_load_failed": "加载失败：{error}",
@@ -2742,4 +2748,17 @@ chinese_word_dict = {
     "file_filter_imervue_brush": "Imervue 笔刷",
     "file_filter_other_brush": "其他绘图软件的笔刷",
     "file_filter_other_palette": "其他图像编辑器的色板",
+    "modify_crop_cannot_overwrite": "这个文件无法直接覆盖（相机 RAW、HEIC、动画或多页文件）。请改用导出保存裁剪结果。",
+    "export_metadata": "元数据：",
+    "export_replace_title": "替换文件？",
+    "export_replace": "“{name}”已存在，要替换它吗？",
+    "export_replace_source": "“{name}”就是正在导出的原图。要用这份副本替换原图吗？副本已应用这张照片的编辑，也只保留上面选择的元数据。",
+    "export_metadata_all": "全部保留（相机、日期、位置）",
+    "export_metadata_no_location": "保留位置以外的全部",
+    "export_metadata_none": "全部移除",
+    "settings_unreadable_title": "无法读取设置文件",
+    "settings_unreadable": "Imervue 无法读取设置文件：\n{path}\n\n已改用默认设置启动。覆盖这个文件之前，会先在旁边另存一份 {name}.unreadable-<日期>-<时间>。要取回原来的设置，请先关闭 Imervue，再把那份副本重命名为 {name}。",
+    "trash_left_in_place_title": "未移到回收站",
+    "trash_left_in_place": "有 {count} 个已删除的文件无法移到回收站，仍然留在磁盘上：它们所在的磁盘没有回收站（存储卡、U 盘或网络驱动器），或正被其他程序使用。\n\n{paths}\n\n要永久删除它们吗？此操作无法撤销。",
+    "trash_keep_files": "保留",
 }

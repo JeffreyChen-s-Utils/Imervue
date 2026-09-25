@@ -166,7 +166,7 @@ class _InProcessWorker(QThread):
     def run(self):
         try:
             import numpy as np
-            from PIL import Image
+            from PIL import Image, ImageOps
 
             _MODELS_DIR.mkdir(parents=True, exist_ok=True)
             os.environ["U2NET_HOME"] = str(_MODELS_DIR)
@@ -178,7 +178,8 @@ class _InProcessWorker(QThread):
             session = new_session(self._model)
 
             self.step.emit(2, 4, "Removing background...")
-            input_img = Image.open(self._input).convert("RGBA")
+            # Upright, as the viewer shows it: the split objects are saved without EXIF.
+            input_img = ImageOps.exif_transpose(Image.open(self._input)).convert("RGBA")
             output_img = remove(input_img, session=session)
 
             self.step.emit(3, 4, "Finding objects...")

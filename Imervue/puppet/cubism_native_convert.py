@@ -29,12 +29,12 @@ their own DLL path via ``CUBISM_CORE_DLL`` or a standard
 """
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 
 from Imervue.puppet.cubism_import import (
     CubismBundle,
+    _read_json,
     apply_bundle,
     load_cdi3,
     load_exp3,
@@ -79,11 +79,13 @@ def cubism_to_puppet(
     it up when the resulting file is too large.
 
     Raises :class:`CubismBridgeError` when the DLL isn't reachable or
-    the moc fails to load."""
+    the moc fails to load, and :class:`CubismFormatError` when the
+    ``.model3.json`` is not JSON."""
     model3_path = Path(model3_path)
     base_dir = model3_path.parent
-    with model3_path.open(encoding="utf-8") as fp:
-        manifest = json.load(fp)
+    # Malformed JSON raises CubismFormatError, which the importer reports; a
+    # json.JSONDecodeError escaped it and ended the import with a traceback.
+    manifest = _read_json(model3_path)
     file_refs = manifest.get("FileReferences") or {}
     moc_ref = file_refs.get("Moc")
     if not moc_ref:

@@ -105,7 +105,7 @@ pip install .
 | PyOpenGL | Enlaces para OpenGL |
 | PyOpenGL_accelerate | Optimización de rendimiento de OpenGL |
 | numpy | Operaciones con arreglos y caché de miniaturas |
-| rawpy | Decodificación de imágenes RAW |
+| rawpy | Decodificación de imágenes RAW (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG y más) |
 | imageio | E/S de imágenes |
 | imageio-ffmpeg | Exportación de presentación a MP4 (H.264 vía ffmpeg) |
 | defusedxml | Análisis seguro de XML (sidecars XMP) |
@@ -168,6 +168,8 @@ py -m Imervue.cli list-ops          # imprime todos los subcomandos disponibles
 | `preset` / `pipeline` | Aplicar un preajuste de revelado guardado por nombre; ejecutar una cadena JSON ordenada de operaciones |
 | `list-ops` | Listar todos los subcomandos (`--json` para salida legible por máquina) |
 
+Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; `resize` y `strip` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente.
+
 Opciones compartidas: `--out` (directorio de salida), `--recursive`, `--dry-run` (listar acciones sin escribir nada), `--overwrite` y `--version`.
 
 ---
@@ -185,7 +187,8 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Cuadrícula de miniaturas virtualizada** — sólo se renderizan los mosaicos visibles; el tamaño de miniatura es configurable (128 / 256 / 512 / 1024 / auto)
 - **Caché en disco** — miniaturas PNG comprimidas con invalidación basada en MD5 en `%LOCALAPPDATA%/Imervue/cache/thumbnails` (o `~/.cache/imervue/thumbnails`)
 - **Orientación EXIF** — las fotos verticales que el móvil o la cámara solo marcaron en lugar de girarlas se muestran derechas en el visor, las miniaturas, la vista de lista, la vista previa al pasar el cursor y la pestaña Modify; un recorte / giro de revelado guardado antes sigue aplicándose a la orientación sobre la que se hizo
-- **Reproducción de animaciones** — GIF / APNG con controles de reproducir / pausar / fotograma a fotograma / velocidad
+- **Gestión del color** — las fotos con un perfil de color incrustado (Display P3 de móviles, Adobe RGB de cámaras, CMYK) se convierten a sRGB en el visor y las miniaturas; las imágenes sin perfil o en sRGB se muestran tal cual
+- **Reproducción de animaciones** — GIF / APNG con controles de reproducir / pausar / fotograma a fotograma / velocidad; una animación que decodificada ocuparía más de 512 MB se decodifica fotograma a fotograma mientras se reproduce, no toda de antemano
 
 ### Modos de exploración
 
@@ -222,7 +225,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Calificaciones** — 0-5 estrellas (`1`–`5`) + corazón de favorito (`0`)
 - **Etiquetas de color** — rojo/amarillo/verde/azul/púrpura basado en banderas (`F1`–`F5`)
 - **Culling** — bandera de 3 estados compatible con otros gestores de fotos XMP-aware (`P` = elegir, `Shift+X` = rechazar, `U` = quitar bandera); filtra por estado; borrado masivo de rechazadas; el culling automático elige el fotograma más nítido de cada grupo de casi-duplicados y rechaza el resto
-- **Etiquetas jerárquicas** — rutas en árbol como `animal/cat/british`; los descendientes se emparejan automáticamente
+- **Etiquetas jerárquicas** — rutas en árbol como `animal/cat/british`; los descendientes se emparejan automáticamente; **Index Keywords** del menú contextual archiva una jerarquía de palabras clave de Lightroom / darktable (`Places|Taiwan|Taipei`) bajo sus padres
 - **Tags & Albums** con filtrado multietiqueta AND/OR
 - **Álbumes inteligentes** — guarda consultas basadas en reglas y reaplica con un clic; los filtros abarcan extensión, resolución y **relación de aspecto**, **tamaño de archivo**, **piso / techo** de calificación, color, culling, etiquetas (incl. **exclusión**), **cámara / objetivo**, **regex / glob de nombre de archivo** y **antigüedad del archivo**, además de **exportar / importar** a un archivo JSON portable
 - **Apilamiento de pares RAW+JPEG** — colapsa capturas con el mismo nombre base en un solo mosaico; el RAW sigue accesible como hermano
@@ -237,7 +240,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 ### Ordenación y filtrado
 
-- Ordena por nombre / modificado / creado / tamaño / resolución (asc o desc)
+- Ordena por nombre (orden natural, como el Explorador: `img2` antes que `img10`) / modificado / creado / tamaño / resolución (asc o desc)
 - Filtra por extensión, etiqueta de color, calificación, etiqueta/álbum, estado de culling
 - **Filtro avanzado** — resolución / tamaño de archivo / orientación / rango de fecha de modificación
 - Diálogo de **filtro multietiqueta** con lógica booleana AND / OR
@@ -254,11 +257,11 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Metadatos
 
 - **Barra lateral EXIF** con grupos colapsables + tira en línea de 0-5 estrellas
-- Diálogo **editor EXIF**
+- Diálogo **editor EXIF** — descripción, artista, copyright, cámara y comentario (Unicode incluido) escritos en un JPEG o WebP sin paquetes extra, sin tocar los píxeles ni las demás etiquetas
 - **Editor de palabras clave** — título / autor / descripción / palabras clave, con **sugerencias de etiquetas relacionadas** derivadas de la coocurrencia de etiquetas y expansión de vocabulario controlado (una palabra clave hoja aplica automáticamente sus ancestros + sinónimos desde un vocabulario jerárquico editable)
 - Diálogo de **información de imagen** (dimensiones / tamaño / fechas)
-- **Sidecars XMP** (archivos `.xmp` acompañantes) — ida y vuelta de calificación / título / descripción / palabras clave / etiqueta de color para interoperabilidad con otros gestores de fotos XMP-aware (XML seguro vía `defusedxml`)
-- **Editor de geoetiquetas GPS** — lee EXIF GPS existente, escribe nuevas lat/lon vía piexif (JPEG)
+- **Sidecars XMP** (archivos `.xmp` acompañantes) — ida y vuelta de calificación / título / descripción / palabras clave / etiqueta de color para interoperabilidad con otros gestores de fotos XMP-aware (XML seguro vía `defusedxml`). Al guardar se fusiona con el sidecar existente: solo cambian estos campos, así que los ajustes de revelado, el recorte y el historial de otro programa se conservan, y un sidecar ilegible nunca se sobrescribe. Además de `photo.xmp` (Lightroom, Bridge), se lee y actualiza el `photo.jpg.xmp` que escriben darktable y digiKam cuando es el único sidecar; las etiquetas de color se entienden con las palabras de Lightroom (`Red` … `Purple`) y las de Bridge (`Select`, `Second`, `Approved`, `Review`, `To Do`), y se exportan como las escribe Lightroom. Una foto rechazada (`xmp:Rating` -1 en Lightroom, Bridge y darktable) pasa a ser un Reject de la selección, y un Reject se exporta como -1. Un archivo sin sidecar se lee e importa desde el XMP y la valoración EXIF incrustados en él (JPEG, PNG, WebP, TIFF): así guarda Lightroom la valoración y las palabras clave de un JPEG, y el Explorador de Windows sus estrellas.
+- **Editor de geoetiquetas GPS** — lee EXIF GPS existente, escribe nuevas lat/lon en un JPEG o WebP sin paquetes extra, sin tocar sus píxeles, otras etiquetas ni la miniatura
 - **Renombrado por lotes con tokens** — plantillas con vista previa en vivo como `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Exportar metadatos a CSV / JSON** — una fila por imagen incluyendo culling / calificación / etiquetas / notas
 
@@ -281,7 +284,7 @@ Se accede desde el menú **Tools**; organizadas en submenús agrupados por funci
 
 ## Modify — Revelado no destructivo
 
-La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **recipe** por imagen almacenada junto al archivo — los píxeles originales en disco nunca se sobrescriben hasta que uses explícitamente **Export** o **Save As**.
+La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **recipe** por imagen almacenada junto al archivo — los píxeles originales en disco nunca se sobrescriben hasta que uses explícitamente **Export** o **Save As**. **Apply Crop** y el **Save** de anotaciones son las dos excepciones: escriben el resultado sobre el archivo y conservan su EXIF (cámara, fecha de captura, GPS), XMP y DPI. Un RAW de cámara, un HEIC o un archivo animado / de varias páginas nunca se sobrescribe: el recorte te pide exportar y el guardado de anotaciones te pide un archivo nuevo. Las herramientas de un solo paso (CLAHE, mezclador HSL, marco de foto, enderezado automático…) guardan el resultado junto al original como `photo_clahe.png`; volver a ejecutarlas guarda `photo_clahe_1.png` en vez de reemplazar el último resultado. **Auto-Rotate by EXIF**, las copias de **Batch EXIF Strip** y **Split Pages…** numeran sus archivos de la misma manera. La receta y las copias virtuales de una foto la acompañan cuando Imervue la gira sin pérdida (el recorte gira con ella) o reescribe su EXIF (geoetiquetado GPS, editor EXIF); una receta con máscaras locales, capas, destello de lente o etiquetas de rostros se queda con la versión sin girar hasta que se vuelve a girar.
 
 ### Controles deslizantes de revelado
 
@@ -294,7 +297,7 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 ### Curvas y LUT
 
 - **Editor de curva tonal** — curva RGB arrastrable más R / G / B por canal con interpolación cúbica monótona
-- **Aplicar LUT .cube** — carga cualquier LUT 3D de Adobe (hasta 64³), interpola trilinealmente, mezcla con un control de intensidad
+- **Aplicar LUT .cube** — carga cualquier LUT 3D de Adobe (hasta 64³, incluido el `LUT_3D_INPUT_RANGE` de DaVinci Resolve), interpola trilinealmente, mezcla con un control de intensidad
 - **Split Toning** — matiz + saturación de sombras / luces basado en banderas con pivote de balance
 
 ### Efectos creativos
@@ -341,8 +344,8 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 
 - **Marca de agua superpuesta** — texto o imagen, 9 posiciones de anclaje, opacidad, escala; se aplica solo al exportar
 - **Predefinidos de exportación** — flujos de un solo clic Web 1600 / Print 300 dpi / Instagram 1080
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF con control de calidad para formatos con pérdida
-- **Operaciones por lotes** — renombrar, mover/copiar, rotar imágenes seleccionadas
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (y HEIC con `pillow-heif` y JPEG XL con `pillow-jxl-plugin`) con control de calidad para formatos con pérdida; conserva el EXIF de cámara, objetivo y fecha de captura, con la ubicación opcional (**Metadatos**: todos / todos salvo ubicación / ninguno); el nombre propuesto es uno aún libre (`photo_1.png` junto a `photo.png`) y un archivo existente —sobre todo la propia foto— solo se reemplaza tras confirmarlo
+- **Operaciones por lotes** — renombrar, mover/copiar, rotar imágenes seleccionadas. Mover o copiar nunca sobrescribe un archivo con el mismo nombre (llega como `name_1`), y una foto renombrada o movida en Imervue (renombrado por lotes, renombrado por tokens, árbol de carpetas, Mover / Copiar, doble panel, bandeja de preparación, organizador de imágenes) conserva su valoración, favorito, etiquetas, etiqueta de color, título, notas y marca de selección; sus sidecars `.xmp` y de anotaciones la acompañan; lo mismo ocurre con una foto renombrada en otro programa mientras su carpeta está abierta en Imervue. Un nombre nuevo que ahora tiene otra foto seleccionada (renumerar, intercambiar dos nombres) renombra toda la selección en el orden correcto en vez de solo una parte
 - **PDF de hoja de contactos** — cuadrícula multipágina con leyendas (A4 / A3 / Letter / Legal)
 - **Galería web HTML** — carpeta autocontenida con `index.html` + miniaturas JPEG + lightbox en línea
 - **Presentación MP4** — vídeo H.264 con FPS / segundos por imagen / transiciones de fundido / disolución / deslizamiento / barrido configurables (`imageio-ffmpeg`)
@@ -715,7 +718,7 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | Shift+S | Vista dividida |
 | Shift+D / Ctrl+Shift+D | Doble página (LTR / RTL) |
 | Ctrl+Shift+M | Ventana espejo multimonitor |
-| Delete | Mover a la papelera (reversible) |
+| Delete | Mover a la papelera con sus sidecars `.xmp` / de anotaciones (reversible); en una unidad sin papelera (tarjeta de memoria, memoria USB, unidad de red) el archivo se queda hasta que confirme borrarlo para siempre |
 | Escape | Salir de deep zoom / Salir de pantalla completa |
 
 ### Reproducción de animación (GIF / APNG)
@@ -857,10 +860,10 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 | Herramienta | Propósito |
 |------|---------|
 | `list_images` | Lista archivos de imagen en una carpeta (recursión opcional) |
-| `read_image_metadata` / `read_xmp_tags` | Dimensiones, formato, EXIF, sidecar XMP (calificación, etiqueta, palabras clave) |
+| `read_image_metadata` / `read_xmp_tags` | Dimensiones, formato, EXIF, XMP: el sidecar o, si no hay, lo incrustado en el archivo (calificación, etiqueta, palabras clave) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | Análisis sin referencia: estadísticas por canal, colorido/entropía/contraste, histograma + recorte, puntuación de desenfoque |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Vista previa en base64, texto con Tesseract, grupos de casi-duplicados por hash perceptual (con progreso) |
-| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP (+ HEIC / AVIF / JXL opcionales) |
+| `convert_format` | Convertir entre PNG / JPEG / WebP / TIFF / BMP / AVIF (+ HEIC / JXL opcionales) |
 | `apply_watermark` / `apply_frame` | Estampar una marca de agua de texto o un marco mate / Polaroid + leyenda |
 | `build_collage` | Componer imágenes en un montaje en cuadrícula (con progreso) |
 | `crop_image` / `resize_image` / `rotate_image` | Recorte por píxeles, redimensión que preserva el aspecto, rotación / volteo sin pérdida. Los tamaños y las coordenadas se refieren a la imagen enderezada según EXIF. |
@@ -887,8 +890,8 @@ resultado como `structuredContent`, y las herramientas de larga duración transm
 ### Prompts
 
 Cuatro prompts reutilizables: `caption_image`, `suggest_edits`, `analyze_composition`
-(crítica de composición guiada por saliencia) y `flag_issues` (triaje de nitidez + calidad
-+ recorte). Los argumentos de los prompts se pueden autocompletar vía `completion/complete`.
+(crítica de composición guiada por saliencia) y `flag_issues` (triaje de nitidez + calidad +
+recorte). Los argumentos de los prompts se pueden autocompletar vía `completion/complete`.
 
 ### Cableado
 
@@ -930,7 +933,7 @@ Los plugins pueden registrar idiomas completamente nuevos con `language_wrapper.
 
 Se guarda en `user_setting.json` junto a la aplicación: la raíz del proyecto en una copia del código fuente, o la carpeta que contiene el `.exe` en una compilación congelada (tanto PyInstaller como Nuitka).
 
-El archivo es un **contenedor multiperfil**: cada perfil guarda un diccionario de ajustes independiente, así que una sola instalación puede llevar configuraciones separadas (por ejemplo *Work* y *Personal*). Cambia, crea, renombra y elimina perfiles en **File > Profiles…**. Un archivo v1 de perfil único heredado de una versión anterior se migra automáticamente al perfil `default` en la primera lectura. Las escrituras se agrupan unos segundos después del último cambio y se aplican de forma atómica (archivo `.tmp` hermano + `os.replace`), de modo que un guardado interrumpido nunca trunca el archivo.
+El archivo es un **contenedor multiperfil**: cada perfil guarda un diccionario de ajustes independiente, así que una sola instalación puede llevar configuraciones separadas (por ejemplo *Work* y *Personal*). Cambia, crea, renombra y elimina perfiles en **File > Profiles…**. Un archivo v1 de perfil único heredado de una versión anterior se migra automáticamente al perfil `default` en la primera lectura. Las escrituras se agrupan unos segundos después del último cambio y se aplican de forma atómica (archivo `.tmp` hermano + `os.replace`), de modo que un guardado interrumpido nunca trunca el archivo. Si el archivo no se puede leer al iniciar (JSON dañado u otro programa lo tiene abierto), Imervue arranca con la configuración predeterminada y, antes del primer guardado, conserva una copia junto a él como `user_setting.json.unreadable-<fecha>-<hora>`; sin esa copia nunca guarda encima. Un aviso al iniciar indica el archivo y cómo recuperar la configuración anterior.
 
 Entradas clave del perfil activo:
 

@@ -5,25 +5,34 @@ Batch operations — rename, move/copy, rotate for selected tiles.
 from __future__ import annotations
 
 import logging
-import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QFileDialog, QGroupBox, QRadioButton,
 )
 
-from Imervue.image.orientation import upright
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.batch_rename import rename_files
+from Imervue.system.file_transfer import transfer_into
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 logger = logging.getLogger("Imervue.batch_ops")
+
+
+def _toast_result(main_gui: GPUImageView, key: str, default: str, done: int, failed: int) -> None:
+    """Toast "<verb> done/total file(s)" in the UI language: info when some failed, else success."""
+    toast = getattr(main_gui.main_window, "toast", None)
+    if toast is None:
+        return
+    msg = language_wrapper.language_word_dict.get(key, default).format(
+        done=done, total=done + failed)
+    (toast.info if failed else toast.success)(msg)
 
 
 # ===========================
@@ -108,7 +117,8 @@ class BatchRenameDialog(QDialog):
         renamed, failed = self._rename_all(start)
         if renamed:
             self._apply_renames_to_model(renamed)
-        self._show_batch_toast("Renamed", len(renamed), failed)
+        _toast_result(self._gui, "batch_rename_done", "Renamed {done}/{total} file(s)",
+                      len(renamed), failed)
         if renamed:
             self._gui.selected_tiles.clear()
             self._gui.tile_selection_mode = False
@@ -117,39 +127,25 @@ class BatchRenameDialog(QDialog):
         self.accept()
 
     def _rename_all(self, start: int) -> tuple[list[tuple[str, str]], int]:
-        renamed: list[tuple[str, str]] = []
-        failed = 0
-        for i, old_path in enumerate(self._paths):
-            p = Path(old_path)
-            new_path = p.parent / self._build_name(old_path, start + i)
-            try:
-                if new_path != p and not new_path.exists():
-                    p.rename(new_path)
-                    renamed.append((old_path, str(new_path)))
-                else:
-                    failed += 1
-            except OSError:
-                failed += 1
-        return renamed, failed
+        # A new name that another selected file holds now is freed by its own
+        # rename first (renumbering, swapping); sidecars and saved rating /
+        # tags follow each file.
+        return rename_files([
+            (path, str(Path(path).parent / self._build_name(path, start + i)))
+            for i, path in enumerate(self._paths)])
 
     def _apply_renames_to_model(self, renamed: list[tuple[str, str]]) -> None:
         from Imervue.gpu_image_view.tile_textures import free_tile_textures
+        # All at once: with a swap, one file's new path is another's old one.
+        mapping = dict(renamed)
         images = self._gui.model.images
-        for old, new in renamed:
-            if old in images:
-                images[images.index(old)] = new
+        images[:] = [mapping.get(path, path) for path in images]
+        for old, _new in renamed:
             self._gui.tile_cache.pop(old, None)
             self._gui.selected_tiles.discard(old)
         # Free the stale textures (renamed paths) under the GL context so they
         # aren't orphaned on the GPU and the VRAM budget stays accurate.
         free_tile_textures(self._gui, [old for old, _new in renamed])
-
-    def _show_batch_toast(self, op: str, succeeded: int, failed: int) -> None:
-        if not hasattr(self._gui.main_window, "toast"):
-            return
-        msg = f"{op} {succeeded}/{succeeded + failed} file(s)"
-        toast = self._gui.main_window.toast
-        (toast.info if failed else toast.success)(msg)
 
 
 # ===========================
@@ -169,7 +165,8 @@ class BatchMoveDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        layout.addWidget(QLabel(f"{len(paths)} file(s) selected"))
+        layout.addWidget(QLabel(lang.get(
+            "batch_move_selected", "{count} file(s) selected").format(count=len(paths))))
 
         # 模式
         mode_grp = QGroupBox(lang.get("batch_move_mode", "Mode"))
@@ -201,7 +198,9 @@ class BatchMoveDialog(QDialog):
         layout.addLayout(btn_row)
 
     def _browse(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        lang = language_wrapper.language_word_dict
+        folder = QFileDialog.getExistingDirectory(
+            self, lang.get("main_window_select_folder", "Select Folder"))
         if folder:
             self._dest.setText(folder)
 
@@ -210,48 +209,32 @@ class BatchMoveDialog(QDialog):
         if not dest or not Path(dest).is_dir():
             return
         is_move = self._move_radio.isChecked()
-        count, failed = self._transfer_files(dest, is_move)
-        if is_move and count:
-            self._remove_moved_from_model()
-        self._toast_transfer_result("Moved" if is_move else "Copied", count, failed)
+        # Renames instead of overwriting: two cards both hold IMG_0001.JPG.
+        result = transfer_into(self._paths, dest, move=is_move)
+        moved = [source for source, _target in result.done]
+        if is_move and moved:
+            self._remove_moved_from_model(moved)
+        if is_move:
+            _toast_result(self._gui, "batch_move_done", "Moved {done}/{total} file(s)",
+                          len(result.done), len(result.failed))
+        else:
+            _toast_result(self._gui, "batch_copy_done", "Copied {done}/{total} file(s)",
+                          len(result.done), len(result.failed))
         self.accept()
 
-    def _transfer_files(self, dest: str, is_move: bool) -> tuple[int, int]:
-        count = 0
-        failed = 0
-        for src in self._paths:
-            target = Path(dest) / Path(src).name
-            try:
-                if is_move:
-                    shutil.move(src, str(target))
-                else:
-                    shutil.copy2(src, str(target))
-                count += 1
-            except OSError:
-                # shutil.Error already inherits from OSError on every supported
-                # platform, so listing it explicitly is redundant.
-                failed += 1
-        return count, failed
-
-    def _remove_moved_from_model(self) -> None:
+    def _remove_moved_from_model(self, moved: list[str]) -> None:
+        """Drop the files that did move from the grid; a failed one stays where it is."""
         from Imervue.gpu_image_view.tile_textures import free_tile_textures
         images = self._gui.model.images
-        for src in self._paths:
+        for src in moved:
             if src in images:
                 images.remove(src)
             self._gui.tile_cache.pop(src, None)
-        free_tile_textures(self._gui, list(self._paths))
+        free_tile_textures(self._gui, moved)
         self._gui.selected_tiles.clear()
         self._gui.tile_selection_mode = False
         self._gui.clear_tile_grid()
         self._gui.load_tile_grid_async(images)
-
-    def _toast_transfer_result(self, op: str, count: int, failed: int) -> None:
-        if not hasattr(self._gui.main_window, "toast"):
-            return
-        msg = f"{op} {count}/{count + failed} file(s)"
-        toast = self._gui.main_window.toast
-        (toast.info if failed else toast.success)(msg)
 
 
 # ===========================
@@ -259,23 +242,20 @@ class BatchMoveDialog(QDialog):
 # ===========================
 
 def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
-    """旋轉選取的圖片並儲存"""
+    """Quarter-turn each file in *paths* on disk (*degrees* is 90 or -90) and refresh the grid."""
     from Imervue.gpu_image_view.tile_textures import free_tile_textures
     count = 0
     failed = 0
     rotated: list[str] = []
     for path in paths:
-        try:
-            # Rotate what is shown: the re-save drops the EXIF orientation.
-            img = upright(Image.open(path))
-            img = img.rotate(-degrees, expand=True)
-            img.save(path)
+        # One quarter turn at a time, the way Lossless Rotate does it: a JPEG
+        # only gets a new EXIF orientation, other files keep their metadata,
+        # and RAW / animated / multi-page files are refused untouched.
+        if lossless_rotate(path, clockwise=degrees > 0):
             count += 1
-            # 清除快取
             main_gui.tile_cache.pop(path, None)
             rotated.append(path)
-        except IMAGE_READ_ERRORS:
-            logger.debug("Rotating %s failed", path, exc_info=True)
+        else:
             failed += 1
     # Free the now-stale rotated textures under the GL context (with accounting).
     free_tile_textures(main_gui, rotated)
@@ -286,14 +266,7 @@ def batch_rotate(main_gui: GPUImageView, paths: list[str], degrees: int):
         main_gui.clear_tile_grid()
         main_gui.load_tile_grid_async(main_gui.model.images)
 
-    if hasattr(main_gui.main_window, "toast"):
-        msg = language_wrapper.language_word_dict.get(
-            "batch_rotate_done", "Rotated {done}/{total} file(s)",
-        ).format(done=count, total=count + failed)
-        if failed:
-            main_gui.main_window.toast.info(msg)
-        else:
-            main_gui.main_window.toast.success(msg)
+    _toast_result(main_gui, "batch_rotate_done", "Rotated {done}/{total} file(s)", count, failed)
 
 
 # ===========================

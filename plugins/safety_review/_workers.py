@@ -262,7 +262,12 @@ class _BatchWorker(QThread):
                 _copy_failed(src, self._failed_dir, self._scan_root)
 
     def run(self):
-        detector = _resolve_detector(self._mode)
+        try:
+            detector = _resolve_detector(self._mode)
+        except Exception:  # a worker must always report: the model failed to load
+            logger.exception("Loading the %s detector failed", self._mode)
+            self.result_ready.emit(0, len(self._paths), 0)
+            return
         success = 0
         total_regions = 0
         failures: list[tuple[str, str]] = []

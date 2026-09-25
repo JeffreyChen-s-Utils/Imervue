@@ -71,7 +71,8 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
 ^^^^^^^^^^^^^^
 
 - **常见格式**：PNG、JPEG、BMP、TIFF、WebP、GIF、APNG、SVG
-- **RAW 格式**：CR2（Canon）、NEF（Nikon）、ARW（Sony）、DNG（Adobe）、RAF（Fujifilm）、ORF（Olympus）
+- **RAW 格式**：CR2 / CR3 / CRW（Canon）、NEF / NRW（Nikon）、ARW / SRF / SR2（Sony）、DNG（Adobe）、RAF（Fujifilm）、ORF（Olympus / OM System）、RW2（Panasonic）、RWL（Leica）、PEF（Pentax）、SRW（Samsung）、3FR（Hasselblad）、IIQ（Phase One）、MEF（Mamiya）、MOS（Leaf）、ERF（Epson）、MRW（Minolta）、KDC / DCR（Kodak）
+- **新式格式**：AVIF（内置）；HEIC / HEIF 需要选用的 ``pillow-heif``；JPEG XL 需要选用的 ``pillow-jxl-plugin``
 
 ----
 
@@ -279,7 +280,7 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
 
    * - 功能
      - 菜单位置
-   * - 按名称排序
+   * - 按名称排序（自然顺序：``img2`` 在 ``img10`` 之前）
      - ``排序`` > ``按名称``
    * - 按修改日期排序
      - ``排序`` > ``按修改日期``
@@ -445,6 +446,11 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
 
 这些调整是 **非破坏性** 的：每个滑杆均写入 per-image 的 Edit Recipe，随时可以按 ``重置`` 或
 ``Ctrl + Z`` 逐步还原。Recipe 在重启后保留，也可通过 XMP sidecar 导出 / 同步（见元数据章节）。
+
+只有在你要求时，磁盘上的文件才会改变。**Apply Crop** 与标注的 **Save** 会把结果写回原文件，并保留其 EXIF（相机、拍摄时间、GPS）、XMP 与 DPI。相机 RAW、HEIC 以及动画 / 多页文件永远不会被覆写——裁剪会提示改用导出，标注保存则会询问新文件名。单次处理的工具（CLAHE、HSL 混色器、相框、自动拉直……）会把结果存成原图旁的
+``photo_clahe.png``；再执行一次会存成 ``photo_clahe_1.png``，不会覆盖上一次的结果。**按 EXIF 自动旋转**、**EXIF 批量清除** 的副本与 **拆分页面…** 也用同样的方式编号。Imervue 无损旋转照片（裁剪框会跟着转）或
+改写其 EXIF（GPS 地理标记、EXIF 编辑器）时，照片的配方与虚拟副本都会跟着走；带局部
+蒙版、图层、镜头光晕或人脸标签的配方则留在旋转前的版本上，转回来即可取回。
 
 保存与撤销
 ^^^^^^^^^^
@@ -726,10 +732,11 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 
 右键图片 > ``导出 / 另存为``
 
-- 选择格式：PNG、JPEG、WebP、BMP、TIFF
+- 选择格式：PNG、JPEG、WebP、BMP、TIFF、AVIF；装了 ``pillow-heif`` / ``pillow-jxl-plugin`` 还有 HEIC / JPEG XL
 - 调整质量（有损格式可调）
+- 选择保留的元数据：全部、位置以外的全部（默认）或全部移除。相机、镜头与拍摄时间会一并保留；选择会被记住，批量导出也提供相同选项
 - 预览文件大小
-- 选择保存位置
+- 选择保存位置。建议的文件名一定是还没被占用的（``photo.png`` 旁边就是 ``photo_1.png``），已存在的文件（尤其是原图本身）要确认后才会被替换
 
 导出预设组合
 ^^^^^^^^^^^^
@@ -780,14 +787,16 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 - 可拖拽排列顺序
 - 设定每秒帧数（FPS）
 - 自定义尺寸
-- 循环播放选项
+- 循环播放选项（关闭时只播放一次）
+- 建议的文件是第一帧旁边的 ``output.gif``，名称被占用时会编号（``output_1.gif``）；手动输入的文件名已存在时，要确认后才会被替换
 
 ----
 
 动画图片播放
 ------------
 
-打开 GIF、APNG、动态 WebP 时，会自动播放动画。
+打开 GIF、APNG、动态 WebP 时，会自动播放动画。解码后会超过 512 MB 的动画
+会边播放边逐帧解码，打开时既不会卡住窗口，也不会占满内存。
 
 .. list-table::
    :header-rows: 1
@@ -895,7 +904,12 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
    * - 删除选取的多张图片
      - 框选后按 ``Delete`` 或右键 > ``删除选取``
 
-图片会移到系统回收站，可以从那边恢复。
+图片会移到系统回收站，可以从那边恢复。没有回收站的磁盘（存储卡、U 盘或网络驱动器，Windows
+会直接永久删除）上的文件则会保留：关闭时 Imervue 会列出这些文件，询问是否永久删除。
+
+sidecar 会一起移过去：``IMG.JPG.xmp``、``IMG.JPG.annotations.json`` 与
+``IMG.xmp``；RAW + JPEG 成对时，RAW 仍在使用的 ``IMG.xmp`` 会留下。留下的 sidecar
+会把评级和编辑套到相机之后以同名写入的 ``IMG.*`` 上。
 
 ----
 
@@ -922,6 +936,16 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
      - 给所有选取的图片加上同一个标签
    * - 加入相册
      - 把所有选取的图片放进相册
+
+移动或复制不会覆盖同名文件，而是以 ``name_1.ext`` 存入。在 Imervue 里重命名或
+移动的照片（批量重命名、Token 批量重命名、文件夹树、移动／复制、双窗格、暂存区、
+图片整理）会保留评级、收藏、标签、颜色标签、标题、描述、图库备注与筛选标记；
+重命名或移动文件夹时，里面每张照片的这些数据也都会保留。sidecar 也会一起带走：
+``IMG.xmp``、``IMG.JPG.xmp`` 与 ``IMG.JPG.annotations.json``。RAW + JPEG 成对时，
+RAW 仍在使用的 ``IMG.xmp`` 会复制而不是移动。
+
+文件夹在 Imervue 中打开时，用其他程序重命名的照片也会保留这些数据；新名称原本
+就有的数据则维持不变。
 
 ----
 
@@ -1213,6 +1237,11 @@ Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ``animal/cat/british``）。选择节点即显示该节点与全部子节点下的图片；可一
 键为所选图片添加或移除标签。与右键菜单的扁平标签并行。
 
+右键 ``Index Keywords`` 会把所选图片的 XMP 关键字加入图库。Lightroom 或 darktable
+写的关键字层级（``lr:hierarchicalSubject``，如 ``Places|Taiwan|Taipei``）会成为
+标签路径 ``Places/Taiwan/Taipei``；只是重复这些层级的 ``Places``／``Taiwan``／
+``Taipei`` 零散关键字不会再另外加入。
+
 Token 批量重命名
 ^^^^^^^^^^^^^^^^
 
@@ -1220,7 +1249,9 @@ Token 批量重命名
 ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 等模板后立即显示每个文件的
 新名称；冲突会被高亮。支持 tokens：``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``。
+{hour} {minute}``。另一个选中文件现在的名称不算冲突：重新编号
+（``002`` → ``003``、``003`` → ``004``）或互换两个名称时会重命名整批。Batch Rename
+也一样。
 
 元数据导出
 ^^^^^^^^^^
@@ -1235,6 +1266,22 @@ XMP Sidecar（other XMP-aware photo managers 互通）
 Imervue 支持读写 Adobe XMP sidecar 文件（``photo.jpg`` ↔ ``photo.xmp``），
 让星级、标题、描述、关键字与颜色标签可与 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
 等 XMP 感知工具双向同步。
+
+保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。
+
+除了 ``photo.xmp``\ （Lightroom、Bridge），darktable 与 digiKam 写的
+``photo.jpg.xmp`` 在它是唯一的 sidecar 时也会读取并更新。颜色标签看得懂
+Lightroom 的写法（``Red`` … ``Purple``）与 Bridge 的写法（``Select``、``Second``、
+``Approved``、``Review``、``To Do``），导出时按 Lightroom 的写法写入；没有对应颜色的
+自定义标签会留在 sidecar 里。
+
+被拒绝的照片（Lightroom、Bridge、darktable 的 ``xmp:Rating`` -1）导入后成为筛选的
+**拒绝**\ 且不带星级，**拒绝**\ 导出时写成 -1。sidecar 不是拒绝时会解除「拒绝」，
+「选用」则不受影响。
+
+没有 sidecar 的文件会读取（并导入）文件本身内嵌的数据：先读 XMP（JPEG、PNG、WebP、
+TIFF），再读 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的评级与关键字
+存在这里，Windows 文件资源管理器与部分相机的星级也在这里。有 sidecar 时以 sidecar 为准。
 
 - **为当前图片导入 XMP** — 从 sidecar 读取星级 / 标题 / 关键字 / 颜色标签
   写入内部数据库。
@@ -1303,7 +1350,9 @@ R、G、B 四条通道。点击空白处新增控制点、拖拽移动、右键�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 可载入任意 Adobe ``.cube`` 文件
-（1D / 3D，最高 64³）。LUT 以 ``lru_cache`` 按路径 + mtime 缓存，使用
+（1D / 3D，最高 64³）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
+``LUT_3D_INPUT_RANGE`` 会像 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 一样设定输入范围，带 BOM
+的文件也能读取。LUT 以 ``lru_cache`` 按路径 + mtime 缓存，使用
 三线性插值并通过强度滑块与原图混合，LUT 路径与强度存入 recipe。
 
 虚拟副本（Virtual Copies）
@@ -1432,7 +1481,10 @@ GPS 地理标记
 ^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` 读取已有的 EXIF GPS 坐标并允许
-编辑或设定新的十进制度数。需要安装 ``piexif``；直接写入 JPEG 文件。
+编辑或设定新的十进制度数。JPEG 无需额外套件即可直接写入：只替换其 EXIF 区块，
+像素、其他标签与缩略图都保持不变。WebP 也以相同方式处理；其他格式无法标记。
+
+**EXIF 编辑器**\ （EXIF 侧栏的 ``Edit EXIF`` 按钮）可修改描述、作者、版权、相机厂牌 / 型号与注释。JPEG 与 WebP 无需额外套件，只重写其 EXIF 区块；其他格式会说明无法编辑的原因。
 
 打印排版
 ^^^^^^^^
@@ -2036,6 +2088,8 @@ Windows 上：确认 **Hide when other app is fullscreen**
    * - ``list-ops``
      - 列出所有子命令(``--json`` 输出机器可读格式)
 
+每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。相机 RAW 会像查看器一样显像，而不是读成内嵌的小预览；``resize`` 与 ``strip`` 会写成 PNG。无法读取的文件会被报告，其余文件照常处理。
+
 共用标志:``--out``\ (输出目录)、``--recursive``、``--dry-run``\ (只列出动作、不写入)、``--overwrite`` 与 ``--version``。
 
 ----
@@ -2064,14 +2118,15 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 列出文件夹内的图片（路径、大小、修改时间）。传
        ``recursive=true`` 可递归遍历子目录。
    * - ``read_image_metadata``
-     - 单张图片的尺寸、格式、EXIF、XMP sidecar。缺数据就回对应的
+     - 单张图片的尺寸、格式、EXIF、XMP（sidecar，没有时读文件内嵌的）。缺数据就回对应的
        空值，不会 raise。
    * - ``read_xmp_tags``
-     - 仅读 XMP 的快速路径 — 评级、色标、关键字、标题、描述。
+     - 仅读 XMP 的快速路径（sidecar，没有时读文件内嵌的）— 评级、色标、关键字、标题、描述。
    * - ``convert_format``
      - 图片格式转换。目标格式由目标文件的后缀决定（``png`` /
-       ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``）。
-       JPEG/WebP 可选择 ``quality``\ （1–100）。
+       ``jpg`` / ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``，
+       装了可选后端时还有 ``heic`` / ``jxl``）。
+       JPEG / WebP / AVIF / HEIC / JXL 可选择 ``quality``\ （1–100）。
    * - ``puppet_from_png``
      - 用 puppet 插件的 auto-mesh 从 PNG 建出 ``.puppet`` 动画文件。
        自动注入 Cubism 标准参数，导入后可直接被驱动。

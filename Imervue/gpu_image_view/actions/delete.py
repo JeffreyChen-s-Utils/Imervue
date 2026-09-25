@@ -182,40 +182,46 @@ def undo_delete(main_gui: GPUImageView):
     main_gui.update()
 
 
-def partition_pending_deletions(undo_stack: list[dict]) -> tuple[list[str], list[str]]:
-    """Split still-pending deletions into ``(unlink_paths, trash_paths)``.
+def pending_deletion_list(undo_stack: list[dict]) -> list[str]:
+    """Still-pending deletions in the order they were made, each path once.
 
-    Folders / file-tree deletions were only hidden, never moved, so they go
-    to the OS trash and stay recoverable from there; viewer-list image
-    soft-deletes are unlinked outright.
+    Viewer images and folder / file-tree entries alike: until the shutdown
+    commit none of them has left its place on disk.
     """
-    unlink_paths: list[str] = []
-    trash_paths: list[str] = []
-    for action in undo_stack:
-        if action.get("mode") not in _PENDING_DELETE_MODES or action.get("restored"):
-            continue
-        group = (trash_paths if action.get("mode") == "delete_external"
-                 else unlink_paths)
-        group.extend(action.get("deleted_paths", []))
-    return unlink_paths, trash_paths
+    return list(dict.fromkeys(
+        path
+        for action in undo_stack
+        if action.get("mode") in _PENDING_DELETE_MODES and not action.get("restored")
+        for path in action.get("deleted_paths", [])
+    ))
 
 
-def commit_pending_deletions(main_gui: _UndoStackOwner):
-    """Apply every still-pending soft deletion, then clear the undo stack.
+def commit_pending_deletions(main_gui: _UndoStackOwner) -> list[str]:
+    """Send every still-pending soft deletion to the system Recycle Bin, then clear the undo stack.
+
+    Returns the paths left in place: on a drive without a Recycle Bin (which
+    Windows would have deleted for good) or held by another program. The
+    caller offers to delete those permanently
+    (:func:`Imervue.gui.trash_failure_notice.offer_permanent_delete`).
+
+    Viewer images went the same way as file-tree entries: recoverable from
+    the OS bin, as the manual promises. They used to be unlinked, so a photo
+    deleted with the Delete key was gone for good once Imervue closed. Only
+    the Recycle Bin dialog's Delete Forever removes a file outright.
 
     Runs from ``closeEvent`` on the GUI thread, so the disk work is handed to
-    ``purge_batch`` in groups rather than looped per path: one ``send2trash``
-    call costs ~0.27 s on Windows however few files it carries, so a few
-    hundred pending file-tree deletions used to leave the closing window
-    unresponsive for minutes.
+    ``trash_batch`` in groups rather than looped per path: one ``send2trash``
+    call costs ~0.27 s on Windows however few files it carries.
     """
-    from Imervue.system.trash_ops import purge_batch
-    unlink_paths, trash_paths = partition_pending_deletions(main_gui.undo_stack)
-    if unlink_paths or trash_paths:
-        removed, failed = purge_batch(unlink_paths, trash_paths)
-        logger.info("Committed %d pending deletion(s)", len(removed))
+    from Imervue.system.trash_ops import trash_batch
+    paths = pending_deletion_list(main_gui.undo_stack)
+    failed: list[str] = []
+    if paths:
+        trashed, failed = trash_batch(paths)
+        logger.info("Sent %d pending deletion(s) to the Recycle Bin", len(trashed))
         for path in failed:
-            logger.warning("Failed to permanently delete: %s", path)
+            logger.warning("Couldn't send to the Recycle Bin, left in place: %s", path)
 
     # 程式即將關閉，清除所有 undo 記錄
     main_gui.undo_stack.clear()
+    return failed

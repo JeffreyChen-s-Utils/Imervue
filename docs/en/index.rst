@@ -79,7 +79,8 @@ Supported Formats
 ^^^^^^^^^^^^^^^^^
 
 - **Standard**: PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
-- **RAW**: CR2 (Canon), NEF (Nikon), ARW (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus)
+- **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
+- **Modern**: AVIF (built in); HEIC / HEIF with the optional ``pillow-heif``; JPEG XL with the optional ``pillow-jxl-plugin``
 
 ----
 
@@ -294,7 +295,7 @@ Sorting & Filtering
 
    * - Feature
      - Menu Location
-   * - Sort by name
+   * - Sort by name (natural order: ``img2`` before ``img10``)
      - ``Sort`` > ``By Name``
    * - Sort by date modified
      - ``Sort`` > ``By Modified Date``
@@ -472,6 +473,13 @@ These adjustments are **non-destructive**. Every slider writes into an edit reci
 per-image; press ``Reset`` at any time to restore the original, or ``Ctrl + Z`` to step
 backwards through individual changes. Recipes survive restarts and can be exported / synced
 via the XMP sidecar flow described in the Metadata section.
+
+The file on disk changes only when you ask for it. **Apply Crop** and the annotation **Save** write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten: the crop asks you to export instead, and the annotation save asks for a new file. The one-shot tools (CLAHE, HSL Mixer, Photo Frame, Auto Straighten …) save their
+result beside the original as ``photo_clahe.png``; running one again saves
+``photo_clahe_1.png`` rather than replacing the last result. **Auto-Rotate by EXIF**, the copies from **Batch EXIF Strip** and **Split Pages…** number their files the same way. A photo's recipe and virtual copies stay with it when Imervue
+rotates it losslessly (the crop turns with the photo) or rewrites its EXIF (GPS
+Geotag, the EXIF editor); a recipe with local masks, layers, a lens flare or face
+tags stays with the unrotated version until it is turned back.
 
 Save & Undo
 ^^^^^^^^^^^^
@@ -1541,10 +1549,11 @@ Single Export
 
 Right-click an image > ``Export / Save As``.
 
-- Choose format: PNG, JPEG, WebP, BMP, TIFF
+- Choose format: PNG, JPEG, WebP, BMP, TIFF, AVIF; HEIC and JPEG XL too when ``pillow-heif`` / ``pillow-jxl-plugin`` is installed
 - Adjust quality (for lossy formats)
+- Choose the metadata to keep: all, all but the location (default) or none. Camera, lens and capture date come along; the choice is remembered and Batch Export offers the same
 - Preview estimated file size
-- Pick a save location
+- Pick a save location. The suggested name is one not yet taken (``photo_1.png`` beside ``photo.png``); an existing file — above all the photo itself — is replaced only after you confirm
 
 Export Presets
 ^^^^^^^^^^^^^^
@@ -1600,14 +1609,17 @@ Select multiple images, then right-click > ``Create GIF / Video``.
 - Drag to reorder frames
 - Set frames per second (FPS)
 - Custom dimensions
-- Loop option
+- Loop option: loop forever, or play once when it is off
+- The suggested file is ``output.gif`` beside the first frame, numbered (``output_1.gif``) when that name is taken; a typed name that already exists is replaced only after you confirm
 
 ----
 
 Animation Playback
 ------------------
 
-When opening GIF, APNG, or animated WebP files, animation plays automatically.
+When opening GIF, APNG, or animated WebP files, animation plays automatically. An animation that would take
+more than 512 MB decoded is decoded one frame at a time as it plays, so opening it
+neither freezes the window nor fills memory.
 
 .. list-table::
    :header-rows: 1
@@ -1717,7 +1729,15 @@ Deleting Images
    * - Delete selected images
      - Select multiple, then ``Delete`` or right-click > ``Delete Selected``
 
-Images are moved to the system Recycle Bin / Trash and can be recovered from there.
+Images are moved to the system Recycle Bin / Trash and can be recovered from there. A drive
+without a Recycle Bin — a memory card, USB stick or network share, where Windows
+would delete the file for good — keeps the file instead: on closing, Imervue lists
+such files and asks whether to delete them permanently.
+
+Their sidecars go with them: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` and
+``IMG.xmp``, unless the RAW of a RAW + JPEG pair still uses that last one. A
+sidecar left behind would attach its rating and edits to the next ``IMG.*`` the
+camera writes under the same name.
 
 ----
 
@@ -1744,6 +1764,18 @@ In thumbnail mode, select multiple images then right-click:
      - Apply the same tag to all selected images
    * - Add to Album
      - Place all selected images into an album
+
+A move or copy never overwrites a file of the same name: it arrives as
+``name_1.ext``. A photo renamed or moved in Imervue — Batch Rename, Token Batch
+Rename, the folder tree, Move / Copy, Dual Pane, Staging Tray, Image Organizer —
+keeps its rating, favourite, tags, colour label, title, description, library
+note and cull flag (a renamed or moved folder keeps those of every photo in it).
+Its sidecars go with it: ``IMG.xmp``, ``IMG.JPG.xmp`` and
+``IMG.JPG.annotations.json``. An ``IMG.xmp`` that the RAW of a RAW + JPEG pair
+still uses is copied rather than moved.
+
+A photo renamed in another program while its folder is open in Imervue keeps
+the same data; data the new name already had is left as it is.
 
 ----
 
@@ -2079,6 +2111,12 @@ Hierarchical Tags
 Hierarchical tags live in the library index and are complementary to the flat
 tag system in the right-click menu.
 
+Right-click ``Index Keywords`` adds the selection's XMP keywords to the library.
+A keyword hierarchy Lightroom or darktable wrote (``lr:hierarchicalSubject``,
+``Places|Taiwan|Taipei``) is filed as the tag path ``Places/Taiwan/Taipei``, and
+the loose ``Places`` / ``Taiwan`` / ``Taipei`` keywords that only repeat its
+levels are not added again.
+
 Token Batch Rename
 ^^^^^^^^^^^^^^^^^^
 
@@ -2087,7 +2125,9 @@ type a template like ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` and see
 exactly what every file will be renamed to. Conflicts are highlighted so
 nothing is overwritten. Supported tokens: ``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``.
+{hour} {minute}``. A new name that another selected file has now is
+no conflict: renumbering (``002`` → ``003`` while ``003`` → ``004``) or swapping
+two names renames the whole selection. Batch Rename does the same.
 
 Metadata Export
 ^^^^^^^^^^^^^^^
@@ -2104,6 +2144,23 @@ Imervue can read and write Adobe XMP sidecar files (``photo.jpg`` ↔
 ``photo.xmp``) so that ratings, titles, descriptions, keywords, and color
 labels round-trip cleanly with other XMP-aware photo managers, other XMP-aware photo managers, Bridge, and other
 XMP-aware tools.
+
+Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten.
+
+Besides ``photo.xmp`` (Lightroom, Bridge), the ``photo.jpg.xmp`` that darktable
+and digiKam write is read and updated when it is the only sidecar. Colour labels
+are understood in Lightroom's words (``Red`` … ``Purple``) and Bridge's
+(``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``), and exported as
+Lightroom writes them; a label with no colour (a custom one) is left in the sidecar.
+
+A rejected photo — ``xmp:Rating`` -1 in Lightroom, Bridge and darktable — is
+imported as a culling **Reject** with no stars, and a Reject is exported as -1.
+A sidecar that isn't rejected lifts a Reject; a Pick is left alone.
+
+A file without a sidecar is read — and imported — from what it embeds itself: its
+XMP packet (JPEG, PNG, WebP, TIFF), then its EXIF ``Rating`` / ``RatingPercent``.
+That is where Lightroom keeps a JPEG's rating and keywords, and where Windows
+Explorer and some cameras keep their stars. A sidecar, when there is one, wins.
 
 - **Import XMP for current image** — pulls rating / title / keywords /
   color label from the sidecar into the internal database.
@@ -2186,7 +2243,9 @@ Apply .cube LUT
 ^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` lets you pick any Adobe ``.cube`` file
-(1D or 3D, up to 64³). The LUT is parsed with an ``lru_cache`` keyed by
+(1D or 3D, up to 64³). DaVinci Resolve's ``LUT_1D_INPUT_RANGE`` /
+``LUT_3D_INPUT_RANGE`` sets the input domain the way ``DOMAIN_MIN`` /
+``DOMAIN_MAX`` do, and a file saved with a BOM loads too. The LUT is parsed with an ``lru_cache`` keyed by
 path + mtime, evaluated with trilinear interpolation, and blended against
 the original via an intensity slider. The LUT path and intensity live on
 the recipe.
@@ -2371,8 +2430,11 @@ GPS Geotag
 ^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` reads any existing EXIF GPS tags and
-lets you edit or set new decimal-degree coordinates. Requires ``piexif``
-to be installed; writes to JPEG in place.
+lets you edit or set new decimal-degree coordinates. A JPEG is written in place with no
+extra package: only its EXIF block changes, so the pixels, the other tags and the thumbnail
+stay as they were. A WebP is handled the same way; other formats can't be tagged.
+
+The **EXIF editor** (the ``Edit EXIF`` button in the EXIF sidebar) changes the description, artist, copyright, camera make / model and user comment. A JPEG or WebP needs no extra package and only its EXIF block is rewritten; other formats show why they can't be edited.
 
 Print Layout
 ^^^^^^^^^^^^
@@ -2432,6 +2494,8 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
    * - ``list-ops``
      - List every subcommand (``--json`` for machine-readable output)
 
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run.
+
 Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
 (list actions, write nothing), ``--overwrite`` and ``--version``.
 
@@ -2463,17 +2527,18 @@ Available Tools
      - List image files in a folder (path, size, mtime). Pass
        ``recursive=true`` to walk subfolders.
    * - ``read_image_metadata``
-     - Dimensions, format, EXIF tags and XMP sidecar fields for one
-       image. Missing data is reported as the appropriate empty value
+     - Dimensions, format, EXIF tags and XMP fields (the sidecar, else what
+       the file embeds) for one image. Missing data is reported as the appropriate empty value
        rather than raising.
    * - ``read_xmp_tags``
-     - Fast path that only reads the XMP sidecar — rating, color
-       label, keywords, title, description.
+     - Fast path that only reads the XMP — the sidecar, else what the file
+       embeds: rating, color label, keywords, title, description.
    * - ``convert_format``
      - Convert one image to another format. Destination format is
        inferred from the destination suffix (``png`` / ``jpg`` /
-       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp``). Optional
-       ``quality`` (1–100) applies to JPEG/WebP.
+       ``jpeg`` / ``webp`` / ``tiff`` / ``bmp`` / ``avif``, plus ``heic`` /
+       ``jxl`` when their optional backend is installed). Optional
+       ``quality`` (1–100) applies to JPEG / WebP / AVIF / HEIC / JXL.
    * - ``puppet_from_png``
      - Build a ``.puppet`` rig from a PNG using the puppet plugin's
        auto-mesh. Seeds the Cubism-standard parameter catalogue so

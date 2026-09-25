@@ -104,7 +104,7 @@ pip install .
 | PyOpenGL | OpenGL 绑定 |
 | PyOpenGL_accelerate | OpenGL 性能优化 |
 | numpy | 数组运算与缩图缓存 |
-| rawpy | RAW 图像解码 |
+| rawpy | RAW 图像解码（CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG 等） |
 | imageio | 图片 I/O |
 | imageio-ffmpeg | 幻灯片 MP4 导出（H.264 通过 ffmpeg） |
 | defusedxml | 安全 XML 解析（XMP 边车文件） |
@@ -167,6 +167,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 | `preset` / `pipeline` | 按名称应用已保存的显影预设；执行有序的 JSON 运算管线 |
 | `list-ops` | 列出所有子命令（`--json` 输出机器可读格式） |
 
+每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。相机 RAW 会像查看器一样显像，而不是读成内嵌的小预览；`resize` 与 `strip` 会写成 PNG。无法读取的文件会被报告，其余文件照常处理。
+
 共用标志：`--out`（输出目录）、`--recursive`、`--dry-run`（只列出动作、不写入）、`--overwrite`、`--version`。
 
 ---
@@ -184,7 +186,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 - **虚拟化缩图网格** — 只渲染可见磁砖；缩图尺寸可选（128 / 256 / 512 / 1024 / 自动）
 - **磁盘缓存** — MD5 失效检测的压缩 PNG 缩图，存于 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
 - **EXIF 方向** — 手机或相机只打了方向标签、没有真正旋转的竖拍照片，在检视器、缩图、列表视图、悬停预览和 Modify 分页中都会摆正显示；之前保存的显影裁剪 / 旋转仍按当初的方向套用
-- **动画播放** — GIF / APNG，含播放 / 暂停 / 逐帧 / 速度控制
+- **色彩管理** — 内嵌色彩描述文件的照片（手机的 Display P3、相机的 Adobe RGB、CMYK）在检视器与缩图中会转换为 sRGB 显示；没有描述文件或本身是 sRGB 的图像照原样显示
+- **动画播放** — GIF / APNG，含播放 / 暂停 / 逐帧 / 速度控制；解码后超过 512 MB 的动画会边播放边逐帧解码，而不是一开始全部解码
 
 ### 浏览模式
 
@@ -221,7 +224,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 - **评级** — 0-5 星（`1`-`5`）+ 收藏爱心（`0`）
 - **颜色标签** — other XMP-aware photo managers 式 红 / 黄 / 绿 / 蓝 / 紫（`F1`-`F5`）
 - **挑片**（Culling）— other XMP-aware photo managers 三状态旗标（`P` = 保留、`Shift+X` = 拒绝、`U` = 取消）；按状态过滤；批量删除拒绝；**自动挑片** 会在每组近重复中挑出最清晰的一张保留、其余标为拒绝
-- **层级标签** — 树状路径如 `animal/cat/british`；自动匹配子孙
+- **层级标签** — 树状路径如 `animal/cat/british`；自动匹配子孙；右键 **Index Keywords** 会把 Lightroom／darktable 的关键字层级（`Places|Taiwan|Taipei`）归到对应的父标签下
 - **Tags & Albums** 含多标签 AND / OR 过滤
 - **智能相册** — 保存规则式查询并一键重新应用；过滤条件涵盖扩展名、分辨率与 **长宽比**、**文件大小**、评级 **下限 / 上限**、颜色、挑片、标签（含 **排除**）、**相机 / 镜头**、**文件名正则 / glob** 与 **文件年龄**，并可 **导出 / 导入** 为可移植的 JSON 文件
 - **堆叠 RAW+JPEG 对** — 将同档名采集折叠成单一磁砖；RAW 仍可从同级访问
@@ -236,7 +239,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 ### 排序与过滤
 
-- 按名称 / 修改时间 / 创建时间 / 大小 / 分辨率排序（升 / 降）
+- 按名称（与资源管理器相同的自然顺序：`img2` 在 `img10` 之前）/ 修改时间 / 创建时间 / 大小 / 分辨率排序（升 / 降）
 - 按扩展名、颜色标签、评级、标签 / 相册、挑片状态过滤
 - **高级过滤** — 分辨率 / 文件大小 / 方向 / 修改日期范围
 - **多标签过滤** 对话框含 AND / OR
@@ -253,11 +256,11 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 ### 元数据
 
 - **EXIF 侧栏** 含可折叠组 + 内嵌 0-5 星评级行
-- **EXIF 编辑器** 对话框
+- **EXIF 编辑器** 对话框 — 描述、作者、版权、相机与注释（支持 Unicode）无需额外套件即可写入 JPEG / WebP，像素与其他标签不变
 - **关键字编辑器** — 标题 / 创作者 / 描述 / 关键字，含从标签共现得出的 **相关标签建议**，以及 **受控词汇展开**（输入叶节点关键字会自动套用其祖先＋同义词，词汇为可编辑的层级结构）
 - **图像信息** 对话框（尺寸 / 大小 / 日期）
-- **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 other XMP-aware photo managers（通过 `defusedxml` 安全解析）
-- **GPS 地理标记编辑器** — 读写 EXIF GPS 经纬度（JPEG）
+- **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签双向同步 other XMP-aware photo managers（通过 `defusedxml` 安全解析）。保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。除了 `photo.xmp`（Lightroom、Bridge），darktable 与 digiKam 写的 `photo.jpg.xmp` 在它是唯一的 sidecar 时也会读取并更新；颜色标签看得懂 Lightroom 的写法（`Red` … `Purple`）与 Bridge 的写法（`Select`、`Second`、`Approved`、`Review`、`To Do`），导出时按 Lightroom 的写法写入。被拒绝的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）会成为筛选的「拒绝」，「拒绝」导出时写成 -1。没有 sidecar 的文件会读取并导入文件本身内嵌的 XMP 与 EXIF 评级（JPEG、PNG、WebP、TIFF）：Lightroom 就是这样保存 JPEG 的评级与关键字，Windows 文件资源管理器的星级也是。
+- **GPS 地理标记编辑器** — 读写 EXIF GPS 经纬度；JPEG / WebP 无需额外套件，像素、其他标签与缩略图都不变
 - **令牌批量重命名** — 实时预览模板 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **导出元数据 CSV / JSON** — 每张图一行含挑片 / 评级 / 标签 / 笔记
 
@@ -280,7 +283,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 ## Modify — 非破坏显影
 
-**Modify** 标签是显影工作站。每次调整都存储在每张图片的 **recipe** 中 — 原始文件直到你明确 **导出** 或 **另存为** 才会被覆写。
+**Modify** 标签是显影工作站。每次调整都存储在每张图片的 **recipe** 中 — 原始文件直到你明确 **导出** 或 **另存为** 才会被覆写。例外是 **Apply Crop** 与标注的 **Save**：它们会把结果写回原文件，并保留其 EXIF（相机、拍摄时间、GPS）、XMP 与 DPI。相机 RAW、HEIC 以及动画 / 多页文件永远不会被覆写——裁剪会提示改用导出，标注保存则会询问新文件名。单次处理的工具（CLAHE、HSL 混色器、相框、自动拉直……）会把结果存成原图旁的 `photo_clahe.png`；再执行一次会存成 `photo_clahe_1.png`，不会覆盖上一次的结果。**按 EXIF 自动旋转**、**EXIF 批量清除** 的副本与 **拆分页面…** 也用同样的方式编号。Imervue 无损旋转照片（裁剪框会跟着转）或改写其 EXIF（GPS 地理标记、EXIF 编辑器）时，照片的配方与虚拟副本都会跟着走；带局部蒙版、图层、镜头光晕或人脸标签的配方则留在旋转前的版本上，转回来即可取回。
 
 ### 显影滑块
 
@@ -293,7 +296,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 ### 曲线与 LUT
 
 - **色调曲线编辑器** — 可拖曳 RGB 曲线 + 单独 R / G / B 通道，含 monotone cubic 插值
-- **应用 .cube LUT** — 加载任何 Adobe 3D LUT（最高 64³），trilinear 插值，混合强度滑块
+- **应用 .cube LUT** — 加载任何 Adobe 3D LUT（最高 64³，含 DaVinci Resolve 的 `LUT_3D_INPUT_RANGE`），trilinear 插值，混合强度滑块
 - **分离色调** — 旗标式阴影 / 高光色相 + 饱和度，含平衡枢纽
 
 ### 创意效果
@@ -340,8 +343,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 - **水印叠加** — 文字或图片，9 个锚点、不透明度、缩放；只在导出时套用
 - **导出预设** — Web 1600 / Print 300 dpi / Instagram 1080 一键流水线
-- **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF，有损格式提供质量滑块
-- **批量操作** — 重命名、移动 / 复制、旋转选中图片
+- **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF / AVIF（装了 `pillow-heif` 还有 HEIC，装了 `pillow-jxl-plugin` 还有 JPEG XL），有损格式提供质量滑块；保留相机、镜头与拍摄时间的 EXIF，位置可选（**元数据**：全部／位置以外／无）；建议的文件名一定是还没被占用的（`photo.png` 旁边就是 `photo_1.png`），已存在的文件（尤其是原图本身）要确认后才会被替换
+- **批量操作** — 重命名、移动 / 复制、旋转选中图片。移动或复制不会覆盖同名文件（会以 `name_1` 存入）；在 Imervue 里重命名或移动的照片（批量重命名、Token 批量重命名、文件夹树、移动 / 复制、双窗格、暂存区、图片整理）会保留评级、收藏、标签、颜色标签、标题、备注与筛选标记，`.xmp` 与标注 sidecar 也会一起带走；文件夹在 Imervue 中打开时，用其他程序重命名的照片也一样；改成另一张选中照片现在的名称（重新编号、互换两个名称）时，会按正确顺序把整批重命名，而不是只改一部分
 - **联系表 PDF** — 多页网格含说明（A4 / A3 / Letter / Legal）
 - **网页画廊 HTML** — 自包含文件夹含 `index.html` + JPEG 缩图 + 内嵌灯箱
 - **幻灯片 MP4** — H.264 视频，FPS / 每张保留秒数 / 淡入淡出 / 溶接 / 滑入 / 抹除转场可设（`imageio-ffmpeg`）
@@ -666,7 +669,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 | Shift+S | 分割视图 |
 | Shift+D / Ctrl+Shift+D | 双页（LTR / RTL） |
 | Ctrl+Shift+M | 多屏镜像窗口 |
-| Delete | 移到回收站（可撤销） |
+| Delete | 连同 `.xmp` / 标注 sidecar 移到回收站（可撤销）；在没有回收站的磁盘（存储卡、U 盘、网络驱动器）上，文件会留着，直到你确认永久删除 |
 | Escape | 退出深度缩放 / 全屏 |
 
 ### 动画播放（GIF / APNG）
@@ -807,10 +810,10 @@ python -m Imervue.mcp_server
 | 工具 | 用途 |
 |------|---------|
 | `list_images` | 列出文件夹中的图片（可选递归） |
-| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP 边车（评级、标签、关键字） |
+| `read_image_metadata` / `read_xmp_tags` | 尺寸、格式、EXIF、XMP：sidecar，没有时读文件内嵌的（评级、标签、关键字） |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | 无参考分析：每通道统计、色彩度 / 熵 / 对比度、直方图 + 裁剪、模糊评分 |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 预览、Tesseract 文字、感知哈希近重复分组（带进度） |
-| `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP（+ 可选 HEIC / AVIF / JXL） |
+| `convert_format` | 转换 PNG / JPEG / WebP / TIFF / BMP / AVIF（+ 可选 HEIC / JXL） |
 | `apply_watermark` / `apply_frame` | 烧入文字水印或衬边 / 拍立得相框 + 说明文字 |
 | `build_collage` | 将多张图片合成为网格拼贴（带进度） |
 | `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保持长宽比的缩放、无损旋转 / 翻转。尺寸与坐标以依 EXIF 方向摆正后的图像为准。 |
@@ -880,7 +883,7 @@ python -m Imervue.mcp_server
 
 保存在应用程序旁的 `user_setting.json` —— 源码版本为项目根目录，冻结版本则是含 `.exe` 的文件夹（PyInstaller 与 Nuitka 皆同）。
 
-此文件是**多账号容器**：每个 profile 各自持有独立的设置字典，因此同一份安装可以同时保有不同配置（例如 *Work* 与 *Personal*）。在 **File > Profiles…** 可切换、创建、重命名与删除 profile。旧版留下的 v1 单账号文件会在首次读取时自动迁移为 `default` profile。写入会在最后一次变更后延迟数秒才批量落地，且以原子方式写入（`.tmp` 同层文件 + `os.replace`），因此保存中途被中断也不会截断文件。
+此文件是**多账号容器**：每个 profile 各自持有独立的设置字典，因此同一份安装可以同时保有不同配置（例如 *Work* 与 *Personal*）。在 **File > Profiles…** 可切换、创建、重命名与删除 profile。旧版留下的 v1 单账号文件会在首次读取时自动迁移为 `default` profile。写入会在最后一次变更后延迟数秒才批量落地，且以原子方式写入（`.tmp` 同层文件 + `os.replace`），因此保存中途被中断也不会截断文件。启动时若读不到这个文件（JSON 损坏，或被其他程序占用），Imervue 会以默认设置启动，并在第一次保存前把它另存为旁边的 `user_setting.json.unreadable-<日期>-<时间>`；无法保留副本时绝不覆盖它。启动时会弹出警告，写明是哪个文件以及如何取回原来的设置。
 
 当前 profile 的关键条目：
 

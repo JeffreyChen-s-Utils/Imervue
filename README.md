@@ -105,7 +105,7 @@ pip install .
 | PyOpenGL | OpenGL bindings |
 | PyOpenGL_accelerate | OpenGL performance optimization |
 | numpy | Array operations and thumbnail cache |
-| rawpy | RAW image decoding |
+| rawpy | Camera RAW decoding (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG and more) |
 | imageio | Image I/O |
 | imageio-ffmpeg | Slideshow MP4 export (H.264 via ffmpeg) |
 | defusedxml | Safe XML parsing (XMP sidecars) |
@@ -169,6 +169,8 @@ py -m Imervue.cli list-ops          # print every available subcommand
 | `preset` / `pipeline` | Apply a saved develop preset by name; run an ordered JSON pipeline of ops |
 | `list-ops` | List every subcommand (`--json` for machine output) |
 
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; `resize` and `strip` write it as PNG. A file that can't be read is reported and the rest still run.
+
 Shared flags: `--out` (output directory), `--recursive`, `--dry-run` (list actions, write
 nothing), `--overwrite`, and `--version`.
 
@@ -187,7 +189,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Virtualized thumbnail grid** — only visible tiles are rendered; thumbnail size is configurable (128 / 256 / 512 / 1024 / auto)
 - **Disk cache** — compressed PNG thumbnails with MD5-based invalidation under `%LOCALAPPDATA%/Imervue/cache/thumbnails` (or `~/.cache/imervue/thumbnails`)
 - **EXIF orientation** — portrait shots that a phone or camera tagged instead of turning are shown upright in the viewer, thumbnails, list view, hover preview and Modify tab; a develop crop / rotate saved before this keeps applying to the orientation it was drawn on
-- **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls
+- **Colour management** — photos with an embedded colour profile (Display P3 from phones, Adobe RGB from cameras, CMYK) are converted to sRGB for the viewer and thumbnails; untagged and sRGB images are shown as stored
+- **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls; an animation too large to hold decoded (over 512 MB) decodes each frame as it plays instead of all up front
 
 ### Browsing modes
 
@@ -224,7 +227,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Ratings** — 0-5 stars (`1`–`5`) + favorite heart (`0`)
 - **Color labels** — flag-based red/yellow/green/blue/purple (`F1`–`F5`)
 - **Culling** — other XMP-aware photo managers 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects; **auto-cull** picks the sharpest frame per near-duplicate group and rejects the rest
-- **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically
+- **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically; right-click **Index Keywords** files a Lightroom / darktable keyword hierarchy (`Places|Taiwan|Taipei`) under its parents
 - **Tags & Albums** with multi-tag AND/OR filtering
 - **Smart Albums** — save rule-based queries and reapply with one click; filters span extension, resolution & **aspect**, **file size**, rating **floor / ceiling**, colour, cull, tags (incl. **exclusion**), **camera / lens**, **filename regex / glob** and **file age**, plus **export / import** to a portable JSON file
 - **Stack RAW+JPEG pairs** — collapse same-stem captures into one tile; RAW stays accessible as a sibling
@@ -239,7 +242,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 ### Sort & filter
 
-- Sort by name / modified / created / size / resolution (asc or desc)
+- Sort by name (natural order, like Explorer: `img2` before `img10`) / modified / created / size / resolution (asc or desc)
 - Filter by extension, color label, rating, tag/album, cull state
 - **Advanced filter** — resolution / file size / orientation / modified-date range
 - **Multi-tag filter** dialog with AND / OR boolean logic
@@ -256,11 +259,11 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 ### Metadata
 
 - **EXIF sidebar** with collapsible groups + inline 0-5 star strip
-- **EXIF editor** dialog
+- **EXIF editor** dialog — description, artist, copyright, camera and comment (Unicode included) written into a JPEG or WebP with no extra package, pixels and other tags untouched
 - **Keyword editor** — title / creator / description / keywords, with **related-tag suggestions** drawn from tag co-occurrence and **controlled-vocabulary expansion** (a leaf keyword auto-applies its ancestors + synonyms from an editable hierarchical vocabulary)
 - **Image info** dialog (dimensions / size / dates)
-- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`)
-- **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon via piexif (JPEG)
+- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`). Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten. Besides `photo.xmp` (Lightroom, Bridge), the `photo.jpg.xmp` that darktable and digiKam write is read and updated when it is the only sidecar; colour labels are understood in Lightroom's words (`Red` … `Purple`) and Bridge's (`Select`, `Second`, `Approved`, `Review`, `To Do`), and exported as Lightroom writes them. A rejected photo (`xmp:Rating` -1 in Lightroom, Bridge and darktable) becomes a culling Reject, and a Reject is exported as -1. A file without a sidecar is read and imported from the XMP and EXIF rating embedded in it (JPEG, PNG, WebP, TIFF) — how Lightroom stores a JPEG's rating and keywords, and how Windows Explorer stores its stars.
+- **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon into a JPEG or WebP with no extra package, leaving its pixels, other tags and thumbnail untouched
 - **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — one row per image including cull / rating / tags / notes
 
@@ -283,7 +286,7 @@ Accessed from **Tools** menu; organised into function-grouped submenus:
 
 ## Modify — Non-destructive develop
 
-The **Modify** tab is the develop workstation. Every adjustment lives on a per-image **recipe** stored alongside the file — the original pixels on disk are never overwritten until you explicitly **Export** or **Save As**.
+The **Modify** tab is the develop workstation. Every adjustment lives on a per-image **recipe** stored alongside the file — the original pixels on disk are never overwritten until you explicitly **Export** or **Save As**. **Apply Crop** and the annotation **Save** are the two exceptions: they write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten — the crop asks you to export instead, and the annotation save asks for a new file. The one-shot tools (CLAHE, HSL Mixer, Photo Frame, Auto Straighten …) save their result beside the original as `photo_clahe.png`; running one again saves `photo_clahe_1.png` rather than replacing the last result. **Auto-Rotate by EXIF**, the copies from **Batch EXIF Strip** and **Split Pages…** number their files the same way. A photo's recipe and virtual copies stay with it when Imervue rotates it losslessly (the crop turns with the photo) or rewrites its EXIF (GPS Geotag, the EXIF editor); a recipe with local masks, layers, a lens flare or face tags stays with the unrotated version until it is turned back.
 
 ### Develop sliders
 
@@ -296,7 +299,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 ### Curves & LUTs
 
 - **Tone Curve editor** — draggable RGB curve plus per-channel R / G / B with monotone cubic interpolation
-- **Apply .cube LUT** — load any Adobe 3D LUT (up to 64³), trilinear-interpolate, blend with an intensity slider
+- **Apply .cube LUT** — load any Adobe 3D LUT (up to 64³, DaVinci Resolve's `LUT_3D_INPUT_RANGE` included), trilinear-interpolate, blend with an intensity slider
 - **Split Toning** — flag-based shadow / highlight hue + saturation with a balance pivot
 
 ### Creative effects
@@ -343,8 +346,8 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Watermark overlay** — text or image, 9 anchor positions, opacity, scale; applied on export only
 - **Export presets** — Web 1600 / Print 300 dpi / Instagram 1080 one-click pipelines
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF with quality slider for lossy formats
-- **Batch operations** — rename, move/copy, rotate selected images
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (plus HEIC with `pillow-heif` and JPEG XL with `pillow-jxl-plugin`) with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none); the suggested file name is one not yet taken (`photo_1.png` beside `photo.png`), and an existing file — above all the photo itself — is replaced only after you confirm
+- **Batch operations** — rename, move/copy, rotate selected images. A move or copy never overwrites a file of the same name (it arrives as `name_1`), and a photo renamed or moved in Imervue (Batch Rename, Token Batch Rename, the folder tree, Move / Copy, Dual Pane, Staging Tray, Image Organizer) keeps its rating, favourite, tags, colour label, title, notes and cull flag; its `.xmp` and annotation sidecars go with it; so does a photo renamed in another program while its folder is open in Imervue. Renaming to a name another selected photo has now (renumbering a folder, swapping two names) renames the whole selection in the right order instead of only part of it
 - **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
 - **Web Gallery HTML** — self-contained folder with `index.html` + JPEG thumbs + inline lightbox
 - **Slideshow MP4** — H.264 video with configurable FPS / hold-per-image / fade / dissolve / slide / wipe transitions (`imageio-ffmpeg`)
@@ -717,7 +720,7 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | Shift+S | Split view |
 | Shift+D / Ctrl+Shift+D | Dual-page (LTR / RTL) |
 | Ctrl+Shift+M | Multi-monitor mirror window |
-| Delete | Move to trash (undoable) |
+| Delete | Move to trash with its `.xmp` / annotation sidecars (undoable); on a drive without a Recycle Bin (memory card, USB stick, network share) the file stays until you choose to delete it for good |
 | Escape | Exit deep zoom / Exit fullscreen |
 
 ### Animation playback (GIF / APNG)
@@ -859,10 +862,10 @@ result as `structuredContent`, and long-running tools stream
 | Tool | Purpose |
 |------|---------|
 | `list_images` | List image files in a folder (recursive optional) |
-| `read_image_metadata` / `read_xmp_tags` | Dimensions, format, EXIF, XMP sidecar (rating, label, keywords) |
+| `read_image_metadata` / `read_xmp_tags` | Dimensions, format, EXIF, XMP — the sidecar, else what the file embeds (rating, label, keywords) |
 | `image_statistics` / `quality_metrics` / `read_histogram` / `sharpness_score` | No-reference analysis: per-channel stats, colourfulness/entropy/contrast, histogram + clipping, blur score |
 | `image_thumbnail` / `ocr_text` / `find_similar` | Base64 preview, Tesseract text, perceptual-hash near-duplicate groups (with progress) |
-| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP (+ optional HEIC / AVIF / JXL) |
+| `convert_format` | Convert between PNG / JPEG / WebP / TIFF / BMP / AVIF (+ optional HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | Burn in a text watermark or a matte / Polaroid frame + caption |
 | `build_collage` | Composite images into a grid montage (with progress) |
 | `crop_image` / `resize_image` / `rotate_image` | Pixel crop, aspect-preserving resize, lossless rotate / flip. Sizes and coordinates refer to the EXIF-upright image. |
@@ -889,8 +892,8 @@ result as `structuredContent`, and long-running tools stream
 ### Prompts
 
 Four reusable prompts: `caption_image`, `suggest_edits`, `analyze_composition`
-(saliency-driven composition critique) and `flag_issues` (sharpness + quality
-+ clipping triage). Prompt arguments are completable via `completion/complete`.
+(saliency-driven composition critique) and `flag_issues` (sharpness + quality +
+clipping triage). Prompt arguments are completable via `completion/complete`.
 
 ### Wiring
 
@@ -938,7 +941,11 @@ install can carry separate setups (e.g. *Work* and *Personal*). Switch, create, 
 profiles under **File > Profiles…**. A v1 single-profile file left over from an older release is
 migrated to the `default` profile automatically on first read. Writes are debounced a few seconds
 after the last change and land atomically (`.tmp` sibling + `os.replace`), so an interrupted save
-never truncates the file.
+never truncates the file. If the file can't be read at start-up (broken JSON, or another program
+holding it), Imervue starts with default settings and, before its first save, keeps the file next
+to it as `user_setting.json.unreadable-<date>-<time>`; it never saves over a file it could not
+keep that copy of. A warning at start-up names the file and how to get the
+earlier settings back.
 
 Key entries in the active profile:
 

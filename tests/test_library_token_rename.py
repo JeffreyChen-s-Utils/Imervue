@@ -36,6 +36,28 @@ def three_images(tmp_path):
     return [str(p) for p in paths]
 
 
+class TestNamesHeldByTheBatch:
+    """A name another file of the batch holds now is freed by that file's own rename."""
+
+    def test_renumbering_up_by_one_is_no_conflict(self, tmp_path):
+        for n in (1, 2, 3):
+            (tmp_path / f"{n:03}.png").write_text(str(n), encoding="utf-8")
+        paths = [str(tmp_path / f"{n:03}.png") for n in (1, 2, 3)]
+        plans = preview(paths, "{counter:03}{ext}", start=2)
+        assert [p.conflict for p in plans] == [False, False, False]
+        assert apply_plan(plans) == (3, 0)
+        assert {p.name: p.read_text(encoding="utf-8") for p in tmp_path.iterdir()} == {
+            "002.png": "1", "003.png": "2", "004.png": "3"}
+
+    def test_a_name_held_outside_the_batch_is_still_a_conflict(self, tmp_path):
+        (tmp_path / "001.png").write_text("1", encoding="utf-8")
+        (tmp_path / "002.png").write_text("not selected", encoding="utf-8")
+        plans = preview([str(tmp_path / "001.png")], "{counter:03}{ext}", start=2)
+        assert [p.conflict for p in plans] == [True]
+        assert apply_plan(plans) == (0, 1)
+        assert (tmp_path / "002.png").read_text(encoding="utf-8") == "not selected"
+
+
 class TestCrossFolderConflicts:
     """Collision detection must key on the full destination path, not the bare
     basename: two files in different folders can render to the same name without
@@ -157,6 +179,18 @@ class TestApplyStringFormat:
         assert failed == 2
         survivors = os.listdir(Path(three_images[0]).parent)
         assert "same.png" in survivors
+
+    def test_a_renamed_file_keeps_its_rating_and_sidecar(self, three_images):
+        """The rating stayed under the old name and IMG.xmp was left behind."""
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        first = Path(three_images[0])
+        first.with_suffix(".xmp").write_text("edits", encoding="utf-8")
+        user_setting_dict["image_ratings"] = {str(first): 4}
+        apply_plan(preview([str(first)], "renamed{ext}"))
+        new = first.with_name("renamed.png")
+        assert user_setting_dict["image_ratings"] == {str(new): 4}
+        assert new.with_suffix(".xmp").read_text(encoding="utf-8") == "edits"
+        assert not first.with_suffix(".xmp").exists()
 
 
 def test_metadata_of_an_unreadable_file_falls_back(tmp_path):

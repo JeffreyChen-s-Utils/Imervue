@@ -15,7 +15,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+
+from Imervue.image.shown import load_shown_rgb
+
 
 logger = logging.getLogger("Imervue.panorama")
 
@@ -36,9 +38,8 @@ _STATUS_MESSAGES = {
 
 
 def _load_bgr(path: str | Path) -> np.ndarray:
-    with Image.open(path) as im:
-        rgb = np.asarray(im.convert("RGB"), dtype=np.uint8)
-    return rgb[..., ::-1].copy()
+    """Return an upright HxWx3 uint8 BGR image — cv2 format."""
+    return load_shown_rgb(path)[..., ::-1].copy()
 
 
 def _crop_black(bgr: np.ndarray) -> np.ndarray:

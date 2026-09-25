@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -70,6 +71,14 @@ class FaceDetectorUnavailableError(RuntimeError):
 
 
 def _load_cascade():
+    """The frontal-face cascade, read through Python so any install path works.
+
+    ``cv2.CascadeClassifier(path)`` can't open a path with non-ASCII
+    characters on Windows — OpenCV installed in a user folder with a Chinese
+    name, or an Imervue build unpacked into such a folder — and came back
+    empty, so detection always failed. The XML is read here and handed to
+    OpenCV from memory instead.
+    """
     import cv2
     classifier = getattr(cv2, "CascadeClassifier", None)
     data_dir = getattr(getattr(cv2, "data", None), "haarcascades", None)
@@ -79,9 +88,15 @@ def _load_cascade():
             f"OpenCV {getattr(cv2, '__version__', '?')} has no Haar face "
             f"cascade; install OpenCV 4 (pip install \"opencv-python<5\")",
         )
-    cascade = classifier(cascade_path)
-    if cascade.empty():
-        raise RuntimeError(f"failed to load Haar cascade from {cascade_path}")
+    failure = f"failed to load Haar cascade from {cascade_path}"
+    try:
+        xml = Path(cascade_path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise RuntimeError(failure) from exc
+    storage = cv2.FileStorage(xml, cv2.FILE_STORAGE_READ | cv2.FILE_STORAGE_MEMORY)
+    cascade = classifier()
+    if not cascade.read(storage.getFirstTopLevelNode()) or cascade.empty():
+        raise RuntimeError(failure)
     return cascade
 
 

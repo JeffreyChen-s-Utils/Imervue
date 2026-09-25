@@ -31,7 +31,7 @@ _EXPORT_FAILED = 'Export failed: {err}'
 _ENGLISH_INTENSITY_LABEL = 'Intensity:'
 
 english_word_dict = {
-    "heif_install_hint": "Install pillow-heif to view HEIC/AVIF images.",
+    "heif_install_hint": "Install pillow-heif to view HEIC images.",
     "exif_location": "Location",
     "exif_coordinates": "GPS",
     "exif_video_label": "Video",
@@ -345,7 +345,7 @@ english_word_dict = {
     # EXIF editor
     "exif_edit_button": "Edit EXIF",
     "exif_editor_title": "Edit EXIF Metadata",
-    "exif_editor_no_piexif": "piexif package required.\nInstall: pip install piexif",
+    "exif_editor_unsupported": "EXIF can be edited in JPEG and WebP files.",
     "exif_editor_fields": "Metadata Fields",
     "exif_editor_save": _ENGLISH_SAVE,
     "exif_editor_cancel": _ENGLISH_CANCEL,
@@ -1438,6 +1438,8 @@ english_word_dict = {
     "token_rename_col_new": "New name",
     "token_rename_col_original": "Original",
     "token_rename_col_status": "Status",
+    "token_rename_status_ok": "OK",
+    "token_rename_status_conflict": "Conflict",
     # Metadata Export
     "metadata_export_title": "Export Metadata (CSV / JSON)",
     "metadata_export_format": "Format:",
@@ -2764,6 +2766,10 @@ english_word_dict = {
     "file_filter_icc_profiles": "ICC profiles",
     "file_filter_comic_zip": "Comic book archive",
     "batch_rotate_done": "Rotated {done}/{total} file(s)",
+    "batch_rename_done": "Renamed {done}/{total} file(s)",
+    "batch_move_done": "Moved {done}/{total} file(s)",
+    "batch_copy_done": "Copied {done}/{total} file(s)",
+    "batch_move_selected": "{count} file(s) selected",
     "zoom_limit_toast": "Zoom limit: {limit}",
     "anim_speed_toast": "Speed: {speed}x",
     "annotation_load_failed": "Load failed: {error}",
@@ -2776,4 +2782,17 @@ english_word_dict = {
     "file_filter_imervue_brush": "Imervue brush",
     "file_filter_other_brush": "Brush from other paint apps",
     "file_filter_other_palette": "Palette from other image editors",
+    "modify_crop_cannot_overwrite": "This file can't be overwritten in place (camera RAW, HEIC, animated or multi-page). Export the crop instead.",
+    "export_metadata": "Metadata:",
+    "export_replace_title": "Replace File?",
+    "export_replace": "“{name}” already exists. Replace it?",
+    "export_replace_source": "“{name}” is the photo being exported. Replace the original with this copy? The copy has the photo's edits applied and keeps only the metadata chosen above.",
+    "export_metadata_all": "Keep all (camera, date, location)",
+    "export_metadata_no_location": "Keep all but the location",
+    "export_metadata_none": "Remove all",
+    "settings_unreadable_title": "Settings could not be read",
+    "settings_unreadable": "Imervue could not read its settings file:\n{path}\n\nIt started with default settings. Before the file is saved over, a copy is kept next to it as {name}.unreadable-<date>-<time>. To get your earlier settings back, quit Imervue and rename that copy to {name}.",
+    "trash_left_in_place_title": "Not moved to the Recycle Bin",
+    "trash_left_in_place": "{count} deleted file(s) could not go to the Recycle Bin and are still on disk: their drive has none (a memory card, USB stick or network share), or another program is using them.\n\n{paths}\n\nDelete them permanently? This cannot be undone.",
+    "trash_keep_files": "Keep Them",
 }

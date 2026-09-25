@@ -15,11 +15,12 @@ from PySide6.QtWidgets import QDialog, QLabel, QLineEdit, QVBoxLayout, QWidget
 
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gui._apply_save import (
-    finalize_worker,
     apply_save_buttons,
     current_image_path,
+    finalize_worker,
     load_rgba,
     notify_saved,
+    output_path,
 )
 from Imervue.image.meme import make_meme
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -45,7 +46,7 @@ class _MemeWorker(QThread):
             arr = make_meme(load_rgba(self._path), self._top, self._bottom)
             Image.fromarray(arr, mode="RGBA").save(self._out)
             self.done.emit(True, self._out)
-        except (OSError, ValueError) as exc:
+        except Exception as exc:  # a worker must always report
             logger.exception("Meme failed: %s", exc)
             self.done.emit(False, str(exc))
 
@@ -75,7 +76,7 @@ class MemeDialog(WorkerHostMixin, QDialog):
     def _commit(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None:
             return
-        out_path = Path(self._path).with_name(f"{Path(self._path).stem}_meme.png")
+        out_path = Path(output_path(self._path, "meme"))
         self._worker = _MemeWorker(
             self._path, self._top.text(), self._bottom.text(), str(out_path))
         self._worker.done.connect(self._on_done)

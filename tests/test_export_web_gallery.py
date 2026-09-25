@@ -201,3 +201,45 @@ class TestGenerateWebGalleryReviewMode:
         html = (out / "index.html").read_text(encoding="utf-8")
         expected_key = wg.review_comments_key("Run 7")
         assert expected_key in html
+
+
+class TestThumbnailDecode:
+    """Thumbnails were QImage loads: no EXIF turn, no colour management, no RAW."""
+
+    def test_tagged_photo_thumbnail_is_upright(self, wg, tmp_path):
+        from PIL import Image
+
+        from _decode_samples import tagged_portrait
+        src = tagged_portrait(tmp_path / "p.jpg", size=(800, 400))
+        dest = tmp_path / "thumbs" / "t.jpg"
+        assert wg._make_thumbnail(str(src), dest, 100, 85) is True  # noqa: SLF001
+        with Image.open(dest) as thumb:
+            assert thumb.size == (50, 100)
+
+    def test_colour_profile_is_converted(self, wg, tmp_path):
+        from PIL import Image
+
+        from _decode_samples import p3_green
+        dest = tmp_path / "t.jpg"
+        assert wg._make_thumbnail(str(p3_green(tmp_path / "g.png")), dest, 50, 95) is True  # noqa: SLF001
+        with Image.open(dest) as thumb:
+            red, green, _blue = thumb.getpixel((4, 4))
+            assert red < 20 and green > 235
+
+    def test_raw_gets_a_thumbnail(self, wg, tmp_path, monkeypatch):
+        import numpy as np
+        from PIL import Image
+
+        from Imervue.gpu_image_view.images import image_loader
+        monkeypatch.setattr(image_loader, "_load_raw",
+                            lambda _p, thumbnail: np.full((300, 600, 3), 90, dtype=np.uint8))
+        dest = tmp_path / "t.jpg"
+        assert wg._make_thumbnail(str(tmp_path / "shot.cr2"), dest, 120, 85) is True  # noqa: SLF001
+        with Image.open(dest) as thumb:
+            assert thumb.size == (120, 60)
+
+    def test_unreadable_source_reports_failure(self, wg, tmp_path):
+        bad = tmp_path / "bad.jpg"
+        bad.write_bytes(b"not a jpeg")
+        assert wg._make_thumbnail(str(bad), tmp_path / "t.jpg", 100, 85) is False  # noqa: SLF001
+        assert not (tmp_path / "t.jpg").exists()

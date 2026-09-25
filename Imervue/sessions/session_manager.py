@@ -16,6 +16,8 @@ import re
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
+from Imervue.system.atomic_write import write_text_atomically
+
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
@@ -76,7 +78,7 @@ def save_session_to_path(ui: ImervueMainWindow, path: str | Path) -> Path:
     if not out.name.endswith(SESSION_EXT):
         out = out.with_name(out.name + SESSION_EXT)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_text_atomically(out, json.dumps(data, indent=2, ensure_ascii=False))
     logger.info("Session saved: %s", out)
     return out
 
@@ -129,7 +131,7 @@ def _sanitize_loaded(data: dict[str, Any]) -> dict[str, Any]:
 
 def load_session_from_path(path: str | Path) -> dict[str, Any]:
     """Read + validate a session file. Raises ValueError on schema mismatch."""
-    raw = Path(path).read_text(encoding="utf-8")
+    raw = Path(path).read_text(encoding="utf-8-sig")   # a BOM from a text editor is fine
     data = json.loads(raw)
     if not isinstance(data, dict) or data.get("version") != SESSION_VERSION:
         raise ValueError(f"Unsupported session version: {data.get('version')!r}")

@@ -10,13 +10,14 @@ from Imervue.image.formats import (
     VIEWER_EXTENSIONS,
     ensure_pillow_opener,
 )
+from Imervue.image.avif_support import AVIF_EXTENSIONS
 from Imervue.image.heif_support import HEIF_EXTENSIONS
 from Imervue.image.jxl_support import JXL_EXTENSIONS
 from Imervue.image.video_frames import VIDEO_EXTENSIONS
 
 
 def test_sets_nest():
-    assert RAW_EXTENSIONS | HEIF_EXTENSIONS | JXL_EXTENSIONS <= STILL_IMAGE_EXTENSIONS
+    assert RAW_EXTENSIONS | HEIF_EXTENSIONS | AVIF_EXTENSIONS | JXL_EXTENSIONS <= STILL_IMAGE_EXTENSIONS
     assert VIEWER_EXTENSIONS == STILL_IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
     assert not STILL_IMAGE_EXTENSIONS & VIDEO_EXTENSIONS
 
@@ -25,8 +26,24 @@ def test_extensions_are_lowercase_with_a_dot():
     assert all(e.startswith(".") and e == e.lower() for e in VIEWER_EXTENSIONS)
 
 
+@pytest.mark.parametrize("ext", [
+    ".cr3",     # every Canon body since 2018
+    ".rw2", ".nrw", ".pef", ".srw", ".crw", ".3fr", ".iiq",
+    ".cr2", ".nef", ".arw", ".dng", ".raf", ".orf",
+])
+def test_libraw_formats_are_camera_raw(ext):
+    """Only six RAW formats used to open: a Canon CR3 or Panasonic RW2 never showed up."""
+    assert ext in RAW_EXTENSIONS
+    assert ext in VIEWER_EXTENSIONS
+
+
+@pytest.mark.parametrize("ext", [".x3f", ".raw"])
+def test_formats_libraw_cannot_be_trusted_with_are_left_out(ext):
+    assert ext not in VIEWER_EXTENSIONS
+
+
 @pytest.mark.parametrize(("ext", "expected"), [
-    (".heic", ["heif"]), (".AVIF", ["heif"]), (".jxl", ["jxl"]),
+    (".heic", ["heif"]), (".HEIF", ["heif"]), (".AVIF", []), (".jxl", ["jxl"]),
     (".png", []), (".mp4", []), ("", []),
 ])
 def test_ensure_pillow_opener_registers_only_the_codec_needed(monkeypatch, ext, expected):

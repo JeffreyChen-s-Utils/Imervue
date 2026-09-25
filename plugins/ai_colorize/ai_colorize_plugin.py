@@ -37,6 +37,12 @@ from ai_colorize.colorize import (
     onnx_colorize,
 )
 from Imervue.gui._apply_save import load_rgba as _load_rgba
+try:
+    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
+    from Imervue.gui._apply_save import output_path as _output_path
+except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
+    def _output_path(source: str, suffix: str) -> str:
+        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
@@ -238,9 +244,7 @@ class AIColorizeDialog(WorkerHostMixin, QDialog):
             return
         method_data = str(self._method.currentData())
         intensity = self._intensity.value() / _PERCENT_STEPS
-        out_path = Path(self._path).with_name(
-            f"{Path(self._path).stem}_colorized.png",
-        )
+        out_path = Path(_output_path(self._path, "colorized"))
         # Heuristic colorize is numpy-heavy and ONNX inference is slow — worker it.
         self._worker = _ColorizeWorker(
             self._path, method_data, intensity, str(out_path),

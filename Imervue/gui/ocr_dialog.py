@@ -92,6 +92,10 @@ class _OcrWorker(QThread):
         except (OcrUnavailableError, OSError, ValueError) as exc:
             self.done.emit(False, str(exc))
             return
+        except Exception as exc:  # a worker must always report
+            logger.exception("OCR failed for %s", self._path)
+            self.done.emit(False, str(exc))
+            return
         self.done.emit(True, text)
 
 

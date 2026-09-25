@@ -93,10 +93,10 @@ def load_pose_image(path: str | Path) -> np.ndarray:
     the import. Greyscale and RGB sources are widened to RGBA with
     full opacity; transparent PNGs pass through unchanged.
     """
-    from PIL import Image
-    with Image.open(path) as src:
-        rgba = src.convert("RGBA")
-        return np.array(rgba, dtype=np.uint8)
+    # As the viewer shows it: a phone photo used as a pose reference was
+    # dropped on its side, its colour profile ignored.
+    from Imervue.image.shown import load_shown_rgba
+    return load_shown_rgba(path)
 
 
 # ---------------------------------------------------------------------------

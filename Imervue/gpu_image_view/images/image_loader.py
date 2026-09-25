@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
+from Imervue.system.natural_sort import natural_key
 from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
+from Imervue.image.color_profile import to_srgb
 from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
@@ -34,45 +36,19 @@ def _maybe_collapse_stacks(images: list[str]) -> tuple[list[str], dict[str, list
 
 
 
+_THUMBNAIL_EDGE = 1600   # long side of a thumbnail decode of a raster
+
+
 def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
-    # ``open_raw_efficient`` uses libraw's native file API instead of
-    # rawpy's convenience ``imread`` which would otherwise pre-load
-    # the whole file into a Python ``bytes`` object. For 50 MB+ CR3
-    # / NEF files that's a meaningful peak-memory saving.
-    from Imervue.image.raw_loader import open_raw_efficient
-    with open_raw_efficient(path) as raw:
-        if thumbnail:
-            return _load_raw_thumbnail(raw)
-        return raw.postprocess(
-            use_camera_wb=True,
-            no_auto_bright=False,
-            output_bps=8,
-        )
-
-
-def _load_raw_thumbnail(raw) -> np.ndarray:
-    # Imported here: rawpy and imageio cost ~190 ms at startup, and only a
-    # RAW file needs them.
-    import imageio
-    import rawpy
-    try:
-        thumb = raw.extract_thumb()
-        if thumb.format == rawpy.ThumbFormat.JPEG:
-            return imageio.v3.imread(thumb.data)
-        if thumb.format == rawpy.ThumbFormat.BITMAP:
-            return thumb.data
-        raise ValueError("No valid embedded preview")
-    except (ValueError, OSError, RuntimeError):
-        return raw.postprocess(
-            half_size=True,
-            use_camera_wb=True,
-            output_bps=8,
-        )
+    """Develop the camera RAW at *path* (:func:`Imervue.image.raw_loader.develop_raw`)."""
+    from Imervue.image.raw_loader import develop_raw
+    return develop_raw(path, thumbnail=thumbnail)
 
 
 def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     img = Image.open(path)
     code = exif_orientation(img) if orient else 1
+    img = to_srgb(img)   # embedded colour profile -> the sRGB the screen shows
     # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
     # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
     # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
@@ -81,11 +57,13 @@ def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     return np.array(transpose_for(img, code))
 
 
-def _load_raster_thumbnail(path: str, max_edge: int = 1600, *, orient: bool = True) -> np.ndarray:
+def _load_raster_thumbnail(path: str, max_edge: int = _THUMBNAIL_EDGE, *,
+                           orient: bool = True) -> np.ndarray:
     with Image.open(path) as img:
         code = exif_orientation(img) if orient else 1
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
-        thumb = img.convert("RGBA") if img.mode not in ("RGB", "RGBA", "L") else img
+        shown = to_srgb(img)   # after the downscale: converting fewer pixels
+        thumb = shown.convert("RGBA") if shown.mode not in ("RGB", "RGBA", "L") else shown
         return np.array(transpose_for(thumb, code))
 
 
@@ -96,6 +74,47 @@ def _ensure_rgba(img_data: np.ndarray) -> np.ndarray:
         alpha = np.ones((*img_data.shape[:2], 1), dtype=np.uint8) * 255
         img_data = np.concatenate([img_data, alpha], axis=2)
     return img_data
+
+
+def decode_image_file(path, *, thumbnail: bool = False, orient: bool = True) -> np.ndarray:
+    """Decode *path* into an HxWx4 RGBA array, the pixels as the viewer shows them.
+
+    Handles camera RAW (developed through libraw), SVG, a video's poster frame,
+    HEIC / JPEG XL and every Pillow format. Rasters are converted to sRGB from
+    an embedded colour profile and, with *orient*, turned upright by their EXIF
+    orientation. No recipe and no view-time simulation: this is the base an
+    editor (Modify, Paint) works on. *thumbnail* favours a fast, downscaled
+    decode (RAW embedded preview, 1600 px rasters).
+    """
+    ext = Path(path).suffix.lower()
+    if ext in RAW_EXTENSIONS:
+        img_data = _load_raw(path, thumbnail)
+    elif ext == ".svg":
+        img_data = _load_svg(path, thumbnail=thumbnail)
+    elif ext in VIDEO_EXTENSIONS:
+        img_data = poster_frame(path)
+    else:
+        ensure_pillow_opener(ext)
+        img_data = (_load_raster_thumbnail(path, orient=orient) if thumbnail
+                    else _load_raster(path, orient=orient))
+    return _ensure_rgba(img_data)
+
+
+def decode_image(path, *, max_edge: int | None = None) -> Image.Image:
+    """:func:`decode_image_file` as a Pillow image: RGB when every pixel is opaque, else RGBA.
+
+    What a file written from the viewer's pixels starts from (a thumbnail, a
+    PDF page, a converted copy): camera RAW developed, sRGB, upright. With
+    *max_edge* the long side is scaled down to it, through the fast thumbnail
+    decode (a RAW's embedded preview, a 1600 px raster) when that is big enough.
+    """
+    fast = max_edge is not None and max_edge <= _THUMBNAIL_EDGE
+    img = Image.fromarray(decode_image_file(path, thumbnail=fast), "RGBA")
+    if max_edge is not None:
+        img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+    if img.getextrema()[3] == (255, 255):
+        img = img.convert("RGB")
+    return img
 
 
 def load_image_file(path, thumbnail=False, recipe=None):
@@ -111,20 +130,9 @@ def load_image_file(path, thumbnail=False, recipe=None):
     點陣圖依 EXIF Orientation 轉正; 例外是 recipe 的幾何是在轉正之前設定的
     (``Recipe.base_is_oriented``), 那種 recipe 仍套在原始方向上.
     """
-    ext = Path(path).suffix.lower()
-    orient = recipe is None or recipe.base_is_oriented()
-    if ext in RAW_EXTENSIONS:
-        img_data = _load_raw(path, thumbnail)
-    elif ext == ".svg":
-        img_data = _load_svg(path, thumbnail=thumbnail)
-    elif ext in VIDEO_EXTENSIONS:
-        img_data = poster_frame(path)
-    else:
-        ensure_pillow_opener(ext)
-        img_data = (_load_raster_thumbnail(path, orient=orient) if thumbnail
-                    else _load_raster(path, orient=orient))
-
-    img_data = _ensure_rgba(img_data)
+    img_data = decode_image_file(
+        path, thumbnail=thumbnail, orient=recipe is None or recipe.base_is_oriented(),
+    )
 
     if recipe is not None and not recipe.is_identity():
         try:
@@ -299,7 +307,7 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
 
     if sort_by == "name":
         # Fast default path — avoid the import of sort_menu for the common case.
-        result.sort(key=lambda p: os.path.basename(p).lower(), reverse=not ascending)
+        result.sort(key=lambda p: natural_key(os.path.basename(p)), reverse=not ascending)
     else:
         from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
         key_fn = _SORT_KEYS.get(sort_by, _sort_key_name)
@@ -331,7 +339,7 @@ def _sort_for_user(paths: list[str]) -> list[str]:
     ascending = user_setting_dict.get("sort_ascending", True)
     result = list(paths)
     if sort_by == "name":
-        result.sort(key=lambda p: os.path.basename(p).lower(), reverse=not ascending)
+        result.sort(key=lambda p: natural_key(os.path.basename(p)), reverse=not ascending)
     else:
         from Imervue.menu.sort_menu import _SORT_KEYS, _sort_key_name
         result.sort(
@@ -353,7 +361,7 @@ def open_path(main_gui: GPUImageView, path: str):
 
 
 def _maybe_hint_heif(main_gui: GPUImageView, images: list[str]) -> None:
-    """Toast once per window when a folder has HEIC/AVIF but no decoder."""
+    """Toast once per window when a folder has HEIC but no decoder."""
     from Imervue.image.heif_support import needs_heif_hint
     if not needs_heif_hint(images, ensure_heif_opener()):
         return
@@ -365,7 +373,7 @@ def _maybe_hint_heif(main_gui: GPUImageView, images: list[str]) -> None:
     from Imervue.multi_language.language_wrapper import language_wrapper
     toast.info(language_wrapper.language_word_dict.get(
         "heif_install_hint",
-        "Install pillow-heif to view HEIC/AVIF images.",
+        "Install pillow-heif to view HEIC images.",
     ))
 
 

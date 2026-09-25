@@ -72,6 +72,7 @@ from Imervue.desktop_pet.schedule_rules import (
     rule_from_dict,
     rule_to_dict,
 )
+from Imervue.system.atomic_write import write_text_atomically
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_script")
 
@@ -196,8 +197,9 @@ def load_script(path: str | Path) -> PetScript:
     script."""
     p = Path(path)
     try:
-        text = p.read_text(encoding="utf-8")
-    except OSError as exc:
+        # utf-8-sig: a script saved with a BOM (older Notepad) is still valid JSON to us.
+        text = p.read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeDecodeError) as exc:
         raise PetScriptError(f"can't read {p}: {exc}") from exc
     try:
         raw = json.loads(text)
@@ -214,10 +216,7 @@ def save_script(script: PetScript, path: str | Path) -> None:
     can hand-edit the result."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(
-        json.dumps(script.to_dict(), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    write_text_atomically(p, json.dumps(script.to_dict(), indent=2, ensure_ascii=False) + "\n")
 
 
 def _coerce_script(raw: dict[str, Any]) -> PetScript:

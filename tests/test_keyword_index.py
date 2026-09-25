@@ -57,3 +57,50 @@ def test_import_skips_paths_without_keywords(tmp_path):
     photo = tmp_path / "q.jpg"
     photo.write_bytes(b"\x00")
     assert import_keywords_to_index([str(photo)]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Keyword hierarchies (lr:hierarchicalSubject)
+# ---------------------------------------------------------------------------
+
+
+def test_tag_paths_turns_a_hierarchy_into_a_tag_path():
+    from Imervue.library.keyword_index import tag_paths
+    assert tag_paths(["Places", "Taiwan", "Taipei", "night"],
+                     ["Places|Taiwan|Taipei", " Trips | 2024 "]) == [
+        "Places/Taiwan/Taipei", "Trips/2024", "night"]
+
+
+@pytest.mark.parametrize(("keywords", "hierarchical", "expected"), [
+    ([], [], []),
+    (["a"], [], ["a"]),
+    ([], ["|", ""], []),                 # empty levels only: nothing
+    ([], ["Solo"], ["Solo"]),            # a one-level hierarchy is a plain tag
+])
+def test_tag_paths_edge_cases(keywords, hierarchical, expected):
+    from Imervue.library.keyword_index import tag_paths
+    assert tag_paths(keywords, hierarchical) == expected
+
+
+def test_import_files_a_lightroom_hierarchy_under_its_parents(tmp_path):
+    """Lightroom's Places > Taiwan > Taipei landed as three loose tags."""
+    from Imervue.image import xmp_sidecar
+
+    photo = tmp_path / "p.jpg"
+    photo.write_bytes(b"\x00")
+    xmp_sidecar.sidecar_path_for(str(photo)).write_text(
+        """<x:xmpmeta xmlns:x="adobe:ns:meta/">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns:lr="http://ns.adobe.com/lightroom/1.0/">
+   <dc:subject><rdf:Bag><rdf:li>Places</rdf:li><rdf:li>Taiwan</rdf:li>
+    <rdf:li>Taipei</rdf:li><rdf:li>night</rdf:li></rdf:Bag></dc:subject>
+   <lr:hierarchicalSubject><rdf:Bag><rdf:li>Places|Taiwan|Taipei</rdf:li>
+    </rdf:Bag></lr:hierarchicalSubject>
+  </rdf:Description>
+ </rdf:RDF>
+</x:xmpmeta>""", encoding="utf-8")
+
+    assert import_keywords_to_index([str(photo)]) == 1
+    assert sorted(image_index.tags_of_image(str(photo))) == ["Places/Taiwan/Taipei", "night"]
+    assert str(photo) in image_index.images_with_tag("Places")   # found from the parent too

@@ -12,7 +12,6 @@ import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PIL import Image
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
@@ -24,6 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gui.export_source import recipe_base_image
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.image.saliency import CropSuggestion, suggest_crops
@@ -112,7 +113,7 @@ def open_smart_crop_dialog(viewer: GPUImageView) -> None:
     path = str(images[idx])
     try:
         arr = _load_rgba(path)
-    except (OSError, ValueError):
+    except IMAGE_READ_ERRORS:
         logger.exception("Smart crop failed to load %s", path)
         return
     suggestions = suggest_crops(arr)
@@ -120,7 +121,6 @@ def open_smart_crop_dialog(viewer: GPUImageView) -> None:
 
 
 def _load_rgba(path: str) -> np.ndarray:
-    img = Image.open(path)
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-    return np.array(img)
+    """The pixels the crop will apply to: upright unless the image's recipe predates that."""
+    with recipe_base_image(path, recipe_store.get_for_path(path)) as img:
+        return np.array(img if img.mode == "RGBA" else img.convert("RGBA"))
