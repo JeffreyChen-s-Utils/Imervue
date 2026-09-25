@@ -520,11 +520,11 @@ def test_a_camera_raw_is_developed_not_its_preview(tmp_path, monkeypatch):
     """Pillow opens a NEF's small embedded preview; the tools now develop the RAW."""
     from PIL import Image
 
-    from Imervue.image import dimensions, raw_loader
+    from Imervue.image import dimensions, shown
     src = tmp_path / "shot.nef"
     Image.new("RGB", (16, 12)).save(src, format="TIFF")         # the preview Pillow would see
     developed = np.full((300, 450, 3), 90, dtype=np.uint8)
-    monkeypatch.setattr(raw_loader, "develop_raw", lambda _p, thumbnail=False: developed)
+    monkeypatch.setattr(shown, "develop_raw", lambda _p, thumbnail=False: developed)
     monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: (450, 300))
     info = read_image_metadata(str(src))
     assert (info["width"], info["height"], info["format"], info["mode"]) == (450, 300, "NEF", "RGB")
@@ -536,11 +536,11 @@ def test_a_camera_raw_is_developed_not_its_preview(tmp_path, monkeypatch):
 
 def test_a_cr3_is_developed_too(tmp_path, monkeypatch):
     """A CR3 was listed but went to Pillow, which can't open one."""
-    from Imervue.image import dimensions, raw_loader
+    from Imervue.image import dimensions, shown
     src = tmp_path / "IMG_1.CR3"
     src.write_bytes(b"ftypcrx " * 8)
     developed = np.full((20, 30, 3), 90, dtype=np.uint8)
-    monkeypatch.setattr(raw_loader, "develop_raw", lambda _p, thumbnail=False: developed)
+    monkeypatch.setattr(shown, "develop_raw", lambda _p, thumbnail=False: developed)
     monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: (30, 20))
     info = read_image_metadata(str(src))
     assert (info["width"], info["height"], info["format"]) == (30, 20, "CR3")

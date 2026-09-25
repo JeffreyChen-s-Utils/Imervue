@@ -8,11 +8,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+from Imervue.image.formats import RASTER_EXTENSIONS
 
 # Image extensions the listing tools consider: the viewer's still formats but
 # SVG, which needs Qt to rasterise and the server is Qt-free.
-IMAGE_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS - {".svg"}
+IMAGE_EXTENSIONS: frozenset[str] = RASTER_EXTENSIONS
 # Destination formats that can't carry alpha — flatten to RGB before saving.
 NO_ALPHA_FORMATS = frozenset({"jpg", "jpeg", "bmp"})
 
@@ -21,30 +21,18 @@ def open_upright(image_path: Path):
     """Open *image_path* decoded, converted to sRGB and turned upright.
 
     Every tool works on the image as a viewer shows it: sizes, crop boxes and
-    the written copies (which carry no EXIF or ICC) all use these pixels.
+    the written copies (which carry no EXIF or ICC) all use these pixels. A
+    camera RAW is developed, not read as its embedded preview
+    (:func:`Imervue.image.shown.open_shown`).
     """
-    from PIL import Image
-
-    from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
-    from Imervue.image.shown import as_shown
-    ext = Path(image_path).suffix.lower()
-    if ext in RAW_EXTENSIONS:
-        # Developed like the viewer does; Pillow would open the small embedded
-        # preview (or nothing at all for a CR3).
-        from Imervue.image.raw_loader import develop_raw
-        return Image.fromarray(develop_raw(image_path))
-    ensure_pillow_opener(ext)   # HEIC / AVIF / JPEG XL: "cannot identify image file" without it
-    with Image.open(image_path) as opened:
-        opened.load()
-        shown = as_shown(opened)
-        return shown if shown is not opened else opened.copy()
+    from Imervue.image.shown import open_shown
+    return open_shown(image_path)
 
 
 def load_rgba_array(image_path: Path):
     """Load *image_path* as an upright HxWx4 uint8 RGBA array."""
-    import numpy as np
-    with open_upright(image_path) as opened:
-        return np.array(opened.convert("RGBA"))
+    from Imervue.image.shown import load_shown_rgba
+    return load_shown_rgba(image_path)
 
 
 def validated_dir(path: str) -> Path:
