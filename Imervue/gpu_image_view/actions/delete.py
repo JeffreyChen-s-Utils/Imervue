@@ -196,8 +196,13 @@ def pending_deletion_list(undo_stack: list[dict]) -> list[str]:
     ))
 
 
-def commit_pending_deletions(main_gui: _UndoStackOwner):
+def commit_pending_deletions(main_gui: _UndoStackOwner) -> list[str]:
     """Send every still-pending soft deletion to the system Recycle Bin, then clear the undo stack.
+
+    Returns the paths left in place: on a drive without a Recycle Bin (which
+    Windows would have deleted for good) or held by another program. The
+    caller offers to delete those permanently
+    (:func:`Imervue.gui.trash_failure_notice.offer_permanent_delete`).
 
     Viewer images went the same way as file-tree entries: recoverable from
     the OS bin, as the manual promises. They used to be unlinked, so a photo
@@ -210,6 +215,7 @@ def commit_pending_deletions(main_gui: _UndoStackOwner):
     """
     from Imervue.system.trash_ops import trash_batch
     paths = pending_deletion_list(main_gui.undo_stack)
+    failed: list[str] = []
     if paths:
         trashed, failed = trash_batch(paths)
         logger.info("Sent %d pending deletion(s) to the Recycle Bin", len(trashed))
@@ -218,3 +224,4 @@ def commit_pending_deletions(main_gui: _UndoStackOwner):
 
     # 程式即將關閉，清除所有 undo 記錄
     main_gui.undo_stack.clear()
+    return failed

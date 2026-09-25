@@ -1793,7 +1793,10 @@ Bilder löschen
    * - Ausgewählte Bilder löschen
      - Mehrere auswählen, dann ``Delete`` oder Rechtsklick > ``Ausgewählte löschen``
 
-Bilder werden in den System-Papierkorb verschoben und können von dort wiederhergestellt werden.
+Bilder werden in den System-Papierkorb verschoben und können von dort wiederhergestellt werden. Auf
+einem Laufwerk ohne Papierkorb — Speicherkarte, USB-Stick oder Netzlaufwerk, wo Windows
+endgültig löschen würde — bleibt die Datei: Beim Schließen listet Imervue solche Dateien
+auf und fragt, ob sie endgültig gelöscht werden sollen.
 
 Ihre Sidecars gehen mit: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` und
 ``IMG.xmp``, außer das RAW eines RAW-+-JPEG-Paars nutzt Letzteres noch. Eine

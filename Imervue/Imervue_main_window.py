@@ -17,6 +17,7 @@ from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
 from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
 from Imervue.gui.settings_notice import warn_if_settings_unreadable
+from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gui.toast import ToastManager
 from Imervue.image.browser_state import (
     ImageMetadataIndex,
@@ -681,7 +682,7 @@ class ImervueMainWindow(
             write_user_setting()
 
         with best_effort("commit pending deletions", _logger):
-            commit_pending_deletions(self.viewer)
+            offer_permanent_delete(self, commit_pending_deletions(self.viewer))
 
     @classmethod
     def debug_close(cls) -> None:

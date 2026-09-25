@@ -718,7 +718,7 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | Shift+S | Vista dividida |
 | Shift+D / Ctrl+Shift+D | Doble página (LTR / RTL) |
 | Ctrl+Shift+M | Ventana espejo multimonitor |
-| Delete | Mover a la papelera con sus sidecars `.xmp` / de anotaciones (reversible) |
+| Delete | Mover a la papelera con sus sidecars `.xmp` / de anotaciones (reversible); en una unidad sin papelera (tarjeta de memoria, memoria USB, unidad de red) el archivo se queda hasta que confirme borrarlo para siempre |
 | Escape | Salir de deep zoom / Salir de pantalla completa |
 
 ### Reproducción de animación (GIF / APNG)

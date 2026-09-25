@@ -2755,4 +2755,7 @@ chinese_word_dict = {
     "export_metadata_none": "全部移除",
     "settings_unreadable_title": "无法读取设置文件",
     "settings_unreadable": "Imervue 无法读取设置文件：\n{path}\n\n已改用默认设置启动。覆盖这个文件之前，会先在旁边另存一份 {name}.unreadable-<日期>-<时间>。要取回原来的设置，请先关闭 Imervue，再把那份副本重命名为 {name}。",
+    "trash_left_in_place_title": "未移到回收站",
+    "trash_left_in_place": "有 {count} 个已删除的文件无法移到回收站，仍然留在磁盘上：它们所在的磁盘没有回收站（存储卡、U 盘或网络驱动器），或正被其他程序使用。\n\n{paths}\n\n要永久删除它们吗？此操作无法撤销。",
+    "trash_keep_files": "保留",
 }

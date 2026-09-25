@@ -670,7 +670,7 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 | Shift+S | 分割ビュー |
 | Shift+D / Ctrl+Shift+D | 見開き(LTR / RTL) |
 | Ctrl+Shift+M | マルチモニターミラーウィンドウ |
-| Delete | `.xmp` / 注釈の sidecar ごとゴミ箱へ移動(復元可) |
+| Delete | `.xmp` / 注釈の sidecar ごとゴミ箱へ移動(復元可)。ごみ箱のないドライブ(メモリーカード、USB メモリ、ネットワークドライブ)では、完全に削除すると確認するまでファイルを残す |
 | Escape | ディープズーム / フルスクリーン終了 |
 
 ### アニメーション再生(GIF / APNG)

@@ -669,7 +669,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | Shift+S | 分割檢視 |
 | Shift+D / Ctrl+Shift+D | 雙頁（LTR / RTL） |
 | Ctrl+Shift+M | 多螢幕鏡射視窗 |
-| Delete | 連同 `.xmp` / 註解 sidecar 移到資源回收筒（可復原） |
+| Delete | 連同 `.xmp` / 註解 sidecar 移到資源回收筒（可復原）；在沒有資源回收筒的磁碟（記憶卡、USB 隨身碟、網路磁碟）上，檔案會留著，直到你確認永久刪除 |
 | Escape | 結束深度縮放 / 全螢幕 |
 
 ### 動畫播放（GIF / APNG）

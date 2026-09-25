@@ -638,9 +638,40 @@ def test_an_image_the_bin_refuses_is_left_in_place(tmp_path, monkeypatch, caplog
         {"mode": "delete", "deleted_paths": [str(image)], "indices": [0],
          "restored": False})
     with caplog.at_level("WARNING", logger="Imervue"):
-        delete_mod.commit_pending_deletions(view)
+        left = delete_mod.commit_pending_deletions(view)
     assert image.exists()
+    assert left == [str(image)]
     assert any("left in place" in r.getMessage() for r in caplog.records)
+
+
+def test_an_image_on_a_drive_without_a_recycle_bin_is_not_destroyed(tmp_path, monkeypatch,
+                                                                     os_trash):
+    """On a memory card Windows would have deleted it for good instead of recycling it."""
+    from Imervue.gpu_image_view.actions import delete as delete_mod
+    from Imervue.system import trash_ops
+
+    image = tmp_path / "IMG_0001.JPG"
+    image.write_bytes(b"x")
+    monkeypatch.setattr(trash_ops, "recycle_bin_holds", lambda _path: False)
+    view = _MinimalViewer()
+    view.undo_stack.append(
+        {"mode": "delete", "deleted_paths": [str(image)], "indices": [0],
+         "restored": False})
+    assert delete_mod.commit_pending_deletions(view) == [str(image)]
+    assert image.exists()
+    assert os_trash == []
+
+
+def test_nothing_is_left_when_everything_reached_the_bin(tmp_path, os_trash):
+    from Imervue.gpu_image_view.actions import delete as delete_mod
+
+    image = tmp_path / "a.jpg"
+    image.write_bytes(b"x")
+    view = _MinimalViewer()
+    view.undo_stack.append(
+        {"mode": "delete", "deleted_paths": [str(image)], "indices": [0],
+         "restored": False})
+    assert delete_mod.commit_pending_deletions(view) == []
 
 
 def test_commit_skips_restored_external_folder(tmp_path, monkeypatch):

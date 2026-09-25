@@ -4,6 +4,7 @@ Keyboard shortcut actions for GPUImageView.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,6 +14,8 @@ from Imervue.system.best_effort import best_effort
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
+
+logger = logging.getLogger("Imervue.keyboard_actions")
 
 
 # ===========================
@@ -68,6 +71,11 @@ def _send_to_trash(path: str) -> bool:
         return True
     except ImportError:
         pass
+    except OSError:
+        # A locked or vanished file: raising here ended the whole batch it was
+        # retried from, reporting files already trashed as failed.
+        logger.warning("Couldn't send %s to the trash", path, exc_info=True)
+        return False
 
     # fallback: 使用平台原生方式
     try:

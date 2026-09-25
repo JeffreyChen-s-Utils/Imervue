@@ -902,7 +902,8 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
    * - 删除选取的多张图片
      - 框选后按 ``Delete`` 或右键 > ``删除选取``
 
-图片会移到系统回收站，可以从那边恢复。
+图片会移到系统回收站，可以从那边恢复。没有回收站的磁盘（存储卡、U 盘或网络驱动器，Windows
+会直接永久删除）上的文件则会保留：关闭时 Imervue 会列出这些文件，询问是否永久删除。
 
 sidecar 会一起移过去：``IMG.JPG.xmp``、``IMG.JPG.annotations.json`` 与
 ``IMG.xmp``；RAW + JPEG 成对时，RAW 仍在使用的 ``IMG.xmp`` 会留下。留下的 sidecar

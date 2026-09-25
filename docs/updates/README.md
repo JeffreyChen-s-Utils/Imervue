@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-45 | 2026-09-25 | Deleting on a drive without a Recycle Bin never destroys the file unasked | #bugfix #delete #data-loss | [2026-09](2026-09.md) |
 | U-20260925-44 | 2026-09-25 | Refactor: clear the SonarCloud findings still open on dev | #refactor #sonarcloud | [2026-09](2026-09.md) |
 | U-20260925-43 | 2026-09-25 | A very large animation decodes frame by frame instead of all at once | #bugfix #animation #memory | [2026-09](2026-09.md) |
 | U-20260925-42 | 2026-09-25 | The .cube reader accepts DaVinci Resolve's INPUT_RANGE and a leading BOM | #bugfix #lut #interop | [2026-09](2026-09.md) |

@@ -1739,7 +1739,10 @@ Excluindo Imagens
    * - Excluir imagens selecionadas
      - Selecione várias, depois ``Delete`` ou clique com o botão direito > ``Excluir Selecionadas``
 
-As imagens são movidas para a Lixeira do sistema e podem ser recuperadas de lá.
+As imagens são movidas para a Lixeira do sistema e podem ser recuperadas de lá. Numa
+unidade sem lixeira — cartão de memória, pendrive ou unidade de rede, onde o Windows
+apagaria de vez — o arquivo é mantido: ao fechar, o Imervue lista esses arquivos e
+pergunta se deve excluí-los definitivamente.
 
 Os sidecars vão junto: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` e
 ``IMG.xmp``, a menos que o RAW de um par RAW + JPEG ainda use este último. Um

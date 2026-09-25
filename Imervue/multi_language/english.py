@@ -2789,4 +2789,7 @@ english_word_dict = {
     "export_metadata_none": "Remove all",
     "settings_unreadable_title": "Settings could not be read",
     "settings_unreadable": "Imervue could not read its settings file:\n{path}\n\nIt started with default settings. Before the file is saved over, a copy is kept next to it as {name}.unreadable-<date>-<time>. To get your earlier settings back, quit Imervue and rename that copy to {name}.",
+    "trash_left_in_place_title": "Not moved to the Recycle Bin",
+    "trash_left_in_place": "{count} deleted file(s) could not go to the Recycle Bin and are still on disk: their drive has none (a memory card, USB stick or network share), or another program is using them.\n\n{paths}\n\nDelete them permanently? This cannot be undone.",
+    "trash_keep_files": "Keep Them",
 }

@@ -1727,7 +1727,10 @@ Deleting Images
    * - Delete selected images
      - Select multiple, then ``Delete`` or right-click > ``Delete Selected``
 
-Images are moved to the system Recycle Bin / Trash and can be recovered from there.
+Images are moved to the system Recycle Bin / Trash and can be recovered from there. A drive
+without a Recycle Bin — a memory card, USB stick or network share, where Windows
+would delete the file for good — keeps the file instead: on closing, Imervue lists
+such files and asks whether to delete them permanently.
 
 Their sidecars go with them: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` and
 ``IMG.xmp``, unless the RAW of a RAW + JPEG pair still uses that last one. A

@@ -329,3 +329,71 @@ class TestSidecarsGoToo:
             trashed, failed = trash_batch([image])
         assert (trashed, failed) == ([image], [])
         assert any("sidecar" in r.getMessage() for r in caplog.records)
+
+
+class TestDrivesWithoutARecycleBin:
+    """On a network share, USB stick or memory card Windows deletes for good instead."""
+
+    @pytest.fixture
+    def windows_drives(self, monkeypatch):
+        """Pretend to be Windows with the given GetDriveTypeW answer per drive root."""
+        answers: dict[str, int] = {}
+        monkeypatch.setattr(trash_ops, "_ON_WINDOWS", True)
+        monkeypatch.setattr(trash_ops, "_drive_type", lambda root: answers.get(root, 3))
+        return answers
+
+    @pytest.mark.skipif(not trash_ops._ON_WINDOWS, reason="GetDriveTypeW is Windows only")  # noqa: SLF001
+    def test_a_local_disk_holds_a_recycle_bin(self, tmp_path):
+        assert trash_ops.recycle_bin_holds(str(tmp_path / "a.jpg")) is True
+
+    @pytest.mark.skipif(not trash_ops._ON_WINDOWS, reason="Windows drive letters")  # noqa: SLF001
+    @pytest.mark.parametrize(("drive_type", "holds"), [(2, False), (4, False), (5, False),
+                                                        (0, False), (3, True)])
+    def test_only_a_fixed_disk_holds_one(self, windows_drives, drive_type, holds):
+        """2 removable (USB, SD card), 4 network, 5 optical, 0 unknown, 3 fixed."""
+        windows_drives["E:\\"] = drive_type
+        assert trash_ops.recycle_bin_holds(r"E:\DCIM\IMG_0001.JPG") is holds
+
+    @pytest.mark.skipif(not trash_ops._ON_WINDOWS, reason="Windows UNC paths")  # noqa: SLF001
+    def test_a_network_path_asks_about_its_share(self, windows_drives):
+        windows_drives["\\\\nas\\photos\\"] = 4
+        assert trash_ops.recycle_bin_holds(r"\\nas\photos\2026\a.jpg") is False
+
+    def test_elsewhere_the_trash_decides(self, monkeypatch):
+        monkeypatch.setattr(trash_ops, "_ON_WINDOWS", False)
+        assert trash_ops.recycle_bin_holds("/media/card/a.jpg") is True
+
+    def test_such_a_file_is_left_in_place_and_reported(self, tmp_path, monkeypatch, os_trash):
+        paths = _files(tmp_path, 3)
+        monkeypatch.setattr(trash_ops, "recycle_bin_holds", lambda path: path != paths[1])
+        trashed, failed = trash_batch(paths)
+        assert trashed == [paths[0], paths[2]]
+        assert failed == [paths[1]]
+        assert Path(paths[1]).exists()
+        assert paths[1] not in os_trash
+
+    def test_a_chunk_of_only_such_files_never_reaches_the_shell(self, tmp_path, monkeypatch,
+                                                                batch_spy):
+        paths = _files(tmp_path, 2)
+        monkeypatch.setattr(trash_ops, "recycle_bin_holds", lambda _path: False)
+        assert trash_batch(paths) == ([], paths)
+        assert batch_spy == []
+
+
+class TestPerFileRetry:
+    def test_a_file_the_trash_refuses_fails_alone(self, tmp_path, monkeypatch, os_trash):
+        """The retry's OSError escaped and ended the batch, files already trashed included."""
+        import send2trash
+        paths = _files(tmp_path, 3)
+        real = send2trash.send2trash
+
+        def refuse_the_second(batch):
+            if isinstance(batch, list) or batch == paths[1]:
+                raise PermissionError("in use")
+            real(batch)
+
+        monkeypatch.setattr(send2trash, "send2trash", refuse_the_second)
+        trashed, failed = trash_batch(paths)
+        assert trashed == [paths[0], paths[2]]
+        assert failed == [paths[1]]
+        assert Path(paths[1]).exists()

@@ -1759,7 +1759,9 @@ Eliminar imágenes
      - Seleccione varias, después ``Delete`` o clic derecho > ``Delete Selected``
 
 Las imágenes se mueven a la Papelera de reciclaje / Papelera del sistema y se pueden recuperar
-desde allí.
+desde allí. En una unidad sin papelera (tarjeta de memoria, memoria USB o
+unidad de red, donde Windows la borraría para siempre) el archivo se conserva: al cerrar,
+Imervue enumera esos archivos y pregunta si borrarlos definitivamente.
 
 Sus sidecars van con ellas: ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` e
 ``IMG.xmp``, salvo que el RAW de un par RAW + JPEG todavía use este último. Un

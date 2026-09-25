@@ -14,6 +14,8 @@ are unit-tested without Qt.
 from __future__ import annotations
 
 import logging
+import os
+import sys
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 
@@ -31,6 +33,33 @@ ProgressCallback = Callable[[int, int], None]
 ChunkHandler = Callable[[Sequence[str]], tuple[list[str], list[str]]]
 
 
+_ON_WINDOWS = sys.platform == "win32"
+# GetDriveTypeW's answer for a local fixed disk: the only kind of volume Windows
+# keeps a Recycle Bin on (external hard disks included; USB sticks, memory
+# cards and network shares are not).
+_DRIVE_FIXED = 3
+
+
+def _drive_type(root: str) -> int:
+    import ctypes
+    return int(ctypes.windll.kernel32.GetDriveTypeW(root))
+
+
+def recycle_bin_holds(path: str) -> bool:
+    """Whether the OS trash can take *path* rather than destroy it.
+
+    send2trash asks the Windows shell to recycle without confirmation, and on
+    a volume without a Recycle Bin — a network share, a USB stick, a memory
+    card — the shell deletes the file for good instead. So on Windows only a
+    path on a local fixed disk counts. Elsewhere the trash refuses what it
+    can't take rather than deleting it.
+    """
+    if not _ON_WINDOWS:
+        return True
+    drive = os.path.splitdrive(os.path.abspath(path))[0]
+    return bool(drive) and _drive_type(drive.rstrip("\\/") + "\\") == _DRIVE_FIXED
+
+
 def _trash_many(paths: Sequence[str]) -> None:
     """One shell operation for the whole group (send2trash accepts lists)."""
     from send2trash import send2trash
@@ -38,17 +67,28 @@ def _trash_many(paths: Sequence[str]) -> None:
 
 
 def _trash_chunk(paths: Sequence[str]) -> tuple[list[str], list[str]]:
-    """Trash one chunk; on a batch failure retry per file to isolate it."""
+    """Trash one chunk; on a batch failure retry per file to isolate it.
+
+    A path on a drive without a Recycle Bin (:func:`recycle_bin_holds`) never
+    reaches the shell, which would delete it for good: it fails and stays put.
+    """
+    kept = [path for path in paths if not recycle_bin_holds(path)]
+    for path in kept:
+        logger.warning("Left in place: its drive has no Recycle Bin, and Windows would "
+                       "delete it for good: %s", path)
+    recyclable = [path for path in paths if path not in set(kept)]
+    if not recyclable:
+        return [], kept
     try:
-        _trash_many(paths)
-        return list(paths), []
+        _trash_many(recyclable)
+        return recyclable, kept
     # send2trash raises OSError (TrashPermissionError and Windows COM failures
     # included) or ImportError for a missing backend; retry per file to isolate it.
     except (OSError, ImportError):
         from Imervue.gpu_image_view.actions.keyboard_actions import _send_to_trash
         succeeded: list[str] = []
-        failed: list[str] = []
-        for path in paths:
+        failed: list[str] = list(kept)
+        for path in recyclable:
             (succeeded if _send_to_trash(path) else failed).append(path)
         return succeeded, failed
 

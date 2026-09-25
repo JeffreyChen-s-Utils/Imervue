@@ -2754,4 +2754,7 @@ traditional_chinese_word_dict = {
     "export_metadata_none": "全部移除",
     "settings_unreadable_title": "無法讀取設定檔",
     "settings_unreadable": "Imervue 無法讀取設定檔：\n{path}\n\n已改用預設設定啟動。覆寫這個檔案之前，會先在旁邊另存一份 {name}.unreadable-<日期>-<時間>。要取回原本的設定，請先關閉 Imervue，再把那份副本改名為 {name}。",
+    "trash_left_in_place_title": "未移到資源回收筒",
+    "trash_left_in_place": "有 {count} 個已刪除的檔案無法移到資源回收筒，仍然留在磁碟上：它們所在的磁碟沒有資源回收筒（記憶卡、USB 隨身碟或網路磁碟），或正被其他程式使用。\n\n{paths}\n\n要永久刪除它們嗎？此動作無法復原。",
+    "trash_keep_files": "保留",
 }

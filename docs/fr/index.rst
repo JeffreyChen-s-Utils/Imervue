@@ -1761,7 +1761,10 @@ Supprimer des images
    * - Supprimer les images sélectionnées
      - Sélectionner plusieurs, puis ``Delete`` ou clic droit > ``Supprimer la sélection``
 
-Les images sont déplacées vers la Corbeille du système et peuvent y être récupérées.
+Les images sont déplacées vers la Corbeille du système et peuvent y être récupérées. Sur un
+lecteur sans corbeille — carte mémoire, clé USB ou partage réseau, où Windows les
+supprimerait définitivement — le fichier est conservé : à la fermeture, Imervue liste ces
+fichiers et demande s'il faut les supprimer définitivement.
 
 Leurs sidecars les suivent : ``IMG.JPG.xmp``, ``IMG.JPG.annotations.json`` et
 ``IMG.xmp``, sauf si le RAW d'une paire RAW + JPEG utilise encore ce dernier. Un

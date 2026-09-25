@@ -71,7 +71,8 @@ def run(monkeypatch):
     def _run(*, last=True, failing=(), watchdog=True):
         log: list[str] = []
         fail = set(failing)
-        for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions"):
+        for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
+                     "offer_permanent_delete"):
             monkeypatch.setattr(mod, name, _Rec(log, name, fail))
         monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: not last)
         monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
@@ -99,6 +100,7 @@ _TEARDOWN = [
     "cancel_pending_save",
     "write_user_setting",
     "commit_pending_deletions",
+    "offer_permanent_delete",
 ]
 
 
