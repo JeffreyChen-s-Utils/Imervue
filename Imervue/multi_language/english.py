@@ -1348,6 +1348,7 @@ english_word_dict = {
     "shortcut_action_random_image": "Random Image",
     "shortcut_action_split_view": "Split View",
     "shortcut_action_dual_page": "Dual Page Reading",
+    "shortcut_action_dual_page_rtl": "Dual Page Reading (Right to Left)",
     "shortcut_action_multi_monitor": "Multi-Monitor Window",
     "dual_split_title": "Split View",
     "dual_manga_title": "Dual Page",

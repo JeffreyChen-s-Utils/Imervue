@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
-
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.gpu_image_view.actions.delete import (
     delete_current_image,
@@ -76,7 +74,7 @@ class KeyActionDispatcher:
     def dispatch(self, action: str, modifiers) -> None:
         if self._dispatch_simple(action):
             return
-        if self._dispatch_toggle(action, modifiers):
+        if self._dispatch_toggle(action):
             return
         if self._dispatch_culling(action):
             return
@@ -149,13 +147,14 @@ class KeyActionDispatcher:
     # ------------------------------------------------------------------
     # View-mode toggles
     # ------------------------------------------------------------------
-    def _dispatch_toggle(self, action: str, modifiers) -> bool:
+    def _dispatch_toggle(self, action: str) -> bool:
         """View-mode toggles: theater, pixel_view, split, dual, multi, colour."""
         toggle_handlers = {
             "theater": self._toggle_theater_mode,
             "pixel_view": self._toggle_pixel_view,
             "split_view": self._toggle_split_view,
-            "dual_page": lambda: self._toggle_dual_page(modifiers),
+            "dual_page": lambda: self._open_dual_page("manga"),
+            "dual_page_rtl": lambda: self._open_dual_page("manga_rtl"),
             "multi_monitor": self._toggle_multi_monitor,
             "color_mode_cycle": self._cycle_color_mode,
             "loupe": self._toggle_loupe,
@@ -187,14 +186,16 @@ class KeyActionDispatcher:
         if hasattr(mw, "activate_dual_view"):
             mw.activate_dual_view("split")
 
-    def _toggle_dual_page(self, modifiers) -> None:
+    def _open_dual_page(self, mode: str) -> None:
+        """Dual-page reading, left to right (``"manga"``) or right to left (``"manga_rtl"``).
+
+        Right to left has its own action: it used to hang off Ctrl held with
+        the Dual Page key, but the lookup matches the modifiers exactly, so
+        Ctrl+Shift+D found no action and the mode could not be reached.
+        """
         mw = self.view.main_window
-        if not hasattr(mw, "activate_dual_view"):
-            return
-        mode = ("manga_rtl"
-                if modifiers & Qt.KeyboardModifier.ControlModifier
-                else "manga")
-        mw.activate_dual_view(mode)
+        if hasattr(mw, "activate_dual_view"):
+            mw.activate_dual_view(mode)
 
     def _toggle_multi_monitor(self) -> None:
         mw = self.view.main_window

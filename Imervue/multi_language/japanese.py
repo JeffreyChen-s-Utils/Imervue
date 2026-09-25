@@ -1335,6 +1335,7 @@ japanese_word_dict = {
     "shortcut_action_random_image": "ランダム画像",
     "shortcut_action_split_view": "分割表示",
     "shortcut_action_dual_page": "見開き表示",
+    "shortcut_action_dual_page_rtl": "見開き表示（右綴じ）",
     "shortcut_action_multi_monitor": "マルチモニターウィンドウ",
     "dual_split_title": "分割表示",
     "dual_manga_title": "見開き表示",

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-22 | 2026-09-26 | Ctrl+Shift+D opens right-to-left dual-page reading, which no key reached | #fix #keyboard #manga #shortcuts | [2026-09-b](2026-09-b.md) |
 | U-20260926-21 | 2026-09-26 | place: in a search query finds the photos taken there | #fix #search #library #gps | [2026-09-b](2026-09-b.md) |
 | U-20260926-20 | 2026-09-26 | The List view keeps the sort you chose and orders names naturally | #fix #list-view #sort | [2026-09-b](2026-09-b.md) |
 | U-20260926-19 | 2026-09-26 | Auto-tagging reads a photo as shown and finally tags landscape and portrait | #fix #library #tags #orientation #formats | [2026-09-b](2026-09-b.md) |
@@ -394,4 +395,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 52 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 53 |

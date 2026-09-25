@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `1085d90` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `c0039c3` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 889 | 148,100 |
+| `tests/` | 889 | 148,122 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
-| `Imervue/gui/` | 167 | 33,265 |
+| `Imervue/gui/` | 167 | 33,268 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,355 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,210 |
-| `Imervue/multi_language/` | 8 | 14,149 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,211 |
+| `Imervue/multi_language/` | 8 | 14,154 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,266 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,740** | **330,813** |
+| **總計** | **1,740** | **330,844** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,348 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,357 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -266,11 +266,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,804 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,769 | 繁體中文 |
-| `chinese.py` | 2,770 | 簡體中文 |
-| `japanese.py` | 2,783 | 日文 |
-| `korean.py` | 2,781 | 韓文 |
+| `english.py` | 2,805 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,770 | 繁體中文 |
+| `chinese.py` | 2,771 | 簡體中文 |
+| `japanese.py` | 2,784 | 日文 |
+| `korean.py` | 2,782 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -444,7 +444,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `input_controller.py` | 429 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
 | `key_input_handler.py` | 268 | 鍵盤事件路由（F8 HUD、F1-F5 色標籤、Esc、方向鍵） |
-| `key_action_dispatcher.py` | 355 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
+| `key_action_dispatcher.py` | 356 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
 | `drop_handler.py` | 75 | 拖放檔案/資料夾開啟 |
@@ -537,7 +537,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-167 個檔、33,265 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+167 個檔、33,268 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -643,7 +643,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 設定 / 系統
 
-`preferences_dialog.py`(268) · `shortcut_settings_dialog.py`(404) · `profiles_dialog.py`(206) 多帳號 ·
+`preferences_dialog.py`(268) · `shortcut_settings_dialog.py`(407) · `profiles_dialog.py`(206) 多帳號 ·
 `workspace_dialog.py`(231) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(365) 軟刪除回收桶 ·
 `cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(334) ·
 `dual_pane_dialog.py`(167) 雙窗格檔案管理 · `onboarding_dialog.py`(135) 首次導覽 · `whats_new_dialog.py`(143)
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-889 個檔、148,100 行。`pyproject.toml` 定義三個互斥層級 marker：
+889 個檔、148,122 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

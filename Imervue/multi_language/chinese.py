@@ -1322,6 +1322,7 @@ chinese_word_dict = {
     "shortcut_action_random_image": "随机图片",
     "shortcut_action_split_view": "分割视图",
     "shortcut_action_dual_page": "双页阅读",
+    "shortcut_action_dual_page_rtl": "双页阅读（右至左）",
     "shortcut_action_multi_monitor": "多屏幕窗口",
     "dual_split_title": "分割视图",
     "dual_manga_title": "双页阅读",

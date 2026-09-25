@@ -149,32 +149,32 @@ class _ToggleView:
 def test_loupe_toggles_via_dispatcher():
     view = _ToggleView(deep=True)
     dispatcher = KeyActionDispatcher(view)
-    assert dispatcher._dispatch_toggle("loupe", None) is True   # noqa: SLF001
+    assert dispatcher._dispatch_toggle("loupe") is True   # noqa: SLF001
     assert view._loupe_enabled is True
-    dispatcher._dispatch_toggle("loupe", None)                  # noqa: SLF001
+    dispatcher._dispatch_toggle("loupe")                  # noqa: SLF001
     assert view._loupe_enabled is False
 
 
 def test_loupe_ignored_without_deep_zoom():
     view = _ToggleView(deep=False)
-    KeyActionDispatcher(view)._dispatch_toggle("loupe", None)   # noqa: SLF001
+    KeyActionDispatcher(view)._dispatch_toggle("loupe")   # noqa: SLF001
     assert view._loupe_enabled is False
 
 
 def test_loupe_toggles_in_tile_grid_mode():
     view = _ToggleView(deep=False, grid=True)
     dispatcher = KeyActionDispatcher(view)
-    dispatcher._dispatch_toggle("loupe", None)                  # noqa: SLF001
+    dispatcher._dispatch_toggle("loupe")                  # noqa: SLF001
     assert view._loupe_enabled is True
 
 
 def test_reading_mode_toggles_and_fits_via_dispatcher():
     view = _ToggleView(deep=True)
     dispatcher = KeyActionDispatcher(view)
-    assert dispatcher._dispatch_toggle("reading_mode", None) is True  # noqa: SLF001
+    assert dispatcher._dispatch_toggle("reading_mode") is True  # noqa: SLF001
     assert view._reading_mode is True
     assert view.reading_fits == 1   # entering fits to width
-    dispatcher._dispatch_toggle("reading_mode", None)                # noqa: SLF001
+    dispatcher._dispatch_toggle("reading_mode")                # noqa: SLF001
     assert view._reading_mode is False
     assert view.window_fits == 1    # leaving fits back to window
 
@@ -213,3 +213,25 @@ def test_a_documents_pages_only_step(paged, expected):
     for action in ("anim_toggle", "anim_prev", "anim_next", "anim_faster"):
         dispatcher._dispatch_anim(action)   # noqa: SLF001
     assert anim.calls == expected
+
+
+
+@pytest.mark.parametrize(("key", "modifiers", "mode"), [
+    ("D", "shift", "manga"),
+    ("D", "ctrl_shift", "manga_rtl"),
+])
+def test_dual_page_keys_open_their_reading_direction(key, modifiers, mode):
+    """Ctrl+Shift+D found no action (the lookup matches modifiers exactly): RTL was unreachable."""
+    from types import SimpleNamespace
+
+    from PySide6.QtCore import Qt
+
+    from Imervue.gpu_image_view.key_action_dispatcher import KeyActionDispatcher
+    from Imervue.gui.shortcut_settings_dialog import ShortcutManager
+    mods = {"shift": Qt.KeyboardModifier.ShiftModifier,
+            "ctrl_shift": Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier}[modifiers]
+    action = ShortcutManager().get_action(getattr(Qt.Key, f"Key_{key}").value, mods.value)
+    opened = []
+    view = SimpleNamespace(main_window=SimpleNamespace(activate_dual_view=opened.append))
+    assert KeyActionDispatcher(view)._dispatch_toggle(action) is True   # noqa: SLF001
+    assert opened == [mode]

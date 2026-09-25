@@ -1333,6 +1333,7 @@ korean_word_dict = {
     "shortcut_action_random_image": "랜덤 이미지",
     "shortcut_action_split_view": "분할 뷰",
     "shortcut_action_dual_page": "듀얼 페이지",
+    "shortcut_action_dual_page_rtl": "듀얼 페이지 (우→좌)",
     "shortcut_action_multi_monitor": "다중 모니터 창",
     "dual_split_title": "분할 뷰",
     "dual_manga_title": "듀얼 페이지",
