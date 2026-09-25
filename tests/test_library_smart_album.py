@@ -216,7 +216,7 @@ class TestApplyToPaths:
             a: {"Make": "Canon", "Model": "EOS R5"},
             b: {"Make": "NIKON", "Model": "Z6"},
         }
-        from Imervue.image import info
+        from Imervue.image import exif_merge as info
         monkeypatch.setattr(info, "get_exif_data", lambda p: exif.get(str(p), {}))
         assert smart_album.apply_to_paths([a, b], {"camera": "canon"}) == [a]
 
@@ -227,13 +227,13 @@ class TestApplyToPaths:
             a: {"LensModel": "RF24-70mm F2.8 L"},
             b: {"LensModel": "EF50mm F1.8"},
         }
-        from Imervue.image import info
+        from Imervue.image import exif_merge as info
         monkeypatch.setattr(info, "get_exif_data", lambda p: exif.get(str(p), {}))
         assert smart_album.apply_to_paths([a, b], {"lens": "24-70"}) == [a]
 
     def test_camera_filter_drops_untagged(self, tmp_path, monkeypatch):
         a = _touch(tmp_path / "a.png")
-        from Imervue.image import info
+        from Imervue.image import exif_merge as info
         monkeypatch.setattr(info, "get_exif_data", lambda p: {})
         assert smart_album.apply_to_paths([a], {"camera": "canon"}) == []
 

@@ -110,7 +110,7 @@ def _apply_exif_filters(paths: list[str], rules: dict) -> list[str]:
     lens = rules.get("lens")
     if not camera and not lens:
         return paths
-    from Imervue.image.info import get_exif_data
+    from Imervue.image.exif_merge import get_exif_data
     out: list[str] = []
     for path in paths:
         exif = get_exif_data(Path(path))

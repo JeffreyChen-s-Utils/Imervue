@@ -62,7 +62,7 @@ def plan_import(
 
 def extract_capture_date(path: str) -> datetime | None:
     """EXIF capture date for *path*, falling back to file mtime."""
-    from Imervue.image.info import get_exif_data
+    from Imervue.image.exif_merge import get_exif_data
     exif = get_exif_data(Path(path)) or {}
     parsed = parse_exif_datetime(
         exif.get("DateTimeOriginal") or exif.get("DateTimeDigitized"))

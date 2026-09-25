@@ -17,7 +17,8 @@ from PySide6.QtWidgets import (
     QPushButton, QSizePolicy, QPlainTextEdit,
 )
 
-from Imervue.image.info import get_exif_data, get_file_times
+from Imervue.image.exif_merge import get_exif_data
+from Imervue.image.info import get_file_times
 from Imervue.image.video_frames import is_video_path, probe_video_meta
 from Imervue.multi_language.language_wrapper import language_wrapper
 

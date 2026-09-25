@@ -110,7 +110,7 @@ def _populate_basic_image_info(image_path: Path, out: dict[str, Any]) -> None:
 
 
 def _populate_exif(image_path: Path, out: dict[str, Any]) -> None:
-    from Imervue.image.info import get_exif_data
+    from Imervue.image.exif_merge import get_exif_data
     exif = get_exif_data(image_path) or {}   # {} for an unreadable file or EXIF block
     # EXIF values include byte strings / IFDRational; coerce to JSON-friendly types.
     out["exif"] = {str(k): json_safe(v) for k, v in exif.items()}

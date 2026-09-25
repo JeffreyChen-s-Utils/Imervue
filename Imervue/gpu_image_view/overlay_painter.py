@@ -575,7 +575,7 @@ class OverlayPainter:
         cache = view._exif_osd_cache
         if cache and cache[0] == path:
             return cache[1]
-        from Imervue.image.info import get_exif_data
+        from Imervue.image.exif_merge import get_exif_data
         lines = format_exif_osd_lines(get_exif_data(Path(path)))
         view._exif_osd_cache = (path, lines)
         return lines

@@ -532,3 +532,26 @@ def test_an_unreadable_raw_reports_a_probe_error(tmp_path, monkeypatch):
     src.write_bytes(b"not a raw")
     monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: None)
     assert read_image_metadata(str(src))["error"].startswith("image probe failed")
+
+
+def test_the_tools_load_no_qt(tmp_path):
+    """The server is Qt-free by design; reading EXIF pulled in QtWidgets through image/info."""
+    import subprocess
+    import sys
+
+    from PIL import Image
+    exif = Image.Exif()
+    exif[271] = "Canon"
+    src = tmp_path / "a.jpg"
+    Image.new("RGB", (8, 8)).save(src, exif=exif)
+    code = (
+        "import sys; "
+        "from Imervue.mcp_server.tools import convert_format, read_image_metadata; "
+        "info = read_image_metadata(sys.argv[1]); "
+        "convert_format(sys.argv[1], sys.argv[2]); "
+        "print(info['exif'].get('Make'), any(m.startswith('PySide6') for m in sys.modules))"
+    )
+    root = Path(__file__).resolve().parent.parent
+    result = subprocess.run([sys.executable, "-c", code, str(src), str(tmp_path / "a.png")],  # noqa: S603 - fixed argv
+                            capture_output=True, text=True, check=True, cwd=str(root))
+    assert result.stdout.strip().splitlines()[-1] == "Canon False"
