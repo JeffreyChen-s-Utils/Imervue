@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # imprime todos os subcomandos disponíveis
 | `preset` / `pipeline` | Aplicar uma predefinição de revelação salva pelo nome; executar um pipeline JSON ordenado |
 | `list-ops` | Listar todos os subcomandos (`--json` para saída legível por máquina) |
 
-Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um RAW de câmera é revelado como no visualizador, em vez de lido pela pequena prévia embutida; `resize` e `strip` o gravam como PNG. Um arquivo ilegível é relatado e o restante é processado mesmo assim. Um arquivo incompleto é lido até onde vai, como no visualizador.
+Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um RAW de câmera é revelado como no visualizador, em vez de lido pela pequena prévia embutida; `resize` e `strip` o gravam como PNG. Um arquivo ilegível é relatado e o restante é processado mesmo assim. Um arquivo incompleto é lido até onde vai, como no visualizador. Tons de cinza de 16 bits e de ponto flutuante são escalados para 8 bits como no visualizador; `resize` e `strip` mantêm a profundidade de bits da origem.
 
 Flags compartilhadas: `--out` (diretório de saída), `--recursive`, `--dry-run` (listar ações sem escrever nada), `--overwrite` e `--version`.
 
@@ -190,6 +190,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Gerenciamento de cor** — fotos com perfil de cor embutido (Display P3 de celulares, Adobe RGB de câmeras, CMYK) são convertidas para sRGB no visualizador e nas miniaturas; imagens sem perfil ou em sRGB aparecem como estão
 - **Arquivos incompletos** — um JPEG, PNG, TIFF, GIF ou BMP que termina antes da hora (um download ou cópia interrompidos, uma foto recuperada de um cartão de memória com defeito) abre com a parte que foi lida, como no navegador, em vez de não abrir
 - **Arquivos alterados por outros programas** — quando outro programa salva por cima de uma imagem (um editor externo, direto no arquivo ou renomeando uma cópia por cima), o visualizador mostra a versão nova: a imagem aberta no zoom profundo meio segundo após a última gravação, as miniaturas da grade em poucos segundos
+- **Tons de cinza de 16 bits e de ponto flutuante** — um PNG ou TIFF em cinza de 16 bits (um escaneamento, um mapa de profundidade, uma imagem científica ou astronômica) e um TIFF de ponto flutuante mostram seu brilho real no visualizador, nas miniaturas, nas prévias e nas ferramentas, em vez de quase branco ou preto
 - **Reprodução de animação** — GIF / APNG com controles de play / pause / passo por quadro / velocidade; uma animação que ocuparia mais de 512 MB decodificada é decodificada quadro a quadro durante a reprodução, não toda de antemão; um quadro de 10 ms ou menos é exibido por 100 ms, como nos navegadores
 
 ### Modos de navegação

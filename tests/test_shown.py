@@ -10,7 +10,7 @@ from PIL import Image
 
 from Imervue.image import shown as shown_module
 from Imervue.image.color_profile import to_srgb
-from Imervue.image.shown import as_shown, load_shown_rgb, load_shown_rgba, open_shown
+from Imervue.image.shown import as_shown, as_shown_8bit, load_shown_rgb, load_shown_rgba, open_shown
 
 _P3_RED = (200, 60, 50)
 
@@ -134,3 +134,38 @@ def test_open_shown_turns_and_converts(tmp_path):
     img = open_shown(_tagged_p3_portrait(tmp_path))
     assert img.size == (20, 40)
     assert np.abs(np.array(img.getpixel((10, 20))) - _srgb_red()).max() <= 3
+
+
+def _grey16(tmp_path) -> str:
+    path = tmp_path / "grey16.png"
+    Image.fromarray(np.array([[0, 32768, 65535]], dtype=np.uint16)).save(path)
+    return str(path)
+
+
+def test_as_shown_keeps_a_sixteen_bit_picture_sixteen_bit(tmp_path):
+    with Image.open(_grey16(tmp_path)) as img:
+        assert as_shown(img).mode == "I;16"   # a copy saved from it keeps its depth
+
+
+@pytest.mark.parametrize("mode, pixel", [("RGBA", (128, 128, 128, 255)), ("RGB", (128, 128, 128))])
+def test_as_shown_8bit_scales_sixteen_bit_grey_instead_of_clipping(tmp_path, mode, pixel):
+    with Image.open(_grey16(tmp_path)) as img:
+        out = as_shown_8bit(img, mode=mode)
+    assert out.mode == mode
+    assert out.getpixel((1, 0)) == pixel
+    assert out.getpixel((2, 0))[0] == 255
+
+
+def test_as_shown_8bit_turns_and_converts_like_as_shown(tmp_path):
+    with Image.open(_tagged_p3_portrait(tmp_path)) as img:
+        expected = as_shown(img).convert("RGBA")
+    with Image.open(_tagged_p3_portrait(tmp_path)) as img:
+        out = as_shown_8bit(img)
+    assert out.size == expected.size == (20, 40)
+    assert np.array_equal(np.asarray(out), np.asarray(expected))
+
+
+@pytest.mark.parametrize("load", [load_shown_rgb, load_shown_rgba])
+def test_tool_inputs_scale_sixteen_bit_grey(tmp_path, load):
+    assert load(_grey16(tmp_path))[0, :, 0].tolist() == [0, 128, 255]
+

@@ -13,6 +13,7 @@ from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
 from Imervue.image.color_profile import to_srgb
+from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
@@ -50,7 +51,7 @@ def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     img = Image.open(path)
     code = exif_orientation(img) if orient else 1
     with decode_slot(img.width * img.height):   # one giant panorama at a time
-        img = to_srgb(img)   # embedded colour profile -> the sRGB the screen shows
+        img = to_srgb(to_eight_bit(img))   # 16-bit / float grey scaled; profile -> screen sRGB
         # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
         # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
         # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
@@ -65,7 +66,7 @@ def _load_raster_thumbnail(path: str, max_edge: int = _THUMBNAIL_EDGE, *,
         code = exif_orientation(img) if orient else 1
         # Past JPEG's draft decode this reads every pixel: a giant waits its turn.
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
-        shown = to_srgb(img)   # after the downscale: converting fewer pixels
+        shown = to_srgb(to_eight_bit(img))   # after the downscale: converting fewer pixels
         thumb = shown.convert("RGBA") if shown.mode not in ("RGB", "RGBA", "L") else shown
         return np.array(transpose_for(thumb, code))
 

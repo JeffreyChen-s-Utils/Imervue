@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 from Imervue.image.dimensions import image_dimensions
 from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
@@ -110,7 +110,7 @@ def _load_preview(path: str, max_edge: int = PREVIEW_MAX_EDGE) -> QPixmap | None
     ensure_pillow_opener(Path(path).suffix)
     try:
         with Image.open(path) as src:
-            im = as_shown(src).convert("RGBA")
+            im = as_shown_8bit(src)
             w, h = im.size
             long_edge = max(w, h)
             if long_edge > max_edge:

@@ -47,7 +47,8 @@ def test_configure_pillow_reads_files_cut_short_and_raises_the_pixel_limit(monke
     assert Image.MAX_IMAGE_PIXELS == 48 * 1024 ** 3 // 24
 
 
-def test_pillows_default_refuses_a_file_cut_short(tmp_path):
+def test_pillows_default_refuses_a_file_cut_short(tmp_path, monkeypatch):
+    monkeypatch.setattr(ImageFile, "LOAD_TRUNCATED_IMAGES", False)   # the default, whatever ran before
     _whole, cut = _write(tmp_path, "a.jpg", "JPEG", 0.6)
     with pytest.raises(OSError, match="truncated"):
         decode_image_file(cut)

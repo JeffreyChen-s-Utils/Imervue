@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260925-82 | 2026-09-25 | 16-bit and float greyscale pictures show their real brightness | #fix #formats #viewer #thumbnails | [2026-09-b](2026-09-b.md) |
 | U-20260925-81 | 2026-09-25 | A picture another program saves over shows its new version | #fix #viewer #thumbnails #external-editor | [2026-09-b](2026-09-b.md) |
 | U-20260925-80 | 2026-09-25 | A photo cut short opens as far as it was read | #fix #viewer #decode #cli #mcp | [2026-09-b](2026-09-b.md) |
 | U-20260925-79 | 2026-09-25 | CR3, RW2, ORF and RAF show their EXIF, sort by capture date and keep it in exports | #fix #raw #metadata | [2026-09-b](2026-09-b.md) |
@@ -362,4 +363,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 20 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 21 |

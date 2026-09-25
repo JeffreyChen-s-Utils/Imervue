@@ -139,6 +139,8 @@ Un JPEG, PNG, TIFF, GIF ou BMP tronqué — un téléchargement ou une copie int
 
 Quand un autre programme enregistre par-dessus une image — un éditeur externe, sur place ou en renommant une copie par-dessus —, la visionneuse affiche la nouvelle version : l'image ouverte en zoom profond une demi-seconde après la dernière écriture, les vignettes de la grille en quelques secondes.
 
+Un PNG ou TIFF en gris 16 bits — un scan, une carte de profondeur, une image scientifique ou astronomique — et un TIFF à virgule flottante montrent leur vraie luminosité dans la visionneuse, les vignettes, les aperçus et les outils, au lieu de presque blanc ou noir : les valeurs 16 bits sont mises à l'échelle sur toute leur plage, les valeurs flottantes de 0 à 1 vont du noir au blanc et toute autre plage est étirée.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2536,7 +2538,7 @@ affichage::
    * - ``list-ops``
      - Lister toutes les sous-commandes (``--json`` pour une sortie exploitable par machine)
 
-Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités. Un fichier tronqué est lu aussi loin qu'il va, comme dans la visionneuse.
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités. Un fichier tronqué est lu aussi loin qu'il va, comme dans la visionneuse. Les niveaux de gris 16 bits et à virgule flottante sont ramenés à 8 bits comme dans la visionneuse ; ``resize`` et ``strip`` gardent la profondeur de bits de la source.
 
 Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
 

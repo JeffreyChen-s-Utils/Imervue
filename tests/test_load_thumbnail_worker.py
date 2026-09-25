@@ -64,3 +64,32 @@ def test_legacy_geometry_recipe_keeps_the_stored_orientation(tmp_path):
     arr = worker._bake_fresh(Recipe.from_dict({"rotate_steps": 2}), "x")
     assert arr.shape[:2] == (20, 40)   # rotated 180 on the stored 40x20 pixels
 
+
+
+@pytest.mark.parametrize("size", [None, 64])
+def test_a_sixteen_bit_grey_tile_shows_its_gradient(tmp_path, size):
+    path = tmp_path / "depth.png"
+    Image.fromarray(np.tile(np.linspace(0, 65535, 128).astype(np.uint16), (4, 1))).save(path)
+    row = mod.LoadThumbnailWorker(str(path), size=size)._bake_fresh(None, "")[0, :, 0].astype(int)
+    assert row[0] <= 2          # a downscale averages the first pixels with their neighbours
+    assert row[-1] >= 253
+    assert abs(row[len(row) // 2] - 128) <= 3   # it was nearly all 255: clipped, not scaled
+
+
+@pytest.mark.parametrize("size", [None, 64])
+def test_a_tile_decodes_in_the_giant_decode_slot(tmp_path, monkeypatch, size):
+    from contextlib import contextmanager
+
+    from Imervue.gpu_image_view.images import image_loader
+    asked = []
+
+    @contextmanager
+    def slot(pixels):
+        asked.append(pixels)
+        yield
+
+    monkeypatch.setattr(image_loader, "decode_slot", slot)
+    path = tmp_path / "a.png"
+    Image.new("RGB", (30, 20)).save(path)
+    mod.LoadThumbnailWorker(str(path), size=size)._bake_fresh(None, "")
+    assert asked == [600]

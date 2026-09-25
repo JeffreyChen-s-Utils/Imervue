@@ -1129,3 +1129,34 @@ def test_a_folder_lists_raw_and_avif_but_not_svg(tmp_path):
 def test_output_path_writes_a_raw_as_png(tmp_path):
     assert output_path(tmp_path / "IMG_1.CR3", None, "_resized", None).name == "IMG_1_resized.png"
     assert output_path(tmp_path / "a.jpg", None, "_resized", None).name == "a_resized.jpg"
+
+
+@pytest.mark.parametrize(("command", "extra", "name"), [
+    ("convert", ["--format", "PNG"], "g.png"),
+    ("convert", ["--format", "JPEG"], "g.jpg"),
+    ("thumbnail", ["--size", "400"], "g.png"),
+    ("watermark", ["--text", "x", "--opacity", "0"], "g.png"),
+    ("auto-orient", [], "g.png"),
+])
+def test_sixteen_bit_grey_comes_out_as_a_gradient(tmp_path, command, extra, name):
+    """``convert`` clips 16-bit grey to 255, so the output was a white page."""
+    src = tmp_path / "g.png"
+    Image.fromarray(np.tile(np.linspace(0, 65535, 64).astype(np.uint16), (8, 1))).save(src)
+    out_dir = tmp_path / "out"
+    assert main([command, str(src), *extra, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / name) as out:
+        row = np.asarray(out.convert("L"))[4].astype(int)
+    assert row[0] <= 3
+    assert row[-1] >= 252
+    assert abs(row[32] - 130) <= 6
+
+
+@pytest.mark.parametrize(("command", "extra"), [("resize", ["--max", "32"]), ("strip", [])])
+def test_resize_and_strip_keep_a_sixteen_bit_source_sixteen_bit(tmp_path, command, extra):
+    src = tmp_path / "g.png"
+    Image.fromarray(np.tile(np.linspace(0, 65535, 64).astype(np.uint16), (8, 1))).save(src)
+    out_dir = tmp_path / "out"
+    assert main([command, str(src), *extra, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / "g.png") as out:
+        assert out.mode == "I;16"
+        assert int(np.asarray(out).max()) > 60000

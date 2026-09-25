@@ -139,6 +139,8 @@ Ein abgeschnittenes JPEG, PNG, TIFF, GIF oder BMP — ein abgebrochener Download
 
 Speichert ein anderes Programm über ein Bild — ein externer Editor, direkt oder indem es eine Kopie darüber umbenennt —, zeigt der Viewer die neue Fassung: das in Deep Zoom geöffnete Bild eine halbe Sekunde nach dem letzten Schreibvorgang, Miniaturen im Grid innerhalb weniger Sekunden.
 
+Ein 16-Bit-Graustufen-PNG oder -TIFF — ein Scan, eine Tiefenkarte, eine wissenschaftliche oder astronomische Aufnahme — und ein Gleitkomma-TIFF zeigen im Viewer, in Miniaturen, Vorschauen und Werkzeugen ihre echte Helligkeit statt fast weiß oder schwarz: 16-Bit-Werte werden über ihren ganzen Bereich skaliert, Gleitkommawerte von 0 bis 1 von Schwarz bis Weiß abgebildet und jeder andere Bereich gestreckt.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2541,7 +2543,7 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
    * - ``list-ops``
      - Alle Unterbefehle auflisten (``--json`` für maschinenlesbare Ausgabe)
 
-Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; ``resize`` und ``strip`` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht.
+Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; ``resize`` und ``strip`` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht. 16-Bit- und Gleitkomma-Graustufen werden wie im Viewer auf 8 Bit skaliert; ``resize`` und ``strip`` behalten die Bittiefe der Quelle.
 
 Gemeinsame Flags: ``--out`` (Ausgabeverzeichnis), ``--recursive``, ``--dry-run`` (Aktionen nur auflisten, nichts schreiben), ``--overwrite`` und ``--version``.
 

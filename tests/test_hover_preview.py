@@ -53,6 +53,12 @@ class TestLoadPreview:
         assert pm.width() == 40
         assert pm.height() == 30
 
+    def test_a_sixteen_bit_grey_picture_previews_as_a_gradient(self, hover_mod, tmp_path):
+        p = tmp_path / "grey16.png"
+        Image.fromarray(np.array([[0, 32768, 65535]], dtype=np.uint16)).save(str(p))
+        image = hover_mod._load_preview(str(p)).toImage()
+        assert [image.pixelColor(x, 0).red() for x in range(3)] == [0, 128, 255]
+
 
 class TestUprightAndCaption:
     def test_tagged_photo_previews_upright(self, hover_mod, tmp_path):

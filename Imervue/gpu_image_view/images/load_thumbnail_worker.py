@@ -5,8 +5,6 @@ from PySide6.QtCore import QRunnable, Signal, QObject
 import numpy as np
 from PIL import Image
 
-from Imervue.image.color_profile import to_srgb
-from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.recipe_store import recipe_store
 from Imervue.image.thumbnail_disk_cache import thumbnail_disk_cache
 
@@ -111,16 +109,16 @@ class LoadThumbnailWorker(QRunnable):
             return img_data
 
     def _load_standard(self, *, orient: bool = True) -> np.ndarray:
-        """載入一般圖片（thumbnail() 減少記憶體峰值）；依 EXIF 轉正、內嵌色彩描述檔轉 sRGB"""
-        img = Image.open(self.path)
-        code = exif_orientation(img) if orient else 1
+        """A raster decoded exactly as the viewer decodes it, scaled down to the tile size.
 
-        if self.size is not None:
-            # thumbnail() 會用 draft() 跳過不需要的解碼，大幅降低記憶體
-            img.thumbnail((self.size, self.size), Image.Resampling.LANCZOS)
-
-        img = transpose_for(to_srgb(img).convert("RGBA"), code)
-        return np.array(img)
+        Upright by EXIF, sRGB from an embedded profile, 16-bit and float grey
+        scaled to 8 bits, and a picture past Pillow's default size waiting for
+        the one giant-decode slot (``image_loader``).
+        """
+        from Imervue.gpu_image_view.images.image_loader import _load_raster, _load_raster_thumbnail
+        if self.size is None:
+            return _load_raster(self.path, orient=orient)
+        return _load_raster_thumbnail(self.path, self.size, orient=orient)
 
     def _load_svg(self) -> np.ndarray:
         """載入 SVG 圖片"""

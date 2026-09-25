@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QTableView, QHeaderView, QAbstractItemView, QStyledItemDelegate,
 )
 
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 from Imervue.gui.file_filters import viewer_filter
 from Imervue.image.dimensions import image_dimensions
 from Imervue.image.formats import ensure_pillow_opener
@@ -86,7 +86,7 @@ class _ThumbWorker(QRunnable):
                 w, h = src.size
                 code = exif_orientation(src)
                 src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
-                im = as_shown(src, code).convert("RGBA")
+                im = as_shown_8bit(src, code)
             # The upright size, and the developed size for RAW (Pillow sees its preview).
             w, h = image_dimensions(self.path) or (w, h)
             data = im.tobytes("raw", "RGBA")

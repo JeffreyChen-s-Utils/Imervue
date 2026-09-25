@@ -26,6 +26,7 @@ from PIL import Image
 
 from Imervue.image.dimensions import probe_image
 from Imervue.image.formats import RASTER_EXTENSIONS, RAW_EXTENSIONS
+from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.shown import load_shown_rgba, open_shown
 
@@ -81,7 +82,7 @@ def _resize_to(img: Image.Image, max_edge: int) -> Image.Image:
 
 def op_convert(src: Path, target: Path, args) -> None:
     fmt = args.format.upper()
-    img = open_shown(src)
+    img = to_eight_bit(open_shown(src))   # 16-bit / float grey scaled, not clipped white
     rgb = img.convert("RGB") if fmt == "JPEG" else img.convert("RGBA")
     rgb.save(target, format=fmt, quality=args.quality)
 
@@ -91,12 +92,12 @@ def op_resize(src: Path, target: Path, args) -> None:
 
 
 def op_thumbnail(src: Path, target: Path, args) -> None:
-    _resize_to(open_shown(src).convert("RGBA"), args.size).save(target)
+    _resize_to(to_eight_bit(open_shown(src)).convert("RGBA"), args.size).save(target)
 
 
 def op_watermark(src: Path, target: Path, args) -> None:
     from Imervue.image.watermark import WatermarkOptions, apply_watermark
-    apply_watermark(open_shown(src).convert("RGBA"), WatermarkOptions(
+    apply_watermark(to_eight_bit(open_shown(src)).convert("RGBA"), WatermarkOptions(
         text=args.text, corner=args.corner, opacity=args.opacity)).save(target)
 
 

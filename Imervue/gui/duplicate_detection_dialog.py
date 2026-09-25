@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.system.natural_sort import natural_key
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 from Imervue.image.orientation import exif_orientation
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.image.dimensions import image_dimensions
@@ -245,7 +245,7 @@ def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
         with Image.open(path) as src:
             code = exif_orientation(src)
             src.thumbnail((size, size), Image.Resampling.LANCZOS)
-            img = as_shown(src, code).convert("RGBA")
+            img = as_shown_8bit(src, code)
     except IMAGE_READ_ERRORS:
         return QPixmap()
     arr = np.array(img)

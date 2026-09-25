@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
 | `preset` / `pipeline` | Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen |
 | `list-ops` | Alle Unterbefehle auflisten (`--json` für maschinenlesbare Ausgabe) |
 
-Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; `resize` und `strip` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht.
+Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; `resize` und `strip` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht. 16-Bit- und Gleitkomma-Graustufen werden wie im Viewer auf 8 Bit skaliert; `resize` und `strip` behalten die Bittiefe der Quelle.
 
 Gemeinsame Flags: `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `--version`.
 
@@ -190,6 +190,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Farbmanagement** — Fotos mit eingebettetem Farbprofil (Display P3 vom Handy, Adobe RGB von Kameras, CMYK) werden für Viewer und Thumbnails nach sRGB umgerechnet; Bilder ohne Profil oder mit sRGB werden unverändert gezeigt
 - **Abgeschnittene Dateien** — ein JPEG, PNG, TIFF, GIF oder BMP, das vorzeitig endet (ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto), öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen
 - **Von anderen Programmen geänderte Dateien** — speichert ein anderes Programm über ein Bild (ein externer Editor, direkt oder indem es eine Kopie darüber umbenennt), zeigt der Viewer die neue Fassung: das in Deep Zoom geöffnete Bild eine halbe Sekunde nach dem letzten Schreibvorgang, Miniaturen im Grid innerhalb weniger Sekunden
+- **16-Bit- und Gleitkomma-Graustufen** — ein 16-Bit-Graustufen-PNG oder -TIFF (ein Scan, eine Tiefenkarte, eine wissenschaftliche oder astronomische Aufnahme) und ein Gleitkomma-TIFF zeigen im Viewer, in Miniaturen, Vorschauen und Werkzeugen ihre echte Helligkeit statt fast weiß oder schwarz
 - **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung; eine Animation, die dekodiert mehr als 512 MB bräuchte, wird beim Abspielen Bild für Bild dekodiert statt vorab komplett; ein Bild mit 10 ms oder weniger wird wie in Browsern 100 ms lang gezeigt
 
 ### Browse-Modi

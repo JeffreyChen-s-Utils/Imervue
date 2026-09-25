@@ -138,6 +138,8 @@ A JPEG, PNG, TIFF, GIF or BMP cut short — an interrupted download or copy, a p
 
 When another program saves over a picture — an external editor, in place or by renaming a copy over it — the viewer shows the new version: the picture open in Deep Zoom half a second after the last write, grid thumbnails within a few seconds.
 
+A 16-bit grey PNG or TIFF — a scan, a depth map, a scientific or astronomy frame — and a floating-point TIFF show their real brightness in the viewer, thumbnails, previews and tools, instead of almost white or black: 16-bit values are scaled over their full range, floating-point values of 0 to 1 map onto black to white and any other range is stretched.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -2501,7 +2503,7 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
    * - ``list-ops``
      - List every subcommand (``--json`` for machine-readable output)
 
-Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer.
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer. 16-bit and floating-point greyscale is scaled to 8 bits as in the viewer; ``resize`` and ``strip`` keep the source's bit depth.
 
 Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
 (list actions, write nothing), ``--overwrite`` and ``--version``.

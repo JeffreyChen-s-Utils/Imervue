@@ -168,7 +168,7 @@ py -m Imervue.cli list-ops          # imprime todos los subcomandos disponibles
 | `preset` / `pipeline` | Aplicar un preajuste de revelado guardado por nombre; ejecutar una cadena JSON ordenada de operaciones |
 | `list-ops` | Listar todos los subcomandos (`--json` para salida legible por máquina) |
 
-Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; `resize` y `strip` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente. Un archivo incompleto se lee hasta donde llega, como en el visor.
+Cada subcomando decodifica como el visor: las salidas se enderezan según la orientación EXIF y se convierten a sRGB desde el perfil de color incrustado, las entradas AVIF las lee el propio Pillow, y las HEIC / JPEG XL se leen cuando su backend opcional está instalado. Un RAW de cámara se revela como en el visor en lugar de leerse como su pequeña vista previa incrustada; `resize` y `strip` lo escriben como PNG. Un archivo ilegible se informa y el resto se procesa igualmente. Un archivo incompleto se lee hasta donde llega, como en el visor. Los grises de 16 bits y de coma flotante se escalan a 8 bits como en el visor; `resize` y `strip` conservan la profundidad de bits del original.
 
 Opciones compartidas: `--out` (directorio de salida), `--recursive`, `--dry-run` (listar acciones sin escribir nada), `--overwrite` y `--version`.
 
@@ -190,6 +190,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Gestión del color** — las fotos con un perfil de color incrustado (Display P3 de móviles, Adobe RGB de cámaras, CMYK) se convierten a sRGB en el visor y las miniaturas; las imágenes sin perfil o en sRGB se muestran tal cual
 - **Archivos incompletos** — un JPEG, PNG, TIFF, GIF o BMP que termina antes de tiempo (una descarga o copia interrumpida, una foto recuperada de una tarjeta de memoria dañada) se abre con la parte que se pudo leer, como en un navegador, en lugar de no abrirse
 - **Archivos cambiados por otros programas** — cuando otro programa guarda sobre una imagen (un editor externo, directamente o renombrando una copia encima), el visor muestra la versión nueva: la imagen abierta en zoom profundo medio segundo después de la última escritura, las miniaturas de la cuadrícula en pocos segundos
+- **Escala de grises de 16 bits y de coma flotante** — un PNG o TIFF en gris de 16 bits (un escaneo, un mapa de profundidad, una toma científica o astronómica) y un TIFF de coma flotante muestran su brillo real en el visor, las miniaturas, las vistas previas y las herramientas, en lugar de casi blanco o negro
 - **Reproducción de animaciones** — GIF / APNG con controles de reproducir / pausar / fotograma a fotograma / velocidad; una animación que decodificada ocuparía más de 512 MB se decodifica fotograma a fotograma mientras se reproduce, no toda de antemano; un fotograma de 10 ms o menos se muestra 100 ms, como en los navegadores
 
 ### Modos de exploración

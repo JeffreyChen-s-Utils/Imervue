@@ -3,8 +3,10 @@
 Every place that decodes a file itself (previews, tool inputs, exports) goes
 through :func:`as_shown` so it agrees with the viewer. Its output carries
 neither an orientation tag nor a colour profile, which is exactly right for a
-copy that is saved without EXIF or ICC. :func:`open_shown` decodes a whole
-file that way, camera RAW included, without Qt.
+copy that is saved without EXIF or ICC; it keeps the file's bit depth. What
+goes to the screen takes :func:`as_shown_8bit`, which scales 16-bit and float
+grey instead of letting ``convert`` clip it. :func:`open_shown` decodes a
+whole file that way, camera RAW included, without Qt.
 """
 from __future__ import annotations
 
@@ -15,6 +17,7 @@ from PIL import Image
 
 from Imervue.image.color_profile import to_srgb
 from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
+from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.raw_loader import develop_raw
 
@@ -29,6 +32,16 @@ def as_shown(img: Image.Image, code: int | None = None) -> Image.Image:
     if code is None:
         code = exif_orientation(img)
     return transpose_for(to_srgb(img), code)
+
+
+def as_shown_8bit(img: Image.Image, code: int | None = None, mode: str = "RGBA") -> Image.Image:
+    """:func:`as_shown` in 8-bit *mode*, the pixels the screen gets.
+
+    A 16-bit or floating-point grey picture is scaled over its range first
+    (:func:`~Imervue.image.high_bit_depth.to_eight_bit`): a plain ``convert``
+    clips it, and a 16-bit greyscale scan showed almost white.
+    """
+    return to_eight_bit(as_shown(img, code)).convert(mode)
 
 
 def open_shown(path: str | Path) -> Image.Image:
@@ -50,7 +63,7 @@ def open_shown(path: str | Path) -> Image.Image:
 
 
 def _load_shown(path, mode: str) -> np.ndarray:
-    return np.array(open_shown(path).convert(mode), dtype=np.uint8)
+    return np.array(to_eight_bit(open_shown(path)).convert(mode), dtype=np.uint8)
 
 
 def load_shown_rgb(path) -> np.ndarray:

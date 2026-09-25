@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `170e2c2` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `4e157ba` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 882 | 145,989 |
+| `tests/` | 883 | 146,194 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,144 |
 | `Imervue/gui/` | 167 | 33,279 |
 | `Imervue/puppet/` | 57 | 15,296 |
-| `Imervue/image/` | 127 | 15,174 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,119 |
+| `Imervue/image/` | 128 | 15,254 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,118 |
 | `Imervue/multi_language/` | 8 | 14,119 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,673 |
 | `Imervue/library/` | 32 | 4,230 |
 | `Imervue/menu/` | 11 | 3,593 |
-| `Imervue/` 根層 | 5 | 1,571 |
+| `Imervue/` 根層 | 5 | 1,572 |
 | `Imervue/plugin/` | 10 | 2,246 |
 | `Imervue/system/` | 30 | 2,937 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,365 |
-| **總計** | **1,730** | **328,168** |
+| **總計** | **1,732** | **328,453** |
 
-其中 `Imervue/` 套件本身 784 檔 / 167,814 行。
+其中 `Imervue/` 套件本身 785 檔 / 167,894 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -206,7 +206,7 @@ ImervueMainWindow
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
 | `Imervue_main_window.py` | 706 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
-| `cli.py` | 590 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
+| `cli.py` | 591 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
 ### 6.2 `Imervue/system/`
@@ -309,7 +309,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-127 個模組、15,174 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+128 個模組、15,254 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -387,7 +387,7 @@ ImervueMainWindow
 `xmp_sidecar.py`(598) XMP sidecar 讀寫（跨編輯器互通）；`load` 沒有 sidecar 時讀檔案內嵌的 XMP 封包（JPEG／PNG／WebP／TIFF）再以 EXIF `Rating`／`RatingPercent` 補評分（`load_embedded`，經 `metadata_sync.percent_to_rating`）；找 `foo.xmp`（Adobe），只有 `foo.jpg.xmp`（darktable／digiKam）時讀寫它；`label_color` 把 Lightroom（`Red`）與 Bridge（`Select`）的標籤對到 Imervue 顏色，匯出照 Lightroom 寫法並保留同色的既有用字；`xmp:Rating` -1（Lightroom／Bridge／darktable 的拒絕）與圖庫的挑片 reject 雙向對應；`save` 合併進既有檔：只換評分／標籤／標題／描述／關鍵字／作者，其他編輯器寫的內容（RAW 顯影設定等）與命名空間前綴保留，無法解析的檔丟 `UnreadableSidecarError`（`OSError`）不覆寫 · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
 `raw_exif.py`(278) Pillow 打不開的 RAW 容器的 EXIF：CR3 的 `CMT1`／`CMT2`／`CMT4` 盒、RW2／RWL／ORF（換掉魔術數字後由 Pillow seek 讀取，RW2 去掉 Panasonic 私有標籤但保留 ISO）、RAF 內嵌 JPEG 的 APP1；只 seek 到中繼資料 · `gps.py`(84) EXIF GPS 擷取 · `gps_geotag.py`(84) 寫入（JPEG / WebP 經 `in_place_save.rewrite_exif`，不需 piexif） · `reverse_geocode.py`(151) 離線逆地理編碼 ·
 `geo_keywords.py`(52) 地點寫進 XMP 關鍵字 · `face_detection.py`(148) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`；cascade XML 由 Python 讀入後從記憶體載入，OpenCV 裝在非 ASCII 路徑下也能用） ·
-`annotations.py`(269) JSON sidecar 註解 · `shown.py`(63) `as_shown(img, code=None)`：檢視器看到的樣子（先依內嵌描述檔轉 sRGB、再依 EXIF 轉正）；`open_shown(path)` 不靠 Qt 解整個檔案（相機 RAW 經 `develop_raw` 顯像，其餘先註冊 HEIC / JXL opener），`load_shown_rgb(path)` / `load_shown_rgba(path)` 建在它上面；預覽、工具輸入、匯出、Modify、註解、合成、OCR、CLIP、MCP、Paint 的姿勢圖／素材／參考圖都走它 · `color_profile.py`(55) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB，無描述檔或 sRGB 原樣回傳，transform 依描述檔快取 · `exif_merge.py`(86) `read_exif(path)`（任何格式的 EXIF，子 IFD 在檔案開著時讀好，RAW 容器經 `raw_exif`；GPS、拍攝時間、Token 重新命名、中繼資料匯出都用它）、`merged_exif(img 或 Exif)`、`get_exif_data(path)`（以標籤名稱回傳、HEIC／JXL 先註冊 opener；不依賴 Qt，MCP、圖庫、面板共用）：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(171) 圖片資訊組裝與對話框；EXIF 由 `exif_merge.get_exif_data` 讀，HEIC / JXL 也讀得到
+`annotations.py`(269) JSON sidecar 註解 · `shown.py`(76) `as_shown(img, code=None)`：檢視器看到的樣子（先依內嵌描述檔轉 sRGB、再依 EXIF 轉正）；`open_shown(path)` 不靠 Qt 解整個檔案（相機 RAW 經 `develop_raw` 顯像，其餘先註冊 HEIC / JXL opener），`load_shown_rgb(path)` / `load_shown_rgba(path)` 建在它上面（16 位元與浮點灰階先縮放）；`as_shown_8bit(img, code=None, mode="RGBA")` 是送到螢幕的 8 位元版本，16 位元與浮點灰階先經 `to_eight_bit` 縮放、不讓 `convert` 截斷成全白（清單檢視、懸停預覽、比較、拖出、重複偵測、影像檢查、時間軸、圖層疊加、參考圖、CLIP 用它），`as_shown` 本身保留位元深度（EXIF 清除的副本仍是 16 位元）；預覽、工具輸入、匯出、Modify、註解、合成、OCR、CLIP、MCP、Paint 的姿勢圖／素材／參考圖都走它 · `high_bit_depth.py`(67) `to_eight_bit(img)`：16 位元灰階（`I;16` 各位元組序）依 0..65535 縮成 8 位元，32 位元整數在 16 位元內時同樣縮放、否則最小到最大拉伸，浮點在 0..1 內對應黑到白、否則拉伸，NaN 與無限大顯示黑色；其他模式原樣傳回（Pillow 的 `convert` 對這些模式是截斷，16 位元灰階掃描幾乎全白） · `color_profile.py`(55) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB，無描述檔或 sRGB 原樣回傳，transform 依描述檔快取 · `exif_merge.py`(86) `read_exif(path)`（任何格式的 EXIF，子 IFD 在檔案開著時讀好，RAW 容器經 `raw_exif`；GPS、拍攝時間、Token 重新命名、中繼資料匯出都用它）、`merged_exif(img 或 Exif)`、`get_exif_data(path)`（以標籤名稱回傳、HEIC／JXL 先註冊 opener；不依賴 Qt，MCP、圖庫、面板共用）：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(171) 圖片資訊組裝與對話框；EXIF 由 `exif_merge.get_exif_data` 讀，HEIC / JXL 也讀得到
 
 #### 分析 / 品質
 
@@ -471,8 +471,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 519 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
-| `load_thumbnail_worker.py` | 151 | 單張縮圖解碼 `QRunnable`（與 `load_image_file` 同一條 EXIF 轉正規則；RAW 取 `raw_loader.develop_raw(thumbnail=True)` 的轉正預覽） |
+| `image_loader.py` | 520 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾）、`open_path()` 對外入口；點陣圖（大圖與縮圖）先經 `to_eight_bit` 把 16 位元與浮點灰階縮成 8 位元、再轉 sRGB，並依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
+| `load_thumbnail_worker.py` | 149 | 單張縮圖解碼 `QRunnable`（點陣圖交給 `image_loader._load_raster_thumbnail`／`_load_raster`，和檢視器同一條解碼：EXIF 轉正、sRGB、16 位元灰階縮放、巨圖一次一張的 `decode_slot`；RAW 取 `raw_loader.develop_raw(thumbnail=True)` 的轉正預覽） |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
 
@@ -975,7 +975,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-882 個檔、145,989 行。`pyproject.toml` 定義三個互斥層級 marker：
+883 個檔、146,194 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

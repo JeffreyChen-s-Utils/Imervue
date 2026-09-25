@@ -169,7 +169,7 @@ py -m Imervue.cli list-ops          # print every available subcommand
 | `preset` / `pipeline` | Apply a saved develop preset by name; run an ordered JSON pipeline of ops |
 | `list-ops` | List every subcommand (`--json` for machine output) |
 
-Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; `resize` and `strip` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer.
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; `resize` and `strip` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer. 16-bit and floating-point greyscale is scaled to 8 bits as in the viewer; `resize` and `strip` keep the source's bit depth.
 
 Shared flags: `--out` (output directory), `--recursive`, `--dry-run` (list actions, write
 nothing), `--overwrite`, and `--version`.
@@ -192,6 +192,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Colour management** — photos with an embedded colour profile (Display P3 from phones, Adobe RGB from cameras, CMYK) are converted to sRGB for the viewer and thumbnails; untagged and sRGB images are shown as stored
 - **Files cut short** — a JPEG, PNG, TIFF, GIF or BMP that ends early (an interrupted download or copy, a photo recovered from a failing memory card) opens with the part that was read, as in a browser, instead of not opening at all
 - **Files changed by other programs** — when another program saves over a picture (an external editor, in place or by renaming a copy over it), the viewer shows the new version: the picture open in Deep Zoom half a second after the last write, grid thumbnails within a few seconds
+- **16-bit and floating-point greyscale** — a 16-bit grey PNG or TIFF (a scan, a depth map, a scientific or astronomy frame) and a floating-point TIFF show their real brightness in the viewer, thumbnails, previews and tools, instead of almost white or black
 - **Animation playback** — GIF / APNG with play / pause / frame-step / speed controls; an animation too large to hold decoded (over 512 MB) decodes each frame as it plays instead of all up front; a frame of 10 ms or less plays for 100 ms, as in browsers
 
 ### Browsing modes

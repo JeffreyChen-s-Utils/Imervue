@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.shown_qimage import shown_qimage
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -264,7 +264,7 @@ def _load_rgba_array(path: str, max_edge: int = 2048) -> np.ndarray | None:
     """
     try:
         with Image.open(path) as src:
-            im = as_shown(src).convert("RGBA")
+            im = as_shown_8bit(src)
             w, h = im.size
             long_edge = max(w, h)
             if long_edge > max_edge:

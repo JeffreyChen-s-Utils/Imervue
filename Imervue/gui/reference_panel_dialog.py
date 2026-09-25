@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 from Imervue.gui.file_filters import image_filter
 from Imervue.library import reference_pins
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -271,7 +271,7 @@ def _load_thumb_icon(path: str):
 def _load_preview_pixmap(path: str, target: QSize) -> QPixmap | None:
     try:
         with Image.open(path) as src:
-            rgba = as_shown(src).convert("RGBA")
+            rgba = as_shown_8bit(src)
             rgba.thumbnail(
                 (max(8, target.width()), max(8, target.height())),
                 Image.Resampling.LANCZOS,

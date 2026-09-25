@@ -30,11 +30,13 @@ def test_importing_the_entry_point_does_not_import_qt():
 
 def test_main_sets_up_logging_before_parsing_arguments(monkeypatch):
     calls: list[str] = []
-    from Imervue.system import log_setup
+    from Imervue.system import log_setup, pillow_setup
 
     monkeypatch.setattr(log_setup, "setup_logging", lambda: calls.append("log"))
     monkeypatch.setattr(
         log_setup, "install_exception_logging", lambda: calls.append("hook"))
+    # Recorded, not run: the real one changes Pillow for every later test in the process.
+    monkeypatch.setattr(pillow_setup, "configure_pillow", lambda: calls.append("pillow"))
 
     def _parse_args():
         calls.append("args")
@@ -43,7 +45,7 @@ def test_main_sets_up_logging_before_parsing_arguments(monkeypatch):
     monkeypatch.setattr(entry, "parse_args", _parse_args)
     with pytest.raises(_StopError):
         entry.main()
-    assert calls == ["log", "hook", "args"]
+    assert calls == ["log", "hook", "pillow", "args"]
 
 
 def test_set_windows_app_user_model_id_is_a_noop_off_windows(monkeypatch):
