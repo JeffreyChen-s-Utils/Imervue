@@ -183,7 +183,7 @@ def stub_pynput(monkeypatch):
     fake_pynput.keyboard = fake_keyboard   # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "pynput", fake_pynput)
     monkeypatch.setitem(sys.modules, "pynput.keyboard", fake_keyboard)
-    yield _StubGlobalHotKeys
+    return _StubGlobalHotKeys
 
 
 def test_manager_starts_with_bindings(qapp, stub_pynput):

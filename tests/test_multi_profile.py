@@ -33,7 +33,6 @@ def fresh_profile_state():
     _profile_state["available"] = [DEFAULT_PROFILE]
     user_setting_dict.clear()
     user_setting_dict["language"] = "English"
-    yield
 
 
 # ---------------------------------------------------------------------------

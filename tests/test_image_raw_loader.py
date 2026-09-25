@@ -63,7 +63,7 @@ def stub_rawpy(monkeypatch):
     fake = types.ModuleType("rawpy")
     fake.RawPy = _StubRaw   # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "rawpy", fake)
-    yield _StubRaw
+    return _StubRaw
 
 
 # ---------------------------------------------------------------

@@ -11,8 +11,7 @@ from Imervue.image.recipe_store import RecipeStore
 
 @pytest.fixture
 def store(tmp_path):
-    s = RecipeStore(store_path=tmp_path / "recipes.json")
-    yield s
+    return RecipeStore(store_path=tmp_path / "recipes.json")
 
 
 @pytest.fixture

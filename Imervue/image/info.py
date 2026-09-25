@@ -80,7 +80,7 @@ def build_image_info(main_gui: GPUImageView, path: Path) -> dict[str, Any]:
         exif = get_exif_data(path)
         info["exif_text"] = format_exif_info(exif)
 
-    except Exception as e:  # noqa: BLE001 - any decoder failure is shown in the dialog, logged below
+    except Exception as e:  # noqa: BLE001 - any decoder failure is logged below and shown in the dialog
         logger.warning("Building image info for %s failed", path, exc_info=True)
         info["error"] = str(e)
 

@@ -372,7 +372,7 @@ def qapp():
     """
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
-    yield app
+    return app
     # Don't quit the app here — quitting it makes subsequent tests in the
     # same session unable to recreate it on some platforms. The dedicated
     # ``_qt_session_teardown`` autouse fixture below handles end-of-session

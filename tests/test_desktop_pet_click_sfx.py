@@ -111,7 +111,6 @@ def stub_qsoundeffect(monkeypatch):
     import path."""
     from PySide6 import QtMultimedia
     monkeypatch.setattr(QtMultimedia, "QSoundEffect", _StubEffect)
-    yield
 
 
 def test_player_starts_silent(qapp):

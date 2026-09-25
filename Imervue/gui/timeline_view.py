@@ -80,7 +80,7 @@ class _TimelineThumbWorker(QRunnable):
         except IMAGE_READ_ERRORS:   # missing or unreadable file: expected
             self.signals.done.emit(self.path, QImage(), False)
             return
-        except Exception:  # noqa: BLE001 - worker boundary: log the bug, still emit
+        except Exception:  # noqa: BLE001 - worker boundary logs the bug and still emits
             logger.exception("Timeline thumbnail worker failed for %s", self.path)
             self.signals.done.emit(self.path, QImage(), False)
             return

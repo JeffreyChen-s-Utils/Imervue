@@ -130,7 +130,7 @@ def ocr_available() -> bool:
         # No pytesseract, no binary (TesseractNotFoundError is an OSError), or
         # ``tesseract --version`` exited non-zero.
         return False
-    except SystemExit:
+    except SystemExit:  # NOSONAR - pytesseract exits on an old Tesseract; the app must not
         # pytesseract raises SystemExit, not an Exception, for a Tesseract
         # older than it supports; letting it through would quit the app.
         logger.warning("Tesseract is installed but too old for pytesseract", exc_info=True)

@@ -74,7 +74,7 @@ class AnnotationDestructiveMixin:
                    else self._last_blur_radius)
         self._drawing = ann  # keep dashed-outline preview visible during dialog
         dlg, slider, spin = self._build_strength_dialog(title, label_text, minv, maxv, initial)
-        self._wire_strength_signals(dlg, slider, spin, ann, initial)
+        self._wire_strength_signals(slider, spin, ann, initial)
         dlg.adjustSize()
         self._position_dialog_away_from_ann(dlg, ann)
         try:
@@ -135,8 +135,7 @@ class AnnotationDestructiveMixin:
         return dlg, slider, spin
 
     def _wire_strength_signals(
-        self, dlg: QDialog, slider: QSlider, spin: QSpinBox,
-        ann: Annotation, initial: int,
+        self, slider: QSlider, spin: QSpinBox, ann: Annotation, initial: int,
     ) -> None:
         def apply_value(val: int) -> None:
             if ann.kind == KIND_MOSAIC:

@@ -26,7 +26,7 @@ def canvas(qapp, white_image):
     stack = QUndoStack()
     c = AnnotationCanvas(white_image, stack)
     c.resize(400, 300)
-    yield c
+    return c
 
 
 # ---------------------------------------------------------------------------
