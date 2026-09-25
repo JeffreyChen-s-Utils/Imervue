@@ -1641,7 +1641,9 @@ Seleccione varias imágenes, después clic derecho > ``Create GIF / Video``.
 Reproducción de animaciones
 ---------------------------
 
-Al abrir archivos GIF, APNG o WebP animado, la animación se reproduce automáticamente.
+Al abrir archivos GIF, APNG o WebP animado, la animación se reproduce automáticamente. Una animación que decodificada
+ocuparía más de 512 MB se decodifica fotograma a fotograma mientras se reproduce, así
+que abrirla no congela la ventana ni llena la memoria.
 
 .. list-table::
    :header-rows: 1

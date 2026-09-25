@@ -1615,7 +1615,9 @@ Select multiple images, then right-click > ``Create GIF / Video``.
 Animation Playback
 ------------------
 
-When opening GIF, APNG, or animated WebP files, animation plays automatically.
+When opening GIF, APNG, or animated WebP files, animation plays automatically. An animation that would take
+more than 512 MB decoded is decoded one frame at a time as it plays, so opening it
+neither freezes the window nor fills memory.
 
 .. list-table::
    :header-rows: 1

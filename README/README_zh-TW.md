@@ -187,7 +187,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - **磁碟快取** — MD5 失效檢測的壓縮 PNG 縮圖，存於 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
 - **EXIF 方向** — 手機或相機只標註方向、沒有真的旋轉的直拍照片，在檢視器、縮圖、清單檢視、懸停預覽和 Modify 分頁都會轉正顯示；之前儲存的顯影裁切 / 旋轉仍套用在當初的方向上
 - **色彩管理** — 內嵌色彩描述檔的照片（手機的 Display P3、相機的 Adobe RGB、CMYK）在檢視器與縮圖中會轉換為 sRGB 顯示；沒有描述檔或本身是 sRGB 的影像照原樣顯示
-- **動畫播放** — GIF / APNG，含播放 / 暫停 / 逐格 / 速度控制
+- **動畫播放** — GIF / APNG，含播放 / 暫停 / 逐格 / 速度控制；解碼後超過 512 MB 的動畫會邊播放邊逐格解碼，而不是一開始全部解碼
 
 ### 瀏覽模式
 

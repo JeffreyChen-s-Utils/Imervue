@@ -1649,7 +1649,9 @@ Sélectionnez plusieurs images, puis clic droit > ``Créer GIF / Vidéo``.
 Lecture d'animations
 --------------------
 
-À l'ouverture de fichiers GIF, APNG ou WebP animés, l'animation se lit automatiquement.
+À l'ouverture de fichiers GIF, APNG ou WebP animés, l'animation se lit automatiquement. Une animation qui occuperait
+plus de 512 Mo une fois décodée est décodée image par image pendant la lecture : l'ouvrir
+ne fige pas la fenêtre et ne remplit pas la mémoire.
 
 .. list-table::
    :header-rows: 1

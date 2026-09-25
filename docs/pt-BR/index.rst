@@ -1627,7 +1627,9 @@ Selecione várias imagens, depois clique com o botão direito > ``Criar GIF / V�
 Reprodução de Animação
 ----------------------
 
-Ao abrir arquivos GIF, APNG ou WebP animados, a animação é reproduzida automaticamente.
+Ao abrir arquivos GIF, APNG ou WebP animados, a animação é reproduzida automaticamente. Uma animação que ocuparia
+mais de 512 MB decodificada é decodificada quadro a quadro durante a reprodução, então
+abri-la não congela a janela nem enche a memória.
 
 .. list-table::
    :header-rows: 1

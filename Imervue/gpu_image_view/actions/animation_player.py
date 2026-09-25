@@ -4,6 +4,7 @@ Animation player for GIF / APNG / Animated WebP.
 """
 from __future__ import annotations
 
+import io
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -28,6 +29,18 @@ ANIMATED_EXTS = {".gif", ".apng", ".webp", ".png"}
 # falls back to rebuilding, which is no worse than before and can't blow up RAM.
 _PYRAMID_CACHE_BUDGET = 128 * 1024 * 1024
 
+# Past this many bytes of decoded RGBA frames an animation is decoded one frame
+# at a time as it plays: decoding every frame up front on the GUI thread took a
+# 1080p animated WebP of 600 frames to ~5 GB and froze the window meanwhile.
+_DECODED_FRAMES_BUDGET = 512 * 1024 * 1024
+_DEFAULT_FRAME_MS = 100
+
+
+def _frame_duration(info: dict) -> int:
+    """A frame's display time in ms; a missing or non-positive one plays as 100 ms."""
+    duration = info.get("duration", _DEFAULT_FRAME_MS)
+    return int(duration) if duration and duration > 0 else _DEFAULT_FRAME_MS
+
 
 def can_cache_pyramid(current_bytes: int, new_bytes: int, budget: int) -> bool:
     """Whether a new frame pyramid of ``new_bytes`` still fits the budget.
@@ -50,6 +63,11 @@ class AnimationPlayer:
         # doesn't rebuild the same pyramid every pass; bounded by a RAM budget.
         self._pyramid_cache: dict[int, object] = {}
         self._pyramid_bytes = 0
+        # Streaming (an animation past _DECODED_FRAMES_BUDGET): the image over
+        # the file's bytes, its frame count and the one frame decoded last.
+        self._source: Image.Image | None = None
+        self._frame_count = 0
+        self._decoded: tuple[int, np.ndarray] | None = None
         self.current_frame = 0
         self.playing = False
         self.speed = 1.0
@@ -59,7 +77,12 @@ class AnimationPlayer:
 
     @property
     def total_frames(self) -> int:
-        return len(self.frames)
+        return self._frame_count if self._source is not None else len(self.frames)
+
+    @property
+    def streaming(self) -> bool:
+        """Whether frames are decoded as they are shown rather than all at load."""
+        return self._source is not None
 
     @property
     def is_animated(self) -> bool:
@@ -73,7 +96,48 @@ class AnimationPlayer:
             logger.exception(f"Failed to open {self.path}: {e}")
             return False
         with img:
+            if self._too_big_to_hold(img):
+                return self._open_streaming()
             return self._load_frames(img)
+
+    @staticmethod
+    def _too_big_to_hold(img: Image.Image) -> bool:
+        try:
+            n_frames = getattr(img, "n_frames", 1)
+        except (*IMAGE_READ_ERRORS, EOFError):
+            return False                  # _load_frames decodes what it can
+        return n_frames > 1 and n_frames * img.width * img.height * 4 > _DECODED_FRAMES_BUDGET
+
+    def _open_streaming(self) -> bool:
+        """Keep the file's bytes (not the file, which Windows would lock) and decode lazily."""
+        try:
+            source = Image.open(io.BytesIO(Path(self.path).read_bytes()))
+            count = source.n_frames
+            first = np.array(source.convert("RGBA"), dtype=np.uint8)
+        except (*IMAGE_READ_ERRORS, EOFError) as e:
+            logger.warning(f"Failed to open {self.path} for streaming: {e}")
+            return False
+        self.frames.clear()
+        self.durations[:] = [_DEFAULT_FRAME_MS] * count
+        self.durations[0] = _frame_duration(source.info)
+        self._source, self._frame_count, self._decoded = source, count, (0, first)
+        self.current_frame = 0
+        logger.info(f"Streaming {count} frames of {self.path} instead of decoding them all")
+        return True
+
+    def _streamed_frame(self, index: int) -> np.ndarray | None:
+        """Frame *index* decoded now (or the last one decoded, when it is that frame)."""
+        if self._decoded is not None and self._decoded[0] == index:
+            return self._decoded[1]
+        try:
+            self._source.seek(index)
+            frame = np.array(self._source.convert("RGBA"), dtype=np.uint8)
+        except (*IMAGE_READ_ERRORS, EOFError) as e:
+            logger.warning(f"Frame {index} of {self.path} failed: {e}")
+            return self._decoded[1] if self._decoded is not None else None
+        self.durations[index] = _frame_duration(self._source.info)
+        self._decoded = (index, frame)
+        return frame
 
     def _load_frames(self, img: Image.Image) -> bool:
         """Decode every frame of the open *img*; ``False`` unless two or more decode."""
@@ -90,11 +154,7 @@ class AnimationPlayer:
                 frame = img.convert("RGBA")
                 arr = np.array(frame, dtype=np.uint8)
                 self.frames.append(arr)
-                # 取得幀間隔（毫秒）
-                dur = img.info.get("duration", 100)
-                if dur <= 0:
-                    dur = 100
-                self.durations.append(dur)
+                self.durations.append(_frame_duration(img.info))   # 幀間隔（毫秒）
             except EOFError:
                 break
             except IMAGE_READ_ERRORS as e:
@@ -157,6 +217,8 @@ class AnimationPlayer:
 
     def get_current_frame_data(self) -> np.ndarray | None:
         """取得當前幀的 RGBA numpy array"""
+        if self._source is not None:
+            return self._streamed_frame(self.current_frame)
         if not self.frames:
             return None
         return self.frames[self.current_frame]
@@ -169,6 +231,9 @@ class AnimationPlayer:
         self.durations.clear()
         self._pyramid_cache.clear()
         self._pyramid_bytes = 0
+        if self._source is not None:
+            self._source.close()
+        self._source, self._frame_count, self._decoded = None, 0, None
 
     # --- internal ---
 

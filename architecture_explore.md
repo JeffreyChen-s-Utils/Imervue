@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `9fb8c4a` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `c57150d` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 870 | 143,028 |
+| `tests/` | 870 | 143,118 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,139 |
 | `Imervue/gui/` | 166 | 33,115 |
 | `Imervue/puppet/` | 57 | 15,295 |
 | `Imervue/image/` | 125 | 14,619 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,894 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,959 |
 | `Imervue/multi_language/` | 8 | 14,089 |
 | `Imervue/desktop_pet/` | 34 | 8,260 |
 | `Imervue/mcp_server/` | 16 | 4,701 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,341 |
-| **總計** | **1,710** | **323,979** |
+| **總計** | **1,710** | **324,134** |
 
-其中 `Imervue/` 套件本身 776 檔 / 166,610 行。
+其中 `Imervue/` 套件本身 776 檔 / 166,675 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -480,7 +480,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `batch_ops.py` | 289 | 批次重新命名（經 `batch_rename.rename_files`）/ 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
 | `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
-| `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
+| `animation_player.py` | 310 | GIF / APNG / Animated WebP 播放器；解碼後超過 `_DECODED_FRAMES_BUDGET`（512 MB）就改為串流：留住檔案位元組（BytesIO，不鎖檔），播到哪格才解哪格，只快取最後一格 |
 | `search_dialog.py` | 280 | 檔名即時搜尋 |
 | `goto_dialog.py` | 102 | Ctrl+G 跳至第 N 張 |
 | `keyboard_actions.py` | 310 | 鍵盤快捷動作實作（Ctrl+C 複製檢視器顯示的金字塔底層，沒有時才解碼檔案） |
@@ -969,7 +969,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-870 個檔、143,028 行。`pyproject.toml` 定義三個互斥層級 marker：
+870 個檔、143,118 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
