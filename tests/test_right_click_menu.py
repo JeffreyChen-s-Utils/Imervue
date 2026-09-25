@@ -1,4 +1,4 @@
-"""Tests for right-click menu actions that write files, and Show in Explorer."""
+"""Tests for right-click menu actions that write files, Show in Explorer and Set as Wallpaper."""
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -136,3 +136,26 @@ def test_show_in_explorer_reveals_the_shown_picture(qapp, monkeypatch, tmp_path)
     finally:
         menu.deleteLater()
     assert revealed == [path]
+
+
+def test_set_as_wallpaper_runs_off_the_gui_thread(qapp, monkeypatch, tmp_path, pump_until):
+    """A RAW is developed into a JPEG copy first, which must not freeze the window."""
+    import threading
+
+    from PySide6.QtWidgets import QMenu
+    calls = []
+    monkeypatch.setattr(right_click_menu, "set_desktop_wallpaper",
+                        lambda path: calls.append((path, threading.current_thread())))
+    path = str(tmp_path / "a.nef")
+    view = SimpleNamespace(model=SimpleNamespace(images=[path]), deep_zoom=True, current_index=0)
+    menu = QMenu()
+    try:
+        right_click_menu._set_wallpaper_action(view, menu)  # noqa: SLF001
+        (action,) = menu.actions()
+        action.trigger()
+        assert pump_until(lambda: calls)
+    finally:
+        menu.deleteLater()
+    ((wallpaper_path, thread),) = calls
+    assert wallpaper_path == path
+    assert thread is not threading.main_thread()

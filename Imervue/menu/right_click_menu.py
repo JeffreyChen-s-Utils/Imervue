@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import QMenu, QApplication, QWidgetAction
 
 from Imervue.gpu_image_view.actions.batch_ops import (
@@ -621,7 +623,9 @@ def _set_wallpaper_action(main_gui: GPUImageView, menu: QMenu):
 
     lang = language_wrapper.language_word_dict
     action = menu.addAction(lang.get("right_click_set_wallpaper", "Set as Wallpaper"))
-    action.triggered.connect(lambda: set_desktop_wallpaper(path))
+    # Off the GUI thread: a RAW or HEIC is decoded into a JPEG copy first.
+    action.triggered.connect(
+        lambda: QThreadPool.globalInstance().start(partial(set_desktop_wallpaper, path)))
 
 
 # ===========================

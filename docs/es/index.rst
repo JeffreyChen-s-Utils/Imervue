@@ -1844,6 +1844,8 @@ como fondo de escritorio.
 
 Compatible con Windows, macOS y Linux (GNOME).
 
+Windows deja el escritorio en negro, e informa de que todo fue bien, cuando recibe un archivo que no puede decodificar. Por eso, una imagen que no es JPEG, PNG ni BMP —un RAW de cámara, HEIC, PSD, TGA, WebP y los demás formatos que abre Imervue— y una foto que hay que enderezar se entregan como una copia JPEG de lo que muestra el visor. La copia se guarda en ``%LOCALAPPDATA%\Imervue\wallpaper`` (``~/.local/share/imervue/wallpaper`` en macOS y Linux); solo se conserva la más reciente.
+
 ----
 
 Multi-ventana

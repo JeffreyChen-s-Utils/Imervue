@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-09 | 2026-09-26 | Set as Wallpaper hands the desktop a JPEG it can show, not a RAW or PSD it turns black | #fix #wallpaper #formats #windows | [2026-09-b](2026-09-b.md) |
 | U-20260926-08 | 2026-09-26 | Reveal in folder in the List view selects the photo, like Show in Explorer | #fix #list-view #windows | [2026-09-b](2026-09-b.md) |
 | U-20260926-07 | 2026-09-26 | Refactor: the file tree and the right-click menu reveal through file_manager.reveal_or_warn | #refactor #windows | [2026-09-b](2026-09-b.md) |
 | U-20260926-06 | 2026-09-26 | A greyscale picture's grey profile is applied like a colour one | #fix #color-management #viewer #thumbnails | [2026-09-b](2026-09-b.md) |
@@ -381,4 +382,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 39 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 40 |

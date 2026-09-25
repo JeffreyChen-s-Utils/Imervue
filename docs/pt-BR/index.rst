@@ -1821,6 +1821,8 @@ Clique com o botão direito no modo Deep Zoom > ``Definir como Papel de Parede``
 
 Suportado no Windows, macOS e Linux (GNOME).
 
+O Windows deixa a área de trabalho preta, e ainda informa sucesso, quando recebe um arquivo que não consegue decodificar. Por isso, uma imagem que não é JPEG, PNG nem BMP — RAW de câmera, HEIC, PSD, TGA, WebP e os demais formatos que o Imervue abre — e uma foto que precisa ser endireitada são entregues como uma cópia JPEG do que o visualizador mostra. A cópia fica em ``%LOCALAPPDATA%\Imervue\wallpaper`` (``~/.local/share/imervue/wallpaper`` no macOS e no Linux); só a mais recente é mantida.
+
 ----
 
 Múltiplas Janelas

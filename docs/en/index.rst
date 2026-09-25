@@ -1809,6 +1809,8 @@ Right-click in Deep Zoom mode > ``Set as Wallpaper`` to set the current image as
 
 Supported on Windows, macOS, and Linux (GNOME).
 
+Windows turns the desktop black, while reporting success, when it is handed a file it can't decode. A picture that isn't a JPEG, PNG or BMP — a camera RAW, HEIC, PSD, TGA, WebP and the other formats Imervue opens — and a photo that has to be turned upright are therefore handed over as a JPEG copy of what the viewer shows. The copy is kept in ``%LOCALAPPDATA%\Imervue\wallpaper`` (``~/.local/share/imervue/wallpaper`` on macOS and Linux); only the newest one is kept.
+
 ----
 
 Multi-Window

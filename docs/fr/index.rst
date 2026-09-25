@@ -1845,6 +1845,8 @@ Clic droit en mode Deep Zoom > ``Définir comme fond d'écran`` pour définir l'
 
 Pris en charge sur Windows, macOS et Linux (GNOME).
 
+Windows rend le bureau noir, tout en signalant un succès, quand il reçoit un fichier qu'il ne sait pas décoder. Une image qui n'est ni JPEG, ni PNG, ni BMP — RAW d'appareil photo, HEIC, PSD, TGA, WebP et les autres formats qu'ouvre Imervue — ainsi qu'une photo à redresser sont donc transmises sous forme de copie JPEG de ce qu'affiche la visionneuse. La copie est conservée dans ``%LOCALAPPDATA%\Imervue\wallpaper`` (``~/.local/share/imervue/wallpaper`` sous macOS et Linux) ; seule la plus récente est gardée.
+
 ----
 
 Multi-fenêtres

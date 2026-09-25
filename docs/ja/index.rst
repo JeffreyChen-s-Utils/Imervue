@@ -1002,6 +1002,8 @@ RGB ヒストグラム
 
 Windows、macOS、Linux（GNOME）に対応しています。
 
+Windows はデコードできないファイルを渡されると、成功を返したままデスクトップを黒くします。そのため JPEG・PNG・BMP 以外の画像（カメラの RAW、HEIC、PSD、TGA、WebP など Imervue が開けるその他の形式）と、向きを直す必要がある写真は、ビューアの表示どおりの JPEG コピーにして渡します。コピーは ``%LOCALAPPDATA%\Imervue\wallpaper``\ （macOS と Linux では ``~/.local/share/imervue/wallpaper``）に置かれ、最新の 1 枚だけが残ります。
+
 ----
 
 マルチウィンドウ

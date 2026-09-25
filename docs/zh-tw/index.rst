@@ -978,6 +978,8 @@ RGB 直方圖
 
 支援 Windows、macOS、Linux（GNOME）。
 
+Windows 收到無法解碼的檔案時，仍會回報成功，卻把桌面變成全黑。因此不是 JPEG、PNG、BMP 的圖片（相機 RAW、HEIC、PSD、TGA、WebP 等 Imervue 能開啟的其他格式），以及需要轉正的照片，會先存成與檢視器顯示相同的 JPEG 副本再交給系統。副本放在 ``%LOCALAPPDATA%\Imervue\wallpaper``\ （macOS 與 Linux 為 ``~/.local/share/imervue/wallpaper``），只保留最新的一份。
+
 ----
 
 多視窗

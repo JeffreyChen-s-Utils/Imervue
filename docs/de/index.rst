@@ -1877,6 +1877,8 @@ Rechtsklick im Deep-Zoom-Modus > ``Als Hintergrundbild festlegen``, um das aktue
 
 Unterstützt unter Windows, macOS und Linux (GNOME).
 
+Windows färbt den Desktop schwarz und meldet trotzdem Erfolg, wenn es eine Datei nicht decodieren kann. Ein Bild, das kein JPEG, PNG oder BMP ist – Kamera-RAW, HEIC, PSD, TGA, WebP und die übrigen Formate, die Imervue öffnet –, und ein Foto, das erst aufgerichtet werden muss, werden deshalb als JPEG-Kopie dessen übergeben, was der Viewer zeigt. Die Kopie liegt in ``%LOCALAPPDATA%\Imervue\wallpaper`` (unter macOS und Linux ``~/.local/share/imervue/wallpaper``); nur die neueste wird behalten.
+
 ----
 
 Mehrfenster

@@ -997,6 +997,8 @@ RGB 히스토그램
 
 Windows, macOS, Linux (GNOME)를 지원합니다.
 
+Windows는 디코딩할 수 없는 파일을 받으면 성공했다고 알리면서 바탕 화면을 검게 만듭니다. 그래서 JPEG·PNG·BMP가 아닌 이미지(카메라 RAW, HEIC, PSD, TGA, WebP 등 Imervue가 여는 나머지 형식)와 방향을 바로잡아야 하는 사진은 뷰어에 보이는 그대로 JPEG 사본으로 만들어 넘깁니다. 사본은 ``%LOCALAPPDATA%\Imervue\wallpaper``\ (macOS와 Linux에서는 ``~/.local/share/imervue/wallpaper``)에 저장되며, 가장 최근 것만 남습니다.
+
 ----
 
 멀티 윈도우
