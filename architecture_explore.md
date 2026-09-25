@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `829ced6` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `22092b7` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 890 | 149,055 |
+| `tests/` | 890 | 149,095 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
-| `Imervue/gui/` | 167 | 33,436 |
+| `Imervue/gui/` | 167 | 33,439 |
 | `Imervue/puppet/` | 57 | 15,296 |
 | `Imervue/image/` | 128 | 15,369 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,200 |
@@ -83,10 +83,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（17 個外掛） | 64 | 14,431 |
-| **總計** | **1,740** | **332,229** |
+| `plugins/`（17 個外掛） | 64 | 14,451 |
+| **總計** | **1,740** | **332,292** |
 
-其中 `Imervue/` 套件本身 786 檔 / 168,743 行。
+其中 `Imervue/` 套件本身 786 檔 / 168,746 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -536,7 +536,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-167 個檔、33,436 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+167 個檔、33,439 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -616,7 +616,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `clone_stamp_dialog.py`(205) · `healing_brush_dialog.py`(241) · `sky_replace_dialog.py`(139) ·
 `portrait_retouch_dialog.py`(162) · `noise_sharpen_dialog.py`(152) · `face_detection_dialog.py`(236) ·
 `hdr_merge_dialog.py`(148) · `panorama_dialog.py`(160) · `focus_stack_dialog.py`(148) ·
-`stack_blend_dialog.py`(168) · `collage_dialog.py`(87) · `deflicker_dialog.py`(237) 縮時去閃（檢視器解碼；輸出到 `deflickered/`，可寫回的格式沿用並帶 EXIF，RAW 存 PNG） ·
+`stack_blend_dialog.py`(168) · `collage_dialog.py`(87) · `deflicker_dialog.py`(240) 縮時去閃（檢視器解碼；輸出到 `deflickered/`，可寫回的格式沿用並帶 EXIF，RAW 存 PNG） ·
 `id_photo_sheet_dialog.py`(106) · `print_layout_dialog.py`(222)
 
 #### 批次 / 匯出 / 管理
@@ -976,7 +976,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-890 個檔、149,055 行。`pyproject.toml` 定義三個互斥層級 marker：
+890 個檔、149,095 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

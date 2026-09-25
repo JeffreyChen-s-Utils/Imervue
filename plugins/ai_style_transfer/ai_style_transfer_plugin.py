@@ -230,7 +230,12 @@ class StyleTransferDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, message: str) -> None:
-        self._worker = None
+        # ``done`` is the thread's last act, but run() may not have returned yet.
+        # Wait before dropping the only reference: Qt aborts the whole process
+        # when a still-running QThread is destroyed.
+        if self._worker is not None:
+            self._worker.wait()
+            self._worker = None
         if not ok:
             self._notify_failure(RuntimeError(message))
             return

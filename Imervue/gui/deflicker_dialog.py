@@ -128,6 +128,9 @@ class DeflickerDialog(WorkerHostMixin, QDialog):
 
     def _on_finished(self, written: int) -> None:
         if self._worker is not None:
+            # finished_with_count is emitted from inside run(): wait for the thread
+            # to exit, or deleting it while it still runs aborts the process.
+            self._worker.wait()
             self._worker.deleteLater()
             self._worker = None
         if hasattr(self._viewer, "main_window") and hasattr(

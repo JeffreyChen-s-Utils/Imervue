@@ -105,7 +105,12 @@ class OutpaintDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
-        self._worker = None
+        # ``done`` is the thread's last act, but run() may not have returned yet.
+        # Wait before dropping the only reference: Qt aborts the whole process
+        # when a still-running QThread is destroyed.
+        if self._worker is not None:
+            self._worker.wait()
+            self._worker = None
         lang = language_wrapper.language_word_dict
         toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
         if toast is not None:

@@ -254,7 +254,12 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
         self._sam_worker.start()
 
     def _on_sam_done(self, ok: bool, mask_or_error: object) -> None:  # pragma: no cover - Qt UI
-        self._sam_worker = None
+        # ``done`` is the thread's last act, but run() may not have returned yet.
+        # Wait before dropping the only reference: Qt aborts the whole process
+        # when a still-running QThread is destroyed.
+        if self._sam_worker is not None:
+            self._sam_worker.wait()
+            self._sam_worker = None
         if not ok:
             self._notify("object_remove_failed", "Object removal failed", str(mask_or_error))
             return
@@ -327,7 +332,12 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
-        self._worker = None
+        # ``done`` is the thread's last act, but run() may not have returned yet.
+        # Wait before dropping the only reference: Qt aborts the whole process
+        # when a still-running QThread is destroyed.
+        if self._worker is not None:
+            self._worker.wait()
+            self._worker = None
         if not ok:
             self._notify("object_remove_failed", "Object removal failed", message)
             return

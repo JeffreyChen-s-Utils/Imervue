@@ -43,3 +43,76 @@ def test_dialog_defers_teardown_to_the_mixin(module_name, cls_name):
     # A bespoke override here would shadow the mixin's crash-safe teardown.
     assert "closeEvent" not in cls.__dict__
     assert "_wait_worker" not in cls.__dict__
+
+
+
+_DONE_SLOTS = [
+    ("ai_denoise.ai_denoise_plugin", "AIDenoiseDialog"),
+    ("ai_colorize.ai_colorize_plugin", "AIColorizeDialog"),
+    ("ai_motion_deblur.ai_motion_deblur_plugin", "AIMotionDeblurDialog"),
+    ("ai_style_transfer.ai_style_transfer_plugin", "StyleTransferDialog"),
+    ("ai_smart_resize.ai_smart_resize_plugin", "AISmartResizeDialog"),
+    ("portrait_mode.portrait_mode", "PortraitModeDialog"),
+    ("npr_filters.npr_filters_plugin", "NPRFiltersDialog"),
+    ("ai_portrait_relight.ai_portrait_relight_plugin", "AIPortraitRelightDialog"),
+]
+
+
+class _Host:
+    """The attribute surface ``_on_done`` touches; records the order of events."""
+
+    def __init__(self):
+        self.events: list[str] = []
+        host = self
+
+        class _Worker:
+            def wait(self):
+                host.events.append("wait" if host._worker is self else "wait after drop")
+
+        self._worker = _Worker()
+        self._viewer = None
+
+    def _notify_failure(self, _exc):
+        self.events.append("failure")
+
+    def _notify_success(self, _path):
+        self.events.append("success")
+
+    def accept(self):
+        self.events.append("accept")
+
+
+@pytest.mark.parametrize("module_name, cls_name", _DONE_SLOTS)
+@pytest.mark.parametrize("ok", [True, False])
+def test_done_waits_for_the_thread_before_dropping_it(module_name, cls_name, ok):
+    """Dropping the only reference to a QThread still returning from run() aborts the process."""
+    cls = getattr(importlib.import_module(module_name), cls_name)
+    host = _Host()
+    cls._on_done(host, ok, "out.png" if ok else "boom")
+    assert host.events[0] == "wait"
+    assert host._worker is None
+    assert host.events[1:] == (["success", "accept"] if ok else ["failure"])
+
+
+
+_OTHER_DONE_SLOTS = [
+    ("ai_object_remove.ai_object_remove_plugin", "ObjectRemoveDialog", "_on_sam_done", "_sam_worker"),
+    ("ai_object_remove.ai_object_remove_plugin", "ObjectRemoveDialog", "_on_done", "_worker"),
+    ("ai_outpaint.ai_outpaint_plugin", "OutpaintDialog", "_on_done", "_worker"),
+    ("cloud_share.cloud_share_plugin", "CloudShareDialog", "_on_done", "_worker"),
+]
+
+
+@pytest.mark.parametrize("module_name, cls_name, slot, attr", _OTHER_DONE_SLOTS)
+def test_other_done_slots_wait_before_dropping(module_name, cls_name, slot, attr):
+    """The same wait-then-drop in the slots whose bodies differ from the eight above."""
+    from unittest.mock import MagicMock
+    cls = getattr(importlib.import_module(module_name), cls_name)
+    host = MagicMock()
+    seen = []
+    worker = MagicMock()
+    worker.wait.side_effect = lambda *_a: seen.append(getattr(host, attr) is worker)
+    setattr(host, attr, worker)
+    getattr(cls, slot)(host, False, "boom")
+    assert seen == [True]
+    assert getattr(host, attr) is None
