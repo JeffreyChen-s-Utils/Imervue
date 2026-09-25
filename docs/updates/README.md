@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-24 | 2026-09-26 | Clicking a star in the List view rates the row, as the docs said | #fix #list-view #rating | [2026-09-b](2026-09-b.md) |
 | U-20260926-23 | 2026-09-26 | Shift+Tab reaches Theater Mode instead of moving the focus away | #fix #keyboard #shortcuts #viewer | [2026-09-b](2026-09-b.md) |
 | U-20260926-22 | 2026-09-26 | Ctrl+Shift+D opens right-to-left dual-page reading, which no key reached | #fix #keyboard #manga #shortcuts | [2026-09-b](2026-09-b.md) |
 | U-20260926-21 | 2026-09-26 | place: in a search query finds the photos taken there | #fix #search #library #gps | [2026-09-b](2026-09-b.md) |
@@ -396,4 +397,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 54 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 55 |

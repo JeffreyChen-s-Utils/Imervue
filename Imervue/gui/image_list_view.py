@@ -457,6 +457,16 @@ def _format_rating(rating: int) -> str:
     return _STAR_FILLED * rating + _STAR_EMPTY * (_RATING_MAX - rating)
 
 
+def star_at(x: float, center_x: float, strip_width: float) -> int:
+    """The star (1-5) under *x* in a strip of five stars *strip_width* wide centred on *center_x*.
+
+    A click left or right of the strip counts as the nearest end star.
+    """
+    step = max(strip_width, 1.0) / _RATING_MAX
+    left = center_x - step * _RATING_MAX / 2
+    return min(max(int((x - left) // step) + 1, 1), _RATING_MAX)
+
+
 def _fmt_size(kb: float) -> str:
     if kb >= 1024:
         return f"{kb / 1024:.2f} MB"
@@ -577,6 +587,23 @@ class ImageListView(QTableView):
         if event.key() in COLOR_LABEL_KEYS and no_ctrl_alt:
             return f"label_{COLOR_LABEL_KEYS[event.key()]}"
         return action
+
+    def mousePressEvent(self, event):  # noqa: N802 - Qt override
+        """A left click in the Rating column rates that row by the star it lands on.
+
+        The same star again clears it, as the rating keys do. The click still
+        selects the row.
+        """
+        index = self.indexAt(event.position().toPoint())
+        if (event.button() == Qt.MouseButton.LeftButton and index.isValid()
+                and index.column() == ImageListModel.COL_RATING and self._main_window is not None):
+            rect = self.visualRect(index)
+            strip = self.fontMetrics().horizontalAdvance(_STAR_FILLED * _RATING_MAX)
+            star = star_at(event.position().x(), rect.center().x(), strip)
+            path = self._model.path_at(index.row())
+            if path:
+                self._main_window.mark_list_selection(f"rate_{star}", [path])
+        super().mousePressEvent(event)
 
     def _handle_edit_key(self, event) -> bool:
         """Delete, Undo, ratings, favourite, cull flags and colours act on the list as on the wall.

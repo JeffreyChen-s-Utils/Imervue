@@ -739,3 +739,36 @@ def test_the_chosen_sort_survives_a_rebuild(qapp, tmp_path):
     finally:
         view.deleteLater()
     assert order == ["d.png", "b.png", "a.png"]
+
+
+
+@pytest.mark.parametrize(("x", "star"), [(76, 1), (84, 1), (85, 2), (100, 3), (124, 5), (0, 1), (999, 5)])
+def test_star_at_maps_a_click_to_a_star(x, star):
+    from Imervue.gui.image_list_view import star_at
+    assert star_at(x, center_x=100, strip_width=50) == star
+
+
+def _click(view, index, x_offset=0, button=Qt.MouseButton.LeftButton):
+    from PySide6.QtCore import QEvent, QPointF
+    from PySide6.QtGui import QMouseEvent
+    rect = view.visualRect(index)
+    pos = QPointF(rect.center().x() + x_offset, rect.center().y())
+    view.mousePressEvent(QMouseEvent(QEvent.Type.MouseButtonPress, pos, pos, button, button,
+                                     Qt.KeyboardModifier.NoModifier))
+
+
+def test_clicking_the_rating_column_rates_the_row(qapp, tmp_path):
+    """The docs promised it; the column only showed the stars."""
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png", "b.png"], window)
+    try:
+        view.resize(1200, 400)
+        model = view.model()
+        strip = view.fontMetrics().horizontalAdvance("\u2605" * 5)
+        _click(view, model.index(1, model.COL_RATING), x_offset=strip // 2 - 1)   # the last star
+        _click(view, model.index(0, model.COL_RATING))                           # the middle one
+        _click(view, model.index(0, model.COL_NAME))                             # not the rating
+        _click(view, model.index(0, model.COL_RATING), button=Qt.MouseButton.RightButton)
+    finally:
+        view.deleteLater()
+    assert window.marked == [("rate_5", [str(tmp_path / "b.png")]), ("rate_3", [str(tmp_path / "a.png")])]
