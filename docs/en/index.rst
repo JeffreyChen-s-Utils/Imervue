@@ -1609,6 +1609,7 @@ Select multiple images, then right-click > ``Create GIF / Video``.
 - Set frames per second (FPS)
 - Custom dimensions
 - Loop option
+- The suggested file is ``output.gif`` beside the first frame, numbered (``output_1.gif``) when that name is taken; a typed name that already exists is replaced only after you confirm
 
 ----
 

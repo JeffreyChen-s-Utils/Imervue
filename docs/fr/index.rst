@@ -1643,6 +1643,7 @@ Sélectionnez plusieurs images, puis clic droit > ``Créer GIF / Vidéo``.
 - Définir les images par seconde (FPS)
 - Dimensions personnalisées
 - Option de boucle
+- Le fichier proposé est ``output.gif`` à côté de la première image, numéroté (``output_1.gif``) si ce nom est pris ; un nom saisi qui existe déjà n'est remplacé qu'après confirmation
 
 ----
 

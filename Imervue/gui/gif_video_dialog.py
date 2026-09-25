@@ -17,10 +17,13 @@ from PySide6.QtWidgets import (
 from PIL import Image
 
 from Imervue.system.qt_timers import call_later
-from Imervue.gui.dialog_rows import action_button_row, path_browse_row, save_path_into
+from Imervue.gui.dialog_rows import (
+    action_button_row, may_replace, path_browse_row, save_path_into,
+)
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.free_names import free_names
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -170,6 +173,10 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
         self._paths = list(paths)
         self._lang = language_wrapper.language_word_dict
         self._worker = None
+        # The suggested output path while it is still the suggestion, and the
+        # path last picked through Browse… (its Save dialog asked about replacing).
+        self._auto_output = ""
+        self._browsed_path: str | None = None
 
         self.setWindowTitle(self._lang.get("gif_video_title", "Create GIF / Video"))
         self.setMinimumSize(520, 520)
@@ -191,8 +198,8 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
         path_row, self._path_edit, _browse = path_browse_row(
             self._browse, browse_text=self._lang.get("export_browse", "Browse..."))
         if self._paths:
-            default = Path(self._paths[0]).parent / "output.gif"
-            self._path_edit.setText(str(default))
+            self._auto_output = self._suggested_output(".gif")
+            self._path_edit.setText(self._auto_output)
         layout.addLayout(path_row)
 
         # Progress
@@ -282,9 +289,16 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
         # Update extension in path
         path = self._path_edit.text()
         if path:
-            p = Path(path)
             ext = ".gif" if is_gif else ".mp4"
-            self._path_edit.setText(str(p.with_suffix(ext)))
+            if path == self._auto_output:
+                self._auto_output = self._suggested_output(ext)
+                self._path_edit.setText(self._auto_output)
+            else:
+                self._path_edit.setText(str(Path(path).with_suffix(ext)))
+
+    def _suggested_output(self, ext: str) -> str:
+        """A free ``output<ext>`` beside the first frame, so an earlier result is kept."""
+        return str(free_names(Path(self._paths[0]).parent, ["output"], ext)[0])
 
     def _move_up(self):
         row = self._list.currentRow()
@@ -303,8 +317,10 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
     def _browse(self):
         fmt = self._fmt_combo.currentText()
         ext = ".gif" if fmt == "GIF" else ".mp4"
-        save_path_into(
+        picked = save_path_into(
             self, self._path_edit, self._lang.get("gif_video_save", "Save As"), f"{fmt} (*{ext})")
+        if picked:
+            self._browsed_path = picked
 
     def _get_ordered_paths(self) -> list[str]:
         paths = []
@@ -318,7 +334,7 @@ class GifVideoDialog(WorkerHostMixin, QDialog):
             return
 
         paths = self._get_ordered_paths()
-        if not paths:
+        if not paths or not may_replace(self, output, self._browsed_path):
             return
 
         self._create_btn.setEnabled(False)

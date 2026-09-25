@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-56 | 2026-09-25 | Create GIF / Video suggests a free name and asks before replacing a file | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260925-55 | 2026-09-25 | The replace-existing-file question moves to dialog_rows (refactor) | #refactor #export | [2026-09](2026-09.md) |
 | U-20260925-54 | 2026-09-25 | Auto-rotate, EXIF Strip copies and Split Pages number their files instead of replacing | #fix #data-loss | [2026-09](2026-09.md) |
 | U-20260925-53 | 2026-09-25 | Export never replaces a file, the photo itself above all, without asking | #fix #export #data-loss | [2026-09](2026-09.md) |
