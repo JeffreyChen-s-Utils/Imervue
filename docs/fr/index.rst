@@ -2153,7 +2153,10 @@ saisissez un modèle comme ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` et voy
 exactement comment chaque fichier sera renommé. Les conflits sont mis en évidence afin que
 rien ne soit écrasé. Jetons pris en charge : ``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``.
+{hour} {minute}``. Un nouveau nom que porte actuellement un autre
+fichier sélectionné n'est pas un conflit : renuméroter (``002`` → ``003`` pendant que
+``003`` → ``004``) ou échanger deux noms renomme toute la sélection. Batch Rename fait
+de même.
 
 Export des métadonnées
 ^^^^^^^^^^^^^^^^^^^^^^

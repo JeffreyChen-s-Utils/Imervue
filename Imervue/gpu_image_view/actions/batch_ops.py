@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (
 from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_transfer import carry_along, is_same_file, transfer_into
+from Imervue.system.batch_rename import rename_files
+from Imervue.system.file_transfer import transfer_into
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -126,32 +127,20 @@ class BatchRenameDialog(QDialog):
         self.accept()
 
     def _rename_all(self, start: int) -> tuple[list[tuple[str, str]], int]:
-        renamed: list[tuple[str, str]] = []
-        failed = 0
-        for i, old_path in enumerate(self._paths):
-            p = Path(old_path)
-            new_path = p.parent / self._build_name(old_path, start + i)
-            try:
-                # str(), not Path ==: WindowsPath equality ignores case, which hid
-                # a case-only rename as "no change".
-                if str(new_path) != str(p) and (not new_path.exists() or is_same_file(p, new_path)):
-                    p.rename(new_path)
-                    renamed.append((old_path, str(new_path)))
-                    # Its sidecars and saved rating / tags follow, one file at a
-                    # time so a RAW + JPEG pair's shared IMG.xmp reaches both.
-                    carry_along([(old_path, str(new_path))], move=True)
-                else:
-                    failed += 1
-            except OSError:
-                failed += 1
-        return renamed, failed
+        # A new name that another selected file holds now is freed by its own
+        # rename first (renumbering, swapping); sidecars and saved rating /
+        # tags follow each file.
+        return rename_files([
+            (path, str(Path(path).parent / self._build_name(path, start + i)))
+            for i, path in enumerate(self._paths)])
 
     def _apply_renames_to_model(self, renamed: list[tuple[str, str]]) -> None:
         from Imervue.gpu_image_view.tile_textures import free_tile_textures
+        # All at once: with a swap, one file's new path is another's old one.
+        mapping = dict(renamed)
         images = self._gui.model.images
-        for old, new in renamed:
-            if old in images:
-                images[images.index(old)] = new
+        images[:] = [mapping.get(path, path) for path in images]
+        for old, _new in renamed:
             self._gui.tile_cache.pop(old, None)
             self._gui.selected_tiles.discard(old)
         # Free the stale textures (renamed paths) under the GL context so they

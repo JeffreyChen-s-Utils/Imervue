@@ -1245,7 +1245,9 @@ Token 批量重命名
 ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 等模板后立即显示每个文件的
 新名称；冲突会被高亮。支持 tokens：``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``。
+{hour} {minute}``。另一个选中文件现在的名称不算冲突：重新编号
+（``002`` → ``003``、``003`` → ``004``）或互换两个名称时会重命名整批。Batch Rename
+也一样。
 
 元数据导出
 ^^^^^^^^^^

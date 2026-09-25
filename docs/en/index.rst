@@ -2118,7 +2118,9 @@ type a template like ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` and see
 exactly what every file will be renamed to. Conflicts are highlighted so
 nothing is overwritten. Supported tokens: ``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``.
+{hour} {minute}``. A new name that another selected file has now is
+no conflict: renumbering (``002`` → ``003`` while ``003`` → ``004``) or swapping
+two names renames the whole selection. Batch Rename does the same.
 
 Metadata Export
 ^^^^^^^^^^^^^^^

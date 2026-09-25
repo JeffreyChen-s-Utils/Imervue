@@ -1281,7 +1281,9 @@ Token 일괄 이름 변경
 ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 같은 템플릿을 입력하면 각
 파일의 새 이름이 즉시 표시되며 충돌은 강조됩니다. 지원 토큰: ``{name}
 {ext} {counter[:NN]} {date[:fmt]} {width} {height} {wxh} {size_kb} {camera}
-{year} {month} {day} {hour} {minute}``.
+{year} {month} {day} {hour} {minute}``. 선택한 다른 파일이 지금 쓰는 이름은 충돌이
+아닙니다. 번호 다시 매기기(``002`` → ``003``, ``003`` → ``004``)나 두 이름 맞바꾸기도
+선택 전체의 이름을 바꿉니다. Batch Rename도 마찬가지입니다.
 
 메타데이터 내보내기
 ^^^^^^^^^^^^^^^^^^^

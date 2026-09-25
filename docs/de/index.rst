@@ -2187,7 +2187,10 @@ in der Sie eine Vorlage wie ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` einge
 und genau sehen, wozu jede Datei umbenannt wird. Konflikte werden hervorgehoben, damit
 nichts überschrieben wird. Unterstützte Token: ``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``.
+{hour} {minute}``. Ein neuer Name, den gerade eine andere ausgewählte
+Datei trägt, ist kein Konflikt: Neunummerieren (``002`` → ``003``, während ``003`` →
+``004``) oder das Tauschen zweier Namen benennt die ganze Auswahl um. Batch Rename
+verhält sich genauso.
 
 Metadaten-Export
 ^^^^^^^^^^^^^^^^

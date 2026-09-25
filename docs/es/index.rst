@@ -2154,7 +2154,10 @@ Renombrado por lotes con tokens
 donde escribe una plantilla como ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` y ve
 exactamente cómo se renombrará cada archivo. Los conflictos se resaltan para que nada se
 sobrescriba. Tokens admitidos: ``{name} {ext} {counter[:NN]} {date[:fmt]} {width} {height}
-{wxh} {size_kb} {camera} {year} {month} {day} {hour} {minute}``.
+{wxh} {size_kb} {camera} {year} {month} {day} {hour} {minute}``. Un nombre nuevo que ahora tiene otro archivo
+seleccionado no es un conflicto: renumerar (``002`` → ``003`` mientras ``003`` →
+``004``) o intercambiar dos nombres renombra toda la selección. Batch Rename hace lo
+mismo.
 
 Exportación de metadatos
 ^^^^^^^^^^^^^^^^^^^^^^^^

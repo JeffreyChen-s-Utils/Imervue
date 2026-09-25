@@ -1276,7 +1276,9 @@ Token 批次重新命名
 ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 的樣板，即可看到每個檔案的新
 名稱；衝突會被標示。支援 tokens：``{name} {ext} {counter[:NN]} {date[:fmt]}
 {width} {height} {wxh} {size_kb} {camera} {year} {month} {day} {hour}
-{minute}``。
+{minute}``。另一個選取檔案現在的名稱不算衝突：重新編號
+（``002`` → ``003``、``003`` → ``004``）或互換兩個名稱時會重新命名整批。Batch
+Rename 也一樣。
 
 中繼資料匯出
 ^^^^^^^^^^^^

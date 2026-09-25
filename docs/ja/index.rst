@@ -1288,7 +1288,9 @@ Token 一括リネーム
 ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` のようなテンプレートを入力
 するとファイルごとの新名称が即座に表示されます。衝突はハイライト。対応
 トークン：``{name} {ext} {counter[:NN]} {date[:fmt]} {width} {height}
-{wxh} {size_kb} {camera} {year} {month} {day} {hour} {minute}``。
+{wxh} {size_kb} {camera} {year} {month} {day} {hour} {minute}``。選択中の別のファイルが今使っている名前は衝突になりません。番号の振り
+直し(``002`` → ``003`` と同時に ``003`` → ``004``)や 2 つの名前の入れ替えでも選択
+全体をリネームします。Batch Rename も同様です。
 
 メタデータエクスポート
 ^^^^^^^^^^^^^^^^^^^^^^

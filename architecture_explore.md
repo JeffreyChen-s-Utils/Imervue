@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `10ef669` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `9f3efc1` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 866 | 142,176 |
+| `tests/` | 867 | 142,422 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,138 |
 | `Imervue/gui/` | 165 | 33,074 |
 | `Imervue/puppet/` | 57 | 15,292 |
 | `Imervue/image/` | 125 | 14,564 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,905 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 12,894 |
 | `Imervue/multi_language/` | 8 | 14,079 |
 | `Imervue/desktop_pet/` | 34 | 8,259 |
 | `Imervue/mcp_server/` | 16 | 4,701 |
-| `Imervue/library/` | 32 | 4,256 |
+| `Imervue/library/` | 32 | 4,251 |
 | `Imervue/menu/` | 11 | 3,583 |
 | `Imervue/` 根層 | 5 | 1,576 |
 | `Imervue/plugin/` | 10 | 2,243 |
-| `Imervue/system/` | 24 | 2,451 |
+| `Imervue/system/` | 25 | 2,608 |
 | `Imervue/export/` | 9 | 1,081 |
 | `Imervue/user_settings/` | 10 | 1,130 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,304 |
-| **總計** | **1,703** | **322,747** |
+| **總計** | **1,705** | **323,134** |
 
-其中 `Imervue/` 套件本身 773 檔 / 166,267 行。
+其中 `Imervue/` 套件本身 774 檔 / 166,408 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -235,6 +235,7 @@ ImervueMainWindow
 | `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
 | `trash_ops.py` | 244 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果） |
 | `file_transfer.py` | 244 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
+| `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
 | `atomic_write.py` | 33 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本） |
 | `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
 | `watch_folder.py` | 140 | 監控資料夾自動化：新檔案進來自動套用動作 |
@@ -475,7 +476,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | --- | ---: | --- |
 | `delete.py` | 220 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops` |
 | `select.py` | 231 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
-| `batch_ops.py` | 300 | 批次重新命名 / 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
+| `batch_ops.py` | 289 | 批次重新命名（經 `batch_rename.rename_files`）/ 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
 | `compare_dialog.py` | 584 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 245 | GIF / APNG / Animated WebP 播放器 |
@@ -524,7 +525,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `collection_stats.py` | 81 | 集合的評分/收藏/色標籤/挑片統計 |
 | `reference_pins.py` | 95 | 釘選參考圖籃子 |
 | `staging_tray.py` | 98 | 跨資料夾選取籃 |
-| `token_rename.py` | 216 | Token 式批次改名 |
+| `token_rename.py` | 211 | Token 式批次改名；預覽時批次內其他檔目前的名稱不算衝突，實際改名交給 `batch_rename.rename_files` |
 
 ### 6.12 `Imervue/gui/`
 
@@ -966,7 +967,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-866 個檔、142,176 行。`pyproject.toml` 定義三個互斥層級 marker：
+867 個檔、142,422 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

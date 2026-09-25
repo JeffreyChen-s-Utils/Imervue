@@ -157,6 +157,22 @@ class TestBatchRenameDialog:
         assert gui.model.images == [str(tmp_path / "shot_1.jpg"), str(taken)]
         assert toasts == [("info", "Renamed 1/2 file(s)")]
 
+    def test_swapped_names_keep_each_tile_on_its_file(self, qapp, tmp_path):
+        """Two files swapping names: the grid pointed both slots at the same path."""
+        a, b = tmp_path / "shot_2.jpg", tmp_path / "shot_1.jpg"
+        a.write_text("a", encoding="utf-8")
+        b.write_text("b", encoding="utf-8")
+        dlg, gui, toasts = self._dialog(qapp, [str(a), str(b)])
+        dlg._template.setText("shot_{n}{ext}")  # noqa: SLF001
+        try:
+            dlg._apply()  # noqa: SLF001
+        finally:
+            dlg.deleteLater()
+        assert (tmp_path / "shot_1.jpg").read_text(encoding="utf-8") == "a"
+        assert (tmp_path / "shot_2.jpg").read_text(encoding="utf-8") == "b"
+        assert gui.model.images == [str(tmp_path / "shot_1.jpg"), str(tmp_path / "shot_2.jpg")]
+        assert toasts == [("success", "Renamed 2/2 file(s)")]
+
     def test_renamed_files_keep_their_rating_and_sidecars(self, qapp, tmp_path):
         from Imervue.user_settings.user_setting_dict import user_setting_dict
         raw, jpeg = tmp_path / "IMG.CR2", tmp_path / "IMG.JPG"

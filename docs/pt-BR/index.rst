@@ -2132,7 +2132,9 @@ digita um template como ``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` e vê
 exatamente em que cada arquivo será renomeado. Conflitos são destacados para que
 nada seja sobrescrito. Tokens suportados: ``{name} {ext} {counter[:NN]}
 {date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``.
+{hour} {minute}``. Um nome novo que outro arquivo selecionado tem agora
+não é conflito: renumerar (``002`` → ``003`` enquanto ``003`` → ``004``) ou trocar
+dois nomes renomeia a seleção inteira. O Batch Rename faz o mesmo.
 
 Exportação de Metadados
 ^^^^^^^^^^^^^^^^^^^^^^^

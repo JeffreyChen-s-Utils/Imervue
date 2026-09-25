@@ -34,7 +34,8 @@ from PIL import Image
 
 from Imervue.image.dimensions import image_dimensions
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
-from Imervue.system.file_transfer import carry_along, is_same_file
+from Imervue.system.batch_rename import rename_files
+from Imervue.system.file_transfer import is_same_file
 
 _TOKEN_RE = re.compile(r"\{([a-zA-Z_]+)(?::([^{}]+))?\}")
 
@@ -72,6 +73,8 @@ def preview(
     """Generate the full rename preview without touching the filesystem."""
     plans: list[RenamePlan] = []
     dest_paths: set[str] = set()
+    # A name another file of this batch holds now is freed by its own rename.
+    sources = {os.path.normcase(os.path.abspath(src)) for src in paths}
     for i, src in enumerate(paths):
         metadata = _gather_metadata(src, start + i)
         new_name = _apply_template(template, metadata)
@@ -82,10 +85,11 @@ def preview(
         # same name without colliding. Keying on the basename flagged the second
         # as a conflict and apply_plan skipped it, so cross-folder renames lost
         # every folder after the first.
-        key = os.path.normcase(dst)
+        key = os.path.normcase(os.path.abspath(dst))
         # A destination that is the source itself (a case-only change on a
         # case-insensitive file system) is no conflict.
-        conflict = key in dest_paths or (os.path.exists(dst) and not is_same_file(src, dst))
+        conflict = key in dest_paths or (
+            key not in sources and os.path.exists(dst) and not is_same_file(src, dst))
         dest_paths.add(key)
         plans.append(RenamePlan(src=src, dst=dst, conflict=conflict))
     return plans
@@ -95,23 +99,14 @@ def rename_plans(plans: list[RenamePlan]) -> tuple[list[tuple[str, str]], int]:
     """Rename everything in the plan; returns the ``(src, dst)`` pairs renamed and the failures.
 
     A conflict, an unchanged name or a rename the OS refuses counts as a
-    failure. Each renamed file's sidecars and saved rating / tags / labels
-    follow it (:func:`Imervue.system.file_transfer.carry_along`).
+    failure. A destination that another file of the plan holds now is freed
+    first, so renumbering or swapping names lands as a whole; sidecars and
+    saved rating / tags / labels follow each renamed file
+    (:func:`Imervue.system.batch_rename.rename_files`).
     """
-    renamed: list[tuple[str, str]] = []
-    failed = 0
-    for plan in plans:
-        if plan.conflict or os.path.abspath(plan.src) == os.path.abspath(plan.dst):
-            failed += 1
-            continue
-        try:
-            os.rename(plan.src, plan.dst)
-        except OSError:
-            failed += 1
-            continue
-        renamed.append((plan.src, plan.dst))
-        carry_along([(plan.src, plan.dst)], move=True)
-    return renamed, failed
+    wanted = [(plan.src, plan.dst) for plan in plans if not plan.conflict]
+    renamed, failed = rename_files(wanted)
+    return renamed, failed + len(plans) - len(wanted)
 
 
 def apply_plan(plans: list[RenamePlan]) -> tuple[int, int]:
