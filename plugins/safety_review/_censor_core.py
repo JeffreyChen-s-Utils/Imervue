@@ -58,6 +58,40 @@ def _nudenet_corners(box) -> tuple[int, int, int, int]:
     return x, y, x + w, y + h
 
 
+def _read_bgr(src: str):
+    """*src* decoded as OpenCV's ``imread`` decodes it — BGR, EXIF orientation applied — for any path.
+
+    ``cv2.imread`` can't open a path with non-ASCII characters on Windows
+    (a photo under ``照片/``) and returns None; reading the bytes and
+    decoding them with ``cv2.imdecode`` gives the same array for every path.
+    Raises ``ValueError`` for a file OpenCV can't decode (an empty one
+    included: ``imdecode`` asserts on an empty buffer).
+    """
+    import cv2
+    import numpy as np
+    data = np.fromfile(src, dtype=np.uint8)
+    image = cv2.imdecode(data, cv2.IMREAD_COLOR) if data.size else None
+    if image is None:
+        raise ValueError(f"OpenCV cannot decode {src}")
+    return image
+
+
+class _AnyPathDetector:
+    """A NudeNet detector that opens any path.
+
+    NudeNet reads a path with ``cv2.imread``, so on Windows every photo in a
+    folder with a non-ASCII name failed with ``'NoneType' object has no
+    attribute 'shape'``. This one hands it the decoded image instead.
+    """
+
+    def __init__(self, detector) -> None:
+        self._detector = detector
+
+    def detect(self, src: str):
+        """NudeNet's detections for the image at *src*."""
+        return self._detector.detect(_read_bgr(src))
+
+
 def _open_upright(src: str):
     """Open *src* for censoring, turned upright by its EXIF orientation.
 

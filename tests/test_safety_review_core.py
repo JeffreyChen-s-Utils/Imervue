@@ -502,6 +502,84 @@ def test_runner_reads_nudenet_boxes_as_x_y_width_height():
     assert _runner._detect_boxes_real(_Det(), "x.png", 0.25, labels) == [(300, 400, 400, 480)]
 
 
+class _RecordingNudeDetector:
+    """Stands in for ``nudenet.NudeDetector``; keeps what each ``detect`` got."""
+
+    def __init__(self):
+        self.seen = []
+
+    def detect(self, image):
+        self.seen.append(image)
+        return []
+
+
+@pytest.fixture
+def fake_nudenet(monkeypatch):
+    import sys
+    import types
+    module = types.ModuleType("nudenet")
+    module.NudeDetector = _RecordingNudeDetector
+    monkeypatch.setitem(sys.modules, "nudenet", module)
+    monkeypatch.setattr(_detection, "_cached_detector", None)
+    return module
+
+
+def test_read_bgr_opens_a_path_with_a_non_ascii_folder(tmp_path):
+    """NudeNet's cv2.imread returned None here, so every such photo failed."""
+    pytest.importorskip("cv2")
+    src = tmp_path / "照片" / "a.png"
+    src.parent.mkdir()
+    Image.new("RGB", (6, 4), (255, 0, 0)).save(src)
+    image = _censor_core._read_bgr(str(src))
+    assert image.shape == (4, 6, 3)
+    assert tuple(image[0, 0]) == (0, 0, 255)          # BGR, as imread gives it
+
+
+def test_read_bgr_matches_imread_including_exif_orientation(tmp_path):
+    cv2 = pytest.importorskip("cv2")
+    src = tmp_path / "tagged.jpg"
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    rng = np.random.default_rng(7)
+    Image.fromarray(rng.integers(0, 256, (20, 40, 3), dtype=np.uint8)).save(src, exif=exif)
+    image = _censor_core._read_bgr(str(src))
+    assert image.shape == (40, 20, 3)
+    assert np.array_equal(image, cv2.imread(str(src)))
+
+
+@pytest.mark.parametrize("content", [b"", b"not an image"])
+def test_read_bgr_refuses_what_opencv_cannot_decode(tmp_path, content):
+    pytest.importorskip("cv2")
+    src = tmp_path / "bad.jpg"
+    src.write_bytes(content)
+    with pytest.raises(ValueError, match="cannot decode"):
+        _censor_core._read_bgr(str(src))
+
+
+def test_any_path_detector_hands_nudenet_the_decoded_image(tmp_path):
+    pytest.importorskip("cv2")
+    src = tmp_path / "照片.png"
+    Image.new("RGB", (3, 2), (0, 0, 255)).save(src)
+    inner = _RecordingNudeDetector()
+    assert _censor_core._AnyPathDetector(inner).detect(str(src)) == []
+    (image,) = inner.seen
+    assert isinstance(image, np.ndarray)
+    assert image.shape == (2, 3, 3)
+
+
+def test_in_app_detector_opens_any_path(fake_nudenet):
+    detector = _detection._get_detector()
+    assert isinstance(detector, _censor_core._AnyPathDetector)
+    assert _detection._get_detector() is detector
+
+
+@pytest.mark.parametrize("mode", ["real", "auto"])
+def test_runner_detector_opens_any_path(fake_nudenet, monkeypatch, mode):
+    monkeypatch.setattr(_runner, "_load_anime_model", lambda: "anime")
+    detector, _anime = _runner._load_detectors(mode)
+    assert isinstance(detector, _censor_core._AnyPathDetector)
+
+
 def _tagged_portrait_png(path: Path) -> Path:
     """80x40 stored red pixels tagged 6: shown (and read by OpenCV) as 40 wide, 80 tall."""
     exif = Image.Exif()

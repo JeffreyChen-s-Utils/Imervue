@@ -29,6 +29,7 @@ from safety_review._constants import (
     _categories_to_real_labels,
 )
 from safety_review._censor_core import (
+    _AnyPathDetector,
     _censor_region,
     _detect_image_mode,
     _ensure_parent,
@@ -72,7 +73,7 @@ def _get_detector():
     with _cached_detector_lock:
         if _cached_detector is None:
             from nudenet import NudeDetector
-            _cached_detector = NudeDetector()
+            _cached_detector = _AnyPathDetector(NudeDetector())
         return _cached_detector
 
 

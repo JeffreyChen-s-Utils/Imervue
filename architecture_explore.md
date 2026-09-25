@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `9f3efc1` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-25 · 對應 commit `1428898` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 867 | 142,422 |
+| `tests/` | 867 | 142,500 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,138 |
 | `Imervue/gui/` | 165 | 33,074 |
 | `Imervue/puppet/` | 57 | 15,292 |
@@ -83,8 +83,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 9 | 1,081 |
 | `Imervue/user_settings/` | 10 | 1,130 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（17 個外掛） | 64 | 14,304 |
-| **總計** | **1,705** | **323,134** |
+| `plugins/`（17 個外掛） | 64 | 14,341 |
+| **總計** | **1,705** | **323,249** |
 
 其中 `Imervue/` 套件本身 774 檔 / 166,408 行。
 
@@ -941,7 +941,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 外掛 | 檔案/行數 | 功用 | 重量級相依 |
 | --- | --- | --- | --- |
-| `safety_review` | 15 / 4,546 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用 | nudenet, ultralytics, huggingface_hub |
+| `safety_review` | 15 / 4,616 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到） | nudenet, ultralytics, huggingface_hub |
 | `spanish_translation` | 3 / 1,773 | 西班牙文語言外掛，示範 `register_language()` | — |
 | `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 823 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
@@ -967,7 +967,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-867 個檔、142,422 行。`pyproject.toml` 定義三個互斥層級 marker：
+867 個檔、142,500 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

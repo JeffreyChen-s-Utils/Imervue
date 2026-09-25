@@ -31,6 +31,7 @@ from pathlib import Path
 # the Qt plugin package, so it loads them as sibling modules instead.
 if __package__:   # imported as part of the plugin package (tests)
     from safety_review._censor_core import (
+        _AnyPathDetector,
         _censor_region,
         _detect_image_mode,
         _ensure_parent,
@@ -54,6 +55,7 @@ if __package__:   # imported as part of the plugin package (tests)
     )
 else:             # run as a script next to its siblings
     from _censor_core import (
+        _AnyPathDetector,
         _censor_region,
         _detect_image_mode,
         _ensure_parent,
@@ -231,13 +233,13 @@ def _load_detectors(det_mode):
     if det_mode == "auto":
         print("PROGRESS:Loading both detectors (auto mode)...", flush=True)
         from nudenet import NudeDetector
-        return NudeDetector(), _load_anime_model()
+        return _AnyPathDetector(NudeDetector()), _load_anime_model()
     if det_mode == "anime":
         print("PROGRESS:Loading EraX anime detector...", flush=True)
         return None, _load_anime_model()
     from nudenet import NudeDetector
     print("PROGRESS:Loading NudeNet detector...", flush=True)
-    return NudeDetector(), None
+    return _AnyPathDetector(NudeDetector()), None
 
 
 def _process_one_with_fallback(run_for_shape, shape, retries=1):
