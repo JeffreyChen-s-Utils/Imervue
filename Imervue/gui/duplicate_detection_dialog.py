@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.image.shown import as_shown
 from Imervue.image.orientation import exif_orientation
 from Imervue.gui.dialog_rows import folder_picker_row
@@ -490,7 +491,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
     def _on_delete_finished(self, trashed: list, failed: list):
         import contextlib
         pending = getattr(self, "_pending_delete_items", {})
-        for path in trashed:
+        # What the Recycle Bin could not take (a memory card, a network share)
+        # goes for good only if the user says so.
+        removed = offer_permanent_delete(self, failed)
+        for path in [*trashed, *removed]:
             item = pending.pop(path, None)
             if item is None:
                 continue
@@ -501,7 +505,8 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
                 if parent is not None:
                     parent.removeChild(item)
         for path in failed:
-            logger.warning("Failed to delete %s", path)
+            if path not in removed:
+                logger.warning("Failed to delete %s", path)
         self._pending_delete_items = {}
         if self._delete_worker is not None:
             self._delete_worker.deleteLater()
@@ -511,7 +516,7 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         self._select_redundant_btn.setEnabled(True)
         self._status_label.setText(
             self._lang.get("duplicate_deleted", "{count} file(s) deleted").replace(
-                _COUNT_PLACEHOLDER, str(len(trashed))
+                _COUNT_PLACEHOLDER, str(len(trashed) + len(removed))
             ))
 
     def _select_redundant(self):

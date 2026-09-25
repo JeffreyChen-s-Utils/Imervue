@@ -155,6 +155,40 @@ def test_delete_reenables_scan_after_finishing(qapp, tmp_path, monkeypatch):
     assert dlg._scan_btn.isEnabled() is True
 
 
+def test_a_duplicate_the_bin_refused_goes_for_good_when_the_user_agrees(qapp, tmp_path,
+                                                                         monkeypatch):
+    """On a memory card the trash can't take it; it was only logged, and the count fell short."""
+    from PySide6.QtWidgets import QMessageBox
+
+    from Imervue.gui import trash_failure_notice
+    from Imervue.system import trash_ops
+
+    # The real worker's body, run inline: the trash itself has to refuse the file.
+    monkeypatch.setattr(trash_ops.FileDeleteWorker, "start", lambda worker: worker.run())
+    monkeypatch.setattr(trash_ops, "recycle_bin_holds", lambda _path: False)
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
+    asked = []
+    monkeypatch.setattr(trash_failure_notice, "_ask_to_delete_permanently",
+                        lambda _parent, paths: asked.append(list(paths)) or True)
+
+    keep = _png(tmp_path / "keep.png", 50, 50)
+    drop = _png(tmp_path / "drop.png", 50, 50)
+    dlg = _dialog()
+    dlg._on_result([[_entry(keep), _entry(drop)]])
+    _select_path(dlg, drop)
+    dlg._delete_selected()
+
+    assert asked == [[drop]]
+    assert not os.path.exists(drop)
+    remaining = {
+        dlg._tree.topLevelItem(0).child(ci).data(0, Qt.ItemDataRole.UserRole)
+        for ci in range(dlg._tree.topLevelItem(0).childCount())
+    }
+    assert remaining == {keep}
+    assert "1" in dlg._status_label.text()
+
+
 class _DeadItem:
     def parent(self):
         raise RuntimeError("Internal C++ object already deleted")

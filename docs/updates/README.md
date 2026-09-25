@@ -70,6 +70,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-47 | 2026-09-25 | Duplicate Finder offers to delete for good what the Recycle Bin refused | #bugfix #delete #duplicates | [2026-09](2026-09.md) |
 | U-20260925-46 | 2026-09-25 | Confirmed permanent deletes remove folders and files the Recycle Bin can't take | #bugfix #delete | [2026-09](2026-09.md) |
 | U-20260925-45 | 2026-09-25 | Deleting on a drive without a Recycle Bin never destroys the file unasked | #bugfix #delete #data-loss | [2026-09](2026-09.md) |
 | U-20260925-44 | 2026-09-25 | Refactor: clear the SonarCloud findings still open on dev | #refactor #sonarcloud | [2026-09](2026-09.md) |
