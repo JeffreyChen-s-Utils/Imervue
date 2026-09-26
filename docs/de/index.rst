@@ -806,6 +806,8 @@ Ausdrücke, Pose-Gruppen, Lippensynchronisation und Webcam-Tracking, **ohne prop
    |               Motions-Dock                        |
    +---------------------------------------------------+
 
+Die Docks rechts teilen sich einen Tab-Bereich: **Parameters** (ein Schieberegler pro Parameter), **Expressions** (jede Expression ein- oder ausschalten), **Pose** (wählen, welches Mitglied jeder Pose-Gruppe sichtbar ist — eine Gruppe zeigt ihr erstes Mitglied, bis ein anderes gewählt wird) und **Bones** (die Deformer-Hierarchie).
+
 End-to-End-Workflow
 ^^^^^^^^^^^^^^^^^^^
 

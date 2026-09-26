@@ -2522,6 +2522,8 @@ chinese_word_dict = {
     "puppet_cubism_failed": "Cubism 导入失败：{error}",
     "puppet_expressions_dock": "表情",
     "puppet_expressions_empty": "没有表情 — 请加载定义了表情的偶。",
+    "puppet_pose_dock": "姿势",
+    "puppet_pose_empty": "没有姿势组 — 请加载定义了姿势组的偶。",
     "puppet_import_psd_title": "导入 PSD",
     "puppet_menu_edit": "编辑",
     "puppet_menu_file": "文件",

@@ -465,7 +465,7 @@ JSON 为主，人类可 diff，没有专有二进制。
 - **参数绑定** — 每个参数保有 key 列表，将滑块值对应到部分 deformer-form 快照；运行时采样并逐字段线性插值
 - **动作播放** — 底部停靠含动作列表 + 播放 / 暂停 / 停止 / 循环 / 拖曳；曲线采样器支持 `linear`、`stepped`、`inverse-stepped`、`cubic-bezier` 段（牛顿迭代 time → param）；每动作淡入 / 淡出
 - **表情** — `additive` / `multiply` / `overwrite` 参数叠加堆栈
-- **姿势组** — 互斥 drawable 可见性（武器切换、嘴形变体）
+- **姿势组** — 互斥 drawable 可见性（武器切换、嘴形变体）；**Pose** 停靠栏选择每组显示的成员
 - **物理** — Verlet 钟摆链用于头发 / 衣物 / 缎带；输入参数移动链锚点，重力 + 阻尼 + 每粒子弹簧回复静止
 - **顶点 morph** — Cubism 式线性混合于 rest 与 ±extreme deltas；每帧向量化 numpy，60 FPS
 - **不透明度 keys** — 参数驱动的 alpha 曲线；让替代姿势 mesh 随手势参数淡入 / 淡出

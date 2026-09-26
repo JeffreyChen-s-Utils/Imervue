@@ -2533,6 +2533,8 @@ korean_word_dict = {
     "puppet_cubism_failed": "Cubism 가져오기 실패: {error}",
     "puppet_expressions_dock": "표정",
     "puppet_expressions_empty": "표정 없음 — 표정이 정의된 퍼펫을 불러오세요.",
+    "puppet_pose_dock": "포즈",
+    "puppet_pose_empty": "포즈 그룹 없음 — 포즈 그룹이 정의된 퍼펫을 불러오세요.",
     "puppet_import_psd_title": "PSD 가져오기",
     "puppet_menu_edit": "편집",
     "puppet_menu_file": "파일",

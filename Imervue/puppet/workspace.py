@@ -56,6 +56,7 @@ from Imervue.puppet.motion_dock import MotionDock
 from Imervue.puppet.motion_recorder import MotionRecorder, append_motion
 from Imervue.puppet.motion_timeline import MotionTimelineDialog
 from Imervue.puppet.parameter_dock import ParameterDock
+from Imervue.puppet.pose_dock import PoseDock
 from Imervue.puppet.recorder import RecordingSession
 from Imervue.puppet.webcam_tracker import WebcamTracker
 from Imervue.puppet.workspace_import import PuppetImportMixin
@@ -131,7 +132,10 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
         # Tabify so the user gets Parameters/Expressions/Bones as
         # three tabs in the same right pane instead of a cramped split.
         # Parameters is the most-frequent one so it stays on top.
+        self._pose_dock = PoseDock(self._canvas, self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._pose_dock)
         self.tabifyDockWidget(self._expression_dock, self._parameter_dock)
+        self.tabifyDockWidget(self._expression_dock, self._pose_dock)
         self.tabifyDockWidget(self._expression_dock, self._bone_tree_dock)
 
         self._motion_dock = MotionDock(self._canvas, self)

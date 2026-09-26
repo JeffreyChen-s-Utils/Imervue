@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `9b40b74` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `79e76d2` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 902 | 151,318 |
+| `tests/` | 902 | 151,333 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,532 |
-| `Imervue/puppet/` | 57 | 15,410 |
+| `Imervue/puppet/` | 57 | 15,417 |
 | `Imervue/image/` | 128 | 15,414 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
-| `Imervue/multi_language/` | 8 | 14,357 |
+| `Imervue/multi_language/` | 8 | 14,367 |
 | `Imervue/desktop_pet/` | 34 | 8,362 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,464 |
-| **總計** | **1,753** | **335,221** |
+| **總計** | **1,753** | **335,253** |
 
-其中 `Imervue/` 套件本身 787 檔 / 169,439 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,456 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -796,7 +796,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-57 個檔、15,410 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+57 個檔、15,417 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -823,7 +823,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `deformers.py` | 262 | 純 NumPy deformer 實作 |
 | `physics.py` | 138 | Verlet 物理引擎（純浮點數積分，由 `PuppetCanvas` 的物理時鐘推進） |
 | `render_prep.py` | 103 | `PuppetDocument` → GL-ready draw list |
-| `canvas.py` | 920 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動，以及物理鏈自己的時鐘（顯示中且有鏈時約 60 Hz 推進）；實際繪製來自 `canvas_render.py` |
+| `canvas.py` | 923 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動，以及物理鏈自己的時鐘（顯示中且有鏈時約 60 Hz 推進）；實際繪製來自 `canvas_render.py` |
 | `canvas_render.py` | 537 | `PuppetCanvasRenderMixin`：棋盤背景、桌寵陰影、drawable 繪製與 stencil 裁切、選取框與錨點、頂點緩衝與貼圖（預乘 alpha 的 `_premultiply_alpha`）快取 |
 | `clip_masks.py` | 56 | `Drawable.clip_mask` 參照解析 |
 | `ik.py` | 89 | 兩節骨骼解析式 IK |
@@ -839,7 +839,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `motion_timeline.py`(355) 曲線圖編輯 · `motion_compress.py`(113) 移除冗餘關鍵幀 ·
 `motion_picker.py`(53) 群組隨機挑選 · `synth_motions.py`(286) 為轉檔 rig 合成閒置動作 ·
 `idle_driver.py`(143) · `idle_motion_cycler.py`(151) · `easing.py`(203) 緩動預設 ·
-`motion_dock.py`(193) · `expression_dock.py`(121) · `parameter_dock.py`(197) · `bone_tree_dock.py`(196)
+`motion_dock.py`(193) · `expression_dock.py`(121) · `pose_dock.py`(118) 姿勢群組挑成員（跟著 canvas 的 `pose_changed`）· `parameter_dock.py`(197) · `bone_tree_dock.py`(196)
 
 #### 即時輸入驅動
 
@@ -854,7 +854,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `spritesheet.py`(67) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
 `vts_api.py`(385) VTube Studio Public API server（最小子集）
 
-`workspace.py`(852) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(294，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(361，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
+`workspace.py`(856) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(294，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(361，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
 
 ### 6.16 `Imervue/desktop_pet/`
 
@@ -979,7 +979,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-902 個檔、151,318 行。`pyproject.toml` 定義三個互斥層級 marker：
+902 個檔、151,333 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -475,7 +475,7 @@ JSON-based, humanly diffable, no proprietary binary.
 - **Parameter rig** — each parameter holds a key list mapping a slider value to a partial deformer-form snapshot; runtime samples and per-field-lerps
 - **Motion playback** — bottom dock with motion list + Play / Pause / Stop / Loop / scrub; curve sampler honours `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` segments (Newton-iterated time → param solve); per-motion fade-in / fade-out
 - **Expressions** — stack of `additive` / `multiply` / `overwrite` parameter overlays
-- **Pose groups** — mutually-exclusive drawable visibility (weapon swaps, mouth-shape variants)
+- **Pose groups** — mutually-exclusive drawable visibility (weapon swaps, mouth-shape variants); the **Pose** dock picks which member each group shows
 - **Physics** — Verlet pendulum chains for hair / cloth / ribbons; input param moves chain anchor, gravity + damping + per-particle springs pull back to rest
 - **Vertex morphs** — Cubism-style linear blend between rest and ±extreme deltas; vectorised numpy per-frame at 60 FPS
 - **Opacity keys** — parameter-driven alpha curves; lets alternate-pose meshes fade in / out as a gesture parameter fires

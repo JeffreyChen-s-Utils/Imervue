@@ -2535,6 +2535,8 @@ japanese_word_dict = {
     "puppet_cubism_failed": "Cubism の取り込みに失敗しました：{error}",
     "puppet_expressions_dock": "表情",
     "puppet_expressions_empty": "表情がありません — 表情を定義したパペットを読み込んでください。",
+    "puppet_pose_dock": "ポーズ",
+    "puppet_pose_empty": "ポーズグループがありません — ポーズグループを定義したパペットを読み込んでください。",
     "puppet_import_psd_title": "PSD 取り込み",
     "puppet_menu_edit": "編集",
     "puppet_menu_file": "ファイル",

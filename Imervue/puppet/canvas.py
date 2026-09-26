@@ -150,13 +150,15 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
     The workspace wires this to ``BoneTreeDock.clear_selection`` so
     the tree row un-highlights alongside the canvas marker."""
     hit_area_triggered = Signal(str)
-    # Image-space pointer position as it moves over the canvas (not while
-    # panning or dragging a mesh vertex); InputEngine turns it into the
-    # Drag-track head look-at.
-    cursor_moved = Signal(float, float)
     """Emitted with the hit-area id when the user left-clicks inside
     one. Only fires when mesh-edit mode is off — when it's on, the
     left-click is consumed by the vertex drag instead."""
+    cursor_moved = Signal(float, float)
+    """Image-space pointer position as it moves over the canvas (not while
+    panning or dragging a mesh vertex); InputEngine turns it into the
+    Drag-track head look-at."""
+    pose_changed = Signal(str, str)
+    """``(group_id, drawable_id)`` after :meth:`set_pose_active` shows a member."""
 
     def __init__(self, parent=None, *, pet_mode: bool = False):
         # Request a stencil buffer so clip_mask drawing can use it.
@@ -642,6 +644,7 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._active_pose[group_id] = drawable_id
         self._recompute_deformed_vertices()
         self.update()
+        self.pose_changed.emit(group_id, drawable_id)
         return True
 
     def active_pose(self) -> dict[str, str]:

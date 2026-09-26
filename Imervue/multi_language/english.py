@@ -2557,6 +2557,8 @@ english_word_dict = {
     "puppet_cubism_failed": "Cubism import failed: {error}",
     "puppet_expressions_dock": "Expressions",
     "puppet_expressions_empty": "No expressions — load a puppet that defines them.",
+    "puppet_pose_dock": "Pose",
+    "puppet_pose_empty": "No pose groups — load a puppet that defines them.",
     "puppet_import_psd_title": "Import PSD",
     "puppet_menu_edit": "Edit",
     "puppet_menu_file": "File",

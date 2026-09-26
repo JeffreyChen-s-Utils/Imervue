@@ -814,6 +814,8 @@ um formato de arquivo ``.puppet`` totalmente aberto.
    |               Dock Motions                        |
    +---------------------------------------------------+
 
+Os docks da direita compartilham uma área com abas: **Parameters** (um controle deslizante por parâmetro), **Expressions** (liga ou desliga cada expressão), **Pose** (escolhe qual membro de cada pose group aparece — um grupo mostra o primeiro membro até que outro seja escolhido) e **Bones** (a hierarquia de deformers).
+
 Fluxo de Trabalho de Ponta a Ponta
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

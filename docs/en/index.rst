@@ -806,6 +806,8 @@ open ``.puppet`` file format.
    |               Motions dock                        |
    +---------------------------------------------------+
 
+The right-hand docks share one tabbed area: **Parameters** (a slider per parameter), **Expressions** (turn each expression on or off), **Pose** (pick which member of each pose group is shown — a group shows its first member until another is picked) and **Bones** (the deformer hierarchy).
+
 End-to-end workflow
 ^^^^^^^^^^^^^^^^^^^
 

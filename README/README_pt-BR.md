@@ -471,7 +471,7 @@ Baseado em JSON, diff-friendly por humanos, sem binário proprietário.
 - **Rig de parâmetros** — cada parâmetro mantém uma lista de chaves mapeando um valor de slider para um snapshot parcial de forma de deformer; o runtime amostra e faz lerp campo a campo
 - **Reprodução de motion** — dock inferior com lista de motions + Play / Pause / Stop / Loop / scrub; o amostrador de curvas honra segmentos `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` (resolução de tempo → param por iteração de Newton); fade-in / fade-out por motion
 - **Expressões** — pilha de sobreposições de parâmetros `additive` / `multiply` / `overwrite`
-- **Pose groups** — visibilidade mutuamente exclusiva de drawables (trocas de arma, variantes de formato de boca)
+- **Pose groups** — visibilidade mutuamente exclusiva de drawables (trocas de arma, variantes de formato de boca); o dock **Pose** escolhe qual membro cada grupo mostra
 - **Física** — cadeias de pêndulo Verlet para cabelo / pano / fitas; param de entrada move a âncora da cadeia, gravidade + amortecimento + molas por partícula puxam de volta ao repouso
 - **Vertex morphs** — blend linear estilo Cubism entre rest e ±deltas extremos; numpy vetorizado por frame a 60 FPS
 - **Opacity keys** — curvas de alpha dirigidas por parâmetro; permite que malhas de pose alternativa façam fade-in / fade-out conforme um parâmetro de gesto dispara

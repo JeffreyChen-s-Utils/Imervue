@@ -808,6 +808,8 @@ physique, expressions, groupes de poses, lip-sync et suivi par webcam,
    |               Dock Mouvements                     |
    +---------------------------------------------------+
 
+Les docks de droite partagent une zone à onglets : **Parameters** (un curseur par paramètre), **Expressions** (activer ou désactiver chaque expression), **Pose** (choisir quel membre de chaque pose group est affiché ; un groupe montre son premier membre tant qu'aucun autre n'est choisi) et **Bones** (la hiérarchie des deformers).
+
 Flux de travail de bout en bout
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

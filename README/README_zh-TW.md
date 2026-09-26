@@ -465,7 +465,7 @@ JSON 為主，人類可 diff，沒有專有二進位。
 - **參數綁定** — 每個參數保有 key 清單，將滑桿值對應到部分 deformer-form 快照；執行時採樣並逐欄位線性插值
 - **動作播放** — 底部擺放欄含動作清單 + 播放 / 暫停 / 停止 / 循環 / 拖曳；曲線取樣器支援 `linear`、`stepped`、`inverse-stepped`、`cubic-bezier` 段（牛頓迭代 time → param）；每動作淡入 / 淡出
 - **表情** — `additive` / `multiply` / `overwrite` 參數疊加堆疊
-- **姿勢群組** — 互斥 drawable 可見性（武器切換、嘴形變體）
+- **姿勢群組** — 互斥 drawable 可見性（武器切換、嘴形變體）；**Pose** 擺放欄選擇每個群組顯示的成員
 - **物理** — Verlet 鐘擺鏈用於頭髮 / 衣物 / 緞帶；輸入參數移動鏈錨點，重力 + 阻尼 + 每粒子彈簧回復靜止
 - **頂點 morph** — Cubism 式線性混合於 rest 與 ±extreme deltas；每幀向量化 numpy，60 FPS
 - **不透明度 keys** — 參數驅動的 alpha 曲線；讓替代姿勢 mesh 隨手勢參數淡入 / 淡出

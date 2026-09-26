@@ -471,7 +471,7 @@ Basé sur JSON, lisible et diffable par un humain, sans binaire propriétaire.
 - **Rig de paramètres** — chaque paramètre conserve une liste de clés mappant une valeur de curseur à un instantané partiel de forme de déformeur ; l'exécution échantillonne et interpole linéairement par champ
 - **Lecture de mouvements** — dock inférieur avec liste de mouvements + Play / Pause / Stop / Loop / scrub ; l'échantillonneur de courbes honore les segments `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` (résolution time → param par itération de Newton) ; fondu d'entrée / sortie par mouvement
 - **Expressions** — pile de superpositions de paramètres `additive` / `multiply` / `overwrite`
-- **Pose groups** — visibilité de drawables mutuellement exclusive (changement d'arme, variantes de forme de bouche)
+- **Pose groups** — visibilité de drawables mutuellement exclusive (changement d'arme, variantes de forme de bouche) ; le dock **Pose** choisit le membre affiché par chaque groupe
 - **Physique** — chaînes pendulaires de Verlet pour cheveux / vêtements / rubans ; le paramètre d'entrée déplace l'ancre de la chaîne, la gravité + l'amortissement + les ressorts par particule ramènent au repos
 - **Vertex morphs** — mélange linéaire style Cubism entre rest et deltas ±extreme ; numpy vectorisé par image à 60 FPS
 - **Opacity keys** — courbes alpha pilotées par paramètres ; permettent à des maillages de pose alternatifs d'apparaître/disparaître en fondu lorsqu'un paramètre de geste se déclenche

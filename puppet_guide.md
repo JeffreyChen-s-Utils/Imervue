@@ -453,7 +453,8 @@ ids the input drivers expect.
 ### Pose groups
 
 Mutually-exclusive drawable visibility. Only one member of a
-group is shown at a time; selecting another hides the rest.
+group is shown at a time: pick it in the **Pose** dock, which
+lists each group's members, and the others are hidden.
 Used for weapon swaps, mouth-shape variants, costume changes.
 The group's first member is the one shown by default; the
 members' own `visible` flags don't apply.

@@ -471,7 +471,7 @@ Basado en JSON, comparable a mano, sin binarios propietarios.
 - **Rig de parámetros** — cada parámetro mantiene una lista de claves mapeando un valor de control a una instantánea parcial de forma de deformer; el runtime muestrea e interpola linealmente campo a campo
 - **Reproducción de motion** — dock inferior con lista de motion + Play / Pause / Stop / Loop / scrub; el muestreador de curvas respeta segmentos `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` (resolución time → param iterada con Newton); fundido de entrada / salida por motion
 - **Expresiones** — pila de superposiciones de parámetros `additive` / `multiply` / `overwrite`
-- **Grupos de pose** — visibilidad de drawable mutuamente excluyente (cambios de arma, variantes de forma de boca)
+- **Grupos de pose** — visibilidad de drawable mutuamente excluyente (cambios de arma, variantes de forma de boca); el panel **Pose** elige qué miembro muestra cada grupo
 - **Física** — cadenas de péndulo Verlet para pelo / ropa / lazos; el parámetro de entrada mueve el ancla de la cadena, gravedad + amortiguación + resortes por partícula la devuelven al reposo
 - **Vertex morphs** — mezcla lineal estilo Cubism entre rest y deltas ±extremos; numpy vectorizado por fotograma a 60 FPS
 - **Claves de opacidad** — curvas alfa controladas por parámetro; permite que mallas de pose alternativa hagan fundido al activarse un parámetro de gesto

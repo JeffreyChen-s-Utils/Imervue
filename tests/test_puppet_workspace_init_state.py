@@ -46,6 +46,7 @@ _EXPECTED = {'_add_param_action': ('QAction',),
  '_ndi_toggle': ('QAction',),
  '_open_action': ('QAction',),
  '_parameter_dock': ('ParameterDock',),
+ '_pose_dock': ('PoseDock',),
  '_recent_menu': ('QMenu',),
  '_record_action': ('QAction',),
  '_recorder': ('RecordingSession',),
@@ -97,12 +98,12 @@ def test_dock_layout(workspace):
     docks = {type(d).__name__: d for d in workspace.findChildren(QDockWidget)}
     right = Qt.DockWidgetArea.RightDockWidgetArea
     assert {n: workspace.dockWidgetArea(d) for n, d in docks.items()} == {
-        "ParameterDock": right, "ExpressionDock": right, "BoneTreeDock": right,
-        "MotionDock": Qt.DockWidgetArea.BottomDockWidgetArea,
+        "ParameterDock": right, "ExpressionDock": right, "PoseDock": right,
+        "BoneTreeDock": right, "MotionDock": Qt.DockWidgetArea.BottomDockWidgetArea,
     }
     tabbed = {type(t).__name__ for t in workspace.tabifiedDockWidgets(docks["ExpressionDock"])}
-    assert tabbed == {"ParameterDock", "BoneTreeDock"}
+    assert tabbed == {"ParameterDock", "PoseDock", "BoneTreeDock"}
     assert workspace.tabifiedDockWidgets(docks["MotionDock"]) == []
-    assert [docks[n].windowTitle() for n in ("ParameterDock", "ExpressionDock", "BoneTreeDock",
-                                             "MotionDock")] == [
-        "Parameters", "Expressions", "Bones", "Motions"]
+    assert [docks[n].windowTitle() for n in ("ParameterDock", "ExpressionDock", "PoseDock",
+                                             "BoneTreeDock", "MotionDock")] == [
+        "Parameters", "Expressions", "Pose", "Bones", "Motions"]

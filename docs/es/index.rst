@@ -817,6 +817,8 @@ físicas, expresiones, grupos de poses, lip-sync y seguimiento por webcam,
    |             Dock de movimientos                   |
    +---------------------------------------------------+
 
+Los paneles de la derecha comparten un área con pestañas: **Parameters** (un control deslizante por parámetro), **Expressions** (activar o desactivar cada expresión), **Pose** (elegir qué miembro de cada grupo de pose se muestra; un grupo muestra su primer miembro hasta que se elige otro) y **Bones** (la jerarquía de deformadores).
+
 Flujo de trabajo de principio a fin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

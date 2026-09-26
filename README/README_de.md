@@ -471,7 +471,7 @@ JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat.
 - **Parameter-Rig** — jeder Parameter hält eine Key-Liste, die einen Slider-Wert auf einen partiellen Deformer-Form-Snapshot abbildet; Runtime sampelt und Per-Field-Lerp
 - **Motion-Playback** — Bottom-Dock mit Motion-Liste + Play / Pause / Stop / Loop / Scrub; der Curve-Sampler unterstützt `linear`-, `stepped`-, `inverse-stepped`-, `cubic-bezier`-Segmente (Newton-iteriertes Time → Param Solve); Per-Motion Fade-In / Fade-Out
 - **Expressions** — Stack von `additive`- / `multiply`- / `overwrite`-Parameter-Overlays
-- **Pose-Gruppen** — sich gegenseitig ausschließende Drawable-Sichtbarkeit (Waffenwechsel, Mouth-Shape-Varianten)
+- **Pose-Gruppen** — sich gegenseitig ausschließende Drawable-Sichtbarkeit (Waffenwechsel, Mouth-Shape-Varianten); das **Pose**-Dock wählt, welches Mitglied jede Gruppe zeigt
 - **Physik** — Verlet-Pendel-Ketten für Haare / Stoff / Bänder; Input-Parameter bewegt Ketten-Anker, Schwerkraft + Dämpfung + Per-Partikel-Federn ziehen zur Ruhelage
 - **Vertex-Morphs** — Cubism-style lineare Mischung zwischen Rest und ±Extrem-Deltas; vektorisiertes numpy pro Frame bei 60 FPS
 - **Opacity-Keys** — parametergetriebene Alpha-Kurven; lassen Alternate-Pose-Meshes ein- / ausblenden, wenn ein Gesture-Parameter feuert
