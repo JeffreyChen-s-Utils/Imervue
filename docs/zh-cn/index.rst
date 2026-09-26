@@ -1077,8 +1077,8 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
   ``document.motions`` 列表生成。选中一项会播放该动作；不会
   说出 ``motion_lines`` 的台词（那些只回应命中区域的点击）。
 * **Apply expression**\ （应用表情）子菜单 — 从角色的
-  ``document.expressions`` 生成。选中会加上该表情的参数
-  overlay；再次应用不会有任何变化。
+  ``document.expressions`` 生成。表情开启期间对应条目处于勾选状态；
+  选中会加上该表情的参数 overlay，再次选中则将其移除。
 * 五个顶层可勾选开关：**Lock position**\ （锁定位置）、
   **Click-through**\ （穿透点击）、**Always on bottom**
   （永远置底）、**Hide on fullscreen**\ （全屏时隐藏）、

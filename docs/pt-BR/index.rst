@@ -1286,9 +1286,9 @@ Abre um menu de contexto com a seguinte estrutura:
   ``motion_lines`` (essas respondem apenas a um clique em área de
   acerto).
 * Submenu **Apply expression** — populado a partir de
-  ``document.expressions`` do rig. Selecionar uma adiciona a
-  sobreposição de parâmetros da expressão; aplicá-la de novo não faz
-  nada.
+  ``document.expressions`` do rig. Cada entrada fica marcada enquanto
+  sua expressão está ativa; selecionar uma adiciona a sobreposição de
+  parâmetros da expressão e selecioná-la de novo a remove.
 * Cinco toggles marcáveis de nível superior: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — acesso rápido aos mesmos toggles na aba do

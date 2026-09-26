@@ -1109,8 +1109,8 @@ rig 불러오기
   채워짐. 항목을 선택하면 해당 모션이 재생되며, ``motion_lines`` 대사는
   말하지 않음 (그 대사는 히트 영역 클릭에만 응답).
 * **Apply expression** 서브메뉴 — rig 의 ``document.expressions`` 로
-  채워짐. 선택하면 표정의 파라미터 오버레이가 추가되며, 다시 적용해도
-  아무 변화가 없음.
+  채워짐. 표정이 켜져 있는 동안 해당 항목에 체크 표시가 되며, 선택하면
+  표정의 파라미터 오버레이가 추가되고 다시 선택하면 해제됨.
 * 최상위 체크 가능 토글 5개: **Lock position**, **Click-through**,
   **Always on bottom**, **Hide on fullscreen**, **Speech bubble** —
   워크스페이스 탭의 동일한 토글에 대한 빠른 접근.

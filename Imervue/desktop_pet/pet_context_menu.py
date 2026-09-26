@@ -89,9 +89,10 @@ def _build_motions_submenu(   # pragma: no cover - Qt UI
         )
 
 
-def _build_expressions_submenu(   # pragma: no cover - Qt UI
+def _build_expressions_submenu(
     window: PetWindow, menu: QMenu, tr: Callable[[str, str], str],
 ) -> None:
+    """One checkable entry per expression, checked while it is on; a click toggles it."""
     expressions_menu = menu.addMenu(
         tr("desktop_pet_menu_apply_expression", "Apply expression"),
     )
@@ -100,8 +101,11 @@ def _build_expressions_submenu(   # pragma: no cover - Qt UI
         expressions_menu.setEnabled(False)
         return
     unnamed = tr(UNNAMED_KEY, UNNAMED_DEFAULT)
+    active = set(window.canvas().active_expressions())
     for expression in document.expressions:
         action = expressions_menu.addAction(expression.name or unnamed)
+        action.setCheckable(True)
+        action.setChecked(expression.name in active)
         action.triggered.connect(
             lambda _checked=False, e=expression: window.apply_expression(e.name),
         )

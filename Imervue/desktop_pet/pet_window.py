@@ -610,7 +610,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         self._play_motion(motion)
 
     def apply_expression(self, name: str) -> None:
-        """Public alias used by the context-menu expressions submenu."""
+        """Toggle ``name`` on or off (the context-menu expressions submenu)."""
         self._apply_expression(name)
 
     # ---- file drag-drop -------------------------------------------
@@ -692,11 +692,15 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
                 return
 
     def _apply_expression(self, name: str) -> None:
-        """Add an expression on the canvas. The canvas's expression
-        stack dedupes on name, so re-applying the same expression is a
-        no-op rather than a double-stack; nothing here removes one."""
+        """Toggle an expression: add it, or take it off when it is already on.
+
+        The context menu shows each expression checked while it is active;
+        before, an applied expression stayed until the rig was reloaded.
+        """
         canvas = self._canvas
-        if hasattr(canvas, "add_expression"):
+        if name in canvas.active_expressions():
+            canvas.remove_expression(name)
+        else:
             canvas.add_expression(name)
 
     # =====================================================================

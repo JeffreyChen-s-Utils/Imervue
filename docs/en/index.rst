@@ -1278,8 +1278,9 @@ Opens a context menu with the following structure:
   motion; it speaks no ``motion_lines`` line (those answer a
   hit-area click only).
 * **Apply expression** submenu — populated from the rig's
-  ``document.expressions``. Selecting one adds the expression's
-  parameter overlay; applying it again does nothing.
+  ``document.expressions``. Each entry is checked while its expression is
+  on; selecting one adds the expression's parameter overlay, selecting it
+  again takes it off.
 * Five top-level checkable toggles: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — quick access to the same toggles in the

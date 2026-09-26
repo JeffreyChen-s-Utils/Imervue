@@ -1304,9 +1304,10 @@ sofern das Rig diese Gruppen hat.
   keine ``motion_lines``-Zeile gesprochen (diese antworten nur
   auf einen Klick auf einen Trefferbereich).
 * **Apply expression**-Untermenü — gefüllt aus
-  ``document.expressions`` des Rigs. Die Auswahl fügt das
-  Parameter-Overlay des Ausdrucks hinzu; erneutes Anwenden
-  bewirkt nichts.
+  ``document.expressions`` des Rigs. Jeder Eintrag ist abgehakt,
+  solange sein Ausdruck aktiv ist; die Auswahl fügt das
+  Parameter-Overlay des Ausdrucks hinzu, eine erneute Auswahl
+  entfernt es wieder.
 * Fünf aktivierbare Top-Level-Umschalter: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — schneller Zugriff auf dieselben Umschalter

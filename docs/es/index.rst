@@ -1293,9 +1293,10 @@ Abre un menú contextual con la siguiente estructura:
   ``motion_lines`` (esas responden solo a un clic en una zona de
   impacto).
 * Submenú **Apply expression** — poblado a partir de
-  ``document.expressions`` del rig. Seleccionar una añade la
-  superposición de parámetros de la expresión; aplicarla de nuevo
-  no hace nada.
+  ``document.expressions`` del rig. Cada entrada aparece marcada
+  mientras su expresión está activa; seleccionar una añade la
+  superposición de parámetros de la expresión y seleccionarla de
+  nuevo la quita.
 * Cinco conmutadores marcables de nivel superior: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — acceso rápido a los mismos conmutadores de la

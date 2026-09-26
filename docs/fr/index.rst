@@ -1294,9 +1294,10 @@ Ouvre un menu contextuel avec la structure suivante :
   ce mouvement ; il ne prononce aucune réplique ``motion_lines``
   (celles-ci ne répondent qu'à un clic sur une zone cliquable).
 * Sous-menu **Apply expression** — peuplé depuis
-  ``document.expressions`` du rig. En sélectionner une ajoute la
-  superposition de paramètres de l'expression ; l'appliquer à
-  nouveau ne fait rien.
+  ``document.expressions`` du rig. Chaque entrée est cochée tant
+  que son expression est active ; en sélectionner une ajoute la
+  superposition de paramètres de l'expression, la sélectionner à
+  nouveau la retire.
 * Cinq bascules à cocher de haut niveau : **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — accès rapide aux mêmes bascules de l'onglet
