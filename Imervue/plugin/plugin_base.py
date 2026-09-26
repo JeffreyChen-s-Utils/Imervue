@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QMenu, QTabWidget
     from Imervue.Imervue_main_window import ImervueMainWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -117,7 +118,11 @@ class ImervuePlugin:
     # ===========================
 
     def on_image_loaded(self, image_path: str, viewer: GPUImageView) -> None:
-        """Called after a single image is loaded in deep zoom mode.
+        """Called once an image is on screen at full size in deep zoom mode.
+
+        Runs however the image was opened (Open File, a grid tile, next /
+        previous, the filmstrip) and again when it is reloaded after an edit;
+        not for the low-resolution preview shown while a large image decodes.
 
         Args:
             image_path: Absolute path to the loaded image.
@@ -149,6 +154,10 @@ class ImervuePlugin:
     def on_image_deleted(self, deleted_paths: list[str], viewer: GPUImageView) -> None:
         """Called after image(s) are soft-deleted (added to undo stack).
 
+        Covers deletes from the viewer and from the folder tree; a file the
+        tree sends straight to the Recycle Bin (not in the image list) does
+        not count.
+
         Args:
             deleted_paths: List of deleted image paths.
             viewer: The GPUImageView instance.
@@ -159,7 +168,9 @@ class ImervuePlugin:
     # Input Hooks
     # ===========================
 
-    def on_key_press(self, key: int, modifiers: int, viewer: GPUImageView) -> bool:
+    def on_key_press(
+        self, key: int, modifiers: Qt.KeyboardModifier, viewer: GPUImageView,
+    ) -> bool:
         """Called when a key is pressed in the viewer.
 
         Return True to consume the event (prevent default handling).

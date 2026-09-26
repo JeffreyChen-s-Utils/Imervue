@@ -155,7 +155,7 @@ def on_build_main_tabs(self, tabs):
 
 #### `on_image_loaded(image_path: str, viewer: GPUImageView)`
 
-Called after a single image is loaded in deep zoom mode.
+Called once an image is on screen at full size in deep zoom mode, however it was opened (Open File, a grid tile, next / previous, the filmstrip), and again when it is reloaded after an edit. The low-resolution preview shown while a large image decodes does not count.
 
 ```python
 def on_image_loaded(self, image_path, viewer):
@@ -182,7 +182,7 @@ def on_image_switched(self, image_path, viewer):
 
 #### `on_image_deleted(deleted_paths: list[str], viewer: GPUImageView)`
 
-Called after image(s) are soft-deleted (added to the undo stack).
+Called after image(s) are soft-deleted (added to the undo stack), from the viewer or from the folder tree. A file the tree sends straight to the Recycle Bin because it is not in the image list does not count.
 
 ```python
 def on_image_deleted(self, deleted_paths, viewer):
@@ -191,7 +191,7 @@ def on_image_deleted(self, deleted_paths, viewer):
 
 ### Input Hooks
 
-#### `on_key_press(key: int, modifiers: int, viewer: GPUImageView) -> bool`
+#### `on_key_press(key: int, modifiers: Qt.KeyboardModifier, viewer: GPUImageView) -> bool`
 
 Called when a key is pressed in the viewer. Return `True` to consume the event and prevent default handling. Return `False` to let the default handler run.
 
@@ -204,6 +204,8 @@ def on_key_press(self, key, modifiers, viewer):
         return True  # Event consumed
     return False  # Let default handling continue
 ```
+
+`key` is a Qt key code (`Qt.Key`); `modifiers` is a `Qt.KeyboardModifier` flag, so test a modifier with `modifiers & Qt.KeyboardModifier.ControlModifier`.
 
 > **Important:** Be careful about consuming common keys. Only return `True` for keys your plugin specifically handles.
 

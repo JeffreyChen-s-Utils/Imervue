@@ -32,6 +32,7 @@ def _display_fake(*, with_issue_hook=True):
         _prefetch_neighbors=lambda: calls.append(("prefetch",)),
         _update_status_info=lambda: calls.append(("status",)),
         _notify_deep_zoom_displayed=lambda: calls.append(("notify",)),
+        _notify_plugins_image_loaded=lambda p: calls.append(("plugins", p)),
         _browse=SimpleNamespace(begin_image_fade_in=lambda: calls.append(("fade",))),
         update=lambda: calls.append(("update",)),
     )
@@ -47,10 +48,11 @@ def test_finalize_clears_state_and_runs_every_display_step():
     assert fake._deep_zoom_retry_counts == {"other.png": 1}  # others untouched
     assert [c[0] for c in calls] == [
         "clear_issue", "enforce", "apply_view", "anim",
-        "prefetch", "status", "notify", "fade", "update",
+        "prefetch", "status", "notify", "plugins", "fade", "update",
     ]
     # Animation is started for THIS path (the promoted-prefetch drift bug).
     assert ("anim", "img.png") in calls
+    assert ("plugins", "img.png") in calls
 
 
 def test_finalize_without_issue_hook_still_runs_the_rest():
@@ -58,8 +60,22 @@ def test_finalize_without_issue_hook_still_runs_the_rest():
     GPUImageView._finalize_deep_zoom_display(fake, "img.png")
     assert [c[0] for c in calls] == [
         "enforce", "apply_view", "anim", "prefetch",
-        "status", "notify", "fade", "update",
+        "status", "notify", "plugins", "fade", "update",
     ]
+
+
+def test_plugins_hear_about_an_image_once_it_is_shown():
+    """``on_image_loaded`` fired only from Open File, before the picture had loaded."""
+    seen = []
+    manager = SimpleNamespace(dispatch_image_loaded=lambda path, viewer: seen.append((path, viewer)))
+    fake = SimpleNamespace(main_window=SimpleNamespace(plugin_manager=manager))
+    GPUImageView._notify_plugins_image_loaded(fake, "img.png")
+    assert seen == [("img.png", fake)]
+
+
+def test_a_window_without_plugins_is_left_alone():
+    fake = SimpleNamespace(main_window=SimpleNamespace())
+    GPUImageView._notify_plugins_image_loaded(fake, "img.png")
 
 
 # ---------------------------------------------------------------------------

@@ -395,3 +395,20 @@ def test_a_hidden_picture_opened_on_purpose_joins_its_folders_list(tmp_path):
     assert [os.path.basename(p) for p in model.images] == [".b.png", "a.png", "c.png"]
     assert viewer.current_index == 0
     assert loaded == [str(tmp_path / ".b.png")]
+
+
+def test_opening_a_file_leaves_on_image_loaded_to_the_display(tmp_path):
+    """The hook fired here, before the picture had loaded; the display runs it now."""
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.images import image_loader
+    (tmp_path / "a.png").write_bytes(b"x")
+    dispatched = []
+    model = SimpleNamespace(images=[])
+    model.set_images = lambda images: setattr(model, "images", list(images))
+    manager = SimpleNamespace(dispatch_image_loaded=lambda *args: dispatched.append(args))
+    viewer = SimpleNamespace(model=model, current_index=-1, tile_grid_mode=True,
+                             load_deep_zoom_image=lambda _path: None,
+                             main_window=SimpleNamespace(plugin_manager=manager))
+    image_loader._open_file(viewer, tmp_path / "a.png")
+    assert dispatched == []

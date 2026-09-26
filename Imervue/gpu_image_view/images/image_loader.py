@@ -511,8 +511,6 @@ def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:
         reapply()
     add_recent_image(str(path_obj))
     user_setting_dict["user_last_folder"] = str(dir_path)
-    if hasattr(main_gui.main_window, "plugin_manager"):
-        main_gui.main_window.plugin_manager.dispatch_image_loaded(str(path_obj), main_gui)
 
 
 def _locate_current_index(images: list[str], target: str) -> int:

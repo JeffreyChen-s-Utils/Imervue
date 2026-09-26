@@ -537,3 +537,35 @@ def test_kept_files_still_get_the_warning(qapp, tmp_path, monkeypatch):
     assert all(Path(path).exists() for path in files)
     assert ("warning", "Couldn't delete 2 item(s)") in main.toast.calls
     tree.deleteLater()
+
+
+def _with_plugin_spy(main):
+    deleted = []
+    main.plugin_manager = SimpleNamespace(
+        dispatch_image_deleted=lambda paths, viewer: deleted.append((paths, viewer)))
+    return deleted
+
+
+def test_a_tree_delete_of_a_listed_image_reaches_the_plugins(qapp, tmp_path, monkeypatch):
+    """``on_image_deleted`` fired for viewer deletes only, never for the tree's."""
+    tree, main, files = _big_batch_tree(tmp_path, monkeypatch, 1, listed=1)
+    deleted = _with_plugin_spy(main)
+    tree._delete_paths(files)  # noqa: SLF001
+    assert deleted == [(files, main.viewer)]
+    tree.deleteLater()
+
+
+def test_a_tree_batch_delete_reaches_the_plugins_once(qapp, tmp_path, monkeypatch):
+    tree, main, files = _big_batch_tree(tmp_path, monkeypatch, 5, listed=3)
+    deleted = _with_plugin_spy(main)
+    tree._delete_paths(files)  # noqa: SLF001
+    assert deleted == [(files[:3], main.viewer)]   # loose files are not list images
+    tree.deleteLater()
+
+
+def test_a_tree_delete_of_a_loose_file_does_not_reach_the_plugins(qapp, tmp_path, monkeypatch):
+    tree, main, files = _big_batch_tree(tmp_path, monkeypatch, 1, listed=0)
+    deleted = _with_plugin_spy(main)
+    tree._delete_paths(files)  # noqa: SLF001
+    assert deleted == []
+    tree.deleteLater()

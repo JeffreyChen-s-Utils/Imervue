@@ -697,6 +697,7 @@ class _FileTreeView(QTreeView):
         for _idx, path in removed:
             viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, removed[0][0])
+        self._notify_plugins_deleted([path for _idx, path in removed], viewer)
 
     def _trash_in_background(self, request: _TrashRequest) -> None:
         """Queue *request* for the OS-trash worker and pump the queue."""
@@ -814,7 +815,14 @@ class _FileTreeView(QTreeView):
         self._release_tile_textures(viewer, [path])
         viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, idx)
+        self._notify_plugins_deleted([path], viewer)
         self._notify_deleted(path)
+
+    def _notify_plugins_deleted(self, paths: list[str], viewer) -> None:
+        """Run the plugins' ``on_image_deleted`` for list images this tree soft-deleted."""
+        manager = getattr(self._main_window, "plugin_manager", None)
+        if manager is not None:
+            manager.dispatch_image_deleted(paths, viewer)
 
     @staticmethod
     def _release_tile_textures(viewer, paths: list[str]) -> None:

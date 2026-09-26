@@ -162,6 +162,7 @@ class DeepZoomLoadingMixin:
         self._prefetch_neighbors()
         self._update_status_info()
         self._notify_deep_zoom_displayed()
+        self._notify_plugins_image_loaded(path)
         self._browse.begin_image_fade_in()
         self.update()
 
@@ -273,6 +274,12 @@ class DeepZoomLoadingMixin:
             # pylint: disable=not-callable  # guarded by callable() above
             callback(self.deep_zoom.levels[0])
         self._log_overlay_diagnostics()
+
+    def _notify_plugins_image_loaded(self, path: str) -> None:
+        """Run the plugins' ``on_image_loaded`` now that *path* is on screen at full size."""
+        manager = getattr(self.main_window, "plugin_manager", None)
+        if manager is not None:
+            manager.dispatch_image_loaded(path, self)
 
     def _log_overlay_diagnostics(self) -> None:
         """Record (at DEBUG) the inputs that decide filmstrip / minimap /
