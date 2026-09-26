@@ -102,3 +102,47 @@ def test_selection_and_deep_zoom_still_come_before_the_focus():
                    focused_tile_index=0, focus_ring_visible=True)
     assert resolve_cull_targets(selected) == ["c"]
     assert resolve_cull_targets(zoomed) == ["c"]
+
+
+
+def _label_view():
+    toasts = []
+    view = _view(main_window=SimpleNamespace(
+        toast=SimpleNamespace(info=toasts.append),
+        language_wrapper=SimpleNamespace(language_word_dict={})))
+    view.update = lambda: None
+    return view, toasts
+
+
+def test_a_colour_key_on_a_selection_that_all_has_it_clears_it():
+    """Rating keys cleared a selection that already had the rating; colour keys never did."""
+    from Imervue.gpu_image_view.cull_actions import apply_color_label
+    from Imervue.user_settings.color_labels import get_color_label, set_color_label
+    view, toasts = _label_view()
+    for path in ("a", "b"):
+        set_color_label(path, "red")
+    apply_color_label(view, "red", ["a", "b"])
+    assert (get_color_label("a"), get_color_label("b")) == (None, None)
+    assert toasts == ["Colour label cleared"]
+
+
+def test_a_colour_key_on_a_mixed_selection_gives_it_to_all():
+    from Imervue.gpu_image_view.cull_actions import apply_color_label
+    from Imervue.user_settings.color_labels import get_color_label, set_color_label
+    view, toasts = _label_view()
+    set_color_label("a", "red")
+    set_color_label("b", "green")
+    apply_color_label(view, "red", ["a", "b", "c"])
+    assert [get_color_label(p) for p in ("a", "b", "c")] == ["red", "red", "red"]
+    assert toasts == ["3 images → Red"]
+
+
+def test_a_colour_key_on_one_image_still_toggles():
+    from Imervue.gpu_image_view.cull_actions import apply_color_label
+    from Imervue.user_settings.color_labels import get_color_label
+    view, toasts = _label_view()
+    apply_color_label(view, "blue", ["a"])
+    assert get_color_label("a") == "blue"
+    apply_color_label(view, "blue", ["a"])
+    assert get_color_label("a") is None
+    assert toasts == ["Colour: Blue", "Colour label cleared"]

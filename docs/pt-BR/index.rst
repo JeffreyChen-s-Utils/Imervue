@@ -127,7 +127,7 @@ Modo Lista (Detalhes)
 ^^^^^^^^^^^^^^^^^^^^^
 
 Pressione ``Ctrl + L`` para alternar entre a grade de miniaturas e uma visualização em lista ordenável
-com estas colunas: Pré-visualização · Rótulo · Nome · Resolução · Tamanho · Tipo · Modificado.
+com estas colunas: Pré-visualização · Rótulo · Avaliação · Nome · Resolução · Tamanho · Tipo · Modificado.
 Clique duas vezes em uma linha (ou pressione ``Enter``) para entrar no Deep Zoom; pressione ``Esc``
 para retornar à lista. Miniaturas e metadados são carregados de forma lazy em uma thread de trabalho
 para que pastas muito grandes permaneçam responsivas.
@@ -258,14 +258,15 @@ azul = a retocar).
    * - Ação
      - Tecla
    * - Vermelho / Amarelo / Verde / Azul / Roxo
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (pressione a mesma tecla novamente para limpar)
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (pressione a mesma tecla novamente para
+       limpar; em uma seleção, só limpa quando todas as imagens selecionadas já têm essa cor)
    * - Aplicação em lote à seleção
      - Selecione várias miniaturas, depois pressione a tecla F correspondente
    * - Filtrar por cor
      - ``Filtrar`` > ``Por Rótulo de Cor`` > escolha uma cor / Qualquer rótulo / Sem rótulo
 
 A barra de status mostra um chip colorido para a imagem atual. As miniaturas exibem uma faixa colorida
-na borda esquerda. A **Visualização em Lista** tem colunas dedicadas de **Rótulo** e **Avaliação por Estrelas**
+na borda esquerda. A **Visualização em Lista** tem colunas dedicadas de **Rótulo** e **Avaliação**
 pelas quais você pode ordenar — clique em qualquer célula na coluna de estrelas para definir a avaliação
 sem sair da lista.
 
@@ -299,9 +300,11 @@ Categorize suas imagens com tags e álbuns.
    * - Abrir gerenciador
      - Pressione ``T`` ou ``Arquivo`` > ``Tags e Álbuns``
    * - Marcar uma imagem com tag
-     - Clique com o botão direito na imagem > ``Adicionar à Tag``
+     - No Deep Zoom, clique com o botão direito > ``Tags``; para miniaturas selecionadas, clique
+       com o botão direito > ``Operações em Lote`` > ``Adicionar à Tag``
    * - Adicionar ao álbum
-     - Clique com o botão direito na imagem > ``Adicionar ao Álbum``
+     - No Deep Zoom, clique com o botão direito > ``Álbuns``; para miniaturas selecionadas, clique
+       com o botão direito > ``Operações em Lote`` > ``Adicionar ao Álbum``
    * - Filtrar por tag/álbum único
      - ``Filtrar`` > ``Por Tag`` / ``Por Álbum``
    * - Filtro multi-tag (E / OU)
@@ -329,7 +332,7 @@ Classificação e Filtragem
    * - Crescente / Decrescente
      - ``Ordenar`` > ``Crescente`` / ``Decrescente``
    * - Filtrar por extensão
-     - ``Filtrar`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
+     - ``Filtrar`` > ``Por Extensão`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
    * - Filtrar por avaliação
      - ``Filtrar`` > ``Por Avaliação``
    * - Filtrar por rótulo de cor
@@ -1565,10 +1568,10 @@ Rotação e Inversão
      - Menu
    * - Rotacionar 90 ° horário
      - ``R``
-     - Botão direito > Modify > Rotate CW
+     - Botão direito > Modify > Rotate Clockwise
    * - Rotacionar 90 ° anti-horário
      - ``Shift + R``
-     - Botão direito > Modify > Rotate CCW
+     - Botão direito > Modify > Rotate Counter-clockwise
    * - Inverter horizontal
      - --
      - Botão direito > Modify > Flip Horizontal
@@ -1681,7 +1684,8 @@ Um TIFF de várias páginas — um documento digitalizado — não é reproduzid
 Comparação de Imagens
 ---------------------
 
-No modo de miniaturas, selecione 2 -- 4 imagens, depois clique com o botão direito > ``Comparar Imagens``.
+No modo de miniaturas, selecione 2 ou 4 imagens, depois clique com o botão direito > ``Comparar Imagens``
+(ou escolha-as na lista da caixa de diálogo).
 
 A caixa de diálogo tem quatro abas:
 
@@ -2249,7 +2253,7 @@ Culling (Pick / Reject)
 Flag de cull de três estados baseado em sinalização. Pressione ``P`` para escolher
 a imagem atual ou cada miniatura selecionada, ``Shift + X`` para rejeitar, ``U`` para
 desmarcar. ``Filtrar`` > ``Por Estado de Cull`` mostra apenas escolhidas, rejeitadas
-ou não marcadas. ``Extra Tools`` > ``Culling`` aplica o filtro via uma caixa de diálogo
+ou não marcadas. ``Extra Tools`` > ``Workflow`` > ``Culling`` aplica o filtro via uma caixa de diálogo
 e também expõe um botão **Excluir todas as rejeitadas** que remove permanentemente os
 arquivos marcados do disco. O botão **Escolher a mais nítida por grupo similar** da mesma
 caixa de diálogo agrupa as quase duplicatas da pasta por hash perceptual, pontua cada uma

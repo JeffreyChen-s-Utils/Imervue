@@ -129,7 +129,7 @@ Modo lista (detalle)
 ^^^^^^^^^^^^^^^^^^^^
 
 Pulse ``Ctrl + L`` para alternar entre la cuadrícula de miniaturas y una vista de lista
-ordenable con estas columnas: Vista previa · Etiqueta · Nombre · Resolución · Tamaño · Tipo
+ordenable con estas columnas: Vista previa · Etiqueta · Valoración · Nombre · Resolución · Tamaño · Tipo
 · Modificado. Haga doble clic en una fila (o pulse ``Enter``) para entrar en Deep Zoom; pulse
 ``Esc`` para volver a la lista. Las miniaturas y los metadatos se cargan de forma diferida en
 un hilo de trabajo, de modo que las carpetas muy grandes mantienen la capacidad de respuesta.
@@ -263,7 +263,8 @@ a descartar, verde = seleccionados, azul = pendientes de retoque).
    * - Acción
      - Tecla
    * - Rojo / Amarillo / Verde / Azul / Púrpura
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (pulse la misma tecla de nuevo para borrar)
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (pulse la misma tecla de nuevo para borrar; en
+       una selección solo borra cuando todas las imágenes seleccionadas ya tienen ese color)
    * - Aplicar a la selección en lote
      - Seleccione varias miniaturas y pulse la tecla F correspondiente
    * - Filtrar por color
@@ -271,7 +272,7 @@ a descartar, verde = seleccionados, azul = pendientes de retoque).
 
 La barra de estado muestra un chip de color para la imagen actual. Las miniaturas muestran
 una franja de color en el borde izquierdo. La **vista de lista** tiene columnas dedicadas
-**Label** y **Star Rating** que se pueden ordenar — haga clic en cualquier celda de la columna
+**Label** y **Rating** que se pueden ordenar — haga clic en cualquier celda de la columna
 de estrellas para establecer la valoración sin salir de la lista.
 
 Marcadores
@@ -304,9 +305,11 @@ Categorice sus imágenes con etiquetas y álbumes.
    * - Abrir el gestor
      - Pulse ``T`` o ``File`` > ``Tags & Albums``
    * - Etiquetar una imagen
-     - Clic derecho en la imagen > ``Add to Tag``
+     - En Deep Zoom, clic derecho > ``Tags``; para las miniaturas seleccionadas, clic derecho >
+       ``Batch Operations`` > ``Add to Tag``
    * - Añadir a un álbum
-     - Clic derecho en la imagen > ``Add to Album``
+     - En Deep Zoom, clic derecho > ``Albums``; para las miniaturas seleccionadas, clic derecho >
+       ``Batch Operations`` > ``Add to Album``
    * - Filtrar por una sola etiqueta / álbum
      - ``Filter`` > ``By Tag`` / ``By Album``
    * - Filtro multi-etiqueta (AND / OR)
@@ -334,7 +337,7 @@ Ordenación y filtrado
    * - Ascendente / Descendente
      - ``Sort`` > ``Ascending`` / ``Descending``
    * - Filtrar por extensión
-     - ``Filter`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
+     - ``Filter`` > ``By Extension`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
    * - Filtrar por valoración
      - ``Filter`` > ``By Rating``
    * - Filtrar por etiqueta de color
@@ -1582,10 +1585,10 @@ Rotación y volteo
      - Menú
    * - Rotar 90 ° en sentido horario
      - ``R``
-     - Clic derecho > Modify > Rotate CW
+     - Clic derecho > Modify > Rotate Clockwise
    * - Rotar 90 ° en sentido antihorario
      - ``Shift + R``
-     - Clic derecho > Modify > Rotate CCW
+     - Clic derecho > Modify > Rotate Counter-clockwise
    * - Voltear horizontalmente
      - --
      - Clic derecho > Modify > Flip Horizontal
@@ -1698,7 +1701,8 @@ Un TIFF de varias páginas — un documento escaneado — no se reproduce: muest
 Comparación de imágenes
 -----------------------
 
-En el modo miniaturas, seleccione 2 -- 4 imágenes, después clic derecho > ``Compare Images``.
+En el modo miniaturas, seleccione 2 o 4 imágenes, después clic derecho > ``Compare Images`` (o
+elíjalas en la lista del diálogo).
 
 El diálogo tiene cuatro pestañas:
 
@@ -2275,7 +2279,7 @@ Descarte (Pick / Reject)
 Marcador de descarte de tres estados basado en banderas. Pulse ``P`` para marcar la imagen
 actual o cada mosaico seleccionado, ``Shift + X`` para rechazar, ``U`` para quitar la marca.
 ``Filter`` > ``By Cull State`` muestra sólo picks, rejects o sin marcar. ``Extra Tools`` >
-``Culling`` aplica el filtro mediante un diálogo y también expone un botón **Delete all
+``Workflow`` > ``Culling`` aplica el filtro mediante un diálogo y también expone un botón **Delete all
 rejects** que elimina permanentemente del disco los archivos marcados.
 
 Bandeja de preparación

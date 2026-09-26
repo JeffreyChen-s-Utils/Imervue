@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-55 | 2026-09-26 | A colour key clears a selection that already has it, and the organising docs match the menus | #fix #culling #color-label #docs #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-54 | 2026-09-26 | The Puppet guide translations are held to the English structure too | #test #docs #i18n #puppet | [2026-09-b](2026-09-b.md) |
 | U-20260926-53 | 2026-09-26 | The previous session's log survives the relaunch after a crash | #fix #logging #docs #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-52 | 2026-09-26 | The Paint tab is built the first time it is used | #perf #startup #paint | [2026-09-b](2026-09-b.md) |
@@ -427,4 +428,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 85 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |

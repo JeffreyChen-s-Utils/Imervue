@@ -199,7 +199,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 ### Modes de navigation
 
 - **Grille** (par défaut) — grille de tuiles virtualisée avec aperçu au survol (délai de 500 ms)
-- **Liste (détail)** — bascule avec `Ctrl+L` ; colonnes : Aperçu · Étiquette · Nom · Résolution · Taille · Type · Modifié; `Delete` retire les lignes sélectionnées et `Ctrl+Z` les rétablit, et les touches de note (`0`–`5`), de tri (`P` / `Shift+X` / `U`) et de couleur (`F1`–`F5`) les marquent, comme dans la grille
+- **Liste (détail)** — bascule avec `Ctrl+L` ; colonnes : Aperçu · Étiquette · Note · Nom · Résolution · Taille · Type · Modifié; `Delete` retire les lignes sélectionnées et `Ctrl+Z` les rétablit, et les touches de note (`0`–`5`), de tri (`P` / `Shift+X` / `U`) et de couleur (`F1`–`F5`) les marquent, comme dans la grille
 - **Deep Zoom** — double-cliquez sur une tuile ; panoramique / zoom GPU fluide avec mini-carte
 - **Vue divisée** (`Shift+S`) — deux images côte à côte
 - **Lecture en double page** (`Shift+D`, `Ctrl+Shift+D` pour les mangas de droite à gauche) — lecteur en pages en regard

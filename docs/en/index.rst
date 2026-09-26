@@ -130,7 +130,7 @@ List (Detail) Mode
 ^^^^^^^^^^^^^^^^^^
 
 Press ``Ctrl + L`` to toggle between thumbnail grid and a sortable list view with these columns:
-Preview · Label · Name · Resolution · Size · Type · Modified. Double-click a row (or press ``Enter``) to enter
+Preview · Label · Rating · Name · Resolution · Size · Type · Modified. Double-click a row (or press ``Enter``) to enter
 Deep Zoom; press ``Esc`` to return to the list. Thumbnails and metadata are loaded lazily on a worker thread
 so very large folders stay responsive.
 
@@ -259,14 +259,15 @@ quick categorisation (e.g. red = reject candidates, green = selects, blue = to r
    * - Action
      - Key
    * - Red / Yellow / Green / Blue / Purple
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (press the same key again to clear)
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (press the same key again to clear; on a
+       selection it clears only when every selected picture already has that colour)
    * - Batch apply to selection
      - Select multiple thumbnails, then press the corresponding F key
    * - Filter by colour
      - ``Filter`` > ``By Color Label`` > pick a colour / Any label / No label
 
 The status bar shows a coloured chip for the current image. Thumbnails display a coloured strip on
-the left edge. The **List view** has dedicated **Label** and **Star Rating** columns that you can
+the left edge. The **List view** has dedicated **Label** and **Rating** columns that you can
 sort by — click any cell in the star column to set the rating without leaving the list.
 
 Bookmarks
@@ -299,9 +300,11 @@ Categorise your images with tags and albums.
    * - Open manager
      - Press ``T`` or ``File`` > ``Tags & Albums``
    * - Tag an image
-     - Right-click image > ``Add to Tag``
+     - In Deep Zoom, right-click > ``Tags``; for selected thumbnails, right-click >
+       ``Batch Operations`` > ``Add to Tag``
    * - Add to album
-     - Right-click image > ``Add to Album``
+     - In Deep Zoom, right-click > ``Albums``; for selected thumbnails, right-click >
+       ``Batch Operations`` > ``Add to Album``
    * - Filter by a single tag / album
      - ``Filter`` > ``By Tag`` / ``By Album``
    * - Multi-tag filter (AND / OR)
@@ -329,7 +332,7 @@ Sorting & Filtering
    * - Ascending / Descending
      - ``Sort`` > ``Ascending`` / ``Descending``
    * - Filter by extension
-     - ``Filter`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
+     - ``Filter`` > ``By Extension`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
    * - Filter by rating
      - ``Filter`` > ``By Rating``
    * - Filter by colour label
@@ -1555,10 +1558,10 @@ Rotation & Flipping
      - Menu
    * - Rotate 90 ° clockwise
      - ``R``
-     - Right-click > Modify > Rotate CW
+     - Right-click > Modify > Rotate Clockwise
    * - Rotate 90 ° counter-clockwise
      - ``Shift + R``
-     - Right-click > Modify > Rotate CCW
+     - Right-click > Modify > Rotate Counter-clockwise
    * - Flip horizontal
      - --
      - Right-click > Modify > Flip Horizontal
@@ -1670,7 +1673,8 @@ A multi-page TIFF — a scanned document — is not played: it shows one page at
 Image Comparison
 ----------------
 
-In thumbnail mode, select 2 -- 4 images, then right-click > ``Compare Images``.
+In thumbnail mode, select 2 or 4 images, then right-click > ``Compare Images`` (or pick them
+in the dialog's list).
 
 The dialog has four tabs:
 
@@ -2235,7 +2239,7 @@ Culling (Pick / Reject)
 flag-based three-state cull flag. Press ``P`` to pick the current image
 or every selected tile, ``Shift + X`` to reject, ``U`` to unflag. ``Filter`` >
 ``By Cull State`` shows only picks, rejects, or unflagged. ``Extra Tools`` >
-``Culling`` applies the filter via a dialog and also exposes a **Delete all
+``Workflow`` > ``Culling`` applies the filter via a dialog and also exposes a **Delete all
 rejects** button that permanently removes the flagged files from disk. The same
 dialog's **Pick sharpest per similar group** button groups the folder's
 near-duplicates by perceptual hash, scores each by sharpness, and marks the

@@ -47,17 +47,26 @@ def resolve_cull_targets(view: GPUImageView) -> list[str]:
 
 
 def apply_color_label(view: GPUImageView, color: str, targets: list[str] | None = None) -> None:
-    """Toggle ``color`` on *targets*, by default the currently-active target(s)."""
-    from Imervue.user_settings.color_labels import set_color_label, toggle_color_label
+    """Toggle ``color`` on *targets*, by default the currently-active target(s).
+
+    Like the rating keys: when every target already has ``color`` it is
+    cleared from all of them, otherwise all of them get it.
+    """
+    from Imervue.user_settings.color_labels import (
+        get_color_label, set_color_label, toggle_color_label,
+    )
 
     targets = resolve_cull_targets(view) if targets is None else targets
     if not targets:
         return
 
-    # Single-target behaves as toggle; multi-target applies uniformly.
     if len(targets) == 1:
         new_color = toggle_color_label(targets[0], color)
         _toast_color_change(view, new_color)
+    elif all(get_color_label(path) == color for path in targets):
+        for path in targets:
+            set_color_label(path, None)
+        _toast_color_change(view, None)
     else:
         for path in targets:
             set_color_label(path, color)

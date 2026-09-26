@@ -126,7 +126,7 @@ Listenmodus (Detailansicht)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Drücken Sie ``Ctrl + L``, um zwischen Miniaturansicht-Raster und einer sortierbaren Listenansicht
-mit folgenden Spalten umzuschalten: Vorschau · Etikett · Name · Auflösung · Größe · Typ · Geändert.
+mit folgenden Spalten umzuschalten: Vorschau · Etikett · Bewertung · Name · Auflösung · Größe · Typ · Geändert.
 Doppelklicken Sie eine Zeile (oder drücken Sie ``Enter``), um Deep Zoom zu öffnen; ``Esc`` führt
 zurück zur Liste. Miniaturansichten und Metadaten werden in einem Worker-Thread verzögert geladen,
 sodass auch sehr große Ordner reaktionsfähig bleiben.
@@ -257,7 +257,8 @@ Kategorisierung (z. B. rot = Ausschusskandidaten, grün = Auswahl, blau = zu ret
    * - Aktion
      - Taste
    * - Rot / Gelb / Grün / Blau / Lila
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (gleiche Taste erneut zum Löschen)
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (gleiche Taste erneut zum Löschen; bei einer
+       Auswahl wird nur gelöscht, wenn jedes ausgewählte Bild diese Farbe schon hat)
    * - Stapelanwendung auf Auswahl
      - Mehrere Miniaturansichten auswählen, dann entsprechende F-Taste drücken
    * - Nach Farbe filtern
@@ -265,7 +266,7 @@ Kategorisierung (z. B. rot = Ausschusskandidaten, grün = Auswahl, blau = zu ret
 
 Die Statusleiste zeigt einen farbigen Chip für das aktuelle Bild. Miniaturansichten zeigen
 einen farbigen Streifen am linken Rand. Die **Listenansicht** hat eigene Spalten **Etikett**
-und **Sternebewertung**, nach denen sortiert werden kann — Klick in eine Zelle der Sternespalte
+und **Bewertung**, nach denen sortiert werden kann — Klick in eine Zelle der Sternespalte
 setzt die Bewertung, ohne die Liste zu verlassen.
 
 Lesezeichen
@@ -298,9 +299,11 @@ Bilder mit Tags und Alben kategorisieren.
    * - Manager öffnen
      - ``T`` drücken oder ``Datei`` > ``Tags und Alben``
    * - Bild taggen
-     - Rechtsklick auf Bild > ``Zu Tag hinzufügen``
+     - In Deep Zoom Rechtsklick > ``Tags``; für ausgewählte Miniaturansichten Rechtsklick >
+       ``Stapeloperationen`` > ``Zu Tag hinzufügen``
    * - Zu Album hinzufügen
-     - Rechtsklick auf Bild > ``Zu Album hinzufügen``
+     - In Deep Zoom Rechtsklick > ``Alben``; für ausgewählte Miniaturansichten Rechtsklick >
+       ``Stapeloperationen`` > ``Zu Album hinzufügen``
    * - Nach einzelnem Tag / Album filtern
      - ``Filter`` > ``Nach Tag`` / ``Nach Album``
    * - Multi-Tag-Filter (AND / OR)
@@ -328,7 +331,7 @@ Sortieren und Filtern
    * - Aufsteigend / Absteigend
      - ``Sortieren`` > ``Aufsteigend`` / ``Absteigend``
    * - Nach Erweiterung filtern
-     - ``Filter`` > ``JPEG`` / ``PNG`` / ``RAW`` usw.
+     - ``Filter`` > ``Nach Erweiterung`` > ``JPEG`` / ``PNG`` / ``RAW`` usw.
    * - Nach Bewertung filtern
      - ``Filter`` > ``Nach Bewertung``
    * - Nach Farbetikett filtern
@@ -1614,10 +1617,10 @@ Rotation und Spiegelung
      - Menü
    * - 90° im Uhrzeigersinn drehen
      - ``R``
-     - Rechtsklick > Modify > CW drehen
+     - Rechtsklick > Modify > Im Uhrzeigersinn drehen
    * - 90° gegen Uhrzeigersinn drehen
      - ``Shift + R``
-     - Rechtsklick > Modify > CCW drehen
+     - Rechtsklick > Modify > Gegen den Uhrzeigersinn drehen
    * - Horizontal spiegeln
      - --
      - Rechtsklick > Modify > Horizontal spiegeln
@@ -1730,7 +1733,8 @@ Ein mehrseitiges TIFF – ein gescanntes Dokument – wird nicht abgespielt: Es 
 Bildvergleich
 -------------
 
-Wählen Sie im Miniaturansichten-Modus 2 -- 4 Bilder aus, dann Rechtsklick > ``Bilder vergleichen``.
+Wählen Sie im Miniaturansichten-Modus 2 oder 4 Bilder aus, dann Rechtsklick > ``Bilder vergleichen``
+(oder wählen Sie sie in der Liste des Dialogs aus).
 
 Der Dialog hat vier Tabs:
 
@@ -2310,7 +2314,7 @@ Culling (Pick / Reject)
 Dreiwertiges Flag-basiertes Cull-Flag. Drücken Sie ``P``, um das aktuelle Bild oder
 jede ausgewählte Kachel zu picken, ``Shift + X`` zum Verwerfen, ``U`` zum Entfernen
 des Flags. ``Filter`` > ``By Cull State`` zeigt nur Picks, Rejects oder Ungeflaggte
-an. ``Extra Tools`` > ``Culling`` wendet den Filter über einen Dialog an und stellt
+an. ``Extra Tools`` > ``Workflow`` > ``Culling`` wendet den Filter über einen Dialog an und stellt
 außerdem eine Schaltfläche **Delete all rejects** zur Verfügung, die die geflaggten
 Dateien dauerhaft von der Festplatte entfernt.
 

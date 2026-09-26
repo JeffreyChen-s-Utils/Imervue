@@ -127,7 +127,7 @@ Mode liste (détails)
 ^^^^^^^^^^^^^^^^^^^^
 
 Appuyez sur ``Ctrl + L`` pour basculer entre la grille de vignettes et une vue liste triable avec les colonnes :
-Aperçu · Étiquette · Nom · Résolution · Taille · Type · Modifié. Double-cliquez sur une ligne (ou appuyez sur ``Enter``) pour entrer
+Aperçu · Étiquette · Note · Nom · Résolution · Taille · Type · Modifié. Double-cliquez sur une ligne (ou appuyez sur ``Enter``) pour entrer
 en Deep Zoom ; appuyez sur ``Esc`` pour revenir à la liste. Les vignettes et les métadonnées sont chargées paresseusement sur un fil d'exécution
 de travail, afin que les très grands dossiers restent réactifs.
 
@@ -256,14 +256,15 @@ une catégorisation rapide (par ex. rouge = à rejeter, vert = à conserver, ble
    * - Action
      - Touche
    * - Rouge / Jaune / Vert / Bleu / Violet
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (appuyer à nouveau pour effacer)
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (appuyer à nouveau pour effacer ; sur une
+       sélection, n'efface que si toutes les images sélectionnées ont déjà cette couleur)
    * - Appliquer par lot à la sélection
      - Sélectionnez plusieurs vignettes, puis appuyez sur la touche F correspondante
    * - Filtrer par couleur
      - ``Filtre`` > ``Par étiquette de couleur`` > choisir une couleur / N'importe quelle étiquette / Aucune étiquette
 
 La barre d'état affiche une pastille colorée pour l'image courante. Les vignettes affichent une bande colorée sur
-le bord gauche. La **vue Liste** dispose de colonnes dédiées **Étiquette** et **Notation** que vous pouvez
+le bord gauche. La **vue Liste** dispose de colonnes dédiées **Étiquette** et **Note** que vous pouvez
 trier — cliquez sur n'importe quelle cellule de la colonne étoile pour définir la note sans quitter la liste.
 
 Signets
@@ -296,9 +297,11 @@ Classez vos images par tags et albums.
    * - Ouvrir le gestionnaire
      - Appuyez sur ``T`` ou ``Fichier`` > ``Tags et albums``
    * - Marquer une image
-     - Clic droit sur l'image > ``Ajouter au tag``
+     - En Deep Zoom, clic droit > ``Tags`` ; pour les vignettes sélectionnées, clic droit >
+       ``Opérations par lots`` > ``Ajouter au tag``
    * - Ajouter à un album
-     - Clic droit sur l'image > ``Ajouter à l'album``
+     - En Deep Zoom, clic droit > ``Albums`` ; pour les vignettes sélectionnées, clic droit >
+       ``Opérations par lots`` > ``Ajouter à l'album``
    * - Filtrer par un seul tag / album
      - ``Filtre`` > ``Par tag`` / ``Par album``
    * - Filtre multi-tags (ET / OU)
@@ -326,7 +329,7 @@ Tri et filtrage
    * - Croissant / Décroissant
      - ``Trier`` > ``Croissant`` / ``Décroissant``
    * - Filtrer par extension
-     - ``Filtre`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
+     - ``Filtre`` > ``Par extension`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
    * - Filtrer par note
      - ``Filtre`` > ``Par note``
    * - Filtrer par étiquette de couleur
@@ -1590,10 +1593,10 @@ Rotation et retournement
      - Menu
    * - Rotation 90 ° horaire
      - ``R``
-     - Clic droit > Modify > Rotate CW
+     - Clic droit > Modify > Rotate Clockwise
    * - Rotation 90 ° antihoraire
      - ``Shift + R``
-     - Clic droit > Modify > Rotate CCW
+     - Clic droit > Modify > Rotate Counter-clockwise
    * - Retournement horizontal
      - --
      - Clic droit > Modify > Flip Horizontal
@@ -1705,7 +1708,8 @@ Un TIFF multipage — un document numérisé — n'est pas lu comme une animatio
 Comparaison d'images
 --------------------
 
-En mode vignettes, sélectionnez 2 -- 4 images, puis clic droit > ``Comparer les images``.
+En mode vignettes, sélectionnez 2 ou 4 images, puis clic droit > ``Comparer les images`` (ou
+choisissez-les dans la liste de la boîte de dialogue).
 
 La boîte de dialogue comprend quatre onglets :
 
@@ -2274,7 +2278,7 @@ Tri (Sélectionner / Rejeter)
 Indicateur de tri à trois états basé sur un marquage. Appuyez sur ``P`` pour sélectionner l'image
 courante ou chaque vignette sélectionnée, ``Shift + X`` pour rejeter, ``U`` pour retirer le marquage. ``Filtre`` >
 ``Par état de tri`` n'affiche que les sélections, les rejets ou les non marqués. ``Extra Tools`` >
-``Culling`` applique le filtre via une boîte de dialogue et expose également un bouton **Delete all
+``Workflow`` > ``Culling`` applique le filtre via une boîte de dialogue et expose également un bouton **Delete all
 rejects** qui supprime définitivement du disque les fichiers marqués.
 
 Plateau de mise à disposition
