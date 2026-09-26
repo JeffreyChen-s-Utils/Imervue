@@ -53,6 +53,11 @@ class GPUImageView(
         QOpenGLWidget):
     """OpenGL image viewer: the thumbnail tile grid and the deep-zoom single-image view."""
 
+    # Set up by view_state_init.init_deep_zoom_state; declared on the class so
+    # the deep-zoom teardown's read-then-clear is visibly of a known attribute.
+    _minimap_tex: int | None = None
+    _minimap_dzi = None
+
     def __init__(self, main_window: ImervueMainWindow):
         super().__init__()
 

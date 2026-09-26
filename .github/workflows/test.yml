@@ -23,7 +23,9 @@ jobs:
     - name: Install linters
       # ruff matches uv.lock. Keep the pin: a newer ruff can promote rules to
       # stable (0.16 adds PLR0917) and turn an unchanged tree red.
-      run: python -m pip install "ruff==0.15.20" "bandit[toml]==1.9.4"
+      # Wheels only: an sdist would run its setup script on the runner.
+      run: |
+        python -m pip install --only-binary :all: "ruff==0.15.20" "bandit[toml]==1.9.4"
     - name: ruff
       run: python -m ruff check . --output-format=github
     - name: bandit
@@ -42,7 +44,8 @@ jobs:
         python-version: "3.12"
     - name: Install Sphinx
       # The same requirements Read the Docs installs (.readthedocs.yaml).
-      run: python -m pip install -r docs/requirements.txt
+      run: |
+        python -m pip install --only-binary :all: -r docs/requirements.txt
     - name: Build
       # ``-W`` turns every docutils / Sphinx warning into a failure, so a
       # translation that breaks inline markup next to CJK text is caught here.
@@ -74,7 +77,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
-        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest pytest-cov
+        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio imageio-ffmpeg send2trash watchdog defusedxml pytest pytest-cov
     - name: Run fast tests
       # ``PYTHONFAULTHANDLER=1`` + ``-X faulthandler`` makes the
       # interpreter print a native traceback on SIGSEGV / fatal
@@ -117,7 +120,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
-        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest pytest-cov
+        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio imageio-ffmpeg send2trash watchdog defusedxml pytest pytest-cov
     - name: Run ${{ matrix.layer }} tests
       env:
         PYTHONFAULTHANDLER: "1"

@@ -661,4 +661,5 @@ def turned_with_file(recipe: Recipe, *, clockwise: bool, size: tuple[int, int]) 
     if crop is not None:
         x, y, w, h = crop
         crop = (height - y - h, x, h, w) if clockwise else (y, width - x - w, h, w)
-    return replace(recipe, flip_h=recipe.flip_v, flip_v=recipe.flip_h, crop=crop)
+    return replace(  # NOSONAR  # dataclasses.replace returns the Recipe it copies
+        recipe, flip_h=recipe.flip_v, flip_v=recipe.flip_h, crop=crop)
