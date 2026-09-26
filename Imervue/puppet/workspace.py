@@ -738,7 +738,9 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
                 "Pick a motion from the dock before editing.",
             )
             return
-        dialog = MotionTimelineDialog(motion, self)
+        doc = self._canvas.document()
+        ranges = {p.id: (p.min, p.max) for p in doc.parameters} if doc is not None else {}
+        dialog = MotionTimelineDialog(motion, self, ranges=ranges)
         dialog.widget().track_modified.connect(self._on_timeline_edit_committed)
         dialog.exec()
 
@@ -795,8 +797,8 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
                 # any motion is tagged with it — matches Cubism's
                 # "TapHead" / "TapBody" convention.
                 self._motion_dock.player().play_group(area.motion, doc.motions)
-            else:
-                self._motion_dock.select_motion(area.motion)
+            elif self._motion_dock.select_motion(area.motion):
+                self._motion_dock.player().play()
         if area.expression:
             if area.expression in self._canvas.active_expressions():
                 self._canvas.remove_expression(area.expression)

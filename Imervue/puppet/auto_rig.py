@@ -21,8 +21,9 @@ naming patterns Cubism artists already use, then bolting on:
   ``ParamAngleZ`` (Live2D's head-roll axis).
 
 * **Hair swing** — when "hair" or "bang" layers exist, add a warp
-  deformer + a physics rig driven by ``ParamAngleX`` so they swing as
-  the head moves.
+  deformer keyed on ``ParamHairFront`` (its lower rows shift sideways,
+  the top row stays put) + a physics rig from ``ParamAngleX`` to
+  ``ParamHairFront`` so they swing as the head moves.
 
 All rule predicates are pure-Python and live next to the patches so
 tests can exercise the detection without going through a PSD.
@@ -57,6 +58,11 @@ from Imervue.puppet.standard_params import (
 
 _HEAD_TILT_RAD: float = math.radians(15.0)
 """Maximum head-roll angle the auto-rigger keys at ``ParamAngleZ=±1``."""
+
+_HAIR_SWAY_FRACTION: float = 0.08
+"""How far the hair warp's bottom row shifts at ``ParamHairFront=±1``,
+as a fraction of the hair's width; rows above it shift proportionally
+less and the top row not at all."""
 
 _HAIR_PHYSICS_PARTICLES: int = 4
 """Default chain length for an auto-rigged hair swing. Long enough to
@@ -286,6 +292,14 @@ def _rig_hair_swing(document: PuppetDocument) -> int:
     document.deformers.append(warp)
     _ensure_parameter(document, PARAM_ANGLE_X)
     _ensure_parameter(document, PARAM_HAIR_FRONT)
+    sway = (bounds[2] - bounds[0]) * _HAIR_SWAY_FRACTION
+    _set_param_keys(
+        document, PARAM_HAIR_FRONT,
+        {
+            value: {deformer_id: {"grid": _swayed_grid(warp.form, value * sway)}}
+            for value in (-1.0, 0.0, 1.0)
+        },
+    )
     rig_id = _unique_physics_id(document, "hair_chain")
     document.physics_rigs.append(
         PhysicsRig(
@@ -296,6 +310,19 @@ def _rig_hair_swing(document: PuppetDocument) -> int:
         ),
     )
     return len(hair_ids)
+
+
+def _swayed_grid(form: dict, shift: float) -> list[list[list[float]]]:
+    """A copy of a warp's grid with each row moved ``shift`` × its depth sideways.
+
+    Depth runs from 0 at the top row (where hair is attached) to 1 at the
+    bottom row, so the tips swing furthest.
+    """
+    last_row = max(1, int(form["rows"]) - 1)
+    return [
+        [[float(x) + shift * r / last_row, float(y)] for x, y in row]
+        for r, row in enumerate(form["grid"])
+    ]
 
 
 # ---------------------------------------------------------------------------

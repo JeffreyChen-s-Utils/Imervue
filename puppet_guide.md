@@ -268,7 +268,8 @@ post-hoc.
    it, then choose **Edit > Edit motion…**.
 2. Pick a parameter from the **Track** list. The graph shows that
    track's keys: time runs left to right over the motion's
-   duration, and the value axis always spans −1 to 1.
+   duration, and the value axis spans the parameter's own range
+   (−1 to 1 when the rig doesn't define the parameter).
 3. Drag a yellow point to move a key in time and value. On
    `cubic-bezier` segments, drag the purple handles to shape the
    curve. Each segment is drawn as a straight line between its
@@ -372,7 +373,7 @@ seeds the standard parameter catalogue and auto-rigs by layer name:
   `ParamAngleZ` (±15°)
 - `hair` / `bang` / `fringe` layers share a warp deformer plus a
   physics chain from `ParamAngleX` to `ParamHairFront`; the warp
-  has no keys on `ParamHairFront` yet
+  is keyed on `ParamHairFront`, so the hair tips swing sideways
 
 Other layers (body, arms, clothing) get no deformers.
 
@@ -498,8 +499,7 @@ its drawables at their current, deformed positions; left-clicking
 inside one (with **Edit mesh** off) runs its actions. Its `motion`
 names a motion group — a random motion of that group plays
 (`TapHead` picks one of the `TapHead` motions); when no motion
-carries that group, the motion of that name is selected in the
-**Motions** dock, stopped, for **Play** to start. Its `expression`
+carries that group, the motion of that name plays. Its `expression`
 toggles that expression (click body → toggle `surprised`). Where
 boxes overlap, the area with the frontmost drawable wins.
 

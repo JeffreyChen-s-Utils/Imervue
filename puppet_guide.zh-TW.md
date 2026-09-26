@@ -179,7 +179,7 @@ Virtual Camera 與 NDI 都用 off-screen framebuffer 重畫，**不含棋盤格�
 **Motion Timeline** 對話框可以事後微調動作的關鍵點。
 
 1. 在 **Motions** 擺放欄點動作讓播放器載入它，再選 **Edit > Edit motion…**。
-2. 從 **Track** 清單挑一個參數。圖表顯示該軌的關鍵點：X 軸是動作長度內的時間，Y 軸固定是 −1 到 1。
+2. 從 **Track** 清單挑一個參數。圖表顯示該軌的關鍵點：X 軸是動作長度內的時間，Y 軸是該參數自己的範圍（rig 沒定義這個參數時為 −1 到 1）。
 3. 拖黃色的點移動關鍵點的時間跟數值。`cubic-bezier` segment 可以拖紫色控制把手塑形。每個 segment 都畫成兩個關鍵點之間的直線。
 4. 對話框不能新增或刪除關鍵點，也不能改 segment 類型；四種類型（`linear`、`stepped`、`inverse-stepped`、`cubic-bezier`）來自動作檔本身。
 5. 每次拖曳都會更新記憶體中的動作，並把 canvas 重新擺到播放器目前的時間點。**File > Save As…** 才會把修改寫進 `.puppet` 檔。
@@ -233,7 +233,7 @@ Parameter blends — 在兩個以上參數構成的網格上替變形器 form �
 - 名稱含左右與開閉狀態的眼睛圖層（`eye_l_open`、`EyeRClose` …）跟著 `ParamEyeLOpen` / `ParamEyeROpen` 淡入淡出，所以 Auto-blink 會切換它們
 - 嘴巴圖層（`mouth_open`、`mouth_close`、`mouth_a` … `mouth_o`）跟著 `ParamMouthOpenY` 跟 `ParamMouthForm` 淡入淡出，所以 Mic lip-sync 會切換它們
 - `head` / `face` 圖層共用一個以 `ParamAngleZ` 打 key（±15°）的旋轉變形器
-- `hair` / `bang` / `fringe` 圖層共用一個 warp 變形器，外加一條從 `ParamAngleX` 到 `ParamHairFront` 的物理鏈；warp 目前在 `ParamHairFront` 上還沒有 key
+- `hair` / `bang` / `fringe` 圖層共用一個 warp 變形器，外加一條從 `ParamAngleX` 到 `ParamHairFront` 的物理鏈；warp 以 `ParamHairFront` 打 key，髮尾會左右擺動
 
 其他圖層（身體、手臂、衣服）不會加任何變形器。
 
@@ -287,7 +287,7 @@ Puppet 分頁顯示中且 rig 有物理鏈時，canvas 用自己的時鐘每秒�
 
 ### Hit areas
 
-命名的點擊區域。hit area 的範圍是它所列 drawable 在目前（已變形）位置的外框；在範圍內按左鍵（**Edit mesh** 關閉時）會執行它的動作。它的 `motion` 指定動作群組 — 從該群組隨機播一個動作（`TapHead` 會挑一個 `TapHead` 動作）；沒有動作屬於該群組時，會在 **Motions** 擺放欄選取同名動作並停住，等你按 **Play**。它的 `expression` 會切換該表情（點 body → 切換 `surprised`）。範圍重疊時，含最前面 drawable 的那個勝出。
+命名的點擊區域。hit area 的範圍是它所列 drawable 在目前（已變形）位置的外框；在範圍內按左鍵（**Edit mesh** 關閉時）會執行它的動作。它的 `motion` 指定動作群組 — 從該群組隨機播一個動作（`TapHead` 會挑一個 `TapHead` 動作）；沒有動作屬於該群組時，播放同名的動作。它的 `expression` 會切換該表情（點 body → 切換 `surprised`）。範圍重疊時，含最前面 drawable 的那個勝出。
 
 內附的 March 7th rig 沒有定義任何 hit area，點擊它不會有反應。用 **File > Import Cubism…** 轉換的 rig 會帶入模型的 `HitAreas`，但只有範圍、沒有動作；在 `puppet.json` 的 `hit_areas` 清單替它們加上 `motion` 或 `expression` 才會有反應。Puppet 分頁沒有 hit area 編輯器。
 

@@ -505,6 +505,9 @@ def _load_referenced_motion(
         motion.fade_in_duration = float(fade_in)
     if isinstance(fade_out, int | float):
         motion.fade_out_duration = float(fade_out)
+    sound_ref = entry.get("Sound")
+    if isinstance(sound_ref, str) and sound_ref:
+        motion.sound_path = str(base_dir / sound_ref)
     return motion, path.resolve()
 
 

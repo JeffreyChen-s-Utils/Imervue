@@ -181,6 +181,10 @@ class MotionDock(QDockWidget):
         self._player.seek(duration * step / _SCRUB_STEPS)
 
     def _refresh_transport(self) -> None:
+        if self._loop_box.isChecked() != self._player.loop():
+            self._loop_box.blockSignals(True)   # showing the motion's flag, not setting it
+            self._loop_box.setChecked(self._player.loop())
+            self._loop_box.blockSignals(False)
         playing = self._player.is_playing()
         self._play_btn.setEnabled(not playing)
         self._pause_btn.setEnabled(playing)

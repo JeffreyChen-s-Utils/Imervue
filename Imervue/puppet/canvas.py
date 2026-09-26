@@ -455,10 +455,9 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         active_values = apply_expressions(
             self._parameter_values, self._active_expressions,
         )
-        # Physics outputs are layered last so an authored slider /
-        # motion / expression still wins where they explicitly set
-        # the same parameter, but the physics rig drives whichever
-        # parameter the rig nominated.
+        # Physics outputs are layered last, so a chain's output parameter
+        # follows the chain even where a slider, motion or expression also
+        # sets it.
         active_values = {**active_values, **self._physics_outputs}
         if active_values:
             self._deformed_vertices = compose_all_drawables(

@@ -175,3 +175,24 @@ def test_auto_rig_on_empty_document_is_noop():
     doc = PuppetDocument(size=(64, 64))
     counts = auto_rig(doc)
     assert counts == {"eyes": 0, "mouth": 0, "head_tilt": 0, "hair_swing": 0}
+
+
+
+def test_the_hair_warp_is_keyed_so_the_chain_sways_it():
+    """The hair chain drove ParamHairFront, which nothing was keyed on: no visible swing."""
+    from Imervue.puppet.runtime import compose_all_drawables
+    doc = _doc_with(("hair_back_01", "bang_01"))
+    doc.parameters = standard_parameters()
+    auto_rig(doc)
+    warp = next(d for d in doc.deformers if d.type == "warp")
+    keys = {k.value: k.forms[warp.id]["grid"] for k in doc.parameter("ParamHairFront").keys}
+    assert sorted(keys) == [-1.0, 0.0, 1.0]
+    assert keys[0.0] == warp.form["grid"]
+    width = warp.form["bounds"][2] - warp.form["bounds"][0]
+    top, bottom = keys[1.0][0], keys[1.0][-1]
+    assert [p[0] for p in top] == pytest.approx([p[0] for p in warp.form["grid"][0]])
+    assert bottom[0][0] - warp.form["grid"][-1][0][0] == pytest.approx(0.08 * width)
+    assert keys[-1.0][-1][0][0] - warp.form["grid"][-1][0][0] == pytest.approx(-0.08 * width)
+    rest = compose_all_drawables(doc, {"ParamHairFront": 0.0})["bang_01"]
+    swung = compose_all_drawables(doc, {"ParamHairFront": 1.0})["bang_01"]
+    assert (swung[:, 0] > rest[:, 0]).any()

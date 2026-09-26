@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-89 | 2026-09-26 | Puppet motions honour their loop flag, hit areas play a named motion, PSD hair sways | #fix #puppet #desktop-pet #docs #i18n #done | [2026-09-c](2026-09-c.md) |
 | U-20260926-88 | 2026-09-26 | Puppet has a Pose dock that picks each pose group's shown member | #feature #fix #puppet #docs #i18n #done | [2026-09-c](2026-09-c.md) |
 | U-20260926-87 | 2026-09-26 | Dialogs stop their workers on OK too, and a closed window unloads its own plugins | #fix #plugins #crash #docs #done | [2026-09-c](2026-09-c.md) |
 | U-20260926-86 | 2026-09-26 | The Puppet guide and the .puppet format spec describe what the code does | #docs #puppet #i18n | [2026-09-c](2026-09-c.md) |
@@ -462,4 +463,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 33 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 34 |

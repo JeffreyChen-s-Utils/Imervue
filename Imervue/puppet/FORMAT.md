@@ -384,8 +384,7 @@ under no part are unaffected.
 The region is the axis-aligned bounding box of the listed drawables at
 their current, deformed positions. A click inside it runs the actions:
 when any motion's `group` equals `motion`, a random motion of that
-group plays; otherwise the motion named `motion` is selected in the
-Motions dock without playing. `expression` switches that expression on
+group plays; otherwise the motion named `motion` plays. `expression` switches that expression on
 or off. Where regions overlap, the one holding the drawable with the
 highest `draw_order` wins.
 
@@ -417,7 +416,7 @@ highest `draw_order` wins.
 |---|---|---|---|
 | `version` | int | no | Writers emit `1`; the loader doesn't check it |
 | `duration` | float | yes | Total length in seconds |
-| `loop` | bool | no | Default `false`; stored and written back — playback in the Puppet tab follows the Motions dock's **Loop** checkbox instead |
+| `loop` | bool | no | Default `false`; whether playback wraps round at the end. Picking the motion sets the Motions dock's **Loop** box from it, and toggling the box changes it |
 | `tracks` | array | yes | One per animated parameter |
 | `tracks[].param_id` | string | yes | Parameter the track drives |
 | `tracks[].segments` | array | yes | Curve segments (see below) |

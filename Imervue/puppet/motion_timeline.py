@@ -316,9 +316,17 @@ class _ControlHandle(QGraphicsEllipseItem):
 class MotionTimelineDialog(QDialog):
     """Modal-ish dialog wrapping a :class:`MotionTimelineWidget` with a
     track picker. The workspace hands it the active motion; the user
-    picks one of the motion's tracks and edits the curve in place."""
+    picks one of the motion's tracks and edits the curve in place.
 
-    def __init__(self, motion: Motion, parent=None):
+    ``ranges`` maps a parameter id to its ``(min, max)``; a track's value
+    axis spans that range (a Cubism head angle runs −30…30), and −1…1
+    for a parameter it doesn't list or an empty range.
+    """
+
+    def __init__(
+        self, motion: Motion, parent=None, *,
+        ranges: dict[str, tuple[float, float]] | None = None,
+    ):
         lang = language_wrapper.language_word_dict
         super().__init__(parent)
         self.setWindowTitle(
@@ -342,6 +350,7 @@ class MotionTimelineDialog(QDialog):
         layout.addWidget(self._view, stretch=1)
 
         self._motion = motion
+        self._ranges = dict(ranges or {})
         if motion.tracks:
             self._on_track_changed(0)
 
@@ -352,4 +361,8 @@ class MotionTimelineDialog(QDialog):
         if not 0 <= index < len(self._motion.tracks):
             self._view.set_track(None, None)
             return
-        self._view.set_track(self._motion, self._motion.tracks[index])
+        track = self._motion.tracks[index]
+        low, high = self._ranges.get(track.param_id, (-1.0, 1.0))
+        if not high > low:
+            low, high = -1.0, 1.0
+        self._view.set_track(self._motion, track, value_min=low, value_max=high)
