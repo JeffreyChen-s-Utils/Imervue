@@ -1419,7 +1419,7 @@ spanish_word_dict.update({
     "lut_clear": "Borrar",
     "lut_intensity": "Intensidad:",
     "lut_pick": "Seleccionar LUT .cube",
-    "lut_hint": "Elija cualquier LUT .cube de Adobe (hasta 64³). La intensidad se mezcla con el original.",
+    "lut_hint": "Elija cualquier LUT .cube de Adobe (3D hasta 65³, 1D hasta 65 536 puntos). La intensidad se mezcla con el original.",
     # Virtual Copies
     "vcopies_title": "Copias virtuales",
     "vcopies_hint": "Instantáneas con nombre de la receta de esta imagen — intercambiables en cualquier momento.",

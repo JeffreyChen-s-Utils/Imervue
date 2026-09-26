@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `ae474db` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `0ed9631` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 893 | 149,589 |
+| `tests/` | 893 | 149,660 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
-| `Imervue/gui/` | 168 | 33,526 |
+| `Imervue/gui/` | 168 | 33,545 |
 | `Imervue/puppet/` | 57 | 15,304 |
-| `Imervue/image/` | 128 | 15,396 |
+| `Imervue/image/` | 128 | 15,403 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,219 |
-| `Imervue/multi_language/` | 8 | 14,324 |
+| `Imervue/multi_language/` | 8 | 14,329 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,451 |
-| **總計** | **1,744** | **332,954** |
+| **總計** | **1,744** | **333,056** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,914 行。
+其中 `Imervue/` 套件本身 787 檔 / 168,945 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -311,7 +311,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-128 個模組、15,396 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+128 個模組、15,403 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -329,7 +329,7 @@ ImervueMainWindow
 `curves.py`(245) 曲線 · `tone_curve.py`(152) flag-based 曲線 · `levels.py`(95) 黑白場+gamma ·
 `channel_mixer.py`(129) 3×3 矩陣 · `hsl_mixer.py`(109) 分頻 HSL · `split_toning.py`(67) ·
 `gradient_map.py`(169) · `gradient_perceptual.py`(144) OkLab/OkLCH 感知混色 ·
-`colormap.py`(63) 科學色階 · `lut.py`(258) Adobe `.cube` 讀取與套用（含 Resolve 的 `LUT_*_INPUT_RANGE`、BOM）·
+`colormap.py`(63) 科學色階 · `lut.py`(265) Adobe `.cube` 讀取與套用（含 Resolve 的 `LUT_*_INPUT_RANGE`、BOM）·
 `auto_color_balance.py`(190) 四種自動白平衡 · `posterize.py`(130) · `solarize.py`(51) ·
 `velvia.py`(65) 亮度加權飽和 · `film_negative.py`(67) 負片轉正 · `filmic_tonemap.py`(94) ·
 `tone_equalizer.py`(80) 分區曝光 · `soft_proof.py`(65) ICC 軟打樣 + 色域外標示
@@ -536,7 +536,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-168 個檔、33,526 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+168 個檔、33,545 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -593,11 +593,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `tone_curve_dialog.py`(288) · `levels_dialog.py`(169) · `channel_mixer_dialog.py`(148) ·
 `hsl_mixer_dialog.py`(130) · `split_toning_dialog.py`(114) · `gradient_map_dialog.py`(165) ·
-`colormap_dialog.py`(91) · `lut_dialog.py`(110) · `posterize_dialog.py`(157) ·
+`colormap_dialog.py`(91) · `lut_dialog.py`(111) · `posterize_dialog.py`(157) ·
 `solarize_dialog.py`(139) · `velvia_dialog.py`(84) · `film_negative_dialog.py`(81) ·
 `filmic_tonemap_dialog.py`(106) · `tone_equalizer_dialog.py`(96) · `detail_equalizer_dialog.py`(91) ·
 `auto_color_balance_dialog.py`(199) · `local_contrast_dialog.py`(120) · `clahe_dialog.py`(100) ·
-`defringe_dialog.py`(95) · `graduated_density_dialog.py`(95) · `soft_proof_dialog.py`(128) ·
+`defringe_dialog.py`(95) · `graduated_density_dialog.py`(113) · `soft_proof_dialog.py`(128) ·
 `develop_presets_dialog.py`(166) · `virtual_copies_dialog.py`(159) · `before_after_dialog.py`(174) 分割滑桿對照 ·
 `layers_dialog.py`(449) 疊加圖層堆疊管理 · `masks_dialog.py`(223) 局部調整遮罩
 
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-893 個檔、149,589 行。`pyproject.toml` 定義三個互斥層級 marker：
+893 個檔、149,660 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

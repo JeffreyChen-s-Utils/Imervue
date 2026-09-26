@@ -1648,7 +1648,7 @@ japanese_word_dict = {
     "lut_clear": "クリア",
     "lut_intensity": "強度：",
     "lut_pick": ".cube LUT を選択",
-    "lut_hint": "任意の Adobe .cube LUT を読み込めます（最大 64\u00b3）。強度で原画とブレンド。",
+    "lut_hint": "任意の Adobe .cube LUT を読み込めます（3D は最大 65\u00b3、1D は最大 65,536 点）。強度で原画とブレンド。",
 
     # --- Virtual Copies ---
     "vcopies_title": "バーチャルコピー",
@@ -2308,6 +2308,7 @@ japanese_word_dict = {
     "graduated_density_angle": "角度（°）：",
     "graduated_density_hardness": "硬さ：",
     "graduated_density_offset": "オフセット：",
+    "graduated_density_tint": "グラデーション側に色味を付ける",
     "graduated_density_stops": "濃度（段）：",
     "graduated_density_title": "段階フィルター",
     "htags_add": "作成",

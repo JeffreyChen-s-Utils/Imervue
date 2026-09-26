@@ -78,7 +78,8 @@ class LutDialog(QDialog):
         layout.addLayout(strength)
         layout.addWidget(QLabel(lang.get(
             "lut_hint",
-            "Pick any Adobe .cube LUT (up to 64³). Intensity blends with the original.",
+            "Pick any Adobe .cube LUT (3D up to 65³, 1D up to 65,536 points). "
+            "Intensity blends with the original.",
         )))
         layout.addWidget(buttons)
 

@@ -1784,7 +1784,7 @@ Imervue は ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）または
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` は現在の Deep Zoom 画像（または
 最初に選択されたタイル）の 64bit DCT pHash を計算し、ハミング距離の近い順
-にインデックスから結果を提示します。``Max distance`` で厳密度を調整でき
+にインデックスから結果を提示します。``最大ハミング距離`` で厳密度を調整でき
 ます。
 
 セマンティック検索（CLIP）
@@ -1803,7 +1803,7 @@ Imervue は ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）または
 ^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` はヒューリスティックタグを ``auto/...``
-以下（``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+以下（``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``）に付与します。判定には、ビューアーに表示される画像の彩度・エッジ・形状を使います。ワーカースレッドで実行しプログレスバー付き。
 
 階層タグ
@@ -1814,7 +1814,8 @@ Imervue は ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）または
 画像一覧が表示され、現在の選択をワンクリックでタグ付け／解除できます。
 右クリックメニューのフラットタグと併存します。
 
-右クリックの ``Index Keywords`` は、選択画像の XMP キーワードをライブラリに追加します。
+サムネイルを選択して右クリック > ``一括操作`` > ``キーワードを索引`` を選ぶと、
+選択画像の XMP キーワードがライブラリに追加されます。
 Lightroom や darktable が書いたキーワード階層(``lr:hierarchicalSubject``、
 ``Places|Taiwan|Taipei``)はタグパス ``Places/Taiwan/Taipei`` として登録され、
 その階層を繰り返すだけの ``Places``／``Taiwan``／``Taipei`` は重ねて追加しません。
@@ -1849,8 +1850,9 @@ other XMP-aware photo managers、other XMP-aware photo managers、Bridge など�
 ``photo.xmp``\ （Lightroom、Bridge）のほか、darktable と digiKam が書く
 ``photo.jpg.xmp`` も、それが唯一の sidecar なら読み込んで更新します。
 カラーラベルは Lightroom の表記（``Red`` … ``Purple``）と Bridge の表記
-（``Select``、``Second``、``Approved``、``Review``、``To Do``）を理解し、
-エクスポート時は Lightroom の表記で書き込みます。色に対応しない独自ラベルは
+（``Select``、``Second``、``Approved``、``Review``、``To Do``）を理解します。
+新しく付けた色や変更した色は Lightroom の表記で書き出し、同じ色を Bridge の表記で
+すでに持っている sidecar はその表記を保ちます。色に対応しない独自ラベルは
 sidecar に残します。
 
 除外された写真(Lightroom、Bridge、darktable の ``xmp:Rating`` -1)は、星なしの
@@ -1899,8 +1901,9 @@ State`` で状態別に表示、``Extra Tools`` > ``Workflow`` > ``Culling`` ダ
 ^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` は現在の画像セットを日／月／年単位で
-グルーピング（Google フォト風）。日付は EXIF ``DateTimeOriginal`` を優先、
-なければファイル更新日時を使用。画像をダブルクリックで Deep Zoom へ。
+グルーピング（Google フォト風）。日付は EXIF ``DateTimeOriginal``、次に
+``DateTimeDigitized``、次に ``DateTime`` の順に取り、どれもなければファイル
+更新日時を使用。画像をダブルクリックで Deep Zoom へ。
 
 外部アプリへのドラッグアウト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1934,7 +1937,7 @@ monotone cubic で補間され、カーブは recipe に保存されて非破壊
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` で任意の Adobe ``.cube`` ファイル
-（1D / 3D、最大 64³）を選択できます。DaVinci Resolve の
+（3D は最大 65³、1D は最大 65,536 点）を選択できます。DaVinci Resolve の
 ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE`` は ``DOMAIN_MIN`` / ``DOMAIN_MAX`` と同じく
 入力範囲を決め、BOM 付きのファイルも読み込めます。LUT はパス+mtime キーで
 ``lru_cache`` に保持され、トリリニア補間で適用、強度スライダーで原画
@@ -1987,23 +1990,24 @@ OpenCV inpainting（Telea / Navier-Stokes）で修復し、新規ファイルに
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` は純 numpy の 4 スライダー：
 放射歪み ``k1``\ （樽型 / 糸巻型）、周辺光量補正、赤 / 青チャンネルの
-色収差放射スケール。出力サイズが変わり得るため recipe ではなく新規
-ファイルに保存します。
+色収差放射スケール。補正後の画像は元画像と同じサイズのまま、新規
+ファイルとして保存します。
 
 マップビュー
 ^^^^^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` は Leaflet + OpenStreetMap
-（``PySide6.QtWebEngineWidgets`` 必須）でライブラリ内の GPS 付き画像
-をすべてプロットします。WebEngine が無い場合は座標リストに
-フォールバックします。
+``Extra Tools`` > ``Views`` > ``Map View`` は、開いているフォルダの GPS 付き画像を
+Leaflet + OpenStreetMap の対話型マップ（``PySide6.QtWebEngineWidgets`` 必須）に
+プロットします。マーカーは最寄りの都市ごとに 1 つで、そこにある画像の枚数を
+示します。WebEngine が無い場合は、それらの場所を枚数と座標付きで並べたリストに
+フォールバックするので、最小構成のインストールでも使えます。
 
 カレンダービュー
 ^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` は ``QCalendarWidget`` で撮影日
 のあるセルをハイライトします（EXIF ``DateTimeOriginal`` →
-``DateTimeDigitized`` → ファイル mtime の順）。日付を選択するとその
+``DateTimeDigitized`` → ``DateTime`` → ファイル mtime の順）。日付を選択するとその
 日の画像が一覧表示され、ダブルクリックでメインビューアーに開き
 ます。
 
@@ -2046,7 +2050,7 @@ OpenCV 4 が必要です（``pip install "opencv-python<5"``）。OpenCV 5 で�
 ^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` は 0..1 の正規化トリミング
-矩形と任意角度の水平補正を組み合わせます。出力は最大内接矩形に
+矩形と最大 ±15° の水平補正を組み合わせます。出力は最大内接矩形に
 自動トリミングされ、黒い余白は出ません。
 
 自動水平補正
@@ -2081,7 +2085,7 @@ OpenCV 4 が必要です（``pip install "opencv-python<5"``）。OpenCV 5 で�
 トーンとクリエイティブエフェクト
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Develop (Non-Destructive)`` には、適用してそのまま保存するワンショットのエフェクトがまとまっています。どれも純粋な NumPy 変換に薄いスライダーダイアログをかぶせたもので、同じロジックは MCP ツールとしても公開されています：
+``Extra Tools`` > ``Develop (Non-Destructive)`` には、適用してそのまま保存するワンショットのエフェクトがまとまっています。どれも純粋な NumPy 変換に薄いスライダーダイアログをかぶせたもので（フレームとキャプションだけは Pillow で描画します）、同じロジックは MCP ツールとしても公開されています：
 
 - **段階フィルター**\ （Graduated Density）— 角度・硬さ・オフセットで決まるリニアな ND グラデーション。色付けもでき、手作業のマスクなしで空や前景を暗くできます。
 - **トーンイコライザー**\ （Tone Equalizer）— 平滑化したマスク上で、輝度ゾーンごとに独立して露出を調整します（黒レベルから白レベルまで、ゾーンごとに 1 本のスライダー）。調整がシーンの階調に沿います。
@@ -2113,7 +2117,9 @@ Web ギャラリー
 自己完結型のサイトとして書き出します。ライトボックス付きの ``index.html``、JPEG
 サムネイル、元画像のコピーが入ります（**元画像をコピー（ポータブル）** のチェックを外すと
 元画像はコピーしません）。ページタイトルとサムネイルのサイズ・品質を設定できます。
-サーバーは不要で、ディスクから直接開くことも、任意の静的ホスティングに置くこともできます。
+元画像をコピーした場合はサーバーが不要で、ディスクから直接開くことも、任意の静的
+ホスティングに置くこともできます。コピーしない場合、フルサイズへのリンクは自分の
+ディスク上の画像を指します。
 
 **クライアントレビュー** にチェックを入れると、ギャラリーを送ってフィードバックを集められます。
 各画像の下にコメント欄が付き、コメントはレビュー担当者のブラウザーに保存されます。ページの

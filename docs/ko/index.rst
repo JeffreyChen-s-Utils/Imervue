@@ -1936,7 +1936,7 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images``\ 는 현재 Deep Zoom 이미지(또는 첫
 번째 선택 타일)의 64비트 DCT pHash를 계산하여 해밍 거리 순으로 인덱스
-내 유사 이미지를 보여줍니다. ``Max distance``\ 로 범위를 조절할 수 있습니다.
+내 유사 이미지를 보여줍니다. ``최대 해밍 거리``\ 로 범위를 조절할 수 있습니다.
 
 의미 기반 검색 (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1954,7 +1954,7 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 ^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images``\ 는 휴리스틱 태그를 ``auto/...``
-(``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+(``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``) 아래에 부여합니다. 뷰어에 표시되는 그림의 채도, 가장자리, 형태로 판단합니다.
 작업 스레드에서 실행되며 실시간 진행률 표시줄을 제공합니다.
 
@@ -1966,7 +1966,8 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 이미지 목록을 볼 수 있으며, 현재 선택을 한 번에 태그/해제할 수 있습니다.
 우클릭 메뉴의 평면 태그와 공존합니다.
 
-우클릭 ``Index Keywords``\ 는 선택한 이미지의 XMP 키워드를 라이브러리에 추가합니다.
+썸네일을 선택한 뒤 우클릭 > ``일괄 작업`` > ``키워드 색인``\ 을 실행하면 선택한 이미지의
+XMP 키워드를 라이브러리에 추가합니다.
 Lightroom이나 darktable이 쓴 키워드 계층(``lr:hierarchicalSubject``,
 ``Places|Taiwan|Taipei``)은 태그 경로 ``Places/Taiwan/Taipei``\ 로 등록되며, 그 계층을
 반복할 뿐인 ``Places`` / ``Taiwan`` / ``Taipei`` 키워드는 다시 추가하지 않습니다.
@@ -2001,8 +2002,9 @@ Imervue는 Adobe XMP sidecar 파일 (``photo.jpg`` ↔ ``photo.xmp``) 읽기/쓰
 ``photo.xmp``\ (Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는
 ``photo.jpg.xmp``\ 도 그것이 유일한 sidecar이면 읽고 갱신합니다. 색상 라벨은
 Lightroom 표기(``Red`` … ``Purple``)와 Bridge 표기(``Select``, ``Second``,
-``Approved``, ``Review``, ``To Do``)를 이해하며, 내보낼 때는 Lightroom 표기로
-씁니다. 색상에 대응하지 않는 사용자 라벨은 sidecar에 남겨 둡니다.
+``Approved``, ``Review``, ``To Do``)를 이해합니다. 새로 붙이거나 바꾼 색상은 Lightroom
+표기로 내보내고, 같은 색상을 이미 Bridge 표기로 가진 sidecar는 그 표기를 유지합니다.
+색상에 대응하지 않는 사용자 라벨은 sidecar에 남겨 둡니다.
 
 거부된 사진(Lightroom, Bridge, darktable의 ``xmp:Rating`` -1)은 별점 없는 선별
 **거부**\ 로 가져오고, **거부**\ 는 -1로 내보냅니다. 거부가 아닌 sidecar는 '거부'를
@@ -2051,9 +2053,9 @@ State``로 특정 상태만 표시할 수 있고, ``Extra Tools`` > ``Workflow``
 ^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View``\ 는 현재 이미지 집합을 일/월/년 단위로
-그룹화합니다 (Google 포토 스타일). 날짜는 EXIF ``DateTimeOriginal``\ 을
-우선 사용하며, 없으면 파일 수정 시간을 사용합니다. 이미지를 더블
-클릭하면 Deep Zoom에서 열립니다.
+그룹화합니다 (Google 포토 스타일). 날짜는 EXIF ``DateTimeOriginal``, 그다음
+``DateTimeDigitized``, 그다음 ``DateTime`` 순으로 사용하며, 모두 없으면 파일 수정
+시간을 사용합니다. 이미지를 더블 클릭하면 Deep Zoom에서 열립니다.
 
 외부 앱으로 드래그 아웃
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -2085,8 +2087,8 @@ EXIF 사이드바에는 자유 텍스트 **Notes** 필드가 있습니다. 입�
 .cube LUT 적용
 ^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 에서 Adobe ``.cube`` 파일(1D / 3D,
-최대 64³)을 선택할 수 있습니다. DaVinci Resolve의
+``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 에서 Adobe ``.cube`` 파일(3D 최대 65³,
+1D 최대 65,536점)을 선택할 수 있습니다. DaVinci Resolve의
 ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE`` 지시어는 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 와
 같이 입력 범위를 정하며, BOM이 붙은 파일도 읽을 수 있습니다. LUT 는 경로 + mtime 키로
 ``lru_cache`` 에 유지되고, 삼선형 보간으로 적용되며 강도 슬라이더로
@@ -2137,23 +2139,24 @@ ECC 정렬이 기본으로 활성화되어 약간의 핸드헬드 오프셋을 �
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` 은 순수 numpy 기반 4 슬라이더를
 제공합니다: 방사 왜곡 ``k1`` (배럴 / 핀쿠션), 비네트 보정, 빨강 /
-파랑 채널 색수차 방사 스케일. 출력 크기가 바뀔 수 있어 recipe 가
-아닌 새 파일로 저장됩니다.
+파랑 채널 색수차 방사 스케일. 보정된 이미지는 원본과 같은 크기로
+새 파일에 저장됩니다.
 
 지도 보기
 ^^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` 는 Leaflet + OpenStreetMap
-(``PySide6.QtWebEngineWidgets`` 필요)로 라이브러리의 GPS 태그된
-이미지를 모두 지도에 표시합니다. WebEngine 이 없으면 좌표 목록으로
-대체됩니다.
+``Extra Tools`` > ``Views`` > ``Map View`` 는 열려 있는 폴더의 GPS 태그된 이미지를
+Leaflet + OpenStreetMap 대화형 지도(``PySide6.QtWebEngineWidgets`` 필요)에 표시합니다.
+가장 가까운 도시마다 마커 하나를 두고 그곳의 사진 수를 보여 줍니다. WebEngine 이
+없으면 그 장소들을 사진 수, 좌표와 함께 나열한 목록으로 대체되므로 최소 설치에서도
+사용할 수 있습니다.
 
 달력 보기
 ^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` 는 ``QCalendarWidget`` 에서 사진이
 있는 날짜를 강조합니다(EXIF ``DateTimeOriginal`` →
-``DateTimeDigitized`` → 파일 mtime 순). 날짜를 선택하면 해당일 사진이
+``DateTimeDigitized`` → ``DateTime`` → 파일 mtime 순). 날짜를 선택하면 해당일 사진이
 나열되고, 더블클릭으로 메인 뷰어에서 엽니다.
 
 얼굴 검출
@@ -2195,7 +2198,7 @@ OpenCV 4 가 필요합니다(``pip install "opencv-python<5"``). OpenCV 5 에서
 ^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` 은 0..1 정규화 자르기
-사각형과 임의 각도 수평 맞춤을 결합합니다. 출력은 최대 내접
+사각형과 최대 ±15° 수평 맞춤을 결합합니다. 출력은 최대 내접
 사각형으로 자동 잘려 검은 모서리가 없습니다.
 
 자동 수평 맞춤
@@ -2230,7 +2233,7 @@ bilateral 노이즈 감소와 언샤프 마스크 선명화를 결합합니다. 
 톤 및 크리에이티브 효과
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Develop (Non-Destructive)`` 에는 한 번 적용하고 저장하는 효과들이 모여 있습니다. 각 효과는 순수 NumPy 변환 위에 얇은 슬라이더 대화상자를 얹은 것이며, 같은 로직은 MCP 도구로도 제공됩니다:
+``Extra Tools`` > ``Develop (Non-Destructive)`` 에는 한 번 적용하고 저장하는 효과들이 모여 있습니다. 각 효과는 순수 NumPy 변환 위에 얇은 슬라이더 대화상자를 얹은 것이며(프레임 및 캡션만 Pillow로 그립니다), 같은 로직은 MCP 도구로도 제공됩니다:
 
 - **그러데이션 농도** (Graduated Density) — 각도, 경도, 오프셋으로 정의되는 선형 ND 그러데이션이며 색조를 입힐 수도 있습니다. 수동 마스크 없이 하늘이나 전경을 어둡게 합니다.
 - **톤 이퀄라이저** (Tone Equalizer) — 부드럽게 다듬은 마스크 위에서 휘도 구간마다 노출을 따로 조정합니다(검정부터 흰색까지 구간마다 슬라이더 하나). 조정이 장면의 톤을 따라갑니다.
@@ -2260,8 +2263,9 @@ GPS 지오태그
 ``Extra Tools`` > ``Export`` > ``Web Gallery`` 는 선택한 이미지(또는 폴더 전체)를
 자체 완결형 사이트로 저장합니다. 라이트박스가 있는 ``index.html``, JPEG 썸네일, 원본
 사본이 들어가며, **원본 이미지 복사 (이식 가능)** 체크를 해제하면 원본은 복사하지
-않습니다. 페이지 제목과 썸네일 크기·품질을 설정할 수 있습니다. 서버가 필요 없으므로
-디스크에서 바로 열거나 아무 정적 호스팅에나 올리면 됩니다.
+않습니다. 페이지 제목과 썸네일 크기·품질을 설정할 수 있습니다. 원본을 복사했다면 서버가
+필요 없으므로 디스크에서 바로 열거나 아무 정적 호스팅에나 올리면 됩니다. 복사하지
+않았다면 원본 크기 링크는 내 디스크에 있는 이미지를 가리킵니다.
 
 **클라이언트 검토**\ 를 켜면 갤러리를 보내 피드백을 받을 수 있습니다. 각 이미지 아래에
 댓글 상자가 생기고 메모는 검토자의 브라우저에 저장되며, 페이지의 **Export comments**

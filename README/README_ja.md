@@ -304,7 +304,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 ### カーブ & LUT
 
 - **トーンカーブエディタ** — ドラッグ可能な RGB カーブ + 個別の R / G / B チャンネル、monotone cubic 補間付き
-- **.cube LUT 適用** — Adobe 3D LUT(最大 64³、DaVinci Resolve の `LUT_3D_INPUT_RANGE` にも対応)を読み込み、トリリニア補間、強度スライダーでブレンド
+- **.cube LUT 適用** — Adobe LUT(3D は最大 65³、1D は最大 65,536 点、DaVinci Resolve の `LUT_3D_INPUT_RANGE` にも対応)を読み込み、トリリニア補間、強度スライダーでブレンド
 - **スプリットトーニング** — フラグベースのシャドウ / ハイライト色相 + 彩度、バランスピボット付き
 
 ### クリエイティブエフェクト

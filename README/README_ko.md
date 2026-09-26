@@ -304,7 +304,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 ### 커브 및 LUT
 
 - **톤 커브 편집기** — 드래그 가능한 RGB 커브와 채널별 R / G / B 커브 (monotone cubic 보간)
-- **.cube LUT 적용** — 임의의 Adobe 3D LUT 로드 (최대 64³, DaVinci Resolve의 `LUT_3D_INPUT_RANGE` 포함), trilinear 보간, 강도 슬라이더로 블렌드
+- **.cube LUT 적용** — 임의의 Adobe LUT 로드 (3D 최대 65³, 1D 최대 65,536점, DaVinci Resolve의 `LUT_3D_INPUT_RANGE` 포함), trilinear 보간, 강도 슬라이더로 블렌드
 - **스플릿 토닝** — 플래그 기반 그림자 / 하이라이트 색조 + 채도, 균형 피벗 포함
 
 ### 크리에이티브 효과

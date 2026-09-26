@@ -1634,7 +1634,7 @@ traditional_chinese_word_dict = {
     "lut_clear": "清除",
     "lut_intensity": "強度：",
     "lut_pick": "選擇 .cube LUT",
-    "lut_hint": "可載入任何 Adobe .cube LUT（最大 64\u00b3）。強度滑桿可與原圖混合。",
+    "lut_hint": "可載入任何 Adobe .cube LUT（3D 最大 65\u00b3，1D 最多 65,536 點）。強度滑桿可與原圖混合。",
 
     # --- Virtual Copies ---
     "vcopies_title": "虛擬副本",
@@ -2294,6 +2294,7 @@ traditional_chinese_word_dict = {
     "graduated_density_angle": "角度（°）：",
     "graduated_density_hardness": "硬度：",
     "graduated_density_offset": "偏移：",
+    "graduated_density_tint": "為漸層那一側加上色調",
     "graduated_density_stops": "密度（級）：",
     "graduated_density_title": "漸層減光",
     "htags_add": "建立",

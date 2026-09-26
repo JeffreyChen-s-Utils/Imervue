@@ -1745,7 +1745,7 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` 會對當前深度縮放的圖片（或第一張選
 取圖）計算 64 位元 DCT pHash，並依 Hamming 距離遞增列出索引中的近似圖。
-可藉由「Max distance」調整寬鬆度。
+可藉由 ``最大漢明距離`` 調整寬鬆度。
 
 語意搜尋（CLIP）
 ^^^^^^^^^^^^^^^^
@@ -1765,7 +1765,7 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` 會將經驗式標籤套用於 ``auto/...``
-（``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+（``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``），依據檢視器所顯示畫面的色彩飽和度、邊緣與形狀來判斷。執行時以工作執行緒處理，具即時進度列。
 
 階層式標籤
@@ -1775,10 +1775,10 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ``animal/cat/british``）。選取節點即可列出該節點與所有子節點下的圖片；可
 一鍵為目前選取的圖片加上或移除標籤。此系統與右鍵選單的扁平標籤並行。
 
-右鍵 ``Index Keywords`` 會把所選圖片的 XMP 關鍵字加入圖庫。Lightroom 或 darktable
-寫的關鍵字階層（``lr:hierarchicalSubject``，如 ``Places|Taiwan|Taipei``）會成為
-標籤路徑 ``Places/Taiwan/Taipei``；只是重複這些層級的 ``Places``／``Taiwan``／
-``Taipei`` 零散關鍵字不會再另外加入。
+選取縮圖後右鍵 > ``批次操作`` > ``索引關鍵字`` 會把所選圖片的 XMP 關鍵字加入圖庫。
+Lightroom 或 darktable 寫的關鍵字階層（``lr:hierarchicalSubject``，如
+``Places|Taiwan|Taipei``）會成為標籤路徑 ``Places/Taiwan/Taipei``；只是重複這些層級的
+``Places``／``Taiwan``／``Taipei`` 零散關鍵字不會再另外加入。
 
 Token 批次重新命名
 ^^^^^^^^^^^^^^^^^^
@@ -1810,8 +1810,9 @@ Imervue 支援讀寫 Adobe XMP sidecar 檔（``photo.jpg`` ↔ ``photo.xmp``）�
 除了 ``photo.xmp``\ （Lightroom、Bridge），darktable 與 digiKam 寫的
 ``photo.jpg.xmp`` 在它是唯一的 sidecar 時也會讀取並更新。色彩標籤看得懂
 Lightroom 的寫法（``Red`` … ``Purple``）與 Bridge 的寫法（``Select``、``Second``、
-``Approved``、``Review``、``To Do``），匯出時照 Lightroom 的寫法寫入；沒有對應顏色的
-自訂標籤會留在 sidecar 裡。
+``Approved``、``Review``、``To Do``）。新加上或改過的顏色照 Lightroom 的寫法匯出；已用
+Bridge 的寫法存著同一顏色的 sidecar 會保留那個寫法。沒有對應顏色的自訂標籤會留在
+sidecar 裡。
 
 被拒絕的照片（Lightroom、Bridge、darktable 的 ``xmp:Rating`` -1）匯入後成為篩選的
 **拒絕**\ 且不帶星等，**拒絕**\ 匯出時寫成 -1。sidecar 不是拒絕時會解除「拒絕」，
@@ -1855,8 +1856,8 @@ XML 解析透過 ``defusedxml`` 進行，避免 XXE / billion-laughs 等攻擊�
 ^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` 以「日／月／年」方式分組目前圖片集
-（date-grouped library views 樣式）。日期優先使用 EXIF ``DateTimeOriginal``，否則退回檔
-案修改時間。雙擊圖片即可進入深度縮放。
+（date-grouped library views 樣式）。日期依序使用 EXIF ``DateTimeOriginal``、
+``DateTimeDigitized``、``DateTime``，都沒有時退回檔案修改時間。雙擊圖片即可進入深度縮放。
 
 拖放至外部應用程式
 ^^^^^^^^^^^^^^^^^^
@@ -1886,7 +1887,7 @@ R、G、B 四條通道。點擊空白處新增控制點、拖曳移動、右鍵�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 可選擇任意 Adobe ``.cube`` 檔案
-（1D / 3D，最大 64³）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
+（3D 最大 65³，1D 最多 65,536 點）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
 ``LUT_3D_INPUT_RANGE`` 會像 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 一樣設定輸入範圍，帶 BOM
 的檔案也能讀取。LUT 以 ``lru_cache`` 依路徑 + mtime 快取，使用
 三線性插值套用，並透過強度滑桿與原始影像混合。LUT 路徑與強度儲存在
@@ -1933,21 +1934,22 @@ HDR 合成
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` 提供四個純 numpy 滑桿：
 徑向失真 ``k1``\ （桶型 / 枕型）、暗角補光，以及紅 / 藍通道的色差
-徑向縮放。因影像尺寸可能改變，結果輸出為新檔而非寫入 recipe。
+徑向縮放。校正後的影像與原圖尺寸相同，輸出為新檔。
 
 地圖檢視
 ^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` 透過 Leaflet + OpenStreetMap（需
-``PySide6.QtWebEngineWidgets``）顯示目前圖庫中所有有 GPS 的照片。
-未安裝 WebEngine 時降級為 ``(路徑, 緯度, 經度)`` 列表。
+``Extra Tools`` > ``Views`` > ``Map View`` 透過 Leaflet + OpenStreetMap 互動式地圖（需
+``PySide6.QtWebEngineWidgets``）顯示目前開啟的資料夾中有 GPS 的照片，每個最近的城市
+一個標記，並標出那裡的照片數。未安裝 WebEngine 時降級為這些地點的列表，附照片數與
+座標，在最精簡的安裝下也能使用。
 
 行事曆檢視
 ^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` 以 ``QCalendarWidget`` 標示有
 照片的日期（依序嘗試 EXIF ``DateTimeOriginal`` → ``DateTimeDigitized``
-→ 檔案 mtime）。點選日期列出當日照片，雙擊於主視窗開啟。
+→ ``DateTime`` → 檔案 mtime）。點選日期列出當日照片，雙擊於主視窗開啟。
 
 人臉偵測
 ^^^^^^^^
@@ -1985,7 +1987,7 @@ develop pipeline 的 tone curve 之後套用。
 ^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` 結合 0..1 正規化裁切矩形與
-任意角度拉直。輸出會自動裁切到最大內接矩形，旋轉後的照片不會有
+最大 ±15° 的拉直角度。輸出會自動裁切到最大內接矩形，旋轉後的照片不會有
 黑邊。
 
 自動拉直
@@ -2019,8 +2021,8 @@ bilateral 降噪，再以 unsharp mask 銳化。「僅亮度通道」會保留�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` 匯集了一組一次性、套用即存檔的
-效果，每個都是薄薄一層滑桿對話框、底層是純 NumPy 轉換（同樣的邏輯也以 MCP
-工具形式對外提供）：
+效果，每個都是薄薄一層滑桿對話框、底層是純 NumPy 轉換（外框與說明文字用 Pillow
+繪製；同樣的邏輯也以 MCP 工具形式對外提供）：
 
 - **漸層減光（Graduated Density）** — 依角度、硬度與偏移定義的線性中性減光
   漸層，可加色調；免手繪遮罩就能壓暗天空或前景。
@@ -2057,8 +2059,9 @@ GPS 地理標記
 
 ``Extra Tools`` > ``Export`` > ``Web Gallery`` 把選取的圖片（或整個資料夾）輸出成可獨立運作的
 網站：附燈箱的 ``index.html``、JPEG 縮圖，以及原始檔案的副本（取消勾選
-**複製原始檔案（可攜式）** 就不複製原始檔案）。頁面標題與縮圖的尺寸和品質都可以設定。頁面
-不需要伺服器，直接從磁碟開啟或放到任何靜態網站主機上都可以。
+**複製原始檔案（可攜式）** 就不複製原始檔案）。頁面標題與縮圖的尺寸和品質都可以設定。有複製
+原始檔案時，頁面不需要伺服器，直接從磁碟開啟或放到任何靜態網站主機上都可以；沒有複製時，
+頁面上的原圖連結指向你自己磁碟上的圖片。
 
 勾選 **客戶審閱** 就能把相簿交給客戶提供意見。每張圖片下方會有一個留言框；留言存在審閱者的
 瀏覽器裡，頁面上的 **Export comments** 按鈕會把所有留言存成一個 JSON 檔。

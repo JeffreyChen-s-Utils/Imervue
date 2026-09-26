@@ -308,7 +308,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 ### Curves & LUTs
 
 - **Tone Curve editor** — draggable RGB curve plus per-channel R / G / B with monotone cubic interpolation
-- **Apply .cube LUT** — load any Adobe 3D LUT (up to 64³, DaVinci Resolve's `LUT_3D_INPUT_RANGE` included), trilinear-interpolate, blend with an intensity slider
+- **Apply .cube LUT** — load any Adobe LUT (3D up to 65³, 1D up to 65,536 points; DaVinci Resolve's `LUT_3D_INPUT_RANGE` included), trilinear-interpolate, blend with an intensity slider
 - **Split Toning** — flag-based shadow / highlight hue + saturation with a balance pivot
 
 ### Creative effects

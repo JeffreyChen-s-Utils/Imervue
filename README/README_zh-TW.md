@@ -303,7 +303,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 ### 曲線與 LUT
 
 - **色調曲線編輯器** — 可拖曳 RGB 曲線 + 個別 R / G / B 通道，含 monotone cubic 插值
-- **套用 .cube LUT** — 載入任何 Adobe 3D LUT（最高 64³，含 DaVinci Resolve 的 `LUT_3D_INPUT_RANGE`），trilinear 插值，混合強度滑桿
+- **套用 .cube LUT** — 載入任何 Adobe LUT（3D 最高 65³，1D 最多 65,536 點，含 DaVinci Resolve 的 `LUT_3D_INPUT_RANGE`），trilinear 插值，混合強度滑桿
 - **分離色調** — 旗標式陰影 / 高光色相 + 飽和度，含平衡樞紐
 
 ### 創意效果

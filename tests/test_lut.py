@@ -80,9 +80,28 @@ class TestParse:
             lut_mod.parse_cube(path)
 
     def test_rejects_oversized_lut(self, tmp_path):
-        body = "LUT_3D_SIZE 128\n"
+        body = "LUT_3D_SIZE 66\n"
         path = _write(tmp_path, "huge.cube", body)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="3D LUT size 66 exceeds maximum 65"):
+            lut_mod.parse_cube(path)
+
+    def test_a_65_point_grid_loads(self, tmp_path):
+        """DaVinci Resolve and ARRI export 65-point cubes; a cap of 64 refused them."""
+        path = _write(tmp_path, "resolve.cube", _identity_3d_cube(65))
+        lut = lut_mod.parse_cube(path)
+        assert lut.size == 65
+        assert lut.table.shape == (65, 65, 65, 3)
+
+    def test_a_4096_point_1d_curve_loads(self, tmp_path):
+        """1D curves are usually 1024 or 4096 points; the shared cap of 64 refused them."""
+        rows = "\n".join(f"{i / 4095:.6f} {i / 4095:.6f} {i / 4095:.6f}" for i in range(4096))
+        path = _write(tmp_path, "curve.cube", "LUT_1D_SIZE 4096\n" + rows)
+        lut = lut_mod.parse_cube(path)
+        assert (lut.size, lut.is_3d, lut.table.shape) == (4096, False, (4096, 3))
+
+    def test_a_1d_curve_past_the_spec_limit_is_refused(self, tmp_path):
+        path = _write(tmp_path, "too_long.cube", "LUT_1D_SIZE 65537\n")
+        with pytest.raises(ValueError, match="1D LUT size 65537 exceeds maximum 65536"):
             lut_mod.parse_cube(path)
 
     def test_size_directive_without_value_raises_valueerror(self, tmp_path):

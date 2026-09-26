@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-57 | 2026-09-26 | 65-point and 1D LUTs load, Graduated Density offers its tint, and the library docs match the code | #fix #lut #develop #docs #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
 | U-20260926-56 | 2026-09-26 | Record U-20260926-54 lost its file names to shell quoting and was repaired in place | #incident #docs | [2026-09-c](2026-09-c.md) |
 | U-20260926-55 | 2026-09-26 | A colour key clears a selection that already has it, and the organising docs match the menus | #fix #culling #color-label #docs #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-54 | 2026-09-26 | The Puppet guide translations are held to the English structure too | #test #docs #i18n #puppet | [2026-09-b](2026-09-b.md) |
@@ -430,4 +431,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 1 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 2 |

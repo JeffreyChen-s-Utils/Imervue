@@ -2172,7 +2172,7 @@ Búsqueda de imágenes similares
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` ejecuta un pHash DCT de 64
 bits sobre la imagen actual en deep-zoom (o sobre el primer mosaico seleccionado) y lista las
 coincidencias cercanas del índice ordenadas por distancia de Hamming. Ajuste el spin
-``Max distance`` para ampliar o restringir el ámbito.
+``Max Hamming distance`` para ampliar o restringir el ámbito.
 
 Búsqueda semántica (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2194,7 +2194,8 @@ Auto-Tag
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` aplica etiquetas heurísticas
-bajo ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` / ``portrait``),
+bajo ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
+``portrait``),
 deducidas de la saturación del color, los bordes y la forma de la imagen tal como la muestra el
 visor. Se ejecuta en un hilo de trabajo con una barra de progreso en vivo.
 
@@ -2207,8 +2208,8 @@ imágenes bajo esa rama (descendientes incluidos). Etiquete o desetiquete la sel
 con un clic. Las etiquetas jerárquicas viven en el índice de la biblioteca y son
 complementarias al sistema de etiquetas planas del menú contextual.
 
-``Index Keywords`` del menú contextual añade a la biblioteca las palabras clave XMP de
-la selección. Una jerarquía de palabras clave escrita por Lightroom o darktable
+Clic derecho > ``Batch Operations`` > ``Index Keywords`` (con miniaturas seleccionadas) añade a
+la biblioteca las palabras clave XMP de la selección. Una jerarquía de palabras clave escrita por Lightroom o darktable
 (``lr:hierarchicalSubject``, ``Places|Taiwan|Taipei``) se archiva como la ruta de
 etiqueta ``Places/Taiwan/Taipei``, y las palabras sueltas ``Places`` / ``Taiwan`` /
 ``Taipei`` que solo repiten sus niveles no se añaden otra vez.
@@ -2247,8 +2248,9 @@ Además de ``photo.xmp`` (Lightroom, Bridge), se lee y actualiza el
 ``photo.jpg.xmp`` que escriben darktable y digiKam cuando es el único sidecar.
 Las etiquetas de color se entienden con las palabras de Lightroom (``Red`` …
 ``Purple``) y las de Bridge (``Select``, ``Second``, ``Approved``, ``Review``,
-``To Do``), y se exportan como las escribe Lightroom; una etiqueta sin color (una
-personalizada) se deja en el sidecar.
+``To Do``). Un color nuevo o cambiado se exporta como lo escribe Lightroom; un
+sidecar que ya tiene la palabra de Bridge para ese mismo color conserva esa palabra.
+Una etiqueta sin color (una personalizada) se deja en el sidecar.
 
 Una foto rechazada — ``xmp:Rating`` -1 en Lightroom, Bridge y darktable — se
 importa como **Reject** de la selección sin estrellas, y un Reject se exporta como
@@ -2301,9 +2303,9 @@ Vista de línea de tiempo
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` agrupa el conjunto de imágenes actual por día,
-mes o año (agrupado por fecha). La fecha se toma de EXIF ``DateTimeOriginal`` cuando está
-presente, en caso contrario de la fecha de modificación del archivo. Haga doble clic en
-cualquier imagen para abrirla en Deep Zoom.
+mes o año (agrupado por fecha). La fecha se toma de EXIF ``DateTimeOriginal``, después de
+``DateTimeDigitized``, después de ``DateTime`` y, si no, de la fecha de modificación del
+archivo. Haga doble clic en cualquier imagen para abrirla en Deep Zoom.
 
 Arrastrar fuera a aplicaciones externas
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2337,7 +2339,7 @@ Aplicar LUT .cube
 ^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` le permite elegir
-cualquier archivo Adobe ``.cube`` (1D o 3D, hasta 64³). ``LUT_1D_INPUT_RANGE`` /
+cualquier archivo Adobe ``.cube`` (3D hasta 65³, 1D hasta 65.536 puntos). ``LUT_1D_INPUT_RANGE`` /
 ``LUT_3D_INPUT_RANGE`` de DaVinci Resolve fija el rango de entrada igual que
 ``DOMAIN_MIN`` / ``DOMAIN_MAX``, y también se lee un archivo guardado con BOM. La LUT se parsea con un ``lru_cache``
 clave por ruta + mtime, se evalúa con interpolación trilineal, y se mezcla contra el original
@@ -2391,26 +2393,25 @@ Corrección de lente
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` expone cuatro deslizadores
 puros en numpy: distorsión radial ``k1`` (barril / cojín), levantamiento de viñeteado, y
-escala radial de aberración cromática por canal para rojo y azul. La imagen corregida se
-guarda como un archivo nuevo — la corrección de lente no es parte de la receta porque la
-forma de la salida puede cambiar.
+escala radial de aberración cromática por canal para rojo y azul. La imagen corregida, del
+mismo tamaño que la original, se guarda como un archivo nuevo.
 
 Vista de mapa
 ^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` traza todas las imágenes con geotag de la
-biblioteca actual en un mapa Leaflet + OpenStreetMap interactivo (requiere
-``PySide6.QtWebEngineWidgets``). Sin WebEngine, el diálogo recurre a una lista simple de
-entradas ``(path, lat, lon)`` para que la función siga siendo usable en instalaciones
-mínimas.
+``Extra Tools`` > ``Views`` > ``Map View`` traza las imágenes con geotag de la carpeta
+abierta en un mapa Leaflet + OpenStreetMap interactivo, con un marcador por ciudad más
+cercana y el número de imágenes que hay allí (requiere ``PySide6.QtWebEngineWidgets``).
+Sin WebEngine, el diálogo recurre a una lista de esos lugares con sus recuentos y
+coordenadas, para que la función siga siendo usable en instalaciones mínimas.
 
 Vista de calendario
 ^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` muestra un ``QCalendarWidget`` con los días
 resaltados cuando se tomaron fotos ese día (EXIF ``DateTimeOriginal`` →
-``DateTimeDigitized`` → mtime del archivo). Seleccionar una fecha lista sus imágenes; doble
-clic para abrir una en el visor principal.
+``DateTimeDigitized`` → ``DateTime`` → mtime del archivo). Seleccionar una fecha lista sus
+imágenes; doble clic para abrir una en el visor principal.
 
 Detección de rostros
 ^^^^^^^^^^^^^^^^^^^^
@@ -2453,7 +2454,7 @@ Recortar / Enderezar
 ^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` combina un rectángulo de
-recorte normalizado (0..1) con un ángulo de enderezamiento arbitrario. La salida se
+recorte normalizado (0..1) con un ángulo de enderezamiento de hasta ±15°. La salida se
 recorta automáticamente al rectángulo interior más grande, de modo que las fotos rotadas no
 tienen esquinas negras.
 
@@ -2493,8 +2494,8 @@ Efectos tonales y creativos
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` reúne un conjunto de efectos de
 aplicar-y-guardar de un solo paso, cada uno un fino diálogo de controles deslizantes
-sobre una transformación en NumPy puro (la misma lógica también se expone como
-herramienta MCP):
+sobre una transformación en NumPy puro (Frame & Caption dibuja con Pillow; la misma
+lógica también se expone como herramienta MCP):
 
 - **Graduated Density** — un degradado de densidad neutra lineal definido por ángulo,
   dureza y desplazamiento, opcionalmente teñido; oscurece un cielo o un primer plano sin
@@ -2539,8 +2540,9 @@ Galería web
 ``Extra Tools`` > ``Export`` > ``Web Gallery`` guarda las imágenes seleccionadas (o toda la
 carpeta) como un sitio autocontenido: ``index.html`` con lightbox, miniaturas JPEG y copias de los
 originales, salvo que desmarque **Copiar los originales a tamaño completo**. Puede elegir el título
-de la página y el tamaño y la calidad de las miniaturas. La página no necesita servidor: ábrala
-desde el disco o súbala a cualquier alojamiento estático.
+de la página y el tamaño y la calidad de las miniaturas. Con los originales copiados, la página
+no necesita servidor: ábrala desde el disco o súbala a cualquier alojamiento estático. Sin ellos,
+sus enlaces a tamaño completo apuntan a las imágenes de su propio disco.
 
 Marque **Revisión del cliente** para enviar la galería y recoger opiniones. Cada imagen recibe un
 cuadro de comentario; las notas se quedan en el navegador del revisor y el botón

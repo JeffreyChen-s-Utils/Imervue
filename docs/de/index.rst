@@ -2204,8 +2204,8 @@ eines Albums filtert den aktiven Ordner nach den gespeicherten Regeln.
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` führt einen 64-Bit-DCT-pHash
 auf dem aktuellen Deep-Zoom-Bild (oder der ersten ausgewählten Kachel) aus und listet
-nahe Treffer aus dem Index, sortiert nach Hamming-Distanz. Stellen Sie ``Max distance``
-ein, um das Netz zu verbreitern oder zu straffen.
+nahe Treffer aus dem Index, sortiert nach Hamming-Distanz. Stellen Sie
+``Max Hamming distance`` ein, um das Netz zu verbreitern oder zu straffen.
 
 Semantische Suche (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2227,8 +2227,8 @@ Auto-Tag
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` wendet heuristische Tags
-unter ``auto/...`` an (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
-``portrait``), abgeleitet aus Farbsättigung, Kanten und Form des Bildes, so wie der
+unter ``auto/...`` an (``photo`` / ``document`` / ``screenshot`` / ``graphic`` /
+``landscape`` / ``portrait``), abgeleitet aus Farbsättigung, Kanten und Form des Bildes, so wie der
 Betrachter es anzeigt. Läuft in einem Worker-Thread mit Live-Fortschrittsbalken.
 
 Hierarchische Tags
@@ -2240,9 +2240,10 @@ Tags wie ``animal/cat/british``. Wählen Sie ein Tag, um jedes Bild unter diesem
 Hierarchische Tags leben im Bibliotheksindex und ergänzen das flache Tag-System im
 Rechtsklick-Menü.
 
-``Index Keywords`` im Rechtsklick-Menü übernimmt die XMP-Stichwörter der Auswahl in
-die Bibliothek. Eine von Lightroom oder darktable geschriebene Stichwort-Hierarchie
-(``lr:hierarchicalSubject``, ``Places|Taiwan|Taipei``) wird als Tag-Pfad
+Rechtsklick > ``Stapeloperationen`` > ``Index Keywords`` (bei ausgewählten Miniaturansichten)
+übernimmt die XMP-Stichwörter der Auswahl in die Bibliothek. Eine von Lightroom oder
+darktable geschriebene Stichwort-Hierarchie (``lr:hierarchicalSubject``,
+``Places|Taiwan|Taipei``) wird als Tag-Pfad
 ``Places/Taiwan/Taipei`` abgelegt; lose Stichwörter ``Places`` / ``Taiwan`` /
 ``Taipei``, die nur ihre Ebenen wiederholen, kommen nicht noch einmal hinzu.
 
@@ -2281,8 +2282,10 @@ Neben ``photo.xmp`` (Lightroom, Bridge) wird auch die von darktable und digiKam
 geschriebene ``photo.jpg.xmp`` gelesen und aktualisiert, wenn sie die einzige
 Sidecar-Datei ist. Farbetiketten werden in Lightrooms Wörtern (``Red`` … ``Purple``)
 und in Bridges (``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``)
-verstanden und so exportiert, wie Lightroom sie schreibt; ein Etikett ohne Farbe
-(ein eigenes) bleibt in der Sidecar-Datei stehen.
+verstanden. Eine neue oder geänderte Farbe wird so exportiert, wie Lightroom sie
+schreibt; eine Sidecar-Datei, die für dieselbe Farbe bereits Bridges Wort enthält,
+behält dieses Wort. Ein Etikett ohne Farbe (ein eigenes) bleibt in der
+Sidecar-Datei stehen.
 
 Ein abgelehntes Foto — ``xmp:Rating`` -1 in Lightroom, Bridge und darktable —
 wird als Culling-**Reject** ohne Sterne importiert, und ein Reject wird als -1
@@ -2337,9 +2340,10 @@ Zeitleisten-Ansicht
 ^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` gruppiert das aktuelle Bildset nach Tag,
-Monat oder Jahr (datumsgruppiert). Das Datum wird aus EXIF ``DateTimeOriginal``
-genommen, wenn vorhanden, andernfalls aus der Datei-Änderungszeit. Doppelklicken
-Sie auf ein beliebiges Bild, um es in Deep Zoom zu öffnen.
+Monat oder Jahr (datumsgruppiert). Das Datum stammt aus EXIF ``DateTimeOriginal``,
+danach aus ``DateTimeDigitized``, danach aus ``DateTime`` und andernfalls aus der
+Datei-Änderungszeit. Doppelklicken Sie auf ein beliebiges Bild, um es in Deep Zoom
+zu öffnen.
 
 Drag-out zu externen Apps
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2374,7 +2378,7 @@ angewendet wird.
 ^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` lässt Sie eine
-beliebige Adobe-``.cube``-Datei (1D oder 3D, bis zu 64³) wählen. ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE``
+beliebige Adobe-``.cube``-Datei (3D bis zu 65³, 1D bis zu 65.536 Punkte) wählen. ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE``
 von DaVinci Resolve legt den Eingabebereich wie ``DOMAIN_MIN`` / ``DOMAIN_MAX``
 fest, und auch eine Datei mit BOM wird gelesen. Die LUT wird mit
 einem ``lru_cache`` mit Schlüssel Pfad + mtime geparst, mit trilinearer Interpolation
@@ -2431,16 +2435,17 @@ Objektivkorrektur
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` stellt vier reine
 Numpy-Schieberegler bereit: radiale Verzerrung ``k1`` (Tonne / Kissen),
 Vignetten-Anhebung und kanalweise chromatische Aberrations-Radialskalierung für
-Rot und Blau. Das korrigierte Bild wird als neue Datei gespeichert — die
-Objektivkorrektur ist nicht Teil des Recipes, weil sich die Ausgabeform ändern kann.
+Rot und Blau. Das korrigierte Bild, so groß wie das Original, wird als neue Datei
+gespeichert.
 
 Kartenansicht
 ^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` plottet jedes geotaggte Bild der aktuellen
-Bibliothek auf einer interaktiven Leaflet + OpenStreetMap-Karte (benötigt
-``PySide6.QtWebEngineWidgets``). Ohne WebEngine fällt der Dialog auf eine einfache
-Liste von ``(path, lat, lon)``-Einträgen zurück, damit das Feature auf minimalen
+``Extra Tools`` > ``Views`` > ``Map View`` plottet die geotaggten Bilder des geöffneten
+Ordners auf einer interaktiven Leaflet + OpenStreetMap-Karte, mit einer Markierung pro
+nächstgelegener Stadt samt der Anzahl der Bilder dort (benötigt
+``PySide6.QtWebEngineWidgets``). Ohne WebEngine fällt der Dialog auf eine Liste dieser
+Orte mit ihrer Anzahl und ihren Koordinaten zurück, damit das Feature auf minimalen
 Installationen verwendbar bleibt.
 
 Kalenderansicht
@@ -2448,8 +2453,9 @@ Kalenderansicht
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` zeigt ein ``QCalendarWidget``, in
 dem Tage hervorgehoben werden, an denen Fotos aufgenommen wurden (EXIF
-``DateTimeOriginal`` → ``DateTimeDigitized`` → Datei-mtime). Auswählen eines
-Datums listet seine Bilder; Doppelklick öffnet eines im Hauptbetrachter.
+``DateTimeOriginal`` → ``DateTimeDigitized`` → ``DateTime`` → Datei-mtime).
+Auswählen eines Datums listet seine Bilder; Doppelklick öffnet eines im
+Hauptbetrachter.
 
 Gesichtserkennung
 ^^^^^^^^^^^^^^^^^
@@ -2493,7 +2499,7 @@ Zuschneiden / Begradigen
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` kombiniert ein
-normalisiertes (0..1) Zuschnitt-Rechteck mit einem beliebigen Begradigungs-Winkel.
+normalisiertes (0..1) Zuschnitt-Rechteck mit einem Begradigungs-Winkel von bis zu ±15°.
 Die Ausgabe wird auf das größte innere Rechteck zugeschnitten, sodass gedrehte Fotos
 keine schwarzen Ecken haben.
 
@@ -2534,8 +2540,8 @@ Tonwert- und Kreativeffekte
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` bündelt eine Reihe von Einmal-Effekten,
 die angewendet und gleich gespeichert werden. Jeder ist ein schlanker Schieberegler-Dialog
-über einer reinen NumPy-Transformation (dieselbe Logik steht auch als MCP-Werkzeug
-bereit):
+über einer reinen NumPy-Transformation (Frame & Caption zeichnet mit Pillow; dieselbe
+Logik steht auch als MCP-Werkzeug bereit):
 
 - **Graduated Density** — ein linearer Neutraldichte-Gradient, festgelegt über Winkel,
   Härte und Versatz, optional eingefärbt; dunkelt Himmel oder Vordergrund ohne
@@ -2582,8 +2588,10 @@ Web-Galerie
 ``Extra Tools`` > ``Export`` > ``Web Gallery`` schreibt die ausgewählten Bilder (oder den ganzen
 Ordner) als eigenständige Website: ``index.html`` mit Lightbox, JPEG-Miniaturansichten und Kopien
 der Originale, sofern Sie **Originale in voller Größe kopieren** nicht abwählen. Seitentitel sowie
-Größe und Qualität der Miniaturansichten legen Sie selbst fest. Die Seite braucht keinen Server:
-Öffnen Sie sie direkt von der Festplatte oder legen Sie sie auf einen beliebigen statischen Host.
+Größe und Qualität der Miniaturansichten legen Sie selbst fest. Mit kopierten Originalen braucht
+die Seite keinen Server: Öffnen Sie sie direkt von der Festplatte oder legen Sie sie auf einen
+beliebigen statischen Host. Ohne sie zeigen die Links zur vollen Größe auf die Bilder auf Ihrer
+eigenen Festplatte.
 
 Aktivieren Sie **Kunden-Review**, wenn Sie Feedback zur Galerie einholen möchten. Unter jedem Bild
 erscheint ein Kommentarfeld; die Notizen bleiben im Browser des Prüfers, und die Schaltfläche

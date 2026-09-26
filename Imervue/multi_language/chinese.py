@@ -1635,7 +1635,7 @@ chinese_word_dict = {
     "lut_clear": "清除",
     "lut_intensity": "强度：",
     "lut_pick": "选择 .cube LUT",
-    "lut_hint": "可载入任意 Adobe .cube LUT（最高 64\u00b3）。强度滑块与原图混合。",
+    "lut_hint": "可载入任意 Adobe .cube LUT（3D 最高 65\u00b3，1D 最多 65,536 点）。强度滑块与原图混合。",
 
     # --- Virtual Copies ---
     "vcopies_title": "虚拟副本",
@@ -2295,6 +2295,7 @@ chinese_word_dict = {
     "graduated_density_angle": "角度（°）：",
     "graduated_density_hardness": "硬度：",
     "graduated_density_offset": "偏移：",
+    "graduated_density_tint": "为渐变那一侧加上色调",
     "graduated_density_stops": "密度（档）：",
     "graduated_density_title": "渐变滤镜",
     "htags_add": "创建",

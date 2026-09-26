@@ -2133,7 +2133,7 @@ Similar-Image Search
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` runs a 64-bit DCT pHash on the
 current deep-zoom image (or the first selected tile) and lists near matches
-from the index sorted by Hamming distance. Adjust the ``Max distance`` spin to
+from the index sorted by Hamming distance. Adjust the ``Max Hamming distance`` spin to
 widen or tighten the net.
 
 Semantic Search (CLIP)
@@ -2156,7 +2156,7 @@ Auto-Tag
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` applies heuristic tags under
-``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``), read from the colour saturation, edges and shape of the picture as the
 viewer shows it. Runs on a worker thread with a live progress bar.
 
@@ -2169,7 +2169,7 @@ Hierarchical Tags
 Hierarchical tags live in the library index and are complementary to the flat
 tag system in the right-click menu.
 
-Right-click ``Index Keywords`` adds the selection's XMP keywords to the library.
+Right-click > ``Batch Operations`` > ``Index Keywords`` (with thumbnails selected) adds the selection's XMP keywords to the library.
 A keyword hierarchy Lightroom or darktable wrote (``lr:hierarchicalSubject``,
 ``Places|Taiwan|Taipei``) is filed as the tag path ``Places/Taiwan/Taipei``, and
 the loose ``Places`` / ``Taiwan`` / ``Taipei`` keywords that only repeat its
@@ -2208,8 +2208,9 @@ Saving merges into an existing sidecar: only these fields change, so a raw devel
 Besides ``photo.xmp`` (Lightroom, Bridge), the ``photo.jpg.xmp`` that darktable
 and digiKam write is read and updated when it is the only sidecar. Colour labels
 are understood in Lightroom's words (``Red`` … ``Purple``) and Bridge's
-(``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``), and exported as
-Lightroom writes them; a label with no colour (a custom one) is left in the sidecar.
+(``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``). A new or changed
+colour is exported as Lightroom writes it; a sidecar that already holds Bridge's word
+for the same colour keeps that word. A label with no colour (a custom one) is left in the sidecar.
 
 A rejected photo — ``xmp:Rating`` -1 in Lightroom, Bridge and darktable — is
 imported as a culling **Reject** with no stars, and a Reject is exported as -1.
@@ -2264,8 +2265,8 @@ Timeline View
 ^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` groups the current image set by day,
-month, or year (date-grouped). Date is taken from EXIF
-``DateTimeOriginal`` when present, otherwise from the file modification time.
+month, or year (date-grouped). The date comes from EXIF ``DateTimeOriginal``, then
+``DateTimeDigitized``, then ``DateTime``, and otherwise from the file modification time.
 Double-click any image to open it in Deep Zoom.
 
 Drag-out to External Apps
@@ -2300,7 +2301,7 @@ Apply .cube LUT
 ^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` lets you pick any Adobe ``.cube`` file
-(1D or 3D, up to 64³). DaVinci Resolve's ``LUT_1D_INPUT_RANGE`` /
+(3D up to 65³, 1D up to 65,536 points). DaVinci Resolve's ``LUT_1D_INPUT_RANGE`` /
 ``LUT_3D_INPUT_RANGE`` sets the input domain the way ``DOMAIN_MIN`` /
 ``DOMAIN_MAX`` do, and a file saved with a BOM loads too. The LUT is parsed with an ``lru_cache`` keyed by
 path + mtime, evaluated with trilinear interpolation, and blended against
@@ -2357,24 +2358,23 @@ Lens Correction
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` exposes four pure-numpy sliders:
 radial distortion ``k1`` (barrel / pincushion), vignette lift, and
 per-channel chromatic-aberration radial scale for red and blue. The
-corrected image is saved as a new file — lens correction is not part of
-the recipe because the output shape can change.
+corrected image, the same size as the original, is saved as a new file.
 
 Map View
 ^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` plots every geotagged image in the current
-library on an interactive Leaflet + OpenStreetMap map (requires
-``PySide6.QtWebEngineWidgets``). Without WebEngine, the dialog falls back
-to a plain list of ``(path, lat, lon)`` entries so the feature remains
-usable on minimal installs.
+``Extra Tools`` > ``Views`` > ``Map View`` plots the geotagged images of the open folder
+on an interactive Leaflet + OpenStreetMap map, one marker per nearest city with the
+number of pictures there (requires ``PySide6.QtWebEngineWidgets``). Without WebEngine,
+the dialog falls back to a list of those places with their counts and coordinates, so
+the feature remains usable on minimal installs.
 
 Calendar View
 ^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` shows a ``QCalendarWidget`` with days
 highlighted when photos were taken that day (EXIF ``DateTimeOriginal`` →
-``DateTimeDigitized`` → file mtime). Selecting a date lists its images;
+``DateTimeDigitized`` → ``DateTime`` → file mtime). Selecting a date lists its images;
 double-click to open one in the main viewer.
 
 Face Detection
@@ -2418,7 +2418,7 @@ Crop / Straighten
 ^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` combines a normalised (0..1)
-crop rectangle with an arbitrary straighten angle. The output is
+crop rectangle with a straighten angle of up to ±15°. The output is
 auto-cropped to the largest inner rectangle so rotated photos have no
 black corners.
 
@@ -2458,7 +2458,7 @@ Tonal & Creative Effects
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` gathers a set of one-shot,
 apply-and-save effects, each a thin slider dialog over a pure-NumPy transform
-(the same logic is also exposed as an MCP tool):
+(Frame & Caption draws with Pillow; the same logic is also exposed as an MCP tool):
 
 - **Graduated Density** — a linear neutral-density gradient defined by angle,
   hardness and offset, optionally tinted; darkens a sky or foreground without a
@@ -2501,7 +2501,8 @@ Web Gallery
 ``Extra Tools`` > ``Export`` > ``Web Gallery`` writes the selected pictures (or the whole folder)
 as a self-contained site: ``index.html`` with a lightbox, JPEG thumbnails, and copies of the
 originals unless you untick **Copy full-size originals**. You set the page title and the
-thumbnail size and quality. The page needs no server: open it from disk or put it on any static host.
+thumbnail size and quality. With the originals copied, the page needs no server: open it from disk or
+put it on any static host. Without them, its full-size links point at the pictures on your own disk.
 
 Tick **Client review** to send the gallery out for feedback. Each picture gets a comment box; the
 notes stay in the reviewer's browser, and the page's **Export comments** button saves them all as

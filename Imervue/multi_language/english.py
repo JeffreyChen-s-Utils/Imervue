@@ -1668,7 +1668,7 @@ english_word_dict = {
     "lut_clear": "Clear",
     "lut_intensity": _ENGLISH_INTENSITY_LABEL,
     "lut_pick": "Select .cube LUT",
-    "lut_hint": "Pick any Adobe .cube LUT (up to 64\u00b3). Intensity blends with the original.",
+    "lut_hint": "Pick any Adobe .cube LUT (3D up to 65\u00b3, 1D up to 65,536 points). Intensity blends with the original.",
 
     # --- Virtual Copies ---
     "vcopies_title": "Virtual Copies",
@@ -2329,6 +2329,7 @@ english_word_dict = {
     "graduated_density_angle": "Angle (°):",
     "graduated_density_hardness": "Hardness:",
     "graduated_density_offset": "Offset:",
+    "graduated_density_tint": "Tint the graded side",
     "graduated_density_stops": "Density (stops):",
     "graduated_density_title": "Graduated Density",
     "htags_add": "Create",

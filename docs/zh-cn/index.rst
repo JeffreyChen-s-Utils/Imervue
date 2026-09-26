@@ -1893,7 +1893,7 @@ Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` 会对当前深度缩放（或第一张选中）
 的图片计算 64 位 DCT pHash，并按汉明距离由近到远列出索引中的近似图，可
-通过 Max distance 调节宽严。
+通过 ``最大汉明距离`` 调节宽严。
 
 语义搜索（CLIP）
 ^^^^^^^^^^^^^^^^
@@ -1913,7 +1913,7 @@ Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` 将启发式标签归入 ``auto/...``
-（``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+（``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``），根据查看器所显示画面的色彩饱和度、边缘与形状来判断。在工作线程中运行，带实时进度条。
 
 分层标签
@@ -1923,10 +1923,10 @@ Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ``animal/cat/british``）。选择节点即显示该节点与全部子节点下的图片；可一
 键为所选图片添加或移除标签。与右键菜单的扁平标签并行。
 
-右键 ``Index Keywords`` 会把所选图片的 XMP 关键字加入图库。Lightroom 或 darktable
-写的关键字层级（``lr:hierarchicalSubject``，如 ``Places|Taiwan|Taipei``）会成为
-标签路径 ``Places/Taiwan/Taipei``；只是重复这些层级的 ``Places``／``Taiwan``／
-``Taipei`` 零散关键字不会再另外加入。
+选中缩略图后右键 > ``批量操作`` > ``索引关键字`` 会把所选图片的 XMP 关键字加入图库。
+Lightroom 或 darktable 写的关键字层级（``lr:hierarchicalSubject``，如
+``Places|Taiwan|Taipei``）会成为标签路径 ``Places/Taiwan/Taipei``；只是重复这些层级的
+``Places``／``Taiwan``／``Taipei`` 零散关键字不会再另外加入。
 
 Token 批量重命名
 ^^^^^^^^^^^^^^^^
@@ -1958,8 +1958,9 @@ Imervue 支持读写 Adobe XMP sidecar 文件（``photo.jpg`` ↔ ``photo.xmp``�
 除了 ``photo.xmp``\ （Lightroom、Bridge），darktable 与 digiKam 写的
 ``photo.jpg.xmp`` 在它是唯一的 sidecar 时也会读取并更新。颜色标签看得懂
 Lightroom 的写法（``Red`` … ``Purple``）与 Bridge 的写法（``Select``、``Second``、
-``Approved``、``Review``、``To Do``），导出时按 Lightroom 的写法写入；没有对应颜色的
-自定义标签会留在 sidecar 里。
+``Approved``、``Review``、``To Do``）。新加或改过的颜色按 Lightroom 的写法导出；已用
+Bridge 的写法存着同一颜色的 sidecar 会保留那个写法。没有对应颜色的自定义标签会留在
+sidecar 里。
 
 被拒绝的照片（Lightroom、Bridge、darktable 的 ``xmp:Rating`` -1）导入后成为筛选的
 **拒绝**\ 且不带星级，**拒绝**\ 导出时写成 -1。sidecar 不是拒绝时会解除「拒绝」，
@@ -2003,7 +2004,8 @@ XML 解析通过 ``defusedxml`` 进行，避免 XXE / billion-laughs 等攻击�
 ^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` 按「日／月／年」分组当前图片集（Google
-Photos 风格）。日期优先取 EXIF ``DateTimeOriginal``，否则使用文件修改时间。
+Photos 风格）。日期依序取 EXIF ``DateTimeOriginal``、``DateTimeDigitized``、
+``DateTime``，都没有时使用文件修改时间。
 双击图片可进入深度缩放。
 
 拖拽至外部应用
@@ -2034,7 +2036,7 @@ R、G、B 四条通道。点击空白处新增控制点、拖拽移动、右键�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 可载入任意 Adobe ``.cube`` 文件
-（1D / 3D，最高 64³）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
+（3D 最高 65³，1D 最多 65,536 点）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
 ``LUT_3D_INPUT_RANGE`` 会像 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 一样设定输入范围，带 BOM
 的文件也能读取。LUT 以 ``lru_cache`` 按路径 + mtime 缓存，使用
 三线性插值并通过强度滑块与原图混合，LUT 路径与强度存入 recipe。
@@ -2080,21 +2082,22 @@ HDR 合成
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` 提供四个纯 numpy 滑块：径向
 畸变 ``k1``\ （桶形 / 枕形）、暗角补偿，以及红 / 蓝通道色差径向缩放。
-因尺寸可能改变，结果输出为新文件而非写入 recipe。
+校正后的图片与原图尺寸相同，输出为新文件。
 
 地图视图
 ^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` 通过 Leaflet + OpenStreetMap（需
-``PySide6.QtWebEngineWidgets``）显示所有含 GPS 的照片；未安装
-WebEngine 时降级为坐标列表。
+``Extra Tools`` > ``Views`` > ``Map View`` 通过 Leaflet + OpenStreetMap 交互式地图（需
+``PySide6.QtWebEngineWidgets``）显示当前打开的文件夹中含 GPS 的照片，每个最近的城市
+一个标记，并标出那里的照片数；未安装 WebEngine 时降级为这些地点的列表，附照片数与
+坐标，在最小安装下也能使用。
 
 日历视图
 ^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` 用 ``QCalendarWidget`` 高亮有
 照片的日期（依序 EXIF ``DateTimeOriginal`` → ``DateTimeDigitized``
-→ 文件 mtime）。选中日期列出当日照片，双击在主视图中打开。
+→ ``DateTime`` → 文件 mtime）。选中日期列出当日照片，双击在主视图中打开。
 
 人脸检测
 ^^^^^^^^
@@ -2132,7 +2135,7 @@ develop pipeline 的 tone curve 之后应用。
 ^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` 结合 0..1 归一化裁剪矩形和
-任意角度拉直。输出会自动裁剪到最大内接矩形，旋转后不会产生黑边。
+最大 ±15° 的拉直角度。输出会自动裁剪到最大内接矩形，旋转后不会产生黑边。
 
 自动拉直
 ^^^^^^^^
@@ -2165,8 +2168,8 @@ bilateral 降噪，再用 unsharp mask 锐化。「仅亮度通道」会保留�
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` 汇集了一组一次性、应用即保存的
-效果，每个都是一层简单的滑块对话框，底层是纯 NumPy 变换（同样的逻辑也以 MCP
-工具的形式提供）：
+效果，每个都是一层简单的滑块对话框，底层是纯 NumPy 变换（边框与说明文字用 Pillow
+绘制；同样的逻辑也以 MCP 工具的形式提供）：
 
 - **渐变滤镜（Graduated Density）** — 由角度、硬度与偏移定义的线性中性密度
   渐变，可加色调；无需手绘蒙版即可压暗天空或前景。
@@ -2203,8 +2206,9 @@ GPS 地理标记
 
 ``Extra Tools`` > ``Export`` > ``Web Gallery`` 把选中的图片（或整个文件夹）输出为自包含的
 网站：带灯箱的 ``index.html``、JPEG 缩略图，以及原图的副本（取消勾选
-**复制原始文件（可移植）** 就不复制原图）。可以设定页面标题与缩略图的尺寸和质量。页面不需要
-服务器，直接从磁盘打开或放到任何静态托管空间都可以。
+**复制原始文件（可移植）** 就不复制原图）。可以设定页面标题与缩略图的尺寸和质量。复制了原图时，
+页面不需要服务器，直接从磁盘打开或放到任何静态托管空间都可以；不复制原图时，页面上的
+原图链接指向你自己磁盘上的图片。
 
 勾选 **客户审阅** 就能把相册发给客户收集意见。每张图片下方会有一个留言框；留言保存在审阅者的
 浏览器里，页面上的 **Export comments** 按钮会把所有留言保存为一个 JSON 文件。

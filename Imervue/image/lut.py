@@ -1,7 +1,7 @@
 """
 Adobe ``.cube`` LUT reader and applier.
 
-Supports LUT_1D_SIZE and LUT_3D_SIZE cube files up to 64³ (DaVinci Resolve,
+Supports LUT_3D_SIZE cube files up to 65³ and LUT_1D_SIZE up to 65,536 points (DaVinci Resolve,
 Adobe, other XMP-aware photo managers, and most free LUT packs export in this format).
 Parsing is tolerant of comments (``# …``), blank lines, and different
 newline styles.
@@ -23,7 +23,12 @@ import numpy as np
 
 logger = logging.getLogger("Imervue.lut")
 
-_MAX_CUBE_SIZE = 64
+# The .cube spec allows 1D tables of 2-65536 points and 3D grids of 2-256. One
+# cap of 64 for both refused the common 1024 / 4096-point 1D curves and the
+# 65-point grids DaVinci Resolve and ARRI export. 3D stops at 65: a 65-point
+# grid (274,625 rows) parses in ~0.7 s, a 129-point one in ~11 s.
+_MAX_1D_SIZE = 65536
+_MAX_3D_SIZE = 65
 
 
 @dataclass(frozen=True)
@@ -143,8 +148,10 @@ def parse_cube(path: str | Path) -> CubeLut:
     size = header.size
     if size <= 0:
         raise ValueError("missing LUT_1D_SIZE / LUT_3D_SIZE header")
-    if size > _MAX_CUBE_SIZE:
-        raise ValueError(f"LUT size {size} exceeds maximum {_MAX_CUBE_SIZE}")
+    limit = _MAX_3D_SIZE if header.is_3d else _MAX_1D_SIZE
+    if size > limit:
+        kind = "3D" if header.is_3d else "1D"
+        raise ValueError(f"{kind} LUT size {size} exceeds maximum {limit}")
     expected = size ** 3 if header.is_3d else size
     if len(values) != expected:
         raise ValueError(

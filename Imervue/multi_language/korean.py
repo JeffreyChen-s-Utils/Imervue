@@ -1646,7 +1646,7 @@ korean_word_dict = {
     "lut_clear": "지우기",
     "lut_intensity": "강도:",
     "lut_pick": ".cube LUT 선택",
-    "lut_hint": "임의의 Adobe .cube LUT 가능(최대 64\u00b3). 강도로 원본과 블렌딩.",
+    "lut_hint": "임의의 Adobe .cube LUT 가능(3D 최대 65\u00b3, 1D 최대 65,536점). 강도로 원본과 블렌딩.",
 
     # --- Virtual Copies ---
     "vcopies_title": "가상 복사본",
@@ -2306,6 +2306,7 @@ korean_word_dict = {
     "graduated_density_angle": "각도 (°):",
     "graduated_density_hardness": "경도:",
     "graduated_density_offset": "오프셋:",
+    "graduated_density_tint": "그라데이션 쪽에 색조 입히기",
     "graduated_density_stops": "농도 (스톱):",
     "graduated_density_title": "그러데이션 농도",
     "htags_add": "만들기",
