@@ -629,7 +629,7 @@ Pestaña 5 — la **Desktop Pet** coloca cualquier personaje `.puppet` sobre tu 
 ### Interacciones de clic
 
 - **Clic izquierdo sobre el cuerpo** — si el rig define un hit area (p. ej. tocar la cabeza), se reproduce el motion correspondiente. Si no, la mascota te saluda con un bocadillo.
-- **Clic derecho en cualquier sitio** — abre un menú contextual con: Ocultar mascota, Drivers en vivo, Reproducir motion (lista de todos los motions del rig), Aplicar expresión, Bloquear posición, Clic transparente, Siempre debajo, Ocultar en pantalla completa, Bocadillo, Tamaño.
+- **Clic derecho en cualquier sitio** — abre un menú contextual con: Ocultar mascota, Drivers en vivo, Reproducir motion (lista de todos los motions del rig), Aplicar expresión, Pose (elegir el miembro visible de cada grupo de pose), Bloquear posición, Clic transparente, Siempre debajo, Ocultar en pantalla completa, Bocadillo, Tamaño.
 - **Icono de la bandeja del sistema** — clic izquierdo para alternar visibilidad, clic derecho para Mostrar/Ocultar, Clic transparente, Abrir puppet, Ocultar mascota.
 
 ### Drivers en vivo

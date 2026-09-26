@@ -42,6 +42,7 @@ def build_context_menu(   # pragma: no cover - Qt UI
     _build_drivers_submenu(window, menu, tr)
     _build_motions_submenu(window, menu, tr)
     _build_expressions_submenu(window, menu, tr)
+    _build_pose_submenu(window, menu, tr)
     menu.addSeparator()
     _build_toggle_actions(window, menu, tr)
     menu.addSeparator()
@@ -109,6 +110,32 @@ def _build_expressions_submenu(
         action.triggered.connect(
             lambda _checked=False, e=expression: window.apply_expression(e.name),
         )
+
+
+def _build_pose_submenu(
+    window: PetWindow, menu: QMenu, tr: Callable[[str, str], str],
+) -> None:
+    """One submenu per pose group listing its members; the shown one is checked."""
+    pose_menu = menu.addMenu(tr("desktop_pet_menu_pose", "Pose"))
+    document = window.document()
+    groups = [g for g in (document.pose_groups if document else []) if g.drawables]
+    if not groups:
+        pose_menu.setEnabled(False)
+        return
+    canvas = window.canvas()
+    active = canvas.active_pose()
+    for group in groups:
+        group_menu = pose_menu.addMenu(document.display_names.get(group.id, group.id))
+        shown = active.get(group.id)
+        if shown not in group.drawables:
+            shown = group.drawables[0]      # what the canvas shows until one is picked
+        for member in group.drawables:
+            action = group_menu.addAction(member)
+            action.setCheckable(True)
+            action.setChecked(member == shown)
+            action.triggered.connect(
+                lambda _checked=False, g=group.id, m=member: canvas.set_pose_active(g, m),
+            )
 
 
 def _build_toggle_actions(   # pragma: no cover - Qt UI

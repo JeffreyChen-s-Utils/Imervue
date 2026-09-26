@@ -1081,6 +1081,9 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
 * **Apply expression**\ （应用表情）子菜单 — 从角色的
   ``document.expressions`` 生成。表情开启期间对应条目处于勾选状态；
   选中会加上该表情的参数 overlay，再次选中则将其移除。
+* **Pose**\ （姿势）子菜单 — 角色里每个姿势组各一个子菜单（标签为组的显示名，
+  没有则用 id），列出该组的成员；当前显示的成员处于勾选状态，
+  选中另一个则改为显示它。角色没有姿势组时禁用。
 * 五个顶层可勾选开关：**Lock position**\ （锁定位置）、
   **Click-through**\ （穿透点击）、**Always on bottom**
   （永远置底）、**Hide on fullscreen**\ （全屏时隐藏）、

@@ -584,7 +584,7 @@ Onglet 5 — le **Desktop Pet** place n'importe quel personnage `.puppet` sur vo
 ### Interactions au clic
 
 - **Clic-gauche sur le corps** — si le rig définit une zone de contact (par exemple toucher la tête), le mouvement correspondant se joue. Sinon, le pet vous salue dans une bulle de dialogue.
-- **Clic-droit n'importe où** — ouvre un menu contextuel avec : Masquer le pet, Pilotes en direct, Jouer un mouvement (liste de tous les mouvements du rig), Appliquer une expression, Verrouiller la position, Clic traversant, Toujours en arrière-plan, Masquer en plein écran, Bulle de dialogue, Taille.
+- **Clic-droit n'importe où** — ouvre un menu contextuel avec : Masquer le pet, Pilotes en direct, Jouer un mouvement (liste de tous les mouvements du rig), Appliquer une expression, Pose (choisir le membre affiché de chaque pose group), Verrouiller la position, Clic traversant, Toujours en arrière-plan, Masquer en plein écran, Bulle de dialogue, Taille.
 - **Icône de barre d'état système** — clic-gauche pour basculer la visibilité, clic-droit pour Afficher/Masquer, Clic traversant, Ouvrir un puppet, Masquer le pet.
 
 ### Pilotes en direct

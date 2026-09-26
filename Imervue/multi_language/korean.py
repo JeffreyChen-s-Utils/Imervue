@@ -630,6 +630,7 @@ korean_word_dict = {
     "desktop_pet_menu_hide": '펫 숨기기',
     "desktop_pet_menu_play_motion": '모션 재생',
     "desktop_pet_menu_apply_expression": '표정 적용',
+    "desktop_pet_menu_pose": "포즈",
     "desktop_pet_menu_size": '크기',
     "desktop_pet_size_small": '작게',
     "desktop_pet_size_medium": '보통',

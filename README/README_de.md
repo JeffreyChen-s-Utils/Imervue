@@ -631,7 +631,7 @@ Tab 5 — das **Desktop Pet** setzt jeden `.puppet`-Charakter als rahmenloses, t
 ### Klick-Interaktionen
 
 - **Linksklick auf den Körper** — definiert das Rig eine Hit Area (z. B. Kopf antippen), wird die passende Motion abgespielt. Andernfalls begrüßt Sie das Pet mit einer Sprechblase.
-- **Rechtsklick an beliebiger Stelle** — öffnet ein Kontextmenü mit: Pet verstecken, Live-Driver, Motion abspielen (Liste aller Motions des Rigs), Expression anwenden, Position sperren, Click-Through, Always on Bottom, Hide on Fullscreen, Sprechblase, Größe.
+- **Rechtsklick an beliebiger Stelle** — öffnet ein Kontextmenü mit: Pet verstecken, Live-Driver, Motion abspielen (Liste aller Motions des Rigs), Expression anwenden, Pose (sichtbares Mitglied jeder Pose-Gruppe wählen), Position sperren, Click-Through, Always on Bottom, Hide on Fullscreen, Sprechblase, Größe.
 - **System-Tray-Symbol** — Linksklick toggelt die Sichtbarkeit, Rechtsklick zeigt Anzeigen/Verstecken, Click-Through, Open Puppet, Pet verstecken.
 
 ### Live-Driver

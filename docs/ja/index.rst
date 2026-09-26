@@ -1040,6 +1040,7 @@ rig の読み込み
 * **Live drivers** サブメニュー — 7 つのチェック可能なトグル（Auto idle、Idle motions、Auto-blink、Drag-track head、Mouse gaze、Mic lip-sync、Webcam tracking）。チェック状態はライブドライバの状態を反映するので、メニューを見れば現在動いているものがわかります。
 * **Play motion** サブメニュー — アクティブな rig の ``document.motions`` リストから生成されます。エントリを選ぶとそのモーションが再生されます。``motion_lines`` のセリフは話しません（それはヒットエリアのクリックにだけ応答します）。
 * **Apply expression** サブメニュー — rig の ``document.expressions`` から生成されます。表情がオンの間は各エントリにチェックが付きます。選択すると表情のパラメータオーバーレイを追加し、もう一度選択すると外します。
+* **Pose** サブメニュー — rig のポーズグループごとに 1 つのサブメニュー（グループの表示名、なければ ID をラベルに使用）があり、そのグループのメンバーを一覧表示します。表示中のメンバーにチェックが付き、別のメンバーを選ぶと代わりにそれが表示されます。rig にポーズグループがないときは無効化されます。
 * 5 つのトップレベルチェック可能トグル: **Lock position**、**Click-through**、**Always on bottom**、**Hide on fullscreen**、**Speech bubble** — ワークスペースタブと同じトグルへのクイックアクセス。
 * **Size** サブメニュー — Small / Medium / Large。現在のプリセットにチェックが入ります。
 

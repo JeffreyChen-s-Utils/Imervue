@@ -717,6 +717,7 @@ english_word_dict = {
     "desktop_pet_menu_hide": 'Hide pet',
     "desktop_pet_menu_play_motion": 'Play motion',
     "desktop_pet_menu_apply_expression": 'Apply expression',
+    "desktop_pet_menu_pose": "Pose",
     "desktop_pet_menu_size": 'Size',
     "desktop_pet_size_small": 'Small',
     "desktop_pet_size_medium": 'Medium',

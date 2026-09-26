@@ -1299,6 +1299,11 @@ Abre un menú contextual con la siguiente estructura:
   mientras su expresión está activa; seleccionar una añade la
   superposición de parámetros de la expresión y seleccionarla de
   nuevo la quita.
+* Submenú **Pose** — un submenú por cada grupo de pose del rig
+  (rotulado con el nombre visible del grupo o, si no tiene, con su id)
+  que lista los miembros del grupo; el miembro visible aparece marcado
+  y seleccionar otro lo muestra en su lugar. Desactivado cuando el rig
+  no tiene grupos de pose.
 * Cinco conmutadores marcables de nivel superior: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — acceso rápido a los mismos conmutadores de la

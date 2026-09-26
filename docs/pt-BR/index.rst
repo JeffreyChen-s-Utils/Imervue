@@ -1291,6 +1291,10 @@ Abre um menu de contexto com a seguinte estrutura:
   ``document.expressions`` do rig. Cada entrada fica marcada enquanto
   sua expressão está ativa; selecionar uma adiciona a sobreposição de
   parâmetros da expressão e selecioná-la de novo a remove.
+* Submenu **Pose** — um submenu por pose group do rig (rotulado com o
+  nome de exibição do grupo ou, se não houver, com seu id), listando os
+  membros do grupo; o membro exibido fica marcado e selecionar outro o
+  exibe no lugar. Fica desabilitado quando o rig não tem pose groups.
 * Cinco toggles marcáveis de nível superior: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — acesso rápido aos mesmos toggles na aba do

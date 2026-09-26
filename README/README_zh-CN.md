@@ -580,7 +580,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 ### 点击交互
 
 - **左键点角色身体** — 若 rig 有定义命中区域（例如点头），就播放对应的动作；否则宠物会用对话气泡跟你打招呼。
-- **右键任意处** — 打开 context menu：Hide pet、Live drivers、Play motion（rig 内所有动作清单）、Apply expression、Lock position、Click-through、Always on bottom、Hide on fullscreen、Speech bubble、Size。
+- **右键任意处** — 打开 context menu：Hide pet、Live drivers、Play motion（rig 内所有动作清单）、Apply expression、Pose（选择每个姿势组显示的成员）、Lock position、Click-through、Always on bottom、Hide on fullscreen、Speech bubble、Size。
 - **系统托盘图标** — 左键切换显示 / 隐藏；右键打开 Show/Hide、Click-through、Open puppet、Hide pet。
 
 ### 实时驱动

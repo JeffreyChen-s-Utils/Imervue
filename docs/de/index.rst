@@ -1310,6 +1310,11 @@ sofern das Rig diese Gruppen hat.
   solange sein Ausdruck aktiv ist; die Auswahl fügt das
   Parameter-Overlay des Ausdrucks hinzu, eine erneute Auswahl
   entfernt es wieder.
+* **Pose**-Untermenü — ein Untermenü pro Pose-Gruppe des Rigs
+  (beschriftet mit dem Anzeigenamen der Gruppe, sonst mit ihrer ID),
+  das die Mitglieder der Gruppe auflistet; das sichtbare Mitglied ist
+  abgehakt, die Auswahl eines anderen zeigt stattdessen dieses an.
+  Deaktiviert, wenn das Rig keine Pose-Gruppen hat.
 * Fünf aktivierbare Top-Level-Umschalter: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — schneller Zugriff auf dieselben Umschalter

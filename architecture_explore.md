@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `dfb842a` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `498f0e4` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -72,8 +72,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/puppet/` | 58 | 15,601 |
 | `Imervue/image/` | 128 | 15,414 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
-| `Imervue/multi_language/` | 8 | 14,367 |
-| `Imervue/desktop_pet/` | 34 | 8,362 |
+| `Imervue/multi_language/` | 8 | 14,372 |
+| `Imervue/desktop_pet/` | 34 | 8,389 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
 | `Imervue/menu/` | 11 | 3,594 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,464 |
-| **總計** | **1,757** | **335,820** |
+| **總計** | **1,757** | **335,852** |
 
-其中 `Imervue/` 套件本身 788 檔 / 169,640 行。
+其中 `Imervue/` 套件本身 788 檔 / 169,672 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -858,7 +858,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-34 個檔、8,362 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+34 個檔、8,389 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
@@ -872,7 +872,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `pet_interaction.py` | 214 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
 | `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
 | `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
-| `pet_context_menu.py` | 144 | 右鍵選單建構器 |
+| `pet_context_menu.py` | 171 | 右鍵選單建構器 |
 | `pet_registry.py` | 134 | 多隻寵物的生命週期登錄表（以 pet id 為鍵） |
 | `pet_shadow.py` | 137 + `pet_shadow_controller.py`(83) | 放射漸層落地陰影（單一 draw call） |
 | `speech_bubble.py` | 208 | 對話泡泡覆蓋視窗（自動淡出） |

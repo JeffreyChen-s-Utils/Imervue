@@ -633,7 +633,7 @@ Tab 5 — the **Desktop Pet** puts any `.puppet` character on your desktop as a 
 ### Click interactions
 
 - **Left-click the body** — if the rig defines a hit area (e.g. tap the head), the matching motion plays. Otherwise the pet greets you with a speech bubble.
-- **Right-click anywhere** — opens a context menu with: Hide pet, Live drivers, Play motion (list of every motion in the rig), Apply expression, Lock position, Click-through, Always on bottom, Hide on fullscreen, Speech bubble, Size.
+- **Right-click anywhere** — opens a context menu with: Hide pet, Live drivers, Play motion (list of every motion in the rig), Apply expression, Pose (pick each pose group's shown member), Lock position, Click-through, Always on bottom, Hide on fullscreen, Speech bubble, Size.
 - **System tray icon** — left-click to toggle visibility, right-click for Show/Hide, Click-through, Open puppet, Hide pet.
 
 ### Live drivers

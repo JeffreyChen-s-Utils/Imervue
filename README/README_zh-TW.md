@@ -580,7 +580,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 ### 點擊互動
 
 - **左鍵點身體** — 若 rig 定義了 hit area（例如戳頭），就播放對應的動作。否則寵物會用對話泡泡跟你打招呼。
-- **任意位置右鍵** — 開啟內容選單：隱藏寵物、Live drivers、Play motion（rig 裡所有動作清單）、Apply expression、鎖定位置、點擊穿透、永遠置底、全螢幕時自動隱藏、對話泡泡、Size。
+- **任意位置右鍵** — 開啟內容選單：隱藏寵物、Live drivers、Play motion（rig 裡所有動作清單）、Apply expression、Pose（選擇每個姿勢群組顯示的成員）、鎖定位置、點擊穿透、永遠置底、全螢幕時自動隱藏、對話泡泡、Size。
 - **系統托盤 icon** — 左鍵點切換顯示，右鍵開選單（顯示 / 隱藏、點擊穿透、Open puppet、隱藏寵物）。
 
 ### 即時驅動

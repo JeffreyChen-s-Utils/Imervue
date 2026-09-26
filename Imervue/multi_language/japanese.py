@@ -633,6 +633,7 @@ japanese_word_dict = {
     "desktop_pet_menu_hide": 'ペットを隠す',
     "desktop_pet_menu_play_motion": 'モーションを再生',
     "desktop_pet_menu_apply_expression": '表情を適用',
+    "desktop_pet_menu_pose": "ポーズ",
     "desktop_pet_menu_size": 'サイズ',
     "desktop_pet_size_small": '小',
     "desktop_pet_size_medium": '中',

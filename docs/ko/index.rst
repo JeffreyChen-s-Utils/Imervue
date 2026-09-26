@@ -1113,6 +1113,10 @@ rig 불러오기
 * **Apply expression** 서브메뉴 — rig 의 ``document.expressions`` 로
   채워짐. 표정이 켜져 있는 동안 해당 항목에 체크 표시가 되며, 선택하면
   표정의 파라미터 오버레이가 추가되고 다시 선택하면 해제됨.
+* **Pose** 서브메뉴 — rig 의 포즈 그룹마다 서브메뉴가 하나씩 생기며 (그룹의
+  표시 이름, 없으면 id 로 표시) 그룹의 멤버를 나열함. 현재 표시 중인 멤버에
+  체크 표시가 되며, 다른 멤버를 선택하면 그 멤버가 대신 표시됨. rig 에 포즈
+  그룹이 없으면 비활성화됨.
 * 최상위 체크 가능 토글 5개: **Lock position**, **Click-through**,
   **Always on bottom**, **Hide on fullscreen**, **Speech bubble** —
   워크스페이스 탭의 동일한 토글에 대한 빠른 접근.

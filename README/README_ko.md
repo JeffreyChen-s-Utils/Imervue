@@ -579,7 +579,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 ### 클릭 상호작용
 
 - **본체에서 왼쪽 클릭** — 리그에 hit area가 정의되어 있으면(예: 머리 탭) 매칭되는 모션이 재생됩니다. 그렇지 않으면 펫이 말풍선으로 인사합니다.
-- **어디서나 오른쪽 클릭** — 컨텍스트 메뉴를 엽니다: 펫 숨기기, Live drivers, Play motion(리그의 모든 모션 목록), Apply expression, 위치 잠금, 클릭 통과, 항상 맨 아래, 전체 화면 시 숨김, 말풍선, 크기.
+- **어디서나 오른쪽 클릭** — 컨텍스트 메뉴를 엽니다: 펫 숨기기, Live drivers, Play motion(리그의 모든 모션 목록), Apply expression, Pose(각 포즈 그룹에서 표시할 멤버 선택), 위치 잠금, 클릭 통과, 항상 맨 아래, 전체 화면 시 숨김, 말풍선, 크기.
 - **시스템 트레이 아이콘** — 왼쪽 클릭으로 가시성을 토글하고, 오른쪽 클릭으로 Show/Hide, Click-through, Open puppet, Hide pet 메뉴를 엽니다.
 
 ### 라이브 드라이버

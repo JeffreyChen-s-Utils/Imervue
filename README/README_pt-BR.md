@@ -605,7 +605,7 @@ Aba 5 — o **Desktop Pet** coloca qualquer personagem `.puppet` na sua área de
 ### Interações de clique
 
 - **Clique esquerdo no corpo** — se o rig definir uma hit area (ex.: tocar na cabeça), o motion correspondente é reproduzido. Caso contrário, o pet te cumprimenta com um balão de fala.
-- **Clique direito em qualquer lugar** — abre um menu de contexto com: Esconder pet, Live drivers, Play motion (lista de todos os motions do rig), Apply expression, Travar posição, Click-through, Sempre no fundo, Esconder em tela cheia, Balão de fala, Tamanho.
+- **Clique direito em qualquer lugar** — abre um menu de contexto com: Esconder pet, Live drivers, Play motion (lista de todos os motions do rig), Apply expression, Pose (escolher o membro exibido de cada pose group), Travar posição, Click-through, Sempre no fundo, Esconder em tela cheia, Balão de fala, Tamanho.
 - **Ícone da bandeja do sistema** — clique esquerdo alterna a visibilidade, clique direito traz Mostrar/Esconder, Click-through, Abrir puppet, Esconder pet.
 
 ### Drivers ao vivo

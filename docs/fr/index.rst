@@ -1300,6 +1300,10 @@ Ouvre un menu contextuel avec la structure suivante :
   que son expression est active ; en sélectionner une ajoute la
   superposition de paramètres de l'expression, la sélectionner à
   nouveau la retire.
+* Sous-menu **Pose** — un sous-menu par pose group du rig (intitulé
+  du nom affiché du groupe, sinon de son id) qui liste les membres du
+  groupe ; le membre affiché est coché, et en sélectionner un autre
+  l'affiche à sa place. Désactivé lorsque le rig n'a aucun pose group.
 * Cinq bascules à cocher de haut niveau : **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — accès rapide aux mêmes bascules de l'onglet

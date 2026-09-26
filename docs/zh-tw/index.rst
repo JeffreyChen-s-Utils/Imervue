@@ -1006,6 +1006,7 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道
 * **Live drivers** 子選單 — 七個可勾選 toggle（Auto idle、Idle motions、Auto-blink、Drag-track head、Mouse gaze、Mic lip-sync、Webcam tracking）。勾選狀態鏡像 live driver 的真實狀態，所以選單顯示的就是目前在跑什麼。
 * **Play motion** 子選單 — 由當前 rig 的 ``document.motions`` 清單填入。選一項就播該動作；不會說出 ``motion_lines`` 的台詞（那些只回應 hit area 的點擊）。
 * **Apply expression** 子選單 — 由 rig 的 ``document.expressions`` 填入。表情開啟時對應項目會打勾；選一項會加上該表情的參數 overlay，再選一次就會拿掉。
+* **Pose** 子選單 — rig 裡每個姿勢群組各一個子選單（標籤為群組的顯示名稱，沒有就用 id），列出該群組的成員；目前顯示的成員會打勾，選另一個就改為顯示它。rig 沒有姿勢群組時會停用。
 * 五個最上層的可勾選 toggle：**Lock position**、**Click-through**、**Always on bottom**、**Hide on fullscreen**、**Speech bubble** — 快速存取分頁裡同樣的 toggle。
 * **Size** 子選單 — Small / Medium / Large；目前的預設會被勾起來。
 

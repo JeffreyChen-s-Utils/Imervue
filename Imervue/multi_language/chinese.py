@@ -622,6 +622,7 @@ chinese_word_dict = {
     "desktop_pet_menu_hide": '隐藏宠物',
     "desktop_pet_menu_play_motion": '播放动作',
     "desktop_pet_menu_apply_expression": '应用表情',
+    "desktop_pet_menu_pose": "姿势",
     "desktop_pet_menu_size": '尺寸',
     "desktop_pet_size_small": '小',
     "desktop_pet_size_medium": '中',
