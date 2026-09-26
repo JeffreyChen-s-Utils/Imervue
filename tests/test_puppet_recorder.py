@@ -8,7 +8,7 @@ We use a lightweight stub canvas in place of the real
 :class:`PuppetCanvas` so the test session doesn't accumulate
 unparented ``QOpenGLWidget`` instances; on Windows CI those triggered
 ``Windows fatal exception: access violation`` after enough widgets
-piled up. The recorder only needs ``grabFramebuffer()`` and
+piled up. The recorder only needs ``render_offscreen_puppet()`` and
 ``document()`` from its target so the stub stays minimal.
 """
 from __future__ import annotations
@@ -16,8 +16,11 @@ from __future__ import annotations
 import pytest
 from PySide6.QtCore import QSize
 from PySide6.QtGui import QImage
+from types import SimpleNamespace
+
 from PySide6.QtWidgets import QWidget
 
+from Imervue.puppet import recorder as recorder_mod
 from Imervue.puppet.recorder import RecordingSession, save_canvas_png
 
 
@@ -25,18 +28,21 @@ class _StubCanvas(QWidget):
     """Plain-QWidget stand-in that only implements the canvas methods
     the recorder consumes."""
 
-    def __init__(self) -> None:
+    def __init__(self, doc_size=(8, 8)) -> None:
         super().__init__()
         self._image: QImage | None = None
+        self._document = SimpleNamespace(size=doc_size)
+        self.renders: list = []
 
     def set_capture_image(self, image: QImage | None) -> None:
         self._image = image
 
-    def grabFramebuffer(self) -> QImage:   # noqa: N802 - mirrors Qt API
+    def render_offscreen_puppet(self, width, height, *, background_rgba):
+        self.renders.append((width, height, background_rgba))
         return self._image if self._image is not None else QImage()
 
     def document(self):
-        return None
+        return self._document
 
 
 def _stub_with_real_image(width: int = 8, height: int = 8) -> _StubCanvas:
@@ -187,3 +193,53 @@ def test_save_canvas_png_propagates_an_unexpected_capture_error(qapp, tmp_path, 
     monkeypatch.setattr(recorder_mod, "capture_canvas_image", broken)
     with pytest.raises(TypeError):
         save_canvas_png(object(), tmp_path / "frame.png")
+
+
+
+@pytest.mark.parametrize(("doc_size", "long_side", "multiple", "expected"), [
+    ((800, 600), 4096, 1, (800, 600)),
+    ((8000, 2000), 4096, 1, (4096, 1024)),
+    ((1920, 1080), 1080, 16, (1072, 592)),
+    ((1000, 1000), 1080, 16, (992, 992)),
+    ((3, 1), 1080, 16, (16, 16)),
+    ((0, 0), 1080, 1, (1, 1)),
+])
+def test_frame_size(doc_size, long_side, multiple, expected):
+    assert recorder_mod.frame_size(doc_size, long_side, multiple) == expected
+
+
+def test_a_capture_is_the_character_alone_at_its_own_size(qapp):
+    """Capture grabbed the editor's framebuffer: the checker, the zoom and any selection."""
+    canvas = _stub_with_real_image()
+    canvas._document = SimpleNamespace(size=(640, 480))  # noqa: SLF001
+    try:
+        recorder_mod.capture_canvas_image(canvas)
+        assert canvas.renders == [(640, 480, (0.0, 0.0, 0.0, 0.0))]
+    finally:
+        canvas.deleteLater()
+
+
+def test_a_capture_without_a_puppet_fails_cleanly(qapp):
+    canvas = _stub_with_real_image()
+    canvas._document = None  # noqa: SLF001
+    try:
+        with pytest.raises(recorder_mod.CaptureError):
+            recorder_mod.capture_canvas_image(canvas)
+    finally:
+        canvas.deleteLater()
+
+
+def test_a_recording_frame_is_fitted_on_white(qapp):
+    canvas = _stub_with_real_image()
+    canvas._document = SimpleNamespace(size=(1920, 1080))  # noqa: SLF001
+    rec = RecordingSession(canvas)
+    frames = []
+    rec._writer = SimpleNamespace(append_data=frames.append)  # noqa: SLF001
+    try:
+        rec._on_tick()  # noqa: SLF001
+        assert canvas.renders == [(1072, 592, (1.0, 1.0, 1.0, 1.0))]
+        assert len(frames) == 1
+    finally:
+        rec._writer = None  # noqa: SLF001
+        rec.deleteLater()
+        canvas.deleteLater()

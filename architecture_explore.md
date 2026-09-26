@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `c7a9ed9` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `89be816` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -848,7 +848,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 輸出
 
-`recorder.py`(199) 幀擷取 · `batch_export.py`(186) 每個 motion 匯出成 MP4/GIF/WebM ·
+`recorder.py`(239) 幀擷取 · `batch_export.py`(186) 每個 motion 匯出成 MP4/GIF/WebM ·
 `spritesheet.py`(67) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
 `vts_api.py`(385) VTube Studio Public API server（最小子集）
 
