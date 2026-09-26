@@ -530,8 +530,8 @@ Paint-Arbeitsbereich (Paint-Tab)
 
 Die dritte Hauptregisterkarte — **Paint** — ist ein voll ausgestatteter Mal-Arbeitsbereich
 mit Multi-Tab-Dokumenten, Vektor- und Raster-Layern, Manga-Werkzeugen, Animationsframes
-und PSD-Import/Export. Über die Tab-Leiste wechseln oder ``E`` aus dem Deep-Zoom-Modus
-drücken, um das aktuelle Bild direkt in einen neuen Paint-Tab zu senden.
+und PSD-Import/Export. Beim Wechsel über die Tab-Leiste wird das Bild, das der Viewer
+gerade zeigt, auf die Leinwand geladen.
 
 UX-Highlights — der Paint-Arbeitsbereich bietet einen voll ausgestatteten Brush-Größen-Cursor,
 der mit dem Zoom skaliert, unterschiedliche Cursor-Symbole pro Werkzeug, ein
@@ -558,10 +558,16 @@ gelöschte Pixel beim Neumalen nicht mehr ausbluten.
    |leiste|                      | Material · …   |
    +------+----------------------+----------------+
 
-Die rechten Docks (Farbe, Brush, Bucket, Swatches, Layers, Navigator, Verlauf,
-Pages, Animation, Histogramm, Materialbibliothek, Stamps, Pose, Referenz) sind in einer einzigen Spalte gestapelt,
-sodass die Leinwand die volle sichtbare Höhe behält. Beliebigen Dock-Titel ziehen,
-um neu anzuordnen oder ein Panel zu lösen, dann das Ergebnis über
+Die vierzehn Docks auf der rechten Seite sind als Tabs in einer einzigen Spalte
+gestapelt, sodass die Leinwand die volle sichtbare Höhe behält, und in drei Gruppen
+gegliedert:
+
+- **Zeichnen** — Farbe, Brush, Bucket, Swatches
+- **Leinwand** — Layers, Navigator, Verlauf, Pages, Animation, Histogramm
+- **Bibliothek** — Materialien, Stamps, Pose, Referenz
+
+Jedes Dock lässt sich einzeln über das Menü ``Fenster`` ein- und ausblenden. Beliebigen
+Dock-Titel ziehen, um neu anzuordnen oder ein Panel zu lösen, dann das Ergebnis über
 ``Einstellungen`` > ``Workspace-Layouts…`` speichern.
 
 Werkzeugpalette (linke Leiste)
@@ -821,9 +827,9 @@ in das ``.puppet``-Zip eingebrannt, sodass das Demo mit der Standard-
 Das Rig trägt 203 Cubism-Standardparameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), sodass jeder
 Standard-Eingabetreiber (Webcam, Blinzeln, Lippensynchronisation, Cursor-Look-At)
-es ohne rigspezifische Konfiguration steuert. Neun loopende Motions sind im
-Bundle enthalten — vom Autor konvertierte Cubism-Idle-Loops plus Referenz-
-Gesten-Loops in den Gruppen ``Idle`` und ``TapHead``.
+es ohne rigspezifische Konfiguration steuert. Achtzehn Motions sind im Bundle
+enthalten: acht loopende Idle-Motions in der Gruppe ``Idle``, neun loopende Gesten
+in der Gruppe ``Gesture`` und ein einmaliges ``tap_head`` in der Gruppe ``TapHead``.
 
 Öffnen Sie den Puppet-Tab, klicken Sie **Open Puppet…**, zeigen Sie auf
 ``march_7th.puppet`` — die Figur erscheint zentriert. Ziehen Sie einen
@@ -951,7 +957,7 @@ Toolbar-Referenz
        denselben Charakter-Only-Off-Screen-Renderpfad, der für das Streaming
        verwendet wird)
    * - Output > Virtual camera / NDI output
-     - Live-Streaming-Surfaces — siehe *Live-Streaming an OBS* oben
+     - Live-Streaming-Surfaces — siehe *Live-Streaming an OBS* unten
    * - Reset to rest
      - Den Motion-Player snap-stoppen, jeden Live-Treiber abschalten,
        Ausdrücke / Pose-Gruppen löschen, Parameter-Standards wiederherstellen
@@ -2182,7 +2188,7 @@ ein, um das Netz zu verbreitern oder zu straffen.
 Semantische Suche (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` ermöglicht das Eintippen einer natürlichsprachigen
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` ermöglicht das Eintippen einer natürlichsprachigen
 Phrase (zum Beispiel *"golden retriever in snow"* oder *"neon street at night"*) und
 gibt die Bilder des geöffneten Ordners geordnet zurück. Jedes Bild wird mit einem
 CLIP-Vision-/Language-Encoder eingebettet und neben seinem Pfad gespeichert; eine
@@ -2691,6 +2697,54 @@ Verfügbare Werkzeuge
    * - ``reverse_geocode`` / ``extract_video_frame``
      - GPS-Koordinaten offline zur nächsten Stadt auflösen und einen Frame eines
        Videos zu einem Standbild dekodieren.
+   * - ``extract_gps`` / ``dominant_colors``
+     - EXIF-GPS-Breite/-Länge lesen (lässt sich mit ``reverse_geocode`` verketten);
+       eine Median-Cut-Farbpalette extrahieren (RGB / Hex / Pixelanzahl).
+   * - ``error_level_analysis``
+     - Error-Level-Analysis-Manipulationskarte per JPEG-Neukomprimierung als PNG-Data-URI
+       (bearbeitete Bereiche leuchten vor dem Hintergrund auf).
+   * - ``search_images``
+     - Einen Ordner mit der Abfrage-DSL der Smart Albums filtern (Endung / Name /
+       Größe / Abmessungen / Seitenverhältnis / EXIF-Kamera / Objektiv / Ort).
+   * - ``solarize_image`` / ``glow_image``
+     - Eine Solarisations-Tonumkehr oder ein diffuses Glühen / Orton-Bloom anwenden und
+       das Ergebnis speichern.
+   * - ``velvia_image`` / ``emboss_image`` / ``defringe_image``
+     - Luminanzgewichtete Velvia-Sättigungsverstärkung, Prägerelief mit gerichtetem
+       Licht und Entsättigung violetter/grüner Farbsäume an Kanten.
+   * - ``film_negative_image`` / ``graduated_density_image``
+     - Ein gescanntes Farbnegativ umkehren (automatische Filmbasis) und einen linearen
+       Grauverlaufsfilter anwenden.
+   * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
+     - Filmisches Reinhard/Hable-Highlight-Rolloff, Belichtung pro Luminanzzone
+       und Kontrast pro Frequenzband.
+   * - ``colormap_image`` / ``false_color_image``
+     - Die Luminanz über eine perzeptuelle Viridis-/Magma-/Jet-Farbskala umfärben oder
+       auf eine Falschfarben-Belichtungsskala abbilden.
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Geordnetes (Bayer-)Dithering auf wenige Tonstufen pro Kanal, Split-Toning für
+       Schatten/Lichter und Pixel-Sortierung nach Helligkeitsbändern.
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - Zwischen rechtwinkligen und Polarkoordinaten umrechnen (Tiny Planet) oder
+       das Bild in eine Anzahl von Kaleidoskop-Segmenten spiegeln.
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - Milchglas-Streuung über zufällige Nachbarpixel, kontrastbegrenzter adaptiver
+       Histogrammausgleich und Mitteltonklarheit + Feindetail-Textur.
+   * - ``posterize_image`` / ``gradient_map_image``
+     - Jeden Kanal auf wenige flache Stufen quantisieren oder die Luminanz über einen
+       nach Intensität gemischten Schwarz-Weiß-Verlauf neu abbilden.
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - Einstellbares Gaußsches Filmkorn, Dunstentfernung per Dark-Channel-Prior und
+       geometrische Verzerrung durch Strudel / Zusammenziehen / Wellen.
+   * - ``levels_image`` / ``curve_image``
+     - Tonwertkorrektur mit Schwarz-/Weißpunkt und Gamma sowie ein Preset für die
+       Master-Gradationskurve (S-Kurve, Schatten anheben, Lichter komprimieren).
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - Automatischer Weißabgleich (Gray World, White Patch, Perzentil-Streckung,
+       Retinex) und ein 3x3-Kanalmixer mit Monochrom-Umwandlung.
+   * - ``lens_correction_image``
+     - Tonnen-/Kissenverzeichnung korrigieren (k1), die Eckvignettierung aufhellen
+       oder vertiefen und rote/blaue chromatische Aberration aufheben.
 
 Jedes Werkzeug bewirbt ein JSON-``outputSchema`` und Read-only- /
 Destructive-``annotations`` und gibt sein Ergebnis als ``structuredContent``

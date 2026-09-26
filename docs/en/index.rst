@@ -526,8 +526,8 @@ Paint Workspace (Paint Tab)
 
 The third top-level tab — **Paint** — is a full-featured painting workspace
 with multi-tab documents, vector and raster layers, manga tools, animation
-frames, and PSD import/export. Switch to it from the tab bar or press ``E``
-from Deep Zoom mode to send the current image straight into a new Paint tab.
+frames, and PSD import/export. Switching to it from the tab bar loads the
+picture the viewer is showing onto the canvas.
 
 UX-affordance highlights — the Paint workspace ships with a full-featured
 brush-size cursor that scales with zoom, distinct cursor icons per tool,
@@ -822,9 +822,10 @@ baked into the ``.puppet`` zip, so the demo opens on the default
 The rig carries 203 Cubism-standard parameters (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), so
 every standard input driver (webcam, blink, lip-sync, cursor look-at)
-drives it without per-rig configuration. Nine looping motions ship in
-the bundle — author-converted Cubism idle loops plus reference
-gesture loops in the ``Idle`` and ``TapHead`` groups.
+drives it without per-rig configuration. Eighteen motions ship in the
+bundle: eight looping idle motions in the ``Idle`` group, nine looping
+gestures in the ``Gesture`` group and a one-shot ``tap_head`` in the
+``TapHead`` group.
 
 Open the Puppet tab, click **Open Puppet…**, point at
 ``march_7th.puppet`` — the figure appears centred. Drag any parameter
@@ -948,7 +949,7 @@ Toolbar reference
        batch-render every motion in the rig to its own file (all via
        the same character-only off-screen render path used for streaming)
    * - Output > Virtual camera / NDI output
-     - Live streaming surfaces — see *Live streaming to OBS* above
+     - Live streaming surfaces — see *Live streaming to OBS* below
    * - Reset to rest
      - Snap-stop the motion player, untoggle every live driver,
        clear expressions / pose groups, restore parameter defaults
@@ -2113,7 +2114,7 @@ widen or tighten the net.
 Semantic Search (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` lets you type a natural-language phrase
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` lets you type a natural-language phrase
 (for example *"golden retriever in snow"* or *"neon street at night"*) and
 returns the pictures of the open folder, ranked. Each image is embedded with a
 CLIP vision/language encoder and stored alongside its path; a text query is

@@ -6,7 +6,7 @@ plugin enable step needed.
 
 | File | Subject | Drawables | Parameters | Motions |
 |---|---|---|---|---|
-| `march_7th.puppet` | March 7th (Honkai: Star Rail) Live2D rig | 307 | 203 | 9 (Idle ×7, TapHead ×1, plus author-recorded loops) |
+| `march_7th.puppet` | March 7th (Honkai: Star Rail) Live2D rig | 307 | 203 | 18 (Idle ×8, Gesture ×9, TapHead ×1) |
 | `vivian.puppet` | Vivian (薇薇安) — community-published free Live2D rig | 392 | 197 | 4 (synthesised idle loops) |
 
 ## `march_7th.puppet`
@@ -28,7 +28,7 @@ on the default `requirements.txt` without the Cubism Native SDK.
 * **Vertex morphs only** — Cubism's keyform pipeline is reduced to a
   linear blend between the parameter default and ±extreme so the
   built-in runtime can play it back without licensed SDK code.
-* **Nine motions:**
+* **Eighteen motions:**
   * Author-converted Cubism loops — `zhaiyan`, `zhaoxiang` (both in
     the `Idle` group).
   * Reference idle / interaction loops merged in from the old
@@ -39,6 +39,9 @@ on the default `requirements.txt` without the Cubism Native SDK.
     keyframes drop because the converted rig has no arm-slider
     equivalent, but every motion that touches the head or body
     survives.
+  * Expression gesture loops in the `Gesture` group — `face_cover`,
+    `peace`, `photo`, `blush`, `dark_face`, `cry`, `sweat`, `stars`,
+    `shooting_star`.
 
 ## `vivian.puppet`
 

@@ -538,9 +538,8 @@ Espacio de trabajo Paint (Pestaña Paint)
 
 La tercera pestaña de nivel superior — **Paint** — es un espacio de trabajo de pintura
 con todas las funciones, con documentos en múltiples pestañas, capas vectoriales y raster,
-herramientas de manga, fotogramas de animación e importación/exportación de PSD. Cambie a
-ella desde la barra de pestañas o pulse ``E`` desde el modo Deep Zoom para enviar la imagen
-actual directamente a una nueva pestaña de Paint.
+herramientas de manga, fotogramas de animación e importación/exportación de PSD. Al cambiar
+a ella desde la barra de pestañas, la imagen que muestra el visor se carga en el lienzo.
 
 Aspectos destacados de la experiencia de usuario — el espacio de trabajo Paint incluye un
 cursor de tamaño de pincel con todas las funciones que se escala con el zoom, iconos de cursor
@@ -568,11 +567,16 @@ que los píxeles borrados dejan de filtrarse en un repintado.
    | herr.|                      | Material · …   |
    +------+----------------------+----------------+
 
-Los docks del lado derecho (Color, Brush, Bucket, Swatches, Layers, Navigator, History,
-Pages, Animation, Histogram, Materials, Stamps, Pose, Reference) están organizados como pestañas en una sola columna,
-de modo que el lienzo mantiene la altura visible completa. Arrastre el título de cualquier dock
-para reorganizarlo o flotar un panel, después guarde el resultado mediante
-``Settings`` > ``Workspace Layouts…``.
+Los catorce docks del lado derecho están organizados como pestañas en una sola columna,
+de modo que el lienzo mantiene la altura visible completa, y se agrupan en tres bloques:
+
+- **Dibujo** — Color, Brush, Bucket, Swatches
+- **Lienzo** — Layers, Navigator, History, Pages, Animation, Histogram
+- **Biblioteca** — Materials, Stamps, Pose, Reference
+
+Cada dock se puede mostrar u ocultar por separado desde el menú ``Window``. Arrastre el
+título de cualquier dock para reorganizarlo o flotar un panel, después guarde el resultado
+mediante ``Settings`` > ``Workspace Layouts…``.
 
 Paleta de herramientas (Banda izquierda)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -830,9 +834,9 @@ por defecto sin redistribuir el SDK de Cubism.
 El rig lleva 203 parámetros estándar de Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), por lo que todos los
 drivers de entrada estándar (webcam, parpadeo, lip-sync, mirada al cursor) lo controlan
-sin configuración por rig. Nueve movimientos en bucle se incluyen en el bundle —
-bucles idle de Cubism convertidos por el autor más bucles de gestos de referencia en
-los grupos ``Idle`` y ``TapHead``.
+sin configuración por rig. El bundle incluye dieciocho movimientos: ocho movimientos
+idle en bucle en el grupo ``Idle``, nueve gestos en bucle en el grupo ``Gesture`` y un
+``tap_head`` de una sola reproducción en el grupo ``TapHead``.
 
 Abra la pestaña Puppet, haga clic en **Open Puppet…**, apunte a
 ``march_7th.puppet`` — la figura aparece centrada. Arrastre cualquier deslizador de
@@ -953,7 +957,7 @@ Referencia de la barra de herramientas
        cada movimiento del rig a su propio archivo (todo mediante la misma ruta de render
        off-screen sólo-personaje usada para streaming)
    * - Output > Virtual camera / NDI output
-     - Superficies de streaming en vivo — consulte *Streaming en vivo a OBS* más arriba
+     - Superficies de streaming en vivo — consulte *Streaming en vivo a OBS* más abajo
    * - Reset to rest
      - Detiene en seco el reproductor de movimiento, desactiva cada driver en vivo,
        limpia expresiones / grupos de pose, restaura los valores por defecto de los parámetros
@@ -2151,7 +2155,7 @@ coincidencias cercanas del índice ordenadas por distancia de Hamming. Ajuste el
 Búsqueda semántica (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` le permite escribir una frase en lenguaje natural (por
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` le permite escribir una frase en lenguaje natural (por
 ejemplo *"golden retriever en la nieve"* o *"calle de neón por la noche"*) y devuelve, clasificadas,
 las imágenes de la carpeta abierta. Cada imagen se incrusta con un encoder visual/lingüístico
 CLIP y se almacena junto a su ruta; una consulta de texto se incrusta en el mismo espacio
@@ -2651,6 +2655,54 @@ Herramientas disponibles
    * - ``reverse_geocode`` / ``extract_video_frame``
      - Resuelve coordenadas GPS a la ciudad más cercana sin conexión, y decodifica un
        fotograma de un vídeo a una imagen fija.
+   * - ``extract_gps`` / ``dominant_colors``
+     - Lee la latitud/longitud GPS del EXIF (se encadena con ``reverse_geocode``);
+       extrae una paleta de colores por corte de mediana (rgb / hex / número de píxeles).
+   * - ``error_level_analysis``
+     - Mapa de manipulación por Error-Level-Analysis mediante recompresión JPEG, como URI
+       de datos PNG (las regiones editadas destacan sobre el fondo).
+   * - ``search_images``
+     - Filtra una carpeta con el DSL de consultas de los álbumes inteligentes (extensión /
+       nombre / tamaño / dimensiones / relación de aspecto / cámara EXIF / objetivo / lugar).
+   * - ``solarize_image`` / ``glow_image``
+     - Aplica una inversión tonal de solarizado o un resplandor difuso / bloom Orton y
+       guarda el resultado.
+   * - ``velvia_image`` / ``emboss_image`` / ``defringe_image``
+     - Refuerzo de saturación Velvia ponderado por luminancia, efecto de relieve con luz
+       direccional y desaturación de franjas moradas/verdes en los bordes.
+   * - ``film_negative_image`` / ``graduated_density_image``
+     - Invierte un negativo en color escaneado (base de película automática) y aplica un
+       degradado lineal de densidad neutra graduada.
+   * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
+     - Caída suave de altas luces fílmica Reinhard/Hable, exposición por zona de luminancia
+       y contraste por banda de frecuencia.
+   * - ``colormap_image`` / ``false_color_image``
+     - Recolorea la luminancia con un mapa perceptual viridis/magma/jet, o la asigna a una
+       escala de exposición en falso color.
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Tramado ordenado (Bayer) a pocos tonos por canal, virado partido de sombras/altas
+       luces y ordenación de píxeles por bandas de brillo.
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - Transforma entre coordenadas rectangulares y polares (tiny planet), o refleja el
+       encuadre en varias cuñas de caleidoscopio.
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - Dispersión de vidrio esmerilado con vecinos aleatorios, ecualización adaptativa del
+       histograma con contraste limitado, y claridad de medios tonos + textura de detalle fino.
+   * - ``posterize_image`` / ``gradient_map_image``
+     - Cuantiza cada canal a unas pocas bandas planas, o reasigna la luminancia mediante un
+       degradado de negro a blanco mezclado según la intensidad.
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - Grano de película gaussiano ajustable, eliminación de neblina por dark channel prior,
+       y distorsión geométrica de remolino / pellizco / ondulación.
+   * - ``levels_image`` / ``curve_image``
+     - Niveles de punto negro/blanco y gamma, y un preajuste de curva tonal maestra
+       (curva en S, levantar sombras, comprimir altas luces).
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - Balance de blancos automático (gray-world, white-patch, estiramiento por percentil,
+       retinex) y un mezclador de canales 3x3 con conversión a monocromo.
+   * - ``lens_correction_image``
+     - Corrige la distorsión de barril/cojín (k1), aclara u oscurece el viñeteado de las
+       esquinas y anula la aberración cromática roja/azul.
 
 Cada herramienta anuncia un ``outputSchema`` JSON y ``annotations`` de solo lectura /
 destructivas, y devuelve su resultado como ``structuredContent`` junto al sobre de texto

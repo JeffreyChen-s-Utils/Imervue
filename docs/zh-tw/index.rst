@@ -495,34 +495,40 @@ Windows 標為隱藏的檔案（在檔案總管與資料夾樹中也不顯示）
 繪圖工作區（繪圖分頁）
 ----------------------
 
-第三個頂層分頁 — **繪圖** — 是 本格的なラスター描画 風格的繪圖工作區，支援多分頁文件、
-向量與點陣圖層、漫畫工具、動畫影格，以及 PSD 匯入/匯出。從分頁列切換進入，
-或在大圖模式下按 ``E`` 將目前圖片送入新繪圖分頁。
+第三個頂層分頁 — **繪圖** — 是功能完整的繪圖工作區，支援多分頁文件、
+向量與點陣圖層、漫畫工具、動畫影格，以及 PSD 匯入/匯出。從分頁列切換過來時，
+會把檢視器正在顯示的圖片載入畫布。
 
-UX 體質升級：本格的なラスター描画 風格、會跟著 zoom 縮放的筆刷大小游標、每個工具獨立
-的游標圖示、畫布底層的透明格紋、拖放高亮覆蓋、每個 tab 的「已修改」星號、
-undo / redo toast 確認、status bar 的 autosave 狀態段、開啟時自動偵測前次
-session 的 autosave 並提示還原。
+易用性亮點 — 繪圖工作區提供隨縮放同步變化的筆刷大小游標、每個工具各自的
+游標圖示、畫布底層的透明棋盤格、拖放時的醒目提示覆蓋、每個分頁的「已修改」
+星號、復原 / 重做的提示確認、狀態列的自動儲存狀態區段，以及啟動時列出前次
+異常結束工作階段快照的自動儲存還原提示。
 
-進階快捷鍵：``Tab`` 一鍵隱藏 / 還原所有 docks 進入專心模式、``Ctrl+Tab``
-切換分頁、``,`` / ``.`` 循環筆刷種類、``0–9`` 數字鍵以 10 % 為單位設定
-不透明度、``Alt+[`` / ``Alt+]`` 切換 active 圖層、畫布右鍵彈出 Undo /
-Redo / Select All / Deselect / Fit / 100 % 快捷選單。
+進階快捷鍵：``Tab`` 一鍵隱藏 / 還原所有面板，專心繪圖；``Ctrl+Tab``
+切換分頁；``,`` / ``.`` 循環切換筆刷種類；``0–9`` 數字鍵以 10 % 為單位設定
+筆刷不透明度；``Alt+[`` / ``Alt+]`` 逐層切換作用中圖層；在畫布上按右鍵會跳出
+復原 / 重做 / 全選 / 取消選取 / 符合視窗 / 100 % 快捷選單。
 
-顏色 dock 加入「透明 / 無顏色」槽（背景預設為透明），fill 與魔棒會尊重
-alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
+顏色面板提供「透明 / 無顏色」槽（背景預設為透明），填色與魔棒都會遵守
+alpha 邊界，擦除過的像素不會在重畫時滲進來。
 
 ::
 
    +------+----------------------+----------------+
    | 工具 |                      | 顏色 · 筆刷    |
-   | 列   |    畫布（繪圖）       | 圖層 · 縮覽    |
+   | 列   |    畫布（繪圖）      | 圖層 · 縮覽    |
    |      |                      | 素材 · …       |
    +------+----------------------+----------------+
 
-右側面板（顏色、筆刷、圖層、縮覽圖、素材庫、歷史、色票、參考、直方圖、動畫）
-全部分頁化進同一欄位，畫布因此能保留完整可見高度。拖曳任何 dock 的標題列
-可重新排列或浮動，再透過 ``設定`` > ``工作區排版…`` 儲存命名後的版面。
+右側的十四個面板全部分頁化併入同一欄，畫布因此能保留完整可見高度；
+這些面板分成三組：
+
+- **繪製** — 顏色、筆刷、填色桶、色票
+- **畫布** — 圖層、導航器、歷史記錄、頁面、動畫、直方圖
+- **素材庫** — 素材、圖章、姿勢、參考圖
+
+每個面板都能從 ``視窗`` 選單個別顯示或隱藏。拖曳任何面板的標題列可重新排列
+或浮動，再透過 ``設定`` > ``工作區排版…`` 儲存結果。
 
 工具列（左側）
 ^^^^^^^^^^^^^^
@@ -726,6 +732,16 @@ Puppet 工作區（Puppet 分頁）
    ``puppet_guide.zh-TW.md``\ （英文版 ``puppet_guide.md``、簡體中文版 ``puppet_guide.zh-CN.md``）。
    本章是參考手冊；那份是逐步走讀。
 
+::
+
+   +-----------+----------------------+----------------+
+   |  工具列   |                      |  Parameters    |
+   +-----------+   GL 畫布            |    擺放欄      |
+   |           |                      |                |
+   +-----------+----------------------+                |
+   |               Motions 擺放欄                      |
+   +---------------------------------------------------+
+
 端到端流程
 ^^^^^^^^^^
 
@@ -740,7 +756,7 @@ Puppet 工作區（Puppet 分頁）
 
 倉庫內附完整 rig：``examples/puppet/march_7th.puppet`` — 307-drawable 的 Cubism Live2D 角色，倉庫內轉換好。紋理跟每參數頂點 morph 全烘進 ``.puppet`` zip，使用預設 ``requirements.txt`` 就能開，無需散布 Cubism SDK。
 
-該 rig 帶 203 個 Cubism 標準參數（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），所以所有標準輸入驅動（攝影機、眨眼、對嘴、游標追蹤）不用調整就能驅動。內附 18 個循環動作 — 作者轉換的 Cubism idle 迴圈，加上 ``Idle`` 群組和 ``Gesture`` 群組的參考手勢。
+該 rig 帶 203 個 Cubism 標準參數（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），所以所有標準輸入驅動（攝影機、眨眼、對嘴、游標追蹤）不用調整就能驅動。內附 18 個動作：``Idle`` 群組有 8 個循環播放的 idle 動作，``Gesture`` 群組有 9 個循環手勢，``TapHead`` 群組則有 1 個只播放一次的 ``tap_head``。
 
 Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7th 或自己的 ``.puppet`` 開啟。下方 **Motions** 擺放欄點任一個動作即播。
 
@@ -791,38 +807,6 @@ Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7th 或自己�
 physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG — 沒有
 專利二進位，可完全透過 git diff。
 
-OBS 直播整合
-^^^^^^^^^^^^
-
-兩條輸出，都把角色獨立渲染到 off-screen framebuffer（不含棋盤格背景與編輯器外殼）再送到串流端。輸出長邊上限 1080 px，避免 Cubism 原生畫布（March 7th 是 3503×7777）被 DirectShow 虛擬攝影機驅動拒絕。
-
-**A. Virtual Camera** — 在 OBS《視訊擷取裝置》來源清單裡以 webcam 形式出現。``pip install pyvirtualcam`` 加上平台驅動：OBS Studio 26+（Windows/macOS）會附 *OBS Virtual Camera* 驅動，第一次打開 OBS 點 *Start Virtual Camera* 註冊；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具列 **Output > Virtual camera** 開始串流。
-
-DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道**，所以 Imervue 在角色以外的區域填\ **洋紅色 #FF00FF** 當色鍵。OBS 端去背：
-
-1. 視訊擷取裝置來源右鍵 → **Filters**
-2. **Effect Filters > + > Color Key**
-3. 設定 **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
-
-濾鏡跟著來源走，下次啟用虛擬攝影機自動套用。
-
-**B. NDI 輸出** — LAN 上 < 50 ms 延遲、原生 RGBA，OBS / vMix 可以直接把角色疊到自己的場景上、不用色鍵。``pip install ndi-python``，加上 `NDI Tools <https://ndi.video/tools/>`_ runtime 與 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 外掛。工具列 **Output > NDI output** 開始廣播（預設來源名 *Imervue Puppet*）。
-
-``ndi-python`` 只 ship source distribution、pip 拿到後從 C++ 編。Windows 需要 Visual Studio Build Tools 2022（含 C++ 工作負載）、CMake 加到 PATH、NDI SDK（從 <https://ndi.video/for-developers/ndi-sdk/> 取得，跟 NDI Tools 不同）裝在預設位置、環境變數 ``NDI_SDK_DIR`` 指向 SDK。
-
-詳細逐步與疑難排解見 ``puppet_guide.zh-TW.md`` § 1.2。
-
-錄製自訂動作
-^^^^^^^^^^^^
-
-不想手動編 keyframe？用即時 take 錄：
-
-1. 工具列 **Record motion** 打勾，會跳出命名對話框。
-2. 錄製時拖滑桿、開 **Webcam tracking**、讓物理跑 — 任何會寫參數值的事情都可以。
-3. **Record motion** 取消勾 — 錄製器把 30 Hz 串流烘焙成一個 ``Motion``：每個真的有變動的參數一條 linear-segment 軌（沒變動的丟掉）。新動作立刻出現在底部 **Motions** 擺放欄。
-
-存進 ``.puppet`` 的方式跟手寫 keys 的動作完全相同。
-
 工具列參考
 ^^^^^^^^^^
 
@@ -836,6 +820,8 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道
      - 從磁碟載入 ``.puppet``，或從工具列直接挑 ``examples/puppet/`` 下內附的 rig
    * - Import PNG… / Import PSD… / Import Cubism…
      - PNG 自動 mesh、PSD 分層拆 drawable、Cubism rig sample-and-reconstruct。Cubism 檔案選擇器同時接受 ``.moc3`` 跟 ``.model3.json``；工作區還沒開 rig 時兩條路徑都跑完整 ``.moc3 → .puppet`` 轉換（SDK 使用者自備）。已經開了 rig 時挑 ``.model3.json`` 改把 JSON 部分（motions / expressions / physics）疊到既有文件
+   * - Recent
+     - 快速重新開啟最近開啟過的 puppet
    * - Save As…
      - 把目前 rig 寫成 ``.puppet`` zip
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
@@ -857,11 +843,43 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道
    * - Capture frame… / Record… / Export all motions…
      - 存單張 PNG、開關 GIF / WebM / MP4 錄製、或批次把每個動作各別 render 成檔（全部用跟串流相同的角色獨立 off-screen render）
    * - Output > Virtual camera / NDI output
-     - 直播輸出 — 見上面的「OBS 直播整合」
+     - 直播輸出 — 見下方的「OBS 直播整合」
    * - Reset to rest
      - Motion player 直接停、所有 live driver 取消勾、清空 expressions / pose groups、參數復位
    * - Fit to Window
      - Canvas 上重新置中 + 縮放 rig
+
+錄製自訂動作
+^^^^^^^^^^^^
+
+不想手動編 keyframe？用即時 take 錄：
+
+1. 工具列 **Record motion** 打勾，會跳出命名對話框。
+2. 錄製時拖滑桿、開 **Webcam tracking**、讓物理跑 — 任何會寫參數值的事情都可以。
+3. **Record motion** 取消勾 — 錄製器把 30 Hz 串流烘焙成一個 ``Motion``：每個真的有變動的參數一條 linear-segment 軌（沒變動的丟掉）。新動作立刻出現在底部 **Motions** 擺放欄。
+
+存進 ``.puppet`` 的方式跟手寫 keys 的動作完全相同。
+
+OBS 直播整合
+^^^^^^^^^^^^
+
+兩條輸出，都把角色獨立渲染到 off-screen framebuffer（不含棋盤格背景與編輯器外殼）再送到串流端。輸出長邊上限 1080 px，避免 Cubism 原生畫布（March 7th 是 3503×7777）被 DirectShow 虛擬攝影機驅動拒絕。
+
+**A. Virtual Camera** — 在 OBS《視訊擷取裝置》來源清單裡以 webcam 形式出現。``pip install pyvirtualcam`` 加上平台驅動：OBS Studio 26+（Windows/macOS）會附 *OBS Virtual Camera* 驅動，第一次打開 OBS 點 *Start Virtual Camera* 註冊；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具列 **Output > Virtual camera** 開始串流。
+
+DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道**，所以 Imervue 在角色以外的區域填\ **洋紅色 #FF00FF** 當色鍵。OBS 端去背：
+
+1. 視訊擷取裝置來源右鍵 → **Filters**
+2. **Effect Filters > + > Color Key**
+3. 設定 **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
+
+濾鏡跟著來源走，下次啟用虛擬攝影機自動套用。
+
+**B. NDI 輸出** — LAN 上 < 50 ms 延遲、原生 RGBA，OBS / vMix 可以直接把角色疊到自己的場景上、不用色鍵。``pip install ndi-python``，加上 `NDI Tools <https://ndi.video/tools/>`_ runtime 與 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 外掛。工具列 **Output > NDI output** 開始廣播（預設來源名 *Imervue Puppet*）。
+
+``ndi-python`` 只 ship source distribution、pip 拿到後從 C++ 編。Windows 需要 Visual Studio Build Tools 2022（含 C++ 工作負載）、CMake 加到 PATH、NDI SDK（從 <https://ndi.video/for-developers/ndi-sdk/> 取得，跟 NDI Tools 不同）裝在預設位置、環境變數 ``NDI_SDK_DIR`` 指向 SDK。
+
+詳細逐步與疑難排解見 ``puppet_guide.zh-TW.md`` § 1.2。
 
 選用依賴
 ^^^^^^^^
@@ -1718,7 +1736,7 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 語意搜尋（CLIP）
 ^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` 讓你輸入自然語言片語（例如
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` 讓你輸入自然語言片語（例如
 *"golden retriever in snow"* 或 *"neon street at night"*），從目前開啟的資料夾
 回傳排序後的圖片。每張圖片會以 CLIP 視覺／語言編碼器嵌入並與其路徑一併儲
 存；文字查詢則嵌入同一向量空間，再以 cosine 相似度比對。
@@ -2154,6 +2172,53 @@ Imervue 內建一個 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 彙整資料夾的評等、收藏、色標與挑片狀態(計數、0–5 星分佈與平均)。
    * - ``reverse_geocode`` / ``extract_video_frame``
      - 離線把 GPS 座標解析成最近的城市,以及把影片的一格解碼成靜態影像。
+   * - ``extract_gps`` / ``dominant_colors``
+     - 讀取 EXIF GPS 緯度 / 經度（可接著交給 ``reverse_geocode``）；
+       擷取 median-cut 調色盤（rgb / hex / 像素數）。
+   * - ``error_level_analysis``
+     - 以 PNG data URI 回傳 JPEG 重新壓縮的錯誤等級分析（ELA）竄改圖
+       （編輯過的區域會在背景上亮起來）。
+   * - ``search_images``
+     - 用智慧相簿查詢 DSL 篩選資料夾（副檔名 / 名稱 / 大小 / 尺寸 /
+       長寬比 / EXIF 相機 / 鏡頭 / 地點）。
+   * - ``solarize_image`` / ``glow_image``
+     - 套用中途曝光（solarize）色調反轉，或漫射光暈 / Orton 柔光，
+       並儲存結果。
+   * - ``velvia_image`` / ``emboss_image`` / ``defringe_image``
+     - Velvia 式依亮度加權的飽和度增強、定向光源浮雕，
+       以及紫邊 / 綠邊去色。
+   * - ``film_negative_image`` / ``graduated_density_image``
+     - 反轉掃描的彩色負片（自動偵測片基），以及套用線性漸層減光鏡。
+   * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
+     - Filmic Reinhard / Hable 高光滾降、依亮度區段調整曝光，
+       以及依頻段調整對比。
+   * - ``colormap_image`` / ``false_color_image``
+     - 以 viridis / magma / jet 感知色彩對應表為亮度重新著色，
+       或對應到假色曝光刻度。
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Bayer 有序抖動（每個通道只留少數幾個色階）、陰影 / 高光分離色調，
+       以及依亮度區段排序像素。
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - 在直角座標與極座標之間轉換（小行星效果），
+       或把畫面鏡射成數個萬花筒扇區。
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - 隨機鄰近像素散射的毛玻璃效果、限制對比的自適應直方圖等化，
+       以及中間調清晰度 + 細部紋理。
+   * - ``posterize_image`` / ``gradient_map_image``
+     - 把每個通道量化成少數幾個平坦色階，
+       或把亮度對應到黑到白的漸層並依強度混合。
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - 可調的高斯底片顆粒、暗通道先驗去霧，
+       以及漩渦 / 擠壓 / 漣漪幾何扭曲。
+   * - ``levels_image`` / ``curve_image``
+     - 黑點 / 白點與 gamma 色階，以及主色調曲線預設
+       （S 曲線、提亮陰影、壓縮高光）。
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - 自動白平衡（gray-world、white-patch、percentile-stretch、retinex），
+       以及支援單色轉換的 3x3 通道混合器。
+   * - ``lens_correction_image``
+     - 校正桶型 / 枕型變形（k1）、提亮或加深四角暗角，
+       並消除紅 / 藍色差。
 
 每個工具都會宣告 JSON ``outputSchema`` 與唯讀 / 破壞性的 ``annotations``,
 並把結果以 ``structuredContent`` 連同文字信封一併回傳(依 MCP 2025-11-25),

@@ -531,8 +531,8 @@ Espaço de Trabalho Paint (Aba Paint)
 
 A terceira aba principal — **Paint** — é um espaço de trabalho completo para pintura
 com documentos em múltiplas abas, camadas vetoriais e raster, ferramentas para mangá,
-quadros de animação e importação/exportação PSD. Mude para ela pela barra de abas ou
-pressione ``E`` no modo Deep Zoom para enviar a imagem atual diretamente para uma nova aba Paint.
+quadros de animação e importação/exportação PSD. Ao mudar para ela pela barra de abas,
+a imagem exibida no visualizador é carregada na tela.
 
 Destaques de usabilidade — o espaço de trabalho Paint vem com um cursor completo de
 tamanho de pincel que escala com o zoom, ícones de cursor distintos por ferramenta,
@@ -560,12 +560,16 @@ pixels apagados não vazam para uma nova pintura.
    | Ferr.|                      | Material · …   |
    +------+----------------------+----------------+
 
-Os docks do lado direito (Cor, Pincel, Balde, Paleta, Camada, Navegador, Histórico,
-Páginas, Animação, Histograma, biblioteca de Materiais, Carimbos,
-Pose, Referência) são organizados em abas em
-uma única coluna para que a tela mantenha toda a altura visível. Arraste o título
-de qualquer dock para reorganizar ou flutuar um painel, depois salve o resultado
-via ``Configurações`` > ``Layouts de Espaço de Trabalho…``.
+Os catorze docks do lado direito são organizados em abas em uma única coluna para
+que a tela mantenha toda a altura visível, agrupados em três conjuntos:
+
+- **Desenho** — Cor, Pincel, Balde, Amostras
+- **Tela** — Camadas, Navegador, Histórico, Páginas, Animação, Histograma
+- **Biblioteca** — Materiais, Carimbos, Pose, Referência
+
+Cada dock pode ser exibido ou ocultado individualmente pelo menu ``Janela``. Arraste
+o título de qualquer dock para reorganizar ou flutuar um painel, depois salve o
+resultado via ``Configurações`` > ``Layouts de Espaço de Trabalho…``.
 
 Paleta de Ferramentas (Tira Esquerda)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -825,9 +829,9 @@ redistribuir o Cubism SDK.
 O rig carrega 203 parâmetros padrão Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), então
 todo driver de entrada padrão (webcam, piscar, sincronização labial, olhar do
-cursor) o aciona sem configuração por rig. Nove motions em loop estão incluídos
-no pacote — loops de idle do Cubism convertidos pelo autor mais loops de
-gestos de referência nos grupos ``Idle`` e ``TapHead``.
+cursor) o aciona sem configuração por rig. Dezoito motions estão incluídos no
+pacote: oito motions de idle em loop no grupo ``Idle``, nove gestos em loop no
+grupo ``Gesture`` e um ``tap_head`` de execução única no grupo ``TapHead``.
 
 Abra a aba Puppet, clique em **Open Puppet…**, aponte para
 ``march_7th.puppet`` — a figura aparece centralizada. Arraste qualquer slider
@@ -950,7 +954,7 @@ Referência da Barra de Ferramentas
        renderizar em lote cada motion do rig em seu próprio arquivo (tudo via
        o mesmo caminho de render off-screen apenas-personagem usado para streaming)
    * - Output > Virtual camera / NDI output
-     - Superfícies de streaming ao vivo — ver *Streaming ao vivo para o OBS* acima
+     - Superfícies de streaming ao vivo — ver *Streaming ao vivo para o OBS* abaixo
    * - Reset to rest
      - Snap-stop do player de motion, desativa todo driver ao vivo,
        limpa expressões / grupos de pose, restaura padrões de parâmetro
@@ -2126,7 +2130,7 @@ para alargar ou apertar a rede.
 Pesquisa Semântica (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` permite digitar uma frase em linguagem natural
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` permite digitar uma frase em linguagem natural
 (por exemplo *"golden retriever na neve"* ou *"rua de neon à noite"*) e
 retorna, classificadas, as imagens da pasta aberta. Cada imagem é incorporada com um
 encoder visão/linguagem CLIP e armazenada junto com seu caminho; uma consulta de texto é

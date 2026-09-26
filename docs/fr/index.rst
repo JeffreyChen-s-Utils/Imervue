@@ -529,8 +529,8 @@ Espace de travail Paint (onglet Paint)
 
 Le troisième onglet principal — **Paint** — est un espace de travail de peinture complet
 avec documents à onglets multiples, calques vectoriels et matriciels, outils manga, images
-clés d'animation, et import/export PSD. Basculez-y depuis la barre d'onglets ou appuyez sur ``E``
-depuis le mode Deep Zoom pour envoyer l'image courante directement dans un nouvel onglet Paint.
+clés d'animation, et import/export PSD. Y basculer depuis la barre d'onglets charge sur le
+canevas l'image affichée par la visionneuse.
 
 Points forts en matière d'ergonomie — l'espace de travail Paint dispose d'un curseur
 de taille de pinceau complet qui s'adapte au zoom, d'icônes de curseur distinctes par outil,
@@ -553,16 +553,21 @@ les limites alpha, de sorte que les pixels effacés cessent de baver lors d'une 
 ::
 
    +------+----------------------+----------------+
-   | Outils|                     | Couleur · Brush|
-   | Bar  |   Canevas (peinture) | Calque · Nav.  |
-   |      |                      | Matériaux · …  |
+   | Barre|                      | Couleur · Brush|
+   | d'   |   Canevas (peinture) | Calque · Nav.  |
+   |outils|                      | Matériaux · …  |
    +------+----------------------+----------------+
 
-Les docks de droite (Couleur, Pinceau, Calque, Navigateur, Bibliothèque de matériaux,
-Historique, Échantillons, Référence, Histogramme, Animation) sont regroupés en onglets dans
-une colonne unique afin que le canevas conserve toute la hauteur visible. Faites glisser
-n'importe quel titre de dock pour réorganiser ou détacher un panneau, puis enregistrez le
-résultat via ``Paramètres`` > ``Dispositions d'espace de travail…``.
+Les quatorze docks de droite sont regroupés en onglets dans une colonne unique afin que le
+canevas conserve toute la hauteur visible, et répartis en trois groupes :
+
+- **Dessin** — Couleur, Pinceau, Pot de peinture, Échantillons
+- **Canevas** — Calques, Navigateur, Historique, Pages, Animation, Histogramme
+- **Bibliothèque** — Matériaux, Tampons, Pose, Référence
+
+Chaque dock peut être affiché ou masqué individuellement depuis le menu ``Fenêtre``. Faites
+glisser n'importe quel titre de dock pour réorganiser ou détacher un panneau, puis enregistrez
+le résultat via ``Paramètres`` > ``Dispositions d'espace de travail…``.
 
 Palette d'outils (bande de gauche)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -820,9 +825,9 @@ cuits dans le zip ``.puppet``, de sorte que la démo s'ouvre avec le
 Le rig comporte 203 paramètres standard Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), de sorte que
 chaque pilote d'entrée standard (webcam, clignement, lip-sync, regard vers le curseur)
-le pilote sans configuration par rig. Neuf mouvements en boucle sont livrés
-dans le pack — boucles d'inactivité Cubism converties par l'auteur, plus des boucles
-de gestes de référence dans les groupes ``Idle`` et ``TapHead``.
+le pilote sans configuration par rig. Dix-huit mouvements sont livrés dans le pack :
+huit mouvements d'inactivité en boucle dans le groupe ``Idle``, neuf gestes en boucle
+dans le groupe ``Gesture`` et un ``tap_head`` joué une seule fois dans le groupe ``TapHead``.
 
 Ouvrez l'onglet Puppet, cliquez sur **Ouvrir Puppet…**, pointez vers
 ``march_7th.puppet`` — la figure apparaît centrée. Faites glisser n'importe quel curseur
@@ -943,7 +948,7 @@ Référence de la barre d'outils
        rendre par lots chaque mouvement du rig dans son propre fichier (le tout via
        le même chemin de rendu hors écran "personnage seul" utilisé pour le streaming)
    * - Output > Virtual camera / NDI output
-     - Surfaces de streaming en direct — voir *Streaming en direct vers OBS* ci-dessus
+     - Surfaces de streaming en direct — voir *Streaming en direct vers OBS* ci-dessous
    * - Reset to rest
      - Arrête net le lecteur de mouvement, désactive tous les pilotes en direct,
        efface les expressions / groupes de pose, restaure les paramètres par défaut
@@ -2148,7 +2153,7 @@ de l'index triées par distance de Hamming. Ajustez la valeur ``Max distance`` p
 Recherche sémantique (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` vous permet de taper une phrase en langage naturel
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` vous permet de taper une phrase en langage naturel
 (par exemple *"golden retriever in snow"* ou *"neon street at night"*) et
 renvoie, classées, les images du dossier ouvert. Chaque image est encodée avec un
 encodeur vision/langage CLIP et stockée à côté de son chemin ; une requête textuelle est
@@ -2656,6 +2661,54 @@ Outils disponibles
    * - ``reverse_geocode`` / ``extract_video_frame``
      - Résout des coordonnées GPS vers la ville la plus proche hors ligne, et
        décode une image d'une vidéo en photo fixe.
+   * - ``extract_gps`` / ``dominant_colors``
+     - Lit la latitude/longitude GPS de l'EXIF (s'enchaîne avec ``reverse_geocode``) ;
+       extrait une palette de couleurs par coupe médiane (rgb / hex / nombre de pixels).
+   * - ``error_level_analysis``
+     - Carte de falsification par Error-Level-Analysis (recompression JPEG) sous forme
+       d'URI de données PNG (les zones retouchées ressortent sur le fond).
+   * - ``search_images``
+     - Filtre un dossier avec le DSL de requêtes des albums intelligents (extension / nom /
+       taille / dimensions / rapport d'aspect / appareil EXIF / objectif / lieu).
+   * - ``solarize_image`` / ``glow_image``
+     - Applique une inversion tonale de solarisation ou une lueur diffuse / un bloom Orton,
+       puis enregistre le résultat.
+   * - ``velvia_image`` / ``emboss_image`` / ``defringe_image``
+     - Renforcement de saturation Velvia pondéré par la luminance, relief en estampage à
+       lumière directionnelle, et désaturation des franges violettes/vertes sur les bords.
+   * - ``film_negative_image`` / ``graduated_density_image``
+     - Inverse un négatif couleur numérisé (base du film automatique) et applique un
+       dégradé linéaire de densité neutre graduée.
+   * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
+     - Atténuation filmique des hautes lumières Reinhard/Hable, exposition par zone de
+       luminance et contraste par bande de fréquences.
+   * - ``colormap_image`` / ``false_color_image``
+     - Recolore la luminance à travers une palette perceptuelle viridis/magma/jet, ou la
+       projette sur une échelle d'exposition en fausses couleurs.
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Tramage ordonné (Bayer) sur quelques tons par canal, virage partiel ombres/hautes
+       lumières, et tri de pixels par bandes de luminosité.
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - Passe des coordonnées rectangulaires aux coordonnées polaires et inversement
+       (petite planète), ou reflète le cadre en un nombre de secteurs de kaléidoscope.
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - Diffusion en verre dépoli par voisins aléatoires, égalisation adaptative
+       d'histogramme à contraste limité, et clarté des tons moyens + texture de détail fin.
+   * - ``posterize_image`` / ``gradient_map_image``
+     - Quantifie chaque canal en quelques aplats, ou remappe la luminance à travers un
+       dégradé du noir au blanc mélangé selon l'intensité.
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - Grain argentique gaussien réglable, suppression du voile par dark channel prior,
+       et distorsion géométrique tourbillon / pincement / ondulation.
+   * - ``levels_image`` / ``curve_image``
+     - Niveaux point noir/blanc et gamma, et un préréglage de courbe tonale principale
+       (courbe en S, déboucher les ombres, compresser les hautes lumières).
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - Balance des blancs automatique (gray-world, white-patch, étirement par centile,
+       retinex) et un mélangeur de canaux 3x3 avec conversion monochrome.
+   * - ``lens_correction_image``
+     - Corrige la distorsion en barillet/coussinet (k1), éclaircit ou accentue le
+       vignetage des coins, et annule l'aberration chromatique rouge/bleu.
 
 Chaque outil annonce un ``outputSchema`` JSON et des ``annotations`` lecture seule /
 destructrices, et retourne son résultat sous forme de ``structuredContent`` aux côtés
