@@ -715,6 +715,448 @@ alpha 邊界，擦除過後不再有殘留 RGB 污染重畫的軟邊。
 
 ----
 
+Puppet 工作區（Puppet 分頁）
+----------------------------
+
+第四個頂層分頁 — **Puppet** — 是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D（網格變形綁骨、參數、動作、物理、表情、姿勢群組、對嘴、攝影機追蹤），但\ **不依賴任何專利 SDK**、**不使用** ``live2d-py``，採用完全開放的 ``.puppet`` 檔案格式。
+
+.. note::
+
+   端到端教學 — 從全新安裝到 OBS 直播或產出 MP4 — 在倉庫根目錄的
+   ``puppet_guide.zh-TW.md``\ （英文版 ``puppet_guide.md``、簡體中文版 ``puppet_guide.zh-CN.md``）。
+   本章是參考手冊；那份是逐步走讀。
+
+端到端流程
+^^^^^^^^^^
+
+1. **匯入 PNG** — 工具列 ``Import PNG…`` 跑 ``puppet.auto_mesh.puppet_from_png``：依 alpha 三角化、單一 drawable、可立即渲染。
+2. **加變形器** — ``Add Rotation Deformer``\ （錨點 + 角度）或 ``Add Warp Deformer``\ （rows × cols Bezier lattice；邊界外頂點直通）。
+3. **加參數** — ``Add Parameter`` 在右側 **Parameters** 擺放欄加滑桿（自動命名 ``Param1``、``Param2`` …）。
+4. **設 keys** — 拖滑桿到極端值、編輯 deformer form、按 **Set key**。對中立值跟另一端重複。Runtime 接著會在滑桿移動時於相鄰 keys 之間 lerp 各欄位。
+5. **儲存** — ``Save As…`` 把 rig + 紋理 + 動作 + 表情 + 物理寫成單一 ``.puppet`` zip，可分享或之後用 ``Open Puppet…`` 重開。
+
+範例
+^^^^
+
+倉庫內附完整 rig：``examples/puppet/march_7th.puppet`` — 307-drawable 的 Cubism Live2D 角色，倉庫內轉換好。紋理跟每參數頂點 morph 全烘進 ``.puppet`` zip，使用預設 ``requirements.txt`` 就能開，無需散布 Cubism SDK。
+
+該 rig 帶 203 個 Cubism 標準參數（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），所以所有標準輸入驅動（攝影機、眨眼、對嘴、游標追蹤）不用調整就能驅動。內附 18 個循環動作 — 作者轉換的 Cubism idle 迴圈，加上 ``Idle`` 群組和 ``Gesture`` 群組的參考手勢。
+
+Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7Th 或自己的 ``.puppet`` 開啟。下方 **Motions** 擺放欄點任一個動作即播。
+
+**執行內附範例 — 逐步走讀：**
+
+1. **啟動 Imervue**。原始碼跑：``python -m Imervue``；裝好的版本：直接執行 ``Imervue`` 執行檔 / app bundle。``examples/`` 資料夾已經打包進 wheel 跟 Nuitka EXE，rig 檔案會在安裝目錄底下。
+2. 點視窗頂端的 **Puppet** 分頁。
+3. 工具列 → **File > Examples > March 7Th**\ （或工具列上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中載入，參數欄會填滿 203 個 Cubism 標準參數滑桿。
+4. 在底部 **Motions** 擺放欄單擊任一個動作條目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即開始播放；再點一次停止，或選別的動作交叉淡入。
+5. 切換工具列上的即時輸入 toggle 讓 rig 跟著你動 — **Drag-track head**\ （頭跟著游標）、**Auto-blink**\ （自動眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 隨機 idle 動作）、**Mic lip-sync**\ （麥克風 RMS 帶動嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驅動頭 / 眼 / 嘴）。
+6. 工具列 **Reset to rest** 把所有動作停掉、所有即時驅動取消勾、清掉 expressions / pose 覆寫，所有參數復位 — 標準的「重新開始」按鈕。
+7. 之後要開別的 rig：**File > Open Puppet…** 從磁碟挑任何 ``.puppet`` zip；**File > Examples ▾** 永遠連到內附清單。
+
+``.puppet`` 檔案格式（v1）
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+一個 ``.puppet`` 檔就是一個 zip 壓縮檔：
+
+::
+
+   my_character.puppet
+   ├── puppet.json              # required — manifest, drawables, deformers, parameters
+   ├── textures/
+   │   ├── face.png             # referenced by drawables[].texture
+   │   └── body.png
+   ├── motions/                 # optional
+   │   ├── idle.json
+   │   └── wave.json
+   ├── expressions/             # optional
+   │   └── smile.json
+   └── physics.json             # optional
+
+頂層 ``puppet.json`` 範例::
+
+   {
+     "version": 1,
+     "size": [2048, 2048],
+     "drawables": [ ... ],
+     "deformers": [ ... ],
+     "parameters": [ ... ],
+     "motions": ["idle", "wave"],
+     "expressions": ["smile"],
+     "pose": {"groups": [ ... ]},
+     "physics": "physics.json"
+   }
+
+完整結構（drawables、deformers、parameters、motions、expressions、pose、
+physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG — 沒有
+專利二進位，可完全透過 git diff。
+
+OBS 直播整合
+^^^^^^^^^^^^
+
+兩條輸出，都把角色獨立渲染到 off-screen framebuffer（不含棋盤格背景與編輯器外殼）再送到串流端。輸出長邊上限 1080 px，避免 Cubism 原生畫布（March 7th 是 3503×7777）被 DirectShow 虛擬攝影機驅動拒絕。
+
+**A. Virtual Camera** — 在 OBS《視訊擷取裝置》來源清單裡以 webcam 形式出現。``pip install pyvirtualcam`` 加上平台驅動：OBS Studio 26+（Windows/macOS）會附 *OBS Virtual Camera* 驅動，第一次打開 OBS 點 *Start Virtual Camera* 註冊；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具列 **Output > Virtual camera** 開始串流。
+
+DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道**，所以 Imervue 在角色以外的區域填\ **洋紅色 #FF00FF** 當色鍵。OBS 端去背：
+
+1. 視訊擷取裝置來源右鍵 → **Filters**
+2. **Effect Filters > + > Color Key**
+3. 設定 **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
+
+濾鏡跟著來源走，下次啟用虛擬攝影機自動套用。
+
+**B. NDI 輸出** — LAN 上 < 50 ms 延遲、原生 RGBA，OBS / vMix 可以直接把角色疊到自己的場景上、不用色鍵。``pip install ndi-python``，加上 `NDI Tools <https://ndi.video/tools/>`_ runtime 與 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 外掛。工具列 **Output > NDI output** 開始廣播（預設來源名 *Imervue Puppet*）。
+
+``ndi-python`` 只 ship source distribution、pip 拿到後從 C++ 編。Windows 需要 Visual Studio Build Tools 2022（含 C++ 工作負載）、CMake 加到 PATH、NDI SDK（從 <https://ndi.video/for-developers/ndi-sdk/> 取得，跟 NDI Tools 不同）裝在預設位置、環境變數 ``NDI_SDK_DIR`` 指向 SDK。
+
+詳細逐步與疑難排解見 ``puppet_guide.zh-TW.md`` § 1.2。
+
+錄製自訂動作
+^^^^^^^^^^^^
+
+不想手動編 keyframe？用即時 take 錄：
+
+1. 工具列 **Record motion** 打勾，會跳出命名對話框。
+2. 錄製時拖滑桿、開 **Webcam tracking**、讓物理跑 — 任何會寫參數值的事情都可以。
+3. **Record motion** 取消勾 — 錄製器把 30 Hz 串流烘焙成一個 ``Motion``：每個真的有變動的參數一條 linear-segment 軌（沒變動的丟掉）。新動作立刻出現在底部 **Motions** 擺放欄。
+
+存進 ``.puppet`` 的方式跟手寫 keys 的動作完全相同。
+
+工具列參考
+^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 動作
+     - 用途
+   * - Open Puppet… / Examples ▾
+     - 從磁碟載入 ``.puppet``，或從工具列直接挑 ``examples/puppet/`` 下內附的 rig
+   * - Import PNG… / Import PSD… / Import Cubism…
+     - PNG 自動 mesh、PSD 分層拆 drawable、Cubism rig sample-and-reconstruct。Cubism 檔案選擇器同時接受 ``.moc3`` 跟 ``.model3.json``；工作區還沒開 rig 時兩條路徑都跑完整 ``.moc3 → .puppet`` 轉換（SDK 使用者自備）。已經開了 rig 時挑 ``.model3.json`` 改把 JSON 部分（motions / expressions / physics）疊到既有文件
+   * - Save As…
+     - 把目前 rig 寫成 ``.puppet`` zip
+   * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
+     - 從工具列 author rig
+   * - Drag-track head
+     - 游標偏移 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
+   * - Auto-blink
+     - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上的 cosine close→open，每 ~4.5 秒一次（force-write 路徑繞過 canvas 的 no-change-skip，避免被其他 driver 卡住）
+   * - Mic lip-sync
+     - 麥克風 RMS → ``ParamMouthOpenY``\ （需 ``sounddevice``）
+   * - Webcam tracking
+     - MediaPipe Tasks API FaceLandmarker → 頭部 yaw / pitch / roll + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``；開啟即時預覽 dialog 顯示偵測到的 landmark）
+   * - Auto idle / Idle motions
+     - 標準參數上的呼吸 + 漂移，加上 Idle 群組動作的隨機循環
+   * - Edit mesh
+     - 拖曳 canvas 上的頂點微調 mesh
+   * - Record motion
+     - 把參數變化錄成新的 ``Motion`` 加進文件 — take 烘焙、不用手動 author keys
+   * - Capture frame… / Record… / Export all motions…
+     - 存單張 PNG、開關 GIF / WebM / MP4 錄製、或批次把每個動作各別 render 成檔（全部用跟串流相同的角色獨立 off-screen render）
+   * - Output > Virtual camera / NDI output
+     - 直播輸出 — 見上面的「OBS 直播整合」
+   * - Reset to rest
+     - Motion player 直接停、所有 live driver 取消勾、清空 expressions / pose groups、參數復位
+   * - Fit to Window
+     - Canvas 上重新置中 + 縮放 rig
+
+選用依賴
+^^^^^^^^
+
+* ``sounddevice`` — 麥克風對嘴
+* ``opencv-python`` + ``mediapipe`` — 攝影機臉部追蹤
+* ``imageio-ffmpeg`` — MP4 / WebM 錄製（已隨幻燈片影片功能附帶）
+* ``pyvirtualcam`` — 虛擬攝影機輸出（見「OBS 直播整合」）
+* ``ndi-python`` — NDI 輸出（見「OBS 直播整合」）
+* 使用者自備 Cubism Native SDK DLL — ``.moc3 → .puppet`` 轉換（Live2D Free Material License 禁止散布；放在 ``<cwd>/sdk/`` 或設 ``CUBISM_CORE_DLL`` 環境變數）
+
+任何缺失都會優雅停用 — 對應工具列 toggle 會自動彈回去並提示安裝。**File > Install dependencies…** 可一次裝齊所有 Python 選用包。
+
+----
+
+桌寵工作區（Desktop Pet 分頁）
+------------------------------
+
+第五個分頁 — **Desktop Pet** — 把任何 ``.puppet`` 角色當成無邊框、透明背景的桌面浮層放到你的桌面上。分頁本身是控制面板；真正的角色是另外一個獨立的最上層視窗，與整個 Puppet runtime 共用一切（動作、表情、物理、idle driver、麥克風 / 攝影機輸入）。桌寵可以對點擊有反應、跑計時器驅動的動畫、追隨你的游標、其他 App 全螢幕時自動藏起來，還能用你寫在 JSON 檔裡的台詞說話。
+
+本章是這個分頁的完整參考手冊，章節安排如下：
+
+#. **快速上手** — 從「我剛打開 Imervue」到「桌面上出現桌寵了」的五步流程。
+#. **載入 rig** — 檔案選擇器、內附範例、跨啟動的還原。
+#. **浮層視窗** — 所有視窗層級的行為（拖曳移動、邊緣吸附、點擊穿透、位置鎖定、永遠置底、全螢幕自動隱藏、隱藏時暫停、透明度、尺寸、多螢幕還原）。
+#. **互動模型** — 左鍵 hit area、完整右鍵選單、系統匣。
+#. **Live driver** — 六個可開關的輸入 driver 與其選用依賴。
+#. **桌寵腳本** — 一個 JSON 檔，讓你能換掉桌寵的台詞、安排提醒，並對每個 hit area / 每個 motion 綁定反應。
+#. **持久化** — 哪些東西會跨啟動記住、以及完整的設定 schema。
+#. **製作新桌寵** — 指向 Puppet 分頁與 ``.puppet`` 檔案格式。
+#. **疑難排解** — 常見狀況與處理方式。
+
+快速上手
+^^^^^^^^
+
+1. 切換到 **Desktop Pet** 分頁。
+2. 點 **Load bundled March 7th** 用內附的角色，或 **Open Puppet…** 選自己的 ``.puppet`` 檔。
+3. 浮層出現在桌面上，**Show pet on desktop** 勾選框會自動勾起來。（要在不關閉 Imervue 的情況下把桌寵藏起來，把勾選框取消、或用系統匣圖示。）
+4. 把角色拖到想要的位置，放開時靠近螢幕邊緣會吸附貼齊。
+5. 從分頁或桌寵的右鍵選單挑你要的 **Live driver** — idle 呼吸、眨眼、游標追隨、麥克風對嘴、攝影機追蹤。
+
+你設定的一切都會跨啟動保留下來，所以步驟 5 是每個 rig / 角色一次的決定。
+
+載入 rig
+^^^^^^^^
+
+分頁提供三條載入途徑：
+
+* **Open Puppet…** — 從硬碟挑任何 ``.puppet`` 檔。
+* **Load bundled March 7th** — 開啟內附在 ``examples/puppet/march_7th.puppet`` 的 rig。Resolver 會先查 ``examples_dir()``\ （對 Nuitka 打包 / pip 安裝版本是 frozen-safe），找不到再退回 repo 根目錄相對路徑，所以這顆按鈕在兩種執行模式下都能用。
+* **上次的 rig** — Imervue 啟動時會從 ``last_rig_path`` 設定欄位自動還原上次載入的 rig；Desktop Pet 分頁會靜默重建浮層，所以你和上次離開時的狀態之間只差一個點擊。
+
+載入成功會自動勾起 **Show pet on desktop**，桌寵立刻現身。失敗時勾選框不會動，錯誤訊息會寫在分頁的狀態列上。
+
+浮層視窗
+^^^^^^^^
+
+角色待在一個獨立於 Imervue 主視窗之外的最上層視窗。視窗是無邊框、不出現在工作列、預設永遠浮在所有其他視窗的上面。
+
+.. list-table:: 視窗行為
+   :header-rows: 1
+   :widths: 28 72
+
+   * - 行為
+     - 細節
+   * - 無邊框浮層
+     - 沒有視窗外框、沒有最小化 / 關閉按鈕、不出現在工作列。整個可見表面就是角色本身。
+   * - 透明背景
+     - 角色沒覆蓋到的地方完全透明，後面的桌面 / App 像素級透出來。
+   * - 拖曳移動
+     - 在身體任意位置左鍵按下、拖、放開。游標移動少於 6 px 才會被當成點擊；移得更遠就視為拖曳，點擊處理器不會觸發。
+   * - 邊緣吸附
+     - 在螢幕邊緣附近放開（預設：24 px 以內），桌寵會「卡」上去貼齊邊緣。閾值可在 0（關閉）到 200（很黏）之間調整。X、Y 兩軸各自獨立判斷，所以拖到角落時會同時吸附兩條邊。
+   * - 越界夾回
+     - 拖到螢幕邊緣外才放開的，會被夾回螢幕內。你沒辦法把桌寵丟到螢幕外面、再也抓不回來。
+   * - 點擊穿透模式
+     - 開啟後，所有滑鼠事件穿過桌寵直達後面的東西。角色仍然看得見，但無法拖、無法右鍵、也無法用來觸發動作。桌寵純粹當裝飾時打開它。
+   * - 鎖定位置
+     - 停用拖曳移動，但不影響點擊穿透。把桌寵放好了、不想被誤拖時很有用。
+   * - 永遠置底
+     - 把桌寵從永遠置頂翻成永遠置底。桌寵會待在所有其他視窗的後面，像桌面小工具。同時取消接受 focus 的旗標，所以點桌寵不會把它升到前面。
+   * - 全螢幕自動隱藏
+     - 一個 1 Hz 的背景輪詢監看桌寵所在螢幕上的前景視窗。當該視窗覆蓋 ≥ 99 % 螢幕、且每邊容差 ≤ 4 px（真正的全螢幕和無邊框視窗遊戲都抓得到），桌寵自動藏起來。全螢幕結束後桌寵會回到原本的位置。Windows 上偵測器走 Win32 ``GetWindowRect`` API；macOS / Linux 上會優雅 no-op（桌寵保持可見）。
+   * - 隱藏時暫停
+     - ~30 FPS 的繪圖 tick 和 1 Hz 的腳本 tick 都會在 ``hideEvent`` 時停掉，所以藏起來的桌寵 CPU 用量為零。下次 ``showEvent`` 時重新啟動。
+   * - 尺寸預設
+     - 小（200 × 300）、中（320 × 480）、大（480 × 720）。桌寵以目前中心為錨點縮放，調尺寸時不會跳位。Snap 會在 resize 之後重跑一次。
+   * - 透明度滑桿
+     - 10 – 100 %。作用在視窗層級（透過 ``setWindowOpacity``），所以整個桌寵一起淡出，不是只淡材質。10 % 是下限，是為了讓你永遠看得到、抓得到桌寵 — 完全透明會讓你弄丟它。
+   * - 位置記憶
+     - 每次放開後吸附完成的 ``(x, y)`` 都會被保存。下次啟動時桌寵會回到那個螢幕座標。如果保存的位置已經不在任何連接的螢幕內（你從上次啟動到現在拔掉了一個螢幕），桌寵會退回主螢幕的右下角。
+
+互動模型
+^^^^^^^^
+
+桌寵透過三個獨立通道回應滑鼠輸入。
+
+**左鍵點身體**
+
+點擊位置會反映射回 puppet canvas 座標（抵銷 canvas 的平移 / 縮放），再丟進現有的 ``hit_test`` 流程。結果如下驅動行為：
+
+#. 如果有 ``HitArea`` 覆蓋了被點到的 drawable、且該 area 有綁定 motion，就播這個 motion。
+#. 不論 motion 有沒有播，桌寵都可能彈出對話泡泡 — 台詞挑選的優先順序見 *桌寵腳本* 段。
+#. 沒有任何 hit area 覆蓋點擊時，桌寵退回打招呼（從腳本的 ``greetings`` 清單，或內建 fallback）。
+
+拖曳移動的手勢會壓抑點擊處理器，所以移動桌寵不會觸發動作 / 對話。
+
+**右鍵點身體任意位置**
+
+開啟右鍵選單，結構如下：
+
+* **Hide pet** — 最上層動作，關閉浮層。
+* **Live drivers** 子選單 — 六個可勾選 toggle（Auto idle、Idle motions、Auto-blink、Drag-track head、Mic lip-sync、Webcam tracking）。勾選狀態鏡像 live driver 的真實狀態，所以選單顯示的就是目前在跑什麼。
+* **Play motion** 子選單 — 由當前 rig 的 ``document.motions`` 清單填入。選一項就播該動作（如果腳本對該動作綁了台詞，可能會同時觸發桌寵的聲音）。
+* **Apply expression** 子選單 — 由 rig 的 ``document.expressions`` 填入。選一項會切換該表情的參數 overlay。
+* 五個最上層的可勾選 toggle：**Lock position**、**Click-through**、**Always on bottom**、**Hide on fullscreen**、**Speech bubble** — 快速存取分頁裡同樣的 toggle。
+* **Size** 子選單 — Small / Medium / Large；目前的預設會被勾起來。
+
+沒載入 rig 時，motion / expression 子選單會 disabled。
+
+**系統匣圖示**
+
+系統匣圖示（僅在支援系統匣的平台上建立）提供第四個操作面，給最常用的動作：
+
+* 左鍵單擊切換桌寵顯示。
+* 右鍵開啟選單：**Show pet**\ （可勾選）、**Click-through**、**Open puppet…**、**Hide pet**。
+* 可勾選的 Show / Click-through 項目透過 ``sync_visibility`` / ``sync_click_through`` 鏡像分頁的勾選狀態，所以不論使用者從哪邊切，狀態都會同步。
+
+Live driver
+^^^^^^^^^^^
+
+每個 live driver 都是第一次開啟時才 lazy-create，所以沒在用的 driver，閒置的桌寵不會花任何 timer / thread 成本。每個 driver 的狀態會被保存；開啟、關閉 Imervue、再重啟，桌寵會帶著同樣的 driver 重新打開。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 50 28
+
+   * - Driver
+     - 做什麼
+     - 選用依賴
+   * - **Auto idle**
+     - 在標準參數（``ParamBreath`` 等）上加呼吸 + 微幅漂移，沒其他東西在動的時候讓角色看起來有生命。
+     - 無
+   * - **Idle motions**
+     - 每幾秒從 rig 的 ``Idle`` 群組隨機挑一個 motion 播。目前有 motion 在跑就停下不挑。
+     - 無
+   * - **Auto-blink**
+     - 每 ~4.5 秒沿著平滑的 cosine 曲線闔眼再睜眼。Driver 會強制寫入該參數，所以其他會碰到 eye-open 的 driver 不會壓掉眨眼。
+     - 無
+   * - **Drag-track head**
+     - 頭和眼睛會轉向全域游標位置，即使游標不在桌寵上也一樣。驅動 ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` / ``ParamEyeBallY``。
+     - 無
+   * - **Mic lip-sync**
+     - 麥克風 RMS 振幅驅動 ``ParamMouthOpenY``。
+     - ``sounddevice``
+   * - **Webcam tracking**
+     - MediaPipe FaceLandmarker 以 ~30 FPS 讀你的攝影機，驅動頭部姿態 + eye-open + mouth-open 參數。會開一個小的即時預覽視窗讓你確認攝影機有看到你的臉。
+     - ``opencv-python`` + ``mediapipe``
+
+兩個帶選用依賴的 driver 會優雅降級：所需套件沒裝時，勾選框會自動彈回去，分頁的狀態列會顯示「install sounddevice」/「install opencv-python + mediapipe」提示。
+
+桌寵腳本 — 自訂台詞與排程事件
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+桌寵的對話泡泡內容來自一個 JSON 檔，你可以自己寫，並從分頁上的 **Pet script** 群組載入。腳本管四件事：
+
+* **Greetings** — 沒有更具體匹配時的預設點擊台詞。
+* **Hit-area responses** — 按 ``HitArea.id`` 分桶的台詞。
+* **Motion lines** — 按 motion 名稱分桶的台詞，桌寵開始播該 motion 時觸發（不論是 hit area 觸發還是右鍵選單觸發）。
+* **Scheduled chimes** — 計時器驅動的台詞，每 ``every_seconds`` 秒（monotonic 牆鐘時間）觸發一次。
+
+Schema（有版本 — 未來的欄位會向前相容）：
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "name": "March 7th — playful voice",
+     "greetings": [
+       "Hi!", "Hello hello!", "Need a break?"
+     ],
+     "hit_responses": {
+       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
+       "HitAreaBody": ["Hehe~", "Pat pat?"]
+     },
+     "motion_lines": {
+       "wave": ["Hi!", "Hello!"],
+       "curtsy": ["Cheers!"]
+     },
+     "scheduled": [
+       {"every_seconds": 1800, "messages": ["Stretch break!"]}
+     ]
+   }
+
+載入規則：
+
+* 每個桶內的清單以 round-robin 取樣，所以使用者不會連續兩次看到同一句。
+* 未知的最上層 key 會被忽略（向前相容 — 未來的 v2 檔在 v1 runtime 上仍能載入）。
+* 垃圾清單項（型別錯誤、scheduled 項格式錯誤、``every_seconds`` 為零或負數）會被跳過 — 一筆爛資料不會弄爛整個載入。只有完全無法 parse 的 JSON 才會 raise 錯誤、把路徑寫到狀態列上。
+* hit-area / motion / greeting 的層疊：左鍵點擊先查 ``hit_responses[area.id]``、再查 ``motion_lines[area.motion]``、再查 ``greetings``，最底層才是內建預設打招呼集。
+* 時間追蹤用 ``time.monotonic``，所以筆電休眠或系統時鐘跳變不會把排隊的事件一次連發出來。
+
+**Reset to default** 會丟掉使用者腳本、回到內建打招呼集；保存的腳本路徑也會清空，下次啟動不會再載入它。
+
+可用的範例放在 ``examples/desktop_pet/march_7th.petscript.json`` — 六句打招呼、兩個 hit-area 桶（head / body）、三個 motion 台詞（wave / curtsy / cheer），以及一個 30 分鐘的伸展提醒。
+
+持久化
+^^^^^^
+
+所有 Desktop Pet 狀態都透過 ``user_setting_dict["desktop_pet"]``\ （Imervue 標準使用者設定檔裡的一個 slot）來回。每個欄位在載入時都有預設值 + 範圍夾取，所以損壞的設定檔不會讓啟動 crash。
+
+.. list-table:: 持久化欄位
+   :header-rows: 1
+   :widths: 28 18 54
+
+   * - 欄位
+     - 預設值
+     - 備註
+   * - ``last_rig_path``
+     - ``""``
+     - 啟動時若檔案仍存在會自動還原。
+   * - ``script_path``
+     - ``""``
+     - 啟動時若腳本仍可 parse 會自動還原；無法讀的腳本會靜默退回預設。
+   * - ``position``
+     - ``[-1, -1]``
+     - 上次拖曳放開的螢幕座標 ``(x, y)``。``-1, -1`` 表示「使用主螢幕的右下角」。跨 session 拔掉多螢幕也會走同樣的 fallback。
+   * - ``size_preset``
+     - ``"medium"``
+     - ``small`` / ``medium`` / ``large`` 三選一。
+   * - ``opacity``
+     - ``1.0``
+     - 夾取到 ``[0.1, 1.0]``。超出範圍的值會被重置為預設。
+   * - ``click_through``
+     - ``false``
+     -
+   * - ``anchor_locked``
+     - ``false``
+     -
+   * - ``always_on_bottom``
+     - ``false``
+     - 與永遠置頂互斥。
+   * - ``hide_on_fullscreen``
+     - ``true``
+     - 設成 ``false`` 可讓桌寵在全螢幕期間保持顯示。
+   * - ``snap_threshold``
+     - ``24``
+     - 夾取到 ``[0, 200]`` px。
+   * - ``drivers``
+     - 全 ``false``
+     - 以 driver id 為 key 的子 dict（``auto_idle``、``idle_motion``、``auto_blink``、``drag_track``、``mic_lipsync``、``webcam_tracking``）。未知 key 會原樣往返保留以向前相容。
+   * - ``show_on_launch``
+     - ``false``
+     - Imervue 啟動時自動顯示浮層。
+   * - ``speech_enabled``
+     - ``true``
+     - 設成 false 時對話泡泡永遠不彈。
+
+設定 dict 的 merge 行為是淺一層的：缺少新 key 的舊設定檔，載入後仍會產生完整的狀態 dict（預設值補洞）；你存過的新 key，即使降級到不認得它們的舊 runtime 上也能保留下來。
+
+製作新桌寵
+^^^^^^^^^^
+
+任何 ``.puppet`` 檔都能當 Desktop Pet 的角色用 — Desktop Pet 分頁純粹是 renderer + 互動殼層；rig 的製作在 Puppet 分頁裡發生（見 *Puppet 工作區（Puppet 分頁）*）。
+
+製作自己的桌寵 rig：
+
+#. 切換到 Puppet 分頁，透過 **File > Import PNG…** 或 **File > Import PSD…** 匯入美術素材，或透過 **File > Import Cubism…** 拉入 Cubism 模型。
+#. 製作旋轉 / warp deformer、參數、動作、表情，以及（選用）綁定到身體部位的 hit area，讓 Desktop Pet 的左鍵處理器能觸發動作。
+#. 透過 **File > Save As…** 把 rig 存成 ``.puppet`` zip。
+#. 切回 Desktop Pet 分頁，用 **Open Puppet…** 載入新檔。
+
+如果你的 rig 定義了 ``HitArea`` 項目，可以在 ``.petscript.json`` 裡寫對應的 ``hit_responses`` key（key 要對得上 area id），就能為每個 hit area 寫自訂對話泡泡台詞。
+
+疑難排解
+^^^^^^^^
+
+**桌寵出現在灰色矩形裡，而不是完全透明。** OS 層級的半透明背景屬性需要 alpha-aware 的 GL surface 加上嵌入 GL widget 的對應屬性。確認沒有任何第三方視窗管理工具在浮層視窗上覆寫 ``WA_TranslucentBackground``\ （Linux 上某些自製視窗管理員會這樣做）。Windows / macOS 上應該「直接能用」。
+
+**「Load bundled March 7th」說檔案找不到。** Resolver 先查 ``examples_dir()``\ （打包版用的 frozen-safe 位置），再退回 CWD 相對路徑。兩者都沒有 rig 時，狀態列會列出預期路徑。檢查你安裝中附的 ``examples/`` 資料夾 — 如果是從原始碼 checkout 執行，要從 repository 根目錄啟動 Imervue。
+
+**桌寵被點了不講話。** 三個檢查點：
+
+#. 確認 **Speech bubble on click** toggle 是開的（在分頁或右鍵選單裡）。
+#. 如果你載了自訂腳本，確認 JSON 能 parse — 分頁的狀態列會顯示載入錯誤。
+#. 如果 hit-area 點擊沒反應，那個 area 大概是沒綁 motion 而且腳本裡也沒有對應 area id 的 ``hit_responses`` 項。要嘛在 Puppet 分頁把 motion 綁上去，要嘛把 area id 加到腳本的 ``hit_responses``。
+
+**Webcam tracking 勾選框自己彈回去。** Webcam tracking 需要在 Imervue 跑的同一個 Python 環境裡裝 ``opencv-python`` 和 ``mediapipe``。用 ``pip install opencv-python mediapipe`` 安裝。裝完後，切換勾選框應該會跳出一個小預覽視窗顯示偵測到的臉部 landmark。
+
+**桌寵沒在其他 App 全螢幕時自動藏起來。** 全螢幕偵測器以 1 Hz 輪詢前景視窗。Windows 上用 ``GetWindowRect`` Win32 API；macOS / Linux 上沒有可靠的跨平台對等物，會 no-op（桌寵保持顯示）。在 Windows 上：確認 **Hide when other app is fullscreen** 是勾的，並確認全螢幕視窗確實覆蓋了與桌寵同一個螢幕的 ≥ 99 %。
+
+**桌寵的位置在跨啟動之間漂到螢幕外。** 這發生在桌寵原本所在的螢幕在下次啟動時不再連接（筆電 dock、第二個螢幕被拔掉）。這種情況下桌寵會自動退回主螢幕的右下角 — 把它拖到你想要的地方，下次保存就會覆蓋掉那個過時的位置。
+
+----
+
 旋轉與翻轉
 ----------
 
@@ -1595,448 +2037,6 @@ GPS 地理標記
 ``Extra Tools`` > ``Export`` > ``Print Layout`` 把多張圖片排版成多頁 PDF，可設
 定頁面大小、方向、格線、邊界、內距與裁切標記。需要安裝
 ``reportlab``。
-
-----
-
-Puppet 工作區（Puppet 分頁）
-----------------------------
-
-第四個頂層分頁 — **Puppet** — 是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D（網格變形綁骨、參數、動作、物理、表情、姿勢群組、對嘴、攝影機追蹤），但\ **不依賴任何專利 SDK**、**不使用** ``live2d-py``，採用完全開放的 ``.puppet`` 檔案格式。
-
-.. note::
-
-   端到端教學 — 從全新安裝到 OBS 直播或產出 MP4 — 在倉庫根目錄的
-   ``puppet_guide.zh-TW.md``\ （英文版 ``puppet_guide.md``、簡體中文版 ``puppet_guide.zh-CN.md``）。
-   本章是參考手冊；那份是逐步走讀。
-
-端到端流程
-^^^^^^^^^^
-
-1. **匯入 PNG** — 工具列 ``Import PNG…`` 跑 ``puppet.auto_mesh.puppet_from_png``：依 alpha 三角化、單一 drawable、可立即渲染。
-2. **加變形器** — ``Add Rotation Deformer``\ （錨點 + 角度）或 ``Add Warp Deformer``\ （rows × cols Bezier lattice；邊界外頂點直通）。
-3. **加參數** — ``Add Parameter`` 在右側 **Parameters** 擺放欄加滑桿（自動命名 ``Param1``、``Param2`` …）。
-4. **設 keys** — 拖滑桿到極端值、編輯 deformer form、按 **Set key**。對中立值跟另一端重複。Runtime 接著會在滑桿移動時於相鄰 keys 之間 lerp 各欄位。
-5. **儲存** — ``Save As…`` 把 rig + 紋理 + 動作 + 表情 + 物理寫成單一 ``.puppet`` zip，可分享或之後用 ``Open Puppet…`` 重開。
-
-範例
-^^^^
-
-倉庫內附完整 rig：``examples/puppet/march_7th.puppet`` — 307-drawable 的 Cubism Live2D 角色，倉庫內轉換好。紋理跟每參數頂點 morph 全烘進 ``.puppet`` zip，使用預設 ``requirements.txt`` 就能開，無需散布 Cubism SDK。
-
-該 rig 帶 203 個 Cubism 標準參數（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），所以所有標準輸入驅動（攝影機、眨眼、對嘴、游標追蹤）不用調整就能驅動。內附 18 個循環動作 — 作者轉換的 Cubism idle 迴圈，加上 ``Idle`` 群組和 ``Gesture`` 群組的參考手勢。
-
-Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7Th 或自己的 ``.puppet`` 開啟。下方 **Motions** 擺放欄點任一個動作即播。
-
-**執行內附範例 — 逐步走讀：**
-
-1. **啟動 Imervue**。原始碼跑：``python -m Imervue``；裝好的版本：直接執行 ``Imervue`` 執行檔 / app bundle。``examples/`` 資料夾已經打包進 wheel 跟 Nuitka EXE，rig 檔案會在安裝目錄底下。
-2. 點視窗頂端的 **Puppet** 分頁。
-3. 工具列 → **File > Examples > March 7Th**\ （或工具列上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中載入，參數欄會填滿 203 個 Cubism 標準參數滑桿。
-4. 在底部 **Motions** 擺放欄單擊任一個動作條目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即開始播放；再點一次停止，或選別的動作交叉淡入。
-5. 切換工具列上的即時輸入 toggle 讓 rig 跟著你動 — **Drag-track head**\ （頭跟著游標）、**Auto-blink**\ （自動眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 隨機 idle 動作）、**Mic lip-sync**\ （麥克風 RMS 帶動嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驅動頭 / 眼 / 嘴）。
-6. 工具列 **Reset to rest** 把所有動作停掉、所有即時驅動取消勾、清掉 expressions / pose 覆寫，所有參數復位 — 標準的「重新開始」按鈕。
-7. 之後要開別的 rig：**File > Open Puppet…** 從磁碟挑任何 ``.puppet`` zip；**File > Examples ▾** 永遠連到內附清單。
-
-``.puppet`` 檔案格式（v1）
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-一個 ``.puppet`` 檔就是一個 zip 壓縮檔：
-
-::
-
-   my_character.puppet
-   ├── puppet.json              # required — manifest, drawables, deformers, parameters
-   ├── textures/
-   │   ├── face.png             # referenced by drawables[].texture
-   │   └── body.png
-   ├── motions/                 # optional
-   │   ├── idle.json
-   │   └── wave.json
-   ├── expressions/             # optional
-   │   └── smile.json
-   └── physics.json             # optional
-
-頂層 ``puppet.json`` 範例::
-
-   {
-     "version": 1,
-     "size": [2048, 2048],
-     "drawables": [ ... ],
-     "deformers": [ ... ],
-     "parameters": [ ... ],
-     "motions": ["idle", "wave"],
-     "expressions": ["smile"],
-     "pose": {"groups": [ ... ]},
-     "physics": "physics.json"
-   }
-
-完整結構（drawables、deformers、parameters、motions、expressions、pose、
-physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG — 沒有
-專利二進位，可完全透過 git diff。
-
-OBS 直播整合
-^^^^^^^^^^^^
-
-兩條輸出，都把角色獨立渲染到 off-screen framebuffer（不含棋盤格背景與編輯器外殼）再送到串流端。輸出長邊上限 1080 px，避免 Cubism 原生畫布（March 7th 是 3503×7777）被 DirectShow 虛擬攝影機驅動拒絕。
-
-**A. Virtual Camera** — 在 OBS《視訊擷取裝置》來源清單裡以 webcam 形式出現。``pip install pyvirtualcam`` 加上平台驅動：OBS Studio 26+（Windows/macOS）會附 *OBS Virtual Camera* 驅動，第一次打開 OBS 點 *Start Virtual Camera* 註冊；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具列 **Output > Virtual camera** 開始串流。
-
-DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道**，所以 Imervue 在角色以外的區域填\ **洋紅色 #FF00FF** 當色鍵。OBS 端去背：
-
-1. 視訊擷取裝置來源右鍵 → **Filters**
-2. **Effect Filters > + > Color Key**
-3. 設定 **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
-
-濾鏡跟著來源走，下次啟用虛擬攝影機自動套用。
-
-**B. NDI 輸出** — LAN 上 < 50 ms 延遲、原生 RGBA，OBS / vMix 可以直接把角色疊到自己的場景上、不用色鍵。``pip install ndi-python``，加上 `NDI Tools <https://ndi.video/tools/>`_ runtime 與 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 外掛。工具列 **Output > NDI output** 開始廣播（預設來源名 *Imervue Puppet*）。
-
-``ndi-python`` 只 ship source distribution、pip 拿到後從 C++ 編。Windows 需要 Visual Studio Build Tools 2022（含 C++ 工作負載）、CMake 加到 PATH、NDI SDK（從 <https://ndi.video/for-developers/ndi-sdk/> 取得，跟 NDI Tools 不同）裝在預設位置、環境變數 ``NDI_SDK_DIR`` 指向 SDK。
-
-詳細逐步與疑難排解見 ``puppet_guide.zh-TW.md`` § 1.2。
-
-錄製自訂動作
-^^^^^^^^^^^^
-
-不想手動編 keyframe？用即時 take 錄：
-
-1. 工具列 **Record motion** 打勾，會跳出命名對話框。
-2. 錄製時拖滑桿、開 **Webcam tracking**、讓物理跑 — 任何會寫參數值的事情都可以。
-3. **Record motion** 取消勾 — 錄製器把 30 Hz 串流烘焙成一個 ``Motion``：每個真的有變動的參數一條 linear-segment 軌（沒變動的丟掉）。新動作立刻出現在底部 **Motions** 擺放欄。
-
-存進 ``.puppet`` 的方式跟手寫 keys 的動作完全相同。
-
-工具列參考
-^^^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 動作
-     - 用途
-   * - Open Puppet… / Examples ▾
-     - 從磁碟載入 ``.puppet``，或從工具列直接挑 ``examples/puppet/`` 下內附的 rig
-   * - Import PNG… / Import PSD… / Import Cubism…
-     - PNG 自動 mesh、PSD 分層拆 drawable、Cubism rig sample-and-reconstruct。Cubism 檔案選擇器同時接受 ``.moc3`` 跟 ``.model3.json``；工作區還沒開 rig 時兩條路徑都跑完整 ``.moc3 → .puppet`` 轉換（SDK 使用者自備）。已經開了 rig 時挑 ``.model3.json`` 改把 JSON 部分（motions / expressions / physics）疊到既有文件
-   * - Save As…
-     - 把目前 rig 寫成 ``.puppet`` zip
-   * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - 從工具列 author rig
-   * - Drag-track head
-     - 游標偏移 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
-   * - Auto-blink
-     - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上的 cosine close→open，每 ~4.5 秒一次（force-write 路徑繞過 canvas 的 no-change-skip，避免被其他 driver 卡住）
-   * - Mic lip-sync
-     - 麥克風 RMS → ``ParamMouthOpenY``\ （需 ``sounddevice``）
-   * - Webcam tracking
-     - MediaPipe Tasks API FaceLandmarker → 頭部 yaw / pitch / roll + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``；開啟即時預覽 dialog 顯示偵測到的 landmark）
-   * - Auto idle / Idle motions
-     - 標準參數上的呼吸 + 漂移，加上 Idle 群組動作的隨機循環
-   * - Edit mesh
-     - 拖曳 canvas 上的頂點微調 mesh
-   * - Record motion
-     - 把參數變化錄成新的 ``Motion`` 加進文件 — take 烘焙、不用手動 author keys
-   * - Capture frame… / Record… / Export all motions…
-     - 存單張 PNG、開關 GIF / WebM / MP4 錄製、或批次把每個動作各別 render 成檔（全部用跟串流相同的角色獨立 off-screen render）
-   * - Output > Virtual camera / NDI output
-     - 直播輸出 — 見上面的「OBS 直播整合」
-   * - Reset to rest
-     - Motion player 直接停、所有 live driver 取消勾、清空 expressions / pose groups、參數復位
-   * - Fit to Window
-     - Canvas 上重新置中 + 縮放 rig
-
-選用依賴
-^^^^^^^^
-
-* ``sounddevice`` — 麥克風對嘴
-* ``opencv-python`` + ``mediapipe`` — 攝影機臉部追蹤
-* ``imageio-ffmpeg`` — MP4 / WebM 錄製（已隨幻燈片影片功能附帶）
-* ``pyvirtualcam`` — 虛擬攝影機輸出（見「OBS 直播整合」）
-* ``ndi-python`` — NDI 輸出（見「OBS 直播整合」）
-* 使用者自備 Cubism Native SDK DLL — ``.moc3 → .puppet`` 轉換（Live2D Free Material License 禁止散布；放在 ``<cwd>/sdk/`` 或設 ``CUBISM_CORE_DLL`` 環境變數）
-
-任何缺失都會優雅停用 — 對應工具列 toggle 會自動彈回去並提示安裝。**File > Install dependencies…** 可一次裝齊所有 Python 選用包。
-
-----
-
-桌寵工作區（Desktop Pet 分頁）
-------------------------------
-
-第五個分頁 — **Desktop Pet** — 把任何 ``.puppet`` 角色當成無邊框、透明背景的桌面浮層放到你的桌面上。分頁本身是控制面板；真正的角色是另外一個獨立的最上層視窗，與整個 Puppet runtime 共用一切（動作、表情、物理、idle driver、麥克風 / 攝影機輸入）。桌寵可以對點擊有反應、跑計時器驅動的動畫、追隨你的游標、其他 App 全螢幕時自動藏起來，還能用你寫在 JSON 檔裡的台詞說話。
-
-本章是這個分頁的完整參考手冊，章節安排如下：
-
-#. **快速上手** — 從「我剛打開 Imervue」到「桌面上出現桌寵了」的五步流程。
-#. **載入 rig** — 檔案選擇器、內附範例、跨啟動的還原。
-#. **浮層視窗** — 所有視窗層級的行為（拖曳移動、邊緣吸附、點擊穿透、位置鎖定、永遠置底、全螢幕自動隱藏、隱藏時暫停、透明度、尺寸、多螢幕還原）。
-#. **互動模型** — 左鍵 hit area、完整右鍵選單、系統匣。
-#. **Live driver** — 六個可開關的輸入 driver 與其選用依賴。
-#. **桌寵腳本** — 一個 JSON 檔，讓你能換掉桌寵的台詞、安排提醒，並對每個 hit area / 每個 motion 綁定反應。
-#. **持久化** — 哪些東西會跨啟動記住、以及完整的設定 schema。
-#. **製作新桌寵** — 指向 Puppet 分頁與 ``.puppet`` 檔案格式。
-#. **疑難排解** — 常見狀況與處理方式。
-
-快速上手
-^^^^^^^^
-
-1. 切換到 **Desktop Pet** 分頁。
-2. 點 **Load bundled March 7th** 用內附的角色，或 **Open Puppet…** 選自己的 ``.puppet`` 檔。
-3. 浮層出現在桌面上，**Show pet on desktop** 勾選框會自動勾起來。（要在不關閉 Imervue 的情況下把桌寵藏起來，把勾選框取消、或用系統匣圖示。）
-4. 把角色拖到想要的位置，放開時靠近螢幕邊緣會吸附貼齊。
-5. 從分頁或桌寵的右鍵選單挑你要的 **Live driver** — idle 呼吸、眨眼、游標追隨、麥克風對嘴、攝影機追蹤。
-
-你設定的一切都會跨啟動保留下來，所以步驟 5 是每個 rig / 角色一次的決定。
-
-載入 rig
-^^^^^^^^
-
-分頁提供三條載入途徑：
-
-* **Open Puppet…** — 從硬碟挑任何 ``.puppet`` 檔。
-* **Load bundled March 7th** — 開啟內附在 ``examples/puppet/march_7th.puppet`` 的 rig。Resolver 會先查 ``examples_dir()``\ （對 Nuitka 打包 / pip 安裝版本是 frozen-safe），找不到再退回 repo 根目錄相對路徑，所以這顆按鈕在兩種執行模式下都能用。
-* **上次的 rig** — Imervue 啟動時會從 ``last_rig_path`` 設定欄位自動還原上次載入的 rig；Desktop Pet 分頁會靜默重建浮層，所以你和上次離開時的狀態之間只差一個點擊。
-
-載入成功會自動勾起 **Show pet on desktop**，桌寵立刻現身。失敗時勾選框不會動，錯誤訊息會寫在分頁的狀態列上。
-
-浮層視窗
-^^^^^^^^
-
-角色待在一個獨立於 Imervue 主視窗之外的最上層視窗。視窗是無邊框、不出現在工作列、預設永遠浮在所有其他視窗的上面。
-
-.. list-table:: 視窗行為
-   :header-rows: 1
-   :widths: 28 72
-
-   * - 行為
-     - 細節
-   * - 無邊框浮層
-     - 沒有視窗外框、沒有最小化 / 關閉按鈕、不出現在工作列。整個可見表面就是角色本身。
-   * - 透明背景
-     - 角色沒覆蓋到的地方完全透明，後面的桌面 / App 像素級透出來。
-   * - 拖曳移動
-     - 在身體任意位置左鍵按下、拖、放開。游標移動少於 6 px 才會被當成點擊；移得更遠就視為拖曳，點擊處理器不會觸發。
-   * - 邊緣吸附
-     - 在螢幕邊緣附近放開（預設：24 px 以內），桌寵會「卡」上去貼齊邊緣。閾值可在 0（關閉）到 200（很黏）之間調整。X、Y 兩軸各自獨立判斷，所以拖到角落時會同時吸附兩條邊。
-   * - 越界夾回
-     - 拖到螢幕邊緣外才放開的，會被夾回螢幕內。你沒辦法把桌寵丟到螢幕外面、再也抓不回來。
-   * - 點擊穿透模式
-     - 開啟後，所有滑鼠事件穿過桌寵直達後面的東西。角色仍然看得見，但無法拖、無法右鍵、也無法用來觸發動作。桌寵純粹當裝飾時打開它。
-   * - 鎖定位置
-     - 停用拖曳移動，但不影響點擊穿透。把桌寵放好了、不想被誤拖時很有用。
-   * - 永遠置底
-     - 把桌寵從永遠置頂翻成永遠置底。桌寵會待在所有其他視窗的後面，像桌面小工具。同時取消接受 focus 的旗標，所以點桌寵不會把它升到前面。
-   * - 全螢幕自動隱藏
-     - 一個 1 Hz 的背景輪詢監看桌寵所在螢幕上的前景視窗。當該視窗覆蓋 ≥ 99 % 螢幕、且每邊容差 ≤ 4 px（真正的全螢幕和無邊框視窗遊戲都抓得到），桌寵自動藏起來。全螢幕結束後桌寵會回到原本的位置。Windows 上偵測器走 Win32 ``GetWindowRect`` API；macOS / Linux 上會優雅 no-op（桌寵保持可見）。
-   * - 隱藏時暫停
-     - ~30 FPS 的繪圖 tick 和 1 Hz 的腳本 tick 都會在 ``hideEvent`` 時停掉，所以藏起來的桌寵 CPU 用量為零。下次 ``showEvent`` 時重新啟動。
-   * - 尺寸預設
-     - 小（200 × 300）、中（320 × 480）、大（480 × 720）。桌寵以目前中心為錨點縮放，調尺寸時不會跳位。Snap 會在 resize 之後重跑一次。
-   * - 透明度滑桿
-     - 10 – 100 %。作用在視窗層級（透過 ``setWindowOpacity``），所以整個桌寵一起淡出，不是只淡材質。10 % 是下限，是為了讓你永遠看得到、抓得到桌寵 — 完全透明會讓你弄丟它。
-   * - 位置記憶
-     - 每次放開後吸附完成的 ``(x, y)`` 都會被保存。下次啟動時桌寵會回到那個螢幕座標。如果保存的位置已經不在任何連接的螢幕內（你從上次啟動到現在拔掉了一個螢幕），桌寵會退回主螢幕的右下角。
-
-互動模型
-^^^^^^^^
-
-桌寵透過三個獨立通道回應滑鼠輸入。
-
-**左鍵點身體**
-
-點擊位置會反映射回 puppet canvas 座標（抵銷 canvas 的平移 / 縮放），再丟進現有的 ``hit_test`` 流程。結果如下驅動行為：
-
-#. 如果有 ``HitArea`` 覆蓋了被點到的 drawable、且該 area 有綁定 motion，就播這個 motion。
-#. 不論 motion 有沒有播，桌寵都可能彈出對話泡泡 — 台詞挑選的優先順序見 *桌寵腳本* 段。
-#. 沒有任何 hit area 覆蓋點擊時，桌寵退回打招呼（從腳本的 ``greetings`` 清單，或內建 fallback）。
-
-拖曳移動的手勢會壓抑點擊處理器，所以移動桌寵不會觸發動作 / 對話。
-
-**右鍵點身體任意位置**
-
-開啟右鍵選單，結構如下：
-
-* **Hide pet** — 最上層動作，關閉浮層。
-* **Live drivers** 子選單 — 六個可勾選 toggle（Auto idle、Idle motions、Auto-blink、Drag-track head、Mic lip-sync、Webcam tracking）。勾選狀態鏡像 live driver 的真實狀態，所以選單顯示的就是目前在跑什麼。
-* **Play motion** 子選單 — 由當前 rig 的 ``document.motions`` 清單填入。選一項就播該動作（如果腳本對該動作綁了台詞，可能會同時觸發桌寵的聲音）。
-* **Apply expression** 子選單 — 由 rig 的 ``document.expressions`` 填入。選一項會切換該表情的參數 overlay。
-* 五個最上層的可勾選 toggle：**Lock position**、**Click-through**、**Always on bottom**、**Hide on fullscreen**、**Speech bubble** — 快速存取分頁裡同樣的 toggle。
-* **Size** 子選單 — Small / Medium / Large；目前的預設會被勾起來。
-
-沒載入 rig 時，motion / expression 子選單會 disabled。
-
-**系統匣圖示**
-
-系統匣圖示（僅在支援系統匣的平台上建立）提供第四個操作面，給最常用的動作：
-
-* 左鍵單擊切換桌寵顯示。
-* 右鍵開啟選單：**Show pet**\ （可勾選）、**Click-through**、**Open puppet…**、**Hide pet**。
-* 可勾選的 Show / Click-through 項目透過 ``sync_visibility`` / ``sync_click_through`` 鏡像分頁的勾選狀態，所以不論使用者從哪邊切，狀態都會同步。
-
-Live driver
-^^^^^^^^^^^
-
-每個 live driver 都是第一次開啟時才 lazy-create，所以沒在用的 driver，閒置的桌寵不會花任何 timer / thread 成本。每個 driver 的狀態會被保存；開啟、關閉 Imervue、再重啟，桌寵會帶著同樣的 driver 重新打開。
-
-.. list-table::
-   :header-rows: 1
-   :widths: 22 50 28
-
-   * - Driver
-     - 做什麼
-     - 選用依賴
-   * - **Auto idle**
-     - 在標準參數（``ParamBreath`` 等）上加呼吸 + 微幅漂移，沒其他東西在動的時候讓角色看起來有生命。
-     - 無
-   * - **Idle motions**
-     - 每幾秒從 rig 的 ``Idle`` 群組隨機挑一個 motion 播。目前有 motion 在跑就停下不挑。
-     - 無
-   * - **Auto-blink**
-     - 每 ~4.5 秒沿著平滑的 cosine 曲線闔眼再睜眼。Driver 會強制寫入該參數，所以其他會碰到 eye-open 的 driver 不會壓掉眨眼。
-     - 無
-   * - **Drag-track head**
-     - 頭和眼睛會轉向全域游標位置，即使游標不在桌寵上也一樣。驅動 ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` / ``ParamEyeBallY``。
-     - 無
-   * - **Mic lip-sync**
-     - 麥克風 RMS 振幅驅動 ``ParamMouthOpenY``。
-     - ``sounddevice``
-   * - **Webcam tracking**
-     - MediaPipe FaceLandmarker 以 ~30 FPS 讀你的攝影機，驅動頭部姿態 + eye-open + mouth-open 參數。會開一個小的即時預覽視窗讓你確認攝影機有看到你的臉。
-     - ``opencv-python`` + ``mediapipe``
-
-兩個帶選用依賴的 driver 會優雅降級：所需套件沒裝時，勾選框會自動彈回去，分頁的狀態列會顯示「install sounddevice」/「install opencv-python + mediapipe」提示。
-
-桌寵腳本 — 自訂台詞與排程事件
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-桌寵的對話泡泡內容來自一個 JSON 檔，你可以自己寫，並從分頁上的 **Pet script** 群組載入。腳本管四件事：
-
-* **Greetings** — 沒有更具體匹配時的預設點擊台詞。
-* **Hit-area responses** — 按 ``HitArea.id`` 分桶的台詞。
-* **Motion lines** — 按 motion 名稱分桶的台詞，桌寵開始播該 motion 時觸發（不論是 hit area 觸發還是右鍵選單觸發）。
-* **Scheduled chimes** — 計時器驅動的台詞，每 ``every_seconds`` 秒（monotonic 牆鐘時間）觸發一次。
-
-Schema（有版本 — 未來的欄位會向前相容）：
-
-.. code-block:: json
-
-   {
-     "version": 1,
-     "name": "March 7th — playful voice",
-     "greetings": [
-       "Hi!", "Hello hello!", "Need a break?"
-     ],
-     "hit_responses": {
-       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
-       "HitAreaBody": ["Hehe~", "Pat pat?"]
-     },
-     "motion_lines": {
-       "wave": ["Hi!", "Hello!"],
-       "curtsy": ["Cheers!"]
-     },
-     "scheduled": [
-       {"every_seconds": 1800, "messages": ["Stretch break!"]}
-     ]
-   }
-
-載入規則：
-
-* 每個桶內的清單以 round-robin 取樣，所以使用者不會連續兩次看到同一句。
-* 未知的最上層 key 會被忽略（向前相容 — 未來的 v2 檔在 v1 runtime 上仍能載入）。
-* 垃圾清單項（型別錯誤、scheduled 項格式錯誤、``every_seconds`` 為零或負數）會被跳過 — 一筆爛資料不會弄爛整個載入。只有完全無法 parse 的 JSON 才會 raise 錯誤、把路徑寫到狀態列上。
-* hit-area / motion / greeting 的層疊：左鍵點擊先查 ``hit_responses[area.id]``、再查 ``motion_lines[area.motion]``、再查 ``greetings``，最底層才是內建預設打招呼集。
-* 時間追蹤用 ``time.monotonic``，所以筆電休眠或系統時鐘跳變不會把排隊的事件一次連發出來。
-
-**Reset to default** 會丟掉使用者腳本、回到內建打招呼集；保存的腳本路徑也會清空，下次啟動不會再載入它。
-
-可用的範例放在 ``examples/desktop_pet/march_7th.petscript.json`` — 六句打招呼、兩個 hit-area 桶（head / body）、三個 motion 台詞（wave / curtsy / cheer），以及一個 30 分鐘的伸展提醒。
-
-持久化
-^^^^^^
-
-所有 Desktop Pet 狀態都透過 ``user_setting_dict["desktop_pet"]``\ （Imervue 標準使用者設定檔裡的一個 slot）來回。每個欄位在載入時都有預設值 + 範圍夾取，所以損壞的設定檔不會讓啟動 crash。
-
-.. list-table:: 持久化欄位
-   :header-rows: 1
-   :widths: 28 18 54
-
-   * - 欄位
-     - 預設值
-     - 備註
-   * - ``last_rig_path``
-     - ``""``
-     - 啟動時若檔案仍存在會自動還原。
-   * - ``script_path``
-     - ``""``
-     - 啟動時若腳本仍可 parse 會自動還原；無法讀的腳本會靜默退回預設。
-   * - ``position``
-     - ``[-1, -1]``
-     - 上次拖曳放開的螢幕座標 ``(x, y)``。``-1, -1`` 表示「使用主螢幕的右下角」。跨 session 拔掉多螢幕也會走同樣的 fallback。
-   * - ``size_preset``
-     - ``"medium"``
-     - ``small`` / ``medium`` / ``large`` 三選一。
-   * - ``opacity``
-     - ``1.0``
-     - 夾取到 ``[0.1, 1.0]``。超出範圍的值會被重置為預設。
-   * - ``click_through``
-     - ``false``
-     -
-   * - ``anchor_locked``
-     - ``false``
-     -
-   * - ``always_on_bottom``
-     - ``false``
-     - 與永遠置頂互斥。
-   * - ``hide_on_fullscreen``
-     - ``true``
-     - 設成 ``false`` 可讓桌寵在全螢幕期間保持顯示。
-   * - ``snap_threshold``
-     - ``24``
-     - 夾取到 ``[0, 200]`` px。
-   * - ``drivers``
-     - 全 ``false``
-     - 以 driver id 為 key 的子 dict（``auto_idle``、``idle_motion``、``auto_blink``、``drag_track``、``mic_lipsync``、``webcam_tracking``）。未知 key 會原樣往返保留以向前相容。
-   * - ``show_on_launch``
-     - ``false``
-     - Imervue 啟動時自動顯示浮層。
-   * - ``speech_enabled``
-     - ``true``
-     - 設成 false 時對話泡泡永遠不彈。
-
-設定 dict 的 merge 行為是淺一層的：缺少新 key 的舊設定檔，載入後仍會產生完整的狀態 dict（預設值補洞）；你存過的新 key，即使降級到不認得它們的舊 runtime 上也能保留下來。
-
-製作新桌寵
-^^^^^^^^^^
-
-任何 ``.puppet`` 檔都能當 Desktop Pet 的角色用 — Desktop Pet 分頁純粹是 renderer + 互動殼層；rig 的製作在 Puppet 分頁裡發生（見 *Puppet 工作區（Puppet 分頁）*）。
-
-製作自己的桌寵 rig：
-
-#. 切換到 Puppet 分頁，透過 **File > Import PNG…** 或 **File > Import PSD…** 匯入美術素材，或透過 **File > Import Cubism…** 拉入 Cubism 模型。
-#. 製作旋轉 / warp deformer、參數、動作、表情，以及（選用）綁定到身體部位的 hit area，讓 Desktop Pet 的左鍵處理器能觸發動作。
-#. 透過 **File > Save As…** 把 rig 存成 ``.puppet`` zip。
-#. 切回 Desktop Pet 分頁，用 **Open Puppet…** 載入新檔。
-
-如果你的 rig 定義了 ``HitArea`` 項目，可以在 ``.petscript.json`` 裡寫對應的 ``hit_responses`` key（key 要對得上 area id），就能為每個 hit area 寫自訂對話泡泡台詞。
-
-疑難排解
-^^^^^^^^
-
-**桌寵出現在灰色矩形裡，而不是完全透明。** OS 層級的半透明背景屬性需要 alpha-aware 的 GL surface 加上嵌入 GL widget 的對應屬性。確認沒有任何第三方視窗管理工具在浮層視窗上覆寫 ``WA_TranslucentBackground``\ （Linux 上某些自製視窗管理員會這樣做）。Windows / macOS 上應該「直接能用」。
-
-**「Load bundled March 7th」說檔案找不到。** Resolver 先查 ``examples_dir()``\ （打包版用的 frozen-safe 位置），再退回 CWD 相對路徑。兩者都沒有 rig 時，狀態列會列出預期路徑。檢查你安裝中附的 ``examples/`` 資料夾 — 如果是從原始碼 checkout 執行，要從 repository 根目錄啟動 Imervue。
-
-**桌寵被點了不講話。** 三個檢查點：
-
-#. 確認 **Speech bubble on click** toggle 是開的（在分頁或右鍵選單裡）。
-#. 如果你載了自訂腳本，確認 JSON 能 parse — 分頁的狀態列會顯示載入錯誤。
-#. 如果 hit-area 點擊沒反應，那個 area 大概是沒綁 motion 而且腳本裡也沒有對應 area id 的 ``hit_responses`` 項。要嘛在 Puppet 分頁把 motion 綁上去，要嘛把 area id 加到腳本的 ``hit_responses``。
-
-**Webcam tracking 勾選框自己彈回去。** Webcam tracking 需要在 Imervue 跑的同一個 Python 環境裡裝 ``opencv-python`` 和 ``mediapipe``。用 ``pip install opencv-python mediapipe`` 安裝。裝完後，切換勾選框應該會跳出一個小預覽視窗顯示偵測到的臉部 landmark。
-
-**桌寵沒在其他 App 全螢幕時自動藏起來。** 全螢幕偵測器以 1 Hz 輪詢前景視窗。Windows 上用 ``GetWindowRect`` Win32 API；macOS / Linux 上沒有可靠的跨平台對等物，會 no-op（桌寵保持顯示）。在 Windows 上：確認 **Hide when other app is fullscreen** 是勾的，並確認全螢幕視窗確實覆蓋了與桌寵同一個螢幕的 ≥ 99 %。
-
-**桌寵的位置在跨啟動之間漂到螢幕外。** 這發生在桌寵原本所在的螢幕在下次啟動時不再連接（筆電 dock、第二個螢幕被拔掉）。這種情況下桌寵會自動退回主螢幕的右下角 — 把它拖到你想要的地方，下次保存就會覆蓋掉那個過時的位置。
 
 ----
 

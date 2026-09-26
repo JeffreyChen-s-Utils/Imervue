@@ -726,6 +726,597 @@ PSD 가져오기/내보내기를 지원합니다. 탭 막대에서 전환하거�
 
 ----
 
+Puppet 작업 공간 (Puppet 탭)
+-----------------------------
+
+네 번째 최상위 탭 — **Puppet** — 은 처음부터 만든 2D 리깅 퍼펫 애니메이션 시스템입니다. Live2D 가 하는 것 (메시 변형 리깅, 매개변수, 모션, 물리, 표정, 포즈 그룹, 립싱크, 웹캠 추적) 을 **독점 SDK 없이**, **live2d-py 없이**, 완전히 개방된 ``.puppet`` 파일 포맷으로 구현합니다.
+
+.. note::
+
+   엔드 투 엔드 튜토리얼 (새 설치부터 OBS 라이브 스트림 또는 MP4 출력까지) 은
+   저장소 루트의 ``puppet_guide.md`` 에 있습니다 (중국어판은 ``puppet_guide.zh-TW.md`` /
+   ``puppet_guide.zh-CN.md``). 이 장은 레퍼런스이고, 가이드는 단계별 안내입니다.
+
+엔드 투 엔드 워크플로우
+^^^^^^^^^^^^^^^^^^^^^^^
+
+1. **PNG 가져오기** — 도구 모음 ``Import PNG…`` 가 ``puppet.auto_mesh.puppet_from_png`` 실행: 알파 기반 삼각화, 단일 drawable, 즉시 렌더링 가능.
+2. **디포머 추가** — ``Add Rotation Deformer`` (앵커 + 각도) 또는 ``Add Warp Deformer`` (행 × 열 Bezier 격자; 경계 외 정점은 그대로).
+3. **매개변수 추가** — ``Add Parameter`` 가 오른쪽 **Parameters** 도크에 슬라이더 추가 (자동 명명 ``Param1``、``Param2`` …).
+4. **키 설정** — 슬라이더를 한쪽 극단으로 이동, 디포머 form 편집 후 **Set key**. 중립값과 반대 극단에서 반복. 런타임이 슬라이더 이동 시 인접 키 사이를 보간합니다.
+5. **저장** — ``Save As…`` 로 rig + 텍스처 + 모션 + 표정 + 물리를 단일 ``.puppet`` zip 으로 출력.
+
+예제
+^^^^
+
+저장소 동봉: ``examples/puppet/march_7th.puppet`` — 트리 내 변환된 307-drawable Cubism Live2D 캐릭터. 텍스처와 매개변수별 정점 morph 가 모두 ``.puppet`` zip 에 굽혀져 있어, 기본 ``requirements.txt`` 만으로 열 수 있습니다 (Cubism SDK 재배포 없음).
+
+203 개의 Cubism 표준 매개변수가 있어 (``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …), 표준 입력 드라이버 (웹캠, 깜빡임, 립싱크, 커서 추적) 가 rig 별 설정 없이 동작합니다. 18 개의 루프 모션 동봉: 작자 변환된 Cubism idle 루프 + ``Idle`` 그룹 / ``Gesture`` 그룹의 참조 제스처.
+
+Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7Th 또는 자신의 ``.puppet`` 을 열 수 있습니다. 하단 **Motions** 도크의 모션을 클릭하면 재생됩니다.
+
+**동봉 예제 실행 — 단계별 가이드:**
+
+1. **Imervue 실행**. 소스에서: ``python -m Imervue``. 패키지 빌드: ``Imervue`` 실행 파일 / app bundle 을 직접 실행. ``examples/`` 디렉터리는 wheel 과 Nuitka EXE 양쪽에 번들되어 있어 설치 경로 어디에서나 rig 파일을 사용할 수 있습니다.
+2. 창 상단의 **Puppet** 탭을 클릭.
+3. 도구 모음 → **File > Examples > March 7Th** (또는 도구 모음의 **Examples ▾** 드롭다운). 307-drawable rig 가 중앙에 로드되고, 매개변수 도크는 203 개의 Cubism 표준 매개변수 슬라이더로 채워집니다.
+4. 하단 **Motions** 도크에서 모션 항목 (``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …) 을 싱글 클릭. 즉시 재생 시작; 다시 클릭하면 정지, 다른 모션 선택 시 크로스페이드.
+5. 도구 모음의 실시간 입력 토글로 자신의 입력으로 rig 를 구동 — **Drag-track head** (커서 추적), **Auto-blink** (자동 깜빡임), **Auto idle** + **Idle motions** (호흡 + 무작위 idle 모션), **Mic lip-sync** (마이크 RMS 로 입 벌림), **Webcam tracking** (MediaPipe FaceLandmarker 로 머리 / 눈 / 입 추적).
+6. 도구 모음의 **Reset to rest** 는 모든 모션 중지, 모든 실시간 드라이버 끄기, expressions / pose 오버라이드 제거, 모든 매개변수를 기본값으로 되돌리기 — 표준 "처음부터 다시" 버튼.
+7. 나중에 다른 rig 열기: **File > Open Puppet…** 디스크에서 임의의 ``.puppet`` zip 선택; **File > Examples ▾** 은 항상 동봉 목록에 바인딩됩니다.
+
+``.puppet`` 파일 포맷 (v1)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``.puppet`` 파일은 zip 아카이브입니다:
+
+::
+
+   my_character.puppet
+   ├── puppet.json              # 필수 — 매니페스트, drawables, deformers, parameters
+   ├── textures/
+   │   ├── face.png             # drawables[].texture 에서 참조
+   │   └── body.png
+   ├── motions/                 # 선택
+   │   ├── idle.json
+   │   └── wave.json
+   ├── expressions/             # 선택
+   │   └── smile.json
+   └── physics.json             # 선택
+
+최상위 ``puppet.json`` 예시::
+
+   {
+     "version": 1,
+     "size": [2048, 2048],
+     "drawables": [ ... ],
+     "deformers": [ ... ],
+     "parameters": [ ... ],
+     "motions": ["idle", "wave"],
+     "expressions": ["smile"],
+     "pose": {"groups": [ ... ]},
+     "physics": "physics.json"
+   }
+
+전체 스키마 (drawables, deformers, parameters, motions, expressions, pose, physics) 는 저장소의 ``Imervue/puppet/FORMAT.md`` 에 있습니다. JSON + PNG 만 사용 — 독점 바이너리가 없어 git 으로 완전히 diff 할 수 있습니다.
+
+도구 모음 레퍼런스
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 액션
+     - 용도
+   * - Open Puppet… / Examples ▾
+     - 디스크에서 ``.puppet`` 로드, 또는 ``examples/puppet/`` 의 동봉 rig 를 도구 모음에서 직접 선택
+   * - Import PNG… / Import PSD… / Import Cubism…
+     - PNG 자동 메시, PSD 레이어 분할, Cubism rig 의 sample-and-reconstruct. Cubism 파일 선택기는 ``.moc3`` 와 ``.model3.json`` 둘 다 받으며, 작업 공간에 rig 가 열려 있지 않을 때는 어느 경로든 완전한 ``.moc3 → .puppet`` 변환이 실행됩니다 (SDK 는 사용자 제공). rig 가 이미 열려 있는 상태에서 ``.model3.json`` 을 고르면 JSON 메타데이터 (motions / expressions / physics) 가 활성 문서에 병합됩니다
+   * - Save As…
+     - 현재 rig 을 ``.puppet`` zip 으로 출력
+   * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
+     - 도구 모음에서 rig 작성
+   * - Drag-track head
+     - 커서 오프셋 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
+   * - Auto-blink
+     - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 에서 약 4.5 초마다 cosine close→open (force-write 경로로 canvas 의 no-change-skip 우회, 다른 드라이버에 막히지 않음)
+   * - Mic lip-sync
+     - 마이크 RMS → ``ParamMouthOpenY`` (``sounddevice`` 필요)
+   * - Webcam tracking
+     - MediaPipe Tasks API FaceLandmarker → 머리 yaw / pitch / roll + 눈 + 입 (``opencv-python`` + ``mediapipe`` 필요; 감지된 랜드마크를 표시하는 실시간 미리보기 dialog 열림)
+   * - Auto idle / Idle motions
+     - 표준 매개변수의 호흡 + 드리프트, Idle 그룹 모션의 랜덤 사이클러
+   * - Edit mesh
+     - canvas 정점을 드래그하여 메시 미세 조정
+   * - Record motion
+     - 매개변수 변화를 새 ``Motion`` 으로 녹화하여 문서에 추가 — take 베이크, 수동 키 작성 불필요
+   * - Capture frame… / Record… / Export all motions…
+     - 단일 PNG 저장, GIF / WebM / MP4 녹화 토글, 각 모션을 개별 파일로 일괄 렌더링 (모두 스트리밍과 동일한 캐릭터 단독 off-screen render 경로 사용)
+   * - Output > Virtual camera / NDI output
+     - 라이브 스트리밍 표면 — 아래의 "OBS 라이브 스트리밍" 참조
+   * - Reset to rest
+     - 모션 플레이어 즉시 정지, 모든 라이브 드라이버 끄기, 표정 / 포즈 그룹 비우기, 매개변수 기본값 복원
+   * - Fit to Window
+     - canvas 에서 rig 을 재중앙 정렬 + 재스케일
+
+커스텀 모션 녹화
+^^^^^^^^^^^^^^^^
+
+수동으로 키프레임을 찍는 대신 라이브 take 를 녹화:
+
+1. 도구 모음의 **Record motion** 켜기 — 이름 다이얼로그 표시.
+2. 녹화 중 슬라이더 드래그、**Webcam tracking** 활성화、물리 실행 — 매개변수 값을 쓰는 모든 작업 OK.
+3. **Record motion** 끄기 — 레코더가 30 Hz 스트림을 베이크하여 ``Motion`` 화 (실제로 움직인 매개변수마다 하나의 linear-segment 트랙, 변동 없는 트랙은 폐기). 새 모션이 하단 **Motions** 도크에 즉시 표시.
+
+커스텀 모션은 수동 작성된 모션과 동일한 ``motions/<name>.json`` JSON 페이로드로 저장됩니다.
+
+OBS 라이브 스트리밍
+^^^^^^^^^^^^^^^^^^^
+
+두 개의 출력 경로. 둘 다 캐릭터만 off-screen framebuffer 에 렌더링하여 (체커보드 배경도 에디터 chrome 도 포함되지 않음) 스트리밍 표면에 전달합니다. 출력의 가장 긴 변은 1080 px 까지 캡 (Cubism 네이티브 3503×7777 이 DirectShow 가상 카메라 드라이버에 거부되는 것을 방지).
+
+**A. 가상 카메라** — OBS 의 "비디오 캡처 장치" 소스 목록에 웹캠으로 표시. ``pip install pyvirtualcam`` + 플랫폼별 드라이버: OBS Studio 26+ (Windows / macOS) 에 *OBS Virtual Camera* 드라이버 동봉 (OBS 첫 실행 시 *Start Virtual Camera* 클릭하여 등록); Linux 는 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``. 도구 모음 **Output > Virtual camera** 로 스트림 시작.
+
+DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음** 이므로, Imervue 는 캐릭터 외부 영역을 **마젠타 #FF00FF** 로 채워 크로마키 역할을 합니다. OBS 에서 제거:
+
+1. 비디오 캡처 장치 소스 우클릭 → **필터**
+2. **이펙트 필터 > + > Color Key**
+3. **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
+
+필터는 소스에 부착되어, 가상 카메라를 재개할 때마다 자동으로 적용됩니다.
+
+**B. NDI 출력** — LAN 상 < 50 ms 지연, 네이티브 RGBA, OBS / vMix 가 자체 장면에 직접 합성, 크로마키 패스 불필요. ``pip install ndi-python`` + `NDI Tools <https://ndi.video/tools/>`_ 런타임 + `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 플러그인. 도구 모음 **Output > NDI output** 으로 방송 시작 (기본 소스 이름 *Imervue Puppet*).
+
+``ndi-python`` 은 소스 배포만 있어 pip 가 C++ 에서 빌드합니다. Windows 사용자는 Visual Studio Build Tools 2022 (C++ 워크로드), CMake 를 PATH 에, NDI SDK (<https://ndi.video/for-developers/ndi-sdk/> 에서 받음, NDI Tools 와 별개) 를 기본 위치에 설치, 환경 변수 ``NDI_SDK_DIR`` 을 SDK 로 설정해야 합니다.
+
+자세한 단계 및 문제 해결은 ``puppet_guide.md`` § 1.2 참조.
+
+선택적 의존성
+^^^^^^^^^^^^^
+
+* ``sounddevice`` — 립싱크용 마이크
+* ``opencv-python`` + ``mediapipe`` — 웹캠 얼굴 추적
+* ``imageio-ffmpeg`` — MP4 / WebM 녹화 (이미 슬라이드쇼 비디오용으로 동봉)
+* ``pyvirtualcam`` — 가상 카메라 출력 ("OBS 라이브 스트리밍" 참조)
+* ``ndi-python`` — NDI 출력 ("OBS 라이브 스트리밍" 참조)
+* 사용자 제공 Cubism Native SDK DLL — ``.moc3 → .puppet`` 변환 (Live2D Free Material License 가 재배포 금지; ``<cwd>/sdk/`` 에 두거나 ``CUBISM_CORE_DLL`` 환경 변수 설정)
+
+누락 시 우아하게 다운그레이드 — 해당 도구 모음 토글이 자동 꺼지고 "install <package>" 힌트 표시. **File > Install dependencies…** 로 모든 Python 선택적 패키지를 한 번에 설치.
+
+----
+
+데스크톱 펫 작업 공간 (Desktop Pet 탭)
+--------------------------------------
+
+탭 5 — **Desktop Pet** 은 임의의 ``.puppet`` 캐릭터를 프레임 없는 투명
+오버레이로 데스크톱 위에 띄웁니다. 탭 자체는 제어 패널이며, 실제 캐릭터는
+별도의 최상위 창으로 전체 Puppet 런타임 (모션, 표정, 물리, idle 드라이버,
+마이크 / 웹캠 입력) 을 공유합니다. 펫은 클릭에 반응하고, 타이머 기반
+애니메이션을 실행하며, 커서를 따라가고, 다른 앱이 전체화면일 때 숨고,
+JSON 파일에 직접 작성한 대사를 말할 수 있습니다.
+
+이 장은 해당 탭에 대한 완전한 레퍼런스이며 다음과 같이 구성됩니다:
+
+#. **빠른 시작** — "Imervue 를 막 열었음" 에서 "데스크톱에 퍼펫이 있음"
+   까지의 5단계 경로.
+#. **rig 불러오기** — 파일 선택기, 동봉 예제, 실행 간 복원.
+#. **오버레이 창** — 모든 창 수준 동작 (드래그 이동, 가장자리 스냅,
+   클릭 통과, 앵커 잠금, 항상 아래, 전체화면 시 숨기기, 숨김 시 일시정지,
+   불투명도, 크기, 멀티 모니터 복원).
+#. **상호 작용 모델** — 좌클릭 히트 영역, 전체 우클릭 컨텍스트 메뉴,
+   시스템 트레이.
+#. **라이브 드라이버** — 옵트인 입력 드라이버 6종과 선택적 의존성.
+#. **펫 스크립트** — 펫의 목소리를 사용자 대사로 교체하고, 알림을
+   예약하며, 히트 영역별 / 모션별 응답을 바인딩하는 JSON 파일.
+#. **영속성** — 실행 간 기억되는 항목과 정확한 설정 스키마.
+#. **새 펫 제작** — Puppet 탭 + ``.puppet`` 파일 형식 안내.
+#. **문제 해결** — 흔한 의외의 상황과 대처법.
+
+빠른 시작
+^^^^^^^^^
+
+1. **Desktop Pet** 탭으로 전환.
+2. **Load bundled March 7th** 을 클릭해 동봉된 캐릭터를 사용하거나,
+   **Open Puppet…** 으로 자신의 ``.puppet`` 파일을 선택.
+3. 오버레이가 데스크톱에 나타나고 **Show pet on desktop** 체크박스가
+   자동으로 켜집니다. (Imervue 를 닫지 않고 펫만 숨기고 싶다면 체크박스를
+   해제하거나 시스템 트레이 아이콘을 사용.)
+4. 캐릭터를 원하는 위치로 드래그. 화면 가장자리 근처에서 놓으면 그
+   가장자리에 밀착됩니다.
+5. 워크스페이스 탭이나 펫의 우클릭 메뉴에서 원하는 **라이브 드라이버**
+   — idle 호흡, 깜빡임, 커서 추적, 마이크 립싱크, 웹캠 추적 — 를 선택.
+
+설정한 모든 항목은 다음 실행에서도 유지되므로 5단계는 rig / 페르소나당
+한 번만 결정하면 됩니다.
+
+rig 불러오기
+^^^^^^^^^^^^
+
+탭은 세 가지 불러오기 경로를 제공합니다:
+
+* **Open Puppet…** — 디스크의 임의 ``.puppet`` 파일을 선택.
+* **Load bundled March 7th** — ``examples/puppet/march_7th.puppet`` 에
+  포함된 rig 을 엽니다. 리졸버는 먼저 ``examples_dir()`` 을 검색하고
+  (패키지된 Nuitka / pip 설치 빌드에서 frozen-safe), 그다음 리포지토리
+  루트 상대 경로로 폴백하므로 두 실행 모드 모두에서 버튼이 동작합니다.
+* **마지막 rig** — 이전에 불러왔던 rig 은 ``last_rig_path`` 설정
+  필드를 통해 Imervue 시작 시 자동 복원됩니다. Desktop Pet 탭이
+  오버레이를 보이지 않게 재인스턴스화하므로, 펫은 종료한 상태 그대로
+  한 번의 클릭이면 다시 나타납니다.
+
+불러오기에 성공하면 **Show pet on desktop** 이 자동으로 켜져 펫이
+즉시 나타납니다. 실패 경로는 체크박스를 그대로 두고 탭의 상태 라벨에
+오류를 기록합니다.
+
+오버레이 창
+^^^^^^^^^^^
+
+캐릭터는 Imervue 메인 창과 분리된 최상위 창에 존재합니다. 이 창은
+프레임이 없고 작업 표시줄 항목이 없으며, (기본값으로) 다른 모든 창
+위에 머무릅니다.
+
+.. list-table:: 창 동작
+   :header-rows: 1
+   :widths: 28 72
+
+   * - 동작
+     - 상세
+   * - 프레임 없는 오버레이
+     - 창 chrome 없음, 최소화 / 닫기 버튼 없음, 작업 표시줄 항목 없음.
+       캐릭터 자체가 보이는 전체 표면.
+   * - 투명 배경
+     - 캐릭터가 가리지 않는 영역은 완전히 투명. 펫 뒤의 데스크톱 /
+       앱이 픽셀 단위로 그대로 비침.
+   * - 드래그로 이동
+     - 본체 어디서나 좌클릭 누르고 드래그한 후 놓기. 커서가 6 px
+       미만으로 움직였을 때만 클릭으로 인식 — 그보다 멀리 움직이면
+       이동 제스처로 처리되어 클릭 핸들러가 발화하지 않음.
+   * - 가장자리 스냅
+     - 화면 가장자리 근처 (기본값: 24 px 이내) 에서 놓으면 펫이
+       해당 가장자리에 밀착. 임계값은 0 (끔) 부터 200 (매우 끈끈함)
+       까지 설정 가능. 스냅은 축별로 독립적으로 작동하므로 모서리로
+       드래그하면 두 가장자리에 동시에 도킹.
+   * - 오버슈트 클램프
+     - 화면 가장자리를 넘어가는 드래그는 화면 안쪽으로 다시 잡힘.
+       다시 잡을 수 없는 화면 밖으로 펫을 두고 올 수 없음.
+   * - 클릭 통과 모드
+     - 활성화 시 모든 마우스 이벤트가 펫을 통과해 그 뒤의 대상으로
+       전달됨. 캐릭터는 여전히 보이지만 드래그 / 우클릭 / 모션 트리거
+       불가. 펫이 순수 장식용일 때 사용.
+   * - 위치 잠금
+     - 클릭 통과에 영향을 주지 않고 드래그 이동만 비활성화. 펫을
+       정확한 위치에 두고 실수 이동을 막고 싶을 때 유용.
+   * - 항상 아래
+     - 펫을 항상 위 대신 항상 아래로 전환. 펫이 데스크톱 위젯처럼
+       다른 모든 창 뒤에 위치. 포커스 수용 플래그도 해제되어 펫을
+       클릭해도 앞으로 올라오지 않음.
+   * - 전체화면 시 숨기기
+     - 1 Hz 백그라운드 폴링이 펫이 있는 모니터의 전경 창을 감시.
+       해당 창이 화면의 99 % 이상을 가장자리별 허용 오차 4 px 이하로
+       덮으면 (실제 전체화면과 borderless windowed 게임 모두 캐치),
+       펫이 자동으로 숨음. 전체화면이 끝나면 펫이 이전 위치에 다시
+       나타남. 검출기는 Windows 에서 Win32 ``GetWindowRect`` API 를
+       사용. macOS / Linux 에서는 우아하게 no-op (펫이 그대로 보임).
+   * - 숨김 시 일시정지
+     - ``hideEvent`` 에서 약 30 FPS 페인트 틱과 1 Hz 스크립트 틱이
+       모두 멈춰 숨겨진 펫은 CPU 비용이 0. 다음 ``showEvent`` 에서
+       재시작.
+   * - 크기 프리셋
+     - 작게 (200 × 300), 보통 (320 × 480), 크게 (480 × 720). 펫이
+       현재 중심을 기준으로 크기가 변하므로 크기 변경이 위치를
+       이동시키지 않음. 크기 변경 후 스냅이 다시 실행됨.
+   * - 불투명도 슬라이더
+     - 10 – 100 %. 창 수준에서 동작 (``setWindowOpacity``) 하므로
+       텍스처뿐 아니라 펫 전체가 페이드. 펫을 항상 보고 잡을 수
+       있도록 최소 10 % 바닥값 존재 — 완전히 투명하면 잃어버릴 수
+       있기 때문.
+   * - 위치 기억
+     - 매 릴리스 후 스냅된 ``(x, y)`` 가 영속화됨. 다음 실행 시 펫이
+       그 화면 좌표로 돌아옴. 저장된 위치가 더 이상 연결된 화면
+       내부에 들어가지 않으면 (지난 실행 이후 모니터를 분리한 경우)
+       펫이 주 화면의 우하단 모서리로 폴백.
+
+상호 작용 모델
+^^^^^^^^^^^^^^
+
+펫은 세 개의 독립적인 채널을 통해 마우스 입력에 반응합니다.
+
+**본체 좌클릭**
+
+클릭 위치가 (캔버스 팬 / 줌을 되돌려) 퍼펫 캔버스 좌표로 매핑되어
+기존 ``hit_test`` 파이프라인을 통과합니다. 결과는 다음 순서로 동작을
+구동합니다:
+
+#. ``HitArea`` 가 클릭된 drawable 을 덮고 있고, 해당 영역에 모션이
+   연결되어 있으면 그 모션이 재생됨.
+#. 모션 재생 여부와 무관하게 펫이 말풍선을 띄울 수 있음 — 대사 선택
+   우선순위는 *펫 스크립트* 절 참고.
+#. 어떤 히트 영역도 클릭을 덮지 않으면 펫이 인사 (스크립트의
+   ``greetings`` 리스트 또는 내장 폴백) 로 처리.
+
+드래그 이동 제스처는 클릭 핸들러를 억제하므로, 펫을 이동하는 동작은
+모션 / 발화를 트리거하지 않습니다.
+
+**본체 우클릭**
+
+다음 구조의 컨텍스트 메뉴를 엽니다:
+
+* **Hide pet** — 오버레이를 닫는 최상위 동작.
+* **Live drivers** 서브메뉴 — 체크 가능한 토글 6개 (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
+  Webcam tracking). 체크 상태가 라이브 드라이버 상태를 반영하므로
+  현재 실행 중인 항목이 메뉴에 보임.
+* **Play motion** 서브메뉴 — 활성 rig 의 ``document.motions`` 리스트로
+  채워짐. 항목을 선택하면 해당 모션이 재생 (스크립트가 모션에 대사를
+  바인딩했다면 펫의 목소리도 트리거됨).
+* **Apply expression** 서브메뉴 — rig 의 ``document.expressions`` 로
+  채워짐. 선택하면 표정의 파라미터 오버레이가 토글됨.
+* 최상위 체크 가능 토글 5개: **Lock position**, **Click-through**,
+  **Always on bottom**, **Hide on fullscreen**, **Speech bubble** —
+  워크스페이스 탭의 동일한 토글에 대한 빠른 접근.
+* **Size** 서브메뉴 — Small / Medium / Large. 현재 프리셋이 체크됨.
+
+rig 이 로드되어 있지 않으면 모션 / 표정 서브메뉴는 비활성화됩니다.
+
+**시스템 트레이 아이콘**
+
+(트레이 지원을 보고하는 플랫폼에서만 인스턴스화되는) 트레이 아이콘이
+가장 자주 쓰는 동작을 위한 네 번째 표면을 제공합니다:
+
+* 좌클릭은 펫 표시를 토글.
+* 우클릭은 **Show pet** (체크 가능), **Click-through**,
+  **Open puppet…**, **Hide pet** 메뉴를 엽니다.
+* 체크 가능한 Show / Click-through 항목은 ``sync_visibility`` /
+  ``sync_click_through`` 를 통해 워크스페이스의 체크 상태를 미러링하므로,
+  사용자가 어디서 토글하든 동기화가 유지됨.
+
+라이브 드라이버
+^^^^^^^^^^^^^^^
+
+각 라이브 드라이버는 처음 활성화될 때 lazy 생성되므로, 휴면 상태의
+펫은 켜두지 않은 드라이버에 대해 타이머 / 스레드 비용이 0 입니다.
+각 드라이버의 상태는 영속화됩니다 — 켜 두고 Imervue 를 닫은 후
+다시 실행하면 같은 드라이버가 실행 중인 상태로 펫이 다시 열립니다.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 50 28
+
+   * - 드라이버
+     - 기능
+     - 선택적 의존성
+   * - **Auto idle**
+     - 표준 파라미터 (``ParamBreath`` 등) 에 호흡 + 미세한 드리프트를
+       주어 다른 애니메이션이 없을 때도 캐릭터가 살아있어 보이게 함.
+     - 없음
+   * - **Idle motions**
+     - 몇 초마다 rig 의 ``Idle`` 그룹에서 모션을 랜덤으로 선택해
+       재생. 현재 진행 중인 모션이 있으면 중단.
+     - 없음
+   * - **Auto-blink**
+     - 약 4.5 초마다 부드러운 코사인 곡선으로 눈을 감았다 뜸.
+       드라이버가 파라미터를 강제 기록하여, 눈뜸 값을 만지는 다른
+       드라이버가 깜빡임을 억제하지 않음.
+     - 없음
+   * - **Drag-track head**
+     - 커서가 펫 위에 있지 않더라도 머리 + 눈이 전역 커서 위치를
+       향함. ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
+       ``ParamEyeBallY`` 를 구동.
+     - 없음
+   * - **Mic lip-sync**
+     - 마이크 RMS 진폭이 ``ParamMouthOpenY`` 를 구동.
+     - ``sounddevice``
+   * - **Webcam tracking**
+     - MediaPipe FaceLandmarker 가 약 30 FPS 로 웹캠을 읽어 머리
+       포즈 + 눈뜸 + 입벌림 파라미터를 구동. 카메라가 얼굴을 인식
+       하는지 확인할 수 있는 작은 라이브 미리보기 창이 열림.
+     - ``opencv-python`` + ``mediapipe``
+
+선택적 의존성이 필요한 두 드라이버는 우아하게 다운그레이드됩니다:
+필요한 패키지가 설치되어 있지 않으면 체크박스를 켜도 다시 꺼지고,
+워크스페이스의 상태 라벨에 "install sounddevice" / "install
+opencv-python + mediapipe" 힌트가 표시됩니다.
+
+펫 스크립트 — 사용자 음성 및 예약 이벤트
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+펫의 말풍선은 직접 작성한 후 탭의 **Pet script** 그룹에서 불러올 수
+있는 JSON 파일을 사용합니다. 스크립트는 네 가지를 제어합니다:
+
+* **인사말** — 더 구체적인 매칭이 없을 때 사용되는 기본 클릭 대사.
+* **히트 영역 응답** — ``HitArea.id`` 별 대사 버킷.
+* **모션 대사** — 모션 이름별 대사 버킷. 펫이 (히트 영역 또는
+  컨텍스트 메뉴에서) 해당 모션을 시작할 때 발화.
+* **예약된 챠임** — 모노토닉 wall-clock 시간 기준
+  ``every_seconds`` 마다 발화하는 타이머 기반 대사.
+
+스키마 (버전 관리됨 — 미래 필드는 forward-compatible):
+
+.. code-block:: json
+
+   {
+     "version": 1,
+     "name": "March 7th — playful voice",
+     "greetings": [
+       "Hi!", "Hello hello!", "Need a break?"
+     ],
+     "hit_responses": {
+       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
+       "HitAreaBody": ["Hehe~", "Pat pat?"]
+     },
+     "motion_lines": {
+       "wave": ["Hi!", "Hello!"],
+       "curtsy": ["Cheers!"]
+     },
+     "scheduled": [
+       {"every_seconds": 1800, "messages": ["Stretch break!"]}
+     ]
+   }
+
+로딩 규칙:
+
+* 리스트는 버킷별 라운드 로빈으로 샘플링되어, 같은 대사가 연속으로
+  나오지 않음.
+* 알 수 없는 최상위 키는 무시됨 (forward-compat — 향후 v2 파일도 v1
+  런타임에서 그대로 로드됨).
+* 잘못된 리스트 항목 (타입 불일치, 형식이 깨진 예약 항목, 0 또는
+  음수 ``every_seconds``) 은 건너뜀 — 한 줄이 잘못되었다고 전체 로드가
+  실패하지 않음. 완전히 파싱 불가능한 JSON 만 오류를 발생시키고 상태
+  라벨에 경로를 표시.
+* 히트 영역 / 모션 / 인사말 캐스케이드는 계층적으로 동작: 좌클릭은
+  먼저 ``hit_responses[area.id]`` 를 참조한 다음, ``motion_lines[area.motion]``,
+  그다음 ``greetings``, 마지막으로 내장 기본 인사말 세트를 바닥으로
+  사용.
+* 시간 추적은 ``time.monotonic`` 을 사용하므로 노트북을 절전 모드에
+  넣거나 시스템 시계가 점프해도 큐에 쌓인 이벤트가 폭주하지 않음.
+
+**Reset to default** 는 사용자 스크립트를 버리고 내장 인사말 세트로
+되돌립니다. 영속화된 스크립트 경로도 지워지므로 다음 실행 시 다시
+로드되지 않습니다.
+
+동작하는 샘플은
+``examples/desktop_pet/march_7th.petscript.json`` 에 있습니다 — 인사말
+6개, 히트 영역 버킷 2개 (head / body), 모션 대사 3개 (wave / curtsy /
+cheer), 30분 스트레칭 알림 포함.
+
+영속성
+^^^^^^
+
+모든 Desktop Pet 상태는 ``user_setting_dict["desktop_pet"]`` (표준
+Imervue 사용자 설정 파일의 슬롯) 을 통해 라운드 트립됩니다. 각
+필드는 로드 시 기본값 + 범위 클램프가 있어, 손상된 설정 파일이
+실행을 중단시키지 못합니다.
+
+.. list-table:: 영속화되는 필드
+   :header-rows: 1
+   :widths: 28 18 54
+
+   * - 필드
+     - 기본값
+     - 비고
+   * - ``last_rig_path``
+     - ``""``
+     - 파일이 아직 존재하면 실행 시 자동 복원.
+   * - ``script_path``
+     - ``""``
+     - 스크립트가 여전히 파싱되면 실행 시 자동 복원. 읽을 수 없는
+       스크립트는 조용히 기본값으로 되돌림.
+   * - ``position``
+     - ``[-1, -1]``
+     - 마지막 드래그 릴리스의 화면 좌표 ``(x, y)``. ``-1, -1`` 은
+       "주 화면의 우하단 사용" 을 의미. 세션 간 멀티 모니터 분리도
+       같은 방식으로 폴백.
+   * - ``size_preset``
+     - ``"medium"``
+     - ``small`` / ``medium`` / ``large`` 중 하나.
+   * - ``opacity``
+     - ``1.0``
+     - ``[0.1, 1.0]`` 으로 클램프. 범위 밖 값은 기본값으로 리셋.
+   * - ``click_through``
+     - ``false``
+     -
+   * - ``anchor_locked``
+     - ``false``
+     -
+   * - ``always_on_bottom``
+     - ``false``
+     - 항상 위와 상호 배타적.
+   * - ``hide_on_fullscreen``
+     - ``true``
+     - 전체화면 동안 펫을 계속 보이게 하려면 ``false`` 설정.
+   * - ``snap_threshold``
+     - ``24``
+     - ``[0, 200]`` px 로 클램프.
+   * - ``drivers``
+     - 전부 ``false``
+     - 드라이버 id (``auto_idle``, ``idle_motion``, ``auto_blink``,
+       ``drag_track``, ``mic_lipsync``, ``webcam_tracking``) 를 키로
+       하는 서브 dict. 알 수 없는 키는 forward-compat 을 위해
+       그대로 라운드 트립됨.
+   * - ``show_on_launch``
+     - ``false``
+     - Imervue 시작 시 오버레이 자동 표시.
+   * - ``speech_enabled``
+     - ``true``
+     - false 일 때 말풍선이 절대 뜨지 않음.
+
+설정 dict 의 병합 동작은 한 단계 깊이입니다: 새 키가 없는 오래된
+설정 파일도 로드 시 완전한 상태 dict 를 생성하며 (기본값이 빈
+곳을 채움), 저장한 새 키는 그 키를 모르는 이전 런타임으로
+다운그레이드해도 살아남습니다.
+
+새 펫 제작
+^^^^^^^^^^
+
+모든 ``.puppet`` 파일은 Desktop Pet 캐릭터로 동작합니다 — Desktop Pet
+탭은 순수 렌더러 + 상호 작용 쉘이며, rig 저작은 Puppet 탭에서
+이루어집니다 ( *Puppet 작업 공간 (Puppet 탭)* 참조).
+
+자신의 펫 rig 을 만들려면:
+
+#. Puppet 탭으로 전환하고 **File > Import PNG…** 또는
+   **File > Import PSD…** 로 아트워크를 가져오거나,
+   **File > Import Cubism…** 으로 Cubism 모델을 가져옴.
+#. 회전 / 워프 디포머, 파라미터, 모션, 표정을 작성하고, (선택적으로)
+   바디 파츠에 연결된 히트 영역을 만들어 Desktop Pet 의 좌클릭
+   핸들러가 모션을 발화할 수 있도록 함.
+#. **File > Save As…** 로 rig 을 ``.puppet`` 으로 저장.
+#. Desktop Pet 탭으로 돌아와 **Open Puppet…** 으로 새 파일 로드.
+
+rig 이 ``HitArea`` 항목을 정의하고 있다면, ``hit_responses`` 키가
+영역 id 와 일치하는 ``.petscript.json`` 에서 히트 영역별 말풍선
+대사를 작성할 수 있습니다.
+
+문제 해결
+^^^^^^^^^
+
+**펫이 완전히 투명하지 않고 회색 사각형 안에 표시됨.** OS 수준의
+반투명 배경 속성은 알파 인식 GL 표면과 임베디드 GL 위젯의 일치하는
+속성이 모두 필요합니다. 서드 파티 창 관리 도구가 오버레이 창의
+``WA_TranslucentBackground`` 속성을 덮어쓰지 않도록 확인하세요
+(일부 Linux 사용자 정의 창 관리자가 그렇게 함). Windows / macOS
+에서는 "그냥 동작" 해야 합니다.
+
+**"Load bundled March 7th" 가 파일을 찾을 수 없다고 보고함.**
+리졸버는 먼저 ``examples_dir()`` (패키지된 빌드가 사용하는 frozen-safe
+위치) 을 참조한 후 CWD 상대 경로로 폴백합니다. 둘 다에 rig 이 없으면
+상태 라벨이 기대 경로를 표시합니다. 설치본과 함께 동봉된
+``examples/`` 디렉터리가 있는지 확인 — 소스 체크아웃의 경우 리포지토리
+루트에서 Imervue 를 실행하세요.
+
+**클릭해도 펫이 말하지 않음.** 세 가지 확인:
+
+#. **Speech bubble on click** 토글이 켜져 있는지 확인 (탭 또는
+   우클릭 메뉴).
+#. 사용자 정의 스크립트를 로드했다면 JSON 이 파싱되는지 확인 — 탭의
+   상태 라벨에 로드 오류가 표시됨.
+#. 히트 영역 클릭이 아무 일도 하지 않았다면, 그 영역에 일치하는
+   모션이 없고 스크립트에도 해당 영역 id 에 대한 ``hit_responses``
+   항목이 없을 가능성이 높음. Puppet 탭에서 영역에 모션을 바인딩하거나
+   영역 id 를 스크립트의 ``hit_responses`` 에 추가.
+
+**웹캠 추적 체크박스가 다시 꺼짐.** 웹캠 추적에는 Imervue 가 실행
+중인 동일한 Python 환경에 ``opencv-python`` 과 ``mediapipe`` 가
+설치되어 있어야 합니다. ``pip install opencv-python mediapipe`` 로
+설치. 설치 후 체크박스를 토글하면 검출된 얼굴 랜드마크가 표시되는
+작은 미리보기 창이 떠야 합니다.
+
+**전체화면 앱에서 펫이 자동으로 숨지 않음.** 전체화면 검출기는
+전경 창을 1 Hz 로 폴링합니다. Windows 에서는 ``GetWindowRect`` Win32
+API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
+대체가 없어 no-op 처리 (펫이 그대로 보임). Windows 의 경우:
+**Hide when other app is fullscreen** 이 체크되어 있는지 확인하고,
+전체화면 창이 펫과 동일한 모니터의 99 % 이상을 실제로 덮는지 검증.
+
+**실행 간 펫 위치가 화면 밖으로 흘러감.** 이는 펫이 있던 화면이
+다음 실행에서 더 이상 연결되어 있지 않을 때 (노트북 도크, 두 번째
+모니터 분리) 발생합니다. 이 경우 펫이 주 화면의 우하단 모서리로
+자동 폴백 — 원하는 위치로 드래그하면 다음 저장이 오래된 위치를
+덮어씁니다.
+
+----
+
 회전 및 뒤집기
 --------------
 
@@ -1296,6 +1887,18 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 번째 선택 타일)의 64비트 DCT pHash를 계산하여 해밍 거리 순으로 인덱스
 내 유사 이미지를 보여줍니다. ``Max distance``\ 로 범위를 조절할 수 있습니다.
 
+의미 기반 검색 (CLIP)
+^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Semantic Search``\ 에서 자연어 문구(예: *"눈 속의 골든 리트리버"*, *"밤의 네온 거리"*)를 입력하면 열려 있는 폴더의 그림을 순위대로 보여 줍니다. 각 이미지는 CLIP 비전 / 언어 인코더로 임베딩되어 경로와 함께 저장되고, 텍스트 쿼리는 같은 벡터 공간에 임베딩되어 코사인 유사도로 비교됩니다.
+
+임베딩은 ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) 또는 ``~/.cache/imervue/clip_cache.npz`` (POSIX)에 하나의 압축된 ``.npz`` 아카이브로 캐시됩니다. 대화상자는 열려 있는 폴더를 검색합니다. 캐시에 아직 없거나 그 뒤로 바뀐(크기 또는 수정 시간) 그림만 임베딩하므로 같은 폴더를 다시 검색하면 바로 시작되며, 결과는 그 폴더에서만 나옵니다.
+
+.. note::
+   의미 기반 검색에는 선택 사항인 ``open_clip_torch`` 와 ``torch``
+   패키지가 필요합니다. 설치되어 있지 않으면 메뉴 항목이 무엇이 빠졌는지 알려 주며,
+   다른 기능은 계속 작동합니다.
+
 자동 태그
 ^^^^^^^^^
 
@@ -1573,6 +2176,24 @@ bilateral 노이즈 감소와 언샤프 마스크 선명화를 결합합니다. 
 대상 색 공간으로 변환했다 되돌린 뒤, 왕복에서 클립된 픽셀을
 마젠타로 강조합니다. 인쇄 전 빠른 색 영역 체크용 도구입니다.
 
+톤 및 크리에이티브 효과
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` 에는 한 번 적용하고 저장하는 효과들이 모여 있습니다. 각 효과는 순수 NumPy 변환 위에 얇은 슬라이더 대화상자를 얹은 것이며, 같은 로직은 MCP 도구로도 제공됩니다:
+
+- **그러데이션 농도** (Graduated Density) — 각도, 경도, 오프셋으로 정의되는 선형 ND 그러데이션이며 색조를 입힐 수도 있습니다. 수동 마스크 없이 하늘이나 전경을 어둡게 합니다.
+- **톤 이퀄라이저** (Tone Equalizer) — 부드럽게 다듬은 마스크 위에서 휘도 구간마다 노출을 따로 조정합니다(검정부터 흰색까지 구간마다 슬라이더 하나). 조정이 장면의 톤을 따라갑니다.
+- **디테일 이퀄라이저** (Detail Equalizer) — 주파수 대역마다 게인 슬라이더(미세한 텍스처 → 거친 대비)를 두는, 단일 명료도 슬라이더의 다중 스케일 대안입니다.
+- **필름 톤 매핑** (Filmic Tone Map) — 피벗 대비와 채도 복원을 갖춘 Reinhard 또는 Hable 하이라이트 롤오프로, 대비가 높은 단일 노출용입니다.
+- **Velvia** — 휘도 가중 채도 부스트로, 칙칙한 색은 강하게 살리고 이미 채도가 높은 색과 그림자는 건드리지 않습니다.
+- **필름 네거티브** (Film Negative) — 스캔한 컬러 네거티브를 반전하고, 자동 추정한 주황색 필름 베이스를 나눠서 제거합니다. 출력 감마 슬라이더가 있습니다.
+- **프린지 제거** (Defringe) — 대비가 높은 가장자리를 따라 생기는 보라색 / 녹색 색수차 프린지의 채도를 낮추고, 평탄한 색 영역은 그대로 둡니다.
+- **엠보스** (Emboss) — 휘도 높이 필드로 방향광 부조를 만듭니다(방위각 / 고도 / 깊이 + 회색조 토글).
+- **극좌표** (Polar Coordinates) — 프레임을 원반으로 감거나 펼칩니다(타이니 플래닛 / 극좌표 반전 효과).
+- **만화경** (Kaleidoscope) — 한 각도 쐐기를 ``n``\ 중 대칭으로 미러링합니다.
+- **젖빛 유리** (Frosted Glass) — 결정론적이며 시드로 재현 가능한 로컬 픽셀 산란입니다.
+- **프레임 및 캡션** (Frame & Caption) — 원하는 색의 매트 테두리, 선택적으로 더 두꺼운 폴라로이드 스타일 하단 띠, 그리고 그 띠에 자체 색으로 새기는 캡션.
+
 GPS 지오태그
 ^^^^^^^^^^^^
 
@@ -1601,562 +2222,6 @@ GPS 지오태그
 ``Extra Tools`` > ``Export`` > ``Print Layout`` 은 여러 이미지를 멀티 페이지
 PDF 로 배치합니다. 페이지 크기, 방향, 그리드, 여백, 간격, 재단
 표시를 설정할 수 있습니다. ``reportlab`` 이 필요합니다.
-
-----
-
-Puppet 작업 공간 (Puppet 탭)
------------------------------
-
-네 번째 최상위 탭 — **Puppet** — 은 처음부터 만든 2D 리깅 퍼펫 애니메이션 시스템입니다. Live2D 가 하는 것 (메시 변형 리깅, 매개변수, 모션, 물리, 표정, 포즈 그룹, 립싱크, 웹캠 추적) 을 **독점 SDK 없이**, **live2d-py 없이**, 완전히 개방된 ``.puppet`` 파일 포맷으로 구현합니다.
-
-.. note::
-
-   엔드 투 엔드 튜토리얼 (새 설치부터 OBS 라이브 스트림 또는 MP4 출력까지) 은
-   저장소 루트의 ``puppet_guide.md`` 에 있습니다 (중국어판은 ``puppet_guide.zh-TW.md`` /
-   ``puppet_guide.zh-CN.md``). 이 장은 레퍼런스이고, 가이드는 단계별 안내입니다.
-
-엔드 투 엔드 워크플로우
-^^^^^^^^^^^^^^^^^^^^^^^
-
-1. **PNG 가져오기** — 도구 모음 ``Import PNG…`` 가 ``puppet.auto_mesh.puppet_from_png`` 실행: 알파 기반 삼각화, 단일 drawable, 즉시 렌더링 가능.
-2. **디포머 추가** — ``Add Rotation Deformer`` (앵커 + 각도) 또는 ``Add Warp Deformer`` (행 × 열 Bezier 격자; 경계 외 정점은 그대로).
-3. **매개변수 추가** — ``Add Parameter`` 가 오른쪽 **Parameters** 도크에 슬라이더 추가 (자동 명명 ``Param1``、``Param2`` …).
-4. **키 설정** — 슬라이더를 한쪽 극단으로 이동, 디포머 form 편집 후 **Set key**. 중립값과 반대 극단에서 반복. 런타임이 슬라이더 이동 시 인접 키 사이를 보간합니다.
-5. **저장** — ``Save As…`` 로 rig + 텍스처 + 모션 + 표정 + 물리를 단일 ``.puppet`` zip 으로 출력.
-
-예제
-^^^^
-
-저장소 동봉: ``examples/puppet/march_7th.puppet`` — 트리 내 변환된 307-drawable Cubism Live2D 캐릭터. 텍스처와 매개변수별 정점 morph 가 모두 ``.puppet`` zip 에 굽혀져 있어, 기본 ``requirements.txt`` 만으로 열 수 있습니다 (Cubism SDK 재배포 없음).
-
-203 개의 Cubism 표준 매개변수가 있어 (``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …), 표준 입력 드라이버 (웹캠, 깜빡임, 립싱크, 커서 추적) 가 rig 별 설정 없이 동작합니다. 18 개의 루프 모션 동봉: 작자 변환된 Cubism idle 루프 + ``Idle`` 그룹 / ``Gesture`` 그룹의 참조 제스처.
-
-Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7Th 또는 자신의 ``.puppet`` 을 열 수 있습니다. 하단 **Motions** 도크의 모션을 클릭하면 재생됩니다.
-
-**동봉 예제 실행 — 단계별 가이드:**
-
-1. **Imervue 실행**. 소스에서: ``python -m Imervue``. 패키지 빌드: ``Imervue`` 실행 파일 / app bundle 을 직접 실행. ``examples/`` 디렉터리는 wheel 과 Nuitka EXE 양쪽에 번들되어 있어 설치 경로 어디에서나 rig 파일을 사용할 수 있습니다.
-2. 창 상단의 **Puppet** 탭을 클릭.
-3. 도구 모음 → **File > Examples > March 7Th** (또는 도구 모음의 **Examples ▾** 드롭다운). 307-drawable rig 가 중앙에 로드되고, 매개변수 도크는 203 개의 Cubism 표준 매개변수 슬라이더로 채워집니다.
-4. 하단 **Motions** 도크에서 모션 항목 (``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …) 을 싱글 클릭. 즉시 재생 시작; 다시 클릭하면 정지, 다른 모션 선택 시 크로스페이드.
-5. 도구 모음의 실시간 입력 토글로 자신의 입력으로 rig 를 구동 — **Drag-track head** (커서 추적), **Auto-blink** (자동 깜빡임), **Auto idle** + **Idle motions** (호흡 + 무작위 idle 모션), **Mic lip-sync** (마이크 RMS 로 입 벌림), **Webcam tracking** (MediaPipe FaceLandmarker 로 머리 / 눈 / 입 추적).
-6. 도구 모음의 **Reset to rest** 는 모든 모션 중지, 모든 실시간 드라이버 끄기, expressions / pose 오버라이드 제거, 모든 매개변수를 기본값으로 되돌리기 — 표준 "처음부터 다시" 버튼.
-7. 나중에 다른 rig 열기: **File > Open Puppet…** 디스크에서 임의의 ``.puppet`` zip 선택; **File > Examples ▾** 은 항상 동봉 목록에 바인딩됩니다.
-
-OBS 라이브 스트리밍
-^^^^^^^^^^^^^^^^^^^
-
-두 개의 출력 경로. 둘 다 캐릭터만 off-screen framebuffer 에 렌더링하여 (체커보드 배경도 에디터 chrome 도 포함되지 않음) 스트리밍 표면에 전달합니다. 출력의 가장 긴 변은 1080 px 까지 캡 (Cubism 네이티브 3503×7777 이 DirectShow 가상 카메라 드라이버에 거부되는 것을 방지).
-
-**A. 가상 카메라** — OBS 의 "비디오 캡처 장치" 소스 목록에 웹캠으로 표시. ``pip install pyvirtualcam`` + 플랫폼별 드라이버: OBS Studio 26+ (Windows / macOS) 에 *OBS Virtual Camera* 드라이버 동봉 (OBS 첫 실행 시 *Start Virtual Camera* 클릭하여 등록); Linux 는 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``. 도구 모음 **Output > Virtual camera** 로 스트림 시작.
-
-DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음** 이므로, Imervue 는 캐릭터 외부 영역을 **마젠타 #FF00FF** 로 채워 크로마키 역할을 합니다. OBS 에서 제거:
-
-1. 비디오 캡처 장치 소스 우클릭 → **필터**
-2. **이펙트 필터 > + > Color Key**
-3. **Key Color Type** = ``Custom Color``、**Custom Color** = HEX ``FF00FF``、**Similarity** = ``80–300``、**Smoothness** = ``30–50``
-
-필터는 소스에 부착되어, 가상 카메라를 재개할 때마다 자동으로 적용됩니다.
-
-**B. NDI 출력** — LAN 상 < 50 ms 지연, 네이티브 RGBA, OBS / vMix 가 자체 장면에 직접 합성, 크로마키 패스 불필요. ``pip install ndi-python`` + `NDI Tools <https://ndi.video/tools/>`_ 런타임 + `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 플러그인. 도구 모음 **Output > NDI output** 으로 방송 시작 (기본 소스 이름 *Imervue Puppet*).
-
-``ndi-python`` 은 소스 배포만 있어 pip 가 C++ 에서 빌드합니다. Windows 사용자는 Visual Studio Build Tools 2022 (C++ 워크로드), CMake 를 PATH 에, NDI SDK (<https://ndi.video/for-developers/ndi-sdk/> 에서 받음, NDI Tools 와 별개) 를 기본 위치에 설치, 환경 변수 ``NDI_SDK_DIR`` 을 SDK 로 설정해야 합니다.
-
-자세한 단계 및 문제 해결은 ``puppet_guide.md`` § 1.2 참조.
-
-커스텀 모션 녹화
-^^^^^^^^^^^^^^^^
-
-수동으로 키프레임을 찍는 대신 라이브 take 를 녹화:
-
-1. 도구 모음의 **Record motion** 켜기 — 이름 다이얼로그 표시.
-2. 녹화 중 슬라이더 드래그、**Webcam tracking** 활성화、물리 실행 — 매개변수 값을 쓰는 모든 작업 OK.
-3. **Record motion** 끄기 — 레코더가 30 Hz 스트림을 베이크하여 ``Motion`` 화 (실제로 움직인 매개변수마다 하나의 linear-segment 트랙, 변동 없는 트랙은 폐기). 새 모션이 하단 **Motions** 도크에 즉시 표시.
-
-커스텀 모션은 수동 작성된 모션과 동일한 ``motions/<name>.json`` JSON 페이로드로 저장됩니다.
-
-도구 모음 레퍼런스
-^^^^^^^^^^^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 액션
-     - 용도
-   * - Open Puppet… / Examples ▾
-     - 디스크에서 ``.puppet`` 로드, 또는 ``examples/puppet/`` 의 동봉 rig 를 도구 모음에서 직접 선택
-   * - Import PNG… / Import PSD… / Import Cubism…
-     - PNG 자동 메시, PSD 레이어 분할, Cubism rig 의 sample-and-reconstruct. Cubism 파일 선택기는 ``.moc3`` 와 ``.model3.json`` 둘 다 받으며, 작업 공간에 rig 가 열려 있지 않을 때는 어느 경로든 완전한 ``.moc3 → .puppet`` 변환이 실행됩니다 (SDK 는 사용자 제공). rig 가 이미 열려 있는 상태에서 ``.model3.json`` 을 고르면 JSON 메타데이터 (motions / expressions / physics) 가 활성 문서에 병합됩니다
-   * - Save As…
-     - 현재 rig 을 ``.puppet`` zip 으로 출력
-   * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - 도구 모음에서 rig 작성
-   * - Drag-track head
-     - 커서 오프셋 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
-   * - Auto-blink
-     - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 에서 약 4.5 초마다 cosine close→open (force-write 경로로 canvas 의 no-change-skip 우회, 다른 드라이버에 막히지 않음)
-   * - Mic lip-sync
-     - 마이크 RMS → ``ParamMouthOpenY`` (``sounddevice`` 필요)
-   * - Webcam tracking
-     - MediaPipe Tasks API FaceLandmarker → 머리 yaw / pitch / roll + 눈 + 입 (``opencv-python`` + ``mediapipe`` 필요; 감지된 랜드마크를 표시하는 실시간 미리보기 dialog 열림)
-   * - Auto idle / Idle motions
-     - 표준 매개변수의 호흡 + 드리프트, Idle 그룹 모션의 랜덤 사이클러
-   * - Edit mesh
-     - canvas 정점을 드래그하여 메시 미세 조정
-   * - Record motion
-     - 매개변수 변화를 새 ``Motion`` 으로 녹화하여 문서에 추가 — take 베이크, 수동 키 작성 불필요
-   * - Capture frame… / Record… / Export all motions…
-     - 단일 PNG 저장, GIF / WebM / MP4 녹화 토글, 각 모션을 개별 파일로 일괄 렌더링 (모두 스트리밍과 동일한 캐릭터 단독 off-screen render 경로 사용)
-   * - Output > Virtual camera / NDI output
-     - 라이브 스트리밍 표면 — 위의 "OBS 라이브 스트리밍" 참조
-   * - Reset to rest
-     - 모션 플레이어 즉시 정지, 모든 라이브 드라이버 끄기, 표정 / 포즈 그룹 비우기, 매개변수 기본값 복원
-   * - Fit to Window
-     - canvas 에서 rig 을 재중앙 정렬 + 재스케일
-
-선택적 의존성
-^^^^^^^^^^^^^
-
-* ``sounddevice`` — 립싱크용 마이크
-* ``opencv-python`` + ``mediapipe`` — 웹캠 얼굴 추적
-* ``imageio-ffmpeg`` — MP4 / WebM 녹화 (이미 슬라이드쇼 비디오용으로 동봉)
-* ``pyvirtualcam`` — 가상 카메라 출력 ("OBS 라이브 스트리밍" 참조)
-* ``ndi-python`` — NDI 출력 ("OBS 라이브 스트리밍" 참조)
-* 사용자 제공 Cubism Native SDK DLL — ``.moc3 → .puppet`` 변환 (Live2D Free Material License 가 재배포 금지; ``<cwd>/sdk/`` 에 두거나 ``CUBISM_CORE_DLL`` 환경 변수 설정)
-
-누락 시 우아하게 다운그레이드 — 해당 도구 모음 토글이 자동 꺼지고 "install <package>" 힌트 표시. **File > Install dependencies…** 로 모든 Python 선택적 패키지를 한 번에 설치.
-
-----
-
-데스크톱 펫 작업 공간 (Desktop Pet 탭)
---------------------------------------
-
-탭 5 — **Desktop Pet** 은 임의의 ``.puppet`` 캐릭터를 프레임 없는 투명
-오버레이로 데스크톱 위에 띄웁니다. 탭 자체는 제어 패널이며, 실제 캐릭터는
-별도의 최상위 창으로 전체 Puppet 런타임 (모션, 표정, 물리, idle 드라이버,
-마이크 / 웹캠 입력) 을 공유합니다. 펫은 클릭에 반응하고, 타이머 기반
-애니메이션을 실행하며, 커서를 따라가고, 다른 앱이 전체화면일 때 숨고,
-JSON 파일에 직접 작성한 대사를 말할 수 있습니다.
-
-이 장은 해당 탭에 대한 완전한 레퍼런스이며 다음과 같이 구성됩니다:
-
-#. **빠른 시작** — "Imervue 를 막 열었음" 에서 "데스크톱에 퍼펫이 있음"
-   까지의 5단계 경로.
-#. **rig 불러오기** — 파일 선택기, 동봉 예제, 실행 간 복원.
-#. **오버레이 창** — 모든 창 수준 동작 (드래그 이동, 가장자리 스냅,
-   클릭 통과, 앵커 잠금, 항상 아래, 전체화면 시 숨기기, 숨김 시 일시정지,
-   불투명도, 크기, 멀티 모니터 복원).
-#. **상호 작용 모델** — 좌클릭 히트 영역, 전체 우클릭 컨텍스트 메뉴,
-   시스템 트레이.
-#. **라이브 드라이버** — 옵트인 입력 드라이버 6종과 선택적 의존성.
-#. **펫 스크립트** — 펫의 목소리를 사용자 대사로 교체하고, 알림을
-   예약하며, 히트 영역별 / 모션별 응답을 바인딩하는 JSON 파일.
-#. **영속성** — 실행 간 기억되는 항목과 정확한 설정 스키마.
-#. **새 펫 제작** — Puppet 탭 + ``.puppet`` 파일 형식 안내.
-#. **문제 해결** — 흔한 의외의 상황과 대처법.
-
-빠른 시작
-^^^^^^^^^
-
-1. **Desktop Pet** 탭으로 전환.
-2. **Load bundled March 7th** 을 클릭해 동봉된 캐릭터를 사용하거나,
-   **Open Puppet…** 으로 자신의 ``.puppet`` 파일을 선택.
-3. 오버레이가 데스크톱에 나타나고 **Show pet on desktop** 체크박스가
-   자동으로 켜집니다. (Imervue 를 닫지 않고 펫만 숨기고 싶다면 체크박스를
-   해제하거나 시스템 트레이 아이콘을 사용.)
-4. 캐릭터를 원하는 위치로 드래그. 화면 가장자리 근처에서 놓으면 그
-   가장자리에 밀착됩니다.
-5. 워크스페이스 탭이나 펫의 우클릭 메뉴에서 원하는 **라이브 드라이버**
-   — idle 호흡, 깜빡임, 커서 추적, 마이크 립싱크, 웹캠 추적 — 를 선택.
-
-설정한 모든 항목은 다음 실행에서도 유지되므로 5단계는 rig / 페르소나당
-한 번만 결정하면 됩니다.
-
-rig 불러오기
-^^^^^^^^^^^^
-
-탭은 세 가지 불러오기 경로를 제공합니다:
-
-* **Open Puppet…** — 디스크의 임의 ``.puppet`` 파일을 선택.
-* **Load bundled March 7th** — ``examples/puppet/march_7th.puppet`` 에
-  포함된 rig 을 엽니다. 리졸버는 먼저 ``examples_dir()`` 을 검색하고
-  (패키지된 Nuitka / pip 설치 빌드에서 frozen-safe), 그다음 리포지토리
-  루트 상대 경로로 폴백하므로 두 실행 모드 모두에서 버튼이 동작합니다.
-* **마지막 rig** — 이전에 불러왔던 rig 은 ``last_rig_path`` 설정
-  필드를 통해 Imervue 시작 시 자동 복원됩니다. Desktop Pet 탭이
-  오버레이를 보이지 않게 재인스턴스화하므로, 펫은 종료한 상태 그대로
-  한 번의 클릭이면 다시 나타납니다.
-
-불러오기에 성공하면 **Show pet on desktop** 이 자동으로 켜져 펫이
-즉시 나타납니다. 실패 경로는 체크박스를 그대로 두고 탭의 상태 라벨에
-오류를 기록합니다.
-
-오버레이 창
-^^^^^^^^^^^
-
-캐릭터는 Imervue 메인 창과 분리된 최상위 창에 존재합니다. 이 창은
-프레임이 없고 작업 표시줄 항목이 없으며, (기본값으로) 다른 모든 창
-위에 머무릅니다.
-
-.. list-table:: 창 동작
-   :header-rows: 1
-   :widths: 28 72
-
-   * - 동작
-     - 상세
-   * - 프레임 없는 오버레이
-     - 창 chrome 없음, 최소화 / 닫기 버튼 없음, 작업 표시줄 항목 없음.
-       캐릭터 자체가 보이는 전체 표면.
-   * - 투명 배경
-     - 캐릭터가 가리지 않는 영역은 완전히 투명. 펫 뒤의 데스크톱 /
-       앱이 픽셀 단위로 그대로 비침.
-   * - 드래그로 이동
-     - 본체 어디서나 좌클릭 누르고 드래그한 후 놓기. 커서가 6 px
-       미만으로 움직였을 때만 클릭으로 인식 — 그보다 멀리 움직이면
-       이동 제스처로 처리되어 클릭 핸들러가 발화하지 않음.
-   * - 가장자리 스냅
-     - 화면 가장자리 근처 (기본값: 24 px 이내) 에서 놓으면 펫이
-       해당 가장자리에 밀착. 임계값은 0 (끔) 부터 200 (매우 끈끈함)
-       까지 설정 가능. 스냅은 축별로 독립적으로 작동하므로 모서리로
-       드래그하면 두 가장자리에 동시에 도킹.
-   * - 오버슈트 클램프
-     - 화면 가장자리를 넘어가는 드래그는 화면 안쪽으로 다시 잡힘.
-       다시 잡을 수 없는 화면 밖으로 펫을 두고 올 수 없음.
-   * - 클릭 통과 모드
-     - 활성화 시 모든 마우스 이벤트가 펫을 통과해 그 뒤의 대상으로
-       전달됨. 캐릭터는 여전히 보이지만 드래그 / 우클릭 / 모션 트리거
-       불가. 펫이 순수 장식용일 때 사용.
-   * - 위치 잠금
-     - 클릭 통과에 영향을 주지 않고 드래그 이동만 비활성화. 펫을
-       정확한 위치에 두고 실수 이동을 막고 싶을 때 유용.
-   * - 항상 아래
-     - 펫을 항상 위 대신 항상 아래로 전환. 펫이 데스크톱 위젯처럼
-       다른 모든 창 뒤에 위치. 포커스 수용 플래그도 해제되어 펫을
-       클릭해도 앞으로 올라오지 않음.
-   * - 전체화면 시 숨기기
-     - 1 Hz 백그라운드 폴링이 펫이 있는 모니터의 전경 창을 감시.
-       해당 창이 화면의 99 % 이상을 가장자리별 허용 오차 4 px 이하로
-       덮으면 (실제 전체화면과 borderless windowed 게임 모두 캐치),
-       펫이 자동으로 숨음. 전체화면이 끝나면 펫이 이전 위치에 다시
-       나타남. 검출기는 Windows 에서 Win32 ``GetWindowRect`` API 를
-       사용. macOS / Linux 에서는 우아하게 no-op (펫이 그대로 보임).
-   * - 숨김 시 일시정지
-     - ``hideEvent`` 에서 약 30 FPS 페인트 틱과 1 Hz 스크립트 틱이
-       모두 멈춰 숨겨진 펫은 CPU 비용이 0. 다음 ``showEvent`` 에서
-       재시작.
-   * - 크기 프리셋
-     - 작게 (200 × 300), 보통 (320 × 480), 크게 (480 × 720). 펫이
-       현재 중심을 기준으로 크기가 변하므로 크기 변경이 위치를
-       이동시키지 않음. 크기 변경 후 스냅이 다시 실행됨.
-   * - 불투명도 슬라이더
-     - 10 – 100 %. 창 수준에서 동작 (``setWindowOpacity``) 하므로
-       텍스처뿐 아니라 펫 전체가 페이드. 펫을 항상 보고 잡을 수
-       있도록 최소 10 % 바닥값 존재 — 완전히 투명하면 잃어버릴 수
-       있기 때문.
-   * - 위치 기억
-     - 매 릴리스 후 스냅된 ``(x, y)`` 가 영속화됨. 다음 실행 시 펫이
-       그 화면 좌표로 돌아옴. 저장된 위치가 더 이상 연결된 화면
-       내부에 들어가지 않으면 (지난 실행 이후 모니터를 분리한 경우)
-       펫이 주 화면의 우하단 모서리로 폴백.
-
-상호 작용 모델
-^^^^^^^^^^^^^^
-
-펫은 세 개의 독립적인 채널을 통해 마우스 입력에 반응합니다.
-
-**본체 좌클릭**
-
-클릭 위치가 (캔버스 팬 / 줌을 되돌려) 퍼펫 캔버스 좌표로 매핑되어
-기존 ``hit_test`` 파이프라인을 통과합니다. 결과는 다음 순서로 동작을
-구동합니다:
-
-#. ``HitArea`` 가 클릭된 drawable 을 덮고 있고, 해당 영역에 모션이
-   연결되어 있으면 그 모션이 재생됨.
-#. 모션 재생 여부와 무관하게 펫이 말풍선을 띄울 수 있음 — 대사 선택
-   우선순위는 *펫 스크립트* 절 참고.
-#. 어떤 히트 영역도 클릭을 덮지 않으면 펫이 인사 (스크립트의
-   ``greetings`` 리스트 또는 내장 폴백) 로 처리.
-
-드래그 이동 제스처는 클릭 핸들러를 억제하므로, 펫을 이동하는 동작은
-모션 / 발화를 트리거하지 않습니다.
-
-**본체 우클릭**
-
-다음 구조의 컨텍스트 메뉴를 엽니다:
-
-* **Hide pet** — 오버레이를 닫는 최상위 동작.
-* **Live drivers** 서브메뉴 — 체크 가능한 토글 6개 (Auto idle,
-  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
-  Webcam tracking). 체크 상태가 라이브 드라이버 상태를 반영하므로
-  현재 실행 중인 항목이 메뉴에 보임.
-* **Play motion** 서브메뉴 — 활성 rig 의 ``document.motions`` 리스트로
-  채워짐. 항목을 선택하면 해당 모션이 재생 (스크립트가 모션에 대사를
-  바인딩했다면 펫의 목소리도 트리거됨).
-* **Apply expression** 서브메뉴 — rig 의 ``document.expressions`` 로
-  채워짐. 선택하면 표정의 파라미터 오버레이가 토글됨.
-* 최상위 체크 가능 토글 5개: **Lock position**, **Click-through**,
-  **Always on bottom**, **Hide on fullscreen**, **Speech bubble** —
-  워크스페이스 탭의 동일한 토글에 대한 빠른 접근.
-* **Size** 서브메뉴 — Small / Medium / Large. 현재 프리셋이 체크됨.
-
-rig 이 로드되어 있지 않으면 모션 / 표정 서브메뉴는 비활성화됩니다.
-
-**시스템 트레이 아이콘**
-
-(트레이 지원을 보고하는 플랫폼에서만 인스턴스화되는) 트레이 아이콘이
-가장 자주 쓰는 동작을 위한 네 번째 표면을 제공합니다:
-
-* 좌클릭은 펫 표시를 토글.
-* 우클릭은 **Show pet** (체크 가능), **Click-through**,
-  **Open puppet…**, **Hide pet** 메뉴를 엽니다.
-* 체크 가능한 Show / Click-through 항목은 ``sync_visibility`` /
-  ``sync_click_through`` 를 통해 워크스페이스의 체크 상태를 미러링하므로,
-  사용자가 어디서 토글하든 동기화가 유지됨.
-
-라이브 드라이버
-^^^^^^^^^^^^^^^
-
-각 라이브 드라이버는 처음 활성화될 때 lazy 생성되므로, 휴면 상태의
-펫은 켜두지 않은 드라이버에 대해 타이머 / 스레드 비용이 0 입니다.
-각 드라이버의 상태는 영속화됩니다 — 켜 두고 Imervue 를 닫은 후
-다시 실행하면 같은 드라이버가 실행 중인 상태로 펫이 다시 열립니다.
-
-.. list-table::
-   :header-rows: 1
-   :widths: 22 50 28
-
-   * - 드라이버
-     - 기능
-     - 선택적 의존성
-   * - **Auto idle**
-     - 표준 파라미터 (``ParamBreath`` 등) 에 호흡 + 미세한 드리프트를
-       주어 다른 애니메이션이 없을 때도 캐릭터가 살아있어 보이게 함.
-     - 없음
-   * - **Idle motions**
-     - 몇 초마다 rig 의 ``Idle`` 그룹에서 모션을 랜덤으로 선택해
-       재생. 현재 진행 중인 모션이 있으면 중단.
-     - 없음
-   * - **Auto-blink**
-     - 약 4.5 초마다 부드러운 코사인 곡선으로 눈을 감았다 뜸.
-       드라이버가 파라미터를 강제 기록하여, 눈뜸 값을 만지는 다른
-       드라이버가 깜빡임을 억제하지 않음.
-     - 없음
-   * - **Drag-track head**
-     - 커서가 펫 위에 있지 않더라도 머리 + 눈이 전역 커서 위치를
-       향함. ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
-       ``ParamEyeBallY`` 를 구동.
-     - 없음
-   * - **Mic lip-sync**
-     - 마이크 RMS 진폭이 ``ParamMouthOpenY`` 를 구동.
-     - ``sounddevice``
-   * - **Webcam tracking**
-     - MediaPipe FaceLandmarker 가 약 30 FPS 로 웹캠을 읽어 머리
-       포즈 + 눈뜸 + 입벌림 파라미터를 구동. 카메라가 얼굴을 인식
-       하는지 확인할 수 있는 작은 라이브 미리보기 창이 열림.
-     - ``opencv-python`` + ``mediapipe``
-
-선택적 의존성이 필요한 두 드라이버는 우아하게 다운그레이드됩니다:
-필요한 패키지가 설치되어 있지 않으면 체크박스를 켜도 다시 꺼지고,
-워크스페이스의 상태 라벨에 "install sounddevice" / "install
-opencv-python + mediapipe" 힌트가 표시됩니다.
-
-펫 스크립트 — 사용자 음성 및 예약 이벤트
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-펫의 말풍선은 직접 작성한 후 탭의 **Pet script** 그룹에서 불러올 수
-있는 JSON 파일을 사용합니다. 스크립트는 네 가지를 제어합니다:
-
-* **인사말** — 더 구체적인 매칭이 없을 때 사용되는 기본 클릭 대사.
-* **히트 영역 응답** — ``HitArea.id`` 별 대사 버킷.
-* **모션 대사** — 모션 이름별 대사 버킷. 펫이 (히트 영역 또는
-  컨텍스트 메뉴에서) 해당 모션을 시작할 때 발화.
-* **예약된 챠임** — 모노토닉 wall-clock 시간 기준
-  ``every_seconds`` 마다 발화하는 타이머 기반 대사.
-
-스키마 (버전 관리됨 — 미래 필드는 forward-compatible):
-
-.. code-block:: json
-
-   {
-     "version": 1,
-     "name": "March 7th — playful voice",
-     "greetings": [
-       "Hi!", "Hello hello!", "Need a break?"
-     ],
-     "hit_responses": {
-       "HitAreaHead": ["Hey, my head!", "Stop poking!"],
-       "HitAreaBody": ["Hehe~", "Pat pat?"]
-     },
-     "motion_lines": {
-       "wave": ["Hi!", "Hello!"],
-       "curtsy": ["Cheers!"]
-     },
-     "scheduled": [
-       {"every_seconds": 1800, "messages": ["Stretch break!"]}
-     ]
-   }
-
-로딩 규칙:
-
-* 리스트는 버킷별 라운드 로빈으로 샘플링되어, 같은 대사가 연속으로
-  나오지 않음.
-* 알 수 없는 최상위 키는 무시됨 (forward-compat — 향후 v2 파일도 v1
-  런타임에서 그대로 로드됨).
-* 잘못된 리스트 항목 (타입 불일치, 형식이 깨진 예약 항목, 0 또는
-  음수 ``every_seconds``) 은 건너뜀 — 한 줄이 잘못되었다고 전체 로드가
-  실패하지 않음. 완전히 파싱 불가능한 JSON 만 오류를 발생시키고 상태
-  라벨에 경로를 표시.
-* 히트 영역 / 모션 / 인사말 캐스케이드는 계층적으로 동작: 좌클릭은
-  먼저 ``hit_responses[area.id]`` 를 참조한 다음, ``motion_lines[area.motion]``,
-  그다음 ``greetings``, 마지막으로 내장 기본 인사말 세트를 바닥으로
-  사용.
-* 시간 추적은 ``time.monotonic`` 을 사용하므로 노트북을 절전 모드에
-  넣거나 시스템 시계가 점프해도 큐에 쌓인 이벤트가 폭주하지 않음.
-
-**Reset to default** 는 사용자 스크립트를 버리고 내장 인사말 세트로
-되돌립니다. 영속화된 스크립트 경로도 지워지므로 다음 실행 시 다시
-로드되지 않습니다.
-
-동작하는 샘플은
-``examples/desktop_pet/march_7th.petscript.json`` 에 있습니다 — 인사말
-6개, 히트 영역 버킷 2개 (head / body), 모션 대사 3개 (wave / curtsy /
-cheer), 30분 스트레칭 알림 포함.
-
-영속성
-^^^^^^
-
-모든 Desktop Pet 상태는 ``user_setting_dict["desktop_pet"]`` (표준
-Imervue 사용자 설정 파일의 슬롯) 을 통해 라운드 트립됩니다. 각
-필드는 로드 시 기본값 + 범위 클램프가 있어, 손상된 설정 파일이
-실행을 중단시키지 못합니다.
-
-.. list-table:: 영속화되는 필드
-   :header-rows: 1
-   :widths: 28 18 54
-
-   * - 필드
-     - 기본값
-     - 비고
-   * - ``last_rig_path``
-     - ``""``
-     - 파일이 아직 존재하면 실행 시 자동 복원.
-   * - ``script_path``
-     - ``""``
-     - 스크립트가 여전히 파싱되면 실행 시 자동 복원. 읽을 수 없는
-       스크립트는 조용히 기본값으로 되돌림.
-   * - ``position``
-     - ``[-1, -1]``
-     - 마지막 드래그 릴리스의 화면 좌표 ``(x, y)``. ``-1, -1`` 은
-       "주 화면의 우하단 사용" 을 의미. 세션 간 멀티 모니터 분리도
-       같은 방식으로 폴백.
-   * - ``size_preset``
-     - ``"medium"``
-     - ``small`` / ``medium`` / ``large`` 중 하나.
-   * - ``opacity``
-     - ``1.0``
-     - ``[0.1, 1.0]`` 으로 클램프. 범위 밖 값은 기본값으로 리셋.
-   * - ``click_through``
-     - ``false``
-     -
-   * - ``anchor_locked``
-     - ``false``
-     -
-   * - ``always_on_bottom``
-     - ``false``
-     - 항상 위와 상호 배타적.
-   * - ``hide_on_fullscreen``
-     - ``true``
-     - 전체화면 동안 펫을 계속 보이게 하려면 ``false`` 설정.
-   * - ``snap_threshold``
-     - ``24``
-     - ``[0, 200]`` px 로 클램프.
-   * - ``drivers``
-     - 전부 ``false``
-     - 드라이버 id (``auto_idle``, ``idle_motion``, ``auto_blink``,
-       ``drag_track``, ``mic_lipsync``, ``webcam_tracking``) 를 키로
-       하는 서브 dict. 알 수 없는 키는 forward-compat 을 위해
-       그대로 라운드 트립됨.
-   * - ``show_on_launch``
-     - ``false``
-     - Imervue 시작 시 오버레이 자동 표시.
-   * - ``speech_enabled``
-     - ``true``
-     - false 일 때 말풍선이 절대 뜨지 않음.
-
-설정 dict 의 병합 동작은 한 단계 깊이입니다: 새 키가 없는 오래된
-설정 파일도 로드 시 완전한 상태 dict 를 생성하며 (기본값이 빈
-곳을 채움), 저장한 새 키는 그 키를 모르는 이전 런타임으로
-다운그레이드해도 살아남습니다.
-
-새 펫 제작
-^^^^^^^^^^
-
-모든 ``.puppet`` 파일은 Desktop Pet 캐릭터로 동작합니다 — Desktop Pet
-탭은 순수 렌더러 + 상호 작용 쉘이며, rig 저작은 Puppet 탭에서
-이루어집니다 ( *Puppet 작업 공간 (Puppet 탭)* 참조).
-
-자신의 펫 rig 을 만들려면:
-
-#. Puppet 탭으로 전환하고 **File > Import PNG…** 또는
-   **File > Import PSD…** 로 아트워크를 가져오거나,
-   **File > Import Cubism…** 으로 Cubism 모델을 가져옴.
-#. 회전 / 워프 디포머, 파라미터, 모션, 표정을 작성하고, (선택적으로)
-   바디 파츠에 연결된 히트 영역을 만들어 Desktop Pet 의 좌클릭
-   핸들러가 모션을 발화할 수 있도록 함.
-#. **File > Save As…** 로 rig 을 ``.puppet`` 으로 저장.
-#. Desktop Pet 탭으로 돌아와 **Open Puppet…** 으로 새 파일 로드.
-
-rig 이 ``HitArea`` 항목을 정의하고 있다면, ``hit_responses`` 키가
-영역 id 와 일치하는 ``.petscript.json`` 에서 히트 영역별 말풍선
-대사를 작성할 수 있습니다.
-
-문제 해결
-^^^^^^^^^
-
-**펫이 완전히 투명하지 않고 회색 사각형 안에 표시됨.** OS 수준의
-반투명 배경 속성은 알파 인식 GL 표면과 임베디드 GL 위젯의 일치하는
-속성이 모두 필요합니다. 서드 파티 창 관리 도구가 오버레이 창의
-``WA_TranslucentBackground`` 속성을 덮어쓰지 않도록 확인하세요
-(일부 Linux 사용자 정의 창 관리자가 그렇게 함). Windows / macOS
-에서는 "그냥 동작" 해야 합니다.
-
-**"Load bundled March 7th" 가 파일을 찾을 수 없다고 보고함.**
-리졸버는 먼저 ``examples_dir()`` (패키지된 빌드가 사용하는 frozen-safe
-위치) 을 참조한 후 CWD 상대 경로로 폴백합니다. 둘 다에 rig 이 없으면
-상태 라벨이 기대 경로를 표시합니다. 설치본과 함께 동봉된
-``examples/`` 디렉터리가 있는지 확인 — 소스 체크아웃의 경우 리포지토리
-루트에서 Imervue 를 실행하세요.
-
-**클릭해도 펫이 말하지 않음.** 세 가지 확인:
-
-#. **Speech bubble on click** 토글이 켜져 있는지 확인 (탭 또는
-   우클릭 메뉴).
-#. 사용자 정의 스크립트를 로드했다면 JSON 이 파싱되는지 확인 — 탭의
-   상태 라벨에 로드 오류가 표시됨.
-#. 히트 영역 클릭이 아무 일도 하지 않았다면, 그 영역에 일치하는
-   모션이 없고 스크립트에도 해당 영역 id 에 대한 ``hit_responses``
-   항목이 없을 가능성이 높음. Puppet 탭에서 영역에 모션을 바인딩하거나
-   영역 id 를 스크립트의 ``hit_responses`` 에 추가.
-
-**웹캠 추적 체크박스가 다시 꺼짐.** 웹캠 추적에는 Imervue 가 실행
-중인 동일한 Python 환경에 ``opencv-python`` 과 ``mediapipe`` 가
-설치되어 있어야 합니다. ``pip install opencv-python mediapipe`` 로
-설치. 설치 후 체크박스를 토글하면 검출된 얼굴 랜드마크가 표시되는
-작은 미리보기 창이 떠야 합니다.
-
-**전체화면 앱에서 펫이 자동으로 숨지 않음.** 전체화면 검출기는
-전경 창을 1 Hz 로 폴링합니다. Windows 에서는 ``GetWindowRect`` Win32
-API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
-대체가 없어 no-op 처리 (펫이 그대로 보임). Windows 의 경우:
-**Hide when other app is fullscreen** 이 체크되어 있는지 확인하고,
-전체화면 창이 펫과 동일한 모니터의 99 % 이상을 실제로 덮는지 검증.
-
-**실행 간 펫 위치가 화면 밖으로 흘러감.** 이는 펫이 있던 화면이
-다음 실행에서 더 이상 연결되어 있지 않을 때 (노트북 도크, 두 번째
-모니터 분리) 발생합니다. 이 경우 펫이 주 화면의 우하단 모서리로
-자동 폴백 — 원하는 위치로 드래그하면 다음 저장이 오래된 위치를
-덮어씁니다.
 
 ----
 

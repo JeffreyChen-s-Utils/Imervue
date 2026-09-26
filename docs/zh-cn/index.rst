@@ -716,830 +716,6 @@ alpha 边界，擦除后不再有残留 RGB 污染重画的软边。
 
 ----
 
-旋转与翻转
-----------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 20 50
-
-   * - 操作
-     - 快捷键
-     - 菜单
-   * - 顺时针旋转 90°
-     - ``R``
-     - 右键 > 修改 > 顺时针旋转
-   * - 逆时针旋转 90°
-     - ``Shift + R``
-     - 右键 > 修改 > 逆时针旋转
-   * - 水平翻转
-     - --
-     - 右键 > 修改 > 水平翻转
-   * - 垂直翻转
-     - --
-     - 右键 > 修改 > 垂直翻转
-   * - 无损旋转（JPEG）
-     - --
-     - 右键 > 无损旋转
-
-----
-
-导出图片
---------
-
-单张导出
-^^^^^^^^
-
-打开图片（大图模式）后，右键 > ``导出 / 另存为``
-
-- 选择格式：PNG、JPEG、WebP、BMP、TIFF、AVIF；装了 ``pillow-heif`` / ``pillow-jxl-plugin`` 还有 HEIC / JPEG XL
-- 调整质量（有损格式可调）
-- 选择保留的元数据：全部、位置以外的全部（默认）或全部移除。相机、镜头与拍摄时间会一并保留；选择会被记住，批量导出也提供相同选项
-- 预览文件大小
-- 选择保存位置。建议的文件名一定是还没被占用的（``photo.png`` 旁边就是 ``photo_1.png``），已存在的文件（尤其是原图本身）要确认后才会被替换
-
-导出预设组合
-^^^^^^^^^^^^
-
-下方的批量导出有一个\ **预设**\ 列表，可为常见输出目标填好尺寸、格式与质量；选\ **自定义**\ 则由你自行设置：
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 预设
-     - 输出
-   * - **Web — 1600 px JPEG**
-     - 长边最多 1600 px、JPEG 质量 85。
-   * - **4K Web — 3840 px JPEG**
-     - 长边最多 3840 px、JPEG 质量 90。
-   * - **Print — 300 DPI PNG**
-     - 全分辨率、PNG、300 dpi。
-   * - **Instagram — 1080×1080 square**
-     - 居中裁成正方形、1080 × 1080、JPEG 质量 90。
-   * - **Thumbnail — 400 px JPEG**
-     - 长边最多 400 px、JPEG 质量 80。
-
-水印
-^^^^^^^^
-
-批量导出还可以在每一份导出的副本上加上文字水印：可设置文字、位置（四角之一或居中）与不透明度。原始文件永远不会被修改。
-
-批量导出
-^^^^^^^^
-
-选取多张图片后，右键 > ``批量操作`` > ``批量导出``
-
-- 统一格式转换
-- 设定最大宽度／高度（自动等比缩放）
-- 质量控制
-- 进度条实时显示
-
-制作 GIF / 视频
-^^^^^^^^^^^^^^^^
-
-选取多张图片后，右键 > ``批量操作`` > ``制作 GIF / 视频``
-
-- 支持 GIF 和 MP4 格式
-- 可拖拽排列顺序
-- 设定每秒帧数（FPS）
-- 自定义尺寸
-- 循环播放选项（关闭时只播放一次）
-- 建议的文件是第一帧旁边的 ``output.gif``，名称被占用时会编号（``output_1.gif``）；手动输入的文件名已存在时，要确认后才会被替换
-
-----
-
-动画图片播放
-------------
-
-打开 GIF、APNG、动态 WebP 时，会自动播放动画。解码后会超过 512 MB 的动画
-会边播放边逐帧解码，打开时既不会卡住窗口，也不会占满内存。
-10 ms 以下的帧会和浏览器一样显示 100 ms，很多 GIF 都以此为前提。
-
-多页 TIFF（扫描的文件）不会播放，而是一次显示一页，用 ``,`` 与 ``.`` 翻页，显示为“第 2/5 页”。不是动画的帧也不会播放：相机嵌入 JPEG 的预览（MPF）、PSD 的图层，以及 APNG 的默认图像（给不支持 APNG 的程序看的静态图）。
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 按键
-     - 操作
-   * - ``空格键``
-     - 播放／暂停
-   * - ``,``
-     - 上一帧
-   * - ``.``
-     - 下一帧
-   * - ``]``
-     - 加速播放
-   * - ``[``
-     - 减速播放
-
-----
-
-图片比较
---------
-
-在缩略图模式下框选 2～4 张图片，右键 > ``比较图片``。
-
-对话框共有四个标签页：
-
-.. list-table::
-   :header-rows: 1
-   :widths: 25 75
-
-   * - 标签页
-     - 用途
-   * - **并排**
-     - 同时显示 2 或 4 张图片，各自自适应缩放。
-   * - **叠加**
-     - 两张图以 α 滑块混合（0 → 只看 A、100 → 只看 B）。需选中 2 张。
-   * - **差异**
-     - 显示 ``|A − B|`` 的逐像素差异；增益滑块（0.10×–20×）可放大细微变化。
-   * - **A | B 分割**
-     - before / after 分割视图，可拖动垂直分割线扫动。适合展示 Develop 调整或导出差异。需选中 2 张。
-
-尺寸不同时会自动以 Lanczos 将 B 重新采样为 A 的尺寸。超大图片内部会限制长边 ≤ 2048 px 以保持实时反应。
-
-.. seealso::
-   若想直接在主窗口并排而不打开对话框，请见 **分割视图**\ （``Shift + S``）与
-   **双页阅读**\ （``Shift + D`` / ``Ctrl + Shift + D``）。
-
-----
-
-幻灯片
-------
-
-按 ``S`` 或右键 > ``幻灯片``，开始自动播放所有图片。
-
-- 可调整每张停留时间
-- 可开启淡入淡出效果
-
-----
-
-搜索图片
---------
-
-按 ``Ctrl + F`` 或 ``/``，输入关键字即可搜索当前文件夹中的图片名称。
-
-搜索支持 **模糊匹配**\ （前缀 > 子串 > 子序列 三级排名）与 **子串高亮**。
-按 ``Enter`` 或双击结果跳至对应图片。
-
-若想按 **编号** 跳转，改按 ``Ctrl + G`` 打开跳页对话框。
-
-----
-
-复制与粘贴
-----------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 40 60
-
-   * - 操作
-     - 方法
-   * - 复制图片到剪贴板
-     - 大图模式下按 ``Ctrl + C``
-   * - 粘贴剪贴板图片
-     - ``文件`` > ``从剪贴板粘贴``，或按 ``Ctrl + V``
-   * - 自动监控剪贴板
-     - ``文件`` > ``自动标注剪贴板图片`` 打勾
-
-.. note::
-   自动监控功能开启后，每当剪贴板出现新图片（例如用截图工具），就会自动打开标注编辑。
-
-----
-
-删除图片
---------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 40 60
-
-   * - 操作
-     - 方法
-   * - 删除当前图片
-     - 按 ``Delete`` 键
-   * - 删除选取的多张图片
-     - 框选后按 ``Delete`` 或右键 > ``删除选取``
-
-图片会移到系统回收站，可以从那边恢复。没有回收站的磁盘（存储卡、U 盘或网络驱动器，Windows
-会直接永久删除）上的文件则会保留：关闭时 Imervue 会列出这些文件，询问是否永久删除。
-
-sidecar 会一起移过去：``IMG.JPG.xmp``、``IMG.JPG.annotations.json`` 与
-``IMG.xmp``；RAW + JPEG 成对时，RAW 仍在使用的 ``IMG.xmp`` 会留下。留下的 sidecar
-会把评级和编辑套到相机之后以同名写入的 ``IMG.*`` 上。
-
-----
-
-批量操作
---------
-
-在缩略图模式下选取多张图片后，右键 > ``批量操作``：
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 功能
-     - 说明
-   * - 批量重命名
-     - 使用模板 ``{name}`` ``{n}`` ``{ext}`` 自动命名
-   * - 移动／复制
-     - 把图片移动或复制到其他文件夹
-   * - 全部旋转
-     - 一次旋转所有选取的图片
-   * - 批量导出
-     - 统一转换格式和大小
-   * - 制作 GIF / 视频
-     - 把选取的图片做成 GIF 或 MP4 动画（见"制作 GIF / 视频"）
-   * - 按地点标记
-     - 把每张带地理标记的照片最近的城市和国家加入它的 XMP 关键字
-   * - 索引关键字
-     - 把选取图片的 XMP 关键字加入图库
-   * - 自动挑出模糊
-     - 把模糊的照片标为 Reject（淘汰）
-   * - 自动剔除低质量
-     - 把选取图片中最差的四分之一（锐度、曝光、对比度）标为 Reject（淘汰）
-   * - 按 EXIF 自动旋转
-     - 为每张照片另存一份摆正的 PNG 副本，文件名为 ``<name>_oriented.png``
-   * - 合并成 PDF／TIFF…
-     - 按界面上的排列顺序把选取的图片合并成一个多页 PDF 或 TIFF
-   * - 按日期导入文件夹…
-     - 按拍摄日期（EXIF，没有则用文件日期）把选取的图片复制到 ``YYYY/MM`` 文件夹；
-       已在那里的文件保留原名，新来的文件加上 ``_1``
-   * - 加入标签
-     - 给所有选取的图片加上同一个标签
-   * - 加入相册
-     - 把所有选取的图片放进相册
-
-移动或复制不会覆盖同名文件，而是以 ``name_1.ext`` 存入。在 Imervue 里重命名或
-移动的照片（批量重命名、Token 批量重命名、文件夹树、移动／复制、双窗格、暂存区、
-图片整理）会保留评级、收藏、标签、颜色标签、标题、描述、图库备注与筛选标记；
-重命名或移动文件夹时，里面每张照片的这些数据也都会保留。sidecar 也会一起带走：
-``IMG.xmp``、``IMG.JPG.xmp`` 与 ``IMG.JPG.annotations.json``。RAW + JPEG 成对时，
-RAW 仍在使用的 ``IMG.xmp`` 会复制而不是移动。
-
-文件夹在 Imervue 中打开时，用其他程序重命名的照片也会保留这些数据；新名称原本
-就有的数据则维持不变。
-
-----
-
-RGB 直方图
-----------
-
-在大图模式下按 ``H``，会在画面上显示 RGB 直方图，方便判断曝光状况。再按一次隐藏。
-
-----
-
-设为壁纸
---------
-
-大图模式下右键 > ``设为壁纸``，一键将当前图片设为系统壁纸。
-
-支持 Windows、macOS、Linux（GNOME）。
-
-Windows 收到无法解码的文件时，仍会回报成功，却把桌面变成全黑。因此不是 JPEG、PNG、BMP 的图片（相机 RAW、HEIC、PSD、TGA、WebP 等 Imervue 能打开的其他格式），以及需要转正的照片，会先存成与检视器显示相同的 JPEG 副本再交给系统。副本放在 ``%LOCALAPPDATA%\Imervue\wallpaper``\ （macOS 与 Linux 为 ``~/.local/share/imervue/wallpaper``），只保留最新的一份。
-
-----
-
-多窗口
-------
-
-``文件`` > ``新建窗口``，可以同时打开多个 Imervue 窗口，各自独立浏览不同文件夹。
-
-触控板手势
-----------
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 手势
-     - 动作
-   * - 捏合
-     - 在大图模式放大／缩小（以捏合中心为锚点）
-   * - 水平滑动
-     - 上一张 / 下一张图片
-
-----
-
-Windows 文件关联
------------------
-
-让你在资源管理器中直接用 Imervue 打开图片：
-
-1. ``文件`` > ``文件关联`` > ``注册 Open with Imervue``
-2. 需要系统管理员权限
-3. 之后右键任意图片就能看到 ``Open with Imervue`` 选项
-
-如果要移除：``文件`` > ``文件关联`` > ``移除文件关联``
-
-----
-
-插件系统
---------
-
-Imervue 支持插件扩展功能。
-
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
-
-   * - 操作
-     - 菜单位置
-   * - 查看已安装插件
-     - ``插件`` > ``管理插件``
-   * - 下载新插件
-     - ``插件`` > ``下载插件``
-   * - 打开插件文件夹
-     - ``插件`` > ``打开插件文件夹``
-   * - 重新加载
-     - ``插件`` > ``重新加载插件``
-
-----
-
-语言切换
---------
-
-``语言`` 菜单可以切换界面语言：
-
-- English
-- 繁体中文
-- 简体中文
-- 한국어
-- 日本語
-
-切换后需要重新启动才会生效。
-
-插件可以自行新增语言。**Español** 正是这样提供的 —— 从插件下载器安装
-``spanish_translation`` 插件后,它就会与五个内置语言一起出现在 ``Language``
-菜单中。插件也可以为已有语言补充翻译;已存在的键永远不会被覆盖,因此插件
-不可能弄坏内置字符串。
-
-----
-
-所有快捷键一览
---------------
-
-浏览
-^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 按键
-     - 功能
-   * - ``←`` / ``→``
-     - 上一张／下一张图片
-   * - 方向键
-     - 在缩略图间移动焦点框
-   * - ``Ctrl + Shift + ←`` / ``→``
-     - 跨文件夹跳至前／下一个含图片的同级文件夹
-   * - ``Alt + ←`` / ``Alt + →``
-     - 浏览历史 返回 / 前进（类似浏览器）
-   * - ``Ctrl + G``
-     - 按编号跳至图片
-   * - ``X``
-     - 随机跳一张
-   * - 鼠标滚轮 / 捏合
-     - 放大缩小
-   * - 水平滑动
-     - 上／下一张图片
-   * - 鼠标中键拖拽
-     - 平移画面
-   * - ``F``
-     - 全屏
-   * - ``Shift + Tab``
-     - 剧场模式（隐藏所有外壳）
-   * - ``Ctrl + L``
-     - 切换 缩略图格 ↔ 列表（详细）
-   * - ``Shift + S``
-     - 分割视图（两张并排）
-   * - ``Shift + D`` / ``Ctrl + Shift + D``
-     - 双页阅读 / 从右到左（漫画）
-   * - ``Ctrl + Shift + M``
-     - 副屏镜像窗口
-   * - ``Esc``
-     - 回到缩略图模式／退出全屏／关闭双图或列表模式
-   * - ``W``
-     - 适应宽度
-   * - ``Shift + W``
-     - 适应高度
-   * - ``Home``
-     - 重置缩放
-
-编辑
-^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 按键
-     - 功能
-   * - ``E``
-     - 打开标注编辑器
-   * - ``R``
-     - 顺时针旋转
-   * - ``Shift + R``
-     - 逆时针旋转
-   * - ``Ctrl + Z``
-     - 撤销
-   * - ``Ctrl + Shift + Z``
-     - 重做
-   * - ``Delete``
-     - 删除图片
-
-整理
-^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 按键
-     - 功能
-   * - ``0``
-     - 加入／取消收藏
-   * - ``1`` ～ ``5``
-     - 评分（再按取消）
-   * - ``F1`` ～ ``F5``
-     - 颜色标签：红／黄／绿／蓝／紫（再按清除）
-   * - ``P``
-     - 分拣：Pick（标为保留）
-   * - ``Shift + X``
-     - 分拣：Reject（标为淘汰）
-   * - ``U``
-     - 分拣：取消标记
-   * - ``B``
-     - 加入／取消书签
-   * - ``T``
-     - 标签与相册管理
-
-工具与叠加层
-^^^^^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 按键
-     - 功能
-   * - ``Ctrl + F`` / ``/``
-     - 模糊搜索（子串高亮）
-   * - ``Ctrl + C``
-     - 复制图片到剪贴板
-   * - ``Ctrl + V``
-     - 从剪贴板粘贴
-   * - ``H``
-     - RGB 直方图
-   * - ``F8`` / ``Ctrl + F8``
-     - OSD 信息 / Debug HUD（显存、缓存、线程）
-   * - ``Shift + P``
-     - 像素查看（≥ 400 % 显示网格与光标下 RGB 值）
-   * - ``Shift + M``
-     - 循环色彩模式（正常／灰阶／反相／怀旧）
-   * - ``S``
-     - 幻灯片
-
-动画播放
-^^^^^^^^
-
-.. list-table::
-   :header-rows: 1
-   :widths: 30 70
-
-   * - 按键
-     - 功能
-   * - ``空格键``
-     - 播放／暂停
-   * - ``,``
-     - 上一帧
-   * - ``.``
-     - 下一帧
-   * - ``[``
-     - 减速
-   * - ``]``
-     - 加速
-
-图库与元数据管理
-----------------
-
-Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
-``~/.cache/imervue/library.db``\ （POSIX）维护 SQLite 索引，用于跨文件夹搜索、
-分层标签、智能相册、感知哈希、笔记与分拣旗标。以下功能多数位于
-``Extra Tools``\ （额外功能）菜单。为方便查找，该菜单按功能分为八个子菜单：
-``Batch``\ （批量）、``Library & Metadata``\ （图库与元数据）、
-``Views``\ （视图）、``Workflow``\ （工作流程）、``Export``\ （导出）、
-``Develop (Non-Destructive)``\ （调整）、``Retouch & Transform``\ （修复与变形）、
-``Multi-Image``\ （多张合成），以下路径均以
-``Extra Tools`` > ``<子菜单>`` > ``<工具>`` 的形式呈现。
-
-图库搜索
-^^^^^^^^
-
-``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` 支持添加多个\ **根目录**\ 并在后台建立索引，
-之后可按文件名、最小宽高与文件大小搜索（最多 2000 条结果）；双击结果即可打开。
-
-右键 > ``查询搜索…`` 以精简的查询语言筛选当前文件夹，例如 ``kw:beach rating:>=4 type:video place:Paris``。``place:`` 可填城市、国家或两者（``Paris``、``France``、``Paris, France``），含空格的值用双引号括起（``place:"Rio de Janeiro"``）。
-
-智能相册
-^^^^^^^^
-
-``Extra Tools`` > ``Library & Metadata`` > ``Smart Albums`` 以友好名称保存一组过滤规则（扩展名、最小
-尺寸、颜色标签、评分、收藏、分拣状态、分层标签、文件名片段），再次应用
-时会按规则过滤当前文件夹。
-
-相似图片搜索
-^^^^^^^^^^^^
-
-``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` 会对当前深度缩放（或第一张选中）
-的图片计算 64 位 DCT pHash，并按汉明距离由近到远列出索引中的近似图，可
-通过 Max distance 调节宽严。
-
-自动标记
-^^^^^^^^
-
-``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` 将启发式标签归入 ``auto/...``
-（``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
-``portrait``），根据查看器所显示画面的色彩饱和度、边缘与形状来判断。在工作线程中运行，带实时进度条。
-
-分层标签
-^^^^^^^^
-
-``Extra Tools`` > ``Library & Metadata`` > ``Hierarchical Tags`` 管理树状标签（如
-``animal/cat/british``）。选择节点即显示该节点与全部子节点下的图片；可一
-键为所选图片添加或移除标签。与右键菜单的扁平标签并行。
-
-右键 ``Index Keywords`` 会把所选图片的 XMP 关键字加入图库。Lightroom 或 darktable
-写的关键字层级（``lr:hierarchicalSubject``，如 ``Places|Taiwan|Taipei``）会成为
-标签路径 ``Places/Taiwan/Taipei``；只是重复这些层级的 ``Places``／``Taiwan``／
-``Taipei`` 零散关键字不会再另外加入。
-
-Token 批量重命名
-^^^^^^^^^^^^^^^^
-
-``Extra Tools`` > ``Batch`` > ``Token Batch Rename`` 提供实时预览，输入
-``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 等模板后立即显示每个文件的
-新名称；冲突会被高亮。支持 tokens：``{name} {ext} {counter[:NN]}
-{date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
-{hour} {minute}``。另一个选中文件现在的名称不算冲突：重新编号
-（``002`` → ``003``、``003`` → ``004``）或互换两个名称时会重命名整批。Batch Rename
-也一样。
-
-元数据导出
-^^^^^^^^^^
-
-``Extra Tools`` > ``Library & Metadata`` > ``Export Metadata (CSV / JSON)`` 会为当前视图中的每张图
-片输出一行，包含 EXIF、尺寸、颜色标签、评分、收藏、分层标签、分拣状态
-与笔记。方便接入电子表格或外部流程。
-
-XMP Sidecar（other XMP-aware photo managers 互通）
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Imervue 支持读写 Adobe XMP sidecar 文件（``photo.jpg`` ↔ ``photo.xmp``），
-让星级、标题、描述、关键字与颜色标签可与 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
-等 XMP 感知工具双向同步。
-
-保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。
-
-除了 ``photo.xmp``\ （Lightroom、Bridge），darktable 与 digiKam 写的
-``photo.jpg.xmp`` 在它是唯一的 sidecar 时也会读取并更新。颜色标签看得懂
-Lightroom 的写法（``Red`` … ``Purple``）与 Bridge 的写法（``Select``、``Second``、
-``Approved``、``Review``、``To Do``），导出时按 Lightroom 的写法写入；没有对应颜色的
-自定义标签会留在 sidecar 里。
-
-被拒绝的照片（Lightroom、Bridge、darktable 的 ``xmp:Rating`` -1）导入后成为筛选的
-**拒绝**\ 且不带星级，**拒绝**\ 导出时写成 -1。sidecar 不是拒绝时会解除「拒绝」，
-「选用」则不受影响。
-
-没有 sidecar 的文件会读取（并导入）文件本身内嵌的数据：先读 XMP（JPEG、PNG、WebP、
-TIFF、CR3、RW2、ORF、RAF），再读 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的评级与关键字
-存在这里，Windows 文件资源管理器与部分相机的星级也在这里。有 sidecar 时以 sidecar 为准。
-
-``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` 有两个按钮，作用于当前视图中的每张图片：
-
-- **Export sidecars** — 将每张图片的星级 / 标题 / 描述 / 关键字 / 颜色标签写入它的 sidecar。
-- **Import sidecars** — 把 sidecar 的内容读回 Imervue 自己的记录。
-
-XML 解析通过 ``defusedxml`` 进行，避免 XXE / billion-laughs 等攻击。
-
-**EXIF 侧边栏** 亦提供可点击的 **星级快速条** — 设置的星级即为 XMP 导出的值。
-
-分拣（Pick / Reject）
-^^^^^^^^^^^^^^^^^^^^^
-
-旗标式的三态旗标。``P`` 将当前或选中的所有 tile 标为 Pick；
-``Shift + X`` 标为 Reject；``U`` 取消。``Filter`` > ``By Cull State`` 可只
-显示某种状态；``Extra Tools`` > ``Workflow`` > ``Culling`` 提供对话框并带有
-**Delete all rejects** 按钮，可从磁盘永久删除被淘汰文件。
-
-暂存篮
-^^^^^^
-
-``Extra Tools`` > ``Workflow`` > ``Staging Tray`` 是跨文件夹的暂存篮。任意 tile 可加入篮中
-（重启后保留），再一键将整篮移动或复制到目标文件夹。适合从多次拍摄中
-汇总出精选再导出。
-
-双窗格文件管理
-^^^^^^^^^^^^^^
-
-``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` 提供 双窗格的双
-树视图，可在两侧文件夹之间直接移动或复制选中项。
-
-时间轴视图
-^^^^^^^^^^
-
-``Extra Tools`` > ``Views`` > ``Timeline View`` 按「日／月／年」分组当前图片集（Google
-Photos 风格）。日期优先取 EXIF ``DateTimeOriginal``，否则使用文件修改时间。
-双击图片可进入深度缩放。
-
-拖拽至外部应用
-^^^^^^^^^^^^^^
-
-从\ **已选中** tile 按住拖拽，即可将文件丢入资源管理器、Chrome、Discord 等
-支持 file URL 的应用；拖拽预览为 tile 缩略图。
-
-单张图片笔记
-^^^^^^^^^^^^
-
-EXIF 侧栏包含 **Notes** 文本框，输入内容会经短暂去抖后自动写入索引；笔记
-按图片路径保存，重新扫描也能保留。
-
-----
-
-高级 Develop 与合成
--------------------
-
-色调曲线（Tone Curve）
-^^^^^^^^^^^^^^^^^^^^^^
-
-``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Tone Curve`` 打开可拖拽控制点的曲线编辑器，提供 RGB、
-R、G、B 四条通道。点击空白处新增控制点、拖拽移动、右键删除。点之间
-以单调三次（monotone cubic）插值，曲线存在 recipe 中渲染时非破坏性生效。
-
-应用 .cube LUT
-^^^^^^^^^^^^^^
-
-``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 可载入任意 Adobe ``.cube`` 文件
-（1D / 3D，最高 64³）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
-``LUT_3D_INPUT_RANGE`` 会像 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 一样设定输入范围，带 BOM
-的文件也能读取。LUT 以 ``lru_cache`` 按路径 + mtime 缓存，使用
-三线性插值并通过强度滑块与原图混合，LUT 路径与强度存入 recipe。
-
-虚拟副本（Virtual Copies）
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``Extra Tools`` > ``Workflow`` > ``Virtual Copies`` 为同一张图创建多组命名 recipe
-快照。保存当前编辑后继续实验，之后随时切回任一版本；副本与主
-recipe 同存，重置主 recipe 也不会消失。
-
-HDR 合成
-^^^^^^^^
-
-``Extra Tools`` > ``Multi-Image`` > ``HDR Merge`` 使用 OpenCV Mertens 曝光融合合并
-多张不同曝光。可勾选 Align 先以 ``cv2.AlignMTB`` 对齐，输出写到
-指定路径，不影响源文件。
-
-全景拼接
-^^^^^^^^
-
-``Extra Tools`` > ``Multi-Image`` > ``Panorama Stitch`` 使用 OpenCV ``Stitcher`` 拼接
-重叠影像，风景 / 城市用 **Panorama** 模式，平面文档用 **Scans**
-模式，可自动裁掉黑边。
-
-景深合成（Focus Stacking）
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``Extra Tools`` > ``Multi-Image`` > ``Focus Stacking`` 融合不同对焦距离的多张图像，
-以 Laplacian 方差选取每像素最清晰的来源，并用高斯平滑避免接缝。
-默认启用 ECC 对齐以补手持位移。
-
-修复画笔
-^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Healing Brush`` 在最大 720 px 长边的预览中显示当前
-图像。左键添加圆形修复区，右键移除，半径滑块控制新区域大小。应用
-时使用 OpenCV inpainting（Telea 快 / Navier-Stokes 平滑），输出为
-新文件。
-
-镜头校正
-^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` 提供四个纯 numpy 滑块：径向
-畸变 ``k1``\ （桶形 / 枕形）、暗角补偿，以及红 / 蓝通道色差径向缩放。
-因尺寸可能改变，结果输出为新文件而非写入 recipe。
-
-地图视图
-^^^^^^^^
-
-``Extra Tools`` > ``Views`` > ``Map View`` 通过 Leaflet + OpenStreetMap（需
-``PySide6.QtWebEngineWidgets``）显示所有含 GPS 的照片；未安装
-WebEngine 时降级为坐标列表。
-
-日历视图
-^^^^^^^^
-
-``Extra Tools`` > ``Views`` > ``Calendar View`` 用 ``QCalendarWidget`` 高亮有
-照片的日期（依序 EXIF ``DateTimeOriginal`` → ``DateTimeDigitized``
-→ 文件 mtime）。选中日期列出当日照片，双击在主视图中打开。
-
-人脸检测
-^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Face Detection`` 使用 OpenCV Haar 正脸分类器检测
-脸部并以矩形标注。在列表双击输入姓名，保存后写入 recipe 的
-``extra['face_tags']``。此为经典算法，适合「找出脸的位置」，并
-非现代 CNN 识别的替代。
-需要 OpenCV 4（``pip install "opencv-python<5"``）：OpenCV 5 已移除 Haar
-分类器，此时对话框会给出提示而不进行检测。
-
-局部调整蒙版
-^^^^^^^^^^^^
-
-``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Local Adjustment Masks`` 支持画笔 / 放射 / 线性
-渐变三种蒙版。每个蒙版都有独立的曝光、亮度、对比、饱和度、色温、
-色调 delta 和羽化滑块，保存到 ``recipe.extra['masks']``，以非破坏
-方式在加载时混合到原图。
-
-色调分离
-^^^^^^^^
-
-``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Split Toning`` 对阴影和高光分别应用不同色相与
-饱和度，并通过平衡枢纽决定边界。保存在 ``recipe.extra`` 中，并在
-develop pipeline 的 tone curve 之后应用。
-
-仿制图章
-^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Clone Stamp`` 以羽化方式把源区块复制到目标，
-是修复画笔的硬边版本。Shift+点击设定源点，单击盖章，右键撤销。
-结果输出为新文件，不会影响原图。
-
-裁剪 / 拉直
-^^^^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` 结合 0..1 归一化裁剪矩形和
-任意角度拉直。输出会自动裁剪到最大内接矩形，旋转后不会产生黑边。
-
-自动拉直
-^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Auto-Straighten`` 通过 Hough line 检测主要的地
-平线或垂直线，给出建议旋转角度。应用前可以手动微调。
-
-降噪 / 锐化
-^^^^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Noise Reduction / Sharpening`` 先用边缘保留的
-bilateral 降噪，再用 unsharp mask 锐化。「仅亮度通道」会保留色噪，
-但能压平明度噪声而不糊掉色彩边缘。
-
-天空 / 背景
-^^^^^^^^^^^
-
-``Extra Tools`` > ``Retouch & Transform`` > ``Sky / Background`` 把检测到的天空替换成渐变，
-或直接把背景去除成透明 / 白底。安装 ``rembg`` (U²-Net) 时会自动
-启用神经网络前景分割。
-
-屏幕校样
-^^^^^^^^
-
-``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Soft Proof`` 加载 ICC 描述文件，将图像转入目标
-色域再转回，并用洋红显示往返过程中被裁切的像素 — 打印前的快速
-色域检查。
-
-GPS 地理标记
-^^^^^^^^^^^^
-
-``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` 读取已有的 EXIF GPS 坐标并允许
-编辑或设定新的十进制度数。JPEG 无需额外套件即可直接写入：只替换其 EXIF 区块，
-像素、其他标签与缩略图都保持不变。WebP 也以相同方式处理；其他格式无法标记。
-
-**EXIF 编辑器**\ （EXIF 侧栏的 ``Edit EXIF`` 按钮）可修改描述、作者、版权、相机厂牌 / 型号与注释。JPEG 与 WebP 无需额外套件，只重写其 EXIF 区块；其他格式会说明无法编辑的原因。
-
-网页相册
-^^^^^^^^
-
-``Extra Tools`` > ``Export`` > ``Web Gallery`` 把选中的图片（或整个文件夹）输出为自包含的
-网站：带灯箱的 ``index.html``、JPEG 缩略图，以及原图的副本（取消勾选
-**复制原始文件（可移植）** 就不复制原图）。可以设定页面标题与缩略图的尺寸和质量。页面不需要
-服务器，直接从磁盘打开或放到任何静态托管空间都可以。
-
-勾选 **客户审阅** 就能把相册发给客户收集意见。每张图片下方会有一个留言框；留言保存在审阅者的
-浏览器里，页面上的 **Export comments** 按钮会把所有留言保存为一个 JSON 文件。
-
-打印排版
-^^^^^^^^
-
-``Extra Tools`` > ``Export`` > ``Print Layout`` 把多张图片排版为多页 PDF，可设
-定页面大小、方向、网格、边距、间隔与裁切标记。需要 ``reportlab``。
-
-----
-
 Puppet 工作区（Puppet 标签）
 ----------------------------
 
@@ -1578,6 +754,43 @@ Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7Th 或自己�
 5. 切换工具栏上的实时输入 toggle 让 rig 跟你动 — **Drag-track head**\ （头跟光标）、**Auto-blink**\ （自动眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 随机 idle 动作）、**Mic lip-sync**\ （麦克风 RMS 带动嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驱动头 / 眼 / 嘴）。
 6. 工具栏 **Reset to rest** 停掉所有动作、取消勾所有实时驱动、清掉 expressions / pose 覆盖，所有参数复位 — 标准的「从头开始」按钮。
 7. 之后要打开别的 rig：**File > Open Puppet…** 从磁盘挑任何 ``.puppet`` zip；**File > Examples ▾** 始终连到内置清单。
+
+``.puppet`` 文件格式（v1）
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+一个 ``.puppet`` 文件就是一个 zip 压缩包：
+
+::
+
+   my_character.puppet
+   ├── puppet.json              # required — manifest, drawables, deformers, parameters
+   ├── textures/
+   │   ├── face.png             # referenced by drawables[].texture
+   │   └── body.png
+   ├── motions/                 # optional
+   │   ├── idle.json
+   │   └── wave.json
+   ├── expressions/             # optional
+   │   └── smile.json
+   └── physics.json             # optional
+
+顶层 ``puppet.json`` 示例::
+
+   {
+     "version": 1,
+     "size": [2048, 2048],
+     "drawables": [ ... ],
+     "deformers": [ ... ],
+     "parameters": [ ... ],
+     "motions": ["idle", "wave"],
+     "expressions": ["smile"],
+     "pose": {"groups": [ ... ]},
+     "physics": "physics.json"
+   }
+
+完整结构（drawables、deformers、parameters、motions、expressions、pose、
+physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG — 没有
+专有二进制格式，可以完全通过 git diff 比对。
 
 OBS 直播整合
 ^^^^^^^^^^^^
@@ -2086,6 +1299,886 @@ Windows 上：确认 **Hide when other app is fullscreen**
 所在的屏幕已经不在连接的显示器里（笔记本脱坞、副屏被拔）。
 这种情况下桌宠会自动回退到主屏右下角 — 拖到你想要的位置，
 下次保存会覆盖掉过时的坐标。
+
+----
+
+旋转与翻转
+----------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 50
+
+   * - 操作
+     - 快捷键
+     - 菜单
+   * - 顺时针旋转 90°
+     - ``R``
+     - 右键 > 修改 > 顺时针旋转
+   * - 逆时针旋转 90°
+     - ``Shift + R``
+     - 右键 > 修改 > 逆时针旋转
+   * - 水平翻转
+     - --
+     - 右键 > 修改 > 水平翻转
+   * - 垂直翻转
+     - --
+     - 右键 > 修改 > 垂直翻转
+   * - 无损旋转（JPEG）
+     - --
+     - 右键 > 无损旋转
+
+----
+
+导出图片
+--------
+
+单张导出
+^^^^^^^^
+
+打开图片（大图模式）后，右键 > ``导出 / 另存为``
+
+- 选择格式：PNG、JPEG、WebP、BMP、TIFF、AVIF；装了 ``pillow-heif`` / ``pillow-jxl-plugin`` 还有 HEIC / JPEG XL
+- 调整质量（有损格式可调）
+- 选择保留的元数据：全部、位置以外的全部（默认）或全部移除。相机、镜头与拍摄时间会一并保留；选择会被记住，批量导出也提供相同选项
+- 预览文件大小
+- 选择保存位置。建议的文件名一定是还没被占用的（``photo.png`` 旁边就是 ``photo_1.png``），已存在的文件（尤其是原图本身）要确认后才会被替换
+
+导出预设组合
+^^^^^^^^^^^^
+
+下方的批量导出有一个\ **预设**\ 列表，可为常见输出目标填好尺寸、格式与质量；选\ **自定义**\ 则由你自行设置：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 预设
+     - 输出
+   * - **Web — 1600 px JPEG**
+     - 长边最多 1600 px、JPEG 质量 85。
+   * - **4K Web — 3840 px JPEG**
+     - 长边最多 3840 px、JPEG 质量 90。
+   * - **Print — 300 DPI PNG**
+     - 全分辨率、PNG、300 dpi。
+   * - **Instagram — 1080×1080 square**
+     - 居中裁成正方形、1080 × 1080、JPEG 质量 90。
+   * - **Thumbnail — 400 px JPEG**
+     - 长边最多 400 px、JPEG 质量 80。
+
+水印
+^^^^^^^^
+
+批量导出还可以在每一份导出的副本上加上文字水印：可设置文字、位置（四角之一或居中）与不透明度。原始文件永远不会被修改。
+
+批量导出
+^^^^^^^^
+
+选取多张图片后，右键 > ``批量操作`` > ``批量导出``
+
+- 统一格式转换
+- 设定最大宽度／高度（自动等比缩放）
+- 质量控制
+- 进度条实时显示
+
+制作 GIF / 视频
+^^^^^^^^^^^^^^^^
+
+选取多张图片后，右键 > ``批量操作`` > ``制作 GIF / 视频``
+
+- 支持 GIF 和 MP4 格式
+- 可拖拽排列顺序
+- 设定每秒帧数（FPS）
+- 自定义尺寸
+- 循环播放选项（关闭时只播放一次）
+- 建议的文件是第一帧旁边的 ``output.gif``，名称被占用时会编号（``output_1.gif``）；手动输入的文件名已存在时，要确认后才会被替换
+
+----
+
+动画图片播放
+------------
+
+打开 GIF、APNG、动态 WebP 时，会自动播放动画。解码后会超过 512 MB 的动画
+会边播放边逐帧解码，打开时既不会卡住窗口，也不会占满内存。
+10 ms 以下的帧会和浏览器一样显示 100 ms，很多 GIF 都以此为前提。
+
+多页 TIFF（扫描的文件）不会播放，而是一次显示一页，用 ``,`` 与 ``.`` 翻页，显示为“第 2/5 页”。不是动画的帧也不会播放：相机嵌入 JPEG 的预览（MPF）、PSD 的图层，以及 APNG 的默认图像（给不支持 APNG 的程序看的静态图）。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按键
+     - 操作
+   * - ``空格键``
+     - 播放／暂停
+   * - ``,``
+     - 上一帧
+   * - ``.``
+     - 下一帧
+   * - ``]``
+     - 加速播放
+   * - ``[``
+     - 减速播放
+
+----
+
+图片比较
+--------
+
+在缩略图模式下框选 2～4 张图片，右键 > ``比较图片``。
+
+对话框共有四个标签页：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - 标签页
+     - 用途
+   * - **并排**
+     - 同时显示 2 或 4 张图片，各自自适应缩放。
+   * - **叠加**
+     - 两张图以 α 滑块混合（0 → 只看 A、100 → 只看 B）。需选中 2 张。
+   * - **差异**
+     - 显示 ``|A − B|`` 的逐像素差异；增益滑块（0.10×–20×）可放大细微变化。
+   * - **A | B 分割**
+     - before / after 分割视图，可拖动垂直分割线扫动。适合展示 Develop 调整或导出差异。需选中 2 张。
+
+尺寸不同时会自动以 Lanczos 将 B 重新采样为 A 的尺寸。超大图片内部会限制长边 ≤ 2048 px 以保持实时反应。
+
+.. seealso::
+   若想直接在主窗口并排而不打开对话框，请见 **分割视图**\ （``Shift + S``）与
+   **双页阅读**\ （``Shift + D`` / ``Ctrl + Shift + D``）。
+
+----
+
+幻灯片
+------
+
+按 ``S`` 或右键 > ``幻灯片``，开始自动播放所有图片。
+
+- 可调整每张停留时间
+- 可开启淡入淡出效果
+
+----
+
+搜索图片
+--------
+
+按 ``Ctrl + F`` 或 ``/``，输入关键字即可搜索当前文件夹中的图片名称。
+
+搜索支持 **模糊匹配**\ （前缀 > 子串 > 子序列 三级排名）与 **子串高亮**。
+按 ``Enter`` 或双击结果跳至对应图片。
+
+若想按 **编号** 跳转，改按 ``Ctrl + G`` 打开跳页对话框。
+
+----
+
+复制与粘贴
+----------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - 操作
+     - 方法
+   * - 复制图片到剪贴板
+     - 大图模式下按 ``Ctrl + C``
+   * - 粘贴剪贴板图片
+     - ``文件`` > ``从剪贴板粘贴``，或按 ``Ctrl + V``
+   * - 自动监控剪贴板
+     - ``文件`` > ``自动标注剪贴板图片`` 打勾
+
+.. note::
+   自动监控功能开启后，每当剪贴板出现新图片（例如用截图工具），就会自动打开标注编辑。
+
+----
+
+删除图片
+--------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - 操作
+     - 方法
+   * - 删除当前图片
+     - 按 ``Delete`` 键
+   * - 删除选取的多张图片
+     - 框选后按 ``Delete`` 或右键 > ``删除选取``
+
+图片会移到系统回收站，可以从那边恢复。没有回收站的磁盘（存储卡、U 盘或网络驱动器，Windows
+会直接永久删除）上的文件则会保留：关闭时 Imervue 会列出这些文件，询问是否永久删除。
+
+sidecar 会一起移过去：``IMG.JPG.xmp``、``IMG.JPG.annotations.json`` 与
+``IMG.xmp``；RAW + JPEG 成对时，RAW 仍在使用的 ``IMG.xmp`` 会留下。留下的 sidecar
+会把评级和编辑套到相机之后以同名写入的 ``IMG.*`` 上。
+
+----
+
+批量操作
+--------
+
+在缩略图模式下选取多张图片后，右键 > ``批量操作``：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 功能
+     - 说明
+   * - 批量重命名
+     - 使用模板 ``{name}`` ``{n}`` ``{ext}`` 自动命名
+   * - 移动／复制
+     - 把图片移动或复制到其他文件夹
+   * - 全部旋转
+     - 一次旋转所有选取的图片
+   * - 批量导出
+     - 统一转换格式和大小
+   * - 制作 GIF / 视频
+     - 把选取的图片做成 GIF 或 MP4 动画（见"制作 GIF / 视频"）
+   * - 按地点标记
+     - 把每张带地理标记的照片最近的城市和国家加入它的 XMP 关键字
+   * - 索引关键字
+     - 把选取图片的 XMP 关键字加入图库
+   * - 自动挑出模糊
+     - 把模糊的照片标为 Reject（淘汰）
+   * - 自动剔除低质量
+     - 把选取图片中最差的四分之一（锐度、曝光、对比度）标为 Reject（淘汰）
+   * - 按 EXIF 自动旋转
+     - 为每张照片另存一份摆正的 PNG 副本，文件名为 ``<name>_oriented.png``
+   * - 合并成 PDF／TIFF…
+     - 按界面上的排列顺序把选取的图片合并成一个多页 PDF 或 TIFF
+   * - 按日期导入文件夹…
+     - 按拍摄日期（EXIF，没有则用文件日期）把选取的图片复制到 ``YYYY/MM`` 文件夹；
+       已在那里的文件保留原名，新来的文件加上 ``_1``
+   * - 加入标签
+     - 给所有选取的图片加上同一个标签
+   * - 加入相册
+     - 把所有选取的图片放进相册
+
+移动或复制不会覆盖同名文件，而是以 ``name_1.ext`` 存入。在 Imervue 里重命名或
+移动的照片（批量重命名、Token 批量重命名、文件夹树、移动／复制、双窗格、暂存区、
+图片整理）会保留评级、收藏、标签、颜色标签、标题、描述、图库备注与筛选标记；
+重命名或移动文件夹时，里面每张照片的这些数据也都会保留。sidecar 也会一起带走：
+``IMG.xmp``、``IMG.JPG.xmp`` 与 ``IMG.JPG.annotations.json``。RAW + JPEG 成对时，
+RAW 仍在使用的 ``IMG.xmp`` 会复制而不是移动。
+
+文件夹在 Imervue 中打开时，用其他程序重命名的照片也会保留这些数据；新名称原本
+就有的数据则维持不变。
+
+----
+
+RGB 直方图
+----------
+
+在大图模式下按 ``H``，会在画面上显示 RGB 直方图，方便判断曝光状况。再按一次隐藏。
+
+----
+
+设为壁纸
+--------
+
+大图模式下右键 > ``设为壁纸``，一键将当前图片设为系统壁纸。
+
+支持 Windows、macOS、Linux（GNOME）。
+
+Windows 收到无法解码的文件时，仍会回报成功，却把桌面变成全黑。因此不是 JPEG、PNG、BMP 的图片（相机 RAW、HEIC、PSD、TGA、WebP 等 Imervue 能打开的其他格式），以及需要转正的照片，会先存成与检视器显示相同的 JPEG 副本再交给系统。副本放在 ``%LOCALAPPDATA%\Imervue\wallpaper``\ （macOS 与 Linux 为 ``~/.local/share/imervue/wallpaper``），只保留最新的一份。
+
+----
+
+多窗口
+------
+
+``文件`` > ``新建窗口``，可以同时打开多个 Imervue 窗口，各自独立浏览不同文件夹。
+
+工作区布局预设
+--------------
+
+``文件`` > ``工作区…`` 会把当前的窗口几何、停靠面板 / 工具栏排列、分隔条尺寸与
+当前根文件夹以一个名称保存下来 — 之后就能像 other XMP-aware photo managers 切换
+*Library* / *Develop* / *Export*、或 Adobe Bridge 切换 *Metadata* / *Filmstrip*
+那样在已保存的布局之间切换。对话框支持「保存当前布局」「加载」「重命名」「删除」。
+工作区保存在 ``user_settings.json``\ （``workspaces`` 键下），跨会话保留。
+
+.. tip::
+   建立一个 **Browse** 工作区，显示目录树与缩略图网格；再建立一个独立的
+   **Develop** 工作区，把 develop 面板最大化、目录树折叠。一次点击就能把整个
+   窗口切换成最适合各项任务的形状。
+
+触控板手势
+----------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 手势
+     - 动作
+   * - 捏合
+     - 在大图模式放大／缩小（以捏合中心为锚点）
+   * - 水平滑动
+     - 上一张 / 下一张图片
+
+----
+
+Windows 文件关联
+-----------------
+
+让你在资源管理器中直接用 Imervue 打开图片：
+
+1. ``文件`` > ``文件关联`` > ``注册 Open with Imervue``
+2. 需要系统管理员权限
+3. 之后右键任意图片就能看到 ``Open with Imervue`` 选项
+
+如果要移除：``文件`` > ``文件关联`` > ``移除文件关联``
+
+----
+
+插件系统
+--------
+
+Imervue 支持插件扩展功能。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - 操作
+     - 菜单位置
+   * - 查看已安装插件
+     - ``插件`` > ``管理插件``
+   * - 下载新插件
+     - ``插件`` > ``下载插件``
+   * - 打开插件文件夹
+     - ``插件`` > ``打开插件文件夹``
+   * - 重新加载
+     - ``插件`` > ``重新加载插件``
+
+----
+
+语言切换
+--------
+
+``语言`` 菜单可以切换界面语言：
+
+- English
+- 繁体中文
+- 简体中文
+- 한국어
+- 日本語
+
+切换后需要重新启动才会生效。
+
+插件可以自行新增语言。**Español** 正是这样提供的 —— 从插件下载器安装
+``spanish_translation`` 插件后,它就会与五个内置语言一起出现在 ``Language``
+菜单中。插件也可以为已有语言补充翻译;已存在的键永远不会被覆盖,因此插件
+不可能弄坏内置字符串。
+
+----
+
+所有快捷键一览
+--------------
+
+浏览
+^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按键
+     - 功能
+   * - ``←`` / ``→``
+     - 上一张／下一张图片
+   * - 方向键
+     - 在缩略图间移动焦点框
+   * - ``Ctrl + Shift + ←`` / ``→``
+     - 跨文件夹跳至前／下一个含图片的同级文件夹
+   * - ``Alt + ←`` / ``Alt + →``
+     - 浏览历史 返回 / 前进（类似浏览器）
+   * - ``Ctrl + G``
+     - 按编号跳至图片
+   * - ``X``
+     - 随机跳一张
+   * - 鼠标滚轮 / 捏合
+     - 放大缩小
+   * - 水平滑动
+     - 上／下一张图片
+   * - 鼠标中键拖拽
+     - 平移画面
+   * - ``F``
+     - 全屏
+   * - ``Shift + Tab``
+     - 剧场模式（隐藏所有外壳）
+   * - ``Ctrl + L``
+     - 切换 缩略图格 ↔ 列表（详细）
+   * - ``Shift + S``
+     - 分割视图（两张并排）
+   * - ``Shift + D`` / ``Ctrl + Shift + D``
+     - 双页阅读 / 从右到左（漫画）
+   * - ``Ctrl + Shift + M``
+     - 副屏镜像窗口
+   * - ``Esc``
+     - 回到缩略图模式／退出全屏／关闭双图或列表模式
+   * - ``W``
+     - 适应宽度
+   * - ``Shift + W``
+     - 适应高度
+   * - ``Home``
+     - 重置缩放
+
+编辑
+^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按键
+     - 功能
+   * - ``E``
+     - 打开标注编辑器
+   * - ``R``
+     - 顺时针旋转
+   * - ``Shift + R``
+     - 逆时针旋转
+   * - ``Ctrl + Z``
+     - 撤销
+   * - ``Ctrl + Shift + Z``
+     - 重做
+   * - ``Delete``
+     - 删除图片
+
+整理
+^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按键
+     - 功能
+   * - ``0``
+     - 加入／取消收藏
+   * - ``1`` ～ ``5``
+     - 评分（再按取消）
+   * - ``F1`` ～ ``F5``
+     - 颜色标签：红／黄／绿／蓝／紫（再按清除）
+   * - ``P``
+     - 分拣：Pick（标为保留）
+   * - ``Shift + X``
+     - 分拣：Reject（标为淘汰）
+   * - ``U``
+     - 分拣：取消标记
+   * - ``B``
+     - 加入／取消书签
+   * - ``T``
+     - 标签与相册管理
+
+工具与叠加层
+^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按键
+     - 功能
+   * - ``Ctrl + F`` / ``/``
+     - 模糊搜索（子串高亮）
+   * - ``Ctrl + C``
+     - 复制图片到剪贴板
+   * - ``Ctrl + V``
+     - 从剪贴板粘贴
+   * - ``H``
+     - RGB 直方图
+   * - ``F8`` / ``Ctrl + F8``
+     - OSD 信息 / Debug HUD（显存、缓存、线程）
+   * - ``Shift + P``
+     - 像素查看（≥ 400 % 显示网格与光标下 RGB 值）
+   * - ``Shift + M``
+     - 循环色彩模式（正常／灰阶／反相／怀旧）
+   * - ``S``
+     - 幻灯片
+
+动画播放
+^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按键
+     - 功能
+   * - ``空格键``
+     - 播放／暂停
+   * - ``,``
+     - 上一帧
+   * - ``.``
+     - 下一帧
+   * - ``[``
+     - 减速
+   * - ``]``
+     - 加速
+
+图库与元数据管理
+----------------
+
+Imervue 会在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
+``~/.cache/imervue/library.db``\ （POSIX）维护 SQLite 索引，用于跨文件夹搜索、
+分层标签、智能相册、感知哈希、笔记与分拣旗标。以下功能多数位于
+``Extra Tools``\ （额外功能）菜单。为方便查找，该菜单按功能分为八个子菜单：
+``Batch``\ （批量）、``Library & Metadata``\ （图库与元数据）、
+``Views``\ （视图）、``Workflow``\ （工作流程）、``Export``\ （导出）、
+``Develop (Non-Destructive)``\ （调整）、``Retouch & Transform``\ （修复与变形）、
+``Multi-Image``\ （多张合成），以下路径均以
+``Extra Tools`` > ``<子菜单>`` > ``<工具>`` 的形式呈现。
+
+图库搜索
+^^^^^^^^
+
+``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` 支持添加多个\ **根目录**\ 并在后台建立索引，
+之后可按文件名、最小宽高与文件大小搜索（最多 2000 条结果）；双击结果即可打开。
+
+右键 > ``查询搜索…`` 以精简的查询语言筛选当前文件夹，例如 ``kw:beach rating:>=4 type:video place:Paris``。``place:`` 可填城市、国家或两者（``Paris``、``France``、``Paris, France``），含空格的值用双引号括起（``place:"Rio de Janeiro"``）。
+
+智能相册
+^^^^^^^^
+
+``Extra Tools`` > ``Library & Metadata`` > ``Smart Albums`` 以友好名称保存一组过滤规则（扩展名、最小
+尺寸、颜色标签、评分、收藏、分拣状态、分层标签、文件名片段），再次应用
+时会按规则过滤当前文件夹。
+
+相似图片搜索
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` 会对当前深度缩放（或第一张选中）
+的图片计算 64 位 DCT pHash，并按汉明距离由近到远列出索引中的近似图，可
+通过 Max distance 调节宽严。
+
+语义搜索（CLIP）
+^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Semantic Search`` 让你输入自然语言短语（例如
+*"golden retriever in snow"* 或 *"neon street at night"*），从当前打开的文件夹
+返回排序后的图片。每张图片会用 CLIP 视觉 / 语言编码器生成嵌入向量，并与其路径
+一起保存；文字查询则嵌入同一向量空间，再按余弦相似度比较。
+
+嵌入向量会缓存到 ``%LOCALAPPDATA%/Imervue/clip_cache.npz``\ （Windows）或 ``~/.cache/imervue/clip_cache.npz``\ （POSIX），存成单一精简的 ``.npz`` 文件。对话框搜索的是当前打开的文件夹：只为缓存里还没有、或之后改动过（大小或修改时间）的图片计算向量，所以同一个文件夹再搜一次会立刻开始，结果也只来自这个文件夹。
+
+.. note::
+   语义搜索需要可选的 ``open_clip_torch`` 与 ``torch`` 包。若未安装，菜单项
+   会说明缺少什么，其他功能仍可正常使用。
+
+自动标记
+^^^^^^^^
+
+``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` 将启发式标签归入 ``auto/...``
+（``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
+``portrait``），根据查看器所显示画面的色彩饱和度、边缘与形状来判断。在工作线程中运行，带实时进度条。
+
+分层标签
+^^^^^^^^
+
+``Extra Tools`` > ``Library & Metadata`` > ``Hierarchical Tags`` 管理树状标签（如
+``animal/cat/british``）。选择节点即显示该节点与全部子节点下的图片；可一
+键为所选图片添加或移除标签。与右键菜单的扁平标签并行。
+
+右键 ``Index Keywords`` 会把所选图片的 XMP 关键字加入图库。Lightroom 或 darktable
+写的关键字层级（``lr:hierarchicalSubject``，如 ``Places|Taiwan|Taipei``）会成为
+标签路径 ``Places/Taiwan/Taipei``；只是重复这些层级的 ``Places``／``Taiwan``／
+``Taipei`` 零散关键字不会再另外加入。
+
+Token 批量重命名
+^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Batch`` > ``Token Batch Rename`` 提供实时预览，输入
+``{date:yyyymmdd}_{camera}_{counter:04}{ext}`` 等模板后立即显示每个文件的
+新名称；冲突会被高亮。支持 tokens：``{name} {ext} {counter[:NN]}
+{date[:fmt]} {width} {height} {wxh} {size_kb} {camera} {year} {month} {day}
+{hour} {minute}``。另一个选中文件现在的名称不算冲突：重新编号
+（``002`` → ``003``、``003`` → ``004``）或互换两个名称时会重命名整批。Batch Rename
+也一样。
+
+元数据导出
+^^^^^^^^^^
+
+``Extra Tools`` > ``Library & Metadata`` > ``Export Metadata (CSV / JSON)`` 会为当前视图中的每张图
+片输出一行，包含 EXIF、尺寸、颜色标签、评分、收藏、分层标签、分拣状态
+与笔记。方便接入电子表格或外部流程。
+
+XMP Sidecar（other XMP-aware photo managers 互通）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Imervue 支持读写 Adobe XMP sidecar 文件（``photo.jpg`` ↔ ``photo.xmp``），
+让星级、标题、描述、关键字与颜色标签可与 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
+等 XMP 感知工具双向同步。
+
+保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。
+
+除了 ``photo.xmp``\ （Lightroom、Bridge），darktable 与 digiKam 写的
+``photo.jpg.xmp`` 在它是唯一的 sidecar 时也会读取并更新。颜色标签看得懂
+Lightroom 的写法（``Red`` … ``Purple``）与 Bridge 的写法（``Select``、``Second``、
+``Approved``、``Review``、``To Do``），导出时按 Lightroom 的写法写入；没有对应颜色的
+自定义标签会留在 sidecar 里。
+
+被拒绝的照片（Lightroom、Bridge、darktable 的 ``xmp:Rating`` -1）导入后成为筛选的
+**拒绝**\ 且不带星级，**拒绝**\ 导出时写成 -1。sidecar 不是拒绝时会解除「拒绝」，
+「选用」则不受影响。
+
+没有 sidecar 的文件会读取（并导入）文件本身内嵌的数据：先读 XMP（JPEG、PNG、WebP、
+TIFF、CR3、RW2、ORF、RAF），再读 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的评级与关键字
+存在这里，Windows 文件资源管理器与部分相机的星级也在这里。有 sidecar 时以 sidecar 为准。
+
+``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` 有两个按钮，作用于当前视图中的每张图片：
+
+- **Export sidecars** — 将每张图片的星级 / 标题 / 描述 / 关键字 / 颜色标签写入它的 sidecar。
+- **Import sidecars** — 把 sidecar 的内容读回 Imervue 自己的记录。
+
+XML 解析通过 ``defusedxml`` 进行，避免 XXE / billion-laughs 等攻击。
+
+**EXIF 侧边栏** 亦提供可点击的 **星级快速条** — 设置的星级即为 XMP 导出的值。
+
+分拣（Pick / Reject）
+^^^^^^^^^^^^^^^^^^^^^
+
+旗标式的三态旗标。``P`` 将当前或选中的所有 tile 标为 Pick；
+``Shift + X`` 标为 Reject；``U`` 取消。``Filter`` > ``By Cull State`` 可只
+显示某种状态；``Extra Tools`` > ``Workflow`` > ``Culling`` 提供对话框并带有
+**Delete all rejects** 按钮，可从磁盘永久删除被淘汰文件。
+
+暂存篮
+^^^^^^
+
+``Extra Tools`` > ``Workflow`` > ``Staging Tray`` 是跨文件夹的暂存篮。任意 tile 可加入篮中
+（重启后保留），再一键将整篮移动或复制到目标文件夹。适合从多次拍摄中
+汇总出精选再导出。
+
+双窗格文件管理
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` 提供 双窗格的双
+树视图，可在两侧文件夹之间直接移动或复制选中项。
+
+时间轴视图
+^^^^^^^^^^
+
+``Extra Tools`` > ``Views`` > ``Timeline View`` 按「日／月／年」分组当前图片集（Google
+Photos 风格）。日期优先取 EXIF ``DateTimeOriginal``，否则使用文件修改时间。
+双击图片可进入深度缩放。
+
+拖拽至外部应用
+^^^^^^^^^^^^^^
+
+从\ **已选中** tile 按住拖拽，即可将文件丢入资源管理器、Chrome、Discord 等
+支持 file URL 的应用；拖拽预览为 tile 缩略图。
+
+单张图片笔记
+^^^^^^^^^^^^
+
+EXIF 侧栏包含 **Notes** 文本框，输入内容会经短暂去抖后自动写入索引；笔记
+按图片路径保存，重新扫描也能保留。
+
+----
+
+高级 Develop 与合成
+-------------------
+
+色调曲线（Tone Curve）
+^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Tone Curve`` 打开可拖拽控制点的曲线编辑器，提供 RGB、
+R、G、B 四条通道。点击空白处新增控制点、拖拽移动、右键删除。点之间
+以单调三次（monotone cubic）插值，曲线存在 recipe 中渲染时非破坏性生效。
+
+应用 .cube LUT
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` 可载入任意 Adobe ``.cube`` 文件
+（1D / 3D，最高 64³）。DaVinci Resolve 的 ``LUT_1D_INPUT_RANGE`` /
+``LUT_3D_INPUT_RANGE`` 会像 ``DOMAIN_MIN`` / ``DOMAIN_MAX`` 一样设定输入范围，带 BOM
+的文件也能读取。LUT 以 ``lru_cache`` 按路径 + mtime 缓存，使用
+三线性插值并通过强度滑块与原图混合，LUT 路径与强度存入 recipe。
+
+虚拟副本（Virtual Copies）
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Workflow`` > ``Virtual Copies`` 为同一张图创建多组命名 recipe
+快照。保存当前编辑后继续实验，之后随时切回任一版本；副本与主
+recipe 同存，重置主 recipe 也不会消失。
+
+HDR 合成
+^^^^^^^^
+
+``Extra Tools`` > ``Multi-Image`` > ``HDR Merge`` 使用 OpenCV Mertens 曝光融合合并
+多张不同曝光。可勾选 Align 先以 ``cv2.AlignMTB`` 对齐，输出写到
+指定路径，不影响源文件。
+
+全景拼接
+^^^^^^^^
+
+``Extra Tools`` > ``Multi-Image`` > ``Panorama Stitch`` 使用 OpenCV ``Stitcher`` 拼接
+重叠影像，风景 / 城市用 **Panorama** 模式，平面文档用 **Scans**
+模式，可自动裁掉黑边。
+
+景深合成（Focus Stacking）
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Multi-Image`` > ``Focus Stacking`` 融合不同对焦距离的多张图像，
+以 Laplacian 方差选取每像素最清晰的来源，并用高斯平滑避免接缝。
+默认启用 ECC 对齐以补手持位移。
+
+修复画笔
+^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Healing Brush`` 在最大 720 px 长边的预览中显示当前
+图像。左键添加圆形修复区，右键移除，半径滑块控制新区域大小。应用
+时使用 OpenCV inpainting（Telea 快 / Navier-Stokes 平滑），输出为
+新文件。
+
+镜头校正
+^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` 提供四个纯 numpy 滑块：径向
+畸变 ``k1``\ （桶形 / 枕形）、暗角补偿，以及红 / 蓝通道色差径向缩放。
+因尺寸可能改变，结果输出为新文件而非写入 recipe。
+
+地图视图
+^^^^^^^^
+
+``Extra Tools`` > ``Views`` > ``Map View`` 通过 Leaflet + OpenStreetMap（需
+``PySide6.QtWebEngineWidgets``）显示所有含 GPS 的照片；未安装
+WebEngine 时降级为坐标列表。
+
+日历视图
+^^^^^^^^
+
+``Extra Tools`` > ``Views`` > ``Calendar View`` 用 ``QCalendarWidget`` 高亮有
+照片的日期（依序 EXIF ``DateTimeOriginal`` → ``DateTimeDigitized``
+→ 文件 mtime）。选中日期列出当日照片，双击在主视图中打开。
+
+人脸检测
+^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Face Detection`` 使用 OpenCV Haar 正脸分类器检测
+脸部并以矩形标注。在列表双击输入姓名，保存后写入 recipe 的
+``extra['face_tags']``。此为经典算法，适合「找出脸的位置」，并
+非现代 CNN 识别的替代。
+需要 OpenCV 4（``pip install "opencv-python<5"``）：OpenCV 5 已移除 Haar
+分类器，此时对话框会给出提示而不进行检测。
+
+局部调整蒙版
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Local Adjustment Masks`` 支持画笔 / 放射 / 线性
+渐变三种蒙版。每个蒙版都有独立的曝光、亮度、对比、饱和度、色温、
+色调 delta 和羽化滑块，保存到 ``recipe.extra['masks']``，以非破坏
+方式在加载时混合到原图。
+
+色调分离
+^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Split Toning`` 对阴影和高光分别应用不同色相与
+饱和度，并通过平衡枢纽决定边界。保存在 ``recipe.extra`` 中，并在
+develop pipeline 的 tone curve 之后应用。
+
+仿制图章
+^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Clone Stamp`` 以羽化方式把源区块复制到目标，
+是修复画笔的硬边版本。Shift+点击设定源点，单击盖章，右键撤销。
+结果输出为新文件，不会影响原图。
+
+裁剪 / 拉直
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` 结合 0..1 归一化裁剪矩形和
+任意角度拉直。输出会自动裁剪到最大内接矩形，旋转后不会产生黑边。
+
+自动拉直
+^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Auto-Straighten`` 通过 Hough line 检测主要的地
+平线或垂直线，给出建议旋转角度。应用前可以手动微调。
+
+降噪 / 锐化
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Noise Reduction / Sharpening`` 先用边缘保留的
+bilateral 降噪，再用 unsharp mask 锐化。「仅亮度通道」会保留色噪，
+但能压平明度噪声而不糊掉色彩边缘。
+
+天空 / 背景
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Retouch & Transform`` > ``Sky / Background`` 把检测到的天空替换成渐变，
+或直接把背景去除成透明 / 白底。安装 ``rembg`` (U²-Net) 时会自动
+启用神经网络前景分割。
+
+屏幕校样
+^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Soft Proof`` 加载 ICC 描述文件，将图像转入目标
+色域再转回，并用洋红显示往返过程中被裁切的像素 — 打印前的快速
+色域检查。
+
+色调与创意效果
+^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` 汇集了一组一次性、应用即保存的
+效果，每个都是一层简单的滑块对话框，底层是纯 NumPy 变换（同样的逻辑也以 MCP
+工具的形式提供）：
+
+- **渐变滤镜（Graduated Density）** — 由角度、硬度与偏移定义的线性中性密度
+  渐变，可加色调；无需手绘蒙版即可压暗天空或前景。
+- **色调均衡器（Tone Equalizer）** — 按亮度分区独立调整曝光（黑 → 白各一个
+  滑块），经平滑蒙版让调整贴合场景的色调。
+- **细节均衡器（Detail Equalizer）** — 每个频带一个增益滑块（细部纹理 → 大尺度
+  对比），是单一清晰度滑块的多尺度替代方案。
+- **胶片色调映射（Filmic Tone Map）** — Reinhard 或 Hable 高光滚降，加上围绕支点的
+  对比度与饱和度恢复，适合高反差的单张曝光。
+- **Velvia** — 按亮度加权的饱和度提升，增强暗淡的颜色，同时避开已饱和的颜色与阴影。
+- **胶片负片（Film Negative）** — 反转扫描的彩色负片，除去自动估算的橙色片基，
+  附输出 gamma 滑块。
+- **去色边（Defringe）** — 去除高反差边缘上的紫 / 绿色差色边，不影响平坦的色块。
+- **浮雕（Emboss）** — 以亮度高度场生成方向光浮雕（方位角 / 仰角 / 深度 + 灰度
+  开关）。
+- **极坐标（Polar Coordinates）** — 把画面卷成圆盘或展开（小星球 / 极坐标反转
+  效果）。
+- **万花筒（Kaleidoscope）** — 将单个角度楔形镜像成 ``n`` 重对称。
+- **磨砂玻璃（Frosted Glass）** — 确定性的、可用种子复现的局部像素散射。
+- **边框与说明文字（Frame & Caption）** — 任意颜色的卡纸边框、可选的宝丽来风格
+  加宽底边，以及以独立颜色烙在底边上的说明文字。
+
+GPS 地理标记
+^^^^^^^^^^^^
+
+``Extra Tools`` > ``Library & Metadata`` > ``GPS Geotag`` 读取已有的 EXIF GPS 坐标并允许
+编辑或设定新的十进制度数。JPEG 无需额外套件即可直接写入：只替换其 EXIF 区块，
+像素、其他标签与缩略图都保持不变。WebP 也以相同方式处理；其他格式无法标记。
+
+**EXIF 编辑器**\ （EXIF 侧栏的 ``Edit EXIF`` 按钮）可修改描述、作者、版权、相机厂牌 / 型号与注释。JPEG 与 WebP 无需额外套件，只重写其 EXIF 区块；其他格式会说明无法编辑的原因。
+
+网页相册
+^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Web Gallery`` 把选中的图片（或整个文件夹）输出为自包含的
+网站：带灯箱的 ``index.html``、JPEG 缩略图，以及原图的副本（取消勾选
+**复制原始文件（可移植）** 就不复制原图）。可以设定页面标题与缩略图的尺寸和质量。页面不需要
+服务器，直接从磁盘打开或放到任何静态托管空间都可以。
+
+勾选 **客户审阅** 就能把相册发给客户收集意见。每张图片下方会有一个留言框；留言保存在审阅者的
+浏览器里，页面上的 **Export comments** 按钮会把所有留言保存为一个 JSON 文件。
+
+打印排版
+^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Print Layout`` 把多张图片排版为多页 PDF，可设
+定页面大小、方向、网格、边距、间隔与裁切标记。需要 ``reportlab``。
 
 ----
 

@@ -2501,6 +2501,43 @@ konvertiert das Bild durch es hindurch und zurück und hebt in Magenta die Pixel
 die bei diesem Round-Trip beschnitten wurden — eine schnelle Außer-Gamut-Prüfung vor
 dem Druck.
 
+Tonwert- und Kreativeffekte
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``Extra Tools`` > ``Develop (Non-Destructive)`` bündelt eine Reihe von Einmal-Effekten,
+die angewendet und gleich gespeichert werden. Jeder ist ein schlanker Schieberegler-Dialog
+über einer reinen NumPy-Transformation (dieselbe Logik steht auch als MCP-Werkzeug
+bereit):
+
+- **Graduated Density** — ein linearer Neutraldichte-Gradient, festgelegt über Winkel,
+  Härte und Versatz, optional eingefärbt; dunkelt Himmel oder Vordergrund ohne
+  manuelle Maske ab.
+- **Tone Equalizer** — eigene Belichtung pro Luminanzzone (je ein Schieberegler von
+  Schwarz bis Weiß) über einer geglätteten Maske, sodass die Anpassung den Tonwerten
+  der Szene folgt.
+- **Detail Equalizer** — ein Verstärkungsregler pro Frequenzband (feine Textur →
+  grober Kontrast), die mehrskalige Alternative zu einem einzelnen Klarheitsregler.
+- **Filmic Tone Map** — ein sanftes Abrollen der Lichter nach Reinhard oder Hable mit
+  Kontrast um einen Drehpunkt und Sättigungswiederherstellung, für kontrastreiche
+  Einzelbelichtungen.
+- **Velvia** — eine luminanzgewichtete Sättigungsanhebung, die gedämpfte Farben
+  verstärkt und bereits gesättigte Farben sowie die Schatten schont.
+- **Film Negative** — ein gescanntes Farbnegativ umkehren und dabei die automatisch
+  geschätzte orange Filmbasis herausrechnen, mit einem Schieberegler für das
+  Ausgabe-Gamma.
+- **Defringe** — violette / grüne Farbsäume durch chromatische Aberration entlang
+  kontrastreicher Kanten entsättigen; flächige Farben bleiben unberührt.
+- **Emboss** — ein Relief mit gerichtetem Licht aus dem Luminanz-Höhenfeld
+  (Azimut / Elevation / Tiefe + Graustufen-Schalter).
+- **Polar Coordinates** — das Bild zu einer Scheibe aufwickeln oder abwickeln (der
+  Tiny-Planet- bzw. Polarinversions-Look).
+- **Kaleidoscope** — einen Winkelsektor zu ``n``-facher Symmetrie spiegeln.
+- **Frosted Glass** — eine deterministische, über einen Seed reproduzierbare lokale
+  Pixelstreuung.
+- **Frame & Caption** — ein Passepartout-Rand in beliebiger Farbe, ein optionaler
+  breiterer unterer Streifen im Polaroid-Stil und eine darin eingebrannte
+  Bildunterschrift in eigener Farbe.
+
 GPS-Geotag
 ^^^^^^^^^^
 
