@@ -4,7 +4,9 @@ import importlib
 import importlib.util
 import logging
 import sys
+from collections.abc import Iterator
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -60,75 +62,11 @@ class PluginManager:
 
         self._plugin_dirs = plugin_dirs
 
-        for plugin_dir in plugin_dirs:
-            if not plugin_dir.is_dir():
-                logger.info(f"Plugin directory does not exist, skipping: {plugin_dir}")
-                continue
+        for plugin_class in _plugin_classes(plugin_dirs):
+            self._instantiate(plugin_class)
 
-            # Add plugin dir to sys.path so imports work
-            dir_str = str(plugin_dir)
-            if dir_str not in sys.path:
-                sys.path.insert(0, dir_str)
-
-            for candidate in sorted(plugin_dir.iterdir()):
-                if candidate.is_dir() and (candidate / "__init__.py").exists():
-                    self._load_plugin_package(candidate)
-                elif (
-                    candidate.is_file()
-                    and candidate.suffix == ".py"
-                    and candidate.stem != "__init__"
-                ):
-                    self._load_plugin_file(candidate)
-
-    def _load_plugin_package(self, package_dir: Path) -> None:
-        """Load a plugin from a package directory."""
-        module_name = package_dir.name
-        try:
-            logger.info("Importing plugin package '%s' from %s", module_name, package_dir)
-            module = importlib.import_module(module_name)
-            logger.info("Successfully imported '%s', registering...", module_name)
-            self._register_from_module(module, package_dir)
-        except Exception as e:
-            logger.exception("Failed to load plugin package '%s': %s", module_name, e)
-
-    def _load_plugin_file(self, file_path: Path) -> None:
-        """Load a plugin from a single .py file."""
-        module_name = file_path.stem
-        try:
-            spec = importlib.util.spec_from_file_location(module_name, file_path)
-            if spec and spec.loader:
-                module = importlib.util.module_from_spec(spec)
-                sys.modules[module_name] = module
-                spec.loader.exec_module(module)
-                self._register_from_module(module, file_path)
-        except Exception as e:
-            logger.exception(f"Failed to load plugin file '{file_path.name}': {e}")
-
-    def _register_from_module(self, module, source: Path) -> None:
-        """Extract plugin_class from a module and instantiate it."""
-        plugin_class = getattr(module, "plugin_class", None)
-
-        if plugin_class is None:
-            # Search for ImervuePlugin subclasses in the module
-            for attr_name in dir(module):
-                attr = getattr(module, attr_name)
-                if (isinstance(attr, type)
-                        and issubclass(attr, ImervuePlugin)
-                        and attr is not ImervuePlugin):
-                    plugin_class = attr
-                    break
-
-        if plugin_class is None:
-            logger.warning(f"No plugin class found in '{source}', skipping.")
-            return
-
-        if not (isinstance(plugin_class, type) and issubclass(plugin_class, ImervuePlugin)):
-            logger.warning(
-                f"plugin_class in '{source}' is not a subclass of ImervuePlugin, skipping."
-            )
-            return
-
-        # Check for duplicates
+    def _instantiate(self, plugin_class: type[ImervuePlugin]) -> None:
+        """Instantiate ``plugin_class`` once, run ``on_plugin_loaded`` and merge its strings."""
         for existing in self._plugins:
             if type(existing).__name__ == plugin_class.__name__:
                 logger.warning(
@@ -226,3 +164,90 @@ class PluginManager:
             except Exception as e:
                 logger.exception(f"[{plugin.plugin_name}] on_plugin_unloaded error: {e}")
         self._plugins.clear()
+
+
+def _plugin_candidates(plugin_dirs: list[Path]) -> Iterator[Path]:
+    """Yield each plugin package directory and single-file plugin, in name order.
+
+    Each existing directory is put on ``sys.path`` first, so plugins import
+    their own modules as ``<plugin_name>.<module>``.
+    """
+    for plugin_dir in plugin_dirs:
+        if not plugin_dir.is_dir():
+            logger.info(f"Plugin directory does not exist, skipping: {plugin_dir}")
+            continue
+
+        # Add plugin dir to sys.path so imports work
+        dir_str = str(plugin_dir)
+        if dir_str not in sys.path:
+            sys.path.insert(0, dir_str)
+
+        yield from filter(_is_plugin_candidate, sorted(plugin_dir.iterdir()))
+
+
+def _is_plugin_candidate(path: Path) -> bool:
+    """A package directory with an ``__init__.py``, or a ``.py`` file other than ``__init__``."""
+    if path.is_dir():
+        return (path / "__init__.py").exists()
+    return path.is_file() and path.suffix == ".py" and path.stem != "__init__"
+
+
+def _import_plugin(candidate: Path) -> ModuleType | None:
+    """Import a plugin package (cached by ``importlib``) or execute a single-file plugin."""
+    if candidate.is_dir():
+        module_name = candidate.name
+        logger.info("Importing plugin package '%s' from %s", module_name, candidate)
+        module = importlib.import_module(module_name)
+        logger.info("Successfully imported '%s', registering...", module_name)
+        return module
+    module_name = candidate.stem
+    spec = importlib.util.spec_from_file_location(module_name, candidate)
+    if not (spec and spec.loader):
+        return None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _plugin_class_in(module: ModuleType, source: Path) -> type[ImervuePlugin] | None:
+    """Return the module's ``plugin_class``, else its first ImervuePlugin subclass."""
+    plugin_class = getattr(module, "plugin_class", None)
+
+    if plugin_class is None:
+        # Search for ImervuePlugin subclasses in the module
+        for attr_name in dir(module):
+            attr = getattr(module, attr_name)
+            if (isinstance(attr, type)
+                    and issubclass(attr, ImervuePlugin)
+                    and attr is not ImervuePlugin):
+                plugin_class = attr
+                break
+
+    if plugin_class is None:
+        logger.warning(f"No plugin class found in '{source}', skipping.")
+        return None
+
+    if not (isinstance(plugin_class, type) and issubclass(plugin_class, ImervuePlugin)):
+        logger.warning(
+            f"plugin_class in '{source}' is not a subclass of ImervuePlugin, skipping."
+        )
+        return None
+    return plugin_class
+
+
+def _plugin_classes(plugin_dirs: list[Path]) -> Iterator[type[ImervuePlugin]]:
+    """Import every plugin under ``plugin_dirs`` and yield its plugin class.
+
+    A plugin that fails to import is logged and skipped, so one broken plugin
+    never stops the others from loading.
+    """
+    for candidate in _plugin_candidates(plugin_dirs):
+        try:
+            module = _import_plugin(candidate)
+            plugin_class = None if module is None else _plugin_class_in(module, candidate)
+        except Exception as e:  # plugin sandboxing: any import-time error
+            logger.exception(f"Failed to load plugin '{candidate.name}': {e}")
+            continue
+        if plugin_class is not None:
+            yield plugin_class

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `b98b149` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `a77e332` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 900 | 150,947 |
+| `tests/` | 901 | 151,045 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,537 |
 | `Imervue/puppet/` | 57 | 15,410 |
@@ -78,15 +78,15 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/library/` | 32 | 4,308 |
 | `Imervue/menu/` | 11 | 3,594 |
 | `Imervue/` 根層 | 5 | 1,598 |
-| `Imervue/plugin/` | 10 | 2,246 |
+| `Imervue/plugin/` | 10 | 2,271 |
 | `Imervue/system/` | 32 | 3,176 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,455 |
-| **總計** | **1,751** | **334,738** |
+| **總計** | **1,752** | **334,861** |
 
-其中 `Imervue/` 套件本身 787 檔 / 169,336 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,361 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -908,7 +908,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `plugin_base.py` | 206 | `ImervuePlugin` 基底類別，12 個 hook：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
-| `plugin_manager.py` | 228 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
+| `plugin_manager.py` | 253 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
 | `plugin_downloader.py` | 530 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
 | `pip_installer.py` | 850 | 外掛相依安裝器：下載內嵌 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔；再匯出 `python_finder` 的名稱（外掛依賴 `pip_installer._find_python`） |
 | `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-900 個檔、150,947 行。`pyproject.toml` 定義三個互斥層級 marker：
+901 個檔、151,045 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
