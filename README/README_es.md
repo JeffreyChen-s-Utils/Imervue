@@ -381,7 +381,7 @@ Atajos de una letra: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z 
 
 ### Pinceles
 
-Seis tipos de pincel — Lápiz / Pluma / Marcador / Aerógrafo / Acuarela / Sumi — más predefinidos basados en ellos (Crayón, Resaltador, Caligrafía sumi …). El dock Pincel ajusta Tamaño / Opacidad / Dureza / Densidad / Modo de mezcla; la barra de opciones lleva Tamaño / Opacidad / Dureza. La presión del lápiz de la tableta escala el tamaño y la opacidad. Captura de punta de pincel desde una selección, **File > Import brush preset…**.
+Seis tipos de pincel — Lápiz / Pluma / Marcador / Aerógrafo / Acuarela / Sumi — más predefinidos basados en ellos (Crayón, Resaltador, Caligrafía sumi …). El dock Pincel ajusta Tamaño / Opacidad / Dureza / Densidad / Modo de mezcla; la barra de opciones lleva Tamaño / Opacidad / Dureza. La presión del lápiz de la tableta escala el tamaño y la opacidad según la curva definida en **Settings > Pressure Curve…**; un ratón dibuja a plena presión. Captura de punta de pincel desde una selección, **File > Import brush preset…**.
 
 ### Capas
 

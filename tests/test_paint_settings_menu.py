@@ -98,7 +98,27 @@ def test_open_pressure_curve_creates_dialog(qapp, monkeypatch):
         ws.deleteLater()
 
 
+def test_open_pressure_curve_stores_the_edited_curve(qapp, monkeypatch):
+    """The curve used to be set on the state unsaved, and no stroke ever read it."""
+    from Imervue.paint.pressure_curve import HARD_FLOOR
+    from Imervue.paint.pressure_curve_dialog import PressureCurveDialog
+
+    def fake_exec(self):
+        self.editor().set_points(HARD_FLOOR.points)
+        return PressureCurveDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(PressureCurveDialog, "exec", fake_exec)
+    ws = PaintWorkspace()
+    try:
+        ws._settings_menu_bridge.open_pressure_curve()  # noqa: SLF001
+        assert ws.state().pressure_curve == HARD_FLOOR
+        assert user_setting_dict["paint_state"]["pressure_curve"] == HARD_FLOOR.to_dict()
+    finally:
+        ws.deleteLater()
+
+
 def test_open_pressure_curve_cancel_does_not_assign_state(qapp, monkeypatch):
+    from Imervue.paint.pressure_curve import PressureCurve
     from Imervue.paint.pressure_curve_dialog import PressureCurveDialog
     monkeypatch.setattr(
         PressureCurveDialog, "exec",
@@ -109,7 +129,7 @@ def test_open_pressure_curve_cancel_does_not_assign_state(qapp, monkeypatch):
         bridge = ws._settings_menu_bridge   # noqa: SLF001
         bridge.open_pressure_curve()
         # No assignment because the dialog was cancelled.
-        assert not hasattr(ws.state(), "pressure_curve")
+        assert ws.state().pressure_curve == PressureCurve()
     finally:
         ws.deleteLater()
 

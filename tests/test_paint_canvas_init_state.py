@@ -25,7 +25,7 @@ _DEFAULTS = {
     "_onion_skin_buffer_id": None, "_bleed_guides_visible": False,
     "_bleed_guides": None, "_fit_pending": False, "_fitted_widget_size": (0, 0),
     "_last_resize_size": (0, 0), "_user_view_locked": False, "_dispatcher": None,
-    "_panning": False, "_pan_anchor": (0, 0), "_last_pressure": 1.0,
+    "_panning": False, "_pan_anchor": (0, 0),
     "_marquee_segments": None, "_marquee_phase": 0, "_tool_overlay": None,
 }
 

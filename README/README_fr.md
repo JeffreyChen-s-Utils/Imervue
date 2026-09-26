@@ -381,7 +381,7 @@ Raccourcis à une lettre : `B / E / G / I / M / L / W / V / T / U / R / P / S / 
 
 ### Pinceaux
 
-Six types de pinceaux — Crayon / Stylo / Marqueur / Aérographe / Aquarelle / Sumi — plus des préréglages construits sur eux (Pastel gras, Surligneur, Calligraphie sumi …). Le dock Pinceau règle Taille / Opacité / Dureté / Densité / Mode de fusion ; la barre d'options porte Taille / Opacité / Dureté. La pression du stylet de tablette module la taille et l'opacité. Capture de pointe de pinceau depuis une sélection, **File > Import brush preset…**.
+Six types de pinceaux — Crayon / Stylo / Marqueur / Aérographe / Aquarelle / Sumi — plus des préréglages construits sur eux (Pastel gras, Surligneur, Calligraphie sumi …). Le dock Pinceau règle Taille / Opacité / Dureté / Densité / Mode de fusion ; la barre d'options porte Taille / Opacité / Dureté. La pression du stylet de tablette module la taille et l'opacité selon la courbe définie dans **Settings > Pressure Curve…** ; une souris dessine à pleine pression. Capture de pointe de pinceau depuis une sélection, **File > Import brush preset…**.
 
 ### Calques
 

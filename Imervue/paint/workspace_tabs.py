@@ -113,6 +113,11 @@ class TabManagerMixin:
         canvas = PaintCanvas(self)
         canvas.new_blank_document()
         canvas.set_tool_dispatcher(self._dispatcher)
+        # What _build_size_hud / _wire_canvas_signals give the first tab: the
+        # canvas reads the tool state for Hand / Zoom, [ / ] and pen pressure,
+        # and its right-click menu is a custom one that must be connected.
+        canvas.set_size_hud(self._size_hud, self._state)
+        canvas.customContextMenuRequested.connect(self._show_canvas_context_menu)
         idx = self._tabs.addTab(canvas, self._next_untitled_tab_name())
         self._tabs.setCurrentIndex(idx)   # -> _on_tab_changed sets self._canvas
         # Seed the new canvas's undo stack so its first stroke is undoable.

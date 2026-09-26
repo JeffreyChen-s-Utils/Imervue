@@ -385,7 +385,7 @@ Single-letter shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C 
 
 ### Brushes
 
-Six brush kinds — Pencil / Pen / Marker / Airbrush / Watercolour / Sumi — plus presets built on them (Crayon, Highlight, Sumi calligraphy …). The Brush dock sets Size / Opacity / Hardness / Density / Blend mode; the Options bar carries Size / Opacity / Hardness. Tablet pen pressure scales size and opacity. Brush-tip capture from a selection, **File > Import brush preset…**.
+Six brush kinds — Pencil / Pen / Marker / Airbrush / Watercolour / Sumi — plus presets built on them (Crayon, Highlight, Sumi calligraphy …). The Brush dock sets Size / Opacity / Hardness / Density / Blend mode; the Options bar carries Size / Opacity / Hardness. Tablet pen pressure scales size and opacity through the curve set in **Settings > Pressure Curve…**; a mouse draws at full pressure. Brush-tip capture from a selection, **File > Import brush preset…**.
 
 ### Layers
 

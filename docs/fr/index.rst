@@ -668,7 +668,10 @@ Pinceaux
 Pastel gras, Surligneur et Calligraphie sumi sont des préréglages de pinceau construits sur
 ces types. Chaque pinceau expose Taille / Opacité / Dureté / Densité / Mode de fusion dans
 le **dock Pinceau** ; la **barre d'options** supérieure porte Taille / Opacité / Dureté.
-La pression du stylet de tablette module directement la taille et l'opacité du pinceau.
+La pression du stylet de tablette module la taille et l'opacité du pinceau selon la courbe
+définie dans ``Paramètres`` > ``Courbe de pression…`` (faites glisser un point, cliquez pour
+en ajouter un, faites un clic droit pour en retirer un, ou partez de Linéaire / Douce /
+Dure) ; une souris dessine à pleine pression.
 Utilisez ``Édition`` > ``Capturer une pointe de pinceau…`` pour transformer une sélection en
 rectangle en pointe de pinceau personnalisée.
 

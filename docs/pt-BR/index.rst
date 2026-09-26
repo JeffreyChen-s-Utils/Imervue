@@ -672,7 +672,10 @@ Giz de cera, Marca-texto e caligrafia Sumi são presets de pincel construídos
 sobre esses tipos. Cada pincel expõe Tamanho / Opacidade / Dureza / Densidade /
 Modo de Mistura no **dock Pincel**; a **barra de Opções** superior traz
 Tamanho / Opacidade / Dureza. A pressão da caneta da mesa digitalizadora escala
-diretamente o tamanho e a opacidade do pincel. Use ``Editar`` >
+o tamanho e a opacidade do pincel pela curva definida em ``Configurações`` >
+``Curva de Pressão…`` (arraste um ponto, clique para adicionar um, clique com o
+botão direito para remover um, ou comece por Linear / Suave / Dura); um mouse
+desenha com pressão total. Use ``Editar`` >
 ``Capturar Ponta de Pincel…`` para transformar uma seleção em uma ponta de
 pincel personalizada.
 

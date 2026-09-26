@@ -381,7 +381,7 @@ Einzelbuchstaben-Shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S /
 
 ### Brushes
 
-Sechs Brush-Arten — Pencil / Pen / Marker / Airbrush / Watercolour / Sumi — plus darauf aufbauende Presets (Crayon, Highlight, Sumi calligraphy …). Das Brush-Dock stellt Size / Opacity / Hardness / Density / Blend-Mode ein; die Options-Bar bietet Size / Opacity / Hardness. Der Stiftdruck des Tabletts skaliert Größe und Opazität. Brush-Tip-Aufnahme aus einer Auswahl, **File > Import brush preset…**.
+Sechs Brush-Arten — Pencil / Pen / Marker / Airbrush / Watercolour / Sumi — plus darauf aufbauende Presets (Crayon, Highlight, Sumi calligraphy …). Das Brush-Dock stellt Size / Opacity / Hardness / Density / Blend-Mode ein; die Options-Bar bietet Size / Opacity / Hardness. Der Stiftdruck des Tabletts skaliert Größe und Opazität über die in **Settings > Pressure Curve…** eingestellte Kurve; eine Maus zeichnet mit vollem Druck. Brush-Tip-Aufnahme aus einer Auswahl, **File > Import brush preset…**.
 
 ### Layers
 

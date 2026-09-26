@@ -279,11 +279,10 @@ class PaintCanvas(
         self._user_view_locked = False
 
     def _init_interaction_state(self) -> None:
-        """Tool dispatch, panning, pressure, marquee animation and the drag-preview overlay."""
+        """Tool dispatch, panning, marquee animation and the drag-preview overlay."""
         self._dispatcher: ToolDispatcher | None = None
         self._panning = False
         self._pan_anchor = (0, 0)
-        self._last_pressure = 1.0
 
         # Cached marquee segments — recomputed when set_selection() is
         # called, redrawn under an animated phase by _marquee_timer.

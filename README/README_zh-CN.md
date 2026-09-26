@@ -380,7 +380,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 ### 笔刷
 
-六种笔刷类型 — 铅笔 / 钢笔 / 马克笔 / 喷枪 / 水彩 / 水墨 — 以及基于它们的预设（Crayon、Highlight、Sumi calligraphy …）。笔刷停靠设置大小 / 不透明度 / 硬度 / 密度 / 混合模式；选项栏提供大小 / 不透明度 / 硬度。数位板笔压会缩放大小与不透明度。选择捕获笔尖、**File > Import brush preset…**。
+六种笔刷类型 — 铅笔 / 钢笔 / 马克笔 / 喷枪 / 水彩 / 水墨 — 以及基于它们的预设（Crayon、Highlight、Sumi calligraphy …）。笔刷停靠设置大小 / 不透明度 / 硬度 / 密度 / 混合模式；选项栏提供大小 / 不透明度 / 硬度。数位板笔压会依 **Settings > Pressure Curve…** 中设置的曲线缩放大小与不透明度；鼠标始终以最大笔压绘制。选择捕获笔尖、**File > Import brush preset…**。
 
 ### 图层
 

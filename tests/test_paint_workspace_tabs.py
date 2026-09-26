@@ -74,6 +74,18 @@ def test_new_tab_canvas_uses_workspace_dispatcher(workspace):
     assert new_canvas._dispatcher is workspace._dispatcher  # noqa: SLF001
 
 
+def test_new_tab_canvas_gets_the_tool_state_and_the_context_menu(workspace, monkeypatch):
+    """Only the first tab had them: Hand, Zoom, [ / ] and the right-click menu did nothing in the others."""
+    from PySide6.QtCore import QPoint
+    shown = []
+    monkeypatch.setattr(workspace, "_show_canvas_context_menu", shown.append)
+    canvas = workspace.new_tab()
+    assert canvas._tool_state_for_hud is workspace._state  # noqa: SLF001
+    assert canvas._size_hud is workspace._size_hud  # noqa: SLF001
+    canvas.customContextMenuRequested.emit(QPoint(3, 4))
+    assert shown == [QPoint(3, 4)]
+
+
 # ---------------------------------------------------------------------------
 # Tab switching
 # ---------------------------------------------------------------------------

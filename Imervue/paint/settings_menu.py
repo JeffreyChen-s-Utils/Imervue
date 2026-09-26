@@ -59,15 +59,12 @@ class _SettingsMenuBridge:
         self._workspace = workspace
 
     def open_pressure_curve(self) -> None:
-        from Imervue.paint.pressure_curve import PressureCurve
+        """Edit the tablet pressure curve; OK stores it in the tool state."""
         from Imervue.paint.pressure_curve_dialog import PressureCurveDialog
         state = self._workspace.state()
-        current = getattr(state, "pressure_curve", PressureCurve())
-        dialog = PressureCurveDialog(curve=current, parent=self._workspace)
+        dialog = PressureCurveDialog(curve=state.pressure_curve, parent=self._workspace)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            # The state may not yet have a pressure_curve field; assign
-            # via setattr so an older state schema doesn't crash.
-            state.pressure_curve = dialog.curve()
+            state.set_pressure_curve(dialog.curve())
 
     def open_shortcuts(self) -> None:
         from Imervue.paint.shortcut_binding import fixed_shortcut_keys

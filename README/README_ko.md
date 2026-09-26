@@ -381,7 +381,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 ### 브러시
 
-브러시 종류 6가지 — 연필 / 펜 / 마커 / 에어브러시 / 수채화 / 먹(Sumi) — 와 이를 기반으로 한 프리셋(Crayon, Highlight, Sumi calligraphy …). Brush 도크에서 Size / Opacity / Hardness / Density / 블렌드 모드를 설정하고, 옵션 바에는 Size / Opacity / Hardness가 있습니다. 태블릿 펜 필압이 크기와 불투명도를 조절합니다. 선택 영역으로부터 브러시 팁 캡처, **File > Import brush preset…**.
+브러시 종류 6가지 — 연필 / 펜 / 마커 / 에어브러시 / 수채화 / 먹(Sumi) — 와 이를 기반으로 한 프리셋(Crayon, Highlight, Sumi calligraphy …). Brush 도크에서 Size / Opacity / Hardness / Density / 블렌드 모드를 설정하고, 옵션 바에는 Size / Opacity / Hardness가 있습니다. 태블릿 펜 필압이 **Settings > Pressure Curve…** 에서 설정한 커브에 따라 크기와 불투명도를 조절하며, 마우스는 항상 최대 필압으로 그립니다. 선택 영역으로부터 브러시 팁 캡처, **File > Import brush preset…**.
 
 ### 레이어
 

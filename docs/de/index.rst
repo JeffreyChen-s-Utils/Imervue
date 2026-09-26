@@ -668,7 +668,9 @@ Brushes
 Wachsmalstift, Textmarker und Sumi-Kalligrafie sind Brush-Presets, die auf diesen
 Arten aufbauen. Jeder Brush bietet Größe / Deckkraft / Härte / Dichte / Mischmodus im
 **Brush-Dock**; die obere **Optionsleiste** bietet Größe / Deckkraft / Härte.
-Der Stiftdruck des Tabletts skaliert Größe und Deckkraft des Brushs direkt.
+Der Stiftdruck des Tabletts skaliert Größe und Deckkraft des Brushs über die Kurve aus
+``Einstellungen`` > ``Druckkurve…`` (Punkte ziehen, per Klick hinzufügen, per Rechtsklick
+entfernen oder mit Linear / Weich / Hart beginnen); eine Maus zeichnet mit vollem Druck.
 ``Bearbeiten`` > ``Brush-Spitze erfassen…`` verwandelt eine Auswahl in eine eigene
 Brush-Spitze.
 

@@ -380,7 +380,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 ### 筆刷
 
-六種筆刷類型 — 鉛筆 / 原子筆 / 麥克筆 / 噴槍 / 水彩 / 水墨 — 以及以它們為基礎的預設（Crayon、Highlight、Sumi calligraphy …）。筆刷面板可調大小 / 不透明度 / 硬度 / 密度 / 混合模式；選項列提供大小 / 不透明度 / 硬度。繪圖板筆壓會縮放大小與不透明度。從選取捕獲筆尖、**File > Import brush preset…**。
+六種筆刷類型 — 鉛筆 / 原子筆 / 麥克筆 / 噴槍 / 水彩 / 水墨 — 以及以它們為基礎的預設（Crayon、Highlight、Sumi calligraphy …）。筆刷面板可調大小 / 不透明度 / 硬度 / 密度 / 混合模式；選項列提供大小 / 不透明度 / 硬度。繪圖板筆壓會依 **Settings > Pressure Curve…** 設定的曲線縮放大小與不透明度；滑鼠一律以最大筆壓繪製。從選取捕獲筆尖、**File > Import brush preset…**。
 
 ### 圖層
 

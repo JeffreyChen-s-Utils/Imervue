@@ -667,7 +667,10 @@ Brushes
 Crayon, Highlight and Sumi calligraphy are brush presets built on these
 kinds. Each brush exposes Size / Opacity / Hardness / Density / Blend-mode in
 the **Brush dock**; the top **Options bar** carries Size / Opacity / Hardness.
-Tablet pen pressure scales the brush size and opacity directly. Use ``Edit`` >
+Tablet pen pressure scales the brush size and opacity through the curve set in
+``Settings`` > ``Pressure Curve…`` (drag a point, click to add one, right-click
+to remove one, or start from Linear / Soft / Hard); a mouse draws at full
+pressure. Use ``Edit`` >
 ``Capture Brush Tip…`` to turn a marquee selection into a custom brush tip.
 
 Layers

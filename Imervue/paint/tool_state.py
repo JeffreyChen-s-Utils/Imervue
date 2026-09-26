@@ -21,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from Imervue.paint.pressure_curve import PressureCurve
 from Imervue.paint.rulers import Ruler
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
 
@@ -124,6 +125,7 @@ EVENT_SYMMETRY = "symmetry"    # symmetry mirror mode changed
 EVENT_RULER = "ruler"          # ruler mode / geometry changed
 EVENT_SUB_TOOL = "sub_tool"    # sub-tool registry / active sub-tool changed
 EVENT_EYEDROPPER = "eyedropper"   # eyedropper sampling mode changed
+EVENT_PRESSURE_CURVE = "pressure_curve"   # tablet pressure response changed
 
 
 @dataclass(frozen=True)
@@ -237,6 +239,9 @@ class ToolState:
     # toggle. False keeps the historical "active layer only" behaviour
     # so existing workflows are unchanged.
     eyedropper_sample_all_layers: bool = False
+    # Tablet pen pressure passes through this curve before it scales the
+    # brush size and opacity (Settings > Pressure Curve…). Identity by default.
+    pressure_curve: PressureCurve = field(default_factory=PressureCurve)
     sub_tools: dict[str, list[SubTool]] = field(default_factory=dict)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -452,6 +457,15 @@ class ToolState:
         self._emit(EVENT_EYEDROPPER)
         return True
 
+    def set_pressure_curve(self, curve: PressureCurve) -> bool:
+        """Replace the tablet pressure curve; ``True`` when it changed."""
+        if curve == self.pressure_curve:
+            return False
+        self.pressure_curve = curve
+        self._persist()
+        self._emit(EVENT_PRESSURE_CURVE)
+        return True
+
     def set_fill(self, **kwargs: Any) -> bool:
         """Update fill bucket attributes."""
         new = self.fill
@@ -625,6 +639,7 @@ class ToolState:
             "snap_to_panel": bool(self.snap_to_panel),
             "quick_mask_active": bool(self.quick_mask_active),
             "eyedropper_sample_all_layers": bool(self.eyedropper_sample_all_layers),
+            "pressure_curve": self.pressure_curve.to_dict(),
             "sub_tools": {
                 tool: [_sub_tool_to_dict(st) for st in entries]
                 for tool, entries in self.sub_tools.items()
@@ -680,6 +695,7 @@ class ToolState:
             eyedropper_sample_all_layers=bool(
                 raw.get("eyedropper_sample_all_layers", False),
             ),
+            pressure_curve=_pressure_curve_from_dict(raw.get("pressure_curve")),
             sub_tools=sub_tools,
         )
 
@@ -879,6 +895,16 @@ def _sub_tools_from_dict(raw: Any) -> dict[str, list[SubTool]]:
         if bucket:
             out[tool] = bucket
     return out
+
+
+def _pressure_curve_from_dict(raw: Any) -> PressureCurve:
+    """The saved curve, or the identity when it is missing or malformed."""
+    if raw is None:
+        return PressureCurve()
+    try:
+        return PressureCurve.from_dict(raw)
+    except ValueError:
+        return PressureCurve()
 
 
 def _history_from_list(raw: Any) -> list[tuple[int, int, int]]:

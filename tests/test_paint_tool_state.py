@@ -779,3 +779,32 @@ def test_reset_colors_restores_documented_defaults():
     state.reset_colors()
     assert state.foreground == ts.DEFAULT_FG
     assert state.background == ts.DEFAULT_BG
+
+
+# ---------------------------------------------------------------------------
+# Pressure curve
+# ---------------------------------------------------------------------------
+
+
+def test_pressure_curve_defaults_to_identity():
+    from Imervue.paint.pressure_curve import PressureCurve
+    assert ts.load_tool_state().pressure_curve == PressureCurve()
+
+
+def test_set_pressure_curve_persists_and_emits():
+    from Imervue.paint.pressure_curve import SOFT_TAPER
+    state = ts.load_tool_state()
+    events = []
+    state.subscribe(events.append)
+    assert state.set_pressure_curve(SOFT_TAPER) is True
+    assert state.set_pressure_curve(SOFT_TAPER) is False
+    assert events == [ts.EVENT_PRESSURE_CURVE]
+    saved = user_setting_dict["paint_state"]["pressure_curve"]
+    assert ts.ToolState.from_dict(user_setting_dict["paint_state"]).pressure_curve == SOFT_TAPER
+    assert saved == SOFT_TAPER.to_dict()
+
+
+@pytest.mark.parametrize("raw", [None, "curve", {"points": "no"}, 5])
+def test_a_missing_or_malformed_saved_curve_is_the_identity(raw):
+    from Imervue.paint.pressure_curve import PressureCurve
+    assert ts.ToolState.from_dict({"pressure_curve": raw}).pressure_curve == PressureCurve()

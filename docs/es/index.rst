@@ -676,7 +676,10 @@ Pinceles
 Cera, Resaltador y Caligrafía sumi son presets de pincel basados en estos tipos. Cada
 pincel expone Size / Opacity / Hardness / Density / Blend-mode en el **dock Brush**; la
 **barra Options** superior lleva Size / Opacity / Hardness. La presión del lápiz de la
-tableta escala directamente el tamaño y la opacidad del pincel. Use ``Edit`` >
+tableta escala el tamaño y la opacidad del pincel según la curva definida en
+``Settings`` > ``Pressure Curve…`` (arrastre un punto, haga clic para añadir uno, haga
+clic derecho para quitar uno, o parta de Linear / Soft / Hard); un ratón dibuja a plena
+presión. Use ``Edit`` >
 ``Capture Brush Tip…`` para convertir una selección de marquesina en una punta de pincel
 personalizada.
 
