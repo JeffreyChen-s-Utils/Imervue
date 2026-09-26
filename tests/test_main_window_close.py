@@ -111,7 +111,14 @@ def test_last_window_runs_the_app_teardown_and_exits(run):
 
 
 def test_secondary_window_only_closes_itself(run):
-    assert run(last=False) == _TEARDOWN + ["event.accept", "super.closeEvent", "deleteLater"]
+    """It unloads its own plugin instances but runs no app-closing hook and no exit."""
+    assert run(last=False) == _TEARDOWN + [
+        "plugin_manager.unload_all", "event.accept", "super.closeEvent", "deleteLater"]
+
+
+def test_a_secondary_window_whose_plugins_fail_to_unload_still_closes(run):
+    assert run(last=False, failing={"plugin_manager.unload_all"}) == _TEARDOWN + [
+        "plugin_manager.unload_all", "event.accept", "super.closeEvent", "deleteLater"]
 
 
 def test_no_watchdog_skips_its_step(run):

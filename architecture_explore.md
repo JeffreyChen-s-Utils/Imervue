@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `7564144` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `9b40b74` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 902 | 151,292 |
+| `tests/` | 902 | 151,318 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
-| `Imervue/gui/` | 168 | 33,545 |
+| `Imervue/gui/` | 168 | 33,532 |
 | `Imervue/puppet/` | 57 | 15,410 |
 | `Imervue/image/` | 128 | 15,414 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
@@ -77,16 +77,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
 | `Imervue/menu/` | 11 | 3,594 |
-| `Imervue/` 根層 | 5 | 1,600 |
-| `Imervue/plugin/` | 10 | 2,330 |
+| `Imervue/` 根層 | 5 | 1,604 |
+| `Imervue/plugin/` | 10 | 2,337 |
 | `Imervue/system/` | 32 | 3,176 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,464 |
-| **總計** | **1,753** | **335,197** |
+| **總計** | **1,753** | **335,221** |
 
-其中 `Imervue/` 套件本身 787 檔 / 169,441 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,439 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -207,7 +207,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 717 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 721 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 608 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -538,7 +538,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-168 個檔、33,545 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+168 個檔、33,532 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -628,7 +628,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(420) 多張圖做 GIF／MP4（預設輸出經 `free_names` 挑沒被占用的 `output.gif`；既有檔案經 `dialog_rows.may_replace` 詢問） · `contact_sheet_dialog.py`(187) ·
 `web_gallery_dialog.py`(160) · `slideshow_mp4_dialog.py`(194) · `image_organizer_dialog.py`(533) ·
 `duplicate_detection_dialog.py`(542) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(744) 淨化重繪（剝除所有隱藏資料）·
-`exif_strip_dialog.py`(309) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(124) · `culling_dialog.py`(253) 挑片 ·
+`exif_strip_dialog.py`(309) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(124) · `culling_dialog.py`(247) 挑片 ·
 `ai_upscale_dialog.py`(693) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
 
 #### 相片庫 / 中繼資料 / 搜尋
@@ -646,7 +646,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 設定 / 系統
 
 `preferences_dialog.py`(268) · `shortcut_settings_dialog.py`(407) · `profiles_dialog.py`(206) 多帳號 ·
-`workspace_dialog.py`(231) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(365) 軟刪除回收桶 ·
+`workspace_dialog.py`(231) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(358) 軟刪除回收桶 ·
 `cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(334) ·
 `dual_pane_dialog.py`(167) 雙窗格檔案管理 · `onboarding_dialog.py`(135) 首次導覽 · `whats_new_dialog.py`(143)
 
@@ -909,7 +909,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `plugin_base.py` | 229 | `ImervuePlugin` 基底類別，12 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
+| `plugin_base.py` | 232 | `ImervuePlugin` 基底類別，12 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
 | `plugin_manager.py` | 289 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式）；`apply_saved_language()` / `register_plugin_languages()`：主視窗建立前只匯入外掛並呼叫 `register_languages()`，讓存下的外掛語言套用得到 |
 | `plugin_downloader.py` | 530 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
 | `pip_installer.py` | 850 | 外掛相依安裝器：下載內嵌 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔；再匯出 `python_finder` 的名稱（外掛依賴 `pip_installer._find_python`） |
@@ -917,7 +917,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
 | `subprocess_util.py` | 36 | 外掛 worker 呼叫子 Python 的共用 helper |
-| `worker_host.py` | 74 | **`WorkerHostMixin`**：擁有背景 `QThread` 的 `QDialog` 共用拆卸邏輯，修掉「QThread destroyed while running」當機（約 90 個對話框使用） |
+| `worker_host.py` | 78 | **`WorkerHostMixin`**：擁有背景 `QThread` 的 `QDialog` 共用拆卸邏輯，修掉「QThread destroyed while running」當機；覆寫 `done()` 與 `closeEvent`，OK、Cancel、關閉視窗都會先停止並等待執行緒（約 90 個對話框使用） |
 
 ### 6.18 `Imervue/mcp_server/`
 
@@ -979,7 +979,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-902 個檔、151,292 行。`pyproject.toml` 定義三個互斥層級 marker：
+902 個檔、151,318 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1062,7 +1062,7 @@ SonarCloud（`JeffreyChen-s-Utils_Imervue`）。
 ### 10.3 `WorkerHostMixin`
 
 `Imervue/plugin/worker_host.py`。凡是擁有背景 `QThread` 的 `QDialog` 都繼承它，
-解決關閉對話框時 `QThread destroyed while still running` 的當機。**不要手寫 `closeEvent` 拆卸邏輯。**
+解決關閉對話框時 `QThread destroyed while still running` 的當機。它覆寫 `done()`（`accept()`、`reject()` 都走到這裡）與 `closeEvent`，兩條路都先停止並等待背景執行緒。**不要手寫 `closeEvent` / `accept` 拆卸邏輯。**
 
 ### 10.4 Collaborator 拆解
 

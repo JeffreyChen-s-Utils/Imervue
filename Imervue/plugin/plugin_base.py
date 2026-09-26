@@ -15,7 +15,7 @@ class ImervuePlugin:
     Plugin developers should subclass this and override the hooks they need.
     Each hook method is called at a specific point in the application lifecycle.
 
-    Required class attributes:
+    Class attributes (optional; unset ones keep the defaults below):
         plugin_name (str): Display name of the plugin.
         plugin_version (str): Version string (e.g. "1.0.0").
         plugin_description (str): Short description of what the plugin does.
@@ -44,7 +44,10 @@ class ImervuePlugin:
         pass
 
     def on_plugin_unloaded(self) -> None:
-        """Called when the plugin is being unloaded or the application is closing.
+        """Called when the plugin is being unloaded: its window closes, or Reload Plugins runs.
+
+        Every main window has its own instance of each plugin; closing a
+        window unloads only that window's instances.
 
         Use this to clean up resources: close files, disconnect signals, etc.
         """
@@ -222,7 +225,7 @@ class ImervuePlugin:
     # ===========================
 
     def on_app_closing(self, main_window: ImervueMainWindow) -> None:
-        """Called when the application is about to close.
+        """Called when the application is about to close (its last main window closes).
 
         Use this for final cleanup or saving state.
         """

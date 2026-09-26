@@ -610,10 +610,14 @@ class ImervueMainWindow(
 
         # Only the LAST main window runs the app-global teardown below. A
         # secondary window (File → New Window) shares this closeEvent; running
-        # the plugin unload + os._exit for it would kill the whole process and
-        # unload plugins out from under the windows that are still open.
+        # the app-closing hook + os._exit for it would kill the whole process.
+        # Every window loads its own plugin instances, so a secondary window
+        # unloads just those; the other windows keep theirs.
         ImervueMainWindow._live_windows.discard(self)
         if _other_live_windows_remain(ImervueMainWindow._live_windows, self):
+            if hasattr(self, "plugin_manager"):
+                with best_effort("unload this window's plugins", _logger):
+                    self.plugin_manager.unload_all()
             event.accept()
             super().closeEvent(event)
             self.deleteLater()

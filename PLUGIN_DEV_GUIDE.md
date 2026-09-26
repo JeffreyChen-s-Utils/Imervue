@@ -45,11 +45,15 @@ from my_plugin.my_plugin import MyPlugin
 plugin_class = MyPlugin
 ```
 
-4. Restart Imervue (or use **Plugins → Reload Plugins**). Your plugin is discovered and loaded automatically.
+4. Restart Imervue. Your plugin is discovered and loaded automatically.
+
+**Plugins → Reload Plugins** also loads a plugin added while Imervue runs. It does not re-import a plugin package that is already imported, so restart after editing a plugin's code. It rebuilds the Plugin-menu entries, but not the tabs added by `on_build_main_tabs()` or the plugin entries of the Language menu, which are only built when the window opens.
 
 ## Plugin Structure
 
-### Required Class Attributes
+### Class Attributes
+
+Set these on your plugin class. Each one is optional: one you leave out keeps the base class default (`"Unnamed Plugin"`, `"0.0.1"`, or an empty string).
 
 | Attribute            | Type  | Description                        |
 |----------------------|-------|------------------------------------|
@@ -81,7 +85,9 @@ def on_plugin_loaded(self):
 
 #### `on_plugin_unloaded()`
 
-Called when the plugin is being unloaded (usually at app shutdown). Clean up resources here.
+Called when the plugin is being unloaded: when its window closes, and before **Plugins → Reload Plugins** loads the plugins again. Clean up resources here.
+
+Each main window loads its own instance of every plugin (**File → New Window** opens another window), and a hook reaches the instance of the window it happens in. Closing a window unloads that window's instances; `on_app_closing()` runs only when the last window closes.
 
 ```python
 def on_plugin_unloaded(self):
@@ -297,7 +303,7 @@ Import the heavy package inside the code that `_run` calls, not at module level,
 
 Never block the GUI thread in a hook. Run long work in a `QThread` subclass and report back through signals.
 
-A dialog that owns a running worker must stop it on **Cancel** as well as on window close; Cancel calls `reject()`, which does not deliver a `closeEvent`. Derive the dialog from `WorkerHostMixin` (`Imervue/plugin/worker_host.py`, listed before `QDialog` in the bases) and keep the worker on `self._worker`: the mixin stops and joins it before the dialog is destroyed. A `QThread` destroyed while it is still running aborts the whole process.
+A dialog that owns a running worker must stop it on **Cancel** and **OK** as well as on window close; `reject()` and `accept()` do not deliver a `closeEvent`. Derive the dialog from `WorkerHostMixin` (`Imervue/plugin/worker_host.py`, listed before `QDialog` in the bases) and keep the worker on `self._worker` (more workers: list their attribute names in `_worker_attrs`): the mixin stops and joins them in `done()`, which `accept()` and `reject()` both end in, and on close, before the dialog is destroyed. A `QThread` destroyed while it is still running aborts the whole process.
 
 ## Distributing a Plugin
 

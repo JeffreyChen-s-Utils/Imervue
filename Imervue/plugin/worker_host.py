@@ -3,15 +3,18 @@
 A dialog that starts a worker thread must stop it before the dialog (and the
 thread's underlying C++ object) is destroyed: a ``QThread`` deleted while still
 running aborts the process (0xC0000409). The subtle trap is that clicking
-*Cancel* calls :meth:`QDialog.reject`, which does **not** deliver a
-``closeEvent`` — so a dialog that only cleaned up in ``closeEvent`` leaked the
-running thread on every Cancel, and dropping that reference on a bounded
-``wait(timeout)`` destroyed a live thread and crashed, most visibly on
-cancel-then-reuse.
+*Cancel* or *OK* calls :meth:`QDialog.reject` / :meth:`QDialog.accept`, which
+do **not** deliver a ``closeEvent`` — so a dialog that only cleaned up in
+``closeEvent`` leaked the running thread on every Cancel, and dropping that
+reference on a bounded ``wait(timeout)`` destroyed a live thread and crashed,
+most visibly on cancel-then-reuse. OK is the same trap: a dialog that accepts
+from its worker's own finished signal, or while a preview worker still runs,
+is destroyed right after ``exec()`` returns.
 
-:class:`WorkerHostMixin` overrides *both* entry points and joins each worker
-with an unbounded ``wait()`` so the thread has always finished before its
-reference is dropped. Kept Qt-import-free (it only calls duck-typed QThread
+:class:`WorkerHostMixin` overrides :meth:`QDialog.done` (which ``accept`` and
+``reject`` both end in) and ``closeEvent``, and joins each worker with an
+unbounded ``wait()`` so the thread has always finished before its reference
+is dropped. Kept Qt-import-free (it only calls duck-typed QThread
 methods) so ``_stop_worker`` is unit-testable against a fake worker without a
 QApplication.
 """
@@ -49,7 +52,7 @@ class WorkerHostMixin:
     Subclasses keep each running :class:`QThread` on an instance attribute and
     list those attribute names in the class-level ``_worker_attrs`` tuple
     (default ``("_worker",)``). Set the attribute to ``None`` when idle. The
-    mixin MUST precede ``QDialog`` in the base list so its ``reject`` /
+    mixin MUST precede ``QDialog`` in the base list so its ``done`` /
     ``closeEvent`` win the MRO.
 
     A worker MAY expose a ``stop()`` and/or ``abort()`` method (to terminate a
@@ -65,9 +68,10 @@ class WorkerHostMixin:
         for attr in getattr(self, "_worker_attrs", _DEFAULT_WORKER_ATTRS):
             _stop_and_null(self, attr)
 
-    def reject(self):  # noqa: N802 - Qt API
+    def done(self, result: int) -> None:
+        """Stop the workers, then finish the dialog (``accept`` and ``reject`` end here)."""
         self._stop_worker()
-        super().reject()
+        super().done(result)
 
     def closeEvent(self, event):  # noqa: N802 - Qt API  # NOSONAR — QWidget override
         self._stop_worker()

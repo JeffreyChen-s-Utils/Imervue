@@ -352,13 +352,6 @@ class RecycleBinDialog(WorkerHostMixin, QDialog):
             )
         logger.warning("Recycle Bin purge failed on %d path(s)", len(failed))
 
-    def accept(self):  # noqa: N802 - Qt API
-        # Close must join a running purge: this dialog is a temporary
-        # (``RecycleBinDialog(...).exec()``) whose QThread child would
-        # otherwise be destroyed mid-run.
-        self._stop_worker()
-        super().accept()
-
 
 def open_recycle_bin_dialog(viewer: GPUImageView, parent=None) -> None:
     dlg = RecycleBinDialog(viewer, parent=parent)

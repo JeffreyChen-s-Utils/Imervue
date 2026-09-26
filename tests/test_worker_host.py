@@ -1,8 +1,8 @@
 """Tests for the shared WorkerHostMixin dialog teardown.
 
 ``_stop_worker`` is exercised against fake workers without a QApplication (it
-only calls duck-typed QThread methods); a small Qt smoke test confirms reject()
-and closeEvent() both route through it.
+only calls duck-typed QThread methods); a small Qt smoke test confirms accept(), reject(), done()
+and closeEvent() all route through it.
 """
 from __future__ import annotations
 
@@ -106,3 +106,22 @@ def test_reject_and_close_route_through_stop_worker(qapp):
     dlg2.closeEvent(QCloseEvent())
     assert worker2.events == ["interrupt", "disconnect", "wait"]
     assert dlg2._worker is None
+
+
+
+def test_accept_and_done_stop_the_worker_too(qapp):
+    """OK (accept) and a direct done() left the worker running: no closeEvent either."""
+    from PySide6.QtWidgets import QDialog
+
+    class _Dialog(WorkerHostMixin, QDialog):
+        def __init__(self):
+            super().__init__(None)
+            self._worker = _FakeWorker(running=True)
+
+    for finish in (QDialog.accept, lambda dialog: dialog.done(5)):
+        dlg = _Dialog()
+        worker = dlg._worker
+        finish(dlg)
+        assert worker.events == ["interrupt", "disconnect", "wait"]
+        assert dlg._worker is None
+        dlg.deleteLater()

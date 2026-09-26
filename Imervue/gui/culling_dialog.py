@@ -242,12 +242,6 @@ class CullingDialog(WorkerHostMixin, QDialog):
         viewer.load_tile_grid_async([p for p in base if p not in gone_set])
         self.accept()
 
-    def accept(self):  # noqa: N802 - Qt API
-        # Join a running worker before the dialog (and its QThread child) is
-        # destroyed; QDialog.accept() does not deliver a closeEvent.
-        self._stop_worker()
-        super().accept()
-
 
 def open_culling(ui: ImervueMainWindow) -> None:
     CullingDialog(ui).exec()
