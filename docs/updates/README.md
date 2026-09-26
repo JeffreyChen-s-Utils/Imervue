@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-46 | 2026-09-26 | The release build pins a pip without the doubly-encoded URL flaw | #security #ci #release | [2026-09-b](2026-09-b.md) |
 | U-20260926-45 | 2026-09-26 | The Puppet Examples menu names March 7th as it is spelled | #fix #puppet #docs | [2026-09-b](2026-09-b.md) |
 | U-20260926-44 | 2026-09-26 | Every docs language has every section, in the English order | #docs #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-43 | 2026-09-26 | Alt+Left and Alt+Right step through the viewing history | #fix #shortcuts #history | [2026-09-b](2026-09-b.md) |
@@ -418,4 +419,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 76 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 77 |
