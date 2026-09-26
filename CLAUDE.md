@@ -83,9 +83,9 @@ ten-language README set: `README.md` plus `README/README_de.md`, `README/README_
   `docs/` in the same commit — the English `docs/en/` pages plus every translated locale tree
   (`zh-cn`, `zh-tw`, `de`, `es`, `fr`, `ja`, `ko`, `pt-BR`, `ru`) — structure and content aligned
   across languages.
-- `tests/test_docs_parity.py` guards the **structure**: each translated README and docs page must keep
-  the English headings at the same levels and, per section, the same number of table rows, bullets
-  and literal blocks. Wording is still a **manual check** across the ten README files above and the
+- `tests/test_docs_parity.py` guards the **structure**: each translated README, docs page and
+  `puppet_guide.<lang>.md` must keep the English headings at the same levels and, per section, the
+  same number of table rows, bullets and literal blocks. Wording is still a **manual check** across the ten README files above and the
   docs trees.
   (`examples/puppet/README.md` documents that example only and is not part of this translation set.)
 

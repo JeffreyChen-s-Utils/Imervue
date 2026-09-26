@@ -108,6 +108,15 @@ def test_translated_readme_has_the_english_structure(lang):
     assert differing == [], f"sections {differing} differ in bullets or table rows"
 
 
+@pytest.mark.parametrize("lang", ("zh-CN", "zh-TW"))
+def test_translated_puppet_guide_has_the_english_structure(lang):
+    english = markdown_shape(_read(_ROOT / "puppet_guide.md"))
+    translated = markdown_shape(_read(_ROOT / f"puppet_guide.{lang}.md"))
+    assert [s[0] for s in translated] == [s[0] for s in english], "headings differ"
+    differing = [n for n, (a, b) in enumerate(zip(english, translated, strict=True)) if a != b]
+    assert differing == [], f"sections {differing} differ in bullets or table rows"
+
+
 @pytest.mark.parametrize("lang", _DOCS_LANGS)
 def test_translated_docs_have_the_english_structure(lang):
     english = rst_shape(_read(_ROOT / "docs" / "en" / "index.rst"))
