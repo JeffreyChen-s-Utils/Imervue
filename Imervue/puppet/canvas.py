@@ -119,11 +119,15 @@ def _fit_scale_and_pan(
     return scale, (width - doc_w * scale) / 2.0, (height - doc_h * scale) / 2.0
 
 # The physics chains' own clock: motions, drivers and the pet's paint tick only
-# move the parameters that feed the chains. About 60 steps a second while a
-# shown rig has chains; a stalled frame integrates as at most 50 ms, and an
-# output change below the threshold is not redrawn, so a settled rig costs a
-# step (under a millisecond for the bundled rigs) and no repaint.
+# move the parameters that feed the chains. The timer fires about 60 times a
+# second while a shown rig has chains; the chains always step by the fixed
+# _PHYSICS_STEP (Verlet integration takes the previous step's length as this
+# one's), as many steps as the elapsed time holds, the rest carried to the next
+# tick. A stalled frame counts as at most 50 ms, and an output change below the
+# threshold is not redrawn, so a settled rig costs a step (under a millisecond
+# for the bundled rigs) and no repaint.
 _PHYSICS_INTERVAL_MS = 16
+_PHYSICS_STEP = 1 / 60
 _PHYSICS_MAX_DT = 0.05
 _PHYSICS_REDRAW_THRESHOLD = 1e-4
 
@@ -270,6 +274,7 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._physics_timer.setInterval(_PHYSICS_INTERVAL_MS)
         self._physics_timer.timeout.connect(self._on_physics_tick)
         self._physics_clock: float | None = None
+        self._physics_lag = 0.0
         # Mesh-edit mode lets the user drag vertices; off by default.
         self._mesh_edit_enabled: bool = False
         self._mesh_edit_target: tuple[str, int] | None = None
@@ -499,20 +504,21 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
             for drawable in self._document.drawables
         }
 
-    def step_physics(self, dt: float) -> None:
-        """Advance the physics chains by ``dt`` seconds and re-fold
-        their outputs into the deformed-vertex cache.
+    def step_physics(self, dt: float, steps: int = 1) -> None:
+        """Advance the physics chains ``steps`` times by ``dt`` seconds and
+        re-fold their outputs into the deformed-vertex cache once.
 
         The canvas's own physics clock calls this (see
         :meth:`_sync_physics_timer`). Outputs that moved less than the
         redraw threshold leave the vertices and the frame alone.
         """
-        if self._document is None:
+        if self._document is None or steps < 1:
             return
         active_values = apply_expressions(
             self._parameter_values, self._active_expressions,
         )
-        outputs = self._physics.step(dt, active_values)
+        for _step in range(steps):
+            outputs = self._physics.step(dt, active_values)
         if _outputs_close(outputs, self._physics_outputs):
             return
         self._physics_outputs = outputs
@@ -533,16 +539,22 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
             return
         if wanted:
             self._physics_clock = None
+            self._physics_lag = 0.0
             self._physics_timer.start()
         else:
             self._physics_timer.stop()
 
     def _on_physics_tick(self) -> None:
-        """Step the chains by the real time since the last tick, capped."""
+        """Step the chains in fixed steps for the real time since the last tick."""
         now = time.monotonic()
         last, self._physics_clock = self._physics_clock, now
-        if last is not None:
-            self.step_physics(min(now - last, _PHYSICS_MAX_DT))
+        if last is None:
+            return
+        self._physics_lag += min(now - last, _PHYSICS_MAX_DT)
+        steps = int(self._physics_lag // _PHYSICS_STEP)
+        if steps:
+            self._physics_lag = max(0.0, self._physics_lag - steps * _PHYSICS_STEP)
+            self.step_physics(_PHYSICS_STEP, steps)
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
         super().showEvent(event)

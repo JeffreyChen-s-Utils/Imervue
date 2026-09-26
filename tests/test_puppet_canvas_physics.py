@@ -28,17 +28,43 @@ def test_outputs_close(new, old, close):
     assert _outputs_close(new, old) is close
 
 
-def test_the_first_tick_only_starts_the_clock(monkeypatch):
-    steps = []
-    host = SimpleNamespace(_physics_clock=None, step_physics=steps.append)
-    times = iter([10.0, 10.016, 12.0])
-    monkeypatch.setattr(canvas_mod.time, "monotonic", lambda: next(times))
-    PuppetCanvas._on_physics_tick(host)  # noqa: SLF001
-    assert steps == []
-    PuppetCanvas._on_physics_tick(host)  # noqa: SLF001
-    assert steps == [pytest.approx(0.016)]
-    PuppetCanvas._on_physics_tick(host)  # noqa: SLF001 - a 2 s stall is capped
-    assert steps[-1] == pytest.approx(canvas_mod._PHYSICS_MAX_DT)  # noqa: SLF001
+_STEP = canvas_mod._PHYSICS_STEP  # noqa: SLF001
+
+
+def _clock_host(monkeypatch, times):
+    calls = []
+    host = SimpleNamespace(
+        _physics_clock=None, _physics_lag=0.0,
+        step_physics=lambda dt, steps: calls.append((dt, steps)))
+    ticks = iter(times)
+    monkeypatch.setattr(canvas_mod.time, "monotonic", lambda: next(ticks))
+    return host, calls
+
+
+def test_ticks_step_in_fixed_steps_and_carry_the_rest(monkeypatch):
+    host, calls = _clock_host(monkeypatch, [10.0, 10.016, 10.034, 12.0])
+    PuppetCanvas._on_physics_tick(host)  # noqa: SLF001 - only starts the clock
+    assert calls == []
+    PuppetCanvas._on_physics_tick(host)  # noqa: SLF001 - 16 ms: not yet a step
+    assert calls == []
+    PuppetCanvas._on_physics_tick(host)  # noqa: SLF001 - 34 ms in all: two steps
+    assert calls == [(_STEP, 2)]
+    assert host._physics_lag == pytest.approx(0.034 - 2 * _STEP)  # noqa: SLF001
+    PuppetCanvas._on_physics_tick(host)  # noqa: SLF001 - a 2 s stall counts as 50 ms
+    assert calls[-1] == (_STEP, 3)
+
+
+def test_uneven_ticks_always_step_by_the_same_length(monkeypatch):
+    """Verlet takes the previous step's length as this one's: uneven dt changed the swing."""
+    times, now = [], 0.0
+    for gap in [0.011, 0.023, 0.016, 0.031, 0.009, 0.017] * 20:
+        times.append(now)
+        now += gap
+    host, calls = _clock_host(monkeypatch, times)
+    for _tick in times:
+        PuppetCanvas._on_physics_tick(host)  # noqa: SLF001
+    assert {dt for dt, _steps in calls} == {_STEP}
+    assert sum(steps for _dt, steps in calls) == int(times[-1] // _STEP)
 
 
 @pytest.mark.parametrize(("chains", "visible", "running"), [
@@ -50,12 +76,14 @@ def test_the_clock_runs_only_for_a_shown_rig_with_chains(qapp, chains, visible, 
     timer = QTimer()
     host = SimpleNamespace(
         _physics=SimpleNamespace(chain_ids=lambda: chains),
-        isVisible=lambda: visible, _physics_timer=timer, _physics_clock=5.0)
+        isVisible=lambda: visible, _physics_timer=timer, _physics_clock=5.0,
+        _physics_lag=0.01)
     try:
         PuppetCanvas._sync_physics_timer(host)  # noqa: SLF001
         assert timer.isActive() is running
         if running:
             assert host._physics_clock is None  # noqa: SLF001 - restarts cleanly
+            assert host._physics_lag == pytest.approx(0.0)  # noqa: SLF001
     finally:
         timer.stop()
 
@@ -85,6 +113,18 @@ def test_a_moving_chain_redraws_and_a_settled_one_does_not():
     calls.clear()
     PuppetCanvas.step_physics(host, 1 / 60)
     assert calls == []
+
+
+def test_several_steps_recompute_the_vertices_once():
+    host, calls = _host_with_a_chain()
+    host._parameter_values["In"] = 1.0  # noqa: SLF001
+    PuppetCanvas.step_physics(host, 1 / 60, 3)
+    assert calls == ["recompute", "update"]
+    one, _calls = _host_with_a_chain()
+    one._parameter_values["In"] = 1.0  # noqa: SLF001
+    for _step in range(3):
+        PuppetCanvas.step_physics(one, 1 / 60)
+    assert host._physics_outputs == pytest.approx(one._physics_outputs)  # noqa: SLF001
 
 
 def test_reset_physics_returns_the_chain_to_rest():
