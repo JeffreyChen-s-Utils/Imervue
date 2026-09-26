@@ -51,6 +51,37 @@ def _tr(key: str, default: str) -> str:
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_workspace")
 _PET_SCRIPT = "Pet script"
+
+# Pet settings mirrored by a Window-group checkbox (attribute names).
+_WINDOW_CHECKS = {
+    "click_through": "_click_through_check",
+    "anchor_locked": "_anchor_check",
+    "always_on_bottom": "_on_bottom_check",
+    "hide_on_fullscreen": "_fullscreen_check",
+    "speech_enabled": "_speech_check",
+}
+# Driver keys mirrored by a Live-drivers checkbox.
+_DRIVER_CHECKS = {
+    "auto_idle": "_idle_check",
+    "idle_motion": "_idle_motion_check",
+    "auto_blink": "_blink_check",
+    "drag_track": "_drag_check",
+    "mouse_gaze": "_gaze_check",
+    "mic_lipsync": "_mic_check",
+    "webcam_tracking": "_webcam_check",
+}
+# Drivers the pet restarts by itself when it is created; the others need an
+# optional package and are started by ticking their checkbox.
+_SELF_RESTORED_DRIVERS = ("auto_idle", "idle_motion", "auto_blink", "drag_track", "mouse_gaze")
+
+
+def _set_quietly(box: QCheckBox, checked: bool) -> None:
+    """Tick or untick ``box`` without running its toggled handler."""
+    box.blockSignals(True)
+    try:
+        box.setChecked(bool(checked))
+    finally:
+        box.blockSignals(False)
 _MUTED_LABEL_STYLE = "color: #888;"
 
 DEFAULT_EXAMPLE_PUPPET = "examples/puppet/march_7th.puppet"
@@ -426,7 +457,37 @@ class PetWorkspace(QWidget):
             self._pet_window.visibility_changed.connect(
                 self._on_pet_visibility_changed,
             )
+            self._pet_window.setting_changed.connect(self._on_pet_setting_changed)
+            # The pet restarted its zero-dependency drivers while it was being
+            # built, before this connection existed.
+            drivers = pet_settings.load().get("drivers", {}) or {}
+            self._on_pet_setting_changed("drivers", {
+                key: bool(drivers.get(key)) for key in _SELF_RESTORED_DRIVERS
+            })
         return self._pet_window
+
+    def _on_pet_setting_changed(self, key: str, value) -> None:
+        """Mirror a saved pet setting into its checkbox or the size combo (and
+        the tray's click-through), so a change from the context menu, the tray
+        or a hotkey no longer leaves the tab showing the old state."""
+        if key == "drivers" and isinstance(value, dict):
+            for name, attr in _DRIVER_CHECKS.items():
+                if name in value:
+                    _set_quietly(getattr(self, attr), value[name])
+            return
+        if key == "size_preset":
+            index = self._size_combo.findData(str(value))
+            if index >= 0:
+                self._size_combo.blockSignals(True)
+                self._size_combo.setCurrentIndex(index)
+                self._size_combo.blockSignals(False)
+            return
+        attr = _WINDOW_CHECKS.get(key)
+        if attr is None:
+            return
+        _set_quietly(getattr(self, attr), value)
+        if key == "click_through" and self._tray is not None:
+            self._tray.sync_click_through(bool(value))
 
     def pet_window(self) -> PetWindow | None:
         """Test hook — returns the overlay if it's been created."""

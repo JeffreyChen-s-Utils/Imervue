@@ -237,3 +237,36 @@ def test_size_combo_offers_each_preset(qapp, preset):
         assert ws._size_combo.itemText(idx) == preset.title()   # noqa: SLF001
     finally:
         ws.deleteLater()
+
+
+
+def test_the_drivers_the_pet_starts_show_as_ticked(qapp):
+    """Auto idle, idle motions and auto-blink start with the pet but their boxes stayed empty."""
+    ws = PetWorkspace()
+    try:
+        window = ws._ensure_pet_window()  # noqa: SLF001
+        assert ws._idle_check.isChecked()  # noqa: SLF001
+        assert ws._idle_motion_check.isChecked()  # noqa: SLF001
+        assert ws._blink_check.isChecked()  # noqa: SLF001
+        assert not ws._drag_check.isChecked()  # noqa: SLF001
+    finally:
+        window.hide()
+        window.deleteLater()
+        ws.deleteLater()
+
+
+def test_a_toggle_made_on_the_pet_shows_in_the_tab(qapp):
+    """The context menu, tray and hotkeys call the pet directly; the tab kept the old state."""
+    ws = PetWorkspace()
+    try:
+        window = ws._ensure_pet_window()  # noqa: SLF001
+        window.set_anchor_locked(True)
+        window.set_drag_track_enabled(True)
+        assert ws._anchor_check.isChecked()  # noqa: SLF001
+        assert ws._drag_check.isChecked()  # noqa: SLF001
+        window.set_anchor_locked(False)
+        assert not ws._anchor_check.isChecked()  # noqa: SLF001
+    finally:
+        window.hide()
+        window.deleteLater()
+        ws.deleteLater()

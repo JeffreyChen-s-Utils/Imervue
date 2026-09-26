@@ -155,6 +155,11 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
     visibility_changed = Signal(bool)
     """``True`` after show / ``False`` after hide."""
 
+    setting_changed = Signal(str, object)
+    """``(key, value)`` for every setting the pet saves, wherever the
+    change came from (context menu, tray, hotkey, tab). Workspace
+    mirrors it into its checkboxes."""
+
     moved = Signal(int, int)
     """``(x, y)`` after a drag release lands on its final
     post-snap position. Workspace persists the result."""
@@ -554,6 +559,8 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         keeps the multi-pet refactor from sprawling across 20+ call
         sites."""
         pet_settings.update(self._pet_id, **fields)
+        for key, value in fields.items():
+            self.setting_changed.emit(key, value)
 
     # ---- FeatureHost adapter ------------------------------------
     # The thin surface the integration controllers depend on (see
