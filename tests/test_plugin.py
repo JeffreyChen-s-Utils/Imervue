@@ -269,6 +269,65 @@ class TestPluginManager:
         pm.discover_and_load([plugin_dir])
         assert pm.plugins == []
 
+    def test_plugin_class_that_is_not_a_plugin_is_skipped(self, tmp_path):
+        """``plugin_class`` naming a class that is not an ImervuePlugin is skipped."""
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        code = "class NotAPlugin:\n    pass\n\nplugin_class = NotAPlugin\n"
+        _create_plugin_package(plugin_dir, "not_a_plugin_class", code)
+
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        assert pm.plugins == []
+
+    def test_failing_constructor_skips_only_that_plugin(self, tmp_path):
+        """A plugin whose constructor raises is skipped; the next one still loads."""
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        bad = textwrap.dedent("""\
+            from Imervue.plugin.plugin_base import ImervuePlugin
+
+            class CtorFailPlugin(ImervuePlugin):
+                def __init__(self, main_window):
+                    raise RuntimeError("boom")
+
+            plugin_class = CtorFailPlugin
+        """)
+        good = textwrap.dedent("""\
+            from Imervue.plugin.plugin_base import ImervuePlugin
+
+            class AfterCtorFailPlugin(ImervuePlugin):
+                plugin_name = "After"
+
+            plugin_class = AfterCtorFailPlugin
+        """)
+        _create_plugin_package(plugin_dir, "ctor_fail_a", bad)
+        _create_plugin_package(plugin_dir, "ctor_fail_b", good)
+
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        assert [p.plugin_name for p in pm.plugins] == ["After"]
+
+    def test_plugins_load_in_name_order_and_a_broken_file_is_skipped(self, tmp_path):
+        """Packages and single files load sorted by name; a broken file does not stop them."""
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        template = textwrap.dedent("""\
+            from Imervue.plugin.plugin_base import ImervuePlugin
+
+            class {cls}(ImervuePlugin):
+                plugin_name = "{name}"
+        """)
+        _create_plugin_package(
+            plugin_dir, "order_c_pkg", template.format(cls="OrderC", name="C"))
+        _create_plugin_file(
+            plugin_dir, "order_a_file", template.format(cls="OrderA", name="A"))
+        _create_plugin_file(plugin_dir, "order_b_broken", "def broken(:\n")
+
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        assert [p.plugin_name for p in pm.plugins] == ["A", "C"]
+
     def test_on_plugin_loaded_called(self, tmp_path):
         """on_plugin_loaded should be called during discover_and_load."""
         from Imervue.plugin.plugin_manager import PluginManager
