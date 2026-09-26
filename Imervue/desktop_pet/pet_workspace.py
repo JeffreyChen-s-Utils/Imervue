@@ -661,13 +661,9 @@ class PetWorkspace(QWidget):
             window.hide()
 
     def _on_pet_visibility_changed(self, visible: bool) -> None:
-        # Block-signals dance to avoid feeding the toggled signal
-        # back into ``_on_show_toggled``.
-        self._show_check.blockSignals(True)
-        try:
-            self._show_check.setChecked(visible)
-        finally:
-            self._show_check.blockSignals(False)
+        # Quietly, so the toggled signal doesn't feed back into
+        # ``_on_show_toggled``.
+        _set_quietly(self._show_check, visible)
         # Keep the tray's checkable "Show pet" in sync too. Without this its state
         # went stale, so the next tray click toggled from the wrong value and the
         # first click was wasted (a "hide" that ran show()).
@@ -730,9 +726,7 @@ class PetWorkspace(QWidget):
                     "Global hotkeys need pynput — pip install pynput",
                 ),
             )
-            self._hotkey_check.blockSignals(True)
-            self._hotkey_check.setChecked(False)
-            self._hotkey_check.blockSignals(False)
+            _set_quietly(self._hotkey_check, False)
 
     def _on_hotkey_edited(self, action: str, edit: QKeySequenceEdit) -> None:
         """Persist the new binding (if parseable) and refresh the
@@ -757,9 +751,7 @@ class PetWorkspace(QWidget):
                     "Mic lip-sync needs sounddevice — pip install sounddevice",
                 ),
             )
-            self._mic_check.blockSignals(True)
-            self._mic_check.setChecked(False)
-            self._mic_check.blockSignals(False)
+            _set_quietly(self._mic_check, False)
 
     def _on_webcam_toggled(self, checked: bool) -> None:
         ok = self._ensure_pet_window().set_webcam_tracking_enabled(bool(checked))
@@ -770,6 +762,4 @@ class PetWorkspace(QWidget):
                     "Webcam tracking needs opencv-python + mediapipe",
                 ),
             )
-            self._webcam_check.blockSignals(True)
-            self._webcam_check.setChecked(False)
-            self._webcam_check.blockSignals(False)
+            _set_quietly(self._webcam_check, False)
