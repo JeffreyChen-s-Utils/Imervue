@@ -27,6 +27,7 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_image_metadata_index': ('ImageMetadataIndex',),
  '_image_tabs': ('list',),
  '_last_screen_avail': ('NoneType', None),
+ '_main_splitter': ('QSplitter',),
  '_main_tabs': ('QTabWidget',),
  '_memory_pressure': ('MemoryPressureIndicator',),
  '_mode_action_grid': ('QAction',),
@@ -188,3 +189,12 @@ def test_pending_autosaves_are_read_from_the_paint_autosave_folder(monkeypatch):
 
     monkeypatch.setattr(auto_save, "pending_recovery_snapshots", unreadable)
     assert main_window_layout._paint_autosaves_pending() is False  # noqa: SLF001
+
+
+def test_a_saved_workspace_records_the_tree_and_viewer_split(window):
+    """Workspaces read ``_main_splitter``, which the window never set, so no split was saved."""
+    from Imervue.gui.workspace_dialog import capture_current_workspace
+    window._main_splitter.setSizes([250, 750])  # noqa: SLF001
+    saved = capture_current_workspace(window, "narrow tree")
+    assert len(saved.splitter_sizes) == 2
+    assert saved.splitter_sizes == window._main_splitter.sizes()  # noqa: SLF001

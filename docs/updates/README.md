@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-65 | 2026-09-26 | Saved workspaces keep the split between the folder tree and the viewer | #fix #workspace #layout | [2026-09-c](2026-09-c.md) |
 | U-20260926-64 | 2026-09-26 | The Cubism import notice names the environment variable the importer reads | #fix #puppet #i18n | [2026-09-c](2026-09-c.md) |
 | U-20260926-63 | 2026-09-26 | Hide on fullscreen works from the first launch and brings the pet back | #fix #desktop-pet | [2026-09-c](2026-09-c.md) |
 | U-20260926-62 | 2026-09-26 | New Paint tabs get Hand, Zoom, the bracket keys and the right-click menu, and the Pressure Curve shapes pen pressure | #fix #done #paint #tablet #docs #i18n | [2026-09-c](2026-09-c.md) |
@@ -438,4 +439,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 9 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 10 |

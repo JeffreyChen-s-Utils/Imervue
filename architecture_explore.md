@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `1742103` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `c9e9d33` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 895 | 150,213 |
+| `tests/` | 896 | 150,309 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,268 |
 | `Imervue/gui/` | 168 | 33,565 |
 | `Imervue/puppet/` | 57 | 15,304 |
@@ -84,7 +84,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,455 |
-| **總計** | **1,746** | **333,817** |
+| **總計** | **1,747** | **333,913** |
 
 其中 `Imervue/` 套件本身 787 檔 / 169,149 行。
 
@@ -205,7 +205,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 714 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 715 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 608 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-895 個檔、150,213 行。`pyproject.toml` 定義三個互斥層級 marker：
+896 個檔、150,309 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

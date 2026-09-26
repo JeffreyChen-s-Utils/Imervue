@@ -107,7 +107,8 @@ class ImervueMainWindow(
         imervue_layout.setContentsMargins(0, 0, 0, 0)
         imervue_layout.setSpacing(0)
 
-        splitter = QSplitter()
+        # Saved workspaces store and restore this tree | viewer split.
+        splitter = self._main_splitter = QSplitter()
         imervue_layout.addWidget(splitter)
 
         self._build_file_tree()
