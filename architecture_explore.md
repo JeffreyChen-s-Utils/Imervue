@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `ca1674a` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `65dd100` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 897 | 150,532 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,268 |
-| `Imervue/gui/` | 168 | 33,565 |
+| `tests/` | 897 | 150,611 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
+| `Imervue/gui/` | 168 | 33,537 |
 | `Imervue/puppet/` | 57 | 15,351 |
-| `Imervue/image/` | 128 | 15,403 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,224 |
-| `Imervue/multi_language/` | 8 | 14,346 |
-| `Imervue/desktop_pet/` | 34 | 8,344 |
+| `Imervue/image/` | 128 | 15,414 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,229 |
+| `Imervue/multi_language/` | 8 | 14,351 |
+| `Imervue/desktop_pet/` | 34 | 8,354 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
 | `Imervue/menu/` | 11 | 3,594 |
 | `Imervue/` 根層 | 5 | 1,598 |
 | `Imervue/plugin/` | 10 | 2,246 |
-| `Imervue/system/` | 32 | 3,169 |
+| `Imervue/system/` | 32 | 3,176 |
 | `Imervue/export/` | 9 | 1,082 |
-| `Imervue/user_settings/` | 10 | 1,155 |
+| `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,455 |
-| **總計** | **1,748** | **334,241** |
+| **總計** | **1,748** | **334,335** |
 
-其中 `Imervue/` 套件本身 787 檔 / 169,254 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,269 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -234,7 +234,7 @@ ImervueMainWindow
 | `wallpaper.py` | 161 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；JPEG／PNG／BMP 以外的格式與帶 EXIF 方向的照片先經 `wallpaper_file` 存成檢視器所見的 JPEG 副本（轉正、sRGB、透明處鋪黑，放在 `%LOCALAPPDATA%/Imervue/wallpaper`，檔名隨來源的大小與修改時間變、只留最新一份；做不出副本時交原檔），因為 Windows 拿到解不開的檔案會回報成功卻把桌面變黑；失敗只記錄；右鍵選單在 `QThreadPool` 裡呼叫 |
 | `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
 | `trash_ops.py` | 327 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果）；`recycle_bin_holds`：Windows 上只有固定磁碟才交給 shell（記憶卡、USB 隨身碟、網路磁碟會被直接永久刪除），其餘留在原處算失敗；`purge_batch` 裡這類「送回收筒」的項目改為直接刪除（使用者已確認永久刪除）；`delete_outright(paths)`：確認後直接刪，資料夾連內容一起（`_unlink_chunk` 仍只刪檔案，culling 不會清空資料夾） |
-| `file_transfer.py` | 244 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
+| `file_transfer.py` | 251 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
 | `atomic_write.py` | 33 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件、`save_image` 的匯出與轉檔、Paint 匯出預設）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本、註解專案） |
 | `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict`、`recipe_store` 使用） |
@@ -256,7 +256,7 @@ ImervueMainWindow
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
 | `metadata_template.py` | 72 | IPTC/XMP 欄位範本（stationery pad） |
-| `path_metadata.py` | 137 | 設定裡以圖片路徑為鍵的資料（評分、色標籤、標題、描述、收藏、書籤、staging tray、參考圖釘選、最近圖片、標籤與相簿成員）跟著改名／搬移的檔案走：`move_path_metadata(mapping, *, keep_existing)` 同時改鍵（`a→b` 與 `b→c` 並存也只搬一次），新路徑上前一個檔案留下的資料清掉；`folder_moves` 把資料夾搬移展開成其下每個路徑；`stored_paths` |
+| `path_metadata.py` | 140 | 設定裡以圖片路徑為鍵的資料（評分、色標籤、標題、描述、收藏、書籤、staging tray、參考圖釘選、最近圖片、標籤與相簿成員）跟著改名／搬移的檔案走：`move_path_metadata(mapping, *, keep_existing)` 同時改鍵（`a→b` 與 `b→c` 並存也只搬一次），新路徑上前一個檔案留下的資料清掉；`folder_moves` 把資料夾搬移展開成其下每個路徑；`stored_paths` |
 | `recent_image.py` | 65 | 最近資料夾 / 圖片追蹤，上限由設定控制 |
 | `tag_validator.py` | 106 | 標籤 / 相簿集合的完整性檢查與清理 |
 | `tags.py` | 133 | 自訂標籤與虛擬相簿管理 |
@@ -311,7 +311,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-128 個模組、15,403 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+128 個模組、15,414 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -376,7 +376,7 @@ ImervueMainWindow
 
 #### I/O、格式與快取
 
-`raw_loader.py`(218) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸；`develop_raw(path, *, thumbnail)` 顯像成 8-bit RGB（嵌入預覽經 `upright_preview` 依 libraw `flip` 轉正，沒有可用預覽就半尺寸顯像；縮圖 worker 也用它），`LibRawError` 轉 `OSError`，不依賴 Qt（MCP 伺服器也用） · `in_place_save.py`(285) `can_rewrite_in_place(path)` / `in_place_format(path)` / `frame_count(path)`：能否把編輯後的像素寫回原檔（RAW、HEIC、JXL、SVG、多影格一律否）；旋轉、Modify 套用裁切、註解儲存都先問它；`carried_save_kwargs(source, fmt, path)` 把原檔的描述性 EXIF（`descriptive_exif`，白名單、不帶轉向與 TIFF 版面標籤）/ ICC / DPI / XMP / PNG 文字 / 壓縮設定（`webp_is_lossless`）轉成重存參數；`save_over_source(path, edited)` 把編輯後（已轉正、sRGB）的影像原子寫回原檔並帶回這些 metadata（不帶 ICC 與轉向），Modify 套用裁切／儲存註解、註解編輯器的 Save 與 AI 放大的覆寫都走它；`save_edited_copy(source, edited, target)` 寫新檔時也帶回來源的描述性 EXIF 與 DPI（同格式則全套）；`descriptive_exif(..., keep_location=False)` 另外去掉 GPS IFD 與 XMP，`keep_maker_note=False`（匯出與換格式的副本）去掉 MakerNote；`can_rewrite_exif` / `rewrite_exif(path, update)`：只換 EXIF 區塊（JPEG 走 `jpeg_exif`、WebP 走 `webp_exif`）並原子寫回，GPS 地理標記與 EXIF 編輯器共用 · `export_metadata.py`(84) 匯出的 metadata 政策：`export_save_options(source, policy)` 依「全部／位置以外（預設）／無」回傳 `{"exif": bytes}`，不帶轉向與像素尺寸 · `jpeg_orientation.py`(65) `set_jpeg_orientation(data, code)`：只改 JPEG 的 EXIF 轉向值（有標籤就原地改 2 bytes，沒有才重組 EXIF 或新增 APP1 段），像素與其他 metadata 不動 · `webp_exif.py`(105) `update_webp_exif(data, update)`：換掉 WebP 的 `EXIF` chunk（簡單格式先升級成帶 `VP8X` 的延伸格式、畫布與 alpha 旗標取自位元串流），影像資料位元組不變 · `jpeg_exif.py`(169) 只靠 Pillow 改 JPEG 的 EXIF：`header_segments` / `exif_segment` / `replace_exif_segment` 換掉 APP1 段、`serialize_exif(exif, original)` 補回 `Image.Exif.tobytes` 會丟的 IFD1 縮圖、`update_jpeg_exif(data, update)` 一次做完（像素位元組不變） · `exif_types.py`(121) `restore_types(payload, original)`：把 Pillow `Exif.tobytes` 猜錯的項目型別（UNDEFINED 被寫成 BYTE、非負 SRATIONAL 被寫成 RATIONAL）依 EXIF 規格表或原檔改回，只換同元素大小的型別，值與位移不動；`jpeg_exif`、`export_metadata`、`in_place_save` 序列化 EXIF 都經過它 · `exif_fields.py`(153) EXIF 編輯器的純邏輯：`EDITABLE_FIELDS`、`read_fields` / `apply_fields`（UTF-8 文字標籤、依區塊位元組序的 UNICODE UserComment，空白即移除）、`can_edit`（JPEG、WebP）、`save_fields`（經 `in_place_save.rewrite_exif` 原子寫回） · `dimensions.py`(47) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）；`probe_image(path)` 另回報格式與模式（RAW 為副檔名與 `RGB`），CLI `info` 用它 · `heif_support.py`(60) HEIC / HEIF 經選用的 pillow-heif（1.x 起不處理 AVIF）· `avif_support.py`(18) AVIF 由 Pillow 內建外掛讀寫，`avif_available()` 回報這個 Pillow 有沒有 libavif · `jxl_support.py`(50) ·
+`raw_loader.py`(218) 省記憶體 RAW 載入；`raw_dimensions()` 只讀標頭取成像尺寸；`develop_raw(path, *, thumbnail)` 顯像成 8-bit RGB（嵌入預覽經 `upright_preview` 依 libraw `flip` 轉正，沒有可用預覽就半尺寸顯像；縮圖 worker 也用它），`LibRawError` 轉 `OSError`，不依賴 Qt（MCP 伺服器也用） · `in_place_save.py`(295) `can_rewrite_in_place(path)` / `in_place_format(path)` / `frame_count(path)`：能否把編輯後的像素寫回原檔（RAW、HEIC、JXL、SVG、多影格一律否）；旋轉、Modify 套用裁切、註解儲存都先問它；`carried_save_kwargs(source, fmt, path)` 把原檔的描述性 EXIF（`descriptive_exif`，白名單、不帶轉向與 TIFF 版面標籤）/ ICC / DPI / XMP / PNG 文字 / 壓縮設定（`webp_is_lossless`）轉成重存參數；`save_over_source(path, edited)` 把編輯後（已轉正、sRGB）的影像原子寫回原檔並帶回這些 metadata（不帶 ICC 與轉向），Modify 套用裁切／儲存註解、註解編輯器的 Save 與 AI 放大的覆寫都走它；`save_edited_copy(source, edited, target)` 寫新檔時也帶回來源的描述性 EXIF 與 DPI（同格式則全套）；`descriptive_exif(..., keep_location=False)` 另外去掉 GPS IFD 與 XMP，`keep_maker_note=False`（匯出與換格式的副本）去掉 MakerNote；`can_rewrite_exif` / `rewrite_exif(path, update)`：只換 EXIF 區塊（JPEG 走 `jpeg_exif`、WebP 走 `webp_exif`）並原子寫回，GPS 地理標記與 EXIF 編輯器共用 · `export_metadata.py`(84) 匯出的 metadata 政策：`export_save_options(source, policy)` 依「全部／位置以外（預設）／無」回傳 `{"exif": bytes}`，不帶轉向與像素尺寸 · `jpeg_orientation.py`(65) `set_jpeg_orientation(data, code)`：只改 JPEG 的 EXIF 轉向值（有標籤就原地改 2 bytes，沒有才重組 EXIF 或新增 APP1 段），像素與其他 metadata 不動 · `webp_exif.py`(105) `update_webp_exif(data, update)`：換掉 WebP 的 `EXIF` chunk（簡單格式先升級成帶 `VP8X` 的延伸格式、畫布與 alpha 旗標取自位元串流），影像資料位元組不變 · `jpeg_exif.py`(169) 只靠 Pillow 改 JPEG 的 EXIF：`header_segments` / `exif_segment` / `replace_exif_segment` 換掉 APP1 段、`serialize_exif(exif, original)` 補回 `Image.Exif.tobytes` 會丟的 IFD1 縮圖、`update_jpeg_exif(data, update)` 一次做完（像素位元組不變） · `exif_types.py`(121) `restore_types(payload, original)`：把 Pillow `Exif.tobytes` 猜錯的項目型別（UNDEFINED 被寫成 BYTE、非負 SRATIONAL 被寫成 RATIONAL）依 EXIF 規格表或原檔改回，只換同元素大小的型別，值與位移不動；`jpeg_exif`、`export_metadata`、`in_place_save` 序列化 EXIF 都經過它 · `exif_fields.py`(153) EXIF 編輯器的純邏輯：`EDITABLE_FIELDS`、`read_fields` / `apply_fields`（UTF-8 文字標籤、依區塊位元組序的 UNICODE UserComment，空白即移除）、`can_edit`（JPEG、WebP）、`save_fields`（經 `in_place_save.rewrite_exif` 原子寫回） · `dimensions.py`(47) `image_dimensions(path)`：讀檔頭取像素尺寸的共用入口（RAW 走 libraw，Pillow 會回報內嵌預覽的尺寸）；`probe_image(path)` 另回報格式與模式（RAW 為副檔名與 `RGB`），CLI `info` 用它 · `heif_support.py`(60) HEIC / HEIF 經選用的 pillow-heif（1.x 起不處理 AVIF）· `avif_support.py`(18) AVIF 由 Pillow 內建外掛讀寫，`avif_available()` 回報這個 Pillow 有沒有 libavif · `jxl_support.py`(50) ·
 `formats.py`(86) 能開的副檔名唯一來源：`JPEG_EXTENSIONS`（`.jpg`／`.jpeg`／`.jpe`／`.jfif`／`.jif`，類型篩選、影像整理、各批次工具與 Paint 的 JPEG 判斷都用它）、`PILLOW_EXTRA_EXTENSIONS`（ICO、TGA、DDS、QOI、JPEG 2000、Netpbm、PCX、PSD 的合併圖：Pillow 自己讀得了，只供檢視，原地存檔不認得它們）、`RAW_EXTENSIONS`（LibRaw 讀得了的 23 種相機 RAW；RAW+JPEG 堆疊也用它）、`STILL_IMAGE_EXTENSIONS`（媒體庫）、`VIEWER_EXTENSIONS`（再加影片；檢視器、檔案樹、拖放、開啟對話框）、`RASTER_EXTENSIONS`（去掉要 Qt 的 SVG；CLI 與 MCP）、`ensure_pillow_opener(ext)` ·
 `save_formats.py`(106) 輸出格式中繼資料與 `save_image`（寫到路徑一律原子替換）；HEIC、JXL 依選用套件，AVIF 依 Pillow 有無 libavif 決定是否提供· `optimize.py`(73) 目標檔案大小編碼 ·
 `export_presets.py`(94) 匯出預設包 · `video_frames.py`(231) 影片解碼原語（瀏覽器與外掛共用） ·
@@ -536,7 +536,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-168 個檔、33,565 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+168 個檔、33,537 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -667,7 +667,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,268 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,270 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -856,7 +856,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-34 個檔、8,344 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+34 個檔、8,354 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-897 個檔、150,532 行。`pyproject.toml` 定義三個互斥層級 marker：
+897 個檔、150,611 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

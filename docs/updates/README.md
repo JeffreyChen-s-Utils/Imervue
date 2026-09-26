@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-71 | 2026-09-26 | Refactor: three functions SonarCloud flags as too complex are split into named steps | #refactor #quality #sonarcloud | [2026-09-c](2026-09-c.md) |
 | U-20260926-70 | 2026-09-26 | Refactor: the Desktop Pet tab unticks boxes through one quiet helper | #refactor #desktop-pet | [2026-09-c](2026-09-c.md) |
 | U-20260926-69 | 2026-09-26 | The Desktop Pet tab follows changes made from the pet's menu, the tray and hotkeys | #fix #desktop-pet | [2026-09-c](2026-09-c.md) |
 | U-20260926-68 | 2026-09-26 | Capture, Record and Export all motions render just the character | #fix #done #puppet #export | [2026-09-c](2026-09-c.md) |
@@ -444,4 +445,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 15 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 16 |

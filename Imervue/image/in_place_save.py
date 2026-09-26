@@ -236,21 +236,31 @@ def _edited_save_kwargs(source_path: str | Path, fmt: str) -> dict:
         kwargs = {"exif": _exif_for(exif, fmt, None)} if len(exif) else {}
     else:
         try:
-            with Image.open(source_path) as source:
-                if in_place_format(source_path) == fmt:
-                    kwargs = carried_save_kwargs(source, fmt, str(source_path))
-                else:
-                    exif = descriptive_exif(source, keep_maker_note=False)
-                    original = source.info.get("exif")
-                    kwargs = {"exif": _exif_for(exif, fmt, original)} if len(exif) else {}
-                    if source.info.get("dpi"):
-                        kwargs["dpi"] = source.info["dpi"]
+            kwargs = _source_save_kwargs(source_path, fmt)
         except IMAGE_READ_ERRORS:
             return {"quality": 90} if fmt == "WEBP" else {}
     kwargs.pop("icc_profile", None)   # the edited pixels are sRGB
     if fmt == "WEBP" and "lossless" not in kwargs:
         kwargs.setdefault("quality", 90)
     return kwargs
+
+
+def _source_save_kwargs(source_path: str | Path, fmt: str) -> dict:
+    """Save options for *fmt* from the metadata of *source_path*, a file Pillow opens.
+
+    Written back in its own format it carries what :func:`carried_save_kwargs`
+    carries; in another, the descriptive EXIF and the DPI. Raises what opening
+    the file raises.
+    """
+    with Image.open(source_path) as source:
+        if in_place_format(source_path) == fmt:
+            return carried_save_kwargs(source, fmt, str(source_path))
+        exif = descriptive_exif(source, keep_maker_note=False)
+        original = source.info.get("exif")
+        kwargs = {"exif": _exif_for(exif, fmt, original)} if len(exif) else {}
+        if source.info.get("dpi"):
+            kwargs["dpi"] = source.info["dpi"]
+        return kwargs
 
 
 _EXIF_REWRITERS: dict[str, Callable[[bytes, Callable[[Image.Exif], None]], bytes]] = {
