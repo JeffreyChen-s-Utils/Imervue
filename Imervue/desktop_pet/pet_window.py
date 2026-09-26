@@ -337,8 +337,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         # The 1 Hz script tick wakes up for scheduled chimes.
         self._tick.start()
         self._script_tick.start()
-        if self._hide_on_fullscreen and self._fullscreen_detector is not None:
-            self._fullscreen_detector.start()
+        self._watch_fullscreen_on_show()
         # Force a fresh canvas repaint on show. Qt does call paintGL
         # automatically after showEvent, but a delayed singleShot
         # update covers the case where textures finish uploading
@@ -353,8 +352,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         # Stop the tick timer so the dormant pet doesn't repaint.
         self._tick.stop()
         self._script_tick.stop()
-        if self._fullscreen_detector is not None:
-            self._fullscreen_detector.stop()
+        self._watch_fullscreen_on_hide()
         if self._speech is not None:
             self._speech.close_bubble()
         self.visibility_changed.emit(False)

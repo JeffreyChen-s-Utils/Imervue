@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-63 | 2026-09-26 | Hide on fullscreen works from the first launch and brings the pet back | #fix #desktop-pet | [2026-09-c](2026-09-c.md) |
 | U-20260926-62 | 2026-09-26 | New Paint tabs get Hand, Zoom, the bracket keys and the right-click menu, and the Pressure Curve shapes pen pressure | #fix #done #paint #tablet #docs #i18n | [2026-09-c](2026-09-c.md) |
 | U-20260926-61 | 2026-09-26 | Paint's options bar, all-layer fill and layout saving work, and closing asks about unsaved Paint tabs | #fix #paint #autosave #data-loss #docs #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
 | U-20260926-60 | 2026-09-26 | Sentences the brand-name scrub broke read properly again in the app and the docs | #fix #i18n #docs #xmp | [2026-09-c](2026-09-c.md) |
@@ -436,4 +437,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 7 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 8 |
