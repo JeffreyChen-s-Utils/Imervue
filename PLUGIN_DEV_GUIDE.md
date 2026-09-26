@@ -88,6 +88,10 @@ def on_plugin_unloaded(self):
     self.my_data.clear()
 ```
 
+#### `register_languages()` (class method)
+
+Called on the plugin class, before any instance exists: before Imervue builds its window when the saved language is not a built-in one, and again each time the plugin is loaded. Register the languages your plugin adds here; see [Creating a language plugin](#2-creating-a-language-plugin-adding-an-entirely-new-language).
+
 ### Menu Hooks
 
 #### `on_build_menu_bar(plugin_menu: QMenu)`
@@ -354,7 +358,7 @@ Built-in language codes: `"English"`, `"Traditional_Chinese"`, `"Chinese"`, `"Ko
 
 ### 2. Creating a language plugin (adding an entirely new language)
 
-You can create a plugin that registers a new language for the entire application. Use `language_wrapper.register_language()` in `on_plugin_loaded()`:
+You can create a plugin that registers a new language for the entire application. Call `language_wrapper.register_language()` from the class method `register_languages()`:
 
 ```python
 from Imervue.plugin.plugin_base import ImervuePlugin
@@ -367,7 +371,8 @@ class SpanishLanguagePlugin(ImervuePlugin):
     plugin_description = "Adds Spanish language support to Imervue"
     plugin_author = "Your Name"
 
-    def on_plugin_loaded(self):
+    @classmethod
+    def register_languages(cls):
         language_wrapper.register_language(
             language_code="Spanish",
             display_name="Español",
@@ -386,7 +391,7 @@ class SpanishLanguagePlugin(ImervuePlugin):
         )
 ```
 
-The new language will automatically appear in the **Language** menu (below a separator). When the user selects it and restarts, the application will use the plugin-provided translations. A built-in language code cannot be registered this way; use `get_translations()` to extend a built-in language.
+The new language will automatically appear in the **Language** menu (below a separator). When the user selects it and restarts, the application uses the plugin-provided translations: when the saved language is not a built-in one, Imervue calls `register_languages()` on each plugin class before it builds its window. A language registered in `on_plugin_loaded()` instead is still listed in the menu, but comes too late to be applied after the restart, because the window's text is built before plugins are loaded. A built-in language code cannot be registered this way; use `get_translations()` to extend a built-in language.
 
 > **Tip:** Copy all keys from `Imervue/multi_language/english.py` as a starting template for your language plugin. Any missing keys will fall back to `None` via `dict.get()`, so make sure to translate all keys for a complete experience.
 

@@ -49,6 +49,18 @@ class ImervuePlugin:
         """
         pass
 
+    @classmethod
+    def register_languages(cls) -> None:
+        """Register the languages this plugin adds; called on the class, not an instance.
+
+        Call ``language_wrapper.register_language`` here. Imervue calls this
+        before it builds the main window when the saved language is not a
+        built-in one, and again before each (re)load of the plugin, so a
+        language picked in the Language menu applies at the next start. A
+        language registered only in ``on_plugin_loaded`` is listed in the menu
+        but comes too late to apply: the window's text is built by then.
+        """
+
     # ===========================
     # Menu Hooks
     # ===========================

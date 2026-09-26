@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-84 | 2026-09-26 | A plugin language picked in the Language menu applies after the restart | #fix #plugins #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
 | U-20260926-83 | 2026-09-26 | The screen-adapt tests count the settle watch instead of racing its timer | #test #flaky | [2026-09-c](2026-09-c.md) |
 | U-20260926-82 | 2026-09-26 | Refactor: plugin discovery runs as import, class lookup and instantiate steps | #refactor #plugins | [2026-09-c](2026-09-c.md) |
 | U-20260926-81 | 2026-09-26 | Tests pin the plugin loader's failure isolation and load order | #test #plugins | [2026-09-c](2026-09-c.md) |
@@ -457,4 +458,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 28 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 29 |

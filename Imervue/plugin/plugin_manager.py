@@ -74,6 +74,7 @@ class PluginManager:
                 )
                 return
 
+        _register_languages_of(plugin_class)
         try:
             instance = plugin_class(self.main_window)
             self._plugins.append(instance)
@@ -251,3 +252,35 @@ def _plugin_classes(plugin_dirs: list[Path]) -> Iterator[type[ImervuePlugin]]:
             continue
         if plugin_class is not None:
             yield plugin_class
+
+
+def _register_languages_of(plugin_class: type[ImervuePlugin]) -> None:
+    """Run ``plugin_class.register_languages``; a failure is logged and the plugin still loads."""
+    try:
+        plugin_class.register_languages()
+    except Exception as e:  # plugin sandboxing
+        logger.exception(f"[{plugin_class.plugin_name}] register_languages error: {e}")
+
+
+def register_plugin_languages(plugin_dirs: list[Path] | None = None) -> None:
+    """Import the plugins and register the languages they add, without instantiating them.
+
+    For the start-up path, before the main window exists (see
+    :func:`apply_saved_language`); nothing but ``register_languages`` runs.
+    """
+    if plugin_dirs is None:
+        plugin_dirs = [_plugins_dir()]
+    for plugin_class in _plugin_classes(plugin_dirs):
+        _register_languages_of(plugin_class)
+
+
+def apply_saved_language(language: str, plugin_dirs: list[Path] | None = None) -> None:
+    """Make ``language`` the UI language, registering plugin languages first when needed.
+
+    The main window builds its text in this language before any plugin is
+    loaded, so a plugin language (Spanish) has to be registered here. A
+    language no plugin provides any more leaves the current one in place.
+    """
+    if language not in language_wrapper.choose_language_dict:
+        register_plugin_languages(plugin_dirs)
+    language_wrapper.reset_language(language)

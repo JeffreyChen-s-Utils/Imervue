@@ -44,7 +44,7 @@ class LanguageWrapper:
             self.language_word_dict = self.choose_language_dict.get(self.language)
 
     def register_language(self, language_code: str, display_name: str, word_dict: dict) -> None:
-        """Register a new language from a plugin.
+        """Register a new language from a plugin; registering it again updates it in place.
 
         Args:
             language_code: Internal language code (e.g. "Spanish", "French").
@@ -58,7 +58,13 @@ class LanguageWrapper:
             )
             return
 
-        self.choose_language_dict[language_code] = dict(word_dict)
+        registered = self.choose_language_dict.get(language_code)
+        if registered is None:
+            self.choose_language_dict[language_code] = dict(word_dict)
+        else:
+            # Registered again (at start-up, then when the plugin loads): update
+            # in place, since the active language's dict is this very object.
+            registered.update(word_dict)
         self.plugin_languages[language_code] = display_name
         logger.info(f"Registered plugin language: {display_name} ({language_code})")
 

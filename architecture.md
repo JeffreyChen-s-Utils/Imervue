@@ -72,9 +72,11 @@ Public interfaces other code or users depend on:
 - **Plugin API** — subclass `ImervuePlugin` (`Imervue/plugin/plugin_base.py`) and override hooks:
   `on_plugin_loaded`, `on_plugin_unloaded`, `on_build_menu_bar`, `on_build_context_menu`,
   `on_build_main_tabs`, `on_image_loaded`, `on_folder_opened`, `on_image_switched`,
-  `on_image_deleted`, `on_key_press`, `get_translations`, `on_app_closing`. Author guide:
+  `on_image_deleted`, `on_key_press`, `get_translations`, `on_app_closing`, plus the class method
+  `register_languages` (called before the main window is built). Author guide:
   `PLUGIN_DEV_GUIDE.md`.
-- **Language API** — `language_wrapper.register_language()` and `merge_translations()`
+- **Language API** — `language_wrapper.register_language()` (from a plugin's
+  `register_languages()`) and `merge_translations()`
   (`Imervue/multi_language/language_wrapper.py`).
 - **MCP tools** — `Imervue/mcp_server/tools.py` re-exports every handler and registers the tool set;
   handlers live in `tools_read.py` / `tools_edit.py`, definitions in `tool_defs_read.py` /
@@ -86,7 +88,8 @@ Public interfaces other code or users depend on:
 
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`
    (before the first PySide6 import) → `read_user_setting()` → `load_and_apply_theme()` /
-   `load_and_apply_from_settings()` → `ImervueMainWindow` (builds tabs, `create_menu()`) →
+   `load_and_apply_from_settings()` → `ImervueMainWindow` (`apply_saved_language()` registers
+   plugin languages first when the saved language is not built in; builds tabs, `create_menu()`) →
    `_init_plugin_system_example()` (`Imervue/integration_guide.py`) →
    `PluginManager.discover_and_load()` → optional `open_path()` for a file given on the command line.
 2. **Browse and view** — `open_path()` (`gpu_image_view/images/image_loader.py`) →
@@ -107,7 +110,7 @@ Public interfaces other code or users depend on:
 | A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; do not hand-write teardown |
 | A develop step | `Recipe.apply` in `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip) |
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
-| A language | Plugin calling `language_wrapper.register_language()` (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
+| A language | Plugin calling `language_wrapper.register_language()` from its `register_languages()` class method (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
 | An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`) |
 | A CLI subcommand | `Imervue/cli.py` |
 | A Paint tool or dock | `Imervue/paint/tools/`, `Imervue/paint/docks/`, routed by `Imervue/paint/tool_dispatcher.py` |

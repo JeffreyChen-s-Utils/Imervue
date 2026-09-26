@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `a77e332` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `637db09` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 901 | 151,045 |
+| `tests/` | 901 | 151,064 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,537 |
 | `Imervue/puppet/` | 57 | 15,410 |
 | `Imervue/image/` | 128 | 15,414 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,229 |
-| `Imervue/multi_language/` | 8 | 14,351 |
+| `Imervue/multi_language/` | 8 | 14,357 |
 | `Imervue/desktop_pet/` | 34 | 8,362 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
 | `Imervue/menu/` | 11 | 3,594 |
-| `Imervue/` 根層 | 5 | 1,598 |
-| `Imervue/plugin/` | 10 | 2,271 |
+| `Imervue/` 根層 | 5 | 1,600 |
+| `Imervue/plugin/` | 10 | 2,316 |
 | `Imervue/system/` | 32 | 3,176 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（17 個外掛） | 64 | 14,455 |
-| **總計** | **1,752** | **334,861** |
+| `plugins/`（17 個外掛） | 64 | 14,464 |
+| **總計** | **1,752** | **334,942** |
 
-其中 `Imervue/` 套件本身 787 檔 / 169,361 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,414 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -111,7 +111,9 @@ py -m Imervue [--debug] [--software_opengl] [file]
    │      load_and_apply_theme(app)       (system/themes.py)
    │      load_and_apply_from_settings(app) (system/ui_scale.py)
    ├─ 6. ImervueMainWindow(debug=…)
-   │      └─ 內部：還原視窗幾何 → 建 5 個分頁 → create_menu()
+   │      └─ 內部：apply_saved_language()（存下的不是內建語言時，先匯入外掛、
+   │                只呼叫各外掛類別的 register_languages() 註冊語言）
+   │                → 還原視窗幾何 → 建 5 個分頁 → create_menu()
    │                → _init_plugin_system_example() 載入外掛
    │                → QTimer(800ms) 顯示 What's New / 首次導覽
    └─ 7. 命令列帶檔案 → QTimer(100ms) open_path(viewer, path)
@@ -205,7 +207,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 715 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 717 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 608 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -265,7 +267,7 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `language_wrapper.py` | 86 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言，`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
+| `language_wrapper.py` | 92 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言（重複註冊就地更新同一個字典），`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
 | `english.py` | 2,806 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
 | `traditional_chinese.py` | 2,771 | 繁體中文 |
 | `chinese.py` | 2,772 | 簡體中文 |
@@ -907,8 +909,8 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `plugin_base.py` | 206 | `ImervuePlugin` 基底類別，12 個 hook：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
-| `plugin_manager.py` | 253 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式） |
+| `plugin_base.py` | 218 | `ImervuePlugin` 基底類別，12 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
+| `plugin_manager.py` | 286 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式）；`apply_saved_language()` / `register_plugin_languages()`：主視窗建立前只匯入外掛並呼叫 `register_languages()`，讓存下的外掛語言套用得到 |
 | `plugin_downloader.py` | 530 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
 | `pip_installer.py` | 850 | 外掛相依安裝器：下載內嵌 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔；再匯出 `python_finder` 的名稱（外掛依賴 `pip_installer._find_python`） |
 | `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
@@ -952,7 +954,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | 外掛 | 檔案/行數 | 功用 | 重量級相依 |
 | --- | --- | --- | --- |
 | `safety_review` | 15 / 4,622 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到）；存檔一律走 `_censor_core._save_as`（`.tmp` + `os.replace`，覆寫原檔模式失敗也不毀原圖） | nudenet, ultralytics, huggingface_hub |
-| `spanish_translation` | 3 / 1,773 | 西班牙文語言外掛，示範 `register_language()` | — |
+| `spanish_translation` | 3 / 1,824 | 西班牙文語言外掛，示範在 `register_languages()` 裡呼叫 `register_language()` | — |
 | `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 823 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
 | `object_splitter` | 4 / 701 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
@@ -977,7 +979,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-901 個檔、151,045 行。`pyproject.toml` 定義三個互斥層級 marker：
+901 個檔、151,064 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

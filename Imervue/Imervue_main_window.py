@@ -33,6 +33,7 @@ from Imervue.menu.recent_menu import rebuild_recent_menu
 from Imervue.menu.sort_menu import build_sort_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.plugin_manager import apply_saved_language
 from Imervue.user_settings.user_setting_dict import (
     write_user_setting, read_user_setting, user_setting_dict, cancel_pending_save,
 )
@@ -145,7 +146,8 @@ class ImervueMainWindow(
         # 語言支援
         # Language support
         self.language_wrapper = language_wrapper
-        self.language_wrapper.reset_language(user_setting_dict.get("language", "English"))
+        # Registers a saved plugin language (Spanish) before any text is built.
+        apply_saved_language(user_setting_dict.get("language", "English"))
         # Qt 自己的字串（確定 / 取消、檔案對話框…）也跟著語言走
         from Imervue.system.qt_translations import install_qt_translations
         install_qt_translations(QApplication.instance(), self.language_wrapper.language)
