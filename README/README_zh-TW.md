@@ -413,7 +413,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 ### 檔案 I/O
 
 - **Open PSD…** 把檔案拼合成單一圖層，開在新分頁；**Save as PSD…** 寫出各圖層與其混合模式（不含遮罩與圖層效果）
-- **Export image…** 輸出 PNG；漫畫專案可把頁面匯出為 **CBZ** 或 **PDF**
+- **Export image…** 依所選的檔案類型輸出 PNG、JPEG、WebP、TIFF 或 BMP（JPEG 與 BMP 不支援透明，會以白底輸出）；漫畫專案可把頁面匯出為 **CBZ** 或 **PDF**。只有 **Save as PSD…** 才算儲存了分頁：匯出之後，關閉時仍會詢問它未儲存的變更
 - **自動儲存** — 作用中分頁有未儲存的修改時每 2 分鐘拍一次快照；下次啟動時以 toast 提示這些快照，**File > Restore Autosave** 把最新一份載入作用中分頁，狀態列會顯示上一次快照的時間。關閉 Imervue 時會詢問有未儲存修改的 Paint 分頁。
 
 ### 強化使用者體驗

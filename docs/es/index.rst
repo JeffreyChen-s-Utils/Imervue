@@ -774,7 +774,7 @@ Entrada/Salida de archivos
 - **Open PSD…** (``Ctrl + O``) aplana el archivo en una sola capa en una pestaña nueva;
   **Save as PSD…** (``Ctrl + S``) escribe las capas con sus modos de fusión (sin máscaras
   ni efectos de capa)
-- **Export image…** — aplana y guarda como PNG
+- **Export image…** — aplana y guarda como PNG, JPEG, WebP, TIFF o BMP, según el tipo de archivo elegido (JPEG y BMP, que no admiten transparencia, sobre fondo blanco). Solo **Save as PSD…** marca la pestaña como guardada; tras una exportación, al cerrar Imervue se sigue preguntando por los cambios sin guardar de la pestaña
 - **Export pages → CBZ** / **→ PDF** — exporta las páginas de un proyecto de cómic
 - **Import brush preset…**, **Import palette…** — trae pinceles y paletas de otras instalaciones o aplicaciones
 - **Autoguardado** — cada 2 minutos, mientras la pestaña activa tenga ediciones sin guardar, se escribe una instantánea; en el siguiente inicio un toast ofrece las instantáneas y **File > Restore Autosave** carga la más reciente en la pestaña activa. La barra de estado muestra cuándo se tomó la última instantánea, y al cerrar Imervue se pregunta por las pestañas Paint con cambios sin guardar.

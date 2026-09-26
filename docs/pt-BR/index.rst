@@ -770,7 +770,7 @@ I/O de Arquivos
 ^^^^^^^^^^^^^^^
 
 - **Abrir PSD…** (``Ctrl + O``) achata o arquivo em uma única camada em uma nova aba; **Salvar como PSD…** (``Ctrl + S``) grava as camadas com seus modos de mistura (sem máscaras nem efeitos de camada)
-- **Exportar imagem…** — achatar e salvar como PNG
+- **Exportar imagem…** — achatar e salvar como PNG, JPEG, WebP, TIFF ou BMP, conforme o tipo de arquivo escolhido (JPEG e BMP, que não têm transparência, sobre fundo branco). Só **Salvar como PSD…** marca a aba como salva; depois de uma exportação, fechar o Imervue ainda pergunta sobre as alterações não salvas da aba
 - **Exportar páginas → CBZ** / **→ PDF** — exportar as páginas de um projeto de quadrinhos
 - **Importar preset de pincel…**, **Importar paleta…** — trazer pincéis e paletas de outras instalações ou aplicativos
 - **Autosalvamento** — a cada 2 minutos, enquanto a aba ativa tiver edições não salvas, um snapshot é gravado; na próxima inicialização um toast oferece os snapshots e **Arquivo > Restaurar Autosalvamento** carrega o mais recente na aba ativa. A barra de status mostra quando o último snapshot foi feito, e ao fechar o Imervue ele pergunta sobre abas Paint com alterações não salvas.

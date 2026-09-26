@@ -27,10 +27,6 @@ from Imervue.paint.color_palette_io import (
     GPL_PALETTE_EXTENSION,
     import_palette,
 )
-from Imervue.paint.export_presets import (
-    BUILT_IN_EXPORT_PRESETS,
-    all_export_presets,
-)
 from Imervue.paint.paint_menu_bar import menu_for
 
 if TYPE_CHECKING:
@@ -265,7 +261,7 @@ class _FileMenuBridge:
         except (OSError, ValueError) as exc:
             self._warn("paint_file_save_psd", exc)
             return
-        self._notify_success("paint_file_save_psd_done", "Saved PSD", path)
+        self._notify_success("paint_file_save_psd_done", "Saved PSD", path, saved=True)
 
     # ---- import paths ----------------------------------------------------
 
@@ -331,43 +327,25 @@ class _FileMenuBridge:
 
     # ---- export paths ----------------------------------------------------
 
-    def export_active_image(self) -> None:  # pragma: no cover - QFileDialog
+    def export_active_image(self) -> None:
+        """Flatten the active tab into the file the user picks, in the format its type names."""
         composite = self._workspace.canvas().document().composite()
         if composite is None:
             return
-        preset = _default_export_preset()
         path = self._pick_save_file(
             title_key="paint_file_export_image",
             title_fallback="Export image",
-            name_filter=_image_filter_for(preset.format),
+            name_filter=EXPORT_IMAGE_FILTER,
         )
         if not path:
             return
+        fmt, path = export_format_for(path)
         try:
-            self._write_image_at_path(composite, path, preset)
+            write_export_image(composite, path, fmt)
         except (OSError, ValueError) as exc:
             self._warn("paint_file_export_image", exc)
             return
         self._notify_success("paint_file_export_image_done", "Exported", path)
-
-    def _write_image_at_path(self, composite, path, preset) -> None:
-        """Write ``composite`` to the exact ``path`` the user chose.
-
-        The export-preset's filename template is for batch flows; the
-        single-image action expects whatever the user typed in the save
-        dialog to be the literal output filename. We therefore drop
-        through Pillow directly with the preset's format / quality /
-        resolution settings.
-        """
-        from pathlib import Path
-
-        from Imervue.paint.export_presets import _write_with_format
-        target = Path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        _write_with_format(
-            composite, target, preset.format,
-            int(preset.quality), int(preset.max_resolution),
-        )
 
     def export_pages_cbz(self) -> None:  # pragma: no cover - QFileDialog
         project = self._current_project()
@@ -448,23 +426,25 @@ class _FileMenuBridge:
         return path or None
 
     def _notify_success(
-        self, key: str, fallback: str, path: str,
+        self, key: str, fallback: str, path: str, *, saved: bool = False,
     ) -> None:
         """Pop a non-blocking success toast for a file write that
         completed cleanly.
 
-        Marks the active tab clean (clears the "modified" asterisk
-        + the close-prompt) since the user just persisted their
-        work. Falls back to the status bar's transient message when
-        the workspace has no toast manager (very early bootstrap or
-        a unit-test stub) so the success signal is never silent.
+        With ``saved`` (a PSD, which keeps the layers) the active tab is
+        marked clean: no "modified" asterisk, no close prompt. An export
+        (a flattened picture, a comic's pages) leaves it modified, so
+        closing still asks before the layers are lost. Falls back to the
+        status bar's transient message when the workspace has no toast
+        manager (very early bootstrap or a unit-test stub) so the success
+        signal is never silent.
         """
         from pathlib import Path
         lang = language_wrapper.language_word_dict
         verb = lang.get(key, fallback)
         msg = f"{verb}: {Path(path).name}"
         mark_clean = getattr(self._workspace, "mark_active_tab_clean", None)
-        if callable(mark_clean):
+        if saved and callable(mark_clean):
             mark_clean()
         toast = getattr(self._workspace, "toast", None)
         if toast is not None:
@@ -494,23 +474,43 @@ class _FileMenuBridge:
         QMessageBox.warning(self._workspace, title, str(exc))
 
 
-def _default_export_preset():
-    """First built-in preset — the documented "PNG full quality" entry."""
-    presets = all_export_presets()
-    if presets:
-        return presets[0]
-    return BUILT_IN_EXPORT_PRESETS[0]
+# Export image…: the file types offered, PNG first (the default), and the
+# format each suffix names. A lossy format is written at full size, quality 95.
+EXPORT_IMAGE_FILTER = ";;".join((
+    "PNG (*.png)", "JPEG (*.jpg *.jpeg)", "WebP (*.webp)", "TIFF (*.tif *.tiff)", "BMP (*.bmp)",
+))
+_EXPORT_SUFFIX_FORMATS = {
+    ".png": "png", ".jpg": "jpeg", ".jpeg": "jpeg", ".webp": "webp",
+    ".tif": "tiff", ".tiff": "tiff", ".bmp": "bmp",
+}
+_EXPORT_QUALITY = 95
 
 
-def _image_filter_for(format_tag: str) -> str:
-    """QFileDialog filter string for a single output format."""
-    return {
-        "png": "PNG (*.png)",
-        "jpeg": "JPEG (*.jpg *.jpeg)",
-        "webp": "WebP (*.webp)",
-        "bmp": "BMP (*.bmp)",
-        "tiff": "TIFF (*.tif *.tiff)",
-    }.get(format_tag, f"{format_tag.upper()} (*.{format_tag})")
+def export_format_for(path: str) -> tuple[str, str]:
+    """``(format, path)`` for an Export image target.
+
+    The format its suffix names (case-insensitive); a path with another or no
+    suffix is written as PNG with ``.png`` appended.
+    """
+    from pathlib import Path
+    fmt = _EXPORT_SUFFIX_FORMATS.get(Path(path).suffix.lower())
+    if fmt is None:
+        return "png", f"{path}.png"
+    return fmt, path
+
+
+def write_export_image(composite, path: str, fmt: str) -> None:
+    """Write the RGBA ``composite`` to ``path`` as ``fmt``, full size, in one step.
+
+    JPEG has no alpha, so it is flattened onto white; the others keep it.
+    Raises ``OSError`` / ``ValueError`` when the write fails.
+    """
+    from pathlib import Path
+
+    from Imervue.paint.export_presets import _write_with_format
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _write_with_format(composite, target, fmt, _EXPORT_QUALITY, 0)
 
 
 # ---------------------------------------------------------------------------

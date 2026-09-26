@@ -414,7 +414,7 @@ Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ei
 ### Datei-I/O
 
 - **Open PSD…** reduziert die Datei auf einen Layer in einem neuen Tab; **Save as PSD…** schreibt die Layer mit ihren Blend-Modes (ohne Masken oder Layer-Effekte)
-- **Export image…** schreibt PNG; Comic-Projekte exportieren ihre Seiten nach **CBZ** oder **PDF**
+- **Export image…** schreibt PNG, JPEG, WebP, TIFF oder BMP, je nach gewähltem Dateityp (JPEG und BMP, die keine Transparenz kennen, auf Weiß); Comic-Projekte exportieren ihre Seiten nach **CBZ** oder **PDF**. Nur **Save as PSD…** gilt als Speichern des Tabs: Nach einem Export fragt das Schließen weiterhin nach seinen ungespeicherten Änderungen
 - **Autosave** — alle 2 Minuten ein Snapshot, solange der aktive Tab ungespeicherte Änderungen hat; beim nächsten Start bietet ein Toast die Snapshots an, **File > Restore Autosave** lädt den neuesten in den aktiven Tab, und die Statusleiste zeigt, wann der letzte aufgenommen wurde. Beim Schließen von Imervue wird für Paint-Tabs mit ungespeicherten Änderungen nachgefragt.
 
 ### Power-User-UX

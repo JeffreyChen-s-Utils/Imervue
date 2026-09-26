@@ -414,7 +414,7 @@ Cada dock é móvel / flutuante e pode ser alternado individualmente pelo menu *
 ### I/O de arquivos
 
 - **Open PSD…** achata o arquivo em uma única camada em uma nova aba; **Save as PSD…** grava as camadas com seus modos de mesclagem (sem máscaras nem efeitos de camada)
-- **Export image…** grava PNG; projetos de quadrinhos exportam suas páginas para **CBZ** ou **PDF**
+- **Export image…** grava PNG, JPEG, WebP, TIFF ou BMP, conforme o tipo de arquivo escolhido (JPEG e BMP, que não têm transparência, sobre fundo branco); projetos de quadrinhos exportam suas páginas para **CBZ** ou **PDF**. Só **Save as PSD…** conta como salvar a aba: depois de uma exportação, fechar ainda pergunta sobre as alterações não salvas dela
 - **Autosave** — um snapshot a cada 2 minutos enquanto a aba ativa tem edições não salvas; na próxima inicialização um toast oferece os snapshots e **File > Restore Autosave** carrega o mais recente na aba ativa, e a barra de status mostra quando o último foi feito. Ao fechar o Imervue, ele pergunta sobre abas Paint com alterações não salvas.
 
 ### UX para usuários avançados

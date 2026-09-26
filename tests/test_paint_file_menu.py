@@ -202,27 +202,6 @@ def test_export_pages_cbz_writes_when_project_present(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_default_export_preset_is_first_built_in():
-    """The bridge picks built-ins[0] when no user presets are set;
-    confirm the helper resolves to a real preset rather than None."""
-    from Imervue.paint.export_presets import BUILT_IN_EXPORT_PRESETS
-    from Imervue.paint.file_menu import _default_export_preset
-    assert _default_export_preset() == BUILT_IN_EXPORT_PRESETS[0]
-
-
-def test_image_filter_for_known_format():
-    from Imervue.paint.file_menu import _image_filter_for
-    assert _image_filter_for("png").startswith("PNG")
-
-
-def test_image_filter_for_unknown_format_falls_back():
-    """Unknown formats produce a usable filter string rather than
-    crashing — the engine could grow new formats without breaking
-    the file dialog filter."""
-    from Imervue.paint.file_menu import _image_filter_for
-    assert _image_filter_for("xyz") == "XYZ (*.xyz)"
-
-
 # Pull in unused imports so ruff doesn't flag them — these prove the
 # tests actually exercise the documented engine surface.
 _USED = (struct, GPL_PALETTE_EXTENSION)

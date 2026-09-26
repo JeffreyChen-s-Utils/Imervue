@@ -414,7 +414,7 @@ Chaque dock est déplaçable / flottant et activable individuellement depuis le 
 ### E/S de fichiers
 
 - **Open PSD…** aplatit le fichier en un seul calque dans un nouvel onglet ; **Save as PSD…** écrit les calques avec leurs modes de fusion (sans masques ni effets de calque)
-- **Export image…** écrit du PNG ; les projets BD exportent leurs pages en **CBZ** ou **PDF**
+- **Export image…** écrit du PNG, JPEG, WebP, TIFF ou BMP, selon le type de fichier choisi (JPEG et BMP, qui ne gèrent pas la transparence, sur fond blanc) ; les projets BD exportent leurs pages en **CBZ** ou **PDF**. Seul **Save as PSD…** compte comme un enregistrement de l'onglet : après un export, la fermeture demande toujours quoi faire de ses modifications non enregistrées
 - **Sauvegarde automatique** — un instantané toutes les 2 minutes tant que l'onglet actif a des modifications non enregistrées ; au lancement suivant, un toast propose les instantanés et **File > Restore Autosave** charge le plus récent dans l'onglet actif, et la barre d'état indique quand le dernier a été pris. À la fermeture, Imervue demande quoi faire des onglets Paint ayant des modifications non enregistrées.
 
 ### UX pour utilisateurs avancés

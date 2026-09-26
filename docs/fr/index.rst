@@ -765,7 +765,7 @@ E/S de fichiers
 ^^^^^^^^^^^^^^^
 
 - **Ouvrir PSD…** (``Ctrl + O``) aplatit le fichier en un seul calque dans un nouvel onglet ; **Enregistrer sous PSD…** (``Ctrl + S``) écrit les calques avec leurs modes de fusion (sans masques ni effets de calque)
-- **Exporter l'image…** — aplatir et enregistrer en PNG
+- **Exporter l'image…** — aplatir et enregistrer en PNG, JPEG, WebP, TIFF ou BMP, selon le type de fichier choisi (JPEG et BMP, qui ne gèrent pas la transparence, sur fond blanc). Seul **Enregistrer sous PSD…** marque l'onglet comme enregistré ; après un export, la fermeture d'Imervue demande toujours quoi faire des modifications non enregistrées de l'onglet
 - **Exporter les pages → CBZ** / **→ PDF** — exporter les pages d'un projet BD
 - **Importer un préréglage de pinceau…**, **Importer une palette…** — importer des pinceaux et des palettes depuis d'autres installations ou applications
 - **Enregistrement automatique** — toutes les 2 minutes, tant que l'onglet actif a des modifications non enregistrées, un instantané est écrit ; au lancement suivant, un toast propose les instantanés et **Fichier > Restaurer l'enregistrement automatique** charge le plus récent dans l'onglet actif. La barre d'état indique quand le dernier instantané a été pris, et à la fermeture, Imervue demande quoi faire des onglets Paint ayant des modifications non enregistrées.

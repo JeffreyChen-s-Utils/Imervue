@@ -413,7 +413,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 ### 文件 I/O
 
 - **Open PSD…** 把文件拼合成一个图层，在新标签中打开；**Save as PSD…** 写出各图层及其混合模式（不含蒙版与图层效果）
-- **Export image…** 写出 PNG；漫画项目可将页面导出为 **CBZ** 或 **PDF**
+- **Export image…** 依所选的文件类型写出 PNG、JPEG、WebP、TIFF 或 BMP（JPEG 与 BMP 不支持透明，会以白底输出）；漫画项目可将页面导出为 **CBZ** 或 **PDF**。只有 **Save as PSD…** 算作保存该标签：导出之后，关闭时仍会询问它未保存的更改
 - **自动保存** — 当前标签有未保存的编辑时每 2 分钟拍一次快照；下次启动时以 toast 提示可用的快照，**File > Restore Autosave** 把最新一份载入当前标签，状态栏显示上一次快照的时间。关闭 Imervue 时会询问有未保存更改的 Paint 标签。
 
 ### 强化用户体验

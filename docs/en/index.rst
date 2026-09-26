@@ -763,7 +763,7 @@ File I/O
 ^^^^^^^^
 
 - **Open PSD…** (``Ctrl + O``) flattens the file into one layer in a new tab; **Save as PSD…** (``Ctrl + S``) writes the layers with their blend modes (no masks or layer effects)
-- **Export image…** — flatten and save as PNG
+- **Export image…** — flatten and save as PNG, JPEG, WebP, TIFF or BMP, by the file type you pick (JPEG and BMP, which have no transparency, on white). Only **Save as PSD…** marks the tab saved; after an export, closing Imervue still asks about the tab's unsaved changes
 - **Export pages → CBZ** / **→ PDF** — export the pages of a comic project
 - **Import brush preset…**, **Import palette…** — bring in brushes and palettes from other installs or apps
 - **Autosave** — every 2 minutes while the active tab has unsaved edits a snapshot is written; on the next launch a toast offers the snapshots and **File > Restore Autosave** loads the newest into the active tab. The status bar shows when the last snapshot was taken, and closing Imervue asks about Paint tabs with unsaved changes.

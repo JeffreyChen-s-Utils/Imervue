@@ -418,7 +418,7 @@ Each dock is movable / floatable and individually toggleable from the **Window**
 ### File I/O
 
 - **Open PSD…** flattens the file into one layer in a new tab; **Save as PSD…** writes the layers with their blend modes (no masks or layer effects)
-- **Export image…** writes PNG; comic projects export their pages to **CBZ** or **PDF**
+- **Export image…** writes PNG, JPEG, WebP, TIFF or BMP, by the file type you pick (JPEG and BMP, which have no transparency, on white); comic projects export their pages to **CBZ** or **PDF**. Only **Save as PSD…** counts as saving the tab: after an export, closing still asks about its unsaved changes
 - **Autosave** — a snapshot every 2 minutes while the active tab has unsaved edits; on the next launch a toast offers the snapshots and **File > Restore Autosave** loads the newest into the active tab, and the status bar shows when the last one was taken. Closing Imervue asks about Paint tabs with unsaved changes.
 
 ### Power-user UX

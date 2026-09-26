@@ -257,11 +257,13 @@ def _write_with_format(
             (max_resolution, max_resolution),
             Image.LANCZOS,
         )
-    if format_tag == "jpeg":
-        # JPEG can't carry an alpha channel; flatten against white.
+    if format_tag in ("jpeg", "bmp"):
+        # Neither keeps an alpha channel (a 32-bit BMP reads back as RGB, the
+        # hidden colour of every transparent pixel showing); flatten on white.
         bg = Image.new("RGB", pil_image.size, (255, 255, 255))
         bg.paste(pil_image, mask=pil_image.split()[3])
         pil_image = bg
+    if format_tag == "jpeg":
         save_kwargs = {"quality": int(quality), "optimize": True}
     elif format_tag == "webp":
         save_kwargs = {"quality": int(quality), "method": 6}
