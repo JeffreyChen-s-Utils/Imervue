@@ -282,6 +282,7 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
                     # member — matches resolve_pose_visibility's
                     # "default to first member" semantics.
                     self._canvas.set_pose_active(group.id, group.drawables[0])
+        self._canvas.reset_physics()
         # 4. Snap parameters back to their authored defaults.
         self._canvas.reset_parameters()
         # 5. Status feedback so the user sees the action took effect.

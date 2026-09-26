@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-80 | 2026-09-26 | Puppet physics chains move: the canvas steps them on a clock of its own | #fix #puppet #desktop-pet #physics | [2026-09-c](2026-09-c.md) |
 | U-20260926-79 | 2026-09-26 | Refactor: the physics integrator steps plain floats instead of two-element arrays | #refactor #puppet #physics #performance | [2026-09-c](2026-09-c.md) |
 | U-20260926-78 | 2026-09-26 | Golden-value tests pin the physics integrator | #test #puppet #physics | [2026-09-c](2026-09-c.md) |
 | U-20260926-77 | 2026-09-26 | The pet's Apply expression entries toggle, checked while on | #fix #desktop-pet #docs #i18n | [2026-09-c](2026-09-c.md) |
@@ -453,4 +454,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 24 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 25 |

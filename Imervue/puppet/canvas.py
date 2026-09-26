@@ -13,6 +13,7 @@ spinning up a context.
 from __future__ import annotations
 
 import contextlib
+import time
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -38,7 +39,7 @@ from OpenGL.GL import (
     GL_PROJECTION,
     GL_VIEWPORT,
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
@@ -116,6 +117,21 @@ def _fit_scale_and_pan(
         return None
     scale = min(width / doc_w, height / doc_h)
     return scale, (width - doc_w * scale) / 2.0, (height - doc_h * scale) / 2.0
+
+# The physics chains' own clock: motions, drivers and the pet's paint tick only
+# move the parameters that feed the chains. About 60 steps a second while a
+# shown rig has chains; a stalled frame integrates as at most 50 ms, and an
+# output change below the threshold is not redrawn, so a settled rig costs a
+# step (under a millisecond for the bundled rigs) and no repaint.
+_PHYSICS_INTERVAL_MS = 16
+_PHYSICS_MAX_DT = 0.05
+_PHYSICS_REDRAW_THRESHOLD = 1e-4
+
+
+def _outputs_close(new: dict[str, float], old: dict[str, float]) -> bool:
+    """Whether two physics output maps differ by less than the redraw threshold."""
+    return new.keys() == old.keys() and all(
+        abs(value - old[key]) < _PHYSICS_REDRAW_THRESHOLD for key, value in new.items())
 
 
 class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
@@ -248,6 +264,10 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._selected_deformer: str | None = None
         self._physics = PhysicsEngine()
         self._physics_outputs: dict[str, float] = {}
+        self._physics_timer = QTimer(self)
+        self._physics_timer.setInterval(_PHYSICS_INTERVAL_MS)
+        self._physics_timer.timeout.connect(self._on_physics_tick)
+        self._physics_clock: float | None = None
         # Mesh-edit mode lets the user drag vertices; off by default.
         self._mesh_edit_enabled: bool = False
         self._mesh_edit_target: tuple[str, int] | None = None
@@ -310,6 +330,7 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._active_pose = {}
         self._physics.bind_document(document)
         self._physics_outputs = {}
+        self._sync_physics_timer()
         self._recompute_deformed_vertices()
         self.document_loaded.emit()
         self.parameters_changed.emit()
@@ -479,16 +500,56 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
 
     def step_physics(self, dt: float) -> None:
         """Advance the physics chains by ``dt`` seconds and re-fold
-        their outputs into the deformed-vertex cache. Workspace's
-        frame timer calls this once per tick."""
+        their outputs into the deformed-vertex cache.
+
+        The canvas's own physics clock calls this (see
+        :meth:`_sync_physics_timer`). Outputs that moved less than the
+        redraw threshold leave the vertices and the frame alone.
+        """
         if self._document is None:
             return
         active_values = apply_expressions(
             self._parameter_values, self._active_expressions,
         )
-        self._physics_outputs = self._physics.step(dt, active_values)
+        outputs = self._physics.step(dt, active_values)
+        if _outputs_close(outputs, self._physics_outputs):
+            return
+        self._physics_outputs = outputs
         self._recompute_deformed_vertices()
         self.update()
+
+    def reset_physics(self) -> None:
+        """Snap every physics chain back to rest and drop its outputs."""
+        self._physics.reset()
+        self._physics_outputs = {}
+        self._recompute_deformed_vertices()
+        self.update()
+
+    def _sync_physics_timer(self) -> None:
+        """Run the physics clock only while a shown rig has physics chains."""
+        wanted = bool(self._physics.chain_ids()) and self.isVisible()
+        if wanted == self._physics_timer.isActive():
+            return
+        if wanted:
+            self._physics_clock = None
+            self._physics_timer.start()
+        else:
+            self._physics_timer.stop()
+
+    def _on_physics_tick(self) -> None:
+        """Step the chains by the real time since the last tick, capped."""
+        now = time.monotonic()
+        last, self._physics_clock = self._physics_clock, now
+        if last is not None:
+            self.step_physics(min(now - last, _PHYSICS_MAX_DT))
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().showEvent(event)
+        self._sync_physics_timer()
+
+    def hideEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().hideEvent(event)
+        self._sync_physics_timer()
 
     def physics(self) -> PhysicsEngine:
         return self._physics

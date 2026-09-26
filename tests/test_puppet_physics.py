@@ -170,3 +170,20 @@ def test_canvas_step_physics_with_no_document_is_safe(qapp):
         canvas.step_physics(1.0 / 60.0)   # must not raise
     finally:
         canvas.deleteLater()
+
+
+
+def test_a_shown_canvas_steps_its_chains_and_a_hidden_one_stops(qapp):
+    """step_physics had no caller: the bundled rigs' hair and cloth never moved."""
+    canvas = PuppetCanvas()
+    try:
+        canvas.load_document(_doc_with_physics())
+        assert not canvas._physics_timer.isActive()  # noqa: SLF001 - not shown yet
+        canvas.show()
+        qapp.processEvents()
+        assert canvas._physics_timer.isActive()  # noqa: SLF001
+        canvas.hide()
+        qapp.processEvents()
+        assert not canvas._physics_timer.isActive()  # noqa: SLF001
+    finally:
+        canvas.deleteLater()
