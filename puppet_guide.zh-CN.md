@@ -28,7 +28,7 @@
 
 1. 启动 Imervue（从源码跑就 `python -m Imervue`）。
 2. 点窗口顶端的 **Puppet** 标签。
-3. **File > Examples > March 7Th**（或工具栏的 **Examples ▾** 下拉）。内置的 307-drawable Cubism rig 居中加载。
+3. **File > Examples > March 7th**（或工具栏的 **Examples ▾** 下拉）。内置的 307-drawable Cubism rig 居中加载。
 4. 在底部 **Motions** 停靠栏点任一个动作 — rig 立刻动起来。
 5. 工具栏的 **Reset to rest** 按钮把 rig 拉回静止姿势。
 
@@ -277,7 +277,7 @@ Verlet pendulum 链用于头发 / 衣物 / 缎带。*输入参数*（例如 `Par
 
 rig 上的命名区域，用户点击内部会发出信号。可绑到动作组（`TapHead → tap_head` 从 `TapHead` 组随机播一个动作），或绑到表情切换（点 body → 切换 `surprised`）。
 
-March 7th rig 有两个 hit area — `head` 触发 `tap_head` 动作、`body` 切换 `surprised` 表情。
+内置的 March 7th rig 没有定义任何 hit area，点击它不会有反应。用 **File > Import Cubism…** 转换的 rig 会带入模型的 `HitAreas`；其他 rig 则取自其 `puppet.json` 里的 `hit_areas` 列表。
 
 ---
 

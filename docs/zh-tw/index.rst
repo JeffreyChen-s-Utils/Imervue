@@ -1084,7 +1084,7 @@ Schema（有版本 — 未來的欄位會向前相容）：
 
 **Reset to default** 會丟掉使用者腳本、回到內建打招呼集；保存的腳本路徑也會清空，下次啟動不會再載入它。
 
-可用的範例放在 ``examples/desktop_pet/march_7th.petscript.json`` — 六句打招呼、兩個 hit-area 桶（head / body）、三個 motion 台詞（wave / curtsy / cheer），以及一個 30 分鐘的伸展提醒。
+可用的範例放在 ``examples/desktop_pet/march_7th.petscript.json`` — 六句打招呼、兩個 hit-area 桶（head / body）、三個 motion 台詞（wave / curtsy / cheer），以及一個 30 分鐘的伸展提醒。head / body 台詞回應的是 hit area 命名為 ``HitAreaHead`` / ``HitAreaBody``\ （Cubism 的命名慣例）的 rig 上的點擊；內附的 March 7th rig 沒有定義任何 hit area，所以點它時會改挑一句打招呼。
 
 持久化
 ^^^^^^

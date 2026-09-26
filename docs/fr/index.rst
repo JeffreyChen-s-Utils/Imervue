@@ -1405,7 +1405,11 @@ Un exemple fonctionnel se trouve à
 ``examples/desktop_pet/march_7th.petscript.json`` — six
 salutations, deux paniers de zones cliquables (tête / corps),
 trois lignes de mouvement (wave / curtsy / cheer) et un rappel
-d'étirement de 30 minutes.
+d'étirement de 30 minutes. Les répliques tête / corps répondent
+aux clics sur un rig dont les zones cliquables s'appellent
+``HitAreaHead`` / ``HitAreaBody`` (la convention de Cubism) ; le
+rig March 7th livré n'en définit aucune, donc un clic dessus
+choisit plutôt une salutation.
 
 Persistance
 ^^^^^^^^^^^

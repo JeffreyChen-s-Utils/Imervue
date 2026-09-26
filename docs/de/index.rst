@@ -1424,7 +1424,11 @@ Ein funktionierendes Beispiel liegt unter
 ``examples/desktop_pet/march_7th.petscript.json`` — sechs
 Begrüßungen, zwei Trefferbereichs-Buckets (Kopf / Körper), drei
 Bewegungszeilen (wave / curtsy / cheer) und eine 30-minütige
-Stretch-Erinnerung.
+Stretch-Erinnerung. Die Zeilen für Kopf / Körper reagieren auf
+Klicks auf ein Rig, dessen Trefferbereiche ``HitAreaHead`` /
+``HitAreaBody`` heißen (die Cubism-Konvention); das mitgelieferte
+Rig March 7th definiert keine, sodass ein Klick darauf
+stattdessen eine Begrüßung auswählt.
 
 Persistenz
 ^^^^^^^^^^

@@ -1402,7 +1402,11 @@ Un ejemplo funcional se encuentra en
 ``examples/desktop_pet/march_7th.petscript.json`` — seis saludos, dos
 depósitos por zona de impacto (cabeza / cuerpo), tres frases de
 movimiento (wave / curtsy / cheer) y un recordatorio de estiramiento
-de 30 minutos.
+de 30 minutos. Las frases de cabeza / cuerpo responden a los clics
+sobre un rig cuyas zonas de impacto se llaman ``HitAreaHead`` /
+``HitAreaBody`` (la convención de Cubism); el rig incluido de
+March 7th no define ninguna, así que un clic sobre él elige un
+saludo en su lugar.
 
 Persistencia
 ^^^^^^^^^^^^

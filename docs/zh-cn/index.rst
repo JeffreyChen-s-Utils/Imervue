@@ -1183,7 +1183,10 @@ Schema（带版本号 — 新字段向前兼容）：
 一个可用的示例位于
 ``examples/desktop_pet/march_7th.petscript.json`` — 六句问候、
 两个命中区域桶（head / body）、三组动作台词（wave / curtsy /
-cheer）、以及一个 30 分钟拉伸提醒。
+cheer）、以及一个 30 分钟拉伸提醒。head / body 台词回应的是命中
+区域名为 ``HitAreaHead`` / ``HitAreaBody``\ （Cubism 的命名惯例）
+的角色上的点击；内置的 March 7th 角色没有定义任何命中区域，所以
+点击它时会改为挑一句问候。
 
 持久化
 ^^^^^^

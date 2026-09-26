@@ -1392,7 +1392,10 @@ Um exemplo funcional vive em
 ``examples/desktop_pet/march_7th.petscript.json`` — seis saudações,
 dois buckets de hit-area (cabeça / corpo), três linhas de motion
 (wave / curtsy / cheer) e um lembrete de alongamento a cada 30
-minutos.
+minutos. As linhas de cabeça / corpo respondem a cliques em um rig
+cujas áreas de acerto se chamam ``HitAreaHead`` / ``HitAreaBody``
+(a convenção do Cubism); o rig March 7th fornecido não define
+nenhuma, então um clique nele escolhe uma saudação em vez disso.
 
 Persistência
 ^^^^^^^^^^^^

@@ -1382,7 +1382,10 @@ A working sample lives at
 ``examples/desktop_pet/march_7th.petscript.json`` — six
 greetings, two hit-area buckets (head / body), three motion
 lines (wave / curtsy / cheer), and a 30-minute stretch
-reminder.
+reminder. The head / body lines answer clicks on a rig whose hit
+areas are named ``HitAreaHead`` / ``HitAreaBody`` (the Cubism
+convention); the bundled March 7th rig defines none, so a click on
+it picks a greeting instead.
 
 Persistence
 ^^^^^^^^^^^

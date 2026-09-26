@@ -1211,7 +1211,10 @@ opencv-python + mediapipe" 힌트가 표시됩니다.
 동작하는 샘플은
 ``examples/desktop_pet/march_7th.petscript.json`` 에 있습니다 — 인사말
 6개, 히트 영역 버킷 2개 (head / body), 모션 대사 3개 (wave / curtsy /
-cheer), 30분 스트레칭 알림 포함.
+cheer), 30분 스트레칭 알림 포함. head / body 대사는 히트 영역 이름이
+``HitAreaHead`` / ``HitAreaBody`` (Cubism 명명 규칙) 인 rig 의 클릭에
+응답합니다. 동봉된 March 7th rig 은 히트 영역을 하나도 정의하지 않으므로,
+클릭하면 대신 인사말이 선택됩니다.
 
 영속성
 ^^^^^^

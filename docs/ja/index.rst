@@ -1113,7 +1113,7 @@ rig が読み込まれていないときはモーション / 表情サブメニ�
 
 **Reset to default** はユーザースクリプトを破棄し、組み込みの挨拶セットに戻します。永続化されていたスクリプトパスもクリアされるので、次回起動時に再読み込みされません。
 
-動作するサンプルが ``examples/desktop_pet/march_7th.petscript.json`` にあります — 挨拶 6 件、ヒットエリアバケット 2 つ（head / body）、モーションセリフ 3 つ（wave / curtsy / cheer）、30 分間隔のストレッチリマインダーが入っています。
+動作するサンプルが ``examples/desktop_pet/march_7th.petscript.json`` にあります — 挨拶 6 件、ヒットエリアバケット 2 つ（head / body）、モーションセリフ 3 つ（wave / curtsy / cheer）、30 分間隔のストレッチリマインダーが入っています。head / body のセリフは、ヒットエリア名が ``HitAreaHead`` / ``HitAreaBody``\ （Cubism の命名規則）の rig でのクリックに応答します。同梱の March 7th rig はヒットエリアを定義していないため、クリックすると代わりに挨拶が選ばれます。
 
 永続化
 ^^^^^^

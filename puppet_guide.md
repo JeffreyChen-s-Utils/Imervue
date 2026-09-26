@@ -34,7 +34,7 @@ feed or a file on disk.
 
 1. Launch Imervue (`python -m Imervue` if running from source).
 2. Click the **Puppet** tab at the top of the window.
-3. **File > Examples > March 7Th** (or the toolbar's **Examples ▾**
+3. **File > Examples > March 7th** (or the toolbar's **Examples ▾**
    dropdown). The bundled 307-drawable Cubism rig opens centred.
 4. In the bottom **Motions** dock, click any of the 18 motions.
    The rig animates immediately.
@@ -424,8 +424,10 @@ inside them. Bind to a motion group (`TapHead → tap_head`
 plays a random motion from the `TapHead` group) or to an
 expression toggle (click body → toggle `surprised`).
 
-The March 7th rig has two hit areas — `head` triggers the
-`tap_head` motion, `body` toggles the `surprised` expression.
+The bundled March 7th rig defines no hit areas, so clicking it
+does nothing. A rig converted with **File > Import Cubism…** brings
+the model's `HitAreas` along; any other rig gets them from the
+`hit_areas` list in its `puppet.json`.
 
 ---
 
