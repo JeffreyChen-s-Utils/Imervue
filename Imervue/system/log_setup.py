@@ -5,7 +5,9 @@ Call ``setup_logging()`` once at startup (before any other import that uses
 ``logging.getLogger``).  In frozen (PyInstaller / Nuitka) builds the log file
 is written next to the .exe; in development it goes to the project root. When
 that directory is not writable — an EXE installed under ``Program Files`` —
-the log falls back to the per-user data directory.
+the log falls back to the per-user data directory. The previous session's log
+is kept beside it as ``imervue.previous.log``, so the traceback of a crash
+survives the relaunch that follows it.
 
 ``install_exception_logging()`` routes unhandled exceptions through the same
 log, which is the only trace a windowed frozen build leaves behind.
@@ -19,6 +21,7 @@ import traceback
 from pathlib import Path
 
 _LOG_FILENAME = "imervue.log"
+_PREVIOUS_LOG_FILENAME = "imervue.previous.log"
 _FILE_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 
 
@@ -30,9 +33,23 @@ def _user_log_dir() -> Path:
     return Path.home() / ".cache" / "imervue"
 
 
+def _keep_previous_log(directory: Path) -> None:
+    """Move the last session's log aside, replacing the one before it.
+
+    A crash leaves its traceback in the log, and the relaunch that follows
+    opened the log afresh and wiped it. A log another running Imervue still
+    holds open can't be moved; it is left where it is.
+    """
+    try:
+        os.replace(directory / _LOG_FILENAME, directory / _PREVIOUS_LOG_FILENAME)
+    except OSError:
+        return   # no earlier log, or it is still open elsewhere
+
+
 def _file_handler(directory: Path) -> logging.FileHandler:
-    """Open a fresh (mode ``w``) log file handler under *directory*."""
+    """Open a fresh (mode ``w``) log file handler under *directory*, keeping the last one."""
     directory.mkdir(parents=True, exist_ok=True)
+    _keep_previous_log(directory)
     handler = logging.FileHandler(str(directory / _LOG_FILENAME), mode="w", encoding="utf-8")
     handler.setFormatter(logging.Formatter(_FILE_FORMAT, datefmt="%Y-%m-%d %H:%M:%S"))
     return handler

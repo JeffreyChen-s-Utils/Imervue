@@ -53,6 +53,12 @@ When you open Imervue, you will see three areas:
 - **Center**: Image display area. Shows all images as a thumbnail grid.
 - **Right**: EXIF sidebar. Displays shooting information for the selected image.
 
+Imervue writes a log of each session to ``imervue.log`` next to the program (in
+``%LOCALAPPDATA%\Imervue``, or ``~/.cache/imervue`` outside Windows, when that folder is
+read-only). The previous session's log is kept as ``imervue.previous.log``, so after a crash
+the log that explains it is still there once Imervue is running again — attach both when
+reporting a problem.
+
 ----
 
 Opening Images

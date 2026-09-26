@@ -54,6 +54,8 @@ Au lancement d'Imervue, vous découvrez trois zones :
 - **Centre** : zone d'affichage des images. Présente toutes les images sous forme de grille de vignettes.
 - **Droite** : barre latérale EXIF. Affiche les informations de prise de vue de l'image sélectionnée.
 
+Imervue écrit le journal de chaque session dans ``imervue.log`` à côté du programme (dans ``%LOCALAPPDATA%\Imervue``, ou ``~/.cache/imervue`` hors de Windows, lorsque ce dossier est en lecture seule). Le journal de la session précédente est conservé sous le nom ``imervue.previous.log``, si bien qu'après un plantage le journal qui l'explique est toujours là une fois Imervue relancé — joignez les deux lorsque vous signalez un problème.
+
 ----
 
 Ouvrir des images

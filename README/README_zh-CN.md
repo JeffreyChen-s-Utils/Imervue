@@ -898,6 +898,8 @@ python -m Imervue.mcp_server
 
 此文件是**多账号容器**：每个 profile 各自持有独立的设置字典，因此同一份安装可以同时保有不同配置（例如 *Work* 与 *Personal*）。在 **File > Profiles…** 可切换、创建、重命名与删除 profile。旧版留下的 v1 单账号文件会在首次读取时自动迁移为 `default` profile。写入会在最后一次变更后延迟数秒才批量落地，且以原子方式写入（`.tmp` 同层文件 + `os.replace`），因此保存中途被中断也不会截断文件。启动时若读不到这个文件（JSON 损坏，或被其他程序占用），Imervue 会以默认设置启动，并在第一次保存前把它另存为旁边的 `user_setting.json.unreadable-<日期>-<时间>`；无法保留副本时绝不覆盖它。启动时会弹出警告，写明是哪个文件以及如何取回原来的设置。
 
+每次会话的日志 `imervue.log` 也写在同一个文件夹（该文件夹为只读时改写到 `%LOCALAPPDATA%\Imervue`，Windows 以外为 `~/.cache/imervue`）。上一次会话的日志会以 `imervue.previous.log` 保留在旁边，因此程序异常退出后再次启动 Imervue，能说明原因的日志依然还在。报告问题时请把两个文件一起附上。
+
 当前 profile 的关键条目：
 
 | 设置 | 类型 | 说明 |

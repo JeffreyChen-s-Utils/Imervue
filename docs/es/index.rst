@@ -55,6 +55,8 @@ Cuando abra Imervue, verá tres áreas:
 - **Centro**: Área de visualización. Muestra todas las imágenes como una cuadrícula de miniaturas.
 - **Derecha**: Barra lateral EXIF. Muestra la información de captura de la imagen seleccionada.
 
+Imervue escribe un registro de cada sesión en ``imervue.log`` junto al programa (en ``%LOCALAPPDATA%\Imervue``, o en ``~/.cache/imervue`` fuera de Windows, cuando esa carpeta es de solo lectura). El registro de la sesión anterior se conserva como ``imervue.previous.log``, así que tras una caída el registro que la explica sigue ahí cuando Imervue vuelve a ejecutarse — adjunte ambos al informar de un problema.
+
 ----
 
 Abrir imágenes

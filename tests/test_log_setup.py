@@ -113,6 +113,37 @@ class TestSetupLogging:
         handler.close()
         assert (target / "imervue.log").exists()
 
+    def test_the_last_sessions_log_is_kept(self, tmp_path, clean_logger):
+        """A crash's traceback used to be wiped by the relaunch that followed it."""
+        (tmp_path / "imervue.log").write_text("Unhandled exception: boom", encoding="utf-8")
+        handler = log_setup._file_handler(tmp_path)
+        handler.close()
+        assert (tmp_path / "imervue.previous.log").read_text(encoding="utf-8") == (
+            "Unhandled exception: boom")
+        assert (tmp_path / "imervue.log").read_text(encoding="utf-8") == ""
+
+    def test_only_one_earlier_log_is_kept(self, tmp_path, clean_logger):
+        (tmp_path / "imervue.previous.log").write_text("two sessions ago", encoding="utf-8")
+        (tmp_path / "imervue.log").write_text("last session", encoding="utf-8")
+        log_setup._file_handler(tmp_path).close()
+        assert (tmp_path / "imervue.previous.log").read_text(encoding="utf-8") == "last session"
+
+    def test_a_first_launch_has_nothing_to_keep(self, tmp_path, clean_logger):
+        log_setup._file_handler(tmp_path).close()
+        assert (tmp_path / "imervue.log").exists()
+        assert not (tmp_path / "imervue.previous.log").exists()
+
+    def test_a_log_that_cannot_be_moved_is_left_alone(self, tmp_path, monkeypatch, clean_logger):
+        """Another running Imervue holds its log open; Windows refuses the move."""
+        (tmp_path / "imervue.log").write_text("held open", encoding="utf-8")
+
+        def refuse(_src, _dst):
+            raise PermissionError("in use")
+
+        monkeypatch.setattr(log_setup.os, "replace", refuse)
+        log_setup._file_handler(tmp_path).close()
+        assert not (tmp_path / "imervue.previous.log").exists()
+
     def test_user_log_dir_is_under_localappdata_on_windows(self, monkeypatch, tmp_path):
         monkeypatch.setattr(sys, "platform", "win32")
         monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))

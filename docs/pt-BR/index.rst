@@ -53,6 +53,8 @@ Ao abrir o Imervue, você verá três áreas:
 - **Centro**: Área de exibição de imagens. Mostra todas as imagens em uma grade de miniaturas.
 - **Direita**: Barra lateral EXIF. Exibe as informações de captura da imagem selecionada.
 
+O Imervue grava um log de cada sessão em ``imervue.log`` ao lado do programa (em ``%LOCALAPPDATA%\Imervue``, ou em ``~/.cache/imervue`` fora do Windows, quando essa pasta é somente leitura). O log da sessão anterior é mantido como ``imervue.previous.log``, então, depois de um travamento, o log que o explica continua lá quando o Imervue volta a rodar — anexe os dois ao relatar um problema.
+
 ----
 
 Abrindo Imagens

@@ -950,6 +950,8 @@ Gespeichert in `user_setting.json` neben der Anwendung — dem Projektstamm bei 
 
 Die Datei ist ein **Multi-Profil-Container**: Jedes Profil hält ein eigenes Einstellungs-Dictionary, sodass eine Installation getrennte Setups tragen kann (z. B. *Work* und *Personal*). Profile wechseln, anlegen, umbenennen und löschen unter **File > Profiles…**. Eine v1-Datei mit einem einzelnen Profil aus einer älteren Version wird beim ersten Lesen automatisch ins Profil `default` migriert. Schreibvorgänge werden einige Sekunden nach der letzten Änderung gebündelt und landen atomar (`.tmp`-Geschwisterdatei + `os.replace`), sodass ein unterbrochenes Speichern die Datei nie abschneidet. Lässt sich die Datei beim Start nicht lesen (defektes JSON oder von einem anderen Programm gesperrt), startet Imervue mit Standardeinstellungen und legt vor dem ersten Speichern eine Kopie als `user_setting.json.unreadable-<Datum>-<Uhrzeit>` daneben ab; ohne diese Kopie speichert es nie darüber. Eine Warnung beim Start nennt die Datei und wie sich die früheren Einstellungen zurückholen lassen.
 
+Das Protokoll jeder Sitzung, `imervue.log`, wird in denselben Ordner geschrieben (in `%LOCALAPPDATA%\Imervue` bzw. außerhalb von Windows in `~/.cache/imervue`, wenn dieser Ordner schreibgeschützt ist). Das Protokoll der vorherigen Sitzung bleibt daneben als `imervue.previous.log` erhalten, sodass nach einem Absturz das Protokoll, das ihn erklärt, noch vorhanden ist, sobald Imervue wieder läuft — hängen Sie beim Melden eines Problems beide an.
+
 Wichtige Einträge im aktiven Profil:
 
 | Setting | Typ | Beschreibung |

@@ -962,6 +962,11 @@ to it as `user_setting.json.unreadable-<date>-<time>`; it never saves over a fil
 keep that copy of. A warning at start-up names the file and how to get the
 earlier settings back.
 
+Each session's log, `imervue.log`, is written to the same folder (to `%LOCALAPPDATA%\Imervue`, or
+`~/.cache/imervue` outside Windows, when that folder is read-only). The previous session's log is
+kept beside it as `imervue.previous.log`, so after a crash the log that explains it is still there
+once Imervue is running again — attach both when reporting a problem.
+
 Key entries in the active profile:
 
 | Setting | Type | Description |

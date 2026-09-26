@@ -948,6 +948,8 @@ Se guarda en `user_setting.json` junto a la aplicación: la raíz del proyecto e
 
 El archivo es un **contenedor multiperfil**: cada perfil guarda un diccionario de ajustes independiente, así que una sola instalación puede llevar configuraciones separadas (por ejemplo *Work* y *Personal*). Cambia, crea, renombra y elimina perfiles en **File > Profiles…**. Un archivo v1 de perfil único heredado de una versión anterior se migra automáticamente al perfil `default` en la primera lectura. Las escrituras se agrupan unos segundos después del último cambio y se aplican de forma atómica (archivo `.tmp` hermano + `os.replace`), de modo que un guardado interrumpido nunca trunca el archivo. Si el archivo no se puede leer al iniciar (JSON dañado u otro programa lo tiene abierto), Imervue arranca con la configuración predeterminada y, antes del primer guardado, conserva una copia junto a él como `user_setting.json.unreadable-<fecha>-<hora>`; sin esa copia nunca guarda encima. Un aviso al iniciar indica el archivo y cómo recuperar la configuración anterior.
 
+El registro de cada sesión, `imervue.log`, se escribe en la misma carpeta (en `%LOCALAPPDATA%\Imervue`, o en `~/.cache/imervue` fuera de Windows, cuando esa carpeta es de solo lectura). El registro de la sesión anterior se conserva junto a él como `imervue.previous.log`, así que tras una caída el registro que la explica sigue ahí cuando Imervue vuelve a ejecutarse — adjunta ambos al informar de un problema.
+
 Entradas clave del perfil activo:
 
 | Ajuste | Tipo | Descripción |

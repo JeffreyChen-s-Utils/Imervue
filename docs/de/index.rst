@@ -53,6 +53,8 @@ Wenn Sie Imervue öffnen, sehen Sie drei Bereiche:
 - **Mitte**: Bildanzeigebereich. Zeigt alle Bilder als Miniaturansicht-Raster an.
 - **Rechts**: EXIF-Seitenleiste. Zeigt die Aufnahmeinformationen für das ausgewählte Bild an.
 
+Imervue schreibt das Protokoll jeder Sitzung in ``imervue.log`` neben dem Programm (in ``%LOCALAPPDATA%\Imervue`` bzw. außerhalb von Windows in ``~/.cache/imervue``, wenn dieser Ordner schreibgeschützt ist). Das Protokoll der vorherigen Sitzung bleibt als ``imervue.previous.log`` erhalten, sodass nach einem Absturz das Protokoll, das ihn erklärt, noch vorhanden ist, sobald Imervue wieder läuft — hängen Sie beim Melden eines Problems beide an.
+
 ----
 
 Bilder öffnen

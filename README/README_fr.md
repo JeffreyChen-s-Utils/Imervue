@@ -903,6 +903,8 @@ Stocké dans `user_setting.json` à côté de l'application — la racine du pro
 
 Le fichier est un **conteneur multi-profils** : chaque profil détient un dictionnaire de réglages indépendant, si bien qu'une même installation peut porter des configurations séparées (par exemple *Work* et *Personal*). Changez, créez, renommez et supprimez les profils depuis **File > Profiles…**. Un fichier v1 mono-profil hérité d'une version antérieure est migré automatiquement vers le profil `default` à la première lecture. Les écritures sont regroupées quelques secondes après la dernière modification et atterrissent de façon atomique (fichier `.tmp` frère + `os.replace`), de sorte qu'une sauvegarde interrompue ne tronque jamais le fichier. Si le fichier est illisible au démarrage (JSON cassé, ou tenu par un autre programme), Imervue démarre avec les réglages par défaut et, avant la première sauvegarde, en garde une copie à côté sous le nom `user_setting.json.unreadable-<date>-<heure>` ; sans cette copie, il n'écrit jamais par-dessus. Un avertissement au démarrage indique le fichier et comment récupérer les réglages précédents.
 
+Le journal de chaque session, `imervue.log`, est écrit dans ce même dossier (dans `%LOCALAPPDATA%\Imervue`, ou `~/.cache/imervue` hors de Windows, lorsque ce dossier est en lecture seule). Le journal de la session précédente est conservé à côté sous le nom `imervue.previous.log`, si bien qu'après un plantage le journal qui l'explique est toujours là une fois Imervue relancé — joignez les deux lorsque vous signalez un problème.
+
 Entrées clés du profil actif :
 
 | Paramètre | Type | Description |
