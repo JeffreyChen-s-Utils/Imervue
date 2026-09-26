@@ -68,7 +68,7 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
         self._groups: dict[str, LayerGroup] = {}
         self._named_selections: dict[str, np.ndarray] = {}
         # Index of the layer the bucket fill samples for connectivity /
-        # tolerance — raster paint apps's "Reference Layer" toggle. ``None`` means
+        # tolerance — raster paint apps' "Reference Layer" toggle. ``None`` means
         # the bucket samples its own target layer (the legacy default).
         # Stored as an index, not a Layer reference, so it survives
         # reorderings via the helpers below.
@@ -498,7 +498,7 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
         """Replace the active selection with one derived from a layer's alpha.
 
         Pixels with alpha strictly greater than ``threshold`` become
-        selected. ``threshold=0`` matches raster paint apps's "Select Layer"
+        selected. ``threshold=0`` matches raster paint apps' "Select Layer"
         command. Returns ``True`` if the selection actually changed.
         """
         from Imervue.paint.selection_ops import from_layer_alpha

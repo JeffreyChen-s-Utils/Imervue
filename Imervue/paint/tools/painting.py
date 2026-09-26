@@ -311,7 +311,7 @@ class FillTool:
     ``selection_provider`` returns the active selection mask (or
     ``None``) at click time. ``reference_provider`` is optional and
     returns the HxWx4 RGBA buffer of the document's reference layer
-    when raster paint apps's "Reference Layer" mode is on; ``None`` falls the
+    when raster paint apps' "Reference Layer" mode is on; ``None`` falls the
     fill back to sampling its own target.
     """
 
@@ -359,7 +359,7 @@ class EyedropperTool:
     raster paint apps convention. Modifier-aware: holding Alt picks BG instead.
 
     ``composite_provider`` returns the document's flattened RGBA buffer
-    when raster paint apps's "Sample All Layers" mode is on. ``None`` falls
+    when raster paint apps' "Sample All Layers" mode is on. ``None`` falls
     the sample back to the active layer only — the legacy default.
     """
 

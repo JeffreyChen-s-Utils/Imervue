@@ -394,7 +394,7 @@ class BrushStrokeOptions:
     # Pixel-art mode — when True, the kernel is forced to a hard
     # ``size x size`` square of 1.0s (no anti-aliased falloff), dab
     # positions snap to integer pixels, and tip / kind shaping is
-    # bypassed. Matches raster paint apps's "ドット絵モード" / Aseprite's
+    # bypassed. Matches raster paint apps' "ドット絵モード" / Aseprite's
     # pixel brush. Tests in test_paint_brush_engine.py exercise the
     # snap + kernel behaviour.
     pixel_art: bool = False

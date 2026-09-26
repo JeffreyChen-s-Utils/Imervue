@@ -2,7 +2,7 @@
 Adobe ``.cube`` LUT reader and applier.
 
 Supports LUT_3D_SIZE cube files up to 65³ and LUT_1D_SIZE up to 65,536 points (DaVinci Resolve,
-Adobe, other XMP-aware photo managers, and most free LUT packs export in this format).
+Adobe tools and most free LUT packs export in this format).
 Parsing is tolerant of comments (``# …``), blank lines, and different
 newline styles.
 

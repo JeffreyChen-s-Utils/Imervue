@@ -169,7 +169,7 @@ class LayerDock(QDockWidget):
             self._shortcut_buttons.append((btn, label, action_id))
             btn.clicked.connect(slot)
             row.addWidget(btn)
-        # Dedicated "add adjustment layer" entry — raster paint apps's Layer
+        # Dedicated "add adjustment layer" entry — raster paint apps' Layer
         # palette has the same affordance under a separate icon. The
         # ``+◐`` glyph (plus + half-tone disc) marks it as an
         # adjustment-only insert vs the plain ``+`` raster add.

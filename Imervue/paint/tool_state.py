@@ -85,7 +85,7 @@ BLEND_MODES = (
 )
 DEFAULT_BLEND_MODE = "normal"
 
-# Brush parameter ranges — identical to raster paint apps's UI sliders. Settings are
+# Brush parameter ranges — identical to raster paint apps' UI sliders. Settings are
 # stored as plain ints/floats; clamping happens on assignment.
 BRUSH_SIZE_MIN = 1
 BRUSH_SIZE_MAX = 500
@@ -226,7 +226,7 @@ class ToolState:
     snap_to_edges: bool = False
     # When ``True`` and the workspace has a manga panel layout
     # registered, the brush clips strokes to the interior of the
-    # panel containing the press point. Matches raster paint apps's
+    # panel containing the press point. Matches raster paint apps'
     # "コマ内描画制限" toggle. Default off so the existing brush
     # behaviour is unchanged.
     snap_to_panel: bool = False
@@ -335,7 +335,7 @@ class ToolState:
         return True
 
     def swap_colors(self) -> None:
-        """Exchange foreground and background — raster paint apps's X shortcut."""
+        """Exchange foreground and background — raster paint apps' X shortcut."""
         if self.foreground == self.background:
             return
         self.foreground, self.background = self.background, self.foreground
@@ -343,7 +343,7 @@ class ToolState:
         self._emit(EVENT_COLOR)
 
     def reset_colors(self) -> None:
-        """Reset to black/white — raster paint apps's D shortcut."""
+        """Reset to black/white — raster paint apps' D shortcut."""
         changed = False
         if self.foreground != DEFAULT_FG:
             self.foreground = DEFAULT_FG

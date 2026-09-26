@@ -137,7 +137,7 @@ class BrushDock(QDockWidget):
         """Stabilizer / scatter / colour-jitter sliders and the follow-tilt box.
 
         The engine already supports these via brush_dynamics + brush_random;
-        surfacing them as live controls here matches raster paint apps's
+        surfacing them as live controls here matches raster paint apps'
         brush-options panel.
         """
         self._stabilizer = self._percent_slider(0, self._on_stabilizer_changed, lang.get(

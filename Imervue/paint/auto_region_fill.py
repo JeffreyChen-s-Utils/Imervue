@@ -1,4 +1,4 @@
-"""One-shot "fill every enclosed region" — raster paint apps's bucket-all.
+"""One-shot "fill every enclosed region" — raster paint apps' bucket-all.
 
 Pure-numpy line-art flat-fill: take a reference (line-art) buffer,
 threshold it into "ink" vs "paper", connected-component label the

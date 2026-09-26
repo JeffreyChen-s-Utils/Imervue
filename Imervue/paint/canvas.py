@@ -313,7 +313,7 @@ class PaintCanvas(
         layers, so :meth:`current_image` returns ``None`` and the tool
         dispatcher silently no-ops on the first brush stroke. The
         workspace calls this from ``__init__`` so the user can paint
-        immediately, matching raster paint apps's "open with a blank canvas"
+        immediately, matching raster paint apps' "open with a blank canvas"
         behaviour.
         """
         if width <= 0 or height <= 0:
