@@ -252,6 +252,11 @@ class InputController:
         if view._drag_selecting:
             self.finish_drag_select()
             return True
+        # A click, not a drag: the press point is spent. Left set, it read as a
+        # drag in progress and switched the hover preview - and the hovered-tile
+        # target of the rating / label / cull keys - off for good.
+        view._drag_start_pos = None
+        view._drag_end_pos = None
         mx, my = event.position().x(), event.position().y()
         clicked_tile = self.tile_at(mx, my)
         if not clicked_tile:
