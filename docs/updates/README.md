@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-73 | 2026-09-26 | Refactor: the upscale worker's two run paths share one loop | #refactor #upscale #quality #sonarcloud | [2026-09-c](2026-09-c.md) |
 | U-20260926-72 | 2026-09-26 | Tests pin the upscale worker's traditional and AI run paths | #test #upscale | [2026-09-c](2026-09-c.md) |
 | U-20260926-71 | 2026-09-26 | Refactor: three functions SonarCloud flags as too complex are split into named steps | #refactor #quality #sonarcloud | [2026-09-c](2026-09-c.md) |
 | U-20260926-70 | 2026-09-26 | Refactor: the Desktop Pet tab unticks boxes through one quiet helper | #refactor #desktop-pet | [2026-09-c](2026-09-c.md) |
@@ -446,4 +447,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 17 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 18 |
