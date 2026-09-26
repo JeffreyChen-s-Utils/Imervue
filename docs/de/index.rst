@@ -18,7 +18,7 @@ Der Großteil dieses Handbuchs ist um diese fünf Abschnitte herum strukturiert.
        Masken, Retusche, Multi-Bild. Siehe *Modify-Tab — Nicht-destruktive Entwicklung*.
    * - **Paint**
      - Voll ausgestattetes Raster-Mal-Studio mit Brushes, Layern, Animation,
-       Manga-Werkzeugen, PSD-I/O. Siehe *Paint-Tab — Voll ausgestatteter Raster-Editor*.
+       Manga-Werkzeugen, PSD-I/O. Siehe *Paint-Arbeitsbereich (Paint-Tab)*.
    * - **Puppet**
      - Von Grund auf neu entwickelter 2D-Rigging-Puppet-Animator — Meshes,
        Deformer, Parameter, Motions, Physik. Siehe *Puppet-Tab — 2D-Rigging-Animation*.
@@ -247,7 +247,7 @@ Die Tasten bewerten das in Deep Zoom gezeigte Bild. Im Grid bewerten sie die mar
 Farbetiketten (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Unabhängige Farbkennzeichen, getrennt von der 1 -- 5-Sterne-Bewertung. Nützlich für schnelle
+Farbkennzeichen, getrennt von der 1 -- 5-Sterne-Bewertung gespeichert. Nützlich für schnelle
 Kategorisierung (z. B. rot = Ausschusskandidaten, grün = Auswahl, blau = zu retuschieren).
 
 .. list-table::
@@ -778,9 +778,9 @@ Puppet-Arbeitsbereich (Puppet-Tab)
 ----------------------------------
 
 Die vierte Hauptregisterkarte — **Puppet** — ist ein von Grund auf neu entwickeltes
-2D-Rigging-Puppet-Animationssystem. Es leistet, was Live2D leistet (Mesh-Deformations-Rigs,
-Parameter, Motions, Physik, Ausdrücke, Pose-Gruppen, Lippensynchronisation, Webcam-Tracking),
-aber **ohne proprietäres SDK**, **ohne `live2d-py`**, und mit einem vollständig offenen
+2D-Rigging-Puppet-Animationssystem: Mesh-Deformations-Rigs, Parameter, Motions, Physik,
+Ausdrücke, Pose-Gruppen, Lippensynchronisation und Webcam-Tracking, **ohne proprietäres SDK**,
+**ohne `live2d-py`** und mit einem vollständig offenen
 ``.puppet``-Dateiformat.
 
 .. note::
@@ -1925,9 +1925,7 @@ Workspace-Layout-Presets
 
 ``Datei`` > ``Workspaces…`` erfasst die aktuelle Fenstergeometrie, Dock- / Toolbar-
 Anordnung, Splittergrößen und den aktiven Wurzelordner unter einem Namen — und
-lässt Sie dann zwischen gespeicherten Layouts wechseln, ähnlich wie andere
-XMP-fähige Foto-Manager *Library* / *Develop* / *Export* oder Adobe Bridge
-*Metadata* / *Filmstrip* wechseln. Der Dialog unterstützt Aktuelles speichern,
+lässt Sie dann zwischen gespeicherten Layouts wechseln. Der Dialog unterstützt Aktuelles speichern,
 Laden, Umbenennen und Löschen. Workspaces bleiben in ``user_settings.json``
 (unter dem Schlüssel ``workspaces``) erhalten und überstehen Sitzungen hinweg.
 
@@ -2268,13 +2266,12 @@ Zeile pro Bild in der aktuellen Ansicht mit EXIF, Abmessungen, Farbetikett, Bewe
 Favorit, hierarchischen Tags, Cull-Status und Notizen. Nützlich, um Cull-Entscheidungen
 in eine Tabelle oder einen externen Workflow einzuspeisen.
 
-XMP-Sidecar (Interop mit anderen XMP-fähigen Foto-Managern)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+XMP-Sidecars
+^^^^^^^^^^^^
 
 Imervue kann Adobe-XMP-Sidecar-Dateien (``photo.jpg`` ↔ ``photo.xmp``) lesen und
 schreiben, sodass Bewertungen, Titel, Beschreibungen, Stichwörter und Farbetiketten
-mit anderen XMP-fähigen Foto-Managern, Bridge und anderen XMP-fähigen Tools sauber
-hin- und herwandern.
+mit Adobe Bridge und anderen XMP-fähigen Foto-Managern sauber hin- und herwandern.
 
 Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben.
 
@@ -2314,7 +2311,7 @@ die dort gesetzte Bewertung ist die, die der XMP-Export schreibt.
 Culling (Pick / Reject)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Dreiwertiges Flag-basiertes Cull-Flag. Drücken Sie ``P``, um das aktuelle Bild oder
+Ein dreiwertiges Cull-Flag. Drücken Sie ``P``, um das aktuelle Bild oder
 jede ausgewählte Kachel zu picken, ``Shift + X`` zum Verwerfen, ``U`` zum Entfernen
 des Flags. ``Filter`` > ``By Cull State`` zeigt nur Picks, Rejects oder Ungeflaggte
 an. ``Extra Tools`` > ``Workflow`` > ``Culling`` wendet den Filter über einen Dialog an und stellt

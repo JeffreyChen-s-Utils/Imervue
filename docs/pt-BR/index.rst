@@ -18,7 +18,7 @@ A maior parte deste guia está organizada em torno dessas cinco seções.
        retoque, multi-imagem. Consulte *Aba Modify — Revelação Não Destrutiva*.
    * - **Paint**
      - Estúdio raster de pintura completo com pincéis, camadas, animação,
-       ferramentas para mangá e I/O de PSD. Consulte *Aba Paint — Editor Raster Completo*.
+       ferramentas para mangá e I/O de PSD. Consulte *Espaço de Trabalho Paint (Aba Paint)*.
    * - **Puppet**
      - Animador de fantoches 2D com rig construído do zero — meshes, deformadores, parâmetros,
        movimentos, física. Consulte *Aba Puppet — Animação 2D com Rig*.
@@ -247,7 +247,7 @@ As teclas avaliam a imagem mostrada no Deep Zoom. Na grade avaliam as miniaturas
 Rótulos de Cor (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Marcadores de cor independentes baseados em flags, armazenados separadamente da avaliação por estrelas
+Marcadores de cor, armazenados separadamente da avaliação por estrelas
 de 1 a 5. Úteis para categorização rápida (ex.: vermelho = candidatos a rejeição, verde = selecionadas,
 azul = a retocar).
 
@@ -780,9 +780,9 @@ Espaço de Trabalho Puppet (Aba Puppet)
 --------------------------------------
 
 A quarta aba principal — **Puppet** — é um sistema de animação de fantoches 2D
-com rig construído do zero. Faz o que o Live2D faz (rigs de deformação de mesh,
-parâmetros, motions, física, expressões, grupos de pose, sincronização labial,
-rastreamento por webcam) mas **sem SDK proprietário**, **sem `live2d-py`**, e com
+com rig construído do zero: rigs de deformação de mesh, parâmetros, motions,
+física, expressões, grupos de pose, sincronização labial e rastreamento por webcam,
+**sem SDK proprietário**, **sem `live2d-py`**, e com
 um formato de arquivo ``.puppet`` totalmente aberto.
 
 .. note::
@@ -1866,9 +1866,7 @@ Presets de Layout de Espaço de Trabalho
 
 ``Arquivo`` > ``Espaços de Trabalho…`` captura a geometria atual da janela, o
 arranjo de docks / barras de ferramentas, tamanhos de splitter e pasta raiz
-ativa sob um nome — depois permite alternar entre layouts salvos da mesma forma
-que outros gerenciadores de fotos com suporte a XMP alternam *Library* /
-*Develop* / *Export* ou o Adobe Bridge alterna *Metadata* / *Filmstrip*. A
+ativa sob um nome — depois permite alternar entre layouts salvos. A
 caixa de diálogo suporta Salvar Atual, Carregar, Renomear e Excluir. Espaços
 de trabalho persistem em ``user_settings.json`` (sob a chave ``workspaces``)
 e sobrevivem entre sessões.
@@ -2208,13 +2206,13 @@ visualização atual cobrindo EXIF, dimensões, rótulo de cor, avaliação, fav
 tags hierárquicas, estado de cull e notas. Útil para alimentar decisões de cull
 em uma planilha ou fluxo de trabalho externo.
 
-Sidecar XMP (Interoperação com outros gerenciadores de fotos com suporte a XMP)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Sidecars XMP
+^^^^^^^^^^^^
 
 O Imervue pode ler e gravar arquivos sidecar XMP da Adobe (``photo.jpg`` ↔
 ``photo.xmp``) para que avaliações, títulos, descrições, palavras-chave e
-rótulos de cor façam round-trip de forma limpa com outros gerenciadores de fotos
-com suporte a XMP, Bridge e outras ferramentas com suporte a XMP.
+rótulos de cor façam round-trip de forma limpa com o Adobe Bridge e outros
+gerenciadores de fotos com suporte a XMP.
 
 Salvar mescla no sidecar existente: só estes campos mudam, então as configurações de revelação, o recorte e o histórico de outro programa são mantidos, e um sidecar ilegível nunca é sobrescrito.
 
@@ -2251,7 +2249,7 @@ clicável — a avaliação que ela define é a que a exportação XMP gravará.
 Culling (Pick / Reject)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Flag de cull de três estados baseado em sinalização. Pressione ``P`` para escolher
+Um flag de cull de três estados. Pressione ``P`` para escolher
 a imagem atual ou cada miniatura selecionada, ``Shift + X`` para rejeitar, ``U`` para
 desmarcar. ``Filtrar`` > ``Por Estado de Cull`` mostra apenas escolhidas, rejeitadas
 ou não marcadas. ``Extra Tools`` > ``Workflow`` > ``Culling`` aplica o filtro via uma caixa de diálogo

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-60 | 2026-09-26 | Sentences the brand-name scrub broke read properly again in the app and the docs | #fix #i18n #docs #xmp | [2026-09-c](2026-09-c.md) |
 | U-20260926-59 | 2026-09-26 | The hover preview and the hovered-tile keys keep working after a click on the wall | #fix #browse #hover #culling | [2026-09-c](2026-09-c.md) |
 | U-20260926-58 | 2026-09-26 | Comments read as sentences again after the brand-name scrub | #refactor #comments | [2026-09-c](2026-09-c.md) |
 | U-20260926-57 | 2026-09-26 | 65-point and 1D LUTs load, Graduated Density offers its tint, and the library docs match the code | #fix #lut #develop #docs #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
@@ -433,4 +434,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 4 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 5 |

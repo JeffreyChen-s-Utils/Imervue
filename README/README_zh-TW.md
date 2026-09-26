@@ -228,9 +228,9 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - **書籤** — 最多 5000 個路徑
 - **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）；在網格中作用於選取的縮圖，沒有就作用於方向鍵所在的那張，再沒有就是滑鼠下的那張
-- **顏色標籤** — other XMP-aware photo managers 式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
-- **挑片**（Culling）— other XMP-aware photo managers 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕；**自動挑片** 會在每組近重複中挑出最清晰的一張保留、其餘標為拒絕
-- **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫；右鍵 **Index Keywords** 會把 Lightroom／darktable 的關鍵字階層（`Places|Taiwan|Taipei`）歸到對應的父標籤下
+- **顏色標籤** — 旗標式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
+- **挑片**（Culling）— 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕；**自動挑片** 會在每組近重複中挑出最清晰的一張保留、其餘標為拒絕
+- **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫；選取縮圖後右鍵 **批次操作** > **索引關鍵字** 會把 Lightroom／darktable 的關鍵字階層（`Places|Taiwan|Taipei`）歸到對應的父標籤下
 - **Tags & Albums** 含多標籤 AND / OR 過濾
 - **智慧相簿** — 儲存規則式查詢並一鍵重新套用；過濾條件涵蓋副檔名、解析度與 **長寬比**、**檔案大小**、評等 **下限 / 上限**、顏色、挑片、標籤（含 **排除**）、**相機 / 鏡頭**、**檔名 regex / glob** 以及 **檔案年齡**，並可 **匯出 / 匯入** 成可攜的 JSON 檔
 - **疊合 RAW+JPEG 對** — 將同檔名擷取折疊成單一磁磚；RAW 仍可從手足存取
@@ -266,7 +266,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - **EXIF 編輯器** 對話框 — 描述、作者、版權、相機與註解（支援 Unicode）不需額外套件即可寫入 JPEG / WebP，像素與其他標籤不變
 - **關鍵字編輯器** — 標題 / 創作者 / 描述 / 關鍵字，並從標籤共現提供 **相關標籤建議**，以及 **受控詞彙展開**（輸入葉節點關鍵字會自動套用其祖先＋同義詞，詞彙為可編輯的階層結構）
 - **影像資訊** 對話框（尺寸 / 大小 / 日期）
-- **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤雙向同步 other XMP-aware photo managers（透過 `defusedxml` 安全解析）。儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。除了 `photo.xmp`（Lightroom、Bridge），darktable 與 digiKam 寫的 `photo.jpg.xmp` 在它是唯一的 sidecar 時也會讀取並更新；顏色標籤看得懂 Lightroom 的寫法（`Red` … `Purple`）與 Bridge 的寫法（`Select`、`Second`、`Approved`、`Review`、`To Do`），匯出時照 Lightroom 的寫法寫入。被拒絕的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）會成為篩選的「拒絕」，「拒絕」匯出時寫成 -1。沒有 sidecar 的檔案會讀取並匯入檔案本身內嵌的 XMP 與 EXIF 評等（JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF）：Lightroom 就是這樣保存 JPEG 的評等與關鍵字，Windows 檔案總管的星等也是。
+- **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤與其他支援 XMP 的相片管理軟體雙向同步（透過 `defusedxml` 安全解析）。儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。除了 `photo.xmp`（Lightroom、Bridge），darktable 與 digiKam 寫的 `photo.jpg.xmp` 在它是唯一的 sidecar 時也會讀取並更新；顏色標籤看得懂 Lightroom 的寫法（`Red` … `Purple`）與 Bridge 的寫法（`Select`、`Second`、`Approved`、`Review`、`To Do`），匯出時照 Lightroom 的寫法寫入。被拒絕的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）會成為篩選的「拒絕」，「拒絕」匯出時寫成 -1。沒有 sidecar 的檔案會讀取並匯入檔案本身內嵌的 XMP 與 EXIF 評等（JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF）：Lightroom 就是這樣保存 JPEG 的評等與關鍵字，Windows 檔案總管的星等也是。
 - **GPS 地理標記編輯器** — 讀寫 EXIF GPS 經緯度；JPEG / WebP 不需額外套件，像素、其他標籤與縮圖都不變
 - **權杖批次重新命名** — 即時預覽範本 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **匯出元資料 CSV / JSON** — 每張影像一列含挑片 / 評等 / 標籤 / 筆記
@@ -304,7 +304,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - **色調曲線編輯器** — 可拖曳 RGB 曲線 + 個別 R / G / B 通道，含 monotone cubic 插值
 - **套用 .cube LUT** — 載入任何 Adobe LUT（3D 最高 65³，1D 最多 65,536 點，含 DaVinci Resolve 的 `LUT_3D_INPUT_RANGE`），trilinear 插值，混合強度滑桿
-- **分離色調** — 旗標式陰影 / 高光色相 + 飽和度，含平衡樞紐
+- **分離色調** — 陰影 / 高光色相 + 飽和度，含平衡樞紐
 
 ### 創意效果
 
@@ -335,7 +335,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - **修復筆刷** — 圓形點，OpenCV inpainting（Telea 或 Navier-Stokes）
 - **仿製圖章** — Shift+點擊來源、羽化貼至目標
-- **裁切 / 拉直** — 標準化裁切矩形 + 任意角度拉直，自動裁到最大內接矩形
+- **裁切 / 拉直** — 標準化裁切矩形 + 最多 ±15° 的拉直，自動裁到最大內接矩形
 - **自動拉直** — Hough-line 地平線 / 垂直線偵測
 - **鏡頭校正** — 純 numpy 徑向畸變（桶狀 / 枕狀）、暈影提升、各通道色差校正
 - **雜訊抑制 / 銳化** — 邊緣保留雙邊去噪 + unsharp mask 銳化
@@ -362,7 +362,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 ### 外部編輯器
 
-從 **File > External Editors…** 註冊程式（your image editor /  / …），再從 **File > Open in External Editor** 啟動。用編輯器存檔後，檢視器會自動顯示新版本。
+從 **File > External Editors…** 註冊程式（影像編輯器等），再從 **File > Open in External Editor** 啟動。用編輯器存檔後，檢視器會自動顯示新版本。
 
 ---
 
@@ -434,7 +434,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 > **完整教學**：[`puppet_guide.zh-TW.md`](../puppet_guide.zh-TW.md) 涵蓋直播（OBS / NDI / 虛擬攝影機）與動畫製作（錄製 / 時間軸編輯 / MP4 匯出）的端到端流程。英文版於 [`puppet_guide.md`](../puppet_guide.md)、簡體中文於 [`puppet_guide.zh-CN.md`](../puppet_guide.zh-CN.md)。
 
-**Puppet** 分頁是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D（網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴、攝影機臉部追蹤），但 **不依賴任何專利 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `Imervue/puppet/FORMAT.md`。
+**Puppet** 分頁是從零打造的 2D 綁骨偶動畫系統：網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴與攝影機臉部追蹤，**不依賴任何專有 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `Imervue/puppet/FORMAT.md`。
 
 ### 檔案格式
 
@@ -446,7 +446,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - `expressions/*.json` — 參數疊加
 - `physics.json` — Verlet 物理配置
 
-JSON 為主，人類可 diff，沒有專利二進位。
+JSON 為主，人類可 diff，沒有專有二進位。
 
 ### 渲染器
 

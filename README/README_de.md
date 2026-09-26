@@ -230,8 +230,8 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Bookmarks** — Bis zu 5000 Pfade
 - **Ratings** — 0–5 Sterne (`1`–`5`) + Favoriten-Herz (`0`); im Grid gelten sie für die markierten Miniaturen, sonst für die mit den Pfeiltasten gewählte, sonst für die unter der Maus
 - **Color Labels** — Flag-basiert rot/gelb/grün/blau/lila (`F1`–`F5`)
-- **Culling** — Wie andere XMP-bewusste Foto-Manager 3-Zustands-Flag (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects; Auto-Cull wählt das schärfste Bild pro Near-Duplicate-Gruppe und verwirft den Rest
-- **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht; **Index Keywords** im Rechtsklick-Menü legt eine Stichwort-Hierarchie aus Lightroom / darktable (`Places|Taiwan|Taipei`) unter ihren Eltern ab
+- **Culling** — Flag mit drei Zuständen (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects; Auto-Cull wählt das schärfste Bild pro Near-Duplicate-Gruppe und verwirft den Rest
+- **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht; Rechtsklick **Batch-Operationen** > **Index Keywords** (bei ausgewählten Miniaturen) legt eine Stichwort-Hierarchie aus Lightroom / darktable (`Places|Taiwan|Taipei`) unter ihren Eltern ab
 - **Tags & Albums** mit Multi-Tag-AND/OR-Filterung
 - **Smart Albums** — Regelbasierte Abfragen speichern und mit einem Klick erneut anwenden; die Filter umfassen Endung, Auflösung & **Seitenverhältnis**, **Dateigröße**, Rating-**Unter- / Obergrenze**, Farbe, Cull, Tags (inkl. **Ausschluss**), **Kamera / Objektiv**, **Dateiname-Regex / -Glob** und **Dateialter**, plus **Export / Import** in eine portable JSON-Datei
 - **Stack RAW+JPEG-Paare** — Aufnahmen mit gleichem Stamm in ein Tile zusammenfassen; RAW bleibt als Geschwister erreichbar
@@ -267,7 +267,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **EXIF-Editor**-Dialog — Beschreibung, Künstler, Copyright, Kamera und Kommentar (auch Unicode) ohne Zusatzpaket in ein JPEG oder WebP schreiben, Pixel und übrige Tags bleiben unverändert
 - **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz und Controlled-Vocabulary-Erweiterung (ein Blatt-Keyword wendet automatisch seine Vorfahren + Synonyme aus einem editierbaren hierarchischen Vokabular an)
 - **Image-Info**-Dialog (Maße / Größe / Datums)
-- **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip zu anderen XMP-bewussten Foto-Managern (sicheres XML via `defusedxml`). Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben. Neben `photo.xmp` (Lightroom, Bridge) wird auch die von darktable und digiKam geschriebene `photo.jpg.xmp` gelesen und aktualisiert, wenn sie die einzige Sidecar-Datei ist; Farbetiketten werden in Lightrooms Wörtern (`Red` … `Purple`) und in Bridges (`Select`, `Second`, `Approved`, `Review`, `To Do`) verstanden und so exportiert, wie Lightroom sie schreibt. Ein abgelehntes Foto (`xmp:Rating` -1 in Lightroom, Bridge und darktable) wird zu einem Culling-Reject, und ein Reject wird als -1 exportiert. Eine Datei ohne Sidecar wird aus dem in ihr eingebetteten XMP und EXIF-Rating gelesen und importiert (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) — so speichert Lightroom Bewertung und Stichwörter eines JPEG und der Windows-Explorer seine Sterne.
+- **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip mit anderen XMP-fähigen Foto-Managern (sicheres XML via `defusedxml`). Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben. Neben `photo.xmp` (Lightroom, Bridge) wird auch die von darktable und digiKam geschriebene `photo.jpg.xmp` gelesen und aktualisiert, wenn sie die einzige Sidecar-Datei ist; Farbetiketten werden in Lightrooms Wörtern (`Red` … `Purple`) und in Bridges (`Select`, `Second`, `Approved`, `Review`, `To Do`) verstanden und so exportiert, wie Lightroom sie schreibt. Ein abgelehntes Foto (`xmp:Rating` -1 in Lightroom, Bridge und darktable) wird zu einem Culling-Reject, und ein Reject wird als -1 exportiert. Eine Datei ohne Sidecar wird aus dem in ihr eingebetteten XMP und EXIF-Rating gelesen und importiert (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) — so speichert Lightroom Bewertung und Stichwörter eines JPEG und der Windows-Explorer seine Sterne.
 - **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon ohne Zusatzpaket in JPEGs und WebPs schreiben, Pixel, übrige Tags und Vorschaubild bleiben unverändert
 - **Token Batch Rename** — Live-Preview-Templates wie `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — eine Zeile pro Bild inkl. Cull / Rating / Tags / Notes
@@ -305,7 +305,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 - **Tone-Curve-Editor** — ziehbare RGB-Kurve plus per-Kanal R / G / B mit monotone-cubic Interpolation
 - **Apply .cube LUT** — beliebige Adobe-LUT laden (3D bis 65³, 1D bis 65.536 Punkte; auch mit DaVinci Resolves `LUT_3D_INPUT_RANGE`), trilinear interpolieren, mit Intensitäts-Slider mischen
-- **Split Toning** — Flag-basiert Schatten- / Lichter-Hue + Sättigung mit Balance-Pivot
+- **Split Toning** — Schatten- / Lichter-Hue + Sättigung mit Balance-Pivot
 
 ### Kreative Effekte
 
@@ -336,7 +336,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 - **Healing Brush** — kreisförmige Spots, OpenCV-Inpainting (Telea oder Navier-Stokes)
 - **Clone Stamp** — Shift+Klick auf Quelle, gefeatherter Blit zum Ziel
-- **Crop / Straighten** — normalisiertes Crop-Rechteck plus Straighten unter beliebigem Winkel, das automatisch auf das größte innere Rechteck zuschneidet
+- **Crop / Straighten** — normalisiertes Crop-Rechteck plus Straighten um bis zu ±15°, das automatisch auf das größte innere Rechteck zuschneidet
 - **Auto-Straighten** — Hough-Line-Horizont- / Vertikal-Detektion
 - **Lens Correction** — Pure-numpy radiale Verzerrung (Barrel / Pincushion), Vignettierungsausgleich, per-Kanal chromatische Aberration
 - **Noise Reduction / Sharpening** — Kantenerhaltende bilaterale Rauschunterdrückung + Unsharp-Mask-Schärfung
@@ -363,7 +363,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 ### Externe Editoren
 
-Programme (Ihr Bildeditor / … / …) unter **File > External Editors…** registrieren und über **File > Open in External Editor** mit dem aktuellen Bild starten. Speichert der Editor, zeigt der Viewer die neue Fassung von selbst.
+Programme (etwa einen Bildeditor) unter **File > External Editors…** registrieren und über **File > Open in External Editor** mit dem aktuellen Bild starten. Speichert der Editor, zeigt der Viewer die neue Fassung von selbst.
 
 ---
 
@@ -433,7 +433,7 @@ Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ei
 
 ## Puppet — 2D-Rigged-Animation
 
-Der **Puppet**-Tab ist ein von Grund auf entwickeltes 2D-Rigged-Puppet-Animationssystem. Es leistet, was Live2D leistet (Mesh-Deformations-Rigs, Parameter, Motions, Physik, Expressions, Pose, Lip-Sync, Webcam-Face-Tracking), aber **ohne proprietäres SDK**, **ohne `live2d-py`** und mit einem vollständig offenen `.puppet`-Dateiformat, dokumentiert in `Imervue/puppet/FORMAT.md`.
+Der **Puppet**-Tab ist ein von Grund auf entwickeltes 2D-Rigged-Puppet-Animationssystem: Mesh-Deformations-Rigs, Parameter, Motions, Physik, Expressions, Pose, Lip-Sync und Webcam-Face-Tracking, **ohne proprietäres SDK**, **ohne `live2d-py`** und mit einem vollständig offenen `.puppet`-Dateiformat, dokumentiert in `Imervue/puppet/FORMAT.md`.
 
 > **Vollständige Anleitung**: [`puppet_guide.md`](../puppet_guide.md) deckt den
 > End-to-End-Flow sowohl für Live-Streaming (OBS / NDI / virtuelle Kamera)

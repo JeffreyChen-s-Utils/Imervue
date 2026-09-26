@@ -229,9 +229,9 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **북마크** — 최대 5000개 경로
 - **별점** — 0-5 별 (`1`–`5`) + 즐겨찾기 하트 (`0`). 그리드에서는 선택한 썸네일, 없으면 방향키로 고른 것, 없으면 마우스 아래의 것에 적용
-- **컬러 라벨** — 다른 XMP 인식 사진 관리자와 동일한 플래그 기반 빨강 / 노랑 / 초록 / 파랑 / 보라 (`F1`–`F5`)
-- **컬링(Culling)** — 다른 XMP 인식 사진 관리자의 3상태 플래그 (`P` = pick, `Shift+X` = reject, `U` = unflag); 상태별 필터링; 거부된 사진 일괄 삭제; 자동 컬링은 근접 중복 그룹마다 가장 선명한 프레임을 pick하고 나머지는 reject
-- **계층 태그** — `animal/cat/british` 같은 트리 경로; 하위 항목 자동 매칭; 우클릭 **Index Keywords**는 Lightroom / darktable 키워드 계층(`Places|Taiwan|Taipei`)을 부모 아래에 둡니다
+- **컬러 라벨** — 플래그 기반 빨강 / 노랑 / 초록 / 파랑 / 보라 (`F1`–`F5`)
+- **컬링(Culling)** — 3상태 플래그 (`P` = pick, `Shift+X` = reject, `U` = unflag); 상태별 필터링; 거부된 사진 일괄 삭제; 자동 컬링은 근접 중복 그룹마다 가장 선명한 프레임을 pick하고 나머지는 reject
+- **계층 태그** — `animal/cat/british` 같은 트리 경로; 하위 항목 자동 매칭; 썸네일을 선택하고 우클릭 **일괄 작업** > **키워드 색인**을 실행하면 Lightroom / darktable 키워드 계층(`Places|Taiwan|Taipei`)을 부모 아래에 둡니다
 - **Tags & Albums** — 다중 태그 AND / OR 필터링
 - **스마트 앨범** — 규칙 기반 쿼리를 저장하고 클릭 한 번으로 재적용; 필터는 확장자, 해상도 및 **종횡비**, **파일 크기**, 별점 **하한 / 상한**, 색상, 컬링, 태그(**제외** 포함), **카메라 / 렌즈**, **파일명 정규식 / glob**, **파일 경과 시간**을 아우르며, 휴대 가능한 JSON 파일로의 **내보내기 / 가져오기**도 지원
 - **RAW+JPEG 쌍 스택** — 동일 파일 스템의 캡처를 하나의 타일로 접기; RAW는 형제 항목으로 여전히 접근 가능
@@ -267,7 +267,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 - **EXIF 편집기** 다이얼로그 — 설명·작성자·저작권·카메라·코멘트(유니코드 포함)를 추가 패키지 없이 JPEG / WebP에 기록하며 픽셀과 다른 태그는 그대로
 - **키워드 편집기** — 제목 / 작성자 / 설명 / 키워드, 태그 동시 출현에서 도출한 **연관 태그 제안** 포함, 그리고 **통제 어휘 확장**(리프 키워드가 편집 가능한 계층 어휘에서 그 조상 + 동의어를 자동으로 적용)
 - **이미지 정보** 다이얼로그 (크기 / 용량 / 날짜)
-- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 인식 사진 관리자와 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
+- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 지원 사진 관리 프로그램과 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
 - **GPS 지오태그 편집기** — EXIF GPS 위도/경도 읽기/쓰기. JPEG / WebP는 추가 패키지 없이 픽셀·다른 태그·썸네일을 그대로 두고 기록
 - **토큰 일괄 이름 변경** — 라이브 미리보기 템플릿 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **메타데이터 CSV / JSON 내보내기** — 컬링 / 별점 / 태그 / 메모를 포함한 이미지당 한 행
@@ -305,7 +305,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **톤 커브 편집기** — 드래그 가능한 RGB 커브와 채널별 R / G / B 커브 (monotone cubic 보간)
 - **.cube LUT 적용** — 임의의 Adobe LUT 로드 (3D 최대 65³, 1D 최대 65,536점, DaVinci Resolve의 `LUT_3D_INPUT_RANGE` 포함), trilinear 보간, 강도 슬라이더로 블렌드
-- **스플릿 토닝** — 플래그 기반 그림자 / 하이라이트 색조 + 채도, 균형 피벗 포함
+- **스플릿 토닝** — 그림자 / 하이라이트 색조 + 채도, 균형 피벗 포함
 
 ### 크리에이티브 효과
 
@@ -336,7 +336,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **힐링 브러시** — 원형 스팟, OpenCV inpainting (Telea 또는 Navier-Stokes)
 - **클론 스탬프** — Shift+클릭으로 소스 지정, 페더 블릿으로 대상에 복제
-- **자르기 / 수평 보정** — 정규화된 자르기 사각형과 임의 각도 수평 보정, 최대 내접 직사각형으로 자동 자르기
+- **자르기 / 수평 보정** — 정규화된 자르기 사각형과 최대 ±15° 수평 보정, 최대 내접 직사각형으로 자동 자르기
 - **자동 수평 보정** — Hough 라인 기반 수평선 / 수직선 검출
 - **렌즈 보정** — 순수 numpy 방사형 왜곡 (배럴 / 핀쿠션), 비네팅 보정, 채널별 색수차 보정
 - **노이즈 감소 / 샤프닝** — 엣지 보존 양방향 노이즈 제거 + unsharp mask 샤프닝
@@ -363,7 +363,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 ### 외부 편집기
 
-**File > External Editors…**에 프로그램(your image editor 등)을 등록하고, **File > Open in External Editor**로 현재 이미지를 해당 편집기에서 열 수 있습니다. 편집기에서 저장하면 뷰어가 알아서 새 버전을 보여 줍니다.
+**File > External Editors…**에 프로그램(이미지 편집기 등)을 등록하고, **File > Open in External Editor**로 현재 이미지를 해당 편집기에서 열 수 있습니다. 편집기에서 저장하면 뷰어가 알아서 새 버전을 보여 줍니다.
 
 ---
 
@@ -433,7 +433,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 ## Puppet — 2D 리그드 애니메이션
 
-**Puppet** 탭은 처음부터 직접 구축한 2D 리그드 퍼펫 애니메이션 시스템입니다. Live2D가 하는 일(메시 변형 리그, 파라미터, 모션, 물리, 표정, 포즈, 입싱크, 웹캠 얼굴 추적)을 수행하지만 **독점 SDK 없이**, **`live2d-py` 없이**, 그리고 `Imervue/puppet/FORMAT.md`에 완전히 문서화된 완전 개방형 `.puppet` 파일 형식을 사용합니다.
+**Puppet** 탭은 처음부터 직접 구축한 2D 리그드 퍼펫 애니메이션 시스템입니다. 메시 변형 리그, 파라미터, 모션, 물리, 표정, 포즈, 입싱크, 웹캠 얼굴 추적을 제공하며, **독점 SDK 없이**, **`live2d-py` 없이**, 그리고 `Imervue/puppet/FORMAT.md`에 완전히 문서화된 완전 개방형 `.puppet` 파일 형식을 사용합니다.
 
 > **전체 가이드**: [`puppet_guide.md`](../puppet_guide.md)는 라이브 스트리밍(OBS / NDI / 가상 카메라)과 애니메이션 제작(녹화 / 타임라인 편집 / MP4 내보내기) 양쪽의 엔드 투 엔드 워크플로우를 다룹니다. 중국어판은 [`puppet_guide.zh-TW.md`](../puppet_guide.zh-TW.md) 및 [`puppet_guide.zh-CN.md`](../puppet_guide.zh-CN.md)에 있습니다.
 

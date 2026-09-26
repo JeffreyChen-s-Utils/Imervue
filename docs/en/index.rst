@@ -18,7 +18,7 @@ Most of this guide is organised around those five sections.
        retouch, multi-image. See *Modify Tab — Non-destructive Develop*.
    * - **Paint**
      - full-featured raster paint studio with brushes, layers, animation,
-       manga tools, PSD I/O. See *Paint Tab — full-featured Raster Editor*.
+       manga tools, PSD I/O. See *Paint Workspace (Paint Tab)*.
    * - **Puppet**
      - From-scratch 2D rigged-puppet animator — meshes, deformers, parameters,
        motions, physics. See *Puppet Tab — 2D Rigged Animation*.
@@ -249,7 +249,7 @@ The keys rate the picture shown in Deep Zoom. On the thumbnail wall they rate th
 Colour Labels (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Independent flag-based colour flags, stored separately from the 1 -- 5 star rating. Useful for
+Colour flags, stored separately from the 1 -- 5 star rating. Useful for
 quick categorisation (e.g. red = reject candidates, green = selects, blue = to retouch).
 
 .. list-table::
@@ -777,9 +777,8 @@ Puppet Workspace (Puppet Tab)
 -----------------------------
 
 The fourth top-level tab — **Puppet** — is a from-scratch 2D rigged-puppet
-animation system. It does what Live2D do (mesh-deformation rigs,
-parameters, motions, physics, expressions, pose groups, lip-sync, webcam
-tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully
+animation system: mesh-deformation rigs, parameters, motions, physics,
+expressions, pose groups, lip-sync and webcam tracking, with **no proprietary SDK**, **no `live2d-py`**, and a fully
 open ``.puppet`` file format.
 
 .. note::
@@ -1855,9 +1854,7 @@ Workspace Layout Presets
 
 ``File`` > ``Workspaces…`` captures the current window geometry, dock / toolbar
 arrangement, splitter sizes, and active root folder under a name — then lets
-you flip between saved layouts the same way other XMP-aware photo managers switches *Library* /
-*Develop* / *Export* or Adobe Bridge switches *Metadata* / *Filmstrip*. The
-dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
+you flip between saved layouts. The dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
 ``user_settings.json`` (under the ``workspaces`` key) and survive across
 sessions.
 
@@ -2195,13 +2192,12 @@ the current view covering EXIF, dimensions, color label, rating, favourite,
 hierarchical tags, cull state, and notes. Useful for feeding cull decisions
 into a spreadsheet or external workflow.
 
-XMP Sidecar (other XMP-aware photo managers Interop)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+XMP Sidecars
+^^^^^^^^^^^^
 
 Imervue can read and write Adobe XMP sidecar files (``photo.jpg`` ↔
 ``photo.xmp``) so that ratings, titles, descriptions, keywords, and color
-labels round-trip cleanly with other XMP-aware photo managers, other XMP-aware photo managers, Bridge, and other
-XMP-aware tools.
+labels round-trip cleanly with Adobe Bridge and other XMP-aware photo managers.
 
 Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten.
 
@@ -2237,7 +2233,7 @@ rating it sets is what XMP export will write.
 Culling (Pick / Reject)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-flag-based three-state cull flag. Press ``P`` to pick the current image
+A three-state cull flag. Press ``P`` to pick the current image
 or every selected tile, ``Shift + X`` to reject, ``U`` to unflag. ``Filter`` >
 ``By Cull State`` shows only picks, rejects, or unflagged. ``Extra Tools`` >
 ``Workflow`` > ``Culling`` applies the filter via a dialog and also exposes a **Delete all

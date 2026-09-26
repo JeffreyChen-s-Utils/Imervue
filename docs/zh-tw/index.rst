@@ -14,7 +14,7 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
    * - **Modify**
      - 非破壞顯影管線 — 滑桿、曲線、LUT、遮罩、修圖、多影像合成。見「Modify 分頁 — 非破壞顯影」。
    * - **Paint**
-     - 本格的なラスター描画 風格的點陣繪圖工作室，含筆刷、圖層、動畫、漫畫工具、PSD I/O。見「Paint 分頁 — 本格的なラスター描画 風格繪圖」。
+     - 功能完整的點陣繪圖工作室，含筆刷、圖層、動畫、漫畫工具、PSD I/O。見「繪圖工作區（繪圖分頁）」。
    * - **Puppet**
      - 從零打造的 2D 綁骨偶動畫器 — 網格、變形器、參數、動作、物理。見「Puppet 分頁 — 2D 綁骨偶動畫」。
    * - **Desktop Pet**
@@ -233,7 +233,7 @@ Windows 標為隱藏的檔案（在檔案總管與資料夾樹中也不顯示）
 色彩標籤 (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^
 
-獨立於星等之外的 旗標式色彩 flag，適合快速分類（例如：紅=刪除候補、綠=精選、藍=待修）。
+與 1 -- 5 星等分開儲存的色彩旗標，適合快速分類（例如：紅=刪除候補、綠=精選、藍=待修）。
 
 .. list-table::
    :header-rows: 1
@@ -726,7 +726,7 @@ alpha 邊界，擦除過的像素不會在重畫時滲進來。
 Puppet 工作區（Puppet 分頁）
 ----------------------------
 
-第四個頂層分頁 — **Puppet** — 是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D（網格變形綁骨、參數、動作、物理、表情、姿勢群組、對嘴、攝影機追蹤），但\ **不依賴任何專利 SDK**、**不使用** ``live2d-py``，採用完全開放的 ``.puppet`` 檔案格式。
+第四個頂層分頁 — **Puppet** — 是從零打造的 2D 綁骨偶動畫系統：網格變形綁骨、參數、動作、物理、表情、姿勢群組、對嘴與攝影機追蹤，\ **不依賴任何專有 SDK**、**不使用** ``live2d-py``，採用完全開放的 ``.puppet`` 檔案格式。
 
 .. note::
 
@@ -807,7 +807,7 @@ Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7th 或自己�
 
 完整結構（drawables、deformers、parameters、motions、expressions、pose、
 physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG — 沒有
-專利二進位，可完全透過 git diff。
+專有二進位，可完全透過 git diff。
 
 工具列參考
 ^^^^^^^^^^
@@ -1474,9 +1474,7 @@ Windows 收到無法解碼的檔案時，仍會回報成功，卻把桌面變成
 --------------
 
 ``檔案`` > ``Workspaces…`` 會把目前的視窗幾何、停靠面板 / 工具列排列、分隔器
-尺寸與作用中的根資料夾以一個名稱擷取下來 — 然後讓你像 other XMP-aware photo managers 切換
-*Library* / *Develop* / *Export*、或 Adobe Bridge 切換 *Metadata* / *Filmstrip*
-那樣在已儲存的佈局間切換。對話框支援 Save Current、Load、Rename、Delete。工作
+尺寸與作用中的根資料夾以一個名稱擷取下來 — 然後讓你在已儲存的佈局間切換。對話框支援 Save Current、Load、Rename、Delete。工作
 區會保存在 ``user_settings.json``\ （``workspaces`` key 底下），並跨工作階段保留。
 
 .. tip::
@@ -1798,12 +1796,11 @@ Rename 也一樣。
 輸出一列，包含 EXIF、尺寸、色彩標籤、評分、最愛、階層式標籤、分揀狀態與
 筆記。適合用於試算表或外部流程。
 
-XMP Sidecar（other XMP-aware photo managers 互通）
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+XMP 伴隨檔
+^^^^^^^^^^
 
 Imervue 支援讀寫 Adobe XMP sidecar 檔（``photo.jpg`` ↔ ``photo.xmp``），
-讓星等、標題、描述、關鍵字與色彩標籤可與 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
-等 XMP 感知工具雙向同步。
+讓星等、標題、描述、關鍵字與色彩標籤可與 Adobe Bridge 及其他支援 XMP 的相片管理軟體雙向同步。
 
 儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。
 
@@ -1834,7 +1831,7 @@ XML 解析透過 ``defusedxml`` 進行，避免 XXE / billion-laughs 等攻擊�
 分揀（Pick / Reject）
 ^^^^^^^^^^^^^^^^^^^^^
 
-旗標式的三態旗標。``P`` 將當前圖片或所有選取 tile 標為 Pick；
+三態分揀旗標。``P`` 將目前圖片或所有選取 tile 標為 Pick；
 ``Shift + X`` 標為 Reject；``U`` 取消旗標。``Filter`` > ``By Cull State`` 可
 只顯示某一種狀態；``Extra Tools`` > ``Workflow`` > ``Culling`` 提供對話框介面並附有
 **Delete all rejects** 按鈕，可從磁碟永久刪除被淘汰的檔案。
@@ -1849,14 +1846,14 @@ XML 解析透過 ``defusedxml`` 進行，避免 XXE / billion-laughs 等攻擊�
 雙窗格檔案管理
 ^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` 提供 雙窗格的雙樹
+``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` 提供雙窗格的雙樹
 檢視，可在兩個資料夾之間直接移動或複製選取項目。
 
 時間軸檢視
 ^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` 以「日／月／年」方式分組目前圖片集
-（date-grouped library views 樣式）。日期依序使用 EXIF ``DateTimeOriginal``、
+（依日期分組）。日期依序使用 EXIF ``DateTimeOriginal``、
 ``DateTimeDigitized``、``DateTime``，都沒有時退回檔案修改時間。雙擊圖片即可進入深度縮放。
 
 拖放至外部應用程式

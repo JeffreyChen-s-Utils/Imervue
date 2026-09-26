@@ -230,8 +230,8 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Marque-pages** — jusqu'à 5000 chemins
 - **Notes** — 0-5 étoiles (`1`–`5`) + cœur favori (`0`); dans la grille, elles s'appliquent aux vignettes sélectionnées, sinon à celle choisie aux flèches, sinon à celle sous la souris
 - **Étiquettes de couleur** — drapeaux rouge/jaune/vert/bleu/violet (`F1`–`F5`)
-- **Tri (Culling)** — drapeau à 3 états compatible avec d'autres gestionnaires photo XMP (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés ; le tri automatique garde l'image la plus nette de chaque groupe de quasi-doublons et rejette le reste
-- **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus ; **Index Keywords** (clic droit) range une hiérarchie de mots-clés Lightroom / darktable (`Places|Taiwan|Taipei`) sous ses parents
+- **Tri (Culling)** — drapeau à trois états (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés ; le tri automatique garde l'image la plus nette de chaque groupe de quasi-doublons et rejette le reste
+- **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus ; clic droit > **Opérations par lots** > **Index Keywords** (vignettes sélectionnées) range une hiérarchie de mots-clés Lightroom / darktable (`Places|Taiwan|Taipei`) sous ses parents
 - **Tags & Albums** avec filtrage multi-étiquettes AND/OR
 - **Albums intelligents** — enregistrer des requêtes basées sur des règles et les réappliquer en un clic ; les filtres couvrent l'extension, la résolution et le **rapport d'aspect**, la **taille de fichier**, la note **plancher / plafond**, la couleur, le tri, les étiquettes (y compris l'**exclusion**), le **boîtier / objectif**, le **regex / glob de nom de fichier** et l'**ancienneté du fichier**, plus l'**export / import** vers un fichier JSON portable
 - **Empilement des paires RAW+JPEG** — regrouper les captures de même base en une seule tuile ; le RAW reste accessible comme frère
@@ -267,7 +267,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - Boîte de dialogue **Éditeur EXIF** — description, artiste, copyright, appareil et commentaire (Unicode compris) écrits dans un JPEG ou un WebP sans paquet supplémentaire, sans toucher aux pixels ni aux autres tags
 - **Éditeur de mots-clés** — titre / créateur / description / mots-clés, avec **suggestions d'étiquettes liées** issues de la cooccurrence des étiquettes et expansion de vocabulaire contrôlé (un mot-clé feuille applique automatiquement ses ancêtres + synonymes depuis un vocabulaire hiérarchique éditable)
 - Boîte de dialogue **Informations sur l'image** (dimensions / taille / dates)
-- **Fichiers annexes XMP** (compagnons `.xmp`) — aller-retour de la note / titre / description / mots-clés / étiquette de couleur pour l'interopérabilité avec d'autres gestionnaires photo XMP (XML sécurisé via `defusedxml`). L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé. Outre `photo.xmp` (Lightroom, Bridge), le `photo.jpg.xmp` qu'écrivent darktable et digiKam est lu et mis à jour lorsqu'il est le seul sidecar ; les étiquettes de couleur sont comprises dans les mots de Lightroom (`Red` … `Purple`) et de Bridge (`Select`, `Second`, `Approved`, `Review`, `To Do`), et exportées comme Lightroom les écrit. Une photo rejetée (`xmp:Rating` -1 dans Lightroom, Bridge et darktable) devient un Reject du tri, et un Reject est exporté en -1. Un fichier sans sidecar est lu et importé depuis le XMP et la note EXIF qu'il embarque (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) : c'est ainsi que Lightroom stocke la note et les mots-clés d'un JPEG, et l'Explorateur Windows ses étoiles.
+- **Fichiers annexes XMP** (compagnons `.xmp`) — aller-retour de la note / titre / description / mots-clés / étiquette de couleur avec d'autres gestionnaires de photos compatibles XMP (XML sécurisé via `defusedxml`). L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé. Outre `photo.xmp` (Lightroom, Bridge), le `photo.jpg.xmp` qu'écrivent darktable et digiKam est lu et mis à jour lorsqu'il est le seul sidecar ; les étiquettes de couleur sont comprises dans les mots de Lightroom (`Red` … `Purple`) et de Bridge (`Select`, `Second`, `Approved`, `Review`, `To Do`), et exportées comme Lightroom les écrit. Une photo rejetée (`xmp:Rating` -1 dans Lightroom, Bridge et darktable) devient un Reject du tri, et un Reject est exporté en -1. Un fichier sans sidecar est lu et importé depuis le XMP et la note EXIF qu'il embarque (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) : c'est ainsi que Lightroom stocke la note et les mots-clés d'un JPEG, et l'Explorateur Windows ses étoiles.
 - **Éditeur de géotag GPS** — lecture des coordonnées EXIF GPS existantes, écriture de nouvelles latitudes/longitudes dans un JPEG ou un WebP sans paquet supplémentaire, sans toucher aux pixels, aux autres tags ni à la vignette
 - **Renommage par lot avec jetons** — modèles avec aperçu en direct comme `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Exporter les métadonnées CSV / JSON** — une ligne par image avec tri / note / étiquettes / notes
@@ -305,7 +305,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 
 - **Éditeur de courbe tonale** — courbe RGB déplaçable plus canaux R / G / B individuels avec interpolation cubique monotone
 - **Appliquer un LUT .cube** — charger n'importe quel LUT Adobe (3D jusqu'à 65³, 1D jusqu'à 65 536 points ; y compris le `LUT_3D_INPUT_RANGE` de DaVinci Resolve), interpolation trilinéaire, mélange via curseur d'intensité
-- **Split Toning** — teinte + saturation par drapeau pour les ombres / hautes lumières avec pivot d'équilibre
+- **Split Toning** — teinte + saturation des ombres / hautes lumières avec pivot d'équilibre
 
 ### Effets créatifs
 
@@ -336,7 +336,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 
 - **Pinceau correcteur** — points circulaires, inpainting OpenCV (Telea ou Navier-Stokes)
 - **Tampon de clonage** — Shift+clic pour la source, application avec feather à la destination
-- **Recadrage / Redressement** — rectangle de recadrage normalisé plus redressement à angle arbitraire qui recadre automatiquement au plus grand rectangle interne
+- **Recadrage / Redressement** — rectangle de recadrage normalisé plus redressement jusqu'à ±15° qui recadre automatiquement au plus grand rectangle interne
 - **Redressement automatique** — détection d'horizon / verticale par lignes de Hough
 - **Correction d'objectif** — distorsion radiale en pure numpy (barillet / coussinet), récupération de vignettage, correction d'aberration chromatique par canal
 - **Réduction de bruit / Accentuation** — débruitage bilatéral préservant les bords + accentuation par masque flou
@@ -363,7 +363,7 @@ L'onglet **Modify** est la station de développement. Chaque ajustement vit dans
 
 ### Éditeurs externes
 
-Enregistrez les programmes (votre éditeur d'image / … ) sous **File > External Editors…** et lancez-les sur l'image actuelle via **File > Open in External Editor**. Quand l'éditeur enregistre, la visionneuse affiche d'elle-même la nouvelle version.
+Enregistrez des programmes (un éditeur d'image, par exemple) sous **File > External Editors…** et lancez-les sur l'image actuelle via **File > Open in External Editor**. Quand l'éditeur enregistre, la visionneuse affiche d'elle-même la nouvelle version.
 
 ---
 
@@ -433,7 +433,7 @@ Appuyez sur `E` depuis Deep Zoom pour envoyer l'image actuelle directement dans 
 
 ## Puppet — Animation 2D avec squelette
 
-L'onglet **Puppet** est un système d'animation de marionnettes 2D avec squelette conçu de zéro. Il fait ce que fait Live2D (rigs de déformation par maillage, paramètres, mouvements, physique, expressions, postures, synchronisation labiale, suivi facial par webcam) mais **sans SDK propriétaire**, **sans `live2d-py`**, et avec un format de fichier `.puppet` totalement ouvert documenté dans `Imervue/puppet/FORMAT.md`.
+L'onglet **Puppet** est un système d'animation de marionnettes 2D avec squelette conçu de zéro : rigs de déformation par maillage, paramètres, mouvements, physique, expressions, postures, synchronisation labiale et suivi facial par webcam, **sans SDK propriétaire**, **sans `live2d-py`**, et avec un format de fichier `.puppet` totalement ouvert documenté dans `Imervue/puppet/FORMAT.md`.
 
 > **Tutoriel complet** : [`puppet_guide.md`](../puppet_guide.md) couvre le
 > flux de bout en bout à la fois pour la diffusion en direct (OBS / NDI / caméra

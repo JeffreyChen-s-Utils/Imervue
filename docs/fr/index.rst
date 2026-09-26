@@ -18,7 +18,7 @@ La majeure partie de ce guide est organisée autour de ces cinq sections.
        retouche, multi-images. Voir *Onglet Modify — Développement non destructif*.
    * - **Paint**
      - Studio de peinture matricielle complet avec pinceaux, calques, animation,
-       outils manga, E/S PSD. Voir *Onglet Paint — Éditeur matriciel complet*.
+       outils manga, E/S PSD. Voir *Espace de travail Paint (onglet Paint)*.
    * - **Puppet**
      - Animateur de marionnettes 2D riggées conçu de zéro — maillages, déformateurs,
        paramètres, mouvements, physique. Voir *Onglet Puppet — Animation 2D riggée*.
@@ -246,7 +246,7 @@ Les touches notent l'image affichée en Deep Zoom. Dans la grille, elles notent 
 Étiquettes de couleur (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Marqueurs de couleur indépendants, stockés séparément de la notation 1 -- 5 étoiles. Utiles pour
+Marqueurs de couleur, stockés séparément de la notation 1 -- 5 étoiles. Utiles pour
 une catégorisation rapide (par ex. rouge = à rejeter, vert = à conserver, bleu = à retoucher).
 
 .. list-table::
@@ -777,9 +777,9 @@ Espace de travail Puppet (onglet Puppet)
 ----------------------------------------
 
 Le quatrième onglet principal — **Puppet** — est un système d'animation de marionnettes
-2D riggées conçu de zéro. Il fait ce que fait Live2D (rigs par déformation de maillage,
-paramètres, mouvements, physique, expressions, groupes de poses, lip-sync, suivi par
-webcam) mais **sans SDK propriétaire**, **sans `live2d-py`**, et avec un format de fichier
+2D riggées conçu de zéro : rigs par déformation de maillage, paramètres, mouvements,
+physique, expressions, groupes de poses, lip-sync et suivi par webcam,
+**sans SDK propriétaire**, **sans `live2d-py`**, et avec un format de fichier
 ``.puppet`` entièrement ouvert.
 
 .. note::
@@ -1892,9 +1892,7 @@ Préréglages de disposition d'espace de travail
 
 ``Fichier`` > ``Espaces de travail…`` capture la géométrie courante de la fenêtre, la disposition
 des docks / barres d'outils, les tailles des séparateurs et le dossier racine actif sous un nom — puis
-vous laisse basculer entre les dispositions enregistrées comme d'autres gestionnaires de photos
-compatibles XMP basculent entre *Library* / *Develop* / *Export*, ou comme Adobe Bridge bascule entre
-*Metadata* / *Filmstrip*. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
+vous laisse basculer entre les dispositions enregistrées. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
 et Supprimer. Les espaces de travail sont conservés dans ``user_settings.json`` (sous la clé
 ``workspaces``) et survivent aux sessions.
 
@@ -2232,13 +2230,13 @@ la vue courante couvrant EXIF, dimensions, étiquette de couleur, note, favori,
 tags hiérarchiques, état de tri et notes. Utile pour injecter les décisions de tri
 dans un tableur ou un flux de travail externe.
 
-Fichier annexe XMP (interopérabilité avec gestionnaires de photos XMP)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Fichiers annexes XMP
+^^^^^^^^^^^^^^^^^^^^
 
 Imervue peut lire et écrire des fichiers annexes Adobe XMP (``photo.jpg`` ↔
 ``photo.xmp``) afin que les notes, titres, descriptions, mots-clés et étiquettes de
-couleur fassent l'aller-retour proprement avec d'autres gestionnaires de photos compatibles
-XMP, d'autres gestionnaires de photos compatibles XMP, Bridge et autres outils XMP.
+couleur fassent l'aller-retour proprement avec Adobe Bridge et d'autres gestionnaires
+de photos compatibles XMP.
 
 L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé.
 
@@ -2276,7 +2274,7 @@ la note qu'elle définit est ce que l'export XMP écrira.
 Tri (Sélectionner / Rejeter)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Indicateur de tri à trois états basé sur un marquage. Appuyez sur ``P`` pour sélectionner l'image
+Un indicateur de tri à trois états. Appuyez sur ``P`` pour sélectionner l'image
 courante ou chaque vignette sélectionnée, ``Shift + X`` pour rejeter, ``U`` pour retirer le marquage. ``Filtre`` >
 ``Par état de tri`` n'affiche que les sélections, les rejets ou les non marqués. ``Extra Tools`` >
 ``Workflow`` > ``Culling`` applique le filtre via une boîte de dialogue et expose également un bouton **Delete all

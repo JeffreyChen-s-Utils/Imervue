@@ -234,8 +234,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Bookmarks** — up to 5000 paths
 - **Ratings** — 0-5 stars (`1`–`5`) + favorite heart (`0`); on the wall they apply to the selected thumbnails, else the one the arrow keys are on, else the one under the mouse
 - **Color labels** — flag-based red/yellow/green/blue/purple (`F1`–`F5`)
-- **Culling** — other XMP-aware photo managers 3-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects; **auto-cull** picks the sharpest frame per near-duplicate group and rejects the rest
-- **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically; right-click **Index Keywords** files a Lightroom / darktable keyword hierarchy (`Places|Taiwan|Taipei`) under its parents
+- **Culling** — three-state flag (`P` = pick, `Shift+X` = reject, `U` = unflag); filter by state; bulk delete-rejects; **auto-cull** picks the sharpest frame per near-duplicate group and rejects the rest
+- **Hierarchical tags** — tree paths like `animal/cat/british`; descendants matched automatically; right-click **Batch Operations** > **Index Keywords** (thumbnails selected) files a Lightroom / darktable keyword hierarchy (`Places|Taiwan|Taipei`) under its parents
 - **Tags & Albums** with multi-tag AND/OR filtering
 - **Smart Albums** — save rule-based queries and reapply with one click; filters span extension, resolution & **aspect**, **file size**, rating **floor / ceiling**, colour, cull, tags (incl. **exclusion**), **camera / lens**, **filename regex / glob** and **file age**, plus **export / import** to a portable JSON file
 - **Stack RAW+JPEG pairs** — collapse same-stem captures into one tile; RAW stays accessible as a sibling
@@ -271,7 +271,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **EXIF editor** dialog — description, artist, copyright, camera and comment (Unicode included) written into a JPEG or WebP with no extra package, pixels and other tags untouched
 - **Keyword editor** — title / creator / description / keywords, with **related-tag suggestions** drawn from tag co-occurrence and **controlled-vocabulary expansion** (a leaf keyword auto-applies its ancestors + synonyms from an editable hierarchical vocabulary)
 - **Image info** dialog (dimensions / size / dates)
-- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip for other XMP-aware photo managers interop (safe XML via `defusedxml`). Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten. Besides `photo.xmp` (Lightroom, Bridge), the `photo.jpg.xmp` that darktable and digiKam write is read and updated when it is the only sidecar; colour labels are understood in Lightroom's words (`Red` … `Purple`) and Bridge's (`Select`, `Second`, `Approved`, `Review`, `To Do`), and exported as Lightroom writes them. A rejected photo (`xmp:Rating` -1 in Lightroom, Bridge and darktable) becomes a culling Reject, and a Reject is exported as -1. A file without a sidecar is read and imported from the XMP and EXIF rating embedded in it (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) — how Lightroom stores a JPEG's rating and keywords, and how Windows Explorer stores its stars.
+- **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip with other XMP-aware photo managers (safe XML via `defusedxml`). Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten. Besides `photo.xmp` (Lightroom, Bridge), the `photo.jpg.xmp` that darktable and digiKam write is read and updated when it is the only sidecar; colour labels are understood in Lightroom's words (`Red` … `Purple`) and Bridge's (`Select`, `Second`, `Approved`, `Review`, `To Do`), and exported as Lightroom writes them. A rejected photo (`xmp:Rating` -1 in Lightroom, Bridge and darktable) becomes a culling Reject, and a Reject is exported as -1. A file without a sidecar is read and imported from the XMP and EXIF rating embedded in it (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) — how Lightroom stores a JPEG's rating and keywords, and how Windows Explorer stores its stars.
 - **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon into a JPEG or WebP with no extra package, leaving its pixels, other tags and thumbnail untouched
 - **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — one row per image including cull / rating / tags / notes
@@ -309,7 +309,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Tone Curve editor** — draggable RGB curve plus per-channel R / G / B with monotone cubic interpolation
 - **Apply .cube LUT** — load any Adobe LUT (3D up to 65³, 1D up to 65,536 points; DaVinci Resolve's `LUT_3D_INPUT_RANGE` included), trilinear-interpolate, blend with an intensity slider
-- **Split Toning** — flag-based shadow / highlight hue + saturation with a balance pivot
+- **Split Toning** — shadow / highlight hue + saturation with a balance pivot
 
 ### Creative effects
 
@@ -340,7 +340,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Healing Brush** — circular spots, OpenCV inpainting (Telea or Navier-Stokes)
 - **Clone Stamp** — Shift+click source, feathered blit to destination
-- **Crop / Straighten** — normalised crop rectangle plus arbitrary-angle straighten that auto-crops to the largest inner rect
+- **Crop / Straighten** — normalised crop rectangle plus a straighten of up to ±15° that auto-crops to the largest inner rect
 - **Auto-Straighten** — Hough-line horizon / vertical detection
 - **Lens Correction** — pure-numpy radial distortion (barrel / pincushion), vignette lift, per-channel chromatic-aberration
 - **Noise Reduction / Sharpening** — edge-preserving bilateral denoise + unsharp-mask sharpening
@@ -367,7 +367,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 ### External editors
 
-Register programs (your image editor /  / …) under **File > External Editors…** and launch them on the current image via **File > Open in External Editor**. When the editor saves, the viewer shows the new version by itself.
+Register programs (an image editor, for example) under **File > External Editors…** and launch them on the current image via **File > Open in External Editor**. When the editor saves, the viewer shows the new version by itself.
 
 ---
 
@@ -437,7 +437,7 @@ Press `E` from Deep Zoom to send the current image straight into a new Paint tab
 
 ## Puppet — 2D rigged animation
 
-The **Puppet** tab is a from-scratch 2D rigged-puppet animation system. It does what Live2D do (mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync, webcam face tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
+The **Puppet** tab is a from-scratch 2D rigged-puppet animation system: mesh-deformation rigs, parameters, motions, physics, expressions, pose, lip-sync and webcam face tracking, with **no proprietary SDK**, **no `live2d-py`**, and a fully open `.puppet` file format documented at `Imervue/puppet/FORMAT.md`.
 
 > **Full walkthrough**: [`puppet_guide.md`](puppet_guide.md) covers the
 > end-to-end flow for both live streaming (OBS / NDI / virtual camera)

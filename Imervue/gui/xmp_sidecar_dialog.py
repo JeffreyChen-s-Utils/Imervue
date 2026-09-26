@@ -1,7 +1,7 @@
 """
 XMP sidecar dialog \u2014 export / import ``.xmp`` files for the current folder
-so ratings, titles, keywords, and colour labels round-trip with other XMP-aware photo managers,
-Bridge, other XMP-aware photo managers, and other XMP-aware applications.
+so ratings, titles, keywords, and colour labels round-trip with Adobe Bridge and other
+XMP-aware photo managers.
 
 Design note: operating on ``viewer.model.images`` (the current browsing set)
 keeps the dialog simple and matches how the neighbouring metadata-export
@@ -37,9 +37,8 @@ class XmpSidecarDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(
             lang.get("xmp_explain", (
-                "Read or write other XMP-aware photo managers-compatible ``.xmp`` sidecar files "
-                "alongside each image. Stores rating, title, description, "
-                "keywords (tags) and colour label."
+                "Read or write .xmp sidecar files next to each image. They store the "
+                "rating, title, description, keywords (tags) and colour label."
             ))
         ))
         layout.addWidget(QLabel(

@@ -19,7 +19,7 @@ secciones.
        máscaras, retoque, multi-imagen. Consulte *Pestaña Modify — Revelado no destructivo*.
    * - **Paint**
      - Estudio completo de pintura raster con pinceles, capas, animación,
-       herramientas de manga e I/O de PSD. Consulte *Pestaña Paint — Editor raster completo*.
+       herramientas de manga e I/O de PSD. Consulte *Espacio de trabajo Paint (Pestaña Paint)*.
    * - **Puppet**
      - Animador de marionetas 2D con rig construido desde cero — mallas, deformadores,
        parámetros, movimientos, físicas. Consulte *Pestaña Puppet — Animación 2D con rig*.
@@ -252,7 +252,7 @@ Las teclas valoran la imagen mostrada en Deep Zoom. En la cuadrícula valoran la
 Etiquetas de color (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Indicadores de color independientes basados en banderas, almacenados por separado de la
+Indicadores de color, almacenados por separado de la
 valoración de 1 -- 5 estrellas. Útiles para una categorización rápida (p. ej. rojo = candidatos
 a descartar, verde = seleccionados, azul = pendientes de retoque).
 
@@ -785,9 +785,9 @@ Espacio de trabajo Puppet (Pestaña Puppet)
 ------------------------------------------
 
 La cuarta pestaña de nivel superior — **Puppet** — es un sistema de animación 2D con rig de
-marionetas construido desde cero. Hace lo que hace Live2D (rigs con deformación de malla,
-parámetros, movimientos, físicas, expresiones, grupos de poses, lip-sync, seguimiento por
-webcam) pero **sin SDK propietario**, **sin `live2d-py`**, y con un formato de archivo
+marionetas construido desde cero: rigs con deformación de malla, parámetros, movimientos,
+físicas, expresiones, grupos de poses, lip-sync y seguimiento por webcam,
+**sin SDK propietario**, **sin `live2d-py`**, y con un formato de archivo
 ``.puppet`` totalmente abierto.
 
 .. note::
@@ -1893,9 +1893,7 @@ Presets de diseño de espacio de trabajo
 
 ``File`` > ``Workspaces…`` captura la geometría actual de la ventana, la disposición de docks
 / barras de herramientas, los tamaños de los divisores y la carpeta raíz activa bajo un nombre
-— después le permite alternar entre diseños guardados de la misma forma que otros gestores de
-fotos compatibles con XMP cambian entre *Library* / *Develop* / *Export*, o Adobe Bridge cambia
-entre *Metadata* / *Filmstrip*. El diálogo admite Save Current, Load, Rename y Delete. Los
+— después le permite alternar entre diseños guardados. El diálogo admite Save Current, Load, Rename y Delete. Los
 espacios de trabajo persisten en ``user_settings.json`` (bajo la clave ``workspaces``) y
 sobreviven entre sesiones.
 
@@ -2234,13 +2232,12 @@ por imagen en la vista actual cubriendo EXIF, dimensiones, etiqueta de color, va
 favorito, etiquetas jerárquicas, estado de descarte y notas. Útil para alimentar decisiones
 de descarte en una hoja de cálculo o en un flujo de trabajo externo.
 
-Archivos secundarios XMP (interoperabilidad con otros gestores con soporte XMP)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Archivos secundarios XMP
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 Imervue puede leer y escribir archivos secundarios Adobe XMP (``photo.jpg`` ↔ ``photo.xmp``)
 para que valoraciones, títulos, descripciones, palabras clave y etiquetas de color hagan ida
-y vuelta limpiamente con otros gestores de fotos con soporte XMP, Bridge, y otras
-herramientas con soporte XMP.
+y vuelta limpiamente con Adobe Bridge y otros gestores de fotos con soporte XMP.
 
 Al guardar se fusiona con el sidecar existente: solo cambian estos campos, así que los ajustes de revelado, el recorte y el historial de otro programa se conservan, y un sidecar ilegible nunca se sobrescribe.
 
@@ -2278,7 +2275,7 @@ la valoración que establece es la que escribirá la exportación XMP.
 Descarte (Pick / Reject)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Marcador de descarte de tres estados basado en banderas. Pulse ``P`` para marcar la imagen
+Un marcador de descarte de tres estados. Pulse ``P`` para marcar la imagen
 actual o cada mosaico seleccionado, ``Shift + X`` para rechazar, ``U`` para quitar la marca.
 ``Filter`` > ``By Cull State`` muestra sólo picks, rejects o sin marcar. ``Extra Tools`` >
 ``Workflow`` > ``Culling`` aplica el filtro mediante un diálogo y también expone un botón **Delete all

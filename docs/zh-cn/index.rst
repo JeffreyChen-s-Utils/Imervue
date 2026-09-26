@@ -14,7 +14,7 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
    * - **Modify**
      - 非破坏显影管线 — 滑块、曲线、LUT、蒙版、修图、多图合成。见"Modify 标签 — 非破坏显影"。
    * - **Paint**
-     - 本格的なラスター描画 风格的栅格绘图工作室，含笔刷、图层、动画、漫画工具、PSD I/O。见"Paint 标签 — 本格的なラスター描画 风格绘图"。
+     - 功能完整的栅格绘图工作室，含笔刷、图层、动画、漫画工具、PSD I/O。见"绘图工作区（绘图标签）"。
    * - **Puppet**
      - 从零打造的 2D 绑骨偶动画器 — 网格、变形器、参数、动作、物理。见"Puppet 标签 — 2D 绑骨偶动画"。
    * - **Desktop Pet**
@@ -233,7 +233,7 @@ Windows 标为隐藏的文件（在资源管理器与文件夹树中也不显示
 颜色标签 (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^
 
-独立于星级之外的 旗标式颜色 flag，适合快速分类（例如：红=删除候选、绿=精选、蓝=待修）。
+与 1 -- 5 星级分开存储的颜色旗标，适合快速分类（例如：红=删除候选、绿=精选、蓝=待修）。
 
 .. list-table::
    :header-rows: 1
@@ -727,7 +727,7 @@ alpha 边界，擦除过的像素不会在重画时渗进来。
 Puppet 工作区（Puppet 标签）
 ----------------------------
 
-第四个顶层标签 — **Puppet** — 是从零打造的 2D 绑骨偶动画系统。功能对标 Live2D（网格变形绑骨、参数、动作、物理、表情、姿势组、对嘴、摄像头追踪），但\ **不依赖任何专利 SDK**、**不使用** ``live2d-py``，采用完全开放的 ``.puppet`` 文件格式。
+第四个顶层标签 — **Puppet** — 是从零打造的 2D 绑骨偶动画系统：网格变形绑骨、参数、动作、物理、表情、姿势组、对嘴与摄像头追踪，\ **不依赖任何专有 SDK**、**不使用** ``live2d-py``，采用完全开放的 ``.puppet`` 文件格式。
 
 .. note::
 
@@ -1622,9 +1622,7 @@ Windows 收到无法解码的文件时，仍会回报成功，却把桌面变成
 --------------
 
 ``文件`` > ``工作区…`` 会把当前的窗口几何、停靠面板 / 工具栏排列、分隔条尺寸与
-当前根文件夹以一个名称保存下来 — 之后就能像 other XMP-aware photo managers 切换
-*Library* / *Develop* / *Export*、或 Adobe Bridge 切换 *Metadata* / *Filmstrip*
-那样在已保存的布局之间切换。对话框支持「保存当前布局」「加载」「重命名」「删除」。
+当前根文件夹以一个名称保存下来 — 之后就能在已保存的布局之间切换。对话框支持「保存当前布局」「加载」「重命名」「删除」。
 工作区保存在 ``user_settings.json``\ （``workspaces`` 键下），跨会话保留。
 
 .. tip::
@@ -1946,12 +1944,11 @@ Token 批量重命名
 片输出一行，包含 EXIF、尺寸、颜色标签、评分、收藏、分层标签、分拣状态
 与笔记。方便接入电子表格或外部流程。
 
-XMP Sidecar（other XMP-aware photo managers 互通）
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+XMP 伴随文件
+^^^^^^^^^^^^
 
 Imervue 支持读写 Adobe XMP sidecar 文件（``photo.jpg`` ↔ ``photo.xmp``），
-让星级、标题、描述、关键字与颜色标签可与 other XMP-aware photo managers、other XMP-aware photo managers、Bridge
-等 XMP 感知工具双向同步。
+让星级、标题、描述、关键字与颜色标签可与 Adobe Bridge 及其他支持 XMP 的照片管理软件双向同步。
 
 保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。
 
@@ -1982,7 +1979,7 @@ XML 解析通过 ``defusedxml`` 进行，避免 XXE / billion-laughs 等攻击�
 分拣（Pick / Reject）
 ^^^^^^^^^^^^^^^^^^^^^
 
-旗标式的三态旗标。``P`` 将当前或选中的所有 tile 标为 Pick；
+三态分拣旗标。``P`` 将当前或选中的所有 tile 标为 Pick；
 ``Shift + X`` 标为 Reject；``U`` 取消。``Filter`` > ``By Cull State`` 可只
 显示某种状态；``Extra Tools`` > ``Workflow`` > ``Culling`` 提供对话框并带有
 **Delete all rejects** 按钮，可从磁盘永久删除被淘汰文件。
@@ -1997,14 +1994,14 @@ XML 解析通过 ``defusedxml`` 进行，避免 XXE / billion-laughs 等攻击�
 双窗格文件管理
 ^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` 提供 双窗格的双
+``Extra Tools`` > ``Workflow`` > ``Dual-Pane File Manager`` 提供双窗格的双
 树视图，可在两侧文件夹之间直接移动或复制选中项。
 
 时间轴视图
 ^^^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Timeline View`` 按「日／月／年」分组当前图片集（Google
-Photos 风格）。日期依序取 EXIF ``DateTimeOriginal``、``DateTimeDigitized``、
+``Extra Tools`` > ``Views`` > ``Timeline View`` 按「日／月／年」分组当前图片集（按日期分组）。
+日期依序取 EXIF ``DateTimeOriginal``、``DateTimeDigitized``、
 ``DateTime``，都没有时使用文件修改时间。
 双击图片可进入深度缩放。
 
