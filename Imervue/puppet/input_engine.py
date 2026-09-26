@@ -46,6 +46,7 @@ class InputEngine(QObject):
         super().__init__(parent)
         self._canvas = canvas
         self._viseme_ready.connect(self._apply_viseme)
+        canvas.cursor_moved.connect(self.push_cursor)
         self._blink_enabled = False
         self._drag_enabled = False
         self._lipsync_enabled = False
@@ -70,8 +71,8 @@ class InputEngine(QObject):
         return self._drag_enabled
 
     def push_cursor(self, image_x: float, image_y: float) -> None:
-        """Workspace forwards canvas mouse hovers here. No-op when drag
-        tracking is off — keeps the wiring cheap when unused."""
+        """Turn the head toward an image-space point (the canvas's
+        ``cursor_moved``). No-op when drag tracking is off."""
         if not self._drag_enabled or self._canvas.document() is None:
             return
         size = self._canvas.document().size

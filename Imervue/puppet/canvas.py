@@ -134,6 +134,10 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
     The workspace wires this to ``BoneTreeDock.clear_selection`` so
     the tree row un-highlights alongside the canvas marker."""
     hit_area_triggered = Signal(str)
+    # Image-space pointer position as it moves over the canvas (not while
+    # panning or dragging a mesh vertex); InputEngine turns it into the
+    # Drag-track head look-at.
+    cursor_moved = Signal(float, float)
     """Emitted with the hit-area id when the user left-clicks inside
     one. Only fires when mesh-edit mode is off — when it's on, the
     left-click is consumed by the vertex drag instead."""
@@ -821,11 +825,13 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
             self._user_view_locked = True
             self.update()
             return
+        ix, iy = self._screen_to_image(
+            event.position().x(), event.position().y(),
+        )
         if self._mesh_edit_enabled and self._mesh_edit_target is not None:
-            ix, iy = self._screen_to_image(
-                event.position().x(), event.position().y(),
-            )
             self.update_mesh_edit_drag(ix, iy)
+            return
+        self.cursor_moved.emit(ix, iy)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
         if event.button() == Qt.MouseButton.MiddleButton and self._panning:

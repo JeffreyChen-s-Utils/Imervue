@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-67 | 2026-09-26 | Drag-track head turns the head toward the cursor | #fix #puppet #desktop-pet | [2026-09-c](2026-09-c.md) |
 | U-20260926-66 | 2026-09-26 | Create GIF / Video makes MP4s with the bundled ffmpeg and from odd-sized pictures | #fix #done #video #export | [2026-09-c](2026-09-c.md) |
 | U-20260926-65 | 2026-09-26 | Saved workspaces keep the split between the folder tree and the viewer | #fix #workspace #layout | [2026-09-c](2026-09-c.md) |
 | U-20260926-64 | 2026-09-26 | The Cubism import notice names the environment variable the importer reads | #fix #puppet #i18n | [2026-09-c](2026-09-c.md) |
@@ -440,4 +441,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 11 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 12 |

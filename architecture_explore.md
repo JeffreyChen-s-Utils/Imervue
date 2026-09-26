@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `3938aed` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `c7a9ed9` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,10 +66,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 896 | 150,309 |
+| `tests/` | 896 | 150,402 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,268 |
 | `Imervue/gui/` | 168 | 33,565 |
-| `Imervue/puppet/` | 57 | 15,304 |
+| `Imervue/puppet/` | 57 | 15,351 |
 | `Imervue/image/` | 128 | 15,403 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,224 |
 | `Imervue/multi_language/` | 8 | 14,346 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,455 |
-| **總計** | **1,747** | **333,913** |
+| **總計** | **1,747** | **334,053** |
 
-其中 `Imervue/` 套件本身 787 檔 / 169,149 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,196 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -794,7 +794,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-57 個檔、15,304 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+57 個檔、15,351 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -821,7 +821,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `deformers.py` | 262 | 純 NumPy deformer 實作 |
 | `physics.py` | 141 | Verlet 物理引擎 |
 | `render_prep.py` | 103 | `PuppetDocument` → GL-ready draw list |
-| `canvas.py` | 853 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動；實際繪製來自 `canvas_render.py` |
+| `canvas.py` | 859 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動；實際繪製來自 `canvas_render.py` |
 | `canvas_render.py` | 537 | `PuppetCanvasRenderMixin`：棋盤背景、桌寵陰影、drawable 繪製與 stencil 裁切、選取框與錨點、頂點緩衝與貼圖（預乘 alpha 的 `_premultiply_alpha`）快取 |
 | `clip_masks.py` | 56 | `Drawable.clip_mask` 參照解析 |
 | `ik.py` | 89 | 兩節骨骼解析式 IK |
@@ -841,7 +841,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 即時輸入驅動
 
-`input_engine.py`(212) 把即時輸入灌進 canvas · `input_drivers.py`(215) 純對應函式（游標→角度參數等）·
+`input_engine.py`(213) 把即時輸入灌進 canvas · `input_drivers.py`(215) 純對應函式（游標→角度參數等）·
 `mouse_gaze_driver.py`(239) 頭+眼追游標 · `webcam_tracker.py`(393) 攝影機 → 參數 ·
 `webcam_preview_dialog.py`(224) · `face_landmark_mapper.py`(212) MediaPipe FaceMesh → 參數 ·
 `audio_lipsync.py`(99) 音檔驅動嘴型
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-896 個檔、150,309 行。`pyproject.toml` 定義三個互斥層級 marker：
+896 個檔、150,402 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
