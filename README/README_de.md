@@ -375,30 +375,30 @@ Der **Paint**-Tab ist ein vollwertiges Raster-Paint-Studio, das als eigenes `QMa
 
 Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Dodge · Burn · Sponge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
 
-Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Sättigen / Entsättigen) — malt lokale Tonwert- und Chroma-Anpassungen, gewichtet durch den Brush und eine Schatten- / Mitten- / Lichter-Maske.
+Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Entsättigen) — malt lokale Anpassungen, gewichtet durch den Brush; Dodge und Burn wirken auf die Mitteltöne. Keines der drei Tools hat Optionen.
 
 Einzelbuchstaben-Shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
 
 ### Brushes
 
-Pen / Marker / Pencil / Highlighter / Spray / Calligraphy / Watercolor / Charcoal / Crayon, mit Steuerungen für Size / Opacity / Hardness / Density / Blend-Mode. Druckkurven-Editor, Brush-Tip-Aufnahme aus einer Auswahl, Import / Export von Brush-Presets.
+Sechs Brush-Arten — Pencil / Pen / Marker / Airbrush / Watercolour / Sumi — plus darauf aufbauende Presets (Crayon, Highlight, Sumi calligraphy …). Das Brush-Dock stellt Size / Opacity / Hardness / Density / Blend-Mode ein; die Options-Bar bietet Size / Opacity / Hardness. Der Stiftdruck des Tabletts skaliert Größe und Opazität. Brush-Tip-Aufnahme aus einer Auswahl, **File > Import brush preset…**.
 
 ### Layers
 
-Vollwertiges Layer-Panel mit Thumbnails, Sichtbarkeits-Toggles, Drag-to-Reorder, Blend-Modes, Opazität, Suche, Vektor-Layern, 1-bit-Layern, **Layer-Masken** (hinzufügen / aus Auswahl / invertieren / anwenden), **Clipping-Masken**, **Layer-Effekten** (Schlagschatten / Outer Glow / Stroke). Layer-nach-Farbe-Aufteilen, Gradient-Map-Presets.
+Vollwertiges Layer-Panel mit Thumbnails, Sichtbarkeits-Toggles, ↑ / ↓-Buttons zum Umsortieren (oder `Ctrl+[` / `Ctrl+]`), Blend-Modes, Opazität, Suche, Vektor-Layern, 1-bit-Layern, **Layer-Masken** (hinzufügen / aus Auswahl / invertieren / anwenden), **Clipping-Masken**, **Layer-Effekten** (Schlagschatten / Outer Glow / Stroke). Layer-nach-Farbe-Aufteilen, Gradient-Map-Presets.
 
 ### Auswahl
 
-Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-Modi und Feather. **Quick Mask Mode** (`Q`) für Paint-the-Mask-Workflows. **Stroke Selection**-Dialog.
+Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-Modi. **Quick Mask Mode** (`Q`) für Paint-the-Mask-Workflows. **Stroke Selection**-Dialog.
 
 ### Animation & Manga
 
-- **Animation** — Frame-Timeline-Dock mit Snapshots, Wiedergabe, Onion-Skin-Overlay, MP4- / GIF-Export
+- **Animation** — Frame-Timeline-Dock: **+ Frame** nimmt einen Snapshot des auf eine Ebene reduzierten Bildes auf, Wiedergabe mit wählbarer FPS, Onion Skin zeigt den vorherigen Frame; die Frames dienen der Vorschau, einen Animations-Export gibt es nicht
 - **Manga-Tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech-Bubble-Tool
 
 ### Filter & Ansichts-Hilfen
 
-- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (jeweils mit Live-Preview-Dialog)
+- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (jeder öffnet einen Parameter-Dialog mit OK / Cancel, ohne Live-Vorschau)
 - **Ansichts-Hilfen** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` dreht CCW)
 
 ### Docks (14, getabbed in 3 Clustern)
@@ -409,13 +409,13 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 | Leinwand | Layers · Navigator · History · Pages · Animation · Histogram |
 | Bibliothek | Materials · Stamps · Pose · Reference |
 
-Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ein- und ausschaltbar. **Settings > Workspace Layouts** speichert und ruft benannte Anordnungen ab.
+Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ein- und ausschaltbar. **Settings > Workspace Layouts…** bietet die eingebauten Layouts Default / Drawing / Comic / Compact; **Save current…** speichert unter einem Namen, welche der Docks Layers / Color / Brush / Navigator / History / Reference angezeigt werden, und das Anwenden eines Layouts blendet diese Docks ein oder aus. Tool-Optionen und Dock-Größen werden nicht gespeichert.
 
 ### Datei-I/O
 
-- **PSD** (Photoshop) öffnen / speichern mit vollem Layer-Roundtrip
-- Export nach PNG / JPEG / WebP, plus mehrseitiger Comic-Export nach **CBZ** oder **PDF**
-- Autosave-Snapshots mit Restore-Latest
+- **Open PSD…** reduziert die Datei auf einen Layer in einem neuen Tab; **Save as PSD…** schreibt die Layer mit ihren Blend-Modes (ohne Masken oder Layer-Effekte)
+- **Export image…** schreibt PNG; Comic-Projekte exportieren ihre Seiten nach **CBZ** oder **PDF**
+- **Autosave** — alle 2 Minuten ein Snapshot, solange der aktive Tab ungespeicherte Änderungen hat; beim nächsten Start bietet ein Toast die Snapshots an, **File > Restore Autosave** lädt den neuesten in den aktiven Tab, und die Statusleiste zeigt, wann der letzte aufgenommen wurde. Beim Schließen von Imervue wird für Paint-Tabs mit ungespeicherten Änderungen nachgefragt.
 
 ### Power-User-UX
 

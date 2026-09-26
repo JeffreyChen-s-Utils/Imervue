@@ -143,3 +143,39 @@ def test_failing_steps_are_logged_with_their_names(run, caplog):
         ("WARNING", "Best-effort step failed: stop the file-tree workers", RuntimeError),
         ("WARNING", "Best-effort step failed: write the user settings", RuntimeError),
     ]
+
+
+
+class _Paint:
+    def __init__(self, log, answer):
+        self._log, self._answer = log, answer
+
+    def confirm_close(self):
+        self._log.append("_paint.confirm_close")
+        return self._answer
+
+
+def test_cancelling_paints_unsaved_prompt_keeps_the_window_open(run, monkeypatch):
+    """Closing Imervue never asked about Paint's unsaved tabs and ended in os._exit."""
+    log: list[str] = []
+    monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
+    window = _Window(log, set())
+    window._paint = _Paint(log, answer=False)  # noqa: SLF001
+    _close(window, _Rec(log, "event", set()))
+    assert log == ["_paint.confirm_close", "event.ignore"]
+
+
+def test_paint_agreeing_lets_the_close_go_on(run, monkeypatch):
+    log: list[str] = []
+    for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
+                 "offer_permanent_delete"):
+        monkeypatch.setattr(mod, name, _Rec(log, name, set()))
+    monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: False)
+    monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
+    window = _Window(log, set())
+    window._paint = _Paint(log, answer=True)  # noqa: SLF001
+    _close(window, _Rec(log, "event", set()))
+    assert log[0] == "_paint.confirm_close"
+    assert log[1:] == _TEARDOWN + [
+        "plugin_manager.dispatch_app_closing", "plugin_manager.unload_all",
+        "event.accept", "super.closeEvent", "os._exit(0)"]

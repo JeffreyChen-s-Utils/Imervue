@@ -580,8 +580,8 @@ de modo que el lienzo mantiene la altura visible completa, y se agrupan en tres 
 - **Biblioteca** — Materials, Stamps, Pose, Reference
 
 Cada dock se puede mostrar u ocultar por separado desde el menú ``Window``. Arrastre el
-título de cualquier dock para reorganizarlo o flotar un panel, después guarde el resultado
-mediante ``Settings`` > ``Workspace Layouts…``.
+título de cualquier dock para reorganizarlo o flotar un panel; ``Settings`` >
+``Workspace Layouts…`` recuerda qué docks se muestran (véase *Diseños de espacio de trabajo*).
 
 Paleta de herramientas (Banda izquierda)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -613,35 +613,37 @@ Paleta de herramientas (Banda izquierda)
      - Herramientas de selección con modos Replace / Add / Subtract / Intersect
    * - Texto
      - ``T``
-     - Editor de texto en línea con fuente / tamaño / negrita / cursiva
+     - El clic abre el diálogo **Add Text** (fuente / tamaño / color / negrita /
+       cursiva); el texto se dibuja en los píxeles de la capa
    * - Degradado
      - ``U``
      - Relleno con degradado lineal / radial / angular / diamante
    * - Desenfoque / Difuminar
-     - ``R``
+     - ``R`` (Difuminar)
      - Manipulación local de píxeles
    * - Dodge / Burn / Sponge
      -
-     - Tonificación de cuarto oscuro — aclara, oscurece o satura /
-       desatura localmente, ponderado por el pincel y una máscara de rango tonal
+     - Tonificación de cuarto oscuro ponderada por el pincel — Dodge aclara y Burn
+       oscurece los medios tonos, Sponge desatura; sin opciones
    * - Pluma (Bezier)
      - ``P``
      - Ruta vectorial con edición de anclas / manejadores
    * - Sello de clonar
      - ``S``
-     - Shift+clic establece la fuente, clic estampa con difuminado
+     - Alt+clic establece la fuente; después arrastre para estampar con el tamaño /
+       la dureza / la opacidad del pincel
    * - Bocadillo
      - ``Ctrl + B``
-     - Bocadillo de cómic / manga con cola automática
+     - Arrastre un recuadro para dibujar un bocadillo de cómic / manga (se dibuja sin cola)
    * - Rectángulo / Elipse / Línea / Polígono
      - ``Shift + R/E/I/P``
      - Primitivas de forma vectorial con trazo + relleno
    * - Recortar
      - ``C``
-     - Recorte interactivo con presets de relación de aspecto
+     - Recorte libre — arrastre un rectángulo; el lienzo se recorta al soltar
    * - Transformar
      - ``Ctrl + T``
-     - Manejadores de transformación libre / escala / rotación / sesgo
+     - Ocho manejadores de escala y un manejador de rotación
    * - Mano
      - ``H``
      - Encuadre del lienzo arrastrando con el cursor
@@ -658,41 +660,42 @@ Pinceles
 
    * - Pincel
      - Efecto
-   * - Pluma
-     - Línea con suavizado nítido, el pincel del día a día
-   * - Marcador / Resaltador
-     - Trazos anchos y semitransparentes que se acumulan
    * - Lápiz
      - Línea fina de grafito ligeramente texturizada
-   * - Aerosol
-     - Puntos dispersos controlados por densidad y flujo
-   * - Caligrafía
-     - El ancho varía con la dirección del trazo
+   * - Pluma
+     - Línea con suavizado nítido, el pincel del día a día
+   * - Marcador
+     - Trazos anchos y semitransparentes que se acumulan
+   * - Aerógrafo
+     - Puntos dispersos que se acumulan en una pulverización suave
    * - Acuarela
-     - Sangrado de bordes húmedos y mezcla suave
-   * - Carboncillo / Cera
-     - Trazos rugosos texturizados con inclinación por presión
+     - Borde húmedo con un interior más claro, como pigmento acumulado en el contorno
+   * - Sumi
+     - Tinta de estilo caligráfico con bordes de pincel seco
 
-Cada pincel expone Size / Opacity / Hardness / Density / Blend-mode en el **dock Brush** y
-en la **barra Options** superior. Use ``Settings`` > ``Pressure Curve…`` para remapear la
-presión de la tableta al ancho o a la opacidad, y ``Edit`` > ``Capture Brush Tip…`` para
-convertir una selección de marquesina en una punta de pincel personalizada.
+Cera, Resaltador y Caligrafía sumi son presets de pincel basados en estos tipos. Cada
+pincel expone Size / Opacity / Hardness / Density / Blend-mode en el **dock Brush**; la
+**barra Options** superior lleva Size / Opacity / Hardness. La presión del lápiz de la
+tableta escala directamente el tamaño y la opacidad del pincel. Use ``Edit`` >
+``Capture Brush Tip…`` para convertir una selección de marquesina en una punta de pincel
+personalizada.
 
 Capas
 ^^^^^
 
 El **dock Layer** ofrece miniaturas, alternancia de visibilidad, renombrado en línea,
-arrastrar para reordenar, y el modo de fusión y opacidad de la capa activa. El menú
-``Layer`` añade:
+reordenación con los botones ↑ / ↓ (o ``Ctrl + [`` / ``Ctrl + ]``), y el modo de fusión y
+opacidad de la capa activa. El menú ``Layer`` añade:
 
 - **New / Vector / Duplicate / Merge Down** (``Ctrl + Shift + N`` /
   ``Ctrl + Shift + V`` / ``Ctrl + J`` / ``Ctrl + E``)
 - **Máscaras** — Add Mask / From Selection / Invert / Apply / Delete
   (``Ctrl + Shift + M`` añade; ``Ctrl + Alt + Shift + M`` añade desde selección)
-- **Máscara de recorte** — recorta la capa de arriba al alfa actual
-  (``Ctrl + Alt + G``)
+- **Máscara de recorte** — activa o desactiva el recorte en la capa activa, recortándola
+  al alfa de la capa inferior (``Ctrl + Alt + G``)
 - **Efectos de capa** — Drop Shadow · Outer Glow · Stroke; limpiar efectos
-- **Capa de referencia** — fija una capa como fuente del cuentagotas
+- **Capa de referencia** — fija una capa como la fuente con cuyos colores compara el cubo
+  de **Relleno**
 - **Capa de 1 bit** — alterna la capa activa a una capa de line-art binaria
 - **Dividir capa por color** — divide una capa de color plano en una capa por color para
   facilitar el rellenado con el cubo
@@ -702,7 +705,8 @@ Selecciones
 ^^^^^^^^^^^
 
 Use las herramientas rect / lazo / varita / selección rápida, después el menú **Edit** >
-**Stroke Selection…** para delinear la marquesina con el pincel actual. ``Q`` alterna el
+**Stroke Selection…** para delinear la marquesina con el color de primer plano, usando el
+ancho (Width) y la posición (Placement) del diálogo. ``Q`` alterna el
 **Modo de máscara rápida** — pinte con cualquier pincel para refinar el borde de la
 selección en rojo, después pulse ``Q`` de nuevo para convertirla de vuelta en una marquesina.
 
@@ -711,11 +715,12 @@ Animación
 
 El **dock Animation** convierte el documento en una tira de fotogramas:
 
-- ``Add Frame`` captura el estado actual de las capas en un nuevo fotograma clave.
-- Haga clic en la miniatura de un fotograma para saltar a él.
-- ``Onion Skin`` (menú View) superpone los fotogramas vecinos con baja opacidad.
-- Exporte la tira mediante **File > Export pages** (CBZ para lectores de cómics,
-  PDF para impresión) o **Animation Export** para MP4 / GIF.
+- ``+ Frame`` captura la imagen aplanada en un nuevo fotograma.
+- Haga clic en la miniatura de un fotograma para cargarlo en la capa activa.
+- ``Onion Skin`` (menú View) superpone el fotograma anterior con baja opacidad.
+- ``▶ Play`` recorre los fotogramas a los FPS elegidos. Los fotogramas sirven para
+  previsualizar y para el papel cebolla — no hay exportación de animación
+  (**File > Export pages** exporta las páginas de un proyecto de cómic, no los fotogramas).
 
 Menú Manga
 ^^^^^^^^^^
@@ -736,16 +741,15 @@ Menú Manga
      - Generadores de líneas cinéticas radiales / paralelas / explosivas
    * - Acción / impacto
      - Superposición de explosión / impacto estilo manga
-   * - Herramienta de bocadillo
-     - Arrastra un bocadillo, suelta la cola hacia el hablante
 
 Filtros
 ^^^^^^^
 
-``Filter`` abre un diálogo con vista previa en vivo para cada efecto:
+Cada entrada de ``Filter`` abre un diálogo de parámetros simple OK / Cancel (sin vista
+previa en vivo):
 
-- **Niveles** — deslizadores de negro / gamma / blanco, por canal
-- **Curvas** — puntos arrastrables (RGB / R / G / B) con interpolación cúbica monótona
+- **Niveles** — deslizadores de punto negro / punto blanco / gamma
+- **Curvas** — un preset (curva en S, levantar sombras, comprimir luces) con un deslizador de intensidad
 - **Posterizar** — cuantiza el color en N pasos
 - **Umbral** — convierte a blanco / negro puros en un punto de corte
 - **Auto Color Balance** — neutraliza dominantes mediante grey-world / white-patch
@@ -756,28 +760,30 @@ Ayudas de visualización
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Cuadrícula de píxeles** (``Ctrl + Shift + '``) — superpone una cuadrícula de un píxel con alto zoom
-- **Ajustar a píxel / bordes** — posicionamiento sub-píxel forzado a coordenadas enteras
-- **Onion Skin** — superposición de fotogramas vecinos para animación
+- **Ajustar a píxel / bordes** — Ajustar a píxel coloca los toques del pincel en píxeles enteros; Ajustar a bordes atrae los puntos a los bordes cercanos del lienzo o de la capa
+- **Onion Skin** — superpone el fotograma de animación anterior
 - **Guías de sangrado** — guías de sangrado y zona segura para impresión
 - **Rotar lienzo** (``Ctrl + Shift + H``) — rotación de vista sin rasterizar
 
 Entrada/Salida de archivos
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- **Open PSD…** (``Ctrl + O``) y **Save as PSD…** (``Ctrl + S``) — ida y vuelta a archivos
-  Photoshop con capas, máscaras, modos de fusión y efectos de capa
-- **Export image…** — aplana y guarda como PNG / JPEG / WebP / BMP / TIFF
-- **Export pages → CBZ** / **→ PDF** — exportación de documentos multi-fotograma para cómics
-- **Importar / Exportar presets de pincel**, **Importar paleta** — compartir recursos entre instalaciones
-- **Instantáneas de autoguardado** — instantáneas periódicas en segundo plano con restauración de la última desde el menú File
+- **Open PSD…** (``Ctrl + O``) aplana el archivo en una sola capa en una pestaña nueva;
+  **Save as PSD…** (``Ctrl + S``) escribe las capas con sus modos de fusión (sin máscaras
+  ni efectos de capa)
+- **Export image…** — aplana y guarda como PNG
+- **Export pages → CBZ** / **→ PDF** — exporta las páginas de un proyecto de cómic
+- **Import brush preset…**, **Import palette…** — trae pinceles y paletas de otras instalaciones o aplicaciones
+- **Autoguardado** — cada 2 minutos, mientras la pestaña activa tenga ediciones sin guardar, se escribe una instantánea; en el siguiente inicio un toast ofrece las instantáneas y **File > Restore Autosave** carga la más reciente en la pestaña activa. La barra de estado muestra cuándo se tomó la última instantánea, y al cerrar Imervue se pregunta por las pestañas Paint con cambios sin guardar.
 
 Diseños de espacio de trabajo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Settings`` > ``Workspace Layouts…`` guarda la disposición de los docks, el estado de las
-opciones de herramienta y los paneles activos bajo un nombre, después alterna entre ellos con
-un solo clic — por ejemplo, un diseño "Dibujo" con los docks Brush + Color destacados y un
-diseño "Composición" con los docks Layer + History expandidos.
+``Settings`` > ``Workspace Layouts…`` enumera los diseños integrados **Default**,
+**Drawing**, **Comic** y **Compact** además de los suyos. **Save current…** guarda bajo un
+nombre cuáles de los docks Layers / Color / Brush / Navigator / History / Reference se
+muestran; aplicar un diseño muestra u oculta esos docks y trae al frente el primero que se
+muestra. No se guardan las opciones de herramienta ni los tamaños de los docks.
 
 ----
 

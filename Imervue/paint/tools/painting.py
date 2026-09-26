@@ -312,7 +312,9 @@ class FillTool:
     ``None``) at click time. ``reference_provider`` is optional and
     returns the HxWx4 RGBA buffer of the document's reference layer
     when raster paint apps' "Reference Layer" mode is on; ``None`` falls the
-    fill back to sampling its own target.
+    fill back to sampling its own target. ``composite_provider`` returns the
+    visible composite, matched instead of the target when "Sample all layers"
+    is on (the reference layer still wins when both are on).
     """
 
     def __init__(
@@ -320,10 +322,20 @@ class FillTool:
         state: ToolState,
         selection_provider=None,
         reference_provider=None,
+        composite_provider=None,
     ):
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
         self._reference_provider = reference_provider or (lambda: None)
+        self._composite_provider = composite_provider or (lambda: None)
+
+    def _match_source(self, fill):
+        """The image whose colours decide the filled region, or None for the target itself."""
+        if fill.use_reference_layer:
+            return self._reference_provider()
+        if fill.sample_all_layers:
+            return self._composite_provider()
+        return None
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase != "press":
@@ -333,9 +345,7 @@ class FillTool:
         if self._state.foreground is None:
             return False
         fill = self._state.fill
-        reference = (
-            self._reference_provider() if fill.use_reference_layer else None
-        )
+        reference = self._match_source(fill)
         result = flood_fill(
             canvas,
             seed_x=int(round(evt.x)),

@@ -375,30 +375,30 @@ La pestaña **Paint** es un estudio de pintura rasterizada con todas las funcion
 
 Pincel · Borrador · Relleno · Cuentagotas · Rect / Lazo / Varita / Selección rápida · Mover · Texto · Gradiente · Desenfoque · Difuminar · Dodge · Burn · Sponge · Pluma · Tampón de clonar · Bocadillo · Rectángulo · Elipse · Línea · Polígono · Recorte · Transformar · Mano · Zoom
 
-El trío de tonificación de cuarto oscuro — **Dodge** (aclarar), **Burn** (oscurecer) y **Sponge** (saturar / desaturar) — pinta ajustes locales de tono y croma, ponderados por el pincel y una máscara de sombras / medios tonos / luces.
+El trío de tonificación de cuarto oscuro — **Dodge** (aclarar), **Burn** (oscurecer) y **Sponge** (desaturar) — pinta ajustes locales ponderados por el pincel; Dodge y Burn actúan sobre los medios tonos. Ninguno de los tres tiene opciones.
 
 Atajos de una letra: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
 ### Pinceles
 
-Pluma / rotulador / lápiz / fluorescente / aerosol / caligrafía / acuarela / carboncillo / crayón, con controles de Tamaño / Opacidad / Dureza / Densidad / Modo de mezcla. Editor de curva de presión, captura de punta de pincel desde una selección, importar / exportar predefinidos de pincel.
+Seis tipos de pincel — Lápiz / Pluma / Marcador / Aerógrafo / Acuarela / Sumi — más predefinidos basados en ellos (Crayón, Resaltador, Caligrafía sumi …). El dock Pincel ajusta Tamaño / Opacidad / Dureza / Densidad / Modo de mezcla; la barra de opciones lleva Tamaño / Opacidad / Dureza. La presión del lápiz de la tableta escala el tamaño y la opacidad. Captura de punta de pincel desde una selección, **File > Import brush preset…**.
 
 ### Capas
 
-Panel de capas completo con miniaturas, alternadores de visibilidad, arrastrar para reordenar, modos de mezcla, opacidad, búsqueda, capas vectoriales, capas de 1 bit, **máscaras de capa** (añadir / desde selección / invertir / aplicar), **máscaras de recorte**, **efectos de capa** (sombra paralela / resplandor externo / trazo). Dividir capa por color, predefinidos de mapa de gradiente.
+Panel de capas completo con miniaturas, alternadores de visibilidad, botones ↑ / ↓ para reordenar (o `Ctrl+[` / `Ctrl+]`), modos de mezcla, opacidad, búsqueda, capas vectoriales, capas de 1 bit, **máscaras de capa** (añadir / desde selección / invertir / aplicar), **máscaras de recorte**, **efectos de capa** (sombra paralela / resplandor externo / trazo). Dividir capa por color, predefinidos de mapa de gradiente.
 
 ### Selección
 
-Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Restar / Intersecar** y difuminado. **Modo máscara rápida** (`Q`) para flujos de pintar-la-máscara. Diálogo **Trazar selección**.
+Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Restar / Intersecar**. **Modo máscara rápida** (`Q`) para flujos de pintar-la-máscara. Diálogo **Trazar selección**.
 
 ### Animación y manga
 
-- **Animación** — dock de línea de tiempo de fotogramas con instantáneas, reproducción, superposición de papel cebolla, exportación MP4 / GIF
+- **Animación** — dock de línea de tiempo de fotogramas: **+ Frame** captura la imagen aplanada, reproducción a los FPS elegidos, el papel cebolla muestra el fotograma anterior; los fotogramas sirven para previsualizar, sin exportación de animación
 - **Herramientas de manga** — Cortador de viñetas · Capas de trama · Estampar números de página · Líneas de velocidad (Radial / Paralela / Explosión) · Destello de acción · Herramienta de bocadillo
 
 ### Filtros y ayudas de vista
 
-- **Filtros** — Niveles · Curvas · Posterizar · Umbral · Auto Balance de Color · Grano de Película · Mediotonos (cada uno con diálogo de vista previa en vivo)
+- **Filtros** — Niveles · Curvas · Posterizar · Umbral · Auto Balance de Color · Grano de Película · Mediotonos (cada uno abre un diálogo de parámetros OK / Cancel, sin vista previa en vivo)
 - **Ayudas de vista** — Cuadrícula de píxeles · Ajustar a píxel · Ajustar a bordes · Papel cebolla · Guías de sangrado · Rotación de lienzo (`Ctrl+Shift+H` rota antihorario)
 
 ### Docks (14, en pestañas dentro de 3 grupos)
@@ -409,13 +409,13 @@ Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Res
 | Lienzo | Capa · Navegador · Historial · Páginas · Animación · Histograma |
 | Biblioteca | Materiales · Sellos · Pose · Referencia |
 
-Cada panel es movible / flotante y se puede activar por separado desde el menú **Window**. **Settings > Workspace Layouts** guarda y recupera disposiciones con nombre.
+Cada panel es movible / flotante y se puede activar por separado desde el menú **Window**. **Settings > Workspace Layouts…** ofrece los diseños integrados Default / Drawing / Comic / Compact; **Save current…** guarda bajo un nombre cuáles de los docks Capa / Color / Pincel / Navegador / Historial / Referencia se muestran, y aplicar un diseño muestra u oculta esos docks. No se guardan las opciones de herramienta ni los tamaños de los docks.
 
 ### E/S de archivos
 
-- Abrir / guardar **PSD** (Photoshop) con ida y vuelta completa de capas
-- Exportar PNG / JPEG / WebP, además de exportación multipágina de cómic a **CBZ** o **PDF**
-- Instantáneas de auto-guardado con restauración de la última
+- **Open PSD…** aplana el archivo en una sola capa en una pestaña nueva; **Save as PSD…** escribe las capas con sus modos de mezcla (sin máscaras ni efectos de capa)
+- **Export image…** escribe PNG; los proyectos de cómic exportan sus páginas a **CBZ** o **PDF**
+- **Autoguardado** — una instantánea cada 2 minutos mientras la pestaña activa tenga ediciones sin guardar; en el siguiente inicio un toast ofrece las instantáneas y **File > Restore Autosave** carga la más reciente en la pestaña activa, y la barra de estado muestra cuándo se tomó la última. Al cerrar Imervue se pregunta por las pestañas Paint con cambios sin guardar.
 
 ### UX para usuarios avanzados
 

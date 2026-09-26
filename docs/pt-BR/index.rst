@@ -573,8 +573,9 @@ que a tela mantenha toda a altura visível, agrupados em três conjuntos:
 - **Biblioteca** — Materiais, Carimbos, Pose, Referência
 
 Cada dock pode ser exibido ou ocultado individualmente pelo menu ``Janela``. Arraste
-o título de qualquer dock para reorganizar ou flutuar um painel, depois salve o
-resultado via ``Configurações`` > ``Layouts de Espaço de Trabalho…``.
+o título de qualquer dock para reorganizar ou flutuar um painel;
+``Configurações`` > ``Layouts de Espaço de Trabalho…`` lembra quais docks estão
+visíveis (veja *Layouts de Espaço de Trabalho*).
 
 Paleta de Ferramentas (Tira Esquerda)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -606,36 +607,38 @@ Paleta de Ferramentas (Tira Esquerda)
      - Ferramentas de seleção com modos Substituir / Adicionar / Subtrair / Interseccionar
    * - Texto
      - ``T``
-     - Editor de texto inline com fonte / tamanho / negrito / itálico
+     - Clique abre o diálogo **Adicionar Texto** (fonte / tamanho / cor /
+       negrito / itálico); o texto é desenhado nos pixels da camada
    * - Gradiente
      - ``U``
      - Preenchimento por gradiente Linear / Radial / Angular / Diamante
    * - Desfoque / Esfumar
-     - ``R``
+     - ``R`` (Esfumar)
      - Manipulação local de pixels
    * - Dodge / Burn / Sponge
      -
-     - Tonalização de câmara escura — clareia, escurece ou satura /
-       dessatura localmente, ponderado pelo pincel e por uma máscara de
-       faixa tonal
+     - Tonalização de câmara escura ponderada pelo pincel — Dodge clareia e
+       Burn escurece os meios-tons, Sponge dessatura; sem opções
    * - Caneta (Bezier)
      - ``P``
      - Caminho vetorial com edição de âncoras / alças
    * - Carimbo de Clonar
      - ``S``
-     - Shift+clique define a origem, clique carimba com pluma
+     - Alt+clique define a origem, depois arraste para carimbar com o
+       tamanho / dureza / opacidade do pincel
    * - Balão de Fala
      - ``Ctrl + B``
-     - Balão estilo quadrinho / mangá com cauda automática
+     - Arraste uma caixa para desenhar um balão de quadrinho / mangá
+       (desenhado sem cauda)
    * - Retângulo / Elipse / Linha / Polígono
      - ``Shift + R/E/I/P``
      - Primitivas vetoriais de forma com traço + preenchimento
    * - Recortar
      - ``C``
-     - Recorte interativo com presets de proporção
+     - Recorte livre — arraste um retângulo; a tela é recortada ao soltar
    * - Transformar
      - ``Ctrl + T``
-     - Alças de transformação livre / escala / rotação / inclinação
+     - Oito alças de escala e uma alça de rotação
    * - Mão
      - ``H``
      - Deslocar a tela arrastando com o cursor
@@ -652,42 +655,43 @@ Pincéis
 
    * - Pincel
      - Efeito
-   * - Caneta
-     - Linha nítida e antialiased, o pincel do dia a dia
-   * - Marcador / Marca-texto
-     - Traços largos e semitransparentes que se sobrepõem
    * - Lápis
      - Linha fina de grafite levemente texturizada
-   * - Spray
-     - Pontos dispersos controlados por densidade e fluxo
-   * - Caligrafia
-     - Largura varia com a direção do traço
+   * - Caneta
+     - Linha nítida e antialiased, o pincel do dia a dia
+   * - Marcador
+     - Traços largos e semitransparentes que se sobrepõem
+   * - Aerógrafo
+     - Pontos dispersos que se acumulam em um spray suave
    * - Aquarela
-     - Vazamento de borda úmida e mistura suave
-   * - Carvão / Giz de cera
-     - Traços ásperos e texturizados com inclinação por pressão
+     - Borda úmida com interior mais claro, como pigmento acumulado na borda
+   * - Sumi
+     - Tinta em estilo caligráfico com bordas de pincel seco
 
-Cada pincel expõe Tamanho / Opacidade / Dureza / Densidade / Modo de Mistura no
-**dock Pincel** e na **barra de Opções** superior. Use ``Configurações`` >
-``Curva de Pressão…`` para remapear a pressão da tablet para largura ou opacidade,
-e ``Editar`` > ``Capturar Ponta de Pincel…`` para transformar uma seleção em uma
-ponta de pincel personalizada.
+Giz de cera, Marca-texto e caligrafia Sumi são presets de pincel construídos
+sobre esses tipos. Cada pincel expõe Tamanho / Opacidade / Dureza / Densidade /
+Modo de Mistura no **dock Pincel**; a **barra de Opções** superior traz
+Tamanho / Opacidade / Dureza. A pressão da caneta da mesa digitalizadora escala
+diretamente o tamanho e a opacidade do pincel. Use ``Editar`` >
+``Capturar Ponta de Pincel…`` para transformar uma seleção em uma ponta de
+pincel personalizada.
 
 Camadas
 ^^^^^^^
 
 O **dock Camada** oferece miniaturas, alternâncias de visibilidade, renomeação
-inline, arrastar para reordenar, e o modo de mistura + opacidade da camada ativa.
-O menu ``Camada`` adiciona:
+inline, reordenação com os botões ↑ / ↓ (ou ``Ctrl + [`` / ``Ctrl + ]``), e o
+modo de mistura + opacidade da camada ativa. O menu ``Camada`` adiciona:
 
 - **Nova / Vetorial / Duplicar / Mesclar Abaixo** (``Ctrl + Shift + N`` /
   ``Ctrl + Shift + V`` / ``Ctrl + J`` / ``Ctrl + E``)
 - **Máscaras** — Adicionar Máscara / A partir da Seleção / Inverter / Aplicar / Excluir
   (``Ctrl + Shift + M`` adiciona; ``Ctrl + Alt + Shift + M`` adiciona a partir da seleção)
-- **Máscara de Recorte** — recortar a camada acima ao alfa atual
-  (``Ctrl + Alt + G``)
+- **Máscara de Recorte** — alternar o recorte na camada ativa, recortando-a ao
+  alfa da camada abaixo (``Ctrl + Alt + G``)
 - **Efeitos de Camada** — Sombra Projetada · Brilho Externo · Traço; limpar efeitos
-- **Camada de Referência** — fixar uma camada como fonte do conta-gotas
+- **Camada de Referência** — fixar uma camada como a fonte contra a qual o balde
+  de **Preenchimento** compara as cores
 - **Camada 1-bit** — alternar a camada ativa para uma camada binária de line-art
 - **Dividir Camada por Cor** — dividir uma camada de cor plana em uma camada por
   cor para facilitar repinturas com balde
@@ -697,7 +701,8 @@ Seleções
 ^^^^^^^^
 
 Use as ferramentas retângulo / laço / varinha / seleção rápida, depois o
-**Traçar Seleção…** no menu **Editar** para contornar a marquise com o pincel atual.
+**Traçar Seleção…** no menu **Editar** para contornar a marquise com a cor de
+primeiro plano, usando a Largura e o Posicionamento do diálogo.
 ``Q`` alterna o **Modo Máscara Rápida** — pinte com qualquer pincel para refinar a
 borda da seleção em vermelho, depois pressione ``Q`` novamente para convertê-la de
 volta em uma marquise.
@@ -707,11 +712,13 @@ Animação
 
 O **dock Animação** transforma o documento em uma tira de quadros:
 
-- ``Adicionar Quadro`` captura o estado atual da camada em um novo keyframe.
-- Clique na miniatura de um quadro para saltar até ele.
-- ``Onion Skin`` (menu Visualizar) sobrepõe quadros vizinhos com baixa transparência.
-- Exporte a tira via **Arquivo > Exportar páginas** (CBZ para leitores de quadrinhos,
-  PDF para impressão) ou **Exportação de Animação** para MP4 / GIF.
+- ``+ Quadro`` captura a imagem achatada em um novo quadro.
+- Clique na miniatura de um quadro para carregá-lo na camada ativa.
+- ``Onion Skin`` (menu Visualizar) sobrepõe o quadro anterior com baixa opacidade.
+- ``▶ Reproduzir`` percorre os quadros no FPS escolhido. Os quadros servem para
+  pré-visualização e onion skin — não há exportação de animação
+  (**Arquivo > Exportar páginas** exporta as páginas de um projeto de
+  quadrinhos, não os quadros).
 
 Menu Mangá
 ^^^^^^^^^^
@@ -732,16 +739,15 @@ Menu Mangá
      - Geradores de linhas de velocidade Radial / Paralelas / Explosão
    * - Action Flash
      - Sobreposição estilo mangá de explosão / impacto
-   * - Ferramenta Balão de Fala
-     - Arraste um balão, solte a cauda em direção ao falante
 
 Filtros
 ^^^^^^^
 
-``Filtro`` abre uma caixa de diálogo com pré-visualização ao vivo para cada efeito:
+Cada entrada de ``Filtro`` abre uma caixa de diálogo simples de parâmetros
+OK / Cancelar (sem pré-visualização ao vivo):
 
-- **Níveis** — sliders preto / gama / branco, por canal
-- **Curvas** — pontos arrastáveis (RGB / R / G / B) com interpolação cúbica monotônica
+- **Níveis** — sliders de ponto preto / ponto branco / gama
+- **Curvas** — um preset (Curva em S, Levantar sombras, Comprimir realces) com um slider de Intensidade
 - **Posterizar** — quantizar cor em N passos
 - **Limiar** — converter para preto / branco puro em um corte
 - **Balanço Automático de Cor** — neutralizar dominâncias via grey-world / white-patch
@@ -752,27 +758,29 @@ Auxílios de Visualização
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Grade de Pixels** (``Ctrl + Shift + '``) — sobrepor grade de um pixel em zoom alto
-- **Encaixar em Pixel / Bordas** — colocação sub-pixel travada em coordenadas inteiras
-- **Onion Skin** — sobreposição de vizinhos para animação
+- **Encaixar em Pixel / Bordas** — Encaixar em Pixel posiciona os toques do pincel em pixels inteiros; Encaixar em Bordas puxa os pontos para bordas próximas da tela ou da camada
+- **Onion Skin** — sobrepõe o quadro de animação anterior
 - **Guias de Sangria** — guias de sangria de impressão / zona segura
 - **Rotacionar Tela** (``Ctrl + Shift + H``) — rotação da visualização sem rasterizar
 
 I/O de Arquivos
 ^^^^^^^^^^^^^^^
 
-- **Abrir PSD…** (``Ctrl + O``) e **Salvar como PSD…** (``Ctrl + S``) — round-trip de PSD em camadas com máscaras, modos de mistura e efeitos de camada
-- **Exportar imagem…** — achatar e salvar como PNG / JPEG / WebP / BMP / TIFF
-- **Exportar páginas → CBZ** / **→ PDF** — exportação de documento multi-quadro para quadrinhos
-- **Importar / Exportar presets de pincel**, **Importar paleta** — compartilhar recursos entre instalações
-- **Snapshots de autosalvamento** — snapshots periódicos em segundo plano com restauração do último a partir do menu Arquivo
+- **Abrir PSD…** (``Ctrl + O``) achata o arquivo em uma única camada em uma nova aba; **Salvar como PSD…** (``Ctrl + S``) grava as camadas com seus modos de mistura (sem máscaras nem efeitos de camada)
+- **Exportar imagem…** — achatar e salvar como PNG
+- **Exportar páginas → CBZ** / **→ PDF** — exportar as páginas de um projeto de quadrinhos
+- **Importar preset de pincel…**, **Importar paleta…** — trazer pincéis e paletas de outras instalações ou aplicativos
+- **Autosalvamento** — a cada 2 minutos, enquanto a aba ativa tiver edições não salvas, um snapshot é gravado; na próxima inicialização um toast oferece os snapshots e **Arquivo > Restaurar Autosalvamento** carrega o mais recente na aba ativa. A barra de status mostra quando o último snapshot foi feito, e ao fechar o Imervue ele pergunta sobre abas Paint com alterações não salvas.
 
 Layouts de Espaço de Trabalho
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Configurações`` > ``Layouts de Espaço de Trabalho…`` salva o arranjo dos docks,
-o estado das opções de ferramenta e os painéis ativos com um nome, depois alterna
-entre eles com um clique — por exemplo, um layout "Desenho" com os docks Pincel +
-Cor em destaque e um layout "Composição" com os docks Camada + Histórico expandidos.
+``Configurações`` > ``Layouts de Espaço de Trabalho…`` lista os layouts embutidos
+**Padrão**, **Desenho**, **Quadrinhos** e **Compacto**, além dos seus.
+**Salvar atual…** guarda, com um nome, quais dos docks Camadas / Cor / Pincel /
+Navegador / Histórico / Referência estão visíveis; aplicar um layout mostra ou
+oculta esses docks e traz o primeiro visível para a frente. Opções de ferramenta
+e tamanhos dos docks não são guardados.
 
 ----
 

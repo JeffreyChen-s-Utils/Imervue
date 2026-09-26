@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QMessageBox
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.paint_menu_bar import menu_for
@@ -111,7 +111,30 @@ class _SettingsMenuBridge:
             apply_workspace_preset(self._workspace, preset)
 
         dialog.apply_requested.connect(_on_apply)
+        dialog.save_requested.connect(lambda name: self.save_workspace_preset(name, dialog))
         dialog.exec()
+
+    def save_workspace_preset(self, name: str, parent=None) -> bool:
+        """Store the current dock layout as a user preset called *name*.
+
+        The dialog's Save button emitted a name that nothing received, so no
+        layout was ever saved. A built-in name is refused with a message.
+        """
+        from Imervue.paint.workspace_preset_dialog import (
+            add_user_preset,
+            capture_workspace_preset,
+        )
+        try:
+            add_user_preset(capture_workspace_preset(self._workspace, name))
+        except ValueError:
+            lang = language_wrapper.language_word_dict
+            QMessageBox.warning(
+                parent, lang.get("paint_workspace_preset_save", "Save current"),
+                lang.get("paint_workspace_preset_reserved",
+                         "“{name}” is a built-in layout; choose another name.").format(name=name),
+            )
+            return False
+        return True
 
     def open_liquify(self) -> None:
         import numpy as np

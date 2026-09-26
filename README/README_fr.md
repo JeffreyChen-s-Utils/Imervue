@@ -375,30 +375,30 @@ L'onglet **Paint** est un studio de peinture raster complet intégré comme `QMa
 
 Pinceau · Gomme · Remplissage · Pipette · Rect / Lasso / Baguette / Sélection rapide · Déplacer · Texte · Dégradé · Flou · Doigt · Dodge · Burn · Sponge · Stylo · Tampon de clonage · Bulle de dialogue · Rectangle · Ellipse · Ligne · Polygone · Recadrage · Transformer · Main · Zoom
 
-Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (saturer / désaturer) — peint des ajustements locaux de tonalité et de chrominance, pondérés par le pinceau et un masque ombres / tons moyens / hautes lumières.
+Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (désaturer) — peint des ajustements locaux pondérés par le pinceau ; Dodge et Burn agissent sur les tons moyens. Aucun des trois n'a d'options.
 
 Raccourcis à une lettre : `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.
 
 ### Pinceaux
 
-Stylo / marqueur / crayon / surligneur / aérosol / calligraphie / aquarelle / fusain / crayon de couleur, avec contrôles Taille / Opacité / Dureté / Densité / Mode de fusion. Éditeur de courbe de pression, capture de pointe de pinceau depuis une sélection, import / export de préréglages de pinceaux.
+Six types de pinceaux — Crayon / Stylo / Marqueur / Aérographe / Aquarelle / Sumi — plus des préréglages construits sur eux (Pastel gras, Surligneur, Calligraphie sumi …). Le dock Pinceau règle Taille / Opacité / Dureté / Densité / Mode de fusion ; la barre d'options porte Taille / Opacité / Dureté. La pression du stylet de tablette module la taille et l'opacité. Capture de pointe de pinceau depuis une sélection, **File > Import brush preset…**.
 
 ### Calques
 
-Panneau de calques complet avec miniatures, bascules de visibilité, glisser-déposer pour réordonner, modes de fusion, opacité, recherche, calques vectoriels, calques 1 bit, **masques de calque** (ajouter / depuis la sélection / inverser / appliquer), **masques d'écrêtage**, **effets de calque** (ombre portée / lueur externe / contour). Division de calque par couleur, préréglages de gradient map.
+Panneau de calques complet avec miniatures, bascules de visibilité, boutons ↑ / ↓ pour réordonner (ou `Ctrl+[` / `Ctrl+]`), modes de fusion, opacité, recherche, calques vectoriels, calques 1 bit, **masques de calque** (ajouter / depuis la sélection / inverser / appliquer), **masques d'écrêtage**, **effets de calque** (ombre portée / lueur externe / contour). Division de calque par couleur, préréglages de gradient map.
 
 ### Sélection
 
-Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / Soustraire / Intersecter** et Feather. **Mode masque rapide** (`Q`) pour les flux de travail « peindre le masque ». Boîte de dialogue **Contourer la sélection**.
+Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / Soustraire / Intersecter**. **Mode masque rapide** (`Q`) pour les flux de travail « peindre le masque ». Boîte de dialogue **Contourer la sélection**.
 
 ### Animation et manga
 
-- **Animation** — dock de timeline d'images avec instantanés, lecture, pelure d'oignon, export MP4 / GIF
+- **Animation** — dock de timeline d'images : **+ Frame** capture le dessin aplati, lecture à la cadence (FPS) choisie, la pelure d'oignon montre l'image précédente ; les images servent à la prévisualisation, sans export d'animation
 - **Outils manga** — Découpe de cases · Calques de tonalité · Tampon de numéros de page · Lignes de vitesse (Radial / Parallèle / Burst) · Action Flash · Outil bulle de dialogue
 
 ### Filtres et aides à la vue
 
-- **Filtres** — Niveaux · Courbes · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (chacun avec une boîte de dialogue à aperçu en direct)
+- **Filtres** — Niveaux · Courbes · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (chacun ouvre une boîte de dialogue de paramètres OK / Cancel, sans aperçu en direct)
 - **Aides à la vue** — Grille de pixels · Aligner sur le pixel · Aligner sur les bords · Pelure d'oignon · Guides de fond perdu · Rotation du canevas (`Ctrl+Shift+H` tourne dans le sens antihoraire)
 
 ### Docks (14, à onglets dans 3 groupes)
@@ -409,13 +409,13 @@ Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / S
 | Toile | Calque · Navigateur · Historique · Pages · Animation · Histogramme |
 | Bibliothèque | Matériaux · Tampons · Pose · Référence |
 
-Chaque dock est déplaçable / flottant et activable individuellement depuis le menu **Window**. **Settings > Workspace Layouts** enregistre et rappelle des dispositions nommées.
+Chaque dock est déplaçable / flottant et activable individuellement depuis le menu **Window**. **Settings > Workspace Layouts…** propose les dispositions intégrées Default / Drawing / Comic / Compact ; **Save current…** enregistre sous un nom lesquels des docks Calque / Couleur / Pinceau / Navigateur / Historique / Référence sont affichés, et appliquer une disposition affiche ou masque ces docks. Les options d'outil et la taille des docks ne sont pas enregistrées.
 
 ### E/S de fichiers
 
-- Ouverture / sauvegarde **PSD** (Photoshop) avec aller-retour complet des calques
-- Export PNG / JPEG / WebP, plus export bande dessinée multi-pages en **CBZ** ou **PDF**
-- Instantanés de sauvegarde automatique avec restauration du plus récent
+- **Open PSD…** aplatit le fichier en un seul calque dans un nouvel onglet ; **Save as PSD…** écrit les calques avec leurs modes de fusion (sans masques ni effets de calque)
+- **Export image…** écrit du PNG ; les projets BD exportent leurs pages en **CBZ** ou **PDF**
+- **Sauvegarde automatique** — un instantané toutes les 2 minutes tant que l'onglet actif a des modifications non enregistrées ; au lancement suivant, un toast propose les instantanés et **File > Restore Autosave** charge le plus récent dans l'onglet actif, et la barre d'état indique quand le dernier a été pris. À la fermeture, Imervue demande quoi faire des onglets Paint ayant des modifications non enregistrées.
 
 ### UX pour utilisateurs avancés
 

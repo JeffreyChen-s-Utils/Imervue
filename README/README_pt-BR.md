@@ -375,30 +375,30 @@ A aba **Paint** é um estúdio raster completo embutido como seu próprio `QMain
 
 Pincel · Borracha · Preenchimento · Conta-gotas · Retângulo / Laço / Varinha / Seleção Rápida · Mover · Texto · Gradiente · Desfocar · Smudge · Dodge · Burn · Sponge · Caneta · Carimbo de Clonagem · Balão de Fala · Retângulo · Elipse · Linha · Polígono · Recorte · Transformar · Mão · Zoom
 
-O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (saturar / dessaturar) — pinta ajustes locais de tom e croma, ponderados pelo pincel e por uma máscara de sombras / meios-tons / realces.
+O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (dessaturar) — pinta ajustes locais ponderados pelo pincel; Dodge e Burn atuam nos meios-tons. Nenhum dos três tem opções.
 
 Atalhos de tecla única: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
 ### Pincéis
 
-Caneta / marcador / lápis / marca-texto / spray / caligrafia / aquarela / carvão / giz de cera, com controles de Tamanho / Opacidade / Dureza / Densidade / Modo de mesclagem. Editor de curva de pressão, captura de ponta de pincel a partir de seleção, importar / exportar presets de pincel.
+Seis tipos de pincel — Lápis / Caneta / Marcador / Aerógrafo / Aquarela / Sumi — mais presets construídos sobre eles (Giz de cera, Marca-texto, caligrafia Sumi …). O dock Pincel define Tamanho / Opacidade / Dureza / Densidade / Modo de mesclagem; a barra de opções traz Tamanho / Opacidade / Dureza. A pressão da caneta da mesa digitalizadora escala o tamanho e a opacidade. Captura de ponta de pincel a partir de seleção, **File > Import brush preset…**.
 
 ### Camadas
 
-Painel completo de camadas com miniaturas, alternância de visibilidade, arrastar-para-reordenar, modos de mesclagem, opacidade, busca, camadas vetoriais, camadas 1-bit, **máscaras de camada** (adicionar / a partir da seleção / inverter / aplicar), **clipping masks**, **efeitos de camada** (sombra projetada / brilho externo / contorno). Dividir camada por cor, presets de mapeamento de gradiente.
+Painel completo de camadas com miniaturas, alternância de visibilidade, botões ↑ / ↓ para reordenar (ou `Ctrl+[` / `Ctrl+]`), modos de mesclagem, opacidade, busca, camadas vetoriais, camadas 1-bit, **máscaras de camada** (adicionar / a partir da seleção / inverter / aplicar), **clipping masks**, **efeitos de camada** (sombra projetada / brilho externo / contorno). Dividir camada por cor, presets de mapeamento de gradiente.
 
 ### Seleção
 
-Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicionar / Subtrair / Interseção** e Feathering. **Modo Quick Mask** (`Q`) para fluxos de pintar-a-máscara. Diálogo **Stroke Selection**.
+Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicionar / Subtrair / Interseção**. **Modo Quick Mask** (`Q`) para fluxos de pintar-a-máscara. Diálogo **Stroke Selection**.
 
 ### Animação e mangá
 
-- **Animação** — dock de timeline de frames com snapshots, reprodução, overlay onion-skin, exportação MP4 / GIF
+- **Animação** — dock de timeline de frames: **+ Frame** faz um snapshot da imagem achatada, reprodução no FPS escolhido, o onion skin mostra o frame anterior; os frames servem para pré-visualização, sem exportação de animação
 - **Ferramentas de mangá** — Panel Cutter · Camadas de retícula · Carimbar números de página · Speedlines (Radial / Paralelo / Burst) · Action Flash · ferramenta de Balão de Fala
 
 ### Filtros e auxiliares de visualização
 
-- **Filtros** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (cada um com diálogo de preview ao vivo)
+- **Filtros** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (cada um abre um diálogo de parâmetros OK / Cancel, sem preview ao vivo)
 - **Auxiliares de visualização** — Grade de Pixels · Snap to Pixel · Snap to Edges · Onion Skin · Guias de Sangria · Rotação de Canvas (`Ctrl+Shift+H` gira CCW)
 
 ### Docks (14, em abas dentro de 3 grupos)
@@ -409,13 +409,13 @@ Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicio
 | Tela | Camada · Navegador · Histórico · Páginas · Animação · Histograma |
 | Biblioteca | Materiais · Carimbos · Pose · Referência |
 
-Cada dock é móvel / flutuante e pode ser alternado individualmente pelo menu **Window**. **Settings > Workspace Layouts** salva e recupera arranjos nomeados.
+Cada dock é móvel / flutuante e pode ser alternado individualmente pelo menu **Window**. **Settings > Workspace Layouts…** oferece os layouts embutidos Default / Drawing / Comic / Compact; **Save current…** guarda, com um nome, quais dos docks Camada / Cor / Pincel / Navegador / Histórico / Referência estão visíveis, e aplicar um layout mostra ou oculta esses docks. Opções de ferramenta e tamanhos dos docks não são guardados.
 
 ### I/O de arquivos
 
-- Abrir / salvar **PSD** (Photoshop) com round-trip completo de camadas
-- Exportar PNG / JPEG / WebP, mais exportação de quadrinho multipágina para **CBZ** ou **PDF**
-- Snapshots de autosave com recuperar-mais-recente
+- **Open PSD…** achata o arquivo em uma única camada em uma nova aba; **Save as PSD…** grava as camadas com seus modos de mesclagem (sem máscaras nem efeitos de camada)
+- **Export image…** grava PNG; projetos de quadrinhos exportam suas páginas para **CBZ** ou **PDF**
+- **Autosave** — um snapshot a cada 2 minutos enquanto a aba ativa tem edições não salvas; na próxima inicialização um toast oferece os snapshots e **File > Restore Autosave** carrega o mais recente na aba ativa, e a barra de status mostra quando o último foi feito. Ao fechar o Imervue, ele pergunta sobre abas Paint com alterações não salvas.
 
 ### UX para usuários avançados
 

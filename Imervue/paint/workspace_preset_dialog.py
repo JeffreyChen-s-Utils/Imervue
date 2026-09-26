@@ -31,6 +31,7 @@ from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.workspace_presets import (
     BUILT_IN_PRESETS,
+    DockState,
     WorkspacePreset,
     all_workspace_presets,
     load_workspace_presets,
@@ -121,6 +122,21 @@ _DOCK_NAME_TO_ATTR = {
     "history": "_history_dock",
     "reference": "_reference_dock",
 }
+
+
+def capture_workspace_preset(workspace, name: str) -> WorkspacePreset:
+    """The workspace's current dock layout as a preset called *name* (the inverse of apply).
+
+    ``isHidden`` rather than ``isVisible``: a dock on a background tab of the
+    tabbed column is shown, only not in front.
+    """
+    docks = []
+    for dock_name, attr in _DOCK_NAME_TO_ATTR.items():
+        dock = getattr(workspace, attr, None)
+        if dock is None or not hasattr(dock, "isHidden"):
+            continue
+        docks.append(DockState(name=dock_name, visible=not dock.isHidden()))
+    return WorkspacePreset(name=name, docks=tuple(docks))
 
 
 def apply_workspace_preset(workspace, preset: WorkspacePreset) -> bool:

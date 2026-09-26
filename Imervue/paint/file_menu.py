@@ -69,6 +69,8 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
          bridge.import_brush_preset, ""),
         ("paint_file_import_palette", "Import palette…",
          bridge.import_palette, ""),
+        ("paint_file_restore_autosave", "Restore Autosave",
+         bridge.restore_autosave, ""),
         (None, None, None, None),
         ("paint_file_export_image", "Export image…",
          bridge.export_active_image, ""),
@@ -287,6 +289,19 @@ class _FileMenuBridge:
             return
         if presets:
             save_brush_presets(presets)
+
+    def restore_autosave(self) -> bool:
+        """Load the newest autosave snapshot into the active tab and say what happened."""
+        workspace = self._workspace
+        restored = workspace.restore_latest_autosave()
+        lang = language_wrapper.language_word_dict
+        toast = getattr(workspace, "toast", None)
+        if toast is not None:
+            if restored:
+                toast.info(lang.get("paint_autosave_restored", "Restored the latest autosave"))
+            else:
+                toast.info(lang.get("paint_autosave_none", "No autosave to restore"))
+        return restored
 
     def import_palette(self) -> None:  # pragma: no cover - QFileDialog
         path = self._pick_file(

@@ -369,3 +369,48 @@ def test_each_built_in_preset_lists_distinct_first_visible_dock():
     # universal anchor; Drawing surfaces brush, Comic surfaces
     # reference). Allow that one overlap, refuse a full collapse.
     assert len(set(primaries)) >= 3
+
+
+
+# ---------------------------------------------------------------------------
+# Saving the current layout (the Save button used to do nothing)
+# ---------------------------------------------------------------------------
+
+
+class _Dock:
+    def __init__(self, hidden: bool) -> None:
+        self._hidden = hidden
+
+    def isHidden(self):  # noqa: N802 - Qt's name
+        return self._hidden
+
+
+def _workspace(**hidden):
+    from types import SimpleNamespace
+    return SimpleNamespace(**{f"_{name}_dock": _Dock(flag) for name, flag in hidden.items()})
+
+
+def test_capture_records_which_docks_are_shown():
+    from Imervue.paint.workspace_preset_dialog import capture_workspace_preset
+    preset = capture_workspace_preset(_workspace(layer=False, color=True, brush=False), "Mine")
+    assert preset.name == "Mine"
+    assert {d.name: d.visible for d in preset.docks} == {
+        "layers": True, "color": False, "brush": True}
+
+
+def test_saving_stores_a_user_preset():
+    from Imervue.paint.settings_menu import _SettingsMenuBridge
+    bridge = _SettingsMenuBridge(_workspace(layer=False, color=True))
+    assert bridge.save_workspace_preset("Mine") is True
+    saved = next(p for p in load_workspace_presets() if p.name == "Mine")
+    assert {d.name: d.visible for d in saved.docks} == {"layers": True, "color": False}
+
+
+def test_a_built_in_name_is_refused_with_a_message(qapp, monkeypatch):
+    from Imervue.paint import settings_menu
+    shown = []
+    monkeypatch.setattr(settings_menu.QMessageBox, "warning",
+                        staticmethod(lambda _p, _t, text: shown.append(text)))
+    bridge = settings_menu._SettingsMenuBridge(_workspace(layer=False))
+    assert bridge.save_workspace_preset("Default") is False
+    assert shown == ['“Default” is a built-in layout; choose another name.']

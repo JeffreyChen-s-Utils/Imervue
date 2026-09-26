@@ -571,8 +571,9 @@ canevas conserve toute la hauteur visible, et répartis en trois groupes :
 - **Bibliothèque** — Matériaux, Tampons, Pose, Référence
 
 Chaque dock peut être affiché ou masqué individuellement depuis le menu ``Fenêtre``. Faites
-glisser n'importe quel titre de dock pour réorganiser ou détacher un panneau, puis enregistrez
-le résultat via ``Paramètres`` > ``Dispositions d'espace de travail…``.
+glisser n'importe quel titre de dock pour réorganiser ou détacher un panneau ;
+``Paramètres`` > ``Dispositions d'espace de travail…`` mémorise les docks affichés (voir
+*Dispositions d'espace de travail*).
 
 Palette d'outils (bande de gauche)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -604,35 +605,37 @@ Palette d'outils (bande de gauche)
      - Outils de sélection avec modes Remplacer / Ajouter / Soustraire / Intersection
    * - Texte
      - ``T``
-     - Éditeur de texte en ligne avec police / taille / gras / italique
+     - Un clic ouvre la boîte de dialogue **Ajouter du texte** (police / taille / couleur /
+       gras / italique) ; le texte est dessiné dans les pixels du calque
    * - Dégradé
      - ``U``
      - Remplissage par dégradé Linéaire / Radial / Angulaire / Diamant
    * - Flou / Doigt
-     - ``R``
+     - ``R`` (Doigt)
      - Manipulation locale des pixels
    * - Dodge / Burn / Sponge
      -
-     - Virage de chambre noire — éclaircir, assombrir ou saturer /
-       désaturer localement, pondéré par le pinceau et un masque de plage tonale
+     - Virage de chambre noire pondéré par le pinceau — Dodge éclaircit et Burn
+       assombrit les tons moyens, Sponge désature ; aucune option
    * - Plume (Bézier)
      - ``P``
      - Tracé vectoriel avec édition des ancres et poignées
    * - Tampon de duplication
      - ``S``
-     - Shift+clic définit la source, clic tamponne avec adoucissement
+     - Alt+clic définit la source, puis faites glisser pour tamponner avec la taille /
+       dureté / opacité du pinceau
    * - Bulle de dialogue
      - ``Ctrl + B``
-     - Bulle BD / manga avec queue automatique
+     - Faites glisser un cadre pour dessiner une bulle BD / manga (dessinée sans queue)
    * - Rectangle / Ellipse / Ligne / Polygone
      - ``Shift + R/E/I/P``
      - Primitives de forme vectorielle avec contour + remplissage
    * - Recadrage
      - ``C``
-     - Recadrage interactif avec préréglages de format
+     - Recadrage libre — faites glisser un rectangle ; le canevas est recadré au relâchement
    * - Transformation
      - ``Ctrl + T``
-     - Poignées de transformation libre / mise à l'échelle / rotation / inclinaison
+     - Huit poignées de mise à l'échelle et une poignée de rotation
    * - Main
      - ``H``
      - Panoramique du canevas par glissement du curseur
@@ -649,42 +652,42 @@ Pinceaux
 
    * - Pinceau
      - Effet
-   * - Stylo
-     - Trait net avec anti-crénelage, pinceau du quotidien
-   * - Marqueur / Surligneur
-     - Traits larges et semi-transparents qui se superposent
    * - Crayon
      - Trait fin de graphite, légèrement texturé
+   * - Stylo
+     - Trait net avec anti-crénelage, pinceau du quotidien
+   * - Marqueur
+     - Traits larges et semi-transparents qui se superposent
    * - Aérographe
-     - Points dispersés pilotés par la densité et le flux
-   * - Calligraphie
-     - La largeur varie selon la direction du trait
+     - Points dispersés qui s'accumulent en une pulvérisation douce
    * - Aquarelle
-     - Diffusion à bords humides et fusion douce
-   * - Fusain / Pastel gras
-     - Traits texturés et rugueux avec inclinaison sensible à la pression
+     - Bord humide avec un intérieur plus clair, comme un pigment qui s'amasse sur le pourtour
+   * - Sumi
+     - Encre de style calligraphique avec des bords de pinceau sec
 
-Chaque pinceau expose Taille / Opacité / Dureté / Densité / Mode de fusion dans
-le **dock Pinceau** et la **barre d'options** supérieure. Utilisez ``Paramètres`` >
-``Courbe de pression…`` pour remapper la pression de la tablette vers la largeur ou l'opacité, et
-``Édition`` > ``Capturer une pointe de pinceau…`` pour transformer une sélection en rectangle en pointe
-de pinceau personnalisée.
+Pastel gras, Surligneur et Calligraphie sumi sont des préréglages de pinceau construits sur
+ces types. Chaque pinceau expose Taille / Opacité / Dureté / Densité / Mode de fusion dans
+le **dock Pinceau** ; la **barre d'options** supérieure porte Taille / Opacité / Dureté.
+La pression du stylet de tablette module directement la taille et l'opacité du pinceau.
+Utilisez ``Édition`` > ``Capturer une pointe de pinceau…`` pour transformer une sélection en
+rectangle en pointe de pinceau personnalisée.
 
 Calques
 ^^^^^^^
 
 Le **dock Calque** offre des vignettes, des bascules de visibilité, un renommage en ligne,
-un glisser-déposer pour réorganiser, ainsi que le mode de fusion + l'opacité du calque actif. Le
-menu ``Calque`` ajoute :
+la réorganisation avec les boutons ↑ / ↓ (ou ``Ctrl + [`` / ``Ctrl + ]``), ainsi que le mode
+de fusion + l'opacité du calque actif. Le menu ``Calque`` ajoute :
 
 - **Nouveau / Vectoriel / Dupliquer / Fusionner avec le calque inférieur** (``Ctrl + Shift + N`` /
   ``Ctrl + Shift + V`` / ``Ctrl + J`` / ``Ctrl + E``)
 - **Masques** — Ajouter un masque / Depuis la sélection / Inverser / Appliquer / Supprimer
   (``Ctrl + Shift + M`` ajoute ; ``Ctrl + Alt + Shift + M`` ajoute depuis la sélection)
-- **Masque d'écrêtage** — découper le calque au-dessus sur l'alpha courant
-  (``Ctrl + Alt + G``)
+- **Masque d'écrêtage** — activer / désactiver l'écrêtage du calque actif, qui est alors
+  écrêté sur l'alpha du calque inférieur (``Ctrl + Alt + G``)
 - **Effets de calque** — Ombre portée · Lueur externe · Contour ; effacer les effets
-- **Calque de référence** — épingler un calque comme source de la pipette
+- **Calque de référence** — épingler un calque comme source avec laquelle le **Pot de
+  peinture** compare les couleurs
 - **Calque 1-bit** — basculer le calque actif en calque d'art au trait binaire
 - **Diviser le calque par couleur** — séparer un calque de couleurs plates en un calque
   par couleur pour des re-remplissages au pot faciles
@@ -694,7 +697,8 @@ Sélections
 ^^^^^^^^^^
 
 Utilisez les outils rectangle / lasso / baguette / sélection rapide, puis l'entrée du menu **Édition**
-**Contour de la sélection…** pour tracer la sélection avec le pinceau actif.
+**Contour de la sélection…** pour tracer le contour de la sélection dans la couleur de
+premier plan, avec la Largeur et la Position choisies dans la boîte de dialogue.
 ``Q`` bascule le **mode masque rapide** — peignez avec n'importe quel pinceau pour affiner
 le bord de la sélection en rouge, puis appuyez à nouveau sur ``Q`` pour reconvertir en
 sélection rectangulaire.
@@ -704,11 +708,12 @@ Animation
 
 Le **dock Animation** transforme le document en bande d'images :
 
-- ``Ajouter une image`` capture l'état courant des calques dans une nouvelle image clé.
-- Cliquez sur la vignette d'une image pour y sauter.
-- ``Pelure d'oignon`` (menu Affichage) superpose les images voisines à faible alpha.
-- Exportez la bande via **Fichier > Exporter les pages** (CBZ pour les lecteurs de BD,
-  PDF pour l'impression) ou **Exporter l'animation** pour MP4 / GIF.
+- ``+ Image`` capture le dessin aplati dans une nouvelle image.
+- Cliquez sur la vignette d'une image pour la charger dans le calque actif.
+- ``Pelure d'oignon`` (menu Affichage) superpose l'image précédente à faible alpha.
+- ``▶ Lecture`` fait défiler les images à la cadence (FPS) choisie. Les images servent à
+  la prévisualisation et à la pelure d'oignon — il n'y a pas d'export d'animation
+  (**Fichier > Exporter les pages** exporte les pages d'un projet BD, pas les images).
 
 Menu Manga
 ^^^^^^^^^^
@@ -729,16 +734,15 @@ Menu Manga
      - Générateurs de lignes de vitesse Radiales / Parallèles / Explosion
    * - Action flash
      - Superposition de type explosion / impact dans le style manga
-   * - Outil bulle de dialogue
-     - Faites glisser une bulle, déposez la queue vers le locuteur
 
 Filtres
 ^^^^^^^
 
-``Filtre`` ouvre une boîte de dialogue avec aperçu en direct pour chaque effet :
+Chaque entrée du menu ``Filtre`` ouvre une simple boîte de dialogue de paramètres OK / Annuler
+(sans aperçu en direct) :
 
-- **Niveaux** — curseurs noir / gamma / blanc, par canal
-- **Courbes** — points déplaçables (RGB / R / V / B) avec interpolation cubique monotone
+- **Niveaux** — curseurs point noir / point blanc / gamma
+- **Courbes** — un préréglage (courbe en S, Déboucher les ombres, Compresser les hautes lumières) avec un curseur Intensité
 - **Postérisation** — quantifier la couleur en N paliers
 - **Seuil** — convertir en noir / blanc pur selon un seuil
 - **Balance des couleurs automatique** — neutraliser les dominantes via grey-world / white-patch
@@ -749,27 +753,29 @@ Aides à la visualisation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Grille de pixels** (``Ctrl + Shift + '``) — superpose une grille d'un pixel à fort zoom
-- **Aligner sur les pixels / bords** — placement sous-pixel ramené à des coordonnées entières
-- **Pelure d'oignon** — superposition des images voisines d'animation
+- **Aligner sur les pixels / bords** — Aligner sur les pixels pose les touches du pinceau sur des pixels entiers ; Aligner sur les bords attire les points vers les bords proches du canevas ou d'un calque
+- **Pelure d'oignon** — superpose l'image d'animation précédente
 - **Guides de fond perdu** — guides de fond perdu / zone sûre pour l'impression
 - **Rotation du canevas** (``Ctrl + Shift + H``) — rotation de la vue sans rasterisation
 
 E/S de fichiers
 ^^^^^^^^^^^^^^^
 
-- **Ouvrir PSD…** (``Ctrl + O``) et **Enregistrer sous PSD…** (``Ctrl + S``) — aller-retour Photoshop multicalque avec masques, modes de fusion et effets de calque
-- **Exporter l'image…** — aplatir et enregistrer en PNG / JPEG / WebP / BMP / TIFF
-- **Exporter les pages → CBZ** / **→ PDF** — export de documents multi-images pour BD
-- **Importer / exporter les préréglages de pinceau**, **Importer une palette** — partager les ressources entre installations
-- **Instantanés d'enregistrement automatique** — instantanés périodiques en arrière-plan avec restauration du dernier depuis le menu Fichier
+- **Ouvrir PSD…** (``Ctrl + O``) aplatit le fichier en un seul calque dans un nouvel onglet ; **Enregistrer sous PSD…** (``Ctrl + S``) écrit les calques avec leurs modes de fusion (sans masques ni effets de calque)
+- **Exporter l'image…** — aplatir et enregistrer en PNG
+- **Exporter les pages → CBZ** / **→ PDF** — exporter les pages d'un projet BD
+- **Importer un préréglage de pinceau…**, **Importer une palette…** — importer des pinceaux et des palettes depuis d'autres installations ou applications
+- **Enregistrement automatique** — toutes les 2 minutes, tant que l'onglet actif a des modifications non enregistrées, un instantané est écrit ; au lancement suivant, un toast propose les instantanés et **Fichier > Restaurer l'enregistrement automatique** charge le plus récent dans l'onglet actif. La barre d'état indique quand le dernier instantané a été pris, et à la fermeture, Imervue demande quoi faire des onglets Paint ayant des modifications non enregistrées.
 
 Dispositions d'espace de travail
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Paramètres`` > ``Dispositions d'espace de travail…`` enregistre la disposition des docks,
-l'état des options d'outil et les panneaux actifs sous un nom, puis bascule entre eux en un
-clic — par exemple, une disposition "Dessin" avec les docks Pinceau + Couleur en évidence
-et une disposition "Composition" avec les docks Calque + Historique développés.
+``Paramètres`` > ``Dispositions d'espace de travail…`` liste les dispositions intégrées
+**Par défaut**, **Dessin**, **BD** et **Compacte**, ainsi que les vôtres. **Enregistrer
+l'actuelle…** enregistre sous un nom lesquels des docks Calques / Couleur / Pinceau /
+Navigateur / Historique / Référence sont affichés ; appliquer une disposition affiche ou
+masque ces docks et place le premier dock affiché au premier plan. Les options d'outil et
+la taille des docks ne sont pas enregistrées.
 
 ----
 

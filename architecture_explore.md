@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `a95d38f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `e322ba8` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 893 | 149,717 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,140 |
+| `tests/` | 894 | 150,035 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,234 |
 | `Imervue/gui/` | 168 | 33,544 |
 | `Imervue/puppet/` | 57 | 15,304 |
 | `Imervue/image/` | 128 | 15,403 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,224 |
-| `Imervue/multi_language/` | 8 | 14,326 |
+| `Imervue/multi_language/` | 8 | 14,346 |
 | `Imervue/desktop_pet/` | 34 | 8,261 |
 | `Imervue/mcp_server/` | 16 | 4,666 |
 | `Imervue/library/` | 32 | 4,308 |
 | `Imervue/menu/` | 11 | 3,594 |
-| `Imervue/` 根層 | 5 | 1,589 |
+| `Imervue/` 根層 | 5 | 1,597 |
 | `Imervue/plugin/` | 10 | 2,246 |
 | `Imervue/system/` | 32 | 3,169 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,155 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（17 個外掛） | 64 | 14,451 |
-| **總計** | **1,744** | **333,114** |
+| `plugins/`（17 個外掛） | 64 | 14,455 |
+| **總計** | **1,745** | **333,558** |
 
-其中 `Imervue/` 套件本身 787 檔 / 168,946 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,068 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -205,7 +205,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 706 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 714 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 608 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -667,7 +667,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,140 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+190 個檔、46,234 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -761,24 +761,24 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 756 | 頂層 `PaintWorkspace` widget |
-| `tool_dispatcher.py` | 448 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
+| `paint_workspace.py` | 764 | 頂層 `PaintWorkspace` widget；`confirm_close()` 由主視窗關閉時呼叫（它是分頁，收不到自己的 closeEvent） |
+| `tool_dispatcher.py` | 449 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
 | `tool_state.py` | 896 | **無 Qt** 的工具狀態模型 |
-| `tool_bar.py` | 414 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔 |
+| `tool_bar.py` | 406 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
 | `workspace_tabs.py` | 327 | 多文件分頁 |
 | `workspace_docks.py` | 418 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 433 | 文件內容命令 |
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
 | `workspace_shortcuts.py` | 313 | 快捷鍵（登錄表管理的鍵經 `shortcut_binding` 建立，`apply_shortcut_registry` 套用重新指定）、筆刷調整、歡迎提示 |
-| `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(316) | 具名 dock 佈局預設 |
-| `workspace_autosave.py` | 142 + `auto_save.py`(242) | 自動存檔與當機復原 |
+| `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
+| `workspace_autosave.py` | 171 + `auto_save.py`(242) | 自動存檔（作用中分頁未儲存時才寫快照）、當機復原、`discard_own_autosaves` 關閉時刪掉自己的快照 |
 | `action_recorder.py` | 240 + `action_recorder_dialog.py`(197) | 動作錄製 / 重播 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
 | `tablet_mapping.py` | 230 | 數位板按鍵 → 動作對應 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 276 + `export_utils.py`(231) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(543)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(127)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(558)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(150)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,863 行）
 
@@ -788,7 +788,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### `paint/tools/`（6 檔 · 1,866 行）
 
-`painting.py`(416) 筆刷/橡皮/填色/滴管 · `shapes.py`(444) 形狀與裁切 ·
+`painting.py`(426) 筆刷/橡皮/填色/滴管 · `shapes.py`(444) 形狀與裁切 ·
 `special.py`(353) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(302) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
 `retouch.py`(346) 漸層/塗抹/模糊/加深減淡/海綿
 
@@ -977,7 +977,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-893 個檔、149,717 行。`pyproject.toml` 定義三個互斥層級 marker：
+894 個檔、150,035 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -594,6 +594,14 @@ class ImervueMainWindow(
         import logging
         logging.getLogger("Imervue").info("closeEvent triggered")
 
+        # Paint's unsaved tabs: the teardown below ends in os._exit, so this is
+        # the last chance to ask. The workspace is a tab page and never gets a
+        # closeEvent of its own.
+        paint = getattr(self, "_paint", None)
+        if paint is not None and not paint.confirm_close():
+            event.ignore()
+            return
+
         self._release_for_close()
         self._persist_for_close()
 

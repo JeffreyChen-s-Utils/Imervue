@@ -69,8 +69,31 @@ class AutosaveMixin:
         if snapshot is None:
             return None
         self._last_autosave_at = time.monotonic()
+        written = getattr(self, "_autosave_written", None)
+        if written is None:
+            written = self._autosave_written = set()
+        written.add(snapshot.bundle_path)
         self._refresh_status_line()
         return snapshot.bundle_path
+
+    def discard_own_autosaves(self) -> int:
+        """Delete the snapshots this workspace wrote; returns how many went.
+
+        Called once the user has closed with nothing left to lose (saved, or
+        chose to discard), so the next launch doesn't offer to recover them.
+        Another window's snapshots in the same folder are left alone.
+        """
+        from Imervue.paint.auto_save import discard_snapshot, list_snapshots
+        written = getattr(self, "_autosave_written", None) or set()
+        if not written:
+            return 0
+        target = getattr(self, "_autosave_target_dir", None)
+        gone = 0
+        for snapshot in list_snapshots(target):
+            if snapshot.bundle_path in written and discard_snapshot(snapshot):
+                gone += 1
+        written.clear()
+        return gone
 
     def pending_autosaves(self, *, target_dir=None):
         """Return non-stale recovery candidates for ``target_dir``.
@@ -111,7 +134,13 @@ class AutosaveMixin:
         return self.restore_snapshot(snapshots[0])
 
     def _on_autosave_tick(self) -> None:
-        self.take_autosave_snapshot_now()
+        """Snapshot the active tab, but only when it has unsaved edits.
+
+        An untouched canvas (the viewer's picture loaded into Paint) is nothing to
+        recover; snapshotting it would offer a recovery on every launch.
+        """
+        if getattr(self, "_tab_dirty", {}).get(self._canvas, False):
+            self.take_autosave_snapshot_now()
 
     def _maybe_offer_autosave_recovery(self) -> None:
         """Probe the autosave directory and prompt if anything is there.
@@ -132,7 +161,7 @@ class AutosaveMixin:
         lang = language_wrapper.language_word_dict
         msg = lang.get(
             "paint_autosave_recovery_available",
-            "{n} autosave snapshot(s) available — File ▸ Restore",
+            "{n} autosave snapshot(s) available — File ▸ Restore Autosave",
         ).format(n=len(snapshots))
         if toast is not None:
             toast.warning(msg, duration_ms=6000)

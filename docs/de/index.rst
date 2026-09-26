@@ -572,8 +572,8 @@ gegliedert:
 - **Bibliothek** — Materialien, Stamps, Pose, Referenz
 
 Jedes Dock lässt sich einzeln über das Menü ``Fenster`` ein- und ausblenden. Beliebigen
-Dock-Titel ziehen, um neu anzuordnen oder ein Panel zu lösen, dann das Ergebnis über
-``Einstellungen`` > ``Workspace-Layouts…`` speichern.
+Dock-Titel ziehen, um neu anzuordnen oder ein Panel zu lösen; ``Einstellungen`` >
+``Workspace-Layouts…`` merkt sich, welche Docks angezeigt werden (siehe *Workspace-Layouts*).
 
 Werkzeugpalette (linke Leiste)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -605,35 +605,37 @@ Werkzeugpalette (linke Leiste)
      - Auswahlwerkzeuge mit Modi Ersetzen / Hinzufügen / Subtrahieren / Schnitt
    * - Text
      - ``T``
-     - Inline-Texteditor mit Schrift / Größe / Fett / Kursiv
+     - Klick öffnet den Dialog **Text hinzufügen** (Schrift / Größe / Farbe / Fett /
+       Kursiv); der Text wird in die Pixel des Layers gezeichnet
    * - Gradient
      - ``U``
      - Linear- / Radial- / Winkel- / Diamantgradientfüllung
    * - Weichzeichnen / Verschmieren
-     - ``R``
+     - ``R`` (Verschmieren)
      - Lokale Pixelmanipulation
    * - Dodge / Burn / Sponge
      -
-     - Dunkelkammer-Toning — lokal aufhellen, abdunkeln oder sättigen /
-       entsättigen, gewichtet durch den Brush und eine Tonwertbereichs-Maske
+     - Dunkelkammer-Toning, gewichtet durch den Brush — Dodge hellt die Mitteltöne
+       auf und Burn dunkelt sie ab, Sponge entsättigt; keine Optionen
    * - Pen (Bezier)
      - ``P``
      - Vektorpfad mit Anker- / Griff-Bearbeitung
    * - Klonstempel
      - ``S``
-     - Shift+Klick legt Quelle fest, Klick stempelt mit Feder
+     - Alt+Klick legt die Quelle fest, dann ziehen, um mit Größe / Härte /
+       Deckkraft des Brushs zu stempeln
    * - Sprechblase
      - ``Ctrl + B``
-     - Comic-/Manga-Ballon mit automatischem Schwanz
+     - Rahmen aufziehen, um einen Comic-/Manga-Ballon zu zeichnen (ohne Schwanz)
    * - Rechteck / Ellipse / Linie / Polygon
      - ``Shift + R/E/I/P``
      - Vektorgrundformen mit Strich + Füllung
    * - Zuschneiden
      - ``C``
-     - Interaktives Zuschneiden mit Seitenverhältnis-Presets
+     - Freies Zuschneiden — Rechteck aufziehen; beim Loslassen wird die Leinwand zugeschnitten
    * - Transformieren
      - ``Ctrl + T``
-     - Frei / Skalieren / Drehen / Schräg ziehen
+     - Acht Skalier-Griffe und ein Dreh-Griff
    * - Hand
      - ``H``
      - Leinwand mit Cursor schwenken
@@ -650,42 +652,42 @@ Brushes
 
    * - Brush
      - Effekt
-   * - Stift
-     - Scharfe kantenglättete Linie, der Alltags-Brush
-   * - Marker / Textmarker
-     - Breite, halbtransparente Striche, die sich aufbauen
    * - Bleistift
      - Dünne, leicht texturierte Graphitlinie
-   * - Spray
-     - Streupunkte gesteuert durch Dichte und Fluss
-   * - Kalligrafie
-     - Strichbreite variiert mit Strichrichtung
+   * - Stift
+     - Scharfe kantenglättete Linie, der Alltags-Brush
+   * - Marker
+     - Breite, halbtransparente Striche, die sich aufbauen
+   * - Airbrush
+     - Streupunkte, die sich zu einem weichen Sprühnebel aufbauen
    * - Aquarell
-     - Nasskanten-Auslaufen und sanftes Verblenden
-   * - Kohle / Wachsmalstift
-     - Raue, strukturierte Striche mit Druck-Neigung
+     - Nasse Kante mit hellerem Inneren, wie am Rand gesammeltes Pigment
+   * - Sumi
+     - Tusche im Kalligrafie-Stil mit Trockenpinsel-Kanten
 
-Jeder Brush bietet Größe / Deckkraft / Härte / Dichte / Mischmodus im **Brush-Dock**
-und in der oberen **Optionsleiste**. ``Einstellungen`` > ``Drucksensitivitätskurve…``
-um Tablett-Druck auf Breite oder Deckkraft umzubilden, und
-``Bearbeiten`` > ``Brush-Spitze erfassen…`` um eine Auswahl in eine eigene
-Brush-Spitze zu verwandeln.
+Wachsmalstift, Textmarker und Sumi-Kalligrafie sind Brush-Presets, die auf diesen
+Arten aufbauen. Jeder Brush bietet Größe / Deckkraft / Härte / Dichte / Mischmodus im
+**Brush-Dock**; die obere **Optionsleiste** bietet Größe / Deckkraft / Härte.
+Der Stiftdruck des Tabletts skaliert Größe und Deckkraft des Brushs direkt.
+``Bearbeiten`` > ``Brush-Spitze erfassen…`` verwandelt eine Auswahl in eine eigene
+Brush-Spitze.
 
 Layer
 ^^^^^
 
 Der **Layer-Dock** bietet Miniaturansichten, Sichtbarkeitsschalter, Inline-Umbenennung,
-Ziehen zum Neuanordnen sowie Mischmodus + Deckkraft des aktiven Layers. Das ``Layer``-Menü
-ergänzt:
+Neuanordnen mit den Buttons ↑ / ↓ (oder ``Ctrl + [`` / ``Ctrl + ]``) sowie Mischmodus +
+Deckkraft des aktiven Layers. Das ``Layer``-Menü ergänzt:
 
 - **Neu / Vektor / Duplizieren / Nach unten zusammenführen** (``Ctrl + Shift + N`` /
   ``Ctrl + Shift + V`` / ``Ctrl + J`` / ``Ctrl + E``)
 - **Masken** — Maske hinzufügen / Aus Auswahl / Invertieren / Anwenden / Löschen
   (``Ctrl + Shift + M`` fügt hinzu; ``Ctrl + Alt + Shift + M`` fügt aus Auswahl hinzu)
-- **Schnittmaske** — den Layer darüber an das aktuelle Alpha klippen
-  (``Ctrl + Alt + G``)
+- **Schnittmaske** — Clipping des aktiven Layers umschalten, der dann an das Alpha
+  des Layers darunter geklippt wird (``Ctrl + Alt + G``)
 - **Layereffekte** — Schlagschatten · Außerer Schein · Kontur; Effekte löschen
-- **Referenz-Layer** — einen Layer als Pipettenquelle anheften
+- **Referenz-Layer** — einen Layer als die Quelle anheften, mit deren Farben der
+  **Füllen**-Eimer abgleicht
 - **1-Bit-Layer** — den aktiven Layer in einen binären Strichzeichnungs-Layer umschalten
 - **Layer nach Farbe trennen** — einen flachen Farb-Layer in einen Layer pro Farbe
   aufteilen für einfaches Neufüllen mit dem Eimer
@@ -695,8 +697,8 @@ Auswahlen
 ^^^^^^^^^
 
 Verwenden Sie die Rechteck- / Lasso- / Zauberstab- / Schnellauswahl-Werkzeuge, dann
-**Auswahl umranden…** im **Bearbeiten**-Menü, um die Auswahl mit dem aktuellen Brush
-zu umranden. ``Q`` schaltet **Schnellmaske-Modus** um — mit jedem Brush in Rot malen,
+**Auswahl umranden…** im **Bearbeiten**-Menü, um die Auswahl in der Vordergrundfarbe
+zu umranden, mit Breite und Platzierung aus dem Dialog. ``Q`` schaltet **Schnellmaske-Modus** um — mit jedem Brush in Rot malen,
 um die Auswahlkante zu verfeinern, dann erneut ``Q`` drücken, um zurück zur Auswahl zu konvertieren.
 
 Animation
@@ -704,11 +706,12 @@ Animation
 
 Der **Animation-Dock** verwandelt das Dokument in einen Framestreifen:
 
-- ``Frame hinzufügen`` speichert den aktuellen Layer-Status als neues Keyframe.
-- Klicken Sie eine Frame-Miniaturansicht an, um dorthin zu springen.
-- ``Onion Skin`` (Ansicht-Menü) überlagert benachbarte Frames mit niedrigem Alpha.
-- Den Streifen über **Datei > Seiten exportieren** exportieren (CBZ für Comic-Reader,
-  PDF für Druck) oder **Animation exportieren** für MP4 / GIF.
+- ``+ Frame`` speichert das auf eine Ebene reduzierte Bild als neuen Frame.
+- Klicken Sie eine Frame-Miniaturansicht an, um sie in den aktiven Layer zu laden.
+- ``Onion Skin`` (Ansicht-Menü) überlagert den vorherigen Frame mit niedrigem Alpha.
+- ``▶ Abspielen`` durchläuft die Frames mit der gewählten FPS. Die Frames dienen der
+  Vorschau und dem Onion Skinning — einen Animations-Export gibt es nicht
+  (**Datei > Seiten exportieren** exportiert die Seiten eines Comic-Projekts, keine Frames).
 
 Manga-Menü
 ^^^^^^^^^^
@@ -729,16 +732,15 @@ Manga-Menü
      - Radiale / Parallele / Burst-Speedline-Generatoren
    * - Action Flash
      - Manga-Style-Explosion / Impact-Burst-Overlay
-   * - Sprechblasen-Werkzeug
-     - Ballon ziehen, Schwanz auf den Sprecher richten
 
 Filter
 ^^^^^^
 
-``Filter`` öffnet einen Live-Vorschau-Dialog für jeden Effekt:
+Jeder ``Filter``-Eintrag öffnet einen schlichten Parameter-Dialog mit OK / Abbrechen (ohne
+Live-Vorschau):
 
-- **Tonwerte** — Schwarz / Gamma / Weiß-Schieberegler, pro Kanal
-- **Kurven** — ziehbare Punkte (RGB / R / G / B) mit monotoner kubischer Interpolation
+- **Tonwerte** — Schieberegler für Schwarzpunkt / Weißpunkt / Gamma
+- **Kurven** — ein Preset (S-Kurve, Schatten anheben, Lichter komprimieren) mit einem Stärke-Schieberegler
 - **Tontrennung** — Farbe in N Stufen quantisieren
 - **Schwellenwert** — bei Cut-Off in reines Schwarz / Weiß konvertieren
 - **Auto Color Balance** — Farbstiche per Grey-World / White-Patch neutralisieren
@@ -749,28 +751,29 @@ Anzeigehilfen
 ^^^^^^^^^^^^^
 
 - **Pixel-Raster** (``Ctrl + Shift + '``) — Ein-Pixel-Raster bei hohem Zoom überlagern
-- **An Pixel / Kanten ausrichten** — Sub-Pixel-Platzierung auf ganzzahlige Koordinaten beschneiden
-- **Onion Skin** — Animation-Nachbar-Overlay
+- **An Pixel / Kanten ausrichten** — An Pixel ausrichten setzt Brush-Tupfer auf ganze Pixel; An Kanten ausrichten zieht Punkte an nahe Leinwand- oder Layer-Kanten
+- **Onion Skin** — überlagert den vorherigen Animations-Frame
 - **Beschnittlinien** — Druck-Beschnitt- / Sicherheitszonen-Linien
 - **Leinwand drehen** (``Ctrl + Shift + H``) — Ansichtsrotation ohne Rasterisierung
 
 Datei-I/O
 ^^^^^^^^^
 
-- **PSD öffnen…** (``Ctrl + O``) und **Als PSD speichern…** (``Ctrl + S``) — Photoshop-Layer-Round-Trip mit Masken, Mischmodi und Layereffekten
-- **Bild exportieren…** — flachlegen und als PNG / JPEG / WebP / BMP / TIFF speichern
-- **Seiten exportieren → CBZ** / **→ PDF** — Mehrframe-Dokumentexport für Comics
-- **Brush-Presets importieren / exportieren**, **Palette importieren** — Ressourcen zwischen Installationen teilen
-- **Autosave-Snapshots** — periodische Hintergrund-Snapshots mit Wiederherstellen-Neuestes über das Datei-Menü
+- **PSD öffnen…** (``Ctrl + O``) reduziert die Datei auf einen Layer in einem neuen Tab; **Als PSD speichern…** (``Ctrl + S``) schreibt die Layer mit ihren Mischmodi (ohne Masken oder Layereffekte)
+- **Bild exportieren…** — flachlegen und als PNG speichern
+- **Seiten exportieren → CBZ** / **→ PDF** — die Seiten eines Comic-Projekts exportieren
+- **Brush-Preset importieren…**, **Palette importieren…** — Brushes und Paletten aus anderen Installationen oder Anwendungen übernehmen
+- **Autosave** — alle 2 Minuten wird ein Snapshot geschrieben, solange der aktive Tab ungespeicherte Änderungen hat; beim nächsten Start bietet ein Toast die Snapshots an, und **Datei > Autosave wiederherstellen** lädt den neuesten in den aktiven Tab. Die Statusleiste zeigt, wann der letzte Snapshot aufgenommen wurde, und beim Schließen von Imervue wird für Paint-Tabs mit ungespeicherten Änderungen nachgefragt.
 
 Workspace-Layouts
 ^^^^^^^^^^^^^^^^^
 
-``Einstellungen`` > ``Workspace-Layouts…`` speichert die Dock-Anordnung,
-Werkzeugoptionen und aktiven Panels unter einem Namen und wechselt dann
-mit einem Klick zwischen ihnen — zum Beispiel ein "Zeichnen"-Layout mit
-prominenten Brush + Farb-Docks und ein "Compositing"-Layout mit erweiterten
-Layer + Verlauf-Docks.
+``Einstellungen`` > ``Workspace-Layouts…`` listet die eingebauten Layouts
+**Standard**, **Zeichnen**, **Comic** und **Kompakt** sowie Ihre eigenen.
+**Aktuelles speichern…** speichert unter einem Namen, welche der Docks Layers /
+Farbe / Brush / Navigator / Verlauf / Referenz angezeigt werden; das Anwenden
+eines Layouts blendet diese Docks ein oder aus und holt das erste angezeigte nach
+vorn. Werkzeugoptionen und Dock-Größen werden nicht gespeichert.
 
 ----
 
