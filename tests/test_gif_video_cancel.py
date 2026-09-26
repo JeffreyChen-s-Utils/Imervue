@@ -15,6 +15,7 @@ methods unbound on fakes -- no widget constructed.
 from __future__ import annotations
 
 import shutil
+import sys
 from types import SimpleNamespace
 
 from Imervue.gui.gif_video_dialog import GifVideoDialog, _CreateWorker
@@ -33,6 +34,7 @@ def test_missing_ffmpeg_emits_exactly_one_failure(qapp, monkeypatch):
     # Regression: the video path used to emit (False, "ffmpeg not found") and
     # then run() emitted (True, output) on top, masking the failure as success.
     monkeypatch.setattr(shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "imageio_ffmpeg", None)  # nor the bundled one
     results: list = []
     worker = _CreateWorker(["a.png"], "/out.mp4", "MP4", 24, 0, 0, True)
     worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))

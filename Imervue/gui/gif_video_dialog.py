@@ -30,6 +30,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.gif_video")
 
+# libx264 with yuv420p refuses an odd width or height; pad such frames by one
+# pixel instead of failing the whole video.
+_EVEN_SIZE_FILTER = "pad=ceil(iw/2)*2:ceil(ih/2)*2"
+
+
+def find_ffmpeg() -> str | None:
+    """The ffmpeg on PATH, else the one the optional imageio-ffmpeg package ships."""
+    import shutil
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    try:
+        import imageio_ffmpeg
+    except ImportError:
+        return None
+    try:
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except RuntimeError as exc:
+        logger.info("imageio-ffmpeg has no ffmpeg binary: %s", exc)
+        return None
+
 
 class _CreateWorker(QThread):
     progress = Signal(int, int)
@@ -117,10 +138,9 @@ class _CreateWorker(QThread):
         import tempfile
         import shutil
 
-        # Check ffmpeg
-        ffmpeg = shutil.which("ffmpeg")
+        ffmpeg = find_ffmpeg()
         if not ffmpeg:
-            raise RuntimeError("ffmpeg not found in PATH")
+            raise RuntimeError("ffmpeg not found: install imageio-ffmpeg or put ffmpeg on PATH")
 
         total = len(self._paths)
         tmpdir = tempfile.mkdtemp(prefix="imervue_video_")
@@ -145,6 +165,7 @@ class _CreateWorker(QThread):
                 ffmpeg, "-y",
                 "-framerate", str(self._fps),
                 "-i", pattern,
+                "-vf", _EVEN_SIZE_FILTER,
                 "-c:v", "libx264",
                 "-pix_fmt", "yuv420p",
                 "-preset", "fast",
