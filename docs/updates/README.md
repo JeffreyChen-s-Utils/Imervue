@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-50 | 2026-09-26 | A test keeps every translated README and docs page in the English structure | #test #docs #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-49 | 2026-09-26 | The shortcut tables list every default key and what Home really does | #docs #shortcuts #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-48 | 2026-09-26 | A picture rewritten in place re-sorts the folder by date taken or resolution | #fix #browse #sort #cache | [2026-09-b](2026-09-b.md) |
 | U-20260926-47 | 2026-09-26 | The docs give the Paint tab, the example rig and Semantic Search as they are, in every language | #docs #i18n #puppet | [2026-09-b](2026-09-b.md) |
@@ -422,4 +423,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 80 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 81 |
