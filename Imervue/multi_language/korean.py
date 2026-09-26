@@ -177,7 +177,7 @@ korean_word_dict = {
     "image_info_exif_exposure_time": "셔터: {ExposureTime}\n",
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
-    "recent_menu_title": "최근 열린 메뉴",
+    "recent_menu_title": "최근 항목",
     # Plugin
     "plugin_menu_title": "플러그인",
     "plugin_menu_loaded": "로드된 플러그인",
@@ -581,6 +581,7 @@ korean_word_dict = {
     "desktop_pet_load_failed": '로드 실패: {path}',
     "desktop_pet_group_window": '창',
     "desktop_pet_show": '데스크톱에 펫 표시',
+    "desktop_pet_show_on_launch": 'Imervue 시작 시 펫 표시',
     "desktop_pet_click_through": '클릭 통과 (마우스 이벤트가 데스크톱으로 전달됨)',
     "desktop_pet_anchor": '위치 잠금 (드래그 무시)',
     "desktop_pet_on_bottom": '항상 맨 아래 (데스크톱 위젯 — 모든 창 뒤에)',

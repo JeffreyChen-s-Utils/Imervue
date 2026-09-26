@@ -107,7 +107,7 @@ pip install .
 | numpy | Array operations and thumbnail cache |
 | rawpy | Camera RAW decoding (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG and more) |
 | imageio | Image I/O |
-| imageio-ffmpeg | Slideshow MP4 export (H.264 via ffmpeg) |
+| imageio-ffmpeg | Slideshow MP4 and Create GIF / Video MP4 (H.264 via ffmpeg) |
 | defusedxml | Safe XML parsing (XMP sidecars) |
 | watchdog | Recursive file-tree watching (external changes refresh the tree) |
 
@@ -185,7 +185,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 ### Viewer
 
 - **GPU-accelerated rendering** via OpenGL (GLSL 1.20 shaders with VBO)
-- **Deep-zoom pyramid** — multi-level tiles at 512×512 with LANCZOS resampling; tile LRU holds 256 entries (hard ceiling 512). The VRAM budget is probed from the GL driver at startup and falls back to 1.5 GB, overridable via the `vram_limit_mb` setting (clamped, never silently dropped). Anisotropic filtering up to 8×; panoramas far past Pillow's 179 MP safety limit open too (the limit follows the computer's memory: about 1.3 gigapixels with 16 GB)
+- **Deep-zoom pyramid** — multi-level tiles at 512×512 with LANCZOS resampling; tile LRU holds 256 entries (hard ceiling 512). The VRAM budget is probed from the GL driver at startup and falls back to 1.5 GB, overridable via the `vram_limit_mb` setting (clamped, never silently dropped). Anisotropic filtering up to 8×; panoramas far past Pillow's 179 MP safety limit open too (the limit follows the computer's memory: about 1.4 gigapixels with 16 GB)
 - **Asynchronous loading** — multi-threaded decode with an adaptive prefetch window: ±3 images while browsing, widening to 5 ahead / 1 behind once you page consistently in one direction
 - **Separate worker pools** — thumbnail bursts and deep-zoom decodes run on different pools, so opening a large folder never starves the image you are actually looking at
 - **Virtualized thumbnail grid** — only visible tiles are rendered; thumbnail size is configurable (128 / 256 / 512 / 1024 / auto)
@@ -203,7 +203,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 ### Browsing modes
 
 - **Grid** (default) — virtualized tile grid with hover-preview popup (500 ms delay)
-- **List (detail)** — toggle with `Ctrl+L`; columns: Preview · Label · Rating · Name · Resolution · Size · Type · Modified; `Delete` removes the selected rows and `Ctrl+Z` brings them back, and the rating (`0`–`5`), cull (`P` / `Shift+X` / `U`) and colour (`F1`–`F5`) keys mark them, as on the thumbnail wall
+- **List (detail)** — toggle with `Ctrl+L`; columns: Preview · Label · Rating · Name · Resolution · Size · Type · Modified; `Delete` removes the selected rows and `Ctrl+Z` brings them back, and the rating (`1`–`5`), favourite (`0`), cull (`P` / `Shift+X` / `U`) and colour (`F1`–`F5`) keys mark them, as on the thumbnail wall
 - **Deep Zoom** — double-click a tile; smooth GPU pan/zoom with minimap overlay
 - **Split View** (`Shift+S`) — two images side by side
 - **Dual-Page Reading** (`Shift+D`, `Ctrl+Shift+D` for right-to-left manga) — facing-page reader
@@ -216,7 +216,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - RGB histogram (`H`)
 - F8 OSD (filename / size / type), Ctrl+F8 debug HUD (VRAM / cache / threads)
-- Pixel view (`Shift+P`) — ≥ 400 % zoom shows pixel grid + per-pixel RGB / HEX
+- Pixel view (`Shift+P`) — from 400 % zoom shows the per-pixel RGB / HEX, plus a pixel grid once no more than 40,000 pixels are on screen
 - Color modes (`Shift+M`) — Normal / Grayscale / Invert / Sepia via GLSL
 
 ### Navigation
@@ -356,7 +356,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Export presets** — in Batch Export: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 square / Thumbnail 400 px, or Custom
 - **Watermark** — in Batch Export: a text watermark in a corner or the centre, with its opacity; applied to the exported copies only
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (plus HEIC with `pillow-heif` and JPEG XL with `pillow-jxl-plugin`) with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none); the suggested file name is one not yet taken (`photo_1.png` beside `photo.png`), and an existing file — above all the photo itself — is replaced only after you confirm
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF (plus AVIF when Pillow has AVIF support, HEIC with `pillow-heif` and JPEG XL with `pillow-jxl-plugin`) with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none); the suggested file name is one not yet taken (`photo_1.png` beside `photo.png`), and an existing file — above all the photo itself — is replaced only after you confirm
 - **Batch operations** — rename, move/copy, rotate selected images. A move or copy never overwrites a file of the same name (it arrives as `name_1`), and a photo renamed or moved in Imervue (Batch Rename, Token Batch Rename, the folder tree, Move / Copy, Dual Pane, Staging Tray, Image Organizer) keeps its rating, favourite, tags, colour label, title, notes and cull flag; its `.xmp` and annotation sidecars go with it; so does a photo renamed in another program while its folder is open in Imervue. Renaming to a name another selected photo has now (renumbering a folder, swapping two names) renames the whole selection in the right order instead of only part of it
 - **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
 - **Web Gallery HTML** — self-contained folder with `index.html` + JPEG thumbs + inline lightbox; **Client review** adds a comment box under each picture, kept in the reviewer's browser and downloaded as one JSON file
@@ -465,7 +465,7 @@ JSON-based, humanly diffable, no proprietary binary.
 ### Authoring
 
 - **Import PNG** → auto-generate a triangulated grid mesh that respects alpha
-- **Add Rotation Deformer** (anchor + angle) / **Add Warp Deformer** (rows × cols bezier lattice) toolbar actions
+- **Add Rotation Deformer** (anchor + angle) / **Add Warp Deformer** (rows × cols bilinear lattice) in the **Edit** menu
 - **Add Parameter** → set key forms at slider extremes via **Set Key** in the parameter dock
 - **Mesh editor** — toggle Edit Mesh to drag vertices; clicks within 8 px snap to the nearest
 - **Save As…** writes the whole rig to a `.puppet` zip
@@ -482,10 +482,10 @@ JSON-based, humanly diffable, no proprietary binary.
 
 ### Live input
 
-- Cursor drag → head-angle parameters
+- Drag-track head — the head and eyes turn toward the cursor as it moves over the canvas
 - Auto-blink on a cosine open → close → open curve
 - Mic lip-sync via `sounddevice` RMS → `ParamMouthOpenY` (optional dep)
-- Webcam face tracking via OpenCV + MediaPipe FaceMesh → head yaw / pitch / roll + eye / mouth open (optional deps)
+- Webcam face tracking via OpenCV + the MediaPipe Tasks FaceLandmarker → head yaw / pitch / roll + eye / mouth open (optional deps)
 - Custom motion recording — captures parameter values at 30 Hz while you wiggle sliders / face the webcam / let physics run; bakes into a linear-segment Motion ready to play / loop / save
 
 ### Cubism interop
@@ -494,8 +494,8 @@ The **Cubism Native SDK** can be plugged in (user-supplied DLL — Live2D's Free
 
 ### Output
 
-- **Capture frame…** saves a PNG of the current canvas via `glReadPixels`
-- **Record…** toggles a 30 FPS frame loop into GIF / WebM / MP4 via `imageio`
+- **Capture frame…** saves a PNG of the character alone at the rig's own size (long side at most 4096 px) on a transparent background
+- **Record…** toggles a 30 FPS frame loop into GIF / WebM / MP4 via `imageio`, the character fitted into 1080 px on white (these frames carry no alpha)
 - **Virtual camera** — exposes the puppet canvas as a system webcam
 - **NDI output** — broadcasts the puppet as an NDI source on the LAN
 - **VTube Studio API server** — opt-in WebSocket API for VTS-compatible clients
@@ -625,7 +625,7 @@ Tab 5 — the **Desktop Pet** puts any `.puppet` character on your desktop as a 
 | Lock position | Freeze the pet so accidental drags can't move it. |
 | Always on bottom | Sit the pet behind every other window — a desktop-widget feel instead of always-on-top. |
 | Hide on fullscreen | Auto-hide while another app (game / video / presentation) is fullscreen on the same monitor; come back when fullscreen ends. |
-| Pauses when hidden | The pet stops animating while invisible — zero CPU when off-screen. |
+| Pauses when hidden | The pet stops repainting while invisible; the live drivers' timers keep running. |
 | Size presets | Small / medium / large. Resizes around the centre so the pet doesn't jump across the screen. |
 | Opacity slider | Fade the pet from 10% to 100% so it can be a subtle desktop ornament. |
 | Remembers where you put it | Drag the pet to your favourite corner; it returns there on the next launch. |
@@ -638,12 +638,13 @@ Tab 5 — the **Desktop Pet** puts any `.puppet` character on your desktop as a 
 
 ### Live drivers
 
-Pick any combination from the tab or the right-click menu. Each is off by default — turn on only what you want.
+Pick any combination from the tab or the right-click menu. Auto idle, Idle motions and Auto-blink are on by default; the rest are off — turn on only what you want.
 
 - **Auto idle** — breath + subtle drift so the character feels alive.
 - **Idle motions** — randomly cycle through the rig's idle-group motions.
 - **Auto-blink** — natural cyclic eye-close every few seconds.
-- **Drag-track head** — the head turns to follow your cursor.
+- **Drag-track head** — the head and eyes turn toward your cursor while it is over the pet.
+- **Mouse gaze** — the eyes and head follow your cursor anywhere on screen.
 - **Mic lip-sync** — the mouth opens with your voice (needs `sounddevice`).
 - **Webcam tracking** — your head / eyes / mouth drive the puppet's (needs `opencv-python` and `mediapipe`).
 
@@ -666,6 +667,10 @@ The pet's speech bubble draws from a JSON file you can author yourself. Click **
   "version": 1,
   "name": "Friendly pet",
   "greetings": ["Hi!", "Hello!"],
+  "time_of_day_greetings": {
+    "morning": ["Good morning!"],
+    "night": ["Still up?"]
+  },
   "hit_responses": {
     "HitAreaHead": ["Don't poke me!", "Stop!"]
   },
@@ -679,8 +684,9 @@ The pet's speech bubble draws from a JSON file you can author yourself. Click **
 ```
 
 - **`greetings`** — used when nothing more specific matches a click.
+- **`time_of_day_greetings`** — greetings per local clock band (`morning` 05–11 h, `afternoon` 12–17 h, `evening` 18–21 h, `night` 22–04 h), used before `greetings`; a band without lines falls back to `greetings`.
 - **`hit_responses`** — per-`HitArea` lines. Keys must match the hit-area IDs defined in the rig.
-- **`motion_lines`** — per-motion lines. Fire when the pet plays a motion with that name (hit-area motion or context-menu motion).
+- **`motion_lines`** — per-motion lines. Spoken when a hit-area click plays a motion with that name (not when a motion is started from the context menu).
 - **`scheduled`** — timer-driven chimes. Each entry fires every `every_seconds` seconds.
 
 Lines cycle round-robin per bucket so the user doesn't hear the same line twice in a row. **Reset to default** drops the custom script and brings back the built-in greeting set.
@@ -724,7 +730,7 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | L | Loupe: a magnifier that follows the cursor (also over the thumbnails) |
 | H | Toggle RGB histogram overlay |
 | F8 / Ctrl+F8 | OSD overlay / debug HUD |
-| Shift+P | Toggle pixel view (≥ 400 % zoom shows grid + RGB) |
+| Shift+P | Toggle pixel view (≥ 400 % zoom shows RGB; the grid once ≤ 40,000 pixels are on screen) |
 | Shift+M | Cycle color modes (Normal / Grayscale / Invert / Sepia) |
 | B | Toggle bookmark |
 | Ctrl+C / Ctrl+V | Copy / paste image to/from clipboard |
@@ -791,7 +797,7 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 ### File
 
 - New Window
-- Open Image / Open Folder
+- Open File / Open Folder
 - Recent (folders + images)
 - Bookmarks / Tags & Albums
 - Commit Pending Deletions

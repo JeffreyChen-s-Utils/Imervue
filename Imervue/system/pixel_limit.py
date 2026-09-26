@@ -63,7 +63,7 @@ def pixel_limit_for(memory_bytes: int | None) -> int:
     """``Image.MAX_IMAGE_PIXELS`` for *memory_bytes* of RAM; Pillow's own when unknown or larger.
 
     Pillow refuses twice the limit, so the refusal lands where a decode would
-    take all of the memory: 16 GB refuses past 1.3 gigapixels.
+    take all of the memory: 16 GB (about 17e9 bytes) refuses past 1.4 gigapixels.
     """
     if not memory_bytes or memory_bytes <= 0:
         return DEFAULT_MAX_IMAGE_PIXELS

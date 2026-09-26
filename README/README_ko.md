@@ -107,7 +107,7 @@ pip install .
 | numpy | 배열 연산 및 썸네일 캐시 |
 | rawpy | RAW 이미지 디코딩 (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG 등) |
 | imageio | 이미지 입출력 |
-| imageio-ffmpeg | 슬라이드쇼 MP4 내보내기 (ffmpeg을 통한 H.264) |
+| imageio-ffmpeg | 슬라이드쇼 MP4와 Create GIF / Video의 MP4 (ffmpeg을 통한 H.264) |
 | defusedxml | 안전한 XML 파싱 (XMP 사이드카) |
 | watchdog | 파일 트리 재귀 감시(외부 변경 시 트리 자동 새로 고침) |
 
@@ -181,7 +181,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 ### 뷰어
 
 - **GPU 가속 렌더링** — OpenGL (GLSL 1.20 셰이더 + VBO)
-- **딥 줌 피라미드** — 512×512 타일 멀티레벨 LANCZOS 리샘플링. 타일 LRU는 256개 유지(하드 상한 512). VRAM 예산은 시작 시 GL 드라이버에서 탐지하며 실패 시 1.5 GB로 폴백하고, `vram_limit_mb` 설정으로 재정의 가능(클램프되며 조용히 무시되지 않음). 최대 8× 이방성 필터링. Pillow의 안전 한도(1억 7900만 화소)를 훨씬 넘는 파노라마도 열림(한도는 메모리에 따라 정해지며 16 GB면 약 13억 화소)
+- **딥 줌 피라미드** — 512×512 타일 멀티레벨 LANCZOS 리샘플링. 타일 LRU는 256개 유지(하드 상한 512). VRAM 예산은 시작 시 GL 드라이버에서 탐지하며 실패 시 1.5 GB로 폴백하고, `vram_limit_mb` 설정으로 재정의 가능(클램프되며 조용히 무시되지 않음). 최대 8× 이방성 필터링. Pillow의 안전 한도(1억 7900만 화소)를 훨씬 넘는 파노라마도 열림(한도는 메모리에 따라 정해지며 16 GB면 약 14억 화소)
 - **비동기 로딩** — 멀티스레드 디코딩과 적응형 프리페치 창: 일반 탐색은 ±3장, 한 방향으로 계속 넘기면 앞 5장 / 뒤 1장으로 확장
 - **분리된 워커 풀** — 썸네일 폭주와 딥 줌 디코딩이 서로 다른 풀에서 동작하므로, 큰 폴더를 열어도 지금 보고 있는 이미지가 밀리지 않습니다
 - **가상화된 썸네일 그리드** — 화면에 보이는 타일만 렌더링; 썸네일 크기 설정 가능 (128 / 256 / 512 / 1024 / 자동)
@@ -199,7 +199,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 ### 브라우징 모드
 
 - **그리드**(기본) — 가상화된 타일 그리드, 호버 미리보기 팝업(500 ms 지연)
-- **목록 (상세)** — `Ctrl+L`로 토글; 열: 미리보기 · 라벨 · 평점 · 이름 · 해상도 · 크기 · 종류 · 수정 일시. `Delete`로 선택한 행을 삭제하고 `Ctrl+Z`로 되돌리며, 별점(`0`–`5`)·컬링(`P` / `Shift+X` / `U`)·색상(`F1`–`F5`) 키도 선택한 행에 적용됩니다(그리드와 같음)
+- **목록 (상세)** — `Ctrl+L`로 토글; 열: 미리보기 · 라벨 · 평점 · 이름 · 해상도 · 크기 · 종류 · 수정 일시. `Delete`로 선택한 행을 삭제하고 `Ctrl+Z`로 되돌리며, 별점(`1`–`5`)·즐겨찾기(`0`)·컬링(`P` / `Shift+X` / `U`)·색상(`F1`–`F5`) 키도 선택한 행에 적용됩니다(그리드와 같음)
 - **딥 줌** — 타일 더블 클릭; GPU로 부드러운 팬/줌 + 미니맵 오버레이
 - **분할 뷰** (`Shift+S`) — 두 이미지 나란히 보기
 - **양면 페이지 읽기** (`Shift+D`, 우→좌 만화는 `Ctrl+Shift+D`) — 펼침면 리더
@@ -212,7 +212,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - RGB 히스토그램 (`H`)
 - F8 OSD (파일명 / 크기 / 형식), Ctrl+F8 디버그 HUD (VRAM / 캐시 / 스레드)
-- 픽셀 뷰 (`Shift+P`) — ≥ 400 % 줌에서 픽셀 격자 + 픽셀별 RGB / HEX 표시
+- 픽셀 뷰 (`Shift+P`) — 400 % 줌부터 픽셀별 RGB / HEX 표시, 화면에 보이는 픽셀이 40,000개 이하가 되면 픽셀 격자도 표시
 - 색상 모드 (`Shift+M`) — Normal / Grayscale / Invert / Sepia (GLSL)
 
 ### 내비게이션
@@ -352,7 +352,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **내보내기 프리셋** — 일괄 내보내기에서 선택: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 정사각형 / Thumbnail 400 px, 또는 사용자 지정
 - **워터마크** — 일괄 내보내기에서: 모서리나 중앙에 텍스트 워터마크를 불투명도와 함께 배치; 내보낸 사본에만 적용
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF(`pillow-heif`가 있으면 HEIC, `pillow-jxl-plugin`이 있으면 JPEG XL도), 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음). 제안되는 파일 이름은 아직 쓰이지 않은 이름(`photo.png` 옆이면 `photo_1.png`)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF(Pillow가 AVIF를 지원하면 AVIF, `pillow-heif`가 있으면 HEIC, `pillow-jxl-plugin`이 있으면 JPEG XL도), 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음). 제안되는 파일 이름은 아직 쓰이지 않은 이름(`photo.png` 옆이면 `photo_1.png`)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
 - **일괄 작업** — 이름 변경, 이동/복사, 선택한 이미지 회전. 이동·복사는 같은 이름의 파일을 덮어쓰지 않고 `name_1`로 둡니다. Imervue에서 이름을 바꾸거나 이동한 사진(일괄 이름 변경, 토큰 일괄 이름 변경, 폴더 트리, 이동 / 복사, 듀얼 창, 스테이징 트레이, 이미지 정리)은 별점·즐겨찾기·태그·컬러 라벨·제목·메모·선별 표시를 유지하며, `.xmp`와 주석 sidecar도 함께 옮겨집니다. 폴더가 Imervue에 열려 있는 동안 다른 프로그램에서 이름을 바꾼 사진도 마찬가지입니다. 선택한 다른 사진이 지금 쓰고 있는 이름으로 바꾸는 경우(번호 다시 매기기, 두 이름 맞바꾸기)에도 일부만 바뀌지 않고 올바른 순서로 선택 전체의 이름을 바꿉니다
 - **컨택트 시트 PDF** — 캡션이 있는 다중 페이지 그리드 (A4 / A3 / Letter / Legal)
 - **웹 갤러리 HTML** — `index.html` + JPEG 썸네일 + 인라인 라이트박스가 포함된 자체 완결 폴더; **클라이언트 검토**를 켜면 각 이미지 아래에 댓글 상자가 붙고, 메모는 검토자의 브라우저에 보관되며 하나의 JSON 파일로 다운로드됩니다
@@ -456,7 +456,7 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
 ### 작성
 
 - **PNG 가져오기** → 알파를 고려한 삼각 그리드 메시 자동 생성
-- **회전 디포머 추가** (anchor + angle) / **워프 디포머 추가** (rows × cols 베지에 격자) 툴바 액션
+- **회전 디포머 추가** (anchor + angle) / **워프 디포머 추가** (rows × cols 쌍선형 격자) — **Edit** 메뉴에 있음
 - **파라미터 추가** → 파라미터 도크의 **Set Key**로 슬라이더 양 끝에서 key 형태 설정
 - **메시 편집기** — Edit Mesh를 토글하여 정점 드래그; 8 px 이내 클릭은 가장 가까운 정점에 스냅
 - **Save As…** — 전체 리그를 `.puppet` zip으로 저장
@@ -473,10 +473,10 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
 
 ### 라이브 입력
 
-- 커서 드래그 → 머리 각도 파라미터
+- Drag-track head — 커서가 캔버스 위에서 움직이면 머리와 눈이 커서 쪽으로 돌아감
 - 코사인 open → close → open 커브 기반 자동 눈깜빡임
 - `sounddevice` RMS를 통한 마이크 입싱크 → `ParamMouthOpenY` (선택 의존성)
-- OpenCV + MediaPipe FaceMesh를 통한 웹캠 얼굴 추적 → 머리 yaw / pitch / roll + 눈 / 입 개폐 (선택 의존성)
+- OpenCV + MediaPipe Tasks FaceLandmarker를 통한 웹캠 얼굴 추적 → 머리 yaw / pitch / roll + 눈 / 입 개폐 (선택 의존성)
 - 커스텀 모션 녹화 — 슬라이더를 흔들고 / 웹캠을 향하고 / 물리가 동작하는 동안 30 Hz로 파라미터 값을 캡처; 정지 시 재생 / 루프 / 저장 준비된 선형 세그먼트 Motion으로 베이킹
 
 ### Cubism 상호운용
@@ -485,8 +485,8 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
 
 ### 출력
 
-- **Capture frame…** — `glReadPixels`로 현재 캔버스를 PNG로 저장
-- **Record…** — 30 FPS 프레임 루프를 토글하여 `imageio`를 통해 GIF / WebM / MP4로 저장
+- **Capture frame…** — 캐릭터만 리그 자체 크기(긴 변 최대 4096 px)로 투명 배경의 PNG로 저장
+- **Record…** — 30 FPS 프레임 루프를 토글하여 `imageio`를 통해 GIF / WebM / MP4로 저장. 캐릭터를 흰 배경의 1080 px 안에 맞춤(이 프레임에는 알파가 없음)
 - **가상 카메라** — 퍼펫 캔버스를 시스템 웹캠으로 노출
 - **NDI 출력** — LAN에서 퍼펫을 NDI 소스로 브로드캐스트
 - **VTube Studio API 서버** — VTS 호환 클라이언트를 위한 선택적 WebSocket API
@@ -571,7 +571,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | 위치 잠금 | 펫을 고정하여 우발적인 드래그가 위치를 움직이지 못하게 합니다. |
 | 항상 맨 아래 | 펫을 다른 모든 창 뒤에 배치 — 항상 위가 아닌 데스크톱 위젯 같은 느낌. |
 | 전체 화면 시 숨김 | 같은 모니터에서 다른 앱(게임 / 동영상 / 프레젠테이션)이 전체 화면일 때 자동으로 숨기고, 전체 화면이 끝나면 다시 나타납니다. |
-| 숨겨졌을 때 일시 정지 | 보이지 않는 동안에는 펫이 애니메이션을 멈춰 화면 밖일 때는 CPU 사용량이 0입니다. |
+| 숨겨졌을 때 일시 정지 | 보이지 않는 동안에는 펫이 다시 그리기를 멈춥니다. 라이브 드라이버의 타이머는 계속 동작합니다. |
 | 크기 프리셋 | 소형 / 중형 / 대형. 중앙 기준으로 크기가 바뀌므로 펫이 화면을 가로질러 튀지 않습니다. |
 | 불투명도 슬라이더 | 펫을 10%에서 100%까지 페이드하여 은은한 데스크톱 장식으로 만들 수 있습니다. |
 | 위치 기억 | 펫을 좋아하는 모퉁이로 드래그해 두면 다음 실행 시 그 자리로 돌아옵니다. |
@@ -584,12 +584,13 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 ### 라이브 드라이버
 
-탭이나 오른쪽 클릭 메뉴에서 원하는 조합을 골라 켜세요. 각 항목은 기본적으로 꺼져 있으며, 원하는 것만 켜면 됩니다.
+탭이나 오른쪽 클릭 메뉴에서 원하는 조합을 골라 켜세요. Auto idle, Idle motions, Auto-blink는 기본적으로 켜져 있고 나머지는 꺼져 있으며, 원하는 것만 켜면 됩니다.
 
 - **Auto idle** — 캐릭터가 살아 있는 느낌이 들도록 호흡 + 미세한 드리프트를 더합니다.
 - **Idle motions** — 리그의 아이들 그룹 모션을 무작위로 순환 재생합니다.
 - **Auto-blink** — 몇 초마다 자연스러운 눈 깜박임 사이클.
-- **Drag-track head** — 머리가 커서를 따라 돌아갑니다.
+- **Drag-track head** — 커서가 펫 위에 있는 동안 머리와 눈이 커서 쪽으로 돌아갑니다.
+- **Mouse gaze** — 화면 어디에 있든 눈과 머리가 커서를 따라갑니다.
 - **Mic lip-sync** — 음성에 맞춰 입이 열립니다 (`sounddevice` 필요).
 - **Webcam tracking** — 사용자의 머리 / 눈 / 입이 퍼펫을 움직입니다 (`opencv-python`과 `mediapipe` 필요).
 
@@ -612,6 +613,10 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
   "version": 1,
   "name": "Friendly pet",
   "greetings": ["Hi!", "Hello!"],
+  "time_of_day_greetings": {
+    "morning": ["Good morning!"],
+    "night": ["Still up?"]
+  },
   "hit_responses": {
     "HitAreaHead": ["Don't poke me!", "Stop!"]
   },
@@ -625,8 +630,9 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 ```
 
 - **`greetings`** — 클릭에 더 구체적으로 매칭되는 항목이 없을 때 사용됩니다.
+- **`time_of_day_greetings`** — 현지 시각 구간별 인사말(`morning` 05–11시, `afternoon` 12–17시, `evening` 18–21시, `night` 22–04시). `greetings`보다 먼저 사용되며, 대사가 없는 구간은 `greetings`로 대체됩니다.
 - **`hit_responses`** — `HitArea`별 대사. 키는 리그에 정의된 hit area ID와 일치해야 합니다.
-- **`motion_lines`** — 모션별 대사. 펫이 해당 이름의 모션(hit area 모션 또는 컨텍스트 메뉴 모션)을 재생할 때 발동됩니다.
+- **`motion_lines`** — 모션별 대사. hit area 클릭으로 해당 이름의 모션이 재생될 때 말합니다(컨텍스트 메뉴에서 시작한 모션에는 말하지 않음).
 - **`scheduled`** — 타이머 기반 알림. 각 항목은 `every_seconds`초마다 발동됩니다.
 
 대사는 버킷별로 라운드 로빈 방식으로 순환하므로 같은 대사가 연속으로 두 번 나오지 않습니다. **Reset to default**는 커스텀 스크립트를 버리고 내장 인사말 세트를 되살립니다.
@@ -670,7 +676,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | L | 루페: 커서를 따라다니는 돋보기 (썸네일 위에서도 동작) |
 | H | RGB 히스토그램 오버레이 토글 |
 | F8 / Ctrl+F8 | OSD 오버레이 / 디버그 HUD |
-| Shift+P | 픽셀 뷰 토글 (≥ 400 % 줌에서 격자 + RGB 표시) |
+| Shift+P | 픽셀 뷰 토글 (≥ 400 % 줌에서 RGB 표시, 화면의 픽셀이 40,000개 이하가 되면 격자도 표시) |
 | Shift+M | 색상 모드 순환 (Normal / Grayscale / Invert / Sepia) |
 | B | 북마크 토글 |
 | Ctrl+C / Ctrl+V | 클립보드에서 / 로 이미지 복사 / 붙여넣기 |
@@ -737,7 +743,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 ### File
 
 - New Window
-- Open Image / Open Folder
+- Open File / Open Folder
 - Recent (폴더 + 이미지)
 - Bookmarks / Tags & Albums
 - Commit Pending Deletions

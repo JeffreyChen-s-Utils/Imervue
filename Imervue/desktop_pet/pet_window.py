@@ -692,10 +692,9 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
                 return
 
     def _apply_expression(self, name: str) -> None:
-        """Toggle an expression on the canvas. The canvas's
-        expression stack tolerates duplicates by deduping on
-        name, so re-applying the same expression is a no-op
-        rather than a double-stack."""
+        """Add an expression on the canvas. The canvas's expression
+        stack dedupes on name, so re-applying the same expression is a
+        no-op rather than a double-stack; nothing here removes one."""
         canvas = self._canvas
         if hasattr(canvas, "add_expression"):
             canvas.add_expression(name)

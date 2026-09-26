@@ -125,7 +125,7 @@ english_word_dict = {
     "language_menu_bar_please_restart_messagebox": "Please restart",
     "language_menu_bar_english": "English",
     "language_menu_bar_traditional_chinese": "Traditional Chinese",
-    "language_menu_bar_chinese": "Chinese",
+    "language_menu_bar_chinese": "Simplified Chinese",
     "language_menu_bar_koren": "Korean",
     "language_menu_bar_japanese": "Japanese",
     # Tip menu
@@ -192,7 +192,7 @@ english_word_dict = {
     "image_info_exif_exposure_time": "Shutter: {ExposureTime}\n",
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
-    "recent_menu_title": "Recently Opened Menu",
+    "recent_menu_title": "Recent",
     # Plugin
     "plugin_menu_title": "Plugins",
     "plugin_menu_loaded": "Loaded Plugins",
@@ -668,6 +668,7 @@ english_word_dict = {
     "desktop_pet_load_failed": 'Failed to load {path}',
     "desktop_pet_group_window": 'Window',
     "desktop_pet_show": 'Show pet on desktop',
+    "desktop_pet_show_on_launch": 'Show the pet when Imervue starts',
     "desktop_pet_click_through": 'Click-through (let mouse events pass to the desktop)',
     "desktop_pet_anchor": 'Lock position (ignore drags)',
     "desktop_pet_on_bottom": 'Always on bottom (desktop widget — sits behind every window)',

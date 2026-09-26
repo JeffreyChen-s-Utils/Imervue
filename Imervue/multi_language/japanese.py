@@ -180,7 +180,7 @@ japanese_word_dict = {
     "image_info_exif_exposure_time": "シャッター速度: {ExposureTime}\n",
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
-    "recent_menu_title": "最近開いたメニュー",
+    "recent_menu_title": "最近開いた項目",
     # Plugin
     "plugin_menu_title": "プラグイン",
     "plugin_menu_loaded": "読み込み済みプラグイン",
@@ -584,6 +584,7 @@ japanese_word_dict = {
     "desktop_pet_load_failed": '読み込みに失敗：{path}',
     "desktop_pet_group_window": 'ウィンドウ',
     "desktop_pet_show": 'デスクトップにペットを表示',
+    "desktop_pet_show_on_launch": 'Imervue の起動時にペットを表示',
     "desktop_pet_click_through": 'クリックスルー（マウスイベントをデスクトップへ通す）',
     "desktop_pet_anchor": '位置を固定（ドラッグを無視）',
     "desktop_pet_on_bottom": '常に最背面（デスクトップウィジェット — すべてのウィンドウの背後）',

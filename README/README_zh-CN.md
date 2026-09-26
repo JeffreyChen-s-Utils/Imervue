@@ -106,7 +106,7 @@ pip install .
 | numpy | 数组运算与缩图缓存 |
 | rawpy | RAW 图像解码（CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG 等） |
 | imageio | 图片 I/O |
-| imageio-ffmpeg | 幻灯片 MP4 导出（H.264 通过 ffmpeg） |
+| imageio-ffmpeg | 幻灯片 MP4 与 Create GIF / Video 的 MP4（H.264 通过 ffmpeg） |
 | defusedxml | 安全 XML 解析（XMP 边车文件） |
 | watchdog | 递归监视文件树（外部变更自动刷新树状图） |
 
@@ -180,7 +180,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 ### 查看器
 
 - **GPU 加速渲染** — OpenGL（GLSL 1.20 着色器 + VBO）
-- **深度缩放金字塔** — 512×512 瓦片多层 LANCZOS 缩放；瓦片 LRU 保留 256 条（硬上限 512）。VRAM 预算在启动时向 GL 驱动探测，获取失败则回落 1.5 GB，可用 `vram_limit_mb` 设置覆盖（会钳制，不会被静默忽略）。最高 8× 各向异性过滤；远超 Pillow 安全上限（1.79 亿像素）的全景图也能打开（上限依内存而定：16 GB 约 13 亿像素）
+- **深度缩放金字塔** — 512×512 瓦片多层 LANCZOS 缩放；瓦片 LRU 保留 256 条（硬上限 512）。VRAM 预算在启动时向 GL 驱动探测，获取失败则回落 1.5 GB，可用 `vram_limit_mb` 设置覆盖（会钳制，不会被静默忽略）。最高 8× 各向异性过滤；远超 Pillow 安全上限（1.79 亿像素）的全景图也能打开（上限依内存而定：16 GB 约 14 亿像素）
 - **异步加载** — 多线程解码搭配自适应预取窗口：一般浏览为 ±3 张，一旦持续朝同一方向翻页便扩张为前 5 张 / 后 1 张
 - **独立工作线程池** — 缩略图爆量与深度缩放解码分属不同池，打开大文件夹时不会饿死你正在看的那张图
 - **虚拟化缩图网格** — 只渲染可见磁砖；缩图尺寸可选（128 / 256 / 512 / 1024 / 自动）
@@ -198,7 +198,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 ### 浏览模式
 
 - **网格**（默认）— 虚拟化磁砖网格，悬停预览（500 ms 延迟）
-- **列表（详细）** — `Ctrl+L` 切换；列：预览 · 标签 · 评分 · 名称 · 分辨率 · 大小 · 类型 · 修改时间；`Delete` 删除选中的行，`Ctrl+Z` 撤销；评分（`0`–`5`）、挑片（`P` / `Shift+X` / `U`）、色彩（`F1`–`F5`）键也作用于选中的行，与网格相同
+- **列表（详细）** — `Ctrl+L` 切换；列：预览 · 标签 · 评分 · 名称 · 分辨率 · 大小 · 类型 · 修改时间；`Delete` 删除选中的行，`Ctrl+Z` 撤销；评分（`1`–`5`）、收藏（`0`）、挑片（`P` / `Shift+X` / `U`）、色彩（`F1`–`F5`）键也作用于选中的行，与网格相同
 - **深度缩放** — 双击磁砖；GPU 流畅平移 / 缩放 + 小地图
 - **分割视图**（`Shift+S`）— 两张图并列
 - **双页阅读**（`Shift+D`、`Ctrl+Shift+D` 为漫画从右至左）— 对页阅读器
@@ -211,7 +211,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 - RGB 直方图（`H`）
 - F8 OSD（文件名 / 大小 / 类型）、Ctrl+F8 调试 HUD（VRAM / 缓存 / 线程）
-- 像素视图（`Shift+P`）— ≥ 400 % 缩放显示网格 + 每像素 RGB / HEX
+- 像素视图（`Shift+P`）— 缩放达 400 % 起显示每像素 RGB / HEX，画面上的像素不超过 40,000 个时再加上像素网格
 - 色彩模式（`Shift+M`）— Normal / Grayscale / Invert / Sepia（GLSL）
 
 ### 导航
@@ -351,7 +351,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 - **导出预设** — 在批量导出中：Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 正方形 / Thumbnail 400 px，或自定义
 - **水印** — 在批量导出中：在四角之一或居中加上文字水印，可设置不透明度；只应用于导出的副本
-- **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF / AVIF（装了 `pillow-heif` 还有 HEIC，装了 `pillow-jxl-plugin` 还有 JPEG XL），有损格式提供质量滑块；保留相机、镜头与拍摄时间的 EXIF，位置可选（**元数据**：全部／位置以外／无）；建议的文件名一定是还没被占用的（`photo.png` 旁边就是 `photo_1.png`），已存在的文件（尤其是原图本身）要确认后才会被替换
+- **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF（Pillow 支持 AVIF 时还有 AVIF，装了 `pillow-heif` 还有 HEIC，装了 `pillow-jxl-plugin` 还有 JPEG XL），有损格式提供质量滑块；保留相机、镜头与拍摄时间的 EXIF，位置可选（**元数据**：全部／位置以外／无）；建议的文件名一定是还没被占用的（`photo.png` 旁边就是 `photo_1.png`），已存在的文件（尤其是原图本身）要确认后才会被替换
 - **批量操作** — 重命名、移动 / 复制、旋转选中图片。移动或复制不会覆盖同名文件（会以 `name_1` 存入）；在 Imervue 里重命名或移动的照片（批量重命名、Token 批量重命名、文件夹树、移动 / 复制、双窗格、暂存区、图片整理）会保留评级、收藏、标签、颜色标签、标题、备注与筛选标记，`.xmp` 与标注 sidecar 也会一起带走；文件夹在 Imervue 中打开时，用其他程序重命名的照片也一样；改成另一张选中照片现在的名称（重新编号、互换两个名称）时，会按正确顺序把整批重命名，而不是只改一部分
 - **联系表 PDF** — 多页网格含说明（A4 / A3 / Letter / Legal）
 - **网页画廊 HTML** — 自包含文件夹含 `index.html` + JPEG 缩图 + 内嵌灯箱；**客户审阅** 会在每张图片下方加一个留言框，留言保存在审阅者的浏览器里，可一次下载为一个 JSON 文件
@@ -455,7 +455,7 @@ JSON 为主，人类可 diff，没有专有二进制。
 ### 编辑
 
 - **导入 PNG** → 自动生成考虑 alpha 的三角网格
-- **添加旋转变形器**（anchor + angle）/ **添加 warp 变形器**（rows × cols bezier lattice）工具栏动作
+- **添加旋转变形器**（anchor + angle）/ **添加 warp 变形器**（rows × cols 双线性 lattice），位于 **Edit** 菜单
 - **添加参数** → 在滑块端点按 **Set Key** 在参数停靠记录关键形状
 - **网格编辑器** — 切换 Edit Mesh 拖曳顶点；点击 8 px 内吸附到最近顶点
 - **另存为…** 把整个 rig 写成 `.puppet` zip
@@ -472,10 +472,10 @@ JSON 为主，人类可 diff，没有专有二进制。
 
 ### 实时输入
 
-- 鼠标拖曳 → 头部角度参数
+- Drag-track head — 光标在画布上移动时，头部与眼睛会转向光标
 - 自动眨眼，cosine open → close → open 曲线
 - 麦克风对嘴 via `sounddevice` RMS → `ParamMouthOpenY`（可选依赖）
-- 摄像头脸部追踪 via OpenCV + MediaPipe FaceMesh → 头部 yaw / pitch / roll + 眼 / 嘴开合（可选依赖）
+- 摄像头脸部追踪 via OpenCV + MediaPipe Tasks FaceLandmarker → 头部 yaw / pitch / roll + 眼 / 嘴开合（可选依赖）
 - 自定义动作录制 — 滑动滑块 / 对摄像头 / 物理运行时以 30 Hz 抓取参数值；停止时烘焙成线性段 Motion
 
 ### Cubism 互通
@@ -484,8 +484,8 @@ JSON 为主，人类可 diff，没有专有二进制。
 
 ### 输出
 
-- **截取画面…** 通过 `glReadPixels` 存 PNG
-- **录制…** 切换 30 FPS 帧循环，通过 `imageio` 写成 GIF / WebM / MP4
+- **截取画面…** 只存角色本身的 PNG，保持 rig 本身的尺寸（长边最多 4096 px），背景透明
+- **录制…** 切换 30 FPS 帧循环，通过 `imageio` 写成 GIF / WebM / MP4，角色缩放到 1080 px 内、白色背景（这些帧不含 alpha）
 - **虚拟摄像头** — 把 puppet canvas 暴露成系统的 webcam
 - **NDI 输出** — 在局域网广播 puppet 作为 NDI 源
 - **VTube Studio API 服务器** — 可选 WebSocket API，给 VTS 兼容客户端读参数
@@ -572,7 +572,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 | 锁定位置 | 冻结宠物，避免误拖移动。 |
 | 永远置底 | 让宠物位于所有其他窗口之后 — 像桌面挂件那样，而不是永远置顶。 |
 | 全屏时自动隐藏 | 当其他应用（游戏 / 视频 / 简报）在同一屏幕全屏时自动隐藏宠物；全屏结束后再回来。 |
-| 隐藏时暂停 | 宠物不可见时停止动画 — 离开画面零 CPU。 |
+| 隐藏时暂停 | 宠物不可见时停止重绘；实时驱动的计时器仍会继续运行。 |
 | 尺寸预设 | small / medium / large 三档。以中心对齐缩放，调尺寸时角色不会跨屏幕跳。 |
 | 不透明度滑杆 | 把宠物淡化到 10% – 100%，可以当作低调的桌面摆件。 |
 | 记住你放的位置 | 拖到喜欢的角落后，下次启动时宠物会回到那里。 |
@@ -585,12 +585,13 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 ### 实时驱动
 
-可以从标签或右键菜单挑任意组合。每个驱动默认关闭 — 只开你要的就好。
+可以从标签或右键菜单挑任意组合。Auto idle、Idle motions 与 Auto-blink 默认开启；其余默认关闭 — 只开你要的就好。
 
 - **Auto idle** — 加上呼吸 + 轻微 drift，让角色看起来活着。
 - **Idle motions** — 在 rig 的 idle-group 动作之间随机循环。
 - **Auto-blink** — 每隔几秒自然眨眼的循环曲线。
-- **Drag-track head** — 头部跟着光标转动。
+- **Drag-track head** — 光标在宠物上方时，头部与眼睛会转向光标。
+- **Mouse gaze** — 眼睛与头部在整个屏幕上跟随光标。
 - **Mic lip-sync** — 嘴会跟着你的声音一起开合（需要 `sounddevice`）。
 - **Webcam tracking** — 你的头 / 眼 / 嘴会驱动宠物的对应部位（需要 `opencv-python` 和 `mediapipe`）。
 
@@ -613,6 +614,10 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
   "version": 1,
   "name": "Friendly pet",
   "greetings": ["Hi!", "Hello!"],
+  "time_of_day_greetings": {
+    "morning": ["Good morning!"],
+    "night": ["Still up?"]
+  },
   "hit_responses": {
     "HitAreaHead": ["Don't poke me!", "Stop!"]
   },
@@ -626,8 +631,9 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 ```
 
 - **`greetings`** — 当点击没有匹配到更具体的项目时使用。
+- **`time_of_day_greetings`** — 按本地时钟时段分组的问候语（`morning` 05–11 时、`afternoon` 12–17 时、`evening` 18–21 时、`night` 22–04 时），优先于 `greetings` 使用；没有台词的时段会退回 `greetings`。
 - **`hit_responses`** — 每个 `HitArea` 的台词。键必须与 rig 中定义的命中区域 ID 相符。
-- **`motion_lines`** — 每个动作的台词。当宠物播放同名动作（命中区域动作或 context menu 动作）时触发。
+- **`motion_lines`** — 每个动作的台词。当点击命中区域而播放同名动作时说出（从 context menu 启动的动作不会）。
 - **`scheduled`** — 计时器驱动的提示。每个条目每隔 `every_seconds` 秒触发一次。
 
 每个桶（bucket）内的台词以 round-robin 轮替，使用户不会连续两次看到同一句。**Reset to default** 会丢弃自定义脚本，恢复内建的问候语组。
@@ -671,7 +677,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 | L | 放大镜：跟随光标的局部放大（缩略图上也可用） |
 | H | 切换 RGB 直方图 |
 | F8 / Ctrl+F8 | OSD 叠加层 / 调试 HUD |
-| Shift+P | 切换像素视图（≥ 400 % 显示网格 + RGB） |
+| Shift+P | 切换像素视图（≥ 400 % 显示 RGB；画面上 ≤ 40,000 像素时再显示网格） |
 | Shift+M | 循环色彩模式 |
 | B | 切换书签 |
 | Ctrl+C / Ctrl+V | 复制 / 粘贴图片至 / 自剪贴板 |
@@ -738,7 +744,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 ### File
 
 - New Window
-- Open Image / Open Folder
+- Open File / Open Folder
 - Recent（文件夹 + 图片）
 - Bookmarks / Tags & Albums
 - Commit Pending Deletions

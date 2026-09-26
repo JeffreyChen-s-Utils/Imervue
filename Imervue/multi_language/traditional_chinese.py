@@ -169,7 +169,7 @@ traditional_chinese_word_dict = {
     "image_info_exif_exposure_time": "快門: {ExposureTime}\n",
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # Recent menu
-    "recent_menu_title": "近期開啟選單",
+    "recent_menu_title": "最近開啟",
     # Plugin
     "plugin_menu_title": "插件",
     "plugin_menu_loaded": "已載入的插件",
@@ -573,6 +573,7 @@ traditional_chinese_word_dict = {
     "desktop_pet_load_failed": '載入失敗：{path}',
     "desktop_pet_group_window": '視窗',
     "desktop_pet_show": '在桌面上顯示寵物',
+    "desktop_pet_show_on_launch": 'Imervue 啟動時顯示寵物',
     "desktop_pet_click_through": '點擊穿透（滑鼠事件傳到桌面）',
     "desktop_pet_anchor": '鎖定位置（忽略拖曳）',
     "desktop_pet_on_bottom": '永遠置底（桌面小工具 — 沉到所有視窗後方）',

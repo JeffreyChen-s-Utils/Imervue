@@ -52,7 +52,7 @@ Au lancement d'Imervue, vous découvrez trois zones :
 
 - **Gauche** : arbre des dossiers. Cliquez sur un dossier pour parcourir les images qu'il contient.
 - **Centre** : zone d'affichage des images. Présente toutes les images sous forme de grille de vignettes.
-- **Droite** : barre latérale EXIF. Affiche les informations de prise de vue de l'image sélectionnée.
+- **Droite** : barre latérale EXIF, repliée en une fine bande au démarrage : cliquez dessus pour l'ouvrir. Elle affiche les informations de prise de vue de l'image ouverte.
 
 Imervue écrit le journal de chaque session dans ``imervue.log`` à côté du programme (dans ``%LOCALAPPDATA%\Imervue``, ou ``~/.cache/imervue`` hors de Windows, lorsque ce dossier est en lecture seule). Le journal de la session précédente est conservé sous le nom ``imervue.previous.log``, si bien qu'après un plantage le journal qui l'explique est toujours là une fois Imervue relancé — joignez les deux lorsque vous signalez un problème.
 
@@ -70,13 +70,13 @@ Ouvrir des images
    * - Ouvrir un dossier
      - ``Fichier`` > ``Ouvrir un dossier``, puis choisissez un répertoire
    * - Ouvrir une image
-     - ``Fichier`` > ``Ouvrir une image``, puis choisissez un fichier
+     - ``Fichier`` > ``Ouvrir un fichier``, puis choisissez un fichier
    * - Glisser-déposer
      - Faites glisser une image ou un dossier directement dans la fenêtre
    * - Ouvrir depuis l'Explorateur
      - Clic droit sur une image > ``Open with Imervue`` (association de fichiers requise)
    * - Fichiers récents
-     - ``Fichier`` > ``Récents``, pour rouvrir rapidement un dossier précédemment visité
+     - ``Fichier`` > ``Récents`` > Dossiers récents / Images récentes, pour rouvrir un dossier ou une image
 
 Formats pris en charge
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -131,14 +131,14 @@ Aperçu · Étiquette · Note · Nom · Résolution · Taille · Type · Modifi�
 en Deep Zoom ; appuyez sur ``Esc`` pour revenir à la liste. Les vignettes et les métadonnées sont chargées paresseusement sur un fil d'exécution
 de travail, afin que les très grands dossiers restent réactifs.
 
-``Delete`` retire les lignes sélectionnées et ``Ctrl + Z`` les rétablit, et les touches de note (``0`` – ``5``), de tri (``P`` / ``Shift + X`` / ``U``) et de couleur (``F1`` – ``F5``) les marquent, comme dans la grille ; les touches suivent les réglages des raccourcis.
+``Delete`` retire les lignes sélectionnées et ``Ctrl + Z`` les rétablit, et les touches de note (``1`` – ``5``), de favori (``0``), de tri (``P`` / ``Shift + X`` / ``U``) et de couleur (``F1`` – ``F5``) les marquent, comme dans la grille ; toutes sauf ``F1`` – ``F5`` suivent les réglages des raccourcis.
 
 Mode Deep Zoom
 ^^^^^^^^^^^^^^
 
 Cliquez sur une vignette pour passer en mode Deep Zoom et obtenir un affichage de haute qualité d'une seule image.
 
-Les panoramas bien au-delà de la limite de sécurité de 179 mégapixels de Pillow s'ouvrent aussi : la limite suit la mémoire de l'ordinateur (avec 16 Go, environ 1,3 gigapixel) et ces images géantes sont décodées une à une.
+Les panoramas bien au-delà de la limite de sécurité de 179 mégapixels de Pillow s'ouvrent aussi : la limite suit la mémoire de l'ordinateur (avec 16 Go, environ 1,4 gigapixel) et ces images géantes sont décodées une à une.
 
 Un JPEG, PNG, TIFF, GIF ou BMP tronqué — un téléchargement ou une copie interrompus, une photo récupérée sur une carte mémoire défaillante — s'ouvre avec la partie lue, comme dans un navigateur, au lieu de ne pas s'ouvrir du tout.
 
@@ -187,7 +187,7 @@ Les fichiers que Windows marque cachés — cachés aussi dans l'Explorateur et 
    * - Superposition d'informations OSD
      - ``F8`` affiche nom de fichier / taille / type ; ``Ctrl + F8`` affiche un HUD de débogage (VRAM / cache / threads)
    * - Vue pixel
-     - ``Shift + P`` — à ≥ 400 % de zoom, superpose une grille de pixels et affiche les valeurs RGB / HEX sous le curseur
+     - ``Shift + P`` — à partir de 400 % de zoom, affiche les valeurs RGB / HEX sous le curseur, plus une grille de pixels dès que 40 000 pixels de l'image au plus sont à l'écran
    * - Modes de couleur
      - ``Shift + M`` fait défiler Normal / Niveaux de gris / Inversé / Sépia (GLSL, non destructif)
 
@@ -811,18 +811,20 @@ physique, expressions, groupes de poses, lip-sync et suivi par webcam,
 Flux de travail de bout en bout
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. **Importer un PNG** — depuis la barre d'outils, ``Importer PNG…`` exécute
+1. **Importer un PNG** — ``Fichier`` > ``Importer PNG…`` exécute
    ``puppet.auto_mesh.puppet_from_png`` : grille triangulée bornée par l'alpha,
    un drawable, prêt à rendre.
-2. **Ajouter un déformateur** — ``Ajouter un déformateur de rotation`` (ancre + angle) ou
-   ``Ajouter un déformateur de déformation`` (treillis Bézier lignes × colonnes ; les sommets
+2. **Ajouter un déformateur** — ``Édition`` > ``Ajouter un déformateur de rotation`` (ancre + angle) ou
+   ``Ajouter un déformateur de déformation`` (treillis bilinéaire lignes × colonnes ; les sommets
    hors limites traversent sans changement).
-3. **Ajouter un paramètre** — ``Ajouter un paramètre`` ajoute un curseur au dock
+3. **Ajouter un paramètre** — ``Édition`` > ``Ajouter un paramètre`` ajoute un curseur au dock
    **Paramètres** à droite, avec un identifiant nommé automatiquement (``Param1``, ``Param2``, …).
 4. **Définir des clés** — faites glisser le curseur vers un extrême, modifiez la forme du déformateur
-   par code ou via l'édition du maillage, appuyez sur **Définir une clé**. Répétez au neutre et à l'extrême
+   par code, appuyez sur **Définir une clé**. Répétez au neutre et à l'extrême
    opposé. L'exécution interpolera désormais les champs du déformateur entre les clés adjacentes
-   chaque fois que le curseur bouge.
+   chaque fois que le curseur bouge. **Définir une clé** ne stocke que les formes des déformateurs :
+   **Éditer le maillage** déplace définitivement les sommets de repos du drawable, donc une
+   édition du maillage n'entre pas dans une clé.
 5. **Enregistrer** — ``Enregistrer sous…`` écrit le rig + textures + mouvements + expressions
    + physique dans un seul zip ``.puppet`` que vous pouvez partager ou ouvrir plus tard via
    ``Ouvrir Puppet…``.
@@ -852,18 +854,20 @@ Mouvements — un simple clic associe le mouvement et démarre immédiatement la
 
 1. Lancez Imervue. Depuis les sources : ``python -m Imervue``. Depuis la
    build empaquetée : exécutez l'exécutable / bundle d'application ``Imervue``. Le
-   répertoire ``examples/`` est intégré à la fois dans le wheel et l'EXE Nuitka,
-   donc le rig est présent sur le disque là où vous l'avez installé.
+   répertoire ``examples/`` est intégré aux builds Nuitka et PyInstaller ; une
+   installation pip / wheel ne l'inclut pas (depuis une copie des sources, les rigs
+   se trouvent dans ``examples/puppet/``).
 2. Cliquez sur l'onglet **Puppet** en haut de la fenêtre.
-3. Barre d'outils → **File > Examples > March 7th** (ou la liste déroulante
+3. **File > Examples > March 7th** (ou la liste déroulante
    **Examples ▾** de la barre d'outils). Le rig de 307 drawables se charge centré et
    le dock des paramètres se remplit des 203 curseurs standard Cubism.
 4. Dans le dock **Mouvements** en bas, simple-clic sur n'importe quelle entrée de mouvement
    (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …).
-   La lecture démarre immédiatement ; cliquez à nouveau pour arrêter, ou choisissez
-   un autre mouvement pour faire un fondu enchaîné vers lui.
+   La lecture démarre immédiatement ; un nouveau clic la relance, le bouton **Stop**
+   du dock arrête la lecture, et choisir un autre mouvement fait un fondu enchaîné vers lui.
 5. Basculez les interrupteurs d'entrée en direct sur la barre d'outils pour piloter le rig
-   depuis vos propres entrées — **Drag-track head** pour le regard vers le curseur,
+   depuis vos propres entrées — **Drag-track head** pour tourner la tête et les yeux
+   vers le curseur quand il se déplace sur le canevas,
    **Auto-blink** pour le clignement cyclique des yeux, **Auto idle** + **Idle
    motions** pour la respiration + les clips Idle aléatoires, **Mic lip-sync** pour
    l'ouverture de la bouche depuis le RMS du microphone, **Webcam tracking** pour la
@@ -914,6 +918,11 @@ PNG uniquement — aucun binaire propriétaire, entièrement diffable via git.
 Référence de la barre d'outils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+La barre d'outils porte **Examples ▾**, les six bascules en direct, **Edit mesh**,
+**Record…** et **Reset to rest**. Toutes les autres entrées ci-dessous sont des éléments
+du menu **File**, **Edit**, **Live**, **Output** ou **Tools** ; ces menus contiennent
+aussi les entrées de la barre d'outils.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -921,8 +930,9 @@ Référence de la barre d'outils
    * - Action
      - Rôle
    * - Open Puppet… / Examples ▾
-     - Charger un ``.puppet`` depuis le disque, ou choisir l'un des rigs
-       fournis dans ``examples/puppet/`` directement depuis la barre d'outils
+     - Charger un ``.puppet`` depuis le disque (menu **File**), ou choisir l'un des
+       rigs fournis dans ``examples/puppet/`` depuis **Examples ▾** (le bouton de la
+       barre d'outils, aussi dans **File**)
    * - Import PNG… / Import PSD… / Import Cubism…
      - Créer un maillage automatique pour un PNG, séparer un PSD par calques, ou échantillonner
        et reconstruire un rig Cubism. Le sélecteur Cubism accepte à la fois ``.moc3`` et
@@ -935,9 +945,10 @@ Référence de la barre d'outils
    * - Save As…
      - Écrit le rig actuel sous forme de zip ``.puppet``
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - Construit le rig depuis la barre d'outils
+     - Construit le rig depuis le menu **Edit**
    * - Drag-track head
-     - Décalage du curseur → ``ParamAngleX`` / ``ParamAngleY`` +
+     - La tête et les yeux se tournent vers le curseur quand il se déplace sur le
+       canevas : décalage du curseur → ``ParamAngleX`` / ``ParamAngleY`` +
        ``ParamEyeBallX`` / ``ParamEyeBallY``
    * - Auto-blink
      - Cycle cosinusoïdal fermeture→ouverture sur ``ParamEyeLOpen`` / ``ParamEyeROpen``
@@ -955,26 +966,31 @@ Référence de la barre d'outils
    * - Edit mesh
      - Cliquer-glisser sur les sommets du canevas pour affiner le maillage
    * - Record motion
-     - Capture les changements de paramètres dans un nouveau ``Motion`` et l'ajoute au
-       document — cuisson à partir d'une prise, sans création manuelle d'images clés
+     - Menu **Output** uniquement : capture les changements de paramètres dans un nouveau
+       ``Motion`` et l'ajoute au document — cuisson à partir d'une prise, sans création
+       manuelle d'images clés
    * - Capture frame… / Record… / Export all motions…
      - Enregistrer un PNG, basculer un enregistrement GIF / WebM / MP4, ou
        rendre par lots chaque mouvement du rig dans son propre fichier (le tout via
-       le même chemin de rendu hors écran "personnage seul" utilisé pour le streaming)
+       le même chemin de rendu hors écran "personnage seul" utilisé pour le streaming).
+       Une image capturée garde la taille propre du rig (côté long d'au plus
+       4096 px) sur fond transparent ; un enregistrement ou un export par lots
+       fait tenir le personnage dans 1080 px sur fond blanc, car les images
+       GIF / WebM / MP4 n'ont pas d'alpha
    * - Output > Virtual camera / NDI output
      - Surfaces de streaming en direct — voir *Streaming en direct vers OBS* ci-dessous
    * - Reset to rest
      - Arrête net le lecteur de mouvement, désactive tous les pilotes en direct,
        efface les expressions / groupes de pose, restaure les paramètres par défaut
    * - Fit to Window
-     - Recentre et redimensionne la marionnette dans le canevas
+     - Menu **Tools** : recentre et redimensionne la marionnette dans le canevas
 
 Enregistrer ses propres mouvements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Pour capturer une prise personnalisée plutôt que de créer les images clés à la main :
 
-1. Basculez **Record motion** dans la barre d'outils — une boîte de dialogue de nom apparaît.
+1. Basculez **Output > Record motion** — une boîte de dialogue de nom apparaît.
 2. Pendant l'enregistrement, faites glisser des curseurs, activez **Webcam tracking**, laissez la physique
    tourner, n'importe quoi qui écrive des valeurs de paramètres.
 3. Désactivez **Record motion** — l'enregistreur cuit le flux capturé à 30 Hz dans un
@@ -1000,7 +1016,7 @@ OBS Studio 26+ embarque le pilote *OBS Virtual Camera* sur Windows / macOS (cliq
 sur *Start Virtual Camera* dans OBS une fois pour l'enregistrer) ; Linux utilise
 ``v4l2loopback-dkms`` +
 ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``.
-La barre d'outils **Output > Virtual camera** ouvre le flux.
+La bascule de menu **Output > Virtual camera** ouvre le flux.
 
 DirectShow / AVFoundation / v4l2loopback sont uniquement RGB — pas de canal alpha —
 donc Imervue remplit la zone hors du personnage avec
@@ -1022,7 +1038,7 @@ qu'OBS / vMix composent directement par-dessus leurs propres scènes sans passe
 de chroma key. ``pip install ndi-python`` + le runtime
 `NDI Tools <https://ndi.video/tools/>`_ + le plugin
 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_.
-La barre d'outils **Output > NDI output** diffuse la source (nom par défaut
+La bascule de menu **Output > NDI output** diffuse la source (nom par défaut
 *Imervue Puppet*).
 
 ``ndi-python`` ne fournit qu'une distribution source ; pip la construit
@@ -1049,9 +1065,11 @@ Dépendances optionnelles
   redistribution ; les utilisateurs déposent le SDK sous ``<cwd>/sdk/`` ou définissent
   la variable d'environnement ``CUBISM_CORE_DLL``)
 
-Le plugin se dégrade gracieusement lorsque l'une de ces dépendances est absente — la
-bascule correspondante dans la barre d'outils revient automatiquement et affiche un
-indice "install <package>". ``File > Install dependencies…`` installe par lot
+L'onglet Puppet se dégrade gracieusement lorsqu'un paquet Python est absent — la
+bascule correspondante reste désactivée et l'installateur de dépendances s'ouvre en
+proposant de l'installer ; une fois le paquet installé, la bascule se réactive. Un
+indice textuel n'apparaît que lorsque le paquet est présent mais que le périphérique
+ou le pilote échoue. ``File > Install dependencies…`` installe par lot
 chaque paquet Python optionnel en une seule fois.
 
 ----
@@ -1084,8 +1102,8 @@ ainsi :
    multi-écran).
 #. **Modèle d'interaction** — zones cliquables au clic gauche, menu
    contextuel complet du clic droit, barre d'état système.
-#. **Pilotes en direct** — six pilotes d'entrée optionnels et leurs
-   dépendances optionnelles.
+#. **Pilotes en direct** — sept pilotes d'entrée (trois activés par
+   défaut) et leurs dépendances optionnelles.
 #. **Script du pet** — le fichier JSON qui vous permet de remplacer
    la voix du pet par vos propres répliques, de planifier des
    rappels et de lier les réponses par zone cliquable / par
@@ -1126,10 +1144,10 @@ L'onglet expose trois chemins de chargement :
   sur disque.
 * **Load bundled March 7th** — ouvre le rig livré sous
   ``examples/puppet/march_7th.puppet``. Le résolveur consulte
-  d'abord ``examples_dir()`` (sûr en mode gelé pour les builds
-  Nuitka empaquetés / installés via pip) puis se rabat sur une
-  recherche relative à la racine du dépôt afin que le bouton
-  fonctionne dans les deux modes d'exécution.
+  d'abord ``examples_dir()`` (à côté du programme dans les builds
+  empaquetés Nuitka / PyInstaller, la racine du dépôt dans une
+  copie des sources) puis se rabat sur une recherche relative au
+  dossier de travail courant.
 * **Dernier rig** — le rig chargé précédemment se restaure
   automatiquement au démarrage d'Imervue depuis le champ de
   réglages ``last_rig_path`` ; l'onglet Desktop Pet ré-instancie
@@ -1208,10 +1226,12 @@ au-dessus de toutes les autres fenêtres.
        ``GetWindowRect`` sous Windows ; sur macOS / Linux il
        devient un no-op silencieux (le pet reste visible).
    * - Mise en pause à l'arrêt
-     - Le tick de rendu à ~30 FPS et le tick de script à 1 Hz
-       s'arrêtent tous deux sur ``hideEvent`` afin qu'un pet
-       masqué coûte zéro CPU. Ils redémarrent au prochain
-       ``showEvent``.
+     - Le tick de rendu à ~30 FPS, le tick de script à 1 Hz et la
+       scrutation du plein écran (sauf si c'est le plein écran qui
+       a masqué le pet) s'arrêtent sur ``hideEvent`` et redémarrent
+       au prochain ``showEvent``. Les minuteries des pilotes en
+       direct (clignement, idle, mouvements idle, regard)
+       continuent de tourner.
    * - Préréglages de taille
      - Petit (200 × 300), moyen (320 × 480), grand (480 × 720).
        Le pet se redimensionne autour de son centre actuel afin
@@ -1225,11 +1245,13 @@ au-dessus de toutes les autres fenêtres.
        complètement invisible vous le ferait perdre.
    * - Mémoire de position
      - Le ``(x, y)`` post-accrochage après chaque relâchement est
-       persisté. Au prochain lancement, le pet revient à cette
-       coordonnée écran. Si la position enregistrée ne tombe plus
-       sur aucun écran connecté (vous avez débranché un moniteur
-       depuis le dernier lancement), le pet se rabat sur le coin
-       inférieur droit de l'écran principal.
+       persisté, avec le moniteur sur lequel il se trouve. Au
+       prochain lancement, le pet revient à cette position, bridée
+       à l'intérieur de ce moniteur. Si le moniteur a disparu
+       (vous l'avez débranché depuis le dernier lancement), le pet
+       va sur le premier écran, sa position enregistrée y étant
+       bridée. Le coin inférieur droit ne sert que si aucune
+       position n'a jamais été enregistrée.
 
 Modèle d'interaction
 ^^^^^^^^^^^^^^^^^^^^
@@ -1253,24 +1275,28 @@ comme suit :
    liste de repli intégrée).
 
 Un geste de glisser-déplacer supprime le gestionnaire de clic, donc
-déplacer le pet ne déclenche ni mouvement ni parole.
+déplacer le pet n'affiche pas de bulle de dialogue. Appuyer joue un
+mouvement du groupe ``Drag`` du rig et relâcher après un glissement
+en joue un de son groupe ``Land``, lorsque le rig possède ces
+groupes.
 
 **Clic droit n'importe où sur le corps**
 
 Ouvre un menu contextuel avec la structure suivante :
 
 * **Hide pet** — action de haut niveau qui ferme la superposition.
-* Sous-menu **Live drivers** — six bascules à cocher (Auto idle,
-  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
-  Webcam tracking). L'état coché reflète l'état des pilotes en
-  direct, donc le menu indique ce qui tourne actuellement.
+* Sous-menu **Live drivers** — sept bascules à cocher (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mouse gaze, Mic
+  lip-sync, Webcam tracking). L'état coché reflète l'état des
+  pilotes en direct, donc le menu indique ce qui tourne actuellement.
 * Sous-menu **Play motion** — peuplé depuis la liste
   ``document.motions`` du rig actif. Sélectionner une entrée joue
-  ce mouvement (et peut déclencher la voix du pet si le script lie
-  une réplique à celui-ci).
+  ce mouvement ; il ne prononce aucune réplique ``motion_lines``
+  (celles-ci ne répondent qu'à un clic sur une zone cliquable).
 * Sous-menu **Apply expression** — peuplé depuis
-  ``document.expressions`` du rig. Sélectionner bascule la
-  superposition de paramètres de l'expression.
+  ``document.expressions`` du rig. En sélectionner une ajoute la
+  superposition de paramètres de l'expression ; l'appliquer à
+  nouveau ne fait rien.
 * Cinq bascules à cocher de haut niveau : **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — accès rapide aux mêmes bascules de l'onglet
@@ -1302,8 +1328,10 @@ Pilotes en direct
 Chaque pilote en direct est créé paresseusement à la première
 activation, donc un pet dormant ne paie aucun coût de minuterie /
 thread pour les pilotes que vous n'allumez jamais. L'état de chaque
-pilote est persisté ; activer, fermer Imervue puis relancer rouvre
-le pet avec les mêmes pilotes en marche.
+pilote est persisté ; activer, fermer Imervue puis relancer restaure
+le rig avec les mêmes pilotes en marche. La superposition elle-même
+n'apparaît au lancement que si **Show the pet when Imervue starts**
+est coché dans le groupe Window de l'onglet.
 
 .. list-table::
    :header-rows: 1
@@ -1319,8 +1347,9 @@ le pet avec les mêmes pilotes en marche.
      - aucune
    * - **Idle motions**
      - Choisit aléatoirement un mouvement du groupe ``Idle`` du
-       rig toutes les quelques secondes et le joue. S'arrête si
-       un mouvement est déjà en cours.
+       rig et le joue — un tout de suite à l'activation, puis
+       toutes les quelques secondes. S'efface pendant qu'un
+       mouvement hors Idle se joue.
      - aucune
    * - **Auto-blink**
      - Ferme et rouvre les yeux selon une courbe cosinus douce
@@ -1329,20 +1358,27 @@ le pet avec les mêmes pilotes en marche.
        d'ouverture des yeux ne suppriment pas le clignement.
      - aucune
    * - **Drag-track head**
-     - La tête + les yeux tournent vers la position globale du
-       curseur même quand le curseur n'est pas sur le pet. Pilote
+     - La tête + les yeux tournent vers le curseur pendant qu'il
+       se déplace sur le pet. Pilote
        ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
        ``ParamEyeBallY``.
      - aucune
+   * - **Mouse gaze**
+     - Les yeux et la tête suivent le curseur n'importe où à
+       l'écran, par rapport au centre du pet (les yeux mènent).
+       Pilote les mêmes quatre paramètres.
+     - aucune
    * - **Mic lip-sync**
-     - L'amplitude RMS du micro pilote ``ParamMouthOpenY``. Le
+     - L'amplitude RMS du micro pilote ``ParamMouthOpenY``. La
+       bouche s'ouvre proportionnellement au volume de votre voix,
+       si bien que le personnage semble parler quand vous parlez.
      - ``sounddevice``
    * - **Webcam tracking**
      - MediaPipe FaceLandmarker lit votre webcam à ~30 FPS et
        pilote la pose de la tête + l'ouverture des yeux + les
-       paramètres d'ouverture de la bouche. Ouvre une petite
-       fenêtre d'aperçu en direct pour que vous puissiez vérifier
-       que la caméra voit votre visage.
+       paramètres d'ouverture de la bouche. Aucune fenêtre
+       d'aperçu ne s'ouvre pour le pet (l'aperçu de la caméra
+       appartient à l'onglet Puppet).
      - ``opencv-python`` + ``mediapipe``
 
 Les deux pilotes à dépendance optionnelle se dégradent gracieusement :
@@ -1356,14 +1392,19 @@ Script du pet — voix personnalisée et événements planifiés
 
 La bulle de dialogue du pet puise dans un fichier JSON que vous
 pouvez écrire et charger depuis le groupe **Pet script** de
-l'onglet. Le script régit quatre choses :
+l'onglet. Le script régit cinq choses :
 
 * **Greetings** — répliques par défaut au clic quand rien de plus
   spécifique ne correspond.
+* **Time-of-day greetings** — salutations selon la tranche de
+  l'horloge locale (``morning`` 05–11 h, ``afternoon`` 12–17 h,
+  ``evening`` 18–21 h, ``night`` 22–04 h), utilisées avant les
+  salutations simples ; une tranche sans répliques se rabat sur
+  celles-ci.
 * **Hit-area responses** — paniers de répliques par ``HitArea.id``.
 * **Motion lines** — paniers de répliques par nom de mouvement,
-  déclenchés quand le pet démarre ce mouvement (depuis une zone
-  cliquable ou depuis le menu contextuel).
+  prononcés quand un clic sur une zone cliquable joue ce mouvement
+  (pas quand un mouvement est lancé depuis le menu contextuel).
 * **Scheduled chimes** — répliques pilotées par minuterie qui se
   déclenchent toutes les ``every_seconds`` de temps horloge
   monotone.
@@ -1378,6 +1419,10 @@ Schéma (versionné — les futurs champs sont compatibles ascendants) :
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
+     "time_of_day_greetings": {
+       "morning": ["Good morning!"],
+       "night": ["Still up?"]
+     },
      "hit_responses": {
        "HitAreaHead": ["Hey, my head!", "Stop poking!"],
        "HitAreaBody": ["Hehe~", "Pat pat?"]
@@ -1405,8 +1450,9 @@ Règles de chargement :
   remonter le chemin dans l'étiquette d'état.
 * La cascade zone cliquable / mouvement / salutation est en
   couches : un clic gauche consulte ``hit_responses[area.id]``
-  d'abord, puis ``motion_lines[area.motion]``, puis ``greetings``,
-  puis le jeu de salutations par défaut intégré comme plancher.
+  d'abord, puis ``motion_lines[area.motion]``, puis
+  ``time_of_day_greetings``, puis ``greetings``, puis le jeu de
+  salutations par défaut intégré comme plancher.
 * Le suivi du temps utilise ``time.monotonic`` afin que mettre le
   portable en veille ou faire bondir l'horloge système ne puisse
   pas déclencher en rafale des événements en file.
@@ -1454,16 +1500,17 @@ démarrage.
    * - ``position``
      - ``[-1, -1]``
      - ``(x, y)`` en coordonnées écran du dernier relâchement de
-       glissement. ``-1, -1`` signifie « utiliser le coin
-       inférieur droit de l'écran principal ». Un débranchement
-       multi-écran entre sessions retombe de la même façon.
+       glissement. ``-1, -1`` (jamais enregistré) signifie
+       « utiliser le coin inférieur droit ». Quand le moniteur
+       enregistré a disparu, la position est bridée dans le
+       premier écran.
    * - ``size_preset``
      - ``"medium"``
      - L'une de ``small`` / ``medium`` / ``large``.
    * - ``opacity``
      - ``1.0``
-     - Bridé à ``[0.1, 1.0]``. Les valeurs hors plage reviennent
-       au défaut.
+     - Les valeurs hors plage sont bridées à ``[0.1, 1.0]`` ;
+       seule une valeur non numérique revient au défaut.
    * - ``click_through``
      - ``false``
      -
@@ -1481,16 +1528,19 @@ démarrage.
      - ``24``
      - Bridé à ``[0, 200]`` px.
    * - ``drivers``
-     - tous ``false``
+     - ``auto_idle``, ``idle_motion``, ``auto_blink``
+       ``true`` ; les autres ``false``
      - Sous-dict indexé par id de pilote (``auto_idle``,
        ``idle_motion``, ``auto_blink``, ``drag_track``,
-       ``mic_lipsync``, ``webcam_tracking``). Les clés inconnues
-       font un aller-retour intactes pour la compatibilité
-       ascendante.
+       ``mouse_gaze``, ``mic_lipsync``, ``webcam_tracking``).
+       Les clés inconnues font un aller-retour intactes pour la
+       compatibilité ascendante.
    * - ``show_on_launch``
      - ``false``
-     - Affiche automatiquement la superposition au démarrage
-       d'Imervue.
+     - Réglé par **Show the pet when Imervue starts** dans le
+       groupe Window de l'onglet. Le rig et les pilotes sont
+       restaurés au lancement dans tous les cas ; la superposition
+       n'apparaît que si ce réglage est activé.
    * - ``speech_enabled``
      - ``true``
      - Quand c'est faux, la bulle de dialogue ne s'affiche jamais.
@@ -1557,19 +1607,20 @@ checkouts source, lancez Imervue depuis la racine du dépôt.
 #. Si vous avez chargé un script personnalisé, vérifiez que le JSON
    s'analyse — l'étiquette d'état de l'onglet affiche l'erreur de
    chargement.
-#. Si un clic sur une zone cliquable n'a rien fait, c'est
-   probablement que la zone n'a pas de mouvement associé ET que le
-   script n'a pas d'entrée ``hit_responses`` pour cet id de zone.
-   Liez un mouvement à la zone dans l'onglet Puppet ou ajoutez
-   l'id de zone à ``hit_responses`` du script.
+#. Si **Click-through** est activé, le clic va à la fenêtre
+   derrière le pet ; désactivez-le dans l'onglet ou le menu de la
+   barre d'état. (Avec la parole activée, chaque clic obtient une
+   réplique : un rig sans zones cliquables ne joue aucun mouvement,
+   mais le clic vous salue quand même.)
 
 **La case du suivi webcam rebondit à l'état désactivé.** Le suivi
 webcam a besoin de ``opencv-python`` et ``mediapipe`` installés
 dans le même environnement Python que celui dans lequel tourne
 Imervue. Installez avec ``pip install opencv-python mediapipe``.
-Après installation, basculer la case devrait faire apparaître une
-petite fenêtre d'aperçu montrant les points caractéristiques
-détectés du visage.
+Après installation, cochez à nouveau la case. Le pet n'ouvre
+aucune fenêtre d'aperçu ; pour voir ce que la caméra détecte,
+activez **Webcam tracking** dans l'onglet Puppet, qui affiche les
+points caractéristiques du visage.
 
 **Le pet ne se masque pas automatiquement pendant les applications
 plein écran.** Le détecteur de plein écran scrute la fenêtre de
@@ -1583,8 +1634,8 @@ app is fullscreen** est coché et vérifiez que la fenêtre plein
 **La position du pet dérive hors écran entre les lancements.** Cela
 arrive quand l'écran sur lequel se trouvait le pet n'est plus
 connecté au prochain lancement (station d'accueil portable,
-second moniteur débranché). Le pet se rabat alors automatiquement
-sur le coin inférieur droit de l'écran principal — glissez-le où
+second moniteur débranché). Le pet va alors sur le premier écran,
+sa position enregistrée y étant bridée — glissez-le où
 vous le voulez et la prochaine sauvegarde écrasera la position
 obsolète.
 
@@ -1612,9 +1663,12 @@ Rotation et retournement
    * - Retournement vertical
      - --
      - Clic droit > Modify > Flip Vertical
-   * - Rotation sans perte (JPEG)
+   * - Rotation sans perte
      - --
-     - Clic droit > Lossless Rotate
+     - Clic droit > Lossless Rotate > Lossless Rotate CW / CCW. Seul un JPEG est vraiment
+       sans perte (sa balise d'orientation change) ; PNG / BMP / TIFF / WebP /
+       GIF sont décodés, tournés et réenregistrés (un WebP avec perte est réencodé) ;
+       les RAW d'appareil, HEIC et fichiers multi-images sont refusés
 
 ----
 
@@ -1626,7 +1680,7 @@ Export individuel
 
 Ouvrez une image (Deep Zoom), puis clic droit > ``Exporter / Enregistrer sous``.
 
-- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF, AVIF ; aussi HEIC et JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` est installé
+- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF ; AVIF si Pillow prend en charge l'AVIF, HEIC et JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` est installé
 - Ajustez la qualité (pour les formats avec perte)
 - Choisissez les métadonnées à conserver : toutes, toutes sauf la localisation (par défaut) ou aucune. L'appareil, l'objectif et la date de prise de vue sont conservés ; le choix est mémorisé et l'export par lot propose la même option
 - Aperçu de la taille de fichier estimée
@@ -1676,7 +1730,7 @@ Créer un GIF / une vidéo
 
 Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``Créer GIF / Vidéo``.
 
-- Sortie GIF et MP4
+- Sortie GIF et MP4 ; le MP4 utilise le ffmpeg du PATH, sinon celui fourni avec la dépendance par défaut ``imageio-ffmpeg``
 - Glisser pour réordonner les images
 - Définir les images par seconde (FPS)
 - Dimensions personnalisées
@@ -1781,7 +1835,9 @@ Copier-coller
    * - Copier l'image dans le presse-papiers
      - ``Ctrl + C`` en mode Deep Zoom
    * - Coller l'image du presse-papiers
-     - ``Fichier`` > ``Coller depuis le presse-papiers``, ou ``Ctrl + V``
+     - ``Fichier`` > ``Coller depuis le presse-papiers`` l'ouvre dans l'éditeur d'annotation (rien n'est enregistré) ;
+       ``Ctrl + V`` l'enregistre sous ``pasted_<timestamp>.png`` dans le dossier courant et l'ouvre, ou
+       ouvre un chemin de fichier copié dans le presse-papiers
    * - Surveiller automatiquement le presse-papiers
      - ``Fichier`` > ``Annoter automatiquement les images du presse-papiers`` (bascule)
 
@@ -1802,7 +1858,7 @@ Supprimer des images
    * - Supprimer l'image courante
      - Appuyez sur ``Delete``
    * - Supprimer les images sélectionnées
-     - Sélectionner plusieurs, puis ``Delete`` ou clic droit > ``Supprimer la sélection``
+     - Sélectionner plusieurs, puis ``Delete`` ou clic droit > ``Supprimer les images sélectionnées``
 
 Les images sont déplacées vers la Corbeille du système et peuvent y être récupérées. Sur un
 lecteur sans corbeille — carte mémoire, clé USB ou partage réseau, où Windows les
@@ -1900,15 +1956,16 @@ Préréglages de disposition d'espace de travail
 ----------------------------------------------
 
 ``Fichier`` > ``Espaces de travail…`` capture la géométrie courante de la fenêtre, la disposition
-des docks / barres d'outils, les tailles des séparateurs et le dossier racine actif sous un nom — puis
-vous laisse basculer entre les dispositions enregistrées. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
-et Supprimer. Les espaces de travail sont conservés dans ``user_settings.json`` (sous la clé
+des docks / barres d'outils, la séparation arbre / visionneuse et le dossier racine actif sous un nom — puis
+vous laisse basculer entre les dispositions enregistrées. L'onglet actif et la séparation des panneaux de l'onglet Modify ne sont pas
+enregistrés. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
+et Supprimer. Les espaces de travail sont conservés dans ``user_setting.json`` (sous la clé
 ``workspaces``) et survivent aux sessions.
 
 .. tip::
-   Construisez un espace de travail **Browse** avec l'arbre et la grille de vignettes visibles, et un
-   espace de travail **Develop** distinct avec le panneau de développement maximisé et l'arbre
-   réduit. Un clic place toute votre fenêtre dans la forme adéquate pour chaque tâche.
+   Construisez un espace de travail **Browse** avec un arbre large à côté de la visionneuse, et un
+   espace de travail **Focus** distinct avec l'arbre resserré et les docks inutiles
+   fermés. Un clic place toute votre fenêtre dans la forme adéquate pour chaque tâche.
 
 Gestes du pavé tactile
 ----------------------
@@ -1932,7 +1989,7 @@ Association de fichiers (Windows)
 Enregistrez Imervue comme visionneuse d'images dans l'Explorateur Windows :
 
 1. ``Fichier`` > ``Association de fichiers`` > ``Enregistrer 'Open with Imervue'``
-2. Privilèges administrateur requis.
+2. Aucun droit administrateur n'est nécessaire : l'enregistrement écrit dans le registre de l'utilisateur courant.
 3. Après l'enregistrement, clic droit sur n'importe quelle image dans l'Explorateur pour voir l'option ``Open with Imervue``.
 
 Pour retirer : ``Fichier`` > ``Association de fichiers`` > ``Supprimer l'association de fichiers``.
@@ -2107,7 +2164,7 @@ Outils et superpositions
    * - ``F8`` / ``Ctrl + F8``
      - Superposition d'infos OSD / HUD de débogage (VRAM, cache, threads)
    * - ``Shift + P``
-     - Vue pixel (≥ 400 % affiche la grille de pixels et la valeur RGB sous le curseur)
+     - Vue pixel (à partir de 400 % affiche le RGB / HEX sous le curseur ; la grille dès que ≤ 40 000 pixels de l'image sont à l'écran)
    * - ``Shift + M``
      - Faire défiler les modes de couleur (Normal / Niveaux de gris / Inversé / Sépia)
    * - ``L``

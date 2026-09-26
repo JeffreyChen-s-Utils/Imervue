@@ -107,7 +107,7 @@ pip install .
 | numpy | Operaciones con arreglos y caché de miniaturas |
 | rawpy | Decodificación de imágenes RAW (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG y más) |
 | imageio | E/S de imágenes |
-| imageio-ffmpeg | Exportación de presentación a MP4 (H.264 vía ffmpeg) |
+| imageio-ffmpeg | Presentación a MP4 y MP4 de Create GIF / Video (H.264 vía ffmpeg) |
 | defusedxml | Análisis seguro de XML (sidecars XMP) |
 | watchdog | Vigilancia recursiva del árbol de archivos (los cambios externos refrescan el árbol) |
 
@@ -181,7 +181,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Visor
 
 - **Renderizado acelerado por GPU** mediante OpenGL (shaders GLSL 1.20 con VBO)
-- **Pirámide de zoom profundo** — teselas multinivel de 512×512 con remuestreo LANCZOS; la LRU de teselas guarda 256 entradas (techo duro 512). El presupuesto de VRAM se sondea del controlador GL al arrancar y cae a 1,5 GB si falla, redefinible con el ajuste `vram_limit_mb` (se acota, nunca se descarta en silencio). Filtrado anisotrópico hasta 8×; también se abren panoramas muy por encima del límite de seguridad de 179 MP de Pillow (el límite sigue la memoria del equipo: unos 1,3 gigapíxeles con 16 GB)
+- **Pirámide de zoom profundo** — teselas multinivel de 512×512 con remuestreo LANCZOS; la LRU de teselas guarda 256 entradas (techo duro 512). El presupuesto de VRAM se sondea del controlador GL al arrancar y cae a 1,5 GB si falla, redefinible con el ajuste `vram_limit_mb` (se acota, nunca se descarta en silencio). Filtrado anisotrópico hasta 8×; también se abren panoramas muy por encima del límite de seguridad de 179 MP de Pillow (el límite sigue la memoria del equipo: unos 1,4 gigapíxeles con 16 GB)
 - **Carga asíncrona** — decodificación multihilo con una ventana de precarga adaptativa: ±3 imágenes al navegar, ampliándose a 5 por delante / 1 por detrás en cuanto avanzas de forma constante en una dirección
 - **Pools de trabajo separados** — las ráfagas de miniaturas y las decodificaciones de zoom profundo usan pools distintos, así abrir una carpeta grande nunca deja sin recursos a la imagen que estás mirando
 - **Cuadrícula de miniaturas virtualizada** — sólo se renderizan los mosaicos visibles; el tamaño de miniatura es configurable (128 / 256 / 512 / 1024 / auto)
@@ -199,7 +199,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 ### Modos de exploración
 
 - **Cuadrícula** (predeterminado) — cuadrícula virtualizada de mosaicos con previsualización al pasar el cursor (retraso de 500 ms)
-- **Lista (detalle)** — se alterna con `Ctrl+L`; columnas: Vista previa · Etiqueta · Valoración · Nombre · Resolución · Tamaño · Tipo · Modificado; `Delete` quita las filas seleccionadas y `Ctrl+Z` las recupera, y las teclas de valoración (`0`–`5`), selección (`P` / `Shift+X` / `U`) y color (`F1`–`F5`) las marcan, como en la cuadrícula
+- **Lista (detalle)** — se alterna con `Ctrl+L`; columnas: Vista previa · Etiqueta · Valoración · Nombre · Resolución · Tamaño · Tipo · Modificado; `Delete` quita las filas seleccionadas y `Ctrl+Z` las recupera, y las teclas de valoración (`1`–`5`), favorito (`0`), selección (`P` / `Shift+X` / `U`) y color (`F1`–`F5`) las marcan, como en la cuadrícula
 - **Deep Zoom** — doble clic en un mosaico; paneo/zoom fluido en GPU con superposición de minimapa
 - **Vista dividida** (`Shift+S`) — dos imágenes lado a lado
 - **Lectura de doble página** (`Shift+D`, `Ctrl+Shift+D` para manga de derecha a izquierda) — lector de páginas enfrentadas
@@ -212,7 +212,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 - Histograma RGB (`H`)
 - OSD con F8 (nombre de archivo / tamaño / tipo), HUD de depuración con Ctrl+F8 (VRAM / caché / hilos)
-- Vista de píxeles (`Shift+P`) — con zoom ≥ 400 % muestra la cuadrícula de píxeles + RGB / HEX por píxel
+- Vista de píxeles (`Shift+P`) — desde un zoom de 400 % muestra el RGB / HEX por píxel, más una cuadrícula de píxeles cuando no hay más de 40.000 píxeles en pantalla
 - Modos de color (`Shift+M`) — Normal / Escala de grises / Invertir / Sepia vía GLSL
 
 ### Navegación
@@ -352,7 +352,7 @@ La pestaña **Modify** es la estación de revelado. Cada ajuste vive en una **re
 
 - **Predefinidos de exportación** — en la exportación por lotes: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 cuadrado / Thumbnail 400 px, o Personalizado
 - **Marca de agua** — en la exportación por lotes: una marca de agua de texto en una esquina o en el centro, con su opacidad; se aplica solo a las copias exportadas
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (y HEIC con `pillow-heif` y JPEG XL con `pillow-jxl-plugin`) con control de calidad para formatos con pérdida; conserva el EXIF de cámara, objetivo y fecha de captura, con la ubicación opcional (**Metadatos**: todos / todos salvo ubicación / ninguno); el nombre propuesto es uno aún libre (`photo_1.png` junto a `photo.png`) y un archivo existente —sobre todo la propia foto— solo se reemplaza tras confirmarlo
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF (y AVIF cuando Pillow admite AVIF, HEIC con `pillow-heif` y JPEG XL con `pillow-jxl-plugin`) con control de calidad para formatos con pérdida; conserva el EXIF de cámara, objetivo y fecha de captura, con la ubicación opcional (**Metadatos**: todos / todos salvo ubicación / ninguno); el nombre propuesto es uno aún libre (`photo_1.png` junto a `photo.png`) y un archivo existente —sobre todo la propia foto— solo se reemplaza tras confirmarlo
 - **Operaciones por lotes** — renombrar, mover/copiar, rotar imágenes seleccionadas. Mover o copiar nunca sobrescribe un archivo con el mismo nombre (llega como `name_1`), y una foto renombrada o movida en Imervue (renombrado por lotes, renombrado por tokens, árbol de carpetas, Mover / Copiar, doble panel, bandeja de preparación, organizador de imágenes) conserva su valoración, favorito, etiquetas, etiqueta de color, título, notas y marca de selección; sus sidecars `.xmp` y de anotaciones la acompañan; lo mismo ocurre con una foto renombrada en otro programa mientras su carpeta está abierta en Imervue. Un nombre nuevo que ahora tiene otra foto seleccionada (renumerar, intercambiar dos nombres) renombra toda la selección en el orden correcto en vez de solo una parte
 - **PDF de hoja de contactos** — cuadrícula multipágina con leyendas (A4 / A3 / Letter / Legal)
 - **Galería web HTML** — carpeta autocontenida con `index.html` + miniaturas JPEG + lightbox en línea; **Revisión del cliente** añade un cuadro de comentario bajo cada imagen; los comentarios se guardan en el navegador del revisor y se descargan juntos en un único archivo JSON
@@ -461,7 +461,7 @@ Basado en JSON, comparable a mano, sin binarios propietarios.
 ### Autoría
 
 - **Importar PNG** → genera automáticamente una malla triangulada en cuadrícula que respeta el alfa
-- Acciones de barra de herramientas **Add Rotation Deformer** (ancla + ángulo) / **Add Warp Deformer** (lattice bezier de filas × columnas)
+- **Add Rotation Deformer** (ancla + ángulo) / **Add Warp Deformer** (lattice bilineal de filas × columnas) en el menú **Edit**
 - **Add Parameter** → establece formas clave en los extremos del control vía **Set Key** en el dock de parámetros
 - **Editor de mallas** — alterna Edit Mesh para arrastrar vértices; los clics dentro de 8 px se ajustan al más cercano
 - **Save As…** escribe el rig completo a un zip `.puppet`
@@ -478,10 +478,10 @@ Basado en JSON, comparable a mano, sin binarios propietarios.
 
 ### Entrada en vivo
 
-- Arrastre del cursor → parámetros de ángulo de cabeza
+- Drag-track head — la cabeza y los ojos se giran hacia el cursor mientras se mueve sobre el lienzo
 - Auto-parpadeo en curva coseno open → close → open
 - Sincronización labial por micrófono vía RMS de `sounddevice` → `ParamMouthOpenY` (dep opcional)
-- Seguimiento facial por webcam vía OpenCV + MediaPipe FaceMesh → yaw / pitch / roll de cabeza + apertura de ojos / boca (deps opcionales)
+- Seguimiento facial por webcam vía OpenCV + el FaceLandmarker de MediaPipe Tasks → yaw / pitch / roll de cabeza + apertura de ojos / boca (deps opcionales)
 - Grabación de motion personalizada — captura los valores de parámetros a 30 Hz mientras mueves los controles / miras a la webcam / dejas correr la física; los hornea en un Motion de segmentos lineales listo para reproducir / repetir / guardar
 
 ### Interoperabilidad con Cubism
@@ -490,8 +490,8 @@ El **Cubism Native SDK** puede enchufarse (DLL aportado por el usuario — la Fr
 
 ### Salida
 
-- **Capture frame…** guarda un PNG del lienzo actual vía `glReadPixels`
-- **Record…** alterna un bucle de fotogramas a 30 FPS hacia GIF / WebM / MP4 vía `imageio`
+- **Capture frame…** guarda un PNG solo del personaje al tamaño propio del rig (lado largo de 4096 px como máximo) sobre fondo transparente
+- **Record…** alterna un bucle de fotogramas a 30 FPS hacia GIF / WebM / MP4 vía `imageio`, con el personaje encajado en 1080 px sobre blanco (estos fotogramas no llevan alfa)
 - **Cámara virtual** — expone el lienzo de puppet como webcam del sistema
 - **Salida NDI** — transmite el puppet como fuente NDI en la LAN
 - **Servidor de API VTube Studio** — API WebSocket opcional para clientes compatibles con VTS
@@ -621,7 +621,7 @@ Pestaña 5 — la **Desktop Pet** coloca cualquier personaje `.puppet` sobre tu 
 | Bloquear posición | Congela la mascota para que los arrastres accidentales no puedan moverla. |
 | Siempre debajo | Coloca la mascota detrás de todas las demás ventanas — sensación de widget de escritorio en lugar de siempre encima. |
 | Ocultar en pantalla completa | Se oculta automáticamente mientras otra aplicación (juego / vídeo / presentación) está en pantalla completa en el mismo monitor; vuelve cuando termina la pantalla completa. |
-| Pausa al ocultarse | La mascota deja de animarse mientras es invisible — cero CPU cuando está fuera de pantalla. |
+| Pausa al ocultarse | La mascota deja de redibujarse mientras es invisible; los temporizadores de los drivers en vivo siguen funcionando. |
 | Tamaños predefinidos | Pequeño / mediano / grande. Redimensiona alrededor del centro para que la mascota no salte a través de la pantalla. |
 | Control deslizante de opacidad | Atenúa la mascota del 10 % al 100 % para que pueda ser un adorno discreto del escritorio. |
 | Recuerda dónde la pusiste | Arrastra la mascota a tu esquina favorita; vuelve allí en el siguiente lanzamiento. |
@@ -634,12 +634,13 @@ Pestaña 5 — la **Desktop Pet** coloca cualquier personaje `.puppet` sobre tu 
 
 ### Drivers en vivo
 
-Elige cualquier combinación desde la pestaña o el menú del clic derecho. Cada uno está desactivado por defecto — activa solo lo que quieras.
+Elige cualquier combinación desde la pestaña o el menú del clic derecho. Auto idle, Motions de idle y Auto-parpadeo están activados por defecto; el resto, desactivados — activa solo lo que quieras.
 
 - **Auto idle** — respiración + leve deriva para que el personaje se sienta vivo.
 - **Motions de idle** — recorre aleatoriamente los motions del grupo idle del rig.
 - **Auto-parpadeo** — cierre cíclico natural de los ojos cada pocos segundos.
-- **Seguir cabeza con arrastre** — la cabeza gira para seguir tu cursor.
+- **Seguir cabeza con arrastre** — la cabeza y los ojos se giran hacia tu cursor mientras está sobre la mascota.
+- **Mirada al ratón** — los ojos y la cabeza siguen tu cursor por toda la pantalla.
 - **Sincronización labial por micrófono** — la boca se abre con tu voz (necesita `sounddevice`).
 - **Seguimiento por webcam** — tu cabeza / ojos / boca controlan los del puppet (necesita `opencv-python` y `mediapipe`).
 
@@ -662,6 +663,10 @@ El bocadillo de la mascota se nutre de un archivo JSON que puedes crear tú mism
   "version": 1,
   "name": "Friendly pet",
   "greetings": ["Hi!", "Hello!"],
+  "time_of_day_greetings": {
+    "morning": ["Good morning!"],
+    "night": ["Still up?"]
+  },
   "hit_responses": {
     "HitAreaHead": ["Don't poke me!", "Stop!"]
   },
@@ -675,8 +680,9 @@ El bocadillo de la mascota se nutre de un archivo JSON que puedes crear tú mism
 ```
 
 - **`greetings`** — se usan cuando nada más específico coincide con un clic.
+- **`time_of_day_greetings`** — saludos por franja del reloj local (`morning` 05–11 h, `afternoon` 12–17 h, `evening` 18–21 h, `night` 22–04 h), que se usan antes que `greetings`; una franja sin líneas recurre a `greetings`.
 - **`hit_responses`** — líneas por `HitArea`. Las claves deben coincidir con los IDs de hit area definidos en el rig.
-- **`motion_lines`** — líneas por motion. Se disparan cuando la mascota reproduce un motion con ese nombre (motion de hit area o motion del menú contextual).
+- **`motion_lines`** — líneas por motion. Se dicen cuando un clic en un hit area reproduce un motion con ese nombre (no cuando un motion se inicia desde el menú contextual).
 - **`scheduled`** — avisos accionados por temporizador. Cada entrada se dispara cada `every_seconds` segundos.
 
 Las líneas rotan por turnos (round-robin) en cada grupo para que el usuario no escuche la misma línea dos veces seguidas. **Reset to default** descarta el script personalizado y restaura el conjunto de saludos integrado.
@@ -720,7 +726,7 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | L | Lupa: una lente de aumento que sigue al cursor (también sobre las miniaturas) |
 | H | Alternar superposición de histograma RGB |
 | F8 / Ctrl+F8 | Superposición OSD / HUD de depuración |
-| Shift+P | Alternar vista de píxeles (zoom ≥ 400 % muestra cuadrícula + RGB) |
+| Shift+P | Alternar vista de píxeles (zoom ≥ 400 % muestra RGB; la cuadrícula cuando hay ≤ 40.000 píxeles en pantalla) |
 | Shift+M | Recorrer modos de color (Normal / Escala de grises / Invertir / Sepia) |
 | B | Alternar marcador |
 | Ctrl+C / Ctrl+V | Copiar / pegar imagen al/desde portapapeles |
@@ -787,7 +793,7 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 ### File
 
 - New Window
-- Open Image / Open Folder
+- Open File / Open Folder
 - Recent (carpetas + imágenes)
 - Bookmarks / Tags & Albums
 - Commit Pending Deletions

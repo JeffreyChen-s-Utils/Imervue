@@ -50,7 +50,7 @@ Imervue를 실행하면 세 가지 영역이 표시됩니다:
 
 - **왼쪽**: 폴더 트리. 폴더를 클릭하면 안의 이미지를 탐색할 수 있습니다
 - **가운데**: 이미지 표시 영역. 썸네일 그리드로 모든 이미지를 표시합니다
-- **오른쪽**: EXIF 사이드바. 촬영 정보를 표시합니다
+- **오른쪽**: EXIF 사이드바. 시작할 때는 얇은 띠로 접혀 있으며, 클릭하면 펼쳐집니다. 열려 있는 이미지의 촬영 정보를 표시합니다
 
 Imervue는 세션마다 로그를 프로그램 옆의 ``imervue.log``\ 에 기록합니다(프로그램 폴더가 읽기 전용이면 ``%LOCALAPPDATA%\Imervue``, Windows 외의 환경에서는 ``~/.cache/imervue``\ 에 기록합니다). 이전 세션의 로그는 ``imervue.previous.log``\ 로 보관되므로, 비정상 종료된 뒤 Imervue를 다시 실행해도 그 원인을 알려 주는 로그가 남아 있습니다. 문제를 보고할 때는 두 파일을 모두 첨부해 주세요.
 
@@ -68,13 +68,13 @@ Imervue는 세션마다 로그를 프로그램 옆의 ``imervue.log``\ 에 기�
    * - 폴더 열기
      - ``파일`` > ``폴더 열기``\ 에서 디렉토리 선택
    * - 이미지 열기
-     - ``파일`` > ``이미지 열기``\ 에서 파일 선택
+     - ``파일`` > ``파일 열기``\ 에서 파일 선택
    * - 드래그 앤 드롭
      - 이미지나 폴더를 창에 직접 드롭
    * - 탐색기에서 열기
      - 이미지 우클릭 > ``Open with Imervue`` (파일 연결 등록 필요)
    * - 최근 파일
-     - ``파일`` > ``최근 파일``
+     - ``파일`` > ``최근 항목`` > 최근 폴더 / 최근 이미지에서 폴더나 이미지를 다시 열기
 
 지원 이미지 형식
 ^^^^^^^^^^^^^^^^
@@ -129,14 +129,14 @@ Imervue는 세션마다 로그를 프로그램 옆의 ``imervue.log``\ 에 기�
 (또는 ``Enter``) 하면 확대 보기로 들어가고, ``Esc`` 로 리스트로 돌아갑니다.
 썸네일과 메타데이터는 워커 스레드에서 지연 로드되므로 대용량 폴더에서도 응답성을 유지합니다.
 
-``Delete``\ 로 선택한 행을 삭제하고 ``Ctrl + Z``\ 로 되돌리며, 별점(``0`` – ``5``)·컬링(``P`` / ``Shift + X`` / ``U``)·색상(``F1`` – ``F5``) 키도 선택한 행에 적용됩니다(그리드와 같음). 키는 단축키 설정을 따릅니다.
+``Delete``\ 로 선택한 행을 삭제하고 ``Ctrl + Z``\ 로 되돌리며, 별점(``1`` – ``5``)·즐겨찾기(``0``)·컬링(``P`` / ``Shift + X`` / ``U``)·색상(``F1`` – ``F5``) 키도 선택한 행에 적용됩니다(그리드와 같음). ``F1`` – ``F5``\ 를 제외한 키는 단축키 설정을 따릅니다.
 
 확대 보기 모드 (Deep Zoom)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 썸네일을 클릭하면 확대 보기 모드로 들어가 고화질로 이미지를 볼 수 있습니다.
 
-Pillow의 안전 한도(1억 7900만 화소)를 훨씬 넘는 파노라마도 열립니다. 한도는 컴퓨터 메모리에 맞춰 정해지며(16 GB면 약 13억 화소), 이런 초대형 이미지는 한 번에 한 장씩 디코딩합니다.
+Pillow의 안전 한도(1억 7900만 화소)를 훨씬 넘는 파노라마도 열립니다. 한도는 컴퓨터 메모리에 맞춰 정해지며(16 GB면 약 14억 화소), 이런 초대형 이미지는 한 번에 한 장씩 디코딩합니다.
 
 중간에 끊긴 JPEG, PNG, TIFF, GIF, BMP(다운로드나 복사가 중단된 파일, 고장 난 메모리 카드에서 복구한 사진)도 열리지 않는 대신 브라우저처럼 읽은 부분까지 표시합니다.
 
@@ -185,7 +185,7 @@ Windows에서 숨김으로 표시된 파일(탐색기와 폴더 트리에서도 
    * - OSD 정보 오버레이
      - ``F8`` 파일 정보, ``Ctrl + F8`` 디버그 HUD (VRAM / 캐시 / 스레드)
    * - 픽셀 보기
-     - ``Shift + P`` — 400 % 이상 확대 시 픽셀 격자와 커서 아래 RGB / HEX 표시
+     - ``Shift + P`` — 400 % 확대부터 커서 아래 RGB / HEX 표시, 화면에 보이는 이미지 픽셀이 40,000개 이하가 되면 픽셀 격자도 표시
    * - 색상 모드
      - ``Shift + M`` 일반 / 그레이스케일 / 반전 / 세피아 순환 (GLSL, 비파괴)
 
@@ -784,10 +784,10 @@ Puppet 작업 공간 (Puppet 탭)
 엔드 투 엔드 워크플로우
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-1. **PNG 가져오기** — 도구 모음 ``Import PNG…`` 가 ``puppet.auto_mesh.puppet_from_png`` 실행: 알파 기반 삼각화, 단일 drawable, 즉시 렌더링 가능.
-2. **디포머 추가** — ``Add Rotation Deformer`` (앵커 + 각도) 또는 ``Add Warp Deformer`` (행 × 열 Bezier 격자; 경계 외 정점은 그대로).
-3. **매개변수 추가** — ``Add Parameter`` 가 오른쪽 **Parameters** 도크에 슬라이더 추가 (자동 명명 ``Param1``、``Param2`` …).
-4. **키 설정** — 슬라이더를 한쪽 극단으로 이동, 디포머 form 편집 후 **Set key**. 중립값과 반대 극단에서 반복. 런타임이 슬라이더 이동 시 인접 키 사이를 보간합니다.
+1. **PNG 가져오기** — ``File`` > ``Import PNG…`` 가 ``puppet.auto_mesh.puppet_from_png`` 실행: 알파 기반 삼각화, 단일 drawable, 즉시 렌더링 가능.
+2. **디포머 추가** — ``Edit`` > ``Add Rotation Deformer`` (앵커 + 각도) 또는 ``Add Warp Deformer`` (행 × 열 쌍선형 격자; 경계 외 정점은 그대로).
+3. **매개변수 추가** — ``Edit`` > ``Add Parameter`` 가 오른쪽 **Parameters** 도크에 슬라이더 추가 (자동 명명 ``Param1``、``Param2`` …).
+4. **키 설정** — 슬라이더를 한쪽 극단으로 이동, 코드에서 디포머 form 편집 후 **Set key**. 중립값과 반대 극단에서 반복. 런타임이 슬라이더 이동 시 인접 키 사이를 보간합니다. **Set key** 는 디포머 form 만 저장합니다: **Edit mesh** 는 drawable 의 기본 정점을 영구히 옮기므로 메시 편집은 키로 저장되지 않습니다.
 5. **저장** — ``Save As…`` 로 rig + 텍스처 + 모션 + 표정 + 물리를 단일 ``.puppet`` zip 으로 출력.
 
 예제
@@ -801,11 +801,11 @@ Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7t
 
 **동봉 예제 실행 — 단계별 가이드:**
 
-1. **Imervue 실행**. 소스에서: ``python -m Imervue``. 패키지 빌드: ``Imervue`` 실행 파일 / app bundle 을 직접 실행. ``examples/`` 디렉터리는 wheel 과 Nuitka EXE 양쪽에 번들되어 있어 설치 경로 어디에서나 rig 파일을 사용할 수 있습니다.
+1. **Imervue 실행**. 소스에서: ``python -m Imervue``. 패키지 빌드: ``Imervue`` 실행 파일 / app bundle 을 직접 실행. ``examples/`` 디렉터리는 Nuitka 와 PyInstaller 빌드에 번들되어 있으며, pip / wheel 설치에는 포함되지 않습니다 (소스 체크아웃에서는 rig 가 ``examples/puppet/`` 에 있습니다).
 2. 창 상단의 **Puppet** 탭을 클릭.
-3. 도구 모음 → **File > Examples > March 7th** (또는 도구 모음의 **Examples ▾** 드롭다운). 307-drawable rig 가 중앙에 로드되고, 매개변수 도크는 203 개의 Cubism 표준 매개변수 슬라이더로 채워집니다.
-4. 하단 **Motions** 도크에서 모션 항목 (``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …) 을 싱글 클릭. 즉시 재생 시작; 다시 클릭하면 정지, 다른 모션 선택 시 크로스페이드.
-5. 도구 모음의 실시간 입력 토글로 자신의 입력으로 rig 를 구동 — **Drag-track head** (커서 추적), **Auto-blink** (자동 깜빡임), **Auto idle** + **Idle motions** (호흡 + 무작위 idle 모션), **Mic lip-sync** (마이크 RMS 로 입 벌림), **Webcam tracking** (MediaPipe FaceLandmarker 로 머리 / 눈 / 입 추적).
+3. **File > Examples > March 7th** (또는 도구 모음의 **Examples ▾** 드롭다운). 307-drawable rig 가 중앙에 로드되고, 매개변수 도크는 203 개의 Cubism 표준 매개변수 슬라이더로 채워집니다.
+4. 하단 **Motions** 도크에서 모션 항목 (``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …) 을 싱글 클릭. 즉시 재생 시작; 다시 클릭하면 처음부터 다시 재생, 도크의 **Stop** 버튼으로 정지, 다른 모션 선택 시 크로스페이드.
+5. 도구 모음의 실시간 입력 토글로 자신의 입력으로 rig 를 구동 — **Drag-track head** (커서가 canvas 위에서 움직이면 머리와 눈이 커서 쪽으로 돌아감), **Auto-blink** (자동 깜빡임), **Auto idle** + **Idle motions** (호흡 + 무작위 idle 모션), **Mic lip-sync** (마이크 RMS 로 입 벌림), **Webcam tracking** (MediaPipe FaceLandmarker 로 머리 / 눈 / 입 추적).
 6. 도구 모음의 **Reset to rest** 는 모든 모션 중지, 모든 실시간 드라이버 끄기, expressions / pose 오버라이드 제거, 모든 매개변수를 기본값으로 되돌리기 — 표준 "처음부터 다시" 버튼.
 7. 나중에 다른 rig 열기: **File > Open Puppet…** 디스크에서 임의의 ``.puppet`` zip 선택; **File > Examples ▾** 은 항상 동봉 목록에 바인딩됩니다.
 
@@ -847,6 +847,11 @@ Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7t
 도구 모음 레퍼런스
 ^^^^^^^^^^^^^^^^^^
 
+도구 모음에는 **Examples ▾**, 여섯 개의 실시간 토글, **Edit mesh**,
+**Record…**, **Reset to rest** 가 있습니다. 아래의 나머지 항목은 모두
+**File**, **Edit**, **Live**, **Output**, **Tools** 메뉴의 항목이며, 이 메뉴들에는
+도구 모음의 항목도 들어 있습니다.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -854,7 +859,7 @@ Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7t
    * - 액션
      - 용도
    * - Open Puppet… / Examples ▾
-     - 디스크에서 ``.puppet`` 로드, 또는 ``examples/puppet/`` 의 동봉 rig 를 도구 모음에서 직접 선택
+     - 디스크에서 ``.puppet`` 로드 (**File** 메뉴), 또는 ``examples/puppet/`` 의 동봉 rig 를 **Examples ▾** (도구 모음 버튼, **File** 에도 있음) 에서 선택
    * - Import PNG… / Import PSD… / Import Cubism…
      - PNG 자동 메시, PSD 레이어 분할, Cubism rig 의 sample-and-reconstruct. Cubism 파일 선택기는 ``.moc3`` 와 ``.model3.json`` 둘 다 받으며, 작업 공간에 rig 가 열려 있지 않을 때는 어느 경로든 완전한 ``.moc3 → .puppet`` 변환이 실행됩니다 (SDK 는 사용자 제공). rig 가 이미 열려 있는 상태에서 ``.model3.json`` 을 고르면 JSON 메타데이터 (motions / expressions / physics) 가 활성 문서에 병합됩니다
    * - Recent
@@ -862,9 +867,9 @@ Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7t
    * - Save As…
      - 현재 rig 을 ``.puppet`` zip 으로 출력
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - 도구 모음에서 rig 작성
+     - **Edit** 메뉴에서 rig 작성
    * - Drag-track head
-     - 커서 오프셋 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
+     - 커서가 canvas 위에서 움직이면 머리와 눈이 커서 쪽으로 돌아감: 커서 오프셋 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
    * - Auto-blink
      - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 에서 약 4.5 초마다 cosine close→open (force-write 경로로 canvas 의 no-change-skip 우회, 다른 드라이버에 막히지 않음)
    * - Mic lip-sync
@@ -876,22 +881,22 @@ Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7t
    * - Edit mesh
      - canvas 정점을 드래그하여 메시 미세 조정
    * - Record motion
-     - 매개변수 변화를 새 ``Motion`` 으로 녹화하여 문서에 추가 — take 베이크, 수동 키 작성 불필요
+     - **Output** 메뉴 전용: 매개변수 변화를 새 ``Motion`` 으로 녹화하여 문서에 추가 — take 베이크, 수동 키 작성 불필요
    * - Capture frame… / Record… / Export all motions…
-     - 단일 PNG 저장, GIF / WebM / MP4 녹화 토글, 각 모션을 개별 파일로 일괄 렌더링 (모두 스트리밍과 동일한 캐릭터 단독 off-screen render 경로 사용)
+     - 단일 PNG 저장, GIF / WebM / MP4 녹화 토글, 각 모션을 개별 파일로 일괄 렌더링 (모두 스트리밍과 동일한 캐릭터 단독 off-screen render 경로 사용). 캡처한 프레임은 rig 자체 크기 (긴 변 최대 4096 px) 를 유지하며 투명 배경이고, 녹화와 일괄 내보내기는 GIF / WebM / MP4 프레임에 알파가 없으므로 캐릭터를 흰 배경의 1080 px 안에 맞춥니다
    * - Output > Virtual camera / NDI output
      - 라이브 스트리밍 표면 — 아래의 "OBS 라이브 스트리밍" 참조
    * - Reset to rest
      - 모션 플레이어 즉시 정지, 모든 라이브 드라이버 끄기, 표정 / 포즈 그룹 비우기, 매개변수 기본값 복원
    * - Fit to Window
-     - canvas 에서 rig 을 재중앙 정렬 + 재스케일
+     - **Tools** 메뉴: canvas 에서 rig 을 재중앙 정렬 + 재스케일
 
 커스텀 모션 녹화
 ^^^^^^^^^^^^^^^^
 
 수동으로 키프레임을 찍는 대신 라이브 take 를 녹화:
 
-1. 도구 모음의 **Record motion** 켜기 — 이름 다이얼로그 표시.
+1. **Output > Record motion** 켜기 — 이름 다이얼로그 표시.
 2. 녹화 중 슬라이더 드래그、**Webcam tracking** 활성화、물리 실행 — 매개변수 값을 쓰는 모든 작업 OK.
 3. **Record motion** 끄기 — 레코더가 30 Hz 스트림을 베이크하여 ``Motion`` 화 (실제로 움직인 매개변수마다 하나의 linear-segment 트랙, 변동 없는 트랙은 폐기). 새 모션이 하단 **Motions** 도크에 즉시 표시.
 
@@ -902,7 +907,7 @@ OBS 라이브 스트리밍
 
 두 개의 출력 경로. 둘 다 캐릭터만 off-screen framebuffer 에 렌더링하여 (체커보드 배경도 에디터 chrome 도 포함되지 않음) 스트리밍 표면에 전달합니다. 출력의 가장 긴 변은 1080 px 까지 캡 (Cubism 네이티브 3503×7777 이 DirectShow 가상 카메라 드라이버에 거부되는 것을 방지).
 
-**A. 가상 카메라** — OBS 의 "비디오 캡처 장치" 소스 목록에 웹캠으로 표시. ``pip install pyvirtualcam`` + 플랫폼별 드라이버: OBS Studio 26+ (Windows / macOS) 에 *OBS Virtual Camera* 드라이버 동봉 (OBS 첫 실행 시 *Start Virtual Camera* 클릭하여 등록); Linux 는 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``. 도구 모음 **Output > Virtual camera** 로 스트림 시작.
+**A. 가상 카메라** — OBS 의 "비디오 캡처 장치" 소스 목록에 웹캠으로 표시. ``pip install pyvirtualcam`` + 플랫폼별 드라이버: OBS Studio 26+ (Windows / macOS) 에 *OBS Virtual Camera* 드라이버 동봉 (OBS 첫 실행 시 *Start Virtual Camera* 클릭하여 등록); Linux 는 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``. **Output > Virtual camera** 메뉴 토글로 스트림 시작.
 
 DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음** 이므로, Imervue 는 캐릭터 외부 영역을 **마젠타 #FF00FF** 로 채워 크로마키 역할을 합니다. OBS 에서 제거:
 
@@ -912,7 +917,7 @@ DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음*
 
 필터는 소스에 부착되어, 가상 카메라를 재개할 때마다 자동으로 적용됩니다.
 
-**B. NDI 출력** — LAN 상 < 50 ms 지연, 네이티브 RGBA, OBS / vMix 가 자체 장면에 직접 합성, 크로마키 패스 불필요. ``pip install ndi-python`` + `NDI Tools <https://ndi.video/tools/>`_ 런타임 + `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 플러그인. 도구 모음 **Output > NDI output** 으로 방송 시작 (기본 소스 이름 *Imervue Puppet*).
+**B. NDI 출력** — LAN 상 < 50 ms 지연, 네이티브 RGBA, OBS / vMix 가 자체 장면에 직접 합성, 크로마키 패스 불필요. ``pip install ndi-python`` + `NDI Tools <https://ndi.video/tools/>`_ 런타임 + `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 플러그인. **Output > NDI output** 메뉴 토글로 방송 시작 (기본 소스 이름 *Imervue Puppet*).
 
 ``ndi-python`` 은 소스 배포만 있어 pip 가 C++ 에서 빌드합니다. Windows 사용자는 Visual Studio Build Tools 2022 (C++ 워크로드), CMake 를 PATH 에, NDI SDK (<https://ndi.video/for-developers/ndi-sdk/> 에서 받음, NDI Tools 와 별개) 를 기본 위치에 설치, 환경 변수 ``NDI_SDK_DIR`` 을 SDK 로 설정해야 합니다.
 
@@ -928,7 +933,7 @@ DirectShow / AVFoundation / v4l2loopback 모두 **RGB 만, 알파 채널 없음*
 * ``ndi-python`` — NDI 출력 ("OBS 라이브 스트리밍" 참조)
 * 사용자 제공 Cubism Native SDK DLL — ``.moc3 → .puppet`` 변환 (Live2D Free Material License 가 재배포 금지; ``<cwd>/sdk/`` 에 두거나 ``CUBISM_CORE_DLL`` 환경 변수 설정)
 
-누락 시 우아하게 다운그레이드 — 해당 도구 모음 토글이 자동 꺼지고 "install <package>" 힌트 표시. **File > Install dependencies…** 로 모든 Python 선택적 패키지를 한 번에 설치.
+Python 패키지가 누락되면 Puppet 탭은 우아하게 다운그레이드 — 해당 토글은 꺼진 채로 있고 의존성 설치 도구가 열려 설치를 제안하며, 설치되면 토글이 다시 켜집니다. 텍스트 힌트는 패키지는 있지만 장치나 드라이버가 실패할 때만 표시됩니다. **File > Install dependencies…** 로 모든 Python 선택적 패키지를 한 번에 설치.
 
 ----
 
@@ -952,7 +957,8 @@ JSON 파일에 직접 작성한 대사를 말할 수 있습니다.
    불투명도, 크기, 멀티 모니터 복원).
 #. **상호 작용 모델** — 좌클릭 히트 영역, 전체 우클릭 컨텍스트 메뉴,
    시스템 트레이.
-#. **라이브 드라이버** — 옵트인 입력 드라이버 6종과 선택적 의존성.
+#. **라이브 드라이버** — 입력 드라이버 7종 (3종은 기본으로 켜짐) 과
+   선택적 의존성.
 #. **펫 스크립트** — 펫의 목소리를 사용자 대사로 교체하고, 알림을
    예약하며, 히트 영역별 / 모션별 응답을 바인딩하는 JSON 파일.
 #. **영속성** — 실행 간 기억되는 항목과 정확한 설정 스키마.
@@ -984,8 +990,9 @@ rig 불러오기
 * **Open Puppet…** — 디스크의 임의 ``.puppet`` 파일을 선택.
 * **Load bundled March 7th** — ``examples/puppet/march_7th.puppet`` 에
   포함된 rig 을 엽니다. 리졸버는 먼저 ``examples_dir()`` 을 검색하고
-  (패키지된 Nuitka / pip 설치 빌드에서 frozen-safe), 그다음 리포지토리
-  루트 상대 경로로 폴백하므로 두 실행 모드 모두에서 버튼이 동작합니다.
+  (패키지된 Nuitka / PyInstaller 빌드에서는 프로그램 옆, 소스
+  체크아웃에서는 리포지토리 루트), 그다음 현재 작업 폴더 기준 상대
+  경로로 폴백합니다.
 * **마지막 rig** — 이전에 불러왔던 rig 은 ``last_rig_path`` 설정
   필드를 통해 Imervue 시작 시 자동 복원됩니다. Desktop Pet 탭이
   오버레이를 보이지 않게 재인스턴스화하므로, 펫은 종료한 상태 그대로
@@ -1045,9 +1052,10 @@ rig 불러오기
        나타남. 검출기는 Windows 에서 Win32 ``GetWindowRect`` API 를
        사용. macOS / Linux 에서는 우아하게 no-op (펫이 그대로 보임).
    * - 숨김 시 일시정지
-     - ``hideEvent`` 에서 약 30 FPS 페인트 틱과 1 Hz 스크립트 틱이
-       모두 멈춰 숨겨진 펫은 CPU 비용이 0. 다음 ``showEvent`` 에서
-       재시작.
+     - 약 30 FPS 페인트 틱, 1 Hz 스크립트 틱, 전체화면 폴링 (펫을
+       숨긴 원인이 전체화면이 아닌 경우) 이 ``hideEvent`` 에서 멈추고
+       다음 ``showEvent`` 에서 재시작. 라이브 드라이버의 타이머
+       (깜빡임, idle, idle 모션, 시선) 는 계속 동작.
    * - 크기 프리셋
      - 작게 (200 × 300), 보통 (320 × 480), 크게 (480 × 720). 펫이
        현재 중심을 기준으로 크기가 변하므로 크기 변경이 위치를
@@ -1058,10 +1066,12 @@ rig 불러오기
        있도록 최소 10 % 바닥값 존재 — 완전히 투명하면 잃어버릴 수
        있기 때문.
    * - 위치 기억
-     - 매 릴리스 후 스냅된 ``(x, y)`` 가 영속화됨. 다음 실행 시 펫이
-       그 화면 좌표로 돌아옴. 저장된 위치가 더 이상 연결된 화면
-       내부에 들어가지 않으면 (지난 실행 이후 모니터를 분리한 경우)
-       펫이 주 화면의 우하단 모서리로 폴백.
+     - 매 릴리스 후 스냅된 ``(x, y)`` 가 펫이 있는 모니터와 함께
+       영속화됨. 다음 실행 시 펫이 그 위치로 돌아오며, 그 모니터
+       안으로 클램프됨. 모니터가 없어졌으면 (지난 실행 이후 분리한
+       경우) 펫은 저장된 위치를 첫 번째 화면 안으로 클램프해 그
+       화면으로 이동. 우하단 모서리는 위치가 한 번도 저장된 적이
+       없을 때만 사용.
 
 상호 작용 모델
 ^^^^^^^^^^^^^^
@@ -1082,22 +1092,25 @@ rig 불러오기
    ``greetings`` 리스트 또는 내장 폴백) 로 처리.
 
 드래그 이동 제스처는 클릭 핸들러를 억제하므로, 펫을 이동하는 동작은
-모션 / 발화를 트리거하지 않습니다.
+말풍선을 띄우지 않습니다. rig 에 해당 그룹이 있으면 누를 때 rig 의
+``Drag`` 그룹 모션이, 드래그 후 놓을 때 ``Land`` 그룹 모션이
+재생됩니다.
 
 **본체 우클릭**
 
 다음 구조의 컨텍스트 메뉴를 엽니다:
 
 * **Hide pet** — 오버레이를 닫는 최상위 동작.
-* **Live drivers** 서브메뉴 — 체크 가능한 토글 6개 (Auto idle,
-  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
-  Webcam tracking). 체크 상태가 라이브 드라이버 상태를 반영하므로
-  현재 실행 중인 항목이 메뉴에 보임.
+* **Live drivers** 서브메뉴 — 체크 가능한 토글 7개 (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mouse gaze, Mic
+  lip-sync, Webcam tracking). 체크 상태가 라이브 드라이버 상태를
+  반영하므로 현재 실행 중인 항목이 메뉴에 보임.
 * **Play motion** 서브메뉴 — 활성 rig 의 ``document.motions`` 리스트로
-  채워짐. 항목을 선택하면 해당 모션이 재생 (스크립트가 모션에 대사를
-  바인딩했다면 펫의 목소리도 트리거됨).
+  채워짐. 항목을 선택하면 해당 모션이 재생되며, ``motion_lines`` 대사는
+  말하지 않음 (그 대사는 히트 영역 클릭에만 응답).
 * **Apply expression** 서브메뉴 — rig 의 ``document.expressions`` 로
-  채워짐. 선택하면 표정의 파라미터 오버레이가 토글됨.
+  채워짐. 선택하면 표정의 파라미터 오버레이가 추가되며, 다시 적용해도
+  아무 변화가 없음.
 * 최상위 체크 가능 토글 5개: **Lock position**, **Click-through**,
   **Always on bottom**, **Hide on fullscreen**, **Speech bubble** —
   워크스페이스 탭의 동일한 토글에 대한 빠른 접근.
@@ -1123,7 +1136,9 @@ rig 이 로드되어 있지 않으면 모션 / 표정 서브메뉴는 비활성�
 각 라이브 드라이버는 처음 활성화될 때 lazy 생성되므로, 휴면 상태의
 펫은 켜두지 않은 드라이버에 대해 타이머 / 스레드 비용이 0 입니다.
 각 드라이버의 상태는 영속화됩니다 — 켜 두고 Imervue 를 닫은 후
-다시 실행하면 같은 드라이버가 실행 중인 상태로 펫이 다시 열립니다.
+다시 실행하면 같은 드라이버가 실행 중인 상태로 rig 이 복원됩니다.
+오버레이 자체는 탭의 **창** 그룹에서 **Imervue 시작 시 펫 표시** 가
+체크되어 있을 때만 실행 시 나타납니다.
 
 .. list-table::
    :header-rows: 1
@@ -1137,8 +1152,9 @@ rig 이 로드되어 있지 않으면 모션 / 표정 서브메뉴는 비활성�
        주어 다른 애니메이션이 없을 때도 캐릭터가 살아있어 보이게 함.
      - 없음
    * - **Idle motions**
-     - 몇 초마다 rig 의 ``Idle`` 그룹에서 모션을 랜덤으로 선택해
-       재생. 현재 진행 중인 모션이 있으면 중단.
+     - rig 의 ``Idle`` 그룹에서 모션을 랜덤으로 선택해 재생 — 켜면
+       즉시 하나, 그 후 몇 초마다. Idle 이 아닌 모션이 재생 중이면
+       양보함.
      - 없음
    * - **Auto-blink**
      - 약 4.5 초마다 부드러운 코사인 곡선으로 눈을 감았다 뜸.
@@ -1146,17 +1162,21 @@ rig 이 로드되어 있지 않으면 모션 / 표정 서브메뉴는 비활성�
        드라이버가 깜빡임을 억제하지 않음.
      - 없음
    * - **Drag-track head**
-     - 커서가 펫 위에 있지 않더라도 머리 + 눈이 전역 커서 위치를
-       향함. ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
+     - 커서가 펫 위에서 움직이는 동안 머리 + 눈이 커서를 향함.
+       ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
        ``ParamEyeBallY`` 를 구동.
+     - 없음
+   * - **Mouse gaze**
+     - 화면 어디에 있든 펫의 중심을 기준으로 눈과 머리가 커서를
+       따라감 (눈이 먼저 움직임). 같은 네 개의 파라미터를 구동.
      - 없음
    * - **Mic lip-sync**
      - 마이크 RMS 진폭이 ``ParamMouthOpenY`` 를 구동.
      - ``sounddevice``
    * - **Webcam tracking**
      - MediaPipe FaceLandmarker 가 약 30 FPS 로 웹캠을 읽어 머리
-       포즈 + 눈뜸 + 입벌림 파라미터를 구동. 카메라가 얼굴을 인식
-       하는지 확인할 수 있는 작은 라이브 미리보기 창이 열림.
+       포즈 + 눈뜸 + 입벌림 파라미터를 구동. 펫에서는 미리보기
+       창이 열리지 않음 (카메라 미리보기는 Puppet 탭의 기능).
      - ``opencv-python`` + ``mediapipe``
 
 선택적 의존성이 필요한 두 드라이버는 우아하게 다운그레이드됩니다:
@@ -1168,12 +1188,17 @@ opencv-python + mediapipe" 힌트가 표시됩니다.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 펫의 말풍선은 직접 작성한 후 탭의 **Pet script** 그룹에서 불러올 수
-있는 JSON 파일을 사용합니다. 스크립트는 네 가지를 제어합니다:
+있는 JSON 파일을 사용합니다. 스크립트는 다섯 가지를 제어합니다:
 
 * **인사말** — 더 구체적인 매칭이 없을 때 사용되는 기본 클릭 대사.
+* **시간대별 인사말** — 현지 시각 구간 (``morning`` 05–11시,
+  ``afternoon`` 12–17시, ``evening`` 18–21시, ``night`` 22–04시) 별
+  인사말. 일반 인사말보다 먼저 사용되며, 대사가 없는 구간은 일반
+  인사말로 대체.
 * **히트 영역 응답** — ``HitArea.id`` 별 대사 버킷.
-* **모션 대사** — 모션 이름별 대사 버킷. 펫이 (히트 영역 또는
-  컨텍스트 메뉴에서) 해당 모션을 시작할 때 발화.
+* **모션 대사** — 모션 이름별 대사 버킷. 히트 영역 클릭으로 해당
+  모션이 재생될 때 발화 (컨텍스트 메뉴에서 시작한 모션에는 발화하지
+  않음).
 * **예약된 챠임** — 모노토닉 wall-clock 시간 기준
   ``every_seconds`` 마다 발화하는 타이머 기반 대사.
 
@@ -1187,6 +1212,10 @@ opencv-python + mediapipe" 힌트가 표시됩니다.
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
+     "time_of_day_greetings": {
+       "morning": ["Good morning!"],
+       "night": ["Still up?"]
+     },
      "hit_responses": {
        "HitAreaHead": ["Hey, my head!", "Stop poking!"],
        "HitAreaBody": ["Hehe~", "Pat pat?"]
@@ -1212,8 +1241,8 @@ opencv-python + mediapipe" 힌트가 표시됩니다.
   라벨에 경로를 표시.
 * 히트 영역 / 모션 / 인사말 캐스케이드는 계층적으로 동작: 좌클릭은
   먼저 ``hit_responses[area.id]`` 를 참조한 다음, ``motion_lines[area.motion]``,
-  그다음 ``greetings``, 마지막으로 내장 기본 인사말 세트를 바닥으로
-  사용.
+  그다음 ``time_of_day_greetings``, 그다음 ``greetings``, 마지막으로
+  내장 기본 인사말 세트를 바닥으로 사용.
 * 시간 추적은 ``time.monotonic`` 을 사용하므로 노트북을 절전 모드에
   넣거나 시스템 시계가 점프해도 큐에 쌓인 이벤트가 폭주하지 않음.
 
@@ -1253,15 +1282,16 @@ Imervue 사용자 설정 파일의 슬롯) 을 통해 라운드 트립됩니다.
        스크립트는 조용히 기본값으로 되돌림.
    * - ``position``
      - ``[-1, -1]``
-     - 마지막 드래그 릴리스의 화면 좌표 ``(x, y)``. ``-1, -1`` 은
-       "주 화면의 우하단 사용" 을 의미. 세션 간 멀티 모니터 분리도
-       같은 방식으로 폴백.
+     - 마지막 드래그 릴리스의 화면 좌표 ``(x, y)``. ``-1, -1``
+       (저장된 적 없음) 은 "우하단 모서리 사용" 을 의미. 저장된
+       모니터가 없어졌으면 위치를 첫 번째 화면 안으로 클램프.
    * - ``size_preset``
      - ``"medium"``
      - ``small`` / ``medium`` / ``large`` 중 하나.
    * - ``opacity``
      - ``1.0``
-     - ``[0.1, 1.0]`` 으로 클램프. 범위 밖 값은 기본값으로 리셋.
+     - 범위 밖 값은 ``[0.1, 1.0]`` 으로 클램프. 숫자가 아닌 값만
+       기본값으로 되돌림.
    * - ``click_through``
      - ``false``
      -
@@ -1278,14 +1308,17 @@ Imervue 사용자 설정 파일의 슬롯) 을 통해 라운드 트립됩니다.
      - ``24``
      - ``[0, 200]`` px 로 클램프.
    * - ``drivers``
-     - 전부 ``false``
+     - ``auto_idle``, ``idle_motion``, ``auto_blink`` 는
+       ``true``, 나머지는 ``false``
      - 드라이버 id (``auto_idle``, ``idle_motion``, ``auto_blink``,
-       ``drag_track``, ``mic_lipsync``, ``webcam_tracking``) 를 키로
-       하는 서브 dict. 알 수 없는 키는 forward-compat 을 위해
-       그대로 라운드 트립됨.
+       ``drag_track``, ``mouse_gaze``, ``mic_lipsync``,
+       ``webcam_tracking``) 를 키로 하는 서브 dict. 알 수 없는 키는
+       forward-compat 을 위해 그대로 라운드 트립됨.
    * - ``show_on_launch``
      - ``false``
-     - Imervue 시작 시 오버레이 자동 표시.
+     - 탭의 **창** 그룹에 있는 **Imervue 시작 시 펫 표시** 로 설정.
+       rig 과 드라이버는 어느 쪽이든 실행 시 복원되며, 오버레이는
+       이 값이 켜져 있을 때만 나타남.
    * - ``speech_enabled``
      - ``true``
      - false 일 때 말풍선이 절대 뜨지 않음.
@@ -1340,16 +1373,17 @@ rig 이 ``HitArea`` 항목을 정의하고 있다면, ``hit_responses`` 키가
    우클릭 메뉴).
 #. 사용자 정의 스크립트를 로드했다면 JSON 이 파싱되는지 확인 — 탭의
    상태 라벨에 로드 오류가 표시됨.
-#. 히트 영역 클릭이 아무 일도 하지 않았다면, 그 영역에 일치하는
-   모션이 없고 스크립트에도 해당 영역 id 에 대한 ``hit_responses``
-   항목이 없을 가능성이 높음. Puppet 탭에서 영역에 모션을 바인딩하거나
-   영역 id 를 스크립트의 ``hit_responses`` 에 추가.
+#. **Click-through** 가 켜져 있으면 클릭이 펫 뒤의 창으로 전달됨.
+   탭이나 트레이 메뉴에서 끄세요. (말풍선이 켜져 있으면 모든 클릭에
+   대사가 나옴: 히트 영역이 없는 rig 은 모션을 재생하지 않지만 클릭하면
+   여전히 인사함.)
 
 **웹캠 추적 체크박스가 다시 꺼짐.** 웹캠 추적에는 Imervue 가 실행
 중인 동일한 Python 환경에 ``opencv-python`` 과 ``mediapipe`` 가
 설치되어 있어야 합니다. ``pip install opencv-python mediapipe`` 로
-설치. 설치 후 체크박스를 토글하면 검출된 얼굴 랜드마크가 표시되는
-작은 미리보기 창이 떠야 합니다.
+설치. 설치 후 체크박스를 다시 체크하세요. 펫은 미리보기 창을 열지
+않습니다. 카메라가 무엇을 검출하는지 보려면 Puppet 탭에서
+**Webcam tracking** 을 켜면 얼굴 랜드마크가 표시됩니다.
 
 **전체화면 앱에서 펫이 자동으로 숨지 않음.** 전체화면 검출기는
 전경 창을 1 Hz 로 폴링합니다. Windows 에서는 ``GetWindowRect`` Win32
@@ -1360,9 +1394,9 @@ API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
 
 **실행 간 펫 위치가 화면 밖으로 흘러감.** 이는 펫이 있던 화면이
 다음 실행에서 더 이상 연결되어 있지 않을 때 (노트북 도크, 두 번째
-모니터 분리) 발생합니다. 이 경우 펫이 주 화면의 우하단 모서리로
-자동 폴백 — 원하는 위치로 드래그하면 다음 저장이 오래된 위치를
-덮어씁니다.
+모니터 분리) 발생합니다. 이 경우 펫은 저장된 위치를 첫 번째 화면
+안으로 클램프해 그 화면으로 이동 — 원하는 위치로 드래그하면 다음
+저장이 오래된 위치를 덮어씁니다.
 
 ----
 
@@ -1388,9 +1422,12 @@ API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
    * - 상하 뒤집기
      - --
      - 우클릭 > 수정 > 상하 뒤집기
-   * - 무손실 회전 (JPEG)
+   * - 무손실 회전
      - --
-     - 우클릭 > 무손실 회전
+     - 우클릭 > 무손실 회전 > 무손실 시계 방향 회전 / 무손실 반시계 방향 회전. 진정한
+       무손실은 JPEG 뿐입니다 (방향 태그를 변경). PNG / BMP / TIFF / WebP /
+       GIF 는 디코딩 후 회전하여 다시 저장하며 (손실 WebP 는 재인코딩),
+       카메라 RAW, HEIC, 다중 프레임 파일은 거부됩니다
 
 ----
 
@@ -1402,7 +1439,7 @@ API 를 사용하며, macOS / Linux 에는 신뢰할 만한 크로스 플랫폼
 
 이미지를 확대 보기로 연 뒤 우클릭 > ``내보내기 / 다른 이름으로 저장``
 
-- 형식 선택: PNG, JPEG, WebP, BMP, TIFF, AVIF. ``pillow-heif`` / ``pillow-jxl-plugin`` 이 설치되어 있으면 HEIC / JPEG XL 도
+- 형식 선택: PNG, JPEG, WebP, BMP, TIFF. Pillow 가 AVIF 를 지원하면 AVIF, ``pillow-heif`` / ``pillow-jxl-plugin`` 이 설치되어 있으면 HEIC / JPEG XL 도
 - 품질 조정 (손실 형식의 경우)
 - 유지할 메타데이터 선택: 모두, 위치 정보만 제외(기본값), 모두 제거. 카메라·렌즈·촬영 일시가 함께 저장되며, 선택은 기억되고 일괄 내보내기에도 같은 옵션이 있습니다
 - 파일 크기 미리보기
@@ -1452,7 +1489,7 @@ GIF / 동영상 만들기
 
 여러 이미지를 선택 후, 우클릭 > ``일괄 작업`` > ``GIF / 동영상 만들기``
 
-- GIF 및 MP4 지원
+- GIF 및 MP4 지원. MP4 는 PATH 의 ffmpeg 을 사용하고, 없으면 기본 의존성 ``imageio-ffmpeg`` 에 동봉된 ffmpeg 을 사용
 - 드래그로 프레임 순서 변경
 - 초당 프레임 수 (FPS) 설정
 - 사용자 지정 크기
@@ -1556,7 +1593,9 @@ GIF, APNG, 애니메이션 WebP를 열면 자동으로 애니메이션이 재생
    * - 이미지를 클립보드에 복사
      - 확대 보기 모드에서 ``Ctrl + C``
    * - 클립보드 이미지 붙여넣기
-     - ``파일`` > ``클립보드에서 붙여넣기``, 또는 ``Ctrl + V``
+     - ``파일`` > ``클립보드에서 붙여넣기`` 는 주석 편집기에서 엽니다 (아무것도 저장하지 않음).
+       ``Ctrl + V`` 는 현재 폴더에 ``pasted_<timestamp>.png`` 로 저장한 뒤 열거나,
+       클립보드에 복사된 파일 경로를 엽니다
    * - 클립보드 자동 감시
      - ``파일`` > ``클립보드 이미지 자동 주석`` 체크
 
@@ -1671,14 +1710,14 @@ Windows는 디코딩할 수 없는 파일을 받으면 성공했다고 알리면
 ----------------------------
 
 ``파일`` > ``Workspaces…`` 는 현재 창 지오메트리, 도크 / 도구 모음 배치,
-스플리터 크기, 활성 루트 폴더를 이름으로 저장합니다 — 그런 다음 저장된
-레이아웃 사이를 전환할 수 있습니다. 대화상자는 현재 저장, 불러오기, 이름 변경, 삭제를
-지원합니다. 워크스페이스는 ``user_settings.json`` (``workspaces`` 키 아래)
+트리 / 뷰어 분할, 활성 루트 폴더를 이름으로 저장합니다 — 그런 다음 저장된
+레이아웃 사이를 전환할 수 있습니다. 활성 탭과 Modify 탭의 패널 분할은 저장되지 않습니다. 대화상자는 현재 저장, 불러오기, 이름 변경, 삭제를
+지원합니다. 워크스페이스는 ``user_setting.json`` (``workspaces`` 키 아래)
 에 저장되어 세션 간에 유지됩니다.
 
 .. tip::
-   트리와 썸네일 그리드가 보이는 **Browse** 워크스페이스와, 현상 패널을
-   최대화하고 트리를 접은 별도의 **Develop** 워크스페이스를 구성하세요.
+   뷰어 옆에 트리를 넓게 둔 **Browse** 워크스페이스와, 트리를 좁게 끌어
+   줄이고 필요 없는 도크를 닫은 별도의 **Focus** 워크스페이스를 구성하세요.
    한 번의 클릭으로 각 작업에 맞는 창 형태로 전환됩니다.
 
 터치패드 제스처
@@ -1703,7 +1742,7 @@ Windows는 디코딩할 수 없는 파일을 받으면 성공했다고 알리면
 Windows 탐색기에서 직접 Imervue로 이미지를 열 수 있게 합니다:
 
 1. ``파일`` > ``파일 연결`` > ``Open with Imervue 등록``
-2. 관리자 권한이 필요합니다
+2. 관리자 권한은 필요 없습니다: 등록은 현재 사용자의 레지스트리에 기록합니다
 3. 등록 후 이미지를 우클릭하면 ``Open with Imervue`` 옵션이 표시됩니다
 
 해제하려면: ``파일`` > ``파일 연결`` > ``파일 연결 해제``
@@ -1877,7 +1916,7 @@ Imervue는 플러그인을 통한 기능 확장을 지원합니다.
    * - ``F8`` / ``Ctrl + F8``
      - OSD 정보 / 디버그 HUD (VRAM, 캐시, 스레드)
    * - ``Shift + P``
-     - 픽셀 보기 (400 % 이상 시 격자와 커서 아래 RGB 값 표시)
+     - 픽셀 보기 (400 % 부터 커서 아래 RGB / HEX 표시, 화면의 이미지 픽셀이 40,000개 이하가 되면 격자도 표시)
    * - ``Shift + M``
      - 색상 모드 순환 (일반/그레이스케일/반전/세피아)
    * - ``L``

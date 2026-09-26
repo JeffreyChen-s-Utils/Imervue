@@ -53,7 +53,7 @@ Cuando abra Imervue, verá tres áreas:
 
 - **Izquierda**: Árbol de carpetas. Haga clic en una carpeta para examinar las imágenes que contiene.
 - **Centro**: Área de visualización. Muestra todas las imágenes como una cuadrícula de miniaturas.
-- **Derecha**: Barra lateral EXIF. Muestra la información de captura de la imagen seleccionada.
+- **Derecha**: Barra lateral EXIF, plegada en una franja estrecha al iniciar: haga clic en ella para abrirla. Muestra la información de captura de la imagen abierta.
 
 Imervue escribe un registro de cada sesión en ``imervue.log`` junto al programa (en ``%LOCALAPPDATA%\Imervue``, o en ``~/.cache/imervue`` fuera de Windows, cuando esa carpeta es de solo lectura). El registro de la sesión anterior se conserva como ``imervue.previous.log``, así que tras una caída el registro que la explica sigue ahí cuando Imervue vuelve a ejecutarse — adjunte ambos al informar de un problema.
 
@@ -71,13 +71,13 @@ Abrir imágenes
    * - Abrir carpeta
      - ``File`` > ``Open Folder``, después elija un directorio
    * - Abrir una sola imagen
-     - ``File`` > ``Open Image``, después elija un archivo
+     - ``File`` > ``Open File``, después elija un archivo
    * - Arrastrar y soltar
      - Arrastre una imagen o carpeta directamente a la ventana
    * - Abrir desde el Explorador
      - Clic derecho en una imagen > ``Open with Imervue`` (requiere asociación de archivos)
    * - Archivos recientes
-     - ``File`` > ``Recent``, vuelva a abrir rápidamente una carpeta visitada anteriormente
+     - ``File`` > ``Recent`` > Recent Folders / Recent Images, para volver a abrir una carpeta o una imagen
 
 Formatos compatibles
 ^^^^^^^^^^^^^^^^^^^^
@@ -134,7 +134,7 @@ ordenable con estas columnas: Vista previa · Etiqueta · Valoración · Nombre 
 ``Esc`` para volver a la lista. Las miniaturas y los metadatos se cargan de forma diferida en
 un hilo de trabajo, de modo que las carpetas muy grandes mantienen la capacidad de respuesta.
 
-``Delete`` quita las filas seleccionadas y ``Ctrl + Z`` las recupera, y las teclas de valoración (``0`` – ``5``), selección (``P`` / ``Shift + X`` / ``U``) y color (``F1`` – ``F5``) las marcan, como en la cuadrícula; las teclas siguen la configuración de atajos.
+``Delete`` quita las filas seleccionadas y ``Ctrl + Z`` las recupera, y las teclas de valoración (``1`` – ``5``), favorito (``0``), selección (``P`` / ``Shift + X`` / ``U``) y color (``F1`` – ``F5``) las marcan, como en la cuadrícula; todas salvo ``F1`` – ``F5`` siguen la configuración de atajos.
 
 Modo Deep Zoom
 ^^^^^^^^^^^^^^
@@ -142,7 +142,7 @@ Modo Deep Zoom
 Haga clic en una miniatura para entrar en el modo Deep Zoom y ver imágenes individuales en
 alta calidad.
 
-También se abren panoramas muy por encima del límite de seguridad de 179 megapíxeles de Pillow: el límite depende de la memoria del equipo (con 16 GB, unos 1,3 gigapíxeles) y esas imágenes gigantes se decodifican de una en una.
+También se abren panoramas muy por encima del límite de seguridad de 179 megapíxeles de Pillow: el límite depende de la memoria del equipo (con 16 GB, unos 1,4 gigapíxeles) y esas imágenes gigantes se decodifican de una en una.
 
 Un JPEG, PNG, TIFF, GIF o BMP incompleto — una descarga o copia interrumpida, una foto recuperada de una tarjeta de memoria dañada — se abre con la parte que se pudo leer, como en un navegador, en lugar de no abrirse.
 
@@ -191,7 +191,7 @@ Los archivos que Windows marca como ocultos — también ocultos en el Explorado
    * - Información OSD superpuesta
      - ``F8`` muestra nombre/tamaño/tipo; ``Ctrl + F8`` muestra un HUD de depuración (VRAM / caché / hilos)
    * - Vista de píxeles
-     - ``Shift + P`` — con zoom ≥ 400 % superpone una cuadrícula de píxeles y muestra RGB / HEX bajo el cursor
+     - ``Shift + P`` — desde un zoom de 400 % muestra RGB / HEX bajo el cursor, más una cuadrícula de píxeles cuando no hay más de 40.000 píxeles de la imagen en pantalla
    * - Modos de color
      - ``Shift + M`` alterna Normal / Escala de grises / Invertir / Sepia (GLSL, no destructivo)
 
@@ -820,18 +820,20 @@ físicas, expresiones, grupos de poses, lip-sync y seguimiento por webcam,
 Flujo de trabajo de principio a fin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. **Importar un PNG** — el botón ``Import PNG…`` de la barra de herramientas ejecuta
+1. **Importar un PNG** — ``File`` > ``Import PNG…`` ejecuta
    ``puppet.auto_mesh.puppet_from_png``: cuadrícula triangulada limitada por alfa, un
    drawable, lista para renderizar.
-2. **Añadir un deformador** — ``Add Rotation Deformer`` (ancla + ángulo) o
-   ``Add Warp Deformer`` (rejilla Bezier de filas × columnas; los vértices fuera de los
+2. **Añadir un deformador** — ``Edit`` > ``Add Rotation Deformer`` (ancla + ángulo) o
+   ``Add Warp Deformer`` (rejilla bilineal de filas × columnas; los vértices fuera de los
    límites pasan sin cambios).
-3. **Añadir un parámetro** — ``Add Parameter`` añade un deslizador al dock derecho
+3. **Añadir un parámetro** — ``Edit`` > ``Add Parameter`` añade un deslizador al dock derecho
    **Parameters** con id autonombrado (``Param1``, ``Param2``, …).
 4. **Establecer claves** — arrastre el deslizador a un extremo, edite la forma del deformador
-   en código o mediante edición de malla, pulse **Set key**. Repita en neutro y en el extremo
+   en código, pulse **Set key**. Repita en neutro y en el extremo
    opuesto. El runtime ahora interpola linealmente los campos del deformador entre claves
-   adyacentes cada vez que se mueve el deslizador.
+   adyacentes cada vez que se mueve el deslizador. **Set key** solo guarda formas de
+   deformador: **Edit mesh** mueve los vértices de reposo del drawable de forma definitiva,
+   así que una edición de malla no se guarda como clave.
 5. **Guardar** — ``Save As…`` escribe el rig + texturas + movimientos + expresiones + físicas
    en un único zip ``.puppet`` que puede compartir o abrir más tarde mediante
    ``Open Puppet…``.
@@ -861,18 +863,20 @@ Motions — un solo clic enlaza el movimiento e inicia la reproducción inmediat
 
 1. Inicie Imervue. Desde el código fuente: ``python -m Imervue``. Desde la versión
    empaquetada: ejecute el ejecutable / bundle de aplicación ``Imervue``. El directorio
-   ``examples/`` se empaqueta tanto en el wheel como en el EXE de Nuitka, de modo que el
-   rig está en disco dondequiera que lo haya instalado.
+   ``examples/`` se empaqueta en las compilaciones de Nuitka y PyInstaller; una instalación
+   con pip / wheel no lo incluye (desde una copia del código fuente los rigs están en
+   ``examples/puppet/``).
 2. Haga clic en la pestaña **Puppet** en la parte superior de la ventana.
-3. Barra de herramientas → **File > Examples > March 7th** (o el desplegable
+3. **File > Examples > March 7th** (o el desplegable
    **Examples ▾** de la barra de herramientas). El rig de 307 drawables se carga centrado
    y el dock de parámetros se llena con los 203 deslizadores estándar de Cubism.
 4. En el dock **Motions** inferior, haga un solo clic en cualquier entrada de movimiento
    (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …). La reproducción empieza
-   inmediatamente; haga clic de nuevo para detener, o elija un movimiento distinto para
-   hacer un cross-fade hacia él.
+   inmediatamente; un nuevo clic la reinicia, el botón **Stop** del dock detiene la
+   reproducción, y elegir un movimiento distinto hace un cross-fade hacia él.
 5. Active los interruptores de entrada en vivo en la barra de herramientas para controlar
-   el rig desde sus propias entradas — **Drag-track head** para la mirada al cursor,
+   el rig desde sus propias entradas — **Drag-track head** para girar la cabeza y los ojos
+   hacia el cursor mientras se mueve sobre el lienzo,
    **Auto-blink** para el ciclo de cerrar/abrir ojos, **Auto idle** + **Idle motions**
    para respiración + clips Idle aleatorios, **Mic lip-sync** para apertura de boca a partir
    del RMS del micrófono, **Webcam tracking** para cabeza + ojos + boca completos desde
@@ -923,6 +927,11 @@ propietario, totalmente diffable a través de git.
 Referencia de la barra de herramientas
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+La barra de herramientas lleva **Examples ▾**, los seis conmutadores en vivo, **Edit mesh**,
+**Record…** y **Reset to rest**. Todas las demás entradas de abajo son elementos de los
+menús **File**, **Edit**, **Live**, **Output** o **Tools**; esos menús también contienen
+las entradas de la barra de herramientas.
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -930,8 +939,9 @@ Referencia de la barra de herramientas
    * - Acción
      - Propósito
    * - Open Puppet… / Examples ▾
-     - Cargar un ``.puppet`` desde disco, o elegir uno de los rigs incluidos en
-       ``examples/puppet/`` directamente desde la barra de herramientas
+     - Cargar un ``.puppet`` desde disco (menú **File**), o elegir uno de los rigs
+       incluidos en ``examples/puppet/`` desde **Examples ▾** (el botón de la barra de
+       herramientas, también en **File**)
    * - Import PNG… / Import PSD… / Import Cubism…
      - Auto-malla un PNG, divide en capas un PSD, o muestrea-y-reconstruye un rig
        Cubism. El selector de Cubism acepta tanto ``.moc3`` como ``.model3.json``;
@@ -944,9 +954,10 @@ Referencia de la barra de herramientas
    * - Save As…
      - Escribir el rig actual como un zip ``.puppet``
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - Crear el rig desde la barra de herramientas
+     - Crear el rig desde el menú **Edit**
    * - Drag-track head
-     - Offset del cursor → ``ParamAngleX`` / ``ParamAngleY`` +
+     - La cabeza y los ojos se giran hacia el cursor mientras se mueve sobre el
+       lienzo: offset del cursor → ``ParamAngleX`` / ``ParamAngleY`` +
        ``ParamEyeBallX`` / ``ParamEyeBallY``
    * - Auto-blink
      - Ciclo coseno cerrar→abrir en ``ParamEyeLOpen`` / ``ParamEyeROpen``
@@ -964,26 +975,31 @@ Referencia de la barra de herramientas
    * - Edit mesh
      - Arrastra-y-suelta vértices del lienzo para refinar la malla
    * - Record motion
-     - Captura los cambios de parámetros en un nuevo ``Motion`` y lo añade al
-       documento — hornear-desde-toma, sin autoría manual de claves
+     - Solo en el menú **Output**: captura los cambios de parámetros en un nuevo
+       ``Motion`` y lo añade al documento — hornear-desde-toma, sin autoría manual
+       de claves
    * - Capture frame… / Record… / Export all motions…
      - Guarda un único PNG, alterna una grabación GIF / WebM / MP4, o renderiza por lotes
        cada movimiento del rig a su propio archivo (todo mediante la misma ruta de render
-       off-screen sólo-personaje usada para streaming)
+       off-screen sólo-personaje usada para streaming).
+       Un fotograma capturado conserva el tamaño propio del rig (lado largo de 4096 px
+       como máximo) sobre fondo transparente; una grabación o exportación por lotes
+       encaja el personaje en 1080 px sobre blanco, ya que los fotogramas GIF / WebM / MP4
+       no llevan alfa
    * - Output > Virtual camera / NDI output
      - Superficies de streaming en vivo — consulte *Streaming en vivo a OBS* más abajo
    * - Reset to rest
      - Detiene en seco el reproductor de movimiento, desactiva cada driver en vivo,
        limpia expresiones / grupos de pose, restaura los valores por defecto de los parámetros
    * - Fit to Window
-     - Re-centra y re-escala la marioneta en el lienzo
+     - Menú **Tools**: re-centra y re-escala la marioneta en el lienzo
 
 Grabar sus propios movimientos
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Para capturar una toma personalizada en lugar de crear fotogramas clave a mano:
 
-1. Active **Record motion** en la barra de herramientas — aparece un diálogo de nombre.
+1. Active **Output > Record motion** — aparece un diálogo de nombre.
 2. Mientras graba, arrastre deslizadores, active **Webcam tracking**, deje correr la física
    — cualquier cosa que escriba valores de parámetros.
 3. Desactive **Record motion** — el grabador hornea el flujo capturado a 30 Hz en un
@@ -1008,7 +1024,7 @@ Device* de OBS. ``pip install pyvirtualcam`` más el driver de la plataforma:
 OBS Studio 26+ incluye el driver *OBS Virtual Camera* en Windows / macOS (haga clic una vez
 en *Start Virtual Camera* en OBS para registrarlo); Linux usa ``v4l2loopback-dkms`` +
 ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``.
-La barra de herramientas **Output > Virtual camera** abre el flujo.
+El conmutador del menú **Output > Virtual camera** abre el flujo.
 
 DirectShow / AVFoundation / v4l2loopback son sólo-RGB — sin canal alfa — por lo que Imervue
 rellena el área fuera del personaje con **magenta #FF00FF** como croma. Elimínelo en OBS
@@ -1028,7 +1044,7 @@ cada vez que la cámara virtual se reanuda.
 componen directamente sobre sus propias escenas sin pasada de croma. ``pip install ndi-python``
 + el runtime de `NDI Tools <https://ndi.video/tools/>`_ + el plugin
 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_.
-La barra de herramientas **Output > NDI output** emite la fuente (nombre por defecto
+El conmutador del menú **Output > NDI output** emite la fuente (nombre por defecto
 *Imervue Puppet*).
 
 ``ndi-python`` se distribuye sólo como source distribution; pip lo construye desde C++ en
@@ -1054,8 +1070,10 @@ Dependencias opcionales
   redistribución; los usuarios colocan el SDK bajo ``<cwd>/sdk/`` o establecen
   la variable de entorno ``CUBISM_CORE_DLL``)
 
-El plugin se degrada con elegancia cuando alguna de estas falta — el conmutador correspondiente
-en la barra de herramientas se desactiva y muestra una pista "install <package>".
+La pestaña Puppet se degrada con elegancia cuando falta un paquete de Python — el conmutador
+correspondiente sigue desactivado y se abre el instalador de dependencias, que ofrece
+instalarlo; una vez instalado, el conmutador vuelve a activarse. Una pista de texto aparece
+solo cuando el paquete está presente pero falla el dispositivo o el driver.
 ``File > Install dependencies…`` instala por lotes todos los paquetes opcionales de Python
 de una sola vez.
 
@@ -1087,8 +1105,8 @@ así:
    pausa al ocultar, opacidad, tamaño, restauración multimonitor).
 #. **Modelo de interacción** — zonas de impacto para clic izquierdo,
    menú contextual completo del clic derecho, bandeja del sistema.
-#. **Drivers en vivo** — seis drivers de entrada opcionales y sus
-   dependencias opcionales.
+#. **Drivers en vivo** — siete drivers de entrada (tres activados por
+   defecto) y sus dependencias opcionales.
 #. **Script de la mascota** — el archivo JSON que le permite reemplazar
    la voz de la mascota con sus propias frases, programar recordatorios
    y enlazar respuestas por zona de impacto / por movimiento.
@@ -1127,10 +1145,10 @@ La pestaña expone tres rutas de carga:
 * **Open Puppet…** — elija cualquier archivo ``.puppet`` del disco.
 * **Load bundled March 7th** — abre el rig incluido en
   ``examples/puppet/march_7th.puppet``. El resolutor consulta primero
-  ``examples_dir()`` (seguro para entornos congelados con compilaciones
-  empaquetadas con Nuitka / instaladas con pip) y, como alternativa,
-  busca una ruta relativa a la raíz del repositorio para que el botón
-  funcione en ambos modos de ejecución.
+  ``examples_dir()`` (junto al programa en las compilaciones
+  empaquetadas con Nuitka / PyInstaller, la raíz del repositorio en una
+  copia del código fuente) y, como alternativa, busca una ruta relativa
+  a la carpeta de trabajo actual.
 * **Último rig** — el rig cargado previamente se restaura automáticamente
   al iniciar Imervue desde el campo de configuración ``last_rig_path``;
   la pestaña Desktop Pet vuelve a instanciar la superposición de forma
@@ -1205,9 +1223,12 @@ las demás ventanas.
        ``GetWindowRect`` en Windows; en macOS / Linux es no-op de
        forma elegante (la mascota permanece visible).
    * - Pausa al ocultar
-     - El tick de pintado a ~30 FPS y el tick de script a 1 Hz se
-       detienen en ``hideEvent``, así que una mascota oculta cuesta
-       cero CPU. Se reanudan en el siguiente ``showEvent``.
+     - El tick de pintado a ~30 FPS, el tick de script a 1 Hz y el
+       sondeo de pantalla completa (salvo que sea la pantalla completa
+       lo que ocultó la mascota) se detienen en ``hideEvent`` y se
+       reanudan en el siguiente ``showEvent``. Los temporizadores de
+       los drivers en vivo (parpadeo, idle, motions de idle, mirada)
+       siguen funcionando.
    * - Presets de tamaño
      - Pequeño (200 × 300), mediano (320 × 480), grande (480 × 720).
        La mascota se redimensiona alrededor de su centro actual, así
@@ -1221,11 +1242,12 @@ las demás ventanas.
        permitiría perderla.
    * - Memoria de posición
      - Se persiste el ``(x, y)`` posterior al acople tras cada
-       liberación. En el siguiente arranque la mascota vuelve a esa
-       coordenada de pantalla. Si la posición guardada ya no cae
-       dentro de ninguna pantalla conectada (ha desconectado un
-       monitor desde el último arranque), la mascota recurre a la
-       esquina inferior derecha de la pantalla principal.
+       liberación, junto con el monitor en que está. En el siguiente
+       arranque la mascota vuelve a esa posición, ajustada al interior
+       de ese monitor. Si el monitor ya no está (lo ha desconectado
+       desde el último arranque), la mascota va a la primera pantalla
+       con su posición guardada ajustada a ella. La esquina inferior
+       derecha solo se usa cuando nunca se guardó una posición.
 
 Modelo de interacción
 ^^^^^^^^^^^^^^^^^^^^^
@@ -1250,24 +1272,30 @@ el comportamiento de la siguiente forma:
    incorporado).
 
 Un gesto de arrastrar para mover suprime el manejador de clic, así
-que mover la mascota no dispara un movimiento / habla.
+que mover la mascota no hace aparecer un bocadillo. Al pulsar se
+reproduce un movimiento del grupo ``Drag`` del rig y al soltar tras un
+arrastre se reproduce uno de su grupo ``Land``, cuando el rig tiene
+esos grupos.
 
 **Clic derecho en cualquier lugar del cuerpo**
 
 Abre un menú contextual con la siguiente estructura:
 
 * **Hide pet** — acción de nivel superior que cierra la superposición.
-* Submenú **Live drivers** — seis conmutadores marcables (Auto idle,
-  Idle motions, Auto-blink, Drag-track head, Mic lip-sync, Webcam
-  tracking). El estado de marcado refleja el estado del driver en
-  vivo, así que el menú muestra lo que está corriendo actualmente.
+* Submenú **Live drivers** — siete conmutadores marcables (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mouse gaze, Mic
+  lip-sync, Webcam tracking). El estado de marcado refleja el estado
+  del driver en vivo, así que el menú muestra lo que está corriendo
+  actualmente.
 * Submenú **Play motion** — poblado a partir de la lista
   ``document.motions`` del rig activo. Seleccionar una entrada
-  reproduce ese movimiento (y puede disparar la voz de la mascota
-  si el script enlaza una frase a él).
+  reproduce ese movimiento; no dice ninguna frase de
+  ``motion_lines`` (esas responden solo a un clic en una zona de
+  impacto).
 * Submenú **Apply expression** — poblado a partir de
-  ``document.expressions`` del rig. Seleccionar conmuta la
-  superposición de parámetros de la expresión.
+  ``document.expressions`` del rig. Seleccionar una añade la
+  superposición de parámetros de la expresión; aplicarla de nuevo
+  no hace nada.
 * Cinco conmutadores marcables de nivel superior: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — acceso rápido a los mismos conmutadores de la
@@ -1299,7 +1327,9 @@ Cada driver en vivo se crea de forma perezosa en la primera
 activación, así que una mascota inactiva no paga ningún coste de
 temporizador / hilo por los drivers que nunca encienda. El estado de
 cada driver se persiste; activar uno, cerrar Imervue y reiniciar
-reabre la mascota con los mismos drivers en marcha.
+restaura el rig con los mismos drivers en marcha. La superposición
+en sí aparece al arrancar solo cuando **Show the pet when Imervue
+starts** está marcado en el grupo Window de la pestaña.
 
 .. list-table::
    :header-rows: 1
@@ -1315,8 +1345,9 @@ reabre la mascota con los mismos drivers en marcha.
      - ninguna
    * - **Idle motions**
      - Elige aleatoriamente un movimiento del grupo ``Idle`` del rig
-       cada pocos segundos y lo reproduce. Se detiene si ya hay un
-       movimiento en curso.
+       y lo reproduce — uno en cuanto se activa, luego cada pocos
+       segundos. Se aparta mientras se reproduce un movimiento que no
+       es de Idle.
      - ninguna
    * - **Auto-blink**
      - Cierra y reabre los ojos en una curva coseno suave cada
@@ -1325,19 +1356,27 @@ reabre la mascota con los mismos drivers en marcha.
        supriman el parpadeo.
      - ninguna
    * - **Drag-track head**
-     - La cabeza + los ojos giran hacia la posición global del cursor
-       incluso cuando el cursor está fuera de la mascota. Mueve
+     - La cabeza + los ojos giran hacia el cursor mientras se mueve
+       sobre la mascota. Mueve
        ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
        ``ParamEyeBallY``.
      - ninguna
+   * - **Mouse gaze**
+     - Los ojos y la cabeza siguen el cursor por toda la pantalla,
+       respecto al centro de la mascota (los ojos van por delante).
+       Mueve los mismos cuatro parámetros.
+     - ninguna
    * - **Mic lip-sync**
-     - La amplitud RMS del micrófono mueve ``ParamMouthOpenY``. El
+     - La amplitud RMS del micrófono mueve ``ParamMouthOpenY``. La
+       boca se abre en proporción al volumen de su voz, así que el
+       personaje parece hablar cuando usted habla.
      - ``sounddevice``
    * - **Webcam tracking**
      - MediaPipe FaceLandmarker lee su cámara web a ~30 FPS y mueve
        los parámetros de pose de cabeza + apertura de ojos + apertura
-       de boca. Abre una pequeña ventana de vista previa en vivo
-       para que pueda verificar que la cámara ve su cara.
+       de boca. No se abre ninguna ventana de vista previa para la
+       mascota (la vista previa de la cámara pertenece a la pestaña
+       Puppet).
      - ``opencv-python`` + ``mediapipe``
 
 Los dos drivers con dependencia opcional se degradan con elegancia:
@@ -1351,15 +1390,20 @@ Script de la mascota — voz personalizada y eventos programados
 
 El bocadillo de diálogo de la mascota se nutre de un archivo JSON
 que usted puede escribir y cargar desde el grupo **Pet script** de la
-pestaña. El script gobierna cuatro cosas:
+pestaña. El script gobierna cinco cosas:
 
 * **Saludos** — frases de clic por defecto cuando no coincide nada
   más específico.
+* **Saludos según la hora** — saludos para la franja del reloj local
+  (``morning`` 05–11 h, ``afternoon`` 12–17 h, ``evening``
+  18–21 h, ``night`` 22–04 h), usados antes que los saludos simples;
+  una franja sin frases recurre a ellos.
 * **Respuestas por zona de impacto** — depósitos de frases por
   ``HitArea.id``.
 * **Frases de movimiento** — depósitos de frases por nombre de
-  movimiento, disparados cuando la mascota inicia ese movimiento (ya
-  sea desde una zona de impacto o desde el menú contextual).
+  movimiento, dichas cuando un clic en una zona de impacto reproduce
+  ese movimiento (no cuando un movimiento se inicia desde el menú
+  contextual).
 * **Recordatorios programados** — frases dirigidas por temporizador
   que se disparan cada ``every_seconds`` de tiempo monotónico de
   reloj.
@@ -1375,6 +1419,10 @@ adelante):
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
+     "time_of_day_greetings": {
+       "morning": ["Good morning!"],
+       "night": ["Still up?"]
+     },
      "hit_responses": {
        "HitAreaHead": ["Hey, my head!", "Stop poking!"],
        "HitAreaBody": ["Hehe~", "Pat pat?"]
@@ -1402,8 +1450,9 @@ Reglas de carga:
   etiqueta de estado.
 * La cascada de zona de impacto / movimiento / saludo es por capas:
   un clic izquierdo consulta primero ``hit_responses[area.id]``,
-  luego ``motion_lines[area.motion]``, luego ``greetings`` y, como
-  base, el conjunto de saludo por defecto incorporado.
+  luego ``motion_lines[area.motion]``, luego
+  ``time_of_day_greetings``, luego ``greetings`` y, como base, el
+  conjunto de saludo por defecto incorporado.
 * El seguimiento del tiempo usa ``time.monotonic``, así que suspender
   el portátil o saltar el reloj del sistema no puede disparar en
   ráfaga eventos en cola.
@@ -1450,16 +1499,16 @@ archivo de configuración corrupto no puede hacer fallar el arranque.
    * - ``position``
      - ``[-1, -1]``
      - Coordenada de pantalla ``(x, y)`` de la última liberación del
-       arrastre. ``-1, -1`` significa "usar la esquina inferior
-       derecha de la pantalla principal". La desconexión multimonitor
-       entre sesiones recurre al mismo fallback.
+       arrastre. ``-1, -1`` (nunca guardada) significa "usar la
+       esquina inferior derecha". Cuando el monitor guardado ya no
+       está, la posición se ajusta al interior de la primera pantalla.
    * - ``size_preset``
      - ``"medium"``
      - Uno de ``small`` / ``medium`` / ``large``.
    * - ``opacity``
      - ``1.0``
-     - Limitado a ``[0.1, 1.0]``. Los valores fuera de rango vuelven
-       al valor por defecto.
+     - Los valores fuera de rango se limitan a ``[0.1, 1.0]``; solo
+       un valor no numérico vuelve al valor por defecto.
    * - ``click_through``
      - ``false``
      -
@@ -1477,15 +1526,19 @@ archivo de configuración corrupto no puede hacer fallar el arranque.
      - ``24``
      - Limitado a ``[0, 200]`` px.
    * - ``drivers``
-     - todos ``false``
+     - ``auto_idle``, ``idle_motion``, ``auto_blink``
+       ``true``; el resto ``false``
      - Subdiccionario indexado por id de driver (``auto_idle``,
        ``idle_motion``, ``auto_blink``, ``drag_track``,
-       ``mic_lipsync``, ``webcam_tracking``). Las claves desconocidas
-       circulan intactas para compatibilidad hacia adelante.
+       ``mouse_gaze``, ``mic_lipsync``, ``webcam_tracking``). Las
+       claves desconocidas circulan intactas para compatibilidad
+       hacia adelante.
    * - ``show_on_launch``
      - ``false``
-     - Muestra automáticamente la superposición cuando Imervue
-       arranca.
+     - Lo establece **Show the pet when Imervue starts** en el grupo
+       Window de la pestaña. El rig y los drivers se restauran al
+       arrancar en cualquier caso; la superposición solo aparece
+       cuando está activado.
    * - ``speech_enabled``
      - ``true``
      - Cuando es falso, el bocadillo de diálogo nunca aparece.
@@ -1549,19 +1602,20 @@ código fuente, lance Imervue desde la raíz del repositorio.
 #. Si cargó un script personalizado, verifique que el JSON se
    analiza — la etiqueta de estado de la pestaña muestra el error
    de carga.
-#. Si un clic en una zona de impacto no hizo nada, probablemente la
-   zona no tiene un movimiento coincidente Y el script no tiene una
-   entrada ``hit_responses`` para ese id de zona. Bien enlace un
-   movimiento a la zona en la pestaña Puppet, bien añada el id de
-   la zona a ``hit_responses`` del script.
+#. Si **Click-through** está activo, el clic va a la ventana que hay
+   detrás de la mascota; desactívelo en la pestaña o en el menú de la
+   bandeja. (Con el bocadillo activo, cada clic recibe una frase: un
+   rig sin zonas de impacto no reproduce ningún movimiento, pero el
+   clic igualmente le saluda.)
 
 **La casilla de seguimiento por cámara web se desmarca sola.** El
 seguimiento por cámara web necesita ``opencv-python`` y ``mediapipe``
 instalados en el mismo entorno Python en el que se está ejecutando
 Imervue. Instálelos con ``pip install opencv-python mediapipe``.
-Después de la instalación, al marcar la casilla debería aparecer una
-pequeña ventana de vista previa mostrando los puntos faciales
-detectados.
+Después de la instalación, vuelva a marcar la casilla. La mascota no
+abre ninguna ventana de vista previa; para ver lo que detecta la
+cámara, active **Webcam tracking** en la pestaña Puppet, que muestra
+los puntos faciales.
 
 **La mascota no se oculta automáticamente durante aplicaciones en
 pantalla completa.** El detector de pantalla completa sondea la
@@ -1575,8 +1629,8 @@ realmente cubre ≥ 99 % del mismo monitor que la mascota.
 **La posición de la mascota se va fuera de la pantalla entre
 arranques.** Esto pasa cuando la pantalla en la que estaba la mascota
 ya no está conectada en el siguiente arranque (dock del portátil,
-segundo monitor desconectado). La mascota recurre automáticamente a
-la esquina inferior derecha de la pantalla principal en este caso —
+segundo monitor desconectado). En este caso la mascota pasa a la
+primera pantalla con su posición guardada ajustada a ella —
 arrástrela a donde la quiera y el siguiente guardado sobrescribirá
 la posición obsoleta.
 
@@ -1604,9 +1658,12 @@ Rotación y volteo
    * - Voltear verticalmente
      - --
      - Clic derecho > Modify > Flip Vertical
-   * - Rotación sin pérdida (JPEG)
+   * - Rotación sin pérdida
      - --
-     - Clic derecho > Lossless Rotate
+     - Clic derecho > Lossless Rotate > Lossless Rotate CW / CCW. Solo un JPEG es realmente
+       sin pérdida (cambia su etiqueta de orientación); PNG / BMP / TIFF / WebP /
+       GIF se decodifican, se giran y se vuelven a guardar (un WebP con pérdida se recodifica);
+       los RAW de cámara, HEIC y los archivos de varios fotogramas se rechazan
 
 ----
 
@@ -1618,7 +1675,7 @@ Exportación individual
 
 Abra una imagen (Deep Zoom), después clic derecho > ``Export / Save As``.
 
-- Elija el formato: PNG, JPEG, WebP, BMP, TIFF, AVIF; también HEIC y JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` está instalado
+- Elija el formato: PNG, JPEG, WebP, BMP, TIFF; AVIF cuando Pillow admite AVIF, HEIC y JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` está instalado
 - Ajuste la calidad (para formatos con pérdida)
 - Elija qué metadatos conservar: todos, todos salvo la ubicación (predeterminado) o ninguno. Se conservan cámara, objetivo y fecha de captura; la elección se recuerda y la exportación por lotes ofrece la misma opción
 - Vista previa del tamaño estimado del archivo
@@ -1669,7 +1726,7 @@ Crear GIF / Vídeo
 
 Seleccione varias imágenes, después clic derecho > ``Batch Operations`` > ``Create GIF / Video``.
 
-- Salida GIF y MP4
+- Salida GIF y MP4; el MP4 usa el ffmpeg del PATH o, si no lo hay, el que incluye la dependencia por defecto ``imageio-ffmpeg``
 - Arrastrar para reordenar fotogramas
 - Establecer fotogramas por segundo (FPS)
 - Dimensiones personalizadas
@@ -1779,7 +1836,9 @@ Copiar y pegar
    * - Copiar imagen al portapapeles
      - ``Ctrl + C`` en el modo Deep Zoom
    * - Pegar imagen del portapapeles
-     - ``File`` > ``Paste from Clipboard``, o ``Ctrl + V``
+     - ``File`` > ``Paste from Clipboard`` la abre en el editor de anotaciones (no se guarda nada);
+       ``Ctrl + V`` la guarda como ``pasted_<timestamp>.png`` en la carpeta actual y la abre, o
+       abre una ruta de archivo copiada al portapapeles
    * - Monitorización automática del portapapeles
      - ``File`` > ``Auto-annotate Clipboard Images`` (conmutador)
 
@@ -1800,7 +1859,7 @@ Eliminar imágenes
    * - Eliminar la imagen actual
      - Pulse ``Delete``
    * - Eliminar las imágenes seleccionadas
-     - Seleccione varias, después ``Delete`` o clic derecho > ``Delete Selected``
+     - Seleccione varias, después ``Delete`` o clic derecho > ``Delete Selected Images``
 
 Las imágenes se mueven a la Papelera de reciclaje / Papelera del sistema y se pueden recuperar
 desde allí. En una unidad sin papelera (tarjeta de memoria, memoria USB o
@@ -1901,15 +1960,15 @@ Presets de diseño de espacio de trabajo
 ---------------------------------------
 
 ``File`` > ``Workspaces…`` captura la geometría actual de la ventana, la disposición de docks
-/ barras de herramientas, los tamaños de los divisores y la carpeta raíz activa bajo un nombre
-— después le permite alternar entre diseños guardados. El diálogo admite Save Current, Load, Rename y Delete. Los
-espacios de trabajo persisten en ``user_settings.json`` (bajo la clave ``workspaces``) y
+/ barras de herramientas, la división entre árbol y visor y la carpeta raíz activa bajo un nombre
+— después le permite alternar entre diseños guardados. La pestaña activa y la división de paneles de la pestaña Modify no se guardan. El diálogo admite Save Current, Load, Rename y Delete. Los
+espacios de trabajo persisten en ``user_setting.json`` (bajo la clave ``workspaces``) y
 sobreviven entre sesiones.
 
 .. tip::
-   Construya un espacio de trabajo **Browse** con el árbol y la cuadrícula de miniaturas
-   visibles, y un espacio de trabajo **Develop** separado con el panel de revelado maximizado
-   y el árbol contraído. Un solo clic mueve toda su ventana a la forma adecuada para cada tarea.
+   Construya un espacio de trabajo **Browse** con un árbol ancho junto al visor, y un
+   espacio de trabajo **Focus** separado con el árbol arrastrado hasta quedar estrecho y
+   cerrados los docks que no necesite. Un solo clic mueve toda su ventana a la forma adecuada para cada tarea.
 
 Gestos del touchpad
 -------------------
@@ -1933,7 +1992,7 @@ Asociación de archivos (Windows)
 Registrar Imervue como visor de imágenes en el Explorador de Windows:
 
 1. ``File`` > ``File Association`` > ``Register 'Open with Imervue'``
-2. Se requieren privilegios de administrador.
+2. No se necesitan derechos de administrador: el registro escribe en el registro de Windows del usuario actual.
 3. Tras el registro, clic derecho en cualquier imagen en el Explorador para ver la opción ``Open with Imervue``.
 
 Para eliminar: ``File`` > ``File Association`` > ``Remove file association``.
@@ -2108,7 +2167,7 @@ Herramientas y superposiciones
    * - ``F8`` / ``Ctrl + F8``
      - Información OSD superpuesta / HUD de depuración (VRAM, caché, hilos)
    * - ``Shift + P``
-     - Vista de píxeles (≥ 400 % muestra cuadrícula de píxeles y valor RGB bajo el cursor)
+     - Vista de píxeles (desde 400 % muestra RGB / HEX bajo el cursor; la cuadrícula cuando hay ≤ 40.000 píxeles de la imagen en pantalla)
    * - ``Shift + M``
      - Recorrer los modos de color (Normal / Escala de grises / Invertir / Sepia)
    * - ``L``

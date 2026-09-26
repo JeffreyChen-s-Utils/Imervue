@@ -41,8 +41,9 @@ JSON schema (versioned so we can grow without breaking older files):
 * ``hit_responses`` — keyed by ``HitArea.id``; one of the lines
   pops when that area is clicked. Overrides the default greeting.
 * ``motion_lines`` — keyed by ``Motion.name``; one of the lines
-  pops when that motion starts (either from a hit area or from
-  the context menu).
+  pops when a hit-area click plays that motion and the area has no
+  ``hit_responses`` of its own. A motion started from the context
+  menu says nothing.
 * ``scheduled`` — list of timer-driven entries. Each fires after
   ``every_seconds`` of clock time, picking randomly from
   ``messages``.

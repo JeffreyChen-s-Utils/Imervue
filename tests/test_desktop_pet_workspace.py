@@ -270,3 +270,22 @@ def test_a_toggle_made_on_the_pet_shows_in_the_tab(qapp):
         window.hide()
         window.deleteLater()
         ws.deleteLater()
+
+
+
+def test_show_on_launch_is_a_checkbox(qapp):
+    """``show_on_launch`` decided whether the pet opened with Imervue, but nothing set it."""
+    from Imervue.desktop_pet import settings as pet_settings
+    ws = PetWorkspace()
+    try:
+        assert not ws._launch_check.isChecked()  # noqa: SLF001
+        ws._launch_check.setChecked(True)  # noqa: SLF001
+        assert pet_settings.load()["show_on_launch"] is True
+    finally:
+        ws.deleteLater()
+    again = PetWorkspace()
+    try:
+        assert again._launch_check.isChecked()  # noqa: SLF001
+        assert again.pet_window() is None
+    finally:
+        again.deleteLater()

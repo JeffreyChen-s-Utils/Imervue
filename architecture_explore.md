@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `26c915f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-09-26 · 對應 commit `9c2bd01` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -863,10 +863,10 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `pet_window.py` | 841 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas` |
+| `pet_window.py` | 840 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas` |
 | `pet_window_flags.py` | 201 | `PetWindowFlagsMixin`：`PetWindow` 的視窗旗標組合（置頂／置底、點擊穿透）、鎖定位置、吸附門檻、透明度、全螢幕時隱藏 |
 | `pet_feature_toggles.py` | 219 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、OBS／Twitch、虛擬攝影機、LLM、音樂律動、閒置小遊戲、通知、webhook、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
-| `pet_workspace.py` | 765 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設） |
+| `pet_workspace.py` | 775 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設） |
 | `pet_interaction.py` | 214 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
 | `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
 | `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
@@ -898,7 +898,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 個性與行為
 
-`pet_script.py`(436) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(521) 內建編輯器 ·
+`pet_script.py`(437) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(521) 內建編輯器 ·
 `schedule_rules.py`(101) 時段 / 星期閘門 · `idle_minigame.py`(278) 閒置好奇 / 打呵欠 ·
 `llm_dialogue.py`(242) 本地 LLM（預設 Ollama）對話 · `music_rhythm.py`(463) WASAPI loopback 抓系統音訊隨節奏擺動 ·
 `click_sfx.py`(168) 事件音效

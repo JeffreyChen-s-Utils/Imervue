@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-75 | 2026-09-26 | The guides describe Puppet, Desktop Pet, browsing and the file tools as they work, and the pet can open with Imervue | #docs #fix #done #desktop-pet #puppet #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
 | U-20260926-74 | 2026-09-26 | CI installs wheels only, the docs build is pinned, and the open static-analysis findings are cleared | #ci #quality #sonarcloud #codacy | [2026-09-c](2026-09-c.md) |
 | U-20260926-73 | 2026-09-26 | Refactor: the upscale worker's two run paths share one loop | #refactor #upscale #quality #sonarcloud | [2026-09-c](2026-09-c.md) |
 | U-20260926-72 | 2026-09-26 | Tests pin the upscale worker's traditional and AI run paths | #test #upscale | [2026-09-c](2026-09-c.md) |
@@ -448,4 +449,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
-| [2026-09-c.md](2026-09-c.md) | 2026-09 | 19 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 20 |

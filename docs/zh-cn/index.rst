@@ -43,7 +43,7 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
 
 - **左边**：文件夹目录，点选文件夹就能浏览里面的图片
 - **中间**：图片显示区，会以缩略图网格展示所有图片
-- **右边**：EXIF 信息栏，显示图片的拍摄信息
+- **右边**：EXIF 信息栏，启动时折叠成一条细边，点击即可展开；显示当前打开的图片的拍摄信息
 
 Imervue 会把每次会话的日志写到程序旁边的 ``imervue.log``\ （程序所在的文件夹为只读时改写到 ``%LOCALAPPDATA%\Imervue``，Windows 以外为 ``~/.cache/imervue``）。上一次会话的日志会保留为 ``imervue.previous.log``，因此程序异常退出后再次启动 Imervue，能说明原因的日志依然还在。报告问题时请把两个文件一起附上。
 
@@ -61,13 +61,13 @@ Imervue 会把每次会话的日志写到程序旁边的 ``imervue.log``\ （程
    * - 打开文件夹
      - ``文件`` > ``打开文件夹``，选择你要浏览的目录
    * - 打开单张图片
-     - ``文件`` > ``打开图片``，选择一张图片
+     - ``文件`` > ``打开文件``，选择一张图片
    * - 拖拽打开
      - 直接把图片或文件夹拖进窗口
    * - 从资源管理器打开
      - 右键图片 > ``Open with Imervue``\ （需先注册文件关联）
    * - 最近打开
-     - ``文件`` > ``最近打开``，快速回到之前看过的文件夹
+     - ``文件`` > ``最近打开`` > 最近的文件夹 / 最近的图片，重新打开文件夹或图片
 
 支持的图片格式
 ^^^^^^^^^^^^^^
@@ -120,14 +120,14 @@ Imervue 会把每次会话的日志写到程序旁边的 ``imervue.log``\ （程
 双击行（或按 ``Enter``）进入大图模式；按 ``Esc`` 返回列表。缩略图与元数据在后台线程懒加载，
 面对大型文件夹仍保持流畅。
 
-``Delete`` 删除选中的行，``Ctrl + Z`` 撤销；评分（``0`` – ``5``）、挑片（``P`` / ``Shift + X`` / ``U``）、色彩（``F1`` – ``F5``）键也作用于选中的行，与网格相同；按键跟随快捷键设置。
+``Delete`` 删除选中的行，``Ctrl + Z`` 撤销；评分（``1`` – ``5``）、收藏（``0``）、挑片（``P`` / ``Shift + X`` / ``U``）、色彩（``F1`` – ``F5``）键也作用于选中的行，与网格相同；除 ``F1`` – ``F5`` 外的按键都跟随快捷键设置。
 
 大图模式（Deep Zoom）
 ^^^^^^^^^^^^^^^^^^^^^
 
 点击缩略图后进入大图模式，可以高画质浏览单张图片。
 
-远超 Pillow 安全上限（1.79 亿像素）的全景图也能打开：上限依电脑内存而定（16 GB 约 13 亿像素），这类超大图像一次只解码一张。
+远超 Pillow 安全上限（1.79 亿像素）的全景图也能打开：上限依电脑内存而定（16 GB 约 14 亿像素），这类超大图像一次只解码一张。
 
 中途截断的 JPEG、PNG、TIFF、GIF、BMP（下载或复制中断、从故障存储卡救回的照片）会像浏览器一样显示已读到的部分，而不是完全打不开。
 
@@ -176,7 +176,7 @@ Windows 标为隐藏的文件（在资源管理器与文件夹树中也不显示
    * - OSD 信息叠加
      - ``F8`` 显示文件名／尺寸／类型；``Ctrl + F8`` 显示 Debug HUD（显存／缓存／线程）
    * - 像素查看
-     - ``Shift + P``：缩放 ≥ 400 % 显示像素网格与光标下 RGB／HEX
+     - ``Shift + P``：缩放达 400 % 起显示光标下 RGB／HEX，画面上的图片像素不超过 40,000 个时再叠加像素网格
    * - 色彩模式
      - ``Shift + M`` 循环 正常／灰阶／反相／怀旧（GLSL，非破坏性）
 
@@ -756,10 +756,10 @@ Puppet 工作区（Puppet 标签）
 端到端流程
 ^^^^^^^^^^
 
-1. **导入 PNG** — 工具栏 ``Import PNG…`` 跑 ``puppet.auto_mesh.puppet_from_png``：依 alpha 三角化、单一 drawable、可立即渲染。
-2. **加变形器** — ``Add Rotation Deformer``\ （锚点 + 角度）或 ``Add Warp Deformer``\ （rows × cols Bezier lattice；边界外顶点直通）。
-3. **加参数** — ``Add Parameter`` 在右侧 **Parameters** 停靠栏加滑块（自动命名 ``Param1``、``Param2`` …）。
-4. **设 keys** — 拖滑块到极端值、编辑 deformer form、按 **Set key**。对中立值跟另一端重复。Runtime 接着会在滑块移动时于相邻 keys 之间 lerp 各字段。
+1. **导入 PNG** — ``File`` > ``Import PNG…`` 跑 ``puppet.auto_mesh.puppet_from_png``：依 alpha 三角化、单一 drawable、可立即渲染。
+2. **加变形器** — ``Edit`` > ``Add Rotation Deformer``\ （锚点 + 角度）或 ``Add Warp Deformer``\ （rows × cols 双线性 lattice；边界外顶点直通）。
+3. **加参数** — ``Edit`` > ``Add Parameter`` 在右侧 **Parameters** 停靠栏加滑块（自动命名 ``Param1``、``Param2`` …）。
+4. **设 keys** — 拖滑块到极端值、编辑 deformer form、按 **Set key**。对中立值跟另一端重复。Runtime 接着会在滑块移动时于相邻 keys 之间 lerp 各字段。**Set key** 只记录 deformer form：**Edit mesh** 会永久移动 drawable 的静止顶点，所以 mesh 编辑不会被记成 key。
 5. **保存** — ``Save As…`` 把 rig + 纹理 + 动作 + 表情 + 物理写成单一 ``.puppet`` zip，可分享或之后用 ``Open Puppet…`` 重开。
 
 示例
@@ -773,11 +773,11 @@ Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7th 或自己�
 
 **执行内置示例 — 分步演示：**
 
-1. **启动 Imervue**。源码运行：``python -m Imervue``；安装版：直接执行 ``Imervue`` 可执行文件 / app bundle。``examples/`` 目录已打包进 wheel 与 Nuitka EXE，rig 文件位于安装目录下。
+1. **启动 Imervue**。源码运行：``python -m Imervue``；安装版：直接执行 ``Imervue`` 可执行文件 / app bundle。``examples/`` 目录已打包进 Nuitka 与 PyInstaller 版本；pip / wheel 安装不含此目录（从源码 checkout 运行时 rig 位于 ``examples/puppet/``）。
 2. 点窗口顶部的 **Puppet** 标签。
-3. 工具栏 → **File > Examples > March 7th**\ （或工具栏上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中载入，参数栏填满 203 个 Cubism 标准参数滑块。
-4. 在底部 **Motions** 停靠栏单击任一个动作条目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即开始播放；再点一次停止，或选别的动作交叉淡入。
-5. 切换工具栏上的实时输入 toggle 让 rig 跟你动 — **Drag-track head**\ （头跟光标）、**Auto-blink**\ （自动眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 随机 idle 动作）、**Mic lip-sync**\ （麦克风 RMS 带动嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驱动头 / 眼 / 嘴）。
+3. **File > Examples > March 7th**\ （或工具栏上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中载入，参数栏填满 203 个 Cubism 标准参数滑块。
+4. 在底部 **Motions** 停靠栏单击任一个动作条目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即开始播放；再点一次会从头重播，停靠栏的 **Stop** 按钮停止播放，选别的动作则交叉淡入。
+5. 切换工具栏上的实时输入 toggle 让 rig 跟你动 — **Drag-track head**\ （光标在画布上移动时，头与眼睛转向光标）、**Auto-blink**\ （自动眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 随机 idle 动作）、**Mic lip-sync**\ （麦克风 RMS 带动嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驱动头 / 眼 / 嘴）。
 6. 工具栏 **Reset to rest** 停掉所有动作、取消勾所有实时驱动、清掉 expressions / pose 覆盖，所有参数复位 — 标准的「从头开始」按钮。
 7. 之后要打开别的 rig：**File > Open Puppet…** 从磁盘挑任何 ``.puppet`` zip；**File > Examples ▾** 始终连到内置清单。
 
@@ -821,6 +821,10 @@ physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
 工具栏参考
 ^^^^^^^^^^
 
+工具栏上有 **Examples ▾**、六个实时开关、**Edit mesh**、**Record…** 与
+**Reset to rest**。下表其余条目都位于 **File**、**Edit**、**Live**、**Output** 或
+**Tools** 菜单；这些菜单也包含工具栏上的条目。
+
 .. list-table::
    :header-rows: 1
    :widths: 30 70
@@ -828,7 +832,7 @@ physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
    * - 动作
      - 用途
    * - Open Puppet… / Examples ▾
-     - 从磁盘加载 ``.puppet``，或从工具栏直接挑 ``examples/puppet/`` 下内置的 rig
+     - 从磁盘加载 ``.puppet``\ （**File** 菜单），或从 **Examples ▾**\ （工具栏按钮，**File** 菜单下也有）挑 ``examples/puppet/`` 下内置的 rig
    * - Import PNG… / Import PSD… / Import Cubism…
      - PNG 自动 mesh、PSD 分层拆 drawable、Cubism rig sample-and-reconstruct。Cubism 文件选择器同时接受 ``.moc3`` 和 ``.model3.json``；工作区还没开 rig 时两条路径都跑完整 ``.moc3 → .puppet`` 转换（SDK 用户自备）。已经开了 rig 时选 ``.model3.json`` 会把 JSON 部分（motions / expressions / physics）叠加到既有文档
    * - Recent
@@ -836,9 +840,9 @@ physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
    * - Save As…
      - 把当前 rig 写成 ``.puppet`` zip
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - 从工具栏 author rig
+     - 从 **Edit** 菜单 author rig
    * - Drag-track head
-     - 光标偏移 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
+     - 光标在画布上移动时，头与眼睛转向光标：光标偏移 → ``ParamAngleX`` / ``ParamAngleY`` + ``ParamEyeBallX`` / ``ParamEyeBallY``
    * - Auto-blink
      - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上的 cosine close→open，每 ~4.5 秒一次（force-write 路径绕过 canvas 的 no-change-skip，避免被其他 driver 卡住）
    * - Mic lip-sync
@@ -850,22 +854,22 @@ physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
    * - Edit mesh
      - 拖曳 canvas 上的顶点微调 mesh
    * - Record motion
-     - 把参数变化录成新的 ``Motion`` 加进文档 — take 烘焙、不用手动 author keys
+     - 只在 **Output** 菜单：把参数变化录成新的 ``Motion`` 加进文档 — take 烘焙、不用手动 author keys
    * - Capture frame… / Record… / Export all motions…
-     - 存单张 PNG、开关 GIF / WebM / MP4 录制、或批量把每个动作各别 render 成文件（全部用跟推流相同的角色独立 off-screen render）
+     - 存单张 PNG、开关 GIF / WebM / MP4 录制、或批量把每个动作各别 render 成文件（全部用跟推流相同的角色独立 off-screen render）。截取的画面保持 rig 本身的尺寸（长边最多 4096 px）、背景透明；录制与批量导出则把角色缩放到 1080 px 内、白色背景，因为 GIF / WebM / MP4 帧不含 alpha
    * - Output > Virtual camera / NDI output
      - 直播输出 — 见下方的“OBS 直播整合”
    * - Reset to rest
      - Motion player 直接停、所有 live driver 取消勾、清空 expressions / pose groups、参数复位
    * - Fit to Window
-     - Canvas 上重新居中 + 缩放 rig
+     - **Tools** 菜单：Canvas 上重新居中 + 缩放 rig
 
 录制自定义动作
 ^^^^^^^^^^^^^^
 
 不想手动编 keyframe？用实时 take 录：
 
-1. 工具栏 **Record motion** 打勾，会弹出命名对话框。
+1. **Output > Record motion** 打勾，会弹出命名对话框。
 2. 录制时拖滑块、开 **Webcam tracking**、让物理跑 — 任何会写参数值的事情都可以。
 3. **Record motion** 取消勾 — 录制器把 30 Hz 串流烘焙成一个 ``Motion``：每个真的有变动的参数一条 linear-segment 轨（没变动的丢掉）。新动作立刻出现在底部 **Motions** 停靠栏。
 
@@ -876,7 +880,7 @@ OBS 直播整合
 
 两条输出，都把角色独立渲染到 off-screen framebuffer（不含棋盘格背景与编辑器外壳）再送到推流端。输出长边上限 1080 px，避免 Cubism 原生画布（March 7th 是 3503×7777）被 DirectShow 虚拟摄像头驱动拒绝。
 
-**A. Virtual Camera** — 在 OBS"视频捕获设备"源列表里以 webcam 形式出现。``pip install pyvirtualcam`` 加上平台驱动：OBS Studio 26+（Windows/macOS）会附 *OBS Virtual Camera* 驱动，第一次打开 OBS 点 *Start Virtual Camera* 注册；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。工具栏 **Output > Virtual camera** 开始推流。
+**A. Virtual Camera** — 在 OBS"视频捕获设备"源列表里以 webcam 形式出现。``pip install pyvirtualcam`` 加上平台驱动：OBS Studio 26+（Windows/macOS）会附 *OBS Virtual Camera* 驱动，第一次打开 OBS 点 *Start Virtual Camera* 注册；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。菜单开关 **Output > Virtual camera** 开始推流。
 
 DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道**，所以 Imervue 在角色以外的区域填\ **洋红色 #FF00FF** 当色键。OBS 端去背：
 
@@ -886,7 +890,7 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
 
 滤镜跟着源走，下次启用虚拟摄像头自动套用。
 
-**B. NDI 输出** — LAN 上 < 50 ms 延迟、原生 RGBA，OBS / vMix 可以直接把角色叠到自己的场景上、不用色键。``pip install ndi-python``，加上 `NDI Tools <https://ndi.video/tools/>`_ runtime 与 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 插件。工具栏 **Output > NDI output** 开始广播（默认源名 *Imervue Puppet*）。
+**B. NDI 输出** — LAN 上 < 50 ms 延迟、原生 RGBA，OBS / vMix 可以直接把角色叠到自己的场景上、不用色键。``pip install ndi-python``，加上 `NDI Tools <https://ndi.video/tools/>`_ runtime 与 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ 插件。菜单开关 **Output > NDI output** 开始广播（默认源名 *Imervue Puppet*）。
 
 ``ndi-python`` 只 ship source distribution、pip 拿到后从 C++ 编。Windows 需要 Visual Studio Build Tools 2022（含 C++ 工作负载）、CMake 加到 PATH、NDI SDK（从 <https://ndi.video/for-developers/ndi-sdk/> 取得，跟 NDI Tools 不同）装在默认位置、环境变量 ``NDI_SDK_DIR`` 指向 SDK。
 
@@ -902,7 +906,7 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
 * ``ndi-python`` — NDI 输出（见"OBS 直播整合"）
 * 用户自备 Cubism Native SDK DLL — ``.moc3 → .puppet`` 转换（Live2D Free Material License 禁止散布；放在 ``<cwd>/sdk/`` 或设 ``CUBISM_CORE_DLL`` 环境变量）
 
-任何缺失都会优雅停用 — 对应工具栏 toggle 会自动弹回去并提示安装。**File > Install dependencies…** 可一次装齐所有 Python 可选包。
+缺少 Python 包时 Puppet 标签会优雅降级 — 对应开关保持关闭，并打开依赖安装器提供安装；装好后开关会重新打开。只有包已安装但设备或驱动失败时才会显示文字提示。**File > Install dependencies…** 可一次装齐所有 Python 可选包。
 
 ----
 
@@ -925,7 +929,7 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
    点击、锚点锁定、永远置底、全屏时隐藏、隐藏时暂停、透明度、
    尺寸、多显示器恢复）。
 #. **交互模型** — 左键命中区域、完整右键菜单、系统托盘。
-#. **实时驱动** — 六个可选的输入驱动及其可选依赖。
+#. **实时驱动** — 七个输入驱动（三个默认开启）及其可选依赖。
 #. **Pet script（桌宠脚本）** — 用 JSON 文件替换桌宠的"嗓音"、
    排定提醒、为每个命中区域 / 每个动作绑定回应。
 #. **持久化** — 跨启动会被记住的字段及完整设置 schema。
@@ -959,9 +963,9 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
   ``.puppet`` 文件。
 * **Load bundled March 7th**\ （载入内置 March 7th） — 打开内置
   的 ``examples/puppet/march_7th.puppet``。解析器先查
-  ``examples_dir()``\ （对打包的 Nuitka / pip 安装版本是
-  frozen-safe 的），再回退到相对仓库根目录的查找，所以两种运行
-  方式下按钮都能正常工作。
+  ``examples_dir()``\ （打包的 Nuitka / PyInstaller 版本位于
+  程序旁边，源码 checkout 则是仓库根目录），再回退到相对当前
+  工作文件夹的查找。
 * **Last rig**\ （上一个角色） — 上次加载的角色会在 Imervue 启动
   时从设置字段 ``last_rig_path`` 自动恢复；Desktop Pet 标签会
   不可见地重新实例化浮层，让桌宠只差一次点击就回到你离开时
@@ -1018,9 +1022,10 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
        上使用 Win32 ``GetWindowRect`` API；在 macOS / Linux
        上会优雅地 no-op（桌宠保持可见）。
    * - 隐藏时暂停
-     - 在 ``hideEvent`` 时 ~30 FPS 的绘制 tick 和 1 Hz 的
-       脚本 tick 都会停下，所以隐藏中的桌宠零 CPU 占用。下次
-       ``showEvent`` 会重新启动。
+     - ~30 FPS 的绘制 tick、1 Hz 的脚本 tick 与全屏轮询
+       （除非正是全屏让桌宠隐藏）会在 ``hideEvent`` 时停下，
+       下次 ``showEvent`` 时重新启动。实时驱动的计时器（眨眼、
+       闲置、闲置动作、视线）会继续运行。
    * - 尺寸预设
      - 小（200 × 300）、中（320 × 480）、大（480 × 720）。
        桌宠围绕当前中心点缩放，所以改尺寸时不会跑位。缩放
@@ -1031,10 +1036,11 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
        是为了让你始终看得见、抓得到桌宠 — 完全透明会让你
        把它弄丢。
    * - 位置记忆
-     - 每次松开后吸附之后的 ``(x, y)`` 都会被持久化。下次
-       启动桌宠会回到那个屏幕坐标。如果保存的坐标已经不在
-       任何连接的屏幕里（你拔掉了显示器），桌宠会回退到
-       主屏的右下角。
+     - 每次松开后吸附之后的 ``(x, y)`` 会连同所在显示器一起
+       被持久化。下次启动桌宠会回到那个位置，并钳制在该显示器
+       内。如果那台显示器已经不在（上次启动后你拔掉了它），
+       桌宠会到第一个屏幕，保存的位置会被钳制到其中。只有从未
+       保存过位置时才会使用右下角。
 
 交互模型
 ^^^^^^^^
@@ -1054,22 +1060,25 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
 #. 如果没有命中区域覆盖该点击，桌宠会回退到一句问候（从脚本
    的 ``greetings`` 列表或内置回退集里选）。
 
-拖曳移动手势会抑制点击处理器，所以拖动桌宠不会触发动作 / 台词。
+拖曳移动手势会抑制点击处理器，所以拖动桌宠不会弹出气泡。角色
+有 ``Drag`` 组时，按下会播放其中一个动作；拖曳后松开时，若角色
+有 ``Land`` 组，则播放其中一个动作。
 
 **身体上任意位置右键**
 
 弹出一个结构如下的上下文菜单：
 
 * **Hide pet**\ （隐藏桌宠） — 顶层动作，关闭浮层。
-* **Live drivers**\ （实时驱动）子菜单 — 六个可勾选的开关
+* **Live drivers**\ （实时驱动）子菜单 — 七个可勾选的开关
   （Auto idle、Idle motions、Auto-blink、Drag-track head、
-  Mic lip-sync、Webcam tracking）。勾选状态镜像实时驱动的
-  运行状态，所以菜单显示的就是当前在跑的。
+  Mouse gaze、Mic lip-sync、Webcam tracking）。勾选状态镜像
+  实时驱动的运行状态，所以菜单显示的就是当前在跑的。
 * **Play motion**\ （播放动作）子菜单 — 从当前角色的
-  ``document.motions`` 列表生成。选中一项会播放该动作（如果
-  脚本为它绑定了台词，还会触发桌宠的声音）。
+  ``document.motions`` 列表生成。选中一项会播放该动作；不会
+  说出 ``motion_lines`` 的台词（那些只回应命中区域的点击）。
 * **Apply expression**\ （应用表情）子菜单 — 从角色的
-  ``document.expressions`` 生成。选中会切换该表情的参数 overlay。
+  ``document.expressions`` 生成。选中会加上该表情的参数
+  overlay；再次应用不会有任何变化。
 * 五个顶层可勾选开关：**Lock position**\ （锁定位置）、
   **Click-through**\ （穿透点击）、**Always on bottom**
   （永远置底）、**Hide on fullscreen**\ （全屏时隐藏）、
@@ -1097,7 +1106,10 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
 
 每个实时驱动都是首次启用时才懒创建的，所以一只休眠中的桌宠
 对你没开的驱动零 timer / 线程开销。每个驱动的状态都会被持久化；
-打开它、关掉 Imervue、再启动，桌宠会带着同样的驱动复活。
+打开它、关掉 Imervue、再启动，角色会带着同样的驱动恢复。浮层
+本身只有在标签的 **Window**\ （窗口）分组里勾选了
+**Show the pet when Imervue starts**\ （Imervue 启动时显示宠物）
+时才会在启动时出现。
 
 .. list-table::
    :header-rows: 1
@@ -1111,25 +1123,30 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、没有 alpha 通道
        让角色在什么都没动时也显得活着。
      - 无
    * - **Idle motions**
-     - 每隔几秒从角色的 ``Idle`` 组里随机挑一个动作播放。
-       如果当前已有动作在跑则跳过。
+     - 从角色的 ``Idle`` 组里随机挑一个动作播放 — 开启时
+       立刻播一个，之后每隔几秒一个。非 Idle 动作播放期间
+       会让开。
      - 无
    * - **Auto-blink**
      - 每 ~4.5 s 用平滑的余弦曲线闭眼再睁眼。该驱动会强制
        写入参数，避免其它触碰眼睛 open 值的驱动压制眨眼。
      - 无
    * - **Drag-track head**
-     - 头 + 眼睛即便光标不在桌宠上也会转向全局光标位置。
+     - 光标在桌宠上方移动时，头 + 眼睛转向光标。
        驱动 ``ParamAngleX`` / ``ParamAngleY`` /
        ``ParamEyeBallX`` / ``ParamEyeBallY``。
+     - 无
+   * - **Mouse gaze**
+     - 眼睛与头部在整个屏幕上跟随光标，以桌宠中心为基准
+       （眼睛先动）。驱动同样的四个参数。
      - 无
    * - **Mic lip-sync**
      - 麦克风 RMS 振幅驱动 ``ParamMouthOpenY``。
      - ``sounddevice``
    * - **Webcam tracking**
      - MediaPipe FaceLandmarker 以 ~30 FPS 读取摄像头，驱动
-       头部姿态 + 眼 open + 嘴 open 参数。会打开一个小的实时
-       预览窗口让你确认摄像头看得见你的脸。
+       头部姿态 + 眼 open + 嘴 open 参数。桌宠不会打开预览
+       窗口（摄像头预览属于 Puppet 标签）。
      - ``opencv-python`` + ``mediapipe``
 
 两个带可选依赖的驱动会优雅降级：如果依赖没装，勾选会被弹回，
@@ -1140,13 +1157,17 @@ Pet script — 自定义嗓音与定时事件
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 桌宠的气泡从一个你可以自己写的 JSON 文件取台词，文件通过标签
-里的 **Pet script**\ （桌宠脚本）面板加载。脚本控制四件事：
+里的 **Pet script**\ （桌宠脚本）面板加载。脚本控制五件事：
 
 * **Greetings**\ （问候） — 没有更具体匹配时使用的默认点击台词。
+* **Time-of-day greetings**\ （时段问候） — 按本地时钟时段
+  （``morning`` 05–11 时、``afternoon`` 12–17 时、``evening``
+  18–21 时、``night`` 22–04 时）分组的问候，优先于普通问候使用；
+  没有台词的时段会退回普通问候。
 * **Hit-area responses**\ （命中区域回应） — 按 ``HitArea.id``
   分桶的台词。
-* **Motion lines**\ （动作台词） — 按动作名分桶的台词，在桌宠
-  开始播放该动作时触发（无论来自命中区域还是上下文菜单）。
+* **Motion lines**\ （动作台词） — 按动作名分桶的台词，在点击
+  命中区域而播放该动作时说出（从上下文菜单启动的动作不会）。
 * **Scheduled chimes**\ （定时提醒） — 定时驱动的台词，每过
   ``every_seconds`` 秒（按 monotonic 墙钟）触发一次。
 
@@ -1160,6 +1181,10 @@ Schema（带版本号 — 新字段向前兼容）：
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
+     "time_of_day_greetings": {
+       "morning": ["Good morning!"],
+       "night": ["Still up?"]
+     },
      "hit_responses": {
        "HitAreaHead": ["Hey, my head!", "Stop poking!"],
        "HitAreaBody": ["Hehe~", "Pat pat?"]
@@ -1183,7 +1208,8 @@ Schema（带版本号 — 新字段向前兼容）：
   失败。只有彻底无法解析的 JSON 才会报错并把路径显示在状态栏。
 * 命中区域 / 动作 / 问候按层级回退：一次左键先查
   ``hit_responses[area.id]``，然后 ``motion_lines[area.motion]``，
-  然后 ``greetings``，最后兜底的内置默认问候集。
+  然后 ``time_of_day_greetings``，然后 ``greetings``，最后兜底的
+  内置默认问候集。
 * 时间跟踪使用 ``time.monotonic``，所以挂起笔记本或调系统时钟
   也不会让排队事件批量爆发。
 
@@ -1221,15 +1247,16 @@ cheer）、以及一个 30 分钟拉伸提醒。head / body 台词回应的是�
        回退到默认。
    * - ``position``
      - ``[-1, -1]``
-     - 上次松手后的屏幕坐标 ``(x, y)``。``-1, -1`` 表示
-       "使用主屏右下角"。两次会话之间拔掉显示器会用同样
-       的方式回退。
+     - 上次松手后的屏幕坐标 ``(x, y)``。``-1, -1``\ （从未
+       保存）表示"使用右下角"。保存时的显示器不在时，位置会
+       被钳制到第一个屏幕内。
    * - ``size_preset``
      - ``"medium"``
      - ``small`` / ``medium`` / ``large`` 之一。
    * - ``opacity``
      - ``1.0``
-     - 钳制到 ``[0.1, 1.0]``。越界值重置为默认。
+     - 越界值会被钳制到 ``[0.1, 1.0]``；只有非数值才会回退
+       到默认。
    * - ``click_through``
      - ``false``
      -
@@ -1246,14 +1273,18 @@ cheer）、以及一个 30 分钟拉伸提醒。head / body 台词回应的是�
      - ``24``
      - 钳制到 ``[0, 200]`` px。
    * - ``drivers``
-     - 全部 ``false``
+     - ``auto_idle``、``idle_motion``、``auto_blink`` 为
+       ``true``；其余 ``false``
      - 按驱动 id 索引的子 dict（``auto_idle``、
        ``idle_motion``、``auto_blink``、``drag_track``、
-       ``mic_lipsync``、``webcam_tracking``）。未知 key
-       原样 round-trip 以便向前兼容。
+       ``mouse_gaze``、``mic_lipsync``、``webcam_tracking``）。
+       未知 key 原样 round-trip 以便向前兼容。
    * - ``show_on_launch``
      - ``false``
-     - Imervue 启动时自动显示浮层。
+     - 由标签 **Window**\ （窗口）分组里的
+       **Show the pet when Imervue starts**\ （Imervue 启动时
+       显示宠物）设置。启动时角色与驱动总会恢复；只有开启此项时
+       浮层才会出现。
    * - ``speech_enabled``
      - ``true``
      - 为 false 时气泡永远不弹。
@@ -1308,16 +1339,17 @@ key 也能在不认识它们的旧运行时上幸存。
    （在标签或右键菜单里）。
 #. 如果加载了自定义脚本，确认 JSON 能解析 — 加载错误会显示在
    标签的状态栏。
-#. 如果点击命中区域什么都没发生，说明该区域既没绑动作，脚本
-   里也没有该区域 id 对应的 ``hit_responses`` 条目。要么在
-   Puppet 标签里给该区域绑一个动作，要么在脚本的
-   ``hit_responses`` 里加上该区域 id。
+#. 如果开启了 **Click-through**\ （穿透点击），点击会传给桌宠
+   背后的窗口；在标签或托盘菜单里关掉它。（气泡开启时，每次
+   点击都会有一句台词：没有命中区域的角色不会播放动作，但点击
+   仍会跟你打招呼。）
 
 **摄像头追踪勾选会自动弹回。** Webcam tracking 需要在 Imervue
 运行的同一个 Python 环境里装 ``opencv-python`` 与
 ``mediapipe``。安装命令 ``pip install opencv-python mediapipe``。
-装好后再勾选应该会弹出一个显示检测到的人脸 landmark 的小预览
-窗口。
+装好后再勾选一次。桌宠不会打开预览窗口；要查看摄像头检测到
+什么，请在 Puppet 标签里打开 **Webcam tracking**，那里会显示
+人脸 landmark。
 
 **全屏应用时桌宠不自动隐藏。** 全屏检测器以 1 Hz 轮询前台
 窗口。Windows 上用 ``GetWindowRect`` Win32 API；macOS / Linux
@@ -1328,7 +1360,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
 
 **桌宠在两次启动之间漂到屏幕外。** 这发生在下次启动时桌宠
 所在的屏幕已经不在连接的显示器里（笔记本脱坞、副屏被拔）。
-这种情况下桌宠会自动回退到主屏右下角 — 拖到你想要的位置，
+这种情况下桌宠会移到第一个屏幕，保存的位置会被钳制到其中 — 拖到你想要的位置，
 下次保存会覆盖掉过时的坐标。
 
 ----
@@ -1355,9 +1387,11 @@ Windows 上：确认 **Hide when other app is fullscreen**
    * - 垂直翻转
      - --
      - 右键 > 修改 > 垂直翻转
-   * - 无损旋转（JPEG）
+   * - 无损旋转
      - --
-     - 右键 > 无损旋转
+     - 右键 > 无损旋转 > 无损顺时针旋转 / 无损逆时针旋转。只有 JPEG 是真正无损（只改方向标签）；
+       PNG / BMP / TIFF / WebP / GIF 会解码、旋转后重新保存（有损 WebP 会重新编码）；
+       相机 RAW、HEIC 与多帧文件会被拒绝
 
 ----
 
@@ -1369,7 +1403,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
 
 打开图片（大图模式）后，右键 > ``导出 / 另存为``
 
-- 选择格式：PNG、JPEG、WebP、BMP、TIFF、AVIF；装了 ``pillow-heif`` / ``pillow-jxl-plugin`` 还有 HEIC / JPEG XL
+- 选择格式：PNG、JPEG、WebP、BMP、TIFF；Pillow 支持 AVIF 时还有 AVIF，装了 ``pillow-heif`` / ``pillow-jxl-plugin`` 还有 HEIC / JPEG XL
 - 调整质量（有损格式可调）
 - 选择保留的元数据：全部、位置以外的全部（默认）或全部移除。相机、镜头与拍摄时间会一并保留；选择会被记住，批量导出也提供相同选项
 - 预览文件大小
@@ -1417,7 +1451,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
 
 选取多张图片后，右键 > ``批量操作`` > ``制作 GIF / 视频``
 
-- 支持 GIF 和 MP4 格式
+- 支持 GIF 和 MP4 格式；MP4 使用 PATH 上的 ffmpeg，没有时使用默认依赖 ``imageio-ffmpeg`` 附带的 ffmpeg
 - 可拖拽排列顺序
 - 设定每秒帧数（FPS）
 - 自定义尺寸
@@ -1518,7 +1552,9 @@ Windows 上：确认 **Hide when other app is fullscreen**
    * - 复制图片到剪贴板
      - 大图模式下按 ``Ctrl + C``
    * - 粘贴剪贴板图片
-     - ``文件`` > ``从剪贴板粘贴``，或按 ``Ctrl + V``
+     - ``文件`` > ``从剪贴板粘贴`` 会在标注编辑器中打开图片（不会保存任何文件）；
+       ``Ctrl + V`` 会把图片存成当前文件夹里的 ``pasted_<时间戳>.png`` 并打开，
+       或打开复制到剪贴板的文件路径
    * - 自动监控剪贴板
      - ``文件`` > ``自动标注剪贴板图片`` 打勾
 
@@ -1539,7 +1575,7 @@ Windows 上：确认 **Hide when other app is fullscreen**
    * - 删除当前图片
      - 按 ``Delete`` 键
    * - 删除选取的多张图片
-     - 框选后按 ``Delete`` 或右键 > ``删除选取``
+     - 框选后按 ``Delete`` 或右键 > ``删除选取的图``
 
 图片会移到系统回收站，可以从那边恢复。没有回收站的磁盘（存储卡、U 盘或网络驱动器，Windows
 会直接永久删除）上的文件则会保留：关闭时 Imervue 会列出这些文件，询问是否永久删除。
@@ -1629,13 +1665,13 @@ Windows 收到无法解码的文件时，仍会回报成功，却把桌面变成
 工作区布局预设
 --------------
 
-``文件`` > ``工作区…`` 会把当前的窗口几何、停靠面板 / 工具栏排列、分隔条尺寸与
-当前根文件夹以一个名称保存下来 — 之后就能在已保存的布局之间切换。对话框支持「保存当前布局」「加载」「重命名」「删除」。
-工作区保存在 ``user_settings.json``\ （``workspaces`` 键下），跨会话保留。
+``文件`` > ``工作区…`` 会把当前的窗口几何、停靠面板 / 工具栏排列、目录树 / 检视器的分隔与
+当前根文件夹以一个名称保存下来 — 之后就能在已保存的布局之间切换。当前分页与 Modify 分页的面板分隔不会保存。对话框支持「保存当前布局」「加载」「重命名」「删除」。
+工作区保存在 ``user_setting.json``\ （``workspaces`` 键下），跨会话保留。
 
 .. tip::
-   建立一个 **Browse** 工作区，显示目录树与缩略图网格；再建立一个独立的
-   **Develop** 工作区，把 develop 面板最大化、目录树折叠。一次点击就能把整个
+   建立一个 **Browse** 工作区，让宽的目录树位于检视器旁边；再建立一个独立的
+   **Focus** 工作区，把目录树拖窄、关掉用不到的停靠面板。一次点击就能把整个
    窗口切换成最适合各项任务的形状。
 
 触控板手势
@@ -1660,7 +1696,7 @@ Windows 文件关联
 让你在资源管理器中直接用 Imervue 打开图片：
 
 1. ``文件`` > ``文件关联`` > ``注册 Open with Imervue``
-2. 需要系统管理员权限
+2. 不需要系统管理员权限：注册只写入当前用户的注册表
 3. 之后右键任意图片就能看到 ``Open with Imervue`` 选项
 
 如果要移除：``文件`` > ``文件关联`` > ``移除文件关联``
@@ -1834,7 +1870,7 @@ Imervue 支持插件扩展功能。
    * - ``F8`` / ``Ctrl + F8``
      - OSD 信息 / Debug HUD（显存、缓存、线程）
    * - ``Shift + P``
-     - 像素查看（≥ 400 % 显示网格与光标下 RGB 值）
+     - 像素查看（从 400 % 起显示光标下 RGB / HEX；画面上 ≤ 40,000 个图片像素时再显示网格）
    * - ``Shift + M``
      - 循环色彩模式（正常／灰阶／反相／怀旧）
    * - ``L``

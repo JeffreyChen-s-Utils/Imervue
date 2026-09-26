@@ -18,6 +18,8 @@ from Imervue.desktop_pet.pet_workspace import PetWorkspace
 # attribute, text, settings key (None = not restored), handler
 _CHECKS = [
     ("_show_check", "Show pet on desktop", None, "_on_show_toggled"),
+    ("_launch_check", "Show the pet when Imervue starts", "show_on_launch",
+     "_on_show_on_launch_toggled"),
     ("_click_through_check", "Click-through (let mouse events pass to the desktop)",
      "click_through", "_on_click_through_toggled"),
     ("_anchor_check", "Lock position (ignore drags)", "anchor_locked", "_on_anchor_toggled"),
@@ -56,9 +58,9 @@ def workspace(qapp):
 
 def test_group_rows_in_order(workspace):
     items = _items(_window_group(workspace))
-    assert [getattr(workspace, attr) for attr, *_x in _CHECKS] == items[:6]
-    assert [type(x).__name__ for x in items[6:]] == ["QHBoxLayout"] * 3
-    for (attr, text, *_rest), box in zip(_CHECKS, items[:6], strict=True):
+    assert [getattr(workspace, attr) for attr, *_x in _CHECKS] == items[:7]
+    assert [type(x).__name__ for x in items[7:]] == ["QHBoxLayout"] * 3
+    for (attr, text, *_rest), box in zip(_CHECKS, items[:7], strict=True):
         assert isinstance(box, QCheckBox) and box.text() == text, attr
 
 
@@ -94,7 +96,7 @@ def test_checks_drive_their_handlers(qapp, monkeypatch):
 
 
 def test_size_row(workspace):
-    label, combo, stretch = _row(_items(_window_group(workspace))[6])
+    label, combo, stretch = _row(_items(_window_group(workspace))[7])
     assert label.text() == "Size:" and stretch is None
     assert isinstance(combo, QComboBox) and combo is workspace._size_combo  # noqa: SLF001
     assert [combo.itemData(i) for i in range(combo.count())] == ["small", "medium", "large"]
@@ -103,7 +105,7 @@ def test_size_row(workspace):
 
 
 def test_opacity_row(workspace):
-    row = _items(_window_group(workspace))[7]
+    row = _items(_window_group(workspace))[8]
     label, slider, readout = _row(row)
     assert label.text() == "Opacity:"
     assert isinstance(slider, QSlider) and slider is workspace._opacity_slider  # noqa: SLF001
@@ -115,7 +117,7 @@ def test_opacity_row(workspace):
 
 
 def test_snap_row(workspace):
-    label, spin, stretch = _row(_items(_window_group(workspace))[8])
+    label, spin, stretch = _row(_items(_window_group(workspace))[9])
     assert label.text() == "Edge-snap threshold (px):" and stretch is None
     assert isinstance(spin, QSpinBox) and spin is workspace._snap_spin  # noqa: SLF001
     assert (spin.minimum(), spin.maximum(), spin.value()) == (

@@ -108,7 +108,7 @@ spanish_word_dict.update({
     "image_info_exif_exposure_time": "Velocidad: {ExposureTime}\n",
     "image_info_exif_iso": "ISO: {ISOSpeedRatings}",
     # ----- Recent / plugin / plugin downloader -----
-    "recent_menu_title": "Menú de archivos recientes",
+    "recent_menu_title": "Recientes",
     "plugin_menu_title": "Complementos",
     "plugin_menu_loaded": "Complementos cargados",
     "plugin_menu_no_plugins": "Sin complementos cargados",

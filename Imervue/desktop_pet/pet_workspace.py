@@ -87,9 +87,10 @@ _MUTED_LABEL_STYLE = "color: #888;"
 DEFAULT_EXAMPLE_PUPPET = "examples/puppet/march_7th.puppet"
 """Repo-root relative path used for the test that verifies the
 constant still points inside ``examples/puppet/``. The actual
-runtime resolution goes through :func:`examples_dir` so packaged
-builds (Nuitka EXE, pip install) find the bundled rig wherever
-Imervue was installed instead of relying on the user's CWD."""
+runtime resolution goes through :func:`examples_dir` so the packaged
+builds that bundle ``examples/`` (Nuitka, PyInstaller) find the rig
+wherever Imervue was installed; a pip install has no ``examples/``,
+and a source checkout falls back to the current working folder."""
 
 
 def _resolve_bundled_example() -> Path | None:
@@ -224,6 +225,9 @@ class PetWorkspace(QWidget):
 
         self._show_check = self._window_check(
             _tr("desktop_pet_show", "Show pet on desktop"), None, self._on_show_toggled)
+        self._launch_check = self._window_check(
+            _tr("desktop_pet_show_on_launch", "Show the pet when Imervue starts"),
+            settings["show_on_launch"], self._on_show_on_launch_toggled)
         self._click_through_check = self._window_check(
             _tr(
                 "desktop_pet_click_through",
@@ -248,8 +252,9 @@ class PetWorkspace(QWidget):
         self._speech_check = self._window_check(
             _tr("desktop_pet_speech", "Speech bubble on click"),
             settings["speech_enabled"], self._on_speech_toggled)
-        for box in (self._show_check, self._click_through_check, self._anchor_check,
-                    self._on_bottom_check, self._fullscreen_check, self._speech_check):
+        for box in (self._show_check, self._launch_check, self._click_through_check,
+                    self._anchor_check, self._on_bottom_check, self._fullscreen_check,
+                    self._speech_check):
             layout.addWidget(box)
 
         layout.addLayout(self._build_size_row(settings))
@@ -669,6 +674,11 @@ class PetWorkspace(QWidget):
         # first click was wasted (a "hide" that ran show()).
         if self._tray is not None:
             self._tray.sync_visibility(visible)
+
+    @staticmethod
+    def _on_show_on_launch_toggled(checked: bool) -> None:
+        """Remember whether the overlay opens with Imervue (``show_on_launch``)."""
+        pet_settings.update(show_on_launch=bool(checked))
 
     def _on_click_through_toggled(self, checked: bool) -> None:
         self._ensure_pet_window().set_click_through(bool(checked))
