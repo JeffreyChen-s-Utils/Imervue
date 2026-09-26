@@ -29,13 +29,16 @@ class _FakeScreen:
 
 class _FakeViewer:
     """Viewer surface bound to the production screen-refit methods, so the
-    real deferral / visibility dispatch is exercised without a GL widget."""
+    real deferral / visibility dispatch is exercised without a GL widget.
+
+    The slow screen-settle watch is only counted: its 60 ms polls are real
+    time, so on a loaded machine one could land inside the test's
+    ``processEvents()`` and fit a second time. It has its own tests in
+    ``test_deep_zoom_canvas_adapt``.
+    """
 
     request_screen_refit = GPUImageView.request_screen_refit
     _schedule_canvas_adapt = GPUImageView._schedule_canvas_adapt
-    _schedule_screen_settle_adapt = GPUImageView._schedule_screen_settle_adapt
-    _poll_settle = GPUImageView._poll_settle
-    _adapt_and_update = GPUImageView._adapt_and_update
     _adapt_view_to_canvas = GPUImageView._adapt_view_to_canvas
 
     def __init__(self, *, deep: bool = True, grid: bool = False,
@@ -52,6 +55,7 @@ class _FakeViewer:
         self.zoom = 1.0
         self.fit_calls = 0
         self.update_calls = 0
+        self.settle_watches = 0
         self.clamp_calls = 0
         self._browse = SimpleNamespace(clamp_pan=self._clamp_pan)
 
@@ -66,6 +70,9 @@ class _FakeViewer:
 
     def _clamp_pan(self):
         self.clamp_calls += 1
+
+    def _schedule_screen_settle_adapt(self):
+        self.settle_watches += 1
 
     def _fit_to_window(self):
         self.fit_calls += 1
@@ -190,6 +197,7 @@ def test_maximized_window_keeps_geometry_but_refits(qapp):
     assert win.set_geometry_calls == []
     qapp.processEvents()
     assert win.viewer.fit_calls == 1
+    assert win.viewer.settle_watches == 1
 
 
 def test_no_deep_zoom_skips_refit(qapp):
