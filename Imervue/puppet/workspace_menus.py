@@ -15,6 +15,15 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
+def example_label(stem: str) -> str:
+    """Menu label for a bundled rig file: ``march_7th`` -> ``March 7th``.
+
+    Only each word's first letter is raised: ``str.title`` also raised the
+    letter after a digit and showed "March 7Th".
+    """
+    return " ".join(word[:1].upper() + word[1:] for word in stem.split("_") if word)
+
+
 RECENT_KEY = "puppet_recent_files"
 
 
@@ -259,8 +268,7 @@ class PuppetMenusMixin:
             empty.setEnabled(False)
             return
         for path in bundled:
-            label = path.stem.replace("_", " ").title()
-            action = self._examples_menu.addAction(label)
+            action = self._examples_menu.addAction(example_label(path.stem))
             action.setToolTip(str(path))
             action.triggered.connect(
                 lambda _checked=False, p=str(path): self.open_puppet(p),

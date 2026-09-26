@@ -841,7 +841,7 @@ Motions — clique único vincula o motion e inicia a reprodução imediatamente
    O diretório ``examples/`` é empacotado tanto na wheel quanto no EXE Nuitka,
    então o rig está no disco onde quer que você tenha instalado.
 2. Clique na aba **Puppet** no topo da janela.
-3. Barra de ferramentas → **File > Examples > March 7Th** (ou o dropdown
+3. Barra de ferramentas → **File > Examples > March 7th** (ou o dropdown
    **Examples ▾** da barra de ferramentas). O rig de 307 drawables carrega
    centralizado e o dock de parâmetros é preenchido com os 203 sliders padrão Cubism.
 4. No dock **Motions** inferior, clique uma vez em qualquer entrada de motion

@@ -836,7 +836,7 @@ Mouvements — un simple clic associe le mouvement et démarre immédiatement la
    répertoire ``examples/`` est intégré à la fois dans le wheel et l'EXE Nuitka,
    donc le rig est présent sur le disque là où vous l'avez installé.
 2. Cliquez sur l'onglet **Puppet** en haut de la fenêtre.
-3. Barre d'outils → **File > Examples > March 7Th** (ou la liste déroulante
+3. Barre d'outils → **File > Examples > March 7th** (ou la liste déroulante
    **Examples ▾** de la barre d'outils). Le rig de 307 drawables se charge centré et
    le dock des paramètres se remplit des 203 curseurs standard Cubism.
 4. Dans le dock **Mouvements** en bas, simple-clic sur n'importe quelle entrée de mouvement

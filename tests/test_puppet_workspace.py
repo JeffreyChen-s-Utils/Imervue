@@ -184,8 +184,8 @@ def test_recent_menu_lists_existing_files(qapp, tmp_path):
 def test_examples_menu_lists_bundled_puppets(qapp, tmp_path, monkeypatch):
     """``_rebuild_examples_menu`` must scan
     ``<examples_dir>/puppet/*.puppet`` and add one action per file.
-    File names are pretty-printed (underscores → spaces, title-cased)
-    so ``march_7th.puppet`` shows as ``March 7Th``."""
+    File names are pretty-printed (underscores → spaces, each word's first
+    letter raised) so ``march_7th.puppet`` shows as ``March 7th``."""
     import Imervue.puppet.workspace as ws_mod
     examples_root = tmp_path / "examples"
     (examples_root / "puppet").mkdir(parents=True)
@@ -202,7 +202,7 @@ def test_examples_menu_lists_bundled_puppets(qapp, tmp_path, monkeypatch):
         actions = ws._examples_menu.actions()   # noqa: SLF001
         labels = [a.text() for a in actions if a.isEnabled()]
         # Sorted alphabetically by stem, pretty-printed.
-        assert labels == ["Demo Rig", "March 7Th"]
+        assert labels == ["Demo Rig", "March 7th"]
         # Tooltip carries the absolute path.
         assert "march_7th.puppet" in actions[1].toolTip()
     finally:

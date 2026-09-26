@@ -743,13 +743,13 @@ Puppet 工作区（Puppet 标签）
 
 该 rig 带 203 个 Cubism 标准参数（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），所以所有标准输入驱动（摄像头、眨眼、对嘴、光标追踪）不用调整就能驱动。内置 18 个循环动作 — 作者转换的 Cubism idle 循环，加上 ``Idle`` 组和 ``Gesture`` 组的参考手势。
 
-Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7Th 或自己的 ``.puppet`` 打开。下方 **Motions** 停靠栏点任一个动作即播。
+Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7th 或自己的 ``.puppet`` 打开。下方 **Motions** 停靠栏点任一个动作即播。
 
 **执行内置示例 — 分步演示：**
 
 1. **启动 Imervue**。源码运行：``python -m Imervue``；安装版：直接执行 ``Imervue`` 可执行文件 / app bundle。``examples/`` 目录已打包进 wheel 与 Nuitka EXE，rig 文件位于安装目录下。
 2. 点窗口顶部的 **Puppet** 标签。
-3. 工具栏 → **File > Examples > March 7Th**\ （或工具栏上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中载入，参数栏填满 203 个 Cubism 标准参数滑块。
+3. 工具栏 → **File > Examples > March 7th**\ （或工具栏上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中载入，参数栏填满 203 个 Cubism 标准参数滑块。
 4. 在底部 **Motions** 停靠栏单击任一个动作条目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即开始播放；再点一次停止，或选别的动作交叉淡入。
 5. 切换工具栏上的实时输入 toggle 让 rig 跟你动 — **Drag-track head**\ （头跟光标）、**Auto-blink**\ （自动眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 随机 idle 动作）、**Mic lip-sync**\ （麦克风 RMS 带动嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驱动头 / 眼 / 嘴）。
 6. 工具栏 **Reset to rest** 停掉所有动作、取消勾所有实时驱动、清掉 expressions / pose 覆盖，所有参数复位 — 标准的「从头开始」按钮。

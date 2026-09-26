@@ -846,7 +846,7 @@ Motions — un solo clic enlaza el movimiento e inicia la reproducción inmediat
    ``examples/`` se empaqueta tanto en el wheel como en el EXE de Nuitka, de modo que el
    rig está en disco dondequiera que lo haya instalado.
 2. Haga clic en la pestaña **Puppet** en la parte superior de la ventana.
-3. Barra de herramientas → **File > Examples > March 7Th** (o el desplegable
+3. Barra de herramientas → **File > Examples > March 7th** (o el desplegable
    **Examples ▾** de la barra de herramientas). El rig de 307 drawables se carga centrado
    y el dock de parámetros se llena con los 203 deslizadores estándar de Cubism.
 4. En el dock **Motions** inferior, haga un solo clic en cualquier entrada de movimiento

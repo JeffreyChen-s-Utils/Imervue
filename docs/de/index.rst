@@ -839,7 +839,7 @@ startet sofort die Wiedergabe.
    Nuitka-EXE gebündelt, sodass das Rig auf der Festplatte vorhanden ist,
    wo immer Sie installiert haben.
 2. Klicken Sie oben im Fenster auf den **Puppet**-Tab.
-3. Toolbar → **File > Examples > March 7Th** (oder die **Examples ▾**-Dropdown
+3. Toolbar → **File > Examples > March 7th** (oder die **Examples ▾**-Dropdown
    in der Toolbar). Das 307-Drawable-Rig wird zentriert geladen und der
    Parameter-Dock füllt sich mit den 203 Cubism-Standard-Schiebereglern.
 4. Im unteren **Motions**-Dock einen beliebigen Motion-Eintrag einzeln klicken

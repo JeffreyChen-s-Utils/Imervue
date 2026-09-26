@@ -11,7 +11,7 @@ import pytest
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu, QWidget
 
-from Imervue.puppet.workspace_menus import PuppetMenusMixin
+from Imervue.puppet.workspace_menus import PuppetMenusMixin, example_label
 
 # (attribute, label, checkable, slot)
 _ACTIONS = [
@@ -120,3 +120,15 @@ def test_labels_come_from_the_language_dict(qapp, monkeypatch):
         assert widget._save_action.text() == "Save As…"  # noqa: SLF001
     finally:
         widget.deleteLater()
+
+
+
+@pytest.mark.parametrize(("stem", "label"), [
+    ("march_7th", "March 7th"),      # str.title() made this "March 7Th"
+    ("vivian", "Vivian"),
+    ("my__rig_v2", "My Rig V2"),
+    ("already_Upper", "Already Upper"),
+    ("", ""),
+])
+def test_example_label(stem, label):
+    assert example_label(stem) == label

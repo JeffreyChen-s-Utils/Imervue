@@ -838,7 +838,7 @@ dock — single-click binds the motion and starts playback immediately.
    ``examples/`` directory is bundled into both the wheel and the
    Nuitka EXE, so the rig is on disk wherever you installed.
 2. Click the **Puppet** tab at the top of the window.
-3. Toolbar → **File > Examples > March 7Th** (or the toolbar's
+3. Toolbar → **File > Examples > March 7th** (or the toolbar's
    **Examples ▾** dropdown). The 307-drawable rig loads centred and
    the parameter dock fills with the 203 Cubism-standard sliders.
 4. In the bottom **Motions** dock, single-click any motion entry
