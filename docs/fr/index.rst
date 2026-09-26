@@ -2013,8 +2013,14 @@ Navigation
      - Ajuster à la largeur
    * - ``Shift + W``
      - Ajuster à la hauteur
+   * - ``Shift + F``
+     - Ajuster à la fenêtre
+   * - ``-`` / ``=``
+     - Zoom arrière / avant
+   * - ``V``
+     - Mode lecture : ajuster à la largeur, faire défiler pour lire, passer à l'image suivante à la fin
    * - ``Home``
-     - Réinitialiser le zoom
+     - Ajuster l'image entière à la fenêtre (dans la grille : retour en haut)
 
 Édition
 ^^^^^^^
@@ -2033,7 +2039,7 @@ Navigation
      - Rotation antihoraire
    * - ``Ctrl + Z``
      - Annuler
-   * - ``Ctrl + Shift + Z``
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
      - Rétablir
    * - ``Delete``
      - Supprimer l'image
@@ -2087,8 +2093,14 @@ Outils et superpositions
      - Vue pixel (≥ 400 % affiche la grille de pixels et la valeur RGB sous le curseur)
    * - ``Shift + M``
      - Faire défiler les modes de couleur (Normal / Niveaux de gris / Inversé / Sépia)
+   * - ``L``
+     - Loupe : une zone agrandie qui suit le curseur (également sur les vignettes)
    * - ``S``
      - Diaporama
+   * - ``Ctrl + Shift + P``
+     - Palette de commandes
+   * - ``Alt + M``
+     - Rejouer la dernière macro sur la sélection
 
 Images animées
 ^^^^^^^^^^^^^^

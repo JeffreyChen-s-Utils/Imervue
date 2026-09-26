@@ -220,7 +220,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - 跨資料夾導航（`Ctrl+Shift+←/→`）
 - 跳到第 N 張（`Ctrl+G`）
 - 模糊搜尋（`Ctrl+F` / `/`）
-- **命令面板**（`Ctrl+Shift+P`）— 模糊搜尋所有選單動作
+- **指令面板**（`Ctrl+Shift+P`）— 模糊搜尋所有選單動作
 - 資料夾末端自動循環
 - 觸控板捏合縮放 + 水平滑動切換影像
 
@@ -647,9 +647,10 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | Alt+← / Alt+→ | 歷史返回 / 前進 |
 | Ctrl+G | 跳到第 N 張 |
 | X | 隨機跳轉 |
-| Home | 重設縮放與平移 |
+| Home | 讓影像適應視窗（網格中：捲回頂端） |
 | Ctrl+F 或 / | 模糊搜尋對話框 |
-| Ctrl+Shift+P | 開啟命令面板 |
+| T | 開啟標籤與相簿 |
+| Ctrl+Shift+P | 開啟指令面板 |
 | Alt+M | 在目前選取重放上一個巨集 |
 | S | 開啟幻燈片對話框 |
 | Ctrl+Z | 復原 |
@@ -663,7 +664,11 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | Shift+Tab | 切換劇場模式 |
 | R / Shift+R | 順時針 / 逆時針旋轉 |
 | E | 在註解編輯器中開啟目前的影像 |
-| W / Shift+W | 適合寬度 / 高度 |
+| W / Shift+W | 適應寬度 / 高度 |
+| Shift+F | 適應視窗 |
+| - / = | 縮小 / 放大 |
+| V | 閱讀模式（適應寬度，捲動閱讀，到底後前往下一張影像） |
+| L | 放大鏡：跟隨游標的局部放大（縮圖上也可用） |
 | H | 切換 RGB 直方圖 |
 | F8 / Ctrl+F8 | OSD 疊加層 / 除錯 HUD |
 | Shift+P | 切換像素檢視（≥ 400 % 顯示網格 + RGB） |

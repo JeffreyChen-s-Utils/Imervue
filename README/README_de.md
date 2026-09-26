@@ -698,8 +698,9 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | Alt+← / Alt+→ | History zurück / vor |
 | Ctrl+G | Zu Bild per Index springen |
 | X | Zu einem zufälligen Bild springen |
-| Home | Zoom und Pan auf Ursprung zurücksetzen |
+| Home | Bild an das Fenster anpassen (im Grid: zurück nach oben scrollen) |
 | Ctrl+F oder / | Fuzzy-Such-Dialog öffnen |
+| T | Tags & Albums öffnen |
 | Ctrl+Shift+P | Command Palette öffnen |
 | Alt+M | Letztes Macro auf aktueller Auswahl wiederholen |
 | S | Slideshow-Dialog öffnen |
@@ -715,6 +716,10 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | R / Shift+R | Drehen CW / CCW |
 | E | Aktuelles Bild im Annotationseditor öffnen |
 | W / Shift+W | An Breite / Höhe anpassen |
+| Shift+F | An Fenster anpassen |
+| - / = | Herauszoomen / hineinzoomen |
+| V | Lesemodus (an Breite anpassen, zum Lesen scrollen, am Ende weiter zum nächsten Bild) |
+| L | Lupe: ein Vergrößerungsglas, das dem Cursor folgt (auch über den Thumbnails) |
 | H | RGB-Histogramm-Overlay umschalten |
 | F8 / Ctrl+F8 | OSD-Overlay / Debug-HUD |
 | Shift+P | Pixel View umschalten (≥ 400 % Zoom zeigt Grid + RGB) |

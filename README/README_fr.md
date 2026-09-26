@@ -651,8 +651,9 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | Alt+← / Alt+→ | Historique précédent / suivant |
 | Ctrl+G | Aller à l'image par index |
 | X | Sauter à une image aléatoire |
-| Home | Réinitialiser le zoom et le panoramique à l'origine |
+| Home | Adapter l'image à la fenêtre (dans la grille : remonter tout en haut) |
 | Ctrl+F ou / | Ouvrir la boîte de dialogue de recherche floue |
+| T | Ouvrir Tags & Albums |
 | Ctrl+Shift+P | Ouvrir la palette de commandes |
 | Alt+M | Rejouer la dernière macro sur la sélection actuelle |
 | S | Ouvrir la boîte de dialogue diaporama |
@@ -668,6 +669,10 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | R / Shift+R | Rotation horaire / antihoraire |
 | E | Ouvrir l'image courante dans l'éditeur d'annotation |
 | W / Shift+W | Adapter à la largeur / hauteur |
+| Shift+F | Adapter à la fenêtre |
+| - / = | Zoom arrière / avant |
+| V | Mode lecture (adapter à la largeur, faire défiler pour lire, passer à l'image suivante à la fin) |
+| L | Loupe : une zone agrandie qui suit le curseur (également sur les vignettes) |
 | H | Basculer la superposition d'histogramme RGB |
 | F8 / Ctrl+F8 | Superposition OSD / HUD de débogage |
 | Shift+P | Basculer la vue pixel (zoom ≥ 400 % affiche la grille + RGB) |

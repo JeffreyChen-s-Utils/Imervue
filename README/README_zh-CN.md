@@ -647,8 +647,9 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 | Alt+← / Alt+→ | 历史后退 / 前进 |
 | Ctrl+G | 跳到第 N 张 |
 | X | 随机跳转 |
-| Home | 重置缩放与平移 |
+| Home | 让图片适应窗口（网格中：滚回顶部） |
 | Ctrl+F 或 / | 模糊搜索对话框 |
+| T | 打开标签与相册 |
 | Ctrl+Shift+P | 打开命令面板 |
 | Alt+M | 在当前选择重放上一个宏 |
 | S | 打开幻灯片对话框 |
@@ -663,7 +664,11 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 | Shift+Tab | 切换剧场模式 |
 | R / Shift+R | 顺时针 / 逆时针旋转 |
 | E | 在标注编辑器中打开当前图片 |
-| W / Shift+W | 适合宽度 / 高度 |
+| W / Shift+W | 适应宽度 / 高度 |
+| Shift+F | 适应窗口 |
+| - / = | 缩小 / 放大 |
+| V | 阅读模式（适应宽度，滚动阅读，到底后前往下一张图片） |
+| L | 放大镜：跟随光标的局部放大（缩略图上也可用） |
 | H | 切换 RGB 直方图 |
 | F8 / Ctrl+F8 | OSD 叠加层 / 调试 HUD |
 | Shift+P | 切换像素视图（≥ 400 % 显示网格 + RGB） |

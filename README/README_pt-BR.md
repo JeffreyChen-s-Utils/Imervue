@@ -672,8 +672,9 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 | Alt+← / Alt+→ | Voltar / avançar no histórico |
 | Ctrl+G | Ir para imagem por índice |
 | X | Saltar para uma imagem aleatória |
-| Home | Resetar zoom e pan para a origem |
+| Home | Ajustar a imagem à janela (na grade: rolar de volta ao topo) |
 | Ctrl+F ou / | Abrir diálogo de busca fuzzy |
+| T | Abrir Tags & Albums |
 | Ctrl+Shift+P | Abrir Paleta de Comandos |
 | Alt+M | Reproduzir último macro na seleção atual |
 | S | Abrir diálogo de slideshow |
@@ -689,6 +690,10 @@ Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](e
 | R / Shift+R | Rotacionar CW / CCW |
 | E | Abrir a imagem atual no editor de anotações |
 | W / Shift+W | Ajustar à largura / altura |
+| Shift+F | Ajustar à janela |
+| - / = | Diminuir / aumentar o zoom |
+| V | Modo de leitura (ajustar à largura, rolar para ler, avançar para a próxima imagem no fim) |
+| L | Lupa: uma lente de aumento que segue o cursor (também sobre as miniaturas) |
 | H | Alternar overlay de histograma RGB |
 | F8 / Ctrl+F8 | Overlay OSD / HUD de depuração |
 | Shift+P | Alternar vista de pixel (zoom ≥ 400 % mostra grade + RGB) |

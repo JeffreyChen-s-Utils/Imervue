@@ -2014,8 +2014,14 @@ Navegación
      - Ajustar al ancho
    * - ``Shift + W``
      - Ajustar al alto
+   * - ``Shift + F``
+     - Ajustar a la ventana
+   * - ``-`` / ``=``
+     - Alejar / acercar el zoom
+   * - ``V``
+     - Modo lectura: ajustar al ancho, desplazarse para leer, pasar a la siguiente imagen al llegar al final
    * - ``Home``
-     - Restablecer zoom
+     - Ajustar la imagen entera a la ventana (en la cuadrícula: volver arriba)
 
 Edición
 ^^^^^^^
@@ -2034,7 +2040,7 @@ Edición
      - Rotar en sentido antihorario
    * - ``Ctrl + Z``
      - Deshacer
-   * - ``Ctrl + Shift + Z``
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
      - Rehacer
    * - ``Delete``
      - Eliminar imagen
@@ -2088,8 +2094,14 @@ Herramientas y superposiciones
      - Vista de píxeles (≥ 400 % muestra cuadrícula de píxeles y valor RGB bajo el cursor)
    * - ``Shift + M``
      - Recorrer los modos de color (Normal / Escala de grises / Invertir / Sepia)
+   * - ``L``
+     - Lupa: una lente de aumento que sigue al cursor (también sobre las miniaturas)
    * - ``S``
      - Presentación
+   * - ``Ctrl + Shift + P``
+     - Paleta de comandos
+   * - ``Alt + M``
+     - Reproducir la última macro sobre la selección
 
 Imágenes animadas
 ^^^^^^^^^^^^^^^^^

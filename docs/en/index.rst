@@ -1974,8 +1974,14 @@ Browsing
      - Fit to width
    * - ``Shift + W``
      - Fit to height
+   * - ``Shift + F``
+     - Fit to window
+   * - ``-`` / ``=``
+     - Zoom out / in
+   * - ``V``
+     - Reading mode: fit to width, scroll to read, go on to the next image at the end
    * - ``Home``
-     - Reset zoom
+     - Fit the whole image in the window (on the thumbnail wall: back to the top)
 
 Editing
 ^^^^^^^
@@ -1994,7 +2000,7 @@ Editing
      - Rotate counter-clockwise
    * - ``Ctrl + Z``
      - Undo
-   * - ``Ctrl + Shift + Z``
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
      - Redo
    * - ``Delete``
      - Delete image
@@ -2048,8 +2054,14 @@ Tools & Overlays
      - Pixel view (≥ 400 % shows pixel grid and RGB value under cursor)
    * - ``Shift + M``
      - Cycle colour modes (Normal / Grayscale / Invert / Sepia)
+   * - ``L``
+     - Loupe: a magnifier that follows the cursor (also over the thumbnails)
    * - ``S``
      - Slideshow
+   * - ``Ctrl + Shift + P``
+     - Command Palette
+   * - ``Alt + M``
+     - Replay the last macro on the selection
 
 Animated Images
 ^^^^^^^^^^^^^^^

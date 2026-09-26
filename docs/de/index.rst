@@ -2047,8 +2047,14 @@ Durchsuchen
      - An Breite anpassen
    * - ``Shift + W``
      - An Höhe anpassen
+   * - ``Shift + F``
+     - An Fenster anpassen
+   * - ``-`` / ``=``
+     - Herauszoomen / hineinzoomen
+   * - ``V``
+     - Lesemodus: an Breite anpassen, zum Lesen scrollen, am Ende weiter zum nächsten Bild
    * - ``Home``
-     - Zoom zurücksetzen
+     - Ganzes Bild in das Fenster einpassen (im Grid: zurück nach oben)
 
 Bearbeiten
 ^^^^^^^^^^
@@ -2067,7 +2073,7 @@ Bearbeiten
      - Gegen Uhrzeigersinn drehen
    * - ``Ctrl + Z``
      - Rückgängig
-   * - ``Ctrl + Shift + Z``
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
      - Wiederherstellen
    * - ``Delete``
      - Bild löschen
@@ -2121,8 +2127,14 @@ Werkzeuge und Overlays
      - Pixel-Ansicht (≥ 400 % zeigt Pixelraster und RGB-Wert unter Cursor)
    * - ``Shift + M``
      - Farbmodi durchschalten (Normal / Graustufen / Invertieren / Sepia)
+   * - ``L``
+     - Lupe: ein Vergrößerungsglas, das dem Cursor folgt (auch über den Miniaturansichten)
    * - ``S``
      - Diashow
+   * - ``Ctrl + Shift + P``
+     - Command Palette
+   * - ``Alt + M``
+     - Letztes Macro auf der Auswahl wiederholen
 
 Animierte Bilder
 ^^^^^^^^^^^^^^^^

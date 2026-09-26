@@ -696,8 +696,9 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | Alt+← / Alt+→ | Historial atrás / adelante |
 | Ctrl+G | Ir a imagen por índice |
 | X | Saltar a una imagen aleatoria |
-| Home | Restablecer zoom y paneo al origen |
+| Home | Ajustar la imagen a la ventana (en la cuadrícula: volver a desplazarse al inicio) |
 | Ctrl+F o / | Abrir diálogo de búsqueda difusa |
+| T | Abrir Tags & Albums |
 | Ctrl+Shift+P | Abrir Paleta de comandos |
 | Alt+M | Reproducir la última macro sobre la selección actual |
 | S | Abrir diálogo de presentación |
@@ -713,6 +714,10 @@ Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](
 | R / Shift+R | Rotar horario / antihorario |
 | E | Abrir la imagen actual en el editor de anotaciones |
 | W / Shift+W | Ajustar a ancho / alto |
+| Shift+F | Ajustar a la ventana |
+| - / = | Alejar / acercar el zoom |
+| V | Modo lectura (ajustar al ancho, desplazarse para leer, pasar a la siguiente imagen al llegar al final) |
+| L | Lupa: una lente de aumento que sigue al cursor (también sobre las miniaturas) |
 | H | Alternar superposición de histograma RGB |
 | F8 / Ctrl+F8 | Superposición OSD / HUD de depuración |
 | Shift+P | Alternar vista de píxeles (zoom ≥ 400 % muestra cuadrícula + RGB) |

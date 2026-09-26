@@ -700,8 +700,9 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | Alt+← / Alt+→ | History back / forward |
 | Ctrl+G | Go to image by index |
 | X | Jump to a random image |
-| Home | Reset zoom and pan to origin |
+| Home | Fit the image to the window (on the thumbnail wall: scroll back to the top) |
 | Ctrl+F or / | Open fuzzy search dialog |
+| T | Open Tags & Albums |
 | Ctrl+Shift+P | Open Command Palette |
 | Alt+M | Replay last macro on current selection |
 | S | Open slideshow dialog |
@@ -717,6 +718,10 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | R / Shift+R | Rotate CW / CCW |
 | E | Open the current image in the annotation editor |
 | W / Shift+W | Fit to width / height |
+| Shift+F | Fit to window |
+| - / = | Zoom out / in |
+| V | Reading mode (fit to width, scroll to read, go on to the next image at the end) |
+| L | Loupe: a magnifier that follows the cursor (also over the thumbnails) |
 | H | Toggle RGB histogram overlay |
 | F8 / Ctrl+F8 | OSD overlay / debug HUD |
 | Shift+P | Toggle pixel view (≥ 400 % zoom shows grid + RGB) |
