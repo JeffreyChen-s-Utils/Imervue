@@ -33,6 +33,7 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_mode_action_list': ('QAction',),
  '_modify_menu_action': ('QAction',),
  '_modify_splitter': ('QSplitter',),
+ '_paint_page': ('QWidget',),
  '_pet_tray': ('PetTrayIcon',),
  '_plugin_menu': ('QMenu',),
  '_plugin_menu_entries': ('list',),
@@ -80,7 +81,6 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  'model': ('FileTreeSortProxy',),
  'modify_panel': ('DevelopPanel',),
  'objectNameChanged': ('SignalInstance',),
- 'paint_workspace': ('PaintWorkspace',),
  'pet_workspace': ('PetWorkspace',),
  'plugin_manager': ('PluginManager',),
  'puppet_workspace': ('PuppetWorkspace',),
@@ -141,3 +141,50 @@ def test_file_tree_shows_every_format_the_viewer_opens(window):
 def test_the_modify_panel_undoes_through_the_viewers_stack(window):
     """Slider edits are pushed to the viewer's undo manager; the panel's buttons must step it."""
     assert window.modify_panel.undo_stack() is window.viewer.undo_manager
+
+
+def test_the_paint_tab_is_built_on_first_use(window):
+    """Building Paint cost every launch about 0.4 s, for a tab many sessions never open."""
+    tabs = window._main_tabs  # noqa: SLF001
+    page = window._paint_page  # noqa: SLF001
+    assert window._paint is None  # noqa: SLF001
+    assert tabs.widget(tabs.indexOf(page)) is page
+    tabs.setCurrentIndex(tabs.indexOf(page))
+    workspace = window._paint  # noqa: SLF001
+    assert type(workspace).__name__ == "PaintWorkspace"
+    assert workspace.parent() is page
+    assert window.paint_workspace is workspace   # built once, then reused
+
+
+def test_asking_for_the_workspace_builds_it(window):
+    assert type(window.paint_workspace).__name__ == "PaintWorkspace"
+    assert window._paint_page.layout().indexOf(window.paint_workspace) == 0  # noqa: SLF001
+
+
+def test_a_crashed_paint_session_still_gets_its_recovery_offer_at_launch(qapp, monkeypatch):
+    """The autosave toast is raised while Paint is built, so pending autosaves build it at once."""
+    from Imervue.gui import main_window_layout
+    from Imervue.Imervue_main_window import ImervueMainWindow
+    monkeypatch.setattr(main_window_layout, "_paint_autosaves_pending", lambda: True)
+    win = ImervueMainWindow()
+    try:
+        assert type(win._paint).__name__ == "PaintWorkspace"  # noqa: SLF001
+    finally:
+        win._release_for_close()  # noqa: SLF001
+        ImervueMainWindow._live_windows.discard(win)  # noqa: SLF001
+        win.deleteLater()
+
+
+def test_pending_autosaves_are_read_from_the_paint_autosave_folder(monkeypatch):
+    from Imervue.gui import main_window_layout
+    from Imervue.paint import auto_save
+    monkeypatch.setattr(auto_save, "pending_recovery_snapshots", lambda: ["snap"])
+    assert main_window_layout._paint_autosaves_pending() is True  # noqa: SLF001
+    monkeypatch.setattr(auto_save, "pending_recovery_snapshots", lambda: [])
+    assert main_window_layout._paint_autosaves_pending() is False  # noqa: SLF001
+
+    def unreadable():
+        raise OSError("denied")
+
+    monkeypatch.setattr(auto_save, "pending_recovery_snapshots", unreadable)
+    assert main_window_layout._paint_autosaves_pending() is False  # noqa: SLF001

@@ -25,8 +25,33 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
+def _paint_autosaves_pending() -> bool:
+    """Whether a crashed Paint session left autosaves to offer back at launch."""
+    from Imervue.paint.auto_save import pending_recovery_snapshots
+    try:
+        return bool(pending_recovery_snapshots())
+    except OSError:
+        return False
+
+
 class MainWindowLayoutMixin:
     """The main window's widget builders, mixed into ``ImervueMainWindow``."""
+
+    _paint = None   # the Paint tab's workspace, built on first use
+
+    @property
+    def paint_workspace(self):
+        """The Paint tab's workspace, built the first time anything asks for it.
+
+        Building it took about 0.4 s of every launch (measured without a profiler,
+        2026-09-26), so the tab starts as an empty page and a session that never
+        paints never pays for it.
+        """
+        if self._paint is None:
+            from Imervue.paint.paint_workspace import PaintWorkspace
+            self._paint = PaintWorkspace(parent=self._paint_page)
+            self._paint_page.layout().addWidget(self._paint)
+        return self._paint
 
     def _build_file_tree(self) -> None:
         """File tree of tab 0: filtered model, view, sort and search controls."""
@@ -216,14 +241,18 @@ class MainWindowLayoutMixin:
         )
 
         # --------------------------------------------------------
-        # Tab 2: Paint workspace — full-featured painting surface
+        # Tab 2: Paint workspace — full-featured painting surface, built on
+        # first use (see ``paint_workspace``). Autosaves from a crashed
+        # session are still offered at launch, as they always were.
         # --------------------------------------------------------
-        from Imervue.paint.paint_workspace import PaintWorkspace
-        self.paint_workspace = PaintWorkspace(parent=self)
+        self._paint_page = QWidget()
+        QVBoxLayout(self._paint_page).setContentsMargins(0, 0, 0, 0)
         self._main_tabs.addTab(
-            self.paint_workspace,
+            self._paint_page,
             lang.get("paint_tab_title", "Paint"),
         )
+        if _paint_autosaves_pending():
+            _ = self.paint_workspace
 
         # --------------------------------------------------------
         # Tab 3: Puppet workspace — 2D rigged-puppet animation.

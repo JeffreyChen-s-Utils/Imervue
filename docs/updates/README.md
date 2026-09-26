@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20260926-52 | 2026-09-26 | The Paint tab is built the first time it is used | #perf #startup #paint | [2026-09-b](2026-09-b.md) |
 | U-20260926-51 | 2026-09-26 | The guides say the March 7th rig has no hit areas, which it does not | #docs #puppet #desktop-pet #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-50 | 2026-09-26 | A test keeps every translated README and docs page in the English structure | #test #docs #i18n | [2026-09-b](2026-09-b.md) |
 | U-20260926-49 | 2026-09-26 | The shortcut tables list every default key and what Home really does | #docs #shortcuts #i18n | [2026-09-b](2026-09-b.md) |
@@ -424,4 +425,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | File | Period | Entries |
 |---|---|---:|
 | [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 82 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 83 |
