@@ -396,3 +396,79 @@ class TestTraditionalMethods:
         assert progress == []                      # broke before the first image
         assert results == [(0, 0)]                 # reported so the UI resets
         assert list(out_dir.glob("*.png")) == []   # nothing upscaled
+
+
+
+# ---------------------------------------------------------------------------
+# Worker run paths (the per-image loop both methods share)
+# ---------------------------------------------------------------------------
+
+
+def _worker_pictures(tmp_path):
+    from PIL import Image
+    src = tmp_path / "src"
+    src.mkdir()
+    Image.new("RGB", (8, 6), (200, 40, 40)).save(src / "red.png")
+    rgba = Image.new("RGBA", (4, 4), (10, 20, 30, 255))
+    rgba.putpixel((0, 0), (10, 20, 30, 0))
+    rgba.save(src / "clear.png")
+    (src / "broken.png").write_bytes(b"not a picture")
+    out = tmp_path / "out"
+    out.mkdir()
+    return [str(src / "red.png"), str(src / "clear.png"), str(src / "broken.png")], out
+
+
+def _run(worker):
+    progress, results = [], []
+    worker.progress.connect(lambda i, total, text: progress.append((i, total, text)))
+    worker.result_ready.connect(lambda ok, bad: results.append((ok, bad)))
+    worker.run()
+    worker.deleteLater()
+    return progress, results
+
+
+def test_the_traditional_run_resizes_each_picture(qapp, tmp_path):
+    from PIL import Image
+    from Imervue.gui.ai_upscale_dialog import _UpscaleWorker
+    paths, out = _worker_pictures(tmp_path)
+    progress, results = _run(_UpscaleWorker(paths, str(out), "trad:nearest", False, 3))
+    assert results == [(2, 1)]
+    assert progress == [(0, 3, "red.png"), (1, 3, "clear.png"), (2, 3, "broken.png")]
+    with Image.open(out / "red_x3.png") as done:
+        assert done.size == (24, 18)
+    with Image.open(out / "clear_x3.png") as done:
+        assert done.size == (12, 12)
+
+
+def test_the_ai_run_upscales_through_the_session_and_keeps_alpha(qapp, tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from PIL import Image
+    from Imervue.gui import ai_upscale_dialog as mod
+
+    sessions = []
+
+    class _Session:
+        def __init__(self, model_path, providers):
+            sessions.append((model_path, providers))
+
+    monkeypatch.setitem(sys.modules, "onnxruntime", SimpleNamespace(
+        get_available_providers=lambda: ["DmlExecutionProvider", "CPUExecutionProvider"],
+        InferenceSession=_Session))
+    monkeypatch.setattr(mod, "_download_model", lambda key: f"C:/models/{key}.onnx")
+    monkeypatch.setattr(mod, "_upscale_image", lambda session, arr, scale, progress_cb=None:
+                        np.repeat(np.repeat(arr, scale, axis=0), scale, axis=1))
+    paths, out = _worker_pictures(tmp_path)
+    progress, results = _run(mod._UpscaleWorker(paths, str(out), "realesrgan-x2plus", False))
+    assert results == [(2, 1)]
+    assert sessions == [("C:/models/realesrgan-x2plus.onnx",
+                         ["DmlExecutionProvider", "CPUExecutionProvider"])]
+    assert progress == [(0, 3, "Downloading model..."), (0, 3, "Loading model..."),
+                        (0, 3, "red.png"), (1, 3, "clear.png"), (2, 3, "broken.png")]
+    with Image.open(out / "red_x2.png") as done:
+        assert done.size == (16, 12)
+        assert done.mode == "RGB"
+    with Image.open(out / "clear_x2.png") as done:
+        assert done.size == (8, 8)
+        assert done.mode == "RGBA"
+        assert done.getpixel((0, 0))[3] < 255
