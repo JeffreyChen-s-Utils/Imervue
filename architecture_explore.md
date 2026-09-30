@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `1d00e5e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `1580b6e` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,16 +66,16 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 907 | 152,542 |
+| `tests/` | 909 | 153,281 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
-| `Imervue/gui/` | 168 | 33,532 |
+| `Imervue/gui/` | 168 | 33,563 |
 | `Imervue/puppet/` | 58 | 15,601 |
 | `Imervue/image/` | 128 | 15,414 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
-| `Imervue/multi_language/` | 8 | 14,372 |
+| `Imervue/multi_language/` | 8 | 14,377 |
 | `Imervue/desktop_pet/` | 34 | 8,389 |
 | `Imervue/mcp_server/` | 16 | 4,668 |
-| `Imervue/library/` | 32 | 4,407 |
+| `Imervue/library/` | 34 | 4,759 |
 | `Imervue/menu/` | 11 | 3,594 |
 | `Imervue/` 根層 | 6 | 1,939 |
 | `Imervue/plugin/` | 10 | 2,337 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（17 個外掛） | 64 | 14,464 |
-| **總計** | **1,760** | **337,114** |
+| **總計** | **1,764** | **338,241** |
 
-其中 `Imervue/` 套件本身 789 檔 / 170,108 行。
+其中 `Imervue/` 套件本身 791 檔 / 170,496 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -511,8 +511,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `smart_album.py` | 361 | Smart Albums：保存查詢並重新套用 |
 | `search_query.py` | 219 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
-| `clip_search.py` | 424 | CLIP 語意搜尋（「找出符合這句話的照片」）；向量連同檔案的大小與修改時間快取在 `clip_cache.npz`，`is_current` 判斷可沿用，`query_text(within=)` 只在指定路徑裡排名 |
-| `auto_tag.py` | 133 | 啟發式內容分類 + 選用 CLIP ONNX |
+| `clip_search.py` | 373 | CLIP 語意搜尋（「找出符合這句話的照片」）；後端是 `clip_onnx` 的 ONNX 模型（不用 torch），快取另記模型 id，別的模型寫的快取不載入；向量連同檔案的大小與修改時間快取在 `clip_cache.npz`，`is_current` 判斷可沿用，`query_text(within=)` 只在指定路徑裡排名 |
+| `clip_onnx.py` | 232 | CLIP ViT-B/32 的 onnxruntime 後端：Hugging Face `Xenova/clip-vit-base-patch32` 固定 commit 的 int8 量化文字 / 影像編碼器（約 150 MB，首次使用下載）；影像前處理（短邊 224 bicubic、中心裁切、OpenAI mean/std）；provider 只用 CUDA（一定是獨顯）或 CPU，不用 DirectML（混合筆電預設裝置常是內顯）；`rank_labels` 零樣本標籤；`default_embedder()` 讓語意搜尋與 Auto-Tag 共用一份模型 |
+| `clip_tokenizer.py` | 151 | 純 Python 的 CLIP byte-level BPE 斷詞器（讀模型的 `vocab.json` / `merges.txt`，NFC、空白合併、小寫、依 Unicode 類別切段、`<|startoftext|>` / `<|endoftext|>` 任何位置都先切出），與 `tokenizers` 參考實作 5000 句隨機字串逐 id 相同 |
+| `auto_tag.py` | 153 | 啟發式內容分類；CLIP 模型已下載時改用 `clip_onnx` 零樣本標籤（最多三個，提示詞向量依模型與標籤組快取），Auto-Tag 自己不觸發下載 |
 | `phash.py` | 85 | 64-bit DCT pHash（轉正後經 `perceptual_hash.grey_levels` 取灰階） |
 | `bloom_filter.py` | 150 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
 | `dedupe_resolver.py` | 60 | 從一組重複中挑出該保留的那張 |
@@ -539,7 +541,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-168 個檔、33,532 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+168 個檔、33,563 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -634,7 +636,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 相片庫 / 中繼資料 / 搜尋
 
-`library_search_dialog.py`(227) · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(190) ·
+`library_search_dialog.py`(227) · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(221) ·
 `similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(523) ·
 `tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(190) · `auto_tag_dialog.py`(172) ·
 `keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(139) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明） ·
@@ -950,7 +952,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 進外掛的條件（任一成立）：① 需要重量級 / 選用執行期相依（rembg、onnxruntime、torch、opencv、大模型權重）；
 ② 需要失敗隔離（ML / GPU / CUDA 崩潰不該拖垮檢視器）；③ 需要獨立發版節奏。
 
-留在主程式：跑在預設相依集、失敗最多壞一張圖、屬於日常瀏覽 / 顯影流程。
+留在主程式：跑在預設相依集、失敗最多壞一張圖、屬於日常瀏覽 / 顯影流程。例外：AI 放大（`gui/ai_upscale_dialog.py`）與 CLIP 語意搜尋 / Auto-Tag（`library/clip_onnx.py`）在主程式裡，首次使用才經 `ensure_dependencies` 安裝 onnxruntime，模型依固定 revision 下載。
 
 | 外掛 | 檔案/行數 | 功用 | 重量級相依 |
 | --- | --- | --- | --- |
@@ -980,7 +982,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-907 個檔、152,542 行。`pyproject.toml` 定義三個互斥層級 marker：
+909 個檔、153,281 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

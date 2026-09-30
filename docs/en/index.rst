@@ -2210,9 +2210,12 @@ embedded into the same vector space and compared by cosine similarity.
 Embeddings are cached to ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) or ``~/.cache/imervue/clip_cache.npz`` (POSIX) as a single compact ``.npz`` archive. The dialog searches the folder that is open: it embeds only the pictures the cache doesn't hold yet or that changed since (size or modification time), so searching the same folder again starts at once, and the results come from that folder only.
 
 .. note::
-   Semantic Search requires the optional ``open_clip_torch`` and ``torch``
-   packages. If they are not installed the menu entry explains what is missing
-   and other features continue to work.
+   Semantic Search runs CLIP ViT-B/32 on ``onnxruntime``, without PyTorch. The first
+   time you open it without ``onnxruntime``, Imervue offers to install it; the model
+   (about 150 MB, int8-quantised) then downloads once from Hugging Face at a pinned
+   revision and is read from the local cache afterwards. It runs on an NVIDIA GPU
+   through CUDA when ``onnxruntime`` has it, otherwise on the CPU; it never picks an
+   integrated GPU. Embeddings cached by a different model are computed again.
 
 Auto-Tag
 ^^^^^^^^
@@ -2221,6 +2224,12 @@ Auto-Tag
 ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``), read from the colour saturation, edges and shape of the picture as the
 viewer shows it. Runs on a worker thread with a live progress bar.
+
+Once Semantic Search has downloaded the CLIP model, Auto-Tag labels each picture
+zero-shot with it instead: up to three of ``photo``, ``document``, ``screenshot``,
+``graphic``, ``illustration``, ``portrait``, ``landscape``, ``animal``, ``food`` and
+``text``, the closest first. A picture CLIP can't read gets the heuristic tags, and
+Auto-Tag never starts the download itself.
 
 Hierarchical Tags
 ^^^^^^^^^^^^^^^^^

@@ -2262,9 +2262,13 @@ vectorial y se compara por similitud coseno.
 Las incrustaciones se almacenan en caché en ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) o ``~/.cache/imervue/clip_cache.npz`` (POSIX) como un único archivo ``.npz`` compacto. El diálogo busca en la carpeta abierta: solo incrusta las imágenes que la caché aún no tiene o que cambiaron desde entonces (tamaño o fecha de modificación), así que buscar otra vez en la misma carpeta empieza al instante, y los resultados vienen solo de esa carpeta.
 
 .. note::
-   Semantic Search requiere los paquetes opcionales ``open_clip_torch`` y ``torch``. Si no
-   están instalados, la entrada del menú explica qué falta y otras funciones siguen
-   funcionando.
+   Semantic Search ejecuta CLIP ViT-B/32 sobre ``onnxruntime``, sin PyTorch. La primera
+   vez que lo abre sin ``onnxruntime``, Imervue ofrece instalarlo; después, el modelo
+   (unos 150 MB, cuantizado a int8) se descarga una sola vez desde Hugging Face en una
+   revisión fijada y a partir de entonces se lee de la caché local. Se ejecuta en una GPU
+   NVIDIA mediante CUDA cuando ``onnxruntime`` la admite y, si no, en la CPU; nunca elige
+   una GPU integrada. Las incrustaciones almacenadas en caché por un modelo distinto se
+   vuelven a calcular.
 
 Auto-Tag
 ^^^^^^^^
@@ -2274,6 +2278,12 @@ bajo ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``l
 ``portrait``),
 deducidas de la saturación del color, los bordes y la forma de la imagen tal como la muestra el
 visor. Se ejecuta en un hilo de trabajo con una barra de progreso en vivo.
+
+Una vez que Semantic Search ha descargado el modelo CLIP, Auto-Tag pasa a etiquetar cada
+imagen en modo zero-shot con ese modelo: hasta tres entre ``photo``, ``document``,
+``screenshot``, ``graphic``, ``illustration``, ``portrait``, ``landscape``, ``animal``,
+``food`` y ``text``, la más cercana primero. Una imagen que CLIP no puede leer recibe las
+etiquetas heurísticas, y Auto-Tag nunca inicia la descarga por sí mismo.
 
 Etiquetas jerárquicas
 ^^^^^^^^^^^^^^^^^^^^^

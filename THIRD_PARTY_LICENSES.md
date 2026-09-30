@@ -219,7 +219,7 @@ Python wrapper 為 MIT；底層的 **NDI® SDK by Vizrt Group** 為專利軟體�
 - **License / 授權:** MIT
 - **Website / 網站:** https://github.com/microsoft/onnxruntime
 - **Feature triggers / 功能觸發:** AI image upscale (Real-ESRGAN), CLIP
-  ONNX auto-tag, AI background removal
+  semantic search and auto-tag, AI background removal
 
 ### Hugging Face Hub (huggingface_hub)
 
@@ -228,18 +228,20 @@ Python wrapper 為 MIT；底層的 **NDI® SDK by Vizrt Group** 為專利軟體�
 - **Feature triggers / 功能觸發:** Downloading pinned model revisions
   for AI upscale / CLIP
 
-### OpenCLIP (open_clip_torch)
+### CLIP ViT-B/32 model weights (ONNX export)
 
-- **License / 授權:** MIT
-- **Website / 網站:** https://github.com/mlfoundations/open_clip
+- **License / 授權:** MIT (OpenAI CLIP)
+- **Website / 網站:** https://github.com/openai/CLIP ; ONNX export
+  https://huggingface.co/Xenova/clip-vit-base-patch32
 - **Feature triggers / 功能觸發:** Semantic search (natural-language
-  image queries)
+  image queries) and CLIP auto-tag labels
 
-### PyTorch (torch)
+Downloaded on first use at a pinned revision into the Hugging Face cache;
+not bundled. The tokenizer vocabulary (`vocab.json`, `merges.txt`) comes
+with the model under the same license.
 
-- **License / 授權:** BSD-3-Clause
-- **Website / 網站:** https://pytorch.org
-- **Feature triggers / 功能觸發:** CLIP semantic search backend
+首次使用時依固定版本下載到 Hugging Face 快取，不隨程式散布。斷詞用的
+詞彙表（`vocab.json`、`merges.txt`）隨模型下載，授權相同。
 
 ### rembg
 

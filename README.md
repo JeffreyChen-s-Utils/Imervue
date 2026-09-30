@@ -115,7 +115,7 @@ Optional (feature-gated; omit to disable the feature cleanly):
 
 | Package | Purpose |
 |---------|---------|
-| open_clip_torch + torch | CLIP semantic search (natural-language image queries) |
+| onnxruntime + huggingface_hub | CLIP semantic search and CLIP auto-tag labels (offered for install on first use; the ~150 MB model downloads once) |
 | onnxruntime | Real-ESRGAN AI upscale |
 | opencv-python<5 | HDR merge, panorama stitch, focus stacking, face detection, healing brush |
 | sounddevice | Puppet lip-sync from microphone |
@@ -284,8 +284,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Library Search** — SQLite multi-root index, searched by file name, minimum width / height and file size (up to 2000 results; double-click one to open it); a rescan reads only new or changed files (and, with **Compute perceptual hash** ticked, files still without a hash), several at once
 - **Search by Query** (right-click) — a compact query language over the open folder: keywords, tags (incl. negation), ratings, colour, extension, place, cull, favourites, aspect, age, size, dimensions, camera / lens, and filename regex / glob; `place:` matches a city, a country or both, and a value with spaces goes in double quotes (`place:"Rio de Janeiro"`)
 - **Find Similar (average hash)** — pHash and dHash are joined by an optional average-hash (aHash) for a complementary near-duplicate metric
-- **Semantic Search (CLIP)** — natural-language queries ("golden retriever in snow") via cached embeddings; gracefully unavailable when `open_clip_torch` + `torch` aren't installed
-- **Auto-Tag** — heuristic tags from colour, edges and shape: document / screenshot / photo / graphic, landscape / portrait
+- **Semantic Search (CLIP)** — natural-language queries ("golden retriever in snow") via cached embeddings from CLIP ViT-B/32 on onnxruntime, no PyTorch: Imervue offers to install `onnxruntime` on first use and downloads the ~150 MB model once, at a pinned revision; it runs on an NVIDIA GPU through CUDA when available, otherwise on the CPU, never on an integrated GPU
+- **Auto-Tag** — heuristic tags from colour, edges and shape: document / screenshot / photo / graphic, landscape / portrait; once Semantic Search has downloaded the CLIP model, zero-shot CLIP labels instead (up to three of photo, document, screenshot, graphic, illustration, portrait, landscape, animal, food, text)
 
 ### Metadata
 

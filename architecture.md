@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-01 against `355497a` on `dev`.
+> Last verified: 2026-10-01 against `1580b6e` on `dev`.
 
 ## 1. Purpose
 
@@ -15,7 +15,9 @@ a non-destructive "develop" editor (Modify tab), a raster paint / comic workspac
 puppet animator compatible with Live2D Cubism, and a desktop-pet overlay driven by the puppet
 runtime. Two non-GUI surfaces reuse the same image algorithms: a headless batch CLI and a Model
 Context Protocol (MCP) stdio server. Heavy or crash-prone optional dependencies (ONNX runtime,
-rembg, OpenCV, downloaded model weights) are kept out of the main program and shipped as plugins.
+rembg, OpenCV, downloaded model weights) are kept out of the main program and shipped as plugins;
+the exceptions, AI upscale and CLIP semantic search / auto-tag, offer to install onnxruntime on
+first use and download their models at pinned revisions.
 
 ## 2. Layers and directories
 

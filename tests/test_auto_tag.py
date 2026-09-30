@@ -157,3 +157,77 @@ def test_a_sixteen_bit_scan_is_tagged_like_its_eight_bit_copy(tmp_path):
     Image.fromarray(ramp).save(sixteen)
     Image.fromarray((ramp // 257).astype(np.uint8)).save(eight)
     assert auto_tag.classify_heuristic(sixteen) == auto_tag.classify_heuristic(eight)
+
+
+class _LabelEmbedder:
+    """Stands in for the ONNX embedder: the image points at one label's prompt."""
+
+    model_id = "fake-clip"
+
+    def __init__(self, image=None, error=None):
+        self._image = image
+        self._error = error
+        self.text_calls = 0
+
+    def embed_image(self, _path):
+        if self._error is not None:
+            raise self._error
+        return self._image
+
+    def embed_texts(self, prompts):
+        self.text_calls += 1
+        return np.eye(len(prompts), dtype=np.float32)
+
+
+class TestClipLabels:
+    @pytest.fixture(autouse=True)
+    def _fresh_label_cache(self, monkeypatch):
+        monkeypatch.setattr(auto_tag, "_label_cache", {})
+
+    def _use(self, monkeypatch, embedder, *, downloaded=True):
+        from Imervue.library import clip_onnx
+        monkeypatch.setattr(clip_onnx, "model_downloaded", lambda *_a: downloaded)
+        monkeypatch.setattr(clip_onnx, "default_embedder", lambda: embedder)
+
+    def test_no_download_means_no_labels(self, monkeypatch):
+        embedder = _LabelEmbedder(np.array([1.0, 0.0], np.float32))
+        self._use(monkeypatch, embedder, downloaded=False)
+        assert auto_tag.try_clip_labels("a.png", ["cat", "dog"]) == []
+
+    def test_labels_come_from_the_closest_prompts(self, monkeypatch):
+        embedder = _LabelEmbedder(np.array([0.0, 1.0, 0.0], np.float32))
+        self._use(monkeypatch, embedder)
+        assert auto_tag.try_clip_labels("a.png", ["cat", "dog", "car"]) == ["dog"]
+
+    def test_the_default_prompts_are_used(self, monkeypatch):
+        image = np.zeros(len(auto_tag._DEFAULT_PROMPTS), np.float32)
+        image[auto_tag._DEFAULT_PROMPTS.index("food")] = 1.0
+        self._use(monkeypatch, _LabelEmbedder(image))
+        assert auto_tag.try_clip_labels("a.png") == ["food"]
+
+    def test_the_prompt_embeddings_are_computed_once(self, monkeypatch):
+        embedder = _LabelEmbedder(np.array([1.0, 0.0], np.float32))
+        self._use(monkeypatch, embedder)
+        auto_tag.try_clip_labels("a.png", ["cat", "dog"])
+        auto_tag.try_clip_labels("b.png", ["cat", "dog"])
+        assert embedder.text_calls == 1
+
+    def test_an_unreadable_image_gives_no_labels(self, monkeypatch):
+        self._use(monkeypatch, _LabelEmbedder(None))
+        assert auto_tag.try_clip_labels("a.png", ["cat"]) == []
+
+    def test_a_model_that_went_missing_gives_no_labels(self, monkeypatch, caplog):
+        self._use(monkeypatch, _LabelEmbedder(error=OSError("vocab.json is unavailable")))
+        assert auto_tag.try_clip_labels("a.png", ["cat"]) == []
+        assert "vocab.json is unavailable" in caplog.text
+
+    @pytest.mark.parametrize(("label", "prompt"), [
+        ("animal", "a photo of an animal"), ("food", "a photo of a food"),
+        ("illustration", "a photo of an illustration"),
+    ])
+    def test_prompt_article(self, label, prompt):
+        assert auto_tag._prompt(label) == prompt
+
+    def test_auto_tag_image_prefers_clip_labels(self, monkeypatch, colourful_photo):
+        monkeypatch.setattr(auto_tag, "try_clip_labels", lambda _p: ["animal"])
+        assert auto_tag.auto_tag_image(colourful_photo) == ["auto/animal"]

@@ -2231,9 +2231,12 @@ incorporada no mesmo espaço vetorial e comparada por similaridade de cosseno.
 Os embeddings são armazenados em cache em ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) ou ``~/.cache/imervue/clip_cache.npz`` (POSIX) como um único arquivo ``.npz`` compacto. A caixa de diálogo pesquisa a pasta aberta: incorpora apenas as imagens que o cache ainda não tem ou que mudaram desde então (tamanho ou data de modificação), então pesquisar de novo a mesma pasta começa na hora, e os resultados vêm só dessa pasta.
 
 .. note::
-   A Pesquisa Semântica requer os pacotes opcionais ``open_clip_torch`` e ``torch``.
-   Se não estiverem instalados, a entrada do menu explica o que está faltando
-   e outros recursos continuam funcionando.
+   A Pesquisa Semântica executa o CLIP ViT-B/32 sobre ``onnxruntime``, sem PyTorch. Na
+   primeira vez que você a abre sem ``onnxruntime``, o Imervue oferece instalá-lo; o modelo
+   (cerca de 150 MB, quantizado em int8) é então baixado uma única vez do Hugging Face em uma
+   revisão fixada e, depois disso, lido do cache local. Ele roda em uma GPU NVIDIA via CUDA
+   quando o ``onnxruntime`` tem suporte a ela, senão na CPU; nunca escolhe uma GPU
+   integrada. Embeddings armazenados em cache por um modelo diferente são calculados de novo.
 
 Auto-Tag
 ^^^^^^^^
@@ -2243,6 +2246,12 @@ Auto-Tag
 ``portrait``), lidas da saturação de cor, das bordas e da forma da imagem como o
 visualizador a mostra. Executa em uma thread de trabalho com uma barra
 de progresso em tempo real.
+
+Depois que a Pesquisa Semântica tiver baixado o modelo CLIP, o Auto-Tag passa a rotular
+cada imagem com ele em modo zero-shot: até três entre ``photo``, ``document``,
+``screenshot``, ``graphic``, ``illustration``, ``portrait``, ``landscape``, ``animal``,
+``food`` e ``text``, o mais próximo primeiro. Uma imagem que o CLIP não consegue ler recebe
+as tags heurísticas, e o Auto-Tag nunca inicia o download por conta própria.
 
 Tags Hierárquicas
 ^^^^^^^^^^^^^^^^^

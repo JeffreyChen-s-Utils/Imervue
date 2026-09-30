@@ -1821,9 +1821,12 @@ Imervue は ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）または
 埋め込みは ``%LOCALAPPDATA%/Imervue/clip_cache.npz``\ （Windows）または ``~/.cache/imervue/clip_cache.npz``\ （POSIX）に、1 つのコンパクトな ``.npz`` アーカイブとしてキャッシュされます。ダイアログは開いているフォルダーを検索します。キャッシュにまだない画像と、その後に変更された画像（サイズまたは更新日時）だけを埋め込むため、同じフォルダーをもう一度検索するとすぐに始まり、結果はそのフォルダーからのみ返されます。
 
 .. note::
-   セマンティック検索にはオプションの ``open_clip_torch`` と ``torch``
-   パッケージが必要です。インストールされていない場合はメニュー項目が不足しているものを説明し、
-   他の機能はそのまま動作します。
+   セマンティック検索は PyTorch を使わず、\ ``onnxruntime`` 上で CLIP ViT-B/32 を実行します。
+   ``onnxruntime`` がない状態で初めて開くと、Imervue がそのインストールを提案します。
+   その後、モデル（約 150 MB、int8 量子化済み）を Hugging Face から固定リビジョンで一度だけダウンロードし、
+   以降はローカルキャッシュから読み込みます。\ ``onnxruntime`` が CUDA に対応していれば CUDA 経由で
+   NVIDIA GPU 上で、それ以外は CPU 上で実行し、内蔵 GPU を選ぶことはありません。
+   別のモデルでキャッシュされた埋め込みは計算し直されます。
 
 自動タグ付け
 ^^^^^^^^^^^^
@@ -1831,6 +1834,8 @@ Imervue は ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）または
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` はヒューリスティックタグを ``auto/...``
 以下（``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``）に付与します。判定には、ビューアーに表示される画像の彩度・エッジ・形状を使います。ワーカースレッドで実行しプログレスバー付き。
+
+セマンティック検索が CLIP モデルをダウンロード済みの場合、自動タグ付けは代わりにそのモデルで各画像をゼロショットでラベル付けします。\ ``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``illustration`` / ``portrait`` / ``landscape`` / ``animal`` / ``food`` / ``text`` のうち最大 3 つを、近いものから順に付与します。CLIP で読み取れない画像にはヒューリスティックタグが付き、自動タグ付けが自分からダウンロードを始めることはありません。
 
 階層タグ
 ^^^^^^^^

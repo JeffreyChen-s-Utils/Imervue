@@ -115,7 +115,7 @@ pip install .
 
 | パッケージ | 用途 |
 |---------|---------|
-| open_clip_torch + torch | CLIP セマンティック検索(自然言語による画像検索) |
+| onnxruntime + huggingface_hub | CLIP セマンティック検索と CLIP 自動タグのラベル(初回使用時にインストールを提案。約 150 MB のモデルは一度だけダウンロード) |
 | onnxruntime | Real-ESRGAN AI アップスケール |
 | opencv-python<5 | HDR 合成、パノラマ合成、フォーカススタック、顔検出、ヒーリングブラシ |
 | sounddevice | Puppet マイクによるリップシンク |
@@ -276,8 +276,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - **ライブラリ検索** — SQLite マルチルートインデックスを、ファイル名・最小幅 / 高さ・ファイルサイズで検索(最大 2000 件。ダブルクリックで開きます)。再スキャンは追加・変更されたファイル(**Compute perceptual hash** がオンならハッシュ未計算のファイルも)だけを複数同時に読み込みます
 - **クエリ検索**(右クリック)— 開いているフォルダーを対象にしたコンパクトなクエリ言語: キーワード、タグ(否定を含む)、レーティング、カラー、拡張子、場所、カリング、お気に入り、アスペクト比、経過時間、サイズ、寸法、カメラ / レンズ、ファイル名の正規表現 / glob。`place:` は都市・国・その両方に一致し、空白を含む値はダブルクォートで囲みます(`place:"Rio de Janeiro"`)
 - **類似検索(average hash)** — pHash と dHash に、補完的な近似重複メトリックとしてオプションの average-hash(aHash)を組み合わせ
-- **セマンティック検索(CLIP)** — 自然言語クエリ(「雪の中のゴールデンレトリバー」など)をキャッシュ済み embedding で実行。`open_clip_torch` + `torch` が未インストール時は優雅に無効化
-- **自動タグ付け** — 色・エッジ・形状から付けるヒューリスティックタグ: document / screenshot / photo / graphic、landscape / portrait
+- **セマンティック検索(CLIP)** — 自然言語クエリ(「雪の中のゴールデンレトリバー」など)を、onnxruntime 上の CLIP ViT-B/32 によるキャッシュ済み embedding で実行(PyTorch 不要)。初回使用時に Imervue が `onnxruntime` のインストールを提案し、約 150 MB のモデルを固定リビジョンで一度だけダウンロードします。利用できる場合は CUDA 経由で NVIDIA GPU 上で、それ以外は CPU 上で動作し、内蔵 GPU は使いません
+- **自動タグ付け** — 色・エッジ・形状から付けるヒューリスティックタグ: document / screenshot / photo / graphic、landscape / portrait。セマンティック検索が CLIP モデルをダウンロード済みなら、代わりに CLIP のゼロショットラベルを付与(photo、document、screenshot、graphic、illustration、portrait、landscape、animal、food、text のうち最大 3 つ)
 
 ### メタデータ
 

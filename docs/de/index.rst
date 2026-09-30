@@ -2287,9 +2287,13 @@ Textabfrage wird in denselben Vektorraum eingebettet und per Kosinus-Ähnlichkei
 Embeddings werden in ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) bzw. ``~/.cache/imervue/clip_cache.npz`` (POSIX) als einzelnes kompaktes ``.npz``-Archiv gecacht. Der Dialog durchsucht den geöffneten Ordner: Er bettet nur die Bilder ein, die der Cache noch nicht hat oder die sich seitdem geändert haben (Größe oder Änderungszeit), sodass eine erneute Suche im selben Ordner sofort beginnt; die Ergebnisse stammen nur aus diesem Ordner.
 
 .. note::
-   Semantische Suche erfordert die optionalen Pakete ``open_clip_torch`` und ``torch``.
-   Wenn sie nicht installiert sind, erklärt der Menüeintrag, was fehlt, und andere
-   Funktionen funktionieren weiter.
+   Semantische Suche führt CLIP ViT-B/32 auf ``onnxruntime`` aus, ohne PyTorch. Wenn Sie
+   sie zum ersten Mal ohne ``onnxruntime`` öffnen, bietet Imervue an, es zu installieren;
+   das Modell (etwa 150 MB, int8-quantisiert) wird dann einmalig in einer festgelegten
+   Revision von Hugging Face heruntergeladen und danach aus dem lokalen Cache gelesen. Es
+   läuft über CUDA auf einer NVIDIA-GPU, wenn ``onnxruntime`` CUDA unterstützt, sonst auf
+   der CPU; eine integrierte GPU wählt es nie. Von einem anderen Modell gecachte Embeddings
+   werden neu berechnet.
 
 Auto-Tag
 ^^^^^^^^
@@ -2298,6 +2302,12 @@ Auto-Tag
 unter ``auto/...`` an (``photo`` / ``document`` / ``screenshot`` / ``graphic`` /
 ``landscape`` / ``portrait``), abgeleitet aus Farbsättigung, Kanten und Form des Bildes, so wie der
 Betrachter es anzeigt. Läuft in einem Worker-Thread mit Live-Fortschrittsbalken.
+
+Sobald die Semantische Suche das CLIP-Modell heruntergeladen hat, vergibt Auto-Tag die
+Labels stattdessen per Zero-Shot mit diesem Modell: bis zu drei aus ``photo``,
+``document``, ``screenshot``, ``graphic``, ``illustration``, ``portrait``, ``landscape``,
+``animal``, ``food`` und ``text``, das ähnlichste zuerst. Ein Bild, das CLIP nicht lesen
+kann, erhält die heuristischen Tags, und Auto-Tag startet den Download nie selbst.
 
 Hierarchische Tags
 ^^^^^^^^^^^^^^^^^^

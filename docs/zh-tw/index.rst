@@ -1779,8 +1779,11 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 嵌入向量會快取到 ``%LOCALAPPDATA%/Imervue/clip_cache.npz``\ （Windows）或 ``~/.cache/imervue/clip_cache.npz``\ （POSIX），存成單一精簡的 ``.npz`` 檔。對話框搜尋的是目前開啟的資料夾：只替快取裡還沒有、或之後改過（大小或修改時間）的圖片計算向量，所以同一個資料夾再搜一次會立刻開始，結果也只來自這個資料夾。
 
 .. note::
-   語意搜尋需要選用套件 ``open_clip_torch`` 與 ``torch``。若未安裝，選單項目
-   會說明缺少什麼，其他功能仍可正常運作。
+   語意搜尋以 ``onnxruntime`` 執行 CLIP ViT-B/32，不需要 PyTorch。在未安裝
+   ``onnxruntime`` 的情況下第一次開啟時，Imervue 會詢問是否安裝；接著模型（約 150 MB，
+   int8 量化）會從 Hugging Face 以鎖定的版本下載一次，之後都從本機快取讀取。
+   ``onnxruntime`` 支援 CUDA 時會在 NVIDIA 顯示卡上執行，否則在 CPU 上執行；絕不會選用
+   內建顯示晶片。由其他模型快取的嵌入向量會重新計算。
 
 自動標記
 ^^^^^^^^
@@ -1788,6 +1791,11 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` 會將經驗式標籤套用於 ``auto/...``
 （``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``），依據檢視器所顯示畫面的色彩飽和度、邊緣與形狀來判斷。執行時以工作執行緒處理，具即時進度列。
+
+語意搜尋下載過 CLIP 模型後，自動標記會改用它對每張圖片做零樣本標記：從 ``photo``、``document``、
+``screenshot``、``graphic``、``illustration``、``portrait``、``landscape``、``animal``、
+``food`` 與 ``text`` 中最多選三個，最接近的排在最前面。CLIP 讀不了的圖片會改用經驗式標籤，
+而自動標記本身絕不會啟動下載。
 
 階層式標籤
 ^^^^^^^^^^

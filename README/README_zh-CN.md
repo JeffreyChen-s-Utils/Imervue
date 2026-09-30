@@ -114,7 +114,7 @@ pip install .
 
 | 包 | 用途 |
 |---------|---------|
-| open_clip_torch + torch | CLIP 语义搜索 |
+| onnxruntime + huggingface_hub | CLIP 语义搜索与 CLIP 自动标签（首次使用时提示安装；约 150 MB 的模型只下载一次） |
 | onnxruntime | Real-ESRGAN AI 放大 |
 | opencv-python<5 | HDR 合成、全景拼接、焦点堆叠、人脸检测、修复笔刷 |
 | sounddevice | Puppet 麦克风对嘴 |
@@ -275,8 +275,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - **图库搜索** — SQLite 多根索引，可按文件名、最小宽 / 高与文件大小搜索（最多 2000 条结果；双击即可打开）；重新扫描只读取新增或修改的文件（勾选 **Compute perceptual hash** 时也读取还没有哈希值的文件），多个同时进行
 - **查询搜索**（右键）— 以精简的查询语言筛选当前打开的文件夹：关键字、标签（含取反）、评级、颜色、扩展名、地点、挑片、收藏、长宽比、年龄、大小、尺寸、相机 / 镜头，以及文件名正则 / glob；`place:` 可填城市、国家或两者，含空格的值用双引号括起（`place:"Rio de Janeiro"`）
 - **找相似（average hash）** — pHash 与 dHash 再加上可选的 average-hash（aHash），提供互补的近重复度量
-- **语义搜索（CLIP）** — 自然语言查询（如"雪中的金毛犬"）通过缓存的 embedding；`open_clip_torch` + `torch` 未安装时优雅停用
-- **自动标签** — 根据颜色、边缘与形状给出启发式标签：document / screenshot / photo / graphic、landscape / portrait
+- **语义搜索（CLIP）** — 自然语言查询（如"雪中的金毛犬"），使用 onnxruntime 上运行的 CLIP ViT-B/32 生成并缓存 embedding，不需要 PyTorch：首次使用时 Imervue 会提示安装 `onnxruntime`，并按固定版本下载约 150 MB 的模型（只下载一次）；有 NVIDIA GPU 时通过 CUDA 运行，否则使用 CPU，从不使用集成显卡
+- **自动标签** — 根据颜色、边缘与形状给出启发式标签：document / screenshot / photo / graphic、landscape / portrait；语义搜索下载 CLIP 模型后，改用 CLIP 零样本标签（从 photo、document、screenshot、graphic、illustration、portrait、landscape、animal、food、text 中最多选三个）
 
 ### 元数据
 

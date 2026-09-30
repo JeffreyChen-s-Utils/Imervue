@@ -115,7 +115,7 @@ Optional (Feature-Gated; weglassen, um das Feature sauber zu deaktivieren):
 
 | Paket | Zweck |
 |---------|---------|
-| open_clip_torch + torch | CLIP-Semantiksuche (Bildabfragen in natürlicher Sprache) |
+| onnxruntime + huggingface_hub | CLIP-Semantiksuche und CLIP-Auto-Tag-Labels (Installation wird bei der ersten Nutzung angeboten; das ~150 MB große Modell wird einmalig heruntergeladen) |
 | onnxruntime | Real-ESRGAN AI-Upscale |
 | opencv-python<5 | HDR-Merge, Panorama-Stitch, Focus-Stacking, Gesichtserkennung, Healing-Brush |
 | sounddevice | Puppet-Lip-Sync per Mikrofon |
@@ -276,8 +276,8 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Library Search** — SQLite-Multi-Root-Index, durchsucht nach Dateiname, Mindestbreite / -höhe und Dateigröße (bis zu 2000 Treffer; ein Doppelklick öffnet einen); ein erneuter Scan liest nur neue oder geänderte Dateien (und bei aktiviertem **Compute perceptual hash** Dateien noch ohne Hash), mehrere gleichzeitig
 - **Search by Query** (Rechtsklick) — eine kompakte Query-Sprache über dem geöffneten Ordner: Keywords, Tags (inkl. Negation), Ratings, Farbe, Endung, Ort, Cull, Favoriten, Seitenverhältnis, Alter, Größe, Maße, Kamera / Objektiv sowie Dateiname-Regex / -Glob; `place:` passt auf Stadt, Land oder beides, und ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (`place:"Rio de Janeiro"`)
 - **Find Similar (Average Hash)** — pHash und dHash werden durch einen optionalen Average-Hash (aHash) zu einer komplementären Near-Duplicate-Metrik verbunden
-- **Semantic Search (CLIP)** — Natural-Language-Queries („Golden Retriever im Schnee") über gecachte Embeddings; deaktiviert sich elegant, wenn `open_clip_torch` + `torch` nicht installiert sind
-- **Auto-Tag** — Heuristische Tags aus Farbe, Kanten und Form: Dokument / Screenshot / Foto / Grafik, Querformat / Hochformat
+- **Semantic Search (CLIP)** — Natural-Language-Queries („Golden Retriever im Schnee") über gecachte Embeddings aus CLIP ViT-B/32 auf onnxruntime, ohne PyTorch: Imervue bietet bei der ersten Nutzung an, `onnxruntime` zu installieren, und lädt das ~150 MB große Modell einmalig in einer festgelegten Revision herunter; es läuft über CUDA auf einer NVIDIA-GPU, sofern verfügbar, sonst auf der CPU, nie auf einer integrierten GPU
+- **Auto-Tag** — Heuristische Tags aus Farbe, Kanten und Form: Dokument / Screenshot / Foto / Grafik, Querformat / Hochformat; sobald die Semantische Suche das CLIP-Modell heruntergeladen hat, stattdessen Zero-Shot-CLIP-Labels (bis zu drei aus photo, document, screenshot, graphic, illustration, portrait, landscape, animal, food, text)
 
 ### Metadaten
 

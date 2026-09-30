@@ -2,10 +2,11 @@
 
 The semantic index and cosine ranking live in
 :mod:`Imervue.library.clip_search`; this is the Qt front-end. Embedding the
-folder needs the optional ``open_clip`` backend and is run in a worker so the UI
-stays responsive — the text query itself (``query_text``) is instant. Tests
-inject a ready index built on a fake embedder, so the dialog's search / display
-logic is exercised without torch.
+folder needs the ONNX CLIP backend (``onnxruntime``, offered for install when
+missing; the model downloads once) and runs in a worker so the UI stays
+responsive — the text query itself (``query_text``) is instant. Tests inject a
+ready index built on a fake embedder, so the dialog's search / display logic is
+exercised without a model.
 """
 from __future__ import annotations
 
@@ -39,6 +40,7 @@ class _IndexBuildWorker(QThread):
 
     progress = Signal(int, int)
     done = Signal()
+    failed = Signal(str)   # the model could not be loaded; nothing was embedded
 
     def __init__(self, index: ClipSearchIndex, paths: list[str], parent=None) -> None:
         super().__init__(parent)
@@ -47,6 +49,16 @@ class _IndexBuildWorker(QThread):
 
     def run(self) -> None:
         """Embed the paths the index doesn't hold as they are now, then keep the cache on disk."""
+        try:
+            self._index.prepare()   # downloads the model the first time
+        except OSError as exc:      # offline, or the Hub refused
+            logger.warning("Semantic search model unavailable: %s", exc)
+            self.failed.emit(str(exc))
+            return
+        except Exception as exc:    # a corrupt model file: onnxruntime's own errors
+            logger.exception("Semantic search model failed to load")
+            self.failed.emit(str(exc))
+            return
         total = len(self._paths)
         embedded = 0
         for done_count, path in enumerate(self._paths, start=1):
@@ -119,12 +131,30 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
         self._set_search_enabled(False)
         self._progress.setVisible(True)
         self._progress.setRange(0, len(paths))
-        self._status.setText(language_wrapper.language_word_dict.get(
-            "semantic_search_building", "Building index…"))
+        lang = language_wrapper.language_word_dict
+        self._status.setText(
+            lang.get("semantic_search_downloading",
+                     "Downloading the CLIP model (about 150 MB, only once)…")
+            if self._index.needs_download()
+            else lang.get("semantic_search_building", "Building index…"))
         self._worker = _IndexBuildWorker(self._index, paths, self)
-        self._worker.progress.connect(lambda done, _t: self._progress.setValue(done))
+        self._worker.progress.connect(self._on_progress)
         self._worker.done.connect(self._on_index_ready)
+        self._worker.failed.connect(self._on_model_failed)
         self._worker.start()
+
+    def _on_progress(self, done: int, _total: int) -> None:
+        if done == 1:   # the model is loaded: embedding has begun
+            self._status.setText(language_wrapper.language_word_dict.get(
+                "semantic_search_building", "Building index…"))
+        self._progress.setValue(done)
+
+    def _on_model_failed(self, message: str) -> None:
+        """Say why nothing can be searched; the query field stays disabled."""
+        self._progress.setVisible(False)
+        failed = language_wrapper.language_word_dict.get(
+            "semantic_search_model_failed", "The CLIP model could not be loaded: {error}")
+        self._status.setText(failed.format(error=message))
 
     def _on_index_ready(self) -> None:
         self._progress.setVisible(False)
@@ -146,7 +176,7 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
             return
         try:
             hits = self._index.query_text(text, top_k=_TOP_K, within=self._scope)
-        except (RuntimeError, ValueError) as exc:
+        except (RuntimeError, ValueError, OSError) as exc:
             self._status.setText(str(exc))
             return
         self._populate(hits)
@@ -168,23 +198,24 @@ class SemanticSearchDialog(WorkerHostMixin, QDialog):
         open_path(main_gui=self._viewer, path=path)
 
 
-def _warn_unavailable(parent) -> None:
-    from PySide6.QtWidgets import QMessageBox
-    lang = language_wrapper.language_word_dict
-    QMessageBox.information(
-        parent, lang.get("semantic_search_title", "Semantic Search"),
-        lang.get("semantic_search_unavailable",
-                 "Natural-language search needs the optional 'open_clip_torch' backend.\n"
-                 "Install it (pip install open_clip_torch torch) to enable this feature."))
-
-
-def open_semantic_search_dialog(viewer) -> None:
-    """Open natural-language search over the viewer's current folder."""
-    from Imervue.library.clip_search import get_default_index, is_available
-    parent = getattr(viewer, "main_window", viewer)
-    if not is_available():
-        _warn_unavailable(parent)
-        return
+def _show(viewer, parent) -> None:
+    from Imervue.library.clip_search import get_default_index
     images = [str(p) for p in getattr(viewer.model, "images", [])]
     index = get_default_index()   # the embeddings cached by earlier searches
     SemanticSearchDialog(viewer, index, build_paths=images, parent=parent).exec()
+
+
+def open_semantic_search_dialog(viewer) -> None:
+    """Open natural-language search over the viewer's current folder.
+
+    Without ``onnxruntime`` the dependency installer asks to install it first and
+    opens the search once it is in place.
+    """
+    from Imervue.library.clip_search import is_available
+    parent = getattr(viewer, "main_window", viewer)
+    if is_available():
+        _show(viewer, parent)
+        return
+    from Imervue.library.clip_onnx import REQUIRED_PACKAGES
+    from Imervue.plugin.pip_installer import ensure_dependencies
+    ensure_dependencies(parent, REQUIRED_PACKAGES, lambda: _show(viewer, parent))

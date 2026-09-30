@@ -1,12 +1,12 @@
 """
-Auto-tagging — heuristic content classifier + optional CLIP ONNX hook.
+Auto-tagging — heuristic content classifier + optional CLIP zero-shot labels.
 
 The heuristic classifier inspects image statistics to assign coarse tags
 (``screenshot``, ``document``, ``photo``, ``graphic``) without any model
-dependency. If ``onnxruntime`` and a CLIP model file are available, we
-delegate to that for richer zero-shot labels. The hook is intentionally
-lazy — the import chain for CLIP pulls in heavy packages we don't want
-to load unless the user actually asks for auto-tagging.
+dependency. When ``onnxruntime`` is installed and the CLIP model has been
+downloaded (by Semantic Search), the ONNX CLIP model labels the picture
+zero-shot instead. The import is lazy, so onnxruntime loads only when
+auto-tagging actually runs.
 """
 from __future__ import annotations
 
@@ -92,25 +92,45 @@ def classify_heuristic(path: str | Path) -> list[str]:
     return tags
 
 
-def try_clip_labels(_path: str | Path, _prompts: list[str] | None = None) -> list[str]:
-    """Attempt zero-shot labelling via a local CLIP ONNX model.
+def try_clip_labels(path: str | Path, prompts: list[str] | None = None) -> list[str]:
+    """Zero-shot labels for *path* from the ONNX CLIP model, best first.
 
-    Returns an empty list if onnxruntime or the model file isn't present —
-    callers fall back to ``classify_heuristic``.
+    Scores the image against "a photo of a/an <label>" for each of *prompts*
+    (``_DEFAULT_PROMPTS`` by default). Returns ``[]`` — so callers fall back to
+    ``classify_heuristic`` — when onnxruntime is missing, the model has not been
+    downloaded yet (auto-tagging never starts a download), or the image can't be
+    read.
     """
+    from Imervue.library import clip_onnx
+    if not clip_onnx.model_downloaded():
+        return []
+    labels = list(prompts or _DEFAULT_PROMPTS)
+    embedder = clip_onnx.default_embedder()
     try:
-        import onnxruntime  # noqa: F401
-    except ImportError:
+        image = embedder.embed_image(path)
+        if image is None:
+            return []
+        label_vectors = _label_vectors(embedder, tuple(labels))
+    except OSError as exc:   # the cached model files went missing or are unreadable
+        logger.warning("CLIP auto-tag unavailable: %s", exc)
         return []
-    from Imervue.system.app_paths import app_dir
-    model_path = app_dir() / "models" / "clip_vit_b32.onnx"
-    if not model_path.is_file():
-        return []
-    # We keep the actual inference out of here to avoid hard-coding a tokenizer.
-    # Plugins can replace this function by monkey-patching if they ship a full
-    # CLIP pipeline; base install stays dependency-free.
-    logger.debug("CLIP model present but inference hook not wired (%s)", model_path)
-    return []
+    return clip_onnx.rank_labels(image, label_vectors, labels)
+
+
+def _prompt(label: str) -> str:
+    article = "an" if label[:1].lower() in "aeiou" else "a"
+    return f"a photo of {article} {label}"
+
+
+_label_cache: dict[tuple[str, tuple[str, ...]], np.ndarray] = {}
+
+
+def _label_vectors(embedder, labels: tuple[str, ...]) -> np.ndarray:
+    """The labels' prompt embeddings, computed once per model and label set."""
+    key = (embedder.model_id, labels)
+    if key not in _label_cache:
+        _label_cache[key] = embedder.embed_texts([_prompt(label) for label in labels])
+    return _label_cache[key]
 
 
 def auto_tag_image(path: str) -> list[str]:

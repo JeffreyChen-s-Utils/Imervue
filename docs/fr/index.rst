@@ -2257,9 +2257,12 @@ encodée dans le même espace vectoriel et comparée par similarité cosinus.
 Les encodages sont mis en cache dans ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) ou ``~/.cache/imervue/clip_cache.npz`` (POSIX) sous forme d'une seule archive ``.npz`` compacte. La boîte de dialogue cherche dans le dossier ouvert : elle n'encode que les images absentes du cache ou modifiées depuis (taille ou date de modification), si bien qu'une nouvelle recherche dans le même dossier démarre aussitôt, et les résultats ne viennent que de ce dossier.
 
 .. note::
-   La recherche sémantique nécessite les paquets optionnels ``open_clip_torch`` et ``torch``.
-   S'ils ne sont pas installés, l'entrée du menu explique ce qui manque et les autres fonctionnalités
-   continuent de fonctionner.
+   La recherche sémantique exécute CLIP ViT-B/32 sur ``onnxruntime``, sans PyTorch. La première
+   fois que vous l'ouvrez sans ``onnxruntime``, Imervue propose de l'installer ; le modèle
+   (environ 150 Mo, quantifié en int8) est ensuite téléchargé une seule fois depuis Hugging Face
+   à une révision figée, puis lu depuis le cache local. Il s'exécute sur un GPU NVIDIA via CUDA
+   lorsque ``onnxruntime`` le prend en charge, sinon sur le CPU ; il ne choisit jamais un GPU
+   intégré. Les encodages mis en cache par un autre modèle sont recalculés.
 
 Tag automatique
 ^^^^^^^^^^^^^^^
@@ -2268,6 +2271,12 @@ Tag automatique
 ``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``), déduits de la saturation des couleurs, des contours et de la forme de l'image telle
 que la visionneuse l'affiche. S'exécute sur un thread de travail avec une barre de progression en direct.
+
+Une fois que la recherche sémantique a téléchargé le modèle CLIP, le tag automatique étiquette
+plutôt chaque image en zero-shot avec ce modèle : jusqu'à trois parmi ``photo``, ``document``,
+``screenshot``, ``graphic``, ``illustration``, ``portrait``, ``landscape``, ``animal``, ``food``
+et ``text``, la plus proche en premier. Une image que CLIP ne peut pas lire reçoit les tags
+heuristiques, et le tag automatique ne lance jamais le téléchargement lui-même.
 
 Tags hiérarchiques
 ^^^^^^^^^^^^^^^^^^

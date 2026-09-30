@@ -115,7 +115,7 @@ Opcionales (gestionados por funcionalidad; si no se instalan, la función se des
 
 | Paquete | Propósito |
 |---------|---------|
-| open_clip_torch + torch | Búsqueda semántica con CLIP (consultas en lenguaje natural) |
+| onnxruntime + huggingface_hub | Búsqueda semántica con CLIP y etiquetas CLIP del auto-etiquetado (se ofrece su instalación en el primer uso; el modelo de ~150 MB se descarga una sola vez) |
 | onnxruntime | Escalado por IA con Real-ESRGAN |
 | opencv-python<5 | Fusión HDR, costura de panoramas, apilamiento de foco, detección de rostros, pincel de saneamiento |
 | sounddevice | Sincronización labial en Puppet desde el micrófono |
@@ -276,8 +276,8 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Búsqueda en biblioteca** — índice SQLite multi-raíz, con búsqueda por nombre de archivo, ancho / alto mínimo y tamaño de archivo (hasta 2000 resultados; doble clic en uno para abrirlo); un nuevo escaneo solo lee archivos nuevos o modificados (y, con **Compute perceptual hash** marcado, los que aún no tienen hash), varios a la vez
 - **Búsqueda por consulta** (clic derecho) — un lenguaje de consulta compacto sobre la carpeta abierta: palabras clave, etiquetas (incl. negación), calificaciones, color, extensión, lugar, culling, favoritos, relación de aspecto, antigüedad, tamaño, dimensiones, cámara / objetivo, y regex / glob de nombre de archivo; `place:` coincide con una ciudad, un país o ambos, y un valor con espacios va entre comillas dobles (`place:"Rio de Janeiro"`)
 - **Encontrar similares (average hash)** — pHash y dHash se complementan con un average-hash (aHash) opcional como métrica adicional de casi-duplicados
-- **Búsqueda semántica (CLIP)** — consultas en lenguaje natural ("golden retriever en la nieve") vía embeddings en caché; se desactiva con gracia si `open_clip_torch` + `torch` no están instalados
-- **Auto-etiquetado** — etiquetas heurísticas a partir del color, los bordes y la forma: documento / captura de pantalla / foto / gráfico, horizontal / vertical
+- **Búsqueda semántica (CLIP)** — consultas en lenguaje natural ("golden retriever en la nieve") vía embeddings en caché de CLIP ViT-B/32 sobre onnxruntime, sin PyTorch: Imervue ofrece instalar `onnxruntime` en el primer uso y descarga una sola vez el modelo de ~150 MB, en una revisión fijada; se ejecuta en una GPU NVIDIA mediante CUDA cuando está disponible y, si no, en la CPU, nunca en una GPU integrada
+- **Auto-etiquetado** — etiquetas heurísticas a partir del color, los bordes y la forma: documento / captura de pantalla / foto / gráfico, horizontal / vertical; una vez que la búsqueda semántica ha descargado el modelo CLIP, en su lugar etiquetas CLIP zero-shot (hasta tres entre foto, documento, captura de pantalla, gráfico, ilustración, retrato, paisaje, animal, comida, texto)
 
 ### Metadatos
 

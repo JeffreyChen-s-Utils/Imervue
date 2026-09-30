@@ -2000,9 +2000,12 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 임베딩은 ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) 또는 ``~/.cache/imervue/clip_cache.npz`` (POSIX)에 하나의 압축된 ``.npz`` 아카이브로 캐시됩니다. 대화상자는 열려 있는 폴더를 검색합니다. 캐시에 아직 없거나 그 뒤로 바뀐(크기 또는 수정 시간) 그림만 임베딩하므로 같은 폴더를 다시 검색하면 바로 시작되며, 결과는 그 폴더에서만 나옵니다.
 
 .. note::
-   의미 기반 검색에는 선택 사항인 ``open_clip_torch`` 와 ``torch``
-   패키지가 필요합니다. 설치되어 있지 않으면 메뉴 항목이 무엇이 빠졌는지 알려 주며,
-   다른 기능은 계속 작동합니다.
+   의미 기반 검색은 PyTorch 없이 ``onnxruntime``\ 에서 CLIP ViT-B/32를 실행합니다.
+   ``onnxruntime`` 없이 처음 열면 Imervue가 설치를 제안하며, 그다음 모델(약 150 MB,
+   int8 양자화)을 Hugging Face에서 고정된 리비전으로 한 번만 다운로드하고 이후로는
+   로컬 캐시에서 읽습니다. ``onnxruntime``\ 이 CUDA를 지원하면 CUDA를 통해 NVIDIA GPU에서,
+   그렇지 않으면 CPU에서 실행되며, 내장 GPU는 절대 선택하지 않습니다. 다른 모델로
+   캐시된 임베딩은 다시 계산됩니다.
 
 자동 태그
 ^^^^^^^^^
@@ -2011,6 +2014,12 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
 ``portrait``) 아래에 부여합니다. 뷰어에 표시되는 그림의 채도, 가장자리, 형태로 판단합니다.
 작업 스레드에서 실행되며 실시간 진행률 표시줄을 제공합니다.
+
+의미 기반 검색이 CLIP 모델을 다운로드한 뒤에는 자동 태그가 대신 그 모델로 각 그림에
+제로샷 레이블을 붙입니다. ``photo``, ``document``, ``screenshot``, ``graphic``,
+``illustration``, ``portrait``, ``landscape``, ``animal``, ``food``, ``text`` 중
+가장 가까운 것부터 최대 3개입니다. CLIP이 읽지 못하는 그림에는 휴리스틱 태그가 붙으며,
+자동 태그가 직접 다운로드를 시작하는 일은 없습니다.
 
 계층 태그
 ^^^^^^^^^

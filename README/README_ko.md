@@ -115,7 +115,7 @@ pip install .
 
 | 패키지 | 용도 |
 |---------|---------|
-| open_clip_torch + torch | CLIP 시맨틱 검색 (자연어 이미지 쿼리) |
+| onnxruntime + huggingface_hub | CLIP 시맨틱 검색 및 CLIP 자동 태그 레이블 (처음 사용할 때 설치를 제안하며, 약 150 MB 모델은 한 번만 다운로드) |
 | onnxruntime | Real-ESRGAN AI 업스케일 |
 | opencv-python<5 | HDR 병합, 파노라마 스티칭, 포커스 스태킹, 얼굴 검출, 힐링 브러시 |
 | sounddevice | Puppet 마이크 입싱크 |
@@ -276,8 +276,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - **라이브러리 검색** — SQLite 다중 루트 인덱스를 파일명, 최소 너비 / 높이, 파일 크기로 검색 (최대 2000개 결과; 더블클릭하면 열림); 다시 스캔하면 새로 생기거나 바뀐 파일(**Compute perceptual hash**가 켜져 있으면 해시가 없는 파일도)만 여러 개 동시에 읽음
 - **쿼리 검색** (우클릭) — 열린 폴더를 대상으로 하는 간결한 쿼리 언어: 키워드, 태그(부정 포함), 별점, 색상, 확장자, 장소, 컬링, 즐겨찾기, 종횡비, 경과 시간, 크기, 해상도, 카메라 / 렌즈, 파일명 정규식 / glob. `place:`는 도시, 국가 또는 둘 다와 일치하며, 공백이 있는 값은 큰따옴표로 묶습니다(`place:"Rio de Janeiro"`)
 - **유사 항목 찾기 (average hash)** — pHash와 dHash에 선택적 average-hash(aHash)를 결합하여 보완적인 근접 중복 메트릭 제공
-- **시맨틱 검색 (CLIP)** — 캐시된 임베딩을 통한 자연어 쿼리 ("눈 속의 골든 리트리버"); `open_clip_torch` + `torch`가 설치되지 않으면 우아하게 비활성화
-- **자동 태그** — 색상, 가장자리, 형태로 판단하는 휴리스틱 태그: document / screenshot / photo / graphic, landscape / portrait
+- **시맨틱 검색 (CLIP)** — onnxruntime에서 실행되는 CLIP ViT-B/32의 캐시된 임베딩을 통한 자연어 쿼리 ("눈 속의 골든 리트리버"), PyTorch 불필요: 처음 사용할 때 Imervue가 `onnxruntime` 설치를 제안하고 약 150 MB 모델을 고정된 리비전으로 한 번만 다운로드하며, 가능하면 CUDA를 통해 NVIDIA GPU에서, 그렇지 않으면 CPU에서 실행되고 내장 GPU에서는 절대 실행되지 않음
+- **자동 태그** — 색상, 가장자리, 형태로 판단하는 휴리스틱 태그: document / screenshot / photo / graphic, landscape / portrait; 시맨틱 검색이 CLIP 모델을 다운로드한 뒤에는 대신 제로샷 CLIP 레이블 사용 (photo, document, screenshot, graphic, illustration, portrait, landscape, animal, food, text 중 최대 3개)
 
 ### 메타데이터
 

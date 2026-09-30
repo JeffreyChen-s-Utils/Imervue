@@ -71,24 +71,12 @@ def test_query_without_embedder_surfaces_error(qapp):
     assert dlg._status.text()
 
 
-def test_open_dialog_warns_when_backend_unavailable(qapp, monkeypatch):
-    from Imervue.gui import semantic_search_dialog as mod
-    from Imervue.library import clip_search
-
-    warned: list[bool] = []
-    monkeypatch.setattr(mod, "_warn_unavailable", lambda parent: warned.append(True))
-    monkeypatch.setattr(clip_search, "is_available", lambda: False)
-    viewer = SimpleNamespace(main_window=None, model=SimpleNamespace(images=[]))
-    mod.open_semantic_search_dialog(viewer)
-    assert warned == [True]
-
-
 def test_index_build_worker_breaks_on_interruption(qapp):
     """A cancelled index build stops at its next per-image check instead of
     embedding the whole folder, so the dialog's wait() returns promptly."""
     from Imervue.gui.semantic_search_dialog import _IndexBuildWorker
     added: list = []
-    fake_index = SimpleNamespace(add=lambda p: added.append(p))
+    fake_index = SimpleNamespace(add=lambda p: added.append(p), prepare=lambda: None)
 
     class _Interrupted(_IndexBuildWorker):
         def isInterruptionRequested(self):   # noqa: N802 - Qt API
@@ -109,22 +97,116 @@ def test_dialog_uses_worker_host_mixin():
     assert "closeEvent" not in SemanticSearchDialog.__dict__
 
 
-def test_unavailable_notice_is_translated(qapp, monkeypatch):
-    from PySide6.QtWidgets import QMessageBox
-
+def test_without_onnxruntime_the_installer_runs_first(qapp, monkeypatch):
     from Imervue.gui import semantic_search_dialog as mod
-    from Imervue.multi_language.japanese import japanese_word_dict
-    from Imervue.multi_language.language_wrapper import language_wrapper
-
-    monkeypatch.setattr(language_wrapper, "language_word_dict", japanese_word_dict)
+    from Imervue.library import clip_onnx, clip_search
+    from Imervue.plugin import pip_installer
+    asked: list = []
     shown: list = []
-    monkeypatch.setattr(QMessageBox, "information",
-                        lambda _parent, title, text: shown.append((title, text)))
-    mod._warn_unavailable(None)
-    assert shown == [(japanese_word_dict["semantic_search_title"],
-                      japanese_word_dict["semantic_search_unavailable"])]
-    assert "open_clip_torch" in shown[0][1]
+    monkeypatch.setattr(clip_search, "is_available", lambda: False)
+    monkeypatch.setattr(pip_installer, "ensure_dependencies",
+                        lambda parent, packages, on_ready: asked.append((packages, on_ready)))
+    monkeypatch.setattr(mod, "_show", lambda viewer, parent: shown.append(viewer))
+    viewer = SimpleNamespace(main_window=None, model=SimpleNamespace(images=[]))
+    mod.open_semantic_search_dialog(viewer)
+    assert [packages for packages, _ in asked] == [clip_onnx.REQUIRED_PACKAGES]
+    assert shown == []
+    asked[0][1]()                      # the install finished
+    assert shown == [viewer]
 
+
+class _NoModelEmbedder(_FakeEmbedder):
+    def prepare(self):
+        raise OSError("CLIP model file vocab.json is unavailable: offline")
+
+    def embed_image(self, path):
+        raise AssertionError("nothing may be embedded without a model")
+
+
+def test_a_model_that_cannot_load_fails_the_build_without_embedding(qapp, tmp_path):
+    from Imervue.gui.semantic_search_dialog import _IndexBuildWorker
+    index = ClipSearchIndex(_NoModelEmbedder(), cache_path=tmp_path / "c.npz")
+    worker = _IndexBuildWorker(index, ["a.png"])
+    failed: list = []
+    done: list = []
+    worker.failed.connect(failed.append)
+    worker.done.connect(lambda: done.append(True))
+    worker.run()
+    assert failed == ["CLIP model file vocab.json is unavailable: offline"]
+    assert done == []
+    assert not (tmp_path / "c.npz").exists()
+
+
+def test_the_dialog_reports_the_failure_and_keeps_search_off(qapp, monkeypatch, tmp_path):
+    from Imervue.gui import semantic_search_dialog as mod
+    monkeypatch.setattr(mod._IndexBuildWorker, "start", lambda self: self.run())
+    index = ClipSearchIndex(_NoModelEmbedder(), cache_path=tmp_path / "c.npz")
+    dlg = SemanticSearchDialog(SimpleNamespace(main_window=None), index, build_paths=["a.png"])
+    try:
+        status = dlg._status.text()
+        enabled = dlg._query.isEnabled()
+        progress_visible = dlg._progress.isVisible()
+    finally:
+        dlg.deleteLater()
+    assert "offline" in status
+    assert not enabled
+    assert not progress_visible
+
+
+class _CorruptModelEmbedder(_FakeEmbedder):
+    def prepare(self):
+        raise RuntimeError("[ONNXRuntimeError] : 7 : INVALID_PROTOBUF")
+
+
+def test_a_corrupt_model_still_reports_instead_of_hanging(qapp, tmp_path):
+    from Imervue.gui.semantic_search_dialog import _IndexBuildWorker
+    worker = _IndexBuildWorker(ClipSearchIndex(_CorruptModelEmbedder()), ["a.png"])
+    failed: list = []
+    worker.failed.connect(failed.append)
+    worker.run()
+    assert failed == ["[ONNXRuntimeError] : 7 : INVALID_PROTOBUF"]
+
+
+class _UndownloadedEmbedder(_FakeEmbedder):
+    def is_downloaded(self):
+        return False
+
+
+def test_the_first_build_says_it_downloads_then_that_it_indexes(qapp, monkeypatch):
+    from Imervue.gui import semantic_search_dialog as mod
+    from Imervue.multi_language.english import english_word_dict
+    monkeypatch.setattr(mod._IndexBuildWorker, "start", lambda self: None)
+    index = ClipSearchIndex(_UndownloadedEmbedder())
+    dlg = SemanticSearchDialog(SimpleNamespace(main_window=None), index,
+                               build_paths=["a.png", "b.png"])
+    try:
+        first = dlg._status.text()
+        dlg._on_progress(1, 2)
+        second = dlg._status.text()
+        value = dlg._progress.value()
+    finally:
+        dlg.deleteLater()
+    assert first == english_word_dict["semantic_search_downloading"]
+    assert second == english_word_dict["semantic_search_building"]
+    assert value == 1
+
+
+def test_a_search_whose_model_went_missing_shows_why(qapp, monkeypatch):
+    index = ClipSearchIndex(_FakeEmbedder())
+    index.add("beach::a.png")
+    dlg = SemanticSearchDialog(SimpleNamespace(main_window=None), index)
+
+    def gone(*_args, **_kwargs):
+        raise OSError("model gone")
+
+    monkeypatch.setattr(index, "query_text", gone)
+    try:
+        dlg._query.setText("beach")
+        dlg._search()
+        status = dlg._status.text()
+    finally:
+        dlg.deleteLater()
+    assert status == "model gone"
 
 
 class _CountingEmbedder(_FakeEmbedder):
