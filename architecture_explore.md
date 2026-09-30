@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `efa911f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `078e530` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 914 | 154,316 |
+| `tests/` | 914 | 154,364 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,563 |
 | `Imervue/puppet/` | 60 | 16,052 |
-| `Imervue/image/` | 128 | 15,414 |
+| `Imervue/image/` | 128 | 15,456 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
 | `Imervue/multi_language/` | 8 | 14,377 |
 | `Imervue/desktop_pet/` | 30 | 7,174 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（18 個外掛） | 73 | 16,164 |
-| **總計** | **1,776** | **340,361** |
+| **總計** | **1,776** | **340,451** |
 
-其中 `Imervue/` 套件本身 789 檔 / 169,881 行。
+其中 `Imervue/` 套件本身 789 檔 / 169,923 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -314,14 +314,14 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-128 個模組、15,414 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+128 個模組、15,456 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `recipe.py` | 665 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`、`exif_oriented` / `base_is_oriented()`（舊存檔缺這個鍵、又帶幾何時，仍套在未轉正的像素上），以及 `file_identity()`（md5(前、中、後各 4KB \| 檔案大小)，避免 mtime 改變就失效；只看前 4KB 時，同尺寸的未壓縮掃描檔會共用一個 identity）與 `file_identities()`（連同舊版只含前 4KB 的 identity，供遷移）；`turned_with_file(recipe, clockwise, size)`：檔案轉 90° 後的 recipe（翻轉互換、裁切框隨之旋轉；帶位置的 extra 不轉） |
+| `recipe.py` | 707 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線：幾何(旋轉/翻轉/裁切) → 曝光 → 亮度對比 → vibrance → 飽和度，再依 `extra` 套用 split toning / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack / masks / LUT。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`、`exif_oriented` / `base_is_oriented()`（舊存檔缺這個鍵、又帶幾何時，仍套在未轉正的像素上），以及 `file_identity()`（md5(前、中、後各 4KB \| 檔案大小)，避免 mtime 改變就失效；只看前 4KB 時，同尺寸的未壓縮掃描檔會共用一個 identity）與 `file_identities()`（連同舊版只含前 4KB 的 identity，供遷移）；`turned_with_file(recipe, clockwise, size)`：檔案轉 90° 後的 recipe（翻轉互換、裁切框隨之旋轉；帶位置的 extra 不轉） |
 | `recipe_store.py` | 477 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`identity_for(path)` 查詢前先把存在舊版 identity 下的 recipe 搬到新 identity（每個檔案只搬一次）；`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案；讀不到的 store 檔由 `UnreadableFileGuard` 看守，解不開的單筆原樣寫回 |
 | `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
 | `recipe_diff.py` | 63 | 兩個 recipe 的 diff 與選擇性合併 |
@@ -985,7 +985,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-914 個檔、154,316 行。`pyproject.toml` 定義三個互斥層級 marker：
+914 個檔、154,364 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

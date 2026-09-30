@@ -32,6 +32,7 @@ import logging
 import math
 from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -304,33 +305,47 @@ class Recipe:
         if arr.dtype != np.uint8:
             arr = arr.astype(np.uint8, copy=False)
 
-        recipe = self.normalized()
-        arr = _apply_geometry(arr, recipe)
-        arr = apply_white_balance(arr, recipe.temperature, recipe.tint)
-        arr = _apply_exposure(arr, recipe)
-        arr = apply_highlights_shadows(arr, recipe.highlights, recipe.shadows)
-        arr = apply_whites_blacks(arr, recipe.whites, recipe.blacks)
-        arr = _apply_brightness_contrast(arr, recipe)
-        arr = apply_vibrance(arr, recipe.vibrance)
-        arr = _apply_saturation(arr, recipe)
-        arr = apply_tone_curve(
-            arr,
-            recipe.tone_curve_rgb,
-            r_points=recipe.tone_curve_r,
-            g_points=recipe.tone_curve_g,
-            b_points=recipe.tone_curve_b,
-        )
-        arr = _apply_split_toning(arr, recipe)
-        arr = _apply_lut(arr, recipe)
-        arr = _apply_masks(arr, recipe)
-        arr = _apply_levels(arr, recipe)
-        arr = _apply_channel_mixer(arr, recipe)
-        arr = _apply_gradient_map(arr, recipe)
-        arr = _apply_threshold_posterize(arr, recipe)
-        arr = _apply_lens_flare(arr, recipe)
-        arr = _apply_film_grain(arr, recipe)
-        arr = _apply_layer_stack(arr, recipe)
+        return self.normalized().apply_stages(arr)
+
+    def apply_stages(self, arr: np.ndarray, first: str | None = None,
+                     last: str | None = None) -> np.ndarray:
+        """Run the stages of :data:`STAGE_NAMES` from *first* to *last* (inclusive) on *arr*.
+
+        ``apply`` runs them all on the normalised recipe; a renderer that does
+        some stages itself runs the others through here. *arr* must already be
+        HxWx4 uint8, and the recipe normalised.
+        """
+        start = 0 if first is None else STAGE_NAMES.index(first)
+        stop = len(_STAGES) if last is None else STAGE_NAMES.index(last) + 1
+        for _name, stage in _STAGES[start:stop]:
+            arr = stage(arr, self)
         return arr
+
+
+def _apply_white_balance(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_white_balance(arr, recipe.temperature, recipe.tint)
+
+
+def _apply_highlights_shadows(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_highlights_shadows(arr, recipe.highlights, recipe.shadows)
+
+
+def _apply_whites_blacks(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_whites_blacks(arr, recipe.whites, recipe.blacks)
+
+
+def _apply_vibrance(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_vibrance(arr, recipe.vibrance)
+
+
+def _apply_tone_curve(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_tone_curve(
+        arr,
+        recipe.tone_curve_rgb,
+        r_points=recipe.tone_curve_r,
+        g_points=recipe.tone_curve_g,
+        b_points=recipe.tone_curve_b,
+    )
 
 
 def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
@@ -569,6 +584,33 @@ def _apply_saturation(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
     img = Image.fromarray(arr, mode="RGBA")
     img = ImageEnhance.Color(img).enhance(1.0 + recipe.saturation)
     return np.array(img)
+
+
+# The develop pipeline, in order: each stage takes and returns an HxWx4 uint8
+# array and passes it through unchanged when its settings are neutral.
+_STAGES: tuple[tuple[str, Callable[[np.ndarray, Recipe], np.ndarray]], ...] = (
+    ("geometry", _apply_geometry),
+    ("white_balance", _apply_white_balance),
+    ("exposure", _apply_exposure),
+    ("highlights_shadows", _apply_highlights_shadows),
+    ("whites_blacks", _apply_whites_blacks),
+    ("brightness_contrast", _apply_brightness_contrast),
+    ("vibrance", _apply_vibrance),
+    ("saturation", _apply_saturation),
+    ("tone_curve", _apply_tone_curve),
+    ("split_toning", _apply_split_toning),
+    ("lut", _apply_lut),
+    ("masks", _apply_masks),
+    ("levels", _apply_levels),
+    ("channel_mixer", _apply_channel_mixer),
+    ("gradient_map", _apply_gradient_map),
+    ("threshold_posterize", _apply_threshold_posterize),
+    ("lens_flare", _apply_lens_flare),
+    ("film_grain", _apply_film_grain),
+    ("layer_stack", _apply_layer_stack),
+)
+#: Names of the develop stages in the order ``Recipe.apply`` runs them.
+STAGE_NAMES: tuple[str, ...] = tuple(name for name, _stage in _STAGES)
 
 
 # ----------------------------------------------------------------------
