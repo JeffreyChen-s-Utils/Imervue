@@ -2253,7 +2253,9 @@ Bibliothekssuche
 eines oder mehrerer **Root-Ordner** zu einem globalen Index, der in einem Hintergrundthread
 gecrawlt wird. Sobald ein Root indiziert ist, können Sie ihn nach Dateiname,
 Mindestbreite / -höhe und Dateigröße durchsuchen (bis zu 2000 Treffer); ein Doppelklick
-auf einen Treffer öffnet ihn.
+auf einen Treffer öffnet ihn. Ein erneuter Scan liest nur Dateien, die seit dem letzten Scan neu sind oder sich geändert
+haben, und bei aktiviertem **Compute perceptual hash** auch früher ohne Hash indizierte
+Dateien; die gelesenen Dateien werden in mehreren Threads gleichzeitig dekodiert.
 
 Rechtsklick > ``Search by Query…`` filtert den aktuellen Ordner mit einer kompakten Abfragesprache, zum Beispiel ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` nimmt eine Stadt, ein Land oder beides (``Paris``, ``France``, ``Paris, France``); ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (``place:"Rio de Janeiro"``).
 

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-03 | 2026-10-01 | Library scans read only new or changed files, on several threads, and fill in missing pHashes | #done #library #performance #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-02 | 2026-10-01 | Every MCP tool is a CLI subcommand, and the CLI gained the MCP tools' options | #done #cli #mcp #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-01 | 2026-10-01 | Refactor: the library scanner probes a file and stores its row as two steps | #refactor #library | [2026-10](2026-10.md) |
 | U-20260926-91 | 2026-09-26 | The Desktop Pet's right-click menu picks each pose group's shown member | #feature #desktop-pet #docs #i18n | [2026-09-c](2026-09-c.md) |
@@ -468,4 +469,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 2 |
+| [2026-10.md](2026-10.md) | 2026-10 | 3 |

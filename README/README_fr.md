@@ -273,7 +273,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 - **Recherche floue par nom de fichier** avec mise en surbrillance des sous-chaînes
 - **Trouver des images similaires** — pHash (DCT 64 bits) avec distance de Hamming ajustable
-- **Recherche dans la photothèque** — index SQLite multi-racines, interrogé par nom de fichier, largeur / hauteur minimales et taille de fichier (jusqu'à 2000 résultats ; double-cliquez sur l'un d'eux pour l'ouvrir)
+- **Recherche dans la photothèque** — index SQLite multi-racines, interrogé par nom de fichier, largeur / hauteur minimales et taille de fichier (jusqu'à 2000 résultats ; double-cliquez sur l'un d'eux pour l'ouvrir) ; un nouveau scan ne lit que les fichiers nouveaux ou modifiés (et, avec **Compute perceptual hash** coché, ceux encore sans hachage), plusieurs à la fois
 - **Recherche par requête** (clic droit) — un langage de requête compact sur le dossier ouvert : mots-clés, étiquettes (y compris la négation), notes, couleur, extension, lieu, tri, favoris, rapport d'aspect, ancienneté, taille, dimensions, boîtier / objectif, et regex / glob de nom de fichier ; `place:` correspond à une ville, un pays ou les deux, et une valeur avec des espaces se met entre guillemets doubles (`place:"Rio de Janeiro"`)
 - **Trouver des similaires (hachage moyen)** — pHash et dHash sont complétés par un hachage moyen (aHash) optionnel pour une métrique de quasi-doublon complémentaire
 - **Recherche sémantique (CLIP)** — requêtes en langage naturel (« golden retriever dans la neige ») via des embeddings mis en cache ; indisponible proprement lorsque `open_clip_torch` + `torch` ne sont pas installés

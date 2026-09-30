@@ -2197,7 +2197,9 @@ Pesquisa de Biblioteca
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` permite adicionar uma ou mais **pastas raiz**
 a um índice global que é varrido em uma thread em segundo plano. Uma vez que uma raiz é
 indexada você pode pesquisá-la por nome de arquivo, largura / altura mínima e tamanho de
-arquivo (até 2000 resultados); clique duas vezes em um resultado para abri-lo.
+arquivo (até 2000 resultados); clique duas vezes em um resultado para abri-lo. Uma nova varredura só lê os arquivos novos ou alterados desde a anterior e, com **Compute
+perceptual hash** marcado, os indexados antes sem hash; os arquivos lidos são decodificados em
+várias threads ao mesmo tempo.
 
 Clique direito > ``Search by Query…`` filtra a pasta atual com uma linguagem de consulta compacta, por exemplo ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` aceita uma cidade, um país ou ambos (``Paris``, ``France``, ``Paris, France``); um valor com espaços vai entre aspas duplas (``place:"Rio de Janeiro"``).
 

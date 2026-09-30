@@ -1973,7 +1973,8 @@ Imervue는 ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) 또는
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search``\ 에서 하나 이상의 **루트 폴더**\ 를 글로벌
 인덱스에 추가하면 백그라운드에서 크롤링됩니다. 인덱싱된 루트는 파일명, 최소 너비 / 높이,
-파일 크기로 검색할 수 있으며(최대 2000개 결과), 결과를 더블클릭하면 열립니다.
+파일 크기로 검색할 수 있으며(최대 2000개 결과), 결과를 더블클릭하면 열립니다. 다시 스캔하면 지난 스캔 이후 새로 생기거나 바뀐 파일만 읽고, **Compute perceptual hash**\ 가
+켜져 있으면 해시 없이 인덱싱된 파일도 읽으며, 읽는 파일은 여러 스레드에서 동시에 디코딩합니다.
 
 우클릭 > ``쿼리 검색…``\ 으로 현재 폴더를 간결한 쿼리 언어로 걸러 냅니다. 예: ``kw:beach rating:>=4 type:video place:Paris``. ``place:``\ 에는 도시, 국가 또는 둘 다(``Paris``, ``France``, ``Paris, France``)를 쓸 수 있고, 공백이 있는 값은 큰따옴표로 묶습니다(``place:"Rio de Janeiro"``).
 

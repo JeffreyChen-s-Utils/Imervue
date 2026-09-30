@@ -273,7 +273,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 - **Fuzzy-Dateinamensuche** mit Substring-Highlighting
 - **Find Similar Images** — pHash (64-Bit DCT) mit einstellbarer Hamming-Distanz
-- **Library Search** — SQLite-Multi-Root-Index, durchsucht nach Dateiname, Mindestbreite / -höhe und Dateigröße (bis zu 2000 Treffer; ein Doppelklick öffnet einen)
+- **Library Search** — SQLite-Multi-Root-Index, durchsucht nach Dateiname, Mindestbreite / -höhe und Dateigröße (bis zu 2000 Treffer; ein Doppelklick öffnet einen); ein erneuter Scan liest nur neue oder geänderte Dateien (und bei aktiviertem **Compute perceptual hash** Dateien noch ohne Hash), mehrere gleichzeitig
 - **Search by Query** (Rechtsklick) — eine kompakte Query-Sprache über dem geöffneten Ordner: Keywords, Tags (inkl. Negation), Ratings, Farbe, Endung, Ort, Cull, Favoriten, Seitenverhältnis, Alter, Größe, Maße, Kamera / Objektiv sowie Dateiname-Regex / -Glob; `place:` passt auf Stadt, Land oder beides, und ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (`place:"Rio de Janeiro"`)
 - **Find Similar (Average Hash)** — pHash und dHash werden durch einen optionalen Average-Hash (aHash) zu einer komplementären Near-Duplicate-Metrik verbunden
 - **Semantic Search (CLIP)** — Natural-Language-Queries („Golden Retriever im Schnee") über gecachte Embeddings; deaktiviert sich elegant, wenn `open_clip_torch` + `torch` nicht installiert sind

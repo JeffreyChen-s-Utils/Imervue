@@ -192,3 +192,161 @@ def test_index_one_registers_the_codec_before_reading(tmp_path, monkeypatch):
     img.write_bytes(b"not decodable")
     assert scanner._index_one(img, with_phash=True) is True
     assert seen == [".heic"]
+
+
+# --- incremental and parallel scanning ---------------------------------------
+
+def _noise(path, seed=0):
+    rng = np.random.default_rng(seed)
+    Image.fromarray((rng.random((32, 32, 3)) * 255).astype(np.uint8)).save(str(path))
+    return str(path)
+
+
+def _scan(root, *, with_phash=True):
+    s = scanner.LibraryScanner([str(root)], with_phash=with_phash)
+    errors: list[str] = []
+    s.error.connect(errors.append)
+    s.run()
+    assert errors == []
+    return s
+
+
+@pytest.mark.parametrize(("cpus", "workers"), [(None, 1), (1, 1), (2, 1), (4, 3), (64, 8)])
+def test_probe_workers_leave_a_core_for_the_ui_and_stop_at_eight(cpus, workers, monkeypatch):
+    monkeypatch.setattr(os, "cpu_count", lambda: None)
+    assert scanner.probe_workers(cpus) == workers
+
+
+def test_probe_workers_default_to_the_machine(monkeypatch):
+    monkeypatch.setattr(os, "cpu_count", lambda: 6)
+    assert scanner.probe_workers() == 5
+
+
+def test_a_rescan_with_phash_fills_in_a_row_indexed_without_one(tmp_path, qapp):
+    """A file first indexed with pHash off was skipped by every later pHash scan."""
+    root = tmp_path / "lib"
+    root.mkdir()
+    path = _noise(root / "a.png")
+    _scan(root, with_phash=False)
+    assert image_index.get_image(path)["phash"] is None
+    _scan(root, with_phash=True)
+    row = image_index.get_image(path)
+    assert row["phash"] is not None
+    assert (row["width"], row["height"]) == (32, 32)
+
+
+def test_an_unchanged_hashed_file_is_not_read_again(tmp_path, qapp, monkeypatch):
+    root = tmp_path / "lib"
+    root.mkdir()
+    _noise(root / "a.png")
+    _scan(root)
+    read: list[str] = []
+    monkeypatch.setattr(scanner, "compute_phash", lambda p: read.append(str(p)))
+    _scan(root)
+    assert read == []
+
+
+def test_a_changed_file_scanned_without_phash_drops_the_stale_hash(tmp_path, qapp):
+    """The old content's pHash and size would otherwise keep matching it in similar search."""
+    root = tmp_path / "lib"
+    root.mkdir()
+    path = _noise(root / "a.png")
+    _scan(root)
+    assert image_index.get_image(path)["phash"] is not None
+    Image.new("RGB", (8, 4)).save(path)
+    stat = os.stat(path)
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 5_000_000_000))
+    _scan(root, with_phash=False)
+    row = image_index.get_image(path)
+    assert (row["phash"], row["width"], row["height"]) == (None, None, None)
+    assert row["size"] == os.stat(path).st_size
+
+
+def test_files_are_read_on_worker_threads_with_the_database_lock_free(tmp_path, qapp,
+                                                                      monkeypatch):
+    import threading
+    import time
+    root = tmp_path / "lib"
+    root.mkdir()
+    for i in range(12):
+        _noise(root / f"{i}.png", seed=i)
+    real_probe = scanner._probe
+    threads: set[int] = set()
+    lock_free: list[bool] = []
+
+    def probe(path, stat_result, *, with_phash):
+        threads.add(threading.get_ident())
+        acquired = image_index._lock.acquire(blocking=False)  # noqa: SLF001
+        lock_free.append(acquired)
+        if acquired:
+            image_index._lock.release()  # noqa: SLF001
+        time.sleep(0.02)
+        return real_probe(path, stat_result, with_phash=with_phash)
+
+    monkeypatch.setattr(scanner, "_probe", probe)
+    monkeypatch.setattr(scanner, "probe_workers", lambda: 3)
+    _scan(root)
+    assert image_index.count_images() == 12
+    assert threading.get_ident() not in threads
+    assert len(threads) > 1
+    assert all(lock_free)
+
+
+def test_progress_reaches_the_total_once_per_file_count(tmp_path, qapp, monkeypatch):
+    monkeypatch.setattr(scanner, "_SCAN_COMMIT_CHUNK", 4)
+    root = tmp_path / "lib"
+    root.mkdir()
+    for i in range(9):
+        _noise(root / f"{i}.png", seed=i)
+    s = scanner.LibraryScanner([str(root)], with_phash=False)
+    events: list[int] = []
+    s.progress.connect(lambda i, n, p: events.append(i))
+    s.run()
+    assert events == sorted(set(events))
+    assert events[-1] == 9
+    assert {4, 8} <= set(events)   # every chunk's end, skipped files included
+
+
+def test_cancel_during_a_chunk_stops_before_the_next(tmp_path, qapp, monkeypatch):
+    monkeypatch.setattr(scanner, "_SCAN_COMMIT_CHUNK", 2)
+    root = tmp_path / "lib"
+    root.mkdir()
+    for i in range(6):
+        _noise(root / f"{i}.png", seed=i)
+    s = scanner.LibraryScanner([str(root)], with_phash=False)
+    real_probe = scanner._probe
+
+    def probe(path, stat_result, *, with_phash):
+        s.cancel()
+        return real_probe(path, stat_result, with_phash=with_phash)
+
+    monkeypatch.setattr(scanner, "_probe", probe)
+    monkeypatch.setattr(scanner, "probe_workers", lambda: 1)
+    s.run()
+    assert image_index.count_images() == 1
+
+
+def test_a_failing_probe_ends_the_scan_with_an_error(tmp_path, qapp, monkeypatch):
+    root = tmp_path / "lib"
+    root.mkdir()
+    _noise(root / "a.png")
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("decoder bug")
+
+    monkeypatch.setattr(scanner, "_probe", broken)
+    s = scanner.LibraryScanner([str(root)])
+    errors: list[str] = []
+    s.error.connect(errors.append)
+    s.run()
+    assert errors == ["decoder bug"]
+
+
+def test_set_decoded_fields_replaces_and_clears(tmp_path):
+    image_index.upsert_image(str(tmp_path / "a.png"), size=1, mtime=1.0, width=5, height=6,
+                             phash=2**63 + 1)
+    image_index.set_decoded_fields(str(tmp_path / "a.png"), width=None, height=7, phash=2**63 + 5)
+    row = image_index.get_image(str(tmp_path / "a.png"))
+    assert (row["width"], row["height"]) == (None, 7)
+    from Imervue.library.phash import to_signed64
+    assert row["phash"] == to_signed64(2**63 + 5)

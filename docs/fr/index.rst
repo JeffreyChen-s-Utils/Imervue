@@ -2223,7 +2223,9 @@ Recherche dans la bibliothèque
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` vous permet d'ajouter un ou plusieurs **dossiers racine**
 à un index global parcouru en arrière-plan. Une fois une racine indexée, vous pouvez y chercher
 par nom de fichier, largeur / hauteur minimales et taille de fichier (jusqu'à 2000 résultats) ;
-double-cliquez sur un résultat pour l'ouvrir.
+double-cliquez sur un résultat pour l'ouvrir. Un nouveau scan ne lit que les fichiers nouveaux ou modifiés depuis le précédent et, avec
+**Compute perceptual hash** coché, ceux indexés plus tôt sans hachage ; les fichiers lus sont
+décodés sur plusieurs threads à la fois.
 
 Clic droit > ``Search by Query…`` filtre le dossier courant avec un langage de requête compact, par exemple ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` accepte une ville, un pays ou les deux (``Paris``, ``France``, ``Paris, France``) ; une valeur avec des espaces se met entre guillemets doubles (``place:"Rio de Janeiro"``).
 

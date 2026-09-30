@@ -2176,7 +2176,9 @@ Library Search
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` lets you add one or more **root folders**
 to a global index that is crawled in a background thread. Once a root is
 indexed you can search it by file name, minimum width / height and file size
-(up to 2000 results); double-click a result to open it.
+(up to 2000 results); double-click a result to open it. A rescan only reads files that are new or changed since the last one, and, with **Compute
+perceptual hash** ticked, files indexed earlier without a hash; the files it reads are decoded
+on several threads at once.
 
 Right-click > ``Search by Query…`` filters the current folder with a compact query language, for example ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` takes a city, a country or both (``Paris``, ``France``, ``Paris, France``); a value with spaces goes in double quotes (``place:"Rio de Janeiro"``).
 

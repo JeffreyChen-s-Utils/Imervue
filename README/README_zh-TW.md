@@ -272,7 +272,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **模糊檔名搜尋** 含子字串高亮
 - **找相似** — pHash（64-bit DCT）含可調 Hamming 距離
-- **圖庫搜尋** — SQLite 多根索引，可依檔名、最小寬 / 高與檔案大小搜尋（最多 2000 筆結果；按兩下即可開啟）
+- **圖庫搜尋** — SQLite 多根索引，可依檔名、最小寬 / 高與檔案大小搜尋（最多 2000 筆結果；按兩下即可開啟）；重新掃描只讀取新增或修改的檔案（勾選 **Compute perceptual hash** 時也讀取還沒有雜湊值的檔案），多個同時進行
 - **查詢搜尋**（右鍵）— 以精簡的查詢語言篩選目前開啟的資料夾：關鍵字、標籤（含否定）、評等、顏色、副檔名、地點、挑片、收藏、長寬比、年齡、大小、尺寸、相機 / 鏡頭，以及檔名 regex / glob；`place:` 可填城市、國家或兩者，含空格的值用雙引號括起（`place:"Rio de Janeiro"`）
 - **找相似（average hash）** — pHash 與 dHash 再搭配選用的 average-hash（aHash），提供互補的近重複度量
 - **語意搜尋（CLIP）** — 自然語言查詢（如「雪中的黃金獵犬」）透過快取的 embedding；`open_clip_torch` + `torch` 未安裝時優雅停用

@@ -257,6 +257,23 @@ def upsert_image(
         )
 
 
+def set_decoded_fields(
+    path: str, *, width: int | None, height: int | None, phash: int | None,
+) -> None:
+    """Replace the fields read from the file's pixels; ``None`` clears one.
+
+    Unlike :func:`upsert_image`, which keeps an old value where the new one is
+    ``None``, this makes a rescanned file's size and pHash describe its current
+    content, or nothing when it was not read or could not be.
+    """
+    stored_phash = to_signed64(phash) if phash is not None else None
+    with _lock:
+        conn().execute(
+            "UPDATE images SET width = ?, height = ?, phash = ? WHERE path = ?",
+            (width, height, stored_phash, str(path)),
+        )
+
+
 def get_image(path: str) -> dict | None:
     row = conn().execute(
         "SELECT * FROM images WHERE path = ?", (str(path),)

@@ -2228,7 +2228,9 @@ Búsqueda en la biblioteca
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` le permite añadir una o más
 **carpetas raíz** a un índice global que se rastrea en un hilo en segundo plano. Una vez que
 una raíz está indexada puede buscar en ella por nombre de archivo, ancho / alto mínimo y tamaño
-de archivo (hasta 2000 resultados); haga doble clic en un resultado para abrirlo.
+de archivo (hasta 2000 resultados); haga doble clic en un resultado para abrirlo. Un nuevo escaneo solo lee los archivos nuevos o modificados desde el anterior y, con
+**Compute perceptual hash** marcado, los indexados antes sin hash; los archivos que lee se
+decodifican en varios hilos a la vez.
 
 Clic derecho > ``Search by Query…`` filtra la carpeta actual con un lenguaje de consulta compacto, por ejemplo ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` admite una ciudad, un país o ambos (``Paris``, ``France``, ``Paris, France``); un valor con espacios va entre comillas dobles (``place:"Rio de Janeiro"``).
 

@@ -1749,7 +1749,8 @@ Imervue 會在 ``%LOCALAPPDATA%/Imervue/library.db``\ （Windows）或
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` 允許新增多個\ **根目錄**\ 並在背景建立索引，
-之後可依檔名、最小寬高與檔案大小搜尋（最多 2000 筆結果）；按兩下結果即可開啟。
+之後可依檔名、最小寬高與檔案大小搜尋（最多 2000 筆結果）；按兩下結果即可開啟。重新掃描只讀取上次之後新增或修改的檔案，勾選 **Compute perceptual hash** 時還會讀取之前沒有雜湊值的檔案；
+讀取的檔案會在多個執行緒上同時解碼。
 
 右鍵 > ``查詢搜尋…`` 以精簡的查詢語言篩選目前的資料夾，例如 ``kw:beach rating:>=4 type:video place:Paris``。``place:`` 可填城市、國家或兩者（``Paris``、``France``、``Paris, France``），含空格的值用雙引號括起（``place:"Rio de Janeiro"``）。
 

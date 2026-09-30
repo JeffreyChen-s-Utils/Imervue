@@ -2,13 +2,18 @@
 Background scanner — walks library roots and populates the SQLite index.
 
 Runs in a QThread; emits progress signals so the UI can show a status bar.
-Per-image work (stat + pHash) is cheap enough to do sequentially; if the root
-has tens of thousands of images we throttle by yielding every N files.
+Rescans are incremental: a file whose mtime and size match its row is skipped
+without being opened, unless the scan wants a pHash the row lacks. The files
+that do need reading are decoded on a small thread pool (Pillow and NumPy
+release the GIL) with the database lock free, and each chunk's rows are then
+written in one transaction.
 """
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Iterable
+from concurrent.futures import Executor, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,6 +31,16 @@ logger = logging.getLogger("Imervue.library.scanner")
 # Files indexed per DB transaction during a bulk scan. Large enough to amortise
 # commit overhead, small enough to keep progress durable and transactions short.
 _SCAN_COMMIT_CHUNK = 256
+# Decoding threads at most; one core is always left for the UI.
+_MAX_PROBE_WORKERS = 8
+_PROGRESS_EVERY = 10
+
+
+def probe_workers(cpu_count: int | None = None) -> int:
+    """Threads that decode files at once: every core but one, between 1 and 8."""
+    cpus = os.cpu_count() if cpu_count is None else cpu_count
+    return max(1, min(_MAX_PROBE_WORKERS, (cpus or 1) - 1))
+
 
 def _iter_images(root: str) -> Iterable[Path]:
     # The same walk Library Maintenance diffs against, so a file it reports as
@@ -45,12 +60,13 @@ def _build_skip_bloom() -> BloomFilter:
 
 
 def _can_skip_via_bloom(
-    path: Path, stat_result, bloom: BloomFilter | None,
+    path: Path, stat_result, bloom: BloomFilter | None, *, need_phash: bool = False,
 ) -> bool:
     """``True`` when the bloom filter says this file is *probably*
     already indexed AND an exact-row check confirms mtime + size
     match. The two-stage check keeps bloom-filter false positives
-    from making us miss a real update."""
+    from making us miss a real update. With *need_phash* a row
+    indexed without a pHash is not skipped, so the scan fills it in."""
     if bloom is None:
         return False
     fp = fingerprint(str(path), stat_result.st_mtime, stat_result.st_size)
@@ -58,7 +74,7 @@ def _can_skip_via_bloom(
         return False
     # Bloom says "maybe" — confirm with an exact lookup.
     row = image_index.get_image(str(path))
-    if row is None:
+    if row is None or (need_phash and row["phash"] is None):
         return False
     return (
         row["mtime"] is not None
@@ -95,10 +111,9 @@ def _probe(path: Path, stat_result, *, with_phash: bool) -> ScanRow:
 
 
 def _store(row: ScanRow) -> None:
-    image_index.upsert_image(
-        row.path, size=row.size, mtime=row.mtime, width=row.width, height=row.height,
-        phash=row.phash,
-    )
+    """Write *row*; its size and pHash replace the old ones, which describe the old content."""
+    image_index.upsert_image(row.path, size=row.size, mtime=row.mtime)
+    image_index.set_decoded_fields(row.path, width=row.width, height=row.height, phash=row.phash)
 
 
 def _index_one(
@@ -111,10 +126,19 @@ def _index_one(
         stat = path.stat()
     except OSError:
         return False
-    if _can_skip_via_bloom(path, stat, bloom):
+    if _can_skip_via_bloom(path, stat, bloom, need_phash=with_phash):
         return False
     _store(_probe(path, stat, with_phash=with_phash))
     return True
+
+
+@dataclass(frozen=True)
+class _Pending:
+    """A file of the current chunk that must be read: its place in the scan and its stat."""
+
+    position: int
+    path: Path
+    stat: os.stat_result
 
 
 class LibraryScanner(QObject):
@@ -129,6 +153,7 @@ class LibraryScanner(QObject):
         self._roots = list(roots)
         self._with_phash = with_phash
         self._cancel = False
+        self._reported = 0
 
     def cancel(self) -> None:
         self._cancel = True
@@ -154,17 +179,53 @@ class LibraryScanner(QObject):
     def _scan_paths(self, paths: list[Path], total: int, bloom) -> None:
         """Index *paths*, committing one transaction per chunk so a large
         first scan isn't N separate commits while progress stays durable."""
-        for start in range(0, total, _SCAN_COMMIT_CHUNK):
-            if self._cancel:
-                return
-            with image_index.write_batch():
-                for offset, p in enumerate(paths[start:start + _SCAN_COMMIT_CHUNK]):
-                    if self._cancel:
-                        break
-                    _index_one(p, with_phash=self._with_phash, bloom=bloom)
-                    i = start + offset + 1
-                    if i % 10 == 0 or i == total:
-                        self.progress.emit(i, total, str(p))
+        with ThreadPoolExecutor(max_workers=probe_workers(),
+                                thread_name_prefix="library-probe") as pool:
+            for start in range(0, total, _SCAN_COMMIT_CHUNK):
+                if self._cancel:
+                    return
+                chunk = paths[start:start + _SCAN_COMMIT_CHUNK]
+                self._scan_chunk(pool, chunk, start, total, bloom)
+
+    def _scan_chunk(self, pool: Executor, chunk: list[Path], start: int, total: int,
+                    bloom) -> None:
+        """Probe the chunk's changed files on *pool*, then write their rows in one batch."""
+        pending = self._changed(chunk, start, bloom)
+        rows: list[ScanRow] = []
+        for item, row in zip(pending, pool.map(self._probe_unless_cancelled, pending),
+                             strict=True):
+            if row is not None:
+                rows.append(row)
+            self._report(item.position + 1, total, item.path)
+        with image_index.write_batch():
+            for row in rows:
+                _store(row)
+        if chunk and not self._cancel:
+            self._report(start + len(chunk), total, chunk[-1], force=True)
+
+    def _changed(self, chunk: list[Path], start: int, bloom) -> list[_Pending]:
+        """The chunk's files that are new, changed, or missing the pHash this scan wants."""
+        pending = []
+        for offset, path in enumerate(chunk):
+            try:
+                stat = path.stat()
+            except OSError:
+                continue
+            if not _can_skip_via_bloom(path, stat, bloom, need_phash=self._with_phash):
+                pending.append(_Pending(start + offset, path, stat))
+        return pending
+
+    def _probe_unless_cancelled(self, item: _Pending) -> ScanRow | None:
+        if self._cancel:
+            return None
+        return _probe(item.path, item.stat, with_phash=self._with_phash)
+
+    def _report(self, current: int, total: int, path: Path, *, force: bool = False) -> None:
+        """Emit progress every few files, at each chunk's end (*force*) and at the last file."""
+        due = force or current % _PROGRESS_EVERY == 0 or current == total
+        if current > self._reported and due:
+            self._reported = current
+            self.progress.emit(current, total, str(path))
 
 
 class LibraryScanThread(QThread):
