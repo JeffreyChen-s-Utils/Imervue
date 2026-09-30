@@ -10,17 +10,17 @@ GPU 加速图像工作站，提供 **五个顶层标签**。本手册大部分�
    * - 标签
      - 功能
    * - **Imervue**
-     - 浏览、查看、整理、搜索、批处理图库。见"Imervue 标签 — 图片浏览与图库"。
+     - 浏览、查看、整理、搜索、批处理图库。见"打开图片"、"浏览图片"与"整理图片"。
    * - **Modify**
-     - 非破坏显影管线 — 滑块、曲线、LUT、蒙版、修图、多图合成。见"Modify 标签 — 非破坏显影"。
+     - 非破坏显影管线 — 滑块、曲线、LUT、蒙版、修图、多图合成。见"编辑图片（修改选项卡）"。
    * - **Paint**
      - 功能完整的栅格绘图工作室，含笔刷、图层、动画、漫画工具、PSD I/O。见"绘图工作区（绘图标签）"。
    * - **Puppet**
-     - 从零打造的 2D 绑骨偶动画器 — 网格、变形器、参数、动作、物理。见"Puppet 标签 — 2D 绑骨偶动画"。
+     - 从零打造的 2D 绑骨偶动画器 — 网格、变形器、参数、动作、物理。见"Puppet 工作区（Puppet 标签）"。
    * - **Desktop Pet**
      - 无边框、透明、始终置顶的浮层，用实时驱动（idle / blink / mic / webcam / drag-track）在桌面上运行同样的 ``.puppet`` 角色。见"桌宠工作区（Desktop Pet 标签）"。
 
-接下来的"快速开始"、"参考"、"插件系统"、"MCP 服务器"属于跨标签的章节，所有标签通用。
+"快速开始"、"所有快捷键一览"、"额外工具菜单参考"、"插件系统"、"命令行启动"与"MCP 服务器"属于跨标签的章节，所有五个标签通用。
 
 .. contents:: 目录
    :depth: 2
@@ -634,7 +634,7 @@ Crayon、Highlight 与 Sumi calligraphy 是基于这些类型的笔刷预设。�
 ^^^^
 
 **图层 dock** 提供缩略图、可见性切换、原地重命名、用 ↑ / ↓ 按钮（或
-``Ctrl + [`` / ``Ctrl + ]``）调整顺序，以及当前层的混合模式与不透明度。
+``Ctrl + ]`` / ``Ctrl + [``）调整顺序，以及当前层的混合模式与不透明度。
 ``图层`` 菜单还有：
 
 - **新建 / 矢量 / 复制 / 向下合并**\ （``Ctrl + Shift + N`` / ``Ctrl + Shift + V`` /
@@ -1728,6 +1728,82 @@ Imervue 支持插件扩展功能。
    * - 重新加载
      - ``插件`` > ``重新加载插件``
 
+编写插件
+^^^^^^^^
+
+插件是 ``plugins/<name>/`` 下的一个 Python 包 —— 从源码运行时位于 ``Imervue`` 包旁边，打包版则位于
+可执行文件旁边（``Plugins`` > ``Open Plugin Folder`` 会打开这个文件夹）。它的 ``__init__.py`` 把
+``plugin_class`` 设为 ``Imervue.plugin.plugin_base.ImervuePlugin`` 的子类；``plugins/`` 下的单个
+``.py`` 文件也能加载（使用其中第一个 ``ImervuePlugin`` 子类），但插件下载器只分发包。类属性
+``plugin_name``、``plugin_version``、``plugin_description`` 与 ``plugin_author`` 都是可选的
+（默认分别为 ``"Unnamed Plugin"``、``"0.0.1"`` 与空字符串）。每个主窗口都会为每个插件创建自己的
+实例，并把自身传进去，因此钩子可以使用 ``self.main_window`` 与 ``self.viewer``\ （即
+``GPUImageView``）。只需覆写你用到的钩子；每次调用都有保护，异常会以插件的名称记录到日志，而不会让
+Imervue 停止运行。含示例的完整指南见
+`PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 40 32
+
+   * - 钩子
+     - 调用时机
+     - 参数 / 返回值
+   * - ``register_languages()``\ （类方法）
+     - 在创建每个实例之前对插件类调用（每次加载与 ``Reload Plugins`` 时）；另外，当保存的语言不是
+       内置语言时，启动阶段在建立主窗口之前也会调用。启动时这一轮会导入每个插件，但除此之外不执行
+       任何东西
+     - 无参数。在这里调用 ``language_wrapper.register_language(language_code, display_name,
+       word_dict)``；内置语言代码会被拒绝。返回值被忽略；异常会记录到日志，插件仍会加载
+   * - ``on_plugin_loaded()``
+     - 实例创建后立即调用：建立主窗口时，以及 ``Plugins`` > ``Reload Plugins`` 之后再次调用
+     - 无参数；返回值被忽略
+   * - ``get_translations()``
+     - 紧接在 ``on_plugin_loaded()`` 之后，每次加载调用一次
+     - 返回 ``{language_code: {key: text}}``\ （默认 ``{}``）。这些字符串会合并进语言表；已存在的键
+       永远不会被覆盖，未知的语言代码会被跳过
+   * - ``on_build_main_tabs(tabs)``
+     - 建立主窗口时调用一次，在五个内置标签之后、``on_build_menu_bar`` 之前；``Reload Plugins``
+       不会再次调用它
+     - ``tabs``：主窗口的顶层 ``QTabWidget``；用 ``tabs.addTab(widget, label)`` 添加标签。
+       返回值被忽略
+   * - ``on_build_menu_bar(plugin_menu)``
+     - 共用的 ``Plugins`` 菜单建好后调用一次，``Reload Plugins`` 之后再次调用
+     - ``plugin_menu``：``Plugins`` 菜单的 ``QMenu``\ （不是 ``QMenuBar``）。插件在此处添加到菜单栏
+       任何位置的项目，都会在重新加载时移除。返回值被忽略
+   * - ``on_build_context_menu(menu, viewer)``
+     - 每次建立查看器的右键菜单时调用，在内置项目之后、菜单打开之前
+     - ``menu``：上下文 ``QMenu``；``viewer``：``GPUImageView``。返回值被忽略
+   * - ``on_folder_opened(folder_path, image_paths, viewer)``
+     - 打开的文件夹扫描完成时
+     - ``folder_path``：该文件夹；``image_paths``：扫描找到的所有图片。返回值被忽略
+   * - ``on_image_loaded(image_path, viewer)``
+     - 每当图片以完整尺寸显示在深度缩放中时调用（无论以何种方式打开），编辑后重新加载时也会再次
+       调用；大图解码期间显示的低分辨率预览不会触发
+     - ``image_path``：图片的路径。返回值被忽略
+   * - ``on_image_switched(image_path, viewer)``
+     - 下一张 / 上一张（包括在列表两端循环）切换到另一张图片、开始加载时立即调用；图片显示后接着
+       调用 ``on_image_loaded``。从网格或胶片条打开图片不会调用它
+     - ``image_path``：新的当前图片。返回值被忽略
+   * - ``on_image_deleted(deleted_paths, viewer)``
+     - 从查看器（当前图片或选中的缩略图）或文件夹树软删除图片（放入撤销栈）之后；文件夹树因为文件
+       不在图片列表中而直接送进回收站的文件不会触发
+     - ``deleted_paths``：被删除路径的列表。返回值被忽略
+   * - ``on_key_press(key, modifiers, viewer)``
+     - 查看器收到的每次按键，在内置按键与快捷键设置（Shortcut Settings）的绑定之前调用；按加载顺序
+       依次询问各插件。被菜单或窗口快捷键先接走的按键永远不会到达查看器
+     - ``key``：``Qt.Key`` 代码（int）；``modifiers``：``Qt.KeyboardModifier`` 标志。返回
+       ``True`` 表示消费该按键 —— 之后的插件与默认处理都会被跳过；返回 ``False``\ （默认）则继续
+       传递。抛出异常视同 ``False``
+   * - ``on_app_closing(main_window)``
+     - 最后一个主窗口关闭时调用：在 Paint 的未保存标签提示被接受、设置已保存之后，插件卸载之前；
+       关闭其他窗口不会调用它
+     - ``main_window``：正在关闭的 ``ImervueMainWindow``。返回值被忽略
+   * - ``on_plugin_unloaded()``
+     - 插件所属窗口关闭时（对最后一个窗口而言是在 ``on_app_closing`` 之后），以及 ``Reload Plugins``
+       重新加载插件之前；插件按加载顺序的相反顺序卸载
+     - 无参数；返回值被忽略
+
 ----
 
 语言切换
@@ -1906,6 +1982,37 @@ Imervue 支持插件扩展功能。
      - 减速
    * - ``]``
      - 加速
+
+Paint
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按键
+     - 功能
+   * - ``[`` / ``]``
+     - 笔刷大小减小 / 增大 1 px
+   * - ``Shift + [`` / ``Shift + ]``
+     - 笔刷大小减小 / 增大 5 px
+   * - ``Ctrl + Z``
+     - 撤销
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
+     - 重做
+   * - ``Ctrl + D``
+     - 取消选区
+   * - ``Ctrl + 0`` / ``Ctrl + 1``
+     - 适合窗口 / 实际大小（100 %）
+   * - ``X``
+     - 交换前景色 / 背景色
+   * - ``D``
+     - 将颜色重置为黑 / 白
+   * - ``Ctrl + Tab`` / ``Ctrl + Shift + Tab``
+     - 下一个 / 上一个 Paint 标签
+
+工具按键见"工具栏（左侧）"一节。在 Paint 标签中，``Settings`` > ``Shortcuts…`` 可以重新映射工具、笔刷大小、
+图层、撤销 / 重做、取消选区、视图与颜色的按键（``Ctrl + Y`` 始终保留为第二个重做键）。
 
 图库与元数据管理
 ----------------
@@ -2276,16 +2383,382 @@ GPS 地理标记
 
 ----
 
+额外工具菜单参考
+------------------
+
+``Extra Tools`` 菜单的每一个菜单项，按子菜单、依菜单顺序列出。许多菜单项在上文有更完整的章节；
+这里是完整的清单。会保存新文件的菜单项把文件写在源文件旁边，文件名已被占用时加上 ``_1``、``_2`` …；
+标为"保存在 recipe 中"的菜单项是对图片显影设置的非破坏编辑。插件可以在这些子菜单中加入自己的菜单项。
+
+批量（Batch）
+^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``Batch Format Conversion``
+     - 把文件夹中的图片（默认为当前文件夹）转换为 PNG、JPEG、WebP、BMP 或 TIFF，安装了对应编码器时
+       也可转为 HEIC / AVIF / JXL；可设置质量、跳过同格式文件，以及把原图送进回收站。
+   * - ``Batch EXIF Strip``
+     - 为保护隐私，移除文件夹中每张图片的 EXIF、GPS 等元数据；可以覆盖原图，也可以把干净的副本
+       写到输出文件夹。
+   * - ``Image Sanitizer``
+     - 从原始像素重新渲染文件夹中的图片，清除所有隐藏数据（元数据、隐写内容、尾随字节），并把
+       每个文件重命名为日期 + 随机字符串；也可以像 ``AI Image Upscale`` 那样把小图放大到目标分辨率。
+   * - ``Image Organizer``
+     - 把文件夹中的图片按日期（年-月或年）、分辨率、文件类型、文件大小或每个文件夹的固定数量分到
+       子文件夹，可复制或移动，并提供预览。
+   * - ``Token Batch Rename``
+     - 以令牌模板（如 ``{name}_{counter:04}`` 或 ``{date}_{camera}``）重命名选中的图片（或整个
+       文件夹），实时预览并标出冲突；边车文件、评分与标签会跟着文件走。
+   * - ``Deflicker (Time-lapse)``
+     - 均衡当前文件夹中延时摄影各帧之间的亮度（以滚动平均或全局平均为目标），把校正后的副本写到
+       ``deflickered/`` 子文件夹，原图保持不变。
+   * - ``Document Binarize``
+     - 用 Sauvola 自适应阈值（窗口大小与 k 滑块）把页面的照片或扫描件转成干净的白底黑字，在源文件
+       旁保存 ``<name>_bw.png``。
+   * - ``Otsu Threshold``
+     - 以自动选出的 Otsu 全局阈值把当前图片转为黑白，可选择反相，保存为 ``<name>_otsu.png``。
+   * - ``Edit Animation``
+     - 对当前的 GIF、APNG 或动态 WebP 进行倒放、来回播放（boomerang）、调整时间（0.25x 至 4x）或
+       优化（合并重复帧），保存为 ``<name>_edited.gif``。
+   * - ``Optimize to Target Size``
+     - 以符合 KB 大小预算的最高质量，把当前图片重新编码为 JPEG 或 WebP，保存为 ``<name>_opt.jpg``
+       或 ``<name>_opt.webp``。
+   * - ``Meme Caption``
+     - 为当前图片加上经典的上下梗图字幕（带黑色描边、自动换行的大写白字），保存为
+       ``<name>_meme.png``。
+   * - ``Steganography``
+     - 把文字消息藏进当前图片的最低有效位，保存为无损的 ``<name>_stego.png``；或读出以这种方式
+       隐藏的消息。
+
+图库与元数据（Library & Metadata）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``Library Search``
+     - 管理图库根文件夹，把它们扫描进索引（可选同时计算感知哈希），并按文件名、最小宽 / 高与以 KB
+       计的文件大小搜索；双击结果即可打开。
+   * - ``Smart Albums``
+     - 保存规则式相册（扩展名、名称、标签、地点、最小尺寸与评分、颜色标签、挑片状态、收藏）并显示
+       匹配结果；可以根据 GPS 数据为每个城市建立一个相册，也可以导入或导出相册。
+   * - ``Find Similar Images``
+     - 在选定的 Hamming 距离内，用感知哈希在图库中查找与当前（或第一张选中的）图片相似的图片；
+       请先在 ``Library Search`` 中勾选 pHash 扫描你的根文件夹。
+   * - ``Semantic Search``
+     - 使用在 ``onnxruntime`` 上运行的 CLIP（首次使用时提示安装），在当前文件夹中查找与文字描述
+       （如"日落时的海滩"）相符的图片；约 150 MB 的模型只下载一次。
+   * - ``Find Duplicate Images``
+     - 扫描文件夹（可包括子文件夹），按文件哈希查找完全相同的副本，或按感知哈希查找相似图片；可以
+       预先选中每组中除最佳副本以外的全部图片，并把选中的图片移到回收站。
+   * - ``Auto-Tag Images``
+     - 为选中的图片（或整个文件夹）加上启发式内容标签（photo、document、screenshot、graphic、
+       landscape、portrait），放在层级标签树的 ``auto/`` 下；语义搜索下载模型后，改用 CLIP 标签。
+   * - ``Hierarchical Tags``
+     - 建立和删除树状标签（如 ``animal/cat/british``），列出某个标签下的图片，并为选中的磁砖加上
+       或移除标签。
+   * - ``Export Metadata (CSV / JSON)``
+     - 为当前视图中的每张图片写一条记录（文件信息、相机、镜头、曝光、ISO 等主要 EXIF 字段、评分、
+       颜色标签、标签与笔记）到 CSV 或 JSON 文件。
+   * - ``XMP Sidecars``
+     - 为当前视图中的每张图片导出或导入 ``.xmp`` 边车文件，让评分、标题、描述、关键字与颜色标签
+       能与 Adobe Bridge、Lightroom 及其他支持 XMP 的工具双向同步。
+   * - ``GPS Geotag``
+     - 把纬度与经度（十进制度数）写入当前图片的 EXIF GPS 标签，取代原有的值；仅限 JPEG 与 WebP
+       文件。
+   * - ``Thumbnail Cache``
+     - 显示缩略图缓存占用的磁盘空间，并可清除缓存。
+
+视图（Views）
+^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``By day``
+     - 位于 ``Timeline View`` 下：把主视图换成当前文件夹的图片，按拍摄日（EXIF 日期，没有则用
+       文件日期）分组，每组一个标题；双击图片即可打开。
+   * - ``By month``
+     - 位于 ``Timeline View`` 下：同样的时间轴，按拍摄月份分组。
+   * - ``By year``
+     - 位于 ``Timeline View`` 下：同样的时间轴，按拍摄年份分组。
+   * - ``Calendar View``
+     - 显示日历，标出当前文件夹中有照片的日子（按拍摄日期）；单击某天列出它的图片，双击其中一张
+       即可打开。
+   * - ``Map View``
+     - 在 OpenStreetMap 地图上标出当前文件夹中带地理标记的图片，每个最近的城市一个标记并附数量；
+       地图需在线加载，没有 QtWebEngine 时改为显示坐标列表。
+   * - ``Scopes & Inspector``
+     - 以多个标签页分析当前图片：亮度波形、RGB 分量图、伪色曝光、峰值对焦、错误级别分析（ELA）与
+       克隆（复制-移动）检测。
+   * - ``Tiny Planet (360°)``
+     - 把 2:1 等距柱状投影的 360° 全景重新投影成指定尺寸的方形"小行星"，保存为
+       ``<name>_planet.png``；图片不是 2:1 时会给出警告。
+   * - ``Image Statistics``
+     - 显示当前图片 R、G、B 与亮度通道的平均值、最小值、最大值、标准差与中位数，并可把 256 级
+       直方图导出为 CSV。
+   * - ``Quality Report``
+     - 列出当前图片的无参考质量指标：色彩丰富度、色调熵、RMS 对比度、边缘密度与估计噪声。
+   * - ``Test Chart``
+     - 以指定的宽度与高度生成校准图样（SMPTE 彩条、灰阶楔、渐变、棋盘格或纯色）并保存为文件。
+   * - ``Off``
+     - 位于 ``Color blindness preview`` 下：关闭色觉缺陷预览。
+   * - ``Protanopia (red-blind)``
+     - 位于 ``Color blindness preview`` 下：在查看器中以红色盲者看到的样子显示图片；仅影响显示，
+       文件与其 recipe 都保持不变。
+   * - ``Deuteranopia (green-blind)``
+     - 位于 ``Color blindness preview`` 下：模拟最常见的红绿色觉缺陷 —— 绿色盲；仅影响显示。
+   * - ``Tritanopia (blue-blind)``
+     - 位于 ``Color blindness preview`` 下：模拟蓝色盲（蓝黄色觉缺陷）；仅影响显示。
+   * - ``Achromatopsia (greyscale)``
+     - 位于 ``Color blindness preview`` 下：以全灰阶显示图片，如同全色盲者所见；仅影响显示。
+
+工作流程（Workflow）
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``Culling``
+     - 把当前文件夹筛选为保留、拒绝或未标记的图片；自动挑片会在每组相似图片中挑出最清晰的一张、
+       其余标为拒绝，还可以永久删除所有被拒绝的图片。
+   * - ``Staging Tray``
+     - 跨文件夹、重启后仍保留的篮子：从任何文件夹加入选中的磁砖或当前图片，再把它们全部移动或复制
+       到同一个文件夹，或把暂存篮显示为相册。
+   * - ``Reference Panel``
+     - 固定参考图片（从文件、拖放或当前图片加入），附大尺寸预览供并排比较；列表在重启后保留。
+   * - ``Virtual Copies``
+     - 为当前图片的显影 recipe 保存命名快照，并可在它们之间切换，而不必复制文件。
+   * - ``Dual-Pane File Manager``
+     - 并排的两个文件夹树，用来把选中项从一侧复制或移动到另一侧，或在查看器中打开文件。
+   * - ``Macros``
+     - 录制、编辑、清理并重放作用于选中图片的评分、收藏、颜色标签与标签动作的宏。
+   * - ``Watched Folder``
+     - 对话框打开期间监视一个文件夹（含子文件夹），为每张新进的图片套用选定的显影预设，适合免手动的
+       联机拍摄或导入流程。
+
+导出（Export）
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``Contact Sheet PDF``
+     - 把选中图片（或整个文件夹）的缩略图以行 × 列网格排在 A4、A3、Letter 或 Legal 页面上，可设
+       边距、可选标题与可选的文件名说明。
+   * - ``Web Gallery``
+     - 把选中的图片（或整个文件夹）导出为带缩略图与灯箱的自包含 HTML 相册；可复制原图，并加入客户
+       审阅留言框，留言可导出为 JSON。
+   * - ``Slideshow Video``
+     - 把选中的图片（或整个文件夹）渲染为 MP4，可设尺寸、帧率、停留时间、质量与转场（淡入淡出、
+       溶解、滑动或擦除）。
+   * - ``Print Layout``
+     - 把图片平铺到多页 PDF 网格上，可设页面大小、方向、行数、列数、边距、间隔与裁切标记；需要可选的
+       ``reportlab`` 包。
+   * - ``Collage``
+     - 把选中的图片（或整个文件夹）合成为 1 到 12 列的网格拼贴，在第一张图片旁保存 ``collage.png``。
+   * - ``ID Photo Sheet``
+     - 把当前人像按证件照尺寸（35 x 45 mm、2 x 2 in、33 x 48 mm 或 50 x 70 mm）以 300 DPI 平铺在
+       4x6、5x7、A4 或 Letter 相纸上，保存为 ``<name>_idsheet.png``。
+
+非破坏性调整（Develop (Non-Destructive)）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``Before / After Compare``
+     - 在同一个视图中以可拖动的分隔线，同时显示当前图片套用显影 recipe 之前与之后的样子。
+   * - ``Develop Presets…``
+     - 把当前图片的 recipe 保存为命名预设，之后可套用到当前图片或选中的图片，或只把预设中启用的调整
+       合并进它们各自的 recipe。
+   * - ``Tone Curve``
+     - 在直方图上编辑主 RGB 曲线以及独立的红、绿、蓝曲线（单击添加、拖动移动、右键删除控制点）；
+       保存在 recipe 中。
+   * - ``Apply .cube LUT``
+     - 以可调强度套用 Adobe ``.cube`` 3D 或 1D LUT；保存在 recipe 中，``Clear`` 可将其移除。
+   * - ``Split Toning``
+     - 分别以色相与饱和度为阴影和高光着色，另有平衡滑块；保存在 recipe 中。
+   * - ``Local Adjustment Masks``
+     - 添加画笔、径向与线性渐变蒙版，每个蒙版各有曝光、亮度、对比度、饱和度、色温、色调、高光、阴影
+       与羽化设置；保存在 recipe 中。
+   * - ``Layers``
+     - 叠加最多八个文字、图片或 LUT 覆盖图层，可设不透明度以及正常、正片叠底、滤色或叠加混合；
+       保存在 recipe 中。
+   * - ``Levels``
+     - 设置黑场、白场与 gamma；保存在 recipe 中。
+   * - ``Channel Mixer``
+     - 以加权的红、绿、蓝输入加上偏移量重建每个输出通道，并提供用于黑白转换的单色模式；保存在
+       recipe 中。
+   * - ``Gradient Map``
+     - 以可调强度把亮度映射到预设渐变（Mono、Sepia、Cyanotype、Fire、Ocean、Magenta–Teal），可选在
+       感知均匀的 OkLCH 中混合；保存在 recipe 中。
+   * - ``Auto Color Balance``
+     - 以灰度世界、白色块、自动色阶（百分位）或 Retinex 方法去除色偏，并以强度滑块混合，保存为
+       ``<name>_balanced.png``。
+   * - ``Clarity / Dehaze``
+     - 套用去雾、清晰度与纹理这三个局部对比度滑块，保存为 ``<name>_local.png``。
+   * - ``HSL / Color Mixer``
+     - 分别调整八个色彩区段（红到洋红）的色相、饱和度与明度，保存为 ``<name>_hsl.png``。
+   * - ``CLAHE (Local Equalize)``
+     - 在亮度上以限制对比度的自适应直方图均衡（裁剪上限与分块数）增强局部对比度，保存为
+       ``<name>_clahe.png``。
+   * - ``Flatten Background``
+     - 以可调程度去除平滑的背景渐变，例如光污染或不均匀的照明（减法），或暗角（除法），保存为
+       ``<name>_flat.png``。
+   * - ``Frame & Caption``
+     - 加上彩色卡纸边框、可选的宝丽来风格底部宽边与说明文字，保存为 ``<name>_framed.png``。
+   * - ``Ordered Dither``
+     - 以 Bayer 有序抖动图样把每个通道降到 2 至 8 级，营造复古印刷感，保存为 ``<name>_dither.png``。
+   * - ``Color Map``
+     - 以 viridis、magma 或 jet 色彩映射为图片的亮度重新着色，保存为 ``<name>_colormap.png``。
+   * - ``Distort``
+     - 以可调强度对图片做漩涡、挤压 / 膨胀或波纹扭曲，保存为 ``<name>_distort.png``。
+   * - ``Polar Coordinates``
+     - 把图片卷成圆盘，或把圆盘展开成长条，可选反转半径，保存为 ``<name>_polar.png``。
+   * - ``Kaleidoscope``
+     - 把一个楔形区域绕中心镜像成对称图样，可设分段数与旋转角度，保存为
+       ``<name>_kaleidoscope.png``。
+   * - ``Frosted Glass``
+     - 把每个像素随机散射到附近的位置（半径以像素计，种子可重现），营造磨砂玻璃质感，保存为
+       ``<name>_frosted.png``。
+   * - ``Pixel Sort``
+     - 在上下亮度范围内，沿行或列按亮度排序像素，营造故障艺术效果，保存为 ``<name>_pixelsort.png``。
+   * - ``Film Grain``
+     - 加上程序生成的胶片颗粒，可设强度、颗粒大小、单色与种子；保存在 recipe 中。
+   * - ``Lens Flare``
+     - 在指定位置加上合成的镜头光晕，可设强度、光环大小与颜色；保存在 recipe 中。
+   * - ``Threshold / Posterize``
+     - 套用黑白阈值（0 至 255），和 / 或把每个通道色调分离为 2 至 64 级；保存在 recipe 中。
+   * - ``Solarize``
+     - 反转高于阈值的色调，营造暗房中途曝光效果，并以混合滑块调整程度，保存为 ``<name>_solarize.png``。
+   * - ``Diffuse Glow``
+     - 加上 Orton 风格的柔和泛光，可设数量、半径与高光阈值，保存为 ``<name>_glow.png``。
+   * - ``Graduated Density``
+     - 像渐变 ND 滤镜一样沿直线压暗画面的一侧（角度、档数、硬度、偏移、可选色调），保存为
+       ``<name>_gradnd.png``。
+   * - ``Velvia``
+     - 像 Velvia 反转片一样，对较暗淡的颜色增强最多，附强度与阴影保护滑块，保存为
+       ``<name>_velvia.png``。
+   * - ``Emboss``
+     - 以指定的方位角与仰角打光渲染浮雕效果，附深度滑块与灰阶选项，保存为 ``<name>_emboss.png``。
+   * - ``Defringe``
+     - 沿高对比度边缘降低紫色、绿色或所有彩色边的饱和度，附数量与边缘阈值滑块，保存为
+       ``<name>_defringe.png``。
+   * - ``Film Negative``
+     - 把扫描的彩色负片反转为正片，并去除（自动估计的）橙色片基，可设输出 gamma，保存为
+       ``<name>_positive.png``。
+   * - ``Filmic Tone Map``
+     - 以 Reinhard 或 Hable 电影感曲线柔和压缩高光，附曝光、白点、对比度与饱和度滑块，保存为
+       ``<name>_filmic.png``。
+   * - ``Tone Equalizer``
+     - 分别设置黑色、阴影、中间调、高光与白色的曝光，并以平滑处理避免光晕，保存为
+       ``<name>_toneeq.png``。
+   * - ``Detail Equalizer``
+     - 分别在细、中、粗与大范围细节频段增强或减弱对比度，保存为 ``<name>_detaileq.png``。
+   * - ``Soft Proof``
+     - 以选定的 ICC 输出描述文件预览当前图片，把超出色域的像素标成洋红色并计数；不会保存任何东西。
+
+修复与变形（Retouch & Transform）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``AI Image Upscale``
+     - 以 Real-ESRGAN（通用 x4、动漫 x4 或 x2）或 Lanczos、Bicubic、Nearest 重采样放大整个文件夹的
+       图片；AI 模型会按需安装 ``onnxruntime``，并在首次使用时自动下载（约 65 MB）。
+   * - ``Noise Reduction / Sharpening``
+     - 套用保留边缘的降噪（可只针对亮度）与 USM 锐化（可设数量与半径），保存到指定文件；需要 OpenCV
+       （``opencv-python``）。
+   * - ``Healing Brush``
+     - 以 Telea 或 Navier-Stokes 修补方法去除你在预览上单击的斑点（右键删除斑点），保存到指定文件；
+       需要 OpenCV。
+   * - ``Clone Stamp``
+     - 把从 Shift + 单击设定的源点取得的柔边区块复制到你在预览上单击的每个点（右键撤销），把结果
+       保存到指定文件。
+   * - ``Frequency Separation``
+     - 以指定的模糊半径把当前图片拆成 ``<name>_low.png``\ （颜色与色调）和 ``<name>_high.png``
+       （纹理），供在其他软件中修图；以 low + (high - 128) 重新合成。
+   * - ``Smart Crop``
+     - 根据显著性建议裁剪（自由、1:1、4:5、3:2、16:9），把主体放在三分法交点上，并把选定的裁剪以
+       非破坏裁剪写入 recipe。
+   * - ``Portrait Auto-Retouch``
+     - 平滑肤色区域、去除红眼，最后再加一道锐化，每一步各有滑块，保存为 ``<name>_retouched.png``。
+   * - ``Face Detection``
+     - 用 OpenCV 的 Haar cascade 检测当前图片中的人脸，并让你为每张脸命名；名称随 recipe 保存。
+       需要 OpenCV 4（``opencv-python<5``）。
+   * - ``Sky / Background``
+     - 以渐变替换天空，或把背景去除为透明或白色，保存到指定文件；需要 OpenCV，安装了 ``rembg`` 时
+       用它进行背景抠图。
+   * - ``Crop / Straighten``
+     - 最多旋转 ±15°（裁掉空白的角落），并按归一化坐标或长宽比预设裁剪，保存到指定文件；拉直需要
+       OpenCV。
+   * - ``Auto-Straighten``
+     - 测量地平线或垂直线的倾斜角度，让你调整旋转量，并把拉直后的图片保存到指定文件；需要 OpenCV。
+   * - ``Lens Correction``
+     - 用滑块校正桶形 / 枕形畸变、暗角与红 / 蓝色差，保存到指定文件。
+   * - ``Scale Bar``
+     - 根据"每单位像素数"与单位名称，把校准过的比例尺烧录进当前图片，保存为 ``<name>_scalebar.png``。
+
+多张合成（Multi-Image）
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 菜单项
+     - 功能
+   * - ``HDR Merge``
+     - 以 Mertens 曝光融合合并两张或更多不同曝光的照片（不需要曝光数据），可先对齐；需要 OpenCV。
+   * - ``Panorama Stitch``
+     - 拼接两张或更多依序拍摄、重叠 20 % 至 40 % 的照片，可选全景或平面扫描模式，并可裁掉黑边；
+       需要 OpenCV。
+   * - ``Focus Stacking``
+     - 保留每一帧中最清晰的像素，把一组对焦包围照片合成为一张全景深图片，可先对齐；需要 OpenCV。
+   * - ``Image Stack``
+     - 对已对齐的连拍逐像素以平均、中位数、最大值、最小值或 sigma 裁剪平均合并，用于长曝光、去除
+       人群或星轨；不需要 OpenCV。
+   * - ``Anaglyph 3D``
+     - 把当前图片（左眼）与选定的右眼图片合成为红青立体图（Dubois、彩色、灰阶或 true 方法），保存为
+       ``<name>_anaglyph.png``。
+
+----
+
 命令行启动
 ----------
 
 ::
 
-   imervue                        # 正常启动
-   imervue 图片路径               # 直接打开指定图片
-   imervue 文件夹路径             # 直接打开指定文件夹
-   imervue --debug                # 启用调试模式
-   imervue --software_opengl      # 使用软件渲染（显卡不支持时）
+   python -m Imervue                      # 正常启动
+   python -m Imervue 图片路径             # 直接打开指定图片
+   python -m Imervue 文件夹路径           # 直接打开指定文件夹
+   python -m Imervue --debug              # 启用调试模式
+   python -m Imervue --software_opengl    # 使用软件渲染（显卡不支持时）
 
 无界面批处理 CLI
 ^^^^^^^^^^^^^^^^
@@ -2353,6 +2826,67 @@ MCP 服务器（参见 `MCP 服务器`_）的每个工具也都是一个子命�
    py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
    py -m Imervue.cli histogram a.jpg --json
    py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+
+``pipeline FILE INPUTS…`` 对每个输入按顺序执行一串运算，每个输入写出一个 PNG：在源文件旁写入
+``<stem>_pipeline.png``，或在 ``--out`` 中写入 ``<stem>.png``。``FILE`` 是 UTF-8 编码的 JSON
+（带字节顺序标记也可以），内容是步骤列表，或对象 ``{"pipeline": [...]}``。每个步骤是一个对象，
+由指定运算名称的 ``"op"`` 加上该运算的参数组成；省略的参数取默认值，运算不认识的键会被忽略。
+一条管线最多 50 个步骤；空管线会把每个输入按解码后的样子原样写出。读取任何图片之前会先检查文件：
+无法读取或解析的文件会输出 ``error: …``；超过 50 个步骤、步骤缺少 ``"op"`` 名称或运算未知时，
+每个问题输出一行 ``pipeline error: step N: …``。两种情况下命令都以退出码 2 结束，且不写出任何文件。
+参数类型错误（``null``，或该填数字的地方填了文本）会让该图片失败并被报告，退出码为 1。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 44 42
+
+   * - 运算
+     - 参数（默认值）
+     - 效果
+   * - ``dehaze``
+     - ``strength``\ （``1.0``；限制在 0 – 1）
+     - 暗通道先验去雾；``0`` 时图片保持不变
+   * - ``clahe``
+     - ``clip``\ （``2.0``；至少 1）、``tiles``\ （``8``；至少 1）
+     - 在 ``tiles`` × ``tiles`` 网格上对亮度做限制对比度的自适应均衡
+   * - ``dither``
+     - ``levels``\ （``2``；限制在 2 – 8）
+     - 4×4 Bayer 有序抖动，每个通道 ``levels`` 个值；保留 alpha
+   * - ``distort``
+     - ``mode``\ （``"swirl"``：``swirl`` / ``pinch`` / ``ripple``）、``strength``\ （``0.5``；
+       限制在 -1 – 1）
+     - 以中心为基准的几何扭曲；``pinch`` 模式下正强度为凸出、负强度为收缩
+   * - ``clarity``
+     - ``amount``\ （``0.5``；-1 – 1，负值为柔化）
+     - 以中间调为权重、大半径的局部对比度
+   * - ``texture``
+     - ``amount``\ （``0.5``；-1 – 1，负值为柔化）
+     - 小半径、针对精细细节的局部对比度
+   * - ``grayscale``
+     - 无
+     - 把亮度（0.299 R + 0.587 G + 0.114 B）写入全部三个通道；保留 alpha
+   * - ``invert``
+     - 无
+     - 反转 R、G、B；保留 alpha
+   * - ``watermark``
+     - ``text``\ （``""``：不加水印）、``corner``\ （``"bottom-right"``：``top-left`` /
+       ``top-right`` / ``bottom-left`` / ``bottom-right`` / ``center``；其他值一律视为
+       ``bottom-right``）、``opacity``\ （``0.6``；限制在 0 – 1）
+     - 带投影的白色文字，大小为长边的 3.5 %；``watermark`` 子命令的 ``--font-fraction``、
+       ``--color`` 与 ``--no-shadow`` 没有对应的步骤参数
+
+例如 ``look.json``::
+
+   {
+     "pipeline": [
+       {"op": "dehaze", "strength": 0.4},
+       {"op": "clahe", "clip": 2.5, "tiles": 8},
+       {"op": "clarity", "amount": 0.3},
+       {"op": "watermark", "text": "(c) Me", "corner": "bottom-right", "opacity": 0.5}
+     ]
+   }
+
+   py -m Imervue.cli pipeline look.json photos/ --out graded/
 
 ----
 
@@ -2471,7 +3005,8 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
 
 每个工具都会公布 JSON ``outputSchema`` 以及只读 / 破坏性
 ``annotations``，并在文本信封之外以 ``structuredContent`` 返回结果
-（遵循 MCP 2025-11-25），让客户端无需重新解析即可消费类型化载荷。
+（这些字段来自较新的 MCP 修订版；握手时报告的版本为 ``2025-03-26``），
+让客户端无需重新解析即可消费类型化载荷。
 长时间运行的工具在调用方传入进度令牌时会流式发送
 ``notifications/progress``。
 
@@ -2495,13 +3030,14 @@ repo 根目录已附项目级 ``.mcp.json``：
      "mcpServers": {
        "imervue": {
          "type": "stdio",
-         "command": "python",
+         "command": "py",
          "args": ["-m", "Imervue.mcp_server"]
        }
      }
    }
 
-用 Claude Code 打开 repo 任何子目录都会自动发现这个服务器。
+``py`` 是 Windows 的 Python 启动器；在 macOS 或 Linux 上请改用 ``python3``，或安装了 Imervue
+的环境中的解释器。用 Claude Code 打开 repo 任何子目录都会自动发现这个服务器。
 首次使用时 Claude Code 会询问是否启用项目 MCP 服务器，接受即可。
 
 Claude Desktop
@@ -2518,20 +3054,110 @@ Claude Desktop
 通信协议
 ^^^^^^^^
 
-服务器走 MCP ``2025-03-26`` 版的 stdio JSON-RPC 2.0:
+服务器从 stdin 读取以换行分隔的 JSON-RPC 2.0 消息，并把响应与通知写到 stdout，每条一行
+UTF-8。无论客户端请求哪个版本，它对 ``initialize`` 的应答都使用协议版本 ``2025-03-26``。
+请求一次处理一个；批量请求（JSON 数组）会以 ``-32600`` 拒绝。
 
-* ``initialize`` — 握手，广告 ``capabilities.tools``。
-* ``tools/list`` — 列出已注册工具与其 JSON-Schema 输入定义。
-* ``tools/call`` — 用 ``{"name", "arguments"}`` 调用工具，结果回
-  在 ``content`` 数组。
-* ``notifications/*`` — 静默接受（不响应）。
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - 方法
+     - 作用
+   * - ``initialize``
+     - 握手。返回 ``protocolVersion`` ``2025-03-26``、``serverInfo``\ （``imervue``
+       ``1.0.0``），以及能力 ``tools`` 与 ``prompts``\ （``listChanged: false``）、
+       ``resources``\ （``subscribe: true``、``listChanged: true``）、``completions`` 与 ``logging``。
+   * - ``ping``
+     - 返回空结果。
+   * - ``tools/list``
+     - 一页列出全部 56 个工具，每个都带 ``inputSchema``、``outputSchema`` 与 ``annotations``
+       （``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``）。
+   * - ``tools/call``
+     - 执行 ``{"name", "arguments"}``。结果是一个 ``text`` 内容块，内含 JSON 编码的返回值；
+       返回值是对象时另附 ``structuredContent``。工具抛出异常，或参数不符合其参数定义时，会返回
+       ``isError: true`` 与一段 ``Error: …`` 文本，而不是协议错误；未知的工具名称为 ``-32602``。
+   * - ``prompts/list``
+     - 四个提示词及其参数。
+   * - ``prompts/get``
+     - 按 ``{"name", "arguments"}`` 生成消息；``caption_image`` 与
+       ``analyze_composition`` 会把 PNG 缩略图作为图像消息嵌入。未知的提示词或缺少
+       ``path`` 时为 ``-32602``。
+   * - ``completion/complete``
+     - 为 ``ref/prompt`` 参数提供前缀匹配的值：``suggest_edits`` 的 ``style``
+       （general、portrait、landscape、product、street、food、macro）与
+       ``analyze_composition`` 的 ``focus``\ （all、framing、balance、subject、leading_lines）。
+       其他参数得到空列表。
+   * - ``resources/list``
+     - ``IMERVUE_MCP_ROOT`` 所指文件夹中直接包含的图片（不含隐藏文件与 SVG），每页 100 个并附
+       ``nextCursor``；未设置该变量时为空。
+   * - ``resources/templates/list``
+     - 下表中的两个 URI 模板。
+   * - ``resources/read``
+     - 读取一个 ``imervue://image/…`` URI（见下文）。
+   * - ``resources/subscribe`` / ``resources/unsubscribe``
+     - 把 URI 加入或移出接收 ``notifications/resources/updated`` 的集合。
+   * - ``logging/setLevel``
+     - 设置以 ``notifications/message`` 发送的最低级别（``debug``、``info``、``notice``、
+       ``warning``、``error``、``critical``、``alert``、``emergency``；启动时为 ``info``）；
+       其他值为 ``-32602``。
+   * - 来自客户端的 ``notifications/*``
+     - 接受但不回复（``notifications/initialized``、``notifications/cancelled`` …）；
+       取消通知不会中止正在运行的工具。
+   * - ``notifications/progress``\ （发送）
+     - 当 ``tools/call`` 请求带有 ``params._meta.progressToken``\ （字符串或整数）时，在
+       ``find_similar`` 或 ``build_collage`` 运行期间发送 ``{progressToken, progress, total, message}``；
+       ``progress`` 只增不减。
+   * - ``notifications/resources/updated``\ （发送）
+     - 当 ``IMERVUE_MCP_ROOT`` 中的文件变更、且其缩略图 URI 已被订阅时，发送 ``{uri}``。
+   * - ``notifications/resources/list_changed``\ （发送）
+     - ``IMERVUE_MCP_ROOT`` 中有任何变更时发送（以 watchdog 监视，不递归），无论是否已订阅。
+   * - ``notifications/message``\ （发送）
+     - 达到或高于 ``logging/setLevel`` 级别的日志条目，经由 ``MCPServer.emit_log`` 发送。
+       内置工具不会调用它，所以默认的服务器不会发送任何日志消息。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - URI
+     - 返回
+   * - ``imervue://image/{path}``
+     - 图片的 PNG 缩略图（已转正、缩放到 256 px 以内），以 base64 ``blob`` 返回，
+       ``mimeType`` 为 ``image/png``。``resources/list`` 返回的就是这种形式的 URI。
+   * - ``imervue://image/{path}/metadata``
+     - ``read_image_metadata`` 的结果（尺寸、格式、EXIF、XMP），以 JSON ``text`` 返回，
+       ``mimeType`` 为 ``application/json``。
+
+``{path}`` 是图片文件路径的完整百分号编码，分隔符与盘符冒号也要编码
+（``C:\photos\a.jpg`` 即 ``imervue://image/C%3A%5Cphotos%5Ca.jpg``）。读取时直接解析该路径，
+因此适用于任何文件，不限于 ``IMERVUE_MCP_ROOT`` 之下的文件；含 ``..`` 片段的路径为 ``-32602``，
+文件不存在为 ``-32002``，其他协议（scheme）的 URI 为 ``-32602``。
+
+错误使用以下 JSON-RPC 错误码：``-32700``\ （某一行不是 JSON）、``-32600``\ （不是请求对象，或缺少
+``method``）、``-32601``\ （未知方法）、``-32602``\ （参数错误、未知的工具或提示词、无效的日志级别或
+游标、不支持的资源 URI）、``-32002``\ （找不到资源文件）与 ``-32603``\ （内部错误）。
 
 实现在 ``Imervue/mcp_server/``：
 
-* ``server.py`` — 协议循环 + 工具注册表
-* ``tools.py`` — 各工具的 handler 与默认工具集
-* ``__main__.py`` — ``python -m Imervue.mcp_server`` 入口
+* ``server.py`` — JSON-RPC 分派器（``MCPServer``）、stdio 循环（``run``）与
+  ``IMERVUE_MCP_ROOT`` 监视器。
+* ``tools.py`` — 工具集的对外入口：重新导出每个 handler，并注册默认工具
+  （``register_default_tools``）。
+* ``tools_read.py`` / ``tools_edit.py`` — 工具的 handler（列表、元数据与分析；以及把结果写到目标位置的
+  编辑），共用的辅助函数在 ``tool_support.py``。
+* ``tool_defs_read.py`` / ``tool_defs_edit.py`` — 每个工具的名称、描述、输入 schema 与 handler，
+  按 ``tools/list`` 的顺序排列。
+* ``tool_schemas.py`` — 每个工具的 ``outputSchema`` 与 ``annotations``。
+* ``prompts.py`` / ``completion.py`` — 四个提示词与 ``completion/complete`` 的候选值。
+* ``resources.py`` — ``imervue://image/`` 资源。
+* ``progress.py`` / ``notifications.py`` / ``logging.py`` — 进度回报、加锁的 stdout 写入器与资源订阅，
+  以及日志级别过滤。
+* ``__main__.py`` — ``python -m Imervue.mcp_server`` 入口。
 
-自定义工具可以直接 :class:`MCPServer` 然后 :meth:`MCPServer.register`，
-通过 :meth:`MCPServer.handle_message` 喂消息（或直接调用
-:func:`run` 跑 stdio 循环）。
+注册自定义工具的方式：构造 :class:`MCPServer`，调用 :meth:`MCPServer.register`\ （名称、描述、
+输入 schema、handler，以及可选的输出 schema 与 annotations；名称重复会抛出 ``ValueError``；带
+``progress`` 参数的 handler 会收到一个进度回报器），再把每条消息交给
+:meth:`MCPServer.handle_message`，它会返回响应，通知则返回 ``None``。
+:func:`run` 总是用默认工具建立自己的服务器，所以自定义工具集需要自己的循环；若要发送通知，请把
+``server.notifier`` 设为指向输出流的 ``Notifier``。

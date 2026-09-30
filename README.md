@@ -191,6 +191,11 @@ Each MCP parameter becomes an option with the same default and allowed values: `
 `--zone-gains`, a yes/no parameter is `--grayscale` / `--no-grayscale`, and a colour or a matrix row
 takes its values in order (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` lists them.
 
+`pipeline FILE INPUTS…` chains operations from a JSON file — a list of steps, or
+`{"pipeline": [...]}`, each step an `"op"` plus its parameters (at most 50 steps). The ops are
+`dehaze`, `clahe`, `dither`, `distort`, `clarity`, `texture`, `grayscale`, `invert` and
+`watermark`; the docs list every parameter and default.
+
 ```bash
 py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
 py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
@@ -303,8 +308,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 Accessed from **Tools** menu; organised into function-grouped submenus:
 
 - **Batch** — Format Conversion · EXIF Strip · Image Sanitizer (re-render to strip hidden data) · Image Organizer (sort into subfolders by date / resolution / type / size) · Token Batch Rename
-- **AI / Heuristic** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Find Duplicate Images · Find Similar Images · Auto-Tag · Face Detection (Haar cascade)
-- **Library & Metadata** — Library Search · Smart Albums · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
+- **Retouch & Transform** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Face Detection (Haar cascade) · healing, cloning, crop / straighten and lens correction
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
 
 ### System integration
 
@@ -805,12 +810,18 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 | P / S / C / Z / H | Pen / Clone / Crop / Zoom / Hand |
 | Q | Toggle Quick Mask Mode |
 | Tab | Toggle all docks |
-| Ctrl+Tab | Cycle Paint tabs |
+| Ctrl+Tab / Ctrl+Shift+Tab | Next / previous Paint tab |
 | , / . | Cycle brush kinds |
 | 0-9 | Brush opacity 10% steps |
 | Alt+[ / Alt+] | Step active layer down / up |
 | Ctrl+[ / Ctrl+] | Move active layer down / up the stack |
 | Ctrl+D | Deselect |
+| [ / ] | Decrease / increase brush size by 1 px |
+| Shift+[ / Shift+] | Decrease / increase brush size by 5 px |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | Add layer / Duplicate layer / Merge down |
+| Ctrl+0 / Ctrl+1 | Fit to window / Actual size (100 %) |
+| X | Swap foreground / background colors |
+| D | Reset colors to black / white |
 
 ---
 
@@ -833,14 +844,14 @@ A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](exam
 
 ### Tools (extra tools — organised into 8 grouped submenus)
 
-- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar / Duplicate · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
-- **Views** — Timeline · Calendar · Map
-- **Workflow** — Culling · Staging Tray · Virtual Copies · Dual-Pane File Manager · Macros
-- **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout
-- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Polar · Kaleidoscope · Frosted Glass · Soft Proof
-- **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction
-- **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking
+- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename · Deflicker (Time-lapse) · Document Binarize · Otsu Threshold · Edit Animation · Optimize to Target Size · Meme Caption · Steganography
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Thumbnail Cache
+- **Views** — Timeline View (by day / month / year) · Calendar View · Map View · Scopes & Inspector · Tiny Planet (360°) · Image Statistics · Quality Report · Test Chart · Color blindness preview (protanopia / deuteranopia / tritanopia / achromatopsia)
+- **Workflow** — Culling · Staging Tray · Reference Panel · Virtual Copies · Dual-Pane File Manager · Macros · Watched Folder
+- **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout · Collage · ID Photo Sheet
+- **Develop (Non-Destructive)** — Before / After Compare · Develop Presets · Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Layers · Levels · Channel Mixer · Gradient Map · Auto Color Balance · Clarity / Dehaze · HSL / Color Mixer · CLAHE · Flatten Background · Frame & Caption · Ordered Dither · Color Map · Distort · Polar Coordinates · Kaleidoscope · Frosted Glass · Pixel Sort · Film Grain · Lens Flare · Threshold / Posterize · Solarize · Diffuse Glow · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Soft Proof
+- **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Frequency Separation · Smart Crop · Portrait Auto-Retouch · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction · Scale Bar
+- **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking · Image Stack · Anaglyph 3D
 
 ### View / Sort / Filter / Language / Plugins / Instructions
 
@@ -868,7 +879,7 @@ Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE
 | Hook | Trigger |
 |------|---------|
 | `on_plugin_loaded()` | After plugin is instantiated |
-| `on_plugin_unloaded()` | At app shutdown |
+| `on_plugin_unloaded()` | When its window closes, and before Reload Plugins |
 | `on_build_menu_bar(plugin_menu)` | After the shared Plugins menu is built |
 | `on_build_main_tabs(tabs)` | After the five built-in tabs are added |
 | `on_build_context_menu(menu, viewer)` | When right-click menu opens |
@@ -879,6 +890,7 @@ Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE
 | `on_key_press(key, modifiers, viewer)` | On key press (return True to consume) |
 | `on_app_closing(main_window)` | Before application closes |
 | `get_translations()` | Provide i18n strings |
+| `register_languages()` | Class method: register new languages (before each load, and at startup) |
 
 ### Plugin Downloader
 

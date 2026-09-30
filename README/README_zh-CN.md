@@ -182,6 +182,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 
 每个 MCP 参数都会成为一个选项，默认值与允许的取值都与原参数相同：`zone_gains` 对应 `--zone-gains`，布尔（是 / 否）参数对应 `--grayscale` / `--no-grayscale`，颜色或矩阵的一行则按顺序接受各个值（`--red 1 0 0`）。`py -m Imervue.cli <subcommand> --help` 会列出这些选项。
 
+`pipeline FILE INPUTS…` 按 JSON 文件串接多个运算 —— 文件内容是步骤列表或 `{"pipeline": [...]}`，每个步骤是一个 `"op"` 加上该运算的参数（最多 50 个步骤）。可用的运算有 `dehaze`、`clahe`、`dither`、`distort`、`clarity`、`texture`、`grayscale`、`invert` 与 `watermark`；每个参数及其默认值见文档。
+
 ```bash
 py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
 py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
@@ -293,9 +295,9 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 从 **Tools** 菜单访问；分为功能组子菜单：
 
-- **批次** — 格式转换 · EXIF 清除 · 图像清洗器（重新渲染移除所有隐藏数据）· 图像整理器 · 令牌批量重命名
-- **AI / 启发式** — AI 图像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 找重复 · 找相似 · 自动标签 · 人脸检测
-- **图库与元数据** — 图库搜索 · 智能相册 · 层级标签 · 导出元数据 · XMP 边车 · GPS 标记
+- **批次** — 格式转换 · EXIF 清除 · 图像清洗器（重新渲染移除所有隐藏数据）· 图像整理器（按日期 / 分辨率 / 类型 / 大小分到子文件夹）· 令牌批量重命名
+- **修图与变形** — AI 图像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 人脸检测（Haar cascade）· 修复、仿制、裁切 / 拉直与镜头校正
+- **图库与元数据** — 图库搜索 · 智能相册 · 找相似图片 · 语义搜索 · 找重复图片 · 自动标签 · 层级标签 · 导出元数据 · XMP 边车 · GPS 标记
 
 ### 系统集成
 
@@ -748,12 +750,18 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 | P / S / C / Z / H | 钢笔 / 仿制 / 裁剪 / 缩放 / 抓手 |
 | Q | 切换快速蒙版模式 |
 | Tab | 切换所有停靠 |
-| Ctrl+Tab | 循环 Paint 标签 |
+| Ctrl+Tab / Ctrl+Shift+Tab | 下一个 / 上一个 Paint 标签 |
 | , / . | 循环笔刷种类 |
 | 0-9 | 笔刷不透明度 10% 步进 |
 | Alt+[ / Alt+] | 下 / 上切换作用图层 |
 | Ctrl+[ / Ctrl+] | 在堆叠中下移 / 上移作用图层 |
 | Ctrl+D | 取消选择 |
+| [ / ] | 笔刷大小减小 / 增大 1 px |
+| Shift+[ / Shift+] | 笔刷大小减小 / 增大 5 px |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | 新建图层 / 复制图层 / 向下合并 |
+| Ctrl+0 / Ctrl+1 | 适合窗口 / 实际大小（100 %） |
+| X | 交换前景色 / 背景色 |
+| D | 将颜色重置为黑 / 白 |
 
 ---
 
@@ -776,14 +784,14 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 ### Tools（额外工具 — 分为 8 个组子菜单）
 
-- **批次** — 格式转换 · EXIF 清除 · 图像清洗器 · 图像整理器 · 令牌批量重命名
-- **图库与元数据** — 图库搜索 · 智能相册 · 找相似 / 重复 · 自动标签 · 层级标签 · 导出元数据 · XMP 边车 · GPS 标记
-- **视图** — Timeline · Calendar · Map
-- **工作流** — 挑片 · 暂存盘 · 虚拟副本 · 双面板 FM · 宏
-- **导出** — 联系表 PDF · 网页画廊 · 幻灯片视频（MP4）· 打印布局
-- **显影（非破坏）** — 色调曲线 · .cube LUT · 分离色调 · 局部调整蒙版 · 渐变中灰密度 · Velvia · 浮雕 · 去紫边 · 彩色负片 · 电影感色调映射 · 色调 / 细节均衡器 · 极坐标 · 万花筒 · 磨砂玻璃 · 软打样
-- **修图与变形** — AI 图像放大 · 降噪 / 锐化 · 修复笔刷 · 仿制图章 · 人脸检测 · 天空 / 背景 · 裁切 / 拉直 · 自动拉直 · 镜头校正
-- **多图** — HDR 合成 · 全景拼接 · 焦点堆叠
+- **批次** — 格式转换 · EXIF 清除 · 图像清洗器 · 图像整理器 · 令牌批量重命名 · 去闪烁（延时摄影）· 文档二值化 · Otsu 阈值 · 编辑动画 · 优化到目标大小 · 梗图字幕 · 隐写术
+- **图库与元数据** — 图库搜索 · 智能相册 · 找相似图片 · 语义搜索 · 找重复图片 · 自动标签图片 · 层级标签 · 导出元数据（CSV / JSON）· XMP 边车 · GPS 标记 · 缩略图缓存
+- **视图** — 时间轴视图（按日 / 月 / 年）· 日历视图 · 地图视图 · 示波器与检测 · 小行星全景（360°）· 图像统计 · 质量报告 · 测试图卡 · 色盲模拟预览（红色盲 / 绿色盲 / 蓝色盲 / 全色盲）
+- **工作流** — 挑片 · 暂存盘 · 参考图面板 · 虚拟副本 · 双面板文件管理器 · 宏 · 监视文件夹
+- **导出** — 联系表 PDF · 网页画廊 · 幻灯片视频（MP4）· 打印布局 · 拼贴 · 证件照排版
+- **显影（非破坏）** — 前后对比 · 显影预设 · 色调曲线 · .cube LUT · 分离色调 · 局部调整蒙版 · 图层 · 色阶 · 通道混合器 · 渐变映射 · 自动色彩平衡 · 清晰度 / 去雾 · HSL / 色彩混合 · CLAHE · 背景平整 · 边框与说明文字 · 有序抖动 · 色彩映射 · 扭曲 · 极坐标 · 万花筒 · 磨砂玻璃 · 像素排序 · 胶片颗粒 · 镜头光晕 · 阈值 / 色调分离 · 曝色反转 · 柔光晕染 · 渐变中灰密度 · Velvia · 浮雕 · 去紫边 · 彩色负片 · 电影感色调映射 · 色调 / 细节均衡器 · 软打样
+- **修图与变形** — AI 图像放大 · 降噪 / 锐化 · 修复笔刷 · 仿制图章 · 频率分离 · 智能裁剪 · 人像自动修图 · 人脸检测 · 天空 / 背景 · 裁切 / 拉直 · 自动拉直 · 镜头校正 · 比例尺
+- **多图** — HDR 合成 · 全景拼接 · 焦点堆叠 · 图像叠合 · 红青立体 3D
 
 ### 视图 / 排序 / 过滤 / 语言 / 插件 / 说明
 
@@ -811,7 +819,7 @@ Imervue 支持第三方插件。完整参考见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | 钩子 | 触发 |
 |------|---------|
 | `on_plugin_loaded()` | 插件实例化后 |
-| `on_plugin_unloaded()` | App 关闭时 |
+| `on_plugin_unloaded()` | 所属窗口关闭时，以及 Reload Plugins 之前 |
 | `on_build_menu_bar(plugin_menu)` | 共用的 Plugins 菜单建好后 |
 | `on_build_main_tabs(tabs)` | 内置 5 个标签加完之后 |
 | `on_build_context_menu(menu, viewer)` | 右键菜单打开时 |
@@ -822,6 +830,7 @@ Imervue 支持第三方插件。完整参考见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_key_press(key, modifiers, viewer)` | 按键时（返回 True 消费事件） |
 | `on_app_closing(main_window)` | App 关闭前 |
 | `get_translations()` | 提供 i18n 字符串 |
+| `register_languages()` | 类方法：注册新语言（每次加载前，以及启动时） |
 
 ### 插件下载器
 

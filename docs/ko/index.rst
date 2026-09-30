@@ -12,22 +12,23 @@ GPU 가속 이미지 작업 스튜디오. **다섯 개의 최상위 탭** 을 �
      - 기능
    * - **Imervue**
      - 이미지 라이브러리 탐색·표시·정리·검색·일괄 처리.
-       「Imervue 탭 — 이미지 뷰어 및 라이브러리」를 참조하세요.
+       「이미지 열기」「이미지 탐색」「이미지 정리」를 참조하세요.
    * - **Modify**
      - 비파괴 현상 파이프라인 — 슬라이더, 커브, LUT, 마스크, 리터치, 다중 이미지 합성.
-       「Modify 탭 — 비파괴 현상」을 참조하세요.
+       「이미지 편집 (수정 탭)」을 참조하세요.
    * - **Paint**
      - 래스터 페인팅 스튜디오. 브러시, 레이어, 애니메이션, 만화 도구, PSD I/O.
        「페인트 워크스페이스 (페인트 탭)」을 참조하세요.
    * - **Puppet**
      - 처음부터 만든 2D 리깅 퍼펫 애니메이터 — 메시, 디포머, 매개변수, 모션, 물리.
-       「Puppet 탭 — 2D 리깅 퍼펫 애니메이션」을 참조하세요.
+       「Puppet 작업 공간 (Puppet 탭)」을 참조하세요.
    * - **Desktop Pet**
      - 데스크톱에서 동일한 ``.puppet`` rig 을 라이브 드라이버 (idle / blink /
        mic / webcam / drag-track) 와 함께 실행하는 프레임 없는 투명·항상 위
-       오버레이. 「데스크톱 펫 작업 공간」을 참조하세요.
+       오버레이. 「데스크톱 펫 작업 공간 (Desktop Pet 탭)」을 참조하세요.
 
-뒤따르는 「시작하기」「레퍼런스」「플러그인 시스템」「MCP 서버」는 모든 탭에 공통되는 횡단 섹션입니다.
+「시작하기」「키보드 단축키 목록」「추가 도구 메뉴 레퍼런스」「플러그인 시스템」「명령줄 실행」「MCP 서버」
+섹션은 횡단 섹션으로, 다섯 개의 탭 모두에 적용됩니다.
 
 .. contents:: 목차
    :depth: 2
@@ -659,7 +660,7 @@ Crayon, Highlight, Sumi calligraphy 는 이 종류들을 기반으로 만든 브
 ^^^^^^
 
 **레이어 도크** 는 썸네일, 표시 토글, 즉시 이름 변경, ↑ / ↓ 버튼 (또는
-``Ctrl + [`` / ``Ctrl + ]``) 을 이용한 순서 변경, 활성 레이어 블렌드 모드 및
+``Ctrl + ]`` / ``Ctrl + [``) 을 이용한 순서 변경, 활성 레이어 블렌드 모드 및
 불투명도를 제공합니다. ``레이어`` 메뉴에는 추가로:
 
 - **새로 / 벡터 / 복제 / 아래 병합** (``Ctrl + Shift + N`` /
@@ -763,7 +764,7 @@ Crayon, Highlight, Sumi calligraphy 는 이 종류들을 기반으로 만든 브
 Puppet 작업 공간 (Puppet 탭)
 -----------------------------
 
-네 번째 최상위 탭 — **Puppet** — 은 처음부터 만든 2D 리깅 퍼펫 애니메이션 시스템입니다. 메시 변형 리깅, 매개변수, 모션, 물리, 표정, 포즈 그룹, 립싱크, 웹캠 추적을 **독점 SDK 없이**, **live2d-py 없이**, 완전히 개방된 ``.puppet`` 파일 포맷으로 구현합니다.
+네 번째 최상위 탭 — **Puppet** — 은 처음부터 만든 2D 리깅 퍼펫 애니메이션 시스템입니다. 메시 변형 리깅, 매개변수, 모션, 물리, 표정, 포즈 그룹, 립싱크, 웹캠 추적을 **독점 SDK 없이**, ``live2d-py`` **없이**, 완전히 개방된 ``.puppet`` 파일 포맷으로 구현합니다.
 
 .. note::
 
@@ -1775,6 +1776,87 @@ Imervue는 플러그인을 통한 기능 확장을 지원합니다.
    * - 플러그인 다시 로드
      - ``플러그인`` > ``플러그인 다시 로드``
 
+플러그인 작성
+^^^^^^^^^^^^^
+
+플러그인은 ``plugins/<name>/`` 에 있는 Python 패키지입니다. 소스 체크아웃에서는 ``Imervue``
+패키지 옆, 패키지된 빌드에서는 실행 파일 옆에 있습니다(``Plugins`` > ``Open Plugin Folder`` 로
+열 수 있습니다). 패키지의 ``__init__.py`` 는 ``plugin_class`` 를
+``Imervue.plugin.plugin_base.ImervuePlugin`` 의 하위 클래스로 설정합니다. ``plugins/`` 안의 단일
+``.py`` 파일도 로드되지만(그 안의 첫 번째 ``ImervuePlugin`` 하위 클래스가 사용됨), 플러그인
+다운로더는 패키지만 배포합니다. 클래스 속성 ``plugin_name``, ``plugin_version``,
+``plugin_description``, ``plugin_author`` 는 선택 사항입니다(기본값은 ``"Unnamed Plugin"``,
+``"0.0.1"``, 빈 문자열). 메인 창마다 각 플러그인의 인스턴스를 따로 만들어 자기 자신을 넘기므로, 훅에서
+``self.main_window`` 와 ``self.viewer``\ (``GPUImageView``)를 쓸 수 있습니다. 필요한 훅만
+재정의하면 됩니다. 각 호출은 감싸여 있어서 예외가 나도 Imervue가 멈추지 않고 플러그인 이름으로 로그에
+기록됩니다. 예제가 포함된 전체 가이드는
+`PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_\ 입니다.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 40 32
+
+   * - 훅
+     - 호출 시점
+     - 인자 / 반환값
+   * - ``register_languages()`` (클래스 메서드)
+     - 각 인스턴스를 만들기 전에 플러그인 클래스에서 호출됩니다(매번 로드할 때와 ``Reload
+       Plugins`` 때). 저장된 언어가 내장 언어가 아니면 시작 시 메인 창을 만들기 전에도 호출되며,
+       이 시작 단계에서는 모든 플러그인을 import 할 뿐 그 밖에는 아무것도 실행하지 않습니다
+     - 인자 없음. 여기서 ``language_wrapper.register_language(language_code, display_name,
+       word_dict)`` 를 호출합니다. 내장 언어 코드는 거부됩니다. 반환값은 무시되며, 예외는 로그에
+       기록되고 플러그인은 그대로 로드됩니다
+   * - ``on_plugin_loaded()``
+     - 인스턴스가 만들어진 직후: 메인 창을 만드는 동안, 그리고 ``Plugins`` > ``Reload Plugins``
+       뒤에 다시
+     - 인자 없음. 반환값은 무시됨
+   * - ``get_translations()``
+     - ``on_plugin_loaded()`` 직후, 로드마다 한 번
+     - ``{language_code: {key: text}}`` 를 반환합니다(기본값 ``{}``). 문자열은 언어 테이블에
+       병합되며, 이미 있는 키는 절대 덮어쓰지 않고 알 수 없는 언어 코드는 건너뜁니다
+   * - ``on_build_main_tabs(tabs)``
+     - 메인 창을 만드는 동안 한 번, 내장 탭 다섯 개 뒤이자 ``on_build_menu_bar`` 전.
+       ``Reload Plugins`` 는 이 훅을 다시 실행하지 않습니다
+     - ``tabs``: 메인 창의 최상위 ``QTabWidget``. ``tabs.addTab(widget, label)`` 로 탭을
+       추가합니다. 반환값은 무시됨
+   * - ``on_build_menu_bar(plugin_menu)``
+     - 공유 ``Plugins`` 메뉴를 만든 뒤 한 번, 그리고 ``Reload Plugins`` 뒤에 다시
+     - ``plugin_menu``: ``Plugins`` ``QMenu``\ (``QMenuBar`` 가 아님). 여기서 플러그인이 메뉴
+       막대 어디에든 추가한 항목은 다시 로드할 때 제거됩니다. 반환값은 무시됨
+   * - ``on_build_context_menu(menu, viewer)``
+     - 뷰어의 우클릭 메뉴를 만들 때마다, 내장 항목 뒤이자 메뉴가 열리기 직전
+     - ``menu``: 컨텍스트 ``QMenu``; ``viewer``: ``GPUImageView``. 반환값은 무시됨
+   * - ``on_folder_opened(folder_path, image_paths, viewer)``
+     - 연 폴더의 스캔이 끝났을 때
+     - ``folder_path``: 폴더; ``image_paths``: 스캔에서 찾은 모든 이미지. 반환값은 무시됨
+   * - ``on_image_loaded(image_path, viewer)``
+     - 어떻게 열었든 이미지가 딥 줌에서 원래 크기로 화면에 표시될 때마다, 그리고 편집 후 다시
+       로드될 때도. 큰 이미지를 디코딩하는 동안 보이는 저해상도 미리보기에는 호출되지 않습니다
+     - ``image_path``: 이미지 경로. 반환값은 무시됨
+   * - ``on_image_switched(image_path, viewer)``
+     - 다음 / 이전(목록 양 끝에서 반대쪽 끝으로 넘어가는 경우 포함)으로 다른 이미지로 이동할 때,
+       로드가 시작되자마자. 표시되면 ``on_image_loaded`` 가 이어집니다. 그리드나 필름스트립에서
+       이미지를 열 때는 호출되지 않습니다
+     - ``image_path``: 새 현재 이미지. 반환값은 무시됨
+   * - ``on_image_deleted(deleted_paths, viewer)``
+     - 뷰어(현재 이미지 또는 선택한 썸네일)나 폴더 트리에서 이미지가 소프트 삭제(실행 취소 스택에
+       들어감)된 뒤. 이미지 목록에 없어서 트리가 곧바로 휴지통으로 보내는 파일에는 호출되지 않습니다
+     - ``deleted_paths``: 삭제된 경로 목록. 반환값은 무시됨
+   * - ``on_key_press(key, modifiers, viewer)``
+     - 뷰어가 받는 키 입력마다, 내장 키와 단축키 설정 바인딩보다 먼저. 플러그인에는 로드 순서대로
+       묻습니다. 메뉴나 창 단축키가 먼저 가져가는 키는 뷰어에 도달하지 않습니다
+     - ``key``: ``Qt.Key`` 코드(int); ``modifiers``: ``Qt.KeyboardModifier`` 플래그. ``True``
+       를 반환하면 키를 소비하여 이후 플러그인과 기본 처리를 건너뜁니다. ``False``\ (기본값)를
+       반환하면 다음으로 넘깁니다. 예외는 ``False`` 로 간주됩니다
+   * - ``on_app_closing(main_window)``
+     - 마지막 메인 창이 닫힐 때, Paint의 저장하지 않은 탭 확인이 수락되고 설정이 저장된 뒤,
+       플러그인을 언로드하기 직전. 다른 창을 닫을 때는 호출되지 않습니다
+     - ``main_window``: 닫히는 ``ImervueMainWindow``. 반환값은 무시됨
+   * - ``on_plugin_unloaded()``
+     - 플러그인의 창이 닫힐 때(마지막 창이면 ``on_app_closing`` 뒤), 그리고 ``Reload Plugins``
+       가 플러그인을 다시 로드하기 전. 플러그인은 로드의 역순으로 언로드됩니다
+     - 인자 없음. 반환값은 무시됨
+
 ----
 
 언어 전환
@@ -1953,6 +2035,38 @@ Imervue는 플러그인을 통한 기능 확장을 지원합니다.
      - 속도 감소
    * - ``]``
      - 속도 증가
+
+페인트
+^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 키
+     - 기능
+   * - ``[`` / ``]``
+     - 브러시 크기를 1 px 줄이기 / 늘리기
+   * - ``Shift + [`` / ``Shift + ]``
+     - 브러시 크기를 5 px 줄이기 / 늘리기
+   * - ``Ctrl + Z``
+     - 실행취소
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
+     - 다시실행
+   * - ``Ctrl + D``
+     - 선택 해제
+   * - ``Ctrl + 0`` / ``Ctrl + 1``
+     - 창에 맞춤 / 실제 크기 (100 %)
+   * - ``X``
+     - 전경색 / 배경색 바꾸기
+   * - ``D``
+     - 색을 검정 / 흰색으로 초기화
+   * - ``Ctrl + Tab`` / ``Ctrl + Shift + Tab``
+     - 다음 / 이전 Paint 탭
+
+도구 키는 「도구 팔레트 (왼쪽)」에 나와 있습니다. Paint 탭의 ``Settings`` > ``Shortcuts…`` 에서
+도구, 브러시 크기, 레이어, 실행취소 / 다시실행, 선택 해제, 보기, 색상 키를 다시 지정할 수 있습니다
+(``Ctrl + Y`` 는 두 번째 다시실행 키로 유지됩니다).
 
 라이브러리 및 메타데이터 관리
 -----------------------------
@@ -2343,16 +2457,429 @@ PDF 로 배치합니다. 페이지 크기, 방향, 그리드, 여백, 간격, �
 
 ----
 
+추가 도구 메뉴 레퍼런스
+------------------------
+
+``Extra Tools`` 메뉴의 모든 항목을 서브메뉴별로 메뉴 순서대로 정리했습니다. 상당수는 위에 더
+자세한 섹션이 있으며, 이 목록이 전체 목록입니다. 새 파일을 저장하는 항목은 원본 옆에 쓰고, 이름이
+이미 있으면 ``_1``, ``_2`` … 를 붙입니다. "레시피에 저장"이라고 적힌 항목은 이미지의 현상 설정을
+비파괴로 편집합니다. 플러그인도 이 서브메뉴에 자체 항목을 추가할 수 있습니다.
+
+일괄 처리 (Batch)
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``Batch Format Conversion``
+     - 폴더의 이미지(기본값은 현재 폴더)를 PNG, JPEG, WebP, BMP, TIFF로, 인코더가 설치되어 있으면
+       HEIC / AVIF / JXL로도 변환합니다. 품질, 같은 포맷 건너뛰기, 원본을 휴지통으로 보내기 옵션이
+       있습니다.
+   * - ``Batch EXIF Strip``
+     - 개인 정보 보호를 위해 폴더의 모든 이미지에서 EXIF, GPS 및 기타 메타데이터를 제거합니다.
+       원본을 덮어쓰거나 깨끗한 사본을 출력 폴더에 씁니다.
+   * - ``Image Sanitizer``
+     - 폴더의 이미지를 원시 픽셀에서 다시 렌더링하여 숨겨진 데이터(메타데이터, 스테가노그래피,
+       뒤에 붙은 바이트)를 모두 제거하고, 각 파일 이름을 날짜 + 임의 문자열로 바꿉니다.
+       ``AI Image Upscale`` 처럼 작은 이미지를 목표 해상도로 업스케일할 수도 있습니다.
+   * - ``Image Organizer``
+     - 폴더의 이미지를 날짜(연-월 또는 연), 해상도, 파일 형식, 파일 크기 또는 폴더당 고정 개수에
+       따라 하위 폴더로 정리합니다. 복사하거나 이동할 수 있으며 미리보기가 있습니다.
+   * - ``Token Batch Rename``
+     - 선택한 이미지(또는 폴더 전체)의 이름을 ``{name}_{counter:04}`` 나 ``{date}_{camera}`` 같은
+       토큰 템플릿으로 바꿉니다. 충돌을 표시하는 실시간 미리보기가 있으며, 사이드카, 별점, 태그도
+       파일을 따라갑니다.
+   * - ``Deflicker (Time-lapse)``
+     - 현재 폴더의 타임랩스 프레임 사이의 밝기 차이를 고르게 맞추고(이동 평균 또는 전체 평균 목표),
+       보정한 사본을 ``deflickered/`` 하위 폴더에 씁니다. 원본은 건드리지 않습니다.
+   * - ``Document Binarize``
+     - 페이지를 찍은 사진이나 스캔을 Sauvola 적응형 임계값 처리(창 크기와 k 슬라이더)로 흰 바탕에
+       검은 글씨로 깔끔하게 바꾸고, 원본 옆에 ``<name>_bw.png`` 로 저장합니다.
+   * - ``Otsu Threshold``
+     - 현재 이미지를 자동으로 고른 Otsu 전역 임계값으로 흑백 변환합니다. 반전 옵션이 있으며
+       ``<name>_otsu.png`` 로 저장합니다.
+   * - ``Edit Animation``
+     - 현재 GIF, APNG 또는 애니메이션 WebP를 역재생, 부메랑, 재타이밍(0.25x ~ 4x) 또는
+       최적화(반복되는 프레임 병합)하여 ``<name>_edited.gif`` 로 저장합니다.
+   * - ``Optimize to Target Size``
+     - 현재 이미지를 KB 단위 크기 예산에 맞는 가장 높은 품질의 JPEG 또는 WebP로 다시 인코딩하여
+       ``<name>_opt.jpg`` 또는 ``<name>_opt.webp`` 로 저장합니다.
+   * - ``Meme Caption``
+     - 현재 이미지에 전형적인 위아래 밈 캡션(검은 외곽선이 있는 흰색 대문자, 자동 줄바꿈)을 추가하여
+       ``<name>_meme.png`` 로 저장합니다.
+   * - ``Steganography``
+     - 현재 이미지의 최하위 비트에 텍스트 메시지를 숨겨 무손실 ``<name>_stego.png`` 로 저장하거나,
+       그렇게 숨긴 메시지를 드러냅니다.
+
+라이브러리 및 메타데이터 (Library & Metadata)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``Library Search``
+     - 라이브러리 루트 폴더를 관리하고, 이를 인덱스로 스캔하며(선택적으로 지각적 해시 포함), 파일명,
+       최소 너비 / 높이, KB 단위 파일 크기로 검색합니다. 결과를 더블클릭하면 열립니다.
+   * - ``Smart Albums``
+     - 규칙 기반 앨범(확장자, 이름, 태그, 장소, 최소 크기와 별점, 색상 라벨, 컬링 상태, 즐겨찾기)을
+       저장하고 일치하는 항목을 보여 줍니다. GPS 데이터로 도시마다 앨범을 하나씩 만들 수 있고, 앨범을
+       가져오거나 내보낼 수 있습니다.
+   * - ``Find Similar Images``
+     - 지각적 해시로 현재(또는 처음 선택한) 이미지와 비슷해 보이는 라이브러리 이미지를 지정한 Hamming
+       거리 안에서 찾습니다. 먼저 ``Library Search`` 에서 pHash를 켜고 루트를 스캔하세요.
+   * - ``Semantic Search``
+     - "해 질 녘 해변" 같은 텍스트 설명과 일치하는 현재 폴더의 이미지를 ``onnxruntime`` 기반
+       CLIP으로 찾습니다(처음 사용할 때 설치를 제안). 약 150 MB 모델은 한 번만 다운로드됩니다.
+   * - ``Find Duplicate Images``
+     - 폴더(선택적으로 하위 폴더 포함)에서 파일 해시로 완전히 같은 중복을, 지각적 해시로 비슷한
+       이미지를 찾습니다. 각 그룹에서 가장 좋은 사본을 뺀 나머지를 미리 선택하고 선택 항목을 휴지통으로
+       옮길 수 있습니다.
+   * - ``Auto-Tag Images``
+     - 선택한 이미지(또는 폴더 전체)에 휴리스틱 내용 태그(photo, document, screenshot, graphic,
+       landscape, portrait)를 계층 태그 트리의 ``auto/`` 아래에 붙이거나, 시맨틱 검색이 모델을
+       다운로드한 뒤에는 CLIP 레이블을 붙입니다.
+   * - ``Hierarchical Tags``
+     - ``animal/cat/british`` 같은 트리 구조 태그를 만들고 삭제하며, 태그 아래의 이미지를 나열하고,
+       선택한 타일에 태그를 붙이거나 뗍니다.
+   * - ``Export Metadata (CSV / JSON)``
+     - 현재 보기의 이미지마다 레코드 하나(파일 정보, 카메라·렌즈·노출·ISO 같은 주요 EXIF 필드, 별점,
+       색상 라벨, 태그, 메모)를 CSV 또는 JSON 파일로 씁니다.
+   * - ``XMP Sidecars``
+     - 현재 보기의 모든 이미지에 대해 ``.xmp`` 사이드카 파일을 내보내거나 가져와서, 별점, 제목, 설명,
+       키워드, 색상 라벨이 Adobe Bridge, Lightroom 및 기타 XMP 지원 도구와 양방향으로 오가게 합니다.
+   * - ``GPS Geotag``
+     - 위도와 경도(십진 도)를 현재 이미지의 EXIF GPS 태그에 쓰며, 이미 있는 값은 대체합니다. JPEG와
+       WebP 파일만 지원합니다.
+   * - ``Thumbnail Cache``
+     - 썸네일 캐시가 사용하는 디스크 공간을 보여 주고 캐시를 지웁니다.
+
+보기 (Views)
+^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``By day``
+     - ``Timeline View`` 아래: 메인 보기를 현재 폴더의 이미지로 바꾸어 촬영일(EXIF 날짜, 없으면 파일
+       날짜)마다 머리글 아래에 묶어 보여 줍니다. 이미지를 더블클릭하면 열립니다.
+   * - ``By month``
+     - ``Timeline View`` 아래: 같은 타임라인을 촬영 월별로 묶습니다.
+   * - ``By year``
+     - ``Timeline View`` 아래: 같은 타임라인을 촬영 연도별로 묶습니다.
+   * - ``Calendar View``
+     - 현재 폴더에서 사진이 있는 날(촬영 날짜 기준)을 강조한 달력을 보여 줍니다. 날짜를 클릭하면 그날의
+       이미지가 나열되고, 하나를 더블클릭하면 열립니다.
+   * - ``Map View``
+     - 현재 폴더의 지오태그된 이미지를 OpenStreetMap 지도에 표시하며, 가장 가까운 도시마다 개수가
+       적힌 마커를 하나씩 둡니다. 지도는 온라인으로 로드되며, QtWebEngine이 없으면 좌표 목록으로
+       대체됩니다.
+   * - ``Scopes & Inspector``
+     - 현재 이미지를 탭별로 분석합니다: 휘도 파형, RGB 퍼레이드, 폴스 컬러 노출, 포커스 피킹, 오류
+       수준 분석(Error Level Analysis), 복제(copy-move) 검출.
+   * - ``Tiny Planet (360°)``
+     - 2:1 등장방형(equirectangular) 360° 파노라마를 지정한 크기의 정사각형 "작은 행성"으로
+       재투영하여 ``<name>_planet.png`` 로 저장합니다. 이미지가 2:1이 아니면 경고합니다.
+   * - ``Image Statistics``
+     - 현재 이미지의 R, G, B, 휘도 채널별 평균, 최소, 최대, 표준편차, 중앙값을 보여 주고, 256단계
+       히스토그램을 CSV로 내보냅니다.
+   * - ``Quality Report``
+     - 현재 이미지의 무참조 품질 지표를 나열합니다: 색채감(colourfulness), 톤 엔트로피, RMS 대비,
+       에지 밀도, 추정 노이즈.
+   * - ``Test Chart``
+     - 보정용 패턴(SMPTE 컬러 바, 그레이스케일 웨지, 그라데이션 램프, 체커보드 또는 단색)을 지정한
+       너비와 높이로 생성해 파일로 저장합니다.
+   * - ``Off``
+     - ``Color blindness preview`` 아래: 색각 이상 미리보기를 끕니다.
+   * - ``Protanopia (red-blind)``
+     - ``Color blindness preview`` 아래: 제1색맹(적색맹)인 사람이 보는 대로 뷰어에 이미지를
+       표시합니다. 표시 전용이며 파일과 레시피는 그대로입니다.
+   * - ``Deuteranopia (green-blind)``
+     - ``Color blindness preview`` 아래: 가장 흔한 적록 색각 이상인 제2색맹(녹색맹)을
+       시뮬레이션합니다. 표시 전용입니다.
+   * - ``Tritanopia (blue-blind)``
+     - ``Color blindness preview`` 아래: 제3색맹(청황 색각 이상)을 시뮬레이션합니다. 표시
+       전용입니다.
+   * - ``Achromatopsia (greyscale)``
+     - ``Color blindness preview`` 아래: 전색맹처럼 이미지를 완전한 회색조로 보여 줍니다. 표시
+       전용입니다.
+
+워크플로 (Workflow)
+^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``Culling``
+     - 현재 폴더를 pick, reject 또는 플래그 없는 이미지로 필터링하고, 비슷한 이미지 그룹마다 가장
+       선명한 이미지를 pick하고 나머지를 reject하는 자동 컬링을 하며, 모든 reject를 영구 삭제할 수
+       있습니다.
+   * - ``Staging Tray``
+     - 폴더를 가로지르는 영구 바구니입니다. 어느 폴더에서든 선택한 타일이나 현재 이미지를 추가한 뒤,
+       모두 한 폴더로 이동하거나 복사하고, 트레이를 앨범으로 보여 줄 수 있습니다.
+   * - ``Reference Panel``
+     - 참조 이미지(파일에서, 드래그 앤 드롭으로 또는 현재 이미지에서 추가)를 고정하고 나란히 비교할
+       수 있도록 크게 미리 보여 줍니다. 목록은 재시작 후에도 유지됩니다.
+   * - ``Virtual Copies``
+     - 현재 이미지의 현상 레시피를 이름 붙인 스냅숏으로 저장하고, 파일을 복제하지 않고 스냅숏 사이를
+       전환합니다.
+   * - ``Dual-Pane File Manager``
+     - 두 폴더 트리를 나란히 놓고 한쪽의 선택 항목을 다른 쪽으로 복사하거나 이동하며, 파일을 뷰어에서
+       엽니다.
+   * - ``Macros``
+     - 선택한 이미지에 대한 별점, 즐겨찾기, 색상 라벨, 태그 동작의 매크로를 녹화, 편집, 정리,
+       재생합니다.
+   * - ``Watched Folder``
+     - 대화 상자가 열려 있는 동안 폴더(하위 폴더 포함)를 감시하여 새로 들어오는 모든 이미지에 지정한
+       현상 프리셋을 적용합니다. 손이 가지 않는 테더링이나 가져오기 워크플로에 씁니다.
+
+내보내기 (Export)
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``Contact Sheet PDF``
+     - 선택한 이미지(또는 폴더 전체)의 썸네일을 A4, A3, Letter 또는 Legal 페이지에 행 x 열
+       그리드로 배치합니다. 여백, 선택적 제목, 선택적 파일명 캡션을 지원합니다.
+   * - ``Web Gallery``
+     - 선택한 이미지(또는 폴더 전체)를 썸네일과 라이트박스가 있는 자체 완결형 HTML 갤러리로
+       내보냅니다. 원본을 복사할 수 있고, JSON으로 내보내지는 클라이언트 검토 댓글 상자를 추가할 수
+       있습니다.
+   * - ``Slideshow Video``
+     - 선택한 이미지(또는 폴더 전체)를 지정한 크기, 프레임 레이트, 표시 시간, 품질, 전환 효과(페이드,
+       디졸브, 슬라이드, 와이프)로 MP4로 렌더링합니다.
+   * - ``Print Layout``
+     - 페이지 크기, 방향, 행, 열, 여백, 간격, 재단 표시를 지정해 여러 페이지 PDF 그리드에 사진을
+       배치합니다. 선택적 ``reportlab`` 패키지가 필요합니다.
+   * - ``Collage``
+     - 선택한 이미지(또는 폴더 전체)를 1 ~ 12열 그리드 몽타주로 합성하여 첫 번째 이미지 옆에
+       ``collage.png`` 로 저장합니다.
+   * - ``ID Photo Sheet``
+     - 현재 인물 사진을 증명사진 크기(35 x 45 mm, 2 x 2 in, 33 x 48 mm 또는 50 x 70 mm)로 4x6,
+       5x7, A4 또는 Letter 용지에 300 DPI로 배열하여 ``<name>_idsheet.png`` 로 저장합니다.
+
+비파괴 현상 (Develop (Non-Destructive))
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``Before / After Compare``
+     - 현재 이미지를 현상 레시피 적용 전과 후로 한 화면에 보여 주며, 드래그할 수 있는 구분선으로
+       나눕니다.
+   * - ``Develop Presets…``
+     - 현재 이미지의 레시피를 이름 붙인 프리셋으로 저장한 뒤, 현재 이미지나 선택 항목에 적용하거나
+       활성 조정만 각 이미지의 레시피에 병합합니다.
+   * - ``Tone Curve``
+     - 히스토그램 위에서 마스터 RGB 커브와 빨강, 초록, 파랑 개별 커브를 편집합니다(클릭으로 점 추가,
+       드래그로 이동, 우클릭으로 제거). 레시피에 저장됩니다.
+   * - ``Apply .cube LUT``
+     - Adobe ``.cube`` 3D 또는 1D LUT를 조절 가능한 강도로 적용합니다. 레시피에 저장되며,
+       ``Clear`` 로 제거합니다.
+   * - ``Split Toning``
+     - 섀도와 하이라이트를 각각의 색조와 채도로 물들이며 밸런스 슬라이더가 있습니다. 레시피에
+       저장됩니다.
+   * - ``Local Adjustment Masks``
+     - 브러시, 방사형, 선형 그라데이션 마스크를 추가하며, 마스크마다 노출, 밝기, 대비, 채도, 색온도,
+       색조, 하이라이트, 섀도, 페더를 따로 가집니다. 레시피에 저장됩니다.
+   * - ``Layers``
+     - 텍스트, 이미지 또는 LUT 오버레이 레이어를 최대 8개까지 불투명도와 표준, 곱하기, 스크린,
+       오버레이 블렌딩으로 쌓습니다. 레시피에 저장됩니다.
+   * - ``Levels``
+     - 블랙 포인트, 화이트 포인트, 감마를 설정합니다. 레시피에 저장됩니다.
+   * - ``Channel Mixer``
+     - 각 출력 채널을 빨강, 초록, 파랑 입력의 가중합과 오프셋으로 다시 만들며, 흑백 변환용 모노크롬
+       모드가 있습니다. 레시피에 저장됩니다.
+   * - ``Gradient Map``
+     - 휘도를 프리셋 그라데이션(Mono, Sepia, Cyanotype, Fire, Ocean, Magenta–Teal)으로
+       매핑합니다. 강도를 조절할 수 있고 지각적 OkLCH 공간에서 섞을 수도 있습니다. 레시피에
+       저장됩니다.
+   * - ``Auto Color Balance``
+     - gray-world, white-patch, auto-levels(백분위수) 또는 Retinex 방식으로 색 틀어짐을 제거하고
+       강도 슬라이더로 섞어 ``<name>_balanced.png`` 로 저장합니다.
+   * - ``Clarity / Dehaze``
+     - Dehaze, Clarity, Texture 로컬 대비 슬라이더를 적용하여 ``<name>_local.png`` 로 저장합니다.
+   * - ``HSL / Color Mixer``
+     - 여덟 개 색상 대역(빨강 ~ 마젠타)별로 색조, 채도, 휘도를 따로 조정하여 ``<name>_hsl.png`` 로
+       저장합니다.
+   * - ``CLAHE (Local Equalize)``
+     - 휘도에 대비 제한 적응형 히스토그램 평활화(클립 한계와 타일 수)를 적용해 로컬 대비를 높이고
+       ``<name>_clahe.png`` 로 저장합니다.
+   * - ``Flatten Background``
+     - 광공해나 고르지 않은 조명 같은 완만한 배경 그라데이션(빼기) 또는 비네팅(나누기)을 조절 가능한
+       정도로 제거하여 ``<name>_flat.png`` 로 저장합니다.
+   * - ``Frame & Caption``
+     - 색상 매트 테두리, 선택적 폴라로이드 스타일 하단 띠, 캡션을 추가하여 ``<name>_framed.png`` 로
+       저장합니다.
+   * - ``Ordered Dither``
+     - Bayer 순서형 디더 패턴으로 각 채널을 2 ~ 8단계로 줄여 레트로 인쇄 느낌을 내고
+       ``<name>_dither.png`` 로 저장합니다.
+   * - ``Color Map``
+     - 이미지의 휘도를 viridis, magma 또는 jet 컬러맵으로 다시 칠하여 ``<name>_colormap.png`` 로
+       저장합니다.
+   * - ``Distort``
+     - 이미지를 조절 가능한 강도로 소용돌이, 핀치 / 볼록, 물결 모양으로 왜곡하여
+       ``<name>_distort.png`` 로 저장합니다.
+   * - ``Polar Coordinates``
+     - 이미지를 원반으로 감싸거나 원반을 띠로 펼치며, 반지름을 반전할 수도 있습니다.
+       ``<name>_polar.png`` 로 저장합니다.
+   * - ``Kaleidoscope``
+     - 쐐기 조각 하나를 중심 둘레로 거울처럼 반복해 대칭 패턴을 만들며, 조각 수와 회전을 지정합니다.
+       ``<name>_kaleidoscope.png`` 로 저장합니다.
+   * - ``Frosted Glass``
+     - 각 픽셀을 근처의 임의 위치로 흩뿌려(픽셀 단위 반경, 재현 가능한 시드) 질감 있는 유리 느낌을
+       내고 ``<name>_frosted.png`` 로 저장합니다.
+   * - ``Pixel Sort``
+     - 하한 / 상한 밝기 구간 안에서 행 또는 열을 따라 픽셀을 밝기순으로 정렬해 글리치 느낌을 내고
+       ``<name>_pixelsort.png`` 로 저장합니다.
+   * - ``Film Grain``
+     - 강도, 입자 크기, 모노크롬, 시드를 조절하는 절차적 필름 그레인을 추가합니다. 레시피에
+       저장됩니다.
+   * - ``Lens Flare``
+     - 지정한 위치에 강도, 헤일로 크기, 색상을 조절할 수 있는 합성 렌즈 플레어를 추가합니다. 레시피에
+       저장됩니다.
+   * - ``Threshold / Posterize``
+     - 흑백 임계값(0 ~ 255)을 적용하거나 각 채널을 2 ~ 64단계로 포스터화하며, 둘 다 적용할 수도
+       있습니다. 레시피에 저장됩니다.
+   * - ``Solarize``
+     - 임계값보다 밝은 톤을 반전해 암실 솔라리제이션 느낌을 내고, 혼합 슬라이더로 섞어
+       ``<name>_solarize.png`` 로 저장합니다.
+   * - ``Diffuse Glow``
+     - 양, 반경, 하이라이트 임계값을 조절하는 Orton 스타일의 부드러운 블룸을 추가하여
+       ``<name>_glow.png`` 로 저장합니다.
+   * - ``Graduated Density``
+     - 그라데이션 ND 필터처럼 직선을 따라 프레임 한쪽을 어둡게 하여(각도, 스톱, 경도, 오프셋, 선택적
+       색조) ``<name>_gradnd.png`` 로 저장합니다.
+   * - ``Velvia``
+     - Velvia 슬라이드 필름처럼 채도가 낮은 색을 가장 많이 끌어올리며, 강도와 섀도 보호 슬라이더가
+       있습니다. ``<name>_velvia.png`` 로 저장합니다.
+   * - ``Emboss``
+     - 지정한 방위각과 고도에서 비춘 부조를 렌더링하며, 깊이 슬라이더와 회색조 옵션이 있습니다.
+       ``<name>_emboss.png`` 로 저장합니다.
+   * - ``Defringe``
+     - 고대비 가장자리를 따라 생기는 보라, 초록 또는 모든 색 프린지의 채도를 없애며, 양과 가장자리
+       임계값 슬라이더가 있습니다. ``<name>_defringe.png`` 로 저장합니다.
+   * - ``Film Negative``
+     - 스캔한 컬러 네거티브를 포지티브로 반전하고 주황색 필름 베이스(자동 추정)를 제거하며, 출력
+       감마를 지정합니다. ``<name>_positive.png`` 로 저장합니다.
+   * - ``Filmic Tone Map``
+     - Reinhard 또는 Hable 필믹 커브로 하이라이트를 부드럽게 눌러 주며, 노출, 화이트 포인트, 대비,
+       채도 슬라이더가 있습니다. ``<name>_filmic.png`` 로 저장합니다.
+   * - ``Tone Equalizer``
+     - 블랙, 섀도, 중간톤, 하이라이트, 화이트의 노출을 따로 설정하며, 헤일로를 막기 위해
+       스무딩합니다. ``<name>_toneeq.png`` 로 저장합니다.
+   * - ``Detail Equalizer``
+     - 미세, 중간, 거친, 넓은 디테일 대역에서 대비를 따로 높이거나 줄여 ``<name>_detaileq.png`` 로
+       저장합니다.
+   * - ``Soft Proof``
+     - 지정한 ICC 출력 프로필로 현재 이미지를 미리 보고, 색 영역 밖의 픽셀을 마젠타로 칠해 개수를
+       셉니다. 아무것도 저장하지 않습니다.
+
+리터치 및 변형 (Retouch & Transform)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``AI Image Upscale``
+     - Real-ESRGAN(general x4, anime x4 또는 x2)이나 Lanczos, Bicubic, Nearest 리샘플링으로
+       폴더의 이미지를 업스케일합니다. AI 모델은 필요할 때 ``onnxruntime`` 을 설치하고, 처음 사용할
+       때 자동으로 다운로드됩니다(약 65 MB).
+   * - ``Noise Reduction / Sharpening``
+     - 가장자리를 보존하는 노이즈 감소(선택적으로 휘도만)와 양 및 반경을 지정하는 언샤프 마스크
+       샤프닝을 적용하여 지정한 파일로 저장합니다. OpenCV(``opencv-python``)가 필요합니다.
+   * - ``Healing Brush``
+     - 미리보기에서 클릭한 잡티를(우클릭하면 점 삭제) Telea 또는 Navier-Stokes 방식의 인페인팅으로
+       제거하여 지정한 파일로 저장합니다. OpenCV가 필요합니다.
+   * - ``Clone Stamp``
+     - Shift+클릭한 소스 지점에서 가장자리가 부드러운 패치를 미리보기에서 클릭한 각 지점으로
+       복사하여(우클릭하면 실행 취소) 결과를 지정한 파일로 저장합니다.
+   * - ``Frequency Separation``
+     - 지정한 흐림 반경에서 현재 이미지를 ``<name>_low.png``\ (색과 톤)와 ``<name>_high.png``\ (질감)로
+       분리해 다른 곳에서 리터치할 수 있게 합니다. 다시 합칠 때는 low + (high - 128)입니다.
+   * - ``Smart Crop``
+     - 피사체를 3분할 교차점에 두는 현저성 기반 자르기(자유, 1:1, 4:5, 3:2, 16:9)를 제안하고, 고른
+       것을 비파괴 자르기로 레시피에 기록합니다.
+   * - ``Portrait Auto-Retouch``
+     - 피부 톤 영역을 부드럽게 하고 적목을 제거하며 마지막에 샤프닝을 한 번 더 적용합니다. 각각
+       슬라이더가 있으며 ``<name>_retouched.png`` 로 저장합니다.
+   * - ``Face Detection``
+     - OpenCV의 Haar cascade로 현재 이미지의 얼굴을 검출하고 각 얼굴에 이름을 붙일 수 있게 합니다.
+       이름은 레시피와 함께 저장됩니다. OpenCV 4(``opencv-python<5``)가 필요합니다.
+   * - ``Sky / Background``
+     - 하늘을 그라데이션으로 바꾸거나 배경을 투명 또는 흰색으로 제거하여 지정한 파일로 저장합니다.
+       OpenCV가 필요하며, ``rembg`` 가 설치되어 있으면 배경 잘라내기에 사용합니다.
+   * - ``Crop / Straighten``
+     - 최대 ±15°까지 회전하고(빈 모서리는 잘라냄) 정규화 좌표나 종횡비 프리셋으로 잘라 지정한 파일로
+       저장합니다. 수평 맞춤에는 OpenCV가 필요합니다.
+   * - ``Auto-Straighten``
+     - 수평선이나 수직선의 기울기를 측정하고 회전을 조정할 수 있게 한 뒤, 수평을 맞춘 이미지를 지정한
+       파일로 저장합니다. OpenCV가 필요합니다.
+   * - ``Lens Correction``
+     - 슬라이더로 술통형 / 실패형 왜곡, 비네팅, 빨강 / 파랑 색수차를 보정하여 지정한 파일로
+       저장합니다.
+   * - ``Scale Bar``
+     - 단위당 픽셀 값과 단위 레이블로 보정한 스케일 바를 현재 이미지에 새겨 ``<name>_scalebar.png``
+       로 저장합니다.
+
+다중 이미지 (Multi-Image)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 항목
+     - 기능
+   * - ``HDR Merge``
+     - 노출이 다른 두 장 이상의 사진을 Mertens 노출 융합으로 합칩니다(노출 데이터 불필요). 먼저
+       정렬할 수도 있습니다. OpenCV가 필요합니다.
+   * - ``Panorama Stitch``
+     - 20 ~ 40 % 겹치게 순서대로 찍은 두 장 이상의 사진을 파노라마 또는 평면 스캔 모드로 이어 붙이며,
+       검은 테두리를 잘라낼 수도 있습니다. OpenCV가 필요합니다.
+   * - ``Focus Stacking``
+     - 각 프레임에서 가장 선명한 픽셀을 골라 초점 브래킷을 전체에 초점이 맞은 한 장으로 합치며, 먼저
+       정렬할 수도 있습니다. OpenCV가 필요합니다.
+   * - ``Image Stack``
+     - 이미 정렬된 연사를 픽셀마다 평균, 중앙값, 최대, 최소 또는 시그마 클리핑 평균으로 합쳐 장노출,
+       인파 제거, 별 궤적을 만듭니다. OpenCV가 필요 없습니다.
+   * - ``Anaglyph 3D``
+     - 현재 이미지(왼쪽 눈)와 지정한 오른쪽 눈 이미지를 적청 애너글리프(Dubois, 컬러, 회색 또는 true
+       방식)로 합쳐 ``<name>_anaglyph.png`` 로 저장합니다.
+
+----
+
 명령줄 실행
 -----------
 
 ::
 
-   imervue                        # 일반 실행
-   imervue /path/to/image         # 지정한 이미지 열기
-   imervue /path/to/folder        # 지정한 폴더 열기
-   imervue --debug                # 디버그 모드 활성화
-   imervue --software_opengl      # 소프트웨어 렌더링 사용 (GPU 미지원 시)
+   python -m Imervue                      # 일반 실행
+   python -m Imervue /path/to/image       # 지정한 이미지 열기
+   python -m Imervue /path/to/folder      # 지정한 폴더 열기
+   python -m Imervue --debug              # 디버그 모드 활성화
+   python -m Imervue --software_opengl    # 소프트웨어 렌더링 사용 (GPU 미지원 시)
 
 헤드리스 배치 CLI
 ^^^^^^^^^^^^^^^^^
@@ -2426,6 +2953,70 @@ MCP 서버(`MCP 서버`_ 참고)의 모든 도구도 하위 명령입니다. 그
    py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
    py -m Imervue.cli histogram a.jpg --json
    py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+
+``pipeline FILE INPUTS…`` 는 각 입력에 순서가 있는 작업 체인을 실행하고 입력마다 PNG 하나를 씁니다.
+원본 옆에는 ``<stem>_pipeline.png``, ``--out`` 안에는 ``<stem>.png`` 로 씁니다. ``FILE`` 은 단계
+목록이나 ``{"pipeline": [...]}`` 객체를 담은 UTF-8 JSON입니다(바이트 순서 표시가 있어도 됩니다). 각
+단계는 작업 이름을 지정하는 ``"op"`` 와 그 작업의 매개변수를 가진 객체입니다. 생략한 매개변수는
+기본값을 쓰고, 작업이 모르는 키는 무시됩니다. 파이프라인은 최대 50단계이며, 빈 파이프라인은 각 입력을
+디코딩한 그대로 씁니다. 파일은 이미지를 읽기 전에 검사됩니다. 읽거나 파싱할 수 없는 파일은
+``error: …`` 를 출력하고, 50단계 초과, ``"op"`` 이름이 없는 단계, 알 수 없는 작업은 문제마다
+``pipeline error: step N: …`` 한 줄을 출력합니다. 어느 경우든 명령은 종료 코드 2로 끝나며 아무것도
+쓰지 않습니다. 잘못된 형식의 매개변수(``null``, 숫자 자리에 텍스트)는 해당 이미지를 실패시키고 이는
+보고되며, 종료 코드는 1입니다.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 44 42
+
+   * - 작업
+     - 매개변수 (기본값)
+     - 효과
+   * - ``dehaze``
+     - ``strength`` (``1.0``; 0 – 1로 제한)
+     - 다크 채널 프라이어 안개 제거. ``0`` 이면 이미지가 바뀌지 않음
+   * - ``clahe``
+     - ``clip`` (``2.0``; 1 이상), ``tiles`` (``8``; 1 이상)
+     - ``tiles`` × ``tiles`` 그리드에서 휘도에 대비 제한 적응형 평활화 적용
+   * - ``dither``
+     - ``levels`` (``2``; 2 – 8로 제한)
+     - 채널마다 ``levels`` 개의 값으로 줄이는 4×4 Bayer 순서형 디더. 알파 유지
+   * - ``distort``
+     - ``mode`` (``"swirl"``: ``swirl`` / ``pinch`` / ``ripple``),
+       ``strength`` (``0.5``; -1 – 1로 제한)
+     - 중심 둘레의 기하 왜곡. ``pinch`` 에서는 양수 강도가 볼록하게, 음수 강도가 오목하게
+       만듦
+   * - ``clarity``
+     - ``amount`` (``0.5``; -1 – 1, 음수는 부드럽게)
+     - 중간톤에 가중치를 둔 큰 반경의 로컬 대비
+   * - ``texture``
+     - ``amount`` (``0.5``; -1 – 1, 음수는 부드럽게)
+     - 작은 반경의 미세 디테일 로컬 대비
+   * - ``grayscale``
+     - 없음
+     - 루마(0.299 R + 0.587 G + 0.114 B)를 세 채널 모두에 넣음. 알파 유지
+   * - ``invert``
+     - 없음
+     - R, G, B 반전. 알파 유지
+   * - ``watermark``
+     - ``text`` (``""``: 워터마크 없음), ``corner`` (``"bottom-right"``: ``top-left`` /
+       ``top-right`` / ``bottom-left`` / ``bottom-right`` / ``center``; 그 밖의 값은
+       ``bottom-right`` 로 간주), ``opacity`` (``0.6``; 0 – 1로 제한)
+     - 긴 변의 3.5 % 크기로 그림자가 있는 흰색 텍스트. ``watermark`` 서브커맨드의
+       ``--font-fraction``, ``--color``, ``--no-shadow`` 에 해당하는 단계 매개변수는 없음
+
+예를 들어 ``look.json`` 은 다음과 같습니다::
+
+   {
+     "pipeline": [
+       {"op": "dehaze", "strength": 0.4},
+       {"op": "clahe", "clip": 2.5, "tiles": 8},
+       {"op": "clarity", "amount": 0.3},
+       {"op": "watermark", "text": "(c) Me", "corner": "bottom-right", "opacity": 0.5}
+     ]
+   }
+
+   py -m Imervue.cli pipeline look.json photos/ --out graded/
 
 ----
 
@@ -2552,7 +3143,8 @@ Cline, …) 가 GUI 를 실행하지 않고도 프로젝트의 순수 로직 헬
 
 모든 도구는 JSON ``outputSchema`` 와 읽기 전용 /
 파괴적 ``annotations`` 를 광고하며, 텍스트 봉투와 함께 결과를
-``structuredContent`` 로 반환하므로 (MCP 2025-11-25 기준),
+``structuredContent`` 로 반환하므로 (이후 MCP 개정판의 필드이며, 핸드셰이크는
+``2025-03-26`` 을 보고함),
 클라이언트는 재파싱 없이 타입이 지정된 페이로드를 소비합니다. 장시간
 실행되는 도구는 호출자가 진행 토큰을 전달하면
 ``notifications/progress`` 를 스트리밍합니다.
@@ -2577,13 +3169,14 @@ Claude Code (프로젝트 수준)
      "mcpServers": {
        "imervue": {
          "type": "stdio",
-         "command": "python",
+         "command": "py",
          "args": ["-m", "Imervue.mcp_server"]
        }
      }
    }
 
-Claude Code 에서 리포의 하위 디렉터리를 열면 이 서버가 자동으로
+``py`` 는 Windows용 Python 런처입니다. macOS나 Linux에서는 ``python3`` 또는 Imervue가 설치된
+환경의 인터프리터를 사용하세요. Claude Code 에서 리포의 하위 디렉터리를 열면 이 서버가 자동으로
 발견됩니다. Claude Code 는 프로젝트 서버를 처음 활성화하기 전에
 확인을 요청합니다 — 사용하려면 그 확인을 수락하세요.
 
@@ -2602,23 +3195,117 @@ Claude Desktop 설정에 동일한 항목을 추가합니다:
 프로토콜 표면
 ^^^^^^^^^^^^^
 
-서버는 MCP 버전 ``2025-03-26`` 의 stdio JSON-RPC 2.0
-전송을 구현합니다:
+서버는 stdin에서 줄바꿈으로 구분된 JSON-RPC 2.0 메시지를 읽고, 응답과 알림을 stdout에 UTF-8 한 줄씩
+씁니다. 클라이언트가 어떤 버전을 요청하든 ``initialize`` 에는 프로토콜 버전 ``2025-03-26`` 으로
+응답합니다. 요청은 한 번에 하나씩 처리되며, 배치(JSON 배열)는 ``-32600`` 으로 거부됩니다.
 
-* ``initialize`` — 핸드셰이크; ``capabilities.tools`` 를 광고.
-* ``tools/list`` — 등록된 도구를 해당
-  JSON-Schema 입력 정의와 함께 열거.
-* ``tools/call`` — ``{"name", "arguments"}`` 로 도구를 호출;
-  결과는 ``content`` 배열 안에 반환됨.
-* ``notifications/*`` — 조용히 수락됨 (응답 없음).
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - 메서드
+     - 기능
+   * - ``initialize``
+     - 핸드셰이크. ``protocolVersion`` ``2025-03-26``, ``serverInfo`` (``imervue``
+       ``1.0.0``), 그리고 기능 ``tools`` 와 ``prompts`` (``listChanged: false``),
+       ``resources`` (``subscribe: true``, ``listChanged: true``), ``completions``, ``logging``
+       을 반환합니다.
+   * - ``ping``
+     - 빈 결과를 반환합니다.
+   * - ``tools/list``
+     - 56개 도구 전부를 한 페이지로 반환하며, 각 도구에는 ``inputSchema``, ``outputSchema``,
+       ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
+       ``openWorldHint``)가 있습니다.
+   * - ``tools/call``
+     - ``{"name", "arguments"}`` 를 실행합니다. 결과는 JSON으로 인코딩한 반환값을 담은 ``text``
+       콘텐츠 블록이며, 반환값이 객체이면 ``structuredContent`` 도 함께 옵니다. 도구가 예외를
+       발생시키거나 인자가 매개변수에 맞지 않으면 프로토콜 오류 대신 ``isError: true`` 와
+       ``Error: …`` 텍스트를 반환합니다. 알 수 없는 도구 이름은 ``-32602`` 입니다.
+   * - ``prompts/list``
+     - 네 개의 프롬프트와 그 인자.
+   * - ``prompts/get``
+     - ``{"name", "arguments"}`` 의 메시지를 만듭니다. ``caption_image`` 와
+       ``analyze_composition`` 은 PNG 썸네일을 이미지 메시지로 넣습니다. 알 수 없는 프롬프트나
+       ``path`` 누락은 ``-32602`` 입니다.
+   * - ``completion/complete``
+     - ``ref/prompt`` 인자에 대해 접두사가 일치하는 값: ``suggest_edits`` 의 ``style``
+       (general, portrait, landscape, product, street, food, macro)과 ``analyze_composition``
+       의 ``focus`` (all, framing, balance, subject, leading_lines). 그 밖의 인자는 빈 목록을
+       받습니다.
+   * - ``resources/list``
+     - ``IMERVUE_MCP_ROOT`` 가 가리키는 폴더 바로 안의 이미지(숨김 파일과 SVG 제외)를
+       ``nextCursor`` 와 함께 페이지당 100개씩 반환합니다. 변수가 설정되지 않으면 비어 있습니다.
+   * - ``resources/templates/list``
+     - 아래 표의 두 URI 템플릿.
+   * - ``resources/read``
+     - ``imervue://image/…`` URI 하나를 읽습니다(아래 참조).
+   * - ``resources/subscribe`` / ``resources/unsubscribe``
+     - ``notifications/resources/updated`` 를 받는 집합에 URI를 추가하거나 제거합니다.
+   * - ``logging/setLevel``
+     - ``notifications/message`` 로 보낼 가장 낮은 수준(``debug``, ``info``, ``notice``,
+       ``warning``, ``error``, ``critical``, ``alert``, ``emergency``; 시작 시 ``info``)을
+       설정합니다. 그 밖의 값은 ``-32602`` 입니다.
+   * - 클라이언트가 보낸 ``notifications/*``
+     - 응답 없이 수락됩니다(``notifications/initialized``, ``notifications/cancelled``, …).
+       취소해도 실행 중인 도구는 멈추지 않습니다.
+   * - ``notifications/progress`` (전송)
+     - ``tools/call`` 요청이 ``params._meta.progressToken`` (문자열 또는 정수)을 담고 있으면
+       ``find_similar`` 나 ``build_collage`` 가 실행되는 동안
+       ``{progressToken, progress, total, message}`` 를 보냅니다. ``progress`` 는 증가하기만
+       합니다.
+   * - ``notifications/resources/updated`` (전송)
+     - ``IMERVUE_MCP_ROOT`` 의 파일이 바뀌고 그 썸네일 URI가 구독되어 있을 때 ``{uri}``.
+   * - ``notifications/resources/list_changed`` (전송)
+     - 구독 여부와 관계없이 ``IMERVUE_MCP_ROOT`` (watchdog으로 감시, 재귀 아님)에 변경이 있을
+       때마다.
+   * - ``notifications/message`` (전송)
+     - ``MCPServer.emit_log`` 를 통해 보내는, ``logging/setLevel`` 수준 이상의 로그 항목. 내장
+       도구는 이를 호출하지 않으므로 기본 서버는 아무것도 보내지 않습니다.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - URI
+     - 반환
+   * - ``imervue://image/{path}``
+     - 이미지의 PNG 썸네일(바로 세우고 256 px 안에 맞춤)을 ``mimeType`` ``image/png`` 인 base64
+       ``blob`` 으로 반환합니다. ``resources/list`` 는 이 형식의 URI를 반환합니다.
+   * - ``imervue://image/{path}/metadata``
+     - ``read_image_metadata`` 결과(크기, 포맷, EXIF, XMP)를 ``mimeType``
+       ``application/json`` 인 JSON ``text`` 로 반환합니다.
+
+``{path}`` 는 구분자와 드라이브 콜론까지 포함해 전체를 퍼센트 인코딩한 이미지 파일 경로입니다
+(``C:\photos\a.jpg`` 는 ``imervue://image/C%3A%5Cphotos%5Ca.jpg``). 읽기는 경로를 직접 해석하므로
+``IMERVUE_MCP_ROOT`` 아래의 파일뿐 아니라 어떤 파일에도 동작합니다. ``..`` 세그먼트가 있는 경로는
+``-32602``, 없는 파일은 ``-32002``, 다른 스킴의 URI는 ``-32602`` 입니다.
+
+오류는 JSON-RPC 코드 ``-32700`` (JSON이 아닌 줄), ``-32600`` (요청 객체가 아니거나 ``method``
+없음), ``-32601`` (알 수 없는 메서드), ``-32602`` (잘못된 매개변수, 알 수 없는 도구나 프롬프트,
+잘못된 로그 수준이나 커서, 지원하지 않는 리소스 URI), ``-32002`` (리소스 파일 없음),
+``-32603`` (내부 오류)을 사용합니다.
 
 구현은 ``Imervue/mcp_server/`` 에 있습니다:
 
-* ``server.py`` — 프로토콜 루프 + 도구 레지스트리.
-* ``tools.py`` — 핸들러 함수와 기본 도구 정의.
+* ``server.py`` — JSON-RPC 디스패처(``MCPServer``), stdio 루프(``run``),
+  ``IMERVUE_MCP_ROOT`` 감시기.
+* ``tools.py`` — 도구 세트의 공개 창구: 모든 핸들러를 다시 내보내고 기본 도구를 등록합니다
+  (``register_default_tools``).
+* ``tools_read.py`` / ``tools_edit.py`` — 도구 핸들러(목록, 메타데이터, 분석; 대상 파일에 쓰는
+  편집)와 ``tool_support.py`` 의 공용 헬퍼.
+* ``tool_defs_read.py`` / ``tool_defs_edit.py`` — 각 도구의 이름, 설명, 입력 스키마, 핸들러를
+  ``tools/list`` 순서대로 정의.
+* ``tool_schemas.py`` — 각 도구의 ``outputSchema`` 와 ``annotations``.
+* ``prompts.py`` / ``completion.py`` — 네 개의 프롬프트와 ``completion/complete`` 제안.
+* ``resources.py`` — ``imervue://image/`` 리소스.
+* ``progress.py`` / ``notifications.py`` / ``logging.py`` — 진행 보고, 잠금이 걸린 stdout
+  작성기와 리소스 구독, 로그 수준 필터링.
 * ``__main__.py`` — ``python -m Imervue.mcp_server`` 진입점.
 
-:class:`MCPServer` 를 직접 구성하고 :meth:`MCPServer.register` 를
-호출한 뒤 :meth:`MCPServer.handle_message` 로 메시지를 전달하여 (또는
-내장 :func:`run` 헬퍼로 stdio 루프를 구동하여) 사용자 정의 도구를
-등록할 수 있습니다.
+:class:`MCPServer` 를 구성하고 :meth:`MCPServer.register`\ (이름, 설명, 입력 스키마, 핸들러,
+선택적 출력 스키마와 annotations. 이름이 중복되면 ``ValueError`` 가 발생하고, ``progress``
+매개변수가 있는 핸들러는 진행 보고기를 받음)를 호출한 뒤 각 메시지를
+:meth:`MCPServer.handle_message` 에 넘기면 사용자 정의 도구를 등록할 수 있습니다. 이 메서드는
+응답을 반환하며, 알림이면 ``None`` 을 반환합니다. :func:`run` 은 항상 기본 도구로 자체 서버를
+만들므로 사용자 정의 세트에는 별도의 루프가 필요합니다. 알림을 보내려면 ``server.notifier`` 를
+출력 스트림의 ``Notifier`` 로 설정하세요.

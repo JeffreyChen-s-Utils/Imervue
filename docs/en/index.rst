@@ -12,23 +12,24 @@ Most of this guide is organised around those five sections.
      - What it does
    * - **Imervue**
      - Browse, view, organise, search, and batch-process your image library.
-       See *Imervue Tab — Image Viewer & Library*.
+       See *Opening Images*, *Browsing Images* and *Organising Images*.
    * - **Modify**
      - Non-destructive develop pipeline — sliders, curves, LUTs, masks,
-       retouch, multi-image. See *Modify Tab — Non-destructive Develop*.
+       retouch, multi-image. See *Editing Images (Modify Tab)*.
    * - **Paint**
      - full-featured raster paint studio with brushes, layers, animation,
        manga tools, PSD I/O. See *Paint Workspace (Paint Tab)*.
    * - **Puppet**
      - From-scratch 2D rigged-puppet animator — meshes, deformers, parameters,
-       motions, physics. See *Puppet Tab — 2D Rigged Animation*.
+       motions, physics. See *Puppet Workspace (Puppet Tab)*.
    * - **Desktop Pet**
      - Frameless, transparent, always-on-top overlay that runs the same
        ``.puppet`` rigs on your desktop with live drivers (idle / blink / mic /
-       webcam / drag-track). See *Desktop Pet Workspace*.
+       webcam / drag-track). See *Desktop Pet Workspace (Desktop Pet Tab)*.
 
-The *Getting Started*, *Reference*, *Plugin System*, and *MCP Server* sections
-that follow are cross-cutting — they apply across all five tabs.
+The *Getting Started*, *Keyboard Shortcuts Reference*, *Extra Tools Menu Reference*,
+*Plugin System*, *Command-Line Usage* and *MCP Server* sections are cross-cutting — they apply
+across all five tabs.
 
 .. contents:: Table of Contents
    :depth: 2
@@ -677,7 +678,7 @@ Layers
 ^^^^^^
 
 The **Layer dock** offers thumbnails, visibility toggles, inline rename,
-reordering with the ↑ / ↓ buttons (or ``Ctrl + [`` / ``Ctrl + ]``), and the
+reordering with the ↑ / ↓ buttons (or ``Ctrl + ]`` / ``Ctrl + [``), and the
 active-layer blend mode + opacity. The ``Layer`` menu adds:
 
 - **New / Vector / Duplicate / Merge Down** (``Ctrl + Shift + N`` /
@@ -785,7 +786,7 @@ Puppet Workspace (Puppet Tab)
 
 The fourth top-level tab — **Puppet** — is a from-scratch 2D rigged-puppet
 animation system: mesh-deformation rigs, parameters, motions, physics,
-expressions, pose groups, lip-sync and webcam tracking, with **no proprietary SDK**, **no `live2d-py`**, and a fully
+expressions, pose groups, lip-sync and webcam tracking, with **no proprietary SDK**, **no** ``live2d-py``, and a fully
 open ``.puppet`` file format.
 
 .. note::
@@ -1976,6 +1977,94 @@ Imervue supports plugins for extended functionality.
    * - Reload plugins
      - ``Plugins`` > ``Reload Plugins``
 
+Writing Plugins
+^^^^^^^^^^^^^^^
+
+A plugin is a Python package in ``plugins/<name>/`` — next to the ``Imervue`` package in a
+source checkout, next to the executable in a packaged build (``Plugins`` > ``Open Plugin
+Folder`` opens it). Its ``__init__.py`` sets ``plugin_class`` to a subclass of
+``Imervue.plugin.plugin_base.ImervuePlugin``; a single ``.py`` file in ``plugins/`` also loads
+(its first ``ImervuePlugin`` subclass is used), but the plugin downloader only distributes
+packages. The class attributes ``plugin_name``, ``plugin_version``, ``plugin_description`` and
+``plugin_author`` are optional (``"Unnamed Plugin"``, ``"0.0.1"`` and empty strings by default).
+Every main window creates its own instance of each plugin and passes itself in, so a hook can use
+``self.main_window`` and ``self.viewer`` (the ``GPUImageView``). Override only the hooks you
+need; each call is wrapped, so an exception is logged under the plugin's name instead of
+stopping Imervue. The full guide, with examples, is
+`PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 40 32
+
+   * - Hook
+     - Called when
+     - Arguments / return
+   * - ``register_languages()`` (class method)
+     - On the plugin class before each instance is created (at every load and ``Reload
+       Plugins``), and at startup before the main window is built when the saved language is not
+       a built-in one; that startup pass imports every plugin and runs nothing else
+     - No arguments. Call ``language_wrapper.register_language(language_code, display_name,
+       word_dict)`` here; a built-in language code is refused. Return value ignored; an exception
+       is logged and the plugin still loads
+   * - ``on_plugin_loaded()``
+     - Right after the instance is created: while the main window is built, and again after
+       ``Plugins`` > ``Reload Plugins``
+     - No arguments; return value ignored
+   * - ``get_translations()``
+     - Right after ``on_plugin_loaded()``, once per load
+     - Returns ``{language_code: {key: text}}`` (default ``{}``). The strings are merged into the
+       language tables; keys that already exist are never overwritten and unknown language codes
+       are skipped
+   * - ``on_build_main_tabs(tabs)``
+     - Once while the main window is built, after the five built-in tabs and before
+       ``on_build_menu_bar``; ``Reload Plugins`` does not run it again
+     - ``tabs``: the main window's top-level ``QTabWidget``; add a tab with
+       ``tabs.addTab(widget, label)``. Return value ignored
+   * - ``on_build_menu_bar(plugin_menu)``
+     - Once after the shared ``Plugins`` menu is built, and again after ``Reload Plugins``
+     - ``plugin_menu``: the ``Plugins`` ``QMenu`` (not the ``QMenuBar``). Entries a plugin adds
+       anywhere in the menu bar here are removed on reload. Return value ignored
+   * - ``on_build_context_menu(menu, viewer)``
+     - Each time the viewer's right-click menu is built, after the built-in entries and just
+       before it opens
+     - ``menu``: the context ``QMenu``; ``viewer``: the ``GPUImageView``. Return value ignored
+   * - ``on_folder_opened(folder_path, image_paths, viewer)``
+     - When the scan of an opened folder finishes
+     - ``folder_path``: the folder; ``image_paths``: every image the scan found. Return value
+       ignored
+   * - ``on_image_loaded(image_path, viewer)``
+     - Each time an image is on screen at full size in deep zoom, however it was opened, and again
+       when it is reloaded after an edit; not for the low-resolution preview shown while a large
+       image decodes
+     - ``image_path``: the image's path. Return value ignored
+   * - ``on_image_switched(image_path, viewer)``
+     - When next / previous (including the wrap-around at either end of the list) moves to
+       another image, as soon as its load starts; ``on_image_loaded`` follows once it is shown.
+       Opening an image from the grid or the filmstrip does not call it
+     - ``image_path``: the new current image. Return value ignored
+   * - ``on_image_deleted(deleted_paths, viewer)``
+     - After images are soft-deleted (put on the undo stack) from the viewer — the current image
+       or the selected thumbnails — or from the folder tree; not for a file the tree sends straight
+       to the Recycle Bin because it is not in the image list
+     - ``deleted_paths``: list of the deleted paths. Return value ignored
+   * - ``on_key_press(key, modifiers, viewer)``
+     - On each key press the viewer receives, before its built-in keys and the Shortcut Settings
+       bindings; plugins are asked in load order. A key that a menu or window shortcut takes first
+       never reaches the viewer
+     - ``key``: a ``Qt.Key`` code (int); ``modifiers``: ``Qt.KeyboardModifier`` flags. Return
+       ``True`` to consume the key — later plugins and the default handling are skipped; return
+       ``False`` (the default) to pass it on. An exception counts as ``False``
+   * - ``on_app_closing(main_window)``
+     - When the last main window closes, after Paint's unsaved-tab prompt is accepted and the
+       settings are saved, just before the plugins are unloaded; closing another window does not
+       call it
+     - ``main_window``: the closing ``ImervueMainWindow``. Return value ignored
+   * - ``on_plugin_unloaded()``
+     - When the plugin's window closes (after ``on_app_closing`` for the last window), and before
+       ``Reload Plugins`` loads the plugins again; plugins are unloaded in reverse load order
+     - No arguments; return value ignored
+
 ----
 
 Language
@@ -2155,6 +2244,38 @@ Animated Images
      - Slow down
    * - ``]``
      - Speed up
+
+Paint
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Key
+     - Action
+   * - ``[`` / ``]``
+     - Decrease / increase the brush size by 1 px
+   * - ``Shift + [`` / ``Shift + ]``
+     - Decrease / increase the brush size by 5 px
+   * - ``Ctrl + Z``
+     - Undo
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
+     - Redo
+   * - ``Ctrl + D``
+     - Deselect
+   * - ``Ctrl + 0`` / ``Ctrl + 1``
+     - Fit to window / Actual size (100 %)
+   * - ``X``
+     - Swap foreground / background colours
+   * - ``D``
+     - Reset colours to black / white
+   * - ``Ctrl + Tab`` / ``Ctrl + Shift + Tab``
+     - Next / previous Paint tab
+
+Tool keys are listed under *Tool Palette*. ``Settings`` > ``Shortcuts…`` in the Paint tab remaps
+the tool, brush-size, layer, undo / redo, deselect, view and colour keys (``Ctrl + Y`` stays as a
+second Redo key).
 
 ----
 
@@ -2587,16 +2708,437 @@ gutter, and crop marks. Requires ``reportlab``.
 
 ----
 
+Extra Tools Menu Reference
+--------------------------
+
+Every entry of the ``Extra Tools`` menu, submenu by submenu, in menu order. Many have a
+fuller section above; this list is the complete inventory. Entries that save a new file write
+it next to the source and add ``_1``, ``_2`` … when the name is taken; entries marked
+"stored in the recipe" are non-destructive edits of the image's develop settings. Plugins can
+add their own entries to these submenus.
+
+Batch
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Batch Format Conversion``
+     - Converts a folder's images (the current folder by default) to PNG, JPEG, WebP, BMP or TIFF,
+       or to HEIC / AVIF / JXL when their encoders are installed, with quality, skip-same-format and
+       send-originals-to-trash options.
+   * - ``Batch EXIF Strip``
+     - Removes EXIF, GPS and other metadata from every image in a folder for privacy, either
+       overwriting the originals or writing clean copies to an output folder.
+   * - ``Image Sanitizer``
+     - Re-renders a folder's images from raw pixels, stripping all hidden data (metadata,
+       steganography, trailing bytes) and renaming each to date + random string; can also upscale
+       small images to a target resolution, as in ``AI Image Upscale``.
+   * - ``Image Organizer``
+     - Sorts a folder's images into subfolders by date (year-month or year), resolution, file type,
+       file size or a fixed count per folder, copying or moving them, with a preview.
+   * - ``Token Batch Rename``
+     - Renames the selected images (or the whole folder) from a token template such as
+       ``{name}_{counter:04}`` or ``{date}_{camera}``, with a live preview that flags conflicts;
+       sidecars, ratings and tags follow the files.
+   * - ``Deflicker (Time-lapse)``
+     - Evens out frame-to-frame brightness across the current folder's time-lapse frames
+       (rolling-mean or global-mean target) and writes the corrected copies to a ``deflickered/``
+       subfolder, leaving the originals untouched.
+   * - ``Document Binarize``
+     - Turns a photo or scan of a page into clean black-on-white with Sauvola adaptive thresholding
+       (window size and k sliders), saving ``<name>_bw.png`` next to the source.
+   * - ``Otsu Threshold``
+     - Converts the current image to black and white at its automatically chosen Otsu global
+       threshold, with an invert option, saving ``<name>_otsu.png``.
+   * - ``Edit Animation``
+     - Reverses, boomerangs, re-times (0.25x to 4x) or optimizes (merges repeated frames of) the
+       current GIF, APNG or animated WebP, saving ``<name>_edited.gif``.
+   * - ``Optimize to Target Size``
+     - Re-encodes the current image as JPEG or WebP at the highest quality that fits a size budget
+       in KB, saving ``<name>_opt.jpg`` or ``<name>_opt.webp``.
+   * - ``Meme Caption``
+     - Adds classic top and bottom meme captions (upper-case white text with a black outline,
+       word-wrapped) to the current image, saving ``<name>_meme.png``.
+   * - ``Steganography``
+     - Hides a text message in the least-significant bits of the current image, saved as a lossless
+       ``<name>_stego.png``, or reveals a message hidden that way.
+
+Library & Metadata
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Library Search``
+     - Manages library root folders, scans them into the index (optionally with perceptual hashes)
+       and searches it by filename, minimum width / height and file size in KB; double-click a
+       result to open it.
+   * - ``Smart Albums``
+     - Saves rule-based albums (extensions, name, tags, place, minimum size and rating, colour
+       label, cull state, favourites) and shows their matches; can create one album per city from
+       GPS data, and import or export albums.
+   * - ``Find Similar Images``
+     - Finds library images that look like the current (or first selected) image by perceptual hash
+       within a chosen Hamming distance; scan your roots with pHash in ``Library Search`` first.
+   * - ``Semantic Search``
+     - Finds images in the current folder that match a text description such as "beach at sunset"
+       using CLIP on ``onnxruntime`` (offered for install on first use); the ~150 MB model
+       downloads once.
+   * - ``Find Duplicate Images``
+     - Scans a folder (optionally with subfolders) for exact duplicates by file hash or look-alikes
+       by perceptual hash; can pre-select all but the best copy of each group and move the selection
+       to the Recycle Bin.
+   * - ``Auto-Tag Images``
+     - Tags the selected images, or the whole folder, with heuristic content tags (photo, document,
+       screenshot, graphic, landscape, portrait) under ``auto/`` in the hierarchical tag tree, or
+       with CLIP labels once Semantic Search has downloaded its model.
+   * - ``Hierarchical Tags``
+     - Creates and deletes tree-structured tags such as ``animal/cat/british``, lists the images
+       under a tag, and tags or untags the selected tiles.
+   * - ``Export Metadata (CSV / JSON)``
+     - Writes a record per image in the current view (file details, key EXIF fields such as camera,
+       lens, exposure and ISO, rating, colour label, tags and note) to a CSV or JSON file.
+   * - ``XMP Sidecars``
+     - Exports or imports ``.xmp`` sidecar files for every image in the current view, so rating,
+       title, description, keywords and colour label round-trip with Adobe Bridge, Lightroom and
+       other XMP-aware tools.
+   * - ``GPS Geotag``
+     - Writes a latitude and longitude (decimal degrees) into the current image's EXIF GPS tags,
+       replacing any already there; JPEG and WebP files only.
+   * - ``Thumbnail Cache``
+     - Shows how much disk space the thumbnail cache uses and clears it.
+
+Views
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``By day``
+     - Under ``Timeline View``: replaces the main view with the current folder's images grouped
+       under a header per capture day (EXIF date, else the file date); double-click an image to open
+       it.
+   * - ``By month``
+     - Under ``Timeline View``: the same timeline, grouped by capture month.
+   * - ``By year``
+     - Under ``Timeline View``: the same timeline, grouped by capture year.
+   * - ``Calendar View``
+     - Shows a calendar that highlights the days with photos in the current folder (by capture
+       date); click a day to list its images and double-click one to open it.
+   * - ``Map View``
+     - Plots the current folder's geotagged images on an OpenStreetMap map, one marker per nearest
+       city with a count; the map loads online and falls back to a coordinate list without
+       QtWebEngine.
+   * - ``Scopes & Inspector``
+     - Analyses the current image in tabs: luminance waveform, RGB parade, false-colour exposure,
+       focus peaking, Error Level Analysis and clone (copy-move) detection.
+   * - ``Tiny Planet (360°)``
+     - Reprojects a 2:1 equirectangular 360° panorama into a square "little planet" of a chosen
+       size, saving ``<name>_planet.png``; warns when the image is not 2:1.
+   * - ``Image Statistics``
+     - Shows the mean, minimum, maximum, standard deviation and median of the current image's R, G,
+       B and luminance channels, and exports its 256-level histogram as CSV.
+   * - ``Quality Report``
+     - Lists no-reference quality metrics for the current image: colourfulness, tonal entropy, RMS
+       contrast, edge density and estimated noise.
+   * - ``Test Chart``
+     - Generates a calibration pattern (SMPTE colour bars, greyscale wedge, gradient ramp,
+       checkerboard or solid colour) at a chosen width and height and saves it to a file.
+   * - ``Off``
+     - Under ``Color blindness preview``: turns the colour-vision-deficiency preview off.
+   * - ``Protanopia (red-blind)``
+     - Under ``Color blindness preview``: shows the image in the viewer as a person with protanopia
+       sees it; display only, the file and its recipe stay untouched.
+   * - ``Deuteranopia (green-blind)``
+     - Under ``Color blindness preview``: simulates deuteranopia, the most common red-green
+       deficiency; display only.
+   * - ``Tritanopia (blue-blind)``
+     - Under ``Color blindness preview``: simulates tritanopia (blue-yellow deficiency); display
+       only.
+   * - ``Achromatopsia (greyscale)``
+     - Under ``Color blindness preview``: shows the image in full greyscale, as with achromatopsia;
+       display only.
+
+Workflow
+^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Culling``
+     - Filters the current folder to picks, rejects or unflagged images, auto-culls by picking the
+       sharpest image of each look-alike group and rejecting the rest, and can permanently delete
+       every reject.
+   * - ``Staging Tray``
+     - A persistent cross-folder basket: add the selected tiles or the current image from any
+       folder, then move or copy them all to one folder, or show the tray as an album.
+   * - ``Reference Panel``
+     - Pins reference images (added from files, by drag-and-drop or from the current image) with a
+       large preview for side-by-side comparison; the list persists across restarts.
+   * - ``Virtual Copies``
+     - Saves named snapshots of the current image's develop recipe and switches between them without
+       duplicating the file.
+   * - ``Dual-Pane File Manager``
+     - Two folder trees side by side for copying or moving the selection from one to the other, or
+       opening a file in the viewer.
+   * - ``Macros``
+     - Records, edits, cleans up and replays macros of rating, favourite, colour-label and tag
+       actions on the selected images.
+   * - ``Watched Folder``
+     - While the dialog is open, watches a folder (including subfolders) and assigns a chosen
+       develop preset to every new image that arrives, for hands-off tethered or import workflows.
+
+Export
+^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Contact Sheet PDF``
+     - Lays out thumbnails of the selected images (or the whole folder) in a rows x columns grid on
+       A4, A3, Letter or Legal pages, with margins, an optional title and optional filename
+       captions.
+   * - ``Web Gallery``
+     - Exports the selected images (or the whole folder) as a self-contained HTML gallery with
+       thumbnails and a lightbox; can copy the originals and add client-review comment boxes that
+       export as JSON.
+   * - ``Slideshow Video``
+     - Renders the selected images (or the whole folder) to an MP4 with a chosen size, frame rate,
+       hold time, quality and transition (fade, dissolve, slide or wipe).
+   * - ``Print Layout``
+     - Tiles pictures on a multi-page PDF grid with page size, orientation, rows, columns, margin,
+       gutter and crop marks; requires the optional ``reportlab`` package.
+   * - ``Collage``
+     - Composites the selected images (or the whole folder) into a grid montage of 1 to 12 columns,
+       saving ``collage.png`` next to the first image.
+   * - ``ID Photo Sheet``
+     - Tiles the current portrait at an ID size (35 x 45 mm, 2 x 2 in, 33 x 48 mm or 50 x 70 mm) on
+       4x6, 5x7, A4 or Letter paper at 300 DPI, saving ``<name>_idsheet.png``.
+
+Develop (Non-Destructive)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Before / After Compare``
+     - Shows the current image without and with its develop recipe in one view, split by a draggable
+       divider.
+   * - ``Develop Presets…``
+     - Saves the current image's recipe as a named preset, then applies it to the current image or
+       the selection, or merges only its active adjustments into their own recipes.
+   * - ``Tone Curve``
+     - Edits a master RGB curve and separate red, green and blue curves over a histogram (click to
+       add, drag to move, right-click to remove a point); stored in the recipe.
+   * - ``Apply .cube LUT``
+     - Applies an Adobe ``.cube`` 3D or 1D LUT at an adjustable intensity; stored in the recipe, and
+       ``Clear`` removes it.
+   * - ``Split Toning``
+     - Tints shadows and highlights with separate hue and saturation, plus a balance slider; stored
+       in the recipe.
+   * - ``Local Adjustment Masks``
+     - Adds brush, radial and linear-gradient masks, each with its own exposure, brightness,
+       contrast, saturation, temperature, tint, highlights, shadows and feather; stored in the
+       recipe.
+   * - ``Layers``
+     - Stacks up to eight text, image or LUT overlay layers with opacity and normal, multiply,
+       screen or overlay blending; stored in the recipe.
+   * - ``Levels``
+     - Sets the black point, white point and gamma; stored in the recipe.
+   * - ``Channel Mixer``
+     - Rebuilds each output channel from weighted red, green and blue inputs plus an offset, with a
+       monochrome mode for black-and-white conversion; stored in the recipe.
+   * - ``Gradient Map``
+     - Maps luminance through a preset gradient (Mono, Sepia, Cyanotype, Fire, Ocean, Magenta–Teal)
+       at an adjustable intensity, optionally blended in perceptual OkLCH; stored in the recipe.
+   * - ``Auto Color Balance``
+     - Removes colour casts with the gray-world, white-patch, auto-levels (percentile) or Retinex
+       method, blended by an intensity slider, saving ``<name>_balanced.png``.
+   * - ``Clarity / Dehaze``
+     - Applies the Dehaze, Clarity and Texture local-contrast sliders, saving ``<name>_local.png``.
+   * - ``HSL / Color Mixer``
+     - Adjusts hue, saturation and luminance separately for eight colour bands (red to magenta),
+       saving ``<name>_hsl.png``.
+   * - ``CLAHE (Local Equalize)``
+     - Boosts local contrast with contrast-limited adaptive histogram equalization (clip limit and
+       tile count) on the luminance, saving ``<name>_clahe.png``.
+   * - ``Flatten Background``
+     - Removes a smooth background gradient such as light pollution or uneven lighting (subtract),
+       or vignetting (divide), with an adjustable degree, saving ``<name>_flat.png``.
+   * - ``Frame & Caption``
+     - Adds a coloured matte border, an optional Polaroid-style bottom band and a caption, saving
+       ``<name>_framed.png``.
+   * - ``Ordered Dither``
+     - Reduces each channel to 2 to 8 levels with a Bayer ordered-dither pattern for a retro print
+       look, saving ``<name>_dither.png``.
+   * - ``Color Map``
+     - Recolours the image's luminance through the viridis, magma or jet colour map, saving
+       ``<name>_colormap.png``.
+   * - ``Distort``
+     - Swirls, pinches / bulges or ripples the image at an adjustable strength, saving
+       ``<name>_distort.png``.
+   * - ``Polar Coordinates``
+     - Wraps the image into a disc, or unrolls a disc into a strip, optionally inverting the radius,
+       saving ``<name>_polar.png``.
+   * - ``Kaleidoscope``
+     - Mirrors one wedge around the centre into a symmetric pattern with a chosen number of segments
+       and rotation, saving ``<name>_kaleidoscope.png``.
+   * - ``Frosted Glass``
+     - Scatters each pixel to a random nearby position (radius in pixels, reproducible seed) for a
+       textured-glass look, saving ``<name>_frosted.png``.
+   * - ``Pixel Sort``
+     - Sorts pixels by brightness along rows or columns within a lower / upper brightness band for a
+       glitch look, saving ``<name>_pixelsort.png``.
+   * - ``Film Grain``
+     - Adds procedural film grain with intensity, grain size, monochrome and seed controls; stored
+       in the recipe.
+   * - ``Lens Flare``
+     - Adds a synthetic lens flare at a chosen position with intensity, halo size and colour
+       controls; stored in the recipe.
+   * - ``Threshold / Posterize``
+     - Applies a black-and-white threshold (0 to 255) and / or posterizes each channel to 2 to 64
+       levels; stored in the recipe.
+   * - ``Solarize``
+     - Inverts the tones above a threshold for a darkroom solarization look, blended by a mix
+       slider, saving ``<name>_solarize.png``.
+   * - ``Diffuse Glow``
+     - Adds an Orton-style soft bloom with amount, radius and highlight-threshold controls, saving
+       ``<name>_glow.png``.
+   * - ``Graduated Density``
+     - Darkens one side of the frame along a straight line like a graduated ND filter (angle, stops,
+       hardness, offset, optional tint), saving ``<name>_gradnd.png``.
+   * - ``Velvia``
+     - Boosts muted colours the most, like Velvia slide film, with strength and shadow-protection
+       sliders, saving ``<name>_velvia.png``.
+   * - ``Emboss``
+     - Renders a relief lit from a chosen azimuth and elevation, with a depth slider and a greyscale
+       option, saving ``<name>_emboss.png``.
+   * - ``Defringe``
+     - Desaturates purple, green or all coloured fringes along high-contrast edges, with amount and
+       edge-threshold sliders, saving ``<name>_defringe.png``.
+   * - ``Film Negative``
+     - Inverts a scanned colour negative into a positive, removing the orange film base (estimated
+       automatically), with an output gamma, saving ``<name>_positive.png``.
+   * - ``Filmic Tone Map``
+     - Rolls off highlights with a Reinhard or Hable filmic curve, with exposure, white point,
+       contrast and saturation sliders, saving ``<name>_filmic.png``.
+   * - ``Tone Equalizer``
+     - Sets the exposure separately for blacks, shadows, midtones, highlights and whites, with
+       smoothing to avoid halos, saving ``<name>_toneeq.png``.
+   * - ``Detail Equalizer``
+     - Boosts or cuts contrast separately in the fine, medium, coarse and broad detail bands, saving
+       ``<name>_detaileq.png``.
+   * - ``Soft Proof``
+     - Previews the current image through a chosen ICC output profile, painting out-of-gamut pixels
+       magenta and counting them; nothing is saved.
+
+Retouch & Transform
+^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``AI Image Upscale``
+     - Upscales a folder of images with Real-ESRGAN (general x4, anime x4 or x2) or Lanczos, Bicubic
+       or Nearest resampling; the AI models install ``onnxruntime`` on demand and are downloaded
+       automatically on first use (~65 MB).
+   * - ``Noise Reduction / Sharpening``
+     - Applies edge-preserving noise reduction (optionally luminance only) and unsharp-mask
+       sharpening with amount and radius, saving to a chosen file; requires OpenCV
+       (``opencv-python``).
+   * - ``Healing Brush``
+     - Removes the spots you click on a preview (right-click deletes a spot) by inpainting with the
+       Telea or Navier-Stokes method, saving to a chosen file; requires OpenCV.
+   * - ``Clone Stamp``
+     - Copies a soft-edged patch from a Shift-clicked source point to each point you click on a
+       preview (right-click undoes), saving the result to a chosen file.
+   * - ``Frequency Separation``
+     - Splits the current image at a chosen blur radius into ``<name>_low.png`` (colour and tone)
+       and ``<name>_high.png`` (texture) for retouching elsewhere; recombine as low + (high - 128).
+   * - ``Smart Crop``
+     - Suggests saliency-based crops (free, 1:1, 4:5, 3:2, 16:9) that put the subject on a
+       rule-of-thirds point, and writes the chosen one into the recipe as a non-destructive crop.
+   * - ``Portrait Auto-Retouch``
+     - Smooths skin-tone areas, removes red-eye and adds a final sharpening pass, each with its own
+       slider, saving ``<name>_retouched.png``.
+   * - ``Face Detection``
+     - Detects faces in the current image with OpenCV's Haar cascade and lets you name each one; the
+       names are saved with the recipe. Requires OpenCV 4 (``opencv-python<5``).
+   * - ``Sky / Background``
+     - Replaces the sky with a gradient, or removes the background to transparent or white, saving
+       to a chosen file; needs OpenCV, and uses ``rembg`` for the background cut-out when installed.
+   * - ``Crop / Straighten``
+     - Rotates by up to ±15° (cropping off the empty corners) and crops by normalised coordinates or
+       an aspect-ratio preset, saving to a chosen file; straightening requires OpenCV.
+   * - ``Auto-Straighten``
+     - Measures the tilt of the horizon or vertical lines, lets you adjust the rotation, and saves
+       the straightened image to a chosen file; requires OpenCV.
+   * - ``Lens Correction``
+     - Corrects barrel / pincushion distortion, vignetting and red / blue chromatic aberration with
+       sliders, saving to a chosen file.
+   * - ``Scale Bar``
+     - Burns a calibrated scale bar into the current image from a pixels-per-unit value and a unit
+       label, saving ``<name>_scalebar.png``.
+
+Multi-Image
+^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``HDR Merge``
+     - Fuses two or more differently exposed shots with Mertens exposure fusion (no exposure data
+       needed), optionally aligning them first; requires OpenCV.
+   * - ``Panorama Stitch``
+     - Stitches two or more overlapping shots, taken in order with 20 to 40 % overlap, in panorama
+       or flat-scan mode, optionally cropping the black borders; requires OpenCV.
+   * - ``Focus Stacking``
+     - Blends a focus bracket into one all-in-focus image by keeping the sharpest pixels from each
+       frame, optionally aligning them first; requires OpenCV.
+   * - ``Image Stack``
+     - Combines an already-aligned burst per pixel by mean, median, max, min or sigma-clipped mean,
+       for long exposures, crowd removal or star trails; no OpenCV needed.
+   * - ``Anaglyph 3D``
+     - Combines the current image (left eye) with a chosen right-eye image into a red-cyan anaglyph
+       (Dubois, colour, grey or true method), saving ``<name>_anaglyph.png``.
+
+----
+
 Command-Line Usage
 ------------------
 
 ::
 
-   imervue                        # Launch normally
-   imervue /path/to/image         # Open a specific image
-   imervue /path/to/folder        # Open a specific folder
-   imervue --debug                # Enable debug mode
-   imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+   python -m Imervue                      # Launch normally
+   python -m Imervue /path/to/image       # Open a specific image
+   python -m Imervue /path/to/folder      # Open a specific folder
+   python -m Imervue --debug              # Enable debug mode
+   python -m Imervue --software_opengl    # Use software rendering (when GPU is unsupported)
 
 Headless Batch CLI
 ^^^^^^^^^^^^^^^^^^
@@ -2675,6 +3217,71 @@ lists them::
    py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
    py -m Imervue.cli histogram a.jpg --json
    py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+
+``pipeline FILE INPUTS…`` runs an ordered chain of operations on each input and writes one PNG
+per input: ``<stem>_pipeline.png`` beside the source, or ``<stem>.png`` in ``--out``. ``FILE`` is
+UTF-8 JSON (a byte-order mark is fine) holding either a list of steps or an object
+``{"pipeline": [...]}``. Each step is an object with an ``"op"`` naming the operation plus that
+operation's parameters; a parameter left out takes its default, and keys an op does not know are
+ignored. A pipeline has at most 50 steps; an empty one writes each input as decoded. The file is
+checked before any image is read: a file that cannot be read or parsed prints ``error: …``, and
+more than 50 steps, a step without an ``"op"`` name, or an unknown op print one
+``pipeline error: step N: …`` line per problem; either way the command exits with code 2 and
+writes nothing. A parameter of the wrong type (``null``, text where a number belongs) fails that
+image, which is reported, and the exit code is 1.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 44 42
+
+   * - Op
+     - Parameters (defaults)
+     - Effect
+   * - ``dehaze``
+     - ``strength`` (``1.0``; clamped to 0 – 1)
+     - Dark-channel-prior haze removal; ``0`` leaves the image unchanged
+   * - ``clahe``
+     - ``clip`` (``2.0``; at least 1), ``tiles`` (``8``; at least 1)
+     - Contrast-limited adaptive equalization of the luminance on a ``tiles`` × ``tiles`` grid
+   * - ``dither``
+     - ``levels`` (``2``; clamped to 2 – 8)
+     - Ordered 4×4 Bayer dither to ``levels`` values per channel; alpha kept
+   * - ``distort``
+     - ``mode`` (``"swirl"``: ``swirl`` / ``pinch`` / ``ripple``), ``strength`` (``0.5``;
+       clamped to -1 – 1)
+     - Geometric warp around the centre; for ``pinch`` a positive strength bulges and a negative
+       one pinches
+   * - ``clarity``
+     - ``amount`` (``0.5``; -1 – 1, negative softens)
+     - Midtone-weighted, large-radius local contrast
+   * - ``texture``
+     - ``amount`` (``0.5``; -1 – 1, negative softens)
+     - Small-radius, fine-detail local contrast
+   * - ``grayscale``
+     - none
+     - Luma (0.299 R + 0.587 G + 0.114 B) into all three channels; alpha kept
+   * - ``invert``
+     - none
+     - Inverts R, G and B; alpha kept
+   * - ``watermark``
+     - ``text`` (``""``: no watermark), ``corner`` (``"bottom-right"``: ``top-left`` /
+       ``top-right`` / ``bottom-left`` / ``bottom-right`` / ``center``; any other value counts as
+       ``bottom-right``), ``opacity`` (``0.6``; clamped to 0 – 1)
+     - White text with a drop shadow, sized 3.5 % of the long edge; the ``watermark``
+       subcommand's ``--font-fraction``, ``--color`` and ``--no-shadow`` have no step parameter
+
+For example, ``look.json``::
+
+   {
+     "pipeline": [
+       {"op": "dehaze", "strength": 0.4},
+       {"op": "clahe", "clip": 2.5, "tiles": 8},
+       {"op": "clarity", "amount": 0.3},
+       {"op": "watermark", "text": "(c) Me", "corner": "bottom-right", "opacity": 0.5}
+     ]
+   }
+
+   py -m Imervue.cli pipeline look.json photos/ --out graded/
 
 ----
 
@@ -2803,7 +3410,8 @@ Available Tools
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
-``structuredContent`` alongside the text envelope (per MCP 2025-11-25),
+``structuredContent`` alongside the text envelope (fields from later MCP revisions; the
+handshake reports ``2025-03-26``),
 so clients consume typed payloads without re-parsing. Long-running
 tools stream ``notifications/progress`` when the caller passes a
 progress token.
@@ -2828,14 +3436,15 @@ The repository ships a project-level ``.mcp.json`` at the repo root:
      "mcpServers": {
        "imervue": {
          "type": "stdio",
-         "command": "python",
+         "command": "py",
          "args": ["-m", "Imervue.mcp_server"]
        }
      }
    }
 
-Opening any subdirectory of the repo in Claude Code auto-discovers
-this server. Claude Code prompts before enabling project servers the
+``py`` is the Windows Python launcher; on macOS or Linux use ``python3`` or the interpreter of
+the environment Imervue is installed in. Opening any subdirectory of the repo in Claude Code
+auto-discovers this server. Claude Code prompts before enabling project servers the
 first time — accept the prompt to use it.
 
 Claude Desktop
@@ -2853,23 +3462,116 @@ interpreter that can ``import Imervue``.
 Protocol Surface
 ^^^^^^^^^^^^^^^^
 
-The server implements the stdio JSON-RPC 2.0 transport of MCP
-version ``2025-03-26``:
+The server reads newline-delimited JSON-RPC 2.0 messages on stdin and writes responses and
+notifications to stdout, one UTF-8 line each. It answers ``initialize`` with protocol version
+``2025-03-26`` whatever version the client asks for. Requests are handled one at a time; a batch
+(a JSON array) is refused with ``-32600``.
 
-* ``initialize`` — handshake; advertises ``capabilities.tools``.
-* ``tools/list`` — enumerate the registered tools with their
-  JSON-Schema input definitions.
-* ``tools/call`` — invoke a tool with ``{"name", "arguments"}``;
-  results come back inside the ``content`` array.
-* ``notifications/*`` — silently accepted (no response).
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - Method
+     - What it does
+   * - ``initialize``
+     - Handshake. Returns ``protocolVersion`` ``2025-03-26``, ``serverInfo`` (``imervue``
+       ``1.0.0``) and the capabilities ``tools`` and ``prompts`` (``listChanged: false``),
+       ``resources`` (``subscribe: true``, ``listChanged: true``), ``completions`` and ``logging``.
+   * - ``ping``
+     - Returns an empty result.
+   * - ``tools/list``
+     - All 56 tools in one page, each with ``inputSchema``, ``outputSchema`` and ``annotations``
+       (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``).
+   * - ``tools/call``
+     - Runs ``{"name", "arguments"}``. The result is a ``text`` content block holding the
+       JSON-encoded return value, plus ``structuredContent`` when it is an object. A tool that
+       raises, or arguments that don't fit its parameters, give ``isError: true`` and an
+       ``Error: …`` text instead of a protocol error; an unknown tool name is ``-32602``.
+   * - ``prompts/list``
+     - The four prompts with their arguments.
+   * - ``prompts/get``
+     - Builds the messages of ``{"name", "arguments"}``; ``caption_image`` and
+       ``analyze_composition`` embed a PNG thumbnail as an image message. An unknown prompt or a
+       missing ``path`` is ``-32602``.
+   * - ``completion/complete``
+     - Prefix-matched values for a ``ref/prompt`` argument: ``style`` of ``suggest_edits``
+       (general, portrait, landscape, product, street, food, macro) and ``focus`` of
+       ``analyze_composition`` (all, framing, balance, subject, leading_lines). Any other argument
+       gets an empty list.
+   * - ``resources/list``
+     - The images directly in the folder ``IMERVUE_MCP_ROOT`` names (hidden files and SVG left
+       out), 100 per page with a ``nextCursor``; empty when the variable is unset.
+   * - ``resources/templates/list``
+     - The two URI templates in the table below.
+   * - ``resources/read``
+     - Reads one ``imervue://image/…`` URI (see below).
+   * - ``resources/subscribe`` / ``resources/unsubscribe``
+     - Adds or removes a URI from the set that receives ``notifications/resources/updated``.
+   * - ``logging/setLevel``
+     - Sets the lowest level (``debug``, ``info``, ``notice``, ``warning``, ``error``,
+       ``critical``, ``alert``, ``emergency``; ``info`` at start) sent as
+       ``notifications/message``; any other value is ``-32602``.
+   * - ``notifications/*`` from the client
+     - Accepted without a reply (``notifications/initialized``, ``notifications/cancelled``, …);
+       a cancellation does not stop a running tool.
+   * - ``notifications/progress`` (sent)
+     - ``{progressToken, progress, total, message}`` while ``find_similar`` or ``build_collage``
+       runs, when the ``tools/call`` request carried ``params._meta.progressToken`` (a string or
+       an integer); ``progress`` only increases.
+   * - ``notifications/resources/updated`` (sent)
+     - ``{uri}`` when a file in ``IMERVUE_MCP_ROOT`` changes and its thumbnail URI is subscribed.
+   * - ``notifications/resources/list_changed`` (sent)
+     - On any change in ``IMERVUE_MCP_ROOT`` (watched with watchdog, not recursively),
+       subscribed or not.
+   * - ``notifications/message`` (sent)
+     - Log entries at or above the ``logging/setLevel`` level, sent through
+       ``MCPServer.emit_log``. The built-in tools do not call it, so the stock server sends none.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - URI
+     - Returns
+   * - ``imervue://image/{path}``
+     - A PNG thumbnail of the image — upright, fit in 256 px — as a base64 ``blob`` with
+       ``mimeType`` ``image/png``. ``resources/list`` returns URIs of this form.
+   * - ``imervue://image/{path}/metadata``
+     - The ``read_image_metadata`` result (dimensions, format, EXIF, XMP) as JSON ``text`` with
+       ``mimeType`` ``application/json``.
+
+``{path}`` is the image's file path percent-encoded in full, separators and drive colon included
+(``C:\photos\a.jpg`` is ``imervue://image/C%3A%5Cphotos%5Ca.jpg``). A read resolves the path
+directly, so it works for any file, not only those under ``IMERVUE_MCP_ROOT``; a path with a
+``..`` segment is ``-32602``, a missing file ``-32002`` and a URI with another scheme ``-32602``.
+
+Errors use the JSON-RPC codes ``-32700`` (a line that is not JSON), ``-32600`` (not a request
+object, or no ``method``), ``-32601`` (unknown method), ``-32602`` (bad parameters, unknown tool or
+prompt, invalid log level or cursor, unsupported resource URI), ``-32002`` (resource file not
+found) and ``-32603`` (internal error).
 
 The implementation lives in ``Imervue/mcp_server/``:
 
-* ``server.py`` — protocol loop + tool registry.
-* ``tools.py`` — handler functions and the default tool definitions.
+* ``server.py`` — the JSON-RPC dispatcher (``MCPServer``), the stdio loop (``run``) and the
+  ``IMERVUE_MCP_ROOT`` watcher.
+* ``tools.py`` — the public face of the tool set: re-exports every handler and registers the
+  default tools (``register_default_tools``).
+* ``tools_read.py`` / ``tools_edit.py`` — the tool handlers (listing, metadata and analysis;
+  edits written to a destination), with shared helpers in ``tool_support.py``.
+* ``tool_defs_read.py`` / ``tool_defs_edit.py`` — each tool's name, description, input schema
+  and handler, in ``tools/list`` order.
+* ``tool_schemas.py`` — each tool's ``outputSchema`` and ``annotations``.
+* ``prompts.py`` / ``completion.py`` — the four prompts and the ``completion/complete``
+  suggestions.
+* ``resources.py`` — the ``imervue://image/`` resources.
+* ``progress.py`` / ``notifications.py`` / ``logging.py`` — progress reporting, the locked stdout
+  writer and resource subscriptions, and log-level filtering.
 * ``__main__.py`` — ``python -m Imervue.mcp_server`` entry point.
 
-Custom tools can be registered by constructing :class:`MCPServer`
-manually, calling :meth:`MCPServer.register`, and feeding messages
-through :meth:`MCPServer.handle_message` (or driving the stdio loop
-with the built-in :func:`run` helper).
+Custom tools can be registered by constructing :class:`MCPServer`, calling
+:meth:`MCPServer.register` (name, description, input schema, handler, optional output schema and
+annotations; a duplicate name raises ``ValueError``; a handler with a ``progress`` parameter
+receives a progress reporter) and feeding each message to :meth:`MCPServer.handle_message`, which
+returns the response or ``None`` for a notification. :func:`run` always builds its own server with
+the default tools, so a custom set needs its own loop; set ``server.notifier`` to a ``Notifier``
+on the output stream for notifications to be sent.

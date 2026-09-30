@@ -87,6 +87,11 @@ ten-language README set: `README.md` plus `README/README_de.md`, `README/README_
   `puppet_guide.<lang>.md` must keep the English headings at the same levels and, per section, the
   same number of table rows, bullets and literal blocks. Wording is still a **manual check** across the ten README files above and the
   docs trees.
+- `tests/test_docs_coverage.py` guards **coverage**: every `docs/<lang>/index.rst` must name every CLI
+  subcommand and `pipeline` op, MCP tool / prompt / JSON-RPC method, plugin hook, Extra Tools menu entry
+  (its English label) and default Paint shortcut as a ``` ``literal`` ```, and every README the CLI
+  subcommands, MCP tools / prompts and plugin hooks. A new one of any of these is documented in all ten
+  languages in the same commit; names stay in English in every translation.
   (`examples/puppet/README.md` documents that example only and is not part of this translation set.)
 
 ## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`

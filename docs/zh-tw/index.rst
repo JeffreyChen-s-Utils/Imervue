@@ -10,17 +10,17 @@ GPU 加速影像工作站，提供 **五個頂層分頁**。本手冊大部分�
    * - 分頁
      - 功能
    * - **Imervue**
-     - 瀏覽、檢視、整理、搜尋、批次處理圖庫。見「Imervue 分頁 — 圖片瀏覽與圖庫」。
+     - 瀏覽、檢視、整理、搜尋、批次處理圖庫。見「開啟圖片」、「瀏覽圖片」與「整理圖片」。
    * - **Modify**
-     - 非破壞顯影管線 — 滑桿、曲線、LUT、遮罩、修圖、多影像合成。見「Modify 分頁 — 非破壞顯影」。
+     - 非破壞顯影管線 — 滑桿、曲線、LUT、遮罩、修圖、多影像合成。見「編輯圖片（修改分頁）」。
    * - **Paint**
      - 功能完整的點陣繪圖工作室，含筆刷、圖層、動畫、漫畫工具、PSD I/O。見「繪圖工作區（繪圖分頁）」。
    * - **Puppet**
-     - 從零打造的 2D 綁骨偶動畫器 — 網格、變形器、參數、動作、物理。見「Puppet 分頁 — 2D 綁骨偶動畫」。
+     - 從零打造的 2D 綁骨偶動畫器 — 網格、變形器、參數、動作、物理。見「Puppet 工作區（Puppet 分頁）」。
    * - **Desktop Pet**
      - 無邊框、透明、永遠置頂的浮層，在桌面上跑同樣的 ``.puppet`` rig，帶即時驅動（idle / blink / mic / webcam / drag-track）。見「桌寵工作區（Desktop Pet 分頁）」。
 
-接下來的「快速開始」、「參考」、「外掛系統」、「MCP 伺服器」屬於跨分頁的章節，所有分頁通用。
+「快速開始」、「所有快捷鍵一覽」、「額外工具選單參考」、「外掛系統」、「命令列啟動」與「MCP 伺服器」屬於跨分頁的章節，五個分頁全都適用。
 
 .. contents:: 目錄
    :depth: 2
@@ -632,7 +632,7 @@ Crayon、Highlight 與 Sumi calligraphy 是以這些類型為基礎的筆刷預�
 ^^^^
 
 **圖層 dock** 提供縮圖、可見性切換、就地重新命名、以 ↑ / ↓ 按鈕排序（或
-``Ctrl + [`` / ``Ctrl + ]``），以及作用層的混合模式 + 不透明度。``圖層`` 選單再加上：
+``Ctrl + ]`` / ``Ctrl + [``），以及作用層的混合模式 + 不透明度。``圖層`` 選單再加上：
 
 - **新增 / 向量 / 複製 / 向下合併**\ （``Ctrl + Shift + N`` / ``Ctrl + Shift + V`` /
   ``Ctrl + J`` / ``Ctrl + E``）
@@ -1553,6 +1553,82 @@ Imervue 支援外掛擴充功能。
    * - 重新載入
      - ``外掛`` > ``重新載入外掛``
 
+撰寫外掛
+^^^^^^^^
+
+外掛是 ``plugins/<name>/`` 裡的一個 Python 套件——從原始碼執行時位於 ``Imervue`` 套件旁，
+打包版則位於執行檔旁（``Plugins`` > ``Open Plugin Folder`` 會開啟這個資料夾）。它的
+``__init__.py`` 把 ``plugin_class`` 設為 ``Imervue.plugin.plugin_base.ImervuePlugin`` 的子類別；
+直接放在 ``plugins/`` 裡的單一 ``.py`` 檔也能載入（採用其中第一個 ``ImervuePlugin`` 子類別），
+但外掛下載器只發布套件。類別屬性 ``plugin_name``、``plugin_version``、``plugin_description`` 與
+``plugin_author`` 皆為選填（預設分別為 ``"Unnamed Plugin"``、``"0.0.1"`` 與空字串）。每個主視窗
+都會為每個外掛建立自己的實例並把自己傳入，因此鉤子可以使用 ``self.main_window`` 與
+``self.viewer``\ （``GPUImageView``）。只需覆寫需要的鉤子；每次呼叫都經過包裝，拋出的例外會以
+外掛名稱記錄下來，而不會讓 Imervue 停止運作。含範例的完整指南見
+`PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 40 32
+
+   * - 鉤子
+     - 呼叫時機
+     - 參數／回傳值
+   * - ``register_languages()``\ （類別方法）
+     - 每次建立實例之前在外掛類別上呼叫（每次載入與 ``Reload Plugins`` 時）；已儲存的語言不是
+       內建語言時，也會在啟動、主視窗建立之前呼叫。啟動時的這一輪只匯入每個外掛，不執行其他動作
+     - 無參數。在此呼叫
+       ``language_wrapper.register_language(language_code, display_name, word_dict)``；內建語言
+       代碼會被拒絕。回傳值會被忽略；拋出的例外會記錄下來，外掛仍會載入
+   * - ``on_plugin_loaded()``
+     - 實例建立後立即呼叫：主視窗建立期間，以及 ``Plugins`` > ``Reload Plugins`` 之後再呼叫一次
+     - 無參數；回傳值會被忽略
+   * - ``get_translations()``
+     - 緊接在 ``on_plugin_loaded()`` 之後，每次載入呼叫一次
+     - 回傳 ``{language_code: {key: text}}``\ （預設 ``{}``）。字串會併入語言表；已存在的鍵永遠
+       不會被覆寫，未知的語言代碼會被略過
+   * - ``on_build_main_tabs(tabs)``
+     - 主視窗建立期間呼叫一次，在五個內建分頁之後、``on_build_menu_bar`` 之前；
+       ``Reload Plugins`` 不會再次執行它
+     - ``tabs``：主視窗的頂層 ``QTabWidget``；以 ``tabs.addTab(widget, label)`` 新增分頁。
+       回傳值會被忽略
+   * - ``on_build_menu_bar(plugin_menu)``
+     - 共用的 ``Plugins`` 選單建好後呼叫一次，``Reload Plugins`` 之後再呼叫一次
+     - ``plugin_menu``：``Plugins`` 的 ``QMenu``\ （不是 ``QMenuBar``）。外掛在此加到選單列任何位置
+       的項目，重新載入時都會被移除。回傳值會被忽略
+   * - ``on_build_context_menu(menu, viewer)``
+     - 每次建立檢視器的右鍵選單時呼叫，在內建項目之後、選單開啟之前
+     - ``menu``：右鍵選單的 ``QMenu``；``viewer``：``GPUImageView``。回傳值會被忽略
+   * - ``on_folder_opened(folder_path, image_paths, viewer)``
+     - 開啟的資料夾掃描完成時
+     - ``folder_path``：該資料夾；``image_paths``：掃描找到的每張圖片。回傳值會被忽略
+   * - ``on_image_loaded(image_path, viewer)``
+     - 每次圖片以完整大小顯示在大圖模式時，不論以何種方式開啟，編輯後重新載入時也會再呼叫；
+       大型圖片解碼期間顯示的低解析度預覽不會觸發
+     - ``image_path``：圖片路徑。回傳值會被忽略
+   * - ``on_image_switched(image_path, viewer)``
+     - 以下一張／上一張（包括在清單兩端循環）切換到另一張圖片、開始載入時立即呼叫；圖片顯示後
+       接著呼叫 ``on_image_loaded``。從縮圖網格或底片條開啟圖片時不會呼叫
+     - ``image_path``：新的目前圖片。回傳值會被忽略
+   * - ``on_image_deleted(deleted_paths, viewer)``
+     - 從檢視器（目前圖片或選取的縮圖）或資料夾樹軟刪除圖片（放入復原堆疊）之後；資料夾樹因檔案
+       不在圖片清單中而直接送進資源回收筒的檔案不會觸發
+     - ``deleted_paths``：被刪除路徑的清單。回傳值會被忽略
+   * - ``on_key_press(key, modifiers, viewer)``
+     - 檢視器每收到一次按鍵就呼叫，在內建按鍵與「快捷鍵設定」的綁定之前；依載入順序詢問各外掛。
+       被選單或視窗快捷鍵先攔截的按鍵不會到達檢視器
+     - ``key``：``Qt.Key`` 代碼（int）；``modifiers``：``Qt.KeyboardModifier`` 旗標。回傳
+       ``True`` 表示消費此按鍵，後續外掛與預設處理都會略過；回傳 ``False``\ （預設）則繼續傳遞。
+       拋出例外視同 ``False``
+   * - ``on_app_closing(main_window)``
+     - 最後一個主視窗關閉時，在 Paint 未儲存分頁的提示被接受、設定儲存完畢之後，外掛卸載之前；
+       關閉其他視窗不會呼叫
+     - ``main_window``：正在關閉的 ``ImervueMainWindow``。回傳值會被忽略
+   * - ``on_plugin_unloaded()``
+     - 外掛所屬的視窗關閉時（最後一個視窗會在 ``on_app_closing`` 之後），以及 ``Reload Plugins``
+       重新載入外掛之前；外掛依載入順序的反向卸載
+     - 無參數；回傳值會被忽略
+
 ----
 
 語言切換
@@ -1731,6 +1807,39 @@ Imervue 支援外掛擴充功能。
      - 減速
    * - ``]``
      - 加速
+
+繪圖分頁
+^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 按鍵
+     - 功能
+   * - ``[`` / ``]``
+     - 筆刷大小減少／增加 1 px
+   * - ``Shift + [`` / ``Shift + ]``
+     - 筆刷大小減少／增加 5 px
+   * - ``Ctrl + Z``
+     - 復原
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
+     - 重做
+   * - ``Ctrl + D``
+     - 取消選取
+   * - ``Ctrl + 0`` / ``Ctrl + 1``
+     - 符合視窗／實際大小（100 %）
+   * - ``X``
+     - 互換前景色／背景色
+   * - ``D``
+     - 將顏色重設為黑／白
+   * - ``Ctrl + Tab`` / ``Ctrl + Shift + Tab``
+     - 下一個／上一個繪圖分頁
+
+工具的按鍵列在「工具列（左側）」。在繪圖分頁中，``Settings`` > ``Shortcuts…`` 可以重新指定工具、
+筆刷大小、圖層、復原／重做、取消選取、檢視與顏色的按鍵（``Ctrl + Y`` 仍保留為第二個重做鍵）。
+
+----
 
 圖庫與中繼資料管理
 ------------------
@@ -2103,16 +2212,381 @@ GPS 地理標記
 
 ----
 
+額外工具選單參考
+----------------
+
+以下依子選單、照選單順序列出 ``Extra Tools`` 選單的每個項目。許多項目在前面有更完整的章節；這份
+清單是完整的總覽。會另存新檔的項目把檔案寫在來源旁，名稱已被占用時加上 ``_1``、``_2`` …；標示
+「存入配方」的項目是對圖片顯影設定（配方，recipe）的非破壞編輯。外掛也可以在這些子選單中加入自己
+的項目。
+
+批次（Batch）
+^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``Batch Format Conversion``
+     - 把資料夾（預設為目前資料夾）中的圖片轉成 PNG、JPEG、WebP、BMP 或 TIFF，安裝了對應編碼器時
+       也可轉成 HEIC / AVIF / JXL；可設定品質、略過相同格式，以及把原檔送進資源回收筒。
+   * - ``Batch EXIF Strip``
+     - 為了隱私移除資料夾中每張圖片的 EXIF、GPS 與其他中繼資料，可直接覆寫原檔，或把乾淨的副本
+       寫到輸出資料夾。
+   * - ``Image Sanitizer``
+     - 從原始像素重新渲染資料夾中的圖片，去除所有隱藏資料（中繼資料、隱寫內容、檔尾多餘位元組），
+       並把每張重新命名為日期 + 隨機字串；也可以像 ``AI Image Upscale`` 一樣把小圖放大到目標解析度。
+   * - ``Image Organizer``
+     - 依日期（年-月或年）、解析度、檔案類型、檔案大小或每個資料夾固定張數，把資料夾中的圖片分到
+       子資料夾，可選擇複製或移動，並提供預覽。
+   * - ``Token Batch Rename``
+     - 以權杖範本（例如 ``{name}_{counter:04}`` 或 ``{date}_{camera}``）重新命名選取的圖片（或整個
+       資料夾），即時預覽會標出衝突；伴隨檔、評分與標籤會跟著檔案走。
+   * - ``Deflicker (Time-lapse)``
+     - 拉平目前資料夾中縮時攝影各影格之間的亮度起伏（目標為移動平均或整體平均），並把校正後的副本
+       寫到 ``deflickered/`` 子資料夾，原檔不受影響。
+   * - ``Document Binarize``
+     - 以 Sauvola 自適應閾值（視窗大小與 k 滑桿）把頁面的照片或掃描檔轉成乾淨的白底黑字，在來源旁
+       儲存 ``<name>_bw.png``。
+   * - ``Otsu Threshold``
+     - 以自動選出的 Otsu 全域閾值把目前圖片轉成黑白，可選擇反相，儲存為 ``<name>_otsu.png``。
+   * - ``Edit Animation``
+     - 把目前的 GIF、APNG 或動態 WebP 倒放、來回播放（boomerang）、調整速度（0.25x 到 4x）或
+       最佳化（合併重複的影格），儲存為 ``<name>_edited.gif``。
+   * - ``Optimize to Target Size``
+     - 以符合 KB 大小預算的最高品質，把目前圖片重新編碼為 JPEG 或 WebP，儲存為
+       ``<name>_opt.jpg`` 或 ``<name>_opt.webp``。
+   * - ``Meme Caption``
+     - 在目前圖片加上經典的上下迷因字幕（大寫白字加黑色外框，自動換行），儲存為
+       ``<name>_meme.png``。
+   * - ``Steganography``
+     - 把文字訊息藏進目前圖片的最低有效位元，另存為無損的 ``<name>_stego.png``，或讀出以此方式
+       藏入的訊息。
+
+圖庫與中繼資料（Library & Metadata）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``Library Search``
+     - 管理圖庫根資料夾，把它們掃描進索引（可選擇一併計算感知雜湊），並依檔名、最小寬度／高度與
+       檔案大小（KB）搜尋；雙擊結果即可開啟。
+   * - ``Smart Albums``
+     - 儲存以規則定義的相簿（副檔名、名稱、標籤、地點、最小尺寸與評分、色彩標籤、挑片狀態、最愛）
+       並顯示符合的圖片；可依 GPS 資料為每個城市建立一本相簿，也能匯入或匯出相簿。
+   * - ``Find Similar Images``
+     - 以感知雜湊在指定的 Hamming 距離內，找出與目前（或第一張選取的）圖片相似的圖庫圖片；請先在
+       ``Library Search`` 以 pHash 掃描你的根資料夾。
+   * - ``Semantic Search``
+     - 以執行在 ``onnxruntime`` 上的 CLIP（首次使用時會提示安裝），找出目前資料夾中符合文字描述
+       （例如「beach at sunset」）的圖片；約 150 MB 的模型只需下載一次。
+   * - ``Find Duplicate Images``
+     - 掃描資料夾（可含子資料夾），以檔案雜湊找出完全相同的檔案，或以感知雜湊找出相似圖片；可預先
+       選取每組中最佳那張以外的所有副本，並把選取項目移到資源回收筒。
+   * - ``Auto-Tag Images``
+     - 以啟發式內容標籤（photo、document、screenshot、graphic、landscape、portrait）在階層式標籤樹的
+       ``auto/`` 底下標記選取的圖片或整個資料夾；語意搜尋下載過模型後，改用 CLIP 標籤。
+   * - ``Hierarchical Tags``
+     - 建立與刪除 ``animal/cat/british`` 這類樹狀標籤，列出某個標籤下的圖片，並為選取的縮圖加上或
+       移除標籤。
+   * - ``Export Metadata (CSV / JSON)``
+     - 把目前檢視中每張圖片的記錄（檔案資訊、相機、鏡頭、曝光、ISO 等主要 EXIF 欄位、評分、色彩
+       標籤、標籤與筆記）寫成 CSV 或 JSON 檔。
+   * - ``XMP Sidecars``
+     - 為目前檢視中的每張圖片匯出或匯入 ``.xmp`` 伴隨檔，讓評分、標題、描述、關鍵字與色彩標籤能與
+       Adobe Bridge、Lightroom 及其他支援 XMP 的工具互通。
+   * - ``GPS Geotag``
+     - 把緯度與經度（十進位度數）寫入目前圖片的 EXIF GPS 標籤，取代原有的值；僅限 JPEG 與 WebP
+       檔案。
+   * - ``Thumbnail Cache``
+     - 顯示縮圖快取占用的磁碟空間，並可清除。
+
+檢視（Views）
+^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``By day``
+     - 位於 ``Timeline View`` 底下：把主檢視換成目前資料夾的圖片，依拍攝日（EXIF 日期，沒有則用
+       檔案日期）分組，每天一個標題；雙擊圖片即可開啟。
+   * - ``By month``
+     - 位於 ``Timeline View`` 底下：同樣的時間軸，依拍攝月份分組。
+   * - ``By year``
+     - 位於 ``Timeline View`` 底下：同樣的時間軸，依拍攝年份分組。
+   * - ``Calendar View``
+     - 顯示行事曆，標出目前資料夾中有照片的日期（依拍攝日期）；點選某天會列出當天的圖片，雙擊其中
+       一張即可開啟。
+   * - ``Map View``
+     - 把目前資料夾中帶地理標記的圖片標在 OpenStreetMap 地圖上，每個最近的城市一個標記並附張數；
+       地圖需連線載入，沒有 QtWebEngine 時改為座標清單。
+   * - ``Scopes & Inspector``
+     - 以分頁分析目前圖片：亮度波形、RGB 分量圖、假色曝光、對焦峰值、錯誤等級分析（ELA）與仿製
+       （複製-移動）偵測。
+   * - ``Tiny Planet (360°)``
+     - 把 2:1 等距長方投影的 360° 全景重新投影成指定大小的正方形「小行星」，儲存為
+       ``<name>_planet.png``；圖片不是 2:1 時會提出警告。
+   * - ``Image Statistics``
+     - 顯示目前圖片 R、G、B 與亮度通道的平均值、最小值、最大值、標準差與中位數，並可把 256 階
+       直方圖匯出為 CSV。
+   * - ``Quality Report``
+     - 列出目前圖片的無參考品質指標：色彩豐富度、色調熵、RMS 對比、邊緣密度與估計雜訊。
+   * - ``Test Chart``
+     - 以指定的寬度與高度產生校正圖樣（SMPTE 彩條、灰階階梯、漸層、棋盤格或純色），並存成檔案。
+   * - ``Off``
+     - 位於 ``Color blindness preview`` 底下：關閉色覺異常預覽。
+   * - ``Protanopia (red-blind)``
+     - 位於 ``Color blindness preview`` 底下：在檢視器中以紅色盲者看到的樣子顯示圖片；僅影響顯示，
+       檔案與其配方都不會變動。
+   * - ``Deuteranopia (green-blind)``
+     - 位於 ``Color blindness preview`` 底下：模擬綠色盲，也就是最常見的紅綠色覺異常；僅影響顯示。
+   * - ``Tritanopia (blue-blind)``
+     - 位於 ``Color blindness preview`` 底下：模擬藍色盲（藍黃色覺異常）；僅影響顯示。
+   * - ``Achromatopsia (greyscale)``
+     - 位於 ``Color blindness preview`` 底下：以全灰階顯示圖片，如同全色盲者所見；僅影響顯示。
+
+工作流程（Workflow）
+^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``Culling``
+     - 把目前資料夾篩選為保留、拒絕或未標記的圖片；自動挑片會在每組相似圖片中挑出最清晰的一張、
+       拒絕其餘，也能永久刪除所有被拒絕的圖片。
+   * - ``Staging Tray``
+     - 跨資料夾且會持續保存的暫存籃：從任何資料夾加入選取的縮圖或目前圖片，再一次全部移動或複製到
+       同一個資料夾，或把暫存籃當成相簿顯示。
+   * - ``Reference Panel``
+     - 釘選參考圖片（從檔案、拖放或目前圖片加入），附大尺寸預覽可並排比較；清單在重新啟動後仍會
+       保留。
+   * - ``Virtual Copies``
+     - 把目前圖片的顯影配方存成具名快照，不需複製檔案就能在快照之間切換。
+   * - ``Dual-Pane File Manager``
+     - 並排的兩個資料夾樹，可把選取項目從一邊複製或移動到另一邊，或在檢視器中開啟檔案。
+   * - ``Macros``
+     - 錄製、編輯、整理並在選取的圖片上重播由評分、最愛、色彩標籤與標籤動作組成的巨集。
+   * - ``Watched Folder``
+     - 對話框開啟期間監看一個資料夾（含子資料夾），並把指定的顯影預設套用到每張新進的圖片，適合
+       免手動的連線拍攝或匯入流程。
+
+匯出（Export）
+^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``Contact Sheet PDF``
+     - 把選取圖片（或整個資料夾）的縮圖以列 x 欄的網格排在 A4、A3、Letter 或 Legal 頁面上，可設定
+       邊界、選用的標題與選用的檔名說明。
+   * - ``Web Gallery``
+     - 把選取的圖片（或整個資料夾）匯出成含縮圖與燈箱、可獨立運作的 HTML 相簿；可複製原始檔案，
+       並加入客戶審閱用的留言框，留言可匯出為 JSON。
+   * - ``Slideshow Video``
+     - 把選取的圖片（或整個資料夾）輸出成 MP4，可設定尺寸、影格率、停留時間、品質與轉場（淡入淡出、
+       溶接、滑動或擦除）。
+   * - ``Print Layout``
+     - 把圖片排在多頁 PDF 的網格上，可設定頁面大小、方向、列數、欄數、邊界、內距與裁切標記；需要
+       選用套件 ``reportlab``。
+   * - ``Collage``
+     - 把選取的圖片（或整個資料夾）合成為 1 到 12 欄的網格拼貼，在第一張圖片旁儲存
+       ``collage.png``。
+   * - ``ID Photo Sheet``
+     - 以證件尺寸（35 x 45 mm、2 x 2 in、33 x 48 mm 或 50 x 70 mm）把目前的人像排滿 4x6、5x7、A4
+       或 Letter 相紙（300 DPI），儲存為 ``<name>_idsheet.png``。
+
+非破壞顯影（Develop (Non-Destructive)）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``Before / After Compare``
+     - 在同一個檢視中以可拖曳的分隔線，並排顯示目前圖片套用顯影配方前後的樣子。
+   * - ``Develop Presets…``
+     - 把目前圖片的配方存成具名預設，之後可套用到目前圖片或選取項目，或只把其中有設定的調整合併進
+       它們各自的配方。
+   * - ``Tone Curve``
+     - 在直方圖上編輯主 RGB 曲線與個別的紅、綠、藍曲線（點一下新增、拖曳移動、按右鍵移除控制點）；
+       存入配方。
+   * - ``Apply .cube LUT``
+     - 以可調強度套用 Adobe ``.cube`` 3D 或 1D LUT；存入配方，``Clear`` 可移除。
+   * - ``Split Toning``
+     - 以各自的色相與飽和度為陰影與高光著色，另有平衡滑桿；存入配方。
+   * - ``Local Adjustment Masks``
+     - 新增筆刷、放射與線性漸層遮罩，每個遮罩各有曝光、亮度、對比、飽和度、色溫、色調、高光、陰影
+       與羽化；存入配方。
+   * - ``Layers``
+     - 疊加最多八個文字、圖片或 LUT 圖層，可設定不透明度與正常、色彩增值、濾色或覆蓋混合；存入配方。
+   * - ``Levels``
+     - 設定黑點、白點與 gamma；存入配方。
+   * - ``Channel Mixer``
+     - 以加權的紅、綠、藍輸入加上偏移量重建每個輸出通道，並有單色模式可轉成黑白；存入配方。
+   * - ``Gradient Map``
+     - 把亮度對應到預設漸層（Mono、Sepia、Cyanotype、Fire、Ocean、Magenta–Teal），強度可調，可選擇
+       在感知式 OkLCH 中混合；存入配方。
+   * - ``Auto Color Balance``
+     - 以 gray-world、white-patch、自動色階（百分位數）或 Retinex 方法去除色偏，並以強度滑桿混合，
+       儲存為 ``<name>_balanced.png``。
+   * - ``Clarity / Dehaze``
+     - 套用去霧、清晰度與紋理這三個局部對比滑桿，儲存為 ``<name>_local.png``。
+   * - ``HSL / Color Mixer``
+     - 對八個色帶（紅到洋紅）分別調整色相、飽和度與明度，儲存為 ``<name>_hsl.png``。
+   * - ``CLAHE (Local Equalize)``
+     - 以限制對比的自適應直方圖等化（裁切上限與區塊數）提升亮度的局部對比，儲存為
+       ``<name>_clahe.png``。
+   * - ``Flatten Background``
+     - 去除光害或照明不均這類平滑的背景漸層（相減），或去除暗角（相除），程度可調，儲存為
+       ``<name>_flat.png``。
+   * - ``Frame & Caption``
+     - 加上有顏色的卡紙邊框、選用的拍立得風格下緣色帶與說明文字，儲存為 ``<name>_framed.png``。
+   * - ``Ordered Dither``
+     - 以 Bayer 有序抖動圖樣把每個通道降到 2 到 8 階，呈現復古印刷感，儲存為 ``<name>_dither.png``。
+   * - ``Color Map``
+     - 以 viridis、magma 或 jet 色彩對應表為圖片的亮度重新著色，儲存為 ``<name>_colormap.png``。
+   * - ``Distort``
+     - 以可調強度對圖片做漩渦、擠壓／膨脹或漣漪變形，儲存為 ``<name>_distort.png``。
+   * - ``Polar Coordinates``
+     - 把圖片捲成圓盤，或把圓盤展開成長條，可選擇反轉半徑，儲存為 ``<name>_polar.png``。
+   * - ``Kaleidoscope``
+     - 把一個角楔繞中心鏡射成對稱圖樣，可設定分段數與旋轉，儲存為 ``<name>_kaleidoscope.png``。
+   * - ``Frosted Glass``
+     - 把每個像素散射到附近的隨機位置（半徑以像素計，種子可重現），呈現毛玻璃質感，儲存為
+       ``<name>_frosted.png``。
+   * - ``Pixel Sort``
+     - 在下限／上限亮度區間內沿列或欄依亮度排序像素，呈現故障藝術風格，儲存為
+       ``<name>_pixelsort.png``。
+   * - ``Film Grain``
+     - 加上程序產生的底片顆粒，可調整強度、顆粒大小、單色與種子；存入配方。
+   * - ``Lens Flare``
+     - 在指定位置加上合成的鏡頭光暈，可調整強度、光環大小與顏色；存入配方。
+   * - ``Threshold / Posterize``
+     - 套用黑白閾值（0 到 255），以及／或把每個通道的色調量化為 2 到 64 階；存入配方。
+   * - ``Solarize``
+     - 反轉閾值以上的色調，呈現暗房的中途曝光效果，並以混合滑桿調整，儲存為 ``<name>_solarize.png``。
+   * - ``Diffuse Glow``
+     - 加上 Orton 風格的柔光暈染，可調整量、半徑與高光閾值，儲存為 ``<name>_glow.png``。
+   * - ``Graduated Density``
+     - 像漸層 ND 濾鏡一樣沿一條直線壓暗畫面的一側（角度、級數、硬度、偏移、選用色調），儲存為
+       ``<name>_gradnd.png``。
+   * - ``Velvia``
+     - 像 Velvia 正片一樣最強化平淡的顏色，並有強度與陰影保護滑桿，儲存為 ``<name>_velvia.png``。
+   * - ``Emboss``
+     - 從指定的方位角與仰角打光呈現浮雕，附深度滑桿與灰階選項，儲存為 ``<name>_emboss.png``。
+   * - ``Defringe``
+     - 沿高反差邊緣降低紫色、綠色或所有彩色色邊的飽和度，附量與邊緣閾值滑桿，儲存為
+       ``<name>_defringe.png``。
+   * - ``Film Negative``
+     - 把掃描的彩色負片反轉為正片，去除自動估算的橙色片基，並可設定輸出 gamma，儲存為
+       ``<name>_positive.png``。
+   * - ``Filmic Tone Map``
+     - 以 Reinhard 或 Hable filmic 曲線滾降高光，附曝光、白點、對比與飽和度滑桿，儲存為
+       ``<name>_filmic.png``。
+   * - ``Tone Equalizer``
+     - 分別設定黑色、陰影、中間調、高光與白色的曝光，並加以平滑避免光暈，儲存為
+       ``<name>_toneeq.png``。
+   * - ``Detail Equalizer``
+     - 分別提升或降低細部、中等、粗略與大範圍細節頻帶的對比，儲存為 ``<name>_detaileq.png``。
+   * - ``Soft Proof``
+     - 透過指定的 ICC 輸出描述檔預覽目前圖片，把超出色域的像素塗成洋紅並計數；不會儲存任何檔案。
+
+修圖與變形（Retouch & Transform）
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``AI Image Upscale``
+     - 以 Real-ESRGAN（通用 x4、動漫 x4 或 x2）或 Lanczos、Bicubic、Nearest 重新取樣放大資料夾中的
+       圖片；AI 模型會視需要安裝 ``onnxruntime``，並在首次使用時自動下載（約 65 MB）。
+   * - ``Noise Reduction / Sharpening``
+     - 套用保留邊緣的降噪（可只處理亮度）與可調量和半徑的 unsharp mask 銳化，存到指定的檔案；需要
+       OpenCV（``opencv-python``）。
+   * - ``Healing Brush``
+     - 以 Telea 或 Navier-Stokes 方法修補（inpainting），去除你在預覽上點選的斑點（按右鍵刪除斑點），
+       存到指定的檔案；需要 OpenCV。
+   * - ``Clone Stamp``
+     - 從以 Shift+點擊指定的來源點複製柔邊區塊，貼到你在預覽上點選的每個位置（按右鍵復原），並把
+       結果存到指定的檔案。
+   * - ``Frequency Separation``
+     - 以指定的模糊半徑把目前圖片拆成 ``<name>_low.png``\ （色彩與色調）與 ``<name>_high.png``
+       （紋理），供在其他程式中修圖；以 low + (high - 128) 重新合成。
+   * - ``Smart Crop``
+     - 依顯著性建議裁切（自由、1:1、4:5、3:2、16:9），讓主體落在三分法交點上，並把選定的裁切以
+       非破壞方式寫入配方。
+   * - ``Portrait Auto-Retouch``
+     - 柔化膚色區域、去除紅眼，最後再加一道銳化，每一項各有滑桿，儲存為 ``<name>_retouched.png``。
+   * - ``Face Detection``
+     - 以 OpenCV 的 Haar cascade 偵測目前圖片中的臉孔，並可為每張臉命名；名稱會與配方一起儲存。
+       需要 OpenCV 4（``opencv-python<5``）。
+   * - ``Sky / Background``
+     - 把天空換成漸層，或把背景去除成透明或白色，存到指定的檔案；需要 OpenCV，安裝了 ``rembg`` 時
+       會用它去背。
+   * - ``Crop / Straighten``
+     - 最多旋轉 ±15°（裁掉空白的角落），並依正規化座標或長寬比預設裁切，存到指定的檔案；拉直需要
+       OpenCV。
+   * - ``Auto-Straighten``
+     - 測量地平線或垂直線的傾斜，讓你調整旋轉角度，並把拉直後的圖片存到指定的檔案；需要 OpenCV。
+   * - ``Lens Correction``
+     - 以滑桿校正桶狀／枕狀變形、暗角與紅／藍色差，存到指定的檔案。
+   * - ``Scale Bar``
+     - 依每單位像素數與單位標籤，把校正過的比例尺燒入目前圖片，儲存為 ``<name>_scalebar.png``。
+
+多影像（Multi-Image）
+^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 項目
+     - 功能
+   * - ``HDR Merge``
+     - 以 Mertens 曝光融合合併兩張以上不同曝光的照片（不需要曝光資料），可先對齊；需要 OpenCV。
+   * - ``Panorama Stitch``
+     - 以全景或平面掃描模式拼接兩張以上依序拍攝、重疊 20 到 40 % 的照片，可裁掉黑邊；需要 OpenCV。
+   * - ``Focus Stacking``
+     - 保留每個影格最清晰的像素，把一組對焦包圍合成為一張全景深的圖片，可先對齊；需要 OpenCV。
+   * - ``Image Stack``
+     - 以平均、中位數、最大值、最小值或 sigma 裁切平均，逐像素合併已對齊的連拍，用於長曝光、移除
+       人群或星軌；不需要 OpenCV。
+   * - ``Anaglyph 3D``
+     - 把目前圖片（左眼）與指定的右眼圖片合成為紅青立體圖（Dubois、彩色、灰階或 true 方法），
+       儲存為 ``<name>_anaglyph.png``。
+
+----
+
 命令列啟動
 ----------
 
 ::
 
-   imervue                        # 正常啟動
-   imervue 圖片路徑               # 直接開啟指定圖片
-   imervue 資料夾路徑             # 直接開啟指定資料夾
-   imervue --debug                # 啟用除錯模式
-   imervue --software_opengl      # 使用軟體渲染（顯卡不支援時）
+   python -m Imervue                      # 正常啟動
+   python -m Imervue 圖片路徑             # 直接開啟指定圖片
+   python -m Imervue 資料夾路徑           # 直接開啟指定資料夾
+   python -m Imervue --debug              # 啟用除錯模式
+   python -m Imervue --software_opengl    # 使用軟體渲染（顯卡不支援時）
 
 無介面批次 CLI
 ^^^^^^^^^^^^^^
@@ -2181,6 +2655,67 @@ MCP 伺服器（見 `MCP 伺服器`_\ ）的每個工具也都是子指令。其
    py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
    py -m Imervue.cli histogram a.jpg --json
    py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+
+``pipeline FILE INPUTS…`` 對每個輸入依序執行一連串運算，並為每個輸入寫出一張 PNG：來源旁的
+``<stem>_pipeline.png``，或 ``--out`` 中的 ``<stem>.png``。``FILE`` 是 UTF-8 JSON（帶位元組順序
+標記也可以），內容是步驟清單，或是物件 ``{"pipeline": [...]}``。每個步驟是一個物件，以 ``"op"``
+指定運算名稱，再加上該運算的參數；省略的參數使用預設值，運算不認得的鍵會被忽略。一條管線最多 50
+個步驟；空的管線會把每個輸入照解碼後的樣子寫出。讀取任何圖片之前會先檢查檔案：無法讀取或解析的
+檔案會印出 ``error: …``；超過 50 個步驟、步驟缺少 ``"op"`` 名稱或運算不存在時，每個問題各印出一行
+``pipeline error: step N: …``。兩種情況下指令都會以代碼 2 結束，且不寫出任何檔案。參數型別錯誤
+（``null``、該填數字的地方填了文字）會讓那張圖片失敗並回報，結束代碼為 1。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 44 42
+
+   * - 運算
+     - 參數（預設值）
+     - 效果
+   * - ``dehaze``
+     - ``strength``\ （``1.0``；限制在 0 – 1）
+     - 暗通道先驗去霧；``0`` 表示圖片不變
+   * - ``clahe``
+     - ``clip``\ （``2.0``；至少 1）、``tiles``\ （``8``；至少 1）
+     - 在 ``tiles`` × ``tiles`` 的網格上，對亮度做限制對比的自適應等化
+   * - ``dither``
+     - ``levels``\ （``2``；限制在 2 – 8）
+     - 4×4 Bayer 有序抖動，每個通道只留 ``levels`` 個值；保留 alpha
+   * - ``distort``
+     - ``mode``\ （``"swirl"``：``swirl`` / ``pinch`` / ``ripple``）、``strength``\ （``0.5``；
+       限制在 -1 – 1）
+     - 以中心為基準的幾何變形；``pinch`` 的強度為正時向外膨脹、為負時向內擠壓
+   * - ``clarity``
+     - ``amount``\ （``0.5``；-1 – 1，負值會柔化）
+     - 以中間調加權、大半徑的局部對比
+   * - ``texture``
+     - ``amount``\ （``0.5``；-1 – 1，負值會柔化）
+     - 小半徑、細部的局部對比
+   * - ``grayscale``
+     - 無
+     - 把亮度（0.299 R + 0.587 G + 0.114 B）寫入全部三個通道；保留 alpha
+   * - ``invert``
+     - 無
+     - 反轉 R、G 與 B；保留 alpha
+   * - ``watermark``
+     - ``text``\ （``""``：不加浮水印）、``corner``\ （``"bottom-right"``：``top-left`` /
+       ``top-right`` / ``bottom-left`` / ``bottom-right`` / ``center``；其他值一律視為
+       ``bottom-right``）、``opacity``\ （``0.6``；限制在 0 – 1）
+     - 帶陰影的白色文字，大小為長邊的 3.5 %；``watermark`` 子指令的 ``--font-fraction``、
+       ``--color`` 與 ``--no-shadow`` 沒有對應的步驟參數
+
+以 ``look.json`` 為例::
+
+   {
+     "pipeline": [
+       {"op": "dehaze", "strength": 0.4},
+       {"op": "clahe", "clip": 2.5, "tiles": 8},
+       {"op": "clarity", "amount": 0.3},
+       {"op": "watermark", "text": "(c) Me", "corner": "bottom-right", "opacity": 0.5}
+     ]
+   }
+
+   py -m Imervue.cli pipeline look.json photos/ --out graded/
 
 ----
 
@@ -2296,7 +2831,8 @@ Imervue 內建一個 `Model Context Protocol <https://modelcontextprotocol.io>`_
        並消除紅 / 藍色差。
 
 每個工具都會宣告 JSON ``outputSchema`` 與唯讀 / 破壞性的 ``annotations``,
-並把結果以 ``structuredContent`` 連同文字信封一併回傳(依 MCP 2025-11-25),
+並把結果以 ``structuredContent`` 連同文字信封一併回傳（這些欄位出自較新的 MCP 修訂版；
+握手時回報的版本是 ``2025-03-26``），
 讓客戶端不需重新 parse 就能取得型別化的 payload。長時間執行的工具在呼叫端
 傳入 progress token 時會串流 ``notifications/progress``。
 
@@ -2320,13 +2856,14 @@ repo 根目錄已附專案層級的 ``.mcp.json``:
      "mcpServers": {
        "imervue": {
          "type": "stdio",
-         "command": "python",
+         "command": "py",
          "args": ["-m", "Imervue.mcp_server"]
        }
      }
    }
 
-用 Claude Code 開啟 repo 任何子目錄都會自動探索到這個伺服器。
+``py`` 是 Windows 的 Python 啟動器；在 macOS 或 Linux 上請改用 ``python3``，或安裝了 Imervue 的
+環境中的直譯器。用 Claude Code 開啟 repo 任何子目錄都會自動探索到這個伺服器。
 首次使用時 Claude Code 會詢問是否啟用專案 MCP 伺服器,接受即可。
 
 Claude Desktop
@@ -2343,20 +2880,107 @@ Claude Desktop
 通訊協定
 ^^^^^^^^
 
-伺服器走 MCP ``2025-03-26`` 版的 stdio JSON-RPC 2.0:
+伺服器從 stdin 讀取以換行分隔的 JSON-RPC 2.0 訊息，並把回應與通知寫到 stdout，每則一行 UTF-8。
+不論客戶端要求哪個版本，``initialize`` 一律以協定版本 ``2025-03-26`` 回覆。請求一次處理一個；
+批次請求（JSON 陣列）會以 ``-32600`` 拒絕。
 
-* ``initialize`` — 握手,廣告 ``capabilities.tools``。
-* ``tools/list`` — 列出已註冊工具與其 JSON-Schema 輸入定義。
-* ``tools/call`` — 用 ``{"name", "arguments"}`` 呼叫工具,結果回
-  在 ``content`` 陣列。
-* ``notifications/*`` — 靜默接受(不回應)。
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - 方法
+     - 功能
+   * - ``initialize``
+     - 握手。回傳 ``protocolVersion`` ``2025-03-26``、``serverInfo``\ （``imervue``
+       ``1.0.0``）以及能力 ``tools`` 與 ``prompts``\ （``listChanged: false``）、
+       ``resources``\ （``subscribe: true``、``listChanged: true``）、``completions`` 與 ``logging``。
+   * - ``ping``
+     - 回傳空結果。
+   * - ``tools/list``
+     - 一頁列出全部 56 個工具，每個都附 ``inputSchema``、``outputSchema`` 與 ``annotations``
+       （``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``）。
+   * - ``tools/call``
+     - 執行 ``{"name", "arguments"}``。結果是一個 ``text`` 內容區塊，內含 JSON 編碼的回傳值；回傳值
+       是物件時另附 ``structuredContent``。工具拋出例外，或引數不符合其參數時，會回傳
+       ``isError: true`` 與一段 ``Error: …`` 文字，而不是協定錯誤；未知的工具名稱為 ``-32602``。
+   * - ``prompts/list``
+     - 四個 prompt 及其引數。
+   * - ``prompts/get``
+     - 建立 ``{"name", "arguments"}`` 的訊息；``caption_image`` 與 ``analyze_composition`` 會把
+       PNG 縮圖以圖片訊息內嵌。未知的 prompt 或缺少 ``path`` 為 ``-32602``。
+   * - ``completion/complete``
+     - 為 ``ref/prompt`` 引數提供前綴比對的值：``suggest_edits`` 的 ``style``\ （general、portrait、
+       landscape、product、street、food、macro）與 ``analyze_composition`` 的 ``focus``\ （all、
+       framing、balance、subject、leading_lines）。其他引數得到空清單。
+   * - ``resources/list``
+     - ``IMERVUE_MCP_ROOT`` 所指定資料夾中直接存放的圖片（排除隱藏檔與 SVG），每頁 100 筆並附
+       ``nextCursor``；未設定此變數時為空。
+   * - ``resources/templates/list``
+     - 下表的兩個 URI 範本。
+   * - ``resources/read``
+     - 讀取一個 ``imervue://image/…`` URI（見下文）。
+   * - ``resources/subscribe`` / ``resources/unsubscribe``
+     - 把 URI 加入或移出會收到 ``notifications/resources/updated`` 的集合。
+   * - ``logging/setLevel``
+     - 設定以 ``notifications/message`` 送出的最低等級（``debug``、``info``、``notice``、
+       ``warning``、``error``、``critical``、``alert``、``emergency``；啟動時為 ``info``）；
+       其他值為 ``-32602``。
+   * - 客戶端送來的 ``notifications/*``
+     - 接受但不回覆（``notifications/initialized``、``notifications/cancelled``…）；取消通知不會
+       停止執行中的工具。
+   * - ``notifications/progress``\ （送出）
+     - 當 ``tools/call`` 請求帶有 ``params._meta.progressToken``\ （字串或整數）時，在
+       ``find_similar`` 或 ``build_collage`` 執行期間送出 ``{progressToken, progress, total, message}``；
+       ``progress`` 只增不減。
+   * - ``notifications/resources/updated``\ （送出）
+     - ``IMERVUE_MCP_ROOT`` 中的檔案變更、且其縮圖 URI 已訂閱時送出 ``{uri}``。
+   * - ``notifications/resources/list_changed``\ （送出）
+     - ``IMERVUE_MCP_ROOT``\ （以 watchdog 監看，不遞迴）有任何變更時送出，不論是否已訂閱。
+   * - ``notifications/message``\ （送出）
+     - 等級不低於 ``logging/setLevel`` 設定值的記錄，透過 ``MCPServer.emit_log`` 送出。內建工具不會
+       呼叫它，因此原裝的伺服器不會送出任何記錄。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - URI
+     - 回傳內容
+   * - ``imervue://image/{path}``
+     - 圖片的 PNG 縮圖（依方向轉正，縮放至 256 px 以內），以 base64 ``blob`` 回傳，``mimeType`` 為
+       ``image/png``。``resources/list`` 回傳的就是這種形式的 URI。
+   * - ``imervue://image/{path}/metadata``
+     - ``read_image_metadata`` 的結果（尺寸、格式、EXIF、XMP），以 JSON ``text`` 回傳，``mimeType``
+       為 ``application/json``。
+
+``{path}`` 是圖片檔案路徑的完整百分比編碼，分隔符號與磁碟機冒號也要編碼
+（``C:\photos\a.jpg`` 即 ``imervue://image/C%3A%5Cphotos%5Ca.jpg``）。讀取時直接解析該路徑，因此
+任何檔案都讀得到，不限於 ``IMERVUE_MCP_ROOT`` 底下的檔案；含 ``..`` 片段的路徑為 ``-32602``，
+不存在的檔案為 ``-32002``，其他 scheme 的 URI 為 ``-32602``。
+
+錯誤使用下列 JSON-RPC 代碼：``-32700``\ （不是 JSON 的一行）、``-32600``\ （不是請求物件，或缺少
+``method``）、``-32601``\ （未知的方法）、``-32602``\ （參數錯誤、未知的工具或 prompt、無效的
+記錄等級或游標、不支援的資源 URI）、``-32002``\ （找不到資源檔案）與 ``-32603``\ （內部錯誤）。
 
 實作在 ``Imervue/mcp_server/``:
 
-* ``server.py`` — 協定迴圈 + 工具註冊表
-* ``tools.py`` — 各工具的 handler 與預設工具集
+* ``server.py`` — JSON-RPC 分派器（``MCPServer``）、stdio 迴圈（``run``）與
+  ``IMERVUE_MCP_ROOT`` 監看器。
+* ``tools.py`` — 工具集的公開介面：重新匯出每個 handler，並註冊預設工具
+  （``register_default_tools``）。
+* ``tools_read.py`` / ``tools_edit.py`` — 各工具的 handler（列出、中繼資料與分析；寫入目的地的
+  編輯），共用的輔助函式在 ``tool_support.py``。
+* ``tool_defs_read.py`` / ``tool_defs_edit.py`` — 各工具的名稱、描述、輸入 schema 與 handler，
+  依 ``tools/list`` 的順序排列。
+* ``tool_schemas.py`` — 各工具的 ``outputSchema`` 與 ``annotations``。
+* ``prompts.py`` / ``completion.py`` — 四個 prompt 與 ``completion/complete`` 的建議值。
+* ``resources.py`` — ``imervue://image/`` 資源。
+* ``progress.py`` / ``notifications.py`` / ``logging.py`` — 進度回報、加鎖的 stdout 寫入器與
+  資源訂閱，以及記錄等級篩選。
 * ``__main__.py`` — ``python -m Imervue.mcp_server`` 進入點
 
-自訂工具可以直接 :class:`MCPServer` 然後 :meth:`MCPServer.register`,
-透過 :meth:`MCPServer.handle_message` 餵訊息(或直接呼叫
-:func:`run` 跑 stdio 迴圈)。
+自訂工具的註冊方式：建立 :class:`MCPServer`、呼叫 :meth:`MCPServer.register`\ （名稱、描述、
+輸入 schema、handler，以及選用的輸出 schema 與 annotations；名稱重複會拋出 ``ValueError``；帶有
+``progress`` 參數的 handler 會收到進度回報器），再把每則訊息交給 :meth:`MCPServer.handle_message`，
+它會回傳回應，若是通知則回傳 ``None``。:func:`run` 一律以預設工具建立自己的伺服器，因此自訂的工具集
+需要自己的迴圈；要送出通知，請把 ``server.notifier`` 設為輸出串流上的 ``Notifier``。

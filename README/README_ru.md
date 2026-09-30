@@ -183,6 +183,11 @@ py -m Imervue.cli list-ops          # вывести все доступные �
 
 Каждый параметр MCP становится флагом с тем же значением по умолчанию и теми же допустимыми значениями: `zone_gains` превращается в `--zone-gains`, параметр «да/нет» — в `--grayscale` / `--no-grayscale`, а цвет или строка матрицы принимает значения по порядку (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` выводит их список.
 
+`pipeline FILE INPUTS…` связывает операции в цепочку по JSON-файлу — списку шагов или
+`{"pipeline": [...]}`, где каждый шаг — это `"op"` плюс его параметры (не более 50 шагов). Доступные
+операции: `dehaze`, `clahe`, `dither`, `distort`, `clarity`, `texture`, `grayscale`, `invert` и
+`watermark`; в документации перечислены все параметры и значения по умолчанию.
+
 ```bash
 py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
 py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
@@ -295,8 +300,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 Доступ из меню **Tools**; организованы в сгруппированные по функциям подменю:
 
 - **Пакетные** — Преобразование формата · Очистка EXIF · Санитайзер изображений (повторный рендеринг для удаления скрытых данных) · Органайзер изображений (сортировка по подпапкам по дате / разрешению / типу / размеру) · Пакетное переименование по токенам
-- **AI / Эвристика** — AI-апскейл изображений (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Поиск дубликатов · Поиск похожих · Автотегирование · Распознавание лиц (каскады Хаара)
-- **Библиотека и метаданные** — Поиск по библиотеке · Умные альбомы · Иерархические теги · Экспорт метаданных · XMP sidecar · GPS-геотеги
+- **Ретушь и трансформация** — AI-апскейл изображений (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Распознавание лиц (каскады Хаара) · лечащая кисть, клонирование, кадрирование / выпрямление и коррекция объектива
+- **Библиотека и метаданные** — Поиск по библиотеке · Умные альбомы · Поиск похожих · Семантический поиск · Поиск дубликатов · Автотегирование · Иерархические теги · Экспорт метаданных · XMP sidecar · GPS-геотеги
 
 ### Интеграция с системой
 
@@ -795,12 +800,18 @@ OBS **Sources > + > Window Capture** может захватить окно Imer
 | P / S / C / Z / H | Перо / Клон / Кадрирование / Зум / Рука |
 | Q | Переключение режима быстрой маски |
 | Tab | Переключение всех доков |
-| Ctrl+Tab | Цикл вкладок Paint |
+| Ctrl+Tab / Ctrl+Shift+Tab | Следующая / предыдущая вкладка Paint |
 | , / . | Цикл видов кистей |
 | 0-9 | Непрозрачность кисти с шагом 10% |
 | Alt+[ / Alt+] | Переключение активного слоя вниз / вверх |
 | Ctrl+[ / Ctrl+] | Сдвинуть активный слой вниз / вверх в стопке |
 | Ctrl+D | Снять выделение |
+| [ / ] | Уменьшить / увеличить размер кисти на 1 px |
+| Shift+[ / Shift+] | Уменьшить / увеличить размер кисти на 5 px |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | Добавить слой / Дублировать слой / Объединить вниз |
+| Ctrl+0 / Ctrl+1 | По размеру окна / Реальный размер (100 %) |
+| X | Поменять местами основной и фоновый цвета |
+| D | Сбросить цвета на чёрный / белый |
 
 ---
 
@@ -823,14 +834,14 @@ OBS **Sources > + > Window Capture** может захватить окно Imer
 
 ### Tools (дополнительные инструменты — организованы в 8 сгруппированных подменю)
 
-- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar / Duplicate · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
-- **Views** — Timeline · Calendar · Map
-- **Workflow** — Culling · Staging Tray · Virtual Copies · Dual-Pane File Manager · Macros
-- **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout
-- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Градиентная плотность · Velvia · Тиснение · Удаление каймы · Цветной негатив · Кинематографический тонмаппинг · Тоновый / детальный эквалайзер · Полярные координаты · Калейдоскоп · Матовое стекло · Soft Proof
-- **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction
-- **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking
+- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename · Deflicker (Time-lapse) · Document Binarize · Otsu Threshold · Edit Animation · Optimize to Target Size · Meme Caption · Steganography
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Thumbnail Cache
+- **Views** — Timeline View (по дням / месяцам / годам) · Calendar View · Map View · Scopes & Inspector · Tiny Planet (360°) · Image Statistics · Quality Report · Test Chart · Color blindness preview (протанопия / дейтеранопия / тританопия / ахроматопсия)
+- **Workflow** — Culling · Staging Tray · Reference Panel · Virtual Copies · Dual-Pane File Manager · Macros · Watched Folder
+- **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout · Collage · ID Photo Sheet
+- **Develop (Non-Destructive)** — Before / After Compare · Develop Presets · Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Layers · Levels · Channel Mixer · Gradient Map · Auto Color Balance · Clarity / Dehaze · HSL / Color Mixer · CLAHE · Flatten Background · Frame & Caption · Ordered Dither · Color Map · Distort · Polar Coordinates · Kaleidoscope · Frosted Glass · Pixel Sort · Film Grain · Lens Flare · Threshold / Posterize · Solarize · Diffuse Glow · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Soft Proof
+- **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Frequency Separation · Smart Crop · Portrait Auto-Retouch · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction · Scale Bar
+- **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking · Image Stack · Anaglyph 3D
 
 ### View / Sort / Filter / Language / Plugins / Instructions
 
@@ -858,7 +869,7 @@ Imervue поддерживает сторонние плагины. См. [PLUGI
 | Хук | Триггер |
 |------|---------|
 | `on_plugin_loaded()` | После инстанцирования плагина |
-| `on_plugin_unloaded()` | При завершении работы приложения |
+| `on_plugin_unloaded()` | При закрытии своего окна и перед Reload Plugins |
 | `on_build_menu_bar(plugin_menu)` | После построения общего меню Plugins |
 | `on_build_main_tabs(tabs)` | После добавления пяти встроенных вкладок |
 | `on_build_context_menu(menu, viewer)` | При открытии меню по правому клику |
@@ -869,6 +880,7 @@ Imervue поддерживает сторонние плагины. См. [PLUGI
 | `on_key_press(key, modifiers, viewer)` | При нажатии клавиши (вернуть True для поглощения) |
 | `on_app_closing(main_window)` | Перед закрытием приложения |
 | `get_translations()` | Предоставление строк i18n |
+| `register_languages()` | Метод класса: регистрация новых языков (перед каждой загрузкой и при запуске) |
 
 ### Загрузчик плагинов
 

@@ -183,6 +183,11 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 각 MCP 파라미터는 같은 기본값과 허용 값을 가진 옵션이 됩니다. `zone_gains`는 `--zone-gains`가 되고, 예/아니요 파라미터는 `--grayscale` / `--no-grayscale`가 되며, 색이나 행렬의 한 행은 값을 순서대로 받습니다(`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help`로 옵션 목록을 볼 수 있습니다.
 
+`pipeline FILE INPUTS…`는 JSON 파일에 적힌 작업을 차례로 연결해 실행합니다. 파일에는 단계 목록이나
+`{"pipeline": [...]}`를 쓰며, 각 단계는 `"op"`와 그 파라미터로 이루어집니다(최대 50단계). 사용할 수 있는 작업은
+`dehaze`, `clahe`, `dither`, `distort`, `clarity`, `texture`, `grayscale`, `invert`,
+`watermark`이며, 모든 파라미터와 기본값은 문서에 나와 있습니다.
+
 ```bash
 py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
 py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
@@ -295,8 +300,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 **Tools** 메뉴에서 접근; 기능별로 묶인 서브메뉴로 정리:
 
 - **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저(숨겨진 데이터를 제거하기 위해 다시 렌더링) · 이미지 정리기(날짜 / 해상도 / 종류 / 크기별로 하위 폴더에 정렬) · 토큰 일괄 이름 변경
-- **AI / 휴리스틱** — AI 이미지 업스케일 (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · 중복 이미지 찾기 · 유사 이미지 찾기 · 자동 태그 · 얼굴 검출 (Haar cascade)
-- **라이브러리 및 메타데이터** — 라이브러리 검색 · 스마트 앨범 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그
+- **보정 및 변형** — AI 이미지 업스케일 (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · 얼굴 검출 (Haar cascade) · 힐링, 클론, 자르기 / 수평 보정, 렌즈 보정
+- **라이브러리 및 메타데이터** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 자동 태그 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그
 
 ### 시스템 통합
 
@@ -747,12 +752,18 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | P / S / C / Z / H | 펜 / 클론 / 자르기 / 줌 / 핸드 |
 | Q | 퀵 마스크 모드 토글 |
 | Tab | 모든 도크 토글 |
-| Ctrl+Tab | Paint 탭 순환 |
+| Ctrl+Tab / Ctrl+Shift+Tab | 다음 / 이전 Paint 탭 |
 | , / . | 브러시 종류 순환 |
 | 0-9 | 브러시 불투명도 10% 단계 |
 | Alt+[ / Alt+] | 활성 레이어 아래 / 위로 이동 |
 | Ctrl+[ / Ctrl+] | 활성 레이어를 스택에서 아래 / 위로 옮기기 |
 | Ctrl+D | 선택 해제 |
+| [ / ] | 브러시 크기 1 px 줄이기 / 늘리기 |
+| Shift+[ / Shift+] | 브러시 크기 5 px 줄이기 / 늘리기 |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | 레이어 추가 / 레이어 복제 / 아래로 병합 |
+| Ctrl+0 / Ctrl+1 | 창에 맞추기 / 실제 크기 (100 %) |
+| X | 전경색 / 배경색 바꾸기 |
+| D | 색을 검정 / 흰색으로 초기화 |
 
 ---
 
@@ -775,14 +786,14 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 ### Tools (추가 도구 — 8개의 그룹화된 서브메뉴로 정리)
 
-- **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저 · 이미지 정리기 · 토큰 일괄 이름 변경
-- **Library & Metadata** — 라이브러리 검색 · 스마트 앨범 · 유사 / 중복 찾기 · 자동 태그 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그
-- **Views** — Timeline · Calendar · Map
-- **Workflow** — Culling · 스테이징 트레이 · 가상 사본 · 듀얼 페인 파일 관리자 · 매크로
-- **Export** — 컨택트 시트 PDF · 웹 갤러리 · 슬라이드쇼 비디오 (MP4) · 인쇄 레이아웃
-- **Develop (Non-Destructive)** — 톤 커브 · .cube LUT · 스플릿 토닝 · 로컬 조정 마스크 · 그라데이션 농도 · 벨비아 · 엠보스 · 디프린지 · 필름 네거티브 · 필믹 톤 매핑 · 톤 / 디테일 이퀄라이저 · 극좌표 · 만화경 · 서리 유리 · 소프트 프루프
-- **Retouch & Transform** — AI 이미지 업스케일 · 노이즈 감소 / 샤프닝 · 힐링 브러시 · 클론 스탬프 · 얼굴 검출 · 하늘 / 배경 · 자르기 / 수평 보정 · 자동 수평 보정 · 렌즈 보정
-- **Multi-Image** — HDR 병합 · 파노라마 스티칭 · 포커스 스태킹
+- **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저 · 이미지 정리기 · 토큰 일괄 이름 변경 · 디플리커 (타임랩스) · 문서 이진화 · Otsu 임계값 · 애니메이션 편집 · 목표 크기로 최적화 · 밈 캡션 · 스테가노그래피
+- **Library & Metadata** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 이미지 자동 태그 · 계층 태그 · 메타데이터 내보내기 (CSV / JSON) · XMP 사이드카 · GPS 지오태그 · 썸네일 캐시
+- **Views** — 타임라인 보기 (일 / 월 / 연 단위) · 캘린더 보기 · 지도 보기 · 스코프 및 인스펙터 · 타이니 플래닛 (360°) · 이미지 통계 · 품질 보고서 · 테스트 차트 · 색각 이상 미리보기 (제1색맹 / 제2색맹 / 제3색맹 / 전색맹)
+- **Workflow** — Culling · 스테이징 트레이 · 참조 패널 · 가상 사본 · 듀얼 페인 파일 관리자 · 매크로 · 감시 폴더
+- **Export** — 컨택트 시트 PDF · 웹 갤러리 · 슬라이드쇼 비디오 (MP4) · 인쇄 레이아웃 · 콜라주 · 증명사진 시트
+- **Develop (Non-Destructive)** — 전 / 후 비교 · 현상 프리셋 · 톤 커브 · .cube LUT · 스플릿 토닝 · 로컬 조정 마스크 · 레이어 · 레벨 · 채널 믹서 · 그라데이션 맵 · 자동 색 균형 · 명료도 / 디헤이즈 · HSL / 색상 믹서 · CLAHE · 배경 평탄화 · 프레임 및 캡션 · 오더드 디더 · 컬러 맵 · 왜곡 · 극좌표 · 만화경 · 서리 유리 · 픽셀 정렬 · 필름 그레인 · 렌즈 플레어 · 임계값 / 포스터화 · 솔라리제이션 · 디퓨즈 글로우 · 그라데이션 농도 · 벨비아 · 엠보스 · 디프린지 · 필름 네거티브 · 필믹 톤 매핑 · 톤 / 디테일 이퀄라이저 · 소프트 프루프
+- **Retouch & Transform** — AI 이미지 업스케일 · 노이즈 감소 / 샤프닝 · 힐링 브러시 · 클론 스탬프 · 주파수 분리 · 스마트 자르기 · 인물 자동 보정 · 얼굴 검출 · 하늘 / 배경 · 자르기 / 수평 보정 · 자동 수평 보정 · 렌즈 보정 · 스케일 바
+- **Multi-Image** — HDR 병합 · 파노라마 스티칭 · 포커스 스태킹 · 이미지 스택 · 애너글리프 3D
 
 ### View / Sort / Filter / Language / Plugins / Instructions
 
@@ -810,7 +821,7 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 | 훅 | 트리거 |
 |------|---------|
 | `on_plugin_loaded()` | 플러그인 인스턴스화 후 |
-| `on_plugin_unloaded()` | 앱 종료 시 |
+| `on_plugin_unloaded()` | 플러그인의 창이 닫힐 때, 그리고 Reload Plugins 전 |
 | `on_build_menu_bar(plugin_menu)` | 공유 Plugins 메뉴가 빌드된 후 |
 | `on_build_main_tabs(tabs)` | 내장 5개 탭이 추가된 후 |
 | `on_build_context_menu(menu, viewer)` | 우클릭 메뉴 열릴 때 |
@@ -821,6 +832,7 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 | `on_key_press(key, modifiers, viewer)` | 키 누름 시 (이벤트 소비 시 True 반환) |
 | `on_app_closing(main_window)` | 애플리케이션 종료 전 |
 | `get_translations()` | i18n 문자열 제공 |
+| `register_languages()` | 클래스 메서드: 새 언어 등록 (매번 로드 전과 시작 시) |
 
 ### 플러그인 다운로더
 

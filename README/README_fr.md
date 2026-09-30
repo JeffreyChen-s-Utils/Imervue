@@ -183,6 +183,8 @@ Chaque outil du [serveur MCP](#serveur-mcp) est aussi une sous-commande. Dix d'e
 
 Chaque paramètre MCP devient une option avec la même valeur par défaut et les mêmes valeurs autorisées : `zone_gains` devient `--zone-gains`, un paramètre oui/non devient `--grayscale` / `--no-grayscale`, et une couleur ou une ligne de matrice prend ses valeurs dans l'ordre (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` les liste.
 
+`pipeline FILE INPUTS…` enchaîne des opérations décrites dans un fichier JSON — une liste d'étapes, ou `{"pipeline": [...]}`, chaque étape étant un `"op"` suivi de ses paramètres (50 étapes au plus). Les opérations sont `dehaze`, `clahe`, `dither`, `distort`, `clarity`, `texture`, `grayscale`, `invert` et `watermark` ; la documentation liste chaque paramètre et sa valeur par défaut.
+
 ```bash
 py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
 py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
@@ -295,8 +297,8 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 Accessibles depuis le menu **Tools** ; organisés en sous-menus groupés par fonction :
 
 - **Batch** — Conversion de format · Suppression EXIF · Image Sanitizer (re-rendu pour effacer les données cachées) · Image Organizer (tri en sous-dossiers par date / résolution / type / taille) · Renommage par lot avec jetons
-- **AI / Heuristique** — Agrandissement d'image IA (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Trouver les doublons · Trouver des images similaires · Auto-Tag · Détection de visages (cascade Haar)
-- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Étiquettes hiérarchiques · Export des métadonnées · Fichiers annexes XMP · Géotag GPS
+- **Retouche et transformation** — Agrandissement d'image IA (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Détection de visages (cascade Haar) · correcteur, clonage, recadrage / redressement et correction d'objectif
+- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées · Fichiers annexes XMP · Géotag GPS
 
 ### Intégration système
 
@@ -752,12 +754,18 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 | P / S / C / Z / H | Stylo / Clone / Recadrer / Zoom / Main |
 | Q | Basculer le mode masque rapide |
 | Tab | Basculer tous les docks |
-| Ctrl+Tab | Cycler les onglets Paint |
+| Ctrl+Tab / Ctrl+Shift+Tab | Onglet Paint suivant / précédent |
 | , / . | Cycler les types de pinceaux |
 | 0-9 | Opacité du pinceau par pas de 10 % |
 | Alt+[ / Alt+] | Descendre / monter le calque actif |
 | Ctrl+[ / Ctrl+] | Déplacer le calque actif vers le bas / le haut de la pile |
 | Ctrl+D | Désélectionner |
+| [ / ] | Diminuer / augmenter la taille du pinceau de 1 px |
+| Shift+[ / Shift+] | Diminuer / augmenter la taille du pinceau de 5 px |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | Ajouter un calque / Dupliquer le calque / Fusionner avec le calque inférieur |
+| Ctrl+0 / Ctrl+1 | Ajuster à la fenêtre / Taille réelle (100 %) |
+| X | Permuter les couleurs de premier plan / d'arrière-plan |
+| D | Réinitialiser les couleurs en noir / blanc |
 
 ---
 
@@ -780,14 +788,14 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.j
 
 ### Tools (outils supplémentaires — organisés en 8 sous-menus groupés)
 
-- **Batch** — Conversion de format · Suppression EXIF · Image Sanitizer · Image Organizer · Renommage par lot avec jetons
-- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver les similaires / doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées · Fichiers annexes XMP · Géotag GPS
-- **Vues** — Timeline · Calendar · Map
-- **Workflow** — Tri · Plateau de travail · Copies virtuelles · Gestionnaire de fichiers à deux volets · Macros
-- **Export** — PDF planche-contact · Galerie web · Diaporama vidéo (MP4) · Mise en page d'impression
-- **Develop (non destructif)** — Courbe tonale · LUT .cube · Split Toning · Masques d'ajustement local · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Polar · Kaleidoscope · Frosted Glass · Soft Proof
-- **Retouche et transformation** — Agrandissement d'image IA · Réduction de bruit / Accentuation · Pinceau correcteur · Tampon de clonage · Détection de visages · Ciel / Arrière-plan · Recadrage / Redressement · Redressement automatique · Correction d'objectif
-- **Multi-Image** — Fusion HDR · Assemblage panoramique · Focus Stacking
+- **Batch** — Conversion de format · Suppression EXIF · Image Sanitizer · Image Organizer · Renommage par lot avec jetons · Deflicker (time-lapse) · Binarisation de documents · Seuil d'Otsu · Édition d'animation · Optimisation à une taille cible · Légende de mème · Stéganographie
+- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées (CSV / JSON) · Fichiers annexes XMP · Géotag GPS · Cache des vignettes
+- **Vues** — Timeline (par jour / mois / année) · Calendar · Map · Scopes & Inspector · Tiny Planet (360°) · Statistiques d'image · Rapport de qualité · Mire de test · Aperçu du daltonisme (protanopie / deutéranopie / tritanopie / achromatopsie)
+- **Workflow** — Tri · Plateau de travail · Panneau de référence · Copies virtuelles · Gestionnaire de fichiers à deux volets · Macros · Dossier surveillé
+- **Export** — PDF planche-contact · Galerie web · Diaporama vidéo (MP4) · Mise en page d'impression · Collage · Planche de photos d'identité
+- **Develop (non destructif)** — Comparaison avant / après · Préréglages de développement · Courbe tonale · LUT .cube · Split Toning · Masques d'ajustement local · Calques · Niveaux · Mélangeur de canaux · Gradient Map · Balance automatique des couleurs · Clarity / Dehaze · Mélangeur HSL / couleurs · CLAHE · Aplatir l'arrière-plan · Cadre et légende · Tramage ordonné · Color Map · Distort · Coordonnées polaires · Kaleidoscope · Frosted Glass · Pixel Sort · Grain argentique · Reflet d'objectif · Seuil / Postérisation · Solarize · Diffuse Glow · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Soft Proof
+- **Retouche et transformation** — Agrandissement d'image IA · Réduction de bruit / Accentuation · Pinceau correcteur · Tampon de clonage · Séparation de fréquences · Recadrage intelligent · Retouche automatique de portrait · Détection de visages · Ciel / Arrière-plan · Recadrage / Redressement · Redressement automatique · Correction d'objectif · Barre d'échelle
+- **Multi-Image** — Fusion HDR · Assemblage panoramique · Focus Stacking · Empilement d'images · Anaglyphe 3D
 
 ### View / Sort / Filter / Language / Plugins / Instructions
 
@@ -815,7 +823,7 @@ Imervue prend en charge les plugins tiers. Voir [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | Hook | Déclenchement |
 |------|---------|
 | `on_plugin_loaded()` | Après l'instanciation du plugin |
-| `on_plugin_unloaded()` | À la fermeture de l'application |
+| `on_plugin_unloaded()` | À la fermeture de sa fenêtre, et avant Reload Plugins |
 | `on_build_menu_bar(plugin_menu)` | Après construction du menu Plugins partagé |
 | `on_build_main_tabs(tabs)` | Après ajout des cinq onglets intégrés |
 | `on_build_context_menu(menu, viewer)` | À l'ouverture du menu clic droit |
@@ -826,6 +834,7 @@ Imervue prend en charge les plugins tiers. Voir [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_key_press(key, modifiers, viewer)` | Lors d'un appui touche (retourne True pour consommer) |
 | `on_app_closing(main_window)` | Avant la fermeture de l'application |
 | `get_translations()` | Fournir des chaînes i18n |
+| `register_languages()` | Méthode de classe : enregistrer de nouvelles langues (avant chaque chargement, et au démarrage) |
 
 ### Téléchargeur de plugins
 

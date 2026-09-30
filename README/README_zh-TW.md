@@ -182,6 +182,11 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 每個 MCP 參數都會變成一個選項，預設值與允許值維持不變：`zone_gains` 對應 `--zone-gains`，是／否參數對應 `--grayscale` / `--no-grayscale`，顏色或矩陣的一列則依序接收各個值（`--red 1 0 0`）。`py -m Imervue.cli <subcommand> --help` 會列出這些選項。
 
+`pipeline FILE INPUTS…` 依 JSON 檔串接多個運算——檔案內容是步驟清單，或
+`{"pipeline": [...]}`，每個步驟是一個 `"op"` 加上它的參數（最多 50 個步驟）。可用的運算有
+`dehaze`、`clahe`、`dither`、`distort`、`clarity`、`texture`、`grayscale`、`invert` 與
+`watermark`；說明文件列出每個參數與預設值。
+
 ```bash
 py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
 py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
@@ -294,8 +299,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 從 **Tools** 選單存取；分為功能群組子選單：
 
 - **批次** — 格式轉換 · EXIF 清除 · 影像清洗器（重新渲染移除所有隱藏資料）· 影像整理器 · 權杖批次重命名
-- **AI / 啟發式** — AI 影像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 找重複 · 找相似 · 自動標籤 · 人臉偵測
-- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
+- **修圖與變形** — AI 影像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 人臉偵測（Haar cascade）· 修復、仿製、裁切 / 拉直與鏡頭校正
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
 
 ### 系統整合
 
@@ -748,12 +753,18 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | P / S / C / Z / H | 鋼筆 / 仿製 / 裁切 / 縮放 / 抓手 |
 | Q | 切換快速遮罩模式 |
 | Tab | 切換所有擺放欄 |
-| Ctrl+Tab | 循環 Paint 分頁 |
+| Ctrl+Tab / Ctrl+Shift+Tab | 下一個 / 上一個 Paint 分頁 |
 | , / . | 循環筆刷種類 |
 | 0-9 | 筆刷不透明度 10% 步進 |
 | Alt+[ / Alt+] | 下 / 上切換作用圖層 |
 | Ctrl+[ / Ctrl+] | 在堆疊中下移 / 上移作用圖層 |
 | Ctrl+D | 取消選取 |
+| [ / ] | 筆刷大小減少 / 增加 1 px |
+| Shift+[ / Shift+] | 筆刷大小減少 / 增加 5 px |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | 新增圖層 / 複製圖層 / 向下合併 |
+| Ctrl+0 / Ctrl+1 | 符合視窗 / 實際大小（100 %） |
+| X | 互換前景 / 背景色 |
+| D | 將顏色重設為黑 / 白 |
 
 ---
 
@@ -776,14 +787,14 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 ### Tools（額外工具 — 分為 8 個群組子選單）
 
-- **批次** — 格式轉換 · EXIF 清除 · 影像清洗器 · 影像整理器 · 權杖批次重命名
-- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似 / 重複 · 自動標籤 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
-- **檢視** — Timeline · Calendar · Map
-- **工作流程** — 挑片 · 暫存盤 · 虛擬副本 · 雙窗格 FM · 巨集
-- **匯出** — 聯絡單 PDF · 網頁圖庫 · 幻燈片影片（MP4）· 列印佈局
-- **顯影（非破壞）** — 色調曲線 · .cube LUT · 分離色調 · 局部調整遮罩 · 漸層減光 · Velvia · 浮雕 · 去色邊 · 負片轉正 · 電影調色 · 色調 / 細節等化器 · 極座標 · 萬花筒 · 毛玻璃 · 軟校樣
-- **修圖與變形** — AI 影像放大 · 雜訊抑制 / 銳化 · 修復筆刷 · 仿製圖章 · 人臉偵測 · 天空 / 背景 · 裁切 / 拉直 · 自動拉直 · 鏡頭校正
-- **多影像** — HDR 合成 · 全景拼接 · 焦點堆疊
+- **批次** — 格式轉換 · EXIF 清除 · 影像清洗器 · 影像整理器 · 權杖批次重命名 · 去閃爍（縮時攝影）· 文件二值化 · Otsu 閾值 · 編輯動畫 · 最佳化至目標大小 · 迷因字幕 · 隱寫術
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤影像 · 階層標籤 · 匯出元資料（CSV / JSON）· XMP 邊車檔 · GPS 標記 · 縮圖快取
+- **檢視** — 時間軸檢視（依日 / 月 / 年）· 行事曆檢視 · 地圖檢視 · 示波器與檢查器 · 小行星（360°）· 影像統計 · 品質報告 · 測試圖 · 色盲預覽（紅色盲 / 綠色盲 / 藍色盲 / 全色盲）
+- **工作流程** — 挑片 · 暫存盤 · 參考面板 · 虛擬副本 · 雙窗格檔案管理 · 巨集 · 監看資料夾
+- **匯出** — 聯絡單 PDF · 網頁圖庫 · 幻燈片影片（MP4）· 列印佈局 · 拼貼 · 證件照排版
+- **顯影（非破壞）** — 前後比較 · 顯影預設 · 色調曲線 · .cube LUT · 分離色調 · 局部調整遮罩 · 圖層 · 色階 · 通道混合器 · 漸層映射 · 自動色彩平衡 · 清晰度 / 去霧 · HSL / 混色器 · CLAHE · 平整背景 · 外框與說明文字 · 有序抖動 · 色彩對應 · 扭曲 · 極座標 · 萬花筒 · 毛玻璃 · 像素排序 · 底片顆粒 · 鏡頭光暈 · 閾值 / 色調量化 · 曝色反轉 · 柔光暈染 · 漸層減光 · Velvia · 浮雕 · 去色邊 · 負片轉正 · 電影調色 · 色調 / 細節等化器 · 軟校樣
+- **修圖與變形** — AI 影像放大 · 雜訊抑制 / 銳化 · 修復筆刷 · 仿製圖章 · 頻率分離 · 智慧裁切 · 人像自動修飾 · 人臉偵測 · 天空 / 背景 · 裁切 / 拉直 · 自動拉直 · 鏡頭校正 · 比例尺
+- **多影像** — HDR 合成 · 全景拼接 · 焦點堆疊 · 影像堆疊 · 紅藍立體 3D
 
 ### 檢視 / 排序 / 過濾 / 語言 / 外掛 / 說明
 
@@ -811,7 +822,7 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | 鉤子 | 觸發 |
 |------|---------|
 | `on_plugin_loaded()` | 外掛實例化後 |
-| `on_plugin_unloaded()` | App 關閉時 |
+| `on_plugin_unloaded()` | 所屬視窗關閉時，以及重新載入外掛（Reload Plugins）之前 |
 | `on_build_menu_bar(plugin_menu)` | 共用的 Plugins 選單建好後 |
 | `on_build_main_tabs(tabs)` | 內建 5 個分頁加完之後 |
 | `on_build_context_menu(menu, viewer)` | 右鍵選單開啟時 |
@@ -822,6 +833,7 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_key_press(key, modifiers, viewer)` | 按鍵時（回傳 True 消費事件） |
 | `on_app_closing(main_window)` | App 關閉前 |
 | `get_translations()` | 提供 i18n 字串 |
+| `register_languages()` | 類別方法：註冊新語言（每次載入前，以及啟動時） |
 
 ### 外掛下載器
 

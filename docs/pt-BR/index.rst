@@ -12,23 +12,24 @@ A maior parte deste guia está organizada em torno dessas cinco seções.
      - O que faz
    * - **Imervue**
      - Navega, visualiza, organiza, pesquisa e processa em lote sua biblioteca de imagens.
-       Consulte *Aba Imervue — Visualizador de Imagens e Biblioteca*.
+       Consulte *Abrindo Imagens*, *Navegando pelas Imagens* e *Organizando Imagens*.
    * - **Modify**
      - Pipeline de revelação não destrutiva — sliders, curvas, LUTs, máscaras,
-       retoque, multi-imagem. Consulte *Aba Modify — Revelação Não Destrutiva*.
+       retoque, multi-imagem. Consulte *Editando Imagens (Aba Modify)*.
    * - **Paint**
      - Estúdio raster de pintura completo com pincéis, camadas, animação,
        ferramentas para mangá e I/O de PSD. Consulte *Espaço de Trabalho Paint (Aba Paint)*.
    * - **Puppet**
      - Animador de fantoches 2D com rig construído do zero — meshes, deformadores, parâmetros,
-       movimentos, física. Consulte *Aba Puppet — Animação 2D com Rig*.
+       movimentos, física. Consulte *Espaço de Trabalho Puppet (Aba Puppet)*.
    * - **Desktop Pet**
      - Sobreposição sem moldura, transparente e sempre no topo que roda os
        mesmos rigs ``.puppet`` na sua área de trabalho com drivers ao vivo (idle /
-       blink / mic / webcam / drag-track). Consulte *Espaço de Trabalho Desktop Pet*.
+       blink / mic / webcam / drag-track). Consulte *Espaço de Trabalho Desktop Pet (Aba Desktop Pet)*.
 
-As seções *Primeiros Passos*, *Referência*, *Sistema de Plugins* e *Servidor MCP*
-que vêm a seguir são transversais — aplicam-se a todas as cinco abas.
+As seções *Primeiros Passos*, *Referência de Atalhos de Teclado*, *Referência do Menu Extra
+Tools*, *Sistema de Plugins*, *Uso na Linha de Comando* e *Servidor MCP* são transversais —
+aplicam-se a todas as cinco abas.
 
 .. contents:: Sumário
    :depth: 2
@@ -683,7 +684,7 @@ Camadas
 ^^^^^^^
 
 O **dock Camada** oferece miniaturas, alternâncias de visibilidade, renomeação
-inline, reordenação com os botões ↑ / ↓ (ou ``Ctrl + [`` / ``Ctrl + ]``), e o
+inline, reordenação com os botões ↑ / ↓ (ou ``Ctrl + ]`` / ``Ctrl + [``), e o
 modo de mistura + opacidade da camada ativa. O menu ``Camada`` adiciona:
 
 - **Nova / Vetorial / Duplicar / Mesclar Abaixo** (``Ctrl + Shift + N`` /
@@ -793,7 +794,7 @@ Espaço de Trabalho Puppet (Aba Puppet)
 A quarta aba principal — **Puppet** — é um sistema de animação de fantoches 2D
 com rig construído do zero: rigs de deformação de mesh, parâmetros, motions,
 física, expressões, grupos de pose, sincronização labial e rastreamento por webcam,
-**sem SDK proprietário**, **sem `live2d-py`**, e com
+**sem SDK proprietário**, **sem** ``live2d-py``, e com
 um formato de arquivo ``.puppet`` totalmente aberto.
 
 .. note::
@@ -1997,6 +1998,95 @@ O Imervue suporta plugins para funcionalidade estendida.
    * - Recarregar plugins
      - ``Plugins`` > ``Recarregar Plugins``
 
+Escrevendo Plugins
+^^^^^^^^^^^^^^^^^^
+
+Um plugin é um pacote Python em ``plugins/<name>/`` — ao lado do pacote ``Imervue`` em um
+checkout do código-fonte, ao lado do executável em uma build empacotada (``Plugins`` > ``Open Plugin
+Folder`` abre a pasta). O ``__init__.py`` dele define ``plugin_class`` como uma subclasse de
+``Imervue.plugin.plugin_base.ImervuePlugin``; um único arquivo ``.py`` em ``plugins/`` também é
+carregado (a primeira subclasse de ``ImervuePlugin`` nele é usada), mas o downloader de plugins só
+distribui pacotes. Os atributos de classe ``plugin_name``, ``plugin_version``, ``plugin_description`` e
+``plugin_author`` são opcionais (``"Unnamed Plugin"``, ``"0.0.1"`` e strings vazias por padrão).
+Cada janela principal cria a própria instância de cada plugin e passa a si mesma, então um hook pode usar
+``self.main_window`` e ``self.viewer`` (o ``GPUImageView``). Sobrescreva apenas os hooks de que você
+precisa; cada chamada é protegida, então uma exceção é registrada no log com o nome do plugin em vez de
+interromper o Imervue. O guia completo, com exemplos, é
+`PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 40 32
+
+   * - Hook
+     - Chamado quando
+     - Argumentos / retorno
+   * - ``register_languages()`` (método de classe)
+     - Na classe do plugin antes de cada instância ser criada (a cada carregamento e em ``Reload
+       Plugins``), e na inicialização antes de a janela principal ser construída quando o idioma salvo
+       não é um dos embutidos; essa passada de inicialização importa todos os plugins e não executa mais nada
+     - Sem argumentos. Chame ``language_wrapper.register_language(language_code, display_name,
+       word_dict)`` aqui; um código de idioma embutido é recusado. O valor de retorno é ignorado; uma
+       exceção é registrada no log e o plugin é carregado mesmo assim
+   * - ``on_plugin_loaded()``
+     - Logo depois de a instância ser criada: enquanto a janela principal é construída, e de novo depois de
+       ``Plugins`` > ``Reload Plugins``
+     - Sem argumentos; valor de retorno ignorado
+   * - ``get_translations()``
+     - Logo depois de ``on_plugin_loaded()``, uma vez por carregamento
+     - Retorna ``{language_code: {key: text}}`` (padrão ``{}``). As strings são mescladas nas
+       tabelas de idioma; chaves que já existem nunca são sobrescritas e códigos de idioma
+       desconhecidos são ignorados
+   * - ``on_build_main_tabs(tabs)``
+     - Uma vez enquanto a janela principal é construída, depois das cinco abas embutidas e antes de
+       ``on_build_menu_bar``; ``Reload Plugins`` não o executa de novo
+     - ``tabs``: o ``QTabWidget`` de nível superior da janela principal; adicione uma aba com
+       ``tabs.addTab(widget, label)``. Valor de retorno ignorado
+   * - ``on_build_menu_bar(plugin_menu)``
+     - Uma vez depois de o menu ``Plugins`` compartilhado ser construído, e de novo depois de ``Reload Plugins``
+     - ``plugin_menu``: o ``QMenu`` ``Plugins`` (não a ``QMenuBar``). As entradas que um plugin adiciona
+       em qualquer lugar da barra de menus aqui são removidas ao recarregar. Valor de retorno ignorado
+   * - ``on_build_context_menu(menu, viewer)``
+     - Cada vez que o menu de clique direito do visualizador é construído, depois das entradas embutidas e
+       logo antes de abrir
+     - ``menu``: o ``QMenu`` de contexto; ``viewer``: o ``GPUImageView``. Valor de retorno ignorado
+   * - ``on_folder_opened(folder_path, image_paths, viewer)``
+     - Quando termina a varredura de uma pasta aberta
+     - ``folder_path``: a pasta; ``image_paths``: todas as imagens que a varredura encontrou. Valor de
+       retorno ignorado
+   * - ``on_image_loaded(image_path, viewer)``
+     - Cada vez que uma imagem aparece na tela em tamanho total no deep zoom, não importa como foi
+       aberta, e de novo quando é recarregada após uma edição; não para a prévia de baixa resolução
+       exibida enquanto uma imagem grande é decodificada
+     - ``image_path``: o caminho da imagem. Valor de retorno ignorado
+   * - ``on_image_switched(image_path, viewer)``
+     - Quando próxima / anterior (incluindo a volta em qualquer uma das pontas da lista) passa para
+       outra imagem, assim que o carregamento dela começa; ``on_image_loaded`` vem depois, quando ela é
+       exibida. Abrir uma imagem pela grade ou pela filmstrip não o chama
+     - ``image_path``: a nova imagem atual. Valor de retorno ignorado
+   * - ``on_image_deleted(deleted_paths, viewer)``
+     - Depois que imagens são soft-deletadas (colocadas na pilha de desfazer) a partir do visualizador —
+       a imagem atual ou as miniaturas selecionadas — ou da árvore de pastas; não para um arquivo que a
+       árvore envia direto para a Lixeira porque ele não está na lista de imagens
+     - ``deleted_paths``: lista dos caminhos excluídos. Valor de retorno ignorado
+   * - ``on_key_press(key, modifiers, viewer)``
+     - A cada tecla pressionada que o visualizador recebe, antes das teclas embutidas dele e das
+       vinculações de Shortcut Settings; os plugins são consultados na ordem de carregamento. Uma tecla
+       que um atalho de menu ou de janela captura primeiro nunca chega ao visualizador
+     - ``key``: um código ``Qt.Key`` (int); ``modifiers``: flags ``Qt.KeyboardModifier``. Retorne
+       ``True`` para consumir a tecla — os plugins seguintes e o tratamento padrão são pulados; retorne
+       ``False`` (o padrão) para repassá-la. Uma exceção conta como ``False``
+   * - ``on_app_closing(main_window)``
+     - Quando a última janela principal fecha, depois que o aviso de abas não salvas do Paint é aceito
+       e as configurações são salvas, logo antes de os plugins serem descarregados; fechar outra janela
+       não o chama
+     - ``main_window``: a ``ImervueMainWindow`` que está fechando. Valor de retorno ignorado
+   * - ``on_plugin_unloaded()``
+     - Quando a janela do plugin fecha (depois de ``on_app_closing`` para a última janela), e antes de
+       ``Reload Plugins`` carregar os plugins de novo; os plugins são descarregados na ordem inversa
+       à de carregamento
+     - Sem argumentos; valor de retorno ignorado
+
 ----
 
 Idioma
@@ -2176,6 +2266,38 @@ Imagens animadas
      - Desacelerar
    * - ``]``
      - Acelerar
+
+Paint
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Tecla
+     - Ação
+   * - ``[`` / ``]``
+     - Diminuir / aumentar o tamanho do pincel em 1 px
+   * - ``Shift + [`` / ``Shift + ]``
+     - Diminuir / aumentar o tamanho do pincel em 5 px
+   * - ``Ctrl + Z``
+     - Desfazer
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
+     - Refazer
+   * - ``Ctrl + D``
+     - Desmarcar seleção
+   * - ``Ctrl + 0`` / ``Ctrl + 1``
+     - Ajustar à janela / Tamanho real (100 %)
+   * - ``X``
+     - Trocar as cores de primeiro plano / fundo
+   * - ``D``
+     - Redefinir as cores para preto / branco
+   * - ``Ctrl + Tab`` / ``Ctrl + Shift + Tab``
+     - Aba Paint seguinte / anterior
+
+As teclas das ferramentas estão listadas em *Paleta de Ferramentas (Tira Esquerda)*. ``Settings`` >
+``Shortcuts…`` na aba Paint remapeia as teclas de ferramenta, tamanho do pincel, camada, desfazer /
+refazer, desmarcar, visualização e cor (``Ctrl + Y`` continua como segunda tecla de Refazer).
 
 ----
 
@@ -2616,16 +2738,446 @@ sarjeta e marcas de corte configuráveis. Requer ``reportlab``.
 
 ----
 
+Referência do Menu Extra Tools
+------------------------------
+
+Todas as entradas do menu ``Extra Tools``, submenu por submenu, na ordem do menu. Muitas têm uma
+seção mais completa acima; esta lista é o inventário completo. As entradas que salvam um arquivo novo
+o gravam ao lado da origem e acrescentam ``_1``, ``_2`` … quando o nome já existe; as entradas marcadas
+"guardado na receita" são edições não destrutivas das configurações de revelação da imagem. Plugins podem
+adicionar suas próprias entradas a estes submenus.
+
+Lote (Batch)
+^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``Batch Format Conversion``
+     - Converte as imagens de uma pasta (a pasta atual por padrão) para PNG, JPEG, WebP, BMP ou TIFF,
+       ou para HEIC / AVIF / JXL quando os codificadores estão instalados, com opções de qualidade, de
+       pular o mesmo formato e de enviar os originais para a lixeira.
+   * - ``Batch EXIF Strip``
+     - Remove EXIF, GPS e outros metadados de todas as imagens de uma pasta por privacidade,
+       sobrescrevendo os originais ou gravando cópias limpas em uma pasta de saída.
+   * - ``Image Sanitizer``
+     - Re-renderiza as imagens de uma pasta a partir dos pixels brutos, removendo todos os dados ocultos
+       (metadados, esteganografia, bytes no fim do arquivo) e renomeando cada uma para data + texto
+       aleatório; também pode ampliar imagens pequenas para uma resolução-alvo, como em ``AI Image Upscale``.
+   * - ``Image Organizer``
+     - Separa as imagens de uma pasta em subpastas por data (ano-mês ou ano), resolução, tipo de arquivo,
+       tamanho de arquivo ou uma quantidade fixa por pasta, copiando ou movendo, com prévia.
+   * - ``Token Batch Rename``
+     - Renomeia as imagens selecionadas (ou a pasta inteira) a partir de um template de tokens como
+       ``{name}_{counter:04}`` ou ``{date}_{camera}``, com prévia ao vivo que sinaliza conflitos;
+       sidecars, avaliações e tags acompanham os arquivos.
+   * - ``Deflicker (Time-lapse)``
+     - Uniformiza o brilho de quadro a quadro nos quadros de time-lapse da pasta atual (alvo por média
+       móvel ou média global) e grava as cópias corrigidas em uma subpasta ``deflickered/``, sem tocar
+       nos originais.
+   * - ``Document Binarize``
+     - Transforma a foto ou o escaneamento de uma página em preto sobre branco limpo com limiarização
+       adaptativa de Sauvola (sliders de tamanho da janela e k), salvando ``<name>_bw.png`` ao lado da
+       origem.
+   * - ``Otsu Threshold``
+     - Converte a imagem atual para preto e branco no limiar global de Otsu escolhido automaticamente,
+       com opção de inverter, salvando ``<name>_otsu.png``.
+   * - ``Edit Animation``
+     - Inverte, faz bumerangue, altera o tempo (0,25x a 4x) ou otimiza (mescla quadros repetidos de)
+       o GIF, APNG ou WebP animado atual, salvando ``<name>_edited.gif``.
+   * - ``Optimize to Target Size``
+     - Recodifica a imagem atual como JPEG ou WebP na maior qualidade que cabe em um orçamento de
+       tamanho em KB, salvando ``<name>_opt.jpg`` ou ``<name>_opt.webp``.
+   * - ``Meme Caption``
+     - Adiciona as legendas clássicas de meme em cima e embaixo (texto branco em maiúsculas com contorno
+       preto e quebra de linha) à imagem atual, salvando ``<name>_meme.png``.
+   * - ``Steganography``
+     - Esconde uma mensagem de texto nos bits menos significativos da imagem atual, salva como um
+       ``<name>_stego.png`` sem perdas, ou revela uma mensagem escondida dessa forma.
+
+Biblioteca e Metadados (Library & Metadata)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``Library Search``
+     - Gerencia as pastas-raiz da biblioteca, varre-as para o índice (opcionalmente com hashes
+       perceptuais) e pesquisa-o por nome de arquivo, largura / altura mínima e tamanho de arquivo em KB;
+       clique duas vezes em um resultado para abri-lo.
+   * - ``Smart Albums``
+     - Salva álbuns baseados em regras (extensões, nome, tags, lugar, tamanho e avaliação mínimos,
+       etiqueta de cor, estado de triagem, favoritos) e mostra as correspondências; pode criar um álbum
+       por cidade a partir dos dados de GPS, e importar ou exportar álbuns.
+   * - ``Find Similar Images``
+     - Encontra imagens da biblioteca parecidas com a imagem atual (ou a primeira selecionada) por hash
+       perceptual dentro de uma distância de Hamming escolhida; varra antes suas raízes com pHash em
+       ``Library Search``.
+   * - ``Semantic Search``
+     - Encontra imagens na pasta atual que correspondem a uma descrição em texto como "praia ao pôr do
+       sol" usando CLIP sobre ``onnxruntime`` (oferecido para instalação no primeiro uso); o modelo de
+       ~150 MB é baixado uma única vez.
+   * - ``Find Duplicate Images``
+     - Varre uma pasta (opcionalmente com subpastas) em busca de duplicatas exatas por hash de arquivo ou
+       de imagens parecidas por hash perceptual; pode pré-selecionar todas exceto a melhor cópia de cada
+       grupo e mover a seleção para a Lixeira.
+   * - ``Auto-Tag Images``
+     - Marca as imagens selecionadas, ou a pasta inteira, com tags heurísticas de conteúdo (photo,
+       document, screenshot, graphic, landscape, portrait) sob ``auto/`` na árvore de tags hierárquicas,
+       ou com rótulos CLIP depois que a Pesquisa Semântica tiver baixado o modelo.
+   * - ``Hierarchical Tags``
+     - Cria e exclui tags em árvore como ``animal/cat/british``, lista as imagens sob uma tag e
+       aplica ou remove tags dos tiles selecionados.
+   * - ``Export Metadata (CSV / JSON)``
+     - Grava um registro por imagem da visualização atual (detalhes do arquivo, campos EXIF principais
+       como câmera, lente, exposição e ISO, avaliação, etiqueta de cor, tags e nota) em um arquivo CSV
+       ou JSON.
+   * - ``XMP Sidecars``
+     - Exporta ou importa arquivos sidecar ``.xmp`` para todas as imagens da visualização atual, para
+       que avaliação, título, descrição, palavras-chave e etiqueta de cor façam round-trip com Adobe
+       Bridge, Lightroom e outras ferramentas com suporte a XMP.
+   * - ``GPS Geotag``
+     - Grava uma latitude e uma longitude (graus decimais) nas tags GPS EXIF da imagem atual,
+       substituindo as que já existirem; apenas arquivos JPEG e WebP.
+   * - ``Thumbnail Cache``
+     - Mostra quanto espaço em disco o cache de miniaturas usa e o limpa.
+
+Visualizações (Views)
+^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``By day``
+     - Em ``Timeline View``: substitui a visualização principal pelas imagens da pasta atual agrupadas
+       sob um cabeçalho por dia de captura (data EXIF, senão a data do arquivo); clique duas vezes em
+       uma imagem para abri-la.
+   * - ``By month``
+     - Em ``Timeline View``: a mesma linha do tempo, agrupada por mês de captura.
+   * - ``By year``
+     - Em ``Timeline View``: a mesma linha do tempo, agrupada por ano de captura.
+   * - ``Calendar View``
+     - Mostra um calendário que destaca os dias com fotos na pasta atual (pela data de captura);
+       clique em um dia para listar as imagens dele e clique duas vezes em uma para abri-la.
+   * - ``Map View``
+     - Plota as imagens geotaggeadas da pasta atual em um mapa do OpenStreetMap, um marcador por cidade
+       mais próxima com uma contagem; o mapa carrega online e recua para uma lista de coordenadas
+       sem QtWebEngine.
+   * - ``Scopes & Inspector``
+     - Analisa a imagem atual em abas: forma de onda de luminância, parade RGB, exposição em falsa cor,
+       focus peaking, Error Level Analysis e detecção de clonagem (copy-move).
+   * - ``Tiny Planet (360°)``
+     - Reprojeta um panorama equirretangular 360° de proporção 2:1 em um "pequeno planeta" quadrado do
+       tamanho escolhido, salvando ``<name>_planet.png``; avisa quando a imagem não é 2:1.
+   * - ``Image Statistics``
+     - Mostra a média, o mínimo, o máximo, o desvio-padrão e a mediana dos canais R, G, B e de
+       luminância da imagem atual, e exporta o histograma de 256 níveis dela como CSV.
+   * - ``Quality Report``
+     - Lista métricas de qualidade sem referência da imagem atual: colorido, entropia tonal, contraste
+       RMS, densidade de bordas e ruído estimado.
+   * - ``Test Chart``
+     - Gera um padrão de calibração (barras de cor SMPTE, cunha de cinzas, rampa de gradiente,
+       tabuleiro de xadrez ou cor sólida) na largura e altura escolhidas e o salva em um arquivo.
+   * - ``Off``
+     - Em ``Color blindness preview``: desliga a prévia de deficiência de visão de cores.
+   * - ``Protanopia (red-blind)``
+     - Em ``Color blindness preview``: mostra a imagem no visualizador como uma pessoa com protanopia a
+       vê; só na tela, o arquivo e a receita dele ficam intactos.
+   * - ``Deuteranopia (green-blind)``
+     - Em ``Color blindness preview``: simula a deuteranopia, a deficiência vermelho-verde mais comum;
+       só na tela.
+   * - ``Tritanopia (blue-blind)``
+     - Em ``Color blindness preview``: simula a tritanopia (deficiência azul-amarelo); só na
+       tela.
+   * - ``Achromatopsia (greyscale)``
+     - Em ``Color blindness preview``: mostra a imagem totalmente em tons de cinza, como na acromatopsia;
+       só na tela.
+
+Fluxo de Trabalho (Workflow)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``Culling``
+     - Filtra a pasta atual para imagens escolhidas, rejeitadas ou sem marca, faz a triagem automática
+       escolhendo a imagem mais nítida de cada grupo de imagens parecidas e rejeitando as demais, e pode
+       excluir permanentemente todas as rejeitadas.
+   * - ``Staging Tray``
+     - Uma cesta persistente entre pastas: adicione os tiles selecionados ou a imagem atual de qualquer
+       pasta, depois mova ou copie todos para uma pasta, ou mostre a bandeja como um álbum.
+   * - ``Reference Panel``
+     - Fixa imagens de referência (adicionadas de arquivos, arrastando e soltando ou a partir da imagem
+       atual) com uma prévia grande para comparação lado a lado; a lista persiste entre reinicializações.
+   * - ``Virtual Copies``
+     - Salva snapshots nomeados da receita de revelação da imagem atual e alterna entre eles sem
+       duplicar o arquivo.
+   * - ``Dual-Pane File Manager``
+     - Duas árvores de pastas lado a lado para copiar ou mover a seleção de uma para a outra, ou abrir
+       um arquivo no visualizador.
+   * - ``Macros``
+     - Grava, edita, limpa e reproduz macros de ações de avaliação, favorito, etiqueta de cor e tag
+       nas imagens selecionadas.
+   * - ``Watched Folder``
+     - Enquanto o diálogo está aberto, monitora uma pasta (incluindo subpastas) e atribui uma
+       predefinição de revelação escolhida a cada nova imagem que chega, para fluxos de captura tethered
+       ou de importação sem intervenção.
+
+Exportação (Export)
+^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``Contact Sheet PDF``
+     - Dispõe miniaturas das imagens selecionadas (ou da pasta inteira) em uma grade de linhas x colunas
+       em páginas A4, A3, Letter ou Legal, com margens, um título opcional e legendas opcionais com o
+       nome do arquivo.
+   * - ``Web Gallery``
+     - Exporta as imagens selecionadas (ou a pasta inteira) como uma galeria HTML autocontida com
+       miniaturas e lightbox; pode copiar os originais e adicionar caixas de comentário de revisão do
+       cliente que são exportadas como JSON.
+   * - ``Slideshow Video``
+     - Renderiza as imagens selecionadas (ou a pasta inteira) em um MP4 com tamanho, taxa de quadros,
+       tempo de exibição, qualidade e transição (fade, dissolve, slide ou wipe) escolhidos.
+   * - ``Print Layout``
+     - Dispõe imagens em uma grade de PDF de várias páginas com tamanho de página, orientação, linhas,
+       colunas, margem, sarjeta e marcas de corte; requer o pacote opcional ``reportlab``.
+   * - ``Collage``
+     - Compõe as imagens selecionadas (ou a pasta inteira) em uma montagem em grade de 1 a 12 colunas,
+       salvando ``collage.png`` ao lado da primeira imagem.
+   * - ``ID Photo Sheet``
+     - Repete o retrato atual em um tamanho de documento (35 x 45 mm, 2 x 2 pol, 33 x 48 mm ou
+       50 x 70 mm) em papel 4x6, 5x7, A4 ou Letter a 300 DPI, salvando ``<name>_idsheet.png``.
+
+Revelação Não Destrutiva (Develop)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``Before / After Compare``
+     - Mostra a imagem atual sem e com a receita de revelação em uma única visualização, dividida por um
+       divisor arrastável.
+   * - ``Develop Presets…``
+     - Salva a receita da imagem atual como uma predefinição nomeada e depois a aplica à imagem atual ou
+       à seleção, ou mescla apenas os ajustes ativos dela nas receitas de cada uma.
+   * - ``Tone Curve``
+     - Edita uma curva RGB mestra e curvas separadas de vermelho, verde e azul sobre um histograma
+       (clique para adicionar, arraste para mover, clique com o botão direito para remover um ponto);
+       guardado na receita.
+   * - ``Apply .cube LUT``
+     - Aplica uma LUT 3D ou 1D ``.cube`` da Adobe com intensidade ajustável; guardado na receita, e
+       ``Clear`` a remove.
+   * - ``Split Toning``
+     - Tinge sombras e realces com matiz e saturação separados, mais um slider de equilíbrio; guardado
+       na receita.
+   * - ``Local Adjustment Masks``
+     - Adiciona máscaras de pincel, radiais e de gradiente linear, cada uma com a própria exposição,
+       brilho, contraste, saturação, temperatura, matiz, realces, sombras e suavização; guardado na
+       receita.
+   * - ``Layers``
+     - Empilha até oito camadas de sobreposição de texto, imagem ou LUT com opacidade e mesclagem
+       normal, multiplicação, tela ou sobreposição; guardado na receita.
+   * - ``Levels``
+     - Define o ponto preto, o ponto branco e o gama; guardado na receita.
+   * - ``Channel Mixer``
+     - Reconstrói cada canal de saída a partir de entradas ponderadas de vermelho, verde e azul mais um
+       deslocamento, com modo monocromático para conversão em preto e branco; guardado na receita.
+   * - ``Gradient Map``
+     - Mapeia a luminância por um gradiente predefinido (Mono, Sepia, Cyanotype, Fire, Ocean,
+       Magenta–Teal) com intensidade ajustável, opcionalmente mesclado no espaço perceptual OkLCH;
+       guardado na receita.
+   * - ``Auto Color Balance``
+     - Remove dominantes de cor com o método gray-world, white-patch, auto-levels (percentil) ou
+       Retinex, mesclado por um slider de intensidade, salvando ``<name>_balanced.png``.
+   * - ``Clarity / Dehaze``
+     - Aplica os sliders de contraste local Dehaze, Clarity e Texture, salvando ``<name>_local.png``.
+   * - ``HSL / Color Mixer``
+     - Ajusta matiz, saturação e luminância separadamente para oito faixas de cor (do vermelho ao
+       magenta), salvando ``<name>_hsl.png``.
+   * - ``CLAHE (Local Equalize)``
+     - Realça o contraste local com equalização adaptativa de histograma com limite de contraste
+       (limite de corte e quantidade de blocos) na luminância, salvando ``<name>_clahe.png``.
+   * - ``Flatten Background``
+     - Remove um gradiente de fundo suave, como poluição luminosa ou iluminação irregular (subtrair),
+       ou vinheta (dividir), com grau ajustável, salvando ``<name>_flat.png``.
+   * - ``Frame & Caption``
+     - Adiciona uma borda passe-partout colorida, uma faixa inferior opcional no estilo Polaroid e uma
+       legenda, salvando ``<name>_framed.png``.
+   * - ``Ordered Dither``
+     - Reduz cada canal a 2 a 8 níveis com um padrão de dithering ordenado Bayer para um visual de
+       impressão retrô, salvando ``<name>_dither.png``.
+   * - ``Color Map``
+     - Recolore a luminância da imagem pelo mapa de cores viridis, magma ou jet, salvando
+       ``<name>_colormap.png``.
+   * - ``Distort``
+     - Aplica redemoinho, compressão / abaulamento ou ondulação à imagem com intensidade ajustável,
+       salvando ``<name>_distort.png``.
+   * - ``Polar Coordinates``
+     - Enrola a imagem em um disco, ou desenrola um disco em uma faixa, opcionalmente invertendo o raio,
+       salvando ``<name>_polar.png``.
+   * - ``Kaleidoscope``
+     - Espelha uma fatia em torno do centro em um padrão simétrico com número de segmentos e rotação
+       escolhidos, salvando ``<name>_kaleidoscope.png``.
+   * - ``Frosted Glass``
+     - Espalha cada pixel para uma posição próxima aleatória (raio em pixels, semente reproduzível) para
+       um visual de vidro texturizado, salvando ``<name>_frosted.png``.
+   * - ``Pixel Sort``
+     - Ordena pixels por brilho ao longo de linhas ou colunas dentro de uma faixa de brilho inferior /
+       superior para um visual glitch, salvando ``<name>_pixelsort.png``.
+   * - ``Film Grain``
+     - Adiciona granulação de filme procedural com controles de intensidade, tamanho do grão,
+       monocromático e semente; guardado na receita.
+   * - ``Lens Flare``
+     - Adiciona um lens flare sintético em uma posição escolhida com controles de intensidade, tamanho do
+       halo e cor; guardado na receita.
+   * - ``Threshold / Posterize``
+     - Aplica um limiar de preto e branco (0 a 255) e / ou posteriza cada canal para 2 a 64
+       níveis; guardado na receita.
+   * - ``Solarize``
+     - Inverte os tons acima de um limiar para um visual de solarização de laboratório, mesclado por um
+       slider de mistura, salvando ``<name>_solarize.png``.
+   * - ``Diffuse Glow``
+     - Adiciona um brilho suave no estilo Orton com controles de quantidade, raio e limiar de realces,
+       salvando ``<name>_glow.png``.
+   * - ``Graduated Density``
+     - Escurece um lado do quadro ao longo de uma linha reta como um filtro ND graduado (ângulo, stops,
+       dureza, deslocamento, tingimento opcional), salvando ``<name>_gradnd.png``.
+   * - ``Velvia``
+     - Realça mais as cores apagadas, como o filme de slide Velvia, com sliders de intensidade e de
+       proteção das sombras, salvando ``<name>_velvia.png``.
+   * - ``Emboss``
+     - Renderiza um relevo iluminado a partir de um azimute e uma elevação escolhidos, com slider de
+       profundidade e opção de tons de cinza, salvando ``<name>_emboss.png``.
+   * - ``Defringe``
+     - Dessatura franjas roxas, verdes ou de todas as cores ao longo de bordas de alto contraste, com
+       sliders de quantidade e de limiar de borda, salvando ``<name>_defringe.png``.
+   * - ``Film Negative``
+     - Inverte um negativo colorido escaneado em positivo, removendo a base laranja do filme (estimada
+       automaticamente), com gama de saída, salvando ``<name>_positive.png``.
+   * - ``Filmic Tone Map``
+     - Suaviza os realces com uma curva filmic Reinhard ou Hable, com sliders de exposição, ponto
+       branco, contraste e saturação, salvando ``<name>_filmic.png``.
+   * - ``Tone Equalizer``
+     - Define a exposição separadamente para pretos, sombras, tons médios, realces e brancos, com
+       suavização para evitar halos, salvando ``<name>_toneeq.png``.
+   * - ``Detail Equalizer``
+     - Aumenta ou reduz o contraste separadamente nas faixas de detalhe fino, médio, grosso e amplo,
+       salvando ``<name>_detaileq.png``.
+   * - ``Soft Proof``
+     - Pré-visualiza a imagem atual através de um perfil ICC de saída escolhido, pintando de magenta os
+       pixels fora do gamut e contando-os; nada é salvo.
+
+Retoque e Transformação (Retouch & Transform)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``AI Image Upscale``
+     - Amplia uma pasta de imagens com Real-ESRGAN (geral x4, anime x4 ou x2) ou reamostragem Lanczos,
+       Bicubic ou Nearest; os modelos de IA instalam o ``onnxruntime`` sob demanda e são baixados
+       automaticamente no primeiro uso (~65 MB).
+   * - ``Noise Reduction / Sharpening``
+     - Aplica redução de ruído que preserva bordas (opcionalmente só na luminância) e nitidez por
+       máscara de nitidez (unsharp mask) com quantidade e raio, salvando em um arquivo escolhido; requer
+       OpenCV (``opencv-python``).
+   * - ``Healing Brush``
+     - Remove as manchas em que você clica em uma prévia (clique com o botão direito exclui uma mancha)
+       por inpainting com o método Telea ou Navier-Stokes, salvando em um arquivo escolhido; requer OpenCV.
+   * - ``Clone Stamp``
+     - Copia um trecho de bordas suaves de um ponto de origem marcado com Shift+clique para cada ponto em
+       que você clica em uma prévia (clique com o botão direito desfaz), salvando o resultado em um
+       arquivo escolhido.
+   * - ``Frequency Separation``
+     - Divide a imagem atual em um raio de desfoque escolhido em ``<name>_low.png`` (cor e tom) e
+       ``<name>_high.png`` (textura) para retoque em outro programa; recombine como low + (high - 128).
+   * - ``Smart Crop``
+     - Sugere recortes baseados em saliência (livre, 1:1, 4:5, 3:2, 16:9) que colocam o assunto em um
+       ponto da regra dos terços, e grava o escolhido na receita como um recorte não destrutivo.
+   * - ``Portrait Auto-Retouch``
+     - Suaviza áreas de tom de pele, remove olhos vermelhos e adiciona uma passada final de nitidez,
+       cada um com seu próprio slider, salvando ``<name>_retouched.png``.
+   * - ``Face Detection``
+     - Detecta rostos na imagem atual com a Haar cascade do OpenCV e deixa você nomear cada um; os
+       nomes são salvos com a receita. Requer OpenCV 4 (``opencv-python<5``).
+   * - ``Sky / Background``
+     - Substitui o céu por um gradiente, ou remove o fundo para transparente ou branco, salvando em um
+       arquivo escolhido; precisa de OpenCV e usa ``rembg`` para o recorte do fundo quando instalado.
+   * - ``Crop / Straighten``
+     - Gira até ±15° (cortando os cantos vazios) e recorta por coordenadas normalizadas ou por uma
+       predefinição de proporção, salvando em um arquivo escolhido; o endireitamento requer OpenCV.
+   * - ``Auto-Straighten``
+     - Mede a inclinação do horizonte ou das linhas verticais, deixa você ajustar a rotação e salva a
+       imagem endireitada em um arquivo escolhido; requer OpenCV.
+   * - ``Lens Correction``
+     - Corrige distorção de barril / almofada, vinheta e aberração cromática vermelho / azul com
+       sliders, salvando em um arquivo escolhido.
+   * - ``Scale Bar``
+     - Grava na imagem atual uma barra de escala calibrada a partir de um valor de pixels por unidade e
+       um rótulo de unidade, salvando ``<name>_scalebar.png``.
+
+Multi-Imagem (Multi-Image)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrada
+     - O que faz
+   * - ``HDR Merge``
+     - Funde duas ou mais fotos com exposições diferentes por fusão de exposição de Mertens (sem
+       precisar de dados de exposição), opcionalmente alinhando-as antes; requer OpenCV.
+   * - ``Panorama Stitch``
+     - Costura duas ou mais fotos sobrepostas, tiradas em ordem com 20 a 40 % de sobreposição, no modo
+       panorama ou flat-scan, opcionalmente cortando as bordas pretas; requer OpenCV.
+   * - ``Focus Stacking``
+     - Mescla um bracketing de foco em uma única imagem toda em foco mantendo os pixels mais nítidos de
+       cada quadro, opcionalmente alinhando-os antes; requer OpenCV.
+   * - ``Image Stack``
+     - Combina uma sequência já alinhada pixel a pixel por média, mediana, máximo, mínimo ou média com
+       sigma-clipping, para longas exposições, remoção de multidões ou rastros de estrelas; não precisa
+       de OpenCV.
+   * - ``Anaglyph 3D``
+     - Combina a imagem atual (olho esquerdo) com uma imagem de olho direito escolhida em um anáglifo
+       vermelho-ciano (método Dubois, colorido, cinza ou verdadeiro), salvando ``<name>_anaglyph.png``.
+
+----
+
+
 Uso na Linha de Comando
 -----------------------
 
 ::
 
-   imervue                        # Iniciar normalmente
-   imervue /caminho/para/imagem   # Abrir uma imagem específica
-   imervue /caminho/para/pasta    # Abrir uma pasta específica
-   imervue --debug                # Habilitar modo debug
-   imervue --software_opengl      # Usar renderização por software (quando a GPU não é suportada)
+   python -m Imervue                          # Iniciar normalmente
+   python -m Imervue /caminho/para/imagem     # Abrir uma imagem específica
+   python -m Imervue /caminho/para/pasta      # Abrir uma pasta específica
+   python -m Imervue --debug                  # Habilitar modo debug
+   python -m Imervue --software_opengl        # Usar renderização por software (quando a GPU não é suportada)
 
 CLI de lote sem interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2699,6 +3251,71 @@ lista todas elas::
    py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
    py -m Imervue.cli histogram a.jpg --json
    py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+
+``pipeline FILE INPUTS…`` executa uma cadeia ordenada de operações em cada entrada e grava um PNG
+por entrada: ``<stem>_pipeline.png`` ao lado da origem, ou ``<stem>.png`` em ``--out``. ``FILE`` é
+um JSON em UTF-8 (uma marca de ordem de bytes não atrapalha) contendo uma lista de etapas ou um objeto
+``{"pipeline": [...]}``. Cada etapa é um objeto com um ``"op"`` que nomeia a operação mais os
+parâmetros dessa operação; um parâmetro omitido assume o valor padrão, e chaves que uma operação não
+conhece são ignoradas. Um pipeline tem no máximo 50 etapas; um pipeline vazio grava cada entrada como foi
+decodificada. O arquivo é verificado antes de qualquer imagem ser lida: um arquivo que não pode ser lido
+ou interpretado imprime ``error: …``, e mais de 50 etapas, uma etapa sem nome em ``"op"`` ou uma operação
+desconhecida imprimem uma linha ``pipeline error: step N: …`` por problema; em qualquer desses casos o
+comando sai com código 2 e não grava nada. Um parâmetro do tipo errado (``null``, texto onde cabe um
+número) faz aquela imagem falhar, o que é relatado, e o código de saída é 1.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 44 42
+
+   * - Operação
+     - Parâmetros (padrões)
+     - Efeito
+   * - ``dehaze``
+     - ``strength`` (``1.0``; limitado a 0 – 1)
+     - Remoção de neblina por dark channel prior; ``0`` deixa a imagem inalterada
+   * - ``clahe``
+     - ``clip`` (``2.0``; no mínimo 1), ``tiles`` (``8``; no mínimo 1)
+     - Equalização adaptativa com limite de contraste da luminância em uma grade ``tiles`` × ``tiles``
+   * - ``dither``
+     - ``levels`` (``2``; limitado a 2 – 8)
+     - Dithering Bayer ordenado 4×4 para ``levels`` valores por canal; alfa mantido
+   * - ``distort``
+     - ``mode`` (``"swirl"``: ``swirl`` / ``pinch`` / ``ripple``), ``strength`` (``0.5``;
+       limitado a -1 – 1)
+     - Deformação geométrica em torno do centro; em ``pinch`` uma intensidade positiva abaula e uma
+       negativa comprime
+   * - ``clarity``
+     - ``amount`` (``0.5``; -1 – 1, negativo suaviza)
+     - Contraste local de raio grande, ponderado nos tons médios
+   * - ``texture``
+     - ``amount`` (``0.5``; -1 – 1, negativo suaviza)
+     - Contraste local de raio pequeno, para detalhes finos
+   * - ``grayscale``
+     - nenhum
+     - Luma (0,299 R + 0,587 G + 0,114 B) nos três canais; alfa mantido
+   * - ``invert``
+     - nenhum
+     - Inverte R, G e B; alfa mantido
+   * - ``watermark``
+     - ``text`` (``""``: sem marca d'água), ``corner`` (``"bottom-right"``: ``top-left`` /
+       ``top-right`` / ``bottom-left`` / ``bottom-right`` / ``center``; qualquer outro valor conta como
+       ``bottom-right``), ``opacity`` (``0.6``; limitado a 0 – 1)
+     - Texto branco com sombra projetada, com 3,5 % do lado maior; ``--font-fraction``, ``--color`` e
+       ``--no-shadow`` do subcomando ``watermark`` não têm parâmetro de etapa
+
+Por exemplo, ``look.json``::
+
+   {
+     "pipeline": [
+       {"op": "dehaze", "strength": 0.4},
+       {"op": "clahe", "clip": 2.5, "tiles": 8},
+       {"op": "clarity", "amount": 0.3},
+       {"op": "watermark", "text": "(c) Me", "corner": "bottom-right", "opacity": 0.5}
+     ]
+   }
+
+   py -m Imervue.cli pipeline look.json photos/ --out graded/
 
 ----
 
@@ -2830,8 +3447,8 @@ Ferramentas Disponíveis
 
 Toda ferramenta anuncia um ``outputSchema`` JSON e ``annotations`` de
 somente-leitura / destrutivas, e retorna seu resultado como
-``structuredContent`` junto com o envelope de texto (conforme o MCP
-2025-11-25), de modo que os clientes consomem payloads tipados sem
+``structuredContent`` junto com o envelope de texto (campos de revisões posteriores do MCP; o
+handshake informa ``2025-03-26``), de modo que os clientes consomem payloads tipados sem
 re-parsear. Ferramentas de longa duração transmitem
 ``notifications/progress`` quando o chamador passa um token de progresso.
 
@@ -2855,14 +3472,15 @@ O repositório inclui um ``.mcp.json`` em nível de projeto na raiz do repositó
      "mcpServers": {
        "imervue": {
          "type": "stdio",
-         "command": "python",
+         "command": "py",
          "args": ["-m", "Imervue.mcp_server"]
        }
      }
    }
 
-Abrir qualquer subdiretório do repositório no Claude Code descobre automaticamente
-este servidor. O Claude Code pergunta antes de habilitar servidores de projeto na
+``py`` é o Python Launcher do Windows; no macOS ou Linux use ``python3`` ou o interpretador do
+ambiente em que o Imervue está instalado. Abrir qualquer subdiretório do repositório no Claude Code
+descobre automaticamente este servidor. O Claude Code pergunta antes de habilitar servidores de projeto na
 primeira vez — aceite o prompt para usá-lo.
 
 Claude Desktop
@@ -2880,23 +3498,117 @@ interpretador capaz de ``import Imervue``.
 Superfície do Protocolo
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-O servidor implementa o transporte JSON-RPC 2.0 via stdio do MCP
-versão ``2025-03-26``:
+O servidor lê mensagens JSON-RPC 2.0 delimitadas por quebra de linha no stdin e grava respostas e
+notificações no stdout, uma linha UTF-8 cada. Ele responde ao ``initialize`` com a versão de protocolo
+``2025-03-26`` qualquer que seja a versão pedida pelo cliente. As requisições são tratadas uma de cada
+vez; um lote (um array JSON) é recusado com ``-32600``.
 
-* ``initialize`` — handshake; anuncia ``capabilities.tools``.
-* ``tools/list`` — enumera as ferramentas registradas com suas
-  definições de entrada JSON-Schema.
-* ``tools/call`` — invoca uma ferramenta com ``{"name", "arguments"}``;
-  os resultados voltam dentro do array ``content``.
-* ``notifications/*`` — aceitas silenciosamente (sem resposta).
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - Método
+     - O que faz
+   * - ``initialize``
+     - Handshake. Retorna ``protocolVersion`` ``2025-03-26``, ``serverInfo`` (``imervue``
+       ``1.0.0``) e as capabilities ``tools`` e ``prompts`` (``listChanged: false``),
+       ``resources`` (``subscribe: true``, ``listChanged: true``), ``completions`` e ``logging``.
+   * - ``ping``
+     - Retorna um resultado vazio.
+   * - ``tools/list``
+     - Todas as 56 ferramentas em uma única página, cada uma com ``inputSchema``, ``outputSchema`` e
+       ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``).
+   * - ``tools/call``
+     - Executa ``{"name", "arguments"}``. O resultado é um bloco de conteúdo ``text`` com o valor de
+       retorno codificado em JSON, mais ``structuredContent`` quando ele é um objeto. Uma ferramenta que
+       lança uma exceção, ou argumentos que não se encaixam nos parâmetros dela, dão ``isError: true`` e
+       um texto ``Error: …`` em vez de um erro de protocolo; um nome de ferramenta desconhecido é ``-32602``.
+   * - ``prompts/list``
+     - Os quatro prompts com seus argumentos.
+   * - ``prompts/get``
+     - Monta as mensagens de ``{"name", "arguments"}``; ``caption_image`` e
+       ``analyze_composition`` incorporam uma miniatura PNG como mensagem de imagem. Um prompt
+       desconhecido ou um ``path`` ausente é ``-32602``.
+   * - ``completion/complete``
+     - Valores correspondentes por prefixo para um argumento ``ref/prompt``: ``style`` de
+       ``suggest_edits`` (general, portrait, landscape, product, street, food, macro) e ``focus`` de
+       ``analyze_composition`` (all, framing, balance, subject, leading_lines). Qualquer outro argumento
+       recebe uma lista vazia.
+   * - ``resources/list``
+     - As imagens diretamente na pasta indicada por ``IMERVUE_MCP_ROOT`` (arquivos ocultos e SVG
+       ficam de fora), 100 por página com um ``nextCursor``; vazio quando a variável não está definida.
+   * - ``resources/templates/list``
+     - Os dois templates de URI da tabela abaixo.
+   * - ``resources/read``
+     - Lê uma URI ``imervue://image/…`` (veja abaixo).
+   * - ``resources/subscribe`` / ``resources/unsubscribe``
+     - Adiciona ou remove uma URI do conjunto que recebe ``notifications/resources/updated``.
+   * - ``logging/setLevel``
+     - Define o nível mais baixo (``debug``, ``info``, ``notice``, ``warning``, ``error``,
+       ``critical``, ``alert``, ``emergency``; ``info`` no início) enviado como
+       ``notifications/message``; qualquer outro valor é ``-32602``.
+   * - ``notifications/*`` vindas do cliente
+     - Aceitas sem resposta (``notifications/initialized``, ``notifications/cancelled``, …);
+       um cancelamento não interrompe uma ferramenta em execução.
+   * - ``notifications/progress`` (enviada)
+     - ``{progressToken, progress, total, message}`` enquanto ``find_similar`` ou ``build_collage``
+       executa, quando a requisição ``tools/call`` trouxe ``params._meta.progressToken`` (uma string ou
+       um inteiro); ``progress`` só aumenta.
+   * - ``notifications/resources/updated`` (enviada)
+     - ``{uri}`` quando um arquivo em ``IMERVUE_MCP_ROOT`` muda e a URI da miniatura dele está assinada.
+   * - ``notifications/resources/list_changed`` (enviada)
+     - Em qualquer mudança em ``IMERVUE_MCP_ROOT`` (monitorada com watchdog, sem recursão),
+       assinada ou não.
+   * - ``notifications/message`` (enviada)
+     - Entradas de log no nível de ``logging/setLevel`` ou acima, enviadas por
+       ``MCPServer.emit_log``. As ferramentas embutidas não o chamam, então o servidor padrão não envia nenhuma.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - URI
+     - Retorna
+   * - ``imervue://image/{path}``
+     - Uma miniatura PNG da imagem — na orientação correta, cabendo em 256 px — como um ``blob`` base64
+       com ``mimeType`` ``image/png``. ``resources/list`` retorna URIs nesse formato.
+   * - ``imervue://image/{path}/metadata``
+     - O resultado de ``read_image_metadata`` (dimensões, formato, EXIF, XMP) como ``text`` JSON com
+       ``mimeType`` ``application/json``.
+
+``{path}`` é o caminho do arquivo da imagem totalmente codificado em percent-encoding, incluindo
+separadores e os dois-pontos da unidade (``C:\photos\a.jpg`` é ``imervue://image/C%3A%5Cphotos%5Ca.jpg``).
+Uma leitura resolve o caminho diretamente, então funciona para qualquer arquivo, não só os que estão em
+``IMERVUE_MCP_ROOT``; um caminho com um segmento ``..`` é ``-32602``, um arquivo inexistente ``-32002`` e
+uma URI com outro esquema ``-32602``.
+
+Os erros usam os códigos JSON-RPC ``-32700`` (uma linha que não é JSON), ``-32600`` (não é um objeto de
+requisição, ou não tem ``method``), ``-32601`` (método desconhecido), ``-32602`` (parâmetros inválidos,
+ferramenta ou prompt desconhecido, nível de log ou cursor inválido, URI de recurso não suportada),
+``-32002`` (arquivo do recurso não encontrado) e ``-32603`` (erro interno).
 
 A implementação está em ``Imervue/mcp_server/``:
 
-* ``server.py`` — loop de protocolo + registro de ferramentas.
-* ``tools.py`` — funções handler e as definições de ferramenta padrão.
+* ``server.py`` — o despachante JSON-RPC (``MCPServer``), o loop stdio (``run``) e o
+  monitor de ``IMERVUE_MCP_ROOT``.
+* ``tools.py`` — a face pública do conjunto de ferramentas: reexporta todos os handlers e registra as
+  ferramentas padrão (``register_default_tools``).
+* ``tools_read.py`` / ``tools_edit.py`` — os handlers das ferramentas (listagem, metadados e análise;
+  edições gravadas em um destino), com helpers compartilhados em ``tool_support.py``.
+* ``tool_defs_read.py`` / ``tool_defs_edit.py`` — o nome, a descrição, o schema de entrada e o handler
+  de cada ferramenta, na ordem de ``tools/list``.
+* ``tool_schemas.py`` — o ``outputSchema`` e as ``annotations`` de cada ferramenta.
+* ``prompts.py`` / ``completion.py`` — os quatro prompts e as sugestões de
+  ``completion/complete``.
+* ``resources.py`` — os recursos ``imervue://image/``.
+* ``progress.py`` / ``notifications.py`` / ``logging.py`` — relatório de progresso, o gravador de stdout
+  com trava e as assinaturas de recursos, e a filtragem por nível de log.
 * ``__main__.py`` — ponto de entrada ``python -m Imervue.mcp_server``.
 
-Ferramentas customizadas podem ser registradas construindo :class:`MCPServer`
-manualmente, chamando :meth:`MCPServer.register` e alimentando mensagens
-através de :meth:`MCPServer.handle_message` (ou conduzindo o loop stdio
-com o helper :func:`run` embutido).
+Ferramentas customizadas podem ser registradas construindo :class:`MCPServer`, chamando
+:meth:`MCPServer.register` (nome, descrição, schema de entrada, handler, schema de saída e annotations
+opcionais; um nome duplicado lança ``ValueError``; um handler com um parâmetro ``progress`` recebe um
+reporter de progresso) e passando cada mensagem para :meth:`MCPServer.handle_message`, que retorna a
+resposta ou ``None`` para uma notificação. :func:`run` sempre monta o próprio servidor com as
+ferramentas padrão, então um conjunto customizado precisa do próprio loop; defina ``server.notifier``
+como um ``Notifier`` no fluxo de saída para que as notificações sejam enviadas.
