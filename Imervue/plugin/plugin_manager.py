@@ -42,6 +42,7 @@ class PluginManager:
         self.main_window = main_window
         self._plugins: list[ImervuePlugin] = []
         self._plugin_dirs: list[Path] = []
+        self._pet_hook_connected = False
 
     @property
     def plugins(self) -> list[ImervuePlugin]:
@@ -152,6 +153,30 @@ class PluginManager:
             except Exception as e:
                 logger.exception(f"[{plugin.plugin_name}] on_key_press error: {e}")
         return False
+
+    def dispatch_pet_created(self, pet) -> None:
+        for plugin in self._plugins:
+            try:
+                plugin.on_pet_created(pet)
+            except Exception as e:
+                logger.exception(f"[{plugin.plugin_name}] on_pet_created error: {e}")
+
+    def connect_pet_hooks(self) -> None:
+        """Send ``on_pet_created`` for the pet that exists now and each one created later.
+
+        Called after the plugins load and again after Reload Plugins; the
+        connection to the Desktop Pet tab is made once. A window without the
+        tab (or a test double) is left alone.
+        """
+        workspace = getattr(self.main_window, "pet_workspace", None)
+        if workspace is None:
+            return
+        if not self._pet_hook_connected:
+            workspace.pet_created.connect(self.dispatch_pet_created)
+            self._pet_hook_connected = True
+        pet = workspace.pet_window()
+        if pet is not None:
+            self.dispatch_pet_created(pet)
 
     def dispatch_app_closing(self, main_window: ImervueMainWindow) -> None:
         for plugin in self._plugins:

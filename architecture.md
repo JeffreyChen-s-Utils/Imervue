@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-01 against `1580b6e` on `dev`.
+> Last verified: 2026-10-01 against `0aacf8f` on `dev`.
 
 ## 1. Purpose
 
@@ -74,9 +74,11 @@ Public interfaces other code or users depend on:
 - **Plugin API** — subclass `ImervuePlugin` (`Imervue/plugin/plugin_base.py`) and override hooks:
   `on_plugin_loaded`, `on_plugin_unloaded`, `on_build_menu_bar`, `on_build_context_menu`,
   `on_build_main_tabs`, `on_image_loaded`, `on_folder_opened`, `on_image_switched`,
-  `on_image_deleted`, `on_key_press`, `get_translations`, `on_app_closing`, plus the class method
-  `register_languages` (called before the main window is built). Author guide:
-  `PLUGIN_DEV_GUIDE.md`.
+  `on_image_deleted`, `on_key_press`, `get_translations`, `on_pet_created`, `on_app_closing`, plus
+  the class method `register_languages` (called before the main window is built). Author guide:
+  `PLUGIN_DEV_GUIDE.md`. `on_pet_created(pet)` reaches plugins through
+  `PluginManager.connect_pet_hooks` (the Desktop Pet tab's `pet_created` signal, and the pet that
+  already exists at load / reload); the pet's plugin surface is listed in its docstring.
 - **Language API** — `language_wrapper.register_language()` (from a plugin's
   `register_languages()`) and `merge_translations()`
   (`Imervue/multi_language/language_wrapper.py`).
@@ -151,6 +153,14 @@ Public interfaces other code or users depend on:
   plain name when the import fails, so keep the two-argument call working. Keep these import paths
   working, or change the plugins in the same round. `load_rgba` has shipped since v1.0.56 or
   earlier, so a newly downloaded plugin still runs on older installs.
+- **Desktop pet plugin surface.** `pet_integrations` (Desktop Pet Integrations) subclasses
+  `IntegrationController` from `Imervue.desktop_pet.pet_feature_base` and calls
+  `Imervue.system.local_origin.is_allowed_origin`; it relies on the `on_pet_created` hook and on the
+  pet window's `play_group`, `speak`, `speak_notification`, `speech_on`, `setting`, `persist`,
+  `add_integration`, `remove_integration` and `integration`. It keeps its options in the pet's settings
+  under `obs_*`, `twitch_*`, `webhook_*` and `win_notifications_*`. Keep these names, or change the
+  plugin in the same round. On an install older than `on_pet_created` the plugin loads but the pet
+  never gets the integrations.
 - **External services.** Every download made by the plugin downloader and pip installer goes through
   an HTTPS-only guard; model downloads from Hugging Face must pin a revision. Codacy and SonarCloud
   analyse only the `main` branch.

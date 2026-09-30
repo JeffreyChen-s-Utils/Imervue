@@ -21,7 +21,7 @@ import time
 
 import pytest
 
-from Imervue.desktop_pet.webhook_server import (
+from pet_integrations.webhook_server import (
     DEFAULT_HOST,
     DEFAULT_PORT,
     WebhookCommand,
@@ -116,7 +116,7 @@ def test_bearer_token_malformed_returns_empty():
 def test_handler_sets_a_positive_request_timeout():
     """StreamRequestHandler applies the class `timeout` to the request socket;
     without it a client that stalls mid-body pins a handler thread forever."""
-    from Imervue.desktop_pet.webhook_server import (
+    from pet_integrations.webhook_server import (
         _REQUEST_TIMEOUT_S,
         _WebhookHandler,
     )

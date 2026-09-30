@@ -12,7 +12,7 @@ permission — the first time we connect, Windows shows a system
 dialog asking the user to grant access. The :class:`winrt`
 packages ship as platform wheels (no compile step needed) but
 remain optional: missing import or denied permission falls back
-to a workspace status message rather than crashing the pet.
+to a status message rather than crashing the pet.
 
 Non-Windows OSes get a stub that always reports "not supported".
 The pet still works fine without notification reactions; the
@@ -31,7 +31,7 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, Signal
 
-logger = logging.getLogger("Imervue.desktop_pet.windows_notification_hook")
+logger = logging.getLogger("Imervue.plugin.pet_integrations.windows_notification_hook")
 
 NOTIFY_MOTION_GROUP: str = "Notify"
 """Group name the pet plays on every notification by default. Rigs
@@ -97,7 +97,7 @@ class WindowsNotificationClient(QObject):
     1. :meth:`start` requests Windows access permission. The OS
        shows a one-time dialog; subsequent starts return cached
        status. Returns ``False`` if access is denied / undecided
-       so the workspace can surface "permission required".
+       so the plugin can surface "permission required".
     2. After access is granted, we register an event handler.
        Windows fires the handler from its own thread; we re-emit
        through :attr:`notification_received` (thread-safe) and
@@ -109,12 +109,12 @@ class WindowsNotificationClient(QObject):
 
     action_triggered = Signal(str)
     """Emitted with the motion-group name after applying the
-    policy filter. PetWindow connects this to
-    :meth:`PetWindow.play_random_motion_in_group`."""
+    policy filter. The plugin connects this to
+    the pet's ``play_group``."""
 
     speech_triggered = Signal(str)
     """Emitted with the speech-bubble line per
-    :func:`notification_to_action`. ``PetWindow`` is the consumer."""
+    :func:`notification_to_action`. The plugin is the consumer."""
 
     _notification_ready = Signal(object)
     """Internal: marshals a notification id from the WinRT callback thread onto

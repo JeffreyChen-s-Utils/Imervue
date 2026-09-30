@@ -76,31 +76,20 @@ DEFAULTS: dict[str, Any] = {
     "script_path": "",            # path to a user-supplied .petscript.json; "" = built-in defaults
     "hotkeys_enabled": False,     # global keyboard shortcuts (needs pynput)
     "hotkeys": {},                # {action: "ctrl+shift+p"}; empty = use module defaults
-    "obs_enabled": False,         # listen for OBS events (needs obs-websocket-py)
-    "obs_host": "localhost",
-    "obs_port": 4455,
-    "obs_password": "",
-    "twitch_enabled": False,      # listen for Twitch chat keywords
-    "twitch_channel": "",         # channel to join (omit leading #)
-    "twitch_oauth": "",           # oauth:xxx token from twitchapps.com/tmi
-    "twitch_triggers": {},        # {keyword: motion-group-name}
     "virtual_camera_enabled": False,   # stream pet to system virtual camera (needs pyvirtualcam)
     "llm_enabled": False,              # use a local LLM for fresh speech lines
     "llm_base_url": "http://localhost:11434",
     "llm_model": "llama3.2:1b",
     "llm_persona": "",                 # empty = use module default persona
-    "win_notifications_enabled": False,   # react to Windows toast notifications (needs winrt)
-    "win_notifications_ignored": [],      # list of app_user_model_ids to ignore
     "click_sfx_enabled": False,           # play sound effects on click / drag / drop / notify
     "click_sfx_volume": 0.6,              # 0.0 - 1.0
     "click_sfx_paths": {},                # {event: path}; events without entries stay silent
     "pet_shadow_enabled": True,           # render a soft drop shadow under the puppet
     "pet_shadow_opacity": 0.7,            # 0.0 - 1.0 multiplier on the texture's built-in falloff
     "pet_shadow_scale": 1.0,              # 0.0 - 2.0 width-of-shadow multiplier
-    "webhook_enabled": False,             # localhost HTTP server for external triggers
-    "webhook_port": 9876,                 # listen port (loopback only)
-    "webhook_token": "",                  # optional bearer token; empty = no auth
 }
+# The OBS / Twitch / webhook / Windows-notification options are kept here by the
+# Desktop Pet Integrations plugin under keys of its own (unknown keys survive a save).
 
 
 def load(pet_id: str = DEFAULT_PET_ID) -> dict[str, Any]:

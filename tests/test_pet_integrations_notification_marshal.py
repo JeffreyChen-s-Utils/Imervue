@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from Imervue.desktop_pet.windows_notification_hook import WindowsNotificationClient
+from pet_integrations.windows_notification_hook import WindowsNotificationClient
 
 
 def test_notification_changed_emits_the_marshal_signal(qapp):

@@ -625,6 +625,8 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 所有设置 — 位置、驱动、不透明度、点击穿透、尺寸 — 都会跨启动保留。
 
+**Desktop Pet Integrations** 插件（**Plugins > Download Plugins**）会新增 **Plugins > Desktop Pet Integrations** 菜单：宠物会响应 OBS（开始直播、录制、切换场景）、Twitch 聊天关键字、本地 webhook（`POST http://127.0.0.1:9876/trigger`，内容为 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知。它同时也是基于 `on_pet_created` 编写宠物插件的示例。
+
 ### 自定义语音（pet script）
 
 宠物的对话气泡取材自一个你可以自行编写的 JSON 文件。在 Desktop Pet 标签的 **Pet script** 分组中点击 **Load script…**，选择一个 `.petscript.json`。schema 如下：
@@ -828,6 +830,7 @@ Imervue 支持第三方插件。完整参考见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_image_switched(path, viewer)` | 切换图片时 |
 | `on_image_deleted(paths, viewer)` | 图片被软删除后 |
 | `on_key_press(key, modifiers, viewer)` | 按键时（返回 True 消费事件） |
+| `on_pet_created(pet)` | 桌面宠物窗口创建时，或插件加载时宠物已存在 |
 | `on_app_closing(main_window)` | App 关闭前 |
 | `get_translations()` | 提供 i18n 字符串 |
 | `register_languages()` | 类方法：注册新语言（每次加载前，以及启动时） |

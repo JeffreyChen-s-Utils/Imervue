@@ -316,6 +316,7 @@ def _reload_plugins(ui: ImervueMainWindow):
     plugin_menu = _live_plugin_menu(ui)
     if plugin_menu is not None:
         dispatch_plugin_menus(ui, manager, plugin_menu)
+    manager.connect_pet_hooks()
 
     loaded = len(manager.plugins)
     if hasattr(ui, "toast"):

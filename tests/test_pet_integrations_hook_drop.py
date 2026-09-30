@@ -9,8 +9,8 @@ from __future__ import annotations
 import threading
 from types import SimpleNamespace
 
-from Imervue.desktop_pet.obs_event_hook import ObsEventClient
-from Imervue.desktop_pet.twitch_chat_hook import TwitchChatClient
+from pet_integrations.obs_event_hook import ObsEventClient
+from pet_integrations.twitch_chat_hook import TwitchChatClient
 
 
 def test_obs_is_running_false_without_a_client():

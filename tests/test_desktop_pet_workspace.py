@@ -289,3 +289,18 @@ def test_show_on_launch_is_a_checkbox(qapp):
         assert again.pet_window() is None
     finally:
         again.deleteLater()
+
+
+def test_creating_the_pet_announces_it_once_for_plugins(qapp):
+    """Plugins hear on_pet_created from this signal; asking for the pet again must not repeat it."""
+    ws = PetWorkspace()
+    created: list = []
+    ws.pet_created.connect(created.append)
+    try:
+        window = ws._ensure_pet_window()  # noqa: SLF001
+        assert ws._ensure_pet_window() is window  # noqa: SLF001
+        assert created == [window]
+    finally:
+        window.hide()
+        window.deleteLater()
+        ws.deleteLater()

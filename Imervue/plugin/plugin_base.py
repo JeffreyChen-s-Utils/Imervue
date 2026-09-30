@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QMenu, QTabWidget
     from Imervue.Imervue_main_window import ImervueMainWindow
+    from Imervue.desktop_pet.pet_window import PetWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
@@ -113,6 +114,37 @@ class ImervuePlugin:
 
             from PySide6.QtWidgets import QLabel
             tabs.addTab(QLabel("My Plugin"), "My Plugin")
+        """
+        pass
+
+    # ===========================
+    # Desktop Pet Hooks
+    # ===========================
+
+    def on_pet_created(self, pet: PetWindow) -> None:
+        """Called when the desktop pet window exists: when the Desktop Pet tab
+        first creates it, and right after this plugin loads (or reloads) if it
+        already does.
+
+        The supported surface of ``pet`` for plugins:
+
+        * ``play_group(group) -> bool`` plays a random motion of a motion
+          group; ``speak(line)`` and ``speak_notification(line)`` show a speech
+          bubble (the second with the notification sound); ``speech_on`` tells
+          whether speech is enabled;
+        * ``setting(key, default)`` / ``persist(**fields)`` read and write the
+          pet's saved settings, which keep keys Imervue does not know;
+        * ``add_integration(key, controller)`` / ``remove_integration(key)`` /
+          ``integration(key)`` hand the pet an
+          :class:`~Imervue.desktop_pet.pet_feature_base.IntegrationController`
+          it stops when it shuts down (remove it in ``on_plugin_unloaded``);
+        * the signals ``hit_triggered(str)`` (a click, with the hit area's id or
+          ``""``), ``moved(int, int)`` and ``visibility_changed(bool)``.
+
+        Example::
+
+            def on_pet_created(self, pet):
+                pet.hit_triggered.connect(lambda area: pet.speak("Hi!"))
         """
         pass
 

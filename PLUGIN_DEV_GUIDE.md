@@ -215,6 +215,58 @@ def on_key_press(self, key, modifiers, viewer):
 
 > **Important:** Be careful about consuming common keys. Only return `True` for keys your plugin specifically handles.
 
+### Desktop Pet Hooks
+
+#### `on_pet_created(pet: PetWindow)`
+
+Called when the desktop pet window exists: when the Desktop Pet tab first creates it, and right after
+your plugin loads (or **Reload Plugins** runs) if it already does. The pet window is created lazily,
+so a plugin that loads before anyone opens the tab hears it later.
+
+The supported surface of `pet`:
+
+| Member | What it does |
+|---|---|
+| `play_group(group) -> bool` | Play a random motion of a motion group (`False` when the rig has none) |
+| `speak(line)` / `speak_notification(line)` | Show a speech bubble; the second also plays the notification sound |
+| `speech_on` | Whether the user has the speech bubble on |
+| `setting(key, default)` / `persist(**fields)` | Read / write the pet's saved settings; keys Imervue does not know are kept |
+| `add_integration(key, controller)` / `remove_integration(key)` / `integration(key)` | Hand the pet an `IntegrationController` (`Imervue.desktop_pet.pet_feature_base`) it stops when it shuts down |
+| `hit_triggered(str)`, `moved(int, int)`, `visibility_changed(bool)` | Signals: a click (the hit area's id, or `""`), a drag that ended, shown / hidden |
+
+```python
+from Imervue.desktop_pet.pet_feature_base import IntegrationController
+
+
+class ClockController(IntegrationController):
+    persist_key = "clock_enabled"          # the pet's setting that remembers "on"
+
+    def _build_client(self):               # called once; any object with start / stop / is_running
+        return HourlyChime(on_hour=lambda: self._host.play_group("Chime"))
+
+
+class ClockPlugin(ImervuePlugin):
+    plugin_name = "Hourly Chime"
+
+    def on_pet_created(self, pet):
+        self._pet = pet
+        pet.add_integration("clock", ClockController(pet))
+        pet.hit_triggered.connect(lambda area: pet.speak(f"You touched {area or 'me'}!"))
+        if pet.setting("clock_enabled", False):
+            pet.integration("clock").set_enabled(True)
+
+    def on_plugin_unloaded(self):
+        if getattr(self, "_pet", None) is not None:
+            self._pet.remove_integration("clock")   # stops it, keeps "on" for next time
+```
+
+`IntegrationController.set_enabled(True)` builds the client once (`_build_client`), pushes the settings
+into it on every start (`_configure`), starts it and saves whether it started under `persist_key`;
+`set_enabled(False)` stops it and saves "off"; `shutdown()` stops it without saving. The
+**Desktop Pet Integrations** plugin (`pet_integrations` in the plugin downloader) is the full example:
+OBS, Twitch chat, a local webhook and Windows notifications, each one an `IntegrationController`, with a
+menu of toggles, optional packages installed on first use, and a settings dialog.
+
 ### Application Hooks
 
 #### `on_app_closing(main_window: ImervueMainWindow)`

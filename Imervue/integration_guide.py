@@ -55,6 +55,7 @@ def _init_plugin_system_example(main_window: ImervueMainWindow) -> None:
     # (recording them so Reload Plugins can take them out again).
     plugin_menu = build_plugin_menu(main_window)
     dispatch_plugin_menus(main_window, manager, plugin_menu)
+    manager.connect_pet_hooks()
 
 
 def _dispatch_main_tab_hook(manager: PluginManager, tabs) -> None:

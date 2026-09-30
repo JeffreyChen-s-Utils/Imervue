@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `2788bc1` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `0aacf8f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 909 | 153,300 |
+| `tests/` | 913 | 153,996 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,563 |
 | `Imervue/puppet/` | 58 | 15,601 |
 | `Imervue/image/` | 128 | 15,414 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
 | `Imervue/multi_language/` | 8 | 14,377 |
-| `Imervue/desktop_pet/` | 34 | 8,389 |
+| `Imervue/desktop_pet/` | 30 | 7,174 |
 | `Imervue/mcp_server/` | 16 | 4,668 |
 | `Imervue/library/` | 34 | 4,759 |
-| `Imervue/menu/` | 11 | 3,594 |
-| `Imervue/` 根層 | 6 | 1,942 |
-| `Imervue/plugin/` | 10 | 2,337 |
+| `Imervue/menu/` | 11 | 3,595 |
+| `Imervue/` 根層 | 6 | 1,943 |
+| `Imervue/plugin/` | 10 | 2,394 |
 | `Imervue/system/` | 32 | 3,176 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（17 個外掛） | 64 | 14,464 |
-| **總計** | **1,764** | **338,263** |
+| `plugins/`（18 個外掛） | 73 | 16,164 |
+| **總計** | **1,773** | **339,503** |
 
-其中 `Imervue/` 套件本身 791 檔 / 170,499 行。
+其中 `Imervue/` 套件本身 787 檔 / 169,343 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -664,7 +664,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_menu.py` | 524 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
-| `plugin_menu.py` | 333 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
+| `plugin_menu.py` | 334 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 185 | 依名稱 / 修改日期 / 建立日期 / 拍攝日期（`library.calendar_index.capture_datetime`：EXIF 拍攝時間，沒有就用修改時間；同一秒的連拍依檔名）/ 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
@@ -861,17 +861,17 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-34 個檔、8,389 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+30 個檔、7,174 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `pet_window.py` | 844 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas` |
+| `pet_window.py` | 867 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas`；`add_integration` / `remove_integration` / `integration` 讓外掛把 `IntegrationController` 掛進 `shutdown()` 會停的登錄表 |
 | `pet_window_flags.py` | 201 | `PetWindowFlagsMixin`：`PetWindow` 的視窗旗標組合（置頂／置底、點擊穿透）、鎖定位置、吸附門檻、透明度、全螢幕時隱藏 |
-| `pet_feature_toggles.py` | 219 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、OBS／Twitch、虛擬攝影機、LLM、音樂律動、閒置小遊戲、通知、webhook、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
-| `pet_workspace.py` | 775 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設） |
+| `pet_feature_toggles.py` | 188 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、虛擬攝影機、LLM、音樂律動、閒置小遊戲、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
+| `pet_workspace.py` | 780 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設）；建立寵物視窗時發 `pet_created`，外掛經 `PluginManager.connect_pet_hooks` 收到 `on_pet_created` |
 | `pet_interaction.py` | 214 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
 | `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
 | `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
@@ -880,15 +880,15 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | `pet_shadow.py` | 137 + `pet_shadow_controller.py`(83) | 放射漸層落地陰影（單一 draw call） |
 | `speech_bubble.py` | 208 | 對話泡泡覆蓋視窗（自動淡出） |
 | `tray_icon.py` | 151 | 系統匣切換 |
-| `settings.py` | 304 | 設定持久化（schema + 預設值 + 載入夾限） |
+| `settings.py` | 293 | 設定持久化（schema + 預設值 + 載入夾限） |
 | `fullscreen_detector.py` | 166 | 偵測同螢幕有全螢幕程式時自動隱藏 |
 
 #### 驅動與功能控制器（兩個家族）
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `pet_feature_base.py` | 171 | `FeatureHost` Protocol + `IntegrationController` 骨架 |
-| `pet_features.py` | 178 | 具體整合控制器：OBS / Twitch / Webhook / Windows 通知 / 全域熱鍵 |
+| `pet_feature_base.py` | 159 | `FeatureHost` Protocol + `IntegrationController` 骨架 |
+| `pet_features.py` | 77 | 內建整合控制器：全域熱鍵；OBS / Twitch / Webhook / Windows 通知是 `plugins/pet_integrations` 外掛，經 `add_integration` 加進同一個登錄表 |
 | `pet_drivers.py` | 243 | canvas 驅動控制器：音樂律動 / 閒置小遊戲 / 點擊音效 / LLM 對話 |
 | `pet_canvas_drivers.py` | 168 | canvas 輸入驅動子系統（自動眨眼 / 拖曳追頭 / 麥克風對嘴） |
 
@@ -896,9 +896,9 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 外部整合
 
-`obs_event_hook.py`(195) OBS WebSocket → 動作群組 · `twitch_chat_hook.py`(277) Twitch 聊天關鍵字 ·
-`webhook_server.py`(323) localhost HTTP POST `/trigger` · `windows_notification_hook.py`(293) Windows toast →
-`Notify` 動作 + 朗讀標題 · `hotkey_manager.py`(248) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(46) 衝突偵測 ·
+OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrations`（§7） ·
+寵物外掛的穩定介面見 `plugin_base.on_pet_created` ·
+`hotkey_manager.py`(248) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(46) 衝突偵測 ·
 `command_parser.py`(77) 可重用的聊天指令路由器（exact / prefix / substring / regex）
 
 #### 個性與行為
@@ -912,8 +912,8 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `plugin_base.py` | 232 | `ImervuePlugin` 基底類別，12 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_app_closing` |
-| `plugin_manager.py` | 289 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式）；`apply_saved_language()` / `register_plugin_languages()`：主視窗建立前只匯入外掛並呼叫 `register_languages()`，讓存下的外掛語言套用得到 |
+| `plugin_base.py` | 264 | `ImervuePlugin` 基底類別，13 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_pet_created`（寵物視窗建立時，或外掛載入時寵物已存在）、`on_app_closing` |
+| `plugin_manager.py` | 314 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派（`connect_pet_hooks` 接上桌面寵物分頁的 `pet_created`，載入 / 重新載入時補發給已存在的寵物）、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式）；`apply_saved_language()` / `register_plugin_languages()`：主視窗建立前只匯入外掛並呼叫 `register_languages()`，讓存下的外掛語言套用得到 |
 | `plugin_downloader.py` | 530 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
 | `pip_installer.py` | 850 | 外掛相依安裝器：下載內嵌 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔；再匯出 `python_finder` 的名稱（外掛依賴 `pip_installer._find_python`） |
 | `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
@@ -957,6 +957,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 | 外掛 | 檔案/行數 | 功用 | 重量級相依 |
 | --- | --- | --- | --- |
 | `safety_review` | 15 / 4,622 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到）；存檔一律走 `_censor_core._save_as`（`.tmp` + `os.replace`，覆寫原檔模式失敗也不毀原圖） | nudenet, ultralytics, huggingface_hub |
+| `pet_integrations` | 9 / 1,700 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
 | `spanish_translation` | 3 / 1,824 | 西班牙文語言外掛，示範在 `register_languages()` 裡呼叫 `register_language()` | — |
 | `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 823 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
@@ -982,7 +983,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 ## 8. `tests/` 測試體系
 
-909 個檔、153,300 行。`pyproject.toml` 定義三個互斥層級 marker：
+913 個檔、153,996 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -78,6 +78,7 @@ class TestImervuePlugin:
         # Should not raise
         plugin.on_plugin_loaded()
         plugin.on_plugin_unloaded()
+        plugin.on_pet_created(object())
 
     def test_menu_hooks_are_noop(self):
         from Imervue.plugin.plugin_base import ImervuePlugin
@@ -498,6 +499,51 @@ class TestPluginManagerDispatch:
         menu = MagicMock()
         pm.dispatch_build_context_menu(menu, mw.viewer)
         plugin.on_build_context_menu.assert_called_once_with(menu, mw.viewer)
+
+    def test_dispatch_pet_created(self):
+        pm, _, plugin = self._make_pm_with_mock_plugin()
+        pet = object()
+        pm.dispatch_pet_created(pet)
+        plugin.on_pet_created.assert_called_once_with(pet)
+
+    def test_a_failing_pet_hook_does_not_reach_the_next_plugin(self):
+        pm, _, plugin = self._make_pm_with_mock_plugin()
+        plugin.on_pet_created.side_effect = RuntimeError("plugin bug")
+        second = MagicMock()
+        pm._plugins.append(second)
+        pm.dispatch_pet_created("pet")
+        second.on_pet_created.assert_called_once_with("pet")
+
+    def test_connect_pet_hooks_sends_the_existing_pet_and_connects_once(self):
+        from Imervue.plugin.plugin_manager import PluginManager
+        mw = _make_mock_main_window()
+        pet = object()
+        mw.pet_workspace.pet_window.return_value = pet
+        pm = PluginManager(mw)
+        plugin = MagicMock()
+        pm._plugins.append(plugin)
+        pm.connect_pet_hooks()
+        pm.connect_pet_hooks()          # after Reload Plugins
+        mw.pet_workspace.pet_created.connect.assert_called_once_with(pm.dispatch_pet_created)
+        assert plugin.on_pet_created.call_count == 2
+
+    def test_connect_pet_hooks_without_a_pet_yet_only_connects(self):
+        from Imervue.plugin.plugin_manager import PluginManager
+        mw = _make_mock_main_window()
+        mw.pet_workspace.pet_window.return_value = None
+        pm = PluginManager(mw)
+        plugin = MagicMock()
+        pm._plugins.append(plugin)
+        pm.connect_pet_hooks()
+        plugin.on_pet_created.assert_not_called()
+        mw.pet_workspace.pet_created.connect.assert_called_once()
+
+    def test_connect_pet_hooks_without_the_pet_tab_does_nothing(self):
+        from types import SimpleNamespace
+
+        from Imervue.plugin.plugin_manager import PluginManager
+        pm = PluginManager(SimpleNamespace(viewer=None))
+        pm.connect_pet_hooks()           # no pet_workspace: no error
 
     def test_dispatch_error_does_not_propagate(self):
         """If a plugin hook raises, dispatch should not propagate the error."""

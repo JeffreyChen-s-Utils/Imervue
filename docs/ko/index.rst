@@ -1357,6 +1357,46 @@ rig 이 ``HitArea`` 항목을 정의하고 있다면, ``hit_responses`` 키가
 영역 id 와 일치하는 ``.petscript.json`` 에서 히트 영역별 말풍선
 대사를 작성할 수 있습니다.
 
+연동 플러그인
+^^^^^^^^^^^^^
+
+**Desktop Pet Integrations** 플러그인(``Plugins`` > ``Download Plugins``, 카테고리
+``plugins``, 이름 ``pet_integrations``)을 설치하면 펫이 외부 세계에 반응합니다. 이 플러그인은
+``Plugins`` > ``Desktop Pet Integrations`` 메뉴를 추가하며, 여기에는 연동마다 항목이 하나씩 있고
+각 옵션을 설정하는 ``Settings…`` 항목이 있습니다. 각 항목은 펫을 한 번 표시한 뒤에 켤 수 있으며,
+필요한 선택적 패키지를 먼저 설치하고, 재시작 후에도 켜진 상태가 유지됩니다. 이 플러그인은 펫을
+확장하는 플러그인의 실제 예제이기도 합니다 — *플러그인 작성* 과 ``on_pet_created`` 를 참조하세요.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - 연동
+     - 펫의 동작
+     - 필요 사항
+   * - OBS 이벤트에 반응
+     - 스트리밍이나 녹화가 시작 / 중지되거나 장면이 바뀌면 ``Stream``, ``Record``, ``Scene``
+       그룹의 모션을 재생합니다. OBS WebSocket 서버의 호스트, 포트, 비밀번호는 ``Settings…``
+       에서 설정합니다
+     - ``obs-websocket-py``\ (처음 사용할 때 설치됨), WebSocket 서버를 켠 OBS
+   * - Twitch 채팅에 반응
+     - 채널 채팅에 참여하여, 메시지에 키워드가 포함될 때마다 그 키워드에 매핑된 모션 그룹을
+       재생합니다(대소문자 구분 없음. ``Settings…`` 에 ``keyword = Group`` 형식으로 한 줄씩 입력)
+     - 채널 이름과 ``oauth:`` 토큰
+   * - 로컬 웹훅(127.0.0.1)
+     - 스크립트, Stream Deck, 자동화 도구가 보내는 JSON POST
+       ``{"group": "Wave", "speech": "Hi!"}`` 를 ``http://127.0.0.1:9876/trigger``\ (포트는
+       ``Settings…`` 에서 변경)에서 받습니다. 두 필드는 모두 생략할 수 있습니다. 토큰을 설정하면
+       요청에 ``Authorization: Bearer <token>`` 헤더가 있어야 하며, 웹 페이지에서 온 요청은
+       거부됩니다
+     - 추가로 필요한 것 없음
+   * - Windows 알림에 반응
+     - 다른 앱이 Windows 알림을 표시하면 ``Notify`` 그룹을 재생하고 알림 제목을 말합니다. 무시할
+       앱 ID 목록에 있는 앱은 건너뜁니다. 처음에는 Windows 가 알림 접근 권한을 요청합니다
+     - Windows, ``winrt`` 알림 패키지(처음 사용할 때 설치됨)
+
+rig 은 자신이 가진 모션 그룹에만 반응하며, 없는 그룹은 아무것도 재생하지 않습니다.
+
 문제 해결
 ^^^^^^^^^
 
@@ -1848,6 +1888,14 @@ Imervue는 플러그인을 통한 기능 확장을 지원합니다.
      - ``key``: ``Qt.Key`` 코드(int); ``modifiers``: ``Qt.KeyboardModifier`` 플래그. ``True``
        를 반환하면 키를 소비하여 이후 플러그인과 기본 처리를 건너뜁니다. ``False``\ (기본값)를
        반환하면 다음으로 넘깁니다. 예외는 ``False`` 로 간주됩니다
+   * - ``on_pet_created(pet)``
+     - Desktop Pet 탭이 펫 창을 만들 때, 그리고 펫이 이미 있으면 플러그인이 로드된 직후(또는
+       ``Reload Plugins`` 실행 후)
+     - ``pet``: 펫 창. 플러그인은 ``play_group(group)``, ``speak(line)``,
+       ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` 와 시그널 ``hit_triggered``,
+       ``moved``, ``visibility_changed`` 를 사용합니다. 반환값은 무시됨
    * - ``on_app_closing(main_window)``
      - 마지막 메인 창이 닫힐 때, Paint의 저장하지 않은 탭 확인이 수락되고 설정이 저장된 뒤,
        플러그인을 언로드하기 직전. 다른 창을 닫을 때는 호출되지 않습니다

@@ -1,11 +1,10 @@
 """The desktop pet's live-driver and integration toggles.
 
 ``PetWindow`` exposes one ``set_*_enabled`` / ``*_enabled`` pair per feature
-(auto blink, lip-sync, webcam tracking, hotkeys, OBS / Twitch hooks, virtual
-camera, LLM dialogue, music rhythm, idle minigame, notifications, webhook,
-drop shadow, click SFX, mouse gaze). Each one only forwards to the controller
-that owns the feature and persists the choice, so they live together here and
-``PetWindow`` mixes them in. The controllers themselves are built by
+(auto blink, lip-sync, webcam tracking, hotkeys, virtual camera, LLM dialogue,
+music rhythm, idle minigame, drop shadow, click SFX, mouse gaze). Each one only
+forwards to the controller that owns the feature and persists the choice, so they
+live together here and ``PetWindow`` mixes them in. The controllers themselves are built by
 ``PetWindow._init_drivers_and_voice`` / ``_init_feature_controllers``.
 """
 from __future__ import annotations
@@ -83,21 +82,7 @@ class PetFeatureTogglesMixin:
             if line and self._speech_enabled:
                 self._show_speech(line)
 
-    def set_obs_hook_enabled(self, enabled: bool) -> bool:
-        """Connect / disconnect the OBS event listener (see
-        ObsHookController). ``False`` when the dep / connection failed."""
-        return self._features["obs"].set_enabled(enabled)
 
-    def obs_hook_enabled(self) -> bool:
-        return self._features["obs"].is_enabled()
-
-    def set_twitch_hook_enabled(self, enabled: bool) -> bool:
-        """Connect / disconnect the Twitch chat listener (see
-        TwitchHookController). ``False`` when config / handshake failed."""
-        return self._features["twitch"].set_enabled(enabled)
-
-    def twitch_hook_enabled(self) -> bool:
-        return self._features["twitch"].is_enabled()
 
     def set_virtual_camera_enabled(self, enabled: bool) -> bool:
         """Toggle the system virtual camera output. ``False`` when
@@ -158,33 +143,17 @@ class PetFeatureTogglesMixin:
         call this so the minigame knows the user is still there."""
         self._idle_minigame.notify_activity()
 
-    def set_windows_notifications_enabled(self, enabled: bool) -> bool:
-        """Toggle the Windows toast notification listener (see
-        WindowsNotificationController). ``False`` covers missing winrt,
-        non-Windows, denied permission, or registration failure."""
-        return self._features["windows_notifications"].set_enabled(enabled)
-
-    def windows_notifications_enabled(self) -> bool:
-        return self._features["windows_notifications"].is_enabled()
 
     def speak_notification(self, line: str) -> None:   # pragma: no cover - Qt UI
         """Route a notification's title through the speech bubble +
-        SFX. Called by the notification controller; bypasses the
-        script engine because the notification text already carries
-        its own content (no generic-greeting fallback)."""
+        SFX. Part of the plugin surface (the Windows-notification
+        integration calls it); bypasses the script engine because the
+        notification text already carries its own content."""
         if not self._speech_enabled or not line:
             return
         self._show_speech(line)
         self._play_sfx(SFX_NOTIFY)
 
-    def set_webhook_enabled(self, enabled: bool) -> bool:
-        """Toggle the localhost HTTP webhook receiver (see
-        WebhookController). ``False`` when the bind failed (port in
-        use, OS refusal)."""
-        return self._features["webhook"].set_enabled(enabled)
-
-    def webhook_enabled(self) -> bool:
-        return self._features["webhook"].is_enabled()
 
     def set_pet_shadow_enabled(self, enabled: bool) -> None:
         """Toggle the drop shadow + persist. Live update — the next

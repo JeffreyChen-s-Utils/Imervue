@@ -28,7 +28,7 @@ import threading
 
 from PySide6.QtCore import QObject, Signal
 
-logger = logging.getLogger("Imervue.desktop_pet.twitch_chat_hook")
+logger = logging.getLogger("Imervue.plugin.pet_integrations.twitch_chat_hook")
 
 TWITCH_IRC_HOST: str = "irc.chat.twitch.tv"
 TWITCH_IRC_TLS_PORT: int = 6697
@@ -140,7 +140,7 @@ class TwitchChatClient(QObject):
     def set_endpoint(self, channel: str, oauth: str) -> None:
         """Cache the channel name + OAuth token. Effective on the
         next :meth:`start`; a running client stays on its current
-        connection so a keystroke in the workspace doesn't thrash
+        connection so a keystroke in the settings dialog doesn't thrash
         the socket."""
         self._channel = str(channel).lower().lstrip("#")
         self._oauth = str(oauth)

@@ -71,10 +71,10 @@ def _imervue_version() -> str:
         return "unknown"
 
 
-# A settings key, at any depth, whose name marks a credential: the desktop pet's
-# ``webhook_token``, ``obs_password`` and ``twitch_oauth`` live inside the nested
-# ``desktop_pet`` dict, where the top-level list above cannot reach them. Name
-# parts are matched whole, so ``token_rename_template`` is kept.
+# A settings key, at any depth, whose name marks a credential: the desktop pet
+# integrations plugin keeps ``webhook_token``, ``obs_password`` and ``twitch_oauth``
+# inside the nested ``desktop_pet`` dict, where the top-level list above cannot
+# reach them. Name parts are matched whole, so ``token_rename_template`` is kept.
 _SECRET_PARTS = frozenset({"password", "passwd", "secret", "oauth", "credential", "credentials"})
 
 

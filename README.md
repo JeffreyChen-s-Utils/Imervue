@@ -685,6 +685,8 @@ Pick any combination from the tab or the right-click menu. Auto idle, Idle motio
 
 Everything you set — position, drivers, opacity, click-through, size — is remembered between launches.
 
+The **Desktop Pet Integrations** plugin (**Plugins > Download Plugins**) adds **Plugins > Desktop Pet Integrations**: the pet reacts to OBS (streaming, recording, scene changes), to Twitch chat keywords, to a local webhook (`POST http://127.0.0.1:9876/trigger` with `{"group": "Wave", "speech": "Hi!"}`) and to Windows notifications. It is also the example of a pet plugin built on `on_pet_created`.
+
 ### Custom voice (pet script)
 
 The pet's speech bubble draws from a JSON file you can author yourself. Click **Load script…** in the **Pet script** group of the Desktop Pet tab and pick a `.petscript.json`. The schema:
@@ -888,6 +890,7 @@ Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE
 | `on_image_switched(path, viewer)` | When navigating between images |
 | `on_image_deleted(paths, viewer)` | After image(s) are soft-deleted |
 | `on_key_press(key, modifiers, viewer)` | On key press (return True to consume) |
+| `on_pet_created(pet)` | When the desktop pet window is created, or already exists when the plugin loads |
 | `on_app_closing(main_window)` | Before application closes |
 | `get_translations()` | Provide i18n strings |
 | `register_languages()` | Class method: register new languages (before each load, and at startup) |

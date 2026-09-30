@@ -1589,6 +1589,51 @@ des répliques de bulle par zone cliquable dans un
 ``.petscript.json`` dont les clés ``hit_responses`` correspondent
 aux ids de zone.
 
+Plugin d'intégrations
+^^^^^^^^^^^^^^^^^^^^^
+
+Le plugin **Desktop Pet Integrations** (``Plugins`` > ``Download Plugins``, catégorie
+``plugins``, nom ``pet_integrations``) permet au pet de réagir au monde extérieur. Il ajoute
+``Plugins`` > ``Desktop Pet Integrations`` avec une entrée par intégration et une entrée
+``Settings…`` pour leurs options ; une entrée peut être activée une fois le pet affiché, installe
+d'abord le paquet optionnel dont elle a besoin et reste active d'un redémarrage à l'autre. C'est
+aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plugins* et
+``on_pet_created``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - Intégration
+     - Ce que fait le pet
+     - Prérequis
+   * - Réagir aux événements OBS
+     - Joue un mouvement du groupe ``Stream``, ``Record`` ou ``Scene`` lorsque la diffusion ou
+       l'enregistrement démarre ou s'arrête, ou que la scène change. Réglez l'hôte, le port et le
+       mot de passe du serveur WebSocket d'OBS dans ``Settings…``
+     - ``obs-websocket-py`` (installé à la première utilisation) ; OBS avec son serveur
+       WebSocket activé
+   * - Réagir au chat Twitch
+     - Rejoint le chat d'une chaîne et joue le groupe de mouvements associé à un mot-clé chaque
+       fois qu'un message le contient (insensible à la casse ; lignes ``keyword = Group`` dans
+       ``Settings…``)
+     - Un nom de chaîne et un jeton ``oauth:``
+   * - Webhook local (127.0.0.1)
+     - Écoute sur ``http://127.0.0.1:9876/trigger`` (port dans ``Settings…``) un POST JSON
+       ``{"group": "Wave", "speech": "Hi!"}`` — chaque champ peut être omis — envoyé par des
+       scripts, un Stream Deck ou des outils d'automatisation. Si un jeton est défini, les
+       requêtes doivent envoyer ``Authorization: Bearer <token>`` ; les requêtes provenant
+       d'une page web sont refusées
+     - Rien de plus
+   * - Réagir aux notifications Windows
+     - Joue le groupe ``Notify`` et prononce le titre de la notification lorsqu'une autre
+       application affiche une notification Windows ; les applications listées dans les
+       identifiants d'application ignorés sont sautées. Windows demande l'accès aux
+       notifications la première fois
+     - Windows ; les paquets de notification ``winrt`` (installés à la première utilisation)
+
+Un rig ne réagit qu'aux groupes de mouvements qu'il possède ; un groupe manquant ne joue rien.
+
 Dépannage
 ^^^^^^^^^
 
@@ -2114,6 +2159,14 @@ exemples, est
        ``Qt.KeyboardModifier``. Retournez ``True`` pour consommer la touche — les plugins
        suivants et le traitement par défaut sont ignorés ; retournez ``False`` (par défaut)
        pour la transmettre. Une exception compte comme ``False``
+   * - ``on_pet_created(pet)``
+     - Lorsque l'onglet Desktop Pet crée la fenêtre du pet, et juste après le chargement du
+       plugin (ou l'exécution de ``Reload Plugins``) si le pet existe déjà
+     - ``pet`` : la fenêtre du pet. Les plugins utilisent ``play_group(group)``,
+       ``speak(line)``, ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` et les signaux ``hit_triggered``,
+       ``moved`` et ``visibility_changed``. Valeur de retour ignorée
    * - ``on_app_closing(main_window)``
      - Lorsque la dernière fenêtre principale se ferme, après acceptation de l'invite de
        Paint sur les onglets non enregistrés et l'enregistrement des paramètres, juste avant

@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -117,6 +117,10 @@ def _resolve_bundled_example() -> Path | None:
 
 class PetWorkspace(QWidget):
     """The control-panel tab. Owns one :class:`PetWindow`."""
+
+    pet_created = Signal(object)
+    """The :class:`PetWindow`, once, right after this tab creates it; plugins
+    hear it as ``on_pet_created``."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -469,6 +473,7 @@ class PetWorkspace(QWidget):
             self._on_pet_setting_changed("drivers", {
                 key: bool(drivers.get(key)) for key in _SELF_RESTORED_DRIVERS
             })
+            self.pet_created.emit(self._pet_window)
         return self._pet_window
 
     def _on_pet_setting_changed(self, key: str, value) -> None:

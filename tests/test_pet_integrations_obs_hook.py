@@ -19,7 +19,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from Imervue.desktop_pet.obs_event_hook import (
+from pet_integrations.obs_event_hook import (
     DEFAULT_OBS_HOST,
     DEFAULT_OBS_PORT,
     OBS_EVENT_GROUPS,

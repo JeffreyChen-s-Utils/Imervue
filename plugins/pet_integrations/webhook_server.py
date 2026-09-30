@@ -47,7 +47,7 @@ from PySide6.QtCore import QObject, Signal
 
 from Imervue.system.local_origin import is_allowed_origin
 
-logger = logging.getLogger("Imervue.desktop_pet.webhook_server")
+logger = logging.getLogger("Imervue.plugin.pet_integrations.webhook_server")
 
 DEFAULT_HOST: str = "127.0.0.1"
 """Bind address. Loopback only — never extended to 0.0.0.0 by the
@@ -247,7 +247,7 @@ class WebhookReceiver(QObject):
     def set_endpoint(self, port: int, token: str = "") -> None:   # nosec B107  # bearer token field; empty default means "no auth"
         """Cache the port + token. Effective on the next
         :meth:`start`; a running server stays on its current
-        socket so a keystroke in the workspace settings doesn't
+        socket so a keystroke in the settings dialog doesn't
         thrash the OS port."""
         self._port = int(port) if port else DEFAULT_PORT
         self._token = str(token)

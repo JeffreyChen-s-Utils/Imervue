@@ -626,6 +626,8 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 
 設定した内容 — 位置、ドライバー、不透明度、クリックスルー、サイズ — はすべて起動間で記憶されます。
 
+**Desktop Pet Integrations** プラグイン(**Plugins > Download Plugins**)を入れると **Plugins > Desktop Pet Integrations** が追加されます:ペットが OBS(配信、録画、シーン切り替え)、Twitch チャットのキーワード、ローカル webhook(`POST http://127.0.0.1:9876/trigger` に `{"group": "Wave", "speech": "Hi!"}` を送信)、Windows 通知に反応します。`on_pet_created` を使って作るペット用プラグインの例でもあります。
+
 ### カスタムボイス(pet script)
 
 ペットのスピーチバブルは、自分で作成できる JSON ファイルから読み込まれます。Desktop Pet タブの **Pet script** グループで **Load script…** をクリックし、`.petscript.json` を選択します。スキーマは次のとおりです:
@@ -829,6 +831,7 @@ Imervue はサードパーティプラグインをサポートします。完全
 | `on_image_switched(path, viewer)` | 画像を切り替えた時 |
 | `on_image_deleted(paths, viewer)` | 画像がソフト削除された後 |
 | `on_key_press(key, modifiers, viewer)` | キー押下時(True を返すとイベント消費) |
+| `on_pet_created(pet)` | デスクトップペットのウィンドウが作成された時、またはプラグインのロード時にすでに存在する場合 |
 | `on_app_closing(main_window)` | アプリ終了直前 |
 | `get_translations()` | i18n 文字列を提供 |
 | `register_languages()` | クラスメソッド: 新しい言語を登録(各ロードの前と起動時) |

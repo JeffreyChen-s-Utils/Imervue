@@ -627,6 +627,8 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 설정한 모든 항목 — 위치, 드라이버, 불투명도, 클릭 통과, 크기 — 은 실행 사이에 기억됩니다.
 
+**Desktop Pet Integrations** 플러그인(**Plugins > Download Plugins**)을 설치하면 **Plugins > Desktop Pet Integrations** 메뉴가 추가됩니다. 펫이 OBS(스트리밍, 녹화, 장면 전환), Twitch 채팅 키워드, 로컬 웹훅(`POST http://127.0.0.1:9876/trigger`에 `{"group": "Wave", "speech": "Hi!"}` 전송), Windows 알림에 반응합니다. 이 플러그인은 `on_pet_created`로 만든 펫 플러그인의 예제이기도 합니다.
+
 ### 커스텀 음성 (펫 스크립트)
 
 펫의 말풍선은 직접 작성할 수 있는 JSON 파일에서 대사를 가져옵니다. Desktop Pet 탭의 **Pet script** 그룹에서 **Load script…**를 클릭하고 `.petscript.json` 파일을 선택하세요. 스키마:
@@ -830,6 +832,7 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 | `on_image_switched(path, viewer)` | 이미지 간 내비게이션 시 |
 | `on_image_deleted(paths, viewer)` | 이미지(들)이 소프트 삭제된 후 |
 | `on_key_press(key, modifiers, viewer)` | 키 누름 시 (이벤트 소비 시 True 반환) |
+| `on_pet_created(pet)` | 데스크톱 펫 창이 생성될 때, 또는 플러그인 로드 시 펫 창이 이미 있을 때 |
 | `on_app_closing(main_window)` | 애플리케이션 종료 전 |
 | `get_translations()` | i18n 문자열 제공 |
 | `register_languages()` | 클래스 메서드: 새 언어 등록 (매번 로드 전과 시작 시) |

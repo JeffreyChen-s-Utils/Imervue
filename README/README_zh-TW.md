@@ -628,6 +628,8 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 所有設定 — 位置、驅動、不透明度、點擊穿透、尺寸 — 都會在下次啟動時記住。
 
+**Desktop Pet Integrations** 外掛（**Plugins > Download Plugins**）會新增 **Plugins > Desktop Pet Integrations**：寵物會對 OBS（直播、錄影、切換場景）、Twitch 聊天室關鍵字、本機 webhook（`POST http://127.0.0.1:9876/trigger`，內容為 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知做出反應。它也是以 `on_pet_created` 打造桌寵外掛的範例。
+
 ### 自訂語音（pet script）
 
 寵物的對話泡泡取自一個你可以自行編寫的 JSON 檔。在 Desktop Pet 分頁的 **Pet script** 群組點 **Load script…**，選一個 `.petscript.json`。結構如下：
@@ -831,6 +833,7 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_image_switched(path, viewer)` | 切換影像時 |
 | `on_image_deleted(paths, viewer)` | 影像被軟刪除後 |
 | `on_key_press(key, modifiers, viewer)` | 按鍵時（回傳 True 消費事件） |
+| `on_pet_created(pet)` | 桌寵視窗建立時，或外掛載入時桌寵視窗已存在 |
 | `on_app_closing(main_window)` | App 關閉前 |
 | `get_translations()` | 提供 i18n 字串 |
 | `register_languages()` | 類別方法：註冊新語言（每次載入前，以及啟動時） |

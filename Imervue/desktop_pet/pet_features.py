@@ -12,16 +12,13 @@ Every controller talks to the window only through the narrow
 so the behaviour (lazy construction, settings round-trip, signal
 wiring, ``start`` / ``stop``) is preserved byte-for-byte from the
 original inline implementations while becoming independently
-testable.
+testable. The OBS, Twitch chat, webhook and Windows-notification
+integrations are the Desktop Pet Integrations plugin
+(``plugins/pet_integrations``); they join this registry through
+``PetWindow.add_integration``.
 """
 from __future__ import annotations
 
-from Imervue.desktop_pet.obs_event_hook import ObsEventClient
-from Imervue.desktop_pet.twitch_chat_hook import TwitchChatClient
-from Imervue.desktop_pet.webhook_server import WebhookReceiver
-from Imervue.desktop_pet.windows_notification_hook import (
-    WindowsNotificationClient,
-)
 from Imervue.desktop_pet.hotkey_manager import (
     DEFAULT_HOTKEY_BINDINGS,
     GlobalHotkeyManager,
@@ -30,99 +27,7 @@ from Imervue.desktop_pet.pet_feature_base import (
     FeatureHost,
     IntegrationController,
     merge_bindings,
-    sanitize_app_ids,
 )
-
-DEFAULT_OBS_HOST = "localhost"
-DEFAULT_OBS_PORT = 4455
-DEFAULT_WEBHOOK_PORT = 9876
-
-
-class ObsHookController(IntegrationController):
-    """OBS websocket event listener → motion group triggers."""
-
-    persist_key = "obs_enabled"
-
-    def _build_client(self) -> ObsEventClient:
-        client = ObsEventClient(parent=self._host)
-        client.group_triggered.connect(self._host.play_group)
-        return client
-
-    def _configure(self, client: ObsEventClient) -> None:
-        client.set_endpoint(
-            host=str(self._host.setting("obs_host", DEFAULT_OBS_HOST)),
-            port=int(self._host.setting("obs_port", DEFAULT_OBS_PORT)),
-            password=str(self._host.setting("obs_password", "")),
-        )
-
-
-class TwitchHookController(IntegrationController):
-    """Twitch IRC chat listener → keyword-matched motion triggers."""
-
-    persist_key = "twitch_enabled"
-
-    def _build_client(self) -> TwitchChatClient:
-        client = TwitchChatClient(parent=self._host)
-        client.keyword_matched.connect(self._host.play_group)
-        return client
-
-    def _configure(self, client: TwitchChatClient) -> None:
-        client.set_endpoint(
-            channel=str(self._host.setting("twitch_channel", "")),
-            oauth=str(self._host.setting("twitch_oauth", "")),
-        )
-        client.set_triggers(self._host.setting("twitch_triggers", {}) or {})
-
-
-class WebhookController(IntegrationController):
-    """Localhost HTTP webhook receiver → motion + speech triggers."""
-
-    persist_key = "webhook_enabled"
-
-    def _build_client(self) -> WebhookReceiver:
-        client = WebhookReceiver(parent=self._host)
-        client.command_received.connect(self._on_command)
-        return client
-
-    def _configure(self, client: WebhookReceiver) -> None:
-        client.set_endpoint(
-            port=int(self._host.setting("webhook_port", DEFAULT_WEBHOOK_PORT)),
-            token=str(self._host.setting("webhook_token", "")),
-        )
-
-    def _on_command(self, group: str, speech: str) -> None:
-        """Apply a webhook trigger. Motion + speech are independent —
-        a caller might set just one."""
-        if group:
-            self._host.play_group(group)
-        if speech and self._host.speech_on:
-            self._host.speak(speech)
-
-
-class WindowsNotificationController(IntegrationController):
-    """Windows toast listener → motion + (optional) speech triggers."""
-
-    persist_key = "win_notifications_enabled"
-
-    def _build_client(self) -> WindowsNotificationClient:
-        client = WindowsNotificationClient(parent=self._host)
-        client.action_triggered.connect(self._host.play_group)
-        client.speech_triggered.connect(self._on_speech)
-        return client
-
-    def _configure(self, client: WindowsNotificationClient) -> None:
-        ignored = self._host.setting("win_notifications_ignored", []) or []
-        client.set_ignored_app_ids(sanitize_app_ids(ignored))
-
-    def _on_speech(self, line: str) -> None:
-        """Route a notification's title through the speech bubble.
-
-        We bypass the script engine because the notification text
-        already carries its own content — falling back to a generic
-        greeting would be wrong here.
-        """
-        if self._host.speech_on and line:
-            self._host.speak_notification(line)   # type: ignore[attr-defined]
 
 
 class HotkeyController(IntegrationController):
@@ -169,10 +74,4 @@ def build_integration_controllers(
     Factory so the window's constructor stays a one-liner and tests
     can build the same registry against a fake host.
     """
-    return {
-        "obs": ObsHookController(host),
-        "twitch": TwitchHookController(host),
-        "webhook": WebhookController(host),
-        "windows_notifications": WindowsNotificationController(host),
-        "hotkeys": HotkeyController(host),
-    }
+    return {"hotkeys": HotkeyController(host)}

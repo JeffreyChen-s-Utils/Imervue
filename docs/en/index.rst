@@ -1547,6 +1547,46 @@ If your rig defines ``HitArea`` entries, you can author per-
 hit-area speech-bubble lines in a ``.petscript.json`` whose
 ``hit_responses`` keys match the area ids.
 
+Integrations Plugin
+^^^^^^^^^^^^^^^^^^^
+
+The **Desktop Pet Integrations** plugin (``Plugins`` > ``Download Plugins``, category
+``plugins``, name ``pet_integrations``) lets the pet react to the outside world. It adds
+``Plugins`` > ``Desktop Pet Integrations`` with one entry per integration and a ``Settings…``
+entry for their options; an entry can be turned on once the pet has been shown, installs the
+optional package it needs first, and stays on across restarts. It is also the worked example of
+a plugin that extends the pet — see *Writing Plugins* and ``on_pet_created``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - Integration
+     - What the pet does
+     - Needs
+   * - React to OBS events
+     - Plays a motion of the ``Stream``, ``Record`` or ``Scene`` group when streaming or recording
+       starts or stops, or the scene changes. Set OBS's WebSocket server host, port and password in
+       ``Settings…``
+     - ``obs-websocket-py`` (installed on first use); OBS with its WebSocket server on
+   * - React to Twitch chat
+     - Joins a channel's chat and plays the motion group mapped to a keyword whenever a message
+       contains it (case-insensitive; ``keyword = Group`` lines in ``Settings…``)
+     - A channel name and an ``oauth:`` token
+   * - Local webhook (127.0.0.1)
+     - Listens on ``http://127.0.0.1:9876/trigger`` (port in ``Settings…``) for a JSON POST
+       ``{"group": "Wave", "speech": "Hi!"}`` — either field may be left out — from scripts,
+       Stream Deck or automation tools. With a token set, requests must send
+       ``Authorization: Bearer <token>``; requests from a web page are refused
+     - Nothing extra
+   * - React to Windows notifications
+     - Plays the ``Notify`` group and says the notification's title when another app shows a
+       Windows notification; apps listed under ignored app ids are skipped. Windows asks for
+       notification access the first time
+     - Windows; the ``winrt`` notification packages (installed on first use)
+
+A rig reacts only to the motion groups it has; a missing group plays nothing.
+
 Troubleshooting
 ^^^^^^^^^^^^^^^
 
@@ -2055,6 +2095,14 @@ stopping Imervue. The full guide, with examples, is
      - ``key``: a ``Qt.Key`` code (int); ``modifiers``: ``Qt.KeyboardModifier`` flags. Return
        ``True`` to consume the key — later plugins and the default handling are skipped; return
        ``False`` (the default) to pass it on. An exception counts as ``False``
+   * - ``on_pet_created(pet)``
+     - When the Desktop Pet tab creates the pet window, and right after the plugin loads (or
+       ``Reload Plugins`` runs) if the pet already exists
+     - ``pet``: the pet window. Plugins use ``play_group(group)``, ``speak(line)``,
+       ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` and the signals ``hit_triggered``,
+       ``moved`` and ``visibility_changed``. Return value ignored
    * - ``on_app_closing(main_window)``
      - When the last main window closes, after Paint's unsaved-tab prompt is accepted and the
        settings are saved, just before the plugins are unloaded; closing another window does not

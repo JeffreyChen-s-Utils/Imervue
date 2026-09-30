@@ -1323,6 +1323,43 @@ key 也能在不认识它们的旧运行时上幸存。
 让 ``hit_responses`` 的 key 匹配区域 id，即可为每个命中区域
 单独写气泡台词。
 
+集成插件
+^^^^^^^^
+
+**Desktop Pet Integrations**\ （桌面宠物集成）插件（``Plugins`` > ``Download Plugins``，
+分类 ``plugins``，名称 ``pet_integrations``）让桌宠能对外部世界作出反应。它会新增
+``Plugins`` > ``Desktop Pet Integrations`` 菜单，每种集成各占一项，另有一个 ``Settings…``
+项用于设置它们的选项；桌宠显示过之后才能开启各项，开启时会先安装所需的可选包，重启后仍保持
+开启。它也是扩展桌宠的插件的完整示例 — 见 *编写插件* 与 ``on_pet_created``。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - 集成
+     - 桌宠的反应
+     - 依赖
+   * - React to OBS events（响应 OBS 事件）
+     - 开始或停止直播、录制，或切换场景时，播放 ``Stream``、``Record`` 或 ``Scene`` 组的动作。
+       在 ``Settings…`` 中设置 OBS WebSocket 服务器的主机、端口与密码
+     - ``obs-websocket-py``\ （首次使用时安装）；OBS 需开启其 WebSocket 服务器
+   * - React to Twitch chat（响应 Twitch 聊天）
+     - 加入某个频道的聊天室，每当消息包含某个关键词时，播放映射到该关键词的动作组（不区分大小写；
+       在 ``Settings…`` 中按 ``keyword = Group`` 每行一条设置）
+     - 频道名称与一个 ``oauth:`` 令牌
+   * - Local webhook (127.0.0.1)（本机 Webhook）
+     - 在 ``http://127.0.0.1:9876/trigger``\ （端口在 ``Settings…`` 中设置）上监听来自脚本、
+       Stream Deck 或自动化工具的 JSON POST ``{"group": "Wave", "speech": "Hi!"}`` — 两个字段
+       都可省略。设置了令牌时，请求必须带上 ``Authorization: Bearer <token>``；来自网页的请求会被
+       拒绝
+     - 无需额外依赖
+   * - React to Windows notifications（响应 Windows 通知）
+     - 其他应用弹出 Windows 通知时，播放 ``Notify`` 组并说出通知的标题；列在忽略应用 ID 中的应用会被
+       跳过。首次使用时 Windows 会请求通知访问权限
+     - Windows；\ ``winrt`` 通知相关包（首次使用时安装）
+
+角色只会对自身拥有的动作组作出反应；缺少的组不会播放任何内容。
+
 疑难排查
 ^^^^^^^^
 
@@ -1795,6 +1832,14 @@ Imervue 停止运行。含示例的完整指南见
      - ``key``：``Qt.Key`` 代码（int）；``modifiers``：``Qt.KeyboardModifier`` 标志。返回
        ``True`` 表示消费该按键 —— 之后的插件与默认处理都会被跳过；返回 ``False``\ （默认）则继续
        传递。抛出异常视同 ``False``
+   * - ``on_pet_created(pet)``
+     - Desktop Pet 标签创建桌宠窗口时调用；若桌宠已存在，则在插件加载（或执行 ``Reload Plugins``）
+       之后立即调用
+     - ``pet``：桌宠窗口。插件可使用 ``play_group(group)``、``speak(line)``、
+       ``speak_notification(line)``、``speech_on``、``setting(key, default)``、
+       ``persist(**fields)``、``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)``，以及信号 ``hit_triggered``、
+       ``moved`` 与 ``visibility_changed``。返回值被忽略
    * - ``on_app_closing(main_window)``
      - 最后一个主窗口关闭时调用：在 Paint 的未保存标签提示被接受、设置已保存之后，插件卸载之前；
        关闭其他窗口不会调用它

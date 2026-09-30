@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import socket
 
-from Imervue.desktop_pet.twitch_chat_hook import (
+from pet_integrations.twitch_chat_hook import (
     TwitchChatClient,
     coerce_triggers,
     match_keyword,

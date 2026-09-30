@@ -47,6 +47,7 @@ from Imervue.desktop_pet.pet_drivers import (
 from Imervue.desktop_pet.pet_canvas_drivers import PetCanvasDrivers
 from Imervue.desktop_pet.pet_interaction import PetInteraction, llm_situation_tag
 from Imervue.desktop_pet.pet_shadow_controller import PetShadowController
+from Imervue.desktop_pet.pet_feature_base import IntegrationController
 from Imervue.desktop_pet.pet_features import build_integration_controllers
 from Imervue.desktop_pet.pet_feature_toggles import PetFeatureTogglesMixin
 from Imervue.desktop_pet.pet_window_flags import PetWindowFlagsMixin
@@ -280,9 +281,9 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         self._fullscreen_detector: FullscreenDetector | None = None
         self._hidden_by_fullscreen: bool = False
 
-        # OBS / Twitch / webhook / Windows-notifications / hotkeys
-        # share one lazy-worker lifecycle; the registry holds them and
-        # the window delegates its public toggles in.
+        # Hotkeys and the integrations plugins add (add_integration) share
+        # one lazy-worker lifecycle; the registry holds them so shutdown()
+        # stops every one.
         self._features = build_integration_controllers(self)
 
         # LLM dialogue, click SFX, music-rhythm and idle-minigame each
@@ -594,6 +595,28 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         """The id this pet persists under — useful for the registry
         and tests that need to verify isolation."""
         return self._pet_id
+
+    # ---- integrations added by plugins ---------------------------------
+
+    def add_integration(self, key: str, controller: IntegrationController) -> None:
+        """Register a plugin's integration so :meth:`shutdown` stops it.
+
+        A controller already under *key* is shut down (its enabled setting
+        kept) and replaced.
+        """
+        self.remove_integration(key)
+        self._features[key] = controller
+
+    def remove_integration(self, key: str) -> None:
+        """Stop and forget the integration under *key*, keeping its enabled setting."""
+        controller = self._features.pop(key, None)
+        if controller is not None:
+            with best_effort("shut down a removed integration"):
+                controller.shutdown()
+
+    def integration(self, key: str) -> IntegrationController | None:
+        """The integration registered under *key*, if any."""
+        return self._features.get(key)
 
     # =====================================================================
     # Motion / expression playback (context menu + hit-area)

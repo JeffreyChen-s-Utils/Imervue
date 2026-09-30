@@ -1209,6 +1209,47 @@ rig が読み込まれていないときはモーション / 表情サブメニ�
 
 rig が ``HitArea`` エントリを定義していれば、``hit_responses`` キーがエリア ID と一致するような ``.petscript.json`` でヒットエリアごとのスピーチバブルセリフを作成できます。
 
+連携プラグイン
+^^^^^^^^^^^^^^
+
+**Desktop Pet Integrations** プラグイン（``Plugins`` > ``Download Plugins``、カテゴリ
+``plugins``、名前 ``pet_integrations``）を使うと、ペットが外部の出来事に反応します。このプラグインは
+``Plugins`` > ``Desktop Pet Integrations`` を追加し、連携ごとに 1 つの項目と、各オプションを設定する
+``Settings…`` 項目を用意します。項目はペットを一度表示した後にオンにでき、必要なオプションパッケージを
+先にインストールし、再起動後もオンのまま保たれます。ペットを拡張するプラグインの実例でもあります —
+*プラグインの作成* と ``on_pet_created`` を参照してください。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - 連携
+     - ペットの動作
+     - 必要なもの
+   * - OBS イベントに反応
+     - 配信や録画の開始・停止、またはシーンの切り替え時に ``Stream``、``Record``、``Scene``
+       グループのモーションを再生します。OBS の WebSocket サーバーのホスト、ポート、パスワードは
+       ``Settings…`` で設定します
+     - ``obs-websocket-py``\ （初回使用時にインストール）。WebSocket サーバーを有効にした OBS
+   * - Twitch チャットに反応
+     - チャンネルのチャットに参加し、メッセージにキーワードが含まれるたびに、そのキーワードに
+       割り当てたモーショングループを再生します（大文字小文字は区別しません。``Settings…`` の
+       ``keyword = Group`` 行で指定）
+     - チャンネル名と ``oauth:`` トークン
+   * - ローカル webhook（127.0.0.1）
+     - ``http://127.0.0.1:9876/trigger``\ （ポートは ``Settings…`` で設定）で、スクリプト、
+       Stream Deck、自動化ツールからの JSON POST ``{"group": "Wave", "speech": "Hi!"}`` を
+       待ち受けます（どちらのフィールドも省略可）。トークンを設定した場合、リクエストは
+       ``Authorization: Bearer <token>`` を送る必要があります。Web ページからのリクエストは拒否されます
+     - 追加の必要なし
+   * - Windows 通知に反応
+     - 別のアプリが Windows 通知を表示すると、``Notify`` グループを再生して通知のタイトルを話します。
+       無視するアプリ ID に挙げたアプリはスキップされます。初回は Windows が通知へのアクセス許可を
+       求めます
+     - Windows。\ ``winrt`` 通知パッケージ（初回使用時にインストール）
+
+rig は自身が持つモーショングループにだけ反応します。存在しないグループでは何も再生されません。
+
 トラブルシューティング
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1672,6 +1713,14 @@ Imervue は止まらず、プラグイン名付きでログに記録されます
      - ``key``：\ ``Qt.Key`` コード（int）。``modifiers``：\ ``Qt.KeyboardModifier`` フラグ。
        ``True`` を返すとキーを消費し、後続のプラグインと既定の処理はスキップされます。
        ``False``\ （既定）を返すと次に渡します。例外は ``False`` として扱われます
+   * - ``on_pet_created(pet)``
+     - Desktop Pet タブがペットウィンドウを作成したとき、およびペットがすでに存在する場合はプラグインの
+       読み込み直後（または ``Reload Plugins`` の実行後）
+     - ``pet``：ペットウィンドウ。プラグインは ``play_group(group)``、``speak(line)``、
+       ``speak_notification(line)``、``speech_on``、``setting(key, default)``、
+       ``persist(**fields)``、``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` と、シグナル ``hit_triggered``、
+       ``moved``、``visibility_changed`` を使います。戻り値は無視されます
    * - ``on_app_closing(main_window)``
      - 最後のメインウィンドウが閉じるとき。Paint の未保存タブの確認が承認され、設定が保存された後、
        プラグインがアンロードされる直前です。他のウィンドウを閉じても呼ばれません

@@ -1584,6 +1584,50 @@ Si su rig define entradas ``HitArea``, puede escribir frases de
 bocadillo por zona de impacto en un ``.petscript.json`` cuyas
 claves ``hit_responses`` coincidan con los ids de las zonas.
 
+Plugin de integraciones
+^^^^^^^^^^^^^^^^^^^^^^^
+
+El plugin **Desktop Pet Integrations** (``Plugins`` > ``Download Plugins``, categoría
+``plugins``, nombre ``pet_integrations``) permite que la mascota reaccione al mundo exterior.
+Añade ``Plugins`` > ``Desktop Pet Integrations`` con una entrada por integración y una entrada
+``Settings…`` para sus opciones; una entrada puede activarse una vez que se ha mostrado la
+mascota, instala primero el paquete opcional que necesita y sigue activada entre reinicios.
+También es el ejemplo práctico de un plugin que amplía la mascota — véase *Escribir plugins* y
+``on_pet_created``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - Integración
+     - Qué hace la mascota
+     - Necesita
+   * - Reaccionar a eventos de OBS
+     - Reproduce un movimiento del grupo ``Stream``, ``Record`` o ``Scene`` cuando empieza o
+       termina la transmisión o la grabación, o cuando cambia la escena. Configure el host, el
+       puerto y la contraseña del servidor WebSocket de OBS en ``Settings…``
+     - ``obs-websocket-py`` (se instala en el primer uso); OBS con su servidor WebSocket activado
+   * - Reaccionar al chat de Twitch
+     - Se une al chat de un canal y reproduce el grupo de movimientos asignado a una palabra clave
+       cada vez que un mensaje la contiene (sin distinguir mayúsculas de minúsculas; líneas
+       ``keyword = Group`` en ``Settings…``)
+     - Un nombre de canal y un token ``oauth:``
+   * - Webhook local (127.0.0.1)
+     - Escucha en ``http://127.0.0.1:9876/trigger`` (puerto en ``Settings…``) un POST JSON
+       ``{"group": "Wave", "speech": "Hi!"}`` — cualquiera de los dos campos puede omitirse —
+       enviado desde scripts, Stream Deck o herramientas de automatización. Con un token
+       configurado, las solicitudes deben enviar ``Authorization: Bearer <token>``; las
+       solicitudes procedentes de una página web se rechazan
+     - Nada adicional
+   * - Reaccionar a notificaciones de Windows
+     - Reproduce el grupo ``Notify`` y dice el título de la notificación cuando otra aplicación
+       muestra una notificación de Windows; se omiten las aplicaciones indicadas en los ids de
+       aplicación ignorados. Windows pide acceso a las notificaciones la primera vez
+     - Windows; los paquetes de notificaciones ``winrt`` (se instalan en el primer uso)
+
+Un rig solo reacciona a los grupos de movimientos que tiene; un grupo que falta no reproduce
+nada.
+
 Solución de problemas
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -2112,6 +2156,14 @@ con ejemplos, es
        Devuelva ``True`` para consumir la tecla — se omiten los plugins posteriores y el manejo
        predeterminado; devuelva ``False`` (el valor por defecto) para dejarla pasar. Una excepción
        cuenta como ``False``
+   * - ``on_pet_created(pet)``
+     - Cuando la pestaña Desktop Pet crea la ventana de la mascota, y justo después de cargar el
+       plugin (o de ejecutar ``Reload Plugins``) si la mascota ya existe
+     - ``pet``: la ventana de la mascota. Los plugins usan ``play_group(group)``, ``speak(line)``,
+       ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` y las señales ``hit_triggered``,
+       ``moved`` y ``visibility_changed``. El valor de retorno se ignora
    * - ``on_app_closing(main_window)``
      - Cuando se cierra la última ventana principal, tras aceptarse el aviso de pestañas sin guardar
        de Paint y guardarse los ajustes, justo antes de descargar los plugins; cerrar otra ventana

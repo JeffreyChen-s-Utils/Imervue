@@ -676,6 +676,8 @@ Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. A
 
 Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größe — wird zwischen den Starts gespeichert.
 
+Das Plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) fügt **Plugins > Desktop Pet Integrations** hinzu: Das Pet reagiert auf OBS (Streaming, Aufnahme, Szenenwechsel), auf Schlüsselwörter im Twitch-Chat, auf einen lokalen Webhook (`POST http://127.0.0.1:9876/trigger` mit `{"group": "Wave", "speech": "Hi!"}`) und auf Windows-Benachrichtigungen. Es ist zugleich das Beispiel für ein Pet-Plugin, das auf `on_pet_created` aufbaut.
+
 ### Eigene Stimme (Pet-Skript)
 
 Die Sprechblase des Pets greift auf eine JSON-Datei zurück, die Sie selbst verfassen können. Klicken Sie in der **Pet script**-Gruppe des Desktop Pet-Tabs auf **Load script…** und wählen Sie eine `.petscript.json`. Das Schema:
@@ -879,6 +881,7 @@ Imervue unterstützt Third-Party-Plugins. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_image_switched(path, viewer)` | Beim Navigieren zwischen Bildern |
 | `on_image_deleted(paths, viewer)` | Nachdem Bilder soft gelöscht wurden |
 | `on_key_press(key, modifiers, viewer)` | Bei Tastendruck (True zurückgeben, um zu konsumieren) |
+| `on_pet_created(pet)` | Wenn das Desktop-Pet-Fenster erstellt wird oder beim Laden des Plugins bereits existiert |
 | `on_app_closing(main_window)` | Bevor die Anwendung schließt |
 | `get_translations()` | Stellt i18n-Strings bereit |
 | `register_languages()` | Klassenmethode: neue Sprachen registrieren (vor jedem Laden und beim Start) |

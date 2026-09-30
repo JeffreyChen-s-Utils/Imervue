@@ -10,7 +10,7 @@ automatic.
 ``obs-websocket-py`` provides the protocol client; we treat it as
 an optional dependency exactly like ``pynput`` / ``sounddevice``.
 Missing or unreachable OBS surfaces as :meth:`ObsEventClient.start`
-returning ``False`` so the workspace can show a "needs obs-websocket-py"
+returning ``False`` so the plugin can show a "needs obs-websocket-py"
 or "couldn't connect" message rather than crashing the pet.
 
 The pure helper :func:`obs_event_to_group` is the dispatch policy
@@ -24,7 +24,7 @@ import logging
 
 from PySide6.QtCore import QObject, Signal
 
-logger = logging.getLogger("Imervue.desktop_pet.obs_event_hook")
+logger = logging.getLogger("Imervue.plugin.pet_integrations.obs_event_hook")
 
 OBS_GROUP_STREAM: str = "Stream"
 OBS_GROUP_RECORD: str = "Record"
@@ -92,7 +92,7 @@ class ObsEventClient(QObject):
 
     connection_state_changed = Signal(bool)
     """``True`` after a successful :meth:`start`, ``False`` after
-    :meth:`stop` or a connection drop. Lets the workspace mirror
+    :meth:`stop` or a connection drop. Lets the plugin mirror
     the live state into its checkbox."""
 
     def __init__(self, parent=None) -> None:
@@ -108,7 +108,7 @@ class ObsEventClient(QObject):
         """Cache connection params. If a connection is live it stays
         on the *old* endpoint until the caller cycles :meth:`stop` /
         :meth:`start` — silently reconnecting on every keystroke
-        in the workspace's settings boxes would thrash OBS."""
+        in the settings dialog would thrash OBS."""
         self._host = str(host) or DEFAULT_OBS_HOST
         self._port = int(port) if port else DEFAULT_OBS_PORT
         self._password = str(password)

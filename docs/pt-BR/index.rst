@@ -1566,6 +1566,49 @@ Se seu rig define entradas ``HitArea``, você pode criar linhas de
 balão de fala por área de acerto em um ``.petscript.json`` cujas
 chaves ``hit_responses`` combinam com os ids das áreas.
 
+Plugin de integrações
+^^^^^^^^^^^^^^^^^^^^^
+
+O plugin **Desktop Pet Integrations** (``Plugins`` > ``Download Plugins``, categoria
+``plugins``, nome ``pet_integrations``) faz o pet reagir ao mundo exterior. Ele adiciona
+``Plugins`` > ``Desktop Pet Integrations`` com uma entrada por integração e uma entrada
+``Settings…`` para as opções delas; uma entrada pode ser ativada depois que o pet foi exibido,
+instala antes o pacote opcional de que precisa e continua ativada entre reinicializações. Ele
+também é o exemplo completo de um plugin que estende o pet — veja *Escrevendo Plugins* e
+``on_pet_created``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - Integração
+     - O que o pet faz
+     - Requisitos
+   * - Reagir a eventos do OBS
+     - Toca uma motion do grupo ``Stream``, ``Record`` ou ``Scene`` quando a transmissão ou a
+       gravação começa ou para, ou quando a cena muda. Defina o host, a porta e a senha do servidor
+       WebSocket do OBS em ``Settings…``
+     - ``obs-websocket-py`` (instalado no primeiro uso); OBS com o servidor WebSocket ativado
+   * - Reagir ao chat da Twitch
+     - Entra no chat de um canal e toca o grupo de motions mapeado para uma palavra-chave sempre
+       que uma mensagem a contém (sem diferenciar maiúsculas de minúsculas; linhas
+       ``keyword = Group`` em ``Settings…``)
+     - Um nome de canal e um token ``oauth:``
+   * - Webhook local (127.0.0.1)
+     - Escuta em ``http://127.0.0.1:9876/trigger`` (porta em ``Settings…``) um POST JSON
+       ``{"group": "Wave", "speech": "Hi!"}`` — qualquer um dos campos pode ser omitido — vindo de
+       scripts, do Stream Deck ou de ferramentas de automação. Com um token definido, as
+       requisições precisam enviar ``Authorization: Bearer <token>``; requisições vindas de uma
+       página web são recusadas
+     - Nada extra
+   * - Reagir a notificações do Windows
+     - Toca o grupo ``Notify`` e fala o título da notificação quando outro app exibe uma
+       notificação do Windows; apps listados nos ids de app ignorados são pulados. O Windows pede
+       acesso às notificações na primeira vez
+     - Windows; os pacotes de notificação ``winrt`` (instalados no primeiro uso)
+
+Um rig reage apenas aos grupos de motions que possui; um grupo ausente não toca nada.
+
 Solução de problemas
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -2076,6 +2119,14 @@ interromper o Imervue. O guia completo, com exemplos, é
      - ``key``: um código ``Qt.Key`` (int); ``modifiers``: flags ``Qt.KeyboardModifier``. Retorne
        ``True`` para consumir a tecla — os plugins seguintes e o tratamento padrão são pulados; retorne
        ``False`` (o padrão) para repassá-la. Uma exceção conta como ``False``
+   * - ``on_pet_created(pet)``
+     - Quando a aba Desktop Pet cria a janela do pet, e logo depois de o plugin carregar (ou de
+       ``Reload Plugins`` ser executado) se o pet já existe
+     - ``pet``: a janela do pet. Os plugins usam ``play_group(group)``, ``speak(line)``,
+       ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` e os sinais ``hit_triggered``,
+       ``moved`` e ``visibility_changed``. Valor de retorno ignorado
    * - ``on_app_closing(main_window)``
      - Quando a última janela principal fecha, depois que o aviso de abas não salvas do Paint é aceito
        e as configurações são salvas, logo antes de os plugins serem descarregados; fechar outra janela

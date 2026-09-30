@@ -1174,6 +1174,38 @@ Schema（有版本 — 未來的欄位會向前相容）：
 
 如果你的 rig 定義了 ``HitArea`` 項目，可以在 ``.petscript.json`` 裡寫對應的 ``hit_responses`` key（key 要對得上 area id），就能為每個 hit area 寫自訂對話泡泡台詞。
 
+整合外掛
+^^^^^^^^
+
+**Desktop Pet Integrations** 外掛（``Plugins`` > ``Download Plugins``，分類 ``plugins``，名稱 ``pet_integrations``）讓桌寵能對外界做出反應。它會新增 ``Plugins`` > ``Desktop Pet Integrations`` 選單，每種整合各有一個項目，另有一個 ``Settings…`` 項目用來設定各項選項；桌寵顯示過之後即可開啟項目，開啟時會先安裝所需的選用套件，重新啟動後也會保持開啟。它也是擴充桌寵的外掛的完整範例 — 見 *撰寫外掛* 與 ``on_pet_created``。
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - 整合
+     - 桌寵的反應
+     - 需求
+   * - 對 OBS 事件做出反應
+     - 開始或停止直播、錄影，或切換場景時，播放 ``Stream``、``Record`` 或 ``Scene`` 群組的動作。在
+       ``Settings…`` 設定 OBS WebSocket 伺服器的主機、連接埠與密碼
+     - ``obs-websocket-py``\ （首次使用時安裝）；OBS 需開啟其 WebSocket 伺服器
+   * - 對 Twitch 聊天室做出反應
+     - 加入某個頻道的聊天室，每當訊息包含某個關鍵字，就播放對應到該關鍵字的動作群組（不分大小寫；在
+       ``Settings…`` 中以 ``keyword = Group`` 逐行設定）
+     - 頻道名稱與 ``oauth:`` 權杖
+   * - 本機 webhook（127.0.0.1）
+     - 在 ``http://127.0.0.1:9876/trigger``\ （連接埠可在 ``Settings…`` 設定）接收來自腳本、
+       Stream Deck 或自動化工具的 JSON POST ``{"group": "Wave", "speech": "Hi!"}`` — 兩個欄位都可省略。
+       設定權杖後，請求必須帶上 ``Authorization: Bearer <token>``；來自網頁的請求會被拒絕
+     - 不需額外安裝
+   * - 對 Windows 通知做出反應
+     - 其他 App 顯示 Windows 通知時，播放 ``Notify`` 群組並說出通知的標題；列在忽略的 App ID 中的
+       App 會被略過。第一次使用時 Windows 會要求授予通知存取權
+     - Windows；``winrt`` 通知套件（首次使用時安裝）
+
+rig 只會對自己擁有的動作群組做出反應；缺少的群組不會播放任何動作。
+
 疑難排解
 ^^^^^^^^
 
@@ -1620,6 +1652,14 @@ Imervue 支援外掛擴充功能。
      - ``key``：``Qt.Key`` 代碼（int）；``modifiers``：``Qt.KeyboardModifier`` 旗標。回傳
        ``True`` 表示消費此按鍵，後續外掛與預設處理都會略過；回傳 ``False``\ （預設）則繼續傳遞。
        拋出例外視同 ``False``
+   * - ``on_pet_created(pet)``
+     - Desktop Pet 分頁建立桌寵視窗時；若桌寵已存在，則在外掛載入（或執行 ``Reload Plugins``）後
+       立即呼叫
+     - ``pet``：桌寵視窗。外掛可使用 ``play_group(group)``、``speak(line)``、
+       ``speak_notification(line)``、``speech_on``、``setting(key, default)``、
+       ``persist(**fields)``、``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)``，以及訊號 ``hit_triggered``、
+       ``moved`` 與 ``visibility_changed``。回傳值會被忽略
    * - ``on_app_closing(main_window)``
      - 最後一個主視窗關閉時，在 Paint 未儲存分頁的提示被接受、設定儲存完畢之後，外掛卸載之前；
        關閉其他視窗不會呼叫

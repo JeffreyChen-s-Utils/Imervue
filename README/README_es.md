@@ -677,6 +677,8 @@ Elige cualquier combinación desde la pestaña o el menú del clic derecho. Auto
 
 Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño — se recuerda entre lanzamientos.
 
+El plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) añade **Plugins > Desktop Pet Integrations**: la mascota reacciona a OBS (transmisión, grabación, cambios de escena), a palabras clave del chat de Twitch, a un webhook local (`POST http://127.0.0.1:9876/trigger` con `{"group": "Wave", "speech": "Hi!"}`) y a las notificaciones de Windows. También es el ejemplo de un plugin de mascota construido sobre `on_pet_created`.
+
 ### Voz personalizada (pet script)
 
 El bocadillo de la mascota se nutre de un archivo JSON que puedes crear tú mismo. Haz clic en **Load script…** en el grupo **Pet script** de la pestaña Desktop Pet y elige un `.petscript.json`. El esquema:
@@ -880,6 +882,7 @@ Imervue soporta plugins de terceros. Consulta [PLUGIN_DEV_GUIDE.md](../PLUGIN_DE
 | `on_image_switched(path, viewer)` | Al navegar entre imágenes |
 | `on_image_deleted(paths, viewer)` | Tras eliminar imagen(es) por borrado suave |
 | `on_key_press(key, modifiers, viewer)` | Al pulsar tecla (devuelve True para consumir) |
+| `on_pet_created(pet)` | Al crearse la ventana de la mascota de escritorio, o si ya existe cuando se carga el plugin |
 | `on_app_closing(main_window)` | Antes de cerrar la aplicación |
 | `get_translations()` | Proporcionar cadenas de i18n |
 | `register_languages()` | Método de clase: registrar idiomas nuevos (antes de cada carga, y al arrancar) |

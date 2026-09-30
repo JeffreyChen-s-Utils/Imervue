@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from Imervue.desktop_pet.windows_notification_hook import (
+from pet_integrations.windows_notification_hook import (
     ACCESS_STATUS_ALLOWED,
     ACCESS_STATUS_DENIED,
     NOTIFY_MOTION_GROUP,
@@ -91,7 +91,7 @@ def test_client_start_on_non_windows_returns_false(qapp, monkeypatch):
     """Cross-platform safety: ``start()`` on macOS / Linux must
     not crash, just return False."""
     monkeypatch.setattr(
-        "Imervue.desktop_pet.windows_notification_hook.platform.system",
+        "pet_integrations.windows_notification_hook.platform.system",
         lambda: "Linux",
     )
     client = WindowsNotificationClient()
@@ -103,7 +103,7 @@ def test_client_start_without_winrt_returns_false(qapp, monkeypatch):
     """Missing winrt → False with no exception. Same friendly-deg
     pattern as the other optional-dep clients."""
     monkeypatch.setattr(
-        "Imervue.desktop_pet.windows_notification_hook.platform.system",
+        "pet_integrations.windows_notification_hook.platform.system",
         lambda: "Windows",
     )
     monkeypatch.setitem(sys.modules, "winrt", None)
@@ -118,7 +118,7 @@ def test_client_start_with_denied_access_returns_false(qapp, monkeypatch):
     """Access denied → False so the workspace can show "please
     grant permission" to the user."""
     monkeypatch.setattr(
-        "Imervue.desktop_pet.windows_notification_hook.platform.system",
+        "pet_integrations.windows_notification_hook.platform.system",
         lambda: "Windows",
     )
 
@@ -140,7 +140,7 @@ def test_client_start_succeeds_when_access_allowed(qapp, monkeypatch):
     """Granted access + handler registration → True; subsequent
     start is idempotent."""
     monkeypatch.setattr(
-        "Imervue.desktop_pet.windows_notification_hook.platform.system",
+        "pet_integrations.windows_notification_hook.platform.system",
         lambda: "Windows",
     )
 
@@ -244,7 +244,7 @@ def test_stop_when_not_running_is_safe(qapp):
 
 def test_shutdown_aliases_stop(qapp, monkeypatch):
     monkeypatch.setattr(
-        "Imervue.desktop_pet.windows_notification_hook.platform.system",
+        "pet_integrations.windows_notification_hook.platform.system",
         lambda: "Windows",
     )
 
@@ -285,7 +285,7 @@ def test_action_speech_extraction(title, body, expected_speech):
 
 
 def test_notification_without_readable_app_id_is_logged(caplog):
-    from Imervue.desktop_pet.windows_notification_hook import _extract_info
+    from pet_integrations.windows_notification_hook import _extract_info
 
     class _NoAppInfo:
         @property

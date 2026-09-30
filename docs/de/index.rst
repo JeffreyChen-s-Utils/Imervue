@@ -1603,6 +1603,52 @@ Sprechblasen-Zeilen pro Trefferbereich in einer
 ``.petscript.json`` verfassen, deren ``hit_responses``-Schlüssel
 mit den Bereichs-IDs übereinstimmen.
 
+Integrations-Plugin
+^^^^^^^^^^^^^^^^^^^
+
+Das Plugin **Desktop Pet Integrations** (``Plugins`` > ``Download Plugins``, Kategorie
+``plugins``, Name ``pet_integrations``) lässt das Pet auf die Außenwelt reagieren. Es fügt
+``Plugins`` > ``Desktop Pet Integrations`` hinzu, mit einem Eintrag pro Integration und einem
+Eintrag ``Settings…`` für deren Optionen; ein Eintrag lässt sich einschalten, sobald das Pet
+angezeigt wurde, installiert zuerst das optionale Paket, das er braucht, und bleibt über
+Neustarts hinweg aktiv. Es ist zugleich das ausgearbeitete Beispiel für ein Plugin, das das Pet
+erweitert — siehe *Plugins schreiben* und ``on_pet_created``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - Integration
+     - Was das Pet tut
+     - Benötigt
+   * - Auf OBS-Ereignisse reagieren
+     - Spielt eine Bewegung aus der Gruppe ``Stream``, ``Record`` oder ``Scene`` ab, wenn Streaming
+       oder Aufnahme startet oder stoppt oder die Szene wechselt. Host, Port und Passwort des
+       WebSocket-Servers von OBS stellen Sie in ``Settings…`` ein
+     - ``obs-websocket-py`` (wird bei der ersten Verwendung installiert); OBS mit
+       eingeschaltetem WebSocket-Server
+   * - Auf den Twitch-Chat reagieren
+     - Tritt dem Chat eines Kanals bei und spielt die einem Schlüsselwort zugeordnete
+       Bewegungsgruppe ab, sobald eine Nachricht es enthält (ohne Beachtung der
+       Groß-/Kleinschreibung; Zeilen ``keyword = Group`` in ``Settings…``)
+     - Ein Kanalname und ein ``oauth:``-Token
+   * - Lokaler Webhook (127.0.0.1)
+     - Lauscht auf ``http://127.0.0.1:9876/trigger`` (Port in ``Settings…``) auf einen JSON-POST
+       ``{"group": "Wave", "speech": "Hi!"}`` — jedes der beiden Felder darf fehlen — von
+       Skripten, Stream Deck oder Automatisierungswerkzeugen. Ist ein Token gesetzt, müssen
+       Anfragen ``Authorization: Bearer <token>`` senden; Anfragen von einer Webseite werden
+       abgelehnt
+     - Nichts weiter
+   * - Auf Windows-Benachrichtigungen reagieren
+     - Spielt die Gruppe ``Notify`` ab und spricht den Titel der Benachrichtigung aus, wenn eine
+       andere App eine Windows-Benachrichtigung anzeigt; Apps, die unter den ignorierten App-IDs
+       stehen, werden übersprungen. Windows fragt beim ersten Mal nach dem Zugriff auf
+       Benachrichtigungen
+     - Windows; die ``winrt``-Benachrichtigungspakete (werden bei der ersten Verwendung
+       installiert)
+
+Ein Rig reagiert nur auf die Bewegungsgruppen, die es hat; eine fehlende Gruppe spielt nichts ab.
+
 Fehlerbehebung
 ^^^^^^^^^^^^^^
 
@@ -2138,6 +2184,14 @@ protokolliert wird, statt Imervue anzuhalten. Die vollständige Anleitung mit Be
        Sie ``True`` zurück, um die Taste zu konsumieren — spätere Plugins und die
        Standardbehandlung werden übersprungen; geben Sie ``False`` (Standard) zurück, um sie
        weiterzureichen. Eine Ausnahme zählt als ``False``
+   * - ``on_pet_created(pet)``
+     - Wenn der Desktop-Pet-Tab das Pet-Fenster erstellt, und direkt nachdem das Plugin geladen
+       wurde (oder ``Reload Plugins`` läuft), falls das Pet bereits existiert
+     - ``pet``: das Pet-Fenster. Plugins verwenden ``play_group(group)``, ``speak(line)``,
+       ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` und die Signale ``hit_triggered``,
+       ``moved`` und ``visibility_changed``. Rückgabewert wird ignoriert
    * - ``on_app_closing(main_window)``
      - Wenn das letzte Hauptfenster geschlossen wird, nachdem die Abfrage zu ungespeicherten
        Paint-Tabs bestätigt und die Einstellungen gespeichert wurden, kurz bevor die Plugins

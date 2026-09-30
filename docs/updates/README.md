@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-07 | 2026-10-01 | The desktop pet's OBS, Twitch, webhook and notification hooks are an example plugin on a new on_pet_created hook | #done #desktop-pet #plugins #Imervue_Plugins #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-06 | 2026-10-01 | A docs coverage test checks the guide and READMEs name every command, tool, hook and menu entry | #done #docs #i18n #test | [2026-10](2026-10.md) |
 | U-20261001-05 | 2026-10-01 | A pipeline step with a non-string op or a null parameter is reported, not a traceback | #fix #cli | [2026-10](2026-10.md) |
 | U-20261001-04 | 2026-10-01 | Semantic Search runs CLIP on onnxruntime instead of torch, and Auto-Tag uses it | #done #clip #library #onnx #docs #i18n | [2026-10](2026-10.md) |
@@ -472,4 +473,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 6 |
+| [2026-10.md](2026-10.md) | 2026-10 | 7 |
