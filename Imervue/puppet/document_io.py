@@ -101,21 +101,20 @@ def save_puppet(doc: PuppetDocument, path: str | Path) -> None:
 
 def _write_puppet(doc: PuppetDocument, p: Path) -> None:
     with zipfile.ZipFile(p, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(_PUPPET_JSON, _puppet_json_bytes(doc))
-        for tex_path, tex_bytes in doc.textures.items():
-            zf.writestr(tex_path, tex_bytes)
-        for motion in doc.motions:
-            zf.writestr(
-                f"{_MOTIONS_DIR}{motion.name}.json",
-                _motion_json_bytes(motion),
-            )
-        for expr in doc.expressions:
-            zf.writestr(
-                f"{_EXPRESSIONS_DIR}{expr.name}.json",
-                _expression_json_bytes(expr),
-            )
-        if doc.physics_rigs:
-            zf.writestr(_PHYSICS_JSON, _physics_json_bytes(doc.physics_rigs))
+        _write_entries(zf, doc)
+
+
+def _write_entries(zf: zipfile.ZipFile, doc: PuppetDocument) -> None:
+    """Write every entry of *doc* into the open archive *zf*."""
+    zf.writestr(_PUPPET_JSON, _puppet_json_bytes(doc))
+    for tex_path, tex_bytes in doc.textures.items():
+        zf.writestr(tex_path, tex_bytes)
+    for motion in doc.motions:
+        zf.writestr(f"{_MOTIONS_DIR}{motion.name}.json", _motion_json_bytes(motion))
+    for expr in doc.expressions:
+        zf.writestr(f"{_EXPRESSIONS_DIR}{expr.name}.json", _expression_json_bytes(expr))
+    if doc.physics_rigs:
+        zf.writestr(_PHYSICS_JSON, _physics_json_bytes(doc.physics_rigs))
 
 
 # ---------------------------------------------------------------------------
@@ -860,21 +859,7 @@ def to_zip_bytes(doc: PuppetDocument) -> bytes:
     embedding a puppet inside another container later."""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(_PUPPET_JSON, _puppet_json_bytes(doc))
-        for tex_path, tex_bytes in doc.textures.items():
-            zf.writestr(tex_path, tex_bytes)
-        for motion in doc.motions:
-            zf.writestr(
-                f"{_MOTIONS_DIR}{motion.name}.json",
-                _motion_json_bytes(motion),
-            )
-        for expr in doc.expressions:
-            zf.writestr(
-                f"{_EXPRESSIONS_DIR}{expr.name}.json",
-                _expression_json_bytes(expr),
-            )
-        if doc.physics_rigs:
-            zf.writestr(_PHYSICS_JSON, _physics_json_bytes(doc.physics_rigs))
+        _write_entries(zf, doc)
     return buf.getvalue()
 
 
