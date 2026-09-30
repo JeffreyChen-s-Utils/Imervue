@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QThread, Signal
@@ -67,6 +68,39 @@ def _can_skip_via_bloom(
     )
 
 
+@dataclass(frozen=True)
+class ScanRow:
+    """What one file contributes to the index: its stat, and its size and pHash when read."""
+
+    path: str
+    size: int
+    mtime: float
+    width: int | None = None
+    height: int | None = None
+    phash: int | None = None
+
+
+def _probe(path: Path, stat_result, *, with_phash: bool) -> ScanRow:
+    """Read what the index stores for *path*; touches no database.
+
+    With ``with_phash`` the file is decoded for its size and pHash; an
+    unreadable file still yields a row, without them.
+    """
+    width = height = None
+    ensure_pillow_opener(path.suffix)   # compute_phash reads HEIC / JXL only with the codec
+    if with_phash:
+        width, height = image_dimensions(path) or (None, None)
+    phash = compute_phash(path) if with_phash else None
+    return ScanRow(str(path), stat_result.st_size, stat_result.st_mtime, width, height, phash)
+
+
+def _store(row: ScanRow) -> None:
+    image_index.upsert_image(
+        row.path, size=row.size, mtime=row.mtime, width=row.width, height=row.height,
+        phash=row.phash,
+    )
+
+
 def _index_one(
     path: Path, *, with_phash: bool, bloom: BloomFilter | None = None,
 ) -> bool:
@@ -79,20 +113,7 @@ def _index_one(
         return False
     if _can_skip_via_bloom(path, stat, bloom):
         return False
-    width = height = None
-    ensure_pillow_opener(path.suffix)   # compute_phash reads HEIC / JXL only with the codec
-    if with_phash:
-        # Size is optional; an unreadable file is indexed without it.
-        width, height = image_dimensions(path) or (None, None)
-    phash = compute_phash(path) if with_phash else None
-    image_index.upsert_image(
-        str(path),
-        size=stat.st_size,
-        mtime=stat.st_mtime,
-        width=width,
-        height=height,
-        phash=phash,
-    )
+    _store(_probe(path, stat, with_phash=with_phash))
     return True
 
 
