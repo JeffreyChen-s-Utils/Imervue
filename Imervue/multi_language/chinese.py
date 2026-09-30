@@ -441,6 +441,8 @@ chinese_word_dict = {
     "batch_export_max_width": "最大宽度：",
     "batch_export_max_height": "最大高度：",
     "batch_export_start": "导出",
+    "batch_export_render_on": "运算设备：",
+    "batch_export_render_cpu": "CPU",
     "batch_export_done": "已导出 {success}/{total} 张图片",
     "batch_export_preset": "预设：",
     "batch_export_preset_custom": "自定义",

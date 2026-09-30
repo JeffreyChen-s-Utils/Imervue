@@ -1502,6 +1502,21 @@ Windows 上：确认 **Hide when other app is fullscreen**
 - 设定最大宽度／高度（自动等比缩放）
 - 质量控制
 - 进度条实时显示
+- **运算设备**：CPU，或在安装 GPU 显影插件后使用独立显卡（见下文）
+
+GPU 显影插件
+^^^^^^^^^^^^^^
+
+**GPU 显影**\ （GPU Develop）插件（``Plugins`` > ``Download Plugins``，分类 ``plugins``，名称
+``gpu_develop``）让批量导出能在独立显卡上渲染显影 recipe。
+``Plugins`` > ``GPU 显影…`` 首次使用时会安装 ``wgpu``，随后显示将要使用的显卡；
+之后批量导出会显示\ **运算设备**，并已选好那张显卡（选\ **CPU**\ 则照旧渲染）。
+
+- 白平衡、曝光、高光 / 阴影、白色 / 黑色、亮度、对比度、鲜艳度、饱和度与色调曲线在 GPU 上运行；旋转、翻转、裁切以及色调曲线之后的所有步骤（分离色调、LUT、蒙版、色阶等）仍在 CPU 上运行
+- 一张 2400 万像素的照片在 GPU 上约需 0.1 秒，在 CPU 上则约需 7 秒（不含解码与保存）
+- 只使用独立显卡，从不使用集成显卡或软件渲染器；在 Windows 上优先通过 Vulkan，其次是 Direct3D 12
+- GPU 处理失败的图片会改由 CPU 渲染，因此导出仍会完成
+- 输出与 CPU 渲染器相比，只有一小部分像素会有几个色阶以内的差异
 
 制作 GIF / 视频
 ^^^^^^^^^^^^^^^^
@@ -1793,6 +1808,8 @@ Imervue 支持插件扩展功能。
 ``GPUImageView``）。只需覆写你用到的钩子；每次调用都有保护，异常会以插件的名称记录到日志，而不会让
 Imervue 停止运行。含示例的完整指南见
 `PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_。
+除了钩子之外，插件还可以在 ``on_plugin_loaded()`` 中用 ``Imervue.image.develop_backends.register``
+注册一个 ``BackendProvider``，为批量导出提供另一个显影 recipe 渲染器；GPU 显影插件就是示例。
 
 .. list-table::
    :header-rows: 1

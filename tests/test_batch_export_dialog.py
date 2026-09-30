@@ -14,12 +14,18 @@ from PySide6.QtWidgets import QGroupBox, QLabel, QPushButton
 
 from Imervue.gui import batch_export_dialog as mod
 from Imervue.gui.batch_export_dialog import BatchExportDialog
-from Imervue.image import export_presets
+from Imervue.image import develop_backends, export_presets
 
 
 @pytest.fixture(autouse=True)
 def _english(monkeypatch):
     monkeypatch.setattr(mod.language_wrapper, "language_word_dict", {})
+
+
+@pytest.fixture(autouse=True)
+def _cpu_only(monkeypatch):
+    """No develop backend unless a test registers one (a loaded GPU plugin would add a row)."""
+    monkeypatch.setattr(develop_backends, "_providers", {})
 
 
 @pytest.fixture
@@ -274,3 +280,85 @@ def test_worker_writes_the_metadata_the_policy_allows(qapp, tmp_path, policy, ha
         assert bool(written.get_ifd(0x8825)) is has_gps
         assert bool(written.get_ifd(0x8769).get(0x9003)) is has_date
         assert tuple(round(v) for v in img.info["dpi"]) == (300, 300)
+
+
+# ---------------------------------------------------------------------------
+# Render on: the develop backend the recipes render with.
+# ---------------------------------------------------------------------------
+
+class _Renderer:
+    label = "Fake GPU"
+
+    def __init__(self):
+        self.rendered = 0
+        self.closed = False
+
+    def render(self, arr, recipe):
+        self.rendered += 1
+        return recipe.apply(arr)
+
+    def close(self):
+        self.closed = True
+
+
+@pytest.fixture
+def fake_gpu():
+    opened = []
+
+    def opener():
+        opened.append(_Renderer())
+        return opened[-1]
+    develop_backends.register(develop_backends.BackendProvider(
+        key="fake", probe=lambda: "Fake GPU (Vulkan)", open=opener))
+    return opened
+
+
+def test_no_render_row_when_only_the_cpu_can_render(dialog, export):
+    assert not any(isinstance(x, mod.QHBoxLayout) and dialog._render_combo in _row(x)  # noqa: SLF001
+                   for x in _items(dialog))
+    assert export()._settings.backend == develop_backends.CPU  # noqa: SLF001
+
+
+def test_a_gpu_backend_adds_the_render_row_under_metadata_and_is_chosen(qapp, tmp_path, fake_gpu):
+    dlg = BatchExportDialog(SimpleNamespace(main_window=None), [str(tmp_path / "a.png")])
+    try:
+        label, combo = _row(_items(dlg)[6])
+        assert label.text() == "Render on:" and combo is dlg._render_combo  # noqa: SLF001
+        assert [combo.itemText(i) for i in range(combo.count())] == ["CPU", "Fake GPU (Vulkan)"]
+        assert [combo.itemData(i) for i in range(combo.count())] == [develop_backends.CPU, "fake"]
+        assert combo.currentData() == "fake"
+        assert dlg._collect_settings().backend == "fake"  # noqa: SLF001
+        combo.setCurrentIndex(0)
+        assert dlg._collect_settings().backend == develop_backends.CPU  # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+
+
+def test_the_worker_renders_on_the_chosen_backend_and_closes_it(qapp, tmp_path, fake_gpu, monkeypatch):
+    from PIL import Image
+
+    from Imervue.gui import export_source
+    from Imervue.image.recipe import Recipe
+    from Imervue.image.recipe_store import RecipeStore
+    store = RecipeStore(store_path=tmp_path / "recipes.json")
+    monkeypatch.setattr(export_source, "recipe_store", store)
+    sources = []
+    for name in ("a", "b"):
+        sources.append(tmp_path / f"{name}.png")
+        Image.new("RGB", (8, 8), (90, 90, 90)).save(sources[-1])
+        store.set_for_path(str(sources[-1]), Recipe(exposure=0.5))
+    out = tmp_path / "out"
+    out.mkdir()
+    worker = mod._ExportWorker([str(p) for p in sources], str(out),  # noqa: SLF001
+                               mod.ExportSettings("PNG", 90, backend="fake"))
+    results = []
+    worker.result_ready.connect(lambda ok, bad: results.append((ok, bad)))
+    worker.run()
+    worker.deleteLater()
+    (renderer,) = fake_gpu
+    assert (renderer.rendered, renderer.closed, results) == (2, True, [(2, 0)])
+
+
+def test_the_worker_on_the_cpu_opens_no_backend(qapp, tmp_path, fake_gpu):
+    _results, _img = _run_worker(tmp_path, mod.ExportSettings("PNG", 90))
+    assert fake_gpu == []

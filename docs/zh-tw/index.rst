@@ -1324,6 +1324,21 @@ rig 只會對自己擁有的動作群組做出反應；缺少的群組不會播�
 - 設定最大寬度／高度（自動等比縮放）
 - 品質控制
 - 進度條即時顯示
+- **運算裝置**：CPU，或安裝 GPU 顯影外掛後的獨立顯示卡（見下文）
+
+GPU 顯影外掛
+^^^^^^^^^^^^^^^^
+
+**GPU 顯影** 外掛（``Plugins`` > ``Download Plugins``，分類 ``plugins``，名稱
+``gpu_develop``）讓批次匯出可以在獨立顯示卡上套用顯影配方。
+``Plugins`` > ``GPU 顯影…`` 第一次使用時會安裝 ``wgpu``，接著顯示它將使用的顯示卡名稱；
+之後批次匯出會顯示 **運算裝置**，並已選好那張顯示卡（選 **CPU** 就照以前的方式渲染）。
+
+- 白平衡、曝光、高光／陰影、白色／黑色、亮度、對比、鮮豔度、飽和度與色調曲線在顯示卡上執行；旋轉、翻轉、裁切，以及色調曲線之後的所有步驟（分離色調、LUT、遮罩、色階等）則留在 CPU 上
+- 一張 24 MP 的照片在顯示卡上約需 0.1 秒，在 CPU 上則約需 7 秒，不含解碼與存檔的時間
+- 只使用獨立顯示卡，絕不使用內建顯示卡或軟體渲染器；在 Windows 上優先透過 Vulkan，其次是 Direct3D 12
+- 顯示卡處理失敗的影像會改用 CPU 渲染，因此匯出仍會完成
+- 輸出與 CPU 渲染器的結果相比，只有少數像素相差幾個色階
 
 製作 GIF / 影片
 ^^^^^^^^^^^^^^^^
@@ -1615,6 +1630,8 @@ Imervue 支援外掛擴充功能。
 ``self.viewer``\ （``GPUImageView``）。只需覆寫需要的鉤子；每次呼叫都經過包裝，拋出的例外會以
 外掛名稱記錄下來，而不會讓 Imervue 停止運作。含範例的完整指南見
 `PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_。
+除了鉤子之外，外掛也能為批次匯出提供另一個顯影配方渲染器：在 ``on_plugin_loaded()`` 中用
+``Imervue.image.develop_backends.register`` 註冊一個 ``BackendProvider``。GPU 顯影外掛就是範例。
 
 .. list-table::
    :header-rows: 1

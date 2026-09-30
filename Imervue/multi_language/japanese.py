@@ -452,6 +452,8 @@ japanese_word_dict = {
     "batch_export_max_width": "最大幅：",
     "batch_export_max_height": "最大高さ：",
     "batch_export_start": "エクスポート",
+    "batch_export_render_on": "処理デバイス：",
+    "batch_export_render_cpu": "CPU",
     "batch_export_done": "{success}/{total} 枚をエクスポートしました",
     "batch_export_preset": "プリセット：",
     "batch_export_preset_custom": "カスタム",

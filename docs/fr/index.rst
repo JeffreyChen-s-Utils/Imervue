@@ -1795,6 +1795,22 @@ Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``E
 - Définir largeur / hauteur maximales (mise à l'échelle automatique du ratio d'aspect)
 - Contrôle de la qualité
 - Barre de progression en temps réel
+- **Render on** : le CPU, ou un GPU dédié lorsque le plugin GPU Develop est installé (voir ci-dessous)
+
+Plugin GPU Develop
+^^^^^^^^^^^^^^^^^^
+
+Le plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, catégorie ``plugins``, nom
+``gpu_develop``) permet à l'export par lots de rendre les recettes de développement sur un GPU
+dédié. ``Plugins`` > ``GPU Develop…`` installe ``wgpu`` la première fois, puis indique le GPU
+qu'il utilisera ; l'export par lots affiche ensuite **Render on** avec ce GPU sélectionné
+(choisissez **CPU** pour rendre comme avant).
+
+- La balance des blancs, l'exposition, les hautes lumières / ombres, les blancs / noirs, la luminosité, le contraste, la vibrance, la saturation et la courbe tonale s'exécutent sur le GPU ; la rotation, les retournements, le recadrage et tout ce qui suit la courbe tonale (virage partiel, LUT, masques, niveaux et le reste) restent sur le CPU
+- Une photo de 24 MP prend environ 0,1 s sur le GPU au lieu d'environ 7 s sur le CPU, sans compter le décodage et l'enregistrement
+- Seul un GPU dédié est utilisé, jamais un GPU intégré ni un moteur de rendu logiciel ; sous Windows, via Vulkan d'abord, puis Direct3D 12
+- Une image sur laquelle le GPU échoue est rendue sur le CPU, si bien que l'export se termine quand même
+- Le résultat correspond à celui du moteur de rendu CPU à quelques niveaux près sur une faible part des pixels
 
 Créer un GIF / une vidéo
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2104,6 +2120,10 @@ hooks dont vous avez besoin ; chaque appel est encapsulé, si bien qu'une except
 journalisée sous le nom du plugin au lieu d'arrêter Imervue. Le guide complet, avec des
 exemples, est
 `PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+Outre les hooks, un plugin peut fournir à l'export par lots un autre moteur de rendu pour les
+recettes de développement en enregistrant un ``BackendProvider`` avec
+``Imervue.image.develop_backends.register`` dans ``on_plugin_loaded()`` ; le plugin GPU Develop
+en est l'exemple.
 
 .. list-table::
    :header-rows: 1

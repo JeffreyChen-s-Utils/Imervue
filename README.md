@@ -383,6 +383,7 @@ The **Modify** tab is the develop workstation. Every adjustment lives on a per-i
 
 - **Export presets** — in Batch Export: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 square / Thumbnail 400 px, or Custom
 - **Watermark** — in Batch Export: a text watermark in a corner or the centre, with its opacity; applied to the exported copies only
+- **GPU batch develop** — with the **GPU Develop** plugin (**Plugins > Download Plugins**), Batch Export renders Develop recipes on a discrete GPU, chosen under **Render on**; **Plugins > GPU Develop…** installs `wgpu` on first use and names the GPU it found. White balance, exposure, highlights / shadows, whites / blacks, brightness, contrast, vibrance, saturation and the tone curve run on the GPU (a 24 MP photo in about 0.1 s instead of about 7 s); the rest of a recipe stays on the CPU. Integrated GPUs are never used, an image the GPU fails on is rendered on the CPU, and the output matches the CPU renderer to within a few levels on a small share of pixels
 - **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF (plus AVIF when Pillow has AVIF support, HEIC with `pillow-heif` and JPEG XL with `pillow-jxl-plugin`) with quality slider for lossy formats; keeps camera, lens and capture-date EXIF, with the location optional (**Metadata**: all / all but location / none); the suggested file name is one not yet taken (`photo_1.png` beside `photo.png`), and an existing file — above all the photo itself — is replaced only after you confirm
 - **Batch operations** — rename, move/copy, rotate selected images. A move or copy never overwrites a file of the same name (it arrives as `name_1`), and a photo renamed or moved in Imervue (Batch Rename, Token Batch Rename, the folder tree, Move / Copy, Dual Pane, Staging Tray, Image Organizer) keeps its rating, favourite, tags, colour label, title, notes and cull flag; its `.xmp` and annotation sidecars go with it; so does a photo renamed in another program while its folder is open in Imervue. Renaming to a name another selected photo has now (renumbering a folder, swapping two names) renames the whole selection in the right order instead of only part of it
 - **Contact Sheet PDF** — multi-page grid with captions (A4 / A3 / Letter / Legal)
@@ -894,6 +895,8 @@ Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE
 | `on_app_closing(main_window)` | Before application closes |
 | `get_translations()` | Provide i18n strings |
 | `register_languages()` | Class method: register new languages (before each load, and at startup) |
+
+Besides hooks, a plugin can give Batch Export another renderer for Develop recipes: register a `BackendProvider` with `Imervue.image.develop_backends.register` in `on_plugin_loaded`. The GPU Develop plugin is the example; [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE.md) has the details.
 
 ### Plugin Downloader
 

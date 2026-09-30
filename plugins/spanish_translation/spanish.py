@@ -353,6 +353,8 @@ spanish_word_dict.update({
     "batch_export_max_width": "Ancho máx:",
     "batch_export_max_height": "Alto máx:",
     "batch_export_start": "Exportar",
+    "batch_export_render_on": "Procesar en:",
+    "batch_export_render_cpu": "CPU",
     "batch_export_done": "Exportadas {success}/{total} imagen(es)",
     "batch_export_preset": "Preajuste:",
     "batch_export_preset_custom": "Personalizado",

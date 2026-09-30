@@ -371,6 +371,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **导出预设** — 在批量导出中：Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 正方形 / Thumbnail 400 px，或自定义
 - **水印** — 在批量导出中：在四角之一或居中加上文字水印，可设置不透明度；只应用于导出的副本
+- **GPU 批量显影** — 安装 **GPU 显影** 插件（**Plugins > Download Plugins**）后，批量导出可以在独立显卡上渲染显影 recipe，在 **运算设备** 中选择；**Plugins > GPU 显影…** 首次使用时会安装 `wgpu`，并显示找到的显卡。白平衡、曝光、高光 / 阴影、白色 / 黑色、亮度、对比度、鲜艳度、饱和度与色调曲线在 GPU 上运行（一张 2400 万像素的照片约 0.1 秒，而不是约 7 秒）；recipe 的其余部分仍在 CPU 上处理。从不使用集成显卡；GPU 处理失败的图片改由 CPU 渲染；输出与 CPU 渲染器相比，只有一小部分像素会有几个色阶以内的差异
 - **另存为 / 导出** — PNG / JPEG / WebP / BMP / TIFF（Pillow 支持 AVIF 时还有 AVIF，装了 `pillow-heif` 还有 HEIC，装了 `pillow-jxl-plugin` 还有 JPEG XL），有损格式提供质量滑块；保留相机、镜头与拍摄时间的 EXIF，位置可选（**元数据**：全部／位置以外／无）；建议的文件名一定是还没被占用的（`photo.png` 旁边就是 `photo_1.png`），已存在的文件（尤其是原图本身）要确认后才会被替换
 - **批量操作** — 重命名、移动 / 复制、旋转选中图片。移动或复制不会覆盖同名文件（会以 `name_1` 存入）；在 Imervue 里重命名或移动的照片（批量重命名、Token 批量重命名、文件夹树、移动 / 复制、双窗格、暂存区、图片整理）会保留评级、收藏、标签、颜色标签、标题、备注与筛选标记，`.xmp` 与标注 sidecar 也会一起带走；文件夹在 Imervue 中打开时，用其他程序重命名的照片也一样；改成另一张选中照片现在的名称（重新编号、互换两个名称）时，会按正确顺序把整批重命名，而不是只改一部分
 - **联系表 PDF** — 多页网格含说明（A4 / A3 / Letter / Legal）
@@ -834,6 +835,8 @@ Imervue 支持第三方插件。完整参考见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_app_closing(main_window)` | App 关闭前 |
 | `get_translations()` | 提供 i18n 字符串 |
 | `register_languages()` | 类方法：注册新语言（每次加载前，以及启动时） |
+
+除了钩子之外，插件还可以为批量导出提供另一个显影 recipe 渲染器：在 `on_plugin_loaded` 中用 `Imervue.image.develop_backends.register` 注册一个 `BackendProvider`。GPU 显影插件就是示例；详见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)。
 
 ### 插件下载器
 

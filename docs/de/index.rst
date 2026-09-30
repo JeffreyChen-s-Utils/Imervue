@@ -1817,6 +1817,22 @@ Mehrere Bilder auswählen, dann Rechtsklick > ``Stapeloperationen`` > ``Stapelex
 - Maximale Breite / Höhe setzen (automatische Seitenverhältnisskalierung)
 - Qualitätskontrolle
 - Echtzeit-Fortschrittsbalken
+- **Render on**: die CPU oder eine dedizierte GPU, wenn das Plugin GPU Develop installiert ist (siehe unten)
+
+GPU-Develop-Plugin
+^^^^^^^^^^^^^^^^^^
+
+Das Plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, Kategorie ``plugins``, Name
+``gpu_develop``) lässt den Stapelexport Develop-Rezepte auf einer dedizierten GPU rendern.
+``Plugins`` > ``GPU Develop…`` installiert beim ersten Mal ``wgpu`` und nennt danach die GPU, die
+es verwenden wird; der Stapelexport zeigt dann **Render on** mit dieser GPU ausgewählt (wählen Sie
+**CPU**, um wie bisher zu rendern).
+
+- Weißabgleich, Belichtung, Lichter / Schatten, Weiß / Schwarz, Helligkeit, Kontrast, Dynamik, Sättigung und die Tonwertkurve laufen auf der GPU; Drehung, Spiegelungen, der Zuschnitt und alles nach der Tonwertkurve (Split-Toning, LUT, Masken, Tonwerte und der Rest) bleiben auf der CPU
+- Ein 24-MP-Foto braucht auf der GPU etwa 0,1 s statt etwa 7 s auf der CPU, Dekodieren und Speichern nicht mitgerechnet
+- Verwendet wird nur eine dedizierte GPU, nie eine integrierte GPU oder ein Software-Renderer; unter Windows zuerst über Vulkan, dann über Direct3D 12
+- Ein Bild, bei dem die GPU scheitert, wird auf der CPU gerendert, sodass der Export trotzdem abgeschlossen wird
+- Die Ausgabe stimmt mit der des CPU-Renderers bis auf wenige Stufen bei einem kleinen Anteil der Pixel überein
 
 GIF / Video erstellen
 ^^^^^^^^^^^^^^^^^^^^^
@@ -2134,6 +2150,9 @@ eigene Instanz jedes Plugins und übergibt sich selbst, sodass ein Hook ``self.m
 brauchen; jeder Aufruf ist abgesichert, sodass eine Ausnahme unter dem Namen des Plugins
 protokolliert wird, statt Imervue anzuhalten. Die vollständige Anleitung mit Beispielen ist
 `PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+Neben Hooks kann ein Plugin dem Stapelexport einen weiteren Renderer für Develop-Rezepte geben,
+indem es in ``on_plugin_loaded()`` einen ``BackendProvider`` mit
+``Imervue.image.develop_backends.register`` registriert; das Plugin GPU Develop ist das Beispiel.
 
 .. list-table::
    :header-rows: 1

@@ -441,6 +441,8 @@ traditional_chinese_word_dict = {
     "batch_export_max_width": "最大寬度：",
     "batch_export_max_height": "最大高度：",
     "batch_export_start": "匯出",
+    "batch_export_render_on": "運算裝置：",
+    "batch_export_render_cpu": "CPU",
     "batch_export_done": "已匯出 {success}/{total} 張圖片",
     "batch_export_preset": "預設：",
     "batch_export_preset_custom": "自訂",

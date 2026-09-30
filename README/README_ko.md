@@ -375,6 +375,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **내보내기 프리셋** — 일괄 내보내기에서 선택: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 정사각형 / Thumbnail 400 px, 또는 사용자 지정
 - **워터마크** — 일괄 내보내기에서: 모서리나 중앙에 텍스트 워터마크를 불투명도와 함께 배치; 내보낸 사본에만 적용
+- **GPU 일괄 현상** — **GPU 현상** 플러그인(**Plugins > Download Plugins**)을 설치하면 일괄 내보내기가 현상 recipe를 외장 GPU에서 렌더링하며, GPU는 **처리 장치**에서 고릅니다. **Plugins > GPU 현상…** 메뉴는 처음 사용할 때 `wgpu`를 설치하고 찾은 GPU의 이름을 알려 줍니다. 화이트 밸런스, 노출, 하이라이트 / 그림자, 흰색 계열 / 검정 계열, 밝기, 대비, 활기, 채도, 톤 커브는 GPU에서 실행되고(24 MP 사진 한 장이 약 7초 대신 약 0.1초), recipe의 나머지는 CPU에 남습니다. 내장 GPU는 절대 사용하지 않고, GPU에서 실패한 이미지는 CPU로 렌더링하며, 출력은 CPU 렌더러와 일치하되 일부 픽셀에서만 몇 단계 이내의 차이가 납니다
 - **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF(Pillow가 AVIF를 지원하면 AVIF, `pillow-heif`가 있으면 HEIC, `pillow-jxl-plugin`이 있으면 JPEG XL도), 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음). 제안되는 파일 이름은 아직 쓰이지 않은 이름(`photo.png` 옆이면 `photo_1.png`)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
 - **일괄 작업** — 이름 변경, 이동/복사, 선택한 이미지 회전. 이동·복사는 같은 이름의 파일을 덮어쓰지 않고 `name_1`로 둡니다. Imervue에서 이름을 바꾸거나 이동한 사진(일괄 이름 변경, 토큰 일괄 이름 변경, 폴더 트리, 이동 / 복사, 듀얼 창, 스테이징 트레이, 이미지 정리)은 별점·즐겨찾기·태그·컬러 라벨·제목·메모·선별 표시를 유지하며, `.xmp`와 주석 sidecar도 함께 옮겨집니다. 폴더가 Imervue에 열려 있는 동안 다른 프로그램에서 이름을 바꾼 사진도 마찬가지입니다. 선택한 다른 사진이 지금 쓰고 있는 이름으로 바꾸는 경우(번호 다시 매기기, 두 이름 맞바꾸기)에도 일부만 바뀌지 않고 올바른 순서로 선택 전체의 이름을 바꿉니다
 - **컨택트 시트 PDF** — 캡션이 있는 다중 페이지 그리드 (A4 / A3 / Letter / Legal)
@@ -836,6 +837,8 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 | `on_app_closing(main_window)` | 애플리케이션 종료 전 |
 | `get_translations()` | i18n 문자열 제공 |
 | `register_languages()` | 클래스 메서드: 새 언어 등록 (매번 로드 전과 시작 시) |
+
+훅 외에도 플러그인은 일괄 내보내기에 현상 recipe용 렌더러를 하나 더 제공할 수 있습니다. `on_plugin_loaded`에서 `Imervue.image.develop_backends.register`로 `BackendProvider`를 등록하면 됩니다. GPU 현상 플러그인이 그 예제이며, 자세한 내용은 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)를 참고하세요.
 
 ### 플러그인 다운로더
 

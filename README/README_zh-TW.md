@@ -374,6 +374,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **匯出預設** — 在批次匯出中：Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 正方形 / Thumbnail 400 px，或自訂
 - **浮水印** — 在批次匯出中：在四個角落之一或置中加上文字浮水印，可設定不透明度；只套用在匯出的副本上
+- **GPU 批次顯影** — 安裝 **GPU 顯影** 外掛（**Plugins > Download Plugins**）後，批次匯出可以改在獨立顯示卡上套用顯影 recipe（在 **運算裝置** 中選擇）；**Plugins > GPU 顯影…** 會在第一次使用時安裝 `wgpu`，並顯示它找到的顯示卡名稱。白平衡、曝光、高光 / 陰影、白色 / 黑色、亮度、對比、鮮豔度、飽和度與色調曲線在顯示卡上執行（一張 24 MP 的照片約 0.1 秒，而不是約 7 秒）；recipe 的其餘部分仍在 CPU 上執行。絕不使用內建顯示卡，顯示卡處理失敗的影像會改用 CPU 渲染，輸出與 CPU 渲染器的結果相比，只有少數像素相差幾個色階
 - **另存新檔 / 匯出** — PNG / JPEG / WebP / BMP / TIFF（Pillow 支援 AVIF 時還有 AVIF，裝了 `pillow-heif` 還有 HEIC，裝了 `pillow-jxl-plugin` 還有 JPEG XL），有損格式提供品質滑桿；保留相機、鏡頭與拍攝時間的 EXIF，位置可選（**中繼資料**：全部／位置以外／無）；建議的檔名一定是還沒被占用的（`photo.png` 旁邊就是 `photo_1.png`），已存在的檔案（尤其是原圖本身）要確認後才會被取代
 - **批次操作** — 重命名、移動 / 複製、旋轉選取影像。移動或複製不會覆蓋同名檔案（會以 `name_1` 存入）；在 Imervue 裡重新命名或移動的照片（批次重新命名、Token 批次重新命名、資料夾樹、移動 / 複製、雙窗格、暫存區、影像整理）會保留評等、收藏、標籤、顏色標籤、標題、備註與篩選標記，`.xmp` 與註解 sidecar 也會一起帶走；資料夾在 Imervue 中開著時，用其他程式重新命名的照片也一樣；改成另一張選取照片現在的名稱（重新編號、互換兩個名稱）時，會依正確順序把整批重新命名，而不是只改一部分
 - **聯絡單 PDF** — 多頁網格含說明（A4 / A3 / Letter / Legal）
@@ -837,6 +838,8 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_app_closing(main_window)` | App 關閉前 |
 | `get_translations()` | 提供 i18n 字串 |
 | `register_languages()` | 類別方法：註冊新語言（每次載入前，以及啟動時） |
+
+除了鉤子之外，外掛也能為批次匯出提供另一個顯影 recipe 渲染器：在 `on_plugin_loaded` 中用 `Imervue.image.develop_backends.register` 註冊一個 `BackendProvider`。GPU 顯影外掛就是範例；詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)。
 
 ### 外掛下載器
 

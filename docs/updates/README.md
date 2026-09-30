@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-11 | 2026-10-01 | Batch Export renders Develop recipes on the discrete GPU through a new develop-backend registry and the GPU Develop plugin | #done #develop #gpu #plugins #Imervue_Plugins #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-10 | 2026-10-01 | Refactor: the develop pipeline is a named stage table any part of which can run | #refactor #develop | [2026-10](2026-10.md) |
 | U-20261001-09 | 2026-10-01 | The .puppet format has published JSON Schemas, a media type, a validate command and a reference reader | #done #puppet #format #mcp #cli #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-08 | 2026-10-01 | Refactor: saving a .puppet to disk or to bytes writes its entries in one place | #refactor #puppet | [2026-10](2026-10.md) |
@@ -476,4 +477,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 10 |
+| [2026-10.md](2026-10.md) | 2026-10 | 11 |

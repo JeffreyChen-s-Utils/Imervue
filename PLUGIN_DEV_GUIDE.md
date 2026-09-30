@@ -278,6 +278,53 @@ def on_app_closing(self, main_window):
     self.save_plugin_state()
 ```
 
+## Develop Backends
+
+`Recipe.apply` renders a Develop recipe on the CPU. A plugin can offer Batch Export another renderer
+— the **GPU Develop** plugin (`gpu_develop` in the plugin downloader) renders on the discrete GPU — by
+registering a provider in `Imervue.image.develop_backends`:
+
+```python
+from Imervue.image import develop_backends
+from Imervue.image.recipe import Recipe
+
+
+class FastRenderer:
+    label = "Fast renderer"
+
+    def render(self, arr, recipe: Recipe):          # HxWx4 uint8 in, HxWx4 uint8 out
+        recipe = recipe.normalized()
+        arr = recipe.apply_stages(arr, last="geometry")          # what you don't do yourself…
+        arr = my_fast_colour_stages(arr, recipe)                # …from white_balance to tone_curve
+        return recipe.apply_stages(arr, first="split_toning")    # …the rest
+
+    def close(self):
+        release_the_device()
+
+
+PROVIDER = develop_backends.BackendProvider(
+    key="fast", probe=lambda: "Fast renderer" if device_present() else None, open=FastRenderer)
+
+
+class FastPlugin(ImervuePlugin):
+    def on_plugin_loaded(self):
+        develop_backends.register(PROVIDER)
+
+    def on_plugin_unloaded(self):
+        develop_backends.unregister("fast")
+```
+
+| Piece | Contract |
+|---|---|
+| `probe()` | Returns the label Batch Export shows under **Render on**, or `None` when the backend cannot run on this machine; `RuntimeError`, `OSError` and `ImportError` hide the backend |
+| `open()` | Builds a renderer when an export starts, on the export thread; `RuntimeError`, `OSError` and `ImportError` make that export render on the CPU |
+| `render(arr, recipe)` | Must return what `recipe.apply(arr)` does. `Recipe.apply_stages(arr, first, last)` runs any span of the stages in `Imervue.image.recipe.STAGE_NAMES`, so a renderer does only the stages it is faster at. A `RuntimeError` renders that image on the CPU |
+| `close()` | Called once when the export ends |
+
+The key `"cpu"` belongs to the built-in renderer. Every window loads its own plugin instance, so a
+plugin that can be loaded in several windows unregisters when its last instance unloads (the GPU
+Develop plugin counts them).
+
 ## Accessing Application State
 
 ### Viewer State

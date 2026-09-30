@@ -449,6 +449,8 @@ korean_word_dict = {
     "batch_export_max_width": "최대 너비:",
     "batch_export_max_height": "최대 높이:",
     "batch_export_start": "내보내기",
+    "batch_export_render_on": "처리 장치:",
+    "batch_export_render_cpu": "CPU",
     "batch_export_done": "{success}/{total}개의 이미지를 내보냈습니다",
     "batch_export_preset": "프리셋:",
     "batch_export_preset_custom": "사용자 지정",

@@ -1744,6 +1744,22 @@ Select multiple images, then right-click > ``Batch Operations`` > ``Batch Export
 - Set maximum width / height (auto aspect-ratio scaling)
 - Quality control
 - Real-time progress bar
+- **Render on**: the CPU, or a discrete GPU when the GPU Develop plugin is installed (below)
+
+GPU Develop Plugin
+^^^^^^^^^^^^^^^^^^
+
+The **GPU Develop** plugin (``Plugins`` > ``Download Plugins``, category ``plugins``, name
+``gpu_develop``) lets Batch Export render Develop recipes on a discrete GPU.
+``Plugins`` > ``GPU Develop…`` installs ``wgpu`` the first time and then names the GPU it will
+use; Batch Export then shows **Render on** with that GPU chosen (pick **CPU** to render as
+before).
+
+- White balance, exposure, highlights / shadows, whites / blacks, brightness, contrast, vibrance, saturation and the tone curve run on the GPU; rotation, flips, the crop and everything after the tone curve (split toning, LUT, masks, levels and the rest) stay on the CPU
+- A 24 MP photo takes about 0.1 s on the GPU instead of about 7 s on the CPU, not counting decoding and saving
+- Only a discrete GPU is used, never an integrated GPU or a software renderer; on Windows through Vulkan first, then Direct3D 12
+- An image the GPU fails on is rendered on the CPU, so the export still completes
+- The output matches the CPU renderer to within a few levels on a small share of pixels
 
 Create GIF / Video
 ^^^^^^^^^^^^^^^^^^^
@@ -2049,6 +2065,9 @@ Every main window creates its own instance of each plugin and passes itself in, 
 need; each call is wrapped, so an exception is logged under the plugin's name instead of
 stopping Imervue. The full guide, with examples, is
 `PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+Besides hooks, a plugin can give Batch Export another renderer for Develop recipes by registering
+a ``BackendProvider`` with ``Imervue.image.develop_backends.register`` in
+``on_plugin_loaded()``; the GPU Develop plugin is the example.
 
 .. list-table::
    :header-rows: 1

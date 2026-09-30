@@ -372,6 +372,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 - **Export-Presets** — im Batch-Export: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 quadratisch / Thumbnail 400 px oder Custom
 - **Wasserzeichen** — im Batch-Export: ein Text-Wasserzeichen in einer Ecke oder der Mitte, mit einstellbarer Opazität; nur auf die exportierten Kopien angewendet
+- **GPU-Batch-Entwicklung** — mit dem Plugin **GPU Develop** (**Plugins > Download Plugins**) rendert der Batch-Export Develop-Rezepte auf einer dedizierten GPU, ausgewählt unter **Render on**; **Plugins > GPU Develop…** installiert beim ersten Aufruf `wgpu` und nennt die gefundene GPU. Weißabgleich, Belichtung, Lichter / Schatten, Weiß / Schwarz, Helligkeit, Kontrast, Vibrance, Sättigung und die Tonwertkurve laufen auf der GPU (ein 24-MP-Foto in etwa 0,1 s statt etwa 7 s); der Rest eines Rezepts bleibt auf der CPU. Integrierte GPUs werden nie verwendet, ein Bild, bei dem die GPU scheitert, wird auf der CPU gerendert, und die Ausgabe stimmt mit der des CPU-Renderers bis auf wenige Stufen bei einem kleinen Anteil der Pixel überein
 - **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF (dazu AVIF, wenn Pillow AVIF unterstützt, HEIC mit `pillow-heif` und JPEG XL mit `pillow-jxl-plugin`) mit Qualitäts-Slider für verlustbehaftete Formate; übernimmt Kamera-, Objektiv- und Aufnahmedatum-EXIF, der Standort ist optional (**Metadaten**: alle / alle außer Standort / keine); der vorgeschlagene Dateiname ist noch frei (`photo_1.png` neben `photo.png`), und eine vorhandene Datei – vor allem das Foto selbst – wird erst nach Rückfrage ersetzt
 - **Batch-Operationen** — Umbenennen, Verschieben/Kopieren, ausgewählte Bilder drehen. Verschieben oder Kopieren überschreibt nie eine gleichnamige Datei (sie kommt als `name_1` an), und ein in Imervue umbenanntes oder verschobenes Foto (Stapel-Umbenennen, Token-Stapel-Umbenennen, Ordnerbaum, Verschieben / Kopieren, Zwei-Fenster-Ansicht, Staging-Ablage, Bild-Organizer) behält Bewertung, Favorit, Tags, Farbetikett, Titel, Notizen und Auswahl-Markierung; seine `.xmp`- und Anmerkungs-Sidecars wandern mit; ebenso ein Foto, das in einem anderen Programm umbenannt wird, während sein Ordner in Imervue geöffnet ist. Ein neuer Name, den gerade ein anderes ausgewähltes Foto trägt (Neunummerieren, zwei Namen tauschen), benennt die ganze Auswahl in der richtigen Reihenfolge um statt nur einen Teil davon
 - **Contact Sheet PDF** — mehrseitiges Grid mit Untertiteln (A4 / A3 / Letter / Legal)
@@ -885,6 +886,8 @@ Imervue unterstützt Third-Party-Plugins. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_app_closing(main_window)` | Bevor die Anwendung schließt |
 | `get_translations()` | Stellt i18n-Strings bereit |
 | `register_languages()` | Klassenmethode: neue Sprachen registrieren (vor jedem Laden und beim Start) |
+
+Neben Hooks kann ein Plugin dem Batch-Export einen weiteren Renderer für Develop-Rezepte geben: Registrieren Sie in `on_plugin_loaded` einen `BackendProvider` mit `Imervue.image.develop_backends.register`. Das Plugin GPU Develop ist das Beispiel; Details stehen in [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md).
 
 ### Plugin-Downloader
 

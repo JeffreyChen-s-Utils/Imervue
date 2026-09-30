@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-01 against `efa911f` on `dev`.
+> Last verified: 2026-10-01 against `75c751b` on `dev`.
 
 ## 1. Purpose
 
@@ -108,6 +108,11 @@ Public interfaces other code or users depend on:
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.
    Delete: soft delete in `gpu_image_view/actions/delete.py` → `commit_pending_deletions()` →
    one batch through `system/trash_ops.py`.
+4. **Batch export** — `gui/batch_export_dialog.py` `_ExportWorker` opens the renderer chosen under
+   *Render on* (`image/develop_backends.open_renderer()`; none for the CPU) → per image
+   `gui/export_source.open_export_source(path, renderer)` → `develop_backends.render()` (the
+   renderer, or `Recipe.apply` on the CPU, also when the renderer fails on that image) →
+   `image/save_formats.save_image()`; the renderer is closed when the loop ends.
 
 ## 5. Extension points
 
@@ -115,7 +120,8 @@ Public interfaces other code or users depend on:
 | --- | --- |
 | A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_menu.py` |
 | A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; do not hand-write teardown |
-| A develop step | `Recipe.apply` in `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip) |
+| A develop step | A row in `_STAGES` of `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip). A stage between `white_balance` and `tone_curve` also needs the GPU Develop plugin (`plugins/gpu_develop/params.py` `GPU_STAGES`), which renders nothing on the GPU until its span matches |
+| A develop renderer (another device for the recipe) | A `BackendProvider` registered with `Imervue.image.develop_backends.register()` from a plugin's `on_plugin_loaded`; it must return what `Recipe.apply` does and may run any span through `Recipe.apply_stages()` (reference: `plugins/gpu_develop/`) |
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
 | A language | Plugin calling `language_wrapper.register_language()` from its `register_languages()` class method (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
 | An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
@@ -164,6 +170,14 @@ Public interfaces other code or users depend on:
   under `obs_*`, `twitch_*`, `webhook_*` and `win_notifications_*`. Keep these names, or change the
   plugin in the same round. On an install older than `on_pet_created` the plugin loads but the pet
   never gets the integrations.
+- **GPU Develop plugin surface.** `gpu_develop` (in Imervue_Plugins) registers a
+  `BackendProvider` with `Imervue.image.develop_backends.register` / `unregister`, renders with
+  `Recipe.normalized()`, `Recipe.apply_stages(arr, first, last)` and `STAGE_NAMES` from
+  `Imervue.image.recipe`, `is_zero` from `Imervue.image.recipe_adjustments`, and installs `wgpu` with
+  `Imervue.plugin.pip_installer.ensure_dependencies`. Keep these names and the stage names from
+  `white_balance` to `tone_curve`, or change the plugin in the same round; a pipeline whose span
+  differs makes the plugin offer no GPU. An install older than `develop_backends` fails to load the
+  plugin (logged) and keeps exporting on the CPU.
 - **External services.** Every download made by the plugin downloader and pip installer goes through
   an HTTPS-only guard; model downloads from Hugging Face must pin a revision. Codacy and SonarCloud
   analyse only the `main` branch.

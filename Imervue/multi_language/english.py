@@ -464,6 +464,8 @@ english_word_dict = {
     "batch_export_max_width": "Max Width:",
     "batch_export_max_height": "Max Height:",
     "batch_export_start": "Export",
+    "batch_export_render_on": "Render on:",
+    "batch_export_render_cpu": "CPU",
     "batch_export_done": "Exported {success}/{total} image(s)",
     "batch_export_preset": "Preset:",
     "batch_export_preset_custom": "Custom",

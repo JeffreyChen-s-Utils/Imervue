@@ -379,6 +379,7 @@ A aba **Modify** é a estação de revelação. Toda alteração vive em uma **r
 
 - **Presets de exportação** — na Exportação em Lote: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 quadrado / Thumbnail 400 px, ou Custom
 - **Marca d'água** — na Exportação em Lote: uma marca d'água de texto em um canto ou no centro, com sua opacidade; aplicada apenas às cópias exportadas
+- **Revelação em lote na GPU** — com o plugin **GPU Develop** (**Plugins > Download Plugins**), a Exportação em Lote renderiza as receitas de revelação em uma GPU dedicada, escolhida em **Render on**; **Plugins > GPU Develop…** instala o `wgpu` no primeiro uso e informa a GPU que encontrou. Balanço de branco, exposição, realces / sombras, brancos / pretos, brilho, contraste, vibração, saturação e a curva tonal rodam na GPU (uma foto de 24 MP em cerca de 0,1 s em vez de cerca de 7 s); o restante de uma receita fica na CPU. GPUs integradas nunca são usadas, uma imagem em que a GPU falha é renderizada na CPU, e a saída coincide com a do renderizador de CPU com diferença de poucos níveis em uma pequena parcela dos pixels
 - **Salvar Como / Exportar** — PNG / JPEG / WebP / BMP / TIFF (e AVIF quando o Pillow tem suporte a AVIF, HEIC com `pillow-heif` e JPEG XL com `pillow-jxl-plugin`) com slider de qualidade para formatos com perdas; mantém o EXIF de câmera, lente e data de captura, com a localização opcional (**Metadados**: todos / todos menos localização / nenhum); o nome sugerido é um ainda livre (`photo_1.png` ao lado de `photo.png`), e um arquivo existente — sobretudo a própria foto — só é substituído após confirmação
 - **Operações em lote** — renomear, mover/copiar, rotacionar imagens selecionadas. Mover ou copiar nunca sobrescreve um arquivo de mesmo nome (ele chega como `name_1`), e uma foto renomeada ou movida no Imervue (renomeação em lote, renomeação por tokens, árvore de pastas, Mover / Copiar, painel duplo, bandeja de preparação, organizador de imagens) mantém a avaliação, o favorito, as tags, o rótulo de cor, o título, as notas e a marcação de seleção; os sidecars `.xmp` e de anotações vão junto; o mesmo vale para uma foto renomeada em outro programa enquanto a pasta está aberta no Imervue. Um nome novo que outra foto selecionada tem agora (renumerar, trocar dois nomes) renomeia a seleção inteira na ordem certa em vez de só uma parte
 - **PDF de Contact Sheet** — grade em várias páginas com legendas (A4 / A3 / Letter / Legal)
@@ -866,6 +867,8 @@ Imervue suporta plugins de terceiros. Veja [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_G
 | `on_app_closing(main_window)` | Antes de a aplicação fechar |
 | `get_translations()` | Fornecer strings i18n |
 | `register_languages()` | Método de classe: registrar novos idiomas (antes de cada carregamento e na inicialização) |
+
+Além dos hooks, um plugin pode dar à Exportação em Lote outro renderizador para as receitas de revelação: registre um `BackendProvider` com `Imervue.image.develop_backends.register` em `on_plugin_loaded`. O plugin GPU Develop é o exemplo; [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md) traz os detalhes.
 
 ### Downloader de plugins
 

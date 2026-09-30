@@ -1766,6 +1766,22 @@ Selecione várias imagens, depois clique com o botão direito > ``Operações em
 - Definir largura / altura máximas (escala automática de proporção)
 - Controle de qualidade
 - Barra de progresso em tempo real
+- **Render on**: a CPU, ou uma GPU dedicada quando o plugin GPU Develop está instalado (abaixo)
+
+Plugin GPU Develop
+^^^^^^^^^^^^^^^^^^
+
+O plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, categoria ``plugins``, nome
+``gpu_develop``) permite que a Exportação em Lote renderize receitas de revelação em uma GPU dedicada.
+``Plugins`` > ``GPU Develop…`` instala o ``wgpu`` na primeira vez e depois informa a GPU que vai
+usar; a Exportação em Lote passa então a mostrar **Render on** com essa GPU escolhida (escolha
+**CPU** para renderizar como antes).
+
+- Balanço de branco, exposição, realces / sombras, brancos / pretos, brilho, contraste, vibração, saturação e a curva tonal rodam na GPU; rotação, espelhamentos, o recorte e tudo o que vem depois da curva tonal (split toning, LUT, máscaras, níveis e o restante) ficam na CPU
+- Uma foto de 24 MP leva cerca de 0,1 s na GPU em vez de cerca de 7 s na CPU, sem contar a decodificação e o salvamento
+- Só uma GPU dedicada é usada, nunca uma GPU integrada nem um renderizador por software; no Windows, primeiro via Vulkan e depois via Direct3D 12
+- Uma imagem em que a GPU falha é renderizada na CPU, então a exportação ainda é concluída
+- A saída coincide com a do renderizador de CPU com diferença de poucos níveis em uma pequena parcela dos pixels
 
 Criar GIF / Vídeo
 ^^^^^^^^^^^^^^^^^
@@ -2073,6 +2089,9 @@ Cada janela principal cria a própria instância de cada plugin e passa a si mes
 precisa; cada chamada é protegida, então uma exceção é registrada no log com o nome do plugin em vez de
 interromper o Imervue. O guia completo, com exemplos, é
 `PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+Além dos hooks, um plugin pode dar à Exportação em Lote outro renderizador para as receitas de
+revelação registrando um ``BackendProvider`` com ``Imervue.image.develop_backends.register`` em
+``on_plugin_loaded()``; o plugin GPU Develop é o exemplo.
 
 .. list-table::
    :header-rows: 1
