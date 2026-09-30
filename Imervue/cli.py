@@ -244,8 +244,8 @@ def validate_pipeline(steps: list) -> list[str]:
     if len(steps) > _MAX_PIPELINE_STEPS:
         errors.append(f"too many steps ({len(steps)} > {_MAX_PIPELINE_STEPS})")
     for i, step in enumerate(steps):
-        if not isinstance(step, dict) or "op" not in step:
-            errors.append(f"step {i}: each step must be an object with an 'op'")
+        if not isinstance(step, dict) or not isinstance(step.get("op"), str):
+            errors.append(f"step {i}: each step must be an object with an 'op' name")
         elif step["op"] not in _PIPELINE_OPS:
             errors.append(f"step {i}: unknown op {step['op']!r}; "
                           f"known: {sorted(_PIPELINE_OPS)}")
@@ -254,8 +254,11 @@ def validate_pipeline(steps: list) -> list[str]:
 
 def op_pipeline(src: Path, target: Path, args) -> None:
     arr = load_shown_rgba(src)
-    for step in args.pipeline_steps:
-        arr = _PIPELINE_OPS[step["op"]](arr, step)
+    for index, step in enumerate(args.pipeline_steps):
+        try:
+            arr = _PIPELINE_OPS[step["op"]](arr, step)
+        except TypeError as exc:   # a parameter of the wrong type, e.g. null: this image's error
+            raise ValueError(f"pipeline step {index} ({step['op']}): {exc}") from exc
     Image.fromarray(arr, mode="RGBA").save(target)
 
 

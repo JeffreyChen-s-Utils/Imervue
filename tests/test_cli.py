@@ -243,6 +243,25 @@ def test_pipeline_unknown_op_is_validation_error(tmp_path, capsys):
     assert "unknown op" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("op", [["dehaze"], 7, None, {"name": "dehaze"}])
+def test_an_op_that_is_no_name_is_a_validation_error(op):
+    """A list as the op raised TypeError (unhashable) out of the validator: a traceback."""
+    errors = validate_pipeline([{"op": op}])
+    assert errors == ["step 0: each step must be an object with an 'op' name"]
+
+
+def test_a_null_parameter_fails_that_image_not_the_run(tmp_path, capsys):
+    """float(None) raised TypeError past the per-image handler and ended the run."""
+    _save(tmp_path / "a.png")
+    _save(tmp_path / "b.png")
+    spec = tmp_path / "pipe.json"
+    spec.write_text(json.dumps([{"op": "invert"}, {"op": "dehaze", "strength": None}]))
+    assert main(["pipeline", str(spec), str(tmp_path), "--out", str(tmp_path / "out")]) == 1
+    err = capsys.readouterr().err
+    assert "pipeline step 1 (dehaze)" in err
+    assert "0 processed, 0 skipped, 2 errors" in err
+
+
 def test_pipeline_bad_json_is_error(tmp_path):
     spec = tmp_path / "pipe.json"
     spec.write_text("{not valid json")
