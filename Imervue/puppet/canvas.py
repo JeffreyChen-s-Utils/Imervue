@@ -118,6 +118,19 @@ def _fit_scale_and_pan(
     scale = min(width / doc_w, height / doc_h)
     return scale, (width - doc_w * scale) / 2.0, (height - doc_h * scale) / 2.0
 
+
+def offscreen_framebuffer_format():
+    """The format of ``render_offscreen_puppet``'s framebuffer: with a depth-stencil attachment.
+
+    Clip masks draw through the stencil buffer; a framebuffer without one
+    ignored them, so every recording, snapshot and stream showed clipped
+    drawables (irises, hair shadows) spilling past their masks.
+    """
+    from PySide6.QtOpenGL import QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat
+    fmt = QOpenGLFramebufferObjectFormat()
+    fmt.setAttachment(QOpenGLFramebufferObject.Attachment.CombinedDepthStencil)
+    return fmt
+
 # The physics chains' own clock: motions, drivers and the pet's paint tick only
 # move the parameters that feed the chains. The timer fires about 60 times a
 # second while a shown rig has chains; the chains always step by the fixed
@@ -735,16 +748,12 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         """
         if self._document is None or width <= 0 or height <= 0:
             return None
-        from PySide6.QtOpenGL import (
-            QOpenGLFramebufferObject,
-            QOpenGLFramebufferObjectFormat,
-        )
+        from PySide6.QtOpenGL import QOpenGLFramebufferObject
 
         self.makeCurrent()
         fbo = None
         try:
-            fmt = QOpenGLFramebufferObjectFormat()
-            fbo = QOpenGLFramebufferObject(width, height, fmt)
+            fbo = QOpenGLFramebufferObject(width, height, offscreen_framebuffer_format())
             if not fbo.bind():
                 return None
             try:

@@ -65,3 +65,63 @@ def test_widget_frame_has_the_checker_backdrop_and_the_character(shown_canvas, q
 def test_textures_are_cached_after_a_render(shown_canvas):
     shown_canvas.render_offscreen_puppet(120, 160)
     assert shown_canvas._texture_cache  # noqa: SLF001
+
+
+def _square(drawable_id, box, color, **extra):
+    """A one-quad drawable over *box* ``(x0, y0, x1, y1)`` with a solid-colour texture."""
+    import io
+
+    from PIL import Image
+
+    from Imervue.puppet.document import Drawable
+    x0, y0, x1, y1 = box
+    buf = io.BytesIO()
+    Image.new("RGBA", (4, 4), color).save(buf, format="PNG")
+    drawable = Drawable(id=drawable_id, texture=f"textures/{drawable_id}.png",
+                        vertices=[(x0, y0), (x1, y0), (x1, y1), (x0, y1)], indices=[0, 1, 2, 0, 2, 3],
+                        uvs=[(0, 0), (1, 0), (1, 1), (0, 1)], **extra)
+    return drawable, buf.getvalue()
+
+
+def _red_columns(pixels: np.ndarray) -> np.ndarray:
+    red = (pixels[..., 0] > 200) & (pixels[..., 1] < 60) & (pixels[..., 2] < 60)
+    columns = np.where(red)[1]
+    assert columns.size, "the clipped drawable was not drawn at all"
+    return columns
+
+
+def test_clip_masks_clip_on_screen_and_off_screen(qapp):
+    """A clipped drawable shows only inside its (invisible) mask, in the widget and off-screen.
+
+    Off-screen, the framebuffer lacked a stencil buffer, so nothing was clipped;
+    on NVIDIA's 616 driver a ``glClear`` of the stencil dropped every later draw of
+    the frame, so clipped drawables vanished on screen too.
+    """
+    from PySide6.QtTest import QTest
+
+    from Imervue.puppet.canvas import PuppetCanvas
+    from Imervue.puppet.document import PuppetDocument
+
+    doc = PuppetDocument(size=(100, 100))
+    mask, mask_png = _square("mask", (40, 0, 60, 100), (0, 0, 255, 255), draw_order=0, visible=False)
+    red, red_png = _square("red", (0, 0, 100, 100), (255, 0, 0, 255), draw_order=1, clip_mask="mask")
+    doc.drawables = [mask, red]
+    doc.textures = {mask.texture: mask_png, red.texture: red_png}
+    canvas = PuppetCanvas()
+    try:
+        canvas.resize(100, 100)
+        canvas.show()
+        assert QTest.qWaitForWindowExposed(canvas)
+        canvas.load_document(doc)
+        offscreen = _rgba(canvas.render_offscreen_puppet(100, 100))
+        canvas.repaint()
+        qapp.processEvents()
+        on_screen = _rgba(canvas.grabFramebuffer())
+        assert _red_columns(offscreen).min() >= 38 and _red_columns(offscreen).max() <= 61
+        # The widget fits the document with its own zoom and pan, so only the band's width is known:
+        # the mask's fifth of the document, not all of it.
+        columns = _red_columns(on_screen)
+        assert columns.max() - columns.min() + 1 <= 0.3 * on_screen.shape[1]
+    finally:
+        canvas.close()
+        canvas.deleteLater()
