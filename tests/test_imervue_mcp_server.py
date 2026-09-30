@@ -331,6 +331,16 @@ def test_convert_format_writes_jpeg(sample_image, tmp_path):
         assert img.size == (48, 32)
 
 
+@pytest.mark.parametrize(("name", "pil_format"), [("out.tif", "TIFF"), ("out.tiff", "TIFF")])
+def test_convert_format_writes_tiff_under_either_suffix(sample_image, tmp_path, name, pil_format):
+    """Regression: a ``.tif`` destination raised KeyError('TIF') inside Pillow."""
+    dst = tmp_path / name
+    convert_format(str(sample_image), str(dst))
+    from PIL import Image
+    with Image.open(dst) as img:
+        assert img.format == pil_format
+
+
 def test_convert_format_rgba_to_jpeg_drops_alpha(sample_rgba_image, tmp_path):
     """JPEG can't carry alpha — we silently convert to RGB so the
     call doesn't error out on a PNG-with-alpha input."""

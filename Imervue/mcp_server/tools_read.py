@@ -22,6 +22,8 @@ from Imervue.system.image_listing import list_images as _list_folder
 _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
     "png", "jpeg", "jpg", "webp", "tiff", "tif", "bmp",
 })
+# Suffixes whose Pillow format name differs: Pillow knows no "JPG" or "TIF".
+_PILLOW_FORMAT_NAMES: dict[str, str] = {"jpg": "jpeg", "tif": "tiff"}
 # Output formats a Pillow may lack, routed through save_formats (HEIC / AVIF / JXL).
 _EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "JXL"}
 _SHARPNESS_MAX_SIDE = 512
@@ -167,7 +169,7 @@ def convert_format(
         )
     with open_upright(src) as opened:
         save_kwargs: dict[str, Any] = {}
-        normalised = "jpeg" if fmt in {"jpg", "jpeg"} else fmt
+        normalised = _PILLOW_FORMAT_NAMES.get(fmt, fmt)
         if normalised in {"jpeg", "webp"}:
             save_kwargs["quality"] = max(1, min(100, int(quality)))
         # JPEG / BMP can't carry alpha, and JPEG also can't write palette

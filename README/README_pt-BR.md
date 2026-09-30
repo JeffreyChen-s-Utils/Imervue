@@ -160,17 +160,39 @@ py -m Imervue.cli list-ops          # imprime todos os subcomandos disponíveis
 | Subcomando | Finalidade |
 |---|---|
 | `info` / `stats` | Dimensões e formato; métricas de qualidade sem referência (`--json` para saída legível por máquina) |
-| `convert` / `resize` / `thumbnail` | Conversão de formato (`--format` / `--quality`), redimensionamento pelo lado maior, caixa de miniatura |
-| `watermark` / `optimize` | Marca d'água de texto (`--text` / `--corner` / `--opacity`); codificar dentro de um orçamento `--max-kb` |
+| `convert` / `resize` / `thumbnail` | Conversão de formato (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); redimensionamento pelo lado maior (`--max`) ou para `--width` / `--height` exatos; caixa de miniatura |
+| `watermark` / `optimize` | Marca d'água de texto (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); codificar dentro de um orçamento `--max-kb` |
 | `dehaze` / `clahe` / `dither` / `distort` | Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple |
 | `auto-orient` / `strip` | Gravar a orientação EXIF nos pixels; salvar novamente sem EXIF / XMP / ICC |
-| `collage` / `anaglyph` | Montagem em grade (`--columns`); 3D vermelho-ciano a partir de um par estéreo (`--method`) |
+| `collage` / `anaglyph` | Montagem em grade (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); 3D vermelho-ciano a partir de um par estéreo (`--method`) |
 | `preset` / `pipeline` | Aplicar uma predefinição de revelação salva pelo nome; executar um pipeline JSON ordenado |
 | `list-ops` | Listar todos os subcomandos (`--json` para saída legível por máquina) |
 
 Todo subcomando decodifica como o visualizador: as saídas são endireitadas pela orientação EXIF e convertidas para sRGB a partir do perfil de cor embutido, entradas AVIF são lidas pelo próprio Pillow, e entradas HEIC / JPEG XL quando o backend opcional está instalado. Um RAW de câmera é revelado como no visualizador, em vez de lido pela pequena prévia embutida; `resize` e `strip` o gravam como PNG. Um arquivo ilegível é relatado e o restante é processado mesmo assim. Um arquivo incompleto é lido até onde vai, como no visualizador. Tons de cinza de 16 bits e de ponto flutuante são escalados para 8 bits como no visualizador; `resize` e `strip` mantêm a profundidade de bits da origem.
 
 Os subcomandos que recebem arquivos ou pastas (todos exceto `collage`, `anaglyph` e `list-ops`) compartilham `--out` (diretório de saída), `--recursive`, `--dry-run` (listar ações sem escrever nada), `--overwrite` e `-j` / `--jobs` (workers paralelos; `0` usa todos os núcleos). `collage` e `anaglyph` gravam o único arquivo indicado por `--out`. `--version` mostra a versão da CLI.
+
+Toda ferramenta do [Servidor MCP](#servidor-mcp) também é um subcomando. Dez delas são os subcomandos acima
+(`convert_format` é `convert`, `quality_metrics` é `stats`, `build_collage` é `collage` e assim por diante);
+as outras 46 executam o próprio código da ferramenta MCP:
+
+| Tipo | Subcomandos |
+|---|---|
+| Edições: gravam `<stem>_<name>.png` ao lado de cada origem, ou `<stem>.png` em `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
+| Outras saídas | `ela` (mapa de Error Level Analysis em PNG), `video-frame` (um quadro de um vídeo, `--frame-index`), `puppet-from-png` (um rig `.puppet`, `--cell-size`) |
+| Relatórios: um resultado por imagem, `--json` para saída legível por máquina | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
+| Executam uma vez e imprimem JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+
+Cada parâmetro MCP vira uma opção com o mesmo valor padrão e os mesmos valores permitidos: `zone_gains` vira
+`--zone-gains`, um parâmetro sim/não vira `--grayscale` / `--no-grayscale`, e uma cor ou uma linha de matriz
+recebe seus valores em ordem (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` lista todas elas.
+
+```bash
+py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+py -m Imervue.cli histogram a.jpg --json
+py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+```
 
 ---
 

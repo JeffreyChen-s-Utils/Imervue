@@ -160,17 +160,35 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 | サブコマンド | 用途 |
 |---|---|
 | `info` / `stats` | 寸法とフォーマット、無参照品質メトリクス(`--json` で機械可読出力) |
-| `convert` / `resize` / `thumbnail` | フォーマット変換(`--format` / `--quality`)、長辺上限リサイズ、サムネイルサイズ |
-| `watermark` / `optimize` | テキスト透かし(`--text` / `--corner` / `--opacity`)、`--max-kb` 予算内でのエンコード |
+| `convert` / `resize` / `thumbnail` | フォーマット変換(`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL、`--quality`)、長辺(`--max`)または正確な `--width` / `--height` へのリサイズ、サムネイルサイズ |
+| `watermark` / `optimize` | テキスト透かし(`--text`、`--corner`、`--opacity`、`--font-fraction`、`--color R G B`、`--no-shadow`)、`--max-kb` 予算内でのエンコード |
 | `dehaze` / `clahe` / `dither` / `distort` | ダークチャネル除霞、適応等化、Bayer 秩序ディザ、swirl / pinch / ripple |
 | `auto-orient` / `strip` | EXIF 方向フラグをピクセルに焼き込み、EXIF / XMP / ICC を除いて再保存 |
-| `collage` / `anaglyph` | グリッドモンタージュ(`--columns`)、ステレオペアから赤シアン 3D(`--method`) |
+| `collage` / `anaglyph` | グリッドモンタージュ(`--columns`、`--cell-width` / `--cell-height`、`--gap`、`--margin`、`--background R G B`)、ステレオペアから赤シアン 3D(`--method`) |
 | `preset` / `pipeline` | 保存済み現像プリセットを名前で適用、順序付き JSON パイプラインを実行 |
 | `list-ops` | 全サブコマンドを一覧表示(`--json` で機械可読出力) |
 
 すべてのサブコマンドはビューアーと同じくデコードします：出力は EXIF の向きで正立させ、埋め込みカラープロファイルから sRGB に変換します。AVIF の入力は Pillow 自身が読み込み、HEIC / JPEG XL の入力は、対応するオプションのバックエンドがインストールされていれば読み込めます。カメラ RAW は小さな埋め込みプレビューではなく、ビューアーと同じく現像して読み込みます。`resize` と `strip` は PNG で書き出します。読めないファイルは報告され、残りはそのまま処理されます。途中で切れたファイルは、ビューアーと同じく読める所まで読み込みます。16 ビット・浮動小数点のグレースケールはビューアーと同じく 8 ビットにスケーリングします。`resize` と `strip` は元のビット深度を保ちます。
 
 ファイルやフォルダを受け取るサブコマンド(`collage`、`anaglyph`、`list-ops` 以外のすべて)は、`--out`(出力ディレクトリ)、`--recursive`、`--dry-run`(アクションを列挙するだけで書き込まない)、`--overwrite`、`-j` / `--jobs`(並列ワーカー数。`0` ですべてのコアを使用)を共通で受け付けます。`collage` と `anaglyph` は `--out` で指定した 1 つのファイルに書き出します。`--version` は CLI のバージョンを表示します。
+
+[MCP サーバー](#mcp-サーバー)のすべてのツールはサブコマンドとしても使えます。そのうち 10 個は上記のサブコマンドです(`convert_format` は `convert`、`quality_metrics` は `stats`、`build_collage` は `collage` など)。残りの 46 個は MCP ツール自身のコードを実行します:
+
+| 種類 | サブコマンド |
+|---|---|
+| 編集: 各元画像の隣に `<stem>_<name>.png` を、または `--out` 内に `<stem>.png` を書き出す | `frame`、`crop`、`rotate`、`solarize`、`glow`、`velvia`、`emboss`、`film-negative`、`defringe`、`graduated-density`、`filmic-tonemap`、`tone-equalizer`、`detail-equalizer`、`colormap`、`false-color`、`split-toning`、`pixel-sort`、`polar`、`kaleidoscope`、`frosted-glass`、`local-contrast`、`posterize`、`gradient-map`、`film-grain`、`levels`、`auto-color-balance`、`channel-mixer`、`curve`、`lens-correction` |
+| その他の出力 | `ela`(Error Level Analysis マップを PNG で出力)、`video-frame`(動画の 1 フレーム、`--frame-index`)、`puppet-from-png`(`.puppet` rig、`--cell-size`) |
+| レポート: 画像ごとに 1 件の結果、`--json` で機械可読出力 | `metadata`、`xmp`、`gps`、`dominant-colors`、`sharpness`、`statistics`、`histogram`、`ocr`、`puppet-inspect` |
+| 1 回だけ実行して JSON を表示 | `list-images FOLDER`、`search FOLDER --query "..."`、`similar FOLDER`、`collection-stats FOLDER`、`reverse-geocode --latitude .. --longitude ..` |
+
+MCP の各パラメーターは、同じ既定値と許容値を持つオプションになります。`zone_gains` は `--zone-gains` に、はい/いいえのパラメーターは `--grayscale` / `--no-grayscale` になり、色や行列の行は値を順に並べて指定します(`--red 1 0 0`)。`py -m Imervue.cli <subcommand> --help` で一覧を表示できます。
+
+```bash
+py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+py -m Imervue.cli histogram a.jpg --json
+py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+```
 
 ---
 

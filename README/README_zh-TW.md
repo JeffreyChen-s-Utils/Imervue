@@ -159,17 +159,35 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 | 子指令 | 用途 |
 |---|---|
 | `info` / `stats` | 尺寸與格式；無參考品質指標（`--json` 輸出機器可讀格式） |
-| `convert` / `resize` / `thumbnail` | 格式轉換（`--format` / `--quality`）、長邊上限縮放、縮圖尺寸 |
-| `watermark` / `optimize` | 文字浮水印（`--text` / `--corner` / `--opacity`）；在 `--max-kb` 預算內編碼 |
+| `convert` / `resize` / `thumbnail` | 格式轉換（`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL、`--quality`）；依長邊（`--max`）或指定的 `--width` / `--height` 縮放；縮圖尺寸 |
+| `watermark` / `optimize` | 文字浮水印（`--text`、`--corner`、`--opacity`、`--font-fraction`、`--color R G B`、`--no-shadow`）；在 `--max-kb` 預算內編碼 |
 | `dehaze` / `clahe` / `dither` / `distort` | 暗通道去霧、自適應等化、Bayer 有序抖動、swirl / pinch / ripple |
 | `auto-orient` / `strip` | 把 EXIF 方向旗標烘焙進像素；重存並移除 EXIF / XMP / ICC |
-| `collage` / `anaglyph` | 網格拼貼（`--columns`）；立體對轉紅藍 3D（`--method`） |
+| `collage` / `anaglyph` | 網格拼貼（`--columns`、`--cell-width` / `--cell-height`、`--gap`、`--margin`、`--background R G B`）；立體對轉紅藍 3D（`--method`） |
 | `preset` / `pipeline` | 依名稱套用已存的顯影預設；執行有序的 JSON 運算管線 |
 | `list-ops` | 列出所有子指令（`--json` 輸出機器可讀格式） |
 
 每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；AVIF 由 Pillow 自己讀取，安裝了選用後端時也能讀取 HEIC / JPEG XL。相機 RAW 會像檢視器一樣顯像，而不是讀成內嵌的小預覽；`resize` 與 `strip` 會寫成 PNG。無法讀取的檔案會被回報，其餘檔案照常處理。中途截斷的檔案會像檢視器一樣，讀取到能讀的位置為止。16 位元與浮點灰階會像檢視器一樣縮放成 8 位元；`resize` 與 `strip` 保留來源的位元深度。
 
 接受檔案或資料夾的子指令（`collage`、`anaglyph`、`list-ops` 以外的全部）共用 `--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite` 與 `-j` / `--jobs`（平行工作數；`0` 表示使用所有核心）。`collage` 與 `anaglyph` 會寫入 `--out` 指定的單一檔案。`--version` 顯示 CLI 版本。
+
+[MCP 伺服器](#mcp-伺服器)的每個工具也都是子指令。其中十個就是上面的子指令（`convert_format` 即 `convert`、`quality_metrics` 即 `stats`、`build_collage` 即 `collage`，依此類推）；其餘 46 個直接執行該 MCP 工具本身的程式碼：
+
+| 類型 | 子指令 |
+|---|---|
+| 編輯：在每個來源檔旁寫出 `<stem>_<name>.png`，或在 `--out` 中寫出 `<stem>.png` | `frame`、`crop`、`rotate`、`solarize`、`glow`、`velvia`、`emboss`、`film-negative`、`defringe`、`graduated-density`、`filmic-tonemap`、`tone-equalizer`、`detail-equalizer`、`colormap`、`false-color`、`split-toning`、`pixel-sort`、`polar`、`kaleidoscope`、`frosted-glass`、`local-contrast`、`posterize`、`gradient-map`、`film-grain`、`levels`、`auto-color-balance`、`channel-mixer`、`curve`、`lens-correction` |
+| 其他輸出 | `ela`（錯誤等級分析圖，輸出為 PNG）、`video-frame`（影片中的單一影格，`--frame-index`）、`puppet-from-png`（`.puppet` rig，`--cell-size`） |
+| 報告：每張圖片一個結果，`--json` 輸出機器可讀格式 | `metadata`、`xmp`、`gps`、`dominant-colors`、`sharpness`、`statistics`、`histogram`、`ocr`、`puppet-inspect` |
+| 執行一次並印出 JSON | `list-images FOLDER`、`search FOLDER --query "..."`、`similar FOLDER`、`collection-stats FOLDER`、`reverse-geocode --latitude .. --longitude ..` |
+
+每個 MCP 參數都會變成一個選項，預設值與允許值維持不變：`zone_gains` 對應 `--zone-gains`，是／否參數對應 `--grayscale` / `--no-grayscale`，顏色或矩陣的一列則依序接收各個值（`--red 1 0 0`）。`py -m Imervue.cli <subcommand> --help` 會列出這些選項。
+
+```bash
+py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+py -m Imervue.cli histogram a.jpg --json
+py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+```
 
 ---
 

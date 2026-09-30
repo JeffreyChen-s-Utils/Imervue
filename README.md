@@ -161,11 +161,11 @@ py -m Imervue.cli list-ops          # print every available subcommand
 | Subcommand | Purpose |
 |---|---|
 | `info` / `stats` | Dimensions & format; no-reference quality metrics (`--json` for machine output) |
-| `convert` / `resize` / `thumbnail` | Format conversion (`--format` / `--quality`), max-long-edge resize, thumbnail box |
-| `watermark` / `optimize` | Text watermark (`--text` / `--corner` / `--opacity`); encode under a `--max-kb` budget |
+| `convert` / `resize` / `thumbnail` | Format conversion (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); resize to a long edge (`--max`) or an exact `--width` / `--height`; thumbnail box |
+| `watermark` / `optimize` | Text watermark (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); encode under a `--max-kb` budget |
 | `dehaze` / `clahe` / `dither` / `distort` | Dark-channel dehaze, adaptive equalization, ordered Bayer dither, swirl / pinch / ripple |
 | `auto-orient` / `strip` | Bake the EXIF orientation flag into pixels; re-save without EXIF / XMP / ICC |
-| `collage` / `anaglyph` | Grid montage (`--columns`); red-cyan 3D from a stereo pair (`--method`) |
+| `collage` / `anaglyph` | Grid montage (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); red-cyan 3D from a stereo pair (`--method`) |
 | `preset` / `pipeline` | Apply a saved develop preset by name; run an ordered JSON pipeline of ops |
 | `list-ops` | List every subcommand (`--json` for machine output) |
 
@@ -175,6 +175,28 @@ The subcommands that take files or folders (all but `collage`, `anaglyph` and `l
 (output directory), `--recursive`, `--dry-run` (list actions, write nothing), `--overwrite` and `-j` /
 `--jobs` (parallel workers; `0` uses every core). `collage` and `anaglyph` write the one file `--out`
 names. `--version` prints the CLI version.
+
+Every tool of the [MCP server](#mcp-server) is a subcommand too. Ten of them are the subcommands above
+(`convert_format` is `convert`, `quality_metrics` is `stats`, `build_collage` is `collage`, and so on);
+the other 46 run the MCP tool's own code:
+
+| Kind | Subcommands |
+|---|---|
+| Edits: write `<stem>_<name>.png` beside each source, or `<stem>.png` in `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
+| Other outputs | `ela` (Error Level Analysis map as PNG), `video-frame` (one frame of a video, `--frame-index`), `puppet-from-png` (a `.puppet` rig, `--cell-size`) |
+| Reports: one result per image, `--json` for machine output | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
+| Run once and print JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+
+Each MCP parameter becomes an option with the same default and allowed values: `zone_gains` is
+`--zone-gains`, a yes/no parameter is `--grayscale` / `--no-grayscale`, and a colour or a matrix row
+takes its values in order (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` lists them.
+
+```bash
+py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+py -m Imervue.cli histogram a.jpg --json
+py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+```
 
 ---
 

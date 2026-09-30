@@ -2364,15 +2364,19 @@ PDF 로 배치합니다. 페이지 크기, 방향, 그리드, 여백, 간격, �
    * - ``info`` / ``stats``
      - 크기와 포맷, 무참조 품질 지표(``--json``\ 으로 기계 판독 출력)
    * - ``convert`` / ``resize`` / ``thumbnail``
-     - 포맷 변환(``--format`` / ``--quality``), 긴 변 상한 리사이즈, 썸네일 크기
+     - 포맷 변환(``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL,
+       ``--quality``), 긴 변(``--max``) 또는 정확한 ``--width`` / ``--height``\ 로
+       리사이즈, 썸네일 크기
    * - ``watermark`` / ``optimize``
-     - 텍스트 워터마크(``--text`` / ``--corner`` / ``--opacity``), ``--max-kb`` 예산 내 인코딩
+     - 텍스트 워터마크(``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
+       ``--color R G B``, ``--no-shadow``), ``--max-kb`` 예산 내 인코딩
    * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
      - 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple
    * - ``auto-orient`` / ``strip``
      - EXIF 방향 플래그를 픽셀에 굽기, EXIF / XMP / ICC 없이 재저장
    * - ``collage`` / ``anaglyph``
-     - 그리드 몽타주(``--columns``), 스테레오 쌍에서 적청 3D(``--method``)
+     - 그리드 몽타주(``--columns``, ``--cell-width`` / ``--cell-height``, ``--gap``,
+       ``--margin``, ``--background R G B``), 스테레오 쌍에서 적청 3D(``--method``)
    * - ``preset`` / ``pipeline``
      - 저장된 현상 프리셋을 이름으로 적용, 순서가 있는 JSON 파이프라인 실행
    * - ``list-ops``
@@ -2381,6 +2385,37 @@ PDF 로 배치합니다. 페이지 크기, 방향, 그리드, 여백, 간격, �
 모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 카메라 RAW는 작은 내장 미리보기가 아니라 뷰어처럼 현상해서 읽으며, ``resize`` 와 ``strip`` 은 PNG로 저장합니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다. 잘린 파일은 뷰어처럼 읽을 수 있는 곳까지 읽습니다. 16비트·부동소수점 그레이스케일은 뷰어처럼 8비트로 스케일하며, ``resize`` 와 ``strip`` 은 원본의 비트 깊이를 유지합니다.
 
 파일이나 폴더를 받는 하위 명령(``collage``, ``anaglyph``, ``list-ops`` 를 제외한 전부)은 ``--out``\ (출력 디렉터리), ``--recursive``, ``--dry-run``\ (동작만 나열하고 쓰지 않음), ``--overwrite``, ``-j`` / ``--jobs``\ (병렬 워커 수, ``0`` 이면 모든 코어 사용)를 공용으로 받습니다. ``collage`` 와 ``anaglyph`` 는 ``--out`` 으로 지정한 파일 하나에 씁니다. ``--version`` 은 CLI 버전을 출력합니다.
+
+MCP 서버(`MCP 서버`_ 참고)의 모든 도구도 하위 명령입니다. 그중 10개는 위의 하위 명령이고
+(``convert_format``\ 은 ``convert``, ``quality_metrics``\ 는 ``stats``, ``build_collage``\ 는
+``collage`` 등), 나머지 46개는 MCP 도구 자체의 코드를 실행합니다:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 종류
+     - 서브커맨드
+   * - 편집: 각 원본 옆에 ``<stem>_<name>.png``, 또는 ``--out`` 안에 ``<stem>.png``\ 를 씀
+     - ``frame``, ``crop``, ``rotate``, ``solarize``, ``glow``, ``velvia``, ``emboss``, ``film-negative``, ``defringe``, ``graduated-density``, ``filmic-tonemap``, ``tone-equalizer``, ``detail-equalizer``, ``colormap``, ``false-color``, ``split-toning``, ``pixel-sort``, ``polar``, ``kaleidoscope``, ``frosted-glass``, ``local-contrast``, ``posterize``, ``gradient-map``, ``film-grain``, ``levels``, ``auto-color-balance``, ``channel-mixer``, ``curve``, ``lens-correction``
+   * - 기타 출력
+     - ``ela``\ (오류 수준 분석(Error Level Analysis) 맵을 PNG로), ``video-frame``\ (동영상의
+       프레임 한 장, ``--frame-index``), ``puppet-from-png``\ (``.puppet`` 리그, ``--cell-size``)
+   * - 보고: 이미지마다 결과 하나, ``--json``\ 으로 기계 판독 출력
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+   * - 한 번 실행하고 JSON 출력
+     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``,
+       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+
+각 MCP 매개변수는 같은 기본값과 허용 값을 가진 옵션이 됩니다. ``zone_gains``\ 는
+``--zone-gains``\ 가 되고, 예/아니요 매개변수는 ``--grayscale`` / ``--no-grayscale``\ 가 되며,
+색이나 행렬의 한 행은 값을 순서대로 받습니다(``--red 1 0 0``).
+``py -m Imervue.cli <subcommand> --help``\ 로 옵션 목록을 볼 수 있습니다::
+
+   py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+   py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+   py -m Imervue.cli histogram a.jpg --json
+   py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ----
 

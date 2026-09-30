@@ -448,10 +448,10 @@ _EXPECTED = {'info': ('print image dimensions / format',
               (('--format',),
                'format',
                'PNG',
-               None,
+               'upper',
                False,
                None,
-               'JPEG / PNG / WEBP',
+               'output format',
                '_StoreAction'),
               (('--quality',),
                'quality',
@@ -461,7 +461,7 @@ _EXPECTED = {'info': ('print image dimensions / format',
                None,
                '1-100 for lossy formats',
                '_StoreAction')]),
- 'resize': ('resize to a maximum long edge',
+ 'resize': ('resize to a maximum long edge, or to an exact width / height',
             [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
              (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),
              (('--recursive',),
@@ -496,7 +496,23 @@ _EXPECTED = {'info': ('print image dimensions / format',
               None,
               'parallel workers (1=inline, 0=auto/all cores)',
               '_StoreAction'),
-             (('--max',), 'max', 1600, 'int', False, None, 'max long edge in px', '_StoreAction')]),
+             (('--max',), 'max', 1600, 'int', False, None, 'max long edge in px', '_StoreAction'),
+             (('--width',),
+              'width',
+              None,
+              'int',
+              False,
+              None,
+              'exact width in px (with no --height, height keeps the aspect)',
+              '_StoreAction'),
+             (('--height',),
+              'height',
+              None,
+              'int',
+              False,
+              None,
+              'exact height in px (with no --width, width keeps the aspect)',
+              '_StoreAction')]),
  'thumbnail': ('make thumbnails',
                [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
                 (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),
@@ -584,7 +600,31 @@ _EXPECTED = {'info': ('print image dimensions / format',
                  None,
                  'placement corner',
                  '_StoreAction'),
-                (('--opacity',), 'opacity', 0.6, 'float', False, None, '0..1', '_StoreAction')]),
+                (('--opacity',), 'opacity', 0.6, 'float', False, None, '0..1', '_StoreAction'),
+                (('--font-fraction',),
+                 'font_fraction',
+                 0.035,
+                 'float',
+                 False,
+                 None,
+                 'text height as a fraction of the image, 0.005..0.2',
+                 '_StoreAction'),
+                (('--color',),
+                 'color',
+                 [255, 255, 255],
+                 'int',
+                 False,
+                 3,
+                 'text colour',
+                 '_StoreAction'),
+                (('--shadow', '--no-shadow'),
+                 'shadow',
+                 True,
+                 None,
+                 False,
+                 0,
+                 'drop shadow behind the text',
+                 'BooleanOptionalAction')]),
  'optimize': ('encode under a target file size',
               [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
                (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),
@@ -863,6 +903,46 @@ _EXPECTED = {'info': ('print image dimensions / format',
              [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
               (('--recursive',), 'recursive', False, None, False, 0, None, '_StoreTrueAction'),
               (('--columns',), 'columns', 3, 'int', False, None, 'grid columns', '_StoreAction'),
+              (('--cell-width',),
+               'cell_width',
+               400,
+               'int',
+               False,
+               None,
+               'cell width in px',
+               '_StoreAction'),
+              (('--cell-height',),
+               'cell_height',
+               400,
+               'int',
+               False,
+               None,
+               'cell height in px',
+               '_StoreAction'),
+              (('--gap',),
+               'gap',
+               12,
+               'int',
+               False,
+               None,
+               'gap between cells in px',
+               '_StoreAction'),
+              (('--margin',),
+               'margin',
+               20,
+               'int',
+               False,
+               None,
+               'outer margin in px',
+               '_StoreAction'),
+              (('--background',),
+               'background',
+               [255, 255, 255],
+               'int',
+               False,
+               3,
+               'background colour',
+               '_StoreAction'),
               (('--out',),
                'out',
                'collage.png',
@@ -1058,8 +1138,12 @@ def _describe(parser: argparse.ArgumentParser) -> dict:
 
 
 def test_subcommands_and_arguments_are_unchanged():
+    """The hand-written subcommands; ``test_cli_tools`` pins the ones built from MCP tools."""
     from Imervue.cli import build_parser
-    actual = _describe(build_parser())
+    from Imervue.cli_tools import BRIDGED
+    generated = set(BRIDGED.values())
+    actual = {name: row for name, row in _describe(build_parser()).items()
+              if name not in generated}
     assert list(actual) == list(_EXPECTED)
     for name, expected in _EXPECTED.items():
         assert actual[name] == expected, name
@@ -1205,3 +1289,94 @@ def test_anaglyph_reports_an_unreadable_side(tmp_path, capsys):
                  "--out", str(out)]) == 1
     assert not out.exists()
     assert "error:" in capsys.readouterr().err
+
+
+# --- options the MCP tools already had ---------------------------------------
+
+@pytest.mark.parametrize(("fmt", "name", "pil_format"), [
+    ("tiff", "a.tif", "TIFF"), ("BMP", "a.bmp", "BMP"), ("webp", "a.webp", "WEBP"),
+])
+def test_convert_writes_the_formats_the_mcp_tool_writes(tmp_path, fmt, name, pil_format):
+    _save(tmp_path / "a.png", mode="RGBA")
+    out_dir = tmp_path / "out"
+    assert main(["convert", str(tmp_path / "a.png"), "--format", fmt, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / name) as out:
+        assert out.format == pil_format
+
+
+def test_convert_rejects_a_format_it_cannot_name(tmp_path, capsys):
+    _save(tmp_path / "a.png")
+    with pytest.raises(SystemExit) as exit_info:
+        main(["convert", str(tmp_path / "a.png"), "--format", "GIF"])
+    assert exit_info.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err
+
+
+def test_convert_to_a_format_this_install_cannot_write_is_one_files_error(
+        tmp_path, capsys, monkeypatch):
+    from Imervue.image import save_formats
+    _save(tmp_path / "a.png")
+
+    def refuse(*_args, **_kwargs):
+        raise ValueError("HEIC output requires the pillow-heif package.")
+
+    monkeypatch.setattr(save_formats, "save_image", refuse)
+    assert main(["convert", str(tmp_path / "a.png"), "--format", "HEIC",
+                 "--out", str(tmp_path / "out")]) == 1
+    assert "pillow-heif" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("extra", "size"), [
+    (["--width", "50"], (50, 25)),
+    (["--height", "20"], (40, 20)),
+    (["--width", "30", "--height", "30"], (30, 30)),
+])
+def test_resize_to_an_exact_width_or_height(tmp_path, extra, size):
+    _save(tmp_path / "a.png", size=(200, 100))
+    out_dir = tmp_path / "out"
+    assert main(["resize", str(tmp_path / "a.png"), *extra, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / "a.png") as out:
+        assert out.size == size
+
+
+def test_resize_rejects_a_zero_width_as_one_files_error(tmp_path, capsys):
+    _save(tmp_path / "a.png")
+    assert main(["resize", str(tmp_path / "a.png"), "--width", "0",
+                 "--out", str(tmp_path / "out")]) == 1
+    assert "must be positive" in capsys.readouterr().err
+
+
+def test_watermark_colour_size_and_shadow_reach_the_renderer(tmp_path, monkeypatch):
+    from Imervue.image import watermark
+    seen = {}
+
+    def spy(img, opts):
+        seen["opts"] = opts
+        return img
+
+    monkeypatch.setattr(watermark, "apply_watermark", spy)
+    _save(tmp_path / "a.png")
+    assert main(["watermark", str(tmp_path / "a.png"), "--text", "x", "--color", "300", "0", "9",
+                 "--font-fraction", "0.1", "--no-shadow", "--corner", "center",
+                 "--out", str(tmp_path / "out")]) == 0
+    opts = seen["opts"]
+    assert (opts.color, opts.font_fraction, opts.shadow, opts.corner) == (
+        (255, 0, 9), 0.1, False, "center")
+
+
+def test_watermark_rejects_an_unknown_corner(tmp_path):
+    _save(tmp_path / "a.png")
+    with pytest.raises(SystemExit):
+        main(["watermark", str(tmp_path / "a.png"), "--text", "x", "--corner", "middle"])
+
+
+def test_collage_layout_options(tmp_path):
+    _save(tmp_path / "a.png", size=(40, 40))
+    _save(tmp_path / "b.png", size=(40, 40))
+    out = tmp_path / "grid.png"
+    assert main(["collage", str(tmp_path / "a.png"), str(tmp_path / "b.png"), "--columns", "2",
+                 "--cell-width", "50", "--cell-height", "30", "--gap", "4", "--margin", "6",
+                 "--background", "0", "0", "255", "--out", str(out)]) == 0
+    with Image.open(out) as grid:
+        assert grid.size == (6 * 2 + 50 * 2 + 4, 6 * 2 + 30)
+        assert grid.convert("RGB").getpixel((0, 0)) == (0, 0, 255)

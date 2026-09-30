@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-09-23 against `5fc068d` on `dev`.
+> Last verified: 2026-10-01 against `355497a` on `dev`.
 
 ## 1. Purpose
 
@@ -63,7 +63,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | Entry | File | Notes |
 | --- | --- | --- |
 | `py -m Imervue [--debug] [--software_opengl] [file]` | `Imervue/__main__.py` | GUI application |
-| `py -m Imervue.cli <subcommand>` | `Imervue/cli.py` | Headless batch; `list-ops` lists subcommands |
+| `py -m Imervue.cli <subcommand>` | `Imervue/cli.py` | Headless batch; `list-ops` lists subcommands; every MCP tool is also a subcommand (`Imervue/cli_tools.py`) |
 | `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | Calls `run()` in `Imervue/mcp_server/server.py` |
 | `exe/start_Imervue.py` | — | Launch shim for frozen builds |
 
@@ -111,8 +111,8 @@ Public interfaces other code or users depend on:
 | A develop step | `Recipe.apply` in `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip) |
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
 | A language | Plugin calling `language_wrapper.register_language()` from its `register_languages()` class method (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
-| An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`) |
-| A CLI subcommand | `Imervue/cli.py` |
+| An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
+| A CLI subcommand | `Imervue/cli.py` (`_SUBCOMMANDS` row plus a `_WRITE_SPEC`, `_REPORTERS` or `_MULTI_COMMANDS` entry); one that mirrors an MCP tool comes from `Imervue/cli_tools.py` instead |
 | A Paint tool or dock | `Imervue/paint/tools/`, `Imervue/paint/docks/`, routed by `Imervue/paint/tool_dispatcher.py` |
 | A theme | `Imervue/system/themes.py` |
 

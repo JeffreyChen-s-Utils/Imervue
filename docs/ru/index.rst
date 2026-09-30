@@ -2764,15 +2764,15 @@ Qt**, поэтому им можно пользоваться из скрипт�
    * - ``info`` / ``stats``
      - Размеры и формат; безэталонные метрики качества (``--json`` для машиночитаемого вывода)
    * - ``convert`` / ``resize`` / ``thumbnail``
-     - Конвертация формата (``--format`` / ``--quality``), масштаб по максимальной длинной стороне, размер миниатюры
+     - Конвертация формата (``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, ``--quality``); масштаб по длинной стороне (``--max``) или до точных ``--width`` / ``--height``; размер миниатюры
    * - ``watermark`` / ``optimize``
-     - Текстовый водяной знак (``--text`` / ``--corner`` / ``--opacity``); кодирование в рамках бюджета ``--max-kb``
+     - Текстовый водяной знак (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``, ``--color R G B``, ``--no-shadow``); кодирование в рамках бюджета ``--max-kb``
    * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
      - Удаление дымки по тёмному каналу, адаптивная эквализация, упорядоченный дизеринг Байера, swirl / pinch / ripple
    * - ``auto-orient`` / ``strip``
      - Запечь флаг ориентации EXIF в пиксели; пересохранить без EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``
-     - Сетчатый монтаж (``--columns``); красно-голубое 3D из стереопары (``--method``)
+     - Сетчатый монтаж (``--columns``, ``--cell-width`` / ``--cell-height``, ``--gap``, ``--margin``, ``--background R G B``); красно-голубое 3D из стереопары (``--method``)
    * - ``preset`` / ``pipeline``
      - Применить сохранённый пресет обработки по имени; выполнить упорядоченный JSON-конвейер
    * - ``list-ops``
@@ -2781,6 +2781,30 @@ Qt**, поэтому им можно пользоваться из скрипт�
 Каждая подкоманда декодирует так же, как просмотрщик: результат разворачивается по EXIF-ориентации и преобразуется в sRGB из встроенного цветового профиля, входные AVIF читает сам Pillow, а входные HEIC / JPEG XL читаются, если установлен соответствующий необязательный бэкенд. RAW-файл камеры проявляется так же, как в просмотрщике, а не читается как маленькое встроенное превью; ``resize`` и ``strip`` записывают его в PNG. Нечитаемый файл попадает в отчёт, остальные всё равно обрабатываются. Обрезанный файл читается до того места, где он обрывается, как в просмотрщике. 16-битные и вещественные оттенки серого масштабируются до 8 бит, как в просмотрщике; ``resize`` и ``strip`` сохраняют разрядность исходника.
 
 Подкоманды, принимающие файлы или папки (все, кроме ``collage``, ``anaglyph`` и ``list-ops``), используют общие флаги ``--out`` (каталог вывода), ``--recursive``, ``--dry-run`` (только перечислить действия, ничего не писать), ``--overwrite`` и ``-j`` / ``--jobs`` (число параллельных обработчиков; ``0`` задействует все ядра). ``collage`` и ``anaglyph`` записывают один файл, указанный в ``--out``. ``--version`` выводит версию CLI.
+
+Каждый инструмент MCP-сервера (см. `MCP-сервер`_) тоже является подкомандой. Десять из них — это подкоманды выше (``convert_format`` — это ``convert``, ``quality_metrics`` — ``stats``, ``build_collage`` — ``collage`` и так далее); остальные 46 выполняют собственный код инструмента MCP:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Вид
+     - Подкоманды
+   * - Правки: записывают ``<stem>_<name>.png`` рядом с каждым исходником или ``<stem>.png`` в ``--out``
+     - ``frame``, ``crop``, ``rotate``, ``solarize``, ``glow``, ``velvia``, ``emboss``, ``film-negative``, ``defringe``, ``graduated-density``, ``filmic-tonemap``, ``tone-equalizer``, ``detail-equalizer``, ``colormap``, ``false-color``, ``split-toning``, ``pixel-sort``, ``polar``, ``kaleidoscope``, ``frosted-glass``, ``local-contrast``, ``posterize``, ``gradient-map``, ``film-grain``, ``levels``, ``auto-color-balance``, ``channel-mixer``, ``curve``, ``lens-correction``
+   * - Другие результаты
+     - ``ela`` (карта Error Level Analysis в PNG), ``video-frame`` (один кадр видео, ``--frame-index``), ``puppet-from-png`` (риг ``.puppet``, ``--cell-size``)
+   * - Отчёты: один результат на изображение, ``--json`` для машиночитаемого вывода
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+   * - Запускаются один раз и выводят JSON
+     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``, ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+
+Каждый параметр MCP становится флагом с тем же значением по умолчанию и теми же допустимыми значениями: ``zone_gains`` превращается в ``--zone-gains``, параметр «да/нет» — в ``--grayscale`` / ``--no-grayscale``, а цвет или строка матрицы принимает значения по порядку (``--red 1 0 0``). ``py -m Imervue.cli <subcommand> --help`` выводит их список::
+
+   py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+   py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+   py -m Imervue.cli histogram a.jpg --json
+   py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ----
 

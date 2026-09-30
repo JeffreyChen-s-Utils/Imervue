@@ -2702,15 +2702,19 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
    * - ``info`` / ``stats``
      - Maße und Format; referenzfreie Qualitätsmetriken (``--json`` für maschinenlesbare Ausgabe)
    * - ``convert`` / ``resize`` / ``thumbnail``
-     - Formatkonvertierung (``--format`` / ``--quality``), Skalierung auf maximale lange Kante, Thumbnail-Box
+     - Formatkonvertierung (``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL,
+       ``--quality``); Skalierung auf eine lange Kante (``--max``) oder exakt auf ``--width`` /
+       ``--height``; Thumbnail-Box
    * - ``watermark`` / ``optimize``
-     - Text-Wasserzeichen (``--text`` / ``--corner`` / ``--opacity``); Kodierung unter einem ``--max-kb``-Budget
+     - Text-Wasserzeichen (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
+       ``--color R G B``, ``--no-shadow``); Kodierung unter einem ``--max-kb``-Budget
    * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
      - Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple
    * - ``auto-orient`` / ``strip``
      - EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern
    * - ``collage`` / ``anaglyph``
-     - Raster-Montage (``--columns``); Rot-Cyan-3D aus einem Stereopaar (``--method``)
+     - Raster-Montage (``--columns``, ``--cell-width`` / ``--cell-height``, ``--gap``,
+       ``--margin``, ``--background R G B``); Rot-Cyan-3D aus einem Stereopaar (``--method``)
    * - ``preset`` / ``pipeline``
      - Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen
    * - ``list-ops``
@@ -2719,6 +2723,37 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
 Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; ``resize`` und ``strip`` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht. 16-Bit- und Gleitkomma-Graustufen werden wie im Viewer auf 8 Bit skaliert; ``resize`` und ``strip`` behalten die Bittiefe der Quelle.
 
 Die Unterbefehle, die Dateien oder Ordner entgegennehmen (alle außer ``collage``, ``anaglyph`` und ``list-ops``), teilen sich ``--out`` (Ausgabeverzeichnis), ``--recursive``, ``--dry-run`` (Aktionen nur auflisten, nichts schreiben), ``--overwrite`` und ``-j`` / ``--jobs`` (parallele Worker; ``0`` nutzt alle Kerne). ``collage`` und ``anaglyph`` schreiben die eine Datei, die ``--out`` angibt. ``--version`` gibt die CLI-Version aus.
+
+Jedes Tool des MCP-Servers (siehe `MCP-Server`_) ist ebenfalls ein Unterbefehl. Zehn davon sind die
+obigen Unterbefehle (``convert_format`` ist ``convert``, ``quality_metrics`` ist ``stats``,
+``build_collage`` ist ``collage`` usw.); die übrigen 46 führen den Code des MCP-Tools selbst aus:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Art
+     - Unterbefehle
+   * - Bearbeitungen: schreiben ``<stem>_<name>.png`` neben jede Quelle oder ``<stem>.png`` in ``--out``
+     - ``frame``, ``crop``, ``rotate``, ``solarize``, ``glow``, ``velvia``, ``emboss``, ``film-negative``, ``defringe``, ``graduated-density``, ``filmic-tonemap``, ``tone-equalizer``, ``detail-equalizer``, ``colormap``, ``false-color``, ``split-toning``, ``pixel-sort``, ``polar``, ``kaleidoscope``, ``frosted-glass``, ``local-contrast``, ``posterize``, ``gradient-map``, ``film-grain``, ``levels``, ``auto-color-balance``, ``channel-mixer``, ``curve``, ``lens-correction``
+   * - Andere Ausgaben
+     - ``ela`` (Error-Level-Analysis-Karte als PNG), ``video-frame`` (ein Einzelbild eines Videos,
+       ``--frame-index``), ``puppet-from-png`` (ein ``.puppet``-Rig, ``--cell-size``)
+   * - Berichte: ein Ergebnis pro Bild, ``--json`` für maschinenlesbare Ausgabe
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+   * - Einmal ausführen und JSON ausgeben
+     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``,
+       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+
+Jeder MCP-Parameter wird zu einer Option mit demselben Standardwert und denselben erlaubten Werten:
+``zone_gains`` wird zu ``--zone-gains``, ein Ja/Nein-Parameter zu ``--grayscale`` / ``--no-grayscale``,
+und eine Farbe oder eine Matrixzeile nimmt ihre Werte der Reihe nach entgegen (``--red 1 0 0``).
+``py -m Imervue.cli <subcommand> --help`` listet sie auf::
+
+   py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+   py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+   py -m Imervue.cli histogram a.jpg --json
+   py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ----
 

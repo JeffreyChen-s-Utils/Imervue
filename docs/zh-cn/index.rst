@@ -2298,15 +2298,18 @@ GPS 地理标记
    * - ``info`` / ``stats``
      - 尺寸与格式;无参考质量指标(``--json`` 输出机器可读格式)
    * - ``convert`` / ``resize`` / ``thumbnail``
-     - 格式转换(``--format`` / ``--quality``)、长边上限缩放、缩略图尺寸
+     - 格式转换(``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL、``--quality``);
+       缩放到指定长边(``--max``)或精确的 ``--width`` / ``--height``;缩略图尺寸
    * - ``watermark`` / ``optimize``
-     - 文字水印(``--text`` / ``--corner`` / ``--opacity``);在 ``--max-kb`` 预算内编码
+     - 文字水印(``--text``、``--corner``、``--opacity``、``--font-fraction``、
+       ``--color R G B``、``--no-shadow``);在 ``--max-kb`` 预算内编码
    * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
      - 暗通道去雾、自适应均衡、Bayer 有序抖动、swirl / pinch / ripple
    * - ``auto-orient`` / ``strip``
      - 把 EXIF 方向标记烘焙进像素;重存并移除 EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``
-     - 网格拼贴(``--columns``);立体对转红蓝 3D(``--method``)
+     - 网格拼贴(``--columns``、``--cell-width`` / ``--cell-height``、``--gap``、``--margin``、
+       ``--background R G B``);立体对转红蓝 3D(``--method``)
    * - ``preset`` / ``pipeline``
      - 按名称应用已保存的显影预设;执行有序的 JSON 运算管线
    * - ``list-ops``
@@ -2315,6 +2318,32 @@ GPS 地理标记
 每个子命令都像查看器一样解码：输出会依 EXIF 方向转正，并从内嵌色彩描述文件转换为 sRGB；AVIF 由 Pillow 自己读取，安装了可选后端时也能读取 HEIC / JPEG XL。相机 RAW 会像查看器一样显像，而不是读成内嵌的小预览；``resize`` 与 ``strip`` 会写成 PNG。无法读取的文件会被报告，其余文件照常处理。中途截断的文件会像查看器一样，读取到能读的位置为止。16 位与浮点灰阶会像查看器一样缩放成 8 位；``resize`` 与 ``strip`` 保留来源的位深度。
 
 接受文件或文件夹的子命令（除 ``collage``、``anaglyph`` 与 ``list-ops`` 外的全部）共用 ``--out``\ （输出目录）、``--recursive``、``--dry-run``\ （只列出动作、不写入）、``--overwrite`` 与 ``-j`` / ``--jobs``\ （并行任务数；``0`` 表示使用全部核心）。``collage`` 与 ``anaglyph`` 写入 ``--out`` 指定的单个文件。``--version`` 显示 CLI 版本。
+
+MCP 服务器（参见 `MCP 服务器`_）的每个工具也都是一个子命令。其中十个就是上面的子命令（``convert_format`` 即 ``convert``、``quality_metrics`` 即 ``stats``、``build_collage`` 即 ``collage``，依此类推）；其余 46 个直接执行 MCP 工具自身的代码：
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - 类型
+     - 子命令
+   * - 编辑：在每个源文件旁写入 ``<stem>_<name>.png``，或在 ``--out`` 中写入 ``<stem>.png``
+     - ``frame``、``crop``、``rotate``、``solarize``、``glow``、``velvia``、``emboss``、``film-negative``、``defringe``、``graduated-density``、``filmic-tonemap``、``tone-equalizer``、``detail-equalizer``、``colormap``、``false-color``、``split-toning``、``pixel-sort``、``polar``、``kaleidoscope``、``frosted-glass``、``local-contrast``、``posterize``、``gradient-map``、``film-grain``、``levels``、``auto-color-balance``、``channel-mixer``、``curve``、``lens-correction``
+   * - 其他输出
+     - ``ela``\ （错误级别分析图，输出为 PNG）、``video-frame``\ （视频中的单帧，``--frame-index``）、
+       ``puppet-from-png``\ （``.puppet`` 绑骨模型，``--cell-size``）
+   * - 报告：每张图片一个结果，``--json`` 输出机器可读格式
+     - ``metadata``、``xmp``、``gps``、``dominant-colors``、``sharpness``、``statistics``、``histogram``、``ocr``、``puppet-inspect``
+   * - 执行一次并输出 JSON
+     - ``list-images FOLDER``、``search FOLDER --query "..."``、``similar FOLDER``、
+       ``collection-stats FOLDER``、``reverse-geocode --latitude .. --longitude ..``
+
+每个 MCP 参数都会成为一个选项，默认值与允许的取值都与原参数相同：``zone_gains`` 对应 ``--zone-gains``，布尔（是 / 否）参数对应 ``--grayscale`` / ``--no-grayscale``，颜色或矩阵的一行则按顺序接受各个值（``--red 1 0 0``）。``py -m Imervue.cli <subcommand> --help`` 会列出这些选项::
+
+   py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+   py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+   py -m Imervue.cli histogram a.jpg --json
+   py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ----
 
