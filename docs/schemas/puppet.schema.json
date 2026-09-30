@@ -1,0 +1,657 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/puppet.schema.json",
+  "title": ".puppet puppet.json (v1)",
+  "type": "object",
+  "required": [
+    "version",
+    "size",
+    "drawables",
+    "deformers",
+    "parameters"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "size": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "drawables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/drawable"
+      }
+    },
+    "deformers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/deformer"
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/parameter"
+      }
+    },
+    "motions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "expressions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "pose": {
+      "type": "object",
+      "required": [],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pose_group"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "physics": {
+      "type": "string",
+      "minLength": 1
+    },
+    "hit_areas": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/hit_area"
+      }
+    },
+    "parameter_blends": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/parameter_blend"
+      }
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/part"
+      }
+    },
+    "display_names": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "xy": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "drawable": {
+      "type": "object",
+      "required": [
+        "id",
+        "texture",
+        "vertices",
+        "indices",
+        "uvs",
+        "draw_order"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "texture": {
+          "type": "string",
+          "minLength": 1
+        },
+        "vertices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/xy"
+          }
+        },
+        "indices": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "uvs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/xy"
+          }
+        },
+        "draw_order": {
+          "type": "integer"
+        },
+        "blend_mode": {
+          "enum": [
+            "normal",
+            "additive",
+            "multiply"
+          ]
+        },
+        "clip_mask": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "bone_weights": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "opacity_keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "parameter",
+              "stops"
+            ],
+            "properties": {
+              "parameter": {
+                "type": "string",
+                "minLength": 1
+              },
+              "stops": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "alpha"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "alpha": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "multiply_color": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "multiply_color_keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "parameter",
+              "stops"
+            ],
+            "properties": {
+              "parameter": {
+                "type": "string",
+                "minLength": 1
+              },
+              "stops": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "value",
+                    "color"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    },
+                    "color": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "vertex_morphs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "parameter"
+            ],
+            "properties": {
+              "parameter": {
+                "type": "string",
+                "minLength": 1
+              },
+              "delta_at_min": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/xy"
+                }
+              },
+              "delta_at_max": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/xy"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "deformer": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "drawables",
+        "form"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "rotation",
+            "warp",
+            "bone_rotation"
+          ]
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "drawables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "form": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "rotation"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "form": {
+                "$ref": "#/$defs/rotation_form"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "warp"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "form": {
+                "$ref": "#/$defs/warp_form"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bone_rotation"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "form": {
+                "$ref": "#/$defs/bone_rotation_form"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "rotation_form": {
+      "type": "object",
+      "required": [
+        "anchor",
+        "angle"
+      ],
+      "properties": {
+        "anchor": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "angle": {
+          "type": "number"
+        }
+      }
+    },
+    "warp_form": {
+      "type": "object",
+      "required": [
+        "rows",
+        "cols",
+        "grid",
+        "bounds"
+      ],
+      "properties": {
+        "rows": {
+          "type": "integer"
+        },
+        "cols": {
+          "type": "integer"
+        },
+        "grid": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/xy"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/xy"
+                }
+              }
+            ]
+          }
+        },
+        "bounds": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "bone_rotation_form": {
+      "type": "object",
+      "required": [
+        "bone_id",
+        "anchor",
+        "angle"
+      ],
+      "properties": {
+        "bone_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "anchor": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "angle": {
+          "type": "number"
+        }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "required": [
+        "id",
+        "min",
+        "max",
+        "default"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "default": {
+          "type": "number"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "value"
+            ],
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "forms": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "parameter_blend": {
+      "type": "object",
+      "required": [
+        "id",
+        "parameters",
+        "keys"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "coords"
+            ],
+            "properties": {
+              "coords": {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              "forms": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "part": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "drawables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "hit_area": {
+      "type": "object",
+      "required": [
+        "id",
+        "drawables"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "drawables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "motion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expression": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "pose_group": {
+      "type": "object",
+      "required": [
+        "id",
+        "drawables"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "drawables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

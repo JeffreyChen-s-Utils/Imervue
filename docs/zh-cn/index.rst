@@ -816,9 +816,24 @@ Puppet 标签工具栏 → **Examples ▾** 下拉直接选 March 7th 或自己�
      "physics": "physics.json"
    }
 
-完整结构（drawables、deformers、parameters、motions、expressions、pose、
+完整规格（drawables、deformers、parameters、motions、expressions、pose、
 physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG — 没有
 专有二进制格式，可以完全通过 git diff 比对。
+
+格式是开放的，并且可由机器校验：
+
+- 保存的 ``.puppet`` 以一个未压缩的 ``mimetype`` 条目开头，内容为
+  ``application/vnd.imervue.puppet+zip``，因此程序凭文件开头的几个字节就能识别它；
+  每个 JSON 文件也都在 ``$schema`` 中注明自己的 JSON Schema。
+- 四份 JSON Schema（draft 2020-12）—— ``puppet``、``motion``、``expression`` 与
+  ``physics`` —— 发布在 ``docs/schemas/``；遵循 ``$schema`` 的编辑器会在输入时即时检查文件。
+- ``py -m Imervue.cli puppet-validate character.puppet``\ （MCP
+  ``puppet_validate``）按 schema、加载器规则与 rig 检查项校验文件；
+  ``puppet-schema``\ （MCP ``puppet_schema``）则输出某一份 schema。
+- ``docs/examples/read_puppet.py`` 仅用 Python 标准库就能读取 ``.puppet``，
+  可作为其他程序的参考实现；规格与 schema 均采用 MIT 许可，任何程序都可以读写此格式。
+- 遇到格式版本较新的文件时会拒绝读取，并说明该文件使用的版本，因此较旧的 Imervue
+  会提示用户更新，而不是误读文件。
 
 工具栏参考
 ^^^^^^^^^^
@@ -2846,7 +2861,7 @@ GPS 地理标记
 
 接受文件或文件夹的子命令（除 ``collage``、``anaglyph`` 与 ``list-ops`` 外的全部）共用 ``--out``\ （输出目录）、``--recursive``、``--dry-run``\ （只列出动作、不写入）、``--overwrite`` 与 ``-j`` / ``--jobs``\ （并行任务数；``0`` 表示使用全部核心）。``collage`` 与 ``anaglyph`` 写入 ``--out`` 指定的单个文件。``--version`` 显示 CLI 版本。
 
-MCP 服务器（参见 `MCP 服务器`_）的每个工具也都是一个子命令。其中十个就是上面的子命令（``convert_format`` 即 ``convert``、``quality_metrics`` 即 ``stats``、``build_collage`` 即 ``collage``，依此类推）；其余 46 个直接执行 MCP 工具自身的代码：
+MCP 服务器（参见 `MCP 服务器`_）的每个工具也都是一个子命令。其中十个就是上面的子命令（``convert_format`` 即 ``convert``、``quality_metrics`` 即 ``stats``、``build_collage`` 即 ``collage``，依此类推）；其余 48 个直接执行 MCP 工具自身的代码：
 
 .. list-table::
    :header-rows: 1
@@ -2860,10 +2875,11 @@ MCP 服务器（参见 `MCP 服务器`_）的每个工具也都是一个子命�
      - ``ela``\ （错误级别分析图，输出为 PNG）、``video-frame``\ （视频中的单帧，``--frame-index``）、
        ``puppet-from-png``\ （``.puppet`` 绑骨模型，``--cell-size``）
    * - 报告：每张图片一个结果，``--json`` 输出机器可读格式
-     - ``metadata``、``xmp``、``gps``、``dominant-colors``、``sharpness``、``statistics``、``histogram``、``ocr``、``puppet-inspect``
+     - ``metadata``、``xmp``、``gps``、``dominant-colors``、``sharpness``、``statistics``、``histogram``、``ocr``、``puppet-inspect``、``puppet-validate``
    * - 执行一次并输出 JSON
      - ``list-images FOLDER``、``search FOLDER --query "..."``、``similar FOLDER``、
-       ``collection-stats FOLDER``、``reverse-geocode --latitude .. --longitude ..``
+       ``collection-stats FOLDER``、``reverse-geocode --latitude .. --longitude ..``、
+       ``puppet-schema --name ..``
 
 每个 MCP 参数都会成为一个选项，默认值与允许的取值都与原参数相同：``zone_gains`` 对应 ``--zone-gains``，布尔（是 / 否）参数对应 ``--grayscale`` / ``--no-grayscale``，颜色或矩阵的一行则按顺序接受各个值（``--red 1 0 0``）。``py -m Imervue.cli <subcommand> --help`` 会列出这些选项::
 
@@ -2975,6 +2991,9 @@ Imervue 内置一个 `Model Context Protocol <https://modelcontextprotocol.io>`_
      - 打开 ``.puppet`` 并返回结构化清单：drawables、deformers、
        parameters、motions、expressions、hit areas、parts、
        parameter blends、physics rigs。
+   * - ``puppet_validate`` / ``puppet_schema``
+     - 按 v1 格式检查 ``.puppet``\ （JSON Schema、加载器规则、rig 检查）；
+       返回它公开发布的四份 JSON Schema 之一。
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - 每通道均值 / 最小 / 最大 / 标准差 / 中位数、无参考质量指标
        （色彩度、熵、对比度、边缘密度、噪点），以及 256 桶直方图与
@@ -3116,7 +3135,7 @@ UTF-8。无论客户端请求哪个版本，它对 ``initialize`` 的应答都�
    * - ``ping``
      - 返回空结果。
    * - ``tools/list``
-     - 一页列出全部 56 个工具，每个都带 ``inputSchema``、``outputSchema`` 与 ``annotations``
+     - 一页列出全部 58 个工具，每个都带 ``inputSchema``、``outputSchema`` 与 ``annotations``
        （``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``）。
    * - ``tools/call``
      - 执行 ``{"name", "arguments"}``。结果是一个 ``text`` 内容块，内含 JSON 编码的返回值；

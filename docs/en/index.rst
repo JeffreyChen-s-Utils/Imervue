@@ -916,9 +916,26 @@ Top-level ``puppet.json`` example::
      "physics": "physics.json"
    }
 
-The full schema (drawables, deformers, parameters, motions, expressions,
+The full specification (drawables, deformers, parameters, motions, expressions,
 pose, physics) lives at ``Imervue/puppet/FORMAT.md`` in the repo. JSON +
 PNG only — no proprietary binary, fully diffable through git.
+
+The format is open and machine-checkable:
+
+- A saved ``.puppet`` starts with an uncompressed ``mimetype`` entry holding
+  ``application/vnd.imervue.puppet+zip``, so a program can recognise it from
+  its first bytes, and every JSON file names its JSON Schema in ``$schema``.
+- Four JSON Schemas (draft 2020-12) — ``puppet``, ``motion``, ``expression``
+  and ``physics`` — are published in ``docs/schemas/``; editors that follow
+  ``$schema`` check a file as it is typed.
+- ``py -m Imervue.cli puppet-validate character.puppet`` (MCP
+  ``puppet_validate``) checks a file against the schemas, the loader's rules
+  and the rig checks; ``puppet-schema`` (MCP ``puppet_schema``) prints a schema.
+- ``docs/examples/read_puppet.py`` reads a ``.puppet`` with the Python standard
+  library alone, as a reference for other programs; the specification and the
+  schemas are MIT-licensed, so any program may read or write the format.
+- A file of a newer format version is refused with the version it uses, so an
+  older Imervue says to update instead of misreading it.
 
 Toolbar reference
 ^^^^^^^^^^^^^^^^^
@@ -3237,7 +3254,7 @@ The subcommands that take files or folders (all but ``collage``, ``anaglyph`` an
 
 Every tool of the MCP server (see `MCP Server`_) is a subcommand too. Ten of them are the
 subcommands above (``convert_format`` is ``convert``, ``quality_metrics`` is ``stats``,
-``build_collage`` is ``collage``, and so on); the other 46 run the MCP tool's own code:
+``build_collage`` is ``collage``, and so on); the other 48 run the MCP tool's own code:
 
 .. list-table::
    :header-rows: 1
@@ -3251,10 +3268,11 @@ subcommands above (``convert_format`` is ``convert``, ``quality_metrics`` is ``s
      - ``ela`` (Error Level Analysis map as PNG), ``video-frame`` (one frame of a video,
        ``--frame-index``), ``puppet-from-png`` (a ``.puppet`` rig, ``--cell-size``)
    * - Reports: one result per image, ``--json`` for machine output
-     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
    * - Run once and print JSON
      - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``,
-       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``,
+       ``puppet-schema --name ..``
 
 Each MCP parameter becomes an option with the same default and allowed values: ``zone_gains`` is
 ``--zone-gains``, a yes/no parameter is ``--grayscale`` / ``--no-grayscale``, and a colour or a
@@ -3379,6 +3397,9 @@ Available Tools
      - Open a ``.puppet`` archive and return a structured inventory:
        drawables, deformers, parameters, motions, expressions, hit
        areas, parts, parameter blends and physics rigs.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - Check a ``.puppet`` against the v1 format (JSON Schemas, loader rules,
+       rig checks); return one of its four published JSON Schemas.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - Per-channel mean/min/max/std/median, no-reference quality
        metrics (colourfulness, entropy, contrast, edge density, noise),
@@ -3528,7 +3549,7 @@ notifications to stdout, one UTF-8 line each. It answers ``initialize`` with pro
    * - ``ping``
      - Returns an empty result.
    * - ``tools/list``
-     - All 56 tools in one page, each with ``inputSchema``, ``outputSchema`` and ``annotations``
+     - All 58 tools in one page, each with ``inputSchema``, ``outputSchema`` and ``annotations``
        (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``).
    * - ``tools/call``
      - Runs ``{"name", "arguments"}``. The result is a ``text`` content block holding the

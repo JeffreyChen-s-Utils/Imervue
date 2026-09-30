@@ -49,6 +49,8 @@ BRIDGED: dict[str, str] = {
     "search_images": "search",
     "puppet_from_png": "puppet-from-png",
     "puppet_inspect": "puppet-inspect",
+    "puppet_validate": "puppet-validate",
+    "puppet_schema": "puppet-schema",
     "reverse_geocode": "reverse-geocode",
     "extract_video_frame": "video-frame",
     "sharpness_score": "sharpness",

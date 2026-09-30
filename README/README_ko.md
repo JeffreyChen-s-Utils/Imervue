@@ -172,14 +172,14 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 파일이나 폴더를 받는 하위 명령(`collage`, `anaglyph`, `list-ops`를 제외한 전부)은 `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `-j` / `--jobs`(병렬 워커 수, `0`이면 모든 코어 사용)를 공용으로 받습니다. `collage`와 `anaglyph`는 `--out`으로 지정한 파일 하나에 씁니다. `--version`은 CLI 버전을 출력합니다.
 
-[MCP 서버](#mcp-서버)의 모든 도구도 하위 명령입니다. 그중 10개는 위의 하위 명령이고(`convert_format`은 `convert`, `quality_metrics`는 `stats`, `build_collage`는 `collage` 등), 나머지 46개는 MCP 도구 자체의 코드를 실행합니다:
+[MCP 서버](#mcp-서버)의 모든 도구도 하위 명령입니다. 그중 10개는 위의 하위 명령이고(`convert_format`은 `convert`, `quality_metrics`는 `stats`, `build_collage`는 `collage` 등), 나머지 48개는 MCP 도구 자체의 코드를 실행합니다:
 
 | 종류 | 서브커맨드 |
 |---|---|
 | 편집: 각 원본 옆에 `<stem>_<name>.png`, 또는 `--out` 안에 `<stem>.png`를 씀 | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
 | 기타 출력 | `ela`(오류 수준 분석(Error Level Analysis) 맵을 PNG로), `video-frame`(동영상의 프레임 한 장, `--frame-index`), `puppet-from-png`(`.puppet` 리그, `--cell-size`) |
-| 보고: 이미지마다 결과 하나, `--json`으로 기계 판독 출력 | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
-| 한 번 실행하고 JSON 출력 | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+| 보고: 이미지마다 결과 하나, `--json`으로 기계 판독 출력 | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| 한 번 실행하고 JSON 출력 | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
 
 각 MCP 파라미터는 같은 기본값과 허용 값을 가진 옵션이 됩니다. `zone_gains`는 `--zone-gains`가 되고, 예/아니요 파라미터는 `--grayscale` / `--no-grayscale`가 되며, 색이나 행렬의 한 행은 값을 순서대로 받습니다(`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help`로 옵션 목록을 볼 수 있습니다.
 
@@ -470,7 +470,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - `expressions/*.json` — 파라미터 오버레이
 - `physics.json` — Verlet 리그 구성
 
-JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
+JSON 기반, 사람이 diff 가능, 독점 바이너리 없음. 이 형식은 개방되어 있고 검증할 수 있습니다: 저장된 파일은 압축하지 않은 `mimetype` 항목(`application/vnd.imervue.puppet+zip`)으로 시작하고, 모든 JSON 파일은 `$schema`에 자신의 스키마를 명시합니다. 네 개의 JSON Schema는 [`docs/schemas/`](../docs/schemas/)에 공개되어 있고, `py -m Imervue.cli puppet-validate character.puppet`(MCP `puppet_validate`)은 파일을 검사하며 `puppet-schema`(MCP `puppet_schema`)는 스키마를 출력합니다. [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py)는 Python 표준 라이브러리만으로 파일을 읽습니다. 사양([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md))과 스키마는 MIT 라이선스이므로 어떤 프로그램이든 `.puppet` 파일을 읽거나 쓸 수 있습니다.
 
 ### 렌더러
 
@@ -853,7 +853,7 @@ python -m Imervue.mcp_server
 
 ### 도구
 
-선택된 도구(총 56개 — 전체 목록은 문서 참고). 모든 도구는 JSON
+선택된 도구(총 58개 — 전체 목록은 문서 참고). 모든 도구는 JSON
 `outputSchema`와 읽기 전용 / 파괴적 `annotations`를 광고하고, 결과를
 `structuredContent`로 반환하며, 장시간 실행 도구는
 `notifications/progress`를 스트리밍합니다.
@@ -887,6 +887,7 @@ python -m Imervue.mcp_server
 | `lens_correction_image` | 왜곡(k1), 비네팅, 적/청 색수차 보정 |
 | `reverse_geocode` / `extract_video_frame` | 오프라인 GPS → 도시, 비디오 프레임 한 장을 정지 이미지로 디코딩 |
 | `puppet_from_png` / `puppet_inspect` | PNG에서 `.puppet` 리그 빌드; `.puppet`을 열고 인벤토리 반환 |
+| `puppet_validate` / `puppet_schema` | `.puppet`을 v1 형식(스키마, 로더, 리그 검사)에 맞춰 검사; 형식의 JSON Schema 하나를 반환 |
 
 ### 프롬프트
 

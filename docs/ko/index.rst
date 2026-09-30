@@ -845,7 +845,24 @@ Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7t
      "physics": "physics.json"
    }
 
-전체 스키마 (drawables, deformers, parameters, motions, expressions, pose, physics) 는 저장소의 ``Imervue/puppet/FORMAT.md`` 에 있습니다. JSON + PNG 만 사용 — 독점 바이너리가 없어 git 으로 완전히 diff 할 수 있습니다.
+전체 사양 (drawables, deformers, parameters, motions, expressions, pose, physics) 은 저장소의 ``Imervue/puppet/FORMAT.md`` 에 있습니다. JSON + PNG 만 사용 — 독점 바이너리가 없어 git 으로 완전히 diff 할 수 있습니다.
+
+이 형식은 개방되어 있고 기계로 검증할 수 있습니다:
+
+- 저장된 ``.puppet``\ 은 ``application/vnd.imervue.puppet+zip``\ 을 담은 압축하지 않은
+  ``mimetype`` 항목으로 시작하므로 프로그램이 첫 바이트만 보고 형식을 알아볼 수 있으며,
+  모든 JSON 파일은 ``$schema``\ 에 자신의 JSON Schema를 명시합니다.
+- 네 개의 JSON Schema(draft 2020-12) — ``puppet``, ``motion``, ``expression``,
+  ``physics`` — 가 ``docs/schemas/``\ 에 공개되어 있어, ``$schema``\ 를 따르는 편집기는
+  입력하는 동안 파일을 검사합니다.
+- ``py -m Imervue.cli puppet-validate character.puppet``\ (MCP ``puppet_validate``)은
+  스키마, 로더 규칙, 리그 검사에 맞춰 파일을 검사하고, ``puppet-schema``\ (MCP
+  ``puppet_schema``)는 스키마를 출력합니다.
+- ``docs/examples/read_puppet.py``\ 는 다른 프로그램을 위한 참고 구현으로, Python 표준
+  라이브러리만으로 ``.puppet``\ 을 읽습니다. 사양과 스키마는 MIT 라이선스이므로 어떤
+  프로그램이든 이 형식을 읽거나 쓸 수 있습니다.
+- 더 새로운 형식 버전의 파일은 그 파일이 쓰는 버전을 알려 주며 거부되므로, 이전 버전의
+  Imervue는 파일을 잘못 읽는 대신 업데이트하라고 안내합니다.
 
 도구 모음 레퍼런스
 ^^^^^^^^^^^^^^^^^^
@@ -2973,7 +2990,7 @@ PDF 로 배치합니다. 페이지 크기, 방향, 그리드, 여백, 간격, �
 
 MCP 서버(`MCP 서버`_ 참고)의 모든 도구도 하위 명령입니다. 그중 10개는 위의 하위 명령이고
 (``convert_format``\ 은 ``convert``, ``quality_metrics``\ 는 ``stats``, ``build_collage``\ 는
-``collage`` 등), 나머지 46개는 MCP 도구 자체의 코드를 실행합니다:
+``collage`` 등), 나머지 48개는 MCP 도구 자체의 코드를 실행합니다:
 
 .. list-table::
    :header-rows: 1
@@ -2987,10 +3004,11 @@ MCP 서버(`MCP 서버`_ 참고)의 모든 도구도 하위 명령입니다. 그
      - ``ela``\ (오류 수준 분석(Error Level Analysis) 맵을 PNG로), ``video-frame``\ (동영상의
        프레임 한 장, ``--frame-index``), ``puppet-from-png``\ (``.puppet`` 리그, ``--cell-size``)
    * - 보고: 이미지마다 결과 하나, ``--json``\ 으로 기계 판독 출력
-     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
    * - 한 번 실행하고 JSON 출력
      - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``,
-       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``,
+       ``puppet-schema --name ..``
 
 각 MCP 매개변수는 같은 기본값과 허용 값을 가진 옵션이 됩니다. ``zone_gains``\ 는
 ``--zone-gains``\ 가 되고, 예/아니요 매개변수는 ``--grayscale`` / ``--no-grayscale``\ 가 되며,
@@ -3113,6 +3131,9 @@ Cline, …) 가 GUI 를 실행하지 않고도 프로젝트의 순수 로직 헬
      - ``.puppet`` 아카이브를 열어 구조화된 인벤토리를 반환:
        drawable, deformer, 파라미터, 모션, 표정, 히트
        영역, 파트, 파라미터 블렌드 및 물리 rig.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - ``.puppet``\ 을 v1 형식(JSON Schema, 로더 규칙, rig 검사)에 맞춰
+       검사하고, 공개된 네 개의 JSON Schema 중 하나를 반환.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - 채널별 평균/최소/최대/표준편차/중앙값, 무참조 품질
        지표 (선명도, 엔트로피, 대비, 에지 밀도, 노이즈),
@@ -3261,7 +3282,7 @@ Claude Desktop 설정에 동일한 항목을 추가합니다:
    * - ``ping``
      - 빈 결과를 반환합니다.
    * - ``tools/list``
-     - 56개 도구 전부를 한 페이지로 반환하며, 각 도구에는 ``inputSchema``, ``outputSchema``,
+     - 58개 도구 전부를 한 페이지로 반환하며, 각 도구에는 ``inputSchema``, ``outputSchema``,
        ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
        ``openWorldHint``)가 있습니다.
    * - ``tools/call``

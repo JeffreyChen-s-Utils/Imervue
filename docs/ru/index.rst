@@ -958,10 +958,29 @@ Cubism SDK.
      "physics": "physics.json"
    }
 
-Полная схема (drawables, deformers, parameters, motions, expressions,
+Полная спецификация (drawables, deformers, parameters, motions, expressions,
 pose, physics) находится в ``Imervue/puppet/FORMAT.md`` в репозитории.
 Только JSON + PNG — без проприетарного бинарного формата, полностью
 diff-абельно через git.
+
+Формат открыт и проверяется машинно:
+
+- Сохранённый ``.puppet`` начинается с несжатой записи ``mimetype``, содержащей
+  ``application/vnd.imervue.puppet+zip``, поэтому программа может распознать его
+  по первым байтам, а каждый JSON-файл называет свою JSON Schema в ``$schema``.
+- Четыре JSON Schema (draft 2020-12) — ``puppet``, ``motion``, ``expression``
+  и ``physics`` — опубликованы в ``docs/schemas/``; редакторы, которые следуют
+  ``$schema``, проверяют файл прямо во время набора.
+- ``py -m Imervue.cli puppet-validate character.puppet`` (MCP
+  ``puppet_validate``) проверяет файл по схемам, правилам загрузчика
+  и проверкам рига; ``puppet-schema`` (MCP ``puppet_schema``) выводит схему.
+- ``docs/examples/read_puppet.py`` читает ``.puppet`` средствами одной лишь
+  стандартной библиотеки Python и служит образцом для других программ;
+  спецификация и схемы распространяются под лицензией MIT, поэтому любая
+  программа может читать и записывать этот формат.
+- Файл более новой версии формата отклоняется с указанием используемой в нём
+  версии, поэтому старая версия Imervue предлагает обновиться, а не читает его
+  неправильно.
 
 Справочник по панели инструментов
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3419,7 +3438,7 @@ Qt**, поэтому им можно пользоваться из скрипт�
 
 Подкоманды, принимающие файлы или папки (все, кроме ``collage``, ``anaglyph`` и ``list-ops``), используют общие флаги ``--out`` (каталог вывода), ``--recursive``, ``--dry-run`` (только перечислить действия, ничего не писать), ``--overwrite`` и ``-j`` / ``--jobs`` (число параллельных обработчиков; ``0`` задействует все ядра). ``collage`` и ``anaglyph`` записывают один файл, указанный в ``--out``. ``--version`` выводит версию CLI.
 
-Каждый инструмент MCP-сервера (см. `MCP-сервер`_) тоже является подкомандой. Десять из них — это подкоманды выше (``convert_format`` — это ``convert``, ``quality_metrics`` — ``stats``, ``build_collage`` — ``collage`` и так далее); остальные 46 выполняют собственный код инструмента MCP:
+Каждый инструмент MCP-сервера (см. `MCP-сервер`_) тоже является подкомандой. Десять из них — это подкоманды выше (``convert_format`` — это ``convert``, ``quality_metrics`` — ``stats``, ``build_collage`` — ``collage`` и так далее); остальные 48 выполняют собственный код инструмента MCP:
 
 .. list-table::
    :header-rows: 1
@@ -3432,9 +3451,10 @@ Qt**, поэтому им можно пользоваться из скрипт�
    * - Другие результаты
      - ``ela`` (карта Error Level Analysis в PNG), ``video-frame`` (один кадр видео, ``--frame-index``), ``puppet-from-png`` (риг ``.puppet``, ``--cell-size``)
    * - Отчёты: один результат на изображение, ``--json`` для машиночитаемого вывода
-     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
    * - Запускаются один раз и выводят JSON
-     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``, ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``, ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``,
+       ``puppet-schema --name ..``
 
 Каждый параметр MCP становится флагом с тем же значением по умолчанию и теми же допустимыми значениями: ``zone_gains`` превращается в ``--zone-gains``, параметр «да/нет» — в ``--grayscale`` / ``--no-grayscale``, а цвет или строка матрицы принимает значения по порядку (``--red 1 0 0``). ``py -m Imervue.cli <subcommand> --help`` выводит их список::
 
@@ -3558,6 +3578,10 @@ Imervue поставляется со встроенным сервером `Mod
      - Открыть архив ``.puppet`` и вернуть структурированный инвентарь:
        drawables, deformers, parameters, motions, expressions, hit
        areas, parts, parameter blends и риги physics.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - Проверить ``.puppet`` на соответствие формату v1 (JSON Schema, правила
+       загрузчика, проверки рига); вернуть одну из четырёх опубликованных
+       JSON Schema формата.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - Поканальные mean/min/max/std/median, метрики качества без эталона
        (красочность, энтропия, контраст, плотность краёв, шум) и
@@ -3722,7 +3746,7 @@ Claude Desktop
    * - ``ping``
      - Возвращает пустой результат.
    * - ``tools/list``
-     - Все 56 инструментов на одной странице, у каждого ``inputSchema``, ``outputSchema`` и
+     - Все 58 инструментов на одной странице, у каждого ``inputSchema``, ``outputSchema`` и
        ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
        ``openWorldHint``).
    * - ``tools/call``

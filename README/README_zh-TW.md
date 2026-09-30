@@ -171,14 +171,14 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 接受檔案或資料夾的子指令（`collage`、`anaglyph`、`list-ops` 以外的全部）共用 `--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite` 與 `-j` / `--jobs`（平行工作數；`0` 表示使用所有核心）。`collage` 與 `anaglyph` 會寫入 `--out` 指定的單一檔案。`--version` 顯示 CLI 版本。
 
-[MCP 伺服器](#mcp-伺服器)的每個工具也都是子指令。其中十個就是上面的子指令（`convert_format` 即 `convert`、`quality_metrics` 即 `stats`、`build_collage` 即 `collage`，依此類推）；其餘 46 個直接執行該 MCP 工具本身的程式碼：
+[MCP 伺服器](#mcp-伺服器)的每個工具也都是子指令。其中十個就是上面的子指令（`convert_format` 即 `convert`、`quality_metrics` 即 `stats`、`build_collage` 即 `collage`，依此類推）；其餘 48 個直接執行該 MCP 工具本身的程式碼：
 
 | 類型 | 子指令 |
 |---|---|
 | 編輯：在每個來源檔旁寫出 `<stem>_<name>.png`，或在 `--out` 中寫出 `<stem>.png` | `frame`、`crop`、`rotate`、`solarize`、`glow`、`velvia`、`emboss`、`film-negative`、`defringe`、`graduated-density`、`filmic-tonemap`、`tone-equalizer`、`detail-equalizer`、`colormap`、`false-color`、`split-toning`、`pixel-sort`、`polar`、`kaleidoscope`、`frosted-glass`、`local-contrast`、`posterize`、`gradient-map`、`film-grain`、`levels`、`auto-color-balance`、`channel-mixer`、`curve`、`lens-correction` |
 | 其他輸出 | `ela`（錯誤等級分析圖，輸出為 PNG）、`video-frame`（影片中的單一影格，`--frame-index`）、`puppet-from-png`（`.puppet` rig，`--cell-size`） |
-| 報告：每張圖片一個結果，`--json` 輸出機器可讀格式 | `metadata`、`xmp`、`gps`、`dominant-colors`、`sharpness`、`statistics`、`histogram`、`ocr`、`puppet-inspect` |
-| 執行一次並印出 JSON | `list-images FOLDER`、`search FOLDER --query "..."`、`similar FOLDER`、`collection-stats FOLDER`、`reverse-geocode --latitude .. --longitude ..` |
+| 報告：每張圖片一個結果，`--json` 輸出機器可讀格式 | `metadata`、`xmp`、`gps`、`dominant-colors`、`sharpness`、`statistics`、`histogram`、`ocr`、`puppet-inspect`、`puppet-validate` |
+| 執行一次並印出 JSON | `list-images FOLDER`、`search FOLDER --query "..."`、`similar FOLDER`、`collection-stats FOLDER`、`reverse-geocode --latitude .. --longitude ..`、`puppet-schema --name ..` |
 
 每個 MCP 參數都會變成一個選項，預設值與允許值維持不變：`zone_gains` 對應 `--zone-gains`，是／否參數對應 `--grayscale` / `--no-grayscale`，顏色或矩陣的一列則依序接收各個值（`--red 1 0 0`）。`py -m Imervue.cli <subcommand> --help` 會列出這些選項。
 
@@ -469,7 +469,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - `expressions/*.json` — 參數疊加
 - `physics.json` — Verlet 物理配置
 
-JSON 為主，人類可 diff，沒有專有二進位。
+JSON 為主，人類可 diff，沒有專有二進位。這個格式是開放且可檢查的：存出的檔案以一個未壓縮的 `mimetype` 項目（`application/vnd.imervue.puppet+zip`）開頭，每個 JSON 檔都在 `$schema` 中標明自己的 schema；四份 JSON Schema 公開於 [`docs/schemas/`](../docs/schemas/)；`py -m Imervue.cli puppet-validate character.puppet`（MCP `puppet_validate`）會檢查檔案，`puppet-schema`（MCP `puppet_schema`）會印出一份 schema；[`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) 只用 Python 標準函式庫就能讀取 `.puppet` 檔。規格（[`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)）與 schema 皆採 MIT 授權，任何程式都能讀寫 `.puppet` 檔案。
 
 ### 渲染器
 
@@ -854,7 +854,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精選工具（共 56 個 — 完整清單見文件）。每個工具都會宣告 JSON
+精選工具（共 58 個 — 完整清單見文件）。每個工具都會宣告 JSON
 `outputSchema` 與唯讀 / 破壞性的 `annotations`，並把結果以
 `structuredContent` 回傳；長時間執行的工具會串流 `notifications/progress`。
 
@@ -887,6 +887,7 @@ python -m Imervue.mcp_server
 | `lens_correction_image` | 校正鏡頭桶狀／枕狀變形（k1）、暗角與紅／藍色差 |
 | `reverse_geocode` / `extract_video_frame` | 離線 GPS → 城市、把影片一格解碼成靜態影像 |
 | `puppet_from_png` / `puppet_inspect` | 從 PNG 建構 `.puppet` rig；開啟一個並回傳清單 |
+| `puppet_validate` / `puppet_schema` | 依 v1 格式檢查 `.puppet`（schema、載入器、rig 檢查）；回傳其中一份 JSON Schema |
 
 ### Prompts
 

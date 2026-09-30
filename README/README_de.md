@@ -172,14 +172,14 @@ Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausr
 
 Die Unterbefehle, die Dateien oder Ordner entgegennehmen (alle außer `collage`, `anaglyph` und `list-ops`), teilen sich `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `-j` / `--jobs` (parallele Worker; `0` nutzt alle Kerne). `collage` und `anaglyph` schreiben die eine Datei, die `--out` angibt. `--version` gibt die CLI-Version aus.
 
-Jedes Tool des [MCP-Servers](#mcp-server) ist ebenfalls ein Unterbefehl. Zehn davon sind die obigen Unterbefehle (`convert_format` ist `convert`, `quality_metrics` ist `stats`, `build_collage` ist `collage` usw.); die übrigen 46 führen den Code des MCP-Tools selbst aus:
+Jedes Tool des [MCP-Servers](#mcp-server) ist ebenfalls ein Unterbefehl. Zehn davon sind die obigen Unterbefehle (`convert_format` ist `convert`, `quality_metrics` ist `stats`, `build_collage` ist `collage` usw.); die übrigen 48 führen den Code des MCP-Tools selbst aus:
 
 | Art | Unterbefehle |
 |---|---|
 | Bearbeitungen: schreiben `<stem>_<name>.png` neben jede Quelle oder `<stem>.png` in `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
 | Andere Ausgaben | `ela` (Error-Level-Analysis-Karte als PNG), `video-frame` (ein Einzelbild eines Videos, `--frame-index`), `puppet-from-png` (ein `.puppet`-Rig, `--cell-size`) |
-| Berichte: ein Ergebnis pro Bild, `--json` für maschinenlesbare Ausgabe | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
-| Einmal ausführen und JSON ausgeben | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+| Berichte: ein Ergebnis pro Bild, `--json` für maschinenlesbare Ausgabe | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| Einmal ausführen und JSON ausgeben | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
 
 Jeder MCP-Parameter wird zu einer Option mit demselben Standardwert und denselben erlaubten Werten: `zone_gains` wird zu `--zone-gains`, ein Ja/Nein-Parameter zu `--grayscale` / `--no-grayscale`, und eine Farbe oder eine Matrixzeile nimmt ihre Werte der Reihe nach entgegen (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` listet sie auf.
 
@@ -472,7 +472,7 @@ Der **Puppet**-Tab ist ein von Grund auf entwickeltes 2D-Rigged-Puppet-Animation
 - `expressions/*.json` — Parameter-Overlays
 - `physics.json` — Verlet-Rig-Konfiguration
 
-JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat.
+JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat. Das Format ist offen und prüfbar: Eine gespeicherte Datei beginnt mit einem unkomprimierten `mimetype`-Eintrag (`application/vnd.imervue.puppet+zip`), und jede JSON-Datei nennt ihr Schema in `$schema`; die vier JSON Schemas sind in [`docs/schemas/`](../docs/schemas/) veröffentlicht; `py -m Imervue.cli puppet-validate character.puppet` (MCP `puppet_validate`) prüft eine Datei, und `puppet-schema` (MCP `puppet_schema`) gibt ein Schema aus; [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) liest eine Datei allein mit der Python-Standardbibliothek. Die Spezifikation ([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)) und die Schemas stehen unter der MIT-Lizenz, sodass jedes Programm `.puppet`-Dateien lesen oder schreiben darf.
 
 ### Renderer
 
@@ -902,7 +902,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Ausgewählte Tools (56 insgesamt — vollständige Liste in der Doku). Jedes Tool
+Ausgewählte Tools (58 insgesamt — vollständige Liste in der Doku). Jedes Tool
 bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
 gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
 `notifications/progress`.
@@ -936,6 +936,7 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `lens_correction_image` | Verzeichnung (k1), Vignette und rot/blaue chromatische Aberration korrigieren |
 | `reverse_geocode` / `extract_video_frame` | Offline-GPS → Stadt, ein Videoframe zu einem Standbild dekodieren |
 | `puppet_from_png` / `puppet_inspect` | Ein `.puppet`-Rig aus einem PNG bauen; eines öffnen und sein Inventar zurückgeben |
+| `puppet_validate` / `puppet_schema` | Ein `.puppet` gegen das v1-Format prüfen (Schemas, Loader, Rig-Prüfungen); eines seiner JSON Schemas zurückgeben |
 
 ### Prompts
 

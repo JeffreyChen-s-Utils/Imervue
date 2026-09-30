@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/motion.schema.json",
+  "title": ".puppet motions/<name>.json (v1)",
+  "type": "object",
+  "required": [
+    "duration",
+    "tracks"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "duration": {
+      "type": "number",
+      "minimum": 0
+    },
+    "loop": {
+      "type": "boolean"
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "param_id",
+          "segments"
+        ],
+        "properties": {
+          "param_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "segments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "p0",
+                "p1"
+              ],
+              "properties": {
+                "type": {
+                  "enum": [
+                    "linear",
+                    "stepped",
+                    "inverse-stepped",
+                    "cubic-bezier"
+                  ]
+                },
+                "p0": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "p1": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "c0": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "c1": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "fade_in_duration": {
+      "type": "number",
+      "minimum": 0
+    },
+    "fade_out_duration": {
+      "type": "number",
+      "minimum": 0
+    },
+    "sound_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "group": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false
+}

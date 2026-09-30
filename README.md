@@ -178,14 +178,14 @@ names. `--version` prints the CLI version.
 
 Every tool of the [MCP server](#mcp-server) is a subcommand too. Ten of them are the subcommands above
 (`convert_format` is `convert`, `quality_metrics` is `stats`, `build_collage` is `collage`, and so on);
-the other 46 run the MCP tool's own code:
+the other 48 run the MCP tool's own code:
 
 | Kind | Subcommands |
 |---|---|
 | Edits: write `<stem>_<name>.png` beside each source, or `<stem>.png` in `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
 | Other outputs | `ela` (Error Level Analysis map as PNG), `video-frame` (one frame of a video, `--frame-index`), `puppet-from-png` (a `.puppet` rig, `--cell-size`) |
-| Reports: one result per image, `--json` for machine output | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
-| Run once and print JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+| Reports: one result per image, `--json` for machine output | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| Run once and print JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
 
 Each MCP parameter becomes an option with the same default and allowed values: `zone_gains` is
 `--zone-gains`, a yes/no parameter is `--grayscale` / `--no-grayscale`, and a colour or a matrix row
@@ -483,7 +483,7 @@ The **Puppet** tab is a from-scratch 2D rigged-puppet animation system: mesh-def
 - `expressions/*.json` — parameter overlays
 - `physics.json` — Verlet rig configuration
 
-JSON-based, humanly diffable, no proprietary binary.
+JSON-based, humanly diffable, no proprietary binary. The format is open and checkable: a saved file starts with an uncompressed `mimetype` entry (`application/vnd.imervue.puppet+zip`) and every JSON file names its schema in `$schema`; the four JSON Schemas are published in [`docs/schemas/`](docs/schemas/); `py -m Imervue.cli puppet-validate character.puppet` (MCP `puppet_validate`) checks a file and `puppet-schema` (MCP `puppet_schema`) prints a schema; [`docs/examples/read_puppet.py`](docs/examples/read_puppet.py) reads one with the Python standard library alone. The specification ([`Imervue/puppet/FORMAT.md`](Imervue/puppet/FORMAT.md)) and schemas are MIT-licensed, so any program may read or write `.puppet` files.
 
 ### Renderer
 
@@ -911,7 +911,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Selected tools (56 in total — full list in the docs). Every tool advertises a
+Selected tools (58 in total — full list in the docs). Every tool advertises a
 JSON `outputSchema` and read-only / destructive `annotations`, returns its
 result as `structuredContent`, and long-running tools stream
 `notifications/progress`.
@@ -945,6 +945,7 @@ result as `structuredContent`, and long-running tools stream
 | `lens_correction_image` | Correct distortion (k1), vignette and red/blue chromatic aberration |
 | `reverse_geocode` / `extract_video_frame` | Offline GPS → city, decode one video frame to a still |
 | `puppet_from_png` / `puppet_inspect` | Build a `.puppet` rig from a PNG; open one and return its inventory |
+| `puppet_validate` / `puppet_schema` | Check a `.puppet` against the v1 format (schemas, loader, rig checks); return one of its JSON Schemas |
 
 ### Prompts
 

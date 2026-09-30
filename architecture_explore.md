@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `35382a6` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `efa911f` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -55,7 +55,7 @@ Imervue = **Image + Immerse + View**。以 PySide6 + OpenGL 打造的桌面應�
 | 桌面寵物懸浮視窗 | Tab 4 `Desktop Pet` | `desktop_pet/` |
 
 另有兩條**非 GUI** 的對外介面：`Imervue/cli.py`（headless 批次 CLI）與
-`Imervue/mcp_server/`（Model Context Protocol server，把 56 個影像工具暴露給 LLM 代理）。
+`Imervue/mcp_server/`（Model Context Protocol server，把 58 個影像工具暴露給 LLM 代理）。
 
 **必要相依只有 11 個套件**：PySide6、qt-material、Pillow、PyOpenGL(+accelerate)、numpy、
 rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依都被推到 `plugins/`。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 913 | 153,996 |
+| `tests/` | 914 | 154,316 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,563 |
-| `Imervue/puppet/` | 58 | 15,586 |
+| `Imervue/puppet/` | 60 | 16,052 |
 | `Imervue/image/` | 128 | 15,414 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
 | `Imervue/multi_language/` | 8 | 14,377 |
 | `Imervue/desktop_pet/` | 30 | 7,174 |
-| `Imervue/mcp_server/` | 16 | 4,668 |
+| `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 34 | 4,759 |
 | `Imervue/menu/` | 11 | 3,595 |
-| `Imervue/` 根層 | 6 | 1,943 |
+| `Imervue/` 根層 | 6 | 1,945 |
 | `Imervue/plugin/` | 10 | 2,394 |
 | `Imervue/system/` | 32 | 3,176 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（18 個外掛） | 73 | 16,164 |
-| **總計** | **1,773** | **339,488** |
+| **總計** | **1,776** | **340,361** |
 
-其中 `Imervue/` 套件本身 787 檔 / 169,328 行。
+其中 `Imervue/` 套件本身 789 檔 / 169,881 行。
 
 測試碼與產品碼比約 **0.71 : 1**（123k vs 173k），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -209,7 +209,7 @@ ImervueMainWindow
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
 | `Imervue_main_window.py` | 721 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 688 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑；`build_parser` 依序加手寫子指令、`cli_tools` 由 MCP 工具產生的 46 個、最後 `list-ops` |
-| `cli_tools.py` | 258 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 46 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤 |
+| `cli_tools.py` | 260 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 48 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
 ### 6.2 `Imervue/system/`
@@ -799,7 +799,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-58 個檔、15,586 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+60 個檔、16,052 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -808,7 +808,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `document.py` | 395 | `.puppet` v1 檔案格式的純 Python 資料模型（`Drawable` / `Deformer` / `Parameter` / `Motion` / `HitArea`） |
-| `document_io.py` | 869 | `.puppet` zip 容器讀寫 |
+| `document_io.py` | 884 | `.puppet` zip 容器讀寫；第一個項目是未壓縮的 `mimetype`（`application/vnd.imervue.puppet+zip`），每個 JSON 帶 `$schema`；較新的格式版本以「請更新 Imervue」拒絕，布林 `true` 不算版本 1 |
+| `format_schema.py` | 327 | `.puppet` v1 的四份 JSON Schema（draft 2020-12：puppet / motion / expression / physics，`$id` 是 `docs/schemas/` 在 `main` 上的 raw URL；`python -m Imervue.puppet.format_schema docs/schemas` 重產）與 `check_puppet_file`：schema → 載入器規則 → `validator` 的 rig 檢查（CLI `puppet-validate`、MCP `puppet_validate`） |
+| `schema_check.py` | 124 | 只涵蓋上述 schema 所用子集的 JSON Schema 驗證器（`$ref`、type、enum、const、properties、required、additionalProperties、items、min/maxItems、minimum/maximum、minLength、allOf、anyOf、if/then），不依賴第三方套件；與 `jsonschema` 對拍 7200 個變造檔判定一致 |
 | `cubism_import.py` | 550 | Live2D Cubism v3 檔案格式匯入 |
 | `cubism_native_bridge.py` | 443 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
 | `cubism_native_convert.py` | 646 | `.moc3` → `PuppetDocument` 轉換 |
@@ -929,13 +931,13 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `server.py` | 439 | JSON-RPC 2.0 over stdio 的協定迴圈 |
-| `tools.py` | 172 | 工具集的對外門面：re-export 全部 56 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
-| `tools_read.py` | 641 | 20 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`… |
+| `tools.py` | 176 | 工具集的對外門面：re-export 全部 58 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
+| `tools_read.py` | 662 | 22 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`、`puppet_validate`、`puppet_schema`… |
 | `tools_edit.py` | 883 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
 | `tool_support.py` | 77 | 兩組處理器共用：`IMAGE_EXTENSIONS`（即 `formats.RASTER_EXTENSIONS`）、`NO_ALPHA_FORMATS`、`open_upright` / `load_rgba_array`（委派 `shown.open_shown` / `load_shown_rgba`，RAW 經 libraw 顯像；每個工具都在依 EXIF 轉正後的影像上運作，尺寸與座標也以它為準）、`validated_dir`／`validated_file`、`json_safe` |
-| `tool_defs_read.py` | 351 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
+| `tool_defs_read.py` | 387 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
 | `tool_defs_edit.py` | 929 | `EDIT_TOOL_DEFINITIONS`：寫出類工具的同上資料 |
-| `tool_schemas.py` | 578 | 每個工具的輸出 schema 與 annotation（有 parity test 強制與 `_TOOL_DEFINITIONS` 對齊） |
+| `tool_schemas.py` | 602 | 每個工具的輸出 schema 與 annotation（有 parity test 強制與 `_TOOL_DEFINITIONS` 對齊） |
 | `prompts.py` | 228 | 影像助理的 prompt 範本 |
 | `resources.py` | 132 | 把圖片暴露成可讀 MCP resource |
 | `progress.py` | 66 | 長時間工具呼叫的進度通知 |
@@ -983,7 +985,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-913 個檔、153,996 行。`pyproject.toml` 定義三個互斥層級 marker：
+914 個檔、154,316 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

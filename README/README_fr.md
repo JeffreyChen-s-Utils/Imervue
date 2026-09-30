@@ -172,14 +172,14 @@ Chaque sous-commande décode comme la visionneuse : les sorties sont redressées
 
 Les sous-commandes qui prennent des fichiers ou des dossiers (toutes sauf `collage`, `anaglyph` et `list-ops`) partagent `--out` (répertoire de sortie), `--recursive`, `--dry-run` (lister les actions sans rien écrire), `--overwrite` et `-j` / `--jobs` (workers parallèles ; `0` utilise tous les cœurs). `collage` et `anaglyph` écrivent l'unique fichier désigné par `--out`. `--version` affiche la version de la CLI.
 
-Chaque outil du [serveur MCP](#serveur-mcp) est aussi une sous-commande. Dix d'entre eux sont les sous-commandes ci-dessus (`convert_format` est `convert`, `quality_metrics` est `stats`, `build_collage` est `collage`, etc.) ; les 46 autres exécutent le code propre de l'outil MCP :
+Chaque outil du [serveur MCP](#serveur-mcp) est aussi une sous-commande. Dix d'entre eux sont les sous-commandes ci-dessus (`convert_format` est `convert`, `quality_metrics` est `stats`, `build_collage` est `collage`, etc.) ; les 48 autres exécutent le code propre de l'outil MCP :
 
 | Type | Sous-commandes |
 |---|---|
 | Retouches : écrivent `<stem>_<name>.png` à côté de chaque source, ou `<stem>.png` dans `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
 | Autres sorties | `ela` (carte Error Level Analysis en PNG), `video-frame` (une image d'une vidéo, `--frame-index`), `puppet-from-png` (un rig `.puppet`, `--cell-size`) |
-| Rapports : un résultat par image, `--json` pour une sortie exploitable par machine | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
-| Exécution unique avec sortie JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+| Rapports : un résultat par image, `--json` pour une sortie exploitable par machine | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| Exécution unique avec sortie JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
 
 Chaque paramètre MCP devient une option avec la même valeur par défaut et les mêmes valeurs autorisées : `zone_gains` devient `--zone-gains`, un paramètre oui/non devient `--grayscale` / `--no-grayscale`, et une couleur ou une ligne de matrice prend ses valeurs dans l'ordre (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` les liste.
 
@@ -472,7 +472,7 @@ L'onglet **Puppet** est un système d'animation de marionnettes 2D avec squelett
 - `expressions/*.json` — superpositions de paramètres
 - `physics.json` — configuration physique Verlet
 
-Basé sur JSON, lisible et diffable par un humain, sans binaire propriétaire.
+Basé sur JSON, lisible et diffable par un humain, sans binaire propriétaire. Le format est ouvert et vérifiable : un fichier enregistré commence par une entrée `mimetype` non compressée (`application/vnd.imervue.puppet+zip`) et chaque fichier JSON nomme son schéma dans `$schema` ; les quatre JSON Schemas sont publiés dans [`docs/schemas/`](../docs/schemas/) ; `py -m Imervue.cli puppet-validate character.puppet` (MCP `puppet_validate`) vérifie un fichier et `puppet-schema` (MCP `puppet_schema`) affiche un schéma ; [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) en lit un avec la seule bibliothèque standard de Python. La spécification ([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)) et les schémas sont sous licence MIT, si bien que n'importe quel programme peut lire ou écrire des fichiers `.puppet`.
 
 ### Moteur de rendu
 
@@ -855,7 +855,7 @@ python -m Imervue.mcp_server
 
 ### Outils
 
-Outils sélectionnés (56 au total — liste complète dans la documentation). Chaque outil
+Outils sélectionnés (58 au total — liste complète dans la documentation). Chaque outil
 annonce un `outputSchema` JSON et des `annotations` lecture seule / destructrices, retourne
 son résultat sous forme de `structuredContent`, et les outils de longue durée diffusent
 `notifications/progress`.
@@ -889,6 +889,7 @@ son résultat sous forme de `structuredContent`, et les outils de longue durée 
 | `lens_correction_image` | Corriger la distorsion (k1), le vignettage et l'aberration chromatique rouge/bleue |
 | `reverse_geocode` / `extract_video_frame` | GPS hors ligne → ville, décodage d'une image vidéo en photo |
 | `puppet_from_png` / `puppet_inspect` | Construire un rig `.puppet` à partir d'un PNG ; en ouvrir un et retourner son inventaire |
+| `puppet_validate` / `puppet_schema` | Vérifier un `.puppet` par rapport au format v1 (schémas, chargeur, vérifications du rig) ; retourner l'un de ses JSON Schemas |
 
 ### Prompts
 

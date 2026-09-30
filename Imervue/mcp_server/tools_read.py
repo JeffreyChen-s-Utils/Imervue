@@ -257,6 +257,27 @@ def puppet_inspect(path: str) -> dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------
+# puppet_validate / puppet_schema
+# ---------------------------------------------------------------------------
+
+
+def puppet_validate(path: str) -> dict[str, Any]:
+    """Check a ``.puppet`` file against the v1 format: its JSON Schemas, the
+    loader's structural rules and the rig checks (``Imervue.puppet.format_schema``)."""
+    from Imervue.puppet.format_schema import check_puppet_file
+    return check_puppet_file(validated_file(path))
+
+
+def puppet_schema(name: str = "puppet") -> dict[str, Any]:
+    """Return the published JSON Schema of one ``.puppet`` file kind
+    (``puppet``, ``motion``, ``expression`` or ``physics``)."""
+    from Imervue.puppet.format_schema import SCHEMA_URLS, SCHEMAS
+    if name not in SCHEMAS:
+        raise ValueError(f"name must be one of {sorted(SCHEMAS)}, got {name!r}")
+    return {"name": name, "url": SCHEMA_URLS[name], "schema": SCHEMAS[name]}
+
+
 def _convert_via_save_formats(src: Path, dst: Path, fmt: str, quality: int) -> dict[str, Any]:
     """Convert through save_formats, which knows whether HEIC / AVIF / JXL can be written."""
     from Imervue.image.save_formats import save_image

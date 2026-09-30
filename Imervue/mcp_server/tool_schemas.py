@@ -225,6 +225,30 @@ TOOL_METADATA: dict[str, dict[str, Any]] = {
             ["path"],
         ),
     },
+    "puppet_validate": {
+        "annotations": _read_only("Validate puppet file"),
+        "output_schema": _obj(
+            {
+                "path": _STR,
+                "valid": _BOOL,
+                "version": {"type": ["integer", "number", "string", "boolean", "null"]},
+                "schema_errors": _STR_ARRAY,
+                "load_error": _STR_OR_NULL,
+                "issues": _arr(_obj(
+                    {"severity": _STR, "code": _STR, "message": _STR, "location": _STR},
+                    ["severity", "code", "message"],
+                )),
+            },
+            ["path", "valid", "schema_errors", "load_error", "issues"],
+        ),
+    },
+    "puppet_schema": {
+        "annotations": _read_only("Puppet format schema"),
+        "output_schema": _obj(
+            {"name": _STR, "url": _STR, "schema": {"type": "object"}},
+            ["name", "url", "schema"],
+        ),
+    },
     "reverse_geocode": {
         "annotations": _read_only("Reverse geocode coordinates"),
         "output_schema": _obj(

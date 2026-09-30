@@ -916,9 +916,28 @@ Beispiel ``puppet.json`` auf Top-Level::
      "physics": "physics.json"
    }
 
-Das vollständige Schema (Drawables, Deformer, Parameter, Motions, Ausdrücke,
+Die vollständige Spezifikation (Drawables, Deformer, Parameter, Motions, Ausdrücke,
 Pose, Physik) liegt unter ``Imervue/puppet/FORMAT.md`` im Repo. Nur JSON +
 PNG — kein proprietäres Binärformat, vollständig diff-fähig via git.
+
+Das Format ist offen und maschinell prüfbar:
+
+- Ein gespeichertes ``.puppet`` beginnt mit einem unkomprimierten ``mimetype``-Eintrag,
+  der ``application/vnd.imervue.puppet+zip`` enthält, sodass ein Programm es an
+  seinen ersten Bytes erkennen kann, und jede JSON-Datei nennt ihr JSON Schema in ``$schema``.
+- Vier JSON Schemas (Draft 2020-12) — ``puppet``, ``motion``, ``expression``
+  und ``physics`` — sind in ``docs/schemas/`` veröffentlicht; Editoren, die
+  ``$schema`` folgen, prüfen eine Datei schon während der Eingabe.
+- ``py -m Imervue.cli puppet-validate character.puppet`` (MCP
+  ``puppet_validate``) prüft eine Datei gegen die Schemas, die Regeln des Loaders
+  und die Rig-Prüfungen; ``puppet-schema`` (MCP ``puppet_schema``) gibt ein Schema aus.
+- ``docs/examples/read_puppet.py`` liest ein ``.puppet`` allein mit der
+  Python-Standardbibliothek, als Referenz für andere Programme; die Spezifikation und
+  die Schemas stehen unter der MIT-Lizenz, sodass jedes Programm das Format lesen
+  oder schreiben darf.
+- Eine Datei mit einer neueren Formatversion wird unter Angabe der verwendeten Version
+  abgelehnt, sodass ein älteres Imervue zum Aktualisieren auffordert, statt sie falsch
+  zu lesen.
 
 Toolbar-Referenz
 ^^^^^^^^^^^^^^^^
@@ -3378,7 +3397,7 @@ Die Unterbefehle, die Dateien oder Ordner entgegennehmen (alle außer ``collage`
 
 Jedes Tool des MCP-Servers (siehe `MCP-Server`_) ist ebenfalls ein Unterbefehl. Zehn davon sind die
 obigen Unterbefehle (``convert_format`` ist ``convert``, ``quality_metrics`` ist ``stats``,
-``build_collage`` ist ``collage`` usw.); die übrigen 46 führen den Code des MCP-Tools selbst aus:
+``build_collage`` ist ``collage`` usw.); die übrigen 48 führen den Code des MCP-Tools selbst aus:
 
 .. list-table::
    :header-rows: 1
@@ -3392,10 +3411,11 @@ obigen Unterbefehle (``convert_format`` ist ``convert``, ``quality_metrics`` ist
      - ``ela`` (Error-Level-Analysis-Karte als PNG), ``video-frame`` (ein Einzelbild eines Videos,
        ``--frame-index``), ``puppet-from-png`` (ein ``.puppet``-Rig, ``--cell-size``)
    * - Berichte: ein Ergebnis pro Bild, ``--json`` für maschinenlesbare Ausgabe
-     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
    * - Einmal ausführen und JSON ausgeben
      - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``,
-       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``,
+       ``puppet-schema --name ..``
 
 Jeder MCP-Parameter wird zu einer Option mit demselben Standardwert und denselben erlaubten Werten:
 ``zone_gains`` wird zu ``--zone-gains``, ein Ja/Nein-Parameter zu ``--grayscale`` / ``--no-grayscale``,
@@ -3521,6 +3541,9 @@ Verfügbare Werkzeuge
      - Ein ``.puppet``-Archiv öffnen und ein strukturiertes Inventar zurückgeben:
        Drawables, Deformer, Parameter, Motions, Ausdrücke, Hit-Areas, Parts,
        Parameter-Blends und Physik-Rigs.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - Ein ``.puppet`` gegen das v1-Format prüfen (JSON Schemas, Loader-Regeln,
+       Rig-Prüfungen); eines seiner vier veröffentlichten JSON Schemas zurückgeben.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - Per-Kanal-Mittelwert/Min/Max/Std/Median, No-Reference-Qualitätsmetriken
        (Colourfulness, Entropie, Kontrast, Kantendichte, Rauschen) und das
@@ -3669,7 +3692,7 @@ nacheinander bearbeitet; ein Batch (ein JSON-Array) wird mit ``-32600`` abgelehn
    * - ``ping``
      - Gibt ein leeres Ergebnis zurück.
    * - ``tools/list``
-     - Alle 56 Werkzeuge auf einer Seite, jedes mit ``inputSchema``, ``outputSchema`` und
+     - Alle 58 Werkzeuge auf einer Seite, jedes mit ``inputSchema``, ``outputSchema`` und
        ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
        ``openWorldHint``).
    * - ``tools/call``

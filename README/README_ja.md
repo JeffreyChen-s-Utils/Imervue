@@ -172,14 +172,14 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 
 ファイルやフォルダを受け取るサブコマンド(`collage`、`anaglyph`、`list-ops` 以外のすべて)は、`--out`(出力ディレクトリ)、`--recursive`、`--dry-run`(アクションを列挙するだけで書き込まない)、`--overwrite`、`-j` / `--jobs`(並列ワーカー数。`0` ですべてのコアを使用)を共通で受け付けます。`collage` と `anaglyph` は `--out` で指定した 1 つのファイルに書き出します。`--version` は CLI のバージョンを表示します。
 
-[MCP サーバー](#mcp-サーバー)のすべてのツールはサブコマンドとしても使えます。そのうち 10 個は上記のサブコマンドです(`convert_format` は `convert`、`quality_metrics` は `stats`、`build_collage` は `collage` など)。残りの 46 個は MCP ツール自身のコードを実行します:
+[MCP サーバー](#mcp-サーバー)のすべてのツールはサブコマンドとしても使えます。そのうち 10 個は上記のサブコマンドです(`convert_format` は `convert`、`quality_metrics` は `stats`、`build_collage` は `collage` など)。残りの 48 個は MCP ツール自身のコードを実行します:
 
 | 種類 | サブコマンド |
 |---|---|
 | 編集: 各元画像の隣に `<stem>_<name>.png` を、または `--out` 内に `<stem>.png` を書き出す | `frame`、`crop`、`rotate`、`solarize`、`glow`、`velvia`、`emboss`、`film-negative`、`defringe`、`graduated-density`、`filmic-tonemap`、`tone-equalizer`、`detail-equalizer`、`colormap`、`false-color`、`split-toning`、`pixel-sort`、`polar`、`kaleidoscope`、`frosted-glass`、`local-contrast`、`posterize`、`gradient-map`、`film-grain`、`levels`、`auto-color-balance`、`channel-mixer`、`curve`、`lens-correction` |
 | その他の出力 | `ela`(Error Level Analysis マップを PNG で出力)、`video-frame`(動画の 1 フレーム、`--frame-index`)、`puppet-from-png`(`.puppet` rig、`--cell-size`) |
-| レポート: 画像ごとに 1 件の結果、`--json` で機械可読出力 | `metadata`、`xmp`、`gps`、`dominant-colors`、`sharpness`、`statistics`、`histogram`、`ocr`、`puppet-inspect` |
-| 1 回だけ実行して JSON を表示 | `list-images FOLDER`、`search FOLDER --query "..."`、`similar FOLDER`、`collection-stats FOLDER`、`reverse-geocode --latitude .. --longitude ..` |
+| レポート: 画像ごとに 1 件の結果、`--json` で機械可読出力 | `metadata`、`xmp`、`gps`、`dominant-colors`、`sharpness`、`statistics`、`histogram`、`ocr`、`puppet-inspect`、`puppet-validate` |
+| 1 回だけ実行して JSON を表示 | `list-images FOLDER`、`search FOLDER --query "..."`、`similar FOLDER`、`collection-stats FOLDER`、`reverse-geocode --latitude .. --longitude ..`、`puppet-schema --name ..` |
 
 MCP の各パラメーターは、同じ既定値と許容値を持つオプションになります。`zone_gains` は `--zone-gains` に、はい/いいえのパラメーターは `--grayscale` / `--no-grayscale` になり、色や行列の行は値を順に並べて指定します(`--red 1 0 0`)。`py -m Imervue.cli <subcommand> --help` で一覧を表示できます。
 
@@ -467,7 +467,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - `expressions/*.json` — パラメーターオーバーレイ
 - `physics.json` — Verlet 物理構成
 
-JSON ベースで、人間が diff 可能、プロプライエタリなバイナリは一切なし。
+JSON ベースで、人間が diff 可能、プロプライエタリなバイナリは一切なし。フォーマットはオープンで検証可能です: 保存したファイルは無圧縮の `mimetype` エントリ(`application/vnd.imervue.puppet+zip`)で始まり、すべての JSON ファイルは `$schema` で自身のスキーマを示します。4 つの JSON Schema は [`docs/schemas/`](../docs/schemas/) で公開しています。`py -m Imervue.cli puppet-validate character.puppet`(MCP `puppet_validate`)でファイルを検証し、`puppet-schema`(MCP `puppet_schema`)でスキーマを表示できます。[`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) は Python 標準ライブラリだけでファイルを読み込みます。仕様([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md))とスキーマは MIT ライセンスなので、どのプログラムでも `.puppet` ファイルを読み書きできます。
 
 ### レンダラ
 
@@ -852,7 +852,7 @@ python -m Imervue.mcp_server
 
 ### ツール
 
-主なツール(全 56 種 — 完全な一覧はドキュメントを参照)。すべてのツールは JSON
+主なツール(全 58 種 — 完全な一覧はドキュメントを参照)。すべてのツールは JSON
 の `outputSchema` と read-only / destructive の `annotations` を公開し、結果を
 `structuredContent` として返します。長時間実行されるツールは
 `notifications/progress` をストリーミングします。
@@ -886,6 +886,7 @@ python -m Imervue.mcp_server
 | `lens_correction_image` | 歪み(k1)、周辺光量、赤/青の色収差を補正 |
 | `reverse_geocode` / `extract_video_frame` | オフラインで GPS → 都市名、動画の 1 フレームを静止画にデコード |
 | `puppet_from_png` / `puppet_inspect` | PNG から `.puppet` rig を構築。`.puppet` を開いてインベントリを返す |
+| `puppet_validate` / `puppet_schema` | `.puppet` を v1 フォーマット(スキーマ、ローダー、rig チェック)に照らして検証。JSON Schema の 1 つを返す |
 
 ### プロンプト
 

@@ -5,10 +5,18 @@ and animate a 2D rigged character. The whole format is JSON + PNG so it
 diffs humanly through git, has no proprietary binary, and is fully
 documented here.
 
+The format is open: this specification, the JSON Schemas in
+[`docs/schemas/`](../../docs/schemas/) and the reference reader
+[`docs/examples/read_puppet.py`](../../docs/examples/read_puppet.py) are
+MIT-licensed like the rest of Imervue, and any program may read or write
+`.puppet` files. *Implementing the format* at the end lists what a reader
+and a writer must do.
+
 ## Zip layout
 
 ```
 my_character.puppet
+├── mimetype                 # recommended — first entry, uncompressed: the media type
 ├── puppet.json              # required — manifest, drawables, deformers, parameters
 ├── textures/
 │   ├── face.png             # referenced by drawables[].texture
@@ -27,12 +35,31 @@ names one of them; a drawable whose texture is missing is not drawn
 (**Tools > Validate** reports it). Loaders reject an archive whose
 entries add up to more than 2 GiB uncompressed.
 
+## Media type and identification
+
+The media type is `application/vnd.imervue.puppet+zip`. Writers put it,
+in ASCII with no newline, in an entry named `mimetype` that is the
+archive's **first** entry and is **stored uncompressed** — the way EPUB
+and OpenDocument files do — so the bytes `mimetype` followed by the media
+type appear at offset 30 of the file and a program can recognise a
+`.puppet` without unzipping it. Readers must not require the entry: files
+written before it existed have none. An archive whose `mimetype` holds a
+different type is not a `.puppet`.
+
+Every JSON file of the archive may carry a `"$schema"` key naming its
+JSON Schema (see *JSON Schemas*); Imervue writes it so that editors check
+the file as it is typed. Readers ignore it.
+
 ## Version policy
 
 `puppet.json["version"]` is an integer monotonically incremented when
 the schema gains a breaking change. v1 is frozen by this document.
 
-* Loaders **must** reject unknown future versions cleanly.
+* Loaders **must** reject unknown future versions cleanly, saying which
+  version the file uses. Imervue answers "this file uses .puppet format
+  vN, newer than the v1 this Imervue reads; update Imervue to open it".
+  A `version` that is not an integer (JSON `true` included) is rejected
+  as unsupported.
 * Future versions append fields; existing fields keep their meaning so
   v1 readers can be forward-compatible by ignoring unknown keys.
 * Writers always emit the highest version they understand.
@@ -59,6 +86,7 @@ the schema gains a breaking change. v1 is frozen by this document.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
+| `$schema` | string | no | URL of this file's JSON Schema; writers use the `puppet` URL of *JSON Schemas* |
 | `version` | int | yes | Schema version (must be `1` for this spec) |
 | `size` | `[w, h]` ints | yes | Canvas dimensions in pixels |
 | `drawables` | array | yes | Pieces of art (see *Drawable* below); may be empty |
@@ -414,6 +442,7 @@ highest `draw_order` wins.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
+| `$schema` | string | no | URL of the `motion` JSON Schema |
 | `version` | int | no | Writers emit `1`; the loader doesn't check it |
 | `duration` | float | yes | Total length in seconds |
 | `loop` | bool | no | Default `false`; whether playback wraps round at the end. Picking the motion sets the Motions dock's **Loop** box from it, and toggling the box changes it |
@@ -448,7 +477,9 @@ holds its last.
 ```
 
 `mode` is one of `additive` (the default), `multiply`, `overwrite`;
-each param needs `id` and `value`, and `params` defaults to empty.
+each param needs `id` and `value`, and `params` defaults to empty. The
+file may also carry `version` (writers emit `1`) and `$schema` (the
+`expression` schema's URL).
 Active expressions overlay the slider / motion values in the order they
 were switched on, each applied to the previous one's result.
 
@@ -487,6 +518,9 @@ ignored. Both `id` and `drawables` are required.
 }
 ```
 
+The file holds `rigs` (required), `version` (writers emit `1`) and
+`$schema` (the `physics` schema's URL); each rig:
+
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `id` | string | yes | Unique among rigs |
@@ -511,5 +545,62 @@ about 60 times a second while it is shown and the rig has chains.
 ## Reserved future-use keys
 
 Loaders ignore keys not in this spec but **writers must not emit
-unknown keys** for a v1 file. Any future field will arrive in v2 with a
-stated migration path.
+unknown keys** for a v1 file (`$schema` is part of the spec). Any future
+field will arrive in v2 with a stated migration path.
+
+## JSON Schemas
+
+Four JSON Schemas (draft 2020-12) describe the JSON files, generated from
+`Imervue/puppet/format_schema.py` into `docs/schemas/`:
+
+| File | Schema URL (`$id`) |
+|---|---|
+| `puppet.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/puppet.schema.json` |
+| `motions/<name>.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/motion.schema.json` |
+| `expressions/<name>.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/expression.schema.json` |
+| `physics.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/physics.schema.json` |
+
+They encode every *must* above that a schema can express: required keys,
+types, enums, ranges (`opacity` in `[0, 1]`, `size` at least 1, indices
+at least 0), `[x, y]` pairs and `[r, g, b]` triples, each deformer
+type's form keys, and no unknown keys. What a schema cannot express —
+triangle indices within the vertex count, `uvs` as long as `vertices`,
+bone-weight lists as long as `vertices`, listed motions / expressions /
+physics present in the archive — the loader checks.
+
+## Checking a file
+
+```
+py -m Imervue.cli puppet-validate character.puppet --json
+py -m Imervue.cli puppet-schema --name motion
+```
+
+`puppet-validate` (the MCP tool `puppet_validate`) runs the schemas over
+every JSON file of the archive, then the loader, then the rig checks of
+**Tools > Validate**, and reports `valid`, the file's `version`,
+`schema_errors`, `load_error` and the rig `issues`. A file is valid
+when nothing breaks the format and no rig check reports an error.
+`puppet-schema` (MCP `puppet_schema`) prints a schema.
+
+## Implementing the format
+
+A **reader** of v1:
+
+* opens the zip, and may check the `mimetype` entry when there is one;
+* reads `puppet.json` and refuses a `version` other than the integer `1`,
+  naming the version it found;
+* ignores keys it does not know and entries outside this layout;
+* treats a drawable whose texture is missing as not drawn, and a missing
+  listed motion / expression / physics file as an error.
+
+A **writer** of v1:
+
+* writes `mimetype` first and uncompressed, then `puppet.json`, the
+  textures and the files `puppet.json` names;
+* emits only keys of this specification and makes every JSON file pass
+  its schema;
+* keeps `indices`, `uvs` and `bone_weights` consistent with `vertices`.
+
+[`docs/examples/read_puppet.py`](../../docs/examples/read_puppet.py) is a
+reader in about 40 lines of the Python standard library: it returns the
+manifest, the textures' bytes and the motion, expression and physics JSON.

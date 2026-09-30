@@ -923,9 +923,26 @@ Ejemplo de ``puppet.json`` de nivel superior::
      "physics": "physics.json"
    }
 
-El esquema completo (drawables, deformers, parameters, motions, expressions, pose, physics)
+La especificación completa (drawables, deformers, parameters, motions, expressions, pose, physics)
 vive en ``Imervue/puppet/FORMAT.md`` en el repositorio. Sólo JSON + PNG — sin binario
 propietario, totalmente diffable a través de git.
+
+El formato es abierto y verificable por máquina:
+
+- Un ``.puppet`` guardado empieza con una entrada ``mimetype`` sin comprimir que contiene
+  ``application/vnd.imervue.puppet+zip``, de modo que un programa puede reconocerlo por sus
+  primeros bytes, y cada archivo JSON indica su JSON Schema en ``$schema``.
+- Cuatro JSON Schemas (draft 2020-12) — ``puppet``, ``motion``, ``expression`` y
+  ``physics`` — se publican en ``docs/schemas/``; los editores que siguen ``$schema``
+  comprueban un archivo mientras se escribe.
+- ``py -m Imervue.cli puppet-validate character.puppet`` (MCP ``puppet_validate``) comprueba
+  un archivo frente a los esquemas, las reglas del cargador y las comprobaciones del rig;
+  ``puppet-schema`` (MCP ``puppet_schema``) imprime un esquema.
+- ``docs/examples/read_puppet.py`` lee un ``.puppet`` sólo con la biblioteca estándar de
+  Python, como referencia para otros programas; la especificación y los esquemas tienen
+  licencia MIT, así que cualquier programa puede leer o escribir el formato.
+- Un archivo de una versión de formato más reciente se rechaza indicando la versión que usa,
+  de modo que un Imervue más antiguo pide actualizar en lugar de leerlo mal.
 
 Referencia de la barra de herramientas
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3327,7 +3344,7 @@ Cada subcomando decodifica como el visor: las salidas se enderezan según la ori
 
 Los subcomandos que reciben archivos o carpetas (todos salvo ``collage``, ``anaglyph`` y ``list-ops``) comparten ``--out`` (directorio de salida), ``--recursive``, ``--dry-run`` (listar acciones sin escribir nada), ``--overwrite`` y ``-j`` / ``--jobs`` (workers en paralelo; ``0`` usa todos los núcleos). ``collage`` y ``anaglyph`` escriben el único archivo que indica ``--out``. ``--version`` muestra la versión de la CLI.
 
-Cada herramienta del servidor MCP (véase `Servidor MCP`_) es también un subcomando. Diez de ellas son los subcomandos anteriores (``convert_format`` es ``convert``, ``quality_metrics`` es ``stats``, ``build_collage`` es ``collage``, etc.); las otras 46 ejecutan el código propio de la herramienta MCP:
+Cada herramienta del servidor MCP (véase `Servidor MCP`_) es también un subcomando. Diez de ellas son los subcomandos anteriores (``convert_format`` es ``convert``, ``quality_metrics`` es ``stats``, ``build_collage`` es ``collage``, etc.); las otras 48 ejecutan el código propio de la herramienta MCP:
 
 .. list-table::
    :header-rows: 1
@@ -3340,9 +3357,9 @@ Cada herramienta del servidor MCP (véase `Servidor MCP`_) es también un subcom
    * - Otras salidas
      - ``ela`` (mapa de Error Level Analysis como PNG), ``video-frame`` (un fotograma de un vídeo, ``--frame-index``), ``puppet-from-png`` (un rig ``.puppet``, ``--cell-size``)
    * - Informes: un resultado por imagen, ``--json`` para salida legible por máquina
-     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
    * - Se ejecutan una vez e imprimen JSON
-     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``, ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``, ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``, ``puppet-schema --name ..``
 
 Cada parámetro MCP se convierte en una opción con el mismo valor predeterminado y los mismos valores permitidos: ``zone_gains`` es ``--zone-gains``, un parámetro sí/no es ``--grayscale`` / ``--no-grayscale``, y un color o una fila de matriz recibe sus valores en orden (``--red 1 0 0``). ``py -m Imervue.cli <subcommand> --help`` los enumera::
 
@@ -3464,6 +3481,9 @@ Herramientas disponibles
      - Abre un archivo ``.puppet`` y devuelve un inventario estructurado: drawables,
        deformers, parameters, motions, expressions, hit areas, parts, mezclas de parámetros
        y rigs físicos.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - Comprueba un ``.puppet`` frente al formato v1 (JSON Schemas, reglas del cargador,
+       comprobaciones del rig); devuelve uno de sus cuatro JSON Schemas publicados.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - Media/mín/máx/desv/mediana por canal, métricas de calidad sin referencia
        (colorido, entropía, contraste, densidad de bordes, ruido) y el histograma de
@@ -3612,7 +3632,7 @@ se atienden de una en una; un lote (un array JSON) se rechaza con ``-32600``.
    * - ``ping``
      - Devuelve un resultado vacío.
    * - ``tools/list``
-     - Las 56 herramientas en una sola página, cada una con ``inputSchema``, ``outputSchema`` y
+     - Las 58 herramientas en una sola página, cada una con ``inputSchema``, ``outputSchema`` y
        ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
        ``openWorldHint``).
    * - ``tools/call``

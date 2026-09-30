@@ -922,9 +922,26 @@ Exemplo de ``puppet.json`` de nível superior::
      "physics": "physics.json"
    }
 
-O schema completo (drawables, deformadores, parâmetros, motions, expressões,
+A especificação completa (drawables, deformadores, parâmetros, motions, expressões,
 pose, física) está em ``Imervue/puppet/FORMAT.md`` no repositório. Somente JSON +
 PNG — sem binário proprietário, totalmente diff-vel via git.
+
+O formato é aberto e verificável por máquina:
+
+- Um ``.puppet`` salvo começa com uma entrada ``mimetype`` sem compressão contendo
+  ``application/vnd.imervue.puppet+zip``, para que um programa possa reconhecê-lo pelos
+  seus primeiros bytes, e todo arquivo JSON indica seu JSON Schema em ``$schema``.
+- Quatro JSON Schemas (draft 2020-12) — ``puppet``, ``motion``, ``expression``
+  e ``physics`` — estão publicados em ``docs/schemas/``; editores que seguem
+  ``$schema`` verificam o arquivo enquanto ele é digitado.
+- ``py -m Imervue.cli puppet-validate character.puppet`` (MCP
+  ``puppet_validate``) verifica um arquivo contra os schemas, as regras do carregador
+  e as verificações do rig; ``puppet-schema`` (MCP ``puppet_schema``) imprime um schema.
+- ``docs/examples/read_puppet.py`` lê um ``.puppet`` usando apenas a biblioteca padrão
+  do Python, como referência para outros programas; a especificação e os
+  schemas têm licença MIT, então qualquer programa pode ler ou gravar o formato.
+- Um arquivo de uma versão mais nova do formato é recusado informando a versão que usa, para que
+  um Imervue mais antigo peça para ser atualizado em vez de lê-lo incorretamente.
 
 Referência da Barra de Ferramentas
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3274,7 +3291,7 @@ Os subcomandos que recebem arquivos ou pastas (todos exceto ``collage``, ``anagl
 
 Toda ferramenta do servidor MCP (veja `Servidor MCP`_) também é um subcomando. Dez delas são os
 subcomandos acima (``convert_format`` é ``convert``, ``quality_metrics`` é ``stats``,
-``build_collage`` é ``collage`` e assim por diante); as outras 46 executam o próprio código da ferramenta MCP:
+``build_collage`` é ``collage`` e assim por diante); as outras 48 executam o próprio código da ferramenta MCP:
 
 .. list-table::
    :header-rows: 1
@@ -3288,10 +3305,11 @@ subcomandos acima (``convert_format`` é ``convert``, ``quality_metrics`` é ``s
      - ``ela`` (mapa de Error Level Analysis em PNG), ``video-frame`` (um quadro de um vídeo,
        ``--frame-index``), ``puppet-from-png`` (um rig ``.puppet``, ``--cell-size``)
    * - Relatórios: um resultado por imagem, ``--json`` para saída legível por máquina
-     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
    * - Executam uma vez e imprimem JSON
      - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``,
-       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``
+       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``,
+       ``puppet-schema --name ..``
 
 Cada parâmetro MCP vira uma opção com o mesmo valor padrão e os mesmos valores permitidos: ``zone_gains``
 vira ``--zone-gains``, um parâmetro sim/não vira ``--grayscale`` / ``--no-grayscale``, e uma cor ou uma
@@ -3415,6 +3433,9 @@ Ferramentas Disponíveis
      - Abre um arquivo ``.puppet`` e retorna um inventário estruturado:
        drawables, deformadores, parâmetros, motions, expressões, áreas
        de hit, partes, blends de parâmetro e rigs de física.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - Verifica um ``.puppet`` contra o formato v1 (JSON Schemas, regras do carregador,
+       verificações do rig); retorna um dos seus quatro JSON Schemas publicados.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - Média/mín/máx/desvio padrão/mediana por canal, métricas de
        qualidade sem referência (colorfulness, entropia, contraste,
@@ -3567,7 +3588,7 @@ vez; um lote (um array JSON) é recusado com ``-32600``.
    * - ``ping``
      - Retorna um resultado vazio.
    * - ``tools/list``
-     - Todas as 56 ferramentas em uma única página, cada uma com ``inputSchema``, ``outputSchema`` e
+     - Todas as 58 ferramentas em uma única página, cada uma com ``inputSchema``, ``outputSchema`` e
        ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``).
    * - ``tools/call``
      - Executa ``{"name", "arguments"}``. O resultado é um bloco de conteúdo ``text`` com o valor de

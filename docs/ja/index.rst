@@ -849,7 +849,23 @@ Puppet タブのツールバー → **Examples ▾** ドロップダウンから
      "physics": "physics.json"
    }
 
-完全なスキーマ（drawables、deformers、parameters、motions、expressions、pose、physics）はリポジトリの ``Imervue/puppet/FORMAT.md`` にあります。JSON + PNG のみ — プロプライエタリなバイナリはなく、git で差分を完全に追跡できます。
+完全な仕様（drawables、deformers、parameters、motions、expressions、pose、physics）はリポジトリの ``Imervue/puppet/FORMAT.md`` にあります。JSON + PNG のみ — プロプライエタリなバイナリはなく、git で差分を完全に追跡できます。
+
+フォーマットはオープンで、機械的に検証できます：
+
+- 保存された ``.puppet`` は ``application/vnd.imervue.puppet+zip`` を格納した無圧縮の ``mimetype``
+  エントリで始まるため、プログラムは先頭のバイトからそれと判別できます。
+  また、すべての JSON ファイルは ``$schema`` で自身の JSON Schema を示します。
+- 4 つの JSON Schema（draft 2020-12）— ``puppet``、``motion``、``expression``、``physics`` — を
+  ``docs/schemas/`` で公開しています。``$schema`` に従うエディターでは、入力中にファイルが検証されます。
+- ``py -m Imervue.cli puppet-validate character.puppet``\ （MCP ``puppet_validate``）は、スキーマ、
+  ローダーの規則、rig チェックに照らしてファイルを検証します。
+  ``puppet-schema``\ （MCP ``puppet_schema``）はスキーマを表示します。
+- ``docs/examples/read_puppet.py`` は Python 標準ライブラリだけで ``.puppet`` を読み込む、
+  他のプログラム向けのリファレンスです。
+  仕様とスキーマは MIT ライセンスなので、どのプログラムでもこのフォーマットを読み書きできます。
+- より新しいフォーマットバージョンのファイルは、使われているバージョンを示して読み込みを拒否します。
+  そのため古い Imervue は誤って読み込まず、更新を促します。
 
 ツールバーリファレンス
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -2803,7 +2819,7 @@ Web ギャラリー
 
 MCP サーバー(`MCP Server`_ を参照)のすべてのツールはサブコマンドとしても使えます。
 そのうち 10 個は上記のサブコマンドです(``convert_format`` は ``convert``、``quality_metrics`` は ``stats``、
-``build_collage`` は ``collage`` など)。残りの 46 個は MCP ツール自身のコードを実行します:
+``build_collage`` は ``collage`` など)。残りの 48 個は MCP ツール自身のコードを実行します:
 
 .. list-table::
    :header-rows: 1
@@ -2817,10 +2833,11 @@ MCP サーバー(`MCP Server`_ を参照)のすべてのツールはサブコマ
      - ``ela``\ (Error Level Analysis マップを PNG で出力)、``video-frame``\ (動画の 1 フレーム、
        ``--frame-index``)、``puppet-from-png``\ (``.puppet`` rig、``--cell-size``)
    * - レポート: 画像ごとに 1 件の結果、``--json`` で機械可読出力
-     - ``metadata``、``xmp``、``gps``、``dominant-colors``、``sharpness``、``statistics``、``histogram``、``ocr``、``puppet-inspect``
+     - ``metadata``、``xmp``、``gps``、``dominant-colors``、``sharpness``、``statistics``、``histogram``、``ocr``、``puppet-inspect``、``puppet-validate``
    * - 1 回だけ実行して JSON を表示
      - ``list-images FOLDER``、``search FOLDER --query "..."``、``similar FOLDER``、
-       ``collection-stats FOLDER``、``reverse-geocode --latitude .. --longitude ..``
+       ``collection-stats FOLDER``、``reverse-geocode --latitude .. --longitude ..``、
+       ``puppet-schema --name ..``
 
 MCP の各パラメーターは、同じ既定値と許容値を持つオプションになります。
 ``zone_gains`` は ``--zone-gains`` に、はい/いいえのパラメーターは ``--grayscale`` / ``--no-grayscale`` になり、
@@ -2939,6 +2956,9 @@ Cline、…）が GUI を起動せずにプロジェクトの純粋ロジック�
      - ``.puppet`` アーカイブを開き、構造化されたインベントリを返します:
        drawables、deformers、parameters、motions、expressions、hit areas、
        parts、parameter blends、physics rigs。
+   * - ``puppet_validate`` / ``puppet_schema``
+     - ``.puppet`` を v1 フォーマット（JSON Schema、ローダーの規則、rig チェック）に照らして検証します。
+       公開されている 4 つの JSON Schema のうち 1 つを返します。
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - チャンネルごとの平均/最小/最大/標準偏差/中央値、参照なしの品質メトリクス
        （colourfulness、entropy、contrast、edge density、noise）、および
@@ -3087,7 +3107,7 @@ UTF-8 で書き出します。クライアントがどのバージョンを求�
    * - ``ping``
      - 空の結果を返します。
    * - ``tools/list``
-     - 全 56 ツールを 1 ページで返します。各ツールには ``inputSchema``、``outputSchema``、
+     - 全 58 ツールを 1 ページで返します。各ツールには ``inputSchema``、``outputSchema``、
        ``annotations``\ （``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
        ``openWorldHint``）が付きます。
    * - ``tools/call``

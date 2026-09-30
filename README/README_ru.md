@@ -172,14 +172,14 @@ py -m Imervue.cli list-ops          # вывести все доступные �
 
 Подкоманды, принимающие файлы или папки (все, кроме `collage`, `anaglyph` и `list-ops`), используют общие флаги `--out` (каталог вывода), `--recursive`, `--dry-run` (только перечислить действия, ничего не писать), `--overwrite` и `-j` / `--jobs` (число параллельных обработчиков; `0` задействует все ядра). `collage` и `anaglyph` записывают один файл, указанный в `--out`. `--version` выводит версию CLI.
 
-Каждый инструмент [MCP-сервера](#mcp-сервер) тоже является подкомандой. Десять из них — это подкоманды выше (`convert_format` — это `convert`, `quality_metrics` — `stats`, `build_collage` — `collage` и так далее); остальные 46 выполняют собственный код инструмента MCP:
+Каждый инструмент [MCP-сервера](#mcp-сервер) тоже является подкомандой. Десять из них — это подкоманды выше (`convert_format` — это `convert`, `quality_metrics` — `stats`, `build_collage` — `collage` и так далее); остальные 48 выполняют собственный код инструмента MCP:
 
 | Вид | Подкоманды |
 |---|---|
 | Правки: записывают `<stem>_<name>.png` рядом с каждым исходником или `<stem>.png` в `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
 | Другие результаты | `ela` (карта Error Level Analysis в PNG), `video-frame` (один кадр видео, `--frame-index`), `puppet-from-png` (риг `.puppet`, `--cell-size`) |
-| Отчёты: один результат на изображение, `--json` для машиночитаемого вывода | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
-| Запускаются один раз и выводят JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+| Отчёты: один результат на изображение, `--json` для машиночитаемого вывода | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| Запускаются один раз и выводят JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
 
 Каждый параметр MCP становится флагом с тем же значением по умолчанию и теми же допустимыми значениями: `zone_gains` превращается в `--zone-gains`, параметр «да/нет» — в `--grayscale` / `--no-grayscale`, а цвет или строка матрицы принимает значения по порядку (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` выводит их список.
 
@@ -475,7 +475,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - `expressions/*.json` — оверлеи параметров
 - `physics.json` — конфигурация Verlet-физики
 
-На основе JSON, поддаётся человеческому diff, без проприетарного бинарного формата.
+На основе JSON, поддаётся человеческому diff, без проприетарного бинарного формата. Формат открыт и проверяем: сохранённый файл начинается с несжатой записи `mimetype` (`application/vnd.imervue.puppet+zip`), а каждый JSON-файл называет свою схему в `$schema`; четыре JSON Schema опубликованы в [`docs/schemas/`](../docs/schemas/); `py -m Imervue.cli puppet-validate character.puppet` (MCP `puppet_validate`) проверяет файл, а `puppet-schema` (MCP `puppet_schema`) выводит схему; [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) читает файл средствами одной лишь стандартной библиотеки Python. Спецификация ([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)) и схемы распространяются под лицензией MIT, поэтому любая программа может читать и записывать файлы `.puppet`.
 
 ### Рендерер
 
@@ -901,7 +901,7 @@ python -m Imervue.mcp_server
 
 ### Инструменты
 
-Избранные инструменты (всего 56 — полный список в документации). Каждый
+Избранные инструменты (всего 58 — полный список в документации). Каждый
 инструмент объявляет JSON `outputSchema` и аннотации `annotations`
 (только чтение / разрушающее действие), возвращает результат как
 `structuredContent`, а долго выполняющиеся инструменты транслируют
@@ -936,6 +936,7 @@ python -m Imervue.mcp_server
 | `lens_correction_image` | Коррекция дисторсии (k1), виньетирования и красно/синей хроматической аберрации |
 | `reverse_geocode` / `extract_video_frame` | Офлайн GPS → город, декодирование одного кадра видео в стоп-кадр |
 | `puppet_from_png` / `puppet_inspect` | Построение `.puppet` рига из PNG; открытие рига и возврат его инвентаря |
+| `puppet_validate` / `puppet_schema` | Проверка `.puppet` на соответствие формату v1 (схемы, загрузчик, проверки рига); возврат одной из его JSON Schema |
 
 ### Подсказки
 

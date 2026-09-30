@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-09 | 2026-10-01 | The .puppet format has published JSON Schemas, a media type, a validate command and a reference reader | #done #puppet #format #mcp #cli #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-08 | 2026-10-01 | Refactor: saving a .puppet to disk or to bytes writes its entries in one place | #refactor #puppet | [2026-10](2026-10.md) |
 | U-20261001-07 | 2026-10-01 | The desktop pet's OBS, Twitch, webhook and notification hooks are an example plugin on a new on_pet_created hook | #done #desktop-pet #plugins #Imervue_Plugins #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-06 | 2026-10-01 | A docs coverage test checks the guide and READMEs name every command, tool, hook and menu entry | #done #docs #i18n #test | [2026-10](2026-10.md) |
@@ -474,4 +475,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 8 |
+| [2026-10.md](2026-10.md) | 2026-10 | 9 |

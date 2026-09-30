@@ -174,14 +174,14 @@ Os subcomandos que recebem arquivos ou pastas (todos exceto `collage`, `anaglyph
 
 Toda ferramenta do [Servidor MCP](#servidor-mcp) também é um subcomando. Dez delas são os subcomandos acima
 (`convert_format` é `convert`, `quality_metrics` é `stats`, `build_collage` é `collage` e assim por diante);
-as outras 46 executam o próprio código da ferramenta MCP:
+as outras 48 executam o próprio código da ferramenta MCP:
 
 | Tipo | Subcomandos |
 |---|---|
 | Edições: gravam `<stem>_<name>.png` ao lado de cada origem, ou `<stem>.png` em `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
 | Outras saídas | `ela` (mapa de Error Level Analysis em PNG), `video-frame` (um quadro de um vídeo, `--frame-index`), `puppet-from-png` (um rig `.puppet`, `--cell-size`) |
-| Relatórios: um resultado por imagem, `--json` para saída legível por máquina | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect` |
-| Executam uma vez e imprimem JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..` |
+| Relatórios: um resultado por imagem, `--json` para saída legível por máquina | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| Executam uma vez e imprimem JSON | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
 
 Cada parâmetro MCP vira uma opção com o mesmo valor padrão e os mesmos valores permitidos: `zone_gains` vira
 `--zone-gains`, um parâmetro sim/não vira `--grayscale` / `--no-grayscale`, e uma cor ou uma linha de matriz
@@ -479,7 +479,7 @@ A aba **Puppet** é um sistema de animação 2D de marionetes com rigging feito 
 - `expressions/*.json` — sobreposições de parâmetros
 - `physics.json` — configuração de rig Verlet
 
-Baseado em JSON, diff-friendly por humanos, sem binário proprietário.
+Baseado em JSON, diff-friendly por humanos, sem binário proprietário. O formato é aberto e verificável: um arquivo salvo começa com uma entrada `mimetype` sem compressão (`application/vnd.imervue.puppet+zip`) e todo arquivo JSON indica seu schema em `$schema`; os quatro JSON Schemas estão publicados em [`docs/schemas/`](../docs/schemas/); `py -m Imervue.cli puppet-validate character.puppet` (MCP `puppet_validate`) verifica um arquivo e `puppet-schema` (MCP `puppet_schema`) imprime um schema; [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) lê um arquivo usando apenas a biblioteca padrão do Python. A especificação ([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)) e os schemas têm licença MIT, então qualquer programa pode ler ou gravar arquivos `.puppet`.
 
 ### Renderizador
 
@@ -883,7 +883,7 @@ python -m Imervue.mcp_server
 
 ### Ferramentas
 
-Ferramentas selecionadas (56 no total — lista completa na documentação). Toda
+Ferramentas selecionadas (58 no total — lista completa na documentação). Toda
 ferramenta anuncia um `outputSchema` JSON e `annotations` de somente-leitura /
 destrutivas, retorna seu resultado como `structuredContent` e ferramentas de
 longa duração transmitem `notifications/progress`.
@@ -917,6 +917,7 @@ longa duração transmitem `notifications/progress`.
 | `lens_correction_image` | Corrigir distorção (k1), vinheta e aberração cromática vermelha/azul |
 | `reverse_geocode` / `extract_video_frame` | GPS → cidade offline, decodificar um frame de vídeo em imagem estática |
 | `puppet_from_png` / `puppet_inspect` | Construir um rig `.puppet` a partir de um PNG; abrir um e retornar seu inventário |
+| `puppet_validate` / `puppet_schema` | Verificar um `.puppet` contra o formato v1 (schemas, carregador, verificações do rig); retornar um dos seus JSON Schemas |
 
 ### Prompts
 

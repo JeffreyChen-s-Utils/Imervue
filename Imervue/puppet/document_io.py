@@ -12,6 +12,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from Imervue.puppet.format_schema import MEDIA_TYPE, MIMETYPE_ENTRY, SCHEMA_URLS
 from Imervue.system.atomic_write import replace_atomically
 from Imervue.puppet.document import (
     BLEND_MODES,
@@ -105,7 +106,12 @@ def _write_puppet(doc: PuppetDocument, p: Path) -> None:
 
 
 def _write_entries(zf: zipfile.ZipFile, doc: PuppetDocument) -> None:
-    """Write every entry of *doc* into the open archive *zf*."""
+    """Write every entry of *doc* into the open archive *zf*.
+
+    The first entry is ``mimetype``, stored uncompressed, so a tool can tell a
+    ``.puppet`` from any other zip by its first bytes (as EPUB and ODF do).
+    """
+    zf.writestr(zipfile.ZipInfo(MIMETYPE_ENTRY), MEDIA_TYPE, compress_type=zipfile.ZIP_STORED)
     zf.writestr(_PUPPET_JSON, _puppet_json_bytes(doc))
     for tex_path, tex_bytes in doc.textures.items():
         zf.writestr(tex_path, tex_bytes)
@@ -160,10 +166,15 @@ def _load_from_zip(zf: zipfile.ZipFile) -> PuppetDocument:
 
 def _check_version(manifest: dict) -> None:
     version = manifest.get("version")
-    if version != SCHEMA_VERSION:
+    if version == SCHEMA_VERSION and not isinstance(version, bool):   # JSON true == 1 in Python
+        return
+    if isinstance(version, int) and not isinstance(version, bool) and version > SCHEMA_VERSION:
         raise PuppetFormatError(
-            f"unsupported puppet schema version {version!r}; expected {SCHEMA_VERSION}"
-        )
+            f"this file uses .puppet format v{version}, newer than the v{SCHEMA_VERSION} "
+            "this Imervue reads; update Imervue to open it")
+    raise PuppetFormatError(
+        f"unsupported puppet schema version {version!r}; expected {SCHEMA_VERSION}"
+    )
 
 
 def _parse_size(raw: Any) -> tuple[int, int]:
@@ -542,6 +553,7 @@ def _parse_physics_rig(raw: dict) -> PhysicsRig:
 
 def _puppet_json_bytes(doc: PuppetDocument) -> bytes:
     payload = {
+        "$schema": SCHEMA_URLS["puppet"],
         "version": SCHEMA_VERSION,
         "size": [int(doc.size[0]), int(doc.size[1])],
         "drawables": [_drawable_to_json(d) for d in doc.drawables],
@@ -738,6 +750,7 @@ def _parameter_blend_to_json(b: ParameterBlend) -> dict:
 
 def _motion_json_bytes(motion: Motion) -> bytes:
     payload = {
+        "$schema": SCHEMA_URLS["motion"],
         "version": SCHEMA_VERSION,
         "duration": motion.duration,
         "loop": motion.loop,
@@ -775,6 +788,7 @@ def _segment_to_json(s: MotionSegment) -> dict:
 
 def _expression_json_bytes(expr: Expression) -> bytes:
     payload = {
+        "$schema": SCHEMA_URLS["expression"],
         "version": SCHEMA_VERSION,
         "params": [
             {"id": p.id, "value": p.value, "mode": p.mode}
@@ -786,6 +800,7 @@ def _expression_json_bytes(expr: Expression) -> bytes:
 
 def _physics_json_bytes(rigs: list[PhysicsRig]) -> bytes:
     payload = {
+        "$schema": SCHEMA_URLS["physics"],
         "version": SCHEMA_VERSION,
         "rigs": [
             {

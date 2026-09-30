@@ -20,6 +20,8 @@ from Imervue.mcp_server.tools_read import (
     ocr_text,
     puppet_from_png,
     puppet_inspect,
+    puppet_schema,
+    puppet_validate,
     quality_metrics,
     read_histogram,
     read_image_metadata,
@@ -194,6 +196,40 @@ READ_TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["path"],
         },
         "handler": puppet_inspect,
+    },
+    {
+        "name": "puppet_validate",
+        "description": (
+            "Check a .puppet file against the v1 format: the JSON Schemas of its "
+            "puppet.json, motions, expressions and physics, the loader's structural "
+            "rules, then the rig consistency checks. valid is true when nothing breaks "
+            "the format and no check reports an error."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+        "handler": puppet_validate,
+    },
+    {
+        "name": "puppet_schema",
+        "description": (
+            "Return the published JSON Schema (draft 2020-12) of one .puppet file "
+            "kind: puppet (puppet.json), motion, expression or physics."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "enum": ["puppet", "motion", "expression", "physics"],
+                    "default": "puppet",
+                },
+            },
+            "required": [],
+        },
+        "handler": puppet_schema,
     },
     {
         "name": "reverse_geocode",
