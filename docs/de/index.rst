@@ -3234,7 +3234,11 @@ Export
    * - ``Contact Sheet PDF``
      - Ordnet Miniaturansichten der ausgewählten Bilder (oder des ganzen Ordners) in einem Raster
        aus Zeilen x Spalten auf A4-, A3-, Letter- oder Legal-Seiten an, mit Rändern, optionalem
-       Titel und optionalen Dateinamen-Beschriftungen.
+       Titel und optionalen Dateinamen-Beschriftungen. Das Feld **Layout** trägt ein Preset ein —
+       Default (4 × 5, 10 mm, mit Beschriftungen), Compact (6 × 8, 5 mm, ohne), Proof (5 × 6,
+       8 mm, mit Beschriftungen), Editorial (2 × 3, 18 mm, mit Beschriftungen) oder Index (8 × 10,
+       4 mm, ohne), jeweils Spalten × Zeilen — und wer einen dieser Werte von Hand ändert, stellt
+       es auf Custom.
    * - ``Web Gallery``
      - Exportiert die ausgewählten Bilder (oder den ganzen Ordner) als eigenständige HTML-Galerie
        mit Miniaturansichten und Lightbox; kann die Originale kopieren und Kommentarfelder für das

@@ -3094,7 +3094,9 @@ Export
    * - ``Contact Sheet PDF``
      - Lays out thumbnails of the selected images (or the whole folder) in a rows x columns grid on
        A4, A3, Letter or Legal pages, with margins, an optional title and optional filename
-       captions.
+       captions. The **Layout** box fills in a preset — Default (4 × 5, 10 mm, captions), Compact
+       (6 × 8, 5 mm, none), Proof (5 × 6, 8 mm, captions), Editorial (2 × 3, 18 mm, captions) or
+       Index (8 × 10, 4 mm, none), columns × rows — and editing any of those by hand makes it Custom.
    * - ``Web Gallery``
      - Exports the selected images (or the whole folder) as a self-contained HTML gallery with
        thumbnails and a lightbox; can copy the originals and add client-review comment boxes that

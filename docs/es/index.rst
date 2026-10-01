@@ -3184,7 +3184,11 @@ Exportar (Export)
    * - ``Contact Sheet PDF``
      - Dispone las miniaturas de las imágenes seleccionadas (o de toda la carpeta) en una
        cuadrícula de filas x columnas sobre páginas A4, A3, Letter o Legal, con márgenes, un título
-       opcional y leyendas opcionales con el nombre de archivo.
+       opcional y leyendas opcionales con el nombre de archivo. El cuadro **Diseño** aplica un
+       predefinido — Default (4 × 5, 10 mm, con leyendas), Compact (6 × 8, 5 mm, sin leyendas),
+       Proof (5 × 6, 8 mm, con leyendas), Editorial (2 × 3, 18 mm, con leyendas) o Index (8 × 10,
+       4 mm, sin leyendas), en columnas × filas — y editar a mano cualquiera de esos valores lo
+       deja en Custom.
    * - ``Web Gallery``
      - Exporta las imágenes seleccionadas (o toda la carpeta) como una galería HTML autocontenida
        con miniaturas y lightbox; puede copiar los originales y añadir cuadros de comentarios de

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-44 | 2026-10-01 | The contact sheet dialog offers named layout presets; contact_sheet_layouts is wired | #feature #export #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-43 | 2026-10-01 | Twitch triggers match whole messages, starts or regular expressions; command_parser is wired | #feature #desktop_pet #Imervue_Plugins #docs | [2026-10](2026-10.md) |
 | U-20261001-42 | 2026-10-01 | Desktop Pet refuses a hotkey another action uses and names shared ones; hotkey_conflicts is wired | #feature #desktop_pet #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-41 | 2026-10-01 | Puppet's Live menu turns a WAV into a lip-sync motion that plays the file; audio_lipsync is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
@@ -509,4 +510,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 43 |
+| [2026-10.md](2026-10.md) | 2026-10 | 44 |

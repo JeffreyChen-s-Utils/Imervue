@@ -3139,7 +3139,10 @@ Exportação (Export)
    * - ``Contact Sheet PDF``
      - Dispõe miniaturas das imagens selecionadas (ou da pasta inteira) em uma grade de linhas x colunas
        em páginas A4, A3, Letter ou Legal, com margens, um título opcional e legendas opcionais com o
-       nome do arquivo.
+       nome do arquivo. A caixa **Layout** preenche um preset — Default (4 × 5, 10 mm, com legendas),
+       Compact (6 × 8, 5 mm, sem legendas), Proof (5 × 6, 8 mm, com legendas), Editorial (2 × 3, 18 mm,
+       com legendas) ou Index (8 × 10, 4 mm, sem legendas), em colunas × linhas — e editar qualquer um
+       desses valores à mão muda a caixa para Custom.
    * - ``Web Gallery``
      - Exporta as imagens selecionadas (ou a pasta inteira) como uma galeria HTML autocontida com
        miniaturas e lightbox; pode copiar os originais e adicionar caixas de comentário de revisão do

@@ -3210,7 +3210,11 @@ Sous-menu Export
    * - ``Contact Sheet PDF``
      - Dispose les vignettes des images sélectionnées (ou de tout le dossier) dans une grille
        lignes x colonnes sur des pages A4, A3, Letter ou Legal, avec des marges, un titre
-       facultatif et des légendes de nom de fichier facultatives.
+       facultatif et des légendes de nom de fichier facultatives. Le champ **Layout** applique un
+       préréglage — Default (4 × 5, 10 mm, avec légendes), Compact (6 × 8, 5 mm, sans légendes),
+       Proof (5 × 6, 8 mm, avec légendes), Editorial (2 × 3, 18 mm, avec légendes) ou Index
+       (8 × 10, 4 mm, sans légendes), en colonnes × lignes — et modifier à la main l'une de ces
+       valeurs le fait passer en Custom.
    * - ``Web Gallery``
      - Exporte les images sélectionnées (ou tout le dossier) sous forme de galerie HTML autonome
        avec vignettes et lightbox ; peut copier les originaux et ajouter des zones de

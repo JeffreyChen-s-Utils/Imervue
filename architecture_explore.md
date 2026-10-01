@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `bf749f5` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `d3fb302` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 911 | 151,804 |
+| `tests/` | 911 | 151,862 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
-| `Imervue/gui/` | 169 | 33,728 |
+| `Imervue/gui/` | 169 | 33,780 |
 | `Imervue/puppet/` | 60 | 16,391 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,787 |
+| `Imervue/multi_language/` | 8 | 14,832 |
 | `Imervue/desktop_pet/` | 29 | 7,084 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,757** | **334,390** |
+| **總計** | **1,757** | **334,545** |
 
-其中 `Imervue/` 套件本身 766 檔 / 166,565 行。
+其中 `Imervue/` 套件本身 766 檔 / 166,662 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -303,7 +303,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `contact_sheet.py` | 189 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab）；格子影像經 `decode_image` |
-| `contact_sheet_layouts.py` | 55 | 具名版面預設（紙張 / 格線 / 邊界 / 說明文字） |
+| `contact_sheet_layouts.py` | 55 | 具名版面預設（格線 / 邊界 / 說明文字；Contact Sheet 對話框的 Layout 選單用它） |
 | `web_gallery.py` | 262 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依）；縮圖經 `decode_image`（轉正、sRGB、RAW 可讀） |
 | `slideshow_mp4.py` | 140 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
 | `slideshow_effects.py` | 101 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
@@ -538,7 +538,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-169 個檔、33,728 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+169 個檔、33,780 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -626,7 +626,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 批次 / 匯出 / 管理
 
 `batch_convert_dialog.py`(403) 批次格式轉換（經 `upright_image` 解碼、帶回全部 EXIF；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(430) 批次匯出（格式、品質、縮放、浮水印、metadata；有顯影後端時多一列「運算裝置」，預設選第一個後端，worker 在自己的執行緒開啟算繪器、結束時關閉，`result_ready` 一定從 `finally` 發出） · `export_dialog.py`(256) 單張匯出（預設檔名經 `free_names` 挑還沒被占用的；目標就是原圖本身時另外詢問，其他既有檔案經 `dialog_rows.may_replace`，預設不取代） · `export_source.py`(55) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（`image_loader.decode_image` 的別名入口；AI 放大與批次轉換共用） · `shown_qimage.py`(33) `shown_qimage(path, *, max_edge)`：檢視器解碼成 QImage，讀不到回傳空 QImage（比較、雙圖、多螢幕、資料夾縮圖取代 `QPixmap(path)`）、`open_export_source(path, renderer=None)`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再經 `develop_backends.render` 套 recipe，批次匯出可傳入 GPU 算繪器；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
-`optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(420) 多張圖做 GIF／MP4（預設輸出經 `free_names` 挑沒被占用的 `output.gif`；既有檔案經 `dialog_rows.may_replace` 詢問） · `contact_sheet_dialog.py`(187) ·
+`optimize_dialog.py`(111) 目標檔案大小 · `gif_video_dialog.py`(420) 多張圖做 GIF／MP4（預設輸出經 `free_names` 挑沒被占用的 `output.gif`；既有檔案經 `dialog_rows.may_replace` 詢問） · `contact_sheet_dialog.py`(239) Layout 預設選單（選了填入格線，手動改就回到 Custom） ·
 `web_gallery_dialog.py`(160) · `slideshow_mp4_dialog.py`(194) · `image_organizer_dialog.py`(533) ·
 `duplicate_detection_dialog.py`(542) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(744) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(309) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(124) · `culling_dialog.py`(247) 挑片 ·
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-911 個檔、151,804 行。`pyproject.toml` 定義三個互斥層級 marker：
+911 個檔、151,862 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1210,7 +1210,7 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 7 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+11. **有 6 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
     `paint/`、`puppet/`、`desktop_pet/` 已全部接上）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
