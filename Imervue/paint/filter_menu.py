@@ -472,15 +472,59 @@ def _warn(workspace: object, text: str) -> None:  # pragma: no cover - Qt UI
         toast.warning(text)
 
 
+def single_slider(spec: FilterSpec) -> ParamSpec | None:
+    """The filter's only parameter when it is a slider (live preview possible), else None."""
+    if len(spec.parameters) == 1 and spec.parameters[0].kind in ("int_slider", "float_slider"):
+        return spec.parameters[0]
+    return None
+
+
+def slider_steps(param: ParamSpec) -> int:
+    """Slider positions per unit of the parameter: 1 for whole numbers, ``1 / step`` otherwise."""
+    return 1 if param.kind == "int_slider" else max(1, int(round(1.0 / param.step)))
+
+
+def preview_params(param: ParamSpec, value: float) -> dict[str, Any]:
+    """The filter's parameter dict for the preview slider's *value*."""
+    return {param.name: int(round(value)) if param.kind == "int_slider" else float(value)}
+
+
+def _ask_params(  # pragma: no cover - Qt dialogs
+    workspace: PaintWorkspace, spec: FilterSpec, image,
+) -> dict | None:
+    """The parameters chosen for *spec* — live preview for one slider, the form otherwise."""
+    slider = single_slider(spec)
+    if slider is None:
+        dialog = FilterParametersDialog(spec, parent=workspace)
+        return dialog.values() if dialog.exec() == QDialog.DialogCode.Accepted else None
+    from Imervue.paint.filter_preview_dialog import FilterPreviewDialog, preview_crop
+    lang = language_wrapper.language_word_dict
+    steps = slider_steps(slider)
+    preview = FilterPreviewDialog(
+        preview_crop(image),
+        lambda crop, value: spec.apply_fn(crop, preview_params(slider, value)),
+        slider_min=int(round(slider.minimum * steps)),
+        slider_max=int(round(slider.maximum * steps)),
+        slider_default=int(round(float(slider.default) * steps)),
+        value_scale=1.0 / steps,
+        label_format="{:g}" if steps == 1 else "{:.2f}",
+        title_key=spec.label_key, title_fallback=spec.label_fallback,
+        value_label=lang.get(slider.label_key, slider.label_fallback),
+        parent=workspace,
+    )
+    if preview.exec() != QDialog.DialogCode.Accepted:
+        return None
+    return preview_params(slider, preview.slider_value())
+
+
 def _run_filter(workspace: PaintWorkspace, spec: FilterSpec) -> None:  # pragma: no cover - Qt UI
     document = workspace.canvas().document()
     layer = document.active_layer()
     if layer is None:
         return
-    dialog = FilterParametersDialog(spec, parent=workspace)
-    if dialog.exec() != QDialog.DialogCode.Accepted:
+    params = _ask_params(workspace, spec, layer.image)
+    if params is None:
         return
-    params = dialog.values()
     try:
         layer.image[...] = apply_filter_to_layer(
             spec, params, layer.image, document.selection(),

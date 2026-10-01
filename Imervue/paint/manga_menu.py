@@ -79,6 +79,10 @@ def populate_manga_menu(workspace: PaintWorkspace) -> None:
         lang.get("paint_manga_flash", "Action Flash"),
     )
     flash_action.triggered.connect(bridge.add_flash)
+    text_action = menu.addAction(
+        lang.get("paint_manga_text_along_selection", "Text Along Selection…"),
+    )
+    text_action.triggered.connect(bridge.add_text_along_selection)
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +137,21 @@ class _MangaMenuBridge:
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         commit_speedlines_layer(self._workspace, dialog.options())
+
+    def add_text_along_selection(self) -> None:  # pragma: no cover - Qt dialog
+        """Ask for the text and its style, then lay it along the selection's outline."""
+        from Imervue.paint.text_tool import TextToolDialog
+        ws = self._workspace
+        if ws.canvas().document().selection() is None:
+            toast = getattr(ws, "toast", None)
+            if toast is not None:
+                toast.warning(language_wrapper.language_word_dict.get(
+                    "paint_manga_text_needs_selection",
+                    "Select a shape first: the text follows its outline"))
+            return
+        dialog = TextToolDialog(ws.state().foreground or (0, 0, 0), parent=ws)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            commit_text_along_selection(ws, dialog.options())
 
     def stamp_page_numbers(self) -> None:
         """Drop a "Page N" layer on every page in the active project.
@@ -268,6 +287,34 @@ def commit_speedlines_layer(workspace: PaintWorkspace, options) -> bool:
     h, w = document.shape
     rendered = render_speedlines((h, w), options)
     layer = document.add_layer(name=f"Speedlines ({options.kind})")
+    np.copyto(layer.image, rendered)
+    document.invalidate_composite()
+    workspace.canvas().update()
+    return True
+
+
+def commit_text_along_selection(workspace: PaintWorkspace, options) -> bool:
+    """Lay ``options.text`` along the outline of the selection, on a new "Text" layer.
+
+    ``options`` is the Add Text dialog's :class:`TextRenderOptions`; its
+    font, size, colour, bold and italic apply, the vertical setting does
+    not (the outline decides the direction). False, with nothing added,
+    when there is no selection, no text, or nothing got drawn.
+    """
+    import numpy as np
+
+    from Imervue.paint.text_on_selection import render_text_along_selection
+    document = workspace.canvas().document()
+    selection = document.selection()
+    if document.shape is None or selection is None or not options.text.strip():
+        return False
+    rendered = render_text_along_selection(
+        selection, options.text, document.shape, family=options.family,
+        size=options.size, color=options.color, bold=options.bold, italic=options.italic,
+    )
+    if not rendered[..., 3].any():
+        return False
+    layer = document.add_layer(name="Text")
     np.copyto(layer.image, rendered)
     document.invalidate_composite()
     workspace.canvas().update()

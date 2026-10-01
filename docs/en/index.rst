@@ -775,12 +775,16 @@ Manga Menu
      - Radial / Parallel / Burst speedline generators
    * - Action Flash
      - Manga-style explosion / impact burst overlay
+   * - Text Along Selection…
+     - Lays text along the outline of the selection, on a new layer — text, font, size, colour, bold and italic come from the Add Text dialog
 
 Filters
 ^^^^^^^
 
-Each ``Filter`` entry opens a plain OK / Cancel parameter dialog (no live
-preview):
+The filters with a single slider — Posterize, Threshold, Convert to
+Halftone and Match Colour — preview live as you drag, on the middle 480 ×
+480 pixels of the layer at full size; OK applies the value to the whole
+layer. The others open a plain OK / Cancel parameter dialog:
 
 - **Levels** — black point / white point / gamma sliders
 - **Curves** — a preset (S-curve, Lift shadows, Compress highlights) with a Strength slider

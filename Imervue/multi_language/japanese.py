@@ -898,6 +898,8 @@ japanese_word_dict = {
     "paint_manga_speedlines_parallel": '流線',
     "paint_manga_speedlines_burst": '集中爆発',
     "paint_manga_flash": 'アクションフラッシュ',
+    "paint_manga_text_along_selection": "選択範囲に沿ったテキスト…",
+    "paint_manga_text_needs_selection": "先に形を選択してください。テキストはその輪郭に沿って配置されます",
     "paint_layer_gradient_map": 'グラデーションマップ追加',
     "paint_gradient_map_grayscale": 'グレースケール',
     "paint_gradient_map_sunset": '夕焼け',

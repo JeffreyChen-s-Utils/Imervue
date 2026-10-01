@@ -786,12 +786,17 @@ Menu Manga
      - Générateurs de lignes de vitesse Radiales / Parallèles / Explosion
    * - Action flash
      - Superposition de type explosion / impact dans le style manga
+   * - Texte le long de la sélection…
+     - Place du texte le long du contour de la sélection, sur un nouveau calque — le texte, la police, la taille, la couleur, le gras et l'italique proviennent de la boîte de dialogue **Ajouter du texte**
 
 Filtres
 ^^^^^^^
 
-Chaque entrée du menu ``Filtre`` ouvre une simple boîte de dialogue de paramètres OK / Annuler
-(sans aperçu en direct) :
+Les filtres à un seul curseur — Postérisation, Seuil, Convertir en demi-teintes et
+Correspondance de la couleur — affichent un aperçu en direct pendant que vous faites
+glisser, sur les 480 × 480 pixels centraux du calque en taille réelle ; OK applique la
+valeur à tout le calque. Les autres ouvrent une simple boîte de dialogue de paramètres
+OK / Annuler :
 
 - **Niveaux** — curseurs point noir / point blanc / gamma
 - **Courbes** — un préréglage (courbe en S, Déboucher les ombres, Compresser les hautes lumières) avec un curseur Intensité

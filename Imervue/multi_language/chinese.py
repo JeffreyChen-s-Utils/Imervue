@@ -885,6 +885,8 @@ chinese_word_dict = {
     "paint_manga_speedlines_parallel": '流线',
     "paint_manga_speedlines_burst": '集中爆发',
     "paint_manga_flash": '动作闪光',
+    "paint_manga_text_along_selection": "沿选区排文字…",
+    "paint_manga_text_needs_selection": "请先选择一个形状：文字会沿着它的轮廓排列",
     "paint_layer_gradient_map": '加入渐变映射',
     "paint_gradient_map_grayscale": '灰阶',
     "paint_gradient_map_sunset": '夕阳',

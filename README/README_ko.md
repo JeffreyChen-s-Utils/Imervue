@@ -426,11 +426,11 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### 애니메이션 및 만화
 
 - **애니메이션** — 프레임 타임라인 도크: **+ Frame** 버튼이 평면화된 그림을 스냅샷하고, 선택한 FPS로 재생하며, 어니언 스킨이 이전 프레임을 보여 줍니다. **Export…** 버튼은 프레임을 애니메이션 GIF, WebP(무손실) 또는 PNG로 저장하며, 각 프레임은 선택한 FPS의 한 틱 동안 표시됩니다
-- **만화 도구** — 패널 컷터 · 톤 레이어 · 페이지 번호 스탬프 · 스피드라인(방사 / 평행 / 버스트) · 액션 플래시 · 말풍선 도구
+- **만화 도구** — 패널 컷터 · 톤 레이어 · 페이지 번호 스탬프 · 스피드라인(방사 / 평행 / 버스트) · 액션 플래시 · 선택 영역을 따라 텍스트(입력한 텍스트를 선택 영역의 윤곽을 따라 새 레이어에 배치) · 말풍선 도구
 
 ### 필터 및 보기 보조
 
-- **필터** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (고른 참조 이미지의 색감) · Match Swatches (각 픽셀을 가장 가까운 Swatches 색으로) (각각 OK / Cancel 파라미터 다이얼로그를 열며, 라이브 미리보기는 없음)
+- **필터** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (고른 참조 이미지의 색감) · Match Swatches (각 픽셀을 가장 가까운 Swatches 색으로) (슬라이더가 하나뿐인 Posterize, Threshold, Halftone, Match Colour 는 드래그하는 동안 레이어를 원본 크기로 잘라 낸 부분에서 라이브 미리보기를 보여 주고, 나머지는 OK / Cancel 파라미터 다이얼로그를 엶)
 - **보기 보조** — 픽셀 격자 · 픽셀에 스냅 · 가장자리에 스냅 · 어니언 스킨 · 블리드 가이드 · 캔버스 회전 (`Ctrl+Shift+H`로 반시계 방향 회전)
 
 ### 도크 (14개, 3개 클러스터 탭형)

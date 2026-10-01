@@ -423,11 +423,11 @@ Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / S
 ### Animation et manga
 
 - **Animation** — dock de timeline d'images : **+ Frame** capture le dessin aplati, lecture à la cadence (FPS) choisie, la pelure d'oignon montre l'image précédente ; **Export…** enregistre les images en GIF animé, WebP (sans perte) ou PNG, chaque image durant un tick de la cadence choisie
-- **Outils manga** — Découpe de cases · Calques de tonalité · Tampon de numéros de page · Lignes de vitesse (Radial / Parallèle / Burst) · Action Flash · Outil bulle de dialogue
+- **Outils manga** — Découpe de cases · Calques de tonalité · Tampon de numéros de page · Lignes de vitesse (Radial / Parallèle / Burst) · Action Flash · Texte le long de la sélection (place le texte que vous saisissez le long du contour de la sélection, sur un nouveau calque) · Outil bulle de dialogue
 
 ### Filtres et aides à la vue
 
-- **Filtres** — Niveaux · Courbes · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (l'ambiance colorimétrique d'une image de référence que vous choisissez) · Match Swatches (chaque pixel dans sa couleur la plus proche du Nuancier) (chacun ouvre une boîte de dialogue de paramètres OK / Cancel, sans aperçu en direct)
+- **Filtres** — Niveaux · Courbes · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (l'ambiance colorimétrique d'une image de référence que vous choisissez) · Match Swatches (chaque pixel dans sa couleur la plus proche du Nuancier) (les filtres à un seul curseur — Posterize, Threshold, Halftone, Match Colour — affichent un aperçu en direct sur un extrait du calque en taille réelle pendant que vous faites glisser ; les autres ouvrent une boîte de dialogue de paramètres OK / Cancel)
 - **Aides à la vue** — Grille de pixels · Aligner sur le pixel · Aligner sur les bords · Pelure d'oignon · Guides de fond perdu · Rotation du canevas (`Ctrl+Shift+H` tourne dans le sens antihoraire)
 
 ### Docks (14, à onglets dans 3 groupes)

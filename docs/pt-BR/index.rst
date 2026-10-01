@@ -784,12 +784,17 @@ Menu Mangá
      - Geradores de linhas de velocidade Radial / Paralelas / Explosão
    * - Action Flash
      - Sobreposição estilo mangá de explosão / impacto
+   * - Texto ao Longo da Seleção…
+     - Dispõe o texto ao longo do contorno da seleção, em uma nova camada — texto, fonte, tamanho, cor, negrito e itálico vêm do diálogo Adicionar Texto
 
 Filtros
 ^^^^^^^
 
-Cada entrada de ``Filtro`` abre uma caixa de diálogo simples de parâmetros
-OK / Cancelar (sem pré-visualização ao vivo):
+Os filtros com um único slider — Posterizar, Limiar, Converter para Meio-Tom
+e Corresponder Cor — mostram uma pré-visualização ao vivo enquanto você
+arrasta, nos 480 × 480 pixels centrais da camada em tamanho real; OK aplica
+o valor à camada inteira. Os demais abrem uma caixa de diálogo simples de
+parâmetros OK / Cancelar:
 
 - **Níveis** — sliders de ponto preto / ponto branco / gama
 - **Curvas** — um preset (Curva em S, Levantar sombras, Comprimir realces) com um slider de Intensidade

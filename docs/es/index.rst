@@ -787,12 +787,16 @@ Menú Manga
      - Generadores de líneas cinéticas radiales / paralelas / explosivas
    * - Acción / impacto
      - Superposición de explosión / impacto estilo manga
+   * - Texto a lo largo de la selección…
+     - Coloca texto a lo largo del contorno de la selección, en una capa nueva — el texto, la fuente, el tamaño, el color, la negrita y la cursiva vienen del diálogo **Add Text**
 
 Filtros
 ^^^^^^^
 
-Cada entrada de ``Filter`` abre un diálogo de parámetros simple OK / Cancel (sin vista
-previa en vivo):
+Los filtros con un solo deslizador — Posterizar, Umbral, Convertir a semitonos e
+Igualar color — muestran una vista previa en vivo mientras arrastra, sobre los
+480 × 480 píxeles centrales de la capa a tamaño completo; OK aplica el valor a toda
+la capa. Los demás abren un diálogo de parámetros simple OK / Cancel:
 
 - **Niveles** — deslizadores de punto negro / punto blanco / gamma
 - **Curvas** — un preset (curva en S, levantar sombras, comprimir luces) con un deslizador de intensidad

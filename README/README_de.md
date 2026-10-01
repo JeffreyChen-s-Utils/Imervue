@@ -423,11 +423,11 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 ### Animation & Manga
 
 - **Animation** — Frame-Timeline-Dock: **+ Frame** nimmt einen Snapshot des auf eine Ebene reduzierten Bildes auf, Wiedergabe mit wählbarer FPS, Onion Skin zeigt den vorherigen Frame; **Export…** speichert die Frames als animiertes GIF, WebP (verlustfrei) oder PNG, wobei jeder Frame einen Takt der gewählten FPS dauert
-- **Manga-Tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech-Bubble-Tool
+- **Manga-Tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Text Along Selection (legt einen eingetippten Text entlang des Umrisses der Auswahl auf einen neuen Layer) · Speech-Bubble-Tool
 
 ### Filter & Ansichts-Hilfen
 
-- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (die Farbstimmung eines gewählten Referenzbilds) · Match Swatches (jedes Pixel in seiner nächstgelegenen Swatches-Farbe) (jeder öffnet einen Parameter-Dialog mit OK / Cancel, ohne Live-Vorschau)
+- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (die Farbstimmung eines gewählten Referenzbilds) · Match Swatches (jedes Pixel in seiner nächstgelegenen Swatches-Farbe) (die Filter mit nur einem Schieberegler — Posterize, Threshold, Halftone, Match Colour — zeigen beim Ziehen eine Live-Vorschau auf einem Ausschnitt des Layers in voller Größe; die übrigen öffnen einen Parameter-Dialog mit OK / Cancel)
 - **Ansichts-Hilfen** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` dreht CCW)
 
 ### Docks (14, getabbed in 3 Clustern)

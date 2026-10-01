@@ -778,12 +778,16 @@ Manga-Menü
      - Radiale / Parallele / Burst-Speedline-Generatoren
    * - Action Flash
      - Manga-Style-Explosion / Impact-Burst-Overlay
+   * - Text entlang der Auswahl…
+     - Legt Text entlang des Umrisses der Auswahl auf einen neuen Layer — Text, Schrift, Größe, Farbe, Fett und Kursiv kommen aus dem Dialog **Text hinzufügen**
 
 Filter
 ^^^^^^
 
-Jeder ``Filter``-Eintrag öffnet einen schlichten Parameter-Dialog mit OK / Abbrechen (ohne
-Live-Vorschau):
+Die Filter mit nur einem Schieberegler — Tontrennung, Schwellenwert, In Halbton
+konvertieren und Farbe angleichen — zeigen beim Ziehen eine Live-Vorschau auf den
+mittleren 480 × 480 Pixeln des Layers in voller Größe; OK wendet den Wert auf den
+ganzen Layer an. Die übrigen öffnen einen schlichten Parameter-Dialog mit OK / Abbrechen:
 
 - **Tonwerte** — Schieberegler für Schwarzpunkt / Weißpunkt / Gamma
 - **Kurven** — ein Preset (S-Kurve, Schatten anheben, Lichter komprimieren) mit einem Stärke-Schieberegler

@@ -896,6 +896,8 @@ korean_word_dict = {
     "paint_manga_speedlines_parallel": '속도선',
     "paint_manga_speedlines_burst": '집중 폭발',
     "paint_manga_flash": '액션 플래시',
+    "paint_manga_text_along_selection": "선택 영역을 따라 텍스트…",
+    "paint_manga_text_needs_selection": "먼저 모양을 선택하세요. 텍스트가 그 윤곽을 따라 놓입니다",
     "paint_layer_gradient_map": '그래디언트 맵 추가',
     "paint_gradient_map_grayscale": '회색조',
     "paint_gradient_map_sunset": '석양',

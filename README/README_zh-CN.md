@@ -422,11 +422,11 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### 动画与漫画
 
 - **动画** — 帧时间轴停靠：**+ Frame** 为拼合后的画面拍快照，按所选 FPS 播放，洋葱皮显示上一帧；**Export…** 将各帧保存为 GIF、WebP（无损）或 PNG 动画，每帧持续所选 FPS 的一个节拍
-- **漫画工具** — 分镜切割 · 网点层 · 盖页码 · 速度线（径向 / 平行 / 爆发）· 动作闪光 · 对话框工具
+- **漫画工具** — 分镜切割 · 网点层 · 盖页码 · 速度线（径向 / 平行 / 爆发）· 动作闪光 · 沿选区排文字（把你输入的文字沿选区轮廓排列，放在新图层上）· 对话框工具
 
 ### 滤镜与查看辅助
 
-- **滤镜** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour（你选取的参考图像的色彩氛围）· Match Swatches（每个像素换成色板中最接近的颜色）（每个都打开 OK / Cancel 参数对话框，无实时预览）
+- **滤镜** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour（你选取的参考图像的色彩氛围）· Match Swatches（每个像素换成色板中最接近的颜色）（只有一个滑块的滤镜 — Posterize、Threshold、Halftone、Match Colour — 拖动滑块时会在图层按原尺寸裁出的一块区域上实时预览；其他滤镜打开 OK / Cancel 参数对话框）
 - **查看辅助** — 像素格 · 对齐像素 · 对齐边缘 · 洋葱皮 · 出血指引 · 画布旋转（`Ctrl+Shift+H` CCW 旋转）
 
 ### 停靠（14 个，分 3 组以分页排列）

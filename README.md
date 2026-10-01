@@ -434,11 +434,11 @@ Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect**
 ### Animation & manga
 
 - **Animation** — frame timeline dock: **+ Frame** snapshots the flattened picture, playback at a chosen FPS, onion skin shows the previous frame; **Export…** saves the frames as an animated GIF, WebP (lossless) or PNG, each frame lasting one tick of the chosen FPS
-- **Manga tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech Bubble tool
+- **Manga tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Text Along Selection (lays text you type along the outline of the selection, on a new layer) · Speech Bubble tool
 
 ### Filters & view aids
 
-- **Filters** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (the colour mood of a reference image you pick) · Match Swatches (each pixel in its nearest Swatches colour) (each opens an OK / Cancel parameter dialog, no live preview)
+- **Filters** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (the colour mood of a reference image you pick) · Match Swatches (each pixel in its nearest Swatches colour) (the one-slider filters — Posterize, Threshold, Halftone, Match Colour — preview live on a full-size crop of the layer as you drag; the others open an OK / Cancel parameter dialog)
 - **View aids** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` rotates CCW)
 
 ### Docks (14, tabbed in 3 clusters)

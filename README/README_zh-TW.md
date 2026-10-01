@@ -425,11 +425,11 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### 動畫與漫畫
 
 - **動畫** — 影格時間軸面板：**+ Frame** 把拼合後的畫面存成快照、以選定的 FPS 播放、洋蔥皮顯示前一影格；**Export…** 把影格存成 GIF、WebP（無損）或 PNG 動畫，每個影格持續選定 FPS 的一個節拍
-- **漫畫工具** — 分鏡切割 · 網點層 · 蓋頁碼 · 速度線（放射 / 平行 / 爆發）· 動作閃光 · 對話框工具
+- **漫畫工具** — 分鏡切割 · 網點層 · 蓋頁碼 · 速度線（放射 / 平行 / 爆發）· 動作閃光 · 沿選區排文字（把你輸入的文字沿著選區外框排列，放在新圖層上）· 對話框工具
 
 ### 濾鏡與檢視輔助
 
-- **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour（你選取的參考圖片的色彩氛圍）· Match Swatches（每個像素換成色票中最接近的顏色）（每個都開啟 OK / Cancel 參數對話框，沒有即時預覽）
+- **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour（你選取的參考圖片的色彩氛圍）· Match Swatches（每個像素換成色票中最接近的顏色）（只有一個滑桿的濾鏡 — Posterize、Threshold、Halftone、Match Colour — 拖曳滑桿時會在圖層以原尺寸裁出的一塊區域上即時預覽；其他濾鏡開啟 OK / Cancel 參數對話框）
 - **檢視輔助** — 像素格 · 對齊像素 · 對齊邊緣 · 洋蔥皮 · 出血指引 · 畫布旋轉（`Ctrl+Shift+H` CCW 旋轉）
 
 ### 擺放欄（14 個，分 3 群組以分頁排列）

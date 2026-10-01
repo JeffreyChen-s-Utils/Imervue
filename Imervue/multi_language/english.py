@@ -911,6 +911,8 @@ english_word_dict = {
     "paint_manga_speedlines_parallel": 'Speedlines: Parallel',
     "paint_manga_speedlines_burst": 'Speedlines: Burst',
     "paint_manga_flash": 'Action Flash',
+    "paint_manga_text_along_selection": "Text Along Selection…",
+    "paint_manga_text_needs_selection": "Select a shape first: the text follows its outline",
     "paint_layer_gradient_map": 'Add Gradient Map',
     "paint_gradient_map_grayscale": 'Grayscale',
     "paint_gradient_map_sunset": 'Sunset',

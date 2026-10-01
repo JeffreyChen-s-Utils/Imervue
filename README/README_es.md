@@ -426,11 +426,11 @@ Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Res
 ### Animación y manga
 
 - **Animación** — dock de línea de tiempo de fotogramas: **+ Frame** captura la imagen aplanada, reproducción a los FPS elegidos, el papel cebolla muestra el fotograma anterior; **Export…** guarda los fotogramas como GIF animado, WebP (sin pérdida) o PNG, y cada fotograma dura un tick de los FPS elegidos
-- **Herramientas de manga** — Cortador de viñetas · Capas de trama · Estampar números de página · Líneas de velocidad (Radial / Paralela / Explosión) · Destello de acción · Herramienta de bocadillo
+- **Herramientas de manga** — Cortador de viñetas · Capas de trama · Estampar números de página · Líneas de velocidad (Radial / Paralela / Explosión) · Destello de acción · Texto a lo largo de la selección (coloca el texto que escribas a lo largo del contorno de la selección, en una capa nueva) · Herramienta de bocadillo
 
 ### Filtros y ayudas de vista
 
-- **Filtros** — Niveles · Curvas · Posterizar · Umbral · Auto Balance de Color · Grano de Película · Mediotonos · Igualar Color (el ambiente de color de una imagen de referencia que elijas) · Igualar Muestrario (cada píxel en su color más cercano del Muestrario) (cada uno abre un diálogo de parámetros OK / Cancel, sin vista previa en vivo)
+- **Filtros** — Niveles · Curvas · Posterizar · Umbral · Auto Balance de Color · Grano de Película · Mediotonos · Igualar Color (el ambiente de color de una imagen de referencia que elijas) · Igualar Muestrario (cada píxel en su color más cercano del Muestrario) (los filtros de un solo deslizador — Posterizar, Umbral, Mediotonos, Igualar Color — muestran una vista previa en vivo sobre un recorte a tamaño completo de la capa mientras arrastras; los demás abren un diálogo de parámetros OK / Cancel)
 - **Ayudas de vista** — Cuadrícula de píxeles · Ajustar a píxel · Ajustar a bordes · Papel cebolla · Guías de sangrado · Rotación de lienzo (`Ctrl+Shift+H` rota antihorario)
 
 ### Docks (14, en pestañas dentro de 3 grupos)

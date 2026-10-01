@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `fdaebd3` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `5d316c3` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 905 | 151,189 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,470 |
+| `tests/` | 907 | 151,322 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
 | `Imervue/gui/` | 169 | 33,728 |
 | `Imervue/puppet/` | 59 | 16,018 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,672 |
+| `Imervue/multi_language/` | 8 | 14,682 |
 | `Imervue/desktop_pet/` | 29 | 7,036 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,750** | **333,094** |
+| **總計** | **1,752** | **333,347** |
 
-其中 `Imervue/` 套件本身 765 檔 / 165,919 行。
+其中 `Imervue/` 套件本身 765 檔 / 166,039 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -670,7 +670,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-169 個檔、42,470 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+169 個檔、42,580 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -721,8 +721,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `bezier_path.py`(217) + `pen_commit.py`(130) 鋼筆工具 ·
 `vector_layer.py`(311) 非破壞性向量線條 · `binary_layer.py`(139) 1-bit 墨線圖層 ·
 `image_trace.py`(220) 遮罩 → 輪廓向量化 ·
-`text_render.py`(225) · `text_tool.py`(209) · `text_on_path.py`(173) ·
-`text_on_selection.py`(92)
+`text_render.py`(225) · `text_tool.py`(209) · `text_on_path.py`(173) 沿折線排字 ·
+`text_on_selection.py`(92) 沿選區輪廓排字（Manga > Text Along Selection…，新「Text」圖層）
 
 #### 顏色
 
@@ -734,7 +734,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 漫畫 / 網點
 
-`manga_menu.py`(578) · `manga_panels.py`(262) 分鏡版面 ·
+`manga_menu.py`(625) · `manga_panels.py`(262) 分鏡版面 ·
 `halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) 對話框氣泡 ·
 `comic_stamps.py`(266) + `stamp_dock.py`(88) · `flash_effect.py`(132) 爆炸效果 ·
 `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
@@ -778,7 +778,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |
 | `canvas_presets.py` | 184 + `new_canvas_dialog.py`(136) | File > New Canvas… 的尺寸預設（紙張／漫畫／螢幕 + 自訂，存在設定）與對話框（尺寸、白或透明背景）|
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(635)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(519)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(635)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(563)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(198) 單一滑桿濾鏡的即時預覽（圖層中央 480×480 原尺寸裁切） |
 
 #### `paint/docks/`（7 檔 · 1,940 行）
 
@@ -983,7 +983,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-905 個檔、151,189 行。`pyproject.toml` 定義三個互斥層級 marker：
+907 個檔、151,322 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1209,8 +1209,8 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 16 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    2 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+11. **有 14 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    5 個在 `puppet/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 

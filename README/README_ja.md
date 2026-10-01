@@ -423,11 +423,11 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### アニメーション & 漫画
 
 - **アニメーション** — フレームタイムラインドック: **+ Frame** で統合した絵をスナップショット、選んだ FPS で再生、オニオンスキンで前のフレームを表示。**Export…** でフレームをアニメーション GIF、WebP(可逆)、PNG として保存し、各フレームの長さは選んだ FPS の 1 コマ分
-- **漫画ツール** — コマ切り · トーンレイヤー · ノンブル印字 · スピード線(放射 / 平行 / バースト)· アクションフラッシュ · 吹き出しツール
+- **漫画ツール** — コマ切り · トーンレイヤー · ノンブル印字 · スピード線(放射 / 平行 / バースト)· アクションフラッシュ · 選択範囲に沿ったテキスト(入力したテキストを選択範囲の輪郭に沿って新しいレイヤーに配置) · 吹き出しツール
 
 ### フィルタ & 表示補助
 
-- **フィルタ** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour(選んだ参照画像の色の雰囲気) · Match Swatches(各ピクセルをスウォッチで最も近い色に)(それぞれ OK / Cancel のパラメータダイアログを開きます。ライブプレビューはありません)
+- **フィルタ** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour(選んだ参照画像の色の雰囲気) · Match Swatches(各ピクセルをスウォッチで最も近い色に)(スライダーが 1 本だけの Posterize、Threshold、Halftone、Match Colour は、ドラッグ中にレイヤーを原寸で切り出した部分でライブプレビューします。それ以外は OK / Cancel のパラメータダイアログを開きます)
 - **表示補助** — ピクセルグリッド · ピクセルスナップ · エッジスナップ · オニオンスキン · 裁ち落としガイド · キャンバス回転(`Ctrl+Shift+H` で反時計回り回転)
 
 ### ドック(14、3 クラスタにタブ配置)

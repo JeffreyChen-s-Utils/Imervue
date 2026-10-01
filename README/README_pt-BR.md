@@ -430,11 +430,11 @@ Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicio
 ### Animação e mangá
 
 - **Animação** — dock de timeline de frames: **+ Frame** faz um snapshot da imagem achatada, reprodução no FPS escolhido, o onion skin mostra o frame anterior; **Export…** salva os frames como GIF animado, WebP (sem perdas) ou PNG, cada frame durando um tique do FPS escolhido
-- **Ferramentas de mangá** — Panel Cutter · Camadas de retícula · Carimbar números de página · Speedlines (Radial / Paralelo / Burst) · Action Flash · ferramenta de Balão de Fala
+- **Ferramentas de mangá** — Panel Cutter · Camadas de retícula · Carimbar números de página · Speedlines (Radial / Paralelo / Burst) · Action Flash · Texto ao longo da seleção (dispõe o texto que você digita ao longo do contorno da seleção, em uma nova camada) · ferramenta de Balão de Fala
 
 ### Filtros e auxiliares de visualização
 
-- **Filtros** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (a atmosfera de cor de uma imagem de referência que você escolhe) · Match Swatches (cada pixel na cor mais próxima do dock Amostras) (cada um abre um diálogo de parâmetros OK / Cancel, sem preview ao vivo)
+- **Filtros** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (a atmosfera de cor de uma imagem de referência que você escolhe) · Match Swatches (cada pixel na cor mais próxima do dock Amostras) (os filtros de um único slider — Posterize, Threshold, Halftone, Match Colour — mostram um preview ao vivo num recorte em tamanho real da camada enquanto você arrasta; os demais abrem um diálogo de parâmetros OK / Cancel)
 - **Auxiliares de visualização** — Grade de Pixels · Snap to Pixel · Snap to Edges · Onion Skin · Guias de Sangria · Rotação de Canvas (`Ctrl+Shift+H` gira CCW)
 
 ### Docks (14, em abas dentro de 3 grupos)
