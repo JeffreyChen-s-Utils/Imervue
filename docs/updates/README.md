@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-27 | 2026-10-01 | Paint's Material dock lists the user's materials and captured tips; Save Selection as Material is wired | #done #bugfix #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-26 | 2026-10-01 | Paint's Animation dock exports GIF, WebP or PNG animations; animation_export is wired | #feature #paint #performance #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-25 | 2026-10-01 | Paint's Color dock gets the hue-ring colour wheel; color_wheel_widget is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-24 | 2026-10-01 | Paint's File menu saves and opens whole comic projects; paint_project_io is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
@@ -492,4 +493,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 26 |
+| [2026-10.md](2026-10.md) | 2026-10 | 27 |

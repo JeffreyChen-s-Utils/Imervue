@@ -686,6 +686,14 @@ Sumi-Kalligrafie ist es eingeschaltet); ein Pixel-Art-Brush behält seine quadra
 Spitze.
 ``Bearbeiten`` > ``Brush-Spitze erfassen…`` verwandelt eine Auswahl in eine eigene
 Brush-Spitze.
+Das **Materials-Dock** listet Ihre eigenen Materialien vor den eingebauten
+Rasterfolien und Texturen: Bilder im Ordner ``materials`` im Programmordner von
+Imervue (ein direkter Unterordner namens ``texture``, ``tone``, ``pattern``,
+``brush_tip`` oder ``pose`` ordnet sie dieser Kategorie zu) sowie die von Ihnen
+erfassten Brush-Spitzen. ``Bearbeiten`` > ``Auswahl als Material speichern…``
+speichert den ausgewählten Teil des sichtbaren Bildes dort unter einem Namen und
+einer Kategorie Ihrer Wahl (Pixel außerhalb der Auswahl werden transparent, und ein
+früheres Material gleichen Namens bleibt erhalten); es erscheint sofort im Dock.
 
 Layer
 ^^^^^

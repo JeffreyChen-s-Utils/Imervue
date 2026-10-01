@@ -688,6 +688,14 @@ la direction dans laquelle penche le stylet de tablette et la fait pivoter pour 
 carrée.
 Utilisez ``Édition`` > ``Capturer une pointe de pinceau…`` pour transformer une sélection en
 rectangle en pointe de pinceau personnalisée.
+Le **dock Matériaux** liste vos propres matériaux avant les trames et textures
+intégrées : les images du dossier ``materials`` situé dans le dossier du programme
+d'Imervue (un dossier de premier niveau nommé ``texture``, ``tone``, ``pattern``,
+``brush_tip`` ou ``pose`` les range dans cette catégorie) et les pointes de pinceau que
+vous avez capturées. ``Édition`` > ``Enregistrer la sélection comme matériau…`` y
+enregistre la partie sélectionnée de l'image visible sous le nom et dans la catégorie de
+votre choix (les pixels hors de la sélection deviennent transparents, et un matériau
+antérieur du même nom est conservé) ; le nouveau matériau apparaît aussitôt dans le dock.
 
 Calques
 ^^^^^^^

@@ -683,6 +683,14 @@ saturation and brightness, and **Follow pen tilt** narrows the tip across the
 direction a tablet pen leans and turns it to follow (the Sumi calligraphy
 preset has it on); a pixel-art brush keeps its square tip. Use ``Edit`` >
 ``Capture Brush Tip…`` to turn a marquee selection into a custom brush tip.
+The **Materials dock** lists your own materials ahead of the built-in tones
+and textures: images in the ``materials`` folder of Imervue's program folder
+(a first-level folder named ``texture``, ``tone``, ``pattern``, ``brush_tip``
+or ``pose`` files them under that category) and the brush tips you captured.
+``Edit`` > ``Save Selection as Material…`` saves the selected part of the
+visible picture there under a name and category you pick (pixels outside the
+selection become transparent, and an earlier material of the same name is
+kept); it appears in the dock at once.
 
 Layers
 ^^^^^^

@@ -690,7 +690,15 @@ direção em que a caneta da mesa digitalizadora se inclina e a gira para
 acompanhar essa inclinação (o preset caligrafia Sumi vem com essa opção
 ativada); um pincel de pixel art mantém sua ponta quadrada. Use ``Editar`` >
 ``Capturar Ponta de Pincel…`` para transformar uma seleção em uma ponta de
-pincel personalizada.
+pincel personalizada. O **dock Materiais** lista seus próprios materiais antes
+das retículas e texturas embutidas: imagens na pasta ``materials`` da pasta do
+programa do Imervue (uma pasta de primeiro nível chamada ``texture``, ``tone``,
+``pattern``, ``brush_tip`` ou ``pose`` as classifica nessa categoria) e as
+pontas de pincel que você capturou. ``Editar`` >
+``Salvar Seleção como Material…`` salva ali a parte selecionada da imagem
+visível com o nome e a categoria que você escolher (os pixels fora da seleção
+ficam transparentes, e um material anterior com o mesmo nome é mantido); ele
+aparece no dock na hora.
 
 Camadas
 ^^^^^^^

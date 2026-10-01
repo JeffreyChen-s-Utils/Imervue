@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `b43a37c` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `3156603` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 897 | 150,121 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 167 | 41,384 |
+| `tests/` | 898 | 150,262 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 167 | 41,485 |
 | `Imervue/gui/` | 169 | 33,728 |
 | `Imervue/puppet/` | 59 | 16,018 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,422 |
+| `Imervue/multi_language/` | 8 | 14,437 |
 | `Imervue/desktop_pet/` | 29 | 7,036 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,740** | **330,690** |
+| **總計** | **1,741** | **330,947** |
 
-其中 `Imervue/` 套件本身 763 檔 / 164,583 行。
+其中 `Imervue/` 套件本身 763 檔 / 164,699 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -670,7 +670,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-167 個檔、41,384 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+167 個檔、41,485 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -748,8 +748,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 素材 / 參考 / 姿勢
 
-`material_library.py`(301) · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(121) ·
-`save_region_as_material.py`(107) · `reference_dock.py`(258) Paint 參考圖 dock（經 `decode_image_file` 以檢視器的樣子顯示：轉正、sRGB、RAW 顯像） ·
+`material_library.py`(330) 素材索引；`material_dock_index` = 使用者的 `<app_dir>/materials/` 與擷取的筆刷形狀 + 內建程序化素材 · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(121) ·
+`save_region_as_material.py`(113) Edit > Save Selection as Material…（不覆寫同名素材） · `reference_dock.py`(258) Paint 參考圖 dock（經 `decode_image_file` 以檢視器的樣子顯示：轉正、sRGB、RAW 顯像） ·
 `pose_skeleton.py`(210) + `pose_dock.py`(185) + `pose_drop.py`(128) 2D 火柴人姿勢參考
 
 #### 輔助線 / 檢視
@@ -778,7 +778,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(624)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(624)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,921 行）
 
@@ -983,7 +983,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-897 個檔、150,121 行。`pyproject.toml` 定義三個互斥層級 marker：
+898 個檔、150,262 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1209,8 +1209,8 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 25 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    11 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+11. **有 24 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    10 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 

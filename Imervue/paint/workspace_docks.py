@@ -94,11 +94,9 @@ class DockBuilder:
     def _create_library_docks(self) -> None:
         ws = self._ws
         from Imervue.paint.dock_panels import MaterialDock
-        from Imervue.paint.material_library import default_material_index
+        from Imervue.paint.material_library import material_dock_index
         from Imervue.paint.swatch_panel import SwatchPanel
-        ws._material_dock = MaterialDock(
-            index=default_material_index(), parent=ws,
-        )
+        ws._material_dock = MaterialDock(index=material_dock_index(), parent=ws)
         ws._material_dock.material_chosen.connect(ws._on_material_chosen)
         ws._swatch_dock = SwatchPanel(ws._state, ws)
         ws._swatch_dock.color_chosen.connect(

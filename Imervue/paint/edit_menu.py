@@ -72,6 +72,10 @@ def populate_edit_menu(workspace: PaintWorkspace) -> None:
         lang.get("paint_edit_capture_brush_tip", "Capture Brush Tip…"),
     )
     capture_action.triggered.connect(bridge.capture_brush_tip)
+    material_action = menu.addAction(
+        lang.get("paint_edit_save_material", "Save Selection as Material…"),
+    )
+    material_action.triggered.connect(bridge.save_selection_as_material)
 
 
 # ---------------------------------------------------------------------------
@@ -128,6 +132,30 @@ class _EditMenuBridge:
         if not ok:
             return
         commit_capture_brush_tip(self._workspace, str(name))
+
+    def save_selection_as_material(self) -> None:  # pragma: no cover - Qt UI
+        from PySide6.QtWidgets import QInputDialog
+
+        from Imervue.paint.material_library import DEFAULT_CATEGORY, MATERIAL_CATEGORIES
+        if self._workspace.canvas().document().selection() is None:
+            return
+        lang = language_wrapper.language_word_dict
+        title = lang.get("paint_edit_save_material", "Save Selection as Material…")
+        name, ok = QInputDialog.getText(
+            self._workspace, title, lang.get("paint_edit_save_material_name", "Material name"),
+            text="my_material",
+        )
+        if not ok:
+            return
+        labels = [lang.get(f"paint_material_cat_{c}", c.replace("_", " ").title())
+                  for c in MATERIAL_CATEGORIES]
+        label, ok = QInputDialog.getItem(
+            self._workspace, title, lang.get("paint_edit_save_material_category", "Category"),
+            labels, MATERIAL_CATEGORIES.index(DEFAULT_CATEGORY), False,
+        )
+        if ok:
+            commit_save_material(self._workspace, str(name),
+                                 MATERIAL_CATEGORIES[labels.index(label)])
 
 
 # ---------------------------------------------------------------------------
@@ -217,15 +245,55 @@ def commit_capture_brush_tip(
         path = save_brush_tip(tip, name, target_dir=target_dir)
     except (OSError, ValueError):
         return None
-    # Surface the new tip in the material panel — append to the
-    # live index so the user can click it without reloading.
-    if hasattr(workspace, "_material_dock"):
-        index = workspace._material_dock.index()  # noqa: SLF001
-        index.entries.append(MaterialEntry(
-            name=path.stem, path=path, category="brush_tip", tags=("user",),
-        ))
-        workspace._material_dock._refresh_grid()  # noqa: SLF001
+    _show_in_material_dock(workspace, MaterialEntry(
+        name=path.stem, path=path, category="brush_tip", tags=("user",),
+    ))
     return str(path)
+
+
+def commit_save_material(
+    workspace, name: str, category: str, *, library_root=None,
+) -> str | None:
+    """Save the selected part of the visible picture into the material library.
+
+    Pixels inside the selection's bounding box but outside the selection
+    become transparent. The tile lands in ``<library_root>/<category>/``
+    (default :func:`~Imervue.paint.material_library.user_materials_dir`),
+    which the Material dock reads at start-up, and shows in the dock at
+    once. Returns the saved path, or ``None`` when there is no selection or
+    the save fails.
+    """
+    from Imervue.paint.material_library import user_materials_dir
+    from Imervue.paint.save_region_as_material import (
+        save_region_as_material,
+        selection_bounds,
+    )
+    document = workspace.canvas().document()
+    selection = document.selection()
+    rect = selection_bounds(selection)
+    picture = document.composite()
+    if rect is None or picture is None:
+        return None
+    picture = picture.copy()
+    picture[~selection, 3] = 0
+    try:
+        entry = save_region_as_material(
+            picture, rect, library_root=library_root or user_materials_dir(),
+            name=name, category=category,
+        )
+    except (OSError, ValueError):
+        return None
+    _show_in_material_dock(workspace, entry)
+    return str(entry.path)
+
+
+def _show_in_material_dock(workspace, entry) -> None:
+    """Append *entry* to the live Material dock, so it is usable without a restart."""
+    dock = getattr(workspace, "_material_dock", None)
+    if dock is None:
+        return
+    dock.index().entries.append(entry)
+    dock._refresh_grid()  # noqa: SLF001
 
 
 def commit_stroke_selection(workspace, params: dict) -> bool:

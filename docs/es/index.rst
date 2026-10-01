@@ -694,6 +694,14 @@ Caligrafía sumi lo tiene activado); un pincel de pixel art conserva su punta cu
 Use ``Edit`` >
 ``Capture Brush Tip…`` para convertir una selección de marquesina en una punta de pincel
 personalizada.
+El **dock Materials** muestra sus propios materiales antes de las tramas y texturas
+integradas: las imágenes de la carpeta ``materials`` dentro de la carpeta del programa
+de Imervue (una carpeta de primer nivel llamada ``texture``, ``tone``, ``pattern``,
+``brush_tip`` o ``pose`` las clasifica en esa categoría) y las puntas de pincel que haya
+capturado. ``Edit`` > ``Save Selection as Material…`` guarda allí la parte seleccionada
+de la imagen visible con el nombre y la categoría que elija (los píxeles fuera de la
+selección se vuelven transparentes, y un material anterior con el mismo nombre se
+conserva); el nuevo material aparece en el dock de inmediato.
 
 Capas
 ^^^^^

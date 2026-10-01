@@ -36,6 +36,7 @@ from pathlib import Path
 import numpy as np
 
 from Imervue.image.formats import JPEG_EXTENSIONS
+from Imervue.system.app_paths import app_dir
 from Imervue.system.atomic_write import write_text_atomically
 
 MATERIAL_CATEGORIES = (
@@ -49,6 +50,9 @@ DEFAULT_CATEGORY = "texture"
 
 _SUPPORTED_EXTENSIONS = frozenset({".png", ".bmp", ".tif", ".tiff"}) | JPEG_EXTENSIONS
 _INDEX_FILENAME = "index.json"
+#: ``<app_dir>/materials/``: the user's own library; a first-level folder named
+#: after a category (``tone/``, ``pattern/`` ...) files its images under it.
+USER_MATERIALS_DIR_NAME = "materials"
 
 
 @dataclass(frozen=True)
@@ -299,3 +303,28 @@ def default_material_index() -> MaterialIndex:
         for name, category, tags, provider in DEFAULT_PROCEDURAL_CATALOG
     ]
     return MaterialIndex(entries=entries)
+
+
+def user_materials_dir() -> Path:
+    """``<app_dir>/materials/``, the user's material library (not created here)."""
+    return app_dir() / USER_MATERIALS_DIR_NAME
+
+
+def user_material_index() -> MaterialIndex:
+    """The user's own materials: the library folder plus the captured brush tips.
+
+    Read from disk on every call, so the Material dock shows what earlier
+    sessions saved. Folders that do not exist yet give no entries; nothing is
+    created.
+    """
+    from Imervue.paint.brush_tip_capture import USER_BRUSH_TIP_DIR_NAME
+    return MaterialIndex.merged([
+        MaterialIndex.from_directory(user_materials_dir()),
+        MaterialIndex.from_directory(app_dir() / USER_BRUSH_TIP_DIR_NAME,
+                                     default_category="brush_tip"),
+    ])
+
+
+def material_dock_index() -> MaterialIndex:
+    """What the Material dock lists: the user's materials first, then the built-in ones."""
+    return MaterialIndex.merged([user_material_index(), default_material_index()])
