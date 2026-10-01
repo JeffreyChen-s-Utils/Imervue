@@ -1,3 +1,10 @@
+"""The active UI language: the built-in dictionaries plus what plugins register or merge.
+
+Plugin strings are checked with :mod:`Imervue.multi_language.translation_validation`
+on the way in: the problems are logged, and a string that is empty or whose
+``{placeholders}`` differ from English is dropped, so the built-in fallback
+shows instead of a blank or a ``.format()`` that raises ``KeyError``.
+"""
 from __future__ import annotations
 
 import logging
@@ -7,6 +14,12 @@ from Imervue.multi_language.english import english_word_dict
 from Imervue.multi_language.japanese import japanese_word_dict
 from Imervue.multi_language.korean import korean_word_dict
 from Imervue.multi_language.traditional_chinese import traditional_chinese_word_dict
+from Imervue.multi_language.translation_validation import (
+    compare_keys,
+    extract_placeholders,
+    validate_merge_payload,
+    validate_translation,
+)
 
 logger = logging.getLogger("Imervue.language")
 
@@ -18,6 +31,31 @@ BUILTIN_LANGUAGES: list[str] = [
     "Korean",
     "Japanese",
 ]
+
+
+def usable_strings(reference: dict, strings: dict) -> dict:
+    """*strings* without empty values and without those whose placeholders differ from *reference*.
+
+    A key *reference* doesn't have is kept as long as it isn't empty.
+    """
+    return {
+        key: value for key, value in strings.items()
+        if isinstance(value, str) and value.strip()
+        and (key not in reference
+             or extract_placeholders(value) == extract_placeholders(reference[key]))
+    }
+
+
+def _checked_language(code: str, word_dict: dict) -> dict:
+    """Log what is wrong with a plugin language and return its usable strings."""
+    problems = validate_translation(english_word_dict, word_dict, require_all_keys=False)
+    if problems:
+        logger.warning("Plugin language %r: %s", code, "; ".join(problems))
+    missing, _extra = compare_keys(english_word_dict, word_dict)
+    if missing:
+        logger.info("Plugin language %r lacks %d key(s); those show the built-in text",
+                    code, len(missing))
+    return usable_strings(english_word_dict, word_dict)
 
 
 class LanguageWrapper:
@@ -58,6 +96,7 @@ class LanguageWrapper:
             )
             return
 
+        word_dict = _checked_language(language_code, word_dict)
         registered = self.choose_language_dict.get(language_code)
         if registered is None:
             self.choose_language_dict[language_code] = dict(word_dict)
@@ -78,13 +117,22 @@ class LanguageWrapper:
         Args:
             translations: {language_code: {key: translated_string}}.
                           Language codes not in choose_language_dict are skipped.
+
+        The payload is checked first (problems are logged); an empty string,
+        or one whose placeholders differ from the payload's English string
+        for that key (else the built-in English one), is not merged.
         """
+        problems = validate_merge_payload(translations,
+                                          known_languages=set(self.choose_language_dict))
+        if problems:
+            logger.warning("Plugin translations: %s", "; ".join(problems))
+        reference = {**english_word_dict, **translations.get("English", {})}
         for lang_code, extra_dict in translations.items():
             target = self.choose_language_dict.get(lang_code)
             if target is None:
                 logger.debug(f"merge_translations: skipping unknown language '{lang_code}'")
                 continue
-            for key, value in extra_dict.items():
+            for key, value in usable_strings(reference, extra_dict).items():
                 if key not in target:
                     target[key] = value
 

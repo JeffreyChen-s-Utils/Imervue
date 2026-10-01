@@ -1886,14 +1886,17 @@ Imervue 停止运行。含示例的完整指南见
        内置语言时，启动阶段在建立主窗口之前也会调用。启动时这一轮会导入每个插件，但除此之外不执行
        任何东西
      - 无参数。在这里调用 ``language_wrapper.register_language(language_code, display_name,
-       word_dict)``；内置语言代码会被拒绝。返回值被忽略；异常会记录到日志，插件仍会加载
+       word_dict)``；内置语言代码会被拒绝。为空或 ``{placeholders}`` 与英文不同的字符串会被丢弃，
+       并记录到日志（改为显示内置文本），缺少的键也会记录到日志。返回值被忽略；异常会记录到日志，
+       插件仍会加载
    * - ``on_plugin_loaded()``
      - 实例创建后立即调用：建立主窗口时，以及 ``Plugins`` > ``Reload Plugins`` 之后再次调用
      - 无参数；返回值被忽略
    * - ``get_translations()``
      - 紧接在 ``on_plugin_loaded()`` 之后，每次加载调用一次
      - 返回 ``{language_code: {key: text}}``\ （默认 ``{}``）。这些字符串会合并进语言表；已存在的键
-       永远不会被覆盖，未知的语言代码会被跳过
+       永远不会被覆盖，未知的语言代码会被跳过。为空的字符串，或 ``{placeholders}`` 与返回数据中该键的英文字符串不同的字符串，
+       会被丢弃；这些问题会记录到日志
    * - ``on_build_main_tabs(tabs)``
      - 建立主窗口时调用一次，在五个内置标签之后、``on_build_menu_bar`` 之前；``Reload Plugins``
        不会再次调用它

@@ -2251,8 +2251,10 @@ la línea de estado; el cargador de plugins lo omite sin importarlo y deja el mo
        guardado no es uno integrado; esa pasada de arranque importa todos los plugins y no ejecuta
        nada más
      - Sin argumentos. Llame aquí a ``language_wrapper.register_language(language_code,
-       display_name, word_dict)``; un código de idioma integrado se rechaza. El valor de retorno se
-       ignora; una excepción se registra y el plugin se carga igualmente
+       display_name, word_dict)``; un código de idioma integrado se rechaza. Una cadena vacía o
+       cuyos ``{placeholders}`` difieran de los del inglés se descarta y se registra (se muestra
+       el texto integrado), y las claves que faltan se registran. El valor de retorno se ignora;
+       una excepción se registra y el plugin se carga igualmente
    * - ``on_plugin_loaded()``
      - Justo después de crear la instancia: mientras se construye la ventana principal, y de
        nuevo tras ``Plugins`` > ``Reload Plugins``
@@ -2261,7 +2263,9 @@ la línea de estado; el cargador de plugins lo omite sin importarlo y deja el mo
      - Justo después de ``on_plugin_loaded()``, una vez por carga
      - Devuelve ``{language_code: {key: text}}`` (por defecto ``{}``). Las cadenas se fusionan en
        las tablas de idioma; las claves que ya existen nunca se sobrescriben y los códigos de
-       idioma desconocidos se omiten
+       idioma desconocidos se omiten. Una cadena vacía, o cuyos ``{placeholders}`` difieran de
+       los de la cadena en inglés de esa clave en los datos devueltos, se descarta; los problemas
+       se registran
    * - ``on_build_main_tabs(tabs)``
      - Una vez mientras se construye la ventana principal, tras las cinco pestañas integradas y
        antes de ``on_build_menu_bar``; ``Reload Plugins`` no lo vuelve a ejecutar

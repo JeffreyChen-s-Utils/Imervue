@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `d2f68e76` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `d4435dfa` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 915 | 152,443 |
+| `tests/` | 916 | 152,518 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,391 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 15,067 |
+| `Imervue/multi_language/` | 8 | 15,115 |
 | `Imervue/desktop_pet/` | 29 | 7,084 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,750 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,764** | **336,216** |
+| **總計** | **1,765** | **336,339** |
 
-其中 `Imervue/` 套件本身 769 檔 / 167,752 行。
+其中 `Imervue/` 套件本身 769 檔 / 167,800 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -268,13 +268,13 @@ ImervueMainWindow
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `language_wrapper.py` | 92 | 單例 `language_wrapper`。內建 5 語言；`register_language()` 供外掛新增語言（重複註冊就地更新同一個字典），`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
+| `language_wrapper.py` | 140 | 單例 `language_wrapper`（外掛字串進來前先經 `translation_validation` 檢查、記錄問題，空字串或 `{placeholder}` 與英文不符的丟掉，改顯示內建文字）。內建 5 語言；`register_language()` 供外掛新增語言（重複註冊就地更新同一個字典），`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
 | `english.py` | 2,806 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
 | `traditional_chinese.py` | 2,771 | 繁體中文 |
 | `chinese.py` | 2,772 | 簡體中文 |
 | `japanese.py` | 2,785 | 日文 |
 | `korean.py` | 2,783 | 韓文 |
-| `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 型別） |
+| `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 空值 / placeholder；`register_language` 與 `merge_translations` 都會跑） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
 
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-915 個檔、152,443 行。`pyproject.toml` 定義三個互斥層級 marker：
+916 個檔、152,518 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1210,10 +1210,9 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 1 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    `paint/`、`puppet/`、`desktop_pet/` 已全部接上）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
-    不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
-    （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
+11. **每個模組都要有正式程式 import 它**：`tests/test_unwired_modules.py` 掃 `Imervue/`、`plugins/` 與根目錄
+    `*.spec` 的 import，新增模組若沒人 import 就失敗（`Imervue_mac.spec` 用 `system/macos_bundle.py` 也算）。
+    當初沒人 import 的 56 個模組，27 個已刪除、29 個已逐一接上 UI，`_KNOWN_UNWIRED` 現在是空的、只能維持空的。
 
 12. **同一視窗裡同一個按鍵只能有一個啟用中的快捷鍵。** 兩個 `WindowShortcut` 範圍的 `QAction` / `QShortcut`
     綁同一鍵，Qt 視為歧義、兩個都不觸發，也不會報錯。Paint 分頁嵌在主視窗裡，所以它的按鍵和主視窗自己的

@@ -2259,7 +2259,9 @@ journal.
        principale lorsque la langue enregistrée n'est pas une langue intégrée ; ce passage au
        démarrage importe tous les plugins et n'exécute rien d'autre
      - Aucun argument. Appelez ici ``language_wrapper.register_language(language_code,
-       display_name, word_dict)`` ; un code de langue intégrée est refusé. Valeur de retour
+       display_name, word_dict)`` ; un code de langue intégrée est refusé. Une chaîne vide ou
+       dont les ``{placeholders}`` diffèrent de ceux de l'anglais est écartée et journalisée
+       (le texte intégré s'affiche), et les clés manquantes sont journalisées. Valeur de retour
        ignorée ; une exception est journalisée et le plugin se charge quand même
    * - ``on_plugin_loaded()``
      - Juste après la création de l'instance : pendant la construction de la fenêtre
@@ -2269,7 +2271,9 @@ journal.
      - Juste après ``on_plugin_loaded()``, une fois par chargement
      - Retourne ``{language_code: {key: text}}`` (par défaut ``{}``). Les chaînes sont
        fusionnées dans les tables de langue ; les clés existantes ne sont jamais écrasées et
-       les codes de langue inconnus sont ignorés
+       les codes de langue inconnus sont ignorés. Une chaîne vide, ou dont les
+       ``{placeholders}`` diffèrent de ceux de la chaîne anglaise de cette clé dans les données
+       retournées, est écartée ; les problèmes sont journalisés
    * - ``on_build_main_tabs(tabs)``
      - Une fois pendant la construction de la fenêtre principale, après les cinq onglets
        intégrés et avant ``on_build_menu_bar`` ; ``Reload Plugins`` ne le relance pas

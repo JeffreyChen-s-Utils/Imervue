@@ -6,10 +6,10 @@ import, resolving relative ones, plus dotted module names written as string
 literals for lazy ``importlib`` loads. A module nothing imports is either an
 entry point run with ``py -m`` or code no user can reach.
 
-``_KNOWN_UNWIRED`` lists the modules that were already unreachable when the
-guard was added (``progress.md`` #22 asks the owner to wire or remove them).
-The list may only shrink: a new unreachable module fails
-``test_no_new_unwired_modules``, and wiring or deleting a listed one fails
+``_KNOWN_UNWIRED`` listed the modules that were already unreachable when the
+guard was added; every one has since been wired or removed, so it is empty and
+may stay that way: a new unreachable module fails
+``test_no_new_unwired_modules``, and a listed one that gets wired fails
 ``test_known_list_is_current`` until its entry is removed.
 """
 from __future__ import annotations
@@ -23,9 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 _ENTRY_POINTS = {"Imervue.__main__", "Imervue.cli", "Imervue.mcp_server.__main__"}
 
-_KNOWN_UNWIRED = {
-    "Imervue.multi_language.translation_validation",
-}
+_KNOWN_UNWIRED: frozenset[str] = frozenset()
 
 
 def _dotted(path: Path) -> str:

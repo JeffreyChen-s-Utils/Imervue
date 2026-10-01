@@ -2215,7 +2215,9 @@ ignora sem importá-lo e registra o motivo no log.
        Plugins``), e na inicialização antes de a janela principal ser construída quando o idioma salvo
        não é um dos embutidos; essa passada de inicialização importa todos os plugins e não executa mais nada
      - Sem argumentos. Chame ``language_wrapper.register_language(language_code, display_name,
-       word_dict)`` aqui; um código de idioma embutido é recusado. O valor de retorno é ignorado; uma
+       word_dict)`` aqui; um código de idioma embutido é recusado. Uma string vazia ou cujos
+       ``{placeholders}`` diferem dos do inglês é descartada e registrada no log (o texto embutido
+       aparece), e chaves ausentes são registradas no log. O valor de retorno é ignorado; uma
        exceção é registrada no log e o plugin é carregado mesmo assim
    * - ``on_plugin_loaded()``
      - Logo depois de a instância ser criada: enquanto a janela principal é construída, e de novo depois de
@@ -2225,7 +2227,8 @@ ignora sem importá-lo e registra o motivo no log.
      - Logo depois de ``on_plugin_loaded()``, uma vez por carregamento
      - Retorna ``{language_code: {key: text}}`` (padrão ``{}``). As strings são mescladas nas
        tabelas de idioma; chaves que já existem nunca são sobrescritas e códigos de idioma
-       desconhecidos são ignorados
+       desconhecidos são ignorados. Uma string vazia, ou cujos ``{placeholders}`` diferem dos da
+       string em inglês do payload para essa chave, é descartada; os problemas são registrados no log
    * - ``on_build_main_tabs(tabs)``
      - Uma vez enquanto a janela principal é construída, depois das cinco abas embutidas e antes de
        ``on_build_menu_bar``; ``Reload Plugins`` não o executa de novo

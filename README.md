@@ -1007,7 +1007,7 @@ Full protocol surface in the MCP section of [docs/en/index.rst](docs/en/index.rs
 
 Change via the **Language** menu. Restart required.
 
-Plugins can register entirely new languages via `language_wrapper.register_language()`, or contribute translations to the built-in ones via `get_translations()` (existing keys are never overwritten, so a plugin can't break a shipped string). **Español** is available exactly this way — install the `spanish_translation` plugin from the downloader and it appears in the Language menu alongside the five built-ins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Plugins can register entirely new languages via `language_wrapper.register_language()`, or contribute translations to the built-in ones via `get_translations()` (existing keys are never overwritten, so a plugin can't break a shipped string). A plugin string that is empty, or whose `{placeholders}` differ from the English one, is dropped and logged, so the built-in text shows instead of a blank or an error. **Español** is available exactly this way — install the `spanish_translation` plugin from the downloader and it appears in the Language menu alongside the five built-ins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 

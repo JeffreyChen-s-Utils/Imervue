@@ -946,7 +946,7 @@ python -m Imervue.mcp_server
 
 从 **Language** 菜单切换。需重启。
 
-插件可通过 `language_wrapper.register_language()` 注册全新语言，或通过 `get_translations()` 为内置语言补充翻译（已有键永远不会被覆盖，所以插件不可能弄坏内置字符串）。**Español** 正是这样提供的 —— 从下载器安装 `spanish_translation` 插件后，它就会与五个内置语言一起出现在语言菜单中。详见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
+插件可通过 `language_wrapper.register_language()` 注册全新语言，或通过 `get_translations()` 为内置语言补充翻译（已有键永远不会被覆盖，所以插件不可能弄坏内置字符串）。插件字符串若为空，或其 `{placeholders}` 与英文版不同，就会被丢弃并写入日志，界面改为显示内置文本，而不会出现空白或错误。**Español** 正是这样提供的 —— 从下载器安装 `spanish_translation` 插件后，它就会与五个内置语言一起出现在语言菜单中。详见 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
 
 ---
 

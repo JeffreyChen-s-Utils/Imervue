@@ -2282,8 +2282,11 @@ ins Protokoll.
        Sprache keine eingebaute ist; dieser Startdurchlauf importiert jedes Plugin und führt sonst
        nichts aus
      - Keine Argumente. Rufen Sie hier ``language_wrapper.register_language(language_code,
-       display_name, word_dict)`` auf; ein eingebauter Sprachcode wird abgelehnt. Der Rückgabewert
-       wird ignoriert; eine Ausnahme wird protokolliert, und das Plugin wird trotzdem geladen
+       display_name, word_dict)`` auf; ein eingebauter Sprachcode wird abgelehnt. Eine
+       Zeichenkette, die leer ist oder deren ``{placeholders}`` von denen der englischen
+       abweichen, wird verworfen und protokolliert (der eingebaute Text erscheint), und fehlende
+       Schlüssel werden protokolliert. Der Rückgabewert wird ignoriert; eine Ausnahme wird
+       protokolliert, und das Plugin wird trotzdem geladen
    * - ``on_plugin_loaded()``
      - Direkt nachdem die Instanz erzeugt wurde: während das Hauptfenster gebaut wird und erneut
        nach ``Plugins`` > ``Reload Plugins``
@@ -2292,7 +2295,9 @@ ins Protokoll.
      - Direkt nach ``on_plugin_loaded()``, einmal pro Laden
      - Gibt ``{language_code: {key: text}}`` zurück (Standard ``{}``). Die Zeichenketten werden in
        die Sprachtabellen übernommen; bereits vorhandene Schlüssel werden nie überschrieben, und
-       unbekannte Sprachcodes werden übersprungen
+       unbekannte Sprachcodes werden übersprungen. Eine leere Zeichenkette oder eine, deren
+       ``{placeholders}`` von denen der englischen Zeichenkette desselben Schlüssels in den
+       zurückgegebenen Daten abweichen, wird verworfen; die Probleme werden protokolliert
    * - ``on_build_main_tabs(tabs)``
      - Einmal, während das Hauptfenster gebaut wird, nach den fünf eingebauten Tabs und vor
        ``on_build_menu_bar``; ``Reload Plugins`` führt ihn nicht erneut aus

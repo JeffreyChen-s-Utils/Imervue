@@ -949,7 +949,7 @@ python -m Imervue.mcp_server
 
 **Language** 메뉴에서 변경합니다. 재시작이 필요합니다.
 
-플러그인은 `language_wrapper.register_language()`로 완전히 새로운 언어를 등록하거나, `get_translations()`로 내장 언어에 번역을 추가할 수 있습니다(기존 키는 절대 덮어쓰지 않으므로 플러그인이 기본 문자열을 망가뜨릴 수 없습니다). **Español**이 바로 이 방식입니다 — 다운로더에서 `spanish_translation` 플러그인을 설치하면 다섯 개 내장 언어와 함께 언어 메뉴에 나타납니다. 자세한 내용은 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n) 참조.
+플러그인은 `language_wrapper.register_language()`로 완전히 새로운 언어를 등록하거나, `get_translations()`로 내장 언어에 번역을 추가할 수 있습니다(기존 키는 절대 덮어쓰지 않으므로 플러그인이 기본 문자열을 망가뜨릴 수 없습니다). 비어 있거나 `{placeholders}`가 영어 문자열과 다른 플러그인 문자열은 버려지고 로그에 기록되므로, 빈칸이나 오류 대신 내장 텍스트가 표시됩니다. **Español**이 바로 이 방식입니다 — 다운로더에서 `spanish_translation` 플러그인을 설치하면 다섯 개 내장 언어와 함께 언어 메뉴에 나타납니다. 자세한 내용은 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n) 참조.
 
 ---
 

@@ -999,7 +999,7 @@ Superficie completa del protocolo en la sección MCP de [docs/en/index.rst](../d
 
 Cambia desde el menú **Language**. Reinicio requerido.
 
-Los plugins pueden registrar idiomas completamente nuevos con `language_wrapper.register_language()`, o aportar traducciones a los integrados con `get_translations()` (las claves existentes nunca se sobrescriben, así que un plugin no puede romper una cadena de fábrica). **Español** está disponible exactamente así: instala el plugin `spanish_translation` desde el descargador y aparecerá en el menú Language junto a los cinco idiomas integrados. Consulta [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Los plugins pueden registrar idiomas completamente nuevos con `language_wrapper.register_language()`, o aportar traducciones a los integrados con `get_translations()` (las claves existentes nunca se sobrescriben, así que un plugin no puede romper una cadena de fábrica). Una cadena de un plugin que esté vacía, o cuyos `{placeholders}` difieran de los de la cadena en inglés, se descarta y se registra en el log, de modo que se muestra el texto integrado en lugar de un hueco en blanco o un error. **Español** está disponible exactamente así: instala el plugin `spanish_translation` desde el descargador y aparecerá en el menú Language junto a los cinco idiomas integrados. Consulta [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 

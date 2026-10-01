@@ -2183,8 +2183,10 @@ the status line; the plugin loader skips it with the reason in the log, without 
        Plugins``), and at startup before the main window is built when the saved language is not
        a built-in one; that startup pass imports every plugin and runs nothing else
      - No arguments. Call ``language_wrapper.register_language(language_code, display_name,
-       word_dict)`` here; a built-in language code is refused. Return value ignored; an exception
-       is logged and the plugin still loads
+       word_dict)`` here; a built-in language code is refused. A string that is empty or whose
+       ``{placeholders}`` differ from English is dropped and logged (the built-in text shows), and
+       missing keys are logged. Return value ignored; an exception is logged and the plugin still
+       loads
    * - ``on_plugin_loaded()``
      - Right after the instance is created: while the main window is built, and again after
        ``Plugins`` > ``Reload Plugins``
@@ -2193,7 +2195,8 @@ the status line; the plugin loader skips it with the reason in the log, without 
      - Right after ``on_plugin_loaded()``, once per load
      - Returns ``{language_code: {key: text}}`` (default ``{}``). The strings are merged into the
        language tables; keys that already exist are never overwritten and unknown language codes
-       are skipped
+       are skipped. An empty string, or one whose ``{placeholders}`` differ from the payload's
+       English string for that key, is dropped; the problems are logged
    * - ``on_build_main_tabs(tabs)``
      - Once while the main window is built, after the five built-in tabs and before
        ``on_build_menu_bar``; ``Reload Plugins`` does not run it again

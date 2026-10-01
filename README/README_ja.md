@@ -948,7 +948,7 @@ python -m Imervue.mcp_server
 
 **Language** メニューから切り替え可能。再起動が必要です。
 
-プラグインは `language_wrapper.register_language()` で完全に新しい言語を登録するか、`get_translations()` で組み込み言語に翻訳を追加できます(既存のキーは決して上書きされないため、プラグインが同梱の文字列を壊すことはありません)。**Español** はまさにこの方法で提供されています — ダウンローダから `spanish_translation` プラグインを入れると、5 つの組み込み言語と並んで言語メニューに現れます。詳細は [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n) を参照。
+プラグインは `language_wrapper.register_language()` で完全に新しい言語を登録するか、`get_translations()` で組み込み言語に翻訳を追加できます(既存のキーは決して上書きされないため、プラグインが同梱の文字列を壊すことはありません)。空の文字列や、`{placeholders}` が英語の文字列と異なるプラグインの文字列は破棄されてログに記録されるため、空欄やエラーではなく組み込みのテキストが表示されます。**Español** はまさにこの方法で提供されています — ダウンローダから `spanish_translation` プラグインを入れると、5 つの組み込み言語と並んで言語メニューに現れます。詳細は [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n) を参照。
 
 ---
 

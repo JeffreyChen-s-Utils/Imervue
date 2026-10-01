@@ -951,7 +951,7 @@ Surface complète du protocole dans la section MCP de [docs/en/index.rst](../doc
 
 Changement via le menu **Language**. Redémarrage requis.
 
-Les plugins peuvent enregistrer des langues entièrement nouvelles via `language_wrapper.register_language()`, ou compléter les traductions des langues intégrées via `get_translations()` (les clés existantes ne sont jamais écrasées, un plugin ne peut donc pas casser une chaîne livrée). **Español** est proposé exactement ainsi : installez le plugin `spanish_translation` depuis le téléchargeur et il apparaît dans le menu Language aux côtés des cinq langues intégrées. Voir [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Les plugins peuvent enregistrer des langues entièrement nouvelles via `language_wrapper.register_language()`, ou compléter les traductions des langues intégrées via `get_translations()` (les clés existantes ne sont jamais écrasées, un plugin ne peut donc pas casser une chaîne livrée). Une chaîne de plugin vide, ou dont les `{placeholders}` diffèrent de ceux de la chaîne anglaise, est écartée et journalisée : le texte intégré s'affiche alors à la place d'un vide ou d'une erreur. **Español** est proposé exactement ainsi : installez le plugin `spanish_translation` depuis le téléchargeur et il apparaît dans le menu Language aux côtés des cinq langues intégrées. Voir [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 

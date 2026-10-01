@@ -1702,14 +1702,16 @@ Imervue 支援外掛擴充功能。
        內建語言時，也會在啟動、主視窗建立之前呼叫。啟動時的這一輪只匯入每個外掛，不執行其他動作
      - 無參數。在此呼叫
        ``language_wrapper.register_language(language_code, display_name, word_dict)``；內建語言
-       代碼會被拒絕。回傳值會被忽略；拋出的例外會記錄下來，外掛仍會載入
+       代碼會被拒絕。為空或 ``{placeholders}`` 與英文不同的字串會被捨棄並記錄下來（改為顯示內建文字），
+       缺少的鍵也會記錄下來。回傳值會被忽略；拋出的例外會記錄下來，外掛仍會載入
    * - ``on_plugin_loaded()``
      - 實例建立後立即呼叫：主視窗建立期間，以及 ``Plugins`` > ``Reload Plugins`` 之後再呼叫一次
      - 無參數；回傳值會被忽略
    * - ``get_translations()``
      - 緊接在 ``on_plugin_loaded()`` 之後，每次載入呼叫一次
      - 回傳 ``{language_code: {key: text}}``\ （預設 ``{}``）。字串會併入語言表；已存在的鍵永遠
-       不會被覆寫，未知的語言代碼會被略過
+       不會被覆寫，未知的語言代碼會被略過。空字串，或 ``{placeholders}`` 與回傳資料中該鍵的英文字串不同的字串，
+       會被捨棄；這些問題會記錄下來
    * - ``on_build_main_tabs(tabs)``
      - 主視窗建立期間呼叫一次，在五個內建分頁之後、``on_build_menu_bar`` 之前；
        ``Reload Plugins`` 不會再次執行它

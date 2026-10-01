@@ -979,7 +979,7 @@ Superfície completa do protocolo na seção MCP de [docs/en/index.rst](../docs/
 
 Altere pelo menu **Language**. Requer reinicialização.
 
-Plugins podem registrar idiomas totalmente novos via `language_wrapper.register_language()` ou contribuir traduções para os embutidos via `get_translations()` (chaves existentes nunca são sobrescritas, então um plugin não consegue quebrar uma string de fábrica). **Español** é oferecido exatamente assim: instale o plugin `spanish_translation` pelo downloader e ele aparece no menu Language ao lado dos cinco idiomas embutidos. Veja [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Plugins podem registrar idiomas totalmente novos via `language_wrapper.register_language()` ou contribuir traduções para os embutidos via `get_translations()` (chaves existentes nunca são sobrescritas, então um plugin não consegue quebrar uma string de fábrica). Uma string de plugin vazia, ou cujos `{placeholders}` diferem dos da string em inglês, é descartada e registrada no log, de modo que o texto embutido aparece no lugar de um espaço em branco ou de um erro. **Español** é oferecido exatamente assim: instale o plugin `spanish_translation` pelo downloader e ele aparece no menu Language ao lado dos cinco idiomas embutidos. Veja [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 

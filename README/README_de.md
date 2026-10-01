@@ -998,7 +998,7 @@ Vollständige Protokoll-Oberfläche im MCP-Abschnitt von [docs/en/index.rst](../
 
 Über das **Language**-Menü umschalten. Neustart erforderlich.
 
-Plugins können über `language_wrapper.register_language()` vollständig neue Sprachen registrieren oder über `get_translations()` Übersetzungen zu den eingebauten beisteuern (bestehende Schlüssel werden nie überschrieben, ein Plugin kann also keine mitgelieferte Zeichenkette kaputt machen). **Español** wird genau so bereitgestellt: Installiere das Plugin `spanish_translation` über den Downloader, und es erscheint im Menü Language neben den fünf eingebauten Sprachen. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Plugins können über `language_wrapper.register_language()` vollständig neue Sprachen registrieren oder über `get_translations()` Übersetzungen zu den eingebauten beisteuern (bestehende Schlüssel werden nie überschrieben, ein Plugin kann also keine mitgelieferte Zeichenkette kaputt machen). Eine Plugin-Zeichenkette, die leer ist oder deren `{placeholders}` von denen der englischen abweichen, wird verworfen und protokolliert, sodass statt einer leeren Stelle oder eines Fehlers der eingebaute Text erscheint. **Español** wird genau so bereitgestellt: Installiere das Plugin `spanish_translation` über den Downloader, und es erscheint im Menü Language neben den fünf eingebauten Sprachen. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 

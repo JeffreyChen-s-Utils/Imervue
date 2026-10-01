@@ -949,7 +949,7 @@ python -m Imervue.mcp_server
 
 從 **Language** 選單切換。需重啟。
 
-外掛可透過 `language_wrapper.register_language()` 註冊全新語言，或透過 `get_translations()` 為內建語言補充翻譯（既有鍵永遠不會被覆寫，所以外掛不可能弄壞內建字串）。**Español** 就是這樣提供的 —— 從下載器安裝 `spanish_translation` 外掛後，它就會與五個內建語言一起出現在語言選單中。詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
+外掛可透過 `language_wrapper.register_language()` 註冊全新語言，或透過 `get_translations()` 為內建語言補充翻譯（既有鍵永遠不會被覆寫，所以外掛不可能弄壞內建字串）。外掛字串若為空，或其 `{placeholders}` 與英文版不同，就會被捨棄並寫進記錄，介面改為顯示內建文字，而不會出現空白或錯誤。**Español** 就是這樣提供的 —— 從下載器安裝 `spanish_translation` 外掛後，它就會與五個內建語言一起出現在語言選單中。詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
 
 ---
 
