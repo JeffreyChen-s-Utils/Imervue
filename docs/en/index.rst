@@ -723,9 +723,11 @@ The **Animation dock** turns the document into a frame strip:
 - ``+ Frame`` snapshots the flattened picture into a new frame.
 - Click a frame thumbnail to load it into the active layer.
 - ``Onion Skin`` (View menu) overlays the previous frame at low alpha.
-- ``▶ Play`` cycles the frames at the chosen FPS. The frames are for
-  previewing and onion skinning — there is no animation export
-  (**File > Export pages** exports a comic project's pages, not frames).
+- ``▶ Play`` cycles the frames at the chosen FPS.
+- ``Export…`` saves the frames as an animated GIF, WebP or PNG — the file
+  type you pick sets the format, a name without one becomes a GIF — each
+  frame lasting one tick of the chosen FPS. WebP is written without loss;
+  GIF reduces each frame to 255 colours and makes faint pixels transparent.
 
 Manga Menu
 ^^^^^^^^^^

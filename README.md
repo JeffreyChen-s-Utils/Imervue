@@ -427,7 +427,7 @@ Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect**
 
 ### Animation & manga
 
-- **Animation** — frame timeline dock: **+ Frame** snapshots the flattened picture, playback at a chosen FPS, onion skin shows the previous frame; frames are for previewing, with no animation export
+- **Animation** — frame timeline dock: **+ Frame** snapshots the flattened picture, playback at a chosen FPS, onion skin shows the previous frame; **Export…** saves the frames as an animated GIF, WebP (lossless) or PNG, each frame lasting one tick of the chosen FPS
 - **Manga tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech Bubble tool
 
 ### Filters & view aids

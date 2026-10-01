@@ -731,10 +731,12 @@ O **dock Animação** transforma o documento em uma tira de quadros:
 - ``+ Quadro`` captura a imagem achatada em um novo quadro.
 - Clique na miniatura de um quadro para carregá-lo na camada ativa.
 - ``Onion Skin`` (menu Visualizar) sobrepõe o quadro anterior com baixa opacidade.
-- ``▶ Reproduzir`` percorre os quadros no FPS escolhido. Os quadros servem para
-  pré-visualização e onion skin — não há exportação de animação
-  (**Arquivo > Exportar páginas** exporta as páginas de um projeto de
-  quadrinhos, não os quadros).
+- ``▶ Reproduzir`` percorre os quadros no FPS escolhido.
+- ``Exportar…`` salva os quadros como GIF animado, WebP ou PNG — o tipo de
+  arquivo escolhido define o formato, e um nome sem tipo vira GIF —, cada
+  quadro durando um tique do FPS escolhido. O WebP é gravado sem perdas; o
+  GIF reduz cada quadro a 255 cores e torna transparentes os pixels tênues,
+  de baixa opacidade.
 
 Menu Mangá
 ^^^^^^^^^^

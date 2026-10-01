@@ -419,7 +419,7 @@ Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Res
 
 ### Animación y manga
 
-- **Animación** — dock de línea de tiempo de fotogramas: **+ Frame** captura la imagen aplanada, reproducción a los FPS elegidos, el papel cebolla muestra el fotograma anterior; los fotogramas sirven para previsualizar, sin exportación de animación
+- **Animación** — dock de línea de tiempo de fotogramas: **+ Frame** captura la imagen aplanada, reproducción a los FPS elegidos, el papel cebolla muestra el fotograma anterior; **Export…** guarda los fotogramas como GIF animado, WebP (sin pérdida) o PNG, y cada fotograma dura un tick de los FPS elegidos
 - **Herramientas de manga** — Cortador de viñetas · Capas de trama · Estampar números de página · Líneas de velocidad (Radial / Paralela / Explosión) · Destello de acción · Herramienta de bocadillo
 
 ### Filtros y ayudas de vista

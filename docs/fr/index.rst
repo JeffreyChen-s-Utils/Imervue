@@ -728,9 +728,11 @@ Le **dock Animation** transforme le document en bande d'images :
 - ``+ Image`` capture le dessin aplati dans une nouvelle image.
 - Cliquez sur la vignette d'une image pour la charger dans le calque actif.
 - ``Pelure d'oignon`` (menu Affichage) superpose l'image précédente à faible alpha.
-- ``▶ Lecture`` fait défiler les images à la cadence (FPS) choisie. Les images servent à
-  la prévisualisation et à la pelure d'oignon — il n'y a pas d'export d'animation
-  (**Fichier > Exporter les pages** exporte les pages d'un projet BD, pas les images).
+- ``▶ Lecture`` fait défiler les images à la cadence (FPS) choisie.
+- ``Exporter…`` enregistre les images en GIF animé, WebP ou PNG — le type de fichier
+  choisi détermine le format, un nom sans extension devient un GIF — chaque image
+  durant un tick de la cadence choisie. Le WebP est écrit sans perte ; le GIF réduit
+  chaque image à 255 couleurs et rend transparents les pixels à peine visibles.
 
 Menu Manga
 ^^^^^^^^^^

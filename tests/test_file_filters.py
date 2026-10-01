@@ -60,7 +60,7 @@ def test_open_image_dialog_offers_heif_and_jxl(monkeypatch):
 
 # Labels that are format or product names, the same in every language; "{}" is
 # an f-string label that is itself a placeholder (a format name).
-_NAME_LABELS = {"BMP", "CSV", "Cube LUT", "Cubism", "GIF", "JPEG", "JSON", "MP4", "PDF", "PNG",
+_NAME_LABELS = {"APNG", "BMP", "CSV", "Cube LUT", "Cubism", "GIF", "JPEG", "JSON", "MP4", "PDF", "PNG",
                 "PSD", "Photoshop", "TIFF", "WebM", "WebP", "Adobe Swatch",
                 "Adobe Swatch Exchange", "{}"}
 

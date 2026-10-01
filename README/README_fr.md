@@ -416,7 +416,7 @@ Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / S
 
 ### Animation et manga
 
-- **Animation** — dock de timeline d'images : **+ Frame** capture le dessin aplati, lecture à la cadence (FPS) choisie, la pelure d'oignon montre l'image précédente ; les images servent à la prévisualisation, sans export d'animation
+- **Animation** — dock de timeline d'images : **+ Frame** capture le dessin aplati, lecture à la cadence (FPS) choisie, la pelure d'oignon montre l'image précédente ; **Export…** enregistre les images en GIF animé, WebP (sans perte) ou PNG, chaque image durant un tick de la cadence choisie
 - **Outils manga** — Découpe de cases · Calques de tonalité · Tampon de numéros de page · Lignes de vitesse (Radial / Parallèle / Burst) · Action Flash · Outil bulle de dialogue
 
 ### Filtres et aides à la vue

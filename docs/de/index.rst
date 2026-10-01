@@ -724,9 +724,11 @@ Der **Animation-Dock** verwandelt das Dokument in einen Framestreifen:
 - ``+ Frame`` speichert das auf eine Ebene reduzierte Bild als neuen Frame.
 - Klicken Sie eine Frame-Miniaturansicht an, um sie in den aktiven Layer zu laden.
 - ``Onion Skin`` (Ansicht-Menü) überlagert den vorherigen Frame mit niedrigem Alpha.
-- ``▶ Abspielen`` durchläuft die Frames mit der gewählten FPS. Die Frames dienen der
-  Vorschau und dem Onion Skinning — einen Animations-Export gibt es nicht
-  (**Datei > Seiten exportieren** exportiert die Seiten eines Comic-Projekts, keine Frames).
+- ``▶ Abspielen`` durchläuft die Frames mit der gewählten FPS.
+- ``Exportieren…`` speichert die Frames als animiertes GIF, WebP oder PNG — der
+  gewählte Dateityp bestimmt das Format, ein Name ohne Dateityp wird zum GIF — wobei
+  jeder Frame einen Takt der gewählten FPS dauert. WebP wird verlustfrei geschrieben;
+  GIF reduziert jeden Frame auf 255 Farben und macht kaum sichtbare Pixel transparent.
 
 Manga-Menü
 ^^^^^^^^^^

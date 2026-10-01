@@ -733,9 +733,11 @@ El **dock Animation** convierte el documento en una tira de fotogramas:
 - ``+ Frame`` captura la imagen aplanada en un nuevo fotograma.
 - Haga clic en la miniatura de un fotograma para cargarlo en la capa activa.
 - ``Onion Skin`` (menú View) superpone el fotograma anterior con baja opacidad.
-- ``▶ Play`` recorre los fotogramas a los FPS elegidos. Los fotogramas sirven para
-  previsualizar y para el papel cebolla — no hay exportación de animación
-  (**File > Export pages** exporta las páginas de un proyecto de cómic, no los fotogramas).
+- ``▶ Play`` recorre los fotogramas a los FPS elegidos.
+- ``Export…`` guarda los fotogramas como GIF animado, WebP o PNG — el tipo de archivo
+  que elija determina el formato y un nombre sin extensión se convierte en GIF — y
+  cada fotograma dura un tick de los FPS elegidos. WebP se escribe sin pérdida; GIF
+  reduce cada fotograma a 255 colores y vuelve transparentes los píxeles apenas visibles.
 
 Menú Manga
 ^^^^^^^^^^

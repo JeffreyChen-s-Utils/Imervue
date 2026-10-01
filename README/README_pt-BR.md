@@ -423,7 +423,7 @@ Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicio
 
 ### Animação e mangá
 
-- **Animação** — dock de timeline de frames: **+ Frame** faz um snapshot da imagem achatada, reprodução no FPS escolhido, o onion skin mostra o frame anterior; os frames servem para pré-visualização, sem exportação de animação
+- **Animação** — dock de timeline de frames: **+ Frame** faz um snapshot da imagem achatada, reprodução no FPS escolhido, o onion skin mostra o frame anterior; **Export…** salva os frames como GIF animado, WebP (sem perdas) ou PNG, cada frame durando um tique do FPS escolhido
 - **Ferramentas de mangá** — Panel Cutter · Camadas de retícula · Carimbar números de página · Speedlines (Radial / Paralelo / Burst) · Action Flash · ferramenta de Balão de Fala
 
 ### Filtros e auxiliares de visualização

@@ -416,7 +416,7 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 
 ### Animation & Manga
 
-- **Animation** — Frame-Timeline-Dock: **+ Frame** nimmt einen Snapshot des auf eine Ebene reduzierten Bildes auf, Wiedergabe mit wählbarer FPS, Onion Skin zeigt den vorherigen Frame; die Frames dienen der Vorschau, einen Animations-Export gibt es nicht
+- **Animation** — Frame-Timeline-Dock: **+ Frame** nimmt einen Snapshot des auf eine Ebene reduzierten Bildes auf, Wiedergabe mit wählbarer FPS, Onion Skin zeigt den vorherigen Frame; **Export…** speichert die Frames als animiertes GIF, WebP (verlustfrei) oder PNG, wobei jeder Frame einen Takt der gewählten FPS dauert
 - **Manga-Tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech-Bubble-Tool
 
 ### Filter & Ansichts-Hilfen

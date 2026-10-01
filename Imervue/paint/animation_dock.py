@@ -17,6 +17,8 @@ Signals
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QImage, QPixmap
@@ -41,6 +43,8 @@ from Imervue.paint.animation_timeline import (
 )
 
 THUMBNAIL_PX = 64
+#: Save-dialog filters for Export…; the chosen suffix picks the format.
+ANIMATION_FILTERS = "GIF (*.gif);;WebP (*.webp);;APNG (*.png *.apng)"
 
 
 class AnimationDock(QDockWidget):
@@ -127,6 +131,14 @@ class AnimationDock(QDockWidget):
         self._fps_spin.setSuffix(" fps")
         self._fps_spin.valueChanged.connect(self._on_fps_changed)
         controls.addWidget(self._fps_spin)
+
+        self._export_btn = QPushButton(lang.get("paint_animation_export", "Export…"))
+        self._export_btn.clicked.connect(self._export)
+        self._export_btn.setToolTip(lang.get(
+            "paint_animation_export_tooltip",
+            "Save the frames as an animated GIF, WebP or PNG at the chosen FPS",
+        ))
+        controls.addWidget(self._export_btn)
         controls.addStretch(1)
         return controls
 
@@ -235,6 +247,52 @@ class AnimationDock(QDockWidget):
         # the user doesn't think the action is broken when nothing
         # happens.
         self._remove_btn.setEnabled(len(self._timeline.frames) > 1)
+        self._export_btn.setEnabled(bool(self._timeline.frames))
+
+    # ---- export ---------------------------------------------------------
+
+    def _export(self) -> None:  # pragma: no cover - QFileDialog
+        from PySide6.QtWidgets import QFileDialog
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getSaveFileName(
+            self, lang.get("paint_animation_export_title", "Export Animation"), "",
+            ANIMATION_FILTERS,
+        )
+        if path:
+            self.export_to(path)
+
+    def export_to(self, path: str) -> bool:
+        """Write the frames to *path* in the format its suffix names; report the outcome.
+
+        A name without a suffix gets ``.gif``. The outcome goes to the parent
+        workspace's toast, or to a message box when it has none (errors only).
+        """
+        from PySide6.QtWidgets import QApplication
+
+        from Imervue.paint.animation_export import export_animation
+        if not Path(path).suffix:
+            path += ".gif"
+        lang = language_wrapper.language_word_dict
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            export_animation(self._timeline, path)
+        except (OSError, ValueError) as exc:
+            failed = lang.get("paint_animation_export_failed", "Animation export failed")
+            self._report(f"{failed}: {exc}", error=True)
+            return False
+        finally:
+            QApplication.restoreOverrideCursor()
+        done = lang.get("paint_animation_export_done", "Exported animation")
+        self._report(f"{done}: {Path(path).name}", error=False)
+        return True
+
+    def _report(self, text: str, *, error: bool) -> None:
+        toast = getattr(self.parent(), "toast", None)
+        if toast is not None:
+            (toast.error if error else toast.success)(text)
+        elif error:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, self.windowTitle(), text)
 
     def _make_thumbnail(self, index: int, image: np.ndarray) -> QToolButton:
         btn = QToolButton()
