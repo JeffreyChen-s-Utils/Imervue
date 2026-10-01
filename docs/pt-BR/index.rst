@@ -1090,6 +1090,14 @@ Para capturar uma take customizada em vez de autorizar keyframes manualmente:
 Motions customizados salvos dessa forma fazem round-trip pelo mesmo payload
 JSON ``motions/<name>.json`` que os autorizados manualmente.
 
+**Edit > Edit motion…** abre a linha do tempo do motion carregado no player:
+arraste uma key ou uma alça de bézier, remodele a trilha escolhida com um
+easing nomeado usando **Ease** e **Apply to Track** (31 curvas; elastic e
+bounce viram 16 keys lineares por segmento), ou afine uma take de 30 Hz com
+**Simplify Keys**, que descarta toda key que fica dentro da tolerância — uma
+porcentagem do intervalo de cada parâmetro — da linha que passa pelas keys
+vizinhas.
+
 Streaming ao Vivo para o OBS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

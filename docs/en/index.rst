@@ -1080,6 +1080,13 @@ To capture a custom take rather than authoring keyframes by hand:
 Custom motions saved this way round-trip through the same JSON
 ``motions/<name>.json`` payload as authored ones.
 
+**Edit > Edit motion…** opens the timeline of the motion the player holds:
+drag a key or a bezier handle, reshape the chosen track to a named easing
+with **Ease** and **Apply to Track** (31 curves; elastic and bounce become
+16 linear keys per segment), or thin a 30 Hz take with **Simplify Keys**,
+which drops every key that sits within the tolerance — a percentage of each
+parameter's range — of the line through its neighbours.
+
 Live streaming to OBS
 ^^^^^^^^^^^^^^^^^^^^^
 

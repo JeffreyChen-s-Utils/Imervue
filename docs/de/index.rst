@@ -1088,6 +1088,14 @@ Um eine eigene Aufnahme zu erfassen, statt Keyframes von Hand zu authoring:
 So gespeicherte eigene Motions wandern denselben JSON-``motions/<name>.json``-Payload
 hin und zurück wie authorierte.
 
+**Edit > Edit motion…** öffnet die Timeline der Motion, die der Player gerade
+hält: einen Key oder ein Bezier-Handle ziehen, den gewählten Track mit **Ease**
+und **Apply to Track** zu einem benannten Easing umformen (31 Kurven; elastic
+und bounce werden zu 16 linearen Keys pro Segment) oder eine 30-Hz-Aufnahme mit
+**Simplify Keys** ausdünnen, das jeden Key verwirft, der innerhalb der Toleranz
+(ein Prozentsatz des Bereichs jedes Parameters) von der Linie durch seine
+Nachbarn liegt.
+
 Live-Streaming an OBS
 ^^^^^^^^^^^^^^^^^^^^^
 

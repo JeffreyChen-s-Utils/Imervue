@@ -494,6 +494,7 @@ Basé sur JSON, lisible et diffable par un humain, sans binaire propriétaire. L
 - **Add Rotation Deformer** (ancre + angle) / **Add Warp Deformer** (lattice bilinéaire rows × cols) dans le menu **Edit**
 - **Add Parameter** → définir des formes-clés aux extrêmes du curseur via **Set Key** dans le dock des paramètres
 - **Éditeur de maillage** — basculer Edit Mesh pour déplacer les sommets ; les clics à moins de 8 px se collent au plus proche
+- **Timeline de mouvement** — **Edit > Edit motion…** fait glisser les clés et les poignées de Bézier ; **Ease** remodèle une piste selon l'un des 31 easings nommés (elastic et bounce deviennent des clés échantillonnées) et **Simplify Keys** supprime les clés d'une prise enregistrée situées à moins d'une tolérance de la droite passant par leurs voisines
 - **Save As…** écrit l'ensemble du rig dans un zip `.puppet`
 
 ### Exécution

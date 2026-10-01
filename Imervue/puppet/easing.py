@@ -14,13 +14,20 @@ ships the standard easing curves three ways:
 * :func:`control_points_for_segment` — scale those handles onto a segment's
   start / end points, returning the ``(c0, c1)`` a cubic-bezier segment needs.
 
-Pure Python — no Qt and no document mutation; the caller builds the
-``MotionSegment`` from the returned control points.
+* :func:`eased_segments` / :func:`ease_track` — rebuild segments so they
+  follow a named easing: one cubic-bezier (or linear) segment where a single
+  curve can carry it, :data:`EASING_SAMPLES` linear pieces for elastic and
+  bounce. The Puppet motion timeline's **Ease** box applies it to a track.
+
+Pure Python — no Qt; :func:`ease_track` returns a new track and leaves the
+one it is given alone.
 """
 from __future__ import annotations
 
 import math
 from collections.abc import Callable
+
+from Imervue.puppet.document import MotionSegment, MotionTrack
 
 # Back-easing overshoot constants (the classic 1.70158 magic number).
 _BACK_C1 = 1.70158
@@ -201,3 +208,43 @@ def control_points_for_segment(
     c0 = (t0 + x1 * dt, v0 + y1 * dv)
     c1 = (t0 + x2 * dt, v0 + y2 * dv)
     return c0, c1
+
+
+EASING_SAMPLES = 16
+"""Linear pieces per segment for an easing with no single cubic-bezier form."""
+
+
+def eased_segments(
+    name: str,
+    p0: tuple[float, float],
+    p1: tuple[float, float],
+    *,
+    samples: int = EASING_SAMPLES,
+) -> list[MotionSegment]:
+    """Segments carrying ``p0`` → ``p1`` along the easing *name*.
+
+    One linear or cubic-bezier segment when a single curve can follow it;
+    otherwise (elastic, bounce) *samples* linear pieces through
+    :func:`ease_value`. Raises ``ValueError`` for an unknown easing.
+    """
+    if name == "linear":
+        return [MotionSegment("linear", p0, p1)]
+    if name in EASING_BEZIER:
+        c0, c1 = control_points_for_segment(name, p0, p1)
+        return [MotionSegment("cubic-bezier", p0, p1, c0, c1)]
+    ease_value(name, 0.0)
+    (t0, v0), (t1, v1) = p0, p1
+    points = [
+        (t0 + (t1 - t0) * k / samples, v0 + (v1 - v0) * ease_value(name, k / samples))
+        for k in range(samples + 1)
+    ]
+    points[-1] = (t1, v1)
+    return [MotionSegment("linear", a, b) for a, b in zip(points, points[1:], strict=False)]
+
+
+def ease_track(track: MotionTrack, name: str) -> MotionTrack:
+    """A copy of *track* whose every segment follows the easing *name* between the same keys."""
+    return MotionTrack(track.param_id, [
+        piece for segment in track.segments
+        for piece in eased_segments(name, segment.p0, segment.p1)
+    ])

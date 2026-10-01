@@ -274,9 +274,15 @@ post-hoc.
    `cubic-bezier` segments, drag the purple handles to shape the
    curve. Each segment is drawn as a straight line between its
    keys.
-4. The dialog doesn't add or delete keys or change a segment's
-   type; the four types (`linear`, `stepped`, `inverse-stepped`,
-   `cubic-bezier`) come from the motion file.
+4. **Ease** reshapes every segment of the shown track: pick an
+   easing such as `ease-in-out-sine` and press **Apply to Track**.
+   The keys stay where they are; `elastic` and `bounce` become 16
+   linear keys per segment. **Simplify Keys** drops, on every
+   track, the keys that sit within **Tolerance** (a percentage of
+   the parameter's range) of the line through their neighbours —
+   it thins a 30 Hz take to the keys that matter, and the label
+   shows the key count before and after. The dialog doesn't add
+   single keys.
 5. Every drag updates the motion in memory and re-poses the
    canvas at the player's current time. **File > Save As…**
    writes the change into the `.puppet` file.

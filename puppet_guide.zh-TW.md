@@ -181,7 +181,7 @@ Virtual Camera 與 NDI 都用 off-screen framebuffer 重畫，**不含棋盤格�
 1. 在 **Motions** 擺放欄點動作讓播放器載入它，再選 **Edit > Edit motion…**。
 2. 從 **Track** 清單挑一個參數。圖表顯示該軌的關鍵點：X 軸是動作長度內的時間，Y 軸是該參數自己的範圍（rig 沒定義這個參數時為 −1 到 1）。
 3. 拖黃色的點移動關鍵點的時間跟數值。`cubic-bezier` segment 可以拖紫色控制把手塑形。每個 segment 都畫成兩個關鍵點之間的直線。
-4. 對話框不能新增或刪除關鍵點，也不能改 segment 類型；四種類型（`linear`、`stepped`、`inverse-stepped`、`cubic-bezier`）來自動作檔本身。
+4. **緩動** 會重塑目前顯示軌道的每個 segment：挑一種緩動曲線（例如 `ease-in-out-sine`），再按 **套用到此軌道**。關鍵點留在原位；`elastic` 與 `bounce` 會變成每個 segment 16 個 linear 關鍵點。**精簡關鍵影格** 會在每條軌上刪掉與前後關鍵點連線相差在 **容許誤差**（參數範圍的百分比）以內的關鍵點 — 把 30 Hz 的 take 精簡到真正重要的關鍵點，旁邊的標籤會顯示精簡前後的關鍵點數。對話框不能單獨新增關鍵點。
 5. 每次拖曳都會更新記憶體中的動作，並把 canvas 重新擺到播放器目前的時間點。**File > Save As…** 才會把修改寫進 `.puppet` 檔。
 
 ### 2.3 手動 keyframe 編輯（不錄 take）

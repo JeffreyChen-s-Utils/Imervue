@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-38 | 2026-10-01 | Puppet's motion timeline simplifies a recorded take's keys within a tolerance; motion_compress is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-37 | 2026-10-01 | Puppet's motion timeline reshapes a track to a named easing; easing is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-36 | 2026-10-01 | Paint's single-slider filters preview live on a full-resolution crop; filter_preview_dialog is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-35 | 2026-10-01 | Paint's Manga menu lays text along the selection's outline; text_on_selection is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-34 | 2026-10-01 | Paint's Bucket dock flat-colours the line art's regions on a new layer; auto_base_color is wired and 19x faster | #feature #paint #performance #docs #i18n | [2026-10](2026-10.md) |
@@ -502,4 +504,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 36 |
+| [2026-10.md](2026-10.md) | 2026-10 | 38 |

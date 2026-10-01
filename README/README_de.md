@@ -494,6 +494,7 @@ JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat. Das Form
 - **Add Rotation Deformer** (Anker + Winkel) / **Add Warp Deformer** (Rows × Cols bilineares Lattice) im **Edit**-Menü
 - **Add Parameter** → Key-Forms an Slider-Extremen via **Set Key** im Parameter-Dock setzen
 - **Mesh-Editor** — Edit Mesh umschalten, um Vertices zu ziehen; Klicks innerhalb 8 px snappen auf den nächsten
+- **Motion-Timeline** — **Edit > Edit motion…** zieht Keys und Bezier-Handles; **Ease** formt einen Track zu einem von 31 benannten Easings um (elastic und bounce werden zu gesampelten Keys) und **Simplify Keys** verwirft die Keys einer aufgezeichneten Aufnahme, die innerhalb einer Toleranz der Linie durch ihre Nachbarn liegen
 - **Save As…** schreibt das gesamte Rig in ein `.puppet`-Zip
 
 ### Runtime

@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `5d316c3` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `f7d7d74` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 907 | 151,322 |
+| `tests/` | 908 | 151,437 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
 | `Imervue/gui/` | 169 | 33,728 |
-| `Imervue/puppet/` | 59 | 16,018 |
+| `Imervue/puppet/` | 59 | 16,157 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,682 |
+| `Imervue/multi_language/` | 8 | 14,722 |
 | `Imervue/desktop_pet/` | 29 | 7,036 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,752** | **333,347** |
+| **總計** | **1,753** | **333,641** |
 
-其中 `Imervue/` 套件本身 765 檔 / 166,039 行。
+其中 `Imervue/` 套件本身 765 檔 / 166,218 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -794,7 +794,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-59 個檔、16,018 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+59 個檔、16,157 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -835,9 +835,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 動作 / 表情 / 閒置
 
 `motion_sampler.py`(148) 純取樣 · `motion_player.py`(381) Qt 播放驅動（循環依動作自己的 `loop`） · `motion_recorder.py`(166) 錄製 ·
-`motion_timeline.py`(368) 曲線圖編輯（數值軸用參數自己的範圍） · `motion_compress.py`(113) 移除冗餘關鍵幀 ·
+`motion_timeline.py`(460) 曲線圖編輯（數值軸用參數自己的範圍；Ease 把整軌改成具名緩動、Simplify Keys 依參數範圍百分比精簡關鍵幀） · `motion_compress.py`(113) 移除冗餘關鍵幀（Simplify Keys） ·
 `motion_picker.py`(53) 群組隨機挑選 · `synth_motions.py`(286) 為轉檔 rig 合成閒置動作 ·
-`idle_driver.py`(143) · `idle_motion_cycler.py`(151) · `easing.py`(203) 緩動預設 ·
+`idle_driver.py`(143) · `idle_motion_cycler.py`(151) · `easing.py`(250) 緩動預設（`ease_track`：單一 bezier 或 elastic／bounce 取樣成線段，時間軸的 Ease 用它） ·
 `motion_dock.py`(197) · `expression_dock.py`(121) · `pose_dock.py`(118) 姿勢群組挑成員（跟著 canvas 的 `pose_changed`）· `parameter_dock.py`(197) · `bone_tree_dock.py`(196)
 
 #### 即時輸入驅動
@@ -983,7 +983,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-907 個檔、151,322 行。`pyproject.toml` 定義三個互斥層級 marker：
+908 個檔、151,437 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1209,8 +1209,8 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 14 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    5 個在 `puppet/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+11. **有 12 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    3 個在 `puppet/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 

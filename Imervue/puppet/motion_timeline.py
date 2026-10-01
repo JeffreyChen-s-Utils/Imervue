@@ -20,6 +20,7 @@ from PySide6.QtGui import QBrush, QColor, QPen
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
+    QDoubleSpinBox,
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsLineItem,
@@ -27,12 +28,15 @@ from PySide6.QtWidgets import (
     QGraphicsView,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QVBoxLayout,
 )
 
 from Imervue.system.qt_timers import call_later
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.puppet.document import MotionTrack
+from Imervue.puppet.easing import EASING_NAMES, ease_track
+from Imervue.puppet.motion_compress import compress_track, count_keys
 
 if TYPE_CHECKING:
     from Imervue.puppet.document import Motion
@@ -321,6 +325,12 @@ class MotionTimelineDialog(QDialog):
     ``ranges`` maps a parameter id to its ``(min, max)``; a track's value
     axis spans that range (a Cubism head angle runs −30…30), and −1…1
     for a parameter it doesn't list or an empty range.
+
+    Under the graph, **Ease** reshapes every segment of the shown track to a
+    named easing (:meth:`apply_easing`) and **Simplify Keys** drops the keys
+    of every track that sit within a tolerance — a percentage of each
+    parameter's range — of the line through their neighbours
+    (:meth:`simplify_keys`); recorded motions carry one key per frame.
     """
 
     def __init__(
@@ -351,18 +361,100 @@ class MotionTimelineDialog(QDialog):
 
         self._motion = motion
         self._ranges = dict(ranges or {})
+        layout.addLayout(self._build_tools_row())
         if motion.tracks:
             self._on_track_changed(0)
 
     def widget(self) -> MotionTimelineWidget:
         return self._view
 
+    def apply_easing(self, name: str) -> bool:
+        """Reshape every segment of the shown track to the easing *name*; False with no track."""
+        track = self._view.track()
+        if track is None or not track.segments:
+            return False
+        track.segments[:] = ease_track(track, name).segments
+        self._show_track(track)
+        self._view.track_modified.emit()
+        return True
+
+    def simplify_keys(self, percent: float) -> tuple[int, int]:
+        """Drop redundant keys from every track; returns the key count ``(before, after)``.
+
+        A key goes when the curve without it stays within *percent* of the
+        parameter's range of the original everywhere.
+        """
+        before = self.key_count()
+        for track in self._motion.tracks:
+            low, high = self._range_of(track.param_id)
+            tol = max(0.0, float(percent)) / 100.0 * (high - low)
+            track.segments[:] = compress_track(track, tol=tol).segments
+        after = self.key_count()
+        current = self._view.track()
+        if current is not None:
+            self._show_track(current)
+        self._show_key_count(before, after)
+        if after != before:
+            self._view.track_modified.emit()
+        return before, after
+
+    def key_count(self) -> int:
+        """Keys across all of the motion's tracks."""
+        return sum(count_keys(track) for track in self._motion.tracks)
+
+    def _build_tools_row(self) -> QHBoxLayout:
+        lang = language_wrapper.language_word_dict
+        row = QHBoxLayout()
+        row.addWidget(QLabel(lang.get("puppet_timeline_ease", "Ease:")))
+        self._ease_box = QComboBox()
+        self._ease_box.addItems(EASING_NAMES)
+        self._ease_box.setCurrentText("ease-in-out-sine")
+        row.addWidget(self._ease_box)
+        apply_ease = QPushButton(lang.get("puppet_timeline_apply_ease", "Apply to Track"))
+        apply_ease.setToolTip(lang.get(
+            "puppet_timeline_apply_ease_tooltip",
+            "Reshape every segment of this track to the chosen easing, keeping its keys"))
+        apply_ease.clicked.connect(lambda: self.apply_easing(self._ease_box.currentText()))
+        row.addWidget(apply_ease)
+        row.addStretch(1)
+        row.addWidget(QLabel(lang.get("puppet_timeline_tolerance", "Tolerance:")))
+        self._tolerance = QDoubleSpinBox()
+        self._tolerance.setRange(0.0, 25.0)
+        self._tolerance.setSingleStep(0.5)
+        self._tolerance.setValue(1.0)
+        self._tolerance.setSuffix(" %")
+        row.addWidget(self._tolerance)
+        simplify = QPushButton(lang.get("puppet_timeline_simplify", "Simplify Keys"))
+        simplify.setToolTip(lang.get(
+            "puppet_timeline_simplify_tooltip",
+            "Drop the keys of every track that sit within the tolerance (a share of the "
+            "parameter's range) of the line through their neighbours"))
+        simplify.clicked.connect(lambda: self.simplify_keys(self._tolerance.value()))
+        row.addWidget(simplify)
+        self._keys_label = QLabel()
+        row.addWidget(self._keys_label)
+        self._show_key_count(self.key_count())
+        return row
+
+    def _show_key_count(self, before: int, after: int | None = None) -> None:
+        lang = language_wrapper.language_word_dict
+        if after is None:
+            text = lang.get("puppet_timeline_keys", "{count} keys").format(count=before)
+        else:
+            text = lang.get("puppet_timeline_keys_simplified", "{before} → {after} keys").format(
+                before=before, after=after)
+        self._keys_label.setText(text)
+
+    def _range_of(self, param_id: str) -> tuple[float, float]:
+        low, high = self._ranges.get(param_id, (-1.0, 1.0))
+        return (low, high) if high > low else (-1.0, 1.0)
+
+    def _show_track(self, track: MotionTrack) -> None:
+        low, high = self._range_of(track.param_id)
+        self._view.set_track(self._motion, track, value_min=low, value_max=high)
+
     def _on_track_changed(self, index: int) -> None:
         if not 0 <= index < len(self._motion.tracks):
             self._view.set_track(None, None)
             return
-        track = self._motion.tracks[index]
-        low, high = self._ranges.get(track.param_id, (-1.0, 1.0))
-        if not high > low:
-            low, high = -1.0, 1.0
-        self._view.set_track(self._motion, track, value_min=low, value_max=high)
+        self._show_track(self._motion.tracks[index])

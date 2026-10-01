@@ -1088,6 +1088,14 @@ Para capturar una toma personalizada en lugar de crear fotogramas clave a mano:
 Los movimientos personalizados guardados de esta forma hacen ida y vuelta a través del mismo
 payload JSON ``motions/<name>.json`` que los creados a mano.
 
+**Edit > Edit motion…** abre la línea de tiempo del movimiento que tiene el
+reproductor: arrastre una clave o un manejador bezier, remodele la pista elegida
+según un easing con nombre con **Ease** y **Apply to Track** (31 curvas; elastic
+y bounce se convierten en 16 claves lineales por segmento), o aligere una toma de
+30 Hz con **Simplify Keys**, que descarta cada clave que queda dentro de la
+tolerancia (un porcentaje del rango de cada parámetro) de la recta que pasa por
+sus vecinas.
+
 Streaming en vivo a OBS
 ^^^^^^^^^^^^^^^^^^^^^^^
 

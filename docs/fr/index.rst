@@ -1087,6 +1087,14 @@ Pour capturer une prise personnalisée plutôt que de créer les images clés à
 Les mouvements personnalisés enregistrés ainsi font des allers-retours via le même fichier JSON
 ``motions/<name>.json`` que ceux créés à la main.
 
+**Edit > Edit motion…** ouvre la timeline du mouvement que tient le lecteur :
+faites glisser une clé ou une poignée de Bézier, remodelez la piste choisie selon
+un easing nommé avec **Ease** et **Apply to Track** (31 courbes ; elastic et
+bounce deviennent 16 clés linéaires par segment), ou allégez une prise à 30 Hz
+avec **Simplify Keys**, qui supprime toute clé située à moins de la tolérance
+(un pourcentage de la plage de chaque paramètre) de la droite passant par ses
+voisines.
+
 Streaming en direct vers OBS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -497,6 +497,7 @@ Basado en JSON, comparable a mano, sin binarios propietarios. El formato es abie
 - **Add Rotation Deformer** (ancla + ángulo) / **Add Warp Deformer** (lattice bilineal de filas × columnas) en el menú **Edit**
 - **Add Parameter** → establece formas clave en los extremos del control vía **Set Key** en el dock de parámetros
 - **Editor de mallas** — alterna Edit Mesh para arrastrar vértices; los clics dentro de 8 px se ajustan al más cercano
+- **Línea de tiempo de motion** — **Edit > Edit motion…** arrastra claves y manejadores bezier; **Ease** remodela una pista según uno de 31 easings con nombre (elastic y bounce se convierten en claves muestreadas) y **Simplify Keys** descarta las claves de una toma grabada que quedan dentro de una tolerancia de la recta que pasa por sus vecinas
 - **Save As…** escribe el rig completo a un zip `.puppet`
 
 ### Runtime
