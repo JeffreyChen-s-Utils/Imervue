@@ -637,7 +637,9 @@ Werkzeugpalette (linke Leiste)
        auf und Burn dunkelt sie ab, Sponge entsättigt; keine Optionen
    * - Pen (Bezier)
      - ``P``
-     - Vektorpfad mit Anker- / Griff-Bearbeitung
+     - Vektorpfad mit Anker- / Griff-Bearbeitung; **Glätten** in der
+       Optionsleiste legt statt gerader Linien eine einzige glatte Kurve durch
+       alle angeklickten Punkte
    * - Klonstempel
      - ``S``
      - Alt+Klick legt die Quelle fest, dann ziehen, um mit Größe / Härte /
@@ -800,6 +802,7 @@ Anzeigehilfen
 Datei-I/O
 ^^^^^^^^^
 
+- **Neue Leinwand…** — ein neuer Tab in der gewählten Größe: ein Papier-, Manga- oder Bildschirm-Preset (A4, B5-Mangaseite, 1080p, 4K …), eines, das Sie mit **Als Preset speichern…** gespeichert haben, oder eine beliebige Breite und Höhe bis 16384 px, auf weißem oder transparentem Hintergrund (**Neuer Tab**, ``Ctrl + N``, behält den weißen Standard von 1024 × 1024 bei)
 - **PSD öffnen…** (``Ctrl + O``) reduziert die Datei auf einen Layer in einem neuen Tab; **Als PSD speichern…** (``Ctrl + S``) schreibt die Layer mit ihren Mischmodi (ohne Masken oder Layereffekte)
 - **Bild exportieren…** — flachlegen und als PNG, JPEG, WebP, TIFF oder BMP speichern, je nach gewähltem Dateityp (JPEG und BMP, die keine Transparenz kennen, auf Weiß). Nur **Als PSD speichern…** markiert den Tab als gespeichert; nach einem Export fragt Imervue beim Schließen weiterhin nach den ungespeicherten Änderungen des Tabs
 - **Seiten exportieren → CBZ** / **→ PDF** — die Seiten eines Comic-Projekts exportieren; **Comic-Projekt speichern…** speichert den ganzen Comic, jede Seite mit ihren Layern, in einer einzigen ``.imervue-proj``-Datei, und **Comic-Projekt öffnen…** holt ihn zurück

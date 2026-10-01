@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-33 | 2026-10-01 | Paint's Pen draws one smooth curve through the clicked points with Smooth; catmull_rom_spline is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-32 | 2026-10-01 | Paint's File menu opens canvases of preset or typed sizes; canvas_presets is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-31 | 2026-10-01 | Paint's Swatches dock shows named palettes and keeps your own; color_palette is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-30 | 2026-10-01 | Paint's Filter menu matches a reference image's colour or the swatches; match_color and match_palette are wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-29 | 2026-10-01 | Paint's Lasso snaps its outline to nearby edges with Magnetic; magnetic_lasso is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
@@ -497,4 +499,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 31 |
+| [2026-10.md](2026-10.md) | 2026-10 | 33 |

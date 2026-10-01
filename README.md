@@ -409,6 +409,8 @@ The **Paint** tab is a full-featured raster paint studio embedded as its own `QM
 
 Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Dodge · Burn · Sponge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
 
+The **Pen** joins the points you click with straight lines, or curves where you drag out handles; with **Smooth** ticked in its Options bar, it runs one smooth curve through every point instead.
+
 The darkroom-toning trio — **Dodge** (lighten), **Burn** (darken) and **Sponge** (desaturate) — paint local adjustments weighted by the brush; Dodge and Burn work on the midtones. None of the three has options.
 
 The **Gradient** tool paints foreground → background, or a gradient of your own: pick it under **Colours** in the Options bar, and **Edit…** there opens the gradient editor, where each gradient has a name and colour stops (each with a position and a colour with opacity) that you add, move, recolour and remove. Your gradients are kept between sessions.
@@ -449,6 +451,7 @@ The Color dock opens with a hue ring and saturation / brightness triangle: drag 
 
 ### File I/O
 
+- **New Canvas…** opens a tab of the size you pick — a paper, manga or screen preset (A4, B5 manga page, 1080p, 4K …), one you saved with **Save as Preset…**, or any width and height — on a white or transparent background; **New Tab** (`Ctrl+N`) keeps the 1024 × 1024 white default
 - **Open PSD…** flattens the file into one layer in a new tab; **Save as PSD…** writes the layers with their blend modes (no masks or layer effects)
 - **Export image…** writes PNG, JPEG, WebP, TIFF or BMP, by the file type you pick (JPEG and BMP, which have no transparency, on white); comic projects export their pages to **CBZ** or **PDF**. **Save Comic Project…** keeps a whole comic, every page with its layers, in one `.imervue-proj` file, and **Open Comic Project…** brings it back. Only **Save as PSD…** counts as saving the tab: after an export, closing still asks about its unsaved changes
 - **Autosave** — a snapshot every 2 minutes while the active tab has unsaved edits; on the next launch a toast offers the snapshots and **File > Restore Autosave** loads the newest into the active tab, and the status bar shows when the last one was taken. Closing Imervue asks about Paint tabs with unsaved changes.

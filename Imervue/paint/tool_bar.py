@@ -175,12 +175,14 @@ class PaintOptionsBar(QToolBar):
         gradient_idx = self._stack.addWidget(self._build_gradient_strip(lang))
         self._page_for_tool["gradient"] = gradient_idx
 
+        self._page_for_tool["bezier_pen"] = self._stack.addWidget(self._build_pen_strip(lang))
+
         # Empty page for tools with no options yet (move / hand / zoom / blur / smudge / eyedropper)
         empty_idx = self._stack.addWidget(self._build_empty_strip(lang))
         for tool in (
             "eyedropper", "move", "hand", "zoom", "blur", "smudge", "text",
             "dodge", "burn", "sponge",
-            "bezier_pen", "clone_stamp", "transform", "speech_bubble",
+            "clone_stamp", "transform", "speech_bubble",
             "shape_rect", "shape_ellipse", "shape_line", "shape_polygon",
             "crop",
         ):
@@ -375,6 +377,21 @@ class PaintOptionsBar(QToolBar):
             self._state.set_gradient(name=dialog.selected_name())
         self._fill_gradient_colours()
 
+    def _build_pen_strip(self, lang: dict) -> QWidget:
+        widget = QWidget()
+        row = QHBoxLayout(widget)
+        row.setContentsMargins(6, 0, 6, 0)
+        self._pen_smooth = QCheckBox(lang.get("paint_pen_smooth", "Smooth"))
+        self._pen_smooth.setToolTip(lang.get(
+            "paint_pen_smooth_tooltip",
+            "Draw one smooth curve through the points you click instead of straight lines",
+        ))
+        self._pen_smooth.toggled.connect(
+            lambda checked: None if self._suspend else self._state.set_pen_smooth(checked))
+        row.addWidget(self._pen_smooth)
+        row.addStretch(1)
+        return widget
+
     @staticmethod
     def _build_empty_strip(lang: dict) -> QWidget:
         widget = QWidget()
@@ -396,7 +413,8 @@ class PaintOptionsBar(QToolBar):
             self.set_tool(self._state.tool)
         elif channel == ts.EVENT_BRUSH:
             self._refresh_brush_strip()
-        elif channel in (ts.EVENT_FILL, ts.EVENT_SELECTION_MODE, ts.EVENT_GRADIENT):
+        elif channel in (ts.EVENT_FILL, ts.EVENT_SELECTION_MODE, ts.EVENT_GRADIENT,
+                         ts.EVENT_PEN):
             self._refresh_option_strips()
 
     def _refresh_option_strips(self) -> None:
@@ -409,6 +427,7 @@ class PaintOptionsBar(QToolBar):
             self._fill_all_layers.setChecked(fill.sample_all_layers)
             self._select_mode.setCurrentIndex(self._select_mode.findData(self._state.selection_mode))
             self._lasso_magnetic.setChecked(self._state.lasso_magnetic)
+            self._pen_smooth.setChecked(self._state.pen_smooth)
             self._gradient_kind.setCurrentIndex(self._gradient_kind.findData(self._state.gradient_kind))
             self._gradient_reverse.setChecked(self._state.gradient_reverse)
             self._gradient_colours.setCurrentIndex(

@@ -103,15 +103,20 @@ class TabManagerMixin:
         """Return how many open documents the workspace currently holds."""
         return self._tabs.count()
 
-    def new_tab(self) -> PaintCanvas:
+    def new_tab(self, *, width: int | None = None, height: int | None = None,
+                fill: tuple[int, int, int, int] | None = None) -> PaintCanvas:
         """Open a fresh blank document in a new tab and switch to it.
 
-        Returns the new tab's :class:`PaintCanvas` so callers can
-        e.g. ``load_image`` into it. The dispatcher follows because
-        its providers read from ``self._canvas`` at event time.
+        *width* / *height* / *fill* size and paint its background (File > New
+        Canvas…); left out, the canvas defaults apply. Returns the new tab's
+        :class:`PaintCanvas` so callers can e.g. ``load_image`` into it. The
+        dispatcher follows because its providers read from ``self._canvas`` at
+        event time.
         """
         canvas = PaintCanvas(self)
-        canvas.new_blank_document()
+        size = {k: v for k, v in (("width", width), ("height", height), ("fill", fill))
+                if v is not None}
+        canvas.new_blank_document(**size)
         canvas.set_tool_dispatcher(self._dispatcher)
         # What _build_size_hud / _wire_canvas_signals give the first tab: the
         # canvas reads the tool state for Hand / Zoom, [ / ] and pen pressure,

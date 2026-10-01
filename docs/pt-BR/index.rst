@@ -638,7 +638,9 @@ Paleta de Ferramentas (Tira Esquerda)
        Burn escurece os meios-tons, Sponge dessatura; sem opções
    * - Caneta (Bezier)
      - ``P``
-     - Caminho vetorial com edição de âncoras / alças
+     - Caminho vetorial com edição de âncoras / alças; **Smooth** na barra de
+       Opções traça uma única curva suave por todos os pontos clicados em vez
+       de linhas retas
    * - Carimbo de Clonar
      - ``S``
      - Alt+clique define a origem, depois arraste para carimbar com o
@@ -807,6 +809,7 @@ Auxílios de Visualização
 I/O de Arquivos
 ^^^^^^^^^^^^^^^
 
+- **Nova Tela…** — uma nova aba do tamanho que você escolher: um preset de papel, mangá ou monitor (A4, página de mangá B5, 1080p, 4K …), um que você salvou com **Salvar como preset…**, ou qualquer largura e altura até 16384 px, com fundo branco ou transparente (**Nova Aba**, ``Ctrl + N``, mantém o padrão de 1024 × 1024 em branco)
 - **Abrir PSD…** (``Ctrl + O``) achata o arquivo em uma única camada em uma nova aba; **Salvar como PSD…** (``Ctrl + S``) grava as camadas com seus modos de mistura (sem máscaras nem efeitos de camada)
 - **Exportar imagem…** — achatar e salvar como PNG, JPEG, WebP, TIFF ou BMP, conforme o tipo de arquivo escolhido (JPEG e BMP, que não têm transparência, sobre fundo branco). Só **Salvar como PSD…** marca a aba como salva; depois de uma exportação, fechar o Imervue ainda pergunta sobre as alterações não salvas da aba
 - **Exportar páginas → CBZ** / **→ PDF** — exportar as páginas de um projeto de quadrinhos; **Salvar projeto de quadrinhos…** salva o quadrinho inteiro, cada página com suas camadas, em um único arquivo ``.imervue-proj``, e **Abrir projeto de quadrinhos…** o reabre

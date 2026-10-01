@@ -645,7 +645,9 @@ Paleta de herramientas (Banda izquierda)
        oscurece los medios tonos, Sponge desatura; sin opciones
    * - Pluma (Bezier)
      - ``P``
-     - Ruta vectorial con edición de anclas / manejadores
+     - Ruta vectorial con edición de anclas / manejadores; **Smooth** en la
+       barra Options traza una sola curva suave que pasa por cada punto
+       pulsado en lugar de líneas rectas
    * - Sello de clonar
      - ``S``
      - Alt+clic establece la fuente; después arrastre para estampar con el tamaño /
@@ -809,6 +811,7 @@ Ayudas de visualización
 Entrada/Salida de archivos
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- **New Canvas…** — una pestaña nueva del tamaño que elija: un preset de papel, manga o pantalla (A4, página de manga B5, 1080p, 4K …), uno que haya guardado con **Save as Preset…**, o cualquier ancho y alto de hasta 16384 px, sobre fondo blanco o transparente (**New Tab**, ``Ctrl + N``, mantiene el predeterminado blanco de 1024 × 1024)
 - **Open PSD…** (``Ctrl + O``) aplana el archivo en una sola capa en una pestaña nueva;
   **Save as PSD…** (``Ctrl + S``) escribe las capas con sus modos de fusión (sin máscaras
   ni efectos de capa)

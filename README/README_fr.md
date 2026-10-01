@@ -398,6 +398,8 @@ L'onglet **Paint** est un studio de peinture raster complet intégré comme `QMa
 
 Pinceau · Gomme · Remplissage · Pipette · Rect / Lasso / Baguette / Sélection rapide · Déplacer · Texte · Dégradé · Flou · Doigt · Dodge · Burn · Sponge · Stylo · Tampon de clonage · Bulle de dialogue · Rectangle · Ellipse · Ligne · Polygone · Recadrage · Transformer · Main · Zoom
 
+Le **Stylo** relie les points sur lesquels vous cliquez par des lignes droites, ou par des courbes là où vous étirez des poignées ; avec **Lisse** coché dans sa barre d'options, il trace à la place une seule courbe lisse passant par tous les points.
+
 Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (désaturer) — peint des ajustements locaux pondérés par le pinceau ; Dodge et Burn agissent sur les tons moyens. Aucun des trois n'a d'options.
 
 L'outil **Dégradé** peint premier plan → arrière-plan, ou un dégradé personnalisé : choisissez-le sous **Couleurs** dans la barre d'options, et **Modifier…** y ouvre l'éditeur de dégradés, où chaque dégradé a un nom et des points de couleur (chacun avec une position et une couleur avec opacité) que vous ajoutez, déplacez, recolorez et supprimez. Vos dégradés sont conservés d'une session à l'autre.
@@ -438,6 +440,7 @@ Le dock Couleur s'ouvre sur un anneau de teinte et un triangle saturation / lumi
 
 ### E/S de fichiers
 
+- **New Canvas…** ouvre un onglet de la taille choisie — un préréglage papier, manga ou écran (A4, page manga B5, 1080p, 4K …), un préréglage enregistré avec **Save as Preset…**, ou n'importe quelles largeur et hauteur — sur fond blanc ou transparent ; **New Tab** (`Ctrl+N`) conserve le format blanc par défaut de 1024 × 1024
 - **Open PSD…** aplatit le fichier en un seul calque dans un nouvel onglet ; **Save as PSD…** écrit les calques avec leurs modes de fusion (sans masques ni effets de calque)
 - **Export image…** écrit du PNG, JPEG, WebP, TIFF ou BMP, selon le type de fichier choisi (JPEG et BMP, qui ne gèrent pas la transparence, sur fond blanc) ; les projets BD exportent leurs pages en **CBZ** ou **PDF**. **Save Comic Project…** conserve une BD entière, chaque page avec ses calques, dans un seul fichier `.imervue-proj`, et **Open Comic Project…** la rouvre. Seul **Save as PSD…** compte comme un enregistrement de l'onglet : après un export, la fermeture demande toujours quoi faire de ses modifications non enregistrées
 - **Sauvegarde automatique** — un instantané toutes les 2 minutes tant que l'onglet actif a des modifications non enregistrées ; au lancement suivant, un toast propose les instantanés et **File > Restore Autosave** charge le plus récent dans l'onglet actif, et la barre d'état indique quand le dernier a été pris. À la fermeture, Imervue demande quoi faire des onglets Paint ayant des modifications non enregistrées.

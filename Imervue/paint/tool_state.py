@@ -126,6 +126,7 @@ EVENT_RULER = "ruler"          # ruler mode / geometry changed
 EVENT_SUB_TOOL = "sub_tool"    # sub-tool registry / active sub-tool changed
 EVENT_EYEDROPPER = "eyedropper"   # eyedropper sampling mode changed
 EVENT_PRESSURE_CURVE = "pressure_curve"   # tablet pressure response changed
+EVENT_PEN = "pen"              # pen tool's Smooth curve setting changed
 
 
 @dataclass(frozen=True)
@@ -230,6 +231,8 @@ class ToolState:
     lasso_magnetic: bool = False
     # Palette the Swatches dock shows (paint/color_palette); "" = the recent colours.
     swatch_palette: str = ""
+    # Pen paths run as one smooth curve through the anchors (paint/catmull_rom_spline).
+    pen_smooth: bool = False
     snap_to_pixel: bool = False
     snap_to_edges: bool = False
     # When ``True`` and the workspace has a manga panel layout
@@ -466,6 +469,15 @@ class ToolState:
         self._emit(EVENT_HISTORY)
         return True
 
+    def set_pen_smooth(self, enabled: bool) -> bool:
+        """Turn the pen's Smooth curve on or off. True if it changed."""
+        if bool(enabled) == self.pen_smooth:
+            return False
+        self.pen_smooth = bool(enabled)
+        self._persist()
+        self._emit(EVENT_PEN)
+        return True
+
     def set_lasso_magnetic(self, enabled: bool) -> bool:
         """Turn edge snapping of lasso outlines on or off. True if it changed."""
         if bool(enabled) == self.lasso_magnetic:
@@ -662,6 +674,7 @@ class ToolState:
             "selection_mode": self.selection_mode,
             "lasso_magnetic": bool(self.lasso_magnetic),
             "swatch_palette": self.swatch_palette,
+            "pen_smooth": bool(self.pen_smooth),
             "gradient_kind": self.gradient_kind,
             "gradient_reverse": self.gradient_reverse,
             "gradient_repeat": self.gradient_repeat,
@@ -721,6 +734,7 @@ class ToolState:
             brush=brush, fill=fill, selection_mode=selection_mode,
             lasso_magnetic=bool(raw.get("lasso_magnetic", False)),
             swatch_palette=str(raw.get("swatch_palette", "") or ""),
+            pen_smooth=bool(raw.get("pen_smooth", False)),
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
             gradient_repeat=gradient_repeat,
             gradient_name=str(raw.get("gradient_name", "") or ""),

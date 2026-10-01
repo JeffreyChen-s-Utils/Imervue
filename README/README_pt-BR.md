@@ -405,6 +405,8 @@ A aba **Paint** é um estúdio raster completo embutido como seu próprio `QMain
 
 Pincel · Borracha · Preenchimento · Conta-gotas · Retângulo / Laço / Varinha / Seleção Rápida · Mover · Texto · Gradiente · Desfocar · Smudge · Dodge · Burn · Sponge · Caneta · Carimbo de Clonagem · Balão de Fala · Retângulo · Elipse · Linha · Polígono · Recorte · Transformar · Mão · Zoom
 
+A **Caneta** liga os pontos que você clica com linhas retas, ou com curvas onde você arrasta alças; com **Smooth** marcado na barra de opções, ela traça em vez disso uma única curva suave por todos os pontos.
+
 O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (dessaturar) — pinta ajustes locais ponderados pelo pincel; Dodge e Burn atuam nos meios-tons. Nenhum dos três tem opções.
 
 A ferramenta **Gradiente** pinta da cor de primeiro plano → cor de fundo, ou com um gradiente seu: escolha-o em **Colours** na barra de opções, e **Edit…** ali abre o editor de gradientes, onde cada gradiente tem um nome e paradas de cor (cada uma com uma posição e uma cor com opacidade) que você adiciona, move, recolore e remove. Seus gradientes são mantidos entre sessões.
@@ -445,6 +447,7 @@ O dock Cor abre com um anel de matiz e um triângulo de saturação / brilho: ar
 
 ### I/O de arquivos
 
+- **New Canvas…** abre uma aba do tamanho que você escolher — um preset de papel, mangá ou tela (A4, página de mangá B5, 1080p, 4K …), um que você salvou com **Save as Preset…**, ou qualquer largura e altura — com fundo branco ou transparente; **New Tab** (`Ctrl+N`) mantém o padrão de 1024 × 1024 em branco
 - **Open PSD…** achata o arquivo em uma única camada em uma nova aba; **Save as PSD…** grava as camadas com seus modos de mesclagem (sem máscaras nem efeitos de camada)
 - **Export image…** grava PNG, JPEG, WebP, TIFF ou BMP, conforme o tipo de arquivo escolhido (JPEG e BMP, que não têm transparência, sobre fundo branco); projetos de quadrinhos exportam suas páginas para **CBZ** ou **PDF**. **Save Comic Project…** salva um quadrinho inteiro, cada página com suas camadas, em um único arquivo `.imervue-proj`, e **Open Comic Project…** o reabre. Só **Save as PSD…** conta como salvar a aba: depois de uma exportação, fechar ainda pergunta sobre as alterações não salvas dela
 - **Autosave** — um snapshot a cada 2 minutos enquanto a aba ativa tem edições não salvas; na próxima inicialização um toast oferece os snapshots e **File > Restore Autosave** carrega o mais recente na aba ativa, e a barra de status mostra quando o último foi feito. Ao fechar o Imervue, ele pergunta sobre abas Paint com alterações não salvas.

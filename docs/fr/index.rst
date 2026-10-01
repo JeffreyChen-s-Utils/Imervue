@@ -640,7 +640,9 @@ Palette d'outils (bande de gauche)
        assombrit les tons moyens, Sponge désature ; aucune option
    * - Plume (Bézier)
      - ``P``
-     - Tracé vectoriel avec édition des ancres et poignées
+     - Tracé vectoriel avec édition des ancres et poignées ; **Lisse** dans la
+       barre d'options trace une seule courbe lisse passant par tous les points
+       cliqués au lieu de lignes droites
    * - Tampon de duplication
      - ``S``
      - Alt+clic définit la source, puis faites glisser pour tamponner avec la taille /
@@ -806,6 +808,7 @@ Aides à la visualisation
 E/S de fichiers
 ^^^^^^^^^^^^^^^
 
+- **Nouveau canevas…** — un nouvel onglet de la taille choisie : un préréglage papier, manga ou écran (A4, page manga B5, 1080p, 4K …), un préréglage enregistré avec **Enregistrer comme préréglage…**, ou n'importe quelles largeur et hauteur jusqu'à 16384 px, sur fond blanc ou transparent (**Nouvel onglet**, ``Ctrl + N``, conserve le format blanc par défaut de 1024 × 1024)
 - **Ouvrir PSD…** (``Ctrl + O``) aplatit le fichier en un seul calque dans un nouvel onglet ; **Enregistrer sous PSD…** (``Ctrl + S``) écrit les calques avec leurs modes de fusion (sans masques ni effets de calque)
 - **Exporter l'image…** — aplatir et enregistrer en PNG, JPEG, WebP, TIFF ou BMP, selon le type de fichier choisi (JPEG et BMP, qui ne gèrent pas la transparence, sur fond blanc). Seul **Enregistrer sous PSD…** marque l'onglet comme enregistré ; après un export, la fermeture d'Imervue demande toujours quoi faire des modifications non enregistrées de l'onglet
 - **Exporter les pages → CBZ** / **→ PDF** — exporter les pages d'un projet BD ; **Enregistrer le projet BD…** conserve la BD entière, chaque page avec ses calques, dans un seul fichier ``.imervue-proj``, et **Ouvrir un projet BD…** la rouvre

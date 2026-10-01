@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `4e6933e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `e2fc525` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 902 | 150,798 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 168 | 42,102 |
+| `tests/` | 904 | 151,009 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,315 |
 | `Imervue/gui/` | 169 | 33,728 |
 | `Imervue/puppet/` | 59 | 16,018 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,587 |
+| `Imervue/multi_language/` | 8 | 14,652 |
 | `Imervue/desktop_pet/` | 29 | 7,036 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,746** | **332,250** |
+| **總計** | **1,749** | **332,739** |
 
-其中 `Imervue/` 套件本身 764 檔 / 165,466 行。
+其中 `Imervue/` 套件本身 765 檔 / 165,744 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -670,7 +670,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-168 個檔、42,102 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+169 個檔、42,315 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -702,7 +702,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `brush_presets.py`(349) · `default_brush_presets.py`(164) · `brush_preset_io.py`(240) 含外部格式匯入 ·
 `brush_preset_dialog.py`(264) · `brush_kind_preview.py`(89) · `brush_tip_capture.py`(137) 從選區擷取筆尖 ·
 `custom_brush.py`(97) · `pressure_curve.py`(146) + `pressure_curve_dialog.py`(255) 筆壓曲線 ·
-`stabilizer.py`(84) 筆畫穩定器 · `catmull_rom_spline.py`(80) 平滑重採樣 · `symmetry.py`(85) 對稱繪製 ·
+`stabilizer.py`(84) 筆畫穩定器 · `catmull_rom_spline.py`(80) 平滑重採樣（鋼筆 Options bar 的 Smooth：穿過各點的一條曲線）· `symmetry.py`(85) 對稱繪製 ·
 `smudge.py`(120) 塗抹/混色筆 · `blur.py`(74) · `dodge_burn.py`(100) · `sponge.py`(68) ·
 `stamp_tool.py`(151) + `stroke_along_path.py`(99)
 
@@ -718,7 +718,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `fill.py`(372) 洪水填色 · `auto_region_fill.py`(253) 一次填滿所有封閉區 · `auto_base_color.py`(245) 線稿自動平塗 ·
 `divide_layer.py`(158) 依顏色拆圖層 · `gradient.py`(168) + `gradient_editor.py`(324) 多色標漸層（存在設定，增刪移改色標）+ `gradient_editor_dialog.py`(256) 漸層編輯器（Options bar 的 Edit…）+
 `gradient_map_presets.py`(88) · `shape_engine.py`(265) ·
-`bezier_path.py`(217) + `pen_commit.py`(106) 鋼筆工具 ·
+`bezier_path.py`(217) + `pen_commit.py`(130) 鋼筆工具 ·
 `vector_layer.py`(311) 非破壞性向量線條 · `binary_layer.py`(139) 1-bit 墨線圖層 ·
 `image_trace.py`(220) 遮罩 → 輪廓向量化 ·
 `text_render.py`(225) · `text_tool.py`(209) · `text_on_path.py`(173) ·
@@ -765,9 +765,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | --- | ---: | --- |
 | `paint_workspace.py` | 764 | 頂層 `PaintWorkspace` widget；`confirm_close()` 由主視窗關閉時呼叫（它是分頁，收不到自己的 closeEvent） |
 | `tool_dispatcher.py` | 449 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
-| `tool_state.py` | 960 | **無 Qt** 的工具狀態模型 |
-| `tool_bar.py` | 461 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
-| `workspace_tabs.py` | 332 | 多文件分頁 |
+| `tool_state.py` | 974 | **無 Qt** 的工具狀態模型 |
+| `tool_bar.py` | 480 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
+| `workspace_tabs.py` | 337 | 多文件分頁 |
 | `workspace_docks.py` | 418 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 433 | 文件內容命令 |
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
@@ -777,8 +777,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |
-| `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(624)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(519)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
+| `canvas_presets.py` | 184 + `new_canvas_dialog.py`(136) | File > New Canvas… 的尺寸預設（紙張／漫畫／螢幕 + 自訂，存在設定）與對話框（尺寸、白或透明背景）|
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(635)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(519)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,921 行）
 
@@ -786,10 +786,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `materials.py`(265) 素材庫 dock · `navigators.py`(247) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
-#### `paint/tools/`（6 檔 · 1,907 行）
+#### `paint/tools/`（6 檔 · 1,911 行）
 
 `painting.py`(438) 筆刷/橡皮/填色/滴管 · `shapes.py`(444) 形狀與裁切 ·
-`special.py`(353) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(314) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
+`special.py`(357) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(314) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
 `retouch.py`(357) 漸層（前景→背景或存下的多色標漸層）/塗抹/模糊/加深減淡/海綿
 
 ### 6.15 `Imervue/puppet/`
@@ -983,7 +983,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-902 個檔、150,798 行。`pyproject.toml` 定義三個互斥層級 marker：
+904 個檔、151,009 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1209,8 +1209,8 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 19 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    5 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+11. **有 17 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    3 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 

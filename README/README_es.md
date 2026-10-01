@@ -401,6 +401,8 @@ La pestaña **Paint** es un estudio de pintura rasterizada con todas las funcion
 
 Pincel · Borrador · Relleno · Cuentagotas · Rect / Lazo / Varita / Selección rápida · Mover · Texto · Gradiente · Desenfoque · Difuminar · Dodge · Burn · Sponge · Pluma · Tampón de clonar · Bocadillo · Rectángulo · Elipse · Línea · Polígono · Recorte · Transformar · Mano · Zoom
 
+La **Pluma** une los puntos en los que haces clic con líneas rectas, o con curvas donde arrastras manejadores; con **Suavizado** marcado en su barra de opciones, traza en cambio una sola curva suave que pasa por todos los puntos.
+
 El trío de tonificación de cuarto oscuro — **Dodge** (aclarar), **Burn** (oscurecer) y **Sponge** (desaturar) — pinta ajustes locales ponderados por el pincel; Dodge y Burn actúan sobre los medios tonos. Ninguno de los tres tiene opciones.
 
 La herramienta **Gradiente** pinta primer plano → fondo, o un degradado propio: elígelo en **Colores** en la barra de opciones, y **Editar…** allí abre el editor de degradados, donde cada degradado tiene un nombre y paradas de color (cada una con una posición y un color con opacidad) que puedes añadir, mover, recolorear y quitar. Tus degradados se conservan entre sesiones.
@@ -441,6 +443,7 @@ El panel Color se abre con un anillo de tono y un triángulo de saturación / br
 
 ### E/S de archivos
 
+- **New Canvas…** abre una pestaña del tamaño que elijas — un predefinido de papel, manga o pantalla (A4, página de manga B5, 1080p, 4K …), uno que hayas guardado con **Save as Preset…**, o cualquier ancho y alto — sobre fondo blanco o transparente; **New Tab** (`Ctrl+N`) mantiene el predeterminado blanco de 1024 × 1024
 - **Open PSD…** aplana el archivo en una sola capa en una pestaña nueva; **Save as PSD…** escribe las capas con sus modos de mezcla (sin máscaras ni efectos de capa)
 - **Export image…** escribe PNG, JPEG, WebP, TIFF o BMP, según el tipo de archivo elegido (JPEG y BMP, que no admiten transparencia, sobre fondo blanco); los proyectos de cómic exportan sus páginas a **CBZ** o **PDF**. **Save Comic Project…** guarda un cómic entero, cada página con sus capas, en un solo archivo `.imervue-proj`, y **Open Comic Project…** lo recupera. Solo **Save as PSD…** cuenta como guardar la pestaña: tras una exportación, al cerrar se sigue preguntando por sus cambios sin guardar
 - **Autoguardado** — una instantánea cada 2 minutos mientras la pestaña activa tenga ediciones sin guardar; en el siguiente inicio un toast ofrece las instantáneas y **File > Restore Autosave** carga la más reciente en la pestaña activa, y la barra de estado muestra cuándo se tomó la última. Al cerrar Imervue se pregunta por las pestañas Paint con cambios sin guardar.

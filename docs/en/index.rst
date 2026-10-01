@@ -635,7 +635,9 @@ Tool Palette (Left Strip)
        darkens the midtones, Sponge desaturates; no options
    * - Pen (Bezier)
      - ``P``
-     - Vector path with anchor / handle editing
+     - Vector path with anchor / handle editing; **Smooth** in the Options
+       bar runs one smooth curve through every clicked point instead of
+       straight lines
    * - Clone Stamp
      - ``S``
      - Alt+click sets the source, then drag to stamp with the brush size /
@@ -798,6 +800,7 @@ View Aids
 File I/O
 ^^^^^^^^
 
+- **New Canvas…** — a new tab of the size you pick: a paper, manga or screen preset (A4, B5 manga page, 1080p, 4K …), one you saved with **Save as Preset…**, or any width and height up to 16384 px, on a white or transparent background (**New Tab**, ``Ctrl + N``, keeps the 1024 × 1024 white default)
 - **Open PSD…** (``Ctrl + O``) flattens the file into one layer in a new tab; **Save as PSD…** (``Ctrl + S``) writes the layers with their blend modes (no masks or layer effects)
 - **Export image…** — flatten and save as PNG, JPEG, WebP, TIFF or BMP, by the file type you pick (JPEG and BMP, which have no transparency, on white). Only **Save as PSD…** marks the tab saved; after an export, closing Imervue still asks about the tab's unsaved changes
 - **Export pages → CBZ** / **→ PDF** — export the pages of a comic project; **Save Comic Project…** keeps the whole comic, every page with its layers, in one ``.imervue-proj`` file, and **Open Comic Project…** brings it back

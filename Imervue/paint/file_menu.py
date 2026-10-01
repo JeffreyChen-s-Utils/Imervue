@@ -52,6 +52,8 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
     for key, fallback, slot, shortcut in (
         ("paint_file_new_tab", "New Tab",
          bridge.new_tab, "Ctrl+N"),
+        ("paint_file_new_canvas", "New Canvas…",
+         bridge.new_canvas, ""),
         ("paint_file_new_project", "New Comic Project…",
          bridge.new_comic_project, "Ctrl+Alt+N"),
         ("paint_file_open_project", "Open Comic Project…",
@@ -121,6 +123,15 @@ class _FileMenuBridge:
 
     def new_tab(self) -> None:
         self._workspace.new_tab()
+
+    def new_canvas(self) -> None:  # pragma: no cover - Qt dialog
+        """File > New Canvas…: a new tab of the size and background the dialog asks for."""
+        from Imervue.paint.new_canvas_dialog import NewCanvasDialog
+        from PySide6.QtWidgets import QDialog
+        dialog = NewCanvasDialog(parent=self._workspace)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            width, height, fill = dialog.values()
+            self._workspace.new_tab(width=width, height=height, fill=fill)
 
     def new_comic_project(self) -> None:  # pragma: no cover - Qt dialog
         """Pop a small picker (template + page count + project name)

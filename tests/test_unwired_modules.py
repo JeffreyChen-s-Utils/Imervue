@@ -29,7 +29,6 @@ _KNOWN_UNWIRED = {
     "Imervue.library.capture_time", "Imervue.library.gpx_geotag",
     "Imervue.multi_language.translation_validation",
     "Imervue.paint.auto_base_color",
-    "Imervue.paint.canvas_presets", "Imervue.paint.catmull_rom_spline",
     "Imervue.paint.filter_preview_dialog",
     "Imervue.paint.text_on_selection",
     "Imervue.puppet.audio_lipsync", "Imervue.puppet.bone_weights", "Imervue.puppet.easing",

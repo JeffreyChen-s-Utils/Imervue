@@ -398,6 +398,8 @@ Der **Paint**-Tab ist ein vollwertiges Raster-Paint-Studio, das als eigenes `QMa
 
 Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Dodge · Burn · Sponge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
 
+Das **Pen**-Tool verbindet die angeklickten Punkte mit geraden Linien oder mit Kurven, wo Sie Griffe herausziehen; ist **Smooth** in seiner Options-Bar aktiviert, legt es stattdessen eine einzige glatte Kurve durch alle Punkte.
+
 Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Entsättigen) — malt lokale Anpassungen, gewichtet durch den Brush; Dodge und Burn wirken auf die Mitteltöne. Keines der drei Tools hat Optionen.
 
 Das **Gradient**-Tool malt Vordergrund → Hintergrund oder einen eigenen Verlauf: Wählen Sie ihn unter **Colours** in der Options-Bar; **Edit…** dort öffnet den Verlaufseditor, in dem jeder Verlauf einen Namen und Farbstopps hat (jeder mit einer Position und einer Farbe mit Opazität), die Sie hinzufügen, verschieben, umfärben und entfernen. Ihre Verläufe bleiben zwischen Sitzungen erhalten.
@@ -438,6 +440,7 @@ Das Color-Dock öffnet sich mit einem Farbtonring und einem Sättigungs- / Helli
 
 ### Datei-I/O
 
+- **New Canvas…** öffnet einen Tab in der gewählten Größe — ein Papier-, Manga- oder Bildschirm-Preset (A4, B5-Mangaseite, 1080p, 4K …), eines, das Sie mit **Save as Preset…** gespeichert haben, oder eine beliebige Breite und Höhe — auf weißem oder transparentem Hintergrund; **New Tab** (`Ctrl+N`) behält den weißen Standard von 1024 × 1024 bei
 - **Open PSD…** reduziert die Datei auf einen Layer in einem neuen Tab; **Save as PSD…** schreibt die Layer mit ihren Blend-Modes (ohne Masken oder Layer-Effekte)
 - **Export image…** schreibt PNG, JPEG, WebP, TIFF oder BMP, je nach gewähltem Dateityp (JPEG und BMP, die keine Transparenz kennen, auf Weiß); Comic-Projekte exportieren ihre Seiten nach **CBZ** oder **PDF**. **Save Comic Project…** speichert einen ganzen Comic, jede Seite mit ihren Layern, in einer einzigen `.imervue-proj`-Datei, und **Open Comic Project…** holt ihn zurück. Nur **Save as PSD…** gilt als Speichern des Tabs: Nach einem Export fragt das Schließen weiterhin nach seinen ungespeicherten Änderungen
 - **Autosave** — alle 2 Minuten ein Snapshot, solange der aktive Tab ungespeicherte Änderungen hat; beim nächsten Start bietet ein Toast die Snapshots an, **File > Restore Autosave** lädt den neuesten in den aktiven Tab, und die Statusleiste zeigt, wann der letzte aufgenommen wurde. Beim Schließen von Imervue wird für Paint-Tabs mit ungespeicherten Änderungen nachgefragt.
