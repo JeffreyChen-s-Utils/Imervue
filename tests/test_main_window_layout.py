@@ -22,7 +22,8 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_folder_refresh_timer': ('QTimer', 500, True),
  '_folder_tab_shortcuts': ('list',),
  '_folder_view_sessions': ('dict',),
- '_folder_watcher': ('QFileSystemWatcher',),
+ '_folder_watcher': ('FolderPoller',),
+ '_follows_app_state': ('bool', True),
  '_image_issue_dock': ('QDockWidget',),
  '_image_metadata_index': ('ImageMetadataIndex',),
  '_image_tabs': ('list',),
@@ -60,7 +61,6 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_tab_bar': ('QTabBar',),
  '_tab_switching': ('bool', False),
  '_tree_panel': ('QWidget',),
- '_tree_watchdog': ('FileTreeWatchdog',),
  '_view_stack': ('QStackedWidget',),
  'breadcrumb': ('BreadcrumbBar',),
  'clipboard_monitor': ('ClipboardMonitor',),
@@ -282,3 +282,10 @@ def test_a_pet_that_shows_on_launch_is_built_at_startup(qapp, monkeypatch):
         assert win.puppet_workspace is None
     finally:
         _close(win)
+
+
+def test_the_folder_tree_holds_no_change_notification_handles(window):
+    """A watched folder's parents cannot be renamed on Windows, so the tree's model does not watch."""
+    from PySide6.QtWidgets import QFileSystemModel
+    source = window.model.sourceModel()
+    assert source.testOption(QFileSystemModel.Option.DontWatchForChanges)

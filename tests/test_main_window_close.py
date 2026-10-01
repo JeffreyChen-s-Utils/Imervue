@@ -42,13 +42,12 @@ class _Base:
 class _Window(_Base):
     """Stand-in for the window: recorders for collaborators, real helper methods."""
 
-    def __init__(self, log, failing, *, watchdog=True):
+    def __init__(self, log, failing):
         self._log = log
         for name in ("_save_current_folder_session", "_main_tabs", "tree", "modify_panel",
-                     "viewer", "_save_window_geometry", "plugin_manager", "deleteLater"):
+                     "viewer", "_save_window_geometry", "plugin_manager", "deleteLater",
+                     "_folder_watcher"):
             setattr(self, name, _Rec(log, name, failing))
-        if watchdog:
-            self._tree_watchdog = _Rec(log, "_tree_watchdog", failing)
         self._on_main_tab_changed = object()
 
     def __getattr__(self, name):
@@ -68,7 +67,7 @@ def _close(window, event):
 
 @pytest.fixture
 def run(monkeypatch):
-    def _run(*, last=True, failing=(), watchdog=True):
+    def _run(*, last=True, failing=()):
         log: list[str] = []
         fail = set(failing)
         for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
@@ -76,7 +75,7 @@ def run(monkeypatch):
             monkeypatch.setattr(mod, name, _Rec(log, name, fail))
         monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: not last)
         monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
-        window = _Window(log, fail, watchdog=watchdog)
+        window = _Window(log, fail)
         _close(window, _Rec(log, "event", fail))
         assert window not in ImervueMainWindow._live_windows  # noqa: SLF001
         return log
@@ -86,7 +85,7 @@ def run(monkeypatch):
 _TEARDOWN = [
     "_save_current_folder_session",
     "_main_tabs.currentChanged.disconnect",
-    "_tree_watchdog.stop",
+    "_folder_watcher.stop",
     "tree.shutdown",
     "modify_panel._debounce.stop",
     "modify_panel.recipe_committed.disconnect",
@@ -119,10 +118,6 @@ def test_secondary_window_only_closes_itself(run):
 def test_a_secondary_window_whose_plugins_fail_to_unload_still_closes(run):
     assert run(last=False, failing={"plugin_manager.unload_all"}) == _TEARDOWN + [
         "plugin_manager.unload_all", "event.accept", "super.closeEvent", "deleteLater"]
-
-
-def test_no_watchdog_skips_its_step(run):
-    assert "_tree_watchdog.stop" not in run(watchdog=False)
 
 
 def test_a_failing_step_skips_only_the_rest_of_its_group(run):

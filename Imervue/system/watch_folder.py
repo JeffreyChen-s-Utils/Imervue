@@ -1,7 +1,8 @@
 """Watched-folder automation — apply an action to images as they arrive.
 
-Watches a folder with a recursive ``watchdog.Observer`` (the same pattern as
-:mod:`Imervue.system.file_tree_watcher`); when new image files appear, each is
+Watches a folder with a recursive ``watchdog.Observer`` while the user has
+this automation on (on Windows the watched folder's parents cannot be renamed
+meanwhile); when new image files appear, each is
 handed to an injected *processor* callable on the UI thread. The viewer wires a
 processor that assigns a chosen develop preset to the new file, giving a
 hands-off ingest pipeline.

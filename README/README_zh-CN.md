@@ -110,7 +110,7 @@ pip install .
 | imageio | 图片 I/O |
 | imageio-ffmpeg | 幻灯片 MP4 与 Create GIF / Video 的 MP4（H.264 通过 ffmpeg） |
 | defusedxml | 安全 XML 解析（XMP 边车文件） |
-| watchdog | 递归监视文件树（外部变更自动刷新树状图） |
+| watchdog | Watched Folder 自动化与 MCP 服务器的变更通知 |
 
 可选（feature-gated；不装就停用该功能）：
 
@@ -304,7 +304,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### 系统集成
 
 - Windows 右键 **用 Imervue 打开**（通过注册表）
-- 文件夹监控（`QFileSystemWatcher` 自动刷新）
+- 文件夹监控：约每秒检查一次打开的文件夹，在别处新增、删除或重命名的文件一两秒内就会出现；不会一直占用文件夹，所以在 Windows 上仍可重命名或移动它的上层文件夹。文件夹树在按 F5 / **Refresh**、Imervue 回到前台以及打开的文件夹有变更时更新
 - Toast 通知系统（info / success / warning / error）
 - 插件系统含在线下载器（见 [插件系统](#插件系统)）
 

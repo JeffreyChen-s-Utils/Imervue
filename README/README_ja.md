@@ -111,7 +111,7 @@ pip install .
 | imageio | 画像 I/O |
 | imageio-ffmpeg | スライドショー MP4 と Create GIF / Video の MP4(ffmpeg 経由の H.264) |
 | defusedxml | 安全な XML 解析(XMP サイドカー) |
-| watchdog | ファイルツリーの再帰監視(外部変更でツリーを自動更新) |
+| watchdog | Watched Folder の自動処理と MCP サーバーの変更通知 |
 
 オプション(feature-gated。インストールしなければ該当機能は無効化):
 
@@ -305,7 +305,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### システム統合
 
 - Windows 右クリック **Open with Imervue**(レジストリ経由で登録)
-- フォルダ監視(`QFileSystemWatcher` による自動更新)
+- フォルダ監視：開いているフォルダを約 1 秒ごとに確認するため、ほかで追加・削除・名前変更されたファイルは 1〜2 秒で反映されます。フォルダを開いたままにしないので、Windows でも上位のフォルダの名前変更や移動ができます。フォルダツリーは F5 / **Refresh**、Imervue が前面に戻ったとき、開いているフォルダが変わったときに更新されます
 - トースト通知システム(info / success / warning / error)
 - オンラインダウンローダ付きプラグインシステム([プラグインシステム](#プラグインシステム)を参照)
 

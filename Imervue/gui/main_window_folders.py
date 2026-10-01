@@ -1,6 +1,8 @@
 """Watched folder, refresh and folder sessions of the main window.
 
-Watching the open folder for changes, refreshing the image list while keeping
+Polling the open folder for changes (``system/folder_poll.py``: nothing holds
+it open, so Windows can still rename or move the folders above it), refreshing
+the image list and the folder tree while keeping
 the deep-zoom image in place, recovering when the folder disappears, and
 saving / restoring each folder's session (view mode, current image).
 ``ImervueMainWindow`` mixes these methods in.
@@ -10,6 +12,7 @@ from __future__ import annotations
 import contextlib
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 
 from Imervue.system.qt_timers import call_later
 from Imervue.image.browser_state import detect_renamed_paths, filter_paths, migrate_view_path_state
@@ -27,15 +30,15 @@ class MainWindowFoldersMixin:
     """Watched folder, refresh and folder sessions of the main window."""
 
     def watch_folder(self, folder: str):
-        """監控指定資料夾，發生變更時自動刷新"""
-        dirs = self._folder_watcher.directories()
-        if dirs:
-            self._folder_watcher.removePaths(dirs)
-        if folder:
-            self._folder_watcher.addPath(folder)
-        # 同步啟動遞迴 watchdog 觀察整個樹根，QFileSystemModel 才會即時更新
-        if folder and hasattr(self, "_tree_watchdog"):
-            self._tree_watchdog.watch(folder)
+        """Poll *folder* for changes and refresh the grid when it changes; ``""`` stops."""
+        self._folder_watcher.watch(folder)
+
+    def _on_application_state_changed(self, state) -> None:
+        """Back in front: catch up with changes made in other programs meanwhile."""
+        if state != Qt.ApplicationState.ApplicationActive:
+            return
+        self._folder_watcher.poll()
+        self.tree.refresh()
 
     def _on_watched_folder_changed(self, _path: str):
         """Coalesce folder-change bursts into one stable refresh."""
@@ -61,6 +64,7 @@ class MainWindowFoldersMixin:
         current_full = list(getattr(viewer, "_unfiltered_images", None) or viewer.model.images)
         if new_images != current_full:
             self._apply_refreshed_image_list(new_images)
+            self.tree.refresh()
 
     def _current_view_folder(self) -> str:
         """Folder backing the current viewer state, if any."""
@@ -159,8 +163,6 @@ class MainWindowFoldersMixin:
             self.model.setRootPath(parent)
             self.tree.setRootIndex(self.model.index(parent))
             self._clear_view_folder_watch()
-            if hasattr(self, "_tree_watchdog"):
-                self._tree_watchdog.watch(parent)
             self.breadcrumb.set_path(parent)
         else:
             self.watch_folder("")
@@ -183,11 +185,8 @@ class MainWindowFoldersMixin:
     def _clear_view_folder_watch(self) -> None:
         """Stop the viewer folder watcher without changing the file-tree root."""
         watcher = getattr(self, "_folder_watcher", None)
-        if watcher is None:
-            return
-        dirs = watcher.directories()
-        if dirs:
-            watcher.removePaths(dirs)
+        if watcher is not None:
+            watcher.watch("")
 
     @staticmethod
     def _nearest_existing_parent(path: Path) -> str:

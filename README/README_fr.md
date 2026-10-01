@@ -111,7 +111,7 @@ pip install .
 | imageio | E/S d'images |
 | imageio-ffmpeg | MP4 du diaporama et MP4 de Create GIF / Video (H.264 via ffmpeg) |
 | defusedxml | Analyse XML sécurisée (fichiers annexes XMP) |
-| watchdog | Surveillance récursive de l'arborescence (les modifications externes rafraîchissent l'arbre) |
+| watchdog | Automatisation Watched Folder et notifications de changement du serveur MCP |
 
 Optionnel (sous condition ; ne pas installer désactive proprement la fonctionnalité) :
 
@@ -305,7 +305,7 @@ Accessibles depuis le menu **Tools** ; organisés en sous-menus groupés par fon
 ### Intégration système
 
 - Menu contextuel **Ouvrir avec Imervue** au clic droit sous Windows (association de fichiers via le registre)
-- Surveillance des dossiers via `QFileSystemWatcher` (rafraîchissement automatique au changement)
+- Surveillance des dossiers : le dossier ouvert est vérifié environ une fois par seconde, si bien que les fichiers ajoutés, supprimés ou renommés ailleurs apparaissent en une ou deux secondes ; rien ne garde le dossier ouvert, donc sous Windows les dossiers parents peuvent toujours être renommés ou déplacés. L'arborescence se met à jour avec F5 / **Refresh**, quand Imervue revient au premier plan et quand le dossier ouvert change
 - Système de notifications toast (info / succès / avertissement / erreur)
 - Système de plugins avec téléchargeur en ligne (voir [Système de plugins](#système-de-plugins))
 

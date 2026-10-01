@@ -12,7 +12,8 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QDockWidget, QHBoxLayout, QLabel, QLineEdit, QProgressBar, QSizePolicy, QSplitter,
+    QDockWidget, QFileSystemModel, QHBoxLayout, QLabel, QLineEdit, QProgressBar, QSizePolicy,
+    QSplitter,
     QStackedWidget, QStatusBar, QTabBar, QVBoxLayout, QWidget,
 )
 
@@ -60,7 +61,12 @@ class MainWindowLayoutMixin:
         # FolderThumbnailModel 供縮圖與檔案系統存取；FileTreeSortProxy 供
         # 具名排序鍵（含 QFileSystemModel 沒有欄位的「建立日期」），並轉發
         # QFileSystemModel 介面，所以其餘程式照舊把它當檔案系統 model 用。
-        self.model = FileTreeSortProxy(FolderThumbnailModel())
+        source = FolderThumbnailModel()
+        # No change notifications: a watched folder cannot have the folders above
+        # it renamed or moved on Windows. The tree is refreshed instead
+        # (``_FileTreeView.refresh``).
+        source.setOption(QFileSystemModel.Option.DontWatchForChanges, True)
+        self.model = FileTreeSortProxy(source)
         # 只篩選圖片格式 + 資料夾，隱藏不符合的檔案
         self.model.setNameFilters([f"*{ext}" for ext in sorted(VIEWER_EXTENSIONS)])
         self.model.setNameFilterDisables(False)

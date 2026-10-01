@@ -111,7 +111,7 @@ pip install .
 | imageio | Bild-I/O |
 | imageio-ffmpeg | Slideshow-MP4 und Create-GIF-/Video-MP4 (H.264 via ffmpeg) |
 | defusedxml | Sicheres XML-Parsing (XMP-Sidecars) |
-| watchdog | Rekursive Dateibaum-Überwachung (externe Änderungen aktualisieren den Baum) |
+| watchdog | Automatisierung „Watched Folder“ und die Änderungsbenachrichtigungen des MCP-Servers |
 
 Optional (Feature-Gated; weglassen, um das Feature sauber zu deaktivieren):
 
@@ -305,7 +305,7 @@ Aufrufbar im **Tools**-Menü; in funktionsgruppierte Untermenüs organisiert:
 ### Systemintegration
 
 - Windows-Rechtsklick-Kontextmenü **Open with Imervue** (registry-basierte Dateiverknüpfung)
-- Ordnerüberwachung mit `QFileSystemWatcher` (Auto-Refresh bei Änderung)
+- Ordnerüberwachung: Der geöffnete Ordner wird etwa einmal pro Sekunde geprüft, sodass anderswo hinzugefügte, gelöschte oder umbenannte Dateien nach ein bis zwei Sekunden erscheinen; nichts hält den Ordner offen, daher lassen sich unter Windows die Ordner darüber weiterhin umbenennen oder verschieben. Der Ordnerbaum zieht bei F5 / **Refresh** nach, wenn Imervue wieder in den Vordergrund kommt und wenn sich der geöffnete Ordner ändert
 - Toast-Benachrichtigungssystem (info / success / warning / error)
 - Plugin-System mit Online-Plugin-Downloader (siehe [Plugin-System](#plugin-system))
 

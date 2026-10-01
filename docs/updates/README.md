@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-19 | 2026-10-01 | The open folder is polled instead of watched, so Windows can rename or move the folders above it | #done #decision #windows #file-tree #bugfix | [2026-10](2026-10.md) |
 | U-20261001-18 | 2026-10-01 | Puppet and Desktop Pet are optional tabs: Preferences turns them off, and when on they load on first use | #done #ui #puppet #desktop-pet #performance #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-17 | 2026-10-01 | Refactor: the desktop_pet package exports its classes lazily, so its light submodules load alone | #refactor #desktop-pet | [2026-10](2026-10.md) |
 | U-20261001-16 | 2026-10-01 | GPU Develop starts wgpu with only Vulkan, D3D12 or Metal, and its device tests run in a process of their own | #bugfix #gpu #plugins #Imervue_Plugins #test | [2026-10](2026-10.md) |
@@ -484,4 +485,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 18 |
+| [2026-10.md](2026-10.md) | 2026-10 | 19 |

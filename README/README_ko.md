@@ -111,7 +111,7 @@ pip install .
 | imageio | 이미지 입출력 |
 | imageio-ffmpeg | 슬라이드쇼 MP4와 Create GIF / Video의 MP4 (ffmpeg을 통한 H.264) |
 | defusedxml | 안전한 XML 파싱 (XMP 사이드카) |
-| watchdog | 파일 트리 재귀 감시(외부 변경 시 트리 자동 새로 고침) |
+| watchdog | Watched Folder 자동화와 MCP 서버의 변경 알림 |
 
 선택 사항 (기능별 게이트; 설치하지 않으면 해당 기능만 비활성화):
 
@@ -308,7 +308,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### 시스템 통합
 
 - Windows 우클릭 **Open with Imervue** 컨텍스트 메뉴 (레지스트리 기반 파일 연결)
-- `QFileSystemWatcher`를 이용한 폴더 모니터링 (변경 시 자동 새로고침)
+- 폴더 모니터링: 열린 폴더를 약 1초마다 확인하므로 다른 곳에서 추가·삭제·이름 변경한 파일이 1~2초 안에 나타납니다. 폴더를 계속 열어 두지 않으므로 Windows에서도 상위 폴더의 이름을 바꾸거나 옮길 수 있습니다. 폴더 트리는 F5 / **Refresh**, Imervue가 다시 앞으로 올 때, 열린 폴더가 바뀔 때 갱신됩니다
 - 토스트 알림 시스템 (info / success / warning / error)
 - 온라인 플러그인 다운로더가 포함된 플러그인 시스템 ([플러그인 시스템](#플러그인-시스템) 참조)
 

@@ -109,7 +109,8 @@ class FolderThumbnailModel(QFileSystemModel):
     def clear_missing_previews(self) -> None:
         """Drop cached "no preview" markers so preview-less folders re-scan.
 
-        Called after an external change (watchdog / F5 refresh) so a folder
+        Called when the tree is refreshed (F5, Imervue back in front, the open
+        folder changed) so a folder
         whose preview briefly failed to decode — or that just gained its first
         image — gets a fresh attempt on the next paint. Folders that already
         have a decoded preview keep it, so there is no flicker and no

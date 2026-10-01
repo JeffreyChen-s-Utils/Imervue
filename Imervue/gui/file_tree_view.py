@@ -223,11 +223,18 @@ class _FileTreeView(QTreeView):
         if path:
             self._rename_path(path)
 
+    def refresh(self) -> None:
+        """Re-read the shown folders from disk; the main window calls it (``_refresh_tree``)."""
+        self._refresh_tree()
+
     def _refresh_tree(self) -> None:
         """Force QFileSystemModel to re-scan the current root.
 
-        Useful when external tools have changed the folder contents and
-        Qt's native watcher hasn't picked it up yet.
+        The model does not watch the folders it lists (``DontWatchForChanges``:
+        a change-notification handle on a folder stops Windows from renaming or
+        moving the folders above it), so changes made outside the tree show
+        after this runs: on F5 / Refresh, when Imervue comes back to the front,
+        and when the open folder changes.
         """
         model: QFileSystemModel = self.model()
         root = self.rootIndex()
