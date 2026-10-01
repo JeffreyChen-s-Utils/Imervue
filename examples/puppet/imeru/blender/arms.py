@@ -9,14 +9,24 @@ from __future__ import annotations
 
 import math
 
+from body import (
+    NAVY,
+    NAVY_DEEP,
+    NAVY_EDGE,
+    NAVY_LINE,
+    NAVY_SHADE,
+    WHITE,
+    WHITE_DEEP,
+    WHITE_EDGE,
+    WHITE_LINE,
+    WHITE_SHADE,
+)
 from common import W, bez, resample
 from geo import ellipsoid, tube
-from head import SKIN, SKIN_LINE, SKIN_SHADE
+from head import SKIN, SKIN_EDGE, SKIN_LINE, SKIN_SHADE
 from ornament import gold
 from toon import add_outline, toon
 
-WHITE, WHITE_SHADE, WHITE_DEEP, WHITE_LINE = "#FBFBFF", "#D5D9F1", "#AEB5DC", "#565C8C"
-NAVY, NAVY_SHADE, NAVY_DEEP, NAVY_LINE = "#34437E", "#232E5C", "#171E40", "#0E1430"
 ARM_DEPTH = -30.0
 
 
@@ -30,11 +40,11 @@ def _path(points, side: str):
 
 def _sleeve():
     return toon("sleeve", WHITE, WHITE_SHADE, deep=WHITE_DEEP, split=0.52, deep_split=0.12,
-                rim="#FFFFFF", rim_split=0.8, rim_strength=0.4)
+                rim="#FFFFFF", rim_split=0.8, rim_strength=0.4, edge=WHITE_EDGE, occlusion=0.8)
 
 
 def _skin():
-    return toon("hand_skin", SKIN, SKIN_SHADE, split=0.3)
+    return toon("hand_skin", SKIN, SKIN_SHADE, split=0.3, edge=SKIN_EDGE)
 
 
 def build_upper_arm(side: str, collection_for) -> None:
@@ -68,7 +78,7 @@ def build_forearm(side: str, collection_for) -> None:
     add_outline(arm, WHITE_LINE, 2.3)
     collection_for(f"forearm_{side}", arm)
     navy = toon("cuff", NAVY, NAVY_SHADE, deep=NAVY_DEEP, split=0.4, rim="#6F86D8",
-                rim_split=0.78)
+                rim_split=0.78, edge=NAVY_EDGE, occlusion=0.8)
     cuff_path = [(288, float(y), ARM_DEPTH) for y in range(1336, 1395, 4)]
     cuff = tube(f"cuff_{side}", _path(cuff_path, side), [(35.5, 31.0)] * len(cuff_path), navy,
                 segments=32)

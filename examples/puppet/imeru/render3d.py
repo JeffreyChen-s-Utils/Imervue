@@ -53,7 +53,7 @@ def render(out_dir: Path = CACHE, layers: tuple[str, ...] = ()) -> None:
         sys.stderr.write(result.stdout[-4000:] + result.stderr[-4000:])
         raise RuntimeError("Blender render failed")
     for line in result.stdout.splitlines():
-        if line.startswith("rendered "):
+        if line.startswith(("rendered ", "baked ")):
             print(line)
 
 

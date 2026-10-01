@@ -903,15 +903,18 @@ O repositório inclui uma demo totalmente riggada em
 Imervue. Ela é feita inteiramente por
 ``examples/puppet/imeru/build.py`` (``py -3`` reconstrói o arquivo; exige
 o Blender 4.2 ou mais recente): o cabelo, o corpo, a roupa e os braços dela
-são modelados e recebem cel shading no Blender, sendo renderizados uma
-camada do puppet por vez, os olhos, as sobrancelhas e a boca são pintados
-por cima como nos personagens de jogos 3D, e as camadas são então
-riggadas, então a demo não carrega direitos de terceiros: 40 drawables em
-um canvas de
-1024 × 1336, giros de cabeça feitos de morphs de vértice com paralaxe no
-estilo Live2D, íris recortadas pelo branco dos olhos, braços com duas
-articulações construídos com rotation deformers, e três cadeias de física
-que balançam o cabelo.
+são modelados e recebem cel shading no Blender com os truques de
+sombreamento dos jogos de anime em 3D (cabelo iluminado pelas normais de
+uma forma substituta suave, mechas e traços de brilho pintados, oclusão
+pré-calculada), sendo renderizados uma camada do puppet por vez, o rosto
+dela é sombreado a partir de um mapa de sombra facial SDF, os olhos, as
+sobrancelhas e a boca são pintados por cima como nos personagens de jogos
+3D, e as camadas são então riggadas, então a demo não carrega direitos de
+terceiros: 45 drawables em um canvas de 1024 × 1336, giros de cabeça
+feitos de morphs de vértice com paralaxe no estilo Live2D, uma sombra no
+rosto que muda de forma conforme ela se vira para longe da luz, íris
+recortadas pelo branco dos olhos, braços com duas articulações construídos
+com rotation deformers, e três cadeias de física que balançam o cabelo.
 
 O rig carrega todos os parâmetros padrão Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) mais

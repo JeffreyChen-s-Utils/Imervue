@@ -892,11 +892,15 @@ The repository ships a fully-rigged demo at
 mascot. She is made entirely by
 ``examples/puppet/imeru/build.py`` (``py -3`` rebuilds the file; it needs
 Blender 4.2 or newer): her hair, body, outfit and arms are modelled and
-cel-shaded in Blender and rendered one puppet layer at a time, her eyes,
-brows and mouth are painted on like a 3D game character's, and the
-layers are then rigged, so the demo carries no third-party rights: 40
-drawables on a 1024 × 1336
-canvas, head turns made of Live2D-style parallax vertex morphs, irises
+cel-shaded in Blender with the shading tricks of 3D anime games (hair lit
+through the normals of a smooth stand-in shape, painted strands and
+highlight strokes, baked occlusion) and rendered one puppet layer at a
+time, her face is shaded from an SDF face shadow map, her eyes, brows and
+mouth are painted on like a 3D game character's, and the layers are then
+rigged, so the demo carries no third-party rights: 45 drawables on a
+1024 × 1336 canvas, head turns made of Live2D-style parallax vertex
+morphs, a face shadow that changes shape as she turns away from the
+light, irises
 clipped to the eye whites, two-joint arms built from rotation
 deformers, and three physics chains that swing the hair.
 

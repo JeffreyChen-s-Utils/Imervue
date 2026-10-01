@@ -590,7 +590,7 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 
 ### サンプル
 
-同梱 rig は [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) です — Imervue オリジナルのマスコット **Imeru**:1024 × 1336 のキャンバス上に 40 個の drawable、Cubism 標準パラメータすべてに加えて 2 関節の腕、Live2D 風の視差による頭の振り向き、白目にクリップされた虹彩でのまばたき、髪の物理演算、8 個のモーション(Idle ループ 2 個、TapHead、TapBody、wave を含む Gesture 4 個)、7 個の表情を備えています。**File > Examples > Imeru** または **Open Puppet…** から開き、頭や体をクリックすると反応します。3D のアニメ調ゲームがキャラクターを作るのと同じやり方で、すべてコードで作られています。髪、体、衣装、腕は Blender でモデリングとセルシェーディングを行ってパペットのレイヤーごとに 1 枚ずつレンダリングし、目、眉、口は描き込み、そのうえでレイヤーをリギングしているため、ファイルにサードパーティーの権利は含まれません。`py -3 examples/puppet/imeru/build.py` で再生成できます(Blender 4.2 以降が必要)。
+同梱 rig は [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) です — Imervue オリジナルのマスコット **Imeru**:1024 × 1336 のキャンバス上に 45 個の drawable、Cubism 標準パラメータすべてに加えて 2 関節の腕、Live2D 風の視差による頭の振り向き、光から顔をそむけるにつれて形が変わる顔の影、白目にクリップされた虹彩でのまばたき、髪の物理演算、8 個のモーション(Idle ループ 2 個、TapHead、TapBody、wave を含む Gesture 4 個)、7 個の表情を備えています。**File > Examples > Imeru** または **Open Puppet…** から開き、頭や体をクリックすると反応します。3D のアニメ調ゲームがキャラクターを作るのと同じやり方で、すべてコードで作られています。髪、体、衣装、腕は Blender でモデリングし、そうしたゲームのシェーディング技法(なめらかな代理形状の法線でライティングした髪、描き込んだ毛束とハイライトのストローク、ベイクしたオクルージョン)でセルシェーディングを行ってパペットのレイヤーごとに 1 枚ずつレンダリングし、顔は SDF フェイスシャドウマップで陰影を付け、目、眉、口は描き込み、そのうえでレイヤーをリギングしているため、ファイルにサードパーティーの権利は含まれません。`py -3 examples/puppet/imeru/build.py` で再生成できます(Blender 4.2 以降が必要)。
 
 ---
 

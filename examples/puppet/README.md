@@ -7,7 +7,7 @@ built in (see `Imervue/puppet/`); there is nothing to enable.
 
 | File | Subject | Drawables | Parameters | Motions | Expressions |
 |---|---|---|---|---|---|
-| `imeru.puppet` | Imeru, Imervue's original mascot | 40 | 31 | 8 | 7 |
+| `imeru.puppet` | Imeru, Imervue's original mascot | 45 | 31 | 8 | 7 |
 
 ## `imeru.puppet`
 
@@ -24,15 +24,29 @@ py -3 examples/puppet/imeru/build.py --no-render  # rig the last render again
 It needs Blender 4.2 or newer, found through `$BLENDER_EXE`, `PATH`,
 `D:/Tools/blender-*/` or `C:/Program Files/Blender Foundation/`. The
 build models her hair, body, sailor outfit and arms in Blender
-(`imeru/blender/`), cel-shades them (two or three tones, a rim light, an
-angel ring on the hair, inverted-hull lines) and renders every puppet
-layer on its own at twice the canvas size (`imeru/render3d.py`; about a
-minute, into the ignored `imeru/render/`), cutting the bang and neck
-shadows from extra passes in which the hair and head only cast shadows.
-It then paints her eyes, brows, blush, nose and mouth
-(`imeru/features.py`), rigs every layer (`imeru/rig.py`), adds the
-motions and expressions, writes `imeru.puppet` and checks it against
-the `.puppet` format (`Imervue/puppet/FORMAT.md`).
+(`imeru/blender/`) and cel-shades them the way 3D anime games do: two or
+three tones with a saturated band along the shadow line, a rim light and
+inverted-hull lines; hair lit through the normals of a smooth ball and
+column around it (`normals.py`), so the whole mass falls into light and
+shade in one shape, with strand lines and a highlight band broken into
+one stroke per lock painted on in the shader; and occlusion baked into
+every vertex (`lightmap.py`), so creases and the hair under other hair
+stay in shade. It renders every puppet layer on its own at twice the
+canvas size (`imeru/render3d.py`; about a minute, into the ignored
+`imeru/render/`), cutting the bang and neck shadows from extra passes in
+which the hair and head only cast shadows.
+
+The face is shaded the way those games shade faces, not from its
+normals: `imeru/face_shadow.py` draws the shadow for light angles from
+0 to 90 degrees (the cheekbone holds the light longest, the nose throws a
+small shadow, a lit triangle stays under the far eye), merges the shapes
+into one SDF face shadow map by signed-distance interpolation, and cuts
+it into five rings; the bangs' outline, pushed a few pixels along the
+light, adds a clear hair shadow on the forehead. The build then paints
+her eyes, brows, blush, nose and mouth (`imeru/features.py`), rigs every
+layer (`imeru/rig.py`), adds the motions and expressions, writes
+`imeru.puppet` and checks it against the `.puppet` format
+(`Imervue/puppet/FORMAT.md`).
 
 **What the rig shows off:**
 
@@ -40,6 +54,11 @@ the `.puppet` format (`Imervue/puppet/FORMAT.md`).
   its depth: the eyes and nose shift most, the face outline stays put,
   the fringe moves in front and the back hair the other way, so the face
   reads as round. `ParamAngleZ` rolls the head around the neck.
+* **A face shadow that follows the light** — the light stays put, so
+  turning her head changes the angle it meets her face at: the five
+  rings of the face shadow map (`face_shade_0` … `face_shade_4`) fade in
+  with `ParamAngleX`, and the shadow sweeps across the far cheek as she
+  turns away from the light, or onto the near side past it.
 * **Eyes** — the white of each eye closes onto the lower lid
   (`ParamEyeLOpen` / `ParamEyeROpen`) and the iris and highlights are
   clipped to it with `clip_mask`; `ParamEyeLSmile` / `ParamEyeRSmile`

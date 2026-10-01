@@ -591,7 +591,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 ### 데모
 
-번들된 리그는 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet)입니다 — Imervue의 오리지널 마스코트 **Imeru**: 1024 × 1336 캔버스 위의 drawable 40개, 모든 Cubism 표준 매개변수와 2관절 팔, Live2D 스타일 시차(parallax) 고개 돌리기, 흰자 안으로 클리핑된 눈동자와 함께하는 눈 깜빡임, 머리카락 물리, 모션 8개(Idle 루프 2개, TapHead, TapBody, 손 흔들기를 포함한 Gesture 4개)와 표정 7개를 갖추고 있습니다. **File > Examples > Imeru** 메뉴 또는 **Open Puppet…** 명령으로 열고, 머리나 몸을 클릭하면 반응하는 모습을 볼 수 있습니다. 3D 애니메이션풍 게임이 캐릭터를 만드는 방식 그대로 전부 코드로 만들었습니다. 머리카락, 몸, 의상, 팔은 Blender에서 모델링하고 셀 셰이딩한 뒤 퍼펫 레이어 하나씩 렌더링하고, 눈과 눈썹, 입은 그려 넣은 다음 레이어를 리깅했기 때문에 파일에 제3자 권리가 없으며, `py -3 examples/puppet/imeru/build.py`로 다시 빌드할 수 있습니다(Blender 4.2 이상 필요).
+번들된 리그는 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet)입니다 — Imervue의 오리지널 마스코트 **Imeru**: 1024 × 1336 캔버스 위의 drawable 45개, 모든 Cubism 표준 매개변수와 2관절 팔, Live2D 스타일 시차(parallax) 고개 돌리기, 빛을 등지며 고개를 돌릴수록 모양이 바뀌는 얼굴 그림자, 흰자 안으로 클리핑된 눈동자와 함께하는 눈 깜빡임, 머리카락 물리, 모션 8개(Idle 루프 2개, TapHead, TapBody, 손 흔들기를 포함한 Gesture 4개)와 표정 7개를 갖추고 있습니다. **File > Examples > Imeru** 메뉴 또는 **Open Puppet…** 명령으로 열고, 머리나 몸을 클릭하면 반응하는 모습을 볼 수 있습니다. 3D 애니메이션풍 게임이 캐릭터를 만드는 방식 그대로 전부 코드로 만들었습니다. 머리카락, 몸, 의상, 팔은 Blender에서 모델링하고 그런 게임의 셰이딩 기법(매끈한 대리 형상의 법선으로 빛을 받는 머리카락, 그려 넣은 머리카락 가닥과 하이라이트 스트로크, 베이크한 오클루전)으로 셀 셰이딩한 뒤 퍼펫 레이어 하나씩 렌더링하고, 얼굴은 SDF 얼굴 그림자 맵으로 음영을 넣고, 눈과 눈썹, 입은 그려 넣은 다음 레이어를 리깅했기 때문에 파일에 제3자 권리가 없으며, `py -3 examples/puppet/imeru/build.py`로 다시 빌드할 수 있습니다(Blender 4.2 이상 필요).
 
 ---
 

@@ -905,12 +905,16 @@ Le dépôt fournit une démo entièrement riggée à
 d'Imervue. Elle est entièrement fabriquée par
 ``examples/puppet/imeru/build.py`` (``py -3`` reconstruit le fichier ; il faut
 Blender 4.2 ou plus récent) : ses cheveux, son corps, sa tenue et ses bras sont
-modélisés et ombrés en cel-shading dans Blender, puis rendus un calque de
-marionnette à la fois, ses yeux, ses sourcils et sa bouche sont peints par-dessus
-comme ceux d'un personnage de jeu en 3D, et les calques sont ensuite riggés, de
-sorte que la démo ne porte aucun droit de tiers : 40 drawables sur un canevas de
-1024 × 1336, des rotations de tête faites de morphs de sommets en parallaxe façon
-Live2D, des iris découpés aux blancs des yeux, des bras à deux articulations
+modélisés et ombrés en cel-shading dans Blender avec les astuces d'ombrage des
+jeux d'anime en 3D (des cheveux éclairés via les normales d'une forme lisse de
+substitution, des mèches peintes et des traits de reflet, une occlusion
+précalculée), puis rendus un calque de marionnette à la fois, son visage est ombré
+à partir d'une carte SDF d'ombre faciale, ses yeux, ses sourcils et sa bouche sont
+peints par-dessus comme ceux d'un personnage de jeu en 3D, et les calques sont
+ensuite riggés, de sorte que la démo ne porte aucun droit de tiers : 45 drawables
+sur un canevas de 1024 × 1336, des rotations de tête faites de morphs de sommets
+en parallaxe façon Live2D, une ombre faciale qui change de forme à mesure qu'elle
+se détourne de la lumière, des iris découpés aux blancs des yeux, des bras à deux articulations
 construits à partir de déformeurs de rotation, et trois chaînes physiques qui font
 balancer les cheveux.
 

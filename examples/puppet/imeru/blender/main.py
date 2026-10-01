@@ -1,10 +1,11 @@
 """Blender entry point: build Imeru in 3D and render each puppet layer to its own PNG.
 
 Run by ``render3d.py`` as ``blender -b --factory-startup --python main.py -- OUT [LAYER ...]``.
-Every builder puts its objects in one collection per puppet layer; each layer is rendered
-alone (so the parts hidden behind other layers are painted too). Two extra passes render a
-layer with other layers casting shadows but invisible to the camera — ``face_shadowed`` and
-``body_shadowed`` — from which the build cuts the bang and neck shadow layers.
+Every builder puts its objects in one collection per puppet layer, the occlusion is baked
+(``lightmap.py``), and each layer is rendered alone (so the parts hidden behind other
+layers are painted too). Two extra passes render a layer with other layers casting
+shadows but invisible to the camera — ``face_shadowed`` and ``body_shadowed`` — from
+which the build cuts the bang and neck shadow layers.
 """
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ import bpy  # noqa: E402
 import arms  # noqa: E402
 import body  # noqa: E402
 import head  # noqa: E402
+import lightmap  # noqa: E402
 from geo import link  # noqa: E402
 from toon import setup_scene  # noqa: E402
 
@@ -77,6 +79,9 @@ def main(argv: list[str]) -> None:
     out.mkdir(parents=True, exist_ok=True)
     setup_scene()
     collections = build()
+    started = time.perf_counter()
+    lightmap.bake(collections)
+    print(f"baked occlusion in {time.perf_counter() - started:.1f}s", flush=True)
     for layer in sorted(collections):
         if not wanted or layer in wanted:
             render(collections, out, layer, layer)

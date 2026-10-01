@@ -4,8 +4,10 @@ Shading is the cel look of 3D anime games: a white Diffuse BSDF goes through Sha
 so its grey value is the light falling on the surface (the sun's strength is pi, so a surface
 square to the sun reads 1.0), and fixed thresholds split it into a lit, a shade and an
 optional deep tone. Colours can blend from top to bottom of the canvas (hair turning cyan at
-the tips), a rim light picks out the silhouette, and hair gets a zigzag "angel ring" band.
-Lines are inverted hulls: a Solidify shell with flipped normals and back faces culled.
+the tips), a rim light picks out the silhouette, and a saturated band runs along the shadow
+line. Baked occlusion (``lightmap.py``) keeps creases in shade, and hair is painted: strand
+lines down each lock and a highlight band broken into one stroke per lock. Lines are
+inverted hulls: a Solidify shell with flipped normals and back faces culled.
 """
 from __future__ import annotations
 
@@ -116,6 +118,22 @@ class _Graph:
         self.link(to_rgb.outputs[0], grey.inputs[0])
         return grey.outputs[0]
 
+    def attribute(self, name: str):
+        """A float attribute of the mesh being shaded (``ao``, ``along``, ``across``)."""
+        node = self.tree.nodes.new("ShaderNodeAttribute")
+        node.attribute_type = "GEOMETRY"
+        node.attribute_name = name
+        return node.outputs["Fac"]
+
+    def ease(self, value, low: float, high: float):
+        """0 below *low*, 1 above *high*, a smooth step between."""
+        node = self.tree.nodes.new("ShaderNodeMapRange")
+        node.interpolation_type = "SMOOTHSTEP"
+        self.link(value, node.inputs["Value"])
+        node.inputs["From Min"].default_value = low
+        node.inputs["From Max"].default_value = high
+        return node.outputs["Result"]
+
     def world_y(self):
         """The canvas y (pixels, down) of the shaded point."""
         geometry = self.node("ShaderNodeNewGeometry")
@@ -149,30 +167,42 @@ def toon(name: str, lit: str, shade: str, *, deep: str | None = None,
          split: float = 0.42, deep_split: float = 0.12, stops: list | None = None,
          rim: str | None = None, rim_split: float = 0.74, rim_strength: float = 0.55,
          spec: str | None = None, spec_split: float = 0.55, roughness: float = 0.3,
-         ring: dict | None = None) -> bpy.types.Material:
+         edge: str | None = None, edge_width: float = 0.07, occlusion: float = 0.0,
+         strands: dict | None = None, streak: dict | None = None) -> bpy.types.Material:
     """A cel material.
 
     *lit* / *shade* / *deep* are ``#RRGGBB``. *stops* overrides them down the canvas:
-    ``[(y, lit, shade, deep), ...]`` from the top. *ring* adds an angel-ring band:
-    ``{"y": centre, "half": px, "zig": px, "period": px, "colour": ..}``.
+    ``[(y, lit, shade, deep), ...]`` from the top. *edge* tints a thin band of the lit side
+    along the shadow line (the saturated terminator of anime shading). *occlusion* (0-1)
+    is how much the baked ``ao`` attribute darkens the light (see ``lightmap.py``).
+    *strands* paints lines along a lock of hair and *streak* its highlight stroke; see
+    :func:`_strands` and :func:`_streak`.
     """
     material = bpy.data.materials.new(name)
     g = _Graph(material)
     y_px, split_xyz = g.world_y()
     column = {"lit": 1, "shade": 2, "deep": 3}
 
-    def tone(key: str, colour: str):
+    def tone(key: str):
         if stops:
             return _tone(g, [(row[0], row[column[key]]) for row in stops], y_px)
-        return g.colour(colour)
+        return g.colour({"lit": lit, "shade": shade, "deep": deep or shade}[key])
 
     light = g.light()
+    if occlusion:
+        open_air = g.ease(g.attribute("ao"), 0.3, 0.85)
+        light = g.math("MULTIPLY", light, g.math("MULTIPLY_ADD", open_air, occlusion,
+                                                 1.0 - occlusion))
     lit_mask = g.math("GREATER_THAN", light, split)
-    colour = tone("shade", shade)
+    colour = tone("shade")
     if deep:
-        deep_mask = g.math("GREATER_THAN", light, deep_split)
-        colour = g.mix(deep_mask, tone("deep", deep), colour)
-    colour = g.mix(lit_mask, colour, tone("lit", lit))
+        colour = g.mix(g.math("GREATER_THAN", light, deep_split), tone("deep"), colour)
+    colour = g.mix(lit_mask, colour, tone("lit"))
+    if edge:
+        band = g.math("MULTIPLY", lit_mask, g.math("LESS_THAN", light, split + edge_width))
+        colour = g.mix(band, colour, g.mix(0.6, tone("shade"), edge))
+    if strands:
+        colour = _strands(g, colour, strands, g.mix(lit_mask, tone("deep"), tone("shade")))
     if rim:
         weight = g.node("ShaderNodeLayerWeight", Blend=0.35)
         rim_mask = g.math("GREATER_THAN", weight.outputs["Facing"], rim_split)
@@ -180,28 +210,63 @@ def toon(name: str, lit: str, shade: str, *, deep: str | None = None,
         colour = g.mix(g.math("MULTIPLY", rim_mask, rim_strength), colour, rim, "SCREEN")
     if spec:
         gloss = g.light("ShaderNodeBsdfGlossy", Roughness=roughness)
-        spec_mask = g.math("GREATER_THAN", gloss, spec_split)
-        colour = g.mix(spec_mask, colour, spec, "SCREEN")
-    if ring:
-        colour = _angel_ring(g, colour, ring, y_px, split_xyz, light)
+        colour = g.mix(g.math("GREATER_THAN", gloss, spec_split), colour, spec, "SCREEN")
+    if streak:
+        colour = _streak(g, colour, streak, (y_px, split_xyz), light)
     g.emit(colour)
     material.use_backface_culling = False
     return material
 
 
-def _angel_ring(g: _Graph, colour, ring: dict, y_px, split_xyz, light):
-    """A zigzag highlight band across the hair at canvas y ``ring['y']``."""
-    x_px = g.math("MULTIPLY", split_xyz.outputs["X"], PX)
-    wave = g.math("SINE", g.math("MULTIPLY", x_px, 2 * math.pi / ring.get("period", 26.0)))
-    centre = g.math("ADD", g.math("MULTIPLY", wave, ring.get("zig", 7.0)), ring["y"])
-    distance = g.math("ABSOLUTE", g.math("SUBTRACT", y_px, centre))
-    band = g.math("LESS_THAN", distance, ring.get("half", 9.0))
+def _lock_random(g: _Graph):
+    """A value in 0-1 that differs from lock to lock (each lock is its own object)."""
+    return g.node("ShaderNodeObjectInfo").outputs["Random"]
+
+
+def _strands(g: _Graph, colour, spec: dict, line_tone):
+    """Painted strand lines running down a lock of hair.
+
+    ``spec["lines"]`` is ``[(across, half width), ...]`` in the lock's ``across`` units
+    (-1 to 1 edge to edge); each lock shifts them by up to ``spec["jitter"]``, and they
+    taper away near the root and the tip.
+    """
+    across, along = g.attribute("across"), g.attribute("along")
+    shift = g.math("MULTIPLY", g.math("SUBTRACT", _lock_random(g), 0.5), spec.get("jitter", 0.3))
+    fade = g.math("MULTIPLY", g.ease(along, 0.04, 0.24),
+                  g.math("SUBTRACT", 1.0, g.ease(along, 0.6, 0.96)))
+    total = None
+    for centre, half in spec["lines"]:
+        offset = g.math("ABSOLUTE", g.math("SUBTRACT", across, g.math("ADD", shift, centre)))
+        line_mask = g.math("LESS_THAN", offset, g.math("MULTIPLY", fade, half))
+        total = line_mask if total is None else g.math("MAXIMUM", total, line_mask)
+    return g.mix(g.math("MULTIPLY", total, spec.get("strength", 0.8)), colour, line_tone)
+
+
+def _streak(g: _Graph, colour, spec: dict, position, light):
+    """The broken highlight band of anime hair: one pointed stroke per lock.
+
+    The band follows the curve of the head: canvas y ``spec["y"]`` in the middle, ``bend``
+    pixels lower ``spread`` pixels to either side. Each stroke is ``half`` pixels tall at
+    the middle of its lock, narrows to a point toward the lock's edges (``edge``, in
+    ``across`` units) and sits up to ``jitter`` pixels off the band, lock by lock.
+    """
+    y_px, split_xyz = position
+    x_rel = g.math("MULTIPLY", split_xyz.outputs["X"], PX)
+    sweep = g.math("DIVIDE", x_rel, spec.get("spread", 200.0))
+    centre = g.math("MULTIPLY_ADD", g.math("MULTIPLY", sweep, sweep), spec.get("bend", 0.0),
+                    spec["y"])
+    random_lock = _lock_random(g)
+    centre = g.math("MULTIPLY_ADD", g.math("SUBTRACT", random_lock, 0.5),
+                    spec.get("jitter", 10.0), centre)
+    narrow = g.math("DIVIDE", g.attribute("across"), spec.get("edge", 0.85))
+    lens = g.math("MAXIMUM", g.math("SUBTRACT", 1.0, g.math("MULTIPLY", narrow, narrow)), 0.0)
+    half = g.math("MULTIPLY", g.math("MULTIPLY_ADD", random_lock, 0.5, 0.75),
+                  g.math("MULTIPLY", lens, spec["half"]))
+    band = g.math("LESS_THAN", g.math("ABSOLUTE", g.math("SUBTRACT", y_px, centre)), half)
     weight = g.node("ShaderNodeLayerWeight", Blend=0.4)
-    front = g.math("LESS_THAN", weight.outputs["Facing"], ring.get("facing", 0.55))
-    lit = g.math("GREATER_THAN", light, 0.2)
-    mask = g.math("MULTIPLY", g.math("MULTIPLY", band, front), lit)
-    return g.mix(g.math("MULTIPLY", mask, ring.get("strength", 0.85)), colour,
-                 ring["colour"], "SCREEN")
+    front = g.math("LESS_THAN", weight.outputs["Facing"], spec.get("facing", 0.55))
+    mask = g.math("MULTIPLY", g.math("MULTIPLY", band, front), g.math("GREATER_THAN", light, 0.2))
+    return g.mix(g.math("MULTIPLY", mask, spec.get("strength", 0.85)), colour, spec["colour"])
 
 
 def flat(name: str, colour: str) -> bpy.types.Material:

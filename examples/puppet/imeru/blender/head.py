@@ -2,7 +2,9 @@
 
 The head is lofted from the 2D face outline the eyes and mouth were drawn for (the outline
 seen from the front is exact), so the painted features in ``art.py`` still sit on it. Hair
-is built lock by lock as flattened tubes that follow the skull.
+is built lock by lock as flattened tubes that follow the skull, shaded with the normals of
+a smooth ball and column around it (``normals.py``) so the whole mass takes the light as
+one shape, with strand lines and a broken highlight band painted on in the shader.
 """
 from __future__ import annotations
 
@@ -11,11 +13,13 @@ import random
 
 from common import CX, bez, chain, mirror, resample, smoothstep
 from geo import ellipsoid, sheet, tube
+from normals import blend_fields, borrow, column_field, ellipsoid_field, face_light
 from ornament import jewel
-from toon import add_outline, toon
+from toon import LIGHT_DIRECTION, add_outline, toon
 
 # ---- palette (the 2D layers use the same colours) --------------------------------------
 SKIN, SKIN_SHADE, SKIN_LINE = "#FFEFE6", "#F7CDC1", "#C9857A"
+SKIN_EDGE = "#F79583"
 HAIR, HAIR_SHADE, HAIR_DEEP = "#D7D1F7", "#ABA0E6", "#8476CF"
 HAIR_SPEC, HAIR_LINE = "#FBFAFF", "#5B4DA6"
 
@@ -75,18 +79,22 @@ def _rings(y0: float, y1: float, step: float, grow: float = 0.0):
 
 
 def build_face(collection_for):
-    """The ``face`` layer: the head itself, cel-shaded skin."""
-    skin = toon("skin", SKIN, SKIN_SHADE, split=0.16, rim="#FFFFFF", rim_split=0.82,
-                rim_strength=0.3)
+    """The ``face`` layer: the head itself, lit all over but for the shadows cast on it.
+
+    Its own light and shade come from the face shadow map (``face_shadow.py``), as in
+    anime games, so the render only contributes the skin and the bangs' shadow.
+    """
+    skin = toon("skin", SKIN, SKIN_SHADE, split=0.16)
     path, radii = _rings(CROWN_Y, CHIN_Y, 3.0)
     head = tube("head", path, radii, skin, segments=56)
+    face_light(head, -LIGHT_DIRECTION)
     add_outline(head, SKIN_LINE, 2.2)
     collection_for("face", head)
 
 
 def build_neck(collection_for):
     """The neck, part of the ``body`` layer."""
-    skin = toon("neck_skin", SKIN, SKIN_SHADE, split=0.3)
+    skin = toon("neck_skin", SKIN, SKIN_SHADE, split=0.3, edge=SKIN_EDGE, occlusion=0.6)
     path = [(CX, y, -36.0) for y in range(660, 881, 10)]
     radii = [(37.0 + max(0.0, (y - 800) * 0.25), 32.0, 30.0) for _, y, _ in path]
     neck = tube("neck", path, radii, skin, segments=32)
@@ -102,21 +110,36 @@ BACK_STOPS = [(300.0, "#B4A9EA", "#8E80D8", "#6E61C2"), (700.0, "#A69AE2", "#7D7
               (1000.0, "#8FA2E0", "#6E83CF", "#5368BA"), (1320.0, "#86C9DE", "#5EA3C6", "#4880B4")]
 
 
-def hair_material(name: str, *, split: float = 0.46, ring: dict | None = None,
-                  stops: list | None = None):
+#: The smooth shapes the hair borrows its shading normals from: a ball around the head,
+#: and columns around the side locks and the long back hair that it eases into.
+HEAD_FIELD = ellipsoid_field((CX, SKULL_Y, -20.0), (215.0, 215.0, 200.0))
+SIDE_FIELD = blend_fields(HEAD_FIELD, column_field(CX, -120.0, 240.0, 200.0), 430.0, 600.0)
+BACK_FIELD = blend_fields(HEAD_FIELD, column_field(CX, -420.0, 280.0, 260.0), 420.0, 640.0)
+#: Painted strand lines down every lock: (across, half width), shifted lock by lock.
+STRANDS = {"lines": ((-0.46, 0.05), (0.1, 0.04), (0.52, 0.045)), "jitter": 0.3,
+           "strength": 0.7}
+#: The highlight band around the head, broken into one stroke per lock.
+STREAK = {"y": 340.0, "bend": 78.0, "spread": 190.0, "half": 7.0, "jitter": 16.0,
+          "edge": 0.72, "colour": HAIR_SPEC, "strength": 0.88}
+
+
+def hair_material(name: str, *, split: float = 0.46, stops: list | None = None,
+                  streak: dict | None = None, strands: dict | None = STRANDS):
+    """Cel-shaded hair: the colour gradient, baked occlusion, painted strands and streak."""
     return toon(name, HAIR, HAIR_SHADE, deep=HAIR_DEEP, split=split, deep_split=0.14,
-                stops=stops or HAIR_STOPS,
-                rim="#FFFFFF", rim_split=0.8, rim_strength=0.4,
-                spec=HAIR_SPEC, spec_split=0.86, roughness=0.12, ring=ring)
+                stops=stops or HAIR_STOPS, rim="#FFFFFF", rim_split=0.8, rim_strength=0.4,
+                edge="#8F78F0", occlusion=0.85, strands=strands, streak=streak)
 
 
 def lock(name: str, curve, width: float, material, *, lift: float = 14.0,
          flat: float = 0.32, root: float = 0.55, belly: float = 0.4, n: int = 44,
-         follow: bool = True, line: float = 2.0, sink: float | None = None):
+         follow: bool = True, line: float = 2.0, sink: float | None = None,
+         field=HEAD_FIELD):
     """One lock of hair along a 2D or 3D curve; on the skull it follows the surface.
 
     With *sink* the root starts that far above the skull and rises to *lift* over the
     first fifth of the lock, so a surface just above *sink* hides where it grows from.
+    The lock is shaded with the normals of *field* (see ``normals.py``).
     """
     pts = resample(curve, n)
     path = []
@@ -139,6 +162,7 @@ def lock(name: str, curve, width: float, material, *, lift: float = 14.0,
         across = width * shape
         radii.append((across, across * flat, across * flat))
     obj = tube(name, path, radii, material, segments=18)
+    borrow(obj, field)
     if line > 0:
         add_outline(obj, HAIR_LINE, line)
     return obj
@@ -194,13 +218,13 @@ def _fringe_lock(name, root_x, tip, width, mat, lift):
 
 def build_bangs(collection_for):
     """The ``bangs`` layer: the hair over the crown down to the hairline, and the fringe."""
-    ring = {"y": 334.0, "half": 5.0, "zig": 7.0, "period": 10.0, "colour": "#FFFFFF",
-            "strength": 0.55, "facing": 0.45}
-    mat = hair_material("bangs_hair", ring=ring)
-    scalp = sheet("scalp", _scalp_outline(), scalp_depth, mat, thickness=4.0, step=10.0)
+    mat = hair_material("bangs_hair", streak=STREAK)
+    scalp_mat = hair_material("scalp_hair", strands=None)
+    scalp = sheet("scalp", _scalp_outline(), scalp_depth, scalp_mat, thickness=4.0, step=10.0)
+    borrow(scalp, HEAD_FIELD)
     add_outline(scalp, HAIR_LINE, 2.2, even=False)
     collection_for("bangs", scalp)
-    flow = toon("hair_flow", HAIR_SHADE, HAIR_DEEP, split=0.4)
+    flow = toon("hair_flow", HAIR_SHADE, HAIR_DEEP, split=0.4, occlusion=0.85)
     for k, x in enumerate((392, 432, 470, 548, 588, 628)):
         top = (CX + (x - CX) * 0.25, CROWN_Y + 22)
         curve = bez(top, (CX + (x - CX) * 0.6, CROWN_Y + 40), (x, 300),
@@ -218,7 +242,7 @@ def build_bangs(collection_for):
 
 def build_side_locks(collection_for):
     """``side_lock_l`` / ``side_lock_r``: the long locks framing the face."""
-    mat = hair_material("side_hair", split=0.44)
+    mat = hair_material("side_hair", split=0.44, streak=STREAK)
     strands = (((352, 352), (294, 470), (282, 720), (318, 990), 34.0, 60.0),
                ((362, 372), (312, 540), (304, 760), (336, 930), 24.0, 74.0),
                ((346, 372), (280, 540), (268, 760), (290, 880), 18.0, 50.0))
@@ -228,7 +252,7 @@ def build_side_locks(collection_for):
             if side == "r":
                 curve = mirror(curve)
             obj = lock(f"side_{side}_{k}", curve, width, mat, lift=0.0, belly=0.36, root=0.15,
-                       follow=False)
+                       follow=False, field=SIDE_FIELD)
             collection_for(f"side_lock_{side}", obj)
 
 
@@ -242,14 +266,16 @@ def _back_locks(collection_for, mat, rng, *, count, spread, depth, width, prefix
                     (CX + u * spread, 900, depth), (tip_x, tip_y, depth - 20), 40)
         lock_width = width + rng.uniform(-7, 9)
         collection_for("back_hair", lock(f"{prefix}_{i}", curve, lock_width, mat, lift=0.0,
-                                         belly=0.2, root=0.8, follow=False, line=2.2))
+                                         belly=0.2, root=0.8, follow=False, line=2.2,
+                                         field=BACK_FIELD))
 
 
 def build_back_hair(collection_for):
     """``back_hair``: the hair behind the head and down her back, outer and darker inner locks."""
     inner = toon("back_inner", HAIR_SHADE, HAIR_DEEP, deep="#6556B6", split=0.62,
-                 stops=[(y, shade, deep, deep) for y, _, shade, deep in BACK_STOPS])
-    outer = hair_material("back_hair", split=0.5, stops=BACK_STOPS)
+                 stops=[(y, shade, deep, deep) for y, _, shade, deep in BACK_STOPS],
+                 occlusion=0.85)
+    outer = hair_material("back_hair", split=0.5, stops=BACK_STOPS, streak=STREAK)
     rng = random.Random(11)
     shell = ellipsoid("hair_mass", (CX, 476, -100), (206, 206, 150), inner, segments=48)
     add_outline(shell, HAIR_LINE, 2.2)

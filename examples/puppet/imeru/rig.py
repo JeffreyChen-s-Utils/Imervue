@@ -16,6 +16,7 @@ import numpy as np
 from PIL import Image
 
 import art
+import face_shadow
 from Imervue.puppet.auto_mesh import triangulate_alpha_grid
 from Imervue.puppet.document import (
     Deformer,
@@ -40,6 +41,7 @@ SIDE = {"l": "R", "r": "L"}
 HEAD_DEPTH = {  # parallax depth: 1 = eye plane, >1 in front of it, <0 behind the head
     "lid_crease": 0.75,
     "face": 0.35,
+    "face_shade": 0.35,
     "bang_shadow": 0.9,
     "blush": 0.72,
     "nose": 0.95,
@@ -66,6 +68,7 @@ CELL = {
     "collar": 32,
     "ribbon": 20,
     "face": 22,
+    "face_shade": 22,
     "bangs": 22,
     "side_lock": 20,
     "neck_shadow": 20,
@@ -92,7 +95,9 @@ CELL = {
 
 
 def kind(layer_id: str) -> str:
-    """``iris_l`` -> ``iris``."""
+    """``iris_l`` -> ``iris``; the face shadow rings ``face_shade_0``.. -> ``face_shade``."""
+    if layer_id.startswith("face_shade_"):
+        return "face_shade"
     return layer_id[:-2] if layer_id[-2:] in ("_l", "_r") else layer_id
 
 
@@ -453,8 +458,11 @@ def rig_one(d: Drawable, layer_id: str) -> None:
         eye_rig(d, layer_id[-1])
     if k == "brow":
         brow_rig(d, layer_id[-1])
-    if k == "face":
+    if k in ("face", "face_shade"):
         jaw_rig(d)
+    if k == "face_shade":
+        d.opacity_keys = [{"parameter": "ParamAngleX",
+                           "stops": face_shadow.ring_opacity(layer_id)}]
     if k == "blush":
         blush_rig(d)
     if k in ("bangs", "ahoge", "side_lock", "back_hair"):
@@ -462,7 +470,7 @@ def rig_one(d: Drawable, layer_id: str) -> None:
     head_turn(d)
     head_roll(d)
     head_follows_body(d)
-    if k == "bang_shadow":
+    if k in ("bang_shadow", "face_shade"):
         d.clip_mask = "face"
 
 
@@ -549,7 +557,8 @@ def parts() -> list[Part]:
                 for k in ("upper_arm", "forearm", "hand", "hand_open")
             ],
         ),
-        Part(id="Face", drawables=["face", "bang_shadow", "blush", "nose"]),
+        Part(id="Face", drawables=["face", *face_shadow.RINGS, "bang_shadow", "blush",
+                                   "nose"]),
         Part(id="Mouth", drawables=["mouth_inside", "mouth_line"]),
         Part(
             id="Eyes",

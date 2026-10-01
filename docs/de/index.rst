@@ -897,12 +897,17 @@ Das Repository liefert ein vollständig geriggtes Demo unter
 von Imervue. Sie entsteht vollständig durch
 ``examples/puppet/imeru/build.py`` (``py -3`` erzeugt die Datei neu; dafür
 ist Blender 4.2 oder neuer nötig): Haare, Körper, Outfit und Arme werden
-in Blender modelliert, mit Cel-Shading versehen und Puppet-Ebene für
-Puppet-Ebene gerendert, Augen, Brauen und Mund werden wie bei einer
-3D-Spielfigur aufgemalt, und danach werden die Ebenen geriggt, sodass das
-Demo keine Rechte Dritter enthält: 40 Drawables auf einer 1024 × 1336
-großen Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im Live2D-Stil, auf das
-Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
+in Blender modelliert, mit Cel-Shading samt den Shading-Tricks von
+3D-Anime-Spielen versehen (Haar, das über die Normalen einer glatten
+Stellvertreterform beleuchtet wird, aufgemalte Strähnen und
+Glanzlicht-Striche, gebackene Okklusion) und Puppet-Ebene für
+Puppet-Ebene gerendert, ihr Gesicht wird über eine
+SDF-Gesichtsschatten-Map schattiert, Augen, Brauen und Mund werden wie
+bei einer 3D-Spielfigur aufgemalt, und danach werden die Ebenen geriggt,
+sodass das Demo keine Rechte Dritter enthält: 45 Drawables auf einer
+1024 × 1336 großen Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im
+Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich
+vom Licht abwendet, auf das Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
 drei Physikketten, die das Haar schwingen lassen.
 
 Das Rig trägt jeden Cubism-Standardparameter (``ParamAngleX/Y/Z``,

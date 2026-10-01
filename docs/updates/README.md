@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-60 | 2026-10-01 | Imeru is shaded like a 3D anime game: an SDF face shadow that follows her head, borrowed hair normals, baked occlusion, painted strands | #feature #puppet #art #docs | [2026-10](2026-10.md) |
 | U-20261001-59 | 2026-10-01 | Imervue_dev 1.0.10 is on PyPI: the publish-dev upload works with the new token | #release #ci #X-13 #done | [2026-10](2026-10.md) |
 | U-20261001-58 | 2026-10-01 | Both wheels install only the Imervue package: the test suite stays out of site-packages | #bugfix #packaging #release #done | [2026-10](2026-10.md) |
 | U-20261001-57 | 2026-10-01 | The Fast jobs pass again: the six tests they had been failing unseen are fixed at their causes | #bugfix #ci #tests #cli #done | [2026-10](2026-10.md) |
@@ -525,4 +526,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 59 |
+| [2026-10.md](2026-10.md) | 2026-10 | 60 |

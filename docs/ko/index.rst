@@ -843,7 +843,7 @@ Puppet 작업 공간 (Puppet 탭)
 예제
 ^^^^
 
-저장소 동봉: ``examples/puppet/imeru.puppet`` — Imervue 의 오리지널 마스코트 **Imeru**. 전부 ``examples/puppet/imeru/build.py`` 가 만듭니다 (``py -3`` 으로 실행하면 파일을 다시 빌드하며, Blender 4.2 이상이 필요). 머리카락, 몸, 의상, 팔은 Blender 에서 모델링하고 셀 셰이딩한 뒤 퍼펫 레이어 하나씩 렌더링하고, 눈과 눈썹, 입은 3D 게임 캐릭터처럼 그려 넣은 다음 레이어를 리깅하므로, 데모에는 제3자 권리가 없습니다: 1024 × 1336 캔버스 위의 drawable 40 개, Live2D 스타일 시차 (parallax) 정점 morph 로 만든 고개 돌리기, 흰자 안으로 클리핑된 눈동자, 회전 디포머로 만든 2관절 팔, 머리카락을 흔드는 물리 체인 3 개.
+저장소 동봉: ``examples/puppet/imeru.puppet`` — Imervue 의 오리지널 마스코트 **Imeru**. 전부 ``examples/puppet/imeru/build.py`` 가 만듭니다 (``py -3`` 으로 실행하면 파일을 다시 빌드하며, Blender 4.2 이상이 필요). 머리카락, 몸, 의상, 팔은 Blender 에서 모델링하고 3D 애니메이션풍 게임의 셰이딩 기법 (매끈한 대리 형상의 법선으로 빛을 받는 머리카락, 그려 넣은 머리카락 가닥과 하이라이트 스트로크, 베이크한 오클루전) 으로 셀 셰이딩한 뒤 퍼펫 레이어 하나씩 렌더링하고, 얼굴은 SDF 얼굴 그림자 맵으로 음영을 넣고, 눈과 눈썹, 입은 3D 게임 캐릭터처럼 그려 넣은 다음 레이어를 리깅하므로, 데모에는 제3자 권리가 없습니다: 1024 × 1336 캔버스 위의 drawable 45 개, Live2D 스타일 시차 (parallax) 정점 morph 로 만든 고개 돌리기, 빛을 등지며 고개를 돌릴수록 모양이 바뀌는 얼굴 그림자, 흰자 안으로 클리핑된 눈동자, 회전 디포머로 만든 2관절 팔, 머리카락을 흔드는 물리 체인 3 개.
 
 모든 Cubism 표준 매개변수 (``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …) 에 더해 팔용 ``ParamArmLA/LB/RA/RB`` 가 있어, 모든 표준 입력 드라이버 (웹캠, 깜빡임, 립싱크, 커서 추적) 가 rig 별 설정 없이 동작합니다. 파일에는 모션 8 개가 들어 있습니다. ``Idle`` 그룹에 반복 재생되는 idle 모션 2 개, ``TapHead`` 에 ``tap_head``, ``TapBody`` 에 ``shy`` (머리나 몸을 클릭하면 재생), ``Gesture`` 에 ``greet``, ``wave``, ``surprised``, ``sleepy`` 가 있으며, 표정 7 개 (smile, happy, surprised, sad, angry, blush, sleepy) 가 함께 들어 있습니다.
 

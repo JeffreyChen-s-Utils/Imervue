@@ -1,8 +1,10 @@
 """Imeru's layers: the 3D render (Blender) plus the painted face features, bottom to top.
 
 The body, outfit, arms, head and hair are modelled and cel-shaded in Blender
-(``blender/``, run through ``render3d.py``); the eyes, brows, blush, nose and mouth are
-painted on top like a game character's face textures (``features.py``). This module holds
+(``blender/``, run through ``render3d.py``); the face's own shading comes from an SDF face
+shadow map and the hair's outline pushed along the light (``face_shadow.py``); the eyes,
+brows, blush, nose and mouth are painted on top like a game character's face textures
+(``features.py``). This module holds
 the geometry both sides and the rig share — the eye lids, the iris, the mouth, the arm
 joints — and ``LAYER_ORDER``, the drawing order from the bottom.
 """
@@ -55,10 +57,15 @@ def mouth_inside_shape():
 
 def all_layers(render_dir: Path | None = None) -> dict[str, np.ndarray]:
     """Every layer: the Blender render in *render_dir* (render3d's cache) and the features."""
+    import face_shadow
     import features
     import render3d
 
     layers = render3d.load(render_dir or render3d.CACHE)
+    face_alpha = layers["face"][..., 3]
+    layers.update(face_shadow.shade_layers(face_alpha, CX))
+    layers["bang_shadow"] = face_shadow.merge(
+        layers["bang_shadow"], face_shadow.hair_shadow(face_alpha, layers["bangs"][..., 3]))
     layers.update(features.all_features())
     missing = [name for name in LAYER_ORDER if name not in layers]
     if missing:
@@ -81,6 +88,11 @@ LAYER_ORDER = [
     "ribbon",
     "neck_shadow",
     "face",
+    "face_shade_0",
+    "face_shade_1",
+    "face_shade_2",
+    "face_shade_3",
+    "face_shade_4",
     "bang_shadow",
     "blush",
     "nose",

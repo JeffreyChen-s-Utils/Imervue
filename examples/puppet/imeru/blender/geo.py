@@ -57,16 +57,25 @@ def tube(name: str, path: Sequence[Sequence[float]], radii: Sequence[Sequence[fl
     ``radii[i]`` is ``(across, front)`` or ``(across, front, back)``: the half width seen
     from the front and how far the surface bulges toward / away from the viewer. A zero
     radius closes the tube to a point. *squash(k, theta)* may scale ring vertex *k*.
+
+    Every vertex carries two attributes the shaders paint with: ``along`` (0 at the start
+    of the path, 1 at its end) and ``across`` (-1 at one edge seen from the front, 0 in the
+    middle, 1 at the other edge).
     """
     points = [px(*p) for p in path]
     frames = _frames(points)
     bm = bmesh.new()
+    along = bm.verts.layers.float.new("along")
+    across_layer = bm.verts.layers.float.new("across")
     rings: list[list] = []
-    for point, (side, up), r in zip(points, frames, radii, strict=True):
+    last = max(1, len(points) - 1)
+    for i, (point, (side, up), r) in enumerate(zip(points, frames, radii, strict=True)):
         across, front = r[0] / PX, r[1] / PX
         back = (r[2] if len(r) > 2 else r[1]) / PX
         if across < 1e-7 and front < 1e-7:
-            rings.append([bm.verts.new(point)])
+            pole = bm.verts.new(point)
+            pole[along], pole[across_layer] = i / last, 0.0
+            rings.append([pole])
             continue
         ring = []
         for k in range(segments):
@@ -75,7 +84,9 @@ def tube(name: str, path: Sequence[Sequence[float]], radii: Sequence[Sequence[fl
             scale = squash(k, theta) if squash else 1.0
             depth = front if s >= 0 else back
             offset = side * (across * c * scale) + up * (depth * s * scale)
-            ring.append(bm.verts.new(point + offset))
+            vert = bm.verts.new(point + offset)
+            vert[along], vert[across_layer] = i / last, c
+            ring.append(vert)
         rings.append(ring)
     for a, b in zip(rings, rings[1:], strict=False):
         _bridge(bm, a, b)

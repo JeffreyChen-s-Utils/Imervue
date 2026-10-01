@@ -11,7 +11,11 @@ import pytest
 from Imervue.puppet.document import PuppetDocument
 from Imervue.puppet.document_io import load_puppet
 from Imervue.puppet.format_schema import check_puppet_file
-from Imervue.puppet.runtime import compose_all_drawables, default_parameter_values
+from Imervue.puppet.runtime import (
+    compose_all_drawables,
+    default_parameter_values,
+    resolve_drawable_opacity,
+)
 from Imervue.puppet.standard_params import standard_parameter_ids
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -98,6 +102,37 @@ def test_motions_expressions_and_hit_areas(doc):
     groups = set(motions.values())
     assert {a.id: a.motion for a in doc.hit_areas} == {"Head": "TapHead", "Body": "TapBody"}
     assert {a.motion for a in doc.hit_areas} <= groups
+
+
+def _ring_opacity(doc, turn: float) -> dict[str, float]:
+    values = {**default_parameter_values(doc), "ParamAngleX": turn}
+    return {d.id: round(resolve_drawable_opacity(d, values), 3)
+            for d in doc.drawables if d.id.startswith("face_shade_")}
+
+
+def test_the_face_shadow_grows_as_she_turns_away_from_the_light(doc):
+    """The light stays put, so the face shadow map's rings fill in with ParamAngleX."""
+    assert _ring_opacity(doc, 0.0) == {"face_shade_0": 0.0, "face_shade_1": 1.0,
+                                       "face_shade_2": 1.0, "face_shade_3": 0.0,
+                                       "face_shade_4": 0.0}
+    assert _ring_opacity(doc, 1.0) == {"face_shade_0": 0.0, "face_shade_1": 1.0,
+                                       "face_shade_2": 1.0, "face_shade_3": 1.0,
+                                       "face_shade_4": 1.0}
+    assert _ring_opacity(doc, -1.0) == {"face_shade_0": 1.0, "face_shade_1": 0.0,
+                                        "face_shade_2": 0.0, "face_shade_3": 0.0,
+                                        "face_shade_4": 0.0}
+    halfway = _ring_opacity(doc, 0.25)
+    assert 0.0 < halfway["face_shade_3"] < 1.0 and halfway["face_shade_4"] == 0.0
+
+
+def test_the_face_shadow_rings_stay_on_the_face_and_move_with_it(doc):
+    rings = [d for d in doc.drawables if d.id.startswith("face_shade_")]
+    assert len(rings) == 5
+    face = next(d for d in doc.drawables if d.id == "face")
+    face_morphs = {m["parameter"] for m in face.vertex_morphs}
+    for ring in rings:
+        assert ring.clip_mask == "face"
+        assert {m["parameter"] for m in ring.vertex_morphs} == face_morphs
 
 
 def test_every_motion_track_drives_a_parameter_that_exists(doc):
