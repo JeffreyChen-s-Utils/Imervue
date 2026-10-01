@@ -254,7 +254,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Étiquettes de couleur** — drapeaux rouge/jaune/vert/bleu/violet (`F1`–`F5`)
 - **Tri (Culling)** — drapeau à trois états (`P` = garder, `Shift+X` = rejeter, `U` = retirer) ; filtre par état ; suppression groupée des rejetés ; le tri automatique garde l'image la plus nette de chaque groupe de quasi-doublons et rejette le reste
 - **Étiquettes hiérarchiques** — arborescences telles que `animal/cat/british` ; les descendants sont automatiquement reconnus ; clic droit > **Opérations par lots** > **Index Keywords** (vignettes sélectionnées) range une hiérarchie de mots-clés Lightroom / darktable (`Places|Taiwan|Taipei`) sous ses parents
-- **Tags & Albums** avec filtrage multi-étiquettes AND/OR
+- **Tags & Albums** avec filtrage multi-étiquettes AND/OR ; un nom nouveau ou renommé qui ne diffère d'un autre que par la casse ou les espaces est refusé, et **Nettoyer…** oublie les fichiers qui n'existent plus et fusionne les noms qui ne diffèrent que par la casse
 - **Albums intelligents** — enregistrer des requêtes basées sur des règles et les réappliquer en un clic ; les filtres couvrent l'extension, la résolution et le **rapport d'aspect**, la **taille de fichier**, la note **plancher / plafond**, la couleur, le tri, les étiquettes (y compris l'**exclusion**), le **boîtier / objectif**, le **regex / glob de nom de fichier** et l'**ancienneté du fichier**, plus l'**export / import** vers un fichier JSON portable
 - **Empilement des paires RAW+JPEG** — regrouper les captures de même base en une seule tuile ; le RAW reste accessible comme frère
 - **Notes par image** dans la barre latérale EXIF — sauvegarde temporisée, persistante entre sessions

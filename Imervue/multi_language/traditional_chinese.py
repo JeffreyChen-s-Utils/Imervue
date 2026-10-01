@@ -407,6 +407,13 @@ traditional_chinese_word_dict = {
     "filter_ext_svg": "SVG",
     # 標籤與相簿
     "tag_album_title": "標籤與相簿",
+    "tag_cleanup": "清理…",
+    "tag_cleanup_tooltip": "移除已不存在的檔案，並合併只差大小寫的名稱",
+    "tag_cleanup_title": "清理標籤與相簿",
+    "tag_cleanup_nothing": "沒有需要清理的：每個檔案都還在，也沒有只差大小寫的名稱。",
+    "tag_cleanup_confirm": "要移除 {orphans} 筆已不存在檔案的紀錄，並合併 {count} 個只差大小寫的名稱嗎？\n{merges}",
+    "tag_name_taken": "「{name}」與既有名稱只差大小寫或空白。",
+    "tag_name_invalid": "無法使用「{name}」：不能含有 Tab 或換行。",
     "tag_tab_tags": "標籤",
     "tag_tab_albums": "相簿",
     "tag_close": "關閉",

@@ -254,7 +254,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Color Labels** — Flag-basiert rot/gelb/grün/blau/lila (`F1`–`F5`)
 - **Culling** — Flag mit drei Zuständen (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects; Auto-Cull wählt das schärfste Bild pro Near-Duplicate-Gruppe und verwirft den Rest
 - **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht; Rechtsklick **Batch-Operationen** > **Index Keywords** (bei ausgewählten Miniaturen) legt eine Stichwort-Hierarchie aus Lightroom / darktable (`Places|Taiwan|Taipei`) unter ihren Eltern ab
-- **Tags & Albums** mit Multi-Tag-AND/OR-Filterung
+- **Tags & Albums** mit Multi-Tag-AND/OR-Filterung; ein neuer oder umbenannter Name, der sich von einem anderen nur in Groß-/Kleinschreibung oder Leerzeichen unterscheidet, wird abgelehnt, und **Aufräumen…** vergisst Dateien, die nicht mehr existieren, und führt Namen zusammen, die sich nur in Groß-/Kleinschreibung unterscheiden
 - **Smart Albums** — Regelbasierte Abfragen speichern und mit einem Klick erneut anwenden; die Filter umfassen Endung, Auflösung & **Seitenverhältnis**, **Dateigröße**, Rating-**Unter- / Obergrenze**, Farbe, Cull, Tags (inkl. **Ausschluss**), **Kamera / Objektiv**, **Dateiname-Regex / -Glob** und **Dateialter**, plus **Export / Import** in eine portable JSON-Datei
 - **Stack RAW+JPEG-Paare** — Aufnahmen mit gleichem Stamm in ein Tile zusammenfassen; RAW bleibt als Geschwister erreichbar
 - **Per-Image-Notes** in der EXIF-Sidebar — Entprelltes Speichern, sitzungsübergreifend persistent

@@ -310,6 +310,12 @@ Classez vos images par tags et albums.
      - ``Filtre`` > ``Par tag`` / ``Par album``
    * - Filtre multi-tags (ET / OU)
      - ``Filtre`` > ``Filtre multi-tags…`` — cochez plusieurs tags ou albums, choisissez N'importe (OU) ou Tous (ET)
+   * - Nettoyer
+     - **Nettoyer…** dans le gestionnaire oublie les entrées des fichiers qui n'existent plus et fusionne
+       les noms qui ne diffèrent que par la casse (celui qui compte le plus d'images garde son
+       orthographe), une fois que vous avez confirmé les décomptes. Créer ou renommer un tag ou un album
+       avec un nom qui ne diffère d'un autre que par la casse ou les espaces est refusé, tout comme un
+       nom contenant une tabulation ou un saut de ligne
 
 Tri et filtrage
 ^^^^^^^^^^^^^^^

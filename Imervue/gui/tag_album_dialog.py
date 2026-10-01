@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
     QPushButton, QLabel, QInputDialog, QTabWidget, QWidget,
-    QMenu,
+    QMenu, QMessageBox,
 )
 
 from Imervue.gui.dialog_rows import confirm
@@ -20,6 +20,7 @@ from Imervue.user_settings.tags import (
     get_all_albums, create_album, delete_album, rename_album,
     add_to_album, remove_from_album, get_album_images,
 )
+from Imervue.user_settings.tag_validator import clean_collection, name_problem, plan_cleanup
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -64,10 +65,62 @@ class TagAlbumDialog(QDialog):
         self._album_widget = self._build_album_tab()
         self._tabs.addTab(self._album_widget, self._lang.get("tag_tab_albums", "Albums"))
 
-        # Close
+        bottom = QHBoxLayout()
+        cleanup_btn = QPushButton(self._lang.get("tag_cleanup", "Clean Up…"))
+        cleanup_btn.setToolTip(self._lang.get(
+            "tag_cleanup_tooltip",
+            "Forget files that no longer exist and merge names that differ only in case"))
+        cleanup_btn.clicked.connect(self._clean_up)
+        bottom.addWidget(cleanup_btn)
+        bottom.addStretch(1)
         close_btn = QPushButton(self._lang.get("tag_close", "Close"))
         close_btn.clicked.connect(self.close)
-        layout.addWidget(close_btn)
+        bottom.addWidget(close_btn)
+        layout.addLayout(bottom)
+
+    def _usable_name(self, name: str, existing: dict, current: str | None = None) -> bool:
+        """True when *name* may be created (or *current* renamed to it); else say why not."""
+        problem = name_problem(name, existing, current=current)
+        if problem is None:
+            return True
+        if problem == "duplicate":
+            text = self._lang.get("tag_name_taken",
+                                  "“{name}” differs from an existing name only in case or spaces.")
+        else:
+            text = self._lang.get("tag_name_invalid",
+                                  "“{name}” can't be used: no tabs or line breaks.")
+        QMessageBox.warning(self, self._lang.get("tag_album_title", "Tags & Albums"),
+                            text.format(name=name))
+        return False
+
+    def _clean_up(self) -> None:
+        """Offer to drop entries of missing files and merge case-duplicate names, then do it."""
+        from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
+        tags, albums = get_all_tags(), get_all_albums()
+        paths = {p for coll in (tags, albums) for members in coll.values() for p in members}
+        existing = {p for p in paths if Path(p).exists()}
+        plans = (plan_cleanup(tags, existing), plan_cleanup(albums, existing))
+        title = self._lang.get("tag_cleanup_title", "Clean Up Tags & Albums")
+        if not any(plan.changes for plan in plans):
+            QMessageBox.information(self, title, self._lang.get(
+                "tag_cleanup_nothing",
+                "Nothing to clean up: every file still exists and no two names differ "
+                "only in case."))
+            return
+        merges = [f"{src} → {dst}" for plan in plans for src, dst in plan.merges]
+        question = self._lang.get(
+            "tag_cleanup_confirm",
+            "Forget {orphans} entries of files that no longer exist and merge {count} "
+            "name(s) that differ only in case?\n{merges}",
+        ).format(orphans=sum(plan.orphans for plan in plans), count=len(merges),
+                 merges="\n".join(merges))
+        if not confirm(self, title, question):
+            return
+        user_setting_dict["image_tags"] = clean_collection(tags, existing)
+        user_setting_dict["albums"] = clean_collection(albums, existing)
+        schedule_save()
+        self._refresh_tags()
+        self._refresh_albums()
 
     # ===========================
     # Tags Tab
@@ -158,7 +211,7 @@ class TagAlbumDialog(QDialog):
         name, ok = QInputDialog.getText(
             self, self._lang.get(_K_TAG_CREATE, _K_TAG_CREATE_FALLBACK),
             self._lang.get(_K_TAG_CREATE_PROMPT, _K_TAG_NAME_FALLBACK))
-        if ok and name.strip():
+        if ok and name.strip() and self._usable_name(name.strip(), get_all_tags()):
             create_tag(name.strip())
             self._refresh_tags()
 
@@ -170,8 +223,10 @@ class TagAlbumDialog(QDialog):
         new_name, ok = QInputDialog.getText(
             self, self._lang.get("tag_rename", _K_RENAME_FALLBACK),
             self._lang.get("tag_rename_prompt", "New name:"), text=old)
-        if ok and new_name.strip() and new_name.strip() != old:
-            rename_tag(old, new_name.strip())
+        new_name = new_name.strip()
+        if ok and new_name and new_name != old and self._usable_name(
+                new_name, get_all_tags(), old):
+            rename_tag(old, new_name)
             self._refresh_tags()
 
     def _delete_tag(self):
@@ -308,7 +363,7 @@ class TagAlbumDialog(QDialog):
         name, ok = QInputDialog.getText(
             self, self._lang.get(_K_ALBUM_CREATE, _K_ALBUM_CREATE_FALLBACK),
             self._lang.get(_K_ALBUM_CREATE_PROMPT, _K_ALBUM_NAME_FALLBACK))
-        if ok and name.strip():
+        if ok and name.strip() and self._usable_name(name.strip(), get_all_albums()):
             create_album(name.strip())
             self._refresh_albums()
 
@@ -320,8 +375,10 @@ class TagAlbumDialog(QDialog):
         new_name, ok = QInputDialog.getText(
             self, self._lang.get("album_rename", _K_RENAME_FALLBACK),
             self._lang.get("album_rename_prompt", "New name:"), text=old)
-        if ok and new_name.strip() and new_name.strip() != old:
-            rename_album(old, new_name.strip())
+        new_name = new_name.strip()
+        if ok and new_name and new_name != old and self._usable_name(
+                new_name, get_all_albums(), old):
+            rename_album(old, new_name)
             self._refresh_albums()
 
     def _delete_album(self):

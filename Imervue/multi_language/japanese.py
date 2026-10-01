@@ -418,6 +418,13 @@ japanese_word_dict = {
     "filter_ext_svg": "SVG",
     # タグ & アルバム
     "tag_album_title": "タグ & アルバム",
+    "tag_cleanup": "整理…",
+    "tag_cleanup_tooltip": "存在しなくなったファイルを外し、大文字と小文字だけが違う名前をまとめます",
+    "tag_cleanup_title": "タグとアルバムを整理",
+    "tag_cleanup_nothing": "整理するものはありません。すべてのファイルが存在し、大文字と小文字だけが違う名前もありません。",
+    "tag_cleanup_confirm": "存在しなくなったファイルの記録 {orphans} 件を外し、大文字と小文字だけが違う名前 {count} 個をまとめますか？\n{merges}",
+    "tag_name_taken": "「{name}」は既存の名前と大文字・小文字または空白だけが違います。",
+    "tag_name_invalid": "「{name}」は使えません：タブや改行は含められません。",
     "tag_tab_tags": "タグ",
     "tag_tab_albums": _JAPANESE_TR30A230EB30D030E0,
     "tag_close": _JAPANESE_TR95893058308B,

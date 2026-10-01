@@ -25,7 +25,7 @@ _ENTRY_POINTS = {"Imervue.__main__", "Imervue.cli", "Imervue.mcp_server.__main__
 
 _KNOWN_UNWIRED = {
     "Imervue.multi_language.translation_validation",
-    "Imervue.user_settings.metadata_template", "Imervue.user_settings.tag_validator",
+    "Imervue.user_settings.metadata_template",
 }
 
 

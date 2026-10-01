@@ -407,6 +407,13 @@ chinese_word_dict = {
     "filter_ext_svg": "SVG",
     # 标签与相册
     "tag_album_title": "标签与相册",
+    "tag_cleanup": "清理…",
+    "tag_cleanup_tooltip": "移除已不存在的文件，并合并只差大小写的名称",
+    "tag_cleanup_title": "清理标签和相册",
+    "tag_cleanup_nothing": "没有需要清理的：每个文件都还在，也没有只差大小写的名称。",
+    "tag_cleanup_confirm": "要移除 {orphans} 条已不存在文件的记录，并合并 {count} 个只差大小写的名称吗？\n{merges}",
+    "tag_name_taken": "“{name}”与已有名称只差大小写或空格。",
+    "tag_name_invalid": "无法使用“{name}”：不能包含 Tab 或换行。",
     "tag_tab_tags": "标签",
     "tag_tab_albums": "相册",
     "tag_close": "关闭",

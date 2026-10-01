@@ -317,6 +317,12 @@ Categorice sus imágenes con etiquetas y álbumes.
      - ``Filter`` > ``By Tag`` / ``By Album``
    * - Filtro multi-etiqueta (AND / OR)
      - ``Filter`` > ``Multi-Tag Filter…`` — marque varias etiquetas o álbumes, elija Any (OR) o All (AND)
+   * - Limpiar
+     - **Clean Up…** en el gestor olvida las entradas de los archivos que ya no existen y fusiona los
+       nombres que solo difieren en mayúsculas y minúsculas (el que tiene más imágenes conserva su
+       grafía), después de que confirme los recuentos. Se rechaza crear o renombrar una etiqueta o un
+       álbum con un nombre que solo difiere de otro en mayúsculas y minúsculas o en espacios, al igual
+       que un nombre con una tabulación o un salto de línea
 
 Ordenación y filtrado
 ^^^^^^^^^^^^^^^^^^^^^

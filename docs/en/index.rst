@@ -312,6 +312,11 @@ Categorise your images with tags and albums.
      - ``Filter`` > ``By Tag`` / ``By Album``
    * - Multi-tag filter (AND / OR)
      - ``Filter`` > ``Multi-Tag Filter…`` — check multiple tags or albums, choose Any (OR) or All (AND)
+   * - Clean up
+     - **Clean Up…** in the manager forgets the entries of files that no longer exist and merges
+       names that differ only in case (the one with more images keeps its spelling), after you
+       confirm the counts. Creating or renaming a tag or album to a name that differs from another
+       only in case or spaces is refused, as is a name with a tab or line break
 
 Sorting & Filtering
 ^^^^^^^^^^^^^^^^^^^

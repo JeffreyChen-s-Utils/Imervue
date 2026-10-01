@@ -257,7 +257,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Etiquetas de color** — rojo/amarillo/verde/azul/púrpura basado en banderas (`F1`–`F5`)
 - **Culling** — bandera de tres estados (`P` = elegir, `Shift+X` = rechazar, `U` = quitar bandera); filtra por estado; borrado masivo de rechazadas; el culling automático elige el fotograma más nítido de cada grupo de casi-duplicados y rechaza el resto
 - **Etiquetas jerárquicas** — rutas en árbol como `animal/cat/british`; los descendientes se emparejan automáticamente; **Operaciones por lotes** > **Index Keywords** del menú contextual (con miniaturas seleccionadas) archiva una jerarquía de palabras clave de Lightroom / darktable (`Places|Taiwan|Taipei`) bajo sus padres
-- **Tags & Albums** con filtrado multietiqueta AND/OR
+- **Tags & Albums** con filtrado multietiqueta AND/OR; se rechaza un nombre nuevo o renombrado que solo difiere de otro en mayúsculas y minúsculas o en espacios, y **Clean Up…** olvida los archivos que ya no existen y fusiona los nombres que solo difieren en mayúsculas y minúsculas
 - **Álbumes inteligentes** — guarda consultas basadas en reglas y reaplica con un clic; los filtros abarcan extensión, resolución y **relación de aspecto**, **tamaño de archivo**, **piso / techo** de calificación, color, culling, etiquetas (incl. **exclusión**), **cámara / objetivo**, **regex / glob de nombre de archivo** y **antigüedad del archivo**, además de **exportar / importar** a un archivo JSON portable
 - **Apilamiento de pares RAW+JPEG** — colapsa capturas con el mismo nombre base en un solo mosaico; el RAW sigue accesible como hermano
 - **Notas por imagen** en la barra lateral EXIF — guardado con debounce, persiste entre sesiones

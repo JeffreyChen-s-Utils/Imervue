@@ -415,6 +415,13 @@ korean_word_dict = {
     "filter_ext_svg": "SVG",
     # 태그 & 앨범
     "tag_album_title": "태그 & 앨범",
+    "tag_cleanup": "정리…",
+    "tag_cleanup_tooltip": "더 이상 없는 파일을 빼고 대소문자만 다른 이름을 합칩니다",
+    "tag_cleanup_title": "태그와 앨범 정리",
+    "tag_cleanup_nothing": "정리할 것이 없습니다. 모든 파일이 있고 대소문자만 다른 이름도 없습니다.",
+    "tag_cleanup_confirm": "더 이상 없는 파일의 항목 {orphans}개를 빼고 대소문자만 다른 이름 {count}개를 합칠까요?\n{merges}",
+    "tag_name_taken": "'{name}'은(는) 기존 이름과 대소문자나 공백만 다릅니다.",
+    "tag_name_invalid": "'{name}'은(는) 쓸 수 없습니다: 탭이나 줄바꿈을 넣을 수 없습니다.",
     "tag_tab_tags": "태그",
     "tag_tab_albums": "앨범",
     "tag_close": "닫기",

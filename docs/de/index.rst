@@ -311,6 +311,12 @@ Bilder mit Tags und Alben kategorisieren.
      - ``Filter`` > ``Nach Tag`` / ``Nach Album``
    * - Multi-Tag-Filter (AND / OR)
      - ``Filter`` > ``Multi-Tag-Filter…`` — mehrere Tags oder Alben anhaken, Beliebig (OR) oder Alle (AND) wählen
+   * - Aufräumen
+     - **Aufräumen…** im Manager vergisst die Einträge von Dateien, die nicht mehr existieren, und führt
+       Namen zusammen, die sich nur in Groß-/Kleinschreibung unterscheiden (der mit mehr Bildern behält
+       seine Schreibweise), nachdem Sie die Anzahlen bestätigt haben. Einen Tag oder ein Album so anzulegen
+       oder umzubenennen, dass sich sein Name von einem anderen nur in Groß-/Kleinschreibung oder
+       Leerzeichen unterscheidet, wird abgelehnt, ebenso ein Name mit Tabulator oder Zeilenumbruch
 
 Sortieren und Filtern
 ^^^^^^^^^^^^^^^^^^^^^

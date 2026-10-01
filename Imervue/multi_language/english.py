@@ -430,6 +430,13 @@ english_word_dict = {
     "filter_ext_svg": "SVG",
     # Tags & Albums
     "tag_album_title": "Tags & Albums",
+    "tag_cleanup": "Clean Up…",
+    "tag_cleanup_tooltip": "Forget files that no longer exist and merge names that differ only in case",
+    "tag_cleanup_title": "Clean Up Tags & Albums",
+    "tag_cleanup_nothing": "Nothing to clean up: every file still exists and no two names differ only in case.",
+    "tag_cleanup_confirm": "Forget {orphans} entries of files that no longer exist and merge {count} name(s) that differ only in case?\n{merges}",
+    "tag_name_taken": "“{name}” differs from an existing name only in case or spaces.",
+    "tag_name_invalid": "“{name}” can't be used: no tabs or line breaks.",
     "tag_tab_tags": _ENGLISH_TAGS,
     "tag_tab_albums": _ENGLISH_ALBUMS,
     "tag_close": _ENGLISH_CLOSE,

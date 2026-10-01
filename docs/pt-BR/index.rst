@@ -312,6 +312,11 @@ Categorize suas imagens com tags e álbuns.
      - ``Filtrar`` > ``Por Tag`` / ``Por Álbum``
    * - Filtro multi-tag (E / OU)
      - ``Filtrar`` > ``Filtro Multi-Tag…`` — marque várias tags ou álbuns, escolha Qualquer (OU) ou Todos (E)
+   * - Limpar
+     - **Limpar…** no gerenciador esquece as entradas de arquivos que não existem mais e mescla nomes
+       que diferem só em maiúsculas/minúsculas (o que tem mais imagens mantém a sua grafia), depois que
+       você confirma as contagens. Criar ou renomear uma tag ou álbum com um nome que difere de outro só
+       em maiúsculas/minúsculas ou espaços é recusado, assim como um nome com tabulação ou quebra de linha
 
 Classificação e Filtragem
 ^^^^^^^^^^^^^^^^^^^^^^^^^
