@@ -294,6 +294,8 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - Diálogo de **información de imagen** (dimensiones / tamaño / fechas)
 - **Sidecars XMP** (archivos `.xmp` acompañantes) — ida y vuelta de calificación / título / descripción / palabras clave / etiqueta de color con otros gestores de fotos compatibles con XMP (XML seguro vía `defusedxml`). Al guardar se fusiona con el sidecar existente: solo cambian estos campos, así que los ajustes de revelado, el recorte y el historial de otro programa se conservan, y un sidecar ilegible nunca se sobrescribe. Además de `photo.xmp` (Lightroom, Bridge), se lee y actualiza el `photo.jpg.xmp` que escriben darktable y digiKam cuando es el único sidecar; las etiquetas de color se entienden con las palabras de Lightroom (`Red` … `Purple`) y las de Bridge (`Select`, `Second`, `Approved`, `Review`, `To Do`), y se exportan como las escribe Lightroom. Una foto rechazada (`xmp:Rating` -1 en Lightroom, Bridge y darktable) pasa a ser un Reject de la selección, y un Reject se exporta como -1. Un archivo sin sidecar se lee e importa desde el XMP y la valoración EXIF incrustados en él (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF): así guarda Lightroom la valoración y las palabras clave de un JPEG, y el Explorador de Windows sus estrellas.
 - **Editor de geoetiquetas GPS** — lee EXIF GPS existente, escribe nuevas lat/lon en un JPEG o WebP sin paquetes extra, sin tocar sus píxeles, otras etiquetas ni la miniatura
+- **Geoetiquetar desde traza GPX** — empareja las horas de captura EXIF de la selección con un registro `.gpx` de un teléfono o un registrador GPS, con la zona horaria de la cámara, un límite de separación e interpolación entre puntos, y luego escribe las posiciones en los archivos JPEG / WebP
+- **Editar hora de captura** — desplaza la hora de captura EXIF de la selección en días / horas / minutos / segundos, o indicando cuándo se tomó realmente la primera foto; DateTimeOriginal, DateTimeDigitized y DateTime se reescriben en archivos JPEG / WebP
 - **Renombrado por lotes con tokens** — plantillas con vista previa en vivo como `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Exportar metadatos a CSV / JSON** — una fila por imagen incluyendo culling / calificación / etiquetas / notas
 
@@ -303,7 +305,7 @@ Se accede desde el menú **Tools**; organizadas en submenús agrupados por funci
 
 - **Lote** — Conversión de formato · Eliminación EXIF · Saneador de imágenes (re-renderiza para quitar datos ocultos) · Organizador de imágenes (ordena en subcarpetas por fecha / resolución / tipo / tamaño) · Renombrado por lotes con tokens
 - **Retoque y transformación** — Escalado de imágenes por IA (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Detección de rostros (cascada Haar) · saneamiento, clonado, recorte / enderezado y corrección de lente
-- **Biblioteca y metadatos** — Búsqueda en biblioteca · Álbumes inteligentes · Encontrar imágenes similares · Búsqueda semántica · Encontrar imágenes duplicadas · Auto-etiquetado · Etiquetas jerárquicas · Exportar metadatos · Sidecars XMP · Geoetiqueta GPS
+- **Biblioteca y metadatos** — Búsqueda en biblioteca · Álbumes inteligentes · Encontrar imágenes similares · Búsqueda semántica · Encontrar imágenes duplicadas · Auto-etiquetado · Etiquetas jerárquicas · Exportar metadatos · Sidecars XMP · Geoetiqueta GPS · Geoetiquetar desde traza GPX · Editar hora de captura
 
 ### Integración con el sistema
 
@@ -853,7 +855,7 @@ Un ejemplo funcional está en [`examples/desktop_pet/imeru.petscript.json`](../e
 ### Tools (herramientas adicionales — organizadas en 8 submenús agrupados)
 
 - **Lote** — Conversión de formato · Eliminación EXIF · Saneador de imágenes · Organizador de imágenes · Renombrado por lotes con tokens · Antiparpadeo (time-lapse) · Binarizar documento · Umbral de Otsu · Editar animación · Optimizar a un tamaño objetivo · Leyenda de meme · Esteganografía
-- **Biblioteca y metadatos** — Búsqueda en biblioteca · Álbumes inteligentes · Encontrar imágenes similares · Búsqueda semántica · Encontrar imágenes duplicadas · Auto-etiquetar imágenes · Etiquetas jerárquicas · Exportar metadatos (CSV / JSON) · Sidecars XMP · Geoetiqueta GPS · Caché de miniaturas
+- **Biblioteca y metadatos** — Búsqueda en biblioteca · Álbumes inteligentes · Encontrar imágenes similares · Búsqueda semántica · Encontrar imágenes duplicadas · Auto-etiquetar imágenes · Etiquetas jerárquicas · Exportar metadatos (CSV / JSON) · Sidecars XMP · Geoetiqueta GPS · Geoetiquetar desde traza GPX · Editar hora de captura · Caché de miniaturas
 - **Vistas** — Vista Timeline (por día / mes / año) · Vista Calendar · Vista Map · Scopes e inspector · Tiny Planet (360°) · Estadísticas de imagen · Informe de calidad · Carta de prueba · Vista previa de daltonismo (protanopía / deuteranopía / tritanopía / acromatopsia)
 - **Flujo de trabajo** — Culling · Bandeja de preparación · Panel de referencias · Copias virtuales · Gestor de archivos de doble panel · Macros · Carpeta vigilada
 - **Exportar** — PDF de hoja de contactos · Galería web · Vídeo de presentación (MP4) · Diseño de impresión · Collage · Hoja de fotos de carné

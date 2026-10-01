@@ -3128,6 +3128,18 @@ Library & Metadata — Bibliothek und Metadaten
    * - ``GPS Geotag``
      - Schreibt Breiten- und Längengrad (Dezimalgrad) in die EXIF-GPS-Tags des aktuellen Bildes
        und ersetzt dabei vorhandene; nur JPEG- und WebP-Dateien.
+   * - ``Geotag from GPX Track``
+     - Gleicht die ausgewählten Bilder (oder die ganze Ansicht) anhand ihrer EXIF-Aufnahmezeit mit
+       einem ``.gpx``-Track ab: Legen Sie fest, wie weit die Kamerauhr von UTC abwich und wie weit
+       ein Foto von einem Trackpunkt entfernt sein darf (und ob zwischen Punkten interpoliert
+       wird), sehen Sie, wie viele auf den Track fallen, und schreiben Sie dann ihre Positionen in
+       die EXIF-GPS-Tags; nur JPEG- und WebP-Dateien.
+   * - ``Edit Capture Time``
+     - Verschiebt die EXIF-Aufnahmezeit der ausgewählten Bilder (oder der ganzen Ansicht) um Tage,
+       Stunden, Minuten und Sekunden oder anhand des Zeitpunkts, zu dem das erste Foto tatsächlich
+       aufgenommen wurde, und schreibt dabei DateTimeOriginal, DateTimeDigitized und DateTime neu;
+       Fotos ohne EXIF-Aufnahmezeit bleiben unverändert, und nur JPEG und WebP lassen sich neu
+       schreiben.
    * - ``Thumbnail Cache``
      - Zeigt, wie viel Speicherplatz der Miniaturansicht-Cache belegt, und leert ihn.
 

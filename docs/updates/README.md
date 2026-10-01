@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-47 | 2026-10-01 | Extra Tools shifts the EXIF capture time of a selection; capture_time is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-46 | 2026-10-01 | Extra Tools geotags a selection from a GPX track; gpx_geotag is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-45 | 2026-10-01 | The EXIF editor describes an image with a local vision model; caption is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-44 | 2026-10-01 | The contact sheet dialog offers named layout presets; contact_sheet_layouts is wired | #feature #export #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-43 | 2026-10-01 | Twitch triggers match whole messages, starts or regular expressions; command_parser is wired | #feature #desktop_pet #Imervue_Plugins #docs | [2026-10](2026-10.md) |
@@ -511,4 +513,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 45 |
+| [2026-10.md](2026-10.md) | 2026-10 | 47 |

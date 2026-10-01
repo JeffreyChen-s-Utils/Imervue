@@ -2993,6 +2993,16 @@ Library & Metadata
    * - ``GPS Geotag``
      - Writes a latitude and longitude (decimal degrees) into the current image's EXIF GPS tags,
        replacing any already there; JPEG and WebP files only.
+   * - ``Geotag from GPX Track``
+     - Matches the selected images (or the whole view) against a ``.gpx`` track by their EXIF
+       capture time: set how far the camera's clock ran from UTC, how far from a track point a
+       photo may be (and whether to interpolate between points), see how many fall on the track,
+       then write their positions into the EXIF GPS tags; JPEG and WebP files only.
+   * - ``Edit Capture Time``
+     - Shifts the EXIF capture time of the selected images (or the whole view) by days, hours,
+       minutes and seconds, or by when the first photo was really taken, rewriting
+       DateTimeOriginal, DateTimeDigitized and DateTime; photos without an EXIF capture time are
+       left alone, and only JPEG and WebP can be rewritten.
    * - ``Thumbnail Cache``
      - Shows how much disk space the thumbnail cache uses and clears it.
 

@@ -294,6 +294,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - Диалог **информации об изображении** (размеры / размер файла / даты)
 - **XMP sidecar-файлы** (`.xmp`-компаньоны) — двусторонняя синхронизация оценки / заголовка / описания / ключевых слов / цветовой метки с другими фотоменеджерами с поддержкой XMP (безопасный XML через `defusedxml`). При сохранении данные сливаются с существующим sidecar-файлом: меняются только эти поля, поэтому сохранённые там настройки проявки, кадрирование и история другого редактора остаются, а нечитаемый sidecar никогда не перезаписывается. Помимо `photo.xmp` (Lightroom, Bridge), читается и обновляется `photo.jpg.xmp`, который пишут darktable и digiKam, если это единственный sidecar; цветовые метки понимаются в словах Lightroom (`Red` … `Purple`) и Bridge (`Select`, `Second`, `Approved`, `Review`, `To Do`) и экспортируются так, как их пишет Lightroom. Отклонённое фото (`xmp:Rating` -1 в Lightroom, Bridge и darktable) становится отметкой Reject при отборе, а Reject экспортируется как -1. Файл без sidecar читается и импортируется из встроенных в него XMP и EXIF-оценки (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) — так Lightroom хранит оценку и ключевые слова JPEG, а Проводник Windows — звёзды.
 - **Редактор GPS-геотегов** — чтение существующих EXIF GPS, запись новых широты/долготы в JPEG или WebP без дополнительных пакетов, без изменения пикселей, остальных тегов и миниатюры
+- **Геотеги из GPX-трека** — сопоставление EXIF-времени съёмки выбранных изображений с журналом `.gpx` с телефона или GPS-логгера с учётом часового пояса камеры, предельного разрыва во времени и интерполяции между точками, затем запись координат в файлы JPEG / WebP
+- **Изменение времени съёмки** — сдвиг EXIF-времени съёмки выбранных изображений на дни / часы / минуты / секунды или указанием, когда на самом деле был сделан первый снимок; в файлах JPEG / WebP перезаписываются DateTimeOriginal, DateTimeDigitized и DateTime
 - **Пакетное переименование по токенам** — шаблоны с предпросмотром в реальном времени, например `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Экспорт метаданных CSV / JSON** — одна строка на изображение, включая отбор / оценку / теги / заметки
 
@@ -303,7 +305,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **Пакетные** — Преобразование формата · Очистка EXIF · Санитайзер изображений (повторный рендеринг для удаления скрытых данных) · Органайзер изображений (сортировка по подпапкам по дате / разрешению / типу / размеру) · Пакетное переименование по токенам
 - **Ретушь и трансформация** — AI-апскейл изображений (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Распознавание лиц (каскады Хаара) · лечащая кисть, клонирование, кадрирование / выпрямление и коррекция объектива
-- **Библиотека и метаданные** — Поиск по библиотеке · Умные альбомы · Поиск похожих · Семантический поиск · Поиск дубликатов · Автотегирование · Иерархические теги · Экспорт метаданных · XMP sidecar · GPS-геотеги
+- **Библиотека и метаданные** — Поиск по библиотеке · Умные альбомы · Поиск похожих · Семантический поиск · Поиск дубликатов · Автотегирование · Иерархические теги · Экспорт метаданных · XMP sidecar · GPS-геотеги · Геотеги из GPX-трека · Изменение времени съёмки
 
 ### Интеграция с системой
 
@@ -851,7 +853,7 @@ OBS **Sources > + > Window Capture** может захватить окно Imer
 ### Tools (дополнительные инструменты — организованы в 8 сгруппированных подменю)
 
 - **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename · Deflicker (Time-lapse) · Document Binarize · Otsu Threshold · Edit Animation · Optimize to Target Size · Meme Caption · Steganography
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Thumbnail Cache
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time · Thumbnail Cache
 - **Views** — Timeline View (по дням / месяцам / годам) · Calendar View · Map View · Scopes & Inspector · Tiny Planet (360°) · Image Statistics · Quality Report · Test Chart · Color blindness preview (протанопия / дейтеранопия / тританопия / ахроматопсия)
 - **Workflow** — Culling · Staging Tray · Reference Panel · Virtual Copies · Dual-Pane File Manager · Macros · Watched Folder
 - **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout · Collage · ID Photo Sheet

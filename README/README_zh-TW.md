@@ -293,6 +293,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - **影像資訊** 對話框（尺寸 / 大小 / 日期）
 - **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤與其他支援 XMP 的相片管理軟體雙向同步（透過 `defusedxml` 安全解析）。儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。除了 `photo.xmp`（Lightroom、Bridge），darktable 與 digiKam 寫的 `photo.jpg.xmp` 在它是唯一的 sidecar 時也會讀取並更新；顏色標籤看得懂 Lightroom 的寫法（`Red` … `Purple`）與 Bridge 的寫法（`Select`、`Second`、`Approved`、`Review`、`To Do`），匯出時照 Lightroom 的寫法寫入。被拒絕的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）會成為篩選的「拒絕」，「拒絕」匯出時寫成 -1。沒有 sidecar 的檔案會讀取並匯入檔案本身內嵌的 XMP 與 EXIF 評等（JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF）：Lightroom 就是這樣保存 JPEG 的評等與關鍵字，Windows 檔案總管的星等也是。
 - **GPS 地理標記編輯器** — 讀寫 EXIF GPS 經緯度；JPEG / WebP 不需額外套件，像素、其他標籤與縮圖都不變
+- **從 GPX 軌跡加上地理標記** — 用選取影像的 EXIF 拍攝時間比對手機或 GPS 記錄器的 `.gpx` 記錄，可設定相機的時區、時間差上限與軌跡點之間的內插，再把位置寫入 JPEG / WebP 檔案
+- **修改拍攝時間** — 把選取影像的 EXIF 拍攝時間平移若干天 / 小時 / 分鐘 / 秒，或直接指定第一張照片的實際拍攝時間；改寫 JPEG / WebP 檔案中的 DateTimeOriginal、DateTimeDigitized 與 DateTime
 - **權杖批次重新命名** — 即時預覽範本 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **匯出元資料 CSV / JSON** — 每張影像一列含挑片 / 評等 / 標籤 / 筆記
 
@@ -302,7 +304,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **批次** — 格式轉換 · EXIF 清除 · 影像清洗器（重新渲染移除所有隱藏資料）· 影像整理器 · 權杖批次重命名
 - **修圖與變形** — AI 影像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 人臉偵測（Haar cascade）· 修復、仿製、裁切 / 拉直與鏡頭校正
-- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記 · 從 GPX 軌跡加上地理標記 · 修改拍攝時間
 
 ### 系統整合
 
@@ -804,7 +806,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 ### Tools（額外工具 — 分為 8 個群組子選單）
 
 - **批次** — 格式轉換 · EXIF 清除 · 影像清洗器 · 影像整理器 · 權杖批次重命名 · 去閃爍（縮時攝影）· 文件二值化 · Otsu 閾值 · 編輯動畫 · 最佳化至目標大小 · 迷因字幕 · 隱寫術
-- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤影像 · 階層標籤 · 匯出元資料（CSV / JSON）· XMP 邊車檔 · GPS 標記 · 縮圖快取
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤影像 · 階層標籤 · 匯出元資料（CSV / JSON）· XMP 邊車檔 · GPS 標記 · 從 GPX 軌跡加上地理標記 · 修改拍攝時間 · 縮圖快取
 - **檢視** — 時間軸檢視（依日 / 月 / 年）· 行事曆檢視 · 地圖檢視 · 示波器與檢查器 · 小行星（360°）· 影像統計 · 品質報告 · 測試圖 · 色盲預覽（紅色盲 / 綠色盲 / 藍色盲 / 全色盲）
 - **工作流程** — 挑片 · 暫存盤 · 參考面板 · 虛擬副本 · 雙窗格檔案管理 · 巨集 · 監看資料夾
 - **匯出** — 聯絡單 PDF · 網頁圖庫 · 幻燈片影片（MP4）· 列印佈局 · 拼貼 · 證件照排版

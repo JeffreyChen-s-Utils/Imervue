@@ -291,6 +291,8 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - Boîte de dialogue **Informations sur l'image** (dimensions / taille / dates)
 - **Fichiers annexes XMP** (compagnons `.xmp`) — aller-retour de la note / titre / description / mots-clés / étiquette de couleur avec d'autres gestionnaires de photos compatibles XMP (XML sécurisé via `defusedxml`). L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé. Outre `photo.xmp` (Lightroom, Bridge), le `photo.jpg.xmp` qu'écrivent darktable et digiKam est lu et mis à jour lorsqu'il est le seul sidecar ; les étiquettes de couleur sont comprises dans les mots de Lightroom (`Red` … `Purple`) et de Bridge (`Select`, `Second`, `Approved`, `Review`, `To Do`), et exportées comme Lightroom les écrit. Une photo rejetée (`xmp:Rating` -1 dans Lightroom, Bridge et darktable) devient un Reject du tri, et un Reject est exporté en -1. Un fichier sans sidecar est lu et importé depuis le XMP et la note EXIF qu'il embarque (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) : c'est ainsi que Lightroom stocke la note et les mots-clés d'un JPEG, et l'Explorateur Windows ses étoiles.
 - **Éditeur de géotag GPS** — lecture des coordonnées EXIF GPS existantes, écriture de nouvelles latitudes/longitudes dans un JPEG ou un WebP sans paquet supplémentaire, sans toucher aux pixels, aux autres tags ni à la vignette
+- **Géotag depuis une trace GPX** — mise en correspondance des heures de prise de vue EXIF de la sélection avec un journal `.gpx` issu d'un téléphone ou d'un enregistreur GPS, avec le fuseau horaire de l'appareil, un écart maximal et une interpolation entre les points, puis écriture des positions dans les fichiers JPEG / WebP
+- **Modifier l'heure de prise de vue** — décalage de l'heure de prise de vue EXIF de la sélection de jours / heures / minutes / secondes, ou en indiquant quand la première photo a réellement été prise ; DateTimeOriginal, DateTimeDigitized et DateTime sont réécrits dans les fichiers JPEG / WebP
 - **Renommage par lot avec jetons** — modèles avec aperçu en direct comme `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Exporter les métadonnées CSV / JSON** — une ligne par image avec tri / note / étiquettes / notes
 
@@ -300,7 +302,7 @@ Accessibles depuis le menu **Tools** ; organisés en sous-menus groupés par fon
 
 - **Batch** — Conversion de format · Suppression EXIF · Image Sanitizer (re-rendu pour effacer les données cachées) · Image Organizer (tri en sous-dossiers par date / résolution / type / taille) · Renommage par lot avec jetons
 - **Retouche et transformation** — Agrandissement d'image IA (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Détection de visages (cascade Haar) · correcteur, clonage, recadrage / redressement et correction d'objectif
-- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées · Fichiers annexes XMP · Géotag GPS
+- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées · Fichiers annexes XMP · Géotag GPS · Géotag depuis une trace GPX · Modifier l'heure de prise de vue
 
 ### Intégration système
 
@@ -805,7 +807,7 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/imeru.petscript.json`
 ### Tools (outils supplémentaires — organisés en 8 sous-menus groupés)
 
 - **Batch** — Conversion de format · Suppression EXIF · Image Sanitizer · Image Organizer · Renommage par lot avec jetons · Deflicker (time-lapse) · Binarisation de documents · Seuil d'Otsu · Édition d'animation · Optimisation à une taille cible · Légende de mème · Stéganographie
-- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées (CSV / JSON) · Fichiers annexes XMP · Géotag GPS · Cache des vignettes
+- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées (CSV / JSON) · Fichiers annexes XMP · Géotag GPS · Géotag depuis une trace GPX · Modifier l'heure de prise de vue · Cache des vignettes
 - **Vues** — Timeline (par jour / mois / année) · Calendar · Map · Scopes & Inspector · Tiny Planet (360°) · Statistiques d'image · Rapport de qualité · Mire de test · Aperçu du daltonisme (protanopie / deutéranopie / tritanopie / achromatopsie)
 - **Workflow** — Tri · Plateau de travail · Panneau de référence · Copies virtuelles · Gestionnaire de fichiers à deux volets · Macros · Dossier surveillé
 - **Export** — PDF planche-contact · Galerie web · Diaporama vidéo (MP4) · Mise en page d'impression · Collage · Planche de photos d'identité

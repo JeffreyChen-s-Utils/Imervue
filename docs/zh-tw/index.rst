@@ -2433,6 +2433,14 @@ GPS 地理標記
    * - ``GPS Geotag``
      - 把緯度與經度（十進位度數）寫入目前圖片的 EXIF GPS 標籤，取代原有的值；僅限 JPEG 與 WebP
        檔案。
+   * - ``Geotag from GPX Track``
+     - 依 EXIF 拍攝時間把選取的圖片（或整個目前檢視）與 ``.gpx`` 軌跡比對：設定相機時鐘與 UTC
+       相差多少、照片與軌跡點最多可相差多久（以及是否在軌跡點之間內插），查看有多少張落在軌跡上，
+       再把位置寫入 EXIF GPS 標籤；僅限 JPEG 與 WebP 檔案。
+   * - ``Edit Capture Time``
+     - 把選取圖片（或整個目前檢視）的 EXIF 拍攝時間平移若干天、小時、分鐘與秒，或依第一張照片的
+       實際拍攝時間調整，改寫 DateTimeOriginal、DateTimeDigitized 與 DateTime；沒有 EXIF
+       拍攝時間的照片維持不變，且只有 JPEG 與 WebP 能改寫。
    * - ``Thumbnail Cache``
      - 顯示縮圖快取占用的磁碟空間，並可清除。
 

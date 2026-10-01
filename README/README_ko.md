@@ -294,6 +294,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - **이미지 정보** 다이얼로그 (크기 / 용량 / 날짜)
 - **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 지원 사진 관리 프로그램과 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
 - **GPS 지오태그 편집기** — EXIF GPS 위도/경도 읽기/쓰기. JPEG / WebP는 추가 패키지 없이 픽셀·다른 태그·썸네일을 그대로 두고 기록
+- **GPX 트랙으로 지오태그** — 선택한 이미지의 EXIF 촬영 시각을 휴대폰이나 GPS 로거의 `.gpx` 기록과 대조(카메라 시간대, 허용 시간 간격 한도, 포인트 사이 보간 적용)한 뒤 위치를 JPEG / WebP 파일에 기록
+- **촬영 시간 수정** — 선택한 이미지의 EXIF 촬영 시각을 일 / 시 / 분 / 초 단위로 옮기거나, 첫 사진을 실제로 찍은 시각을 지정해 보정. JPEG / WebP 파일의 DateTimeOriginal, DateTimeDigitized, DateTime을 다시 씀
 - **토큰 일괄 이름 변경** — 라이브 미리보기 템플릿 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **메타데이터 CSV / JSON 내보내기** — 컬링 / 별점 / 태그 / 메모를 포함한 이미지당 한 행
 
@@ -303,7 +305,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저(숨겨진 데이터를 제거하기 위해 다시 렌더링) · 이미지 정리기(날짜 / 해상도 / 종류 / 크기별로 하위 폴더에 정렬) · 토큰 일괄 이름 변경
 - **보정 및 변형** — AI 이미지 업스케일 (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · 얼굴 검출 (Haar cascade) · 힐링, 클론, 자르기 / 수평 보정, 렌즈 보정
-- **라이브러리 및 메타데이터** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 자동 태그 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그
+- **라이브러리 및 메타데이터** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 자동 태그 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그 · GPX 트랙으로 지오태그 · 촬영 시간 수정
 
 ### 시스템 통합
 
@@ -803,7 +805,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 ### Tools (추가 도구 — 8개의 그룹화된 서브메뉴로 정리)
 
 - **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저 · 이미지 정리기 · 토큰 일괄 이름 변경 · 디플리커 (타임랩스) · 문서 이진화 · Otsu 임계값 · 애니메이션 편집 · 목표 크기로 최적화 · 밈 캡션 · 스테가노그래피
-- **Library & Metadata** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 이미지 자동 태그 · 계층 태그 · 메타데이터 내보내기 (CSV / JSON) · XMP 사이드카 · GPS 지오태그 · 썸네일 캐시
+- **Library & Metadata** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 이미지 자동 태그 · 계층 태그 · 메타데이터 내보내기 (CSV / JSON) · XMP 사이드카 · GPS 지오태그 · GPX 트랙으로 지오태그 · 촬영 시간 수정 · 썸네일 캐시
 - **Views** — 타임라인 보기 (일 / 월 / 연 단위) · 캘린더 보기 · 지도 보기 · 스코프 및 인스펙터 · 타이니 플래닛 (360°) · 이미지 통계 · 품질 보고서 · 테스트 차트 · 색각 이상 미리보기 (제1색맹 / 제2색맹 / 제3색맹 / 전색맹)
 - **Workflow** — Culling · 스테이징 트레이 · 참조 패널 · 가상 사본 · 듀얼 페인 파일 관리자 · 매크로 · 감시 폴더
 - **Export** — 컨택트 시트 PDF · 웹 갤러리 · 슬라이드쇼 비디오 (MP4) · 인쇄 레이아웃 · 콜라주 · 증명사진 시트

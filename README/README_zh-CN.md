@@ -290,6 +290,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - **图像信息** 对话框（尺寸 / 大小 / 日期）
 - **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签与其他支持 XMP 的照片管理软件双向同步（通过 `defusedxml` 安全解析）。保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。除了 `photo.xmp`（Lightroom、Bridge），darktable 与 digiKam 写的 `photo.jpg.xmp` 在它是唯一的 sidecar 时也会读取并更新；颜色标签看得懂 Lightroom 的写法（`Red` … `Purple`）与 Bridge 的写法（`Select`、`Second`、`Approved`、`Review`、`To Do`），导出时按 Lightroom 的写法写入。被拒绝的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）会成为筛选的「拒绝」，「拒绝」导出时写成 -1。没有 sidecar 的文件会读取并导入文件本身内嵌的 XMP 与 EXIF 评级（JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF）：Lightroom 就是这样保存 JPEG 的评级与关键字，Windows 文件资源管理器的星级也是。
 - **GPS 地理标记编辑器** — 读写 EXIF GPS 经纬度；JPEG / WebP 无需额外套件，像素、其他标签与缩略图都不变
+- **从 GPX 轨迹添加地理标记** — 用选中图片的 EXIF 拍摄时间匹配手机或 GPS 记录器的 `.gpx` 记录，可设置相机的时区、时间差上限与轨迹点之间的插值，再把位置写入 JPEG / WebP 文件
+- **修改拍摄时间** — 把选中图片的 EXIF 拍摄时间平移若干天 / 小时 / 分钟 / 秒，或直接指定第一张照片的实际拍摄时间；改写 JPEG / WebP 文件中的 DateTimeOriginal、DateTimeDigitized 与 DateTime
 - **令牌批量重命名** — 实时预览模板 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **导出元数据 CSV / JSON** — 每张图一行含挑片 / 评级 / 标签 / 笔记
 
@@ -299,7 +301,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **批次** — 格式转换 · EXIF 清除 · 图像清洗器（重新渲染移除所有隐藏数据）· 图像整理器（按日期 / 分辨率 / 类型 / 大小分到子文件夹）· 令牌批量重命名
 - **修图与变形** — AI 图像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 人脸检测（Haar cascade）· 修复、仿制、裁切 / 拉直与镜头校正
-- **图库与元数据** — 图库搜索 · 智能相册 · 找相似图片 · 语义搜索 · 找重复图片 · 自动标签 · 层级标签 · 导出元数据 · XMP 边车 · GPS 标记
+- **图库与元数据** — 图库搜索 · 智能相册 · 找相似图片 · 语义搜索 · 找重复图片 · 自动标签 · 层级标签 · 导出元数据 · XMP 边车 · GPS 标记 · 从 GPX 轨迹添加地理标记 · 修改拍摄时间
 
 ### 系统集成
 
@@ -801,7 +803,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 ### Tools（额外工具 — 分为 8 个组子菜单）
 
 - **批次** — 格式转换 · EXIF 清除 · 图像清洗器 · 图像整理器 · 令牌批量重命名 · 去闪烁（延时摄影）· 文档二值化 · Otsu 阈值 · 编辑动画 · 优化到目标大小 · 梗图字幕 · 隐写术
-- **图库与元数据** — 图库搜索 · 智能相册 · 找相似图片 · 语义搜索 · 找重复图片 · 自动标签图片 · 层级标签 · 导出元数据（CSV / JSON）· XMP 边车 · GPS 标记 · 缩略图缓存
+- **图库与元数据** — 图库搜索 · 智能相册 · 找相似图片 · 语义搜索 · 找重复图片 · 自动标签图片 · 层级标签 · 导出元数据（CSV / JSON）· XMP 边车 · GPS 标记 · 从 GPX 轨迹添加地理标记 · 修改拍摄时间 · 缩略图缓存
 - **视图** — 时间轴视图（按日 / 月 / 年）· 日历视图 · 地图视图 · 示波器与检测 · 小行星全景（360°）· 图像统计 · 质量报告 · 测试图卡 · 色盲模拟预览（红色盲 / 绿色盲 / 蓝色盲 / 全色盲）
 - **工作流** — 挑片 · 暂存盘 · 参考图面板 · 虚拟副本 · 双面板文件管理器 · 宏 · 监视文件夹
 - **导出** — 联系表 PDF · 网页画廊 · 幻灯片视频（MP4）· 打印布局 · 拼贴 · 证件照排版

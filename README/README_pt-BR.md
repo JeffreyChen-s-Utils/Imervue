@@ -298,6 +298,8 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - Diálogo de **informações da imagem** (dimensões / tamanho / datas)
 - **Sidecars XMP** (`.xmp` companheiros) — avaliação / título / descrição / palavras-chave / etiqueta de cor em round-trip com outros gerenciadores de fotos com suporte a XMP (XML seguro via `defusedxml`). Salvar mescla no sidecar existente: só estes campos mudam, então as configurações de revelação, o recorte e o histórico de outro programa são mantidos, e um sidecar ilegível nunca é sobrescrito. Além de `photo.xmp` (Lightroom, Bridge), o `photo.jpg.xmp` que o darktable e o digiKam escrevem é lido e atualizado quando é o único sidecar; os rótulos de cor são entendidos nas palavras do Lightroom (`Red` … `Purple`) e do Bridge (`Select`, `Second`, `Approved`, `Review`, `To Do`), e exportados como o Lightroom os escreve. Uma foto rejeitada (`xmp:Rating` -1 no Lightroom, Bridge e darktable) vira um Reject da seleção, e um Reject é exportado como -1. Um arquivo sem sidecar é lido e importado a partir do XMP e da avaliação EXIF embutidos nele (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF): é assim que o Lightroom guarda a avaliação e as palavras-chave de um JPEG, e o Explorador do Windows as estrelas.
 - **Editor de Geotag GPS** — lê GPS EXIF existente, escreve nova lat/lon em um JPEG ou WebP sem pacote extra, sem alterar pixels, outras tags nem a miniatura
+- **Geotag a partir de trilha GPX** — compara os horários de captura EXIF da seleção com um registro `.gpx` de um celular ou registrador GPS, considerando o fuso horário da câmera, um limite de intervalo e a interpolação entre pontos, e depois grava as posições nos arquivos JPEG / WebP
+- **Editar data de captura** — desloca a data de captura EXIF da seleção em dias / horas / minutos / segundos, ou informando quando a primeira foto foi realmente tirada; DateTimeOriginal, DateTimeDigitized e DateTime são reescritos em arquivos JPEG / WebP
 - **Token Batch Rename** — templates com preview ao vivo como `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — uma linha por imagem incluindo triagem / avaliação / tags / notas
 
@@ -307,7 +309,7 @@ Acessadas a partir do menu **Tools**; organizadas em submenus agrupados por fun�
 
 - **Batch** — Conversão de formato · Remoção EXIF · Sanitizador de imagens (re-renderizar para remover dados ocultos) · Organizador de imagens (ordenar em subpastas por data / resolução / tipo / tamanho) · Token Batch Rename
 - **Retouch & Transform** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Detecção facial (Haar cascade) · cura, clonagem, recorte / endireitamento e correção de lente
-- **Library & Metadata** — Library Search · Smart Albums · Encontrar imagens similares · Busca semântica · Encontrar imagens duplicadas · Auto-Tag · Tags hierárquicas · Exportar metadados · Sidecars XMP · Geotag GPS
+- **Library & Metadata** — Library Search · Smart Albums · Encontrar imagens similares · Busca semântica · Encontrar imagens duplicadas · Auto-Tag · Tags hierárquicas · Exportar metadados · Sidecars XMP · Geotag GPS · Geotag a partir de trilha GPX · Editar data de captura
 
 ### Integração com o sistema
 
@@ -833,7 +835,7 @@ Um exemplo funcional vive em [`examples/desktop_pet/imeru.petscript.json`](../ex
 ### Tools (ferramentas extras — organizadas em 8 submenus agrupados)
 
 - **Batch** — Conversão de formato · Remoção EXIF · Sanitizador de imagens · Organizador de imagens · Token Batch Rename · Deflicker (time-lapse) · Binarização de documentos · Limiar de Otsu · Editar animação · Otimizar para tamanho-alvo · Legenda de meme · Esteganografia
-- **Library & Metadata** — Library Search · Smart Albums · Encontrar imagens similares · Busca semântica · Encontrar imagens duplicadas · Auto-Tag de imagens · Tags hierárquicas · Exportar metadados (CSV / JSON) · Sidecars XMP · Geotag GPS · Cache de miniaturas
+- **Library & Metadata** — Library Search · Smart Albums · Encontrar imagens similares · Busca semântica · Encontrar imagens duplicadas · Auto-Tag de imagens · Tags hierárquicas · Exportar metadados (CSV / JSON) · Sidecars XMP · Geotag GPS · Geotag a partir de trilha GPX · Editar data de captura · Cache de miniaturas
 - **Views** — Vista Timeline (por dia / mês / ano) · Vista Calendar · Vista Map · Scopes & Inspector · Tiny Planet (360°) · Estatísticas da imagem · Relatório de qualidade · Carta de teste · Prévia de daltonismo (protanopia / deuteranopia / tritanopia / acromatopsia)
 - **Workflow** — Triagem · Staging Tray · Painel de referência · Cópias Virtuais · Gerenciador de arquivos de painel duplo · Macros · Pasta monitorada
 - **Export** — PDF de Contact Sheet · Galeria Web · Vídeo Slideshow (MP4) · Print Layout · Colagem · Folha de fotos para documento

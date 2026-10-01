@@ -3037,6 +3037,16 @@ Biblioteca e Metadados (Library & Metadata)
    * - ``GPS Geotag``
      - Grava uma latitude e uma longitude (graus decimais) nas tags GPS EXIF da imagem atual,
        substituindo as que já existirem; apenas arquivos JPEG e WebP.
+   * - ``Geotag from GPX Track``
+     - Compara as imagens selecionadas (ou a visualização inteira) com uma trilha ``.gpx`` pelo horário
+       de captura EXIF: defina quanto o relógio da câmera diferia do UTC, a que distância de um ponto da
+       trilha uma foto pode estar (e se deve interpolar entre pontos), veja quantas caem na trilha e
+       então grave suas posições nas tags GPS EXIF; apenas arquivos JPEG e WebP.
+   * - ``Edit Capture Time``
+     - Desloca a data de captura EXIF das imagens selecionadas (ou da visualização inteira) em dias,
+       horas, minutos e segundos, ou pelo momento em que a primeira foto foi realmente tirada,
+       reescrevendo DateTimeOriginal, DateTimeDigitized e DateTime; fotos sem data de captura EXIF são
+       deixadas como estão, e apenas JPEG e WebP podem ser reescritos.
    * - ``Thumbnail Cache``
      - Mostra quanto espaço em disco o cache de miniaturas usa e o limpa.
 

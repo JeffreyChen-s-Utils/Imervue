@@ -302,6 +302,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Image info** dialog (dimensions / size / dates)
 - **XMP sidecars** (`.xmp` companions) — rating / title / description / keywords / color label round-trip with other XMP-aware photo managers (safe XML via `defusedxml`). Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten. Besides `photo.xmp` (Lightroom, Bridge), the `photo.jpg.xmp` that darktable and digiKam write is read and updated when it is the only sidecar; colour labels are understood in Lightroom's words (`Red` … `Purple`) and Bridge's (`Select`, `Second`, `Approved`, `Review`, `To Do`), and exported as Lightroom writes them. A rejected photo (`xmp:Rating` -1 in Lightroom, Bridge and darktable) becomes a culling Reject, and a Reject is exported as -1. A file without a sidecar is read and imported from the XMP and EXIF rating embedded in it (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) — how Lightroom stores a JPEG's rating and keywords, and how Windows Explorer stores its stars.
 - **GPS Geotag editor** — read existing EXIF GPS, write new lat/lon into a JPEG or WebP with no extra package, leaving its pixels, other tags and thumbnail untouched
+- **Geotag from GPX Track** — match the selection's EXIF capture times against a `.gpx` log from a phone or GPS logger, with the camera's time zone, a gap limit and interpolation between points, then write the positions into the JPEG / WebP files
+- **Edit Capture Time** — shift the EXIF capture time of the selection by days / hours / minutes / seconds, or by naming when the first photo was really taken; DateTimeOriginal, DateTimeDigitized and DateTime are rewritten in JPEG / WebP files
 - **Token Batch Rename** — live-preview templates like `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — one row per image including cull / rating / tags / notes
 
@@ -311,7 +313,7 @@ Accessed from **Tools** menu; organised into function-grouped submenus:
 
 - **Batch** — Format Conversion · EXIF Strip · Image Sanitizer (re-render to strip hidden data) · Image Organizer (sort into subfolders by date / resolution / type / size) · Token Batch Rename
 - **Retouch & Transform** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Face Detection (Haar cascade) · healing, cloning, crop / straighten and lens correction
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time
 
 ### System integration
 
@@ -861,7 +863,7 @@ A working sample lives at [`examples/desktop_pet/imeru.petscript.json`](examples
 ### Tools (extra tools — organised into 8 grouped submenus)
 
 - **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename · Deflicker (Time-lapse) · Document Binarize · Otsu Threshold · Edit Animation · Optimize to Target Size · Meme Caption · Steganography
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Thumbnail Cache
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time · Thumbnail Cache
 - **Views** — Timeline View (by day / month / year) · Calendar View · Map View · Scopes & Inspector · Tiny Planet (360°) · Image Statistics · Quality Report · Test Chart · Color blindness preview (protanopia / deuteranopia / tritanopia / achromatopsia)
 - **Workflow** — Culling · Staging Tray · Reference Panel · Virtual Copies · Dual-Pane File Manager · Macros · Watched Folder
 - **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout · Collage · ID Photo Sheet

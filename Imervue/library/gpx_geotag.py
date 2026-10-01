@@ -7,7 +7,9 @@ between two trackpoints are linearly interpolated; gaps wider than a threshold
 return nothing rather than a guess.
 
 Parsing goes through :mod:`defusedxml` (untrusted XML). The result feeds the
-existing ``image.gps_geotag`` writer. Pure stdlib + defusedxml — ships in main.
+existing ``image.gps_geotag`` writer — **Extra Tools > Library & Metadata >
+Geotag from GPX Track** matches a selection with :func:`match_photos`. Pure
+stdlib + defusedxml — ships in main.
 """
 from __future__ import annotations
 
@@ -65,6 +67,23 @@ def correlate(
     if interpolate:
         return _interpolate(before, after, target, max_gap_s)
     return _nearest_in_segment(before, after, target, max_gap_s)
+
+
+
+def match_photos(
+    items: list[tuple[str, datetime | None]],
+    track: list[TrackPoint],
+    *,
+    max_gap_s: int = _DEFAULT_MAX_GAP_S,
+    interpolate: bool = True,
+    tz_offset_s: int = 0,
+) -> list[tuple[str, tuple[float, float] | None]]:
+    """:func:`correlate` every ``(path, capture time)``; a photo without a time gets None."""
+    return [
+        (path, None if when is None else correlate(
+            when, track, max_gap_s=max_gap_s, interpolate=interpolate, tz_offset_s=tz_offset_s))
+        for path, when in items
+    ]
 
 
 def _read_trkpt(element) -> TrackPoint | None:
