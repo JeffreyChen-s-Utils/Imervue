@@ -38,6 +38,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
 PYPROJECT = REPO_ROOT / "pyproject.toml"
 
+LOCKED_INSTALL = ("python -m pip install --require-hashes --only-binary :all: "
+                  "-r .github/requirements/publish.txt")
+
 RELEASE_JOB = "release"
 BUILD_EXE_JOB = "build-exe-windows"
 PUBLISH_JOB = "publish-release"
@@ -227,6 +230,24 @@ def test_upload_runs_twine_check_before_upload(release_steps):
     check_idx = snippet.find("twine check")
     upload_idx = snippet.find("twine upload")
     assert 0 <= check_idx < upload_idx, "twine check must precede twine upload"
+
+
+def test_release_installs_the_hash_locked_tooling_before_the_bump(release_steps):
+    """The job that uploads to PyPI installs one hash-locked file. It does so
+    before the version bump, so a lock that fails to install stops the job
+    before a tag is pushed."""
+    installs = {s["name"]: s["run"].strip() for s in release_steps
+                if "pip install" in s.get("run", "")}
+    assert installs == {"Install build tooling": LOCKED_INSTALL}
+    names = [s.get("name") for s in release_steps]
+    assert names.index("Install build tooling") < names.index("Bump version in pyproject.toml")
+
+
+def test_release_builds_with_the_locked_backend(release_steps):
+    """``--no-isolation`` makes ``build`` use the setuptools of the lock; an
+    isolated build would download the newest one next to the PyPI token."""
+    build_step = next(s for s in release_steps if s.get("name") == "Build sdist and wheel")
+    assert build_step["run"].strip() == "python -m build --no-isolation"
 
 
 def test_release_stashes_pypi_artefacts(release_steps):
