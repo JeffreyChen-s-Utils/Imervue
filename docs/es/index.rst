@@ -786,6 +786,11 @@ previa en vivo):
 - **Auto Color Balance** — neutraliza dominantes mediante grey-world / white-patch
 - **Grano de película** — ruido de luminancia con tamaño y cantidad ajustables
 - **Convertir a semitonos** — pantalla de puntos al estilo periódico
+- **Igualar color** — pide una imagen de referencia y luego da a la capa el ambiente
+  de color de esa imagen (cada canal adopta la media y la dispersión de la referencia);
+  **Intensidad** mezcla desde sin cambios hasta la igualación completa
+- **Igualar muestras** — vuelve a pintar cada píxel con el color más cercano del dock
+  Swatches (elige o importa colores primero)
 
 Ayudas de visualización
 ^^^^^^^^^^^^^^^^^^^^^^^

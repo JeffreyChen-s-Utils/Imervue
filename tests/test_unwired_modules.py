@@ -32,7 +32,6 @@ _KNOWN_UNWIRED = {
     "Imervue.paint.canvas_presets", "Imervue.paint.catmull_rom_spline",
     "Imervue.paint.color_palette",
     "Imervue.paint.filter_preview_dialog",
-    "Imervue.paint.match_color", "Imervue.paint.match_palette",
     "Imervue.paint.text_on_selection",
     "Imervue.puppet.audio_lipsync", "Imervue.puppet.bone_weights", "Imervue.puppet.easing",
     "Imervue.puppet.mesh_repair", "Imervue.puppet.motion_compress",

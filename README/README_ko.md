@@ -426,7 +426,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ### 필터 및 보기 보조
 
-- **필터** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (각각 OK / Cancel 파라미터 다이얼로그를 열며, 라이브 미리보기는 없음)
+- **필터** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (고른 참조 이미지의 색감) · Match Swatches (각 픽셀을 가장 가까운 Swatches 색으로) (각각 OK / Cancel 파라미터 다이얼로그를 열며, 라이브 미리보기는 없음)
 - **보기 보조** — 픽셀 격자 · 픽셀에 스냅 · 가장자리에 스냅 · 어니언 스킨 · 블리드 가이드 · 캔버스 회전 (`Ctrl+Shift+H`로 반시계 방향 회전)
 
 ### 도크 (14개, 3개 클러스터 탭형)

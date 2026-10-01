@@ -776,6 +776,11 @@ preview):
 - **Auto Color Balance** — neutralise casts via grey-world / white-patch
 - **Film Grain** — luminance noise with adjustable size and amount
 - **Convert to Halftone** — newspaper-style dot screen
+- **Match Colour** — asks for a reference image, then gives the layer that
+  image's colour mood (each channel takes the reference's mean and spread);
+  **Strength** blends from unchanged to the full match
+- **Match Swatches** — repaints every pixel in the nearest colour of the
+  Swatches dock (pick or import colours first)
 
 View Aids
 ^^^^^^^^^

@@ -425,7 +425,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ### 濾鏡與檢視輔助
 
-- **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone（每個都開啟 OK / Cancel 參數對話框，沒有即時預覽）
+- **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour（你選取的參考圖片的色彩氛圍）· Match Swatches（每個像素換成色票中最接近的顏色）（每個都開啟 OK / Cancel 參數對話框，沒有即時預覽）
 - **檢視輔助** — 像素格 · 對齊像素 · 對齊邊緣 · 洋蔥皮 · 出血指引 · 畫布旋轉（`Ctrl+Shift+H` CCW 旋轉）
 
 ### 擺放欄（14 個，分 3 群組以分頁排列）

@@ -426,7 +426,7 @@ Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Res
 
 ### Filtros y ayudas de vista
 
-- **Filtros** — Niveles · Curvas · Posterizar · Umbral · Auto Balance de Color · Grano de Película · Mediotonos (cada uno abre un diálogo de parámetros OK / Cancel, sin vista previa en vivo)
+- **Filtros** — Niveles · Curvas · Posterizar · Umbral · Auto Balance de Color · Grano de Película · Mediotonos · Igualar Color (el ambiente de color de una imagen de referencia que elijas) · Igualar Muestrario (cada píxel en su color más cercano del Muestrario) (cada uno abre un diálogo de parámetros OK / Cancel, sin vista previa en vivo)
 - **Ayudas de vista** — Cuadrícula de píxeles · Ajustar a píxel · Ajustar a bordes · Papel cebolla · Guías de sangrado · Rotación de lienzo (`Ctrl+Shift+H` rota antihorario)
 
 ### Docks (14, en pestañas dentro de 3 grupos)

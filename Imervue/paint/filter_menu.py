@@ -255,6 +255,39 @@ FILTER_SPECS: tuple[FilterSpec, ...] = (
 )
 
 
+def match_colour_spec(reference: np.ndarray) -> FilterSpec:
+    """Match Colour…: give the layer *reference*'s colour mood (``paint/match_color``).
+
+    Each RGB channel takes the reference's mean and spread; **Strength** blends
+    from the layer as it is (0) to the full match (1).
+    """
+    from Imervue.paint.match_color import match_color
+    return FilterSpec(
+        key="match_color",
+        label_key="paint_filter_match_color",
+        label_fallback="Match Colour…",
+        parameters=(
+            ParamSpec("strength", "paint_filter_match_color_strength", "Strength",
+                      "float_slider", 0.0, 1.0, 1.0, step=0.05),
+        ),
+        apply_fn=lambda arr, params: match_color(
+            arr, reference, strength=float(params.get("strength", 1.0))),
+    )
+
+
+def match_swatches_spec(swatches) -> FilterSpec:
+    """Match Swatches…: repaint each pixel in its nearest *swatches* colour (``match_palette``)."""
+    from Imervue.paint.match_palette import match_palette
+    colours = tuple(tuple(int(c) for c in rgb) for rgb in swatches)
+    return FilterSpec(
+        key="match_swatches",
+        label_key="paint_filter_match_swatches",
+        label_fallback="Match Swatches…",
+        parameters=(),
+        apply_fn=lambda arr, _params: match_palette(arr, colours),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Filter parameters dialog — one widget per ParamSpec
 # ---------------------------------------------------------------------------
@@ -390,7 +423,51 @@ def build_filter_menu(workspace: PaintWorkspace) -> QMenu:
         action.triggered.connect(
             lambda _checked=False, s=spec: _run_filter(workspace, s),
         )
+    menu.addSeparator()
+    match_colour = menu.addAction(lang.get("paint_filter_match_color", "Match Colour…"))
+    match_colour.triggered.connect(lambda _checked=False: _run_match_colour(workspace))
+    match_swatches = menu.addAction(lang.get("paint_filter_match_swatches", "Match Swatches…"))
+    match_swatches.triggered.connect(lambda _checked=False: _run_match_swatches(workspace))
     return menu
+
+
+def _run_match_colour(workspace: PaintWorkspace) -> None:  # pragma: no cover - QFileDialog
+    from PySide6.QtWidgets import QFileDialog
+
+    from Imervue.gui.file_filters import viewer_filter
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    from Imervue.image.shown import load_shown_rgba
+    lang = language_wrapper.language_word_dict
+    path, _ = QFileDialog.getOpenFileName(
+        workspace, lang.get("paint_filter_match_color_pick", "Choose the reference image"),
+        "", viewer_filter(),
+    )
+    if not path:
+        return
+    try:
+        reference = load_shown_rgba(path)
+    except IMAGE_READ_ERRORS as exc:
+        unreadable = lang.get("paint_filter_match_color_unreadable",
+                              "Could not read the reference image: {reason}")
+        _warn(workspace, unreadable.format(reason=exc))
+        return
+    _run_filter(workspace, match_colour_spec(reference))
+
+
+def _run_match_swatches(workspace: PaintWorkspace) -> None:  # pragma: no cover - Qt UI
+    swatches = list(workspace._state.color_history)  # noqa: SLF001
+    if not swatches:
+        _warn(workspace, language_wrapper.language_word_dict.get(
+            "paint_filter_no_swatches",
+            "No swatches yet: pick colours, or File > Import palette…, first."))
+        return
+    _run_filter(workspace, match_swatches_spec(swatches))
+
+
+def _warn(workspace: object, text: str) -> None:  # pragma: no cover - Qt UI
+    toast = getattr(workspace, "toast", None)
+    if toast is not None:
+        toast.warning(text)
 
 
 def _run_filter(workspace: PaintWorkspace, spec: FilterSpec) -> None:  # pragma: no cover - Qt UI

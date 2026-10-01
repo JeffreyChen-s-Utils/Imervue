@@ -777,6 +777,11 @@ Live-Vorschau):
 - **Auto Color Balance** — Farbstiche per Grey-World / White-Patch neutralisieren
 - **Filmkorn** — Luminanzrauschen mit anpassbarer Größe und Menge
 - **In Halbton konvertieren** — Zeitungs-Punktraster
+- **Farbe angleichen** — fragt nach einem Referenzbild und gibt dem Layer dann
+  dessen Farbstimmung (jeder Kanal übernimmt Mittelwert und Streuung der Referenz);
+  **Stärke** blendet von unverändert bis zur vollen Angleichung
+- **An Swatches angleichen** — malt jedes Pixel in der nächstgelegenen Farbe des
+  Swatches-Docks neu (zuerst Farben auswählen oder importieren)
 
 Anzeigehilfen
 ^^^^^^^^^^^^^

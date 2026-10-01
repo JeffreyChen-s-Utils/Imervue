@@ -423,7 +423,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ### フィルタ & 表示補助
 
-- **フィルタ** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone(それぞれ OK / Cancel のパラメータダイアログを開きます。ライブプレビューはありません)
+- **フィルタ** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour(選んだ参照画像の色の雰囲気) · Match Swatches(各ピクセルをスウォッチで最も近い色に)(それぞれ OK / Cancel のパラメータダイアログを開きます。ライブプレビューはありません)
 - **表示補助** — ピクセルグリッド · ピクセルスナップ · エッジスナップ · オニオンスキン · 裁ち落としガイド · キャンバス回転(`Ctrl+Shift+H` で反時計回り回転)
 
 ### ドック(14、3 クラスタにタブ配置)

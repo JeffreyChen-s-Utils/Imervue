@@ -785,6 +785,11 @@ OK / Cancelar (sem pré-visualização ao vivo):
 - **Balanço Automático de Cor** — neutralizar dominâncias via grey-world / white-patch
 - **Granulação de Filme** — ruído de luminância com tamanho e quantidade ajustáveis
 - **Converter para Meio-Tom** — tela de pontos estilo jornal
+- **Corresponder Cor** — pede uma imagem de referência e então dá à camada a
+  atmosfera de cor dessa imagem (cada canal assume a média e a dispersão da
+  referência); **Intensidade** mistura de inalterada até a correspondência total
+- **Corresponder Amostras** — repinta cada pixel com a cor mais próxima do
+  dock Amostras (escolha ou importe cores antes)
 
 Auxílios de Visualização
 ^^^^^^^^^^^^^^^^^^^^^^^^

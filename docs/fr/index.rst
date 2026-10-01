@@ -782,6 +782,11 @@ Chaque entrée du menu ``Filtre`` ouvre une simple boîte de dialogue de paramè
 - **Balance des couleurs automatique** — neutraliser les dominantes via grey-world / white-patch
 - **Grain de film** — bruit de luminance avec taille et quantité réglables
 - **Convertir en demi-teintes** — trame de points de style journal
+- **Correspondance de la couleur** — demande une image de référence, puis donne au calque
+  l'ambiance colorimétrique de cette image (chaque canal reprend la moyenne et la dispersion
+  de la référence) ; **Intensité** fond de l'image inchangée jusqu'à la correspondance complète
+- **Correspondance avec les échantillons** — repeint chaque pixel dans la couleur la plus
+  proche du dock Échantillons (choisissez ou importez d'abord des couleurs)
 
 Aides à la visualisation
 ^^^^^^^^^^^^^^^^^^^^^^^^

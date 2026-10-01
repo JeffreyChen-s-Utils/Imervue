@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-30 | 2026-10-01 | Paint's Filter menu matches a reference image's colour or the swatches; match_color and match_palette are wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-29 | 2026-10-01 | Paint's Lasso snaps its outline to nearby edges with Magnetic; magnetic_lasso is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-28 | 2026-10-01 | Paint's gradient tool paints saved multi-stop gradients, edited in a new dialog; gradient_editor is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-27 | 2026-10-01 | Paint's Material dock lists the user's materials and captured tips; Save Selection as Material is wired | #done #bugfix #feature #paint #docs #i18n | [2026-10](2026-10.md) |
@@ -495,4 +496,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 29 |
+| [2026-10.md](2026-10.md) | 2026-10 | 30 |

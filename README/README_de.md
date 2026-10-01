@@ -423,7 +423,7 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 
 ### Filter & Ansichts-Hilfen
 
-- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (jeder öffnet einen Parameter-Dialog mit OK / Cancel, ohne Live-Vorschau)
+- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (die Farbstimmung eines gewählten Referenzbilds) · Match Swatches (jedes Pixel in seiner nächstgelegenen Swatches-Farbe) (jeder öffnet einen Parameter-Dialog mit OK / Cancel, ohne Live-Vorschau)
 - **Ansichts-Hilfen** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` dreht CCW)
 
 ### Docks (14, getabbed in 3 Clustern)

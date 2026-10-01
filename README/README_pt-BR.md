@@ -430,7 +430,7 @@ Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicio
 
 ### Filtros e auxiliares de visualização
 
-- **Filtros** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (cada um abre um diálogo de parâmetros OK / Cancel, sem preview ao vivo)
+- **Filtros** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (a atmosfera de cor de uma imagem de referência que você escolhe) · Match Swatches (cada pixel na cor mais próxima do dock Amostras) (cada um abre um diálogo de parâmetros OK / Cancel, sem preview ao vivo)
 - **Auxiliares de visualização** — Grade de Pixels · Snap to Pixel · Snap to Edges · Onion Skin · Guias de Sangria · Rotação de Canvas (`Ctrl+Shift+H` gira CCW)
 
 ### Docks (14, em abas dentro de 3 grupos)

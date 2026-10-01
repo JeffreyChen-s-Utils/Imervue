@@ -423,7 +423,7 @@ Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / S
 
 ### Filtres et aides à la vue
 
-- **Filtres** — Niveaux · Courbes · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (chacun ouvre une boîte de dialogue de paramètres OK / Cancel, sans aperçu en direct)
+- **Filtres** — Niveaux · Courbes · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (l'ambiance colorimétrique d'une image de référence que vous choisissez) · Match Swatches (chaque pixel dans sa couleur la plus proche du Nuancier) (chacun ouvre une boîte de dialogue de paramètres OK / Cancel, sans aperçu en direct)
 - **Aides à la vue** — Grille de pixels · Aligner sur le pixel · Aligner sur les bords · Pelure d'oignon · Guides de fond perdu · Rotation du canevas (`Ctrl+Shift+H` tourne dans le sens antihoraire)
 
 ### Docks (14, à onglets dans 3 groupes)
