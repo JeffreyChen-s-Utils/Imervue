@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-01 against `8601efe` on `dev`.
+> Last verified: 2026-10-01 against `b5921f8` on `dev`.
 
 ## 1. Purpose
 
@@ -58,7 +58,8 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `examples/` | The bundled `.puppet` character Imeru, the code that builds it (`examples/puppet/imeru/build.py`: a Blender cel-shaded render plus painted face features, then the rig) and her desktop-pet script |
 | `docs/`, `README.md`, `README/` | Sphinx docs and translated READMEs; `README.md` and `docs/en` are canonical |
 | `Imervue.spec`, `Imervue_mac.spec`, `packaging/`, `exe/` | PyInstaller specs, AppImage / auto-py-to-exe config, frozen launch shim (`nuitka.md`, `pyinstaller.md` document builds) |
-| `.github/workflows/` | `test.yml` (ruff + bandit lint job, Sphinx docs build with `-W`, pytest by layer), `release.yml` |
+| `.github/workflows/` | `test.yml` (ruff + bandit lint job, Sphinx docs build with `-W`, pytest by layer, then the `publish-dev` job on a push to `dev`), `release.yml` (stable release on a pull request merged into `main`) |
+| `scripts/` | Stdlib-only helpers CI runs, never shipped in the wheel: `dev_release.py` numbers the `Imervue_dev` release and decides whether a build differs from the published one |
 
 ## 3. Entry points and public interfaces
 
@@ -68,6 +69,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `py -m Imervue.cli <subcommand>` | `Imervue/cli.py` | Headless batch; `list-ops` lists subcommands; every MCP tool is also a subcommand (`Imervue/cli_tools.py`) |
 | `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | Calls `run()` in `Imervue/mcp_server/server.py` |
 | `exe/start_Imervue.py` | — | Launch shim for frozen builds |
+| PyPI packages `Imervue` (stable), `Imervue_dev` (dev channel) | `pyproject.toml`, `dev.toml` | Stable: a pull request merged into `main` runs `release.yml`, which bumps `pyproject.toml`, tags and uploads. Dev: the `publish-dev` job of `test.yml` runs after `lint`, `docs`, `fast` and `extended` on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back |
 
 Public interfaces other code or users depend on:
 

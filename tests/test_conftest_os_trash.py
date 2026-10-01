@@ -86,7 +86,7 @@ def test_stand_in_module_when_send2trash_is_missing(monkeypatch, tmp_path):
     import builtins
     import sys
 
-    import conftest
+    from tests import conftest
 
     real_import = builtins.__import__
 

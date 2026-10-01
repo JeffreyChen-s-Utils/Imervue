@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `b5921f8f` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `1e642f72` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 917 | 152,633 |
+| `tests/` | 919 | 153,066 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,626 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,391 |
@@ -84,7 +84,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,766** | **336,510** |
+| **總計** | **1,768** | **336,943** |
 
 其中 `Imervue/` 套件本身 769 檔 / 167,856 行。
 
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-917 個檔、152,633 行。`pyproject.toml` 定義三個互斥層級 marker：
+919 個檔、153,066 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1000,6 +1000,14 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 `user_setting.json`）、`os_trash`（以行程內假回收筒取代 `send2trash`，測試絕不碰系統資源回收筒）和 `_restore_app_appearance`（還原測試改過的 QApplication 字型與樣式表，避免同一 xdist worker 後續檔案的元件尺寸被改變）。
 
 **輔助模組**：`_qt_skip.py`（GL widget 的 CI skip marker）、`_instant_worker.py`、`_toast_spy.py`、`_app_appearance.py`（`app_appearance_restored`：字型與樣式表還原 context manager）。
+
+**CI 的行程結束碼**：`CI=true` 時 `conftest.py` 為了避開 Qt teardown 的 access violation 會提前結束行程，結束碼一律是
+pytest 回報的那一個。`pytest_sessionfinish` 把它記在該次執行的 `config.stash`；全過（0）時 `pytest_unconfigure` 在印完
+摘要後直接 `TerminateProcess`，其餘由 `pytest_configure` 註冊的 `atexit` 以該結束碼 `os._exit`。session 沒跑完就沒有
+結束碼可帶（例如選項打錯），兩層都不介入，行程照 pytest 自己的結束碼結束。pytest 是以 `tests.conftest` 載入這個檔，
+測試要用它一律寫 `from tests import conftest` 或 `from tests.conftest import …`；裸的 `import conftest` 會把同一個檔
+再執行一份。`tests/test_conftest_exit_status.py` 以子行程實跑三種結束碼（有失敗、全過、選項錯誤），並掃描 `tests/`
+不得出現裸 import。
 
 ### Qt / OpenGL 在無頭 CI 上的硬規則
 
@@ -1027,6 +1035,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | AppImage | `packaging/build_appimage.sh` | Linux |
 | 跨平台說明 | `packaging/CROSS_PLATFORM.md` | |
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免** |
+| dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具版本與 release.yml 相同（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
 ### 品質閘（專案規範的 Definition of Done）
