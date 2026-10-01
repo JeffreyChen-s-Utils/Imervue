@@ -204,7 +204,11 @@ Use the shared fixtures in `tests/conftest.py` (`qapp`, `tmp_path`, `sample_*_ar
 `image_folder`); don't roll your own QApplication or RNG seed. Never write to the real
 `user_setting.json` — the autouse `_isolate_user_settings` fixture redirects the path, so just
 mutate `user_setting_dict` directly. A test that was already skipping for a missing optional
-dependency may keep skipping, but every NEW test must actually run.
+dependency may keep skipping, but every NEW test must actually run. A test that needs something
+from the conftest module itself imports it as `from tests import conftest` (or
+`from tests.conftest import …`), never `import conftest`: pytest loaded the file as
+`tests.conftest`, and the bare name runs it a second time (`tests/test_conftest_exit_status.py`
+rejects it).
 
 Waiting on a queued Qt signal (a worker thread's `done`, a `QTimer`) goes through the
 `pump_until(predicate, timeout=5.0)` fixture — never a fixed number of `processEvents()`

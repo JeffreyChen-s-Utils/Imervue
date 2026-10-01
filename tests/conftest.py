@@ -109,18 +109,44 @@ def pytest_collection_modifyitems(config, items):
 # post-yield summary print, so the banner is lost.) FALLBACK: an ``atexit``
 # handler that ``os._exit``s with the captured code, covering a failing CI
 # session that reaches interpreter shutdown without the hook having exited.
+#
+# Both layers act only on the exit status pytest itself reported, which
+# ``pytest_sessionfinish`` records on the run's ``config``. Until it is recorded
+# neither does anything, so a run that ends before its session finishes (a
+# usage error such as an unknown option) keeps the exit code pytest gives it.
+# The status lives on ``config`` and the fallback is registered from
+# ``pytest_configure``, never in a module global or at import: pytest loads
+# this file as ``tests.conftest``, and anything that imports it under another
+# name (a bare ``import conftest``) runs a second copy. A handler registered by
+# such a copy would hold its own default status and run first (``atexit`` is
+# last in, first out), exiting 0 over a session with failed tests. A copy
+# pytest did not load receives no hooks, so it registers nothing.
 
-_pytest_exit_status: int = 0
+_EXIT_STATUS: Final = pytest.StashKey[int]()
 
 
-def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
-    """Capture pytest's intended exit code before finalisation runs."""
-    global _pytest_exit_status
-    _pytest_exit_status = int(exitstatus)
+def _on_ci() -> bool:
+    """Whether this run is a CI job (GitHub Actions sets ``CI=true``)."""
+    return os.environ.get("CI") == "true"
+
+
+def _reported_exit_status(config) -> int | None:
+    """The exit status pytest reported for *config*'s session; ``None`` before it finishes."""
+    return config.stash.get(_EXIT_STATUS, None)
+
+
+def pytest_configure(config):
+    """Arm the exit fallback for this run; see ``_force_clean_exit``."""
+    atexit.register(_force_clean_exit, config)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Record pytest's exit status before finalisation runs."""
+    session.config.stash[_EXIT_STATUS] = int(exitstatus)
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_unconfigure(config):  # noqa: ARG001
+def pytest_unconfigure(config):
     """Hard-exit a green CI session before the native teardown segfault.
 
     The summary banner has already printed by now; on CI a passing session
@@ -129,7 +155,7 @@ def pytest_unconfigure(config):  # noqa: ARG001
     wrapper. A failing session (or any local run) falls through to normal
     teardown so real failures and new ``__del__`` bugs still surface.
     """
-    if os.environ.get("CI") == "true" and _pytest_exit_status == 0:
+    if _on_ci() and _reported_exit_status(config) == 0:
         sys.stdout.flush()
         sys.stderr.flush()
         _hard_exit_zero()
@@ -158,21 +184,21 @@ def _hard_exit_zero() -> None:
     os._exit(0)
 
 
-def _force_clean_exit() -> None:
+def _force_clean_exit(config) -> None:
     """Fallback skip of module finalisation to dodge the Qt teardown segfault.
 
     The ``pytest_unconfigure`` hook already exits a passing CI session; this
     covers the remaining path (a failing CI session reaching interpreter
-    shutdown). Only fires under headless CI — local runs do interpreter cleanup
-    normally so any new ``__del__`` bug shows up immediately during development
-    instead of being masked.
+    shutdown) and exits with the status pytest reported for *config*'s session.
+    Only fires under headless CI — local runs do interpreter cleanup normally so
+    any new ``__del__`` bug shows up immediately during development instead of
+    being masked. A run whose session never finished has no status to carry and
+    is left to exit with pytest's own code.
     """
-    if os.environ.get("CI") != "true":
+    status = _reported_exit_status(config)
+    if not _on_ci() or status is None:
         return
-    os._exit(_pytest_exit_status)
-
-
-atexit.register(_force_clean_exit)
+    os._exit(status)
 
 
 # ---------------------------------------------------------------------------
@@ -198,9 +224,13 @@ def _bootstrap_plugin_imports() -> None:
 
 def _bootstrap_tests_dir_on_path() -> None:
     """Put ``tests/`` on sys.path so test modules can import shared
-    helpers like ``_qt_skip`` without needing relative-import gymnastics
-    (which would require ``tests/__init__.py`` and break pytest's
-    rootdir auto-discovery)."""
+    helpers like ``_qt_skip`` by their bare names.
+
+    This file is not one of those helpers: pytest loaded it as
+    ``tests.conftest``, so ``import conftest`` would run it a second time as
+    another module. Import ``tests.conftest`` instead;
+    ``tests/test_conftest_exit_status.py`` checks every test module for it.
+    """
     tests_dir = str(Path(__file__).resolve().parent)
     if tests_dir not in sys.path:
         sys.path.insert(0, tests_dir)
