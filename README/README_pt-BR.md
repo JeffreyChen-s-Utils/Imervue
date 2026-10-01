@@ -407,6 +407,8 @@ Pincel · Borracha · Preenchimento · Conta-gotas · Retângulo / Laço / Varin
 
 O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (dessaturar) — pinta ajustes locais ponderados pelo pincel; Dodge e Burn atuam nos meios-tons. Nenhum dos três tem opções.
 
+A ferramenta **Gradiente** pinta da cor de primeiro plano → cor de fundo, ou com um gradiente seu: escolha-o em **Colours** na barra de opções, e **Edit…** ali abre o editor de gradientes, onde cada gradiente tem um nome e paradas de cor (cada uma com uma posição e uma cor com opacidade) que você adiciona, move, recolore e remove. Seus gradientes são mantidos entre sessões.
+
 Atalhos de tecla única: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.
 
 ### Pincéis
@@ -419,7 +421,7 @@ Painel completo de camadas com miniaturas, alternância de visibilidade, botões
 
 ### Seleção
 
-Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicionar / Subtrair / Interseção**. **Modo Quick Mask** (`Q`) para fluxos de pintar-a-máscara. Diálogo **Stroke Selection**.
+Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicionar / Subtrair / Interseção**; com **Magnetic** marcado na barra de opções, o contorno do Laço se encaixa na borda mais forte da camada num raio de 10 px quando você solta o botão. **Modo Quick Mask** (`Q`) para fluxos de pintar-a-máscara. Diálogo **Stroke Selection**.
 
 ### Animação e mangá
 

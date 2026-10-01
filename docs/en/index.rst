@@ -608,14 +608,20 @@ Tool Palette (Left Strip)
      - Translate the active layer or selection
    * - Rect / Lasso / Wand / Quick Select
      - ``M`` / ``L`` / ``W``
-     - Selection tools with Replace / Add / Subtract / Intersect modes
+     - Selection tools with Replace / Add / Subtract / Intersect modes; for the
+       Lasso, **Magnetic** in the Options bar snaps the outline onto the
+       strongest edge of the layer within 10 px when you let go
    * - Text
      - ``T``
      - Click opens the **Add Text** dialog (font / size / colour / bold /
        italic); the text is drawn into the layer's pixels
    * - Gradient
      - ``U``
-     - Linear / Radial / Angle / Diamond gradient fill
+     - Linear / Radial / Angle / Diamond gradient fill, from the foreground to
+       the background colour or along a saved multi-stop gradient picked
+       under **Colours** in the Options bar; **Edit…** beside it creates,
+       changes and deletes those gradients (name, colour stops with position
+       and opacity), which are kept between sessions
    * - Blur / Smudge
      - ``R`` (Smudge)
      - Local pixel manipulation

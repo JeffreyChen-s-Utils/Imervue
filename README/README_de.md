@@ -400,6 +400,8 @@ Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · M
 
 Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Entsättigen) — malt lokale Anpassungen, gewichtet durch den Brush; Dodge und Burn wirken auf die Mitteltöne. Keines der drei Tools hat Optionen.
 
+Das **Gradient**-Tool malt Vordergrund → Hintergrund oder einen eigenen Verlauf: Wählen Sie ihn unter **Colours** in der Options-Bar; **Edit…** dort öffnet den Verlaufseditor, in dem jeder Verlauf einen Namen und Farbstopps hat (jeder mit einer Position und einer Farbe mit Opazität), die Sie hinzufügen, verschieben, umfärben und entfernen. Ihre Verläufe bleiben zwischen Sitzungen erhalten.
+
 Einzelbuchstaben-Shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
 
 ### Brushes
@@ -412,7 +414,7 @@ Vollwertiges Layer-Panel mit Thumbnails, Sichtbarkeits-Toggles, ↑ / ↓-Button
 
 ### Auswahl
 
-Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-Modi. **Quick Mask Mode** (`Q`) für Paint-the-Mask-Workflows. **Stroke Selection**-Dialog.
+Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-Modi; ist **Magnetic** in der Options-Bar aktiviert, rastet der Umriss des Lassos beim Loslassen an der stärksten Kante des Layers innerhalb von 10 px ein. **Quick Mask Mode** (`Q`) für Paint-the-Mask-Workflows. **Stroke Selection**-Dialog.
 
 ### Animation & Manga
 

@@ -609,14 +609,20 @@ Werkzeugpalette (linke Leiste)
      - Aktiven Layer oder Auswahl verschieben
    * - Rechteck / Lasso / Zauberstab / Schnellauswahl
      - ``M`` / ``L`` / ``W``
-     - Auswahlwerkzeuge mit Modi Ersetzen / Hinzufügen / Subtrahieren / Schnitt
+     - Auswahlwerkzeuge mit Modi Ersetzen / Hinzufügen / Subtrahieren / Schnitt;
+       beim Lasso rastet **Magnetisch** in der Optionsleiste den Umriss beim
+       Loslassen an der stärksten Kante des Layers innerhalb von 10 px ein
    * - Text
      - ``T``
      - Klick öffnet den Dialog **Text hinzufügen** (Schrift / Größe / Farbe / Fett /
        Kursiv); der Text wird in die Pixel des Layers gezeichnet
    * - Gradient
      - ``U``
-     - Linear- / Radial- / Winkel- / Diamantgradientfüllung
+     - Linear- / Radial- / Winkel- / Diamantgradientfüllung, von der Vordergrund-
+       zur Hintergrundfarbe oder entlang eines gespeicherten Verlaufs mit mehreren
+       Farbstopps, gewählt unter **Farben** in der Optionsleiste; **Bearbeiten…**
+       daneben legt diese Verläufe an, ändert und löscht sie (Name, Farbstopps mit
+       Position und Deckkraft); sie bleiben zwischen Sitzungen erhalten
    * - Weichzeichnen / Verschmieren
      - ``R`` (Verschmieren)
      - Lokale Pixelmanipulation

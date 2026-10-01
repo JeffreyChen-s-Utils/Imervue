@@ -221,9 +221,13 @@ class ToolState:
     gradient_kind: str = "linear"
     gradient_reverse: bool = False
     gradient_repeat: int = 1
+    # Name of a saved multi-stop gradient (gradient_editor); "" = foreground → background.
+    gradient_name: str = ""
     symmetry_mode: str = "off"
     ruler: Ruler = field(default_factory=Ruler)
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
+    # Lasso outlines snap to the strongest nearby edge (paint/magnetic_lasso).
+    lasso_magnetic: bool = False
     snap_to_pixel: bool = False
     snap_to_edges: bool = False
     # When ``True`` and the workspace has a manga panel layout
@@ -364,8 +368,13 @@ class ToolState:
 
     def set_gradient(self, *, kind: str | None = None,
                      reverse: bool | None = None,
-                     repeat: int | None = None) -> bool:
-        """Update gradient kind / reverse / repeat. True if anything changed."""
+                     repeat: int | None = None,
+                     name: str | None = None) -> bool:
+        """Update gradient kind / reverse / repeat / colours. True if anything changed.
+
+        *name* picks a saved multi-stop gradient by name; ``""`` goes back to
+        foreground → background.
+        """
         from Imervue.paint.gradient import GRADIENT_KINDS
         changed = False
         if kind is not None:
@@ -384,6 +393,9 @@ class ToolState:
             if repeat != self.gradient_repeat:
                 self.gradient_repeat = repeat
                 changed = True
+        if name is not None and str(name) != self.gradient_name:
+            self.gradient_name = str(name)
+            changed = True
         if changed:
             self._persist()
             self._emit(EVENT_GRADIENT)
@@ -439,6 +451,15 @@ class ToolState:
         if mode == self.selection_mode:
             return False
         self.selection_mode = mode
+        self._persist()
+        self._emit(EVENT_SELECTION_MODE)
+        return True
+
+    def set_lasso_magnetic(self, enabled: bool) -> bool:
+        """Turn edge snapping of lasso outlines on or off. True if it changed."""
+        if bool(enabled) == self.lasso_magnetic:
+            return False
+        self.lasso_magnetic = bool(enabled)
         self._persist()
         self._emit(EVENT_SELECTION_MODE)
         return True
@@ -628,9 +649,11 @@ class ToolState:
                 "gap_close_px": self.fill.gap_close_px,
             },
             "selection_mode": self.selection_mode,
+            "lasso_magnetic": bool(self.lasso_magnetic),
             "gradient_kind": self.gradient_kind,
             "gradient_reverse": self.gradient_reverse,
             "gradient_repeat": self.gradient_repeat,
+            "gradient_name": self.gradient_name,
             "symmetry_mode": self.symmetry_mode,
             "ruler": self.ruler.to_dict(),
             "color_history": [list(c) for c in self.color_history],
@@ -684,8 +707,10 @@ class ToolState:
         return cls(
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
+            lasso_magnetic=bool(raw.get("lasso_magnetic", False)),
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
             gradient_repeat=gradient_repeat,
+            gradient_name=str(raw.get("gradient_name", "") or ""),
             symmetry_mode=symmetry_mode, ruler=ruler,
             color_history=history,
             snap_to_pixel=bool(raw.get("snap_to_pixel", False)),

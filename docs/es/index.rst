@@ -617,14 +617,20 @@ Paleta de herramientas (Banda izquierda)
      - Traslada la capa o selección activa
    * - Rect / Lazo / Varita / Selección rápida
      - ``M`` / ``L`` / ``W``
-     - Herramientas de selección con modos Replace / Add / Subtract / Intersect
+     - Herramientas de selección con modos Replace / Add / Subtract / Intersect;
+       en el Lazo, **Magnetic** en la barra Options ajusta el contorno al borde
+       más fuerte de la capa a menos de 10 px al soltar
    * - Texto
      - ``T``
      - El clic abre el diálogo **Add Text** (fuente / tamaño / color / negrita /
        cursiva); el texto se dibuja en los píxeles de la capa
    * - Degradado
      - ``U``
-     - Relleno con degradado lineal / radial / angular / diamante
+     - Relleno con degradado lineal / radial / angular / diamante, del color de
+       primer plano al de fondo o a lo largo de un degradado guardado de varias
+       paradas elegido en **Colours** en la barra Options; **Edit…** a su lado
+       crea, cambia y elimina esos degradados (nombre, paradas de color con
+       posición y opacidad), que se conservan entre sesiones
    * - Desenfoque / Difuminar
      - ``R`` (Difuminar)
      - Manipulación local de píxeles

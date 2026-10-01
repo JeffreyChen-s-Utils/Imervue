@@ -400,6 +400,8 @@ Pinceau · Gomme · Remplissage · Pipette · Rect / Lasso / Baguette / Sélecti
 
 Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (désaturer) — peint des ajustements locaux pondérés par le pinceau ; Dodge et Burn agissent sur les tons moyens. Aucun des trois n'a d'options.
 
+L'outil **Dégradé** peint premier plan → arrière-plan, ou un dégradé personnalisé : choisissez-le sous **Couleurs** dans la barre d'options, et **Modifier…** y ouvre l'éditeur de dégradés, où chaque dégradé a un nom et des points de couleur (chacun avec une position et une couleur avec opacité) que vous ajoutez, déplacez, recolorez et supprimez. Vos dégradés sont conservés d'une session à l'autre.
+
 Raccourcis à une lettre : `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.
 
 ### Pinceaux
@@ -412,7 +414,7 @@ Panneau de calques complet avec miniatures, bascules de visibilité, boutons ↑
 
 ### Sélection
 
-Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / Soustraire / Intersecter**. **Mode masque rapide** (`Q`) pour les flux de travail « peindre le masque ». Boîte de dialogue **Contourer la sélection**.
+Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / Soustraire / Intersecter** ; avec **Magnétique** coché dans la barre d'options, le contour du Lasso s'aimante sur le bord le plus marqué du calque dans un rayon de 10 px lorsque vous relâchez. **Mode masque rapide** (`Q`) pour les flux de travail « peindre le masque ». Boîte de dialogue **Contourer la sélection**.
 
 ### Animation et manga
 

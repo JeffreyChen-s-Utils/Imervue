@@ -411,6 +411,8 @@ Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · M
 
 The darkroom-toning trio — **Dodge** (lighten), **Burn** (darken) and **Sponge** (desaturate) — paint local adjustments weighted by the brush; Dodge and Burn work on the midtones. None of the three has options.
 
+The **Gradient** tool paints foreground → background, or a gradient of your own: pick it under **Colours** in the Options bar, and **Edit…** there opens the gradient editor, where each gradient has a name and colour stops (each with a position and a colour with opacity) that you add, move, recolour and remove. Your gradients are kept between sessions.
+
 Single-letter shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.
 
 ### Brushes
@@ -423,7 +425,7 @@ Full layer panel with thumbnails, visibility toggles, ↑ / ↓ reorder buttons 
 
 ### Selection
 
-Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect** modes. **Quick Mask Mode** (`Q`) for paint-the-mask workflows. **Stroke Selection** dialog.
+Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect** modes; with **Magnetic** ticked in the Options bar, the Lasso's outline snaps onto the strongest edge of the layer within 10 px when you let go. **Quick Mask Mode** (`Q`) for paint-the-mask workflows. **Stroke Selection** dialog.
 
 ### Animation & manga
 

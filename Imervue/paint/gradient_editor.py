@@ -25,17 +25,11 @@ presets and palettes.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
-from Imervue.paint.gradient import (
-    GRADIENT_KINDS,
-    _angle_t,
-    _diamond_t,
-    _linear_t,
-    _radial_t,
-)
+from Imervue.paint.gradient import _T_FIELD_BUILDERS, GRADIENT_KINDS
 from Imervue.user_settings.user_setting_dict import (
     schedule_save,
     user_setting_dict,
@@ -147,6 +141,58 @@ class MultiStopGradient:
 
 
 # ---------------------------------------------------------------------------
+# Editing — each returns a new gradient, the input is never changed
+# ---------------------------------------------------------------------------
+
+
+def default_gradient(
+    name: str,
+    start: tuple[int, int, int, int] = (0, 0, 0, 255),
+    end: tuple[int, int, int, int] = (255, 255, 255, 255),
+) -> MultiStopGradient:
+    """A two-stop gradient from *start* to *end*, the starting point for a new one."""
+    return MultiStopGradient(name=name, stops=(GradientStop(0.0, start), GradientStop(1.0, end)))
+
+
+def add_stop(gradient: MultiStopGradient) -> tuple[MultiStopGradient, int]:
+    """Add a stop in the middle of the widest gap, coloured as the gradient is there.
+
+    Returns the new gradient and the new stop's index.
+    """
+    stops = gradient.stops
+    gap = max(range(1, len(stops)), key=lambda i: stops[i].position - stops[i - 1].position)
+    position = (stops[gap - 1].position + stops[gap].position) / 2
+    new = GradientStop(position, interpolate_at(gradient, position))
+    return replace(gradient, stops=(*stops[:gap], new, *stops[gap:])), gap
+
+
+def remove_stop(gradient: MultiStopGradient, index: int) -> MultiStopGradient:
+    """Drop the stop at *index*; the two end stops stay, so a gradient keeps both ends."""
+    if not 0 < index < len(gradient.stops) - 1:
+        return gradient
+    return replace(gradient, stops=gradient.stops[:index] + gradient.stops[index + 1:])
+
+
+def move_stop(gradient: MultiStopGradient, index: int, position: float) -> MultiStopGradient:
+    """Move an inner stop to *position*, kept between its neighbours; the ends stay at 0 and 1."""
+    stops = gradient.stops
+    if not 0 < index < len(stops) - 1:
+        return gradient
+    position = max(stops[index - 1].position, min(stops[index + 1].position, float(position)))
+    moved = GradientStop(position, stops[index].color)
+    return replace(gradient, stops=(*stops[:index], moved, *stops[index + 1:]))
+
+
+def recolour_stop(
+    gradient: MultiStopGradient, index: int, color: tuple[int, int, int, int],
+) -> MultiStopGradient:
+    """Give the stop at *index* the RGBA *color*."""
+    stops = gradient.stops
+    changed = GradientStop(stops[index].position, tuple(int(c) for c in color))  # type: ignore[arg-type]
+    return replace(gradient, stops=(*stops[:index], changed, *stops[index + 1:]))
+
+
+# ---------------------------------------------------------------------------
 # Interpolation
 # ---------------------------------------------------------------------------
 
@@ -207,14 +253,15 @@ def render_multistop_gradient(
     *,
     kind: str = "linear",
     reverse: bool = False,
+    repeat: int = 1,
     selection: np.ndarray | None = None,
 ) -> bool:
     """Fill ``canvas`` with a multi-stop gradient between ``p0`` and ``p1``.
 
     Mirrors :func:`Imervue.paint.gradient.render_gradient` for the
-    geometry side; the colour interpolation is done via the gradient
-    LUT instead of a single FG↔BG mix, so any number of stops
-    appears in the result.
+    geometry side, *repeat* included; the colour interpolation is done
+    via the gradient LUT instead of a single FG↔BG mix, so any number of
+    stops appears in the result.
     """
     if canvas.ndim != 3 or canvas.shape[2] != 4 or canvas.dtype != np.uint8:
         raise ValueError(
@@ -236,17 +283,12 @@ def render_multistop_gradient(
         return False
 
     yy, xx = np.indices((h, w), dtype=np.float32)
-    if kind == "linear":
-        t = _linear_t(xx, yy, x0, y0, x1, y1)
-    elif kind == "radial":
-        t = _radial_t(xx, yy, x0, y0, x1, y1)
-    elif kind == "angle":
-        t = _angle_t(xx, yy, x0, y0, x1, y1)
-    else:
-        t = _diamond_t(xx, yy, x0, y0, x1, y1)
-    t = np.clip(t, 0.0, 1.0)
+    t = np.clip(_T_FIELD_BUILDERS[kind](xx, yy, x0, y0, x1, y1), 0.0, 1.0)
     if reverse:
         t = 1.0 - t
+    repeat = max(1, int(repeat))
+    if repeat > 1:
+        t = np.mod(t * repeat, 1.0)       # tiled along the span, as render_gradient does
 
     lut = build_lut(gradient, steps=256)
     indices = np.clip((t * 255.0 + 0.5).astype(np.int32), 0, 255)

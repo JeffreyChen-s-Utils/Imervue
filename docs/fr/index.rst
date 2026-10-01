@@ -610,14 +610,21 @@ Palette d'outils (bande de gauche)
      - Translater le calque actif ou la sélection
    * - Rectangle / Lasso / Baguette / Sélection rapide
      - ``M`` / ``L`` / ``W``
-     - Outils de sélection avec modes Remplacer / Ajouter / Soustraire / Intersection
+     - Outils de sélection avec modes Remplacer / Ajouter / Soustraire / Intersection ;
+       pour le Lasso, **Magnétique** dans la barre d'options aimante le contour sur
+       le bord le plus marqué du calque dans un rayon de 10 px lorsque vous relâchez
    * - Texte
      - ``T``
      - Un clic ouvre la boîte de dialogue **Ajouter du texte** (police / taille / couleur /
        gras / italique) ; le texte est dessiné dans les pixels du calque
    * - Dégradé
      - ``U``
-     - Remplissage par dégradé Linéaire / Radial / Angulaire / Diamant
+     - Remplissage par dégradé Linéaire / Radial / Angulaire / Diamant, de la
+       couleur de premier plan à celle d'arrière-plan ou le long d'un dégradé
+       enregistré à plusieurs points de couleur choisi sous **Couleurs** dans la
+       barre d'options ; **Modifier…** à côté crée, change et supprime ces dégradés
+       (nom, points de couleur avec position et opacité), qui sont conservés d'une
+       session à l'autre
    * - Flou / Doigt
      - ``R`` (Doigt)
      - Manipulation locale des pixels

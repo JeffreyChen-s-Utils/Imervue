@@ -25,8 +25,10 @@ from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QSlider,
     QSpinBox,
     QStackedWidget,
@@ -198,6 +200,7 @@ class PaintOptionsBar(QToolBar):
         idx = self._page_for_tool.get(tool)
         if idx is not None:
             self._stack.setCurrentIndex(idx)
+        self._lasso_magnetic.setVisible(tool == "select_lasso")
 
     # ---- builders --------------------------------------------------------
 
@@ -290,6 +293,15 @@ class PaintOptionsBar(QToolBar):
         ))
         self._select_mode.currentIndexChanged.connect(self._on_select_mode)
         row.addWidget(self._select_mode)
+        self._lasso_magnetic = QCheckBox(lang.get("paint_select_magnetic", "Magnetic"))
+        self._lasso_magnetic.setToolTip(lang.get(
+            "paint_select_magnetic_tooltip",
+            "Snap the lasso outline onto the strongest edge within 10 px when you let go",
+        ))
+        self._lasso_magnetic.toggled.connect(
+            lambda checked: None if self._suspend else self._state.set_lasso_magnetic(checked))
+        self._lasso_magnetic.setVisible(False)          # shown for the lasso only
+        row.addWidget(self._lasso_magnetic)
         row.addStretch(1)
         return widget
 
@@ -320,8 +332,48 @@ class PaintOptionsBar(QToolBar):
         self._gradient_reverse.toggled.connect(
             lambda checked: None if self._suspend else self._state.set_gradient(reverse=checked))
         row.addWidget(self._gradient_reverse)
+        row.addWidget(QLabel(lang.get("paint_gradient_colours", "Colours:")))
+        self._gradient_colours = QComboBox()
+        self._gradient_colours.setToolTip(lang.get(
+            "paint_gradient_colours_tooltip",
+            "Foreground → background, or one of your saved multi-stop gradients",
+        ))
+        self._gradient_colours.currentIndexChanged.connect(self._on_gradient_colours)
+        row.addWidget(self._gradient_colours)
+        edit = QPushButton(lang.get("paint_gradient_edit", "Edit…"))
+        edit.setToolTip(lang.get("paint_gradient_edit_tooltip",
+                                 "Create, change or delete saved gradients"))
+        edit.clicked.connect(self._edit_gradients)
+        row.addWidget(edit)
+        self._fill_gradient_colours()
         row.addStretch(1)
         return widget
+
+    def _fill_gradient_colours(self) -> None:
+        """List "foreground → background" and every saved gradient; select the state's choice."""
+        from Imervue.paint.gradient_editor import load_gradients
+        lang = language_wrapper.language_word_dict
+        combo = self._gradient_colours
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem(lang.get("paint_gradient_fg_bg", "Foreground → Background"), "")
+        for gradient in load_gradients():
+            combo.addItem(gradient.name, gradient.name)
+        combo.setCurrentIndex(max(0, combo.findData(self._state.gradient_name)))
+        combo.blockSignals(False)
+
+    def _on_gradient_colours(self, index: int) -> None:
+        if not self._suspend and index >= 0:
+            self._state.set_gradient(name=self._gradient_colours.itemData(index))
+
+    def _edit_gradients(self) -> None:  # pragma: no cover - Qt dialog
+        from Imervue.paint.gradient_editor_dialog import GradientEditorDialog
+        dialog = GradientEditorDialog(self, selected=self._state.gradient_name,
+                                      start=self._state.foreground or (0, 0, 0),
+                                      end=self._state.background or (255, 255, 255))
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._state.set_gradient(name=dialog.selected_name())
+        self._fill_gradient_colours()
 
     @staticmethod
     def _build_empty_strip(lang: dict) -> QWidget:
@@ -356,8 +408,11 @@ class PaintOptionsBar(QToolBar):
             self._fill_contiguous.setChecked(fill.contiguous)
             self._fill_all_layers.setChecked(fill.sample_all_layers)
             self._select_mode.setCurrentIndex(self._select_mode.findData(self._state.selection_mode))
+            self._lasso_magnetic.setChecked(self._state.lasso_magnetic)
             self._gradient_kind.setCurrentIndex(self._gradient_kind.findData(self._state.gradient_kind))
             self._gradient_reverse.setChecked(self._state.gradient_reverse)
+            self._gradient_colours.setCurrentIndex(
+                max(0, self._gradient_colours.findData(self._state.gradient_name)))
         finally:
             self._suspend = False
 

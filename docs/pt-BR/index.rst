@@ -611,14 +611,20 @@ Paleta de Ferramentas (Tira Esquerda)
      - Transladar a camada ativa ou seleção
    * - Retângulo / Laço / Varinha / Seleção Rápida
      - ``M`` / ``L`` / ``W``
-     - Ferramentas de seleção com modos Substituir / Adicionar / Subtrair / Interseccionar
+     - Ferramentas de seleção com modos Substituir / Adicionar / Subtrair / Interseccionar; no
+       Laço, **Magnetic** na barra de Opções encaixa o contorno na borda mais forte
+       da camada num raio de 10 px quando você solta o botão
    * - Texto
      - ``T``
      - Clique abre o diálogo **Adicionar Texto** (fonte / tamanho / cor /
        negrito / itálico); o texto é desenhado nos pixels da camada
    * - Gradiente
      - ``U``
-     - Preenchimento por gradiente Linear / Radial / Angular / Diamante
+     - Preenchimento por gradiente Linear / Radial / Angular / Diamante, da cor
+       de primeiro plano para a de fundo ou ao longo de um gradiente salvo de
+       várias paradas escolhido em **Colours** na barra de Opções; **Edit…** ao
+       lado cria, altera e exclui esses gradientes (nome, paradas de cor com
+       posição e opacidade), que são mantidos entre sessões
    * - Desfoque / Esfumar
      - ``R`` (Esfumar)
      - Manipulação local de pixels
