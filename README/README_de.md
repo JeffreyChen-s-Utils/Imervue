@@ -479,7 +479,7 @@ JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat. Das Form
 
 ### Renderer
 
-`QOpenGLWidget` mit Vertex-Array-Textured-Triangle-Drawing in draw_order, Per-Drawable-Blend-Modes (normal / additive / multiply), Pose-Group-Exklusivität, Ortho-Projektion im Image-Space, GL_REPEAT-gekacheltem Transparency-Checker-Backdrop, Wheel-Zoom + Middle-Drag-Pan. Optimiert für große Rigs — March 7th (307 Drawables / 2965 Vertex-Morphs) läuft mit 60 FPS auf der CPU.
+`QOpenGLWidget` mit Vertex-Array-Textured-Triangle-Drawing in draw_order, Per-Drawable-Blend-Modes (normal / additive / multiply), Pose-Group-Exklusivität, Ortho-Projektion im Image-Space, GL_REPEAT-gekacheltem Transparency-Checker-Backdrop, Wheel-Zoom + Middle-Drag-Pan. Optimiert für große Rigs — ein konvertiertes Cubism-Rig mit 307 Drawables und 2965 Vertex-Morphs läuft mit 60 FPS auf der CPU.
 
 ### Authoring
 
@@ -546,7 +546,7 @@ Das Puppet-Canvas erscheint als Webcam, die OBS über seine Standard-Video-Captu
    benannte Gerät auswählen (typischerweise *OBS Virtual Camera*).
 
 Imervue cappt die längste Seite des Streaming-Outputs bei 1080 px, damit
-Cubism-native Canvases (March 7th ist 3503×7777) nicht vom DirectShow-
+Cubism-native Canvases (oft 3000–8000 px hoch) nicht vom DirectShow-
 Virtual-Camera-Treiber abgelehnt werden. Das Seitenverhältnis bleibt
 erhalten; OBS kann bei Bedarf weiter skalieren.
 
@@ -627,7 +627,7 @@ Maschinen, auf denen Sie keine Treiber installieren dürfen.
 
 ### Demo
 
-Ein einsatzbereites Rig liegt unter [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — ein 307-Drawable-Cubism-Live2D-Charakter, in-tree konvertiert. Via **Open Puppet…** öffnen, dann erscheint das Rig zentriert; klicken Sie auf eine der 18 Motions (Idle-Group + Gesture-Group), um sie abzuspielen. Die Gestures umfassen Peace-Sign, Face Cover, Foto, Erröten, Dark Face, Weinen, Schwitzen, Sterne, Sternschnuppe — jede benannte Gesture, die das Rig definiert.
+Das mitgelieferte Rig ist [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**, das originale Maskottchen von Imervue: 40 Drawables auf einer 1024 × 1336 großen Canvas, jeder Cubism-Standardparameter plus zweigelenkige Arme, Kopfdrehungen mit Parallaxe im Live2D-Stil, Blinzeln mit auf das Augenweiß geclippten Iriden, Haarphysik, 8 Motions (zwei Idle-Loops, TapHead, TapBody und vier Gestures, darunter ein Winken) und 7 Expressions. Öffnen Sie es über **File > Examples > Imeru** oder **Open Puppet…** und klicken Sie auf ihren Kopf oder Körper, um sie reagieren zu sehen. Sie ist vollständig per Code gezeichnet und geriggt, sodass die Datei keine Rechte Dritter enthält; `py -3 examples/puppet/imeru/build.py` erzeugt sie neu.
 
 ---
 
@@ -672,7 +672,7 @@ Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. A
 ### So starten Sie
 
 1. Wechseln Sie in den **Desktop Pet**-Tab.
-2. Klicken Sie auf **Load bundled March 7th**, um den mitgelieferten Charakter zu nutzen, oder auf **Open Puppet…**, um Ihre eigene `.puppet`-Datei zu wählen.
+2. Klicken Sie auf **Load bundled Imeru**, um den mitgelieferten Charakter zu nutzen, oder auf **Open Puppet…**, um Ihre eigene `.puppet`-Datei zu wählen.
 3. Aktivieren Sie **Show pet on desktop**.
 4. Ziehen Sie die Figur dorthin, wo Sie sie haben möchten; wählen Sie die gewünschten Driver; passen Sie Opazität / Größe an.
 5. Rechtsklicken Sie jederzeit für das Schnellaktions-Menü, oder nutzen Sie das System-Tray-Symbol, um das Pet zu verstecken, ohne den Tab zu suchen.
@@ -714,7 +714,7 @@ Die Sprechblase des Pets greift auf eine JSON-Datei zurück, die Sie selbst verf
 
 Die Zeilen rotieren im Round-Robin-Verfahren pro Bucket, sodass der Benutzer dieselbe Zeile nicht zweimal hintereinander hört. **Reset to default** verwirft das benutzerdefinierte Skript und stellt den eingebauten Begrüßungssatz wieder her.
 
-Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json).
+Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json); seine Kopf- und Körperzeilen antworten auf Klicks auf Imerus Hit Areas `Head` und `Body`.
 
 ---
 

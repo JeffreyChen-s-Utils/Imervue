@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "name": "Imeru — cheerful photo-buddy voice",
+  "greetings": [
+    "Hi! Found any good shots today?",
+    "Hello~",
+    "Need a second pair of eyes?",
+    "Let's sort some photos!",
+    "Don't forget to back up~",
+    "Smile for the camera!"
+  ],
+  "time_of_day_greetings": {
+    "morning": [
+      "Good morning! Nice light out there?"
+    ],
+    "afternoon": [
+      "Afternoon~ how's the editing going?"
+    ],
+    "evening": [
+      "Good evening! Blue hour soon!"
+    ],
+    "night": [
+      "Still editing? Get some sleep~"
+    ]
+  },
+  "hit_responses": {
+    "Head": [
+      "Hehe, that tickles!",
+      "Careful, my hairpin!",
+      "Pat pat~"
+    ],
+    "Body": [
+      "Eek!",
+      "I'm not a lens cap!",
+      "Hey~"
+    ]
+  },
+  "motion_lines": {
+    "wave": [
+      "Hi there!",
+      "Hello!"
+    ],
+    "greet": [
+      "Nice to meet you!"
+    ],
+    "surprised": [
+      "Whoa!"
+    ],
+    "sleepy": [
+      "*yawn*"
+    ],
+    "shy": [
+      "Um..."
+    ]
+  },
+  "scheduled": [
+    {
+      "every_seconds": 1800,
+      "messages": [
+        "Hydrate~",
+        "Rest your eyes for 20 seconds!",
+        "Stretch break!"
+      ]
+    }
+  ]
+}

@@ -12,7 +12,7 @@ JSON schema (versioned so we can grow without breaking older files):
 
     {
         "version": 1,
-        "name": "March 7th",
+        "name": "Imeru",
         "greetings": ["Hello!", "Hi there!"],
         "time_of_day_greetings": {
             "morning": ["Good morning!"],

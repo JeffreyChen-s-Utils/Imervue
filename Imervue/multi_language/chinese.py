@@ -573,7 +573,7 @@ chinese_word_dict = {
     "desktop_pet_section_title": '桌面宠物 — 把 puppet 放到桌面上',
     "desktop_pet_group_rig": 'Rig',
     "desktop_pet_open_puppet": '打开 Puppet…',
-    "desktop_pet_load_example": '加载内置 March 7th',
+    "desktop_pet_load_example": '加载内置 Imeru',
     "desktop_pet_no_rig": '尚未加载 rig',
     "desktop_pet_loaded": '已加载：{name}',
     "desktop_pet_load_failed": '加载失败：{path}',

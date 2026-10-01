@@ -836,21 +836,27 @@ Try a worked example
 ^^^^^^^^^^^^^^^^^^^^
 
 The repository ships a fully-rigged demo at
-``examples/puppet/march_7th.puppet`` — a 307-drawable Cubism Live2D
-rig converted in-tree. Textures and per-parameter vertex morphs are
-baked into the ``.puppet`` zip, so the demo opens on the default
-``requirements.txt`` without redistributing the Cubism SDK.
+``examples/puppet/imeru.puppet`` — **Imeru**, Imervue's original
+mascot. She is drawn and rigged entirely by
+``examples/puppet/imeru/build.py`` (``py -3`` rebuilds the file), so
+the demo carries no third-party rights: 40 drawables on a 1024 × 1336
+canvas, head turns made of Live2D-style parallax vertex morphs, irises
+clipped to the eye whites, two-joint arms built from rotation
+deformers, and three physics chains that swing the hair.
 
-The rig carries 203 Cubism-standard parameters (``ParamAngleX/Y/Z``,
-``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), so
-every standard input driver (webcam, blink, lip-sync, cursor look-at)
-drives it without per-rig configuration. Eighteen motions ship in the
-bundle: eight looping idle motions in the ``Idle`` group, nine looping
-gestures in the ``Gesture`` group and a one-shot ``tap_head`` in the
-``TapHead`` group.
+The rig carries every Cubism-standard parameter (``ParamAngleX/Y/Z``,
+``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
+``ParamArmLA/LB/RA/RB`` for the arms, so every standard input driver
+(webcam, blink, lip-sync, cursor look-at) drives it without per-rig
+configuration. Eight motions ship in the file: two looping idle
+motions in the ``Idle`` group, ``tap_head`` in ``TapHead`` and ``shy``
+in ``TapBody`` (clicking her head or body plays them), and ``greet``,
+``wave``, ``surprised`` and ``sleepy`` in ``Gesture``; seven
+expressions come with them (smile, happy, surprised, sad, angry,
+blush, sleepy).
 
 Open the Puppet tab, click **Open Puppet…**, point at
-``march_7th.puppet`` — the figure appears centred. Drag any parameter
+``imeru.puppet`` — the figure appears centred. Drag any parameter
 slider to drive a joint, or click one of the motions in the Motions
 dock — single-click binds the motion and starts playback immediately.
 
@@ -862,11 +868,11 @@ dock — single-click binds the motion and starts playback immediately.
    builds; a pip / wheel install does not include it (from a source
    checkout the rigs are in ``examples/puppet/``).
 2. Click the **Puppet** tab at the top of the window.
-3. **File > Examples > March 7th** (or the toolbar's
-   **Examples ▾** dropdown). The 307-drawable rig loads centred and
-   the parameter dock fills with the 203 Cubism-standard sliders.
+3. **File > Examples > Imeru** (or the toolbar's
+   **Examples ▾** dropdown). The rig loads centred and the
+   parameter dock fills with its sliders.
 4. In the bottom **Motions** dock, single-click any motion entry
-   (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …).
+   (``idle_look``, ``wave``, ``tap_head`` …).
    Playback starts immediately; clicking it again restarts it, the
    dock's **Stop** button stops playback, and picking a different
    motion cross-fades into it.
@@ -1033,7 +1039,7 @@ Live streaming to OBS
 Two output paths, both rendering the puppet alone (no checker
 backdrop, no editor chrome) into an off-screen framebuffer before
 handing it to the streaming surface. Output longest side caps at
-1080 px so Cubism-native canvases (March 7th is 3503×7777) don't
+1080 px so Cubism-native canvases (often 3000–8000 px tall) don't
 get rejected by DirectShow virtual-camera drivers.
 
 **A. Virtual Camera** — appears as a webcam in OBS's *Video Capture
@@ -1141,7 +1147,7 @@ Quick start
 ^^^^^^^^^^^
 
 1. Switch to the **Desktop Pet** tab.
-2. Click **Load bundled March 7th** to use the included character,
+2. Click **Load bundled Imeru** to use the included character,
    or **Open Puppet…** to pick your own ``.puppet`` file.
 3. The overlay appears on your desktop and the **Show pet on
    desktop** checkbox is ticked automatically. (If you ever want
@@ -1162,8 +1168,8 @@ Loading a rig
 The tab exposes three load paths:
 
 * **Open Puppet…** — pick any ``.puppet`` file from disk.
-* **Load bundled March 7th** — opens the rig shipped under
-  ``examples/puppet/march_7th.puppet``. The resolver searches
+* **Load bundled Imeru** — opens the rig shipped under
+  ``examples/puppet/imeru.puppet``. The resolver searches
   ``examples_dir()`` first (beside the program in the packaged
   Nuitka / PyInstaller builds, the repository root in a source
   checkout) and falls back to a lookup relative to the current
@@ -1418,7 +1424,7 @@ Schema (versioned — future fields are forward-compatible):
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
@@ -1462,13 +1468,13 @@ built-in greeting set; the persisted script path is cleared so
 the next launch doesn't reload it.
 
 A working sample lives at
-``examples/desktop_pet/march_7th.petscript.json`` — six
-greetings, two hit-area buckets (head / body), three motion
-lines (wave / curtsy / cheer), and a 30-minute stretch
-reminder. The head / body lines answer clicks on a rig whose hit
-areas are named ``HitAreaHead`` / ``HitAreaBody`` (the Cubism
-convention); the bundled March 7th rig defines none, so a click on
-it picks a greeting instead.
+``examples/desktop_pet/imeru.petscript.json`` — six
+greetings, a line for each time of day, two hit-area buckets
+(``Head`` / ``Body``), lines for five motions (wave / greet /
+surprised / sleepy / shy), and a 30-minute stretch reminder. The
+bucket names are Imeru's hit areas, so her head and body answer
+clicks; a rig whose hit areas use the Cubism names
+(``HitAreaHead`` / ``HitAreaBody``) needs buckets under those.
 
 Persistence
 ^^^^^^^^^^^
@@ -1618,7 +1624,7 @@ window-management tool is overriding the
 (some custom window managers on Linux do this). On Windows /
 macOS this should "just work".
 
-**"Load bundled March 7th" reports the file isn't found.** The
+**"Load bundled Imeru" reports the file isn't found.** The
 resolver consults ``examples_dir()`` first (the frozen-safe
 location used by packaged builds) and falls back to a CWD-
 relative path. If neither contains the rig, the status label

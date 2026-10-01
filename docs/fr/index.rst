@@ -839,20 +839,27 @@ Essayer un exemple complet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Le dépôt fournit une démo entièrement riggée à
-``examples/puppet/march_7th.puppet`` — un rig Cubism Live2D de 307 drawables
-converti dans l'arbre. Les textures et les morphs de sommets par paramètre sont
-cuits dans le zip ``.puppet``, de sorte que la démo s'ouvre avec le
-``requirements.txt`` par défaut sans redistribuer le Cubism SDK.
+``examples/puppet/imeru.puppet`` — **Imeru**, la mascotte originale
+d'Imervue. Elle est entièrement dessinée et riggée par
+``examples/puppet/imeru/build.py`` (``py -3`` reconstruit le fichier), de sorte
+que la démo ne porte aucun droit de tiers : 40 drawables sur un canevas de
+1024 × 1336, des rotations de tête faites de morphs de sommets en parallaxe façon
+Live2D, des iris découpés aux blancs des yeux, des bras à deux articulations
+construits à partir de déformeurs de rotation, et trois chaînes physiques qui font
+balancer les cheveux.
 
-Le rig comporte 203 paramètres standard Cubism (``ParamAngleX/Y/Z``,
-``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), de sorte que
-chaque pilote d'entrée standard (webcam, clignement, lip-sync, regard vers le curseur)
-le pilote sans configuration par rig. Dix-huit mouvements sont livrés dans le pack :
-huit mouvements d'inactivité en boucle dans le groupe ``Idle``, neuf gestes en boucle
-dans le groupe ``Gesture`` et un ``tap_head`` joué une seule fois dans le groupe ``TapHead``.
+Le rig comporte tous les paramètres standard Cubism (``ParamAngleX/Y/Z``,
+``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
+``ParamArmLA/LB/RA/RB`` pour les bras, de sorte que chaque pilote d'entrée standard
+(webcam, clignement, lip-sync, regard vers le curseur) le pilote sans configuration
+par rig. Huit mouvements sont livrés dans le fichier : deux mouvements d'inactivité
+en boucle dans le groupe ``Idle``, ``tap_head`` dans ``TapHead`` et ``shy``
+dans ``TapBody`` (un clic sur sa tête ou son corps les joue), ainsi que ``greet``,
+``wave``, ``surprised`` et ``sleepy`` dans ``Gesture`` ; sept expressions les
+accompagnent (smile, happy, surprised, sad, angry, blush, sleepy).
 
 Ouvrez l'onglet Puppet, cliquez sur **Ouvrir Puppet…**, pointez vers
-``march_7th.puppet`` — la figure apparaît centrée. Faites glisser n'importe quel curseur
+``imeru.puppet`` — la figure apparaît centrée. Faites glisser n'importe quel curseur
 de paramètre pour piloter une articulation, ou cliquez sur l'un des mouvements dans le dock
 Mouvements — un simple clic associe le mouvement et démarre immédiatement la lecture.
 
@@ -864,11 +871,11 @@ Mouvements — un simple clic associe le mouvement et démarre immédiatement la
    installation pip / wheel ne l'inclut pas (depuis une copie des sources, les rigs
    se trouvent dans ``examples/puppet/``).
 2. Cliquez sur l'onglet **Puppet** en haut de la fenêtre.
-3. **File > Examples > March 7th** (ou la liste déroulante
-   **Examples ▾** de la barre d'outils). Le rig de 307 drawables se charge centré et
-   le dock des paramètres se remplit des 203 curseurs standard Cubism.
+3. **File > Examples > Imeru** (ou la liste déroulante
+   **Examples ▾** de la barre d'outils). Le rig se charge centré et
+   le dock des paramètres se remplit de ses curseurs.
 4. Dans le dock **Mouvements** en bas, simple-clic sur n'importe quelle entrée de mouvement
-   (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …).
+   (``idle_look``, ``wave``, ``tap_head`` …).
    La lecture démarre immédiatement ; un nouveau clic la relance, le bouton **Stop**
    du dock arrête la lecture, et choisir un autre mouvement fait un fondu enchaîné vers lui.
 5. Basculez les interrupteurs d'entrée en direct sur la barre d'outils pour piloter le rig
@@ -1030,7 +1037,7 @@ Streaming en direct vers OBS
 Deux chemins de sortie, les deux rendent la marionnette seule (pas de fond en damier,
 pas de chrome d'éditeur) dans un framebuffer hors écran avant de la passer à la surface
 de streaming. Le côté le plus long de la sortie est plafonné à 1080 px afin que les
-canevas natifs Cubism (March 7th fait 3503×7777) ne soient pas rejetés par les
+canevas natifs Cubism (souvent hauts de 3000 à 8000 px) ne soient pas rejetés par les
 pilotes de caméra virtuelle DirectShow.
 
 **A. Caméra virtuelle** — apparaît comme une webcam dans la liste de sources *Video
@@ -1141,7 +1148,7 @@ Démarrage rapide
 ^^^^^^^^^^^^^^^^
 
 1. Passez à l'onglet **Desktop Pet**.
-2. Cliquez sur **Load bundled March 7th** pour utiliser le
+2. Cliquez sur **Load bundled Imeru** pour utiliser le
    personnage inclus, ou sur **Open Puppet…** pour choisir votre
    propre fichier ``.puppet``.
 3. La superposition apparaît sur votre bureau et la case **Show pet
@@ -1165,8 +1172,8 @@ L'onglet expose trois chemins de chargement :
 
 * **Open Puppet…** — choisissez n'importe quel fichier ``.puppet``
   sur disque.
-* **Load bundled March 7th** — ouvre le rig livré sous
-  ``examples/puppet/march_7th.puppet``. Le résolveur consulte
+* **Load bundled Imeru** — ouvre le rig livré sous
+  ``examples/puppet/imeru.puppet``. Le résolveur consulte
   d'abord ``examples_dir()`` (à côté du programme dans les builds
   empaquetés Nuitka / PyInstaller, la racine du dépôt dans une
   copie des sources) puis se rabat sur une recherche relative au
@@ -1443,7 +1450,7 @@ Schéma (versionné — les futurs champs sont compatibles ascendants) :
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
@@ -1490,14 +1497,15 @@ jeu de salutations intégré ; le chemin de script persisté est
 effacé afin que le prochain lancement ne le recharge pas.
 
 Un exemple fonctionnel se trouve à
-``examples/desktop_pet/march_7th.petscript.json`` — six
-salutations, deux paniers de zones cliquables (tête / corps),
-trois lignes de mouvement (wave / curtsy / cheer) et un rappel
-d'étirement de 30 minutes. Les répliques tête / corps répondent
-aux clics sur un rig dont les zones cliquables s'appellent
-``HitAreaHead`` / ``HitAreaBody`` (la convention de Cubism) ; le
-rig March 7th livré n'en définit aucune, donc un clic dessus
-choisit plutôt une salutation.
+``examples/desktop_pet/imeru.petscript.json`` — six
+salutations, une réplique pour chaque moment de la journée, deux
+paniers de zones cliquables (``Head`` / ``Body``), des répliques
+pour cinq mouvements (wave / greet / surprised / sleepy / shy) et
+un rappel d'étirement de 30 minutes. Les noms des paniers sont
+ceux des zones cliquables d'Imeru, donc sa tête et son corps
+répondent aux clics ; un rig dont les zones cliquables portent les
+noms de Cubism (``HitAreaHead`` / ``HitAreaBody``) a besoin de
+paniers sous ces noms-là.
 
 Persistance
 ^^^^^^^^^^^
@@ -1665,7 +1673,7 @@ qu'aucun outil tiers de gestion de fenêtres ne contourne l'attribut
 (certains gestionnaires de fenêtres personnalisés sous Linux le
 font). Sous Windows / macOS cela devrait « juste fonctionner ».
 
-**« Load bundled March 7th » signale que le fichier est introuvable.**
+**« Load bundled Imeru » signale que le fichier est introuvable.**
 Le résolveur consulte d'abord ``examples_dir()`` (l'emplacement sûr
 en mode gelé utilisé par les builds empaquetés) puis se rabat sur
 un chemin relatif au CWD. Si aucun ne contient le rig, l'étiquette

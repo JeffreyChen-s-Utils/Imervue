@@ -581,7 +581,7 @@ korean_word_dict = {
     "desktop_pet_section_title": '데스크톱 펫 — 퍼펫을 데스크톱 위에 오버레이',
     "desktop_pet_group_rig": 'Rig',
     "desktop_pet_open_puppet": '퍼펫 열기…',   # NOSONAR S1192 - i18n label shared across tabs
-    "desktop_pet_load_example": '번들된 March 7th 불러오기',
+    "desktop_pet_load_example": '번들된 Imeru 불러오기',
     "desktop_pet_no_rig": 'rig 가 로드되지 않음',
     "desktop_pet_loaded": '로드됨: {name}',
     "desktop_pet_load_failed": '로드 실패: {path}',

@@ -668,7 +668,7 @@ english_word_dict = {
     "desktop_pet_section_title": 'Desktop Pet — overlay your puppet on the desktop',
     "desktop_pet_group_rig": 'Rig',
     "desktop_pet_open_puppet": 'Open Puppet…',
-    "desktop_pet_load_example": 'Load bundled March 7th',
+    "desktop_pet_load_example": 'Load bundled Imeru',
     "desktop_pet_no_rig": 'No rig loaded',
     "desktop_pet_loaded": 'Loaded: {name}',
     "desktop_pet_load_failed": 'Failed to load {path}',

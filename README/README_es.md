@@ -482,7 +482,7 @@ Basado en JSON, comparable a mano, sin binarios propietarios. El formato es abie
 
 ### Renderizador
 
-`QOpenGLWidget` con dibujo de triángulos texturizados por vertex-array en draw_order, modos de mezcla por drawable (normal / aditivo / multiplicar), exclusividad de pose-group, proyección ortográfica en espacio de imagen, fondo de cuadros de transparencia con GL_REPEAT, zoom con rueda + paneo con arrastre del botón medio. Optimizado para rigs grandes — March 7th (307 drawables / 2965 vertex morphs) corre a 60 FPS en CPU.
+`QOpenGLWidget` con dibujo de triángulos texturizados por vertex-array en draw_order, modos de mezcla por drawable (normal / aditivo / multiplicar), exclusividad de pose-group, proyección ortográfica en espacio de imagen, fondo de cuadros de transparencia con GL_REPEAT, zoom con rueda + paneo con arrastre del botón medio. Optimizado para rigs grandes — un rig de Cubism convertido con 307 drawables y 2965 vertex morphs corre a 60 FPS en CPU.
 
 ### Autoría
 
@@ -548,7 +548,7 @@ estándar Video Capture Device.
    nombrado en el paso 3 (típicamente *OBS Virtual Camera*).
 
 Imervue limita el lado más largo de la salida de streaming a 1080 px
-para que los lienzos nativos de Cubism (March 7th es 3503×7777) no
+para que los lienzos nativos de Cubism (a menudo de 3000–8000 px de alto) no
 sean rechazados por el driver de cámara virtual DirectShow. Se preserva
 la relación de aspecto; OBS puede escalar más si es necesario.
 
@@ -628,7 +628,7 @@ máquinas bloqueadas donde no puedes instalar drivers.
 
 ### Demo
 
-Un rig listo para usar está en [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — un personaje Cubism Live2D de 307 drawables convertido dentro del árbol. Ábrelo vía **Open Puppet…** para ver el rig aparecer centrado; haz clic en cualquiera de las 18 motions (grupo Idle + grupo Gesture) para reproducir. Los gestos cubren signo de paz, cubrirse la cara, foto, sonrojo, cara oscura, llorar, sudor, estrellas, estrella fugaz — todo gesto con nombre que define el rig.
+El rig incluido es [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**, la mascota original de Imervue: 40 drawables sobre un lienzo de 1024 × 1336, todos los parámetros estándar de Cubism más brazos de dos articulaciones, giros de cabeza con paralaje al estilo Live2D, parpadeo con los iris recortados al blanco de los ojos, física del pelo, 8 motions (dos bucles Idle, TapHead, TapBody y cuatro Gestures, entre ellos un saludo con la mano) y 7 expresiones. Ábrelo vía **File > Examples > Imeru** u **Open Puppet…**, y haz clic en su cabeza o su cuerpo para verla reaccionar. Está dibujada y riggeada enteramente por código, así que el archivo no conlleva derechos de terceros; `py -3 examples/puppet/imeru/build.py` lo reconstruye.
 
 ---
 
@@ -673,7 +673,7 @@ Elige cualquier combinación desde la pestaña o el menú del clic derecho. Auto
 ### Cómo empezar
 
 1. Cambia a la pestaña **Desktop Pet**.
-2. Haz clic en **Load bundled March 7th** para usar el personaje incluido, o en **Open Puppet…** para elegir tu propio archivo `.puppet`.
+2. Haz clic en **Load bundled Imeru** para usar el personaje incluido, o en **Open Puppet…** para elegir tu propio archivo `.puppet`.
 3. Marca **Show pet on desktop**.
 4. Arrastra el personaje a donde quieras; elige los drivers que quieras; ajusta opacidad / tamaño.
 5. Haz clic derecho en cualquier momento para el menú de acción rápida, o usa el icono de la bandeja del sistema para ocultar la mascota sin tener que encontrar la pestaña.
@@ -715,7 +715,7 @@ El bocadillo de la mascota se nutre de un archivo JSON que puedes crear tú mism
 
 Las líneas rotan por turnos (round-robin) en cada grupo para que el usuario no escuche la misma línea dos veces seguidas. **Reset to default** descarta el script personalizado y restaura el conjunto de saludos integrado.
 
-Un ejemplo funcional está en [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json).
+Un ejemplo funcional está en [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json); sus líneas de cabeza y cuerpo responden a los clics en los hit areas `Head` y `Body` de Imeru.
 
 ---
 

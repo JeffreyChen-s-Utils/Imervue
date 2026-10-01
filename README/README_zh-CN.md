@@ -473,7 +473,7 @@ JSON 为主，人类可 diff，没有专有二进制。格式是开放且可校�
 
 ### 渲染器
 
-`QOpenGLWidget` 含 vertex-array textured-triangle 绘制（按 draw_order）、每 drawable 混合模式（normal / additive / multiply）、pose-group 互斥、图像空间正交投影、GL_REPEAT 平铺的透明度棋盘背景、滚轮缩放 + 中键拖曳平移。针对大型 rig 优化 — March 7th（307 drawables / 2965 vertex morphs）在 CPU 上达 60 FPS。
+`QOpenGLWidget` 含 vertex-array textured-triangle 绘制（按 draw_order）、每 drawable 混合模式（normal / additive / multiply）、pose-group 互斥、图像空间正交投影、GL_REPEAT 平铺的透明度棋盘背景、滚轮缩放 + 中键拖曳平移。针对大型 rig 优化 — 一个含 307 个 drawable、2965 个 vertex morph 的转换后 Cubism rig 在 CPU 上达 60 FPS。
 
 ### 编辑
 
@@ -529,7 +529,7 @@ JSON 为主，人类可 diff，没有专有二进制。格式是开放且可校�
 3. Puppet 标签打开 rig，工具栏 / **Output > Virtual camera** 打勾。状态栏会打印出实际设备名。
 4. OBS：**Sources > + > Video Capture Device**，下拉选步骤 3 打印的设备名（通常是 *OBS Virtual Camera*）。
 
-Imervue 会把输出帧的长边强制压到 1080 px，所以 Cubism 原生画布（March 7th 是 3503×7777）不会被 DirectShow 虚拟摄像头驱动拒绝。长宽比保留，OBS 端可以再缩。
+Imervue 会把输出帧的长边强制压到 1080 px，所以 Cubism 原生画布（高度常在 3000–8000 px）不会被 DirectShow 虚拟摄像头驱动拒绝。长宽比保留，OBS 端可以再缩。
 
 每一帧都会用 off-screen framebuffer 重画 — 只渲染角色本身、不含棋盘格背景与编辑器外壳。所以 OBS 看到的就是"角色 + 一张纯洋红色背景"。
 
@@ -576,7 +576,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 ### 示例
 
-示例 rig 在 [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — 307 drawable 的 Cubism Live2D 角色仓库内转换。从 **打开 puppet…** 打开，rig 居中加载；点击 18 个动作（Idle 组 + Gesture 组）任意一个即播放。手势涵盖比耶、捂脸、拍照、脸红、黑脸、哭、流汗、星星、流星 — rig 定义的所有命名手势。
+内置 rig 是 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**，Imervue 的原创吉祥物：1024 × 1336 画布上的 40 个 drawable，具备所有 Cubism 标准参数外加双关节手臂、Live2D 式视差转头、虹膜被裁切在眼白内的眨眼、头发物理、8 个动作（两个 Idle 循环、TapHead、TapBody 以及包含挥手在内的四个 Gesture）和 7 个表情。从 **File > Examples > Imeru** 或 **打开 puppet…** 打开，点她的头或身体即可看到她的反应。她完全由代码绘制与绑定，所以文件不涉及任何第三方权利；`py -3 examples/puppet/imeru/build.py` 可重新生成它。
 
 ---
 
@@ -621,7 +621,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 ### 如何开始
 
 1. 切换到 **Desktop Pet** 标签。
-2. 点 **Load bundled March 7th** 用内建的角色，或点 **Open Puppet…** 选自己的 `.puppet` 文件。
+2. 点 **Load bundled Imeru** 用内建的角色，或点 **Open Puppet…** 选自己的 `.puppet` 文件。
 3. 勾选 **Show pet on desktop**。
 4. 把角色拖到你想要的位置；挑选要启用的驱动；调整不透明度 / 尺寸。
 5. 随时右键打开快速操作菜单，或用系统托盘图标在找不到标签时隐藏宠物。
@@ -663,7 +663,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 每个桶（bucket）内的台词以 round-robin 轮替，使用户不会连续两次看到同一句。**Reset to default** 会丢弃自定义脚本，恢复内建的问候语组。
 
-一个可用的示例位于 [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json)。
+一个可用的示例位于 [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json)；其中 head 与 body 的台词会回应对 Imeru 的 `Head` 和 `Body` 命中区域的点击。
 
 ---
 

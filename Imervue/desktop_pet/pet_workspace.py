@@ -84,7 +84,7 @@ def _set_quietly(box: QCheckBox, checked: bool) -> None:
         box.blockSignals(False)
 _MUTED_LABEL_STYLE = "color: #888;"
 
-DEFAULT_EXAMPLE_PUPPET = "examples/puppet/march_7th.puppet"
+DEFAULT_EXAMPLE_PUPPET = "examples/puppet/imeru.puppet"
 """Repo-root relative path used for the test that verifies the
 constant still points inside ``examples/puppet/``. The actual
 runtime resolution goes through :func:`examples_dir` so the packaged
@@ -93,8 +93,11 @@ wherever Imervue was installed; a pip install has no ``examples/``,
 and a source checkout falls back to the current working folder."""
 
 
+_EXAMPLE_NAME = Path(DEFAULT_EXAMPLE_PUPPET).name
+
+
 def _resolve_bundled_example() -> Path | None:
-    """Return the absolute path to the bundled March 7th rig, or
+    """Return the absolute path to the bundled Imeru rig, or
     ``None`` when the file isn't present (some dev checkouts strip
     examples for size). Tries the frozen-safe ``examples_dir()``
     first, then falls back to a CWD-relative lookup so the workspace
@@ -103,13 +106,13 @@ def _resolve_bundled_example() -> Path | None:
     from Imervue.system.app_paths import examples_dir
 
     for root in (examples_dir(), Path.cwd()):
-        candidate = root / "puppet" / "march_7th.puppet"
+        candidate = root / "puppet" / _EXAMPLE_NAME
         if candidate.is_file():
             return candidate
         # Some layouts use ``examples/puppet/...`` directly under
         # the search root rather than splitting examples_dir already
         # ending in "examples". Cover that too.
-        candidate = root / "examples" / "puppet" / "march_7th.puppet"
+        candidate = root / "examples" / "puppet" / _EXAMPLE_NAME
         if candidate.is_file():
             return candidate
     return None
@@ -208,7 +211,7 @@ class PetWorkspace(QWidget):
         self._open_button.clicked.connect(self._on_open_puppet)
         row.addWidget(self._open_button)
         self._open_example_button = QPushButton(
-            _tr("desktop_pet_load_example", "Load bundled March 7th"),
+            _tr("desktop_pet_load_example", "Load bundled Imeru"),
         )
         self._open_example_button.clicked.connect(self._on_open_example)
         row.addWidget(self._open_example_button)

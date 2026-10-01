@@ -765,18 +765,18 @@ Puppet 工作區（Puppet 分頁）
 範例
 ^^^^
 
-倉庫內附完整 rig：``examples/puppet/march_7th.puppet`` — 307-drawable 的 Cubism Live2D 角色，倉庫內轉換好。紋理跟每參數頂點 morph 全烘進 ``.puppet`` zip，使用預設 ``requirements.txt`` 就能開，無需散布 Cubism SDK。
+倉庫內附完整 rig：``examples/puppet/imeru.puppet`` — **Imeru**，Imervue 的原創吉祥物。她從繪製到 rig 全部由 ``examples/puppet/imeru/build.py`` 完成（用 ``py -3`` 執行即可重新產生檔案），所以這個範例不涉及任何第三方權利：1024 × 1336 畫布上的 40 個 drawable、以 Live2D 式視差頂點 morph 組成的轉頭、裁切在眼白內的虹膜、由旋轉變形器組成的雙關節手臂，以及三條擺動頭髮的物理鏈。
 
-該 rig 帶 203 個 Cubism 標準參數（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），所以所有標準輸入驅動（攝影機、眨眼、對嘴、游標追蹤）不用調整就能驅動。內附 18 個動作：``Idle`` 群組有 8 個循環播放的 idle 動作，``Gesture`` 群組有 9 個循環手勢，``TapHead`` 群組則有 1 個只播放一次的 ``tap_head``。
+該 rig 帶有所有 Cubism 標準參數（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），外加控制手臂的 ``ParamArmLA/LB/RA/RB``，所以所有標準輸入驅動（攝影機、眨眼、對嘴、游標追蹤）不必逐一設定 rig 就能驅動。檔案內附 8 個動作：``Idle`` 群組有 2 個循環播放的 idle 動作，``TapHead`` 有 ``tap_head``、``TapBody`` 有 ``shy``\ （點她的頭或身體就會播放），``Gesture`` 則有 ``greet``、``wave``、``surprised`` 與 ``sleepy``；另外隨附 7 個表情（smile、happy、surprised、sad、angry、blush、sleepy）。
 
-Puppet 分頁工具列 → **Examples ▾** 下拉直接選 March 7th 或自己的 ``.puppet`` 開啟。下方 **Motions** 擺放欄點任一個動作即播。
+開啟 Puppet 分頁，點 **Open Puppet…**，選 ``imeru.puppet`` — 角色會居中出現。拖動任一個參數滑桿來驅動關節，或點 Motions 擺放欄裡的任一個動作 — 單擊會綁定該動作並立即開始播放。
 
 **執行內附範例 — 逐步走讀：**
 
 1. **啟動 Imervue**。原始碼跑：``python -m Imervue``；裝好的版本：直接執行 ``Imervue`` 執行檔 / app bundle。``examples/`` 資料夾有打包進 Nuitka 與 PyInstaller 版本；pip / wheel 安裝則不含（從原始碼 checkout 執行時，rig 在 ``examples/puppet/``）。
 2. 點視窗頂端的 **Puppet** 分頁。
-3. **File > Examples > March 7th**\ （或工具列上的 **Examples ▾** 下拉）。307-drawable 的 rig 居中載入，參數欄會填滿 203 個 Cubism 標準參數滑桿。
-4. 在底部 **Motions** 擺放欄單擊任一個動作條目（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）。立即開始播放；再點一次會重新播放，擺放欄的 **Stop** 按鈕停止播放，選別的動作則交叉淡入。
+3. **File > Examples > Imeru**\ （或工具列上的 **Examples ▾** 下拉）。rig 居中載入，參數欄會填滿它的滑桿。
+4. 在底部 **Motions** 擺放欄單擊任一個動作條目（``idle_look``、``wave``、``tap_head`` …）。立即開始播放；再點一次會重新播放，擺放欄的 **Stop** 按鈕停止播放，選別的動作則交叉淡入。
 5. 切換工具列上的即時輸入 toggle 讓 rig 跟著你動 — **Drag-track head**\ （游標在畫布上移動時，頭與眼睛轉向游標）、**Auto-blink**\ （自動眨眼）、**Auto idle** + **Idle motions**\ （呼吸 + 隨機 idle 動作）、**Mic lip-sync**\ （麥克風 RMS 帶動嘴型）、**Webcam tracking**\ （MediaPipe FaceLandmarker 驅動頭 / 眼 / 嘴）。
 6. 工具列 **Reset to rest** 把所有動作停掉、所有即時驅動取消勾、清掉 expressions / pose 覆寫，所有參數復位 — 標準的「重新開始」按鈕。
 7. 之後要開別的 rig：**File > Open Puppet…** 從磁碟挑任何 ``.puppet`` zip；**File > Examples ▾** 永遠連到內附清單。
@@ -893,7 +893,7 @@ physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
 OBS 直播整合
 ^^^^^^^^^^^^
 
-兩條輸出，都把角色獨立渲染到 off-screen framebuffer（不含棋盤格背景與編輯器外殼）再送到串流端。輸出長邊上限 1080 px，避免 Cubism 原生畫布（March 7th 是 3503×7777）被 DirectShow 虛擬攝影機驅動拒絕。
+兩條輸出，都把角色獨立渲染到 off-screen framebuffer（不含棋盤格背景與編輯器外殼）再送到串流端。輸出長邊上限 1080 px，避免 Cubism 原生畫布（高度常在 3000–8000 px）被 DirectShow 虛擬攝影機驅動拒絕。
 
 **A. Virtual Camera** — 在 OBS《視訊擷取裝置》來源清單裡以 webcam 形式出現。``pip install pyvirtualcam`` 加上平台驅動：OBS Studio 26+（Windows/macOS）會附 *OBS Virtual Camera* 驅動，第一次打開 OBS 點 *Start Virtual Camera* 註冊；Linux 用 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。選單 toggle **Output > Virtual camera** 開始串流。
 
@@ -946,7 +946,7 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道
 ^^^^^^^^
 
 1. 切換到 **Desktop Pet** 分頁。
-2. 點 **Load bundled March 7th** 用內附的角色，或 **Open Puppet…** 選自己的 ``.puppet`` 檔。
+2. 點 **Load bundled Imeru** 用內附的角色，或 **Open Puppet…** 選自己的 ``.puppet`` 檔。
 3. 浮層出現在桌面上，**Show pet on desktop** 勾選框會自動勾起來。（要在不關閉 Imervue 的情況下把桌寵藏起來，把勾選框取消、或用系統匣圖示。）
 4. 把角色拖到想要的位置，放開時靠近螢幕邊緣會吸附貼齊。
 5. 從分頁或桌寵的右鍵選單挑你要的 **Live driver** — idle 呼吸、眨眼、游標追隨、麥克風對嘴、攝影機追蹤。
@@ -959,7 +959,7 @@ DirectShow / AVFoundation / v4l2loopback 都\ **只有 RGB、沒有 alpha 通道
 分頁提供三條載入途徑：
 
 * **Open Puppet…** — 從硬碟挑任何 ``.puppet`` 檔。
-* **Load bundled March 7th** — 開啟內附在 ``examples/puppet/march_7th.puppet`` 的 rig。Resolver 會先查 ``examples_dir()``\ （Nuitka / PyInstaller 打包版是程式旁邊，原始碼 checkout 則是 repository 根目錄），找不到再退回以目前工作資料夾為準的相對路徑。
+* **Load bundled Imeru** — 開啟內附在 ``examples/puppet/imeru.puppet`` 的 rig。Resolver 會先查 ``examples_dir()``\ （Nuitka / PyInstaller 打包版是程式旁邊，原始碼 checkout 則是 repository 根目錄），找不到再退回以目前工作資料夾為準的相對路徑。
 * **上次的 rig** — Imervue 啟動時會從 ``last_rig_path`` 設定欄位自動還原上次載入的 rig；Desktop Pet 分頁會靜默重建浮層，所以你和上次離開時的狀態之間只差一個點擊。
 
 載入成功會自動勾起 **Show pet on desktop**，桌寵立刻現身。失敗時勾選框不會動，錯誤訊息會寫在分頁的狀態列上。
@@ -1092,7 +1092,7 @@ Schema（有版本 — 未來的欄位會向前相容）：
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
@@ -1123,7 +1123,7 @@ Schema（有版本 — 未來的欄位會向前相容）：
 
 **Reset to default** 會丟掉使用者腳本、回到內建打招呼集；保存的腳本路徑也會清空，下次啟動不會再載入它。
 
-可用的範例放在 ``examples/desktop_pet/march_7th.petscript.json`` — 六句打招呼、兩個 hit-area 桶（head / body）、三個 motion 台詞（wave / curtsy / cheer），以及一個 30 分鐘的伸展提醒。head / body 台詞回應的是 hit area 命名為 ``HitAreaHead`` / ``HitAreaBody``\ （Cubism 的命名慣例）的 rig 上的點擊；內附的 March 7th rig 沒有定義任何 hit area，所以點它時會改挑一句打招呼。
+可用的範例放在 ``examples/desktop_pet/imeru.petscript.json`` — 六句打招呼、每個時段各一句台詞、兩個 hit-area 桶（``Head`` / ``Body``）、五個動作的台詞（wave / greet / surprised / sleepy / shy），以及一個 30 分鐘的伸展提醒。桶名就是 Imeru 的 hit area 名稱，所以點她的頭和身體都會有回應；hit area 採用 Cubism 命名（``HitAreaHead`` / ``HitAreaBody``）的 rig 則需要以這兩個名稱建立桶。
 
 持久化
 ^^^^^^
@@ -1230,7 +1230,7 @@ rig 只會對自己擁有的動作群組做出反應；缺少的群組不會播�
 
 **桌寵出現在灰色矩形裡，而不是完全透明。** OS 層級的半透明背景屬性需要 alpha-aware 的 GL surface 加上嵌入 GL widget 的對應屬性。確認沒有任何第三方視窗管理工具在浮層視窗上覆寫 ``WA_TranslucentBackground``\ （Linux 上某些自製視窗管理員會這樣做）。Windows / macOS 上應該「直接能用」。
 
-**「Load bundled March 7th」說檔案找不到。** Resolver 先查 ``examples_dir()``\ （打包版用的 frozen-safe 位置），再退回 CWD 相對路徑。兩者都沒有 rig 時，狀態列會列出預期路徑。檢查你安裝中附的 ``examples/`` 資料夾 — 如果是從原始碼 checkout 執行，要從 repository 根目錄啟動 Imervue。
+**「Load bundled Imeru」說檔案找不到。** Resolver 先查 ``examples_dir()``\ （打包版用的 frozen-safe 位置），再退回 CWD 相對路徑。兩者都沒有 rig 時，狀態列會列出預期路徑。檢查你安裝中附的 ``examples/`` 資料夾 — 如果是從原始碼 checkout 執行，要從 repository 根目錄啟動 Imervue。
 
 **桌寵被點了不講話。** 三個檢查點：
 

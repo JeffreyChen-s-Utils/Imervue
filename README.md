@@ -490,7 +490,7 @@ JSON-based, humanly diffable, no proprietary binary. The format is open and chec
 
 ### Renderer
 
-`QOpenGLWidget` with vertex-array textured-triangle drawing in draw_order, per-drawable blend modes (normal / additive / multiply), pose-group exclusivity, ortho projection in image-space, GL_REPEAT-tiled transparency-checker backdrop, wheel zoom + middle-drag pan. Optimised for large rigs — March 7th (307 drawables / 2965 vertex morphs) runs at 60 FPS on CPU.
+`QOpenGLWidget` with vertex-array textured-triangle drawing in draw_order, per-drawable blend modes (normal / additive / multiply), pose-group exclusivity, ortho projection in image-space, GL_REPEAT-tiled transparency-checker backdrop, wheel zoom + middle-drag pan. Optimised for large rigs — a converted Cubism rig with 307 drawables and 2965 vertex morphs runs at 60 FPS on CPU.
 
 ### Authoring
 
@@ -556,7 +556,7 @@ Video Capture Device source.
    named in step 3 (typically *OBS Virtual Camera*).
 
 Imervue caps the streaming output's longest side at 1080 px so
-Cubism-native canvases (March 7th is 3503×7777) don't get rejected
+Cubism-native canvases (often 3000–8000 px tall) don't get rejected
 by the DirectShow virtual-camera driver. Aspect ratio is
 preserved; OBS can scale further if needed.
 
@@ -636,7 +636,7 @@ machines where you can't install drivers.
 
 ### Demo
 
-A drop-in rig lives at [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet) — a 307-drawable Cubism Live2D character converted in-tree. Open via **Open Puppet…** to see the rig come up centred; click any of the 18 motions (Idle group + Gesture group) to play. Gestures cover peace sign, face cover, photo, blush, dark face, cry, sweat, stars, shooting star — every named gesture the rig defines.
+The bundled rig is [`examples/puppet/imeru.puppet`](examples/puppet/imeru.puppet) — **Imeru**, Imervue's original mascot: 40 drawables on a 1024 × 1336 canvas, every Cubism-standard parameter plus two-joint arms, Live2D-style parallax head turns, blinking with the irises clipped to the eye whites, hair physics, 8 motions (two Idle loops, TapHead, TapBody and four Gestures including a wave) and 7 expressions. Open it via **File > Examples > Imeru** or **Open Puppet…**, and click her head or body to see her react. She is drawn and rigged entirely by code, so the file carries no third-party rights; `py -3 examples/puppet/imeru/build.py` rebuilds it.
 
 ---
 
@@ -681,7 +681,7 @@ Pick any combination from the tab or the right-click menu. Auto idle, Idle motio
 ### How to start
 
 1. Switch to the **Desktop Pet** tab.
-2. Click **Load bundled March 7th** to use the included character, or **Open Puppet…** to pick your own `.puppet` file.
+2. Click **Load bundled Imeru** to use the included character, or **Open Puppet…** to pick your own `.puppet` file.
 3. Tick **Show pet on desktop**.
 4. Drag the character to where you want it; pick the drivers you want; adjust opacity / size.
 5. Right-click any time for the quick-action menu, or use the system tray icon to hide the pet without finding the tab.
@@ -723,7 +723,7 @@ The pet's speech bubble draws from a JSON file you can author yourself. Click **
 
 Lines cycle round-robin per bucket so the user doesn't hear the same line twice in a row. **Reset to default** drops the custom script and brings back the built-in greeting set.
 
-A working sample lives at [`examples/desktop_pet/march_7th.petscript.json`](examples/desktop_pet/march_7th.petscript.json).
+A working sample lives at [`examples/desktop_pet/imeru.petscript.json`](examples/desktop_pet/imeru.petscript.json); its head and body lines answer clicks on Imeru's `Head` and `Body` hit areas.
 
 ---
 

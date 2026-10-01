@@ -479,7 +479,7 @@ Basé sur JSON, lisible et diffable par un humain, sans binaire propriétaire. L
 
 ### Moteur de rendu
 
-`QOpenGLWidget` avec dessin de triangles texturés en vertex-array dans l'ordre draw_order, modes de fusion par drawable (normal / additif / multiplicatif), exclusivité des pose-groups, projection orthogonale dans l'espace image, fond en damier de transparence tilé via GL_REPEAT, zoom à la molette + panoramique par bouton du milieu. Optimisé pour les grands rigs — March 7th (307 drawables / 2965 vertex morphs) tourne à 60 FPS sur CPU.
+`QOpenGLWidget` avec dessin de triangles texturés en vertex-array dans l'ordre draw_order, modes de fusion par drawable (normal / additif / multiplicatif), exclusivité des pose-groups, projection orthogonale dans l'espace image, fond en damier de transparence tilé via GL_REPEAT, zoom à la molette + panoramique par bouton du milieu. Optimisé pour les grands rigs — un rig Cubism converti de 307 drawables et 2965 vertex morphs tourne à 60 FPS sur CPU.
 
 ### Création
 
@@ -535,7 +535,7 @@ Le canevas du puppet apparaît comme une webcam qu'OBS capte via sa source Video
 3. Dans l'onglet Puppet, ouvrez votre rig, puis activez **Output > Virtual camera**. La barre d'état affiche le nom exact du périphérique à choisir.
 4. Dans OBS : **Sources > + > Video Capture Device**, choisissez le périphérique nommé à l'étape 3 (généralement *OBS Virtual Camera*).
 
-Imervue plafonne le plus grand côté de la sortie en streaming à 1080 px afin que les canevas natifs Cubism (March 7th fait 3503×7777) ne soient pas rejetés par le pilote de caméra virtuelle DirectShow. Le rapport d'aspect est préservé ; OBS peut redimensionner davantage si nécessaire.
+Imervue plafonne le plus grand côté de la sortie en streaming à 1080 px afin que les canevas natifs Cubism (souvent hauts de 3000 à 8000 px) ne soient pas rejetés par le pilote de caméra virtuelle DirectShow. Le rapport d'aspect est préservé ; OBS peut redimensionner davantage si nécessaire.
 
 ##### Pourquoi le fond est-il magenta ? (et comment l'enlever)
 
@@ -580,7 +580,7 @@ OBS **Sources > + > Window Capture** peut capter la fenêtre Imervue directement
 
 ### Démo
 
-Un rig prêt à l'emploi se trouve à [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — un personnage Cubism Live2D à 307 drawables converti dans le dépôt. Ouvrez via **Open Puppet…** pour voir le rig apparaître centré ; cliquez sur l'un des 18 mouvements (groupe Idle + groupe Gesture) pour le jouer. Les gestes couvrent le signe de paix, main devant le visage, photo, rougeur, visage sombre, pleurs, sueur, étoiles, étoile filante — chaque geste nommé que le rig définit.
+Le rig fourni est [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**, la mascotte originale d'Imervue : 40 drawables sur un canevas de 1024 × 1336, tous les paramètres standard Cubism plus des bras à deux articulations, des rotations de tête en parallaxe façon Live2D, un clignement avec les iris découpés aux blancs des yeux, une physique des cheveux, 8 mouvements (deux boucles Idle, TapHead, TapBody et quatre Gestures dont un salut de la main) et 7 expressions. Ouvrez-le via **File > Examples > Imeru** ou **Open Puppet…**, puis cliquez sur sa tête ou son corps pour la voir réagir. Elle est entièrement dessinée et riggée par du code, de sorte que le fichier ne porte aucun droit de tiers ; `py -3 examples/puppet/imeru/build.py` le reconstruit.
 
 ---
 
@@ -625,7 +625,7 @@ Choisissez n'importe quelle combinaison depuis l'onglet ou le menu clic-droit. A
 ### Comment démarrer
 
 1. Passez à l'onglet **Desktop Pet**.
-2. Cliquez sur **Load bundled March 7th** pour utiliser le personnage inclus, ou sur **Open Puppet…** pour choisir votre propre fichier `.puppet`.
+2. Cliquez sur **Load bundled Imeru** pour utiliser le personnage inclus, ou sur **Open Puppet…** pour choisir votre propre fichier `.puppet`.
 3. Cochez **Show pet on desktop**.
 4. Glissez le personnage là où vous le souhaitez ; choisissez les pilotes voulus ; ajustez l'opacité / la taille.
 5. Faites un clic-droit à tout moment pour le menu d'actions rapides, ou utilisez l'icône de la barre d'état système pour masquer le pet sans retrouver l'onglet.
@@ -667,7 +667,7 @@ La bulle de dialogue du pet puise dans un fichier JSON que vous pouvez rédiger 
 
 Les lignes défilent en tourniquet (round-robin) par catégorie afin que l'utilisateur n'entende pas deux fois la même ligne d'affilée. **Reset to default** abandonne le script personnalisé et rétablit l'ensemble de salutations intégré.
 
-Un exemple fonctionnel se trouve à [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json).
+Un exemple fonctionnel se trouve à [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json) ; ses lignes pour la tête et le corps répondent aux clics sur les zones de contact `Head` et `Body` d'Imeru.
 
 ---
 

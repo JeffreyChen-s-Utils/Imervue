@@ -477,7 +477,7 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음. 이 형식은 �
 
 ### 렌더러
 
-`QOpenGLWidget`로 draw_order에 따른 vertex-array 텍스처 트라이앵글 드로잉, drawable별 블렌드 모드(normal / additive / multiply), pose-group 배타성, 이미지 공간 직교 투영, GL_REPEAT 타일링된 투명도 체커 배경, 휠 줌 + 중간 버튼 드래그 팬을 제공합니다. 대형 리그에 최적화 — March 7th (drawable 307개 / vertex morph 2965개)가 CPU에서 60 FPS로 동작.
+`QOpenGLWidget`로 draw_order에 따른 vertex-array 텍스처 트라이앵글 드로잉, drawable별 블렌드 모드(normal / additive / multiply), pose-group 배타성, 이미지 공간 직교 투영, GL_REPEAT 타일링된 투명도 체커 배경, 휠 줌 + 중간 버튼 드래그 팬을 제공합니다. 대형 리그에 최적화 — drawable 307개와 vertex morph 2965개를 가진 변환된 Cubism 리그가 CPU에서 60 FPS로 동작.
 
 ### 작성
 
@@ -533,7 +533,7 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음. 이 형식은 �
 3. Puppet 탭에서 리그를 열고 **Output > Virtual camera**를 토글합니다. 상태 표시줄에 선택할 정확한 장치명이 표시됩니다.
 4. OBS에서: **Sources > + > Video Capture Device**, 3단계에서 표시된 장치명(보통 *OBS Virtual Camera*)을 선택합니다.
 
-Imervue는 스트리밍 출력의 긴 변을 1080 px로 캡하므로 Cubism 네이티브 캔버스(March 7th은 3503×7777)가 DirectShow 가상 카메라 드라이버에 거부되지 않습니다. 종횡비는 유지되며, 필요하면 OBS에서 더 스케일할 수 있습니다.
+Imervue는 스트리밍 출력의 긴 변을 1080 px로 캡하므로 Cubism 네이티브 캔버스(세로 3000–8000 px인 경우가 많음)가 DirectShow 가상 카메라 드라이버에 거부되지 않습니다. 종횡비는 유지되며, 필요하면 OBS에서 더 스케일할 수 있습니다.
 
 ##### 왜 배경이 마젠타인가? (그리고 제거하는 방법)
 
@@ -578,7 +578,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 ### 데모
 
-손쉽게 사용 가능한 리그는 [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet)에 있습니다 — 트리 내에서 변환된 307 drawable Cubism Live2D 캐릭터. **Open Puppet…**으로 열면 리그가 중앙에 로드됩니다; 18개 모션(Idle 그룹 + Gesture 그룹) 중 아무거나 클릭하여 재생하세요. 제스처는 브이 사인, 얼굴 가리기, 사진, 홍조, 어두운 얼굴, 울음, 땀, 별, 별똥별을 포함합니다 — 리그가 정의하는 모든 명명된 제스처.
+번들된 리그는 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet)입니다 — Imervue의 오리지널 마스코트 **Imeru**: 1024 × 1336 캔버스 위의 drawable 40개, 모든 Cubism 표준 매개변수와 2관절 팔, Live2D 스타일 시차(parallax) 고개 돌리기, 흰자 안으로 클리핑된 눈동자와 함께하는 눈 깜빡임, 머리카락 물리, 모션 8개(Idle 루프 2개, TapHead, TapBody, 손 흔들기를 포함한 Gesture 4개)와 표정 7개를 갖추고 있습니다. **File > Examples > Imeru** 메뉴 또는 **Open Puppet…** 명령으로 열고, 머리나 몸을 클릭하면 반응하는 모습을 볼 수 있습니다. 전부 코드로 그리고 리깅했기 때문에 파일에 제3자 권리가 없으며, `py -3 examples/puppet/imeru/build.py`로 다시 빌드할 수 있습니다.
 
 ---
 
@@ -623,7 +623,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 ### 시작하는 방법
 
 1. **Desktop Pet** 탭으로 전환합니다.
-2. **Load bundled March 7th**를 클릭하여 번들된 캐릭터를 쓰거나, **Open Puppet…**으로 직접 `.puppet` 파일을 고릅니다.
+2. **Load bundled Imeru**를 클릭하여 번들된 캐릭터를 쓰거나, **Open Puppet…** 명령으로 직접 `.puppet` 파일을 고릅니다.
 3. **Show pet on desktop**을 체크합니다.
 4. 캐릭터를 원하는 위치로 드래그하고, 원하는 드라이버를 고르고, 불투명도 / 크기를 조정합니다.
 5. 언제든 오른쪽 클릭으로 빠른 동작 메뉴를 열거나, 탭을 찾지 않고도 시스템 트레이 아이콘으로 펫을 숨길 수 있습니다.
@@ -665,7 +665,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 대사는 버킷별로 라운드 로빈 방식으로 순환하므로 같은 대사가 연속으로 두 번 나오지 않습니다. **Reset to default**는 커스텀 스크립트를 버리고 내장 인사말 세트를 되살립니다.
 
-동작하는 샘플은 [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json)에 있습니다.
+동작하는 샘플은 [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json)에 있습니다. 머리와 몸 대사는 Imeru의 `Head`와 `Body` hit area 클릭에 응답합니다.
 
 ---
 

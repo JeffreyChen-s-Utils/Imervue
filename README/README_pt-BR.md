@@ -486,7 +486,7 @@ Baseado em JSON, diff-friendly por humanos, sem binário proprietário. O format
 
 ### Renderizador
 
-`QOpenGLWidget` com desenho de triângulos texturizados em vertex-array em draw_order, modos de mesclagem por drawable (normal / additive / multiply), exclusividade de pose-group, projeção ortográfica em image-space, fundo de xadrez de transparência em GL_REPEAT-tiled, zoom com roda + pan com arrasto do botão do meio. Otimizado para rigs grandes — March 7th (307 drawables / 2965 vertex morphs) roda a 60 FPS em CPU.
+`QOpenGLWidget` com desenho de triângulos texturizados em vertex-array em draw_order, modos de mesclagem por drawable (normal / additive / multiply), exclusividade de pose-group, projeção ortográfica em image-space, fundo de xadrez de transparência em GL_REPEAT-tiled, zoom com roda + pan com arrasto do botão do meio. Otimizado para rigs grandes — um rig Cubism convertido com 307 drawables e 2965 vertex morphs roda a 60 FPS em CPU.
 
 ### Autoria
 
@@ -544,7 +544,7 @@ Video Capture Device.
 3. Na aba Puppet, abra seu rig, depois alterne **Output > Virtual camera**. A barra de status mostra o nome exato do dispositivo a escolher.
 4. No OBS: **Sources > + > Video Capture Device**, escolha o dispositivo nomeado no passo 3 (tipicamente *OBS Virtual Camera*).
 
-Imervue limita o lado mais longo da saída de streaming em 1080 px para que canvases nativos do Cubism (March 7th é 3503×7777) não sejam rejeitados pelo driver de câmera virtual DirectShow. A proporção é preservada; o OBS pode escalar mais se necessário.
+Imervue limita o lado mais longo da saída de streaming em 1080 px para que canvases nativos do Cubism (muitas vezes com 3000–8000 px de altura) não sejam rejeitados pelo driver de câmera virtual DirectShow. A proporção é preservada; o OBS pode escalar mais se necessário.
 
 ##### Por que o fundo é magenta? (e como removê-lo)
 
@@ -608,7 +608,7 @@ restrições onde você não pode instalar drivers.
 
 ### Demo
 
-Um rig pronto está em [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — um personagem Cubism Live2D de 307 drawables convertido no próprio repositório. Abra via **Open Puppet…** para ver o rig surgir centralizado; clique em qualquer um dos 18 motions (grupo Idle + grupo Gesture) para reproduzir. Os gestos cobrem sinal de paz, cobrir o rosto, foto, blush, rosto escuro, choro, suor, estrelas, estrela cadente — todos os gestos nomeados que o rig define.
+O rig incluído é [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**, o mascote original do Imervue: 40 drawables em um canvas de 1024 × 1336, todos os parâmetros padrão do Cubism mais braços com duas articulações, giros de cabeça com paralaxe no estilo Live2D, piscadas com as íris recortadas pelo branco dos olhos, física de cabelo, 8 motions (dois loops Idle, TapHead, TapBody e quatro Gestures, incluindo um aceno) e 7 expressões. Abra-o via **File > Examples > Imeru** ou **Open Puppet…** e clique na cabeça ou no corpo dela para vê-la reagir. Ela é desenhada e riggada inteiramente por código, então o arquivo não carrega direitos de terceiros; `py -3 examples/puppet/imeru/build.py` o reconstrói.
 
 ---
 
@@ -653,7 +653,7 @@ Escolha qualquer combinação na aba ou no menu de clique direito. Auto idle, Id
 ### Como começar
 
 1. Mude para a aba **Desktop Pet**.
-2. Clique em **Load bundled March 7th** para usar o personagem incluído, ou em **Open Puppet…** para escolher seu próprio arquivo `.puppet`.
+2. Clique em **Load bundled Imeru** para usar o personagem incluído, ou em **Open Puppet…** para escolher seu próprio arquivo `.puppet`.
 3. Marque **Show pet on desktop**.
 4. Arraste o personagem para onde quiser; escolha os drivers desejados; ajuste opacidade / tamanho.
 5. Clique direito a qualquer momento para o menu de ação rápida, ou use o ícone da bandeja do sistema para esconder o pet sem precisar achar a aba.
@@ -695,7 +695,7 @@ O balão de fala do pet vem de um arquivo JSON que você mesmo pode criar. Cliqu
 
 As linhas alternam em round-robin por bucket para que o usuário não ouça a mesma linha duas vezes seguidas. **Reset to default** descarta o script personalizado e traz de volta o conjunto de saudações embutido.
 
-Um exemplo funcional vive em [`examples/desktop_pet/march_7th.petscript.json`](examples/desktop_pet/march_7th.petscript.json).
+Um exemplo funcional vive em [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json); suas linhas de cabeça e corpo respondem a cliques nas hit areas `Head` e `Body` da Imeru.
 
 ---
 

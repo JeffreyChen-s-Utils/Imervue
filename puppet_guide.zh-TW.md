@@ -28,8 +28,8 @@
 
 1. 啟動 Imervue（從原始碼跑就 `python -m Imervue`）。
 2. 點視窗頂端的 **Puppet** 分頁。
-3. **File > Examples > March 7th**（或工具列的 **Examples ▾** 下拉）。內附的 307-drawable Cubism rig 居中載入。
-4. 在底部 **Motions** 擺放欄點任一個動作 — rig 立刻動起來。
+3. **File > Examples > Imeru**（或工具列的 **Examples ▾** 下拉）。內附的 rig — Imervue 的吉祥物 — 居中載入。
+4. 在底部 **Motions** 擺放欄點 8 個動作中的任一個 — rig 立刻動起來。
 5. 工具列的 **Reset to rest** 按鈕把 rig 拉回靜止姿勢。
 
 這是基本款。下面解釋怎麼把這個 idle rig 變成直播或影片檔。
@@ -283,13 +283,13 @@ Puppet 分頁顯示中且 rig 有物理鏈時，canvas 用自己的時鐘每秒�
 
 參數覆寫堆疊，疊在滑桿 / 動作值上。模式：`additive`（最終 = base + value）、`multiply`（最終 = base × value）、`overwrite`（最終 = value）。從 **Expressions** 擺放欄切換；啟用中的表情依開啟順序套用。
 
-用於瞬時情緒：*smile*、*surprised*、*angry*。March 7th rig 內附 8 個表情（`捂脸` / `比耶` / `照相` / `脸红` / `黑脸` / `哭` / `流汗` / `星星`）。
+用於瞬時情緒：*smile*、*surprised*、*angry*。內附的 Imeru rig 帶 7 個表情（`smile` / `happy` / `surprised` / `sad` / `angry` / `blush` / `sleepy`）。
 
 ### Hit areas
 
 命名的點擊區域。hit area 的範圍是它所列 drawable 在目前（已變形）位置的外框；在範圍內按左鍵（**Edit mesh** 關閉時）會執行它的動作。它的 `motion` 指定動作群組 — 從該群組隨機播一個動作（`TapHead` 會挑一個 `TapHead` 動作）；沒有動作屬於該群組時，播放同名的動作。它的 `expression` 會切換該表情（點 body → 切換 `surprised`）。範圍重疊時，含最前面 drawable 的那個勝出。
 
-內附的 March 7th rig 沒有定義任何 hit area，點擊它不會有反應。用 **File > Import Cubism…** 轉換的 rig 會帶入模型的 `HitAreas`，但只有範圍、沒有動作；在 `puppet.json` 的 `hit_areas` 清單替它們加上 `motion` 或 `expression` 才會有反應。Puppet 分頁沒有 hit area 編輯器。
+內附的 Imeru rig 定義了兩個：點她的頭（`Head`）播放 `TapHead` 動作，點她的身體（`Body`）播放 `TapBody` 動作。用 **File > Import Cubism…** 轉換的 rig 會帶入模型的 `HitAreas`，但只有範圍、沒有動作；在 `puppet.json` 的 `hit_areas` 清單替它們加上 `motion` 或 `expression` 才會有反應。Puppet 分頁沒有 hit area 編輯器。
 
 ---
 
@@ -345,7 +345,7 @@ Motions 擺放欄的 **Loop** 關閉時，播到結尾的動作會停在最後�
 
 ### Cubism 轉換器把相機顯示成「多一隻手」
 
-March 7th 之類 rig 的比耶 / 照相 / 捂臉手勢是用 Cubism 動態可見度旗標驅動的。轉換器把這些切換存成 `opacity_keys` 曲線，所以每個道具只在對應參數拉起時出現。如果轉換出來的 `.puppet` 一直顯示這些道具，代表它的 drawable 缺少這些曲線 — 從 **File > Import Cubism…** 重新轉換並儲存結果。
+轉換來的 Cubism rig 上的比耶 / 照相 / 捂臉手勢是用 Cubism 動態可見度旗標驅動的。轉換器把這些切換存成 `opacity_keys` 曲線，所以每個道具只在對應參數拉起時出現。如果轉換出來的 `.puppet` 一直顯示這些道具，代表它的 drawable 缺少這些曲線 — 從 **File > Import Cubism…** 重新轉換並儲存結果。
 
 ---
 
@@ -353,4 +353,4 @@ March 7th 之類 rig 的比耶 / 照相 / 捂臉手勢是用 Cubism 動態可見
 
 `.puppet` 是 zip 容器、含 JSON manifest 跟 PNG 紋理。完整規格見 [`Imervue/puppet/FORMAT.md`](Imervue/puppet/FORMAT.md)。
 
-內附 demo rig：[`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet) 與 [`examples/puppet/vivian.puppet`](examples/puppet/vivian.puppet)（見 [`examples/puppet/README.md`](examples/puppet/README.md)）。
+內附 demo rig：[`examples/puppet/imeru.puppet`](examples/puppet/imeru.puppet)，由 `examples/puppet/imeru/build.py` 重新產生（見 [`examples/puppet/README.md`](examples/puppet/README.md)）。

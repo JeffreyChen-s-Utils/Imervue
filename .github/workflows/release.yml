@@ -40,7 +40,7 @@
 #     files in directory 'plugins'". The Puppet tab is no longer here
 #     (it was promoted to a built-in subpackage at Imervue/puppet/).
 #   - ``--include-data-dir=examples=examples`` ships the demo
-#     ``examples/puppet/march_7th.puppet`` rig so the Puppet tab has
+#     ``examples/puppet/imeru.puppet`` rig so the Puppet tab has
 #     something to open the first time a user clicks **Open Puppet…**.
 #   - The Cubism Native SDK DLL is **never** bundled (Live2D's Free
 #     Material License forbids redistribution). The runtime probes

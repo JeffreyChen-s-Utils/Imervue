@@ -836,20 +836,27 @@ Ein durchgearbeitetes Beispiel ausprobieren
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Das Repository liefert ein vollständig geriggtes Demo unter
-``examples/puppet/march_7th.puppet`` — ein 307-Drawable-Cubism-Live2D-Rig,
-das im Baum konvertiert wurde. Texturen und Per-Parameter-Vertex-Morphs sind
-in das ``.puppet``-Zip eingebrannt, sodass das Demo mit der Standard-
-``requirements.txt`` öffnet, ohne das Cubism SDK weiterverteilen zu müssen.
+``examples/puppet/imeru.puppet`` — **Imeru**, das originale Maskottchen
+von Imervue. Sie wird vollständig von ``examples/puppet/imeru/build.py``
+gezeichnet und geriggt (``py -3`` erzeugt die Datei neu), sodass das Demo
+keine Rechte Dritter enthält: 40 Drawables auf einer 1024 × 1336 großen
+Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im Live2D-Stil, auf das
+Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
+drei Physikketten, die das Haar schwingen lassen.
 
-Das Rig trägt 203 Cubism-Standardparameter (``ParamAngleX/Y/Z``,
-``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), sodass jeder
-Standard-Eingabetreiber (Webcam, Blinzeln, Lippensynchronisation, Cursor-Look-At)
-es ohne rigspezifische Konfiguration steuert. Achtzehn Motions sind im Bundle
-enthalten: acht loopende Idle-Motions in der Gruppe ``Idle``, neun loopende Gesten
-in der Gruppe ``Gesture`` und ein einmaliges ``tap_head`` in der Gruppe ``TapHead``.
+Das Rig trägt jeden Cubism-Standardparameter (``ParamAngleX/Y/Z``,
+``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
+``ParamArmLA/LB/RA/RB`` für die Arme, sodass jeder Standard-Eingabetreiber
+(Webcam, Blinzeln, Lippensynchronisation, Cursor-Look-At) es ohne
+rigspezifische Konfiguration steuert. Acht Motions sind in der Datei
+enthalten: zwei loopende Idle-Motions in der Gruppe ``Idle``, ``tap_head`` in
+``TapHead`` und ``shy`` in ``TapBody`` (ein Klick auf ihren Kopf oder Körper
+spielt sie ab) sowie ``greet``, ``wave``, ``surprised`` und ``sleepy`` in
+``Gesture``; dazu kommen sieben Expressions (smile, happy, surprised, sad,
+angry, blush, sleepy).
 
 Öffnen Sie den Puppet-Tab, klicken Sie **Open Puppet…**, zeigen Sie auf
-``march_7th.puppet`` — die Figur erscheint zentriert. Ziehen Sie einen
+``imeru.puppet`` — die Figur erscheint zentriert. Ziehen Sie einen
 beliebigen Parameter-Schieberegler, um ein Gelenk zu bewegen, oder klicken
 Sie eine der Motions im Motions-Dock — Einzelklick bindet die Motion und
 startet sofort die Wiedergabe.
@@ -862,11 +869,11 @@ startet sofort die Wiedergabe.
    gebündelt; eine pip- / Wheel-Installation enthält es nicht (in einem
    Quellcode-Checkout liegen die Rigs in ``examples/puppet/``).
 2. Klicken Sie oben im Fenster auf den **Puppet**-Tab.
-3. **File > Examples > March 7th** (oder die **Examples ▾**-Dropdown
-   in der Toolbar). Das 307-Drawable-Rig wird zentriert geladen und der
-   Parameter-Dock füllt sich mit den 203 Cubism-Standard-Schiebereglern.
+3. **File > Examples > Imeru** (oder die **Examples ▾**-Dropdown
+   in der Toolbar). Das Rig wird zentriert geladen und der
+   Parameter-Dock füllt sich mit seinen Schiebereglern.
 4. Im unteren **Motions**-Dock einen beliebigen Motion-Eintrag einzeln klicken
-   (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …).
+   (``idle_look``, ``wave``, ``tap_head`` …).
    Die Wiedergabe beginnt sofort; erneutes Klicken startet sie neu, die
    **Stop**-Schaltfläche des Docks stoppt die Wiedergabe, und die Wahl einer
    anderen Motion blendet zu ihr über.
@@ -1036,7 +1043,7 @@ Live-Streaming an OBS
 Zwei Ausgabewege, beide rendern das Puppet allein (kein Schachbrett-Hintergrund,
 kein Editor-Chrome) in einen Off-Screen-Framebuffer, bevor sie es an die
 Streaming-Surface übergeben. Die Ausgabe wird auf 1080 px Langseite gedeckelt,
-damit Cubism-Native-Leinwände (March 7th ist 3503×7777) nicht von
+damit Cubism-Native-Leinwände (oft 3000–8000 px hoch) nicht von
 DirectShow-Virtual-Camera-Treibern abgewiesen werden.
 
 **A. Virtuelle Kamera** — erscheint als Webcam in der *Video-Capture-Geräte*-
@@ -1142,7 +1149,7 @@ Schnellstart
 ^^^^^^^^^^^^
 
 1. Wechseln Sie zum Tab **Desktop Pet**.
-2. Klicken Sie auf **Load bundled March 7th**, um die
+2. Klicken Sie auf **Load bundled Imeru**, um die
    mitgelieferte Figur zu verwenden, oder auf **Open Puppet…**,
    um Ihre eigene ``.puppet``-Datei auszuwählen.
 3. Das Overlay erscheint auf Ihrem Desktop und das Kontrollkästchen
@@ -1167,8 +1174,8 @@ Der Tab bietet drei Lademöglichkeiten:
 
 * **Open Puppet…** — wählen Sie eine beliebige
   ``.puppet``-Datei von der Festplatte.
-* **Load bundled March 7th** — öffnet das mitgelieferte Rig
-  unter ``examples/puppet/march_7th.puppet``. Der Resolver
+* **Load bundled Imeru** — öffnet das mitgelieferte Rig
+  unter ``examples/puppet/imeru.puppet``. Der Resolver
   durchsucht zuerst ``examples_dir()`` (neben dem Programm in
   den paketierten Nuitka- / PyInstaller-Builds, das
   Repository-Root in einem Quellcode-Checkout) und greift auf
@@ -1455,7 +1462,7 @@ vorwärtskompatibel):
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
@@ -1504,14 +1511,15 @@ eingebauten Begrüßungssatz zurück; der gespeicherte Skriptpfad
 wird gelöscht, damit der nächste Start ihn nicht erneut lädt.
 
 Ein funktionierendes Beispiel liegt unter
-``examples/desktop_pet/march_7th.petscript.json`` — sechs
-Begrüßungen, zwei Trefferbereichs-Buckets (Kopf / Körper), drei
-Bewegungszeilen (wave / curtsy / cheer) und eine 30-minütige
-Stretch-Erinnerung. Die Zeilen für Kopf / Körper reagieren auf
-Klicks auf ein Rig, dessen Trefferbereiche ``HitAreaHead`` /
-``HitAreaBody`` heißen (die Cubism-Konvention); das mitgelieferte
-Rig March 7th definiert keine, sodass ein Klick darauf
-stattdessen eine Begrüßung auswählt.
+``examples/desktop_pet/imeru.petscript.json`` — sechs
+Begrüßungen, eine Zeile für jede Tageszeit, zwei
+Trefferbereichs-Buckets (``Head`` / ``Body``), Zeilen für fünf
+Motions (wave / greet / surprised / sleepy / shy) und eine
+30-minütige Stretch-Erinnerung. Die Bucket-Namen sind Imerus
+Trefferbereiche, sodass ihr Kopf und Körper auf Klicks antworten;
+ein Rig, dessen Trefferbereiche die Cubism-Namen verwenden
+(``HitAreaHead`` / ``HitAreaBody``), braucht Buckets unter diesen
+Namen.
 
 Persistenz
 ^^^^^^^^^^
@@ -1683,7 +1691,7 @@ das Attribut ``WA_TranslucentBackground`` auf dem Overlay-Fenster
 Linux tun dies). Unter Windows / macOS sollte es einfach
 funktionieren.
 
-**"Load bundled March 7th" meldet, dass die Datei nicht
+**"Load bundled Imeru" meldet, dass die Datei nicht
 gefunden wurde.** Der Resolver konsultiert zuerst
 ``examples_dir()`` (den frozen-sicheren Speicherort, der von
 paketierten Builds verwendet wird) und greift auf einen

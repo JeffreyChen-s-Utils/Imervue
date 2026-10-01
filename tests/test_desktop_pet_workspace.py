@@ -201,7 +201,7 @@ def test_resolve_bundled_example_uses_app_paths(monkeypatch, tmp_path):
     from Imervue.system import app_paths
 
     fake_examples = tmp_path / "examples"
-    fake_puppet = fake_examples / "puppet" / "march_7th.puppet"
+    fake_puppet = fake_examples / "puppet" / "imeru.puppet"
     fake_puppet.parent.mkdir(parents=True)
     fake_puppet.write_bytes(b"PK\x03\x04")  # just needs to be_a_file
     monkeypatch.setattr(app_paths, "examples_dir", lambda: fake_examples)

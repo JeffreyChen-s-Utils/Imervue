@@ -800,18 +800,18 @@ Puppet ワークスペース（Puppet タブ）
 サンプル
 ^^^^^^^^
 
-リポジトリ同梱：``examples/puppet/march_7th.puppet`` — ツリー内変換済みの 307-drawable Cubism Live2D キャラクター。テクスチャと per-parameter 頂点モーフは ``.puppet`` zip にベイク済みで、デフォルトの ``requirements.txt`` だけで開けます（Cubism SDK 再配布なし）。
+リポジトリ同梱のフルリグ済みデモ：``examples/puppet/imeru.puppet`` — Imervue オリジナルのマスコット **Imeru**。描画もリギングもすべて ``examples/puppet/imeru/build.py`` が行う（``py -3`` で実行するとファイルを再生成）ため、デモにサードパーティーの権利は含まれません：1024 × 1336 のキャンバス上に 40 個の drawable、Live2D 風の視差頂点モーフによる頭の振り向き、白目にクリップされた虹彩、rotation deformer で組んだ 2 関節の腕、髪を揺らす 3 本の物理チェーン。
 
-203 個の Cubism 標準パラメータを持つため（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …）、標準入力ドライバ（ウェブカメラ、まばたき、リップシンク、カーソル追従）が rig 固有設定なしで動きます。同梱モーションは 18 個：``Idle`` グループにループ再生の待機モーション 8 個、``Gesture`` グループにループ再生のジェスチャー 9 個、``TapHead`` グループに 1 回だけ再生する ``tap_head`` があります。
+Cubism 標準パラメータすべて（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …）に加えて腕用の ``ParamArmLA/LB/RA/RB`` を持つため、標準入力ドライバ（ウェブカメラ、まばたき、リップシンク、カーソル追従）が rig 固有設定なしで動きます。同梱モーションは 8 個：``Idle`` グループにループ再生の待機モーション 2 個、``TapHead`` に ``tap_head``、``TapBody`` に ``shy``\ （頭や体をクリックすると再生）、``Gesture`` に ``greet``、``wave``、``surprised``、``sleepy``。あわせて表情 7 個（smile、happy、surprised、sad、angry、blush、sleepy）も入っています。
 
-Puppet タブのツールバー → **Examples ▾** ドロップダウンから直接 March 7th や自分の ``.puppet`` を開けます。下部の **Motions** ドックでモーションをクリックして再生。
+Puppet タブのツールバー → **Examples ▾** ドロップダウンから直接 Imeru（``imeru.puppet``）や自分の ``.puppet`` を開けます。下部の **Motions** ドックでモーションをクリックして再生。
 
 **同梱サンプルの実行手順：**
 
 1. **Imervue を起動**。ソースから：``python -m Imervue``。パッケージ版：``Imervue`` 実行ファイル / app bundle を直接起動。``examples/`` ディレクトリは Nuitka 版と PyInstaller 版にバンドルされています。pip / wheel でのインストールには含まれません（ソースチェックアウトでは rig は ``examples/puppet/`` にあります）。
 2. ウィンドウ上部の **Puppet** タブをクリック。
-3. **File > Examples > March 7th**\ （またはツールバーの **Examples ▾** ドロップダウン）。307-drawable の rig が中央にロードされ、パラメータドックが 203 個の Cubism 標準パラメータスライダーで満たされます。
-4. 下部の **Motions** ドックでモーションエントリ（``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …）をシングルクリック。即座に再生開始；もう一度クリックすると最初から再生し直し、ドックの **Stop** ボタンで停止、別のモーションを選ぶとクロスフェード。
+3. **File > Examples > Imeru**\ （またはツールバーの **Examples ▾** ドロップダウン）。rig が中央にロードされ、パラメータドックがその rig のスライダーで満たされます。
+4. 下部の **Motions** ドックでモーションエントリ（``idle_look``、``wave``、``tap_head`` …）をシングルクリック。即座に再生開始；もう一度クリックすると最初から再生し直し、ドックの **Stop** ボタンで停止、別のモーションを選ぶとクロスフェード。
 5. ツールバーのライブ入力トグルを切り替えて自分の入力で rig を動かす — **Drag-track head**\ （カーソルがキャンバス上を動くと頭と目がその方を向く）、**Auto-blink**\ （自動まばたき）、**Auto idle** + **Idle motions**\ （呼吸 + ランダム idle モーション）、**Mic lip-sync**\ （マイク RMS から口の開閉）、**Webcam tracking**\ （MediaPipe FaceLandmarker による頭 / 目 / 口の追跡）。
 6. ツールバーの **Reset to rest** で全モーション停止、全ライブドライバ OFF、expressions / pose オーバーライドをクリア、全パラメータをデフォルトに戻します — 標準の「最初からやり直し」ボタン。
 7. 別の rig を後で開く場合：**File > Open Puppet…** でディスクから任意の ``.puppet`` zip を開く；**File > Examples ▾** は常に同梱リストにバインドされます。
@@ -927,7 +927,7 @@ Puppet タブのツールバー → **Examples ▾** ドロップダウンから
 OBS ライブ配信
 ^^^^^^^^^^^^^^
 
-2 つの出力パス。どちらもキャラクターのみを off-screen framebuffer にレンダリング（市松模様の背景もエディタ chrome も含まれない）して配信先に渡します。出力の長辺は 1080 px までキャップ（Cubism ネイティブの 3503×7777 が DirectShow 仮想カメラドライバに拒否されるのを防ぐ）。
+2 つの出力パス。どちらもキャラクターのみを off-screen framebuffer にレンダリング（市松模様の背景もエディタ chrome も含まれない）して配信先に渡します。出力の長辺は 1080 px までキャップ（高さ 3000–8000 px になることも多い Cubism ネイティブキャンバスが DirectShow 仮想カメラドライバに拒否されるのを防ぐ）。
 
 **A. 仮想カメラ** — OBS の「映像キャプチャデバイス」ソース一覧にウェブカメラとして表示。``pip install pyvirtualcam`` + プラットフォーム別ドライバ：OBS Studio 26+（Windows / macOS）に *OBS Virtual Camera* ドライバ同梱（OBS 初回起動で *Start Virtual Camera* クリックして登録）；Linux は ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``。**Output > Virtual camera** メニューのトグルで配信開始。
 
@@ -980,7 +980,7 @@ Python パッケージが不足していても Puppet タブは優雅にフォ�
 ^^^^^^^^^^^^^^^^
 
 1. **Desktop Pet** タブに切り替えます。
-2. **Load bundled March 7th** をクリックして同梱キャラクターを使うか、**Open Puppet…** で自分の ``.puppet`` ファイルを選びます。
+2. **Load bundled Imeru** をクリックして同梱キャラクターを使うか、**Open Puppet…** で自分の ``.puppet`` ファイルを選びます。
 3. オーバーレイがデスクトップに現れ、**Show pet on desktop** チェックボックスが自動的にオンになります。（Imervue を閉じずにペットだけ隠したいときは、このチェックを外すか、システムトレイアイコンを使ってください。）
 4. キャラクターを好きな位置までドラッグします。画面端の近くで離すと、その端にぴったりスナップします。
 5. **Live drivers** — アイドル呼吸、まばたき、カーソル追従、マイクリップシンク、ウェブカメラトラッキング — を、ワークスペースタブまたはペットの右クリックメニューから選びます。
@@ -993,7 +993,7 @@ rig の読み込み
 タブには 3 つの読み込み経路があります。
 
 * **Open Puppet…** — ディスク上の任意の ``.puppet`` ファイルを選びます。
-* **Load bundled March 7th** — ``examples/puppet/march_7th.puppet`` 配下に同梱されている rig を開きます。リゾルバはまず ``examples_dir()`` を検索し（パッケージ化された Nuitka / PyInstaller 版ではプログラムの隣、ソースチェックアウトではリポジトリのルート）、見つからなければ現在の作業フォルダーからの相対パスにフォールバックします。
+* **Load bundled Imeru** — ``examples/puppet/imeru.puppet`` 配下に同梱されている rig を開きます。リゾルバはまず ``examples_dir()`` を検索し（パッケージ化された Nuitka / PyInstaller 版ではプログラムの隣、ソースチェックアウトではリポジトリのルート）、見つからなければ現在の作業フォルダーからの相対パスにフォールバックします。
 * **Last rig** — 前回読み込んだ rig は、設定の ``last_rig_path`` フィールドから Imervue 起動時に自動復元されます。Desktop Pet タブはオーバーレイを目に見えない形で再生成するので、前回終了時と同じ状態からワンクリックでペットを再表示できます。
 
 読み込みに成功すると **Show pet on desktop** が自動的にオンになり、ペットが即座に現れます。失敗した場合はチェックボックスはそのままで、エラーがタブのステータスラベルに表示されます。
@@ -1126,7 +1126,7 @@ rig が読み込まれていないときはモーション / 表情サブメニ�
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
@@ -1157,7 +1157,7 @@ rig が読み込まれていないときはモーション / 表情サブメニ�
 
 **Reset to default** はユーザースクリプトを破棄し、組み込みの挨拶セットに戻します。永続化されていたスクリプトパスもクリアされるので、次回起動時に再読み込みされません。
 
-動作するサンプルが ``examples/desktop_pet/march_7th.petscript.json`` にあります — 挨拶 6 件、ヒットエリアバケット 2 つ（head / body）、モーションセリフ 3 つ（wave / curtsy / cheer）、30 分間隔のストレッチリマインダーが入っています。head / body のセリフは、ヒットエリア名が ``HitAreaHead`` / ``HitAreaBody``\ （Cubism の命名規則）の rig でのクリックに応答します。同梱の March 7th rig はヒットエリアを定義していないため、クリックすると代わりに挨拶が選ばれます。
+動作するサンプルが ``examples/desktop_pet/imeru.petscript.json`` にあります — 挨拶 6 件、時間帯ごとのセリフ、ヒットエリアバケット 2 つ（``Head`` / ``Body``）、5 つのモーションのセリフ（wave / greet / surprised / sleepy / shy）、30 分間隔のストレッチリマインダーが入っています。バケット名は Imeru のヒットエリア名なので、頭と体へのクリックに応答します。ヒットエリアに Cubism の名前（``HitAreaHead`` / ``HitAreaBody``）を使う rig では、その名前でバケットを用意する必要があります。
 
 永続化
 ^^^^^^
@@ -1273,7 +1273,7 @@ rig は自身が持つモーショングループにだけ反応します。存�
 
 **ペットが完全に透明にならず、灰色の長方形の中に表示されます。** OS レベルの半透明背景属性には、アルファ対応の GL サーフェスと、埋め込まれた GL ウィジェット上の対応する属性が必要です。サードパーティーのウィンドウ管理ツールがオーバーレイウィンドウの ``WA_TranslucentBackground`` 属性を上書きしていないか確認してください（Linux のカスタムウィンドウマネージャの一部はこれを行います）。Windows / macOS では「そのまま動く」はずです。
 
-**「Load bundled March 7th」がファイルが見つからないと報告します。** リゾルバはまず ``examples_dir()``\ （パッケージ化ビルドが使用するフローズン対応の場所）を参照し、CWD 相対パスにフォールバックします。どちらにも rig が含まれていない場合、ステータスラベルに期待されるパスが表示されます。インストール時に同梱されている ``examples/`` ディレクトリを確認してください — ソースチェックアウトの場合はリポジトリのルートから Imervue を起動してください。
+**「Load bundled Imeru」がファイルが見つからないと報告します。** リゾルバはまず ``examples_dir()``\ （パッケージ化ビルドが使用するフローズン対応の場所）を参照し、CWD 相対パスにフォールバックします。どちらにも rig が含まれていない場合、ステータスラベルに期待されるパスが表示されます。インストール時に同梱されている ``examples/`` ディレクトリを確認してください — ソースチェックアウトの場合はリポジトリのルートから Imervue を起動してください。
 
 **クリックしてもペットが話しません。** 3 つのチェック:
 

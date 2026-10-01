@@ -15,12 +15,12 @@ import pytest
 
 from _qt_skip import pytestmark  # noqa: E402,F401
 
-_RIG = Path(__file__).resolve().parents[1] / "examples" / "puppet" / "vivian.puppet"
+_RIG = Path(__file__).resolve().parents[1] / "examples" / "puppet" / "imeru.puppet"
 
 
 @pytest.fixture(scope="module")
 def shown_canvas(qapp):
-    """One shown canvas with the example rig, shared by the module (the rig is ~21 MB)."""
+    """One shown canvas with the bundled example rig, shared by the module."""
     from PySide6.QtTest import QTest
 
     from Imervue.puppet.canvas import PuppetCanvas

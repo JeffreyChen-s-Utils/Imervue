@@ -474,7 +474,7 @@ JSON ベースで、人間が diff 可能、プロプライエタリなバイナ
 
 ### レンダラ
 
-`QOpenGLWidget` に vertex-array textured-triangle 描画(draw_order に従う)、drawable ごとのブレンドモード(normal / additive / multiply)、pose-group の排他性、画像空間正射投影、GL_REPEAT タイリングの透明チェッカー背景、ホイールズーム + 中ドラッグパンを実装。大規模 rig に最適化済み — March 7th(307 drawables / 2965 vertex morphs)が CPU で 60 FPS。
+`QOpenGLWidget` に vertex-array textured-triangle 描画(draw_order に従う)、drawable ごとのブレンドモード(normal / additive / multiply)、pose-group の排他性、画像空間正射投影、GL_REPEAT タイリングの透明チェッカー背景、ホイールズーム + 中ドラッグパンを実装。大規模 rig に最適化済み — 307 drawables と 2965 vertex morphs を持つ変換済み Cubism rig が CPU で 60 FPS。
 
 ### 編集
 
@@ -530,7 +530,7 @@ puppet キャンバスを仮想 webcam として公開し、OBS の標準「Vide
 3. Puppet タブで rig を開き、ツールバーまたは **Output > Virtual camera** をオン。ステータスバーに実際のデバイス名が表示されます。
 4. OBS: **Sources > + > Video Capture Device** で、ステップ 3 のデバイス名(通常は *OBS Virtual Camera*)を選択。
 
-Imervue は出力フレームの長辺を 1080 px に強制圧縮するので、Cubism ネイティブキャンバス(March 7th は 3503×7777)が DirectShow 仮想カメラドライバーに拒否されることはありません。アスペクト比は保持され、OBS 側でさらに縮小可能です。
+Imervue は出力フレームの長辺を 1080 px に強制圧縮するので、Cubism ネイティブキャンバス(高さ 3000–8000 px になることも多い)が DirectShow 仮想カメラドライバーに拒否されることはありません。アスペクト比は保持され、OBS 側でさらに縮小可能です。
 
 各フレームはオフスクリーンフレームバッファで再描画されます — キャラクター本体のみをレンダリングし、チェッカー背景やエディタ UI シェルは含みません。そのため OBS には「キャラクター + 単色マゼンタ背景」が映ります。
 
@@ -577,7 +577,7 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 
 ### サンプル
 
-サンプル rig は [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) にあります — 307 drawable の Cubism Live2D キャラクターをリポジトリ内で変換したもの。**Open Puppet…** から開くと中央に rig がロードされ、18 個のモーション(Idle グループ + Gesture グループ)のいずれかをクリックすれば再生されます。ジェスチャーには、ピース、顔隠し、写真、頬染め、黒い顔、泣き、汗、星、流れ星 — rig が定義するすべての命名済みジェスチャーが含まれます。
+同梱 rig は [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) です — Imervue オリジナルのマスコット **Imeru**:1024 × 1336 のキャンバス上に 40 個の drawable、Cubism 標準パラメータすべてに加えて 2 関節の腕、Live2D 風の視差による頭の振り向き、白目にクリップされた虹彩でのまばたき、髪の物理演算、8 個のモーション(Idle ループ 2 個、TapHead、TapBody、wave を含む Gesture 4 個)、7 個の表情を備えています。**File > Examples > Imeru** または **Open Puppet…** から開き、頭や体をクリックすると反応します。描画もリギングもすべてコードで行われているため、ファイルにサードパーティーの権利は含まれません。`py -3 examples/puppet/imeru/build.py` で再生成できます。
 
 ---
 
@@ -622,7 +622,7 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 ### 始め方
 
 1. **Desktop Pet** タブに切り替えます。
-2. **Load bundled March 7th** をクリックして同梱キャラクターを使うか、**Open Puppet…** で自分の `.puppet` ファイルを選択します。
+2. **Load bundled Imeru** をクリックして同梱キャラクターを使うか、**Open Puppet…** で自分の `.puppet` ファイルを選択します。
 3. **Show pet on desktop** にチェックを入れます。
 4. キャラクターを好きな場所にドラッグし、使うドライバーを選び、不透明度 / サイズを調整します。
 5. いつでも右クリックでクイックアクションメニュー、またはシステムトレイアイコンからタブを開かずにペットを非表示にできます。
@@ -664,7 +664,7 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 
 セリフはバケットごとにラウンドロビンで循環するので、同じセリフが 2 回連続で流れることはありません。**Reset to default** はカスタムスクリプトを破棄し、組み込みの挨拶セットを復元します。
 
-動作するサンプルは [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json) にあります。
+動作するサンプルは [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json) にあります。head と body のセリフは、Imeru の `Head` と `Body` ヒットエリアへのクリックに応答します。
 
 ---
 

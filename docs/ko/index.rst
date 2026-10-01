@@ -798,18 +798,18 @@ Puppet 작업 공간 (Puppet 탭)
 예제
 ^^^^
 
-저장소 동봉: ``examples/puppet/march_7th.puppet`` — 트리 내 변환된 307-drawable Cubism Live2D 캐릭터. 텍스처와 매개변수별 정점 morph 가 모두 ``.puppet`` zip 에 굽혀져 있어, 기본 ``requirements.txt`` 만으로 열 수 있습니다 (Cubism SDK 재배포 없음).
+저장소 동봉: ``examples/puppet/imeru.puppet`` — Imervue 의 오리지널 마스코트 **Imeru**. 전부 ``examples/puppet/imeru/build.py`` 가 그리고 리깅하므로 (``py -3`` 으로 실행하면 파일을 다시 빌드), 데모에는 제3자 권리가 없습니다: 1024 × 1336 캔버스 위의 drawable 40 개, Live2D 스타일 시차 (parallax) 정점 morph 로 만든 고개 돌리기, 흰자 안으로 클리핑된 눈동자, 회전 디포머로 만든 2관절 팔, 머리카락을 흔드는 물리 체인 3 개.
 
-203 개의 Cubism 표준 매개변수가 있어 (``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …), 표준 입력 드라이버 (웹캠, 깜빡임, 립싱크, 커서 추적) 가 rig 별 설정 없이 동작합니다. 모션은 18 개가 들어 있습니다. ``Idle`` 그룹에 반복 재생되는 idle 모션 8 개, ``Gesture`` 그룹에 반복 재생되는 제스처 9 개, ``TapHead`` 그룹에 한 번만 재생되는 ``tap_head`` 가 있습니다.
+모든 Cubism 표준 매개변수 (``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …) 에 더해 팔용 ``ParamArmLA/LB/RA/RB`` 가 있어, 모든 표준 입력 드라이버 (웹캠, 깜빡임, 립싱크, 커서 추적) 가 rig 별 설정 없이 동작합니다. 파일에는 모션 8 개가 들어 있습니다. ``Idle`` 그룹에 반복 재생되는 idle 모션 2 개, ``TapHead`` 에 ``tap_head``, ``TapBody`` 에 ``shy`` (머리나 몸을 클릭하면 재생), ``Gesture`` 에 ``greet``, ``wave``, ``surprised``, ``sleepy`` 가 있으며, 표정 7 개 (smile, happy, surprised, sad, angry, blush, sleepy) 가 함께 들어 있습니다.
 
-Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7th 또는 자신의 ``.puppet`` 을 열 수 있습니다. 하단 **Motions** 도크의 모션을 클릭하면 재생됩니다.
+Puppet 탭을 열고 **Open Puppet…** 을 클릭해 ``imeru.puppet`` 을 선택하면 캐릭터가 중앙에 나타납니다. 매개변수 슬라이더를 드래그해 관절을 움직이거나, Motions 도크의 모션을 클릭하세요 — 싱글 클릭으로 모션이 바인딩되고 즉시 재생이 시작됩니다.
 
 **동봉 예제 실행 — 단계별 가이드:**
 
 1. **Imervue 실행**. 소스에서: ``python -m Imervue``. 패키지 빌드: ``Imervue`` 실행 파일 / app bundle 을 직접 실행. ``examples/`` 디렉터리는 Nuitka 와 PyInstaller 빌드에 번들되어 있으며, pip / wheel 설치에는 포함되지 않습니다 (소스 체크아웃에서는 rig 가 ``examples/puppet/`` 에 있습니다).
 2. 창 상단의 **Puppet** 탭을 클릭.
-3. **File > Examples > March 7th** (또는 도구 모음의 **Examples ▾** 드롭다운). 307-drawable rig 가 중앙에 로드되고, 매개변수 도크는 203 개의 Cubism 표준 매개변수 슬라이더로 채워집니다.
-4. 하단 **Motions** 도크에서 모션 항목 (``zhaiyan``、``zhaoxiang``、``idle_breath``、``tap_head`` …) 을 싱글 클릭. 즉시 재생 시작; 다시 클릭하면 처음부터 다시 재생, 도크의 **Stop** 버튼으로 정지, 다른 모션 선택 시 크로스페이드.
+3. **File > Examples > Imeru** (또는 도구 모음의 **Examples ▾** 드롭다운). rig 가 중앙에 로드되고, 매개변수 도크는 그 rig 의 슬라이더로 채워집니다.
+4. 하단 **Motions** 도크에서 모션 항목 (``idle_look``、``wave``、``tap_head`` …) 을 싱글 클릭. 즉시 재생 시작; 다시 클릭하면 처음부터 다시 재생, 도크의 **Stop** 버튼으로 정지, 다른 모션 선택 시 크로스페이드.
 5. 도구 모음의 실시간 입력 토글로 자신의 입력으로 rig 를 구동 — **Drag-track head** (커서가 canvas 위에서 움직이면 머리와 눈이 커서 쪽으로 돌아감), **Auto-blink** (자동 깜빡임), **Auto idle** + **Idle motions** (호흡 + 무작위 idle 모션), **Mic lip-sync** (마이크 RMS 로 입 벌림), **Webcam tracking** (MediaPipe FaceLandmarker 로 머리 / 눈 / 입 추적).
 6. 도구 모음의 **Reset to rest** 는 모든 모션 중지, 모든 실시간 드라이버 끄기, expressions / pose 오버라이드 제거, 모든 매개변수를 기본값으로 되돌리기 — 표준 "처음부터 다시" 버튼.
 7. 나중에 다른 rig 열기: **File > Open Puppet…** 디스크에서 임의의 ``.puppet`` zip 선택; **File > Examples ▾** 은 항상 동봉 목록에 바인딩됩니다.
@@ -927,7 +927,7 @@ Puppet 탭 도구 모음 → **Examples ▾** 드롭다운에서 직접 March 7t
 OBS 라이브 스트리밍
 ^^^^^^^^^^^^^^^^^^^
 
-두 개의 출력 경로. 둘 다 캐릭터만 off-screen framebuffer 에 렌더링하여 (체커보드 배경도 에디터 chrome 도 포함되지 않음) 스트리밍 표면에 전달합니다. 출력의 가장 긴 변은 1080 px 까지 캡 (Cubism 네이티브 3503×7777 이 DirectShow 가상 카메라 드라이버에 거부되는 것을 방지).
+두 개의 출력 경로. 둘 다 캐릭터만 off-screen framebuffer 에 렌더링하여 (체커보드 배경도 에디터 chrome 도 포함되지 않음) 스트리밍 표면에 전달합니다. 출력의 가장 긴 변은 1080 px 까지 캡 (세로 3000–8000 px 인 경우가 많은 Cubism 네이티브 캔버스가 DirectShow 가상 카메라 드라이버에 거부되는 것을 방지).
 
 **A. 가상 카메라** — OBS 의 "비디오 캡처 장치" 소스 목록에 웹캠으로 표시. ``pip install pyvirtualcam`` + 플랫폼별 드라이버: OBS Studio 26+ (Windows / macOS) 에 *OBS Virtual Camera* 드라이버 동봉 (OBS 첫 실행 시 *Start Virtual Camera* 클릭하여 등록); Linux 는 ``v4l2loopback-dkms`` + ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``. **Output > Virtual camera** 메뉴 토글로 스트림 시작.
 
@@ -991,7 +991,7 @@ JSON 파일에 직접 작성한 대사를 말할 수 있습니다.
 ^^^^^^^^^
 
 1. **Desktop Pet** 탭으로 전환.
-2. **Load bundled March 7th** 을 클릭해 동봉된 캐릭터를 사용하거나,
+2. **Load bundled Imeru** 를 클릭해 동봉된 캐릭터를 사용하거나,
    **Open Puppet…** 으로 자신의 ``.puppet`` 파일을 선택.
 3. 오버레이가 데스크톱에 나타나고 **Show pet on desktop** 체크박스가
    자동으로 켜집니다. (Imervue 를 닫지 않고 펫만 숨기고 싶다면 체크박스를
@@ -1010,7 +1010,7 @@ rig 불러오기
 탭은 세 가지 불러오기 경로를 제공합니다:
 
 * **Open Puppet…** — 디스크의 임의 ``.puppet`` 파일을 선택.
-* **Load bundled March 7th** — ``examples/puppet/march_7th.puppet`` 에
+* **Load bundled Imeru** — ``examples/puppet/imeru.puppet`` 에
   포함된 rig 을 엽니다. 리졸버는 먼저 ``examples_dir()`` 을 검색하고
   (패키지된 Nuitka / PyInstaller 빌드에서는 프로그램 옆, 소스
   체크아웃에서는 리포지토리 루트), 그다음 현재 작업 폴더 기준 상대
@@ -1234,7 +1234,7 @@ opencv-python + mediapipe" 힌트가 표시됩니다.
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
@@ -1277,12 +1277,12 @@ opencv-python + mediapipe" 힌트가 표시됩니다.
 로드되지 않습니다.
 
 동작하는 샘플은
-``examples/desktop_pet/march_7th.petscript.json`` 에 있습니다 — 인사말
-6개, 히트 영역 버킷 2개 (head / body), 모션 대사 3개 (wave / curtsy /
-cheer), 30분 스트레칭 알림 포함. head / body 대사는 히트 영역 이름이
-``HitAreaHead`` / ``HitAreaBody`` (Cubism 명명 규칙) 인 rig 의 클릭에
-응답합니다. 동봉된 March 7th rig 은 히트 영역을 하나도 정의하지 않으므로,
-클릭하면 대신 인사말이 선택됩니다.
+``examples/desktop_pet/imeru.petscript.json`` 에 있습니다 — 인사말
+6개, 시간대마다 대사 하나씩, 히트 영역 버킷 2개 (``Head`` / ``Body``),
+모션 5개의 대사 (wave / greet / surprised / sleepy / shy), 30분
+스트레칭 알림 포함. 버킷 이름이 Imeru 의 히트 영역 이름이므로 머리와
+몸이 클릭에 응답합니다. 히트 영역에 Cubism 이름 (``HitAreaHead`` /
+``HitAreaBody``) 을 쓰는 rig 은 그 이름으로 된 버킷이 필요합니다.
 
 영속성
 ^^^^^^
@@ -1426,7 +1426,7 @@ rig 은 자신이 가진 모션 그룹에만 반응하며, 없는 그룹은 아�
 (일부 Linux 사용자 정의 창 관리자가 그렇게 함). Windows / macOS
 에서는 "그냥 동작" 해야 합니다.
 
-**"Load bundled March 7th" 가 파일을 찾을 수 없다고 보고함.**
+**"Load bundled Imeru" 가 파일을 찾을 수 없다고 보고함.**
 리졸버는 먼저 ``examples_dir()`` (패키지된 빌드가 사용하는 frozen-safe
 위치) 을 참조한 후 CWD 상대 경로로 폴백합니다. 둘 다에 rig 이 없으면
 상태 라벨이 기대 경로를 표시합니다. 설치본과 함께 동봉된

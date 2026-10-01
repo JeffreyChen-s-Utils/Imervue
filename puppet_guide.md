@@ -34,9 +34,9 @@ feed or a file on disk.
 
 1. Launch Imervue (`python -m Imervue` if running from source).
 2. Click the **Puppet** tab at the top of the window.
-3. **File > Examples > March 7th** (or the toolbar's **Examples ▾**
-   dropdown). The bundled 307-drawable Cubism rig opens centred.
-4. In the bottom **Motions** dock, click any of the 18 motions.
+3. **File > Examples > Imeru** (or the toolbar's **Examples ▾**
+   dropdown). The bundled rig, Imervue's mascot, opens centred.
+4. In the bottom **Motions** dock, click any of the 8 motions.
    The rig animates immediately.
 5. Press **Reset to rest** on the toolbar to snap the rig back to
    its neutral pose.
@@ -489,8 +489,8 @@ from the **Expressions** dock; active expressions apply in the
 order they were switched on.
 
 Used for momentary moods: *smile*, *surprised*, *angry*. The
-March 7th rig ships with 8 expressions (`捂脸` / `比耶` /
-`照相` / `脸红` / `黑脸` / `哭` / `流汗` / `星星`).
+bundled Imeru rig ships with 7 expressions (`smile` / `happy` /
+`surprised` / `sad` / `angry` / `blush` / `sleepy`).
 
 ### Hit areas
 
@@ -503,8 +503,9 @@ carries that group, the motion of that name plays. Its `expression`
 toggles that expression (click body → toggle `surprised`). Where
 boxes overlap, the area with the frontmost drawable wins.
 
-The bundled March 7th rig defines no hit areas, so clicking it
-does nothing. A rig converted with **File > Import Cubism…** brings
+The bundled Imeru rig defines two: clicking her head (`Head`)
+plays a `TapHead` motion and clicking her body (`Body`) a `TapBody`
+motion. A rig converted with **File > Import Cubism…** brings
 the model's `HitAreas` along as regions without actions; give
 them a `motion` or `expression` in the `hit_areas` list of
 `puppet.json` to make them respond. The Puppet tab has no
@@ -593,7 +594,7 @@ expression, pose group and physics chain back in one step.
 
 ### Cubism converter shows the camera as a "phantom hand"
 
-The peace-sign / camera / face-cover gestures on March 7th-style
+The peace-sign / camera / face-cover gestures on converted Cubism
 rigs are driven by Cubism dynamic-visibility flags. The converter
 records those transitions as `opacity_keys` curves, so each prop
 only appears while its parameter is up. If a converted `.puppet`
@@ -608,6 +609,6 @@ The `.puppet` file format is a zip container with JSON manifests
 and PNG textures. Full spec at
 [`Imervue/puppet/FORMAT.md`](Imervue/puppet/FORMAT.md).
 
-Bundled demo rigs: [`examples/puppet/march_7th.puppet`](examples/puppet/march_7th.puppet)
-and [`examples/puppet/vivian.puppet`](examples/puppet/vivian.puppet)
+Bundled demo rig: [`examples/puppet/imeru.puppet`](examples/puppet/imeru.puppet), rebuilt
+by `examples/puppet/imeru/build.py`
 (see [`examples/puppet/README.md`](examples/puppet/README.md)).
