@@ -437,7 +437,7 @@ Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect**
 ### Animation & manga
 
 - **Animation** — frame timeline dock: **+ Frame** snapshots the flattened picture, playback at a chosen FPS, onion skin shows the previous frame; **Export…** saves the frames as an animated GIF, WebP (lossless) or PNG, each frame lasting one tick of the chosen FPS
-- **Manga tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Text Along Selection (lays text you type along the outline of the selection, on a new layer) · Speech Bubble tool
+- **Manga tools** — Panel Cutter (then the brush's **Snap to panel** keeps each stroke inside the panel it starts in) · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Text Along Selection (lays text you type along the outline of the selection, on a new layer) · Speech Bubble tool
 
 ### Filters & view aids
 

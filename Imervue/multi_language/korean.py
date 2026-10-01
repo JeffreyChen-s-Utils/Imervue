@@ -2432,6 +2432,8 @@ korean_word_dict = {
     "paint_brush_follow_tilt": "펜 기울기 따르기",
     "paint_brush_follow_tilt_tooltip": "태블릿 펜의 기울기 방향으로 브러시 커널을 늘립니다",
     "paint_brush_hardness_tooltip": "가장자리 감쇠 — 0% 부드러움, 100% 단단한 원",
+    "paint_snap_to_panel": "칸에 맞추기",
+    "paint_snap_to_panel_tooltip": "각 획을 시작한 만화 칸 안에만 그립니다 (칸은 만화 > 컷 분할…에서 만듦)",
     "paint_brush_kind_changed": "브러시: {kind}",
     "paint_brush_kind_tooltip": "브러시 종류 — 펜 / 연필 / 마커 / 에어브러시 / 수채화",
     "paint_brush_opacity_changed": "불투명도: {pct}%",

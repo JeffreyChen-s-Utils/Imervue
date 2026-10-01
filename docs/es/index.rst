@@ -784,7 +784,7 @@ Menú Manga
    * - Acción
      - Descripción
    * - Cortador de paneles
-     - ``Ctrl + Shift + P`` — divide el lienzo en una cuadrícula de paneles de cómic con filas / columnas / canalón / borde / margen configurables
+     - ``Ctrl + Shift + P`` — divide el lienzo en una cuadrícula de paneles de cómic con filas / columnas / canalón / borde / margen configurables; con **Snap to panel** marcado en la barra Options del pincel, cada trazo se queda después dentro del panel en el que empieza (hasta que cambia el tamaño del lienzo)
    * - Alternar capa de tono
      - Convierte la capa activa en una capa de trama (puntos de semitono)
    * - Estampar números de página

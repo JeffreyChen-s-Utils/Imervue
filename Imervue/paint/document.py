@@ -73,6 +73,9 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
         # Stored as an index, not a Layer reference, so it survives
         # reorderings via the helpers below.
         self._reference_layer_index: int | None = None
+        # The manga panel layout Panel Cutter drew last (``manga_panels.PanelLayout``),
+        # which the brush's Snap to panel clips strokes to. Not saved with the file.
+        self.panel_layout = None
 
     def __deepcopy__(self, memo: dict) -> PaintDocument:
         """Deep-copy the document CONTENT, not its runtime wiring.
@@ -97,6 +100,7 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
             name: mask.copy() for name, mask in self._named_selections.items()
         }
         clone._reference_layer_index = self._reference_layer_index
+        clone.panel_layout = self.panel_layout
         return clone
 
     # ---- listeners -------------------------------------------------------

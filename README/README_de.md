@@ -426,7 +426,7 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 ### Animation & Manga
 
 - **Animation** — Frame-Timeline-Dock: **+ Frame** nimmt einen Snapshot des auf eine Ebene reduzierten Bildes auf, Wiedergabe mit wählbarer FPS, Onion Skin zeigt den vorherigen Frame; **Export…** speichert die Frames als animiertes GIF, WebP (verlustfrei) oder PNG, wobei jeder Frame einen Takt der gewählten FPS dauert
-- **Manga-Tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Text Along Selection (legt einen eingetippten Text entlang des Umrisses der Auswahl auf einen neuen Layer) · Speech-Bubble-Tool
+- **Manga-Tools** — Panel Cutter (danach hält **Snap to panel** des Brushs jeden Strich innerhalb des Panels, in dem er beginnt) · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Text Along Selection (legt einen eingetippten Text entlang des Umrisses der Auswahl auf einen neuen Layer) · Speech-Bubble-Tool
 
 ### Filter & Ansichts-Hilfen
 

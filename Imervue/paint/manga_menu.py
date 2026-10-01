@@ -591,9 +591,10 @@ class FlashConfigDialog(_CentreControlsMixin, QDialog):
 def commit_panel_layout(
     workspace: PaintWorkspace, params: dict[str, int],
 ) -> bool:
-    """Add a Panels layer that draws the requested grid.
+    """Add a Panels layer that draws the requested grid and keep the layout on the document.
 
-    Returns ``True`` if a layer was added (parameters were valid for
+    The brush's **Snap to panel** clips strokes to that layout. Returns
+    ``True`` if a layer was added (parameters were valid for
     the canvas size), ``False`` otherwise. Pure-numpy logic so the
     test suite can exercise both branches without a Qt dialog.
     """
@@ -620,6 +621,7 @@ def commit_panel_layout(
     draw_panel_borders(layer_canvas, layout)
     layer = document.add_layer(name="Panels")
     np.copyto(layer.image, layer_canvas)
+    document.panel_layout = layout          # what the brush's Snap to panel clips to
     document.invalidate_composite()
     workspace.canvas().update()
     return True

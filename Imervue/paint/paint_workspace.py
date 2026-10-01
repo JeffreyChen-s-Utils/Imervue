@@ -227,12 +227,21 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
                 reference_provider=(
                     lambda: self._canvas.document().reference_layer_image()),
                 composite_provider=lambda: self._canvas.document().composite(),
+                panel_layout_provider=self._panel_layout,
                 overlay_setter=lambda overlay: self._canvas.set_tool_overlay(overlay),
                 commit_undo=self._on_dispatcher_commit,
             ),
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
         self._attach_workspace_aware_tools()
+
+    def _panel_layout(self):
+        """The current document's Panel Cutter layout, if it still fits its canvas."""
+        from Imervue.paint.manga_panels import layout_for_canvas
+        document = self._canvas.document()
+        if document.shape is None:
+            return None
+        return layout_for_canvas(getattr(document, "panel_layout", None), document.shape)
 
     def _attach_workspace_aware_tools(self) -> None:
         """Hand each workspace-aware tool a back-reference to ``self``.

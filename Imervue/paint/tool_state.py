@@ -478,6 +478,15 @@ class ToolState:
         self._emit(EVENT_PEN)
         return True
 
+    def set_snap_to_panel(self, enabled: bool) -> bool:
+        """Keep brush strokes inside the manga panel they start in, or not. True if it changed."""
+        if bool(enabled) == self.snap_to_panel:
+            return False
+        self.snap_to_panel = bool(enabled)
+        self._persist()
+        self._emit(EVENT_BRUSH)
+        return True
+
     def set_lasso_magnetic(self, enabled: bool) -> bool:
         """Turn edge snapping of lasso outlines on or off. True if it changed."""
         if bool(enabled) == self.lasso_magnetic:

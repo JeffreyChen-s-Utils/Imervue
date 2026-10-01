@@ -775,7 +775,7 @@ Manga-Menü
    * - Aktion
      - Beschreibung
    * - Panel Cutter
-     - ``Ctrl + Shift + P`` — Leinwand in ein Raster aus Comic-Panels aufteilen mit konfigurierbaren Zeilen / Spalten / Rinnen / Rahmen / Rand
+     - ``Ctrl + Shift + P`` — Leinwand in ein Raster aus Comic-Panels aufteilen mit konfigurierbaren Zeilen / Spalten / Rinnen / Rahmen / Rand; ist **Am Panel einrasten** in der Optionsleiste des Brushs aktiviert, bleibt danach jeder Strich in dem Panel, in dem er beginnt (bis sich die Leinwandgröße ändert)
    * - Tone-Layer umschalten
      - Aktiven Layer in einen Screentone- (Halbton-Punkt-) Layer konvertieren
    * - Seitenzahlen stempeln

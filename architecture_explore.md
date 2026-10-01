@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `d4435dfa` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `71962df7` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 916 | 152,518 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
+| `tests/` | 917 | 152,633 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,626 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,391 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 15,115 |
+| `Imervue/multi_language/` | 8 | 15,125 |
 | `Imervue/desktop_pet/` | 29 | 7,084 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,750 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,765** | **336,339** |
+| **總計** | **1,766** | **336,510** |
 
-其中 `Imervue/` 套件本身 769 檔 / 167,800 行。
+其中 `Imervue/` 套件本身 769 檔 / 167,856 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -670,13 +670,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-169 個檔、42,580 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+169 個檔、42,626 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `document.py` | 895 | `PaintDocument`：圖層堆疊 + 選取範圍 + 作用中圖層（幾何、合併、群組操作來自下面三個 mixin；`Layer` / `LayerGroup` 等由 `layer_model` re-export，見 `__all__`） |
+| `document.py` | 899 | `PaintDocument`：圖層堆疊 + 選取範圍 + 作用中圖層（幾何、合併、群組操作來自下面三個 mixin；`Layer` / `LayerGroup` 等由 `layer_model` re-export，見 `__all__`） |
 | `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
 | `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
 | `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
@@ -734,7 +734,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 漫畫 / 網點
 
-`manga_menu.py`(625) · `manga_panels.py`(262) 分鏡版面 ·
+`manga_menu.py`(627) · `manga_panels.py`(273) 分鏡版面（Panel Cutter 把版面存在 `document.panel_layout`，筆刷的 Snap to panel 經 `ToolDispatcher` 的 `panel_layout_provider` 依它裁切；`layout_for_canvas` 在畫布尺寸變了後不再套用） ·
 `halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) 對話框氣泡 ·
 `comic_stamps.py`(266) + `stamp_dock.py`(88) · `flash_effect.py`(132) 爆炸效果 ·
 `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
@@ -763,10 +763,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 764 | 頂層 `PaintWorkspace` widget；`confirm_close()` 由主視窗關閉時呼叫（它是分頁，收不到自己的 closeEvent） |
+| `paint_workspace.py` | 773 | 頂層 `PaintWorkspace` widget；`confirm_close()` 由主視窗關閉時呼叫（它是分頁，收不到自己的 closeEvent） |
 | `tool_dispatcher.py` | 449 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
-| `tool_state.py` | 974 | **無 Qt** 的工具狀態模型 |
-| `tool_bar.py` | 480 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
+| `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
+| `tool_bar.py` | 491 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
 | `workspace_tabs.py` | 337 | 多文件分頁 |
 | `workspace_docks.py` | 417 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 469 | 文件內容命令 |
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-916 個檔、152,518 行。`pyproject.toml` 定義三個互斥層級 marker：
+917 個檔、152,633 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

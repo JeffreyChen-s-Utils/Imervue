@@ -2421,6 +2421,8 @@ traditional_chinese_word_dict = {
     "paint_brush_follow_tilt": "跟隨筆的傾斜",
     "paint_brush_follow_tilt_tooltip": "沿繪圖板筆的傾斜方向拉伸筆刷形狀",
     "paint_brush_hardness_tooltip": "邊緣衰減 — 0% 柔和，100% 硬邊圓形",
+    "paint_snap_to_panel": "限制在分格內",
+    "paint_snap_to_panel_tooltip": "每一筆都只畫在起筆所在的漫畫分格內（分格來自 漫畫 > 分格切割…）",
     "paint_brush_kind_changed": "筆刷：{kind}",
     "paint_brush_kind_tooltip": "筆刷類型 — 原子筆／鉛筆／麥克筆／噴槍／水彩",
     "paint_brush_opacity_changed": "不透明度：{pct}%",

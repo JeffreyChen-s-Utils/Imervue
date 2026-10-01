@@ -2456,6 +2456,8 @@ english_word_dict = {
     "paint_brush_follow_tilt": "Follow pen tilt",
     "paint_brush_follow_tilt_tooltip": "Stretch the brush kernel along the tablet pen tilt direction",
     "paint_brush_hardness_tooltip": "Edge falloff — 0% soft, 100% hard disc",
+    "paint_snap_to_panel": "Snap to panel",
+    "paint_snap_to_panel_tooltip": "Keep each stroke inside the comic panel it starts in (panels from Manga > Panel Cutter)",
     "paint_brush_kind_changed": "Brush: {kind}",
     "paint_brush_kind_tooltip": "Brush family — pen / pencil / marker / airbrush / watercolor",
     "paint_brush_opacity_changed": "Opacity: {pct}%",

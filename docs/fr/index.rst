@@ -783,7 +783,7 @@ Menu Manga
    * - Action
      - Description
    * - Découpeur de cases
-     - ``Ctrl + Shift + P`` — divise le canevas en une grille de cases BD avec lignes / colonnes / gouttière / bordure / marge configurables
+     - ``Ctrl + Shift + P`` — divise le canevas en une grille de cases BD avec lignes / colonnes / gouttière / bordure / marge configurables ; avec **Aimanter à la case** coché dans la barre d'options du pinceau, chaque trait reste ensuite à l'intérieur de la case où il commence (jusqu'à ce que la taille du canevas change)
    * - Basculer en calque de trame
      - Convertir le calque actif en calque de trame (points de demi-teinte)
    * - Tamponner les numéros de page

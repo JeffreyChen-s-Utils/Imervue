@@ -780,7 +780,7 @@ Menu Mangá
    * - Ação
      - Descrição
    * - Cortador de Painéis
-     - ``Ctrl + Shift + P`` — divide a tela em uma grade de painéis de quadrinhos com linhas / colunas / sarjeta / borda / margem configuráveis
+     - ``Ctrl + Shift + P`` — divide a tela em uma grade de painéis de quadrinhos com linhas / colunas / sarjeta / borda / margem configuráveis; com **Snap to panel** marcado na barra de Opções do pincel, cada traço passa a ficar dentro do painel em que começa (até o tamanho da tela mudar)
    * - Alternar Camada de Tom
      - Converter a camada ativa em uma camada de tom (pontos de meio-tom)
    * - Carimbar Números de Página

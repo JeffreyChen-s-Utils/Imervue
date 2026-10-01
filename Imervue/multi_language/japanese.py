@@ -2434,6 +2434,8 @@ japanese_word_dict = {
     "paint_brush_follow_tilt": "ペンの傾きに追従",
     "paint_brush_follow_tilt_tooltip": "タブレットペンの傾き方向にブラシ形状を引き伸ばす",
     "paint_brush_hardness_tooltip": "エッジの減衰 — 0% で柔らかく、100% で硬い円",
+    "paint_snap_to_panel": "コマにスナップ",
+    "paint_snap_to_panel_tooltip": "各ストロークを描き始めたコマの中に収めます（コマは マンガ > コマ割り… で作成）",
     "paint_brush_kind_changed": "ブラシ: {kind}",
     "paint_brush_kind_tooltip": "ブラシの種類 — ペン / 鉛筆 / マーカー / エアブラシ / 水彩",
     "paint_brush_opacity_changed": "不透明度: {pct}%",

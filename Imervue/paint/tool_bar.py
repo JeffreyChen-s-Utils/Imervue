@@ -239,6 +239,16 @@ class PaintOptionsBar(QToolBar):
         ))
         row.addWidget(self._brush_hardness)
 
+        self._snap_to_panel = QCheckBox(lang.get("paint_snap_to_panel", "Snap to panel"))
+        self._snap_to_panel.setToolTip(lang.get(
+            "paint_snap_to_panel_tooltip",
+            "Keep each stroke inside the comic panel it starts in "
+            "(panels from Manga > Panel Cutter)",
+        ))
+        self._snap_to_panel.toggled.connect(
+            lambda checked: None if self._suspend else self._state.set_snap_to_panel(checked))
+        row.addWidget(self._snap_to_panel)
+
         row.addStretch(1)
         return widget
 
@@ -453,6 +463,7 @@ class PaintOptionsBar(QToolBar):
             self._brush_size.setValue(self._state.brush.size)
             self._brush_opacity.setValue(int(round(self._state.brush.opacity * 100)))
             self._brush_hardness.setValue(int(round(self._state.brush.hardness * 100)))
+            self._snap_to_panel.setChecked(self._state.snap_to_panel)
         finally:
             self._suspend = False
 

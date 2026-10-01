@@ -771,7 +771,7 @@ Manga Menu
    * - Action
      - Description
    * - Panel Cutter
-     - ``Ctrl + Shift + P`` — split the canvas into a grid of comic panels with configurable rows / columns / gutter / border / margin
+     - ``Ctrl + Shift + P`` — split the canvas into a grid of comic panels with configurable rows / columns / gutter / border / margin; with **Snap to panel** ticked on the brush's Options bar, each stroke then stays inside the panel it starts in (until the canvas size changes)
    * - Toggle Tone Layer
      - Convert active layer to a screentone (halftone dot) layer
    * - Stamp Page Numbers

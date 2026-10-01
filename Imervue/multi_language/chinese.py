@@ -2421,6 +2421,8 @@ chinese_word_dict = {
     "paint_brush_follow_tilt": "跟随笔倾斜",
     "paint_brush_follow_tilt_tooltip": "沿数位笔的倾斜方向拉伸笔刷形状",
     "paint_brush_hardness_tooltip": "边缘衰减 — 0% 柔和，100% 硬边圆盘",
+    "paint_snap_to_panel": "限制在分格内",
+    "paint_snap_to_panel_tooltip": "每一笔都只画在起笔所在的漫画分格内（分格来自 漫画 > 分格切割…）",
     "paint_brush_kind_changed": "笔刷：{kind}",
     "paint_brush_kind_tooltip": "笔刷类型 — 钢笔 / 铅笔 / 马克笔 / 喷枪 / 水彩",
     "paint_brush_opacity_changed": "不透明度：{pct}%",
