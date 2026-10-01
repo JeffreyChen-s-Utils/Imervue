@@ -295,8 +295,8 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
     def _init_gl_caches(self) -> None:
         """GL resources created lazily on first paint: checker, pet shadow, VBOs."""
         # The transparency-checker backdrop used to render as a grid of
-        # immediate-mode quads — one per 16-pixel tile. On the March 7th
-        # canvas (3503×7777) that's ~107k glBegin/glEnd cycles per frame
+        # immediate-mode quads — one per 16-pixel tile. On a large imported
+        # Cubism canvas (3503×7777) that's ~107k glBegin/glEnd cycles per frame
         # and the dominant playback bottleneck. Cache a 2×2 RGBA texture
         # once and tile it with GL_REPEAT instead.
         self._checker_texture: int | None = None

@@ -483,7 +483,7 @@ Color 도크를 열면 색조 링과 채도 / 명도 삼각형이 표시됩니�
 - `expressions/*.json` — 파라미터 오버레이
 - `physics.json` — Verlet 리그 구성
 
-JSON 기반, 사람이 diff 가능, 독점 바이너리 없음. 이 형식은 개방되어 있고 검증할 수 있습니다: 저장된 파일은 압축하지 않은 `mimetype` 항목(`application/vnd.imervue.puppet+zip`)으로 시작하고, 모든 JSON 파일은 `$schema`에 자신의 스키마를 명시합니다. 네 개의 JSON Schema는 [`docs/schemas/`](../docs/schemas/)에 공개되어 있고, `py -m Imervue.cli puppet-validate character.puppet`(MCP `puppet_validate`)은 파일을 검사하며 `puppet-schema`(MCP `puppet_schema`)는 스키마를 출력합니다. [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py)는 Python 표준 라이브러리만으로 파일을 읽습니다. 사양([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md))과 스키마는 MIT 라이선스이므로 어떤 프로그램이든 `.puppet` 파일을 읽거나 쓸 수 있습니다.
+JSON 기반, 사람이 diff 가능, 독점 바이너리 없음. 이 형식은 개방되어 있고 검증할 수 있습니다: 저장된 파일은 압축하지 않은 `mimetype` 항목(`application/vnd.imervue.puppet+zip`)으로 시작하고, 모든 JSON 파일은 `$schema`에 자신의 스키마를 명시합니다. 네 개의 JSON Schema는 [`docs/schemas/`](../docs/schemas/)에 공개되어 있고, `py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`(MCP `puppet_validate`)은 파일을 검사하며 `puppet-schema`(MCP `puppet_schema`)는 스키마를 출력합니다. [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py)는 Python 표준 라이브러리만으로 파일을 읽습니다. 사양([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md))과 스키마는 MIT 라이선스이므로 어떤 프로그램이든 `.puppet` 파일을 읽거나 쓸 수 있습니다.
 
 ### 렌더러
 

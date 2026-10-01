@@ -826,7 +826,7 @@ Puppet 工作区（Puppet 标签）
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # required — manifest, drawables, deformers, parameters
    ├── textures/
    │   ├── face.png             # referenced by drawables[].texture
@@ -863,7 +863,7 @@ physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
   每个 JSON 文件也都在 ``$schema`` 中注明自己的 JSON Schema。
 - 四份 JSON Schema（draft 2020-12）—— ``puppet``、``motion``、``expression`` 与
   ``physics`` —— 发布在 ``docs/schemas/``；遵循 ``$schema`` 的编辑器会在输入时即时检查文件。
-- ``py -m Imervue.cli puppet-validate character.puppet``\ （MCP
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet``\ （MCP
   ``puppet_validate``）按 schema、加载器规则与 rig 检查项校验文件；
   ``puppet-schema``\ （MCP ``puppet_schema``）则输出某一份 schema。
 - ``docs/examples/read_puppet.py`` 仅用 Python 标准库就能读取 ``.puppet``，

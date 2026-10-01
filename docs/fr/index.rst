@@ -968,7 +968,7 @@ Un fichier ``.puppet`` est une archive zip :
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # required — manifest, drawables, deformers, parameters
    ├── textures/
    │   ├── face.png             # referenced by drawables[].texture
@@ -1006,7 +1006,7 @@ Le format est ouvert et vérifiable par machine :
 - Quatre JSON Schemas (draft 2020-12) — ``puppet``, ``motion``, ``expression``
   et ``physics`` — sont publiés dans ``docs/schemas/`` ; les éditeurs qui suivent
   ``$schema`` vérifient un fichier au fil de la saisie.
-- ``py -m Imervue.cli puppet-validate character.puppet`` (MCP
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`` (MCP
   ``puppet_validate``) vérifie un fichier par rapport aux schémas, aux règles du chargeur
   et aux vérifications du rig ; ``puppet-schema`` (MCP ``puppet_schema``) affiche un schéma.
 - ``docs/examples/read_puppet.py`` lit un ``.puppet`` avec la seule bibliothèque standard

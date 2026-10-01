@@ -870,7 +870,7 @@ Puppet タブのツールバー → **Examples ▾** ドロップダウンから
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # 必須 — マニフェスト、drawables、deformers、parameters
    ├── textures/
    │   ├── face.png             # drawables[].texture から参照
@@ -907,7 +907,7 @@ Puppet タブのツールバー → **Examples ▾** ドロップダウンから
   また、すべての JSON ファイルは ``$schema`` で自身の JSON Schema を示します。
 - 4 つの JSON Schema（draft 2020-12）— ``puppet``、``motion``、``expression``、``physics`` — を
   ``docs/schemas/`` で公開しています。``$schema`` に従うエディターでは、入力中にファイルが検証されます。
-- ``py -m Imervue.cli puppet-validate character.puppet``\ （MCP ``puppet_validate``）は、スキーマ、
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet``\ （MCP ``puppet_validate``）は、スキーマ、
   ローダーの規則、rig チェックに照らしてファイルを検証します。
   ``puppet-schema``\ （MCP ``puppet_schema``）はスキーマを表示します。
 - ``docs/examples/read_puppet.py`` は Python 標準ライブラリだけで ``.puppet`` を読み込む、

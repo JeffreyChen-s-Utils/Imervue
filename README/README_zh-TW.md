@@ -482,7 +482,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - `expressions/*.json` — 參數疊加
 - `physics.json` — Verlet 物理配置
 
-JSON 為主，人類可 diff，沒有專有二進位。這個格式是開放且可檢查的：存出的檔案以一個未壓縮的 `mimetype` 項目（`application/vnd.imervue.puppet+zip`）開頭，每個 JSON 檔都在 `$schema` 中標明自己的 schema；四份 JSON Schema 公開於 [`docs/schemas/`](../docs/schemas/)；`py -m Imervue.cli puppet-validate character.puppet`（MCP `puppet_validate`）會檢查檔案，`puppet-schema`（MCP `puppet_schema`）會印出一份 schema；[`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) 只用 Python 標準函式庫就能讀取 `.puppet` 檔。規格（[`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)）與 schema 皆採 MIT 授權，任何程式都能讀寫 `.puppet` 檔案。
+JSON 為主，人類可 diff，沒有專有二進位。這個格式是開放且可檢查的：存出的檔案以一個未壓縮的 `mimetype` 項目（`application/vnd.imervue.puppet+zip`）開頭，每個 JSON 檔都在 `$schema` 中標明自己的 schema；四份 JSON Schema 公開於 [`docs/schemas/`](../docs/schemas/)；`py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`（MCP `puppet_validate`）會檢查檔案，`puppet-schema`（MCP `puppet_schema`）會印出一份 schema；[`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) 只用 Python 標準函式庫就能讀取 `.puppet` 檔。規格（[`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)）與 schema 皆採 MIT 授權，任何程式都能讀寫 `.puppet` 檔案。
 
 ### 渲染器
 

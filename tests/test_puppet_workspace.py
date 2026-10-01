@@ -185,12 +185,12 @@ def test_examples_menu_lists_bundled_puppets(qapp, tmp_path, monkeypatch):
     """``_rebuild_examples_menu`` must scan
     ``<examples_dir>/puppet/*.puppet`` and add one action per file.
     File names are pretty-printed (underscores → spaces, each word's first
-    letter raised) so ``march_7th.puppet`` shows as ``March 7th``."""
+    letter raised) so ``imeru_2nd_outfit.puppet`` shows as ``Imeru 2nd Outfit``."""
     import Imervue.puppet.workspace as ws_mod
     examples_root = tmp_path / "examples"
     (examples_root / "puppet").mkdir(parents=True)
-    _write_minimal_puppet(examples_root / "puppet" / "march_7th.puppet")
-    _write_minimal_puppet(examples_root / "puppet" / "demo_rig.puppet")
+    _write_minimal_puppet(examples_root / "puppet" / "imeru_2nd_outfit.puppet")
+    _write_minimal_puppet(examples_root / "puppet" / "imeru.puppet")
     monkeypatch.setattr(
         "Imervue.system.app_paths.app_dir",
         lambda: tmp_path,
@@ -202,9 +202,9 @@ def test_examples_menu_lists_bundled_puppets(qapp, tmp_path, monkeypatch):
         actions = ws._examples_menu.actions()   # noqa: SLF001
         labels = [a.text() for a in actions if a.isEnabled()]
         # Sorted alphabetically by stem, pretty-printed.
-        assert labels == ["Demo Rig", "March 7th"]
+        assert labels == ["Imeru", "Imeru 2nd Outfit"]
         # Tooltip carries the absolute path.
-        assert "march_7th.puppet" in actions[1].toolTip()
+        assert "imeru_2nd_outfit.puppet" in actions[1].toolTip()
     finally:
         ws.deleteLater()
 

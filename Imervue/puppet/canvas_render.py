@@ -152,7 +152,7 @@ class PuppetCanvasRenderMixin:
         """Draw the checker backdrop as one repeating-textured quad.
 
         The old immediate-mode grid hit ~107k glBegin/glEnd cycles per
-        frame on the March 7th canvas (3503×7777 / 16-pixel tile). Now
+        frame on a large imported Cubism canvas (3503×7777 / 16-pixel tile). Now
         the canvas-wide quad samples a cached 2×2 RGBA texture with
         ``GL_REPEAT``, so the entire backdrop is one draw call no
         matter how large the rig."""
@@ -438,8 +438,8 @@ class PuppetCanvasRenderMixin:
     ) -> None:
         """Submit one triangle list via the per-drawable VBO trio.
 
-        Per-vertex ``glBegin/glVertex2f`` runs in the millions for the
-        March 7th rig (307 drawables × ~200 verts × 60 fps) and was
+        Per-vertex ``glBegin/glVertex2f`` runs in the millions for a large
+        imported Cubism rig (307 drawables × ~200 verts × 60 fps) and was
         the original playback-lag bottleneck. Client-side
         ``glDrawElements`` dropped paint cost ~10-50× by pushing the
         loop into the GL driver; VBOs go one step further — UVs and

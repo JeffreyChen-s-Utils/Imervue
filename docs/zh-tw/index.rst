@@ -822,7 +822,7 @@ Puppet 工作區（Puppet 分頁）
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # required — manifest, drawables, deformers, parameters
    ├── textures/
    │   ├── face.png             # referenced by drawables[].texture
@@ -860,7 +860,7 @@ physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
 - 四份 JSON Schema（draft 2020-12）— ``puppet``、``motion``、``expression``
   與 ``physics`` — 公開於 ``docs/schemas/``；會依循 ``$schema`` 的編輯器能在
   輸入時即時檢查檔案。
-- ``py -m Imervue.cli puppet-validate character.puppet``\ （MCP
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet``\ （MCP
   ``puppet_validate``\ ）依 schema、載入器規則與 rig 檢查驗證檔案；
   ``puppet-schema``\ （MCP ``puppet_schema``\ ）會印出一份 schema。
 - ``docs/examples/read_puppet.py`` 只用 Python 標準函式庫就能讀取 ``.puppet``，

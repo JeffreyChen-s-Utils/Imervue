@@ -16,10 +16,10 @@ from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
 def example_label(stem: str) -> str:
-    """Menu label for a bundled rig file: ``march_7th`` -> ``March 7th``.
+    """Menu label for a bundled rig file: ``imeru_2nd_outfit`` -> ``Imeru 2nd Outfit``.
 
     Only each word's first letter is raised: ``str.title`` also raised the
-    letter after a digit and showed "March 7Th".
+    letter after a digit and showed "Imeru 2Nd Outfit".
     """
     return " ".join(word[:1].upper() + word[1:] for word in stem.split("_") if word)
 

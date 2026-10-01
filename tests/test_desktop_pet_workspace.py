@@ -80,7 +80,7 @@ def test_failed_load_does_not_check_show_box(qapp, tmp_path):
 def test_successful_load_auto_shows_pet(qapp, tmp_path, monkeypatch):
     """A successful ``load_puppet`` must auto-tick the show
     checkbox so the user sees the pet appear without a second
-    click. Without this, clicking "Load bundled March 7th" felt
+    click. Without this, clicking "Load bundled Imeru" felt
     broken — the rig was loaded but the overlay stayed hidden."""
     ws = PetWorkspace()
     try:

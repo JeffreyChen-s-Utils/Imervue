@@ -15,7 +15,7 @@ and a writer must do.
 ## Zip layout
 
 ```
-my_character.puppet
+imeru.puppet
 ├── mimetype                 # recommended — first entry, uncompressed: the media type
 ├── puppet.json              # required — manifest, drawables, deformers, parameters
 ├── textures/
@@ -571,7 +571,7 @@ physics present in the archive — the loader checks.
 ## Checking a file
 
 ```
-py -m Imervue.cli puppet-validate character.puppet --json
+py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet --json
 py -m Imervue.cli puppet-schema --name motion
 ```
 

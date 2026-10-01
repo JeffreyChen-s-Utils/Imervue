@@ -488,7 +488,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - `expressions/*.json` — оверлеи параметров
 - `physics.json` — конфигурация Verlet-физики
 
-На основе JSON, поддаётся человеческому diff, без проприетарного бинарного формата. Формат открыт и проверяем: сохранённый файл начинается с несжатой записи `mimetype` (`application/vnd.imervue.puppet+zip`), а каждый JSON-файл называет свою схему в `$schema`; четыре JSON Schema опубликованы в [`docs/schemas/`](../docs/schemas/); `py -m Imervue.cli puppet-validate character.puppet` (MCP `puppet_validate`) проверяет файл, а `puppet-schema` (MCP `puppet_schema`) выводит схему; [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) читает файл средствами одной лишь стандартной библиотеки Python. Спецификация ([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)) и схемы распространяются под лицензией MIT, поэтому любая программа может читать и записывать файлы `.puppet`.
+На основе JSON, поддаётся человеческому diff, без проприетарного бинарного формата. Формат открыт и проверяем: сохранённый файл начинается с несжатой записи `mimetype` (`application/vnd.imervue.puppet+zip`), а каждый JSON-файл называет свою схему в `$schema`; четыре JSON Schema опубликованы в [`docs/schemas/`](../docs/schemas/); `py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet` (MCP `puppet_validate`) проверяет файл, а `puppet-schema` (MCP `puppet_schema`) выводит схему; [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) читает файл средствами одной лишь стандартной библиотеки Python. Спецификация ([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)) и схемы распространяются под лицензией MIT, поэтому любая программа может читать и записывать файлы `.puppet`.
 
 ### Рендерер
 

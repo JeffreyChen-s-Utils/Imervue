@@ -480,7 +480,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - `expressions/*.json` — パラメーターオーバーレイ
 - `physics.json` — Verlet 物理構成
 
-JSON ベースで、人間が diff 可能、プロプライエタリなバイナリは一切なし。フォーマットはオープンで検証可能です: 保存したファイルは無圧縮の `mimetype` エントリ(`application/vnd.imervue.puppet+zip`)で始まり、すべての JSON ファイルは `$schema` で自身のスキーマを示します。4 つの JSON Schema は [`docs/schemas/`](../docs/schemas/) で公開しています。`py -m Imervue.cli puppet-validate character.puppet`(MCP `puppet_validate`)でファイルを検証し、`puppet-schema`(MCP `puppet_schema`)でスキーマを表示できます。[`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) は Python 標準ライブラリだけでファイルを読み込みます。仕様([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md))とスキーマは MIT ライセンスなので、どのプログラムでも `.puppet` ファイルを読み書きできます。
+JSON ベースで、人間が diff 可能、プロプライエタリなバイナリは一切なし。フォーマットはオープンで検証可能です: 保存したファイルは無圧縮の `mimetype` エントリ(`application/vnd.imervue.puppet+zip`)で始まり、すべての JSON ファイルは `$schema` で自身のスキーマを示します。4 つの JSON Schema は [`docs/schemas/`](../docs/schemas/) で公開しています。`py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`(MCP `puppet_validate`)でファイルを検証し、`puppet-schema`(MCP `puppet_schema`)でスキーマを表示できます。[`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) は Python 標準ライブラリだけでファイルを読み込みます。仕様([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md))とスキーマは MIT ライセンスなので、どのプログラムでも `.puppet` ファイルを読み書きできます。
 
 ### レンダラ
 

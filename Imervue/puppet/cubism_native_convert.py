@@ -18,8 +18,8 @@ pipeline that the public API doesn't expose — so the conversion is
 The result is an approximate rig: linear blending instead of Cubism's
 proprietary curve, and parameters are sampled independently so
 non-linear cross-parameter interactions don't carry over. Good
-enough for "March 7th shows up and her head turns when ``ParamAngleZ``
-moves." Not byte-identical to Cubism's runtime, never can be.
+enough for "the character shows up and her head turns when
+``ParamAngleZ`` moves." Not byte-identical to Cubism's runtime, never can be.
 
 Textures, motions, expressions, physics, hit areas, and display
 names load through the existing :mod:`puppet.cubism_import` JSON
@@ -134,8 +134,8 @@ def _build_document_from_model(
 
 # Minimum number of authored motions before we stop adding synth ones.
 # A Cubism drop with fewer than this gets a small idle pack appended so
-# the workspace's motion picker isn't empty — the March 7th bundle, for
-# example, ships zero motions and would otherwise look broken to the user.
+# the workspace's motion picker isn't empty — a bundle that ships zero
+# motions would otherwise look broken to the user.
 _SYNTH_MOTION_THRESHOLD: int = 3
 
 
@@ -624,8 +624,8 @@ def _attach_cubism_bundle(
     """Pull motions / expressions / physics / cdi out of the Cubism
     file references and fold them into the document via the existing
     :mod:`puppet.cubism_import` machinery. Missing files are logged +
-    skipped rather than fatal — March 7th's bundle ships broken paths
-    for some expression files."""
+    skipped rather than fatal — some bundles ship broken paths for
+    expression files."""
     from Imervue.puppet.cubism_import import CubismBundle
 
     file_refs = manifest.get("FileReferences") or {}

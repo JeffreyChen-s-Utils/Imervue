@@ -1008,7 +1008,7 @@ angry, blush, sleepy).
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # обязательно — манифест, drawables, deformers, parameters
    ├── textures/
    │   ├── face.png             # ссылается через drawables[].texture
@@ -1047,7 +1047,7 @@ diff-абельно через git.
 - Четыре JSON Schema (draft 2020-12) — ``puppet``, ``motion``, ``expression``
   и ``physics`` — опубликованы в ``docs/schemas/``; редакторы, которые следуют
   ``$schema``, проверяют файл прямо во время набора.
-- ``py -m Imervue.cli puppet-validate character.puppet`` (MCP
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`` (MCP
   ``puppet_validate``) проверяет файл по схемам, правилам загрузчика
   и проверкам рига; ``puppet-schema`` (MCP ``puppet_schema``) выводит схему.
 - ``docs/examples/read_puppet.py`` читает ``.puppet`` средствами одной лишь

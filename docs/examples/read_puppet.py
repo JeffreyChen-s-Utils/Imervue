@@ -5,7 +5,7 @@ A reference for other programs that want to open the format (specification:
 media type and the format version, then returns the manifest, every texture's
 bytes and the motion, expression and physics JSON the manifest points at.
 
-    python read_puppet.py character.puppet
+    python read_puppet.py examples/puppet/imeru.puppet
 """
 from __future__ import annotations
 

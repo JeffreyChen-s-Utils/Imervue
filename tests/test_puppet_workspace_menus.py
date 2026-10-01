@@ -126,7 +126,7 @@ def test_labels_come_from_the_language_dict(qapp, monkeypatch):
 
 
 @pytest.mark.parametrize(("stem", "label"), [
-    ("march_7th", "March 7th"),      # str.title() made this "March 7Th"
+    ("imeru_2nd_outfit", "Imeru 2nd Outfit"),  # str.title() made this "Imeru 2Nd Outfit"
     ("vivian", "Vivian"),
     ("my__rig_v2", "My Rig V2"),
     ("already_Upper", "Already Upper"),

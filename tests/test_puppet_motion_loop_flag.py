@@ -2,8 +2,7 @@
 
 Every motion looped, whatever its flag: the player started with looping on
 and nothing read the flag, so a tap reaction (``tap_head``, loop off) on the
-bundled March 7th rig repeated forever in the Puppet tab and on the Desktop
-Pet. These use a stand-in canvas (the real one is a ``QOpenGLWidget``).
+bundled rig repeated forever in the Puppet tab and on the Desktop Pet. These use a stand-in canvas (the real one is a ``QOpenGLWidget``).
 """
 from __future__ import annotations
 

@@ -496,7 +496,7 @@ The **Puppet** tab is a from-scratch 2D rigged-puppet animation system: mesh-def
 - `expressions/*.json` — parameter overlays
 - `physics.json` — Verlet rig configuration
 
-JSON-based, humanly diffable, no proprietary binary. The format is open and checkable: a saved file starts with an uncompressed `mimetype` entry (`application/vnd.imervue.puppet+zip`) and every JSON file names its schema in `$schema`; the four JSON Schemas are published in [`docs/schemas/`](docs/schemas/); `py -m Imervue.cli puppet-validate character.puppet` (MCP `puppet_validate`) checks a file and `puppet-schema` (MCP `puppet_schema`) prints a schema; [`docs/examples/read_puppet.py`](docs/examples/read_puppet.py) reads one with the Python standard library alone. The specification ([`Imervue/puppet/FORMAT.md`](Imervue/puppet/FORMAT.md)) and schemas are MIT-licensed, so any program may read or write `.puppet` files.
+JSON-based, humanly diffable, no proprietary binary. The format is open and checkable: a saved file starts with an uncompressed `mimetype` entry (`application/vnd.imervue.puppet+zip`) and every JSON file names its schema in `$schema`; the four JSON Schemas are published in [`docs/schemas/`](docs/schemas/); `py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet` (MCP `puppet_validate`) checks a file and `puppet-schema` (MCP `puppet_schema`) prints a schema; [`docs/examples/read_puppet.py`](docs/examples/read_puppet.py) reads one with the Python standard library alone. The specification ([`Imervue/puppet/FORMAT.md`](Imervue/puppet/FORMAT.md)) and schemas are MIT-licensed, so any program may read or write `.puppet` files.
 
 ### Renderer
 

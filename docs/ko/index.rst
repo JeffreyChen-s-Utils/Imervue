@@ -866,7 +866,7 @@ Puppet 탭을 열고 **Open Puppet…** 을 클릭해 ``imeru.puppet`` 을 선�
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # 필수 — 매니페스트, drawables, deformers, parameters
    ├── textures/
    │   ├── face.png             # drawables[].texture 에서 참조
@@ -902,7 +902,7 @@ Puppet 탭을 열고 **Open Puppet…** 을 클릭해 ``imeru.puppet`` 을 선�
 - 네 개의 JSON Schema(draft 2020-12) — ``puppet``, ``motion``, ``expression``,
   ``physics`` — 가 ``docs/schemas/``\ 에 공개되어 있어, ``$schema``\ 를 따르는 편집기는
   입력하는 동안 파일을 검사합니다.
-- ``py -m Imervue.cli puppet-validate character.puppet``\ (MCP ``puppet_validate``)은
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet``\ (MCP ``puppet_validate``)은
   스키마, 로더 규칙, 리그 검사에 맞춰 파일을 검사하고, ``puppet-schema``\ (MCP
   ``puppet_schema``)는 스키마를 출력합니다.
 - ``docs/examples/read_puppet.py``\ 는 다른 프로그램을 위한 참고 구현으로, Python 표준

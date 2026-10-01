@@ -1,7 +1,7 @@
 """Synthesise a small set of idle-style motions for converted rigs.
 
-Cubism exports often ship few or zero ``.motion3.json`` files — the
-March 7th drop is one such bundle. The rig itself supports plenty of
+Cubism exports often ship few or zero ``.motion3.json`` files. The
+rig itself supports plenty of
 parameters (``ParamAngleX``, ``ParamBreath``, eye-open pairs, …) but
 without authored motions the user has nothing to play back.
 
