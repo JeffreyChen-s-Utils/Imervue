@@ -62,7 +62,30 @@ class AnimationDock(QDockWidget):
         layout = QVBoxLayout(body)
         layout.setContentsMargins(4, 4, 4, 4)
 
-        # Top row — transport buttons.
+        layout.addLayout(self._build_controls(lang))
+
+        # Frame strip — horizontal scroll of thumbnail buttons.
+        self._strip_scroll = QScrollArea()
+        self._strip_scroll.setWidgetResizable(True)
+        self._strip_host = QWidget()
+        self._strip_layout = QHBoxLayout(self._strip_host)
+        self._strip_layout.setContentsMargins(0, 0, 0, 0)
+        self._strip_layout.setSpacing(2)
+        self._strip_layout.addStretch(1)
+        self._strip_scroll.setWidget(self._strip_host)
+        self._strip_scroll.setMinimumHeight(THUMBNAIL_PX + 24)
+        layout.addWidget(self._strip_scroll)
+
+        self.setWidget(body)
+
+        # Playback timer — interval is set from the FPS spinner.
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._on_tick)
+
+        self._refresh_strip()
+
+    def _build_controls(self, lang: dict) -> QHBoxLayout:
+        """The top row: add / remove frame, play, and the FPS spinner."""
         controls = QHBoxLayout()
         self._add_btn = QPushButton(lang.get(
             "paint_animation_add_frame", "+ Frame",
@@ -105,27 +128,7 @@ class AnimationDock(QDockWidget):
         self._fps_spin.valueChanged.connect(self._on_fps_changed)
         controls.addWidget(self._fps_spin)
         controls.addStretch(1)
-        layout.addLayout(controls)
-
-        # Frame strip — horizontal scroll of thumbnail buttons.
-        self._strip_scroll = QScrollArea()
-        self._strip_scroll.setWidgetResizable(True)
-        self._strip_host = QWidget()
-        self._strip_layout = QHBoxLayout(self._strip_host)
-        self._strip_layout.setContentsMargins(0, 0, 0, 0)
-        self._strip_layout.setSpacing(2)
-        self._strip_layout.addStretch(1)
-        self._strip_scroll.setWidget(self._strip_host)
-        self._strip_scroll.setMinimumHeight(THUMBNAIL_PX + 24)
-        layout.addWidget(self._strip_scroll)
-
-        self.setWidget(body)
-
-        # Playback timer — interval is set from the FPS spinner.
-        self._timer = QTimer(self)
-        self._timer.timeout.connect(self._on_tick)
-
-        self._refresh_strip()
+        return controls
 
     # ---- public API -----------------------------------------------------
 
