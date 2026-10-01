@@ -661,6 +661,7 @@ Pestaña 5 — la **Desktop Pet** coloca cualquier personaje `.puppet` sobre tu 
 | Tamaños predefinidos | Pequeño / mediano / grande. Redimensiona alrededor del centro para que la mascota no salte a través de la pantalla. |
 | Control deslizante de opacidad | Atenúa la mascota del 10 % al 100 % para que pueda ser un adorno discreto del escritorio. |
 | Recuerda dónde la pusiste | Arrastra la mascota a tu esquina favorita; vuelve allí en el siguiente lanzamiento. |
+| Atajos globales | Muestra / oculta la mascota, bloquéala, alterna el clic transparente o hazla hablar desde cualquier aplicación (necesita `pynput`): Ctrl+Shift+P / L / T / Espacio por defecto, cada uno reasignable en el grupo **Global hotkeys** de la pestaña. Se rechaza una tecla que ya usa otra acción, y las teclas guardadas que comparten dos acciones se indican en la línea de estado. |
 
 ### Interacciones de clic
 
@@ -690,7 +691,7 @@ Elige cualquier combinación desde la pestaña o el menú del clic derecho. Auto
 
 Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño — se recuerda entre lanzamientos.
 
-El plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) añade **Plugins > Desktop Pet Integrations**: la mascota reacciona a OBS (transmisión, grabación, cambios de escena), a palabras clave del chat de Twitch, a un webhook local (`POST http://127.0.0.1:9876/trigger` con `{"group": "Wave", "speech": "Hi!"}`) y a las notificaciones de Windows. También es el ejemplo de un plugin de mascota construido sobre `on_pet_created`.
+El plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) añade **Plugins > Desktop Pet Integrations**: la mascota reacciona a OBS (transmisión, grabación, cambios de escena), a palabras clave del chat de Twitch (en cualquier parte de un mensaje, o `=hi` para el mensaje completo, `!dance*` para su inicio, `/go+al/` para una expresión regular), a un webhook local (`POST http://127.0.0.1:9876/trigger` con `{"group": "Wave", "speech": "Hi!"}`) y a las notificaciones de Windows. También es el ejemplo de un plugin de mascota construido sobre `on_pet_created`.
 
 ### Voz personalizada (pet script)
 

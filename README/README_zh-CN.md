@@ -609,6 +609,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 | 尺寸预设 | small / medium / large 三档。以中心对齐缩放，调尺寸时角色不会跨屏幕跳。 |
 | 不透明度滑杆 | 把宠物淡化到 10% – 100%，可以当作低调的桌面摆件。 |
 | 记住你放的位置 | 拖到喜欢的角落后，下次启动时宠物会回到那里。 |
+| 全局热键 | 在任何应用中都能显示 / 隐藏宠物、锁定位置、切换点击穿透或让它立即说话（需要 `pynput`）：默认为 Ctrl+Shift+P / L / T / Space，每一个都可以在标签的 **Global hotkeys**（全局热键）分组中重新绑定。已被其他动作占用的按键会被拒绝；两个动作共用的已保存按键会在状态栏中列出。 |
 
 ### 点击交互
 
@@ -638,7 +639,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 所有设置 — 位置、驱动、不透明度、点击穿透、尺寸 — 都会跨启动保留。
 
-**Desktop Pet Integrations** 插件（**Plugins > Download Plugins**）会新增 **Plugins > Desktop Pet Integrations** 菜单：宠物会响应 OBS（开始直播、录制、切换场景）、Twitch 聊天关键字、本地 webhook（`POST http://127.0.0.1:9876/trigger`，内容为 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知。它同时也是基于 `on_pet_created` 编写宠物插件的示例。
+**Desktop Pet Integrations** 插件（**Plugins > Download Plugins**）会新增 **Plugins > Desktop Pet Integrations** 菜单：宠物会响应 OBS（开始直播、录制、切换场景）、Twitch 聊天关键字（出现在消息任意位置即可，或用 `=hi` 匹配整条消息、`!dance*` 匹配开头、`/go+al/` 使用正则表达式）、本地 webhook（`POST http://127.0.0.1:9876/trigger`，内容为 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知。它同时也是基于 `on_pet_created` 编写宠物插件的示例。
 
 ### 自定义语音（pet script）
 

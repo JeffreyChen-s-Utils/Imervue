@@ -633,6 +633,8 @@ japanese_word_dict = {
     "desktop_pet_hotkey_toggle_lock": '位置をロック／解除',
     "desktop_pet_hotkey_click_through": 'クリックスルー切替',
     "desktop_pet_hotkey_speak_now": '今すぐ話す',
+    "desktop_pet_hotkey_taken": "{key} はすでに「{action}」のキーです — 元のキーのままにしました",
+    "desktop_pet_hotkeys_shared": "次のホットキーが同じキーを使っています。どちらかを変更してください：{pairs}",
     "desktop_pet_mic_lipsync": 'マイクリップシンク（sounddevice が必要）',
     "desktop_pet_webcam": 'ウェブカメラ追跡（opencv-python + mediapipe が必要）',
     "desktop_pet_mic_missing": 'マイクリップシンクには sounddevice が必要 — pip install sounddevice',

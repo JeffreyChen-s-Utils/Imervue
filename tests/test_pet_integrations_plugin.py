@@ -268,10 +268,22 @@ def test_the_dialog_fills_in_defaults(qapp):
     assert values == SETTING_DEFAULTS
 
 
+def test_the_trigger_box_explains_the_keyword_syntax(qapp):
+    dialog = IntegrationSettingsDialog({}, None)
+    try:
+        tip = dialog._twitch_triggers.toolTip()               # noqa: SLF001
+    finally:
+        dialog.deleteLater()
+    assert all(form in tip for form in ("=hi", "!dance*", "/go+al/"))
+
+
 @pytest.mark.parametrize(("text", "triggers"), [
     ("hype = Cheer\nhello=Wave", {"hype": "Cheer", "hello": "Wave"}),
     ("no separator\n = Empty\nkey =\n\n", {}),
     ("a = b = c", {"a": "b = c"}),
+    ("=hi = Wave\n=hey=Bow", {"=hi": "Wave", "=hey": "Bow"}),
+    ("/a=b+/ = Cheer\n!dance* = Dance", {"/a=b+/": "Cheer", "!dance*": "Dance"}),
+    ("= = Empty\n/x/ =", {}),
 ])
 def test_parse_triggers(text, triggers):
     assert parse_triggers(text) == triggers
@@ -279,6 +291,8 @@ def test_parse_triggers(text, triggers):
 
 def test_trigger_and_app_id_text_round_trip():
     assert parse_triggers(format_triggers({"hype": "Cheer", "": "x", "k": 3})) == {"hype": "Cheer"}
+    special = {"=hi": "Wave", "/go+al/": "Cheer", "!dance*": "Dance"}
+    assert parse_triggers(format_triggers(special)) == special
     assert parse_app_ids(format_app_ids(["a", "", 3, "b"])) == ["a", "b"]
     assert parse_app_ids(" a \n\na\nb") == ["a", "b"]
 

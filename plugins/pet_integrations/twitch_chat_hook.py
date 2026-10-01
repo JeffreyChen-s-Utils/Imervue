@@ -14,7 +14,8 @@ token* from https://twitchapps.com/tmi (the same kind chat-bot
 tutorials use).
 
 The pure helpers (:func:`parse_chat_message`, :func:`match_keyword`)
-are stateless string operations, easy to unit-test. The Qt wrapper
+are stateless string operations, easy to unit-test; keyword matching goes
+through Imervue's :mod:`~Imervue.desktop_pet.command_parser`. The Qt wrapper
 :class:`TwitchChatClient` owns a worker thread for the blocking
 ``recv`` loop and re-emits hits via thread-safe Qt signals.
 """
@@ -27,6 +28,8 @@ import ssl
 import threading
 
 from PySide6.QtCore import QObject, Signal
+
+from Imervue.desktop_pet.command_parser import match_command, rules_from_dict
 
 logger = logging.getLogger("Imervue.plugin.pet_integrations.twitch_chat_hook")
 
@@ -73,22 +76,19 @@ def parse_chat_message(line: str) -> dict[str, str] | None:
 
 
 def match_keyword(text: str, triggers: dict[str, str]) -> str | None:
-    """Substring match ``text`` against the keys of ``triggers``,
-    case-insensitive. Returns the mapped value (motion group / action
-    name) or ``None`` when nothing matches.
+    """Match ``text`` against the keys of ``triggers``, case-insensitive.
+
+    A plain key matches anywhere in the message; ``=hi`` only the whole
+    message, ``!dance*`` its start and ``/go+al/`` a regular expression (an
+    invalid one never matches). Returns the mapped value (motion group /
+    action name) or ``None`` when nothing matches.
 
     Iteration order matches dict insertion, so the first configured
     keyword in the dict wins on ties — gives the user a predictable
     way to prioritise overlapping triggers (place ``"raid"`` before
     ``"ai"`` if both fire on ``"raidaboo"``).
     """
-    if not text:
-        return None
-    lowered = text.lower()
-    for keyword, mapped in triggers.items():
-        if keyword and keyword.lower() in lowered:
-            return mapped
-    return None
+    return match_command(text, rules_from_dict(triggers))
 
 
 def coerce_triggers(raw: object) -> dict[str, str]:

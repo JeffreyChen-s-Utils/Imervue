@@ -630,6 +630,8 @@ korean_word_dict = {
     "desktop_pet_hotkey_toggle_lock": '위치 잠금 / 해제',
     "desktop_pet_hotkey_click_through": '클릭 통과 전환',
     "desktop_pet_hotkey_speak_now": '지금 말하기',
+    "desktop_pet_hotkey_taken": "{key}은(는) 이미 '{action}'의 키입니다 — 이전 키를 유지했습니다",
+    "desktop_pet_hotkeys_shared": "다음 단축키가 같은 키를 쓰고 있습니다. 하나를 바꾸세요: {pairs}",
     "desktop_pet_mic_lipsync": '마이크 립싱크 (sounddevice 필요)',
     "desktop_pet_webcam": '웹캠 추적 (opencv-python + mediapipe 필요)',
     "desktop_pet_mic_missing": '마이크 립싱크는 sounddevice 가 필요 — pip install sounddevice',

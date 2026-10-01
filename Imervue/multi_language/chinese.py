@@ -622,6 +622,8 @@ chinese_word_dict = {
     "desktop_pet_hotkey_toggle_lock": '锁定／解锁位置',
     "desktop_pet_hotkey_click_through": '切换点击穿透',
     "desktop_pet_hotkey_speak_now": '立即说话',
+    "desktop_pet_hotkey_taken": "{key} 已经是“{action}”的热键 — 保留原来的按键",
+    "desktop_pet_hotkeys_shared": "这些热键用了同一个按键，请改掉其中一个：{pairs}",
     "desktop_pet_mic_lipsync": '麦克风对嘴（需要 sounddevice）',
     "desktop_pet_webcam": '摄像头追踪（需要 opencv-python + mediapipe）',
     "desktop_pet_mic_missing": '麦克风对嘴需要 sounddevice — pip install sounddevice',

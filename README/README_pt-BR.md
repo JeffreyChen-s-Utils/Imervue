@@ -641,6 +641,7 @@ Aba 5 — o **Desktop Pet** coloca qualquer personagem `.puppet` na sua área de
 | Presets de tamanho | Pequeno / médio / grande. Redimensiona ao redor do centro, para que o pet não salte pela tela. |
 | Slider de opacidade | Faz o pet desbotar de 10% a 100%, para que possa ser um enfeite sutil da área de trabalho. |
 | Lembra onde você colocou | Arraste o pet para o seu canto favorito; ele volta para lá no próximo lançamento. |
+| Atalhos globais | Mostre / esconda o pet, trave-o, alterne o click-through ou faça-o falar a partir de qualquer app (precisa de `pynput`): Ctrl+Shift+P / L / T / Space por padrão, cada um reatribuível no grupo **Global hotkeys** da aba. Uma tecla que outra ação já usa é recusada, e teclas salvas que duas ações compartilham são indicadas na linha de status. |
 
 ### Interações de clique
 
@@ -670,7 +671,7 @@ Escolha qualquer combinação na aba ou no menu de clique direito. Auto idle, Id
 
 Tudo o que você configura — posição, drivers, opacidade, click-through, tamanho — é lembrado entre lançamentos.
 
-O plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) adiciona **Plugins > Desktop Pet Integrations**: o pet reage ao OBS (transmissão, gravação, troca de cena), a palavras-chave do chat da Twitch, a um webhook local (`POST http://127.0.0.1:9876/trigger` com `{"group": "Wave", "speech": "Hi!"}`) e às notificações do Windows. Ele também é o exemplo de um plugin de pet construído sobre `on_pet_created`.
+O plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) adiciona **Plugins > Desktop Pet Integrations**: o pet reage ao OBS (transmissão, gravação, troca de cena), a palavras-chave do chat da Twitch (em qualquer parte de uma mensagem, ou `=hi` para a mensagem inteira, `!dance*` para o início dela, `/go+al/` para uma expressão regular), a um webhook local (`POST http://127.0.0.1:9876/trigger` com `{"group": "Wave", "speech": "Hi!"}`) e às notificações do Windows. Ele também é o exemplo de um plugin de pet construído sobre `on_pet_created`.
 
 ### Voz personalizada (pet script)
 

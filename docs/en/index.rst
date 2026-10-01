@@ -1607,6 +1607,18 @@ clamp on load so a corrupted settings file can't crash launch.
    * - ``speech_enabled``
      - ``true``
      - When false the speech bubble never pops.
+   * - ``hotkeys_enabled``
+     - ``false``
+     - Set by **Enable global hotkeys (needs pynput)** in the tab's
+       Global hotkeys group.
+   * - ``hotkeys``
+     - ``{}``
+     - ``{action: key}`` overrides of the defaults ``ctrl+shift+p``
+       (show / hide), ``ctrl+shift+l`` (lock), ``ctrl+shift+t``
+       (click-through) and ``ctrl+shift+space`` (speak now), set by
+       the key fields of the Global hotkeys group. A key another
+       action already uses is refused there; saved keys that two
+       actions share are named in the status line when the tab opens.
 
 The settings dict's merge behaviour is one level deep: older
 settings files missing newer keys still produce a complete
@@ -1662,7 +1674,9 @@ a plugin that extends the pet — see *Writing Plugins* and ``on_pet_created``.
      - ``obs-websocket-py`` (installed on first use); OBS with its WebSocket server on
    * - React to Twitch chat
      - Joins a channel's chat and plays the motion group mapped to a keyword whenever a message
-       contains it (case-insensitive; ``keyword = Group`` lines in ``Settings…``)
+       contains it (case-insensitive; ``keyword = Group`` lines in ``Settings…``). ``=hi`` matches
+       only a message that is exactly "hi", ``!dance*`` one that starts with "!dance", ``/go+al/``
+       a regular expression; the first matching line wins
      - A channel name and an ``oauth:`` token
    * - Local webhook (127.0.0.1)
      - Listens on ``http://127.0.0.1:9876/trigger`` (port in ``Settings…``) for a JSON POST

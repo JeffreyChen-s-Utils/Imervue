@@ -610,6 +610,7 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 | サイズプリセット | Small / Medium / Large。中心を基準にリサイズされるので、ペットが画面を飛び跳ねることがありません。 |
 | 不透明度スライダー | ペットを 10% から 100% までフェードできるので、控えめなデスクトップ装飾としても使えます。 |
 | 位置を記憶 | お気に入りのコーナーにドラッグすれば、次回起動時にもそこに戻ります。 |
+| グローバルホットキー | どのアプリを使っていても、ペットの表示 / 非表示、位置のロック、クリックスルーの切り替え、発話を行えます(`pynput` が必要):デフォルトは Ctrl+Shift+P / L / T / Space で、それぞれタブの **グローバルホットキー** グループで割り当て直せます。別の操作がすでに使っているキーは受け付けられず、2 つの操作で重複している保存済みのキーはステータス行に表示されます。 |
 
 ### クリック操作
 
@@ -639,7 +640,7 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 
 設定した内容 — 位置、ドライバー、不透明度、クリックスルー、サイズ — はすべて起動間で記憶されます。
 
-**Desktop Pet Integrations** プラグイン(**Plugins > Download Plugins**)を入れると **Plugins > Desktop Pet Integrations** が追加されます:ペットが OBS(配信、録画、シーン切り替え)、Twitch チャットのキーワード、ローカル webhook(`POST http://127.0.0.1:9876/trigger` に `{"group": "Wave", "speech": "Hi!"}` を送信)、Windows 通知に反応します。`on_pet_created` を使って作るペット用プラグインの例でもあります。
+**Desktop Pet Integrations** プラグイン(**Plugins > Download Plugins**)を入れると **Plugins > Desktop Pet Integrations** が追加されます:ペットが OBS(配信、録画、シーン切り替え)、Twitch チャットのキーワード(メッセージ内のどこにあっても一致。`=hi` はメッセージ全体、`!dance*` はメッセージの先頭、`/go+al/` は正規表現で照合)、ローカル webhook(`POST http://127.0.0.1:9876/trigger` に `{"group": "Wave", "speech": "Hi!"}` を送信)、Windows 通知に反応します。`on_pet_created` を使って作るペット用プラグインの例でもあります。
 
 ### カスタムボイス(pet script)
 

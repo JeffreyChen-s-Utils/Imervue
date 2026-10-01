@@ -669,6 +669,7 @@ Tab 5 — the **Desktop Pet** puts any `.puppet` character on your desktop as a 
 | Size presets | Small / medium / large. Resizes around the centre so the pet doesn't jump across the screen. |
 | Opacity slider | Fade the pet from 10% to 100% so it can be a subtle desktop ornament. |
 | Remembers where you put it | Drag the pet to your favourite corner; it returns there on the next launch. |
+| Global hotkeys | Show / hide the pet, lock it, toggle click-through or make it speak from any app (needs `pynput`): Ctrl+Shift+P / L / T / Space by default, each rebindable in the tab's **Global hotkeys** group. A key another action already uses is refused, and saved keys that two actions share are named in the status line. |
 
 ### Click interactions
 
@@ -698,7 +699,7 @@ Pick any combination from the tab or the right-click menu. Auto idle, Idle motio
 
 Everything you set — position, drivers, opacity, click-through, size — is remembered between launches.
 
-The **Desktop Pet Integrations** plugin (**Plugins > Download Plugins**) adds **Plugins > Desktop Pet Integrations**: the pet reacts to OBS (streaming, recording, scene changes), to Twitch chat keywords, to a local webhook (`POST http://127.0.0.1:9876/trigger` with `{"group": "Wave", "speech": "Hi!"}`) and to Windows notifications. It is also the example of a pet plugin built on `on_pet_created`.
+The **Desktop Pet Integrations** plugin (**Plugins > Download Plugins**) adds **Plugins > Desktop Pet Integrations**: the pet reacts to OBS (streaming, recording, scene changes), to Twitch chat keywords (anywhere in a message, or `=hi` for the whole message, `!dance*` for its start, `/go+al/` for a regular expression), to a local webhook (`POST http://127.0.0.1:9876/trigger` with `{"group": "Wave", "speech": "Hi!"}`) and to Windows notifications. It is also the example of a pet plugin built on `on_pet_created`.
 
 ### Custom voice (pet script)
 

@@ -611,6 +611,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | 크기 프리셋 | 소형 / 중형 / 대형. 중앙 기준으로 크기가 바뀌므로 펫이 화면을 가로질러 튀지 않습니다. |
 | 불투명도 슬라이더 | 펫을 10%에서 100%까지 페이드하여 은은한 데스크톱 장식으로 만들 수 있습니다. |
 | 위치 기억 | 펫을 좋아하는 모퉁이로 드래그해 두면 다음 실행 시 그 자리로 돌아옵니다. |
+| 전역 단축키 | 어떤 앱을 쓰고 있든 펫 표시 / 숨기기, 위치 잠금, 클릭 통과 전환, 말하기를 실행합니다 (`pynput` 필요). 기본값은 Ctrl+Shift+P / L / T / Space이며, 각각 탭의 **전역 단축키** 그룹에서 다시 지정할 수 있습니다. 다른 동작이 이미 쓰고 있는 키는 거부되고, 두 동작이 함께 쓰는 저장된 키는 상태 줄에 표시됩니다. |
 
 ### 클릭 상호작용
 
@@ -640,7 +641,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 설정한 모든 항목 — 위치, 드라이버, 불투명도, 클릭 통과, 크기 — 은 실행 사이에 기억됩니다.
 
-**Desktop Pet Integrations** 플러그인(**Plugins > Download Plugins**)을 설치하면 **Plugins > Desktop Pet Integrations** 메뉴가 추가됩니다. 펫이 OBS(스트리밍, 녹화, 장면 전환), Twitch 채팅 키워드, 로컬 웹훅(`POST http://127.0.0.1:9876/trigger`에 `{"group": "Wave", "speech": "Hi!"}` 전송), Windows 알림에 반응합니다. 이 플러그인은 `on_pet_created`로 만든 펫 플러그인의 예제이기도 합니다.
+**Desktop Pet Integrations** 플러그인(**Plugins > Download Plugins**)을 설치하면 **Plugins > Desktop Pet Integrations** 메뉴가 추가됩니다. 펫이 OBS(스트리밍, 녹화, 장면 전환), Twitch 채팅 키워드(메시지 어디에 있어도 일치하며, `=hi`는 메시지 전체, `!dance*`는 메시지 시작, `/go+al/`은 정규식으로 일치), 로컬 웹훅(`POST http://127.0.0.1:9876/trigger`에 `{"group": "Wave", "speech": "Hi!"}` 전송), Windows 알림에 반응합니다. 이 플러그인은 `on_pet_created`로 만든 펫 플러그인의 예제이기도 합니다.
 
 ### 커스텀 음성 (펫 스크립트)
 

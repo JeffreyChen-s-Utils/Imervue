@@ -660,6 +660,7 @@ Tab 5 — das **Desktop Pet** setzt jeden `.puppet`-Charakter als rahmenloses, t
 | Größenvoreinstellungen | Klein / mittel / groß. Skaliert um den Mittelpunkt, sodass das Pet nicht über den Bildschirm springt. |
 | Opacity-Slider | Blendet das Pet zwischen 10 % und 100 %, sodass es eine dezente Desktop-Verzierung sein kann. |
 | Merkt sich seine Position | Ziehen Sie das Pet in Ihre Lieblingsecke; beim nächsten Start kehrt es dorthin zurück. |
+| Globale Tastenkürzel | Pet anzeigen / verstecken, Position sperren, Click-Through umschalten oder das Pet sprechen lassen — aus jeder App heraus (benötigt `pynput`): standardmäßig Ctrl+Shift+P / L / T / Leertaste, jedes in der Gruppe **Global hotkeys** des Tabs neu belegbar. Eine Taste, die bereits eine andere Aktion nutzt, wird abgelehnt, und gespeicherte Tasten, die sich zwei Aktionen teilen, werden in der Statuszeile genannt. |
 
 ### Klick-Interaktionen
 
@@ -689,7 +690,7 @@ Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. A
 
 Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größe — wird zwischen den Starts gespeichert.
 
-Das Plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) fügt **Plugins > Desktop Pet Integrations** hinzu: Das Pet reagiert auf OBS (Streaming, Aufnahme, Szenenwechsel), auf Schlüsselwörter im Twitch-Chat, auf einen lokalen Webhook (`POST http://127.0.0.1:9876/trigger` mit `{"group": "Wave", "speech": "Hi!"}`) und auf Windows-Benachrichtigungen. Es ist zugleich das Beispiel für ein Pet-Plugin, das auf `on_pet_created` aufbaut.
+Das Plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) fügt **Plugins > Desktop Pet Integrations** hinzu: Das Pet reagiert auf OBS (Streaming, Aufnahme, Szenenwechsel), auf Schlüsselwörter im Twitch-Chat (irgendwo in einer Nachricht, oder `=hi` für die ganze Nachricht, `!dance*` für ihren Anfang, `/go+al/` für einen regulären Ausdruck), auf einen lokalen Webhook (`POST http://127.0.0.1:9876/trigger` mit `{"group": "Wave", "speech": "Hi!"}`) und auf Windows-Benachrichtigungen. Es ist zugleich das Beispiel für ein Pet-Plugin, das auf `on_pet_created` aufbaut.
 
 ### Eigene Stimme (Pet-Skript)
 

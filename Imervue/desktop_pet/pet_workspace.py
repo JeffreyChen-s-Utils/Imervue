@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.gui.file_filters import translated_filter
 from Imervue.desktop_pet import settings as pet_settings
+from Imervue.desktop_pet.hotkey_conflicts import clashing_action, find_conflicts
 from Imervue.desktop_pet.hotkey_manager import (
     ACTION_SPEAK_NOW,
     ACTION_TOGGLE_CLICK_THROUGH,
@@ -51,6 +52,39 @@ def _tr(key: str, default: str) -> str:
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_workspace")
 _PET_SCRIPT = "Pet script"
+
+# (action, label key, English label) for each row of the Global hotkeys group.
+_HOTKEY_ROWS: tuple[tuple[str, str, str], ...] = (
+    (ACTION_TOGGLE_VISIBLE, "desktop_pet_hotkey_toggle_visible", "Show / hide pet"),
+    (ACTION_TOGGLE_LOCK, "desktop_pet_hotkey_toggle_lock", "Lock / unlock position"),
+    (ACTION_TOGGLE_CLICK_THROUGH, "desktop_pet_hotkey_click_through", "Toggle click-through"),
+    (ACTION_SPEAK_NOW, "desktop_pet_hotkey_speak_now", "Speak now"),
+)
+
+
+def _hotkey_label(action: str) -> str:
+    """The translated row label of the hotkey *action* (the id itself if unknown)."""
+    return next((_tr(key, label) for act, key, label in _HOTKEY_ROWS if act == action), action)
+
+
+def saved_hotkeys() -> dict[str, str]:
+    """The pet's key bindings: the defaults, overridden by every saved non-empty spec."""
+    persisted = pet_settings.load().get("hotkeys", {}) or {}
+    merged = dict(DEFAULT_HOTKEY_BINDINGS)
+    if isinstance(persisted, dict):
+        merged.update({a: s for a, s in persisted.items() if isinstance(s, str) and s})
+    return merged
+
+
+def hotkey_conflict_notice(bindings: dict[str, str]) -> str:
+    """A status-line warning naming the actions that share a key, or "" when none do."""
+    clashes = find_conflicts(bindings)
+    if not clashes:
+        return ""
+    template = _tr("desktop_pet_hotkeys_shared",
+                   "These hotkeys share one key — change one of them: {pairs}")
+    pairs = "; ".join(" / ".join(_hotkey_label(a) for a in actions) for actions in clashes.values())
+    return template.format(pairs=pairs)
 
 # Pet settings mirrored by a Window-group checkbox (attribute names).
 _WINDOW_CHECKS = {
@@ -196,7 +230,7 @@ class PetWorkspace(QWidget):
         layout.addWidget(self._build_hotkey_group())
         layout.addStretch(1)
 
-        self._status = QLabel("")
+        self._status = QLabel(hotkey_conflict_notice(saved_hotkeys()))
         self._status.setStyleSheet(_MUTED_LABEL_STYLE)
         layout.addWidget(self._status)
 
@@ -421,11 +455,7 @@ class PetWorkspace(QWidget):
         group = QGroupBox(_tr("desktop_pet_group_hotkeys", "Global hotkeys"))
         layout = QVBoxLayout(group)
         settings = pet_settings.load()
-        persisted = settings.get("hotkeys", {}) or {}
-        merged = dict(DEFAULT_HOTKEY_BINDINGS)
-        for action, spec in persisted.items():
-            if isinstance(spec, str) and spec:
-                merged[action] = spec
+        merged = saved_hotkeys()
 
         self._hotkey_check = QCheckBox(
             _tr(
@@ -439,17 +469,7 @@ class PetWorkspace(QWidget):
 
         form = QFormLayout()
         self._hotkey_edits: dict[str, QKeySequenceEdit] = {}
-        rows: tuple[tuple[str, str, str], ...] = (
-            (ACTION_TOGGLE_VISIBLE,
-             "desktop_pet_hotkey_toggle_visible", "Show / hide pet"),
-            (ACTION_TOGGLE_LOCK,
-             "desktop_pet_hotkey_toggle_lock", "Lock / unlock position"),
-            (ACTION_TOGGLE_CLICK_THROUGH,
-             "desktop_pet_hotkey_click_through", "Toggle click-through"),
-            (ACTION_SPEAK_NOW,
-             "desktop_pet_hotkey_speak_now", "Speak now"),
-        )
-        for action, label_key, default_label in rows:
+        for action, label_key, default_label in _HOTKEY_ROWS:
             edit = QKeySequenceEdit(QKeySequence(merged[action]))
             edit.editingFinished.connect(
                 lambda _a=action, _e=edit: self._on_hotkey_edited(_a, _e),
@@ -748,15 +768,29 @@ class PetWorkspace(QWidget):
 
     def _on_hotkey_edited(self, action: str, edit: QKeySequenceEdit) -> None:
         """Persist the new binding (if parseable) and refresh the
-        running listener so the change takes effect immediately."""
+        running listener so the change takes effect immediately.
+
+        A key another action already uses is refused: the edit goes back to
+        the action's current key and the status line names the other action.
+        """
         spec = edit.keySequence().toString()
         if not spec or not is_valid_spec(spec):
+            return
+        bindings = saved_hotkeys()
+        clash = clashing_action(bindings, action, spec)
+        if clash is not None:
+            edit.setKeySequence(QKeySequence(bindings.get(action, "")))
+            self._status.setText(_tr(
+                "desktop_pet_hotkey_taken",
+                "{key} is already the key for “{action}” — kept the previous key",
+            ).format(key=spec, action=_hotkey_label(clash)))
             return
         persisted = pet_settings.load().get("hotkeys", {}) or {}
         if not isinstance(persisted, dict):
             persisted = {}
         persisted[action] = spec
         pet_settings.update(hotkeys=persisted)
+        self._status.setText(hotkey_conflict_notice(saved_hotkeys()))
         if self._pet_window is not None and self._pet_window.hotkeys_enabled():
             self._pet_window.set_hotkeys_enabled(True)
 

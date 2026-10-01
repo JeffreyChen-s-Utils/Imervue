@@ -1658,6 +1658,20 @@ démarrage.
    * - ``speech_enabled``
      - ``true``
      - Quand c'est faux, la bulle de dialogue ne s'affiche jamais.
+   * - ``hotkeys_enabled``
+     - ``false``
+     - Réglé par **Enable global hotkeys (needs pynput)** dans le
+       groupe Global hotkeys de l'onglet.
+   * - ``hotkeys``
+     - ``{}``
+     - Remplacements ``{action: key}`` des valeurs par défaut
+       ``ctrl+shift+p`` (afficher / masquer), ``ctrl+shift+l``
+       (verrouiller), ``ctrl+shift+t`` (clic traversant) et
+       ``ctrl+shift+space`` (parler maintenant), réglés par les
+       champs de touche du groupe Global hotkeys. Une touche déjà
+       utilisée par une autre action y est refusée ; les touches
+       enregistrées que deux actions partagent sont indiquées dans
+       la ligne d'état à l'ouverture de l'onglet.
 
 La fusion du dict de réglages se fait sur un niveau de
 profondeur : des fichiers de réglages plus anciens auxquels
@@ -1721,7 +1735,9 @@ aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plug
    * - Réagir au chat Twitch
      - Rejoint le chat d'une chaîne et joue le groupe de mouvements associé à un mot-clé chaque
        fois qu'un message le contient (insensible à la casse ; lignes ``keyword = Group`` dans
-       ``Settings…``)
+       ``Settings…``). ``=hi`` ne correspond qu'à un message qui vaut exactement « hi »,
+       ``!dance*`` à un message qui commence par « !dance », ``/go+al/`` à une expression
+       régulière ; la première ligne correspondante l'emporte
      - Un nom de chaîne et un jeton ``oauth:``
    * - Webhook local (127.0.0.1)
      - Écoute sur ``http://127.0.0.1:9876/trigger`` (port dans ``Settings…``) un POST JSON

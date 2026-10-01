@@ -1668,6 +1668,20 @@ den Start nicht zum Absturz bringen kann.
    * - ``speech_enabled``
      - ``true``
      - Wenn false, erscheint die Sprechblase nie.
+   * - ``hotkeys_enabled``
+     - ``false``
+     - Gesetzt über **Enable global hotkeys (needs pynput)** in der
+       Gruppe Global hotkeys des Tabs.
+   * - ``hotkeys``
+     - ``{}``
+     - ``{action: key}``-Überschreibungen der Standardwerte
+       ``ctrl+shift+p`` (anzeigen / verstecken), ``ctrl+shift+l``
+       (sperren), ``ctrl+shift+t`` (Click-Through) und
+       ``ctrl+shift+space`` (jetzt sprechen), gesetzt über die
+       Tastenfelder der Gruppe Global hotkeys. Eine Taste, die
+       bereits eine andere Aktion nutzt, wird dort abgelehnt;
+       gespeicherte Tasten, die sich zwei Aktionen teilen, werden
+       beim Öffnen des Tabs in der Statuszeile genannt.
 
 Das Merge-Verhalten des Einstellungs-Dicts ist eine Ebene tief:
 Ältere Einstellungsdateien, denen neuere Schlüssel fehlen,
@@ -1731,7 +1745,9 @@ erweitert — siehe *Plugins schreiben* und ``on_pet_created``.
    * - Auf den Twitch-Chat reagieren
      - Tritt dem Chat eines Kanals bei und spielt die einem Schlüsselwort zugeordnete
        Bewegungsgruppe ab, sobald eine Nachricht es enthält (ohne Beachtung der
-       Groß-/Kleinschreibung; Zeilen ``keyword = Group`` in ``Settings…``)
+       Groß-/Kleinschreibung; Zeilen ``keyword = Group`` in ``Settings…``). ``=hi`` trifft nur
+       eine Nachricht, die genau "hi" lautet, ``!dance*`` eine, die mit "!dance" beginnt,
+       ``/go+al/`` einen regulären Ausdruck; die erste passende Zeile gewinnt
      - Ein Kanalname und ein ``oauth:``-Token
    * - Lokaler Webhook (127.0.0.1)
      - Lauscht auf ``http://127.0.0.1:9876/trigger`` (Port in ``Settings…``) auf einen JSON-POST

@@ -31,13 +31,33 @@ def format_triggers(triggers: object) -> str:
 
 
 def parse_triggers(text: str) -> dict[str, str]:
-    """``keyword = Group`` lines back into a dict; blank or malformed lines are skipped."""
+    """``keyword = Group`` lines back into a dict; blank or malformed lines are skipped.
+
+    The ``=`` of an exact-match keyword (``=hi = Wave``) and anything inside a
+    ``/regex/`` belong to the keyword, not the separator.
+    """
     triggers: dict[str, str] = {}
     for line in text.splitlines():
-        keyword, sep, group = line.partition(_TRIGGER_SEPARATOR)
-        if sep and keyword.strip() and group.strip():
-            triggers[keyword.strip()] = group.strip()
+        keyword, group = _split_trigger(line)
+        if keyword and group:
+            triggers[keyword] = group
     return triggers
+
+
+def _split_trigger(line: str) -> tuple[str, str]:
+    """``(keyword, group)`` of one trigger line; either is empty when the line is malformed."""
+    text = line.strip()
+    head = ""
+    if text.startswith(_TRIGGER_SEPARATOR):
+        head, text = _TRIGGER_SEPARATOR, text[1:]
+    elif text.startswith("/") and text.find("/", 1) > 0:
+        end = text.find("/", 1) + 1
+        head, text = text[:end], text[end:]
+    keyword, sep, group = text.partition(_TRIGGER_SEPARATOR)
+    keyword = head + keyword.strip()
+    if not sep or keyword in ("", _TRIGGER_SEPARATOR):
+        return "", ""
+    return keyword, group.strip()
 
 
 def format_app_ids(ids: object) -> str:
@@ -86,6 +106,11 @@ class IntegrationSettingsDialog(QDialog):
         self._twitch_oauth = _secret(merged["twitch_oauth"])
         self._twitch_triggers = QPlainTextEdit(format_triggers(merged["twitch_triggers"]))
         self._twitch_triggers.setPlaceholderText("hype = Cheer")
+        self._twitch_triggers.setToolTip(_tr(
+            "pet_integrations_triggers_tooltip",
+            "One trigger per line: keyword = motion group. A keyword matches anywhere in a "
+            "message; =hi only the whole message, !dance* its start, /go+al/ a regular "
+            "expression. The first line that matches wins."))
         self._webhook_port = _port(merged["webhook_port"])
         self._webhook_token = _secret(merged["webhook_token"])
         self._ignored = QPlainTextEdit(format_app_ids(merged["win_notifications_ignored"]))

@@ -1348,6 +1348,18 @@ Schema（带版本号 — 新字段向前兼容）：
    * - ``speech_enabled``
      - ``true``
      - 为 false 时气泡永远不弹。
+   * - ``hotkeys_enabled``
+     - ``false``
+     - 由标签 **Global hotkeys**\ （全局热键）分组里的
+       **Enable global hotkeys (needs pynput)**\ （启用全局热键，需要 pynput）设置。
+   * - ``hotkeys``
+     - ``{}``
+     - 以 ``{action: key}`` 覆盖以下默认值：
+       ``ctrl+shift+p``\ （显示 / 隐藏）、``ctrl+shift+l``\ （锁定）、
+       ``ctrl+shift+t``\ （点击穿透）与 ``ctrl+shift+space``\ （立即说话），
+       由 **Global hotkeys**\ （全局热键）分组的按键框设置。
+       已被另一个动作占用的按键会在那里被拒绝；
+       两个动作共用的已保存按键会在打开标签时列在状态栏中。
 
 设置 dict 的合并行为是一层深的：缺少新 key 的旧设置文件加载
 后仍会得到一个完整的状态 dict（默认值填空缺）；你已保存的新
@@ -1400,7 +1412,8 @@ key 也能在不认识它们的旧运行时上幸存。
      - ``obs-websocket-py``\ （首次使用时安装）；OBS 需开启其 WebSocket 服务器
    * - React to Twitch chat（响应 Twitch 聊天）
      - 加入某个频道的聊天室，每当消息包含某个关键词时，播放映射到该关键词的动作组（不区分大小写；
-       在 ``Settings…`` 中按 ``keyword = Group`` 每行一条设置）
+       在 ``Settings…`` 中按 ``keyword = Group`` 每行一条设置）。``=hi`` 只匹配内容恰好为“hi”的消息，
+       ``!dance*`` 匹配以“!dance”开头的消息，``/go+al/`` 则是正则表达式；多行都匹配时，采用最上面的那一行
      - 频道名称与一个 ``oauth:`` 令牌
    * - Local webhook (127.0.0.1)（本机 Webhook）
      - 在 ``http://127.0.0.1:9876/trigger``\ （端口在 ``Settings…`` 中设置）上监听来自脚本、

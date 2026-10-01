@@ -1631,6 +1631,18 @@ corrompido não pode travar o lançamento.
    * - ``speech_enabled``
      - ``true``
      - Quando false o balão de fala nunca aparece.
+   * - ``hotkeys_enabled``
+     - ``false``
+     - Definido por **Enable global hotkeys (needs pynput)** no grupo
+       Global hotkeys da aba.
+   * - ``hotkeys``
+     - ``{}``
+     - Substituições ``{action: key}`` dos padrões ``ctrl+shift+p``
+       (mostrar / esconder), ``ctrl+shift+l`` (travar), ``ctrl+shift+t``
+       (click-through) e ``ctrl+shift+space`` (falar agora), definidas
+       pelos campos de tecla do grupo Global hotkeys. Uma tecla que outra
+       ação já usa é recusada ali; teclas salvas que duas ações
+       compartilham são indicadas na linha de status quando a aba abre.
 
 O comportamento de merge do dict de configurações é de um nível de
 profundidade: arquivos de configurações mais antigos sem chaves mais
@@ -1690,7 +1702,9 @@ também é o exemplo completo de um plugin que estende o pet — veja *Escrevend
    * - Reagir ao chat da Twitch
      - Entra no chat de um canal e toca o grupo de motions mapeado para uma palavra-chave sempre
        que uma mensagem a contém (sem diferenciar maiúsculas de minúsculas; linhas
-       ``keyword = Group`` em ``Settings…``)
+       ``keyword = Group`` em ``Settings…``). ``=hi`` só corresponde a uma mensagem que seja
+       exatamente "hi", ``!dance*`` a uma que comece com "!dance", ``/go+al/`` a uma expressão
+       regular; vence a primeira linha que corresponder
      - Um nome de canal e um token ``oauth:``
    * - Webhook local (127.0.0.1)
      - Escuta em ``http://127.0.0.1:9876/trigger`` (porta em ``Settings…``) um POST JSON

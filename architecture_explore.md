@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `5862c1e` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `bf749f5` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,14 +66,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 910 | 151,691 |
+| `tests/` | 911 | 151,804 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
 | `Imervue/gui/` | 169 | 33,728 |
 | `Imervue/puppet/` | 60 | 16,391 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,777 |
-| `Imervue/desktop_pet/` | 29 | 7,036 |
+| `Imervue/multi_language/` | 8 | 14,787 |
+| `Imervue/desktop_pet/` | 29 | 7,084 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
 | `Imervue/menu/` | 11 | 3,595 |
@@ -83,10 +83,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 8 | 1,006 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
-| `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,756** | **334,184** |
+| `plugins/`（19 個外掛） | 80 | 16,021 |
+| **總計** | **1,757** | **334,390** |
 
-其中 `Imervue/` 套件本身 766 檔 / 166,507 行。
+其中 `Imervue/` 套件本身 766 檔 / 166,565 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -858,7 +858,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-29 個檔、7,036 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+29 個檔、7,084 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。套件的 `__init__` 和 puppet 一樣用模組 `__getattr__` 延遲匯出 `PetWindow`／`PetWorkspace`／`PetTrayIcon` 等名稱，所以 import `desktop_pet.settings` 之類的輕量子模組不會載入視窗、工作區與 Puppet canvas。
 
 #### 視窗與互動
@@ -868,7 +868,7 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。�
 | `pet_window.py` | 867 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas`；`add_integration` / `remove_integration` / `integration` 讓外掛把 `IntegrationController` 掛進 `shutdown()` 會停的登錄表 |
 | `pet_window_flags.py` | 201 | `PetWindowFlagsMixin`：`PetWindow` 的視窗旗標組合（置頂／置底、點擊穿透）、鎖定位置、吸附門檻、透明度、全螢幕時隱藏 |
 | `pet_feature_toggles.py` | 188 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、虛擬攝影機、LLM、音樂律動、閒置小遊戲、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
-| `pet_workspace.py` | 780 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設）；建立寵物視窗時發 `pet_created`，外掛經 `PluginManager.connect_pet_hooks` 收到 `on_pet_created` |
+| `pet_workspace.py` | 817 | Tab 4 控制面板（rig 選擇、驅動開關、可見性 / 點擊穿透 / 尺寸預設、全域熱鍵：拒絕別的動作已用的鍵，開分頁時列出共用同一鍵的已存綁定）；建立寵物視窗時發 `pet_created`，外掛經 `PluginManager.connect_pet_hooks` 收到 `on_pet_created` |
 | `pet_interaction.py` | 214 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
 | `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
 | `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
@@ -894,8 +894,8 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。�
 
 OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrations`（§7） ·
 寵物外掛的穩定介面見 `plugin_base.on_pet_created` ·
-`hotkey_manager.py`(248) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(46) 衝突偵測 ·
-`command_parser.py`(77) 可重用的聊天指令路由器（exact / prefix / substring / regex）
+`hotkey_manager.py`(248) 全域熱鍵（pynput）+ `hotkey_conflicts.py`(60) 衝突偵測（`clashing_action`／`find_conflicts`，Desktop Pet 分頁的熱鍵欄位用） ·
+`command_parser.py`(77) 可重用的聊天指令路由器（exact / prefix / substring / regex；`pet_integrations` 外掛的 Twitch 關鍵字走它）
 
 #### 個性與行為
 
@@ -956,7 +956,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | --- | --- | --- | --- |
 | `safety_review` | 15 / 4,622 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到）；存檔一律走 `_censor_core._save_as`（`.tmp` + `os.replace`，覆寫原檔模式失敗也不毀原圖） | nudenet, ultralytics, huggingface_hub |
 | `spanish_translation` | 3 / 1,824 | 西班牙文語言外掛，示範在 `register_languages()` 裡呼叫 `register_language()` | — |
-| `pet_integrations` | 9 / 1,700 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
+| `pet_integrations` | 9 / 1,735 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字〔`=hi` 整則、`!dance*` 開頭、`/re/` 正規式，經主程式 `desktop_pet.command_parser`〕、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
 | `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 832 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
 | `object_splitter` | 4 / 701 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-910 個檔、151,691 行。`pyproject.toml` 定義三個互斥層級 marker：
+911 個檔、151,804 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1210,8 +1210,8 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 9 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    `paint/`、`puppet/` 已全部接上）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+11. **有 7 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    `paint/`、`puppet/`、`desktop_pet/` 已全部接上）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 

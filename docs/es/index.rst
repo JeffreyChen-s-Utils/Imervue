@@ -1648,6 +1648,20 @@ archivo de configuración corrupto no puede hacer fallar el arranque.
    * - ``speech_enabled``
      - ``true``
      - Cuando es falso, el bocadillo de diálogo nunca aparece.
+   * - ``hotkeys_enabled``
+     - ``false``
+     - Lo establece **Enable global hotkeys (needs pynput)** en el
+       grupo Global hotkeys de la pestaña.
+   * - ``hotkeys``
+     - ``{}``
+     - Sustituciones ``{action: key}`` de los valores por defecto
+       ``ctrl+shift+p`` (mostrar / ocultar), ``ctrl+shift+l``
+       (bloquear), ``ctrl+shift+t`` (clic transparente) y
+       ``ctrl+shift+space`` (hablar ahora), establecidas por los
+       campos de tecla del grupo Global hotkeys. Allí se rechaza una
+       tecla que ya usa otra acción; las teclas guardadas que
+       comparten dos acciones se indican en la línea de estado al
+       abrir la pestaña.
 
 El comportamiento de fusión del diccionario de configuración es de
 un nivel de profundidad: los archivos de configuración antiguos a
@@ -1707,7 +1721,9 @@ También es el ejemplo práctico de un plugin que amplía la mascota — véase 
    * - Reaccionar al chat de Twitch
      - Se une al chat de un canal y reproduce el grupo de movimientos asignado a una palabra clave
        cada vez que un mensaje la contiene (sin distinguir mayúsculas de minúsculas; líneas
-       ``keyword = Group`` en ``Settings…``)
+       ``keyword = Group`` en ``Settings…``). ``=hi`` solo coincide con un mensaje que sea
+       exactamente "hi", ``!dance*`` con uno que empiece por "!dance", ``/go+al/`` es una
+       expresión regular; gana la primera línea que coincida
      - Un nombre de canal y un token ``oauth:``
    * - Webhook local (127.0.0.1)
      - Escucha en ``http://127.0.0.1:9876/trigger`` (puerto en ``Settings…``) un POST JSON

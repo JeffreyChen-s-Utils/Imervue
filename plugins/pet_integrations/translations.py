@@ -23,6 +23,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "pet_integrations_channel": "Channel",
         "pet_integrations_oauth": "OAuth token",
         "pet_integrations_triggers": "Keyword = motion group",
+        "pet_integrations_triggers_tooltip": (
+            "One trigger per line: keyword = motion group. A keyword matches anywhere in a message; =hi only the whole message, !dance* its start, /go+al/ a regular expression. The first line that matches wins."),
         "pet_integrations_token": "Bearer token (optional)",
         "pet_integrations_ignored": "Ignored app ids (one per line)",
     },
@@ -46,6 +48,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "pet_integrations_channel": "頻道",
         "pet_integrations_oauth": "OAuth 權杖",
         "pet_integrations_triggers": "關鍵字 = 動作群組",
+        "pet_integrations_triggers_tooltip": (
+            "一行一個觸發：關鍵字 = 動作群組。關鍵字出現在訊息任何位置就符合；=hi 只符合整則訊息、!dance* 符合訊息開頭、/go+al/ 是正規表示式。由第一個符合的行生效。"),
         "pet_integrations_token": "Bearer 權杖（選填）",
         "pet_integrations_ignored": "忽略的應用程式 ID（每行一個）",
     },
@@ -69,6 +73,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "pet_integrations_channel": "频道",
         "pet_integrations_oauth": "OAuth 令牌",
         "pet_integrations_triggers": "关键词 = 动作组",
+        "pet_integrations_triggers_tooltip": (
+            "每行一个触发：关键词 = 动作组。关键词出现在消息任何位置就匹配；=hi 只匹配整条消息、!dance* 匹配消息开头、/go+al/ 是正则表达式。由第一个匹配的行生效。"),
         "pet_integrations_token": "Bearer 令牌（可选）",
         "pet_integrations_ignored": "忽略的应用 ID（每行一个）",
     },
@@ -92,6 +98,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "pet_integrations_channel": "チャンネル",
         "pet_integrations_oauth": "OAuth トークン",
         "pet_integrations_triggers": "キーワード = モーショングループ",
+        "pet_integrations_triggers_tooltip": (
+            "1 行に 1 つ：キーワード = モーショングループ。キーワードはメッセージのどこにあっても一致します。=hi はメッセージ全体、!dance* は先頭、/go+al/ は正規表現に一致します。最初に一致した行が使われます。"),
         "pet_integrations_token": "Bearer トークン（任意）",
         "pet_integrations_ignored": "無視するアプリ ID（1 行に 1 つ）",
     },
@@ -115,6 +123,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "pet_integrations_channel": "채널",
         "pet_integrations_oauth": "OAuth 토큰",
         "pet_integrations_triggers": "키워드 = 모션 그룹",
+        "pet_integrations_triggers_tooltip": (
+            "한 줄에 하나씩: 키워드 = 모션 그룹. 키워드는 메시지 어디에 있든 일치합니다. =hi는 메시지 전체, !dance*는 시작 부분, /go+al/은 정규식과 일치합니다. 처음 일치한 줄이 적용됩니다."),
         "pet_integrations_token": "Bearer 토큰(선택)",
         "pet_integrations_ignored": "무시할 앱 ID(한 줄에 하나)",
     },

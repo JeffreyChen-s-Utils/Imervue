@@ -15,6 +15,8 @@ from __future__ import annotations
 
 import socket
 
+import pytest
+
 from pet_integrations.twitch_chat_hook import (
     TwitchChatClient,
     coerce_triggers,
@@ -93,6 +95,21 @@ def test_match_keyword_empty_inputs_return_none():
 
 def test_match_keyword_no_match_returns_none():
     assert match_keyword("totally unrelated", {"hi": "Wave"}) is None
+
+
+@pytest.mark.parametrize(("text", "group"), [
+    ("hi", "Exact"), ("  HI ", "Exact"), ("hi there", None),             # =hi: the whole message
+    ("!dance now", "Dance"), ("let's !dance", None),                      # !dance*: its start
+    ("GOOOAL!!", "Cheer"), ("goal", "Cheer"), ("gal", None),              # /go+al/: a regex
+])
+def test_match_keyword_exact_prefix_and_regex_keys(text, group):
+    """Keys go through command_parser: ``=`` exact, trailing ``*`` prefix, ``/…/`` regex."""
+    triggers = {"=hi": "Exact", "!dance*": "Dance", "/go+al/": "Cheer"}
+    assert match_keyword(text, triggers) == group
+
+
+def test_match_keyword_invalid_regex_never_matches():
+    assert match_keyword("(((", {"/(((/": "Broken", "(": "Plain"}) == "Plain"
 
 
 # ---------------------------------------------------------------

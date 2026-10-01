@@ -612,6 +612,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | 尺寸 preset | 小 / 中 / 大。以中心為錨點縮放，調尺寸時寵物不會跨螢幕跳。 |
 | 不透明度滑桿 | 把寵物從 10% 淡到 100%，可以當作低調的桌面裝飾。 |
 | 記住你擺的位置 | 把寵物拖到你喜歡的角落；下次啟動會回到那裡。 |
+| 全域熱鍵 | 在任何應用程式裡都能顯示 / 隱藏寵物、鎖定位置、切換點擊穿透或讓它立即說話（需要 `pynput`）：預設為 Ctrl+Shift+P / L / T / Space，每一個都能在分頁的 **Global hotkeys**（全域熱鍵）群組裡重新設定。已被其他動作使用的按鍵會被拒絕；兩個動作共用的已儲存按鍵會列在狀態列上。 |
 
 ### 點擊互動
 
@@ -641,7 +642,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 所有設定 — 位置、驅動、不透明度、點擊穿透、尺寸 — 都會在下次啟動時記住。
 
-**Desktop Pet Integrations** 外掛（**Plugins > Download Plugins**）會新增 **Plugins > Desktop Pet Integrations**：寵物會對 OBS（直播、錄影、切換場景）、Twitch 聊天室關鍵字、本機 webhook（`POST http://127.0.0.1:9876/trigger`，內容為 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知做出反應。它也是以 `on_pet_created` 打造桌寵外掛的範例。
+**Desktop Pet Integrations** 外掛（**Plugins > Download Plugins**）會新增 **Plugins > Desktop Pet Integrations**：寵物會對 OBS（直播、錄影、切換場景）、Twitch 聊天室關鍵字（出現在訊息任何位置即可，或用 `=hi` 比對整則訊息、`!dance*` 比對開頭、`/go+al/` 使用正規表示式）、本機 webhook（`POST http://127.0.0.1:9876/trigger`，內容為 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知做出反應。它也是以 `on_pet_created` 打造桌寵外掛的範例。
 
 ### 自訂語音（pet script）
 

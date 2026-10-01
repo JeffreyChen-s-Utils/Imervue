@@ -717,6 +717,8 @@ english_word_dict = {
     "desktop_pet_hotkey_toggle_lock": 'Lock / unlock position',
     "desktop_pet_hotkey_click_through": 'Toggle click-through',
     "desktop_pet_hotkey_speak_now": 'Speak now',
+    "desktop_pet_hotkey_taken": "{key} is already the key for “{action}” — kept the previous key",
+    "desktop_pet_hotkeys_shared": "These hotkeys share one key — change one of them: {pairs}",
     "desktop_pet_mic_lipsync": 'Mic lip-sync (needs sounddevice)',
     "desktop_pet_webcam": 'Webcam tracking (needs opencv-python + mediapipe)',
     "desktop_pet_mic_missing": 'Mic lip-sync needs sounddevice — pip install sounddevice',

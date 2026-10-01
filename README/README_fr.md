@@ -613,6 +613,7 @@ Onglet 5 — le **Desktop Pet** place n'importe quel personnage `.puppet` sur vo
 | Tailles préréglées | Petit / moyen / grand. Redimensionnement autour du centre afin que le pet ne saute pas à travers l'écran. |
 | Curseur d'opacité | Fondu du pet de 10 % à 100 % pour en faire un ornement de bureau discret. |
 | Mémorise sa position | Glissez le pet dans votre coin préféré ; il y retournera au prochain lancement. |
+| Raccourcis globaux | Affichez / masquez le pet, verrouillez-le, basculez le clic traversant ou faites-le parler depuis n'importe quelle application (nécessite `pynput`) : Ctrl+Shift+P / L / T / Espace par défaut, chacun réassignable dans le groupe **Global hotkeys** de l'onglet. Une touche déjà utilisée par une autre action est refusée, et les touches enregistrées que deux actions partagent sont indiquées dans la ligne d'état. |
 
 ### Interactions au clic
 
@@ -642,7 +643,7 @@ Choisissez n'importe quelle combinaison depuis l'onglet ou le menu clic-droit. A
 
 Tout ce que vous réglez — position, pilotes, opacité, clic traversant, taille — est mémorisé entre les lancements.
 
-Le plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) ajoute **Plugins > Desktop Pet Integrations** : le pet réagit à OBS (diffusion, enregistrement, changements de scène), aux mots-clés du chat Twitch, à un webhook local (`POST http://127.0.0.1:9876/trigger` avec `{"group": "Wave", "speech": "Hi!"}`) et aux notifications Windows. C'est aussi l'exemple d'un plugin de pet construit sur `on_pet_created`.
+Le plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) ajoute **Plugins > Desktop Pet Integrations** : le pet réagit à OBS (diffusion, enregistrement, changements de scène), aux mots-clés du chat Twitch (n'importe où dans un message, ou `=hi` pour le message entier, `!dance*` pour son début, `/go+al/` pour une expression régulière), à un webhook local (`POST http://127.0.0.1:9876/trigger` avec `{"group": "Wave", "speech": "Hi!"}`) et aux notifications Windows. C'est aussi l'exemple d'un plugin de pet construit sur `on_pet_created`.
 
 ### Voix personnalisée (script du pet)
 
