@@ -31,6 +31,8 @@ Die Abschnitte *Erste Schritte*, *Tastenkürzel-Referenz*, *Extra-Tools-Menü-Re
 *Plugin-System*, *Kommandozeilen-Verwendung* und *MCP-Server* sind übergreifend — sie gelten
 für alle fünf Tabs.
 
+**Puppet** und **Desktop Pet** sind optional: Schalten Sie einen der beiden unter ``File`` > ``Preferences`` > **Optional tabs** aus, dann wird ab dem nächsten Start sein Tab nicht angelegt und sein Code nicht geladen, sodass Imervue schneller startet und weniger Speicher braucht. Beide sind standardmäßig an; jeder wird erst beim ersten Öffnen seines Tabs aufgebaut, der Desktop-Pet-Tab schon beim Start, wenn sein Pet beim Start erscheinen soll.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:

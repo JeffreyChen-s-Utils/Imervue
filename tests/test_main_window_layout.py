@@ -35,11 +35,13 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_modify_menu_action': ('QAction',),
  '_modify_splitter': ('QSplitter',),
  '_paint_page': ('QWidget',),
- '_pet_tray': ('PetTrayIcon',),
+ '_pet_page': ('QWidget',),
+ '_pet_tray': ('NoneType', None),
  '_plugin_menu': ('QMenu',),
  '_plugin_menu_entries': ('list',),
  '_pre_dual_mode': ('str', 'grid'),
  '_progress_bar': ('QProgressBar',),
+ '_puppet_page': ('QWidget',),
  '_recent_folder_menu': ('QMenu',),
  '_recent_image_menu': ('QMenu',),
  '_recent_menu': ('QMenu',),
@@ -82,9 +84,9 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  'model': ('FileTreeSortProxy',),
  'modify_panel': ('DevelopPanel',),
  'objectNameChanged': ('SignalInstance',),
- 'pet_workspace': ('PetWorkspace',),
+ 'pet_workspace': ('NoneType', None),
  'plugin_manager': ('PluginManager',),
- 'puppet_workspace': ('PuppetWorkspace',),
+ 'puppet_workspace': ('NoneType', None),
  'rating_filter': ('QComboBox',),
  'tabifiedDockWidgetActivated': ('SignalInstance',),
  'tag_filter': ('QComboBox',),
@@ -198,3 +200,85 @@ def test_a_saved_workspace_records_the_tree_and_viewer_split(window):
     saved = capture_current_workspace(window, "narrow tree")
     assert len(saved.splitter_sizes) == 2
     assert saved.splitter_sizes == window._main_splitter.sizes()  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# Optional tabs: Puppet and Desktop Pet
+# ---------------------------------------------------------------------------
+
+def _tab_titles(win):
+    tabs = win._main_tabs  # noqa: SLF001
+    return [tabs.tabText(i) for i in range(tabs.count())]
+
+
+def test_the_puppet_and_pet_tabs_are_built_on_first_use(window):
+    tabs = window._main_tabs  # noqa: SLF001
+    for page_name, attribute, kind in (("_puppet_page", "puppet_workspace", "PuppetWorkspace"),
+                                       ("_pet_page", "pet_workspace", "PetWorkspace")):
+        page = getattr(window, page_name)
+        assert getattr(window, attribute) is None
+        tabs.setCurrentIndex(tabs.indexOf(page))
+        workspace = getattr(window, attribute)
+        assert type(workspace).__name__ == kind
+        assert workspace.parent() is page
+        tabs.setCurrentIndex(0)
+        tabs.setCurrentIndex(tabs.indexOf(page))
+        assert getattr(window, attribute) is workspace      # built once
+
+
+def test_the_plugins_hear_of_a_pet_built_later(window):
+    assert window.plugin_manager._pet_hook_connected is False  # noqa: SLF001
+    tabs = window._main_tabs  # noqa: SLF001
+    tabs.setCurrentIndex(tabs.indexOf(window._pet_page))  # noqa: SLF001
+    assert window.plugin_manager._pet_hook_connected is True  # noqa: SLF001
+
+
+def _build_window(**settings):
+    from Imervue.Imervue_main_window import ImervueMainWindow
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    user_setting_dict.update(settings)
+    return ImervueMainWindow()
+
+
+def _close(win):
+    from Imervue.Imervue_main_window import ImervueMainWindow
+    win._release_for_close()  # noqa: SLF001
+    ImervueMainWindow._live_windows.discard(win)  # noqa: SLF001
+    win.deleteLater()
+
+
+@pytest.mark.parametrize(("settings", "missing"), [
+    ({"puppet_tab_enabled": False}, "Puppet"),
+    ({"desktop_pet_tab_enabled": False}, "Desktop Pet"),
+])
+def test_a_tab_turned_off_is_not_added(qapp, settings, missing):
+    win = _build_window(**settings)
+    try:
+        titles = _tab_titles(win)
+        assert missing not in titles
+        assert len(titles) == 4
+        assert win._main_tabs.widget(2) is win._paint_page  # noqa: SLF001
+    finally:
+        _close(win)
+
+
+def test_both_tabs_off_leave_the_three_core_tabs(qapp):
+    win = _build_window(puppet_tab_enabled=False, desktop_pet_tab_enabled=False)
+    try:
+        assert win._main_tabs.count() == 3  # noqa: SLF001
+        assert win._puppet_page is None and win._pet_page is None  # noqa: SLF001
+        win._main_tabs.setCurrentIndex(2)  # noqa: SLF001
+        assert win.puppet_workspace is None and win.pet_workspace is None
+    finally:
+        _close(win)
+
+
+def test_a_pet_that_shows_on_launch_is_built_at_startup(qapp, monkeypatch):
+    from Imervue.gui import optional_tabs
+    monkeypatch.setattr(optional_tabs, "pet_shows_on_launch", lambda: True)
+    win = _build_window()
+    try:
+        assert type(win.pet_workspace).__name__ == "PetWorkspace"
+        assert win.puppet_workspace is None
+    finally:
+        _close(win)

@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-01 against `75c751b` on `dev`.
+> Last verified: 2026-10-01 against `8601efe` on `dev`.
 
 ## 1. Purpose
 
@@ -78,7 +78,8 @@ Public interfaces other code or users depend on:
   the class method `register_languages` (called before the main window is built). Author guide:
   `PLUGIN_DEV_GUIDE.md`. `on_pet_created(pet)` reaches plugins through
   `PluginManager.connect_pet_hooks` (the Desktop Pet tab's `pet_created` signal, and the pet that
-  already exists at load / reload); the pet's plugin surface is listed in its docstring.
+  already exists at load / reload; the window calls it again when it builds the Desktop Pet tab after
+  the plugins loaded); the pet's plugin surface is listed in its docstring.
 - **Language API** — `language_wrapper.register_language()` (from a plugin's
   `register_languages()`) and `merge_translations()`
   (`Imervue/multi_language/language_wrapper.py`).
@@ -96,7 +97,9 @@ Public interfaces other code or users depend on:
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`
    (before the first PySide6 import) → `read_user_setting()` → `load_and_apply_theme()` /
    `load_and_apply_from_settings()` → `ImervueMainWindow` (`apply_saved_language()` registers
-   plugin languages first when the saved language is not built in; builds tabs, `create_menu()`) →
+   plugin languages first when the saved language is not built in; builds the tabs, Puppet and Desktop Pet
+   only when they are on in Preferences (`gui/optional_tabs.py`) and then as empty pages whose workspace is
+   built when the tab is first opened; `create_menu()`) →
    `_init_plugin_system_example()` (`Imervue/integration_guide.py`) →
    `PluginManager.discover_and_load()` → optional `open_path()` for a file given on the command line.
 2. **Browse and view** — `open_path()` (`gpu_image_view/images/image_loader.py`) →

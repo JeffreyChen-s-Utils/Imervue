@@ -64,6 +64,8 @@ Imervue est une station de travail image accélérée par GPU qui propose **cinq
 | **Puppet** | Animateur de marionnettes 2D avec squelette conçu de zéro — maillages, déformeurs, paramètres, mouvements, physique |
 | **Desktop Pet** | Superposition de bureau sans cadre, transparente et toujours au premier plan qui exécute n'importe quel rig `.puppet` — glisser-déposer / accrochage aux bords / clic traversant / réduction en plein écran / pilotes en direct / bulle de dialogue / icône de barre d'état système |
 
+**Puppet** et **Desktop Pet** sont facultatifs : désactivez l'un ou l'autre dans **File > Preferences > Optional tabs** et, dès le démarrage suivant, son onglet n'est pas ajouté et son code n'est pas chargé, si bien qu'Imervue démarre plus vite et consomme moins de mémoire. Les deux sont activés par défaut ; chacun est construit la première fois que vous ouvrez son onglet, et l'onglet Desktop Pet dès le démarrage quand son compagnon doit s'afficher au lancement.
+
 Principes de conception :
 
 - **Performance avant tout** — Rendu accéléré par GPU avec des shaders GLSL modernes et des VBO
@@ -962,6 +964,7 @@ Entrées clés du profil actif :
 | `stack_raw_jpeg_pairs` | bool | Bascule d'empilement RAW+JPEG |
 | `external_editors` | list | Éditeurs configurés |
 | `macros` / `macro_last_name` | list / string | Macros enregistrées + cible de Alt+M |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | Onglets facultatifs (activés par défaut ; appliqué au démarrage suivant) |
 
 ---
 

@@ -64,6 +64,8 @@ Imervue is a GPU-accelerated image workstation that ships **five top-level tabs*
 | **Puppet** | From-scratch 2D rigged-puppet animator — meshes, deformers, parameters, motions, physics |
 | **Desktop Pet** | Frameless / transparent / always-on-top overlay that runs the same puppet rigs on your desktop with live drivers (idle / blink / mic / webcam / drag-track) |
 
+**Puppet** and **Desktop Pet** are optional: turn either off under **File > Preferences > Optional tabs** and, from the next start, its tab is not added and its code is not loaded, so Imervue starts faster and uses less memory. Both are on by default; each one is built the first time you open its tab, and the Desktop Pet tab at startup when its pet is set to show on launch.
+
 Design principles:
 
 - **Performance first** — GPU-accelerated rendering with modern GLSL shaders and VBO
@@ -1031,6 +1033,7 @@ Key entries in the active profile:
 | `stack_raw_jpeg_pairs` | bool | RAW+JPEG stack toggle |
 | `external_editors` | list | Configured editors |
 | `macros` / `macro_last_name` | list / string | Saved macros + Alt+M target |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | Optional tabs (on by default; applied at the next start) |
 
 ---
 

@@ -4,6 +4,8 @@ Centralised dialog for runtime-tunable user options that don't fit any
 domain-specific dialog. Currently exposes:
 
 * **VRAM tile-cache limit** — overrides the auto-detected GPU memory budget.
+* UI scale, theme and the deep-zoom browsing aids.
+* **Optional tabs** — Puppet and Desktop Pet; a tab that is off is not loaded.
 
 The dialog persists changes through ``user_setting_dict`` + ``schedule_save``
 so they round-trip across restarts. A restart is required for the VRAM limit
@@ -25,6 +27,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui.optional_tabs import DESKTOP_PET_TAB, PUPPET_TAB, set_tab_enabled, tab_enabled
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
 from Imervue.system.themes import DEFAULT_THEME_NAME, list_themes
@@ -67,6 +70,7 @@ class PreferencesDialog(QDialog):
         layout.addLayout(self._build_ui_scale_form())
         layout.addLayout(self._build_theme_form())
         layout.addLayout(self._build_browsing_form())
+        layout.addLayout(self._build_tabs_form())
         layout.addStretch(1)
         layout.addWidget(self._build_button_box())
 
@@ -201,6 +205,25 @@ class PreferencesDialog(QDialog):
         form.addRow(hint)
         return form
 
+    def _build_tabs_form(self) -> QFormLayout:
+        """The Puppet and Desktop Pet tabs, each on or off from the next start."""
+        lang = language_wrapper.language_word_dict
+        form = QFormLayout()
+        self._puppet_tab_check = QCheckBox(lang.get("preferences_puppet_tab", "Puppet"))
+        self._puppet_tab_check.setChecked(tab_enabled(PUPPET_TAB))
+        self._pet_tab_check = QCheckBox(lang.get("preferences_desktop_pet_tab", "Desktop Pet"))
+        self._pet_tab_check.setChecked(tab_enabled(DESKTOP_PET_TAB))
+        hint = QLabel(lang.get(
+            "preferences_tabs_hint",
+            "A tab that is off is not loaded at all, so Imervue starts faster and uses less "
+            "memory. Restart required."))
+        hint.setStyleSheet(_HINT_LABEL_STYLE)
+        hint.setWordWrap(True)
+        form.addRow(lang.get("preferences_tabs_label", "Optional tabs:"), self._puppet_tab_check)
+        form.addRow("", self._pet_tab_check)
+        form.addRow(hint)
+        return form
+
     def _build_button_box(self) -> QDialogButtonBox:
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
@@ -238,6 +261,8 @@ class PreferencesDialog(QDialog):
         self._filmstrip_check.setChecked(True)
         self._transition_check.setChecked(True)
         self._smooth_nav_check.setChecked(False)
+        self._puppet_tab_check.setChecked(True)
+        self._pet_tab_check.setChecked(True)
 
     def _accept(self) -> None:
         user_setting_dict["vram_limit_auto"] = bool(self._auto_vram.isChecked())
@@ -249,6 +274,8 @@ class PreferencesDialog(QDialog):
             self._transition_check.isChecked())
         user_setting_dict["smooth_navigation_enabled"] = bool(
             self._smooth_nav_check.isChecked())
+        set_tab_enabled(PUPPET_TAB, self._puppet_tab_check.isChecked())
+        set_tab_enabled(DESKTOP_PET_TAB, self._pet_tab_check.isChecked())
         schedule_save()
         self._apply_browse_settings_live()
         self.accept()

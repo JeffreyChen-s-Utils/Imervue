@@ -63,6 +63,8 @@ Imervue 是一款 GPU 加速的影像工作站，提供 **五個頂層分頁**�
 | **Puppet** | 從零打造的 2D 綁骨偶動畫器 — 網格、變形器、參數、動作、物理 |
 | **Desktop Pet** | 無邊框 / 透明背景 / 永遠置頂的桌面寵物 overlay；用同一條 puppet runtime 帶即時驅動（idle / blink / mic / webcam / drag-track） |
 
+**Puppet** 與 **Desktop Pet** 是選用分頁：在 **File > Preferences > Optional tabs** 關閉其中一個，下次啟動起就不會加入那個分頁、也不會載入它的程式，Imervue 啟動更快、占用的記憶體更少。兩者預設開啟；各自在第一次打開分頁時才建立，若桌面寵物設定為啟動時顯示，Desktop Pet 分頁會在啟動時就建立。
+
 設計原則：
 
 - **效能優先** — 使用現代 GLSL 著色器和 VBO 進行 GPU 加速渲染
@@ -960,6 +962,7 @@ python -m Imervue.mcp_server
 | `stack_raw_jpeg_pairs` | bool | RAW+JPEG 疊合切換 |
 | `external_editors` | list | 已配置編輯器 |
 | `macros` / `macro_last_name` | list / string | 已儲存巨集 + Alt+M 目標 |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | 選用分頁（預設開啟；下次啟動生效） |
 
 ---
 

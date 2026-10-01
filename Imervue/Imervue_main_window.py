@@ -238,26 +238,6 @@ class ImervueMainWindow(
         # first screen's size. Deferred so windowHandle() exists.
         call_later(0, self, self._connect_screen_change_signal)
 
-    def _install_desktop_pet_tab(self, lang) -> None:
-        """Wire the 5th tab (Desktop Pet) — frameless / transparent
-        overlay sharing the Puppet runtime. The tab body is the
-        control panel; the actual character lives in a separate
-        top-level window. The system tray icon piggybacks here so
-        the user can toggle visibility without finding the tab; it
-        is only constructed when the platform reports a tray is
-        available (CI / headless desktops skip it gracefully)."""
-        from Imervue.desktop_pet import PetTrayIcon, PetWorkspace
-        self.pet_workspace = PetWorkspace()
-        self._main_tabs.addTab(
-            self.pet_workspace,
-            lang.get("desktop_pet_tab_title", "Desktop Pet"),
-        )
-        if not PetTrayIcon.is_available():
-            return
-        self._pet_tray = PetTrayIcon(self.pet_workspace, parent=self)
-        self.pet_workspace.attach_tray(self._pet_tray)
-        self._pet_tray.show()
-
     # ==========================
     # 主分頁切換（Imervue ↔ 修改）
     # ==========================
@@ -295,6 +275,7 @@ class ImervueMainWindow(
 
     def _on_main_tab_changed(self, idx: int) -> None:
         """Switch between Imervue (viewer), Modify and Paint tabs."""
+        self._build_optional_tab_on_open(idx)
         for shortcut in self._folder_tab_shortcuts:
             shortcut.setEnabled(idx == 0)
         if idx == 1:

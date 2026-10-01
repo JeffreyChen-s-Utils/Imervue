@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `e170ef1` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `8601efe` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 923 | 155,436 |
+| `tests/` | 924 | 155,624 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
-| `Imervue/gui/` | 168 | 33,604 |
+| `Imervue/gui/` | 169 | 33,705 |
 | `Imervue/puppet/` | 60 | 16,107 |
 | `Imervue/image/` | 129 | 15,518 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
-| `Imervue/multi_language/` | 8 | 14,387 |
+| `Imervue/multi_language/` | 8 | 14,407 |
 | `Imervue/desktop_pet/` | 30 | 7,167 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 34 | 4,759 |
 | `Imervue/menu/` | 11 | 3,595 |
-| `Imervue/` 根層 | 6 | 1,945 |
+| `Imervue/` 根層 | 6 | 1,926 |
 | `Imervue/plugin/` | 10 | 2,394 |
 | `Imervue/system/` | 33 | 3,222 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（19 個外掛） | 80 | 16,830 |
-| **總計** | **1,794** | **342,396** |
+| `plugins/`（19 個外掛） | 80 | 16,834 |
+| **總計** | **1,796** | **342,690** |
 
-其中 `Imervue/` 套件本身 791 檔 / 170,130 行。
+其中 `Imervue/` 套件本身 792 檔 / 170,232 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -113,7 +113,7 @@ py -m Imervue [--debug] [--software_opengl] [file]
    ├─ 6. ImervueMainWindow(debug=…)
    │      └─ 內部：apply_saved_language()（存下的不是內建語言時，先匯入外掛、
    │                只呼叫各外掛類別的 register_languages() 註冊語言）
-   │                → 還原視窗幾何 → 建 5 個分頁 → create_menu()
+   │                → 還原視窗幾何 → 建分頁（Puppet、Desktop Pet 依偏好設定開關，開著的也先是空頁，第一次打開才建）→ create_menu()
    │                → _init_plugin_system_example() 載入外掛
    │                → QTimer(800ms) 顯示 What's New / 首次導覽
    └─ 7. 命令列帶檔案 → QTimer(100ms) open_path(viewer, path)
@@ -150,11 +150,11 @@ ImervueMainWindow
 │   │                    └── ExifSidebar
 │   ├── Tab 1  "Modify"        ← QSplitter：左工具列 | AnnotationCanvas | 右顯影滑桿
 │   ├── Tab 2  "Paint"         ← `_paint_page`；PaintWorkspace 第一次用到才建立（`paint_workspace` property），有待還原的自動存檔時啟動就建
-│   ├── Tab 3  "Puppet"        ← PuppetWorkspace (QMainWindow-in-tab)
-│   └── Tab 4  "Desktop Pet"   ← PetWorkspace（控制面板；角色在另一個 top-level PetWindow）
+│   ├── Tab 3  "Puppet"        ← 選用（`gui/optional_tabs.py`）；`_puppet_page`，第一次打開才建 PuppetWorkspace (QMainWindow-in-tab)
+│   └── Tab 4  "Desktop Pet"   ← 選用；`_pet_page`，第一次打開（或寵物設定為啟動時顯示）才建 PetWorkspace（控制面板；角色在另一個 top-level PetWindow）
 ├── QStatusBar  ← 訊息 + 色標籤 chip + index/解析度/大小/縮放/游標 + MemoryPressureIndicator + 進度條
 ├── QDockWidget "Image load issues"  ← ImageIssuePanel
-└── 系統匣 PetTrayIcon（平台支援時）
+└── 系統匣 PetTrayIcon（平台支援、且 Desktop Pet 分頁已建立時）
 ```
 
 **主視窗自己負責的職責**（其餘全部委派）：
@@ -207,7 +207,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 721 | `ImervueMainWindow`：5 分頁協調者（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 702 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 688 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑；`build_parser` 依序加手寫子指令、`cli_tools` 由 MCP 工具產生的 46 個、最後 `list-ops` |
 | `cli_tools.py` | 260 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 48 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
@@ -543,7 +543,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-168 個檔、33,604 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+169 個檔、33,705 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -569,7 +569,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_screens.py` | 205 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
 | `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
-| `main_window_layout.py` | 326 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列） |
+| `main_window_layout.py` | 366 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
+| `optional_tabs.py` | 34 | 選用分頁的設定：`tab_enabled`／`set_tab_enabled`（`puppet_tab_enabled`、`desktop_pet_tab_enabled`，預設開、下次啟動生效）、`pet_shows_on_launch` |
 | `main_window_browse.py` | 147 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
 | `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 937 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理 |
@@ -650,7 +651,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 設定 / 系統
 
-`preferences_dialog.py`(268) · `shortcut_settings_dialog.py`(407) · `profiles_dialog.py`(206) 多帳號 ·
+`preferences_dialog.py`(295) 偏好設定（VRAM、UI 縮放、主題、瀏覽輔助、選用分頁） · `shortcut_settings_dialog.py`(407) · `profiles_dialog.py`(206) 多帳號 ·
 `workspace_dialog.py`(231) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(358) 軟刪除回收桶 ·
 `cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(334) ·
 `dual_pane_dialog.py`(167) 雙窗格檔案管理 · `onboarding_dialog.py`(135) 首次導覽 · `whats_new_dialog.py`(143)
@@ -988,7 +989,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-923 個檔、155,436 行。`pyproject.toml` 定義三個互斥層級 marker：
+924 個檔、155,624 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

@@ -33,6 +33,8 @@ Les sections *Pour démarrer*, *Référence des raccourcis clavier*,
 *Référence du menu Extra Tools*, *Système de plugins*, *Utilisation en ligne de commande*
 et *Serveur MCP* sont transversales — elles s'appliquent à l'ensemble des cinq onglets.
 
+**Puppet** et **Desktop Pet** sont facultatifs : désactivez l'un ou l'autre dans ``File`` > ``Preferences`` > **Optional tabs** et, dès le démarrage suivant, son onglet n'est pas ajouté et son code n'est pas chargé, si bien qu'Imervue démarre plus vite et consomme moins de mémoire. Les deux sont activés par défaut ; chacun est construit la première fois que vous ouvrez son onglet, et l'onglet Desktop Pet dès le démarrage quand son compagnon doit s'afficher au lancement.
+
 .. contents:: Table des matières
    :depth: 2
    :local:

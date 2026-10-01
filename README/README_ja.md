@@ -64,6 +64,8 @@ Imervue は GPU アクセラレーション画像ワークステーションで�
 | **Puppet** | ゼロから構築された 2D リギングパペットアニメーター — メッシュ、デフォーマー、パラメーター、モーション、物理 |
 | **Desktop Pet** | 任意の `.puppet` rig をフレームレスかつ透明な常に最前面のデスクトップオーバーレイとして実行 — ドラッグして移動、エッジスナップ、クリックスルー、ライブドライバー、システムトレイ統合 |
 
+**Puppet** と **Desktop Pet** は任意で使えるタブです。**File > Preferences > Optional tabs** でどちらかをオフにすると、次回の起動からそのタブは追加されず、コードも読み込まれないため、Imervue の起動が速くなりメモリ使用量も減ります。どちらも既定ではオンで、それぞれ初めてタブを開いたときに構築されます。Desktop Pet タブは、ペットを起動時に表示する設定のときは起動時に構築されます。
+
 設計原則:
 
 - **パフォーマンス第一** — モダンな GLSL シェーダーと VBO による GPU アクセラレーションレンダリング
@@ -959,6 +961,7 @@ python -m Imervue.mcp_server
 | `stack_raw_jpeg_pairs` | bool | RAW+JPEG スタック切り替え |
 | `external_editors` | list | 設定済みエディタ |
 | `macros` / `macro_last_name` | list / string | 保存済みマクロ + Alt+M ターゲット |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | 任意のタブ（既定でオン、次回の起動から反映） |
 
 ---
 

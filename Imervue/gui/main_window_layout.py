@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QStackedWidget, QStatusBar, QTabBar, QVBoxLayout, QWidget,
 )
 
+from Imervue.gui import optional_tabs
 from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.file_tree_sort import FileTreeSortProxy
 from Imervue.gui.file_tree_view import _FileTreeView
@@ -255,22 +256,18 @@ class MainWindowLayoutMixin:
             _ = self.paint_workspace
 
         # --------------------------------------------------------
-        # Tab 3: Puppet workspace — 2D rigged-puppet animation.
-        # Was a plugin; pulled in-tree as a built-in tab since the
-        # core viewer / GL / mesh path runs on the default
-        # requirements.txt. The Cubism Native SDK is the only
-        # heavy optional dep and it gracefully unavailable when
-        # the user hasn't supplied the DLL.
+        # Tabs 3 and 4: Puppet and Desktop Pet — optional (Preferences),
+        # built on first use (see ``optional_tabs``).
         # --------------------------------------------------------
-        from Imervue.puppet import PuppetWorkspace
-        self.puppet_workspace = PuppetWorkspace()
-        self._main_tabs.addTab(
-            self.puppet_workspace,
-            lang.get("puppet_tab_title", "Puppet"),
-        )
-
-        # Desktop Pet tab + (optional) system tray.
-        self._install_desktop_pet_tab(lang)
+        self.puppet_workspace = None
+        self.pet_workspace = None
+        self._pet_tray = None
+        self._puppet_page = self._add_optional_tab(
+            optional_tabs.PUPPET_TAB, lang.get("puppet_tab_title", "Puppet"))
+        self._pet_page = self._add_optional_tab(
+            optional_tabs.DESKTOP_PET_TAB, lang.get("desktop_pet_tab_title", "Desktop Pet"))
+        if self._pet_page is not None and optional_tabs.pet_shows_on_launch():
+            self._build_pet_workspace()
 
         self._main_tabs.currentChanged.connect(self._on_main_tab_changed)
         # On the Modify / Paint tabs, Left/Right should page images (like
@@ -278,6 +275,49 @@ class MainWindowLayoutMixin:
         # tab bar's key events — it is the widget that holds focus after a tab
         # click and consumes the arrows.
         self._main_tabs.tabBar().installEventFilter(self)
+
+    def _add_optional_tab(self, key: str, title: str) -> QWidget | None:
+        """An empty page for the optional tab under setting *key*; ``None`` when it is off."""
+        if not optional_tabs.tab_enabled(key):
+            return None
+        page = QWidget()
+        QVBoxLayout(page).setContentsMargins(0, 0, 0, 0)
+        self._main_tabs.addTab(page, title)
+        return page
+
+    def _build_optional_tab_on_open(self, index: int) -> None:
+        """Build the Puppet or Desktop Pet workspace when its tab is opened for the first time."""
+        page = self._main_tabs.widget(index)
+        if page is None:
+            return
+        if page is self._puppet_page and self.puppet_workspace is None:
+            self._build_puppet_workspace()
+        elif page is self._pet_page and self.pet_workspace is None:
+            self._build_pet_workspace()
+
+    def _build_puppet_workspace(self) -> None:
+        """The Puppet tab's 2D rigged-puppet workspace, in its page."""
+        from Imervue.puppet import PuppetWorkspace
+        self.puppet_workspace = PuppetWorkspace(parent=self._puppet_page)
+        self._puppet_page.layout().addWidget(self.puppet_workspace)
+
+    def _build_pet_workspace(self) -> None:
+        """The Desktop Pet tab's control panel, its tray icon, and the plugins' pet hooks.
+
+        The tab body is the control panel; the character lives in a separate
+        top-level window. The tray icon lets the user show or hide the pet
+        without finding the tab, and exists only where the platform has a tray.
+        """
+        from Imervue.desktop_pet import PetTrayIcon, PetWorkspace
+        self.pet_workspace = PetWorkspace(parent=self._pet_page)
+        self._pet_page.layout().addWidget(self.pet_workspace)
+        if PetTrayIcon.is_available():
+            self._pet_tray = PetTrayIcon(self.pet_workspace, parent=self)
+            self.pet_workspace.attach_tray(self._pet_tray)
+            self._pet_tray.show()
+        manager = getattr(self, "plugin_manager", None)
+        if manager is not None:
+            manager.connect_pet_hooks()
 
     def _build_status_bar(self) -> None:
         """Status bar with its info slots and the VRAM pressure indicator."""

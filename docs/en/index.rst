@@ -31,6 +31,8 @@ The *Getting Started*, *Keyboard Shortcuts Reference*, *Extra Tools Menu Referen
 *Plugin System*, *Command-Line Usage* and *MCP Server* sections are cross-cutting — they apply
 across all five tabs.
 
+**Puppet** and **Desktop Pet** are optional: turn either off under ``File`` > ``Preferences`` > **Optional tabs** and, from the next start, its tab is not added and its code is not loaded, so Imervue starts faster and uses less memory. Both are on by default; each one is built the first time you open its tab, and the Desktop Pet tab at startup when its pet is set to show on launch.
+
 .. contents:: Table of Contents
    :depth: 2
    :local:

@@ -64,6 +64,8 @@ Imervue는 GPU 가속 이미지 워크스테이션으로 **다섯 개의 최상�
 | **Puppet** | 처음부터 직접 구축한 2D 리그드 퍼펫 애니메이터 — 메시, 디포머, 파라미터, 모션, 물리 |
 | **Desktop Pet** | 프레임리스 / 투명 / 항상 위 데스크톱 오버레이로 모든 `.puppet` 리그를 실행 — 라이브 드라이버, 가장자리 스냅, 클릭 통과, 말풍선, 시스템 트레이 |
 
+**Puppet**과 **Desktop Pet**은 선택 탭입니다. **File > Preferences > Optional tabs**에서 둘 중 하나를 끄면 다음 시작부터 그 탭이 추가되지 않고 코드도 불러오지 않으므로 Imervue가 더 빨리 시작되고 메모리도 덜 사용합니다. 둘 다 기본으로 켜져 있으며, 각각 탭을 처음 열 때 만들어집니다. Desktop Pet 탭은 펫이 시작할 때 표시되도록 설정되어 있으면 시작할 때 만들어집니다.
+
 설계 원칙:
 
 - **성능 우선** — 최신 GLSL 셰이더와 VBO를 활용한 GPU 가속 렌더링
@@ -960,6 +962,7 @@ python -m Imervue.mcp_server
 | `stack_raw_jpeg_pairs` | bool | RAW+JPEG 스택 토글 |
 | `external_editors` | list | 구성된 편집기 |
 | `macros` / `macro_last_name` | list / string | 저장된 매크로 + Alt+M 대상 |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | 선택 탭(기본 켜짐, 다음 시작부터 적용) |
 
 ---
 

@@ -221,7 +221,8 @@ def on_key_press(self, key, modifiers, viewer):
 
 Called when the desktop pet window exists: when the Desktop Pet tab first creates it, and right after
 your plugin loads (or **Reload Plugins** runs) if it already does. The pet window is created lazily,
-so a plugin that loads before anyone opens the tab hears it later.
+so a plugin that loads before anyone opens the tab hears it later. With the Desktop Pet tab turned off
+in **File > Preferences > Optional tabs** there is no pet, and the hook is never called.
 
 The supported surface of `pet`:
 

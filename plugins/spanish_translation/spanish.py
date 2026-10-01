@@ -1602,6 +1602,10 @@ spanish_word_dict.update({
     "preferences_ui_scale_hint": "Escala todos los widgets ajustando la fuente de la aplicación. Requiere reinicio.",
     "preferences_theme_label": "Tema:",
     "preferences_theme_hint": "Reinicie para que el nuevo tema se aplique completamente.",
+    "preferences_tabs_label": "Pestañas opcionales:",
+    "preferences_puppet_tab": "Marioneta",
+    "preferences_desktop_pet_tab": "Mascota de escritorio",
+    "preferences_tabs_hint": "Una pestaña desactivada no se carga en absoluto, así que Imervue arranca más rápido y usa menos memoria. Requiere reiniciar.",
     # Recycle Bin
     "recycle_bin_title": "Papelera de reciclaje",
     "recycle_bin_col_name": "Nombre",

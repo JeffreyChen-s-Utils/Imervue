@@ -31,6 +31,8 @@ As seções *Primeiros Passos*, *Referência de Atalhos de Teclado*, *Referênci
 Tools*, *Sistema de Plugins*, *Uso na Linha de Comando* e *Servidor MCP* são transversais —
 aplicam-se a todas as cinco abas.
 
+**Puppet** e **Desktop Pet** são opcionais: desligue qualquer um deles em ``File`` > ``Preferences`` > **Optional tabs** e, a partir da próxima inicialização, a aba não é adicionada e o código dela não é carregado, então o Imervue inicia mais rápido e usa menos memória. Os dois vêm ligados; cada um é montado na primeira vez que você abre a aba, e a aba Desktop Pet já na inicialização quando o pet está configurado para aparecer ao iniciar.
+
 .. contents:: Sumário
    :depth: 2
    :local:
