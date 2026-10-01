@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-14 | 2026-10-01 | The SFTP address in old commits is treated as public; history is not rewritten | #decision #done #security | [2026-10](2026-10.md) |
 | U-20261001-13 | 2026-10-01 | The puppet validator no longer reports parameters that drive morphs, curves, blends or physics as moving nothing | #bugfix #puppet | [2026-10](2026-10.md) |
 | U-20261001-12 | 2026-10-01 | Puppet clip masks clip again, on screen and in every off-screen output | #bugfix #puppet #render | [2026-10](2026-10.md) |
 | U-20261001-11 | 2026-10-01 | Batch Export renders Develop recipes on the discrete GPU through a new develop-backend registry and the GPU Develop plugin | #done #develop #gpu #plugins #Imervue_Plugins #docs #i18n | [2026-10](2026-10.md) |
@@ -479,4 +480,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 13 |
+| [2026-10.md](2026-10.md) | 2026-10 | 14 |
