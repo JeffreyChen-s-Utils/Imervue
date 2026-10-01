@@ -77,6 +77,15 @@ def hexrgb(colour: str, alpha: float = 1.0) -> tuple[float, float, float, float]
     return (*lin, alpha)
 
 
+def scatter(index: int, salt: int = 0) -> float:
+    """A value in [0, 1) that looks random but is fixed by *index* and *salt*.
+
+    A low-discrepancy (golden-ratio) sequence: neighbouring indices land far apart, the
+    values cover the range evenly, and every build of the model gets the same ones.
+    """
+    return ((index + 1) * 0.6180339887498949 + salt * 0.7548776662466927) % 1.0
+
+
 def smoothstep(e0: float, e1: float, x: float) -> float:
     """Hermite step from 0 at *e0* to 1 at *e1*."""
     t = max(0.0, min(1.0, (x - e0) / (e1 - e0)))

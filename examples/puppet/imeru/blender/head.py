@@ -9,9 +9,8 @@ one shape, with strand lines and a broken highlight band painted on in the shade
 from __future__ import annotations
 
 import math
-import random
 
-from common import CX, bez, chain, mirror, resample, smoothstep
+from common import CX, bez, chain, mirror, resample, scatter, smoothstep
 from geo import ellipsoid, sheet, tube
 from normals import blend_fields, borrow, column_field, ellipsoid_field, face_light
 from ornament import jewel
@@ -256,15 +255,15 @@ def build_side_locks(collection_for):
             collection_for(f"side_lock_{side}", obj)
 
 
-def _back_locks(collection_for, mat, rng, *, count, spread, depth, width, prefix, length):
+def _back_locks(collection_for, mat, salt, *, count, spread, depth, width, prefix, length):
     for i in range(count):
         u = -1 + 2 * i / (count - 1)
         root = (CX + u * 110, 300 + 40 * abs(u), depth + 60)
-        tip_x = CX + u * spread + rng.uniform(-14, 14)
-        tip_y = length + 80 * math.cos(u * 2.0) + rng.uniform(-36, 30)
+        tip_x = CX + u * spread + 28 * scatter(i, salt) - 14
+        tip_y = length + 80 * math.cos(u * 2.0) + 66 * scatter(i, salt + 1) - 36
         curve = bez(root, (CX + u * (spread - 30), 520, depth + 30),
                     (CX + u * spread, 900, depth), (tip_x, tip_y, depth - 20), 40)
-        lock_width = width + rng.uniform(-7, 9)
+        lock_width = width + 16 * scatter(i, salt + 2) - 7
         collection_for("back_hair", lock(f"{prefix}_{i}", curve, lock_width, mat, lift=0.0,
                                          belly=0.2, root=0.8, follow=False, line=2.2,
                                          field=BACK_FIELD))
@@ -276,13 +275,12 @@ def build_back_hair(collection_for):
                  stops=[(y, shade, deep, deep) for y, _, shade, deep in BACK_STOPS],
                  occlusion=0.85)
     outer = hair_material("back_hair", split=0.5, stops=BACK_STOPS, streak=STREAK)
-    rng = random.Random(11)
     shell = ellipsoid("hair_mass", (CX, 476, -100), (206, 206, 150), inner, segments=48)
     add_outline(shell, HAIR_LINE, 2.2)
     collection_for("back_hair", shell)
-    _back_locks(collection_for, inner, rng, count=12, spread=210, depth=-260, width=46,
+    _back_locks(collection_for, inner, 11, count=12, spread=210, depth=-260, width=46,
                 prefix="back_in", length=1330)
-    _back_locks(collection_for, outer, rng, count=18, spread=262, depth=-190, width=46,
+    _back_locks(collection_for, outer, 23, count=18, spread=262, depth=-190, width=46,
                 prefix="back_out", length=1290)
 
 

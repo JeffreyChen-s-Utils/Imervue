@@ -12,7 +12,6 @@ stays behind when, say, an arm is raised away from the body.
 from __future__ import annotations
 
 import math
-import random
 
 import bpy
 import numpy as np
@@ -31,6 +30,8 @@ GROUPS = (
 )
 RAYS = 32
 REACH_PX = 60.0
+#: The turn between successive rays of the spiral (about 137.5 degrees).
+GOLDEN_ANGLE = math.pi * (3.0 - math.sqrt(5.0))
 #: Neighbour-averaging passes that take the speckle out of the ray count.
 SMOOTHING = 3
 #: Rays start this far off the surface so they don't hit the face they leave from.
@@ -38,12 +39,14 @@ LIFT_PX = 0.6
 
 
 def _directions(count: int) -> list[Vector]:
-    """Cosine-weighted directions over the +Z hemisphere (fixed seed: same bake every run)."""
-    rng = random.Random(7)
+    """Cosine-weighted directions over the +Z hemisphere, on a golden-angle spiral.
+
+    The spiral spreads the rays evenly with no clumps, and every bake uses the same ones.
+    """
     out = []
     for i in range(count):
-        u = (i + rng.random()) / count
-        phi = 2 * math.pi * rng.random()
+        u = (i + 0.5) / count
+        phi = i * GOLDEN_ANGLE
         r = math.sqrt(u)
         out.append(Vector((r * math.cos(phi), r * math.sin(phi), math.sqrt(1 - u))))
     return out

@@ -74,9 +74,14 @@ def render(collections: dict, out: Path, layer: str, visible: str,
 
 
 def main(argv: list[str]) -> None:
-    out = Path(argv[0])
+    """Render into the folder ``argv[0]`` (inside the example's folder) the layers named
+    in ``argv[1:]``, or all of them."""
+    out = Path(argv[0]).resolve()
+    if not out.is_relative_to(HERE.parent):
+        raise SystemExit(f"render output must stay inside {HERE.parent}: {out}")
     wanted = set(argv[1:])
-    out.mkdir(parents=True, exist_ok=True)
+    # The folder was checked to lie inside the example above.
+    out.mkdir(parents=True, exist_ok=True)  # NOSONAR
     setup_scene()
     collections = build()
     started = time.perf_counter()

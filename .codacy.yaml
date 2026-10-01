@@ -26,6 +26,15 @@ engines:
       # B105 on empty defaults: `"obs_password": ""` / `"webhook_token": ""` are
       # the unset values in the desktop-pet settings schema.
       - 'Imervue/desktop_pet/settings.py'
+      # The same settings and their field captions ("Password", "Bearer token
+      # (optional)") moved into the pet-integrations example plugin: empty defaults
+      # and UI labels, never a stored credential.
+      - 'plugins/pet_integrations/integrations.py'
+      - 'plugins/pet_integrations/translations.py'
+      # The Imeru example's build runs Blender (B404 / B603): argv is a list (no
+      # shell), the script is the example's own, and the output folder and layer
+      # names are checked (render3d.checked_arguments) before they reach it.
+      - 'examples/puppet/imeru/render3d.py'
       # "Reveal in file manager" / launch-external subprocess calls: static argv
       # (explorer / open / xdg-open / osascript / ffmpeg) + a local path, never
       # shell=True. Same accepted pattern across these files.
@@ -65,6 +74,9 @@ engines:
     exclude_paths:
       # Test-only non-literal imports / dynamic plugin loading audited by semgrep.
       - 'tests/**'
+      # The Imeru example's Blender run: a checked argv list, no shell (see the
+      # bandit list above).
+      - 'examples/puppet/imeru/render3d.py'
       # Same controlled-subprocess isolation pattern as the bandit list above.
       - 'plugins/safety_review/**'
       - 'plugins/ai_background_remover/ai_background_remover.py'

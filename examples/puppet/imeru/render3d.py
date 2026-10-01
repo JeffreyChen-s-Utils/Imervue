@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import glob
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,8 @@ CACHE = HERE / "render"
 SCALE = 2
 _CANDIDATES = ("D:/Tools/blender-*/blender.exe",
                "C:/Program Files/Blender Foundation/Blender */blender.exe")
+#: What a layer name may look like on Blender's command line.
+LAYER_NAME = re.compile(r"[a-z0-9_]+")
 #: How much darker a shadow pass must be before a pixel counts as shadowed (0-255 luma).
 SHADOW_STEP = 6.0
 
@@ -43,12 +46,28 @@ def find_blender() -> str:
     raise FileNotFoundError("Blender not found: install Blender 4.2 or newer, or set BLENDER_EXE")
 
 
+def checked_arguments(out_dir: Path, layers: tuple[str, ...]) -> list[str]:
+    """The arguments ``blender/main.py`` gets: *out_dir* (resolved) and *layers*.
+
+    Raises ``ValueError`` for an output folder outside this example's folder or a layer
+    name that is not a plain identifier, so nothing else reaches Blender's command line.
+    """
+    out = Path(out_dir).resolve()
+    if not out.is_relative_to(HERE):
+        raise ValueError(f"render output must stay inside {HERE}: {out}")
+    bad = [name for name in layers if not LAYER_NAME.fullmatch(name)]
+    if bad:
+        raise ValueError(f"not layer names: {bad}")
+    return [str(out), *layers]
+
+
 def render(out_dir: Path = CACHE, layers: tuple[str, ...] = ()) -> None:
-    """Render every 3D layer (or just *layers*) into *out_dir*."""
+    """Render every 3D layer (or just *layers*) into *out_dir* (inside this folder)."""
     command = [find_blender(), "-b", "--factory-startup", "--python", str(ENTRY), "--",
-               str(out_dir), *layers]
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8",
-                            errors="replace", check=False)
+               *checked_arguments(out_dir, layers)]
+    # Blender runs this example's own script with arguments checked above, never a shell.
+    result = subprocess.run(command, capture_output=True, text=True,  # NOSONAR
+                            encoding="utf-8", errors="replace", check=False)
     if result.returncode != 0 or "Traceback" in result.stdout + result.stderr:
         sys.stderr.write(result.stdout[-4000:] + result.stderr[-4000:])
         raise RuntimeError("Blender render failed")
