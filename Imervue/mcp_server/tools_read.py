@@ -17,10 +17,13 @@ from Imervue.mcp_server.tool_support import (
     validated_dir,
     validated_file,
 )
+from Imervue.system.image_listing import list_images as _list_folder
 
 _CONVERTIBLE_FORMATS: frozenset[str] = frozenset({
     "png", "jpeg", "jpg", "webp", "tiff", "tif", "bmp",
 })
+# Suffixes whose Pillow format name differs: Pillow knows no "JPG" or "TIF".
+_PILLOW_FORMAT_NAMES: dict[str, str] = {"jpg": "jpeg", "tif": "tiff"}
 # Output formats a Pillow may lack, routed through save_formats (HEIC / AVIF / JXL).
 _EXTRA_FORMAT_NAMES: dict[str, str] = {"heic": "HEIC", "avif": "AVIF", "jxl": "JXL"}
 _SHARPNESS_MAX_SIDE = 512
@@ -31,34 +34,36 @@ _SHARPNESS_MAX_SIDE = 512
 # ---------------------------------------------------------------------------
 
 
+def _folder_images(base: Path, recursive: bool) -> list[str]:
+    """The images under *base* in path order, left out what the viewer leaves out.
+
+    Hidden files (a leading dot, such as a macOS ``._`` companion, or
+    Windows' hidden attribute) are skipped, and a recursive walk does not
+    enter a hidden folder such as ``$RECYCLE.BIN`` (``list_images``).
+    """
+    return sorted(_list_folder(str(base), IMAGE_EXTENSIONS, recursive=recursive))
+
+
 def list_images(folder: str, *, recursive: bool = False) -> dict[str, Any]:
     """Return image files under ``folder`` with their basic stats.
 
-    Set ``recursive`` to walk subdirectories. Non-image files and
-    hidden files (leading dot) are skipped. Each entry has ``path``,
-    ``size_bytes`` and ``mtime`` so an AI client can quickly find the
-    latest / largest images without a separate fs call.
+    Set ``recursive`` to walk subdirectories. Non-image files, hidden
+    files and hidden folders are skipped (:func:`_folder_images`). Each
+    entry has ``path``, ``size_bytes`` and ``mtime`` so an AI client can
+    quickly find the latest / largest images without a separate fs call.
     """
     base = validated_dir(folder)
-    iterator = base.rglob("*") if recursive else base.iterdir()
     entries: list[dict[str, Any]] = []
-    for path in iterator:
-        if not path.is_file():
-            continue
-        if path.name.startswith("."):
-            continue
-        if path.suffix.lower() not in IMAGE_EXTENSIONS:
-            continue
+    for path in _folder_images(base, recursive):
         try:
-            stat = path.stat()
+            stat = Path(path).stat()
         except OSError:
             continue
         entries.append({
-            "path": str(path),
+            "path": path,
             "size_bytes": int(stat.st_size),
             "mtime": stat.st_mtime,
         })
-    entries.sort(key=lambda e: e["path"])
     return {"folder": str(base), "count": len(entries), "images": entries}
 
 
@@ -82,31 +87,14 @@ def read_image_metadata(path: str) -> dict[str, Any]:
 
 
 def _populate_basic_image_info(image_path: Path, out: dict[str, Any]) -> None:
-    from PIL import Image
-
-    from Imervue.image.dimensions import image_dimensions
-    from Imervue.image.formats import RAW_EXTENSIONS, ensure_pillow_opener
+    from Imervue.image.dimensions import probe_image
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
-    ext = image_path.suffix.lower()
-    if ext in RAW_EXTENSIONS:
-        # libraw's size, not the embedded preview's Pillow would report.
-        size = image_dimensions(image_path)
-        if size is None:
-            out["error"] = "image probe failed: libraw can't read this RAW file"
-            return
-        out["width"], out["height"] = size
-        out["format"], out["mode"] = ext.lstrip(".").upper(), "RGB"
-        return
-    ensure_pillow_opener(ext)   # HEIC / AVIF / JPEG XL
     try:
-        with Image.open(image_path) as img:
-            out["format"] = img.format or ""
-            out["mode"] = img.mode
+        # The upright size the other tools (crop, resize, …) work in; libraw's
+        # for a RAW, not the embedded preview's.
+        out["format"], out["mode"], out["width"], out["height"] = probe_image(image_path)
     except IMAGE_READ_ERRORS as exc:
         out["error"] = f"image probe failed: {exc}"
-        return
-    # The upright size the other tools (crop, resize, …) work in.
-    out["width"], out["height"] = image_dimensions(image_path) or (0, 0)
 
 
 def _populate_exif(image_path: Path, out: dict[str, Any]) -> None:
@@ -181,7 +169,7 @@ def convert_format(
         )
     with open_upright(src) as opened:
         save_kwargs: dict[str, Any] = {}
-        normalised = "jpeg" if fmt in {"jpg", "jpeg"} else fmt
+        normalised = _PILLOW_FORMAT_NAMES.get(fmt, fmt)
         if normalised in {"jpeg", "webp"}:
             save_kwargs["quality"] = max(1, min(100, int(quality)))
         # JPEG / BMP can't carry alpha, and JPEG also can't write palette
@@ -267,6 +255,27 @@ def puppet_inspect(path: str) -> dict[str, Any]:
         "parameter_blends": [b.id for b in doc.parameter_blends],
         "physics_rigs": [r.id for r in doc.physics_rigs],
     }
+
+
+# ---------------------------------------------------------------------------
+# puppet_validate / puppet_schema
+# ---------------------------------------------------------------------------
+
+
+def puppet_validate(path: str) -> dict[str, Any]:
+    """Check a ``.puppet`` file against the v1 format: its JSON Schemas, the
+    loader's structural rules and the rig checks (``Imervue.puppet.format_schema``)."""
+    from Imervue.puppet.format_schema import check_puppet_file
+    return check_puppet_file(validated_file(path))
+
+
+def puppet_schema(name: str = "puppet") -> dict[str, Any]:
+    """Return the published JSON Schema of one ``.puppet`` file kind
+    (``puppet``, ``motion``, ``expression`` or ``physics``)."""
+    from Imervue.puppet.format_schema import SCHEMA_URLS, SCHEMAS
+    if name not in SCHEMAS:
+        raise ValueError(f"name must be one of {sorted(SCHEMAS)}, got {name!r}")
+    return {"name": name, "url": SCHEMA_URLS[name], "schema": SCHEMAS[name]}
 
 
 def _convert_via_save_formats(src: Path, dst: Path, fmt: str, quality: int) -> dict[str, Any]:
@@ -483,18 +492,14 @@ def find_similar(
     image advances it.
     """
     base = validated_dir(folder)
-    iterator = base.rglob("*") if recursive else base.iterdir()
-    paths = [
-        str(p) for p in iterator
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    ]
+    paths = _folder_images(base, recursive)
     from Imervue.image.perceptual_hash import find_similar as _find
     on_progress = None
     if progress is not None:
         def report_progress(done: int, total: int) -> None:
             progress.report(done, total=total, message=f"hashed {done}/{total}")
         on_progress = report_progress
-    groups = _find(sorted(paths), int(threshold), on_progress=on_progress)
+    groups = _find(paths, int(threshold), on_progress=on_progress)
     return {
         "folder": str(base),
         "threshold": int(threshold),
@@ -517,11 +522,7 @@ def collection_stats(folder: str, *, recursive: bool = False) -> dict[str, Any]:
     states from the library index.
     """
     base = validated_dir(folder)
-    iterator = base.rglob("*") if recursive else base.iterdir()
-    paths = sorted(
-        str(p) for p in iterator
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    )
+    paths = _folder_images(base, recursive)
     from Imervue.library.collection_stats import summarize
     return {"folder": str(base), **summarize(paths)}
 
@@ -653,11 +654,7 @@ def search_images(
             "query uses fields unavailable in the standalone server: "
             + ", ".join(unsupported),
         )
-    iterator = base.rglob("*") if recursive else base.iterdir()
-    paths = sorted(
-        str(p) for p in iterator
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    )
+    paths = _folder_images(base, recursive)
     matches = apply_to_paths(paths, rules)
     return {
         "folder": str(base), "query": query,

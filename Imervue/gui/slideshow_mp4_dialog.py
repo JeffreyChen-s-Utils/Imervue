@@ -7,10 +7,12 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 from PySide6.QtWidgets import (
+    QComboBox,
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QDoubleSpinBox,
     QPushButton, QFileDialog, QFormLayout, QMessageBox,
 )
 
+from Imervue.export.slideshow_effects import TRANSITIONS
 from Imervue.export.slideshow_mp4 import SlideshowOptions, generate_slideshow_mp4
 from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -53,6 +55,18 @@ class _RenderWorker(QRunnable):
         self.signals.done.emit(self.out, "")
 
 
+# Transition key (slideshow_effects.TRANSITIONS) -> label translation key and fallback.
+_TRANSITION_LABELS = {
+    "fade": ("slideshow_transition_fade", "Fade"),
+    "dissolve": ("slideshow_transition_dissolve", "Dissolve"),
+    "slide_left": ("slideshow_transition_slide_left", "Slide left"),
+    "slide_right": ("slideshow_transition_slide_right", "Slide right"),
+    "slide_up": ("slideshow_transition_slide_up", "Slide up"),
+    "slide_down": ("slideshow_transition_slide_down", "Slide down"),
+    "wipe_left": ("slideshow_transition_wipe_left", "Wipe left"),
+    "wipe_right": ("slideshow_transition_wipe_right", "Wipe right"),
+}
+
 # attribute, spin class, (min, max), default, step (None = keep), suffix,
 # label key / fallback, tooltip key / fallback — one row of the settings form each.
 _SETTINGS_ROWS = (
@@ -70,9 +84,9 @@ _SETTINGS_ROWS = (
      ("slideshow_hold", "Hold per image"),
      ("slideshow_hold_tooltip", "Seconds each image stays on-screen before the fade")),
     ("_fade_spin", QDoubleSpinBox, (0.0, 5.0), 0.5, 0.1, " s",
-     ("slideshow_fade_seconds", "Fade duration"),
+     ("slideshow_fade_seconds", "Transition duration"),
      ("slideshow_fade_seconds_tooltip",
-      "Cross-fade duration between consecutive images. Set to 0 for hard cuts.")),
+      "Length of the transition between consecutive images. Set to 0 for hard cuts.")),
     ("_quality_spin", QSpinBox, (1, 10), 8, None, "",
      ("slideshow_quality", "Quality"),
      ("slideshow_quality_tooltip", "Encoder quality (1 worst / smallest, 10 best / largest)")),
@@ -109,6 +123,10 @@ class SlideshowMp4Dialog(QDialog):
             spin.setToolTip(lang.get(*tooltip))
             setattr(self, attr, spin)
             form.addRow(lang.get(*label), spin)
+        self._transition_combo = QComboBox()
+        for key in TRANSITIONS:
+            self._transition_combo.addItem(lang.get(*_TRANSITION_LABELS[key]), key)
+        form.addRow(lang.get("slideshow_transition", "Transition"), self._transition_combo)
         return form
 
     def _build_button_row(self, lang: dict, images: list[str]) -> QHBoxLayout:
@@ -152,6 +170,7 @@ class SlideshowMp4Dialog(QDialog):
             hold_seconds=self._hold_spin.value(),
             fade_seconds=self._fade_spin.value(),
             quality=self._quality_spin.value(),
+            transition=self._transition_combo.currentData(),
         )
         self._export_btn.setEnabled(False)
         worker = _RenderWorker(list(images), out_path, opts)

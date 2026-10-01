@@ -72,7 +72,7 @@ def test_folder_tab_keys_only_live_on_the_browse_tab(window):
     tabs = window._main_tabs  # noqa: SLF001
     folder_keys = {s.key().toString() for s in window._folder_tab_shortcuts}  # noqa: SLF001
     assert folder_keys == {"Ctrl+T", "Ctrl+W", "Ctrl+Tab", "Ctrl+Shift+Tab"}
-    paint = tabs.indexOf(window.paint_workspace)
+    paint = tabs.indexOf(window._paint_page)  # noqa: SLF001
     tabs.setCurrentIndex(paint)
     assert [s.isEnabled() for s in window._folder_tab_shortcuts] == [False] * 4  # noqa: SLF001
     tabs.setCurrentIndex(0)
@@ -81,7 +81,7 @@ def test_folder_tab_keys_only_live_on_the_browse_tab(window):
 
 def test_paint_keys_that_used_to_be_dead_have_one_owner(window):
     tabs = window._main_tabs  # noqa: SLF001
-    tabs.setCurrentIndex(tabs.indexOf(window.paint_workspace))
+    tabs.setCurrentIndex(tabs.indexOf(window._paint_page))  # noqa: SLF001
     live: dict[str, list[str]] = collections.defaultdict(list)
     owners = [s for s in window.findChildren(QShortcut) if s.parent() is window]
     owners += window.paint_workspace.findChildren(QAction)

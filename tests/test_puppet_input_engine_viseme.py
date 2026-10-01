@@ -13,11 +13,15 @@ import numpy as np
 
 from Imervue.puppet.input_engine import InputEngine
 
+# The engine connects the canvas's cursor_moved; these fakes never move.
+_NO_SIGNAL = SimpleNamespace(connect=lambda _slot: None)
+
 
 def test_on_audio_block_emits_the_viseme_signal(qapp):
     engine = InputEngine(SimpleNamespace(
         document=lambda: object(),                 # not None -> proceeds
         set_parameter_values=lambda vals: None,
+        cursor_moved=_NO_SIGNAL,
     ))
     received: list = []
     engine._viseme_ready.connect(received.append)
@@ -27,7 +31,7 @@ def test_on_audio_block_emits_the_viseme_signal(qapp):
 
 
 def test_on_audio_block_is_a_noop_without_a_document(qapp):
-    engine = InputEngine(SimpleNamespace(document=lambda: None))
+    engine = InputEngine(SimpleNamespace(document=lambda: None, cursor_moved=_NO_SIGNAL))
     received: list = []
     engine._viseme_ready.connect(received.append)
     engine._on_audio_block(np.zeros((256, 1), dtype=np.float32), 256, None, None)

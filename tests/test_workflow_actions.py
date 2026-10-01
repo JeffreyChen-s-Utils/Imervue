@@ -60,3 +60,15 @@ def test_dependabot_keeps_pins_current_on_dev():
     assert {"pip", "github-actions"} <= ecosystems
     assert all(re.search(r"^\s*target-branch:\s*\"dev\"", block, re.MULTILINE)
                for block in blocks)
+
+
+def test_the_docs_job_installs_the_pins_read_the_docs_installs():
+    """The docs job names exact pins inline (a requirements file installs unlocked versions
+    as far as a scanner can tell); they must stay the ones Read the Docs installs."""
+    root = Path(__file__).resolve().parent.parent
+    workflow = (root / ".github" / "workflows" / "test.yml").read_text(encoding="utf-8")
+    install = next(line for line in workflow.splitlines() if '"sphinx==' in line)
+    inline = set(re.findall(r'"([A-Za-z0-9_.-]+==[^"]+)"', install))
+    listed = {line.strip() for line in (root / "docs" / "requirements.txt").read_text(
+        encoding="utf-8").splitlines() if line.strip() and not line.startswith("#")}
+    assert inline == listed

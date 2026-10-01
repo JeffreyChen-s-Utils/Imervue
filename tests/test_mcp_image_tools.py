@@ -109,6 +109,16 @@ def test_find_similar_missing_folder_raises():
         find_similar("/no/such/folder")
 
 
+def test_folder_tools_leave_out_mac_companions(tmp_path):
+    # A "._a.png" beside every photo from a Mac is not an image: it was hashed and counted.
+    _save(tmp_path / "a.png")
+    _save(tmp_path / "b.png", value=40)
+    (tmp_path / "._a.png").write_bytes(bytes([0, 5, 22, 7]) + bytes(80))
+    assert find_similar(str(tmp_path), threshold=64)["groups"] == [[str(tmp_path / "a.png"),
+                                                                    str(tmp_path / "b.png")]]
+    assert collection_stats(str(tmp_path))["total"] == 2
+
+
 def test_registered_in_default_tools():
     from Imervue.mcp_server.tools import _TOOL_DEFINITIONS
     names = {entry["name"] for entry in _TOOL_DEFINITIONS}

@@ -1,5 +1,6 @@
-# Rename to dev version
-# This is dev version
+# The dev channel, Imervue_dev. The publish-dev job of .github/workflows/test.yml builds it by writing
+# this file to pyproject.toml (scripts/dev_release.py). The version below is a floor: CI publishes one
+# patch above the newest release on PyPI and commits nothing back.
 [build-system]
 requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"
@@ -55,4 +56,6 @@ file = "README.md"
 content-type = "text/markdown"
 
 [tool.setuptools.packages]
-find = { namespaces = false }
+# Only the application package. tests/ has an __init__.py, so without ``include`` it is
+# installed as a top-level ``tests`` package (tests/test_packaging_metadata.py).
+find = { include = ["Imervue", "Imervue.*"], namespaces = false }

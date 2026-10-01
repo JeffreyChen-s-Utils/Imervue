@@ -55,6 +55,18 @@ class TestKey:
         monkeypatch.setattr(tdc, "_KEY_VERSION", tdc._KEY_VERSION + 1)
         assert tdc.ThumbnailDiskCache._key(source_image, 128) != before
 
+    def test_a_raw_entry_has_its_own_version(self, tmp_path, monkeypatch):
+        """Portrait RAW previews were cached on their side: only RAW entries are retired."""
+        raw = tmp_path / "IMG_1.CR3"
+        raw.write_bytes(b"x")
+        raw_before = tdc.ThumbnailDiskCache._key(str(raw), 128)
+        png = tmp_path / "a.png"
+        Image.fromarray(np.zeros((4, 4, 3), np.uint8)).save(str(png))
+        png_before = tdc.ThumbnailDiskCache._key(str(png), 128)
+        monkeypatch.setattr(tdc, "_RAW_KEY_VERSION", tdc._RAW_KEY_VERSION + 1)
+        assert tdc.ThumbnailDiskCache._key(str(raw), 128) != raw_before
+        assert tdc.ThumbnailDiskCache._key(str(png), 128) == png_before
+
     def test_depends_on_recipe_hash(self, source_image):
         assert tdc.ThumbnailDiskCache._key(source_image, 128, "rA") != \
                tdc.ThumbnailDiskCache._key(source_image, 128, "rB")
@@ -254,3 +266,17 @@ class TestPutFailures:
         c = tdc.ThumbnailDiskCache()
         with pytest.raises(RuntimeError):
             c.put(source_image, 128, _thumb())
+
+
+def test_a_grey_thumbnail_baked_before_the_grey_fixes_is_not_served(cache_dir, tmp_path, monkeypatch):
+    """A 16-bit grey scan was cached almost white; the fix must not keep serving that copy."""
+    scan = tmp_path / "scan.png"
+    Image.new("I;16", (32, 32), 32896).save(scan)
+    shipped = tdc._KEY_VERSION
+    monkeypatch.setattr(tdc, "_KEY_VERSION", 3)          # the version those were baked under
+    cache = tdc.ThumbnailDiskCache()
+    cache.put(str(scan), 128, np.full((32, 32, 4), 255, dtype=np.uint8))
+    assert cache.get(str(scan), 128) is not None
+    monkeypatch.setattr(tdc, "_KEY_VERSION", shipped)   # the cache folder stays the test's
+    assert shipped > 3
+    assert tdc.ThumbnailDiskCache().get(str(scan), 128) is None

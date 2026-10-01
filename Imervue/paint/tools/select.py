@@ -38,6 +38,10 @@ class _SelectionContext:
         combined = combine(self._provider(), new_mask, self._state.selection_mode)
         self._setter(combined)
 
+    def magnetic(self) -> bool:
+        """Whether lasso outlines snap to edges (the Options bar's Magnetic box)."""
+        return bool(self._state.lasso_magnetic)
+
     def clear(self) -> None:
         """Drop the active selection entirely (no marquee).
 
@@ -130,6 +134,8 @@ class LassoSelectTool:
             if no_drag:
                 self._sel.clear()
                 return True
+            if self._sel.magnetic():
+                points = _snapped(canvas, points)
             h, w = canvas.shape[:2]
             mask = polygon_mask(h, w, points)
             self._sel.write(mask)
@@ -139,6 +145,12 @@ class LassoSelectTool:
     def cancel(self) -> None:
         self._points = []
         self._overlay_setter(None)
+
+
+def _snapped(canvas: np.ndarray, points: list[tuple[float, float]]) -> list[tuple[int, int]]:
+    """Each lasso point moved onto the strongest edge of *canvas* within the default radius."""
+    from Imervue.paint.magnetic_lasso import snap_path_to_edges
+    return snap_path_to_edges(canvas, [(int(round(x)), int(round(y))) for x, y in points])
 
 
 class WandSelectTool:

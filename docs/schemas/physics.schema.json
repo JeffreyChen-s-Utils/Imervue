@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/physics.schema.json",
+  "title": ".puppet physics.json (v1)",
+  "type": "object",
+  "required": [
+    "rigs"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "rigs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "input_param",
+          "output_param",
+          "chain"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "input_param": {
+            "type": "string",
+            "minLength": 1
+          },
+          "output_param": {
+            "type": "string",
+            "minLength": 1
+          },
+          "chain": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [],
+              "properties": {
+                "mass": {
+                  "type": "number"
+                },
+                "damping": {
+                  "type": "number"
+                },
+                "spring": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "gravity": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -85,7 +85,8 @@ class MotionPlayer(QObject):
         motion always starts at 0. Captures the current canvas
         parameter values as the fade source so the first tick blends
         from where the rig already was — when both the previous and
-        new motion have fade configured."""
+        new motion have fade configured. Looping follows the motion's own
+        ``loop`` flag (a tap reaction plays once, an idle loops)."""
         had_previous_motion = self._motion is not None
         previous_values = (
             dict(self._canvas.parameter_values()) if had_previous_motion else {}
@@ -99,6 +100,8 @@ class MotionPlayer(QObject):
         self._elapsed = 0.0
         self._reset_fade_state()
         self._motion = motion
+        if motion is not None:
+            self._loop = bool(motion.loop)
         if motion is not None and had_previous_motion:
             effective_in = self._effective_fade_in(motion)
             if effective_in > 0.0:
@@ -122,7 +125,10 @@ class MotionPlayer(QObject):
         return float(self._motion.duration) if self._motion is not None else 0.0
 
     def set_loop(self, loop: bool) -> None:
+        """Loop or not; the bound motion's ``loop`` flag changes with it, so a save keeps it."""
         self._loop = bool(loop)
+        if self._motion is not None:
+            self._motion.loop = self._loop
         self.state_changed.emit()
 
     def loop(self) -> bool:

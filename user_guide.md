@@ -643,7 +643,7 @@ Imervue 支援外掛擴充功能。
 ### 快速開始
 
 1. 啟動 Imervue → 點視窗頂端的 **Puppet** 分頁。
-2. **檔案 > Examples > March 7Th**（或工具列 **Examples ▾** 下拉）載入內附 307-drawable Cubism rig。
+2. **檔案 > Examples > Imeru**（或工具列 **Examples ▾** 下拉）載入內附的 rig — Imervue 的吉祥物 Imeru。
 3. 底部 **Motions** 擺放欄點任一個動作 — rig 立刻動起來。
 4. 工具列 **Reset to rest** 把 rig 拉回靜止姿勢。
 

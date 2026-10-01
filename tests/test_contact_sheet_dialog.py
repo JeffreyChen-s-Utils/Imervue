@@ -65,12 +65,14 @@ def test_layout_and_settings_form(qapp, monkeypatch):
         assert label.text() == "0 image(s) will be included."
         assert dlg.windowTitle() == "Contact Sheet PDF"
         assert (dlg.minimumWidth(), dlg.minimumHeight()) == (420, 300)
-        assert isinstance(form, QFormLayout) and form.rowCount() == 6
-        label_of = [form.itemAt(r, QFormLayout.ItemRole.LabelRole) for r in range(6)]
-        field_of = [form.itemAt(r, QFormLayout.ItemRole.FieldRole).widget() for r in range(6)]
+        assert isinstance(form, QFormLayout) and form.rowCount() == 7
+        label_of = [form.itemAt(r, QFormLayout.ItemRole.LabelRole) for r in range(7)]
+        field_of = [form.itemAt(r, QFormLayout.ItemRole.FieldRole).widget() for r in range(7)]
         assert [i.widget().text() if i else "" for i in label_of] == [
-            "Rows", "Columns", "Page Size", "Margin", "", "Title"]
-        rows, cols, page, margin, caption, title = field_of
+            "Layout", "Rows", "Columns", "Page Size", "Margin", "", "Title"]
+        layout_box, rows, cols, page, margin, caption, title = field_of
+        assert layout_box is dlg._layout_combo  # noqa: SLF001
+        assert layout_box.currentData() == "default"
         assert rows is dlg._rows_spin and cols is dlg._cols_spin  # noqa: SLF001
         for spin, rng, value, suffix, tip in (
             (rows, (1, 20), 5, "", "Number of image rows per page"),
@@ -114,3 +116,59 @@ def test_buttons_wiring(qapp, monkeypatch):
         assert not dlg.isVisible()
     finally:
         dlg.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Layout presets (contact_sheet_layouts)
+# ---------------------------------------------------------------------------
+
+def test_the_layout_box_lists_custom_then_every_preset(qapp, monkeypatch):
+    from Imervue.export.contact_sheet_layouts import LAYOUT_NAMES
+    dlg = _dialog(monkeypatch)
+    try:
+        box = dlg._layout_combo  # noqa: SLF001
+        assert [box.itemData(i) for i in range(box.count())] == ["", *LAYOUT_NAMES]
+        assert box.itemText(0) == "Custom"
+        assert box.itemText(box.findData("compact")) == "Compact — 6 × 8 (48 per page)"
+    finally:
+        dlg.deleteLater()
+
+
+def test_picking_a_preset_fills_grid_margin_and_caption(qapp, monkeypatch):
+    dlg = _dialog(monkeypatch)
+    try:
+        box = dlg._layout_combo  # noqa: SLF001
+        box.setCurrentIndex(box.findData("editorial"))
+        assert (dlg._rows_spin.value(), dlg._cols_spin.value()) == (3, 2)  # noqa: SLF001
+        assert dlg._margin_spin.value() == 18  # noqa: SLF001
+        assert dlg._caption_check.isChecked()  # noqa: SLF001
+        box.setCurrentIndex(box.findData("index"))
+        assert (dlg._rows_spin.value(), dlg._cols_spin.value()) == (10, 8)  # noqa: SLF001
+        assert not dlg._caption_check.isChecked()  # noqa: SLF001
+        assert box.currentData() == "index"                    # filling didn't flip it to Custom
+    finally:
+        dlg.deleteLater()
+
+
+def test_editing_a_field_by_hand_makes_the_layout_custom(qapp, monkeypatch):
+    dlg = _dialog(monkeypatch)
+    try:
+        box = dlg._layout_combo  # noqa: SLF001
+        box.setCurrentIndex(box.findData("proof"))
+        dlg._margin_spin.setValue(11)  # noqa: SLF001
+        assert box.currentIndex() == 0
+        assert (dlg._rows_spin.value(), dlg._cols_spin.value()) == (6, 5)  # noqa: SLF001
+        box.setCurrentIndex(box.findData("compact"))
+        dlg._caption_check.setChecked(True)  # noqa: SLF001
+        assert box.currentIndex() == 0
+        box.setCurrentIndex(0)                                  # picking Custom keeps the values
+        assert dlg._rows_spin.value() == 8  # noqa: SLF001
+    finally:
+        dlg.deleteLater()
+
+
+def test_layout_labels_are_translated(qapp, monkeypatch):
+    from Imervue.gui import contact_sheet_dialog as mod
+    monkeypatch.setattr(mod.language_wrapper, "language_word_dict", {
+        "contact_sheet_layout_proof": "校樣", "contact_sheet_layout_entry": "{name} {cols}x{rows}={count}"})
+    assert mod.layout_label("proof") == "校樣 5x6=30"

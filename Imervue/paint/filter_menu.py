@@ -255,6 +255,39 @@ FILTER_SPECS: tuple[FilterSpec, ...] = (
 )
 
 
+def match_colour_spec(reference: np.ndarray) -> FilterSpec:
+    """Match Colour…: give the layer *reference*'s colour mood (``paint/match_color``).
+
+    Each RGB channel takes the reference's mean and spread; **Strength** blends
+    from the layer as it is (0) to the full match (1).
+    """
+    from Imervue.paint.match_color import match_color
+    return FilterSpec(
+        key="match_color",
+        label_key="paint_filter_match_color",
+        label_fallback="Match Colour…",
+        parameters=(
+            ParamSpec("strength", "paint_filter_match_color_strength", "Strength",
+                      "float_slider", 0.0, 1.0, 1.0, step=0.05),
+        ),
+        apply_fn=lambda arr, params: match_color(
+            arr, reference, strength=float(params.get("strength", 1.0))),
+    )
+
+
+def match_swatches_spec(swatches) -> FilterSpec:
+    """Match Swatches…: repaint each pixel in its nearest *swatches* colour (``match_palette``)."""
+    from Imervue.paint.match_palette import match_palette
+    colours = tuple(tuple(int(c) for c in rgb) for rgb in swatches)
+    return FilterSpec(
+        key="match_swatches",
+        label_key="paint_filter_match_swatches",
+        label_fallback="Match Swatches…",
+        parameters=(),
+        apply_fn=lambda arr, _params: match_palette(arr, colours),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Filter parameters dialog — one widget per ParamSpec
 # ---------------------------------------------------------------------------
@@ -390,7 +423,98 @@ def build_filter_menu(workspace: PaintWorkspace) -> QMenu:
         action.triggered.connect(
             lambda _checked=False, s=spec: _run_filter(workspace, s),
         )
+    menu.addSeparator()
+    match_colour = menu.addAction(lang.get("paint_filter_match_color", "Match Colour…"))
+    match_colour.triggered.connect(lambda _checked=False: _run_match_colour(workspace))
+    match_swatches = menu.addAction(lang.get("paint_filter_match_swatches", "Match Swatches…"))
+    match_swatches.triggered.connect(lambda _checked=False: _run_match_swatches(workspace))
     return menu
+
+
+def _run_match_colour(workspace: PaintWorkspace) -> None:  # pragma: no cover - QFileDialog
+    from PySide6.QtWidgets import QFileDialog
+
+    from Imervue.gui.file_filters import viewer_filter
+    from Imervue.image.read_errors import IMAGE_READ_ERRORS
+    from Imervue.image.shown import load_shown_rgba
+    lang = language_wrapper.language_word_dict
+    path, _ = QFileDialog.getOpenFileName(
+        workspace, lang.get("paint_filter_match_color_pick", "Choose the reference image"),
+        "", viewer_filter(),
+    )
+    if not path:
+        return
+    try:
+        reference = load_shown_rgba(path)
+    except IMAGE_READ_ERRORS as exc:
+        unreadable = lang.get("paint_filter_match_color_unreadable",
+                              "Could not read the reference image: {reason}")
+        _warn(workspace, unreadable.format(reason=exc))
+        return
+    _run_filter(workspace, match_colour_spec(reference))
+
+
+def _run_match_swatches(workspace: PaintWorkspace) -> None:  # pragma: no cover - Qt UI
+    from Imervue.paint.color_palette import palette_colours
+    state = workspace._state  # noqa: SLF001
+    swatches = palette_colours(state.swatch_palette, state.color_history)
+    if not swatches:
+        _warn(workspace, language_wrapper.language_word_dict.get(
+            "paint_filter_no_swatches",
+            "No swatches yet: pick colours, or File > Import palette…, first."))
+        return
+    _run_filter(workspace, match_swatches_spec(swatches))
+
+
+def _warn(workspace: object, text: str) -> None:  # pragma: no cover - Qt UI
+    toast = getattr(workspace, "toast", None)
+    if toast is not None:
+        toast.warning(text)
+
+
+def single_slider(spec: FilterSpec) -> ParamSpec | None:
+    """The filter's only parameter when it is a slider (live preview possible), else None."""
+    if len(spec.parameters) == 1 and spec.parameters[0].kind in ("int_slider", "float_slider"):
+        return spec.parameters[0]
+    return None
+
+
+def slider_steps(param: ParamSpec) -> int:
+    """Slider positions per unit of the parameter: 1 for whole numbers, ``1 / step`` otherwise."""
+    return 1 if param.kind == "int_slider" else max(1, int(round(1.0 / param.step)))
+
+
+def preview_params(param: ParamSpec, value: float) -> dict[str, Any]:
+    """The filter's parameter dict for the preview slider's *value*."""
+    return {param.name: int(round(value)) if param.kind == "int_slider" else float(value)}
+
+
+def _ask_params(  # pragma: no cover - Qt dialogs
+    workspace: PaintWorkspace, spec: FilterSpec, image,
+) -> dict | None:
+    """The parameters chosen for *spec* — live preview for one slider, the form otherwise."""
+    slider = single_slider(spec)
+    if slider is None:
+        dialog = FilterParametersDialog(spec, parent=workspace)
+        return dialog.values() if dialog.exec() == QDialog.DialogCode.Accepted else None
+    from Imervue.paint.filter_preview_dialog import FilterPreviewDialog, preview_crop
+    lang = language_wrapper.language_word_dict
+    steps = slider_steps(slider)
+    preview = FilterPreviewDialog(
+        preview_crop(image),
+        lambda crop, value: spec.apply_fn(crop, preview_params(slider, value)),
+        slider_min=int(round(slider.minimum * steps)),
+        slider_max=int(round(slider.maximum * steps)),
+        slider_default=int(round(float(slider.default) * steps)),
+        value_scale=1.0 / steps,
+        label_format="{:g}" if steps == 1 else "{:.2f}",
+        title_key=spec.label_key, title_fallback=spec.label_fallback,
+        value_label=lang.get(slider.label_key, slider.label_fallback),
+        parent=workspace,
+    )
+    if preview.exec() != QDialog.DialogCode.Accepted:
+        return None
+    return preview_params(slider, preview.slider_value())
 
 
 def _run_filter(workspace: PaintWorkspace, spec: FilterSpec) -> None:  # pragma: no cover - Qt UI
@@ -398,10 +522,9 @@ def _run_filter(workspace: PaintWorkspace, spec: FilterSpec) -> None:  # pragma:
     layer = document.active_layer()
     if layer is None:
         return
-    dialog = FilterParametersDialog(spec, parent=workspace)
-    if dialog.exec() != QDialog.DialogCode.Accepted:
+    params = _ask_params(workspace, spec, layer.image)
+    if params is None:
         return
-    params = dialog.values()
     try:
         layer.image[...] = apply_filter_to_layer(
             spec, params, layer.image, document.selection(),

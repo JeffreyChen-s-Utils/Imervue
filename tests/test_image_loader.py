@@ -272,3 +272,143 @@ def test_scanning_a_folder_by_name_puts_page2_before_page10(tmp_path):
     assert names == ["page1.png", "page2.png", "page10.png"]
     backwards = [os.path.basename(p) for p in _scan_images(str(tmp_path), ascending=False)]
     assert backwards == ["page10.png", "page2.png", "page1.png"]
+
+
+def test_scanning_by_modified_time_or_size_uses_the_listing(tmp_path, monkeypatch):
+    """The per-path stat is gone: the order comes from what scandir already returned."""
+    from Imervue.gpu_image_view.images import image_loader
+    for name, size, stamp in (("a.png", 30, 300), ("b.png", 10, 100), ("c.png", 20, 200)):
+        path = tmp_path / name
+        path.write_bytes(b"x" * size)
+        os.utime(path, (stamp, stamp))
+
+    def no_stat(*_args, **_kwargs):
+        raise AssertionError("a stat per path")
+
+    monkeypatch.setattr(os.path, "getmtime", no_stat)
+    monkeypatch.setattr(os.path, "getsize", no_stat)
+    by_date = [os.path.basename(p) for p in image_loader._scan_images(str(tmp_path), sort_by="modified")]
+    by_size = [os.path.basename(p) for p in image_loader._scan_images(str(tmp_path), sort_by="size",
+                                                                      ascending=False)]
+    assert by_date == ["b.png", "c.png", "a.png"]
+    assert by_size == ["a.png", "c.png", "b.png"]
+    by_created = image_loader._scan_images(str(tmp_path), sort_by="created")
+    assert sorted(by_created) == sorted(str(p) for p in tmp_path.iterdir())
+
+
+def test_a_folder_sorted_by_name_is_scanned_not_read_from_the_cache(tmp_path, monkeypatch):
+    """Checking every cached path cost 9x a fresh scan (5000 files: 349 ms against 38 ms)."""
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.image import folder_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    (tmp_path / "a.png").write_bytes(b"x")
+    monkeypatch.setitem(user_setting_dict, "sort_by", "name")
+    monkeypatch.setattr(folder_index, "load", lambda *_a, **_k: pytest.fail("cache read"))
+    monkeypatch.setattr(folder_index, "save", lambda *_a, **_k: pytest.fail("cache written"))
+    assert image_loader._scan_images_for_user(str(tmp_path)) == [str(tmp_path / "a.png")]
+
+
+def test_a_folder_sorted_by_resolution_still_uses_the_cache(tmp_path, monkeypatch):
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.image import folder_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    monkeypatch.setitem(user_setting_dict, "sort_by", "resolution")
+    monkeypatch.setattr(folder_index, "load", lambda *_a, **_k: ["cached.png"])
+    assert image_loader._scan_images_for_user(str(tmp_path)) == ["cached.png"]
+
+
+
+def test_a_folder_sorted_by_date_taken_uses_the_cache(tmp_path, monkeypatch):
+    """Sorting by date taken reads every file's EXIF, like sorting by resolution reads its size."""
+    from Imervue.gpu_image_view.images import image_loader
+    from Imervue.image import folder_index
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    monkeypatch.setitem(user_setting_dict, "sort_by", "taken")
+    monkeypatch.setattr(folder_index, "load", lambda *_a, **_k: ["cached.png"])
+    assert image_loader._scan_images_for_user(str(tmp_path)) == ["cached.png"]
+
+
+def test_a_folder_scan_can_sort_by_date_taken(tmp_path):
+    import os
+
+    from Imervue.gpu_image_view.images import image_loader
+    for name, taken in (("a.jpg", "2024:05:03 09:00:00"), ("b.jpg", "2024:05:01 09:00:00"),
+                        ("c.jpg", "2024:05:02 09:00:00")):
+        exif = Image.Exif()
+        exif.get_ifd(0x8769)[0x9003] = taken
+        Image.new("RGB", (4, 4)).save(tmp_path / name, exif=exif)
+        os.utime(tmp_path / name, (1_000_000_000, 1_000_000_000))
+    found = image_loader._scan_images(str(tmp_path), sort_by="taken")
+    assert [os.path.basename(p) for p in found] == ["b.jpg", "c.jpg", "a.jpg"]
+
+@pytest.mark.parametrize("thumbnail", [False, True])
+def test_a_raster_decode_takes_the_giant_slot_for_its_pixel_count(tmp_path, monkeypatch, thumbnail):
+    """Several workers decoding panoramas at once could add their gigabytes up."""
+    from contextlib import contextmanager
+
+    from Imervue.gpu_image_view.images import image_loader
+    asked = []
+
+    @contextmanager
+    def slot(pixels):
+        asked.append(pixels)
+        yield
+
+    monkeypatch.setattr(image_loader, "decode_slot", slot)
+    path = tmp_path / "a.png"
+    Image.new("RGB", (30, 20)).save(path)
+    image_loader.decode_image_file(str(path), thumbnail=thumbnail)
+    assert asked == [600]
+
+
+def test_the_wall_leaves_out_hidden_files_and_mac_companions(tmp_path):
+    """A card from a Mac showed a broken ._ thumbnail beside every photo."""
+    from Imervue.gpu_image_view.images.image_loader import _scan_images
+    for name in ("a.png", "._a.png", ".b.png"):
+        (tmp_path / name).write_bytes(b"x")
+    assert [os.path.basename(p) for p in _scan_images(str(tmp_path))] == ["a.png"]
+
+
+def test_the_progressive_scan_leaves_out_hidden_files(qapp, tmp_path):
+    from Imervue.gpu_image_view.images.image_loader import FolderScanWorker
+    for name in ("a.png", "._a.png"):
+        (tmp_path / name).write_bytes(b"x")
+    finished = []
+    worker = FolderScanWorker(str(tmp_path))
+    worker.signals.finished.connect(lambda _folder, images: finished.append(images))
+    worker.run()
+    assert [[os.path.basename(p) for p in images] for images in finished] == [["a.png"]]
+
+
+def test_a_hidden_picture_opened_on_purpose_joins_its_folders_list(tmp_path):
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.images import image_loader
+    for name in ("a.png", ".b.png", "c.png"):
+        (tmp_path / name).write_bytes(b"x")
+    loaded = []
+    model = SimpleNamespace(images=[])
+    model.set_images = lambda images: setattr(model, "images", list(images))
+    viewer = SimpleNamespace(model=model, current_index=-1, tile_grid_mode=True,
+                             load_deep_zoom_image=loaded.append, main_window=SimpleNamespace())
+    image_loader._open_file(viewer, tmp_path / ".b.png")
+    assert [os.path.basename(p) for p in model.images] == [".b.png", "a.png", "c.png"]
+    assert viewer.current_index == 0
+    assert loaded == [str(tmp_path / ".b.png")]
+
+
+def test_opening_a_file_leaves_on_image_loaded_to_the_display(tmp_path):
+    """The hook fired here, before the picture had loaded; the display runs it now."""
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.images import image_loader
+    (tmp_path / "a.png").write_bytes(b"x")
+    dispatched = []
+    model = SimpleNamespace(images=[])
+    model.set_images = lambda images: setattr(model, "images", list(images))
+    manager = SimpleNamespace(dispatch_image_loaded=lambda *args: dispatched.append(args))
+    viewer = SimpleNamespace(model=model, current_index=-1, tile_grid_mode=True,
+                             load_deep_zoom_image=lambda _path: None,
+                             main_window=SimpleNamespace(plugin_manager=manager))
+    image_loader._open_file(viewer, tmp_path / "a.png")
+    assert dispatched == []

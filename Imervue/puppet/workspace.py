@@ -27,6 +27,7 @@ from Imervue.gui.file_filters import translated_filter
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 from Imervue.puppet.canvas import PuppetCanvas
+from Imervue.puppet.document import Parameter
 from Imervue.puppet.document_io import PuppetFormatError, load_puppet, save_puppet
 from Imervue.puppet.operations import (
     add_parameter,
@@ -56,6 +57,7 @@ from Imervue.puppet.motion_dock import MotionDock
 from Imervue.puppet.motion_recorder import MotionRecorder, append_motion
 from Imervue.puppet.motion_timeline import MotionTimelineDialog
 from Imervue.puppet.parameter_dock import ParameterDock
+from Imervue.puppet.pose_dock import PoseDock
 from Imervue.puppet.recorder import RecordingSession
 from Imervue.puppet.webcam_tracker import WebcamTracker
 from Imervue.puppet.workspace_import import PuppetImportMixin
@@ -131,7 +133,10 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
         # Tabify so the user gets Parameters/Expressions/Bones as
         # three tabs in the same right pane instead of a cramped split.
         # Parameters is the most-frequent one so it stays on top.
+        self._pose_dock = PoseDock(self._canvas, self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._pose_dock)
         self.tabifyDockWidget(self._expression_dock, self._parameter_dock)
+        self.tabifyDockWidget(self._expression_dock, self._pose_dock)
         self.tabifyDockWidget(self._expression_dock, self._bone_tree_dock)
 
         self._motion_dock = MotionDock(self._canvas, self)
@@ -282,6 +287,7 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
                     # member — matches resolve_pose_visibility's
                     # "default to first member" semantics.
                     self._canvas.set_pose_active(group.id, group.drawables[0])
+        self._canvas.reset_physics()
         # 4. Snap parameters back to their authored defaults.
         self._canvas.reset_parameters()
         # 5. Status feedback so the user sees the action took effect.
@@ -583,6 +589,31 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             return
         self._show_validator_dialog(issues, counts)
 
+    def _run_rig_repair(self) -> None:
+        """Tools > Repair Rig: fix every drawable's mesh and weight map, then say what changed."""
+        from Imervue.puppet.rig_repair import repair_rig
+        doc = self._canvas.document()
+        if doc is None:
+            self._announce("puppet_repair_rig_no_doc", "Load a puppet first before repairing.")
+            return
+        report = repair_rig(doc)
+        if not report.changed:
+            self._announce(
+                "puppet_repair_rig_none",
+                "Nothing to repair — every mesh and weight map is sound.",
+            )
+            return
+        self._canvas.load_document(doc)
+        self._announce(
+            "puppet_repair_rig_done",
+            "Repaired {drawables} drawables: {degenerate} degenerate and {broken} broken "
+            "triangles dropped, {merged} duplicate vertices merged, {unused} unused vertices "
+            "removed, {weights} weight maps normalised.",
+            drawables=report.drawables, degenerate=report.removed_degenerate,
+            broken=report.dropped_out_of_range, merged=report.merged_vertices,
+            unused=report.removed_unreferenced, weights=report.weights_normalised,
+        )
+
     def _show_validator_dialog(self, issues, counts) -> None:
         from PySide6.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout
         lang = language_wrapper.language_word_dict
@@ -733,7 +764,9 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
                 "Pick a motion from the dock before editing.",
             )
             return
-        dialog = MotionTimelineDialog(motion, self)
+        doc = self._canvas.document()
+        ranges = {p.id: (p.min, p.max) for p in doc.parameters} if doc is not None else {}
+        dialog = MotionTimelineDialog(motion, self, ranges=ranges)
         dialog.widget().track_modified.connect(self._on_timeline_edit_committed)
         dialog.exec()
 
@@ -790,8 +823,8 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
                 # any motion is tagged with it — matches Cubism's
                 # "TapHead" / "TapBody" convention.
                 self._motion_dock.player().play_group(area.motion, doc.motions)
-            else:
-                self._motion_dock.select_motion(area.motion)
+            elif self._motion_dock.select_motion(area.motion):
+                self._motion_dock.player().play()
         if area.expression:
             if area.expression in self._canvas.active_expressions():
                 self._canvas.remove_expression(area.expression)
@@ -800,6 +833,55 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
         self._announce(
             "puppet_hit_area_triggered", "Hit area '{id}' triggered",
             id=area_id,
+        )
+
+    def _lipsync_from_audio_file(self) -> None:  # pragma: no cover - Qt file dialog
+        """Live > Lip-sync from Audio File…: pick a WAV and add a motion that mimes it."""
+        from PySide6.QtWidgets import QFileDialog
+
+        from Imervue.puppet.standard_params import PARAM_MOUTH_OPEN_Y
+        doc = self._canvas.document()
+        if doc is None:
+            self._announce("puppet_lipsync_audio_no_doc", "Load a puppet first.")
+            return
+        mouth = next((p for p in doc.parameters if p.id == PARAM_MOUTH_OPEN_Y), None)
+        if mouth is None:
+            self._announce(
+                "puppet_lipsync_audio_no_mouth",
+                "This rig has no {param} parameter to drive.", param=PARAM_MOUTH_OPEN_Y,
+            )
+            return
+        lang = language_wrapper.language_word_dict
+        path, _ = QFileDialog.getOpenFileName(
+            self, lang.get("puppet_lipsync_audio", "Lip-sync from Audio File…"), "",
+            translated_filter("file_filter_wav", "WAV audio", ("wav",)),
+        )
+        if path:
+            self._add_lipsync_motion(Path(path), mouth)
+
+    def _add_lipsync_motion(self, path: Path, mouth: Parameter) -> None:
+        """Add a motion opening *mouth* with *path*'s loudness, playing the file; report it."""
+        import wave
+
+        from Imervue.puppet.audio_lipsync import lipsync_motion
+        wide = mouth.max if mouth.max > mouth.default else mouth.min
+        try:
+            motion = lipsync_motion(path, name=f"lipsync_{path.stem}", param_id=mouth.id,
+                                    mouth_range=(mouth.default, wide))
+        except (OSError, EOFError, ValueError, wave.Error) as exc:
+            self._announce("puppet_lipsync_audio_failed", "Could not read {name}: {error}",
+                           name=path.name, error=exc)
+            return
+        if motion is None:
+            self._announce("puppet_lipsync_audio_silent", "{name} is silent — no motion added.",
+                           name=path.name)
+            return
+        append_motion(self._canvas, motion)
+        self._motion_dock.select_motion(motion.name)
+        self._announce(
+            "puppet_lipsync_audio_done",
+            "Added lip-sync motion '{name}' ({duration:.1f}s); it plays with its sound.",
+            name=motion.name, duration=motion.duration,
         )
 
     def _on_motion_recorded(self, motion) -> None:

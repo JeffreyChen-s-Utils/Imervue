@@ -81,11 +81,11 @@ def generate_caption(
     Raises ``ValueError`` if the model returns nothing, and propagates the
     network / URL errors from the underlying POST so the caller can fall back.
     """
-    from Imervue.desktop_pet.llm_dialogue import _request_json
+    from Imervue.system.local_llm import post_json
     image_bytes = Path(image_path).read_bytes()
     payload = build_caption_payload(model, image_bytes, build_caption_prompt(style))
     url = base_url.rstrip("/") + "/api/generate"
-    caption = parse_caption_response(_request_json(url, payload, timeout=timeout))
+    caption = parse_caption_response(post_json(url, payload, timeout=timeout))
     if caption is None:
         raise ValueError("vision model returned an empty caption")
     return caption

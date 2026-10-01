@@ -58,6 +58,182 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-64 | 2026-10-01 | Imeru's build uses fixed sequences and checks what reaches Blender; Codacy skips the accepted patterns | #fix #ci #puppet | [2026-10](2026-10.md) |
+| U-20261001-63 | 2026-10-01 | Refactor: PR #93's static-analysis findings that keep behaviour are cleared | #refactor #ci #puppet | [2026-10](2026-10.md) |
+| U-20261001-62 | 2026-10-01 | The sdist carries no tests either: MANIFEST.in prunes tests/ | #decision #packaging #release #X-13 #done | [2026-10](2026-10.md) |
+| U-20261001-61 | 2026-10-01 | Every example uses Imeru: the documented commands run on her file, and no comment or test names the removed rig | #docs #puppet #tests | [2026-10](2026-10.md) |
+| U-20261001-60 | 2026-10-01 | Imeru is shaded like a 3D anime game: an SDF face shadow that follows her head, borrowed hair normals, baked occlusion, painted strands | #feature #puppet #art #docs | [2026-10](2026-10.md) |
+| U-20261001-59 | 2026-10-01 | Imervue_dev 1.0.10 is on PyPI: the publish-dev upload works with the new token | #release #ci #X-13 #done | [2026-10](2026-10.md) |
+| U-20261001-58 | 2026-10-01 | Both wheels install only the Imervue package: the test suite stays out of site-packages | #bugfix #packaging #release #done | [2026-10](2026-10.md) |
+| U-20261001-57 | 2026-10-01 | The Fast jobs pass again: the six tests they had been failing unseen are fixed at their causes | #bugfix #ci #tests #cli #done | [2026-10](2026-10.md) |
+| U-20261001-56 | 2026-10-01 | Imeru is modelled and cel-shaded in Blender, layer by layer, with repainted eyes | #feature #puppet #art #docs | [2026-10](2026-10.md) |
+| U-20261001-55 | 2026-10-01 | A CI test job exits with pytest's status: the Fast jobs passed with failed tests | #incident #ci #tests | [2026-10](2026-10.md) |
+| U-20261001-54 | 2026-10-01 | The first publish-dev run could not upload: PyPI refuses the token for Imervue_dev | #incident #ci #release #X-13 | [2026-10](2026-10.md) |
+| U-20261001-53 | 2026-10-01 | CI publishes Imervue_dev from the dev branch | #release #ci #X-13 | [2026-10](2026-10.md) |
+| U-20261001-52 | 2026-10-01 | The user guide's Puppet quick start opens Imeru instead of the removed March 7th rig | #docs #puppet #done | [2026-10](2026-10.md) |
+| U-20261001-51 | 2026-10-01 | Paint's brush keeps a stroke inside the comic panel it starts in with Snap to panel | #bugfix #paint #docs #i18n #done | [2026-10](2026-10.md) |
+| U-20261001-50 | 2026-10-01 | Plugin translations are checked before they reach the UI; translation_validation is wired and every module is reachable | #feature #i18n #plugins #docs #done | [2026-10](2026-10.md) |
+| U-20261001-49 | 2026-10-01 | Extra Tools stamps a remembered title, description and keywords template on a selection; metadata_template is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-48 | 2026-10-01 | Tags & Albums refuses names that clash by case and cleans up stale entries; tag_validator is wired | #feature #library #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-47 | 2026-10-01 | Extra Tools shifts the EXIF capture time of a selection; capture_time is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-46 | 2026-10-01 | Extra Tools geotags a selection from a GPX track; gpx_geotag is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-45 | 2026-10-01 | The EXIF editor describes an image with a local vision model; caption is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-44 | 2026-10-01 | The contact sheet dialog offers named layout presets; contact_sheet_layouts is wired | #feature #export #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-43 | 2026-10-01 | Twitch triggers match whole messages, starts or regular expressions; command_parser is wired | #feature #desktop_pet #Imervue_Plugins #docs | [2026-10](2026-10.md) |
+| U-20261001-42 | 2026-10-01 | Desktop Pet refuses a hotkey another action uses and names shared ones; hotkey_conflicts is wired | #feature #desktop_pet #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-41 | 2026-10-01 | Puppet's Live menu turns a WAV into a lip-sync motion that plays the file; audio_lipsync is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-40 | 2026-10-01 | Deleting a puppet vertex keeps its drawable's bone weights and vertex morphs aligned | #bugfix #puppet #done | [2026-10](2026-10.md) |
+| U-20261001-39 | 2026-10-01 | Puppet's Tools menu repairs every mesh and weight map; mesh_repair and bone_weights are wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-38 | 2026-10-01 | Puppet's motion timeline simplifies a recorded take's keys within a tolerance; motion_compress is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-37 | 2026-10-01 | Puppet's motion timeline reshapes a track to a named easing; easing is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-36 | 2026-10-01 | Paint's single-slider filters preview live on a full-resolution crop; filter_preview_dialog is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-35 | 2026-10-01 | Paint's Manga menu lays text along the selection's outline; text_on_selection is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-34 | 2026-10-01 | Paint's Bucket dock flat-colours the line art's regions on a new layer; auto_base_color is wired and 19x faster | #feature #paint #performance #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-33 | 2026-10-01 | Paint's Pen draws one smooth curve through the clicked points with Smooth; catmull_rom_spline is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-32 | 2026-10-01 | Paint's File menu opens canvases of preset or typed sizes; canvas_presets is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-31 | 2026-10-01 | Paint's Swatches dock shows named palettes and keeps your own; color_palette is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-30 | 2026-10-01 | Paint's Filter menu matches a reference image's colour or the swatches; match_color and match_palette are wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-29 | 2026-10-01 | Paint's Lasso snaps its outline to nearby edges with Magnetic; magnetic_lasso is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-28 | 2026-10-01 | Paint's gradient tool paints saved multi-stop gradients, edited in a new dialog; gradient_editor is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-27 | 2026-10-01 | Paint's Material dock lists the user's materials and captured tips; Save Selection as Material is wired | #done #bugfix #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-26 | 2026-10-01 | Paint's Animation dock exports GIF, WebP or PNG animations; animation_export is wired | #feature #paint #performance #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-25 | 2026-10-01 | Paint's Color dock gets the hue-ring colour wheel; color_wheel_widget is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-24 | 2026-10-01 | Paint's File menu saves and opens whole comic projects; paint_project_io is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-23 | 2026-10-01 | Paint's Scatter, Colour jitter and Follow pen tilt shape every dab; brush_random is wired | #done #bugfix #paint #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-22 | 2026-10-01 | 27 modules no user could reach are deleted with their tests; 29 remain to be wired | #refactor #cleanup #decision #paint | [2026-10](2026-10.md) |
+| U-20261001-21 | 2026-10-01 | Plugin tool dialogs share ToolDialogMixin; plugin.json declares the plugin API a plugin needs | #done #refactor #plugin #decision #docs #i18n #Imervue_Plugins | [2026-10](2026-10.md) |
+| U-20261001-20 | 2026-10-01 | Imeru, Imervue's original mascot, is the bundled example character; the third-party rigs are gone | #done #decision #puppet #desktop-pet #examples #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-19 | 2026-10-01 | The open folder is polled instead of watched, so Windows can rename or move the folders above it | #done #decision #windows #file-tree #bugfix | [2026-10](2026-10.md) |
+| U-20261001-18 | 2026-10-01 | Puppet and Desktop Pet are optional tabs: Preferences turns them off, and when on they load on first use | #done #ui #puppet #desktop-pet #performance #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-17 | 2026-10-01 | Refactor: the desktop_pet package exports its classes lazily, so its light submodules load alone | #refactor #desktop-pet | [2026-10](2026-10.md) |
+| U-20261001-16 | 2026-10-01 | GPU Develop starts wgpu with only Vulkan, D3D12 or Metal, and its device tests run in a process of their own | #bugfix #gpu #plugins #Imervue_Plugins #test | [2026-10](2026-10.md) |
+| U-20261001-15 | 2026-10-01 | Refactor: the local-LLM HTTP helpers move out of the desktop pet, so image captions no longer load it | #refactor #desktop-pet | [2026-10](2026-10.md) |
+| U-20261001-14 | 2026-10-01 | The SFTP address in old commits is treated as public; history is not rewritten | #decision #done #security | [2026-10](2026-10.md) |
+| U-20261001-13 | 2026-10-01 | The puppet validator no longer reports parameters that drive morphs, curves, blends or physics as moving nothing | #bugfix #puppet | [2026-10](2026-10.md) |
+| U-20261001-12 | 2026-10-01 | Puppet clip masks clip again, on screen and in every off-screen output | #bugfix #puppet #render | [2026-10](2026-10.md) |
+| U-20261001-11 | 2026-10-01 | Batch Export renders Develop recipes on the discrete GPU through a new develop-backend registry and the GPU Develop plugin | #done #develop #gpu #plugins #Imervue_Plugins #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-10 | 2026-10-01 | Refactor: the develop pipeline is a named stage table any part of which can run | #refactor #develop | [2026-10](2026-10.md) |
+| U-20261001-09 | 2026-10-01 | The .puppet format has published JSON Schemas, a media type, a validate command and a reference reader | #done #puppet #format #mcp #cli #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-08 | 2026-10-01 | Refactor: saving a .puppet to disk or to bytes writes its entries in one place | #refactor #puppet | [2026-10](2026-10.md) |
+| U-20261001-07 | 2026-10-01 | The desktop pet's OBS, Twitch, webhook and notification hooks are an example plugin on a new on_pet_created hook | #done #desktop-pet #plugins #Imervue_Plugins #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-06 | 2026-10-01 | A docs coverage test checks the guide and READMEs name every command, tool, hook and menu entry | #done #docs #i18n #test | [2026-10](2026-10.md) |
+| U-20261001-05 | 2026-10-01 | A pipeline step with a non-string op or a null parameter is reported, not a traceback | #fix #cli | [2026-10](2026-10.md) |
+| U-20261001-04 | 2026-10-01 | Semantic Search runs CLIP on onnxruntime instead of torch, and Auto-Tag uses it | #done #clip #library #onnx #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-03 | 2026-10-01 | Library scans read only new or changed files, on several threads, and fill in missing pHashes | #done #library #performance #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-02 | 2026-10-01 | Every MCP tool is a CLI subcommand, and the CLI gained the MCP tools' options | #done #cli #mcp #docs #i18n | [2026-10](2026-10.md) |
+| U-20261001-01 | 2026-10-01 | Refactor: the library scanner probes a file and stores its row as two steps | #refactor #library | [2026-10](2026-10.md) |
+| U-20260926-91 | 2026-09-26 | The Desktop Pet's right-click menu picks each pose group's shown member | #feature #desktop-pet #docs #i18n | [2026-09-c](2026-09-c.md) |
+| U-20260926-90 | 2026-09-26 | The Puppet physics clock steps the chains in fixed 1/60 s steps | #fix #puppet #desktop-pet #physics | [2026-09-c](2026-09-c.md) |
+| U-20260926-89 | 2026-09-26 | Puppet motions honour their loop flag, hit areas play a named motion, PSD hair sways | #fix #puppet #desktop-pet #docs #i18n #done | [2026-09-c](2026-09-c.md) |
+| U-20260926-88 | 2026-09-26 | Puppet has a Pose dock that picks each pose group's shown member | #feature #fix #puppet #docs #i18n #done | [2026-09-c](2026-09-c.md) |
+| U-20260926-87 | 2026-09-26 | Dialogs stop their workers on OK too, and a closed window unloads its own plugins | #fix #plugins #crash #docs #done | [2026-09-c](2026-09-c.md) |
+| U-20260926-86 | 2026-09-26 | The Puppet guide and the .puppet format spec describe what the code does | #docs #puppet #i18n | [2026-09-c](2026-09-c.md) |
+| U-20260926-85 | 2026-09-26 | Plugins hear on_image_loaded for every shown image and on_image_deleted for tree deletes | #fix #plugins #docs | [2026-09-c](2026-09-c.md) |
+| U-20260926-84 | 2026-09-26 | A plugin language picked in the Language menu applies after the restart | #fix #plugins #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
+| U-20260926-83 | 2026-09-26 | The screen-adapt tests count the settle watch instead of racing its timer | #test #flaky | [2026-09-c](2026-09-c.md) |
+| U-20260926-82 | 2026-09-26 | Refactor: plugin discovery runs as import, class lookup and instantiate steps | #refactor #plugins | [2026-09-c](2026-09-c.md) |
+| U-20260926-81 | 2026-09-26 | Tests pin the plugin loader's failure isolation and load order | #test #plugins | [2026-09-c](2026-09-c.md) |
+| U-20260926-80 | 2026-09-26 | Puppet physics chains move: the canvas steps them on a clock of its own | #fix #puppet #desktop-pet #physics | [2026-09-c](2026-09-c.md) |
+| U-20260926-79 | 2026-09-26 | Refactor: the physics integrator steps plain floats instead of two-element arrays | #refactor #puppet #physics #performance | [2026-09-c](2026-09-c.md) |
+| U-20260926-78 | 2026-09-26 | Golden-value tests pin the physics integrator | #test #puppet #physics | [2026-09-c](2026-09-c.md) |
+| U-20260926-77 | 2026-09-26 | The pet's Apply expression entries toggle, checked while on | #fix #desktop-pet #docs #i18n | [2026-09-c](2026-09-c.md) |
+| U-20260926-76 | 2026-09-26 | Paint's Export image… writes PNG, JPEG, WebP, TIFF or BMP, and an export no longer counts as a save | #fix #feature #paint #export #data-loss #docs #i18n | [2026-09-c](2026-09-c.md) |
+| U-20260926-75 | 2026-09-26 | The guides describe Puppet, Desktop Pet, browsing and the file tools as they work, and the pet can open with Imervue | #docs #fix #done #desktop-pet #puppet #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
+| U-20260926-74 | 2026-09-26 | CI installs wheels only, the docs build is pinned, and the open static-analysis findings are cleared | #ci #quality #sonarcloud #codacy | [2026-09-c](2026-09-c.md) |
+| U-20260926-73 | 2026-09-26 | Refactor: the upscale worker's two run paths share one loop | #refactor #upscale #quality #sonarcloud | [2026-09-c](2026-09-c.md) |
+| U-20260926-72 | 2026-09-26 | Tests pin the upscale worker's traditional and AI run paths | #test #upscale | [2026-09-c](2026-09-c.md) |
+| U-20260926-71 | 2026-09-26 | Refactor: three functions SonarCloud flags as too complex are split into named steps | #refactor #quality #sonarcloud | [2026-09-c](2026-09-c.md) |
+| U-20260926-70 | 2026-09-26 | Refactor: the Desktop Pet tab unticks boxes through one quiet helper | #refactor #desktop-pet | [2026-09-c](2026-09-c.md) |
+| U-20260926-69 | 2026-09-26 | The Desktop Pet tab follows changes made from the pet's menu, the tray and hotkeys | #fix #desktop-pet | [2026-09-c](2026-09-c.md) |
+| U-20260926-68 | 2026-09-26 | Capture, Record and Export all motions render just the character | #fix #done #puppet #export | [2026-09-c](2026-09-c.md) |
+| U-20260926-67 | 2026-09-26 | Drag-track head turns the head toward the cursor | #fix #puppet #desktop-pet | [2026-09-c](2026-09-c.md) |
+| U-20260926-66 | 2026-09-26 | Create GIF / Video makes MP4s with the bundled ffmpeg and from odd-sized pictures | #fix #done #video #export | [2026-09-c](2026-09-c.md) |
+| U-20260926-65 | 2026-09-26 | Saved workspaces keep the split between the folder tree and the viewer | #fix #workspace #layout | [2026-09-c](2026-09-c.md) |
+| U-20260926-64 | 2026-09-26 | The Cubism import notice names the environment variable the importer reads | #fix #puppet #i18n | [2026-09-c](2026-09-c.md) |
+| U-20260926-63 | 2026-09-26 | Hide on fullscreen works from the first launch and brings the pet back | #fix #desktop-pet | [2026-09-c](2026-09-c.md) |
+| U-20260926-62 | 2026-09-26 | New Paint tabs get Hand, Zoom, the bracket keys and the right-click menu, and the Pressure Curve shapes pen pressure | #fix #done #paint #tablet #docs #i18n | [2026-09-c](2026-09-c.md) |
+| U-20260926-61 | 2026-09-26 | Paint's options bar, all-layer fill and layout saving work, and closing asks about unsaved Paint tabs | #fix #paint #autosave #data-loss #docs #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
+| U-20260926-60 | 2026-09-26 | Sentences the brand-name scrub broke read properly again in the app and the docs | #fix #i18n #docs #xmp | [2026-09-c](2026-09-c.md) |
+| U-20260926-59 | 2026-09-26 | The hover preview and the hovered-tile keys keep working after a click on the wall | #fix #browse #hover #culling | [2026-09-c](2026-09-c.md) |
+| U-20260926-58 | 2026-09-26 | Comments read as sentences again after the brand-name scrub | #refactor #comments | [2026-09-c](2026-09-c.md) |
+| U-20260926-57 | 2026-09-26 | 65-point and 1D LUTs load, Graduated Density offers its tint, and the library docs match the code | #fix #lut #develop #docs #i18n #Imervue_Plugins | [2026-09-c](2026-09-c.md) |
+| U-20260926-56 | 2026-09-26 | Record U-20260926-54 lost its file names to shell quoting and was repaired in place | #incident #docs | [2026-09-c](2026-09-c.md) |
+| U-20260926-55 | 2026-09-26 | A colour key clears a selection that already has it, and the organising docs match the menus | #fix #culling #color-label #docs #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-54 | 2026-09-26 | The Puppet guide translations are held to the English structure too | #test #docs #i18n #puppet | [2026-09-b](2026-09-b.md) |
+| U-20260926-53 | 2026-09-26 | The previous session's log survives the relaunch after a crash | #fix #logging #docs #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-52 | 2026-09-26 | The Paint tab is built the first time it is used | #perf #startup #paint | [2026-09-b](2026-09-b.md) |
+| U-20260926-51 | 2026-09-26 | The guides say the March 7th rig has no hit areas, which it does not | #docs #puppet #desktop-pet #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-50 | 2026-09-26 | A test keeps every translated README and docs page in the English structure | #test #docs #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-49 | 2026-09-26 | The shortcut tables list every default key and what Home really does | #docs #shortcuts #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-48 | 2026-09-26 | A picture rewritten in place re-sorts the folder by date taken or resolution | #fix #browse #sort #cache | [2026-09-b](2026-09-b.md) |
+| U-20260926-47 | 2026-09-26 | The docs give the Paint tab, the example rig and Semantic Search as they are, in every language | #docs #i18n #puppet | [2026-09-b](2026-09-b.md) |
+| U-20260926-46 | 2026-09-26 | The release build pins a pip without the doubly-encoded URL flaw | #security #ci #release | [2026-09-b](2026-09-b.md) |
+| U-20260926-45 | 2026-09-26 | The Puppet Examples menu names March 7th as it is spelled | #fix #puppet #docs | [2026-09-b](2026-09-b.md) |
+| U-20260926-44 | 2026-09-26 | Every docs language has every section, in the English order | #docs #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-43 | 2026-09-26 | Alt+Left and Alt+Right step through the viewing history | #fix #shortcuts #history | [2026-09-b](2026-09-b.md) |
+| U-20260926-42 | 2026-09-26 | Frame & Caption lets you pick the frame and caption colours | #feature #frame #i18n #docs | [2026-09-b](2026-09-b.md) |
+| U-20260926-41 | 2026-09-26 | Ten plugins and Deflicker wait for their thread before letting it go | #fix #crash #threads #plugins #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
+| U-20260926-40 | 2026-09-26 | Web Gallery can build the client-review page | #feature #export #web-gallery #i18n #docs #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
+| U-20260926-39 | 2026-09-26 | Undoing a rotate key press no longer crashes the viewer | #fix #crash #undo #shortcuts | [2026-09-b](2026-09-b.md) |
+| U-20260926-38 | 2026-09-26 | Eleven one-shot tools say where they saved, or why they failed | #fix #dialogs #i18n #refactor #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
+| U-20260926-37 | 2026-09-26 | The docs give the E key, the Develop sliders and the batch menu as they are | #docs #develop #export #batch | [2026-09-b](2026-09-b.md) |
+| U-20260926-36 | 2026-09-26 | Develop's Whites slider dims white and its Blacks slider lifts black | #fix #develop #recipe | [2026-09-b](2026-09-b.md) |
+| U-20260926-35 | 2026-09-26 | The monitor mirror is frameless on a second display and its shortcut closes it | #fix #multi-monitor #shortcuts | [2026-09-b](2026-09-b.md) |
+| U-20260926-34 | 2026-09-26 | Print Layout sets its margin and gutter and says when an export fails | #fix #print #export #i18n #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
+| U-20260926-33 | 2026-09-26 | Slideshow MP4 offers the transitions the renderer already has | #fix #slideshow #i18n #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
+| U-20260926-32 | 2026-09-26 | Develop's Undo and Redo buttons step through the slider edits | #fix #develop #undo | [2026-09-b](2026-09-b.md) |
+| U-20260926-31 | 2026-09-26 | Compare opens on the thumbnails you selected | #fix #compare #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-30 | 2026-09-26 | Rating and favourite keys show their stars at once and the rating HUD leaves on time | #fix #viewer #rating #keyboard | [2026-09-b](2026-09-b.md) |
+| U-20260926-29 | 2026-09-26 | The docs give the CLI's shared flags and the MCP resize, palette and completion as they are | #docs #fix #cli #mcp #i18n | [2026-09-b](2026-09-b.md) |
+| U-20260926-28 | 2026-09-26 | cli collage and anaglyph report an unreadable picture instead of crashing | #fix #cli | [2026-09-b](2026-09-b.md) |
+| U-20260926-27 | 2026-09-26 | The docs describe the arrow keys, presets, watermark, Library Search, Auto-Tag and XMP as they work | #docs #fix #i18n #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
+| U-20260926-26 | 2026-09-26 | Esc in the List view leaves fullscreen or goes back to the thumbnails | #fix #list-view #keyboard | [2026-09-b](2026-09-b.md) |
+| U-20260926-25 | 2026-09-26 | Semantic search keeps its embeddings, re-embedding only pictures that changed | #fix #semantic-search #performance #cache | [2026-09-b](2026-09-b.md) |
+| U-20260926-24 | 2026-09-26 | Clicking a star in the List view rates the row, as the docs said | #fix #list-view #rating | [2026-09-b](2026-09-b.md) |
+| U-20260926-23 | 2026-09-26 | Shift+Tab reaches Theater Mode instead of moving the focus away | #fix #keyboard #shortcuts #viewer | [2026-09-b](2026-09-b.md) |
+| U-20260926-22 | 2026-09-26 | Ctrl+Shift+D opens right-to-left dual-page reading, which no key reached | #fix #keyboard #manga #shortcuts | [2026-09-b](2026-09-b.md) |
+| U-20260926-21 | 2026-09-26 | place: in a search query finds the photos taken there | #fix #search #library #gps | [2026-09-b](2026-09-b.md) |
+| U-20260926-20 | 2026-09-26 | The List view keeps the sort you chose and orders names naturally | #fix #list-view #sort | [2026-09-b](2026-09-b.md) |
+| U-20260926-19 | 2026-09-26 | Auto-tagging reads a photo as shown and finally tags landscape and portrait | #fix #library #tags #orientation #formats | [2026-09-b](2026-09-b.md) |
+| U-20260926-18 | 2026-09-26 | Two different 16-bit scans are no longer hashed as the same picture | #fix #duplicates #similar-search #formats #data-loss | [2026-09-b](2026-09-b.md) |
+| U-20260926-17 | 2026-09-26 | Grey thumbnails cached before the 16-bit and grey-profile fixes are made again | #fix #thumbnails #cache #color-management | [2026-09-b](2026-09-b.md) |
+| U-20260926-16 | 2026-09-26 | Ratings, favourite, cull flags and colour labels work in the List view | #fix #list-view #rating #culling #keyboard | [2026-09-b](2026-09-b.md) |
+| U-20260926-15 | 2026-09-26 | Rating and favourite keys on the wall rate the photo you point at, not the last one opened | #fix #rating #culling #keyboard #browse | [2026-09-b](2026-09-b.md) |
+| U-20260926-14 | 2026-09-26 | Delete and Ctrl+Z work in the List view, as on the thumbnail wall | #fix #list-view #delete #keyboard | [2026-09-b](2026-09-b.md) |
+| U-20260926-13 | 2026-09-26 | The shown picture is measured, not Qt-watched, so an editor's save is never refused | #fix #viewer #external-editor #windows #data-loss | [2026-09-b](2026-09-b.md) |
+| U-20260926-12 | 2026-09-26 | Refactor: drop animation_player.is_animated_file, which nothing but tests called | #refactor #dead-code #animation | [2026-09-b](2026-09-b.md) |
+| U-20260926-11 | 2026-09-26 | Sort by Date Taken, the time the camera recorded | #feature #sort #exif #browse | [2026-09-b](2026-09-b.md) |
+| U-20260926-10 | 2026-09-26 | An APNG's default image is not played as the first frame | #fix #viewer #animation #formats | [2026-09-b](2026-09-b.md) |
+| U-20260926-09 | 2026-09-26 | Set as Wallpaper hands the desktop a JPEG it can show, not a RAW or PSD it turns black | #fix #wallpaper #formats #windows | [2026-09-b](2026-09-b.md) |
+| U-20260926-08 | 2026-09-26 | Reveal in folder in the List view selects the photo, like Show in Explorer | #fix #list-view #windows | [2026-09-b](2026-09-b.md) |
+| U-20260926-07 | 2026-09-26 | Refactor: the file tree and the right-click menu reveal through file_manager.reveal_or_warn | #refactor #windows | [2026-09-b](2026-09-b.md) |
+| U-20260926-06 | 2026-09-26 | A greyscale picture's grey profile is applied like a colour one | #fix #color-management #viewer #thumbnails | [2026-09-b](2026-09-b.md) |
+| U-20260926-05 | 2026-09-26 | The List view follows files that another program saves over, deletes or restores | #fix #browse #list-view | [2026-09-b](2026-09-b.md) |
+| U-20260926-04 | 2026-09-26 | A camera JPEG with an MPF preview can be saved over, converted and split like any JPEG | #fix #formats #save | [2026-09-b](2026-09-b.md) |
+| U-20260926-03 | 2026-09-26 | A camera JPEG's preview no longer flickers in, and TIFF pages turn instead of playing | #fix #viewer #animation #formats | [2026-09-b](2026-09-b.md) |
+| U-20260926-02 | 2026-09-26 | Refactor: the remaining Yes / No confirmations call dialog_rows.confirm | #refactor #dialogs | [2026-09-b](2026-09-b.md) |
+| U-20260926-01 | 2026-09-26 | Deleting, clearing and overwriting ask with No as the default | #fix #safety #data-loss | [2026-09-b](2026-09-b.md) |
+| U-20260925-92 | 2026-09-25 | Paste, tag deletion and semantic search speak the interface language | #fix #i18n #clipboard | [2026-09-b](2026-09-b.md) |
+| U-20260925-91 | 2026-09-25 | Show in Explorer finds a photo whose path has a comma | #fix #windows | [2026-09-b](2026-09-b.md) |
+| U-20260925-90 | 2026-09-25 | The shown picture is measured again when Imervue comes back to the front | #fix #viewer #external-editor #tests | [2026-09-b](2026-09-b.md) |
+| U-20260925-89 | 2026-09-25 | A Photoshop PSD shows its merged picture in the viewer | #feature #formats #browse | [2026-09-b](2026-09-b.md) |
+| U-20260925-88 | 2026-09-25 | Icons, textures, JPEG 2000 and Netpbm pictures open in the viewer | #feature #formats #browse | [2026-09-b](2026-09-b.md) |
+| U-20260925-87 | 2026-09-25 | A JPEG named .jfif, .jpe or .jif opens like any other | #fix #formats #browse #batch | [2026-09-b](2026-09-b.md) |
+| U-20260925-86 | 2026-09-25 | The MCP server's folder tools leave out hidden files like the viewer | #fix #mcp #browse | [2026-09-b](2026-09-b.md) |
+| U-20260925-85 | 2026-09-25 | Next / previous folder follows the folder tree's order | #fix #browse #sort | [2026-09-b](2026-09-b.md) |
+| U-20260925-84 | 2026-09-25 | Hidden files and macOS ._ companions stay out of the wall and the batch tools | #fix #browse #batch #library | [2026-09-b](2026-09-b.md) |
+| U-20260925-83 | 2026-09-25 | Refactor: the batch tools share one folder listing | #refactor #batch | [2026-09-b](2026-09-b.md) |
+| U-20260925-82 | 2026-09-25 | 16-bit and float greyscale pictures show their real brightness | #fix #formats #viewer #thumbnails | [2026-09-b](2026-09-b.md) |
+| U-20260925-81 | 2026-09-25 | A picture another program saves over shows its new version | #fix #viewer #thumbnails #external-editor | [2026-09-b](2026-09-b.md) |
+| U-20260925-80 | 2026-09-25 | A photo cut short opens as far as it was read | #fix #viewer #decode #cli #mcp | [2026-09-b](2026-09-b.md) |
+| U-20260925-79 | 2026-09-25 | CR3, RW2, ORF and RAF show their EXIF, sort by capture date and keep it in exports | #fix #raw #metadata | [2026-09-b](2026-09-b.md) |
+| U-20260925-78 | 2026-09-25 | Sorting by resolution weighs a camera RAW by its real size | #fix #sort #raw | [2026-09-b](2026-09-b.md) |
+| U-20260925-77 | 2026-09-25 | A NEF exports to JPEG again: copies leave the camera maker note out | #fix #export #metadata | [2026-09-b](2026-09-b.md) |
+| U-20260925-76 | 2026-09-25 | Object Remove's mask worker reports a failed build instead of jamming the tool | #fix #workers #Imervue_Plugins | [2026-09-b](2026-09-b.md) |
+| U-20260925-75 | 2026-09-25 | Panoramas past Pillow's 179 MP limit open, one giant decode at a time | #fix #formats #memory | [2026-09-b](2026-09-b.md) |
+| U-20260925-74 | 2026-09-25 | Same-size scans no longer share one Modify recipe | #fix #recipe #data-loss | [2026-09-b](2026-09-b.md) |
+| U-20260925-73 | 2026-09-25 | A portrait camera RAW's thumbnail stands upright; a RAW without an embedded preview gets one | #fix #raw #orientation | [2026-09-b](2026-09-b.md) |
+| U-20260925-72 | 2026-09-25 | Opening a folder sorts from the listing, without a system call per file | #perf #sort | [2026-09-b](2026-09-b.md) |
 | U-20260924-100 | 2026-09-24 | Move the metadata-carrying save helpers into in_place_save | #refactor #metadata | [2026-09](2026-09.md) |
 | U-20260924-101 | 2026-09-24 | Keep metadata when Modify and the annotation editor save over a file; never write PNG into a RAW | #fix #metadata #data-loss | [2026-09](2026-09.md) |
 | U-20260924-102 | 2026-09-24 | AI Upscale: full-size RAW input, no PNG bytes under a .cr2 name, EXIF kept | #fix #metadata #data-loss | [2026-09](2026-09.md) |
@@ -70,6 +246,10 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260924-109 | 2026-09-24 | Keep EXIF entry types through Pillow re-serialisation (UNDEFINED, SRATIONAL) | #fix #metadata | [2026-09](2026-09.md) |
 | U-20260924-110 | 2026-09-24 | EXIF editor works without piexif: JPEG edited through Pillow, Unicode kept | #fix #metadata #exif #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260924-111 | 2026-09-24 | WebP EXIF rewritten in place without piexif; piexif no longer used | #fix #metadata #webp #Imervue_Plugins | [2026-09](2026-09.md) |
+| U-20260925-71 | 2026-09-25 | Open with Imervue and the watched folder cover every format the viewer opens | #fix #raw #formats | [2026-09-b](2026-09-b.md) |
+| U-20260925-70 | 2026-09-25 | Refactor: the MCP server decodes and probes through shown.open_shown and dimensions.probe_image | #refactor #mcp | [2026-09-b](2026-09-b.md) |
+| U-20260925-69 | 2026-09-25 | HDR merge, panorama, focus stack, stack blend, paint drops and the CLI develop camera RAW | #fix #raw | [2026-09-b](2026-09-b.md) |
+| U-20260925-68 | 2026-09-25 | Animation frames of 10 ms or less play for 100 ms, as in browsers | #fix #animation | [2026-09-b](2026-09-b.md) |
 | U-20260925-67 | 2026-09-25 | Sorting by name puts img2 before img10, like the file tree and Explorer | #fix #sort | [2026-09-b](2026-09-b.md) |
 | U-20260925-66 | 2026-09-25 | Canon CR3, Panasonic RW2, Pentax PEF and 14 more RAW formats open | #fix #raw #formats | [2026-09-b](2026-09-b.md) |
 | U-20260925-65 | 2026-09-25 | Batch workers report a model or folder that fails before the first image | #fix #workers | [2026-09-b](2026-09-b.md) |
@@ -347,5 +527,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | File | Period | Entries |
 |---|---|---:|
-| [2026-09.md](2026-09.md) | 2026-09 | 15 |
-| [2026-09-b.md](2026-09-b.md) | 2026-09 | 6 |
+| [2026-09.md](2026-09.md) | 2026-09 | 278 |
+| [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
+| [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
+| [2026-10.md](2026-10.md) | 2026-10 | 64 |

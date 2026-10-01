@@ -100,3 +100,33 @@ def test_carried_exif_keeps_the_camera_tag_types(tmp_path):
                                                         [(0x010F, 2, b"Canon\0")]))
     exif = export_save_options(src, METADATA_ALL)["exif"]
     assert entry_types(exif)[("exif", 0x9286)] == 7
+
+
+def _raw_like_tiff(tmp_path, maker_note_size=121_000):
+    """What Pillow opens a NEF as: a TIFF whose Exif IFD holds a 121 KB maker note."""
+    exif = Image.Exif()
+    exif[0x010F] = "NIKON CORPORATION"
+    exif.get_ifd(0x8769).update({0x9003: _DATE, 0x927C: b"Nikon\0" + b"n" * maker_note_size})
+    exif[0x8769] = 0
+    path = tmp_path / "DSC_0001.tif"
+    Image.new("RGB", (8, 8)).save(path, exif=exif)
+    return path
+
+
+@pytest.mark.parametrize("policy", [METADATA_ALL, METADATA_NO_LOCATION])
+def test_a_raw_with_a_large_maker_note_exports_to_jpeg(tmp_path, policy):
+    """Past the 64 KB of a JPEG's EXIF segment: every default export of a NEF failed."""
+    options = export_save_options(_raw_like_tiff(tmp_path), policy)
+    out = tmp_path / "out.jpg"
+    Image.new("RGB", (8, 8)).save(out, exif=options["exif"])
+    with Image.open(out) as saved:
+        sub = saved.getexif().get_ifd(0x8769)
+        assert sub[0x9003] == _DATE
+        assert 0x927C not in sub
+
+
+def test_no_maker_note_is_carried_even_a_small_one(tmp_path):
+    """Its offsets point into the source's own layout, so a copy never gets one."""
+    carried = export_exif(_raw_like_tiff(tmp_path, maker_note_size=100), METADATA_ALL)
+    assert 0x927C not in carried.get_ifd(0x8769)
+    assert carried.get_ifd(0x8769)[0x9003] == _DATE

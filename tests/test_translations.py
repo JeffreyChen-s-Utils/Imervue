@@ -154,3 +154,15 @@ class TestTranslationNewFeatures:
             assert key in lang_dict, (
                 f"Missing EXIF strip key '{key}' in {lang_name}"
             )
+
+
+@pytest.mark.parametrize("words", [
+    english_word_dict, traditional_chinese_word_dict, chinese_word_dict,
+    japanese_word_dict, korean_word_dict,
+])
+@pytest.mark.parametrize("key", ["puppet_cubism_notice_body", "puppet_cubism_sdk_missing_body"])
+def test_cubism_hints_name_the_variable_the_bridge_reads(words, key):
+    """The notice said LIVE2D_CUBISM_CORE; the bridge reads CUBISM_CORE_DLL."""
+    from Imervue.puppet.cubism_native_bridge import LIBRARY_ENV_VAR
+    assert LIBRARY_ENV_VAR in words[key]
+    assert "LIVE2D_CUBISM_CORE" not in words[key]

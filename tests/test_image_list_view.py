@@ -238,26 +238,20 @@ def test_context_menu_no_op_on_empty_selection(qapp):
         view.deleteLater()
 
 
-def test_reveal_path_handles_unknown_target(qapp, tmp_path, monkeypatch):
-    """Reveal delegates to QDesktopServices. The opener is stubbed so the
-    test never launches a real file-manager window (which would otherwise
-    pop open — and stay open — on every test run)."""
-    from PySide6.QtGui import QDesktopServices
+def test_reveal_in_folder_selects_the_photo(qapp, tmp_path, monkeypatch):
+    """Reveal used to open the folder with nothing selected; Show in Explorer elsewhere selects.
 
-    from Imervue.gui.image_list_view import ImageListView
-    opened: list = []
-
-    def _stub_open_url(url):
-        opened.append(url)
-        return True
-
-    monkeypatch.setattr(QDesktopServices, "openUrl", _stub_open_url)
-    view = ImageListView(main_window=None)
+    The file manager is stubbed so the test never opens a real window.
+    """
+    from Imervue.gui import image_list_view
+    revealed: list = []
+    monkeypatch.setattr(image_list_view, "reveal_or_warn", revealed.append)
+    view = image_list_view.ImageListView(main_window=None)
     try:
-        view._reveal_path(str(tmp_path / "nope.png"))  # noqa: SLF001
+        view._reveal_path(str(tmp_path / "a.png"))  # noqa: SLF001
     finally:
         view.deleteLater()
-    assert opened, "reveal should delegate to QDesktopServices.openUrl"
+    assert revealed == [str(tmp_path / "a.png")]
 
 
 class TestThumbFetchRetry:
@@ -355,3 +349,460 @@ def test_list_thumb_bug_is_logged_and_still_emits(qapp, tmp_path, monkeypatch, c
     assert args[-1] is False
     (record,) = caplog.records
     assert record.exc_info[0] is RuntimeError
+
+
+class TestRefetch:
+    """A row whose file another program rewrote, removed or restored is read again."""
+
+    @staticmethod
+    def _fetched_model(model_cls, paths, monkeypatch):
+        m = model_cls(paths)
+        started: list = []
+        monkeypatch.setattr(m._pool, "start", started.append)  # noqa: SLF001
+        for p in paths:
+            m._on_fetched(p, TestThumbFetchRetry._image(), 100, 80, 1.0, 1.0, True)  # noqa: SLF001
+        return m, started
+
+    def test_a_refetched_row_keeps_its_thumbnail_until_read_again(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        a, b = str(tmp_path / "a.png"), str(tmp_path / "b.png")
+        m, started = self._fetched_model(model_cls, [a, b], monkeypatch)
+        old_icon = m._row_index(b)[1].icon  # noqa: SLF001
+        changed: list = []
+        m.dataChanged.connect(lambda top, bottom, roles: changed.append((top.row(), bottom.row(), roles)))
+        m.refetch({b})
+        row = m._row_index(b)[1]  # noqa: SLF001
+        assert row.fetched is False
+        assert row.icon is old_icon
+        assert changed == [(1, 1, [Qt.ItemDataRole.DecorationRole])]
+        assert m._row_index(a)[1].fetched is True  # noqa: SLF001
+        assert started == []          # nothing read until the row is painted
+        m.data(m.index(1, m.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert len(started) == 1
+
+    def test_a_read_under_way_is_dropped_and_done_again(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m = model_cls([p])
+        started: list = []
+        monkeypatch.setattr(m._pool, "start", started.append)  # noqa: SLF001
+        m.data(m.index(0, m.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert len(started) == 1
+        m.refetch([p])                # the file changed while it was being read
+        m._on_fetched(p, TestThumbFetchRetry._image(), 100, 80, 1.0, 1.0, True)  # noqa: SLF001
+        row = m._row_index(p)[1]  # noqa: SLF001
+        assert row.fetched is False
+        assert row.width is None      # the old read's result was not applied
+        assert len(started) == 2
+        m._on_fetched(p, TestThumbFetchRetry._image(), 120, 90, 1.0, 1.0, True)  # noqa: SLF001
+        assert (row.fetched, row.width) == (True, 120)
+
+    def test_refetch_resets_the_retry_budget(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, _started = self._fetched_model(model_cls, [p], monkeypatch)
+        m._retry[p] = 2  # noqa: SLF001
+        m.refetch([p])
+        assert p not in m._retry  # noqa: SLF001
+
+    def test_paths_outside_the_list_are_ignored(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m, _started = self._fetched_model(model_cls, [p], monkeypatch)
+        m.refetch([str(tmp_path / "elsewhere.png")])
+        assert m._row_index(p)[1].fetched is True  # noqa: SLF001
+
+    def test_a_new_folder_forgets_stale_reads(self, list_mod, tmp_path, monkeypatch):
+        model_cls, _ = list_mod
+        p = str(tmp_path / "a.png")
+        m = model_cls([p])
+        monkeypatch.setattr(m._pool, "start", lambda _worker: None)  # noqa: SLF001
+        m.data(m.index(0, m.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        m.refetch([p])
+        m.set_paths([p])
+        assert m._stale == set()  # noqa: SLF001
+
+
+def test_an_external_save_shows_in_the_list(qapp, tmp_path, pump_until):
+    from PIL import Image
+
+    from Imervue.gui.image_list_view import ImageListView
+    path = tmp_path / "a.png"
+    Image.new("RGB", (40, 30), "red").save(path)
+    view = ImageListView(main_window=None)
+    try:
+        model = view.model()
+        view.set_paths([str(path)])
+        index = model.index(0, model.COL_RES)
+        model.data(model.index(0, model.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert pump_until(lambda: model.data(index) == "40×30")
+        Image.new("RGB", (64, 48), "blue").save(path)   # another program saves over it
+        view.refetch({str(path)})
+        model.data(model.index(0, model.COL_THUMB), Qt.ItemDataRole.DecorationRole)
+        assert pump_until(lambda: model.data(index) == "64×48")
+    finally:
+        view.deleteLater()
+
+
+def test_the_main_window_passes_changed_paths_to_the_list():
+    from types import SimpleNamespace
+
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    got: list = []
+    window = SimpleNamespace(image_list_view=SimpleNamespace(refetch=got.append))
+    MainWindowBrowseMixin.refetch_list_rows(window, {"a.png"})
+    assert got == [{"a.png"}]
+
+
+
+class _EditWindow:
+    """Records what the list asks the main window to delete or undo."""
+
+    def __init__(self):
+        self.deleted: list = []
+        self.undos = 0
+
+    def delete_list_selection(self, paths):
+        self.deleted.append(list(paths))
+
+    def undo_from_list(self):
+        self.undos += 1
+
+
+def _press(view, key, modifiers=Qt.KeyboardModifier.NoModifier):
+    from PySide6.QtCore import QEvent
+    from PySide6.QtGui import QKeyEvent
+    event = QKeyEvent(QEvent.Type.KeyPress, key, modifiers)
+    event.ignore()   # a new event starts accepted: make the handler say so itself
+    view.keyPressEvent(event)
+    return event
+
+
+def _list_with(qapp, tmp_path, names, window):
+    from PySide6.QtCore import QItemSelectionModel
+
+    from Imervue.gui.image_list_view import ImageListView
+    view = ImageListView(main_window=window)
+    view.set_paths([str(tmp_path / name) for name in names])
+    return view, QItemSelectionModel
+
+
+def test_delete_in_the_list_deletes_the_selected_rows(qapp, tmp_path):
+    """Delete did nothing in the List view: only the wall and Deep Zoom listened for it."""
+    window = _EditWindow()
+    view, selection = _list_with(qapp, tmp_path, ["a.png", "b.png", "c.png"], window)
+    try:
+        model = view.model()
+        flags = selection.SelectionFlag.Select | selection.SelectionFlag.Rows
+        view.selectionModel().select(model.index(0, 0), flags)
+        view.selectionModel().select(model.index(1, 0), flags)
+        event = _press(view, Qt.Key.Key_Delete)
+    finally:
+        view.deleteLater()
+    assert window.deleted == [[str(tmp_path / "a.png"), str(tmp_path / "b.png")]]
+    assert event.isAccepted()
+
+
+def test_delete_moves_the_cursor_to_the_row_that_takes_their_place(qapp, tmp_path):
+    names = ["a.png", "b.png", "c.png"]
+    view, selection = _list_with(qapp, tmp_path, names, None)
+
+    class _Window(_EditWindow):
+        def delete_list_selection(self, paths):
+            super().delete_list_selection(paths)
+            view.set_paths([str(tmp_path / n) for n in names if str(tmp_path / n) not in paths])
+
+    view._main_window = _Window()  # noqa: SLF001
+    try:
+        view.selectRow(1)
+        _press(view, Qt.Key.Key_Delete)
+        assert view.selected_paths() == [str(tmp_path / "c.png")]
+    finally:
+        view.deleteLater()
+
+
+def test_ctrl_z_in_the_list_undoes(qapp, tmp_path):
+    window = _EditWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        event = _press(view, Qt.Key.Key_Z, Qt.KeyboardModifier.ControlModifier)
+    finally:
+        view.deleteLater()
+    assert window.undos == 1
+    assert event.isAccepted()
+
+
+def test_delete_with_nothing_selected_does_nothing(qapp, tmp_path):
+    window = _EditWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.clearSelection()
+        _press(view, Qt.Key.Key_Delete)
+    finally:
+        view.deleteLater()
+    assert window.deleted == []
+
+
+def test_a_rebound_delete_key_is_followed(qapp, tmp_path, monkeypatch):
+    from Imervue.gui.shortcut_settings_dialog import shortcut_manager
+    window = _EditWindow()
+    monkeypatch.setattr(shortcut_manager, "get_action",
+                        lambda key, _mods: "delete" if key == Qt.Key.Key_X else None)
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.selectRow(0)
+        _press(view, Qt.Key.Key_Delete)
+        assert window.deleted == []
+        _press(view, Qt.Key.Key_X)
+    finally:
+        view.deleteLater()
+    assert window.deleted == [[str(tmp_path / "a.png")]]
+
+
+def test_a_list_without_a_main_window_ignores_delete(qapp, tmp_path):
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], None)
+    try:
+        view.selectRow(0)
+        _press(view, Qt.Key.Key_Delete)   # must not raise
+    finally:
+        view.deleteLater()
+
+
+def test_the_main_window_deletes_the_list_rows_like_the_wall(monkeypatch):
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.actions import delete
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    seen, refreshed = [], []
+    monkeypatch.setattr(delete, "delete_selected_tiles",
+                        lambda viewer: seen.append(set(viewer.selected_tiles)))
+    viewer = SimpleNamespace(selected_tiles={"stale.png"})
+    window = SimpleNamespace(viewer=viewer, refresh_list_view=lambda: refreshed.append(True))
+    MainWindowBrowseMixin.delete_list_selection(window, ["a.png", "b.png"])
+    assert seen == [{"a.png", "b.png"}]
+    assert refreshed == [True]
+
+
+def test_undo_from_the_list_runs_the_viewers_undo_and_shows_the_rows(monkeypatch):
+    from types import SimpleNamespace
+
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    actions, refreshed = [], []
+    viewer = SimpleNamespace(run_shortcut_action=actions.append)
+    window = SimpleNamespace(viewer=viewer, refresh_list_view=lambda: refreshed.append(True))
+    MainWindowBrowseMixin.undo_from_list(window)
+    assert actions == ["undo"]
+    assert refreshed == [True]
+
+
+
+class _MarkWindow(_EditWindow):
+    def __init__(self):
+        super().__init__()
+        self.marked: list = []
+
+    def mark_list_selection(self, action, paths):
+        self.marked.append((action, list(paths)))
+
+
+@pytest.mark.parametrize(("key", "modifiers", "action"), [
+    (Qt.Key.Key_3, Qt.KeyboardModifier.NoModifier, "rate_3"),
+    (Qt.Key.Key_0, Qt.KeyboardModifier.NoModifier, "favorite"),
+    (Qt.Key.Key_P, Qt.KeyboardModifier.NoModifier, "cull_pick"),
+    (Qt.Key.Key_X, Qt.KeyboardModifier.ShiftModifier, "cull_reject"),
+    (Qt.Key.Key_F2, Qt.KeyboardModifier.NoModifier, "label_yellow"),
+])
+def test_marking_keys_act_on_the_selected_rows(qapp, tmp_path, key, modifiers, action):
+    """In the List view these keys went to the table and did nothing."""
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png", "b.png"], window)
+    try:
+        view.selectRow(1)
+        event = _press(view, key, modifiers)
+    finally:
+        view.deleteLater()
+    assert window.marked == [(action, [str(tmp_path / "b.png")])]
+    assert event.isAccepted()
+
+
+def test_a_colour_key_with_ctrl_is_not_a_label(qapp, tmp_path):
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.selectRow(0)
+        _press(view, Qt.Key.Key_F1, Qt.KeyboardModifier.ControlModifier)
+    finally:
+        view.deleteLater()
+    assert window.marked == []
+
+
+def test_marking_keys_without_a_selection_are_left_to_the_table(qapp, tmp_path):
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        view.clearSelection()
+        _press(view, Qt.Key.Key_3)
+    finally:
+        view.deleteLater()
+    assert window.marked == []
+
+
+class _Toast:
+    def __init__(self):
+        self.messages: list = []
+
+    def info(self, message):
+        self.messages.append(message)
+
+
+def _browse_window():
+    from types import SimpleNamespace
+
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    repaints: list = []
+    main = SimpleNamespace(toast=_Toast(), language_wrapper=language_wrapper)
+    viewer = SimpleNamespace(
+        main_window=main, deep_zoom=None, model=SimpleNamespace(images=[]), current_index=0,
+        tile_grid_mode=True, tile_selection_mode=False, selected_tiles=set(),
+        _hover_last_path=None, update=lambda: None)
+    list_view = SimpleNamespace(viewport=lambda: SimpleNamespace(update=lambda: repaints.append(True)))
+    return SimpleNamespace(viewer=viewer, image_list_view=list_view), repaints
+
+
+def test_the_main_window_rates_and_favourites_the_rows(monkeypatch):
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    user_setting_dict["image_ratings"] = {}
+    user_setting_dict["image_favorites"] = []
+    window, repaints = _browse_window()
+    MainWindowBrowseMixin.mark_list_selection(window, "rate_4", ["a.png", "b.png"])
+    MainWindowBrowseMixin.mark_list_selection(window, "favorite", ["b.png"])
+    assert user_setting_dict["image_ratings"] == {"a.png": 4, "b.png": 4}
+    assert user_setting_dict["image_favorites"] == ["b.png"]
+    assert repaints == [True, True]
+
+
+def test_the_main_window_labels_and_culls_the_rows(monkeypatch):
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    from Imervue.library import image_index
+    from Imervue.user_settings import color_labels
+    culled, labelled = [], []
+    monkeypatch.setattr(image_index, "set_cull_state", lambda path, state: culled.append((path, state)))
+    monkeypatch.setattr(color_labels, "set_color_label", lambda path, color: labelled.append((path, color)))
+    window, _repaints = _browse_window()
+    MainWindowBrowseMixin.mark_list_selection(window, "cull_reject", ["a.png", "b.png"])
+    MainWindowBrowseMixin.mark_list_selection(window, "label_green", ["a.png", "b.png"])
+    assert culled == [("a.png", "reject"), ("b.png", "reject")]
+    assert labelled == [("a.png", "green"), ("b.png", "green")]
+    assert window.viewer.main_window.toast.messages   # the same toasts as on the wall
+
+
+
+def test_the_name_column_sorts_naturally(list_mod, tmp_path):
+    """A plain string sort put img10 before img2, unlike the wall and the folder tree."""
+    model_cls, _ = list_mod
+    m = model_cls([str(tmp_path / n) for n in ("img10.png", "img2.png", "img1.png")])
+    m.sort(m.COL_NAME, Qt.SortOrder.AscendingOrder)
+    assert [Path(m.path_at(i)).name for i in range(3)] == ["img1.png", "img2.png", "img10.png"]
+
+
+def test_no_sort_column_keeps_the_rows(list_mod, tmp_path):
+    model_cls, _ = list_mod
+    names = ["b.png", "c.png", "a.png"]
+    m = model_cls([str(tmp_path / n) for n in names])
+    m.sort(-1, Qt.SortOrder.DescendingOrder)
+    assert [Path(m.path_at(i)).name for i in range(3)] == names
+
+
+def test_a_new_list_keeps_the_viewers_order_with_no_sort_arrow(qapp, tmp_path):
+    from Imervue.gui.image_list_view import ImageListView
+    view = ImageListView(main_window=None)
+    try:
+        view.set_paths([str(tmp_path / n) for n in ("b.png", "c.png", "a.png")])
+        order = [Path(view.model().path_at(i)).name for i in range(3)]
+        section = view.horizontalHeader().sortIndicatorSection()
+    finally:
+        view.deleteLater()
+    assert order == ["b.png", "c.png", "a.png"]
+    assert section == -1
+
+
+def test_the_chosen_sort_survives_a_rebuild(qapp, tmp_path):
+    """After a delete or a folder refresh the rows came back unsorted under the sort arrow."""
+    from Imervue.gui.image_list_view import ImageListModel, ImageListView
+    view = ImageListView(main_window=None)
+    try:
+        view.set_paths([str(tmp_path / n) for n in ("b.png", "c.png", "a.png")])
+        view.sortByColumn(ImageListModel.COL_NAME, Qt.SortOrder.DescendingOrder)
+        view.set_paths([str(tmp_path / n) for n in ("b.png", "d.png", "a.png")])
+        order = [Path(view.model().path_at(i)).name for i in range(3)]
+    finally:
+        view.deleteLater()
+    assert order == ["d.png", "b.png", "a.png"]
+
+
+
+@pytest.mark.parametrize(("x", "star"), [(76, 1), (84, 1), (85, 2), (100, 3), (124, 5), (0, 1), (999, 5)])
+def test_star_at_maps_a_click_to_a_star(x, star):
+    from Imervue.gui.image_list_view import star_at
+    assert star_at(x, center_x=100, strip_width=50) == star
+
+
+def _click(view, index, x_offset=0, button=Qt.MouseButton.LeftButton):
+    from PySide6.QtCore import QEvent, QPointF
+    from PySide6.QtGui import QMouseEvent
+    rect = view.visualRect(index)
+    pos = QPointF(rect.center().x() + x_offset, rect.center().y())
+    view.mousePressEvent(QMouseEvent(QEvent.Type.MouseButtonPress, pos, pos, button, button,
+                                     Qt.KeyboardModifier.NoModifier))
+
+
+def test_clicking_the_rating_column_rates_the_row(qapp, tmp_path):
+    """The docs promised it; the column only showed the stars."""
+    window = _MarkWindow()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png", "b.png"], window)
+    try:
+        view.resize(1200, 400)
+        model = view.model()
+        strip = view.fontMetrics().horizontalAdvance("\u2605" * 5)
+        _click(view, model.index(1, model.COL_RATING), x_offset=strip // 2 - 1)   # the last star
+        _click(view, model.index(0, model.COL_RATING))                           # the middle one
+        _click(view, model.index(0, model.COL_NAME))                             # not the rating
+        _click(view, model.index(0, model.COL_RATING), button=Qt.MouseButton.RightButton)
+    finally:
+        view.deleteLater()
+    assert window.marked == [("rate_5", [str(tmp_path / "b.png")]), ("rate_3", [str(tmp_path / "a.png")])]
+
+
+
+def test_escape_in_the_list_asks_the_window_to_leave_it(qapp, tmp_path):
+    """The docs say Esc closes the List mode; the key went nowhere."""
+    class _Window(_MarkWindow):
+        escapes = 0
+
+        def escape_from_list(self):
+            self.escapes += 1
+
+    window = _Window()
+    view, _selection = _list_with(qapp, tmp_path, ["a.png"], window)
+    try:
+        event = _press(view, Qt.Key.Key_Escape)
+        _press(view, Qt.Key.Key_Escape, Qt.KeyboardModifier.ShiftModifier)
+    finally:
+        view.deleteLater()
+    assert window.escapes == 1
+    assert event.isAccepted()
+
+
+@pytest.mark.parametrize(("fullscreen", "expected"), [(True, ["fullscreen"]), (False, ["grid"])])
+def test_escape_leaves_fullscreen_before_the_list(monkeypatch, fullscreen, expected):
+    from types import SimpleNamespace
+
+    from Imervue.gpu_image_view.actions import keyboard_actions
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    done: list = []
+    monkeypatch.setattr(keyboard_actions, "toggle_fullscreen", lambda _viewer: done.append("fullscreen"))
+    window = SimpleNamespace(viewer=object(), isFullScreen=lambda: fullscreen,
+                             set_browse_mode=lambda mode: done.append(mode))
+    MainWindowBrowseMixin.escape_from_list(window)
+    assert done == expected

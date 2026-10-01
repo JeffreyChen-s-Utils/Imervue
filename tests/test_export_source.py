@@ -69,3 +69,51 @@ def test_raw_is_exported_from_the_developed_image(store, tmp_path, monkeypatch):
     monkeypatch.setattr(image_loader, "_load_raw",
                         lambda _p, thumbnail: np.zeros((30, 45, 3), dtype=np.uint8))
     assert export_source.open_export_source(str(tmp_path / "shot.CR2")).size == (45, 30)
+
+
+class _Renderer:
+    label = "Fake GPU"
+
+    def __init__(self, fail=False):
+        self.fail = fail
+        self.recipes = []
+
+    def render(self, arr, recipe):
+        self.recipes.append(recipe)
+        if self.fail:
+            raise RuntimeError("device lost")
+        out = arr.copy()
+        out[..., :3] = 7
+        return out
+
+
+def _developed(store, tmp_path):
+    path = tmp_path / "grey.png"
+    Image.new("RGB", (6, 4), (100, 100, 100)).save(path)
+    store.set_for_path(str(path), Recipe(exposure=1.0))
+    return str(path)
+
+
+def test_a_renderer_renders_the_recipe(store, tmp_path):
+    renderer = _Renderer()
+    img = export_source.open_export_source(_developed(store, tmp_path), renderer)
+    assert [r.exposure for r in renderer.recipes] == [1.0]
+    assert img.getpixel((0, 0))[:3] == (7, 7, 7)
+
+
+def test_without_a_renderer_the_recipe_renders_on_the_cpu(store, tmp_path):
+    img = export_source.open_export_source(_developed(store, tmp_path))
+    assert img.getpixel((0, 0))[:3] == (200, 200, 200)
+
+
+def test_a_failing_renderer_falls_back_to_the_cpu(store, tmp_path):
+    img = export_source.open_export_source(_developed(store, tmp_path), _Renderer(fail=True))
+    assert img.getpixel((0, 0))[:3] == (200, 200, 200)
+
+
+def test_an_image_without_a_recipe_never_reaches_the_renderer(store, tmp_path):
+    path = tmp_path / "plain.png"
+    Image.new("RGB", (7, 5)).save(path)
+    renderer = _Renderer()
+    export_source.open_export_source(str(path), renderer)
+    assert renderer.recipes == []

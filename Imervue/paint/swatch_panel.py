@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import (
+    QComboBox,
     QDockWidget,
     QGridLayout,
     QHBoxLayout,
@@ -28,6 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
@@ -56,6 +58,14 @@ class SwatchPanel(QDockWidget):
         body = QWidget()
         layout = QVBoxLayout(body)
 
+        self._palette_box = QComboBox()
+        self._palette_box.setToolTip(lang.get(
+            "paint_swatch_palette_tooltip",
+            "Show your recent colours or one of the palettes",
+        ))
+        self._palette_box.currentIndexChanged.connect(self._on_palette_chosen)
+        layout.addWidget(self._palette_box)
+
         self._grid_host = QWidget()
         self._grid = QGridLayout(self._grid_host)
         self._grid.setSpacing(2)
@@ -71,7 +81,18 @@ class SwatchPanel(QDockWidget):
             "but the swatches repopulate as soon as new colours are committed",
         ))
         clear_btn.clicked.connect(self._on_clear)
+        self._clear_btn = clear_btn
         bottom.addWidget(clear_btn)
+        self._save_palette_btn = QPushButton(
+            lang.get("paint_swatch_save_palette", "Save as Palette…"))
+        self._save_palette_btn.setToolTip(lang.get(
+            "paint_swatch_save_palette_tooltip", "Keep the recent colours as a named palette"))
+        self._save_palette_btn.clicked.connect(self._on_save_palette)
+        bottom.addWidget(self._save_palette_btn)
+        self._delete_palette_btn = QPushButton(
+            lang.get("paint_swatch_delete_palette", "Delete Palette"))
+        self._delete_palette_btn.clicked.connect(self._on_delete_palette)
+        bottom.addWidget(self._delete_palette_btn)
         bottom.addStretch(1)
         layout.addLayout(bottom)
         layout.addStretch(1)
@@ -94,10 +115,16 @@ class SwatchPanel(QDockWidget):
     # ---- public ----------------------------------------------------------
 
     def refresh(self) -> None:
-        """Rebuild the grid from the current state's color_history."""
+        """Rebuild the palette list and the grid: the chosen palette, else the recent colours."""
+        from Imervue.paint.color_palette import RECENT_COLOURS, is_built_in, palette_colours
+        self._fill_palette_box()
+        chosen = self._state.swatch_palette
+        recent = chosen == RECENT_COLOURS
+        self._clear_btn.setEnabled(recent)
+        self._save_palette_btn.setEnabled(recent and bool(self._state.color_history))
+        self._delete_palette_btn.setEnabled(not recent and not is_built_in(chosen))
         self._clear_grid()
-        history = self._state.color_history
-        for index, rgb in enumerate(history):
+        for index, rgb in enumerate(palette_colours(chosen, self._state.color_history)):
             row, col = divmod(index, _SWATCH_COLUMNS)
             btn = self._make_swatch_button(rgb)
             btn.clicked.connect(
@@ -142,6 +169,78 @@ class SwatchPanel(QDockWidget):
         self.refresh()
         return True
 
+    # ---- palettes ----------------------------------------------------------
+
+    def _fill_palette_box(self) -> None:
+        from Imervue.paint.color_palette import RECENT_COLOURS, all_palettes
+        lang = language_wrapper.language_word_dict
+        box = self._palette_box
+        box.blockSignals(True)
+        box.clear()
+        box.addItem(lang.get("paint_swatch_recent", "Recent colours"), RECENT_COLOURS)
+        for palette in all_palettes():
+            box.addItem(palette.name, palette.name)
+        box.setCurrentIndex(max(0, box.findData(self._state.swatch_palette)))
+        box.blockSignals(False)
+
+    def _on_palette_chosen(self, index: int) -> None:
+        if index >= 0:
+            self._state.set_swatch_palette(self._palette_box.itemData(index))
+
+    def save_recent_as_palette(self, name: str) -> bool:
+        """Keep the recent colours as a palette called *name* and show it. False if not saved.
+
+        Refused for an empty name, a name already taken, or no recent colours.
+        """
+        from Imervue.paint.color_palette import (
+            MAX_PALETTE_SIZE,
+            Palette,
+            all_palettes,
+            load_palettes,
+            save_palettes,
+        )
+        name = str(name).strip()
+        colours = tuple(tuple(int(c) for c in rgb) for rgb in self._state.color_history)
+        if not name or not colours or name in {p.name for p in all_palettes()}:
+            return False
+        save_palettes([*load_palettes(), Palette(name, colours[:MAX_PALETTE_SIZE])])
+        self._state.set_swatch_palette(name)
+        self.refresh()
+        return True
+
+    def delete_palette(self, name: str) -> bool:
+        """Delete your palette *name* (built-in ones stay) and go back to the recent colours."""
+        from Imervue.paint.color_palette import (
+            RECENT_COLOURS,
+            is_built_in,
+            load_palettes,
+            save_palettes,
+        )
+        mine = load_palettes()
+        if is_built_in(name) or name not in {p.name for p in mine}:
+            return False
+        save_palettes([p for p in mine if p.name != name])
+        self._state.set_swatch_palette(RECENT_COLOURS)
+        self.refresh()
+        return True
+
+    def _on_save_palette(self) -> None:  # pragma: no cover - Qt dialog
+        from PySide6.QtWidgets import QInputDialog
+        lang = language_wrapper.language_word_dict
+        name, ok = QInputDialog.getText(
+            self, lang.get("paint_swatch_save_palette", "Save as Palette…"),
+            lang.get("paint_swatch_palette_name", "Palette name"))
+        if ok:
+            self.save_recent_as_palette(name)
+
+    def _on_delete_palette(self) -> None:  # pragma: no cover - Qt dialog
+        lang = language_wrapper.language_word_dict
+        name = self._state.swatch_palette
+        if confirm(self, lang.get("paint_swatch_delete_palette", "Delete Palette"),
+                   lang.get("paint_swatch_delete_palette_confirm",
+                            "Delete the palette “{name}”?").format(name=name)):
+            self.delete_palette(name)
+
     # ---- internals -------------------------------------------------------
 
     def _on_state_event(self, channel: str) -> None:
@@ -165,9 +264,8 @@ class SwatchPanel(QDockWidget):
 
     def _confirm_clear(self) -> bool:  # pragma: no cover - Qt UI
         """Ask before wiping the entire swatch history."""
-        from PySide6.QtWidgets import QMessageBox
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
+        agreed = confirm(
             self,
             lang.get("paint_swatch_clear", "Clear"),
             lang.get(
@@ -175,10 +273,8 @@ class SwatchPanel(QDockWidget):
                 "Drop every recent colour from the history? "
                 "This cannot be undone.",
             ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
-        return reply == QMessageBox.StandardButton.Yes
+        return agreed
 
     def _clear_grid(self) -> None:
         while self._grid.count():
@@ -230,6 +326,11 @@ class SwatchPanel(QDockWidget):
         remove_act = menu.addAction(
             lang.get("paint_swatch_remove", "Remove from History"),
         )
+        # Reordering and removing change the recent colours, not a palette.
+        from Imervue.paint.color_palette import RECENT_COLOURS
+        showing_recent = self._state.swatch_palette == RECENT_COLOURS
+        move_top_act.setEnabled(showing_recent)
+        remove_act.setEnabled(showing_recent)
         chosen = menu.exec(button.mapToGlobal(pos))
         if chosen is copy_act:
             QApplication.clipboard().setText(

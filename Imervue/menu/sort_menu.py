@@ -1,6 +1,6 @@
 """
 排序選單
-Sort menu — allows sorting images by name, date, size, resolution.
+Sort menu — allows sorting images by name, date, date taken, size, resolution.
 """
 from __future__ import annotations
 
@@ -8,11 +8,11 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
 from PySide6.QtGui import QActionGroup
 
 from Imervue.system.natural_sort import natural_key
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.dimensions import image_dimensions
+from Imervue.library.calendar_index import capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
@@ -37,9 +37,17 @@ def _sort_key_modified(path: str):
 
 def _sort_key_created(path: str):
     try:
-        return os.path.getctime(path)
+        st = os.stat(path)
     except OSError:
         return 0
+    # The creation time: st_ctime is the metadata change time outside Windows.
+    return getattr(st, "st_birthtime", st.st_ctime)
+
+
+def _sort_key_taken(path: str):
+    # When the camera took it (EXIF DateTimeOriginal, RAW and HEIC too), else
+    # the modified time; a burst shot within one second keeps its name order.
+    return capture_datetime(path), natural_key(Path(path).name)
 
 
 def _sort_key_size(path: str):
@@ -50,18 +58,18 @@ def _sort_key_size(path: str):
 
 
 def _sort_key_resolution(path: str):
-    try:
-        with Image.open(path) as img:
-            w, h = img.size
-            return w * h
-    except IMAGE_READ_ERRORS:
-        return 0
+    # From the header, like the file info: a camera RAW by the size libraw
+    # develops (Pillow reads its small embedded preview, and no CR3 at all),
+    # HEIC / JPEG XL with their codec registered.
+    dims = image_dimensions(path)
+    return dims[0] * dims[1] if dims else 0
 
 
 _SORT_KEYS = {
     "name": _sort_key_name,
     "modified": _sort_key_modified,
     "created": _sort_key_created,
+    "taken": _sort_key_taken,
     "size": _sort_key_size,
     "resolution": _sort_key_resolution,
 }
@@ -70,6 +78,7 @@ _SORT_LANG_KEYS = {
     "name": "sort_by_name",
     "modified": "sort_by_modified",
     "created": "sort_by_created",
+    "taken": "sort_by_taken",
     "size": "sort_by_size",
     "resolution": "sort_by_resolution",
 }
@@ -129,7 +138,7 @@ def build_sort_menu(ui: ImervueMainWindow):
     current_sort = user_setting_dict.get("sort_by", "name")
     current_asc = user_setting_dict.get("sort_ascending", True)
 
-    for key in ("name", "modified", "created", "size", "resolution"):
+    for key in ("name", "modified", "created", "taken", "size", "resolution"):
         lang_key = _SORT_LANG_KEYS[key]
         default = key.capitalize()
         action = sort_menu.addAction(lang.get(lang_key, default))

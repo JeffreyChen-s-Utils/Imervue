@@ -243,6 +243,23 @@ class TestMaskWorker:
         assert len(results) == 1
         assert np.array_equal(results[0], build_mask(arr, 3, 3, 30, 0))
 
+    def test_a_failed_build_still_reports(self, qapp, monkeypatch, caplog):
+        """build_mask raising left _mask_worker set for good: no later click was ever filled."""
+        from ai_object_remove import ai_object_remove_plugin as plugin
+
+        def broken(*_args):
+            raise MemoryError
+
+        monkeypatch.setattr(plugin, "build_mask", broken)
+        worker = plugin._MaskWorker(np.zeros((4, 4, 4), dtype=np.uint8), 1, 1, 30, 0)
+        results: list = []
+        worker.ready.connect(results.append)
+        with caplog.at_level("ERROR", logger="Imervue"):
+            worker.run()
+        worker.deleteLater()
+        assert results == [None]
+        assert any(r.exc_info for r in caplog.records)
+
     def test_recompute_marks_dirty_while_worker_busy(self):
         from types import SimpleNamespace
 

@@ -33,7 +33,6 @@ from OpenGL.GL import (
     GL_RGBA,
     GL_SRC_ALPHA,
     GL_STATIC_DRAW,
-    GL_STENCIL_BUFFER_BIT,
     GL_STENCIL_TEST,
     GL_TEXTURE_2D,
     GL_TEXTURE_COORD_ARRAY,
@@ -52,8 +51,6 @@ from OpenGL.GL import (
     glBlendFunc,
     glBufferData,
     glBufferSubData,
-    glClear,
-    glClearStencil,
     glColor4f,
     glColorMask,
     glDeleteBuffers,
@@ -124,6 +121,30 @@ def _premultiply_alpha(rgba: np.ndarray) -> np.ndarray:
     return out
 
 
+_STENCIL_RESET_EXTENT = 1.0e6   # document px: past any drawable, deformed or not
+
+
+def _reset_stencil() -> None:   # pragma: no cover - GL needs display
+    """Zero the stencil under everything the frame can draw, by drawing, not ``glClear``.
+
+    A fresh framebuffer's stencil holds anything; the clipped pairs leave it
+    at zero once they are done, so one reset per frame is enough.
+    """
+    glEnable(GL_STENCIL_TEST)
+    glStencilFunc(GL_ALWAYS, 0, 0xFF)
+    glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE)
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
+    glDisable(GL_TEXTURE_2D)
+    extent = _STENCIL_RESET_EXTENT
+    glBegin(GL_QUADS)
+    for x, y in ((-extent, -extent), (extent, -extent), (extent, extent), (-extent, extent)):
+        glVertex2f(x, y)
+    glEnd()
+    glEnable(GL_TEXTURE_2D)
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
+    glDisable(GL_STENCIL_TEST)
+
+
 class PuppetCanvasRenderMixin:
     """OpenGL drawing helpers of :class:`~Imervue.puppet.canvas.PuppetCanvas`."""
 
@@ -131,7 +152,7 @@ class PuppetCanvasRenderMixin:
         """Draw the checker backdrop as one repeating-textured quad.
 
         The old immediate-mode grid hit ~107k glBegin/glEnd cycles per
-        frame on the March 7th canvas (3503×7777 / 16-pixel tile). Now
+        frame on a large imported Cubism canvas (3503×7777 / 16-pixel tile). Now
         the canvas-wide quad samples a cached 2×2 RGBA texture with
         ``GL_REPEAT``, so the entire backdrop is one draw call no
         matter how large the rig."""
@@ -247,6 +268,8 @@ class PuppetCanvasRenderMixin:
 
     def _draw_drawables(self) -> None:  # pragma: no cover - GL needs display
         masks = resolve_masks(self._draw_list)
+        if masks:
+            _reset_stencil()
         # Hoist client-state toggles out of the per-drawable loop. GL
         # accepts redundant ``glEnableClientState`` cheaply but spamming
         # them N*60 times per second on a 307-drawable rig is visible
@@ -309,28 +332,33 @@ class PuppetCanvasRenderMixin:
     ) -> None:
         """Render ``cmd``'s mesh clipped to ``mask_cmd``'s shape using
         the stencil buffer. The mask drawable's deformed vertices are
-        used (so a hair mask follows the head's deformation), and the
-        stencil buffer is wiped at the end so the next clipped pair
-        starts clean."""
+        used (so a hair mask follows the head's deformation): its mesh
+        writes 1 into the stencil, the target draws where the stencil is
+        1, and the mask mesh writes 0 again so the next clipped pair
+        starts clean. The stencil is never cleared with ``glClear``: on
+        NVIDIA's 616 driver every draw after a stencil clear in the same
+        frame was dropped, so clipped drawables vanished."""
         mask_verts = self._deformed_vertices.get(
             mask_cmd.drawable_id, mask_cmd.vertices,
         )
         glEnable(GL_STENCIL_TEST)
-        glClearStencil(0)
-        glClear(GL_STENCIL_BUFFER_BIT)
-        # Stencil-only pass — write 1 wherever the mask drew. Disable
-        # color writes so the mask shape doesn't appear on screen here;
-        # its own pass in the main loop is responsible for showing it.
-        glStencilFunc(GL_ALWAYS, 1, 0xFF)
+        self._write_stencil(mask_cmd, mask_verts, 1)
+        glStencilFunc(GL_EQUAL, 1, 0xFF)
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP)
+        self._draw_cmd_mesh(cmd, verts)
+        self._write_stencil(mask_cmd, mask_verts, 0)
+        glDisable(GL_STENCIL_TEST)
+
+    def _write_stencil(  # pragma: no cover - GL needs display
+        self, mask_cmd, mask_verts, value: int,
+    ) -> None:
+        """Set the stencil to ``value`` wherever the mask's triangles
+        cover, whatever its texture's alpha; colour writes stay off."""
+        glStencilFunc(GL_ALWAYS, value, 0xFF)
         glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE)
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE)
         self._draw_cmd_mesh(mask_cmd, mask_verts)
         glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE)
-        # Target draws only where stencil == 1.
-        glStencilFunc(GL_EQUAL, 1, 0xFF)
-        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP)
-        self._draw_cmd_mesh(cmd, verts)
-        glDisable(GL_STENCIL_TEST)
 
     def _draw_selection_overlay(self) -> None:   # pragma: no cover - GL needs display
         """If a bone-tree row is selected, draw a marker so the user
@@ -410,8 +438,8 @@ class PuppetCanvasRenderMixin:
     ) -> None:
         """Submit one triangle list via the per-drawable VBO trio.
 
-        Per-vertex ``glBegin/glVertex2f`` runs in the millions for the
-        March 7th rig (307 drawables × ~200 verts × 60 fps) and was
+        Per-vertex ``glBegin/glVertex2f`` runs in the millions for a large
+        imported Cubism rig (307 drawables × ~200 verts × 60 fps) and was
         the original playback-lag bottleneck. Client-side
         ``glDrawElements`` dropped paint cost ~10-50× by pushing the
         loop into the GL driver; VBOs go one step further — UVs and

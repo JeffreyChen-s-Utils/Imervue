@@ -9,6 +9,7 @@ the actual reading / writing.
 from __future__ import annotations
 
 import logging
+import zipfile
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
@@ -26,10 +27,6 @@ from Imervue.paint.color_palette_io import (
     ADOBE_SWATCH_EXCHANGE_EXTENSION,
     GPL_PALETTE_EXTENSION,
     import_palette,
-)
-from Imervue.paint.export_presets import (
-    BUILT_IN_EXPORT_PRESETS,
-    all_export_presets,
 )
 from Imervue.paint.paint_menu_bar import menu_for
 
@@ -55,8 +52,14 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
     for key, fallback, slot, shortcut in (
         ("paint_file_new_tab", "New Tab",
          bridge.new_tab, "Ctrl+N"),
+        ("paint_file_new_canvas", "New Canvas…",
+         bridge.new_canvas, ""),
         ("paint_file_new_project", "New Comic Project…",
          bridge.new_comic_project, "Ctrl+Alt+N"),
+        ("paint_file_open_project", "Open Comic Project…",
+         bridge.open_comic_project, ""),
+        ("paint_file_save_project", "Save Comic Project…",
+         bridge.save_comic_project, ""),
         ("paint_file_close_tab", "Close Tab",
          bridge.close_active_tab, "Ctrl+W"),
         (None, None, None, None),
@@ -69,6 +72,8 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
          bridge.import_brush_preset, ""),
         ("paint_file_import_palette", "Import palette…",
          bridge.import_palette, ""),
+        ("paint_file_restore_autosave", "Restore Autosave",
+         bridge.restore_autosave, ""),
         (None, None, None, None),
         ("paint_file_export_image", "Export image…",
          bridge.export_active_image, ""),
@@ -119,6 +124,15 @@ class _FileMenuBridge:
     def new_tab(self) -> None:
         self._workspace.new_tab()
 
+    def new_canvas(self) -> None:  # pragma: no cover - Qt dialog
+        """File > New Canvas…: a new tab of the size and background the dialog asks for."""
+        from Imervue.paint.new_canvas_dialog import NewCanvasDialog
+        from PySide6.QtWidgets import QDialog
+        dialog = NewCanvasDialog(parent=self._workspace)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            width, height, fill = dialog.values()
+            self._workspace.new_tab(width=width, height=height, fill=fill)
+
     def new_comic_project(self) -> None:  # pragma: no cover - Qt dialog
         """Pop a small picker (template + page count + project name)
         and bind the resulting :class:`PaintProject` to the workspace.
@@ -149,6 +163,60 @@ class _FileMenuBridge:
             author=choice.author,
         )
         self._workspace.set_paint_project(project)
+
+    def open_comic_project(self) -> None:  # pragma: no cover - QFileDialog
+        path = self._pick_file(
+            title_key="paint_file_open_project",
+            title_fallback="Open Comic Project",
+            filters=[_project_filter()],
+        )
+        if path:
+            self.open_comic_project_at(path)
+
+    def open_comic_project_at(self, path: str) -> bool:
+        """Load the ``.imervue-proj`` at *path* and make it the workspace's project."""
+        from Imervue.paint.paint_project_io import load_project
+        try:
+            project = load_project(path)
+        except (OSError, ValueError, zipfile.BadZipFile) as exc:
+            self._warn("paint_file_open_project", exc)
+            return False
+        self._workspace.set_paint_project(project)
+        self._notify_success("paint_file_open_project_done", "Opened comic project", path)
+        return True
+
+    def save_comic_project(self) -> None:  # pragma: no cover - QFileDialog
+        if self._current_project() is None:
+            self._warn("paint_file_save_project", language_wrapper.language_word_dict.get(
+                "paint_file_no_project",
+                "No comic project is open; File > New Comic Project… starts one."))
+            return
+        path = self._pick_save_file(
+            title_key="paint_file_save_project",
+            title_fallback="Save Comic Project",
+            name_filter=_project_filter(),
+        )
+        if path:
+            self.save_comic_project_to(path)
+
+    def save_comic_project_to(self, path: str) -> bool:
+        """Write the workspace's project, every page with its layers, to *path*.
+
+        Adds the ``.imervue-proj`` extension when *path* has another one.
+        """
+        from Imervue.paint.paint_project_io import PROJECT_FILE_EXTENSION, save_project
+        project = self._current_project()
+        if project is None:
+            return False
+        if not path.lower().endswith(PROJECT_FILE_EXTENSION):
+            path += PROJECT_FILE_EXTENSION
+        try:
+            save_project(project, path)
+        except (OSError, ValueError) as exc:
+            self._warn("paint_file_save_project", exc)
+            return False
+        self._notify_success("paint_file_save_project_done", "Saved comic project", path)
+        return True
 
     def close_active_tab(self) -> None:
         # ``_tabs`` is the workspace-private QTabWidget — bridge talks
@@ -263,7 +331,7 @@ class _FileMenuBridge:
         except (OSError, ValueError) as exc:
             self._warn("paint_file_save_psd", exc)
             return
-        self._notify_success("paint_file_save_psd_done", "Saved PSD", path)
+        self._notify_success("paint_file_save_psd_done", "Saved PSD", path, saved=True)
 
     # ---- import paths ----------------------------------------------------
 
@@ -287,6 +355,19 @@ class _FileMenuBridge:
             return
         if presets:
             save_brush_presets(presets)
+
+    def restore_autosave(self) -> bool:
+        """Load the newest autosave snapshot into the active tab and say what happened."""
+        workspace = self._workspace
+        restored = workspace.restore_latest_autosave()
+        lang = language_wrapper.language_word_dict
+        toast = getattr(workspace, "toast", None)
+        if toast is not None:
+            if restored:
+                toast.info(lang.get("paint_autosave_restored", "Restored the latest autosave"))
+            else:
+                toast.info(lang.get("paint_autosave_none", "No autosave to restore"))
+        return restored
 
     def import_palette(self) -> None:  # pragma: no cover - QFileDialog
         path = self._pick_file(
@@ -316,43 +397,25 @@ class _FileMenuBridge:
 
     # ---- export paths ----------------------------------------------------
 
-    def export_active_image(self) -> None:  # pragma: no cover - QFileDialog
+    def export_active_image(self) -> None:
+        """Flatten the active tab into the file the user picks, in the format its type names."""
         composite = self._workspace.canvas().document().composite()
         if composite is None:
             return
-        preset = _default_export_preset()
         path = self._pick_save_file(
             title_key="paint_file_export_image",
             title_fallback="Export image",
-            name_filter=_image_filter_for(preset.format),
+            name_filter=EXPORT_IMAGE_FILTER,
         )
         if not path:
             return
+        fmt, path = export_format_for(path)
         try:
-            self._write_image_at_path(composite, path, preset)
+            write_export_image(composite, path, fmt)
         except (OSError, ValueError) as exc:
             self._warn("paint_file_export_image", exc)
             return
         self._notify_success("paint_file_export_image_done", "Exported", path)
-
-    def _write_image_at_path(self, composite, path, preset) -> None:
-        """Write ``composite`` to the exact ``path`` the user chose.
-
-        The export-preset's filename template is for batch flows; the
-        single-image action expects whatever the user typed in the save
-        dialog to be the literal output filename. We therefore drop
-        through Pillow directly with the preset's format / quality /
-        resolution settings.
-        """
-        from pathlib import Path
-
-        from Imervue.paint.export_presets import _write_with_format
-        target = Path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        _write_with_format(
-            composite, target, preset.format,
-            int(preset.quality), int(preset.max_resolution),
-        )
 
     def export_pages_cbz(self) -> None:  # pragma: no cover - QFileDialog
         project = self._current_project()
@@ -433,23 +496,25 @@ class _FileMenuBridge:
         return path or None
 
     def _notify_success(
-        self, key: str, fallback: str, path: str,
+        self, key: str, fallback: str, path: str, *, saved: bool = False,
     ) -> None:
         """Pop a non-blocking success toast for a file write that
         completed cleanly.
 
-        Marks the active tab clean (clears the "modified" asterisk
-        + the close-prompt) since the user just persisted their
-        work. Falls back to the status bar's transient message when
-        the workspace has no toast manager (very early bootstrap or
-        a unit-test stub) so the success signal is never silent.
+        With ``saved`` (a PSD, which keeps the layers) the active tab is
+        marked clean: no "modified" asterisk, no close prompt. An export
+        (a flattened picture, a comic's pages) leaves it modified, so
+        closing still asks before the layers are lost. Falls back to the
+        status bar's transient message when the workspace has no toast
+        manager (very early bootstrap or a unit-test stub) so the success
+        signal is never silent.
         """
         from pathlib import Path
         lang = language_wrapper.language_word_dict
         verb = lang.get(key, fallback)
         msg = f"{verb}: {Path(path).name}"
         mark_clean = getattr(self._workspace, "mark_active_tab_clean", None)
-        if callable(mark_clean):
+        if saved and callable(mark_clean):
             mark_clean()
         toast = getattr(self._workspace, "toast", None)
         if toast is not None:
@@ -459,8 +524,8 @@ class _FileMenuBridge:
         if status is not None:
             status.showMessage(msg, 3000)
 
-    def _warn(self, title_key: str, exc: Exception) -> None:
-        """Surface a file-operation error.
+    def _warn(self, title_key: str, exc: Exception | str) -> None:
+        """Surface a file-operation error (an exception, or the reason as text).
 
         Prefers a non-blocking toast notification when the workspace
         has one (every paint workspace built since the toast wiring
@@ -479,23 +544,50 @@ class _FileMenuBridge:
         QMessageBox.warning(self._workspace, title, str(exc))
 
 
-def _default_export_preset():
-    """First built-in preset — the documented "PNG full quality" entry."""
-    presets = all_export_presets()
-    if presets:
-        return presets[0]
-    return BUILT_IN_EXPORT_PRESETS[0]
+# Export image…: the file types offered, PNG first (the default), and the
+# format each suffix names. A lossy format is written at full size, quality 95.
+EXPORT_IMAGE_FILTER = ";;".join((
+    "PNG (*.png)", "JPEG (*.jpg *.jpeg)", "WebP (*.webp)", "TIFF (*.tif *.tiff)", "BMP (*.bmp)",
+))
+_EXPORT_SUFFIX_FORMATS = {
+    ".png": "png", ".jpg": "jpeg", ".jpeg": "jpeg", ".webp": "webp",
+    ".tif": "tiff", ".tiff": "tiff", ".bmp": "bmp",
+}
+_EXPORT_QUALITY = 95
 
 
-def _image_filter_for(format_tag: str) -> str:
-    """QFileDialog filter string for a single output format."""
-    return {
-        "png": "PNG (*.png)",
-        "jpeg": "JPEG (*.jpg *.jpeg)",
-        "webp": "WebP (*.webp)",
-        "bmp": "BMP (*.bmp)",
-        "tiff": "TIFF (*.tif *.tiff)",
-    }.get(format_tag, f"{format_tag.upper()} (*.{format_tag})")
+def _project_filter() -> str:
+    """The file-dialog filter for comic project bundles."""
+    from Imervue.paint.paint_project_io import PROJECT_FILE_EXTENSION
+    return translated_filter("file_filter_comic_project", "Comic project",
+                             (PROJECT_FILE_EXTENSION.lstrip("."),))
+
+
+def export_format_for(path: str) -> tuple[str, str]:
+    """``(format, path)`` for an Export image target.
+
+    The format its suffix names (case-insensitive); a path with another or no
+    suffix is written as PNG with ``.png`` appended.
+    """
+    from pathlib import Path
+    fmt = _EXPORT_SUFFIX_FORMATS.get(Path(path).suffix.lower())
+    if fmt is None:
+        return "png", f"{path}.png"
+    return fmt, path
+
+
+def write_export_image(composite, path: str, fmt: str) -> None:
+    """Write the RGBA ``composite`` to ``path`` as ``fmt``, full size, in one step.
+
+    JPEG has no alpha, so it is flattened onto white; the others keep it.
+    Raises ``OSError`` / ``ValueError`` when the write fails.
+    """
+    from pathlib import Path
+
+    from Imervue.paint.export_presets import _write_with_format
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _write_with_format(composite, target, fmt, _EXPORT_QUALITY, 0)
 
 
 # ---------------------------------------------------------------------------

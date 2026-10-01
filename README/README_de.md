@@ -64,6 +64,8 @@ Imervue ist eine GPU-beschleunigte Bildworkstation, die **fünf Top-Level-Tabs**
 | **Puppet** | Von Grund auf entwickelter 2D-Rigged-Puppet-Animator — Meshes, Deformer, Parameter, Motions, Physik |
 | **Desktop Pet** | Rahmenloses, transparentes Always-on-Top-Overlay, das jedes `.puppet`-Rig als Desktop-Begleiter laufen lässt |
 
+**Puppet** und **Desktop Pet** sind optional: Schalten Sie einen der beiden unter **File > Preferences > Optional tabs** aus, dann wird ab dem nächsten Start sein Tab nicht angelegt und sein Code nicht geladen, sodass Imervue schneller startet und weniger Speicher braucht. Beide sind standardmäßig an; jeder wird erst beim ersten Öffnen seines Tabs aufgebaut, der Desktop-Pet-Tab schon beim Start, wenn sein Pet beim Start erscheinen soll.
+
 Designprinzipien:
 
 - **Performance zuerst** — GPU-beschleunigtes Rendering mit modernen GLSL-Shadern und VBO
@@ -107,16 +109,16 @@ pip install .
 | numpy | Array-Operationen und Thumbnail-Cache |
 | rawpy | RAW-Bilddekodierung (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG und weitere) |
 | imageio | Bild-I/O |
-| imageio-ffmpeg | Slideshow-MP4-Export (H.264 via ffmpeg) |
+| imageio-ffmpeg | Slideshow-MP4 und Create-GIF-/Video-MP4 (H.264 via ffmpeg) |
 | defusedxml | Sicheres XML-Parsing (XMP-Sidecars) |
-| watchdog | Rekursive Dateibaum-Überwachung (externe Änderungen aktualisieren den Baum) |
+| watchdog | Automatisierung „Watched Folder“ und die Änderungsbenachrichtigungen des MCP-Servers |
 
 Optional (Feature-Gated; weglassen, um das Feature sauber zu deaktivieren):
 
 | Paket | Zweck |
 |---------|---------|
-| open_clip_torch + torch | CLIP-Semantiksuche (Bildabfragen in natürlicher Sprache) |
-| onnxruntime | Real-ESRGAN AI-Upscale / CLIP-ONNX-Auto-Tag |
+| onnxruntime + huggingface_hub | CLIP-Semantiksuche und CLIP-Auto-Tag-Labels (Installation wird bei der ersten Nutzung angeboten; das ~150 MB große Modell wird einmalig heruntergeladen) |
+| onnxruntime | Real-ESRGAN AI-Upscale |
 | opencv-python<5 | HDR-Merge, Panorama-Stitch, Focus-Stacking, Gesichtserkennung, Healing-Brush |
 | sounddevice | Puppet-Lip-Sync per Mikrofon |
 | mediapipe | Puppet-Webcam-Gesichtserkennung |
@@ -160,17 +162,37 @@ py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
 | Unterbefehl | Zweck |
 |---|---|
 | `info` / `stats` | Maße und Format; referenzfreie Qualitätsmetriken (`--json` für maschinenlesbare Ausgabe) |
-| `convert` / `resize` / `thumbnail` | Formatkonvertierung (`--format` / `--quality`), Skalierung auf maximale lange Kante, Thumbnail-Box |
-| `watermark` / `optimize` | Text-Wasserzeichen (`--text` / `--corner` / `--opacity`); Kodierung unter einem `--max-kb`-Budget |
+| `convert` / `resize` / `thumbnail` | Formatkonvertierung (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); Skalierung auf eine lange Kante (`--max`) oder exakt auf `--width` / `--height`; Thumbnail-Box |
+| `watermark` / `optimize` | Text-Wasserzeichen (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); Kodierung unter einem `--max-kb`-Budget |
 | `dehaze` / `clahe` / `dither` / `distort` | Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple |
 | `auto-orient` / `strip` | EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern |
-| `collage` / `anaglyph` | Raster-Montage (`--columns`); Rot-Cyan-3D aus einem Stereopaar (`--method`) |
+| `collage` / `anaglyph` | Raster-Montage (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); Rot-Cyan-3D aus einem Stereopaar (`--method`) |
 | `preset` / `pipeline` | Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen |
 | `list-ops` | Alle Unterbefehle auflisten (`--json` für maschinenlesbare Ausgabe) |
 
-Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; `resize` und `strip` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet.
+Jeder Unterbefehl dekodiert wie der Viewer: Ausgaben werden anhand der EXIF-Ausrichtung aufgerichtet und aus einem eingebetteten Farbprofil nach sRGB konvertiert; AVIF-Eingaben liest Pillow selbst, HEIC- / JPEG-XL-Eingaben werden gelesen, wenn das optionale Backend installiert ist. Eine Kamera-RAW-Datei wird wie im Viewer entwickelt statt als kleine eingebettete Vorschau gelesen; `resize` und `strip` schreiben sie als PNG. Eine unlesbare Datei wird gemeldet, die übrigen werden trotzdem verarbeitet. Eine abgeschnittene Datei wird wie im Viewer so weit gelesen, wie sie reicht. 16-Bit- und Gleitkomma-Graustufen werden wie im Viewer auf 8 Bit skaliert; `resize` und `strip` behalten die Bittiefe der Quelle.
 
-Gemeinsame Flags: `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `--version`.
+Die Unterbefehle, die Dateien oder Ordner entgegennehmen (alle außer `collage`, `anaglyph` und `list-ops`), teilen sich `--out` (Ausgabeverzeichnis), `--recursive`, `--dry-run` (Aktionen nur auflisten, nichts schreiben), `--overwrite` und `-j` / `--jobs` (parallele Worker; `0` nutzt alle Kerne). `collage` und `anaglyph` schreiben die eine Datei, die `--out` angibt. `--version` gibt die CLI-Version aus.
+
+Jedes Tool des [MCP-Servers](#mcp-server) ist ebenfalls ein Unterbefehl. Zehn davon sind die obigen Unterbefehle (`convert_format` ist `convert`, `quality_metrics` ist `stats`, `build_collage` ist `collage` usw.); die übrigen 48 führen den Code des MCP-Tools selbst aus:
+
+| Art | Unterbefehle |
+|---|---|
+| Bearbeitungen: schreiben `<stem>_<name>.png` neben jede Quelle oder `<stem>.png` in `--out` | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
+| Andere Ausgaben | `ela` (Error-Level-Analysis-Karte als PNG), `video-frame` (ein Einzelbild eines Videos, `--frame-index`), `puppet-from-png` (ein `.puppet`-Rig, `--cell-size`) |
+| Berichte: ein Ergebnis pro Bild, `--json` für maschinenlesbare Ausgabe | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| Einmal ausführen und JSON ausgeben | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
+
+Jeder MCP-Parameter wird zu einer Option mit demselben Standardwert und denselben erlaubten Werten: `zone_gains` wird zu `--zone-gains`, ein Ja/Nein-Parameter zu `--grayscale` / `--no-grayscale`, und eine Farbe oder eine Matrixzeile nimmt ihre Werte der Reihe nach entgegen (`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help` listet sie auf.
+
+`pipeline FILE INPUTS…` verkettet Operationen aus einer JSON-Datei — einer Liste von Schritten oder `{"pipeline": [...]}`, jeder Schritt ein `"op"` plus seine Parameter (höchstens 50 Schritte). Die Operationen sind `dehaze`, `clahe`, `dither`, `distort`, `clarity`, `texture`, `grayscale`, `invert` und `watermark`; die Dokumentation listet jeden Parameter und Standardwert auf.
+
+```bash
+py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+py -m Imervue.cli histogram a.jpg --json
+py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+```
 
 ---
 
@@ -181,19 +203,25 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 ### Viewer
 
 - **GPU-beschleunigtes Rendering** via OpenGL (GLSL-1.20-Shader mit VBO)
-- **Deep-Zoom-Pyramide** — mehrstufige 512×512-Kacheln mit LANCZOS-Resampling; der Kachel-LRU hält 256 Einträge (harte Obergrenze 512). Das VRAM-Budget wird beim Start vom GL-Treiber ermittelt und fällt auf 1,5 GB zurück, überschreibbar über die Einstellung `vram_limit_mb` (wird geklemmt, nie stillschweigend verworfen). Anisotrope Filterung bis 8×
+- **Deep-Zoom-Pyramide** — mehrstufige 512×512-Kacheln mit LANCZOS-Resampling; der Kachel-LRU hält 256 Einträge (harte Obergrenze 512). Das VRAM-Budget wird beim Start vom GL-Treiber ermittelt und fällt auf 1,5 GB zurück, überschreibbar über die Einstellung `vram_limit_mb` (wird geklemmt, nie stillschweigend verworfen). Anisotrope Filterung bis 8×; auch Panoramen weit über Pillows Sicherheitsgrenze von 179 MP öffnen sich (die Grenze folgt dem Arbeitsspeicher: bei 16 GB etwa 1,4 Gigapixel)
 - **Asynchrones Laden** — Multithread-Dekodierung mit adaptivem Prefetch-Fenster: ±3 Bilder beim Blättern, erweitert auf 5 voraus / 1 zurück, sobald du konsequent in eine Richtung blätterst
 - **Getrennte Worker-Pools** — Thumbnail-Schübe und Deep-Zoom-Dekodierungen laufen in verschiedenen Pools, sodass das Öffnen eines großen Ordners nie das Bild aushungert, das du gerade ansiehst
 - **Virtualisiertes Thumbnail-Grid** — Nur sichtbare Tiles werden gerendert; Thumbnail-Größe konfigurierbar (128 / 256 / 512 / 1024 / auto)
 - **Festplatten-Cache** — Komprimierte PNG-Thumbnails mit MD5-basierter Invalidierung unter `%LOCALAPPDATA%/Imervue/cache/thumbnails` (oder `~/.cache/imervue/thumbnails`)
 - **EXIF-Ausrichtung** — Hochformatfotos, die Handy oder Kamera nur markiert statt gedreht haben, erscheinen aufrecht in Viewer, Thumbnails, Listenansicht, Hover-Vorschau und Modify-Tab; ein zuvor gespeicherter Develop-Zuschnitt / eine Drehung gilt weiter für die Ausrichtung, auf der er erstellt wurde
-- **Farbmanagement** — Fotos mit eingebettetem Farbprofil (Display P3 vom Handy, Adobe RGB von Kameras, CMYK) werden für Viewer und Thumbnails nach sRGB umgerechnet; Bilder ohne Profil oder mit sRGB werden unverändert gezeigt
-- **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung; eine Animation, die dekodiert mehr als 512 MB bräuchte, wird beim Abspielen Bild für Bild dekodiert statt vorab komplett
+- **Farbmanagement** — Fotos mit eingebettetem Farbprofil (Display P3 vom Handy, Adobe RGB von Kameras, CMYK sowie die Graustufenprofile, die Photoshop in Graustufenbilder einbettet, etwa Dot Gain 20 % oder Gray Gamma 1.8) werden für Viewer und Thumbnails nach sRGB umgerechnet; Bilder ohne Profil oder mit sRGB werden unverändert gezeigt
+- **Abgeschnittene Dateien** — ein JPEG, PNG, TIFF, GIF oder BMP, das vorzeitig endet (ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto), öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen
+- **Von anderen Programmen geänderte Dateien** — speichert ein anderes Programm über ein Bild (ein externer Editor, direkt oder indem es eine Kopie darüber umbenennt), zeigt der Viewer die neue Fassung: das in Deep Zoom geöffnete Bild innerhalb einer Sekunde nach dem letzten Schreibvorgang, Miniaturen im Grid und Zeilen der Liste innerhalb weniger Sekunden
+- **16-Bit- und Gleitkomma-Graustufen** — ein 16-Bit-Graustufen-PNG oder -TIFF (ein Scan, eine Tiefenkarte, eine wissenschaftliche oder astronomische Aufnahme) und ein Gleitkomma-TIFF zeigen im Viewer, in Miniaturen, Vorschauen und Werkzeugen ihre echte Helligkeit statt fast weiß oder schwarz
+- **Versteckte Dateien** — Dateien, die Windows als versteckt markiert (auch im Explorer und im Ordnerbaum ausgeblendet), und Namen mit führendem Punkt, etwa die `._foto.jpg`, die macOS auf Speicherkarten und Netzlaufwerken neben jedes Foto schreibt, erscheinen nicht in der Miniaturansicht, den Ordnersymbolen, den Ordnerlisten der Stapelwerkzeuge, überwachten Ordnern, Bibliotheksscans, der CLI und den Ordnerwerkzeugen des MCP-Servers; rekursive Scans überspringen versteckte Ordner wie `$RECYCLE.BIN` und `.Trashes` vom Mac. Ein absichtlich geöffnetes verstecktes Bild öffnet sich trotzdem
+- **JPEG unter jedem Namen** — `.jpe`, `.jfif` und `.jif` öffnen sich wie `.jpg` (Chrome und Edge unter Windows speichern heruntergeladene Fotos oft als `.jfif`): im Viewer, im JPG-Filter, in den Stapelwerkzeugen und in der CLI
+- **Weitere Formate** — ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX, PSD (das zusammengeführte Bild) öffnen sich zum Ansehen, gelesen von Pillow selbst; Drehen an Ort und Stelle und anderes Zurückschreiben werden abgelehnt, Änderungen gehen über Speichern unter / Export
+- **Animations-Wiedergabe** — GIF / APNG mit Play / Pause / Einzelbild-Schritt / Geschwindigkeitssteuerung; eine Animation, die dekodiert mehr als 512 MB bräuchte, wird beim Abspielen Bild für Bild dekodiert statt vorab komplett; ein Bild mit 10 ms oder weniger wird wie in Browsern 100 ms lang gezeigt; ein mehrseitiges TIFF (ein gescanntes Dokument) zeigt eine Seite nach der anderen, geblättert mit `,` und `.` (die Anzeige nennt die Seitenzahl), und die in ein Kamera-JPEG eingebettete Vorschau (MPF) erscheint nie als zweites Bild, das Standardbild eines APNG (das Standbild für Programme ohne APNG-Unterstützung) nie als erstes
 
 ### Browse-Modi
 
 - **Grid** (Standard) — Virtualisiertes Tile-Grid mit Hover-Preview-Popup (500 ms Verzögerung)
-- **Liste (Detail)** — Umschalten mit `Ctrl+L`; Spalten: Preview · Label · Name · Auflösung · Größe · Typ · Geändert
+- **Liste (Detail)** — Umschalten mit `Ctrl+L`; Spalten: Preview · Label · Bewertung · Name · Auflösung · Größe · Typ · Geändert; `Delete` entfernt die markierten Zeilen und `Ctrl+Z` holt sie zurück, und die Tasten für Bewertung (`1`–`5`), Favorit (`0`), Culling (`P` / `Shift+X` / `U`) und Farbe (`F1`–`F5`) markieren sie, wie im Grid
 - **Deep Zoom** — Doppelklick auf ein Tile; weiches GPU-Pan/Zoom mit Minimap-Overlay
 - **Split View** (`Shift+S`) — Zwei Bilder nebeneinander
 - **Dual-Page-Reading** (`Shift+D`, `Ctrl+Shift+D` für Right-to-Left-Manga) — Doppelseiten-Reader
@@ -206,7 +234,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 - RGB-Histogramm (`H`)
 - F8-OSD (Dateiname / Größe / Typ), Ctrl+F8 Debug-HUD (VRAM / Cache / Threads)
-- Pixel View (`Shift+P`) — ≥ 400 % Zoom zeigt Pixelraster + Per-Pixel-RGB / HEX
+- Pixel View (`Shift+P`) — ab 400 % Zoom zeigt Per-Pixel-RGB / HEX, dazu ein Pixelraster, sobald höchstens 40.000 Pixel auf dem Bildschirm sind
 - Color Modes (`Shift+M`) — Normal / Grayscale / Invert / Sepia via GLSL
 
 ### Navigation
@@ -222,11 +250,11 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 ### Organisation
 
 - **Bookmarks** — Bis zu 5000 Pfade
-- **Ratings** — 0–5 Sterne (`1`–`5`) + Favoriten-Herz (`0`)
+- **Ratings** — 0–5 Sterne (`1`–`5`) + Favoriten-Herz (`0`); im Grid gelten sie für die markierten Miniaturen, sonst für die mit den Pfeiltasten gewählte, sonst für die unter der Maus
 - **Color Labels** — Flag-basiert rot/gelb/grün/blau/lila (`F1`–`F5`)
-- **Culling** — Wie andere XMP-bewusste Foto-Manager 3-Zustands-Flag (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects; Auto-Cull wählt das schärfste Bild pro Near-Duplicate-Gruppe und verwirft den Rest
-- **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht; **Index Keywords** im Rechtsklick-Menü legt eine Stichwort-Hierarchie aus Lightroom / darktable (`Places|Taiwan|Taipei`) unter ihren Eltern ab
-- **Tags & Albums** mit Multi-Tag-AND/OR-Filterung
+- **Culling** — Flag mit drei Zuständen (`P` = Pick, `Shift+X` = Reject, `U` = Unflag); Filter nach Zustand; Bulk-Delete-Rejects; Auto-Cull wählt das schärfste Bild pro Near-Duplicate-Gruppe und verwirft den Rest
+- **Hierarchische Tags** — Baumpfade wie `animal/cat/british`; Nachkommen werden automatisch gematcht; Rechtsklick **Batch-Operationen** > **Index Keywords** (bei ausgewählten Miniaturen) legt eine Stichwort-Hierarchie aus Lightroom / darktable (`Places|Taiwan|Taipei`) unter ihren Eltern ab
+- **Tags & Albums** mit Multi-Tag-AND/OR-Filterung; ein neuer oder umbenannter Name, der sich von einem anderen nur in Groß-/Kleinschreibung oder Leerzeichen unterscheidet, wird abgelehnt, und **Aufräumen…** vergisst Dateien, die nicht mehr existieren, und führt Namen zusammen, die sich nur in Groß-/Kleinschreibung unterscheiden
 - **Smart Albums** — Regelbasierte Abfragen speichern und mit einem Klick erneut anwenden; die Filter umfassen Endung, Auflösung & **Seitenverhältnis**, **Dateigröße**, Rating-**Unter- / Obergrenze**, Farbe, Cull, Tags (inkl. **Ausschluss**), **Kamera / Objektiv**, **Dateiname-Regex / -Glob** und **Dateialter**, plus **Export / Import** in eine portable JSON-Datei
 - **Stack RAW+JPEG-Paare** — Aufnahmen mit gleichem Stamm in ein Tile zusammenfassen; RAW bleibt als Geschwister erreichbar
 - **Per-Image-Notes** in der EXIF-Sidebar — Entprelltes Speichern, sitzungsübergreifend persistent
@@ -240,7 +268,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 ### Sortieren & Filtern
 
-- Sortieren nach Name (natürliche Reihenfolge wie im Explorer: `img2` vor `img10`) / Geändert / Erstellt / Größe / Auflösung (auf- oder absteigend)
+- Sortieren nach Name (natürliche Reihenfolge wie im Explorer: `img2` vor `img10`) / Geändert / Erstellt / Aufnahmedatum (EXIF-Zeit der Kamera, sonst Geändert) / Größe / Auflösung (auf- oder absteigend)
 - Filter nach Endung, Color Label, Rating, Tag/Album, Cull-Zustand
 - **Erweiterter Filter** — Auflösung / Dateigröße / Orientierung / Modified-Date-Range
 - **Multi-Tag-Filter**-Dialog mit boolescher AND-/OR-Logik
@@ -249,19 +277,23 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 - **Fuzzy-Dateinamensuche** mit Substring-Highlighting
 - **Find Similar Images** — pHash (64-Bit DCT) mit einstellbarer Hamming-Distanz
-- **Library Search** — SQLite-Multi-Root-Index mit einer kompakten Query-DSL: Keywords, Tags (inkl. Negation), Ratings, Farbe, Endung, Ort, Cull, Favoriten, Seitenverhältnis, Alter, Größe, Maße, Kamera / Objektiv sowie Dateiname-Regex / -Glob
+- **Library Search** — SQLite-Multi-Root-Index, durchsucht nach Dateiname, Mindestbreite / -höhe und Dateigröße (bis zu 2000 Treffer; ein Doppelklick öffnet einen); ein erneuter Scan liest nur neue oder geänderte Dateien (und bei aktiviertem **Compute perceptual hash** Dateien noch ohne Hash), mehrere gleichzeitig
+- **Search by Query** (Rechtsklick) — eine kompakte Query-Sprache über dem geöffneten Ordner: Keywords, Tags (inkl. Negation), Ratings, Farbe, Endung, Ort, Cull, Favoriten, Seitenverhältnis, Alter, Größe, Maße, Kamera / Objektiv sowie Dateiname-Regex / -Glob; `place:` passt auf Stadt, Land oder beides, und ein Wert mit Leerzeichen steht in doppelten Anführungszeichen (`place:"Rio de Janeiro"`)
 - **Find Similar (Average Hash)** — pHash und dHash werden durch einen optionalen Average-Hash (aHash) zu einer komplementären Near-Duplicate-Metrik verbunden
-- **Semantic Search (CLIP)** — Natural-Language-Queries („Golden Retriever im Schnee") über gecachte Embeddings; deaktiviert sich elegant, wenn `open_clip_torch` + `torch` nicht installiert sind
-- **Auto-Tag** — Heuristische Klassifikation mit optionalem CLIP-ONNX-Upgrade
+- **Semantic Search (CLIP)** — Natural-Language-Queries („Golden Retriever im Schnee") über gecachte Embeddings aus CLIP ViT-B/32 auf onnxruntime, ohne PyTorch: Imervue bietet bei der ersten Nutzung an, `onnxruntime` zu installieren, und lädt das ~150 MB große Modell einmalig in einer festgelegten Revision herunter; es läuft über CUDA auf einer NVIDIA-GPU, sofern verfügbar, sonst auf der CPU, nie auf einer integrierten GPU
+- **Auto-Tag** — Heuristische Tags aus Farbe, Kanten und Form: Dokument / Screenshot / Foto / Grafik, Querformat / Hochformat; sobald die Semantische Suche das CLIP-Modell heruntergeladen hat, stattdessen Zero-Shot-CLIP-Labels (bis zu drei aus photo, document, screenshot, graphic, illustration, portrait, landscape, animal, food, text)
 
 ### Metadaten
 
 - **EXIF-Sidebar** mit aufklappbaren Gruppen + Inline-0-5-Sterne-Strip
-- **EXIF-Editor**-Dialog — Beschreibung, Künstler, Copyright, Kamera und Kommentar (auch Unicode) ohne Zusatzpaket in ein JPEG oder WebP schreiben, Pixel und übrige Tags bleiben unverändert
+- **EXIF-Editor**-Dialog — Beschreibung, Künstler, Copyright, Kamera und Kommentar (auch Unicode) ohne Zusatzpaket in ein JPEG oder WebP schreiben, Pixel und übrige Tags bleiben unverändert; **Describe** füllt die Beschreibung mit einem Satz aus einem lokalen Vision-Modell (Ollama mit `llava` auf `localhost:11434`), sodass das Bild Ihren Computer nie verlässt
 - **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz und Controlled-Vocabulary-Erweiterung (ein Blatt-Keyword wendet automatisch seine Vorfahren + Synonyme aus einem editierbaren hierarchischen Vokabular an)
 - **Image-Info**-Dialog (Maße / Größe / Datums)
-- **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip zu anderen XMP-bewussten Foto-Managern (sicheres XML via `defusedxml`). Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben. Neben `photo.xmp` (Lightroom, Bridge) wird auch die von darktable und digiKam geschriebene `photo.jpg.xmp` gelesen und aktualisiert, wenn sie die einzige Sidecar-Datei ist; Farbetiketten werden in Lightrooms Wörtern (`Red` … `Purple`) und in Bridges (`Select`, `Second`, `Approved`, `Review`, `To Do`) verstanden und so exportiert, wie Lightroom sie schreibt. Ein abgelehntes Foto (`xmp:Rating` -1 in Lightroom, Bridge und darktable) wird zu einem Culling-Reject, und ein Reject wird als -1 exportiert. Eine Datei ohne Sidecar wird aus dem in ihr eingebetteten XMP und EXIF-Rating gelesen und importiert (JPEG, PNG, WebP, TIFF) — so speichert Lightroom Bewertung und Stichwörter eines JPEG und der Windows-Explorer seine Sterne.
+- **XMP-Sidecars** (`.xmp`-Companions) — Rating / Title / Description / Keywords / Color Label, bidirektionales Roundtrip mit anderen XMP-fähigen Foto-Managern (sicheres XML via `defusedxml`). Beim Speichern wird in eine vorhandene Sidecar-Datei eingefügt: nur diese Felder ändern sich, dort gespeicherte Entwicklungseinstellungen, Zuschnitt und Verlauf eines RAW-Entwicklers bleiben erhalten, und eine nicht lesbare Sidecar-Datei wird nie überschrieben. Neben `photo.xmp` (Lightroom, Bridge) wird auch die von darktable und digiKam geschriebene `photo.jpg.xmp` gelesen und aktualisiert, wenn sie die einzige Sidecar-Datei ist; Farbetiketten werden in Lightrooms Wörtern (`Red` … `Purple`) und in Bridges (`Select`, `Second`, `Approved`, `Review`, `To Do`) verstanden und so exportiert, wie Lightroom sie schreibt. Ein abgelehntes Foto (`xmp:Rating` -1 in Lightroom, Bridge und darktable) wird zu einem Culling-Reject, und ein Reject wird als -1 exportiert. Eine Datei ohne Sidecar wird aus dem in ihr eingebetteten XMP und EXIF-Rating gelesen und importiert (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) — so speichert Lightroom Bewertung und Stichwörter eines JPEG und der Windows-Explorer seine Sterne.
 - **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon ohne Zusatzpaket in JPEGs und WebPs schreiben, Pixel, übrige Tags und Vorschaubild bleiben unverändert
+- **Geotag from GPX Track** — die EXIF-Aufnahmezeiten der Auswahl mit einem `.gpx`-Log eines Smartphones oder GPS-Loggers abgleichen, mit der Zeitzone der Kamera, einer Lückengrenze und Interpolation zwischen Punkten, dann die Positionen in die JPEG- / WebP-Dateien schreiben
+- **Edit Capture Time** — die EXIF-Aufnahmezeit der Auswahl um Tage / Stunden / Minuten / Sekunden verschieben oder durch Angabe, wann das erste Foto tatsächlich aufgenommen wurde; DateTimeOriginal, DateTimeDigitized und DateTime werden in JPEG- / WebP-Dateien neu geschrieben
+- **Metadata Template** — ein gemerkter Titel, eine Beschreibung und Stichwörter mit den Tokens `{filename}` / `{name}` / `{folder}` / `{date}` / `{year}`, auf die Auswahl gestempelt, entweder nur in leere Felder (Stichwörter werden ergänzt) oder über das Vorhandene; XMP-Sidecars und Export Metadata schreiben das Ergebnis heraus
 - **Token Batch Rename** — Live-Preview-Templates wie `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — eine Zeile pro Bild inkl. Cull / Rating / Tags / Notes
 
@@ -270,13 +302,13 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 Aufrufbar im **Tools**-Menü; in funktionsgruppierte Untermenüs organisiert:
 
 - **Batch** — Format Conversion · EXIF Strip · Image Sanitizer (Re-Render, um versteckte Daten zu entfernen) · Image Organizer (in Unterordner nach Datum / Auflösung / Typ / Größe sortieren) · Token Batch Rename
-- **AI / Heuristic** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Find Duplicate Images · Find Similar Images · Auto-Tag · Face Detection (Haar Cascade)
-- **Library & Metadata** — Library Search · Smart Albums · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
+- **Retouch & Transform** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Face Detection (Haar Cascade) · Heilen, Klonen, Zuschneiden / Begradigen und Objektivkorrektur
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time · Metadata Template
 
 ### Systemintegration
 
 - Windows-Rechtsklick-Kontextmenü **Open with Imervue** (registry-basierte Dateiverknüpfung)
-- Ordnerüberwachung mit `QFileSystemWatcher` (Auto-Refresh bei Änderung)
+- Ordnerüberwachung: Der geöffnete Ordner wird etwa einmal pro Sekunde geprüft, sodass anderswo hinzugefügte, gelöschte oder umbenannte Dateien nach ein bis zwei Sekunden erscheinen; nichts hält den Ordner offen, daher lassen sich unter Windows die Ordner darüber weiterhin umbenennen oder verschieben. Der Ordnerbaum zieht bei F5 / **Refresh** nach, wenn Imervue wieder in den Vordergrund kommt und wenn sich der geöffnete Ordner ändert
 - Toast-Benachrichtigungssystem (info / success / warning / error)
 - Plugin-System mit Online-Plugin-Downloader (siehe [Plugin-System](#plugin-system))
 
@@ -289,7 +321,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 ### Entwicklungs-Slider
 
 - Weißabgleich — Temperatur / Tint
-- Tonale Bereiche — Schatten / Mitten / Lichter
+- Tonale Bereiche — Lichter / Schatten / Weiß / Schwarz
 - Belichtung / Kontrast / Sättigung / Vibrance
 - Crop, Rotation, Horizontal-/Vertikal-Flip
 - Alle Bearbeitungen bleiben nicht-destruktiv und gehen durch den Rezeptspeicher
@@ -297,8 +329,8 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 ### Kurven & LUTs
 
 - **Tone-Curve-Editor** — ziehbare RGB-Kurve plus per-Kanal R / G / B mit monotone-cubic Interpolation
-- **Apply .cube LUT** — beliebige Adobe-3D-LUT laden (bis 64³, auch mit DaVinci Resolves `LUT_3D_INPUT_RANGE`), trilinear interpolieren, mit Intensitäts-Slider mischen
-- **Split Toning** — Flag-basiert Schatten- / Lichter-Hue + Sättigung mit Balance-Pivot
+- **Apply .cube LUT** — beliebige Adobe-LUT laden (3D bis 65³, 1D bis 65.536 Punkte; auch mit DaVinci Resolves `LUT_3D_INPUT_RANGE`), trilinear interpolieren, mit Intensitäts-Slider mischen
+- **Split Toning** — Schatten- / Lichter-Hue + Sättigung mit Balance-Pivot
 
 ### Kreative Effekte
 
@@ -317,6 +349,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 - **Polar Coordinates (Polar Coordinates)** — ein Bild in eine Scheibe wickeln oder es abrollen (Tiny-Planet / Polar-Inversion)
 - **Kaleidoscope (Kaleidoscope)** — einen Winkel-Keil in n-fache Symmetrie spiegeln
 - **Frosted Glass (Frosted Glass)** — deterministisches seed-basiertes lokales Pixel-Streuen
+- **Frame & Caption (Frame & Caption)** — ein Passepartout-Rand in beliebiger Farbe, ein optionaler unterer Streifen im Polaroid-Stil und eine Bildunterschrift in eigener Farbe
 - **Develop-Presets** — ein Rezept speichern und es dann komplett anwenden oder nur seine aktiven Anpassungen auf andere Bilder mergen (wobei der eigene Crop usw. jedes Bildes erhalten bleibt)
 
 ### Lokale Anpassungen
@@ -328,7 +361,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 - **Healing Brush** — kreisförmige Spots, OpenCV-Inpainting (Telea oder Navier-Stokes)
 - **Clone Stamp** — Shift+Klick auf Quelle, gefeatherter Blit zum Ziel
-- **Crop / Straighten** — normalisiertes Crop-Rechteck plus Straighten unter beliebigem Winkel, das automatisch auf das größte innere Rechteck zuschneidet
+- **Crop / Straighten** — normalisiertes Crop-Rechteck plus Straighten um bis zu ±15°, das automatisch auf das größte innere Rechteck zuschneidet
 - **Auto-Straighten** — Hough-Line-Horizont- / Vertikal-Detektion
 - **Lens Correction** — Pure-numpy radiale Verzerrung (Barrel / Pincushion), Vignettierungsausgleich, per-Kanal chromatische Aberration
 - **Noise Reduction / Sharpening** — Kantenerhaltende bilaterale Rauschunterdrückung + Unsharp-Mask-Schärfung
@@ -342,12 +375,13 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 ### Ausgabe
 
-- **Watermark-Overlay** — Text oder Bild, 9 Anker-Positionen, Opazität, Skalierung; nur beim Export angewendet
-- **Export-Presets** — Web 1600 / Print 300 dpi / Instagram 1080 Ein-Klick-Pipelines
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF (dazu HEIC mit `pillow-heif` und JPEG XL mit `pillow-jxl-plugin`) mit Qualitäts-Slider für verlustbehaftete Formate; übernimmt Kamera-, Objektiv- und Aufnahmedatum-EXIF, der Standort ist optional (**Metadaten**: alle / alle außer Standort / keine); der vorgeschlagene Dateiname ist noch frei (`photo_1.png` neben `photo.png`), und eine vorhandene Datei – vor allem das Foto selbst – wird erst nach Rückfrage ersetzt
+- **Export-Presets** — im Batch-Export: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 quadratisch / Thumbnail 400 px oder Custom
+- **Wasserzeichen** — im Batch-Export: ein Text-Wasserzeichen in einer Ecke oder der Mitte, mit einstellbarer Opazität; nur auf die exportierten Kopien angewendet
+- **GPU-Batch-Entwicklung** — mit dem Plugin **GPU Develop** (**Plugins > Download Plugins**) rendert der Batch-Export Develop-Rezepte auf einer dedizierten GPU, ausgewählt unter **Render on**; **Plugins > GPU Develop…** installiert beim ersten Aufruf `wgpu` und nennt die gefundene GPU. Weißabgleich, Belichtung, Lichter / Schatten, Weiß / Schwarz, Helligkeit, Kontrast, Vibrance, Sättigung und die Tonwertkurve laufen auf der GPU (ein 24-MP-Foto in etwa 0,1 s statt etwa 7 s); der Rest eines Rezepts bleibt auf der CPU. Integrierte GPUs werden nie verwendet, ein Bild, bei dem die GPU scheitert, wird auf der CPU gerendert, und die Ausgabe stimmt mit der des CPU-Renderers bis auf wenige Stufen bei einem kleinen Anteil der Pixel überein
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF (dazu AVIF, wenn Pillow AVIF unterstützt, HEIC mit `pillow-heif` und JPEG XL mit `pillow-jxl-plugin`) mit Qualitäts-Slider für verlustbehaftete Formate; übernimmt Kamera-, Objektiv- und Aufnahmedatum-EXIF, der Standort ist optional (**Metadaten**: alle / alle außer Standort / keine); der vorgeschlagene Dateiname ist noch frei (`photo_1.png` neben `photo.png`), und eine vorhandene Datei – vor allem das Foto selbst – wird erst nach Rückfrage ersetzt
 - **Batch-Operationen** — Umbenennen, Verschieben/Kopieren, ausgewählte Bilder drehen. Verschieben oder Kopieren überschreibt nie eine gleichnamige Datei (sie kommt als `name_1` an), und ein in Imervue umbenanntes oder verschobenes Foto (Stapel-Umbenennen, Token-Stapel-Umbenennen, Ordnerbaum, Verschieben / Kopieren, Zwei-Fenster-Ansicht, Staging-Ablage, Bild-Organizer) behält Bewertung, Favorit, Tags, Farbetikett, Titel, Notizen und Auswahl-Markierung; seine `.xmp`- und Anmerkungs-Sidecars wandern mit; ebenso ein Foto, das in einem anderen Programm umbenannt wird, während sein Ordner in Imervue geöffnet ist. Ein neuer Name, den gerade ein anderes ausgewähltes Foto trägt (Neunummerieren, zwei Namen tauschen), benennt die ganze Auswahl in der richtigen Reihenfolge um statt nur einen Teil davon
-- **Contact Sheet PDF** — mehrseitiges Grid mit Untertiteln (A4 / A3 / Letter / Legal)
-- **Web Gallery HTML** — eigenständiger Ordner mit `index.html` + JPEG-Thumbs + Inline-Lightbox
+- **Contact Sheet PDF** — mehrseitiges Grid mit Untertiteln (A4 / A3 / Letter / Legal); das Feld **Layout** trägt ein Preset ein — Default 4 × 5, Compact 6 × 8, Proof 5 × 6, Editorial 2 × 3, Index 8 × 10 (Spalten × Zeilen, jeweils samt Rand und Untertiteln) — und wer das Grid von Hand ändert, stellt es auf Custom
+- **Web Gallery HTML** — eigenständiger Ordner mit `index.html` + JPEG-Thumbs + Inline-Lightbox; **Kunden-Review** fügt unter jedem Bild ein Kommentarfeld hinzu, die Kommentare bleiben im Browser des Prüfers und werden gesammelt als eine JSON-Datei heruntergeladen
 - **Slideshow MP4** — H.264-Video mit konfigurierbarer FPS / Halten pro Bild / Fade- / Dissolve- / Slide- / Wipe-Übergängen (`imageio-ffmpeg`)
 - **Print Layout** — mehrseitige PDF mit konfigurierbarer Seitengröße / Orientierung / Grid / Margins / Gutter / Schnittmarken
 - **Soft Proof** — ICC-Profil laden, Zielfarbraum simulieren, Out-of-Gamut-Pixel in Magenta markieren
@@ -355,7 +389,7 @@ Der **Modify**-Tab ist die Entwicklungsworkstation. Jede Anpassung lebt in einem
 
 ### Externe Editoren
 
-Programme (Ihr Bildeditor / … / …) unter **File > External Editors…** registrieren und über **File > Open in External Editor** mit dem aktuellen Bild starten.
+Programme (etwa einen Bildeditor) unter **File > External Editors…** registrieren und über **File > Open in External Editor** mit dem aktuellen Bild starten. Speichert der Editor, zeigt der Viewer die neue Fassung von selbst.
 
 ---
 
@@ -367,30 +401,36 @@ Der **Paint**-Tab ist ein vollwertiges Raster-Paint-Studio, das als eigenes `QMa
 
 Brush · Eraser · Fill · Eyedropper · Rect / Lasso / Wand / Quick Select · Move · Text · Gradient · Blur · Smudge · Dodge · Burn · Sponge · Pen · Clone Stamp · Speech Bubble · Rectangle · Ellipse · Line · Polygon · Crop · Transform · Hand · Zoom
 
-Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Sättigen / Entsättigen) — malt lokale Tonwert- und Chroma-Anpassungen, gewichtet durch den Brush und eine Schatten- / Mitten- / Lichter-Maske.
+Das **Pen**-Tool verbindet die angeklickten Punkte mit geraden Linien oder mit Kurven, wo Sie Griffe herausziehen; ist **Smooth** in seiner Options-Bar aktiviert, legt es stattdessen eine einzige glatte Kurve durch alle Punkte.
+
+Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Entsättigen) — malt lokale Anpassungen, gewichtet durch den Brush; Dodge und Burn wirken auf die Mitteltöne. Keines der drei Tools hat Optionen.
+
+**Base colours on a new layer** im **Bucket**-Dock gibt jedem geschlossenen Bereich der Linienzeichnung eine eigene flache Farbe (die Swatches-Farben, sofern das Dock welche zeigt) auf einem neuen Layer darunter — der Flatting-Schritt vor dem Schattieren — und lässt die Linien und den Raum um die Zeichnung leer.
+
+Das **Gradient**-Tool malt Vordergrund → Hintergrund oder einen eigenen Verlauf: Wählen Sie ihn unter **Colours** in der Options-Bar; **Edit…** dort öffnet den Verlaufseditor, in dem jeder Verlauf einen Namen und Farbstopps hat (jeder mit einer Position und einer Farbe mit Opazität), die Sie hinzufügen, verschieben, umfärben und entfernen. Ihre Verläufe bleiben zwischen Sitzungen erhalten.
 
 Einzelbuchstaben-Shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.
 
 ### Brushes
 
-Pen / Marker / Pencil / Highlighter / Spray / Calligraphy / Watercolor / Charcoal / Crayon, mit Steuerungen für Size / Opacity / Hardness / Density / Blend-Mode. Druckkurven-Editor, Brush-Tip-Aufnahme aus einer Auswahl, Import / Export von Brush-Presets.
+Sechs Brush-Arten — Pencil / Pen / Marker / Airbrush / Watercolour / Sumi — plus darauf aufbauende Presets (Crayon, Highlight, Sumi calligraphy …). Das Brush-Dock stellt Size / Opacity / Hardness / Density / Blend-Mode ein; die Options-Bar bietet Size / Opacity / Hardness. Der Stiftdruck des Tabletts skaliert Größe und Opazität über die in **Settings > Pressure Curve…** eingestellte Kurve; eine Maus zeichnet mit vollem Druck. **Scatter** im Brush-Dock versetzt jeden Tupfer um bis zu den eingestellten Anteil der Brush-Größe neben den Strich, **Colour jitter** verschiebt Farbton, Sättigung und Helligkeit jedes Tupfers, und **Follow pen tilt** verschmälert die Spitze quer zu der Richtung, in die sich ein Tablett-Stift neigt, und dreht sie mit (beim Preset Sumi calligraphy ist es eingeschaltet); ein Pixel-Art-Brush behält seine quadratische Spitze. Brush-Tip-Aufnahme aus einer Auswahl, **File > Import brush preset…**.
 
 ### Layers
 
-Vollwertiges Layer-Panel mit Thumbnails, Sichtbarkeits-Toggles, Drag-to-Reorder, Blend-Modes, Opazität, Suche, Vektor-Layern, 1-bit-Layern, **Layer-Masken** (hinzufügen / aus Auswahl / invertieren / anwenden), **Clipping-Masken**, **Layer-Effekten** (Schlagschatten / Outer Glow / Stroke). Layer-nach-Farbe-Aufteilen, Gradient-Map-Presets.
+Vollwertiges Layer-Panel mit Thumbnails, Sichtbarkeits-Toggles, ↑ / ↓-Buttons zum Umsortieren (oder `Ctrl+[` / `Ctrl+]`), Blend-Modes, Opazität, Suche, Vektor-Layern, 1-bit-Layern, **Layer-Masken** (hinzufügen / aus Auswahl / invertieren / anwenden), **Clipping-Masken**, **Layer-Effekten** (Schlagschatten / Outer Glow / Stroke). Layer-nach-Farbe-Aufteilen, Gradient-Map-Presets.
 
 ### Auswahl
 
-Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-Modi und Feather. **Quick Mask Mode** (`Q`) für Paint-the-Mask-Workflows. **Stroke Selection**-Dialog.
+Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-Modi; ist **Magnetic** in der Options-Bar aktiviert, rastet der Umriss des Lassos beim Loslassen an der stärksten Kante des Layers innerhalb von 10 px ein. **Quick Mask Mode** (`Q`) für Paint-the-Mask-Workflows. **Stroke Selection**-Dialog.
 
 ### Animation & Manga
 
-- **Animation** — Frame-Timeline-Dock mit Snapshots, Wiedergabe, Onion-Skin-Overlay, MP4- / GIF-Export
-- **Manga-Tools** — Panel Cutter · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Speech-Bubble-Tool
+- **Animation** — Frame-Timeline-Dock: **+ Frame** nimmt einen Snapshot des auf eine Ebene reduzierten Bildes auf, Wiedergabe mit wählbarer FPS, Onion Skin zeigt den vorherigen Frame; **Export…** speichert die Frames als animiertes GIF, WebP (verlustfrei) oder PNG, wobei jeder Frame einen Takt der gewählten FPS dauert
+- **Manga-Tools** — Panel Cutter (danach hält **Snap to panel** des Brushs jeden Strich innerhalb des Panels, in dem er beginnt) · Tone Layers · Stamp Page Numbers · Speedlines (Radial / Parallel / Burst) · Action Flash · Text Along Selection (legt einen eingetippten Text entlang des Umrisses der Auswahl auf einen neuen Layer) · Speech-Bubble-Tool
 
 ### Filter & Ansichts-Hilfen
 
-- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (jeweils mit Live-Preview-Dialog)
+- **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (die Farbstimmung eines gewählten Referenzbilds) · Match Swatches (jedes Pixel in seiner nächstgelegenen Swatches-Farbe) (die Filter mit nur einem Schieberegler — Posterize, Threshold, Halftone, Match Colour — zeigen beim Ziehen eine Live-Vorschau auf einem Ausschnitt des Layers in voller Größe; die übrigen öffnen einen Parameter-Dialog mit OK / Cancel)
 - **Ansichts-Hilfen** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` dreht CCW)
 
 ### Docks (14, getabbed in 3 Clustern)
@@ -401,13 +441,14 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 | Leinwand | Layers · Navigator · History · Pages · Animation · Histogram |
 | Bibliothek | Materials · Stamps · Pose · Reference |
 
-Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ein- und ausschaltbar. **Settings > Workspace Layouts** speichert und ruft benannte Anordnungen ab.
+Das Color-Dock öffnet sich mit einem Farbtonring und einem Sättigungs- / Helligkeitsdreieck: Ziehen auf dem Ring wählt den Farbton, Ziehen im Dreieck die Abstufung, und die Regler und das Hex-Feld darunter folgen. Das Materials-Dock listet Ihre eigenen Materialien vor den eingebauten Rasterfolien und Texturen: Bilder im Ordner `materials` im Programmordner von Imervue (ein direkter Unterordner namens `texture`, `tone`, `pattern`, `brush_tip` oder `pose` ordnet sie dieser Kategorie zu) sowie Ihre erfassten Brush-Spitzen. **Edit > Save Selection as Material…** speichert den ausgewählten Teil des Bildes dort, ohne je ein früheres Material zu überschreiben. Das Swatches-Dock zeigt Ihre zuletzt verwendeten Farben oder eine Palette: die eingebauten Standard, Pastel und Manga oder eine eigene. **Save as Palette…** speichert die zuletzt verwendeten Farben unter einem Namen, **Delete Palette** entfernt eine Ihrer eigenen, und **Filter > Match Swatches…** verwendet die Farben, die das Dock zeigt. Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ein- und ausschaltbar. **Settings > Workspace Layouts…** bietet die eingebauten Layouts Default / Drawing / Comic / Compact; **Save current…** speichert unter einem Namen, welche der Docks Layers / Color / Brush / Navigator / History / Reference angezeigt werden, und das Anwenden eines Layouts blendet diese Docks ein oder aus. Tool-Optionen und Dock-Größen werden nicht gespeichert.
 
 ### Datei-I/O
 
-- **PSD** (Photoshop) öffnen / speichern mit vollem Layer-Roundtrip
-- Export nach PNG / JPEG / WebP, plus mehrseitiger Comic-Export nach **CBZ** oder **PDF**
-- Autosave-Snapshots mit Restore-Latest
+- **New Canvas…** öffnet einen Tab in der gewählten Größe — ein Papier-, Manga- oder Bildschirm-Preset (A4, B5-Mangaseite, 1080p, 4K …), eines, das Sie mit **Save as Preset…** gespeichert haben, oder eine beliebige Breite und Höhe — auf weißem oder transparentem Hintergrund; **New Tab** (`Ctrl+N`) behält den weißen Standard von 1024 × 1024 bei
+- **Open PSD…** reduziert die Datei auf einen Layer in einem neuen Tab; **Save as PSD…** schreibt die Layer mit ihren Blend-Modes (ohne Masken oder Layer-Effekte)
+- **Export image…** schreibt PNG, JPEG, WebP, TIFF oder BMP, je nach gewähltem Dateityp (JPEG und BMP, die keine Transparenz kennen, auf Weiß); Comic-Projekte exportieren ihre Seiten nach **CBZ** oder **PDF**. **Save Comic Project…** speichert einen ganzen Comic, jede Seite mit ihren Layern, in einer einzigen `.imervue-proj`-Datei, und **Open Comic Project…** holt ihn zurück. Nur **Save as PSD…** gilt als Speichern des Tabs: Nach einem Export fragt das Schließen weiterhin nach seinen ungespeicherten Änderungen
+- **Autosave** — alle 2 Minuten ein Snapshot, solange der aktive Tab ungespeicherte Änderungen hat; beim nächsten Start bietet ein Toast die Snapshots an, **File > Restore Autosave** lädt den neuesten in den aktiven Tab, und die Statusleiste zeigt, wann der letzte aufgenommen wurde. Beim Schließen von Imervue wird für Paint-Tabs mit ungespeicherten Änderungen nachgefragt.
 
 ### Power-User-UX
 
@@ -425,7 +466,7 @@ Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ei
 
 ## Puppet — 2D-Rigged-Animation
 
-Der **Puppet**-Tab ist ein von Grund auf entwickeltes 2D-Rigged-Puppet-Animationssystem. Es leistet, was Live2D leistet (Mesh-Deformations-Rigs, Parameter, Motions, Physik, Expressions, Pose, Lip-Sync, Webcam-Face-Tracking), aber **ohne proprietäres SDK**, **ohne `live2d-py`** und mit einem vollständig offenen `.puppet`-Dateiformat, dokumentiert in `Imervue/puppet/FORMAT.md`.
+Der **Puppet**-Tab ist ein von Grund auf entwickeltes 2D-Rigged-Puppet-Animationssystem: Mesh-Deformations-Rigs, Parameter, Motions, Physik, Expressions, Pose, Lip-Sync und Webcam-Face-Tracking, **ohne proprietäres SDK**, **ohne `live2d-py`** und mit einem vollständig offenen `.puppet`-Dateiformat, dokumentiert in `Imervue/puppet/FORMAT.md`.
 
 > **Vollständige Anleitung**: [`puppet_guide.md`](../puppet_guide.md) deckt den
 > End-to-End-Flow sowohl für Live-Streaming (OBS / NDI / virtuelle Kamera)
@@ -444,18 +485,20 @@ Der **Puppet**-Tab ist ein von Grund auf entwickeltes 2D-Rigged-Puppet-Animation
 - `expressions/*.json` — Parameter-Overlays
 - `physics.json` — Verlet-Rig-Konfiguration
 
-JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat.
+JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat. Das Format ist offen und prüfbar: Eine gespeicherte Datei beginnt mit einem unkomprimierten `mimetype`-Eintrag (`application/vnd.imervue.puppet+zip`), und jede JSON-Datei nennt ihr Schema in `$schema`; die vier JSON Schemas sind in [`docs/schemas/`](../docs/schemas/) veröffentlicht; `py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet` (MCP `puppet_validate`) prüft eine Datei, und `puppet-schema` (MCP `puppet_schema`) gibt ein Schema aus; [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) liest eine Datei allein mit der Python-Standardbibliothek. Die Spezifikation ([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)) und die Schemas stehen unter der MIT-Lizenz, sodass jedes Programm `.puppet`-Dateien lesen oder schreiben darf.
 
 ### Renderer
 
-`QOpenGLWidget` mit Vertex-Array-Textured-Triangle-Drawing in draw_order, Per-Drawable-Blend-Modes (normal / additive / multiply), Pose-Group-Exklusivität, Ortho-Projektion im Image-Space, GL_REPEAT-gekacheltem Transparency-Checker-Backdrop, Wheel-Zoom + Middle-Drag-Pan. Optimiert für große Rigs — March 7th (307 Drawables / 2965 Vertex-Morphs) läuft mit 60 FPS auf der CPU.
+`QOpenGLWidget` mit Vertex-Array-Textured-Triangle-Drawing in draw_order, Per-Drawable-Blend-Modes (normal / additive / multiply), Pose-Group-Exklusivität, Ortho-Projektion im Image-Space, GL_REPEAT-gekacheltem Transparency-Checker-Backdrop, Wheel-Zoom + Middle-Drag-Pan. Optimiert für große Rigs — ein konvertiertes Cubism-Rig mit 307 Drawables und 2965 Vertex-Morphs läuft mit 60 FPS auf der CPU.
 
 ### Authoring
 
 - **Import PNG** → automatische Generierung eines triangulierten Grid-Meshes, das Alpha respektiert
-- **Add Rotation Deformer** (Anker + Winkel) / **Add Warp Deformer** (Rows × Cols Bezier-Lattice) Toolbar-Aktionen
+- **Add Rotation Deformer** (Anker + Winkel) / **Add Warp Deformer** (Rows × Cols bilineares Lattice) im **Edit**-Menü
 - **Add Parameter** → Key-Forms an Slider-Extremen via **Set Key** im Parameter-Dock setzen
 - **Mesh-Editor** — Edit Mesh umschalten, um Vertices zu ziehen; Klicks innerhalb 8 px snappen auf den nächsten
+- **Motion-Timeline** — **Edit > Edit motion…** zieht Keys und Bezier-Handles; **Ease** formt einen Track zu einem von 31 benannten Easings um (elastic und bounce werden zu gesampelten Keys) und **Simplify Keys** verwirft die Keys einer aufgezeichneten Aufnahme, die innerhalb einer Toleranz der Linie durch ihre Nachbarn liegen
+- **Rig-Reparatur** — **Tools > Repair Rig** bereinigt das Mesh jedes Drawables (defekte und flächenlose Dreiecke, doppelte Vertices mit gleicher Position und UV, ungenutzte Vertices — Bone-Weights und Vertex-Morphs folgen den verbleibenden Vertices) und sorgt dafür, dass sich die Bone-Weights jedes Vertex zu 1 summieren
 - **Save As…** schreibt das gesamte Rig in ein `.puppet`-Zip
 
 ### Runtime
@@ -463,17 +506,18 @@ JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat.
 - **Parameter-Rig** — jeder Parameter hält eine Key-Liste, die einen Slider-Wert auf einen partiellen Deformer-Form-Snapshot abbildet; Runtime sampelt und Per-Field-Lerp
 - **Motion-Playback** — Bottom-Dock mit Motion-Liste + Play / Pause / Stop / Loop / Scrub; der Curve-Sampler unterstützt `linear`-, `stepped`-, `inverse-stepped`-, `cubic-bezier`-Segmente (Newton-iteriertes Time → Param Solve); Per-Motion Fade-In / Fade-Out
 - **Expressions** — Stack von `additive`- / `multiply`- / `overwrite`-Parameter-Overlays
-- **Pose-Gruppen** — sich gegenseitig ausschließende Drawable-Sichtbarkeit (Waffenwechsel, Mouth-Shape-Varianten)
+- **Pose-Gruppen** — sich gegenseitig ausschließende Drawable-Sichtbarkeit (Waffenwechsel, Mouth-Shape-Varianten); das **Pose**-Dock wählt, welches Mitglied jede Gruppe zeigt
 - **Physik** — Verlet-Pendel-Ketten für Haare / Stoff / Bänder; Input-Parameter bewegt Ketten-Anker, Schwerkraft + Dämpfung + Per-Partikel-Federn ziehen zur Ruhelage
 - **Vertex-Morphs** — Cubism-style lineare Mischung zwischen Rest und ±Extrem-Deltas; vektorisiertes numpy pro Frame bei 60 FPS
 - **Opacity-Keys** — parametergetriebene Alpha-Kurven; lassen Alternate-Pose-Meshes ein- / ausblenden, wenn ein Gesture-Parameter feuert
 
 ### Live-Input
 
-- Cursor-Drag → Head-Angle-Parameter
+- Drag-Track-Head — Kopf und Augen drehen sich zum Cursor, während er sich über den Canvas bewegt
 - Auto-Blink auf einer Cosinus-Open → Close → Open-Kurve
 - Mic-Lip-Sync via `sounddevice` RMS → `ParamMouthOpenY` (optionale Dep)
-- Webcam-Face-Tracking via OpenCV + MediaPipe FaceMesh → Head Yaw / Pitch / Roll + Eye / Mouth Open (optionale Deps)
+- Lip-Sync aus einer Audiodatei — **Live > Lip-sync from Audio File…** macht aus einer WAV eine Motion, die `ParamMouthOpenY` mit ihrer Lautstärke öffnet (30-mal pro Sekunde, Keys ohne Beitrag werden verworfen) und die WAV als ihren Sound abspielt; keine zusätzliche Abhängigkeit
+- Webcam-Face-Tracking via OpenCV + den MediaPipe Tasks FaceLandmarker → Head Yaw / Pitch / Roll + Eye / Mouth Open (optionale Deps)
 - Custom-Motion-Recording — erfasst Parameterwerte mit 30 Hz, während Sie Slider wackeln / der Webcam ins Gesicht schauen / Physik laufen lassen; backt in eine Linear-Segment-Motion, die zum Abspielen / Loopen / Speichern bereit ist
 
 ### Cubism-Interop
@@ -482,8 +526,8 @@ Das **Cubism Native SDK** kann eingehängt werden (vom Benutzer beigesteuerte DL
 
 ### Ausgabe
 
-- **Capture frame…** speichert ein PNG des aktuellen Canvas via `glReadPixels`
-- **Record…** schaltet eine 30-FPS-Frame-Loop ein, die via `imageio` als GIF / WebM / MP4 schreibt
+- **Capture frame…** speichert ein PNG nur des Charakters in der eigenen Größe des Rigs (lange Seite höchstens 4096 px) auf transparentem Hintergrund
+- **Record…** schaltet eine 30-FPS-Frame-Loop ein, die via `imageio` als GIF / WebM / MP4 schreibt, der Charakter eingepasst in 1080 px auf Weiß (diese Frames tragen keinen Alphakanal)
 - **Virtual camera** — stellt das Puppet-Canvas als System-Webcam bereit
 - **NDI output** — sendet das Puppet als NDI-Quelle im LAN
 - **VTube Studio API server** — opt-in WebSocket-API für VTS-kompatible Clients
@@ -515,7 +559,7 @@ Das Puppet-Canvas erscheint als Webcam, die OBS über seine Standard-Video-Captu
    benannte Gerät auswählen (typischerweise *OBS Virtual Camera*).
 
 Imervue cappt die längste Seite des Streaming-Outputs bei 1080 px, damit
-Cubism-native Canvases (March 7th ist 3503×7777) nicht vom DirectShow-
+Cubism-native Canvases (oft 3000–8000 px hoch) nicht vom DirectShow-
 Virtual-Camera-Treiber abgelehnt werden. Das Seitenverhältnis bleibt
 erhalten; OBS kann bei Bedarf weiter skalieren.
 
@@ -596,7 +640,7 @@ Maschinen, auf denen Sie keine Treiber installieren dürfen.
 
 ### Demo
 
-Ein einsatzbereites Rig liegt unter [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — ein 307-Drawable-Cubism-Live2D-Charakter, in-tree konvertiert. Via **Open Puppet…** öffnen, dann erscheint das Rig zentriert; klicken Sie auf eine der 18 Motions (Idle-Group + Gesture-Group), um sie abzuspielen. Die Gestures umfassen Peace-Sign, Face Cover, Foto, Erröten, Dark Face, Weinen, Schwitzen, Sterne, Sternschnuppe — jede benannte Gesture, die das Rig definiert.
+Das mitgelieferte Rig ist [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**, das originale Maskottchen von Imervue: 45 Drawables auf einer 1024 × 1336 großen Canvas, jeder Cubism-Standardparameter plus zweigelenkige Arme, Kopfdrehungen mit Parallaxe im Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich vom Licht abwendet, Blinzeln mit auf das Augenweiß geclippten Iriden, Haarphysik, 8 Motions (zwei Idle-Loops, TapHead, TapBody und vier Gestures, darunter ein Winken) und 7 Expressions. Öffnen Sie es über **File > Examples > Imeru** oder **Open Puppet…** und klicken Sie auf ihren Kopf oder Körper, um sie reagieren zu sehen. Sie entsteht vollständig per Code, so wie 3D-Anime-Spiele ihre Figuren bauen: Haare, Körper, Outfit und Arme werden in Blender modelliert, mit Cel-Shading samt den Shading-Tricks dieser Spiele versehen (Haar, das über die Normalen einer glatten Stellvertreterform beleuchtet wird, aufgemalte Strähnen und Glanzlicht-Striche, gebackene Okklusion) und Puppet-Ebene für Puppet-Ebene gerendert, ihr Gesicht wird über eine SDF-Gesichtsschatten-Map schattiert, Augen, Brauen und Mund werden aufgemalt, und danach werden die Ebenen geriggt, sodass die Datei keine Rechte Dritter enthält; `py -3 examples/puppet/imeru/build.py` erzeugt sie neu (Blender 4.2 oder neuer).
 
 ---
 
@@ -615,37 +659,41 @@ Tab 5 — das **Desktop Pet** setzt jeden `.puppet`-Charakter als rahmenloses, t
 | Position sperren | Friert das Pet ein, damit es durch versehentliches Ziehen nicht verrutscht. |
 | Always on Bottom | Setzt das Pet hinter jedes andere Fenster — Desktop-Widget-Feeling statt Always-on-Top. |
 | Hide on Fullscreen | Versteckt sich automatisch, während eine andere App (Spiel / Video / Präsentation) auf demselben Monitor im Vollbild läuft; kommt zurück, sobald der Vollbild endet. |
-| Pause beim Verstecken | Das Pet hört auf zu animieren, solange es unsichtbar ist — null CPU, wenn es nicht am Bildschirm ist. |
+| Pause beim Verstecken | Das Pet hört auf neu zu zeichnen, solange es unsichtbar ist; die Timer der Live-Driver laufen weiter. |
 | Größenvoreinstellungen | Klein / mittel / groß. Skaliert um den Mittelpunkt, sodass das Pet nicht über den Bildschirm springt. |
 | Opacity-Slider | Blendet das Pet zwischen 10 % und 100 %, sodass es eine dezente Desktop-Verzierung sein kann. |
 | Merkt sich seine Position | Ziehen Sie das Pet in Ihre Lieblingsecke; beim nächsten Start kehrt es dorthin zurück. |
+| Globale Tastenkürzel | Pet anzeigen / verstecken, Position sperren, Click-Through umschalten oder das Pet sprechen lassen — aus jeder App heraus (benötigt `pynput`): standardmäßig Ctrl+Shift+P / L / T / Leertaste, jedes in der Gruppe **Global hotkeys** des Tabs neu belegbar. Eine Taste, die bereits eine andere Aktion nutzt, wird abgelehnt, und gespeicherte Tasten, die sich zwei Aktionen teilen, werden in der Statuszeile genannt. |
 
 ### Klick-Interaktionen
 
 - **Linksklick auf den Körper** — definiert das Rig eine Hit Area (z. B. Kopf antippen), wird die passende Motion abgespielt. Andernfalls begrüßt Sie das Pet mit einer Sprechblase.
-- **Rechtsklick an beliebiger Stelle** — öffnet ein Kontextmenü mit: Pet verstecken, Live-Driver, Motion abspielen (Liste aller Motions des Rigs), Expression anwenden, Position sperren, Click-Through, Always on Bottom, Hide on Fullscreen, Sprechblase, Größe.
+- **Rechtsklick an beliebiger Stelle** — öffnet ein Kontextmenü mit: Pet verstecken, Live-Driver, Motion abspielen (Liste aller Motions des Rigs), Expression anwenden, Pose (sichtbares Mitglied jeder Pose-Gruppe wählen), Position sperren, Click-Through, Always on Bottom, Hide on Fullscreen, Sprechblase, Größe.
 - **System-Tray-Symbol** — Linksklick toggelt die Sichtbarkeit, Rechtsklick zeigt Anzeigen/Verstecken, Click-Through, Open Puppet, Pet verstecken.
 
 ### Live-Driver
 
-Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. Jeder ist standardmäßig aus — schalten Sie nur ein, was Sie möchten.
+Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. Auto-Idle, Idle-Motions und Auto-Blink sind standardmäßig an; die übrigen sind aus — schalten Sie nur ein, was Sie möchten.
 
 - **Auto-Idle** — Atem + dezenter Drift, damit der Charakter lebendig wirkt.
 - **Idle-Motions** — zykelt zufällig durch die Motions der Idle-Group des Rigs.
 - **Auto-Blink** — natürliches zyklisches Augenschließen alle paar Sekunden.
-- **Drag-Track-Head** — der Kopf folgt Ihrem Cursor.
+- **Drag-Track-Head** — Kopf und Augen drehen sich zu Ihrem Cursor, solange er über dem Pet ist.
+- **Mouse Gaze** — Augen und Kopf folgen Ihrem Cursor überall auf dem Bildschirm.
 - **Mic-Lip-Sync** — der Mund öffnet sich mit Ihrer Stimme (benötigt `sounddevice`).
 - **Webcam-Tracking** — Ihr Kopf / Ihre Augen / Ihr Mund steuern die der Puppet (benötigt `opencv-python` und `mediapipe`).
 
 ### So starten Sie
 
 1. Wechseln Sie in den **Desktop Pet**-Tab.
-2. Klicken Sie auf **Load bundled March 7th**, um den mitgelieferten Charakter zu nutzen, oder auf **Open Puppet…**, um Ihre eigene `.puppet`-Datei zu wählen.
+2. Klicken Sie auf **Load bundled Imeru**, um den mitgelieferten Charakter zu nutzen, oder auf **Open Puppet…**, um Ihre eigene `.puppet`-Datei zu wählen.
 3. Aktivieren Sie **Show pet on desktop**.
 4. Ziehen Sie die Figur dorthin, wo Sie sie haben möchten; wählen Sie die gewünschten Driver; passen Sie Opazität / Größe an.
 5. Rechtsklicken Sie jederzeit für das Schnellaktions-Menü, oder nutzen Sie das System-Tray-Symbol, um das Pet zu verstecken, ohne den Tab zu suchen.
 
 Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größe — wird zwischen den Starts gespeichert.
+
+Das Plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) fügt **Plugins > Desktop Pet Integrations** hinzu: Das Pet reagiert auf OBS (Streaming, Aufnahme, Szenenwechsel), auf Schlüsselwörter im Twitch-Chat (irgendwo in einer Nachricht, oder `=hi` für die ganze Nachricht, `!dance*` für ihren Anfang, `/go+al/` für einen regulären Ausdruck), auf einen lokalen Webhook (`POST http://127.0.0.1:9876/trigger` mit `{"group": "Wave", "speech": "Hi!"}`) und auf Windows-Benachrichtigungen. Es ist zugleich das Beispiel für ein Pet-Plugin, das auf `on_pet_created` aufbaut.
 
 ### Eigene Stimme (Pet-Skript)
 
@@ -656,6 +704,10 @@ Die Sprechblase des Pets greift auf eine JSON-Datei zurück, die Sie selbst verf
   "version": 1,
   "name": "Friendly pet",
   "greetings": ["Hi!", "Hello!"],
+  "time_of_day_greetings": {
+    "morning": ["Good morning!"],
+    "night": ["Still up?"]
+  },
   "hit_responses": {
     "HitAreaHead": ["Don't poke me!", "Stop!"]
   },
@@ -669,13 +721,14 @@ Die Sprechblase des Pets greift auf eine JSON-Datei zurück, die Sie selbst verf
 ```
 
 - **`greetings`** — verwendet, wenn nichts Spezifischeres auf einen Klick passt.
+- **`time_of_day_greetings`** — Begrüßungen pro Tageszeitband der lokalen Uhr (`morning` 05–11 Uhr, `afternoon` 12–17 Uhr, `evening` 18–21 Uhr, `night` 22–04 Uhr), verwendet vor `greetings`; ein Band ohne Zeilen fällt auf `greetings` zurück.
 - **`hit_responses`** — Zeilen pro `HitArea`. Die Keys müssen mit den im Rig definierten Hit-Area-IDs übereinstimmen.
-- **`motion_lines`** — Zeilen pro Motion. Werden ausgelöst, wenn das Pet eine Motion mit diesem Namen abspielt (Hit-Area-Motion oder Kontextmenü-Motion).
+- **`motion_lines`** — Zeilen pro Motion. Werden gesprochen, wenn ein Hit-Area-Klick eine Motion mit diesem Namen abspielt (nicht, wenn eine Motion aus dem Kontextmenü gestartet wird).
 - **`scheduled`** — timergesteuerte Einwürfe. Jeder Eintrag wird alle `every_seconds` Sekunden ausgelöst.
 
 Die Zeilen rotieren im Round-Robin-Verfahren pro Bucket, sodass der Benutzer dieselbe Zeile nicht zweimal hintereinander hört. **Reset to default** verwirft das benutzerdefinierte Skript und stellt den eingebauten Begrüßungssatz wieder her.
 
-Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json).
+Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json); seine Kopf- und Körperzeilen antworten auf Klicks auf Imerus Hit Areas `Head` und `Body`.
 
 ---
 
@@ -685,14 +738,14 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 
 | Shortcut | Aktion |
 |----------|--------|
-| Pfeiltasten | Grid scrollen / Bilder wechseln (Links/Rechts in Deep Zoom) |
-| Shift + Pfeil | Feines Scrollen (halber Schritt) |
+| Pfeiltasten | Grid: Fokusrahmen bewegen (Enter öffnet das Bild) / Deep Zoom: Links/Rechts wechselt das Bild |
 | Ctrl+Shift+←/→ | Zum vorherigen / nächsten Geschwisterordner mit Bildern springen |
 | Alt+← / Alt+→ | History zurück / vor |
 | Ctrl+G | Zu Bild per Index springen |
 | X | Zu einem zufälligen Bild springen |
-| Home | Zoom und Pan auf Ursprung zurücksetzen |
+| Home | Bild an das Fenster anpassen (im Grid: zurück nach oben scrollen) |
 | Ctrl+F oder / | Fuzzy-Such-Dialog öffnen |
+| T | Tags & Albums öffnen |
 | Ctrl+Shift+P | Command Palette öffnen |
 | Alt+M | Letztes Macro auf aktueller Auswahl wiederholen |
 | S | Slideshow-Dialog öffnen |
@@ -706,11 +759,15 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | F | Vollbild umschalten |
 | Shift+Tab | Theater-Modus umschalten (Chrome verbergen) |
 | R / Shift+R | Drehen CW / CCW |
-| E | Bildeditor öffnen (Modify-Tab) |
+| E | Aktuelles Bild im Annotationseditor öffnen |
 | W / Shift+W | An Breite / Höhe anpassen |
+| Shift+F | An Fenster anpassen |
+| - / = | Herauszoomen / hineinzoomen |
+| V | Lesemodus (an Breite anpassen, zum Lesen scrollen, am Ende weiter zum nächsten Bild) |
+| L | Lupe: ein Vergrößerungsglas, das dem Cursor folgt (auch über den Thumbnails) |
 | H | RGB-Histogramm-Overlay umschalten |
 | F8 / Ctrl+F8 | OSD-Overlay / Debug-HUD |
-| Shift+P | Pixel View umschalten (≥ 400 % Zoom zeigt Grid + RGB) |
+| Shift+P | Pixel View umschalten (≥ 400 % Zoom zeigt RGB; das Grid, sobald ≤ 40.000 Pixel auf dem Bildschirm sind) |
 | Shift+M | Color-Modes zyklieren (Normal / Grayscale / Invert / Sepia) |
 | B | Bookmark umschalten |
 | Ctrl+C / Ctrl+V | Bild in / aus Zwischenablage kopieren / einfügen |
@@ -763,12 +820,18 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 | P / S / C / Z / H | Pen / Clone / Zuschneiden / Zoom / Hand |
 | Q | Quick Mask Mode umschalten |
 | Tab | Alle Docks umschalten |
-| Ctrl+Tab | Paint-Tabs zyklieren |
+| Ctrl+Tab / Ctrl+Shift+Tab | Nächster / vorheriger Paint-Tab |
 | , / . | Brush-Arten zyklieren |
 | 0-9 | Brush-Opazität in 10-%-Schritten |
 | Alt+[ / Alt+] | Aktiven Layer ab- / aufwärts schalten |
 | Ctrl+[ / Ctrl+] | Aktiven Layer im Stapel nach unten / oben verschieben |
 | Ctrl+D | Auswahl aufheben |
+| [ / ] | Pinselgröße um 1 px verkleinern / vergrößern |
+| Shift+[ / Shift+] | Pinselgröße um 5 px verkleinern / vergrößern |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | Layer hinzufügen / Layer duplizieren / Nach unten zusammenfügen |
+| Ctrl+0 / Ctrl+1 | An Fenster anpassen / Originalgröße (100 %) |
+| X | Vorder- / Hintergrundfarbe tauschen |
+| D | Farben auf Schwarz / Weiß zurücksetzen |
 
 ---
 
@@ -777,7 +840,7 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 ### File
 
 - New Window
-- Open Image / Open Folder
+- Open File / Open Folder
 - Recent (Ordner + Bilder)
 - Bookmarks / Tags & Albums
 - Commit Pending Deletions
@@ -791,14 +854,14 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/march_7th.petsc
 
 ### Tools (Extra-Tools — in 8 gruppierte Untermenüs organisiert)
 
-- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar / Duplicate · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag
-- **Views** — Timeline · Calendar · Map
-- **Workflow** — Culling · Staging Tray · Virtual Copies · Dual-Pane File Manager · Macros
-- **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout
-- **Develop (Non-Destructive)** — Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Polar · Kaleidoscope · Frosted Glass · Soft Proof
-- **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction
-- **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking
+- **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename · Deflicker (Time-lapse) · Document Binarize · Otsu Threshold · Edit Animation · Optimize to Target Size · Meme Caption · Steganography
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time · Metadata Template · Thumbnail Cache
+- **Views** — Timeline View (nach Tag / Monat / Jahr) · Calendar View · Map View · Scopes & Inspector · Tiny Planet (360°) · Image Statistics · Quality Report · Test Chart · Color blindness preview (Protanopie / Deuteranopie / Tritanopie / Achromatopsie)
+- **Workflow** — Culling · Staging Tray · Reference Panel · Virtual Copies · Dual-Pane File Manager · Macros · Watched Folder
+- **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout · Collage · ID Photo Sheet
+- **Develop (Non-Destructive)** — Before / After Compare · Develop Presets · Tone Curve · .cube LUT · Split Toning · Local Adjustment Masks · Layers · Levels · Channel Mixer · Gradient Map · Auto Color Balance · Clarity / Dehaze · HSL / Color Mixer · CLAHE · Flatten Background · Frame & Caption · Ordered Dither · Color Map · Distort · Polar Coordinates · Kaleidoscope · Frosted Glass · Pixel Sort · Film Grain · Lens Flare · Threshold / Posterize · Solarize · Diffuse Glow · Graduated Density · Velvia · Emboss · Defringe · Film Negative · Filmic Tone Map · Tone / Detail Equalizer · Soft Proof
+- **Retouch & Transform** — AI Image Upscale · Noise Reduction / Sharpening · Healing Brush · Clone Stamp · Frequency Separation · Smart Crop · Portrait Auto-Retouch · Face Detection · Sky / Background · Crop / Straighten · Auto-Straighten · Lens Correction · Scale Bar
+- **Multi-Image** — HDR Merge · Panorama Stitch · Focus Stacking · Image Stack · Anaglyph 3D
 
 ### View / Sort / Filter / Language / Plugins / Instructions
 
@@ -826,7 +889,7 @@ Imervue unterstützt Third-Party-Plugins. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | Hook | Trigger |
 |------|---------|
 | `on_plugin_loaded()` | Nachdem das Plugin instanziiert wurde |
-| `on_plugin_unloaded()` | Beim App-Shutdown |
+| `on_plugin_unloaded()` | Wenn sein Fenster geschlossen wird, und vor Reload Plugins |
 | `on_build_menu_bar(plugin_menu)` | Nachdem das gemeinsame Plugins-Menü gebaut wurde |
 | `on_build_main_tabs(tabs)` | Nachdem die fünf eingebauten Tabs hinzugefügt wurden |
 | `on_build_context_menu(menu, viewer)` | Beim Öffnen des Rechtsklickmenüs |
@@ -835,12 +898,18 @@ Imervue unterstützt Third-Party-Plugins. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_image_switched(path, viewer)` | Beim Navigieren zwischen Bildern |
 | `on_image_deleted(paths, viewer)` | Nachdem Bilder soft gelöscht wurden |
 | `on_key_press(key, modifiers, viewer)` | Bei Tastendruck (True zurückgeben, um zu konsumieren) |
+| `on_pet_created(pet)` | Wenn das Desktop-Pet-Fenster erstellt wird oder beim Laden des Plugins bereits existiert |
 | `on_app_closing(main_window)` | Bevor die Anwendung schließt |
 | `get_translations()` | Stellt i18n-Strings bereit |
+| `register_languages()` | Klassenmethode: neue Sprachen registrieren (vor jedem Laden und beim Start) |
+
+Neben Hooks kann ein Plugin dem Batch-Export einen weiteren Renderer für Develop-Rezepte geben: Registrieren Sie in `on_plugin_loaded` einen `BackendProvider` mit `Imervue.image.develop_backends.register`. Das Plugin GPU Develop ist das Beispiel; Details stehen in [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md).
+
+Ein Dialog, der bei **OK** eine Bildtransformation ausführt, kann die Schaltflächenzeile, die Installation optionaler Pakete, den Worker und den Toast mit dem Ergebnis von `Imervue.plugin.tool_dialog.ToolDialogMixin` übernehmen. Ein Plugin, das Code des Hauptprogramms importiert, der erst nach älteren Versionen hinzugekommen ist, nennt die benötigte Plugin-API-Version in einer `plugin.json` neben seiner `__init__.py` (`{"min_api_version": 2}`); ein zu altes Imervue überspringt es und schreibt den Grund ins Protokoll, statt in seinen Imports zu scheitern.
 
 ### Plugin-Downloader
 
-**Plugins > Download Plugins** öffnet den Online-Downloader. Source-Repo: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins).
+**Plugins > Download Plugins** öffnet den Online-Downloader. Source-Repo: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins). Ein Plugin, das ein neueres Imervue braucht, wird nicht installiert: Die Statuszeile nennt die benötigte Plugin-API-Version, und eine bereits installierte Kopie bleibt unverändert. Aktualisieren Sie Imervue und laden Sie das Plugin dann erneut herunter.
 
 ---
 
@@ -854,7 +923,7 @@ python -m Imervue.mcp_server
 
 ### Tools
 
-Ausgewählte Tools (56 insgesamt — vollständige Liste in der Doku). Jedes Tool
+Ausgewählte Tools (58 insgesamt — vollständige Liste in der Doku). Jedes Tool
 bewirbt ein JSON-`outputSchema` sowie Read-only- / Destructive-`annotations`,
 gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools streamen
 `notifications/progress`.
@@ -868,10 +937,10 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `convert_format` | Zwischen PNG / JPEG / WebP / TIFF / BMP / AVIF konvertieren (+ optional HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | Ein Text-Wasserzeichen oder einen Passepartout- / Polaroid-Rahmen + Caption einbrennen |
 | `build_collage` | Bilder zu einer Grid-Montage komponieren (mit Fortschritt) |
-| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, seitenverhältniserhaltendes Resize, verlustfreies Rotate / Flip. Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild. |
+| `crop_image` / `resize_image` / `rotate_image` | Pixel-Crop, Resize (bei einer Kante bleibt das Seitenverhältnis erhalten, bei beiden entsteht genau diese Größe), verlustfreies Rotate / Flip. Größen und Koordinaten beziehen sich auf das nach EXIF aufgerichtete Bild. |
 | `collection_stats` | Ordner-Zusammenfassung von Rating / Favorit / Color-Label / Cull |
 | `search_images` | Einen Ordner mit der Smart-Album-Query-DSL filtern (Pfad / EXIF / Größe / Maße) |
-| `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / Anteil) |
+| `extract_gps` / `dominant_colors` | EXIF-GPS-Koordinaten lesen (verkettet in `reverse_geocode`); Median-Cut-Farbpalette (rgb / hex / pixel_count) |
 | `error_level_analysis` | JPEG-Rekompressions-Manipulationskarte als PNG-Data-URI |
 | `solarize_image` / `glow_image` | Eine Solarisations-Tonumkehr oder einen Diffuse-Glow-Bloom anwenden und speichern |
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia-Sättigungsboost, Relief aus gerichtetem Licht, Entsättigung von Kanten-Farbsäumen |
@@ -888,12 +957,14 @@ gibt sein Ergebnis als `structuredContent` zurück, und langlaufende Tools strea
 | `lens_correction_image` | Verzeichnung (k1), Vignette und rot/blaue chromatische Aberration korrigieren |
 | `reverse_geocode` / `extract_video_frame` | Offline-GPS → Stadt, ein Videoframe zu einem Standbild dekodieren |
 | `puppet_from_png` / `puppet_inspect` | Ein `.puppet`-Rig aus einem PNG bauen; eines öffnen und sein Inventar zurückgeben |
+| `puppet_validate` / `puppet_schema` | Ein `.puppet` gegen das v1-Format prüfen (Schemas, Loader, Rig-Prüfungen); eines seiner JSON Schemas zurückgeben |
 
 ### Prompts
 
 Vier wiederverwendbare Prompts: `caption_image`, `suggest_edits`, `analyze_composition`
 (saliency-getriebene Kompositionskritik) und `flag_issues` (Schärfe- + Qualitäts- +
-Clipping-Triage). Prompt-Argumente sind via `completion/complete` vervollständigbar.
+Clipping-Triage). `completion/complete` schlägt Werte für das Argument `style` von `suggest_edits`
+und `focus` von `analyze_composition` vor.
 
 ### Verdrahtung
 
@@ -927,7 +998,7 @@ Vollständige Protokoll-Oberfläche im MCP-Abschnitt von [docs/en/index.rst](../
 
 Über das **Language**-Menü umschalten. Neustart erforderlich.
 
-Plugins können über `language_wrapper.register_language()` vollständig neue Sprachen registrieren oder über `get_translations()` Übersetzungen zu den eingebauten beisteuern (bestehende Schlüssel werden nie überschrieben, ein Plugin kann also keine mitgelieferte Zeichenkette kaputt machen). **Español** wird genau so bereitgestellt: Installiere das Plugin `spanish_translation` über den Downloader, und es erscheint im Menü Language neben den fünf eingebauten Sprachen. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
+Plugins können über `language_wrapper.register_language()` vollständig neue Sprachen registrieren oder über `get_translations()` Übersetzungen zu den eingebauten beisteuern (bestehende Schlüssel werden nie überschrieben, ein Plugin kann also keine mitgelieferte Zeichenkette kaputt machen). Eine Plugin-Zeichenkette, die leer ist oder deren `{placeholders}` von denen der englischen abweichen, wird verworfen und protokolliert, sodass statt einer leeren Stelle oder eines Fehlers der eingebaute Text erscheint. **Español** wird genau so bereitgestellt: Installiere das Plugin `spanish_translation` über den Downloader, und es erscheint im Menü Language neben den fünf eingebauten Sprachen. Siehe [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n).
 
 ---
 
@@ -936,6 +1007,8 @@ Plugins können über `language_wrapper.register_language()` vollständig neue S
 Gespeichert in `user_setting.json` neben der Anwendung — dem Projektstamm bei einem Quellcode-Checkout, dem Ordner mit der `.exe` bei einem eingefrorenen Build (PyInstaller **oder** Nuitka).
 
 Die Datei ist ein **Multi-Profil-Container**: Jedes Profil hält ein eigenes Einstellungs-Dictionary, sodass eine Installation getrennte Setups tragen kann (z. B. *Work* und *Personal*). Profile wechseln, anlegen, umbenennen und löschen unter **File > Profiles…**. Eine v1-Datei mit einem einzelnen Profil aus einer älteren Version wird beim ersten Lesen automatisch ins Profil `default` migriert. Schreibvorgänge werden einige Sekunden nach der letzten Änderung gebündelt und landen atomar (`.tmp`-Geschwisterdatei + `os.replace`), sodass ein unterbrochenes Speichern die Datei nie abschneidet. Lässt sich die Datei beim Start nicht lesen (defektes JSON oder von einem anderen Programm gesperrt), startet Imervue mit Standardeinstellungen und legt vor dem ersten Speichern eine Kopie als `user_setting.json.unreadable-<Datum>-<Uhrzeit>` daneben ab; ohne diese Kopie speichert es nie darüber. Eine Warnung beim Start nennt die Datei und wie sich die früheren Einstellungen zurückholen lassen.
+
+Das Protokoll jeder Sitzung, `imervue.log`, wird in denselben Ordner geschrieben (in `%LOCALAPPDATA%\Imervue` bzw. außerhalb von Windows in `~/.cache/imervue`, wenn dieser Ordner schreibgeschützt ist). Das Protokoll der vorherigen Sitzung bleibt daneben als `imervue.previous.log` erhalten, sodass nach einem Absturz das Protokoll, das ihn erklärt, noch vorhanden ist, sobald Imervue wieder läuft — hängen Sie beim Melden eines Problems beide an.
 
 Wichtige Einträge im aktiven Profil:
 
@@ -954,6 +1027,7 @@ Wichtige Einträge im aktiven Profil:
 | `stack_raw_jpeg_pairs` | bool | RAW+JPEG-Stack-Toggle |
 | `external_editors` | list | Konfigurierte Editoren |
 | `macros` / `macro_last_name` | list / string | Gespeicherte Macros + Alt+M-Target |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | Optionale Tabs (standardmäßig an; gilt ab dem nächsten Start) |
 
 ---
 

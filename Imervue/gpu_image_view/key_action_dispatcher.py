@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
-
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.gpu_image_view.actions.delete import (
     delete_current_image,
@@ -76,7 +74,7 @@ class KeyActionDispatcher:
     def dispatch(self, action: str, modifiers) -> None:
         if self._dispatch_simple(action):
             return
-        if self._dispatch_toggle(action, modifiers):
+        if self._dispatch_toggle(action):
             return
         if self._dispatch_culling(action):
             return
@@ -149,13 +147,14 @@ class KeyActionDispatcher:
     # ------------------------------------------------------------------
     # View-mode toggles
     # ------------------------------------------------------------------
-    def _dispatch_toggle(self, action: str, modifiers) -> bool:
+    def _dispatch_toggle(self, action: str) -> bool:
         """View-mode toggles: theater, pixel_view, split, dual, multi, colour."""
         toggle_handlers = {
             "theater": self._toggle_theater_mode,
             "pixel_view": self._toggle_pixel_view,
             "split_view": self._toggle_split_view,
-            "dual_page": lambda: self._toggle_dual_page(modifiers),
+            "dual_page": lambda: self._open_dual_page("manga"),
+            "dual_page_rtl": lambda: self._open_dual_page("manga_rtl"),
             "multi_monitor": self._toggle_multi_monitor,
             "color_mode_cycle": self._cycle_color_mode,
             "loupe": self._toggle_loupe,
@@ -187,14 +186,16 @@ class KeyActionDispatcher:
         if hasattr(mw, "activate_dual_view"):
             mw.activate_dual_view("split")
 
-    def _toggle_dual_page(self, modifiers) -> None:
+    def _open_dual_page(self, mode: str) -> None:
+        """Dual-page reading, left to right (``"manga"``) or right to left (``"manga_rtl"``).
+
+        Right to left has its own action: it used to hang off Ctrl held with
+        the Dual Page key, but the lookup matches the modifiers exactly, so
+        Ctrl+Shift+D found no action and the mode could not be reached.
+        """
         mw = self.view.main_window
-        if not hasattr(mw, "activate_dual_view"):
-            return
-        mode = ("manga_rtl"
-                if modifiers & Qt.KeyboardModifier.ControlModifier
-                else "manga")
-        mw.activate_dual_view(mode)
+        if hasattr(mw, "activate_dual_view"):
+            mw.activate_dual_view(mode)
 
     def _toggle_multi_monitor(self) -> None:
         mw = self.view.main_window
@@ -273,8 +274,11 @@ class KeyActionDispatcher:
         view = self.view
         if not view.deep_zoom:
             return
-        from Imervue.gpu_image_view.actions.undo_commands import RotateCommand
-        view.undo_manager.push(RotateCommand(view, clockwise=clockwise))
+        # rotate_current_image pushes its own recipe command. Wrapped in another
+        # command it ran inside that command's redo / undo, a push within a push:
+        # two entries per key press, and undo, redo, undo corrupted the stack.
+        from Imervue.gpu_image_view.actions.keyboard_actions import rotate_current_image
+        rotate_current_image(view, clockwise=clockwise)
 
     def _reset_view(self) -> None:
         """Home key — back to the "whole image visible" baseline.
@@ -335,6 +339,8 @@ class KeyActionDispatcher:
     def _dispatch_anim(self, action: str) -> None:
         view = self.view
         anim = view._animation
+        if anim.paged and action not in ("anim_prev", "anim_next"):
+            return   # a document's pages step; they don't play at a speed
         if action == "anim_toggle":
             anim.toggle()
         elif action == "anim_prev":

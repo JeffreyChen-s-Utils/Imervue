@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -242,3 +243,160 @@ class TestCacheIsPickleFree:
         blob = np.frombuffer(b'{"not": "a list"}', dtype=np.uint8)
         np.savez(bad, paths_json=blob, matrix=np.zeros((1, 8), np.float32))
         assert ClipSearchIndex(FakeEmbedder()).load(bad) is False
+
+
+
+class TestFreshness:
+    """Embeddings are kept between runs and re-made only for files that changed."""
+
+    @staticmethod
+    def _photo(tmp_path, name="beach::a.png", data=b"x" * 10):
+        path = tmp_path / name.replace("::", "__")
+        path.write_bytes(data)
+        return str(path)
+
+    def test_an_embedded_file_is_current_until_it_changes(self, tmp_path):
+        import os
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=tmp_path / "c.npz")
+        path = self._photo(tmp_path)
+        assert not index.is_current(path)
+        index.add(path)
+        assert index.is_current(path)
+        later = os.stat(path).st_mtime + 5
+        Path(path).write_bytes(b"y" * 20)
+        os.utime(path, (later, later))
+        assert not index.is_current(path)
+
+    def test_freshness_survives_a_save_and_load(self, tmp_path):
+        cache = tmp_path / "c.npz"
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=cache)
+        path = self._photo(tmp_path)
+        index.add(path)
+        index.save()
+        reloaded = ClipSearchIndex(FakeEmbedder(), cache_path=cache)
+        assert reloaded.load()
+        assert reloaded.is_current(path)
+
+    def test_a_cache_without_freshness_is_embedded_again(self, tmp_path):
+        """A cache written before signatures were kept loads, but nothing counts as current."""
+        import json
+        cache = tmp_path / "old.npz"
+        path = self._photo(tmp_path)
+        paths_json = np.frombuffer(json.dumps([path]).encode("utf-8"), dtype=np.uint8)
+        np.savez(cache, paths_json=paths_json, matrix=np.ones((1, 8), np.float32),
+                 dim=np.array([8], dtype=np.int32))
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=cache)
+        assert index.load() and index.contains(path)
+        assert not index.is_current(path)
+
+    def test_removing_forgets_the_freshness(self, tmp_path):
+        index = ClipSearchIndex(FakeEmbedder(), cache_path=tmp_path / "c.npz")
+        path = self._photo(tmp_path)
+        index.add(path)
+        index.remove(path)
+        assert not index.is_current(path)
+
+    def test_a_query_can_be_kept_to_some_paths(self, fake_index):
+        for path in ("beach::a.png", "beach::b.png", "city::c.png"):
+            fake_index.add(path)
+        hits = fake_index.query_text("beach", within={"beach::b.png", "city::c.png"})
+        assert [hit.path for hit in hits] == ["beach::b.png", "city::c.png"]
+        assert fake_index.query_text("beach", within=set()) == []
+
+
+class _ModelEmbedder(FakeEmbedder):
+    """A fake with the optional hooks the ONNX embedder has."""
+
+    def __init__(self, model_id: str, *, downloaded: bool = True):
+        super().__init__()
+        self.model_id = model_id
+        self._downloaded = downloaded
+        self.prepared = 0
+
+    def is_downloaded(self) -> bool:
+        return self._downloaded
+
+    def prepare(self) -> None:
+        self.prepared += 1
+
+
+class TestModelIdentity:
+    def test_a_cache_from_the_same_model_loads(self, tmp_path):
+        cache = tmp_path / "c.npz"
+        first = ClipSearchIndex(_ModelEmbedder("clip-a"), cache_path=cache)
+        first.add("beach::a.png")
+        first.save()
+        again = ClipSearchIndex(_ModelEmbedder("clip-a"), cache_path=cache)
+        assert again.load() and again.contains("beach::a.png")
+
+    def test_a_cache_from_another_model_is_rebuilt(self, tmp_path):
+        """Vectors from another model live in another space: ranking them would be noise."""
+        cache = tmp_path / "c.npz"
+        first = ClipSearchIndex(_ModelEmbedder("clip-a"), cache_path=cache)
+        first.add("beach::a.png")
+        first.save()
+        other = ClipSearchIndex(_ModelEmbedder("clip-b"), cache_path=cache)
+        assert other.load() is False
+        assert other.size == 0
+
+    def test_a_cache_written_before_model_ids_is_rebuilt_for_the_onnx_model(self, tmp_path):
+        import json
+        cache = tmp_path / "old.npz"
+        paths_json = np.frombuffer(json.dumps(["a.png"]).encode("utf-8"), dtype=np.uint8)
+        np.savez(cache, paths_json=paths_json, matrix=np.ones((1, 8), np.float32),
+                 dim=np.array([8], dtype=np.int32))
+        assert ClipSearchIndex(_ModelEmbedder("clip-a"), cache_path=cache).load() is False
+        assert ClipSearchIndex(FakeEmbedder(), cache_path=cache).load() is True
+
+    def test_needs_download_asks_the_embedder(self):
+        assert ClipSearchIndex(_ModelEmbedder("m", downloaded=False)).needs_download() is True
+        assert ClipSearchIndex(_ModelEmbedder("m")).needs_download() is False
+        assert ClipSearchIndex(FakeEmbedder()).needs_download() is False
+        assert ClipSearchIndex(None).needs_download() is False
+
+    def test_prepare_reaches_the_embedder_when_it_has_the_hook(self):
+        embedder = _ModelEmbedder("m")
+        ClipSearchIndex(embedder).prepare()
+        assert embedder.prepared == 1
+        ClipSearchIndex(FakeEmbedder()).prepare()      # no hook: nothing to do
+        ClipSearchIndex(None).prepare()
+
+
+class TestDefaultIndexBackend:
+    def test_is_available_follows_the_onnx_backend(self, monkeypatch):
+        from Imervue.library import clip_onnx
+        monkeypatch.setattr(clip_onnx, "backend_importable", lambda: False)
+        assert is_available() is False
+        monkeypatch.setattr(clip_onnx, "backend_importable", lambda: True)
+        assert is_available() is True
+
+    def test_the_default_index_uses_the_shared_onnx_embedder(self, tmp_path, monkeypatch):
+        from Imervue.library import clip_onnx
+        from Imervue.library import clip_search as cs
+        shared = _ModelEmbedder("clip-a")
+        monkeypatch.setattr(cs, "_default_cache_path", lambda: tmp_path / "s.npz")
+        monkeypatch.setattr(cs, "is_available", lambda: True)
+        monkeypatch.setattr(clip_onnx, "default_embedder", lambda: shared)
+        cs.reset_default_index()
+        try:
+            assert cs.get_default_index()._embedder is shared  # noqa: SLF001
+        finally:
+            cs.reset_default_index()
+
+    def test_an_index_made_before_the_install_is_replaced_after_it(self, tmp_path, monkeypatch):
+        """onnxruntime installed while Imervue runs: the next search must not stay embedder-less."""
+        from Imervue.library import clip_onnx
+        from Imervue.library import clip_search as cs
+        monkeypatch.setattr(cs, "_default_cache_path", lambda: tmp_path / "s.npz")
+        monkeypatch.setattr(clip_onnx, "default_embedder", lambda: _ModelEmbedder("clip-a"))
+        cs.reset_default_index()
+        try:
+            monkeypatch.setattr(cs, "is_available", lambda: False)
+            before = cs.get_default_index()
+            assert not before.is_ready()
+            monkeypatch.setattr(cs, "is_available", lambda: True)
+            after = cs.get_default_index()
+            assert after is not before and after.is_ready()
+            assert cs.get_default_index() is after
+        finally:
+            cs.reset_default_index()

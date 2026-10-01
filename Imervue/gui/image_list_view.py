@@ -26,13 +26,15 @@ from PySide6.QtWidgets import (
     QTableView, QHeaderView, QAbstractItemView, QStyledItemDelegate,
 )
 
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 from Imervue.gui.file_filters import viewer_filter
 from Imervue.image.dimensions import image_dimensions
 from Imervue.image.formats import ensure_pillow_opener
 from Imervue.image.orientation import exif_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.file_manager import reveal_or_warn
+from Imervue.system.natural_sort import natural_key
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -40,6 +42,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.gui.image_list_view")
 
 _THUMB_SIZE = 48
+# Keys that mark the selected rows: ratings, favourite, cull flags, colour labels (F1-F5).
+LIST_MARK_ACTIONS = frozenset({
+    "rate_1", "rate_2", "rate_3", "rate_4", "rate_5", "favorite",
+    "cull_pick", "cull_reject", "cull_unflag",
+    "label_red", "label_yellow", "label_green", "label_blue", "label_purple",
+})
 # A row whose thumbnail fails to load (stat/decode error — usually the file is
 # mid-move/delete or briefly locked) is retried up to this many times before it
 # falls back to a placeholder, so a transient read race can't permanently blank
@@ -86,7 +94,7 @@ class _ThumbWorker(QRunnable):
                 w, h = src.size
                 code = exif_orientation(src)
                 src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
-                im = as_shown(src, code).convert("RGBA")
+                im = as_shown_8bit(src, code)
             # The upright size, and the developed size for RAW (Pillow sees its preview).
             w, h = image_dimensions(self.path) or (w, h)
             data = im.tobytes("raw", "RGBA")
@@ -134,6 +142,8 @@ class ImageListModel(QAbstractTableModel):
         self._in_flight: set[str] = set()
         # path -> transient fetch-failure retry count (see _MAX_THUMB_RETRIES)
         self._retry: dict[str, int] = {}
+        # In-flight reads that began before the file changed on disk (see refetch)
+        self._stale: set[str] = set()
 
     # --- QAbstractItemModel API ---
     def rowCount(self, parent: QModelIndex | None = None) -> int:
@@ -257,8 +267,12 @@ class ImageListModel(QAbstractTableModel):
         """Sort rows in-place by the chosen column.
 
         Uses already-fetched metadata where available; unfetched rows compare
-        by path so they stay stable until their data arrives.
+        by path so they stay stable until their data arrives. Names sort
+        naturally (``img2`` before ``img10``), like the wall and the folder tree.
+        Column -1 (no sort chosen) keeps the rows as they are.
         """
+        if column < 0:
+            return
         def _color_key(r):
             from Imervue.user_settings.color_labels import get_color_label, COLORS
             c = get_color_label(r.path)
@@ -270,12 +284,12 @@ class ImageListModel(QAbstractTableModel):
                 return (1, c)
 
         key_funcs = {
-            self.COL_NAME: lambda r: Path(r.path).name.lower(),
+            self.COL_NAME: lambda r: natural_key(Path(r.path).name),
             self.COL_RES: lambda r: ((r.width or 0) * (r.height or 0)),
             self.COL_SIZE: lambda r: (r.size_kb or 0),
             self.COL_TYPE: lambda r: Path(r.path).suffix.lower(),
             self.COL_MTIME: lambda r: (r.mtime or 0),
-            self.COL_THUMB: lambda r: Path(r.path).name.lower(),
+            self.COL_THUMB: lambda r: natural_key(Path(r.path).name),
             self.COL_LABEL: _color_key,
             self.COL_RATING: lambda r: _rating_for(r.path),
         }
@@ -309,7 +323,27 @@ class ImageListModel(QAbstractTableModel):
         self._rows = [self._row_for_path(p) for p in paths]
         self._in_flight.clear()
         self._retry.clear()
+        self._stale.clear()
         self.endResetModel()
+
+    def refetch(self, paths) -> None:
+        """Read *paths* again: another program rewrote, removed or restored them.
+
+        Each row keeps its old thumbnail until the new read lands, and is read
+        again only once it is on screen. A read already under way may have
+        seen the old file, so its result is dropped and the row read afresh.
+        """
+        wanted = set(paths)
+        for i, row in enumerate(self._rows):
+            if row.path not in wanted:
+                continue
+            self._retry.pop(row.path, None)
+            if row.path in self._in_flight:
+                self._stale.add(row.path)
+                continue
+            row.fetched = False
+            self.dataChanged.emit(self.index(i, self.COL_THUMB), self.index(i, self.COL_THUMB),
+                                  [Qt.ItemDataRole.DecorationRole])
 
     def path_at(self, row: int) -> str | None:
         if 0 <= row < len(self._rows):
@@ -384,6 +418,11 @@ class ImageListModel(QAbstractTableModel):
         if found is None:
             return
         i, row = found
+        if path in self._stale:
+            # Read before another program saved over the file: read it again.
+            self._stale.discard(path)
+            self._ensure_fetched(row)
+            return
         if not ok and self._bump_retry(path):
             # Transient stat/decode failure (file mid-move/locked) — retry
             # instead of caching a permanent placeholder.
@@ -416,6 +455,16 @@ def _format_rating(rating: int) -> str:
         return ""
     rating = min(max(int(rating), 0), _RATING_MAX)
     return _STAR_FILLED * rating + _STAR_EMPTY * (_RATING_MAX - rating)
+
+
+def star_at(x: float, center_x: float, strip_width: float) -> int:
+    """The star (1-5) under *x* in a strip of five stars *strip_width* wide centred on *center_x*.
+
+    A click left or right of the strip counts as the nearest end star.
+    """
+    step = max(strip_width, 1.0) / _RATING_MAX
+    left = center_x - step * _RATING_MAX / 2
+    return min(max(int((x - left) // step) + 1, 1), _RATING_MAX)
 
 
 def _fmt_size(kb: float) -> str:
@@ -454,6 +503,8 @@ class ImageListView(QTableView):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.setSortingEnabled(True)
+        # No column sorted until the user clicks one: the rows keep the viewer's order.
+        self.horizontalHeader().setSortIndicator(-1, Qt.SortOrder.AscendingOrder)
         self.setShowGrid(False)
         self.setWordWrap(False)
         self.verticalHeader().setVisible(False)
@@ -475,7 +526,19 @@ class ImageListView(QTableView):
 
     # --- Public API ---
     def set_paths(self, paths: list[str], metadata_index=None) -> None:
+        """Show *paths*, sorted again by the column the user chose, if any.
+
+        The list is rebuilt after a delete, a folder refresh or a new folder;
+        the header kept its sort arrow while the rows came back in the
+        viewer's order.
+        """
         self._model.set_paths(paths, metadata_index=metadata_index)
+        header = self.horizontalHeader()
+        self._model.sort(header.sortIndicatorSection(), header.sortIndicatorOrder())
+
+    def refetch(self, paths) -> None:
+        """Read *paths* again: they changed on disk (see :meth:`ImageListModel.refetch`)."""
+        self._model.refetch(paths)
 
     def selected_paths(self) -> list[str]:
         return [
@@ -491,6 +554,8 @@ class ImageListView(QTableView):
             self.image_activated.emit(path)
 
     def keyPressEvent(self, event):
+        if self._handle_edit_key(event):
+            return
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             idx = self.currentIndex()
             if idx.isValid():
@@ -512,6 +577,63 @@ class ImageListView(QTableView):
                 event.accept()
                 return
         super().keyPressEvent(event)
+
+    @staticmethod
+    def _list_action(event, action: str | None) -> str | None:
+        """The Shortcut Settings action, or ``label_<colour>`` for the fixed F1-F5 keys."""
+        from Imervue.gpu_image_view.key_input_handler import COLOR_LABEL_KEYS
+        no_ctrl_alt = not (event.modifiers() & (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier))
+        if event.key() in COLOR_LABEL_KEYS and no_ctrl_alt:
+            return f"label_{COLOR_LABEL_KEYS[event.key()]}"
+        return action
+
+    def mousePressEvent(self, event):  # noqa: N802 - Qt override
+        """A left click in the Rating column rates that row by the star it lands on.
+
+        The same star again clears it, as the rating keys do. The click still
+        selects the row.
+        """
+        index = self.indexAt(event.position().toPoint())
+        if (event.button() == Qt.MouseButton.LeftButton and index.isValid()
+                and index.column() == ImageListModel.COL_RATING and self._main_window is not None):
+            rect = self.visualRect(index)
+            strip = self.fontMetrics().horizontalAdvance(_STAR_FILLED * _RATING_MAX)
+            star = star_at(event.position().x(), rect.center().x(), strip)
+            path = self._model.path_at(index.row())
+            if path:
+                self._main_window.mark_list_selection(f"rate_{star}", [path])
+        super().mousePressEvent(event)
+
+    def _handle_edit_key(self, event) -> bool:
+        """Delete, Undo, ratings, favourite, cull flags and colours act on the list as on the wall.
+
+        Delete removes the selected rows (undoable, sent to the Recycle Bin
+        later) and puts the cursor on the row that takes their place.
+        """
+        from Imervue.gui.shortcut_settings_dialog import shortcut_manager
+        window = self._main_window
+        if window is None:
+            return False
+        if event.key() == Qt.Key.Key_Escape and not event.modifiers():
+            window.escape_from_list()
+            event.accept()
+            return True
+        bound = shortcut_manager.get_action(event.key(), event.modifiers())
+        action = self._list_action(event, bound)
+        if action in LIST_MARK_ACTIONS and self.selected_paths():
+            window.mark_list_selection(action, self.selected_paths())
+        elif action == "undo":
+            window.undo_from_list()
+        elif action == "delete" and self.selected_paths():
+            row = min(index.row() for index in self.selectionModel().selectedRows())
+            window.delete_list_selection(self.selected_paths())
+            if self._model.rowCount():
+                self.selectRow(min(row, self._model.rowCount() - 1))
+        else:
+            return False
+        event.accept()
+        return True
 
     def contextMenuEvent(self, event):  # noqa: N802 - Qt override
         """Right-click → quick actions: Open / Reveal / Copy path.
@@ -550,16 +672,10 @@ class ImageListView(QTableView):
         elif chosen is reveal_action:
             self._reveal_path(paths[0])
 
-    def _reveal_path(self, path: str) -> None:
-        """Open the OS file manager at ``path``'s containing folder.
-
-        Falls back gracefully when the platform has no opener so a
-        kiosk-style deployment doesn't crash the table view.
-        """
-        from PySide6.QtCore import QUrl
-        from PySide6.QtGui import QDesktopServices
-        folder = str(Path(path).parent)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+    @staticmethod
+    def _reveal_path(path: str) -> None:
+        """Open the OS file manager with ``path`` selected, as Show in Explorer does."""
+        reveal_or_warn(path)
 
     def _relocate_missing(self, old_path: str) -> None:
         from PySide6.QtWidgets import QFileDialog

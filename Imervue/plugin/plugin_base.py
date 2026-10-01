@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QMenu, QTabWidget
     from Imervue.Imervue_main_window import ImervueMainWindow
+    from Imervue.desktop_pet.pet_window import PetWindow
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
@@ -14,7 +16,7 @@ class ImervuePlugin:
     Plugin developers should subclass this and override the hooks they need.
     Each hook method is called at a specific point in the application lifecycle.
 
-    Required class attributes:
+    Class attributes (optional; unset ones keep the defaults below):
         plugin_name (str): Display name of the plugin.
         plugin_version (str): Version string (e.g. "1.0.0").
         plugin_description (str): Short description of what the plugin does.
@@ -43,11 +45,26 @@ class ImervuePlugin:
         pass
 
     def on_plugin_unloaded(self) -> None:
-        """Called when the plugin is being unloaded or the application is closing.
+        """Called when the plugin is being unloaded: its window closes, or Reload Plugins runs.
+
+        Every main window has its own instance of each plugin; closing a
+        window unloads only that window's instances.
 
         Use this to clean up resources: close files, disconnect signals, etc.
         """
         pass
+
+    @classmethod
+    def register_languages(cls) -> None:
+        """Register the languages this plugin adds; called on the class, not an instance.
+
+        Call ``language_wrapper.register_language`` here. Imervue calls this
+        before it builds the main window when the saved language is not a
+        built-in one, and again before each (re)load of the plugin, so a
+        language picked in the Language menu applies at the next start. A
+        language registered only in ``on_plugin_loaded`` is listed in the menu
+        but comes too late to apply: the window's text is built by then.
+        """
 
     # ===========================
     # Menu Hooks
@@ -101,11 +118,46 @@ class ImervuePlugin:
         pass
 
     # ===========================
+    # Desktop Pet Hooks
+    # ===========================
+
+    def on_pet_created(self, pet: PetWindow) -> None:
+        """Called when the desktop pet window exists: when the Desktop Pet tab
+        first creates it, and right after this plugin loads (or reloads) if it
+        already does.
+
+        The supported surface of ``pet`` for plugins:
+
+        * ``play_group(group) -> bool`` plays a random motion of a motion
+          group; ``speak(line)`` and ``speak_notification(line)`` show a speech
+          bubble (the second with the notification sound); ``speech_on`` tells
+          whether speech is enabled;
+        * ``setting(key, default)`` / ``persist(**fields)`` read and write the
+          pet's saved settings, which keep keys Imervue does not know;
+        * ``add_integration(key, controller)`` / ``remove_integration(key)`` /
+          ``integration(key)`` hand the pet an
+          :class:`~Imervue.desktop_pet.pet_feature_base.IntegrationController`
+          it stops when it shuts down (remove it in ``on_plugin_unloaded``);
+        * the signals ``hit_triggered(str)`` (a click, with the hit area's id or
+          ``""``), ``moved(int, int)`` and ``visibility_changed(bool)``.
+
+        Example::
+
+            def on_pet_created(self, pet):
+                pet.hit_triggered.connect(lambda area: pet.speak("Hi!"))
+        """
+        pass
+
+    # ===========================
     # Image Hooks
     # ===========================
 
     def on_image_loaded(self, image_path: str, viewer: GPUImageView) -> None:
-        """Called after a single image is loaded in deep zoom mode.
+        """Called once an image is on screen at full size in deep zoom mode.
+
+        Runs however the image was opened (Open File, a grid tile, next /
+        previous, the filmstrip) and again when it is reloaded after an edit;
+        not for the low-resolution preview shown while a large image decodes.
 
         Args:
             image_path: Absolute path to the loaded image.
@@ -137,6 +189,10 @@ class ImervuePlugin:
     def on_image_deleted(self, deleted_paths: list[str], viewer: GPUImageView) -> None:
         """Called after image(s) are soft-deleted (added to undo stack).
 
+        Covers deletes from the viewer and from the folder tree; a file the
+        tree sends straight to the Recycle Bin (not in the image list) does
+        not count.
+
         Args:
             deleted_paths: List of deleted image paths.
             viewer: The GPUImageView instance.
@@ -147,7 +203,9 @@ class ImervuePlugin:
     # Input Hooks
     # ===========================
 
-    def on_key_press(self, key: int, modifiers: int, viewer: GPUImageView) -> bool:
+    def on_key_press(
+        self, key: int, modifiers: Qt.KeyboardModifier, viewer: GPUImageView,
+    ) -> bool:
         """Called when a key is pressed in the viewer.
 
         Return True to consume the event (prevent default handling).
@@ -199,7 +257,7 @@ class ImervuePlugin:
     # ===========================
 
     def on_app_closing(self, main_window: ImervueMainWindow) -> None:
-        """Called when the application is about to close.
+        """Called when the application is about to close (its last main window closes).
 
         Use this for final cleanup or saving state.
         """

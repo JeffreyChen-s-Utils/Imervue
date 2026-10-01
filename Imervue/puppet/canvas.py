@@ -13,6 +13,7 @@ spinning up a context.
 from __future__ import annotations
 
 import contextlib
+import time
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -38,7 +39,7 @@ from OpenGL.GL import (
     GL_PROJECTION,
     GL_VIEWPORT,
 )
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
@@ -118,6 +119,38 @@ def _fit_scale_and_pan(
     return scale, (width - doc_w * scale) / 2.0, (height - doc_h * scale) / 2.0
 
 
+def offscreen_framebuffer_format():
+    """The format of ``render_offscreen_puppet``'s framebuffer: with a depth-stencil attachment.
+
+    Clip masks draw through the stencil buffer; a framebuffer without one
+    ignored them, so every recording, snapshot and stream showed clipped
+    drawables (irises, hair shadows) spilling past their masks.
+    """
+    from PySide6.QtOpenGL import QOpenGLFramebufferObject, QOpenGLFramebufferObjectFormat
+    fmt = QOpenGLFramebufferObjectFormat()
+    fmt.setAttachment(QOpenGLFramebufferObject.Attachment.CombinedDepthStencil)
+    return fmt
+
+# The physics chains' own clock: motions, drivers and the pet's paint tick only
+# move the parameters that feed the chains. The timer fires about 60 times a
+# second while a shown rig has chains; the chains always step by the fixed
+# _PHYSICS_STEP (Verlet integration takes the previous step's length as this
+# one's), as many steps as the elapsed time holds, the rest carried to the next
+# tick. A stalled frame counts as at most 50 ms, and an output change below the
+# threshold is not redrawn, so a settled rig costs a step (under a millisecond
+# for the bundled rigs) and no repaint.
+_PHYSICS_INTERVAL_MS = 16
+_PHYSICS_STEP = 1 / 60
+_PHYSICS_MAX_DT = 0.05
+_PHYSICS_REDRAW_THRESHOLD = 1e-4
+
+
+def _outputs_close(new: dict[str, float], old: dict[str, float]) -> bool:
+    """Whether two physics output maps differ by less than the redraw threshold."""
+    return new.keys() == old.keys() and all(
+        abs(value - old[key]) < _PHYSICS_REDRAW_THRESHOLD for key, value in new.items())
+
+
 class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
     """QOpenGLWidget that renders one ``PuppetDocument`` at a time.
 
@@ -137,6 +170,12 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
     """Emitted with the hit-area id when the user left-clicks inside
     one. Only fires when mesh-edit mode is off — when it's on, the
     left-click is consumed by the vertex drag instead."""
+    cursor_moved = Signal(float, float)
+    """Image-space pointer position as it moves over the canvas (not while
+    panning or dragging a mesh vertex); InputEngine turns it into the
+    Drag-track head look-at."""
+    pose_changed = Signal(str, str)
+    """``(group_id, drawable_id)`` after :meth:`set_pose_active` shows a member."""
 
     def __init__(self, parent=None, *, pet_mode: bool = False):
         # Request a stencil buffer so clip_mask drawing can use it.
@@ -244,6 +283,11 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._selected_deformer: str | None = None
         self._physics = PhysicsEngine()
         self._physics_outputs: dict[str, float] = {}
+        self._physics_timer = QTimer(self)
+        self._physics_timer.setInterval(_PHYSICS_INTERVAL_MS)
+        self._physics_timer.timeout.connect(self._on_physics_tick)
+        self._physics_clock: float | None = None
+        self._physics_lag = 0.0
         # Mesh-edit mode lets the user drag vertices; off by default.
         self._mesh_edit_enabled: bool = False
         self._mesh_edit_target: tuple[str, int] | None = None
@@ -251,8 +295,8 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
     def _init_gl_caches(self) -> None:
         """GL resources created lazily on first paint: checker, pet shadow, VBOs."""
         # The transparency-checker backdrop used to render as a grid of
-        # immediate-mode quads — one per 16-pixel tile. On the March 7th
-        # canvas (3503×7777) that's ~107k glBegin/glEnd cycles per frame
+        # immediate-mode quads — one per 16-pixel tile. On a large imported
+        # Cubism canvas (3503×7777) that's ~107k glBegin/glEnd cycles per frame
         # and the dominant playback bottleneck. Cache a 2×2 RGBA texture
         # once and tile it with GL_REPEAT instead.
         self._checker_texture: int | None = None
@@ -306,6 +350,7 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._active_pose = {}
         self._physics.bind_document(document)
         self._physics_outputs = {}
+        self._sync_physics_timer()
         self._recompute_deformed_vertices()
         self.document_loaded.emit()
         self.parameters_changed.emit()
@@ -428,10 +473,9 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         active_values = apply_expressions(
             self._parameter_values, self._active_expressions,
         )
-        # Physics outputs are layered last so an authored slider /
-        # motion / expression still wins where they explicitly set
-        # the same parameter, but the physics rig drives whichever
-        # parameter the rig nominated.
+        # Physics outputs are layered last, so a chain's output parameter
+        # follows the chain even where a slider, motion or expression also
+        # sets it.
         active_values = {**active_values, **self._physics_outputs}
         if active_values:
             self._deformed_vertices = compose_all_drawables(
@@ -473,18 +517,65 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
             for drawable in self._document.drawables
         }
 
-    def step_physics(self, dt: float) -> None:
-        """Advance the physics chains by ``dt`` seconds and re-fold
-        their outputs into the deformed-vertex cache. Workspace's
-        frame timer calls this once per tick."""
-        if self._document is None:
+    def step_physics(self, dt: float, steps: int = 1) -> None:
+        """Advance the physics chains ``steps`` times by ``dt`` seconds and
+        re-fold their outputs into the deformed-vertex cache once.
+
+        The canvas's own physics clock calls this (see
+        :meth:`_sync_physics_timer`). Outputs that moved less than the
+        redraw threshold leave the vertices and the frame alone.
+        """
+        if self._document is None or steps < 1:
             return
         active_values = apply_expressions(
             self._parameter_values, self._active_expressions,
         )
-        self._physics_outputs = self._physics.step(dt, active_values)
+        for _step in range(steps):
+            outputs = self._physics.step(dt, active_values)
+        if _outputs_close(outputs, self._physics_outputs):
+            return
+        self._physics_outputs = outputs
         self._recompute_deformed_vertices()
         self.update()
+
+    def reset_physics(self) -> None:
+        """Snap every physics chain back to rest and drop its outputs."""
+        self._physics.reset()
+        self._physics_outputs = {}
+        self._recompute_deformed_vertices()
+        self.update()
+
+    def _sync_physics_timer(self) -> None:
+        """Run the physics clock only while a shown rig has physics chains."""
+        wanted = bool(self._physics.chain_ids()) and self.isVisible()
+        if wanted == self._physics_timer.isActive():
+            return
+        if wanted:
+            self._physics_clock = None
+            self._physics_lag = 0.0
+            self._physics_timer.start()
+        else:
+            self._physics_timer.stop()
+
+    def _on_physics_tick(self) -> None:
+        """Step the chains in fixed steps for the real time since the last tick."""
+        now = time.monotonic()
+        last, self._physics_clock = self._physics_clock, now
+        if last is None:
+            return
+        self._physics_lag += min(now - last, _PHYSICS_MAX_DT)
+        steps = int(self._physics_lag // _PHYSICS_STEP)
+        if steps:
+            self._physics_lag = max(0.0, self._physics_lag - steps * _PHYSICS_STEP)
+            self.step_physics(_PHYSICS_STEP, steps)
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().showEvent(event)
+        self._sync_physics_timer()
+
+    def hideEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().hideEvent(event)
+        self._sync_physics_timer()
 
     def physics(self) -> PhysicsEngine:
         return self._physics
@@ -577,6 +668,7 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         self._active_pose[group_id] = drawable_id
         self._recompute_deformed_vertices()
         self.update()
+        self.pose_changed.emit(group_id, drawable_id)
         return True
 
     def active_pose(self) -> dict[str, str]:
@@ -656,16 +748,12 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
         """
         if self._document is None or width <= 0 or height <= 0:
             return None
-        from PySide6.QtOpenGL import (
-            QOpenGLFramebufferObject,
-            QOpenGLFramebufferObjectFormat,
-        )
+        from PySide6.QtOpenGL import QOpenGLFramebufferObject
 
         self.makeCurrent()
         fbo = None
         try:
-            fmt = QOpenGLFramebufferObjectFormat()
-            fbo = QOpenGLFramebufferObject(width, height, fmt)
+            fbo = QOpenGLFramebufferObject(width, height, offscreen_framebuffer_format())
             if not fbo.bind():
                 return None
             try:
@@ -821,11 +909,13 @@ class PuppetCanvas(PuppetCanvasRenderMixin, QOpenGLWidget):
             self._user_view_locked = True
             self.update()
             return
+        ix, iy = self._screen_to_image(
+            event.position().x(), event.position().y(),
+        )
         if self._mesh_edit_enabled and self._mesh_edit_target is not None:
-            ix, iy = self._screen_to_image(
-                event.position().x(), event.position().y(),
-            )
             self.update_mesh_edit_drag(ix, iy)
+            return
+        self.cursor_moved.emit(ix, iy)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:   # pragma: no cover - Qt UI
         if event.button() == Qt.MouseButton.MiddleButton and self._panning:

@@ -48,15 +48,17 @@ def _decode_cursor(cursor: str | None) -> int:
 
 
 def list_resources(root: str | None, cursor: str | None = None) -> dict[str, Any]:
-    """List image resources under *root* (paginated). Empty when no root is set."""
+    """List image resources under *root* (paginated). Empty when no root is set.
+
+    Hidden files (a macOS ``._`` companion, Windows' hidden attribute) are
+    left out, as in the viewer (``image_listing.list_images``).
+    """
     base = Path(root) if root else None
     if base is None or not base.is_dir():
         return {"resources": []}
     from Imervue.mcp_server.tool_support import IMAGE_EXTENSIONS
-    paths = sorted(
-        str(p) for p in base.iterdir()
-        if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-    )
+    from Imervue.system.image_listing import list_images
+    paths = sorted(list_images(str(base), IMAGE_EXTENSIONS))
     offset = _decode_cursor(cursor)
     page = paths[offset:offset + _PAGE_SIZE]
     result: dict[str, Any] = {

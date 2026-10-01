@@ -26,7 +26,7 @@ datas = [
     # it was promoted to a built-in Imervue subpackage at Imervue/puppet/
     # and gets picked up automatically by PyInstaller's static analysis.
     ('plugins', 'plugins'),
-    # examples/ — ships examples/puppet/march_7th.puppet so users can try
+    # examples/ — ships examples/puppet/imeru.puppet so users can try
     # the Puppet tab's "Open Puppet…" right after install.
     ('examples', 'examples'),
 ]

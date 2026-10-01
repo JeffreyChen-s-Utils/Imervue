@@ -157,15 +157,3 @@ def merge_bindings(
             if isinstance(spec, str) and spec:
                 merged[action] = spec
     return merged
-
-
-def sanitize_app_ids(ignored: object) -> tuple[str, ...]:
-    """Coerce a persisted "ignored app ids" value into a clean tuple.
-
-    Accepts only a list of non-empty strings; anything else yields an
-    empty tuple. Pure helper so the notification controller's input
-    validation is testable without WinRT.
-    """
-    if not isinstance(ignored, list):
-        return ()
-    return tuple(item for item in ignored if isinstance(item, str) and item)

@@ -47,6 +47,11 @@ class FilterPreviewDialog(QDialog):
       ``slider_value × value_scale``.
     * ``label_format`` — Python format string applied to the
       slider's *scaled* value to label it (e.g. ``"{:.1f}"``).
+    * ``title_key`` / ``title_fallback`` — the window title's translation key
+      and its English text; ``value_label`` names the slider (default "Value:").
+
+    Paint's Filter menu opens it for every filter with a single slider,
+    on a full-resolution crop of the layer (:func:`preview_crop`).
     """
 
     def __init__(
@@ -60,26 +65,15 @@ class FilterPreviewDialog(QDialog):
         value_scale: float = 1.0,
         label_format: str = "{:g}",
         title_key: str = "paint_filter_preview_title",
+        title_fallback: str = "Filter",
+        value_label: str | None = None,
         parent=None,
     ):
         super().__init__(parent)
-        if image.ndim != 3 or image.shape[2] != 4 or image.dtype != np.uint8:
-            raise ValueError(
-                f"image must be HxWx4 uint8 RGBA, got {image.shape} {image.dtype}",
-            )
-        if slider_min >= slider_max:
-            raise ValueError(
-                f"slider_min must be < slider_max, got "
-                f"{slider_min} / {slider_max}",
-            )
-        if not slider_min <= slider_default <= slider_max:
-            raise ValueError(
-                f"slider_default {slider_default} outside "
-                f"[{slider_min}, {slider_max}]",
-            )
+        _check_arguments(image, slider_min, slider_max, slider_default)
 
         lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get(title_key, "Filter"))
+        self.setWindowTitle(lang.get(title_key, title_fallback))
 
         self._source = image
         self._filter_fn = filter_fn
@@ -96,7 +90,7 @@ class FilterPreviewDialog(QDialog):
         layout.addWidget(self._preview, stretch=1)
 
         slider_row = QHBoxLayout()
-        slider_label = QLabel(lang.get(
+        slider_label = QLabel(value_label or lang.get(
             "paint_filter_preview_value", "Value:",
         ))
         slider_row.addWidget(slider_label)
@@ -177,3 +171,28 @@ class FilterPreviewDialog(QDialog):
         return self._label_format.format(
             float(raw_slider_value) * self._value_scale,
         )
+
+
+
+def _check_arguments(image: np.ndarray, low: int, high: int, default: int) -> None:
+    """Raise ``ValueError`` unless *image* is HxWx4 uint8 and *default* lies in ``low < high``."""
+    if image.ndim != 3 or image.shape[2] != 4 or image.dtype != np.uint8:
+        raise ValueError(
+            f"image must be HxWx4 uint8 RGBA, got {image.shape} {image.dtype}",
+        )
+    if low >= high:
+        raise ValueError(f"slider_min must be < slider_max, got {low} / {high}")
+    if not low <= default <= high:
+        raise ValueError(f"slider_default {default} outside [{low}, {high}]")
+
+
+def preview_crop(image: np.ndarray, size: int = PREVIEW_MAX_DIMENSION) -> np.ndarray:
+    """The middle *size* × *size* pixels of *image* (all of it when smaller).
+
+    A crop rather than a shrunken copy keeps filters that work in pixels —
+    halftone dots, grain — looking in the preview as they will on the layer.
+    """
+    h, w = image.shape[:2]
+    top = max(0, (h - size) // 2)
+    left = max(0, (w - size) // 2)
+    return np.ascontiguousarray(image[top:top + size, left:left + size])

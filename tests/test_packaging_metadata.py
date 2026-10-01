@@ -37,7 +37,58 @@ def test_dev_toml_mirrors_pyproject_project_table():
     assert dev["project"]["name"] == "Imervue_dev"
     for key in ("dependencies", "description", "keywords", "requires-python", "classifiers"):
         assert dev["project"][key] == main["project"][key], key
-    assert dev["tool"]["setuptools"]["packages"] == main["tool"]["setuptools"]["packages"]
+
+
+def test_dev_toml_ships_what_pyproject_ships():
+    # CI builds Imervue_dev by writing dev.toml to pyproject.toml (scripts/dev_release.py), so
+    # anything declared on one side only is a package the tests never ran against.
+    main = _toml("pyproject.toml")
+    dev = _toml("dev.toml")
+    for key in ("optional-dependencies", "scripts", "gui-scripts", "entry-points",
+                "license-files", "readme"):
+        assert dev["project"].get(key, {}) == main["project"].get(key, {}), key
+    assert dev["build-system"] == main["build-system"]
+    # Package discovery and package data decide which files reach the wheel.
+    assert dev["tool"]["setuptools"] == main["tool"]["setuptools"]
+
+
+@pytest.mark.parametrize("name", ["pyproject.toml", "dev.toml"])
+def test_only_the_imervue_package_is_discovered(name):
+    # tests/ has an __init__.py: unrestricted discovery installed it as a top-level ``tests``
+    # package, which collides with any other project that ships one.
+    find = _toml(name)["tool"]["setuptools"]["packages"]["find"]
+    assert find == {"include": ["Imervue", "Imervue.*"], "namespaces": False}
+
+
+def test_the_include_patterns_leave_out_every_other_top_level_package():
+    from fnmatch import fnmatchcase
+    include = _toml("pyproject.toml")["tool"]["setuptools"]["packages"]["find"]["include"]
+    # What discovery starts from: each top-level directory that is a regular package.
+    top_level = {init.parent.name for init in _REPO.glob("*/__init__.py")}
+    assert {"Imervue", "tests"} <= top_level
+    assert [name for name in sorted(top_level)
+            if any(fnmatchcase(name, pattern) for pattern in include)] == ["Imervue"]
+
+
+def _manifest_commands() -> list[list[str]]:
+    lines = (_REPO / "MANIFEST.in").read_text(encoding="utf-8").splitlines()
+    return [line.split() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+
+
+def test_the_sdist_carries_no_tests():
+    # On its own setuptools adds tests/test_*.py to an sdist. MANIFEST.in commands apply in
+    # order, so the prune comes last: nothing after it can put a test file back.
+    assert (_REPO / "tests").is_dir()
+    assert _manifest_commands()[-1] == ["prune", "tests"]
+
+
+def test_every_package_directory_under_imervue_is_shipped():
+    # ``namespaces = false`` drops a directory without an __init__.py, with every module in it.
+    missing = sorted(
+        directory.relative_to(_REPO).as_posix()
+        for directory in {path.parent for path in (_REPO / "Imervue").rglob("*.py")}
+        if not (directory / "__init__.py").is_file())
+    assert missing == []
 
 
 def test_requirements_txt_lists_runtime_dependencies_then_the_package():

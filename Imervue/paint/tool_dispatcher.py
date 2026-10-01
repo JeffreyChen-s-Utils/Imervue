@@ -393,6 +393,7 @@ class ToolDispatcher:
                 self._state,
                 self._selection_provider,
                 self._reference_provider,
+                self._composite_provider,
             ),
             "select_rect": RectSelectTool(sel_ctx, self._overlay_setter),
             "select_lasso": LassoSelectTool(sel_ctx, self._overlay_setter),

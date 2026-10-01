@@ -2,15 +2,16 @@
 CLIP-based semantic image search — "find photos that match a phrase".
 
 The module is structured around a small :class:`SemanticEmbedder` protocol so the
-heavy ML backend (``open_clip_torch``) stays an optional runtime dependency:
+ML backend stays an optional runtime dependency:
 
-* In production we lazily wire up :class:`OpenClipEmbedder`, which loads a ViT-B/32
-  CLIP checkpoint via ``open_clip`` on first use.
-* In tests (and when torch is unavailable) callers inject a ``FakeEmbedder`` so
-  the ranking logic can be exercised without pulling in 2 GB of PyTorch wheels.
+* In production the index uses :class:`Imervue.library.clip_onnx.OnnxClipEmbedder`,
+  CLIP ViT-B/32 on onnxruntime, downloaded at a pinned revision on first use.
+* In tests (and when onnxruntime is missing) callers inject a ``FakeEmbedder`` so
+  the ranking logic is exercised without any model.
 
 The :class:`ClipSearchIndex` stores one L2-normalised float32 embedding per image
-path and persists them as a single ``.npz`` archive next to the library DB —
+path and persists them, with the id of the model that made them, as a single
+``.npz`` archive next to the library DB —
 compact on disk and quick to reload (a single numpy read instead of per-image
 base64 decode). Queries embed the text, then dot-product against the stacked
 matrix for a true O(N) cosine scan, which is more than fast enough for the
@@ -34,7 +35,6 @@ import numpy as np
 
 logger = logging.getLogger("Imervue.library.clip_search")
 
-_EMBED_DIM_DEFAULT = 512
 _CACHE_FILENAME = "clip_cache.npz"
 _MIN_TOP_K = 1
 _MAX_TOP_K = 1000
@@ -54,7 +54,11 @@ def _default_cache_path() -> Path:
 
 
 class SemanticEmbedder(Protocol):
-    """Pluggable embedder — text and images map into the same vector space."""
+    """Pluggable embedder — text and images map into the same vector space.
+
+    An embedder may also have ``model_id`` (names its vector space, kept with
+    the cache) and ``prepare()`` (loads the model ahead of the first embed).
+    """
 
     dim: int
 
@@ -63,6 +67,23 @@ class SemanticEmbedder(Protocol):
 
     def embed_image(self, path: str | Path) -> np.ndarray | None:
         """Return an L2-normalised 1-D float32 vector, or ``None`` on failure."""
+
+
+def _signature(path: str) -> list[int] | None:
+    """``[size, mtime_ns]`` of *path*, None when it can't be stat'ed: an embedding's freshness."""
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return None
+    return [stat.st_size, stat.st_mtime_ns]
+
+
+def _valid_signatures(raw, count: int) -> list[list[int] | None]:
+    """The cached signatures, or all None (stale) for a cache written before they were kept."""
+    if not isinstance(raw, list) or len(raw) != count:
+        return [None] * count
+    return [sig if isinstance(sig, list) and len(sig) == 2 and all(isinstance(v, int) for v in sig)
+            else None for sig in raw]
 
 
 def _l2_normalise(vec: np.ndarray) -> np.ndarray:
@@ -75,93 +96,14 @@ def _l2_normalise(vec: np.ndarray) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# OpenCLIP backend (optional)
+# Backend
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class OpenClipConfig:
-    """Runtime configuration for the lazy open_clip backend."""
-
-    model_name: str = "ViT-B-32"
-    pretrained: str = "openai"
-    device: str = "auto"  # "auto" | "cuda" | "cpu"
-
-
-def _available_backends() -> list[str]:
-    """Return the list of optional backends importable in this interpreter."""
-    found: list[str] = []
-    try:
-        import open_clip  # noqa: F401 — availability probe
-        import torch  # noqa: F401
-        found.append("open_clip")
-    except ImportError:
-        pass
-    return found
-
-
 def is_available() -> bool:
-    """True if at least one real embedding backend can be constructed."""
-    return bool(_available_backends())
-
-
-class OpenClipEmbedder:
-    """Adapter around ``open_clip`` — imports are deferred to first use."""
-
-    def __init__(self, config: OpenClipConfig | None = None) -> None:
-        self._config = config or OpenClipConfig()
-        self._model = None
-        self._preprocess = None
-        self._tokenizer = None
-        self._torch = None
-        self._device = None
-        self.dim = _EMBED_DIM_DEFAULT
-
-    def _ensure_loaded(self) -> None:
-        if self._model is not None:
-            return
-        import open_clip
-        import torch
-        device = self._config.device
-        if device == "auto":
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        model, _, preprocess = open_clip.create_model_and_transforms(
-            self._config.model_name, pretrained=self._config.pretrained,
-        )
-        model.eval().to(device)
-        self._model = model
-        self._preprocess = preprocess
-        self._tokenizer = open_clip.get_tokenizer(self._config.model_name)
-        self._torch = torch
-        self._device = device
-        out_dim = getattr(model, "text_projection", None)
-        if out_dim is not None and hasattr(out_dim, "shape"):
-            self.dim = int(out_dim.shape[-1])
-
-    def embed_text(self, text: str) -> np.ndarray:
-        self._ensure_loaded()
-        tokens = self._tokenizer([text]).to(self._device)
-        with self._torch.no_grad():
-            feats = self._model.encode_text(tokens)
-        return _l2_normalise(feats[0].cpu().numpy().astype(np.float32))
-
-    def embed_image(self, path: str | Path) -> np.ndarray | None:
-        self._ensure_loaded()
-        from Imervue.image.read_errors import IMAGE_READ_ERRORS
-        try:
-            from PIL import Image
-            from Imervue.image.shown import as_shown
-            with Image.open(path) as im:
-                # A sideways photo embeds as a different picture; turn it as it is shown.
-                shown = as_shown(im).convert("RGB")
-                tensor = self._preprocess(shown).unsqueeze(0)
-        except IMAGE_READ_ERRORS as exc:
-            logger.debug("CLIP image decode failed for %s: %s", path, exc)
-            return None
-        tensor = tensor.to(self._device)
-        with self._torch.no_grad():
-            feats = self._model.encode_image(tensor)
-        return _l2_normalise(feats[0].cpu().numpy().astype(np.float32))
+    """True when the ONNX CLIP backend's packages are installed (the model downloads on use)."""
+    from Imervue.library.clip_onnx import backend_importable
+    return backend_importable()
 
 
 # ---------------------------------------------------------------------------
@@ -181,9 +123,10 @@ class ClipSearchIndex:
     """In-memory matrix of L2-normalised image embeddings + on-disk cache.
 
     The index is backend-agnostic: callers pass any object implementing
-    :class:`SemanticEmbedder`. Production code uses :class:`OpenClipEmbedder`;
+    :class:`SemanticEmbedder`. Production code uses the ONNX CLIP embedder;
     tests pass a ``FakeEmbedder`` so the ranking / persistence logic is
-    exercised without torch installed.
+    exercised without a model. An embedder's ``model_id`` names its vector
+    space: a cache written by another model is not loaded.
     """
 
     def __init__(
@@ -192,10 +135,13 @@ class ClipSearchIndex:
         cache_path: Path | str | None = None,
     ) -> None:
         self._embedder = embedder
+        self._model_id = str(getattr(embedder, "model_id", ""))
         self._cache_path = Path(cache_path) if cache_path else _default_cache_path()
         self._paths: list[str] = []
         self._index: dict[str, int] = {}
         self._matrix: np.ndarray = np.zeros((0, 0), dtype=np.float32)
+        # path -> [size, mtime_ns] when it was embedded; None: unknown, embed again
+        self._signatures: dict[str, list[int] | None] = {}
 
     # ---- state inspection -------------------------------------------
 
@@ -211,8 +157,25 @@ class ClipSearchIndex:
         """True iff an embedder is attached and can answer queries."""
         return self._embedder is not None
 
+    def needs_download(self) -> bool:
+        """Whether loading the embedder's model will download it first."""
+        downloaded = getattr(self._embedder, "is_downloaded", None)
+        return downloaded is not None and not downloaded()
+
+    def prepare(self) -> None:
+        """Load the embedder's model now (it may download); ``OSError`` when it can't be had."""
+        prepare = getattr(self._embedder, "prepare", None)
+        if prepare is not None:
+            prepare()
+
     def contains(self, path: str | Path) -> bool:
         return str(path) in self._index
+
+    def is_current(self, path: str | Path) -> bool:
+        """Whether *path* is indexed from the file as it is now (same size and modified time)."""
+        key = str(path)
+        recorded = self._signatures.get(key)
+        return key in self._index and recorded is not None and recorded == _signature(key)
 
     # ---- mutation ---------------------------------------------------
 
@@ -233,6 +196,7 @@ class ClipSearchIndex:
         if vec.size == 0:
             return False
         self._append_or_replace(key, vec)
+        self._signatures[key] = _signature(key)
         return True
 
     def add_many(self, paths: list[str] | list[Path]) -> int:
@@ -248,6 +212,7 @@ class ClipSearchIndex:
         idx = self._index.pop(key, None)
         if idx is None:
             return False
+        self._signatures.pop(key, None)
         self._paths.pop(idx)
         self._matrix = np.delete(self._matrix, idx, axis=0)
         # Re-index trailing entries shifted up by one row.
@@ -258,12 +223,14 @@ class ClipSearchIndex:
     def clear(self) -> None:
         self._paths.clear()
         self._index.clear()
+        self._signatures.clear()
         self._matrix = np.zeros((0, 0), dtype=np.float32)
 
     # ---- query ------------------------------------------------------
 
-    def query_text(self, text: str, top_k: int = 50) -> list[SearchHit]:
-        """Rank stored images by cosine similarity to ``text``."""
+    def query_text(self, text: str, top_k: int = 50,
+                   within: set[str] | None = None) -> list[SearchHit]:
+        """Rank stored images by cosine similarity to ``text``, only those in *within* if given."""
         if self._embedder is None:
             raise RuntimeError("Semantic search has no embedder configured")
         if not text or not text.strip():
@@ -277,8 +244,15 @@ class ClipSearchIndex:
                 f"Query dim {query.size} does not match index dim "
                 f"{self._matrix.shape[1]}"
             )
-        scores = self._matrix @ query
-        count = min(top_k, scores.shape[0])
+        if within is None:
+            rows = np.arange(len(self._paths))
+        else:
+            rows = np.array([i for i, p in enumerate(self._paths) if p in within], dtype=np.int64)
+        if rows.size == 0:
+            return []
+        scores = np.full(len(self._paths), -np.inf, dtype=np.float32)
+        scores[rows] = self._matrix[rows] @ query
+        count = min(top_k, int(rows.size))
         # argpartition is O(N) vs argsort's O(N log N) — matters for big libs.
         partition = np.argpartition(-scores, count - 1)[:count]
         ordered = partition[np.argsort(-scores[partition])]
@@ -296,9 +270,14 @@ class ClipSearchIndex:
         target = Path(path) if path else self._cache_path
         target.parent.mkdir(parents=True, exist_ok=True)
         paths_json = np.frombuffer(json.dumps(self._paths).encode("utf-8"), dtype=np.uint8)
+        signatures = [self._signatures.get(p) for p in self._paths]
+        sigs_json = np.frombuffer(json.dumps(signatures).encode("utf-8"), dtype=np.uint8)
+        model = np.frombuffer(self._model_id.encode("utf-8"), dtype=np.uint8)
         np.savez(
             target,
             paths_json=paths_json,
+            sigs_json=sigs_json,
+            model=model,
             matrix=self._matrix,
             dim=np.array([self._matrix.shape[1]], dtype=np.int32),
         )
@@ -309,7 +288,8 @@ class ClipSearchIndex:
 
         Loads with ``allow_pickle=False``, so a tampered cache cannot run code.
         A cache written before the paths moved to JSON (an object array) is
-        rejected like a corrupt one, and the index is rebuilt.
+        rejected like a corrupt one, and the index is rebuilt; so is one whose
+        embeddings came from another model than this index's embedder.
         """
         source = Path(path) if path else self._cache_path
         if not source.exists():
@@ -318,6 +298,11 @@ class ClipSearchIndex:
             with np.load(source, allow_pickle=False) as data:
                 paths = json.loads(data["paths_json"].tobytes().decode("utf-8"))
                 matrix = np.asarray(data["matrix"], dtype=np.float32)
+                sigs = (json.loads(data["sigs_json"].tobytes().decode("utf-8"))
+                        if "sigs_json" in data.files else None)
+                # No model recorded: written before the id was kept (the old torch backend).
+                model = (data["model"].tobytes().decode("utf-8")
+                         if "model" in data.files else "")
         # ValueError also covers bad JSON / UTF-8 and a pickled object array.
         except (OSError, ValueError, KeyError, EOFError, zipfile.BadZipFile) as exc:
             logger.warning("Failed to load CLIP cache %s: %s", source, exc)
@@ -328,9 +313,14 @@ class ClipSearchIndex:
         if matrix.ndim != 2 or matrix.shape[0] != len(paths):
             logger.warning("Malformed CLIP cache at %s", source)
             return False
+        if model != self._model_id:
+            logger.info("CLIP cache %s is from model %r, not %r: rebuilding",
+                        source, model, self._model_id)
+            return False
         self._paths = paths
         self._matrix = matrix
         self._index = {p: i for i, p in enumerate(paths)}
+        self._signatures = dict(zip(paths, _valid_signatures(sigs, len(paths)), strict=True))
         return True
 
     # ---- helpers ----------------------------------------------------
@@ -364,13 +354,14 @@ _default_index: ClipSearchIndex | None = None
 
 
 def get_default_index() -> ClipSearchIndex:
-    """Return the shared index, lazily creating an OpenCLIP-backed one if possible."""
+    """Return the shared index, backed by the ONNX CLIP embedder when onnxruntime is installed."""
     global _default_index
-    if _default_index is not None:
+    if _default_index is not None and (_default_index.is_ready() or not is_available()):
         return _default_index
     embedder: SemanticEmbedder | None = None
     if is_available():
-        embedder = OpenClipEmbedder()
+        from Imervue.library.clip_onnx import default_embedder
+        embedder = default_embedder()
     _default_index = ClipSearchIndex(embedder)
     _default_index.load()
     return _default_index

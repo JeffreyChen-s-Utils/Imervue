@@ -11,7 +11,7 @@ import pytest
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu, QWidget
 
-from Imervue.puppet.workspace_menus import PuppetMenusMixin
+from Imervue.puppet.workspace_menus import PuppetMenusMixin, example_label
 
 # (attribute, label, checkable, slot)
 _ACTIONS = [
@@ -29,6 +29,7 @@ _ACTIONS = [
     ("_mesh_edit_toggle", "Edit mesh", True, "_toggle_mesh_edit"),
     ("_drag_toggle", "Drag-track head", True, "_toggle_drag"),
     ("_blink_toggle", "Auto-blink", True, "_toggle_blink"),
+    ("_lipsync_audio_action", "Lip-sync from Audio File…", False, "_lipsync_from_audio_file"),
     ("_lipsync_toggle", "Mic lip-sync", True, "_toggle_lipsync"),
     ("_webcam_toggle", "Webcam tracking", True, "_toggle_webcam"),
     ("_idle_toggle", "Auto idle", True, "_toggle_idle"),
@@ -41,6 +42,7 @@ _ACTIONS = [
     ("_ndi_toggle", "NDI output", True, "_toggle_ndi"),
     ("_vts_toggle", "VTS API", True, "_toggle_vts_api"),
     ("_validate_action", "Validate", False, "_run_validator"),
+    ("_repair_action", "Repair Rig", False, "_run_rig_repair"),
     ("_fit_action", "Fit to Window", False, "_canvas_reset_view"),
     ("_reset_action", "Reset to rest", False, "_reset_to_rest"),
 ]
@@ -120,3 +122,15 @@ def test_labels_come_from_the_language_dict(qapp, monkeypatch):
         assert widget._save_action.text() == "Save As…"  # noqa: SLF001
     finally:
         widget.deleteLater()
+
+
+
+@pytest.mark.parametrize(("stem", "label"), [
+    ("imeru_2nd_outfit", "Imeru 2nd Outfit"),  # str.title() made this "Imeru 2Nd Outfit"
+    ("vivian", "Vivian"),
+    ("my__rig_v2", "My Rig V2"),
+    ("already_Upper", "Already Upper"),
+    ("", ""),
+])
+def test_example_label(stem, label):
+    assert example_label(stem) == label

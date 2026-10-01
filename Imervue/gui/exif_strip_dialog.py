@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.system.natural_sort import natural_key
+from Imervue.system.image_listing import list_images
 from Imervue.image.in_place_save import can_rewrite_in_place, in_place_format
 from Imervue.image.recipe_store import carry_recipe
 from Imervue.image.shown import as_shown
@@ -33,6 +33,7 @@ from Imervue.system.free_names import free_names
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -40,8 +41,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.exif_strip")
 
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".webp",
-})
+    ".png", ".tiff", ".tif", ".webp",
+}) | JPEG_EXTENSIONS
 
 
 # ---------------------------------------------------------------------------
@@ -49,16 +50,8 @@ _IMAGE_EXTS = frozenset({
 # ---------------------------------------------------------------------------
 
 def _scan_folder(folder: str) -> list[str]:
-    """Return image paths that may contain EXIF data, sorted by name."""
-    result: list[str] = []
-    try:
-        for entry in os.scandir(folder):
-            if entry.is_file() and Path(entry.name).suffix.lower() in _IMAGE_EXTS:
-                result.append(entry.path)
-    except OSError:
-        pass
-    result.sort(key=lambda p: natural_key(os.path.basename(p)))
-    return result
+    """Return image paths that may contain EXIF data, in natural name order."""
+    return list_images(folder, _IMAGE_EXTS)
 
 
 # ---------------------------------------------------------------------------

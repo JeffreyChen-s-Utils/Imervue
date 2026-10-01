@@ -138,3 +138,19 @@ def test_tagged_frames_are_corrected_upright(tmp_path, qapp):
     worker._write_corrected(worker._load_frames())
     with Image.open(tmp_path / "deflickered" / "f0.png") as out:
         assert out.size == (20, 40)
+
+
+
+def test_the_dialog_waits_for_the_thread_before_deleting_it():
+    """finished_with_count fires inside run(): deleting the thread before it exits aborts."""
+    from unittest.mock import MagicMock
+    host = MagicMock()
+    host._viewer = None
+    order = []
+    worker = MagicMock()
+    worker.wait.side_effect = lambda *_a: order.append('wait')
+    worker.deleteLater.side_effect = lambda: order.append('deleteLater')
+    host._worker = worker
+    deflicker_dialog.DeflickerDialog._on_finished(host, 3)
+    assert order == ['wait', 'deleteLater']
+    assert host._worker is None

@@ -51,6 +51,17 @@ class PanelLayout:
     border_width: int
 
 
+def layout_for_canvas(layout: PanelLayout | None, shape: tuple[int, ...]) -> PanelLayout | None:
+    """*layout* when it was cut for a canvas of *shape* ``(h, w, ...)``, else None.
+
+    A canvas resized or cropped since Panel Cutter ran no longer matches its
+    panels, so Snap to panel stops clipping rather than clip to the wrong place.
+    """
+    if layout is None or tuple(shape[:2]) != (layout.height, layout.width):
+        return None
+    return layout
+
+
 def panel_grid(
     width: int,
     height: int,

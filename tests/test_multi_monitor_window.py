@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from PySide6.QtGui import QImage
+from PySide6.QtCore import QEvent, Qt
+from PySide6.QtGui import QGuiApplication, QIcon, QImage, QKeyEvent
 
+from Imervue.gui import multi_monitor_window as mod
 from Imervue.gui.multi_monitor_window import (
     MultiMonitorController,
+    MultiMonitorWindow,
     _PreviewPanel,
     array_to_qimage,
     choose_mirror_screen_index,
@@ -169,3 +172,73 @@ def test_preview_panel_shows_a_tagged_photo_upright(qapp, tmp_path):
         assert (panel._pixmap.width(), panel._pixmap.height()) == (20, 40)  # noqa: SLF001
     finally:
         panel.deleteLater()
+
+
+
+class _IconWindow:
+    @staticmethod
+    def windowIcon():  # noqa: N802 — Qt's name
+        return QIcon()
+
+
+@pytest.fixture
+def mirror(qapp, monkeypatch):
+    """A mirror window whose show calls are recorded instead of shown."""
+    win = MultiMonitorWindow(_IconWindow())
+    win.shown = []
+    monkeypatch.setattr(win, "showFullScreen", lambda: win.shown.append("full screen"))
+    monkeypatch.setattr(win, "showMaximized", lambda: win.shown.append("maximised"))
+    yield win
+    win.deleteLater()
+
+
+def _frameless(win) -> bool:
+    return bool(win.windowFlags() & Qt.WindowType.FramelessWindowHint)
+
+
+class TestPlacement:
+    """The docs promised a frameless window; it opened framed and maximised everywhere."""
+
+    def test_a_secondary_screen_gets_a_frameless_full_screen_mirror(self, mirror, monkeypatch):
+        screen = QGuiApplication.screens()[0]
+        monkeypatch.setattr(mod.QGuiApplication, "primaryScreen", staticmethod(lambda: None))
+        mirror._show_on(screen)  # noqa: SLF001
+        assert _frameless(mirror)
+        assert mirror.shown == ["full screen"]
+        assert mirror.windowHandle().screen() is screen
+        assert mirror.geometry() == screen.geometry()
+
+    def test_the_primary_screen_keeps_a_framed_window(self, mirror):
+        """The main window lives there; a frameless full-screen mirror would bury it."""
+        mirror._show_on(QGuiApplication.primaryScreen())  # noqa: SLF001
+        assert not _frameless(mirror)
+        assert mirror.shown == ["maximised"]
+
+    def test_moving_back_to_the_primary_screen_restores_the_frame(self, mirror, monkeypatch):
+        screen = QGuiApplication.primaryScreen()
+        monkeypatch.setattr(mod.QGuiApplication, "primaryScreen", staticmethod(lambda: None))
+        mirror._show_on(screen)  # noqa: SLF001
+        monkeypatch.setattr(mod.QGuiApplication, "primaryScreen", staticmethod(lambda: screen))
+        mirror._show_on(screen)  # noqa: SLF001
+        assert not _frameless(mirror)
+        assert mirror.shown == ["full screen", "maximised"]
+
+
+class TestClosingKeys:
+    @staticmethod
+    def _press(win, key, mods=Qt.KeyboardModifier.NoModifier) -> list:
+        closed = []
+        win.closed.connect(lambda: closed.append(True))
+        win.keyPressEvent(QKeyEvent(QEvent.Type.KeyPress, key, mods))
+        return closed
+
+    def test_its_own_shortcut_closes_the_mirror(self, mirror):
+        """The toast says Ctrl+Shift+M closes it, but the mirror holds the focus."""
+        mods = Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        assert self._press(mirror, Qt.Key.Key_M, mods) == [True]
+
+    def test_escape_closes_the_mirror(self, mirror):
+        assert self._press(mirror, Qt.Key.Key_Escape) == [True]
+
+    def test_a_plain_m_does_not(self, mirror):
+        assert self._press(mirror, Qt.Key.Key_M) == []

@@ -40,7 +40,7 @@ def test_load_returns_defaults_when_unset():
 
 def test_save_then_load_round_trips():
     pet_settings.save({
-        "last_rig_path": "examples/puppet/march_7th.puppet",
+        "last_rig_path": "examples/puppet/imeru.puppet",
         "size_preset": "large",
         "opacity": 0.7,
         "click_through": True,
@@ -54,7 +54,7 @@ def test_save_then_load_round_trips():
         "position": [120, 240],
     })
     state = pet_settings.load()
-    assert state["last_rig_path"] == "examples/puppet/march_7th.puppet"
+    assert state["last_rig_path"] == "examples/puppet/imeru.puppet"
     assert state["size_preset"] == "large"
     assert state["opacity"] == pytest.approx(0.7)
     assert state["click_through"] is True

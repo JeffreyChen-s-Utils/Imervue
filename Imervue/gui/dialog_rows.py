@@ -75,14 +75,21 @@ def save_path_into(
     return path
 
 
+def confirm(parent: QWidget | None, title: str, text: str) -> bool:
+    """Ask Yes / No before something that can't be undone; True only for Yes.
+
+    No is the default button. Left to itself Qt makes Yes the default, so a
+    stray Enter deleted files, tags or bookmarks.
+    """
+    no = QMessageBox.StandardButton.No
+    answer = QMessageBox.question(parent, title, text, QMessageBox.StandardButton.Yes | no, no)
+    return answer == QMessageBox.StandardButton.Yes
+
+
 def ask_to_replace(parent: QWidget | None, text: str) -> bool:
     """Ask whether to replace an existing file; No is the default answer."""
     title = language_wrapper.language_word_dict.get("export_replace_title", "Replace File?")
-    answer = QMessageBox.question(
-        parent, title, text,
-        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        QMessageBox.StandardButton.No)
-    return answer == QMessageBox.StandardButton.Yes
+    return confirm(parent, title, text)
 
 
 def may_replace(parent: QWidget | None, path: str, confirmed: str | None) -> bool:

@@ -60,3 +60,27 @@ def test_failed_save_reports_and_opens_nothing(view, tmp_path, monkeypatch):
     assert view.model.images == before
     ((kind, text),) = view.main_window.toast.calls
     assert kind == "error" and str(tmp_path) in text
+
+
+def test_an_empty_clipboard_says_so(view, fake_clipboard):
+    fake_clipboard.clear()
+    mod.paste_image_from_clipboard(view)
+    assert view.opened == []
+    assert view.main_window.toast.calls == [("info", "Clipboard does not contain an image")]
+
+
+def test_no_folder_to_save_into_says_so(view, monkeypatch):
+    view.model.images = []
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    monkeypatch.setitem(user_setting_dict, "user_last_folder", "")
+    mod.paste_image_from_clipboard(view)
+    assert view.opened == []
+    assert view.main_window.toast.calls == [
+        ("info", "Open a folder first: a pasted image is saved into it")]
+
+
+def test_the_toast_speaks_the_current_language(view, monkeypatch):
+    from Imervue.multi_language.traditional_chinese import traditional_chinese_word_dict
+    monkeypatch.setattr(mod.language_wrapper, "language_word_dict", traditional_chinese_word_dict)
+    mod.paste_image_from_clipboard(view)
+    assert view.main_window.toast.calls == [("info", "已貼上：pasted_1700000000.png")]

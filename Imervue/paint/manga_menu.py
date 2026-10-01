@@ -79,6 +79,10 @@ def populate_manga_menu(workspace: PaintWorkspace) -> None:
         lang.get("paint_manga_flash", "Action Flash"),
     )
     flash_action.triggered.connect(bridge.add_flash)
+    text_action = menu.addAction(
+        lang.get("paint_manga_text_along_selection", "Text Along Selection…"),
+    )
+    text_action.triggered.connect(bridge.add_text_along_selection)
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +109,7 @@ class _MangaMenuBridge:
 
         The dialog lets the user place the flash off-centre, adjust
         the spike count / radii / colour, or cancel out without
-        spawning any layer — matching raster paint apps's "every effect is
+        spawning any layer — matching raster paint apps' "every effect is
         configurable before commit" UX.
         """
         document = self._workspace.canvas().document()
@@ -133,6 +137,21 @@ class _MangaMenuBridge:
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         commit_speedlines_layer(self._workspace, dialog.options())
+
+    def add_text_along_selection(self) -> None:  # pragma: no cover - Qt dialog
+        """Ask for the text and its style, then lay it along the selection's outline."""
+        from Imervue.paint.text_tool import TextToolDialog
+        ws = self._workspace
+        if ws.canvas().document().selection() is None:
+            toast = getattr(ws, "toast", None)
+            if toast is not None:
+                toast.warning(language_wrapper.language_word_dict.get(
+                    "paint_manga_text_needs_selection",
+                    "Select a shape first: the text follows its outline"))
+            return
+        dialog = TextToolDialog(ws.state().foreground or (0, 0, 0), parent=ws)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            commit_text_along_selection(ws, dialog.options())
 
     def stamp_page_numbers(self) -> None:
         """Drop a "Page N" layer on every page in the active project.
@@ -274,6 +293,34 @@ def commit_speedlines_layer(workspace: PaintWorkspace, options) -> bool:
     return True
 
 
+def commit_text_along_selection(workspace: PaintWorkspace, options) -> bool:
+    """Lay ``options.text`` along the outline of the selection, on a new "Text" layer.
+
+    ``options`` is the Add Text dialog's :class:`TextRenderOptions`; its
+    font, size, colour, bold and italic apply, the vertical setting does
+    not (the outline decides the direction). False, with nothing added,
+    when there is no selection, no text, or nothing got drawn.
+    """
+    import numpy as np
+
+    from Imervue.paint.text_on_selection import render_text_along_selection
+    document = workspace.canvas().document()
+    selection = document.selection()
+    if document.shape is None or selection is None or not options.text.strip():
+        return False
+    rendered = render_text_along_selection(
+        selection, options.text, document.shape, family=options.family,
+        size=options.size, color=options.color, bold=options.bold, italic=options.italic,
+    )
+    if not rendered[..., 3].any():
+        return False
+    layer = document.add_layer(name="Text")
+    np.copyto(layer.image, rendered)
+    document.invalidate_composite()
+    workspace.canvas().update()
+    return True
+
+
 def commit_flash_layer(workspace: PaintWorkspace, options) -> bool:
     """Render a flash layer from ``options`` onto the active document."""
     import numpy as np
@@ -370,7 +417,7 @@ class _CentreControlsMixin:
 class SpeedlineConfigDialog(_CentreControlsMixin, QDialog):
     """Configure a :class:`SpeedlineOptions` before render.
 
-    Mirrors raster paint apps's effect-property dialog: every parameter is
+    Mirrors raster paint apps' effect-property dialog: every parameter is
     exposed, the user can re-centre the focus point, kind-specific
     fields show conditionally, and Cancel walks away without a layer.
     """
@@ -544,9 +591,10 @@ class FlashConfigDialog(_CentreControlsMixin, QDialog):
 def commit_panel_layout(
     workspace: PaintWorkspace, params: dict[str, int],
 ) -> bool:
-    """Add a Panels layer that draws the requested grid.
+    """Add a Panels layer that draws the requested grid and keep the layout on the document.
 
-    Returns ``True`` if a layer was added (parameters were valid for
+    The brush's **Snap to panel** clips strokes to that layout. Returns
+    ``True`` if a layer was added (parameters were valid for
     the canvas size), ``False`` otherwise. Pure-numpy logic so the
     test suite can exercise both branches without a Qt dialog.
     """
@@ -573,6 +621,7 @@ def commit_panel_layout(
     draw_panel_borders(layer_canvas, layout)
     layer = document.add_layer(name="Panels")
     np.copyto(layer.image, layer_canvas)
+    document.panel_layout = layout          # what the brush's Snap to panel clips to
     document.invalidate_composite()
     workspace.canvas().update()
     return True

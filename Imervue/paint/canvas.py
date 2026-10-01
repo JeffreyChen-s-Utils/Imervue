@@ -279,11 +279,10 @@ class PaintCanvas(
         self._user_view_locked = False
 
     def _init_interaction_state(self) -> None:
-        """Tool dispatch, panning, pressure, marquee animation and the drag-preview overlay."""
+        """Tool dispatch, panning, marquee animation and the drag-preview overlay."""
         self._dispatcher: ToolDispatcher | None = None
         self._panning = False
         self._pan_anchor = (0, 0)
-        self._last_pressure = 1.0
 
         # Cached marquee segments — recomputed when set_selection() is
         # called, redrawn under an animated phase by _marquee_timer.
@@ -313,7 +312,7 @@ class PaintCanvas(
         layers, so :meth:`current_image` returns ``None`` and the tool
         dispatcher silently no-ops on the first brush stroke. The
         workspace calls this from ``__init__`` so the user can paint
-        immediately, matching raster paint apps's "open with a blank canvas"
+        immediately, matching raster paint apps' "open with a blank canvas"
         behaviour.
         """
         if width <= 0 or height <= 0:

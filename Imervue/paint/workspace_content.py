@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from Imervue.multi_language.language_wrapper import language_wrapper
+
 POSE_LAYER_NAME = "Pose"
 
 # Stamp sizing relative to the canvas — large enough to read, small
@@ -157,6 +159,40 @@ class ContentOpsMixin:
         document.invalidate_composite()
         self._undo_stack.commit()
         self._canvas.update()
+
+    def _auto_base_colours(self) -> int:
+        """Flat-colour every closed region of the line art on a new layer just under it.
+
+        The line art is the reference layer when one is set, else the active
+        layer. Regions take the Swatches dock's colours when it shows any,
+        else a default ring. Returns how many regions were filled (0: nothing
+        added, and the user is told no closed region was found).
+        """
+        from Imervue.paint.auto_base_color import base_colour_layer
+        from Imervue.paint.color_palette import palette_colours
+
+        document = self._canvas.document()
+        ref_idx = document.reference_layer_index()
+        line_idx = document.active_layer_index() if ref_idx is None else ref_idx
+        if not 0 <= line_idx < len(document.layers()):
+            return 0
+        swatches = palette_colours(self._state.swatch_palette, self._state.color_history)
+        image, count = base_colour_layer(document.layer_at(line_idx).image,
+                                         palette=swatches or None,
+                                         gap_close=int(self._state.fill.gap_close_px))
+        lang = language_wrapper.language_word_dict
+        if count == 0:
+            self.toast.warning(lang.get("paint_fill_base_colours_none",
+                                        "No closed region found in the line art"))
+            return 0
+        document.set_active_layer(line_idx)
+        layer = document.add_layer(name=lang.get("paint_fill_base_colours_layer", "Base colours"))
+        layer.image[...] = image
+        document.move_active_layer(up=False)       # under the line art
+        document.invalidate_composite()
+        self._undo_stack.commit()
+        self._canvas.update()
+        return count
 
     # ---- comic-project page browser ------------------------------------
 

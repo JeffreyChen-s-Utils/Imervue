@@ -626,3 +626,44 @@ def test_paint_mask_writes_opaque_colour_and_reports_the_box():
     assert _paint_mask(canvas, mask, (10, 20, 30)) == FillResult(3, 2, 4, 2, 8)
     assert (canvas[mask] == (10, 20, 30, 255)).all()
     assert not canvas[~mask].any()
+
+
+
+def _blank_layer_over_square(chequer_canvas):
+    """An empty active layer, and a composite that shows a black square under it."""
+    layer = np.zeros((16, 16, 4), dtype=np.uint8)
+    return layer, chequer_canvas
+
+
+def test_sample_all_layers_fills_by_the_visible_picture(chequer_canvas):
+    """"Sample all layers" was stored but the fill still matched the empty active layer."""
+    state = ts.load_tool_state()
+    state.set_foreground((255, 0, 0))
+    state.set_fill(tolerance=0, contiguous=True, sample_all_layers=True)
+    layer, composite = _blank_layer_over_square(chequer_canvas)
+    tool = FillTool(state, composite_provider=lambda: composite)
+    evt = PointerEvent(phase="press", x=8, y=8, button=1, modifiers=0, pressure=1.0)
+    assert tool.handle(evt, layer) is True
+    painted = layer[..., 3] > 0
+    assert painted[4:12, 4:12].all()          # the square seen in the composite
+    assert not painted[0:4, :].any()          # the white around it stays empty
+
+
+def test_without_it_the_fill_matches_the_active_layer(chequer_canvas):
+    state = ts.load_tool_state()
+    state.set_foreground((255, 0, 0))
+    state.set_fill(tolerance=0, contiguous=True, sample_all_layers=False)
+    layer, composite = _blank_layer_over_square(chequer_canvas)
+    tool = FillTool(state, composite_provider=lambda: composite)
+    evt = PointerEvent(phase="press", x=8, y=8, button=1, modifiers=0, pressure=1.0)
+    assert tool.handle(evt, layer) is True
+    assert (layer[..., 3] > 0).all()          # the blank layer is one region
+
+
+def test_the_reference_layer_wins_over_sample_all_layers(chequer_canvas):
+    state = ts.load_tool_state()
+    state.set_fill(sample_all_layers=True, use_reference_layer=True)
+    reference = np.zeros((16, 16, 4), dtype=np.uint8)
+    tool = FillTool(state, reference_provider=lambda: reference,
+                    composite_provider=lambda: chequer_canvas)
+    assert tool._match_source(state.fill) is reference  # noqa: SLF001

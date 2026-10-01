@@ -15,6 +15,15 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
+def example_label(stem: str) -> str:
+    """Menu label for a bundled rig file: ``imeru_2nd_outfit`` -> ``Imeru 2nd Outfit``.
+
+    Only each word's first letter is raised: ``str.title`` also raised the
+    letter after a digit and showed "Imeru 2Nd Outfit".
+    """
+    return " ".join(word[:1].upper() + word[1:] for word in stem.split("_") if word)
+
+
 RECENT_KEY = "puppet_recent_files"
 
 
@@ -88,8 +97,10 @@ class PuppetMenusMixin:
             "puppet_mesh_edit", "Edit mesh", self._toggle_mesh_edit, checkable=True)
 
     def _build_live_actions(self) -> None:
-        """Checkable live-state toggles: tracking, blink, lip-sync and idle."""
+        """Live-state toggles (tracking, blink, lip-sync, idle) and lip-sync from a file."""
         act = self._action
+        self._lipsync_audio_action = act(
+            "puppet_lipsync_audio", "Lip-sync from Audio File…", self._lipsync_from_audio_file)
         self._drag_toggle = act(
             "puppet_drag_track", "Drag-track head", self._toggle_drag, checkable=True)
         self._blink_toggle = act(
@@ -127,6 +138,7 @@ class PuppetMenusMixin:
         """Validate, fit-to-window and reset-to-rest."""
         act = self._action
         self._validate_action = act("puppet_validate", "Validate", self._run_validator)
+        self._repair_action = act("puppet_repair_rig", "Repair Rig", self._run_rig_repair)
         self._fit_action = act("puppet_fit_view", "Fit to Window", self._canvas_reset_view)
 
         # Reset-to-rest — single shortcut for "wipe every live-state
@@ -171,6 +183,7 @@ class PuppetMenusMixin:
         live_menu.addAction(self._drag_toggle)
         live_menu.addAction(self._blink_toggle)
         live_menu.addAction(self._lipsync_toggle)
+        live_menu.addAction(self._lipsync_audio_action)
         live_menu.addAction(self._webcam_toggle)
         live_menu.addSeparator()
         live_menu.addAction(self._idle_toggle)
@@ -188,6 +201,7 @@ class PuppetMenusMixin:
 
         tools_menu = bar.addMenu(lang.get("puppet_menu_tools", "Tools"))
         tools_menu.addAction(self._validate_action)
+        tools_menu.addAction(self._repair_action)
         tools_menu.addAction(self._fit_action)
 
         return bar
@@ -259,8 +273,7 @@ class PuppetMenusMixin:
             empty.setEnabled(False)
             return
         for path in bundled:
-            label = path.stem.replace("_", " ").title()
-            action = self._examples_menu.addAction(label)
+            action = self._examples_menu.addAction(example_label(path.stem))
             action.setToolTip(str(path))
             action.triggered.connect(
                 lambda _checked=False, p=str(path): self.open_puppet(p),

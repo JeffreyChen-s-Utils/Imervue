@@ -21,11 +21,38 @@ _FORMAT_BY_EXT: dict[str, str] = {".pdf": "PDF", ".tif": "TIFF", ".tiff": "TIFF"
 _PAGE_NUMBER_WIDTH = 3
 # Formats that cannot carry alpha / palette — flatten to RGB before saving.
 _RGB_ONLY = frozenset({"PDF"})
+# Pillow counts a PSD's layers as its frames (numbered from 1): layers of one
+# picture, not pages, and seeking frame 0 raises EOFError.
+_SINGLE_PICTURE_FORMATS = frozenset({"PSD"})
+# The MPF index of an MPO (a JPEG carrying more pictures), and the prefix of the
+# picture types that are frames of their own: stereo pairs, multi-angle, panorama.
+_MP_ENTRIES = 0xB002
+_MP_FRAME_TYPE = "Multi-Frame"
 
 
 def multipage_format(ext: str) -> str | None:
     """Return the Pillow save format for a multi-page extension, or None."""
     return _FORMAT_BY_EXT.get(ext.lower())
+
+
+def page_count(img: Image.Image) -> int:
+    """The pages *img* holds: its frames, except those that belong to one picture.
+
+    A PSD's frames are its layers. An MPO is a JPEG whose MPF index lists more
+    pictures, and a camera writes its large preview (or a depth or gain map)
+    there: only an MPF of stereo, multi-angle or panorama frames has pages.
+    """
+    if img.format in _SINGLE_PICTURE_FORMATS:
+        return 1
+    if img.format == "MPO" and not _has_mp_frames(img):
+        return 1
+    return getattr(img, "n_frames", 1)
+
+
+def _has_mp_frames(img: Image.Image) -> bool:
+    entries = getattr(img, "mpinfo", {}).get(_MP_ENTRIES, [])
+    return any(str(entry.get("Attribute", {}).get("MPType", "")).startswith(_MP_FRAME_TYPE)
+               for entry in entries)
 
 
 def split_page_stem(source: str, index: int) -> str:
@@ -79,10 +106,11 @@ def split_multipage(source: str, out_dir: str, ext: str = ".png") -> list[Path]:
     mode = "RGBA" if suffix == ".png" else "RGB"
     saved: list[Path] = []
     with Image.open(source) as img:
-        frames = getattr(img, "n_frames", 1)
+        frames = page_count(img)
         stems = [split_page_stem(source, index) for index in range(frames)]
         for index, out_path in enumerate(free_names(out_root, stems, suffix)):
-            img.seek(index)
+            if frames > 1:   # a PSD's frame 0 can't be sought: its picture is already loaded
+                img.seek(index)
             img.convert(mode).save(str(out_path))
             saved.append(out_path)
     return saved

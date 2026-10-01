@@ -61,8 +61,9 @@ def save_region_as_material(
     ``library_root`` is the on-disk material library directory; the
     new tile lands in the ``category`` subfolder (created if missing)
     so :meth:`MaterialIndex.from_directory` picks it up on the next
-    rescan. ``name`` becomes the file stem; the ``.png`` extension is
-    enforced so the index's filter accepts it.
+    rescan. ``name`` becomes the file stem (``name_2``, ``name_3`` ... when
+    taken, so an earlier material is never overwritten); the ``.png``
+    extension is enforced so the index's filter accepts it.
 
     Returns the freshly-built :class:`MaterialEntry` so the caller
     can splice it into the live index without a full rescan.
@@ -95,12 +96,17 @@ def save_region_as_material(
 
     target_dir = Path(library_root) / category
     target_dir.mkdir(parents=True, exist_ok=True)
-    target_path = (target_dir / f"{safe_name}.png").resolve()
+    target_path = target_dir / f"{safe_name}.png"
+    counter = 2
+    while target_path.exists():          # never overwrite an earlier material
+        target_path = target_dir / f"{safe_name}_{counter}.png"
+        counter += 1
+    target_path = target_path.resolve()
 
     region = canvas[y : y + h, x : x + w]
     Image.fromarray(np.ascontiguousarray(region), mode="RGBA").save(target_path)
     return MaterialEntry(
-        name=safe_name,
+        name=target_path.stem,
         path=target_path,
         category=category,
         tags=(),

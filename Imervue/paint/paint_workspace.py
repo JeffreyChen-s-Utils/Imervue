@@ -31,6 +31,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QMainWindow, QStatusBar, QTabWidget
 
+from Imervue.image.formats import JPEG_EXTENSIONS
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint import tool_state as ts
@@ -226,12 +227,21 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
                 reference_provider=(
                     lambda: self._canvas.document().reference_layer_image()),
                 composite_provider=lambda: self._canvas.document().composite(),
+                panel_layout_provider=self._panel_layout,
                 overlay_setter=lambda overlay: self._canvas.set_tool_overlay(overlay),
                 commit_undo=self._on_dispatcher_commit,
             ),
         )
         self._canvas.set_tool_dispatcher(self._dispatcher)
         self._attach_workspace_aware_tools()
+
+    def _panel_layout(self):
+        """The current document's Panel Cutter layout, if it still fits its canvas."""
+        from Imervue.paint.manga_panels import layout_for_canvas
+        document = self._canvas.document()
+        if document.shape is None:
+            return None
+        return layout_for_canvas(getattr(document, "panel_layout", None), document.shape)
 
     def _attach_workspace_aware_tools(self) -> None:
         """Hand each workspace-aware tool a back-reference to ``self``.
@@ -257,6 +267,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         self._tabs.currentChanged.connect(self._on_tab_changed)
         self._build_welcome_hint()
         self._maybe_offer_autosave_recovery()
+        self.start_autosave()
         self._build_brush_kind_shortcuts()
         from Imervue.paint.shortcut_registry import load_shortcuts
         self.apply_shortcut_registry(load_shortcuts())
@@ -269,33 +280,38 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
     def state(self) -> ToolState:
         return self._state
 
-    def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
-        """Save the dock layout before the window goes away, and block
-        the close on unsaved tabs.
+    def confirm_close(self) -> bool:
+        """Ask about unsaved tabs; True when the workspace may go away.
 
-        The per-tab close handler already protects single-tab discards;
-        this branch covers the wider "user clicks the window X with
-        five modified tabs" case where each tab would otherwise be
-        thrown away silently.
+        On True it has stopped autosaving, saved the dock layout and deleted
+        its own autosave snapshots (nothing is left to recover). The main
+        window calls this before closing: as a tab page this widget never
+        gets a ``closeEvent`` of its own, so unsaved tabs used to vanish.
         """
         if self._has_unsaved_tabs() and not self._confirm_discard_all_unsaved():
-            event.ignore()
-            return
+            return False
         import contextlib
         # Stop the autosave timer so a queued tick can't fire on the torn-down
         # canvas after close.
         with best_effort("stop the autosave timer", logger):
             self.stop_autosave()
+        with best_effort("delete this workspace's autosave snapshots", logger):
+            self.discard_own_autosaves()
         with contextlib.suppress(RuntimeError, OSError):
             self._save_dock_state()
+        return True
+
+    def closeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Block the close on unsaved tabs (see :meth:`confirm_close`)."""
+        if not self.confirm_close():
+            event.ignore()
+            return
         super().closeEvent(event)
 
     # ---- drag-and-drop file open ---------------------------------------
 
-    SUPPORTED_DROP_EXTS = (
-        ".psd", ".png", ".jpg", ".jpeg", ".tif", ".tiff",
-        ".bmp", ".webp",
-    )
+    SUPPORTED_DROP_EXTS = tuple(sorted(
+        {".psd", ".png", ".tif", ".tiff", ".bmp", ".webp"} | JPEG_EXTENSIONS))
 
     def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
         """Accept file URL drops the workspace knows how to open."""

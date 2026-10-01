@@ -68,11 +68,14 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
         self._groups: dict[str, LayerGroup] = {}
         self._named_selections: dict[str, np.ndarray] = {}
         # Index of the layer the bucket fill samples for connectivity /
-        # tolerance — raster paint apps's "Reference Layer" toggle. ``None`` means
+        # tolerance — raster paint apps' "Reference Layer" toggle. ``None`` means
         # the bucket samples its own target layer (the legacy default).
         # Stored as an index, not a Layer reference, so it survives
         # reorderings via the helpers below.
         self._reference_layer_index: int | None = None
+        # The manga panel layout Panel Cutter drew last (``manga_panels.PanelLayout``),
+        # which the brush's Snap to panel clips strokes to. Not saved with the file.
+        self.panel_layout = None
 
     def __deepcopy__(self, memo: dict) -> PaintDocument:
         """Deep-copy the document CONTENT, not its runtime wiring.
@@ -97,6 +100,7 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
             name: mask.copy() for name, mask in self._named_selections.items()
         }
         clone._reference_layer_index = self._reference_layer_index
+        clone.panel_layout = self.panel_layout
         return clone
 
     # ---- listeners -------------------------------------------------------
@@ -498,7 +502,7 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
         """Replace the active selection with one derived from a layer's alpha.
 
         Pixels with alpha strictly greater than ``threshold`` become
-        selected. ``threshold=0`` matches raster paint apps's "Select Layer"
+        selected. ``threshold=0`` matches raster paint apps' "Select Layer"
         command. Returns ``True`` if the selection actually changed.
         """
         from Imervue.paint.selection_ops import from_layer_alpha

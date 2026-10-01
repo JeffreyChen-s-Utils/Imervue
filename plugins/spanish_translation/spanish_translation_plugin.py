@@ -2,8 +2,10 @@
 
 Registers Spanish as a runtime-installable language. The plugin loads
 its full dictionary from ``spanish.py`` and registers it via
-``language_wrapper.register_language``. Once registered, the language
-appears in the Language menu just like the five built-in choices.
+``language_wrapper.register_language`` from ``register_languages``, which
+Imervue calls before it builds its window, so Spanish applies at start-up.
+Once registered, the language appears in the Language menu just like the
+five built-in choices.
 
 Plugin-vs-main note: this plugin owns the entire Spanish translation
 surface, including translations for keys that *other* plugins use
@@ -33,7 +35,9 @@ class SpanishTranslationPlugin(ImervuePlugin):
     plugin_description = "Adds Spanish (Español) to the Language menu."
     plugin_author = "Imervue"
 
-    def on_plugin_loaded(self) -> None:
+    @classmethod
+    def register_languages(cls) -> None:
+        """Register Spanish; Imervue calls this before it builds the window."""
         language_wrapper.register_language(
             "Spanish", "Español", spanish_word_dict,
         )
@@ -41,3 +45,8 @@ class SpanishTranslationPlugin(ImervuePlugin):
             "Spanish translation registered (%d entries)",
             len(spanish_word_dict),
         )
+
+    def on_plugin_loaded(self) -> None:
+        """Register Spanish on an Imervue that predates ``register_languages``."""
+        if "Spanish" not in language_wrapper.plugin_languages:
+            self.register_languages()

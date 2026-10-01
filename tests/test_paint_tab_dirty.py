@@ -153,7 +153,12 @@ def test_close_drops_dirty_entry(workspace, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_file_menu_notify_success_marks_active_tab_clean(qapp):
+@pytest.mark.parametrize(("key", "saved", "cleared_expected"), [
+    ("paint_file_save_psd_done", True, [True]),
+    ("paint_file_export_image_done", False, []),
+])
+def test_file_menu_notify_success_marks_only_a_save_clean(qapp, key, saved, cleared_expected):
+    """An export marked the tab clean, so closing dropped the layers without asking."""
     from Imervue.paint.file_menu import _FileMenuBridge
 
     cleared = []
@@ -171,7 +176,5 @@ def test_file_menu_notify_success_marks_active_tab_clean(qapp):
 
     bridge = _FileMenuBridge(_StubWorkspace())
     fake = "/scratch/out.png"   # noqa: S108  # label only, no file write
-    bridge._notify_success(  # noqa: SLF001
-        "paint_file_export_image_done", "Exported", fake,
-    )
-    assert cleared == [True]
+    bridge._notify_success(key, "Done", fake, saved=saved)  # noqa: SLF001
+    assert cleared == cleared_expected

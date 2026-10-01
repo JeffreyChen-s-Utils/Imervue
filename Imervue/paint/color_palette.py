@@ -166,3 +166,24 @@ def load_palettes() -> list[Palette]:
 def all_palettes() -> list[Palette]:
     """Built-ins followed by user palettes — display order."""
     return list(BUILT_IN_PALETTES) + load_palettes()
+
+
+#: The Swatches dock's choice meaning "the recent colours", not a named palette.
+RECENT_COLOURS = ""
+
+
+def palette_colours(name: str, recent) -> list[tuple[int, int, int]]:
+    """The colours the Swatches dock shows for *name*: the named palette's, else *recent*.
+
+    ``RECENT_COLOURS`` (and a palette that no longer exists) gives *recent*.
+    """
+    if name != RECENT_COLOURS:
+        for palette in all_palettes():
+            if palette.name == name:
+                return list(palette.colors)
+    return [tuple(int(c) for c in rgb) for rgb in recent]
+
+
+def is_built_in(name: str) -> bool:
+    """Whether *name* is one of the palettes that ship with Imervue (they cannot be deleted)."""
+    return find_built_in(name) is not None

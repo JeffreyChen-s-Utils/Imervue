@@ -28,11 +28,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.system.natural_sort import natural_key
+from Imervue.system.image_listing import list_images
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.dimensions import image_dimensions
-from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+from Imervue.image.formats import JPEG_EXTENSIONS, STILL_IMAGE_EXTENSIONS
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_transfer import carry_sidecars, follow_saved_data
@@ -54,16 +54,8 @@ RULE_COUNT = "count"
 # ---------------------------------------------------------------------------
 
 def _scan_folder(folder: str) -> list[str]:
-    """Return image paths in *folder* (non-recursive), sorted by name."""
-    result: list[str] = []
-    try:
-        for entry in os.scandir(folder):
-            if entry.is_file() and Path(entry.name).suffix.lower() in STILL_IMAGE_EXTENSIONS:
-                result.append(entry.path)
-    except OSError:
-        pass
-    result.sort(key=lambda p: natural_key(os.path.basename(p)))
-    return result
+    """Return image paths in *folder* (non-recursive), in natural name order."""
+    return list_images(folder, STILL_IMAGE_EXTENSIONS)
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +88,7 @@ def _get_resolution_bucket(path: str) -> str:
 def _get_type_bucket(path: str) -> str:
     """Return a normalised extension group name."""
     ext = Path(path).suffix.lower()
-    if ext in (".jpg", ".jpeg"):
+    if ext in JPEG_EXTENSIONS:
         return "JPG"
     return ext.lstrip(".").upper() or "OTHER"
 

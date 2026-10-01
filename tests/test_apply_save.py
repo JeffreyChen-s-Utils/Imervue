@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,7 @@ from PIL import Image
 
 from Imervue.gui._apply_save import (
     EffectWorker,
+    finish_save,
     labeled_slider,
     output_path,
     output_paths,
@@ -168,3 +170,84 @@ def test_load_rgba_develops_raw_and_rasterises_svg(tmp_path, monkeypatch):
     svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8">'
                    '<rect width="12" height="8" fill="red"/></svg>', encoding="utf-8")
     assert load_rgba(str(svg)).shape == (8, 12, 4)
+
+
+
+class _Recorder:
+    """Stands in for a one-shot save dialog: records what the finish did to it."""
+
+    def __init__(self):
+        self.toasts: list[tuple[str, str]] = []
+        self.accepted = False
+        self.running = True
+        self.progress_shown = True
+        toast = SimpleNamespace(info=lambda m: self.toasts.append(("info", m)),
+                                error=lambda m: self.toasts.append(("error", m)))
+        self._viewer = SimpleNamespace(main_window=SimpleNamespace(toast=toast))
+        self._progress = SimpleNamespace(setVisible=self._set_progress)
+        self._run_btn = SimpleNamespace(setEnabled=self._set_enabled)
+
+    def _set_progress(self, shown):
+        self.progress_shown = shown
+
+    def _set_enabled(self, enabled):
+        self.running = not enabled
+
+    def _set_running(self, running):
+        self.running = running
+
+    def accept(self):
+        self.accepted = True
+
+
+def test_finish_save_announces_the_written_file_and_closes():
+    dialog = _Recorder()
+    finish_save(dialog, True, str(Path("out") / "photo_hdr.png"), "hdr_failed", "HDR merge failed")
+    assert dialog.toasts == [("info", "Saved photo_hdr.png")]
+    assert dialog.accepted
+    assert not dialog.running and not dialog.progress_shown
+
+
+def test_finish_save_says_why_it_failed_and_stays_open():
+    dialog = _Recorder()
+    finish_save(dialog, False, "disk full", "hdr_failed", "HDR merge failed")
+    assert dialog.toasts == [("error", "HDR merge failed: disk full")]
+    assert not dialog.accepted
+    assert not dialog.running and not dialog.progress_shown
+
+
+_SAVE_DIALOGS = [
+    ("clone_stamp_dialog", "CloneStampDialog", "_on_done", "Clone stamp failed"),
+    ("crop_straighten_dialog", "CropStraightenDialog", "_on_done", "Crop / straighten failed"),
+    ("hdr_merge_dialog", "HdrMergeDialog", "_on_done", "HDR merge failed"),
+    ("healing_brush_dialog", "HealingBrushDialog", "_on_done", "Healing failed"),
+    ("lens_correction_dialog", "LensCorrectionDialog", "_on_done", "Lens correction failed"),
+    ("noise_sharpen_dialog", "NoiseSharpenDialog", "_on_done", "Noise reduction / sharpening failed"),
+    ("sky_replace_dialog", "SkyReplaceDialog", "_on_done", "Sky replacement failed"),
+    ("focus_stack_dialog", "FocusStackDialog", "_on_done", "Focus stacking failed"),
+    ("panorama_dialog", "PanoramaDialog", "_on_done", "Panorama stitch failed"),
+    ("stack_blend_dialog", "StackBlendDialog", "_on_done", "Image stack failed"),
+    ("auto_straighten_dialog", "AutoStraightenDialog", "_on_apply_done", "Auto-straighten failed"),
+]
+
+
+@pytest.mark.parametrize(("module", "cls", "slot", "label"), _SAVE_DIALOGS)
+def test_a_one_shot_tool_reports_its_failure(module, cls, slot, label):
+    """These dialogs dropped the worker's error: the progress bar went away and nothing else."""
+    import importlib
+    dialog_cls = getattr(importlib.import_module(f"Imervue.gui.{module}"), cls)
+    dialog = _Recorder()
+    getattr(dialog_cls, slot)(dialog, False, "disk full")
+    assert dialog.toasts == [("error", f"{label}: disk full")]
+    assert not dialog.accepted
+    assert not dialog.running
+
+
+@pytest.mark.parametrize(("module", "cls", "slot", "label"), _SAVE_DIALOGS)
+def test_a_one_shot_tool_names_the_file_it_wrote(module, cls, slot, label):
+    import importlib
+    dialog_cls = getattr(importlib.import_module(f"Imervue.gui.{module}"), cls)
+    dialog = _Recorder()
+    getattr(dialog_cls, slot)(dialog, True, str(Path("out") / "photo_edit.png"))
+    assert dialog.toasts == [("info", "Saved photo_edit.png")]
+    assert dialog.accepted

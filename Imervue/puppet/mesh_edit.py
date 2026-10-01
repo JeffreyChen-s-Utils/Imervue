@@ -7,7 +7,11 @@ Qt-free; the actual mouse handling lives in the canvas widget.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from Imervue.puppet.document import Drawable, PuppetDocument
+
+_MORPH_SIDES = ("delta_at_min", "delta_at_max")
 
 
 def find_vertex_at(
@@ -57,9 +61,11 @@ def delete_vertex(drawable: Drawable, index: int) -> bool:
     indices > ``index`` in the index array down by one. UV array stays
     aligned with vertices.
 
-    Returns ``True`` if the vertex was removed."""
+    Returns ``True`` if the vertex was removed. The drawable's bone weights
+    and vertex-morph deltas lose the same entry, so they stay aligned."""
     if index < 0 or index >= len(drawable.vertices):
         return False
+    remap_vertex_data(drawable, [i for i in range(len(drawable.vertices)) if i != index])
     drawable.vertices.pop(index)
     if index < len(drawable.uvs):
         drawable.uvs.pop(index)
@@ -91,3 +97,32 @@ def find_drawable_at(
         if idx is not None:
             return (drawable.id, idx)
     return None
+
+
+def remap_vertex_data(drawable: Drawable, sources: Sequence[int]) -> None:
+    """Re-index *drawable*'s per-vertex data: new vertex ``n`` takes what ``sources[n]`` had.
+
+    Covers every ``bone_weights`` list and both delta lists of each
+    ``vertex_morphs`` entry (an index past a short list reads as zero), and
+    drops runtime's cached arrays of the old deltas. The caller replaces
+    ``vertices``, ``uvs`` and ``indices`` itself.
+    """
+    if drawable.bone_weights:
+        drawable.bone_weights = {
+            bone: [float(weights[i]) if i < len(weights) else 0.0 for i in sources]
+            for bone, weights in drawable.bone_weights.items()
+        }
+    if drawable.vertex_morphs:
+        drawable.vertex_morphs = [_remap_morph(morph, sources) for morph in drawable.vertex_morphs]
+
+
+def _remap_morph(morph: dict, sources: Sequence[int]) -> dict:
+    out = {key: value for key, value in morph.items() if not key.startswith("_np_")}
+    for side in _MORPH_SIDES:
+        deltas = morph.get(side)
+        if deltas is not None:
+            out[side] = [
+                tuple(float(c) for c in deltas[i]) if i < len(deltas) else (0.0, 0.0)
+                for i in sources
+            ]
+    return out

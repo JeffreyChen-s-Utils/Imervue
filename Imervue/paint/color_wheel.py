@@ -116,7 +116,7 @@ def triangle_vertices(
     The triangle inscribes in a circle of ``triangle_radius`` and
     rotates so the saturated-hue corner points outward at the
     current hue's ring position. Vertex order is (saturated_hue,
-    white, black) — matches raster paint apps's layout where pulling toward
+    white, black) — matches raster paint apps' layout where pulling toward
     the corner shifts S/V accordingly.
     """
     base_angle = hue_to_ring_angle(hue)

@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
 
+from Imervue.system.hidden_files import is_hidden
 from Imervue.system.natural_sort import natural_key
+from Imervue.system.pixel_limit import decode_slot
 from Imervue.system.best_effort import best_effort
 from Imervue.image.heif_support import ensure_heif_opener
 from Imervue.image.formats import RAW_EXTENSIONS, VIEWER_EXTENSIONS, ensure_pillow_opener
 from Imervue.image.color_profile import to_srgb
+from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.orientation import exif_orientation, transpose_for
 from Imervue.image.pyramid import DeepZoomImage
 from Imervue.image.video_frames import VIDEO_EXTENSIONS, poster_frame
@@ -48,21 +51,23 @@ def _load_raw(path: str, thumbnail: bool) -> np.ndarray:
 def _load_raster(path: str, *, orient: bool = True) -> np.ndarray:
     img = Image.open(path)
     code = exif_orientation(img) if orient else 1
-    img = to_srgb(img)   # embedded colour profile -> the sRGB the screen shows
-    # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
-    # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
-    # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
-    if img.mode not in ("RGB", "RGBA", "L"):
-        img = img.convert("RGBA")
-    return np.array(transpose_for(img, code))
+    with decode_slot(img.width * img.height):   # one giant panorama at a time
+        img = to_srgb(to_eight_bit(img))   # 16-bit / float grey scaled; profile -> screen sRGB
+        # 避免不必要的 RGBA 轉換 — 原生 RGB/L 交給下方補 alpha 的共用路徑處理.
+        # 省掉一次全圖的記憶體複製. 60 MP+ JPEG 記憶體峰值約少 25%.
+        # Palette/CMYK 等怪模式仍走 convert("RGBA") 避免 numpy 解讀錯誤.
+        if img.mode not in ("RGB", "RGBA", "L"):
+            img = img.convert("RGBA")
+        return np.array(transpose_for(img, code))
 
 
 def _load_raster_thumbnail(path: str, max_edge: int = _THUMBNAIL_EDGE, *,
                            orient: bool = True) -> np.ndarray:
-    with Image.open(path) as img:
+    with Image.open(path) as img, decode_slot(img.width * img.height):
         code = exif_orientation(img) if orient else 1
+        # Past JPEG's draft decode this reads every pixel: a giant waits its turn.
         img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
-        shown = to_srgb(img)   # after the downscale: converting fewer pixels
+        shown = to_srgb(to_eight_bit(img))   # after the downscale: converting fewer pixels
         thumb = shown.convert("RGBA") if shown.mode not in ("RGB", "RGBA", "L") else shown
         return np.array(transpose_for(thumb, code))
 
@@ -201,6 +206,13 @@ class _FolderScanSignals(QObject):
     finished = Signal(str, list)
 
 
+def _is_listed(entry: os.DirEntry) -> bool:
+    """A folder entry the viewer lists: a file it opens that is not hidden (``hidden_files``)."""
+    return (entry.is_file(follow_symlinks=False)
+            and os.path.splitext(entry.name)[1].lower() in VIEWER_EXTENSIONS
+            and not is_hidden(entry))
+
+
 class FolderScanWorker(QRunnable):
     """Scan a folder in chunks so very large folders can appear progressively."""
 
@@ -223,10 +235,7 @@ class FolderScanWorker(QRunnable):
                 for entry in it:
                     if self._abort:
                         return
-                    if not entry.is_file(follow_symlinks=False):
-                        continue
-                    ext = os.path.splitext(entry.name)[1].lower()
-                    if ext not in VIEWER_EXTENSIONS:
+                    if not _is_listed(entry):
                         continue
                     batch.append(entry.path)
                     found.append(entry.path)
@@ -283,6 +292,23 @@ def _load_svg(path: str, thumbnail: bool = False) -> np.ndarray:
     return arr
 
 
+# Sorts the directory listing already answers: DirEntry.stat() comes free with
+# os.scandir on Windows (FindNextFile returns times and size), where a stat per
+# path cost a system call each - 5000 files sorted by date took 5x longer.
+_STAT_SORT_KEYS = {
+    "modified": lambda st: st.st_mtime,
+    "size": lambda st: st.st_size,
+    "created": lambda st: getattr(st, "st_birthtime", st.st_ctime),
+}
+
+
+def _stat_value(entry, key) -> float:
+    try:
+        return key(entry.stat(follow_symlinks=False))
+    except OSError:
+        return 0
+
+
 def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) -> list[str]:
     """
     快速掃描資料夾中的圖片，直接用使用者選定的排序方式一次排完（不再先 sort by name 再 re-sort）。
@@ -291,20 +317,21 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
     folder refresh and the unit tests — keep getting the same result.
     """
     import os
-    result = []
+    entries = []
     try:
         # Desktop viewer: *directory* is the user's own local folder pick
         # (file-open dialog / breadcrumb), not untrusted remote input — no
         # privilege boundary is crossed, so the taint warning is a false positive.
         with os.scandir(directory) as it:  # NOSONAR
-            for entry in it:
-                if entry.is_file(follow_symlinks=False):
-                    ext = os.path.splitext(entry.name)[1].lower()
-                    if ext in VIEWER_EXTENSIONS:
-                        result.append(entry.path)
+            entries = [entry for entry in it if _is_listed(entry)]
     except OSError:
         return []
 
+    stat_key = _STAT_SORT_KEYS.get(sort_by)
+    if stat_key is not None:
+        entries.sort(key=lambda entry: _stat_value(entry, stat_key), reverse=not ascending)
+        return [entry.path for entry in entries]
+    result = [entry.path for entry in entries]
     if sort_by == "name":
         # Fast default path — avoid the import of sort_menu for the common case.
         result.sort(key=lambda p: natural_key(os.path.basename(p)), reverse=not ascending)
@@ -315,11 +342,20 @@ def _scan_images(directory: str, sort_by: str = "name", ascending: bool = True) 
     return result
 
 
+# Sorts that open every file's header (its size, its EXIF date): worth the cache.
+_HEADER_SORTS = frozenset({"resolution", "taken"})
+
+
 def _scan_images_for_user(directory: str) -> list[str]:
     """Scan + sort a folder using the user's current sort settings (single pass)."""
     from Imervue.user_settings.user_setting_dict import user_setting_dict
     sort_by = user_setting_dict.get("sort_by", "name")
     ascending = user_setting_dict.get("sort_ascending", True)
+    if sort_by not in _HEADER_SORTS:
+        # Scanning is the fast path here: the cache checks every listed file
+        # still exists, one system call each, while scandir lists them in
+        # batches (5000 files by name: 38 ms scanned, 349 ms from the cache).
+        return _scan_images(directory, sort_by=sort_by, ascending=ascending)
     from Imervue.image import folder_index
     cached = folder_index.load(directory, sort_by=sort_by, ascending=ascending)
     if cached is not None:
@@ -457,8 +493,10 @@ def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.recent_image import add_recent_image
     dir_path = path_obj.parent
     images = _scan_images_for_user(str(dir_path))
-    if not images:
-        return
+    target = os.path.normpath(str(path_obj))
+    if all(os.path.normpath(p) != target for p in images):
+        # A hidden picture opened on purpose joins its folder's list.
+        images = _sort_for_user([*images, str(path_obj)])
     main_gui._unfiltered_images = list(images)
     images, stacks = _maybe_collapse_stacks(images)
     main_gui._stack_members = stacks
@@ -473,8 +511,6 @@ def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:
         reapply()
     add_recent_image(str(path_obj))
     user_setting_dict["user_last_folder"] = str(dir_path)
-    if hasattr(main_gui.main_window, "plugin_manager"):
-        main_gui.main_window.plugin_manager.dispatch_image_loaded(str(path_obj), main_gui)
 
 
 def _locate_current_index(images: list[str], target: str) -> int:

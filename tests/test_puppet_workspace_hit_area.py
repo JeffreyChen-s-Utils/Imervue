@@ -59,7 +59,7 @@ def _doc_with_motion_and_expression() -> PuppetDocument:
     return doc
 
 
-def test_hit_area_with_motion_selects_motion_in_dock(qapp):
+def test_hit_area_with_motion_plays_it(qapp):
     ws = PuppetWorkspace()
     try:
         ws.canvas().load_document(_doc_with_motion_and_expression())
@@ -67,6 +67,7 @@ def test_hit_area_with_motion_selects_motion_in_dock(qapp):
         player = ws._motion_dock.player()   # noqa: SLF001
         assert player.motion() is not None
         assert player.motion().name == "wave"
+        assert player.is_playing()
     finally:
         ws.deleteLater()
 

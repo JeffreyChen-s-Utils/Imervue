@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from Imervue.gui._apply_save import finish_save
 from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -152,10 +153,7 @@ class PanoramaDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, info: str) -> None:
-        self._progress.setVisible(False)
-        self._run_btn.setEnabled(True)
-        if ok:
-            self.accept()
+        finish_save(self, ok, info, "pano_failed", "Panorama stitch failed")
 
 
 def open_panorama(viewer: GPUImageView) -> None:

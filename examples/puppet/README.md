@@ -1,80 +1,104 @@
 # Puppet examples
 
-Drop-in `.puppet` file you can import into the **Puppet** tab of
-Imervue. The Puppet tab is built-in (see `Imervue/puppet/`) — no
-plugin enable step needed.
+Drop-in `.puppet` file you can open in the **Puppet** tab of Imervue
+(**File > Examples > Imeru**, or **Open Puppet…**) or put on your desktop
+from the **Desktop Pet** tab (**Load bundled Imeru**). The Puppet tab is
+built in (see `Imervue/puppet/`); there is nothing to enable.
 
-| File | Subject | Drawables | Parameters | Motions |
-|---|---|---|---|---|
-| `march_7th.puppet` | March 7th (Honkai: Star Rail) Live2D rig | 307 | 203 | 9 (Idle ×7, TapHead ×1, plus author-recorded loops) |
-| `vivian.puppet` | Vivian (薇薇安) — community-published free Live2D rig | 392 | 197 | 4 (synthesised idle loops) |
+| File | Subject | Drawables | Parameters | Motions | Expressions |
+|---|---|---|---|---|---|
+| `imeru.puppet` | Imeru, Imervue's original mascot | 45 | 31 | 8 | 7 |
 
-## `march_7th.puppet`
+## `imeru.puppet`
 
-A real Live2D model converted in-tree from the Cubism SDK output.
-Source `.moc3` / textures stay on the author's machine — the binary
-`.puppet` ships a snapshot of the rig with vertex morphs sampled
-linearly off each parameter, so the file is self-contained and runs
-on the default `requirements.txt` without the Cubism Native SDK.
+Imeru is made entirely by the code in [`imeru/`](imeru/), the way 3D
+anime games build their characters: no third-party artwork, model or SDK
+is involved, so the file can be shared and modified like the rest of
+Imervue. Rebuild it with
 
-**Highlights:**
+```
+py -3 examples/puppet/imeru/build.py              # render in Blender, then rig
+py -3 examples/puppet/imeru/build.py --no-render  # rig the last render again
+```
 
-* **307 drawables** with Cubism's atlas UVs preserved, masks and
-  render order honoured. Front-only fragments are surfaced via the
-  IsVisible bit; back-of-head / back-of-body slices stay hidden.
-* **203 Cubism-standard parameters** — every standard input driver
-  (webcam, blink, lip-sync, cursor look-at) drives the rig without
-  per-rig configuration.
-* **Vertex morphs only** — Cubism's keyform pipeline is reduced to a
-  linear blend between the parameter default and ±extreme so the
-  built-in runtime can play it back without licensed SDK code.
-* **Nine motions:**
-  * Author-converted Cubism loops — `zhaiyan`, `zhaoxiang` (both in
-    the `Idle` group).
-  * Reference idle / interaction loops merged in from the old
-    procedural + complete examples — `idle_breath`, `idle_look`
-    (Idle), `tap_head` (TapHead group, hit-area triggered).
-  * Procedurally-keyed gesture loops remapped onto Cubism standard
-    parameters — `idle`, `wave`, `curtsy`, `cheer`. Arm-only
-    keyframes drop because the converted rig has no arm-slider
-    equivalent, but every motion that touches the head or body
-    survives.
+It needs Blender 4.2 or newer, found through `$BLENDER_EXE`, `PATH`,
+`D:/Tools/blender-*/` or `C:/Program Files/Blender Foundation/`. The
+build models her hair, body, sailor outfit and arms in Blender
+(`imeru/blender/`) and cel-shades them the way 3D anime games do: two or
+three tones with a saturated band along the shadow line, a rim light and
+inverted-hull lines; hair lit through the normals of a smooth ball and
+column around it (`normals.py`), so the whole mass falls into light and
+shade in one shape, with strand lines and a highlight band broken into
+one stroke per lock painted on in the shader; and occlusion baked into
+every vertex (`lightmap.py`), so creases and the hair under other hair
+stay in shade. It renders every puppet layer on its own at twice the
+canvas size (`imeru/render3d.py`; about a minute, into the ignored
+`imeru/render/`), cutting the bang and neck shadows from extra passes in
+which the hair and head only cast shadows.
 
-## `vivian.puppet`
+The face is shaded the way those games shade faces, not from its
+normals: `imeru/face_shadow.py` draws the shadow for light angles from
+0 to 90 degrees (the cheekbone holds the light longest, the nose throws a
+small shadow, a lit triangle stays under the far eye), merges the shapes
+into one SDF face shadow map by signed-distance interpolation, and cuts
+it into five rings; the bangs' outline, pushed a few pixels along the
+light, adds a clear hair shadow on the forehead. The build then paints
+her eyes, brows, blush, nose and mouth (`imeru/features.py`), rigs every
+layer (`imeru/rig.py`), adds the motions and expressions, writes
+`imeru.puppet` and checks it against the `.puppet` format
+(`Imervue/puppet/FORMAT.md`).
 
-A second real Live2D rig converted with the same Cubism Native →
-`.puppet` pipeline, used to validate the importer against a multi-
-atlas rig (eleven 4096² source textures vs March 7th's two). The
-textures are downsampled to 2048² before packing so the example
-stays in the 20 MB range; the rig still covers the full 4584×7920
-author canvas and all 197 Cubism-standard parameters.
+**What the rig shows off:**
 
-**Highlights:**
+* **Live2D-style head turns** — `ParamAngleX/Y` move every head layer by
+  its depth: the eyes and nose shift most, the face outline stays put,
+  the fringe moves in front and the back hair the other way, so the face
+  reads as round. `ParamAngleZ` rolls the head around the neck.
+* **A face shadow that follows the light** — the light stays put, so
+  turning her head changes the angle it meets her face at: the five
+  rings of the face shadow map (`face_shade_0` … `face_shade_4`) fade in
+  with `ParamAngleX`, and the shadow sweeps across the far cheek as she
+  turns away from the light, or onto the near side past it.
+* **Eyes** — the white of each eye closes onto the lower lid
+  (`ParamEyeLOpen` / `ParamEyeROpen`) and the iris and highlights are
+  clipped to it with `clip_mask`; `ParamEyeLSmile` / `ParamEyeRSmile`
+  cross-fade to happy ^^ eyes; `ParamEyeBallX/Y` move the irises.
+* **Mouth** — the inside of the mouth opens from a closed shape
+  (`ParamMouthOpenY`, which also drops the jaw) and `ParamMouthForm`
+  turns the corners up or down, so lip-sync and expressions work.
+* **Two-joint arms** — `ParamArmRA/RB` and `ParamArmLA/LB` raise each
+  upper arm at the shoulder and bend the forearm at the elbow. The
+  format passes no transform from one deformer to another, so the
+  forearm and hand sit in both rotation deformers and the forearm's
+  runs first: bend at the elbow, then turn with the upper arm. Raised,
+  the relaxed hand cross-fades to an open palm for waving.
+* **Hair physics** — three physics chains swing the fringe, the side
+  locks and the back hair (`ParamHairFront/Side/Back`) as the head and
+  body move.
+* **Every Cubism-standard parameter** — webcam tracking, auto-blink,
+  lip-sync and cursor look-at drive her without per-rig setup.
+* **Motions** — `idle_breath` and `idle_look` (Idle), `tap_head`
+  (TapHead, plays when you click her head), `shy` (TapBody, plays when
+  you click her body), and `greet`, `wave`, `surprised`, `sleepy`
+  (Gesture).
+* **Expressions** — `smile`, `happy`, `surprised`, `sad`, `angry`,
+  `blush`, `sleepy`.
 
-* **392 drawables** with original atlas UVs preserved.
-* **197 Cubism-standard parameters** — webcam tracking, auto-blink,
-  lip-sync, cursor look-at all drive the rig without per-rig
-  configuration.
-* **Eleven texture atlases** packed in-archive — exercises the
-  renderer's multi-texture bind path more heavily than the other
-  examples, which only ship two or three.
-* **Four synthesised idle motions** — `synth_head_sway`,
-  `synth_blink`, `synth_body_lean`, `synth_breath`. The source
-  rig ships a single `Scene1.motion3.json` that the converter
-  can't usefully promote to an idle loop, so the synthesiser
-  fills the Idle group with parameter-default-driven takes that
-  read as natural idle motion without per-rig tuning.
+The Desktop Pet's matching voice is
+[`../desktop_pet/imeru.petscript.json`](../desktop_pet/imeru.petscript.json):
+greetings, a line for each time of day, replies to clicks on her `Head`
+and `Body`, lines for her motions and a stretch reminder.
 
 ### Try it
 
-Launch Imervue, switch to the **Puppet** tab, click **Open Puppet…**,
-pick `examples/puppet/march_7th.puppet` (or `vivian.puppet`). Click
-any motion in the bottom Motions dock to play it.
+Launch Imervue, switch to the **Puppet** tab and pick **File > Examples >
+Imeru**. Click any motion in the bottom Motions dock to play it, or click
+her head or body.
 
 Toggle the toolbar features to drive the rig live:
 
 * **Auto idle** + **Idle motions** — breath + cycling Idle clips.
-* **Auto-blink** — eye-open/close cross-fade.
+* **Auto-blink** — eye-open/close.
 * **Drag-track head** — cursor look-at via `ParamAngleX/Y`.
 * **Mic lip-sync** — viseme drives mouth open + form.
 * **Webcam tracking** — face landmarks drive head + eyes + mouth.
@@ -100,5 +124,10 @@ Toggle the toolbar features to drive the rig live:
    linear-segment Motion.
 6. **Save** — **Save As…** writes the whole rig to a `.puppet` zip
    you can share.
+
+Or build one in code the way `imeru/` does: render or draw layers, mesh them with
+`Imervue.puppet.auto_mesh.triangulate_alpha_grid`, add vertex morphs,
+deformers, motions and expressions to a `PuppetDocument`, and save it
+with `Imervue.puppet.document_io.save_puppet`.
 
 See `Imervue/puppet/FORMAT.md` for the full file-format reference.

@@ -329,7 +329,7 @@ def apply_vertex_morphs(
     skip — keeps a partial document well-defined.
 
     Hot path for Cubism-converted rigs: a 307-drawable / 2965-morph
-    March 7th model gets ~10000 calls per second through this. The
+    imported model gets ~10000 calls per second through this. The
     deltas get cached as numpy arrays in private morph-dict keys so
     the first call pays the conversion cost and every subsequent
     call is a pure vector ``add`` — ~100× faster than the per-vertex

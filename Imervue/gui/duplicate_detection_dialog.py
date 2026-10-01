@@ -8,7 +8,6 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
@@ -22,7 +21,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QMessageBox,
     QProgressBar,
     QPushButton,
     QSpinBox,
@@ -31,9 +29,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.system.natural_sort import natural_key
+from Imervue.gui.dialog_rows import confirm
+from Imervue.system.image_listing import list_images
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 from Imervue.image.orientation import exif_orientation
 from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.image.dimensions import image_dimensions
@@ -43,6 +42,7 @@ from Imervue.image.perceptual_hash import upright
 from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -50,9 +50,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.duplicate_detection")
 
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-    ".gif", ".apng",
-})
+    ".png", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng",
+}) | JPEG_EXTENSIONS
 
 
 _METHOD_EXACT = "exact"
@@ -168,31 +167,9 @@ class _ScanWorker(QThread):
             return None
 
     def _collect_paths(self) -> list[str]:
-        result = (self._walk_images() if self._recursive
-                  else self._scandir_images())
-        result.sort(key=lambda p: natural_key(os.path.basename(p)))
-        return result
-
-    def _walk_images(self) -> list[str]:
-        result: list[str] = []
-        for root, _dirs, files in os.walk(self._folder):
-            if self._abort:
-                break
-            result.extend(
-                os.path.join(root, f) for f in files
-                if Path(f).suffix.lower() in _IMAGE_EXTS
-            )
-        return result
-
-    def _scandir_images(self) -> list[str]:
-        try:
-            return [
-                entry.path for entry in os.scandir(self._folder)
-                if entry.is_file()
-                and Path(entry.name).suffix.lower() in _IMAGE_EXTS
-            ]
-        except OSError:
-            return []
+        """The folder's images in natural name order; a cancel ends a recursive walk early."""
+        return list_images(self._folder, _IMAGE_EXTS, recursive=self._recursive,
+                           should_stop=lambda: self._abort)
 
     @staticmethod
     def _file_hash(path: str) -> str:
@@ -245,7 +222,7 @@ def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
         with Image.open(path) as src:
             code = exif_orientation(src)
             src.thumbnail((size, size), Image.Resampling.LANCZOS)
-            img = as_shown(src, code).convert("RGBA")
+            img = as_shown_8bit(src, code)
     except IMAGE_READ_ERRORS:
         return QPixmap()
     arr = np.array(img)
@@ -464,16 +441,10 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
                 paths.append((item, path))
         if not paths:
             return
-        reply = QMessageBox.question(
-            self,
-            self._lang.get("duplicate_confirm_title", "Confirm Delete"),
-            self._lang.get(
-                "duplicate_confirm_msg",
-                "Move {count} file(s) to trash?"
-            ).replace(_COUNT_PLACEHOLDER, str(len(paths))),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        question = self._lang.get(
+            "duplicate_confirm_msg", "Move {count} file(s) to trash?",
+        ).replace(_COUNT_PLACEHOLDER, str(len(paths)))
+        if not confirm(self, self._lang.get("duplicate_confirm_title", "Confirm Delete"), question):
             return
         # 移到垃圾桶是逐檔的 shell 呼叫，大量重複檔在 UI 執行緒跑會凍住
         # 整個視窗 — 交給背景 worker，完成後再更新樹與狀態列。

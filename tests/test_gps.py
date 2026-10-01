@@ -113,6 +113,7 @@ def test_heic_coordinates_are_read(tmp_path):
 
 def test_gps_read_registers_the_codec_first(tmp_path, monkeypatch):
     seen = []
-    monkeypatch.setattr(gps, "ensure_pillow_opener", seen.append)
+    from Imervue.image import exif_merge
+    monkeypatch.setattr(exif_merge, "ensure_pillow_opener", seen.append)
     assert gps.extract_gps(tmp_path / "missing.jxl") is None
     assert seen == [".jxl"]

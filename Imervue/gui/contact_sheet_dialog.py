@@ -1,4 +1,9 @@
-"""Contact sheet PDF export dialog."""
+"""Contact sheet PDF export dialog.
+
+The **Layout** box offers the named presets of
+:mod:`Imervue.export.contact_sheet_layouts`; picking one fills in the grid,
+margin and caption, and changing any of those by hand switches it to Custom.
+"""
 from __future__ import annotations
 
 import logging
@@ -14,6 +19,7 @@ from PySide6.QtWidgets import (
 from Imervue.export.contact_sheet import (
     ContactSheetOptions, PAGE_SIZES, generate_contact_sheet,
 )
+from Imervue.export.contact_sheet_layouts import LAYOUT_NAMES, cells_per_page, layout_options
 from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -27,6 +33,15 @@ _DEFAULT_TITLE = "Contact Sheet PDF"
 
 def _title() -> str:
     return language_wrapper.language_word_dict.get("contact_sheet_title", _DEFAULT_TITLE)
+
+
+def layout_label(name: str) -> str:
+    """The Layout box entry for preset *name*: "Compact — 8 × 6 (48 per page)", translated."""
+    lang = language_wrapper.language_word_dict
+    opts = layout_options(name)
+    template = lang.get("contact_sheet_layout_entry", "{name} — {cols} × {rows} ({count} per page)")
+    return template.format(name=lang.get(f"contact_sheet_layout_{name}", name.title()),
+                           cols=opts.cols, rows=opts.rows, count=cells_per_page(name))
 
 
 def open_contact_sheet_dialog(ui: ImervueMainWindow) -> None:
@@ -83,8 +98,13 @@ class ContactSheetDialog(QDialog):
         layout.addLayout(self._build_button_row(lang, images))
 
     def _build_settings_form(self, lang: dict) -> QFormLayout:
-        """Grid size, page size, margin, the caption box and the optional title."""
+        """Layout preset, grid size, page size, margin, the caption box and the optional title."""
         form = QFormLayout()
+        self._layout_combo = QComboBox()
+        self._layout_combo.setToolTip(lang.get(
+            "contact_sheet_layout_tooltip",
+            "A preset grid, margin and caption; editing any of them makes it Custom"))
+        form.addRow(lang.get("contact_sheet_layout", "Layout"), self._layout_combo)
         self._rows_spin = _tooltip_spin(
             (1, 20), 5, lang.get("contact_sheet_rows_tooltip", "Number of image rows per page"))
         form.addRow(lang.get("contact_sheet_rows", "Rows"), self._rows_spin)
@@ -120,7 +140,39 @@ class ContactSheetDialog(QDialog):
         self._title_edit.setPlaceholderText(lang.get(
             "contact_sheet_title_placeholder", "Optional title"))
         form.addRow(lang.get("contact_sheet_title_label", "Title"), self._title_edit)
+        self._fill_layouts(lang)
         return form
+
+    def _fill_layouts(self, lang: dict) -> None:
+        """List Custom and the presets, start on "default", and watch the fields a preset sets."""
+        self._layout_combo.addItem(lang.get("contact_sheet_layout_custom", "Custom"), "")
+        for name in LAYOUT_NAMES:
+            self._layout_combo.addItem(layout_label(name), name)
+        self._layout_combo.currentIndexChanged.connect(self._on_layout_picked)
+        self._layout_combo.setCurrentIndex(self._layout_combo.findData("default"))
+        for spin in (self._rows_spin, self._cols_spin, self._margin_spin):
+            spin.valueChanged.connect(self._on_layout_field_edited)
+        self._caption_check.toggled.connect(self._on_layout_field_edited)
+
+    def _on_layout_picked(self, row: int) -> None:
+        name = self._layout_combo.itemData(row)
+        if not name:
+            return
+        opts = layout_options(name)
+        widgets = (self._rows_spin, self._cols_spin, self._margin_spin, self._caption_check)
+        for widget in widgets:
+            widget.blockSignals(True)
+        self._rows_spin.setValue(opts.rows)
+        self._cols_spin.setValue(opts.cols)
+        self._margin_spin.setValue(round(opts.margin_mm))
+        self._caption_check.setChecked(opts.caption)
+        for widget in widgets:
+            widget.blockSignals(False)
+
+    def _on_layout_field_edited(self, *_args) -> None:
+        self._layout_combo.blockSignals(True)
+        self._layout_combo.setCurrentIndex(0)          # a hand-edited grid is a custom one
+        self._layout_combo.blockSignals(False)
 
     def _build_button_row(self, lang: dict, images: list[str]) -> QHBoxLayout:
         """Right-aligned Export (for *images*) and Close."""

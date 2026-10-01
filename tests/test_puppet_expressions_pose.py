@@ -226,3 +226,17 @@ def test_canvas_load_document_clears_expression_and_pose(qapp):
         assert canvas.active_pose() == {}
     finally:
         canvas.deleteLater()
+
+
+
+def test_canvas_announces_the_member_it_shows(qapp):
+    """The Pose dock follows ``pose_changed`` (Reset to rest sets poses too)."""
+    canvas = _canvas_with_doc(qapp)
+    seen = []
+    canvas.pose_changed.connect(lambda group, member: seen.append((group, member)))
+    try:
+        canvas.set_pose_active("weapons", "bow")
+        canvas.set_pose_active("weapons", "ghost")    # refused: no signal
+        assert seen == [("weapons", "bow")]
+    finally:
+        canvas.deleteLater()

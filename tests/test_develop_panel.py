@@ -1137,3 +1137,47 @@ class TestDrawingPropertyPairs:
         p, _ = panel
         for widget in (p._width_slider, p._width_spin, p._opacity_slider, p._opacity_spin):
             assert widget in p._interactive_widgets
+
+
+
+@pytest.fixture
+def viewer_stack(panel, monkeypatch):
+    """The viewer's recipe undo stack attached as in the main window; commands write to the test store."""
+    from PySide6.QtGui import QUndoStack
+
+    from Imervue.gpu_image_view.actions import recipe_commands
+    p, store = panel
+    monkeypatch.setattr(recipe_commands, "recipe_store", store)
+    stack = QUndoStack()
+    p.use_undo_stack(stack)
+    p.recipe_committed.connect(lambda path, old, new: stack.push(
+        recipe_commands.EditRecipeCommand(p._main_gui, path, old, new)))  # noqa: SLF001
+    yield p, store, stack
+    stack.deleteLater()
+
+
+def test_undo_and_redo_step_through_the_slider_edits(viewer_stack, sample_file):
+    """The buttons drove a stack no edit was ever pushed to: they did nothing."""
+    p, store, _stack = viewer_stack
+    p.bind_to_path(str(sample_file))
+    p._exposure.setValue(50)  # noqa: SLF001
+    p._btn_undo.click()  # noqa: SLF001 - also commits the edit still in its debounce
+    assert store.get_for_path(str(sample_file)) is None   # back to no recipe at all
+    assert p._exposure.value() == 0  # noqa: SLF001
+    p._btn_redo.click()  # noqa: SLF001
+    assert store.get_for_path(str(sample_file)).exposure == pytest.approx(0.5)
+    assert p._exposure.value() == 50  # noqa: SLF001
+
+
+def test_another_pictures_edit_on_top_is_left_alone(viewer_stack, sample_file, tmp_path):
+    from Imervue.gpu_image_view.actions.recipe_commands import EditRecipeCommand
+    from Imervue.image.recipe import Recipe
+    p, store, stack = viewer_stack
+    other_file = tmp_path / "other.png"
+    other_file.write_bytes(sample_file.read_bytes())
+    other = str(other_file)
+    stack.push(EditRecipeCommand(p._main_gui, other, Recipe(), Recipe(exposure=1.0)))  # noqa: SLF001
+    p.bind_to_path(str(sample_file))
+    p._btn_undo.click()  # noqa: SLF001
+    assert stack.index() == 1
+    assert store.get_for_path(other).exposure == pytest.approx(1.0)

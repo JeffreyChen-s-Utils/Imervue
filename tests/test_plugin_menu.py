@@ -62,6 +62,9 @@ class _Manager:
         for plugin in self.plugins:
             plugin.on_build_menu_bar(menu)
 
+    def connect_pet_hooks(self):
+        self.pet_hooks = getattr(self, "pet_hooks", 0) + 1
+
 
 @pytest.fixture
 def window(qapp):
@@ -122,6 +125,7 @@ def test_reload_does_not_duplicate_entries(qapp, window, monkeypatch):
         plugin_menu._reload_plugins(window)
         qapp.processEvents()
     assert window.plugin_manager.unloaded == 2
+    assert window.plugin_manager.pet_hooks == 2     # reloaded plugins hear about the pet
     assert _texts(_plugins_menu(window)) == before_plugins
     assert _texts(_retouch(window)) == before_retouch
     shared = next(

@@ -5,10 +5,18 @@ and animate a 2D rigged character. The whole format is JSON + PNG so it
 diffs humanly through git, has no proprietary binary, and is fully
 documented here.
 
+The format is open: this specification, the JSON Schemas in
+[`docs/schemas/`](../../docs/schemas/) and the reference reader
+[`docs/examples/read_puppet.py`](../../docs/examples/read_puppet.py) are
+MIT-licensed like the rest of Imervue, and any program may read or write
+`.puppet` files. *Implementing the format* at the end lists what a reader
+and a writer must do.
+
 ## Zip layout
 
 ```
-my_character.puppet
+imeru.puppet
+├── mimetype                 # recommended — first entry, uncompressed: the media type
 ├── puppet.json              # required — manifest, drawables, deformers, parameters
 ├── textures/
 │   ├── face.png             # referenced by drawables[].texture
@@ -21,15 +29,37 @@ my_character.puppet
 └── physics.json             # optional — physics rig if puppet.json physics is set
 ```
 
-Filenames inside the zip are case-sensitive. `textures/` is the only
-required subdirectory.
+Filenames inside the zip are case-sensitive. Every file under
+`textures/` is loaded as a texture, and each `drawables[].texture`
+names one of them; a drawable whose texture is missing is not drawn
+(**Tools > Validate** reports it). Loaders reject an archive whose
+entries add up to more than 2 GiB uncompressed.
+
+## Media type and identification
+
+The media type is `application/vnd.imervue.puppet+zip`. Writers put it,
+in ASCII with no newline, in an entry named `mimetype` that is the
+archive's **first** entry and is **stored uncompressed** — the way EPUB
+and OpenDocument files do — so the bytes `mimetype` followed by the media
+type appear at offset 30 of the file and a program can recognise a
+`.puppet` without unzipping it. Readers must not require the entry: files
+written before it existed have none. An archive whose `mimetype` holds a
+different type is not a `.puppet`.
+
+Every JSON file of the archive may carry a `"$schema"` key naming its
+JSON Schema (see *JSON Schemas*); Imervue writes it so that editors check
+the file as it is typed. Readers ignore it.
 
 ## Version policy
 
 `puppet.json["version"]` is an integer monotonically incremented when
 the schema gains a breaking change. v1 is frozen by this document.
 
-* Loaders **must** reject unknown future versions cleanly.
+* Loaders **must** reject unknown future versions cleanly, saying which
+  version the file uses. Imervue answers "this file uses .puppet format
+  vN, newer than the v1 this Imervue reads; update Imervue to open it".
+  A `version` that is not an integer (JSON `true` included) is rejected
+  as unsupported.
 * Future versions append fields; existing fields keep their meaning so
   v1 readers can be forward-compatible by ignoring unknown keys.
 * Writers always emit the highest version they understand.
@@ -46,21 +76,30 @@ the schema gains a breaking change. v1 is frozen by this document.
   "motions": ["idle", "wave"],
   "expressions": ["smile"],
   "pose": {"groups": [ … ]},
-  "physics": "physics.json"
+  "physics": "physics.json",
+  "hit_areas": [ … ],
+  "parameter_blends": [ … ],
+  "parts": [ … ],
+  "display_names": {"ParamAngleX": "Head X"}
 }
 ```
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
+| `$schema` | string | no | URL of this file's JSON Schema; writers use the `puppet` URL of *JSON Schemas* |
 | `version` | int | yes | Schema version (must be `1` for this spec) |
 | `size` | `[w, h]` ints | yes | Canvas dimensions in pixels |
-| `drawables` | array | yes | Pieces of art (see *Drawable* below) — at least one |
+| `drawables` | array | yes | Pieces of art (see *Drawable* below); may be empty |
 | `deformers` | array | yes | Mesh deformation rigs (may be empty) |
 | `parameters` | array | yes | Animation parameters (may be empty) |
-| `motions` | array of strings | no | Names; each maps to `motions/<name>.json` |
-| `expressions` | array of strings | no | Names; each maps to `expressions/<name>.json` |
+| `motions` | array of strings | no | Names; each maps to `motions/<name>.json`, which must exist |
+| `expressions` | array of strings | no | Names; each maps to `expressions/<name>.json`, which must exist |
 | `pose` | object | no | Visibility groups (see *Pose* below) |
-| `physics` | string | no | Path inside zip; usually `"physics.json"` |
+| `physics` | string | no | Path inside zip, which must exist; writers use `"physics.json"` |
+| `hit_areas` | array | no | Clickable regions (see *Hit area* below) |
+| `parameter_blends` | array | no | Keyforms over several parameters at once (see *Parameter blend* below) |
+| `parts` | array | no | Visibility / opacity tree over drawables (see *Part* below) |
+| `display_names` | object | no | Parameter or part id → friendly label. A Cubism `.cdi3.json` import fills it; it is stored and written back, and the Puppet tab's docks show the raw ids |
 
 ## Drawable
 
@@ -84,22 +123,36 @@ the schema gains a breaking change. v1 is frozen by this document.
 | `id` | string | yes | Unique within the puppet |
 | `texture` | string | yes | Path inside the zip (`textures/foo.png`) |
 | `vertices` | array of `[x, y]` floats | yes | Mesh vertex positions in canvas-space pixels at the *neutral* pose |
-| `indices` | array of ints | yes | Triangle indices, length divisible by 3 |
+| `indices` | array of ints | yes | Triangle indices, length divisible by 3, each within `[0, len(vertices))` |
 | `uvs` | array of `[u, v]` floats | yes | UV coords in `[0, 1]`; same length as `vertices` |
 | `draw_order` | int | yes | Lower draws first; ties broken by array order |
 | `blend_mode` | enum | no | `"normal"` (default), `"additive"`, `"multiply"` |
-| `clip_mask` | string\|null | no | If set, render this drawable only inside `<id>`'s alpha |
-| `visible` | bool | no | Default `true` |
+| `clip_mask` | string\|null | no | If set, draw this drawable only where the named mask drawable's triangles cover (see *Clip masks* below) |
+| `visible` | bool | no | Default `true`; pose-group members ignore it (see *Pose*) |
 | `opacity` | float | no | `[0, 1]`, default `1.0` |
 | `bone_weights` | object | no | Per-vertex skeletal weights (see *Bone weights* below) |
 | `opacity_keys` | array | no | Parameter-driven alpha curves (see *Opacity keys* below) |
+| `multiply_color` | `[r, g, b]` floats | no | Static tint multiplied into the texture colour, default `[1, 1, 1]` |
+| `multiply_color_keys` | array | no | Parameter-driven tint curves (see *Multiply-colour keys* below) |
+| `vertex_morphs` | array | no | Parameter-driven per-vertex offsets (see *Vertex morphs* below) |
+
+### Clip masks
+
+The mask is the named drawable's mesh as it is deformed this frame:
+every pixel its triangles cover passes, whatever its texture's alpha
+there. The mask drawable's own visibility and opacity don't matter —
+an invisible drawable still clips — and the mask still draws normally
+in its own turn when it is visible. An id that names no drawable, or
+the drawable itself, leaves the drawable unclipped.
 
 ### Opacity keys
 
 Optional. Drives the drawable's alpha from one or more parameters —
 this is how Live2D-style cross-fades between pose variants are wired.
 At render time the static `opacity` is multiplied by each curve sampled
-at its parameter value; a final zero short-circuits the draw call.
+at its parameter value and by the opacity of every Part above the
+drawable. A result of `0` makes the drawable fully transparent; it is
+still submitted to the renderer.
 
 ```json
 "opacity_keys": [
@@ -125,6 +178,67 @@ the lowest / above the highest stop clamp to the edge alpha. Multiple
 entries combine multiplicatively, letting two parameters (e.g.
 `swing × expression`) gate the same drawable independently.
 
+### Multiply-colour keys
+
+Optional. The same curve shape as *Opacity keys*, with an RGB colour
+per stop instead of an alpha:
+
+```json
+"multiply_color_keys": [
+  {
+    "parameter": "ParamCheek",
+    "stops": [
+      {"value": 0.0, "color": [1.0, 1.0, 1.0]},
+      {"value": 1.0, "color": [1.0, 0.6, 0.6]}
+    ]
+  }
+]
+```
+
+Each stop needs `value` and `color` (`[r, g, b]`), and an entry needs
+at least two stops. Colours are interpolated channel by channel and
+clamp at the edge stops; every curve multiplies into `multiply_color`,
+and negative channels clamp to `0`.
+
+### Vertex morphs
+
+Optional. Per-vertex offsets driven by one parameter each — the
+Cubism converter stores a parameter's deformation this way:
+
+```json
+"vertex_morphs": [
+  {
+    "parameter": "ParamAngleX",
+    "delta_at_min": [[dx0, dy0], [dx1, dy1], …],
+    "delta_at_max": [[dx0, dy0], [dx1, dy1], …]
+  }
+]
+```
+
+`parameter` is required; `delta_at_min` / `delta_at_max` (either may be
+left out) are offsets from the `vertices`, one per vertex, reached at
+the parameter's `min` and `max`.
+At the parameter's `default` a morph adds nothing; between the default
+and an extreme it adds that side's deltas scaled linearly, and past the
+extreme it holds them. Morphs run before any deformer. A morph whose
+parameter doesn't exist is skipped.
+
+### Bone weights
+
+Optional. Maps a bone id — the `bone_id` in a `bone_rotation`
+deformer's form — to one weight per vertex:
+
+```json
+"bone_weights": {
+  "upper_arm_l": [1.0, 1.0, 0.6, 0.0],
+  "forearm_l":   [0.0, 0.0, 0.4, 1.0]
+}
+```
+
+Each list must be as long as `vertices`. Per vertex, the runtime
+normalises the weights of the bones acting on the drawable so they sum
+to `1`; a vertex whose weights are all `0` stays where it is.
+
 ## Deformer
 
 ```json
@@ -140,10 +254,18 @@ entries combine multiplicatively, letting two parameters (e.g.
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `id` | string | yes | Unique within the puppet |
-| `type` | enum | yes | `"rotation"` or `"warp"` (v1 supports these two) |
-| `parent` | string\|null | yes | Parent deformer id; null = root |
+| `type` | enum | yes | `"rotation"`, `"warp"` or `"bone_rotation"` |
+| `parent` | string\|null | no | Parent deformer id; `null` (default) = root |
 | `drawables` | array of strings | yes | Drawable ids this deformer affects |
 | `form` | object | yes | Type-specific data — see below |
+
+A deformer moves only the drawables in its own `drawables` list.
+`parent` sets the order and nothing else: deformers run parents first
+(otherwise in array order), but a parent's transform is not passed
+down — a child's `anchor` stays where it was authored. Per drawable,
+the pipeline is: vertex morphs, then every `bone_rotation` deformer
+together in one skinning pass, then the `rotation` and `warp`
+deformers in that order.
 
 ### `rotation` form
 
@@ -151,8 +273,7 @@ entries combine multiplicatively, letting two parameters (e.g.
 { "anchor": [cx, cy], "angle": 0.0 }
 ```
 
-Rotates the controlled drawables around `anchor` by `angle` radians at
-the neutral pose.
+Rotates the controlled drawables around `anchor` by `angle` radians.
 
 ### `warp` form
 
@@ -166,9 +287,24 @@ the neutral pose.
 ```
 
 `grid` is a `rows × cols` 2-D array of control points in canvas-space
-pixels at the neutral pose. `bounds` is the rectangle in canvas-space
-that the grid covers; vertices outside the bounds are unaffected by the
-warp.
+pixels at the neutral pose (a flat row-major list of `rows × cols`
+points also works). `bounds` is the rectangle in canvas-space that the
+grid covers; vertices inside it are bilinearly interpolated from the
+four surrounding grid points, and vertices outside the bounds are
+unaffected by the warp. `rows` and `cols` must each be at least 2,
+otherwise the warp does nothing.
+
+### `bone_rotation` form
+
+```json
+{ "bone_id": "upper_arm_l", "anchor": [cx, cy], "angle": 0.0 }
+```
+
+One bone for linear blend skinning. Every `bone_rotation` deformer
+that lists a drawable rotates that drawable's vertices around its
+`anchor` by `angle` radians, and each vertex blends the results by its
+`bone_weights` entry for `bone_id`. A drawable without weights for the
+bone is not moved by it.
 
 ## Parameter
 
@@ -192,11 +328,93 @@ warp.
 | `min` | float | yes | Lower bound |
 | `max` | float | yes | Upper bound |
 | `default` | float | yes | Value at neutral pose |
-| `keys` | array | yes | Key forms; may be empty (parameter has no effect yet) |
+| `keys` | array | no | Key forms; default empty (parameter has no effect yet) |
 
 A key's `forms` maps deformer id → partial form snapshot at that
 parameter value. The runtime samples the parameter, finds the two
-adjacent keys, and linearly interpolates between their forms (per-field).
+adjacent keys, and linearly interpolates between their forms (per-field:
+numbers and equal-length number lists blend, a field only one of the
+keys has is used as-is, and any other field comes from the lower key).
+Below the lowest / above the highest key the edge key's
+forms apply. The result is laid over the deformer's own `form`, so
+fields a key leaves out keep their authored value. When two parameters
+set the same field of the same deformer, the later parameter in the
+`parameters` array wins.
+
+## Parameter blend
+
+```json
+{
+  "id": "head_xy",
+  "parameters": ["ParamAngleX", "ParamAngleY"],
+  "keys": [
+    {"coords": [-1.0, -1.0], "forms": {"head_warp": {"grid": [ … ]}}},
+    {"coords": [ 1.0, -1.0], "forms": {"head_warp": {"grid": [ … ]}}},
+    {"coords": [-1.0,  1.0], "forms": {"head_warp": {"grid": [ … ]}}},
+    {"coords": [ 1.0,  1.0], "forms": {"head_warp": {"grid": [ … ]}}}
+  ]
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | string | yes | Unique within the puppet |
+| `parameters` | array of strings | yes | At least one parameter id — one axis each |
+| `keys` | array | yes | Keys on the grid |
+| `keys[].coords` | array of floats | yes | One value per entry in `parameters` |
+| `keys[].forms` | object | no | Deformer id → partial form, as in a parameter key |
+
+The runtime finds, on each axis, the two key coordinates around the
+parameter's current value (clamping at the ends), then blends the keys
+at the corners of that cell linearly along each axis. A corner without
+a key is left out of the blend. Blends are applied after the
+single-parameter keys, so a blend overrides them on the same deformer
+fields.
+
+## Part
+
+```json
+{
+  "id": "hair",
+  "drawables": ["bang_l", "bang_r"],
+  "children": ["hair_back"],
+  "visible": true,
+  "opacity": 1.0
+}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | string | yes | Unique among parts |
+| `drawables` | array of strings | no | Drawable ids directly under this part |
+| `children` | array of strings | no | Ids of child parts |
+| `visible` | bool | no | Default `true` |
+| `opacity` | float | no | Default `1.0` |
+
+Parts form a tree whose roots are the parts no other part lists as a
+child. A drawable is shown only when every part above it is visible,
+and its opacity is multiplied by every such part's opacity. Drawables
+under no part are unaffected.
+
+## Hit area
+
+```json
+{"id": "head", "drawables": ["face", "hair_front"], "motion": "TapHead", "expression": "surprised"}
+```
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | string | yes | Unique among hit areas |
+| `drawables` | array of strings | yes | Drawables whose bounds form the region |
+| `motion` | string | no | Motion group to play a random member of, or a motion name |
+| `expression` | string | no | Expression to toggle |
+
+The region is the axis-aligned bounding box of the listed drawables at
+their current, deformed positions. A click inside it runs the actions:
+when any motion's `group` equals `motion`, a random motion of that
+group plays; otherwise the motion named `motion` plays. `expression` switches that expression on
+or off. Where regions overlap, the one holding the drawable with the
+highest `draw_order` wins.
 
 ## Motion (`motions/<name>.json`)
 
@@ -222,8 +440,28 @@ adjacent keys, and linearly interpolates between their forms (per-field).
 }
 ```
 
-`duration` is total length in seconds. Segments must tile the timeline
-without gaps; `p0[0]` of segment N+1 equals `p1[0]` of segment N.
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `$schema` | string | no | URL of the `motion` JSON Schema |
+| `version` | int | no | Writers emit `1`; the loader doesn't check it |
+| `duration` | float | yes | Total length in seconds |
+| `loop` | bool | no | Default `false`; whether playback wraps round at the end. Picking the motion sets the Motions dock's **Loop** box from it, and toggling the box changes it |
+| `tracks` | array | yes | One per animated parameter |
+| `tracks[].param_id` | string | yes | Parameter the track drives |
+| `tracks[].segments` | array | yes | Curve segments (see below) |
+| `fade_in_duration` | float | no | Seconds to ease from the previous motion's values when this motion replaces it; `0` (default) uses the player's default (0.5 s in the Puppet tab) |
+| `fade_out_duration` | float | no | Seconds to ease this motion's parameters back to their defaults on **Stop**; `0` (default) uses the player's default |
+| `sound_path` | string | no | Absolute path to a WAV that plays once when playback starts; the file stays outside the zip |
+| `group` | string | no | Motion group (`Idle`, `TapHead`, …) used by *Idle motions* and hit areas |
+
+Each segment has a `type` (`linear`, `stepped`, `inverse-stepped`,
+`cubic-bezier`) and `p0` / `p1` `[time, value]` points; `cubic-bezier`
+also takes control points `c0` / `c1` and falls back to linear without
+them. `stepped` holds `p0`'s value across the segment, `inverse-stepped`
+jumps to `p1`'s. Writers keep segments contiguous — `p0[0]` of segment
+N+1 equals `p1[0]` of segment N; the loader doesn't check this. Before
+the first segment a track holds its first value, and after the last it
+holds its last.
 
 ## Expression (`expressions/<name>.json`)
 
@@ -238,9 +476,12 @@ without gaps; `p0[0]` of segment N+1 equals `p1[0]` of segment N.
 }
 ```
 
-`mode` is one of `additive`, `multiply`, `overwrite`. Expressions
-overlay on top of motion / slider values per the priority order set by
-the runtime.
+`mode` is one of `additive` (the default), `multiply`, `overwrite`;
+each param needs `id` and `value`, and `params` defaults to empty. The
+file may also carry `version` (writers emit `1`) and `$schema` (the
+`expression` schema's URL).
+Active expressions overlay the slider / motion values in the order they
+were switched on, each applied to the previous one's result.
 
 ## Pose
 
@@ -253,7 +494,9 @@ the runtime.
 ```
 
 Each group lists drawable ids that are mutually exclusive — the runtime
-shows exactly one at a time (the last one whose `visible` was set).
+shows exactly one at a time: the group's first member, unless another
+member has been made active. The members' own `visible` flags are
+ignored. Both `id` and `drawables` are required.
 
 ## Physics (`physics.json`)
 
@@ -275,12 +518,89 @@ shows exactly one at a time (the last one whose `visible` was set).
 }
 ```
 
-Each rig is a verlet-integrated particle chain. `input_param` drives
-the chain's anchor; `output_param` receives the tip's lateral
-displacement (clamped to its `[min, max]`).
+The file holds `rigs` (required), `version` (writers emit `1`) and
+`$schema` (the `physics` schema's URL); each rig:
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `id` | string | yes | Unique among rigs |
+| `input_param` | string | yes | Parameter that moves the anchor |
+| `output_param` | string | yes | Parameter the tip drives |
+| `chain` | array | yes | Particles, anchor first |
+| `chain[].mass` | float | no | Default `1.0`; stored and written back, not used by the integrator |
+| `chain[].damping` | float | no | Default `0.7`; fraction of velocity lost per step, clamped to `[0, 0.999]` |
+| `chain[].spring` | float | no | Default `12.0`; each step moves the particle `spring × dt` of the way (at most all of it) toward its rest offset from the particle before it |
+| `gravity` | `[x, y]` floats | no | Default `[0.0, -9.8]`; acceleration on every particle but the anchor, in a frame where the chain hangs toward −y |
+
+Each rig is a verlet-integrated particle chain. The first particle is
+the anchor: it is pinned, and `input_param`'s value × 30 px sets its
+sideways position (its own `damping` / `spring` go unused). Each
+following particle rests 30 px below the one before it. The tip's
+sideways offset ÷ 30 px, clamped to `[-1, 1]`, is written to
+`output_param` — not clamped to that parameter's own `[min, max]` — and
+overrides any slider, motion or expression value there. At rest the
+output equals the input (clamped). The Puppet canvas steps every chain
+about 60 times a second while it is shown and the rig has chains.
 
 ## Reserved future-use keys
 
 Loaders ignore keys not in this spec but **writers must not emit
-unknown keys** for a v1 file. Any future field will arrive in v2 with a
-stated migration path.
+unknown keys** for a v1 file (`$schema` is part of the spec). Any future
+field will arrive in v2 with a stated migration path.
+
+## JSON Schemas
+
+Four JSON Schemas (draft 2020-12) describe the JSON files, generated from
+`Imervue/puppet/format_schema.py` into `docs/schemas/`:
+
+| File | Schema URL (`$id`) |
+|---|---|
+| `puppet.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/puppet.schema.json` |
+| `motions/<name>.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/motion.schema.json` |
+| `expressions/<name>.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/expression.schema.json` |
+| `physics.json` | `https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/physics.schema.json` |
+
+They encode every *must* above that a schema can express: required keys,
+types, enums, ranges (`opacity` in `[0, 1]`, `size` at least 1, indices
+at least 0), `[x, y]` pairs and `[r, g, b]` triples, each deformer
+type's form keys, and no unknown keys. What a schema cannot express —
+triangle indices within the vertex count, `uvs` as long as `vertices`,
+bone-weight lists as long as `vertices`, listed motions / expressions /
+physics present in the archive — the loader checks.
+
+## Checking a file
+
+```
+py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet --json
+py -m Imervue.cli puppet-schema --name motion
+```
+
+`puppet-validate` (the MCP tool `puppet_validate`) runs the schemas over
+every JSON file of the archive, then the loader, then the rig checks of
+**Tools > Validate**, and reports `valid`, the file's `version`,
+`schema_errors`, `load_error` and the rig `issues`. A file is valid
+when nothing breaks the format and no rig check reports an error.
+`puppet-schema` (MCP `puppet_schema`) prints a schema.
+
+## Implementing the format
+
+A **reader** of v1:
+
+* opens the zip, and may check the `mimetype` entry when there is one;
+* reads `puppet.json` and refuses a `version` other than the integer `1`,
+  naming the version it found;
+* ignores keys it does not know and entries outside this layout;
+* treats a drawable whose texture is missing as not drawn, and a missing
+  listed motion / expression / physics file as an error.
+
+A **writer** of v1:
+
+* writes `mimetype` first and uncompressed, then `puppet.json`, the
+  textures and the files `puppet.json` names;
+* emits only keys of this specification and makes every JSON file pass
+  its schema;
+* keeps `indices`, `uvs` and `bone_weights` consistent with `vertices`.
+
+[`docs/examples/read_puppet.py`](../../docs/examples/read_puppet.py) is a
+reader in about 40 lines of the Python standard library: it returns the
+manifest, the textures' bytes and the motion, expression and physics JSON.

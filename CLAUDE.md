@@ -83,8 +83,15 @@ ten-language README set: `README.md` plus `README/README_de.md`, `README/README_
   `docs/` in the same commit — the English `docs/en/` pages plus every translated locale tree
   (`zh-cn`, `zh-tw`, `de`, `es`, `fr`, `ja`, `ko`, `pt-BR`, `ru`) — structure and content aligned
   across languages.
-- There is no README- or docs-parity guard, so this is a **manual check** across the ten README
-  files above and the docs trees.
+- `tests/test_docs_parity.py` guards the **structure**: each translated README, docs page and
+  `puppet_guide.<lang>.md` must keep the English headings at the same levels and, per section, the
+  same number of table rows, bullets and literal blocks. Wording is still a **manual check** across the ten README files above and the
+  docs trees.
+- `tests/test_docs_coverage.py` guards **coverage**: every `docs/<lang>/index.rst` must name every CLI
+  subcommand and `pipeline` op, MCP tool / prompt / JSON-RPC method, plugin hook, Extra Tools menu entry
+  (its English label) and default Paint shortcut as a ``` ``literal`` ```, and every README the CLI
+  subcommands, MCP tools / prompts and plugin hooks. A new one of any of these is documented in all ten
+  languages in the same commit; names stay in English in every translation.
   (`examples/puppet/README.md` documents that example only and is not part of this translation set.)
 
 ## Stage commits, `progress.md`, `docs/updates/` and `architecture.md`
@@ -99,6 +106,7 @@ Workspace rule shared by every repository under `D:\Codes` (full text: `D:\Codes
 - **`docs/updates/`** records finished work: one batch file per month (`YYYY-MM.md`), one entry per piece of work headed `## U-YYYYMMDD-NN · date · title · #tags`, and an index with query commands in `docs/updates/README.md`. When a `progress.md` item is done, delete it and add a `#done` entry plus its index row in the same commit.
 - **`architecture.md`** (repository root) is the short architecture overview: layers, entry points, main flows, extension points, cross-project boundaries. Update it in the same commit whenever a change alters any of those. `architecture_explore.md` stays the detailed per-module map under its own rule in this file.
 - **Cross-project contracts** are listed in `architecture.md` §6: what other repositories rely on here (CLI flags, import paths, constructor arguments, file layouts) and what this repository relies on elsewhere. No test here protects them, so never rename or remove one without changing its consumers in the same round, and update §6 whenever a contract is added or changes.
+- **Both branches publish to PyPI from CI.** A pull request merged into `main` releases `Imervue` (`release.yml`); a push to `dev` that passes every job of `test.yml` and changes what the package ships releases `Imervue_dev` (the `publish-dev` job, `scripts/dev_release.py`). Never bump a version by hand; the version in `dev.toml` is only a floor, and `dev.toml` must ship what `pyproject.toml` ships (`tests/test_packaging_metadata.py`).
 - The update log of the plugin distribution repository `Imervue_Plugins` also lives here, tagged `#Imervue_Plugins`: a `docs/` directory there would show up as a plugin category in the downloader.
 
 ## No AI Attribution (HARD REQUIREMENT)
@@ -196,7 +204,11 @@ Use the shared fixtures in `tests/conftest.py` (`qapp`, `tmp_path`, `sample_*_ar
 `image_folder`); don't roll your own QApplication or RNG seed. Never write to the real
 `user_setting.json` — the autouse `_isolate_user_settings` fixture redirects the path, so just
 mutate `user_setting_dict` directly. A test that was already skipping for a missing optional
-dependency may keep skipping, but every NEW test must actually run.
+dependency may keep skipping, but every NEW test must actually run. A test that needs something
+from the conftest module itself imports it as `from tests import conftest` (or
+`from tests.conftest import …`), never `import conftest`: pytest loaded the file as
+`tests.conftest`, and the bare name runs it a second time (`tests/test_conftest_exit_status.py`
+rejects it).
 
 Waiting on a queued Qt signal (a worker thread's `done`, a `QTimer`) goes through the
 `pump_until(predicate, timeout=5.0)` fixture — never a fixed number of `processEvents()`
@@ -356,12 +368,19 @@ changes nothing on either dashboard until it merges — so "the numbers didn't m
 to `dev` is expected, not a failure. Querying a branch that was never analysed returns an empty
 result set, which reads like a clean report; check the branch exists before trusting a zero.
 
-API tokens live in the environment — never hardcode or echo them:
+When a PR or commit fails a SonarCloud or Codacy check, look the findings up through their APIs instead of
+guessing. The SonarCloud key is in the environment; Codacy answers this public repository without one (the
+`CODACY_PROJECT_TOKEN` in the environment is a project token valid only for its own project, and sent here it
+answers "Bad credentials"):
 
 ```bash
-curl -u "$SonarCloudToken:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=JeffreyChen-s-Utils_Imervue"
-curl -H "project-token: $CODACY_PROJECT_TOKEN" "https://app.codacy.com/api/v3/analysis/organizations/gh/JeffreyChen-s-Utils/repositories/Imervue"
+curl -s -u "$SonarCloudToken:" "https://sonarcloud.io/api/qualitygates/project_status?projectKey=JeffreyChen-s-Utils_Imervue"
+curl -s "https://app.codacy.com/api/v3/analysis/organizations/gh/JeffreyChen-s-Utils/repositories/Imervue/pull-requests/<n>/issues?status=new"
 ```
+
+**Never reveal a key or any personal credential while doing so**: refer to the variables by name only, never
+hardcode, echo or print their values, and never put them in files, commit messages, PR or issue text, logs, or
+any output that leaves the machine.
 
 Codacy reports `"analyzed": false` while a run is still in flight.
 

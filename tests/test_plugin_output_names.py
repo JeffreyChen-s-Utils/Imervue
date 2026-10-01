@@ -1,52 +1,45 @@
-"""Image plugins name their result with Imervue's never-overwrite helper, and still load without it.
+"""Image plugins name their result with Imervue's never-overwrite helper.
 
 A second run of AI Colorize, AI Denoise ... saved over the first run's
-``photo_colorized.png``. The plugins now take ``output_path`` from
-``Imervue.gui._apply_save``; on an install older than 1.0.75, which has no such
-helper, they fall back to the plain name instead of failing to load
-(``architecture.md`` §6: a newly downloaded plugin still runs on older installs).
+``photo_colorized.png``. The tool dialogs now save through the shared
+``ToolDialogMixin``, and AI Object Remove calls the same ``output_path``, so a
+second run gets ``photo_colorized_1.png``. Both need plugin API 2, declared in
+their ``plugin.json`` (``test_plugin_api.py``).
 """
 from __future__ import annotations
 
-import builtins
 import importlib
-from pathlib import Path
 
 import pytest
 
 from Imervue.gui._apply_save import output_path
+from Imervue.plugin import tool_dialog
+from Imervue.plugin.tool_dialog import ToolDialogMixin
 
-_PLUGIN_MODULES = [
-    "ai_colorize.ai_colorize_plugin", "ai_denoise.ai_denoise_plugin",
-    "ai_motion_deblur.ai_motion_deblur_plugin", "ai_portrait_relight.ai_portrait_relight_plugin",
-    "ai_smart_resize.ai_smart_resize_plugin", "ai_style_transfer.ai_style_transfer_plugin",
-    "npr_filters.npr_filters_plugin", "portrait_mode.portrait_mode",
-    "ai_object_remove.ai_object_remove_plugin", "ai_outpaint.ai_outpaint_plugin",
+_TOOL_DIALOGS = [
+    ("ai_colorize.ai_colorize_plugin", "AIColorizeDialog"),
+    ("ai_denoise.ai_denoise_plugin", "AIDenoiseDialog"),
+    ("ai_motion_deblur.ai_motion_deblur_plugin", "AIMotionDeblurDialog"),
+    ("ai_portrait_relight.ai_portrait_relight_plugin", "AIPortraitRelightDialog"),
+    ("ai_smart_resize.ai_smart_resize_plugin", "AISmartResizeDialog"),
+    ("ai_style_transfer.ai_style_transfer_plugin", "StyleTransferDialog"),
+    ("npr_filters.npr_filters_plugin", "NPRFiltersDialog"),
+    ("portrait_mode.portrait_mode", "PortraitModeDialog"),
+    ("ai_outpaint.ai_outpaint_plugin", "OutpaintDialog"),
 ]
 
 
-@pytest.mark.parametrize("name", _PLUGIN_MODULES)
-def test_each_plugin_uses_the_never_overwrite_helper(name):
-    module = importlib.import_module(name)
-    assert module._output_path is output_path  # noqa: SLF001
+def test_the_shared_dialog_names_with_the_never_overwrite_helper():
+    assert tool_dialog.output_path is output_path
 
 
-def test_an_older_imervue_without_the_helper_still_loads_the_plugin(monkeypatch):
-    """The fallback keeps the plain name the plugins wrote before."""
-    real_import = builtins.__import__
+@pytest.mark.parametrize(("module_name", "class_name"), _TOOL_DIALOGS)
+def test_each_tool_dialog_saves_through_the_shared_dialog(module_name, class_name):
+    cls = getattr(importlib.import_module(module_name), class_name)
+    assert issubclass(cls, ToolDialogMixin)
+    assert not hasattr(importlib.import_module(module_name), "_output_path")
 
-    def no_output_path(name, globals_=None, locals_=None, fromlist=(), level=0):
-        if name == "Imervue.gui._apply_save" and fromlist and "output_path" in fromlist:
-            raise ImportError("cannot import name 'output_path'")
-        return real_import(name, globals_, locals_, fromlist, level)
 
-    module = importlib.import_module("ai_colorize.ai_colorize_plugin")
-    monkeypatch.setattr(builtins, "__import__", no_output_path)
-    try:
-        importlib.reload(module)
-        assert module._output_path is not output_path  # noqa: SLF001
-        assert Path(module._output_path("/photos/a.jpg", "colorized")).name == "a_colorized.png"  # noqa: SLF001
-    finally:
-        monkeypatch.setattr(builtins, "__import__", real_import)
-        importlib.reload(module)
-    assert module._output_path is output_path  # noqa: SLF001
+def test_object_remove_uses_the_never_overwrite_helper():
+    module = importlib.import_module("ai_object_remove.ai_object_remove_plugin")
+    assert module.output_path is output_path

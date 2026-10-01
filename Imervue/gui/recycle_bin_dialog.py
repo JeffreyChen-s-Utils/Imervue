@@ -35,13 +35,13 @@ from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QHeaderView,
-    QMessageBox,
     QPushButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -300,14 +300,12 @@ class RecycleBinDialog(WorkerHostMixin, QDialog):
             "recycle_bin_purge_confirm",
             "Permanently delete {count} item(s)? This cannot be undone.",
         ).format(count=count)
-        result = QMessageBox.question(
+        agreed = confirm(
             self,
             title,
             message,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
-        return result == QMessageBox.StandardButton.Yes
+        return agreed
 
     def _detach_entry(self, entry: dict) -> str | None:
         """Pop *entry*'s path out of the undo stack; returns that path."""
@@ -353,13 +351,6 @@ class RecycleBinDialog(WorkerHostMixin, QDialog):
                 ).format(count=len(failed)),
             )
         logger.warning("Recycle Bin purge failed on %d path(s)", len(failed))
-
-    def accept(self):  # noqa: N802 - Qt API
-        # Close must join a running purge: this dialog is a temporary
-        # (``RecycleBinDialog(...).exec()``) whose QThread child would
-        # otherwise be destroyed mid-run.
-        self._stop_worker()
-        super().accept()
 
 
 def open_recycle_bin_dialog(viewer: GPUImageView, parent=None) -> None:

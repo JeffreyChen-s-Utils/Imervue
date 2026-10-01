@@ -1,0 +1,3 @@
+from pet_integrations.pet_integrations_plugin import PetIntegrationsPlugin
+
+plugin_class = PetIntegrationsPlugin

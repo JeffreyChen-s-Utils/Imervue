@@ -12,6 +12,7 @@ from collections.abc import Callable, Iterable, Sequence
 
 from PIL import Image
 
+from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.orientation import exif_orientation, transpose_for
 
@@ -29,9 +30,18 @@ def upright(img: Image.Image) -> Image.Image:
     return transpose_for(img, exif_orientation(img))
 
 
+def grey_levels(img: Image.Image) -> Image.Image:
+    """*img* as 8-bit grey for hashing, 16-bit and float grey scaled over their range.
+
+    ``convert("L")`` clips those modes to 255: two different 16-bit scans both
+    came out almost white and hashed alike, so they were grouped as duplicates.
+    """
+    return to_eight_bit(img).convert("L")
+
+
 def dhash(img: Image.Image, hash_size: int = DEFAULT_HASH_SIZE) -> int:
     """Difference hash: compare adjacent pixel brightness on a tiny grayscale."""
-    resized = img.convert("L").resize(
+    resized = grey_levels(img).resize(
         (hash_size + 1, hash_size), Image.Resampling.LANCZOS)
     # Pillow 14 renamed getdata() → get_flattened_data(); support both.
     get_pixels = getattr(resized, "get_flattened_data", None) or resized.getdata
@@ -54,7 +64,7 @@ def ahash(img: Image.Image, hash_size: int = DEFAULT_HASH_SIZE) -> int:
     near-duplicate detection. Produces the same ``hash_size**2``-bit space, so
     :func:`hamming_distance` compares an ahash with an ahash.
     """
-    resized = img.convert("L").resize(
+    resized = grey_levels(img).resize(
         (hash_size, hash_size), Image.Resampling.LANCZOS)
     get_pixels = getattr(resized, "get_flattened_data", None) or resized.getdata
     pixels = list(get_pixels())

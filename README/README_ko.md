@@ -64,6 +64,8 @@ Imervue는 GPU 가속 이미지 워크스테이션으로 **다섯 개의 최상�
 | **Puppet** | 처음부터 직접 구축한 2D 리그드 퍼펫 애니메이터 — 메시, 디포머, 파라미터, 모션, 물리 |
 | **Desktop Pet** | 프레임리스 / 투명 / 항상 위 데스크톱 오버레이로 모든 `.puppet` 리그를 실행 — 라이브 드라이버, 가장자리 스냅, 클릭 통과, 말풍선, 시스템 트레이 |
 
+**Puppet**과 **Desktop Pet**은 선택 탭입니다. **File > Preferences > Optional tabs**에서 둘 중 하나를 끄면 다음 시작부터 그 탭이 추가되지 않고 코드도 불러오지 않으므로 Imervue가 더 빨리 시작되고 메모리도 덜 사용합니다. 둘 다 기본으로 켜져 있으며, 각각 탭을 처음 열 때 만들어집니다. Desktop Pet 탭은 펫이 시작할 때 표시되도록 설정되어 있으면 시작할 때 만들어집니다.
+
 설계 원칙:
 
 - **성능 우선** — 최신 GLSL 셰이더와 VBO를 활용한 GPU 가속 렌더링
@@ -107,16 +109,16 @@ pip install .
 | numpy | 배열 연산 및 썸네일 캐시 |
 | rawpy | RAW 이미지 디코딩 (CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG 등) |
 | imageio | 이미지 입출력 |
-| imageio-ffmpeg | 슬라이드쇼 MP4 내보내기 (ffmpeg을 통한 H.264) |
+| imageio-ffmpeg | 슬라이드쇼 MP4와 Create GIF / Video의 MP4 (ffmpeg을 통한 H.264) |
 | defusedxml | 안전한 XML 파싱 (XMP 사이드카) |
-| watchdog | 파일 트리 재귀 감시(외부 변경 시 트리 자동 새로 고침) |
+| watchdog | Watched Folder 자동화와 MCP 서버의 변경 알림 |
 
 선택 사항 (기능별 게이트; 설치하지 않으면 해당 기능만 비활성화):
 
 | 패키지 | 용도 |
 |---------|---------|
-| open_clip_torch + torch | CLIP 시맨틱 검색 (자연어 이미지 쿼리) |
-| onnxruntime | Real-ESRGAN AI 업스케일 / CLIP ONNX 자동 태그 |
+| onnxruntime + huggingface_hub | CLIP 시맨틱 검색 및 CLIP 자동 태그 레이블 (처음 사용할 때 설치를 제안하며, 약 150 MB 모델은 한 번만 다운로드) |
+| onnxruntime | Real-ESRGAN AI 업스케일 |
 | opencv-python<5 | HDR 병합, 파노라마 스티칭, 포커스 스태킹, 얼굴 검출, 힐링 브러시 |
 | sounddevice | Puppet 마이크 입싱크 |
 | mediapipe | Puppet 웹캠 얼굴 추적 |
@@ -160,17 +162,40 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 | 서브커맨드 | 용도 |
 |---|---|
 | `info` / `stats` | 크기와 포맷, 무참조 품질 지표(`--json`으로 기계 판독 출력) |
-| `convert` / `resize` / `thumbnail` | 포맷 변환(`--format` / `--quality`), 긴 변 상한 리사이즈, 썸네일 크기 |
-| `watermark` / `optimize` | 텍스트 워터마크(`--text` / `--corner` / `--opacity`), `--max-kb` 예산 내 인코딩 |
+| `convert` / `resize` / `thumbnail` | 포맷 변환(`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`), 긴 변(`--max`) 또는 정확한 `--width` / `--height`로 리사이즈, 썸네일 크기 |
+| `watermark` / `optimize` | 텍스트 워터마크(`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`), `--max-kb` 예산 내 인코딩 |
 | `dehaze` / `clahe` / `dither` / `distort` | 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple |
 | `auto-orient` / `strip` | EXIF 방향 플래그를 픽셀에 굽기, EXIF / XMP / ICC 없이 재저장 |
-| `collage` / `anaglyph` | 그리드 몽타주(`--columns`), 스테레오 쌍에서 적청 3D(`--method`) |
+| `collage` / `anaglyph` | 그리드 몽타주(`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`), 스테레오 쌍에서 적청 3D(`--method`) |
 | `preset` / `pipeline` | 저장된 현상 프리셋을 이름으로 적용, 순서가 있는 JSON 파이프라인 실행 |
 | `list-ops` | 모든 서브커맨드 출력(`--json`으로 기계 판독 출력) |
 
-모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 카메라 RAW는 작은 내장 미리보기가 아니라 뷰어처럼 현상해서 읽으며, `resize` 와 `strip` 은 PNG로 저장합니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다.
+모든 하위 명령은 뷰어와 같은 방식으로 디코딩합니다. 출력은 EXIF 방향에 따라 바로 세우고 내장 색 프로필에서 sRGB로 변환하며, AVIF 입력은 Pillow가 직접 읽고, HEIC / JPEG XL 입력은 선택적 백엔드가 설치되어 있으면 읽습니다. 카메라 RAW는 작은 내장 미리보기가 아니라 뷰어처럼 현상해서 읽으며, `resize` 와 `strip` 은 PNG로 저장합니다. 읽을 수 없는 파일은 보고되고 나머지는 계속 처리됩니다. 잘린 파일은 뷰어처럼 읽을 수 있는 곳까지 읽습니다. 16비트·부동소수점 그레이스케일은 뷰어처럼 8비트로 스케일하며, `resize` 와 `strip` 은 원본의 비트 깊이를 유지합니다.
 
-공용 플래그: `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `--version`.
+파일이나 폴더를 받는 하위 명령(`collage`, `anaglyph`, `list-ops`를 제외한 전부)은 `--out`(출력 디렉터리), `--recursive`, `--dry-run`(동작만 나열하고 쓰지 않음), `--overwrite`, `-j` / `--jobs`(병렬 워커 수, `0`이면 모든 코어 사용)를 공용으로 받습니다. `collage`와 `anaglyph`는 `--out`으로 지정한 파일 하나에 씁니다. `--version`은 CLI 버전을 출력합니다.
+
+[MCP 서버](#mcp-서버)의 모든 도구도 하위 명령입니다. 그중 10개는 위의 하위 명령이고(`convert_format`은 `convert`, `quality_metrics`는 `stats`, `build_collage`는 `collage` 등), 나머지 48개는 MCP 도구 자체의 코드를 실행합니다:
+
+| 종류 | 서브커맨드 |
+|---|---|
+| 편집: 각 원본 옆에 `<stem>_<name>.png`, 또는 `--out` 안에 `<stem>.png`를 씀 | `frame`, `crop`, `rotate`, `solarize`, `glow`, `velvia`, `emboss`, `film-negative`, `defringe`, `graduated-density`, `filmic-tonemap`, `tone-equalizer`, `detail-equalizer`, `colormap`, `false-color`, `split-toning`, `pixel-sort`, `polar`, `kaleidoscope`, `frosted-glass`, `local-contrast`, `posterize`, `gradient-map`, `film-grain`, `levels`, `auto-color-balance`, `channel-mixer`, `curve`, `lens-correction` |
+| 기타 출력 | `ela`(오류 수준 분석(Error Level Analysis) 맵을 PNG로), `video-frame`(동영상의 프레임 한 장, `--frame-index`), `puppet-from-png`(`.puppet` 리그, `--cell-size`) |
+| 보고: 이미지마다 결과 하나, `--json`으로 기계 판독 출력 | `metadata`, `xmp`, `gps`, `dominant-colors`, `sharpness`, `statistics`, `histogram`, `ocr`, `puppet-inspect`, `puppet-validate` |
+| 한 번 실행하고 JSON 출력 | `list-images FOLDER`, `search FOLDER --query "..."`, `similar FOLDER`, `collection-stats FOLDER`, `reverse-geocode --latitude .. --longitude ..`, `puppet-schema --name ..` |
+
+각 MCP 파라미터는 같은 기본값과 허용 값을 가진 옵션이 됩니다. `zone_gains`는 `--zone-gains`가 되고, 예/아니요 파라미터는 `--grayscale` / `--no-grayscale`가 되며, 색이나 행렬의 한 행은 값을 순서대로 받습니다(`--red 1 0 0`). `py -m Imervue.cli <subcommand> --help`로 옵션 목록을 볼 수 있습니다.
+
+`pipeline FILE INPUTS…`는 JSON 파일에 적힌 작업을 차례로 연결해 실행합니다. 파일에는 단계 목록이나
+`{"pipeline": [...]}`를 쓰며, 각 단계는 `"op"`와 그 파라미터로 이루어집니다(최대 50단계). 사용할 수 있는 작업은
+`dehaze`, `clahe`, `dither`, `distort`, `clarity`, `texture`, `grayscale`, `invert`,
+`watermark`이며, 모든 파라미터와 기본값은 문서에 나와 있습니다.
+
+```bash
+py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+py -m Imervue.cli histogram a.jpg --json
+py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+```
 
 ---
 
@@ -181,19 +206,25 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 ### 뷰어
 
 - **GPU 가속 렌더링** — OpenGL (GLSL 1.20 셰이더 + VBO)
-- **딥 줌 피라미드** — 512×512 타일 멀티레벨 LANCZOS 리샘플링. 타일 LRU는 256개 유지(하드 상한 512). VRAM 예산은 시작 시 GL 드라이버에서 탐지하며 실패 시 1.5 GB로 폴백하고, `vram_limit_mb` 설정으로 재정의 가능(클램프되며 조용히 무시되지 않음). 최대 8× 이방성 필터링
+- **딥 줌 피라미드** — 512×512 타일 멀티레벨 LANCZOS 리샘플링. 타일 LRU는 256개 유지(하드 상한 512). VRAM 예산은 시작 시 GL 드라이버에서 탐지하며 실패 시 1.5 GB로 폴백하고, `vram_limit_mb` 설정으로 재정의 가능(클램프되며 조용히 무시되지 않음). 최대 8× 이방성 필터링. Pillow의 안전 한도(1억 7900만 화소)를 훨씬 넘는 파노라마도 열림(한도는 메모리에 따라 정해지며 16 GB면 약 14억 화소)
 - **비동기 로딩** — 멀티스레드 디코딩과 적응형 프리페치 창: 일반 탐색은 ±3장, 한 방향으로 계속 넘기면 앞 5장 / 뒤 1장으로 확장
 - **분리된 워커 풀** — 썸네일 폭주와 딥 줌 디코딩이 서로 다른 풀에서 동작하므로, 큰 폴더를 열어도 지금 보고 있는 이미지가 밀리지 않습니다
 - **가상화된 썸네일 그리드** — 화면에 보이는 타일만 렌더링; 썸네일 크기 설정 가능 (128 / 256 / 512 / 1024 / 자동)
 - **디스크 캐시** — MD5 기반 무효화를 사용하는 압축 PNG 썸네일, `%LOCALAPPDATA%/Imervue/cache/thumbnails` (또는 `~/.cache/imervue/thumbnails`)에 저장
 - **EXIF 방향** — 휴대폰이나 카메라가 회전하지 않고 태그만 붙인 세로 사진을 뷰어, 썸네일, 목록 보기, 호버 미리보기, Modify 탭에서 바로 세워 표시. 이전에 저장한 현상 자르기 / 회전은 만들어진 방향 그대로 적용됩니다
-- **색상 관리** — 색상 프로필이 포함된 사진(휴대폰의 Display P3, 카메라의 Adobe RGB, CMYK)은 뷰어와 썸네일에서 sRGB로 변환해 표시. 프로필이 없거나 sRGB인 이미지는 그대로 표시합니다
-- **애니메이션 재생** — GIF / APNG, 재생 / 일시정지 / 프레임 단위 / 속도 제어 지원; 디코딩하면 512 MB를 넘는 애니메이션은 처음에 모두 디코딩하지 않고 재생하면서 한 프레임씩 디코딩
+- **색상 관리** — 색상 프로필이 포함된 사진(휴대폰의 Display P3, 카메라의 Adobe RGB, CMYK, Photoshop이 흑백 이미지에 넣는 Dot Gain 20%·Gray Gamma 1.8 같은 회색 프로필)은 뷰어와 썸네일에서 sRGB로 변환해 표시. 프로필이 없거나 sRGB인 이미지는 그대로 표시합니다
+- **잘린 파일** — 중간에 끊긴 JPEG, PNG, TIFF, GIF, BMP(다운로드나 복사가 중단된 파일, 고장 난 메모리 카드에서 복구한 사진)도 열리지 않는 대신 브라우저처럼 읽은 부분까지 표시합니다
+- **다른 프로그램이 바꾼 파일** — 다른 프로그램이 이미지를 덮어쓰면(외부 편집기가 직접 덮어쓰든, 사본을 쓴 뒤 이름을 바꿔 교체하든) 뷰어가 새 버전을 보여 줍니다. 딥 줌으로 열린 이미지는 마지막 쓰기 후 1초 안에, 그리드 썸네일과 목록의 행은 몇 초 안에 갱신됩니다
+- **16비트·부동소수점 그레이스케일** — 16비트 그레이스케일 PNG/TIFF(스캔, 깊이 맵, 과학·천체 이미지)와 부동소수점 TIFF도 거의 흰색이나 검은색이 아니라 뷰어, 썸네일, 미리보기, 도구에서 실제 밝기로 표시됩니다
+- **숨김 파일** — Windows에서 숨김으로 표시된 파일(탐색기와 폴더 트리에서도 숨겨짐)과 점으로 시작하는 이름(macOS가 메모리 카드나 네트워크 드라이브의 사진마다 옆에 쓰는 `._photo.jpg` 등)은 썸네일 그리드, 폴더 아이콘, 일괄 도구의 폴더 목록, 감시 폴더, 라이브러리 스캔, CLI, MCP 서버의 폴더 도구에서 제외됩니다. 재귀 스캔은 `$RECYCLE.BIN`이나 Mac의 `.Trashes` 같은 숨김 폴더에 들어가지 않습니다. 일부러 연 숨김 이미지는 그대로 열립니다
+- **어떤 이름의 JPEG도** — `.jpe`, `.jfif`, `.jif`도 `.jpg`처럼 열립니다(Windows의 Chrome과 Edge는 내려받은 사진을 자주 `.jfif`로 저장합니다). 뷰어, JPG 필터, 일괄 도구, CLI 모두 마찬가지입니다
+- **추가 형식** — ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX, PSD (병합된 이미지)는 Pillow가 직접 읽어 볼 수 있습니다. 제자리 회전 같은 되쓰기는 거부되므로 편집은 다른 이름으로 저장 / 내보내기로 저장합니다
+- **애니메이션 재생** — GIF / APNG, 재생 / 일시정지 / 프레임 단위 / 속도 제어 지원; 디코딩하면 512 MB를 넘는 애니메이션은 처음에 모두 디코딩하지 않고 재생하면서 한 프레임씩 디코딩. 10 ms 이하인 프레임은 브라우저처럼 100 ms 동안 표시. 여러 페이지 TIFF(스캔한 문서)는 재생하지 않고 한 페이지씩 보여 주며 `,`와 `.`로 넘깁니다(표시는 "2/5 페이지"). 카메라가 JPEG에 넣는 미리보기(MPF)는 두 번째 프레임으로, APNG의 기본 이미지(APNG를 지원하지 않는 프로그램용 정지 이미지)는 첫 프레임으로 보이지 않습니다
 
 ### 브라우징 모드
 
 - **그리드**(기본) — 가상화된 타일 그리드, 호버 미리보기 팝업(500 ms 지연)
-- **목록 (상세)** — `Ctrl+L`로 토글; 열: 미리보기 · 라벨 · 이름 · 해상도 · 크기 · 종류 · 수정 일시
+- **목록 (상세)** — `Ctrl+L`로 토글; 열: 미리보기 · 라벨 · 평점 · 이름 · 해상도 · 크기 · 종류 · 수정 일시. `Delete`로 선택한 행을 삭제하고 `Ctrl+Z`로 되돌리며, 별점(`1`–`5`)·즐겨찾기(`0`)·컬링(`P` / `Shift+X` / `U`)·색상(`F1`–`F5`) 키도 선택한 행에 적용됩니다(그리드와 같음)
 - **딥 줌** — 타일 더블 클릭; GPU로 부드러운 팬/줌 + 미니맵 오버레이
 - **분할 뷰** (`Shift+S`) — 두 이미지 나란히 보기
 - **양면 페이지 읽기** (`Shift+D`, 우→좌 만화는 `Ctrl+Shift+D`) — 펼침면 리더
@@ -206,7 +237,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - RGB 히스토그램 (`H`)
 - F8 OSD (파일명 / 크기 / 형식), Ctrl+F8 디버그 HUD (VRAM / 캐시 / 스레드)
-- 픽셀 뷰 (`Shift+P`) — ≥ 400 % 줌에서 픽셀 격자 + 픽셀별 RGB / HEX 표시
+- 픽셀 뷰 (`Shift+P`) — 400 % 줌부터 픽셀별 RGB / HEX 표시, 화면에 보이는 픽셀이 40,000개 이하가 되면 픽셀 격자도 표시
 - 색상 모드 (`Shift+M`) — Normal / Grayscale / Invert / Sepia (GLSL)
 
 ### 내비게이션
@@ -222,11 +253,11 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 ### 정리
 
 - **북마크** — 최대 5000개 경로
-- **별점** — 0-5 별 (`1`–`5`) + 즐겨찾기 하트 (`0`)
-- **컬러 라벨** — 다른 XMP 인식 사진 관리자와 동일한 플래그 기반 빨강 / 노랑 / 초록 / 파랑 / 보라 (`F1`–`F5`)
-- **컬링(Culling)** — 다른 XMP 인식 사진 관리자의 3상태 플래그 (`P` = pick, `Shift+X` = reject, `U` = unflag); 상태별 필터링; 거부된 사진 일괄 삭제; 자동 컬링은 근접 중복 그룹마다 가장 선명한 프레임을 pick하고 나머지는 reject
-- **계층 태그** — `animal/cat/british` 같은 트리 경로; 하위 항목 자동 매칭; 우클릭 **Index Keywords**는 Lightroom / darktable 키워드 계층(`Places|Taiwan|Taipei`)을 부모 아래에 둡니다
-- **Tags & Albums** — 다중 태그 AND / OR 필터링
+- **별점** — 0-5 별 (`1`–`5`) + 즐겨찾기 하트 (`0`). 그리드에서는 선택한 썸네일, 없으면 방향키로 고른 것, 없으면 마우스 아래의 것에 적용
+- **컬러 라벨** — 플래그 기반 빨강 / 노랑 / 초록 / 파랑 / 보라 (`F1`–`F5`)
+- **컬링(Culling)** — 3상태 플래그 (`P` = pick, `Shift+X` = reject, `U` = unflag); 상태별 필터링; 거부된 사진 일괄 삭제; 자동 컬링은 근접 중복 그룹마다 가장 선명한 프레임을 pick하고 나머지는 reject
+- **계층 태그** — `animal/cat/british` 같은 트리 경로; 하위 항목 자동 매칭; 썸네일을 선택하고 우클릭 **일괄 작업** > **키워드 색인**을 실행하면 Lightroom / darktable 키워드 계층(`Places|Taiwan|Taipei`)을 부모 아래에 둡니다
+- **Tags & Albums** — 다중 태그 AND / OR 필터링; 새로 만들거나 이름을 바꿀 때 다른 이름과 대소문자나 공백만 다른 이름은 거부되며, **정리…** 버튼은 더 이상 없는 파일을 빼고 대소문자만 다른 이름을 합칩니다
 - **스마트 앨범** — 규칙 기반 쿼리를 저장하고 클릭 한 번으로 재적용; 필터는 확장자, 해상도 및 **종횡비**, **파일 크기**, 별점 **하한 / 상한**, 색상, 컬링, 태그(**제외** 포함), **카메라 / 렌즈**, **파일명 정규식 / glob**, **파일 경과 시간**을 아우르며, 휴대 가능한 JSON 파일로의 **내보내기 / 가져오기**도 지원
 - **RAW+JPEG 쌍 스택** — 동일 파일 스템의 캡처를 하나의 타일로 접기; RAW는 형제 항목으로 여전히 접근 가능
 - **이미지별 메모** — EXIF 사이드바에서 자동 디바운스 저장, 세션 간 영구 보존
@@ -240,7 +271,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 ### 정렬 및 필터
 
-- 이름(탐색기와 같은 자연 순서: `img2`가 `img10`보다 앞) / 수정 시각 / 생성 시각 / 크기 / 해상도로 정렬 (오름 / 내림)
+- 이름(탐색기와 같은 자연 순서: `img2`가 `img10`보다 앞) / 수정 시각 / 생성 시각 / 촬영 시각(카메라의 EXIF 시각, 없으면 수정 시각) / 크기 / 해상도로 정렬 (오름 / 내림)
 - 확장자, 컬러 라벨, 별점, 태그/앨범, 컬링 상태로 필터링
 - **고급 필터** — 해상도 / 파일 크기 / 방향 / 수정 일자 범위
 - **다중 태그 필터** 다이얼로그 (AND / OR 불리언 로직)
@@ -249,19 +280,23 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **퍼지 파일명 검색** + 부분 문자열 하이라이트
 - **유사 이미지 찾기** — pHash (64-bit DCT), 조정 가능한 Hamming 거리
-- **라이브러리 검색** — SQLite 다중 루트 인덱스와 간결한 쿼리 DSL: 키워드, 태그(부정 포함), 별점, 색상, 확장자, 장소, 컬링, 즐겨찾기, 종횡비, 경과 시간, 크기, 해상도, 카메라 / 렌즈, 파일명 정규식 / glob
+- **라이브러리 검색** — SQLite 다중 루트 인덱스를 파일명, 최소 너비 / 높이, 파일 크기로 검색 (최대 2000개 결과; 더블클릭하면 열림); 다시 스캔하면 새로 생기거나 바뀐 파일(**Compute perceptual hash**가 켜져 있으면 해시가 없는 파일도)만 여러 개 동시에 읽음
+- **쿼리 검색** (우클릭) — 열린 폴더를 대상으로 하는 간결한 쿼리 언어: 키워드, 태그(부정 포함), 별점, 색상, 확장자, 장소, 컬링, 즐겨찾기, 종횡비, 경과 시간, 크기, 해상도, 카메라 / 렌즈, 파일명 정규식 / glob. `place:`는 도시, 국가 또는 둘 다와 일치하며, 공백이 있는 값은 큰따옴표로 묶습니다(`place:"Rio de Janeiro"`)
 - **유사 항목 찾기 (average hash)** — pHash와 dHash에 선택적 average-hash(aHash)를 결합하여 보완적인 근접 중복 메트릭 제공
-- **시맨틱 검색 (CLIP)** — 캐시된 임베딩을 통한 자연어 쿼리 ("눈 속의 골든 리트리버"); `open_clip_torch` + `torch`가 설치되지 않으면 우아하게 비활성화
-- **자동 태그** — 휴리스틱 분류 + 선택적 CLIP ONNX 업그레이드
+- **시맨틱 검색 (CLIP)** — onnxruntime에서 실행되는 CLIP ViT-B/32의 캐시된 임베딩을 통한 자연어 쿼리 ("눈 속의 골든 리트리버"), PyTorch 불필요: 처음 사용할 때 Imervue가 `onnxruntime` 설치를 제안하고 약 150 MB 모델을 고정된 리비전으로 한 번만 다운로드하며, 가능하면 CUDA를 통해 NVIDIA GPU에서, 그렇지 않으면 CPU에서 실행되고 내장 GPU에서는 절대 실행되지 않음
+- **자동 태그** — 색상, 가장자리, 형태로 판단하는 휴리스틱 태그: document / screenshot / photo / graphic, landscape / portrait; 시맨틱 검색이 CLIP 모델을 다운로드한 뒤에는 대신 제로샷 CLIP 레이블 사용 (photo, document, screenshot, graphic, illustration, portrait, landscape, animal, food, text 중 최대 3개)
 
 ### 메타데이터
 
 - **EXIF 사이드바** — 접을 수 있는 그룹 + 인라인 0-5 별점 스트립
-- **EXIF 편집기** 다이얼로그 — 설명·작성자·저작권·카메라·코멘트(유니코드 포함)를 추가 패키지 없이 JPEG / WebP에 기록하며 픽셀과 다른 태그는 그대로
+- **EXIF 편집기** 다이얼로그 — 설명·작성자·저작권·카메라·코멘트(유니코드 포함)를 추가 패키지 없이 JPEG / WebP에 기록하며 픽셀과 다른 태그는 그대로. **설명 생성** 버튼은 로컬 비전 모델(`localhost:11434`의 Ollama와 `llava`)이 쓴 한 문장으로 설명을 채우므로 이미지가 내 컴퓨터 밖으로 나가지 않음
 - **키워드 편집기** — 제목 / 작성자 / 설명 / 키워드, 태그 동시 출현에서 도출한 **연관 태그 제안** 포함, 그리고 **통제 어휘 확장**(리프 키워드가 편집 가능한 계층 어휘에서 그 조상 + 동의어를 자동으로 적용)
 - **이미지 정보** 다이얼로그 (크기 / 용량 / 날짜)
-- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 인식 사진 관리자와 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
+- **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 지원 사진 관리 프로그램과 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.
 - **GPS 지오태그 편집기** — EXIF GPS 위도/경도 읽기/쓰기. JPEG / WebP는 추가 패키지 없이 픽셀·다른 태그·썸네일을 그대로 두고 기록
+- **GPX 트랙으로 지오태그** — 선택한 이미지의 EXIF 촬영 시각을 휴대폰이나 GPS 로거의 `.gpx` 기록과 대조(카메라 시간대, 허용 시간 간격 한도, 포인트 사이 보간 적용)한 뒤 위치를 JPEG / WebP 파일에 기록
+- **촬영 시간 수정** — 선택한 이미지의 EXIF 촬영 시각을 일 / 시 / 분 / 초 단위로 옮기거나, 첫 사진을 실제로 찍은 시각을 지정해 보정. JPEG / WebP 파일의 DateTimeOriginal, DateTimeDigitized, DateTime을 다시 씀
+- **메타데이터 템플릿** — `{filename}` / `{name}` / `{folder}` / `{date}` / `{year}` 토큰을 쓸 수 있는 제목·설명·키워드를 기억해 두었다가, 선택한 이미지에 빈 항목만 채우거나(키워드는 추가) 기존 내용을 덮어써서 적용. 결과는 XMP 사이드카와 메타데이터 내보내기로 기록
 - **토큰 일괄 이름 변경** — 라이브 미리보기 템플릿 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **메타데이터 CSV / JSON 내보내기** — 컬링 / 별점 / 태그 / 메모를 포함한 이미지당 한 행
 
@@ -270,13 +305,13 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 **Tools** 메뉴에서 접근; 기능별로 묶인 서브메뉴로 정리:
 
 - **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저(숨겨진 데이터를 제거하기 위해 다시 렌더링) · 이미지 정리기(날짜 / 해상도 / 종류 / 크기별로 하위 폴더에 정렬) · 토큰 일괄 이름 변경
-- **AI / 휴리스틱** — AI 이미지 업스케일 (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · 중복 이미지 찾기 · 유사 이미지 찾기 · 자동 태그 · 얼굴 검출 (Haar cascade)
-- **라이브러리 및 메타데이터** — 라이브러리 검색 · 스마트 앨범 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그
+- **보정 및 변형** — AI 이미지 업스케일 (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · 얼굴 검출 (Haar cascade) · 힐링, 클론, 자르기 / 수평 보정, 렌즈 보정
+- **라이브러리 및 메타데이터** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 자동 태그 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그 · GPX 트랙으로 지오태그 · 촬영 시간 수정 · 메타데이터 템플릿
 
 ### 시스템 통합
 
 - Windows 우클릭 **Open with Imervue** 컨텍스트 메뉴 (레지스트리 기반 파일 연결)
-- `QFileSystemWatcher`를 이용한 폴더 모니터링 (변경 시 자동 새로고침)
+- 폴더 모니터링: 열린 폴더를 약 1초마다 확인하므로 다른 곳에서 추가·삭제·이름 변경한 파일이 1~2초 안에 나타납니다. 폴더를 계속 열어 두지 않으므로 Windows에서도 상위 폴더의 이름을 바꾸거나 옮길 수 있습니다. 폴더 트리는 F5 / **Refresh**, Imervue가 다시 앞으로 올 때, 열린 폴더가 바뀔 때 갱신됩니다
 - 토스트 알림 시스템 (info / success / warning / error)
 - 온라인 플러그인 다운로더가 포함된 플러그인 시스템 ([플러그인 시스템](#플러그인-시스템) 참조)
 
@@ -289,7 +324,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 ### 현상 슬라이더
 
 - 화이트 밸런스 — 색온도 / 틴트
-- 톤 영역 — 그림자 / 미드톤 / 하이라이트
+- 톤 영역 — 하이라이트 / 그림자 / 흰색 계열 / 검정 계열
 - 노출 / 대비 / 채도 / 활기
 - 자르기, 회전, 좌우 / 상하 반전
 - 모든 편집은 비파괴로 유지되며 recipe 저장소를 통해 양방향 보존
@@ -297,8 +332,8 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 ### 커브 및 LUT
 
 - **톤 커브 편집기** — 드래그 가능한 RGB 커브와 채널별 R / G / B 커브 (monotone cubic 보간)
-- **.cube LUT 적용** — 임의의 Adobe 3D LUT 로드 (최대 64³, DaVinci Resolve의 `LUT_3D_INPUT_RANGE` 포함), trilinear 보간, 강도 슬라이더로 블렌드
-- **스플릿 토닝** — 플래그 기반 그림자 / 하이라이트 색조 + 채도, 균형 피벗 포함
+- **.cube LUT 적용** — 임의의 Adobe LUT 로드 (3D 최대 65³, 1D 최대 65,536점, DaVinci Resolve의 `LUT_3D_INPUT_RANGE` 포함), trilinear 보간, 강도 슬라이더로 블렌드
+- **스플릿 토닝** — 그림자 / 하이라이트 색조 + 채도, 균형 피벗 포함
 
 ### 크리에이티브 효과
 
@@ -317,6 +352,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 - **극좌표 (Polar Coordinates)** — 프레임을 원반으로 감거나 펼침 (tiny-planet / 극좌표 반전)
 - **만화경 (Kaleidoscope)** — 하나의 각도 쐐기를 n중 대칭으로 미러링
 - **서리 유리 (Frosted Glass)** — 결정론적 시드 기반 로컬 픽셀 산란
+- **프레임 및 캡션 (Frame & Caption)** — 원하는 색의 매트 테두리, 선택적 폴라로이드 스타일 하단 띠, 별도 색을 지정할 수 있는 캡션
 - **Develop 프리셋** — recipe를 저장한 뒤, 통째로 적용하거나 활성 조정만 다른 이미지에 병합 (각 이미지 고유의 자르기 등은 유지)
 
 ### 로컬 조정
@@ -328,7 +364,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 - **힐링 브러시** — 원형 스팟, OpenCV inpainting (Telea 또는 Navier-Stokes)
 - **클론 스탬프** — Shift+클릭으로 소스 지정, 페더 블릿으로 대상에 복제
-- **자르기 / 수평 보정** — 정규화된 자르기 사각형과 임의 각도 수평 보정, 최대 내접 직사각형으로 자동 자르기
+- **자르기 / 수평 보정** — 정규화된 자르기 사각형과 최대 ±15° 수평 보정, 최대 내접 직사각형으로 자동 자르기
 - **자동 수평 보정** — Hough 라인 기반 수평선 / 수직선 검출
 - **렌즈 보정** — 순수 numpy 방사형 왜곡 (배럴 / 핀쿠션), 비네팅 보정, 채널별 색수차 보정
 - **노이즈 감소 / 샤프닝** — 엣지 보존 양방향 노이즈 제거 + unsharp mask 샤프닝
@@ -342,12 +378,13 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 ### 출력
 
-- **워터마크 오버레이** — 텍스트 또는 이미지, 9개 앵커 위치, 불투명도, 스케일; 내보내기 시에만 적용
-- **내보내기 프리셋** — Web 1600 / Print 300 dpi / Instagram 1080 원클릭 파이프라인
-- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF / AVIF(`pillow-heif`가 있으면 HEIC, `pillow-jxl-plugin`이 있으면 JPEG XL도), 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음). 제안되는 파일 이름은 아직 쓰이지 않은 이름(`photo.png` 옆이면 `photo_1.png`)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
+- **내보내기 프리셋** — 일괄 내보내기에서 선택: Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 정사각형 / Thumbnail 400 px, 또는 사용자 지정
+- **워터마크** — 일괄 내보내기에서: 모서리나 중앙에 텍스트 워터마크를 불투명도와 함께 배치; 내보낸 사본에만 적용
+- **GPU 일괄 현상** — **GPU 현상** 플러그인(**Plugins > Download Plugins**)을 설치하면 일괄 내보내기가 현상 recipe를 외장 GPU에서 렌더링하며, GPU는 **처리 장치**에서 고릅니다. **Plugins > GPU 현상…** 메뉴는 처음 사용할 때 `wgpu`를 설치하고 찾은 GPU의 이름을 알려 줍니다. 화이트 밸런스, 노출, 하이라이트 / 그림자, 흰색 계열 / 검정 계열, 밝기, 대비, 활기, 채도, 톤 커브는 GPU에서 실행되고(24 MP 사진 한 장이 약 7초 대신 약 0.1초), recipe의 나머지는 CPU에 남습니다. 내장 GPU는 절대 사용하지 않고, GPU에서 실패한 이미지는 CPU로 렌더링하며, 출력은 CPU 렌더러와 일치하되 일부 픽셀에서만 몇 단계 이내의 차이가 납니다
+- **Save As / Export** — PNG / JPEG / WebP / BMP / TIFF(Pillow가 AVIF를 지원하면 AVIF, `pillow-heif`가 있으면 HEIC, `pillow-jxl-plugin`이 있으면 JPEG XL도), 손실 포맷에는 품질 슬라이더. 카메라·렌즈·촬영 일시 EXIF를 유지하며 위치 정보는 선택(**메타데이터**: 모두 / 위치 제외 / 없음). 제안되는 파일 이름은 아직 쓰이지 않은 이름(`photo.png` 옆이면 `photo_1.png`)이며, 기존 파일(특히 원본 사진 자체)은 확인한 뒤에만 바뀜
 - **일괄 작업** — 이름 변경, 이동/복사, 선택한 이미지 회전. 이동·복사는 같은 이름의 파일을 덮어쓰지 않고 `name_1`로 둡니다. Imervue에서 이름을 바꾸거나 이동한 사진(일괄 이름 변경, 토큰 일괄 이름 변경, 폴더 트리, 이동 / 복사, 듀얼 창, 스테이징 트레이, 이미지 정리)은 별점·즐겨찾기·태그·컬러 라벨·제목·메모·선별 표시를 유지하며, `.xmp`와 주석 sidecar도 함께 옮겨집니다. 폴더가 Imervue에 열려 있는 동안 다른 프로그램에서 이름을 바꾼 사진도 마찬가지입니다. 선택한 다른 사진이 지금 쓰고 있는 이름으로 바꾸는 경우(번호 다시 매기기, 두 이름 맞바꾸기)에도 일부만 바뀌지 않고 올바른 순서로 선택 전체의 이름을 바꿉니다
-- **컨택트 시트 PDF** — 캡션이 있는 다중 페이지 그리드 (A4 / A3 / Letter / Legal)
-- **웹 갤러리 HTML** — `index.html` + JPEG 썸네일 + 인라인 라이트박스가 포함된 자체 완결 폴더
+- **컨택트 시트 PDF** — 캡션이 있는 다중 페이지 그리드 (A4 / A3 / Letter / Legal); **레이아웃** 상자에서 프리셋을 고르면 값이 채워집니다 — 기본 4 × 5, 촘촘하게 6 × 8, 교정 5 × 6, 에디토리얼 2 × 3, 인덱스 8 × 10 (열 × 행, 각 프리셋의 여백과 캡션 설정 포함) — 그리드를 직접 수정하면 사용자 지정이 됩니다
+- **웹 갤러리 HTML** — `index.html` + JPEG 썸네일 + 인라인 라이트박스가 포함된 자체 완결 폴더; **클라이언트 검토**를 켜면 각 이미지 아래에 댓글 상자가 붙고, 메모는 검토자의 브라우저에 보관되며 하나의 JSON 파일로 다운로드됩니다
 - **슬라이드쇼 MP4** — H.264 비디오, 설정 가능한 FPS / 이미지당 유지 시간 / 페이드 · 디졸브 · 슬라이드 · 와이프 전환 (`imageio-ffmpeg`)
 - **인쇄 레이아웃** — 설정 가능한 페이지 크기 / 방향 / 그리드 / 여백 / 거터 / 재단선이 있는 다중 페이지 PDF 시트
 - **소프트 프루프** — ICC 프로파일 로드, 대상 색역 시뮬레이션, 색역 밖 픽셀을 마젠타로 강조
@@ -355,7 +392,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 ### 외부 편집기
 
-**File > External Editors…**에 프로그램(your image editor 등)을 등록하고, **File > Open in External Editor**로 현재 이미지를 해당 편집기에서 열 수 있습니다.
+**File > External Editors…**에 프로그램(이미지 편집기 등)을 등록하고, **File > Open in External Editor**로 현재 이미지를 해당 편집기에서 열 수 있습니다. 편집기에서 저장하면 뷰어가 알아서 새 버전을 보여 줍니다.
 
 ---
 
@@ -367,30 +404,36 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 브러시 · 지우개 · 채우기 · 스포이드 · 사각형 / 올가미 / 마법봉 / 빠른 선택 · 이동 · 텍스트 · 그라데이션 · 블러 · 스머지 · 닷지 · 번 · 스펀지 · 펜 · 클론 스탬프 · 말풍선 · 사각형 · 타원 · 직선 · 다각형 · 자르기 · 변형 · 핸드 · 줌
 
-암실 토닝 3종 — **닷지(Dodge)**(밝게), **번(Burn)**(어둡게), **스펀지(Sponge)**(채도 증가 / 감소) — 은 브러시와 그림자 / 미드톤 / 하이라이트 마스크로 가중치를 적용하여 로컬 톤 및 채도 조정을 칠합니다.
+**펜** 은 클릭한 점들을 직선으로 잇고, 핸들을 드래그해 끌어낸 곳은 곡선으로 잇습니다. 옵션 바에서 **부드럽게** 를 켜면 대신 모든 점을 지나는 하나의 부드러운 곡선을 그립니다.
+
+암실 토닝 3종 — **닷지(Dodge)**(밝게), **번(Burn)**(어둡게), **스펀지(Sponge)**(채도 감소) — 은 브러시로 가중치를 적용한 로컬 조정을 칠합니다. 닷지와 번은 미드톤에 작용합니다. 세 도구 모두 옵션이 없습니다.
+
+**Bucket** 도크의 **새 레이어에 밑색 칠하기** 는 선화의 닫힌 영역마다 고유한 단색(Swatches 도크에 색이 표시되어 있으면 그 색)을 선화 아래의 새 레이어에 칠합니다. 음영을 넣기 전의 밑색 작업 단계이며, 선과 그림 주변의 공간은 비워 둡니다.
+
+**그라데이션** 도구는 전경색 → 배경색, 또는 직접 만든 그라데이션으로 칠합니다. 옵션 바의 **색상** 에서 고르고, 그곳의 **편집…** 버튼을 누르면 그라데이션 편집기(**그라디언트** 대화상자)가 열립니다. 각 그라데이션에는 이름과 색상 정지점(각각 위치와 불투명도가 있는 색상을 가짐)이 있으며, 정지점을 추가·이동·색 변경·제거할 수 있습니다. 만든 그라데이션은 세션이 바뀌어도 유지됩니다.
 
 단일 키 단축키: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; 도형 변형은 `Shift+R/E/I/P`.
 
 ### 브러시
 
-펜 / 마커 / 연필 / 형광펜 / 스프레이 / 캘리그래피 / 수채화 / 목탄 / 크레용, Size / Opacity / Hardness / Density / 블렌드 모드 제어 포함. 압력 커브 편집기, 선택 영역으로부터 브러시 팁 캡처, 브러시 프리셋 가져오기 / 내보내기.
+브러시 종류 6가지 — 연필 / 펜 / 마커 / 에어브러시 / 수채화 / 먹(Sumi) — 와 이를 기반으로 한 프리셋(Crayon, Highlight, Sumi calligraphy …). Brush 도크에서 Size / Opacity / Hardness / Density / 블렌드 모드를 설정하고, 옵션 바에는 Size / Opacity / Hardness가 있습니다. 태블릿 펜 필압이 **Settings > Pressure Curve…** 에서 설정한 커브에 따라 크기와 불투명도를 조절하며, 마우스는 항상 최대 필압으로 그립니다. Brush 도크의 **Scatter** 는 각 브러시 자국을 최대 브러시 크기에 설정 비율을 곱한 거리까지 획에서 벗어나게 하고, **Colour jitter** 는 자국마다 색조·채도·명도를 바꾸며, **Follow pen tilt** 는 태블릿 펜이 기울어진 방향과 수직인 방향으로 브러시 팁을 좁히고 기울기를 따라 팁을 돌립니다(Sumi calligraphy 프리셋은 이 옵션이 켜져 있습니다). 픽셀 아트 브러시는 정사각형 팁을 그대로 유지합니다. 선택 영역으로부터 브러시 팁 캡처, **File > Import brush preset…**.
 
 ### 레이어
 
-썸네일, 가시성 토글, 드래그로 순서 변경, 블렌드 모드, 불투명도, 검색, 벡터 레이어, 1-bit 레이어, **레이어 마스크**(추가 / 선택에서 / 반전 / 적용), **클리핑 마스크**, **레이어 효과**(드롭 섀도 / 외부 광선 / 스트로크)를 갖춘 완전한 레이어 패널. 색상으로 레이어 분할, 그라데이션 맵 프리셋.
+썸네일, 가시성 토글, ↑ / ↓ 순서 변경 버튼(또는 `Ctrl+[` / `Ctrl+]`), 블렌드 모드, 불투명도, 검색, 벡터 레이어, 1-bit 레이어, **레이어 마스크**(추가 / 선택에서 / 반전 / 적용), **클리핑 마스크**, **레이어 효과**(드롭 섀도 / 외부 광선 / 스트로크)를 갖춘 완전한 레이어 패널. 색상으로 레이어 분할, 그라데이션 맵 프리셋.
 
 ### 선택
 
-사각형 / 올가미 / 마법봉 / 빠른 선택, **교체 / 추가 / 빼기 / 교차** 모드 + 페더. **퀵 마스크 모드** (`Q`) — 마스크를 그려서 작업하는 워크플로우용. **선택 영역 획**(Stroke Selection) 다이얼로그.
+사각형 / 올가미 / 마법봉 / 빠른 선택, **교체 / 추가 / 빼기 / 교차** 모드. 옵션 바에서 **자석** 을 켜면, 버튼을 놓을 때 올가미 윤곽이 10 px 이내에 있는 레이어의 가장 강한 가장자리에 달라붙습니다. **퀵 마스크 모드** (`Q`) — 마스크를 그려서 작업하는 워크플로우용. **선택 영역 획**(Stroke Selection) 다이얼로그.
 
 ### 애니메이션 및 만화
 
-- **애니메이션** — 스냅샷, 재생, 어니언 스킨 오버레이, MP4 / GIF 내보내기를 갖춘 프레임 타임라인 도크
-- **만화 도구** — 패널 컷터 · 톤 레이어 · 페이지 번호 스탬프 · 스피드라인(방사 / 평행 / 버스트) · 액션 플래시 · 말풍선 도구
+- **애니메이션** — 프레임 타임라인 도크: **+ Frame** 버튼이 평면화된 그림을 스냅샷하고, 선택한 FPS로 재생하며, 어니언 스킨이 이전 프레임을 보여 줍니다. **Export…** 버튼은 프레임을 애니메이션 GIF, WebP(무손실) 또는 PNG로 저장하며, 각 프레임은 선택한 FPS의 한 틱 동안 표시됩니다
+- **만화 도구** — 패널 컷터(이후 브러시의 **칸에 맞추기** 가 각 획을 그 획이 시작된 칸 안에 머물게 합니다) · 톤 레이어 · 페이지 번호 스탬프 · 스피드라인(방사 / 평행 / 버스트) · 액션 플래시 · 선택 영역을 따라 텍스트(입력한 텍스트를 선택 영역의 윤곽을 따라 새 레이어에 배치) · 말풍선 도구
 
 ### 필터 및 보기 보조
 
-- **필터** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone (각각 라이브 미리보기 다이얼로그 포함)
+- **필터** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (고른 참조 이미지의 색감) · Match Swatches (각 픽셀을 가장 가까운 Swatches 색으로) (슬라이더가 하나뿐인 Posterize, Threshold, Halftone, Match Colour 는 드래그하는 동안 레이어를 원본 크기로 잘라 낸 부분에서 라이브 미리보기를 보여 주고, 나머지는 OK / Cancel 파라미터 다이얼로그를 엶)
 - **보기 보조** — 픽셀 격자 · 픽셀에 스냅 · 가장자리에 스냅 · 어니언 스킨 · 블리드 가이드 · 캔버스 회전 (`Ctrl+Shift+H`로 반시계 방향 회전)
 
 ### 도크 (14개, 3개 클러스터 탭형)
@@ -401,13 +444,14 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 | 캔버스 | Layers · Navigator · History · Pages · Animation · Histogram |
 | 라이브러리 | Materials · Stamps · Pose · Reference |
 
-각 도크는 이동 / 플로팅 가능하며 **Window** 메뉴에서 개별로 켜고 끌 수 있습니다. **Settings > Workspace Layouts**로 명명된 배치를 저장 및 호출.
+Color 도크를 열면 색조 링과 채도 / 명도 삼각형이 표시됩니다. 링 위를 드래그해 색조를, 삼각형 안을 드래그해 채도와 명도를 고르면 아래의 슬라이더와 HEX 입력란도 함께 따라갑니다. Materials 도크에는 내장 톤과 텍스처보다 앞에 사용자의 재료가 나열됩니다. Imervue 프로그램 폴더의 `materials` 폴더에 있는 이미지(그 바로 아래에 `texture`, `tone`, `pattern`, `brush_tip`, `pose` 이름의 폴더를 두면 그 안의 이미지는 해당 분류로 정리됩니다)와 직접 캡처한 브러시 팁입니다. **Edit > Save Selection as Material…** 메뉴는 그림에서 선택한 부분을 그곳에 저장하며, 이전 재료를 덮어쓰지 않습니다. Swatches 도크는 최근 사용한 색이나 팔레트(내장된 Standard, Pastel, Manga 또는 직접 만든 팔레트)를 표시합니다. **Save as Palette…** 버튼은 최근 사용한 색을 이름을 붙여 저장하고, **Delete Palette** 버튼은 직접 만든 팔레트 하나를 삭제합니다. **Filter > Match Swatches…** 메뉴는 이 도크에 표시된 색을 사용합니다. 각 도크는 이동 / 플로팅 가능하며 **Window** 메뉴에서 개별로 켜고 끌 수 있습니다. **Settings > Workspace Layouts…** 메뉴는 내장된 Default / Drawing / Comic / Compact 레이아웃을 제공합니다. **Save current…** 버튼은 Layers / Color / Brush / Navigator / History / Reference 도크 중 어떤 것이 표시되어 있는지를 이름으로 저장하며, 레이아웃을 적용하면 해당 도크들을 표시하거나 숨깁니다. 도구 옵션과 도크 크기는 저장되지 않습니다.
 
 ### 파일 입출력
 
-- **PSD** (Photoshop) 열기 / 저장, 레이어 양방향 보존
-- PNG / JPEG / WebP 내보내기, 그리고 다중 페이지 만화를 **CBZ** 또는 **PDF**로 내보내기
-- 자동 저장 스냅샷 + 최신 복원
+- **New Canvas…** 명령은 고른 크기의 탭을 흰색 또는 투명 배경으로 엽니다. 크기는 용지·만화·화면 프리셋(A4, B5 만화 원고, 1080p, 4K …), **Save as Preset…** 으로 저장해 둔 프리셋, 또는 임의의 너비와 높이 중에서 고릅니다. **New Tab**(`Ctrl+N`)은 계속 기본 1024 × 1024 흰색 캔버스를 엽니다
+- **Open PSD…** 명령은 파일을 하나의 레이어로 평면화하여 새 탭에 열고, **Save as PSD…** 명령은 레이어를 블렌드 모드와 함께 기록합니다(마스크와 레이어 효과는 제외)
+- **Export image…** 명령은 선택한 파일 형식에 따라 PNG, JPEG, WebP, TIFF 또는 BMP로 기록합니다(투명도가 없는 JPEG와 BMP는 흰색 배경 위에 기록). 만화 프로젝트는 페이지를 **CBZ** 또는 **PDF**로 내보냅니다. **Save Comic Project…** 명령은 만화 전체를 모든 페이지의 레이어까지 포함해 하나의 `.imervue-proj` 파일에 저장하고, **Open Comic Project…** 명령으로 다시 불러옵니다. 탭을 저장한 것으로 치는 것은 **Save as PSD…** 명령뿐이므로, 내보낸 뒤에도 닫을 때 저장되지 않은 변경 사항을 확인합니다
+- **자동 저장** — 활성 탭에 저장되지 않은 편집이 있는 동안 2분마다 스냅샷을 남깁니다. 다음 실행 시 토스트가 스냅샷을 알려 주고 **File > Restore Autosave**가 가장 최신 스냅샷을 활성 탭에 불러오며, 상태 표시줄에 마지막 스냅샷 시각이 표시됩니다. Imervue를 닫을 때 저장되지 않은 변경이 있는 Paint 탭에 대해 확인합니다.
 
 ### 파워 유저 UX
 
@@ -425,7 +469,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 
 ## Puppet — 2D 리그드 애니메이션
 
-**Puppet** 탭은 처음부터 직접 구축한 2D 리그드 퍼펫 애니메이션 시스템입니다. Live2D가 하는 일(메시 변형 리그, 파라미터, 모션, 물리, 표정, 포즈, 입싱크, 웹캠 얼굴 추적)을 수행하지만 **독점 SDK 없이**, **`live2d-py` 없이**, 그리고 `Imervue/puppet/FORMAT.md`에 완전히 문서화된 완전 개방형 `.puppet` 파일 형식을 사용합니다.
+**Puppet** 탭은 처음부터 직접 구축한 2D 리그드 퍼펫 애니메이션 시스템입니다. 메시 변형 리그, 파라미터, 모션, 물리, 표정, 포즈, 입싱크, 웹캠 얼굴 추적을 제공하며, **독점 SDK 없이**, **`live2d-py` 없이**, 그리고 `Imervue/puppet/FORMAT.md`에 완전히 문서화된 완전 개방형 `.puppet` 파일 형식을 사용합니다.
 
 > **전체 가이드**: [`puppet_guide.md`](../puppet_guide.md)는 라이브 스트리밍(OBS / NDI / 가상 카메라)과 애니메이션 제작(녹화 / 타임라인 편집 / MP4 내보내기) 양쪽의 엔드 투 엔드 워크플로우를 다룹니다. 중국어판은 [`puppet_guide.zh-TW.md`](../puppet_guide.zh-TW.md) 및 [`puppet_guide.zh-CN.md`](../puppet_guide.zh-CN.md)에 있습니다.
 
@@ -439,18 +483,20 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 - `expressions/*.json` — 파라미터 오버레이
 - `physics.json` — Verlet 리그 구성
 
-JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
+JSON 기반, 사람이 diff 가능, 독점 바이너리 없음. 이 형식은 개방되어 있고 검증할 수 있습니다: 저장된 파일은 압축하지 않은 `mimetype` 항목(`application/vnd.imervue.puppet+zip`)으로 시작하고, 모든 JSON 파일은 `$schema`에 자신의 스키마를 명시합니다. 네 개의 JSON Schema는 [`docs/schemas/`](../docs/schemas/)에 공개되어 있고, `py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`(MCP `puppet_validate`)은 파일을 검사하며 `puppet-schema`(MCP `puppet_schema`)는 스키마를 출력합니다. [`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py)는 Python 표준 라이브러리만으로 파일을 읽습니다. 사양([`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md))과 스키마는 MIT 라이선스이므로 어떤 프로그램이든 `.puppet` 파일을 읽거나 쓸 수 있습니다.
 
 ### 렌더러
 
-`QOpenGLWidget`로 draw_order에 따른 vertex-array 텍스처 트라이앵글 드로잉, drawable별 블렌드 모드(normal / additive / multiply), pose-group 배타성, 이미지 공간 직교 투영, GL_REPEAT 타일링된 투명도 체커 배경, 휠 줌 + 중간 버튼 드래그 팬을 제공합니다. 대형 리그에 최적화 — March 7th (drawable 307개 / vertex morph 2965개)가 CPU에서 60 FPS로 동작.
+`QOpenGLWidget`로 draw_order에 따른 vertex-array 텍스처 트라이앵글 드로잉, drawable별 블렌드 모드(normal / additive / multiply), pose-group 배타성, 이미지 공간 직교 투영, GL_REPEAT 타일링된 투명도 체커 배경, 휠 줌 + 중간 버튼 드래그 팬을 제공합니다. 대형 리그에 최적화 — drawable 307개와 vertex morph 2965개를 가진 변환된 Cubism 리그가 CPU에서 60 FPS로 동작.
 
 ### 작성
 
 - **PNG 가져오기** → 알파를 고려한 삼각 그리드 메시 자동 생성
-- **회전 디포머 추가** (anchor + angle) / **워프 디포머 추가** (rows × cols 베지에 격자) 툴바 액션
+- **회전 디포머 추가** (anchor + angle) / **워프 디포머 추가** (rows × cols 쌍선형 격자) — **Edit** 메뉴에 있음
 - **파라미터 추가** → 파라미터 도크의 **Set Key**로 슬라이더 양 끝에서 key 형태 설정
 - **메시 편집기** — Edit Mesh를 토글하여 정점 드래그; 8 px 이내 클릭은 가장 가까운 정점에 스냅
+- **모션 타임라인** — **Edit > Edit motion…** 대화 상자에서 키와 베지어 핸들을 드래그; **이징**은 트랙을 이름 있는 이징 31종 중 하나로 다시 만들고(elastic과 bounce는 샘플링된 키가 됨), **키 줄이기**는 녹화한 take에서 이웃 키를 잇는 선으로부터 허용 오차 이내에 있는 키를 삭제
+- **퍼펫 복구** — **Tools > 퍼펫 복구**는 모든 드로어블의 메시를 정리하고(손상된 삼각형과 면적이 0인 삼각형, 위치와 UV가 모두 같은 중복 정점, 사용하지 않는 정점 — 본 가중치와 정점 모프는 남는 정점을 따라감) 각 정점의 본 가중치 합이 1이 되도록 맞춤
 - **Save As…** — 전체 리그를 `.puppet` zip으로 저장
 
 ### 런타임
@@ -458,17 +504,18 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
 - **파라미터 리그** — 각 파라미터는 슬라이더 값을 부분 디포머 형태 스냅샷에 매핑하는 key 리스트를 보유; 런타임에서 샘플링하여 필드별 lerp
 - **모션 재생** — 모션 목록 + Play / Pause / Stop / Loop / 스크럽이 있는 하단 도크; 커브 샘플러는 `linear`, `stepped`, `inverse-stepped`, `cubic-bezier` 세그먼트를 지원(Newton 반복으로 time → param 해결); 모션별 페이드 인 / 페이드 아웃
 - **표정** — `additive` / `multiply` / `overwrite` 파라미터 오버레이 스택
-- **포즈 그룹** — 상호 배타적인 drawable 가시성 (무기 교체, 입 모양 변형)
+- **포즈 그룹** — 상호 배타적인 drawable 가시성 (무기 교체, 입 모양 변형); **Pose** 도크에서 각 그룹이 표시할 멤버를 선택
 - **물리** — 머리카락 / 옷 / 리본을 위한 Verlet 진자 체인; 입력 파라미터가 체인 앵커를 이동시키고, 중력 + 감쇠 + 입자별 스프링이 정지 상태로 복귀
 - **정점 모프** — Cubism 스타일 rest와 ±extreme 델타 사이의 선형 블렌드; numpy 벡터화로 60 FPS 매 프레임
 - **불투명도 keys** — 파라미터 구동 알파 커브; 제스처 파라미터에 따라 대체 포즈 메시가 페이드 인/아웃
 
 ### 라이브 입력
 
-- 커서 드래그 → 머리 각도 파라미터
+- Drag-track head — 커서가 캔버스 위에서 움직이면 머리와 눈이 커서 쪽으로 돌아감
 - 코사인 open → close → open 커브 기반 자동 눈깜빡임
 - `sounddevice` RMS를 통한 마이크 입싱크 → `ParamMouthOpenY` (선택 의존성)
-- OpenCV + MediaPipe FaceMesh를 통한 웹캠 얼굴 추적 → 머리 yaw / pitch / roll + 눈 / 입 개폐 (선택 의존성)
+- 오디오 파일 립싱크 — **Live > 오디오 파일로 립싱크…** 메뉴가 WAV를 모션으로 바꿔 음량에 맞춰 `ParamMouthOpenY`를 열고(초당 30회, 아무것도 바꾸지 않는 키는 제외) WAV를 그 모션의 사운드로 재생; 추가 의존성 없음
+- OpenCV + MediaPipe Tasks FaceLandmarker를 통한 웹캠 얼굴 추적 → 머리 yaw / pitch / roll + 눈 / 입 개폐 (선택 의존성)
 - 커스텀 모션 녹화 — 슬라이더를 흔들고 / 웹캠을 향하고 / 물리가 동작하는 동안 30 Hz로 파라미터 값을 캡처; 정지 시 재생 / 루프 / 저장 준비된 선형 세그먼트 Motion으로 베이킹
 
 ### Cubism 상호운용
@@ -477,8 +524,8 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
 
 ### 출력
 
-- **Capture frame…** — `glReadPixels`로 현재 캔버스를 PNG로 저장
-- **Record…** — 30 FPS 프레임 루프를 토글하여 `imageio`를 통해 GIF / WebM / MP4로 저장
+- **Capture frame…** — 캐릭터만 리그 자체 크기(긴 변 최대 4096 px)로 투명 배경의 PNG로 저장
+- **Record…** — 30 FPS 프레임 루프를 토글하여 `imageio`를 통해 GIF / WebM / MP4로 저장. 캐릭터를 흰 배경의 1080 px 안에 맞춤(이 프레임에는 알파가 없음)
 - **가상 카메라** — 퍼펫 캔버스를 시스템 웹캠으로 노출
 - **NDI 출력** — LAN에서 퍼펫을 NDI 소스로 브로드캐스트
 - **VTube Studio API 서버** — VTS 호환 클라이언트를 위한 선택적 WebSocket API
@@ -499,7 +546,7 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음.
 3. Puppet 탭에서 리그를 열고 **Output > Virtual camera**를 토글합니다. 상태 표시줄에 선택할 정확한 장치명이 표시됩니다.
 4. OBS에서: **Sources > + > Video Capture Device**, 3단계에서 표시된 장치명(보통 *OBS Virtual Camera*)을 선택합니다.
 
-Imervue는 스트리밍 출력의 긴 변을 1080 px로 캡하므로 Cubism 네이티브 캔버스(March 7th은 3503×7777)가 DirectShow 가상 카메라 드라이버에 거부되지 않습니다. 종횡비는 유지되며, 필요하면 OBS에서 더 스케일할 수 있습니다.
+Imervue는 스트리밍 출력의 긴 변을 1080 px로 캡하므로 Cubism 네이티브 캔버스(세로 3000–8000 px인 경우가 많음)가 DirectShow 가상 카메라 드라이버에 거부되지 않습니다. 종횡비는 유지되며, 필요하면 OBS에서 더 스케일할 수 있습니다.
 
 ##### 왜 배경이 마젠타인가? (그리고 제거하는 방법)
 
@@ -544,7 +591,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 ### 데모
 
-손쉽게 사용 가능한 리그는 [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet)에 있습니다 — 트리 내에서 변환된 307 drawable Cubism Live2D 캐릭터. **Open Puppet…**으로 열면 리그가 중앙에 로드됩니다; 18개 모션(Idle 그룹 + Gesture 그룹) 중 아무거나 클릭하여 재생하세요. 제스처는 브이 사인, 얼굴 가리기, 사진, 홍조, 어두운 얼굴, 울음, 땀, 별, 별똥별을 포함합니다 — 리그가 정의하는 모든 명명된 제스처.
+번들된 리그는 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet)입니다 — Imervue의 오리지널 마스코트 **Imeru**: 1024 × 1336 캔버스 위의 drawable 45개, 모든 Cubism 표준 매개변수와 2관절 팔, Live2D 스타일 시차(parallax) 고개 돌리기, 빛을 등지며 고개를 돌릴수록 모양이 바뀌는 얼굴 그림자, 흰자 안으로 클리핑된 눈동자와 함께하는 눈 깜빡임, 머리카락 물리, 모션 8개(Idle 루프 2개, TapHead, TapBody, 손 흔들기를 포함한 Gesture 4개)와 표정 7개를 갖추고 있습니다. **File > Examples > Imeru** 메뉴 또는 **Open Puppet…** 명령으로 열고, 머리나 몸을 클릭하면 반응하는 모습을 볼 수 있습니다. 3D 애니메이션풍 게임이 캐릭터를 만드는 방식 그대로 전부 코드로 만들었습니다. 머리카락, 몸, 의상, 팔은 Blender에서 모델링하고 그런 게임의 셰이딩 기법(매끈한 대리 형상의 법선으로 빛을 받는 머리카락, 그려 넣은 머리카락 가닥과 하이라이트 스트로크, 베이크한 오클루전)으로 셀 셰이딩한 뒤 퍼펫 레이어 하나씩 렌더링하고, 얼굴은 SDF 얼굴 그림자 맵으로 음영을 넣고, 눈과 눈썹, 입은 그려 넣은 다음 레이어를 리깅했기 때문에 파일에 제3자 권리가 없으며, `py -3 examples/puppet/imeru/build.py`로 다시 빌드할 수 있습니다(Blender 4.2 이상 필요).
 
 ---
 
@@ -563,37 +610,41 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | 위치 잠금 | 펫을 고정하여 우발적인 드래그가 위치를 움직이지 못하게 합니다. |
 | 항상 맨 아래 | 펫을 다른 모든 창 뒤에 배치 — 항상 위가 아닌 데스크톱 위젯 같은 느낌. |
 | 전체 화면 시 숨김 | 같은 모니터에서 다른 앱(게임 / 동영상 / 프레젠테이션)이 전체 화면일 때 자동으로 숨기고, 전체 화면이 끝나면 다시 나타납니다. |
-| 숨겨졌을 때 일시 정지 | 보이지 않는 동안에는 펫이 애니메이션을 멈춰 화면 밖일 때는 CPU 사용량이 0입니다. |
+| 숨겨졌을 때 일시 정지 | 보이지 않는 동안에는 펫이 다시 그리기를 멈춥니다. 라이브 드라이버의 타이머는 계속 동작합니다. |
 | 크기 프리셋 | 소형 / 중형 / 대형. 중앙 기준으로 크기가 바뀌므로 펫이 화면을 가로질러 튀지 않습니다. |
 | 불투명도 슬라이더 | 펫을 10%에서 100%까지 페이드하여 은은한 데스크톱 장식으로 만들 수 있습니다. |
 | 위치 기억 | 펫을 좋아하는 모퉁이로 드래그해 두면 다음 실행 시 그 자리로 돌아옵니다. |
+| 전역 단축키 | 어떤 앱을 쓰고 있든 펫 표시 / 숨기기, 위치 잠금, 클릭 통과 전환, 말하기를 실행합니다 (`pynput` 필요). 기본값은 Ctrl+Shift+P / L / T / Space이며, 각각 탭의 **전역 단축키** 그룹에서 다시 지정할 수 있습니다. 다른 동작이 이미 쓰고 있는 키는 거부되고, 두 동작이 함께 쓰는 저장된 키는 상태 줄에 표시됩니다. |
 
 ### 클릭 상호작용
 
 - **본체에서 왼쪽 클릭** — 리그에 hit area가 정의되어 있으면(예: 머리 탭) 매칭되는 모션이 재생됩니다. 그렇지 않으면 펫이 말풍선으로 인사합니다.
-- **어디서나 오른쪽 클릭** — 컨텍스트 메뉴를 엽니다: 펫 숨기기, Live drivers, Play motion(리그의 모든 모션 목록), Apply expression, 위치 잠금, 클릭 통과, 항상 맨 아래, 전체 화면 시 숨김, 말풍선, 크기.
+- **어디서나 오른쪽 클릭** — 컨텍스트 메뉴를 엽니다: 펫 숨기기, Live drivers, Play motion(리그의 모든 모션 목록), Apply expression, Pose(각 포즈 그룹에서 표시할 멤버 선택), 위치 잠금, 클릭 통과, 항상 맨 아래, 전체 화면 시 숨김, 말풍선, 크기.
 - **시스템 트레이 아이콘** — 왼쪽 클릭으로 가시성을 토글하고, 오른쪽 클릭으로 Show/Hide, Click-through, Open puppet, Hide pet 메뉴를 엽니다.
 
 ### 라이브 드라이버
 
-탭이나 오른쪽 클릭 메뉴에서 원하는 조합을 골라 켜세요. 각 항목은 기본적으로 꺼져 있으며, 원하는 것만 켜면 됩니다.
+탭이나 오른쪽 클릭 메뉴에서 원하는 조합을 골라 켜세요. Auto idle, Idle motions, Auto-blink는 기본적으로 켜져 있고 나머지는 꺼져 있으며, 원하는 것만 켜면 됩니다.
 
 - **Auto idle** — 캐릭터가 살아 있는 느낌이 들도록 호흡 + 미세한 드리프트를 더합니다.
 - **Idle motions** — 리그의 아이들 그룹 모션을 무작위로 순환 재생합니다.
 - **Auto-blink** — 몇 초마다 자연스러운 눈 깜박임 사이클.
-- **Drag-track head** — 머리가 커서를 따라 돌아갑니다.
+- **Drag-track head** — 커서가 펫 위에 있는 동안 머리와 눈이 커서 쪽으로 돌아갑니다.
+- **Mouse gaze** — 화면 어디에 있든 눈과 머리가 커서를 따라갑니다.
 - **Mic lip-sync** — 음성에 맞춰 입이 열립니다 (`sounddevice` 필요).
 - **Webcam tracking** — 사용자의 머리 / 눈 / 입이 퍼펫을 움직입니다 (`opencv-python`과 `mediapipe` 필요).
 
 ### 시작하는 방법
 
 1. **Desktop Pet** 탭으로 전환합니다.
-2. **Load bundled March 7th**를 클릭하여 번들된 캐릭터를 쓰거나, **Open Puppet…**으로 직접 `.puppet` 파일을 고릅니다.
+2. **Load bundled Imeru**를 클릭하여 번들된 캐릭터를 쓰거나, **Open Puppet…** 명령으로 직접 `.puppet` 파일을 고릅니다.
 3. **Show pet on desktop**을 체크합니다.
 4. 캐릭터를 원하는 위치로 드래그하고, 원하는 드라이버를 고르고, 불투명도 / 크기를 조정합니다.
 5. 언제든 오른쪽 클릭으로 빠른 동작 메뉴를 열거나, 탭을 찾지 않고도 시스템 트레이 아이콘으로 펫을 숨길 수 있습니다.
 
 설정한 모든 항목 — 위치, 드라이버, 불투명도, 클릭 통과, 크기 — 은 실행 사이에 기억됩니다.
+
+**Desktop Pet Integrations** 플러그인(**Plugins > Download Plugins**)을 설치하면 **Plugins > Desktop Pet Integrations** 메뉴가 추가됩니다. 펫이 OBS(스트리밍, 녹화, 장면 전환), Twitch 채팅 키워드(메시지 어디에 있어도 일치하며, `=hi`는 메시지 전체, `!dance*`는 메시지 시작, `/go+al/`은 정규식으로 일치), 로컬 웹훅(`POST http://127.0.0.1:9876/trigger`에 `{"group": "Wave", "speech": "Hi!"}` 전송), Windows 알림에 반응합니다. 이 플러그인은 `on_pet_created`로 만든 펫 플러그인의 예제이기도 합니다.
 
 ### 커스텀 음성 (펫 스크립트)
 
@@ -604,6 +655,10 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
   "version": 1,
   "name": "Friendly pet",
   "greetings": ["Hi!", "Hello!"],
+  "time_of_day_greetings": {
+    "morning": ["Good morning!"],
+    "night": ["Still up?"]
+  },
   "hit_responses": {
     "HitAreaHead": ["Don't poke me!", "Stop!"]
   },
@@ -617,13 +672,14 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 ```
 
 - **`greetings`** — 클릭에 더 구체적으로 매칭되는 항목이 없을 때 사용됩니다.
+- **`time_of_day_greetings`** — 현지 시각 구간별 인사말(`morning` 05–11시, `afternoon` 12–17시, `evening` 18–21시, `night` 22–04시). `greetings`보다 먼저 사용되며, 대사가 없는 구간은 `greetings`로 대체됩니다.
 - **`hit_responses`** — `HitArea`별 대사. 키는 리그에 정의된 hit area ID와 일치해야 합니다.
-- **`motion_lines`** — 모션별 대사. 펫이 해당 이름의 모션(hit area 모션 또는 컨텍스트 메뉴 모션)을 재생할 때 발동됩니다.
+- **`motion_lines`** — 모션별 대사. hit area 클릭으로 해당 이름의 모션이 재생될 때 말합니다(컨텍스트 메뉴에서 시작한 모션에는 말하지 않음).
 - **`scheduled`** — 타이머 기반 알림. 각 항목은 `every_seconds`초마다 발동됩니다.
 
 대사는 버킷별로 라운드 로빈 방식으로 순환하므로 같은 대사가 연속으로 두 번 나오지 않습니다. **Reset to default**는 커스텀 스크립트를 버리고 내장 인사말 세트를 되살립니다.
 
-동작하는 샘플은 [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json)에 있습니다.
+동작하는 샘플은 [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json)에 있습니다. 머리와 몸 대사는 Imeru의 `Head`와 `Body` hit area 클릭에 응답합니다.
 
 ---
 
@@ -633,14 +689,14 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 | 단축키 | 동작 |
 |----------|--------|
-| 방향키 | 그리드 스크롤 / 이미지 전환 (딥 줌에서는 좌/우) |
-| Shift + 방향 | 세밀 스크롤 (반 단계) |
+| 방향키 | 그리드: 포커스 링 이동 (Enter로 열기) / 딥 줌: 좌/우로 이미지 전환 |
 | Ctrl+Shift+←/→ | 이미지가 있는 이전 / 다음 형제 폴더로 점프 |
 | Alt+← / Alt+→ | 히스토리 뒤로 / 앞으로 |
 | Ctrl+G | 인덱스로 이미지 이동 |
 | X | 무작위 이미지로 점프 |
-| Home | 줌과 팬을 원점으로 리셋 |
+| Home | 이미지를 창에 맞춤 (그리드에서는 맨 위로 스크롤) |
 | Ctrl+F 또는 / | 퍼지 검색 다이얼로그 열기 |
+| T | 태그 & 앨범 열기 |
 | Ctrl+Shift+P | 명령 팔레트 열기 |
 | Alt+M | 현재 선택에서 마지막 매크로 재생 |
 | S | 슬라이드쇼 다이얼로그 열기 |
@@ -654,11 +710,15 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | F | 전체 화면 토글 |
 | Shift+Tab | 시어터 모드 토글 (모든 UI 크롬 숨김) |
 | R / Shift+R | 시계 / 반시계 방향 회전 |
-| E | 이미지 편집기 열기 (Modify 탭) |
+| E | 현재 이미지를 주석 편집기에서 열기 |
 | W / Shift+W | 너비 / 높이에 맞춤 |
+| Shift+F | 창에 맞춤 |
+| - / = | 축소 / 확대 |
+| V | 읽기 모드 (너비에 맞추고 스크롤하며 읽다가 끝에서 다음 이미지로 넘어감) |
+| L | 루페: 커서를 따라다니는 돋보기 (썸네일 위에서도 동작) |
 | H | RGB 히스토그램 오버레이 토글 |
 | F8 / Ctrl+F8 | OSD 오버레이 / 디버그 HUD |
-| Shift+P | 픽셀 뷰 토글 (≥ 400 % 줌에서 격자 + RGB 표시) |
+| Shift+P | 픽셀 뷰 토글 (≥ 400 % 줌에서 RGB 표시, 화면의 픽셀이 40,000개 이하가 되면 격자도 표시) |
 | Shift+M | 색상 모드 순환 (Normal / Grayscale / Invert / Sepia) |
 | B | 북마크 토글 |
 | Ctrl+C / Ctrl+V | 클립보드에서 / 로 이미지 복사 / 붙여넣기 |
@@ -711,12 +771,18 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 | P / S / C / Z / H | 펜 / 클론 / 자르기 / 줌 / 핸드 |
 | Q | 퀵 마스크 모드 토글 |
 | Tab | 모든 도크 토글 |
-| Ctrl+Tab | Paint 탭 순환 |
+| Ctrl+Tab / Ctrl+Shift+Tab | 다음 / 이전 Paint 탭 |
 | , / . | 브러시 종류 순환 |
 | 0-9 | 브러시 불투명도 10% 단계 |
 | Alt+[ / Alt+] | 활성 레이어 아래 / 위로 이동 |
 | Ctrl+[ / Ctrl+] | 활성 레이어를 스택에서 아래 / 위로 옮기기 |
 | Ctrl+D | 선택 해제 |
+| [ / ] | 브러시 크기 1 px 줄이기 / 늘리기 |
+| Shift+[ / Shift+] | 브러시 크기 5 px 줄이기 / 늘리기 |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | 레이어 추가 / 레이어 복제 / 아래로 병합 |
+| Ctrl+0 / Ctrl+1 | 창에 맞추기 / 실제 크기 (100 %) |
+| X | 전경색 / 배경색 바꾸기 |
+| D | 색을 검정 / 흰색으로 초기화 |
 
 ---
 
@@ -725,7 +791,7 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 ### File
 
 - New Window
-- Open Image / Open Folder
+- Open File / Open Folder
 - Recent (폴더 + 이미지)
 - Bookmarks / Tags & Albums
 - Commit Pending Deletions
@@ -739,14 +805,14 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 ### Tools (추가 도구 — 8개의 그룹화된 서브메뉴로 정리)
 
-- **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저 · 이미지 정리기 · 토큰 일괄 이름 변경
-- **Library & Metadata** — 라이브러리 검색 · 스마트 앨범 · 유사 / 중복 찾기 · 자동 태그 · 계층 태그 · 메타데이터 내보내기 · XMP 사이드카 · GPS 지오태그
-- **Views** — Timeline · Calendar · Map
-- **Workflow** — Culling · 스테이징 트레이 · 가상 사본 · 듀얼 페인 파일 관리자 · 매크로
-- **Export** — 컨택트 시트 PDF · 웹 갤러리 · 슬라이드쇼 비디오 (MP4) · 인쇄 레이아웃
-- **Develop (Non-Destructive)** — 톤 커브 · .cube LUT · 스플릿 토닝 · 로컬 조정 마스크 · 그라데이션 농도 · 벨비아 · 엠보스 · 디프린지 · 필름 네거티브 · 필믹 톤 매핑 · 톤 / 디테일 이퀄라이저 · 극좌표 · 만화경 · 서리 유리 · 소프트 프루프
-- **Retouch & Transform** — AI 이미지 업스케일 · 노이즈 감소 / 샤프닝 · 힐링 브러시 · 클론 스탬프 · 얼굴 검출 · 하늘 / 배경 · 자르기 / 수평 보정 · 자동 수평 보정 · 렌즈 보정
-- **Multi-Image** — HDR 병합 · 파노라마 스티칭 · 포커스 스태킹
+- **Batch** — 포맷 변환 · EXIF 제거 · 이미지 새니타이저 · 이미지 정리기 · 토큰 일괄 이름 변경 · 디플리커 (타임랩스) · 문서 이진화 · Otsu 임계값 · 애니메이션 편집 · 목표 크기로 최적화 · 밈 캡션 · 스테가노그래피
+- **Library & Metadata** — 라이브러리 검색 · 스마트 앨범 · 유사 이미지 찾기 · 시맨틱 검색 · 중복 이미지 찾기 · 이미지 자동 태그 · 계층 태그 · 메타데이터 내보내기 (CSV / JSON) · XMP 사이드카 · GPS 지오태그 · GPX 트랙으로 지오태그 · 촬영 시간 수정 · 메타데이터 템플릿 · 썸네일 캐시
+- **Views** — 타임라인 보기 (일 / 월 / 연 단위) · 캘린더 보기 · 지도 보기 · 스코프 및 인스펙터 · 타이니 플래닛 (360°) · 이미지 통계 · 품질 보고서 · 테스트 차트 · 색각 이상 미리보기 (제1색맹 / 제2색맹 / 제3색맹 / 전색맹)
+- **Workflow** — Culling · 스테이징 트레이 · 참조 패널 · 가상 사본 · 듀얼 페인 파일 관리자 · 매크로 · 감시 폴더
+- **Export** — 컨택트 시트 PDF · 웹 갤러리 · 슬라이드쇼 비디오 (MP4) · 인쇄 레이아웃 · 콜라주 · 증명사진 시트
+- **Develop (Non-Destructive)** — 전 / 후 비교 · 현상 프리셋 · 톤 커브 · .cube LUT · 스플릿 토닝 · 로컬 조정 마스크 · 레이어 · 레벨 · 채널 믹서 · 그라데이션 맵 · 자동 색 균형 · 명료도 / 디헤이즈 · HSL / 색상 믹서 · CLAHE · 배경 평탄화 · 프레임 및 캡션 · 오더드 디더 · 컬러 맵 · 왜곡 · 극좌표 · 만화경 · 서리 유리 · 픽셀 정렬 · 필름 그레인 · 렌즈 플레어 · 임계값 / 포스터화 · 솔라리제이션 · 디퓨즈 글로우 · 그라데이션 농도 · 벨비아 · 엠보스 · 디프린지 · 필름 네거티브 · 필믹 톤 매핑 · 톤 / 디테일 이퀄라이저 · 소프트 프루프
+- **Retouch & Transform** — AI 이미지 업스케일 · 노이즈 감소 / 샤프닝 · 힐링 브러시 · 클론 스탬프 · 주파수 분리 · 스마트 자르기 · 인물 자동 보정 · 얼굴 검출 · 하늘 / 배경 · 자르기 / 수평 보정 · 자동 수평 보정 · 렌즈 보정 · 스케일 바
+- **Multi-Image** — HDR 병합 · 파노라마 스티칭 · 포커스 스태킹 · 이미지 스택 · 애너글리프 3D
 
 ### View / Sort / Filter / Language / Plugins / Instructions
 
@@ -774,7 +840,7 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 | 훅 | 트리거 |
 |------|---------|
 | `on_plugin_loaded()` | 플러그인 인스턴스화 후 |
-| `on_plugin_unloaded()` | 앱 종료 시 |
+| `on_plugin_unloaded()` | 플러그인의 창이 닫힐 때, 그리고 Reload Plugins 전 |
 | `on_build_menu_bar(plugin_menu)` | 공유 Plugins 메뉴가 빌드된 후 |
 | `on_build_main_tabs(tabs)` | 내장 5개 탭이 추가된 후 |
 | `on_build_context_menu(menu, viewer)` | 우클릭 메뉴 열릴 때 |
@@ -783,12 +849,18 @@ Imervue는 서드파티 플러그인을 지원합니다. 전체 참조는 [PLUGI
 | `on_image_switched(path, viewer)` | 이미지 간 내비게이션 시 |
 | `on_image_deleted(paths, viewer)` | 이미지(들)이 소프트 삭제된 후 |
 | `on_key_press(key, modifiers, viewer)` | 키 누름 시 (이벤트 소비 시 True 반환) |
+| `on_pet_created(pet)` | 데스크톱 펫 창이 생성될 때, 또는 플러그인 로드 시 펫 창이 이미 있을 때 |
 | `on_app_closing(main_window)` | 애플리케이션 종료 전 |
 | `get_translations()` | i18n 문자열 제공 |
+| `register_languages()` | 클래스 메서드: 새 언어 등록 (매번 로드 전과 시작 시) |
+
+훅 외에도 플러그인은 일괄 내보내기에 현상 recipe용 렌더러를 하나 더 제공할 수 있습니다. `on_plugin_loaded`에서 `Imervue.image.develop_backends.register`로 `BackendProvider`를 등록하면 됩니다. GPU 현상 플러그인이 그 예제이며, 자세한 내용은 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)를 참고하세요.
+
+**OK**를 누르면 이미지 변환 하나를 실행하는 다이얼로그는 버튼 줄, 선택적 패키지 설치, 워커, 결과 토스트를 `Imervue.plugin.tool_dialog.ToolDialogMixin`에서 받아 쓸 수 있습니다. 이전 릴리스 이후에 추가된 메인 프로그램 코드를 import하는 플러그인은 필요한 플러그인 API 버전을 `__init__.py` 옆의 `plugin.json`에 적습니다(`{"min_api_version": 2}`). 너무 오래된 Imervue는 그 플러그인의 import 도중에 실패하는 대신, 이유를 로그에 남기고 그 플러그인을 건너뜁니다.
 
 ### 플러그인 다운로더
 
-**Plugins > Download Plugins**가 온라인 다운로더를 엽니다. 소스 리포지토리: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins).
+**Plugins > Download Plugins**가 온라인 다운로더를 엽니다. 소스 리포지토리: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins). 더 새로운 Imervue가 필요한 플러그인은 설치되지 않습니다. 상태 줄에 그 플러그인에 필요한 플러그인 API 버전이 표시되고, 이미 설치된 사본은 그대로 유지됩니다. Imervue를 업데이트한 뒤 다시 다운로드하세요.
 
 ---
 
@@ -802,7 +874,7 @@ python -m Imervue.mcp_server
 
 ### 도구
 
-선택된 도구(총 56개 — 전체 목록은 문서 참고). 모든 도구는 JSON
+선택된 도구(총 58개 — 전체 목록은 문서 참고). 모든 도구는 JSON
 `outputSchema`와 읽기 전용 / 파괴적 `annotations`를 광고하고, 결과를
 `structuredContent`로 반환하며, 장시간 실행 도구는
 `notifications/progress`를 스트리밍합니다.
@@ -816,10 +888,10 @@ python -m Imervue.mcp_server
 | `convert_format` | PNG / JPEG / WebP / TIFF / BMP / AVIF 간 변환 (+ 선택적 HEIC / JXL) |
 | `apply_watermark` / `apply_frame` | 텍스트 워터마크 또는 매트 / 폴라로이드 프레임 + 캡션 굽기 |
 | `build_collage` | 이미지를 그리드 몽타주로 합성 (진행률 포함) |
-| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 종횡비 유지 리사이즈, 무손실 회전 / 반전. 크기와 좌표는 EXIF 방향을 적용한 이미지를 기준으로 합니다. |
+| `crop_image` / `resize_image` / `rotate_image` | 픽셀 자르기, 리사이즈(한 변만 지정하면 종횡비 유지, 두 변을 모두 지정하면 정확한 크기), 무손실 회전 / 반전. 크기와 좌표는 EXIF 방향을 적용한 이미지를 기준으로 합니다. |
 | `collection_stats` | 폴더 별점 / 즐겨찾기 / 컬러 라벨 / 컬링 요약 |
 | `search_images` | 스마트 앨범 쿼리 DSL로 폴더 필터링 (경로 / EXIF / 크기 / 해상도) |
-| `extract_gps` / `dominant_colors` | EXIF GPS 좌표 읽기(`reverse_geocode`로 연결); median-cut 색상 팔레트 (rgb / hex / 비율) |
+| `extract_gps` / `dominant_colors` | EXIF GPS 좌표 읽기(`reverse_geocode`로 연결); median-cut 색상 팔레트 (rgb / hex / pixel_count) |
 | `error_level_analysis` | JPEG 재압축 변조 맵을 PNG 데이터 URI로 출력 |
 | `solarize_image` / `glow_image` | 솔라리제이션 톤 반전 또는 디퓨즈 글로우 블룸을 적용하고 저장 |
 | `velvia_image` / `emboss_image` / `defringe_image` | 벨비아 채도 부스트, 방향광 엠보스, 가장자리 프린지 탈색 |
@@ -836,13 +908,14 @@ python -m Imervue.mcp_server
 | `lens_correction_image` | 왜곡(k1), 비네팅, 적/청 색수차 보정 |
 | `reverse_geocode` / `extract_video_frame` | 오프라인 GPS → 도시, 비디오 프레임 한 장을 정지 이미지로 디코딩 |
 | `puppet_from_png` / `puppet_inspect` | PNG에서 `.puppet` 리그 빌드; `.puppet`을 열고 인벤토리 반환 |
+| `puppet_validate` / `puppet_schema` | `.puppet`을 v1 형식(스키마, 로더, 리그 검사)에 맞춰 검사; 형식의 JSON Schema 하나를 반환 |
 
 ### 프롬프트
 
 네 가지 재사용 가능한 프롬프트: `caption_image`, `suggest_edits`,
 `analyze_composition`(saliency 기반 구도 비평), `flag_issues`(샤프니스 +
-품질 + 클리핑 분류). 프롬프트 인자는 `completion/complete`를 통해 자동
-완성할 수 있습니다.
+품질 + 클리핑 분류). `completion/complete`는 `suggest_edits`의 `style`과
+`analyze_composition`의 `focus`에 대해 값을 제안합니다.
 
 ### 연결
 
@@ -876,7 +949,7 @@ python -m Imervue.mcp_server
 
 **Language** 메뉴에서 변경합니다. 재시작이 필요합니다.
 
-플러그인은 `language_wrapper.register_language()`로 완전히 새로운 언어를 등록하거나, `get_translations()`로 내장 언어에 번역을 추가할 수 있습니다(기존 키는 절대 덮어쓰지 않으므로 플러그인이 기본 문자열을 망가뜨릴 수 없습니다). **Español**이 바로 이 방식입니다 — 다운로더에서 `spanish_translation` 플러그인을 설치하면 다섯 개 내장 언어와 함께 언어 메뉴에 나타납니다. 자세한 내용은 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n) 참조.
+플러그인은 `language_wrapper.register_language()`로 완전히 새로운 언어를 등록하거나, `get_translations()`로 내장 언어에 번역을 추가할 수 있습니다(기존 키는 절대 덮어쓰지 않으므로 플러그인이 기본 문자열을 망가뜨릴 수 없습니다). 비어 있거나 `{placeholders}`가 영어 문자열과 다른 플러그인 문자열은 버려지고 로그에 기록되므로, 빈칸이나 오류 대신 내장 텍스트가 표시됩니다. **Español**이 바로 이 방식입니다 — 다운로더에서 `spanish_translation` 플러그인을 설치하면 다섯 개 내장 언어와 함께 언어 메뉴에 나타납니다. 자세한 내용은 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n) 참조.
 
 ---
 
@@ -885,6 +958,8 @@ python -m Imervue.mcp_server
 애플리케이션 옆의 `user_setting.json`에 저장됩니다 — 소스 체크아웃에서는 프로젝트 루트, 프리즈 빌드에서는 `.exe`가 있는 폴더(PyInstaller와 Nuitka 모두).
 
 이 파일은 **다중 프로필 컨테이너**입니다. 프로필마다 독립적인 설정 딕셔너리를 가지므로 하나의 설치로 서로 다른 구성(예: *Work*와 *Personal*)을 함께 둘 수 있습니다. **File > Profiles…**에서 전환 / 생성 / 이름 변경 / 삭제할 수 있습니다. 예전 릴리스의 v1 단일 프로필 파일은 처음 읽을 때 자동으로 `default` 프로필로 마이그레이션됩니다. 쓰기는 마지막 변경 후 몇 초 뒤에 모아서 수행되며 원자적으로 기록됩니다(`.tmp` 형제 파일 + `os.replace`). 따라서 저장이 중단되어도 파일이 잘리지 않습니다. 시작할 때 파일을 읽을 수 없으면(깨진 JSON이거나 다른 프로그램이 붙잡고 있는 경우) 기본 설정으로 시작하고, 처음 저장하기 전에 옆에 `user_setting.json.unreadable-<날짜>-<시각>` 사본을 남깁니다. 사본을 남기지 못하면 덮어쓰지 않습니다. 시작할 때 경고로 그 파일과 이전 설정을 되찾는 방법을 알려 줍니다.
+
+각 세션의 로그 파일 `imervue.log`도 같은 폴더에 기록됩니다(그 폴더가 읽기 전용이면 `%LOCALAPPDATA%\Imervue`, Windows 외의 환경에서는 `~/.cache/imervue`에 기록됩니다). 이전 세션의 로그는 옆에 `imervue.previous.log`로 보관되므로, 비정상 종료된 뒤 Imervue를 다시 실행해도 그 원인을 알려 주는 로그가 남아 있습니다. 문제를 보고할 때는 두 파일을 모두 첨부해 주세요.
 
 활성 프로필의 주요 항목:
 
@@ -903,6 +978,7 @@ python -m Imervue.mcp_server
 | `stack_raw_jpeg_pairs` | bool | RAW+JPEG 스택 토글 |
 | `external_editors` | list | 구성된 편집기 |
 | `macros` / `macro_last_name` | list / string | 저장된 매크로 + Alt+M 대상 |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | 선택 탭(기본 켜짐, 다음 시작부터 적용) |
 
 ---
 

@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui._apply_save import load_rgba, output_path
+from Imervue.gui._apply_save import finish_save, load_rgba, output_path
 from Imervue.gui.file_filters import image_filter
 from Imervue.gui.dialog_rows import folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
@@ -129,11 +129,7 @@ class SkyReplaceDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, info: str) -> None:
-        _ = info
-        self._progress.setVisible(False)
-        self._run_btn.setEnabled(True)
-        if ok:
-            self.accept()
+        finish_save(self, ok, info, "sky_failed", "Sky replacement failed")
 
 
 def open_sky_replace(viewer: GPUImageView) -> None:

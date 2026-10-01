@@ -85,6 +85,7 @@ class DockBuilder:
         ws._brush_dock = BrushDock(ws._state, ws)
         ws._fill_dock = FillDock(ws._state, ws)
         ws._fill_dock.set_auto_fill_callback(ws._auto_fill_closed_regions)
+        ws._fill_dock.set_base_colours_callback(ws._auto_base_colours)
         ws._layer_dock = LayerDock(ws._canvas.document(), ws)
         ws._navigator_dock = NavigatorDock(ws)
         ws._history_dock = HistoryDock(ws)
@@ -94,11 +95,9 @@ class DockBuilder:
     def _create_library_docks(self) -> None:
         ws = self._ws
         from Imervue.paint.dock_panels import MaterialDock
-        from Imervue.paint.material_library import default_material_index
+        from Imervue.paint.material_library import material_dock_index
         from Imervue.paint.swatch_panel import SwatchPanel
-        ws._material_dock = MaterialDock(
-            index=default_material_index(), parent=ws,
-        )
+        ws._material_dock = MaterialDock(index=material_dock_index(), parent=ws)
         ws._material_dock.material_chosen.connect(ws._on_material_chosen)
         ws._swatch_dock = SwatchPanel(ws._state, ws)
         ws._swatch_dock.color_chosen.connect(

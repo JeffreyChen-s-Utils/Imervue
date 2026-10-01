@@ -23,14 +23,13 @@ back onto the GUI thread.
 """
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import urllib.error
-import urllib.request
-from urllib.parse import urlparse
 
 from PySide6.QtCore import QObject, Signal
+
+from Imervue.system.local_llm import post_json, validate_base_url
 
 logger = logging.getLogger("Imervue.desktop_pet.llm_dialogue")
 
@@ -56,24 +55,6 @@ DEFAULT_TIMEOUT_S: float = 8.0
 """Hard cap on how long the user waits for a reply. Local models
 on CPU can take a few seconds; 8 s leaves margin without making a
 broken Ollama install feel like a hang."""
-
-_LOOPBACK_HOSTS: frozenset[str] = frozenset({"localhost", "127.0.0.1", "::1"})
-
-
-def validate_base_url(url: str) -> None:
-    """Raise :class:`ValueError` when ``url`` doesn't meet the
-    "loopback http or any https" policy. Pure helper so the
-    settings-validation path can call it without spawning a
-    request."""
-    parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        raise ValueError(f"unsupported scheme: {parsed.scheme!r}")
-    if parsed.scheme == "http" and (parsed.hostname or "") not in _LOOPBACK_HOSTS:
-        raise ValueError(
-            "plain HTTP is only allowed for loopback hosts "
-            "(localhost / 127.0.0.1 / ::1); use HTTPS for remote",
-        )
-
 
 def build_prompt(persona: str, situation: str) -> str:
     """Compose the prompt the LLM sees.
@@ -105,23 +86,6 @@ def extract_line(response_payload: dict) -> str | None:
     if not text:
         return None
     return text
-
-
-def _request_json(url: str, payload: dict, timeout: float) -> dict:
-    """POST ``payload`` as JSON to ``url`` and return the decoded
-    JSON response. ``validate_base_url`` must already have approved
-    the scheme/host pair — this is the wire-format step."""
-    validate_base_url(url)
-    body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310  # scheme + host validated above
-        raw = resp.read()
-    return json.loads(raw.decode("utf-8"))
 
 
 class LlmDialogueClient(QObject):
@@ -215,7 +179,7 @@ class LlmDialogueClient(QObject):
         url = self._base_url.rstrip("/") + "/api/generate"
         payload = {"model": self._model, "prompt": prompt, "stream": False}
         try:
-            data = _request_json(url, payload, timeout=self._timeout_s)
+            data = post_json(url, payload, timeout=self._timeout_s)
         except urllib.error.URLError as exc:
             logger.info("llm request URLError: %s", exc)
             self._safe_fail(f"connection: {exc}")

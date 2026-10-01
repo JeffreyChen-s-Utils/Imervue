@@ -8,13 +8,13 @@ opt-in via the corresponding BrushSettings field:
 * :func:`jitter_color` — perturbs the RGB color of each dab in HSV
   space (hue, saturation and value all shifted by a small random
   amount proportional to ``color_jitter``).
-* :func:`tilt_rotation_radians` — derives a kernel-rotation angle
-  from a pen-tilt vector. The brush kernel can then be rotated to
-  follow the artist's wrist, the way a calligraphy nib does.
+* :func:`tilt_kernel` — narrows the brush kernel across the pen's lean,
+  by how far it leans, and turns it to follow the lean (via
+  :func:`tilt_rotation_radians`), the way a calligraphy nib does.
 
-Pure numpy + math; the BrushStroke loop in brush_engine threads
-its own RNG into these helpers so the same seed reproduces a
-stroke pixel-for-pixel.
+Pure numpy + math; :class:`Imervue.paint.brush_engine.BrushStroke`
+threads its own seeded RNG into these helpers, so the same seed
+reproduces a stroke pixel for pixel.
 """
 from __future__ import annotations
 
@@ -29,6 +29,8 @@ from Imervue.paint.adjustments import _hsv_to_rgb, _rgb_to_hsv
 _MAX_HUE_SHIFT_DEG = 60.0
 _MAX_S_DELTA = 0.4
 _MAX_V_DELTA = 0.3
+# A fully tilted pen narrows the kernel across its lean to this fraction.
+_MIN_TILT_WIDTH = 0.35
 
 
 def scatter_offset(
@@ -103,6 +105,30 @@ def rotate_kernel(kernel: np.ndarray, angle_rad: float) -> np.ndarray:
     """
     if abs(angle_rad) < 1e-6:
         return np.ascontiguousarray(kernel, dtype=np.float32)
+    return _resample(kernel, angle_rad, 1.0)
+
+
+def tilt_kernel(kernel: np.ndarray, tilt_x: float, tilt_y: float) -> np.ndarray:
+    """The kernel a pen tilted by ``(tilt_x, tilt_y)`` lays down.
+
+    The kernel narrows across the direction the pen leans — to
+    ``_MIN_TILT_WIDTH`` of its width at full tilt, linearly by the tilt's
+    length (clamped to 1) — and its long axis turns to follow the lean.
+    An upright pen (``(0, 0)``) returns the kernel unchanged, as a
+    contiguous float32 copy.
+    """
+    lean = min(1.0, math.hypot(float(tilt_x), float(tilt_y)))
+    if lean < 1e-6:
+        return np.ascontiguousarray(kernel, dtype=np.float32)
+    width = 1.0 - (1.0 - _MIN_TILT_WIDTH) * lean
+    return _resample(kernel, tilt_rotation_radians(tilt_x, tilt_y), width)
+
+
+def _resample(kernel: np.ndarray, angle_rad: float, width: float) -> np.ndarray:
+    """Turn *kernel* by *angle_rad* and scale it to *width* across that direction.
+
+    Bilinear sampling about the centre; samples falling outside the kernel are 0.
+    """
     if kernel.ndim != 2:
         raise ValueError(
             f"kernel must be 2-D, got shape {kernel.shape}",
@@ -116,7 +142,7 @@ def rotate_kernel(kernel: np.ndarray, angle_rad: float) -> np.ndarray:
     rel_x = xs - cx
     rel_y = ys - cy
     src_x = rel_x * cos_a - rel_y * sin_a + cx
-    src_y = rel_x * sin_a + rel_y * cos_a + cy
+    src_y = (rel_x * sin_a + rel_y * cos_a) / width + cy
     x0 = np.floor(src_x).astype(np.int32)
     y0 = np.floor(src_y).astype(np.int32)
     fx = (src_x - x0).astype(np.float32)

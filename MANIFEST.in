@@ -1,0 +1,5 @@
+# Neither distribution carries the test suite: it is run from a checkout of the
+# repository. The wheel has none of it because package discovery is limited to
+# Imervue (pyproject.toml, dev.toml). On its own setuptools adds tests/test_*.py
+# to an sdist, and this takes them out. Commands apply in order: keep it last.
+prune tests

@@ -290,3 +290,24 @@ def test_apply_bundle_dedupes_by_name(tmp_path):
 def test_load_motion3_missing_file_raises():
     with pytest.raises(FileNotFoundError):
         load_motion3("does/not/exist.motion3.json")
+
+
+
+@pytest.mark.parametrize("sound", ["sounds/tap.wav", "", None])
+def test_both_motion_loaders_keep_the_entrys_sound(tmp_path, sound):
+    """The full .moc3 conversion dropped Sound; only the .model3.json merge kept it."""
+    from Imervue.puppet import cubism_import, cubism_native_convert
+    motion_path = tmp_path / "motions" / "tap.motion3.json"
+    motion_path.parent.mkdir()
+    _write_minimal_motion3(motion_path)
+    entry = {"File": "motions/tap.motion3.json", "FadeInTime": 0.2}
+    if sound is not None:
+        entry["Sound"] = sound
+    merged = cubism_import._load_motion_entry(tmp_path, "Tap", entry)  # noqa: SLF001
+    converted, _path = cubism_native_convert._load_referenced_motion(  # noqa: SLF001
+        tmp_path, "Tap", entry)
+    expected = str(tmp_path / sound) if sound else None
+    for motion in (merged, converted):
+        assert motion.sound_path == expected
+        assert motion.group == "Tap"
+        assert motion.fade_in_duration == pytest.approx(0.2)

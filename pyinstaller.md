@@ -245,7 +245,7 @@ xcrun stapler staple dist/Imervue.app
 - `--collect-submodules PySide6`：避免少數 Qt 子模組漏掉。
 - `--collect-submodules Imervue`：**必要**。plugin 是執行期從 `<app_dir>/plugins` 載入的，靜態分析看不到它們 `from Imervue.plugin.model_dir import ...` 之類的 import，只跟著主程式走的話那些模組不會進產物，plugin 就會以 `ModuleNotFoundError` 載入失敗（Nuitka 那邊實測掛掉 17 個裡的 10 個，見 `nuitka.md` §2.4）。
 - `--collect-data qt_material`：qt-material 的 QSS / 資源。
-- `--add-data`：語言檔、`plugins/`（外部 plugin 目錄）、`examples/`（內附 `examples/puppet/march_7th.puppet` 示範 rig 讓使用者第一次點 Puppet 分頁的「Open Puppet…」就有東西可開）。**Windows 用 `;`，Linux / macOS 用 `:`** 分隔來源與目的。**注意**：Puppet 從 plugin 升格為內建分頁（`Imervue/puppet/`），會跟其他 `Imervue.*` 子套件一起被 PyInstaller 的靜態分析自動帶進來，不需要任何 `--add-data` 或 `--collect-all=Imervue.puppet`。
+- `--add-data`：語言檔、`plugins/`（外部 plugin 目錄）、`examples/`（內附 `examples/puppet/imeru.puppet` 示範 rig 讓使用者第一次點 Puppet 分頁的「Open Puppet…」就有東西可開）。**Windows 用 `;`，Linux / macOS 用 `:`** 分隔來源與目的。**注意**：Puppet 從 plugin 升格為內建分頁（`Imervue/puppet/`），會跟其他 `Imervue.*` 子套件一起被 PyInstaller 的靜態分析自動帶進來，不需要任何 `--add-data` 或 `--collect-all=Imervue.puppet`。
 - **Cubism Native SDK DLL 永遠不打包**：Live2D 的 Free Material License 禁止散佈 SDK 二進位。`Imervue/puppet/cubism_native_bridge.py` 執行期會探測 `<cwd>/sdk/` 與 `CUBISM_CORE_DLL` 環境變數，使用者自備 DLL；找不到時 `.moc3 → .puppet` 的轉換功能會優雅停用，但已轉好的 `.puppet` rig 還是能正常播放。
 - `defusedxml`：`Imervue/image/xmp_sidecar.py` 會用 `defusedxml` 做 XMP sidecar 的安全 XML 解析（bandit `B405`–`B411`）。PyInstaller 的靜態 import 分析會自動把它收進來，不需要額外 `--collect-all defusedxml`。但**務必確認 venv 已 `pip install defusedxml`**——沒裝的話 XMP 讀寫功能在 frozen 產物中會拋 `ModuleNotFoundError: defusedxml` 而非 silent fallback。
 
@@ -377,6 +377,6 @@ find dist/Imervue -name '*.onnx' -o -name '*.pt' -o -name '*.safetensors'
 21. **浮水印疊加**：開啟浮水印對話框，套用文字 / 圖片浮水印於輸出——驗證 PIL 的 `ImageDraw` / `ImageFont` 在 frozen 下能載入字型資源
 22. **Export presets**：用 Web 1600px / Print 300dpi / Instagram 1080×1080 三種預設匯出——驗證 PIL 的 resample / DPI metadata 寫入正常
 23. **XMP sidecar**：載入含 其他相容 XMP 的照片管理工具 產生的 `.xmp` 圖片，確認星等 / 色彩標籤 / 開發參數被讀取；編輯後存檔再用 其他相容 XMP 的照片管理工具 開啟，確認 sidecar 能被對方讀回——驗證 `defusedxml` 被打包進產物
-24. **Puppet 內建分頁**：切到 Puppet 分頁 → **Open Puppet…** → 選 `examples/puppet/march_7th.puppet`（隨產物內附）→ rig 居中載入；點 Motions dock 任一動作（idle / wave / peace / face_cover …）即播放。驗證 `Imervue.puppet.*` 子套件被 PyInstaller 自動收進、`examples/` 透過 `--add-data` 帶上、`QOpenGLWidget` 在 frozen 環境的 vertex-array 繪製路徑正常
+24. **Puppet 內建分頁**：切到 Puppet 分頁 → **Open Puppet…** → 選 `examples/puppet/imeru.puppet`（隨產物內附）→ rig 居中載入；點 Motions dock 任一動作（idle_look / wave / tap_head …）即播放。驗證 `Imervue.puppet.*` 子套件被 PyInstaller 自動收進、`examples/` 透過 `--add-data` 帶上、`QOpenGLWidget` 在 frozen 環境的 vertex-array 繪製路徑正常
 25. **Puppet 即時輸入（選用）**：開啟 Drag-Track（滑鼠拖動頭部）、Auto-Blink（自動眨眼）；裝有 `sounddevice` 時開 Mic Lip-Sync、裝有 OpenCV + MediaPipe 時開 Webcam Tracking——驗證這幾條選用依賴在 frozen 環境的 `try / except ImportError` fallback 正確（沒裝時不該 crash，只是該選項不可勾選）
 26. **Cubism `.moc3` 轉換器（需自備 SDK）**：把 Live2D Cubism Native SDK 解壓到 `<app_dir>/sdk/` 或設 `CUBISM_CORE_DLL` 環境變數 → File > Convert `.moc3`… → 任意 Cubism 模型 → 確認產出的 `.puppet` 能播放。驗證 ctypes 對 `Live2DCubismCore.dll` 的動態載入在 frozen 環境下走得通；沒裝 SDK 時這個 menu 項應該 disabled / 提示

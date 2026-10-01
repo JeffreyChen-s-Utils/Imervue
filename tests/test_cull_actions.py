@@ -1,7 +1,7 @@
 """Tests for cull_actions.resolve_cull_targets — target resolution order.
 
 The action helpers themselves toggle persistent state and toast, but the
-priority resolution (multi-select → deep-zoom → hover → none) is pure and
+priority resolution (multi-select → deep-zoom → arrow-key focus → hover → none) is pure and
 covered here with a fake view.
 """
 from __future__ import annotations
@@ -72,3 +72,77 @@ def test_empty_selection_set_falls_through_to_hover():
         _hover_last_path="hov.png",
     )
     assert resolve_cull_targets(view) == ["hov.png"]
+
+
+
+def test_the_tile_the_arrow_keys_are_on_beats_the_hovered_one():
+    view = _view(tile_grid_mode=True, model=SimpleNamespace(images=["a", "b", "c"]),
+                 focused_tile_index=1, focus_ring_visible=True, _hover_last_path="c")
+    assert resolve_cull_targets(view) == ["b"]
+
+
+def test_a_hidden_focus_ring_leaves_the_hovered_tile():
+    """Moving the mouse hides the ring: the mouse is what the user is pointing with now."""
+    view = _view(tile_grid_mode=True, model=SimpleNamespace(images=["a", "b", "c"]),
+                 focused_tile_index=1, focus_ring_visible=False, _hover_last_path="c")
+    assert resolve_cull_targets(view) == ["c"]
+
+
+def test_a_focus_past_the_last_tile_falls_through_to_hover():
+    view = _view(tile_grid_mode=True, model=SimpleNamespace(images=["a"]),
+                 focused_tile_index=4, focus_ring_visible=True, _hover_last_path="a")
+    assert resolve_cull_targets(view) == ["a"]
+
+
+def test_selection_and_deep_zoom_still_come_before_the_focus():
+    images = SimpleNamespace(images=["a", "b", "c"])
+    selected = _view(tile_grid_mode=True, tile_selection_mode=True, selected_tiles={"c"},
+                     model=images, focused_tile_index=0, focus_ring_visible=True)
+    zoomed = _view(deep_zoom=object(), model=images, current_index=2,
+                   focused_tile_index=0, focus_ring_visible=True)
+    assert resolve_cull_targets(selected) == ["c"]
+    assert resolve_cull_targets(zoomed) == ["c"]
+
+
+
+def _label_view():
+    toasts = []
+    view = _view(main_window=SimpleNamespace(
+        toast=SimpleNamespace(info=toasts.append),
+        language_wrapper=SimpleNamespace(language_word_dict={})))
+    view.update = lambda: None
+    return view, toasts
+
+
+def test_a_colour_key_on_a_selection_that_all_has_it_clears_it():
+    """Rating keys cleared a selection that already had the rating; colour keys never did."""
+    from Imervue.gpu_image_view.cull_actions import apply_color_label
+    from Imervue.user_settings.color_labels import get_color_label, set_color_label
+    view, toasts = _label_view()
+    for path in ("a", "b"):
+        set_color_label(path, "red")
+    apply_color_label(view, "red", ["a", "b"])
+    assert (get_color_label("a"), get_color_label("b")) == (None, None)
+    assert toasts == ["Colour label cleared"]
+
+
+def test_a_colour_key_on_a_mixed_selection_gives_it_to_all():
+    from Imervue.gpu_image_view.cull_actions import apply_color_label
+    from Imervue.user_settings.color_labels import get_color_label, set_color_label
+    view, toasts = _label_view()
+    set_color_label("a", "red")
+    set_color_label("b", "green")
+    apply_color_label(view, "red", ["a", "b", "c"])
+    assert [get_color_label(p) for p in ("a", "b", "c")] == ["red", "red", "red"]
+    assert toasts == ["3 images → Red"]
+
+
+def test_a_colour_key_on_one_image_still_toggles():
+    from Imervue.gpu_image_view.cull_actions import apply_color_label
+    from Imervue.user_settings.color_labels import get_color_label
+    view, toasts = _label_view()
+    apply_color_label(view, "blue", ["a"])
+    assert get_color_label("a") == "blue"
+    apply_color_label(view, "blue", ["a"])
+    assert get_color_label("a") is None
+    assert toasts == ["Colour: Blue", "Colour label cleared"]

@@ -37,6 +37,12 @@ def test_list_resources_no_root_is_empty():
     assert list_resources(None) == {"resources": []}
 
 
+def test_list_resources_leaves_out_hidden_files(tmp_path):
+    _save(tmp_path / "a.png")
+    (tmp_path / "._a.png").write_bytes(bytes([0, 5, 22, 7]))
+    assert [r["name"] for r in list_resources(str(tmp_path))["resources"]] == ["a.png"]
+
+
 def test_invalid_cursor_raises(tmp_path):
     with pytest.raises(ResourceError) as exc:
         list_resources(str(tmp_path), cursor="!!!notbase64!!!")

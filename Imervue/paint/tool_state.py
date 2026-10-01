@@ -21,6 +21,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from Imervue.paint.pressure_curve import PressureCurve
 from Imervue.paint.rulers import Ruler
 from Imervue.user_settings.user_setting_dict import schedule_save, user_setting_dict
 
@@ -85,7 +86,7 @@ BLEND_MODES = (
 )
 DEFAULT_BLEND_MODE = "normal"
 
-# Brush parameter ranges — identical to raster paint apps's UI sliders. Settings are
+# Brush parameter ranges — identical to raster paint apps' UI sliders. Settings are
 # stored as plain ints/floats; clamping happens on assignment.
 BRUSH_SIZE_MIN = 1
 BRUSH_SIZE_MAX = 500
@@ -124,6 +125,8 @@ EVENT_SYMMETRY = "symmetry"    # symmetry mirror mode changed
 EVENT_RULER = "ruler"          # ruler mode / geometry changed
 EVENT_SUB_TOOL = "sub_tool"    # sub-tool registry / active sub-tool changed
 EVENT_EYEDROPPER = "eyedropper"   # eyedropper sampling mode changed
+EVENT_PRESSURE_CURVE = "pressure_curve"   # tablet pressure response changed
+EVENT_PEN = "pen"              # pen tool's Smooth curve setting changed
 
 
 @dataclass(frozen=True)
@@ -219,14 +222,22 @@ class ToolState:
     gradient_kind: str = "linear"
     gradient_reverse: bool = False
     gradient_repeat: int = 1
+    # Name of a saved multi-stop gradient (gradient_editor); "" = foreground → background.
+    gradient_name: str = ""
     symmetry_mode: str = "off"
     ruler: Ruler = field(default_factory=Ruler)
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
+    # Lasso outlines snap to the strongest nearby edge (paint/magnetic_lasso).
+    lasso_magnetic: bool = False
+    # Palette the Swatches dock shows (paint/color_palette); "" = the recent colours.
+    swatch_palette: str = ""
+    # Pen paths run as one smooth curve through the anchors (paint/catmull_rom_spline).
+    pen_smooth: bool = False
     snap_to_pixel: bool = False
     snap_to_edges: bool = False
     # When ``True`` and the workspace has a manga panel layout
     # registered, the brush clips strokes to the interior of the
-    # panel containing the press point. Matches raster paint apps's
+    # panel containing the press point. Matches raster paint apps'
     # "コマ内描画制限" toggle. Default off so the existing brush
     # behaviour is unchanged.
     snap_to_panel: bool = False
@@ -237,6 +248,9 @@ class ToolState:
     # toggle. False keeps the historical "active layer only" behaviour
     # so existing workflows are unchanged.
     eyedropper_sample_all_layers: bool = False
+    # Tablet pen pressure passes through this curve before it scales the
+    # brush size and opacity (Settings > Pressure Curve…). Identity by default.
+    pressure_curve: PressureCurve = field(default_factory=PressureCurve)
     sub_tools: dict[str, list[SubTool]] = field(default_factory=dict)
     _listeners: list[Callable[[str], None]] = field(
         default_factory=list, repr=False, compare=False,
@@ -335,7 +349,7 @@ class ToolState:
         return True
 
     def swap_colors(self) -> None:
-        """Exchange foreground and background — raster paint apps's X shortcut."""
+        """Exchange foreground and background — raster paint apps' X shortcut."""
         if self.foreground == self.background:
             return
         self.foreground, self.background = self.background, self.foreground
@@ -343,7 +357,7 @@ class ToolState:
         self._emit(EVENT_COLOR)
 
     def reset_colors(self) -> None:
-        """Reset to black/white — raster paint apps's D shortcut."""
+        """Reset to black/white — raster paint apps' D shortcut."""
         changed = False
         if self.foreground != DEFAULT_FG:
             self.foreground = DEFAULT_FG
@@ -359,8 +373,13 @@ class ToolState:
 
     def set_gradient(self, *, kind: str | None = None,
                      reverse: bool | None = None,
-                     repeat: int | None = None) -> bool:
-        """Update gradient kind / reverse / repeat. True if anything changed."""
+                     repeat: int | None = None,
+                     name: str | None = None) -> bool:
+        """Update gradient kind / reverse / repeat / colours. True if anything changed.
+
+        *name* picks a saved multi-stop gradient by name; ``""`` goes back to
+        foreground → background.
+        """
         from Imervue.paint.gradient import GRADIENT_KINDS
         changed = False
         if kind is not None:
@@ -379,6 +398,9 @@ class ToolState:
             if repeat != self.gradient_repeat:
                 self.gradient_repeat = repeat
                 changed = True
+        if name is not None and str(name) != self.gradient_name:
+            self.gradient_name = str(name)
+            changed = True
         if changed:
             self._persist()
             self._emit(EVENT_GRADIENT)
@@ -438,6 +460,42 @@ class ToolState:
         self._emit(EVENT_SELECTION_MODE)
         return True
 
+    def set_swatch_palette(self, name: str) -> bool:
+        """Show the named palette in the Swatches dock (``""`` = recent). True if changed."""
+        if str(name) == self.swatch_palette:
+            return False
+        self.swatch_palette = str(name)
+        self._persist()
+        self._emit(EVENT_HISTORY)
+        return True
+
+    def set_pen_smooth(self, enabled: bool) -> bool:
+        """Turn the pen's Smooth curve on or off. True if it changed."""
+        if bool(enabled) == self.pen_smooth:
+            return False
+        self.pen_smooth = bool(enabled)
+        self._persist()
+        self._emit(EVENT_PEN)
+        return True
+
+    def set_snap_to_panel(self, enabled: bool) -> bool:
+        """Keep brush strokes inside the manga panel they start in, or not. True if it changed."""
+        if bool(enabled) == self.snap_to_panel:
+            return False
+        self.snap_to_panel = bool(enabled)
+        self._persist()
+        self._emit(EVENT_BRUSH)
+        return True
+
+    def set_lasso_magnetic(self, enabled: bool) -> bool:
+        """Turn edge snapping of lasso outlines on or off. True if it changed."""
+        if bool(enabled) == self.lasso_magnetic:
+            return False
+        self.lasso_magnetic = bool(enabled)
+        self._persist()
+        self._emit(EVENT_SELECTION_MODE)
+        return True
+
     def set_eyedropper_sample_all_layers(self, enabled: bool) -> bool:
         """Toggle whether the eyedropper samples the composite vs active.
 
@@ -450,6 +508,15 @@ class ToolState:
         self.eyedropper_sample_all_layers = new_value
         self._persist()
         self._emit(EVENT_EYEDROPPER)
+        return True
+
+    def set_pressure_curve(self, curve: PressureCurve) -> bool:
+        """Replace the tablet pressure curve; ``True`` when it changed."""
+        if curve == self.pressure_curve:
+            return False
+        self.pressure_curve = curve
+        self._persist()
+        self._emit(EVENT_PRESSURE_CURVE)
         return True
 
     def set_fill(self, **kwargs: Any) -> bool:
@@ -614,9 +681,13 @@ class ToolState:
                 "gap_close_px": self.fill.gap_close_px,
             },
             "selection_mode": self.selection_mode,
+            "lasso_magnetic": bool(self.lasso_magnetic),
+            "swatch_palette": self.swatch_palette,
+            "pen_smooth": bool(self.pen_smooth),
             "gradient_kind": self.gradient_kind,
             "gradient_reverse": self.gradient_reverse,
             "gradient_repeat": self.gradient_repeat,
+            "gradient_name": self.gradient_name,
             "symmetry_mode": self.symmetry_mode,
             "ruler": self.ruler.to_dict(),
             "color_history": [list(c) for c in self.color_history],
@@ -625,6 +696,7 @@ class ToolState:
             "snap_to_panel": bool(self.snap_to_panel),
             "quick_mask_active": bool(self.quick_mask_active),
             "eyedropper_sample_all_layers": bool(self.eyedropper_sample_all_layers),
+            "pressure_curve": self.pressure_curve.to_dict(),
             "sub_tools": {
                 tool: [_sub_tool_to_dict(st) for st in entries]
                 for tool, entries in self.sub_tools.items()
@@ -669,8 +741,12 @@ class ToolState:
         return cls(
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
+            lasso_magnetic=bool(raw.get("lasso_magnetic", False)),
+            swatch_palette=str(raw.get("swatch_palette", "") or ""),
+            pen_smooth=bool(raw.get("pen_smooth", False)),
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
             gradient_repeat=gradient_repeat,
+            gradient_name=str(raw.get("gradient_name", "") or ""),
             symmetry_mode=symmetry_mode, ruler=ruler,
             color_history=history,
             snap_to_pixel=bool(raw.get("snap_to_pixel", False)),
@@ -680,6 +756,7 @@ class ToolState:
             eyedropper_sample_all_layers=bool(
                 raw.get("eyedropper_sample_all_layers", False),
             ),
+            pressure_curve=_pressure_curve_from_dict(raw.get("pressure_curve")),
             sub_tools=sub_tools,
         )
 
@@ -879,6 +956,16 @@ def _sub_tools_from_dict(raw: Any) -> dict[str, list[SubTool]]:
         if bucket:
             out[tool] = bucket
     return out
+
+
+def _pressure_curve_from_dict(raw: Any) -> PressureCurve:
+    """The saved curve, or the identity when it is missing or malformed."""
+    if raw is None:
+        return PressureCurve()
+    try:
+        return PressureCurve.from_dict(raw)
+    except ValueError:
+        return PressureCurve()
 
 
 def _history_from_list(raw: Any) -> list[tuple[int, int, int]]:

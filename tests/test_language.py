@@ -101,6 +101,17 @@ class TestLanguageWrapper:
         lw.reset_language("Spanish")
         assert lw.language_word_dict["key1"] == "valor1"
 
+    def test_registering_again_updates_the_same_dict(self):
+        """The active language's dict is shared, so a second registration updates it in place."""
+        lw = LanguageWrapper()
+        lw.register_language("Spanish", "Espanol", {"key1": "valor1"})
+        lw.reset_language("Spanish")
+        active = lw.language_word_dict
+        lw.register_language("Spanish", "Español", {"key2": "valor2"})
+        assert lw.choose_language_dict["Spanish"] is active
+        assert active == {"key1": "valor1", "key2": "valor2"}
+        assert lw.plugin_languages["Spanish"] == "Español"
+
     def test_cannot_override_builtin(self):
         lw = LanguageWrapper()
         original = lw.choose_language_dict["English"]

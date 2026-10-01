@@ -175,3 +175,82 @@ def test_options_bar_brush_strip_widgets_have_tooltips(qapp, state):
         assert bar._brush_hardness.toolTip()
     finally:
         bar.deleteLater()
+
+
+
+# ---------------------------------------------------------------------------
+# Fill / selection / gradient strips drive ToolState (they used to be inert)
+# ---------------------------------------------------------------------------
+
+
+def test_fill_strip_writes_back_and_starts_from_the_state(qapp, state):
+    """The strip showed "Contiguous" unticked while the fill was contiguous, and changed nothing."""
+    bar = PaintOptionsBar(state)
+    try:
+        assert bar._fill_contiguous.isChecked() is state.fill.contiguous  # noqa: SLF001
+        assert bar._fill_tolerance.value() == state.fill.tolerance  # noqa: SLF001
+        bar._fill_tolerance.setValue(90)  # noqa: SLF001
+        bar._fill_contiguous.setChecked(False)  # noqa: SLF001
+        bar._fill_all_layers.setChecked(True)  # noqa: SLF001
+        assert (state.fill.tolerance, state.fill.contiguous, state.fill.sample_all_layers) == (
+            90, False, True)
+    finally:
+        bar.deleteLater()
+
+
+def test_selection_mode_combo_sets_the_mode(qapp, state):
+    bar = PaintOptionsBar(state)
+    try:
+        combo = bar._select_mode  # noqa: SLF001
+        combo.setCurrentIndex(combo.findData("subtract"))
+        assert state.selection_mode == "subtract"
+    finally:
+        bar.deleteLater()
+
+
+def test_gradient_strip_sets_kind_and_reverse(qapp, state):
+    bar = PaintOptionsBar(state)
+    try:
+        combo = bar._gradient_kind  # noqa: SLF001
+        combo.setCurrentIndex(combo.findData("diamond"))
+        bar._gradient_reverse.setChecked(True)  # noqa: SLF001
+        assert (state.gradient_kind, state.gradient_reverse) == ("diamond", True)
+    finally:
+        bar.deleteLater()
+
+
+def test_the_strips_follow_changes_made_elsewhere(qapp, state):
+    bar = PaintOptionsBar(state)
+    try:
+        state.set_selection_mode("intersect")
+        state.set_gradient(kind="radial")
+        state.set_fill(tolerance=7)
+        assert bar._select_mode.currentData() == "intersect"  # noqa: SLF001
+        assert bar._gradient_kind.currentData() == "radial"  # noqa: SLF001
+        assert bar._fill_tolerance.value() == 7  # noqa: SLF001
+    finally:
+        bar.deleteLater()
+
+
+def test_the_text_tool_has_no_inert_strip(qapp, state):
+    """The text strip's font / size / bold / italic did nothing; the Add Text dialog has them."""
+    bar = PaintOptionsBar(state)
+    try:
+        state.set_tool("text")
+        text_page = bar._stack.currentIndex()  # noqa: SLF001
+        state.set_tool("hand")
+        assert bar._stack.currentIndex() == text_page  # noqa: SLF001 - the shared empty page
+    finally:
+        bar.deleteLater()
+
+
+def test_every_tool_has_an_options_page(qapp, state):
+    """Quick Select had no page, so the bar kept showing the previous tool's options."""
+    bar = PaintOptionsBar(state)
+    try:
+        assert set(bar._page_for_tool) == set(ts.TOOLS)  # noqa: SLF001
+        state.set_tool("gradient")
+        state.set_tool("select_quick")
+        assert bar._stack.currentIndex() == bar._page_for_tool["select_rect"]  # noqa: SLF001
+    finally:
+        bar.deleteLater()

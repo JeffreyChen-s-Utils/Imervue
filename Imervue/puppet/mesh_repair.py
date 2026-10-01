@@ -6,11 +6,13 @@ coincident duplicate vertices, and vertices no triangle references any more.
 :func:`repair_mesh` runs the full clean-up in one pass and returns the fixed
 mesh plus a :class:`MeshReport` of what it changed; the ``find_*`` detectors
 expose each check on its own for diagnostics. Pure geometry — no Qt, no numpy.
+Puppet's **Tools > Repair Rig** runs it on every drawable
+(:mod:`Imervue.puppet.rig_repair`), merging only vertices whose UVs match too.
 """
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 Vertex = tuple[float, float]
 
@@ -37,12 +39,17 @@ class MeshReport:
 
 @dataclass
 class RepairedMesh:
-    """A cleaned mesh plus the :class:`MeshReport` describing the clean-up."""
+    """A cleaned mesh plus the :class:`MeshReport` describing the clean-up.
+
+    ``sources[n]`` is the input vertex that new vertex ``n`` came from, so the
+    caller can carry per-vertex data (bone weights, morph deltas) across.
+    """
 
     vertices: list[Vertex]
     indices: list[int]
     uvs: list[Vertex]
     report: MeshReport
+    sources: list[int] = field(default_factory=list)
 
 
 def triangle_area(a: Vertex, b: Vertex, c: Vertex) -> float:
@@ -116,13 +123,16 @@ def repair_mesh(
     *,
     merge_tol: float = 0.0,
     area_eps: float = 0.0,
+    match_uvs: bool = False,
 ) -> RepairedMesh:
     """Clean a mesh's topology and report what changed.
 
     The pass, in order: drop triangles with an out-of-range index, fold
     duplicate vertices (within ``merge_tol``) onto a canonical corner, drop
     degenerate triangles (``area <= area_eps``), then compact away every vertex
-    no surviving triangle references and reindex.
+    no surviving triangle references and reindex. With ``match_uvs`` a
+    duplicate must also have the same UV, so a texture seam — one position,
+    two UVs — stays split.
 
     Raises :class:`ValueError` when ``uvs`` and ``vertices`` differ in length.
     """
@@ -134,7 +144,7 @@ def repair_mesh(
         )
     report = MeshReport()
     tris = _drop_out_of_range(_triangles(indices), len(verts), report)
-    remap = _build_remap(verts, merge_tol)
+    remap = _build_remap(verts, merge_tol, uv_list if match_uvs else None)
     report.merged_vertices = len(verts) - len({*remap.values()})
     tris = _apply_remap_drop_degenerate(tris, remap, verts, area_eps, report)
     return _compact(verts, uv_list, tris, remap, report)
@@ -190,25 +200,31 @@ def _compact(
     new_vertices = [verts[i] for i in referenced]
     new_uvs = [uv_list[i] for i in referenced]
     new_indices = [relabel[idx] for tri in tris for idx in tri]
-    return RepairedMesh(new_vertices, new_indices, new_uvs, report)
+    return RepairedMesh(new_vertices, new_indices, new_uvs, report, referenced)
 
 
-def _build_remap(vertices: Sequence[Vertex], tol: float) -> dict[int, int]:
+def _build_remap(
+    vertices: Sequence[Vertex], tol: float, uvs: Sequence[Vertex] | None = None,
+) -> dict[int, int]:
     if tol <= 0:
-        return _build_remap_exact(vertices)
-    return _build_remap_tol(vertices, tol)
+        return _build_remap_exact(vertices, uvs)
+    return _build_remap_tol(vertices, tol, uvs)
 
 
-def _build_remap_exact(vertices: Sequence[Vertex]) -> dict[int, int]:
-    seen: dict[Vertex, int] = {}
+def _build_remap_exact(
+    vertices: Sequence[Vertex], uvs: Sequence[Vertex] | None,
+) -> dict[int, int]:
+    seen: dict[tuple[float, ...], int] = {}
     remap: dict[int, int] = {}
     for i, vert in enumerate(vertices):
-        key = (vert[0], vert[1])
+        key = (vert[0], vert[1]) if uvs is None else (vert[0], vert[1], *uvs[i])
         remap[i] = seen.setdefault(key, i)
     return remap
 
 
-def _build_remap_tol(vertices: Sequence[Vertex], tol: float) -> dict[int, int]:
+def _build_remap_tol(
+    vertices: Sequence[Vertex], tol: float, uvs: Sequence[Vertex] | None,
+) -> dict[int, int]:
     canon: list[int] = []
     remap: dict[int, int] = {}
     for i, vert in enumerate(vertices):
@@ -218,6 +234,7 @@ def _build_remap_tol(vertices: Sequence[Vertex], tol: float) -> dict[int, int]:
                 for c in canon
                 if abs(vertices[c][0] - vert[0]) <= tol
                 and abs(vertices[c][1] - vert[1]) <= tol
+                and (uvs is None or uvs[c] == uvs[i])
             ),
             None,
         )

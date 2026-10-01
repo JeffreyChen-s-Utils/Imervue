@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from Imervue.gpu_image_view.key_action_dispatcher import (
     KeyActionDispatcher,
     anim_speed_factor,
@@ -147,31 +149,150 @@ class _ToggleView:
 def test_loupe_toggles_via_dispatcher():
     view = _ToggleView(deep=True)
     dispatcher = KeyActionDispatcher(view)
-    assert dispatcher._dispatch_toggle("loupe", None) is True   # noqa: SLF001
+    assert dispatcher._dispatch_toggle("loupe") is True   # noqa: SLF001
     assert view._loupe_enabled is True
-    dispatcher._dispatch_toggle("loupe", None)                  # noqa: SLF001
+    dispatcher._dispatch_toggle("loupe")                  # noqa: SLF001
     assert view._loupe_enabled is False
 
 
 def test_loupe_ignored_without_deep_zoom():
     view = _ToggleView(deep=False)
-    KeyActionDispatcher(view)._dispatch_toggle("loupe", None)   # noqa: SLF001
+    KeyActionDispatcher(view)._dispatch_toggle("loupe")   # noqa: SLF001
     assert view._loupe_enabled is False
 
 
 def test_loupe_toggles_in_tile_grid_mode():
     view = _ToggleView(deep=False, grid=True)
     dispatcher = KeyActionDispatcher(view)
-    dispatcher._dispatch_toggle("loupe", None)                  # noqa: SLF001
+    dispatcher._dispatch_toggle("loupe")                  # noqa: SLF001
     assert view._loupe_enabled is True
 
 
 def test_reading_mode_toggles_and_fits_via_dispatcher():
     view = _ToggleView(deep=True)
     dispatcher = KeyActionDispatcher(view)
-    assert dispatcher._dispatch_toggle("reading_mode", None) is True  # noqa: SLF001
+    assert dispatcher._dispatch_toggle("reading_mode") is True  # noqa: SLF001
     assert view._reading_mode is True
     assert view.reading_fits == 1   # entering fits to width
-    dispatcher._dispatch_toggle("reading_mode", None)                # noqa: SLF001
+    dispatcher._dispatch_toggle("reading_mode")                # noqa: SLF001
     assert view._reading_mode is False
     assert view.window_fits == 1    # leaving fits back to window
+
+
+class _PagedAnim:
+    """A multi-page TIFF's player: records what the frame keys asked of it."""
+
+    def __init__(self, *, paged: bool):
+        self.paged = paged
+        self.is_animated = True
+        self.speed = 1.0
+        self.calls: list[str] = []
+
+    def toggle(self):
+        self.calls.append("toggle")
+
+    def prev_frame(self):
+        self.calls.append("prev")
+
+    def next_frame(self):
+        self.calls.append("next")
+
+    def set_speed(self, speed):
+        self.calls.append("speed")
+        self.speed = speed
+
+
+@pytest.mark.parametrize("paged, expected", [
+    (True, ["prev", "next"]),
+    (False, ["toggle", "prev", "next", "speed"]),
+])
+def test_a_documents_pages_only_step(paged, expected):
+    anim = _PagedAnim(paged=paged)
+    view = SimpleNamespace(_animation=anim, main_window=SimpleNamespace())
+    dispatcher = KeyActionDispatcher(view)
+    for action in ("anim_toggle", "anim_prev", "anim_next", "anim_faster"):
+        dispatcher._dispatch_anim(action)   # noqa: SLF001
+    assert anim.calls == expected
+
+
+
+@pytest.mark.parametrize(("key", "modifiers", "mode"), [
+    ("D", "shift", "manga"),
+    ("D", "ctrl_shift", "manga_rtl"),
+])
+def test_dual_page_keys_open_their_reading_direction(key, modifiers, mode):
+    """Ctrl+Shift+D found no action (the lookup matches modifiers exactly): RTL was unreachable."""
+    from types import SimpleNamespace
+
+    from PySide6.QtCore import Qt
+
+    from Imervue.gpu_image_view.key_action_dispatcher import KeyActionDispatcher
+    from Imervue.gui.shortcut_settings_dialog import ShortcutManager
+    mods = {"shift": Qt.KeyboardModifier.ShiftModifier,
+            "ctrl_shift": Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier}[modifiers]
+    action = ShortcutManager().get_action(getattr(Qt.Key, f"Key_{key}").value, mods.value)
+    opened = []
+    view = SimpleNamespace(main_window=SimpleNamespace(activate_dual_view=opened.append))
+    assert KeyActionDispatcher(view)._dispatch_toggle(action) is True   # noqa: SLF001
+    assert opened == [mode]
+
+
+
+# ---------------------------------------------------------------
+# R / Shift+R — one recipe command per press
+# ---------------------------------------------------------------
+@pytest.fixture
+def rotate_view(qapp, tmp_path, monkeypatch):
+    """A deep-zoom view on one file, with a real undo stack and a scratch recipe store."""
+    from PySide6.QtGui import QUndoStack
+
+    from Imervue.gpu_image_view.actions import recipe_commands
+    from Imervue.image import recipe_store as store_mod
+    store = store_mod.RecipeStore(store_path=tmp_path / "recipes.json")
+    monkeypatch.setattr(recipe_commands, "recipe_store", store)
+    monkeypatch.setattr(store_mod, "recipe_store", store)
+    image = tmp_path / "a.png"
+    image.write_bytes(b"x")
+    view = SimpleNamespace(deep_zoom=object(), model=SimpleNamespace(images=[str(image)]),
+                           current_index=0, undo_manager=QUndoStack())
+
+    def steps():
+        recipe = store.get_for_path(str(image))
+        return 0 if recipe is None else recipe.rotate_steps
+
+    return view, steps
+
+
+def test_a_rotate_key_is_one_undo_step(rotate_view):
+    """R pushed a command whose redo pushed a second one: undo, redo, undo crashed the app."""
+    view, steps = rotate_view
+    stack = view.undo_manager
+    KeyActionDispatcher(view)._push_rotate(True)  # noqa: SLF001
+    assert (stack.count(), stack.index(), steps()) == (1, 1, 1)
+    stack.undo()
+    assert (stack.count(), stack.index(), steps()) == (1, 0, 0)
+    stack.redo()
+    assert (stack.count(), stack.index(), steps()) == (1, 1, 1)
+    stack.undo()
+    assert (stack.count(), stack.index(), steps()) == (1, 0, 0)
+
+
+def test_rotate_keys_step_back_one_press_at_a_time(rotate_view):
+    view, steps = rotate_view
+    stack = view.undo_manager
+    dispatcher = KeyActionDispatcher(view)
+    dispatcher._push_rotate(True)  # noqa: SLF001
+    dispatcher._push_rotate(True)  # noqa: SLF001
+    dispatcher._push_rotate(False)  # noqa: SLF001
+    assert (stack.count(), steps()) == (3, 1)
+    stack.undo()
+    assert steps() == 2
+    stack.undo()
+    assert steps() == 1
+
+
+def test_rotate_keys_do_nothing_outside_deep_zoom(rotate_view):
+    view, steps = rotate_view
+    view.deep_zoom = None
+    KeyActionDispatcher(view)._push_rotate(True)  # noqa: SLF001
+    assert (view.undo_manager.count(), steps()) == (0, 0)

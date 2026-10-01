@@ -32,6 +32,7 @@ import logging
 import math
 from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
@@ -47,8 +48,11 @@ from Imervue.image.tone_curve import apply_tone_curve, is_identity_points
 
 logger = logging.getLogger("Imervue.recipe")
 
-_IDENTITY_HEAD_BYTES = 4096
-_IDENTITY_CACHE: dict[str, tuple[float, int, str]] = {}
+_IDENTITY_CHUNK = 4096
+# Tags the digest so it can never equal a first-4-KB-only (pre-2) identity.
+_IDENTITY_SALT = b"imervue-identity-2"
+# path -> (mtime_ns, size, identity, pre-2 identity)
+_IDENTITY_CACHE: dict[str, tuple[int, int, str, str]] = {}
 
 # Tolerance for treating slider adjustments as a no-op. Values below this are
 # below the visible quantisation threshold on a single 8-bit channel.
@@ -301,33 +305,47 @@ class Recipe:
         if arr.dtype != np.uint8:
             arr = arr.astype(np.uint8, copy=False)
 
-        recipe = self.normalized()
-        arr = _apply_geometry(arr, recipe)
-        arr = apply_white_balance(arr, recipe.temperature, recipe.tint)
-        arr = _apply_exposure(arr, recipe)
-        arr = apply_highlights_shadows(arr, recipe.highlights, recipe.shadows)
-        arr = apply_whites_blacks(arr, recipe.whites, recipe.blacks)
-        arr = _apply_brightness_contrast(arr, recipe)
-        arr = apply_vibrance(arr, recipe.vibrance)
-        arr = _apply_saturation(arr, recipe)
-        arr = apply_tone_curve(
-            arr,
-            recipe.tone_curve_rgb,
-            r_points=recipe.tone_curve_r,
-            g_points=recipe.tone_curve_g,
-            b_points=recipe.tone_curve_b,
-        )
-        arr = _apply_split_toning(arr, recipe)
-        arr = _apply_lut(arr, recipe)
-        arr = _apply_masks(arr, recipe)
-        arr = _apply_levels(arr, recipe)
-        arr = _apply_channel_mixer(arr, recipe)
-        arr = _apply_gradient_map(arr, recipe)
-        arr = _apply_threshold_posterize(arr, recipe)
-        arr = _apply_lens_flare(arr, recipe)
-        arr = _apply_film_grain(arr, recipe)
-        arr = _apply_layer_stack(arr, recipe)
+        return self.normalized().apply_stages(arr)
+
+    def apply_stages(self, arr: np.ndarray, first: str | None = None,
+                     last: str | None = None) -> np.ndarray:
+        """Run the stages of :data:`STAGE_NAMES` from *first* to *last* (inclusive) on *arr*.
+
+        ``apply`` runs them all on the normalised recipe; a renderer that does
+        some stages itself runs the others through here. *arr* must already be
+        HxWx4 uint8, and the recipe normalised.
+        """
+        start = 0 if first is None else STAGE_NAMES.index(first)
+        stop = len(_STAGES) if last is None else STAGE_NAMES.index(last) + 1
+        for _name, stage in _STAGES[start:stop]:
+            arr = stage(arr, self)
         return arr
+
+
+def _apply_white_balance(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_white_balance(arr, recipe.temperature, recipe.tint)
+
+
+def _apply_highlights_shadows(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_highlights_shadows(arr, recipe.highlights, recipe.shadows)
+
+
+def _apply_whites_blacks(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_whites_blacks(arr, recipe.whites, recipe.blacks)
+
+
+def _apply_vibrance(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_vibrance(arr, recipe.vibrance)
+
+
+def _apply_tone_curve(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
+    return apply_tone_curve(
+        arr,
+        recipe.tone_curve_rgb,
+        r_points=recipe.tone_curve_r,
+        g_points=recipe.tone_curve_g,
+        b_points=recipe.tone_curve_b,
+    )
 
 
 def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
@@ -568,45 +586,93 @@ def _apply_saturation(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
     return np.array(img)
 
 
+# The develop pipeline, in order: each stage takes and returns an HxWx4 uint8
+# array and passes it through unchanged when its settings are neutral.
+_STAGES: tuple[tuple[str, Callable[[np.ndarray, Recipe], np.ndarray]], ...] = (
+    ("geometry", _apply_geometry),
+    ("white_balance", _apply_white_balance),
+    ("exposure", _apply_exposure),
+    ("highlights_shadows", _apply_highlights_shadows),
+    ("whites_blacks", _apply_whites_blacks),
+    ("brightness_contrast", _apply_brightness_contrast),
+    ("vibrance", _apply_vibrance),
+    ("saturation", _apply_saturation),
+    ("tone_curve", _apply_tone_curve),
+    ("split_toning", _apply_split_toning),
+    ("lut", _apply_lut),
+    ("masks", _apply_masks),
+    ("levels", _apply_levels),
+    ("channel_mixer", _apply_channel_mixer),
+    ("gradient_map", _apply_gradient_map),
+    ("threshold_posterize", _apply_threshold_posterize),
+    ("lens_flare", _apply_lens_flare),
+    ("film_grain", _apply_film_grain),
+    ("layer_stack", _apply_layer_stack),
+)
+#: Names of the develop stages in the order ``Recipe.apply`` runs them.
+STAGE_NAMES: tuple[str, ...] = tuple(name for name, _stage in _STAGES)
+
+
 # ----------------------------------------------------------------------
 # File identity
 # ----------------------------------------------------------------------
 
 
-def file_identity(path: str | Path) -> str:
-    """Stable per-content identity: md5(first 4 KB | file size).
+def _identity_chunks(path: Path, size: int) -> tuple[bytes, bytes, bytes]:
+    """The first, middle and last :data:`_IDENTITY_CHUNK` bytes of *path*."""
+    with open(path, "rb") as f:
+        head = f.read(_IDENTITY_CHUNK)
+        f.seek(max(0, size // 2 - _IDENTITY_CHUNK // 2))
+        middle = f.read(_IDENTITY_CHUNK)
+        f.seek(max(0, size - _IDENTITY_CHUNK))
+        tail = f.read(_IDENTITY_CHUNK)
+    return head, middle, tail
 
-    A pure mtime/path key would invalidate on every touch (backup tools, a
-    copy, a rename), so we hash the first 4 KB of the file bytes plus the file
-    size. Those bytes hold a JPEG's EXIF, so a metadata rewrite or a lossless
-    rotate does change the identity: Imervue's own rewrites carry the recipe
-    over with ``recipe_store.carry_recipe``. Collisions are possible in theory but extremely
-    unlikely in practice for photo libraries, and the downside of a
-    collision is merely the wrong recipe being applied — easily fixed by
-    resetting it in the Develop panel.
 
-    Results are cached in-process keyed by (mtime_ns, size) so repeated
-    lookups during the same session are effectively free.
+def file_identities(path: str | Path) -> tuple[str, str]:
+    """``(identity, pre-2 identity)`` of *path*; ``("", "")`` when it can't be read.
+
+    The pre-2 identity (md5 of the first 4 KB and the size) is what recipes
+    were stored under before; ``recipe_store`` moves such an entry to the
+    current identity the first time the file is looked up.
     """
     p = Path(path)
     try:
         st = p.stat()
     except OSError:
-        return ""
+        return "", ""
     key = str(p)
     cached = _IDENTITY_CACHE.get(key)
     if cached is not None and cached[0] == st.st_mtime_ns and cached[1] == st.st_size:
-        return cached[2]
+        return cached[2], cached[3]
     try:
-        with open(p, "rb") as f:
-            head = f.read(_IDENTITY_HEAD_BYTES)
+        head, middle, tail = _identity_chunks(p, st.st_size)
     except OSError:
-        return ""
-    digest = hashlib.md5(
-        head + st.st_size.to_bytes(8, "big"), usedforsecurity=False
-    ).hexdigest()
-    _IDENTITY_CACHE[key] = (st.st_mtime_ns, st.st_size, digest)
-    return digest
+        return "", ""
+    size = st.st_size.to_bytes(8, "big")
+    identity = hashlib.md5(
+        _IDENTITY_SALT + head + middle + tail + size, usedforsecurity=False).hexdigest()
+    legacy = hashlib.md5(head + size, usedforsecurity=False).hexdigest()
+    _IDENTITY_CACHE[key] = (st.st_mtime_ns, st.st_size, identity, legacy)
+    return identity, legacy
+
+
+def file_identity(path: str | Path) -> str:
+    """Stable per-content identity: md5 of the first, middle and last 4 KB and the file size.
+
+    A pure mtime/path key would invalidate on every touch (backup tools, a
+    copy, a rename), so the identity comes from the bytes. The first 4 KB
+    alone were not enough: two scanned pages of one size in an uncompressed
+    format (BMP, TIFF) share their header, their white top rows and their
+    size, so every page showed the one recipe. The middle and the end of the
+    file tell them apart. The first bytes hold a JPEG's EXIF, so a metadata
+    rewrite or a lossless rotate changes the identity: Imervue's own rewrites
+    carry the recipe over with ``recipe_store.carry_recipe``.
+
+    Results are cached in-process keyed by (mtime_ns, size) so repeated
+    lookups during the same session are effectively free.
+    """
+    return file_identities(path)[0]
 
 
 def clear_identity_cache() -> None:
@@ -637,4 +703,5 @@ def turned_with_file(recipe: Recipe, *, clockwise: bool, size: tuple[int, int]) 
     if crop is not None:
         x, y, w, h = crop
         crop = (height - y - h, x, h, w) if clockwise else (y, width - x - w, h, w)
-    return replace(recipe, flip_h=recipe.flip_v, flip_v=recipe.flip_h, crop=crop)
+    return replace(  # NOSONAR  # dataclasses.replace returns the Recipe it copies
+        recipe, flip_h=recipe.flip_v, flip_v=recipe.flip_h, crop=crop)

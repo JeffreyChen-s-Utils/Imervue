@@ -30,10 +30,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from PIL import Image
-
 from Imervue.image.dimensions import image_dimensions
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.exif_merge import read_exif
 from Imervue.system.batch_rename import rename_files
 from Imervue.system.file_transfer import is_same_file
 
@@ -178,18 +176,10 @@ def _gather_metadata(path: str, counter: int) -> dict[str, str]:
         mtime = 0.0
         size = 0
 
-    width = height = 0
-    camera = ""
     width, height = image_dimensions(path) or (0, 0)
-    try:
-        with Image.open(path) as im:
-            exif = im.getexif()
-            if exif:
-                make = (exif.get(271) or "").strip()  # Make
-                model = (exif.get(272) or "").strip()  # Model
-                camera = (f"{make} {model}").strip() or ""
-    except (*IMAGE_READ_ERRORS, AttributeError):   # unreadable file or a non-text Make/Model tag
-        pass
+    exif = read_exif(path)   # CR3 / RW2 / ORF / RAF too
+    camera = " ".join(value.strip() for value in (exif.get(271), exif.get(272))  # Make, Model
+                      if isinstance(value, str) and value.strip())
 
     dt = _safe_fromtimestamp(mtime)
     return {

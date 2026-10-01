@@ -45,6 +45,17 @@ def test_iter_image_paths_recursive(tmp_path):
     assert any(p.name == "b.jpg" for p in deep)
 
 
+def test_iter_image_paths_skips_hidden_files_in_a_folder_but_not_one_named(tmp_path):
+    _save(tmp_path / "a.png")
+    _save(tmp_path / "._a.png")
+    trash = tmp_path / ".Trashes"
+    trash.mkdir()
+    _save(trash / "deleted.png")
+    assert [p.name for p in iter_image_paths([str(tmp_path)], recursive=True)] == ["a.png"]
+    named = iter_image_paths([str(tmp_path / "._a.png")], recursive=False)
+    assert [p.name for p in named] == ["._a.png"]
+
+
 def test_output_path_with_and_without_out_dir(tmp_path):
     src = tmp_path / "pic.jpg"
     assert output_path(src, None, "_resized", None).name == "pic_resized.jpg"
@@ -230,6 +241,25 @@ def test_pipeline_unknown_op_is_validation_error(tmp_path, capsys):
     spec.write_text(json.dumps([{"op": "nope"}]))
     assert main(["pipeline", str(spec), str(tmp_path / "p.png")]) == 2
     assert "unknown op" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("op", [["dehaze"], 7, None, {"name": "dehaze"}])
+def test_an_op_that_is_no_name_is_a_validation_error(op):
+    """A list as the op raised TypeError (unhashable) out of the validator: a traceback."""
+    errors = validate_pipeline([{"op": op}])
+    assert errors == ["step 0: each step must be an object with an 'op' name"]
+
+
+def test_a_null_parameter_fails_that_image_not_the_run(tmp_path, capsys):
+    """float(None) raised TypeError past the per-image handler and ended the run."""
+    _save(tmp_path / "a.png")
+    _save(tmp_path / "b.png")
+    spec = tmp_path / "pipe.json"
+    spec.write_text(json.dumps([{"op": "invert"}, {"op": "dehaze", "strength": None}]))
+    assert main(["pipeline", str(spec), str(tmp_path), "--out", str(tmp_path / "out")]) == 1
+    err = capsys.readouterr().err
+    assert "pipeline step 1 (dehaze)" in err
+    assert "0 processed, 0 skipped, 2 errors" in err
 
 
 def test_pipeline_bad_json_is_error(tmp_path):
@@ -437,10 +467,10 @@ _EXPECTED = {'info': ('print image dimensions / format',
               (('--format',),
                'format',
                'PNG',
-               None,
+               'upper',
                False,
                None,
-               'JPEG / PNG / WEBP',
+               'output format',
                '_StoreAction'),
               (('--quality',),
                'quality',
@@ -450,7 +480,7 @@ _EXPECTED = {'info': ('print image dimensions / format',
                None,
                '1-100 for lossy formats',
                '_StoreAction')]),
- 'resize': ('resize to a maximum long edge',
+ 'resize': ('resize to a maximum long edge, or to an exact width / height',
             [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
              (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),
              (('--recursive',),
@@ -485,7 +515,23 @@ _EXPECTED = {'info': ('print image dimensions / format',
               None,
               'parallel workers (1=inline, 0=auto/all cores)',
               '_StoreAction'),
-             (('--max',), 'max', 1600, 'int', False, None, 'max long edge in px', '_StoreAction')]),
+             (('--max',), 'max', 1600, 'int', False, None, 'max long edge in px', '_StoreAction'),
+             (('--width',),
+              'width',
+              None,
+              'int',
+              False,
+              None,
+              'exact width in px (with no --height, height keeps the aspect)',
+              '_StoreAction'),
+             (('--height',),
+              'height',
+              None,
+              'int',
+              False,
+              None,
+              'exact height in px (with no --width, width keeps the aspect)',
+              '_StoreAction')]),
  'thumbnail': ('make thumbnails',
                [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
                 (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),
@@ -573,7 +619,31 @@ _EXPECTED = {'info': ('print image dimensions / format',
                  None,
                  'placement corner',
                  '_StoreAction'),
-                (('--opacity',), 'opacity', 0.6, 'float', False, None, '0..1', '_StoreAction')]),
+                (('--opacity',), 'opacity', 0.6, 'float', False, None, '0..1', '_StoreAction'),
+                (('--font-fraction',),
+                 'font_fraction',
+                 0.035,
+                 'float',
+                 False,
+                 None,
+                 'text height as a fraction of the image, 0.005..0.2',
+                 '_StoreAction'),
+                (('--color',),
+                 'color',
+                 [255, 255, 255],
+                 'int',
+                 False,
+                 3,
+                 'text colour',
+                 '_StoreAction'),
+                (('--shadow', '--no-shadow'),
+                 'shadow',
+                 True,
+                 None,
+                 False,
+                 0,
+                 'drop shadow behind the text',
+                 'BooleanOptionalAction')]),
  'optimize': ('encode under a target file size',
               [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
                (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),
@@ -852,6 +922,46 @@ _EXPECTED = {'info': ('print image dimensions / format',
              [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
               (('--recursive',), 'recursive', False, None, False, 0, None, '_StoreTrueAction'),
               (('--columns',), 'columns', 3, 'int', False, None, 'grid columns', '_StoreAction'),
+              (('--cell-width',),
+               'cell_width',
+               400,
+               'int',
+               False,
+               None,
+               'cell width in px',
+               '_StoreAction'),
+              (('--cell-height',),
+               'cell_height',
+               400,
+               'int',
+               False,
+               None,
+               'cell height in px',
+               '_StoreAction'),
+              (('--gap',),
+               'gap',
+               12,
+               'int',
+               False,
+               None,
+               'gap between cells in px',
+               '_StoreAction'),
+              (('--margin',),
+               'margin',
+               20,
+               'int',
+               False,
+               None,
+               'outer margin in px',
+               '_StoreAction'),
+              (('--background',),
+               'background',
+               [255, 255, 255],
+               'int',
+               False,
+               3,
+               'background colour',
+               '_StoreAction'),
               (('--out',),
                'out',
                'collage.png',
@@ -1047,8 +1157,12 @@ def _describe(parser: argparse.ArgumentParser) -> dict:
 
 
 def test_subcommands_and_arguments_are_unchanged():
+    """The hand-written subcommands; ``test_cli_tools`` pins the ones built from MCP tools."""
     from Imervue.cli import build_parser
-    actual = _describe(build_parser())
+    from Imervue.cli_tools import BRIDGED
+    generated = set(BRIDGED.values())
+    actual = {name: row for name, row in _describe(build_parser()).items()
+              if name not in generated}
     assert list(actual) == list(_EXPECTED)
     for name, expected in _EXPECTED.items():
         assert actual[name] == expected, name
@@ -1068,3 +1182,220 @@ def test_load_pipeline_reads_a_file_saved_with_a_bom(tmp_path):
     f = tmp_path / "pipeline.json"
     f.write_bytes(b"\xef\xbb\xbf" + json.dumps([{"op": "invert"}]).encode("utf-8"))
     assert load_pipeline(str(f)) == [{"op": "invert"}]
+
+
+# ---------------------------------------------------------------------------
+# camera RAW: developed like the viewer, listed in folders, written as PNG
+# ---------------------------------------------------------------------------
+
+
+def _nef_with_a_small_preview(path):
+    """What Pillow sees in a NEF: the 160x120 thumbnail in IFD0."""
+    Image.new("RGB", (160, 120), (0, 0, 255)).save(path, format="TIFF")
+    return path
+
+
+@pytest.fixture
+def developed_raw(monkeypatch):
+    from Imervue.image import dimensions, shown
+    frame = np.full((300, 450, 3), 90, dtype=np.uint8)
+    monkeypatch.setattr(shown, "develop_raw", lambda _p, thumbnail=False: frame)
+    monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: (450, 300))
+    return frame
+
+
+@pytest.mark.parametrize(("command", "extra", "name", "size"), [
+    ("convert", ["--format", "PNG"], "shot.png", (450, 300)),
+    ("resize", ["--max", "90"], "shot.png", (90, 60)),
+    ("strip", [], "shot.png", (450, 300)),
+    ("auto-orient", [], "shot.png", (450, 300)),
+])
+def test_a_raw_is_developed_not_its_preview(tmp_path, developed_raw, command, extra, name, size):
+    """Every subcommand read a NEF as its 160x120 thumbnail, and kept .nef on a PNG."""
+    src = _nef_with_a_small_preview(tmp_path / "shot.nef")
+    out_dir = tmp_path / "out"
+    assert main([command, str(src), *extra, "--out", str(out_dir)]) == 0
+    assert sorted(p.name for p in out_dir.iterdir()) == [name]
+    with Image.open(out_dir / name) as out:
+        assert (out.format, out.size) == ("PNG", size)
+
+
+def test_info_reports_what_libraw_develops(tmp_path, developed_raw, capsys):
+    src = _nef_with_a_small_preview(tmp_path / "shot.NEF")
+    assert main(["info", str(src), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)[0]
+    assert (payload["format"], payload["mode"], payload["width"], payload["height"]) == ("NEF", "RGB", 450, 300)
+
+
+def test_an_unreadable_raw_is_reported(tmp_path, capsys):
+    (tmp_path / "broken.cr3").write_bytes(b"not a raw file" * 20)
+    assert main(["info", str(tmp_path / "broken.cr3"), "--json"]) == 1
+    assert "broken.cr3" in capsys.readouterr().err
+
+
+def test_a_folder_lists_raw_and_avif_but_not_svg(tmp_path):
+    for name in ("a.CR3", "b.rw2", "c.avif", "d.jxl", "e.svg", "f.txt"):
+        (tmp_path / name).write_bytes(b"x")
+    names = [p.name for p in iter_image_paths([str(tmp_path)], recursive=False)]
+    assert names == ["a.CR3", "b.rw2", "c.avif", "d.jxl"]
+
+
+def test_output_path_writes_a_raw_as_png(tmp_path):
+    assert output_path(tmp_path / "IMG_1.CR3", None, "_resized", None).name == "IMG_1_resized.png"
+    assert output_path(tmp_path / "a.jpg", None, "_resized", None).name == "a_resized.jpg"
+
+
+@pytest.mark.parametrize(("command", "extra", "name"), [
+    ("convert", ["--format", "PNG"], "g.png"),
+    ("convert", ["--format", "JPEG"], "g.jpg"),
+    ("thumbnail", ["--size", "400"], "g.png"),
+    ("watermark", ["--text", "x", "--opacity", "0"], "g.png"),
+    ("auto-orient", [], "g.png"),
+])
+def test_sixteen_bit_grey_comes_out_as_a_gradient(tmp_path, command, extra, name):
+    """``convert`` clips 16-bit grey to 255, so the output was a white page."""
+    src = tmp_path / "g.png"
+    Image.fromarray(np.tile(np.linspace(0, 65535, 64).astype(np.uint16), (8, 1))).save(src)
+    out_dir = tmp_path / "out"
+    assert main([command, str(src), *extra, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / name) as out:
+        row = np.asarray(out.convert("L"))[4].astype(int)
+    assert row[0] <= 3
+    assert row[-1] >= 252
+    assert abs(row[32] - 130) <= 6
+
+
+@pytest.mark.parametrize(("command", "extra"), [("resize", ["--max", "32"]), ("strip", [])])
+def test_resize_and_strip_keep_a_sixteen_bit_source_sixteen_bit(tmp_path, command, extra):
+    src = tmp_path / "g.png"
+    Image.fromarray(np.tile(np.linspace(0, 65535, 64).astype(np.uint16), (8, 1))).save(src)
+    out_dir = tmp_path / "out"
+    assert main([command, str(src), *extra, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / "g.png") as out:
+        assert out.mode == "I;16"
+        assert int(np.asarray(out).max()) > 60000
+
+
+
+def test_collage_reports_an_unreadable_input_and_keeps_the_rest(tmp_path, capsys):
+    """One bad input ended the run in a traceback with no collage written."""
+    _save(tmp_path / "a.png", size=(40, 40))
+    (tmp_path / "broken.png").write_bytes(b"not a picture")
+    _save(tmp_path / "b.png", size=(40, 40))
+    out = tmp_path / "grid.png"
+    code = main(["collage", str(tmp_path / "a.png"), str(tmp_path / "broken.png"),
+                 str(tmp_path / "b.png"), "--columns", "2", "--out", str(out)])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert out.exists()
+    assert "broken.png" in captured.err
+    assert "2 images" in captured.out
+
+
+def test_collage_with_nothing_readable_writes_nothing(tmp_path, capsys):
+    (tmp_path / "broken.png").write_bytes(b"not a picture")
+    out = tmp_path / "grid.png"
+    assert main(["collage", str(tmp_path / "broken.png"), "--out", str(out)]) == 1
+    assert not out.exists()
+    assert "broken.png" in capsys.readouterr().err
+
+
+def test_anaglyph_reports_an_unreadable_side(tmp_path, capsys):
+    (tmp_path / "left.png").write_bytes(b"not a picture")
+    _save(tmp_path / "right.png", size=(40, 40))
+    out = tmp_path / "ana.png"
+    assert main(["anaglyph", str(tmp_path / "left.png"), str(tmp_path / "right.png"),
+                 "--out", str(out)]) == 1
+    assert not out.exists()
+    assert "error:" in capsys.readouterr().err
+
+
+# --- options the MCP tools already had ---------------------------------------
+
+@pytest.mark.parametrize(("fmt", "name", "pil_format"), [
+    ("tiff", "a.tif", "TIFF"), ("BMP", "a.bmp", "BMP"), ("webp", "a.webp", "WEBP"),
+])
+def test_convert_writes_the_formats_the_mcp_tool_writes(tmp_path, fmt, name, pil_format):
+    _save(tmp_path / "a.png", mode="RGBA")
+    out_dir = tmp_path / "out"
+    assert main(["convert", str(tmp_path / "a.png"), "--format", fmt, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / name) as out:
+        assert out.format == pil_format
+
+
+def test_convert_rejects_a_format_it_cannot_name(tmp_path, capsys):
+    _save(tmp_path / "a.png")
+    with pytest.raises(SystemExit) as exit_info:
+        main(["convert", str(tmp_path / "a.png"), "--format", "GIF"])
+    assert exit_info.value.code == 2
+    assert "invalid choice" in capsys.readouterr().err
+
+
+def test_convert_to_a_format_this_install_cannot_write_is_one_files_error(
+        tmp_path, capsys, monkeypatch):
+    from Imervue.image import save_formats
+    _save(tmp_path / "a.png")
+
+    def refuse(*_args, **_kwargs):
+        raise ValueError("HEIC output requires the pillow-heif package.")
+
+    monkeypatch.setattr(save_formats, "save_image", refuse)
+    assert main(["convert", str(tmp_path / "a.png"), "--format", "HEIC",
+                 "--out", str(tmp_path / "out")]) == 1
+    assert "pillow-heif" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("extra", "size"), [
+    (["--width", "50"], (50, 25)),
+    (["--height", "20"], (40, 20)),
+    (["--width", "30", "--height", "30"], (30, 30)),
+])
+def test_resize_to_an_exact_width_or_height(tmp_path, extra, size):
+    _save(tmp_path / "a.png", size=(200, 100))
+    out_dir = tmp_path / "out"
+    assert main(["resize", str(tmp_path / "a.png"), *extra, "--out", str(out_dir)]) == 0
+    with Image.open(out_dir / "a.png") as out:
+        assert out.size == size
+
+
+def test_resize_rejects_a_zero_width_as_one_files_error(tmp_path, capsys):
+    _save(tmp_path / "a.png")
+    assert main(["resize", str(tmp_path / "a.png"), "--width", "0",
+                 "--out", str(tmp_path / "out")]) == 1
+    assert "must be positive" in capsys.readouterr().err
+
+
+def test_watermark_colour_size_and_shadow_reach_the_renderer(tmp_path, monkeypatch):
+    from Imervue.image import watermark
+    seen = {}
+
+    def spy(img, opts):
+        seen["opts"] = opts
+        return img
+
+    monkeypatch.setattr(watermark, "apply_watermark", spy)
+    _save(tmp_path / "a.png")
+    assert main(["watermark", str(tmp_path / "a.png"), "--text", "x", "--color", "300", "0", "9",
+                 "--font-fraction", "0.1", "--no-shadow", "--corner", "center",
+                 "--out", str(tmp_path / "out")]) == 0
+    opts = seen["opts"]
+    assert (opts.color, opts.font_fraction, opts.shadow, opts.corner) == (
+        (255, 0, 9), 0.1, False, "center")
+
+
+def test_watermark_rejects_an_unknown_corner(tmp_path):
+    _save(tmp_path / "a.png")
+    with pytest.raises(SystemExit):
+        main(["watermark", str(tmp_path / "a.png"), "--text", "x", "--corner", "middle"])
+
+
+def test_collage_layout_options(tmp_path):
+    _save(tmp_path / "a.png", size=(40, 40))
+    _save(tmp_path / "b.png", size=(40, 40))
+    out = tmp_path / "grid.png"
+    assert main(["collage", str(tmp_path / "a.png"), str(tmp_path / "b.png"), "--columns", "2",
+                 "--cell-width", "50", "--cell-height", "30", "--gap", "4", "--margin", "6",
+                 "--background", "0", "0", "255", "--out", str(out)]) == 0
+    with Image.open(out) as grid:
+        assert grid.size == (6 * 2 + 50 * 2 + 4, 6 * 2 + 30)
+        assert grid.convert("RGB").getpixel((0, 0)) == (0, 0, 255)

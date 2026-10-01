@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue/main/docs/schemas/expression.schema.json",
+  "title": ".puppet expressions/<name>.json (v1)",
+  "type": "object",
+  "required": [],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "params": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "value"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {
+            "type": "number"
+          },
+          "mode": {
+            "enum": [
+              "additive",
+              "multiply",
+              "overwrite"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

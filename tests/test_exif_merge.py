@@ -112,4 +112,4 @@ def test_exif_read_registers_the_codec_first(tmp_path, monkeypatch):
     seen = []
     monkeypatch.setattr(exif_merge, "ensure_pillow_opener", seen.append)
     exif_merge.get_exif_data(tmp_path / "missing.HEIC")
-    assert seen == [".HEIC"]
+    assert seen == [".heic"]

@@ -159,16 +159,39 @@ def apply_save_buttons(reject: Callable[[], None], apply_: Callable[[], None]) -
     return row
 
 
-def notify_saved(
-    viewer, ok: bool, message: str, failed_key: str, failed_fallback: str,
-) -> None:
-    """Toast the outcome of a save: the saved filename, or a failure reason."""
-    lang = language_wrapper.language_word_dict
-    toast = getattr(getattr(viewer, "main_window", None), "toast", None)
-    if toast is None:
-        return
+def finish_save(dialog, ok: bool, message: str, failed_key: str, failed_fallback: str) -> None:
+    """End a one-shot save: hide the progress bar, re-arm Run, toast the outcome, close on success.
+
+    *dialog* carries ``_progress``, ``_run_btn`` and ``_viewer``; *message* is the
+    written path on success, else the error (see :func:`notify_saved`).
+    """
+    dialog._progress.setVisible(False)
+    dialog._run_btn.setEnabled(True)
+    notify_saved(dialog._viewer, ok, message, failed_key, failed_fallback)
     if ok:
-        toast.info(lang.get("local_contrast_done", "Saved {path}").format(
-            path=Path(message).name))
+        dialog.accept()
+
+
+def show_toast(viewer, text: str, *, error: bool = False) -> None:
+    """Show *text* in the main window's toast (an error toast if *error*); no toast, no-op.
+
+    Plugins import this through ``Imervue.plugin.tool_dialog`` (plugin API 2).
+    """
+    toast = getattr(getattr(viewer, "main_window", None), "toast", None)
+    if toast is not None:
+        (toast.error if error else toast.info)(text)
+
+
+def notify_saved(
+    viewer, ok: bool, message: str, failed_key: str, failed_fallback: str, *,
+    done_key: str = "local_contrast_done", done_fallback: str = "Saved {path}",
+) -> None:
+    """Toast the outcome of a save: the saved filename, or a failure reason.
+
+    *done_key* / *done_fallback* give the success text, which takes ``{path}``.
+    """
+    lang = language_wrapper.language_word_dict
+    if ok:
+        show_toast(viewer, lang.get(done_key, done_fallback).format(path=Path(message).name))
     else:
-        toast.error(f"{lang.get(failed_key, failed_fallback)}: {message}")
+        show_toast(viewer, f"{lang.get(failed_key, failed_fallback)}: {message}", error=True)

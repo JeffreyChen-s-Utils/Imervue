@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 
+from Imervue.image import develop_backends
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 
@@ -40,10 +41,15 @@ def upright_image(path: str) -> Image.Image:
     return decode_image(path)
 
 
-def open_export_source(path: str) -> Image.Image:
-    """Return *path* upright, with its Develop recipe applied, ready to be saved elsewhere."""
+def open_export_source(path: str,
+                       renderer: develop_backends.DevelopRenderer | None = None) -> Image.Image:
+    """Return *path* upright, with its Develop recipe applied, ready to be saved elsewhere.
+
+    *renderer* (a GPU one from ``develop_backends.open_renderer``) renders the
+    recipe; without one it runs on the CPU, as it does when the renderer fails.
+    """
     recipe = recipe_store.get_for_path(path)
     img = recipe_base_image(path, recipe)
     if recipe is not None and not recipe.is_identity():
-        img = Image.fromarray(recipe.apply(np.array(img)))
+        img = Image.fromarray(develop_backends.render(np.array(img), recipe, renderer))
     return img

@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui._apply_save import load_rgba, output_path
+from Imervue.gui._apply_save import finish_save, load_rgba, output_path
 from Imervue.gui.dialog_rows import image_save_filter, folder_picker_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.denoise import reduce_noise, sharpen
@@ -142,11 +142,7 @@ class NoiseSharpenDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, info: str) -> None:
-        _ = info
-        self._progress.setVisible(False)
-        self._run_btn.setEnabled(True)
-        if ok:
-            self.accept()
+        finish_save(self, ok, info, "nr_failed", "Noise reduction / sharpening failed")
 
 
 def open_noise_sharpen(viewer: GPUImageView) -> None:

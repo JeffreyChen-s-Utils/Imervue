@@ -78,6 +78,7 @@ class TestImervuePlugin:
         # Should not raise
         plugin.on_plugin_loaded()
         plugin.on_plugin_unloaded()
+        plugin.on_pet_created(object())
 
     def test_menu_hooks_are_noop(self):
         from Imervue.plugin.plugin_base import ImervuePlugin
@@ -269,6 +270,65 @@ class TestPluginManager:
         pm.discover_and_load([plugin_dir])
         assert pm.plugins == []
 
+    def test_plugin_class_that_is_not_a_plugin_is_skipped(self, tmp_path):
+        """``plugin_class`` naming a class that is not an ImervuePlugin is skipped."""
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        code = "class NotAPlugin:\n    pass\n\nplugin_class = NotAPlugin\n"
+        _create_plugin_package(plugin_dir, "not_a_plugin_class", code)
+
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        assert pm.plugins == []
+
+    def test_failing_constructor_skips_only_that_plugin(self, tmp_path):
+        """A plugin whose constructor raises is skipped; the next one still loads."""
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        bad = textwrap.dedent("""\
+            from Imervue.plugin.plugin_base import ImervuePlugin
+
+            class CtorFailPlugin(ImervuePlugin):
+                def __init__(self, main_window):
+                    raise RuntimeError("boom")
+
+            plugin_class = CtorFailPlugin
+        """)
+        good = textwrap.dedent("""\
+            from Imervue.plugin.plugin_base import ImervuePlugin
+
+            class AfterCtorFailPlugin(ImervuePlugin):
+                plugin_name = "After"
+
+            plugin_class = AfterCtorFailPlugin
+        """)
+        _create_plugin_package(plugin_dir, "ctor_fail_a", bad)
+        _create_plugin_package(plugin_dir, "ctor_fail_b", good)
+
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        assert [p.plugin_name for p in pm.plugins] == ["After"]
+
+    def test_plugins_load_in_name_order_and_a_broken_file_is_skipped(self, tmp_path):
+        """Packages and single files load sorted by name; a broken file does not stop them."""
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        template = textwrap.dedent("""\
+            from Imervue.plugin.plugin_base import ImervuePlugin
+
+            class {cls}(ImervuePlugin):
+                plugin_name = "{name}"
+        """)
+        _create_plugin_package(
+            plugin_dir, "order_c_pkg", template.format(cls="OrderC", name="C"))
+        _create_plugin_file(
+            plugin_dir, "order_a_file", template.format(cls="OrderA", name="A"))
+        _create_plugin_file(plugin_dir, "order_b_broken", "def broken(:\n")
+
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        assert [p.plugin_name for p in pm.plugins] == ["A", "C"]
+
     def test_on_plugin_loaded_called(self, tmp_path):
         """on_plugin_loaded should be called during discover_and_load."""
         from Imervue.plugin.plugin_manager import PluginManager
@@ -439,6 +499,51 @@ class TestPluginManagerDispatch:
         menu = MagicMock()
         pm.dispatch_build_context_menu(menu, mw.viewer)
         plugin.on_build_context_menu.assert_called_once_with(menu, mw.viewer)
+
+    def test_dispatch_pet_created(self):
+        pm, _, plugin = self._make_pm_with_mock_plugin()
+        pet = object()
+        pm.dispatch_pet_created(pet)
+        plugin.on_pet_created.assert_called_once_with(pet)
+
+    def test_a_failing_pet_hook_does_not_reach_the_next_plugin(self):
+        pm, _, plugin = self._make_pm_with_mock_plugin()
+        plugin.on_pet_created.side_effect = RuntimeError("plugin bug")
+        second = MagicMock()
+        pm._plugins.append(second)
+        pm.dispatch_pet_created("pet")
+        second.on_pet_created.assert_called_once_with("pet")
+
+    def test_connect_pet_hooks_sends_the_existing_pet_and_connects_once(self):
+        from Imervue.plugin.plugin_manager import PluginManager
+        mw = _make_mock_main_window()
+        pet = object()
+        mw.pet_workspace.pet_window.return_value = pet
+        pm = PluginManager(mw)
+        plugin = MagicMock()
+        pm._plugins.append(plugin)
+        pm.connect_pet_hooks()
+        pm.connect_pet_hooks()          # after Reload Plugins
+        mw.pet_workspace.pet_created.connect.assert_called_once_with(pm.dispatch_pet_created)
+        assert plugin.on_pet_created.call_count == 2
+
+    def test_connect_pet_hooks_without_a_pet_yet_only_connects(self):
+        from Imervue.plugin.plugin_manager import PluginManager
+        mw = _make_mock_main_window()
+        mw.pet_workspace.pet_window.return_value = None
+        pm = PluginManager(mw)
+        plugin = MagicMock()
+        pm._plugins.append(plugin)
+        pm.connect_pet_hooks()
+        plugin.on_pet_created.assert_not_called()
+        mw.pet_workspace.pet_created.connect.assert_called_once()
+
+    def test_connect_pet_hooks_without_the_pet_tab_does_nothing(self):
+        from types import SimpleNamespace
+
+        from Imervue.plugin.plugin_manager import PluginManager
+        pm = PluginManager(SimpleNamespace(viewer=None))
+        pm.connect_pet_hooks()           # no pet_workspace: no error
 
     def test_dispatch_error_does_not_propagate(self):
         """If a plugin hook raises, dispatch should not propagate the error."""
@@ -879,3 +984,45 @@ class TestShippedPlugins:
 
         pm.unload_all()
         assert pm.plugins == []
+
+
+# ===========================
+# Plugin API version gate
+# ===========================
+
+_GATED_PLUGIN = textwrap.dedent("""\
+    from Imervue.plugin.plugin_base import ImervuePlugin
+
+    class {name}(ImervuePlugin):
+        plugin_name = "{name}"
+
+    plugin_class = {name}
+""")
+
+
+class TestPluginApiGate:
+    def _load(self, tmp_path, name: str, manifest: str | None):
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        pkg = _create_plugin_package(plugin_dir, name.lower(), _GATED_PLUGIN.format(name=name))
+        if manifest is not None:
+            (pkg / "plugin.json").write_text(manifest, encoding="utf-8")
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        return [p.plugin_name for p in pm.plugins]
+
+    def test_a_supported_version_loads(self, tmp_path):
+        assert self._load(tmp_path, "GateOkPlugin", '{"min_api_version": 2}') == ["GateOkPlugin"]
+
+    def test_a_newer_version_is_skipped_without_importing_it(self, tmp_path, caplog):
+        from Imervue.plugin.plugin_api import PLUGIN_API_VERSION
+        manifest = f'{{"min_api_version": {PLUGIN_API_VERSION + 1}}}'
+        with caplog.at_level("WARNING", logger="Imervue.plugin"):
+            assert self._load(tmp_path, "GateNewPlugin", manifest) == []
+        assert "gatenewplugin" not in sys.modules
+        assert any("Update Imervue" in r.getMessage() for r in caplog.records)
+
+    def test_an_unreadable_manifest_is_skipped(self, tmp_path, caplog):
+        with caplog.at_level("ERROR", logger="Imervue.plugin"):
+            assert self._load(tmp_path, "GateBadPlugin", "{broken") == []
+        assert any("plugin.json" in r.getMessage() for r in caplog.records)

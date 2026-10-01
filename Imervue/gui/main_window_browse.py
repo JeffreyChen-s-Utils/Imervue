@@ -58,6 +58,50 @@ class MainWindowBrowseMixin:
             metadata_index=getattr(self, "_image_metadata_index", None),
         )
 
+    def refetch_list_rows(self, paths) -> None:
+        """Have the list view read *paths* again: they were rewritten, removed or restored."""
+        self.image_list_view.refetch(paths)
+
+    def delete_list_selection(self, paths: list[str]) -> None:
+        """Delete the list's selected rows as Delete does on the wall: undoable, trashed later."""
+        from Imervue.gpu_image_view.actions import delete
+        self.viewer.selected_tiles.clear()
+        self.viewer.selected_tiles.update(paths)
+        delete.delete_selected_tiles(self.viewer)
+        self.refresh_list_view()
+
+    def mark_list_selection(self, action: str, paths: list[str]) -> None:
+        """Rate, favourite, cull-flag or colour-label the list's selected rows, as on the wall."""
+        from Imervue.gpu_image_view.actions.keyboard_actions import (
+            rate_current_image,
+            toggle_favorite,
+        )
+        from Imervue.gpu_image_view.cull_actions import apply_color_label, apply_cull_state
+        from Imervue.gpu_image_view.key_action_dispatcher import cull_state_for
+        viewer = self.viewer
+        if action.startswith("rate_"):
+            rate_current_image(viewer, int(action[-1]), targets=paths)
+        elif action == "favorite":
+            toggle_favorite(viewer, targets=paths)
+        elif action.startswith("label_"):
+            apply_color_label(viewer, action.removeprefix("label_"), targets=paths)
+        elif cull_state_for(action) is not None:
+            apply_cull_state(viewer, cull_state_for(action), targets=paths)
+        self.image_list_view.viewport().update()   # the Rating and Label columns
+
+    def escape_from_list(self) -> None:
+        """Esc in the list: leave fullscreen first, else go back to the thumbnail wall."""
+        if self.isFullScreen():
+            from Imervue.gpu_image_view.actions.keyboard_actions import toggle_fullscreen
+            toggle_fullscreen(self.viewer)
+            return
+        self.set_browse_mode("grid")
+
+    def undo_from_list(self) -> None:
+        """The viewer's undo (the last edit, else the last delete), then show what came back."""
+        self.viewer.run_shortcut_action("undo")
+        self.refresh_list_view()
+
     def _on_list_activated(self, path: str) -> None:
         """Double-clicking a row opens that image in the deep-zoom viewer.
 

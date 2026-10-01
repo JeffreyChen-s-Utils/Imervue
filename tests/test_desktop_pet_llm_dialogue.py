@@ -2,18 +2,16 @@
 
 Two layers (same pattern as the OBS / Twitch hooks):
 
-* **Pure helpers** (``validate_base_url``, ``build_prompt``,
-  ``extract_line``, ``_request_json`` via monkey-patched
-  ``urllib.request.urlopen``) cover the URL policy and response
-  parsing without spawning threads.
-* **Client lifecycle** uses a stubbed ``_request_json`` so no real
+* **Pure helpers** (``build_prompt``, ``extract_line``) cover the
+  prompt and response parsing without spawning threads; the URL
+  policy and the POST are tested in ``test_local_llm.py``.
+* **Client lifecycle** uses a stubbed ``post_json`` so no real
   HTTP request fires. Each call still goes through the worker
   thread to verify the threading wiring; ``thread.join`` makes
   the result deterministic.
 """
 from __future__ import annotations
 
-import json
 import time
 
 import pytest
@@ -26,47 +24,7 @@ from Imervue.desktop_pet.llm_dialogue import (
     LlmDialogueClient,
     build_prompt,
     extract_line,
-    validate_base_url,
 )
-
-
-# ---------------------------------------------------------------
-# validate_base_url
-# ---------------------------------------------------------------
-
-
-def test_validate_base_url_accepts_loopback_http():
-    """The whole point of HTTP-on-loopback: Ollama listens on plain
-    HTTP at 127.0.0.1 by default — must be allowed without making
-    the user run a TLS proxy."""
-    validate_base_url("http://localhost:11434")   # NOSONAR  # loopback HTTP literal under test
-    validate_base_url("http://127.0.0.1:11434")   # NOSONAR  # loopback HTTP literal under test
-    validate_base_url("http://[::1]:11434")       # NOSONAR  # loopback HTTP literal under test
-
-
-def test_validate_base_url_rejects_plain_http_remote():
-    """Sending an LLM prompt unencrypted across a network is the
-    kind of "oh no" we want a fail-loud about, not a silent
-    misconfiguration."""
-    with pytest.raises(ValueError):
-        validate_base_url("http://example.com:11434")   # NOSONAR  # negative-case fixture; the validator must reject it
-    with pytest.raises(ValueError):
-        validate_base_url("http://192.168.1.5:11434")   # NOSONAR  # negative-case fixture; the validator must reject it
-
-
-def test_validate_base_url_accepts_https_anywhere():
-    """HTTPS is allowed everywhere — users running a remote Ollama
-    can put it behind TLS."""
-    validate_base_url("https://ollama.example.com")
-    validate_base_url("https://localhost:8443")
-
-
-def test_validate_base_url_rejects_unknown_scheme():
-    """File / ftp / no-scheme: all rejected. Catches typos like
-    ``localhost:11434`` (missing scheme parses as scheme=)."""
-    for url in ("ftp://localhost", "file:///etc/ollama", "no-scheme"):
-        with pytest.raises(ValueError):
-            validate_base_url(url)
 
 
 # ---------------------------------------------------------------
@@ -125,62 +83,6 @@ def test_extract_line_non_dict_returns_none():
     string by accident."""
     assert extract_line([]) is None    # type: ignore[arg-type]  # NOSONAR  # negative-case fixture: helper must tolerate wrong type
     assert extract_line("string") is None   # type: ignore[arg-type]  # NOSONAR  # negative-case fixture: helper must tolerate wrong type
-
-
-# ---------------------------------------------------------------
-# _request_json — uses urllib.request.urlopen, stub it
-# ---------------------------------------------------------------
-
-
-class _FakeResponse:
-    def __init__(self, payload: bytes) -> None:
-        self._payload = payload
-
-    def read(self) -> bytes:
-        return self._payload
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_args) -> None:
-        return None
-
-
-def test_request_json_returns_parsed_dict(monkeypatch):
-    captured: dict = {}
-
-    def fake_urlopen(req, timeout=None):
-        captured["url"] = req.full_url
-        captured["body"] = req.data
-        captured["timeout"] = timeout
-        return _FakeResponse(b'{"response": "ok"}')
-
-    monkeypatch.setattr(llm_dialogue.urllib.request, "urlopen", fake_urlopen)
-    out = llm_dialogue._request_json(   # noqa: SLF001
-        "http://localhost:11434/api/generate",   # NOSONAR  # loopback HTTP literal under test
-        {"prompt": "x"}, timeout=5.0,
-    )
-    assert out == {"response": "ok"}
-    assert captured["url"].endswith("/api/generate")
-    assert json.loads(captured["body"])["prompt"] == "x"
-    assert captured["timeout"] == 5.0   # NOSONAR  # exact representable value asserted intentionally
-
-
-def test_request_json_validates_url_before_dialling(monkeypatch):
-    """A bad URL must raise immediately — no network call."""
-    called = {"n": 0}
-
-    def should_not_call(*_args, **_kw):
-        called["n"] += 1
-        return _FakeResponse(b"{}")
-
-    monkeypatch.setattr(llm_dialogue.urllib.request, "urlopen", should_not_call)
-    with pytest.raises(ValueError):
-        llm_dialogue._request_json(   # noqa: SLF001
-            "http://example.com/api",   # NOSONAR  # negative-case fixture; the guard must reject it
-            {}, timeout=1.0,
-        )
-    assert called["n"] == 0
 
 
 # ---------------------------------------------------------------
@@ -258,7 +160,7 @@ def test_client_request_emits_line_on_success(qapp, monkeypatch):
     """Happy path — stub the request, drive a worker through to
     completion, signal fires with the extracted line."""
     monkeypatch.setattr(
-        llm_dialogue, "_request_json",
+        llm_dialogue, "post_json",
         lambda *_a, **_kw: {"response": "Hello from llm"},
     )
     client = LlmDialogueClient()
@@ -275,7 +177,7 @@ def test_client_request_emits_failed_on_value_error(qapp, monkeypatch):
     def boom(*_a, **_kw):
         raise ValueError("bad config")
 
-    monkeypatch.setattr(llm_dialogue, "_request_json", boom)
+    monkeypatch.setattr(llm_dialogue, "post_json", boom)
     client = LlmDialogueClient()
     errors: list[str] = []
     client.request_failed.connect(errors.append)
@@ -288,7 +190,7 @@ def test_client_request_emits_failed_on_timeout(qapp, monkeypatch):
     def boom(*_a, **_kw):
         raise TimeoutError("model warming up")
 
-    monkeypatch.setattr(llm_dialogue, "_request_json", boom)
+    monkeypatch.setattr(llm_dialogue, "post_json", boom)
     client = LlmDialogueClient()
     errors: list[str] = []
     client.request_failed.connect(errors.append)
@@ -301,7 +203,7 @@ def test_client_request_emits_failed_on_empty_response(qapp, monkeypatch):
     """Ollama returned 200 with empty content — must NOT pop an
     empty speech bubble. Routes to request_failed instead."""
     monkeypatch.setattr(
-        llm_dialogue, "_request_json", lambda *_a, **_kw: {"response": ""},
+        llm_dialogue, "post_json", lambda *_a, **_kw: {"response": ""},
     )
     client = LlmDialogueClient()
     errors: list[str] = []
@@ -318,7 +220,7 @@ def test_client_request_emits_failed_on_unknown_exception(qapp, monkeypatch):
     def boom(*_a, **_kw):
         raise RuntimeError("surprise")
 
-    monkeypatch.setattr(llm_dialogue, "_request_json", boom)
+    monkeypatch.setattr(llm_dialogue, "post_json", boom)
     client = LlmDialogueClient()
     errors: list[str] = []
     client.request_failed.connect(errors.append)
@@ -336,7 +238,7 @@ def test_client_set_endpoint_takes_effect_on_next_request(qapp, monkeypatch):
         captured.append(url)
         return {"response": "ok"}
 
-    monkeypatch.setattr(llm_dialogue, "_request_json", capture)
+    monkeypatch.setattr(llm_dialogue, "post_json", capture)
     client = LlmDialogueClient()
     client.set_endpoint(
         base_url="http://localhost:11434",   # NOSONAR  # loopback HTTP literal under test

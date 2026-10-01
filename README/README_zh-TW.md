@@ -63,6 +63,8 @@ Imervue 是一款 GPU 加速的影像工作站，提供 **五個頂層分頁**�
 | **Puppet** | 從零打造的 2D 綁骨偶動畫器 — 網格、變形器、參數、動作、物理 |
 | **Desktop Pet** | 無邊框 / 透明背景 / 永遠置頂的桌面寵物 overlay；用同一條 puppet runtime 帶即時驅動（idle / blink / mic / webcam / drag-track） |
 
+**Puppet** 與 **Desktop Pet** 是選用分頁：在 **File > Preferences > Optional tabs** 關閉其中一個，下次啟動起就不會加入那個分頁、也不會載入它的程式，Imervue 啟動更快、占用的記憶體更少。兩者預設開啟；各自在第一次打開分頁時才建立，若桌面寵物設定為啟動時顯示，Desktop Pet 分頁會在啟動時就建立。
+
 設計原則：
 
 - **效能優先** — 使用現代 GLSL 著色器和 VBO 進行 GPU 加速渲染
@@ -106,16 +108,16 @@ pip install .
 | numpy | 陣列運算與縮圖快取 |
 | rawpy | RAW 影像解碼（CR2 / CR3 / NEF / ARW / RAF / ORF / RW2 / PEF / DNG 等） |
 | imageio | 圖片 I/O |
-| imageio-ffmpeg | 幻燈片 MP4 匯出（H.264 透過 ffmpeg） |
+| imageio-ffmpeg | 幻燈片 MP4 與 Create GIF / Video 的 MP4（H.264 透過 ffmpeg） |
 | defusedxml | 安全 XML 解析（XMP 邊車檔） |
-| watchdog | 遞迴監看檔案樹（外部變更自動刷新樹狀圖） |
+| watchdog | Watched Folder 自動化與 MCP 伺服器的變更通知 |
 
 選用（feature-gated；不裝就停用該功能）：
 
 | 套件 | 用途 |
 |---------|---------|
-| open_clip_torch + torch | CLIP 語意搜尋 |
-| onnxruntime | Real-ESRGAN AI 放大 / CLIP ONNX 自動標籤 |
+| onnxruntime + huggingface_hub | CLIP 語意搜尋與 CLIP 自動標籤（第一次使用時會詢問是否安裝；約 150 MB 的模型只下載一次） |
+| onnxruntime | Real-ESRGAN AI 放大 |
 | opencv-python<5 | HDR 合成、全景拼接、焦點堆疊、人臉偵測、修復筆刷 |
 | sounddevice | Puppet 麥克風對嘴 |
 | mediapipe | Puppet 攝影機臉部追蹤 |
@@ -159,17 +161,40 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 | 子指令 | 用途 |
 |---|---|
 | `info` / `stats` | 尺寸與格式；無參考品質指標（`--json` 輸出機器可讀格式） |
-| `convert` / `resize` / `thumbnail` | 格式轉換（`--format` / `--quality`）、長邊上限縮放、縮圖尺寸 |
-| `watermark` / `optimize` | 文字浮水印（`--text` / `--corner` / `--opacity`）；在 `--max-kb` 預算內編碼 |
+| `convert` / `resize` / `thumbnail` | 格式轉換（`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL、`--quality`）；依長邊（`--max`）或指定的 `--width` / `--height` 縮放；縮圖尺寸 |
+| `watermark` / `optimize` | 文字浮水印（`--text`、`--corner`、`--opacity`、`--font-fraction`、`--color R G B`、`--no-shadow`）；在 `--max-kb` 預算內編碼 |
 | `dehaze` / `clahe` / `dither` / `distort` | 暗通道去霧、自適應等化、Bayer 有序抖動、swirl / pinch / ripple |
 | `auto-orient` / `strip` | 把 EXIF 方向旗標烘焙進像素；重存並移除 EXIF / XMP / ICC |
-| `collage` / `anaglyph` | 網格拼貼（`--columns`）；立體對轉紅藍 3D（`--method`） |
+| `collage` / `anaglyph` | 網格拼貼（`--columns`、`--cell-width` / `--cell-height`、`--gap`、`--margin`、`--background R G B`）；立體對轉紅藍 3D（`--method`） |
 | `preset` / `pipeline` | 依名稱套用已存的顯影預設；執行有序的 JSON 運算管線 |
 | `list-ops` | 列出所有子指令（`--json` 輸出機器可讀格式） |
 
-每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；AVIF 由 Pillow 自己讀取，安裝了選用後端時也能讀取 HEIC / JPEG XL。相機 RAW 會像檢視器一樣顯像，而不是讀成內嵌的小預覽；`resize` 與 `strip` 會寫成 PNG。無法讀取的檔案會被回報，其餘檔案照常處理。
+每個子指令都像檢視器一樣解碼：輸出會依 EXIF 方向轉正，並從內嵌色彩描述檔轉換為 sRGB；AVIF 由 Pillow 自己讀取，安裝了選用後端時也能讀取 HEIC / JPEG XL。相機 RAW 會像檢視器一樣顯像，而不是讀成內嵌的小預覽；`resize` 與 `strip` 會寫成 PNG。無法讀取的檔案會被回報，其餘檔案照常處理。中途截斷的檔案會像檢視器一樣，讀取到能讀的位置為止。16 位元與浮點灰階會像檢視器一樣縮放成 8 位元；`resize` 與 `strip` 保留來源的位元深度。
 
-共用旗標：`--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite`、`--version`。
+接受檔案或資料夾的子指令（`collage`、`anaglyph`、`list-ops` 以外的全部）共用 `--out`（輸出目錄）、`--recursive`、`--dry-run`（只列出動作、不寫入）、`--overwrite` 與 `-j` / `--jobs`（平行工作數；`0` 表示使用所有核心）。`collage` 與 `anaglyph` 會寫入 `--out` 指定的單一檔案。`--version` 顯示 CLI 版本。
+
+[MCP 伺服器](#mcp-伺服器)的每個工具也都是子指令。其中十個就是上面的子指令（`convert_format` 即 `convert`、`quality_metrics` 即 `stats`、`build_collage` 即 `collage`，依此類推）；其餘 48 個直接執行該 MCP 工具本身的程式碼：
+
+| 類型 | 子指令 |
+|---|---|
+| 編輯：在每個來源檔旁寫出 `<stem>_<name>.png`，或在 `--out` 中寫出 `<stem>.png` | `frame`、`crop`、`rotate`、`solarize`、`glow`、`velvia`、`emboss`、`film-negative`、`defringe`、`graduated-density`、`filmic-tonemap`、`tone-equalizer`、`detail-equalizer`、`colormap`、`false-color`、`split-toning`、`pixel-sort`、`polar`、`kaleidoscope`、`frosted-glass`、`local-contrast`、`posterize`、`gradient-map`、`film-grain`、`levels`、`auto-color-balance`、`channel-mixer`、`curve`、`lens-correction` |
+| 其他輸出 | `ela`（錯誤等級分析圖，輸出為 PNG）、`video-frame`（影片中的單一影格，`--frame-index`）、`puppet-from-png`（`.puppet` rig，`--cell-size`） |
+| 報告：每張圖片一個結果，`--json` 輸出機器可讀格式 | `metadata`、`xmp`、`gps`、`dominant-colors`、`sharpness`、`statistics`、`histogram`、`ocr`、`puppet-inspect`、`puppet-validate` |
+| 執行一次並印出 JSON | `list-images FOLDER`、`search FOLDER --query "..."`、`similar FOLDER`、`collection-stats FOLDER`、`reverse-geocode --latitude .. --longitude ..`、`puppet-schema --name ..` |
+
+每個 MCP 參數都會變成一個選項，預設值與允許值維持不變：`zone_gains` 對應 `--zone-gains`，是／否參數對應 `--grayscale` / `--no-grayscale`，顏色或矩陣的一列則依序接收各個值（`--red 1 0 0`）。`py -m Imervue.cli <subcommand> --help` 會列出這些選項。
+
+`pipeline FILE INPUTS…` 依 JSON 檔串接多個運算——檔案內容是步驟清單，或
+`{"pipeline": [...]}`，每個步驟是一個 `"op"` 加上它的參數（最多 50 個步驟）。可用的運算有
+`dehaze`、`clahe`、`dither`、`distort`、`clarity`、`texture`、`grayscale`、`invert` 與
+`watermark`；說明文件列出每個參數與預設值。
+
+```bash
+py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+py -m Imervue.cli histogram a.jpg --json
+py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+```
 
 ---
 
@@ -180,19 +205,25 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 ### 檢視器
 
 - **GPU 加速渲染** — OpenGL（GLSL 1.20 著色器 + VBO）
-- **深度縮放金字塔** — 512×512 磁磚多層 LANCZOS 縮放；磁磚 LRU 保留 256 筆（硬上限 512）。VRAM 預算於啟動時向 GL 驅動探測，取得失敗則回落 1.5 GB，可用 `vram_limit_mb` 設定覆寫（會夾限，不會被靜默忽略）。最高 8× 各向異性過濾
+- **深度縮放金字塔** — 512×512 磁磚多層 LANCZOS 縮放；磁磚 LRU 保留 256 筆（硬上限 512）。VRAM 預算於啟動時向 GL 驅動探測，取得失敗則回落 1.5 GB，可用 `vram_limit_mb` 設定覆寫（會夾限，不會被靜默忽略）。最高 8× 各向異性過濾；遠超過 Pillow 安全上限（1.79 億像素）的全景圖也能開啟（上限依記憶體而定：16 GB 約 14 億像素）
 - **非同步載入** — 多執行緒解碼搭配自適應預取視窗：一般瀏覽為 ±3 張，一旦持續往同一方向翻頁便擴張為前 5 張 / 後 1 張
 - **獨立工作執行緒池** — 縮圖爆量與深度縮放解碼分屬不同池，開啟大資料夾時不會餓死你正在看的那張圖
 - **虛擬化縮圖網格** — 只渲染可見磁磚；縮圖尺寸可選（128 / 256 / 512 / 1024 / 自動）
 - **磁碟快取** — MD5 失效檢測的壓縮 PNG 縮圖，存於 `%LOCALAPPDATA%/Imervue/cache/thumbnails`（或 `~/.cache/imervue/thumbnails`）
 - **EXIF 方向** — 手機或相機只標註方向、沒有真的旋轉的直拍照片，在檢視器、縮圖、清單檢視、懸停預覽和 Modify 分頁都會轉正顯示；之前儲存的顯影裁切 / 旋轉仍套用在當初的方向上
-- **色彩管理** — 內嵌色彩描述檔的照片（手機的 Display P3、相機的 Adobe RGB、CMYK）在檢視器與縮圖中會轉換為 sRGB 顯示；沒有描述檔或本身是 sRGB 的影像照原樣顯示
-- **動畫播放** — GIF / APNG，含播放 / 暫停 / 逐格 / 速度控制；解碼後超過 512 MB 的動畫會邊播放邊逐格解碼，而不是一開始全部解碼
+- **色彩管理** — 內嵌色彩描述檔的照片（手機的 Display P3、相機的 Adobe RGB、CMYK，以及 Photoshop 嵌入灰階影像的灰階描述檔，例如 Dot Gain 20%、Gray Gamma 1.8）在檢視器與縮圖中會轉換為 sRGB 顯示；沒有描述檔或本身是 sRGB 的影像照原樣顯示
+- **不完整的檔案** — 中途截斷的 JPEG、PNG、TIFF、GIF、BMP（下載或複製中斷、從故障記憶卡救回的照片）會像瀏覽器一樣顯示已讀到的部分，而不是完全打不開
+- **被其他程式修改的檔案** — 其他程式覆寫存檔時（外部編輯器直接覆寫，或先寫副本再改名取代），檢視器會顯示新版本：深度縮放中開啟的圖片在最後一次寫入後 1 秒內更新，網格縮圖與清單的列在幾秒內更新
+- **16 位元與浮點灰階** — 16 位元灰階 PNG／TIFF（掃描、深度圖、科學或天文影像）與浮點 TIFF，在檢視器、縮圖、預覽與工具中都以真實亮度顯示，不再幾乎全白或全黑
+- **隱藏檔案** — Windows 標為隱藏的檔案（在檔案總管與資料夾樹中也不顯示），以及以點開頭的名稱（例如 macOS 在記憶卡、網路磁碟上替每張照片寫入的 `._photo.jpg`），不會出現在縮圖網格、資料夾圖示、批次工具的資料夾清單、監看資料夾、圖庫掃描、CLI 與 MCP 伺服器的資料夾工具中；遞迴掃描會跳過 `$RECYCLE.BIN`、Mac 的 `.Trashes` 等隱藏資料夾。特意開啟的隱藏圖片仍會開啟
+- **各種副檔名的 JPEG** — `.jpe`、`.jfif`、`.jif` 和 `.jpg` 一樣能開啟（Windows 上的 Chrome、Edge 常把下載的照片存成 `.jfif`），檢視器、JPG 篩選、批次工具與 CLI 都適用
+- **更多格式** — ICO、TGA、DDS、QOI、JPEG 2000（.jp2／.j2k／.jpf／.jpx）、Netpbm（PPM／PGM／PBM／PNM）、PCX、PSD（合併後的影像） 由 Pillow 直接讀取，可以檢視；原地旋轉等寫回操作會被拒絕，編輯請用「另存新檔」／「匯出」儲存
+- **動畫播放** — GIF / APNG，含播放 / 暫停 / 逐格 / 速度控制；解碼後超過 512 MB 的動畫會邊播放邊逐格解碼，而不是一開始全部解碼；10 ms 以下的影格會和瀏覽器一樣顯示 100 ms；多頁 TIFF（掃描的文件）不會播放，而是一次顯示一頁，用 `,` 與 `.` 翻頁（顯示為「第 2/5 頁」）；相機嵌入 JPEG 的預覽（MPF）不會被當成第二個影格顯示，APNG 的預設影像（給不支援 APNG 的程式看的靜態圖）也不會被當成第一個影格
 
 ### 瀏覽模式
 
 - **網格**（預設）— 虛擬化磁磚網格，懸停預覽（500 ms 延遲）
-- **清單（詳細）** — `Ctrl+L` 切換；欄位：預覽 · 標籤 · 名稱 · 解析度 · 大小 · 類型 · 修改時間
+- **清單（詳細）** — `Ctrl+L` 切換；欄位：預覽 · 標籤 · 評分 · 名稱 · 解析度 · 大小 · 類型 · 修改時間；`Delete` 刪除選取的列，`Ctrl+Z` 可復原；評分（`1`–`5`）、收藏（`0`）、挑片（`P` / `Shift+X` / `U`）、色彩（`F1`–`F5`）鍵也作用於選取的列，與網格相同
 - **深度縮放** — 雙擊磁磚；GPU 流暢平移 / 縮放 + 小地圖
 - **分割檢視**（`Shift+S`）— 兩張影像並列
 - **雙頁閱讀**（`Shift+D`、`Ctrl+Shift+D` 為漫畫右至左）— 對開頁閱讀器
@@ -205,7 +236,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - RGB 直方圖（`H`）
 - F8 OSD（檔名 / 大小 / 類型）、Ctrl+F8 除錯 HUD（VRAM / 快取 / 執行緒）
-- 像素檢視（`Shift+P`）— ≥ 400 % 縮放顯示網格 + 每像素 RGB / HEX
+- 像素檢視（`Shift+P`）— 從 400 % 縮放起顯示每像素 RGB / HEX，畫面上不超過 40,000 個像素時再加上像素網格
 - 色彩模式（`Shift+M`）— Normal / Grayscale / Invert / Sepia（GLSL）
 
 ### 導航
@@ -214,18 +245,18 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - 跨資料夾導航（`Ctrl+Shift+←/→`）
 - 跳到第 N 張（`Ctrl+G`）
 - 模糊搜尋（`Ctrl+F` / `/`）
-- **命令面板**（`Ctrl+Shift+P`）— 模糊搜尋所有選單動作
+- **指令面板**（`Ctrl+Shift+P`）— 模糊搜尋所有選單動作
 - 資料夾末端自動循環
 - 觸控板捏合縮放 + 水平滑動切換影像
 
 ### 整理
 
 - **書籤** — 最多 5000 個路徑
-- **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）
-- **顏色標籤** — other XMP-aware photo managers 式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
-- **挑片**（Culling）— other XMP-aware photo managers 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕；**自動挑片** 會在每組近重複中挑出最清晰的一張保留、其餘標為拒絕
-- **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫；右鍵 **Index Keywords** 會把 Lightroom／darktable 的關鍵字階層（`Places|Taiwan|Taipei`）歸到對應的父標籤下
-- **Tags & Albums** 含多標籤 AND / OR 過濾
+- **評等** — 0-5 星（`1`-`5`）+ 收藏愛心（`0`）；在網格中作用於選取的縮圖，沒有就作用於方向鍵所在的那張，再沒有就是滑鼠下的那張
+- **顏色標籤** — 旗標式 紅 / 黃 / 綠 / 藍 / 紫（`F1`-`F5`）
+- **挑片**（Culling）— 三狀態旗標（`P` = 保留、`Shift+X` = 拒絕、`U` = 取消）；按狀態過濾；批次刪除拒絕；**自動挑片** 會在每組近重複中挑出最清晰的一張保留、其餘標為拒絕
+- **階層式標籤** — 樹狀路徑如 `animal/cat/british`；自動匹配子孫；選取縮圖後右鍵 **批次操作** > **索引關鍵字** 會把 Lightroom／darktable 的關鍵字階層（`Places|Taiwan|Taipei`）歸到對應的父標籤下
+- **Tags & Albums** 含多標籤 AND / OR 過濾；新增或重新命名時，與另一個名稱只差大小寫或空白的名稱會被拒絕；**清理…** 會移除已不存在檔案的紀錄，並合併只差大小寫的名稱
 - **智慧相簿** — 儲存規則式查詢並一鍵重新套用；過濾條件涵蓋副檔名、解析度與 **長寬比**、**檔案大小**、評等 **下限 / 上限**、顏色、挑片、標籤（含 **排除**）、**相機 / 鏡頭**、**檔名 regex / glob** 以及 **檔案年齡**，並可 **匯出 / 匯入** 成可攜的 JSON 檔
 - **疊合 RAW+JPEG 對** — 將同檔名擷取折疊成單一磁磚；RAW 仍可從手足存取
 - **每圖筆記** — 在 EXIF 側欄，自動防抖儲存，跨工作階段持久
@@ -239,7 +270,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 ### 排序與過濾
 
-- 按名稱（與檔案總管相同的自然順序：`img2` 在 `img10` 之前）/ 修改時間 / 建立時間 / 大小 / 解析度排序（升 / 降）
+- 按名稱（與檔案總管相同的自然順序：`img2` 在 `img10` 之前）/ 修改時間 / 建立時間 / 拍攝時間（相機的 EXIF 時間，沒有時用修改時間）/ 大小 / 解析度排序（升 / 降）
 - 按副檔名、顏色標籤、評等、標籤 / 相簿、挑片狀態過濾
 - **進階過濾** — 解析度 / 檔案大小 / 方向 / 修改日期範圍
 - **多標籤過濾** 對話框含 AND / OR
@@ -248,19 +279,23 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - **模糊檔名搜尋** 含子字串高亮
 - **找相似** — pHash（64-bit DCT）含可調 Hamming 距離
-- **圖庫搜尋** — SQLite 多根索引，搭配精簡的查詢 DSL：關鍵字、標籤（含否定）、評等、顏色、副檔名、地點、挑片、收藏、長寬比、年齡、大小、尺寸、相機 / 鏡頭，以及檔名 regex / glob
+- **圖庫搜尋** — SQLite 多根索引，可依檔名、最小寬 / 高與檔案大小搜尋（最多 2000 筆結果；按兩下即可開啟）；重新掃描只讀取新增或修改的檔案（勾選 **Compute perceptual hash** 時也讀取還沒有雜湊值的檔案），多個同時進行
+- **查詢搜尋**（右鍵）— 以精簡的查詢語言篩選目前開啟的資料夾：關鍵字、標籤（含否定）、評等、顏色、副檔名、地點、挑片、收藏、長寬比、年齡、大小、尺寸、相機 / 鏡頭，以及檔名 regex / glob；`place:` 可填城市、國家或兩者，含空格的值用雙引號括起（`place:"Rio de Janeiro"`）
 - **找相似（average hash）** — pHash 與 dHash 再搭配選用的 average-hash（aHash），提供互補的近重複度量
-- **語意搜尋（CLIP）** — 自然語言查詢（如「雪中的黃金獵犬」）透過快取的 embedding；`open_clip_torch` + `torch` 未安裝時優雅停用
-- **自動標籤** — 啟發式分類 + 選用 CLIP ONNX 升級
+- **語意搜尋（CLIP）** — 自然語言查詢（如「雪中的黃金獵犬」），透過以 onnxruntime 執行的 CLIP ViT-B/32 所產生的快取 embedding，不需要 PyTorch：第一次使用時 Imervue 會詢問是否安裝 `onnxruntime`，並以鎖定的版本下載約 150 MB 的模型一次；有 NVIDIA 顯示卡時透過 CUDA 執行，否則在 CPU 上執行，絕不使用內建顯示晶片
+- **自動標籤** — 依顏色、邊緣與形狀給出啟發式標籤：document / screenshot / photo / graphic、landscape / portrait；語意搜尋下載過 CLIP 模型後，改用 CLIP 零樣本標籤（從 photo、document、screenshot、graphic、illustration、portrait、landscape、animal、food、text 中最多選三個）
 
 ### 元資料
 
 - **EXIF 側欄** 含可折疊群組 + 內嵌 0-5 星評等列
-- **EXIF 編輯器** 對話框 — 描述、作者、版權、相機與註解（支援 Unicode）不需額外套件即可寫入 JPEG / WebP，像素與其他標籤不變
+- **EXIF 編輯器** 對話框 — 描述、作者、版權、相機與註解（支援 Unicode）不需額外套件即可寫入 JPEG / WebP，像素與其他標籤不變；**描述** 按鈕用本機視覺模型（`localhost:11434` 上的 Ollama 加 `llava`）寫一句話填入描述，圖片不會離開你的電腦
 - **關鍵字編輯器** — 標題 / 創作者 / 描述 / 關鍵字，並從標籤共現提供 **相關標籤建議**，以及 **受控詞彙展開**（輸入葉節點關鍵字會自動套用其祖先＋同義詞，詞彙為可編輯的階層結構）
 - **影像資訊** 對話框（尺寸 / 大小 / 日期）
-- **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤雙向同步 other XMP-aware photo managers（透過 `defusedxml` 安全解析）。儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。除了 `photo.xmp`（Lightroom、Bridge），darktable 與 digiKam 寫的 `photo.jpg.xmp` 在它是唯一的 sidecar 時也會讀取並更新；顏色標籤看得懂 Lightroom 的寫法（`Red` … `Purple`）與 Bridge 的寫法（`Select`、`Second`、`Approved`、`Review`、`To Do`），匯出時照 Lightroom 的寫法寫入。被拒絕的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）會成為篩選的「拒絕」，「拒絕」匯出時寫成 -1。沒有 sidecar 的檔案會讀取並匯入檔案本身內嵌的 XMP 與 EXIF 評等（JPEG、PNG、WebP、TIFF）：Lightroom 就是這樣保存 JPEG 的評等與關鍵字，Windows 檔案總管的星等也是。
+- **XMP 邊車檔**（`.xmp` 同伴檔）— 評等 / 標題 / 描述 / 關鍵字 / 顏色標籤與其他支援 XMP 的相片管理軟體雙向同步（透過 `defusedxml` 安全解析）。儲存時會合併進既有的 sidecar：只改這些欄位，RAW 顯影軟體存在裡面的顯影設定、裁切與歷程都會保留，無法解析的 sidecar 不會被覆寫。除了 `photo.xmp`（Lightroom、Bridge），darktable 與 digiKam 寫的 `photo.jpg.xmp` 在它是唯一的 sidecar 時也會讀取並更新；顏色標籤看得懂 Lightroom 的寫法（`Red` … `Purple`）與 Bridge 的寫法（`Select`、`Second`、`Approved`、`Review`、`To Do`），匯出時照 Lightroom 的寫法寫入。被拒絕的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）會成為篩選的「拒絕」，「拒絕」匯出時寫成 -1。沒有 sidecar 的檔案會讀取並匯入檔案本身內嵌的 XMP 與 EXIF 評等（JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF）：Lightroom 就是這樣保存 JPEG 的評等與關鍵字，Windows 檔案總管的星等也是。
 - **GPS 地理標記編輯器** — 讀寫 EXIF GPS 經緯度；JPEG / WebP 不需額外套件，像素、其他標籤與縮圖都不變
+- **從 GPX 軌跡加上地理標記** — 用選取影像的 EXIF 拍攝時間比對手機或 GPS 記錄器的 `.gpx` 記錄，可設定相機的時區、時間差上限與軌跡點之間的內插，再把位置寫入 JPEG / WebP 檔案
+- **修改拍攝時間** — 把選取影像的 EXIF 拍攝時間平移若干天 / 小時 / 分鐘 / 秒，或直接指定第一張照片的實際拍攝時間；改寫 JPEG / WebP 檔案中的 DateTimeOriginal、DateTimeDigitized 與 DateTime
+- **中繼資料範本** — 記住一組標題、描述與關鍵字，可用 `{filename}` / `{name}` / `{folder}` / `{date}` / `{year}` 代換符號，套用到選取的影像：只填空白欄位（關鍵字為新增），或覆寫既有內容；結果由 XMP 邊車檔與匯出元資料寫出
 - **權杖批次重新命名** — 即時預覽範本 `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **匯出元資料 CSV / JSON** — 每張影像一列含挑片 / 評等 / 標籤 / 筆記
 
@@ -269,13 +304,13 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 從 **Tools** 選單存取；分為功能群組子選單：
 
 - **批次** — 格式轉換 · EXIF 清除 · 影像清洗器（重新渲染移除所有隱藏資料）· 影像整理器 · 權杖批次重命名
-- **AI / 啟發式** — AI 影像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 找重複 · 找相似 · 自動標籤 · 人臉偵測
-- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
+- **修圖與變形** — AI 影像放大（Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU）· 人臉偵測（Haar cascade）· 修復、仿製、裁切 / 拉直與鏡頭校正
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記 · 從 GPX 軌跡加上地理標記 · 修改拍攝時間 · 中繼資料範本
 
 ### 系統整合
 
 - Windows 右鍵 **以 Imervue 開啟**（透過登錄檔註冊）
-- 資料夾監控（`QFileSystemWatcher` 自動重新整理）
+- 資料夾監控：約每秒檢查一次開啟的資料夾，在別處新增、刪除或重新命名的檔案一兩秒內就會出現；不會一直占用資料夾，所以在 Windows 上仍可重新命名或搬移它的上層資料夾。資料夾樹在按 F5 / **Refresh**、Imervue 回到前景以及開啟的資料夾有變更時更新
 - Toast 通知系統（info / success / warning / error）
 - 外掛系統含線上下載器（見 [外掛系統](#外掛系統)）
 
@@ -288,7 +323,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 ### 顯影滑桿
 
 - 白平衡 — 色溫 / 色調
-- 色調區段 — 陰影 / 中間調 / 高光
+- 色調區段 — 高光 / 陰影 / 白色 / 黑色
 - 曝光 / 對比 / 飽和度 / 鮮豔度
 - 裁切、旋轉、水平 / 垂直翻轉
 - 所有調整透過 recipe 儲存，全程非破壞
@@ -296,8 +331,8 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 ### 曲線與 LUT
 
 - **色調曲線編輯器** — 可拖曳 RGB 曲線 + 個別 R / G / B 通道，含 monotone cubic 插值
-- **套用 .cube LUT** — 載入任何 Adobe 3D LUT（最高 64³，含 DaVinci Resolve 的 `LUT_3D_INPUT_RANGE`），trilinear 插值，混合強度滑桿
-- **分離色調** — 旗標式陰影 / 高光色相 + 飽和度，含平衡樞紐
+- **套用 .cube LUT** — 載入任何 Adobe LUT（3D 最高 65³，1D 最多 65,536 點，含 DaVinci Resolve 的 `LUT_3D_INPUT_RANGE`），trilinear 插值，混合強度滑桿
+- **分離色調** — 陰影 / 高光色相 + 飽和度，含平衡樞紐
 
 ### 創意效果
 
@@ -316,6 +351,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - **極座標（Polar Coordinates）** — 將畫面捲成圓盤或展開（tiny-planet / 極座標反轉）
 - **萬花筒（Kaleidoscope）** — 將單一角楔鏡射成 n 重對稱
 - **毛玻璃（Frosted Glass）** — 可重現的隨機種子局部像素散射
+- **外框與說明文字（Frame & Caption）** — 任意顏色的卡紙邊框、選用的拍立得風格下緣，以及可另設顏色的說明文字
 - **顯影預設** — 儲存 recipe 後可整份 **套用**，或只 **合併** 其有設定的調整到其他影像（保留各影像自身的裁切等）
 
 ### 局部調整
@@ -327,7 +363,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 - **修復筆刷** — 圓形點，OpenCV inpainting（Telea 或 Navier-Stokes）
 - **仿製圖章** — Shift+點擊來源、羽化貼至目標
-- **裁切 / 拉直** — 標準化裁切矩形 + 任意角度拉直，自動裁到最大內接矩形
+- **裁切 / 拉直** — 標準化裁切矩形 + 最多 ±15° 的拉直，自動裁到最大內接矩形
 - **自動拉直** — Hough-line 地平線 / 垂直線偵測
 - **鏡頭校正** — 純 numpy 徑向畸變（桶狀 / 枕狀）、暈影提升、各通道色差校正
 - **雜訊抑制 / 銳化** — 邊緣保留雙邊去噪 + unsharp mask 銳化
@@ -341,12 +377,13 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 ### 輸出
 
-- **浮水印疊加** — 文字或圖片，9 個錨點、不透明度、縮放；只在匯出時套用
-- **匯出預設** — Web 1600 / Print 300 dpi / Instagram 1080 一鍵流水線
-- **另存新檔 / 匯出** — PNG / JPEG / WebP / BMP / TIFF / AVIF（裝了 `pillow-heif` 還有 HEIC，裝了 `pillow-jxl-plugin` 還有 JPEG XL），有損格式提供品質滑桿；保留相機、鏡頭與拍攝時間的 EXIF，位置可選（**中繼資料**：全部／位置以外／無）；建議的檔名一定是還沒被占用的（`photo.png` 旁邊就是 `photo_1.png`），已存在的檔案（尤其是原圖本身）要確認後才會被取代
+- **匯出預設** — 在批次匯出中：Web 1600 px / 4K Web 3840 px / Print 300 DPI PNG / Instagram 1080 × 1080 正方形 / Thumbnail 400 px，或自訂
+- **浮水印** — 在批次匯出中：在四個角落之一或置中加上文字浮水印，可設定不透明度；只套用在匯出的副本上
+- **GPU 批次顯影** — 安裝 **GPU 顯影** 外掛（**Plugins > Download Plugins**）後，批次匯出可以改在獨立顯示卡上套用顯影 recipe（在 **運算裝置** 中選擇）；**Plugins > GPU 顯影…** 會在第一次使用時安裝 `wgpu`，並顯示它找到的顯示卡名稱。白平衡、曝光、高光 / 陰影、白色 / 黑色、亮度、對比、鮮豔度、飽和度與色調曲線在顯示卡上執行（一張 24 MP 的照片約 0.1 秒，而不是約 7 秒）；recipe 的其餘部分仍在 CPU 上執行。絕不使用內建顯示卡，顯示卡處理失敗的影像會改用 CPU 渲染，輸出與 CPU 渲染器的結果相比，只有少數像素相差幾個色階
+- **另存新檔 / 匯出** — PNG / JPEG / WebP / BMP / TIFF（Pillow 支援 AVIF 時還有 AVIF，裝了 `pillow-heif` 還有 HEIC，裝了 `pillow-jxl-plugin` 還有 JPEG XL），有損格式提供品質滑桿；保留相機、鏡頭與拍攝時間的 EXIF，位置可選（**中繼資料**：全部／位置以外／無）；建議的檔名一定是還沒被占用的（`photo.png` 旁邊就是 `photo_1.png`），已存在的檔案（尤其是原圖本身）要確認後才會被取代
 - **批次操作** — 重命名、移動 / 複製、旋轉選取影像。移動或複製不會覆蓋同名檔案（會以 `name_1` 存入）；在 Imervue 裡重新命名或移動的照片（批次重新命名、Token 批次重新命名、資料夾樹、移動 / 複製、雙窗格、暫存區、影像整理）會保留評等、收藏、標籤、顏色標籤、標題、備註與篩選標記，`.xmp` 與註解 sidecar 也會一起帶走；資料夾在 Imervue 中開著時，用其他程式重新命名的照片也一樣；改成另一張選取照片現在的名稱（重新編號、互換兩個名稱）時，會依正確順序把整批重新命名，而不是只改一部分
-- **聯絡單 PDF** — 多頁網格含說明（A4 / A3 / Letter / Legal）
-- **網頁圖庫 HTML** — 自包含資料夾含 `index.html` + JPEG 縮圖 + 內嵌燈箱
+- **聯絡單 PDF** — 多頁網格含說明（A4 / A3 / Letter / Legal）；**版面** 下拉式選單可套用現成版面：預設 4 × 5、緊湊 6 × 8、校樣 5 × 6、編輯版面 2 × 3、索引 8 × 10（欄 × 列，連同各自的邊界與說明設定），手動修改網格就會變成自訂
+- **網頁圖庫 HTML** — 自包含資料夾含 `index.html` + JPEG 縮圖 + 內嵌燈箱；**客戶審閱** 會在每張圖片下方加一個留言框，留言存在審閱者的瀏覽器裡，可一次下載成一個 JSON 檔
 - **幻燈片 MP4** — H.264 影片，FPS / 每張保留秒數 / 淡入淡出 / 溶接 / 滑入 / 抹除轉場可設（`imageio-ffmpeg`）
 - **列印佈局** — 多頁 PDF（A4/A3/Letter/Legal）含網格 / 邊距 / 裝訂溝 / 裁切標記
 - **軟校樣** — 載入 ICC profile、模擬目標色域、用洋紅色標示超出色域的像素
@@ -354,7 +391,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 ### 外部編輯器
 
-從 **File > External Editors…** 註冊程式（your image editor /  / …），再從 **File > Open in External Editor** 啟動。
+從 **File > External Editors…** 註冊程式（影像編輯器等），再從 **File > Open in External Editor** 啟動。用編輯器存檔後，檢視器會自動顯示新版本。
 
 ---
 
@@ -366,30 +403,36 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 筆刷 · 橡皮擦 · 填色 · 滴管 · 矩形 / 套索 / 魔棒 / 快速選取 · 移動 · 文字 · 漸層 · 模糊 · 塗抹 · Dodge · Burn · Sponge · 鋼筆 · 仿製圖章 · 對話框 · 矩形 · 橢圓 · 線條 · 多邊形 · 裁切 · 變形 · 抓手 · 縮放
 
-暗房調色三件組 — **Dodge**（提亮）、**Burn**（加深）與 **Sponge**（加 / 減飽和度）— 在局部繪製色調與彩度調整，依筆刷與陰影 / 中間調 / 高光遮罩加權。
+**鋼筆** 會用直線連接你點下的各點，在你拖出控制把手的地方則連成曲線；在它的選項列勾選 **平滑** 後，會改成穿過每個點畫出一條平滑曲線。
+
+暗房調色三件組 — **Dodge**（提亮）、**Burn**（加深）與 **Sponge**（降低飽和度）— 在局部繪製依筆刷加權的調整；Dodge 與 Burn 作用於中間調。三者都沒有選項。
+
+**油漆桶** 面板的 **在新圖層平塗底色** 會在線稿下方的新圖層上，替線稿的每個封閉區塊各填一種平塗色（色票面板有顯示顏色時就改用色票的顏色）— 也就是上陰影前的平塗步驟 — 線條與圖稿周圍的空間則維持空白。
+
+**漸層** 工具可以畫出前景色 → 背景色，或你自己的漸層：在選項列的 **顏色** 中選擇，旁邊的 **編輯…** 會開啟漸層編輯器；每個漸層都有名稱與色標（每個色標各有位置與含不透明度的顏色），色標可以新增、移動、改色與移除。你的漸層會跨工作階段保留。
 
 單鍵快捷：`B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`；`Shift+R/E/I/P` 切形狀變體。
 
 ### 筆刷
 
-鋼筆 / 麥克筆 / 鉛筆 / 螢光筆 / 噴漆 / 書法 / 水彩 / 木炭 / 蠟筆，含大小 / 不透明度 / 硬度 / 密度 / 混合模式。壓力曲線編輯器、選取捕獲筆尖、筆刷預設匯入 / 匯出。
+六種筆刷類型 — 鉛筆 / 原子筆 / 麥克筆 / 噴槍 / 水彩 / 水墨 — 以及以它們為基礎的預設（Crayon、Highlight、Sumi calligraphy …）。筆刷面板可調大小 / 不透明度 / 硬度 / 密度 / 混合模式；選項列提供大小 / 不透明度 / 硬度。繪圖板筆壓會依 **Settings > Pressure Curve…** 設定的曲線縮放大小與不透明度；滑鼠一律以最大筆壓繪製。筆刷面板的 **散佈** 讓每個筆觸點偏離筆畫，偏移量最多為筆刷大小乘上所設比例；**顏色抖動** 改變每個筆觸點的色相、飽和度與亮度；**跟隨筆的傾斜** 會在與繪圖板筆傾斜方向垂直的方向上讓筆尖變窄，並讓筆尖跟著傾斜方向轉動（Sumi calligraphy 預設已開啟此項）；像素畫筆刷仍維持方形筆尖。從選取捕獲筆尖、**File > Import brush preset…**。
 
 ### 圖層
 
-完整圖層面板含縮圖、可見性、拖曳重排、混合模式、不透明度、搜尋、向量圖層、1-bit 圖層、**圖層遮罩**（新增 / 從選取 / 反轉 / 套用）、**剪裁遮罩**、**圖層效果**（陰影 / 外發光 / 描邊）。按顏色分割圖層、漸層映射預設。
+完整圖層面板含縮圖、可見性、↑ / ↓ 重排按鈕（或 `Ctrl+[` / `Ctrl+]`）、混合模式、不透明度、搜尋、向量圖層、1-bit 圖層、**圖層遮罩**（新增 / 從選取 / 反轉 / 套用）、**剪裁遮罩**、**圖層效果**（陰影 / 外發光 / 描邊）。按顏色分割圖層、漸層映射預設。
 
 ### 選取
 
-矩形 / 套索 / 魔棒 / 快選 含 **取代 / 加 / 減 / 交集** 模式 + 羽化。**快速遮罩模式**（`Q`）。**描邊選取** 對話框。
+矩形 / 套索 / 魔棒 / 快選 含 **取代 / 加 / 減 / 交集** 模式；在選項列勾選 **磁性** 後，放開時套索的輪廓會貼齊 10 px 範圍內圖層最強的邊緣。**快速遮罩模式**（`Q`）。**描邊選取** 對話框。
 
 ### 動畫與漫畫
 
-- **動畫** — 影格時間軸停泊含快照、播放、洋蔥皮、MP4 / GIF 匯出
-- **漫畫工具** — 分鏡切割 · 網點層 · 蓋頁碼 · 速度線（放射 / 平行 / 爆發）· 動作閃光 · 對話框工具
+- **動畫** — 影格時間軸面板：**+ Frame** 把拼合後的畫面存成快照、以選定的 FPS 播放、洋蔥皮顯示前一影格；**Export…** 把影格存成 GIF、WebP（無損）或 PNG 動畫，每個影格持續選定 FPS 的一個節拍
+- **漫畫工具** — 分鏡切割（之後筆刷的 **限制在分格內** 會讓每一筆都留在它起筆的分格裡）· 網點層 · 蓋頁碼 · 速度線（放射 / 平行 / 爆發）· 動作閃光 · 沿選區排文字（把你輸入的文字沿著選區外框排列，放在新圖層上）· 對話框工具
 
 ### 濾鏡與檢視輔助
 
-- **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone（每個含即時預覽對話框）
+- **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour（你選取的參考圖片的色彩氛圍）· Match Swatches（每個像素換成色票中最接近的顏色）（只有一個滑桿的濾鏡 — Posterize、Threshold、Halftone、Match Colour — 拖曳滑桿時會在圖層以原尺寸裁出的一塊區域上即時預覽；其他濾鏡開啟 OK / Cancel 參數對話框）
 - **檢視輔助** — 像素格 · 對齊像素 · 對齊邊緣 · 洋蔥皮 · 出血指引 · 畫布旋轉（`Ctrl+Shift+H` CCW 旋轉）
 
 ### 擺放欄（14 個，分 3 群組以分頁排列）
@@ -400,13 +443,14 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 | 畫布 | 圖層 · 導航 · 歷史 · 頁面 · 動畫 · 直方圖 |
 | 素材庫 | 素材 · 印章 · 姿勢 · 參考 |
 
-每個面板都可移動 / 浮動，並可在 **Window** 選單個別開關。**Settings > Workspace Layouts** 可儲存與呼叫具名配置。
+色彩面板開頭是色相環與飽和度 / 亮度三角形：在色環上拖曳可選取色相，在三角形內拖曳可選取深淺，下方的滑桿與 HEX 欄位會跟著更新。素材面板會把你自己的素材排在內建網點與紋理之前：Imervue 程式資料夾下 `materials` 資料夾中的圖片（放在名為 `texture`、`tone`、`pattern`、`brush_tip` 或 `pose` 的第一層子資料夾中的圖片會歸入該分類），以及你擷取的筆刷筆尖。**Edit > Save Selection as Material…** 會把畫面上選取的部分存到那裡，絕不會覆蓋先前存的同名素材。色票面板會顯示最近使用的顏色，或一組調色盤（內建的 Standard、Pastel、Manga，或你自己的調色盤）：**Save as Palette…** 會把最近使用的顏色以一個名稱存起來，**Delete Palette** 則刪除一組你自己的調色盤；**Filter > Match Swatches…** 使用的就是色票面板顯示的顏色。每個面板都可移動 / 浮動，並可在 **Window** 選單個別開關。**Settings > Workspace Layouts…** 提供內建的 Default / Drawing / Comic / Compact 配置；**Save current…** 會以一個名稱記下 圖層 / 色彩 / 筆刷 / 導航 / 歷史 / 參考 這幾個面板中哪些正在顯示，套用配置時就顯示或隱藏這些面板。工具選項與面板大小不會儲存。
 
 ### 檔案 I/O
 
-- 開啟 / 儲存 **PSD**（Photoshop）含完整圖層往返
-- 匯出 PNG / JPEG / WebP，多頁漫畫匯出 **CBZ** 或 **PDF**
-- 自動儲存快照 + 還原最新
+- **New Canvas…** 依你選的尺寸開啟一個分頁：紙張、漫畫或螢幕預設（A4、B5 漫畫頁、1080p、4K …）、用 **Save as Preset…** 存下的預設，或任意寬度與高度，背景可選白色或透明；**New Tab**（`Ctrl+N`）則維持預設的 1024 × 1024 白色畫布
+- **Open PSD…** 把檔案拼合成單一圖層，開在新分頁；**Save as PSD…** 寫出各圖層與其混合模式（不含遮罩與圖層效果）
+- **Export image…** 依所選的檔案類型輸出 PNG、JPEG、WebP、TIFF 或 BMP（JPEG 與 BMP 不支援透明，會以白底輸出）；漫畫專案可把頁面匯出為 **CBZ** 或 **PDF**。**Save Comic Project…** 會把整部漫畫（每一頁連同其圖層）存成單一 `.imervue-proj` 檔案，**Open Comic Project…** 則能把它重新開啟。只有 **Save as PSD…** 才算儲存了分頁：匯出之後，關閉時仍會詢問它未儲存的變更
+- **自動儲存** — 作用中分頁有未儲存的修改時每 2 分鐘拍一次快照；下次啟動時以 toast 提示這些快照，**File > Restore Autosave** 把最新一份載入作用中分頁，狀態列會顯示上一次快照的時間。關閉 Imervue 時會詢問有未儲存修改的 Paint 分頁。
 
 ### 強化使用者體驗
 
@@ -426,7 +470,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 
 > **完整教學**：[`puppet_guide.zh-TW.md`](../puppet_guide.zh-TW.md) 涵蓋直播（OBS / NDI / 虛擬攝影機）與動畫製作（錄製 / 時間軸編輯 / MP4 匯出）的端到端流程。英文版於 [`puppet_guide.md`](../puppet_guide.md)、簡體中文於 [`puppet_guide.zh-CN.md`](../puppet_guide.zh-CN.md)。
 
-**Puppet** 分頁是從零打造的 2D 綁骨偶動畫系統。功能對標 Live2D（網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴、攝影機臉部追蹤），但 **不依賴任何專利 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `Imervue/puppet/FORMAT.md`。
+**Puppet** 分頁是從零打造的 2D 綁骨偶動畫系統：網格變形綁骨、參數、動作、物理、表情、姿勢、對嘴與攝影機臉部追蹤，**不依賴任何專有 SDK**、**不使用 `live2d-py`**，採用完全開放的 `.puppet` 檔案格式，規格完整記錄於 `Imervue/puppet/FORMAT.md`。
 
 ### 檔案格式
 
@@ -438,18 +482,20 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 - `expressions/*.json` — 參數疊加
 - `physics.json` — Verlet 物理配置
 
-JSON 為主，人類可 diff，沒有專利二進位。
+JSON 為主，人類可 diff，沒有專有二進位。這個格式是開放且可檢查的：存出的檔案以一個未壓縮的 `mimetype` 項目（`application/vnd.imervue.puppet+zip`）開頭，每個 JSON 檔都在 `$schema` 中標明自己的 schema；四份 JSON Schema 公開於 [`docs/schemas/`](../docs/schemas/)；`py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`（MCP `puppet_validate`）會檢查檔案，`puppet-schema`（MCP `puppet_schema`）會印出一份 schema；[`docs/examples/read_puppet.py`](../docs/examples/read_puppet.py) 只用 Python 標準函式庫就能讀取 `.puppet` 檔。規格（[`Imervue/puppet/FORMAT.md`](../Imervue/puppet/FORMAT.md)）與 schema 皆採 MIT 授權，任何程式都能讀寫 `.puppet` 檔案。
 
 ### 渲染器
 
-`QOpenGLWidget` 含 vertex-array textured-triangle 繪製（依 draw_order）、每 drawable 混合模式（normal / additive / multiply）、pose-group 互斥、影像空間正交投影、GL_REPEAT 平鋪的透明度棋盤背景、滾輪縮放 + 中鍵拖曳平移。針對大型 rig 最佳化 — March 7th（307 drawables / 2965 vertex morphs）在 CPU 上達 60 FPS。
+`QOpenGLWidget` 含 vertex-array textured-triangle 繪製（依 draw_order）、每 drawable 混合模式（normal / additive / multiply）、pose-group 互斥、影像空間正交投影、GL_REPEAT 平鋪的透明度棋盤背景、滾輪縮放 + 中鍵拖曳平移。針對大型 rig 最佳化 — 一個含 307 個 drawable、2965 個 vertex morph 的轉換後 Cubism rig 在 CPU 上達 60 FPS。
 
 ### 編輯
 
 - **匯入 PNG** → 自動產生考慮 alpha 的三角網格
-- **新增旋轉變形器**（anchor + angle）/ **新增 warp 變形器**（rows × cols bezier lattice）工具列動作
+- **新增旋轉變形器**（anchor + angle）/ **新增 warp 變形器**（rows × cols 雙線性 lattice），位於 **編輯** 選單
 - **新增參數** → 在滑桿端點按 **Set Key** 在參數擺放欄記錄關鍵形狀
 - **網格編輯器** — 切換 Edit Mesh 拖曳頂點；點擊 8 px 內吸附到最近頂點
+- **動作時間軸** — **編輯 > 編輯動作…** 可拖曳關鍵影格與貝茲控制把手；**緩動** 把一條軌道改成 31 種具名緩動曲線之一（elastic 與 bounce 會轉成取樣出來的關鍵影格），**精簡關鍵影格** 則刪掉錄製 take 中與前後關鍵影格連線相差在容許誤差內的關鍵影格
+- **修復人偶** — **Tools > 修復人偶** 清理每個圖元的網格：刪除損壞與面積為零的三角形，合併位置與 UV 都相同的重複頂點，移除沒有任何三角形用到的頂點（骨骼權重與 vertex morph 會跟著保留下來的頂點），並讓每個頂點的骨骼權重加總為 1
 - **另存新檔…** 把整個 rig 寫成 `.puppet` zip
 
 ### 執行
@@ -457,17 +503,18 @@ JSON 為主，人類可 diff，沒有專利二進位。
 - **參數綁定** — 每個參數保有 key 清單，將滑桿值對應到部分 deformer-form 快照；執行時採樣並逐欄位線性插值
 - **動作播放** — 底部擺放欄含動作清單 + 播放 / 暫停 / 停止 / 循環 / 拖曳；曲線取樣器支援 `linear`、`stepped`、`inverse-stepped`、`cubic-bezier` 段（牛頓迭代 time → param）；每動作淡入 / 淡出
 - **表情** — `additive` / `multiply` / `overwrite` 參數疊加堆疊
-- **姿勢群組** — 互斥 drawable 可見性（武器切換、嘴形變體）
+- **姿勢群組** — 互斥 drawable 可見性（武器切換、嘴形變體）；**Pose** 擺放欄選擇每個群組顯示的成員
 - **物理** — Verlet 鐘擺鏈用於頭髮 / 衣物 / 緞帶；輸入參數移動鏈錨點，重力 + 阻尼 + 每粒子彈簧回復靜止
 - **頂點 morph** — Cubism 式線性混合於 rest 與 ±extreme deltas；每幀向量化 numpy，60 FPS
 - **不透明度 keys** — 參數驅動的 alpha 曲線；讓替代姿勢 mesh 隨手勢參數淡入 / 淡出
 
 ### 即時輸入
 
-- 滑鼠拖曳 → 頭部角度參數
+- 拖曳追蹤頭部 — 游標在畫布上移動時，頭部與眼睛會轉向游標
 - 自動眨眼，cosine open → close → open 曲線
 - 麥克風對嘴 via `sounddevice` RMS → `ParamMouthOpenY`（選用依賴）
-- 攝影機臉部追蹤 via OpenCV + MediaPipe FaceMesh → 頭部 yaw / pitch / roll + 眼 / 嘴開合（選用依賴）
+- 從音訊檔對嘴 — **Live > 從音訊檔對嘴…** 把 WAV 轉成一個動作，讓 `ParamMouthOpenY` 隨它的音量張開（每秒 30 次，不帶來變化的 key 會被丟掉），並把這個 WAV 當成動作的聲音播放；不需要額外依賴
+- 攝影機臉部追蹤 via OpenCV + MediaPipe Tasks FaceLandmarker → 頭部 yaw / pitch / roll + 眼 / 嘴開合（選用依賴）
 - 自訂動作錄製 — 滑動滑桿 / 對攝影機 / 物理運行時以 30 Hz 擷取參數值；停止時烘焙成線性段 Motion
 
 ### Cubism 互通
@@ -476,8 +523,8 @@ JSON 為主，人類可 diff，沒有專利二進位。
 
 ### 輸出
 
-- **擷取畫面…** 透過 `glReadPixels` 存 PNG
-- **錄製…** 切換 30 FPS 影格循環，透過 `imageio` 寫成 GIF / WebM / MP4
+- **擷取畫面…** 以 rig 本身的尺寸（長邊最多 4096 px）、透明背景，存下只有角色的 PNG
+- **錄製…** 切換 30 FPS 影格循環，透過 `imageio` 寫成 GIF / WebM / MP4，角色縮放置入白底的 1080 px 畫面（這些影格沒有 alpha）
 - **虛擬攝影機** — 把 puppet canvas 暴露成系統的 webcam
 - **NDI 輸出** — 在區網廣播 puppet 成 NDI 來源
 - **VTube Studio API 伺服器** — 可選的 WebSocket API，給 VTS 相容客戶端讀參數
@@ -498,7 +545,7 @@ JSON 為主，人類可 diff，沒有專利二進位。
 3. Puppet 分頁打開 rig，工具列 / **Output > Virtual camera** 打勾。狀態列會印出實際裝置名稱。
 4. OBS：**Sources > + > Video Capture Device**，下拉選步驟 3 印出的裝置名（通常是 *OBS Virtual Camera*）。
 
-Imervue 會把輸出影格的長邊強制壓到 1080 px，所以 Cubism 原生畫布（March 7th 是 3503×7777）不會被 DirectShow 虛擬攝影機驅動拒絕。長寬比保留，OBS 端可以再縮。
+Imervue 會把輸出影格的長邊強制壓到 1080 px，所以 Cubism 原生畫布（高度常在 3000–8000 px）不會被 DirectShow 虛擬攝影機驅動拒絕。長寬比保留，OBS 端可以再縮。
 
 每一幀都會用 off-screen framebuffer 重畫 — 只渲染角色本身、不含棋盤格背景與編輯器外殼。所以 OBS 看到的就是「角色 + 一張純洋紅色背景」。
 
@@ -545,7 +592,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 ### 範例
 
-範例 rig 在 [`examples/puppet/march_7th.puppet`](../examples/puppet/march_7th.puppet) — 307 drawable 的 Cubism Live2D 角色倉庫內轉換。從 **開啟 puppet…** 開啟，rig 居中載入；點擊 18 個動作（Idle 群組 + Gesture 群組）任意一個即播放。手勢涵蓋比耶、捂臉、照相、臉紅、黑臉、哭、流汗、星星、流星 — rig 定義的所有命名手勢。
+內附的 rig 是 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**，Imervue 的原創吉祥物：1024 × 1336 畫布上的 45 個 drawable、所有 Cubism 標準參數外加雙關節手臂、Live2D 式視差轉頭、隨她轉頭背向光源而改變形狀的臉部陰影、虹膜裁切在眼白內的眨眼、頭髮物理、8 個動作（兩個 Idle 循環、TapHead、TapBody，以及含揮手在內的四個 Gesture）和 7 個表情。從 **File > Examples > Imeru** 或 **Open Puppet…** 開啟，點她的頭或身體就能看到她的反應。她完全由程式碼打造，做法就跟 3D 動漫風遊戲製作角色一樣：頭髮、身體、服裝和手臂在 Blender 裡建模，並以這類遊戲的著色技巧（借平滑代理形體的法線替頭髮打光、手繪髮絲與高光筆觸、烘焙遮蔽）做卡通渲染（三渲二）著色，再一次一個 puppet 圖層渲染出來；臉部以 SDF 臉部陰影圖著色；眼睛、眉毛和嘴巴則是畫上去的，最後再替各圖層綁上 rig，所以檔案不涉及任何第三方權利；執行 `py -3 examples/puppet/imeru/build.py` 即可重新產生（需要 Blender 4.2 以上版本）。
 
 ---
 
@@ -564,37 +611,41 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | 鎖定位置 | 凍結寵物位置，誤拖也動不了。 |
 | 永遠置底 | 把寵物壓在所有其他視窗下方 — 像桌面小工具而不是 always-on-top。 |
 | 全螢幕時自動隱藏 | 當其他應用（遊戲 / 影片 / 簡報）在同一螢幕進入全螢幕時自動隱藏；全螢幕結束時回來。 |
-| 隱藏時暫停 | 寵物看不見時停止動畫 — 離開畫面時零 CPU。 |
+| 隱藏時暫停 | 寵物看不見時停止重繪；即時驅動的計時器仍繼續運作。 |
 | 尺寸 preset | 小 / 中 / 大。以中心為錨點縮放，調尺寸時寵物不會跨螢幕跳。 |
 | 不透明度滑桿 | 把寵物從 10% 淡到 100%，可以當作低調的桌面裝飾。 |
 | 記住你擺的位置 | 把寵物拖到你喜歡的角落；下次啟動會回到那裡。 |
+| 全域熱鍵 | 在任何應用程式裡都能顯示 / 隱藏寵物、鎖定位置、切換點擊穿透或讓它立即說話（需要 `pynput`）：預設為 Ctrl+Shift+P / L / T / Space，每一個都能在分頁的 **Global hotkeys**（全域熱鍵）群組裡重新設定。已被其他動作使用的按鍵會被拒絕；兩個動作共用的已儲存按鍵會列在狀態列上。 |
 
 ### 點擊互動
 
 - **左鍵點身體** — 若 rig 定義了 hit area（例如戳頭），就播放對應的動作。否則寵物會用對話泡泡跟你打招呼。
-- **任意位置右鍵** — 開啟內容選單：隱藏寵物、Live drivers、Play motion（rig 裡所有動作清單）、Apply expression、鎖定位置、點擊穿透、永遠置底、全螢幕時自動隱藏、對話泡泡、Size。
+- **任意位置右鍵** — 開啟內容選單：隱藏寵物、Live drivers、Play motion（rig 裡所有動作清單）、Apply expression、Pose（選擇每個姿勢群組顯示的成員）、鎖定位置、點擊穿透、永遠置底、全螢幕時自動隱藏、對話泡泡、Size。
 - **系統托盤 icon** — 左鍵點切換顯示，右鍵開選單（顯示 / 隱藏、點擊穿透、Open puppet、隱藏寵物）。
 
 ### 即時驅動
 
-從分頁或右鍵選單裡任意勾選組合。每個預設都是關的 — 只開你想要的。
+從分頁或右鍵選單裡任意勾選組合。Auto idle、Idle motions 與 Auto-blink 預設開啟，其餘預設關閉 — 只開你想要的。
 
 - **Auto idle** — 呼吸 + 微飄移，讓角色看起來有生命感。
 - **Idle motions** — 隨機循環 rig 的 idle 群組動作。
 - **Auto-blink** — 每隔幾秒自然眨眼。
-- **Drag-track head** — 頭部會轉去追你的游標。
+- **Drag-track head** — 游標在寵物上方時，頭部與眼睛會轉向游標。
+- **Mouse gaze** — 眼睛與頭部會跟著游標，不論它在螢幕上的哪個位置。
 - **Mic lip-sync** — 嘴巴跟著你的聲音開合（需要 `sounddevice`）。
 - **Webcam tracking** — 你的頭 / 眼 / 嘴驅動寵物的（需要 `opencv-python` 和 `mediapipe`）。
 
 ### 怎麼開始
 
 1. 切到 **Desktop Pet** 分頁。
-2. 點 **Load bundled March 7th** 用內建角色，或 **Open Puppet…** 選你自己的 `.puppet` 檔。
+2. 點 **Load bundled Imeru** 用內建角色，或 **Open Puppet…** 選你自己的 `.puppet` 檔。
 3. 勾 **Show pet on desktop**。
 4. 把角色拖到你想要的位置；挑選想開的驅動；調整不透明度 / 尺寸。
 5. 隨時右鍵開啟快速動作選單，或用系統托盤 icon 直接隱藏寵物，不用回到分頁。
 
 所有設定 — 位置、驅動、不透明度、點擊穿透、尺寸 — 都會在下次啟動時記住。
+
+**Desktop Pet Integrations** 外掛（**Plugins > Download Plugins**）會新增 **Plugins > Desktop Pet Integrations**：寵物會對 OBS（直播、錄影、切換場景）、Twitch 聊天室關鍵字（出現在訊息任何位置即可，或用 `=hi` 比對整則訊息、`!dance*` 比對開頭、`/go+al/` 使用正規表示式）、本機 webhook（`POST http://127.0.0.1:9876/trigger`，內容為 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知做出反應。它也是以 `on_pet_created` 打造桌寵外掛的範例。
 
 ### 自訂語音（pet script）
 
@@ -605,6 +656,10 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
   "version": 1,
   "name": "Friendly pet",
   "greetings": ["Hi!", "Hello!"],
+  "time_of_day_greetings": {
+    "morning": ["Good morning!"],
+    "night": ["Still up?"]
+  },
   "hit_responses": {
     "HitAreaHead": ["Don't poke me!", "Stop!"]
   },
@@ -618,13 +673,14 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 ```
 
 - **`greetings`** — 當沒有更精確的項目匹配某次點擊時使用。
+- **`time_of_day_greetings`** — 依本機時鐘時段分組的招呼語（`morning` 05–11 時、`afternoon` 12–17 時、`evening` 18–21 時、`night` 22–04 時），優先於 `greetings` 使用；沒有台詞的時段會退回 `greetings`。
 - **`hit_responses`** — 每個 `HitArea` 的台詞。鍵必須對應 rig 中定義的 hit-area ID。
-- **`motion_lines`** — 每個動作的台詞。當寵物播放同名動作（hit-area 動作或右鍵選單動作）時觸發。
+- **`motion_lines`** — 每個動作的台詞。當點擊 hit area 播放同名動作時說出（從右鍵選單啟動的動作不會）。
 - **`scheduled`** — 計時器驅動的提醒。每個項目每 `every_seconds` 秒觸發一次。
 
 台詞會在各分類（bucket）中輪替（round-robin），讓使用者不會連續兩次聽到同一句。**Reset to default** 會捨棄自訂 script，恢復內建的招呼語組。
 
-可用的範例位於 [`examples/desktop_pet/march_7th.petscript.json`](../examples/desktop_pet/march_7th.petscript.json)。
+可用的範例位於 [`examples/desktop_pet/imeru.petscript.json`](../examples/desktop_pet/imeru.petscript.json)；其中 head 與 body 台詞會回應對 Imeru 的 `Head` 與 `Body` hit area 的點擊。
 
 ---
 
@@ -634,15 +690,15 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 | 快捷鍵 | 動作 |
 |----------|--------|
-| 方向鍵 | 滾動網格 / 切換影像（深度縮放中左 / 右） |
-| Shift + 方向 | 細微滾動（半步） |
+| 方向鍵 | 網格：移動焦點框（Enter 開啟該影像）/ 深度縮放：左 / 右切換影像 |
 | Ctrl+Shift+←/→ | 跳到前 / 下個含影像的手足資料夾 |
 | Alt+← / Alt+→ | 歷史返回 / 前進 |
 | Ctrl+G | 跳到第 N 張 |
 | X | 隨機跳轉 |
-| Home | 重設縮放與平移 |
+| Home | 讓影像適應視窗（網格中：捲回頂端） |
 | Ctrl+F 或 / | 模糊搜尋對話框 |
-| Ctrl+Shift+P | 開啟命令面板 |
+| T | 開啟標籤與相簿 |
+| Ctrl+Shift+P | 開啟指令面板 |
 | Alt+M | 在目前選取重放上一個巨集 |
 | S | 開啟幻燈片對話框 |
 | Ctrl+Z | 復原 |
@@ -655,11 +711,15 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | F | 切換全螢幕 |
 | Shift+Tab | 切換劇場模式 |
 | R / Shift+R | 順時針 / 逆時針旋轉 |
-| E | 開啟影像編輯器（Modify 分頁） |
-| W / Shift+W | 適合寬度 / 高度 |
+| E | 在註解編輯器中開啟目前的影像 |
+| W / Shift+W | 適應寬度 / 高度 |
+| Shift+F | 適應視窗 |
+| - / = | 縮小 / 放大 |
+| V | 閱讀模式（適應寬度，捲動閱讀，到底後前往下一張影像） |
+| L | 放大鏡：跟隨游標的局部放大（縮圖上也可用） |
 | H | 切換 RGB 直方圖 |
 | F8 / Ctrl+F8 | OSD 疊加層 / 除錯 HUD |
-| Shift+P | 切換像素檢視（≥ 400 % 顯示網格 + RGB） |
+| Shift+P | 切換像素檢視（≥ 400 % 顯示 RGB；畫面上 ≤ 40,000 個像素時再顯示網格） |
 | Shift+M | 循環色彩模式 |
 | B | 切換書籤 |
 | Ctrl+C / Ctrl+V | 複製 / 貼上影像至 / 自剪貼簿 |
@@ -712,12 +772,18 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 | P / S / C / Z / H | 鋼筆 / 仿製 / 裁切 / 縮放 / 抓手 |
 | Q | 切換快速遮罩模式 |
 | Tab | 切換所有擺放欄 |
-| Ctrl+Tab | 循環 Paint 分頁 |
+| Ctrl+Tab / Ctrl+Shift+Tab | 下一個 / 上一個 Paint 分頁 |
 | , / . | 循環筆刷種類 |
 | 0-9 | 筆刷不透明度 10% 步進 |
 | Alt+[ / Alt+] | 下 / 上切換作用圖層 |
 | Ctrl+[ / Ctrl+] | 在堆疊中下移 / 上移作用圖層 |
 | Ctrl+D | 取消選取 |
+| [ / ] | 筆刷大小減少 / 增加 1 px |
+| Shift+[ / Shift+] | 筆刷大小減少 / 增加 5 px |
+| Ctrl+Shift+N / Ctrl+J / Ctrl+E | 新增圖層 / 複製圖層 / 向下合併 |
+| Ctrl+0 / Ctrl+1 | 符合視窗 / 實際大小（100 %） |
+| X | 互換前景 / 背景色 |
+| D | 將顏色重設為黑 / 白 |
 
 ---
 
@@ -726,7 +792,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 ### File
 
 - New Window
-- Open Image / Open Folder
+- Open File / Open Folder
 - Recent（資料夾 + 影像）
 - Bookmarks / Tags & Albums
 - Commit Pending Deletions
@@ -740,14 +806,14 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 ### Tools（額外工具 — 分為 8 個群組子選單）
 
-- **批次** — 格式轉換 · EXIF 清除 · 影像清洗器 · 影像整理器 · 權杖批次重命名
-- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似 / 重複 · 自動標籤 · 階層標籤 · 匯出元資料 · XMP 邊車檔 · GPS 標記
-- **檢視** — Timeline · Calendar · Map
-- **工作流程** — 挑片 · 暫存盤 · 虛擬副本 · 雙窗格 FM · 巨集
-- **匯出** — 聯絡單 PDF · 網頁圖庫 · 幻燈片影片（MP4）· 列印佈局
-- **顯影（非破壞）** — 色調曲線 · .cube LUT · 分離色調 · 局部調整遮罩 · 漸層減光 · Velvia · 浮雕 · 去色邊 · 負片轉正 · 電影調色 · 色調 / 細節等化器 · 極座標 · 萬花筒 · 毛玻璃 · 軟校樣
-- **修圖與變形** — AI 影像放大 · 雜訊抑制 / 銳化 · 修復筆刷 · 仿製圖章 · 人臉偵測 · 天空 / 背景 · 裁切 / 拉直 · 自動拉直 · 鏡頭校正
-- **多影像** — HDR 合成 · 全景拼接 · 焦點堆疊
+- **批次** — 格式轉換 · EXIF 清除 · 影像清洗器 · 影像整理器 · 權杖批次重命名 · 去閃爍（縮時攝影）· 文件二值化 · Otsu 閾值 · 編輯動畫 · 最佳化至目標大小 · 迷因字幕 · 隱寫術
+- **圖庫與元資料** — 圖庫搜尋 · 智慧相簿 · 找相似影像 · 語意搜尋 · 找重複影像 · 自動標籤影像 · 階層標籤 · 匯出元資料（CSV / JSON）· XMP 邊車檔 · GPS 標記 · 從 GPX 軌跡加上地理標記 · 修改拍攝時間 · 中繼資料範本 · 縮圖快取
+- **檢視** — 時間軸檢視（依日 / 月 / 年）· 行事曆檢視 · 地圖檢視 · 示波器與檢查器 · 小行星（360°）· 影像統計 · 品質報告 · 測試圖 · 色盲預覽（紅色盲 / 綠色盲 / 藍色盲 / 全色盲）
+- **工作流程** — 挑片 · 暫存盤 · 參考面板 · 虛擬副本 · 雙窗格檔案管理 · 巨集 · 監看資料夾
+- **匯出** — 聯絡單 PDF · 網頁圖庫 · 幻燈片影片（MP4）· 列印佈局 · 拼貼 · 證件照排版
+- **顯影（非破壞）** — 前後比較 · 顯影預設 · 色調曲線 · .cube LUT · 分離色調 · 局部調整遮罩 · 圖層 · 色階 · 通道混合器 · 漸層映射 · 自動色彩平衡 · 清晰度 / 去霧 · HSL / 混色器 · CLAHE · 平整背景 · 外框與說明文字 · 有序抖動 · 色彩對應 · 扭曲 · 極座標 · 萬花筒 · 毛玻璃 · 像素排序 · 底片顆粒 · 鏡頭光暈 · 閾值 / 色調量化 · 曝色反轉 · 柔光暈染 · 漸層減光 · Velvia · 浮雕 · 去色邊 · 負片轉正 · 電影調色 · 色調 / 細節等化器 · 軟校樣
+- **修圖與變形** — AI 影像放大 · 雜訊抑制 / 銳化 · 修復筆刷 · 仿製圖章 · 頻率分離 · 智慧裁切 · 人像自動修飾 · 人臉偵測 · 天空 / 背景 · 裁切 / 拉直 · 自動拉直 · 鏡頭校正 · 比例尺
+- **多影像** — HDR 合成 · 全景拼接 · 焦點堆疊 · 影像堆疊 · 紅藍立體 3D
 
 ### 檢視 / 排序 / 過濾 / 語言 / 外掛 / 說明
 
@@ -775,7 +841,7 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | 鉤子 | 觸發 |
 |------|---------|
 | `on_plugin_loaded()` | 外掛實例化後 |
-| `on_plugin_unloaded()` | App 關閉時 |
+| `on_plugin_unloaded()` | 所屬視窗關閉時，以及重新載入外掛（Reload Plugins）之前 |
 | `on_build_menu_bar(plugin_menu)` | 共用的 Plugins 選單建好後 |
 | `on_build_main_tabs(tabs)` | 內建 5 個分頁加完之後 |
 | `on_build_context_menu(menu, viewer)` | 右鍵選單開啟時 |
@@ -784,12 +850,18 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 | `on_image_switched(path, viewer)` | 切換影像時 |
 | `on_image_deleted(paths, viewer)` | 影像被軟刪除後 |
 | `on_key_press(key, modifiers, viewer)` | 按鍵時（回傳 True 消費事件） |
+| `on_pet_created(pet)` | 桌寵視窗建立時，或外掛載入時桌寵視窗已存在 |
 | `on_app_closing(main_window)` | App 關閉前 |
 | `get_translations()` | 提供 i18n 字串 |
+| `register_languages()` | 類別方法：註冊新語言（每次載入前，以及啟動時） |
+
+除了鉤子之外，外掛也能為批次匯出提供另一個顯影 recipe 渲染器：在 `on_plugin_loaded` 中用 `Imervue.image.develop_backends.register` 註冊一個 `BackendProvider`。GPU 顯影外掛就是範例；詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)。
+
+按下 **OK** 就執行一項影像轉換的對話框，可以從 `Imervue.plugin.tool_dialog.ToolDialogMixin` 取得按鈕列、選用套件安裝、背景工作執行緒與結果 toast。外掛若會匯入舊版發行之後才加入的主程式程式碼，就在它的 `__init__.py` 旁放一個 `plugin.json`，寫明所需的外掛 API 版本（`{"min_api_version": 2}`）；版本太舊的 Imervue 會跳過這個外掛並把原因寫進記錄，而不是在它的匯入過程中失敗。
 
 ### 外掛下載器
 
-**Plugins > Download Plugins** 開啟線上下載器。來源倉庫：[Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。
+**Plugins > Download Plugins** 開啟線上下載器。來源倉庫：[Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。需要較新版 Imervue 的外掛不會被安裝：狀態列會列出它所需的外掛 API 版本，已安裝的副本則維持原樣。請先更新 Imervue，再重新下載。
 
 ---
 
@@ -803,7 +875,7 @@ python -m Imervue.mcp_server
 
 ### 工具
 
-精選工具（共 56 個 — 完整清單見文件）。每個工具都會宣告 JSON
+精選工具（共 58 個 — 完整清單見文件）。每個工具都會宣告 JSON
 `outputSchema` 與唯讀 / 破壞性的 `annotations`，並把結果以
 `structuredContent` 回傳；長時間執行的工具會串流 `notifications/progress`。
 
@@ -816,10 +888,10 @@ python -m Imervue.mcp_server
 | `convert_format` | 轉換 PNG / JPEG / WebP / TIFF / BMP / AVIF（+ 選用 HEIC / JXL） |
 | `apply_watermark` / `apply_frame` | 燒入文字浮水印，或加 matte / 拍立得相框 + 說明文字 |
 | `build_collage` | 把多張圖片合成成網格拼貼（含進度） |
-| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、保留長寬比縮放、無損旋轉 / 翻轉。尺寸與座標以依 EXIF 方向轉正後的影像為準。 |
+| `crop_image` / `resize_image` / `rotate_image` | 像素裁切、縮放（只指定一邊時保留長寬比，兩邊都指定時縮成精確尺寸）、無損旋轉 / 翻轉。尺寸與座標以依 EXIF 方向轉正後的影像為準。 |
 | `collection_stats` | 資料夾的評等 / 收藏 / 色標 / 挑片彙整 |
 | `search_images` | 以 smart-album 查詢 DSL 篩選資料夾（路徑 / EXIF / 大小 / 尺寸） |
-| `extract_gps` / `dominant_colors` | 讀取 EXIF GPS 座標（可接 `reverse_geocode`）；median-cut 調色盤（rgb / hex / 占比） |
+| `extract_gps` / `dominant_colors` | 讀取 EXIF GPS 座標（可接 `reverse_geocode`）；median-cut 調色盤（rgb / hex / pixel_count） |
 | `error_level_analysis` | JPEG 重壓的竄改鑑識圖（PNG data URI） |
 | `solarize_image` / `glow_image` | 套用曝色反轉或柔光暈染並存檔 |
 | `velvia_image` / `emboss_image` / `defringe_image` | Velvia 飽和度提升、方向光浮雕、邊緣色邊去飽和 |
@@ -836,12 +908,14 @@ python -m Imervue.mcp_server
 | `lens_correction_image` | 校正鏡頭桶狀／枕狀變形（k1）、暗角與紅／藍色差 |
 | `reverse_geocode` / `extract_video_frame` | 離線 GPS → 城市、把影片一格解碼成靜態影像 |
 | `puppet_from_png` / `puppet_inspect` | 從 PNG 建構 `.puppet` rig；開啟一個並回傳清單 |
+| `puppet_validate` / `puppet_schema` | 依 v1 格式檢查 `.puppet`（schema、載入器、rig 檢查）；回傳其中一份 JSON Schema |
 
 ### Prompts
 
 四個可重用的 prompt：`caption_image`、`suggest_edits`、`analyze_composition`
 （以 saliency 為基礎的構圖評析）與 `flag_issues`（銳利度 + 品質 + 裁切的
-分流檢查）。prompt 的引數可透過 `completion/complete` 自動補全。
+分流檢查）。`completion/complete` 會為 `suggest_edits` 的 `style` 與
+`analyze_composition` 的 `focus` 提供建議值。
 
 ### 配置
 
@@ -875,7 +949,7 @@ python -m Imervue.mcp_server
 
 從 **Language** 選單切換。需重啟。
 
-外掛可透過 `language_wrapper.register_language()` 註冊全新語言，或透過 `get_translations()` 為內建語言補充翻譯（既有鍵永遠不會被覆寫，所以外掛不可能弄壞內建字串）。**Español** 就是這樣提供的 —— 從下載器安裝 `spanish_translation` 外掛後，它就會與五個內建語言一起出現在語言選單中。詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
+外掛可透過 `language_wrapper.register_language()` 註冊全新語言，或透過 `get_translations()` 為內建語言補充翻譯（既有鍵永遠不會被覆寫，所以外掛不可能弄壞內建字串）。外掛字串若為空，或其 `{placeholders}` 與英文版不同，就會被捨棄並寫進記錄，介面改為顯示內建文字，而不會出現空白或錯誤。**Español** 就是這樣提供的 —— 從下載器安裝 `spanish_translation` 外掛後，它就會與五個內建語言一起出現在語言選單中。詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md#internationalization-i18n)。
 
 ---
 
@@ -884,6 +958,8 @@ python -m Imervue.mcp_server
 儲存在應用程式旁的 `user_setting.json` —— 原始碼版本為專案根目錄，凍結版本則是含 `.exe` 的資料夾（PyInstaller 與 Nuitka 皆同）。
 
 此檔是**多帳號容器**：每個 profile 各自持有獨立的設定字典，因此同一份安裝可以同時保有不同組態（例如 *Work* 與 *Personal*）。在 **File > Profiles…** 可切換、建立、重新命名與刪除 profile。舊版留下的 v1 單帳號檔案會在首次讀取時自動遷移為 `default` profile。寫入會在最後一次變更後延遲數秒才批次落地，且以原子方式寫入（`.tmp` 同層檔 + `os.replace`），因此存檔中途被中斷也不會截斷檔案。啟動時若讀不到這個檔案（JSON 損壞，或被其他程式占用），Imervue 會以預設設定啟動，並在第一次存檔前把它另存為旁邊的 `user_setting.json.unreadable-<日期>-<時間>`；無法保留副本時絕不覆蓋它。啟動時會跳出警告，寫明是哪個檔案以及如何取回原本的設定。
+
+每個工作階段的記錄檔 `imervue.log` 也寫在同一個資料夾（該資料夾為唯讀時改寫到 `%LOCALAPPDATA%\Imervue`，Windows 以外為 `~/.cache/imervue`）。上一個工作階段的記錄檔會以 `imervue.previous.log` 保留在旁邊，因此程式異常結束後再次啟動 Imervue，能說明原因的記錄檔依然還在。回報問題時請把兩個檔案一起附上。
 
 目前 profile 的關鍵欄位：
 
@@ -902,6 +978,7 @@ python -m Imervue.mcp_server
 | `stack_raw_jpeg_pairs` | bool | RAW+JPEG 疊合切換 |
 | `external_editors` | list | 已配置編輯器 |
 | `macros` / `macro_last_name` | list / string | 已儲存巨集 + Alt+M 目標 |
+| `puppet_tab_enabled` / `desktop_pet_tab_enabled` | bool | 選用分頁（預設開啟；下次啟動生效） |
 
 ---
 

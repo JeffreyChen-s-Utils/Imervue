@@ -163,7 +163,6 @@ class PaintCanvasInputMixin:
         # users. Map the tablet event onto the same dispatch path used
         # by mouse input so press / move / release reach the active
         # tool with full pressure + tilt detail.
-        self._last_pressure = float(event.pressure())
         phase = _TABLET_PHASE.get(event.type())
         if phase is not None:
             self._dispatch_pointer(
@@ -171,7 +170,7 @@ class PaintCanvasInputMixin:
                 event.position().x(), event.position().y(),
                 button=int(event.button().value),
                 modifiers=int(event.modifiers().value),
-                pressure=self._last_pressure,
+                pressure=self._pen_pressure(float(event.pressure())),
                 tilt_x=float(event.xTilt()) / 60.0,
                 tilt_y=float(event.yTilt()) / 60.0,
             )
@@ -186,8 +185,16 @@ class PaintCanvasInputMixin:
             event.position().x(), event.position().y(),
             button=int(event.button().value),
             modifiers=int(event.modifiers().value),
-            pressure=self._last_pressure,
+            # A mouse has no pressure. The pen's last value (0 on lifting it)
+            # used to stay here and thinned every later mouse stroke.
+            pressure=1.0,
         )
+
+    def _pen_pressure(self, raw: float) -> float:
+        """Tablet pressure shaped by the tool state's curve (Settings > Pressure Curve…)."""
+        from Imervue.paint.pressure_curve import apply_curve
+        curve = getattr(self._tool_state_for_hud, "pressure_curve", None)
+        return apply_curve(curve, raw)
 
     def _dispatch_pointer(
         self,

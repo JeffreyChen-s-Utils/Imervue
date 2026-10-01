@@ -45,11 +45,15 @@ from my_plugin.my_plugin import MyPlugin
 plugin_class = MyPlugin
 ```
 
-4. Restart Imervue (or use **Plugins → Reload Plugins**). Your plugin is discovered and loaded automatically.
+4. Restart Imervue. Your plugin is discovered and loaded automatically.
+
+**Plugins → Reload Plugins** also loads a plugin added while Imervue runs. It does not re-import a plugin package that is already imported, so restart after editing a plugin's code. It rebuilds the Plugin-menu entries, but not the tabs added by `on_build_main_tabs()` or the plugin entries of the Language menu, which are only built when the window opens.
 
 ## Plugin Structure
 
-### Required Class Attributes
+### Class Attributes
+
+Set these on your plugin class. Each one is optional: one you leave out keeps the base class default (`"Unnamed Plugin"`, `"0.0.1"`, or an empty string).
 
 | Attribute            | Type  | Description                        |
 |----------------------|-------|------------------------------------|
@@ -81,12 +85,18 @@ def on_plugin_loaded(self):
 
 #### `on_plugin_unloaded()`
 
-Called when the plugin is being unloaded (usually at app shutdown). Clean up resources here.
+Called when the plugin is being unloaded: when its window closes, and before **Plugins → Reload Plugins** loads the plugins again. Clean up resources here.
+
+Each main window loads its own instance of every plugin (**File → New Window** opens another window), and a hook reaches the instance of the window it happens in. Closing a window unloads that window's instances; `on_app_closing()` runs only when the last window closes.
 
 ```python
 def on_plugin_unloaded(self):
     self.my_data.clear()
 ```
+
+#### `register_languages()` (class method)
+
+Called on the plugin class, before any instance exists: before Imervue builds its window when the saved language is not a built-in one, and again each time the plugin is loaded. Register the languages your plugin adds here; see [Creating a language plugin](#2-creating-a-language-plugin-adding-an-entirely-new-language).
 
 ### Menu Hooks
 
@@ -151,7 +161,7 @@ def on_build_main_tabs(self, tabs):
 
 #### `on_image_loaded(image_path: str, viewer: GPUImageView)`
 
-Called after a single image is loaded in deep zoom mode.
+Called once an image is on screen at full size in deep zoom mode, however it was opened (Open File, a grid tile, next / previous, the filmstrip), and again when it is reloaded after an edit. The low-resolution preview shown while a large image decodes does not count.
 
 ```python
 def on_image_loaded(self, image_path, viewer):
@@ -178,7 +188,7 @@ def on_image_switched(self, image_path, viewer):
 
 #### `on_image_deleted(deleted_paths: list[str], viewer: GPUImageView)`
 
-Called after image(s) are soft-deleted (added to the undo stack).
+Called after image(s) are soft-deleted (added to the undo stack), from the viewer or from the folder tree. A file the tree sends straight to the Recycle Bin because it is not in the image list does not count.
 
 ```python
 def on_image_deleted(self, deleted_paths, viewer):
@@ -187,7 +197,7 @@ def on_image_deleted(self, deleted_paths, viewer):
 
 ### Input Hooks
 
-#### `on_key_press(key: int, modifiers: int, viewer: GPUImageView) -> bool`
+#### `on_key_press(key: int, modifiers: Qt.KeyboardModifier, viewer: GPUImageView) -> bool`
 
 Called when a key is pressed in the viewer. Return `True` to consume the event and prevent default handling. Return `False` to let the default handler run.
 
@@ -201,7 +211,62 @@ def on_key_press(self, key, modifiers, viewer):
     return False  # Let default handling continue
 ```
 
+`key` is a Qt key code (`Qt.Key`); `modifiers` is a `Qt.KeyboardModifier` flag, so test a modifier with `modifiers & Qt.KeyboardModifier.ControlModifier`.
+
 > **Important:** Be careful about consuming common keys. Only return `True` for keys your plugin specifically handles.
+
+### Desktop Pet Hooks
+
+#### `on_pet_created(pet: PetWindow)`
+
+Called when the desktop pet window exists: when the Desktop Pet tab first creates it, and right after
+your plugin loads (or **Reload Plugins** runs) if it already does. The pet window is created lazily,
+so a plugin that loads before anyone opens the tab hears it later. With the Desktop Pet tab turned off
+in **File > Preferences > Optional tabs** there is no pet, and the hook is never called.
+
+The supported surface of `pet`:
+
+| Member | What it does |
+|---|---|
+| `play_group(group) -> bool` | Play a random motion of a motion group (`False` when the rig has none) |
+| `speak(line)` / `speak_notification(line)` | Show a speech bubble; the second also plays the notification sound |
+| `speech_on` | Whether the user has the speech bubble on |
+| `setting(key, default)` / `persist(**fields)` | Read / write the pet's saved settings; keys Imervue does not know are kept |
+| `add_integration(key, controller)` / `remove_integration(key)` / `integration(key)` | Hand the pet an `IntegrationController` (`Imervue.desktop_pet.pet_feature_base`) it stops when it shuts down |
+| `hit_triggered(str)`, `moved(int, int)`, `visibility_changed(bool)` | Signals: a click (the hit area's id, or `""`), a drag that ended, shown / hidden |
+
+```python
+from Imervue.desktop_pet.pet_feature_base import IntegrationController
+
+
+class ClockController(IntegrationController):
+    persist_key = "clock_enabled"          # the pet's setting that remembers "on"
+
+    def _build_client(self):               # called once; any object with start / stop / is_running
+        return HourlyChime(on_hour=lambda: self._host.play_group("Chime"))
+
+
+class ClockPlugin(ImervuePlugin):
+    plugin_name = "Hourly Chime"
+
+    def on_pet_created(self, pet):
+        self._pet = pet
+        pet.add_integration("clock", ClockController(pet))
+        pet.hit_triggered.connect(lambda area: pet.speak(f"You touched {area or 'me'}!"))
+        if pet.setting("clock_enabled", False):
+            pet.integration("clock").set_enabled(True)
+
+    def on_plugin_unloaded(self):
+        if getattr(self, "_pet", None) is not None:
+            self._pet.remove_integration("clock")   # stops it, keeps "on" for next time
+```
+
+`IntegrationController.set_enabled(True)` builds the client once (`_build_client`), pushes the settings
+into it on every start (`_configure`), starts it and saves whether it started under `persist_key`;
+`set_enabled(False)` stops it and saves "off"; `shutdown()` stops it without saving. The
+**Desktop Pet Integrations** plugin (`pet_integrations` in the plugin downloader) is the full example:
+OBS, Twitch chat, a local webhook and Windows notifications, each one an `IntegrationController`, with a
+menu of toggles, optional packages installed on first use, and a settings dialog.
 
 ### Application Hooks
 
@@ -213,6 +278,53 @@ Called when the application is about to close. Use for final cleanup or saving s
 def on_app_closing(self, main_window):
     self.save_plugin_state()
 ```
+
+## Develop Backends
+
+`Recipe.apply` renders a Develop recipe on the CPU. A plugin can offer Batch Export another renderer
+— the **GPU Develop** plugin (`gpu_develop` in the plugin downloader) renders on the discrete GPU — by
+registering a provider in `Imervue.image.develop_backends`:
+
+```python
+from Imervue.image import develop_backends
+from Imervue.image.recipe import Recipe
+
+
+class FastRenderer:
+    label = "Fast renderer"
+
+    def render(self, arr, recipe: Recipe):          # HxWx4 uint8 in, HxWx4 uint8 out
+        recipe = recipe.normalized()
+        arr = recipe.apply_stages(arr, last="geometry")          # what you don't do yourself…
+        arr = my_fast_colour_stages(arr, recipe)                # …from white_balance to tone_curve
+        return recipe.apply_stages(arr, first="split_toning")    # …the rest
+
+    def close(self):
+        release_the_device()
+
+
+PROVIDER = develop_backends.BackendProvider(
+    key="fast", probe=lambda: "Fast renderer" if device_present() else None, open=FastRenderer)
+
+
+class FastPlugin(ImervuePlugin):
+    def on_plugin_loaded(self):
+        develop_backends.register(PROVIDER)
+
+    def on_plugin_unloaded(self):
+        develop_backends.unregister("fast")
+```
+
+| Piece | Contract |
+|---|---|
+| `probe()` | Returns the label Batch Export shows under **Render on**, or `None` when the backend cannot run on this machine; `RuntimeError`, `OSError` and `ImportError` hide the backend |
+| `open()` | Builds a renderer when an export starts, on the export thread; `RuntimeError`, `OSError` and `ImportError` make that export render on the CPU |
+| `render(arr, recipe)` | Must return what `recipe.apply(arr)` does. `Recipe.apply_stages(arr, first, last)` runs any span of the stages in `Imervue.image.recipe.STAGE_NAMES`, so a renderer does only the stages it is faster at. A `RuntimeError` renders that image on the CPU |
+| `close()` | Called once when the export ends |
+
+The key `"cpu"` belongs to the built-in renderer. Every window loads its own plugin instance, so a
+plugin that can be loaded in several windows unregisters when its last instance unloads (the GPU
+Develop plugin counts them).
 
 ## Accessing Application State
 
@@ -291,7 +403,56 @@ Import the heavy package inside the code that `_run` calls, not at module level,
 
 Never block the GUI thread in a hook. Run long work in a `QThread` subclass and report back through signals.
 
-A dialog that owns a running worker must stop it on **Cancel** as well as on window close; Cancel calls `reject()`, which does not deliver a `closeEvent`. Derive the dialog from `WorkerHostMixin` (`Imervue/plugin/worker_host.py`, listed before `QDialog` in the bases) and keep the worker on `self._worker`: the mixin stops and joins it before the dialog is destroyed. A `QThread` destroyed while it is still running aborts the whole process.
+A dialog that owns a running worker must stop it on **Cancel** and **OK** as well as on window close; `reject()` and `accept()` do not deliver a `closeEvent`. Derive the dialog from `WorkerHostMixin` (`Imervue/plugin/worker_host.py`, listed before `QDialog` in the bases) and keep the worker on `self._worker` (more workers: list their attribute names in `_worker_attrs`): the mixin stops and joins them in `done()`, which `accept()` and `reject()` both end in, and on close, before the dialog is destroyed. A `QThread` destroyed while it is still running aborts the whole process.
+
+### One-shot image tools
+
+A dialog whose **OK** runs one image transform and saves the result beside the source can take the whole flow from `ToolDialogMixin` (`Imervue/plugin/tool_dialog.py`, plugin API 2). It includes `WorkerHostMixin`; list it before `QDialog` and keep the viewer on `self._viewer` and the image path on `self._path`:
+
+```python
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform, make_slider
+
+
+class SepiaDialog(ToolDialogMixin, QDialog):
+    output_suffix = "sepia"              # saves photo_sepia.png (photo_sepia_1.png if taken)
+    failed_key = "sepia_failed"          # toast prefix on failure, from get_translations()
+    failed_text = "Sepia failed"
+    done_key = "sepia_done"              # success toast; takes {path}
+
+    def __init__(self, viewer, path):
+        super().__init__(viewer)
+        self._viewer, self._path = viewer, path
+        self._amount = make_slider(0, 100, 80)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self._amount)
+        layout.addWidget(self._build_button_box())   # OK / Cancel
+
+    def _required_packages(self):        # optional: offered for install before the run
+        return [("onnxruntime", "onnxruntime")] if self._uses_model() else []
+
+    def _transform(self) -> Transform:   # RGBA uint8 array in, RGBA uint8 array out
+        amount = self._amount.value() / 100
+        return lambda rgba: sepia(rgba, amount)
+```
+
+**OK** offers to install what `_required_packages` names, runs the transform on a worker thread, saves a PNG and toasts the saved name or the error; a success closes the dialog. The module also exports `make_slider`, `slider_row`, `output_path` and `show_toast(viewer, text, error=False)`.
+
+## Plugin API Versions
+
+A plugin downloaded today can land on an Imervue installed months ago. When a plugin imports something the main program gained later, put a `plugin.json` beside its `__init__.py`:
+
+```json
+{"min_api_version": 2}
+```
+
+**Plugins → Download Plugins** reads it before installing and refuses a plugin that needs a newer Imervue, keeping any installed copy; the plugin loader skips such a plugin with the reason in the log, without importing it. A plugin without the file needs version 1. `Imervue.plugin.plugin_api.PLUGIN_API_VERSION` is the version this Imervue provides:
+
+| Version | Adds |
+|---|---|
+| 1 | Everything else on this page: the hooks, the language API, `WorkerHostMixin` |
+| 2 | `Imervue.plugin.tool_dialog` (`ToolDialogMixin`, `show_toast`), `Imervue.image.develop_backends` |
+
+Installs older than the manifest do not read it: there a plugin that needs more fails at import time and is skipped with the error in the log.
 
 ## Distributing a Plugin
 
@@ -300,6 +461,7 @@ Plugins reach users through the [Imervue_Plugins](https://github.com/Jeffrey-Plu
 - A plugin lives under a category directory: `plugins/<name>/`, or `languages/<name>/` for a language plugin.
 - **Only the files directly inside the plugin directory are downloaded.** Subdirectories (`models/`, `assets/`, ...) are not, so keep every file the plugin needs to run flat, and discover optional files such as model weights at runtime.
 - A download replaces the installed copy of the plugin as a whole, so do not keep user data inside the plugin directory if it has to survive an update.
+- A plugin that needs a newer Imervue than the user has is not installed (see [Plugin API Versions](#plugin-api-versions)).
 
 ## Internationalization (i18n)
 
@@ -354,7 +516,7 @@ Built-in language codes: `"English"`, `"Traditional_Chinese"`, `"Chinese"`, `"Ko
 
 ### 2. Creating a language plugin (adding an entirely new language)
 
-You can create a plugin that registers a new language for the entire application. Use `language_wrapper.register_language()` in `on_plugin_loaded()`:
+You can create a plugin that registers a new language for the entire application. Call `language_wrapper.register_language()` from the class method `register_languages()`:
 
 ```python
 from Imervue.plugin.plugin_base import ImervuePlugin
@@ -367,7 +529,8 @@ class SpanishLanguagePlugin(ImervuePlugin):
     plugin_description = "Adds Spanish language support to Imervue"
     plugin_author = "Your Name"
 
-    def on_plugin_loaded(self):
+    @classmethod
+    def register_languages(cls):
         language_wrapper.register_language(
             language_code="Spanish",
             display_name="Español",
@@ -386,9 +549,9 @@ class SpanishLanguagePlugin(ImervuePlugin):
         )
 ```
 
-The new language will automatically appear in the **Language** menu (below a separator). When the user selects it and restarts, the application will use the plugin-provided translations. A built-in language code cannot be registered this way; use `get_translations()` to extend a built-in language.
+The new language will automatically appear in the **Language** menu (below a separator). When the user selects it and restarts, the application uses the plugin-provided translations: when the saved language is not a built-in one, Imervue calls `register_languages()` on each plugin class before it builds its window. A language registered in `on_plugin_loaded()` instead is still listed in the menu, but comes too late to be applied after the restart, because the window's text is built before plugins are loaded. A built-in language code cannot be registered this way; use `get_translations()` to extend a built-in language.
 
-> **Tip:** Copy all keys from `Imervue/multi_language/english.py` as a starting template for your language plugin. Any missing keys will fall back to `None` via `dict.get()`, so make sure to translate all keys for a complete experience.
+> **Tip:** Copy all keys from `Imervue/multi_language/english.py` as a starting template for your language plugin. A missing key shows the built-in fallback text, so translate all keys for a complete experience. Keep every `{placeholder}` of the English string: a string that is empty or whose placeholders differ is dropped when the language is registered, and the problems — missing keys too — are logged under `Imervue.language`. `get_translations()` strings are checked the same way against the English string you supply for the key.
 
 ## Error Handling
 

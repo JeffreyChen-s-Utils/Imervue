@@ -20,6 +20,10 @@ from typing import TYPE_CHECKING
 
 from Imervue.paint.brush_engine import BrushStrokeOptions
 
+#: Points per anchor-to-anchor span of a Smooth pen curve; fine enough that the
+#: straight steps between them do not show at painting zoom levels.
+SMOOTH_SAMPLES_PER_SEGMENT = 24
+
 if TYPE_CHECKING:
     from Imervue.paint.paint_workspace import PaintWorkspace
 
@@ -43,18 +47,38 @@ def commit_pen_path(workspace: PaintWorkspace) -> bool:
     state = workspace.state()
     if state.foreground is None:
         return False
+    drawn = smoothed_path(path) if state.pen_smooth else path
     # Vector layer → record the path as a non-destructive VectorStroke
     # so the user can edit width / colour / per-node geometry later
     # rather than baking pixels in.
     if getattr(layer, "vector_data", None) is not None:
-        committed = _commit_to_vector_layer(path, layer, state)
+        committed = _commit_to_vector_layer(drawn, layer, state)
     else:
-        committed = _commit_to_raster_layer(path, layer, state)
+        committed = _commit_to_raster_layer(drawn, layer, state)
     # Reset the path so the next pen click starts a fresh stroke.
     path.nodes.clear()
     path.closed = False
     document.invalidate_composite()
     return committed
+
+
+def smooth_points(path) -> list[tuple[float, float]]:
+    """The Pen's Smooth curve through *path*'s anchors (Catmull-Rom), closed if the path is."""
+    from Imervue.paint.catmull_rom_spline import resample_polyline_catmull_rom
+    anchors = [(float(n.anchor[0]), float(n.anchor[1])) for n in path.nodes]
+    return resample_polyline_catmull_rom(anchors, closed=bool(path.closed),
+                                         samples_per_segment=SMOOTH_SAMPLES_PER_SEGMENT)
+
+
+def smoothed_path(path):
+    """A path of straight steps along :func:`smooth_points`, ready for the usual rasterising.
+
+    The anchors' own handles are not used: Smooth draws one curve through every
+    clicked point.
+    """
+    from Imervue.paint.bezier_path import BezierPath, PathNode
+    nodes = [PathNode(anchor=point) for point in smooth_points(path)]
+    return BezierPath(nodes=nodes, closed=bool(path.closed))
 
 
 def _commit_to_raster_layer(path, layer, state) -> bool:
@@ -93,7 +117,7 @@ def _options_from_state(state) -> BrushStrokeOptions:
     """Build a :class:`BrushStrokeOptions` from the workspace state.
 
     The pen tool reuses the brush settings rather than introducing
-    a separate "pen size / pen colour" axis — matches raster paint apps's
+    a separate "pen size / pen colour" axis — matches raster paint apps'
     "your active brush is your pen ink" convention.
     """
     brush = state.brush

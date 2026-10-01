@@ -41,16 +41,11 @@ from ai_object_remove.object_removal import (
 )
 from ai_object_remove.sam import discover_sam_models, sam_mask
 from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.tool_dialog import output_path, show_toast
 from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
@@ -74,7 +69,7 @@ _OVERLAY_ALPHA = 0.55
 
 class AIObjectRemovePlugin(ImervuePlugin):
     plugin_name = "AI Object Remove"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     plugin_description = "Click an object to flood-select and inpaint it away."
     plugin_author = "Imervue"
 
@@ -254,7 +249,12 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
         self._sam_worker.start()
 
     def _on_sam_done(self, ok: bool, mask_or_error: object) -> None:  # pragma: no cover - Qt UI
-        self._sam_worker = None
+        # ``done`` is the thread's last act, but run() may not have returned yet.
+        # Wait before dropping the only reference: Qt aborts the whole process
+        # when a still-running QThread is destroyed.
+        if self._sam_worker is not None:
+            self._sam_worker.wait()
+            self._sam_worker = None
         if not ok:
             self._notify("object_remove_failed", "Object removal failed", str(mask_or_error))
             return
@@ -279,7 +279,7 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
         self._mask_worker.ready.connect(self._on_mask_ready)
         self._mask_worker.start()
 
-    def _on_mask_ready(self, mask: np.ndarray) -> None:
+    def _on_mask_ready(self, mask: np.ndarray | None) -> None:
         if self._mask_worker is not None:
             self._mask_worker.wait()
             self._mask_worker = None
@@ -319,7 +319,7 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
     def _start_worker(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None or self._mask is None or not self.isVisible():
             return
-        out_path = Path(_output_path(self._path, "edited"))
+        out_path = Path(output_path(self._path, "edited"))
         self._worker = _RemoveWorker(
             self._arr, self._mask, str(out_path), self._method.currentData(),
         )
@@ -327,31 +327,30 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
         self._worker.start()
 
     def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
-        self._worker = None
+        # ``done`` is the thread's last act, but run() may not have returned yet.
+        # Wait before dropping the only reference: Qt aborts the whole process
+        # when a still-running QThread is destroyed.
+        if self._worker is not None:
+            self._worker.wait()
+            self._worker = None
         if not ok:
             self._notify("object_remove_failed", "Object removal failed", message)
             return
         lang = language_wrapper.language_word_dict
-        self._toast(lang.get("object_remove_done", "Saved {path}").format(
-            path=Path(message).name), error=False)
+        show_toast(self._viewer, lang.get("object_remove_done", "Saved {path}").format(
+            path=Path(message).name))
         self.accept()
 
     def _notify(self, key: str, fallback: str, detail: str = "") -> None:  # pragma: no cover - Qt UI
         text = language_wrapper.language_word_dict.get(key, fallback)
-        self._toast(f"{text}: {detail}" if detail else text, error=True)
-
-    def _toast(self, text: str, error: bool) -> None:  # pragma: no cover - Qt UI
-        main_window = getattr(self._viewer, "main_window", None)
-        toast = getattr(main_window, "toast", None)
-        if toast is not None:
-            (toast.error if error else toast.info)(text)
+        show_toast(self._viewer, f"{text}: {detail}" if detail else text, error=True)
 
 
 class _MaskWorker(QThread):
     """Run the flood-fill mask build off the UI thread — on a large image the
     fill is slow enough to stall the interactive preview."""
 
-    ready = Signal(object)   # np.ndarray mask
+    ready = Signal(object)   # np.ndarray mask, or None when it could not be built
 
     def __init__(self, arr: np.ndarray, sx: int, sy: int,
                  tolerance: int, grow: int):
@@ -363,8 +362,12 @@ class _MaskWorker(QThread):
         self._grow = grow
 
     def run(self) -> None:
-        self.ready.emit(
-            build_mask(self._arr, self._sx, self._sy, self._tolerance, self._grow))
+        try:
+            mask = build_mask(self._arr, self._sx, self._sy, self._tolerance, self._grow)
+        except Exception:  # a worker must always report, or no later click is ever filled
+            logger.exception("Building the object mask failed")
+            mask = None
+        self.ready.emit(mask)
 
 
 class _RemoveWorker(QThread):

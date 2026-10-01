@@ -80,7 +80,7 @@ def test_failed_load_does_not_check_show_box(qapp, tmp_path):
 def test_successful_load_auto_shows_pet(qapp, tmp_path, monkeypatch):
     """A successful ``load_puppet`` must auto-tick the show
     checkbox so the user sees the pet appear without a second
-    click. Without this, clicking "Load bundled March 7th" felt
+    click. Without this, clicking "Load bundled Imeru" felt
     broken — the rig was loaded but the overlay stayed hidden."""
     ws = PetWorkspace()
     try:
@@ -201,7 +201,7 @@ def test_resolve_bundled_example_uses_app_paths(monkeypatch, tmp_path):
     from Imervue.system import app_paths
 
     fake_examples = tmp_path / "examples"
-    fake_puppet = fake_examples / "puppet" / "march_7th.puppet"
+    fake_puppet = fake_examples / "puppet" / "imeru.puppet"
     fake_puppet.parent.mkdir(parents=True)
     fake_puppet.write_bytes(b"PK\x03\x04")  # just needs to be_a_file
     monkeypatch.setattr(app_paths, "examples_dir", lambda: fake_examples)
@@ -236,4 +236,73 @@ def test_size_combo_offers_each_preset(qapp, preset):
         # The label is the translated name, not the raw preset id.
         assert ws._size_combo.itemText(idx) == preset.title()   # noqa: SLF001
     finally:
+        ws.deleteLater()
+
+
+
+def test_the_drivers_the_pet_starts_show_as_ticked(qapp):
+    """Auto idle, idle motions and auto-blink start with the pet but their boxes stayed empty."""
+    ws = PetWorkspace()
+    window = None
+    try:
+        window = ws._ensure_pet_window()  # noqa: SLF001
+        assert ws._idle_check.isChecked()  # noqa: SLF001
+        assert ws._idle_motion_check.isChecked()  # noqa: SLF001
+        assert ws._blink_check.isChecked()  # noqa: SLF001
+        assert not ws._drag_check.isChecked()  # noqa: SLF001
+    finally:
+        if window is not None:
+            window.hide()
+            window.deleteLater()
+        ws.deleteLater()
+
+
+def test_a_toggle_made_on_the_pet_shows_in_the_tab(qapp):
+    """The context menu, tray and hotkeys call the pet directly; the tab kept the old state."""
+    ws = PetWorkspace()
+    try:
+        window = ws._ensure_pet_window()  # noqa: SLF001
+        window.set_anchor_locked(True)
+        window.set_drag_track_enabled(True)
+        assert ws._anchor_check.isChecked()  # noqa: SLF001
+        assert ws._drag_check.isChecked()  # noqa: SLF001
+        window.set_anchor_locked(False)
+        assert not ws._anchor_check.isChecked()  # noqa: SLF001
+    finally:
+        window.hide()
+        window.deleteLater()
+        ws.deleteLater()
+
+
+
+def test_show_on_launch_is_a_checkbox(qapp):
+    """``show_on_launch`` decided whether the pet opened with Imervue, but nothing set it."""
+    from Imervue.desktop_pet import settings as pet_settings
+    ws = PetWorkspace()
+    try:
+        assert not ws._launch_check.isChecked()  # noqa: SLF001
+        ws._launch_check.setChecked(True)  # noqa: SLF001
+        assert pet_settings.load()["show_on_launch"] is True
+    finally:
+        ws.deleteLater()
+    again = PetWorkspace()
+    try:
+        assert again._launch_check.isChecked()  # noqa: SLF001
+        assert again.pet_window() is None
+    finally:
+        again.deleteLater()
+
+
+def test_creating_the_pet_announces_it_once_for_plugins(qapp):
+    """Plugins hear on_pet_created from this signal; asking for the pet again must not repeat it."""
+    ws = PetWorkspace()
+    created: list = []
+    ws.pet_created.connect(created.append)
+    try:
+        window = ws._ensure_pet_window()  # noqa: SLF001
+        assert ws._ensure_pet_window() is window  # noqa: SLF001
+        assert created == [window]
+    finally:
+        window.hide()
+        window.deleteLater()
         ws.deleteLater()

@@ -205,25 +205,16 @@ def test_metadata_ignores_a_non_text_camera_tag(tmp_path, monkeypatch):
 
     path = tmp_path / "a.jpg"
     _make_image(path, 8, 6)
-    real_open = token_rename.Image.open
-
-    def open_with_numeric_make(*args, **kwargs):
-        img = real_open(*args, **kwargs)
-        img.getexif = lambda: {271: 5, 272: "EOS"}
-        return img
-
-    monkeypatch.setattr(token_rename.Image, "open", open_with_numeric_make)
+    monkeypatch.setattr(token_rename, "read_exif", lambda _p: {271: 5, 272: "EOS"})
     meta = _gather_metadata(str(path), 1)
     assert meta["wxh"] == "8x6"
-    assert meta["camera"] == ""
+    assert meta["camera"] == "EOS"   # the text Model survives a numeric Make
 
 
 def test_metadata_propagates_an_unexpected_reader_error(tmp_path, monkeypatch):
-    from Imervue.library import token_rename
-
     def broken(*_args, **_kwargs):
         raise RuntimeError("reader bug")
 
-    monkeypatch.setattr(token_rename.Image, "open", broken)
+    monkeypatch.setattr(Image, "open", broken)
     with pytest.raises(RuntimeError, match="reader bug"):
         _gather_metadata(str(tmp_path / "a.jpg"), 1)

@@ -37,7 +37,7 @@ DEFAULT_FPS: int = 30
 CHROMA_KEY_MAGENTA_RGBA: tuple[float, float, float, float] = (1.0, 0.0, 1.0, 1.0)
 
 # Cap the longest side of the virtual-camera frame. Live2D source
-# canvases are routinely 3000–8000 px tall (March 7th is 3503×7777),
+# canvases are routinely 3000–8000 px tall (3503×7777 is not unusual),
 # which DirectShow virtual-camera drivers reject outright and which
 # wastes downstream bandwidth in any streaming pipeline. 1080 covers
 # every common streaming aspect (1080p landscape, 1920×1080 portrait,

@@ -62,6 +62,7 @@ class BrushTool:
         # Press-point of the active stroke — fed to the perspective
         # ruler so its snap line passes through where the user pressed.
         self._stroke_anchor: tuple[float, float] | None = None
+        self._follow_tilt = False
         self.last_damage = _EMPTY_DAMAGE
 
     def _panel_clipped_selection(
@@ -92,6 +93,7 @@ class BrushTool:
         if evt.phase == "move" and self._strokes:
             x, y = self._snap(evt.x, evt.y)
             x, y = self._smoothed_xy(x, y)
+            self._pass_tilt(evt)
             self._extend_all(canvas, x, y)
             self.last_damage = self._collect_damage()
             return True
@@ -216,7 +218,11 @@ class BrushTool:
             seed=int(time.monotonic_ns() & 0xFFFFFFFF),
             tip_path=brush.tip_path,
             pixel_art=self._state.snap_to_pixel,
+            scatter=brush.scatter,
+            color_jitter=brush.color_jitter,
+            follow_tilt=brush.follow_tilt,
         )
+        self._follow_tilt = brush.follow_tilt
         from Imervue.paint.gpu_brush import make_brush_stroke
         # GPU stroke uses a per-stroke FBO that can't see sibling
         # strokes' updates without an expensive per-extend re-upload —
@@ -225,12 +231,18 @@ class BrushTool:
         # GPU when GL is current and the options qualify.
         mirror_positions = list(self._mirror(sx, sy))
         prefer_gpu = len(mirror_positions) == 1
-        self._strokes = []
-        for px, py in mirror_positions:
-            stroke = make_brush_stroke(options, prefer_gpu=prefer_gpu)
+        self._strokes = [make_brush_stroke(options, prefer_gpu=prefer_gpu)
+                         for _ in mirror_positions]
+        self._pass_tilt(evt)
+        for stroke, (px, py) in zip(self._strokes, mirror_positions, strict=True):
             stroke.begin(canvas, px, py)
-            self._strokes.append(stroke)
         return True
+
+    def _pass_tilt(self, evt: PointerEvent) -> None:
+        """Hand the pen tilt to the strokes when the brush follows it (CPU strokes only then)."""
+        if self._follow_tilt:
+            for stroke in self._strokes:
+                stroke.set_tilt(evt.tilt_x, evt.tilt_y)
 
 
 # ---------------------------------------------------------------------------
@@ -311,8 +323,10 @@ class FillTool:
     ``selection_provider`` returns the active selection mask (or
     ``None``) at click time. ``reference_provider`` is optional and
     returns the HxWx4 RGBA buffer of the document's reference layer
-    when raster paint apps's "Reference Layer" mode is on; ``None`` falls the
-    fill back to sampling its own target.
+    when raster paint apps' "Reference Layer" mode is on; ``None`` falls the
+    fill back to sampling its own target. ``composite_provider`` returns the
+    visible composite, matched instead of the target when "Sample all layers"
+    is on (the reference layer still wins when both are on).
     """
 
     def __init__(
@@ -320,10 +334,20 @@ class FillTool:
         state: ToolState,
         selection_provider=None,
         reference_provider=None,
+        composite_provider=None,
     ):
         self._state = state
         self._selection_provider = selection_provider or (lambda: None)
         self._reference_provider = reference_provider or (lambda: None)
+        self._composite_provider = composite_provider or (lambda: None)
+
+    def _match_source(self, fill):
+        """The image whose colours decide the filled region, or None for the target itself."""
+        if fill.use_reference_layer:
+            return self._reference_provider()
+        if fill.sample_all_layers:
+            return self._composite_provider()
+        return None
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
         if evt.phase != "press":
@@ -333,9 +357,7 @@ class FillTool:
         if self._state.foreground is None:
             return False
         fill = self._state.fill
-        reference = (
-            self._reference_provider() if fill.use_reference_layer else None
-        )
+        reference = self._match_source(fill)
         result = flood_fill(
             canvas,
             seed_x=int(round(evt.x)),
@@ -359,7 +381,7 @@ class EyedropperTool:
     raster paint apps convention. Modifier-aware: holding Alt picks BG instead.
 
     ``composite_provider`` returns the document's flattened RGBA buffer
-    when raster paint apps's "Sample All Layers" mode is on. ``None`` falls
+    when raster paint apps' "Sample All Layers" mode is on. ``None`` falls
     the sample back to the active layer only — the legacy default.
     """
 

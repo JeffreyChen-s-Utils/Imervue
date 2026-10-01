@@ -299,7 +299,7 @@ def render_tone_layer(
     Density source = ``(1 - luminance) * alpha`` so painting with a
     soft grey brush on a transparent layer yields proportional dot
     density, exactly like :func:`apply_halftone_to_image`. The output
-    inherits the tone's ink colour (instead of raster paint apps's hard-coded
+    inherits the tone's ink colour (instead of raster paint apps' hard-coded
     black) and is rotated by ``tone.angle_deg``. Returns a fresh
     HxWx4 uint8 RGBA buffer — the input is not mutated.
     """

@@ -52,6 +52,7 @@ def auto_base_fill(
     min_region_size: int = DEFAULT_MIN_REGION_SIZE,
     max_regions: int = MAX_REGIONS,
     seed: int = 0,
+    exclude_border: bool = False,
 ) -> list[BaseColorRegion]:
     """Return one :class:`BaseColorRegion` per detected closed region.
 
@@ -67,9 +68,11 @@ def auto_base_fill(
     don't merge two separate regions into one.
 
     Regions smaller than ``min_region_size`` pixels are dropped so
-    AA speckles around the ink don't yield 1-pixel "regions". The
-    output is sorted by area descending and capped at
-    ``max_regions``; callers wanting more should bump the cap.
+    AA speckles around the ink don't yield 1-pixel "regions"; with
+    ``exclude_border`` so are regions touching the image edge — the space
+    around the drawing rather than a shape in it. The output is sorted by
+    area descending and capped at ``max_regions``; callers wanting more
+    should bump the cap.
     """
     _validate_auto_base_args(
         reference, ink_alpha_threshold, min_region_size, max_regions,
@@ -82,6 +85,7 @@ def auto_base_fill(
         open_pixels, palette_list,
         min_region_size=int(min_region_size),
         max_regions=int(max_regions),
+        exclude_border=bool(exclude_border),
     )
     regions.sort(key=lambda r: r.pixel_count, reverse=True)
     return regions
@@ -120,64 +124,113 @@ def _open_pixels_after_gap_close(
 
 def _scan_open_regions(
     open_pixels: np.ndarray, palette_list: list[tuple[int, int, int]],
-    *, min_region_size: int, max_regions: int,
+    *, min_region_size: int, max_regions: int, exclude_border: bool,
 ) -> list[BaseColorRegion]:
-    """Walk the canvas and flood-fill each unvisited open cell.
+    """One region per 4-connected group of open pixels, in raster order of first appearance.
 
-    Returned regions retain raster order (top-left to bottom-right);
-    the caller sorts by ``pixel_count`` after the cap clamps the
-    upper bound on output length.
+    Groups smaller than *min_region_size*, and with *exclude_border* those
+    touching the image edge (the space around the drawing), are skipped; the
+    palette cycles over the kept ones. At most *max_regions* are returned;
+    the caller sorts them by ``pixel_count``.
     """
-    h, w = open_pixels.shape
-    visited = np.zeros((h, w), dtype=np.bool_)
+    labels = _kept_labels(open_pixels, min_region_size=min_region_size,
+                          exclude_border=exclude_border)
+    grid = labels[0]
     regions: list[BaseColorRegion] = []
-    for sy, sx in _seed_iter(open_pixels):
-        if visited[sy, sx]:
-            continue
-        region = _try_capture_region(
-            open_pixels, sx, sy, visited, palette_list,
-            min_region_size=min_region_size, region_index=len(regions),
-        )
-        if region is not None:
-            regions.append(region)
-            if len(regions) >= max_regions:
-                break
+    for index, (label, count) in enumerate(labels[1][:max_regions]):
+        color = palette_list[index % len(palette_list)]
+        regions.append(BaseColorRegion(color=color, mask=grid == label, pixel_count=count))
     return regions
 
 
-def _seed_iter(open_pixels: np.ndarray):
-    """Yield ``(y, x)`` for every open pixel in raster order.
+def _kept_labels(
+    open_pixels: np.ndarray, *, min_region_size: int, exclude_border: bool,
+) -> tuple[np.ndarray, list[tuple[int, int]]]:
+    """The label grid and ``(label, pixel count)`` of each region worth keeping, in raster order."""
+    grid, count = label_open_regions(open_pixels)
+    sizes = np.bincount(grid.ravel(), minlength=count + 1)
+    dropped = np.zeros(count + 1, dtype=np.bool_)
+    dropped[0] = True
+    dropped[sizes < int(min_region_size)] = True
+    if exclude_border:
+        edge = np.concatenate((grid[0], grid[-1], grid[:, 0], grid[:, -1]))
+        dropped[np.unique(edge)] = True
+    kept = [(int(label), int(sizes[label])) for label in np.nonzero(~dropped)[0]]
+    return grid, kept
 
-    Pulled out so the outer scan loop can be a flat iterator of
-    candidate seeds — the dispatcher loop above only handles
-    visited-tracking and region append logic.
+
+def label_open_regions(open_pixels: np.ndarray) -> tuple[np.ndarray, int]:
+    """Label the 4-connected groups of ``True`` cells: an int32 grid (0 = closed) and the count.
+
+    Labels run 1..count in raster order of each group's first cell. Each row's
+    runs come from numpy and are joined to the overlapping runs of the row
+    above with a union-find, so the Python work follows the number of runs,
+    not of pixels (an A4 page at 300 dpi takes well under a second).
     """
     h, w = open_pixels.shape
-    for sy in range(h):
-        for sx in range(w):
-            if open_pixels[sy, sx]:
-                yield sy, sx
+    parent: list[int] = [0]
+    runs: list[tuple[int, int, int, int]] = []          # (row, first col, last col, label)
+    above: list[tuple[int, int, int]] = []
+    for y in range(h):
+        above = _label_row(open_pixels[y], y, above, parent, runs)
+    roots = [_find(parent, label) for label in range(len(parent))]
+    compact = np.zeros(len(parent), dtype=np.int32)
+    order: dict[int, int] = {}
+    for label in range(1, len(parent)):
+        root = roots[label]
+        if root not in order:
+            order[root] = len(order) + 1
+        compact[label] = order[root]
+    grid = np.zeros((h, w), dtype=np.int32)
+    for y, x0, x1, label in runs:
+        grid[y, x0:x1 + 1] = compact[label]
+    return grid, len(order)
 
 
-def _try_capture_region(
-    open_pixels: np.ndarray, sx: int, sy: int,
-    visited: np.ndarray, palette_list: list[tuple[int, int, int]],
-    *, min_region_size: int, region_index: int,
-) -> BaseColorRegion | None:
-    """Flood-fill from ``(sx, sy)`` and return a region if it's big
-    enough, otherwise return ``None``. ``visited`` is updated in
-    place either way so future seeds skip the same cells."""
-    from Imervue.paint.fill import _contiguous_region
-    mask = _contiguous_region(open_pixels, sx, sy)
-    count = int(mask.sum())
-    if count == 0:
-        visited[sy, sx] = True
-        return None
-    visited |= mask
-    if count < min_region_size:
-        return None
-    color = palette_list[region_index % len(palette_list)]
-    return BaseColorRegion(color=color, mask=mask, pixel_count=count)
+def _label_row(
+    row: np.ndarray, y: int, above: list[tuple[int, int, int]], parent: list[int],
+    runs: list[tuple[int, int, int, int]],
+) -> list[tuple[int, int, int]]:
+    """Label row *y*'s runs, joining each to the runs above it that it touches."""
+    edges = np.diff(np.concatenate(([False], row, [False])).astype(np.int8))
+    starts = np.nonzero(edges == 1)[0].tolist()
+    ends = (np.nonzero(edges == -1)[0] - 1).tolist()
+    current: list[tuple[int, int, int]] = []
+    first = 0
+    for x0, x1 in zip(starts, ends, strict=True):
+        while first < len(above) and above[first][1] < x0:
+            first += 1                        # runs above that end before this one starts
+        label = 0
+        k = first
+        while k < len(above) and above[k][0] <= x1:
+            label = _union(parent, label, above[k][2])
+            k += 1
+        if label == 0:
+            label = len(parent)
+            parent.append(label)
+        current.append((x0, x1, label))
+        runs.append((y, x0, x1, label))
+    return current
+
+
+def _find(parent: list[int], label: int) -> int:
+    while parent[label] != label:
+        parent[label] = parent[parent[label]]
+        label = parent[label]
+    return label
+
+
+def _union(parent: list[int], a: int, b: int) -> int:
+    """Join the groups of labels *a* (0 = none yet) and *b*; return the surviving root."""
+    rb = _find(parent, b)
+    if a == 0:
+        return rb
+    ra = _find(parent, a)
+    if ra == rb:
+        return ra
+    low, high = min(ra, rb), max(ra, rb)
+    parent[high] = low
+    return low
 
 
 def _materialise_palette(
@@ -213,6 +266,52 @@ def _materialise_palette(
             int(round(g * 255)),
             int(round(b * 255)),
         ))
+    return out
+
+
+def base_colour_layer(
+    lineart: np.ndarray,
+    *,
+    palette: list[tuple[int, int, int]] | None = None,
+    gap_close: int = 0,
+    min_region_size: int = DEFAULT_MIN_REGION_SIZE,
+    max_regions: int = MAX_REGIONS,
+) -> tuple[np.ndarray, int]:
+    """The flat-colour layer under *lineart*, and how many regions it fills.
+
+    Every closed region gets its own colour (cycling *palette*, else the
+    default ring); the space around the drawing and the lines stay
+    transparent. Opaque line art (dark lines on white) is read by darkness,
+    transparent line art by its alpha. Built from one label grid and a colour
+    lookup, without a mask per region, so it suits a full page.
+    """
+    reference = lineart_ink(lineart)
+    _validate_auto_base_args(reference, 64, min_region_size, max_regions)
+    open_pixels = _open_pixels_after_gap_close(reference, 64, gap_close)
+    grid, kept = _kept_labels(open_pixels, min_region_size=min_region_size,
+                              exclude_border=True)
+    kept = kept[:max_regions]
+    colours = _materialise_palette(palette, seed=0)
+    lut = np.zeros((int(grid.max()) + 1, 4), dtype=np.uint8)
+    for index, (label, _count) in enumerate(kept):
+        lut[label] = (*colours[index % len(colours)], 255)
+    return lut[grid], len(kept)
+
+
+def lineart_ink(image: np.ndarray) -> np.ndarray:
+    """*image* with its alpha saying where the ink is.
+
+    Line art drawn on transparency already does; a fully opaque layer (dark
+    lines on white paper) gets an alpha that grows with darkness, so its
+    lines count as ink and its paper as open space.
+    """
+    if image.ndim != 3 or image.shape[2] != 4 or image.dtype != np.uint8:
+        raise ValueError(f"image must be HxWx4 uint8 RGBA, got {image.shape} {image.dtype}")
+    if int(image[..., 3].min()) < 255:
+        return image
+    luma = (image[..., 0] * 0.299 + image[..., 1] * 0.587 + image[..., 2] * 0.114)
+    out = image.copy()
+    out[..., 3] = (255 - luma).astype(np.uint8)
     return out
 
 

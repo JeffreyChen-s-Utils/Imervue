@@ -12,24 +12,28 @@ La majeure partie de ce guide est organisée autour de ces cinq sections.
      - Rôle
    * - **Imervue**
      - Parcourir, visualiser, organiser, rechercher et traiter par lots votre
-       bibliothèque d'images. Voir *Onglet Imervue — Visionneuse et bibliothèque d'images*.
+       bibliothèque d'images. Voir *Ouvrir des images*, *Parcourir les images* et
+       *Organiser les images*.
    * - **Modify**
      - Pipeline de développement non destructif — curseurs, courbes, LUT, masques,
-       retouche, multi-images. Voir *Onglet Modify — Développement non destructif*.
+       retouche, multi-images. Voir *Édition d'images (onglet Modify)*.
    * - **Paint**
      - Studio de peinture matricielle complet avec pinceaux, calques, animation,
-       outils manga, E/S PSD. Voir *Onglet Paint — Éditeur matriciel complet*.
+       outils manga, E/S PSD. Voir *Espace de travail Paint (onglet Paint)*.
    * - **Puppet**
      - Animateur de marionnettes 2D riggées conçu de zéro — maillages, déformateurs,
-       paramètres, mouvements, physique. Voir *Onglet Puppet — Animation 2D riggée*.
+       paramètres, mouvements, physique. Voir *Espace de travail Puppet (onglet Puppet)*.
    * - **Desktop Pet**
      - Superposition sans cadre, transparente et toujours au premier plan qui
        exécute les mêmes rigs ``.puppet`` sur votre bureau avec des pilotes en
        direct (idle / clignement / micro / webcam / suivi du curseur). Voir
-       *Espace de travail Desktop Pet*.
+       *Espace de travail Desktop Pet (onglet Desktop Pet)*.
 
-Les sections *Pour démarrer*, *Référence*, *Système de plugins* et *Serveur MCP*
-qui suivent sont transversales — elles s'appliquent à l'ensemble des cinq onglets.
+Les sections *Pour démarrer*, *Référence des raccourcis clavier*,
+*Référence du menu Extra Tools*, *Système de plugins*, *Utilisation en ligne de commande*
+et *Serveur MCP* sont transversales — elles s'appliquent à l'ensemble des cinq onglets.
+
+**Puppet** et **Desktop Pet** sont facultatifs : désactivez l'un ou l'autre dans ``File`` > ``Preferences`` > **Optional tabs** et, dès le démarrage suivant, son onglet n'est pas ajouté et son code n'est pas chargé, si bien qu'Imervue démarre plus vite et consomme moins de mémoire. Les deux sont activés par défaut ; chacun est construit la première fois que vous ouvrez son onglet, et l'onglet Desktop Pet dès le démarrage quand son compagnon doit s'afficher au lancement.
 
 .. contents:: Table des matières
    :depth: 2
@@ -52,7 +56,9 @@ Au lancement d'Imervue, vous découvrez trois zones :
 
 - **Gauche** : arbre des dossiers. Cliquez sur un dossier pour parcourir les images qu'il contient.
 - **Centre** : zone d'affichage des images. Présente toutes les images sous forme de grille de vignettes.
-- **Droite** : barre latérale EXIF. Affiche les informations de prise de vue de l'image sélectionnée.
+- **Droite** : barre latérale EXIF, repliée en une fine bande au démarrage : cliquez dessus pour l'ouvrir. Elle affiche les informations de prise de vue de l'image ouverte.
+
+Imervue écrit le journal de chaque session dans ``imervue.log`` à côté du programme (dans ``%LOCALAPPDATA%\Imervue``, ou ``~/.cache/imervue`` hors de Windows, lorsque ce dossier est en lecture seule). Le journal de la session précédente est conservé sous le nom ``imervue.previous.log``, si bien qu'après un plantage le journal qui l'explique est toujours là une fois Imervue relancé — joignez les deux lorsque vous signalez un problème.
 
 ----
 
@@ -68,20 +74,21 @@ Ouvrir des images
    * - Ouvrir un dossier
      - ``Fichier`` > ``Ouvrir un dossier``, puis choisissez un répertoire
    * - Ouvrir une image
-     - ``Fichier`` > ``Ouvrir une image``, puis choisissez un fichier
+     - ``Fichier`` > ``Ouvrir un fichier``, puis choisissez un fichier
    * - Glisser-déposer
      - Faites glisser une image ou un dossier directement dans la fenêtre
    * - Ouvrir depuis l'Explorateur
      - Clic droit sur une image > ``Open with Imervue`` (association de fichiers requise)
    * - Fichiers récents
-     - ``Fichier`` > ``Récents``, pour rouvrir rapidement un dossier précédemment visité
+     - ``Fichier`` > ``Récents`` > Dossiers récents / Images récentes, pour rouvrir un dossier ou une image
 
 Formats pris en charge
 ^^^^^^^^^^^^^^^^^^^^^^
 
-- **Standards** : PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
+- **Standards** : PNG, JPEG (.jpg, .jpeg, .jpe, .jfif, .jif), BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW** : CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **Modernes** : AVIF (intégré) ; HEIC / HEIF avec le paquet optionnel ``pillow-heif`` ; JPEG XL avec le paquet optionnel ``pillow-jxl-plugin``
+- **Autres** : ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX, PSD (l'image fusionnée) — en lecture ; les faire pivoter sur place et les autres réécritures sont refusés, une modification passe par Enregistrer sous / Exporter
 
 ----
 
@@ -113,8 +120,8 @@ Une fois un dossier ouvert, toutes les images s'affichent sous forme de vignette
      - Laissez le curseur 500 ms sur une vignette pour voir un aperçu agrandi
    * - Sélectionner plusieurs images
      - Clic gauche maintenu et glisser pour tracer un rectangle de sélection
-   * - Panoramique au clavier
-     - Touches fléchées ; ``Shift`` pour un mouvement fin
+   * - Passer d'une vignette à l'autre au clavier
+     - Les touches fléchées déplacent un cadre de focus et le font défiler dans la vue ; ``Enter`` ouvre l'image
 
 Chaque vignette affiche des badges de statut : une bande colorée sur le bord gauche (étiquette de couleur),
 un cœur en haut à gauche (favori), une étoile en haut à droite (signet) et des étoiles de notation
@@ -124,14 +131,28 @@ Mode liste (détails)
 ^^^^^^^^^^^^^^^^^^^^
 
 Appuyez sur ``Ctrl + L`` pour basculer entre la grille de vignettes et une vue liste triable avec les colonnes :
-Aperçu · Étiquette · Nom · Résolution · Taille · Type · Modifié. Double-cliquez sur une ligne (ou appuyez sur ``Enter``) pour entrer
+Aperçu · Étiquette · Note · Nom · Résolution · Taille · Type · Modifié. Double-cliquez sur une ligne (ou appuyez sur ``Enter``) pour entrer
 en Deep Zoom ; appuyez sur ``Esc`` pour revenir à la liste. Les vignettes et les métadonnées sont chargées paresseusement sur un fil d'exécution
 de travail, afin que les très grands dossiers restent réactifs.
+
+``Delete`` retire les lignes sélectionnées et ``Ctrl + Z`` les rétablit, et les touches de note (``1`` – ``5``), de favori (``0``), de tri (``P`` / ``Shift + X`` / ``U``) et de couleur (``F1`` – ``F5``) les marquent, comme dans la grille ; toutes sauf ``F1`` – ``F5`` suivent les réglages des raccourcis.
 
 Mode Deep Zoom
 ^^^^^^^^^^^^^^
 
 Cliquez sur une vignette pour passer en mode Deep Zoom et obtenir un affichage de haute qualité d'une seule image.
+
+Les panoramas bien au-delà de la limite de sécurité de 179 mégapixels de Pillow s'ouvrent aussi : la limite suit la mémoire de l'ordinateur (avec 16 Go, environ 1,4 gigapixel) et ces images géantes sont décodées une à une.
+
+Un JPEG, PNG, TIFF, GIF ou BMP tronqué — un téléchargement ou une copie interrompus, une photo récupérée sur une carte mémoire défaillante — s'ouvre avec la partie lue, comme dans un navigateur, au lieu de ne pas s'ouvrir du tout.
+
+Quand un autre programme enregistre par-dessus une image — un éditeur externe, sur place ou en renommant une copie par-dessus —, la visionneuse affiche la nouvelle version : l'image ouverte en zoom profond moins d'une seconde après la dernière écriture, les vignettes de la grille et les lignes de la Liste en quelques secondes.
+
+Un PNG ou TIFF en gris 16 bits — un scan, une carte de profondeur, une image scientifique ou astronomique — et un TIFF à virgule flottante montrent leur vraie luminosité dans la visionneuse, les vignettes, les aperçus et les outils, au lieu de presque blanc ou noir : les valeurs 16 bits sont mises à l'échelle sur toute leur plage, les valeurs flottantes de 0 à 1 vont du noir au blanc et toute autre plage est étirée.
+
+Les images avec un profil colorimétrique intégré — Display P3 des téléphones, Adobe RGB des appareils, CMJN et les profils de gris que Photoshop intègre aux images en niveaux de gris, comme Dot Gain 20 % ou Gray Gamma 1.8 — sont converties en sRGB pour la visionneuse et les vignettes ; une image en niveaux de gris le reste. Les images sans profil ou en sRGB sont affichées telles quelles.
+
+Les fichiers que Windows marque cachés — cachés aussi dans l'Explorateur et l'arborescence — et les noms commençant par un point, comme le ``._photo.jpg`` que macOS écrit à côté de chaque photo sur les cartes mémoire et lecteurs réseau, sont exclus de la grille de vignettes, des icônes de dossier, des listes des outils par lots, des dossiers surveillés, des analyses de la bibliothèque, de la CLI et des outils de dossier du serveur MCP ; les analyses récursives sautent les dossiers cachés comme ``$RECYCLE.BIN`` et le ``.Trashes`` d'un Mac. Une image cachée ouverte volontairement s'ouvre quand même.
 
 .. list-table::
    :header-rows: 1
@@ -170,7 +191,7 @@ Cliquez sur une vignette pour passer en mode Deep Zoom et obtenir un affichage d
    * - Superposition d'informations OSD
      - ``F8`` affiche nom de fichier / taille / type ; ``Ctrl + F8`` affiche un HUD de débogage (VRAM / cache / threads)
    * - Vue pixel
-     - ``Shift + P`` — à ≥ 400 % de zoom, superpose une grille de pixels et affiche les valeurs RGB / HEX sous le curseur
+     - ``Shift + P`` — à partir de 400 % de zoom, affiche les valeurs RGB / HEX sous le curseur, plus une grille de pixels dès que 40 000 pixels de l'image au plus sont à l'écran
    * - Modes de couleur
      - ``Shift + M`` fait défiler Normal / Niveaux de gris / Inversé / Sépia (GLSL, non destructif)
 
@@ -213,7 +234,7 @@ Organiser les images
 Notation et favoris
 ^^^^^^^^^^^^^^^^^^^
 
-En mode Deep Zoom, vous pouvez noter rapidement les images :
+Les touches notent l'image affichée en Deep Zoom. Dans la grille, elles notent les vignettes sélectionnées, sinon celle choisie aux flèches, sinon celle sous la souris : les photos que prendrait une étiquette de couleur ou un marquage de tri. Si toutes ont déjà cette note, la touche l'efface.
 
 .. list-table::
    :header-rows: 1
@@ -229,7 +250,7 @@ En mode Deep Zoom, vous pouvez noter rapidement les images :
 Étiquettes de couleur (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Marqueurs de couleur indépendants, stockés séparément de la notation 1 -- 5 étoiles. Utiles pour
+Marqueurs de couleur, stockés séparément de la notation 1 -- 5 étoiles. Utiles pour
 une catégorisation rapide (par ex. rouge = à rejeter, vert = à conserver, bleu = à retoucher).
 
 .. list-table::
@@ -239,14 +260,15 @@ une catégorisation rapide (par ex. rouge = à rejeter, vert = à conserver, ble
    * - Action
      - Touche
    * - Rouge / Jaune / Vert / Bleu / Violet
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (appuyer à nouveau pour effacer)
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (appuyer à nouveau pour effacer ; sur une
+       sélection, n'efface que si toutes les images sélectionnées ont déjà cette couleur)
    * - Appliquer par lot à la sélection
      - Sélectionnez plusieurs vignettes, puis appuyez sur la touche F correspondante
    * - Filtrer par couleur
      - ``Filtre`` > ``Par étiquette de couleur`` > choisir une couleur / N'importe quelle étiquette / Aucune étiquette
 
 La barre d'état affiche une pastille colorée pour l'image courante. Les vignettes affichent une bande colorée sur
-le bord gauche. La **vue Liste** dispose de colonnes dédiées **Étiquette** et **Notation** que vous pouvez
+le bord gauche. La **vue Liste** dispose de colonnes dédiées **Étiquette** et **Note** que vous pouvez
 trier — cliquez sur n'importe quelle cellule de la colonne étoile pour définir la note sans quitter la liste.
 
 Signets
@@ -279,13 +301,21 @@ Classez vos images par tags et albums.
    * - Ouvrir le gestionnaire
      - Appuyez sur ``T`` ou ``Fichier`` > ``Tags et albums``
    * - Marquer une image
-     - Clic droit sur l'image > ``Ajouter au tag``
+     - En Deep Zoom, clic droit > ``Tags`` ; pour les vignettes sélectionnées, clic droit >
+       ``Opérations par lots`` > ``Ajouter au tag``
    * - Ajouter à un album
-     - Clic droit sur l'image > ``Ajouter à l'album``
+     - En Deep Zoom, clic droit > ``Albums`` ; pour les vignettes sélectionnées, clic droit >
+       ``Opérations par lots`` > ``Ajouter à l'album``
    * - Filtrer par un seul tag / album
      - ``Filtre`` > ``Par tag`` / ``Par album``
    * - Filtre multi-tags (ET / OU)
      - ``Filtre`` > ``Filtre multi-tags…`` — cochez plusieurs tags ou albums, choisissez N'importe (OU) ou Tous (ET)
+   * - Nettoyer
+     - **Nettoyer…** dans le gestionnaire oublie les entrées des fichiers qui n'existent plus et fusionne
+       les noms qui ne diffèrent que par la casse (celui qui compte le plus d'images garde son
+       orthographe), une fois que vous avez confirmé les décomptes. Créer ou renommer un tag ou un album
+       avec un nom qui ne diffère d'un autre que par la casse ou les espaces est refusé, tout comme un
+       nom contenant une tabulation ou un saut de ligne
 
 Tri et filtrage
 ^^^^^^^^^^^^^^^
@@ -300,6 +330,8 @@ Tri et filtrage
      - ``Trier`` > ``Par nom``
    * - Trier par date de modification
      - ``Trier`` > ``Par date de modification``
+   * - Trier par date de prise de vue (heure EXIF de l'appareil ; à défaut, la date de modification)
+     - ``Trier`` > ``Par date de prise de vue``
    * - Trier par taille de fichier
      - ``Trier`` > ``Par taille de fichier``
    * - Trier par résolution
@@ -307,7 +339,7 @@ Tri et filtrage
    * - Croissant / Décroissant
      - ``Trier`` > ``Croissant`` / ``Décroissant``
    * - Filtrer par extension
-     - ``Filtre`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
+     - ``Filtre`` > ``Par extension`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
    * - Filtrer par note
      - ``Filtre`` > ``Par note``
    * - Filtrer par étiquette de couleur
@@ -332,7 +364,8 @@ Basculez le navigateur d'images entre la grille de vignettes et une liste détai
 --------------------------------
 
 Passez à l'onglet **Modify** en haut de la fenêtre pour entrer en mode édition.
-Vous pouvez également appuyer sur ``E`` ou faire un clic droit > ``Modify`` en mode Deep Zoom.
+En mode Deep Zoom, un clic droit > ``Modify`` > ``Develop`` ouvre aussi l'image courante dans cet onglet ;
+``E`` (ou clic droit > ``Modify`` > ``Annotate``) l'ouvre plutôt dans l'éditeur d'annotation séparé.
 
 ::
 
@@ -461,18 +494,20 @@ Ajustements d'image (panneau de droite, partie basse)
      - Décalage chaud / froid (bleu → jaune) ; utile pour les éclairages mixtes ou les prises de vue en intérieur
    * - Balance des blancs — Teinte
      - Décalage magenta / vert ; corrige les dominantes fluorescentes
-   * - Ombres
-     - Relevez ou écrasez les détails dans les zones tonales sombres
-   * - Tons moyens
-     - Ajustez la plage tonale médiane sans affecter les noirs et les blancs
    * - Hautes lumières
      - Récupérez les hautes lumières brûlées ou poussez davantage les zones claires
+   * - Ombres
+     - Relevez ou écrasez les détails dans les zones tonales sombres
+   * - Blancs
+     - Poussez à droite pour étirer les tons les plus clairs jusqu'au blanc ; à gauche pour ramener le blanc à un gris
+   * - Noirs
+     - Poussez à gauche pour écraser les tons les plus sombres jusqu'au noir ; à droite pour relever le noir vers un gris délavé
    * - Vibrance
      - Renforcement intelligent de la saturation — protège les tons chair et les couleurs déjà saturées
 
 Ces ajustements sont **non destructifs**. Chaque curseur écrit dans une recette d'édition stockée
-par image ; appuyez sur ``Réinitialiser`` à tout moment pour restaurer l'original, ou sur ``Ctrl + Z`` pour reculer
-parmi les modifications individuelles. Les recettes survivent aux redémarrages et peuvent être exportées / synchronisées
+par image ; appuyez sur ``Réinitialiser`` à tout moment pour restaurer l'original, ou sur ``Annuler`` / ``Rétablir``
+sous les curseurs pour parcourir les modifications une à une. Les recettes survivent aux redémarrages et peuvent être exportées / synchronisées
 via le flux de fichiers annexes XMP décrit dans la section Métadonnées.
 
 Le fichier sur disque ne change que si vous le demandez. **Apply Crop** et le **Save** des annotations réécrivent le résultat dans le fichier en conservant ses EXIF (appareil, date de prise de vue, GPS), son XMP et sa résolution (DPI). Un RAW d'appareil, un HEIC ou un fichier animé / multipage n'est jamais écrasé : le recadrage vous propose d'exporter, et l'enregistrement des annotations demande un nouveau fichier. Les outils à usage unique (CLAHE, mélangeur TSL, cadre photo, redressement
@@ -509,8 +544,8 @@ Espace de travail Paint (onglet Paint)
 
 Le troisième onglet principal — **Paint** — est un espace de travail de peinture complet
 avec documents à onglets multiples, calques vectoriels et matriciels, outils manga, images
-clés d'animation, et import/export PSD. Basculez-y depuis la barre d'onglets ou appuyez sur ``E``
-depuis le mode Deep Zoom pour envoyer l'image courante directement dans un nouvel onglet Paint.
+clés d'animation, et import/export PSD. Y basculer depuis la barre d'onglets charge sur le
+canevas l'image affichée par la visionneuse.
 
 Points forts en matière d'ergonomie — l'espace de travail Paint dispose d'un curseur
 de taille de pinceau complet qui s'adapte au zoom, d'icônes de curseur distinctes par outil,
@@ -529,20 +564,36 @@ Annuler / Rétablir / Tout sélectionner / Désélectionner / Ajuster / 100 %.
 Le dock des couleurs expose désormais un emplacement "transparent / sans couleur" (par défaut
 arrière-plan = transparent), et le pot de peinture + la baguette magique respectent tous deux
 les limites alpha, de sorte que les pixels effacés cessent de baver lors d'une nouvelle application.
+Sous les emplacements de couleur se trouve un anneau de teinte entourant un triangle
+saturation / luminosité : faites glisser sur l'anneau pour choisir la teinte et dans
+le triangle pour choisir la nuance ; les curseurs HSB / RGB et le champ hexadécimal
+suivent, et une couleur définie ailleurs déplace les repères de la roue. Le
+**dock Échantillons** affiche vos couleurs récentes, ou une palette choisie dans la liste
+déroulante au-dessus : les palettes intégrées Standard, Pastel et Manga, ou l'une des
+vôtres. **Enregistrer comme palette…** conserve les couleurs récentes sous un nom,
+**Supprimer la palette** retire l'une des vôtres (les palettes intégrées restent), et
+``Filtre`` > ``Correspondance avec les échantillons…`` repeint dans les couleurs
+qu'affiche le dock.
 
 ::
 
    +------+----------------------+----------------+
-   | Outils|                     | Couleur · Brush|
-   | Bar  |   Canevas (peinture) | Calque · Nav.  |
-   |      |                      | Matériaux · …  |
+   | Barre|                      | Couleur · Brush|
+   | d'   |   Canevas (peinture) | Calque · Nav.  |
+   |outils|                      | Matériaux · …  |
    +------+----------------------+----------------+
 
-Les docks de droite (Couleur, Pinceau, Calque, Navigateur, Bibliothèque de matériaux,
-Historique, Échantillons, Référence, Histogramme, Animation) sont regroupés en onglets dans
-une colonne unique afin que le canevas conserve toute la hauteur visible. Faites glisser
-n'importe quel titre de dock pour réorganiser ou détacher un panneau, puis enregistrez le
-résultat via ``Paramètres`` > ``Dispositions d'espace de travail…``.
+Les quatorze docks de droite sont regroupés en onglets dans une colonne unique afin que le
+canevas conserve toute la hauteur visible, et répartis en trois groupes :
+
+- **Dessin** — Couleur, Pinceau, Pot de peinture, Échantillons
+- **Canevas** — Calques, Navigateur, Historique, Pages, Animation, Histogramme
+- **Bibliothèque** — Matériaux, Tampons, Pose, Référence
+
+Chaque dock peut être affiché ou masqué individuellement depuis le menu ``Fenêtre``. Faites
+glisser n'importe quel titre de dock pour réorganiser ou détacher un panneau ;
+``Paramètres`` > ``Dispositions d'espace de travail…`` mémorise les docks affichés (voir
+*Dispositions d'espace de travail*).
 
 Palette d'outils (bande de gauche)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -562,7 +613,17 @@ Palette d'outils (bande de gauche)
      - Effacement alpha du calque actif
    * - Pot de peinture
      - ``G``
-     - Remplissage avec tolérance / contigu / échantillonner tous les calques
+     - Remplissage avec tolérance / contigu / échantillonner tous les calques.
+       Dans le dock Pot de peinture,
+       **Remplir automatiquement les zones fermées** remplit chaque zone
+       fermée du dessin au trait (le calque de référence, sinon le calque
+       actif) avec la couleur de premier plan ;
+       **Couleurs de base sur un nouveau calque** donne à chaque zone sa
+       propre couleur en aplat — les couleurs du dock Échantillons quand il
+       en affiche — sur un nouveau calque placé sous le dessin au trait, en
+       laissant vides les traits et l'espace autour du dessin. Des traits
+       sombres sur papier blanc fonctionnent aussi bien que des traits sur
+       fond transparent
    * - Pipette
      - ``I``
      - Sélectionner la couleur de premier plan depuis le canevas
@@ -571,38 +632,49 @@ Palette d'outils (bande de gauche)
      - Translater le calque actif ou la sélection
    * - Rectangle / Lasso / Baguette / Sélection rapide
      - ``M`` / ``L`` / ``W``
-     - Outils de sélection avec modes Remplacer / Ajouter / Soustraire / Intersection
+     - Outils de sélection avec modes Remplacer / Ajouter / Soustraire / Intersection ;
+       pour le Lasso, **Magnétique** dans la barre d'options aimante le contour sur
+       le bord le plus marqué du calque dans un rayon de 10 px lorsque vous relâchez
    * - Texte
      - ``T``
-     - Éditeur de texte en ligne avec police / taille / gras / italique
+     - Un clic ouvre la boîte de dialogue **Ajouter du texte** (police / taille / couleur /
+       gras / italique) ; le texte est dessiné dans les pixels du calque
    * - Dégradé
      - ``U``
-     - Remplissage par dégradé Linéaire / Radial / Angulaire / Diamant
+     - Remplissage par dégradé Linéaire / Radial / Angulaire / Diamant, de la
+       couleur de premier plan à celle d'arrière-plan ou le long d'un dégradé
+       enregistré à plusieurs points de couleur choisi sous **Couleurs** dans la
+       barre d'options ; **Modifier…** à côté crée, change et supprime ces dégradés
+       (nom, points de couleur avec position et opacité), qui sont conservés d'une
+       session à l'autre
    * - Flou / Doigt
-     - ``R``
+     - ``R`` (Doigt)
      - Manipulation locale des pixels
    * - Dodge / Burn / Sponge
      -
-     - Virage de chambre noire — éclaircir, assombrir ou saturer /
-       désaturer localement, pondéré par le pinceau et un masque de plage tonale
+     - Virage de chambre noire pondéré par le pinceau — Dodge éclaircit et Burn
+       assombrit les tons moyens, Sponge désature ; aucune option
    * - Plume (Bézier)
      - ``P``
-     - Tracé vectoriel avec édition des ancres et poignées
+     - Tracé vectoriel avec édition des ancres et poignées ; **Lisse** dans la
+       barre d'options trace une seule courbe lisse passant par tous les points
+       cliqués au lieu de lignes droites
    * - Tampon de duplication
      - ``S``
-     - Shift+clic définit la source, clic tamponne avec adoucissement
+     - Alt+clic définit la source, puis faites glisser pour tamponner avec la taille /
+       dureté / opacité du pinceau
    * - Bulle de dialogue
      - ``Ctrl + B``
-     - Bulle BD / manga avec queue automatique
+     - Faites glisser un cadre pour dessiner une bulle BD / manga (dessinée sans queue)
    * - Rectangle / Ellipse / Ligne / Polygone
      - ``Shift + R/E/I/P``
      - Primitives de forme vectorielle avec contour + remplissage
    * - Recadrage
      - ``C``
-     - Recadrage interactif avec préréglages de format
+     - Recadrage libre — faites glisser un rectangle ; le canevas est recadré au relâchement
    * - Transformation
      - ``Ctrl + T``
-     - Poignées de transformation libre / mise à l'échelle / rotation / inclinaison
+     - Huit poignées de mise à l'échelle et une poignée de rotation
    * - Main
      - ``H``
      - Panoramique du canevas par glissement du curseur
@@ -619,42 +691,59 @@ Pinceaux
 
    * - Pinceau
      - Effet
-   * - Stylo
-     - Trait net avec anti-crénelage, pinceau du quotidien
-   * - Marqueur / Surligneur
-     - Traits larges et semi-transparents qui se superposent
    * - Crayon
      - Trait fin de graphite, légèrement texturé
+   * - Stylo
+     - Trait net avec anti-crénelage, pinceau du quotidien
+   * - Marqueur
+     - Traits larges et semi-transparents qui se superposent
    * - Aérographe
-     - Points dispersés pilotés par la densité et le flux
-   * - Calligraphie
-     - La largeur varie selon la direction du trait
+     - Points dispersés qui s'accumulent en une pulvérisation douce
    * - Aquarelle
-     - Diffusion à bords humides et fusion douce
-   * - Fusain / Pastel gras
-     - Traits texturés et rugueux avec inclinaison sensible à la pression
+     - Bord humide avec un intérieur plus clair, comme un pigment qui s'amasse sur le pourtour
+   * - Sumi
+     - Encre de style calligraphique avec des bords de pinceau sec
 
-Chaque pinceau expose Taille / Opacité / Dureté / Densité / Mode de fusion dans
-le **dock Pinceau** et la **barre d'options** supérieure. Utilisez ``Paramètres`` >
-``Courbe de pression…`` pour remapper la pression de la tablette vers la largeur ou l'opacité, et
-``Édition`` > ``Capturer une pointe de pinceau…`` pour transformer une sélection en rectangle en pointe
-de pinceau personnalisée.
+Pastel gras, Surligneur et Calligraphie sumi sont des préréglages de pinceau construits sur
+ces types. Chaque pinceau expose Taille / Opacité / Dureté / Densité / Mode de fusion dans
+le **dock Pinceau** ; la **barre d'options** supérieure porte Taille / Opacité / Dureté.
+La pression du stylet de tablette module la taille et l'opacité du pinceau selon la courbe
+définie dans ``Paramètres`` > ``Courbe de pression…`` (faites glisser un point, cliquez pour
+en ajouter un, faites un clic droit pour en retirer un, ou partez de Linéaire / Douce /
+Dure) ; une souris dessine à pleine pression. Dans le dock Pinceau, **Dispersion** écarte
+chaque empreinte du tracé jusqu'à la fraction réglée de la taille du pinceau,
+**Variation de couleur** décale la teinte, la saturation et la luminosité de chaque
+empreinte, et **Suivre l'inclinaison du stylet** affine la pointe perpendiculairement à
+la direction dans laquelle penche le stylet de tablette et la fait pivoter pour la suivre
+(le préréglage Calligraphie sumi l'active) ; un pinceau pixel art conserve sa pointe
+carrée.
+Utilisez ``Édition`` > ``Capturer une pointe de pinceau…`` pour transformer une sélection en
+rectangle en pointe de pinceau personnalisée.
+Le **dock Matériaux** liste vos propres matériaux avant les trames et textures
+intégrées : les images du dossier ``materials`` situé dans le dossier du programme
+d'Imervue (un dossier de premier niveau nommé ``texture``, ``tone``, ``pattern``,
+``brush_tip`` ou ``pose`` les range dans cette catégorie) et les pointes de pinceau que
+vous avez capturées. ``Édition`` > ``Enregistrer la sélection comme matériau…`` y
+enregistre la partie sélectionnée de l'image visible sous le nom et dans la catégorie de
+votre choix (les pixels hors de la sélection deviennent transparents, et un matériau
+antérieur du même nom est conservé) ; le nouveau matériau apparaît aussitôt dans le dock.
 
 Calques
 ^^^^^^^
 
 Le **dock Calque** offre des vignettes, des bascules de visibilité, un renommage en ligne,
-un glisser-déposer pour réorganiser, ainsi que le mode de fusion + l'opacité du calque actif. Le
-menu ``Calque`` ajoute :
+la réorganisation avec les boutons ↑ / ↓ (ou ``Ctrl + ]`` / ``Ctrl + [``), ainsi que le mode
+de fusion + l'opacité du calque actif. Le menu ``Calque`` ajoute :
 
 - **Nouveau / Vectoriel / Dupliquer / Fusionner avec le calque inférieur** (``Ctrl + Shift + N`` /
   ``Ctrl + Shift + V`` / ``Ctrl + J`` / ``Ctrl + E``)
 - **Masques** — Ajouter un masque / Depuis la sélection / Inverser / Appliquer / Supprimer
   (``Ctrl + Shift + M`` ajoute ; ``Ctrl + Alt + Shift + M`` ajoute depuis la sélection)
-- **Masque d'écrêtage** — découper le calque au-dessus sur l'alpha courant
-  (``Ctrl + Alt + G``)
+- **Masque d'écrêtage** — activer / désactiver l'écrêtage du calque actif, qui est alors
+  écrêté sur l'alpha du calque inférieur (``Ctrl + Alt + G``)
 - **Effets de calque** — Ombre portée · Lueur externe · Contour ; effacer les effets
-- **Calque de référence** — épingler un calque comme source de la pipette
+- **Calque de référence** — épingler un calque comme source avec laquelle le **Pot de
+  peinture** compare les couleurs
 - **Calque 1-bit** — basculer le calque actif en calque d'art au trait binaire
 - **Diviser le calque par couleur** — séparer un calque de couleurs plates en un calque
   par couleur pour des re-remplissages au pot faciles
@@ -664,7 +753,8 @@ Sélections
 ^^^^^^^^^^
 
 Utilisez les outils rectangle / lasso / baguette / sélection rapide, puis l'entrée du menu **Édition**
-**Contour de la sélection…** pour tracer la sélection avec le pinceau actif.
+**Contour de la sélection…** pour tracer le contour de la sélection dans la couleur de
+premier plan, avec la Largeur et la Position choisies dans la boîte de dialogue.
 ``Q`` bascule le **mode masque rapide** — peignez avec n'importe quel pinceau pour affiner
 le bord de la sélection en rouge, puis appuyez à nouveau sur ``Q`` pour reconvertir en
 sélection rectangulaire.
@@ -674,11 +764,14 @@ Animation
 
 Le **dock Animation** transforme le document en bande d'images :
 
-- ``Ajouter une image`` capture l'état courant des calques dans une nouvelle image clé.
-- Cliquez sur la vignette d'une image pour y sauter.
-- ``Pelure d'oignon`` (menu Affichage) superpose les images voisines à faible alpha.
-- Exportez la bande via **Fichier > Exporter les pages** (CBZ pour les lecteurs de BD,
-  PDF pour l'impression) ou **Exporter l'animation** pour MP4 / GIF.
+- ``+ Image`` capture le dessin aplati dans une nouvelle image.
+- Cliquez sur la vignette d'une image pour la charger dans le calque actif.
+- ``Pelure d'oignon`` (menu Affichage) superpose l'image précédente à faible alpha.
+- ``▶ Lecture`` fait défiler les images à la cadence (FPS) choisie.
+- ``Exporter…`` enregistre les images en GIF animé, WebP ou PNG — le type de fichier
+  choisi détermine le format, un nom sans extension devient un GIF — chaque image
+  durant un tick de la cadence choisie. Le WebP est écrit sans perte ; le GIF réduit
+  chaque image à 255 couleurs et rend transparents les pixels à peine visibles.
 
 Menu Manga
 ^^^^^^^^^^
@@ -690,7 +783,7 @@ Menu Manga
    * - Action
      - Description
    * - Découpeur de cases
-     - ``Ctrl + Shift + P`` — divise le canevas en une grille de cases BD avec lignes / colonnes / gouttière / bordure / marge configurables
+     - ``Ctrl + Shift + P`` — divise le canevas en une grille de cases BD avec lignes / colonnes / gouttière / bordure / marge configurables ; avec **Aimanter à la case** coché dans la barre d'options du pinceau, chaque trait reste ensuite à l'intérieur de la case où il commence (jusqu'à ce que la taille du canevas change)
    * - Basculer en calque de trame
      - Convertir le calque actif en calque de trame (points de demi-teinte)
    * - Tamponner les numéros de page
@@ -699,47 +792,59 @@ Menu Manga
      - Générateurs de lignes de vitesse Radiales / Parallèles / Explosion
    * - Action flash
      - Superposition de type explosion / impact dans le style manga
-   * - Outil bulle de dialogue
-     - Faites glisser une bulle, déposez la queue vers le locuteur
+   * - Texte le long de la sélection…
+     - Place du texte le long du contour de la sélection, sur un nouveau calque — le texte, la police, la taille, la couleur, le gras et l'italique proviennent de la boîte de dialogue **Ajouter du texte**
 
 Filtres
 ^^^^^^^
 
-``Filtre`` ouvre une boîte de dialogue avec aperçu en direct pour chaque effet :
+Les filtres à un seul curseur — Postérisation, Seuil, Convertir en demi-teintes et
+Correspondance de la couleur — affichent un aperçu en direct pendant que vous faites
+glisser, sur les 480 × 480 pixels centraux du calque en taille réelle ; OK applique la
+valeur à tout le calque. Les autres ouvrent une simple boîte de dialogue de paramètres
+OK / Annuler :
 
-- **Niveaux** — curseurs noir / gamma / blanc, par canal
-- **Courbes** — points déplaçables (RGB / R / V / B) avec interpolation cubique monotone
+- **Niveaux** — curseurs point noir / point blanc / gamma
+- **Courbes** — un préréglage (courbe en S, Déboucher les ombres, Compresser les hautes lumières) avec un curseur Intensité
 - **Postérisation** — quantifier la couleur en N paliers
 - **Seuil** — convertir en noir / blanc pur selon un seuil
 - **Balance des couleurs automatique** — neutraliser les dominantes via grey-world / white-patch
 - **Grain de film** — bruit de luminance avec taille et quantité réglables
 - **Convertir en demi-teintes** — trame de points de style journal
+- **Correspondance de la couleur** — demande une image de référence, puis donne au calque
+  l'ambiance colorimétrique de cette image (chaque canal reprend la moyenne et la dispersion
+  de la référence) ; **Intensité** fond de l'image inchangée jusqu'à la correspondance complète
+- **Correspondance avec les échantillons** — repeint chaque pixel dans la couleur la plus
+  proche du dock Échantillons (choisissez ou importez d'abord des couleurs)
 
 Aides à la visualisation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - **Grille de pixels** (``Ctrl + Shift + '``) — superpose une grille d'un pixel à fort zoom
-- **Aligner sur les pixels / bords** — placement sous-pixel ramené à des coordonnées entières
-- **Pelure d'oignon** — superposition des images voisines d'animation
+- **Aligner sur les pixels / bords** — Aligner sur les pixels pose les touches du pinceau sur des pixels entiers ; Aligner sur les bords attire les points vers les bords proches du canevas ou d'un calque
+- **Pelure d'oignon** — superpose l'image d'animation précédente
 - **Guides de fond perdu** — guides de fond perdu / zone sûre pour l'impression
 - **Rotation du canevas** (``Ctrl + Shift + H``) — rotation de la vue sans rasterisation
 
 E/S de fichiers
 ^^^^^^^^^^^^^^^
 
-- **Ouvrir PSD…** (``Ctrl + O``) et **Enregistrer sous PSD…** (``Ctrl + S``) — aller-retour Photoshop multicalque avec masques, modes de fusion et effets de calque
-- **Exporter l'image…** — aplatir et enregistrer en PNG / JPEG / WebP / BMP / TIFF
-- **Exporter les pages → CBZ** / **→ PDF** — export de documents multi-images pour BD
-- **Importer / exporter les préréglages de pinceau**, **Importer une palette** — partager les ressources entre installations
-- **Instantanés d'enregistrement automatique** — instantanés périodiques en arrière-plan avec restauration du dernier depuis le menu Fichier
+- **Nouveau canevas…** — un nouvel onglet de la taille choisie : un préréglage papier, manga ou écran (A4, page manga B5, 1080p, 4K …), un préréglage enregistré avec **Enregistrer comme préréglage…**, ou n'importe quelles largeur et hauteur jusqu'à 16384 px, sur fond blanc ou transparent (**Nouvel onglet**, ``Ctrl + N``, conserve le format blanc par défaut de 1024 × 1024)
+- **Ouvrir PSD…** (``Ctrl + O``) aplatit le fichier en un seul calque dans un nouvel onglet ; **Enregistrer sous PSD…** (``Ctrl + S``) écrit les calques avec leurs modes de fusion (sans masques ni effets de calque)
+- **Exporter l'image…** — aplatir et enregistrer en PNG, JPEG, WebP, TIFF ou BMP, selon le type de fichier choisi (JPEG et BMP, qui ne gèrent pas la transparence, sur fond blanc). Seul **Enregistrer sous PSD…** marque l'onglet comme enregistré ; après un export, la fermeture d'Imervue demande toujours quoi faire des modifications non enregistrées de l'onglet
+- **Exporter les pages → CBZ** / **→ PDF** — exporter les pages d'un projet BD ; **Enregistrer le projet BD…** conserve la BD entière, chaque page avec ses calques, dans un seul fichier ``.imervue-proj``, et **Ouvrir un projet BD…** la rouvre
+- **Importer un préréglage de pinceau…**, **Importer une palette…** — importer des pinceaux et des palettes depuis d'autres installations ou applications
+- **Enregistrement automatique** — toutes les 2 minutes, tant que l'onglet actif a des modifications non enregistrées, un instantané est écrit ; au lancement suivant, un toast propose les instantanés et **Fichier > Restaurer l'enregistrement automatique** charge le plus récent dans l'onglet actif. La barre d'état indique quand le dernier instantané a été pris, et à la fermeture, Imervue demande quoi faire des onglets Paint ayant des modifications non enregistrées.
 
 Dispositions d'espace de travail
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Paramètres`` > ``Dispositions d'espace de travail…`` enregistre la disposition des docks,
-l'état des options d'outil et les panneaux actifs sous un nom, puis bascule entre eux en un
-clic — par exemple, une disposition "Dessin" avec les docks Pinceau + Couleur en évidence
-et une disposition "Composition" avec les docks Calque + Historique développés.
+``Paramètres`` > ``Dispositions d'espace de travail…`` liste les dispositions intégrées
+**Par défaut**, **Dessin**, **BD** et **Compacte**, ainsi que les vôtres. **Enregistrer
+l'actuelle…** enregistre sous un nom lesquels des docks Calques / Couleur / Pinceau /
+Navigateur / Historique / Référence sont affichés ; appliquer une disposition affiche ou
+masque ces docks et place le premier dock affiché au premier plan. Les options d'outil et
+la taille des docks ne sont pas enregistrées.
 
 ----
 
@@ -747,9 +852,9 @@ Espace de travail Puppet (onglet Puppet)
 ----------------------------------------
 
 Le quatrième onglet principal — **Puppet** — est un système d'animation de marionnettes
-2D riggées conçu de zéro. Il fait ce que fait Live2D (rigs par déformation de maillage,
-paramètres, mouvements, physique, expressions, groupes de poses, lip-sync, suivi par
-webcam) mais **sans SDK propriétaire**, **sans `live2d-py`**, et avec un format de fichier
+2D riggées conçu de zéro : rigs par déformation de maillage, paramètres, mouvements,
+physique, expressions, groupes de poses, lip-sync et suivi par webcam,
+**sans SDK propriétaire**, **sans** ``live2d-py``, et avec un format de fichier
 ``.puppet`` entièrement ouvert.
 
 .. note::
@@ -769,21 +874,25 @@ webcam) mais **sans SDK propriétaire**, **sans `live2d-py`**, et avec un format
    |               Dock Mouvements                     |
    +---------------------------------------------------+
 
+Les docks de droite partagent une zone à onglets : **Parameters** (un curseur par paramètre), **Expressions** (activer ou désactiver chaque expression), **Pose** (choisir quel membre de chaque pose group est affiché ; un groupe montre son premier membre tant qu'aucun autre n'est choisi) et **Bones** (la hiérarchie des deformers).
+
 Flux de travail de bout en bout
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. **Importer un PNG** — depuis la barre d'outils, ``Importer PNG…`` exécute
+1. **Importer un PNG** — ``Fichier`` > ``Importer PNG…`` exécute
    ``puppet.auto_mesh.puppet_from_png`` : grille triangulée bornée par l'alpha,
    un drawable, prêt à rendre.
-2. **Ajouter un déformateur** — ``Ajouter un déformateur de rotation`` (ancre + angle) ou
-   ``Ajouter un déformateur de déformation`` (treillis Bézier lignes × colonnes ; les sommets
+2. **Ajouter un déformateur** — ``Édition`` > ``Ajouter un déformateur de rotation`` (ancre + angle) ou
+   ``Ajouter un déformateur de déformation`` (treillis bilinéaire lignes × colonnes ; les sommets
    hors limites traversent sans changement).
-3. **Ajouter un paramètre** — ``Ajouter un paramètre`` ajoute un curseur au dock
+3. **Ajouter un paramètre** — ``Édition`` > ``Ajouter un paramètre`` ajoute un curseur au dock
    **Paramètres** à droite, avec un identifiant nommé automatiquement (``Param1``, ``Param2``, …).
 4. **Définir des clés** — faites glisser le curseur vers un extrême, modifiez la forme du déformateur
-   par code ou via l'édition du maillage, appuyez sur **Définir une clé**. Répétez au neutre et à l'extrême
+   par code, appuyez sur **Définir une clé**. Répétez au neutre et à l'extrême
    opposé. L'exécution interpolera désormais les champs du déformateur entre les clés adjacentes
-   chaque fois que le curseur bouge.
+   chaque fois que le curseur bouge. **Définir une clé** ne stocke que les formes des déformateurs :
+   **Éditer le maillage** déplace définitivement les sommets de repos du drawable, donc une
+   édition du maillage n'entre pas dans une clé.
 5. **Enregistrer** — ``Enregistrer sous…`` écrit le rig + textures + mouvements + expressions
    + physique dans un seul zip ``.puppet`` que vous pouvez partager ou ouvrir plus tard via
    ``Ouvrir Puppet…``.
@@ -792,20 +901,35 @@ Essayer un exemple complet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Le dépôt fournit une démo entièrement riggée à
-``examples/puppet/march_7th.puppet`` — un rig Cubism Live2D de 307 drawables
-converti dans l'arbre. Les textures et les morphs de sommets par paramètre sont
-cuits dans le zip ``.puppet``, de sorte que la démo s'ouvre avec le
-``requirements.txt`` par défaut sans redistribuer le Cubism SDK.
+``examples/puppet/imeru.puppet`` — **Imeru**, la mascotte originale
+d'Imervue. Elle est entièrement fabriquée par
+``examples/puppet/imeru/build.py`` (``py -3`` reconstruit le fichier ; il faut
+Blender 4.2 ou plus récent) : ses cheveux, son corps, sa tenue et ses bras sont
+modélisés et ombrés en cel-shading dans Blender avec les astuces d'ombrage des
+jeux d'anime en 3D (des cheveux éclairés via les normales d'une forme lisse de
+substitution, des mèches peintes et des traits de reflet, une occlusion
+précalculée), puis rendus un calque de marionnette à la fois, son visage est ombré
+à partir d'une carte SDF d'ombre faciale, ses yeux, ses sourcils et sa bouche sont
+peints par-dessus comme ceux d'un personnage de jeu en 3D, et les calques sont
+ensuite riggés, de sorte que la démo ne porte aucun droit de tiers : 45 drawables
+sur un canevas de 1024 × 1336, des rotations de tête faites de morphs de sommets
+en parallaxe façon Live2D, une ombre faciale qui change de forme à mesure qu'elle
+se détourne de la lumière, des iris découpés aux blancs des yeux, des bras à deux articulations
+construits à partir de déformeurs de rotation, et trois chaînes physiques qui font
+balancer les cheveux.
 
-Le rig comporte 203 paramètres standard Cubism (``ParamAngleX/Y/Z``,
-``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), de sorte que
-chaque pilote d'entrée standard (webcam, clignement, lip-sync, regard vers le curseur)
-le pilote sans configuration par rig. Neuf mouvements en boucle sont livrés
-dans le pack — boucles d'inactivité Cubism converties par l'auteur, plus des boucles
-de gestes de référence dans les groupes ``Idle`` et ``TapHead``.
+Le rig comporte tous les paramètres standard Cubism (``ParamAngleX/Y/Z``,
+``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
+``ParamArmLA/LB/RA/RB`` pour les bras, de sorte que chaque pilote d'entrée standard
+(webcam, clignement, lip-sync, regard vers le curseur) le pilote sans configuration
+par rig. Huit mouvements sont livrés dans le fichier : deux mouvements d'inactivité
+en boucle dans le groupe ``Idle``, ``tap_head`` dans ``TapHead`` et ``shy``
+dans ``TapBody`` (un clic sur sa tête ou son corps les joue), ainsi que ``greet``,
+``wave``, ``surprised`` et ``sleepy`` dans ``Gesture`` ; sept expressions les
+accompagnent (smile, happy, surprised, sad, angry, blush, sleepy).
 
 Ouvrez l'onglet Puppet, cliquez sur **Ouvrir Puppet…**, pointez vers
-``march_7th.puppet`` — la figure apparaît centrée. Faites glisser n'importe quel curseur
+``imeru.puppet`` — la figure apparaît centrée. Faites glisser n'importe quel curseur
 de paramètre pour piloter une articulation, ou cliquez sur l'un des mouvements dans le dock
 Mouvements — un simple clic associe le mouvement et démarre immédiatement la lecture.
 
@@ -813,18 +937,20 @@ Mouvements — un simple clic associe le mouvement et démarre immédiatement la
 
 1. Lancez Imervue. Depuis les sources : ``python -m Imervue``. Depuis la
    build empaquetée : exécutez l'exécutable / bundle d'application ``Imervue``. Le
-   répertoire ``examples/`` est intégré à la fois dans le wheel et l'EXE Nuitka,
-   donc le rig est présent sur le disque là où vous l'avez installé.
+   répertoire ``examples/`` est intégré aux builds Nuitka et PyInstaller ; une
+   installation pip / wheel ne l'inclut pas (depuis une copie des sources, les rigs
+   se trouvent dans ``examples/puppet/``).
 2. Cliquez sur l'onglet **Puppet** en haut de la fenêtre.
-3. Barre d'outils → **File > Examples > March 7Th** (ou la liste déroulante
-   **Examples ▾** de la barre d'outils). Le rig de 307 drawables se charge centré et
-   le dock des paramètres se remplit des 203 curseurs standard Cubism.
+3. **File > Examples > Imeru** (ou la liste déroulante
+   **Examples ▾** de la barre d'outils). Le rig se charge centré et
+   le dock des paramètres se remplit de ses curseurs.
 4. Dans le dock **Mouvements** en bas, simple-clic sur n'importe quelle entrée de mouvement
-   (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …).
-   La lecture démarre immédiatement ; cliquez à nouveau pour arrêter, ou choisissez
-   un autre mouvement pour faire un fondu enchaîné vers lui.
+   (``idle_look``, ``wave``, ``tap_head`` …).
+   La lecture démarre immédiatement ; un nouveau clic la relance, le bouton **Stop**
+   du dock arrête la lecture, et choisir un autre mouvement fait un fondu enchaîné vers lui.
 5. Basculez les interrupteurs d'entrée en direct sur la barre d'outils pour piloter le rig
-   depuis vos propres entrées — **Drag-track head** pour le regard vers le curseur,
+   depuis vos propres entrées — **Drag-track head** pour tourner la tête et les yeux
+   vers le curseur quand il se déplace sur le canevas,
    **Auto-blink** pour le clignement cyclique des yeux, **Auto idle** + **Idle
    motions** pour la respiration + les clips Idle aléatoires, **Mic lip-sync** pour
    l'ouverture de la bouche depuis le RMS du microphone, **Webcam tracking** pour la
@@ -842,7 +968,7 @@ Un fichier ``.puppet`` est une archive zip :
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # required — manifest, drawables, deformers, parameters
    ├── textures/
    │   ├── face.png             # referenced by drawables[].texture
@@ -868,12 +994,34 @@ Exemple de ``puppet.json`` de premier niveau ::
      "physics": "physics.json"
    }
 
-Le schéma complet (drawables, déformateurs, paramètres, mouvements, expressions,
+La spécification complète (drawables, déformateurs, paramètres, mouvements, expressions,
 pose, physique) se trouve dans ``Imervue/puppet/FORMAT.md`` du dépôt. JSON +
 PNG uniquement — aucun binaire propriétaire, entièrement diffable via git.
 
+Le format est ouvert et vérifiable par machine :
+
+- Un ``.puppet`` enregistré commence par une entrée ``mimetype`` non compressée contenant
+  ``application/vnd.imervue.puppet+zip``, si bien qu'un programme peut le reconnaître dès
+  ses premiers octets, et chaque fichier JSON nomme son JSON Schema dans ``$schema``.
+- Quatre JSON Schemas (draft 2020-12) — ``puppet``, ``motion``, ``expression``
+  et ``physics`` — sont publiés dans ``docs/schemas/`` ; les éditeurs qui suivent
+  ``$schema`` vérifient un fichier au fil de la saisie.
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`` (MCP
+  ``puppet_validate``) vérifie un fichier par rapport aux schémas, aux règles du chargeur
+  et aux vérifications du rig ; ``puppet-schema`` (MCP ``puppet_schema``) affiche un schéma.
+- ``docs/examples/read_puppet.py`` lit un ``.puppet`` avec la seule bibliothèque standard
+  de Python, comme référence pour d'autres programmes ; la spécification et les
+  schémas sont sous licence MIT, si bien que n'importe quel programme peut lire ou écrire le format.
+- Un fichier d'une version de format plus récente est refusé avec la version qu'il utilise,
+  de sorte qu'un Imervue plus ancien invite à se mettre à jour au lieu de le lire de travers.
+
 Référence de la barre d'outils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+La barre d'outils porte **Examples ▾**, les six bascules en direct, **Edit mesh**,
+**Record…** et **Reset to rest**. Toutes les autres entrées ci-dessous sont des éléments
+du menu **File**, **Edit**, **Live**, **Output** ou **Tools** ; ces menus contiennent
+aussi les entrées de la barre d'outils.
 
 .. list-table::
    :header-rows: 1
@@ -882,8 +1030,9 @@ Référence de la barre d'outils
    * - Action
      - Rôle
    * - Open Puppet… / Examples ▾
-     - Charger un ``.puppet`` depuis le disque, ou choisir l'un des rigs
-       fournis dans ``examples/puppet/`` directement depuis la barre d'outils
+     - Charger un ``.puppet`` depuis le disque (menu **File**), ou choisir l'un des
+       rigs fournis dans ``examples/puppet/`` depuis **Examples ▾** (le bouton de la
+       barre d'outils, aussi dans **File**)
    * - Import PNG… / Import PSD… / Import Cubism…
      - Créer un maillage automatique pour un PNG, séparer un PSD par calques, ou échantillonner
        et reconstruire un rig Cubism. Le sélecteur Cubism accepte à la fois ``.moc3`` et
@@ -896,9 +1045,10 @@ Référence de la barre d'outils
    * - Save As…
      - Écrit le rig actuel sous forme de zip ``.puppet``
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - Construit le rig depuis la barre d'outils
+     - Construit le rig depuis le menu **Edit**
    * - Drag-track head
-     - Décalage du curseur → ``ParamAngleX`` / ``ParamAngleY`` +
+     - La tête et les yeux se tournent vers le curseur quand il se déplace sur le
+       canevas : décalage du curseur → ``ParamAngleX`` / ``ParamAngleY`` +
        ``ParamEyeBallX`` / ``ParamEyeBallY``
    * - Auto-blink
      - Cycle cosinusoïdal fermeture→ouverture sur ``ParamEyeLOpen`` / ``ParamEyeROpen``
@@ -906,6 +1056,13 @@ Référence de la barre d'outils
        afin que les pilotes concurrents ne puissent pas bloquer le clignement)
    * - Mic lip-sync
      - RMS du microphone → ``ParamMouthOpenY`` (nécessite ``sounddevice``)
+   * - Lip-sync from Audio File…
+     - Menu **Live** : transforme un WAV (PCM 8, 16 ou 32 bits) en un mouvement
+       nommé ``lipsync_<file>`` qui ouvre ``ParamMouthOpenY`` selon le volume,
+       30 fois par seconde (les images clés qui n'apportent rien sont supprimées),
+       et lit le WAV comme son du mouvement ; il remplace un mouvement du même nom
+       et est sélectionné dans le dock Mouvements. Ne nécessite aucune dépendance
+       optionnelle
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → lacet / tangage / roulis de la tête +
        yeux + bouche (nécessite ``opencv-python`` + ``mediapipe`` ;
@@ -916,26 +1073,38 @@ Référence de la barre d'outils
    * - Edit mesh
      - Cliquer-glisser sur les sommets du canevas pour affiner le maillage
    * - Record motion
-     - Capture les changements de paramètres dans un nouveau ``Motion`` et l'ajoute au
-       document — cuisson à partir d'une prise, sans création manuelle d'images clés
+     - Menu **Output** uniquement : capture les changements de paramètres dans un nouveau
+       ``Motion`` et l'ajoute au document — cuisson à partir d'une prise, sans création
+       manuelle d'images clés
    * - Capture frame… / Record… / Export all motions…
      - Enregistrer un PNG, basculer un enregistrement GIF / WebM / MP4, ou
        rendre par lots chaque mouvement du rig dans son propre fichier (le tout via
-       le même chemin de rendu hors écran "personnage seul" utilisé pour le streaming)
+       le même chemin de rendu hors écran "personnage seul" utilisé pour le streaming).
+       Une image capturée garde la taille propre du rig (côté long d'au plus
+       4096 px) sur fond transparent ; un enregistrement ou un export par lots
+       fait tenir le personnage dans 1080 px sur fond blanc, car les images
+       GIF / WebM / MP4 n'ont pas d'alpha
    * - Output > Virtual camera / NDI output
-     - Surfaces de streaming en direct — voir *Streaming en direct vers OBS* ci-dessus
+     - Surfaces de streaming en direct — voir *Streaming en direct vers OBS* ci-dessous
    * - Reset to rest
      - Arrête net le lecteur de mouvement, désactive tous les pilotes en direct,
        efface les expressions / groupes de pose, restaure les paramètres par défaut
    * - Fit to Window
-     - Recentre et redimensionne la marionnette dans le canevas
+     - Menu **Tools** : recentre et redimensionne la marionnette dans le canevas
+   * - Repair Rig
+     - Menu **Tools** : dans chaque drawable, supprime les triangles cassés et
+       d'aire nulle, fusionne les sommets en double qui partagent la même position
+       et le même UV (une couture de texture reste séparée), retire les sommets
+       qu'aucun triangle n'utilise — les poids d'os et les vertex morphs suivent
+       les sommets conservés — et fait en sorte que les poids d'os de chaque
+       sommet totalisent 1 ; la barre d'état indique ce qui a changé
 
 Enregistrer ses propres mouvements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Pour capturer une prise personnalisée plutôt que de créer les images clés à la main :
 
-1. Basculez **Record motion** dans la barre d'outils — une boîte de dialogue de nom apparaît.
+1. Basculez **Output > Record motion** — une boîte de dialogue de nom apparaît.
 2. Pendant l'enregistrement, faites glisser des curseurs, activez **Webcam tracking**, laissez la physique
    tourner, n'importe quoi qui écrive des valeurs de paramètres.
 3. Désactivez **Record motion** — l'enregistreur cuit le flux capturé à 30 Hz dans un
@@ -946,13 +1115,21 @@ Pour capturer une prise personnalisée plutôt que de créer les images clés à
 Les mouvements personnalisés enregistrés ainsi font des allers-retours via le même fichier JSON
 ``motions/<name>.json`` que ceux créés à la main.
 
+**Edit > Edit motion…** ouvre la timeline du mouvement que tient le lecteur :
+faites glisser une clé ou une poignée de Bézier, remodelez la piste choisie selon
+un easing nommé avec **Ease** et **Apply to Track** (31 courbes ; elastic et
+bounce deviennent 16 clés linéaires par segment), ou allégez une prise à 30 Hz
+avec **Simplify Keys**, qui supprime toute clé située à moins de la tolérance
+(un pourcentage de la plage de chaque paramètre) de la droite passant par ses
+voisines.
+
 Streaming en direct vers OBS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Deux chemins de sortie, les deux rendent la marionnette seule (pas de fond en damier,
 pas de chrome d'éditeur) dans un framebuffer hors écran avant de la passer à la surface
 de streaming. Le côté le plus long de la sortie est plafonné à 1080 px afin que les
-canevas natifs Cubism (March 7th fait 3503×7777) ne soient pas rejetés par les
+canevas natifs Cubism (souvent hauts de 3000 à 8000 px) ne soient pas rejetés par les
 pilotes de caméra virtuelle DirectShow.
 
 **A. Caméra virtuelle** — apparaît comme une webcam dans la liste de sources *Video
@@ -961,7 +1138,7 @@ OBS Studio 26+ embarque le pilote *OBS Virtual Camera* sur Windows / macOS (cliq
 sur *Start Virtual Camera* dans OBS une fois pour l'enregistrer) ; Linux utilise
 ``v4l2loopback-dkms`` +
 ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``.
-La barre d'outils **Output > Virtual camera** ouvre le flux.
+La bascule de menu **Output > Virtual camera** ouvre le flux.
 
 DirectShow / AVFoundation / v4l2loopback sont uniquement RGB — pas de canal alpha —
 donc Imervue remplit la zone hors du personnage avec
@@ -983,7 +1160,7 @@ qu'OBS / vMix composent directement par-dessus leurs propres scènes sans passe
 de chroma key. ``pip install ndi-python`` + le runtime
 `NDI Tools <https://ndi.video/tools/>`_ + le plugin
 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_.
-La barre d'outils **Output > NDI output** diffuse la source (nom par défaut
+La bascule de menu **Output > NDI output** diffuse la source (nom par défaut
 *Imervue Puppet*).
 
 ``ndi-python`` ne fournit qu'une distribution source ; pip la construit
@@ -1010,9 +1187,11 @@ Dépendances optionnelles
   redistribution ; les utilisateurs déposent le SDK sous ``<cwd>/sdk/`` ou définissent
   la variable d'environnement ``CUBISM_CORE_DLL``)
 
-Le plugin se dégrade gracieusement lorsque l'une de ces dépendances est absente — la
-bascule correspondante dans la barre d'outils revient automatiquement et affiche un
-indice "install <package>". ``File > Install dependencies…`` installe par lot
+L'onglet Puppet se dégrade gracieusement lorsqu'un paquet Python est absent — la
+bascule correspondante reste désactivée et l'installateur de dépendances s'ouvre en
+proposant de l'installer ; une fois le paquet installé, la bascule se réactive. Un
+indice textuel n'apparaît que lorsque le paquet est présent mais que le périphérique
+ou le pilote échoue. ``File > Install dependencies…`` installe par lot
 chaque paquet Python optionnel en une seule fois.
 
 ----
@@ -1045,8 +1224,8 @@ ainsi :
    multi-écran).
 #. **Modèle d'interaction** — zones cliquables au clic gauche, menu
    contextuel complet du clic droit, barre d'état système.
-#. **Pilotes en direct** — six pilotes d'entrée optionnels et leurs
-   dépendances optionnelles.
+#. **Pilotes en direct** — sept pilotes d'entrée (trois activés par
+   défaut) et leurs dépendances optionnelles.
 #. **Script du pet** — le fichier JSON qui vous permet de remplacer
    la voix du pet par vos propres répliques, de planifier des
    rappels et de lier les réponses par zone cliquable / par
@@ -1061,7 +1240,7 @@ Démarrage rapide
 ^^^^^^^^^^^^^^^^
 
 1. Passez à l'onglet **Desktop Pet**.
-2. Cliquez sur **Load bundled March 7th** pour utiliser le
+2. Cliquez sur **Load bundled Imeru** pour utiliser le
    personnage inclus, ou sur **Open Puppet…** pour choisir votre
    propre fichier ``.puppet``.
 3. La superposition apparaît sur votre bureau et la case **Show pet
@@ -1085,12 +1264,12 @@ L'onglet expose trois chemins de chargement :
 
 * **Open Puppet…** — choisissez n'importe quel fichier ``.puppet``
   sur disque.
-* **Load bundled March 7th** — ouvre le rig livré sous
-  ``examples/puppet/march_7th.puppet``. Le résolveur consulte
-  d'abord ``examples_dir()`` (sûr en mode gelé pour les builds
-  Nuitka empaquetés / installés via pip) puis se rabat sur une
-  recherche relative à la racine du dépôt afin que le bouton
-  fonctionne dans les deux modes d'exécution.
+* **Load bundled Imeru** — ouvre le rig livré sous
+  ``examples/puppet/imeru.puppet``. Le résolveur consulte
+  d'abord ``examples_dir()`` (à côté du programme dans les builds
+  empaquetés Nuitka / PyInstaller, la racine du dépôt dans une
+  copie des sources) puis se rabat sur une recherche relative au
+  dossier de travail courant.
 * **Dernier rig** — le rig chargé précédemment se restaure
   automatiquement au démarrage d'Imervue depuis le champ de
   réglages ``last_rig_path`` ; l'onglet Desktop Pet ré-instancie
@@ -1169,10 +1348,12 @@ au-dessus de toutes les autres fenêtres.
        ``GetWindowRect`` sous Windows ; sur macOS / Linux il
        devient un no-op silencieux (le pet reste visible).
    * - Mise en pause à l'arrêt
-     - Le tick de rendu à ~30 FPS et le tick de script à 1 Hz
-       s'arrêtent tous deux sur ``hideEvent`` afin qu'un pet
-       masqué coûte zéro CPU. Ils redémarrent au prochain
-       ``showEvent``.
+     - Le tick de rendu à ~30 FPS, le tick de script à 1 Hz et la
+       scrutation du plein écran (sauf si c'est le plein écran qui
+       a masqué le pet) s'arrêtent sur ``hideEvent`` et redémarrent
+       au prochain ``showEvent``. Les minuteries des pilotes en
+       direct (clignement, idle, mouvements idle, regard)
+       continuent de tourner.
    * - Préréglages de taille
      - Petit (200 × 300), moyen (320 × 480), grand (480 × 720).
        Le pet se redimensionne autour de son centre actuel afin
@@ -1186,11 +1367,13 @@ au-dessus de toutes les autres fenêtres.
        complètement invisible vous le ferait perdre.
    * - Mémoire de position
      - Le ``(x, y)`` post-accrochage après chaque relâchement est
-       persisté. Au prochain lancement, le pet revient à cette
-       coordonnée écran. Si la position enregistrée ne tombe plus
-       sur aucun écran connecté (vous avez débranché un moniteur
-       depuis le dernier lancement), le pet se rabat sur le coin
-       inférieur droit de l'écran principal.
+       persisté, avec le moniteur sur lequel il se trouve. Au
+       prochain lancement, le pet revient à cette position, bridée
+       à l'intérieur de ce moniteur. Si le moniteur a disparu
+       (vous l'avez débranché depuis le dernier lancement), le pet
+       va sur le premier écran, sa position enregistrée y étant
+       bridée. Le coin inférieur droit ne sert que si aucune
+       position n'a jamais été enregistrée.
 
 Modèle d'interaction
 ^^^^^^^^^^^^^^^^^^^^
@@ -1214,24 +1397,33 @@ comme suit :
    liste de repli intégrée).
 
 Un geste de glisser-déplacer supprime le gestionnaire de clic, donc
-déplacer le pet ne déclenche ni mouvement ni parole.
+déplacer le pet n'affiche pas de bulle de dialogue. Appuyer joue un
+mouvement du groupe ``Drag`` du rig et relâcher après un glissement
+en joue un de son groupe ``Land``, lorsque le rig possède ces
+groupes.
 
 **Clic droit n'importe où sur le corps**
 
 Ouvre un menu contextuel avec la structure suivante :
 
 * **Hide pet** — action de haut niveau qui ferme la superposition.
-* Sous-menu **Live drivers** — six bascules à cocher (Auto idle,
-  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
-  Webcam tracking). L'état coché reflète l'état des pilotes en
-  direct, donc le menu indique ce qui tourne actuellement.
+* Sous-menu **Live drivers** — sept bascules à cocher (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mouse gaze, Mic
+  lip-sync, Webcam tracking). L'état coché reflète l'état des
+  pilotes en direct, donc le menu indique ce qui tourne actuellement.
 * Sous-menu **Play motion** — peuplé depuis la liste
   ``document.motions`` du rig actif. Sélectionner une entrée joue
-  ce mouvement (et peut déclencher la voix du pet si le script lie
-  une réplique à celui-ci).
+  ce mouvement ; il ne prononce aucune réplique ``motion_lines``
+  (celles-ci ne répondent qu'à un clic sur une zone cliquable).
 * Sous-menu **Apply expression** — peuplé depuis
-  ``document.expressions`` du rig. Sélectionner bascule la
-  superposition de paramètres de l'expression.
+  ``document.expressions`` du rig. Chaque entrée est cochée tant
+  que son expression est active ; en sélectionner une ajoute la
+  superposition de paramètres de l'expression, la sélectionner à
+  nouveau la retire.
+* Sous-menu **Pose** — un sous-menu par pose group du rig (intitulé
+  du nom affiché du groupe, sinon de son id) qui liste les membres du
+  groupe ; le membre affiché est coché, et en sélectionner un autre
+  l'affiche à sa place. Désactivé lorsque le rig n'a aucun pose group.
 * Cinq bascules à cocher de haut niveau : **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — accès rapide aux mêmes bascules de l'onglet
@@ -1263,8 +1455,10 @@ Pilotes en direct
 Chaque pilote en direct est créé paresseusement à la première
 activation, donc un pet dormant ne paie aucun coût de minuterie /
 thread pour les pilotes que vous n'allumez jamais. L'état de chaque
-pilote est persisté ; activer, fermer Imervue puis relancer rouvre
-le pet avec les mêmes pilotes en marche.
+pilote est persisté ; activer, fermer Imervue puis relancer restaure
+le rig avec les mêmes pilotes en marche. La superposition elle-même
+n'apparaît au lancement que si **Show the pet when Imervue starts**
+est coché dans le groupe Window de l'onglet.
 
 .. list-table::
    :header-rows: 1
@@ -1280,8 +1474,9 @@ le pet avec les mêmes pilotes en marche.
      - aucune
    * - **Idle motions**
      - Choisit aléatoirement un mouvement du groupe ``Idle`` du
-       rig toutes les quelques secondes et le joue. S'arrête si
-       un mouvement est déjà en cours.
+       rig et le joue — un tout de suite à l'activation, puis
+       toutes les quelques secondes. S'efface pendant qu'un
+       mouvement hors Idle se joue.
      - aucune
    * - **Auto-blink**
      - Ferme et rouvre les yeux selon une courbe cosinus douce
@@ -1290,20 +1485,27 @@ le pet avec les mêmes pilotes en marche.
        d'ouverture des yeux ne suppriment pas le clignement.
      - aucune
    * - **Drag-track head**
-     - La tête + les yeux tournent vers la position globale du
-       curseur même quand le curseur n'est pas sur le pet. Pilote
+     - La tête + les yeux tournent vers le curseur pendant qu'il
+       se déplace sur le pet. Pilote
        ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
        ``ParamEyeBallY``.
      - aucune
+   * - **Mouse gaze**
+     - Les yeux et la tête suivent le curseur n'importe où à
+       l'écran, par rapport au centre du pet (les yeux mènent).
+       Pilote les mêmes quatre paramètres.
+     - aucune
    * - **Mic lip-sync**
-     - L'amplitude RMS du micro pilote ``ParamMouthOpenY``. Le
+     - L'amplitude RMS du micro pilote ``ParamMouthOpenY``. La
+       bouche s'ouvre proportionnellement au volume de votre voix,
+       si bien que le personnage semble parler quand vous parlez.
      - ``sounddevice``
    * - **Webcam tracking**
      - MediaPipe FaceLandmarker lit votre webcam à ~30 FPS et
        pilote la pose de la tête + l'ouverture des yeux + les
-       paramètres d'ouverture de la bouche. Ouvre une petite
-       fenêtre d'aperçu en direct pour que vous puissiez vérifier
-       que la caméra voit votre visage.
+       paramètres d'ouverture de la bouche. Aucune fenêtre
+       d'aperçu ne s'ouvre pour le pet (l'aperçu de la caméra
+       appartient à l'onglet Puppet).
      - ``opencv-python`` + ``mediapipe``
 
 Les deux pilotes à dépendance optionnelle se dégradent gracieusement :
@@ -1317,14 +1519,19 @@ Script du pet — voix personnalisée et événements planifiés
 
 La bulle de dialogue du pet puise dans un fichier JSON que vous
 pouvez écrire et charger depuis le groupe **Pet script** de
-l'onglet. Le script régit quatre choses :
+l'onglet. Le script régit cinq choses :
 
 * **Greetings** — répliques par défaut au clic quand rien de plus
   spécifique ne correspond.
+* **Time-of-day greetings** — salutations selon la tranche de
+  l'horloge locale (``morning`` 05–11 h, ``afternoon`` 12–17 h,
+  ``evening`` 18–21 h, ``night`` 22–04 h), utilisées avant les
+  salutations simples ; une tranche sans répliques se rabat sur
+  celles-ci.
 * **Hit-area responses** — paniers de répliques par ``HitArea.id``.
 * **Motion lines** — paniers de répliques par nom de mouvement,
-  déclenchés quand le pet démarre ce mouvement (depuis une zone
-  cliquable ou depuis le menu contextuel).
+  prononcés quand un clic sur une zone cliquable joue ce mouvement
+  (pas quand un mouvement est lancé depuis le menu contextuel).
 * **Scheduled chimes** — répliques pilotées par minuterie qui se
   déclenchent toutes les ``every_seconds`` de temps horloge
   monotone.
@@ -1335,10 +1542,14 @@ Schéma (versionné — les futurs champs sont compatibles ascendants) :
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
+     "time_of_day_greetings": {
+       "morning": ["Good morning!"],
+       "night": ["Still up?"]
+     },
      "hit_responses": {
        "HitAreaHead": ["Hey, my head!", "Stop poking!"],
        "HitAreaBody": ["Hehe~", "Pat pat?"]
@@ -1366,8 +1577,9 @@ Règles de chargement :
   remonter le chemin dans l'étiquette d'état.
 * La cascade zone cliquable / mouvement / salutation est en
   couches : un clic gauche consulte ``hit_responses[area.id]``
-  d'abord, puis ``motion_lines[area.motion]``, puis ``greetings``,
-  puis le jeu de salutations par défaut intégré comme plancher.
+  d'abord, puis ``motion_lines[area.motion]``, puis
+  ``time_of_day_greetings``, puis ``greetings``, puis le jeu de
+  salutations par défaut intégré comme plancher.
 * Le suivi du temps utilise ``time.monotonic`` afin que mettre le
   portable en veille ou faire bondir l'horloge système ne puisse
   pas déclencher en rafale des événements en file.
@@ -1377,10 +1589,15 @@ jeu de salutations intégré ; le chemin de script persisté est
 effacé afin que le prochain lancement ne le recharge pas.
 
 Un exemple fonctionnel se trouve à
-``examples/desktop_pet/march_7th.petscript.json`` — six
-salutations, deux paniers de zones cliquables (tête / corps),
-trois lignes de mouvement (wave / curtsy / cheer) et un rappel
-d'étirement de 30 minutes.
+``examples/desktop_pet/imeru.petscript.json`` — six
+salutations, une réplique pour chaque moment de la journée, deux
+paniers de zones cliquables (``Head`` / ``Body``), des répliques
+pour cinq mouvements (wave / greet / surprised / sleepy / shy) et
+un rappel d'étirement de 30 minutes. Les noms des paniers sont
+ceux des zones cliquables d'Imeru, donc sa tête et son corps
+répondent aux clics ; un rig dont les zones cliquables portent les
+noms de Cubism (``HitAreaHead`` / ``HitAreaBody``) a besoin de
+paniers sous ces noms-là.
 
 Persistance
 ^^^^^^^^^^^
@@ -1411,16 +1628,17 @@ démarrage.
    * - ``position``
      - ``[-1, -1]``
      - ``(x, y)`` en coordonnées écran du dernier relâchement de
-       glissement. ``-1, -1`` signifie « utiliser le coin
-       inférieur droit de l'écran principal ». Un débranchement
-       multi-écran entre sessions retombe de la même façon.
+       glissement. ``-1, -1`` (jamais enregistré) signifie
+       « utiliser le coin inférieur droit ». Quand le moniteur
+       enregistré a disparu, la position est bridée dans le
+       premier écran.
    * - ``size_preset``
      - ``"medium"``
      - L'une de ``small`` / ``medium`` / ``large``.
    * - ``opacity``
      - ``1.0``
-     - Bridé à ``[0.1, 1.0]``. Les valeurs hors plage reviennent
-       au défaut.
+     - Les valeurs hors plage sont bridées à ``[0.1, 1.0]`` ;
+       seule une valeur non numérique revient au défaut.
    * - ``click_through``
      - ``false``
      -
@@ -1438,19 +1656,36 @@ démarrage.
      - ``24``
      - Bridé à ``[0, 200]`` px.
    * - ``drivers``
-     - tous ``false``
+     - ``auto_idle``, ``idle_motion``, ``auto_blink``
+       ``true`` ; les autres ``false``
      - Sous-dict indexé par id de pilote (``auto_idle``,
        ``idle_motion``, ``auto_blink``, ``drag_track``,
-       ``mic_lipsync``, ``webcam_tracking``). Les clés inconnues
-       font un aller-retour intactes pour la compatibilité
-       ascendante.
+       ``mouse_gaze``, ``mic_lipsync``, ``webcam_tracking``).
+       Les clés inconnues font un aller-retour intactes pour la
+       compatibilité ascendante.
    * - ``show_on_launch``
      - ``false``
-     - Affiche automatiquement la superposition au démarrage
-       d'Imervue.
+     - Réglé par **Show the pet when Imervue starts** dans le
+       groupe Window de l'onglet. Le rig et les pilotes sont
+       restaurés au lancement dans tous les cas ; la superposition
+       n'apparaît que si ce réglage est activé.
    * - ``speech_enabled``
      - ``true``
      - Quand c'est faux, la bulle de dialogue ne s'affiche jamais.
+   * - ``hotkeys_enabled``
+     - ``false``
+     - Réglé par **Enable global hotkeys (needs pynput)** dans le
+       groupe Global hotkeys de l'onglet.
+   * - ``hotkeys``
+     - ``{}``
+     - Remplacements ``{action: key}`` des valeurs par défaut
+       ``ctrl+shift+p`` (afficher / masquer), ``ctrl+shift+l``
+       (verrouiller), ``ctrl+shift+t`` (clic traversant) et
+       ``ctrl+shift+space`` (parler maintenant), réglés par les
+       champs de touche du groupe Global hotkeys. Une touche déjà
+       utilisée par une autre action y est refusée ; les touches
+       enregistrées que deux actions partagent sont indiquées dans
+       la ligne d'état à l'ouverture de l'onglet.
 
 La fusion du dict de réglages se fait sur un niveau de
 profondeur : des fichiers de réglages plus anciens auxquels
@@ -1487,6 +1722,53 @@ des répliques de bulle par zone cliquable dans un
 ``.petscript.json`` dont les clés ``hit_responses`` correspondent
 aux ids de zone.
 
+Plugin d'intégrations
+^^^^^^^^^^^^^^^^^^^^^
+
+Le plugin **Desktop Pet Integrations** (``Plugins`` > ``Download Plugins``, catégorie
+``plugins``, nom ``pet_integrations``) permet au pet de réagir au monde extérieur. Il ajoute
+``Plugins`` > ``Desktop Pet Integrations`` avec une entrée par intégration et une entrée
+``Settings…`` pour leurs options ; une entrée peut être activée une fois le pet affiché, installe
+d'abord le paquet optionnel dont elle a besoin et reste active d'un redémarrage à l'autre. C'est
+aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plugins* et
+``on_pet_created``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - Intégration
+     - Ce que fait le pet
+     - Prérequis
+   * - Réagir aux événements OBS
+     - Joue un mouvement du groupe ``Stream``, ``Record`` ou ``Scene`` lorsque la diffusion ou
+       l'enregistrement démarre ou s'arrête, ou que la scène change. Réglez l'hôte, le port et le
+       mot de passe du serveur WebSocket d'OBS dans ``Settings…``
+     - ``obs-websocket-py`` (installé à la première utilisation) ; OBS avec son serveur
+       WebSocket activé
+   * - Réagir au chat Twitch
+     - Rejoint le chat d'une chaîne et joue le groupe de mouvements associé à un mot-clé chaque
+       fois qu'un message le contient (insensible à la casse ; lignes ``keyword = Group`` dans
+       ``Settings…``). ``=hi`` ne correspond qu'à un message qui vaut exactement « hi »,
+       ``!dance*`` à un message qui commence par « !dance », ``/go+al/`` à une expression
+       régulière ; la première ligne correspondante l'emporte
+     - Un nom de chaîne et un jeton ``oauth:``
+   * - Webhook local (127.0.0.1)
+     - Écoute sur ``http://127.0.0.1:9876/trigger`` (port dans ``Settings…``) un POST JSON
+       ``{"group": "Wave", "speech": "Hi!"}`` — chaque champ peut être omis — envoyé par des
+       scripts, un Stream Deck ou des outils d'automatisation. Si un jeton est défini, les
+       requêtes doivent envoyer ``Authorization: Bearer <token>`` ; les requêtes provenant
+       d'une page web sont refusées
+     - Rien de plus
+   * - Réagir aux notifications Windows
+     - Joue le groupe ``Notify`` et prononce le titre de la notification lorsqu'une autre
+       application affiche une notification Windows ; les applications listées dans les
+       identifiants d'application ignorés sont sautées. Windows demande l'accès aux
+       notifications la première fois
+     - Windows ; les paquets de notification ``winrt`` (installés à la première utilisation)
+
+Un rig ne réagit qu'aux groupes de mouvements qu'il possède ; un groupe manquant ne joue rien.
+
 Dépannage
 ^^^^^^^^^
 
@@ -1499,7 +1781,7 @@ qu'aucun outil tiers de gestion de fenêtres ne contourne l'attribut
 (certains gestionnaires de fenêtres personnalisés sous Linux le
 font). Sous Windows / macOS cela devrait « juste fonctionner ».
 
-**« Load bundled March 7th » signale que le fichier est introuvable.**
+**« Load bundled Imeru » signale que le fichier est introuvable.**
 Le résolveur consulte d'abord ``examples_dir()`` (l'emplacement sûr
 en mode gelé utilisé par les builds empaquetés) puis se rabat sur
 un chemin relatif au CWD. Si aucun ne contient le rig, l'étiquette
@@ -1514,19 +1796,20 @@ checkouts source, lancez Imervue depuis la racine du dépôt.
 #. Si vous avez chargé un script personnalisé, vérifiez que le JSON
    s'analyse — l'étiquette d'état de l'onglet affiche l'erreur de
    chargement.
-#. Si un clic sur une zone cliquable n'a rien fait, c'est
-   probablement que la zone n'a pas de mouvement associé ET que le
-   script n'a pas d'entrée ``hit_responses`` pour cet id de zone.
-   Liez un mouvement à la zone dans l'onglet Puppet ou ajoutez
-   l'id de zone à ``hit_responses`` du script.
+#. Si **Click-through** est activé, le clic va à la fenêtre
+   derrière le pet ; désactivez-le dans l'onglet ou le menu de la
+   barre d'état. (Avec la parole activée, chaque clic obtient une
+   réplique : un rig sans zones cliquables ne joue aucun mouvement,
+   mais le clic vous salue quand même.)
 
 **La case du suivi webcam rebondit à l'état désactivé.** Le suivi
 webcam a besoin de ``opencv-python`` et ``mediapipe`` installés
 dans le même environnement Python que celui dans lequel tourne
 Imervue. Installez avec ``pip install opencv-python mediapipe``.
-Après installation, basculer la case devrait faire apparaître une
-petite fenêtre d'aperçu montrant les points caractéristiques
-détectés du visage.
+Après installation, cochez à nouveau la case. Le pet n'ouvre
+aucune fenêtre d'aperçu ; pour voir ce que la caméra détecte,
+activez **Webcam tracking** dans l'onglet Puppet, qui affiche les
+points caractéristiques du visage.
 
 **Le pet ne se masque pas automatiquement pendant les applications
 plein écran.** Le détecteur de plein écran scrute la fenêtre de
@@ -1540,8 +1823,8 @@ app is fullscreen** est coché et vérifiez que la fenêtre plein
 **La position du pet dérive hors écran entre les lancements.** Cela
 arrive quand l'écran sur lequel se trouvait le pet n'est plus
 connecté au prochain lancement (station d'accueil portable,
-second moniteur débranché). Le pet se rabat alors automatiquement
-sur le coin inférieur droit de l'écran principal — glissez-le où
+second moniteur débranché). Le pet va alors sur le premier écran,
+sa position enregistrée y étant bridée — glissez-le où
 vous le voulez et la prochaine sauvegarde écrasera la position
 obsolète.
 
@@ -1559,19 +1842,22 @@ Rotation et retournement
      - Menu
    * - Rotation 90 ° horaire
      - ``R``
-     - Clic droit > Modify > Rotate CW
+     - Clic droit > Modify > Rotate Clockwise
    * - Rotation 90 ° antihoraire
      - ``Shift + R``
-     - Clic droit > Modify > Rotate CCW
+     - Clic droit > Modify > Rotate Counter-clockwise
    * - Retournement horizontal
      - --
      - Clic droit > Modify > Flip Horizontal
    * - Retournement vertical
      - --
      - Clic droit > Modify > Flip Vertical
-   * - Rotation sans perte (JPEG)
+   * - Rotation sans perte
      - --
-     - Clic droit > Lossless Rotate
+     - Clic droit > Lossless Rotate > Lossless Rotate CW / CCW. Seul un JPEG est vraiment
+       sans perte (sa balise d'orientation change) ; PNG / BMP / TIFF / WebP /
+       GIF sont décodés, tournés et réenregistrés (un WebP avec perte est réencodé) ;
+       les RAW d'appareil, HEIC et fichiers multi-images sont refusés
 
 ----
 
@@ -1581,9 +1867,9 @@ Exporter des images
 Export individuel
 ^^^^^^^^^^^^^^^^^
 
-Clic droit sur une image > ``Exporter / Enregistrer sous``.
+Ouvrez une image (Deep Zoom), puis clic droit > ``Exporter / Enregistrer sous``.
 
-- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF, AVIF ; aussi HEIC et JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` est installé
+- Choisissez le format : PNG, JPEG, WebP, BMP, TIFF ; AVIF si Pillow prend en charge l'AVIF, HEIC et JPEG XL si ``pillow-heif`` / ``pillow-jxl-plugin`` est installé
 - Ajustez la qualité (pour les formats avec perte)
 - Choisissez les métadonnées à conserver : toutes, toutes sauf la localisation (par défaut) ou aucune. L'appareil, l'objectif et la date de prise de vue sont conservés ; le choix est mémorisé et l'export par lot propose la même option
 - Aperçu de la taille de fichier estimée
@@ -1592,54 +1878,64 @@ Clic droit sur une image > ``Exporter / Enregistrer sous``.
 Préréglages d'export
 ^^^^^^^^^^^^^^^^^^^^
 
-Pour les cibles de livraison courantes que vous ne souhaitez pas re-régler à chaque fois, utilisez
-``Fichier`` > ``Exporter avec préréglage``. Un clic applique le bon pipeline de redimensionnement, format
-et qualité :
+L'export par lots (ci-dessous) propose une liste **Preset** qui remplit la taille, le format et la
+qualité pour les cibles courantes ; avec **Custom**, c'est vous qui les choisissez :
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 80
+   :widths: 30 70
 
    * - Préréglage
-     - Pipeline
-   * - **Web 1600**
-     - Ajuste le côté le plus long à 1600 px, JPEG qualité 85, sRGB ; pour les téléversements sur blog / forum où la qualité visuelle compte plus que le nombre de pixels.
-   * - **Print 300 dpi**
-     - TIFF pleine résolution / JPEG haute qualité avec métadonnées 300 dpi, sortie gérée en couleur pour les labos et imprimeurs.
-   * - **Instagram 1080**
-     - Recadrage carré (1080 × 1080) ou portrait (1080 × 1350), ratio d'aspect original préservé à l'intérieur, JPEG qualité 90.
+     - Sortie
+   * - **Web — 1600 px JPEG**
+     - Côté long jusqu'à 1600 px, JPEG qualité 85.
+   * - **4K Web — 3840 px JPEG**
+     - Côté long jusqu'à 3840 px, JPEG qualité 90.
+   * - **Print — 300 DPI PNG**
+     - Pleine résolution, PNG, 300 dpi.
+   * - **Instagram — 1080×1080 square**
+     - Recadrage carré centré, 1080 × 1080, JPEG qualité 90.
+   * - **Thumbnail — 400 px JPEG**
+     - Côté long jusqu'à 400 px, JPEG qualité 80.
 
-Les préréglages se composent avec la superposition filigrane (ci-dessous) — activez le filigrane une fois et
-chaque sortie de préréglage le contient.
+Filigrane
+^^^^^^^^^
 
-Superposition de filigrane
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``Fichier`` > ``Filigrane…`` ouvre un configurateur de superposition non destructif. Les paramètres
-s'appliquent uniquement à l'export — les pixels originaux sur le disque ne sont jamais touchés.
-
-- **Mode** : texte ou image. Les filigranes image prennent en charge le PNG avec alpha.
-- **Position** : grille à 9 ancres (coins, bords, centre).
-- **Opacité** : 0 – 100 %.
-- **Échelle** : pourcentage du côté long exporté ; le filigrane se redimensionne automatiquement
-  lorsque vous redimensionnez pour différents préréglages.
+L'export par lots peut aussi dessiner un filigrane texte sur chaque copie exportée : le texte,
+sa position (un coin ou le centre) et son opacité. Les fichiers d'origine ne sont jamais modifiés.
 
 Export par lots
 ^^^^^^^^^^^^^^^
 
-Sélectionnez plusieurs images, puis clic droit > ``Export par lots``.
+Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``Export par lots``.
 
 - Conversion de format uniforme
 - Définir largeur / hauteur maximales (mise à l'échelle automatique du ratio d'aspect)
 - Contrôle de la qualité
 - Barre de progression en temps réel
+- **Render on** : le CPU, ou un GPU dédié lorsque le plugin GPU Develop est installé (voir ci-dessous)
+
+Plugin GPU Develop
+^^^^^^^^^^^^^^^^^^
+
+Le plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, catégorie ``plugins``, nom
+``gpu_develop``) permet à l'export par lots de rendre les recettes de développement sur un GPU
+dédié. ``Plugins`` > ``GPU Develop…`` installe ``wgpu`` la première fois, puis indique le GPU
+qu'il utilisera ; l'export par lots affiche ensuite **Render on** avec ce GPU sélectionné
+(choisissez **CPU** pour rendre comme avant).
+
+- La balance des blancs, l'exposition, les hautes lumières / ombres, les blancs / noirs, la luminosité, le contraste, la vibrance, la saturation et la courbe tonale s'exécutent sur le GPU ; la rotation, les retournements, le recadrage et tout ce qui suit la courbe tonale (virage partiel, LUT, masques, niveaux et le reste) restent sur le CPU
+- Une photo de 24 MP prend environ 0,1 s sur le GPU au lieu d'environ 7 s sur le CPU, sans compter le décodage et l'enregistrement
+- Seul un GPU dédié est utilisé, jamais un GPU intégré ni un moteur de rendu logiciel ; sous Windows, via Vulkan d'abord, puis Direct3D 12
+- Une image sur laquelle le GPU échoue est rendue sur le CPU, si bien que l'export se termine quand même
+- Le résultat correspond à celui du moteur de rendu CPU à quelques niveaux près sur une faible part des pixels
 
 Créer un GIF / une vidéo
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Sélectionnez plusieurs images, puis clic droit > ``Créer GIF / Vidéo``.
+Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``Créer GIF / Vidéo``.
 
-- Sortie GIF et MP4
+- Sortie GIF et MP4 ; le MP4 utilise le ffmpeg du PATH, sinon celui fourni avec la dépendance par défaut ``imageio-ffmpeg``
 - Glisser pour réordonner les images
 - Définir les images par seconde (FPS)
 - Dimensions personnalisées
@@ -1654,6 +1950,9 @@ Lecture d'animations
 À l'ouverture de fichiers GIF, APNG ou WebP animés, l'animation se lit automatiquement. Une animation qui occuperait
 plus de 512 Mo une fois décodée est décodée image par image pendant la lecture : l'ouvrir
 ne fige pas la fenêtre et ne remplit pas la mémoire.
+Une image de 10 ms ou moins s'affiche 100 ms, comme dans les navigateurs : beaucoup de GIF comptent dessus.
+
+Un TIFF multipage — un document numérisé — n'est pas lu comme une animation : il affiche une page à la fois, tournée avec ``,`` et ``.``, et l'indicateur donne le numéro de page. Les images qui ne sont pas une animation ne défilent jamais non plus : l'aperçu qu'un appareil photo intègre à un JPEG (MPF), les calques d'un PSD et l'image par défaut d'un APNG, l'image fixe destinée aux programmes qui ne gèrent pas l'APNG.
 
 .. list-table::
    :header-rows: 1
@@ -1677,7 +1976,8 @@ ne fige pas la fenêtre et ne remplit pas la mémoire.
 Comparaison d'images
 --------------------
 
-En mode vignettes, sélectionnez 2 -- 4 images, puis clic droit > ``Comparer les images``.
+En mode vignettes, sélectionnez 2 ou 4 images, puis clic droit > ``Comparer les images`` (ou
+choisissez-les dans la liste de la boîte de dialogue).
 
 La boîte de dialogue comprend quatre onglets :
 
@@ -1740,7 +2040,9 @@ Copier-coller
    * - Copier l'image dans le presse-papiers
      - ``Ctrl + C`` en mode Deep Zoom
    * - Coller l'image du presse-papiers
-     - ``Fichier`` > ``Coller depuis le presse-papiers``, ou ``Ctrl + V``
+     - ``Fichier`` > ``Coller depuis le presse-papiers`` l'ouvre dans l'éditeur d'annotation (rien n'est enregistré) ;
+       ``Ctrl + V`` l'enregistre sous ``pasted_<timestamp>.png`` dans le dossier courant et l'ouvre, ou
+       ouvre un chemin de fichier copié dans le presse-papiers
    * - Surveiller automatiquement le presse-papiers
      - ``Fichier`` > ``Annoter automatiquement les images du presse-papiers`` (bascule)
 
@@ -1761,7 +2063,7 @@ Supprimer des images
    * - Supprimer l'image courante
      - Appuyez sur ``Delete``
    * - Supprimer les images sélectionnées
-     - Sélectionner plusieurs, puis ``Delete`` ou clic droit > ``Supprimer la sélection``
+     - Sélectionner plusieurs, puis ``Delete`` ou clic droit > ``Supprimer les images sélectionnées``
 
 Les images sont déplacées vers la Corbeille du système et peuvent y être récupérées. Sur un
 lecteur sans corbeille — carte mémoire, clé USB ou partage réseau, où Windows les
@@ -1778,7 +2080,7 @@ que l'appareil écrit sous le même nom.
 Opérations par lots
 -------------------
 
-En mode vignettes, sélectionnez plusieurs images puis clic droit :
+En mode vignettes, sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` :
 
 .. list-table::
    :header-rows: 1
@@ -1794,6 +2096,23 @@ En mode vignettes, sélectionnez plusieurs images puis clic droit :
      - Faire pivoter toutes les images sélectionnées en une fois
    * - Export par lots
      - Convertir le format et redimensionner en masse
+   * - Créer GIF / Vidéo
+     - Animer la sélection en GIF ou en MP4 (voir *Créer un GIF / une vidéo*)
+   * - Taguer par lieu
+     - Ajouter aux mots-clés XMP de chaque photo géolocalisée la ville et le pays les plus proches
+   * - Indexer les mots-clés
+     - Ajouter à la bibliothèque les mots-clés XMP de la sélection
+   * - Tri automatique : photos floues
+     - Marquer les photos floues comme rejetées
+   * - Tri automatique : faible qualité
+     - Marquer comme rejeté le quart le plus faible de la sélection (netteté, exposition, contraste)
+   * - Rotation automatique selon l'EXIF
+     - Enregistrer une copie PNG redressée de chaque photo sous ``<name>_oriented.png``
+   * - Combiner en PDF / TIFF…
+     - Réunir la sélection, dans l'ordre d'affichage, en un seul PDF ou TIFF multipage
+   * - Importer dans des dossiers datés…
+     - Copier la sélection dans des dossiers ``YYYY/MM`` selon la date de prise de vue (EXIF, sinon la date
+       du fichier) ; un fichier déjà présent garde son nom et le nouveau venu reçoit ``_1``
    * - Ajouter au tag
      - Appliquer le même tag à toutes les images sélectionnées
    * - Ajouter à un album
@@ -1829,6 +2148,8 @@ Clic droit en mode Deep Zoom > ``Définir comme fond d'écran`` pour définir l'
 
 Pris en charge sur Windows, macOS et Linux (GNOME).
 
+Windows rend le bureau noir, tout en signalant un succès, quand il reçoit un fichier qu'il ne sait pas décoder. Une image qui n'est ni JPEG, ni PNG, ni BMP — RAW d'appareil photo, HEIC, PSD, TGA, WebP et les autres formats qu'ouvre Imervue — ainsi qu'une photo à redresser sont donc transmises sous forme de copie JPEG de ce qu'affiche la visionneuse. La copie est conservée dans ``%LOCALAPPDATA%\Imervue\wallpaper`` (``~/.local/share/imervue/wallpaper`` sous macOS et Linux) ; seule la plus récente est gardée.
+
 ----
 
 Multi-fenêtres
@@ -1840,17 +2161,16 @@ Préréglages de disposition d'espace de travail
 ----------------------------------------------
 
 ``Fichier`` > ``Espaces de travail…`` capture la géométrie courante de la fenêtre, la disposition
-des docks / barres d'outils, les tailles des séparateurs et le dossier racine actif sous un nom — puis
-vous laisse basculer entre les dispositions enregistrées comme d'autres gestionnaires de photos
-compatibles XMP basculent entre *Library* / *Develop* / *Export*, ou comme Adobe Bridge bascule entre
-*Metadata* / *Filmstrip*. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
-et Supprimer. Les espaces de travail sont conservés dans ``user_settings.json`` (sous la clé
+des docks / barres d'outils, la séparation arbre / visionneuse et le dossier racine actif sous un nom — puis
+vous laisse basculer entre les dispositions enregistrées. L'onglet actif et la séparation des panneaux de l'onglet Modify ne sont pas
+enregistrés. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
+et Supprimer. Les espaces de travail sont conservés dans ``user_setting.json`` (sous la clé
 ``workspaces``) et survivent aux sessions.
 
 .. tip::
-   Construisez un espace de travail **Browse** avec l'arbre et la grille de vignettes visibles, et un
-   espace de travail **Develop** distinct avec le panneau de développement maximisé et l'arbre
-   réduit. Un clic place toute votre fenêtre dans la forme adéquate pour chaque tâche.
+   Construisez un espace de travail **Browse** avec un arbre large à côté de la visionneuse, et un
+   espace de travail **Focus** distinct avec l'arbre resserré et les docks inutiles
+   fermés. Un clic place toute votre fenêtre dans la forme adéquate pour chaque tâche.
 
 Gestes du pavé tactile
 ----------------------
@@ -1874,7 +2194,7 @@ Association de fichiers (Windows)
 Enregistrez Imervue comme visionneuse d'images dans l'Explorateur Windows :
 
 1. ``Fichier`` > ``Association de fichiers`` > ``Enregistrer 'Open with Imervue'``
-2. Privilèges administrateur requis.
+2. Aucun droit administrateur n'est nécessaire : l'enregistrement écrit dans le registre de l'utilisateur courant.
 3. Après l'enregistrement, clic droit sur n'importe quelle image dans l'Explorateur pour voir l'option ``Open with Imervue``.
 
 Pour retirer : ``Fichier`` > ``Association de fichiers`` > ``Supprimer l'association de fichiers``.
@@ -1900,6 +2220,133 @@ Imervue prend en charge les plugins pour des fonctionnalités étendues.
      - ``Plugins`` > ``Ouvrir le dossier des plugins``
    * - Recharger les plugins
      - ``Plugins`` > ``Recharger les plugins``
+
+Écrire des plugins
+^^^^^^^^^^^^^^^^^^
+
+Un plugin est un paquet Python placé dans ``plugins/<name>/`` — à côté du paquet ``Imervue``
+dans une copie des sources, à côté de l'exécutable dans une version empaquetée (``Plugins`` >
+``Open Plugin Folder`` l'ouvre). Son ``__init__.py`` affecte à ``plugin_class`` une sous-classe
+de ``Imervue.plugin.plugin_base.ImervuePlugin`` ; un simple fichier ``.py`` dans ``plugins/`` se
+charge aussi (sa première sous-classe de ``ImervuePlugin`` est utilisée), mais le téléchargeur
+de plugins ne distribue que des paquets. Les attributs de classe ``plugin_name``,
+``plugin_version``, ``plugin_description`` et ``plugin_author`` sont facultatifs
+(``"Unnamed Plugin"``, ``"0.0.1"`` et des chaînes vides par défaut). Chaque fenêtre principale
+crée sa propre instance de chaque plugin et se transmet elle-même, de sorte qu'un hook peut
+utiliser ``self.main_window`` et ``self.viewer`` (le ``GPUImageView``). Ne redéfinissez que les
+hooks dont vous avez besoin ; chaque appel est encapsulé, si bien qu'une exception est
+journalisée sous le nom du plugin au lieu d'arrêter Imervue. Le guide complet, avec des
+exemples, est
+`PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+Outre les hooks, un plugin peut fournir à l'export par lots un autre moteur de rendu pour les
+recettes de développement en enregistrant un ``BackendProvider`` avec
+``Imervue.image.develop_backends.register`` dans ``on_plugin_loaded()`` ; le plugin GPU Develop
+en est l'exemple.
+
+Une boîte de dialogue qui applique une transformation d'image sur **OK** peut s'appuyer sur
+``Imervue.plugin.tool_dialog.ToolDialogMixin`` pour la rangée de boutons, l'installation des
+paquets optionnels, le thread worker et le toast de résultat : elle définit ``output_suffix`` et
+les clés du toast, et renvoie la transformation depuis ``_transform()``. Un plugin qui importe du
+code du programme principal ajouté après d'anciennes versions indique la version de l'API de
+plugins dont il a besoin dans un fichier ``plugin.json`` placé à côté de son ``__init__.py``
+(``{"min_api_version": 2}``). ``Plugins`` > ``Download Plugins`` refuse un tel plugin sur un
+Imervue trop ancien et conserve toute copie déjà installée, en indiquant la version requise dans
+la ligne d'état ; le chargeur de plugins l'ignore sans l'importer et consigne la raison dans le
+journal.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 40 32
+
+   * - Hook
+     - Appelé quand
+     - Arguments / valeur de retour
+   * - ``register_languages()`` (méthode de classe)
+     - Sur la classe du plugin avant la création de chaque instance (à chaque chargement et à
+       chaque ``Reload Plugins``), et au démarrage avant la construction de la fenêtre
+       principale lorsque la langue enregistrée n'est pas une langue intégrée ; ce passage au
+       démarrage importe tous les plugins et n'exécute rien d'autre
+     - Aucun argument. Appelez ici ``language_wrapper.register_language(language_code,
+       display_name, word_dict)`` ; un code de langue intégrée est refusé. Une chaîne vide ou
+       dont les ``{placeholders}`` diffèrent de ceux de l'anglais est écartée et journalisée
+       (le texte intégré s'affiche), et les clés manquantes sont journalisées. Valeur de retour
+       ignorée ; une exception est journalisée et le plugin se charge quand même
+   * - ``on_plugin_loaded()``
+     - Juste après la création de l'instance : pendant la construction de la fenêtre
+       principale, et de nouveau après ``Plugins`` > ``Reload Plugins``
+     - Aucun argument ; valeur de retour ignorée
+   * - ``get_translations()``
+     - Juste après ``on_plugin_loaded()``, une fois par chargement
+     - Retourne ``{language_code: {key: text}}`` (par défaut ``{}``). Les chaînes sont
+       fusionnées dans les tables de langue ; les clés existantes ne sont jamais écrasées et
+       les codes de langue inconnus sont ignorés. Une chaîne vide, ou dont les
+       ``{placeholders}`` diffèrent de ceux de la chaîne anglaise de cette clé dans les données
+       retournées, est écartée ; les problèmes sont journalisés
+   * - ``on_build_main_tabs(tabs)``
+     - Une fois pendant la construction de la fenêtre principale, après les cinq onglets
+       intégrés et avant ``on_build_menu_bar`` ; ``Reload Plugins`` ne le relance pas
+     - ``tabs`` : le ``QTabWidget`` principal de la fenêtre ; ajoutez un onglet avec
+       ``tabs.addTab(widget, label)``. Valeur de retour ignorée
+   * - ``on_build_menu_bar(plugin_menu)``
+     - Une fois après la construction du menu partagé ``Plugins``, et de nouveau après
+       ``Reload Plugins``
+     - ``plugin_menu`` : le ``QMenu`` ``Plugins`` (pas la ``QMenuBar``). Les entrées qu'un
+       plugin ajoute ici n'importe où dans la barre de menus sont retirées au rechargement.
+       Valeur de retour ignorée
+   * - ``on_build_context_menu(menu, viewer)``
+     - À chaque construction du menu clic droit de la visionneuse, après les entrées
+       intégrées et juste avant son ouverture
+     - ``menu`` : le ``QMenu`` contextuel ; ``viewer`` : le ``GPUImageView``. Valeur de
+       retour ignorée
+   * - ``on_folder_opened(folder_path, image_paths, viewer)``
+     - Lorsque l'analyse d'un dossier ouvert se termine
+     - ``folder_path`` : le dossier ; ``image_paths`` : toutes les images trouvées par
+       l'analyse. Valeur de retour ignorée
+   * - ``on_image_loaded(image_path, viewer)``
+     - Chaque fois qu'une image s'affiche en pleine taille en deep zoom, quelle que soit la
+       façon dont elle a été ouverte, et de nouveau lorsqu'elle est rechargée après une
+       modification ; pas pour l'aperçu basse résolution affiché pendant le décodage d'une
+       grande image
+     - ``image_path`` : le chemin de l'image. Valeur de retour ignorée
+   * - ``on_image_switched(image_path, viewer)``
+     - Lorsque suivant / précédent (y compris le retour au début ou à la fin de la liste)
+       passe à une autre image, dès que son chargement commence ; ``on_image_loaded`` suit
+       une fois qu'elle est affichée. Ouvrir une image depuis la grille ou la pellicule ne
+       l'appelle pas
+     - ``image_path`` : la nouvelle image courante. Valeur de retour ignorée
+   * - ``on_image_deleted(deleted_paths, viewer)``
+     - Après la suppression douce d'images (placées sur la pile d'annulation) depuis la
+       visionneuse — l'image courante ou les vignettes sélectionnées — ou depuis
+       l'arborescence des dossiers ; pas pour un fichier que l'arborescence envoie
+       directement à la Corbeille parce qu'il ne figure pas dans la liste d'images
+     - ``deleted_paths`` : liste des chemins supprimés. Valeur de retour ignorée
+   * - ``on_key_press(key, modifiers, viewer)``
+     - À chaque appui de touche reçu par la visionneuse, avant ses touches intégrées et les
+       raccourcis de Shortcut Settings ; les plugins sont consultés dans l'ordre de
+       chargement. Une touche capturée d'abord par un raccourci de menu ou de fenêtre
+       n'atteint jamais la visionneuse
+     - ``key`` : un code ``Qt.Key`` (int) ; ``modifiers`` : les indicateurs
+       ``Qt.KeyboardModifier``. Retournez ``True`` pour consommer la touche — les plugins
+       suivants et le traitement par défaut sont ignorés ; retournez ``False`` (par défaut)
+       pour la transmettre. Une exception compte comme ``False``
+   * - ``on_pet_created(pet)``
+     - Lorsque l'onglet Desktop Pet crée la fenêtre du pet, et juste après le chargement du
+       plugin (ou l'exécution de ``Reload Plugins``) si le pet existe déjà
+     - ``pet`` : la fenêtre du pet. Les plugins utilisent ``play_group(group)``,
+       ``speak(line)``, ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` et les signaux ``hit_triggered``,
+       ``moved`` et ``visibility_changed``. Valeur de retour ignorée
+   * - ``on_app_closing(main_window)``
+     - Lorsque la dernière fenêtre principale se ferme, après acceptation de l'invite de
+       Paint sur les onglets non enregistrés et l'enregistrement des paramètres, juste avant
+       le déchargement des plugins ; fermer une autre fenêtre ne l'appelle pas
+     - ``main_window`` : la ``ImervueMainWindow`` qui se ferme. Valeur de retour ignorée
+   * - ``on_plugin_unloaded()``
+     - Lorsque la fenêtre du plugin se ferme (après ``on_app_closing`` pour la dernière
+       fenêtre), et avant que ``Reload Plugins`` recharge les plugins ; les plugins sont
+       déchargés dans l'ordre inverse de chargement
+     - Aucun argument ; valeur de retour ignorée
 
 ----
 
@@ -1939,9 +2386,7 @@ Navigation
    * - ``Gauche`` / ``Droite``
      - Image précédente / suivante
    * - Touches fléchées
-     - Panoramique en mode vignettes
-   * - ``Shift + Flèche``
-     - Panoramique fin
+     - Déplacer le cadre de focus d'une vignette à l'autre
    * - ``Ctrl + Shift + Gauche`` / ``Droite``
      - Aller au dossier frère précédent / suivant contenant des images
    * - ``Alt + Gauche`` / ``Alt + Droite``
@@ -1974,8 +2419,14 @@ Navigation
      - Ajuster à la largeur
    * - ``Shift + W``
      - Ajuster à la hauteur
+   * - ``Shift + F``
+     - Ajuster à la fenêtre
+   * - ``-`` / ``=``
+     - Zoom arrière / avant
+   * - ``V``
+     - Mode lecture : ajuster à la largeur, faire défiler pour lire, passer à l'image suivante à la fin
    * - ``Home``
-     - Réinitialiser le zoom
+     - Ajuster l'image entière à la fenêtre (dans la grille : retour en haut)
 
 Édition
 ^^^^^^^
@@ -1987,14 +2438,14 @@ Navigation
    * - Touche
      - Action
    * - ``E``
-     - Ouvrir l'onglet Modify
+     - Ouvrir l'éditeur d'annotation
    * - ``R``
      - Rotation horaire
    * - ``Shift + R``
      - Rotation antihoraire
    * - ``Ctrl + Z``
      - Annuler
-   * - ``Ctrl + Shift + Z``
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
      - Rétablir
    * - ``Delete``
      - Supprimer l'image
@@ -2045,11 +2496,17 @@ Outils et superpositions
    * - ``F8`` / ``Ctrl + F8``
      - Superposition d'infos OSD / HUD de débogage (VRAM, cache, threads)
    * - ``Shift + P``
-     - Vue pixel (≥ 400 % affiche la grille de pixels et la valeur RGB sous le curseur)
+     - Vue pixel (à partir de 400 % affiche le RGB / HEX sous le curseur ; la grille dès que ≤ 40 000 pixels de l'image sont à l'écran)
    * - ``Shift + M``
      - Faire défiler les modes de couleur (Normal / Niveaux de gris / Inversé / Sépia)
+   * - ``L``
+     - Loupe : une zone agrandie qui suit le curseur (également sur les vignettes)
    * - ``S``
      - Diaporama
+   * - ``Ctrl + Shift + P``
+     - Palette de commandes
+   * - ``Alt + M``
+     - Rejouer la dernière macro sur la sélection
 
 Images animées
 ^^^^^^^^^^^^^^
@@ -2071,6 +2528,39 @@ Images animées
    * - ``]``
      - Accélérer
 
+Paint
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Touche
+     - Action
+   * - ``[`` / ``]``
+     - Diminuer / augmenter la taille du pinceau de 1 px
+   * - ``Shift + [`` / ``Shift + ]``
+     - Diminuer / augmenter la taille du pinceau de 5 px
+   * - ``Ctrl + Z``
+     - Annuler
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
+     - Rétablir
+   * - ``Ctrl + D``
+     - Désélectionner
+   * - ``Ctrl + 0`` / ``Ctrl + 1``
+     - Ajuster à la fenêtre / Taille réelle (100 %)
+   * - ``X``
+     - Permuter les couleurs de premier plan / d'arrière-plan
+   * - ``D``
+     - Réinitialiser les couleurs en noir / blanc
+   * - ``Ctrl + Tab`` / ``Ctrl + Shift + Tab``
+     - Onglet Paint suivant / précédent
+
+Les touches des outils sont listées sous *Palette d'outils (bande de gauche)*. ``Settings`` >
+``Shortcuts…`` dans l'onglet Paint réassigne les touches des outils, de la taille du pinceau,
+des calques, d'annulation / rétablissement, de désélection, d'affichage et des couleurs
+(``Ctrl + Y`` reste une seconde touche Rétablir).
+
 ----
 
 Bibliothèque et gestion des métadonnées
@@ -2089,9 +2579,13 @@ Recherche dans la bibliothèque
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` vous permet d'ajouter un ou plusieurs **dossiers racine**
-à un index global parcouru en arrière-plan. Une fois une racine indexée, vous pouvez l'interroger
-par extension, largeur/hauteur minimale, plage de taille ou sous-chaîne de nom, et déposer
-les résultats dans la visionneuse comme album virtuel.
+à un index global parcouru en arrière-plan. Une fois une racine indexée, vous pouvez y chercher
+par nom de fichier, largeur / hauteur minimales et taille de fichier (jusqu'à 2000 résultats) ;
+double-cliquez sur un résultat pour l'ouvrir. Un nouveau scan ne lit que les fichiers nouveaux ou modifiés depuis le précédent et, avec
+**Compute perceptual hash** coché, ceux indexés plus tôt sans hachage ; les fichiers lus sont
+décodés sur plusieurs threads à la fois.
+
+Clic droit > ``Search by Query…`` filtre le dossier courant avec un langage de requête compact, par exemple ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` accepte une ville, un pays ou les deux (``Paris``, ``France``, ``Paris, France``) ; une valeur avec des espaces se met entre guillemets doubles (``place:"Rio de Janeiro"``).
 
 Albums intelligents
 ^^^^^^^^^^^^^^^^^^^
@@ -2106,36 +2600,41 @@ Recherche d'images similaires
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` exécute un pHash DCT 64 bits sur
 l'image Deep Zoom courante (ou la première vignette sélectionnée) et liste les correspondances proches
-de l'index triées par distance de Hamming. Ajustez la valeur ``Max distance`` pour
+de l'index triées par distance de Hamming. Ajustez la valeur ``Max Hamming distance`` pour
 élargir ou resserrer la maille.
 
 Recherche sémantique (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` vous permet de taper une phrase en langage naturel
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` vous permet de taper une phrase en langage naturel
 (par exemple *"golden retriever in snow"* ou *"neon street at night"*) et
-renvoie des images classées depuis la bibliothèque indexée. Chaque image est encodée avec un
+renvoie, classées, les images du dossier ouvert. Chaque image est encodée avec un
 encodeur vision/langage CLIP et stockée à côté de son chemin ; une requête textuelle est
 encodée dans le même espace vectoriel et comparée par similarité cosinus.
 
-Les encodages sont mis en cache dans ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) ou
-``~/.cache/imervue/clip_cache.npz`` (POSIX) sous forme d'une seule archive ``.npz`` compacte
-afin que le prochain lancement saute le ré-encodage. Seuls les chemins que vous avez analysés sont
-interrogeables — utilisez ``Scan Folder…`` dans la boîte de dialogue pour étendre l'index.
+Les encodages sont mis en cache dans ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) ou ``~/.cache/imervue/clip_cache.npz`` (POSIX) sous forme d'une seule archive ``.npz`` compacte. La boîte de dialogue cherche dans le dossier ouvert : elle n'encode que les images absentes du cache ou modifiées depuis (taille ou date de modification), si bien qu'une nouvelle recherche dans le même dossier démarre aussitôt, et les résultats ne viennent que de ce dossier.
 
 .. note::
-   La recherche sémantique nécessite les paquets optionnels ``open_clip_torch`` et ``torch``.
-   S'ils ne sont pas installés, l'entrée du menu explique ce qui manque et les autres fonctionnalités
-   continuent de fonctionner.
+   La recherche sémantique exécute CLIP ViT-B/32 sur ``onnxruntime``, sans PyTorch. La première
+   fois que vous l'ouvrez sans ``onnxruntime``, Imervue propose de l'installer ; le modèle
+   (environ 150 Mo, quantifié en int8) est ensuite téléchargé une seule fois depuis Hugging Face
+   à une révision figée, puis lu depuis le cache local. Il s'exécute sur un GPU NVIDIA via CUDA
+   lorsque ``onnxruntime`` le prend en charge, sinon sur le CPU ; il ne choisit jamais un GPU
+   intégré. Les encodages mis en cache par un autre modèle sont recalculés.
 
 Tag automatique
 ^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` applique des tags heuristiques sous
-``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
-``portrait``). Si ``onnxruntime`` et un modèle CLIP à
-``models/clip_vit_b32.onnx`` sont disponibles, il ajoute également des étiquettes de contenu
-basées sur CLIP. S'exécute sur un thread de travail avec une barre de progression en direct.
+``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
+``portrait``), déduits de la saturation des couleurs, des contours et de la forme de l'image telle
+que la visionneuse l'affiche. S'exécute sur un thread de travail avec une barre de progression en direct.
+
+Une fois que la recherche sémantique a téléchargé le modèle CLIP, le tag automatique étiquette
+plutôt chaque image en zero-shot avec ce modèle : jusqu'à trois parmi ``photo``, ``document``,
+``screenshot``, ``graphic``, ``illustration``, ``portrait``, ``landscape``, ``animal``, ``food``
+et ``text``, la plus proche en premier. Une image que CLIP ne peut pas lire reçoit les tags
+heuristiques, et le tag automatique ne lance jamais le téléchargement lui-même.
 
 Tags hiérarchiques
 ^^^^^^^^^^^^^^^^^^
@@ -2146,8 +2645,8 @@ Tags hiérarchiques
 Les tags hiérarchiques vivent dans l'index de la bibliothèque et sont complémentaires du système
 de tags plat dans le menu contextuel.
 
-``Index Keywords`` (clic droit) ajoute à la bibliothèque les mots-clés XMP de la
-sélection. Une hiérarchie de mots-clés écrite par Lightroom ou darktable
+Clic droit > ``Opérations par lots`` > ``Index Keywords`` (vignettes sélectionnées) ajoute
+à la bibliothèque les mots-clés XMP de la sélection. Une hiérarchie de mots-clés écrite par Lightroom ou darktable
 (``lr:hierarchicalSubject``, ``Places|Taiwan|Taipei``) est rangée sous le chemin de
 tag ``Places/Taiwan/Taipei``, et les mots-clés isolés ``Places`` / ``Taiwan`` /
 ``Taipei`` qui ne font que répéter ses niveaux ne sont pas ajoutés une seconde fois.
@@ -2173,13 +2672,13 @@ la vue courante couvrant EXIF, dimensions, étiquette de couleur, note, favori,
 tags hiérarchiques, état de tri et notes. Utile pour injecter les décisions de tri
 dans un tableur ou un flux de travail externe.
 
-Fichier annexe XMP (interopérabilité avec gestionnaires de photos XMP)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Fichiers annexes XMP
+^^^^^^^^^^^^^^^^^^^^
 
 Imervue peut lire et écrire des fichiers annexes Adobe XMP (``photo.jpg`` ↔
 ``photo.xmp``) afin que les notes, titres, descriptions, mots-clés et étiquettes de
-couleur fassent l'aller-retour proprement avec d'autres gestionnaires de photos compatibles
-XMP, d'autres gestionnaires de photos compatibles XMP, Bridge et autres outils XMP.
+couleur fassent l'aller-retour proprement avec Adobe Bridge et d'autres gestionnaires
+de photos compatibles XMP.
 
 L'enregistrement fusionne avec le sidecar existant : seuls ces champs changent, les réglages de développement, le recadrage et l'historique d'un autre logiciel y sont conservés, et un sidecar illisible n'est jamais écrasé.
 
@@ -2187,29 +2686,29 @@ Outre ``photo.xmp`` (Lightroom, Bridge), le ``photo.jpg.xmp`` qu'écrivent
 darktable et digiKam est lu et mis à jour lorsqu'il est le seul sidecar. Les
 étiquettes de couleur sont comprises dans les mots de Lightroom (``Red`` …
 ``Purple``) et de Bridge (``Select``, ``Second``, ``Approved``, ``Review``,
-``To Do``), et exportées comme Lightroom les écrit ; une étiquette sans couleur
-(personnalisée) reste dans le sidecar.
+``To Do``). Une couleur nouvelle ou modifiée est exportée comme Lightroom l'écrit ;
+un sidecar qui contient déjà le mot de Bridge pour la même couleur garde ce mot.
+Une étiquette sans couleur (personnalisée) reste dans le sidecar.
 
 Une photo rejetée — ``xmp:Rating`` -1 dans Lightroom, Bridge et darktable — est
 importée comme **Reject** du tri, sans étoiles, et un Reject est exporté en -1.
 Un sidecar non rejeté lève un Reject ; un Pick reste tel quel.
 
 Un fichier sans sidecar est lu — et importé — depuis ce qu'il embarque lui-même :
-son paquet XMP (JPEG, PNG, WebP, TIFF), puis son ``Rating`` / ``RatingPercent``
+son paquet XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), puis son ``Rating`` / ``RatingPercent``
 EXIF. C'est là que Lightroom garde la note et les mots-clés d'un JPEG, et que
 l'Explorateur Windows et certains appareils gardent leurs étoiles. Un sidecar,
 s'il existe, l'emporte.
 
-- **Importer XMP pour l'image courante** — tire la note / le titre / les mots-clés /
-  l'étiquette de couleur depuis le fichier annexe vers la base de données interne.
-- **Exporter XMP pour l'image courante** — écrit la note / le titre / les
-  mots-clés / l'étiquette de couleur courants dans un fichier annexe à côté de l'image.
-- **Import / export par lots** — applique la même opération à la sélection active
-  ou à tout le dossier.
+``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` comporte deux boutons qui s'appliquent
+à toutes les images de la vue courante :
+
+- **Export sidecars** — écrit la note / le titre / la description / les mots-clés /
+  l'étiquette de couleur de chaque image dans son fichier annexe.
+- **Import sidecars** — les relit dans les enregistrements propres à Imervue.
 
 L'analyse XML utilise ``defusedxml`` afin que des fichiers annexes malformés ou malveillants
-ne puissent pas déclencher d'attaques XXE / billion-laughs. Si ``defusedxml`` n'est pas installé,
-les entrées de menu XMP sont masquées et aucun fichier annexe n'est écrit.
+ne puissent pas déclencher d'attaques XXE / billion-laughs.
 
 La **barre latérale EXIF** expose également une **bande de notation par étoiles** cliquable —
 la note qu'elle définit est ce que l'export XMP écrira.
@@ -2217,10 +2716,10 @@ la note qu'elle définit est ce que l'export XMP écrira.
 Tri (Sélectionner / Rejeter)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Indicateur de tri à trois états basé sur un marquage. Appuyez sur ``P`` pour sélectionner l'image
+Un indicateur de tri à trois états. Appuyez sur ``P`` pour sélectionner l'image
 courante ou chaque vignette sélectionnée, ``Shift + X`` pour rejeter, ``U`` pour retirer le marquage. ``Filtre`` >
 ``Par état de tri`` n'affiche que les sélections, les rejets ou les non marqués. ``Extra Tools`` >
-``Culling`` applique le filtre via une boîte de dialogue et expose également un bouton **Delete all
+``Workflow`` > ``Culling`` applique le filtre via une boîte de dialogue et expose également un bouton **Delete all
 rejects** qui supprime définitivement du disque les fichiers marqués.
 
 Plateau de mise à disposition
@@ -2242,8 +2741,8 @@ Vue chronologique
 ^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` regroupe l'ensemble d'images courant par jour,
-mois ou année (groupé par date). La date est tirée de l'EXIF
-``DateTimeOriginal`` lorsqu'elle est présente, sinon de l'heure de modification du fichier.
+mois ou année (groupé par date). La date est tirée de l'EXIF ``DateTimeOriginal``, puis de
+``DateTimeDigitized``, puis de ``DateTime``, et sinon de l'heure de modification du fichier.
 Double-cliquez sur une image pour l'ouvrir en Deep Zoom.
 
 Glisser-déposer vers des applications externes
@@ -2278,7 +2777,7 @@ Appliquer un LUT .cube
 ^^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` vous permet de choisir n'importe quel fichier Adobe ``.cube``
-(1D ou 3D, jusqu'à 64³). ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE``
+(3D jusqu'à 65³, 1D jusqu'à 65 536 points). ``LUT_1D_INPUT_RANGE`` / ``LUT_3D_INPUT_RANGE``
 de DaVinci Resolve fixe le domaine d'entrée comme ``DOMAIN_MIN`` / ``DOMAIN_MAX``,
 et un fichier enregistré avec un BOM se charge aussi. Le LUT est analysé avec un ``lru_cache`` clé par
 chemin + mtime, évalué par interpolation trilinéaire, et mélangé à l'original
@@ -2335,25 +2834,25 @@ Correction d'objectif
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` expose quatre curseurs purement numpy :
 distorsion radiale ``k1`` (en barillet / coussinet), correction du vignettage et
 échelle radiale d'aberration chromatique par canal pour le rouge et le bleu. L'image
-corrigée est enregistrée dans un nouveau fichier — la correction d'objectif ne fait pas partie
-de la recette car la forme de sortie peut changer.
+corrigée, de la même taille que l'original, est enregistrée dans un nouveau fichier.
 
 Vue carte
 ^^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` trace chaque image géolocalisée de la bibliothèque
-courante sur une carte interactive Leaflet + OpenStreetMap (nécessite
-``PySide6.QtWebEngineWidgets``). Sans WebEngine, la boîte de dialogue se rabat
-sur une simple liste d'entrées ``(path, lat, lon)`` afin que la fonctionnalité reste
-utilisable sur des installations minimales.
+``Extra Tools`` > ``Views`` > ``Map View`` trace les images géolocalisées du dossier ouvert
+sur une carte interactive Leaflet + OpenStreetMap, avec un marqueur par ville la plus proche
+et le nombre de photos qui s'y trouvent (nécessite ``PySide6.QtWebEngineWidgets``). Sans
+WebEngine, la boîte de dialogue se rabat sur une liste de ces lieux avec leur nombre de
+photos et leurs coordonnées, afin que la fonctionnalité reste utilisable sur des
+installations minimales.
 
 Vue calendrier
 ^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` affiche un ``QCalendarWidget`` avec les jours
 surlignés lorsque des photos ont été prises ce jour-là (EXIF ``DateTimeOriginal`` →
-``DateTimeDigitized`` → mtime du fichier). Sélectionner une date liste ses images ;
-double-cliquez pour en ouvrir une dans la visionneuse principale.
+``DateTimeDigitized`` → ``DateTime`` → mtime du fichier). Sélectionner une date liste
+ses images ; double-cliquez pour en ouvrir une dans la visionneuse principale.
 
 Détection de visages
 ^^^^^^^^^^^^^^^^^^^^
@@ -2396,7 +2895,7 @@ Recadrage / Redressement
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` combine un rectangle de recadrage
-normalisé (0..1) avec un angle de redressement arbitraire. La sortie est
+normalisé (0..1) avec un angle de redressement allant jusqu'à ±15°. La sortie est
 recadrée automatiquement au plus grand rectangle intérieur, afin que les photos ayant subi une rotation
 n'aient pas de coins noirs.
 
@@ -2436,8 +2935,8 @@ Effets tonaux et créatifs
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` rassemble un ensemble d'effets
 ponctuels de type appliquer-et-enregistrer, chacun étant une fine boîte de
-dialogue à curseurs au-dessus d'une transformation pure-NumPy (la même logique
-est aussi exposée comme outil MCP) :
+dialogue à curseurs au-dessus d'une transformation pure-NumPy (Frame & Caption
+dessine avec Pillow ; la même logique est aussi exposée comme outil MCP) :
 
 - **Graduated Density** — un dégradé de densité neutre linéaire défini par angle,
   dureté et décalage, éventuellement teinté ; assombrit un ciel ou un premier plan
@@ -2463,6 +2962,9 @@ est aussi exposée comme outil MCP) :
 - **Kaleidoscope** — réfléchit un secteur angulaire en symétrie d'ordre ``n``.
 - **Frosted Glass** — une dispersion locale de pixels déterministe et reproductible
   par graine.
+- **Frame & Caption** — une bordure passe-partout de n'importe quelle couleur, un
+  bandeau inférieur plus épais façon Polaroid en option et une légende incrustée
+  dans ce bandeau, dans sa propre couleur.
 
 Géolocalisation GPS
 ^^^^^^^^^^^^^^^^^^^
@@ -2472,7 +2974,22 @@ vous laisse modifier ou définir de nouvelles coordonnées en degrés décimaux.
 sur place sans paquet supplémentaire : seul son bloc EXIF change, les pixels, les autres tags et
 la vignette restent intacts. Un WebP est traité de la même façon ; les autres formats ne peuvent pas être géotagués.
 
-L'**éditeur EXIF** (bouton ``Edit EXIF`` de la barre latérale EXIF) modifie la description, l'artiste, le copyright, la marque / le modèle de l'appareil et le commentaire. Un JPEG ou un WebP ne nécessite aucun paquet supplémentaire et seul son bloc EXIF est réécrit ; les autres formats indiquent pourquoi ils ne sont pas modifiables.
+L'**éditeur EXIF** (bouton ``Edit EXIF`` de la barre latérale EXIF) modifie la description, l'artiste, le copyright, la marque / le modèle de l'appareil et le commentaire. Un JPEG ou un WebP ne nécessite aucun paquet supplémentaire et seul son bloc EXIF est réécrit ; les autres formats indiquent pourquoi ils ne sont pas modifiables. **Describe**, à côté de la description, demande à un modèle de vision installé sur votre propre ordinateur un texte alternatif d'une phrase et le place dans le champ pour que vous le retouchiez avant **Save** : il faut que `Ollama <https://ollama.com>`__ tourne sur ``localhost:11434`` avec un modèle de vision (``ollama pull llava``), et quand aucun ne répond, la boîte de dialogue le signale et laisse le champ tel quel. L'image n'est envoyée qu'à ce serveur local.
+
+Galerie web
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Web Gallery`` enregistre les images sélectionnées (ou tout le
+dossier) sous forme de site autonome : ``index.html`` avec une lightbox, des vignettes JPEG et des
+copies des originaux, sauf si vous décochez **Copier les originaux en pleine taille**. Vous
+choisissez le titre de la page ainsi que la taille et la qualité des vignettes. Avec les originaux
+copiés, la page n'a besoin d'aucun serveur : ouvrez-la depuis le disque ou déposez-la sur n'importe
+quel hébergement statique. Sans eux, ses liens vers les images en pleine taille pointent vers les
+photos de votre propre disque.
+
+Cochez **Revue client** pour soumettre la galerie à l'avis de vos clients. Chaque image reçoit une
+zone de commentaire ; les notes restent dans le navigateur du relecteur, et le bouton
+**Export comments** de la page les enregistre toutes dans un seul fichier JSON.
 
 Mise en page d'impression
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2483,16 +3000,514 @@ coupe configurables. Nécessite ``reportlab``.
 
 ----
 
+Référence du menu Extra Tools
+-----------------------------
+
+Chaque entrée du menu ``Extra Tools``, sous-menu par sous-menu, dans l'ordre du menu. Beaucoup
+ont une section plus détaillée ci-dessus ; cette liste est l'inventaire complet. Les entrées qui
+enregistrent un nouveau fichier l'écrivent à côté de la source et ajoutent ``_1``, ``_2`` …
+lorsque le nom est déjà pris ; les entrées marquées « enregistré dans la recette » sont des
+modifications non destructives des réglages de développement de l'image. Les plugins peuvent
+ajouter leurs propres entrées à ces sous-menus.
+
+Sous-menu Batch
+^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``Batch Format Conversion``
+     - Convertit les images d'un dossier (le dossier courant par défaut) en PNG, JPEG, WebP, BMP
+       ou TIFF, ou en HEIC / AVIF / JXL lorsque leurs encodeurs sont installés, avec des options
+       de qualité, d'omission des fichiers déjà au bon format et d'envoi des originaux à la
+       corbeille.
+   * - ``Batch EXIF Strip``
+     - Supprime les EXIF, le GPS et les autres métadonnées de toutes les images d'un dossier pour
+       protéger la vie privée, soit en écrasant les originaux, soit en écrivant des copies
+       nettoyées dans un dossier de sortie.
+   * - ``Image Sanitizer``
+     - Re-rend les images d'un dossier à partir des pixels bruts, en supprimant toutes les
+       données cachées (métadonnées, stéganographie, octets de fin) et en renommant chacune en
+       date + chaîne aléatoire ; peut aussi agrandir les petites images vers une résolution
+       cible, comme ``AI Image Upscale``.
+   * - ``Image Organizer``
+     - Trie les images d'un dossier dans des sous-dossiers par date (année-mois ou année),
+       résolution, type de fichier, taille de fichier ou nombre fixe par dossier, en les copiant
+       ou en les déplaçant, avec un aperçu.
+   * - ``Token Batch Rename``
+     - Renomme les images sélectionnées (ou tout le dossier) à partir d'un modèle à jetons comme
+       ``{name}_{counter:04}`` ou ``{date}_{camera}``, avec un aperçu en direct qui signale les
+       conflits ; les fichiers annexes, les notes et les étiquettes suivent les fichiers.
+   * - ``Deflicker (Time-lapse)``
+     - Égalise la luminosité d'une image à l'autre sur les images de time-lapse du dossier
+       courant (cible par moyenne glissante ou moyenne globale) et écrit les copies corrigées
+       dans un sous-dossier ``deflickered/``, sans toucher aux originaux.
+   * - ``Document Binarize``
+     - Transforme une photo ou un scan de page en noir sur blanc net grâce au seuillage adaptatif
+       de Sauvola (curseurs de taille de fenêtre et de k), en enregistrant ``<name>_bw.png`` à
+       côté de la source.
+   * - ``Otsu Threshold``
+     - Convertit l'image courante en noir et blanc à son seuil global d'Otsu choisi
+       automatiquement, avec une option d'inversion, en enregistrant ``<name>_otsu.png``.
+   * - ``Edit Animation``
+     - Inverse, passe en boomerang, re-cadence (0,25x à 4x) ou optimise (fusionne les images
+       répétées) le GIF, l'APNG ou le WebP animé courant, en enregistrant ``<name>_edited.gif``.
+   * - ``Optimize to Target Size``
+     - Réencode l'image courante en JPEG ou WebP à la qualité la plus élevée qui tient dans un
+       budget de taille en Ko, en enregistrant ``<name>_opt.jpg`` ou ``<name>_opt.webp``.
+   * - ``Meme Caption``
+     - Ajoute des légendes de mème classiques en haut et en bas (texte blanc en majuscules avec un
+       contour noir, retour à la ligne automatique) à l'image courante, en enregistrant
+       ``<name>_meme.png``.
+   * - ``Steganography``
+     - Cache un message texte dans les bits de poids faible de l'image courante, enregistrée sans
+       perte sous ``<name>_stego.png``, ou révèle un message caché de cette façon.
+
+Sous-menu Library & Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``Library Search``
+     - Gère les dossiers racines de la photothèque, les indexe (éventuellement avec des hachages
+       perceptuels) et y recherche par nom de fichier, largeur / hauteur minimales et taille de
+       fichier en Ko ; double-cliquez sur un résultat pour l'ouvrir.
+   * - ``Smart Albums``
+     - Enregistre des albums à règles (extensions, nom, étiquettes, lieu, taille et note
+       minimales, étiquette de couleur, état de tri, favoris) et affiche leurs correspondances ;
+       peut créer un album par ville à partir des données GPS, et importer ou exporter des
+       albums.
+   * - ``Find Similar Images``
+     - Trouve les images de la photothèque qui ressemblent à l'image courante (ou à la première
+       sélectionnée) par hachage perceptuel dans une distance de Hamming choisie ; analysez
+       d'abord vos racines avec pHash dans ``Library Search``.
+   * - ``Semantic Search``
+     - Trouve les images du dossier courant qui correspondent à une description textuelle comme
+       « plage au coucher du soleil » grâce à CLIP sur ``onnxruntime`` (dont l'installation est
+       proposée à la première utilisation) ; le modèle d'environ 150 Mo se télécharge une seule
+       fois.
+   * - ``Find Duplicate Images``
+     - Analyse un dossier (éventuellement avec ses sous-dossiers) à la recherche de doublons
+       exacts par hachage de fichier ou d'images semblables par hachage perceptuel ; peut
+       présélectionner toutes les copies sauf la meilleure de chaque groupe et déplacer la
+       sélection vers la Corbeille.
+   * - ``Auto-Tag Images``
+     - Étiquette les images sélectionnées, ou tout le dossier, avec des étiquettes de contenu
+       heuristiques (photo, document, capture d'écran, graphique, paysage, portrait) sous
+       ``auto/`` dans l'arbre des étiquettes hiérarchiques, ou avec des libellés CLIP une fois
+       que Semantic Search a téléchargé son modèle.
+   * - ``Hierarchical Tags``
+     - Crée et supprime des étiquettes arborescentes comme ``animal/cat/british``, liste les
+       images placées sous une étiquette, et ajoute ou retire une étiquette aux vignettes
+       sélectionnées.
+   * - ``Export Metadata (CSV / JSON)``
+     - Écrit un enregistrement par image de la vue courante (détails du fichier, champs EXIF clés
+       comme l'appareil, l'objectif, l'exposition et l'ISO, note, étiquette de couleur,
+       étiquettes et commentaire) dans un fichier CSV ou JSON.
+   * - ``XMP Sidecars``
+     - Exporte ou importe des fichiers annexes ``.xmp`` pour chaque image de la vue courante, afin
+       que la note, le titre, la description, les mots-clés et l'étiquette de couleur fassent
+       l'aller-retour avec Adobe Bridge, Lightroom et les autres outils compatibles XMP.
+   * - ``GPS Geotag``
+     - Écrit une latitude et une longitude (degrés décimaux) dans les balises GPS EXIF de l'image
+       courante, en remplaçant celles déjà présentes ; fichiers JPEG et WebP uniquement.
+   * - ``Geotag from GPX Track``
+     - Fait correspondre les images sélectionnées (ou toute la vue) à une trace ``.gpx`` d'après
+       leur heure de prise de vue EXIF : réglez l'écart entre l'horloge de l'appareil et l'UTC, la
+       distance maximale entre une photo et un point de la trace (et l'interpolation ou non entre
+       les points), voyez combien tombent sur la trace, puis écrivez leurs positions dans les
+       balises GPS EXIF ; fichiers JPEG et WebP uniquement.
+   * - ``Edit Capture Time``
+     - Décale l'heure de prise de vue EXIF des images sélectionnées (ou de toute la vue) de jours,
+       d'heures, de minutes et de secondes, ou d'après le moment où la première photo a réellement
+       été prise, en réécrivant DateTimeOriginal, DateTimeDigitized et DateTime ; les photos sans
+       heure de prise de vue EXIF ne sont pas modifiées, et seuls les JPEG et WebP peuvent être
+       réécrits.
+   * - ``Metadata Template``
+     - Appose un titre, une description et des mots-clés séparés par des virgules sur les images
+       sélectionnées (ou toute la vue). ``{filename}``, ``{name}``, ``{folder}``, ``{date}`` et
+       ``{year}`` sont remplis pour chaque photo ; avec **Only fill empty fields** activé, une photo
+       garde son propre titre et sa description et reçoit les mots-clés ; désactivé, le modèle les
+       remplace et ses mots-clés remplacent les étiquettes de la photo. Une confirmation est
+       demandée avant l'application et le modèle est mémorisé ; ``XMP Sidecars`` et
+       ``Export Metadata`` écrivent le résultat.
+   * - ``Thumbnail Cache``
+     - Affiche l'espace disque utilisé par le cache de vignettes et permet de le vider.
+
+Sous-menu Views
+^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``By day``
+     - Sous ``Timeline View`` : remplace la vue principale par les images du dossier courant
+       regroupées sous un en-tête par jour de prise de vue (date EXIF, sinon la date du
+       fichier) ; double-cliquez sur une image pour l'ouvrir.
+   * - ``By month``
+     - Sous ``Timeline View`` : la même chronologie, regroupée par mois de prise de vue.
+   * - ``By year``
+     - Sous ``Timeline View`` : la même chronologie, regroupée par année de prise de vue.
+   * - ``Calendar View``
+     - Affiche un calendrier qui met en évidence les jours comportant des photos dans le dossier
+       courant (par date de prise de vue) ; cliquez sur un jour pour lister ses images et
+       double-cliquez sur l'une d'elles pour l'ouvrir.
+   * - ``Map View``
+     - Place les images géolocalisées du dossier courant sur une carte OpenStreetMap, un marqueur
+       par ville la plus proche avec un compteur ; la carte se charge en ligne et se replie sur
+       une liste de coordonnées sans QtWebEngine.
+   * - ``Scopes & Inspector``
+     - Analyse l'image courante dans des onglets : forme d'onde de luminance, parade RGB,
+       exposition en fausses couleurs, focus peaking, Error Level Analysis et détection de
+       clonage (copier-déplacer).
+   * - ``Tiny Planet (360°)``
+     - Reprojette un panorama 360° équirectangulaire 2:1 en « petite planète » carrée d'une
+       taille choisie, en enregistrant ``<name>_planet.png`` ; avertit lorsque l'image n'est pas
+       en 2:1.
+   * - ``Image Statistics``
+     - Affiche la moyenne, le minimum, le maximum, l'écart type et la médiane des canaux R, G, B
+       et de luminance de l'image courante, et exporte son histogramme à 256 niveaux en CSV.
+   * - ``Quality Report``
+     - Liste des métriques de qualité sans référence pour l'image courante : colorfulness,
+       entropie tonale, contraste RMS, densité de contours et bruit estimé.
+   * - ``Test Chart``
+     - Génère une mire d'étalonnage (barres de couleur SMPTE, coin de gris, rampe de dégradé,
+       damier ou couleur unie) à une largeur et une hauteur choisies et l'enregistre dans un
+       fichier.
+   * - ``Off``
+     - Sous ``Color blindness preview`` : désactive l'aperçu de déficience de la vision des
+       couleurs.
+   * - ``Protanopia (red-blind)``
+     - Sous ``Color blindness preview`` : affiche l'image dans la visionneuse telle qu'une
+       personne atteinte de protanopie la voit ; affichage uniquement, le fichier et sa recette
+       restent intacts.
+   * - ``Deuteranopia (green-blind)``
+     - Sous ``Color blindness preview`` : simule la deutéranopie, la déficience rouge-vert la plus
+       courante ; affichage uniquement.
+   * - ``Tritanopia (blue-blind)``
+     - Sous ``Color blindness preview`` : simule la tritanopie (déficience bleu-jaune) ;
+       affichage uniquement.
+   * - ``Achromatopsia (greyscale)``
+     - Sous ``Color blindness preview`` : affiche l'image entièrement en niveaux de gris, comme
+       avec l'achromatopsie ; affichage uniquement.
+
+Sous-menu Workflow
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``Culling``
+     - Filtre le dossier courant sur les images retenues, rejetées ou non marquées, effectue un
+       tri automatique en retenant l'image la plus nette de chaque groupe d'images semblables et
+       en rejetant les autres, et peut supprimer définitivement tous les rejets.
+   * - ``Staging Tray``
+     - Un panier persistant inter-dossiers : ajoutez-y les vignettes sélectionnées ou l'image
+       courante depuis n'importe quel dossier, puis déplacez-les ou copiez-les toutes vers un
+       seul dossier, ou affichez le plateau comme un album.
+   * - ``Reference Panel``
+     - Épingle des images de référence (ajoutées depuis des fichiers, par glisser-déposer ou
+       depuis l'image courante) avec un grand aperçu pour une comparaison côte à côte ; la liste
+       est conservée d'un redémarrage à l'autre.
+   * - ``Virtual Copies``
+     - Enregistre des instantanés nommés de la recette de développement de l'image courante et
+       bascule entre eux sans dupliquer le fichier.
+   * - ``Dual-Pane File Manager``
+     - Deux arborescences de dossiers côte à côte pour copier ou déplacer la sélection de l'une
+       vers l'autre, ou ouvrir un fichier dans la visionneuse.
+   * - ``Macros``
+     - Enregistre, modifie, nettoie et rejoue des macros d'actions de note, de favori,
+       d'étiquette de couleur et d'étiquette sur les images sélectionnées.
+   * - ``Watched Folder``
+     - Tant que la boîte de dialogue est ouverte, surveille un dossier (sous-dossiers compris) et
+       attribue un préréglage de développement choisi à chaque nouvelle image qui arrive, pour
+       des workflows de capture connectée ou d'importation sans intervention.
+
+Sous-menu Export
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``Contact Sheet PDF``
+     - Dispose les vignettes des images sélectionnées (ou de tout le dossier) dans une grille
+       lignes x colonnes sur des pages A4, A3, Letter ou Legal, avec des marges, un titre
+       facultatif et des légendes de nom de fichier facultatives. Le champ **Layout** applique un
+       préréglage — Default (4 × 5, 10 mm, avec légendes), Compact (6 × 8, 5 mm, sans légendes),
+       Proof (5 × 6, 8 mm, avec légendes), Editorial (2 × 3, 18 mm, avec légendes) ou Index
+       (8 × 10, 4 mm, sans légendes), en colonnes × lignes — et modifier à la main l'une de ces
+       valeurs le fait passer en Custom.
+   * - ``Web Gallery``
+     - Exporte les images sélectionnées (ou tout le dossier) sous forme de galerie HTML autonome
+       avec vignettes et lightbox ; peut copier les originaux et ajouter des zones de
+       commentaires de validation client exportées en JSON.
+   * - ``Slideshow Video``
+     - Rend les images sélectionnées (ou tout le dossier) en MP4 avec une taille, une cadence
+       d'images, une durée d'affichage, une qualité et une transition (fondu, fondu enchaîné,
+       glissement ou balayage) choisies.
+   * - ``Print Layout``
+     - Dispose des images sur une grille PDF multi-pages avec taille de page, orientation,
+       lignes, colonnes, marge, gouttière et traits de coupe ; nécessite le paquet facultatif
+       ``reportlab``.
+   * - ``Collage``
+     - Compose les images sélectionnées (ou tout le dossier) en un montage en grille de 1 à 12
+       colonnes, en enregistrant ``collage.png`` à côté de la première image.
+   * - ``ID Photo Sheet``
+     - Répète le portrait courant à un format d'identité (35 x 45 mm, 2 x 2 in, 33 x 48 mm ou
+       50 x 70 mm) sur du papier 4x6, 5x7, A4 ou Letter à 300 DPI, en enregistrant
+       ``<name>_idsheet.png``.
+
+Sous-menu Develop (Non-Destructive)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``Before / After Compare``
+     - Affiche l'image courante sans et avec sa recette de développement dans une seule vue,
+       séparées par un séparateur déplaçable.
+   * - ``Develop Presets…``
+     - Enregistre la recette de l'image courante comme préréglage nommé, puis l'applique à
+       l'image courante ou à la sélection, ou fusionne uniquement ses ajustements actifs dans
+       leurs propres recettes.
+   * - ``Tone Curve``
+     - Modifie une courbe RGB principale et des courbes rouge, verte et bleue séparées sur un
+       histogramme (cliquez pour ajouter un point, faites-le glisser pour le déplacer, clic droit
+       pour le supprimer) ; enregistré dans la recette.
+   * - ``Apply .cube LUT``
+     - Applique un LUT 3D ou 1D Adobe ``.cube`` à une intensité réglable ; enregistré dans la
+       recette, et ``Clear`` le retire.
+   * - ``Split Toning``
+     - Teinte les ombres et les hautes lumières avec une teinte et une saturation séparées, plus
+       un curseur d'équilibre ; enregistré dans la recette.
+   * - ``Local Adjustment Masks``
+     - Ajoute des masques au pinceau, radiaux et en dégradé linéaire, chacun avec sa propre
+       exposition, luminosité, contraste, saturation, température, teinte, hautes lumières,
+       ombres et adoucissement ; enregistré dans la recette.
+   * - ``Layers``
+     - Empile jusqu'à huit calques de superposition texte, image ou LUT avec opacité et fusion
+       normale, produit, écran ou incrustation ; enregistré dans la recette.
+   * - ``Levels``
+     - Règle le point noir, le point blanc et le gamma ; enregistré dans la recette.
+   * - ``Channel Mixer``
+     - Reconstruit chaque canal de sortie à partir des entrées rouge, verte et bleue pondérées
+       plus un décalage, avec un mode monochrome pour la conversion en noir et blanc ;
+       enregistré dans la recette.
+   * - ``Gradient Map``
+     - Fait passer la luminance par un dégradé prédéfini (Mono, Sepia, Cyanotype, Fire, Ocean,
+       Magenta–Teal) à une intensité réglable, éventuellement interpolé dans l'espace perceptuel
+       OkLCH ; enregistré dans la recette.
+   * - ``Auto Color Balance``
+     - Supprime les dominantes de couleur avec la méthode gray-world, white-patch, niveaux
+       automatiques (centile) ou Retinex, dosée par un curseur d'intensité, en enregistrant
+       ``<name>_balanced.png``.
+   * - ``Clarity / Dehaze``
+     - Applique les curseurs de contraste local Dehaze, Clarity et Texture, en enregistrant
+       ``<name>_local.png``.
+   * - ``HSL / Color Mixer``
+     - Ajuste séparément la teinte, la saturation et la luminance de huit bandes de couleur (du
+       rouge au magenta), en enregistrant ``<name>_hsl.png``.
+   * - ``CLAHE (Local Equalize)``
+     - Renforce le contraste local par égalisation d'histogramme adaptative à contraste limité
+       (limite d'écrêtage et nombre de tuiles) sur la luminance, en enregistrant
+       ``<name>_clahe.png``.
+   * - ``Flatten Background``
+     - Supprime un dégradé d'arrière-plan doux comme la pollution lumineuse ou un éclairage
+       inégal (soustraction), ou le vignetage (division), avec un degré réglable, en enregistrant
+       ``<name>_flat.png``.
+   * - ``Frame & Caption``
+     - Ajoute une bordure de passe-partout colorée, une bande inférieure facultative de style
+       Polaroid et une légende, en enregistrant ``<name>_framed.png``.
+   * - ``Ordered Dither``
+     - Réduit chaque canal à 2 à 8 niveaux avec un motif de tramage ordonné de Bayer pour un rendu
+       d'impression rétro, en enregistrant ``<name>_dither.png``.
+   * - ``Color Map``
+     - Recolore la luminance de l'image à travers la palette viridis, magma ou jet, en
+       enregistrant ``<name>_colormap.png``.
+   * - ``Distort``
+     - Fait tourbillonner, pince / bombe ou fait onduler l'image avec une intensité réglable, en
+       enregistrant ``<name>_distort.png``.
+   * - ``Polar Coordinates``
+     - Enroule l'image en disque, ou déroule un disque en bande, avec inversion facultative du
+       rayon, en enregistrant ``<name>_polar.png``.
+   * - ``Kaleidoscope``
+     - Reflète un secteur autour du centre en un motif symétrique avec un nombre de segments et
+       une rotation choisis, en enregistrant ``<name>_kaleidoscope.png``.
+   * - ``Frosted Glass``
+     - Disperse chaque pixel vers une position voisine aléatoire (rayon en pixels, graine
+       reproductible) pour un effet de verre texturé, en enregistrant ``<name>_frosted.png``.
+   * - ``Pixel Sort``
+     - Trie les pixels par luminosité le long des lignes ou des colonnes à l'intérieur d'une bande
+       de luminosité basse / haute pour un effet glitch, en enregistrant
+       ``<name>_pixelsort.png``.
+   * - ``Film Grain``
+     - Ajoute un grain argentique procédural avec des réglages d'intensité, de taille du grain,
+       de monochrome et de graine ; enregistré dans la recette.
+   * - ``Lens Flare``
+     - Ajoute un reflet d'objectif synthétique à une position choisie avec des réglages
+       d'intensité, de taille du halo et de couleur ; enregistré dans la recette.
+   * - ``Threshold / Posterize``
+     - Applique un seuil noir et blanc (0 à 255) et / ou postérise chaque canal à 2 à 64
+       niveaux ; enregistré dans la recette.
+   * - ``Solarize``
+     - Inverse les tons au-dessus d'un seuil pour un effet de solarisation de chambre noire, dosé
+       par un curseur de mélange, en enregistrant ``<name>_solarize.png``.
+   * - ``Diffuse Glow``
+     - Ajoute un halo doux de style Orton avec des réglages de quantité, de rayon et de seuil des
+       hautes lumières, en enregistrant ``<name>_glow.png``.
+   * - ``Graduated Density``
+     - Assombrit un côté du cadre le long d'une ligne droite comme un filtre ND dégradé (angle,
+       IL, dureté, décalage, teinte facultative), en enregistrant ``<name>_gradnd.png``.
+   * - ``Velvia``
+     - Renforce surtout les couleurs ternes, comme la pellicule inversible Velvia, avec des
+       curseurs d'intensité et de protection des ombres, en enregistrant ``<name>_velvia.png``.
+   * - ``Emboss``
+     - Produit un relief éclairé depuis un azimut et une élévation choisis, avec un curseur de
+       profondeur et une option niveaux de gris, en enregistrant ``<name>_emboss.png``.
+   * - ``Defringe``
+     - Désature les franges violettes, vertes ou toutes les franges colorées le long des contours
+       à fort contraste, avec des curseurs de quantité et de seuil de contour, en enregistrant
+       ``<name>_defringe.png``.
+   * - ``Film Negative``
+     - Convertit un négatif couleur numérisé en positif, en supprimant le masque orange du film
+       (estimé automatiquement), avec un gamma de sortie, en enregistrant
+       ``<name>_positive.png``.
+   * - ``Filmic Tone Map``
+     - Adoucit les hautes lumières avec une courbe filmique Reinhard ou Hable, avec des curseurs
+       d'exposition, de point blanc, de contraste et de saturation, en enregistrant
+       ``<name>_filmic.png``.
+   * - ``Tone Equalizer``
+     - Règle l'exposition séparément pour les noirs, les ombres, les tons moyens, les hautes
+       lumières et les blancs, avec un lissage pour éviter les halos, en enregistrant
+       ``<name>_toneeq.png``.
+   * - ``Detail Equalizer``
+     - Renforce ou réduit le contraste séparément dans les bandes de détails fins, moyens,
+       grossiers et larges, en enregistrant ``<name>_detaileq.png``.
+   * - ``Soft Proof``
+     - Prévisualise l'image courante à travers un profil ICC de sortie choisi, en peignant en
+       magenta les pixels hors gamut et en les comptant ; rien n'est enregistré.
+
+Sous-menu Retouch & Transform
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``AI Image Upscale``
+     - Agrandit un dossier d'images avec Real-ESRGAN (général x4, anime x4 ou x2) ou un
+       rééchantillonnage Lanczos, Bicubic ou Nearest ; les modèles IA installent
+       ``onnxruntime`` à la demande et sont téléchargés automatiquement à la première
+       utilisation (~65 Mo).
+   * - ``Noise Reduction / Sharpening``
+     - Applique une réduction de bruit préservant les contours (éventuellement sur la luminance
+       uniquement) et une accentuation par masque flou avec quantité et rayon, en enregistrant
+       dans un fichier choisi ; nécessite OpenCV (``opencv-python``).
+   * - ``Healing Brush``
+     - Supprime les taches sur lesquelles vous cliquez dans un aperçu (un clic droit supprime une
+       tache) par inpainting avec la méthode Telea ou Navier-Stokes, en enregistrant dans un
+       fichier choisi ; nécessite OpenCV.
+   * - ``Clone Stamp``
+     - Copie une zone à bords doux depuis un point source choisi par Maj+clic vers chaque point
+       sur lequel vous cliquez dans un aperçu (un clic droit annule), en enregistrant le
+       résultat dans un fichier choisi.
+   * - ``Frequency Separation``
+     - Sépare l'image courante, selon un rayon de flou choisi, en ``<name>_low.png`` (couleur et
+       ton) et ``<name>_high.png`` (texture) pour la retouche dans un autre logiciel ;
+       recombinez avec basse + (haute - 128).
+   * - ``Smart Crop``
+     - Suggère des recadrages basés sur la saillance (libre, 1:1, 4:5, 3:2, 16:9) qui placent le
+       sujet sur un point de la règle des tiers, et écrit celui choisi dans la recette comme
+       recadrage non destructif.
+   * - ``Portrait Auto-Retouch``
+     - Lisse les zones de teinte chair, supprime les yeux rouges et ajoute une passe
+       d'accentuation finale, chacun avec son propre curseur, en enregistrant
+       ``<name>_retouched.png``.
+   * - ``Face Detection``
+     - Détecte les visages dans l'image courante avec la cascade de Haar d'OpenCV et vous permet
+       de nommer chacun ; les noms sont enregistrés avec la recette. Nécessite OpenCV 4
+       (``opencv-python<5``).
+   * - ``Sky / Background``
+     - Remplace le ciel par un dégradé, ou supprime l'arrière-plan vers la transparence ou le
+       blanc, en enregistrant dans un fichier choisi ; nécessite OpenCV, et utilise ``rembg``
+       pour le détourage de l'arrière-plan lorsqu'il est installé.
+   * - ``Crop / Straighten``
+     - Fait pivoter jusqu'à ±15° (en rognant les coins vides) et recadre par coordonnées
+       normalisées ou par un préréglage de rapport d'aspect, en enregistrant dans un fichier
+       choisi ; le redressement nécessite OpenCV.
+   * - ``Auto-Straighten``
+     - Mesure l'inclinaison de l'horizon ou des lignes verticales, vous permet d'ajuster la
+       rotation, et enregistre l'image redressée dans un fichier choisi ; nécessite OpenCV.
+   * - ``Lens Correction``
+     - Corrige la distorsion en barillet / coussinet, le vignetage et l'aberration chromatique
+       rouge / bleu avec des curseurs, en enregistrant dans un fichier choisi.
+   * - ``Scale Bar``
+     - Incruste une barre d'échelle étalonnée dans l'image courante à partir d'une valeur en
+       pixels par unité et d'un libellé d'unité, en enregistrant ``<name>_scalebar.png``.
+
+Sous-menu Multi-Image
+^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entrée
+     - Rôle
+   * - ``HDR Merge``
+     - Fusionne deux prises de vue ou plus exposées différemment par fusion d'exposition de
+       Mertens (aucune donnée d'exposition nécessaire), en les alignant éventuellement d'abord ;
+       nécessite OpenCV.
+   * - ``Panorama Stitch``
+     - Assemble deux prises de vue ou plus qui se chevauchent, prises dans l'ordre avec 20 à 40 %
+       de recouvrement, en mode panorama ou numérisation à plat, en rognant éventuellement les
+       bords noirs ; nécessite OpenCV.
+   * - ``Focus Stacking``
+     - Combine une série de mises au point en une seule image nette partout en conservant les
+       pixels les plus nets de chaque image, en les alignant éventuellement d'abord ; nécessite
+       OpenCV.
+   * - ``Image Stack``
+     - Combine pixel par pixel une rafale déjà alignée par moyenne, médiane, max, min ou moyenne
+       avec rejet sigma, pour des poses longues, la suppression de foule ou des filés d'étoiles ;
+       OpenCV n'est pas nécessaire.
+   * - ``Anaglyph 3D``
+     - Combine l'image courante (œil gauche) avec une image œil droit choisie en un anaglyphe
+       rouge-cyan (méthode Dubois, couleur, gris ou vraie), en enregistrant
+       ``<name>_anaglyph.png``.
+
+----
+
 Utilisation en ligne de commande
 --------------------------------
 
 ::
 
-   imervue                        # Launch normally
-   imervue /path/to/image         # Open a specific image
-   imervue /path/to/folder        # Open a specific folder
-   imervue --debug                # Enable debug mode
-   imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+   python -m Imervue                      # Launch normally
+   python -m Imervue /path/to/image       # Open a specific image
+   python -m Imervue /path/to/folder      # Open a specific folder
+   python -m Imervue --debug              # Enable debug mode
+   python -m Imervue --software_opengl    # Use software rendering (when GPU is unsupported)
 
 CLI de traitement par lots sans interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2515,23 +3530,116 @@ affichage::
    * - ``info`` / ``stats``
      - Dimensions et format ; métriques de qualité sans référence (``--json`` pour une sortie exploitable par machine)
    * - ``convert`` / ``resize`` / ``thumbnail``
-     - Conversion de format (``--format`` / ``--quality``), redimensionnement au grand côté maximal, boîte de vignette
+     - Conversion de format (``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, ``--quality``) ; redimensionnement au grand côté (``--max``) ou à une ``--width`` / ``--height`` exacte ; boîte de vignette
    * - ``watermark`` / ``optimize``
-     - Filigrane texte (``--text`` / ``--corner`` / ``--opacity``) ; encoder sous un budget ``--max-kb``
+     - Filigrane texte (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``, ``--color R G B``, ``--no-shadow``) ; encoder sous un budget ``--max-kb``
    * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
      - Défloutage par canal sombre, égalisation adaptative, tramage Bayer ordonné, swirl / pinch / ripple
    * - ``auto-orient`` / ``strip``
      - Appliquer l'orientation EXIF aux pixels ; réenregistrer sans EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``
-     - Montage en grille (``--columns``) ; 3D rouge-cyan à partir d'une paire stéréo (``--method``)
+     - Montage en grille (``--columns``, ``--cell-width`` / ``--cell-height``, ``--gap``, ``--margin``, ``--background R G B``) ; 3D rouge-cyan à partir d'une paire stéréo (``--method``)
    * - ``preset`` / ``pipeline``
      - Appliquer un préréglage de développement enregistré par son nom ; exécuter un pipeline JSON ordonné
    * - ``list-ops``
      - Lister toutes les sous-commandes (``--json`` pour une sortie exploitable par machine)
 
-Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités.
+Chaque sous-commande décode comme la visionneuse : les sorties sont redressées selon l'orientation EXIF et converties en sRGB depuis le profil couleur intégré, les entrées AVIF sont lues par Pillow lui-même, et les entrées HEIC / JPEG XL lorsque leur backend optionnel est installé. Un RAW d'appareil photo est développé comme dans la visionneuse au lieu d'être lu comme sa petite vignette intégrée ; ``resize`` et ``strip`` l'écrivent en PNG. Un fichier illisible est signalé et les autres sont tout de même traités. Un fichier tronqué est lu aussi loin qu'il va, comme dans la visionneuse. Les niveaux de gris 16 bits et à virgule flottante sont ramenés à 8 bits comme dans la visionneuse ; ``resize`` et ``strip`` gardent la profondeur de bits de la source.
 
-Options communes : ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``--version``.
+Les sous-commandes qui prennent des fichiers ou des dossiers (toutes sauf ``collage``, ``anaglyph`` et ``list-ops``) partagent ``--out`` (répertoire de sortie), ``--recursive``, ``--dry-run`` (lister les actions sans rien écrire), ``--overwrite`` et ``-j`` / ``--jobs`` (workers parallèles ; ``0`` utilise tous les cœurs). ``collage`` et ``anaglyph`` écrivent l'unique fichier désigné par ``--out``. ``--version`` affiche la version de la CLI.
+
+Chaque outil du serveur MCP (voir `Serveur MCP`_) est aussi une sous-commande. Dix d'entre eux sont les sous-commandes ci-dessus (``convert_format`` est ``convert``, ``quality_metrics`` est ``stats``, ``build_collage`` est ``collage``, etc.) ; les 48 autres exécutent le code propre de l'outil MCP :
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Type
+     - Sous-commandes
+   * - Retouches : écrivent ``<stem>_<name>.png`` à côté de chaque source, ou ``<stem>.png`` dans ``--out``
+     - ``frame``, ``crop``, ``rotate``, ``solarize``, ``glow``, ``velvia``, ``emboss``, ``film-negative``, ``defringe``, ``graduated-density``, ``filmic-tonemap``, ``tone-equalizer``, ``detail-equalizer``, ``colormap``, ``false-color``, ``split-toning``, ``pixel-sort``, ``polar``, ``kaleidoscope``, ``frosted-glass``, ``local-contrast``, ``posterize``, ``gradient-map``, ``film-grain``, ``levels``, ``auto-color-balance``, ``channel-mixer``, ``curve``, ``lens-correction``
+   * - Autres sorties
+     - ``ela`` (carte Error Level Analysis en PNG), ``video-frame`` (une image d'une vidéo, ``--frame-index``), ``puppet-from-png`` (un rig ``.puppet``, ``--cell-size``)
+   * - Rapports : un résultat par image, ``--json`` pour une sortie exploitable par machine
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
+   * - Exécution unique avec sortie JSON
+     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``, ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``,
+       ``puppet-schema --name ..``
+
+Chaque paramètre MCP devient une option avec la même valeur par défaut et les mêmes valeurs autorisées : ``zone_gains`` devient ``--zone-gains``, un paramètre oui/non devient ``--grayscale`` / ``--no-grayscale``, et une couleur ou une ligne de matrice prend ses valeurs dans l'ordre (``--red 1 0 0``). ``py -m Imervue.cli <subcommand> --help`` les liste::
+
+   py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+   py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+   py -m Imervue.cli histogram a.jpg --json
+   py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+
+``pipeline FILE INPUTS…`` exécute une chaîne ordonnée d'opérations sur chaque entrée et écrit un
+PNG par entrée : ``<stem>_pipeline.png`` à côté de la source, ou ``<stem>.png`` dans ``--out``.
+``FILE`` est un JSON UTF-8 (une marque d'ordre des octets est acceptée) contenant soit une liste
+d'étapes, soit un objet ``{"pipeline": [...]}``. Chaque étape est un objet avec un ``"op"`` qui
+nomme l'opération, plus les paramètres de cette opération ; un paramètre omis prend sa valeur par
+défaut, et les clés qu'une opération ne connaît pas sont ignorées. Un pipeline compte au plus
+50 étapes ; un pipeline vide écrit chaque entrée telle que décodée. Le fichier est vérifié avant
+la lecture de toute image : un fichier illisible ou impossible à analyser affiche ``error: …``,
+et plus de 50 étapes, une étape sans nom ``"op"`` ou une opération inconnue affichent une ligne
+``pipeline error: step N: …`` par problème ; dans les deux cas, la commande se termine avec le
+code 2 et n'écrit rien. Un paramètre du mauvais type (``null``, du texte là où un nombre est
+attendu) fait échouer cette image, ce qui est signalé, et le code de sortie est 1.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 44 42
+
+   * - Op
+     - Paramètres (valeurs par défaut)
+     - Effet
+   * - ``dehaze``
+     - ``strength`` (``1.0`` ; borné à 0 – 1)
+     - Suppression du voile par a priori du canal sombre ; ``0`` laisse l'image inchangée
+   * - ``clahe``
+     - ``clip`` (``2.0`` ; au moins 1), ``tiles`` (``8`` ; au moins 1)
+     - Égalisation adaptative à contraste limité de la luminance sur une grille
+       ``tiles`` × ``tiles``
+   * - ``dither``
+     - ``levels`` (``2`` ; borné à 2 – 8)
+     - Tramage de Bayer ordonné 4×4 à ``levels`` valeurs par canal ; alpha conservé
+   * - ``distort``
+     - ``mode`` (``"swirl"`` : ``swirl`` / ``pinch`` / ``ripple``), ``strength`` (``0.5`` ;
+       borné à -1 – 1)
+     - Déformation géométrique autour du centre ; pour ``pinch``, une intensité positive bombe
+       et une intensité négative pince
+   * - ``clarity``
+     - ``amount`` (``0.5`` ; -1 – 1, une valeur négative adoucit)
+     - Contraste local à grand rayon, pondéré sur les tons moyens
+   * - ``texture``
+     - ``amount`` (``0.5`` ; -1 – 1, une valeur négative adoucit)
+     - Contraste local à petit rayon, sur les détails fins
+   * - ``grayscale``
+     - aucun
+     - Luma (0.299 R + 0.587 G + 0.114 B) dans les trois canaux ; alpha conservé
+   * - ``invert``
+     - aucun
+     - Inverse R, G et B ; alpha conservé
+   * - ``watermark``
+     - ``text`` (``""`` : pas de filigrane), ``corner`` (``"bottom-right"`` : ``top-left`` /
+       ``top-right`` / ``bottom-left`` / ``bottom-right`` / ``center`` ; toute autre valeur
+       compte comme ``bottom-right``), ``opacity`` (``0.6`` ; borné à 0 – 1)
+     - Texte blanc avec ombre portée, dimensionné à 3,5 % du grand côté ; les options
+       ``--font-fraction``, ``--color`` et ``--no-shadow`` de la sous-commande ``watermark``
+       n'ont pas de paramètre d'étape
+
+Par exemple, ``look.json``::
+
+   {
+     "pipeline": [
+       {"op": "dehaze", "strength": 0.4},
+       {"op": "clahe", "clip": 2.5, "tiles": 8},
+       {"op": "clarity", "amount": 0.3},
+       {"op": "watermark", "text": "(c) Me", "corner": "bottom-right", "opacity": 0.5}
+     ]
+   }
+
+   py -m Imervue.cli pipeline look.json photos/ --out graded/
 
 ----
 
@@ -2581,6 +3689,9 @@ Outils disponibles
      - Ouvre une archive ``.puppet`` et renvoie un inventaire structuré :
        drawables, déformateurs, paramètres, mouvements, expressions, zones de
        contact, parties, mélanges de paramètres et rigs physiques.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - Vérifie un ``.puppet`` par rapport au format v1 (JSON Schemas, règles du
+       chargeur, vérifications du rig) ; renvoie l'un de ses quatre JSON Schemas publiés.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - Moyenne/min/max/écart-type/médiane par canal, métriques de qualité sans
        référence (colorimétrie, entropie, contraste, densité de bords, bruit),
@@ -2599,7 +3710,8 @@ Outils disponibles
      - Compose plusieurs images en une mosaïque en grille (colonnes, taille de
        cellule, espacement, marge, arrière-plan configurables). Rapporte la progression.
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - Recadrage en boîte de pixels, redimensionnement préservant le rapport, et
+     - Recadrage en boîte de pixels, redimensionnement (un seul côté conserve le rapport
+       d'aspect, les deux donnent une taille exacte), et
        rotation 90/180/270 sans perte ou retournement horizontal/vertical.
        Les tailles et coordonnées se rapportent à l'image redressée selon l'EXIF.
    * - ``collection_stats``
@@ -2608,10 +3720,59 @@ Outils disponibles
    * - ``reverse_geocode`` / ``extract_video_frame``
      - Résout des coordonnées GPS vers la ville la plus proche hors ligne, et
        décode une image d'une vidéo en photo fixe.
+   * - ``extract_gps`` / ``dominant_colors``
+     - Lit la latitude/longitude GPS de l'EXIF (s'enchaîne avec ``reverse_geocode``) ;
+       extrait une palette de couleurs par coupe médiane (rgb / hex / nombre de pixels).
+   * - ``error_level_analysis``
+     - Carte de falsification par Error-Level-Analysis (recompression JPEG) sous forme
+       d'URI de données PNG (les zones retouchées ressortent sur le fond).
+   * - ``search_images``
+     - Filtre un dossier avec le DSL de requêtes des albums intelligents (extension / nom /
+       taille / dimensions / rapport d'aspect / appareil EXIF / objectif / lieu).
+   * - ``solarize_image`` / ``glow_image``
+     - Applique une inversion tonale de solarisation ou une lueur diffuse / un bloom Orton,
+       puis enregistre le résultat.
+   * - ``velvia_image`` / ``emboss_image`` / ``defringe_image``
+     - Renforcement de saturation Velvia pondéré par la luminance, relief en estampage à
+       lumière directionnelle, et désaturation des franges violettes/vertes sur les bords.
+   * - ``film_negative_image`` / ``graduated_density_image``
+     - Inverse un négatif couleur numérisé (base du film automatique) et applique un
+       dégradé linéaire de densité neutre graduée.
+   * - ``filmic_tonemap_image`` / ``tone_equalizer_image`` / ``detail_equalizer_image``
+     - Atténuation filmique des hautes lumières Reinhard/Hable, exposition par zone de
+       luminance et contraste par bande de fréquences.
+   * - ``colormap_image`` / ``false_color_image``
+     - Recolore la luminance à travers une palette perceptuelle viridis/magma/jet, ou la
+       projette sur une échelle d'exposition en fausses couleurs.
+   * - ``dither_image`` / ``split_toning_image`` / ``pixel_sort_image``
+     - Tramage ordonné (Bayer) sur quelques tons par canal, virage partiel ombres/hautes
+       lumières, et tri de pixels par bandes de luminosité.
+   * - ``polar_image`` / ``kaleidoscope_image``
+     - Passe des coordonnées rectangulaires aux coordonnées polaires et inversement
+       (petite planète), ou reflète le cadre en un nombre de secteurs de kaléidoscope.
+   * - ``frosted_glass_image`` / ``clahe_image`` / ``local_contrast_image``
+     - Diffusion en verre dépoli par voisins aléatoires, égalisation adaptative
+       d'histogramme à contraste limité, et clarté des tons moyens + texture de détail fin.
+   * - ``posterize_image`` / ``gradient_map_image``
+     - Quantifie chaque canal en quelques aplats, ou remappe la luminance à travers un
+       dégradé du noir au blanc mélangé selon l'intensité.
+   * - ``film_grain_image`` / ``dehaze_image`` / ``distort_image``
+     - Grain argentique gaussien réglable, suppression du voile par dark channel prior,
+       et distorsion géométrique tourbillon / pincement / ondulation.
+   * - ``levels_image`` / ``curve_image``
+     - Niveaux point noir/blanc et gamma, et un préréglage de courbe tonale principale
+       (courbe en S, déboucher les ombres, compresser les hautes lumières).
+   * - ``auto_color_balance_image`` / ``channel_mixer_image``
+     - Balance des blancs automatique (gray-world, white-patch, étirement par centile,
+       retinex) et un mélangeur de canaux 3x3 avec conversion monochrome.
+   * - ``lens_correction_image``
+     - Corrige la distorsion en barillet/coussinet (k1), éclaircit ou accentue le
+       vignetage des coins, et annule l'aberration chromatique rouge/bleu.
 
 Chaque outil annonce un ``outputSchema`` JSON et des ``annotations`` lecture seule /
 destructrices, et retourne son résultat sous forme de ``structuredContent`` aux côtés
-de l'enveloppe texte (selon MCP 2025-11-25), afin que les clients consomment des charges
+de l'enveloppe texte (des champs issus de révisions ultérieures de MCP ; la poignée de main
+annonce ``2025-03-26``), afin que les clients consomment des charges
 typées sans réanalyse. Les outils de longue durée diffusent ``notifications/progress``
 lorsque l'appelant fournit un jeton de progression.
 
@@ -2621,8 +3782,8 @@ Prompts
 Le serveur expose quatre prompts via ``prompts/list`` / ``prompts/get`` :
 ``caption_image``, ``suggest_edits``, ``analyze_composition`` (une critique de
 composition pilotée par la saillance) et ``flag_issues`` (un triage netteté
-+ qualité + écrêtage). Les arguments des prompts peuvent être complétés via
-``completion/complete``.
++ qualité + écrêtage). ``completion/complete`` suggère des valeurs pour le ``style``
+de ``suggest_edits`` et le ``focus`` de ``analyze_composition``.
 
 Claude Code (niveau projet)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2635,14 +3796,15 @@ Le dépôt fournit un ``.mcp.json`` au niveau projet à la racine du dépôt :
      "mcpServers": {
        "imervue": {
          "type": "stdio",
-         "command": "python",
+         "command": "py",
          "args": ["-m", "Imervue.mcp_server"]
        }
      }
    }
 
-L'ouverture de n'importe quel sous-répertoire du dépôt dans Claude Code détecte
-automatiquement ce serveur. Claude Code demande confirmation avant d'activer les
+``py`` est le lanceur Python de Windows ; sous macOS ou Linux, utilisez ``python3`` ou
+l'interpréteur de l'environnement dans lequel Imervue est installé. L'ouverture de n'importe
+quel sous-répertoire du dépôt dans Claude Code détecte automatiquement ce serveur. Claude Code demande confirmation avant d'activer les
 serveurs de projet la première fois — acceptez l'invite pour l'utiliser.
 
 Claude Desktop
@@ -2660,23 +3822,130 @@ interpréteur capable d'exécuter ``import Imervue``.
 Surface du protocole
 ^^^^^^^^^^^^^^^^^^^^
 
-Le serveur implémente le transport JSON-RPC 2.0 stdio de MCP
-version ``2025-03-26`` :
+Le serveur lit sur stdin des messages JSON-RPC 2.0 délimités par des sauts de ligne et écrit les
+réponses et les notifications sur stdout, une ligne UTF-8 chacune. Il répond à ``initialize``
+avec la version de protocole ``2025-03-26``, quelle que soit la version demandée par le client.
+Les requêtes sont traitées une à la fois ; un lot (un tableau JSON) est refusé avec ``-32600``.
 
-* ``initialize`` — poignée de main ; annonce ``capabilities.tools``.
-* ``tools/list`` — énumère les outils enregistrés avec leurs
-  définitions d'entrée JSON-Schema.
-* ``tools/call`` — invoque un outil avec ``{"name", "arguments"}`` ;
-  les résultats reviennent dans le tableau ``content``.
-* ``notifications/*`` — silencieusement acceptés (pas de réponse).
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - Méthode
+     - Rôle
+   * - ``initialize``
+     - Poignée de main. Retourne ``protocolVersion`` ``2025-03-26``, ``serverInfo``
+       (``imervue`` ``1.0.0``) et les capacités ``tools`` et ``prompts``
+       (``listChanged: false``), ``resources`` (``subscribe: true``, ``listChanged: true``),
+       ``completions`` et ``logging``.
+   * - ``ping``
+     - Retourne un résultat vide.
+   * - ``tools/list``
+     - Les 58 outils en une seule page, chacun avec ``inputSchema``, ``outputSchema`` et
+       ``annotations`` (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` /
+       ``openWorldHint``).
+   * - ``tools/call``
+     - Exécute ``{"name", "arguments"}``. Le résultat est un bloc de contenu ``text`` contenant
+       la valeur de retour encodée en JSON, plus ``structuredContent`` lorsqu'il s'agit d'un
+       objet. Un outil qui lève une exception, ou des arguments qui ne correspondent pas à ses
+       paramètres, donnent ``isError: true`` et un texte ``Error: …`` au lieu d'une erreur de
+       protocole ; un nom d'outil inconnu donne ``-32602``.
+   * - ``prompts/list``
+     - Les quatre prompts avec leurs arguments.
+   * - ``prompts/get``
+     - Construit les messages de ``{"name", "arguments"}`` ; ``caption_image`` et
+       ``analyze_composition`` intègrent une vignette PNG sous forme de message image. Un prompt
+       inconnu ou un ``path`` manquant donne ``-32602``.
+   * - ``completion/complete``
+     - Valeurs correspondant au préfixe saisi pour un argument ``ref/prompt`` : ``style`` de
+       ``suggest_edits`` (general, portrait, landscape, product, street, food, macro) et
+       ``focus`` de ``analyze_composition`` (all, framing, balance, subject, leading_lines).
+       Tout autre argument reçoit une liste vide.
+   * - ``resources/list``
+     - Les images situées directement dans le dossier désigné par ``IMERVUE_MCP_ROOT`` (fichiers
+       cachés et SVG exclus), 100 par page avec un ``nextCursor`` ; vide lorsque la variable
+       n'est pas définie.
+   * - ``resources/templates/list``
+     - Les deux modèles d'URI du tableau ci-dessous.
+   * - ``resources/read``
+     - Lit une URI ``imervue://image/…`` (voir ci-dessous).
+   * - ``resources/subscribe`` / ``resources/unsubscribe``
+     - Ajoute ou retire une URI de l'ensemble qui reçoit ``notifications/resources/updated``.
+   * - ``logging/setLevel``
+     - Définit le niveau le plus bas (``debug``, ``info``, ``notice``, ``warning``, ``error``,
+       ``critical``, ``alert``, ``emergency`` ; ``info`` au démarrage) envoyé sous forme de
+       ``notifications/message`` ; toute autre valeur donne ``-32602``.
+   * - ``notifications/*`` du client
+     - Acceptées sans réponse (``notifications/initialized``, ``notifications/cancelled``, …) ;
+       une annulation n'arrête pas un outil en cours d'exécution.
+   * - ``notifications/progress`` (envoyée)
+     - ``{progressToken, progress, total, message}`` pendant l'exécution de ``find_similar`` ou
+       de ``build_collage``, lorsque la requête ``tools/call`` portait
+       ``params._meta.progressToken`` (une chaîne ou un entier) ; ``progress`` ne fait
+       qu'augmenter.
+   * - ``notifications/resources/updated`` (envoyée)
+     - ``{uri}`` lorsqu'un fichier de ``IMERVUE_MCP_ROOT`` change et que son URI de vignette est
+       abonnée.
+   * - ``notifications/resources/list_changed`` (envoyée)
+     - À chaque changement dans ``IMERVUE_MCP_ROOT`` (surveillé avec watchdog, de façon non
+       récursive), abonné ou non.
+   * - ``notifications/message`` (envoyée)
+     - Entrées de journal de niveau égal ou supérieur au niveau fixé par ``logging/setLevel``,
+       envoyées via ``MCPServer.emit_log``. Les outils intégrés ne l'appellent pas, donc le
+       serveur standard n'en envoie aucune.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - URI
+     - Retourne
+   * - ``imervue://image/{path}``
+     - Une vignette PNG de l'image — redressée, ajustée dans 256 px — sous forme de ``blob``
+       base64 avec le ``mimeType`` ``image/png``. ``resources/list`` retourne des URI de cette
+       forme.
+   * - ``imervue://image/{path}/metadata``
+     - Le résultat de ``read_image_metadata`` (dimensions, format, EXIF, XMP) sous forme de
+       ``text`` JSON avec le ``mimeType`` ``application/json``.
+
+``{path}`` est le chemin de fichier de l'image entièrement encodé en pourcentage, séparateurs et
+deux-points du lecteur compris (``C:\photos\a.jpg`` devient
+``imervue://image/C%3A%5Cphotos%5Ca.jpg``). Une lecture résout le chemin directement, elle
+fonctionne donc pour n'importe quel fichier, pas seulement pour ceux situés sous
+``IMERVUE_MCP_ROOT`` ; un chemin comportant un segment ``..`` donne ``-32602``, un fichier
+manquant ``-32002`` et une URI d'un autre schéma ``-32602``.
+
+Les erreurs utilisent les codes JSON-RPC ``-32700`` (une ligne qui n'est pas du JSON), ``-32600``
+(pas un objet requête, ou pas de ``method``), ``-32601`` (méthode inconnue), ``-32602``
+(paramètres invalides, outil ou prompt inconnu, niveau de journalisation ou curseur invalide, URI
+de ressource non prise en charge), ``-32002`` (fichier de ressource introuvable) et ``-32603``
+(erreur interne).
 
 L'implémentation se trouve dans ``Imervue/mcp_server/`` :
 
-* ``server.py`` — boucle de protocole + registre des outils.
-* ``tools.py`` — fonctions de gestion et définitions d'outils par défaut.
+* ``server.py`` — le répartiteur JSON-RPC (``MCPServer``), la boucle stdio (``run``) et
+  l'observateur de ``IMERVUE_MCP_ROOT``.
+* ``tools.py`` — la façade publique de l'ensemble d'outils : réexporte chaque gestionnaire et
+  enregistre les outils par défaut (``register_default_tools``).
+* ``tools_read.py`` / ``tools_edit.py`` — les gestionnaires des outils (listage, métadonnées et
+  analyse ; modifications écrites vers une destination), avec des aides partagées dans
+  ``tool_support.py``.
+* ``tool_defs_read.py`` / ``tool_defs_edit.py`` — le nom, la description, le schéma d'entrée et
+  le gestionnaire de chaque outil, dans l'ordre de ``tools/list``.
+* ``tool_schemas.py`` — le ``outputSchema`` et les ``annotations`` de chaque outil.
+* ``prompts.py`` / ``completion.py`` — les quatre prompts et les suggestions de
+  ``completion/complete``.
+* ``resources.py`` — les ressources ``imervue://image/``.
+* ``progress.py`` / ``notifications.py`` / ``logging.py`` — le rapport de progression, l'écriture
+  verrouillée sur stdout et les abonnements aux ressources, et le filtrage par niveau de
+  journalisation.
 * ``__main__.py`` — point d'entrée ``python -m Imervue.mcp_server``.
 
-Des outils personnalisés peuvent être enregistrés en construisant :class:`MCPServer`
-manuellement, en appelant :meth:`MCPServer.register`, et en alimentant les
-messages via :meth:`MCPServer.handle_message` (ou en pilotant la boucle stdio
-avec l'aide intégrée :func:`run`).
+Des outils personnalisés peuvent être enregistrés en construisant :class:`MCPServer`, en appelant
+:meth:`MCPServer.register` (nom, description, schéma d'entrée, gestionnaire, schéma de sortie et
+annotations facultatifs ; un nom en double lève ``ValueError`` ; un gestionnaire doté d'un
+paramètre ``progress`` reçoit un rapporteur de progression) et en transmettant chaque message à
+:meth:`MCPServer.handle_message`, qui retourne la réponse, ou ``None`` pour une notification.
+:func:`run` construit toujours son propre serveur avec les outils par défaut, donc un ensemble
+personnalisé nécessite sa propre boucle ; affectez à ``server.notifier`` un ``Notifier`` sur le
+flux de sortie pour que les notifications soient envoyées.

@@ -22,6 +22,21 @@ _NAMES = sorted(p.name for p in _PLUGINS.iterdir()
                 if p.is_dir() and not p.name.startswith(("_", ".")) and (p / "__init__.py").is_file())
 
 
+_TOAST_KEY_ATTRS = ("failed_key", "done_key")
+
+
+def _key_attribute(node: ast.AST) -> str | None:
+    """The key a ``failed_key = "..."`` / ``done_key = "..."`` class attribute names, else None.
+
+    ``ToolDialogMixin`` looks these keys up for the dialog that sets them.
+    """
+    if (isinstance(node, ast.Assign) and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name) and node.targets[0].id in _TOAST_KEY_ATTRS
+            and isinstance(node.value, ast.Constant) and isinstance(node.value.value, str)):
+        return node.value.value
+    return None
+
+
 def _looked_up(plugin: str) -> set[str]:
     keys = set()
     for path in (_PLUGINS / plugin).glob("*.py"):
@@ -32,6 +47,8 @@ def _looked_up(plugin: str) -> set[str]:
                     and isinstance(node.args[0], ast.Constant)
                     and isinstance(node.args[0].value, str)):
                 keys.add(node.args[0].value)
+            elif (key := _key_attribute(node)) is not None:
+                keys.add(key)
     return keys
 
 

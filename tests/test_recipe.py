@@ -295,6 +295,56 @@ class TestFileIdentity:
         assert id1 == id2
 
 
+class TestIdentityBeyondTheHeader:
+    """The first 4 KB and the size alone gave same-size uncompressed scans one identity."""
+
+    @staticmethod
+    def _page(path, fmt, ink):
+        from PIL import Image
+        page = np.full((1000, 800), 255, np.uint8)       # white margins, like a scanned page
+        page[400:600, 100:700] = ink                      # different text in the middle
+        Image.fromarray(page).save(path, format=fmt)
+        return path
+
+    @pytest.mark.parametrize("fmt", ["BMP", "TIFF"])
+    def test_two_scanned_pages_of_one_size_differ(self, tmp_path, fmt):
+        first = self._page(tmp_path / f"p1.{fmt.lower()}", fmt, 40)
+        second = self._page(tmp_path / f"p2.{fmt.lower()}", fmt, 140)
+        assert first.stat().st_size == second.stat().st_size
+        clear_identity_cache()
+        assert file_identity(first) != file_identity(second)
+
+    @pytest.mark.parametrize("where", ["middle", "end"])
+    def test_a_change_past_the_first_4_kb_changes_it(self, tmp_path, where):
+        data = bytearray(b"a" * 50_000)
+        p = tmp_path / "a.bin"
+        p.write_bytes(bytes(data))
+        clear_identity_cache()
+        before = file_identity(p)
+        data[25_000 if where == "middle" else -1] = ord("b")
+        p.write_bytes(bytes(data))
+        clear_identity_cache()
+        assert file_identity(p) != before
+
+    def test_the_pre_2_identity_is_the_first_4_kb_and_the_size(self, tmp_path):
+        import hashlib
+        from Imervue.image.recipe import file_identities
+        data = bytes(range(256)) * 40
+        p = tmp_path / "a.bin"
+        p.write_bytes(data)
+        clear_identity_cache()
+        identity, legacy = file_identities(p)
+        expected = hashlib.md5(data[:4096] + len(data).to_bytes(8, "big"), usedforsecurity=False)
+        assert legacy == expected.hexdigest()
+        assert identity != legacy and len(identity) == 32
+
+    def test_a_file_smaller_than_one_chunk(self, tmp_path):
+        p = tmp_path / "tiny.bin"
+        p.write_bytes(b"xyz")
+        clear_identity_cache()
+        assert file_identity(p) == file_identity(p) != ""
+
+
 class TestExifOrientedBase:
     def test_new_recipe_is_authored_on_the_upright_image(self):
         assert Recipe(crop=(0, 0, 4, 4)).base_is_oriented() is True
@@ -363,3 +413,51 @@ class TestTurnedWithFile:
         recipe.extra["levels"] = {"enabled": True}
         turned = turned_with_file(recipe, clockwise=False, size=(6, 4))
         assert (turned.exposure, turned.contrast, turned.extra) == (0.7, -0.2, recipe.extra)
+
+
+# --- the stage table ------------------------------------------------------------
+
+def _busy_recipe() -> Recipe:
+    return Recipe(rotate_steps=1, flip_h=True, temperature=0.3, tint=-0.2, exposure=0.4,
+                  highlights=-0.3, shadows=0.4, whites=0.2, blacks=-0.1, brightness=0.1,
+                  contrast=0.2, vibrance=0.3, saturation=-0.2,
+                  tone_curve_rgb=[(0.0, 0.0), (0.5, 0.6), (1.0, 1.0)],
+                  extra={"levels": {"black": 10, "white": 240, "gamma": 1.2}})
+
+
+def _photo(seed: int = 5) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    arr = rng.integers(0, 256, (24, 32, 4), dtype=np.uint8)
+    arr[..., 3] = 255
+    return arr
+
+
+def test_the_stages_run_in_the_documented_order():
+    from Imervue.image.recipe import STAGE_NAMES
+    assert STAGE_NAMES == (
+        "geometry", "white_balance", "exposure", "highlights_shadows", "whites_blacks",
+        "brightness_contrast", "vibrance", "saturation", "tone_curve", "split_toning", "lut",
+        "masks", "levels", "channel_mixer", "gradient_map", "threshold_posterize", "lens_flare",
+        "film_grain", "layer_stack")
+
+
+def test_every_stage_run_alone_leaves_the_image_as_the_neutral_recipe_does():
+    from Imervue.image.recipe import STAGE_NAMES
+    arr = _photo()
+    for name in STAGE_NAMES:
+        assert np.array_equal(Recipe().apply_stages(arr, first=name, last=name), arr), name
+
+
+@pytest.mark.parametrize("split", ["geometry", "tone_curve", "split_toning", "levels"])
+def test_running_the_stages_in_two_parts_equals_apply(split):
+    from Imervue.image.recipe import STAGE_NAMES
+    recipe = _busy_recipe().normalized()
+    arr = _photo()
+    before = STAGE_NAMES[STAGE_NAMES.index(split) - 1] if split != "geometry" else None
+    head = recipe.apply_stages(arr, last=before) if before else arr
+    assert np.array_equal(recipe.apply_stages(head, first=split), _busy_recipe().apply(arr))
+
+
+def test_an_unknown_stage_name_is_refused():
+    with pytest.raises(ValueError):
+        Recipe().apply_stages(_photo(), first="sharpen")

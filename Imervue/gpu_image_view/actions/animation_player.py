@@ -1,6 +1,11 @@
 """
 動畫播放器 — 支援 GIF / APNG / Animated WebP
-Animation player for GIF / APNG / Animated WebP.
+Animation player for GIF / APNG / Animated WebP, and the pages of a multi-page TIFF.
+
+Pillow reports more than one frame for files whose extra frames are not an
+animation: a camera JPEG's MPF preview (opened as MPO), a PSD's layers, a
+scanned document's TIFF pages. Only the animated formats play; TIFF pages are
+shown one at a time and stepped with the frame keys; the rest stay one picture.
 """
 from __future__ import annotations
 
@@ -13,6 +18,8 @@ import numpy as np
 from PIL import Image
 from PySide6.QtCore import QTimer
 
+from Imervue.image.color_profile import to_srgb
+from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
 if TYPE_CHECKING:
@@ -20,8 +27,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.animation")
 
-# 支援動畫的副檔名
-ANIMATED_EXTS = {".gif", ".apng", ".webp", ".png"}
+# Pillow formats whose frames are an animation, played on their own.
+_ANIMATED_FORMATS = frozenset({"GIF", "PNG", "WEBP", "AVIF", "JXL"})
+# Formats whose frames are the pages of a document: stepped through, never played.
+_PAGED_FORMATS = frozenset({"TIFF"})
 
 # Memory budget for memoised per-frame pyramids. Small animations (the common
 # case) fit entirely, so a loop rebuilds each frame's pyramid at most once
@@ -34,12 +43,35 @@ _PYRAMID_CACHE_BUDGET = 128 * 1024 * 1024
 # 1080p animated WebP of 600 frames to ~5 GB and froze the window meanwhile.
 _DECODED_FRAMES_BUDGET = 512 * 1024 * 1024
 _DEFAULT_FRAME_MS = 100
+# Browsers play a frame of 10 ms or less for 100 ms (Chrome follows Firefox):
+# plenty of GIFs say 0 or 1 centisecond and are only right at that speed.
+_FASTEST_HONOURED_MS = 10
 
 
 def _frame_duration(info: dict) -> int:
-    """A frame's display time in ms; a missing or non-positive one plays as 100 ms."""
+    """A frame's display time in ms; a missing one, or one of 10 ms or less, plays as 100 ms."""
     duration = info.get("duration", _DEFAULT_FRAME_MS)
-    return int(duration) if duration and duration > 0 else _DEFAULT_FRAME_MS
+    if not duration or duration <= _FASTEST_HONOURED_MS:
+        return _DEFAULT_FRAME_MS
+    return int(duration)
+
+
+def _frame_rgba(img: Image.Image) -> np.ndarray:
+    """The current frame as the viewer shows a still: 16-bit / float grey scaled, sRGB, RGBA."""
+    return np.array(to_srgb(to_eight_bit(img)).convert("RGBA"), dtype=np.uint8)
+
+
+def anim_indicator_text(anim: AnimationPlayer, lang: dict) -> str:
+    """The bottom-centre readout: "Page 2/5" for a document, else play state, frame and speed."""
+    current, total = anim.current_frame + 1, anim.total_frames
+    if anim.paged:
+        return lang.get("multipage_page_indicator", "Page {current}/{total}").format(
+            current=current, total=total)
+    frame_text = lang.get("anim_frame_indicator", "Frame {current}/{total}").format(
+        current=current, total=total)
+    status = lang.get("anim_pause", "Pause") if anim.playing else lang.get("anim_play", "Play")
+    speed_text = lang.get("anim_speed", "Speed: {speed}x").format(speed=f"{anim.speed:.1f}")
+    return f"{status}  |  {frame_text}  |  {speed_text}"
 
 
 def can_cache_pyramid(current_bytes: int, new_bytes: int, budget: int) -> bool:
@@ -68,9 +100,14 @@ class AnimationPlayer:
         self._source: Image.Image | None = None
         self._frame_count = 0
         self._decoded: tuple[int, np.ndarray] | None = None
+        # 1 for an APNG whose frame 0 is its default image: the picture shown by
+        # programs without APNG support, not part of the animation.
+        self._first = 0
         self.current_frame = 0
         self.playing = False
         self.speed = 1.0
+        # A multi-page TIFF: its frames are pages, stepped with the frame keys.
+        self.paged = False
         self._timer = QTimer()
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._advance_frame)
@@ -96,9 +133,15 @@ class AnimationPlayer:
             logger.exception(f"Failed to open {self.path}: {e}")
             return False
         with img:
-            if self._too_big_to_hold(img):
-                return self._open_streaming()
-            return self._load_frames(img)
+            if img.format not in _ANIMATED_FORMATS | _PAGED_FORMATS:
+                return False   # an MPO preview, PSD layers: one picture, not frames
+            self.paged = img.format in _PAGED_FORMATS
+            self._first = 1 if img.format == "PNG" and img.info.get("default_image") else 0
+            streamed = self._too_big_to_hold(img)
+            loaded = self._open_streaming() if streamed else self._load_frames(img)
+        if loaded and self._first:
+            self._apply_frame()   # the still on screen is the default image, not frame 1
+        return loaded
 
     @staticmethod
     def _too_big_to_hold(img: Image.Image) -> bool:
@@ -112,8 +155,9 @@ class AnimationPlayer:
         """Keep the file's bytes (not the file, which Windows would lock) and decode lazily."""
         try:
             source = Image.open(io.BytesIO(Path(self.path).read_bytes()))
-            count = source.n_frames
-            first = np.array(source.convert("RGBA"), dtype=np.uint8)
+            count = source.n_frames - self._first
+            source.seek(self._first)
+            first = _frame_rgba(source)
         except (*IMAGE_READ_ERRORS, EOFError) as e:
             logger.warning(f"Failed to open {self.path} for streaming: {e}")
             return False
@@ -130,8 +174,8 @@ class AnimationPlayer:
         if self._decoded is not None and self._decoded[0] == index:
             return self._decoded[1]
         try:
-            self._source.seek(index)
-            frame = np.array(self._source.convert("RGBA"), dtype=np.uint8)
+            self._source.seek(index + self._first)
+            frame = _frame_rgba(self._source)
         except (*IMAGE_READ_ERRORS, EOFError) as e:
             logger.warning(f"Frame {index} of {self.path} failed: {e}")
             return self._decoded[1] if self._decoded is not None else None
@@ -142,18 +186,16 @@ class AnimationPlayer:
     def _load_frames(self, img: Image.Image) -> bool:
         """Decode every frame of the open *img*; ``False`` unless two or more decode."""
         n_frames = getattr(img, "n_frames", 1)
-        if n_frames <= 1:
+        if n_frames - self._first <= 1:
             return False
 
         self.frames.clear()
         self.durations.clear()
 
-        for i in range(n_frames):
+        for i in range(self._first, n_frames):
             try:
                 img.seek(i)
-                frame = img.convert("RGBA")
-                arr = np.array(frame, dtype=np.uint8)
-                self.frames.append(arr)
+                self.frames.append(_frame_rgba(img))
                 self.durations.append(_frame_duration(img.info))   # 幀間隔（毫秒）
             except EOFError:
                 break
@@ -170,8 +212,8 @@ class AnimationPlayer:
         return True
 
     def play(self):
-        """開始播放"""
-        if not self.is_animated:
+        """開始播放; pages of a document are stepped, never played."""
+        if not self.is_animated or self.paged:
             return
         self.playing = True
         self._schedule_next()
@@ -297,14 +339,3 @@ class AnimationPlayer:
             self._pyramid_bytes += new_bytes
         return dzi
 
-
-def is_animated_file(path: str) -> bool:
-    """快速檢查檔案是否為動畫格式"""
-    ext = Path(path).suffix.lower()
-    if ext not in ANIMATED_EXTS:
-        return False
-    try:
-        with Image.open(path) as img:
-            return getattr(img, "n_frames", 1) > 1
-    except IMAGE_READ_ERRORS:
-        return False

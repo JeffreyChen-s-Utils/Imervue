@@ -139,15 +139,8 @@ class PetWindowFlagsMixin:
         self._hide_on_fullscreen = enabled
         self._persist(hide_on_fullscreen=enabled)
         if enabled:
-            if self._fullscreen_detector is None:
-                self._fullscreen_detector = FullscreenDetector(
-                    self._screen_rect_for_detector, parent=self,
-                )
-                self._fullscreen_detector.state_changed.connect(
-                    self._on_fullscreen_state_changed,
-                )
             if self.isVisible():
-                self._fullscreen_detector.start()
+                self._ensure_fullscreen_detector().start()
         elif self._fullscreen_detector is not None:
             self._fullscreen_detector.stop()
             # If the pet was forcibly hidden by a previous fullscreen
@@ -159,6 +152,40 @@ class PetWindowFlagsMixin:
 
     def hide_on_fullscreen(self) -> bool:
         return self._hide_on_fullscreen
+
+    def _ensure_fullscreen_detector(self) -> FullscreenDetector:
+        """The detector, built on first use.
+
+        The setting defaults to on, so the first show needs it before
+        anyone touches the checkbox.
+        """
+        if self._fullscreen_detector is None:
+            self._fullscreen_detector = FullscreenDetector(
+                self._screen_rect_for_detector, parent=self,
+            )
+            self._fullscreen_detector.state_changed.connect(
+                self._on_fullscreen_state_changed,
+            )
+        return self._fullscreen_detector
+
+    def _watch_fullscreen_on_show(self) -> None:
+        """Start polling as the pet appears, when hiding on fullscreen is on.
+
+        A show the user asks for while an app is fullscreen overrides the
+        auto-hide, so the pet no longer counts as hidden by it.
+        """
+        self._hidden_by_fullscreen = False
+        if self._hide_on_fullscreen:
+            self._ensure_fullscreen_detector().start()
+
+    def _watch_fullscreen_on_hide(self) -> None:
+        """Stop polling as the pet hides, unless fullscreen hid it.
+
+        Then the poll is what notices the fullscreen app is gone and brings
+        the pet back.
+        """
+        if self._fullscreen_detector is not None and not self._hidden_by_fullscreen:
+            self._fullscreen_detector.stop()
 
     def _screen_rect_for_detector(self):   # pragma: no cover - Qt geometry
         return pet_placement.screen_rect_for_detector(self)

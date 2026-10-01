@@ -121,3 +121,48 @@ def test_unsafe_file_name_is_refused(qapp, tmp_path, monkeypatch):
     assert errors and "unsafe" in errors[0]
     assert calls == []
     assert not (tmp_path / "evil.py").exists()
+
+
+def _manifest_download(tmp_path, monkeypatch, manifest: bytes):
+    """Download a plugin whose plugin.json says *manifest* over an installed copy."""
+    monkeypatch.setattr(pd, "_get_plugin_dir", lambda: tmp_path)
+    installed = tmp_path / "myplugin"
+    installed.mkdir()
+    (installed / "__init__.py").write_bytes(b"working copy")
+    files = {"https://x/a": b"new", "https://x/m": manifest}
+    monkeypatch.setattr(pd, "_https_urlopen", lambda req, timeout=30: _FakeResp(files[req.full_url]))
+    errors: list = []
+    done: list = []
+    worker = pd.DownloadPluginWorker("myplugin", [
+        {"download_url": "https://x/a", "name": "__init__.py"},
+        {"download_url": "https://x/m", "name": "plugin.json"},
+    ])
+    worker.error.connect(errors.append)
+    worker.result_ready.connect(done.append)
+    worker.run()
+    return errors, done, installed
+
+
+def test_a_plugin_needing_a_newer_imervue_is_refused_and_the_install_kept(qapp, tmp_path, monkeypatch):
+    from Imervue.plugin.plugin_api import PLUGIN_API_VERSION
+    needed = PLUGIN_API_VERSION + 1
+    errors, done, installed = _manifest_download(
+        tmp_path, monkeypatch, f'{{"min_api_version": {needed}}}'.encode())
+    assert done == []
+    (error,) = errors
+    assert "myplugin" in error and f"plugin API {needed}" in error and "Update Imervue" in error
+    assert (installed / "__init__.py").read_bytes() == b"working copy"
+    assert not (installed / "plugin.json").exists()
+    assert not (tmp_path / ".myplugin.partial").exists()
+
+
+def test_a_plugin_this_imervue_supports_installs(qapp, tmp_path, monkeypatch):
+    errors, done, installed = _manifest_download(tmp_path, monkeypatch, b'{"min_api_version": 2}')
+    assert (errors, done) == ([], ["myplugin"])
+    assert (installed / "__init__.py").read_bytes() == b"new"
+
+
+def test_a_plugin_with_a_broken_manifest_is_refused(qapp, tmp_path, monkeypatch):
+    errors, done, installed = _manifest_download(tmp_path, monkeypatch, b"{broken")
+    assert done == [] and len(errors) == 1
+    assert (installed / "__init__.py").read_bytes() == b"working copy"

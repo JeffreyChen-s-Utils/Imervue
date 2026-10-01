@@ -25,7 +25,7 @@ def _reset_user_settings():
     so the tests are independent."""
     keys = ("vram_limit_auto", "vram_limit_mb", "ui_scale_percent", "theme",
             "filmstrip_enabled", "image_transition_enabled",
-            "smooth_navigation_enabled")
+            "smooth_navigation_enabled", "puppet_tab_enabled", "desktop_pet_tab_enabled")
     for k in keys:
         user_setting_dict.pop(k, None)
     yield
@@ -125,5 +125,39 @@ def test_button_box_includes_restore_defaults(qapp):
         assert boxes
         button = boxes[0].button(QDialogButtonBox.StandardButton.RestoreDefaults)
         assert button is not None
+    finally:
+        dlg.deleteLater()
+
+
+def test_the_optional_tabs_start_from_the_settings(qapp):
+    user_setting_dict["puppet_tab_enabled"] = False
+    dlg = PreferencesDialog()
+    try:
+        assert dlg._puppet_tab_check.isChecked() is False    # noqa: SLF001
+        assert dlg._pet_tab_check.isChecked() is True        # noqa: SLF001  # on unless turned off
+    finally:
+        dlg.deleteLater()
+
+
+def test_accept_persists_the_optional_tabs(qapp):
+    dlg = PreferencesDialog()
+    try:
+        dlg._puppet_tab_check.setChecked(False)     # noqa: SLF001
+        dlg._pet_tab_check.setChecked(False)        # noqa: SLF001
+        dlg._accept()                               # noqa: SLF001
+        assert user_setting_dict["puppet_tab_enabled"] is False
+        assert user_setting_dict["desktop_pet_tab_enabled"] is False
+    finally:
+        dlg.deleteLater()
+
+
+def test_restore_defaults_turns_the_optional_tabs_back_on(qapp):
+    user_setting_dict["puppet_tab_enabled"] = False
+    user_setting_dict["desktop_pet_tab_enabled"] = False
+    dlg = PreferencesDialog()
+    try:
+        dlg.restore_defaults()
+        assert dlg._puppet_tab_check.isChecked() is True     # noqa: SLF001
+        assert dlg._pet_tab_check.isChecked() is True        # noqa: SLF001
     finally:
         dlg.deleteLater()

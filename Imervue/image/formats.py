@@ -32,13 +32,45 @@ Sigma's ``.x3f`` is left out: LibRaw reads it only when built with
 which too many non-camera files share.
 """
 
-STILL_IMAGE_EXTENSIONS: frozenset[str] = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng", ".svg",
-}) | RAW_EXTENSIONS | HEIF_EXTENSIONS | AVIF_EXTENSIONS | JXL_EXTENSIONS
+JPEG_EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".jpe", ".jfif", ".jif"})
+"""Every name a JPEG goes by.
+
+Chrome and Edge on Windows often save a downloaded JPEG as ``.jfif``; Pillow
+reads the file by its content, so each of these opens as a JPEG.
+"""
+
+PILLOW_EXTRA_EXTENSIONS: frozenset[str] = frozenset({
+    ".ico",                          # Windows icons: the largest size shows
+    ".tga",                          # Truevision TGA textures
+    ".dds",                          # DirectDraw Surface textures
+    ".qoi",                          # Quite OK Image
+    ".jp2", ".j2k", ".jpf", ".jpx",  # JPEG 2000 (Pillow's OpenJPEG)
+    ".ppm", ".pgm", ".pbm", ".pnm",  # Netpbm
+    ".pcx",                          # ZSoft PCX
+    ".psd",                          # Photoshop: the merged composite it stores
+})
+"""Formats Pillow reads by itself that the viewer shows, for viewing.
+
+No in-place save knows them (:mod:`Imervue.image.in_place_save`): a tool
+that writes the picture back, such as Lossless Rotate, leaves them alone,
+and an edit goes out through Save As / Export.
+"""
+
+STILL_IMAGE_EXTENSIONS: frozenset[str] = (
+    frozenset({".png", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng", ".svg"})
+    | JPEG_EXTENSIONS | PILLOW_EXTRA_EXTENSIONS | RAW_EXTENSIONS
+    | HEIF_EXTENSIONS | AVIF_EXTENSIONS | JXL_EXTENSIONS
+)
 """Every still-image format the viewer opens; what the library indexes."""
 
 VIEWER_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
 """Everything the viewer opens, videos included (shown by their poster frame)."""
+
+RASTER_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS - {".svg"}
+"""The still formats a tool without Qt decodes (the CLI, the MCP server).
+
+SVG is left out: it needs Qt to rasterise.
+"""
 
 
 def ensure_pillow_opener(ext: str) -> None:

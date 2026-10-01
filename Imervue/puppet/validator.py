@@ -132,8 +132,26 @@ def _check_deformers(document: PuppetDocument, issues: list[Issue]) -> None:
             ))
 
 
+def _parameters_in_use(document: PuppetDocument) -> set[str]:
+    """Parameters that move something without keyforms of their own.
+
+    A drawable's vertex morphs, opacity and colour curves, a parameter blend's
+    axes and a physics chain's input all read a parameter directly.
+    """
+    used: set[str] = set()
+    for drawable in document.drawables:
+        curves = (drawable.vertex_morphs, drawable.opacity_keys, drawable.multiply_color_keys)
+        for entries in curves:
+            used.update(entry.get("parameter") for entry in entries or [])
+    for blend in document.parameter_blends:
+        used.update(blend.parameters)
+    used.update(rig.input_param for rig in document.physics_rigs)
+    return used
+
+
 def _check_parameters(document: PuppetDocument, issues: list[Issue]) -> None:
     seen: set[str] = set()
+    in_use = _parameters_in_use(document)
     for param in document.parameters:
         if param.id in seen:
             issues.append(Issue(
@@ -161,7 +179,7 @@ def _check_parameters(document: PuppetDocument, issues: list[Issue]) -> None:
                     f"key {index} value {key.value} outside parameter range",
                     f"parameter:{param.id}:keys[{index}]",
                 ))
-        if not param.keys:
+        if not param.keys and param.id not in in_use:
             issues.append(Issue(
                 "info", "parameter_has_no_keys",
                 f"parameter {param.id!r} has no keyforms — slider moves nothing",

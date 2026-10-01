@@ -179,7 +179,7 @@ def test_fill_form_rows_in_order(fill_dock):
         ("Tolerance:", d._tolerance), (None, d._contiguous),  # noqa: SLF001
         (None, d._sample_all), (None, d._use_reference),  # noqa: SLF001
         ("Expand (px):", d._expand), ("Close gap (px):", d._gap_close),  # noqa: SLF001
-        (None, d._auto_fill_btn),  # noqa: SLF001
+        (None, d._auto_fill_btn), (None, d._base_colours_btn),  # noqa: SLF001
     ]
     assert d.windowTitle() == "Bucket"
 

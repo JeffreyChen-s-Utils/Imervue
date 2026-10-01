@@ -132,3 +132,60 @@ def test_enter_deep_zoom_ignores_tile_removed_from_model():
     assert view.current_index == 0
     assert view.loaded == []
     assert not hasattr(view, "_saved_tile_state")
+
+
+
+class _Event:
+    """Stand-in for a QMouseEvent: position and global position."""
+
+    def __init__(self, x: float, y: float) -> None:
+        self._pos = _Point(x, y)
+
+    def position(self):
+        return self._pos
+
+    def globalPosition(self):  # noqa: N802 - Qt's name
+        return SimpleNamespace(toPoint=lambda: (0, 0))
+
+
+def _wall(selection_mode=False):
+    view = _tile_view(["/p/a.png", "/p/b.png"])
+    view.tile_rects = [(0, 0, 100, 100, "/p/a.png"), (110, 0, 210, 100, "/p/b.png")]
+    view.tile_selection_mode = selection_mode
+    view.selected_tiles = set()
+    view._drag_selecting = False
+    view._middle_dragging = False
+    view._drag_start_pos = _Point(50, 50)   # set by the press
+    view._drag_end_pos = _Point(50, 50)
+    view._hover_last_path = None
+    armed = []
+    view._hover_controller = SimpleNamespace(arm=lambda path, _pos: armed.append(path),
+                                             disarm=lambda: None)
+    view.load_deep_zoom_image = view.loaded.append
+    view.update = lambda: None
+    return view, armed
+
+
+@pytest.mark.parametrize("selection_mode", [False, True])
+def test_a_plain_click_forgets_where_the_press_was(selection_mode):
+    """Left set, the press point read as a drag in progress from then on."""
+    view, _armed = _wall(selection_mode)
+    InputController(view).handle_tile_release(_Event(150, 50))
+    assert view._drag_start_pos is None
+    assert view._drag_end_pos is None
+
+
+def test_a_click_on_empty_wall_forgets_it_too():
+    view, _armed = _wall()
+    assert InputController(view).handle_tile_release(_Event(500, 500)) is False
+    assert view._drag_start_pos is None
+
+
+def test_hover_works_again_after_a_click():
+    """The hover preview (and the hovered-tile target of the rating keys) died after one click."""
+    from Imervue.gpu_image_view.hover_preview_binding import update_hover_preview
+    view, armed = _wall(selection_mode=True)   # a click that toggles, staying on the wall
+    InputController(view).handle_tile_release(_Event(150, 50))
+    update_hover_preview(view, _Event(50, 50))
+    assert armed == ["/p/a.png"]
+    assert view._hover_last_path == "/p/a.png"

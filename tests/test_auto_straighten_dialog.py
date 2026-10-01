@@ -102,3 +102,47 @@ def test_dialog_uses_worker_host_mixin():
     from Imervue.plugin.worker_host import WorkerHostMixin
     assert issubclass(AutoStraightenDialog, WorkerHostMixin)
     assert "closeEvent" not in AutoStraightenDialog.__dict__
+
+
+
+def _detect_host(toasts):
+    toast = SimpleNamespace(error=toasts.append, info=toasts.append)
+    angle = SimpleNamespace(value=None)
+    host = SimpleNamespace(
+        _progress=SimpleNamespace(setVisible=lambda _v: None),
+        _set_running=lambda _r: None,
+        _viewer=SimpleNamespace(main_window=SimpleNamespace(toast=toast)),
+        _angle=SimpleNamespace(setValue=lambda v: setattr(angle, "value", v)),
+    )
+    return host, angle
+
+
+def test_a_failed_tilt_measurement_says_why():
+    """Without opencv the Detect button used to stop its progress bar and say nothing."""
+    toasts = []
+    host, angle = _detect_host(toasts)
+    AutoStraightenDialog._on_detect_done(host, False, 0.0, "No module named 'cv2'")
+    assert toasts == ["Couldn't measure the tilt: No module named 'cv2'"]
+    assert angle.value is None
+
+
+def test_a_measured_tilt_fills_the_angle():
+    toasts = []
+    host, angle = _detect_host(toasts)
+    AutoStraightenDialog._on_detect_done(host, True, 2.5, "")
+    assert angle.value == 2.5
+    assert toasts == []
+
+
+def test_the_detect_worker_reports_the_error(monkeypatch):
+    from Imervue.gui import auto_straighten_dialog as mod
+
+    def boom(_path):
+        raise ImportError("No module named 'cv2'")
+
+    monkeypatch.setattr(mod, "load_rgba", boom)
+    worker = mod._DetectWorker("x.png")
+    got = []
+    worker.done.connect(lambda *args: got.append(args))
+    worker.run()
+    assert got == [(False, 0.0, "No module named 'cv2'")]

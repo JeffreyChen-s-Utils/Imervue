@@ -137,7 +137,7 @@ class BrushDock(QDockWidget):
         """Stabilizer / scatter / colour-jitter sliders and the follow-tilt box.
 
         The engine already supports these via brush_dynamics + brush_random;
-        surfacing them as live controls here matches raster paint apps's
+        surfacing them as live controls here matches raster paint apps'
         brush-options panel.
         """
         self._stabilizer = self._percent_slider(0, self._on_stabilizer_changed, lang.get(
@@ -310,6 +310,17 @@ class FillDock(QDockWidget):
         self._auto_fill_btn.clicked.connect(self._on_auto_fill_clicked)
         form.addRow("", self._auto_fill_btn)
         self._auto_fill_callback = None
+        self._base_colours_btn = QPushButton(
+            lang.get("paint_fill_base_colours", "Base colours on a new layer"),
+        )
+        self._base_colours_btn.setToolTip(lang.get(
+            "paint_fill_base_colours_tooltip",
+            "Give every closed region of the line art its own flat colour, "
+            "on a new layer under it",
+        ))
+        self._base_colours_btn.clicked.connect(self._on_base_colours_clicked)
+        form.addRow("", self._base_colours_btn)
+        self._base_colours_callback = None
 
         self.setWidget(body)
         self._refresh_from_state()
@@ -389,6 +400,14 @@ class FillDock(QDockWidget):
         if self._auto_fill_callback is None:
             return
         self._auto_fill_callback()
+
+    def set_base_colours_callback(self, callback) -> None:
+        """Wire the workspace's base-colour verb to the dock's button."""
+        self._base_colours_callback = callback
+
+    def _on_base_colours_clicked(self) -> None:
+        if self._base_colours_callback is not None:
+            self._base_colours_callback()
 
     def _on_state_event(self, channel: str) -> None:
         if channel == ts.EVENT_FILL:

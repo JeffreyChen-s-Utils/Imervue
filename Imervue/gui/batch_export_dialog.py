@@ -23,7 +23,7 @@ from Imervue.gui.export_source import open_export_source
 from Imervue.image.export_metadata import DEFAULT_METADATA_POLICY, export_save_options
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.image import export_presets
+from Imervue.image import develop_backends, export_presets
 from Imervue.image.save_formats import (
     FORMAT_EXTENSIONS,
     QUALITY_FORMATS,
@@ -55,7 +55,8 @@ class ExportSettings:
     """Format, quality, optional resize / square crop / DPI, watermark and metadata policy.
 
     ``max_w`` / ``max_h`` of 0 leave that side unbounded; nothing is resized
-    unless ``resize`` is set.
+    unless ``resize`` is set. ``backend`` is the ``develop_backends`` key the
+    Develop recipes render on.
     """
 
     fmt: str
@@ -67,6 +68,7 @@ class ExportSettings:
     dpi: int = 0
     watermark: WatermarkOptions = field(default_factory=WatermarkOptions)
     metadata: str = DEFAULT_METADATA_POLICY
+    backend: str = develop_backends.CPU
 
 
 class _ExportWorker(QThread):
@@ -85,22 +87,32 @@ class _ExportWorker(QThread):
         self._abort = True
 
     def run(self):
+        renderer = develop_backends.open_renderer(self._settings.backend)
+        counts = (0, 0)
+        try:
+            counts = self._export_all(renderer)
+        finally:
+            self.result_ready.emit(*counts)
+            if renderer is not None:
+                renderer.close()
+
+    def _export_all(self, renderer) -> tuple[int, int]:
         success = failed = 0
         total = len(self._paths)
         for i, src in enumerate(self._paths):
             if self._abort:
                 break
-            if self._process_one(src):
+            if self._process_one(src, renderer):
                 success += 1
             else:
                 failed += 1
             self.progress.emit(i + 1, total)
-        self.result_ready.emit(success, failed)
+        return success, failed
 
-    def _process_one(self, src: str) -> bool:
+    def _process_one(self, src: str, renderer=None) -> bool:
         s = self._settings
         try:
-            img = open_export_source(src)
+            img = open_export_source(src, renderer)
             if s.square_crop:
                 img = export_presets.square_crop(img)
             img = self._resize_if_needed(img)
@@ -179,6 +191,9 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
 
         metadata_layout, self._metadata_combo = metadata_row()
         layout.addLayout(metadata_layout)
+        render_row = self._build_render_row()
+        if render_row is not None:
+            layout.addLayout(render_row)
 
         layout.addWidget(self._build_resize_group())
         layout.addWidget(self._build_watermark_group())
@@ -222,6 +237,25 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         self._preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         preset_row.addWidget(self._preset_combo, 1)
         return preset_row
+
+    def _build_render_row(self) -> QHBoxLayout | None:
+        """"Render on": the CPU, then each develop backend that can run here, the first chosen.
+
+        ``None`` (no row) when only the CPU can render; the combo exists either way.
+        """
+        self._render_combo = QComboBox()
+        self._render_combo.addItem(
+            self._lang.get("batch_export_render_cpu", "CPU"), develop_backends.CPU)
+        backends = develop_backends.available()
+        for key, label in backends:
+            self._render_combo.addItem(label, key)
+        if not backends:
+            return None
+        self._render_combo.setCurrentIndex(1)
+        row = QHBoxLayout()
+        row.addWidget(QLabel(self._lang.get("batch_export_render_on", "Render on:")))
+        row.addWidget(self._render_combo, 1)
+        return row
 
     @staticmethod
     def _max_side_spin(value: int) -> QSpinBox:
@@ -337,6 +371,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             dpi=preset.dpi if preset_active and preset else 0,
             watermark=self._collect_watermark(),
             metadata=self._metadata_combo.currentData(),
+            backend=self._render_combo.currentData(),
         )
 
     def _collect_watermark(self) -> WatermarkOptions:

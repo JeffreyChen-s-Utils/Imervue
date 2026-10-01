@@ -35,7 +35,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 
 def test_script_from_form_data_basic():
     out = script_from_form_data({
-        "name": "March 7th",
+        "name": "Imeru",
         "greetings": ["Hi!", "Hello!"],
         "time_of_day_greetings": {
             "morning": ["Morning!"],
@@ -45,7 +45,7 @@ def test_script_from_form_data_basic():
         "motion_lines": {"wave": ["Hi"]},
         "scheduled": [{"every_seconds": 60.0, "messages": ["Break?"]}],
     })
-    assert out.name == "March 7th"
+    assert out.name == "Imeru"
     assert out.greetings == ["Hi!", "Hello!"]
     assert out.time_of_day_greetings["morning"] == ["Morning!"]
     assert out.hit_responses == {"head": ["Ouch", "Hey"]}

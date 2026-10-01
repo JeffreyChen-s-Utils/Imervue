@@ -276,3 +276,36 @@ def test_blink_timer_is_repeating(qapp):
         assert engine._blink_timer.isSingleShot() is False   # noqa: SLF001
     finally:
         canvas.deleteLater()
+
+
+def test_moving_over_the_canvas_turns_the_head(qapp):
+    """push_cursor had no caller, so Drag-track head never moved anything."""
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_face_params())
+    engine = InputEngine(canvas)
+    try:
+        engine.set_drag_enabled(True)
+        canvas.cursor_moved.emit(100.0, 100.0)
+        assert canvas.parameter_values()["ParamAngleX"] == pytest.approx(1.0)
+        assert canvas.parameter_values()["ParamAngleY"] == pytest.approx(1.0)
+    finally:
+        engine.deleteLater()
+        canvas.deleteLater()
+
+
+def test_a_mouse_move_reports_the_image_point(qapp):
+    from PySide6.QtCore import QEvent, QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtWidgets import QApplication
+    canvas = PuppetCanvas()
+    canvas.load_document(_doc_with_face_params())
+    seen = []
+    canvas.cursor_moved.connect(lambda x, y: seen.append((x, y)))
+    try:
+        move = QMouseEvent(QEvent.Type.MouseMove, QPointF(12.0, 34.0), QPointF(12.0, 34.0),
+                           Qt.MouseButton.NoButton, Qt.MouseButton.NoButton,
+                           Qt.KeyboardModifier.NoModifier)
+        QApplication.sendEvent(canvas, move)
+        assert seen == [pytest.approx(canvas._screen_to_image(12.0, 34.0))]  # noqa: SLF001
+    finally:
+        canvas.deleteLater()

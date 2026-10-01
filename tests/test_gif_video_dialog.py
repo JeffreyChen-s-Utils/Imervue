@@ -242,3 +242,54 @@ def test_a_looping_gif_loops_forever(qapp, tmp_path):
 def test_a_gif_without_loop_plays_once(qapp, tmp_path):
     """Loop count 1 was written, which browsers play twice (one repeat)."""
     assert b"NETSCAPE2.0" not in _made_gif(tmp_path, loop=False)
+
+
+
+def test_ffmpeg_is_found_through_imageio_ffmpeg(monkeypatch):
+    """MP4 needed ffmpeg on PATH, though the documented optional dependency is imageio-ffmpeg."""
+    import shutil
+    import sys
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "imageio_ffmpeg",
+                        SimpleNamespace(get_ffmpeg_exe=lambda: "C:/bundled/ffmpeg.exe"))
+    assert mod.find_ffmpeg() == "C:/bundled/ffmpeg.exe"
+
+
+def test_ffmpeg_on_path_comes_first(monkeypatch):
+    import shutil
+    monkeypatch.setattr(shutil, "which", lambda _name: "C:/tools/ffmpeg.exe")
+    assert mod.find_ffmpeg() == "C:/tools/ffmpeg.exe"
+
+
+def test_no_ffmpeg_anywhere(monkeypatch):
+    import shutil
+    import sys
+
+    def no_binary():
+        raise RuntimeError("no ffmpeg exe could be found")
+
+    monkeypatch.setattr(shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "imageio_ffmpeg", SimpleNamespace(get_ffmpeg_exe=no_binary))
+    assert mod.find_ffmpeg() is None
+    monkeypatch.setitem(sys.modules, "imageio_ffmpeg", None)
+    assert mod.find_ffmpeg() is None
+
+
+def test_an_mp4_is_made_from_odd_sized_frames(qapp, tmp_path):
+    """libx264 refused a 63 x 47 frame ("width not divisible by 2") and the video failed."""
+    from PIL import Image
+    if mod.find_ffmpeg() is None:
+        pytest.skip("no ffmpeg on this machine")
+    frames = []
+    for i, colour in enumerate(("red", "blue", "green")):
+        frame = tmp_path / f"f{i}.png"
+        Image.new("RGB", (63, 47), colour).save(frame)
+        frames.append(str(frame))
+    out = tmp_path / "out.mp4"
+    results = []
+    worker = mod._CreateWorker(frames, str(out), "MP4", 10, 0, 0, False)  # noqa: SLF001
+    worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
+    worker.run()
+    worker.deleteLater()
+    assert results == [(True, str(out))]
+    assert out.stat().st_size > 0

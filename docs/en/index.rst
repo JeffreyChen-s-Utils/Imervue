@@ -12,23 +12,26 @@ Most of this guide is organised around those five sections.
      - What it does
    * - **Imervue**
      - Browse, view, organise, search, and batch-process your image library.
-       See *Imervue Tab — Image Viewer & Library*.
+       See *Opening Images*, *Browsing Images* and *Organising Images*.
    * - **Modify**
      - Non-destructive develop pipeline — sliders, curves, LUTs, masks,
-       retouch, multi-image. See *Modify Tab — Non-destructive Develop*.
+       retouch, multi-image. See *Editing Images (Modify Tab)*.
    * - **Paint**
      - full-featured raster paint studio with brushes, layers, animation,
-       manga tools, PSD I/O. See *Paint Tab — full-featured Raster Editor*.
+       manga tools, PSD I/O. See *Paint Workspace (Paint Tab)*.
    * - **Puppet**
      - From-scratch 2D rigged-puppet animator — meshes, deformers, parameters,
-       motions, physics. See *Puppet Tab — 2D Rigged Animation*.
+       motions, physics. See *Puppet Workspace (Puppet Tab)*.
    * - **Desktop Pet**
      - Frameless, transparent, always-on-top overlay that runs the same
        ``.puppet`` rigs on your desktop with live drivers (idle / blink / mic /
-       webcam / drag-track). See *Desktop Pet Workspace*.
+       webcam / drag-track). See *Desktop Pet Workspace (Desktop Pet Tab)*.
 
-The *Getting Started*, *Reference*, *Plugin System*, and *MCP Server* sections
-that follow are cross-cutting — they apply across all five tabs.
+The *Getting Started*, *Keyboard Shortcuts Reference*, *Extra Tools Menu Reference*,
+*Plugin System*, *Command-Line Usage* and *MCP Server* sections are cross-cutting — they apply
+across all five tabs.
+
+**Puppet** and **Desktop Pet** are optional: turn either off under ``File`` > ``Preferences`` > **Optional tabs** and, from the next start, its tab is not added and its code is not loaded, so Imervue starts faster and uses less memory. Both are on by default; each one is built the first time you open its tab, and the Desktop Pet tab at startup when its pet is set to show on launch.
 
 .. contents:: Table of Contents
    :depth: 2
@@ -51,7 +54,13 @@ When you open Imervue, you will see three areas:
 
 - **Left**: Folder tree. Click a folder to browse the images inside.
 - **Center**: Image display area. Shows all images as a thumbnail grid.
-- **Right**: EXIF sidebar. Displays shooting information for the selected image.
+- **Right**: EXIF sidebar, folded into a thin strip at start: click it to open it. It shows the shooting information of the picture that is open.
+
+Imervue writes a log of each session to ``imervue.log`` next to the program (in
+``%LOCALAPPDATA%\Imervue``, or ``~/.cache/imervue`` outside Windows, when that folder is
+read-only). The previous session's log is kept as ``imervue.previous.log``, so after a crash
+the log that explains it is still there once Imervue is running again — attach both when
+reporting a problem.
 
 ----
 
@@ -67,20 +76,21 @@ Opening Images
    * - Open Folder
      - ``File`` > ``Open Folder``, then choose a directory
    * - Open Single Image
-     - ``File`` > ``Open Image``, then choose a file
+     - ``File`` > ``Open File``, then choose a file
    * - Drag & Drop
      - Drag an image or folder directly into the window
    * - Open from Explorer
      - Right-click an image > ``Open with Imervue`` (requires file association)
    * - Recent Files
-     - ``File`` > ``Recent``, quickly reopen a previously visited folder
+     - ``File`` > ``Recent`` > Recent Folders / Recent Images, to reopen a folder or picture
 
 Supported Formats
 ^^^^^^^^^^^^^^^^^
 
-- **Standard**: PNG, JPEG, BMP, TIFF, WebP, GIF, APNG, SVG
+- **Standard**: PNG, JPEG (.jpg, .jpeg, .jpe, .jfif, .jif), BMP, TIFF, WebP, GIF, APNG, SVG
 - **RAW**: CR2 / CR3 / CRW (Canon), NEF / NRW (Nikon), ARW / SRF / SR2 (Sony), DNG (Adobe), RAF (Fujifilm), ORF (Olympus / OM System), RW2 (Panasonic), RWL (Leica), PEF (Pentax), SRW (Samsung), 3FR (Hasselblad), IIQ (Phase One), MEF (Mamiya), MOS (Leaf), ERF (Epson), MRW (Minolta), KDC / DCR (Kodak)
 - **Modern**: AVIF (built in); HEIC / HEIF with the optional ``pillow-heif``; JPEG XL with the optional ``pillow-jxl-plugin``
+- **More**: ICO, TGA, DDS, QOI, JPEG 2000 (.jp2 / .j2k / .jpf / .jpx), Netpbm (PPM / PGM / PBM / PNM), PCX, PSD (the merged picture) — for viewing; rotating one in place and other write-backs are refused, so an edit goes out through Save As / Export
 
 ----
 
@@ -112,8 +122,8 @@ After opening a folder, all images are displayed as thumbnails.
      - Rest the cursor on a thumbnail for 500 ms to see a larger preview
    * - Select multiple images
      - Left-click and drag to draw a selection rectangle
-   * - Pan with keyboard
-     - Arrow keys; hold ``Shift`` for fine movement
+   * - Move between thumbnails with the keyboard
+     - Arrow keys move a focus ring and scroll it into view; ``Enter`` opens the picture
 
 Each thumbnail shows status badges: a coloured strip on the left edge (colour label),
 a heart at the top-left (favourite), a star at the top-right (bookmark), and rating stars
@@ -123,14 +133,28 @@ List (Detail) Mode
 ^^^^^^^^^^^^^^^^^^
 
 Press ``Ctrl + L`` to toggle between thumbnail grid and a sortable list view with these columns:
-Preview · Label · Name · Resolution · Size · Type · Modified. Double-click a row (or press ``Enter``) to enter
+Preview · Label · Rating · Name · Resolution · Size · Type · Modified. Double-click a row (or press ``Enter``) to enter
 Deep Zoom; press ``Esc`` to return to the list. Thumbnails and metadata are loaded lazily on a worker thread
 so very large folders stay responsive.
+
+``Delete`` removes the selected rows and ``Ctrl + Z`` brings them back, and the rating (``1`` – ``5``), favourite (``0``), cull (``P`` / ``Shift + X`` / ``U``) and colour (``F1`` – ``F5``) keys mark them, as on the thumbnail wall; all but ``F1`` – ``F5`` follow Shortcut Settings.
 
 Deep Zoom Mode
 ^^^^^^^^^^^^^^
 
 Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
+
+Panoramas far larger than Pillow's 179-megapixel safety limit open too: the limit follows the computer's memory (with 16 GB, about 1.4 gigapixels), and such giants decode one at a time.
+
+A JPEG, PNG, TIFF, GIF or BMP cut short — an interrupted download or copy, a photo recovered from a failing memory card — opens with the part that was read, as in a browser, instead of not opening at all.
+
+When another program saves over a picture — an external editor, in place or by renaming a copy over it — the viewer shows the new version: the picture open in Deep Zoom within a second of the last write, grid thumbnails and the rows of the List view within a few seconds.
+
+A 16-bit grey PNG or TIFF — a scan, a depth map, a scientific or astronomy frame — and a floating-point TIFF show their real brightness in the viewer, thumbnails, previews and tools, instead of almost white or black: 16-bit values are scaled over their full range, floating-point values of 0 to 1 map onto black to white and any other range is stretched.
+
+Pictures with an embedded colour profile — Display P3 from phones, Adobe RGB from cameras, CMYK, and the grey profiles Photoshop embeds in greyscale images such as Dot Gain 20% or Gray Gamma 1.8 — are converted to sRGB for the viewer and thumbnails; a greyscale picture stays greyscale. Untagged and sRGB images are shown as stored.
+
+Files Windows marks hidden — hidden in Explorer and the folder tree too — and names starting with a dot, such as the ``._photo.jpg`` companion macOS writes beside every photo on a memory card or network drive, are left out of the thumbnail wall, folder icons, the batch tools' folder lists, watch folders, library scans, the CLI and the MCP server's folder tools; recursive scans skip hidden folders such as ``$RECYCLE.BIN`` and a Mac's ``.Trashes``. A hidden picture opened on purpose still opens.
 
 .. list-table::
    :header-rows: 1
@@ -169,7 +193,7 @@ Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
    * - OSD info overlay
      - ``F8`` shows filename / size / type; ``Ctrl + F8`` shows a debug HUD (VRAM / cache / threads)
    * - Pixel view
-     - ``Shift + P`` — at ≥ 400 % zoom overlays a pixel grid and shows RGB / HEX under the cursor
+     - ``Shift + P`` — from 400 % zoom shows the RGB / HEX under the cursor, plus a pixel grid once no more than 40,000 picture pixels are on screen
    * - Colour modes
      - ``Shift + M`` cycles Normal / Grayscale / Invert / Sepia (GLSL, non-destructive)
 
@@ -212,7 +236,7 @@ Organising Images
 Rating & Favourites
 ^^^^^^^^^^^^^^^^^^^
 
-In Deep Zoom mode you can quickly rate images:
+The keys rate the picture shown in Deep Zoom. On the thumbnail wall they rate the selected thumbnails, else the one the arrow keys are on, else the one under the mouse — the photos a colour label or a cull flag would take. When every one of them has that rating already, the key clears it.
 
 .. list-table::
    :header-rows: 1
@@ -228,7 +252,7 @@ In Deep Zoom mode you can quickly rate images:
 Colour Labels (F1 -- F5)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Independent flag-based colour flags, stored separately from the 1 -- 5 star rating. Useful for
+Colour flags, stored separately from the 1 -- 5 star rating. Useful for
 quick categorisation (e.g. red = reject candidates, green = selects, blue = to retouch).
 
 .. list-table::
@@ -238,14 +262,15 @@ quick categorisation (e.g. red = reject candidates, green = selects, blue = to r
    * - Action
      - Key
    * - Red / Yellow / Green / Blue / Purple
-     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (press the same key again to clear)
+     - ``F1`` / ``F2`` / ``F3`` / ``F4`` / ``F5`` (press the same key again to clear; on a
+       selection it clears only when every selected picture already has that colour)
    * - Batch apply to selection
      - Select multiple thumbnails, then press the corresponding F key
    * - Filter by colour
      - ``Filter`` > ``By Color Label`` > pick a colour / Any label / No label
 
 The status bar shows a coloured chip for the current image. Thumbnails display a coloured strip on
-the left edge. The **List view** has dedicated **Label** and **Star Rating** columns that you can
+the left edge. The **List view** has dedicated **Label** and **Rating** columns that you can
 sort by — click any cell in the star column to set the rating without leaving the list.
 
 Bookmarks
@@ -278,13 +303,20 @@ Categorise your images with tags and albums.
    * - Open manager
      - Press ``T`` or ``File`` > ``Tags & Albums``
    * - Tag an image
-     - Right-click image > ``Add to Tag``
+     - In Deep Zoom, right-click > ``Tags``; for selected thumbnails, right-click >
+       ``Batch Operations`` > ``Add to Tag``
    * - Add to album
-     - Right-click image > ``Add to Album``
+     - In Deep Zoom, right-click > ``Albums``; for selected thumbnails, right-click >
+       ``Batch Operations`` > ``Add to Album``
    * - Filter by a single tag / album
      - ``Filter`` > ``By Tag`` / ``By Album``
    * - Multi-tag filter (AND / OR)
      - ``Filter`` > ``Multi-Tag Filter…`` — check multiple tags or albums, choose Any (OR) or All (AND)
+   * - Clean up
+     - **Clean Up…** in the manager forgets the entries of files that no longer exist and merges
+       names that differ only in case (the one with more images keeps its spelling), after you
+       confirm the counts. Creating or renaming a tag or album to a name that differs from another
+       only in case or spaces is refused, as is a name with a tab or line break
 
 Sorting & Filtering
 ^^^^^^^^^^^^^^^^^^^
@@ -299,6 +331,8 @@ Sorting & Filtering
      - ``Sort`` > ``By Name``
    * - Sort by date modified
      - ``Sort`` > ``By Modified Date``
+   * - Sort by date taken (the camera's EXIF time; the modified date when there is none)
+     - ``Sort`` > ``By Date Taken``
    * - Sort by file size
      - ``Sort`` > ``By File Size``
    * - Sort by resolution
@@ -306,7 +340,7 @@ Sorting & Filtering
    * - Ascending / Descending
      - ``Sort`` > ``Ascending`` / ``Descending``
    * - Filter by extension
-     - ``Filter`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
+     - ``Filter`` > ``By Extension`` > ``JPEG`` / ``PNG`` / ``RAW`` etc.
    * - Filter by rating
      - ``Filter`` > ``By Rating``
    * - Filter by colour label
@@ -331,7 +365,8 @@ Editing Images (Modify Tab)
 ---------------------------
 
 Switch to the **Modify** tab at the top of the window to enter editing mode.
-You can also press ``E`` or right-click > ``Modify`` in Deep Zoom mode.
+In Deep Zoom, right-click > ``Modify`` > ``Develop`` also opens the current image here;
+``E`` (or right-click > ``Modify`` > ``Annotate``) opens it in the separate annotation editor instead.
 
 ::
 
@@ -460,18 +495,20 @@ Image Adjustments (Right Panel, Lower)
      - Warm / cool shift (blue → yellow); useful for mixed-light or indoor shots
    * - White Balance — Tint
      - Magenta / green shift; corrects fluorescent casts
-   * - Shadows
-     - Lift or crush detail in dark tonal regions
-   * - Midtones
-     - Adjust the middle tonal range without affecting blacks and whites
    * - Highlights
      - Recover blown highlights or push bright areas further
+   * - Shadows
+     - Lift or crush detail in dark tonal regions
+   * - Whites
+     - Right stretches the brightest tones up to white; left dims white to a grey
+   * - Blacks
+     - Left crushes the darkest tones down to black; right lifts black to a faded grey
    * - Vibrance
      - Saturation-aware boost — protects skin tones and already-saturated colours
 
 These adjustments are **non-destructive**. Every slider writes into an edit recipe stored
-per-image; press ``Reset`` at any time to restore the original, or ``Ctrl + Z`` to step
-backwards through individual changes. Recipes survive restarts and can be exported / synced
+per-image; press ``Reset`` at any time to restore the original, or ``Undo`` / ``Redo`` under the
+sliders to step through individual changes. Recipes survive restarts and can be exported / synced
 via the XMP sidecar flow described in the Metadata section.
 
 The file on disk changes only when you ask for it. **Apply Crop** and the annotation **Save** write the result back over the file, keeping its EXIF (camera, capture date, GPS), XMP and DPI. A camera RAW, HEIC or animated / multi-page file is never overwritten: the crop asks you to export instead, and the annotation save asks for a new file. The one-shot tools (CLAHE, HSL Mixer, Photo Frame, Auto Straighten …) save their
@@ -506,8 +543,8 @@ Paint Workspace (Paint Tab)
 
 The third top-level tab — **Paint** — is a full-featured painting workspace
 with multi-tab documents, vector and raster layers, manga tools, animation
-frames, and PSD import/export. Switch to it from the tab bar or press ``E``
-from Deep Zoom mode to send the current image straight into a new Paint tab.
+frames, and PSD import/export. Switching to it from the tab bar loads the
+picture the viewer is showing onto the canvas.
 
 UX-affordance highlights — the Paint workspace ships with a full-featured
 brush-size cursor that scales with zoom, distinct cursor icons per tool,
@@ -524,7 +561,15 @@ Undo / Redo / Select-All / Deselect / Fit / 100 % menu.
 
 The colour dock now exposes a "transparent / no colour" slot (default
 BG = transparent), and fill + magic-wand both respect alpha boundaries
-so erased pixels stop bleeding into a re-paint.
+so erased pixels stop bleeding into a re-paint. Under the colour slots sits
+a hue ring around a saturation / brightness triangle: drag on the ring to
+pick the hue and in the triangle to pick the shade; the HSB / RGB sliders
+and the hex field follow, and a colour set elsewhere moves the wheel's
+markers. The **Swatches dock** shows your recent colours, or a palette
+picked in the box above them: the built-in Standard, Pastel and Manga, or
+one of your own. **Save as Palette…** keeps the recent colours under a name,
+**Delete Palette** removes one of yours (the built-in ones stay), and
+``Filter`` > ``Match Swatches…`` repaints in whatever colours the dock shows.
 
 ::
 
@@ -542,8 +587,8 @@ keeps the full visible height, grouped into three clusters:
 - **Library** — Materials, Stamps, Pose, Reference
 
 Each dock can be toggled individually from the ``Window`` menu. Drag any dock
-title to re-arrange or float a panel, then save the result via
-``Settings`` > ``Workspace Layouts…``.
+title to re-arrange or float a panel; ``Settings`` > ``Workspace Layouts…``
+remembers which docks are shown (see *Workspace Layouts*).
 
 Tool Palette (Left Strip)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -563,7 +608,14 @@ Tool Palette (Left Strip)
      - Alpha-erase the active layer
    * - Fill (bucket)
      - ``G``
-     - Flood-fill with tolerance / contiguous / sample-all-layers
+     - Flood-fill with tolerance / contiguous / sample-all-layers. The
+       Bucket dock's **Auto-fill closed regions** fills every closed region
+       of the line art (the reference layer, else the active one) with the
+       foreground colour; **Base colours on a new layer** gives each region
+       its own flat colour — the Swatches colours when the dock shows any —
+       on a new layer under the line art, leaving the lines and the space
+       around the drawing empty. Dark lines on white paper work as well as
+       lines on transparency
    * - Eyedropper
      - ``I``
      - Pick foreground colour from canvas
@@ -572,38 +624,48 @@ Tool Palette (Left Strip)
      - Translate the active layer or selection
    * - Rect / Lasso / Wand / Quick Select
      - ``M`` / ``L`` / ``W``
-     - Selection tools with Replace / Add / Subtract / Intersect modes
+     - Selection tools with Replace / Add / Subtract / Intersect modes; for the
+       Lasso, **Magnetic** in the Options bar snaps the outline onto the
+       strongest edge of the layer within 10 px when you let go
    * - Text
      - ``T``
-     - Inline text editor with font / size / bold / italic
+     - Click opens the **Add Text** dialog (font / size / colour / bold /
+       italic); the text is drawn into the layer's pixels
    * - Gradient
      - ``U``
-     - Linear / Radial / Angle / Diamond gradient fill
+     - Linear / Radial / Angle / Diamond gradient fill, from the foreground to
+       the background colour or along a saved multi-stop gradient picked
+       under **Colours** in the Options bar; **Edit…** beside it creates,
+       changes and deletes those gradients (name, colour stops with position
+       and opacity), which are kept between sessions
    * - Blur / Smudge
-     - ``R``
+     - ``R`` (Smudge)
      - Local pixel manipulation
    * - Dodge / Burn / Sponge
      -
-     - Darkroom toning — locally lighten, darken, or saturate /
-       desaturate, weighted by the brush and a tonal-range mask
+     - Darkroom toning weighted by the brush — Dodge lightens and Burn
+       darkens the midtones, Sponge desaturates; no options
    * - Pen (Bezier)
      - ``P``
-     - Vector path with anchor / handle editing
+     - Vector path with anchor / handle editing; **Smooth** in the Options
+       bar runs one smooth curve through every clicked point instead of
+       straight lines
    * - Clone Stamp
      - ``S``
-     - Shift+click sets source, click stamps with feather
+     - Alt+click sets the source, then drag to stamp with the brush size /
+       hardness / opacity
    * - Speech Bubble
      - ``Ctrl + B``
-     - Comic / manga balloon with auto-tail
+     - Drag a box to draw a comic / manga balloon (drawn without a tail)
    * - Rectangle / Ellipse / Line / Polygon
      - ``Shift + R/E/I/P``
      - Vector shape primitives with stroke + fill
    * - Crop
      - ``C``
-     - Interactive crop with aspect-ratio presets
+     - Free crop — drag a rectangle; the canvas is cropped on release
    * - Transform
      - ``Ctrl + T``
-     - Free / scale / rotate / skew transform handles
+     - Eight scale handles and one rotate handle
    * - Hand
      - ``H``
      - Pan the canvas with cursor drag
@@ -620,42 +682,56 @@ Brushes
 
    * - Brush
      - Effect
-   * - Pen
-     - Crisp anti-aliased line, the everyday brush
-   * - Marker / Highlighter
-     - Wide, semi-transparent strokes that build up
    * - Pencil
      - Thin slightly textured graphite line
-   * - Spray
-     - Scattered dots driven by density and flow
-   * - Calligraphy
-     - Width varies with stroke direction
-   * - Watercolor
-     - Wet-edge bleed and soft blending
-   * - Charcoal / Crayon
-     - Rough textured strokes with pressure tilt
+   * - Pen
+     - Crisp anti-aliased line, the everyday brush
+   * - Marker
+     - Wide, semi-transparent strokes that build up
+   * - Airbrush
+     - Scattered dots that build up into a soft spray
+   * - Watercolour
+     - Wet edge with a lighter interior, like pigment pooling at the rim
+   * - Sumi
+     - Calligraphy-style ink with dry-brush edges
 
-Each brush exposes Size / Opacity / Hardness / Density / Blend-mode in the
-**Brush dock** and the top **Options bar**. Use ``Settings`` >
-``Pressure Curve…`` to remap tablet pressure to width or opacity, and
-``Edit`` > ``Capture Brush Tip…`` to turn a marquee selection into a custom
-brush tip.
+Crayon, Highlight and Sumi calligraphy are brush presets built on these
+kinds. Each brush exposes Size / Opacity / Hardness / Density / Blend-mode in
+the **Brush dock**; the top **Options bar** carries Size / Opacity / Hardness.
+Tablet pen pressure scales the brush size and opacity through the curve set in
+``Settings`` > ``Pressure Curve…`` (drag a point, click to add one, right-click
+to remove one, or start from Linear / Soft / Hard); a mouse draws at full
+pressure. The Brush dock's **Scatter** moves each dab off the stroke by up to
+that share of the brush size, **Colour jitter** shifts each dab's hue,
+saturation and brightness, and **Follow pen tilt** narrows the tip across the
+direction a tablet pen leans and turns it to follow (the Sumi calligraphy
+preset has it on); a pixel-art brush keeps its square tip. Use ``Edit`` >
+``Capture Brush Tip…`` to turn a marquee selection into a custom brush tip.
+The **Materials dock** lists your own materials ahead of the built-in tones
+and textures: images in the ``materials`` folder of Imervue's program folder
+(a first-level folder named ``texture``, ``tone``, ``pattern``, ``brush_tip``
+or ``pose`` files them under that category) and the brush tips you captured.
+``Edit`` > ``Save Selection as Material…`` saves the selected part of the
+visible picture there under a name and category you pick (pixels outside the
+selection become transparent, and an earlier material of the same name is
+kept); it appears in the dock at once.
 
 Layers
 ^^^^^^
 
 The **Layer dock** offers thumbnails, visibility toggles, inline rename,
-drag-to-reorder, and the active-layer blend mode + opacity. The
-``Layer`` menu adds:
+reordering with the ↑ / ↓ buttons (or ``Ctrl + ]`` / ``Ctrl + [``), and the
+active-layer blend mode + opacity. The ``Layer`` menu adds:
 
 - **New / Vector / Duplicate / Merge Down** (``Ctrl + Shift + N`` /
   ``Ctrl + Shift + V`` / ``Ctrl + J`` / ``Ctrl + E``)
 - **Masks** — Add Mask / From Selection / Invert / Apply / Delete
   (``Ctrl + Shift + M`` adds; ``Ctrl + Alt + Shift + M`` adds from selection)
-- **Clipping Mask** — clip the layer above to the current alpha
-  (``Ctrl + Alt + G``)
+- **Clipping Mask** — toggle clipping on the active layer, clipping it to
+  the alpha of the layer below (``Ctrl + Alt + G``)
 - **Layer Effects** — Drop Shadow · Outer Glow · Stroke; clear effects
-- **Reference Layer** — pin one layer as the eyedropper source
+- **Reference Layer** — pin one layer as the source the **Fill** bucket
+  matches colours against
 - **1-bit Layer** — toggle the active layer to a binary line-art layer
 - **Divide Layer by Colour** — split a flat colour layer into one layer
   per colour for easy bucket re-fills
@@ -665,7 +741,8 @@ Selections
 ^^^^^^^^^^
 
 Use the rect / lasso / wand / quick-select tools, then the **Edit** menu's
-**Stroke Selection…** to outline the marquee with the current brush.
+**Stroke Selection…** to outline the marquee in the foreground colour,
+using the dialog's Width and Placement.
 ``Q`` toggles **Quick Mask Mode** — paint with any brush to refine the
 selection edge in red, then press ``Q`` again to convert it back to a
 marquee.
@@ -675,11 +752,14 @@ Animation
 
 The **Animation dock** turns the document into a frame strip:
 
-- ``Add Frame`` snapshots the current layer state into a new keyframe.
-- Click a frame thumbnail to jump to it.
-- ``Onion Skin`` (View menu) overlays neighbouring frames at low alpha.
-- Export the strip via **File > Export pages** (CBZ for comic readers,
-  PDF for print) or **Animation Export** for MP4 / GIF.
+- ``+ Frame`` snapshots the flattened picture into a new frame.
+- Click a frame thumbnail to load it into the active layer.
+- ``Onion Skin`` (View menu) overlays the previous frame at low alpha.
+- ``▶ Play`` cycles the frames at the chosen FPS.
+- ``Export…`` saves the frames as an animated GIF, WebP or PNG — the file
+  type you pick sets the format, a name without one becomes a GIF — each
+  frame lasting one tick of the chosen FPS. WebP is written without loss;
+  GIF reduces each frame to 255 colours and makes faint pixels transparent.
 
 Manga Menu
 ^^^^^^^^^^
@@ -691,7 +771,7 @@ Manga Menu
    * - Action
      - Description
    * - Panel Cutter
-     - ``Ctrl + Shift + P`` — split the canvas into a grid of comic panels with configurable rows / columns / gutter / border / margin
+     - ``Ctrl + Shift + P`` — split the canvas into a grid of comic panels with configurable rows / columns / gutter / border / margin; with **Snap to panel** ticked on the brush's Options bar, each stroke then stays inside the panel it starts in (until the canvas size changes)
    * - Toggle Tone Layer
      - Convert active layer to a screentone (halftone dot) layer
    * - Stamp Page Numbers
@@ -700,47 +780,58 @@ Manga Menu
      - Radial / Parallel / Burst speedline generators
    * - Action Flash
      - Manga-style explosion / impact burst overlay
-   * - Speech Bubble tool
-     - Drag a balloon, drop the tail toward the speaker
+   * - Text Along Selection…
+     - Lays text along the outline of the selection, on a new layer — text, font, size, colour, bold and italic come from the Add Text dialog
 
 Filters
 ^^^^^^^
 
-``Filter`` opens a live-preview dialog for each effect:
+The filters with a single slider — Posterize, Threshold, Convert to
+Halftone and Match Colour — preview live as you drag, on the middle 480 ×
+480 pixels of the layer at full size; OK applies the value to the whole
+layer. The others open a plain OK / Cancel parameter dialog:
 
-- **Levels** — black / gamma / white sliders, per-channel
-- **Curves** — draggable points (RGB / R / G / B) with monotone cubic interpolation
+- **Levels** — black point / white point / gamma sliders
+- **Curves** — a preset (S-curve, Lift shadows, Compress highlights) with a Strength slider
 - **Posterize** — quantise colour into N steps
 - **Threshold** — convert to pure black / white at a cut-off
 - **Auto Color Balance** — neutralise casts via grey-world / white-patch
 - **Film Grain** — luminance noise with adjustable size and amount
 - **Convert to Halftone** — newspaper-style dot screen
+- **Match Colour** — asks for a reference image, then gives the layer that
+  image's colour mood (each channel takes the reference's mean and spread);
+  **Strength** blends from unchanged to the full match
+- **Match Swatches** — repaints every pixel in the nearest colour of the
+  Swatches dock (pick or import colours first)
 
 View Aids
 ^^^^^^^^^
 
 - **Pixel Grid** (``Ctrl + Shift + '``) — overlay a one-pixel grid at high zoom
-- **Snap to Pixel / Edges** — sub-pixel placement clamped to integer coordinates
-- **Onion Skin** — animation neighbour overlay
+- **Snap to Pixel / Edges** — Snap to Pixel lands brush dabs on whole pixels; Snap to Edges pulls points to nearby canvas or layer edges
+- **Onion Skin** — overlays the previous animation frame
 - **Bleed Guides** — print bleed / safe-zone guides
 - **Rotate Canvas** (``Ctrl + Shift + H``) — view rotation without rasterising
 
 File I/O
 ^^^^^^^^
 
-- **Open PSD…** (``Ctrl + O``) and **Save as PSD…** (``Ctrl + S``) — Photoshop layered round-trip with masks, blend modes, and layer effects
-- **Export image…** — flatten and save as PNG / JPEG / WebP / BMP / TIFF
-- **Export pages → CBZ** / **→ PDF** — multi-frame document export for comics
-- **Import / Export brush presets**, **Import palette** — share resources between installs
-- **Autosave snapshots** — periodic background snapshots with restore-latest from the File menu
+- **New Canvas…** — a new tab of the size you pick: a paper, manga or screen preset (A4, B5 manga page, 1080p, 4K …), one you saved with **Save as Preset…**, or any width and height up to 16384 px, on a white or transparent background (**New Tab**, ``Ctrl + N``, keeps the 1024 × 1024 white default)
+- **Open PSD…** (``Ctrl + O``) flattens the file into one layer in a new tab; **Save as PSD…** (``Ctrl + S``) writes the layers with their blend modes (no masks or layer effects)
+- **Export image…** — flatten and save as PNG, JPEG, WebP, TIFF or BMP, by the file type you pick (JPEG and BMP, which have no transparency, on white). Only **Save as PSD…** marks the tab saved; after an export, closing Imervue still asks about the tab's unsaved changes
+- **Export pages → CBZ** / **→ PDF** — export the pages of a comic project; **Save Comic Project…** keeps the whole comic, every page with its layers, in one ``.imervue-proj`` file, and **Open Comic Project…** brings it back
+- **Import brush preset…**, **Import palette…** — bring in brushes and palettes from other installs or apps
+- **Autosave** — every 2 minutes while the active tab has unsaved edits a snapshot is written; on the next launch a toast offers the snapshots and **File > Restore Autosave** loads the newest into the active tab. The status bar shows when the last snapshot was taken, and closing Imervue asks about Paint tabs with unsaved changes.
 
 Workspace Layouts
 ^^^^^^^^^^^^^^^^^
 
-``Settings`` > ``Workspace Layouts…`` saves the dock arrangement, tool-options
-state, and active panels under a name, then flips between them with one
-click — for example a "Drawing" layout with the Brush + Color docks
-prominent and a "Compositing" layout with the Layer + History docks expanded.
+``Settings`` > ``Workspace Layouts…`` lists the built-in **Default**,
+**Drawing**, **Comic** and **Compact** layouts plus your own. **Save current…**
+stores which of the Layers / Color / Brush / Navigator / History / Reference
+docks are shown under a name; applying a layout shows or hides those docks
+and brings the first shown one to the front. Tool options and dock sizes are
+not stored.
 
 ----
 
@@ -748,9 +839,8 @@ Puppet Workspace (Puppet Tab)
 -----------------------------
 
 The fourth top-level tab — **Puppet** — is a from-scratch 2D rigged-puppet
-animation system. It does what Live2D do (mesh-deformation rigs,
-parameters, motions, physics, expressions, pose groups, lip-sync, webcam
-tracking) but with **no proprietary SDK**, **no `live2d-py`**, and a fully
+animation system: mesh-deformation rigs, parameters, motions, physics,
+expressions, pose groups, lip-sync and webcam tracking, with **no proprietary SDK**, **no** ``live2d-py``, and a fully
 open ``.puppet`` file format.
 
 .. note::
@@ -771,21 +861,25 @@ open ``.puppet`` file format.
    |               Motions dock                        |
    +---------------------------------------------------+
 
+The right-hand docks share one tabbed area: **Parameters** (a slider per parameter), **Expressions** (turn each expression on or off), **Pose** (pick which member of each pose group is shown — a group shows its first member until another is picked) and **Bones** (the deformer hierarchy).
+
 End-to-end workflow
 ^^^^^^^^^^^^^^^^^^^
 
-1. **Import a PNG** — toolbar ``Import PNG…`` runs
+1. **Import a PNG** — ``File`` > ``Import PNG…`` runs
    ``puppet.auto_mesh.puppet_from_png``: alpha-bounded triangulated grid,
    one drawable, ready to render.
-2. **Add a deformer** — ``Add Rotation Deformer`` (anchor + angle) or
-   ``Add Warp Deformer`` (rows × cols Bezier lattice; vertices outside the
+2. **Add a deformer** — ``Edit`` > ``Add Rotation Deformer`` (anchor + angle) or
+   ``Add Warp Deformer`` (rows × cols bilinear lattice; vertices outside the
    bounds pass through unchanged).
-3. **Add a parameter** — ``Add Parameter`` adds a slider to the right-hand
+3. **Add a parameter** — ``Edit`` > ``Add Parameter`` adds a slider to the right-hand
    **Parameters** dock with auto-named id (``Param1``, ``Param2``, …).
 4. **Set keys** — drag the slider to one extreme, edit the deformer's form
-   in code or via mesh edit, press **Set key**. Repeat at neutral and the
+   in code, press **Set key**. Repeat at neutral and the
    opposite extreme. The runtime now lerps deformer fields between adjacent
-   keys whenever the slider moves.
+   keys whenever the slider moves. **Set key** stores deformer forms only:
+   **Edit mesh** moves the drawable's rest vertices for good, so a mesh
+   edit is not keyed.
 5. **Save** — ``Save As…`` writes the rig + textures + motions + expressions
    + physics into a single ``.puppet`` zip you can share or open later via
    ``Open Puppet…``.
@@ -794,20 +888,35 @@ Try a worked example
 ^^^^^^^^^^^^^^^^^^^^
 
 The repository ships a fully-rigged demo at
-``examples/puppet/march_7th.puppet`` — a 307-drawable Cubism Live2D
-rig converted in-tree. Textures and per-parameter vertex morphs are
-baked into the ``.puppet`` zip, so the demo opens on the default
-``requirements.txt`` without redistributing the Cubism SDK.
+``examples/puppet/imeru.puppet`` — **Imeru**, Imervue's original
+mascot. She is made entirely by
+``examples/puppet/imeru/build.py`` (``py -3`` rebuilds the file; it needs
+Blender 4.2 or newer): her hair, body, outfit and arms are modelled and
+cel-shaded in Blender with the shading tricks of 3D anime games (hair lit
+through the normals of a smooth stand-in shape, painted strands and
+highlight strokes, baked occlusion) and rendered one puppet layer at a
+time, her face is shaded from an SDF face shadow map, her eyes, brows and
+mouth are painted on like a 3D game character's, and the layers are then
+rigged, so the demo carries no third-party rights: 45 drawables on a
+1024 × 1336 canvas, head turns made of Live2D-style parallax vertex
+morphs, a face shadow that changes shape as she turns away from the
+light, irises
+clipped to the eye whites, two-joint arms built from rotation
+deformers, and three physics chains that swing the hair.
 
-The rig carries 203 Cubism-standard parameters (``ParamAngleX/Y/Z``,
-``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …), so
-every standard input driver (webcam, blink, lip-sync, cursor look-at)
-drives it without per-rig configuration. Nine looping motions ship in
-the bundle — author-converted Cubism idle loops plus reference
-gesture loops in the ``Idle`` and ``TapHead`` groups.
+The rig carries every Cubism-standard parameter (``ParamAngleX/Y/Z``,
+``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
+``ParamArmLA/LB/RA/RB`` for the arms, so every standard input driver
+(webcam, blink, lip-sync, cursor look-at) drives it without per-rig
+configuration. Eight motions ship in the file: two looping idle
+motions in the ``Idle`` group, ``tap_head`` in ``TapHead`` and ``shy``
+in ``TapBody`` (clicking her head or body plays them), and ``greet``,
+``wave``, ``surprised`` and ``sleepy`` in ``Gesture``; seven
+expressions come with them (smile, happy, surprised, sad, angry,
+blush, sleepy).
 
 Open the Puppet tab, click **Open Puppet…**, point at
-``march_7th.puppet`` — the figure appears centred. Drag any parameter
+``imeru.puppet`` — the figure appears centred. Drag any parameter
 slider to drive a joint, or click one of the motions in the Motions
 dock — single-click binds the motion and starts playback immediately.
 
@@ -815,18 +924,21 @@ dock — single-click binds the motion and starts playback immediately.
 
 1. Launch Imervue. From source: ``python -m Imervue``. From the
    packaged build: run the ``Imervue`` executable / app bundle. The
-   ``examples/`` directory is bundled into both the wheel and the
-   Nuitka EXE, so the rig is on disk wherever you installed.
+   ``examples/`` directory is bundled into the Nuitka and PyInstaller
+   builds; a pip / wheel install does not include it (from a source
+   checkout the rigs are in ``examples/puppet/``).
 2. Click the **Puppet** tab at the top of the window.
-3. Toolbar → **File > Examples > March 7Th** (or the toolbar's
-   **Examples ▾** dropdown). The 307-drawable rig loads centred and
-   the parameter dock fills with the 203 Cubism-standard sliders.
+3. **File > Examples > Imeru** (or the toolbar's
+   **Examples ▾** dropdown). The rig loads centred and the
+   parameter dock fills with its sliders.
 4. In the bottom **Motions** dock, single-click any motion entry
-   (``zhaiyan``, ``zhaoxiang``, ``idle_breath``, ``tap_head`` …).
-   Playback starts immediately; click again to stop, or pick a
-   different motion to cross-fade into it.
+   (``idle_look``, ``wave``, ``tap_head`` …).
+   Playback starts immediately; clicking it again restarts it, the
+   dock's **Stop** button stops playback, and picking a different
+   motion cross-fades into it.
 5. Toggle the live-input switches on the toolbar to drive the rig
-   from your own inputs — **Drag-track head** for cursor look-at,
+   from your own inputs — **Drag-track head** to turn the head and
+   eyes toward the cursor as it moves over the canvas,
    **Auto-blink** for cyclic eye-close, **Auto idle** + **Idle
    motions** for breath + random Idle clips, **Mic lip-sync** for
    mouth-open from microphone RMS, **Webcam tracking** for full
@@ -846,7 +958,7 @@ A ``.puppet`` file is a zip archive:
 
 ::
 
-   my_character.puppet
+   imeru.puppet
    ├── puppet.json              # required — manifest, drawables, deformers, parameters
    ├── textures/
    │   ├── face.png             # referenced by drawables[].texture
@@ -872,12 +984,34 @@ Top-level ``puppet.json`` example::
      "physics": "physics.json"
    }
 
-The full schema (drawables, deformers, parameters, motions, expressions,
+The full specification (drawables, deformers, parameters, motions, expressions,
 pose, physics) lives at ``Imervue/puppet/FORMAT.md`` in the repo. JSON +
 PNG only — no proprietary binary, fully diffable through git.
 
+The format is open and machine-checkable:
+
+- A saved ``.puppet`` starts with an uncompressed ``mimetype`` entry holding
+  ``application/vnd.imervue.puppet+zip``, so a program can recognise it from
+  its first bytes, and every JSON file names its JSON Schema in ``$schema``.
+- Four JSON Schemas (draft 2020-12) — ``puppet``, ``motion``, ``expression``
+  and ``physics`` — are published in ``docs/schemas/``; editors that follow
+  ``$schema`` check a file as it is typed.
+- ``py -m Imervue.cli puppet-validate examples/puppet/imeru.puppet`` (MCP
+  ``puppet_validate``) checks a file against the schemas, the loader's rules
+  and the rig checks; ``puppet-schema`` (MCP ``puppet_schema``) prints a schema.
+- ``docs/examples/read_puppet.py`` reads a ``.puppet`` with the Python standard
+  library alone, as a reference for other programs; the specification and the
+  schemas are MIT-licensed, so any program may read or write the format.
+- A file of a newer format version is refused with the version it uses, so an
+  older Imervue says to update instead of misreading it.
+
 Toolbar reference
 ^^^^^^^^^^^^^^^^^
+
+The toolbar carries **Examples ▾**, the six live toggles, **Edit mesh**,
+**Record…** and **Reset to rest**. Every other entry below is an item of
+the **File**, **Edit**, **Live**, **Output** or **Tools** menu; those
+menus hold the toolbar's entries as well.
 
 .. list-table::
    :header-rows: 1
@@ -886,8 +1020,9 @@ Toolbar reference
    * - Action
      - Purpose
    * - Open Puppet… / Examples ▾
-     - Load a ``.puppet`` from disk, or pick one of the rigs
-       bundled under ``examples/puppet/`` directly from the toolbar
+     - Load a ``.puppet`` from disk (**File** menu), or pick one of the
+       rigs bundled under ``examples/puppet/`` from **Examples ▾** (the
+       toolbar button, also under **File**)
    * - Import PNG… / Import PSD… / Import Cubism…
      - Auto-mesh a PNG, layer-split a PSD, or sample-and-reconstruct
        a Cubism rig. The Cubism picker accepts both ``.moc3`` and
@@ -901,9 +1036,10 @@ Toolbar reference
    * - Save As…
      - Write the current rig out as a ``.puppet`` zip
    * - Add Rotation Deformer / Add Warp Deformer / Add Parameter
-     - Author the rig from the toolbar
+     - Author the rig from the **Edit** menu
    * - Drag-track head
-     - Cursor offset → ``ParamAngleX`` / ``ParamAngleY`` +
+     - The head and eyes turn toward the cursor as it moves over the
+       canvas: cursor offset → ``ParamAngleX`` / ``ParamAngleY`` +
        ``ParamEyeBallX`` / ``ParamEyeBallY``
    * - Auto-blink
      - Cosine close→open cycle on ``ParamEyeLOpen`` / ``ParamEyeROpen``
@@ -911,6 +1047,12 @@ Toolbar reference
        so competing drivers can't stall the blink)
    * - Mic lip-sync
      - Microphone RMS → ``ParamMouthOpenY`` (requires ``sounddevice``)
+   * - Lip-sync from Audio File…
+     - **Live** menu: turn a WAV (8-, 16- or 32-bit PCM) into a motion named
+       ``lipsync_<file>`` that opens ``ParamMouthOpenY`` with the loudness,
+       30 times a second (keys that add nothing are dropped), and plays the
+       WAV as its sound; it replaces a motion of that name and is picked in
+       the Motions dock. Needs no optional dependency
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → head yaw / pitch / roll +
        eye + mouth (requires ``opencv-python`` + ``mediapipe``;
@@ -921,26 +1063,37 @@ Toolbar reference
    * - Edit mesh
      - Click-and-drag canvas vertices to refine the mesh
    * - Record motion
-     - Capture parameter changes into a new ``Motion`` and add it to the
-       document — bake-from-take, no manual key authoring
+     - **Output** menu only: capture parameter changes into a new
+       ``Motion`` and add it to the document — bake-from-take, no manual
+       key authoring
    * - Capture frame… / Record… / Export all motions…
      - Save a single PNG, toggle a GIF / WebM / MP4 recording, or
        batch-render every motion in the rig to its own file (all via
-       the same character-only off-screen render path used for streaming)
+       the same character-only off-screen render path used for streaming).
+       A captured frame keeps the rig's own size (long side at most
+       4096 px) on a transparent background; a recording or batch export
+       fits the character into 1080 px on white, as GIF / WebM / MP4
+       frames carry no alpha
    * - Output > Virtual camera / NDI output
-     - Live streaming surfaces — see *Live streaming to OBS* above
+     - Live streaming surfaces — see *Live streaming to OBS* below
    * - Reset to rest
      - Snap-stop the motion player, untoggle every live driver,
        clear expressions / pose groups, restore parameter defaults
    * - Fit to Window
-     - Re-centre + re-scale the puppet in the canvas
+     - **Tools** menu: re-centre + re-scale the puppet in the canvas
+   * - Repair Rig
+     - **Tools** menu: in every drawable, drop broken and zero-area triangles,
+       merge duplicate vertices that share position and UV (a texture seam
+       stays split), remove vertices no triangle uses — bone weights and
+       vertex morphs follow the vertices that stay — and make each vertex's
+       bone weights sum to 1; the status bar says what changed
 
 Recording your own motions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To capture a custom take rather than authoring keyframes by hand:
 
-1. Toggle **Record motion** in the toolbar — a name dialog appears.
+1. Toggle **Output > Record motion** — a name dialog appears.
 2. While recording, drag sliders, enable **Webcam tracking**, let physics
    run, anything that writes parameter values.
 3. Toggle **Record motion** off — the recorder bakes the captured 30 Hz
@@ -952,13 +1105,20 @@ To capture a custom take rather than authoring keyframes by hand:
 Custom motions saved this way round-trip through the same JSON
 ``motions/<name>.json`` payload as authored ones.
 
+**Edit > Edit motion…** opens the timeline of the motion the player holds:
+drag a key or a bezier handle, reshape the chosen track to a named easing
+with **Ease** and **Apply to Track** (31 curves; elastic and bounce become
+16 linear keys per segment), or thin a 30 Hz take with **Simplify Keys**,
+which drops every key that sits within the tolerance — a percentage of each
+parameter's range — of the line through its neighbours.
+
 Live streaming to OBS
 ^^^^^^^^^^^^^^^^^^^^^
 
 Two output paths, both rendering the puppet alone (no checker
 backdrop, no editor chrome) into an off-screen framebuffer before
 handing it to the streaming surface. Output longest side caps at
-1080 px so Cubism-native canvases (March 7th is 3503×7777) don't
+1080 px so Cubism-native canvases (often 3000–8000 px tall) don't
 get rejected by DirectShow virtual-camera drivers.
 
 **A. Virtual Camera** — appears as a webcam in OBS's *Video Capture
@@ -967,7 +1127,7 @@ platform driver: OBS Studio 26+ ships the *OBS Virtual Camera*
 driver on Windows / macOS (click *Start Virtual Camera* in OBS
 once to register it); Linux uses ``v4l2loopback-dkms`` +
 ``modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"``.
-Toolbar **Output > Virtual camera** opens the stream.
+The **Output > Virtual camera** menu toggle opens the stream.
 
 DirectShow / AVFoundation / v4l2loopback are RGB-only — no alpha
 channel — so Imervue fills the area outside the character with
@@ -989,7 +1149,7 @@ OBS / vMix composite directly over their own scenes with no
 chroma-key pass. ``pip install ndi-python`` + the
 `NDI Tools <https://ndi.video/tools/>`_ runtime + the
 `obs-ndi <https://github.com/obs-ndi/obs-ndi/releases>`_ plugin.
-Toolbar **Output > NDI output** broadcasts the source (default
+The **Output > NDI output** menu toggle broadcasts the source (default
 name *Imervue Puppet*).
 
 ``ndi-python`` ships only a source distribution; pip builds it
@@ -1016,9 +1176,11 @@ Optional dependencies
   redistribution; users drop the SDK under ``<cwd>/sdk/`` or set
   ``CUBISM_CORE_DLL`` env var)
 
-The plugin degrades gracefully when any of these are missing — the
-matching toolbar toggle bounces back off and shows an "install
-<package>" hint. ``File > Install dependencies…`` batch-installs
+The Puppet tab degrades gracefully when a Python package is missing — the
+matching toggle stays off and the dependency installer opens, offering
+to install it; once it is installed the toggle turns back on. A text
+hint appears only when the package is present but the device or driver
+fails. ``File > Install dependencies…`` batch-installs
 every Python optional package in one go.
 
 ----
@@ -1048,8 +1210,8 @@ chapter is organised as:
    opacity, size, multi-monitor restoration).
 #. **Interaction model** — left-click hit areas, the full
    right-click context menu, system tray.
-#. **Live drivers** — six opt-in input drivers and their
-   optional dependencies.
+#. **Live drivers** — seven input drivers (three on by default)
+   and their optional dependencies.
 #. **Pet script** — the JSON file that lets you replace the
    pet's voice with your own lines, schedule reminders, and
    bind per-hit-area / per-motion responses.
@@ -1064,7 +1226,7 @@ Quick start
 ^^^^^^^^^^^
 
 1. Switch to the **Desktop Pet** tab.
-2. Click **Load bundled March 7th** to use the included character,
+2. Click **Load bundled Imeru** to use the included character,
    or **Open Puppet…** to pick your own ``.puppet`` file.
 3. The overlay appears on your desktop and the **Show pet on
    desktop** checkbox is ticked automatically. (If you ever want
@@ -1085,11 +1247,12 @@ Loading a rig
 The tab exposes three load paths:
 
 * **Open Puppet…** — pick any ``.puppet`` file from disk.
-* **Load bundled March 7th** — opens the rig shipped under
-  ``examples/puppet/march_7th.puppet``. The resolver searches
-  ``examples_dir()`` first (frozen-safe for packaged Nuitka /
-  pip-installed builds) and falls back to a repo-root-relative
-  lookup so the button works from both run-modes.
+* **Load bundled Imeru** — opens the rig shipped under
+  ``examples/puppet/imeru.puppet``. The resolver searches
+  ``examples_dir()`` first (beside the program in the packaged
+  Nuitka / PyInstaller builds, the repository root in a source
+  checkout) and falls back to a lookup relative to the current
+  working folder.
 * **Last rig** — the previously loaded rig auto-restores on
   Imervue startup from the ``last_rig_path`` settings field; the
   Desktop Pet tab re-instantiates the overlay invisibly so the
@@ -1158,9 +1321,11 @@ entry, and (by default) stays on top of every other window.
        ``GetWindowRect`` API on Windows; on macOS / Linux it
        no-ops gracefully (the pet stays visible).
    * - Pauses when hidden
-     - The ~30 FPS paint tick and the 1 Hz script tick both
-       stop on ``hideEvent`` so a hidden pet costs zero CPU.
-       They restart on the next ``showEvent``.
+     - The ~30 FPS paint tick, the 1 Hz script tick and the
+       fullscreen poll (unless fullscreen is what hid the pet)
+       stop on ``hideEvent`` and restart on the next
+       ``showEvent``. The live drivers' timers (blink, idle,
+       idle motions, gaze) keep running.
    * - Size presets
      - Small (200 × 300), medium (320 × 480), large (480 × 720).
        The pet resizes around its current centre so a size
@@ -1172,12 +1337,13 @@ entry, and (by default) stays on top of every other window.
        always still see and grab the pet — fully invisible
        would let you lose it.
    * - Position memory
-     - The post-snap ``(x, y)`` after every release is persisted.
-       On the next launch the pet returns to that screen
-       coordinate. If the saved position no longer falls inside
-       any connected screen (you unplugged a monitor since last
-       launch), the pet falls back to the bottom-right corner
-       of the primary screen.
+     - The post-snap ``(x, y)`` after every release is persisted,
+       with the monitor it is on. On the next launch the pet
+       returns to that position, clamped inside that monitor. If
+       the monitor is gone (you unplugged it since last launch),
+       the pet goes to the first screen with its saved position
+       clamped into it. The bottom-right corner is used only when
+       no position was ever saved.
 
 Interaction model
 ^^^^^^^^^^^^^^^^^
@@ -1201,24 +1367,31 @@ follows:
    built-in fallback).
 
 A drag-to-move gesture suppresses the click handler, so moving
-the pet doesn't trigger a motion / speech.
+the pet doesn't pop a speech bubble. Pressing plays a motion from
+the rig's ``Drag`` group and releasing after a drag plays one from
+its ``Land`` group, when the rig has those groups.
 
 **Right-click anywhere on the body**
 
 Opens a context menu with the following structure:
 
 * **Hide pet** — top-level action that closes the overlay.
-* **Live drivers** submenu — six checkable toggles (Auto idle,
-  Idle motions, Auto-blink, Drag-track head, Mic lip-sync,
-  Webcam tracking). Check-state mirrors the live driver state,
-  so the menu shows what's currently running.
+* **Live drivers** submenu — seven checkable toggles (Auto idle,
+  Idle motions, Auto-blink, Drag-track head, Mouse gaze, Mic
+  lip-sync, Webcam tracking). Check-state mirrors the live driver
+  state, so the menu shows what's currently running.
 * **Play motion** submenu — populated from the active rig's
   ``document.motions`` list. Selecting an entry plays that
-  motion (and may trigger the pet's voice if the script binds a
-  line to it).
+  motion; it speaks no ``motion_lines`` line (those answer a
+  hit-area click only).
 * **Apply expression** submenu — populated from the rig's
-  ``document.expressions``. Selecting toggles the expression's
-  parameter overlay.
+  ``document.expressions``. Each entry is checked while its expression is
+  on; selecting one adds the expression's parameter overlay, selecting it
+  again takes it off.
+* **Pose** submenu — one submenu per pose group in the rig (labelled
+  with the group's display name, or its id when it has none), listing
+  the group's members; the member shown is checked, and selecting
+  another shows it instead. Disabled when the rig has no pose groups.
 * Five top-level checkable toggles: **Lock position**,
   **Click-through**, **Always on bottom**, **Hide on fullscreen**,
   **Speech bubble** — quick access to the same toggles in the
@@ -1248,8 +1421,10 @@ Live drivers
 Each live driver is lazy-created on first enable, so a dormant
 pet pays zero timer / thread cost for drivers you never turn
 on. The state of each driver is persisted; toggling on, closing
-Imervue, and re-launching reopens the pet with the same
-drivers running.
+Imervue, and re-launching restores the rig with the same
+drivers running. The overlay itself appears at launch only when
+**Show the pet when Imervue starts** is ticked in the tab's
+Window group.
 
 .. list-table::
    :header-rows: 1
@@ -1265,8 +1440,8 @@ drivers running.
      - none
    * - **Idle motions**
      - Randomly picks a motion from the rig's ``Idle`` group
-       every few seconds and plays it. Stops if no motion is
-       currently in flight.
+       and plays it — one right away when turned on, then every
+       few seconds. Steps aside while a non-Idle motion plays.
      - none
    * - **Auto-blink**
      - Closes and reopens the eyes on a smooth cosine curve
@@ -1275,10 +1450,15 @@ drivers running.
        the blink.
      - none
    * - **Drag-track head**
-     - The head + eyes turn toward the global cursor position
-       even when the cursor is off the pet. Drives
+     - The head + eyes turn toward the cursor while it moves
+       over the pet. Drives
        ``ParamAngleX`` / ``ParamAngleY`` / ``ParamEyeBallX`` /
        ``ParamEyeBallY``.
+     - none
+   * - **Mouse gaze**
+     - The eyes and head follow the cursor anywhere on screen,
+       relative to the pet's centre (the eyes lead). Drives the
+       same four parameters.
      - none
    * - **Mic lip-sync**
      - Microphone RMS amplitude drives ``ParamMouthOpenY``. The
@@ -1288,8 +1468,8 @@ drivers running.
    * - **Webcam tracking**
      - MediaPipe FaceLandmarker reads your webcam at ~30 FPS
        and drives the head pose + eye-open + mouth-open params.
-       Opens a small live-preview window so you can verify the
-       camera sees your face.
+       No preview window opens for the pet (the camera preview
+       belongs to the Puppet tab).
      - ``opencv-python`` + ``mediapipe``
 
 The two optional-dep drivers degrade gracefully: if the
@@ -1302,14 +1482,18 @@ Pet script — custom voice and scheduled events
 
 The pet's speech bubble draws from a JSON file you can author
 and load from the **Pet script** group on the tab. The script
-governs four things:
+governs five things:
 
 * **Greetings** — default click lines when nothing more
   specific matches.
+* **Time-of-day greetings** — greetings for the local clock's
+  band (``morning`` 05–11 h, ``afternoon`` 12–17 h, ``evening``
+  18–21 h, ``night`` 22–04 h), used before the plain greetings;
+  a band without lines falls back to them.
 * **Hit-area responses** — per-``HitArea.id`` line buckets.
-* **Motion lines** — per-motion-name line buckets, fired when
-  the pet starts that motion (either from a hit area or from
-  the context menu).
+* **Motion lines** — per-motion-name line buckets, spoken when
+  a hit-area click plays that motion (not when a motion is
+  started from the context menu).
 * **Scheduled chimes** — timer-driven lines that fire every
   ``every_seconds`` of monotonic wall-clock time.
 
@@ -1319,10 +1503,14 @@ Schema (versioned — future fields are forward-compatible):
 
    {
      "version": 1,
-     "name": "March 7th — playful voice",
+     "name": "Imeru — cheerful voice",
      "greetings": [
        "Hi!", "Hello hello!", "Need a break?"
      ],
+     "time_of_day_greetings": {
+       "morning": ["Good morning!"],
+       "night": ["Still up?"]
+     },
      "hit_responses": {
        "HitAreaHead": ["Hey, my head!", "Stop poking!"],
        "HitAreaBody": ["Hehe~", "Pat pat?"]
@@ -1348,8 +1536,9 @@ Loading rules:
   raises an error and surfaces the path in the status label.
 * The hit-area / motion / greeting cascade is layered: a left-
   click consults ``hit_responses[area.id]`` first, then
-  ``motion_lines[area.motion]``, then ``greetings``, then the
-  built-in default greeting set as the floor.
+  ``motion_lines[area.motion]``, then ``time_of_day_greetings``,
+  then ``greetings``, then the built-in default greeting set as
+  the floor.
 * Time tracking uses ``time.monotonic`` so suspending the laptop
   or jumping the system clock can't binge-fire queued events.
 
@@ -1358,10 +1547,13 @@ built-in greeting set; the persisted script path is cleared so
 the next launch doesn't reload it.
 
 A working sample lives at
-``examples/desktop_pet/march_7th.petscript.json`` — six
-greetings, two hit-area buckets (head / body), three motion
-lines (wave / curtsy / cheer), and a 30-minute stretch
-reminder.
+``examples/desktop_pet/imeru.petscript.json`` — six
+greetings, a line for each time of day, two hit-area buckets
+(``Head`` / ``Body``), lines for five motions (wave / greet /
+surprised / sleepy / shy), and a 30-minute stretch reminder. The
+bucket names are Imeru's hit areas, so her head and body answer
+clicks; a rig whose hit areas use the Cubism names
+(``HitAreaHead`` / ``HitAreaBody``) needs buckets under those.
 
 Persistence
 ^^^^^^^^^^^
@@ -1388,16 +1580,16 @@ clamp on load so a corrupted settings file can't crash launch.
    * - ``position``
      - ``[-1, -1]``
      - Screen-coord ``(x, y)`` from the last drag release.
-       ``-1, -1`` means "use bottom-right of primary screen".
-       Multi-monitor unplug between sessions falls back the
-       same way.
+       ``-1, -1`` (never saved) means "use the bottom-right
+       corner". When the saved monitor is gone, the position is
+       clamped into the first screen.
    * - ``size_preset``
      - ``"medium"``
      - One of ``small`` / ``medium`` / ``large``.
    * - ``opacity``
      - ``1.0``
-     - Clamped to ``[0.1, 1.0]``. Out-of-range values reset
-       to default.
+     - Out-of-range values are clamped to ``[0.1, 1.0]``; only
+       a non-numeric value falls back to the default.
    * - ``click_through``
      - ``false``
      -
@@ -1414,17 +1606,32 @@ clamp on load so a corrupted settings file can't crash launch.
      - ``24``
      - Clamped to ``[0, 200]`` px.
    * - ``drivers``
-     - all ``false``
+     - ``auto_idle``, ``idle_motion``, ``auto_blink``
+       ``true``; the rest ``false``
      - Sub-dict keyed by driver id (``auto_idle``,
        ``idle_motion``, ``auto_blink``, ``drag_track``,
-       ``mic_lipsync``, ``webcam_tracking``). Unknown keys
-       round-trip untouched for forward-compat.
+       ``mouse_gaze``, ``mic_lipsync``, ``webcam_tracking``).
+       Unknown keys round-trip untouched for forward-compat.
    * - ``show_on_launch``
      - ``false``
-     - Auto-show the overlay when Imervue starts.
+     - Set by **Show the pet when Imervue starts** in the tab's
+       Window group. The rig and drivers are restored at launch
+       either way; the overlay appears only when this is on.
    * - ``speech_enabled``
      - ``true``
      - When false the speech bubble never pops.
+   * - ``hotkeys_enabled``
+     - ``false``
+     - Set by **Enable global hotkeys (needs pynput)** in the tab's
+       Global hotkeys group.
+   * - ``hotkeys``
+     - ``{}``
+     - ``{action: key}`` overrides of the defaults ``ctrl+shift+p``
+       (show / hide), ``ctrl+shift+l`` (lock), ``ctrl+shift+t``
+       (click-through) and ``ctrl+shift+space`` (speak now), set by
+       the key fields of the Global hotkeys group. A key another
+       action already uses is refused there; saved keys that two
+       actions share are named in the status line when the tab opens.
 
 The settings dict's merge behaviour is one level deep: older
 settings files missing newer keys still produce a complete
@@ -1456,6 +1663,48 @@ If your rig defines ``HitArea`` entries, you can author per-
 hit-area speech-bubble lines in a ``.petscript.json`` whose
 ``hit_responses`` keys match the area ids.
 
+Integrations Plugin
+^^^^^^^^^^^^^^^^^^^
+
+The **Desktop Pet Integrations** plugin (``Plugins`` > ``Download Plugins``, category
+``plugins``, name ``pet_integrations``) lets the pet react to the outside world. It adds
+``Plugins`` > ``Desktop Pet Integrations`` with one entry per integration and a ``Settings…``
+entry for their options; an entry can be turned on once the pet has been shown, installs the
+optional package it needs first, and stays on across restarts. It is also the worked example of
+a plugin that extends the pet — see *Writing Plugins* and ``on_pet_created``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 56 22
+
+   * - Integration
+     - What the pet does
+     - Needs
+   * - React to OBS events
+     - Plays a motion of the ``Stream``, ``Record`` or ``Scene`` group when streaming or recording
+       starts or stops, or the scene changes. Set OBS's WebSocket server host, port and password in
+       ``Settings…``
+     - ``obs-websocket-py`` (installed on first use); OBS with its WebSocket server on
+   * - React to Twitch chat
+     - Joins a channel's chat and plays the motion group mapped to a keyword whenever a message
+       contains it (case-insensitive; ``keyword = Group`` lines in ``Settings…``). ``=hi`` matches
+       only a message that is exactly "hi", ``!dance*`` one that starts with "!dance", ``/go+al/``
+       a regular expression; the first matching line wins
+     - A channel name and an ``oauth:`` token
+   * - Local webhook (127.0.0.1)
+     - Listens on ``http://127.0.0.1:9876/trigger`` (port in ``Settings…``) for a JSON POST
+       ``{"group": "Wave", "speech": "Hi!"}`` — either field may be left out — from scripts,
+       Stream Deck or automation tools. With a token set, requests must send
+       ``Authorization: Bearer <token>``; requests from a web page are refused
+     - Nothing extra
+   * - React to Windows notifications
+     - Plays the ``Notify`` group and says the notification's title when another app shows a
+       Windows notification; apps listed under ignored app ids are skipped. Windows asks for
+       notification access the first time
+     - Windows; the ``winrt`` notification packages (installed on first use)
+
+A rig reacts only to the motion groups it has; a missing group plays nothing.
+
 Troubleshooting
 ^^^^^^^^^^^^^^^
 
@@ -1468,7 +1717,7 @@ window-management tool is overriding the
 (some custom window managers on Linux do this). On Windows /
 macOS this should "just work".
 
-**"Load bundled March 7th" reports the file isn't found.** The
+**"Load bundled Imeru" reports the file isn't found.** The
 resolver consults ``examples_dir()`` first (the frozen-safe
 location used by packaged builds) and falls back to a CWD-
 relative path. If neither contains the rig, the status label
@@ -1482,18 +1731,18 @@ Imervue from the repository root.
    tab or the right-click menu).
 #. If you loaded a custom script, verify the JSON parses — the
    tab's status label shows the load error.
-#. If a hit-area click did nothing, the area probably has no
-   matching motion AND the script has no ``hit_responses`` entry
-   for that area id. Either bind a motion to the area in the
-   Puppet tab or add the area id to the script's
-   ``hit_responses``.
+#. If **Click-through** is on, the click goes to the window
+   behind the pet; turn it off in the tab or the tray menu. (With
+   speech on, every click gets a line: a rig without hit areas
+   plays no motion, but the click still greets you.)
 
 **The webcam tracking checkbox bounces back off.** Webcam
 tracking needs ``opencv-python`` and ``mediapipe`` installed
 in the same Python environment Imervue is running in. Install
 with ``pip install opencv-python mediapipe``. After install,
-toggling the checkbox should bring up a small preview window
-showing the detected face landmarks.
+tick the checkbox again. The pet opens no preview window; to see
+what the camera detects, turn on **Webcam tracking** in the
+Puppet tab, which shows the face landmarks.
 
 **The pet doesn't auto-hide during fullscreen apps.** The
 fullscreen detector polls the foreground window at 1 Hz. On
@@ -1507,8 +1756,8 @@ monitor as the pet.
 **The pet's position drifts off-screen between launches.** This
 happens when the screen the pet was on is no longer connected
 on the next launch (laptop dock, second monitor unplugged).
-The pet auto-falls-back to the bottom-right corner of the
-primary screen in this case — drag it to where you want and
+The pet moves to the first screen with its saved position
+clamped into it in this case — drag it to where you want and
 the next save will overwrite the stale position.
 
 ----
@@ -1525,19 +1774,22 @@ Rotation & Flipping
      - Menu
    * - Rotate 90 ° clockwise
      - ``R``
-     - Right-click > Modify > Rotate CW
+     - Right-click > Modify > Rotate Clockwise
    * - Rotate 90 ° counter-clockwise
      - ``Shift + R``
-     - Right-click > Modify > Rotate CCW
+     - Right-click > Modify > Rotate Counter-clockwise
    * - Flip horizontal
      - --
      - Right-click > Modify > Flip Horizontal
    * - Flip vertical
      - --
      - Right-click > Modify > Flip Vertical
-   * - Lossless rotate (JPEG)
+   * - Lossless rotate
      - --
-     - Right-click > Lossless Rotate
+     - Right-click > Lossless Rotate > Lossless Rotate CW / CCW. Only a JPEG is truly
+       lossless (its orientation tag changes); PNG / BMP / TIFF / WebP /
+       GIF are decoded, turned and re-saved (a lossy WebP is re-encoded);
+       camera RAW, HEIC and multi-frame files are refused
 
 ----
 
@@ -1547,9 +1799,9 @@ Exporting Images
 Single Export
 ^^^^^^^^^^^^^
 
-Right-click an image > ``Export / Save As``.
+Open an image (Deep Zoom), then right-click > ``Export / Save As``.
 
-- Choose format: PNG, JPEG, WebP, BMP, TIFF, AVIF; HEIC and JPEG XL too when ``pillow-heif`` / ``pillow-jxl-plugin`` is installed
+- Choose format: PNG, JPEG, WebP, BMP, TIFF; AVIF when Pillow has AVIF support, HEIC and JPEG XL when ``pillow-heif`` / ``pillow-jxl-plugin`` is installed
 - Adjust quality (for lossy formats)
 - Choose the metadata to keep: all, all but the location (default) or none. Camera, lens and capture date come along; the choice is remembered and Batch Export offers the same
 - Preview estimated file size
@@ -1558,54 +1810,64 @@ Right-click an image > ``Export / Save As``.
 Export Presets
 ^^^^^^^^^^^^^^
 
-For the common delivery targets you don't want to retune every time, use
-``File`` > ``Export with Preset``. One click applies the right resize, format,
-and quality pipeline:
+Batch Export (below) has a **Preset** list that fills in the size, format and quality for
+common targets; **Custom** leaves them to you:
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 80
+   :widths: 30 70
 
    * - Preset
-     - Pipeline
-   * - **Web 1600**
-     - Fit long edge to 1600 px, JPEG quality 85, sRGB; for blog / forum uploads where visual quality matters more than pixel count.
-   * - **Print 300 dpi**
-     - Full-resolution TIFF / high-quality JPEG with 300 dpi metadata, color-managed output for labs and print shops.
-   * - **Instagram 1080**
-     - Square (1080 × 1080) or portrait (1080 × 1350) crop with the original aspect ratio preserved inside, quality 90 JPEG.
+     - Output
+   * - **Web — 1600 px JPEG**
+     - Long edge up to 1600 px, JPEG quality 85.
+   * - **4K Web — 3840 px JPEG**
+     - Long edge up to 3840 px, JPEG quality 90.
+   * - **Print — 300 DPI PNG**
+     - Full resolution, PNG, 300 dpi.
+   * - **Instagram — 1080×1080 square**
+     - Centre square crop, 1080 × 1080, JPEG quality 90.
+   * - **Thumbnail — 400 px JPEG**
+     - Long edge up to 400 px, JPEG quality 80.
 
-Presets compose with the watermark overlay (below) — enable the watermark once and
-every preset output carries it.
+Watermark
+^^^^^^^^^
 
-Watermark Overlay
-^^^^^^^^^^^^^^^^^
-
-``File`` > ``Watermark…`` opens a non-destructive overlay configurator. Settings
-apply on export only — the original pixels on disk are never touched.
-
-- **Mode**: text or image. Image watermarks support PNG with alpha.
-- **Position**: 9-anchor grid (corners, edges, centre).
-- **Opacity**: 0 – 100 %.
-- **Scale**: percent of the exported long edge; the watermark rescales automatically
-  as you resize for different presets.
+Batch Export can also draw a text watermark on every exported copy: the text, its position
+(a corner or the centre) and its opacity. The original files are never changed.
 
 Batch Export
 ^^^^^^^^^^^^
 
-Select multiple images, then right-click > ``Batch Export``.
+Select multiple images, then right-click > ``Batch Operations`` > ``Batch Export``.
 
 - Uniform format conversion
 - Set maximum width / height (auto aspect-ratio scaling)
 - Quality control
 - Real-time progress bar
+- **Render on**: the CPU, or a discrete GPU when the GPU Develop plugin is installed (below)
+
+GPU Develop Plugin
+^^^^^^^^^^^^^^^^^^
+
+The **GPU Develop** plugin (``Plugins`` > ``Download Plugins``, category ``plugins``, name
+``gpu_develop``) lets Batch Export render Develop recipes on a discrete GPU.
+``Plugins`` > ``GPU Develop…`` installs ``wgpu`` the first time and then names the GPU it will
+use; Batch Export then shows **Render on** with that GPU chosen (pick **CPU** to render as
+before).
+
+- White balance, exposure, highlights / shadows, whites / blacks, brightness, contrast, vibrance, saturation and the tone curve run on the GPU; rotation, flips, the crop and everything after the tone curve (split toning, LUT, masks, levels and the rest) stay on the CPU
+- A 24 MP photo takes about 0.1 s on the GPU instead of about 7 s on the CPU, not counting decoding and saving
+- Only a discrete GPU is used, never an integrated GPU or a software renderer; on Windows through Vulkan first, then Direct3D 12
+- An image the GPU fails on is rendered on the CPU, so the export still completes
+- The output matches the CPU renderer to within a few levels on a small share of pixels
 
 Create GIF / Video
 ^^^^^^^^^^^^^^^^^^^
 
-Select multiple images, then right-click > ``Create GIF / Video``.
+Select multiple images, then right-click > ``Batch Operations`` > ``Create GIF / Video``.
 
-- GIF and MP4 output
+- GIF and MP4 output; MP4 uses the ffmpeg on PATH, else the one bundled with the default ``imageio-ffmpeg`` dependency
 - Drag to reorder frames
 - Set frames per second (FPS)
 - Custom dimensions
@@ -1620,6 +1882,9 @@ Animation Playback
 When opening GIF, APNG, or animated WebP files, animation plays automatically. An animation that would take
 more than 512 MB decoded is decoded one frame at a time as it plays, so opening it
 neither freezes the window nor fills memory.
+A frame of 10 ms or less plays for 100 ms, as browsers do: many GIFs rely on it.
+
+A multi-page TIFF — a scanned document — is not played: it shows one page at a time, turned with ``,`` and ``.``, and the readout says "Page 2/5". Frames that are not an animation never play either: the preview a camera embeds in a JPEG (MPF), the layers of a PSD, and an APNG's default image — the still shown by programs without APNG support.
 
 .. list-table::
    :header-rows: 1
@@ -1643,7 +1908,8 @@ neither freezes the window nor fills memory.
 Image Comparison
 ----------------
 
-In thumbnail mode, select 2 -- 4 images, then right-click > ``Compare Images``.
+In thumbnail mode, select 2 or 4 images, then right-click > ``Compare Images`` (or pick them
+in the dialog's list).
 
 The dialog has four tabs:
 
@@ -1706,7 +1972,9 @@ Copy & Paste
    * - Copy image to clipboard
      - ``Ctrl + C`` in Deep Zoom mode
    * - Paste clipboard image
-     - ``File`` > ``Paste from Clipboard``, or ``Ctrl + V``
+     - ``File`` > ``Paste from Clipboard`` opens it in the annotation editor (nothing is saved);
+       ``Ctrl + V`` saves it as ``pasted_<timestamp>.png`` in the current folder and opens it, or
+       opens a file path copied to the clipboard
    * - Auto-monitor clipboard
      - ``File`` > ``Auto-annotate Clipboard Images`` (toggle)
 
@@ -1727,7 +1995,7 @@ Deleting Images
    * - Delete current image
      - Press ``Delete``
    * - Delete selected images
-     - Select multiple, then ``Delete`` or right-click > ``Delete Selected``
+     - Select multiple, then ``Delete`` or right-click > ``Delete Selected Images``
 
 Images are moved to the system Recycle Bin / Trash and can be recovered from there. A drive
 without a Recycle Bin — a memory card, USB stick or network share, where Windows
@@ -1744,7 +2012,7 @@ camera writes under the same name.
 Batch Operations
 ----------------
 
-In thumbnail mode, select multiple images then right-click:
+In thumbnail mode, select multiple images, then right-click > ``Batch Operations``:
 
 .. list-table::
    :header-rows: 1
@@ -1760,6 +2028,23 @@ In thumbnail mode, select multiple images then right-click:
      - Rotate all selected images at once
    * - Batch Export
      - Convert format and resize in bulk
+   * - Create GIF / Video
+     - Animate the selection as a GIF or an MP4 (see *Create GIF / Video*)
+   * - Tag by Location
+     - Add the nearest city and country of each geotagged photo to its XMP keywords
+   * - Index Keywords
+     - Add the selection's XMP keywords to the library
+   * - Auto-cull Blurry
+     - Flag the blurry photos as Reject
+   * - Auto-cull Low Quality
+     - Flag the weakest quarter of the selection (sharpness, exposure, contrast) as Reject
+   * - Auto-Rotate by EXIF
+     - Save an upright PNG copy of each photo as ``<name>_oriented.png``
+   * - Combine to PDF / TIFF…
+     - Put the selection, in view order, into one multi-page PDF or TIFF
+   * - Import to Dated Folders…
+     - Copy the selection into ``YYYY/MM`` folders by capture date (EXIF, else the file date);
+       a file already there keeps its name and the newcomer gets ``_1``
    * - Add to Tag
      - Apply the same tag to all selected images
    * - Add to Album
@@ -1793,6 +2078,8 @@ Right-click in Deep Zoom mode > ``Set as Wallpaper`` to set the current image as
 
 Supported on Windows, macOS, and Linux (GNOME).
 
+Windows turns the desktop black, while reporting success, when it is handed a file it can't decode. A picture that isn't a JPEG, PNG or BMP — a camera RAW, HEIC, PSD, TGA, WebP and the other formats Imervue opens — and a photo that has to be turned upright are therefore handed over as a JPEG copy of what the viewer shows. The copy is kept in ``%LOCALAPPDATA%\Imervue\wallpaper`` (``~/.local/share/imervue/wallpaper`` on macOS and Linux); only the newest one is kept.
+
 ----
 
 Multi-Window
@@ -1804,17 +2091,15 @@ Workspace Layout Presets
 ------------------------
 
 ``File`` > ``Workspaces…`` captures the current window geometry, dock / toolbar
-arrangement, splitter sizes, and active root folder under a name — then lets
-you flip between saved layouts the same way other XMP-aware photo managers switches *Library* /
-*Develop* / *Export* or Adobe Bridge switches *Metadata* / *Filmstrip*. The
-dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
-``user_settings.json`` (under the ``workspaces`` key) and survive across
+arrangement, the tree / viewer split, and active root folder under a name — then lets
+you flip between saved layouts. The active tab and the Modify tab's panel split are not stored. The dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
+``user_setting.json`` (under the ``workspaces`` key) and survive across
 sessions.
 
 .. tip::
-   Build a **Browse** workspace with the tree and thumbnail grid visible, and a
-   separate **Develop** workspace with the develop panel maximised and the tree
-   collapsed. One click moves your whole window to the right shape for each
+   Build a **Browse** workspace with a wide tree beside the viewer, and a
+   separate **Focus** workspace with the tree dragged narrow and the docks you
+   don't need closed. One click moves your whole window to the right shape for each
    task.
 
 Touchpad Gestures
@@ -1839,7 +2124,7 @@ File Association (Windows)
 Register Imervue as an image viewer in Windows Explorer:
 
 1. ``File`` > ``File Association`` > ``Register 'Open with Imervue'``
-2. Administrator privileges are required.
+2. No administrator rights are needed: registration writes to the current user's registry.
 3. After registration, right-click any image in Explorer to see the ``Open with Imervue`` option.
 
 To remove: ``File`` > ``File Association`` > ``Remove file association``.
@@ -1865,6 +2150,117 @@ Imervue supports plugins for extended functionality.
      - ``Plugins`` > ``Open Plugin Folder``
    * - Reload plugins
      - ``Plugins`` > ``Reload Plugins``
+
+Writing Plugins
+^^^^^^^^^^^^^^^
+
+A plugin is a Python package in ``plugins/<name>/`` — next to the ``Imervue`` package in a
+source checkout, next to the executable in a packaged build (``Plugins`` > ``Open Plugin
+Folder`` opens it). Its ``__init__.py`` sets ``plugin_class`` to a subclass of
+``Imervue.plugin.plugin_base.ImervuePlugin``; a single ``.py`` file in ``plugins/`` also loads
+(its first ``ImervuePlugin`` subclass is used), but the plugin downloader only distributes
+packages. The class attributes ``plugin_name``, ``plugin_version``, ``plugin_description`` and
+``plugin_author`` are optional (``"Unnamed Plugin"``, ``"0.0.1"`` and empty strings by default).
+Every main window creates its own instance of each plugin and passes itself in, so a hook can use
+``self.main_window`` and ``self.viewer`` (the ``GPUImageView``). Override only the hooks you
+need; each call is wrapped, so an exception is logged under the plugin's name instead of
+stopping Imervue. The full guide, with examples, is
+`PLUGIN_DEV_GUIDE.md <https://github.com/JeffreyChen-s-Utils/Imervue/blob/main/PLUGIN_DEV_GUIDE.md>`_.
+Besides hooks, a plugin can give Batch Export another renderer for Develop recipes by registering
+a ``BackendProvider`` with ``Imervue.image.develop_backends.register`` in
+``on_plugin_loaded()``; the GPU Develop plugin is the example.
+
+A dialog that runs one image transform on **OK** can take the button row, the optional-package
+install, the worker thread and the result toast from
+``Imervue.plugin.tool_dialog.ToolDialogMixin``: it sets ``output_suffix`` and the toast keys and
+returns the transform from ``_transform()``. A plugin that imports main-program code added after
+older releases names the plugin API version it needs in a ``plugin.json`` file beside its
+``__init__.py`` (``{"min_api_version": 2}``). ``Plugins`` > ``Download Plugins`` refuses such a
+plugin on an Imervue that is too old and keeps any installed copy, with the version it needs on
+the status line; the plugin loader skips it with the reason in the log, without importing it.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 40 32
+
+   * - Hook
+     - Called when
+     - Arguments / return
+   * - ``register_languages()`` (class method)
+     - On the plugin class before each instance is created (at every load and ``Reload
+       Plugins``), and at startup before the main window is built when the saved language is not
+       a built-in one; that startup pass imports every plugin and runs nothing else
+     - No arguments. Call ``language_wrapper.register_language(language_code, display_name,
+       word_dict)`` here; a built-in language code is refused. A string that is empty or whose
+       ``{placeholders}`` differ from English is dropped and logged (the built-in text shows), and
+       missing keys are logged. Return value ignored; an exception is logged and the plugin still
+       loads
+   * - ``on_plugin_loaded()``
+     - Right after the instance is created: while the main window is built, and again after
+       ``Plugins`` > ``Reload Plugins``
+     - No arguments; return value ignored
+   * - ``get_translations()``
+     - Right after ``on_plugin_loaded()``, once per load
+     - Returns ``{language_code: {key: text}}`` (default ``{}``). The strings are merged into the
+       language tables; keys that already exist are never overwritten and unknown language codes
+       are skipped. An empty string, or one whose ``{placeholders}`` differ from the payload's
+       English string for that key, is dropped; the problems are logged
+   * - ``on_build_main_tabs(tabs)``
+     - Once while the main window is built, after the five built-in tabs and before
+       ``on_build_menu_bar``; ``Reload Plugins`` does not run it again
+     - ``tabs``: the main window's top-level ``QTabWidget``; add a tab with
+       ``tabs.addTab(widget, label)``. Return value ignored
+   * - ``on_build_menu_bar(plugin_menu)``
+     - Once after the shared ``Plugins`` menu is built, and again after ``Reload Plugins``
+     - ``plugin_menu``: the ``Plugins`` ``QMenu`` (not the ``QMenuBar``). Entries a plugin adds
+       anywhere in the menu bar here are removed on reload. Return value ignored
+   * - ``on_build_context_menu(menu, viewer)``
+     - Each time the viewer's right-click menu is built, after the built-in entries and just
+       before it opens
+     - ``menu``: the context ``QMenu``; ``viewer``: the ``GPUImageView``. Return value ignored
+   * - ``on_folder_opened(folder_path, image_paths, viewer)``
+     - When the scan of an opened folder finishes
+     - ``folder_path``: the folder; ``image_paths``: every image the scan found. Return value
+       ignored
+   * - ``on_image_loaded(image_path, viewer)``
+     - Each time an image is on screen at full size in deep zoom, however it was opened, and again
+       when it is reloaded after an edit; not for the low-resolution preview shown while a large
+       image decodes
+     - ``image_path``: the image's path. Return value ignored
+   * - ``on_image_switched(image_path, viewer)``
+     - When next / previous (including the wrap-around at either end of the list) moves to
+       another image, as soon as its load starts; ``on_image_loaded`` follows once it is shown.
+       Opening an image from the grid or the filmstrip does not call it
+     - ``image_path``: the new current image. Return value ignored
+   * - ``on_image_deleted(deleted_paths, viewer)``
+     - After images are soft-deleted (put on the undo stack) from the viewer — the current image
+       or the selected thumbnails — or from the folder tree; not for a file the tree sends straight
+       to the Recycle Bin because it is not in the image list
+     - ``deleted_paths``: list of the deleted paths. Return value ignored
+   * - ``on_key_press(key, modifiers, viewer)``
+     - On each key press the viewer receives, before its built-in keys and the Shortcut Settings
+       bindings; plugins are asked in load order. A key that a menu or window shortcut takes first
+       never reaches the viewer
+     - ``key``: a ``Qt.Key`` code (int); ``modifiers``: ``Qt.KeyboardModifier`` flags. Return
+       ``True`` to consume the key — later plugins and the default handling are skipped; return
+       ``False`` (the default) to pass it on. An exception counts as ``False``
+   * - ``on_pet_created(pet)``
+     - When the Desktop Pet tab creates the pet window, and right after the plugin loads (or
+       ``Reload Plugins`` runs) if the pet already exists
+     - ``pet``: the pet window. Plugins use ``play_group(group)``, ``speak(line)``,
+       ``speak_notification(line)``, ``speech_on``, ``setting(key, default)``,
+       ``persist(**fields)``, ``add_integration(key, controller)`` /
+       ``remove_integration(key)`` / ``integration(key)`` and the signals ``hit_triggered``,
+       ``moved`` and ``visibility_changed``. Return value ignored
+   * - ``on_app_closing(main_window)``
+     - When the last main window closes, after Paint's unsaved-tab prompt is accepted and the
+       settings are saved, just before the plugins are unloaded; closing another window does not
+       call it
+     - ``main_window``: the closing ``ImervueMainWindow``. Return value ignored
+   * - ``on_plugin_unloaded()``
+     - When the plugin's window closes (after ``on_app_closing`` for the last window), and before
+       ``Reload Plugins`` loads the plugins again; plugins are unloaded in reverse load order
+     - No arguments; return value ignored
 
 ----
 
@@ -1904,9 +2300,7 @@ Browsing
    * - ``Left`` / ``Right``
      - Previous / next image
    * - Arrow keys
-     - Pan in thumbnail mode
-   * - ``Shift + Arrow``
-     - Fine pan
+     - Move the focus ring across the thumbnails
    * - ``Ctrl + Shift + Left`` / ``Right``
      - Jump to previous / next sibling folder with images
    * - ``Alt + Left`` / ``Alt + Right``
@@ -1939,8 +2333,14 @@ Browsing
      - Fit to width
    * - ``Shift + W``
      - Fit to height
+   * - ``Shift + F``
+     - Fit to window
+   * - ``-`` / ``=``
+     - Zoom out / in
+   * - ``V``
+     - Reading mode: fit to width, scroll to read, go on to the next image at the end
    * - ``Home``
-     - Reset zoom
+     - Fit the whole image in the window (on the thumbnail wall: back to the top)
 
 Editing
 ^^^^^^^
@@ -1952,14 +2352,14 @@ Editing
    * - Key
      - Action
    * - ``E``
-     - Open Modify tab
+     - Open the annotation editor
    * - ``R``
      - Rotate clockwise
    * - ``Shift + R``
      - Rotate counter-clockwise
    * - ``Ctrl + Z``
      - Undo
-   * - ``Ctrl + Shift + Z``
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
      - Redo
    * - ``Delete``
      - Delete image
@@ -2010,11 +2410,17 @@ Tools & Overlays
    * - ``F8`` / ``Ctrl + F8``
      - OSD info overlay / Debug HUD (VRAM, cache, threads)
    * - ``Shift + P``
-     - Pixel view (≥ 400 % shows pixel grid and RGB value under cursor)
+     - Pixel view (from 400 % shows RGB / HEX under the cursor; the grid once ≤ 40,000 picture pixels are on screen)
    * - ``Shift + M``
      - Cycle colour modes (Normal / Grayscale / Invert / Sepia)
+   * - ``L``
+     - Loupe: a magnifier that follows the cursor (also over the thumbnails)
    * - ``S``
      - Slideshow
+   * - ``Ctrl + Shift + P``
+     - Command Palette
+   * - ``Alt + M``
+     - Replay the last macro on the selection
 
 Animated Images
 ^^^^^^^^^^^^^^^
@@ -2036,6 +2442,38 @@ Animated Images
    * - ``]``
      - Speed up
 
+Paint
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Key
+     - Action
+   * - ``[`` / ``]``
+     - Decrease / increase the brush size by 1 px
+   * - ``Shift + [`` / ``Shift + ]``
+     - Decrease / increase the brush size by 5 px
+   * - ``Ctrl + Z``
+     - Undo
+   * - ``Ctrl + Shift + Z`` / ``Ctrl + Y``
+     - Redo
+   * - ``Ctrl + D``
+     - Deselect
+   * - ``Ctrl + 0`` / ``Ctrl + 1``
+     - Fit to window / Actual size (100 %)
+   * - ``X``
+     - Swap foreground / background colours
+   * - ``D``
+     - Reset colours to black / white
+   * - ``Ctrl + Tab`` / ``Ctrl + Shift + Tab``
+     - Next / previous Paint tab
+
+Tool keys are listed under *Tool Palette*. ``Settings`` > ``Shortcuts…`` in the Paint tab remaps
+the tool, brush-size, layer, undo / redo, deselect, view and colour keys (``Ctrl + Y`` stays as a
+second Redo key).
+
 ----
 
 Library & Metadata Management
@@ -2055,8 +2493,12 @@ Library Search
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Library Search`` lets you add one or more **root folders**
 to a global index that is crawled in a background thread. Once a root is
-indexed you can query it by extension, min width/height, size range, or name
-substring and drop the results into the viewer as a virtual album.
+indexed you can search it by file name, minimum width / height and file size
+(up to 2000 results); double-click a result to open it. A rescan only reads files that are new or changed since the last one, and, with **Compute
+perceptual hash** ticked, files indexed earlier without a hash; the files it reads are decoded
+on several threads at once.
+
+Right-click > ``Search by Query…`` filters the current folder with a compact query language, for example ``kw:beach rating:>=4 type:video place:Paris``. ``place:`` takes a city, a country or both (``Paris``, ``France``, ``Paris, France``); a value with spaces goes in double quotes (``place:"Rio de Janeiro"``).
 
 Smart Albums
 ^^^^^^^^^^^^
@@ -2071,36 +2513,41 @@ Similar-Image Search
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Find Similar Images`` runs a 64-bit DCT pHash on the
 current deep-zoom image (or the first selected tile) and lists near matches
-from the index sorted by Hamming distance. Adjust the ``Max distance`` spin to
+from the index sorted by Hamming distance. Adjust the ``Max Hamming distance`` spin to
 widen or tighten the net.
 
 Semantic Search (CLIP)
 ^^^^^^^^^^^^^^^^^^^^^^
 
-``Extra Tools`` > ``Semantic Search`` lets you type a natural-language phrase
+``Extra Tools`` > ``Library & Metadata`` > ``Semantic Search`` lets you type a natural-language phrase
 (for example *"golden retriever in snow"* or *"neon street at night"*) and
-returns ranked images from the indexed library. Each image is embedded with a
+returns the pictures of the open folder, ranked. Each image is embedded with a
 CLIP vision/language encoder and stored alongside its path; a text query is
 embedded into the same vector space and compared by cosine similarity.
 
-Embeddings are cached to ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) or
-``~/.cache/imervue/clip_cache.npz`` (POSIX) as a single compact ``.npz`` archive
-so the next launch skips re-encoding. Only the paths you have scanned are
-queryable — use ``Scan Folder…`` inside the dialog to extend the index.
+Embeddings are cached to ``%LOCALAPPDATA%/Imervue/clip_cache.npz`` (Windows) or ``~/.cache/imervue/clip_cache.npz`` (POSIX) as a single compact ``.npz`` archive. The dialog searches the folder that is open: it embeds only the pictures the cache doesn't hold yet or that changed since (size or modification time), so searching the same folder again starts at once, and the results come from that folder only.
 
 .. note::
-   Semantic Search requires the optional ``open_clip_torch`` and ``torch``
-   packages. If they are not installed the menu entry explains what is missing
-   and other features continue to work.
+   Semantic Search runs CLIP ViT-B/32 on ``onnxruntime``, without PyTorch. The first
+   time you open it without ``onnxruntime``, Imervue offers to install it; the model
+   (about 150 MB, int8-quantised) then downloads once from Hugging Face at a pinned
+   revision and is read from the local cache afterwards. It runs on an NVIDIA GPU
+   through CUDA when ``onnxruntime`` has it, otherwise on the CPU; it never picks an
+   integrated GPU. Embeddings cached by a different model are computed again.
 
 Auto-Tag
 ^^^^^^^^
 
 ``Extra Tools`` > ``Library & Metadata`` > ``Auto-Tag Images`` applies heuristic tags under
-``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``landscape`` /
-``portrait``). If ``onnxruntime`` and a CLIP model at
-``models/clip_vit_b32.onnx`` are available, it also adds CLIP-based content
-labels. Runs on a worker thread with a live progress bar.
+``auto/...`` (``photo`` / ``document`` / ``screenshot`` / ``graphic`` / ``landscape`` /
+``portrait``), read from the colour saturation, edges and shape of the picture as the
+viewer shows it. Runs on a worker thread with a live progress bar.
+
+Once Semantic Search has downloaded the CLIP model, Auto-Tag labels each picture
+zero-shot with it instead: up to three of ``photo``, ``document``, ``screenshot``,
+``graphic``, ``illustration``, ``portrait``, ``landscape``, ``animal``, ``food`` and
+``text``, the closest first. A picture CLIP can't read gets the heuristic tags, and
+Auto-Tag never starts the download itself.
 
 Hierarchical Tags
 ^^^^^^^^^^^^^^^^^
@@ -2111,7 +2558,7 @@ Hierarchical Tags
 Hierarchical tags live in the library index and are complementary to the flat
 tag system in the right-click menu.
 
-Right-click ``Index Keywords`` adds the selection's XMP keywords to the library.
+Right-click > ``Batch Operations`` > ``Index Keywords`` (with thumbnails selected) adds the selection's XMP keywords to the library.
 A keyword hierarchy Lightroom or darktable wrote (``lr:hierarchicalSubject``,
 ``Places|Taiwan|Taipei``) is filed as the tag path ``Places/Taiwan/Taipei``, and
 the loose ``Places`` / ``Taiwan`` / ``Taipei`` keywords that only repeat its
@@ -2137,41 +2584,40 @@ the current view covering EXIF, dimensions, color label, rating, favourite,
 hierarchical tags, cull state, and notes. Useful for feeding cull decisions
 into a spreadsheet or external workflow.
 
-XMP Sidecar (other XMP-aware photo managers Interop)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+XMP Sidecars
+^^^^^^^^^^^^
 
 Imervue can read and write Adobe XMP sidecar files (``photo.jpg`` ↔
 ``photo.xmp``) so that ratings, titles, descriptions, keywords, and color
-labels round-trip cleanly with other XMP-aware photo managers, other XMP-aware photo managers, Bridge, and other
-XMP-aware tools.
+labels round-trip cleanly with Adobe Bridge and other XMP-aware photo managers.
 
 Saving merges into an existing sidecar: only these fields change, so a raw developer's settings, crop and history stored there are kept, and a sidecar that can't be parsed is never overwritten.
 
 Besides ``photo.xmp`` (Lightroom, Bridge), the ``photo.jpg.xmp`` that darktable
 and digiKam write is read and updated when it is the only sidecar. Colour labels
 are understood in Lightroom's words (``Red`` … ``Purple``) and Bridge's
-(``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``), and exported as
-Lightroom writes them; a label with no colour (a custom one) is left in the sidecar.
+(``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``). A new or changed
+colour is exported as Lightroom writes it; a sidecar that already holds Bridge's word
+for the same colour keeps that word. A label with no colour (a custom one) is left in the sidecar.
 
 A rejected photo — ``xmp:Rating`` -1 in Lightroom, Bridge and darktable — is
 imported as a culling **Reject** with no stars, and a Reject is exported as -1.
 A sidecar that isn't rejected lifts a Reject; a Pick is left alone.
 
 A file without a sidecar is read — and imported — from what it embeds itself: its
-XMP packet (JPEG, PNG, WebP, TIFF), then its EXIF ``Rating`` / ``RatingPercent``.
+XMP packet (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), then its EXIF ``Rating`` / ``RatingPercent``.
 That is where Lightroom keeps a JPEG's rating and keywords, and where Windows
 Explorer and some cameras keep their stars. A sidecar, when there is one, wins.
 
-- **Import XMP for current image** — pulls rating / title / keywords /
-  color label from the sidecar into the internal database.
-- **Export XMP for current image** — writes the current rating / title /
-  keywords / color label into a sidecar next to the image.
-- **Batch import / export** — applies the same operation to the active
-  selection or the whole folder.
+``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` has two buttons that apply to every
+image in the current view:
+
+- **Export sidecars** — writes each image's rating / title / description / keywords /
+  color label into its sidecar.
+- **Import sidecars** — reads them back into Imervue's own records.
 
 XML parsing uses ``defusedxml`` so malformed or malicious sidecars cannot
-trigger XXE / billion-laughs attacks. If ``defusedxml`` is not installed
-the XMP menu entries are hidden and no sidecars are written.
+trigger XXE / billion-laughs attacks.
 
 The **EXIF sidebar** also exposes a clickable **star-rating strip** — the
 rating it sets is what XMP export will write.
@@ -2179,10 +2625,10 @@ rating it sets is what XMP export will write.
 Culling (Pick / Reject)
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-flag-based three-state cull flag. Press ``P`` to pick the current image
+A three-state cull flag. Press ``P`` to pick the current image
 or every selected tile, ``Shift + X`` to reject, ``U`` to unflag. ``Filter`` >
 ``By Cull State`` shows only picks, rejects, or unflagged. ``Extra Tools`` >
-``Culling`` applies the filter via a dialog and also exposes a **Delete all
+``Workflow`` > ``Culling`` applies the filter via a dialog and also exposes a **Delete all
 rejects** button that permanently removes the flagged files from disk. The same
 dialog's **Pick sharpest per similar group** button groups the folder's
 near-duplicates by perceptual hash, scores each by sharpness, and marks the
@@ -2207,8 +2653,8 @@ Timeline View
 ^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Timeline View`` groups the current image set by day,
-month, or year (date-grouped). Date is taken from EXIF
-``DateTimeOriginal`` when present, otherwise from the file modification time.
+month, or year (date-grouped). The date comes from EXIF ``DateTimeOriginal``, then
+``DateTimeDigitized``, then ``DateTime``, and otherwise from the file modification time.
 Double-click any image to open it in Deep Zoom.
 
 Drag-out to External Apps
@@ -2243,7 +2689,7 @@ Apply .cube LUT
 ^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` > ``Apply .cube LUT`` lets you pick any Adobe ``.cube`` file
-(1D or 3D, up to 64³). DaVinci Resolve's ``LUT_1D_INPUT_RANGE`` /
+(3D up to 65³, 1D up to 65,536 points). DaVinci Resolve's ``LUT_1D_INPUT_RANGE`` /
 ``LUT_3D_INPUT_RANGE`` sets the input domain the way ``DOMAIN_MIN`` /
 ``DOMAIN_MAX`` do, and a file saved with a BOM loads too. The LUT is parsed with an ``lru_cache`` keyed by
 path + mtime, evaluated with trilinear interpolation, and blended against
@@ -2300,24 +2746,23 @@ Lens Correction
 ``Extra Tools`` > ``Retouch & Transform`` > ``Lens Correction`` exposes four pure-numpy sliders:
 radial distortion ``k1`` (barrel / pincushion), vignette lift, and
 per-channel chromatic-aberration radial scale for red and blue. The
-corrected image is saved as a new file — lens correction is not part of
-the recipe because the output shape can change.
+corrected image, the same size as the original, is saved as a new file.
 
 Map View
 ^^^^^^^^
 
-``Extra Tools`` > ``Views`` > ``Map View`` plots every geotagged image in the current
-library on an interactive Leaflet + OpenStreetMap map (requires
-``PySide6.QtWebEngineWidgets``). Without WebEngine, the dialog falls back
-to a plain list of ``(path, lat, lon)`` entries so the feature remains
-usable on minimal installs.
+``Extra Tools`` > ``Views`` > ``Map View`` plots the geotagged images of the open folder
+on an interactive Leaflet + OpenStreetMap map, one marker per nearest city with the
+number of pictures there (requires ``PySide6.QtWebEngineWidgets``). Without WebEngine,
+the dialog falls back to a list of those places with their counts and coordinates, so
+the feature remains usable on minimal installs.
 
 Calendar View
 ^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Views`` > ``Calendar View`` shows a ``QCalendarWidget`` with days
 highlighted when photos were taken that day (EXIF ``DateTimeOriginal`` →
-``DateTimeDigitized`` → file mtime). Selecting a date lists its images;
+``DateTimeDigitized`` → ``DateTime`` → file mtime). Selecting a date lists its images;
 double-click to open one in the main viewer.
 
 Face Detection
@@ -2361,7 +2806,7 @@ Crop / Straighten
 ^^^^^^^^^^^^^^^^^
 
 ``Extra Tools`` > ``Retouch & Transform`` > ``Crop / Straighten`` combines a normalised (0..1)
-crop rectangle with an arbitrary straighten angle. The output is
+crop rectangle with a straighten angle of up to ±15°. The output is
 auto-cropped to the largest inner rectangle so rotated photos have no
 black corners.
 
@@ -2401,7 +2846,7 @@ Tonal & Creative Effects
 
 ``Extra Tools`` > ``Develop (Non-Destructive)`` gathers a set of one-shot,
 apply-and-save effects, each a thin slider dialog over a pure-NumPy transform
-(the same logic is also exposed as an MCP tool):
+(Frame & Caption draws with Pillow; the same logic is also exposed as an MCP tool):
 
 - **Graduated Density** — a linear neutral-density gradient defined by angle,
   hardness and offset, optionally tinted; darkens a sky or foreground without a
@@ -2425,6 +2870,8 @@ apply-and-save effects, each a thin slider dialog over a pure-NumPy transform
   tiny-planet / polar-inversion look).
 - **Kaleidoscope** — mirror one angular wedge into ``n``-fold symmetry.
 - **Frosted Glass** — a deterministic, seed-reproducible local pixel scatter.
+- **Frame & Caption** — a matte border in any colour, an optional thicker
+  Polaroid-style bottom band, and a caption burned into it in its own colour.
 
 GPS Geotag
 ^^^^^^^^^^
@@ -2434,7 +2881,20 @@ lets you edit or set new decimal-degree coordinates. A JPEG is written in place 
 extra package: only its EXIF block changes, so the pixels, the other tags and the thumbnail
 stay as they were. A WebP is handled the same way; other formats can't be tagged.
 
-The **EXIF editor** (the ``Edit EXIF`` button in the EXIF sidebar) changes the description, artist, copyright, camera make / model and user comment. A JPEG or WebP needs no extra package and only its EXIF block is rewritten; other formats show why they can't be edited.
+The **EXIF editor** (the ``Edit EXIF`` button in the EXIF sidebar) changes the description, artist, copyright, camera make / model and user comment. A JPEG or WebP needs no extra package and only its EXIF block is rewritten; other formats show why they can't be edited. **Describe**, next to the description, asks a vision model on your own computer for a one-sentence alt text and puts it in the field for you to edit before **Save**: it needs `Ollama <https://ollama.com>`__ running on ``localhost:11434`` with a vision model (``ollama pull llava``), and when none answers the dialog says so and leaves the field alone. The image is sent only to that local server.
+
+Web Gallery
+^^^^^^^^^^^
+
+``Extra Tools`` > ``Export`` > ``Web Gallery`` writes the selected pictures (or the whole folder)
+as a self-contained site: ``index.html`` with a lightbox, JPEG thumbnails, and copies of the
+originals unless you untick **Copy full-size originals**. You set the page title and the
+thumbnail size and quality. With the originals copied, the page needs no server: open it from disk or
+put it on any static host. Without them, its full-size links point at the pictures on your own disk.
+
+Tick **Client review** to send the gallery out for feedback. Each picture gets a comment box; the
+notes stay in the reviewer's browser, and the page's **Export comments** button saves them all as
+one JSON file.
 
 Print Layout
 ^^^^^^^^^^^^
@@ -2445,16 +2905,456 @@ gutter, and crop marks. Requires ``reportlab``.
 
 ----
 
+Extra Tools Menu Reference
+--------------------------
+
+Every entry of the ``Extra Tools`` menu, submenu by submenu, in menu order. Many have a
+fuller section above; this list is the complete inventory. Entries that save a new file write
+it next to the source and add ``_1``, ``_2`` … when the name is taken; entries marked
+"stored in the recipe" are non-destructive edits of the image's develop settings. Plugins can
+add their own entries to these submenus.
+
+Batch
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Batch Format Conversion``
+     - Converts a folder's images (the current folder by default) to PNG, JPEG, WebP, BMP or TIFF,
+       or to HEIC / AVIF / JXL when their encoders are installed, with quality, skip-same-format and
+       send-originals-to-trash options.
+   * - ``Batch EXIF Strip``
+     - Removes EXIF, GPS and other metadata from every image in a folder for privacy, either
+       overwriting the originals or writing clean copies to an output folder.
+   * - ``Image Sanitizer``
+     - Re-renders a folder's images from raw pixels, stripping all hidden data (metadata,
+       steganography, trailing bytes) and renaming each to date + random string; can also upscale
+       small images to a target resolution, as in ``AI Image Upscale``.
+   * - ``Image Organizer``
+     - Sorts a folder's images into subfolders by date (year-month or year), resolution, file type,
+       file size or a fixed count per folder, copying or moving them, with a preview.
+   * - ``Token Batch Rename``
+     - Renames the selected images (or the whole folder) from a token template such as
+       ``{name}_{counter:04}`` or ``{date}_{camera}``, with a live preview that flags conflicts;
+       sidecars, ratings and tags follow the files.
+   * - ``Deflicker (Time-lapse)``
+     - Evens out frame-to-frame brightness across the current folder's time-lapse frames
+       (rolling-mean or global-mean target) and writes the corrected copies to a ``deflickered/``
+       subfolder, leaving the originals untouched.
+   * - ``Document Binarize``
+     - Turns a photo or scan of a page into clean black-on-white with Sauvola adaptive thresholding
+       (window size and k sliders), saving ``<name>_bw.png`` next to the source.
+   * - ``Otsu Threshold``
+     - Converts the current image to black and white at its automatically chosen Otsu global
+       threshold, with an invert option, saving ``<name>_otsu.png``.
+   * - ``Edit Animation``
+     - Reverses, boomerangs, re-times (0.25x to 4x) or optimizes (merges repeated frames of) the
+       current GIF, APNG or animated WebP, saving ``<name>_edited.gif``.
+   * - ``Optimize to Target Size``
+     - Re-encodes the current image as JPEG or WebP at the highest quality that fits a size budget
+       in KB, saving ``<name>_opt.jpg`` or ``<name>_opt.webp``.
+   * - ``Meme Caption``
+     - Adds classic top and bottom meme captions (upper-case white text with a black outline,
+       word-wrapped) to the current image, saving ``<name>_meme.png``.
+   * - ``Steganography``
+     - Hides a text message in the least-significant bits of the current image, saved as a lossless
+       ``<name>_stego.png``, or reveals a message hidden that way.
+
+Library & Metadata
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Library Search``
+     - Manages library root folders, scans them into the index (optionally with perceptual hashes)
+       and searches it by filename, minimum width / height and file size in KB; double-click a
+       result to open it.
+   * - ``Smart Albums``
+     - Saves rule-based albums (extensions, name, tags, place, minimum size and rating, colour
+       label, cull state, favourites) and shows their matches; can create one album per city from
+       GPS data, and import or export albums.
+   * - ``Find Similar Images``
+     - Finds library images that look like the current (or first selected) image by perceptual hash
+       within a chosen Hamming distance; scan your roots with pHash in ``Library Search`` first.
+   * - ``Semantic Search``
+     - Finds images in the current folder that match a text description such as "beach at sunset"
+       using CLIP on ``onnxruntime`` (offered for install on first use); the ~150 MB model
+       downloads once.
+   * - ``Find Duplicate Images``
+     - Scans a folder (optionally with subfolders) for exact duplicates by file hash or look-alikes
+       by perceptual hash; can pre-select all but the best copy of each group and move the selection
+       to the Recycle Bin.
+   * - ``Auto-Tag Images``
+     - Tags the selected images, or the whole folder, with heuristic content tags (photo, document,
+       screenshot, graphic, landscape, portrait) under ``auto/`` in the hierarchical tag tree, or
+       with CLIP labels once Semantic Search has downloaded its model.
+   * - ``Hierarchical Tags``
+     - Creates and deletes tree-structured tags such as ``animal/cat/british``, lists the images
+       under a tag, and tags or untags the selected tiles.
+   * - ``Export Metadata (CSV / JSON)``
+     - Writes a record per image in the current view (file details, key EXIF fields such as camera,
+       lens, exposure and ISO, rating, colour label, tags and note) to a CSV or JSON file.
+   * - ``XMP Sidecars``
+     - Exports or imports ``.xmp`` sidecar files for every image in the current view, so rating,
+       title, description, keywords and colour label round-trip with Adobe Bridge, Lightroom and
+       other XMP-aware tools.
+   * - ``GPS Geotag``
+     - Writes a latitude and longitude (decimal degrees) into the current image's EXIF GPS tags,
+       replacing any already there; JPEG and WebP files only.
+   * - ``Geotag from GPX Track``
+     - Matches the selected images (or the whole view) against a ``.gpx`` track by their EXIF
+       capture time: set how far the camera's clock ran from UTC, how far from a track point a
+       photo may be (and whether to interpolate between points), see how many fall on the track,
+       then write their positions into the EXIF GPS tags; JPEG and WebP files only.
+   * - ``Edit Capture Time``
+     - Shifts the EXIF capture time of the selected images (or the whole view) by days, hours,
+       minutes and seconds, or by when the first photo was really taken, rewriting
+       DateTimeOriginal, DateTimeDigitized and DateTime; photos without an EXIF capture time are
+       left alone, and only JPEG and WebP can be rewritten.
+   * - ``Metadata Template``
+     - Stamps a title, description and comma-separated keywords on the selected images (or the
+       whole view). ``{filename}``, ``{name}``, ``{folder}``, ``{date}`` and ``{year}`` are filled in
+       per photo; with **Only fill empty fields** on, a photo keeps its own title and description
+       and gains the keywords, with it off the template replaces them and its keywords replace the
+       photo's tags. It asks before applying and remembers the template; ``XMP Sidecars`` and
+       ``Export Metadata`` write the result out.
+   * - ``Thumbnail Cache``
+     - Shows how much disk space the thumbnail cache uses and clears it.
+
+Views
+^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``By day``
+     - Under ``Timeline View``: replaces the main view with the current folder's images grouped
+       under a header per capture day (EXIF date, else the file date); double-click an image to open
+       it.
+   * - ``By month``
+     - Under ``Timeline View``: the same timeline, grouped by capture month.
+   * - ``By year``
+     - Under ``Timeline View``: the same timeline, grouped by capture year.
+   * - ``Calendar View``
+     - Shows a calendar that highlights the days with photos in the current folder (by capture
+       date); click a day to list its images and double-click one to open it.
+   * - ``Map View``
+     - Plots the current folder's geotagged images on an OpenStreetMap map, one marker per nearest
+       city with a count; the map loads online and falls back to a coordinate list without
+       QtWebEngine.
+   * - ``Scopes & Inspector``
+     - Analyses the current image in tabs: luminance waveform, RGB parade, false-colour exposure,
+       focus peaking, Error Level Analysis and clone (copy-move) detection.
+   * - ``Tiny Planet (360°)``
+     - Reprojects a 2:1 equirectangular 360° panorama into a square "little planet" of a chosen
+       size, saving ``<name>_planet.png``; warns when the image is not 2:1.
+   * - ``Image Statistics``
+     - Shows the mean, minimum, maximum, standard deviation and median of the current image's R, G,
+       B and luminance channels, and exports its 256-level histogram as CSV.
+   * - ``Quality Report``
+     - Lists no-reference quality metrics for the current image: colourfulness, tonal entropy, RMS
+       contrast, edge density and estimated noise.
+   * - ``Test Chart``
+     - Generates a calibration pattern (SMPTE colour bars, greyscale wedge, gradient ramp,
+       checkerboard or solid colour) at a chosen width and height and saves it to a file.
+   * - ``Off``
+     - Under ``Color blindness preview``: turns the colour-vision-deficiency preview off.
+   * - ``Protanopia (red-blind)``
+     - Under ``Color blindness preview``: shows the image in the viewer as a person with protanopia
+       sees it; display only, the file and its recipe stay untouched.
+   * - ``Deuteranopia (green-blind)``
+     - Under ``Color blindness preview``: simulates deuteranopia, the most common red-green
+       deficiency; display only.
+   * - ``Tritanopia (blue-blind)``
+     - Under ``Color blindness preview``: simulates tritanopia (blue-yellow deficiency); display
+       only.
+   * - ``Achromatopsia (greyscale)``
+     - Under ``Color blindness preview``: shows the image in full greyscale, as with achromatopsia;
+       display only.
+
+Workflow
+^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Culling``
+     - Filters the current folder to picks, rejects or unflagged images, auto-culls by picking the
+       sharpest image of each look-alike group and rejecting the rest, and can permanently delete
+       every reject.
+   * - ``Staging Tray``
+     - A persistent cross-folder basket: add the selected tiles or the current image from any
+       folder, then move or copy them all to one folder, or show the tray as an album.
+   * - ``Reference Panel``
+     - Pins reference images (added from files, by drag-and-drop or from the current image) with a
+       large preview for side-by-side comparison; the list persists across restarts.
+   * - ``Virtual Copies``
+     - Saves named snapshots of the current image's develop recipe and switches between them without
+       duplicating the file.
+   * - ``Dual-Pane File Manager``
+     - Two folder trees side by side for copying or moving the selection from one to the other, or
+       opening a file in the viewer.
+   * - ``Macros``
+     - Records, edits, cleans up and replays macros of rating, favourite, colour-label and tag
+       actions on the selected images.
+   * - ``Watched Folder``
+     - While the dialog is open, watches a folder (including subfolders) and assigns a chosen
+       develop preset to every new image that arrives, for hands-off tethered or import workflows.
+
+Export
+^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Contact Sheet PDF``
+     - Lays out thumbnails of the selected images (or the whole folder) in a rows x columns grid on
+       A4, A3, Letter or Legal pages, with margins, an optional title and optional filename
+       captions. The **Layout** box fills in a preset — Default (4 × 5, 10 mm, captions), Compact
+       (6 × 8, 5 mm, none), Proof (5 × 6, 8 mm, captions), Editorial (2 × 3, 18 mm, captions) or
+       Index (8 × 10, 4 mm, none), columns × rows — and editing any of those by hand makes it Custom.
+   * - ``Web Gallery``
+     - Exports the selected images (or the whole folder) as a self-contained HTML gallery with
+       thumbnails and a lightbox; can copy the originals and add client-review comment boxes that
+       export as JSON.
+   * - ``Slideshow Video``
+     - Renders the selected images (or the whole folder) to an MP4 with a chosen size, frame rate,
+       hold time, quality and transition (fade, dissolve, slide or wipe).
+   * - ``Print Layout``
+     - Tiles pictures on a multi-page PDF grid with page size, orientation, rows, columns, margin,
+       gutter and crop marks; requires the optional ``reportlab`` package.
+   * - ``Collage``
+     - Composites the selected images (or the whole folder) into a grid montage of 1 to 12 columns,
+       saving ``collage.png`` next to the first image.
+   * - ``ID Photo Sheet``
+     - Tiles the current portrait at an ID size (35 x 45 mm, 2 x 2 in, 33 x 48 mm or 50 x 70 mm) on
+       4x6, 5x7, A4 or Letter paper at 300 DPI, saving ``<name>_idsheet.png``.
+
+Develop (Non-Destructive)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``Before / After Compare``
+     - Shows the current image without and with its develop recipe in one view, split by a draggable
+       divider.
+   * - ``Develop Presets…``
+     - Saves the current image's recipe as a named preset, then applies it to the current image or
+       the selection, or merges only its active adjustments into their own recipes.
+   * - ``Tone Curve``
+     - Edits a master RGB curve and separate red, green and blue curves over a histogram (click to
+       add, drag to move, right-click to remove a point); stored in the recipe.
+   * - ``Apply .cube LUT``
+     - Applies an Adobe ``.cube`` 3D or 1D LUT at an adjustable intensity; stored in the recipe, and
+       ``Clear`` removes it.
+   * - ``Split Toning``
+     - Tints shadows and highlights with separate hue and saturation, plus a balance slider; stored
+       in the recipe.
+   * - ``Local Adjustment Masks``
+     - Adds brush, radial and linear-gradient masks, each with its own exposure, brightness,
+       contrast, saturation, temperature, tint, highlights, shadows and feather; stored in the
+       recipe.
+   * - ``Layers``
+     - Stacks up to eight text, image or LUT overlay layers with opacity and normal, multiply,
+       screen or overlay blending; stored in the recipe.
+   * - ``Levels``
+     - Sets the black point, white point and gamma; stored in the recipe.
+   * - ``Channel Mixer``
+     - Rebuilds each output channel from weighted red, green and blue inputs plus an offset, with a
+       monochrome mode for black-and-white conversion; stored in the recipe.
+   * - ``Gradient Map``
+     - Maps luminance through a preset gradient (Mono, Sepia, Cyanotype, Fire, Ocean, Magenta–Teal)
+       at an adjustable intensity, optionally blended in perceptual OkLCH; stored in the recipe.
+   * - ``Auto Color Balance``
+     - Removes colour casts with the gray-world, white-patch, auto-levels (percentile) or Retinex
+       method, blended by an intensity slider, saving ``<name>_balanced.png``.
+   * - ``Clarity / Dehaze``
+     - Applies the Dehaze, Clarity and Texture local-contrast sliders, saving ``<name>_local.png``.
+   * - ``HSL / Color Mixer``
+     - Adjusts hue, saturation and luminance separately for eight colour bands (red to magenta),
+       saving ``<name>_hsl.png``.
+   * - ``CLAHE (Local Equalize)``
+     - Boosts local contrast with contrast-limited adaptive histogram equalization (clip limit and
+       tile count) on the luminance, saving ``<name>_clahe.png``.
+   * - ``Flatten Background``
+     - Removes a smooth background gradient such as light pollution or uneven lighting (subtract),
+       or vignetting (divide), with an adjustable degree, saving ``<name>_flat.png``.
+   * - ``Frame & Caption``
+     - Adds a coloured matte border, an optional Polaroid-style bottom band and a caption, saving
+       ``<name>_framed.png``.
+   * - ``Ordered Dither``
+     - Reduces each channel to 2 to 8 levels with a Bayer ordered-dither pattern for a retro print
+       look, saving ``<name>_dither.png``.
+   * - ``Color Map``
+     - Recolours the image's luminance through the viridis, magma or jet colour map, saving
+       ``<name>_colormap.png``.
+   * - ``Distort``
+     - Swirls, pinches / bulges or ripples the image at an adjustable strength, saving
+       ``<name>_distort.png``.
+   * - ``Polar Coordinates``
+     - Wraps the image into a disc, or unrolls a disc into a strip, optionally inverting the radius,
+       saving ``<name>_polar.png``.
+   * - ``Kaleidoscope``
+     - Mirrors one wedge around the centre into a symmetric pattern with a chosen number of segments
+       and rotation, saving ``<name>_kaleidoscope.png``.
+   * - ``Frosted Glass``
+     - Scatters each pixel to a random nearby position (radius in pixels, reproducible seed) for a
+       textured-glass look, saving ``<name>_frosted.png``.
+   * - ``Pixel Sort``
+     - Sorts pixels by brightness along rows or columns within a lower / upper brightness band for a
+       glitch look, saving ``<name>_pixelsort.png``.
+   * - ``Film Grain``
+     - Adds procedural film grain with intensity, grain size, monochrome and seed controls; stored
+       in the recipe.
+   * - ``Lens Flare``
+     - Adds a synthetic lens flare at a chosen position with intensity, halo size and colour
+       controls; stored in the recipe.
+   * - ``Threshold / Posterize``
+     - Applies a black-and-white threshold (0 to 255) and / or posterizes each channel to 2 to 64
+       levels; stored in the recipe.
+   * - ``Solarize``
+     - Inverts the tones above a threshold for a darkroom solarization look, blended by a mix
+       slider, saving ``<name>_solarize.png``.
+   * - ``Diffuse Glow``
+     - Adds an Orton-style soft bloom with amount, radius and highlight-threshold controls, saving
+       ``<name>_glow.png``.
+   * - ``Graduated Density``
+     - Darkens one side of the frame along a straight line like a graduated ND filter (angle, stops,
+       hardness, offset, optional tint), saving ``<name>_gradnd.png``.
+   * - ``Velvia``
+     - Boosts muted colours the most, like Velvia slide film, with strength and shadow-protection
+       sliders, saving ``<name>_velvia.png``.
+   * - ``Emboss``
+     - Renders a relief lit from a chosen azimuth and elevation, with a depth slider and a greyscale
+       option, saving ``<name>_emboss.png``.
+   * - ``Defringe``
+     - Desaturates purple, green or all coloured fringes along high-contrast edges, with amount and
+       edge-threshold sliders, saving ``<name>_defringe.png``.
+   * - ``Film Negative``
+     - Inverts a scanned colour negative into a positive, removing the orange film base (estimated
+       automatically), with an output gamma, saving ``<name>_positive.png``.
+   * - ``Filmic Tone Map``
+     - Rolls off highlights with a Reinhard or Hable filmic curve, with exposure, white point,
+       contrast and saturation sliders, saving ``<name>_filmic.png``.
+   * - ``Tone Equalizer``
+     - Sets the exposure separately for blacks, shadows, midtones, highlights and whites, with
+       smoothing to avoid halos, saving ``<name>_toneeq.png``.
+   * - ``Detail Equalizer``
+     - Boosts or cuts contrast separately in the fine, medium, coarse and broad detail bands, saving
+       ``<name>_detaileq.png``.
+   * - ``Soft Proof``
+     - Previews the current image through a chosen ICC output profile, painting out-of-gamut pixels
+       magenta and counting them; nothing is saved.
+
+Retouch & Transform
+^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``AI Image Upscale``
+     - Upscales a folder of images with Real-ESRGAN (general x4, anime x4 or x2) or Lanczos, Bicubic
+       or Nearest resampling; the AI models install ``onnxruntime`` on demand and are downloaded
+       automatically on first use (~65 MB).
+   * - ``Noise Reduction / Sharpening``
+     - Applies edge-preserving noise reduction (optionally luminance only) and unsharp-mask
+       sharpening with amount and radius, saving to a chosen file; requires OpenCV
+       (``opencv-python``).
+   * - ``Healing Brush``
+     - Removes the spots you click on a preview (right-click deletes a spot) by inpainting with the
+       Telea or Navier-Stokes method, saving to a chosen file; requires OpenCV.
+   * - ``Clone Stamp``
+     - Copies a soft-edged patch from a Shift-clicked source point to each point you click on a
+       preview (right-click undoes), saving the result to a chosen file.
+   * - ``Frequency Separation``
+     - Splits the current image at a chosen blur radius into ``<name>_low.png`` (colour and tone)
+       and ``<name>_high.png`` (texture) for retouching elsewhere; recombine as low + (high - 128).
+   * - ``Smart Crop``
+     - Suggests saliency-based crops (free, 1:1, 4:5, 3:2, 16:9) that put the subject on a
+       rule-of-thirds point, and writes the chosen one into the recipe as a non-destructive crop.
+   * - ``Portrait Auto-Retouch``
+     - Smooths skin-tone areas, removes red-eye and adds a final sharpening pass, each with its own
+       slider, saving ``<name>_retouched.png``.
+   * - ``Face Detection``
+     - Detects faces in the current image with OpenCV's Haar cascade and lets you name each one; the
+       names are saved with the recipe. Requires OpenCV 4 (``opencv-python<5``).
+   * - ``Sky / Background``
+     - Replaces the sky with a gradient, or removes the background to transparent or white, saving
+       to a chosen file; needs OpenCV, and uses ``rembg`` for the background cut-out when installed.
+   * - ``Crop / Straighten``
+     - Rotates by up to ±15° (cropping off the empty corners) and crops by normalised coordinates or
+       an aspect-ratio preset, saving to a chosen file; straightening requires OpenCV.
+   * - ``Auto-Straighten``
+     - Measures the tilt of the horizon or vertical lines, lets you adjust the rotation, and saves
+       the straightened image to a chosen file; requires OpenCV.
+   * - ``Lens Correction``
+     - Corrects barrel / pincushion distortion, vignetting and red / blue chromatic aberration with
+       sliders, saving to a chosen file.
+   * - ``Scale Bar``
+     - Burns a calibrated scale bar into the current image from a pixels-per-unit value and a unit
+       label, saving ``<name>_scalebar.png``.
+
+Multi-Image
+^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Entry
+     - What it does
+   * - ``HDR Merge``
+     - Fuses two or more differently exposed shots with Mertens exposure fusion (no exposure data
+       needed), optionally aligning them first; requires OpenCV.
+   * - ``Panorama Stitch``
+     - Stitches two or more overlapping shots, taken in order with 20 to 40 % overlap, in panorama
+       or flat-scan mode, optionally cropping the black borders; requires OpenCV.
+   * - ``Focus Stacking``
+     - Blends a focus bracket into one all-in-focus image by keeping the sharpest pixels from each
+       frame, optionally aligning them first; requires OpenCV.
+   * - ``Image Stack``
+     - Combines an already-aligned burst per pixel by mean, median, max, min or sigma-clipped mean,
+       for long exposures, crowd removal or star trails; no OpenCV needed.
+   * - ``Anaglyph 3D``
+     - Combines the current image (left eye) with a chosen right-eye image into a red-cyan anaglyph
+       (Dubois, colour, grey or true method), saving ``<name>_anaglyph.png``.
+
+----
+
 Command-Line Usage
 ------------------
 
 ::
 
-   imervue                        # Launch normally
-   imervue /path/to/image         # Open a specific image
-   imervue /path/to/folder        # Open a specific folder
-   imervue --debug                # Enable debug mode
-   imervue --software_opengl      # Use software rendering (when GPU is unsupported)
+   python -m Imervue                      # Launch normally
+   python -m Imervue /path/to/image       # Open a specific image
+   python -m Imervue /path/to/folder      # Open a specific folder
+   python -m Imervue --debug              # Enable debug mode
+   python -m Imervue --software_opengl    # Use software rendering (when GPU is unsupported)
 
 Headless Batch CLI
 ^^^^^^^^^^^^^^^^^^
@@ -2477,27 +3377,128 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
      - Dimensions and format; no-reference quality metrics (``--json`` for
        machine-readable output)
    * - ``convert`` / ``resize`` / ``thumbnail``
-     - Format conversion (``--format`` / ``--quality``), max-long-edge resize,
-       thumbnail box
+     - Format conversion (``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL,
+       ``--quality``); resize to a long edge (``--max``) or an exact ``--width`` /
+       ``--height``; thumbnail box
    * - ``watermark`` / ``optimize``
-     - Text watermark (``--text`` / ``--corner`` / ``--opacity``); encode under
-       a ``--max-kb`` budget
+     - Text watermark (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
+       ``--color R G B``, ``--no-shadow``); encode under a ``--max-kb`` budget
    * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
      - Dark-channel dehaze, adaptive equalization, ordered Bayer dither,
        swirl / pinch / ripple
    * - ``auto-orient`` / ``strip``
      - Bake the EXIF orientation flag into pixels; re-save without EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``
-     - Grid montage (``--columns``); red-cyan 3D from a stereo pair (``--method``)
+     - Grid montage (``--columns``, ``--cell-width`` / ``--cell-height``, ``--gap``,
+       ``--margin``, ``--background R G B``); red-cyan 3D from a stereo pair (``--method``)
    * - ``preset`` / ``pipeline``
      - Apply a saved develop preset by name; run an ordered JSON pipeline of ops
    * - ``list-ops``
      - List every subcommand (``--json`` for machine-readable output)
 
-Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run.
+Every subcommand decodes like the viewer: outputs are turned upright by the EXIF orientation and converted to sRGB from an embedded colour profile, AVIF inputs are read by Pillow itself, and HEIC / JPEG XL inputs when their optional backend is installed. A camera RAW is developed as in the viewer instead of being read as its small embedded preview; ``resize`` and ``strip`` write it as PNG. A file that can't be read is reported and the rest still run. A file cut short is read as far as it goes, as in the viewer. 16-bit and floating-point greyscale is scaled to 8 bits as in the viewer; ``resize`` and ``strip`` keep the source's bit depth.
 
-Shared flags: ``--out`` (output directory), ``--recursive``, ``--dry-run``
-(list actions, write nothing), ``--overwrite`` and ``--version``.
+The subcommands that take files or folders (all but ``collage``, ``anaglyph`` and ``list-ops``) share
+``--out`` (output directory), ``--recursive``, ``--dry-run`` (list actions, write nothing),
+``--overwrite`` and ``-j`` / ``--jobs`` (parallel workers; ``0`` uses every core). ``collage`` and
+``anaglyph`` write the one file ``--out`` names. ``--version`` prints the CLI version.
+
+Every tool of the MCP server (see `MCP Server`_) is a subcommand too. Ten of them are the
+subcommands above (``convert_format`` is ``convert``, ``quality_metrics`` is ``stats``,
+``build_collage`` is ``collage``, and so on); the other 48 run the MCP tool's own code:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Kind
+     - Subcommands
+   * - Edits: write ``<stem>_<name>.png`` beside each source, or ``<stem>.png`` in ``--out``
+     - ``frame``, ``crop``, ``rotate``, ``solarize``, ``glow``, ``velvia``, ``emboss``, ``film-negative``, ``defringe``, ``graduated-density``, ``filmic-tonemap``, ``tone-equalizer``, ``detail-equalizer``, ``colormap``, ``false-color``, ``split-toning``, ``pixel-sort``, ``polar``, ``kaleidoscope``, ``frosted-glass``, ``local-contrast``, ``posterize``, ``gradient-map``, ``film-grain``, ``levels``, ``auto-color-balance``, ``channel-mixer``, ``curve``, ``lens-correction``
+   * - Other outputs
+     - ``ela`` (Error Level Analysis map as PNG), ``video-frame`` (one frame of a video,
+       ``--frame-index``), ``puppet-from-png`` (a ``.puppet`` rig, ``--cell-size``)
+   * - Reports: one result per image, ``--json`` for machine output
+     - ``metadata``, ``xmp``, ``gps``, ``dominant-colors``, ``sharpness``, ``statistics``, ``histogram``, ``ocr``, ``puppet-inspect``, ``puppet-validate``
+   * - Run once and print JSON
+     - ``list-images FOLDER``, ``search FOLDER --query "..."``, ``similar FOLDER``,
+       ``collection-stats FOLDER``, ``reverse-geocode --latitude .. --longitude ..``,
+       ``puppet-schema --name ..``
+
+Each MCP parameter becomes an option with the same default and allowed values: ``zone_gains`` is
+``--zone-gains``, a yes/no parameter is ``--grayscale`` / ``--no-grayscale``, and a colour or a
+matrix row takes its values in order (``--red 1 0 0``). ``py -m Imervue.cli <subcommand> --help``
+lists them::
+
+   py -m Imervue.cli film-grain photos/ --intensity 0.4 --seed 7 --out grain/
+   py -m Imervue.cli crop a.jpg --x 0 --y 0 --width 800 --height 600
+   py -m Imervue.cli histogram a.jpg --json
+   py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
+
+``pipeline FILE INPUTS…`` runs an ordered chain of operations on each input and writes one PNG
+per input: ``<stem>_pipeline.png`` beside the source, or ``<stem>.png`` in ``--out``. ``FILE`` is
+UTF-8 JSON (a byte-order mark is fine) holding either a list of steps or an object
+``{"pipeline": [...]}``. Each step is an object with an ``"op"`` naming the operation plus that
+operation's parameters; a parameter left out takes its default, and keys an op does not know are
+ignored. A pipeline has at most 50 steps; an empty one writes each input as decoded. The file is
+checked before any image is read: a file that cannot be read or parsed prints ``error: …``, and
+more than 50 steps, a step without an ``"op"`` name, or an unknown op print one
+``pipeline error: step N: …`` line per problem; either way the command exits with code 2 and
+writes nothing. A parameter of the wrong type (``null``, text where a number belongs) fails that
+image, which is reported, and the exit code is 1.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 14 44 42
+
+   * - Op
+     - Parameters (defaults)
+     - Effect
+   * - ``dehaze``
+     - ``strength`` (``1.0``; clamped to 0 – 1)
+     - Dark-channel-prior haze removal; ``0`` leaves the image unchanged
+   * - ``clahe``
+     - ``clip`` (``2.0``; at least 1), ``tiles`` (``8``; at least 1)
+     - Contrast-limited adaptive equalization of the luminance on a ``tiles`` × ``tiles`` grid
+   * - ``dither``
+     - ``levels`` (``2``; clamped to 2 – 8)
+     - Ordered 4×4 Bayer dither to ``levels`` values per channel; alpha kept
+   * - ``distort``
+     - ``mode`` (``"swirl"``: ``swirl`` / ``pinch`` / ``ripple``), ``strength`` (``0.5``;
+       clamped to -1 – 1)
+     - Geometric warp around the centre; for ``pinch`` a positive strength bulges and a negative
+       one pinches
+   * - ``clarity``
+     - ``amount`` (``0.5``; -1 – 1, negative softens)
+     - Midtone-weighted, large-radius local contrast
+   * - ``texture``
+     - ``amount`` (``0.5``; -1 – 1, negative softens)
+     - Small-radius, fine-detail local contrast
+   * - ``grayscale``
+     - none
+     - Luma (0.299 R + 0.587 G + 0.114 B) into all three channels; alpha kept
+   * - ``invert``
+     - none
+     - Inverts R, G and B; alpha kept
+   * - ``watermark``
+     - ``text`` (``""``: no watermark), ``corner`` (``"bottom-right"``: ``top-left`` /
+       ``top-right`` / ``bottom-left`` / ``bottom-right`` / ``center``; any other value counts as
+       ``bottom-right``), ``opacity`` (``0.6``; clamped to 0 – 1)
+     - White text with a drop shadow, sized 3.5 % of the long edge; the ``watermark``
+       subcommand's ``--font-fraction``, ``--color`` and ``--no-shadow`` have no step parameter
+
+For example, ``look.json``::
+
+   {
+     "pipeline": [
+       {"op": "dehaze", "strength": 0.4},
+       {"op": "clahe", "clip": 2.5, "tiles": 8},
+       {"op": "clarity", "amount": 0.3},
+       {"op": "watermark", "text": "(c) Me", "corner": "bottom-right", "opacity": 0.5}
+     ]
+   }
+
+   py -m Imervue.cli pipeline look.json photos/ --out graded/
 
 ----
 
@@ -2547,6 +3548,9 @@ Available Tools
      - Open a ``.puppet`` archive and return a structured inventory:
        drawables, deformers, parameters, motions, expressions, hit
        areas, parts, parameter blends and physics rigs.
+   * - ``puppet_validate`` / ``puppet_schema``
+     - Check a ``.puppet`` against the v1 format (JSON Schemas, loader rules,
+       rig checks); return one of its four published JSON Schemas.
    * - ``image_statistics`` / ``quality_metrics`` / ``read_histogram``
      - Per-channel mean/min/max/std/median, no-reference quality
        metrics (colourfulness, entropy, contrast, edge density, noise),
@@ -2565,7 +3569,8 @@ Available Tools
      - Composite several images into a grid montage (configurable
        columns, cell size, gap, margin, background). Reports progress.
    * - ``crop_image`` / ``resize_image`` / ``rotate_image``
-     - Pixel-box crop, aspect-preserving resize, and lossless 90/180/270
+     - Pixel-box crop, resize (one edge keeps the aspect ratio, both give an exact size), and
+       lossless 90/180/270
        rotation or horizontal/vertical flip.
        Sizes and coordinates refer to the EXIF-upright image.
    * - ``collection_stats``
@@ -2576,7 +3581,7 @@ Available Tools
        one frame of a video to a still image.
    * - ``extract_gps`` / ``dominant_colors``
      - Read EXIF GPS latitude/longitude (chains into ``reverse_geocode``);
-       extract a median-cut colour palette (rgb / hex / pixel share).
+       extract a median-cut colour palette (rgb / hex / pixel count).
    * - ``error_level_analysis``
      - JPEG-recompression Error-Level-Analysis tamper map as a PNG data
        URI (edited regions light up against the background).
@@ -2625,7 +3630,8 @@ Available Tools
 
 Every tool advertises a JSON ``outputSchema`` and read-only /
 destructive ``annotations``, and returns its result as
-``structuredContent`` alongside the text envelope (per MCP 2025-11-25),
+``structuredContent`` alongside the text envelope (fields from later MCP revisions; the
+handshake reports ``2025-03-26``),
 so clients consume typed payloads without re-parsing. Long-running
 tools stream ``notifications/progress`` when the caller passes a
 progress token.
@@ -2636,8 +3642,8 @@ Prompts
 The server exposes four prompts via ``prompts/list`` / ``prompts/get``:
 ``caption_image``, ``suggest_edits``, ``analyze_composition`` (a
 saliency-driven composition critique) and ``flag_issues`` (a sharpness
-+ quality + clipping triage). Prompt arguments are completable through
-``completion/complete``.
++ quality + clipping triage). ``completion/complete`` suggests values for the ``style`` of
+``suggest_edits`` and the ``focus`` of ``analyze_composition``.
 
 Claude Code (Project-Level)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2650,14 +3656,15 @@ The repository ships a project-level ``.mcp.json`` at the repo root:
      "mcpServers": {
        "imervue": {
          "type": "stdio",
-         "command": "python",
+         "command": "py",
          "args": ["-m", "Imervue.mcp_server"]
        }
      }
    }
 
-Opening any subdirectory of the repo in Claude Code auto-discovers
-this server. Claude Code prompts before enabling project servers the
+``py`` is the Windows Python launcher; on macOS or Linux use ``python3`` or the interpreter of
+the environment Imervue is installed in. Opening any subdirectory of the repo in Claude Code
+auto-discovers this server. Claude Code prompts before enabling project servers the
 first time — accept the prompt to use it.
 
 Claude Desktop
@@ -2675,23 +3682,116 @@ interpreter that can ``import Imervue``.
 Protocol Surface
 ^^^^^^^^^^^^^^^^
 
-The server implements the stdio JSON-RPC 2.0 transport of MCP
-version ``2025-03-26``:
+The server reads newline-delimited JSON-RPC 2.0 messages on stdin and writes responses and
+notifications to stdout, one UTF-8 line each. It answers ``initialize`` with protocol version
+``2025-03-26`` whatever version the client asks for. Requests are handled one at a time; a batch
+(a JSON array) is refused with ``-32600``.
 
-* ``initialize`` — handshake; advertises ``capabilities.tools``.
-* ``tools/list`` — enumerate the registered tools with their
-  JSON-Schema input definitions.
-* ``tools/call`` — invoke a tool with ``{"name", "arguments"}``;
-  results come back inside the ``content`` array.
-* ``notifications/*`` — silently accepted (no response).
+.. list-table::
+   :header-rows: 1
+   :widths: 32 68
+
+   * - Method
+     - What it does
+   * - ``initialize``
+     - Handshake. Returns ``protocolVersion`` ``2025-03-26``, ``serverInfo`` (``imervue``
+       ``1.0.0``) and the capabilities ``tools`` and ``prompts`` (``listChanged: false``),
+       ``resources`` (``subscribe: true``, ``listChanged: true``), ``completions`` and ``logging``.
+   * - ``ping``
+     - Returns an empty result.
+   * - ``tools/list``
+     - All 58 tools in one page, each with ``inputSchema``, ``outputSchema`` and ``annotations``
+       (``readOnlyHint`` / ``destructiveHint`` / ``idempotentHint`` / ``openWorldHint``).
+   * - ``tools/call``
+     - Runs ``{"name", "arguments"}``. The result is a ``text`` content block holding the
+       JSON-encoded return value, plus ``structuredContent`` when it is an object. A tool that
+       raises, or arguments that don't fit its parameters, give ``isError: true`` and an
+       ``Error: …`` text instead of a protocol error; an unknown tool name is ``-32602``.
+   * - ``prompts/list``
+     - The four prompts with their arguments.
+   * - ``prompts/get``
+     - Builds the messages of ``{"name", "arguments"}``; ``caption_image`` and
+       ``analyze_composition`` embed a PNG thumbnail as an image message. An unknown prompt or a
+       missing ``path`` is ``-32602``.
+   * - ``completion/complete``
+     - Prefix-matched values for a ``ref/prompt`` argument: ``style`` of ``suggest_edits``
+       (general, portrait, landscape, product, street, food, macro) and ``focus`` of
+       ``analyze_composition`` (all, framing, balance, subject, leading_lines). Any other argument
+       gets an empty list.
+   * - ``resources/list``
+     - The images directly in the folder ``IMERVUE_MCP_ROOT`` names (hidden files and SVG left
+       out), 100 per page with a ``nextCursor``; empty when the variable is unset.
+   * - ``resources/templates/list``
+     - The two URI templates in the table below.
+   * - ``resources/read``
+     - Reads one ``imervue://image/…`` URI (see below).
+   * - ``resources/subscribe`` / ``resources/unsubscribe``
+     - Adds or removes a URI from the set that receives ``notifications/resources/updated``.
+   * - ``logging/setLevel``
+     - Sets the lowest level (``debug``, ``info``, ``notice``, ``warning``, ``error``,
+       ``critical``, ``alert``, ``emergency``; ``info`` at start) sent as
+       ``notifications/message``; any other value is ``-32602``.
+   * - ``notifications/*`` from the client
+     - Accepted without a reply (``notifications/initialized``, ``notifications/cancelled``, …);
+       a cancellation does not stop a running tool.
+   * - ``notifications/progress`` (sent)
+     - ``{progressToken, progress, total, message}`` while ``find_similar`` or ``build_collage``
+       runs, when the ``tools/call`` request carried ``params._meta.progressToken`` (a string or
+       an integer); ``progress`` only increases.
+   * - ``notifications/resources/updated`` (sent)
+     - ``{uri}`` when a file in ``IMERVUE_MCP_ROOT`` changes and its thumbnail URI is subscribed.
+   * - ``notifications/resources/list_changed`` (sent)
+     - On any change in ``IMERVUE_MCP_ROOT`` (watched with watchdog, not recursively),
+       subscribed or not.
+   * - ``notifications/message`` (sent)
+     - Log entries at or above the ``logging/setLevel`` level, sent through
+       ``MCPServer.emit_log``. The built-in tools do not call it, so the stock server sends none.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - URI
+     - Returns
+   * - ``imervue://image/{path}``
+     - A PNG thumbnail of the image — upright, fit in 256 px — as a base64 ``blob`` with
+       ``mimeType`` ``image/png``. ``resources/list`` returns URIs of this form.
+   * - ``imervue://image/{path}/metadata``
+     - The ``read_image_metadata`` result (dimensions, format, EXIF, XMP) as JSON ``text`` with
+       ``mimeType`` ``application/json``.
+
+``{path}`` is the image's file path percent-encoded in full, separators and drive colon included
+(``C:\photos\a.jpg`` is ``imervue://image/C%3A%5Cphotos%5Ca.jpg``). A read resolves the path
+directly, so it works for any file, not only those under ``IMERVUE_MCP_ROOT``; a path with a
+``..`` segment is ``-32602``, a missing file ``-32002`` and a URI with another scheme ``-32602``.
+
+Errors use the JSON-RPC codes ``-32700`` (a line that is not JSON), ``-32600`` (not a request
+object, or no ``method``), ``-32601`` (unknown method), ``-32602`` (bad parameters, unknown tool or
+prompt, invalid log level or cursor, unsupported resource URI), ``-32002`` (resource file not
+found) and ``-32603`` (internal error).
 
 The implementation lives in ``Imervue/mcp_server/``:
 
-* ``server.py`` — protocol loop + tool registry.
-* ``tools.py`` — handler functions and the default tool definitions.
+* ``server.py`` — the JSON-RPC dispatcher (``MCPServer``), the stdio loop (``run``) and the
+  ``IMERVUE_MCP_ROOT`` watcher.
+* ``tools.py`` — the public face of the tool set: re-exports every handler and registers the
+  default tools (``register_default_tools``).
+* ``tools_read.py`` / ``tools_edit.py`` — the tool handlers (listing, metadata and analysis;
+  edits written to a destination), with shared helpers in ``tool_support.py``.
+* ``tool_defs_read.py`` / ``tool_defs_edit.py`` — each tool's name, description, input schema
+  and handler, in ``tools/list`` order.
+* ``tool_schemas.py`` — each tool's ``outputSchema`` and ``annotations``.
+* ``prompts.py`` / ``completion.py`` — the four prompts and the ``completion/complete``
+  suggestions.
+* ``resources.py`` — the ``imervue://image/`` resources.
+* ``progress.py`` / ``notifications.py`` / ``logging.py`` — progress reporting, the locked stdout
+  writer and resource subscriptions, and log-level filtering.
 * ``__main__.py`` — ``python -m Imervue.mcp_server`` entry point.
 
-Custom tools can be registered by constructing :class:`MCPServer`
-manually, calling :meth:`MCPServer.register`, and feeding messages
-through :meth:`MCPServer.handle_message` (or driving the stdio loop
-with the built-in :func:`run` helper).
+Custom tools can be registered by constructing :class:`MCPServer`, calling
+:meth:`MCPServer.register` (name, description, input schema, handler, optional output schema and
+annotations; a duplicate name raises ``ValueError``; a handler with a ``progress`` parameter
+receives a progress reporter) and feeding each message to :meth:`MCPServer.handle_message`, which
+returns the response or ``None`` for a notification. :func:`run` always builds its own server with
+the default tools, so a custom set needs its own loop; set ``server.notifier`` to a ``Notifier``
+on the output stream for notifications to be sent.

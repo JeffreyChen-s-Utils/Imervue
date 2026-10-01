@@ -34,7 +34,7 @@ def test_scale_for_streaming_passes_through_small_canvases():
 
 
 def test_scale_for_streaming_preserves_aspect_ratio_on_tall_canvas():
-    """The March 7th-style tall Cubism canvas (3503×7777) gets
+    """A tall imported Cubism canvas (3503×7777) gets
     scaled so the height becomes MAX_OUTPUT_DIMENSION and the width
     drops proportionally."""
     w, h = _scale_for_streaming(3503, 7777)

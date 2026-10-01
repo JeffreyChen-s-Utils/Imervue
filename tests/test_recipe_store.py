@@ -381,6 +381,68 @@ class TestCarryRecipe:
         assert recipe_store.get_for_path(jpeg) is not None
 
 
+class TestPre2Identities:
+    """Recipes stored under the old first-4-KB identity move to the new one on first use."""
+
+    @staticmethod
+    def _legacy_store(tmp_path, image, recipe):
+        from Imervue.image.recipe import file_identities
+        legacy = file_identities(image)[1]
+        path = tmp_path / "recipes.json"
+        path.write_text(json.dumps({legacy: {"recipe": recipe.to_dict(), "last_path": str(image)}}),
+                        encoding="utf-8")
+        return RecipeStore(store_path=path), legacy
+
+    def test_an_old_entry_is_found_and_moved(self, tmp_path, sample_image):
+        from Imervue.image.recipe import file_identity
+        store, legacy = self._legacy_store(tmp_path, sample_image, Recipe(exposure=0.4))
+        assert store.get_for_path(str(sample_image)).exposure == pytest.approx(0.4)
+        on_disk = json.loads((tmp_path / "recipes.json").read_text(encoding="utf-8"))
+        assert list(on_disk) == [file_identity(sample_image)]
+        assert legacy not in on_disk
+
+    def test_a_reset_after_the_move_stays_reset(self, tmp_path, sample_image):
+        store, _legacy = self._legacy_store(tmp_path, sample_image, Recipe(exposure=0.4))
+        store.delete_for_path(str(sample_image))
+        assert store.get_for_path(str(sample_image)) is None
+
+    def test_variants_move_with_it(self, tmp_path, sample_image):
+        store, _legacy = self._legacy_store(tmp_path, sample_image, Recipe(exposure=0.4))
+        store.save_variant_for_path(str(sample_image), "bw", Recipe(saturation=-1.0))
+        store._reset_for_tests()  # noqa: SLF001
+        assert store.list_variants_for_path(str(sample_image)) == ["bw"]
+
+    def test_two_files_that_shared_it_part_ways(self, tmp_path):
+        """Scans that collided: the first looked up takes the recipe, the other starts clean."""
+        from Imervue.image.recipe import file_identities
+        first, second = tmp_path / "p1.bin", tmp_path / "p2.bin"
+        first.write_bytes(b"H" * 4096 + b"page one" + b"." * 5000)
+        second.write_bytes(b"H" * 4096 + b"page two" + b"." * 5000)
+        clear_identity_cache()
+        assert file_identities(first)[1] == file_identities(second)[1]
+        store, _legacy = self._legacy_store(tmp_path, first, Recipe(exposure=0.4))
+        assert store.get_for_path(str(first)) is not None
+        assert store.get_for_path(str(second)) is None
+        store.set_for_path(str(second), Recipe(exposure=-0.2))
+        assert store.get_for_path(str(first)).exposure == pytest.approx(0.4)
+
+    def test_carry_recipe_moves_an_old_entry_before_the_file_changes(self, tmp_path, monkeypatch):
+        from Imervue.image import recipe_store as module
+        image = tmp_path / "a.bin"
+        image.write_bytes(b"before" * 1000)
+        clear_identity_cache()
+        store, _legacy = self._legacy_store(tmp_path, image, Recipe(exposure=0.4))
+        monkeypatch.setattr(module, "recipe_store", store)
+
+        def rewrite():
+            image.write_bytes(b"after!" * 1000)
+            clear_identity_cache()
+            return True
+
+        assert module.carry_recipe(image, rewrite) is True
+        assert store.get_for_path(str(image)).exposure == pytest.approx(0.4)
+
+
 def test_a_store_file_with_a_bom_is_read(tmp_path):
     path = tmp_path / "recipes.json"
     path.write_bytes(b"\xef\xbb\xbf" + json.dumps(

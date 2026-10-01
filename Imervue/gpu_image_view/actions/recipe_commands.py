@@ -43,6 +43,11 @@ class EditRecipeCommand(QUndoCommand):
         self._old: dict[str, Any] = old_recipe.to_dict()
         self._new: dict[str, Any] = new_recipe.to_dict()
 
+    @property
+    def path(self) -> str:
+        """The file whose recipe this command changes."""
+        return self._path
+
     def _apply(self, recipe_dict: dict[str, Any]) -> None:
         recipe = Recipe.from_dict(recipe_dict)
         recipe_store.set_for_path(self._path, recipe)

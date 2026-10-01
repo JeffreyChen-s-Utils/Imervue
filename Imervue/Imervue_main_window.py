@@ -2,7 +2,7 @@ import logging
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QFileSystemWatcher
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QSplitter, QMenu, QTabWidget,
@@ -33,6 +33,7 @@ from Imervue.menu.recent_menu import rebuild_recent_menu
 from Imervue.menu.sort_menu import build_sort_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.plugin_manager import apply_saved_language
 from Imervue.user_settings.user_setting_dict import (
     write_user_setting, read_user_setting, user_setting_dict, cancel_pending_save,
 )
@@ -107,7 +108,8 @@ class ImervueMainWindow(
         imervue_layout.setContentsMargins(0, 0, 0, 0)
         imervue_layout.setSpacing(0)
 
-        splitter = QSplitter()
+        # Saved workspaces store and restore this tree | viewer split.
+        splitter = self._main_splitter = QSplitter()
         imervue_layout.addWidget(splitter)
 
         self._build_file_tree()
@@ -144,7 +146,8 @@ class ImervueMainWindow(
         # 語言支援
         # Language support
         self.language_wrapper = language_wrapper
-        self.language_wrapper.reset_language(user_setting_dict.get("language", "English"))
+        # Registers a saved plugin language (Spanish) before any text is built.
+        apply_saved_language(user_setting_dict.get("language", "English"))
         # Qt 自己的字串（確定 / 取消、檔案對話框…）也跟著語言走
         from Imervue.system.qt_translations import install_qt_translations
         install_qt_translations(QApplication.instance(), self.language_wrapper.language)
@@ -198,7 +201,10 @@ class ImervueMainWindow(
         QShortcut(QKeySequence("Ctrl+L"), self, activated=self.toggle_browse_mode)
 
         # ===== 資料夾監控 =====
-        self._folder_watcher = QFileSystemWatcher(self)
+        # Polled, not watched: a change-notification handle on the open folder
+        # stops Windows from renaming or moving any folder above it.
+        from Imervue.system.folder_poll import FolderPoller
+        self._folder_watcher = FolderPoller(self)
         self._folder_watcher.directoryChanged.connect(self._on_watched_folder_changed)
         self._folder_change_events = 0
         self._folder_change_last_path = ""
@@ -207,13 +213,11 @@ class ImervueMainWindow(
         self._folder_refresh_timer.setInterval(500)  # 去抖動 500ms
         self._folder_refresh_timer.timeout.connect(self._do_folder_refresh)
 
-        # ===== 檔案樹遞迴監控（watchdog）=====
-        # QFileSystemModel 內建的 watcher 對外部批次變更（git checkout、rsync、
-        # 拖放）反應不及時。watchdog 用獨立執行緒遞迴監看樹根，事件透過 Qt
-        # signal 跨執行緒回到 UI 並去抖動觸發 model 重新整理。
-        from Imervue.system.file_tree_watcher import FileTreeWatchdog
-        self._tree_watchdog = FileTreeWatchdog(self)
-        self._tree_watchdog.bind_model(self.model)
+        # The folder tree is not watched either (see ``_build_file_tree``): it
+        # catches up when Imervue comes back to the front, on F5 / Refresh, and
+        # when the open folder changes.
+        QApplication.instance().applicationStateChanged.connect(self._on_application_state_changed)
+        self._follows_app_state = True
 
         # ===== 拖到別的螢幕 → 視窗與 deep-zoom 圖片自動適配 =====
         # moveEvent 在拖曳期間連續觸發；用單發計時器去抖動，等視窗
@@ -234,26 +238,6 @@ class ImervueMainWindow(
         # the view is re-fitted to the actual screen instead of keeping the
         # first screen's size. Deferred so windowHandle() exists.
         call_later(0, self, self._connect_screen_change_signal)
-
-    def _install_desktop_pet_tab(self, lang) -> None:
-        """Wire the 5th tab (Desktop Pet) — frameless / transparent
-        overlay sharing the Puppet runtime. The tab body is the
-        control panel; the actual character lives in a separate
-        top-level window. The system tray icon piggybacks here so
-        the user can toggle visibility without finding the tab; it
-        is only constructed when the platform reports a tray is
-        available (CI / headless desktops skip it gracefully)."""
-        from Imervue.desktop_pet import PetTrayIcon, PetWorkspace
-        self.pet_workspace = PetWorkspace()
-        self._main_tabs.addTab(
-            self.pet_workspace,
-            lang.get("desktop_pet_tab_title", "Desktop Pet"),
-        )
-        if not PetTrayIcon.is_available():
-            return
-        self._pet_tray = PetTrayIcon(self.pet_workspace, parent=self)
-        self.pet_workspace.attach_tray(self._pet_tray)
-        self._pet_tray.show()
 
     # ==========================
     # 主分頁切換（Imervue ↔ 修改）
@@ -292,6 +276,7 @@ class ImervueMainWindow(
 
     def _on_main_tab_changed(self, idx: int) -> None:
         """Switch between Imervue (viewer), Modify and Paint tabs."""
+        self._build_optional_tab_on_open(idx)
         for shortcut in self._folder_tab_shortcuts:
             shortcut.setEnabled(idx == 0)
         if idx == 1:
@@ -594,15 +579,27 @@ class ImervueMainWindow(
         import logging
         logging.getLogger("Imervue").info("closeEvent triggered")
 
+        # Paint's unsaved tabs: the teardown below ends in os._exit, so this is
+        # the last chance to ask. The workspace is a tab page and never gets a
+        # closeEvent of its own.
+        paint = getattr(self, "_paint", None)
+        if paint is not None and not paint.confirm_close():
+            event.ignore()
+            return
+
         self._release_for_close()
         self._persist_for_close()
 
         # Only the LAST main window runs the app-global teardown below. A
         # secondary window (File → New Window) shares this closeEvent; running
-        # the plugin unload + os._exit for it would kill the whole process and
-        # unload plugins out from under the windows that are still open.
+        # the app-closing hook + os._exit for it would kill the whole process.
+        # Every window loads its own plugin instances, so a secondary window
+        # unloads just those; the other windows keep theirs.
         ImervueMainWindow._live_windows.discard(self)
         if _other_live_windows_remain(ImervueMainWindow._live_windows, self):
+            if hasattr(self, "plugin_manager"):
+                with best_effort("unload this window's plugins", _logger):
+                    self.plugin_manager.unload_all()
             event.accept()
             super().closeEvent(event)
             self.deleteLater()
@@ -640,10 +637,13 @@ class ImervueMainWindow(
         with best_effort("disconnect the tab-change signal", _logger):
             self._main_tabs.currentChanged.disconnect(self._on_main_tab_changed)
 
-        # --- 停止 watchdog 觀察執行緒 ---
-        with best_effort("stop the file-tree watchdog", _logger):
-            if hasattr(self, "_tree_watchdog"):
-                self._tree_watchdog.stop()
+        # --- 停止資料夾輪詢與前景切換的通知 ---
+        with best_effort("stop polling the open folder", _logger):
+            self._folder_watcher.stop()
+        if getattr(self, "_follows_app_state", False):
+            with best_effort("stop following the application state", _logger):
+                QApplication.instance().applicationStateChanged.disconnect(self._on_application_state_changed)
+                self._follows_app_state = False
 
         # --- 等待背景刪除 worker，避免其 QThread 在 view 銷毀時仍在執行 ---
         # (次要視窗走 deleteLater → destroyed-while-running 崩潰；

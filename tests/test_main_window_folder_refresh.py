@@ -100,7 +100,7 @@ class _FakeToast:
         self.warnings.append(message)
 
 
-class _FakeTreeWatchdog:
+class _FakePoller:
     def __init__(self):
         self.paths = []
 
@@ -130,7 +130,7 @@ class _StubMainWindow:
         self.breadcrumb = SimpleNamespace(paths=[], set_path=lambda p: self.breadcrumb.paths.append(p))
         self.filename_label = SimpleNamespace(text="", setText=lambda t: setattr(self.filename_label, "text", t))
         self.toast = _FakeToast()
-        self._tree_watchdog = _FakeTreeWatchdog()
+        self._folder_watcher = _FakePoller()
         self.watched = []
         self._image_metadata_index = ImageMetadataIndex()
 
@@ -403,7 +403,7 @@ def test_missing_active_folder_clears_viewer_and_roots_tree_to_parent(tmp_path):
     assert win.viewer.model.images == []
     assert win.model.root_paths[-1] == str(parent)
     assert win.tree.roots[-1] == str(parent)
-    assert win._tree_watchdog.paths[-1] == str(parent)
+    assert win._folder_watcher.paths[-1] == ""      # the gone folder is no longer polled
     assert win.toast.warnings
 
 

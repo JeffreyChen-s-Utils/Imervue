@@ -171,3 +171,12 @@ def test_saved_material_is_picked_up_by_index_rescan(canvas, tmp_path):
         entry for entry in index.entries if entry.category == "pattern"
     ]
     assert len(pattern_entries) >= 1
+
+
+def test_a_second_save_under_the_same_name_keeps_the_first(canvas, tmp_path):
+    first = save_region_as_material(canvas, (0, 0, 4, 4), library_root=tmp_path, name="tile")
+    second = save_region_as_material(canvas, (5, 5, 4, 4), library_root=tmp_path, name="tile")
+    third = save_region_as_material(canvas, (2, 2, 4, 4), library_root=tmp_path, name="tile")
+    assert [e.path.name for e in (first, second, third)] == ["tile.png", "tile_2.png", "tile_3.png"]
+    assert [e.name for e in (first, second, third)] == ["tile", "tile_2", "tile_3"]
+    np.testing.assert_array_equal(np.asarray(Image.open(first.path).convert("RGBA")), canvas[0:4, 0:4])

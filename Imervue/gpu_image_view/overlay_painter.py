@@ -516,16 +516,8 @@ class OverlayPainter:
         if not anim or not anim.is_animated:
             return
 
-        lang = view.main_window.language_wrapper.language_word_dict
-        frame_text = lang.get("anim_frame_indicator", "Frame {current}/{total}").format(
-            current=anim.current_frame + 1, total=anim.total_frames
-        )
-        status = (
-            lang.get("anim_play", "Play") if not anim.playing
-            else lang.get("anim_pause", "Pause")
-        )
-        speed_text = lang.get("anim_speed", "Speed: {speed}x").format(speed=f"{anim.speed:.1f}")
-        text = f"{status}  |  {frame_text}  |  {speed_text}"
+        from Imervue.gpu_image_view.actions.animation_player import anim_indicator_text
+        text = anim_indicator_text(anim, view.main_window.language_wrapper.language_word_dict)
 
         font = QFont(_FONT_CONSOLAS)
         font.setPixelSize(13)

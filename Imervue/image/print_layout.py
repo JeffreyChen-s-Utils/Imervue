@@ -22,9 +22,11 @@ PAGE_SIZES: dict[str, tuple[float, float]] = {
     "Legal": (612.0, 1008.0),
 }
 
+PT_PER_MM = 72.0 / 25.4
 _DEFAULT_MARGIN_PT = 36.0   # 0.5 inch
 _DEFAULT_GUTTER_PT = 12.0
 _MARK_LENGTH_PT = 12.0
+_MIN_CELL_PT = 1.0
 
 
 @dataclass
@@ -56,17 +58,28 @@ def _draw_crop_marks(canvas, x: float, y: float, w: float, h: float) -> None:
         canvas.line(cx, cy + 2, cx, cy + m)
 
 
-def _cell_geometry(
-    layout: PrintLayout, page_w: float, page_h: float,
-) -> tuple[float, float, float, float]:
-    """Return (x0, y0, cell_w, cell_h) for the first cell."""
+def _cell_size(layout: PrintLayout, page_w: float, page_h: float) -> tuple[float, float]:
+    """Cell width and height once the margins and gutters are off the page (may be negative)."""
     rows = max(1, layout.rows)
     cols = max(1, layout.cols)
     inner_w = page_w - 2 * layout.margin_pt - (cols - 1) * layout.gutter_pt
     inner_h = page_h - 2 * layout.margin_pt - (rows - 1) * layout.gutter_pt
-    cell_w = max(1.0, inner_w / cols)
-    cell_h = max(1.0, inner_h / rows)
-    return layout.margin_pt, layout.margin_pt, cell_w, cell_h
+    return inner_w / cols, inner_h / rows
+
+
+def leaves_room(layout: PrintLayout) -> bool:
+    """Whether *layout*'s margins and gutters leave each grid cell at least a point each way."""
+    cell_w, cell_h = _cell_size(layout, *_page_dimensions(layout))
+    return min(cell_w, cell_h) >= _MIN_CELL_PT
+
+
+def _cell_geometry(
+    layout: PrintLayout, page_w: float, page_h: float,
+) -> tuple[float, float, float, float]:
+    """Return (x0, y0, cell_w, cell_h) for the first cell."""
+    cell_w, cell_h = _cell_size(layout, page_w, page_h)
+    return (layout.margin_pt, layout.margin_pt,
+            max(_MIN_CELL_PT, cell_w), max(_MIN_CELL_PT, cell_h))
 
 
 def export_print_pdf(layout: PrintLayout, output_path: str | Path) -> Path:

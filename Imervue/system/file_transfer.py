@@ -177,18 +177,25 @@ def carry_sidecars(pairs: Iterable[tuple[str, str]], *, move: bool) -> dict[str,
     carried: dict[str, str] = {}
     for source, target in pairs:
         src, dst = Path(source), Path(target)
-        if src.is_dir() or dst.is_dir():
-            continue
-        for side, new_side, adobe in _sidecar_pairs(src, dst):
-            if not side.is_file():
-                continue
-            shared = adobe and _shares_adobe_sidecar(src)
-            try:
-                if _carry_sidecar(side, new_side, move=move and not shared):
-                    carried[_path_key(side)] = str(new_side)
-            except OSError:
-                logger.warning("Could not carry %s to %s", side, new_side, exc_info=True)
+        if not (src.is_dir() or dst.is_dir()):
+            _carry_sidecars_of(src, dst, move=move, carried=carried)
     return carried
+
+
+def _carry_sidecars_of(src: Path, dst: Path, *, move: bool, carried: dict[str, str]) -> None:
+    """Move or copy the sidecars of the file *src* to go with *dst*; record each in *carried*.
+
+    A shared ``IMG.xmp`` (another ``IMG.*`` still uses it) is copied, never moved.
+    """
+    for side, new_side, adobe in _sidecar_pairs(src, dst):
+        if not side.is_file():
+            continue
+        shared = adobe and _shares_adobe_sidecar(src)
+        try:
+            if _carry_sidecar(side, new_side, move=move and not shared):
+                carried[_path_key(side)] = str(new_side)
+        except OSError:
+            logger.warning("Could not carry %s to %s", side, new_side, exc_info=True)
 
 
 def sidecars_of(path: str) -> list[str]:

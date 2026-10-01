@@ -4,7 +4,9 @@ A binding map (``{action: spec}``) can accidentally bind two actions to the
 same chord — even when the specs *look* different (``"Ctrl+Shift+P"`` vs
 ``"shift+ctrl+p"``). These pure helpers canonicalise a spec order- and
 case-independently (reusing :func:`hotkey_manager.to_pynput_spec`) and report
-the clashes so the rebind UI can warn before saving.
+the clashes: the Desktop Pet tab refuses a new key another action already
+uses (:func:`clashing_action`) and warns about saved bindings that share one
+(:func:`find_conflicts`).
 """
 from __future__ import annotations
 
@@ -44,3 +46,15 @@ def find_conflicts(bindings: dict[str, str]) -> dict[str, list[str]]:
 def has_conflicts(bindings: dict[str, str]) -> bool:
     """True when any chord in *bindings* is bound by more than one action."""
     return bool(find_conflicts(bindings))
+
+
+def clashing_action(bindings: dict[str, str], action: str, spec: str) -> str | None:
+    """The first action other than *action* whose binding is *spec*'s chord, or None."""
+    canon = canonical_spec(spec)
+    if canon is None:
+        return None
+    return next(
+        (other for other, bound in bindings.items()
+         if other != action and canonical_spec(bound) == canon),
+        None,
+    )

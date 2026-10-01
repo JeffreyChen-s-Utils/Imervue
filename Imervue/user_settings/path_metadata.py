@@ -116,22 +116,25 @@ def move_path_metadata(mapping: Mapping[str, str], *, keep_existing: bool = Fals
         if isinstance(store, dict):
             changed |= _move_values(store, pairs, keep_existing=keep_existing)
     for key in _LIST_KEYS:
-        paths = user_setting_dict.get(key)
-        if isinstance(paths, list):
-            moved = _moved_list(paths, pairs, keep_existing=keep_existing)
-            if moved is not None:
-                user_setting_dict[key] = moved
-                changed = True
+        changed |= _move_list_in(user_setting_dict, key, pairs, keep_existing=keep_existing)
     for key in _GROUP_KEYS:
         groups = user_setting_dict.get(key)
-        if not isinstance(groups, dict):
-            continue
-        for name, paths in groups.items():
-            if isinstance(paths, list):
-                moved = _moved_list(paths, pairs, keep_existing=keep_existing)
-                if moved is not None:
-                    groups[name] = moved
-                    changed = True
+        if isinstance(groups, dict):
+            for name in list(groups):
+                changed |= _move_list_in(groups, name, pairs, keep_existing=keep_existing)
     if changed:
         schedule_save()
     return changed
+
+
+def _move_list_in(container: dict, key: str, pairs: Mapping[str, str], *,
+                  keep_existing: bool) -> bool:
+    """Replace ``container[key]``, a list of paths, with its moved copy; whether it changed."""
+    paths = container.get(key)
+    if not isinstance(paths, list):
+        return False
+    moved = _moved_list(paths, pairs, keep_existing=keep_existing)
+    if moved is None:
+        return False
+    container[key] = moved
+    return True

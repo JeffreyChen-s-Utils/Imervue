@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import sys
 import types
+import warnings
 
+import numpy as np
 import pytest
 
 from Imervue.image.raw_loader import (
@@ -289,3 +291,94 @@ def test_develop_raw_pulls_in_no_qt():
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,  # noqa: S603 - fixed argv
                             check=True, cwd=str(Path(__file__).parent.parent))
     assert result.stdout.strip() == "False"
+
+
+
+# ---------------------------------------------------------------
+# embedded preview: upright, with a half-size develop as fallback
+# ---------------------------------------------------------------
+
+
+class _PreviewRaw:
+    """A libraw handle with a chosen embedded preview and orientation flag."""
+
+    def __init__(self, thumb, flip=0):
+        self._thumb = thumb
+        self.sizes = types.SimpleNamespace(flip=flip)
+        self.postprocessed: list[dict] = []
+
+    def extract_thumb(self):
+        if isinstance(self._thumb, Exception):
+            raise self._thumb
+        return self._thumb
+
+    def postprocess(self, **kwargs):
+        self.postprocessed.append(kwargs)
+        return np.full((4, 6, 3), 7, dtype=np.uint8)
+
+
+def _jpeg_thumb(size=(60, 40)):
+    import io
+
+    import rawpy
+    from PIL import Image
+    buf = io.BytesIO()
+    img = Image.new("RGB", size, (200, 0, 0))
+    img.paste((0, 0, 255), (0, 0, 10, 10))          # blue in the stored top-left
+    img.save(buf, "JPEG", quality=95)
+    return types.SimpleNamespace(format=rawpy.ThumbFormat.JPEG, data=buf.getvalue())
+
+
+def _preview(raw):
+    from Imervue.image.raw_loader import _embedded_preview
+    return _embedded_preview(raw)
+
+
+@pytest.mark.parametrize(("flip", "shape", "blue_corner"), [
+    (0, (40, 60), (0, 0)),
+    (3, (40, 60), (-1, -1)),      # upside down: the stored top-left lands bottom-right
+    (5, (60, 40), (-1, 0)),       # a quarter turn counter-clockwise
+    (6, (60, 40), (0, -1)),       # a quarter turn clockwise
+])
+def test_the_preview_is_turned_upright(flip, shape, blue_corner):
+    """A portrait RAW's thumbnail lay on its side while the developed image stood upright."""
+    pytest.importorskip("rawpy")
+    raw = _PreviewRaw(_jpeg_thumb(), flip=flip)
+    preview = _preview(raw)
+    assert preview.shape[:2] == shape
+    row, col = blue_corner
+    assert preview[row, col, 2] > 150 > preview[row, col, 0]
+    assert preview.flags.c_contiguous
+    assert raw.postprocessed == []
+
+
+def test_a_preview_the_camera_already_turned_is_left_alone():
+    from Imervue.image.raw_loader import upright_preview
+    portrait = np.zeros((60, 40, 3), dtype=np.uint8)
+    assert upright_preview(portrait, 6) is portrait
+    assert upright_preview(portrait, 0) is portrait
+    grey = np.zeros((40, 60), dtype=np.uint8)
+    assert upright_preview(grey, 5).shape == (60, 40)
+
+
+@pytest.mark.parametrize("failure", ["no thumbnail", "unsupported", "undecodable", "other format"])
+def test_without_a_usable_preview_a_half_size_develop(failure):
+    """A RAW without an embedded preview failed outright: libraw's error is no OSError."""
+    rawpy = pytest.importorskip("rawpy")
+    thumb = {
+        "no thumbnail": rawpy.LibRawNoThumbnailError(),
+        "unsupported": rawpy.LibRawUnsupportedThumbnailError(),
+        "undecodable": types.SimpleNamespace(format=rawpy.ThumbFormat.JPEG, data=b"junk"),
+        "other format": types.SimpleNamespace(format="other", data=b""),
+    }[failure]
+    raw = _PreviewRaw(thumb, flip=5)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)   # imageio probing junk
+        assert _preview(raw).shape == (4, 6, 3)
+    assert raw.postprocessed == [{"half_size": True, "use_camera_wb": True, "output_bps": 8}]
+
+
+def test_an_unexpected_preview_error_propagates():
+    pytest.importorskip("rawpy")
+    with pytest.raises(TypeError, match="bug"):
+        _preview(_PreviewRaw(TypeError("bug")))

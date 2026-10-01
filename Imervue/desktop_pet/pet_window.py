@@ -47,6 +47,7 @@ from Imervue.desktop_pet.pet_drivers import (
 from Imervue.desktop_pet.pet_canvas_drivers import PetCanvasDrivers
 from Imervue.desktop_pet.pet_interaction import PetInteraction, llm_situation_tag
 from Imervue.desktop_pet.pet_shadow_controller import PetShadowController
+from Imervue.desktop_pet.pet_feature_base import IntegrationController
 from Imervue.desktop_pet.pet_features import build_integration_controllers
 from Imervue.desktop_pet.pet_feature_toggles import PetFeatureTogglesMixin
 from Imervue.desktop_pet.pet_window_flags import PetWindowFlagsMixin
@@ -155,6 +156,11 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
     visibility_changed = Signal(bool)
     """``True`` after show / ``False`` after hide."""
 
+    setting_changed = Signal(str, object)
+    """``(key, value)`` for every setting the pet saves, wherever the
+    change came from (context menu, tray, hotkey, tab). Workspace
+    mirrors it into its checkboxes."""
+
     moved = Signal(int, int)
     """``(x, y)`` after a drag release lands on its final
     post-snap position. Workspace persists the result."""
@@ -168,8 +174,8 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         super().__init__(None)
         # Pet id identifies which slot under ``user_setting_dict``
         # this instance reads / writes. The primary pet is
-        # ``"default"`` (preserves the single-pet schema); extras
-        # have stable string ids managed by :mod:`pet_registry`.
+        # ``"default"`` (preserves the single-pet schema); any other
+        # id gets its own slot.
         self._pet_id: str = str(pet_id)
         # Snapshot the persisted state once at startup so every
         # subsystem we wire up below can read its initial value
@@ -275,9 +281,9 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         self._fullscreen_detector: FullscreenDetector | None = None
         self._hidden_by_fullscreen: bool = False
 
-        # OBS / Twitch / webhook / Windows-notifications / hotkeys
-        # share one lazy-worker lifecycle; the registry holds them and
-        # the window delegates its public toggles in.
+        # Hotkeys and the integrations plugins add (add_integration) share
+        # one lazy-worker lifecycle; the registry holds them so shutdown()
+        # stops every one.
         self._features = build_integration_controllers(self)
 
         # LLM dialogue, click SFX, music-rhythm and idle-minigame each
@@ -337,8 +343,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         # The 1 Hz script tick wakes up for scheduled chimes.
         self._tick.start()
         self._script_tick.start()
-        if self._hide_on_fullscreen and self._fullscreen_detector is not None:
-            self._fullscreen_detector.start()
+        self._watch_fullscreen_on_show()
         # Force a fresh canvas repaint on show. Qt does call paintGL
         # automatically after showEvent, but a delayed singleShot
         # update covers the case where textures finish uploading
@@ -353,8 +358,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         # Stop the tick timer so the dormant pet doesn't repaint.
         self._tick.stop()
         self._script_tick.stop()
-        if self._fullscreen_detector is not None:
-            self._fullscreen_detector.stop()
+        self._watch_fullscreen_on_hide()
         if self._speech is not None:
             self._speech.close_bubble()
         self.visibility_changed.emit(False)
@@ -556,6 +560,8 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         keeps the multi-pet refactor from sprawling across 20+ call
         sites."""
         pet_settings.update(self._pet_id, **fields)
+        for key, value in fields.items():
+            self.setting_changed.emit(key, value)
 
     # ---- FeatureHost adapter ------------------------------------
     # The thin surface the integration controllers depend on (see
@@ -590,6 +596,28 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         and tests that need to verify isolation."""
         return self._pet_id
 
+    # ---- integrations added by plugins ---------------------------------
+
+    def add_integration(self, key: str, controller: IntegrationController) -> None:
+        """Register a plugin's integration so :meth:`shutdown` stops it.
+
+        A controller already under *key* is shut down (its enabled setting
+        kept) and replaced.
+        """
+        self.remove_integration(key)
+        self._features[key] = controller
+
+    def remove_integration(self, key: str) -> None:
+        """Stop and forget the integration under *key*, keeping its enabled setting."""
+        controller = self._features.pop(key, None)
+        if controller is not None:
+            with best_effort("shut down a removed integration"):
+                controller.shutdown()
+
+    def integration(self, key: str) -> IntegrationController | None:
+        """The integration registered under *key*, if any."""
+        return self._features.get(key)
+
     # =====================================================================
     # Motion / expression playback (context menu + hit-area)
     # =====================================================================
@@ -605,7 +633,7 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         self._play_motion(motion)
 
     def apply_expression(self, name: str) -> None:
-        """Public alias used by the context-menu expressions submenu."""
+        """Toggle ``name`` on or off (the context-menu expressions submenu)."""
         self._apply_expression(name)
 
     # ---- file drag-drop -------------------------------------------
@@ -687,12 +715,15 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
                 return
 
     def _apply_expression(self, name: str) -> None:
-        """Toggle an expression on the canvas. The canvas's
-        expression stack tolerates duplicates by deduping on
-        name, so re-applying the same expression is a no-op
-        rather than a double-stack."""
+        """Toggle an expression: add it, or take it off when it is already on.
+
+        The context menu shows each expression checked while it is active;
+        before, an applied expression stayed until the rig was reloaded.
+        """
         canvas = self._canvas
-        if hasattr(canvas, "add_expression"):
+        if name in canvas.active_expressions():
+            canvas.remove_expression(name)
+        else:
             canvas.add_expression(name)
 
     # =====================================================================

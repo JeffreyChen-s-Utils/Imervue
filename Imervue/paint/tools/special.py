@@ -99,9 +99,13 @@ class _BezierPenTool:
             path.closed = False
 
     def _refresh_overlay(self, path) -> None:
-        """Draw the path's anchor polyline so the user sees what they
-        are building before any rasterise step runs."""
+        """Draw the path's anchor polyline — or, with Smooth on, the curve
+        through the anchors — so the user sees what they are building before
+        any rasterise step runs."""
         anchors = [(float(node.anchor[0]), float(node.anchor[1])) for node in path.nodes]
+        if self._state.pen_smooth and len(anchors) >= 2:
+            from Imervue.paint.pen_commit import smooth_points
+            anchors = smooth_points(path)
         if len(anchors) >= 1:
             self._overlay_setter({"kind": "polyline", "points": anchors})
         else:

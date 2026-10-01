@@ -5,8 +5,10 @@ ExposureTime, FNumber, ISO, FocalLength, LensModel) live in the Exif sub-IFD,
 and coordinates in the GPS sub-IFD. JPEG / PNG / WebP images also have a
 private ``_getexif()`` that merges them; HEIC and JPEG XL images do not.
 
-:func:`get_exif_data` reads it by tag name from a file; it is Qt-free, so the
-MCP server and the library use it as well as the viewer's panels.
+:func:`read_exif` reads a file's EXIF whatever the format, camera RAW
+containers Pillow can't open included; :func:`get_exif_data` gives it by tag
+name. Both are Qt-free, so the MCP server and the library use them as well as
+the viewer's panels.
 """
 from __future__ import annotations
 
@@ -18,16 +20,48 @@ from PIL import ExifTags, Image
 from PIL.ExifTags import TAGS
 
 from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.raw_exif import RAW_EXIF_EXTENSIONS, raw_exif
+from Imervue.image.read_errors import IMAGE_READ_ERRORS
 
 logger = logging.getLogger("Imervue.image.exif_merge")
 
 
-def merged_exif(img: Image.Image) -> dict[int, Any]:
+_SUB_IFDS = (ExifTags.IFD.Exif, ExifTags.IFD.GPSInfo)
+
+
+def read_exif(path: str | Path) -> Image.Exif:
+    """Return the EXIF of the file at *path*, its Exif and GPS IFDs already read.
+
+    An empty :class:`~PIL.Image.Exif` when it has none or can't be read. The
+    camera RAW containers Pillow can't open (CR3, RW2, ORF, RAF) go through
+    :func:`~Imervue.image.raw_exif.raw_exif`, the rest through Pillow with the
+    HEIC / JPEG XL codec registered. The sub-IFDs are read while the file is
+    open: a TIFF-based file (NEF, CR2, DNG) reads them from the file on
+    demand, which failed with "seek of closed file" once it was closed.
+    """
+    ext = Path(path).suffix.lower()
+    try:
+        if ext in RAW_EXIF_EXTENSIONS:
+            return raw_exif(path) or Image.Exif()
+        ensure_pillow_opener(ext)
+        with Image.open(path) as img:
+            exif = img.getexif()
+            for pointer in _SUB_IFDS:
+                if pointer in exif:
+                    exif.get_ifd(pointer)
+            return exif
+    except IMAGE_READ_ERRORS:
+        logger.debug("EXIF read failed for %s", path, exc_info=True)
+        return Image.Exif()
+
+
+def merged_exif(source: Image.Image | Image.Exif) -> dict[int, Any]:
     """Return IFD0 plus the Exif sub-IFD, with the GPS sub-IFD nested under ``GPSInfo``.
 
     The same shape Pillow's own ``_getexif()`` builds, so JPEG results match it.
+    *source* is an open image or an EXIF read with :func:`read_exif`.
     """
-    exif = img.getexif()
+    exif = source if isinstance(source, Image.Exif) else source.getexif()
     merged: dict[int, Any] = dict(exif)
     merged.update(exif.get_ifd(ExifTags.IFD.Exif))
     if ExifTags.IFD.GPSInfo in exif:
@@ -37,11 +71,8 @@ def merged_exif(img: Image.Image) -> dict[int, Any]:
 
 def get_exif_data(path: Path):
     """Return ``{tag name: value}`` for *path*, or ``{}`` when it has no EXIF or cannot be read."""
-    ensure_pillow_opener(Path(path).suffix)
     try:
-        with Image.open(path) as img:
-            exif_raw = merged_exif(img)
-
+        exif_raw = merged_exif(read_exif(path))
         if not exif_raw:
             return {}
 

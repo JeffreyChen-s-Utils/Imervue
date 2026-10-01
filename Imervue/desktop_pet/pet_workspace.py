@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.gui.file_filters import translated_filter
 from Imervue.desktop_pet import settings as pet_settings
+from Imervue.desktop_pet.hotkey_conflicts import clashing_action, find_conflicts
 from Imervue.desktop_pet.hotkey_manager import (
     ACTION_SPEAK_NOW,
     ACTION_TOGGLE_CLICK_THROUGH,
@@ -51,18 +52,86 @@ def _tr(key: str, default: str) -> str:
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_workspace")
 _PET_SCRIPT = "Pet script"
+
+# (action, label key, English label) for each row of the Global hotkeys group.
+_HOTKEY_ROWS: tuple[tuple[str, str, str], ...] = (
+    (ACTION_TOGGLE_VISIBLE, "desktop_pet_hotkey_toggle_visible", "Show / hide pet"),
+    (ACTION_TOGGLE_LOCK, "desktop_pet_hotkey_toggle_lock", "Lock / unlock position"),
+    (ACTION_TOGGLE_CLICK_THROUGH, "desktop_pet_hotkey_click_through", "Toggle click-through"),
+    (ACTION_SPEAK_NOW, "desktop_pet_hotkey_speak_now", "Speak now"),
+)
+
+
+def _hotkey_label(action: str) -> str:
+    """The translated row label of the hotkey *action* (the id itself if unknown)."""
+    return next((_tr(key, label) for act, key, label in _HOTKEY_ROWS if act == action), action)
+
+
+def saved_hotkeys() -> dict[str, str]:
+    """The pet's key bindings: the defaults, overridden by every saved non-empty spec."""
+    persisted = pet_settings.load().get("hotkeys", {}) or {}
+    merged = dict(DEFAULT_HOTKEY_BINDINGS)
+    if isinstance(persisted, dict):
+        merged.update({a: s for a, s in persisted.items() if isinstance(s, str) and s})
+    return merged
+
+
+def hotkey_conflict_notice(bindings: dict[str, str]) -> str:
+    """A status-line warning naming the actions that share a key, or "" when none do."""
+    clashes = find_conflicts(bindings)
+    if not clashes:
+        return ""
+    template = _tr("desktop_pet_hotkeys_shared",
+                   "These hotkeys share one key — change one of them: {pairs}")
+    pairs = "; ".join(" / ".join(_hotkey_label(a) for a in actions) for actions in clashes.values())
+    return template.format(pairs=pairs)
+
+# Pet settings mirrored by a Window-group checkbox (attribute names).
+_WINDOW_CHECKS = {
+    "click_through": "_click_through_check",
+    "anchor_locked": "_anchor_check",
+    "always_on_bottom": "_on_bottom_check",
+    "hide_on_fullscreen": "_fullscreen_check",
+    "speech_enabled": "_speech_check",
+}
+# Driver keys mirrored by a Live-drivers checkbox.
+_DRIVER_CHECKS = {
+    "auto_idle": "_idle_check",
+    "idle_motion": "_idle_motion_check",
+    "auto_blink": "_blink_check",
+    "drag_track": "_drag_check",
+    "mouse_gaze": "_gaze_check",
+    "mic_lipsync": "_mic_check",
+    "webcam_tracking": "_webcam_check",
+}
+# Drivers the pet restarts by itself when it is created; the others need an
+# optional package and are started by ticking their checkbox.
+_SELF_RESTORED_DRIVERS = ("auto_idle", "idle_motion", "auto_blink", "drag_track", "mouse_gaze")
+
+
+def _set_quietly(box: QCheckBox, checked: bool) -> None:
+    """Tick or untick ``box`` without running its toggled handler."""
+    box.blockSignals(True)
+    try:
+        box.setChecked(bool(checked))
+    finally:
+        box.blockSignals(False)
 _MUTED_LABEL_STYLE = "color: #888;"
 
-DEFAULT_EXAMPLE_PUPPET = "examples/puppet/march_7th.puppet"
+DEFAULT_EXAMPLE_PUPPET = "examples/puppet/imeru.puppet"
 """Repo-root relative path used for the test that verifies the
 constant still points inside ``examples/puppet/``. The actual
-runtime resolution goes through :func:`examples_dir` so packaged
-builds (Nuitka EXE, pip install) find the bundled rig wherever
-Imervue was installed instead of relying on the user's CWD."""
+runtime resolution goes through :func:`examples_dir` so the packaged
+builds that bundle ``examples/`` (Nuitka, PyInstaller) find the rig
+wherever Imervue was installed; a pip install has no ``examples/``,
+and a source checkout falls back to the current working folder."""
+
+
+_EXAMPLE_NAME = Path(DEFAULT_EXAMPLE_PUPPET).name
 
 
 def _resolve_bundled_example() -> Path | None:
-    """Return the absolute path to the bundled March 7th rig, or
+    """Return the absolute path to the bundled Imeru rig, or
     ``None`` when the file isn't present (some dev checkouts strip
     examples for size). Tries the frozen-safe ``examples_dir()``
     first, then falls back to a CWD-relative lookup so the workspace
@@ -71,13 +140,13 @@ def _resolve_bundled_example() -> Path | None:
     from Imervue.system.app_paths import examples_dir
 
     for root in (examples_dir(), Path.cwd()):
-        candidate = root / "puppet" / "march_7th.puppet"
+        candidate = root / "puppet" / _EXAMPLE_NAME
         if candidate.is_file():
             return candidate
         # Some layouts use ``examples/puppet/...`` directly under
         # the search root rather than splitting examples_dir already
         # ending in "examples". Cover that too.
-        candidate = root / "examples" / "puppet" / "march_7th.puppet"
+        candidate = root / "examples" / "puppet" / _EXAMPLE_NAME
         if candidate.is_file():
             return candidate
     return None
@@ -85,6 +154,10 @@ def _resolve_bundled_example() -> Path | None:
 
 class PetWorkspace(QWidget):
     """The control-panel tab. Owns one :class:`PetWindow`."""
+
+    pet_created = Signal(object)
+    """The :class:`PetWindow`, once, right after this tab creates it; plugins
+    hear it as ``on_pet_created``."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -157,7 +230,7 @@ class PetWorkspace(QWidget):
         layout.addWidget(self._build_hotkey_group())
         layout.addStretch(1)
 
-        self._status = QLabel("")
+        self._status = QLabel(hotkey_conflict_notice(saved_hotkeys()))
         self._status.setStyleSheet(_MUTED_LABEL_STYLE)
         layout.addWidget(self._status)
 
@@ -172,7 +245,7 @@ class PetWorkspace(QWidget):
         self._open_button.clicked.connect(self._on_open_puppet)
         row.addWidget(self._open_button)
         self._open_example_button = QPushButton(
-            _tr("desktop_pet_load_example", "Load bundled March 7th"),
+            _tr("desktop_pet_load_example", "Load bundled Imeru"),
         )
         self._open_example_button.clicked.connect(self._on_open_example)
         row.addWidget(self._open_example_button)
@@ -193,6 +266,9 @@ class PetWorkspace(QWidget):
 
         self._show_check = self._window_check(
             _tr("desktop_pet_show", "Show pet on desktop"), None, self._on_show_toggled)
+        self._launch_check = self._window_check(
+            _tr("desktop_pet_show_on_launch", "Show the pet when Imervue starts"),
+            settings["show_on_launch"], self._on_show_on_launch_toggled)
         self._click_through_check = self._window_check(
             _tr(
                 "desktop_pet_click_through",
@@ -217,8 +293,9 @@ class PetWorkspace(QWidget):
         self._speech_check = self._window_check(
             _tr("desktop_pet_speech", "Speech bubble on click"),
             settings["speech_enabled"], self._on_speech_toggled)
-        for box in (self._show_check, self._click_through_check, self._anchor_check,
-                    self._on_bottom_check, self._fullscreen_check, self._speech_check):
+        for box in (self._show_check, self._launch_check, self._click_through_check,
+                    self._anchor_check, self._on_bottom_check, self._fullscreen_check,
+                    self._speech_check):
             layout.addWidget(box)
 
         layout.addLayout(self._build_size_row(settings))
@@ -378,11 +455,7 @@ class PetWorkspace(QWidget):
         group = QGroupBox(_tr("desktop_pet_group_hotkeys", "Global hotkeys"))
         layout = QVBoxLayout(group)
         settings = pet_settings.load()
-        persisted = settings.get("hotkeys", {}) or {}
-        merged = dict(DEFAULT_HOTKEY_BINDINGS)
-        for action, spec in persisted.items():
-            if isinstance(spec, str) and spec:
-                merged[action] = spec
+        merged = saved_hotkeys()
 
         self._hotkey_check = QCheckBox(
             _tr(
@@ -396,17 +469,7 @@ class PetWorkspace(QWidget):
 
         form = QFormLayout()
         self._hotkey_edits: dict[str, QKeySequenceEdit] = {}
-        rows: tuple[tuple[str, str, str], ...] = (
-            (ACTION_TOGGLE_VISIBLE,
-             "desktop_pet_hotkey_toggle_visible", "Show / hide pet"),
-            (ACTION_TOGGLE_LOCK,
-             "desktop_pet_hotkey_toggle_lock", "Lock / unlock position"),
-            (ACTION_TOGGLE_CLICK_THROUGH,
-             "desktop_pet_hotkey_click_through", "Toggle click-through"),
-            (ACTION_SPEAK_NOW,
-             "desktop_pet_hotkey_speak_now", "Speak now"),
-        )
-        for action, label_key, default_label in rows:
+        for action, label_key, default_label in _HOTKEY_ROWS:
             edit = QKeySequenceEdit(QKeySequence(merged[action]))
             edit.editingFinished.connect(
                 lambda _a=action, _e=edit: self._on_hotkey_edited(_a, _e),
@@ -426,7 +489,38 @@ class PetWorkspace(QWidget):
             self._pet_window.visibility_changed.connect(
                 self._on_pet_visibility_changed,
             )
+            self._pet_window.setting_changed.connect(self._on_pet_setting_changed)
+            # The pet restarted its zero-dependency drivers while it was being
+            # built, before this connection existed.
+            drivers = pet_settings.load().get("drivers", {}) or {}
+            self._on_pet_setting_changed("drivers", {
+                key: bool(drivers.get(key)) for key in _SELF_RESTORED_DRIVERS
+            })
+            self.pet_created.emit(self._pet_window)
         return self._pet_window
+
+    def _on_pet_setting_changed(self, key: str, value) -> None:
+        """Mirror a saved pet setting into its checkbox or the size combo (and
+        the tray's click-through), so a change from the context menu, the tray
+        or a hotkey no longer leaves the tab showing the old state."""
+        if key == "drivers" and isinstance(value, dict):
+            for name, attr in _DRIVER_CHECKS.items():
+                if name in value:
+                    _set_quietly(getattr(self, attr), value[name])
+            return
+        if key == "size_preset":
+            index = self._size_combo.findData(str(value))
+            if index >= 0:
+                self._size_combo.blockSignals(True)
+                self._size_combo.setCurrentIndex(index)
+                self._size_combo.blockSignals(False)
+            return
+        attr = _WINDOW_CHECKS.get(key)
+        if attr is None:
+            return
+        _set_quietly(getattr(self, attr), value)
+        if key == "click_through" and self._tray is not None:
+            self._tray.sync_click_through(bool(value))
 
     def pet_window(self) -> PetWindow | None:
         """Test hook — returns the overlay if it's been created."""
@@ -600,18 +694,19 @@ class PetWorkspace(QWidget):
             window.hide()
 
     def _on_pet_visibility_changed(self, visible: bool) -> None:
-        # Block-signals dance to avoid feeding the toggled signal
-        # back into ``_on_show_toggled``.
-        self._show_check.blockSignals(True)
-        try:
-            self._show_check.setChecked(visible)
-        finally:
-            self._show_check.blockSignals(False)
+        # Quietly, so the toggled signal doesn't feed back into
+        # ``_on_show_toggled``.
+        _set_quietly(self._show_check, visible)
         # Keep the tray's checkable "Show pet" in sync too. Without this its state
         # went stale, so the next tray click toggled from the wrong value and the
         # first click was wasted (a "hide" that ran show()).
         if self._tray is not None:
             self._tray.sync_visibility(visible)
+
+    @staticmethod
+    def _on_show_on_launch_toggled(checked: bool) -> None:
+        """Remember whether the overlay opens with Imervue (``show_on_launch``)."""
+        pet_settings.update(show_on_launch=bool(checked))
 
     def _on_click_through_toggled(self, checked: bool) -> None:
         self._ensure_pet_window().set_click_through(bool(checked))
@@ -669,21 +764,33 @@ class PetWorkspace(QWidget):
                     "Global hotkeys need pynput — pip install pynput",
                 ),
             )
-            self._hotkey_check.blockSignals(True)
-            self._hotkey_check.setChecked(False)
-            self._hotkey_check.blockSignals(False)
+            _set_quietly(self._hotkey_check, False)
 
     def _on_hotkey_edited(self, action: str, edit: QKeySequenceEdit) -> None:
         """Persist the new binding (if parseable) and refresh the
-        running listener so the change takes effect immediately."""
+        running listener so the change takes effect immediately.
+
+        A key another action already uses is refused: the edit goes back to
+        the action's current key and the status line names the other action.
+        """
         spec = edit.keySequence().toString()
         if not spec or not is_valid_spec(spec):
+            return
+        bindings = saved_hotkeys()
+        clash = clashing_action(bindings, action, spec)
+        if clash is not None:
+            edit.setKeySequence(QKeySequence(bindings.get(action, "")))
+            self._status.setText(_tr(
+                "desktop_pet_hotkey_taken",
+                "{key} is already the key for “{action}” — kept the previous key",
+            ).format(key=spec, action=_hotkey_label(clash)))
             return
         persisted = pet_settings.load().get("hotkeys", {}) or {}
         if not isinstance(persisted, dict):
             persisted = {}
         persisted[action] = spec
         pet_settings.update(hotkeys=persisted)
+        self._status.setText(hotkey_conflict_notice(saved_hotkeys()))
         if self._pet_window is not None and self._pet_window.hotkeys_enabled():
             self._pet_window.set_hotkeys_enabled(True)
 
@@ -696,9 +803,7 @@ class PetWorkspace(QWidget):
                     "Mic lip-sync needs sounddevice — pip install sounddevice",
                 ),
             )
-            self._mic_check.blockSignals(True)
-            self._mic_check.setChecked(False)
-            self._mic_check.blockSignals(False)
+            _set_quietly(self._mic_check, False)
 
     def _on_webcam_toggled(self, checked: bool) -> None:
         ok = self._ensure_pet_window().set_webcam_tracking_enabled(bool(checked))
@@ -709,6 +814,4 @@ class PetWorkspace(QWidget):
                     "Webcam tracking needs opencv-python + mediapipe",
                 ),
             )
-            self._webcam_check.blockSignals(True)
-            self._webcam_check.setChecked(False)
-            self._webcam_check.blockSignals(False)
+            _set_quietly(self._webcam_check, False)

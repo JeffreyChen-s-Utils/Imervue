@@ -36,11 +36,6 @@ def test_material_is_upright(tmp_path):
     assert load_material_image(tagged_portrait(tmp_path / "p.jpg")).shape == (40, 20, 4)
 
 
-def test_reference_thumbnail_is_upright(tmp_path):
-    from Imervue.paint.reference_panel import load_thumbnail
-    assert load_thumbnail(tagged_portrait(tmp_path / "p.jpg", size=(80, 40)), max_side=40).shape == (40, 20, 4)
-
-
 def test_gif_maker_frames_are_upright_and_raw_is_developed(qapp, tmp_path, monkeypatch):
     from Imervue.gui.gif_video_dialog import _CreateWorker
     _fake_raw(monkeypatch)

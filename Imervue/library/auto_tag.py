@@ -1,12 +1,12 @@
 """
-Auto-tagging — heuristic content classifier + optional CLIP ONNX hook.
+Auto-tagging — heuristic content classifier + optional CLIP zero-shot labels.
 
 The heuristic classifier inspects image statistics to assign coarse tags
 (``screenshot``, ``document``, ``photo``, ``graphic``) without any model
-dependency. If ``onnxruntime`` and a CLIP model file are available, we
-delegate to that for richer zero-shot labels. The hook is intentionally
-lazy — the import chain for CLIP pulls in heavy packages we don't want
-to load unless the user actually asks for auto-tagging.
+dependency. When ``onnxruntime`` is installed and the CLIP model has been
+downloaded (by Semantic Search), the ONNX CLIP model labels the picture
+zero-shot instead. The import is lazy, so onnxruntime loads only when
+auto-tagging actually runs.
 """
 from __future__ import annotations
 
@@ -16,7 +16,10 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from Imervue.image.formats import ensure_pillow_opener
+from Imervue.image.orientation import exif_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.shown import as_shown_8bit
 from Imervue.library import image_index
 
 logger = logging.getLogger("Imervue.library.auto_tag")
@@ -29,12 +32,32 @@ _DEFAULT_PROMPTS = (
 )
 
 
+_SAMPLE_EDGE = 64
+_PREVIEW_EDGE = 256
+
+
+def _shown_sample(path: str | Path) -> tuple[np.ndarray, float]:
+    """A 64x64 RGB sample of *path* as the viewer shows it, and its upright width / height.
+
+    Turned upright first, so a portrait phone photo (stored landscape with an
+    EXIF turn) measures as portrait, with 16-bit and float grey scaled and
+    colour profiles applied like on screen. The aspect is taken before the
+    square sample, which has none. Raises ``IMAGE_READ_ERRORS``.
+    """
+    ensure_pillow_opener(Path(path).suffix)
+    with Image.open(path) as im:
+        code = exif_orientation(im)
+        im.thumbnail((_PREVIEW_EDGE, _PREVIEW_EDGE))
+        shown = as_shown_8bit(im, code, mode="RGB")
+    aspect = shown.width / max(shown.height, 1)
+    small = shown.resize((_SAMPLE_EDGE, _SAMPLE_EDGE), Image.Resampling.BILINEAR)
+    return np.asarray(small, dtype=np.float32) / 255.0, aspect
+
+
 def classify_heuristic(path: str | Path) -> list[str]:
     """Return coarse tags based on image stats; ``[]`` for an image Pillow cannot read."""
     try:
-        with Image.open(path) as im:
-            small = im.convert("RGB").resize((64, 64), Image.Resampling.BILINEAR)
-            arr = np.asarray(small, dtype=np.float32) / 255.0
+        arr, w_over_h = _shown_sample(path)
     except IMAGE_READ_ERRORS:
         return []
 
@@ -62,7 +85,6 @@ def classify_heuristic(path: str | Path) -> list[str]:
     else:
         tags.append("graphic")
 
-    w_over_h = arr.shape[1] / max(arr.shape[0], 1)
     if w_over_h > 1.25:
         tags.append("landscape")
     elif w_over_h < 0.8:
@@ -70,25 +92,45 @@ def classify_heuristic(path: str | Path) -> list[str]:
     return tags
 
 
-def try_clip_labels(_path: str | Path, _prompts: list[str] | None = None) -> list[str]:
-    """Attempt zero-shot labelling via a local CLIP ONNX model.
+def try_clip_labels(path: str | Path, prompts: list[str] | None = None) -> list[str]:
+    """Zero-shot labels for *path* from the ONNX CLIP model, best first.
 
-    Returns an empty list if onnxruntime or the model file isn't present —
-    callers fall back to ``classify_heuristic``.
+    Scores the image against "a photo of a/an <label>" for each of *prompts*
+    (``_DEFAULT_PROMPTS`` by default). Returns ``[]`` — so callers fall back to
+    ``classify_heuristic`` — when onnxruntime is missing, the model has not been
+    downloaded yet (auto-tagging never starts a download), or the image can't be
+    read.
     """
+    from Imervue.library import clip_onnx
+    if not clip_onnx.model_downloaded():
+        return []
+    labels = list(prompts or _DEFAULT_PROMPTS)
+    embedder = clip_onnx.default_embedder()
     try:
-        import onnxruntime  # noqa: F401
-    except ImportError:
+        image = embedder.embed_image(path)
+        if image is None:
+            return []
+        label_vectors = _label_vectors(embedder, tuple(labels))
+    except OSError as exc:   # the cached model files went missing or are unreadable
+        logger.warning("CLIP auto-tag unavailable: %s", exc)
         return []
-    from Imervue.system.app_paths import app_dir
-    model_path = app_dir() / "models" / "clip_vit_b32.onnx"
-    if not model_path.is_file():
-        return []
-    # We keep the actual inference out of here to avoid hard-coding a tokenizer.
-    # Plugins can replace this function by monkey-patching if they ship a full
-    # CLIP pipeline; base install stays dependency-free.
-    logger.debug("CLIP model present but inference hook not wired (%s)", model_path)
-    return []
+    return clip_onnx.rank_labels(image, label_vectors, labels)
+
+
+def _prompt(label: str) -> str:
+    article = "an" if label[:1].lower() in "aeiou" else "a"
+    return f"a photo of {article} {label}"
+
+
+_label_cache: dict[tuple[str, tuple[str, ...]], np.ndarray] = {}
+
+
+def _label_vectors(embedder, labels: tuple[str, ...]) -> np.ndarray:
+    """The labels' prompt embeddings, computed once per model and label set."""
+    key = (embedder.model_id, labels)
+    if key not in _label_cache:
+        _label_cache[key] = embedder.embed_texts([_prompt(label) for label in labels])
+    return _label_cache[key]
 
 
 def auto_tag_image(path: str) -> list[str]:

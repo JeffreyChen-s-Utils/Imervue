@@ -5,10 +5,13 @@ follows an input parameter, gravity + damping + per-particle springs
 pull the chain back toward its rest pose, and the tip's lateral
 displacement drives an output parameter.
 
-Pure-numpy / Qt-free. The canvas drives ``PhysicsEngine.step(dt)`` on
-its frame timer. Implementation choice: position-Verlet integration
-(stores current + previous positions) — stable for chains of <= 16
-particles at 60 FPS without iterative constraint solves.
+Qt-free. The canvas drives ``PhysicsEngine.step(dt)`` on its frame
+timer. Implementation choice: position-Verlet integration (stores current
++ previous positions) — stable for chains of <= 16 particles at 60 FPS
+without iterative constraint solves. The chains are short (2-4 particles
+in the bundled rigs, 48-63 chains a rig), so the integrator works on plain
+floats: per-particle numpy arithmetic on 2-element arrays cost about six
+times as much for the same results.
 """
 from __future__ import annotations
 
@@ -27,8 +30,8 @@ OUTPUT_GAIN: float = 1.0 / REST_LENGTH
 
 @dataclass
 class _ChainState:
-    positions: np.ndarray   # (N, 2) float64 — current
-    previous: np.ndarray   # (N, 2) float64 — for verlet velocity
+    positions: list[list[float]]   # N x [x, y] — current
+    previous: list[list[float]]    # N x [x, y] — for verlet velocity
     rig: PhysicsRig
 
 
@@ -59,14 +62,13 @@ class PhysicsEngine:
         state = self._chains.get(rig_id)
         if state is None:
             return np.empty((0, 2), dtype=np.float64)
-        return state.positions.copy()
+        return np.array(state.positions, dtype=np.float64)
 
     def reset(self) -> None:
         """Snap every chain back to its rest pose."""
         for state in self._chains.values():
-            rest = _rest_positions(state.rig)
-            state.positions = rest.copy()
-            state.previous = rest.copy()
+            state.positions = _rest_positions(state.rig)
+            state.previous = _rest_positions(state.rig)
 
     def step(self, dt: float, parameter_values: dict[str, float]) -> dict[str, float]:
         """Advance every chain by ``dt`` seconds. Returns a partial
@@ -87,34 +89,34 @@ class PhysicsEngine:
         rig = state.rig
         positions = state.positions
         previous = state.previous
-        n = positions.shape[0]
+        n = len(positions)
         if n == 0:
             return 0.0
-        rest = _rest_positions(rig)
         # The anchor (particle 0) is pinned to a position that moves
-        # laterally with the input parameter.
-        positions[0] = rest[0] + np.array(
-            [anchor_input * REST_LENGTH, 0.0], dtype=np.float64,
-        )
-        previous[0] = positions[0]
+        # laterally with the input parameter; the rest pose hangs every
+        # particle REST_LENGTH below the one before it.
+        positions[0] = [anchor_input * REST_LENGTH, 0.0]
+        previous[0] = list(positions[0])
         # Integrate every non-anchor particle.
-        gravity = np.asarray(rig.gravity, dtype=np.float64)
+        gx, gy = float(rig.gravity[0]), float(rig.gravity[1])
+        dt2 = dt * dt
         for i in range(1, n):
-            particle = rig.chain[i]
-            damping = max(0.0, min(0.999, float(particle.damping)))
-            velocity = (positions[i] - previous[i]) * (1.0 - damping)
-            previous[i] = positions[i].copy()
-            positions[i] = positions[i] + velocity + gravity * (dt * dt)
+            keep = 1.0 - max(0.0, min(0.999, float(rig.chain[i].damping)))
+            x, y = positions[i]
+            vx = (x - previous[i][0]) * keep
+            vy = (y - previous[i][1]) * keep
+            previous[i] = [x, y]
+            positions[i] = [x + vx + gx * dt2, y + vy + gy * dt2]
         # Springs pull each particle back toward its rest offset from
         # its parent. Single iteration is plenty at 60 FPS for short chains.
         for i in range(1, n):
-            spring = max(0.0, float(rig.chain[i].spring))
-            target = positions[i - 1] + (rest[i] - rest[i - 1])
-            delta = target - positions[i]
-            positions[i] = positions[i] + delta * min(1.0, spring * dt)
+            pull = min(1.0, max(0.0, float(rig.chain[i].spring)) * dt)
+            target_x = positions[i - 1][0]
+            target_y = positions[i - 1][1] - REST_LENGTH
+            x, y = positions[i]
+            positions[i] = [x + (target_x - x) * pull, y + (target_y - y) * pull]
         # Tip lateral displacement → output parameter
-        tip_offset_x = positions[-1, 0] - rest[-1, 0]
-        return float(np.clip(tip_offset_x * OUTPUT_GAIN, -1.0, 1.0))
+        return float(min(1.0, max(-1.0, positions[-1][0] * OUTPUT_GAIN)))
 
 
 # ---------------------------------------------------------------------------
@@ -123,19 +125,14 @@ class PhysicsEngine:
 
 
 def _build_initial_state(rig: PhysicsRig) -> _ChainState:
-    rest = _rest_positions(rig)
     return _ChainState(
-        positions=rest.copy(),
-        previous=rest.copy(),
+        positions=_rest_positions(rig),
+        previous=_rest_positions(rig),
         rig=rig,
     )
 
 
-def _rest_positions(rig: PhysicsRig) -> np.ndarray:
+def _rest_positions(rig: PhysicsRig) -> list[list[float]]:
     """Particles hang straight down from the anchor at REST_LENGTH
     intervals — the canonical rest pose for hair / ribbon chains."""
-    n = max(1, len(rig.chain))
-    out = np.zeros((n, 2), dtype=np.float64)
-    for i in range(n):
-        out[i] = (0.0, -float(i) * REST_LENGTH)
-    return out
+    return [[0.0, -float(i) * REST_LENGTH] for i in range(max(1, len(rig.chain)))]

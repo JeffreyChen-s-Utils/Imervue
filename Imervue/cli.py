@@ -24,16 +24,26 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.orientation import QUARTER_TURN_CODES, exif_orientation
+from Imervue import cli_tools
+from Imervue.image.dimensions import probe_image
+from Imervue.image.formats import RASTER_EXTENSIONS, RAW_EXTENSIONS
+from Imervue.image.high_bit_depth import to_eight_bit
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import load_shown_rgba, open_shown
+from Imervue.system.image_listing import list_images
 
-_IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
-    ".heic", ".heif", ".avif", ".jxl",
-})
+# The outputs are written without EXIF or ICC, so every input is decoded as the
+# viewer shows it (shown.open_shown): sRGB, turned upright, a camera RAW
+# developed. Otherwise a portrait phone photo comes out sideways, a Display P3
+# one washed out and a NEF as its 160x120 embedded preview.
+
 _FORMAT_EXT = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+# ``convert`` also writes what the MCP ``convert_format`` tool does.
+_CONVERT_EXT = {**_FORMAT_EXT, "TIFF": ".tif", "BMP": ".bmp", "AVIF": ".avif", "HEIC": ".heic",
+                "JXL": ".jxl"}
+_RGB_MAX = 255
+_WHITE = (_RGB_MAX, _RGB_MAX, _RGB_MAX)
+_CORNERS = ("top-left", "top-right", "bottom-left", "bottom-right", "center")
 _BYTES_PER_KB = 1024.0
 _CLI_VERSION = "1.0"
 _NO_INPUTS = "no input images found"
@@ -41,44 +51,36 @@ _EMIT_JSON = "emit JSON"
 
 
 def iter_image_paths(inputs: Iterable[str], *, recursive: bool) -> list[Path]:
-    """Expand *inputs* (files or directories) into a sorted list of image paths."""
+    """Expand *inputs* (files or directories) into a sorted list of image paths.
+
+    A directory contributes its images without hidden files or, recursing,
+    hidden folders (``list_images``); a file named outright is always kept.
+    """
     found: list[Path] = []
     for item in inputs:
         path = Path(item)
         if path.is_dir():
-            walker = path.rglob("*") if recursive else path.glob("*")
-            found.extend(p for p in walker
-                         if p.is_file() and p.suffix.lower() in _IMAGE_EXTS)
+            found.extend(Path(p) for p in list_images(str(path), RASTER_EXTENSIONS,
+                                                      recursive=recursive))
         elif path.is_file():
             found.append(path)
     return sorted(set(found))
 
 
 def output_path(src: Path, out_dir: str | None, suffix: str, ext: str | None) -> Path:
-    """Resolve the destination path for *src* given --out / suffix / new extension."""
-    new_ext = ext if ext is not None else src.suffix
+    """Resolve the destination path for *src* given --out / suffix / new extension.
+
+    ``ext=None`` keeps the source's extension, except that a developed camera
+    RAW is written as PNG: Pillow can't write RAW, and the bytes must match the name.
+    """
+    new_ext = ext if ext is not None else _kept_extension(src)
     if out_dir:
         return Path(out_dir) / f"{src.stem}{new_ext}"
     return src.with_name(f"{src.stem}{suffix}{new_ext}")
 
 
-def _open_shown(path: Path) -> Image.Image:
-    """Decode *path* as the viewer shows it: sRGB, turned upright by its EXIF orientation.
-
-    The outputs are written without EXIF or ICC, so both have to be baked into
-    the pixels: otherwise a portrait phone photo comes out sideways and a
-    Display P3 one washed out. Registers the HEIC / AVIF / JPEG XL opener the
-    extension needs. The file is closed on return; raises ``IMAGE_READ_ERRORS``.
-    """
-    ensure_pillow_opener(path.suffix.lower())
-    with Image.open(path) as img:
-        shown = as_shown(img)
-        shown.load()
-    return shown
-
-
-def _load_rgba(path: Path) -> np.ndarray:
-    return np.array(_open_shown(path).convert("RGBA"))
+def _kept_extension(src: Path) -> str:
+    return ".png" if src.suffix.lower() in RAW_EXTENSIONS else src.suffix
 
 
 # --- operations -------------------------------------------------------------
@@ -89,61 +91,78 @@ def _resize_to(img: Image.Image, max_edge: int) -> Image.Image:
     return resized
 
 
+def _rgb(values: Sequence[int]) -> tuple[int, int, int]:
+    """An ``R G B`` option clamped to 0..255."""
+    return tuple(max(0, min(_RGB_MAX, int(v))) for v in values)
+
+
 def op_convert(src: Path, target: Path, args) -> None:
     fmt = args.format.upper()
-    img = _open_shown(src)
+    if fmt not in _FORMAT_EXT:   # TIFF, BMP, AVIF, HEIC, JXL: the MCP tool's writer
+        from Imervue.mcp_server.tools_read import convert_format
+        convert_format(str(src), str(target), quality=args.quality)
+        return
+    img = to_eight_bit(open_shown(src))   # 16-bit / float grey scaled, not clipped white
     rgb = img.convert("RGB") if fmt == "JPEG" else img.convert("RGBA")
     rgb.save(target, format=fmt, quality=args.quality)
 
 
 def op_resize(src: Path, target: Path, args) -> None:
-    _resize_to(_open_shown(src), args.max).save(target)
+    if args.width is not None or args.height is not None:
+        from Imervue.mcp_server.tools_edit import resize_image   # exact, or one edge kept in aspect
+        resize_image(str(src), str(target), width=args.width, height=args.height)
+        return
+    _resize_to(open_shown(src), args.max).save(target)
 
 
 def op_thumbnail(src: Path, target: Path, args) -> None:
-    _resize_to(_open_shown(src).convert("RGBA"), args.size).save(target)
+    _resize_to(to_eight_bit(open_shown(src)).convert("RGBA"), args.size).save(target)
 
 
 def op_watermark(src: Path, target: Path, args) -> None:
     from Imervue.image.watermark import WatermarkOptions, apply_watermark
-    apply_watermark(_open_shown(src).convert("RGBA"), WatermarkOptions(
-        text=args.text, corner=args.corner, opacity=args.opacity)).save(target)
+    apply_watermark(to_eight_bit(open_shown(src)).convert("RGBA"), WatermarkOptions(
+        text=args.text, corner=args.corner, opacity=args.opacity,
+        font_fraction=args.font_fraction, color=_rgb(args.color),
+        shadow=args.shadow)).save(target)
 
 
 def op_optimize(src: Path, target: Path, args) -> None:
     from Imervue.image.optimize import encode_to_budget
-    data, _quality = encode_to_budget(_load_rgba(src), args.max_kb, args.format.upper())
+    data, _quality = encode_to_budget(load_shown_rgba(src), args.max_kb, args.format.upper())
     target.write_bytes(data)
 
 
 def op_dehaze(src: Path, target: Path, args) -> None:
     from Imervue.image.dehaze import dehaze
-    Image.fromarray(dehaze(_load_rgba(src), args.strength), mode="RGBA").save(target)
+    Image.fromarray(dehaze(load_shown_rgba(src), args.strength), mode="RGBA").save(target)
 
 
 def op_clahe(src: Path, target: Path, args) -> None:
     from Imervue.image.clahe import apply_clahe
-    Image.fromarray(apply_clahe(_load_rgba(src), args.clip, args.tiles), mode="RGBA").save(target)
+    clahe = apply_clahe(load_shown_rgba(src), args.clip, args.tiles)
+    Image.fromarray(clahe, mode="RGBA").save(target)
 
 
 def op_dither(src: Path, target: Path, args) -> None:
     from Imervue.image.dither import ordered_dither
-    Image.fromarray(ordered_dither(_load_rgba(src), args.levels), mode="RGBA").save(target)
+    Image.fromarray(ordered_dither(load_shown_rgba(src), args.levels), mode="RGBA").save(target)
 
 
 def op_distort(src: Path, target: Path, args) -> None:
     from Imervue.image.distort import distort
-    Image.fromarray(distort(_load_rgba(src), args.mode, args.strength), mode="RGBA").save(target)
+    distorted = distort(load_shown_rgba(src), args.mode, args.strength)
+    Image.fromarray(distorted, mode="RGBA").save(target)
 
 
 def op_autoorient(src: Path, target: Path, _args) -> None:
-    Image.fromarray(_load_rgba(src), mode="RGBA").save(target)
+    Image.fromarray(load_shown_rgba(src), mode="RGBA").save(target)
 
 
 def op_strip(src: Path, target: Path, _args) -> None:
     # Re-save without forwarding exif/icc/xmp — Pillow omits metadata by default.
     # The orientation and colour profile go with them, so bake both in first.
-    _open_shown(src).save(target)
+    open_shown(src).save(target)
 
 
 # --- pipeline (chain several operations from a JSON file) -------------------
@@ -225,8 +244,8 @@ def validate_pipeline(steps: list) -> list[str]:
     if len(steps) > _MAX_PIPELINE_STEPS:
         errors.append(f"too many steps ({len(steps)} > {_MAX_PIPELINE_STEPS})")
     for i, step in enumerate(steps):
-        if not isinstance(step, dict) or "op" not in step:
-            errors.append(f"step {i}: each step must be an object with an 'op'")
+        if not isinstance(step, dict) or not isinstance(step.get("op"), str):
+            errors.append(f"step {i}: each step must be an object with an 'op' name")
         elif step["op"] not in _PIPELINE_OPS:
             errors.append(f"step {i}: unknown op {step['op']!r}; "
                           f"known: {sorted(_PIPELINE_OPS)}")
@@ -234,36 +253,33 @@ def validate_pipeline(steps: list) -> list[str]:
 
 
 def op_pipeline(src: Path, target: Path, args) -> None:
-    arr = _load_rgba(src)
-    for step in args.pipeline_steps:
-        arr = _PIPELINE_OPS[step["op"]](arr, step)
+    arr = load_shown_rgba(src)
+    for index, step in enumerate(args.pipeline_steps):
+        try:
+            arr = _PIPELINE_OPS[step["op"]](arr, step)
+        except TypeError as exc:   # a parameter of the wrong type, e.g. null: this image's error
+            raise ValueError(f"pipeline step {index} ({step['op']}): {exc}") from exc
     Image.fromarray(arr, mode="RGBA").save(target)
 
 
 def op_info(src: Path, _args) -> dict:
-    ensure_pillow_opener(src.suffix.lower())
-    with Image.open(src) as img:
-        width, height = img.size
-        if exif_orientation(img) in QUARTER_TURN_CODES:   # report the upright size
-            width, height = height, width
-        info = {
-            "path": str(src), "format": img.format, "mode": img.mode,
-            "width": width, "height": height,
-        }
-    info["size_kb"] = round(src.stat().st_size / _BYTES_PER_KB, 1)
-    return info
+    fmt, mode, width, height = probe_image(src)   # the upright size; libraw's for a RAW
+    return {
+        "path": str(src), "format": fmt, "mode": mode, "width": width, "height": height,
+        "size_kb": round(src.stat().st_size / _BYTES_PER_KB, 1),
+    }
 
 
 def op_stats(src: Path, _args) -> dict:
     from Imervue.image.quality_metrics import quality_metrics
-    metrics = quality_metrics(_load_rgba(src))
+    metrics = quality_metrics(load_shown_rgba(src))
     return {"path": str(src), **{k: round(v, 3) for k, v in metrics.items()}}
 
 
 _REPORTERS = {"info": op_info, "stats": op_stats}
 # command → (operation, output-suffix, extension resolver)
 _WRITE_SPEC = {
-    "convert": (op_convert, "_converted", lambda a: _FORMAT_EXT.get(a.format.upper(), ".png")),
+    "convert": (op_convert, "_converted", lambda a: _CONVERT_EXT[a.format.upper()]),
     "resize": (op_resize, "_resized", lambda _a: None),
     "thumbnail": (op_thumbnail, "_thumb", lambda _a: ".png"),
     "watermark": (op_watermark, "_wm", lambda _a: ".png"),
@@ -281,13 +297,26 @@ def run(args) -> int:
     """Execute the parsed *args*; return a process exit code."""
     if args.command in _MULTI_COMMANDS:
         return _MULTI_COMMANDS[args.command](args)
+    bridged = cli_tools.bridged_commands().get(args.command)
+    if bridged is not None and bridged.kind == cli_tools.SINGLE:
+        return cli_tools.run_single(bridged, args)
     paths = iter_image_paths(args.inputs, recursive=args.recursive)
     if not paths:
         print(_NO_INPUTS, file=sys.stderr)
         return 1
+    if bridged is not None:
+        return _run_bridged(args, paths, bridged)
     if args.command in _REPORTERS:
         return _report(args, paths, _REPORTERS[args.command])
     return _write(args, paths, *_WRITE_SPEC[args.command])
+
+
+def _run_bridged(args, paths: Sequence[Path], bridged: cli_tools.BridgedCommand) -> int:
+    """Run a subcommand generated from an MCP tool over *paths*."""
+    if bridged.kind == cli_tools.REPORTER:
+        return _report(args, paths, cli_tools.reporter(bridged))
+    extension = bridged.extension
+    return _write(args, paths, cli_tools.writer(bridged), bridged.suffix, lambda _a: extension)
 
 
 def _report(args, paths: Sequence[Path], operation) -> int:
@@ -403,11 +432,21 @@ def cmd_collage(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     from Imervue.image.collage import build_collage
-    images = [_load_rgba(p) for p in paths]
+    images, errors = [], 0
+    for path in paths:
+        try:
+            images.append(load_shown_rgba(path))
+        except IMAGE_READ_ERRORS as exc:   # one unreadable file must not end the run
+            print(f"error: {path}: {exc}", file=sys.stderr)
+            errors += 1
+    if not images:
+        return 1
     _ensure_parent(out)
-    Image.fromarray(build_collage(images, args.columns), mode="RGBA").save(out)
-    print(f"{len(paths)} images -> {out}")
-    return 0
+    collage = build_collage(images, args.columns, cell=(args.cell_width, args.cell_height),
+                            gap=args.gap, margin=args.margin, background=_rgb(args.background))
+    Image.fromarray(collage, mode="RGBA").save(out)
+    print(f"{len(images)} images -> {out}")
+    return 1 if errors else 0
 
 
 def cmd_anaglyph(args) -> int:
@@ -423,7 +462,12 @@ def cmd_anaglyph(args) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     from Imervue.image.anaglyph import anaglyph
-    result = anaglyph(_load_rgba(left), _load_rgba(right), args.method)
+    try:
+        pair = load_shown_rgba(left), load_shown_rgba(right)
+    except IMAGE_READ_ERRORS as exc:   # reported like every other subcommand, no traceback
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    result = anaglyph(*pair, args.method)
     _ensure_parent(out)
     Image.fromarray(result, mode="RGBA").save(out)
     print(f"{left} + {right} -> {out}")
@@ -431,7 +475,7 @@ def cmd_anaglyph(args) -> int:
 
 
 def op_preset(src: Path, target: Path, args) -> None:
-    Image.fromarray(args.recipe.apply(_load_rgba(src)), mode="RGBA").save(target)
+    Image.fromarray(args.recipe.apply(load_shown_rgba(src)), mode="RGBA").save(target)
 
 
 def cmd_preset(args) -> int:
@@ -510,17 +554,27 @@ def _add_common(sub: argparse.ArgumentParser) -> None:
 _COMMON = None
 _JSON_FLAG = (("--json",), {"action": "store_true", "help": _EMIT_JSON})
 
+
+def _rgb_option(flag: str, default: tuple[int, int, int], help_text: str) -> tuple:
+    return ((flag,), {"type": int, "nargs": 3, "default": list(default),
+                      "metavar": ("R", "G", "B"), "help": help_text})
+
 # subcommand, help, arguments in order: ``_COMMON`` or ``(flags, add_argument kwargs)``.
 _SUBCOMMANDS: tuple[tuple[str, str, tuple], ...] = (
     ("info", "print image dimensions / format", (_COMMON, _JSON_FLAG)),
     ("stats", "print no-reference quality metrics", (_COMMON, _JSON_FLAG)),
     ("convert", "convert format", (
         _COMMON,
-        (("--format",), {"default": "PNG", "help": "JPEG / PNG / WEBP"}),
+        (("--format",), {"type": str.upper, "choices": list(_CONVERT_EXT), "default": "PNG",
+                         "help": "output format"}),
         (("--quality",), {"type": int, "default": 90, "help": "1-100 for lossy formats"}),
     )),
-    ("resize", "resize to a maximum long edge", (
+    ("resize", "resize to a maximum long edge, or to an exact width / height", (
         _COMMON, (("--max",), {"type": int, "default": 1600, "help": "max long edge in px"}),
+        (("--width",), {"type": int, "default": None,
+                        "help": "exact width in px (with no --height, height keeps the aspect)"}),
+        (("--height",), {"type": int, "default": None,
+                         "help": "exact height in px (with no --width, width keeps the aspect)"}),
     )),
     ("thumbnail", "make thumbnails", (
         _COMMON, (("--size",), {"type": int, "default": 256, "help": "thumbnail box in px"}),
@@ -528,8 +582,14 @@ _SUBCOMMANDS: tuple[tuple[str, str, tuple], ...] = (
     ("watermark", "apply a text watermark", (
         _COMMON,
         (("--text",), {"required": True, "help": "watermark text"}),
-        (("--corner",), {"default": "bottom-right", "help": "placement corner"}),
+        (("--corner",), {"default": "bottom-right", "choices": _CORNERS,
+                         "help": "placement corner"}),
         (("--opacity",), {"type": float, "default": 0.6, "help": "0..1"}),
+        (("--font-fraction",), {"type": float, "default": 0.035, "dest": "font_fraction",
+                                "help": "text height as a fraction of the image, 0.005..0.2"}),
+        _rgb_option("--color", _WHITE, "text colour"),
+        (("--shadow",), {"action": argparse.BooleanOptionalAction, "default": True,
+                         "help": "drop shadow behind the text"}),
     )),
     ("optimize", "encode under a target file size", (
         _COMMON,
@@ -558,6 +618,13 @@ _SUBCOMMANDS: tuple[tuple[str, str, tuple], ...] = (
         (("inputs",), {"nargs": "+", "help": "image files or folders"}),
         (("--recursive",), {"action": "store_true"}),
         (("--columns",), {"type": int, "default": 3, "help": "grid columns"}),
+        (("--cell-width",), {"type": int, "default": 400, "dest": "cell_width",
+                             "help": "cell width in px"}),
+        (("--cell-height",), {"type": int, "default": 400, "dest": "cell_height",
+                              "help": "cell height in px"}),
+        (("--gap",), {"type": int, "default": 12, "help": "gap between cells in px"}),
+        (("--margin",), {"type": int, "default": 20, "help": "outer margin in px"}),
+        _rgb_option("--background", _WHITE, "background colour"),
         (("--out",), {"default": "collage.png", "help": "output image file"}),
     )),
     ("anaglyph", "red-cyan 3D from a stereo pair", (
@@ -572,23 +639,40 @@ _SUBCOMMANDS: tuple[tuple[str, str, tuple], ...] = (
     ("pipeline", "apply an ordered JSON pipeline of ops", (
         (("file",), {"help": "pipeline JSON file ([{op, ...}] or {pipeline: [...]})"}), _COMMON,
     )),
-    ("list-ops", "list available subcommands", (_JSON_FLAG,)),
 )
+_LIST_OPS = ("list-ops", "list available subcommands", (_JSON_FLAG,))
+
+
+def _add_row(subs, name: str, help_text: str, arguments: tuple) -> None:
+    sub = subs.add_parser(name, help=help_text)
+    for argument in arguments:
+        if argument is _COMMON:
+            _add_common(sub)
+        else:
+            flags, kwargs = argument
+            cli_tools.add_argument_as_written(sub, *flags, **kwargs)
+
+
+def _add_bridged(subs, bridged: cli_tools.BridgedCommand) -> None:
+    """A subcommand generated from an MCP tool: shared inputs unless it runs once."""
+    sub = subs.add_parser(bridged.command, help=bridged.help)
+    if bridged.kind != cli_tools.SINGLE:
+        _add_common(sub)
+    cli_tools.add_bridged_arguments(sub, bridged)
+    if bridged.kind == cli_tools.REPORTER:
+        sub.add_argument(*_JSON_FLAG[0], **_JSON_FLAG[1])
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """The ``Imervue.cli`` parser: one subcommand per ``_SUBCOMMANDS`` row, in order."""
+    """The ``Imervue.cli`` parser: the ``_SUBCOMMANDS`` rows, the MCP tools, then ``list-ops``."""
     parser = argparse.ArgumentParser(prog="Imervue.cli", description="Imervue headless image CLI")
     parser.add_argument("--version", action="version", version=f"Imervue CLI {_CLI_VERSION}")
     subs = parser.add_subparsers(dest="command", required=True)
-    for name, help_text, arguments in _SUBCOMMANDS:
-        sub = subs.add_parser(name, help=help_text)
-        for argument in arguments:
-            if argument is _COMMON:
-                _add_common(sub)
-            else:
-                flags, kwargs = argument
-                sub.add_argument(*flags, **kwargs)
+    for row in _SUBCOMMANDS:
+        _add_row(subs, *row)
+    for bridged in cli_tools.bridged_commands().values():
+        _add_bridged(subs, bridged)
+    _add_row(subs, *_LIST_OPS)
     return parser
 
 
@@ -599,4 +683,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    from Imervue.system.pillow_setup import configure_pillow
+    configure_pillow()   # a giant panorama and a file cut short convert too
     sys.exit(main())

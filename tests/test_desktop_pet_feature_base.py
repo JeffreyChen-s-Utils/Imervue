@@ -12,7 +12,6 @@ import pytest
 from Imervue.desktop_pet.pet_feature_base import (
     IntegrationController,
     merge_bindings,
-    sanitize_app_ids,
 )
 
 
@@ -90,25 +89,6 @@ def test_merge_bindings_ignores_non_dict_persisted():
     defaults = {"a": "ctrl+1"}
     assert merge_bindings(defaults, None) == defaults
     assert merge_bindings(defaults, ["not", "a", "dict"]) == defaults
-
-
-# ---------------------------------------------------------------
-# sanitize_app_ids
-# ---------------------------------------------------------------
-
-
-def test_sanitize_app_ids_keeps_only_nonempty_strings():
-    assert sanitize_app_ids(["a", "", "b", 3, None, "c"]) == ("a", "b", "c")
-
-
-def test_sanitize_app_ids_rejects_non_list():
-    assert sanitize_app_ids("a,b,c") == ()
-    assert sanitize_app_ids(None) == ()
-    assert sanitize_app_ids({"a": 1}) == ()
-
-
-def test_sanitize_app_ids_empty_list():
-    assert sanitize_app_ids([]) == ()
 
 
 # ---------------------------------------------------------------

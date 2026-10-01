@@ -187,3 +187,19 @@ def test_dialog_picks_first_track_by_default(qapp):
         assert dlg.widget().track() is motion.tracks[0]
     finally:
         dlg.deleteLater()
+
+
+
+@pytest.mark.parametrize(("ranges", "axis"), [
+    ({"ParamX": (-30.0, 30.0)}, (-30.0, 30.0)),   # a Cubism head angle
+    ({}, (-1.0, 1.0)),                            # a parameter the rig lacks
+    ({"ParamX": (0.5, 0.5)}, (-1.0, 1.0)),        # an empty range
+])
+def test_the_value_axis_spans_the_parameters_range(qapp, ranges, axis):
+    """The axis was fixed at -1..1, so a -30..30 angle track ran off the graph."""
+    dlg = MotionTimelineDialog(_two_segment_motion(), ranges=ranges)
+    try:
+        view = dlg.widget()
+        assert (view._value_min, view._value_max) == pytest.approx(axis)  # noqa: SLF001
+    finally:
+        dlg.deleteLater()

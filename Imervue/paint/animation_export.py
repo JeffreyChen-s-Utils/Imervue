@@ -13,9 +13,12 @@ via Pillow:
 * :func:`export_apng` — animated PNG. Lossless RGBA, larger file
   size than WebP but plays in every browser.
 
-Per-frame durations come from
-:attr:`Imervue.paint.animation.AnimationFrame.duration_ms` so a
-hand-tuned timeline keeps its hold-on-key-poses pacing.
+Each function takes the Paint Animation dock's
+:class:`~Imervue.paint.animation_timeline.AnimationTimeline` (every frame
+shown for ``1000 / fps`` ms; :func:`export_animation` picks the format from
+the file name) or an :class:`~Imervue.paint.animation.Animation`, whose
+frames keep their own :attr:`~Imervue.paint.animation.AnimationFrame.duration_ms`
+so hold-on-key-poses pacing survives.
 """
 from __future__ import annotations
 
@@ -25,10 +28,14 @@ import numpy as np
 from PIL import Image
 
 from Imervue.paint.animation import Animation
+from Imervue.paint.animation_timeline import AnimationTimeline
+
+#: What the export functions accept: the dock's timeline or a document animation.
+AnimationSource = Animation | AnimationTimeline
 
 
 def export_gif(
-    animation: Animation,
+    animation: AnimationSource,
     path: str | Path,
     *,
     loop: bool = True,
@@ -56,7 +63,7 @@ def export_gif(
 
 
 def export_webp(
-    animation: Animation,
+    animation: AnimationSource,
     path: str | Path,
     *,
     loop: bool = True,
@@ -87,7 +94,7 @@ def export_webp(
 
 
 def export_apng(
-    animation: Animation,
+    animation: AnimationSource,
     path: str | Path,
     *,
     loop: bool = True,
@@ -106,21 +113,43 @@ def export_apng(
     )
 
 
+def export_animation(animation: AnimationSource, path: str | Path) -> None:
+    """Write *animation* in the format its file name names.
+
+    ``.gif`` → :func:`export_gif`, ``.webp`` → lossless :func:`export_webp`
+    (lossy WebP smears line art), ``.png`` / ``.apng`` → :func:`export_apng`.
+    Raises ``ValueError`` for any other suffix or an animation with no frames.
+    """
+    suffix = Path(path).suffix.lower()
+    if suffix == ".gif":
+        export_gif(animation, path)
+    elif suffix == ".webp":
+        export_webp(animation, path, lossless=True)
+    elif suffix in (".png", ".apng"):
+        export_apng(animation, path)
+    else:
+        raise ValueError(f"no animation format for {suffix or 'a name without a suffix'!r}")
+
+
 # ---------------------------------------------------------------------------
 # Internals
 # ---------------------------------------------------------------------------
 
 
-def _validate_target(animation: Animation, path: str | Path) -> Path:
-    if animation.frame_count == 0:
+def _validate_target(animation: AnimationSource, path: str | Path) -> Path:
+    if not animation.frames:
         raise ValueError("animation has no frames to export")
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     return target
 
 
-def _render_frames(animation: Animation) -> tuple[list[Image.Image], list[int]]:
+def _render_frames(animation: AnimationSource) -> tuple[list[Image.Image], list[int]]:
     """Composite every frame and convert to PIL Image; collect durations."""
+    if isinstance(animation, AnimationTimeline):
+        duration = max(1, round(1000 / animation.fps))
+        return ([Image.fromarray(frame.image, mode="RGBA") for frame in animation.frames],
+                [duration] * len(animation.frames))
     frames: list[Image.Image] = []
     durations: list[int] = []
     for frame in animation.frames:
@@ -155,11 +184,10 @@ def _to_gif_frame(frame: Image.Image, transparency_threshold: int) -> Image.Imag
     paletted = rgb.convert("P", palette=Image.ADAPTIVE, colors=255)
     transparent_mask = rgba[..., 3] < int(transparency_threshold)
     if transparent_mask.any():
-        # Reserve palette index 255 as the transparent colour.
-        palette_index = paletted.load()
-        if palette_index is not None:
-            ys, xs = np.nonzero(transparent_mask)
-            for y, x in zip(ys, xs, strict=True):
-                palette_index[int(x), int(y)] = 255
+        # Reserve palette index 255 (the adaptive palette uses 0..254) as the
+        # transparent colour; set it in one array pass, not pixel by pixel.
+        indexes = np.array(paletted, dtype=np.uint8)
+        indexes[transparent_mask] = 255
+        paletted.frombytes(indexes.tobytes())
         paletted.info["transparency"] = 255
     return paletted

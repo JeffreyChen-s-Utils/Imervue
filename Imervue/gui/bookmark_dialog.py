@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QMessageBox, QLineEdit, QFileDialog,
 )
 
+from Imervue.gui.dialog_rows import confirm
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.bookmark import (
@@ -338,12 +339,7 @@ class BookmarkDialog(WorkerHostMixin, QDialog):
 
     def _clear_all(self):
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
-            self,
-            lang.get("bookmark_clear_confirm_title", "Clear Bookmarks"),
-            lang.get("bookmark_clear_confirm", "Remove all bookmarks?"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        if confirm(self, lang.get("bookmark_clear_confirm_title", "Clear Bookmarks"),
+                   lang.get("bookmark_clear_confirm", "Remove all bookmarks?")):
             clear_bookmarks()
             self._refresh()

@@ -1,14 +1,12 @@
 """The ONNX paths of the AI plugins must offer to install onnxruntime first.
 
 Picking an ONNX model used to fail with an ImportError toast when
-onnxruntime was missing, with no way to install it. Each dialog's commit now
-routes the ONNX branch through the host's ``ensure_dependencies`` and starts
-the worker from its callback; the non-ONNX branch starts at once. The worker
-start is skipped once the dialog is gone, because the callback can arrive
-after the user closed it.
-
-The routing is tested on a stand-in ``self`` so no dialog (and no model
-discovery or image load) has to be built.
+onnxruntime was missing, with no way to install it. Each dialog names the
+packages its current settings need (``_required_packages``); the shared
+``ToolDialogMixin._commit`` offers to install them before starting the worker,
+and skips the worker when the install answer arrives after the dialog closed
+(``test_tool_dialog.py``). The per-dialog choice is tested on a stand-in
+``self`` so no dialog (and no model discovery or image load) has to be built.
 """
 from __future__ import annotations
 
@@ -17,6 +15,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
+from Imervue.plugin import tool_dialog
 
 ONNX = [("onnxruntime", "onnxruntime")]
 
@@ -59,95 +59,50 @@ def _stand_in(method_data, **extra):
 
 
 @pytest.mark.parametrize(("module_name", "class_name", "onnx_data", "plain_data"), COMMIT_GATED)
-def test_onnx_branch_waits_for_the_dependency_check(ensure, module_name, class_name,
-                                                    onnx_data, plain_data):
-    del plain_data
-    calls, patch = ensure
+def test_only_the_onnx_branch_needs_onnxruntime(module_name, class_name, onnx_data, plain_data):
     module, dialog = _dialog_class(module_name, class_name)
-    patch(module)
-    me = _stand_in(onnx_data)
-    dialog._commit(me)
     assert module.ONNX_PACKAGES == ONNX
-    assert len(calls) == 1
-    parent, packages, on_ready = calls[0]
-    assert parent is me
-    assert packages == ONNX
-    assert on_ready is me._start_worker
-    me._start_worker.assert_not_called()
-
-
-@pytest.mark.parametrize(("module_name", "class_name", "onnx_data", "plain_data"), COMMIT_GATED)
-def test_plain_branch_starts_at_once(ensure, module_name, class_name, onnx_data, plain_data):
-    del onnx_data
-    calls, patch = ensure
-    module, dialog = _dialog_class(module_name, class_name)
-    patch(module)
-    me = _stand_in(plain_data)
-    dialog._commit(me)
-    assert calls == []
-    me._start_worker.assert_called_once_with()
-
-
-@pytest.mark.parametrize(("module_name", "class_name", "onnx_data", "plain_data"), COMMIT_GATED)
-def test_commit_is_ignored_while_a_worker_runs(ensure, module_name, class_name,
-                                              onnx_data, plain_data):
-    del plain_data
-    calls, patch = ensure
-    module, dialog = _dialog_class(module_name, class_name)
-    patch(module)
-    me = _stand_in(onnx_data)
-    me._worker = object()
-    dialog._commit(me)
-    assert calls == []
-    me._start_worker.assert_not_called()
-
-
-@pytest.mark.parametrize(("module_name", "class_name", "onnx_data", "plain_data"), COMMIT_GATED)
-def test_worker_start_skipped_once_dialog_is_closed(module_name, class_name,
-                                                   onnx_data, plain_data):
-    del onnx_data, plain_data
-    _module, dialog = _dialog_class(module_name, class_name)
-    me = SimpleNamespace(_worker=None, isVisible=lambda: False)
-    dialog._start_worker(me)
-    assert me._worker is None
+    onnx = SimpleNamespace(_method=SimpleNamespace(currentData=lambda: onnx_data))
+    plain = SimpleNamespace(_method=SimpleNamespace(currentData=lambda: plain_data))
+    assert dialog._required_packages(onnx) == ONNX
+    assert dialog._required_packages(plain) == []
 
 
 # ---------------------------------------------------------------------------
 # ai_style_transfer: ONNX only
 # ---------------------------------------------------------------------------
 
+def test_style_transfer_always_needs_onnxruntime():
+    _module, dialog = _dialog_class("ai_style_transfer.ai_style_transfer_plugin",
+                                    "StyleTransferDialog")
+    assert dialog._required_packages(SimpleNamespace()) == ONNX
 
-def test_style_transfer_always_checks_onnxruntime(ensure):
+
+def test_style_transfer_with_a_model_offers_onnxruntime(qapp, tmp_path, ensure):
     calls, patch = ensure
-    module, dialog = _dialog_class("ai_style_transfer.ai_style_transfer_plugin",
-                                   "StyleTransferDialog")
-    patch(module)
-    me = SimpleNamespace(_worker=None, _model=SimpleNamespace(currentData=lambda: "/m/s.onnx"),
-                         _start_worker=MagicMock())
-    dialog._commit(me)
-    assert [(p, pk) for p, pk, _cb in calls] == [(me, ONNX)]
-    assert calls[0][2] is me._start_worker
+    patch(tool_dialog)
+    _module, dialog_cls = _dialog_class("ai_style_transfer.ai_style_transfer_plugin",
+                                        "StyleTransferDialog")
+    dialog = dialog_cls(object(), str(tmp_path / "a.png"))
+    try:
+        dialog._model.addItem("model", userData="/m/s.onnx")
+        dialog._model.setCurrentIndex(dialog._model.count() - 1)
+        dialog._commit()
+        assert calls == [(dialog, ONNX, dialog._start_worker_if_open)]
+    finally:
+        dialog.deleteLater()
 
 
 def test_style_transfer_without_model_reports_and_skips_check(ensure):
     calls, patch = ensure
-    module, dialog = _dialog_class("ai_style_transfer.ai_style_transfer_plugin",
-                                   "StyleTransferDialog")
-    patch(module)
+    patch(tool_dialog)
+    _module, dialog = _dialog_class("ai_style_transfer.ai_style_transfer_plugin",
+                                    "StyleTransferDialog")
     me = SimpleNamespace(_worker=None, _model=SimpleNamespace(currentData=lambda: None),
                          _notify_failure=MagicMock())
     dialog._commit(me)
     assert calls == []
-    me._notify_failure.assert_called_once()
-
-
-def test_style_transfer_start_skipped_once_dialog_is_closed():
-    _module, dialog = _dialog_class("ai_style_transfer.ai_style_transfer_plugin",
-                                    "StyleTransferDialog")
-    me = SimpleNamespace(_worker=None, _model=SimpleNamespace(currentData=lambda: "/m/s.onnx"),
-                         isVisible=lambda: False)
-    dialog._start_worker(me)
-    assert me._worker is None
+    me._notify_failure.assert_called_once_with("no model selected")
 
 
 # ---------------------------------------------------------------------------

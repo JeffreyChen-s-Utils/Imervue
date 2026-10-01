@@ -19,6 +19,7 @@ from Imervue.macros.macro_step_validator import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict, schedule_save
+from Imervue.gui.dialog_rows import confirm
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -165,13 +166,8 @@ class MacroManagerDialog(QDialog):
             return
         name = self._current_macro.name
         lang = language_wrapper.language_word_dict
-        reply = QMessageBox.question(
-            self,
-            lang.get("macro_delete_title", "Delete Macro"),
-            lang.get("macro_delete_confirm", "Delete macro '{name}'?").format(name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        question = lang.get("macro_delete_confirm", "Delete macro '{name}'?").format(name=name)
+        if not confirm(self, lang.get("macro_delete_title", "Delete Macro"), question):
             return
         manager.delete_macro(name)
         self._current_macro = None

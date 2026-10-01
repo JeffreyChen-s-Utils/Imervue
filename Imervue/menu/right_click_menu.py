@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import QMenu, QApplication, QWidgetAction
 
 from Imervue.gpu_image_view.actions.batch_ops import (
@@ -33,7 +35,7 @@ from Imervue.gpu_image_view.actions.select import (
 )
 from Imervue.image.info import get_image_info_at_pos, show_image_info_dialog
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_manager import reveal_in_file_manager
+from Imervue.system.file_manager import reveal_or_warn
 from Imervue.menu.recent_menu import build_recent_menu
 
 if TYPE_CHECKING:
@@ -128,15 +130,7 @@ def _show_in_explorer_action(main_gui: GPUImageView, menu: QMenu):
 
     lang = language_wrapper.language_word_dict
     action = menu.addAction(lang.get("right_click_show_in_explorer", "Show in Explorer"))
-    action.triggered.connect(lambda: _open_in_explorer(path))
-
-
-def _open_in_explorer(path: str):
-    try:
-        reveal_in_file_manager(path)
-    except (OSError, ValueError):   # file manager missing, or it refused the path
-        logging.getLogger("Imervue.right_click_menu").warning(
-            "Could not reveal %s in the file manager", path, exc_info=True)
+    action.triggered.connect(lambda: reveal_or_warn(path))
 
 
 # ===========================
@@ -278,7 +272,6 @@ def _maintenance_action(main_gui: GPUImageView, menu: QMenu):
 
 
 def _library_maintenance(main_gui: GPUImageView) -> None:
-    from PySide6.QtWidgets import QMessageBox
     from Imervue.library import image_index
     from Imervue.library.maintenance import run_maintenance
     folders = image_index.list_library_roots()
@@ -291,12 +284,10 @@ def _library_maintenance(main_gui: GPUImageView) -> None:
     toast = getattr(main_gui.main_window, "toast", None)
     result = run_maintenance(folders)
     if result["missing"]:
-        reply = QMessageBox.question(
-            main_gui, lang.get("maintenance_menu", "Library Maintenance…"),
-            lang.get("maintenance_prune_q",
-                     "Remove {n} missing file(s) from the index?").format(
-                         n=result["missing"]))
-        if reply == QMessageBox.StandardButton.Yes:
+        from Imervue.gui.dialog_rows import confirm
+        question = lang.get("maintenance_prune_q", "Remove {n} missing file(s) from the index?")
+        question = question.format(n=result["missing"])
+        if confirm(main_gui, lang.get("maintenance_menu", "Library Maintenance…"), question):
             run_maintenance(folders, prune=True)
             if toast is not None:
                 toast.success(lang.get("maintenance_pruned",
@@ -318,7 +309,7 @@ def _split_pages_action(main_gui: GPUImageView, menu: QMenu):
 def _split_multipage(main_gui: GPUImageView) -> None:
     from PySide6.QtWidgets import QFileDialog
     from PIL import Image
-    from Imervue.image.multipage import split_multipage
+    from Imervue.image.multipage import page_count, split_multipage
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
     path = _current_image_path(main_gui)
     if not path:
@@ -327,7 +318,7 @@ def _split_multipage(main_gui: GPUImageView) -> None:
     toast = getattr(main_gui.main_window, "toast", None)
     try:
         with Image.open(path) as img:
-            frames = getattr(img, "n_frames", 1)
+            frames = page_count(img)
     except IMAGE_READ_ERRORS:
         frames = 1
     if frames <= 1:
@@ -632,7 +623,9 @@ def _set_wallpaper_action(main_gui: GPUImageView, menu: QMenu):
 
     lang = language_wrapper.language_word_dict
     action = menu.addAction(lang.get("right_click_set_wallpaper", "Set as Wallpaper"))
-    action.triggered.connect(lambda: set_desktop_wallpaper(path))
+    # Off the GUI thread: a RAW or HEIC is decoded into a JPEG copy first.
+    action.triggered.connect(
+        lambda: QThreadPool.globalInstance().start(partial(set_desktop_wallpaper, path)))
 
 
 # ===========================

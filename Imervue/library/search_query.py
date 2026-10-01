@@ -4,8 +4,10 @@ A compact query language maps onto the existing ``smart_album`` rule dict, so a
 typed query reuses the whole filter pipeline (and tag index, ratings, colours,
 place lookup) with no new evaluation code:
 
-    kw:beach tag:trip rating:>=4 color:red type:video name:sunset place:"Paris"
-    fav:true cull:pick ext:png
+    kw:beach tag:trip rating:>=4 color:red type:video name:sunset place:Paris
+    fav:true cull:pick ext:png place:"Rio de Janeiro"
+
+A value in double quotes may hold spaces; the quotes are dropped.
 
 Pure: ``parse_query`` turns a string into a rules dict; tests round-trip query →
 rules. The dialog just feeds the result to ``smart_album.apply_to_paths``.
@@ -17,6 +19,8 @@ import time
 
 from Imervue.image.video_frames import VIDEO_EXTENSIONS
 
+# A run of non-space characters, where a double-quoted stretch may hold spaces.
+_TOKEN = re.compile(r'(?:[^\s"]+|"[^"]*")+')
 _DIGITS = re.compile(r"(\d+)")
 _FLOAT = re.compile(r"(\d+(?:\.\d+)?)")
 _TRUE = {"1", "true", "yes", "y", "on"}
@@ -44,7 +48,7 @@ def parse_query(query: str) -> dict:
         "tags": [], "tags_exclude": [], "colors": [], "exts": [], "free": [],
     }
     rules: dict = {}
-    for token in query.split():
+    for token in (match.replace('"', "") for match in _TOKEN.findall(query)):
         if _is_tag_negation(token):
             acc["tags_exclude"].append(token[1:].partition(":")[2].strip())
             continue

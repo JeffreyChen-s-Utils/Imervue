@@ -22,6 +22,90 @@ def test_sets_nest():
     assert not STILL_IMAGE_EXTENSIONS & VIDEO_EXTENSIONS
 
 
+@pytest.mark.parametrize("ext", [".jpg", ".jpeg", ".jpe", ".jfif", ".jif"])
+def test_every_name_a_jpeg_goes_by_opens(ext):
+    """Chrome and Edge on Windows save downloads as .jfif, which never showed up."""
+    assert ext in formats.JPEG_EXTENSIONS
+    assert ext in STILL_IMAGE_EXTENSIONS
+    assert ext in formats.RASTER_EXTENSIONS
+
+
+def test_a_jfif_decodes_and_is_listed(tmp_path):
+    from PIL import Image
+
+    from Imervue.gpu_image_view.images.image_loader import _scan_images, decode_image_file
+    path = tmp_path / "download.jfif"
+    Image.new("RGB", (6, 4), (200, 30, 30)).save(path, format="JPEG")
+    assert _scan_images(str(tmp_path)) == [str(path)]
+    assert decode_image_file(str(path)).shape == (4, 6, 4)
+
+
+_EXTRA_SAMPLES = [
+    (".ico", "ICO", "RGBA"), (".tga", "TGA", "RGB"), (".dds", "DDS", "RGBA"), (".qoi", "QOI", "RGB"),
+    (".jp2", "JPEG2000", "RGB"), (".j2k", "JPEG2000", "RGB"), (".jpf", "JPEG2000", "RGB"),
+    (".jpx", "JPEG2000", "RGB"), (".ppm", "PPM", "RGB"), (".pgm", "PPM", "L"), (".pbm", "PPM", "1"),
+    (".pnm", "PPM", "RGB"), (".pcx", "PCX", "RGB"),
+]
+
+
+def test_every_extra_format_has_a_sample():
+    # Pillow writes no PSD: test_a_layered_psd_shows_its_composite writes one with Paint's writer.
+    assert {ext for ext, _fmt, _mode in _EXTRA_SAMPLES} | {".psd"} == formats.PILLOW_EXTRA_EXTENSIONS
+    assert formats.PILLOW_EXTRA_EXTENSIONS <= STILL_IMAGE_EXTENSIONS
+
+
+@pytest.mark.parametrize(("ext", "fmt", "mode"), _EXTRA_SAMPLES)
+def test_pillows_own_extra_formats_open_for_viewing(tmp_path, ext, fmt, mode):
+    """An icon, a texture, a JPEG 2000 scan or a Netpbm frame never showed up."""
+    from PIL import Image, features
+
+    from Imervue.gpu_image_view.images.image_loader import _scan_images, decode_image_file
+    from Imervue.image.in_place_save import in_place_format
+    if fmt == "JPEG2000" and not features.check("jpg_2000"):
+        pytest.skip("this Pillow was built without OpenJPEG")
+    path = tmp_path / f"picture{ext}"
+    Image.new(mode, (32, 32), 1 if mode == "1" else None).save(path, format=fmt)
+    assert _scan_images(str(tmp_path)) == [str(path)]
+    assert decode_image_file(str(path)).shape == (32, 32, 4)
+    assert in_place_format(str(path)) is None   # viewing only: nothing writes it back
+
+
+def test_a_layered_psd_shows_its_composite(tmp_path):
+    """The viewer shows the merged picture a PSD stores, never its layers as frames."""
+    import numpy as np
+
+    from Imervue.gpu_image_view.actions.animation_player import AnimationPlayer
+    from Imervue.gpu_image_view.images.image_loader import _scan_images, decode_image_file
+    from Imervue.image.in_place_save import in_place_format
+    from Imervue.paint.document import PaintDocument
+    from Imervue.paint.psd_io import save_psd
+    doc = PaintDocument()
+    base = np.zeros((40, 60, 4), dtype=np.uint8)
+    base[...] = (200, 100, 50, 255)
+    doc.load_image(base)
+    doc.add_layer(name="Above").image[10:30, 10:30] = (10, 200, 30, 255)
+    path = tmp_path / "layered.psd"
+    save_psd(doc, path)
+    assert _scan_images(str(tmp_path)) == [str(path)]
+    shown = decode_image_file(str(path))
+    assert shown.shape == (40, 60, 4)
+    assert shown[2, 2].tolist() == [200, 100, 50, 255]
+    assert shown[20, 20].tolist() == [10, 200, 30, 255]
+    assert not AnimationPlayer(None, str(path)).load()   # its layers are no animation
+    assert in_place_format(str(path)) is None
+
+
+def test_rotating_an_extra_format_in_place_is_refused(tmp_path):
+    from PIL import Image
+
+    from Imervue.gpu_image_view.actions.lossless_rotate import lossless_rotate
+    path = tmp_path / "texture.tga"
+    Image.new("RGB", (8, 4), (9, 9, 9)).save(path)
+    before = path.read_bytes()
+    assert lossless_rotate(str(path), clockwise=True) is False
+    assert path.read_bytes() == before
+
+
 def test_extensions_are_lowercase_with_a_dot():
     assert all(e.startswith(".") and e == e.lower() for e in VIEWER_EXTENSIONS)
 

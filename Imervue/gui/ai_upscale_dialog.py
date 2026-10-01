@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.system.natural_sort import natural_key
+from Imervue.system.image_listing import list_images
 from Imervue.gui.export_source import upright_image
 from Imervue.image.in_place_save import (
     can_rewrite_in_place, in_place_format, save_edited_copy, save_over_source,
@@ -37,6 +37,7 @@ from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.system.best_effort import best_effort
+from Imervue.image.formats import JPEG_EXTENSIONS
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -122,30 +123,13 @@ def fill_upscale_model_combo(combo: QComboBox, lang: dict) -> None:
 
 
 _IMAGE_EXTS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp",
-})
+    ".png", ".bmp", ".tiff", ".tif", ".webp",
+}) | JPEG_EXTENSIONS
 
 
 def _scan_folder(folder: str, recursive: bool = False) -> list[str]:
-    """Collect image paths from *folder*, sorted by name."""
-    if recursive:
-        result = [
-            os.path.join(root, f)
-            for root, _dirs, files in os.walk(folder)
-            for f in files
-            if Path(f).suffix.lower() in _IMAGE_EXTS
-        ]
-    else:
-        try:
-            entries = list(os.scandir(folder))
-        except OSError:
-            entries = []
-        result = [
-            e.path for e in entries
-            if e.is_file() and Path(e.name).suffix.lower() in _IMAGE_EXTS
-        ]
-    result.sort(key=lambda p: natural_key(os.path.basename(p)))
-    return result
+    """Collect image paths from *folder*, in natural name order."""
+    return list_images(folder, _IMAGE_EXTS, recursive=recursive)
 
 # Tile size for tiled inference (prevents OOM on large images)
 _TILE_SIZE = 512
@@ -310,12 +294,33 @@ class _UpscaleWorker(QThread):
 
     def _run_traditional(self):
         from PIL import Image
-        resample_name = _TRAD_RESAMPLING[self._model_key]
-        resample = getattr(Image.Resampling, resample_name)
+        resample = getattr(Image.Resampling, _TRAD_RESAMPLING[self._model_key])
         scale = self._scale_override or 2
+        self._upscale_each(
+            scale, lambda img: img.resize((img.width * scale, img.height * scale), resample))
+
+    def _run_ai(self):
+        import onnxruntime as ort
+
+        scale = UPSCALE_MODELS[self._model_key]["scale"]
+        total = len(self._paths)
+        self.progress.emit(0, total, "Downloading model...")
+        model_path = _download_model(self._model_key)
+        self.progress.emit(0, total, "Loading model...")
+        session = ort.InferenceSession(
+            model_path, providers=_preferred_providers(ort.get_available_providers()))
+        self._upscale_each(
+            scale, lambda img: _ai_upscale(session, img, scale, self.tile_progress.emit))
+
+    def _upscale_each(self, scale: int, upscale) -> None:
+        """Run *upscale* (an upright picture in, the enlarged one out) over every path.
+
+        Reports progress per picture, stops when interrupted, counts as failed a
+        file an overwrite can't save back whole or whose upscale raises, saves
+        each result and emits the success / failure counts.
+        """
         total = len(self._paths)
         success = failed = 0
-
         for i, src in enumerate(self._paths):
             if self.isInterruptionRequested():
                 break
@@ -324,86 +329,37 @@ class _UpscaleWorker(QThread):
                 failed += 1
                 continue
             try:
-                img = upright_image(src)
-                new_size = (img.width * scale, img.height * scale)
-                out_img = img.resize(new_size, resample)
+                out_img = upscale(upright_image(src))
                 dst = self._output_path(
                     src, self._output_dir, scale, self._overwrite)
                 self._save(src, out_img, dst)
                 success += 1
             except Exception as exc:
                 logger.exception("Upscale failed for %s: %s", src, exc,
-                             exc_info=True)
+                                 exc_info=True)
                 failed += 1
         self.result_ready.emit(success, failed)
 
-    def _run_ai(self):
-        import numpy as np
-        from PIL import Image
-        import onnxruntime as ort
 
-        info = UPSCALE_MODELS[self._model_key]
-        scale = info["scale"]
+def _preferred_providers(available: list[str]) -> list[str]:
+    """onnxruntime providers to ask for: CUDA and DirectML when present, CPU last."""
+    gpu = [p for p in ("CUDAExecutionProvider", "DmlExecutionProvider") if p in available]
+    return [*gpu, "CPUExecutionProvider"]
 
-        # Download + load model
-        self.progress.emit(0, len(self._paths), "Downloading model...")
-        model_path = _download_model(self._model_key)
-        self.progress.emit(0, len(self._paths), "Loading model...")
 
-        providers = ort.get_available_providers()
-        preferred = []
-        if "CUDAExecutionProvider" in providers:
-            preferred.append("CUDAExecutionProvider")
-        if "DmlExecutionProvider" in providers:
-            preferred.append("DmlExecutionProvider")
-        preferred.append("CPUExecutionProvider")
-        session = ort.InferenceSession(model_path, providers=preferred)
-
-        success = failed = 0
-        total = len(self._paths)
-
-        for i, src in enumerate(self._paths):
-            if self.isInterruptionRequested():
-                break
-            name = Path(src).name
-            self.progress.emit(i, total, name)
-            if self._skip_unwritable(src):
-                failed += 1
-                continue
-            try:
-                img = upright_image(src)
-                if img.mode not in ("RGB", "RGBA"):
-                    img = img.convert("RGB")
-
-                has_alpha = img.mode == "RGBA"
-                if has_alpha:
-                    alpha = img.split()[-1]
-                    rgb = img.convert("RGB")
-                else:
-                    rgb = img
-                    alpha = None
-
-                arr = np.array(rgb)
-                out_arr = _upscale_image(
-                    session, arr, scale,
-                    progress_cb=self.tile_progress.emit,
-                )
-                out_img = Image.fromarray(out_arr)
-
-                if alpha is not None:
-                    alpha_up = alpha.resize(out_img.size, Image.Resampling.LANCZOS)
-                    out_img.putalpha(alpha_up)
-
-                dst = self._output_path(
-                    src, self._output_dir, scale, self._overwrite)
-                self._save(src, out_img, dst)
-                success += 1
-            except Exception as exc:
-                logger.exception("Upscale failed for %s: %s", src, exc,
-                             exc_info=True)
-                failed += 1
-
-        self.result_ready.emit(success, failed)
+def _ai_upscale(session, img, scale: int, progress_cb):
+    """Enlarge *img* with the ONNX *session*; an alpha channel is resized alongside."""
+    import numpy as np
+    from PIL import Image
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+    alpha = img.split()[-1] if img.mode == "RGBA" else None
+    rgb = img.convert("RGB") if alpha is not None else img
+    out_img = Image.fromarray(
+        _upscale_image(session, np.array(rgb), scale, progress_cb=progress_cb))
+    if alpha is not None:
+        out_img.putalpha(alpha.resize(out_img.size, Image.Resampling.LANCZOS))
+    return out_img
 
 
 # ---------------------------------------------------------------------------

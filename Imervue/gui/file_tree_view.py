@@ -23,10 +23,9 @@ if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_manager import reveal_in_file_manager
+from Imervue.system.file_manager import reveal_or_warn
 from Imervue.system.file_transfer import carry_along, carry_sidecars, is_same_file
 import contextlib
-import logging
 
 
 def _next_duplicate_name(source: Path) -> Path:
@@ -96,9 +95,6 @@ def _dedupe_paths(paths: Iterable[str]) -> list[str]:
             seen.add(path)
             out.append(path)
     return out
-
-
-_logger = logging.getLogger("Imervue.file_tree")
 
 
 class _FileTreeView(QTreeView):
@@ -227,11 +223,18 @@ class _FileTreeView(QTreeView):
         if path:
             self._rename_path(path)
 
+    def refresh(self) -> None:
+        """Re-read the shown folders from disk; the main window calls it (``_refresh_tree``)."""
+        self._refresh_tree()
+
     def _refresh_tree(self) -> None:
         """Force QFileSystemModel to re-scan the current root.
 
-        Useful when external tools have changed the folder contents and
-        Qt's native watcher hasn't picked it up yet.
+        The model does not watch the folders it lists (``DontWatchForChanges``:
+        a change-notification handle on a folder stops Windows from renaming or
+        moving the folders above it), so changes made outside the tree show
+        after this runs: on F5 / Refresh, when Imervue comes back to the front,
+        and when the open folder changes.
         """
         model: QFileSystemModel = self.model()
         root = self.rootIndex()
@@ -293,7 +296,7 @@ class _FileTreeView(QTreeView):
         action_explorer = menu.addAction(
             lang.get("tree_open_in_explorer", "Open in Explorer")
         )
-        action_explorer.triggered.connect(lambda: self._open_in_explorer(paths[0]))
+        action_explorer.triggered.connect(lambda: reveal_or_warn(paths[0]))
 
         action_copy = menu.addAction(lang.get("tree_copy_paths", "Copy Paths"))
         action_copy.triggered.connect(
@@ -322,7 +325,7 @@ class _FileTreeView(QTreeView):
         action_explorer = menu.addAction(
             lang.get("tree_open_in_explorer", "Open in Explorer")
         )
-        action_explorer.triggered.connect(lambda: self._open_in_explorer(path))
+        action_explorer.triggered.connect(lambda: reveal_or_warn(path))
 
         # Open containing folder
         if Path(path).is_file():
@@ -330,7 +333,7 @@ class _FileTreeView(QTreeView):
                 lang.get("tree_open_folder", "Open Containing Folder")
             )
             action_folder.triggered.connect(
-                lambda: self._open_in_explorer(str(Path(path).parent), select=False)
+                lambda: reveal_or_warn(str(Path(path).parent), select=False)
             )
 
         # Open with system default application — useful when the user
@@ -618,13 +621,6 @@ class _FileTreeView(QTreeView):
                 ),
             )
 
-    @staticmethod
-    def _open_in_explorer(path: str, select: bool = True):
-        try:
-            reveal_in_file_manager(path, select=select)
-        except (OSError, ValueError):   # file manager missing, or it refused the path
-            _logger.warning("Could not reveal %s in the file manager", path, exc_info=True)
-
     def _open_with_default_app(self, path: str) -> None:
         """Open ``path`` with the OS's default application via Qt's
         QDesktopServices, which is more portable than rolling per-OS
@@ -708,6 +704,7 @@ class _FileTreeView(QTreeView):
         for _idx, path in removed:
             viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, removed[0][0])
+        self._notify_plugins_deleted([path for _idx, path in removed], viewer)
 
     def _trash_in_background(self, request: _TrashRequest) -> None:
         """Queue *request* for the OS-trash worker and pump the queue."""
@@ -825,7 +822,14 @@ class _FileTreeView(QTreeView):
         self._release_tile_textures(viewer, [path])
         viewer.tile_cache.pop(path, None)
         self._refresh_viewer_after_delete(viewer, images, idx)
+        self._notify_plugins_deleted([path], viewer)
         self._notify_deleted(path)
+
+    def _notify_plugins_deleted(self, paths: list[str], viewer) -> None:
+        """Run the plugins' ``on_image_deleted`` for list images this tree soft-deleted."""
+        manager = getattr(self._main_window, "plugin_manager", None)
+        if manager is not None:
+            manager.dispatch_image_deleted(paths, viewer)
 
     @staticmethod
     def _release_tile_textures(viewer, paths: list[str]) -> None:

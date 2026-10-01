@@ -251,6 +251,14 @@ def test_list_images_recursive_walks_subdirs(tmp_path, sample_image):
     assert "nested.png" in found
 
 
+def test_list_images_recursive_skips_hidden_folders(tmp_path, sample_image):
+    trash = tmp_path / ".Trashes" / "501"
+    trash.mkdir(parents=True)
+    (trash / "deleted.png").write_bytes(sample_image.read_bytes())
+    found = [Path(e["path"]).name for e in list_images(str(tmp_path), recursive=True)["images"]]
+    assert found == ["sample.png"]
+
+
 def test_list_images_lists_what_the_viewer_opens(tmp_path, sample_image):
     """AVIF, JPEG XL and CR3 were missing; SVG stays out, the server can't rasterise it."""
     for name in ("shot.avif", "shot.jxl", "IMG_1.CR3", "P1.rw2", "logo.svg"):
@@ -321,6 +329,16 @@ def test_convert_format_writes_jpeg(sample_image, tmp_path):
     with Image.open(dst) as img:
         assert img.format == "JPEG"
         assert img.size == (48, 32)
+
+
+@pytest.mark.parametrize(("name", "pil_format"), [("out.tif", "TIFF"), ("out.tiff", "TIFF")])
+def test_convert_format_writes_tiff_under_either_suffix(sample_image, tmp_path, name, pil_format):
+    """Regression: a ``.tif`` destination raised KeyError('TIF') inside Pillow."""
+    dst = tmp_path / name
+    convert_format(str(sample_image), str(dst))
+    from PIL import Image
+    with Image.open(dst) as img:
+        assert img.format == pil_format
 
 
 def test_convert_format_rgba_to_jpeg_drops_alpha(sample_rgba_image, tmp_path):
@@ -520,11 +538,11 @@ def test_a_camera_raw_is_developed_not_its_preview(tmp_path, monkeypatch):
     """Pillow opens a NEF's small embedded preview; the tools now develop the RAW."""
     from PIL import Image
 
-    from Imervue.image import dimensions, raw_loader
+    from Imervue.image import dimensions, shown
     src = tmp_path / "shot.nef"
     Image.new("RGB", (16, 12)).save(src, format="TIFF")         # the preview Pillow would see
     developed = np.full((300, 450, 3), 90, dtype=np.uint8)
-    monkeypatch.setattr(raw_loader, "develop_raw", lambda _p, thumbnail=False: developed)
+    monkeypatch.setattr(shown, "develop_raw", lambda _p, thumbnail=False: developed)
     monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: (450, 300))
     info = read_image_metadata(str(src))
     assert (info["width"], info["height"], info["format"], info["mode"]) == (450, 300, "NEF", "RGB")
@@ -536,11 +554,11 @@ def test_a_camera_raw_is_developed_not_its_preview(tmp_path, monkeypatch):
 
 def test_a_cr3_is_developed_too(tmp_path, monkeypatch):
     """A CR3 was listed but went to Pillow, which can't open one."""
-    from Imervue.image import dimensions, raw_loader
+    from Imervue.image import dimensions, shown
     src = tmp_path / "IMG_1.CR3"
     src.write_bytes(b"ftypcrx " * 8)
     developed = np.full((20, 30, 3), 90, dtype=np.uint8)
-    monkeypatch.setattr(raw_loader, "develop_raw", lambda _p, thumbnail=False: developed)
+    monkeypatch.setattr(shown, "develop_raw", lambda _p, thumbnail=False: developed)
     monkeypatch.setattr(dimensions, "raw_dimensions", lambda _p: (30, 20))
     info = read_image_metadata(str(src))
     assert (info["width"], info["height"], info["format"]) == (30, 20, "CR3")

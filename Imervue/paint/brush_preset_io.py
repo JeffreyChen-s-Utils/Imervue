@@ -7,7 +7,7 @@ Two file shapes are supported:
   the same dict :meth:`BrushPreset.from_dict` accepts plus a small
   envelope (``format`` / ``version``) so future format upgrades can
   detect old files cleanly.
-* ``.mdp`` — raster paint apps's brush-preset format. The on-disk layout is
+* ``.mdp`` — raster paint apps' brush-preset format. The on-disk layout is
   proprietary and undocumented in detail, but enough fields appear in
   ASCII near the file header to extract the brush name, size, and
   hardness for a useful round-trip. Anything we can't parse falls
@@ -144,7 +144,7 @@ def import_bundle(path: str | Path) -> list[BrushPreset]:
 # ---------------------------------------------------------------------------
 
 
-# raster paint apps's format puts ASCII strings near the header for the brush
+# raster paint apps' format puts ASCII strings near the header for the brush
 # name and tag; numeric parameters are sprinkled between length-
 # prefixed records. We sniff for a handful of tag tokens and pull the
 # associated values out by regex. Anything we can't find is replaced

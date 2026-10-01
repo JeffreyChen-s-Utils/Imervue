@@ -446,33 +446,7 @@ def test_integration_quick_mask_proxy_to_selection_round_trip():
 
 
 # ---------------------------------------------------------------------------
-# 12. Watermark overlay — applying a watermark to a flat image must change
-#     the corner pixels but leave the bulk of the image alone.
-# ---------------------------------------------------------------------------
-
-
-def test_integration_watermark_modifies_only_anchor_corner():
-    """The export-time watermark anchors the overlay at one of nine
-    grid cells. Apply with corner = bottom-right and assert the BR
-    region differs from the base while the TL region matches."""
-    from Imervue.paint.export_utils import apply_watermark
-
-    base = _solid_rgba(64, 64, (200, 200, 200, 255))
-    watermark = _solid_rgba(8, 8, (255, 0, 0, 255))
-    out = apply_watermark(
-        base, watermark, position="bottom-right",
-        opacity=1.0, padding=2,
-    )
-    # Top-left far corner: untouched grey.
-    np.testing.assert_array_equal(out[0:4, 0:4], base[0:4, 0:4])
-    # Bottom-right interior: red watermark must be visible.
-    br = out[-8:-2, -8:-2]
-    assert (br[..., 0] > 200).any()
-    assert (br[..., 1] < 100).any()
-
-
-# ---------------------------------------------------------------------------
-# 13. Tool dispatcher — set the active tool, dispatch a press, the active
+# 12. Tool dispatcher — set the active tool, dispatch a press, the active
 #     layer's pixels change.
 # ---------------------------------------------------------------------------
 
@@ -505,7 +479,7 @@ def test_integration_tool_dispatcher_brush_paints_active_layer():
 
 
 # ---------------------------------------------------------------------------
-# 14. Tag hierarchy — assigning a leaf tag and querying by an ancestor
+# 13. Tag hierarchy — assigning a leaf tag and querying by an ancestor
 #     branch returns the image (descendant rule).
 # ---------------------------------------------------------------------------
 
@@ -544,7 +518,7 @@ def test_integration_hierarchical_tag_descendant_query(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 15. Recipe store per-path persistence — set, save to disk, reload, get
+# 14. Recipe store per-path persistence — set, save to disk, reload, get
 #     the same recipe back. Covers the JSON schema + the file-identity hash.
 # ---------------------------------------------------------------------------
 
@@ -576,7 +550,7 @@ def test_integration_recipe_store_round_trips_per_path(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 16. Phash similarity ordering — three pHashes from three colour gradients
+# 15. Phash similarity ordering — three pHashes from three colour gradients
 #     line up by Hamming distance the way the similar-image search expects.
 # ---------------------------------------------------------------------------
 
@@ -616,7 +590,7 @@ def test_integration_phash_orders_by_visual_similarity(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 17. Brush preset bundle — export a list of presets to a .imervuebrush,
+# 16. Brush preset bundle — export a list of presets to a .imervuebrush,
 #     re-import, every preset survives byte-for-byte.
 # ---------------------------------------------------------------------------
 
@@ -652,7 +626,7 @@ def test_integration_brush_preset_bundle_round_trip(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 18. Color palette .gpl import — the ``.gpl``-format reader returns the colours
+# 17. Color palette .gpl import — the ``.gpl``-format reader returns the colours
 #     in declaration order with the right RGB triples.
 # ---------------------------------------------------------------------------
 
@@ -683,42 +657,7 @@ def test_integration_palette_gimp_import_preserves_color_order(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 19. Action recorder → replay — every recorded action's payload survives
-#     into the replay queue and the recorder reports the same length.
-# ---------------------------------------------------------------------------
-
-
-def test_integration_action_recorder_round_trip_preserves_actions():
-    """Record three actions, persist via the manager, reload the
-    list from the in-memory store. Catches schema regressions in
-    ``Action.to_dict`` / ``ActionRecording.from_dict``."""
-    from Imervue.paint.action_recorder import (
-        Action,
-        ActionRecorder,
-        ActionRecording,
-    )
-
-    rec = ActionRecorder()
-    rec.start("smoke-test")
-    rec.record("brush", {"x": 1, "y": 2})
-    rec.record("erase", {"x": 3, "y": 4})
-    rec.record("brush", {"x": 5, "y": 6})
-    recording = rec.stop()
-    assert recording is not None
-
-    serialised = recording.to_dict()
-    reloaded = ActionRecording.from_dict(serialised)
-    assert reloaded.name == recording.name
-    assert len(reloaded.actions) == 3
-    kinds = [a.kind for a in reloaded.actions]
-    assert kinds == ["brush", "erase", "brush"]
-    assert reloaded.actions[2].params["x"] == 5
-    # Confirm Action's frozen dataclass field is `params`, not `payload`.
-    assert isinstance(Action.from_dict({"kind": "test"}), Action)
-
-
-# ---------------------------------------------------------------------------
-# 20. Pyramid tile generation — a 2048×2048 source produces a multi-level
+# 18. Pyramid tile generation — a 2048×2048 source produces a multi-level
 #     pyramid where each level halves the dimensions until ≤ tile size.
 # ---------------------------------------------------------------------------
 
@@ -749,7 +688,7 @@ def test_integration_pyramid_levels_halve_until_under_tile_size():
 
 
 # ---------------------------------------------------------------------------
-# 21. Compare modes — difference and overlay produce mathematically distinct
+# 19. Compare modes — difference and overlay produce mathematically distinct
 #     outputs when run against the same two source images.
 # ---------------------------------------------------------------------------
 
@@ -783,7 +722,7 @@ def test_integration_compare_modes_yield_distinct_outputs():
 
 
 # ---------------------------------------------------------------------------
-# 22. Web gallery export — three images in a folder produce an index.html
+# 20. Web gallery export — three images in a folder produce an index.html
 #     plus per-image thumbnails on disk.
 # ---------------------------------------------------------------------------
 
@@ -821,7 +760,7 @@ def test_integration_web_gallery_export_writes_index_and_thumbs(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 23. Layer effects pipeline — a layer with a drop-shadow effect produces
+# 21. Layer effects pipeline — a layer with a drop-shadow effect produces
 #     pixels outside the original image bounds in the composite.
 # ---------------------------------------------------------------------------
 

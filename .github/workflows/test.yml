@@ -23,7 +23,9 @@ jobs:
     - name: Install linters
       # ruff matches uv.lock. Keep the pin: a newer ruff can promote rules to
       # stable (0.16 adds PLR0917) and turn an unchanged tree red.
-      run: python -m pip install "ruff==0.15.20" "bandit[toml]==1.9.4"
+      # Wheels only: an sdist would run its setup script on the runner.
+      run: |
+        python -m pip install --only-binary :all: "ruff==0.15.20" "bandit[toml]==1.9.4"
     - name: ruff
       run: python -m ruff check . --output-format=github
     - name: bandit
@@ -41,8 +43,10 @@ jobs:
       with:
         python-version: "3.12"
     - name: Install Sphinx
-      # The same requirements Read the Docs installs (.readthedocs.yaml).
-      run: python -m pip install -r docs/requirements.txt
+      # The pins Read the Docs installs (docs/requirements.txt), named here so the job
+      # installs exact versions; tests/test_workflow_actions.py keeps the two equal.
+      run: |
+        python -m pip install --only-binary :all: "sphinx==9.1.0" "sphinx-rtd-theme==3.1.0"
     - name: Build
       # ``-W`` turns every docutils / Sphinx warning into a failure, so a
       # translation that breaks inline markup next to CJK text is caught here.
@@ -74,7 +78,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
-        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest pytest-cov
+        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio imageio-ffmpeg send2trash watchdog defusedxml pytest pytest-cov wgpu
     - name: Run fast tests
       # ``PYTHONFAULTHANDLER=1`` + ``-X faulthandler`` makes the
       # interpreter print a native traceback on SIGSEGV / fatal
@@ -117,9 +121,62 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
-        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest pytest-cov
+        pip install PySide6 Pillow PyOpenGL numpy rawpy imageio imageio-ffmpeg send2trash watchdog defusedxml pytest pytest-cov wgpu
     - name: Run ${{ matrix.layer }} tests
       env:
         PYTHONFAULTHANDLER: "1"
         PYTHONUNBUFFERED: "1"
       run: python -X faulthandler -u -m pytest tests/ --test-layer=${{ matrix.layer }} -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception
+
+  publish-dev:
+    # The dev channel. A push to dev that passes every job above is built from dev.toml and
+    # uploaded when it is still the tip of dev and ships something the newest Imervue_dev does
+    # not. scripts/dev_release.py picks the version from PyPI, so nothing is committed back.
+    # This workflow also runs for main and for pull requests: the condition keeps both out.
+    name: Publish Imervue_dev to PyPI
+    needs: [lint, docs, fast, extended]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: publish-dev
+      cancel-in-progress: false
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Set up Python 3.12
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: "3.12"
+    - name: Install build tooling
+      # The versions release.yml builds the stable package with
+      # (tests/test_dev_release.py keeps the two in step). Wheels only: an sdist
+      # would run its setup script on the runner.
+      run: |
+        python -m pip install --upgrade --only-binary :all: "pip==26.2.1" "build==1.5.0" "twine==6.2.0"
+    - name: Write pyproject.toml from dev.toml with the next version
+      run: python scripts/dev_release.py prepare
+    - name: Build sdist and wheel
+      # Building does not import the package, so PySide6 is not installed here.
+      run: python -m build
+    - name: Verify distribution metadata
+      run: python -m twine check dist/*
+    - name: Compare with the newest published wheel
+      id: compare
+      run: python scripts/dev_release.py changed dist
+    - name: Check that this commit is still the tip of dev
+      # A run that finishes after a newer push would otherwise publish older
+      # code as the newest release.
+      id: tip
+      run: |
+        tip="$(git ls-remote origin refs/heads/dev | cut -f1)"
+        if [ "$tip" = "$GITHUB_SHA" ]; then current=true; else current=false; fi
+        echo "current=$current" >> "$GITHUB_OUTPUT"
+    - name: Publish to PyPI
+      if: steps.compare.outputs.changed == 'true' && steps.tip.outputs.current == 'true'
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: python -m twine upload --non-interactive dist/*

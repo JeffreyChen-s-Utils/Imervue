@@ -232,3 +232,48 @@ def test_normalised_bone_weights_pass():
     drawable.bone_weights = {"bone1": [1.0, 1.0, 1.0]}
     issues = validate(doc)
     assert "bone_weights_not_normalised" not in _codes(issues)
+
+
+# ---------------------------------------------------------------------------
+# A parameter that moves nothing
+# ---------------------------------------------------------------------------
+
+
+def _no_keys_flagged(doc: PuppetDocument) -> set[str]:
+    return {i.location for i in validate(doc) if i.code == "parameter_has_no_keys"}
+
+
+def test_parameter_without_keys_or_other_use_is_info():
+    doc = _clean_doc()
+    doc.parameters = [Parameter(id="ParamIdle", min=-1.0, max=1.0, default=0.0)]
+    assert _no_keys_flagged(doc) == {"parameter:ParamIdle"}
+
+
+def test_parameter_with_keys_is_not_flagged():
+    doc = _clean_doc()
+    doc.parameters = [Parameter(id="P", min=-1.0, max=1.0, default=0.0,
+                                keys=[ParameterKey(value=0.0, forms={})])]
+    assert not _no_keys_flagged(doc)
+
+
+def test_parameters_that_drive_vertex_morphs_opacity_or_colour_are_not_flagged():
+    doc = _clean_doc()
+    drawable = doc.drawables[0]
+    drawable.vertex_morphs = [{"parameter": "ParamMorph", "delta_at_max": [(0, 1)] * 3}]
+    drawable.opacity_keys = [{"parameter": "ParamFade", "stops": [{"value": 0, "alpha": 0}, {"value": 1, "alpha": 1}]}]
+    drawable.multiply_color_keys = [{"parameter": "ParamTint",
+                                     "stops": [{"value": 0, "color": [1, 1, 1]}, {"value": 1, "color": [1, 0, 0]}]}]
+    doc.parameters = [Parameter(id=name, min=0.0, max=1.0, default=0.0)
+                      for name in ("ParamMorph", "ParamFade", "ParamTint", "ParamUnused")]
+    assert _no_keys_flagged(doc) == {"parameter:ParamUnused"}
+
+
+def test_parameters_in_a_blend_or_feeding_physics_are_not_flagged():
+    from Imervue.puppet.document import BlendKey, ParameterBlend, PhysicsRig
+    doc = _clean_doc()
+    doc.parameters = [Parameter(id=name, min=-1.0, max=1.0, default=0.0)
+                      for name in ("ParamX", "ParamY", "ParamHead", "ParamHair")]
+    doc.parameter_blends = [ParameterBlend(id="xy", parameters=["ParamX", "ParamY"],
+                                           keys=[BlendKey(coords=[0.0, 0.0])])]
+    doc.physics_rigs = [PhysicsRig(id="hair", input_param="ParamHead", output_param="ParamHair")]
+    assert _no_keys_flagged(doc) == {"parameter:ParamHair"}

@@ -1,7 +1,8 @@
 """Watched-folder automation — apply an action to images as they arrive.
 
-Watches a folder with a recursive ``watchdog.Observer`` (the same pattern as
-:mod:`Imervue.system.file_tree_watcher`); when new image files appear, each is
+Watches a folder with a recursive ``watchdog.Observer`` while the user has
+this automation on (on Windows the watched folder's parents cannot be renamed
+meanwhile); when new image files appear, each is
 handed to an injected *processor* callable on the UI thread. The viewer wires a
 processor that assigns a chosen develop preset to the new file, giving a
 hands-off ingest pipeline.
@@ -12,19 +13,20 @@ seen) is pure and unit-tested; only the live Observer wiring needs Qt.
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
 
+from Imervue.image.formats import STILL_IMAGE_EXTENSIONS
+from Imervue.system.image_listing import list_images
+
 logger = logging.getLogger("Imervue.watch_folder")
 
 _DEBOUNCE_MS = 500
-DEFAULT_EXTENSIONS = frozenset({
-    ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp", ".gif",
-    ".heic", ".heif", ".avif", ".jxl",
-})
+# Every still format the viewer opens: camera RAW above all, what a tethered
+# camera drops into the folder.
+DEFAULT_EXTENSIONS: frozenset[str] = STILL_IMAGE_EXTENSIONS
 
 
 def is_image(path: str, extensions: Iterable[str] = DEFAULT_EXTENSIONS) -> bool:
@@ -33,15 +35,12 @@ def is_image(path: str, extensions: Iterable[str] = DEFAULT_EXTENSIONS) -> bool:
 
 
 def scan_images(root: str, extensions: Iterable[str] = DEFAULT_EXTENSIONS) -> set[str]:
-    """Return the set of image file paths directly inside *root*."""
-    exts = set(extensions)
-    try:
-        return {
-            entry.path for entry in os.scandir(root)
-            if entry.is_file() and Path(entry.name).suffix.lower() in exts
-        }
-    except OSError:
-        return set()
+    """Return the set of image file paths directly inside *root*, hidden files left out.
+
+    A macOS ``._`` companion copied in beside each photo is not an image, so
+    it never reaches the watch's actions.
+    """
+    return set(list_images(root, extensions))
 
 
 def select_new(seen: Iterable[str], current: Iterable[str]) -> list[str]:

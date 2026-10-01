@@ -255,8 +255,34 @@ def test_load_rejects_unknown_version(tmp_path):
     })
     out = tmp_path / "future.puppet"
     out.write_bytes(raw)
-    with pytest.raises(PuppetFormatError, match="schema version"):
+    with pytest.raises(PuppetFormatError, match="format v99, newer than the v1"):
         load_puppet(out)
+
+
+@pytest.mark.parametrize("version", [0, "1", None, True, 1.5])
+def test_load_rejects_a_version_that_is_not_v1_or_newer(tmp_path, version):
+    out = tmp_path / "odd.puppet"
+    out.write_bytes(_zip_with_manifest({"version": version, "size": [8, 8], "drawables": [],
+                                        "deformers": [], "parameters": []}))
+    with pytest.raises(PuppetFormatError, match="unsupported puppet schema version"):
+        load_puppet(out)
+
+
+def test_a_saved_puppet_starts_with_its_media_type_and_names_its_schemas(tmp_path):
+    """A .puppet is recognisable by its first bytes, and editors can check its JSON."""
+    from Imervue.puppet.format_schema import MEDIA_TYPE, SCHEMA_URLS
+    doc = _build_full_doc()
+    doc.motions = [Motion(name="idle", duration=1.0, tracks=[])]
+    out = tmp_path / "id.puppet"
+    save_puppet(doc, out)
+    with zipfile.ZipFile(out) as zf:
+        first = zf.infolist()[0]
+        assert (first.filename, first.compress_type) == ("mimetype", zipfile.ZIP_STORED)
+        assert zf.read("mimetype").decode("ascii") == MEDIA_TYPE
+        assert json.loads(zf.read("puppet.json"))["$schema"] == SCHEMA_URLS["puppet"]
+        assert json.loads(zf.read("motions/idle.json"))["$schema"] == SCHEMA_URLS["motion"]
+    assert out.read_bytes()[30:38] == b"mimetype"   # local header name, uncompressed payload next
+    assert load_puppet(out).motions[0].name == "idle"
 
 
 def test_load_rejects_missing_required_top_level_key(tmp_path):

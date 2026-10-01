@@ -16,6 +16,7 @@ from Imervue.paint.canvas import PointerEvent
 from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
 from Imervue.paint.damage import from_rect, union_rects
 from Imervue.paint.gradient import render_gradient
+from Imervue.paint.gradient_editor import render_multistop_gradient
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -36,20 +37,30 @@ class GradientTool:
         if evt.phase == "release" and self._start is not None:
             start = self._start
             self._start = None
-            painted = render_gradient(
-                canvas, start, (evt.x, evt.y),
-                fg=self._state.foreground,
-                bg=self._state.background,
-                kind=self._state.gradient_kind,
-                reverse=self._state.gradient_reverse,
-                repeat=self._state.gradient_repeat,
-                selection=self._selection_provider(),
-            )
-            return painted
+            return self._render(canvas, start, (evt.x, evt.y))
         return False
+
+    def _render(self, canvas: np.ndarray, start, end) -> bool:
+        """Paint the chosen saved multi-stop gradient, else foreground → background."""
+        state = self._state
+        shape = {"kind": state.gradient_kind, "reverse": state.gradient_reverse,
+                 "repeat": state.gradient_repeat, "selection": self._selection_provider()}
+        saved = _saved_gradient(state.gradient_name)
+        if saved is not None:
+            return render_multistop_gradient(canvas, start, end, saved, **shape)
+        return render_gradient(canvas, start, end, fg=state.foreground, bg=state.background,
+                               **shape)
 
     def cancel(self) -> None:
         self._start = None
+
+
+def _saved_gradient(name: str):
+    """The saved multi-stop gradient called *name*, or None (none chosen, or deleted since)."""
+    if not name:
+        return None
+    from Imervue.paint.gradient_editor import load_gradients
+    return next((g for g in load_gradients() if g.name == name), None)
 
 
 class SmudgeTool:

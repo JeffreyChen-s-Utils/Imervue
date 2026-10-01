@@ -81,6 +81,8 @@ def main() -> int:
     from Imervue.system.log_setup import install_exception_logging, setup_logging
     setup_logging()
     install_exception_logging()
+    from Imervue.system.pillow_setup import configure_pillow
+    configure_pillow()   # a 200 MP panorama and a file cut short both open
 
     args = parse_args()
 

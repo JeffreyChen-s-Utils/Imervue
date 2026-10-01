@@ -53,6 +53,11 @@ class GPUImageView(
         QOpenGLWidget):
     """OpenGL image viewer: the thumbnail tile grid and the deep-zoom single-image view."""
 
+    # Set up by view_state_init.init_deep_zoom_state; declared on the class so
+    # the deep-zoom teardown's read-then-clear is visibly of a known attribute.
+    _minimap_tex: int | None = None
+    _minimap_dzi = None
+
     def __init__(self, main_window: ImervueMainWindow):
         super().__init__()
 
@@ -560,9 +565,21 @@ class GPUImageView(
         from Imervue.gpu_image_view.tile_loader import tick_offline_sweep
         tick_offline_sweep(self)
 
-    def _on_offline_scan_finished(self, missing, generation) -> None:
+    def _on_offline_scan_finished(self, missing, generation, rewritten=()) -> None:
         from Imervue.gpu_image_view.tile_loader import on_offline_scan_finished
-        on_offline_scan_finished(self, missing, generation)
+        on_offline_scan_finished(self, missing, generation, rewritten)
+
+    def run_shortcut_action(self, action: str) -> None:
+        """Run a Shortcut Settings action (``"undo"``, ``"delete"``…) as if its key was pressed."""
+        from PySide6.QtCore import Qt
+        self._key_dispatch.dispatch(action, Qt.KeyboardModifier.NoModifier)
+
+    def _reload_rewritten_image(self, path: str) -> None:
+        """Show *path* again, thumbnail and list row too: another program saved over it."""
+        from Imervue.gpu_image_view.tile_loader import refetch_list_rows, refresh_rewritten_tile
+        refresh_rewritten_tile(self, path, self._load_generation)
+        refetch_list_rows(self, (path,))
+        self.reload_current_image_with_recipe(path)
 
     # 保持向後相容（undo_delete 使用）
     def add_thumbnail(self, img_data, path, generation=None):
@@ -729,6 +746,11 @@ class GPUImageView(
         if ev.type() == QEvent.Type.Gesture:
             self._input.handle_gesture_event(ev)
             return True
+        if ev.type() == QEvent.Type.KeyPress:
+            from Imervue.gpu_image_view.key_input_handler import claims_tab
+            if claims_tab(ev):   # QWidget spends Tab / Shift+Tab on focus before keyPressEvent
+                self.keyPressEvent(ev)
+                return True
         return super().event(ev)
 
     # ===========================

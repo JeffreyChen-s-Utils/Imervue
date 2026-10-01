@@ -28,7 +28,7 @@ import numpy as np
 from PIL import Image
 
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
-from Imervue.image.shown import as_shown
+from Imervue.image.shown import as_shown_8bit
 
 logger = logging.getLogger("Imervue.layers")
 
@@ -177,7 +177,7 @@ def _render_image_layer(base: np.ndarray, params: dict) -> np.ndarray | None:
         return None
     try:
         with Image.open(path) as src:   # upright, as the viewer shows it
-            overlay = as_shown(src).convert("RGBA")
+            overlay = as_shown_8bit(src)
     except IMAGE_READ_ERRORS as exc:
         logger.warning("Image layer load failed (%s): %s", path, exc)
         return None

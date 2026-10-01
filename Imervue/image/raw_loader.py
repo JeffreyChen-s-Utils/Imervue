@@ -30,6 +30,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import numpy as np
+
 from Imervue.system.best_effort import best_effort
 
 logger = logging.getLogger("Imervue.image.raw_loader")
@@ -59,6 +61,9 @@ def open_raw_efficient(path: str | Path):
 
 # libraw ``flip`` values that turn the developed image a quarter turn.
 _QUARTER_TURN_FLIPS = frozenset({5, 6})
+# libraw ``flip`` -> ``numpy.rot90`` turns (counter-clockwise) that make an
+# image in sensor orientation upright: 3 upside down, 5 / 6 a quarter turn.
+_FLIP_TURNS = {3: 2, 5: 1, 6: -1}
 
 
 def raw_dimensions(path: str | Path) -> tuple[int, int] | None:
@@ -183,13 +188,31 @@ def _embedded_preview(raw):
     try:
         thumb = raw.extract_thumb()
         if thumb.format == rawpy.ThumbFormat.JPEG:
-            return imageio.v3.imread(thumb.data)
-        if thumb.format == rawpy.ThumbFormat.BITMAP:
-            return thumb.data
-        raise ValueError("No valid embedded preview")
-    except (ValueError, OSError, RuntimeError):
+            preview = imageio.v3.imread(thumb.data)
+        elif thumb.format == rawpy.ThumbFormat.BITMAP:
+            preview = thumb.data
+        else:
+            raise ValueError("No valid embedded preview")
+    # No or an unsupported embedded preview (a LibRawError, which is none of
+    # the others), or one that does not decode (imageio).
+    except (rawpy.LibRawError, ValueError, OSError, RuntimeError):
         return raw.postprocess(
             half_size=True,
             use_camera_wb=True,
             output_bps=8,
         )
+    return upright_preview(preview, raw.sizes.flip)
+
+
+def upright_preview(preview: np.ndarray, flip: int) -> np.ndarray:
+    """Turn a RAW's embedded *preview* upright by libraw's *flip*.
+
+    Cameras store the preview in sensor orientation, as the RAW itself, and
+    libraw's ``postprocess`` turns only the developed image: a portrait shot's
+    preview lay on its side. A preview already portrait for a quarter-turn
+    *flip* was turned by the camera and is returned as is.
+    """
+    turns = _FLIP_TURNS.get(flip, 0)
+    if not turns or (flip in _QUARTER_TURN_FLIPS and preview.shape[0] > preview.shape[1]):
+        return preview
+    return np.ascontiguousarray(np.rot90(preview, turns))

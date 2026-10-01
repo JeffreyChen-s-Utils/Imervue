@@ -42,13 +42,12 @@ class _Base:
 class _Window(_Base):
     """Stand-in for the window: recorders for collaborators, real helper methods."""
 
-    def __init__(self, log, failing, *, watchdog=True):
+    def __init__(self, log, failing):
         self._log = log
         for name in ("_save_current_folder_session", "_main_tabs", "tree", "modify_panel",
-                     "viewer", "_save_window_geometry", "plugin_manager", "deleteLater"):
+                     "viewer", "_save_window_geometry", "plugin_manager", "deleteLater",
+                     "_folder_watcher"):
             setattr(self, name, _Rec(log, name, failing))
-        if watchdog:
-            self._tree_watchdog = _Rec(log, "_tree_watchdog", failing)
         self._on_main_tab_changed = object()
 
     def __getattr__(self, name):
@@ -68,7 +67,7 @@ def _close(window, event):
 
 @pytest.fixture
 def run(monkeypatch):
-    def _run(*, last=True, failing=(), watchdog=True):
+    def _run(*, last=True, failing=()):
         log: list[str] = []
         fail = set(failing)
         for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
@@ -76,7 +75,7 @@ def run(monkeypatch):
             monkeypatch.setattr(mod, name, _Rec(log, name, fail))
         monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: not last)
         monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
-        window = _Window(log, fail, watchdog=watchdog)
+        window = _Window(log, fail)
         _close(window, _Rec(log, "event", fail))
         assert window not in ImervueMainWindow._live_windows  # noqa: SLF001
         return log
@@ -86,7 +85,7 @@ def run(monkeypatch):
 _TEARDOWN = [
     "_save_current_folder_session",
     "_main_tabs.currentChanged.disconnect",
-    "_tree_watchdog.stop",
+    "_folder_watcher.stop",
     "tree.shutdown",
     "modify_panel._debounce.stop",
     "modify_panel.recipe_committed.disconnect",
@@ -111,11 +110,14 @@ def test_last_window_runs_the_app_teardown_and_exits(run):
 
 
 def test_secondary_window_only_closes_itself(run):
-    assert run(last=False) == _TEARDOWN + ["event.accept", "super.closeEvent", "deleteLater"]
+    """It unloads its own plugin instances but runs no app-closing hook and no exit."""
+    assert run(last=False) == _TEARDOWN + [
+        "plugin_manager.unload_all", "event.accept", "super.closeEvent", "deleteLater"]
 
 
-def test_no_watchdog_skips_its_step(run):
-    assert "_tree_watchdog.stop" not in run(watchdog=False)
+def test_a_secondary_window_whose_plugins_fail_to_unload_still_closes(run):
+    assert run(last=False, failing={"plugin_manager.unload_all"}) == _TEARDOWN + [
+        "plugin_manager.unload_all", "event.accept", "super.closeEvent", "deleteLater"]
 
 
 def test_a_failing_step_skips_only_the_rest_of_its_group(run):
@@ -143,3 +145,39 @@ def test_failing_steps_are_logged_with_their_names(run, caplog):
         ("WARNING", "Best-effort step failed: stop the file-tree workers", RuntimeError),
         ("WARNING", "Best-effort step failed: write the user settings", RuntimeError),
     ]
+
+
+
+class _Paint:
+    def __init__(self, log, answer):
+        self._log, self._answer = log, answer
+
+    def confirm_close(self):
+        self._log.append("_paint.confirm_close")
+        return self._answer
+
+
+def test_cancelling_paints_unsaved_prompt_keeps_the_window_open(run, monkeypatch):
+    """Closing Imervue never asked about Paint's unsaved tabs and ended in os._exit."""
+    log: list[str] = []
+    monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
+    window = _Window(log, set())
+    window._paint = _Paint(log, answer=False)  # noqa: SLF001
+    _close(window, _Rec(log, "event", set()))
+    assert log == ["_paint.confirm_close", "event.ignore"]
+
+
+def test_paint_agreeing_lets_the_close_go_on(run, monkeypatch):
+    log: list[str] = []
+    for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
+                 "offer_permanent_delete"):
+        monkeypatch.setattr(mod, name, _Rec(log, name, set()))
+    monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: False)
+    monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
+    window = _Window(log, set())
+    window._paint = _Paint(log, answer=True)  # noqa: SLF001
+    _close(window, _Rec(log, "event", set()))
+    assert log[0] == "_paint.confirm_close"
+    assert log[1:] == _TEARDOWN + [
+        "plugin_manager.dispatch_app_closing", "plugin_manager.unload_all",
+        "event.accept", "super.closeEvent", "os._exit(0)"]
