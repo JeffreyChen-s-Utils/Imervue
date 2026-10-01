@@ -6,4 +6,3 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- **#52** [BLOCKED] `user_guide.md` (around line 649, the Puppet quick start) still opens **File > Examples > March 7th**, a 307-drawable rig that is no longer bundled; another session has the file checked out with uncommitted edits. Next: once it commits, say **File > Examples > Imeru**, the bundled mascot.
