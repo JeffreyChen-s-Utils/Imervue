@@ -914,6 +914,8 @@ physics）记录在仓库的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
      - Motion player 直接停、所有 live driver 取消勾、清空 expressions / pose groups、参数复位
    * - Fit to Window
      - **Tools** 菜单：Canvas 上重新居中 + 缩放 rig
+   * - Repair Rig
+     - **Tools** 菜单：在每个图元中删除损坏和面积为零的三角形，合并位置与 UV 都相同的重复顶点（纹理接缝仍保持分开），移除未被任何三角形使用的顶点（骨骼权重与 vertex morph 会跟随保留下来的顶点），并让每个顶点的骨骼权重总和为 1；状态栏会显示改动了什么
 
 录制自定义动作
 ^^^^^^^^^^^^^^

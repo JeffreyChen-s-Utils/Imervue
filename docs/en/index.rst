@@ -1062,6 +1062,12 @@ menus hold the toolbar's entries as well.
        clear expressions / pose groups, restore parameter defaults
    * - Fit to Window
      - **Tools** menu: re-centre + re-scale the puppet in the canvas
+   * - Repair Rig
+     - **Tools** menu: in every drawable, drop broken and zero-area triangles,
+       merge duplicate vertices that share position and UV (a texture seam
+       stays split), remove vertices no triangle uses — bone weights and
+       vertex morphs follow the vertices that stay — and make each vertex's
+       bone weights sum to 1; the status bar says what changed
 
 Recording your own motions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

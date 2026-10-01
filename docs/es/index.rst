@@ -1071,6 +1071,13 @@ las entradas de la barra de herramientas.
        limpia expresiones / grupos de pose, restaura los valores por defecto de los parámetros
    * - Fit to Window
      - Menú **Tools**: re-centra y re-escala la marioneta en el lienzo
+   * - Repair Rig
+     - Menú **Tools**: en cada drawable, descarta los triángulos rotos y de
+       área nula, fusiona los vértices duplicados que comparten posición y UV
+       (una costura de textura sigue separada), elimina los vértices que ningún
+       triángulo usa — los pesos de hueso y los vertex morphs siguen a los
+       vértices que se conservan — y hace que los pesos de hueso de cada vértice
+       sumen 1; la barra de estado indica qué ha cambiado
 
 Grabar sus propios movimientos
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

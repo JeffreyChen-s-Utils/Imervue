@@ -588,6 +588,31 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             return
         self._show_validator_dialog(issues, counts)
 
+    def _run_rig_repair(self) -> None:
+        """Tools > Repair Rig: fix every drawable's mesh and weight map, then say what changed."""
+        from Imervue.puppet.rig_repair import repair_rig
+        doc = self._canvas.document()
+        if doc is None:
+            self._announce("puppet_repair_rig_no_doc", "Load a puppet first before repairing.")
+            return
+        report = repair_rig(doc)
+        if not report.changed:
+            self._announce(
+                "puppet_repair_rig_none",
+                "Nothing to repair — every mesh and weight map is sound.",
+            )
+            return
+        self._canvas.load_document(doc)
+        self._announce(
+            "puppet_repair_rig_done",
+            "Repaired {drawables} drawables: {degenerate} degenerate and {broken} broken "
+            "triangles dropped, {merged} duplicate vertices merged, {unused} unused vertices "
+            "removed, {weights} weight maps normalised.",
+            drawables=report.drawables, degenerate=report.removed_degenerate,
+            broken=report.dropped_out_of_range, merged=report.merged_vertices,
+            unused=report.removed_unreferenced, weights=report.weights_normalised,
+        )
+
     def _show_validator_dialog(self, issues, counts) -> None:
         from PySide6.QtWidgets import QDialog, QPlainTextEdit, QVBoxLayout
         lang = language_wrapper.language_word_dict

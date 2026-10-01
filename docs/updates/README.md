@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-40 | 2026-10-01 | Deleting a puppet vertex keeps its drawable's bone weights and vertex morphs aligned | #bugfix #puppet #done | [2026-10](2026-10.md) |
+| U-20261001-39 | 2026-10-01 | Puppet's Tools menu repairs every mesh and weight map; mesh_repair and bone_weights are wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-38 | 2026-10-01 | Puppet's motion timeline simplifies a recorded take's keys within a tolerance; motion_compress is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-37 | 2026-10-01 | Puppet's motion timeline reshapes a track to a named easing; easing is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-36 | 2026-10-01 | Paint's single-slider filters preview live on a full-resolution crop; filter_preview_dialog is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
@@ -504,4 +506,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 38 |
+| [2026-10.md](2026-10.md) | 2026-10 | 40 |

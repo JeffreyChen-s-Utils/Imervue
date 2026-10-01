@@ -1070,6 +1070,13 @@ Menüs enthalten auch die Einträge der Toolbar.
        Ausdrücke / Pose-Gruppen löschen, Parameter-Standards wiederherstellen
    * - Fit to Window
      - Menü **Tools**: das Puppet auf der Leinwand neu zentrieren + neu skalieren
+   * - Repair Rig
+     - Menü **Tools**: in jedem Drawable defekte und flächenlose Dreiecke
+       verwerfen, doppelte Vertices mit gleicher Position und UV zusammenführen
+       (eine Texturnaht bleibt getrennt), Vertices entfernen, die kein Dreieck
+       nutzt — Bone-Weights und Vertex-Morphs folgen den verbleibenden
+       Vertices — und die Bone-Weights jedes Vertex so anpassen, dass sie
+       sich zu 1 summieren; die Statusleiste meldet, was sich geändert hat
 
 Eigene Motions aufzeichnen
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

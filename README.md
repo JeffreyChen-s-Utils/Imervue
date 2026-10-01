@@ -506,6 +506,7 @@ JSON-based, humanly diffable, no proprietary binary. The format is open and chec
 - **Add Parameter** → set key forms at slider extremes via **Set Key** in the parameter dock
 - **Mesh editor** — toggle Edit Mesh to drag vertices; clicks within 8 px snap to the nearest
 - **Motion timeline** — **Edit > Edit motion…** drags keys and bezier handles; **Ease** reshapes a track to one of 31 named easings (elastic and bounce become sampled keys) and **Simplify Keys** drops the keys of a recorded take that sit within a tolerance of the line through their neighbours
+- **Repair Rig** — **Tools > Repair Rig** cleans every drawable's mesh (broken and zero-area triangles, duplicate vertices that share position and UV, unused vertices — bone weights and vertex morphs follow the vertices that stay) and makes each vertex's bone weights sum to 1
 - **Save As…** writes the whole rig to a `.puppet` zip
 
 ### Runtime

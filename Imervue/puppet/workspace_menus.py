@@ -136,6 +136,7 @@ class PuppetMenusMixin:
         """Validate, fit-to-window and reset-to-rest."""
         act = self._action
         self._validate_action = act("puppet_validate", "Validate", self._run_validator)
+        self._repair_action = act("puppet_repair_rig", "Repair Rig", self._run_rig_repair)
         self._fit_action = act("puppet_fit_view", "Fit to Window", self._canvas_reset_view)
 
         # Reset-to-rest — single shortcut for "wipe every live-state
@@ -197,6 +198,7 @@ class PuppetMenusMixin:
 
         tools_menu = bar.addMenu(lang.get("puppet_menu_tools", "Tools"))
         tools_menu.addAction(self._validate_action)
+        tools_menu.addAction(self._repair_action)
         tools_menu.addAction(self._fit_action)
 
         return bar

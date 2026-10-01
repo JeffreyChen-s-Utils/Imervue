@@ -1072,6 +1072,13 @@ contêm as entradas da barra de ferramentas.
        limpa expressões / grupos de pose, restaura padrões de parâmetro
    * - Fit to Window
      - Menu **Tools**: recentralizar + redimensionar o puppet no canvas
+   * - Repair Rig
+     - Menu **Tools**: em cada drawable, descartar triângulos quebrados e de
+       área zero, mesclar vértices duplicados que compartilham posição e UV
+       (uma costura de textura continua separada), remover vértices que
+       nenhum triângulo usa — pesos de osso e morphs de vértice acompanham
+       os vértices que permanecem — e fazer os pesos de osso de cada vértice
+       somarem 1; a barra de status informa o que mudou
 
 Gravando Seus Próprios Motions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

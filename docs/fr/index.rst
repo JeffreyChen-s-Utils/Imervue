@@ -1070,6 +1070,13 @@ aussi les entrées de la barre d'outils.
        efface les expressions / groupes de pose, restaure les paramètres par défaut
    * - Fit to Window
      - Menu **Tools** : recentre et redimensionne la marionnette dans le canevas
+   * - Repair Rig
+     - Menu **Tools** : dans chaque drawable, supprime les triangles cassés et
+       d'aire nulle, fusionne les sommets en double qui partagent la même position
+       et le même UV (une couture de texture reste séparée), retire les sommets
+       qu'aucun triangle n'utilise — les poids d'os et les vertex morphs suivent
+       les sommets conservés — et fait en sorte que les poids d'os de chaque
+       sommet totalisent 1 ; la barre d'état indique ce qui a changé
 
 Enregistrer ses propres mouvements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -502,6 +502,7 @@ Baseado em JSON, diff-friendly por humanos, sem binário proprietário. O format
 - **Add Parameter** → defina formas-chave nos extremos do slider via **Set Key** no dock de parâmetros
 - **Editor de malha** — alterne Edit Mesh para arrastar vértices; cliques dentro de 8 px se ajustam ao mais próximo
 - **Linha do tempo de motion** — em **Edit > Edit motion…** arraste chaves e alças de bézier; **Ease** remodela uma trilha com um de 31 easings nomeados (elastic e bounce viram chaves amostradas) e **Simplify Keys** descarta as chaves de uma take gravada que ficam dentro de uma tolerância da linha que liga as chaves vizinhas
+- **Repair Rig** — **Tools > Repair Rig** limpa a malha de cada drawable (triângulos quebrados e de área zero, vértices duplicados que compartilham posição e UV, vértices não usados — os pesos de osso e os vertex morphs acompanham os vértices que permanecem) e faz os pesos de osso de cada vértice somarem 1
 - **Save As…** grava o rig inteiro em um zip `.puppet`
 
 ### Runtime

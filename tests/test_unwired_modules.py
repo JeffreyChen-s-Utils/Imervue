@@ -28,7 +28,7 @@ _KNOWN_UNWIRED = {
     "Imervue.export.contact_sheet_layouts", "Imervue.image.caption",
     "Imervue.library.capture_time", "Imervue.library.gpx_geotag",
     "Imervue.multi_language.translation_validation",
-    "Imervue.puppet.audio_lipsync", "Imervue.puppet.bone_weights", "Imervue.puppet.mesh_repair",
+    "Imervue.puppet.audio_lipsync",
     "Imervue.user_settings.metadata_template", "Imervue.user_settings.tag_validator",
 }
 

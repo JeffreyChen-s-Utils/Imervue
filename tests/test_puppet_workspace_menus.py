@@ -41,6 +41,7 @@ _ACTIONS = [
     ("_ndi_toggle", "NDI output", True, "_toggle_ndi"),
     ("_vts_toggle", "VTS API", True, "_toggle_vts_api"),
     ("_validate_action", "Validate", False, "_run_validator"),
+    ("_repair_action", "Repair Rig", False, "_run_rig_repair"),
     ("_fit_action", "Fit to Window", False, "_canvas_reset_view"),
     ("_reset_action", "Reset to rest", False, "_reset_to_rest"),
 ]

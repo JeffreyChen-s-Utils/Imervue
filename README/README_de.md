@@ -495,6 +495,7 @@ JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat. Das Form
 - **Add Parameter** → Key-Forms an Slider-Extremen via **Set Key** im Parameter-Dock setzen
 - **Mesh-Editor** — Edit Mesh umschalten, um Vertices zu ziehen; Klicks innerhalb 8 px snappen auf den nächsten
 - **Motion-Timeline** — **Edit > Edit motion…** zieht Keys und Bezier-Handles; **Ease** formt einen Track zu einem von 31 benannten Easings um (elastic und bounce werden zu gesampelten Keys) und **Simplify Keys** verwirft die Keys einer aufgezeichneten Aufnahme, die innerhalb einer Toleranz der Linie durch ihre Nachbarn liegen
+- **Rig-Reparatur** — **Tools > Repair Rig** bereinigt das Mesh jedes Drawables (defekte und flächenlose Dreiecke, doppelte Vertices mit gleicher Position und UV, ungenutzte Vertices — Bone-Weights und Vertex-Morphs folgen den verbleibenden Vertices) und sorgt dafür, dass sich die Bone-Weights jedes Vertex zu 1 summieren
 - **Save As…** schreibt das gesamte Rig in ein `.puppet`-Zip
 
 ### Runtime
