@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `6b11fdf` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `68fe844` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 920 | 155,256 |
+| `tests/` | 921 | 155,262 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,604 |
 | `Imervue/puppet/` | 60 | 16,107 |
 | `Imervue/image/` | 129 | 15,518 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
 | `Imervue/multi_language/` | 8 | 14,387 |
-| `Imervue/desktop_pet/` | 30 | 7,174 |
+| `Imervue/desktop_pet/` | 30 | 7,138 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 34 | 4,759 |
 | `Imervue/menu/` | 11 | 3,595 |
 | `Imervue/` 根層 | 6 | 1,945 |
 | `Imervue/plugin/` | 10 | 2,394 |
-| `Imervue/system/` | 32 | 3,176 |
+| `Imervue/system/` | 33 | 3,222 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
 | `plugins/`（19 個外掛） | 80 | 16,802 |
-| **總計** | **1,790** | **342,149** |
+| **總計** | **1,792** | **342,165** |
 
-其中 `Imervue/` 套件本身 790 檔 / 170,091 行。
+其中 `Imervue/` 套件本身 791 檔 / 170,101 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -236,6 +236,7 @@ ImervueMainWindow
 | `file_manager.py` | 59 | `reveal_in_file_manager(path, select=)`：用 OS 的檔案總管開啟路徑（Windows `explorer`，命令列由 `explorer_command` 組成、路徑一律加引號，因為 Explorer 以逗號與 `=` 分隔參數；macOS `open [-R]`、Linux `xdg-open`），檔案總管啟動不了時丟 `OSError`；`reveal_or_warn` 包一層、失敗記警告，給沒有更好處理方式的選單動作用（檔案樹、右鍵選單、清單檢視、外掛選單） |
 | `wallpaper.py` | 161 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；JPEG／PNG／BMP 以外的格式與帶 EXIF 方向的照片先經 `wallpaper_file` 存成檢視器所見的 JPEG 副本（轉正、sRGB、透明處鋪黑，放在 `%LOCALAPPDATA%/Imervue/wallpaper`，檔名隨來源的大小與修改時間變、只留最新一份；做不出副本時交原檔），因為 Windows 拿到解不開的檔案會回報成功卻把桌面變黑；失敗只記錄；右鍵選單在 `QThreadPool` 裡呼叫 |
 | `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
+| `local_llm.py` | 46 | 對本機 LLM 伺服器（預設 Ollama）送 JSON：`validate_base_url`（loopback 的 http 或任何 https）、`post_json`；圖片說明與桌寵對話共用，不依賴 Qt |
 | `trash_ops.py` | 327 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果）；`recycle_bin_holds`：Windows 上只有固定磁碟才交給 shell（記憶卡、USB 隨身碟、網路磁碟會被直接永久刪除），其餘留在原處算失敗；`purge_batch` 裡這類「送回收筒」的項目改為直接刪除（使用者已確認永久刪除）；`delete_outright(paths)`：確認後直接刪，資料夾連內容一起（`_unlink_chunk` 仍只刪檔案，culling 不會清空資料夾） |
 | `file_transfer.py` | 251 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
@@ -405,7 +406,7 @@ ImervueMainWindow
 
 `browser_state.py`(400) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
 `batch_move_planner.py`(114) 無碰撞批次搬移規劃 · `animation_edit.py`(95) GIF/APNG 反轉/回力鏢/速度 ·
-`caption.py`(91) 本地視覺 LLM 產生 alt-text · `ocr.py`(159) Tesseract · `portrait_retouch.py`(177) ·
+`caption.py`(91) 本地視覺 LLM 產生 alt-text（經 `system/local_llm.post_json`） · `ocr.py`(159) Tesseract · `portrait_retouch.py`(177) ·
 `speech_*`／`text_*` 相關在 `paint/`
 
 ### 6.10 `Imervue/gpu_image_view/`
@@ -864,7 +865,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-30 個檔、7,174 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+30 個檔、7,138 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。
 
 #### 視窗與互動
@@ -908,7 +909,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 `pet_script.py`(437) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(521) 內建編輯器 ·
 `schedule_rules.py`(101) 時段 / 星期閘門 · `idle_minigame.py`(278) 閒置好奇 / 打呵欠 ·
-`llm_dialogue.py`(242) 本地 LLM（預設 Ollama）對話 · `music_rhythm.py`(463) WASAPI loopback 抓系統音訊隨節奏擺動 ·
+`llm_dialogue.py`(206) 本地 LLM（預設 Ollama）對話（URL 規則與 POST 在 `system/local_llm`） · `music_rhythm.py`(463) WASAPI loopback 抓系統音訊隨節奏擺動 ·
 `click_sfx.py`(168) 事件音效
 
 ### 6.17 `Imervue/plugin/`
@@ -987,7 +988,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-920 個檔、155,256 行。`pyproject.toml` 定義三個互斥層級 marker：
+921 個檔、155,262 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

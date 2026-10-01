@@ -52,7 +52,7 @@ class TestParseCaptionResponse:
 
 class TestGenerateCaption:
     def test_posts_vision_payload_and_returns_caption(self, tmp_path, monkeypatch):
-        from Imervue.desktop_pet import llm_dialogue
+        from Imervue.system import local_llm
 
         image = tmp_path / "photo.png"
         image.write_bytes(b"\x89PNG\r\nbody")
@@ -63,7 +63,7 @@ class TestGenerateCaption:
             captured["payload"] = payload
             return {"response": '"a small dog"'}
 
-        monkeypatch.setattr(llm_dialogue, "_request_json", _fake_post)
+        monkeypatch.setattr(local_llm, "post_json", _fake_post)
         out = generate_caption(image, model="llava", base_url="http://localhost:11434")
 
         assert out == "a small dog"
@@ -72,11 +72,11 @@ class TestGenerateCaption:
         assert captured["payload"]["stream"] is False
 
     def test_empty_caption_raises(self, tmp_path, monkeypatch):
-        from Imervue.desktop_pet import llm_dialogue
+        from Imervue.system import local_llm
 
         image = tmp_path / "photo.png"
         image.write_bytes(b"data")
         monkeypatch.setattr(
-            llm_dialogue, "_request_json", lambda *a, **k: {"response": "  "})
+            local_llm, "post_json", lambda *a, **k: {"response": "  "})
         with pytest.raises(ValueError, match="empty caption"):
             generate_caption(image)
