@@ -14,7 +14,6 @@ from types import SimpleNamespace
 from Imervue.desktop_pet.pet_canvas_drivers import PetCanvasDrivers
 from Imervue.desktop_pet.pet_drivers import CanvasDriverController
 from Imervue.desktop_pet.pet_feature_base import IntegrationController
-from Imervue.desktop_pet.pet_registry import PetRegistry
 from Imervue.desktop_pet.pet_window import PetWindow
 
 
@@ -107,20 +106,3 @@ def test_integration_shutdown_logs_a_failing_stop(caplog):
         IntegrationController.shutdown(fake)
     assert [r.getMessage() for r in caplog.records] == [
         "Best-effort step failed: stop the integration client"]
-
-
-def test_despawn_shuts_the_window_down_before_deleting():
-    events: list = []
-    window = SimpleNamespace(
-        shutdown=lambda: events.append("shutdown"),
-        hide=lambda: events.append("hide"),
-        deleteLater=lambda: events.append("delete"),
-    )
-    fake_reg = SimpleNamespace(
-        _pets={"x": window},
-        pet_despawned=SimpleNamespace(emit=lambda pid: events.append(("emit", pid))),
-    )
-    assert PetRegistry.despawn(fake_reg, "x") is True
-    # Full sequence: workers stopped first, then hide, delete, and the signal —
-    # a whole-list equality (no subscripting) so the ordering is exact.
-    assert events == ["shutdown", "hide", "delete", ("emit", "x")]

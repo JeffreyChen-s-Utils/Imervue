@@ -1,6 +1,7 @@
 """Guard: every module under ``Imervue/`` is imported by production code.
 
-An AST scan of ``Imervue/`` and ``plugins/`` (tests excluded) collects every
+An AST scan of ``Imervue/``, ``plugins/`` and the root ``*.spec`` build files (tests
+excluded) collects every
 import, resolving relative ones, plus dotted module names written as string
 literals for lazy ``importlib`` loads. A module nothing imports is either an
 entry point run with ``py -m`` or code no user can reach.
@@ -14,6 +15,7 @@ The list may only shrink: a new unreachable module fails
 from __future__ import annotations
 
 import ast
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -23,33 +25,18 @@ _ENTRY_POINTS = {"Imervue.__main__", "Imervue.cli", "Imervue.mcp_server.__main__
 
 _KNOWN_UNWIRED = {
     "Imervue.desktop_pet.command_parser", "Imervue.desktop_pet.hotkey_conflicts",
-    "Imervue.desktop_pet.pet_registry",
-    "Imervue.export.contact_sheet_layouts", "Imervue.export.gallery_sort",
-    "Imervue.gpu_image_view.actions.undo_coalescer",
-    "Imervue.image.annotations", "Imervue.image.caption",
-    "Imervue.library.capture_time", "Imervue.library.face_clustering",
-    "Imervue.library.gpx_geotag",
+    "Imervue.export.contact_sheet_layouts", "Imervue.image.caption",
+    "Imervue.library.capture_time", "Imervue.library.gpx_geotag",
     "Imervue.multi_language.translation_validation",
-    "Imervue.paint.action_recorder_dialog", "Imervue.paint.animation_export",
-    "Imervue.paint.auto_base_color", "Imervue.paint.auto_correct", "Imervue.paint.brush_random",
+    "Imervue.paint.animation_export", "Imervue.paint.auto_base_color", "Imervue.paint.brush_random",
     "Imervue.paint.canvas_presets", "Imervue.paint.catmull_rom_spline",
-    "Imervue.paint.color_management", "Imervue.paint.color_palette",
-    "Imervue.paint.color_sampler", "Imervue.paint.color_wheel_widget",
-    "Imervue.paint.comic_formats", "Imervue.paint.export_utils",
-    "Imervue.paint.filter_preview_dialog", "Imervue.paint.frame_splitter",
-    "Imervue.paint.gradient_editor", "Imervue.paint.line_cleanup",
+    "Imervue.paint.color_palette", "Imervue.paint.color_wheel_widget",
+    "Imervue.paint.filter_preview_dialog", "Imervue.paint.gradient_editor",
     "Imervue.paint.magnetic_lasso", "Imervue.paint.match_color", "Imervue.paint.match_palette",
-    "Imervue.paint.paint_project_io", "Imervue.paint.pattern_fill",
-    "Imervue.paint.perspective_warp", "Imervue.paint.polyline_offset",
-    "Imervue.paint.reference_panel", "Imervue.paint.rich_text",
-    "Imervue.paint.save_region_as_material", "Imervue.paint.smart_guides",
-    "Imervue.paint.speech_bubbles", "Imervue.paint.tablet_mapping",
-    "Imervue.paint.text_on_selection", "Imervue.paint.timelapse",
-    "Imervue.paint.view_transform", "Imervue.paint.watercolor",
+    "Imervue.paint.paint_project_io", "Imervue.paint.save_region_as_material",
+    "Imervue.paint.text_on_selection",
     "Imervue.puppet.audio_lipsync", "Imervue.puppet.bone_weights", "Imervue.puppet.easing",
-    "Imervue.puppet.ik", "Imervue.puppet.mesh_repair", "Imervue.puppet.motion_compress",
-    "Imervue.sessions.session_migration",
-    "Imervue.system.macos_bundle", "Imervue.system.theme_color_math",
+    "Imervue.puppet.mesh_repair", "Imervue.puppet.motion_compress",
     "Imervue.user_settings.metadata_template", "Imervue.user_settings.tag_validator",
 }
 
@@ -84,7 +71,9 @@ def _imported_names(path: Path) -> set[str]:
 @lru_cache(maxsize=1)
 def _unwired() -> frozenset[str]:
     modules = {_dotted(p) for p in (ROOT / "Imervue").rglob("*.py") if p.name != "__init__.py"}
-    sources = [*(ROOT / "Imervue").rglob("*.py"), *(ROOT / "plugins").rglob("*.py")]
+    # The build specs are Python too: Imervue_mac.spec imports system.macos_bundle.
+    sources = [*(ROOT / "Imervue").rglob("*.py"), *(ROOT / "plugins").rglob("*.py"),
+               *ROOT.glob("*.spec")]
     imported: set[str] = set()
     for source in sources:
         imported |= _imported_names(source)
@@ -104,4 +93,14 @@ def test_known_list_is_current():
 def test_scan_sees_relative_and_lazy_imports():
     assert "Imervue.gui.dialog_rows" not in _unwired()        # plain absolute imports
     assert "Imervue.image.read_errors" not in _unwired()      # imported inside functions too
-    assert "Imervue.export.gallery_sort" in _unwired()
+    assert "Imervue.system.macos_bundle" not in _unwired()     # imported by a build spec
+
+
+def test_relative_imports_resolve_against_the_package(tmp_path, monkeypatch):
+    package = tmp_path / "Imervue" / "pkg"
+    package.mkdir(parents=True)
+    source = package / "user.py"
+    source.write_text("from . import sibling\nfrom ..other import thing\n", encoding="utf-8")
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    names = _imported_names(source)
+    assert {"Imervue.pkg.sibling", "Imervue.other", "Imervue.other.thing"} <= names

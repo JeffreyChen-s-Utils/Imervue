@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `464c401` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `05645ac` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 927 | 155,986 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
+| `tests/` | 893 | 149,577 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 167 | 41,137 |
 | `Imervue/gui/` | 169 | 33,728 |
-| `Imervue/puppet/` | 60 | 16,107 |
-| `Imervue/image/` | 129 | 15,518 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
-| `Imervue/multi_language/` | 8 | 14,412 |
-| `Imervue/desktop_pet/` | 30 | 7,170 |
+| `Imervue/puppet/` | 59 | 16,018 |
+| `Imervue/image/` | 128 | 15,249 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
+| `Imervue/multi_language/` | 8 | 14,367 |
+| `Imervue/desktop_pet/` | 29 | 7,036 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
-| `Imervue/library/` | 34 | 4,759 |
+| `Imervue/library/` | 33 | 4,681 |
 | `Imervue/menu/` | 11 | 3,595 |
 | `Imervue/` 根層 | 6 | 1,930 |
 | `Imervue/plugin/` | 12 | 2,617 |
-| `Imervue/system/` | 33 | 3,122 |
-| `Imervue/export/` | 9 | 1,082 |
+| `Imervue/system/` | 32 | 3,031 |
+| `Imervue/export/` | 8 | 1,006 |
 | `Imervue/user_settings/` | 10 | 1,158 |
-| `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
+| `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,801** | **342,362** |
+| **總計** | **1,736** | **329,844** |
 
-其中 `Imervue/` 套件本身 794 檔 / 170,390 行。
+其中 `Imervue/` 套件本身 763 檔 / 164,281 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -228,7 +228,6 @@ ImervueMainWindow
 | `macos_bundle.py` | 74 | macOS `.app` Info.plist 文件型別關聯；每種相機 RAW 對到 `public.camera-raw-image` |
 | `onboarding.py` | 81 | 首次啟動導覽步驟註冊表 |
 | `release_notes.py` | 111 | What's-New 對話框的版本說明資料 |
-| `theme_color_math.py` | 91 | WCAG 對比度數學，供主題撰寫與無障礙稽核 |
 | `themes.py` | 175 | 內建配色主題 |
 | `best_effort.py` | 29 | `best_effort(step)`：不中斷呼叫端地執行一段收尾步驟，失敗時以 warning 帶 traceback 記錄（取代無聲的 `suppress(Exception)`） |
 | `qt_translations.py` | 60 | `install_qt_translations(app, language)`：依介面語言載入 PySide6 附帶的 `qtbase_<locale>.qm`，讓 Qt 內建字串（確定 / 取消、是 / 否、檔案對話框、分頁關閉提示）跟著翻譯；英文或外掛語言不裝 |
@@ -284,7 +283,6 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `session_manager.py` | 249 | Session / Workspace 存檔與還原（開啟的資料夾、圖片、視圖狀態） |
-| `session_migration.py` | 133 | `.imervue-session.json` 的驗證、版本遷移與合併 |
 | `folder_session.py` | 38 | 每資料夾視圖 session 的純函式助手 |
 
 ### 6.6 `Imervue/macros/`
@@ -307,7 +305,6 @@ ImervueMainWindow
 | `contact_sheet.py` | 189 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab）；格子影像經 `decode_image` |
 | `contact_sheet_layouts.py` | 55 | 具名版面預設（紙張 / 格線 / 邊界 / 說明文字） |
 | `web_gallery.py` | 262 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依）；縮圖經 `decode_image`（轉正、sRGB、RAW 可讀） |
-| `gallery_sort.py` | 76 | 匯出前的排序 / 過濾 / 分組（依名稱、時間、大小、副檔名、資料夾、拍攝日） |
 | `slideshow_mp4.py` | 140 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
 | `slideshow_effects.py` | 101 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
 | `cheat_sheet.py` | 237 | 可列印的快捷鍵速查表 PDF，隨當前語言產生 |
@@ -315,7 +312,7 @@ ImervueMainWindow
 
 ### 6.9 `Imervue/image/`（純運算核心）
 
-129 個模組、15,518 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+128 個模組、15,249 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -394,7 +391,7 @@ ImervueMainWindow
 `xmp_sidecar.py`(598) XMP sidecar 讀寫（跨編輯器互通）；`load` 沒有 sidecar 時讀檔案內嵌的 XMP 封包（JPEG／PNG／WebP／TIFF）再以 EXIF `Rating`／`RatingPercent` 補評分（`load_embedded`，經 `metadata_sync.percent_to_rating`）；找 `foo.xmp`（Adobe），只有 `foo.jpg.xmp`（darktable／digiKam）時讀寫它；`label_color` 把 Lightroom（`Red`）與 Bridge（`Select`）的標籤對到 Imervue 顏色，匯出照 Lightroom 寫法並保留同色的既有用字；`xmp:Rating` -1（Lightroom／Bridge／darktable 的拒絕）與圖庫的挑片 reject 雙向對應；`save` 合併進既有檔：只換評分／標籤／標題／描述／關鍵字／作者，其他編輯器寫的內容（RAW 顯影設定等）與命名空間前綴保留，無法解析的檔丟 `UnreadableSidecarError`（`OSError`）不覆寫 · `metadata_sync.py`(76) XMP↔EXIF 評分調和 ·
 `raw_exif.py`(278) Pillow 打不開的 RAW 容器的 EXIF：CR3 的 `CMT1`／`CMT2`／`CMT4` 盒、RW2／RWL／ORF（換掉魔術數字後由 Pillow seek 讀取，RW2 去掉 Panasonic 私有標籤但保留 ISO）、RAF 內嵌 JPEG 的 APP1；只 seek 到中繼資料 · `gps.py`(84) EXIF GPS 擷取 · `gps_geotag.py`(84) 寫入（JPEG / WebP 經 `in_place_save.rewrite_exif`，不需 piexif） · `reverse_geocode.py`(151) 離線逆地理編碼 ·
 `geo_keywords.py`(52) 地點寫進 XMP 關鍵字 · `face_detection.py`(148) 人臉偵測與人物標籤（Haar，需 OpenCV 4；缺時丟 `FaceDetectorUnavailableError`；cascade XML 由 Python 讀入後從記憶體載入，OpenCV 裝在非 ASCII 路徑下也能用） ·
-`annotations.py`(269) JSON sidecar 註解 · `shown.py`(76) `as_shown(img, code=None)`：檢視器看到的樣子（先依內嵌描述檔轉 sRGB、再依 EXIF 轉正）；`open_shown(path)` 不靠 Qt 解整個檔案（相機 RAW 經 `develop_raw` 顯像，其餘先註冊 HEIC / JXL opener），`load_shown_rgb(path)` / `load_shown_rgba(path)` 建在它上面（16 位元與浮點灰階先縮放）；`as_shown_8bit(img, code=None, mode="RGBA")` 是送到螢幕的 8 位元版本，16 位元與浮點灰階先經 `to_eight_bit` 縮放、不讓 `convert` 截斷成全白（清單檢視、懸停預覽、比較、拖出、重複偵測、影像檢查、時間軸、圖層疊加、參考圖、CLIP 用它），`as_shown` 本身保留位元深度（EXIF 清除的副本仍是 16 位元）；預覽、工具輸入、匯出、Modify、註解、合成、OCR、CLIP、MCP、Paint 的姿勢圖／素材／參考圖都走它 · `high_bit_depth.py`(67) `to_eight_bit(img)`：16 位元灰階（`I;16` 各位元組序）依 0..65535 縮成 8 位元，32 位元整數在 16 位元內時同樣縮放、否則最小到最大拉伸，浮點在 0..1 內對應黑到白、否則拉伸，NaN 與無限大顯示黑色；其他模式原樣傳回（Pillow 的 `convert` 對這些模式是截斷，16 位元灰階掃描幾乎全白） · `color_profile.py`(86) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB；灰階（`L`／`LA`）的灰階描述檔（Dot Gain 20%、Gray Gamma 1.8）先算成 256 階曲線（`_grey_curve`）再套到灰階值，結果仍是灰階；無描述檔、sRGB 或描述檔與模式不符時原樣回傳，transform 與曲線依描述檔快取 · `exif_merge.py`(86) `read_exif(path)`（任何格式的 EXIF，子 IFD 在檔案開著時讀好，RAW 容器經 `raw_exif`；GPS、拍攝時間、Token 重新命名、中繼資料匯出都用它）、`merged_exif(img 或 Exif)`、`get_exif_data(path)`（以標籤名稱回傳、HEIC／JXL 先註冊 opener；不依賴 Qt，MCP、圖庫、面板共用）：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(171) 圖片資訊組裝與對話框；EXIF 由 `exif_merge.get_exif_data` 讀，HEIC / JXL 也讀得到
+`shown.py`(76) `as_shown(img, code=None)`：檢視器看到的樣子（先依內嵌描述檔轉 sRGB、再依 EXIF 轉正）；`open_shown(path)` 不靠 Qt 解整個檔案（相機 RAW 經 `develop_raw` 顯像，其餘先註冊 HEIC / JXL opener），`load_shown_rgb(path)` / `load_shown_rgba(path)` 建在它上面（16 位元與浮點灰階先縮放）；`as_shown_8bit(img, code=None, mode="RGBA")` 是送到螢幕的 8 位元版本，16 位元與浮點灰階先經 `to_eight_bit` 縮放、不讓 `convert` 截斷成全白（清單檢視、懸停預覽、比較、拖出、重複偵測、影像檢查、時間軸、圖層疊加、參考圖、CLIP 用它），`as_shown` 本身保留位元深度（EXIF 清除的副本仍是 16 位元）；預覽、工具輸入、匯出、Modify、註解、合成、OCR、CLIP、MCP、Paint 的姿勢圖／素材／參考圖都走它 · `high_bit_depth.py`(67) `to_eight_bit(img)`：16 位元灰階（`I;16` 各位元組序）依 0..65535 縮成 8 位元，32 位元整數在 16 位元內時同樣縮放、否則最小到最大拉伸，浮點在 0..1 內對應黑到白、否則拉伸，NaN 與無限大顯示黑色；其他模式原樣傳回（Pillow 的 `convert` 對這些模式是截斷，16 位元灰階掃描幾乎全白） · `color_profile.py`(86) `to_srgb(img)`：內嵌 ICC（Display P3、Adobe RGB、CMYK）轉 sRGB；灰階（`L`／`LA`）的灰階描述檔（Dot Gain 20%、Gray Gamma 1.8）先算成 256 階曲線（`_grey_curve`）再套到灰階值，結果仍是灰階；無描述檔、sRGB 或描述檔與模式不符時原樣回傳，transform 與曲線依描述檔快取 · `exif_merge.py`(86) `read_exif(path)`（任何格式的 EXIF，子 IFD 在檔案開著時讀好，RAW 容器經 `raw_exif`；GPS、拍攝時間、Token 重新命名、中繼資料匯出都用它）、`merged_exif(img 或 Exif)`、`get_exif_data(path)`（以標籤名稱回傳、HEIC／JXL 先註冊 opener；不依賴 Qt，MCP、圖庫、面板共用）：IFD0 + Exif 子 IFD、GPS 巢狀，與 Pillow 的 `_getexif()` 同形狀但每種格式都有 · `info.py`(171) 圖片資訊組裝與對話框；EXIF 由 `exif_merge.get_exif_data` 讀，HEIC / JXL 也讀得到
 
 #### 分析 / 品質
 
@@ -499,7 +496,6 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `lossless_rotate.py` | 115 | 90° 旋轉檔案：JPEG 只改 EXIF 轉向標籤（`jpeg_orientation`，不需 piexif、其餘位元組不變）；其他格式從檢視器看到的影像轉後原子重存，以 `in_place_save.carried_save_kwargs` 帶回 metadata 與壓縮設定；RAW、多影格等無法完整寫回的檔案拒絕處理；經 `recipe_store.carry_recipe` 讓 Modify recipe 跟著轉（`recipe.turned_with_file`） |
 | `drag_out.py` | 75 | 從圖磚拖出檔案 URI 到 Explorer / Chrome / Discord |
 | `recipe_commands.py` | 65 | `EditRecipeCommand`：顯影編輯的 undo/redo（存新舊 recipe dict） |
-| `undo_coalescer.py` | 61 | 把滑桿拖曳產生的密集編輯合併成單一 undo 步驟 |
 
 ### 6.11 `Imervue/library/`
 
@@ -529,7 +525,6 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `auto_cull.py` | 61 | 依銳利度自動剔除模糊（每張經檢視器的 `decode_image` 讀成最長邊 512 px：RAW 走內嵌預覽、HEIC 可讀、已轉正；讀不了的跳過） |
 | `quality_cull.py` | 58 | 依綜合技術品質剔除（每張經檢視器的 `decode_image` 讀成最長邊 512 px：RAW 走內嵌預覽、HEIC 可讀、已轉正；讀不了的跳過） |
 | `group_cull.py` | 95 | 每組保留最佳一張 |
-| `face_clustering.py` | 78 | 人臉特徵分群 → People Albums |
 | `keyword_index.py` | 63 | XMP sidecar 關鍵字匯入索引；`lr:hierarchicalSubject`（`A\|B\|C`）轉成標籤路徑 `A/B/C`（`tag_paths`），只重複其層級的零散關鍵字不另加 |
 | `keyword_vocabulary.py` | 163 | 受控詞彙展開（Photo Mechanic 式） |
 | `keyword_vocabulary_store.py` | 44 | 詞彙的設定檔儲存 |
@@ -675,7 +670,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-190 個檔、46,270 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+167 個檔、41,137 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -709,59 +704,58 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `custom_brush.py`(97) · `pressure_curve.py`(146) + `pressure_curve_dialog.py`(255) 筆壓曲線 ·
 `stabilizer.py`(84) 筆畫穩定器 · `catmull_rom_spline.py`(80) 平滑重採樣 · `symmetry.py`(85) 對稱繪製 ·
 `smudge.py`(120) 塗抹/混色筆 · `blur.py`(74) · `dodge_burn.py`(100) · `sponge.py`(68) ·
-`watercolor.py`(182) 濕畫法模擬 · `stamp_tool.py`(151) + `stroke_along_path.py`(99)
+`stamp_tool.py`(151) + `stroke_along_path.py`(99)
 
 #### 選取 / 變形
 
 `selection.py`(295) · `selection_ops.py`(325) 選區精修 · `selection_transform.py`(202) 仿射變換 ·
 `marquee.py`(93) 選區邊界線段 · `quick_mask.py`(219) 快速遮罩 · `magnetic_lasso.py`(118) 磁性套索 ·
-`stroke_selection.py`(140) 描邊選區 · `transform_handles.py`(270) · `perspective_warp.py`(202) 四角透視 ·
-`mesh_warp.py`(295) 控制網格雙線性變形 · `liquify.py`(262) + `liquify_dialog.py`(288) 液化 ·
+`stroke_selection.py`(140) 描邊選區 · `transform_handles.py`(270) · `liquify.py`(262) + `liquify_dialog.py`(288) 液化 ·
 `crop.py`(93) + `crop_tool.py`(90) · `canvas_transforms.py`(76) · `image_resize.py`(149)
 
 #### 填色 / 形狀 / 向量 / 文字
 
 `fill.py`(372) 洪水填色 · `auto_region_fill.py`(253) 一次填滿所有封閉區 · `auto_base_color.py`(245) 線稿自動平塗 ·
-`divide_layer.py`(158) 依顏色拆圖層 · `pattern_fill.py`(130) · `gradient.py`(168) + `gradient_editor.py`(282) +
-`gradient_map_presets.py`(88) · `shape_engine.py`(265) + `shape_tool.py`(310) ·
-`bezier_path.py`(217) + `pen_commit.py`(106) 鋼筆工具 · `polyline_offset.py`(75) 平行曲線 ·
+`divide_layer.py`(158) 依顏色拆圖層 · `gradient.py`(168) + `gradient_editor.py`(282) +
+`gradient_map_presets.py`(88) · `shape_engine.py`(265) ·
+`bezier_path.py`(217) + `pen_commit.py`(106) 鋼筆工具 ·
 `vector_layer.py`(311) 非破壞性向量線條 · `binary_layer.py`(139) 1-bit 墨線圖層 ·
-`image_trace.py`(220) 遮罩 → 輪廓向量化 · `line_cleanup.py`(168) Chaikin 平滑 + 補小縫 ·
-`text_render.py`(225) · `text_tool.py`(209) · `rich_text.py`(584) 逐字樣式 · `text_on_path.py`(173) ·
+`image_trace.py`(220) 遮罩 → 輪廓向量化 ·
+`text_render.py`(225) · `text_tool.py`(209) · `text_on_path.py`(173) ·
 `text_on_selection.py`(92)
 
 #### 顏色
 
 `color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) · `color_palette.py`(168) +
-`color_palette_io.py`(303) 外部調色盤格式 · `color_sampler.py`(174) 取樣點 · `swatch_panel.py`(245) ·
+`color_palette_io.py`(303) 外部調色盤格式 · `swatch_panel.py`(245) ·
 `palette_extract.py`(168) median-cut 抽色 · `match_color.py`(96) · `match_palette.py`(108) ·
-`color_management.py`(181) ICC · `color_blindness.py`(118) CVD 模擬 · `auto_correct.py`(79) ·
+`color_blindness.py`(118) CVD 模擬 ·
 `adjustments.py`(739) 純 NumPy 非破壞性調整種類與套用管線 · `histogram.py`(128) + `histogram_dock.py`(141)
 
 #### 漫畫 / 網點
 
-`manga_menu.py`(578) · `manga_effects.py`(347) 速度線 + 網點 · `manga_panels.py`(262) 分鏡版面 ·
-`halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) + `speech_bubbles.py`(487) 對話框氣泡 ·
-`comic_stamps.py`(266) + `stamp_dock.py`(88) · `comic_formats.py`(161) · `flash_effect.py`(132) 爆炸效果 ·
-`frame_splitter.py`(137) · `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
+`manga_menu.py`(578) · `manga_panels.py`(262) 分鏡版面 ·
+`halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) 對話框氣泡 ·
+`comic_stamps.py`(266) + `stamp_dock.py`(88) · `flash_effect.py`(132) 爆炸效果 ·
+`bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
 `page_numbering.py`(156) · `page_dock.py`(348) 頁面瀏覽 · `paint_project.py`(147) 多頁專案 +
 `paint_project_io.py`(114) + `paint_project_export.py`(130) · `new_project_dialog.py`(105)
 
 #### 動畫
 
 `animation.py`(478) 時間軸 + 洋蔥皮 · `animation_timeline.py`(198) 純 NumPy 模型 ·
-`animation_dock.py`(289) 幀條 + 播放控制 · `animation_export.py`(165) · `timelapse.py`(126) 縮時匯出
+`animation_dock.py`(289) 幀條 + 播放控制 · `animation_export.py`(165)
 
 #### 素材 / 參考 / 姿勢
 
 `material_library.py`(301) · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(121) ·
-`save_region_as_material.py`(107) · `reference_dock.py`(258) Paint 參考圖 dock（經 `decode_image_file` 以檢視器的樣子顯示：轉正、sRGB、RAW 顯像） + `reference_panel.py`(283) ·
+`save_region_as_material.py`(107) · `reference_dock.py`(258) Paint 參考圖 dock（經 `decode_image_file` 以檢視器的樣子顯示：轉正、sRGB、RAW 顯像） ·
 `pose_skeleton.py`(210) + `pose_dock.py`(185) + `pose_drop.py`(128) 2D 火柴人姿勢參考
 
 #### 輔助線 / 檢視
 
-`rulers.py`(492) 繪圖輔助尺 · `smart_guides.py`(168) 智慧吸附 · `snap_guides.py`(124) ·
-`visual_guides.py`(262) 像素格線 · `view_transform.py`(146) 平移/縮放/旋轉 · `multi_view.py`(246) 同文件第二視窗 ·
+`rulers.py`(492) 繪圖輔助尺 · `snap_guides.py`(124) ·
+`visual_guides.py`(262) 像素格線 · `multi_view.py`(246) 同文件第二視窗 ·
 `size_hud.py`(138) + `size_hud_bridge.py`(63) 筆刷大小 HUD · `welcome_overlay.py`(222) ·
 `layer_thumbnail.py`(183) · `layer_effects.py`(341) 陰影/外光暈/描邊
 
@@ -780,11 +774,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_shortcuts.py` | 313 | 快捷鍵（登錄表管理的鍵經 `shortcut_binding` 建立，`apply_shortcut_registry` 套用重新指定）、筆刷調整、歡迎提示 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
 | `workspace_autosave.py` | 171 + `auto_save.py`(242) | 自動存檔（作用中分頁未儲存時才寫快照）、當機復原、`discard_own_autosaves` 關閉時刪掉自己的快照 |
-| `action_recorder.py` | 240 + `action_recorder_dialog.py`(197) | 動作錄製 / 重播 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
-| `tablet_mapping.py` | 230 | 數位板按鍵 → 動作對應 |
 | `recent_files.py` | 72 | 最近開啟清單 |
-| `export_presets.py` | 278 + `export_utils.py`(231) | 批次匯出設定檔、浮水印、逐圖層匯出、切片匯出 |
+| `export_presets.py` | 278 | 批次匯出設定檔 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
 | 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(558)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
 
@@ -802,7 +794,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-60 個檔、16,107 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+59 個檔、16,018 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -834,7 +826,6 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `canvas.py` | 934 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動，以及物理鏈自己的時鐘（顯示中且有鏈時約 60 Hz 推進）；實際繪製來自 `canvas_render.py` |
 | `canvas_render.py` | 537 | `PuppetCanvasRenderMixin`：棋盤背景、桌寵陰影、drawable 繪製與 stencil 裁切、選取框與錨點、頂點緩衝與貼圖（預乘 alpha 的 `_premultiply_alpha`）快取 |
 | `clip_masks.py` | 56 | `Drawable.clip_mask` 參照解析 |
-| `ik.py` | 89 | 兩節骨骼解析式 IK |
 | `bone_weights.py` | 100 | 骨骼 LBS 權重驗證與修復 |
 | `hit_test.py` | 120 | `HitArea` 純 Python 命中測試 |
 | `mesh_edit.py` | 93 · `mesh_repair.py` 230 · `symmetrize.py` 138 | 網格編輯 / 拓樸修復 / X 軸自動對稱 |
@@ -866,7 +857,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.16 `Imervue/desktop_pet/`
 
-30 個檔、7,170 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+29 個檔、7,036 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。套件的 `__init__` 和 puppet 一樣用模組 `__getattr__` 延遲匯出 `PetWindow`／`PetWorkspace`／`PetTrayIcon` 等名稱，所以 import `desktop_pet.settings` 之類的輕量子模組不會載入視窗、工作區與 Puppet canvas。
 
 #### 視窗與互動
@@ -881,7 +872,6 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。�
 | `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
 | `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
 | `pet_context_menu.py` | 171 | 右鍵選單建構器 |
-| `pet_registry.py` | 134 | 多隻寵物的生命週期登錄表（以 pet id 為鍵） |
 | `pet_shadow.py` | 137 + `pet_shadow_controller.py`(83) | 放射漸層落地陰影（單一 draw call） |
 | `speech_bubble.py` | 208 | 對話泡泡覆蓋視窗（自動淡出） |
 | `tray_icon.py` | 151 | 系統匣切換 |
@@ -993,7 +983,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-927 個檔、155,986 行。`pyproject.toml` 定義三個互斥層級 marker：
+893 個檔、149,577 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1219,10 +1209,10 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 57 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    34 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
-    不代表它已經接上選單；`paint/watercolor.py`、`paint/comic_formats.py`、`paint/speech_bubbles.py`
-    另有已接上的實作。新增模組若沒被 import，該測試會失敗；要接上或刪除由擁有者決定（`progress.md` #22）。
+11. **有 29 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    15 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+    不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
+    （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 
 12. **同一視窗裡同一個按鍵只能有一個啟用中的快捷鍵。** 兩個 `WindowShortcut` 範圍的 `QAction` / `QShortcut`
     綁同一鍵，Qt 視為歧義、兩個都不觸發，也不會報錯。Paint 分頁嵌在主視窗裡，所以它的按鍵和主視窗自己的

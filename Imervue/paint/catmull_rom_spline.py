@@ -2,8 +2,8 @@
 
 Linear interpolation between raw pen samples leaves visible corners; a uniform
 Catmull-Rom spline passes *through* every input point yet curves smoothly
-between them — a different trade-off from ``line_cleanup``'s Chaikin smoothing
-(which cuts corners) and ``bezier_path`` (which needs authored handles). Pure
+between them — a different trade-off from Chaikin smoothing (which cuts
+corners) and ``bezier_path`` (which needs authored handles). Pure
 coordinate maths on ``(x, y)`` tuples — no Qt, no numpy.
 
 Basis coefficients are the standard uniform Catmull-Rom:

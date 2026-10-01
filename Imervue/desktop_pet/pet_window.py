@@ -174,8 +174,8 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         super().__init__(None)
         # Pet id identifies which slot under ``user_setting_dict``
         # this instance reads / writes. The primary pet is
-        # ``"default"`` (preserves the single-pet schema); extras
-        # have stable string ids managed by :mod:`pet_registry`.
+        # ``"default"`` (preserves the single-pet schema); any other
+        # id gets its own slot.
         self._pet_id: str = str(pet_id)
         # Snapshot the persisted state once at startup so every
         # subsystem we wire up below can read its initial value

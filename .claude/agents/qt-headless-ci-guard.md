@@ -128,7 +128,7 @@ hand the developer one obvious fix — not to lecture about the bug.
 - `tests/test_puppet_canvas.py`, `tests/test_puppet_workspace.py`,
   every other `tests/test_puppet_*.py` uses the same import.
 - `tests/test_desktop_pet_window.py`, `tests/test_desktop_pet_drop_dispatch.py`,
-  `tests/test_desktop_pet_registry.py`, `tests/test_desktop_pet_shadow.py`,
+  `tests/test_desktop_pet_shadow.py`,
   `tests/test_desktop_pet_idle_minigame.py`,
   `tests/test_desktop_pet_music_rhythm.py`,
   `tests/test_desktop_pet_script_editor.py` — adopted later as the
