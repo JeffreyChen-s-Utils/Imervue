@@ -17,7 +17,7 @@ import numpy as np
 
 from Imervue.image.recipe import STAGE_NAMES, Recipe
 
-from gpu_develop.adapter_policy import choose_adapter, describe
+from gpu_develop.adapter_policy import choose_adapter, describe, instance_backends
 from gpu_develop.develop_shader import SHADER, WORKGROUP_SIZE
 from gpu_develop.params import (
     FIRST_STAGE,
@@ -50,8 +50,27 @@ def _gpu_errors() -> tuple[type[BaseException], ...]:
     return wgpu.GPUError, wgpu.GPUPipelineError
 
 
+def limit_backends() -> None:
+    """Create wgpu's instance with only the APIs the adapter policy can choose.
+
+    By default wgpu probes every API, OpenGL included; with Vulkan and OpenGL
+    probed together, instance creation crashed (an access violation inside
+    ``wgpuCreateInstance``) on a machine where either one alone worked. The
+    instance is process-wide: when one already exists it is kept.
+    """
+    try:
+        from wgpu.backends.wgpu_native.extras import set_instance_extras
+    except ImportError:   # another wgpu backend, without instance extras
+        return
+    try:
+        set_instance_extras(backends=instance_backends())
+    except RuntimeError as exc:   # the instance was created earlier in this process
+        logger.debug("wgpu instance already exists, keeping its backends: %s", exc)
+
+
 def _discrete_adapter():
     import wgpu
+    limit_backends()
     adapters = list(wgpu.gpu.enumerate_adapters_sync())
     index = choose_adapter([dict(adapter.info) for adapter in adapters])
     return None if index is None else adapters[index]

@@ -26,6 +26,15 @@ def backend_order(platform: str = sys.platform) -> tuple[str, ...]:
     return _BACKEND_ORDER.get(platform, _DEFAULT_ORDER)
 
 
+# wgpu's instance-level names for the APIs above (``set_instance_extras(backends=...)``).
+_INSTANCE_NAMES = {"D3D12": "DX12", "Vulkan": "Vulkan", "Metal": "Metal"}
+
+
+def instance_backends(platform: str = sys.platform) -> list[str]:
+    """The backends to create wgpu's instance with: only those :func:`choose_adapter` can pick."""
+    return [_INSTANCE_NAMES[name] for name in backend_order(platform)]
+
+
 def choose_adapter(infos: Sequence[dict], platform: str = sys.platform) -> int | None:
     """Index of the adapter to use: a discrete GPU on the preferred API; ``None`` if there is none."""
     order = backend_order(platform)

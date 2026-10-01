@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-16 | 2026-10-01 | GPU Develop starts wgpu with only Vulkan, D3D12 or Metal, and its device tests run in a process of their own | #bugfix #gpu #plugins #Imervue_Plugins #test | [2026-10](2026-10.md) |
 | U-20261001-15 | 2026-10-01 | Refactor: the local-LLM HTTP helpers move out of the desktop pet, so image captions no longer load it | #refactor #desktop-pet | [2026-10](2026-10.md) |
 | U-20261001-14 | 2026-10-01 | The SFTP address in old commits is treated as public; history is not rewritten | #decision #done #security | [2026-10](2026-10.md) |
 | U-20261001-13 | 2026-10-01 | The puppet validator no longer reports parameters that drive morphs, curves, blends or physics as moving nothing | #bugfix #puppet | [2026-10](2026-10.md) |
@@ -481,4 +482,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 15 |
+| [2026-10.md](2026-10.md) | 2026-10 | 16 |

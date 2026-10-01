@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `68fe844` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `2e3a786` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 921 | 155,262 |
+| `tests/` | 922 | 155,390 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
 | `Imervue/gui/` | 168 | 33,604 |
 | `Imervue/puppet/` | 60 | 16,107 |
@@ -83,8 +83,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（19 個外掛） | 80 | 16,802 |
-| **總計** | **1,792** | **342,165** |
+| `plugins/`（19 個外掛） | 80 | 16,830 |
+| **總計** | **1,793** | **342,321** |
 
 其中 `Imervue/` 套件本身 791 檔 / 170,101 行。
 
@@ -962,7 +962,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | --- | --- | --- | --- |
 | `safety_review` | 15 / 4,622 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到）；存檔一律走 `_censor_core._save_as`（`.tmp` + `os.replace`，覆寫原檔模式失敗也不毀原圖） | nudenet, ultralytics, huggingface_hub |
 | `pet_integrations` | 9 / 1,700 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
-| `gpu_develop` | 7 / 636 | 批次匯出在獨立顯示卡上套用顯影 recipe：登錄 `develop_backends` 後端（多個視窗各有實例，最後一個卸載才取消登錄）；`adapter_policy` 只選 `DiscreteGPU`（Windows 先 Vulkan 再 D3D12：wgpu 的 D3D12 經 FXC 編譯，浮點運算被重排，與 CPU 差得較多），內建顯示卡與軟體算繪器一律不用；`params` 把逐通道階段（白平衡、曝光、白黑場、亮度、對比、色調曲線）用 CPU 階段本身跑過 0..255 斜坡做成查表，只有亮部/陰影、vibrance、飽和度在 shader 裡算；對比要整張圖的平均亮度，所以分兩次 dispatch；`develop_shader` 不用 workgroup 記憶體與 barrier（某 D3D12 驅動因此整批不處理），亮度總和用每個 workgroup 一格的全域 atomic；`renderer` 大圖分段、wgpu 錯誤轉 `RuntimeError`（該張改回 CPU），主程式的階段表與 `GPU_STAGES` 不符時不提供 GPU。24MP 約 0.12 秒（CPU 約 7 秒），單一階段與 CPU 差最多 1 階 | wgpu（首次使用時安裝） |
+| `gpu_develop` | 7 / 664 | 批次匯出在獨立顯示卡上套用顯影 recipe：登錄 `develop_backends` 後端（多個視窗各有實例，最後一個卸載才取消登錄）；`adapter_policy` 只選 `DiscreteGPU`（Windows 先 Vulkan 再 D3D12：wgpu 的 D3D12 經 FXC 編譯，浮點運算被重排，與 CPU 差得較多），內建顯示卡與軟體算繪器一律不用，wgpu instance 也只啟用這些 API（Vulkan 與 OpenGL 一起探測曾讓 `wgpuCreateInstance` 當掉）；`params` 把逐通道階段（白平衡、曝光、白黑場、亮度、對比、色調曲線）用 CPU 階段本身跑過 0..255 斜坡做成查表，只有亮部/陰影、vibrance、飽和度在 shader 裡算；對比要整張圖的平均亮度，所以分兩次 dispatch；`develop_shader` 不用 workgroup 記憶體與 barrier（某 D3D12 驅動因此整批不處理），亮度總和用每個 workgroup 一格的全域 atomic；`renderer` 大圖分段、wgpu 錯誤轉 `RuntimeError`（該張改回 CPU），主程式的階段表與 `GPU_STAGES` 不符時不提供 GPU。24MP 約 0.12 秒（CPU 約 7 秒），單一階段與 CPU 差最多 1 階 | wgpu（首次使用時安裝） |
 | `spanish_translation` | 3 / 1,824 | 西班牙文語言外掛，示範在 `register_languages()` 裡呼叫 `register_language()` | — |
 | `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 823 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
@@ -988,7 +988,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-921 個檔、155,262 行。`pyproject.toml` 定義三個互斥層級 marker：
+922 個檔、155,390 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |

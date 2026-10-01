@@ -68,3 +68,11 @@ def test_describe_names_the_device_and_its_api():
 ])
 def test_describe_with_missing_fields(info, expected):
     assert describe(info) == expected
+
+
+@pytest.mark.parametrize(("platform", "backends"), [
+    ("win32", ["Vulkan", "DX12"]), ("darwin", ["Metal"]), ("linux", ["Vulkan"]),
+])
+def test_the_instance_starts_only_the_apis_the_policy_can_choose(platform, backends):
+    from gpu_develop.adapter_policy import instance_backends
+    assert instance_backends(platform) == backends
