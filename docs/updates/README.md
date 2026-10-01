@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-41 | 2026-10-01 | Puppet's Live menu turns a WAV into a lip-sync motion that plays the file; audio_lipsync is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-40 | 2026-10-01 | Deleting a puppet vertex keeps its drawable's bone weights and vertex morphs aligned | #bugfix #puppet #done | [2026-10](2026-10.md) |
 | U-20261001-39 | 2026-10-01 | Puppet's Tools menu repairs every mesh and weight map; mesh_repair and bone_weights are wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-38 | 2026-10-01 | Puppet's motion timeline simplifies a recorded take's keys within a tolerance; motion_compress is wired | #feature #puppet #docs #i18n | [2026-10](2026-10.md) |
@@ -506,4 +507,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 40 |
+| [2026-10.md](2026-10.md) | 2026-10 | 41 |

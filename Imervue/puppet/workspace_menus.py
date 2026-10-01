@@ -97,8 +97,10 @@ class PuppetMenusMixin:
             "puppet_mesh_edit", "Edit mesh", self._toggle_mesh_edit, checkable=True)
 
     def _build_live_actions(self) -> None:
-        """Checkable live-state toggles: tracking, blink, lip-sync and idle."""
+        """Live-state toggles (tracking, blink, lip-sync, idle) and lip-sync from a file."""
         act = self._action
+        self._lipsync_audio_action = act(
+            "puppet_lipsync_audio", "Lip-sync from Audio File…", self._lipsync_from_audio_file)
         self._drag_toggle = act(
             "puppet_drag_track", "Drag-track head", self._toggle_drag, checkable=True)
         self._blink_toggle = act(
@@ -181,6 +183,7 @@ class PuppetMenusMixin:
         live_menu.addAction(self._drag_toggle)
         live_menu.addAction(self._blink_toggle)
         live_menu.addAction(self._lipsync_toggle)
+        live_menu.addAction(self._lipsync_audio_action)
         live_menu.addAction(self._webcam_toggle)
         live_menu.addSeparator()
         live_menu.addAction(self._idle_toggle)

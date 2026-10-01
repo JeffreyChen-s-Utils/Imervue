@@ -937,6 +937,8 @@ Puppet 탭을 열고 **Open Puppet…** 을 클릭해 ``imeru.puppet`` 을 선�
      - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 에서 약 4.5 초마다 cosine close→open (force-write 경로로 canvas 의 no-change-skip 우회, 다른 드라이버에 막히지 않음)
    * - Mic lip-sync
      - 마이크 RMS → ``ParamMouthOpenY`` (``sounddevice`` 필요)
+   * - Lip-sync from Audio File…
+     - **Live** 메뉴: WAV (8 / 16 / 32 비트 PCM) 를 ``lipsync_<file>`` 라는 이름의 모션으로 바꿔 음량에 맞춰 ``ParamMouthOpenY`` 를 초당 30 회 열고 (아무것도 바꾸지 않는 키는 제외), WAV 를 그 모션의 사운드로 재생. 같은 이름의 모션을 대체하며 **Motions** 도크에서 선택. 선택 의존성 불필요
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → 머리 yaw / pitch / roll + 눈 + 입 (``opencv-python`` + ``mediapipe`` 필요; 감지된 랜드마크를 표시하는 실시간 미리보기 dialog 열림)
    * - Auto idle / Idle motions

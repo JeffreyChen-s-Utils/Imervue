@@ -511,6 +511,7 @@ JSON 기반, 사람이 diff 가능, 독점 바이너리 없음. 이 형식은 �
 - Drag-track head — 커서가 캔버스 위에서 움직이면 머리와 눈이 커서 쪽으로 돌아감
 - 코사인 open → close → open 커브 기반 자동 눈깜빡임
 - `sounddevice` RMS를 통한 마이크 입싱크 → `ParamMouthOpenY` (선택 의존성)
+- 오디오 파일 립싱크 — **Live > 오디오 파일로 립싱크…** 메뉴가 WAV를 모션으로 바꿔 음량에 맞춰 `ParamMouthOpenY`를 열고(초당 30회, 아무것도 바꾸지 않는 키는 제외) WAV를 그 모션의 사운드로 재생; 추가 의존성 없음
 - OpenCV + MediaPipe Tasks FaceLandmarker를 통한 웹캠 얼굴 추적 → 머리 yaw / pitch / roll + 눈 / 입 개폐 (선택 의존성)
 - 커스텀 모션 녹화 — 슬라이더를 흔들고 / 웹캠을 향하고 / 물리가 동작하는 동안 30 Hz로 파라미터 값을 캡처; 정지 시 재생 / 루프 / 저장 준비된 선형 세그먼트 Motion으로 베이킹
 

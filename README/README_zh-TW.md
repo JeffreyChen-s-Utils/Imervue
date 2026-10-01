@@ -510,6 +510,7 @@ JSON 為主，人類可 diff，沒有專有二進位。這個格式是開放且�
 - 拖曳追蹤頭部 — 游標在畫布上移動時，頭部與眼睛會轉向游標
 - 自動眨眼，cosine open → close → open 曲線
 - 麥克風對嘴 via `sounddevice` RMS → `ParamMouthOpenY`（選用依賴）
+- 從音訊檔對嘴 — **Live > 從音訊檔對嘴…** 把 WAV 轉成一個動作，讓 `ParamMouthOpenY` 隨它的音量張開（每秒 30 次，不帶來變化的 key 會被丟掉），並把這個 WAV 當成動作的聲音播放；不需要額外依賴
 - 攝影機臉部追蹤 via OpenCV + MediaPipe Tasks FaceLandmarker → 頭部 yaw / pitch / roll + 眼 / 嘴開合（選用依賴）
 - 自訂動作錄製 — 滑動滑桿 / 對攝影機 / 物理運行時以 30 Hz 擷取參數值；停止時烘焙成線性段 Motion
 

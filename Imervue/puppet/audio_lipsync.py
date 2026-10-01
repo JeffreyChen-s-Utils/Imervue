@@ -3,8 +3,10 @@
 The live input engine already lip-syncs from the microphone; this computes the
 same kind of mouth-open envelope from an audio *file* so a puppet can mime to a
 recorded clip. The envelope math is pure numpy and the WAV reader uses only the
-standard library, so the whole pipeline is unit-testable without extra deps. A
-workspace timer can then step the returned curve into ``ParamMouthOpenY``.
+standard library, so the whole pipeline is unit-testable without extra deps.
+:func:`lipsync_motion` turns the curve into a :class:`Motion` on
+``ParamMouthOpenY`` that plays the file as its sound — Puppet's **Live > Lip-sync
+from Audio File…** adds it to the rig.
 """
 from __future__ import annotations
 
@@ -13,10 +15,17 @@ from pathlib import Path
 
 import numpy as np
 
+from Imervue.puppet.document import Motion, MotionSegment, MotionTrack
+from Imervue.puppet.motion_compress import compress_track
+
 # RMS below this fraction of the loudest frame reads as silence (mouth closed),
 # so room tone / breaths don't keep the mouth flapping.
 DEFAULT_GATE = 0.04
 _INT_DTYPES = {1: np.uint8, 2: np.int16, 4: np.int32}
+LIPSYNC_FPS = 30.0
+# Keys within this share of the mouth's range of the line through their
+# neighbours are dropped, so a minute of speech isn't 1800 keys.
+LIPSYNC_TOLERANCE = 0.02
 
 
 def samples_per_frame(sample_rate: int, fps: float) -> int:
@@ -97,3 +106,34 @@ def mouth_open_curve_from_wav(
     """Convenience: load a WAV and return its per-frame mouth-open curve."""
     samples, rate = load_wav_mono(path)
     return mouth_open_curve(samples, rate, fps, gate=gate)
+
+
+def lipsync_motion(
+    path: str | Path,
+    *,
+    name: str,
+    param_id: str,
+    mouth_range: tuple[float, float] = (0.0, 1.0),
+    fps: float = LIPSYNC_FPS,
+) -> Motion | None:
+    """A motion that opens *param_id* with the loudness of the WAV at *path*.
+
+    ``mouth_range`` is ``(closed, fully open)``; the motion lasts as long as
+    the audio, ends closed, carries the file as its ``sound_path`` so the
+    player plays it in sync, and keeps only the keys that matter. None when
+    the file is silent. Raises ``ValueError`` / ``wave.Error`` / ``OSError``
+    for a file it cannot read.
+    """
+    curve = mouth_open_curve_from_wav(path, fps)
+    if not curve or max(curve) <= 0.0:
+        return None
+    closed, wide = mouth_range
+    duration = len(curve) / fps
+    points = [(i / fps, closed + value * (wide - closed)) for i, value in enumerate(curve)]
+    points.append((duration, closed))
+    track = MotionTrack(param_id, [
+        MotionSegment("linear", a, b) for a, b in zip(points, points[1:], strict=False)
+    ])
+    track = compress_track(track, tol=LIPSYNC_TOLERANCE * abs(wide - closed))
+    return Motion(name=name, duration=duration, tracks=[track],
+                  sound_path=str(Path(path).resolve()))

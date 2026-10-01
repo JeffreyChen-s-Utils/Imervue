@@ -1042,6 +1042,12 @@ Menüs enthalten auch die Einträge der Toolbar.
        Leinwand, sodass konkurrierende Treiber das Blinzeln nicht abwürgen)
    * - Mic lip-sync
      - Mikrofon-RMS → ``ParamMouthOpenY`` (benötigt ``sounddevice``)
+   * - Lip-sync from Audio File…
+     - Menü **Live**: eine WAV (8-, 16- oder 32-Bit-PCM) in eine Motion namens
+       ``lipsync_<file>`` umwandeln, die ``ParamMouthOpenY`` mit der Lautstärke
+       öffnet, 30-mal pro Sekunde (Keys ohne Beitrag werden verworfen), und die
+       WAV als ihren Sound abspielt; sie ersetzt eine gleichnamige Motion und
+       wird im Motions-Dock ausgewählt. Benötigt keine optionale Abhängigkeit
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → Kopf-Yaw / Pitch / Roll +
        Augen + Mund (benötigt ``opencv-python`` + ``mediapipe``;

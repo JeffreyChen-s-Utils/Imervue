@@ -524,6 +524,7 @@ JSON-based, humanly diffable, no proprietary binary. The format is open and chec
 - Drag-track head — the head and eyes turn toward the cursor as it moves over the canvas
 - Auto-blink on a cosine open → close → open curve
 - Mic lip-sync via `sounddevice` RMS → `ParamMouthOpenY` (optional dep)
+- Lip-sync from an audio file — **Live > Lip-sync from Audio File…** turns a WAV into a motion that opens `ParamMouthOpenY` with its loudness (30 times a second, keys that add nothing dropped) and plays the WAV as its sound; no extra dependency
 - Webcam face tracking via OpenCV + the MediaPipe Tasks FaceLandmarker → head yaw / pitch / roll + eye / mouth open (optional deps)
 - Custom motion recording — captures parameter values at 30 Hz while you wiggle sliders / face the webcam / let physics run; bakes into a linear-segment Motion ready to play / loop / save
 

@@ -516,6 +516,7 @@ Basado en JSON, comparable a mano, sin binarios propietarios. El formato es abie
 - Drag-track head — la cabeza y los ojos se giran hacia el cursor mientras se mueve sobre el lienzo
 - Auto-parpadeo en curva coseno open → close → open
 - Sincronización labial por micrófono vía RMS de `sounddevice` → `ParamMouthOpenY` (dep opcional)
+- Sincronización labial desde un archivo de audio — **Live > Lip-sync from Audio File…** convierte un WAV en un motion que abre `ParamMouthOpenY` según su volumen (30 veces por segundo, descartando las claves que no aportan nada) y reproduce el WAV como su sonido; sin dependencias extra
 - Seguimiento facial por webcam vía OpenCV + el FaceLandmarker de MediaPipe Tasks → yaw / pitch / roll de cabeza + apertura de ojos / boca (deps opcionales)
 - Grabación de motion personalizada — captura los valores de parámetros a 30 Hz mientras mueves los controles / miras a la webcam / dejas correr la física; los hornea en un Motion de segmentos lineales listo para reproducir / repetir / guardar
 

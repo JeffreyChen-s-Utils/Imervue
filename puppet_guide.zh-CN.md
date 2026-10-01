@@ -208,7 +208,7 @@ Parameter blends — 在两个以上参数构成的网格上给变形器 form �
 
 ### 2.5 动作配音
 
-一个动作可以携带 `sound_path` — 一个 WAV 文件的绝对路径。动作开始播放时通过 `QSoundEffect` 播一次 WAV；**Pause** 和 **Stop** 会停止声音。把 Cubism `.model3.json` 叠加到已打开的 rig（见*导入 rig*）时，会从动作条目的 `Sound` 字段填入；其他动作要编辑 `.puppet` zip 内的 `motions/<name>.json` — Puppet 标签没有设置它的字段。WAV 文件本身不会存进 `.puppet`，文件不存在时直接跳过。
+一个动作可以携带 `sound_path` — 一个 WAV 文件的绝对路径。动作开始播放时通过 `QSoundEffect` 播一次 WAV；**Pause** 和 **Stop** 会停止声音。把 Cubism `.model3.json` 叠加到已打开的 rig（见*导入 rig*）时，会从动作条目的 `Sound` 字段填入；**Live > 从音频文件对嘴…** 则会围绕一个 WAV 建立新动作：嘴巴（`ParamMouthOpenY`）随它的音量张开，每秒 30 次，而这个 WAV 就是动作的声音。其他动作仍要编辑 `.puppet` zip 内的 `motions/<name>.json` — Puppet 标签没有设置它的字段。WAV 文件本身不会存进 `.puppet`，文件不存在时直接跳过。
 
 如果没装 `PySide6.QtMultimedia`，音频优雅停用，动作的视觉轨仍然会播。
 

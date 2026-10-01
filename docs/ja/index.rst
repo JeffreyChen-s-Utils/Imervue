@@ -939,6 +939,8 @@ Puppet タブのツールバー → **Examples ▾** ドロップダウンから
      - ``ParamEyeLOpen`` / ``ParamEyeROpen`` で約 4.5 秒ごとの cosine close→open（force-write パスで canvas の no-change-skip をバイパスし、他のドライバに邪魔されない）
    * - Mic lip-sync
      - マイク RMS → ``ParamMouthOpenY``\ （``sounddevice`` 必要）
+   * - Lip-sync from Audio File…
+     - **Live** メニュー：WAV（8 / 16 / 32 ビット PCM）を ``lipsync_<file>`` という名前のモーションに変換し、音量に合わせて ``ParamMouthOpenY`` を毎秒 30 回開き（何も変えないキーは省く）、WAV をそのモーションのサウンドとして再生。同名のモーションは置き換えられ、**Motions** ドックで選べる。オプション依存は不要
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → 頭の yaw / pitch / roll + 目 + 口（``opencv-python`` + ``mediapipe`` 必要；検出ランドマーク表示のリアルタイムプレビュー dialog 起動）
    * - Auto idle / Idle motions

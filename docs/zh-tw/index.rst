@@ -894,6 +894,8 @@ physics）記錄於倉庫的 ``Imervue/puppet/FORMAT.md``。只有 JSON + PNG �
      - ``ParamEyeLOpen`` / ``ParamEyeROpen`` 上的 cosine close→open，每 ~4.5 秒一次（force-write 路徑繞過 canvas 的 no-change-skip，避免被其他 driver 卡住）
    * - Mic lip-sync
      - 麥克風 RMS → ``ParamMouthOpenY``\ （需 ``sounddevice``）
+   * - Lip-sync from Audio File…
+     - **Live** 選單（**從音訊檔對嘴…**）：把 WAV（8、16 或 32 位元 PCM）轉成名為 ``lipsync_<file>`` 的動作，以每秒 30 次的頻率讓 ``ParamMouthOpenY`` 隨音量張開（不帶來變化的 key 會被丟掉），並把這個 WAV 當成動作的聲音播放；它會取代同名的動作，並在 **Motions** 擺放欄中被選取。不需要任何選用依賴
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → 頭部 yaw / pitch / roll + 眼 + 嘴（需 ``opencv-python`` + ``mediapipe``；開啟即時預覽 dialog 顯示偵測到的 landmark）
    * - Auto idle / Idle motions

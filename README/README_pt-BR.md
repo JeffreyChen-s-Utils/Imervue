@@ -520,6 +520,7 @@ Baseado em JSON, diff-friendly por humanos, sem binário proprietário. O format
 - Drag-track head — a cabeça e os olhos se voltam para o cursor enquanto ele se move sobre o canvas
 - Auto-piscar em uma curva cosseno open → close → open
 - Sincronia labial por microfone via `sounddevice` RMS → `ParamMouthOpenY` (dep opcional)
+- Sincronia labial a partir de um arquivo de áudio — **Live > Lip-sync from Audio File…** transforma um WAV em um motion que abre `ParamMouthOpenY` conforme o volume (30 vezes por segundo, descartando as chaves que não acrescentam nada) e toca o WAV como seu som; sem dependência extra
 - Rastreamento facial por webcam via OpenCV + o FaceLandmarker do MediaPipe Tasks → yaw / pitch / roll da cabeça + abertura de olho / boca (deps opcionais)
 - Gravação de motion customizado — captura valores de parâmetros a 30 Hz enquanto você balança sliders / encara a webcam / deixa a física rodar; bake em Motion de segmentos lineares pronto para reproduzir / loopar / salvar
 

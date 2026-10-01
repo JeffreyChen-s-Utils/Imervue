@@ -513,6 +513,7 @@ Basé sur JSON, lisible et diffable par un humain, sans binaire propriétaire. L
 - Suivi de tête par glissement — la tête et les yeux se tournent vers le curseur quand il se déplace sur le canevas
 - Clignement automatique sur une courbe cosinus ouvrir → fermer → ouvrir
 - Synchronisation labiale au micro via RMS `sounddevice` → `ParamMouthOpenY` (dépendance optionnelle)
+- Synchronisation labiale depuis un fichier audio — **Live > Lip-sync from Audio File…** transforme un WAV en un mouvement qui ouvre `ParamMouthOpenY` selon son volume (30 fois par seconde, les keyframes qui n'apportent rien étant supprimées) et lit le WAV comme son du mouvement ; aucune dépendance supplémentaire
 - Suivi facial par webcam via OpenCV + le FaceLandmarker de MediaPipe Tasks → tête yaw / pitch / roll + ouverture des yeux / bouche (dépendances optionnelles)
 - Enregistrement de mouvements personnalisés — capture les valeurs de paramètres à 30 Hz pendant que vous bougez des curseurs / faites face à la webcam / laissez la physique tourner ; cuit le tout en un Motion à segments linéaires prêt à jouer / boucler / sauvegarder
 

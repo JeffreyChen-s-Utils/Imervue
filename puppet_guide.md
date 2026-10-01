@@ -333,9 +333,12 @@ A motion can carry a `sound_path` — an absolute path to a WAV
 file. When playback of the motion starts, the WAV plays once via
 `QSoundEffect`; **Pause** and **Stop** silence it. Merging a
 Cubism `.model3.json` onto an open rig (see *Importing rigs*)
-fills it from the motion entry's `Sound` field; for any other
-motion, edit `motions/<name>.json` inside the `.puppet` zip —
-the Puppet tab has no field for it. The WAV itself stays outside
+fills it from the motion entry's `Sound` field, and **Live >
+Lip-sync from Audio File…** builds a new motion around a WAV: the
+mouth (`ParamMouthOpenY`) opens with its loudness, 30 times a
+second, and the WAV is the motion's sound. For any other motion,
+edit `motions/<name>.json` inside the `.puppet` zip — the Puppet
+tab has no field for it. The WAV itself stays outside
 the `.puppet` file, and a missing file is skipped.
 
 If `PySide6.QtMultimedia` isn't installed the audio degrades

@@ -1042,6 +1042,13 @@ aussi les entrées de la barre d'outils.
        afin que les pilotes concurrents ne puissent pas bloquer le clignement)
    * - Mic lip-sync
      - RMS du microphone → ``ParamMouthOpenY`` (nécessite ``sounddevice``)
+   * - Lip-sync from Audio File…
+     - Menu **Live** : transforme un WAV (PCM 8, 16 ou 32 bits) en un mouvement
+       nommé ``lipsync_<file>`` qui ouvre ``ParamMouthOpenY`` selon le volume,
+       30 fois par seconde (les images clés qui n'apportent rien sont supprimées),
+       et lit le WAV comme son du mouvement ; il remplace un mouvement du même nom
+       et est sélectionné dans le dock Mouvements. Ne nécessite aucune dépendance
+       optionnelle
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → lacet / tangage / roulis de la tête +
        yeux + bouche (nécessite ``opencv-python`` + ``mediapipe`` ;

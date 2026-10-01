@@ -507,6 +507,7 @@ JSON 为主，人类可 diff，没有专有二进制。格式是开放且可校�
 - Drag-track head — 光标在画布上移动时，头部与眼睛会转向光标
 - 自动眨眼，cosine open → close → open 曲线
 - 麦克风对嘴 via `sounddevice` RMS → `ParamMouthOpenY`（可选依赖）
+- 从音频文件对嘴 — **Live > 从音频文件对嘴…** 把 WAV 转成一个动作，让 `ParamMouthOpenY` 随它的音量张开（每秒 30 次，不产生变化的 key 会被丢弃），并把这个 WAV 作为动作的声音播放；不需要额外依赖
 - 摄像头脸部追踪 via OpenCV + MediaPipe Tasks FaceLandmarker → 头部 yaw / pitch / roll + 眼 / 嘴开合（可选依赖）
 - 自定义动作录制 — 滑动滑块 / 对摄像头 / 物理运行时以 30 Hz 抓取参数值；停止时烘焙成线性段 Motion
 

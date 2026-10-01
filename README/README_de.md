@@ -513,6 +513,7 @@ JSON-basiert, menschenlesbar diff-bar, kein proprietäres Binärformat. Das Form
 - Drag-Track-Head — Kopf und Augen drehen sich zum Cursor, während er sich über den Canvas bewegt
 - Auto-Blink auf einer Cosinus-Open → Close → Open-Kurve
 - Mic-Lip-Sync via `sounddevice` RMS → `ParamMouthOpenY` (optionale Dep)
+- Lip-Sync aus einer Audiodatei — **Live > Lip-sync from Audio File…** macht aus einer WAV eine Motion, die `ParamMouthOpenY` mit ihrer Lautstärke öffnet (30-mal pro Sekunde, Keys ohne Beitrag werden verworfen) und die WAV als ihren Sound abspielt; keine zusätzliche Abhängigkeit
 - Webcam-Face-Tracking via OpenCV + den MediaPipe Tasks FaceLandmarker → Head Yaw / Pitch / Roll + Eye / Mouth Open (optionale Deps)
 - Custom-Motion-Recording — erfasst Parameterwerte mit 30 Hz, während Sie Slider wackeln / der Webcam ins Gesicht schauen / Physik laufen lassen; backt in eine Linear-Segment-Motion, die zum Abspielen / Loopen / Speichern bereit ist
 

@@ -29,6 +29,7 @@ _ACTIONS = [
     ("_mesh_edit_toggle", "Edit mesh", True, "_toggle_mesh_edit"),
     ("_drag_toggle", "Drag-track head", True, "_toggle_drag"),
     ("_blink_toggle", "Auto-blink", True, "_toggle_blink"),
+    ("_lipsync_audio_action", "Lip-sync from Audio File…", False, "_lipsync_from_audio_file"),
     ("_lipsync_toggle", "Mic lip-sync", True, "_toggle_lipsync"),
     ("_webcam_toggle", "Webcam tracking", True, "_toggle_webcam"),
     ("_idle_toggle", "Auto idle", True, "_toggle_idle"),

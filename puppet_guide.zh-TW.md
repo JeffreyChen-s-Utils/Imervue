@@ -208,7 +208,7 @@ Parameter blends — 在兩個以上參數構成的網格上替變形器 form �
 
 ### 2.5 動作配音
 
-一個動作可以攜帶 `sound_path` — 一個 WAV 檔的絕對路徑。動作開始播放時透過 `QSoundEffect` 播一次 WAV；**Pause** 跟 **Stop** 會停止聲音。把 Cubism `.model3.json` 疊加到已開啟的 rig（見*匯入 rig*）時，會從動作項目的 `Sound` 欄位填入；其他動作要編輯 `.puppet` zip 內的 `motions/<name>.json` — Puppet 分頁沒有設定它的欄位。WAV 檔本身不會存進 `.puppet`，檔案不存在時直接略過。
+一個動作可以攜帶 `sound_path` — 一個 WAV 檔的絕對路徑。動作開始播放時透過 `QSoundEffect` 播一次 WAV；**Pause** 跟 **Stop** 會停止聲音。把 Cubism `.model3.json` 疊加到已開啟的 rig（見*匯入 rig*）時，會從動作項目的 `Sound` 欄位填入；**Live > 從音訊檔對嘴…** 則會以一個 WAV 為中心建立新動作：嘴巴（`ParamMouthOpenY`）隨它的音量張開，每秒 30 次，而這個 WAV 就是動作的聲音。其他動作仍要編輯 `.puppet` zip 內的 `motions/<name>.json` — Puppet 分頁沒有設定它的欄位。WAV 檔本身不會存進 `.puppet`，檔案不存在時直接略過。
 
 如果沒裝 `PySide6.QtMultimedia`，音訊優雅停用，動作的視覺軌仍然會播。
 

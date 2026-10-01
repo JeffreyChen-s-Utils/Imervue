@@ -1043,6 +1043,13 @@ las entradas de la barra de herramientas.
        para que los drivers en competencia no puedan detener el parpadeo)
    * - Mic lip-sync
      - RMS del micrófono → ``ParamMouthOpenY`` (requiere ``sounddevice``)
+   * - Lip-sync from Audio File…
+     - Menú **Live**: convierte un WAV (PCM de 8, 16 o 32 bits) en un movimiento
+       llamado ``lipsync_<file>`` que abre ``ParamMouthOpenY`` según el volumen,
+       30 veces por segundo (se descartan las claves que no aportan nada), y
+       reproduce el WAV como su sonido; reemplaza un movimiento con ese nombre y
+       queda seleccionado en el dock **Motions**. No necesita ninguna dependencia
+       opcional
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → yaw / pitch / roll de cabeza +
        ojos + boca (requiere ``opencv-python`` + ``mediapipe``;

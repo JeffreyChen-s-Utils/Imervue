@@ -1034,6 +1034,12 @@ menus hold the toolbar's entries as well.
        so competing drivers can't stall the blink)
    * - Mic lip-sync
      - Microphone RMS → ``ParamMouthOpenY`` (requires ``sounddevice``)
+   * - Lip-sync from Audio File…
+     - **Live** menu: turn a WAV (8-, 16- or 32-bit PCM) into a motion named
+       ``lipsync_<file>`` that opens ``ParamMouthOpenY`` with the loudness,
+       30 times a second (keys that add nothing are dropped), and plays the
+       WAV as its sound; it replaces a motion of that name and is picked in
+       the Motions dock. Needs no optional dependency
    * - Webcam tracking
      - MediaPipe Tasks API FaceLandmarker → head yaw / pitch / roll +
        eye + mouth (requires ``opencv-python`` + ``mediapipe``;
