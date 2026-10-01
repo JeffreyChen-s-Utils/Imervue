@@ -37,7 +37,19 @@ def test_dev_toml_mirrors_pyproject_project_table():
     assert dev["project"]["name"] == "Imervue_dev"
     for key in ("dependencies", "description", "keywords", "requires-python", "classifiers"):
         assert dev["project"][key] == main["project"][key], key
-    assert dev["tool"]["setuptools"]["packages"] == main["tool"]["setuptools"]["packages"]
+
+
+def test_dev_toml_ships_what_pyproject_ships():
+    # CI builds Imervue_dev by writing dev.toml to pyproject.toml (scripts/dev_release.py), so
+    # anything declared on one side only is a package the tests never ran against.
+    main = _toml("pyproject.toml")
+    dev = _toml("dev.toml")
+    for key in ("optional-dependencies", "scripts", "gui-scripts", "entry-points",
+                "license-files", "readme"):
+        assert dev["project"].get(key, {}) == main["project"].get(key, {}), key
+    assert dev["build-system"] == main["build-system"]
+    # Package discovery and package data decide which files reach the wheel.
+    assert dev["tool"]["setuptools"] == main["tool"]["setuptools"]
 
 
 def test_requirements_txt_lists_runtime_dependencies_then_the_package():

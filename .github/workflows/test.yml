@@ -126,3 +126,56 @@ jobs:
         PYTHONFAULTHANDLER: "1"
         PYTHONUNBUFFERED: "1"
       run: python -X faulthandler -u -m pytest tests/ --test-layer=${{ matrix.layer }} -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception
+
+  publish-dev:
+    # The dev channel. A push to dev that passes every job above is built from dev.toml and
+    # uploaded when it is still the tip of dev and ships something the newest Imervue_dev does
+    # not. scripts/dev_release.py picks the version from PyPI, so nothing is committed back.
+    # This workflow also runs for main and for pull requests: the condition keeps both out.
+    name: Publish Imervue_dev to PyPI
+    needs: [lint, docs, fast, extended]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: publish-dev
+      cancel-in-progress: false
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Set up Python 3.12
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: "3.12"
+    - name: Install build tooling
+      # The versions release.yml builds the stable package with
+      # (tests/test_dev_release.py keeps the two in step). Wheels only: an sdist
+      # would run its setup script on the runner.
+      run: |
+        python -m pip install --upgrade --only-binary :all: "pip==26.2.1" "build==1.5.0" "twine==6.2.0"
+    - name: Write pyproject.toml from dev.toml with the next version
+      run: python scripts/dev_release.py prepare
+    - name: Build sdist and wheel
+      # Building does not import the package, so PySide6 is not installed here.
+      run: python -m build
+    - name: Verify distribution metadata
+      run: python -m twine check dist/*
+    - name: Compare with the newest published wheel
+      id: compare
+      run: python scripts/dev_release.py changed dist
+    - name: Check that this commit is still the tip of dev
+      # A run that finishes after a newer push would otherwise publish older
+      # code as the newest release.
+      id: tip
+      run: |
+        tip="$(git ls-remote origin refs/heads/dev | cut -f1)"
+        if [ "$tip" = "$GITHUB_SHA" ]; then current=true; else current=false; fi
+        echo "current=$current" >> "$GITHUB_OUTPUT"
+    - name: Publish to PyPI
+      if: steps.compare.outputs.changed == 'true' && steps.tip.outputs.current == 'true'
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: python -m twine upload --non-interactive dist/*
