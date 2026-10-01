@@ -214,6 +214,7 @@ korean_word_dict = {
     "plugin_dl_status_fetching": "플러그인 목록을 가져오는 중...",
     "plugin_dl_status_found": "{count}개의 플러그인을 찾았습니다",
     "plugin_dl_status_error": "오류: {error}",
+    "plugin_dl_needs_newer": "{name}에는 더 새로운 Imervue가 필요합니다(플러그인 API {needed}, 현재 버전은 {have}). Imervue를 업데이트한 뒤 다시 다운로드하세요.",
     "plugin_dl_status_downloading": "{name} 다운로드 중...",
     "plugin_dl_status_done": "{name} 다운로드 완료!",
     "plugin_dl_status_deleted": "{name}이(가) 삭제되었습니다.",

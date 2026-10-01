@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.plugin_api import MANIFEST_NAME, IncompatiblePluginError, check_compatible
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
@@ -221,6 +222,25 @@ def _is_plugin_candidate(path: Path) -> bool:
     return path.is_file() and path.suffix == ".py" and path.stem != "__init__"
 
 
+def _api_compatible(candidate: Path) -> bool:
+    """False, with the reason logged, for a plugin package this Imervue is too old for.
+
+    A ``plugin.json`` that cannot be read or parsed also keeps the plugin out:
+    what it needs is unknown.
+    """
+    if not candidate.is_dir():
+        return True
+    try:
+        check_compatible(candidate)
+    except IncompatiblePluginError as e:
+        logger.warning("%s", e)
+        return False
+    except (OSError, ValueError) as e:
+        logger.error("Skipping plugin '%s': unreadable %s: %s", candidate.name, MANIFEST_NAME, e)
+        return False
+    return True
+
+
 def _import_plugin(candidate: Path) -> ModuleType | None:
     """Import a plugin package (cached by ``importlib``) or execute a single-file plugin."""
     if candidate.is_dir():
@@ -268,10 +288,13 @@ def _plugin_class_in(module: ModuleType, source: Path) -> type[ImervuePlugin] | 
 def _plugin_classes(plugin_dirs: list[Path]) -> Iterator[type[ImervuePlugin]]:
     """Import every plugin under ``plugin_dirs`` and yield its plugin class.
 
-    A plugin that fails to import is logged and skipped, so one broken plugin
+    A plugin that fails to import, or needs a newer plugin API
+    (``Imervue.plugin.plugin_api``), is logged and skipped, so one broken plugin
     never stops the others from loading.
     """
     for candidate in _plugin_candidates(plugin_dirs):
+        if not _api_compatible(candidate):
+            continue
         try:
             module = _import_plugin(candidate)
             plugin_class = None if module is None else _plugin_class_in(module, candidate)

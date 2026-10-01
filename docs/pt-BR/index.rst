@@ -2103,6 +2103,16 @@ Além dos hooks, um plugin pode dar à Exportação em Lote outro renderizador p
 revelação registrando um ``BackendProvider`` com ``Imervue.image.develop_backends.register`` em
 ``on_plugin_loaded()``; o plugin GPU Develop é o exemplo.
 
+Um diálogo que executa uma transformação de imagem ao clicar em **OK** pode obter a linha de botões, a
+instalação de pacotes opcionais, a thread de trabalho e o toast de resultado de
+``Imervue.plugin.tool_dialog.ToolDialogMixin``: ele define ``output_suffix`` e as chaves do toast e
+retorna a transformação em ``_transform()``. Um plugin que importa código do programa principal
+adicionado depois de versões mais antigas declara a versão da API de plugins de que precisa em um
+arquivo ``plugin.json`` ao lado do seu ``__init__.py`` (``{"min_api_version": 2}``).
+``Plugins`` > ``Download Plugins`` recusa esse plugin em um Imervue antigo demais e mantém qualquer
+cópia já instalada, mostrando na linha de status a versão de que ele precisa; o carregador de plugins o
+ignora sem importá-lo e registra o motivo no log.
+
 .. list-table::
    :header-rows: 1
    :widths: 28 40 32

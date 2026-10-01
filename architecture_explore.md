@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `d30d412` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `464c401` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 925 | 155,713 |
+| `tests/` | 927 | 155,986 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 190 | 46,270 |
-| `Imervue/gui/` | 169 | 33,718 |
+| `Imervue/gui/` | 169 | 33,728 |
 | `Imervue/puppet/` | 60 | 16,107 |
 | `Imervue/image/` | 129 | 15,518 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 68 | 13,234 |
-| `Imervue/multi_language/` | 8 | 14,407 |
+| `Imervue/multi_language/` | 8 | 14,412 |
 | `Imervue/desktop_pet/` | 30 | 7,170 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 34 | 4,759 |
 | `Imervue/menu/` | 11 | 3,595 |
 | `Imervue/` 根層 | 6 | 1,930 |
-| `Imervue/plugin/` | 10 | 2,394 |
+| `Imervue/plugin/` | 12 | 2,617 |
 | `Imervue/system/` | 33 | 3,122 |
 | `Imervue/export/` | 9 | 1,082 |
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 9 | 935 |
-| `plugins/`（19 個外掛） | 80 | 16,834 |
-| **總計** | **1,797** | **342,699** |
+| `plugins/`（19 個外掛） | 80 | 15,986 |
+| **總計** | **1,801** | **342,362** |
 
-其中 `Imervue/` 套件本身 792 檔 / 170,152 行。
+其中 `Imervue/` 套件本身 794 檔 / 170,390 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -543,7 +543,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-169 個檔、33,718 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+169 個檔、33,728 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -595,7 +595,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `settle_poll.py` | 58 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題）；`owner=` 讓鏈隨物件銷毀而停 |
 | `workspace_manager.py` | 154 | 具名工作區預設（幾何 + 佈局快照） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
-| `_apply_save.py` | 187 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果（外掛也 import，見 architecture.md §6） |
+| `_apply_save.py` | 197 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
 
@@ -918,12 +918,14 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `plugin_base.py` | 264 | `ImervuePlugin` 基底類別，13 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_pet_created`（寵物視窗建立時，或外掛載入時寵物已存在）、`on_app_closing` |
-| `plugin_manager.py` | 314 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`）、hook 分派（`connect_pet_hooks` 接上桌面寵物分頁的 `pet_created`，載入 / 重新載入時補發給已存在的寵物）、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式）；`apply_saved_language()` / `register_plugin_languages()`：主視窗建立前只匯入外掛並呼叫 `register_languages()`，讓存下的外掛語言套用得到 |
-| `plugin_downloader.py` | 530 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
+| `plugin_manager.py` | 337 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`；匯入前先用 `plugin_api.check_compatible` 檢查 `plugin.json`，需要較新外掛 API 或讀不懂的就記 log 跳過、不匯入）、hook 分派（`connect_pet_hooks` 接上桌面寵物分頁的 `pet_created`，載入 / 重新載入時補發給已存在的寵物）、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式）；`apply_saved_language()` / `register_plugin_languages()`：主視窗建立前只匯入外掛並呼叫 `register_languages()`，讓存下的外掛語言套用得到 |
+| `plugin_downloader.py` | 544 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme） |
 | `pip_installer.py` | 850 | 外掛相依安裝器：下載內嵌 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔；再匯出 `python_finder` 的名稱（外掛依賴 `pip_installer._find_python`） |
 | `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
+| `plugin_api.py` | 73 | **外掛 API 版本**（純函式）：`PLUGIN_API_VERSION`、讀外掛目錄的 `plugin.json`（`min_api_version`，沒有檔案視為 1）、`check_compatible` 對需要較新版本的外掛丟 `IncompatiblePluginError`；docstring 列出每一版新增的主程式介面 |
+| `tool_dialog.py` | 113 | **`ToolDialogMixin`**（外掛 API 2）：外掛單次影像工具對話框的共用流程，OK → `_required_packages` 的套件安裝詢問 → `EffectWorker` 跑 `_transform()` → 存 `<stem>_<output_suffix>.png` → toast 結果並在成功時關閉；含 `WorkerHostMixin`。並轉出 `make_slider`、`slider_row`、`output_path`、`show_toast` 給外掛用 |
 | `subprocess_util.py` | 36 | 外掛 worker 呼叫子 Python 的共用 helper |
 | `worker_host.py` | 78 | **`WorkerHostMixin`**：擁有背景 `QThread` 的 `QDialog` 共用拆卸邏輯，修掉「QThread destroyed while running」當機；覆寫 `done()` 與 `closeEvent`，OK、Cancel、關閉視窗都會先停止並等待執行緒（約 90 個對話框使用） |
 
@@ -962,24 +964,26 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | 外掛 | 檔案/行數 | 功用 | 重量級相依 |
 | --- | --- | --- | --- |
 | `safety_review` | 15 / 4,622 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到）；存檔一律走 `_censor_core._save_as`（`.tmp` + `os.replace`，覆寫原檔模式失敗也不毀原圖） | nudenet, ultralytics, huggingface_hub |
-| `pet_integrations` | 9 / 1,700 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
-| `gpu_develop` | 7 / 664 | 批次匯出在獨立顯示卡上套用顯影 recipe：登錄 `develop_backends` 後端（多個視窗各有實例，最後一個卸載才取消登錄）；`adapter_policy` 只選 `DiscreteGPU`（Windows 先 Vulkan 再 D3D12：wgpu 的 D3D12 經 FXC 編譯，浮點運算被重排，與 CPU 差得較多），內建顯示卡與軟體算繪器一律不用，wgpu instance 也只啟用這些 API（Vulkan 與 OpenGL 一起探測曾讓 `wgpuCreateInstance` 當掉）；`params` 把逐通道階段（白平衡、曝光、白黑場、亮度、對比、色調曲線）用 CPU 階段本身跑過 0..255 斜坡做成查表，只有亮部/陰影、vibrance、飽和度在 shader 裡算；對比要整張圖的平均亮度，所以分兩次 dispatch；`develop_shader` 不用 workgroup 記憶體與 barrier（某 D3D12 驅動因此整批不處理），亮度總和用每個 workgroup 一格的全域 atomic；`renderer` 大圖分段、wgpu 錯誤轉 `RuntimeError`（該張改回 CPU），主程式的階段表與 `GPU_STAGES` 不符時不提供 GPU。24MP 約 0.12 秒（CPU 約 7 秒），單一階段與 CPU 差最多 1 階 | wgpu（首次使用時安裝） |
 | `spanish_translation` | 3 / 1,824 | 西班牙文語言外掛，示範在 `register_languages()` 裡呼叫 `register_language()` | — |
+| `pet_integrations` | 9 / 1,700 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
 | `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
-| `ai_object_remove` | 4 / 823 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
+| `ai_object_remove` | 4 / 832 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
 | `object_splitter` | 4 / 701 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
+| `gpu_develop` | 7 / 664 | 批次匯出在獨立顯示卡上套用顯影 recipe：登錄 `develop_backends` 後端（多個視窗各有實例，最後一個卸載才取消登錄）；`adapter_policy` 只選 `DiscreteGPU`（Windows 先 Vulkan 再 D3D12：wgpu 的 D3D12 經 FXC 編譯，浮點運算被重排，與 CPU 差得較多），內建顯示卡與軟體算繪器一律不用，wgpu instance 也只啟用這些 API（Vulkan 與 OpenGL 一起探測曾讓 `wgpuCreateInstance` 當掉）；`params` 把逐通道階段（白平衡、曝光、白黑場、亮度、對比、色調曲線）用 CPU 階段本身跑過 0..255 斜坡做成查表，只有亮部/陰影、vibrance、飽和度在 shader 裡算；對比要整張圖的平均亮度，所以分兩次 dispatch；`develop_shader` 不用 workgroup 記憶體與 barrier（某 D3D12 驅動因此整批不處理），亮度總和用每個 workgroup 一格的全域 atomic；`renderer` 大圖分段、wgpu 錯誤轉 `RuntimeError`（該張改回 CPU），主程式的階段表與 `GPU_STAGES` 不符時不提供 GPU。24MP 約 0.12 秒（CPU 約 7 秒），單一階段與 CPU 差最多 1 階 | wgpu（首次使用時安裝） |
 | `video_source` | 3 / 612 | 瀏覽影片並抽出靜幀 | imageio-ffmpeg |
-| `ai_motion_deblur` | 3 / 581 | Wiener 反捲積 + 選用 ONNX | onnxruntime |
-| `ai_portrait_relight` | 3 / 565 | 啟發式 Lambert 打光 + 選用 ONNX | onnxruntime |
-| `ai_smart_resize` | 3 / 524 | Seam carving 內容感知縮放 | — (重運算) |
-| `npr_filters` | 3 / 502 | 鉛筆 / 油畫 / 水彩 / 線稿 | opencv-python |
-| `ai_colorize` | 3 / 505 | 黑白上色：啟發式調色盤 + ONNX | onnxruntime |
-| `cloud_share` | 3 / 485 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛，僅在使用者按下上傳時執行） | — |
-| `ai_denoise` | 3 / 458 | 雙邊濾波（純 NumPy）或 ONNX 神經降噪 | onnxruntime |
-| `ai_style_transfer` | 3 / 400 | ONNX 快速神經風格轉換，自動探索 `models/*.onnx` | onnxruntime |
-| `portrait_mode` | 3 / 384 | rembg 主體遮罩 + 背景模糊（假淺景深） | rembg |
-| `ai_outpaint` | 3 / 237 | 擴張畫布 + 擴散填補邊界 | — |
+| `cloud_share` | 3 / 484 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛，僅在使用者按下上傳時執行） | — |
+| `ai_motion_deblur` | 3 / 480 | Wiener 反捲積 + 選用 ONNX | onnxruntime |
+| `ai_portrait_relight` | 3 / 464 | 啟發式 Lambert 打光 + 選用 ONNX | onnxruntime |
+| `ai_smart_resize` | 3 / 459 | Seam carving 內容感知縮放 | — (重運算) |
+| `npr_filters` | 3 / 428 | 鉛筆 / 油畫 / 水彩 / 線稿 | opencv-python |
+| `ai_colorize` | 3 / 406 | 黑白上色：啟發式調色盤 + ONNX | onnxruntime |
+| `ai_denoise` | 3 / 366 | 雙邊濾波（純 NumPy）或 ONNX 神經降噪 | onnxruntime |
+| `ai_style_transfer` | 3 / 309 | ONNX 快速神經風格轉換，自動探索 `models/*.onnx` | onnxruntime |
+| `portrait_mode` | 3 / 307 | rembg 主體遮罩 + 背景模糊（假淺景深） | rembg |
 | `png_to_icon` | 2 / 195 | PNG → 多尺寸 `.ico` + `.png`（純函式 `write_icon_set`，測試 `tests/test_png_to_icon.py`） | — (Pillow 為預設相依) |
+| `ai_outpaint` | 3 / 192 | 擴張畫布 + 擴散填補邊界 | — |
+
+上表的 `ai_colorize`、`ai_denoise`、`ai_motion_deblur`、`ai_portrait_relight`、`ai_smart_resize`、`ai_style_transfer`、`npr_filters`、`portrait_mode`、`ai_outpaint` 這 9 個單圖工具都以主程式的 `ToolDialogMixin` 建對話框（只留 `_transform()` / `_required_packages()` 與 toast 鍵），`ai_object_remove`、`cloud_share` 用它的 `show_toast` / `output_path`；這 11 個與 `gpu_develop` 都帶 `plugin.json`（`{"min_api_version": 2}`）。
 
 **發佈規則（硬性要求）**：`/plugins/` 在本 repo 是 gitignored（新檔要 `git add -f`），
 且外掛透過另一個公開 repo `D:\Codes\Imervue_Plugins`（remote `Jeffrey-Plugin-Repos/Imervue_Plugins`）
@@ -989,7 +993,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-925 個檔、155,713 行。`pyproject.toml` 定義三個互斥層級 marker：
+927 個檔、155,986 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1068,6 +1072,7 @@ SonarCloud（`JeffreyChen-s-Utils_Imervue`）。
 
 約 30 個「載入當前圖 → 套用 → 另存副本」對話框共用 `gui/_apply_save.py` 的 `EffectWorker(QThread)`。
 新增同型工具時直接接上，不要再手寫 worker。
+外掛的同型對話框改繼承 `plugin/tool_dialog.py` 的 `ToolDialogMixin`（9 個影像外掛），只寫 `_transform()` 與 toast 鍵；用到它的外掛要在 `plugin.json` 宣告外掛 API 2（`plugin/plugin_api.py`，`tests/test_plugin_api.py` 檢查）。
 
 ### 10.3 `WorkerHostMixin`
 

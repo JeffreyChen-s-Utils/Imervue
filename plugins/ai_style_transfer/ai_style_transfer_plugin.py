@@ -12,18 +12,14 @@ plugins-vs-main rule in CLAUDE.md.
 """
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
-    QHBoxLayout,
     QLabel,
     QMenu,
     QSlider,
@@ -32,23 +28,13 @@ from PySide6.QtWidgets import (
 )
 
 from ai_style_transfer.style_transfer import StyleTransferOptions, stylise
-from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
-from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
-from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform, slider_row
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
-
-logger = logging.getLogger("Imervue.plugin.ai_style_transfer")
 
 # Style transfer runs on onnxruntime; offered for install on first use.
 ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
@@ -61,7 +47,7 @@ _PERCENT_STEPS = 100
 
 class AIStyleTransferPlugin(ImervuePlugin):
     plugin_name = "AI Style Transfer"
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     plugin_description = "ONNX fast neural style transfer (Johnson et al.)."
     plugin_author = "Imervue"
 
@@ -135,14 +121,18 @@ class AIStyleTransferPlugin(ImervuePlugin):
         StyleTransferDialog(viewer, str(images[idx])).exec()
 
 
-class StyleTransferDialog(WorkerHostMixin, QDialog):
+class StyleTransferDialog(ToolDialogMixin, QDialog):
     """Pick model + intensity; run on a worker thread on OK."""
+
+    output_suffix = "styled"
+    failed_key = "style_transfer_failed"
+    failed_text = "Style transfer failed"
+    done_key = "style_transfer_done"
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
-        self._worker: _StyleTransferWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("style_transfer_title", "AI Style Transfer"))
         self.setMinimumWidth(440)
@@ -176,7 +166,7 @@ class StyleTransferDialog(WorkerHostMixin, QDialog):
         form.addRow(lang.get("style_transfer_model", "Style model:"), self._model)
         form.addRow(
             lang.get("style_transfer_intensity", "Intensity:"),
-            _slider_with_label(self._intensity, self._intensity_label),
+            slider_row(self._intensity, self._intensity_label),
         )
         return form
 
@@ -192,74 +182,20 @@ class StyleTransferDialog(WorkerHostMixin, QDialog):
         hint.setStyleSheet("color: #888; font-size: 11px;")
         return hint
 
-    def _build_button_box(self) -> QDialogButtonBox:
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal,
-            self,
-        )
-        buttons.accepted.connect(self._commit)
-        buttons.rejected.connect(self.reject)
-        return buttons
-
     def _commit(self) -> None:
-        model_path = str(self._model.currentData() or "")
-        if not model_path:
-            self._notify_failure(RuntimeError("no model selected"))
+        if not self._model.currentData():
+            self._notify_failure("no model selected")
             return
-        if self._worker is not None:
-            return
-        # Style transfer is ONNX only, so it always needs onnxruntime.
-        ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
+        super()._commit()
+    def _required_packages(self) -> list[tuple[str, str]]:
+        return ONNX_PACKAGES
 
-    def _start_worker(self) -> None:
-        # Reached asynchronously after the dependency check, by which time
-        # the user may have closed the dialog.
-        model_path = str(self._model.currentData() or "")
-        if self._worker is not None or not model_path or not self.isVisible():
-            return
-        # ONNX style-transfer inference is slow — run it on a worker thread.
+    def _transform(self) -> Transform:
         options = StyleTransferOptions(
-            model_path=model_path,
+            model_path=str(self._model.currentData()),
             intensity=self._intensity.value() / _PERCENT_STEPS,
         )
-        out_path = Path(_output_path(self._path, "styled"))
-        self._worker = _StyleTransferWorker(self._path, options, str(out_path))
-        self._worker.done.connect(self._on_done)
-        self._worker.start()
-
-    def _on_done(self, ok: bool, message: str) -> None:
-        # ``done`` is the thread's last act, but run() may not have returned yet.
-        # Wait before dropping the only reference: Qt aborts the whole process
-        # when a still-running QThread is destroyed.
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker = None
-        if not ok:
-            self._notify_failure(RuntimeError(message))
-            return
-        self._notify_success(Path(message))
-        self.accept()
-
-    def _notify_failure(self, exc: Exception) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            prefix = language_wrapper.language_word_dict.get(
-                "style_transfer_failed", "Style transfer failed",
-            )
-            self._viewer.main_window.toast.error(f"{prefix}: {exc}")
-
-    def _notify_success(self, out_path: Path) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            self._viewer.main_window.toast.info(
-                language_wrapper.language_word_dict.get(
-                    "style_transfer_done", "Saved {path}",
-                ).format(path=out_path.name),
-            )
+        return lambda rgba: stylise(rgba, options)
 
 
 def _discover_onnx_models() -> list[Path]:
@@ -269,39 +205,3 @@ def _discover_onnx_models() -> list[Path]:
     folder in their file manager and drop weights in.
     """
     return discover_models(_MODELS_DIR)
-
-
-def _slider_with_label(slider: QSlider, label: QLabel) -> QWidget:
-    container = QWidget()
-    row = QHBoxLayout(container)
-    row.setContentsMargins(0, 0, 0, 0)
-    row.addWidget(slider, stretch=1)
-    label.setMinimumWidth(50)
-    row.addWidget(label)
-    return container
-
-
-class _StyleTransferWorker(QThread):
-    """Run ONNX style-transfer inference off the UI thread and save the result."""
-
-    done = Signal(bool, str)
-
-    def __init__(self, path: str, options: StyleTransferOptions, out_path: str):
-        super().__init__()
-        self._path = path
-        self._options = options
-        self._out_path = out_path
-
-    def run(self) -> None:  # pragma: no cover - background thread
-        try:
-            out_arr = stylise(_load_rgba(self._path), self._options)
-            Image.fromarray(out_arr, mode="RGBA").save(self._out_path)
-        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
-            # ONNX / cv2 / PIL raise their own Exception subclasses (ORT's
-            # InvalidArgument, cv2.error, DecompressionBombError) that are not
-            # in the narrow tuple; letting them escape kills the thread with
-            # ``done`` never emitted, so the dialog hangs with a dead OK button.
-            logger.exception("style-transfer worker failed: %s", exc)
-            self.done.emit(False, str(exc))
-            return
-        self.done.emit(True, self._out_path)

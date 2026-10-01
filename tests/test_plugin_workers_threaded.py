@@ -1,14 +1,13 @@
-"""The 7 heavy AI/NPR plugins must run their compute on a background QThread.
+"""The heavy AI/NPR plugins run their compute off the GUI thread.
 
-Each dialog used to call ONNX / rembg / seam-carve / OpenCV inference directly
-in _commit on the GUI thread, freezing the UI until it finished. They now hand
-the work to a _XxxWorker(QThread) that emits done(ok, message), and each dialog
-stops its worker on reject/close (via the shared WorkerHostMixin) so the thread
-is never destroyed mid-run.
-
-The worker.run() bodies are exercised by calling run() directly (no start()), so
-the emit is captured synchronously; the heavy function and image load are
-monkeypatched so the tests stay fast and dependency-free.
+Nine tool dialogs hand their work to the shared ``ToolDialogMixin``
+(``Imervue/plugin/tool_dialog.py``), whose ``EffectWorker`` always reports
+``done(ok, message)``; that flow is covered once in ``test_tool_dialog.py`` and
+the worker's always-report contract in ``test_apply_save_worker.py``. Here each
+dialog's own part is checked: the transform it hands over runs the plugin's
+compute with the dialog's settings. Dialogs are stand-ins (``SimpleNamespace``)
+so no model discovery or image load runs. object_remove and cloud_share keep
+their own workers, run inline by calling ``run()``.
 """
 from __future__ import annotations
 
@@ -22,13 +21,159 @@ from ai_denoise import ai_denoise_plugin as dn
 from ai_motion_deblur import ai_motion_deblur_plugin as db
 from ai_object_remove import ai_object_remove_plugin as orm
 from ai_outpaint import ai_outpaint_plugin as op
+from ai_portrait_relight import ai_portrait_relight_plugin as rl
 from ai_smart_resize import ai_smart_resize_plugin as sr
 from ai_style_transfer import ai_style_transfer_plugin as st
 from npr_filters import npr_filters_plugin as npr
 from portrait_mode import portrait_mode as pm
 
 _ARR = np.zeros((3, 3, 4), dtype=np.uint8)
+_OUT = np.full((3, 3, 4), 7, dtype=np.uint8)
 
+
+def _w(value):
+    """A widget stand-in answering ``value()``, ``currentData()`` and ``isChecked()``."""
+    return SimpleNamespace(value=lambda: value, currentData=lambda: value, isChecked=lambda: value)
+
+
+@pytest.fixture
+def record(monkeypatch):
+    """Replace ``module.name`` by a recorder that returns ``_OUT``."""
+    calls: list = []
+
+    def patch(module, name):
+        def fake(*args, **kwargs):
+            calls.append((args, kwargs))
+            return _OUT
+        monkeypatch.setattr(module, name, fake)
+    return calls, patch
+
+
+def _run(dialog_cls, me) -> np.ndarray:
+    return dialog_cls._transform(me)(_ARR)
+
+
+def test_colorize_hands_over_the_method_and_intensity(record):
+    calls, patch = record
+    patch(cz, "_colorize_dispatch")
+    me = SimpleNamespace(_method=_w("heuristic:sepia"), _intensity=_w(40))
+    assert _run(cz.AIColorizeDialog, me) is _OUT
+    assert calls == [((_ARR, "heuristic:sepia", 40 / cz._PERCENT_STEPS), {})]
+
+
+def test_denoise_bilateral_builds_its_options(record):
+    calls, patch = record
+    patch(dn, "bilateral_denoise")
+    me = SimpleNamespace(_method=_w("bilateral"), _blend=_w(50), _radius=_w(4), _sigma=_w(30))
+    assert _run(dn.AIDenoiseDialog, me) is _OUT
+    ((arr, options), _), = calls
+    assert arr is _ARR
+    assert options == dn.BilateralOptions(spatial_radius=4, intensity_sigma=30.0,
+                                          blend=50 / dn._PERCENT_STEPS)
+
+
+def test_denoise_onnx_passes_the_model_and_blend(record):
+    calls, patch = record
+    patch(dn, "onnx_denoise")
+    me = SimpleNamespace(_method=_w("/m/d.onnx"), _blend=_w(80))
+    assert _run(dn.AIDenoiseDialog, me) is _OUT
+    assert calls == [((_ARR, "/m/d.onnx"), {"blend": 80 / dn._PERCENT_STEPS})]
+
+
+def test_deblur_wiener_builds_its_options(record):
+    calls, patch = record
+    patch(db, "wiener_deblur")
+    me = SimpleNamespace(_method=_w(("wiener", "motion")), _blend=_w(100), _gauss_radius=_w(3),
+                         _motion_length=_w(15), _motion_angle=_w(30), _snr=_w(25))
+    assert _run(db.AIMotionDeblurDialog, me) is _OUT
+    ((_arr, options), _), = calls
+    assert options == db.WienerOptions(psf_kind="motion", gaussian_radius=3, motion_length=15,
+                                       motion_angle=30, snr_db=25, blend=100 / db._PERCENT_STEPS)
+
+
+def test_deblur_onnx_passes_the_model_and_blend(record):
+    calls, patch = record
+    patch(db, "onnx_deblur")
+    me = SimpleNamespace(_method=_w(("onnx", "/m/b.onnx")), _blend=_w(60))
+    assert _run(db.AIMotionDeblurDialog, me) is _OUT
+    assert calls == [((_ARR, "/m/b.onnx"), {"blend": 60 / db._PERCENT_STEPS})]
+
+
+def test_relight_builds_its_options(record):
+    calls, patch = record
+    patch(rl, "heuristic_relight")
+    me = SimpleNamespace(_method=_w(("heuristic", None)), _azimuth=_w(45), _elevation=_w(30),
+                         _intensity=_w(60), _temperature=_w(-10), _blend=_w(100))
+    assert _run(rl.AIPortraitRelightDialog, me) is _OUT
+    ((_arr, options), _), = calls
+    assert options == rl.RelightOptions(azimuth=45.0, elevation=30.0,
+                                        intensity=60 / rl._INTENSITY_STEPS, temperature=-10,
+                                        blend=100 / rl._PERCENT_STEPS)
+
+
+def test_smart_resize_builds_its_options(record):
+    calls, patch = record
+    patch(sr, "smart_resize")
+    me = SimpleNamespace(_width=_w(800), _height=_w(600), _boost=_w(150), _protect_alpha=_w(False))
+    assert _run(sr.AISmartResizeDialog, me) is _OUT
+    ((_arr, options), _), = calls
+    assert options == sr.SmartResizeOptions(out_width=800, out_height=600,
+                                            energy_boost=150 / sr._BOOST_SLIDER_STEPS,
+                                            protect_alpha=False)
+
+
+def test_style_transfer_passes_the_model_and_intensity(record):
+    calls, patch = record
+    patch(st, "stylise")
+    me = SimpleNamespace(_model=_w("/m/s.onnx"), _intensity=_w(70))
+    assert _run(st.StyleTransferDialog, me) is _OUT
+    ((_arr, options), _), = calls
+    assert options == st.StyleTransferOptions(model_path="/m/s.onnx",
+                                              intensity=70 / st._PERCENT_STEPS)
+
+
+def test_npr_clamps_the_intensity_and_builds_its_options(record):
+    calls, patch = record
+    patch(npr, "apply_npr_filter")
+    me = SimpleNamespace(_style=_w("pencil"), _intensity=_w(10_000), _sigma_s=_w(60),
+                         _sigma_r=_w(40), _oil_levels=_w(8), _line_threshold=_w(90))
+    assert _run(npr.NPRFiltersDialog, me) is _OUT
+    ((_arr, options), _), = calls
+    assert options == npr.NPRFilterOptions(style="pencil", intensity=npr.INTENSITY_MAX,
+                                           sigma_s=60, sigma_r=40, oil_levels=8, line_threshold=90)
+
+
+def test_portrait_blurs_around_the_subject_mask(record, monkeypatch):
+    calls, patch = record
+    mask = np.ones((3, 3), np.uint8)
+    monkeypatch.setattr(pm, "_extract_subject_mask", lambda _a: mask)
+    patch(pm, "apply_portrait_blur")
+    me = SimpleNamespace(_blur=_w(16), _feather=_w(4))
+    assert _run(pm.PortraitModeDialog, me) is _OUT
+    ((arr, got_mask, options), _), = calls
+    assert arr is _ARR and got_mask is mask
+    assert options == pm.PortraitBlurOptions(blur_radius=16, feather_radius=4)
+
+
+def test_outpaint_passes_the_border_width(record):
+    calls, patch = record
+    patch(op, "outpaint")
+    assert _run(op.OutpaintDialog, SimpleNamespace(_padding=_w(96))) is _OUT
+    assert calls == [((_ARR, 96), {})]
+
+
+@pytest.mark.parametrize(("dialog_cls", "suffix"), [
+    (cz.AIColorizeDialog, "colorized"), (dn.AIDenoiseDialog, "denoised"),
+    (db.AIMotionDeblurDialog, "deblur"), (rl.AIPortraitRelightDialog, "relit"),
+    (sr.AISmartResizeDialog, "smart"), (st.StyleTransferDialog, "styled"),
+    (npr.NPRFiltersDialog, "npr"), (pm.PortraitModeDialog, "portrait"),
+    (op.OutpaintDialog, "outpaint"),
+])
+def test_each_tool_keeps_its_output_name(dialog_cls, suffix):
+    assert dialog_cls.output_suffix == suffix
+
+
+# --- the workers object_remove and cloud_share still own ---------------------
 
 def _capture(worker):
     captured: list[tuple[bool, str]] = []
@@ -38,169 +183,31 @@ def _capture(worker):
     return captured[-1]
 
 
-def _boom(*_a, **_k):
-    raise ValueError("kaboom")
-
-
 class _HardError(Exception):
-    """An exception outside the workers' old narrow catch tuple — stands in
-    for onnxruntime.InvalidArgument / cv2.error / PIL.DecompressionBombError,
-    all of which subclass Exception directly."""
+    """Outside any narrow catch tuple — stands in for onnxruntime / cv2 / PIL errors."""
 
 
 def _boom_hard(*_a, **_k):
     raise _HardError("unexpected backend failure")
 
 
-# --- per-plugin worker success + failure -----------------------------------
-
-def test_portrait_worker(qapp, tmp_path, monkeypatch):
-    monkeypatch.setattr(pm, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(pm, "_extract_subject_mask", lambda _a: np.zeros((3, 3), np.uint8))
-    monkeypatch.setattr(pm, "apply_portrait_blur", lambda _a, _m, _o: _ARR.copy())
-    out = tmp_path / "p.png"
-    ok, msg = _capture(pm._PortraitWorker("in.png", object(), str(out)))
-    assert ok and msg == str(out) and out.exists()
-
-    monkeypatch.setattr(pm, "_extract_subject_mask", _boom)
-    ok, msg = _capture(pm._PortraitWorker("in.png", object(), str(tmp_path / "x.png")))
-    assert not ok and "kaboom" in msg
-
-
-def test_style_transfer_worker(qapp, tmp_path, monkeypatch):
-    monkeypatch.setattr(st, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(st, "stylise", lambda _a, _o: _ARR.copy())
-    out = tmp_path / "s.png"
-    ok, msg = _capture(st._StyleTransferWorker("in.png", object(), str(out)))
-    assert ok and msg == str(out) and out.exists()
-
-    monkeypatch.setattr(st, "stylise", _boom)
-    ok, msg = _capture(st._StyleTransferWorker("in.png", object(), str(tmp_path / "x.png")))
-    assert not ok and "kaboom" in msg
-
-
-def test_denoise_worker(qapp, tmp_path, monkeypatch):
-    monkeypatch.setattr(dn, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(dn, "bilateral_denoise", lambda _a, _o: _ARR.copy())
-    monkeypatch.setattr(dn, "onnx_denoise", lambda _a, _m, blend=0.0: _ARR.copy())
-    out = tmp_path / "d.png"
-    ok, msg = _capture(dn._DenoiseWorker("in.png", "bilateral", 0.5, object(), str(out)))
-    assert ok and out.exists()
-    # ONNX branch routes through onnx_denoise.
-    out2 = tmp_path / "d2.png"
-    ok, _ = _capture(dn._DenoiseWorker("in.png", "some_model", 0.5, None, str(out2)))
-    assert ok and out2.exists()
-
-    monkeypatch.setattr(dn, "onnx_denoise", _boom)
-    ok, msg = _capture(dn._DenoiseWorker("in.png", "some_model", 0.5, None, str(tmp_path / "x.png")))
-    assert not ok and "kaboom" in msg
-
-
-def test_colorize_worker(qapp, tmp_path, monkeypatch):
-    monkeypatch.setattr(cz, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(cz, "_colorize_dispatch", lambda _a, _m, _i: _ARR.copy())
-    out = tmp_path / "c.png"
-    ok, msg = _capture(cz._ColorizeWorker("in.png", "heuristic:sepia", 0.5, str(out)))
-    assert ok and out.exists()
-
-    monkeypatch.setattr(cz, "_colorize_dispatch", _boom)
-    ok, msg = _capture(cz._ColorizeWorker("in.png", "heuristic:sepia", 0.5, str(tmp_path / "x.png")))
-    assert not ok and "kaboom" in msg
-
-
-def test_deblur_worker(qapp, tmp_path, monkeypatch):
-    monkeypatch.setattr(db, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(db, "wiener_deblur", lambda _a, _o: _ARR.copy())
-    monkeypatch.setattr(db, "onnx_deblur", lambda _a, _m, blend=0.0: _ARR.copy())
-    out = tmp_path / "b.png"
-    ok, _ = _capture(db._DeblurWorker("in.png", ("wiener", "gaussian"), 0.5, object(), str(out)))
-    assert ok and out.exists()
-    out2 = tmp_path / "b2.png"
-    ok, _ = _capture(db._DeblurWorker("in.png", ("onnx", "model.onnx"), 0.5, None, str(out2)))
-    assert ok and out2.exists()
-
-    monkeypatch.setattr(db, "wiener_deblur", _boom)
-    ok, msg = _capture(db._DeblurWorker("in.png", ("wiener", "gaussian"), 0.5, None, str(tmp_path / "x.png")))
-    assert not ok and "kaboom" in msg
-
-
-def test_smart_resize_worker(qapp, tmp_path, monkeypatch):
-    monkeypatch.setattr(sr, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(sr, "smart_resize", lambda _a, _o: _ARR.copy())
-    out = tmp_path / "r.png"
-    ok, msg = _capture(sr._SmartResizeWorker("in.png", object(), str(out)))
-    assert ok and out.exists()
-
-    monkeypatch.setattr(sr, "smart_resize", _boom)
-    ok, msg = _capture(sr._SmartResizeWorker("in.png", object(), str(tmp_path / "x.png")))
-    assert not ok and "kaboom" in msg
-
-
-def test_npr_worker(qapp, tmp_path, monkeypatch):
-    monkeypatch.setattr(npr, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(npr, "apply_npr_filter", lambda _a, _o: _ARR.copy())
-    out = tmp_path / "n.png"
-    ok, msg = _capture(npr._NPRFilterWorker("in.png", object(), str(out)))
-    assert ok and out.exists()
-
-    monkeypatch.setattr(npr, "apply_npr_filter", _boom)
-    ok, msg = _capture(npr._NPRFilterWorker("in.png", object(), str(tmp_path / "x.png")))
-    assert not ok and "kaboom" in msg
-
-
-# --- unexpected backend errors still report (not just the narrow tuple) -----
-
-# (module, patch_load_rgba, compute_attr, worker_factory(module, out_path))
-_HARD_FAIL_CASES = [
-    (cz, True, "_colorize_dispatch",
-     lambda m, out: m._ColorizeWorker("in.png", "heuristic:sepia", 0.5, out)),
-    (dn, True, "onnx_denoise",
-     lambda m, out: m._DenoiseWorker("in.png", "some_model", 0.5, None, out)),
-    (db, True, "wiener_deblur",
-     lambda m, out: m._DeblurWorker("in.png", ("wiener", "gaussian"), 0.5, object(), out)),
-    (sr, True, "smart_resize",
-     lambda m, out: m._SmartResizeWorker("in.png", object(), out)),
-    (st, True, "stylise",
-     lambda m, out: m._StyleTransferWorker("in.png", object(), out)),
-    (npr, True, "apply_npr_filter",
-     lambda m, out: m._NPRFilterWorker("in.png", object(), out)),
-    (pm, True, "_extract_subject_mask",
-     lambda m, out: m._PortraitWorker("in.png", object(), out)),
-    (orm, False, "remove_object",
-     lambda m, out: m._RemoveWorker(_ARR.copy(), np.zeros((3, 3), np.uint8), out)),
-    (orm, False, "sam_mask",
-     lambda m, _out: m._SamMaskWorker(_ARR.copy(), (1, 1), "enc", "dec")),
-    (op, True, "outpaint",
-     lambda m, out: m._OutpaintWorker("in.png", 10, out)),
-]
-
-
-@pytest.mark.parametrize("module, patch_load, compute_attr, factory", _HARD_FAIL_CASES)
-def test_worker_reports_unexpected_error(
-    module, patch_load, compute_attr, factory, qapp, tmp_path, monkeypatch,
-):
-    """Regression: each worker caught only (ImportError, OSError, ValueError
-    [, RuntimeError]); an ORT/cv2/PIL exception outside that tuple escaped
-    run(), killing the thread with done() never emitted — the dialog then hung
-    with a permanently dead OK button. run() must report every failure."""
-    if patch_load:
-        monkeypatch.setattr(module, "_load_rgba", lambda _p: _ARR.copy())
-    monkeypatch.setattr(module, compute_attr, _boom_hard)
-    ok, msg = _capture(factory(module, str(tmp_path / "x.png")))
+@pytest.mark.parametrize(("compute_attr", "factory"), [
+    ("remove_object", lambda m, out: m._RemoveWorker(_ARR.copy(), np.zeros((3, 3), np.uint8), out)),
+    ("sam_mask", lambda m, _out: m._SamMaskWorker(_ARR.copy(), (1, 1), "enc", "dec")),
+])
+def test_object_remove_workers_report_unexpected_errors(compute_attr, factory, qapp, tmp_path,
+                                                        monkeypatch):
+    monkeypatch.setattr(orm, compute_attr, _boom_hard)
+    ok, msg = _capture(factory(orm, str(tmp_path / "x.png")))
     assert ok is False
     assert "unexpected backend failure" in str(msg)
 
 
 def test_cloud_share_worker_reports_unexpected_error(qapp, monkeypatch):
-    """cloud_share's single-path catch missed http.client exceptions and its
-    batch path was unwrapped entirely — a provider error left the spinner
-    hung. Any uploader failure must now report."""
+    """A provider error must report, or the spinner hangs."""
     from cloud_share import cloud_share_plugin as cs
-    monkeypatch.setattr(
-        cs._UploadWorker, "_uploader", lambda _self: _boom_hard,
-    )
-    worker = cs._UploadWorker("imgur", ["a.png"], {"client_id": "x"})
-    ok, msg = _capture(worker)
+    monkeypatch.setattr(cs._UploadWorker, "_uploader", lambda _self: _boom_hard)
+    ok, msg = _capture(cs._UploadWorker("imgur", ["a.png"], {"client_id": "x"}))
     assert ok is False
     assert "unexpected backend failure" in str(msg)
 
@@ -208,46 +215,7 @@ def test_cloud_share_worker_reports_unexpected_error(qapp, monkeypatch):
 def test_cloud_share_worker_reports_batch_error(qapp, monkeypatch):
     from cloud_share import cloud_share_plugin as cs
     monkeypatch.setattr(cs, "upload_batch", _boom_hard)
-    monkeypatch.setattr(
-        cs._UploadWorker, "_uploader", lambda _self: (lambda _p: "link"),
-    )
-    worker = cs._UploadWorker("imgur", ["a.png", "b.png"], {"client_id": "x"})
-    ok, msg = _capture(worker)
+    monkeypatch.setattr(cs._UploadWorker, "_uploader", lambda _self: (lambda _p: "link"))
+    ok, msg = _capture(cs._UploadWorker("imgur", ["a.png", "b.png"], {"client_id": "x"}))
     assert ok is False
     assert "unexpected backend failure" in str(msg)
-
-
-# --- every dialog stops its worker on reject/close via the shared mixin -----
-
-_DIALOGS = [
-    pm.PortraitModeDialog,
-    st.StyleTransferDialog,
-    dn.AIDenoiseDialog,
-    cz.AIColorizeDialog,
-    db.AIMotionDeblurDialog,
-    sr.AISmartResizeDialog,
-    npr.NPRFiltersDialog,
-]
-
-
-def _fake_running_worker(waited):
-    return SimpleNamespace(
-        isRunning=lambda: True,
-        requestInterruption=lambda: None,
-        disconnect=lambda: None,
-        wait=lambda: waited.append("w"),
-    )
-
-
-@pytest.mark.parametrize("dialog_cls", _DIALOGS)
-def test_stop_worker_joins_running_thread(dialog_cls):
-    waited: list[str] = []
-    fake = SimpleNamespace(_worker=_fake_running_worker(waited))
-    dialog_cls._stop_worker(fake)          # inherited from WorkerHostMixin
-    assert waited == ["w"]
-    assert fake._worker is None
-
-
-@pytest.mark.parametrize("dialog_cls", _DIALOGS)
-def test_stop_worker_safe_without_a_worker(dialog_cls):
-    dialog_cls._stop_worker(SimpleNamespace(_worker=None))   # must not raise

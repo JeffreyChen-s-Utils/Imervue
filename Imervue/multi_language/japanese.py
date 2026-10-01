@@ -217,6 +217,7 @@ japanese_word_dict = {
     "plugin_dl_status_fetching": "プラグイン一覧を取得中...",
     "plugin_dl_status_found": "{count} 個のプラグインが見つかりました",
     "plugin_dl_status_error": "エラー：{error}",
+    "plugin_dl_needs_newer": "{name} には新しい Imervue が必要です（プラグイン API {needed}、このバージョンは {have}）。Imervue を更新してから、もう一度ダウンロードしてください。",
     "plugin_dl_status_downloading": "{name} をダウンロード中...",
     "plugin_dl_status_done": "{name} のダウンロードが完了しました！",
     "plugin_dl_status_deleted": "{name} を削除しました。",

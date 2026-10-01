@@ -229,6 +229,7 @@ english_word_dict = {
     "plugin_dl_status_fetching": "Fetching plugin list...",
     "plugin_dl_status_found": "Found {count} plugin(s)",
     "plugin_dl_status_error": "Error: {error}",
+    "plugin_dl_needs_newer": "{name} needs a newer Imervue (plugin API {needed}; this one has {have}). Update Imervue, then download it again.",
     "plugin_dl_status_downloading": "Downloading {name}...",
     "plugin_dl_status_done": "Downloaded {name} successfully!",
     "plugin_dl_status_deleted": "Deleted {name}.",

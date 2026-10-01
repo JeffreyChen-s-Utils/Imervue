@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-21 | 2026-10-01 | Plugin tool dialogs share ToolDialogMixin; plugin.json declares the plugin API a plugin needs | #done #refactor #plugin #decision #docs #i18n #Imervue_Plugins | [2026-10](2026-10.md) |
 | U-20261001-20 | 2026-10-01 | Imeru, Imervue's original mascot, is the bundled example character; the third-party rigs are gone | #done #decision #puppet #desktop-pet #examples #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-19 | 2026-10-01 | The open folder is polled instead of watched, so Windows can rename or move the folders above it | #done #decision #windows #file-tree #bugfix | [2026-10](2026-10.md) |
 | U-20261001-18 | 2026-10-01 | Puppet and Desktop Pet are optional tabs: Preferences turns them off, and when on they load on first use | #done #ui #puppet #desktop-pet #performance #docs #i18n | [2026-10](2026-10.md) |
@@ -486,4 +487,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 20 |
+| [2026-10.md](2026-10.md) | 2026-10 | 21 |

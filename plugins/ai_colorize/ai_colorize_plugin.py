@@ -11,17 +11,14 @@ Colourise black-and-white photos. Two methods are exposed:
 """
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QLabel,
     QMenu,
@@ -36,23 +33,13 @@ from ai_colorize.colorize import (
     heuristic_colorize,
     onnx_colorize,
 )
-from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
-from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
-from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform, slider_row
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
-
-logger = logging.getLogger("Imervue.plugin.ai_colorize")
 
 # The optional ONNX path needs onnxruntime; offered for install on first use.
 ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
@@ -65,7 +52,7 @@ _PERCENT_STEPS = 100
 
 class AIColorizePlugin(ImervuePlugin):
     plugin_name = "AI Colorize"
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     plugin_description = "Colour black-and-white photos via preset palettes or ONNX models."
     plugin_author = "Imervue"
 
@@ -159,14 +146,18 @@ class AIColorizePlugin(ImervuePlugin):
         AIColorizeDialog(viewer, str(images[idx])).exec()
 
 
-class AIColorizeDialog(WorkerHostMixin, QDialog):
+class AIColorizeDialog(ToolDialogMixin, QDialog):
     """Pick method + intensity; run on a worker thread on OK."""
+
+    output_suffix = "colorized"
+    failed_key = "ai_colorize_failed"
+    failed_text = "Colorize failed"
+    done_key = "ai_colorize_done"
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
-        self._worker: _ColorizeWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("ai_colorize_title", "AI Colorize"))
         self.setMinimumWidth(440)
@@ -201,7 +192,7 @@ class AIColorizeDialog(WorkerHostMixin, QDialog):
         form.addRow(lang.get("ai_colorize_method", "Method:"), self._method)
         form.addRow(
             lang.get("ai_colorize_intensity", "Intensity:"),
-            _slider_with_label(self._intensity, self._intensity_label),
+            slider_row(self._intensity, self._intensity_label),
         )
         return form
 
@@ -217,72 +208,13 @@ class AIColorizeDialog(WorkerHostMixin, QDialog):
         hint.setStyleSheet("color: #888; font-size: 11px;")
         return hint
 
-    def _build_button_box(self) -> QDialogButtonBox:
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal,
-            self,
-        )
-        buttons.accepted.connect(self._commit)
-        buttons.rejected.connect(self.reject)
-        return buttons
-
-    def _commit(self) -> None:
-        if self._worker is not None:
-            return
-        if str(self._method.currentData()).startswith("onnx:"):
-            # The ONNX path needs onnxruntime; offer to install it before running.
-            ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
-            return
-        self._start_worker()
-
-    def _start_worker(self) -> None:
-        # Also reached asynchronously after the dependency check, by which
-        # time the user may have closed the dialog.
-        if self._worker is not None or not self.isVisible():
-            return
+    def _required_packages(self) -> list[tuple[str, str]]:
+        # The ONNX path needs onnxruntime; the mixin offers to install it before running.
+        return ONNX_PACKAGES if str(self._method.currentData()).startswith("onnx:") else []
+    def _transform(self) -> Transform:
         method_data = str(self._method.currentData())
         intensity = self._intensity.value() / _PERCENT_STEPS
-        out_path = Path(_output_path(self._path, "colorized"))
-        # Heuristic colorize is numpy-heavy and ONNX inference is slow — worker it.
-        self._worker = _ColorizeWorker(
-            self._path, method_data, intensity, str(out_path),
-        )
-        self._worker.done.connect(self._on_done)
-        self._worker.start()
-
-    def _on_done(self, ok: bool, message: str) -> None:
-        # ``done`` is the thread's last act, but run() may not have returned yet.
-        # Wait before dropping the only reference: Qt aborts the whole process
-        # when a still-running QThread is destroyed.
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker = None
-        if not ok:
-            self._notify_failure(RuntimeError(message))
-            return
-        self._notify_success(Path(message))
-        self.accept()
-
-    def _notify_failure(self, exc: Exception) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            prefix = language_wrapper.language_word_dict.get(
-                "ai_colorize_failed", "Colorize failed",
-            )
-            self._viewer.main_window.toast.error(f"{prefix}: {exc}")
-
-    def _notify_success(self, out_path: Path) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            self._viewer.main_window.toast.info(
-                language_wrapper.language_word_dict.get(
-                    "ai_colorize_done", "Saved {path}",
-                ).format(path=out_path.name),
-            )
+        return lambda rgba: _colorize_dispatch(rgba, method_data, intensity)
 
 
 def _discover_onnx_models() -> list[Path]:
@@ -292,17 +224,6 @@ def _discover_onnx_models() -> list[Path]:
     folder in their file manager and drop weights in.
     """
     return discover_models(_MODELS_DIR)
-
-
-def _slider_with_label(slider: QSlider, label: QLabel) -> QWidget:
-    from PySide6.QtWidgets import QHBoxLayout
-    container = QWidget()
-    row = QHBoxLayout(container)
-    row.setContentsMargins(0, 0, 0, 0)
-    row.addWidget(slider, stretch=1)
-    label.setMinimumWidth(50)
-    row.addWidget(label)
-    return container
 
 
 def _colorize_dispatch(arr: np.ndarray, method_data: str,
@@ -316,32 +237,3 @@ def _colorize_dispatch(arr: np.ndarray, method_data: str,
         model_path = method_data.split(":", 1)[1]
         return onnx_colorize(arr, model_path, intensity=intensity)
     raise ValueError(f"Unknown method data: {method_data}")
-
-
-class _ColorizeWorker(QThread):
-    """Run heuristic or ONNX colorize off the UI thread and save the result."""
-
-    done = Signal(bool, str)
-
-    def __init__(self, path: str, method_data: str, intensity: float,
-                 out_path: str):
-        super().__init__()
-        self._path = path
-        self._method_data = method_data
-        self._intensity = intensity
-        self._out_path = out_path
-
-    def run(self) -> None:  # pragma: no cover - background thread
-        try:
-            arr = _load_rgba(self._path)
-            out_arr = _colorize_dispatch(arr, self._method_data, self._intensity)
-            Image.fromarray(out_arr, mode="RGBA").save(self._out_path)
-        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
-            # ONNX / cv2 / PIL raise their own Exception subclasses (ORT's
-            # InvalidArgument, cv2.error, DecompressionBombError) that are not
-            # in the narrow tuple; letting them escape kills the thread with
-            # ``done`` never emitted, so the dialog hangs with a dead OK button.
-            logger.exception("colorize worker failed: %s", exc)
-            self.done.emit(False, str(exc))
-            return
-        self.done.emit(True, self._out_path)

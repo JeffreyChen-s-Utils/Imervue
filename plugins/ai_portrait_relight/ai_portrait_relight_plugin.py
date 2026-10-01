@@ -1,20 +1,15 @@
 """AI Portrait Relighting plugin — heuristic shading + optional ONNX path."""
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QLabel,
     QMenu,
-    QSlider,
     QVBoxLayout,
     QWidget,
 )
@@ -32,23 +27,13 @@ from ai_portrait_relight.relight import (
     heuristic_relight,
     onnx_relight,
 )
-from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
-from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
-from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform, make_slider
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
-
-logger = logging.getLogger("Imervue.plugin.ai_portrait_relight")
 
 # The optional ONNX path needs onnxruntime; offered for install on first use.
 ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
@@ -61,7 +46,7 @@ _INTENSITY_STEPS = 100  # slider int -> intensity = value / 100
 
 class AIPortraitRelightPlugin(ImervuePlugin):
     plugin_name = "AI Portrait Relighting"
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     plugin_description = "Heuristic directional relighting + optional ONNX path."
     plugin_author = "Imervue"
 
@@ -175,31 +160,7 @@ def _build_relight_transform(method, options: RelightOptions):
     return lambda arr: onnx_relight(arr, model_path, blend=blend)
 
 
-class _RelightWorker(QThread):
-    """Run a relight transform off the GUI thread and save the result."""
-
-    done = Signal(bool, str)   # (ok, output_path_or_error_message)
-
-    def __init__(self, path: str, transform, out_path: str):
-        super().__init__()
-        self._path = path
-        self._transform = transform
-        self._out = out_path
-
-    def run(self) -> None:
-        try:
-            out_arr = self._transform(_load_rgba(self._path))
-            Image.fromarray(out_arr, mode="RGBA").save(self._out)
-            self.done.emit(True, self._out)
-        except Exception as exc:  # noqa: BLE001 - a worker must always report
-            # Load, ONNX inference (ImportError / onnxruntime errors) and save
-            # can raise many types; narrowing let some escape so ``done`` never
-            # fired and the dialog hung. Always report the failure.
-            logger.exception("Relight failed: %s", exc)
-            self.done.emit(False, str(exc))
-
-
-class AIPortraitRelightDialog(WorkerHostMixin, QDialog):
+class AIPortraitRelightDialog(ToolDialogMixin, QDialog):
     """Pick method + light direction, run the relight on a worker thread on OK.
 
     Inherits :class:`WorkerHostMixin` so closing or cancelling the dialog while
@@ -207,25 +168,29 @@ class AIPortraitRelightDialog(WorkerHostMixin, QDialog):
     close/reject teardown and was destroyed mid-run.
     """
 
+    output_suffix = "relit"
+    failed_key = "relight_failed"
+    failed_text = "Relight failed"
+    done_key = "relight_done"
+
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
-        self._worker: _RelightWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("relight_title", "AI Portrait Relighting"))
         self.setMinimumWidth(440)
 
         self._method = self._build_method_combo(lang)
-        self._azimuth = _slider(AZIMUTH_MIN, AZIMUTH_MAX, 45)
-        self._elevation = _slider(ELEVATION_MIN, ELEVATION_MAX, 30)
-        self._intensity = _slider(
+        self._azimuth = make_slider(AZIMUTH_MIN, AZIMUTH_MAX, 45)
+        self._elevation = make_slider(ELEVATION_MIN, ELEVATION_MAX, 30)
+        self._intensity = make_slider(
             int(INTENSITY_MIN * _INTENSITY_STEPS),
             int(INTENSITY_MAX * _INTENSITY_STEPS),
             60,
         )
-        self._temperature = _slider(TEMPERATURE_MIN, TEMPERATURE_MAX, 0)
-        self._blend = _slider(0, _PERCENT_STEPS, _PERCENT_STEPS)
+        self._temperature = make_slider(TEMPERATURE_MIN, TEMPERATURE_MAX, 0)
+        self._blend = make_slider(0, _PERCENT_STEPS, _PERCENT_STEPS)
 
         layout = QVBoxLayout(self)
         layout.addLayout(self._build_form(lang))
@@ -271,35 +236,10 @@ class AIPortraitRelightDialog(WorkerHostMixin, QDialog):
         hint.setStyleSheet("color: #888; font-size: 11px;")
         return hint
 
-    def _build_button_box(self) -> QDialogButtonBox:
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal,
-            self,
-        )
-        buttons.accepted.connect(self._commit)
-        buttons.rejected.connect(self.reject)
-        return buttons
-
-    def _commit(self) -> None:
-        if self._worker is not None:
-            return
-        if self._method.currentData()[0] == "onnx":
-            # The ONNX path needs onnxruntime; offer to install it before running.
-            ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
-            return
-        self._start_worker()
-
-    def _start_worker(self) -> None:
-        # Also reached asynchronously after the dependency check, by which
-        # time the user may have closed the dialog.
-        if self._worker is not None or not self.isVisible():
-            return
-        # Run the relight (heuristic numpy OR neural ONNX inference) on a worker
-        # thread. The ONNX path can take seconds, and running it here froze the
-        # GUI for the whole inference.
-        method = self._method.currentData()
+    def _required_packages(self) -> list[tuple[str, str]]:
+        # The ONNX path needs onnxruntime; the mixin offers to install it before running.
+        return ONNX_PACKAGES if self._method.currentData()[0] == "onnx" else []
+    def _transform(self) -> Transform:
         options = RelightOptions(
             azimuth=float(self._azimuth.value()),
             elevation=float(self._elevation.value()),
@@ -307,43 +247,7 @@ class AIPortraitRelightDialog(WorkerHostMixin, QDialog):
             temperature=int(self._temperature.value()),
             blend=self._blend.value() / _PERCENT_STEPS,
         )
-        transform = _build_relight_transform(method, options)
-        out_path = Path(_output_path(self._path, "relit"))
-        self._worker = _RelightWorker(self._path, transform, str(out_path))
-        self._worker.done.connect(self._on_done)
-        self._worker.start()
-
-    def _on_done(self, ok: bool, message: str) -> None:
-        # Wait for the thread to fully stop before dropping the reference — this
-        # dialog is a temporary, so accept() below returns from exec() and lets
-        # it be garbage-collected; dropping a live QThread reference crashes.
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker = None
-        if ok:
-            self._notify_success(Path(message))
-            self.accept()
-        else:
-            self._notify_failure(RuntimeError(message))
-
-    def _notify_failure(self, exc: Exception) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            prefix = language_wrapper.language_word_dict.get(
-                "relight_failed", "Relight failed",
-            )
-            self._viewer.main_window.toast.error(f"{prefix}: {exc}")
-
-    def _notify_success(self, out_path: Path) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            self._viewer.main_window.toast.info(
-                language_wrapper.language_word_dict.get(
-                    "relight_done", "Saved {path}",
-                ).format(path=out_path.name),
-            )
+        return _build_relight_transform(self._method.currentData(), options)
 
 
 def _discover_onnx_models() -> list[Path]:
@@ -353,12 +257,3 @@ def _discover_onnx_models() -> list[Path]:
     folder in their file manager and drop weights in.
     """
     return discover_models(_MODELS_DIR)
-
-
-def _slider(lo: int, hi: int, value: int) -> QSlider:
-    s = QSlider(Qt.Orientation.Horizontal)
-    s.setRange(lo, hi)
-    s.setValue(value)
-    return s
-
-

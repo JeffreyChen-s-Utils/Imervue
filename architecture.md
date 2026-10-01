@@ -50,7 +50,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `Imervue/user_settings/` | Global settings dict (profiles, migration, debounced atomic save), tags, bookmarks, colour labels |
 | `Imervue/multi_language/` | `language_wrapper` singleton and built-in dictionaries (`english.py` is the canonical key set) |
 | `Imervue/sessions/`, `Imervue/macros/`, `Imervue/external/` | Session/workspace save-restore, macro record/replay, external-editor launcher |
-| `Imervue/plugin/` | Plugin base class, manager, downloader, pip installer, `WorkerHostMixin` |
+| `Imervue/plugin/` | Plugin base class, manager, downloader, pip installer, `WorkerHostMixin`, the plugin API version (`plugin_api.py`) and the shared tool dialog (`tool_dialog.py`) |
 | `Imervue/mcp_server/` | MCP JSON-RPC 2.0 stdio server; no Qt, no optional dependencies |
 | `Imervue/cli.py` | Headless batch CLI (NumPy + Pillow paths only, never starts Qt) |
 | `plugins/` | Plugin sources (gitignored; tracked files need `git add -f`), mirrored to Imervue_Plugins |
@@ -123,6 +123,8 @@ Public interfaces other code or users depend on:
 | --- | --- |
 | A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_menu.py` |
 | A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; do not hand-write teardown |
+| A plugin dialog that runs one image transform on OK | Inherit `ToolDialogMixin` from `Imervue/plugin/tool_dialog.py` (it includes `WorkerHostMixin`): set `output_suffix` and the toast keys, return the transform from `_transform()`, name optional packages in `_required_packages()`; the plugin then needs plugin API 2 in its `plugin.json` |
+| Main-program code that plugins import | Raise `PLUGIN_API_VERSION` in `Imervue/plugin/plugin_api.py` and list what the version adds in its docstring; plugins using it declare `{"min_api_version": N}` in `plugin.json` (`tests/test_plugin_api.py` checks the bundled ones) |
 | A develop step | A row in `_STAGES` of `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip). A stage between `white_balance` and `tone_curve` also needs the GPU Develop plugin (`plugins/gpu_develop/params.py` `GPU_STAGES`), which renders nothing on the GPU until its span matches |
 | A develop renderer (another device for the recipe) | A `BackendProvider` registered with `Imervue.image.develop_backends.register()` from a plugin's `on_plugin_loaded`; it must return what `Recipe.apply` does and may run any span through `Recipe.apply_stages()` (reference: `plugins/gpu_develop/`) |
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
@@ -145,6 +147,15 @@ Public interfaces other code or users depend on:
   Any change under `plugins/<name>/` here must be copied to `D:\Codes\Imervue_Plugins` and pushed
   to `main`; keep every runtime-required file flat (nested `models/`, `assets/` are never fetched).
   Language plugins sit under `languages/` there, the rest under `plugins/`.
+- **Plugin API version.** A plugin's optional `plugin.json` (`{"min_api_version": N}`, read by
+  `Imervue/plugin/plugin_api.py`) names the main-program surface it needs; without the file it needs
+  1. The downloader refuses a plugin needing more than `PLUGIN_API_VERSION` before swapping it into
+  place, and the plugin manager skips it without importing it. Version 2 added
+  `Imervue.plugin.tool_dialog` and `Imervue.image.develop_backends`; the nine tool-dialog plugins,
+  `ai_object_remove`, `cloud_share` and `gpu_develop` declare it. Installs released before the
+  manifest ignore it, so on them such a plugin fails at import time and is skipped (logged). Keep the
+  file name, the key and every name an API version lists, or raise the version and change the
+  plugins in the same round.
 - **Extra Tools submenu names.** Plugins in Imervue_Plugins place menu entries with
   `main_window.findChild(QMenu, "extra_tools.<key>")` (`develop_submenu`, `retouch_submenu`, ...;
   names set by `Imervue/menu/extra_tools_menu.py` `submenu_object_name`). Never rename or drop one;
@@ -157,14 +168,19 @@ Public interfaces other code or users depend on:
   `object_splitter`, `safety_review`) call `from Imervue.plugin.pip_installer import _find_python` to
   get an interpreter with pip, and import `_subprocess_kwargs` from the same module for their child
   processes. Both live in `Imervue/plugin/python_finder.py`; `pip_installer` re-exports them, and
-  `tests/test_python_finder.py` checks the re-export. Ten image plugins load their input with
-  `from Imervue.gui._apply_save import load_rgba`, which returns an HxWx4 RGBA array as the viewer
-  shows it: RAW developed at full size, sRGB, EXIF-upright. The same ten name their result with
-  `from Imervue.gui._apply_save import output_path` (`output_path(source, suffix)` → a sibling
-  `<stem>_<suffix>.png` that doesn't exist yet), shipped since v1.0.75; they fall back to the
-  plain name when the import fails, so keep the two-argument call working. Keep these import paths
-  working, or change the plugins in the same round. `load_rgba` has shipped since v1.0.56 or
-  earlier, so a newly downloaded plugin still runs on older installs.
+  `tests/test_python_finder.py` checks the re-export. Nine image plugins (`ai_colorize`,
+  `ai_denoise`, `ai_motion_deblur`, `ai_portrait_relight`, `ai_smart_resize`, `ai_style_transfer`,
+  `ai_outpaint`, `npr_filters`, `portrait_mode`) build their dialog on
+  `Imervue.plugin.tool_dialog.ToolDialogMixin`, which loads the input with
+  `Imervue.gui._apply_save.load_rgba` (an HxWx4 RGBA array as the viewer shows it: RAW developed at
+  full size, sRGB, EXIF-upright) through `EffectWorker`, saves `<stem>_<suffix>.png` under a free
+  name (`output_path`), and toasts with `notify_saved`. `ai_object_remove` imports `load_rgba`
+  from `_apply_save` and `output_path` / `show_toast` from `tool_dialog`; `cloud_share` imports
+  `show_toast`; `ai_motion_deblur` and `ai_portrait_relight` import `make_slider`, `ai_colorize` and
+  `ai_style_transfer` `slider_row`. Keep these names, the mixin's attributes (`output_suffix`,
+  `failed_key`, `failed_text`, `done_key`, `done_text`) and hooks (`_transform`,
+  `_required_packages`, `_commit`, `_notify_failure`) working, or change the plugins in the same
+  round.
 - **Desktop pet plugin surface.** `pet_integrations` (Desktop Pet Integrations) subclasses
   `IntegrationController` from `Imervue.desktop_pet.pet_feature_base` and calls
   `Imervue.system.local_origin.is_allowed_origin`; it relies on the `on_pet_created` hook and on the

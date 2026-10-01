@@ -900,9 +900,11 @@ Imervue supports third-party plugins. See [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE
 
 Besides hooks, a plugin can give Batch Export another renderer for Develop recipes: register a `BackendProvider` with `Imervue.image.develop_backends.register` in `on_plugin_loaded`. The GPU Develop plugin is the example; [PLUGIN_DEV_GUIDE.md](PLUGIN_DEV_GUIDE.md) has the details.
 
+A dialog that runs one image transform on **OK** can take the button row, the optional-package install, the worker and the result toast from `Imervue.plugin.tool_dialog.ToolDialogMixin`. A plugin that imports main-program code added after older releases names the plugin API version it needs in a `plugin.json` beside its `__init__.py` (`{"min_api_version": 2}`); an Imervue that is too old skips it with the reason in the log instead of failing inside its imports.
+
 ### Plugin Downloader
 
-**Plugins > Download Plugins** opens the online downloader. Source repo: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins).
+**Plugins > Download Plugins** opens the online downloader. Source repo: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins). A plugin that needs a newer Imervue is not installed: the status line names the plugin API version it needs, and any installed copy stays as it was. Update Imervue, then download it again.
 
 ---
 

@@ -2164,6 +2164,17 @@ Neben Hooks kann ein Plugin dem Stapelexport einen weiteren Renderer für Develo
 indem es in ``on_plugin_loaded()`` einen ``BackendProvider`` mit
 ``Imervue.image.develop_backends.register`` registriert; das Plugin GPU Develop ist das Beispiel.
 
+Ein Dialog, der bei **OK** eine Bildtransformation ausführt, kann die Schaltflächenzeile, die
+Installation optionaler Pakete, den Worker-Thread und den Toast mit dem Ergebnis von
+``Imervue.plugin.tool_dialog.ToolDialogMixin`` übernehmen: Er setzt ``output_suffix`` und die
+Toast-Schlüssel und gibt die Transformation aus ``_transform()`` zurück. Ein Plugin, das Code des
+Hauptprogramms importiert, der erst nach älteren Versionen hinzugekommen ist, nennt die benötigte
+Plugin-API-Version in einer Datei ``plugin.json`` neben seiner ``__init__.py``
+(``{"min_api_version": 2}``). ``Plugins`` > ``Download Plugins`` lehnt ein solches Plugin auf einem
+zu alten Imervue ab und behält eine bereits installierte Kopie, wobei die benötigte Version in der
+Statuszeile steht; der Plugin-Loader überspringt es, ohne es zu importieren, und schreibt den Grund
+ins Protokoll.
+
 .. list-table::
    :header-rows: 1
    :widths: 28 40 32

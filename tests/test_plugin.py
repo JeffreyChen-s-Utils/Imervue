@@ -984,3 +984,45 @@ class TestShippedPlugins:
 
         pm.unload_all()
         assert pm.plugins == []
+
+
+# ===========================
+# Plugin API version gate
+# ===========================
+
+_GATED_PLUGIN = textwrap.dedent("""\
+    from Imervue.plugin.plugin_base import ImervuePlugin
+
+    class {name}(ImervuePlugin):
+        plugin_name = "{name}"
+
+    plugin_class = {name}
+""")
+
+
+class TestPluginApiGate:
+    def _load(self, tmp_path, name: str, manifest: str | None):
+        from Imervue.plugin.plugin_manager import PluginManager
+        plugin_dir = tmp_path / "plugins"
+        pkg = _create_plugin_package(plugin_dir, name.lower(), _GATED_PLUGIN.format(name=name))
+        if manifest is not None:
+            (pkg / "plugin.json").write_text(manifest, encoding="utf-8")
+        pm = PluginManager(_make_mock_main_window())
+        pm.discover_and_load([plugin_dir])
+        return [p.plugin_name for p in pm.plugins]
+
+    def test_a_supported_version_loads(self, tmp_path):
+        assert self._load(tmp_path, "GateOkPlugin", '{"min_api_version": 2}') == ["GateOkPlugin"]
+
+    def test_a_newer_version_is_skipped_without_importing_it(self, tmp_path, caplog):
+        from Imervue.plugin.plugin_api import PLUGIN_API_VERSION
+        manifest = f'{{"min_api_version": {PLUGIN_API_VERSION + 1}}}'
+        with caplog.at_level("WARNING", logger="Imervue.plugin"):
+            assert self._load(tmp_path, "GateNewPlugin", manifest) == []
+        assert "gatenewplugin" not in sys.modules
+        assert any("Update Imervue" in r.getMessage() for r in caplog.records)
+
+    def test_an_unreadable_manifest_is_skipped(self, tmp_path, caplog):
+        with caplog.at_level("ERROR", logger="Imervue.plugin"):
+            assert self._load(tmp_path, "GateBadPlugin", "{broken") == []
+        assert any("plugin.json" in r.getMessage() for r in caplog.records)

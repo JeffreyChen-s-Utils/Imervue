@@ -843,9 +843,11 @@ Imervue 支援第三方外掛。完整參考見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 
 除了鉤子之外，外掛也能為批次匯出提供另一個顯影 recipe 渲染器：在 `on_plugin_loaded` 中用 `Imervue.image.develop_backends.register` 註冊一個 `BackendProvider`。GPU 顯影外掛就是範例；詳見 [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md)。
 
+按下 **OK** 就執行一項影像轉換的對話框，可以從 `Imervue.plugin.tool_dialog.ToolDialogMixin` 取得按鈕列、選用套件安裝、背景工作執行緒與結果 toast。外掛若會匯入舊版發行之後才加入的主程式程式碼，就在它的 `__init__.py` 旁放一個 `plugin.json`，寫明所需的外掛 API 版本（`{"min_api_version": 2}`）；版本太舊的 Imervue 會跳過這個外掛並把原因寫進記錄，而不是在它的匯入過程中失敗。
+
 ### 外掛下載器
 
-**Plugins > Download Plugins** 開啟線上下載器。來源倉庫：[Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。
+**Plugins > Download Plugins** 開啟線上下載器。來源倉庫：[Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。需要較新版 Imervue 的外掛不會被安裝：狀態列會列出它所需的外掛 API 版本，已安裝的副本則維持原樣。請先更新 Imervue，再重新下載。
 
 ---
 

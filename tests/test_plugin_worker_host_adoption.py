@@ -14,6 +14,7 @@ import importlib
 
 import pytest
 
+from Imervue.plugin.tool_dialog import ToolDialogMixin
 from Imervue.plugin.worker_host import WorkerHostMixin
 
 _DIALOGS = [
@@ -46,7 +47,7 @@ def test_dialog_defers_teardown_to_the_mixin(module_name, cls_name):
 
 
 
-_DONE_SLOTS = [
+_TOOL_DIALOGS = [
     ("ai_denoise.ai_denoise_plugin", "AIDenoiseDialog"),
     ("ai_colorize.ai_colorize_plugin", "AIColorizeDialog"),
     ("ai_motion_deblur.ai_motion_deblur_plugin", "AIMotionDeblurDialog"),
@@ -55,57 +56,33 @@ _DONE_SLOTS = [
     ("portrait_mode.portrait_mode", "PortraitModeDialog"),
     ("npr_filters.npr_filters_plugin", "NPRFiltersDialog"),
     ("ai_portrait_relight.ai_portrait_relight_plugin", "AIPortraitRelightDialog"),
+    ("ai_outpaint.ai_outpaint_plugin", "OutpaintDialog"),
 ]
 
 
-class _Host:
-    """The attribute surface ``_on_done`` touches; records the order of events."""
+@pytest.mark.parametrize("module_name, cls_name", _TOOL_DIALOGS)
+def test_tool_dialogs_share_one_done_slot(module_name, cls_name):
+    """The wait-then-drop ``_on_done`` lives once, in ``ToolDialogMixin`` (``test_tool_dialog.py``).
 
-    def __init__(self):
-        self.events: list[str] = []
-        host = self
-
-        class _Worker:
-            def wait(self):
-                host.events.append("wait" if host._worker is self else "wait after drop")
-
-        self._worker = _Worker()
-        self._viewer = None
-
-    def _notify_failure(self, _exc):
-        self.events.append("failure")
-
-    def _notify_success(self, _path):
-        self.events.append("success")
-
-    def accept(self):
-        self.events.append("accept")
-
-
-@pytest.mark.parametrize("module_name, cls_name", _DONE_SLOTS)
-@pytest.mark.parametrize("ok", [True, False])
-def test_done_waits_for_the_thread_before_dropping_it(module_name, cls_name, ok):
-    """Dropping the only reference to a QThread still returning from run() aborts the process."""
+    Dropping the only reference to a QThread still returning from run() aborts
+    the process; a private copy of the slot in a dialog could drift from that.
+    """
     cls = getattr(importlib.import_module(module_name), cls_name)
-    host = _Host()
-    cls._on_done(host, ok, "out.png" if ok else "boom")
-    assert host.events[0] == "wait"
-    assert host._worker is None
-    assert host.events[1:] == (["success", "accept"] if ok else ["failure"])
-
+    assert issubclass(cls, ToolDialogMixin)
+    for name in ("_on_done", "_start_worker", "_build_button_box"):
+        assert name not in cls.__dict__, name
 
 
 _OTHER_DONE_SLOTS = [
     ("ai_object_remove.ai_object_remove_plugin", "ObjectRemoveDialog", "_on_sam_done", "_sam_worker"),
     ("ai_object_remove.ai_object_remove_plugin", "ObjectRemoveDialog", "_on_done", "_worker"),
-    ("ai_outpaint.ai_outpaint_plugin", "OutpaintDialog", "_on_done", "_worker"),
     ("cloud_share.cloud_share_plugin", "CloudShareDialog", "_on_done", "_worker"),
 ]
 
 
 @pytest.mark.parametrize("module_name, cls_name, slot, attr", _OTHER_DONE_SLOTS)
 def test_other_done_slots_wait_before_dropping(module_name, cls_name, slot, attr):
-    """The same wait-then-drop in the slots whose bodies differ from the eight above."""
+    """The same wait-then-drop in the slots that are not the shared tool-dialog one."""
     from unittest.mock import MagicMock
     cls = getattr(importlib.import_module(module_name), cls_name)
     host = MagicMock()

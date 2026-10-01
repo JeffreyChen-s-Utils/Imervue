@@ -32,6 +32,7 @@ from cloud_share.uploaders import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.tool_dialog import show_toast
 from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
@@ -47,7 +48,7 @@ _SETTINGS_KEY = "cloud_share"
 
 class CloudSharePlugin(ImervuePlugin):
     plugin_name = "Cloud Share"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     plugin_description = "Upload the current image to WebDAV or Imgur."
     plugin_author = "Imervue"
 
@@ -194,23 +195,16 @@ class CloudShareDialog(WorkerHostMixin, QDialog):
             self._worker = None
         lang = language_wrapper.language_word_dict
         if not ok:
-            self._toast(f"{lang.get('cloud_share_failed', 'Upload failed')}: {message}",
-                        error=True)
+            failed = lang.get("cloud_share_failed", "Upload failed")
+            show_toast(self._viewer, f"{failed}: {message}", error=True)
             return
         if getattr(self, "_batch", False):
-            self._toast(lang.get("cloud_share_batch_done", "Uploaded {summary}").format(
-                summary=message), error=False)
+            text = lang.get("cloud_share_batch_done", "Uploaded {summary}").format(summary=message)
         else:
             QApplication.clipboard().setText(message)
-            self._toast(lang.get("cloud_share_done", "Uploaded — link copied: {url}").format(
-                url=message), error=False)
+            text = lang.get("cloud_share_done", "Uploaded — link copied: {url}").format(url=message)
+        show_toast(self._viewer, text)
         self.accept()
-
-    def _toast(self, text: str, error: bool) -> None:  # pragma: no cover - Qt UI
-        main_window = getattr(self._viewer, "main_window", None)
-        toast = getattr(main_window, "toast", None)
-        if toast is not None:
-            (toast.error if error else toast.info)(text)
 
 
 class _UploadWorker(QThread):

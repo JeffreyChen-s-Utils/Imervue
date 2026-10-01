@@ -2134,6 +2134,16 @@ recetas de revelado registrando un ``BackendProvider`` con
 ``Imervue.image.develop_backends.register`` en ``on_plugin_loaded()``; el plugin GPU Develop es
 el ejemplo.
 
+Un diálogo que aplica una transformación de imagen al pulsar **OK** puede tomar de
+``Imervue.plugin.tool_dialog.ToolDialogMixin`` la fila de botones, la instalación de paquetes
+opcionales, el hilo de trabajo y el toast con el resultado: el diálogo define ``output_suffix`` y
+las claves del toast, y devuelve la transformación desde ``_transform()``. Un plugin que importa
+código del programa principal añadido después de versiones más antiguas indica la versión de la API
+de plugins que necesita en un archivo ``plugin.json`` junto a su ``__init__.py``
+(``{"min_api_version": 2}``). ``Plugins`` > ``Download Plugins`` rechaza un plugin así en un
+Imervue demasiado antiguo y conserva cualquier copia ya instalada, con la versión que necesita en
+la línea de estado; el cargador de plugins lo omite sin importarlo y deja el motivo en el registro.
+
 .. list-table::
    :header-rows: 1
    :widths: 28 40 32

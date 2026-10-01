@@ -405,6 +405,55 @@ Never block the GUI thread in a hook. Run long work in a `QThread` subclass and 
 
 A dialog that owns a running worker must stop it on **Cancel** and **OK** as well as on window close; `reject()` and `accept()` do not deliver a `closeEvent`. Derive the dialog from `WorkerHostMixin` (`Imervue/plugin/worker_host.py`, listed before `QDialog` in the bases) and keep the worker on `self._worker` (more workers: list their attribute names in `_worker_attrs`): the mixin stops and joins them in `done()`, which `accept()` and `reject()` both end in, and on close, before the dialog is destroyed. A `QThread` destroyed while it is still running aborts the whole process.
 
+### One-shot image tools
+
+A dialog whose **OK** runs one image transform and saves the result beside the source can take the whole flow from `ToolDialogMixin` (`Imervue/plugin/tool_dialog.py`, plugin API 2). It includes `WorkerHostMixin`; list it before `QDialog` and keep the viewer on `self._viewer` and the image path on `self._path`:
+
+```python
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform, make_slider
+
+
+class SepiaDialog(ToolDialogMixin, QDialog):
+    output_suffix = "sepia"              # saves photo_sepia.png (photo_sepia_1.png if taken)
+    failed_key = "sepia_failed"          # toast prefix on failure, from get_translations()
+    failed_text = "Sepia failed"
+    done_key = "sepia_done"              # success toast; takes {path}
+
+    def __init__(self, viewer, path):
+        super().__init__(viewer)
+        self._viewer, self._path = viewer, path
+        self._amount = make_slider(0, 100, 80)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self._amount)
+        layout.addWidget(self._build_button_box())   # OK / Cancel
+
+    def _required_packages(self):        # optional: offered for install before the run
+        return [("onnxruntime", "onnxruntime")] if self._uses_model() else []
+
+    def _transform(self) -> Transform:   # RGBA uint8 array in, RGBA uint8 array out
+        amount = self._amount.value() / 100
+        return lambda rgba: sepia(rgba, amount)
+```
+
+**OK** offers to install what `_required_packages` names, runs the transform on a worker thread, saves a PNG and toasts the saved name or the error; a success closes the dialog. The module also exports `make_slider`, `slider_row`, `output_path` and `show_toast(viewer, text, error=False)`.
+
+## Plugin API Versions
+
+A plugin downloaded today can land on an Imervue installed months ago. When a plugin imports something the main program gained later, put a `plugin.json` beside its `__init__.py`:
+
+```json
+{"min_api_version": 2}
+```
+
+**Plugins → Download Plugins** reads it before installing and refuses a plugin that needs a newer Imervue, keeping any installed copy; the plugin loader skips such a plugin with the reason in the log, without importing it. A plugin without the file needs version 1. `Imervue.plugin.plugin_api.PLUGIN_API_VERSION` is the version this Imervue provides:
+
+| Version | Adds |
+|---|---|
+| 1 | Everything else on this page: the hooks, the language API, `WorkerHostMixin` |
+| 2 | `Imervue.plugin.tool_dialog` (`ToolDialogMixin`, `show_toast`), `Imervue.image.develop_backends` |
+
+Installs older than the manifest do not read it: there a plugin that needs more fails at import time and is skipped with the error in the log.
+
 ## Distributing a Plugin
 
 Plugins reach users through the [Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins) repository. **Plugins → Download Plugins** reads its `main` branch:
@@ -412,6 +461,7 @@ Plugins reach users through the [Imervue_Plugins](https://github.com/Jeffrey-Plu
 - A plugin lives under a category directory: `plugins/<name>/`, or `languages/<name>/` for a language plugin.
 - **Only the files directly inside the plugin directory are downloaded.** Subdirectories (`models/`, `assets/`, ...) are not, so keep every file the plugin needs to run flat, and discover optional files such as model weights at runtime.
 - A download replaces the installed copy of the plugin as a whole, so do not keep user data inside the plugin directory if it has to survive an update.
+- A plugin that needs a newer Imervue than the user has is not installed (see [Plugin API Versions](#plugin-api-versions)).
 
 ## Internationalization (i18n)
 

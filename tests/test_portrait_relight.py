@@ -165,7 +165,7 @@ def test_relight_zero_intensity_zero_temperature_returns_close_to_original(
 
 
 # ---------------------------------------------------------------------------
-# Plugin worker — relight runs off the GUI thread now
+# The relight transform the dialog hands to the shared worker
 # ---------------------------------------------------------------------------
 
 
@@ -181,36 +181,17 @@ class TestRelightWorker:
 
     def test_worker_runs_heuristic_and_saves(self, tmp_path, qapp):
         from PIL import Image
-        from ai_portrait_relight.ai_portrait_relight_plugin import (
-            _RelightWorker,
-            _build_relight_transform,
-        )
+        from ai_portrait_relight.ai_portrait_relight_plugin import _build_relight_transform
+
+        from Imervue.gui._apply_save import EffectWorker
         src = tmp_path / "p.png"
         Image.new("RGBA", (16, 16), (120, 120, 120, 255)).save(str(src))
         out = tmp_path / "p_relit.png"
         transform = _build_relight_transform(("heuristic", None), RelightOptions())
-        worker = _RelightWorker(str(src), transform, str(out))
+        worker = EffectWorker(str(src), transform, str(out))
         results: list = []
         worker.done.connect(lambda ok, msg: results.append((ok, msg)))
         worker.run()   # synchronous — no thread started
 
         assert results == [(True, str(out))]
         assert out.exists()
-
-    def test_worker_reports_failure_when_transform_raises(self, tmp_path, qapp):
-        from PIL import Image
-        from ai_portrait_relight.ai_portrait_relight_plugin import _RelightWorker
-        src = tmp_path / "p.png"
-        Image.new("RGBA", (8, 8), (10, 10, 10, 255)).save(str(src))
-
-        def _boom(_arr):
-            raise ImportError("onnxruntime missing")   # optional ONNX dep absent
-
-        worker = _RelightWorker(str(src), _boom, str(tmp_path / "o.png"))
-        results: list = []
-        worker.done.connect(lambda ok, msg: results.append((ok, msg)))
-        worker.run()
-
-        # Broad catch means the failure is always reported so the OK button
-        # doesn't hang forever.
-        assert results == [(False, "onnxruntime missing")]

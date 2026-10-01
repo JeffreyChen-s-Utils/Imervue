@@ -2077,6 +2077,15 @@ Besides hooks, a plugin can give Batch Export another renderer for Develop recip
 a ``BackendProvider`` with ``Imervue.image.develop_backends.register`` in
 ``on_plugin_loaded()``; the GPU Develop plugin is the example.
 
+A dialog that runs one image transform on **OK** can take the button row, the optional-package
+install, the worker thread and the result toast from
+``Imervue.plugin.tool_dialog.ToolDialogMixin``: it sets ``output_suffix`` and the toast keys and
+returns the transform from ``_transform()``. A plugin that imports main-program code added after
+older releases names the plugin API version it needs in a ``plugin.json`` file beside its
+``__init__.py`` (``{"min_api_version": 2}``). ``Plugins`` > ``Download Plugins`` refuses such a
+plugin on an Imervue that is too old and keeps any installed copy, with the version it needs on
+the status line; the plugin loader skips it with the reason in the log, without importing it.
+
 .. list-table::
    :header-rows: 1
    :widths: 28 40 32

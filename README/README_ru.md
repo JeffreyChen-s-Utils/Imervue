@@ -890,9 +890,11 @@ Imervue поддерживает сторонние плагины. См. [PLUGI
 
 Помимо хуков, плагин может дать пакетному экспорту ещё один рендерер для рецептов проявки: зарегистрируйте `BackendProvider` через `Imervue.image.develop_backends.register` в `on_plugin_loaded`. Пример — плагин GPU Develop; подробности — в [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md).
 
+Диалог, который по **OK** выполняет одно преобразование изображения, может взять ряд кнопок, установку необязательных пакетов, рабочий поток и тост с результатом из `Imervue.plugin.tool_dialog.ToolDialogMixin`. Плагин, импортирующий код основной программы, добавленный уже после выхода старых версий, указывает нужную ему версию API плагинов в файле `plugin.json` рядом со своим `__init__.py` (`{"min_api_version": 2}`); слишком старая версия Imervue пропускает такой плагин и записывает причину в журнал, вместо того чтобы падать на его импортах.
+
 ### Загрузчик плагинов
 
-**Plugins > Download Plugins** открывает онлайн-загрузчик. Репозиторий-источник: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins).
+**Plugins > Download Plugins** открывает онлайн-загрузчик. Репозиторий-источник: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins). Плагин, которому нужна более новая версия Imervue, не устанавливается: строка состояния называет нужную ему версию API плагинов, а уже установленная копия остаётся как была. Обновите Imervue и скачайте плагин снова.
 
 ---
 

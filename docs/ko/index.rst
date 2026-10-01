@@ -1870,6 +1870,15 @@ Imervue는 플러그인을 통한 기능 확장을 지원합니다.
 ``BackendProvider`` 를 등록하여 일괄 내보내기에 현상 레시피용 렌더러를 하나 더 제공할 수 있습니다.
 GPU 현상 플러그인이 그 예제입니다.
 
+**OK** 를 누르면 이미지 변환 하나를 실행하는 다이얼로그는 버튼 줄, 선택적 패키지 설치, 워커 스레드,
+결과 토스트를 ``Imervue.plugin.tool_dialog.ToolDialogMixin`` 에서 받아 쓸 수 있습니다. 다이얼로그는
+``output_suffix`` 와 토스트 키를 설정하고 ``_transform()`` 에서 변환을 반환합니다. 이전 릴리스 이후에
+추가된 메인 프로그램 코드를 import하는 플러그인은 필요한 플러그인 API 버전을 ``__init__.py`` 옆의
+``plugin.json`` 파일에 적습니다(``{"min_api_version": 2}``). 너무 오래된 Imervue에서는
+``Plugins`` > ``Download Plugins`` 가 그런 플러그인을 거부하고 이미 설치된 사본은 그대로 두며, 필요한
+버전을 상태 줄에 표시합니다. 플러그인 로더는 그 플러그인을 import하지 않고 건너뛰며 이유를 로그에
+남깁니다.
+
 .. list-table::
    :header-rows: 1
    :widths: 28 40 32

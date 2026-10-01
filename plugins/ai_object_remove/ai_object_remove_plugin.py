@@ -41,16 +41,11 @@ from ai_object_remove.object_removal import (
 )
 from ai_object_remove.sam import discover_sam_models, sam_mask
 from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.tool_dialog import output_path, show_toast
 from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
@@ -74,7 +69,7 @@ _OVERLAY_ALPHA = 0.55
 
 class AIObjectRemovePlugin(ImervuePlugin):
     plugin_name = "AI Object Remove"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     plugin_description = "Click an object to flood-select and inpaint it away."
     plugin_author = "Imervue"
 
@@ -324,7 +319,7 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
     def _start_worker(self) -> None:  # pragma: no cover - Qt UI
         if self._worker is not None or self._mask is None or not self.isVisible():
             return
-        out_path = Path(_output_path(self._path, "edited"))
+        out_path = Path(output_path(self._path, "edited"))
         self._worker = _RemoveWorker(
             self._arr, self._mask, str(out_path), self._method.currentData(),
         )
@@ -342,19 +337,13 @@ class ObjectRemoveDialog(WorkerHostMixin, QDialog):
             self._notify("object_remove_failed", "Object removal failed", message)
             return
         lang = language_wrapper.language_word_dict
-        self._toast(lang.get("object_remove_done", "Saved {path}").format(
-            path=Path(message).name), error=False)
+        show_toast(self._viewer, lang.get("object_remove_done", "Saved {path}").format(
+            path=Path(message).name))
         self.accept()
 
     def _notify(self, key: str, fallback: str, detail: str = "") -> None:  # pragma: no cover - Qt UI
         text = language_wrapper.language_word_dict.get(key, fallback)
-        self._toast(f"{text}: {detail}" if detail else text, error=True)
-
-    def _toast(self, text: str, error: bool) -> None:  # pragma: no cover - Qt UI
-        main_window = getattr(self._viewer, "main_window", None)
-        toast = getattr(main_window, "toast", None)
-        if toast is not None:
-            (toast.error if error else toast.info)(text)
+        show_toast(self._viewer, f"{text}: {detail}" if detail else text, error=True)
 
 
 class _MaskWorker(QThread):

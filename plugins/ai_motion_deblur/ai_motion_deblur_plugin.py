@@ -7,20 +7,15 @@ the browse / develop loop on a bad model.
 """
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QLabel,
     QMenu,
-    QSlider,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -39,23 +34,13 @@ from ai_motion_deblur.deblur import (
     onnx_deblur,
     wiener_deblur,
 )
-from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.model_dir import discover_models
-from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
-from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform, make_slider
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
-
-logger = logging.getLogger("Imervue.plugin.ai_motion_deblur")
 
 # The optional ONNX path needs onnxruntime; offered for install on first use.
 ONNX_PACKAGES = [("onnxruntime", "onnxruntime")]
@@ -67,7 +52,7 @@ _PERCENT_STEPS = 100
 
 class AIMotionDeblurPlugin(ImervuePlugin):
     plugin_name = "AI Motion Deblur"
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     plugin_description = "Wiener deconvolution or ONNX-based motion deblur."
     plugin_author = "Imervue"
 
@@ -172,24 +157,28 @@ class AIMotionDeblurPlugin(ImervuePlugin):
         AIMotionDeblurDialog(viewer, str(images[idx])).exec()
 
 
-class AIMotionDeblurDialog(WorkerHostMixin, QDialog):
+class AIMotionDeblurDialog(ToolDialogMixin, QDialog):
     """Pick PSF type + tweak knobs; run on a worker thread on OK."""
+
+    output_suffix = "deblur"
+    failed_key = "deblur_failed"
+    failed_text = "Deblur failed"
+    done_key = "deblur_done"
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
-        self._worker: _DeblurWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("deblur_title", "AI Motion Deblur"))
         self.setMinimumWidth(460)
 
         self._method = self._build_method_combo(lang)
-        self._gauss_radius = _slider(PSF_GAUSSIAN_RADIUS_MIN, PSF_GAUSSIAN_RADIUS_MAX, 3)
-        self._motion_length = _slider(PSF_MOTION_LENGTH_MIN, PSF_MOTION_LENGTH_MAX, 15)
-        self._motion_angle = _slider(PSF_ANGLE_MIN, PSF_ANGLE_MAX, 0)
-        self._snr = _slider(SNR_DB_MIN, SNR_DB_MAX, 25)
-        self._blend = _slider(0, _PERCENT_STEPS, _PERCENT_STEPS)
+        self._gauss_radius = make_slider(PSF_GAUSSIAN_RADIUS_MIN, PSF_GAUSSIAN_RADIUS_MAX, 3)
+        self._motion_length = make_slider(PSF_MOTION_LENGTH_MIN, PSF_MOTION_LENGTH_MAX, 15)
+        self._motion_angle = make_slider(PSF_ANGLE_MIN, PSF_ANGLE_MAX, 0)
+        self._snr = make_slider(SNR_DB_MIN, SNR_DB_MAX, 25)
+        self._blend = make_slider(0, _PERCENT_STEPS, _PERCENT_STEPS)
 
         self._psf_pages = self._build_psf_pages(lang)
         self._method.currentIndexChanged.connect(self._on_method_changed)
@@ -276,82 +265,23 @@ class AIMotionDeblurDialog(WorkerHostMixin, QDialog):
         hint.setStyleSheet("color: #888; font-size: 11px;")
         return hint
 
-    def _build_button_box(self) -> QDialogButtonBox:
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal,
-            self,
-        )
-        buttons.accepted.connect(self._commit)
-        buttons.rejected.connect(self.reject)
-        return buttons
-
-    def _commit(self) -> None:
-        if self._worker is not None:
-            return
-        if self._method.currentData()[0] == "onnx":
-            # The ONNX path needs onnxruntime; offer to install it before running.
-            ensure_dependencies(self, ONNX_PACKAGES, self._start_worker)
-            return
-        self._start_worker()
-
-    def _start_worker(self) -> None:
-        # Also reached asynchronously after the dependency check, by which
-        # time the user may have closed the dialog.
-        if self._worker is not None or not self.isVisible():
-            return
+    def _required_packages(self) -> list[tuple[str, str]]:
+        # The ONNX path needs onnxruntime; the mixin offers to install it before running.
+        return ONNX_PACKAGES if self._method.currentData()[0] == "onnx" else []
+    def _transform(self) -> Transform:
         method = self._method.currentData()
         blend = self._blend.value() / _PERCENT_STEPS
-        wiener_opts = None
-        if method[0] == "wiener":
-            wiener_opts = WienerOptions(
-                psf_kind=method[1],
-                gaussian_radius=int(self._gauss_radius.value()),
-                motion_length=int(self._motion_length.value()),
-                motion_angle=int(self._motion_angle.value()),
-                snr_db=int(self._snr.value()),
-                blend=blend,
-            )
-        out_path = Path(_output_path(self._path, "deblur"))
-        # Wiener deconvolution (FFT) and ONNX inference are slow — run on a worker.
-        self._worker = _DeblurWorker(
-            self._path, method, blend, wiener_opts, str(out_path),
+        if method[0] != "wiener":
+            return lambda rgba: onnx_deblur(rgba, method[1], blend=blend)
+        options = WienerOptions(
+            psf_kind=method[1],
+            gaussian_radius=int(self._gauss_radius.value()),
+            motion_length=int(self._motion_length.value()),
+            motion_angle=int(self._motion_angle.value()),
+            snr_db=int(self._snr.value()),
+            blend=blend,
         )
-        self._worker.done.connect(self._on_done)
-        self._worker.start()
-
-    def _on_done(self, ok: bool, message: str) -> None:
-        # ``done`` is the thread's last act, but run() may not have returned yet.
-        # Wait before dropping the only reference: Qt aborts the whole process
-        # when a still-running QThread is destroyed.
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker = None
-        if not ok:
-            self._notify_failure(RuntimeError(message))
-            return
-        self._notify_success(Path(message))
-        self.accept()
-
-    def _notify_failure(self, exc: Exception) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            prefix = language_wrapper.language_word_dict.get(
-                "deblur_failed", "Deblur failed",
-            )
-            self._viewer.main_window.toast.error(f"{prefix}: {exc}")
-
-    def _notify_success(self, out_path: Path) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            self._viewer.main_window.toast.info(
-                language_wrapper.language_word_dict.get(
-                    "deblur_done", "Saved {path}",
-                ).format(path=out_path.name),
-            )
+        return lambda rgba: wiener_deblur(rgba, options)
 
 
 def _discover_onnx_models() -> list[Path]:
@@ -361,43 +291,3 @@ def _discover_onnx_models() -> list[Path]:
     folder in their file manager and drop weights in.
     """
     return discover_models(_MODELS_DIR)
-
-
-def _slider(lo: int, hi: int, value: int) -> QSlider:
-    s = QSlider(Qt.Orientation.Horizontal)
-    s.setRange(lo, hi)
-    s.setValue(value)
-    return s
-
-
-class _DeblurWorker(QThread):
-    """Run Wiener or ONNX deblur off the UI thread and save the result."""
-
-    done = Signal(bool, str)
-
-    def __init__(self, path: str, method, blend: float,
-                 wiener_opts: WienerOptions | None, out_path: str):
-        super().__init__()
-        self._path = path
-        self._method = method
-        self._blend = blend
-        self._wiener_opts = wiener_opts
-        self._out_path = out_path
-
-    def run(self) -> None:  # pragma: no cover - background thread
-        try:
-            arr = _load_rgba(self._path)
-            if self._method[0] == "wiener":
-                out_arr = wiener_deblur(arr, self._wiener_opts)
-            else:
-                out_arr = onnx_deblur(arr, self._method[1], blend=self._blend)
-            Image.fromarray(out_arr, mode="RGBA").save(self._out_path)
-        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
-            # ONNX / cv2 / PIL raise their own Exception subclasses (ORT's
-            # InvalidArgument, cv2.error, DecompressionBombError) that are not
-            # in the narrow tuple; letting them escape kills the thread with
-            # ``done`` never emitted, so the dialog hangs with a dead OK button.
-            logger.exception("motion-deblur worker failed: %s", exc)
-            self.done.emit(False, str(exc))
-            return
-        self.done.emit(True, self._out_path)

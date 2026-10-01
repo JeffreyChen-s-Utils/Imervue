@@ -1813,6 +1813,14 @@ Imervue 停止运行。含示例的完整指南见
 除了钩子之外，插件还可以在 ``on_plugin_loaded()`` 中用 ``Imervue.image.develop_backends.register``
 注册一个 ``BackendProvider``，为批量导出提供另一个显影 recipe 渲染器；GPU 显影插件就是示例。
 
+按下 **OK** 即执行一项图像变换的对话框，可以从 ``Imervue.plugin.tool_dialog.ToolDialogMixin``
+获得按钮行、可选包安装、后台工作线程与结果 toast：对话框只需设置 ``output_suffix`` 与 toast
+文本的翻译键，并在 ``_transform()`` 中返回该变换。插件如果导入了旧版本发布之后才加入的主程序代码，
+就在它的 ``__init__.py`` 旁放一个 ``plugin.json`` 文件，写明所需的插件 API 版本
+（``{"min_api_version": 2}``）。在版本过旧的 Imervue 上，``Plugins`` > ``Download Plugins``
+会拒绝安装这类插件并保留已安装的副本，同时在状态栏显示它所需的版本；插件加载器则会跳过它、
+不导入它，并把原因写入日志。
+
 .. list-table::
    :header-rows: 1
    :widths: 28 40 32

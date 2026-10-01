@@ -7,16 +7,12 @@ graceful failure when they're not installed.
 """
 from __future__ import annotations
 
-import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QLabel,
     QMenu,
@@ -33,22 +29,13 @@ from portrait_mode.portrait_blur import (
     PortraitBlurOptions,
     apply_portrait_blur,
 )
-from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
-from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
-
-logger = logging.getLogger("Imervue.plugin.portrait_mode")
 
 # (import name, pip name); installed on first use through the host's pip installer.
 REQUIRED_PACKAGES = [("rembg", "rembg"), ("onnxruntime", "onnxruntime")]
@@ -56,7 +43,7 @@ REQUIRED_PACKAGES = [("rembg", "rembg"), ("onnxruntime", "onnxruntime")]
 
 class PortraitModePlugin(ImervuePlugin):
     plugin_name = "Portrait Mode"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     plugin_description = "Subject-isolated background blur via rembg."
     plugin_author = "Imervue"
 
@@ -129,14 +116,18 @@ class PortraitModePlugin(ImervuePlugin):
         )
 
 
-class PortraitModeDialog(WorkerHostMixin, QDialog):
+class PortraitModeDialog(ToolDialogMixin, QDialog):
     """Slider-driven blur + feather options. Runs on a worker thread on OK."""
+
+    output_suffix = "portrait"
+    failed_key = "portrait_mode_failed"
+    failed_text = "Portrait mode failed"
+    done_key = "portrait_mode_done"
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
-        self._worker: _PortraitWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("portrait_mode_title", "Portrait Mode"))
         self.setMinimumWidth(420)
@@ -172,62 +163,14 @@ class PortraitModeDialog(WorkerHostMixin, QDialog):
                     self._feather)
         return form
 
-    def _build_button_box(self) -> QDialogButtonBox:
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal,
-            self,
-        )
-        buttons.accepted.connect(self._commit)
-        buttons.rejected.connect(self.reject)
-        return buttons
-
-    def _commit(self) -> None:
+    def _transform(self) -> Transform:
         # Subject-mask extraction (rembg / onnxruntime) plus the blur composite
-        # can run for seconds — do them on a worker so the dialog stays live.
-        if self._worker is not None:
-            return
+        # can run for seconds; the mixin runs this on a worker.
         options = PortraitBlurOptions(
             blur_radius=int(self._blur.value()),
             feather_radius=int(self._feather.value()),
         )
-        out_path = Path(_output_path(self._path, "portrait"))
-        self._worker = _PortraitWorker(self._path, options, str(out_path))
-        self._worker.done.connect(self._on_done)
-        self._worker.start()
-
-    def _on_done(self, ok: bool, message: str) -> None:
-        # ``done`` is the thread's last act, but run() may not have returned yet.
-        # Wait before dropping the only reference: Qt aborts the whole process
-        # when a still-running QThread is destroyed.
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker = None
-        if not ok:
-            self._notify_failure(RuntimeError(message))
-            return
-        self._notify_success(Path(message))
-        self.accept()
-
-    def _notify_failure(self, exc: Exception) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            prefix = language_wrapper.language_word_dict.get(
-                "portrait_mode_failed", "Portrait mode failed",
-            )
-            self._viewer.main_window.toast.error(f"{prefix}: {exc}")
-
-    def _notify_success(self, out_path: Path) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            self._viewer.main_window.toast.info(
-                language_wrapper.language_word_dict.get(
-                    "portrait_mode_done", "Saved {path}",
-                ).format(path=out_path.name),
-            )
+        return lambda rgba: apply_portrait_blur(rgba, _extract_subject_mask(rgba), options)
 
 
 def _extract_subject_mask(arr: np.ndarray) -> np.ndarray:
@@ -250,32 +193,3 @@ def _extract_subject_mask(arr: np.ndarray) -> np.ndarray:
     if cut_arr.ndim != 3 or cut_arr.shape[2] != 4:
         raise RuntimeError("rembg returned an unexpected image shape")
     return cut_arr[..., 3]
-
-
-class _PortraitWorker(QThread):
-    """Extract the subject mask and composite the blur off the UI thread."""
-
-    done = Signal(bool, str)
-
-    def __init__(self, path: str, options: PortraitBlurOptions, out_path: str):
-        super().__init__()
-        self._path = path
-        self._options = options
-        self._out_path = out_path
-
-    def run(self) -> None:  # pragma: no cover - background thread
-        try:
-            arr = _load_rgba(self._path)
-            mask = _extract_subject_mask(arr)
-            composite = apply_portrait_blur(arr, mask, self._options)
-            Image.fromarray(composite, mode="RGBA").save(self._out_path)
-        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
-            # rembg / ONNX / cv2 / PIL raise their own Exception subclasses
-            # (ORT's InvalidArgument, cv2.error, DecompressionBombError) that
-            # are not in the narrow tuple; letting them escape kills the thread
-            # with ``done`` never emitted, so the dialog hangs with a dead OK
-            # button.
-            logger.exception("portrait worker failed: %s", exc)
-            self.done.emit(False, str(exc))
-            return
-        self.done.emit(True, self._out_path)

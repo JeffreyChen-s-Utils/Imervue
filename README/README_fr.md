@@ -844,9 +844,11 @@ Imervue prend en charge les plugins tiers. Voir [PLUGIN_DEV_GUIDE.md](../PLUGIN_
 
 Outre les hooks, un plugin peut fournir à l'export par lots un autre moteur de rendu pour les recettes de développement : enregistrez un `BackendProvider` avec `Imervue.image.develop_backends.register` dans `on_plugin_loaded`. Le plugin GPU Develop en est l'exemple ; [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md) donne les détails.
 
+Une boîte de dialogue qui applique une transformation d'image sur **OK** peut s'appuyer sur `Imervue.plugin.tool_dialog.ToolDialogMixin` pour la rangée de boutons, l'installation des paquets optionnels, le worker et le toast de résultat. Un plugin qui importe du code du programme principal ajouté après d'anciennes versions indique la version de l'API de plugins dont il a besoin dans un `plugin.json` placé à côté de son `__init__.py` (`{"min_api_version": 2}`) ; un Imervue trop ancien l'ignore en consignant la raison dans le journal, au lieu d'échouer dans ses imports.
+
 ### Téléchargeur de plugins
 
-**Plugins > Download Plugins** ouvre le téléchargeur en ligne. Dépôt source : [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins).
+**Plugins > Download Plugins** ouvre le téléchargeur en ligne. Dépôt source : [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins). Un plugin qui nécessite un Imervue plus récent n'est pas installé : la ligne d'état indique la version de l'API de plugins dont il a besoin, et toute copie déjà installée reste telle quelle. Mettez Imervue à jour, puis téléchargez-le à nouveau.
 
 ---
 

@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.plugin_api import PLUGIN_API_VERSION, IncompatiblePluginError, check_compatible
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 
@@ -59,6 +60,15 @@ RAW_BASE_URL = (
 PLUGIN_CATEGORIES: tuple[str, ...] = ("plugins", "languages")
 
 PluginListing = tuple[str, str, list[dict]]
+
+
+def needs_newer_text(error: IncompatiblePluginError) -> str:
+    """The status-line text for a plugin this Imervue is too old to run."""
+    return language_wrapper.language_word_dict.get(
+        "plugin_dl_needs_newer",
+        "{name} needs a newer Imervue (plugin API {needed}; this one has {have}). "
+        "Update Imervue, then download it again.",
+    ).format(name=error.plugin, needed=error.needed, have=PLUGIN_API_VERSION)
 
 
 def _get_plugin_dir() -> Path:
@@ -194,12 +204,16 @@ class DownloadPluginWorker(QThread):
                     with _https_urlopen(req, timeout=30) as resp:
                         dest.write_bytes(resp.read())
                     self.progress.emit(i + 1, total)
+                # Refused before the swap, so a working install stays as it was.
+                check_compatible(tmp_dir, self.plugin_name)
                 shutil.rmtree(final_dir, ignore_errors=True)
                 os.replace(tmp_dir, final_dir)
             except Exception:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
                 raise
             self.result_ready.emit(self.plugin_name)
+        except IncompatiblePluginError as e:
+            self.error.emit(needs_newer_text(e))
         except _EXPECTED_FETCH_ERRORS as e:
             self.error.emit(str(e))
         except Exception as e:

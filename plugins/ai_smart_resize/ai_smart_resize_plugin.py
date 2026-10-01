@@ -7,16 +7,13 @@ out of the main viewer's failure path.
 """
 from __future__ import annotations
 
-import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QLabel,
     QMenu,
@@ -31,21 +28,12 @@ from ai_smart_resize.seam_carving import (
     SmartResizeOptions,
     smart_resize,
 )
-from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
-from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
-
-logger = logging.getLogger("Imervue.plugin.ai_smart_resize")
 
 _BOOST_SLIDER_STEPS = 100
 _DEFAULT_BOOST = 100  # 1.0x
@@ -53,7 +41,7 @@ _DEFAULT_BOOST = 100  # 1.0x
 
 class AISmartResizePlugin(ImervuePlugin):
     plugin_name = "AI Smart Resize"
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     plugin_description = "Content-aware resize via seam carving."
     plugin_author = "Imervue"
 
@@ -134,14 +122,18 @@ class AISmartResizePlugin(ImervuePlugin):
         AISmartResizeDialog(viewer, str(images[idx])).exec()
 
 
-class AISmartResizeDialog(WorkerHostMixin, QDialog):
+class AISmartResizeDialog(ToolDialogMixin, QDialog):
     """Pick target dimensions; apply seam-carving on a worker thread."""
+
+    output_suffix = "smart"
+    failed_key = "smart_resize_failed"
+    failed_text = "Smart resize failed"
+    done_key = "smart_resize_done"
 
     def __init__(self, viewer: GPUImageView, path: str, parent=None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
-        self._worker: _SmartResizeWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("smart_resize_title", "AI Smart Resize"))
         self.setMinimumWidth(440)
@@ -193,89 +185,15 @@ class AISmartResizeDialog(WorkerHostMixin, QDialog):
         hint.setStyleSheet("color: #888; font-size: 11px;")
         return hint
 
-    def _build_button_box(self) -> QDialogButtonBox:
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel,
-            Qt.Orientation.Horizontal,
-            self,
-        )
-        buttons.accepted.connect(self._commit)
-        buttons.rejected.connect(self.reject)
-        return buttons
-
-    def _commit(self) -> None:
-        if self._worker is not None:
-            return
+    def _transform(self) -> Transform:
         options = SmartResizeOptions(
             out_width=int(self._width.value()),
             out_height=int(self._height.value()),
             energy_boost=self._boost.value() / _BOOST_SLIDER_STEPS,
             protect_alpha=self._protect_alpha.isChecked(),
         )
-        out_path = Path(_output_path(self._path, "smart"))
-        # Seam carving removes/adds seams one scanline at a time — slow; worker it.
-        self._worker = _SmartResizeWorker(self._path, options, str(out_path))
-        self._worker.done.connect(self._on_done)
-        self._worker.start()
-
-    def _on_done(self, ok: bool, message: str) -> None:
-        # ``done`` is the thread's last act, but run() may not have returned yet.
-        # Wait before dropping the only reference: Qt aborts the whole process
-        # when a still-running QThread is destroyed.
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker = None
-        if not ok:
-            self._notify_failure(RuntimeError(message))
-            return
-        self._notify_success(Path(message))
-        self.accept()
-
-    def _notify_failure(self, exc: Exception) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            prefix = language_wrapper.language_word_dict.get(
-                "smart_resize_failed", "Smart resize failed",
-            )
-            self._viewer.main_window.toast.error(f"{prefix}: {exc}")
-
-    def _notify_success(self, out_path: Path) -> None:
-        if hasattr(self._viewer, "main_window") and hasattr(
-            self._viewer.main_window, "toast",
-        ):
-            self._viewer.main_window.toast.info(
-                language_wrapper.language_word_dict.get(
-                    "smart_resize_done", "Saved {path}",
-                ).format(path=out_path.name),
-            )
-
-
-class _SmartResizeWorker(QThread):
-    """Run content-aware seam-carve resize off the UI thread and save it."""
-
-    done = Signal(bool, str)
-
-    def __init__(self, path: str, options: SmartResizeOptions, out_path: str):
-        super().__init__()
-        self._path = path
-        self._options = options
-        self._out_path = out_path
-
-    def run(self) -> None:  # pragma: no cover - background thread
-        try:
-            out_arr = smart_resize(_load_rgba(self._path), self._options)
-            Image.fromarray(out_arr, mode="RGBA").save(self._out_path)
-        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
-            # ONNX / cv2 / PIL raise their own Exception subclasses (ORT's
-            # InvalidArgument, cv2.error, DecompressionBombError) that are not
-            # in the narrow tuple; letting them escape kills the thread with
-            # ``done`` never emitted, so the dialog hangs with a dead OK button.
-            logger.exception("smart-resize worker failed: %s", exc)
-            self.done.emit(False, str(exc))
-            return
-        self.done.emit(True, self._out_path)
+        # Seam carving removes/adds seams one scanline at a time — slow; the mixin workers it.
+        return lambda rgba: smart_resize(rgba, options)
 
 
 # EXIF orientations that turn the image a quarter turn, swapping its width and height.

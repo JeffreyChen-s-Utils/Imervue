@@ -5,12 +5,9 @@ Qt shell (menu entry, padding dialog, background worker).
 """
 from __future__ import annotations
 
-import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -22,21 +19,12 @@ from PySide6.QtWidgets import (
 )
 
 from ai_outpaint.outpaint import outpaint
-from Imervue.gui._apply_save import load_rgba as _load_rgba
-try:
-    # A free name (photo_x.png, then _1 ...), so a second run keeps the first result.
-    from Imervue.gui._apply_save import output_path as _output_path
-except ImportError:   # Imervue before 1.0.75 has no helper: the plain name, as before
-    def _output_path(source: str, suffix: str) -> str:
-        return str(Path(source).with_name(f"{Path(source).stem}_{suffix}.png"))
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_base import ImervuePlugin
-from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.tool_dialog import ToolDialogMixin, Transform
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
-
-logger = logging.getLogger("Imervue.plugin.ai_outpaint")
 
 _DEFAULT_PAD = 64
 _SLIDER_MAX = 512
@@ -44,7 +32,7 @@ _SLIDER_MAX = 512
 
 class AIOutpaintPlugin(ImervuePlugin):
     plugin_name = "AI Outpaint"
-    plugin_version = "1.0.0"
+    plugin_version = "1.0.1"
     plugin_description = "Extend an image's canvas and fill the new border."
     plugin_author = "Imervue"
 
@@ -64,14 +52,18 @@ class AIOutpaintPlugin(ImervuePlugin):
             OutpaintDialog(viewer, str(images[idx])).exec()
 
 
-class OutpaintDialog(WorkerHostMixin, QDialog):
+class OutpaintDialog(ToolDialogMixin, QDialog):
     """Pick a border width and outpaint the current image on Apply."""
+
+    output_suffix = "outpaint"
+    failed_key = "outpaint_failed"
+    failed_text = "Outpaint failed"
+    done_key = "outpaint_done"
 
     def __init__(self, viewer: GPUImageView, path: str, parent: QWidget | None = None):
         super().__init__(viewer if isinstance(viewer, QWidget) else parent)
         self._viewer = viewer
         self._path = path
-        self._worker: _OutpaintWorker | None = None
         lang = language_wrapper.language_word_dict
         self.setWindowTitle(lang.get("outpaint_title", "Outpaint…"))
         self.setMinimumWidth(360)
@@ -96,57 +88,9 @@ class OutpaintDialog(WorkerHostMixin, QDialog):
         row.addWidget(apply_btn)
         return row
 
-    def _commit(self) -> None:  # pragma: no cover - Qt UI
-        if self._worker is not None:
-            return
-        out_path = Path(_output_path(self._path, "outpaint"))
-        self._worker = _OutpaintWorker(self._path, self._padding.value(), str(out_path))
-        self._worker.done.connect(self._on_done)
-        self._worker.start()
-
-    def _on_done(self, ok: bool, message: str) -> None:  # pragma: no cover - Qt UI
-        # ``done`` is the thread's last act, but run() may not have returned yet.
-        # Wait before dropping the only reference: Qt aborts the whole process
-        # when a still-running QThread is destroyed.
-        if self._worker is not None:
-            self._worker.wait()
-            self._worker = None
-        lang = language_wrapper.language_word_dict
-        toast = getattr(getattr(self._viewer, "main_window", None), "toast", None)
-        if toast is not None:
-            if ok:
-                toast.info(lang.get("outpaint_done", "Saved {path}").format(
-                    path=Path(message).name))
-            else:
-                toast.error(f"{lang.get('outpaint_failed', 'Outpaint failed')}: {message}")
-        if ok:
-            self.accept()
-
-
-class _OutpaintWorker(QThread):
-    """Run outpaint off the UI thread and save the result."""
-
-    done = Signal(bool, str)
-
-    def __init__(self, path: str, padding: int, out_path: str):
-        super().__init__()
-        self._path = path
-        self._padding = padding
-        self._out_path = out_path
-
-    def run(self) -> None:  # pragma: no cover - background thread
-        try:
-            result = outpaint(_load_rgba(self._path), self._padding)
-            Image.fromarray(result, mode="RGBA").save(self._out_path)
-        except Exception as exc:  # noqa: BLE001 - a worker thread must always report
-            # ONNX / cv2 / PIL raise their own Exception subclasses (ORT's
-            # InvalidArgument, cv2.error, DecompressionBombError) that are not
-            # in the narrow tuple; letting them escape kills the thread with
-            # ``done`` never emitted, so the dialog hangs with a dead OK button.
-            logger.exception("outpaint worker failed: %s", exc)
-            self.done.emit(False, str(exc))
-            return
-        self.done.emit(True, self._out_path)
+    def _transform(self) -> Transform:
+        padding = self._padding.value()
+        return lambda rgba: outpaint(rgba, padding)
 
 
 _TRANSLATIONS: dict[str, dict[str, str]] = {

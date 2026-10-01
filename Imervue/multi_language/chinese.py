@@ -206,6 +206,7 @@ chinese_word_dict = {
     "plugin_dl_status_fetching": "正在获取插件列表...",
     "plugin_dl_status_found": "找到 {count} 个插件",
     "plugin_dl_status_error": "错误：{error}",
+    "plugin_dl_needs_newer": "{name} 需要更新版本的 Imervue（插件 API {needed}，当前版本为 {have}）。请先更新 Imervue 再重新下载。",
     "plugin_dl_status_downloading": "正在下载 {name}...",
     "plugin_dl_status_done": "已成功下载 {name}！",
     "plugin_dl_status_deleted": "已删除 {name}。",

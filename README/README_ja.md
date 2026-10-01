@@ -841,9 +841,11 @@ Imervue はサードパーティプラグインをサポートします。完全
 
 プラグインはフックのほかに、バッチエクスポートへ現像レシピ用の別のレンダラーを追加することもできます。`on_plugin_loaded` の中で `Imervue.image.develop_backends.register` を使って `BackendProvider` を登録します。GPU 現像プラグインがその例です。詳細は [PLUGIN_DEV_GUIDE.md](../PLUGIN_DEV_GUIDE.md) を参照してください。
 
+**OK** で画像変換を 1 つ実行するダイアログは、ボタン列、オプションパッケージのインストール、ワーカー、結果のトーストを `Imervue.plugin.tool_dialog.ToolDialogMixin` から受け取れます。旧リリース以降に追加されたメインプログラムのコードを import するプラグインは、必要なプラグイン API バージョンを `__init__.py` と同じ場所に置いた `plugin.json` に書きます(`{"min_api_version": 2}`)。古すぎる Imervue は、そのプラグインを import の途中で失敗させるのではなく、理由をログに記録してスキップします。
+
 ### プラグインダウンローダ
 
-**Plugins > Download Plugins** でオンラインダウンローダを開きます。ソースリポジトリ: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。
+**Plugins > Download Plugins** でオンラインダウンローダを開きます。ソースリポジトリ: [Jeffrey-Plugin-Repos/Imervue_Plugins](https://github.com/Jeffrey-Plugin-Repos/Imervue_Plugins)。より新しい Imervue を必要とするプラグインはインストールされません。ステータス行に必要なプラグイン API バージョンが表示され、インストール済みのコピーはそのまま残ります。Imervue を更新してから、もう一度ダウンロードしてください。
 
 ---
 

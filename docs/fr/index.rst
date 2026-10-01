@@ -2135,6 +2135,17 @@ recettes de développement en enregistrant un ``BackendProvider`` avec
 ``Imervue.image.develop_backends.register`` dans ``on_plugin_loaded()`` ; le plugin GPU Develop
 en est l'exemple.
 
+Une boîte de dialogue qui applique une transformation d'image sur **OK** peut s'appuyer sur
+``Imervue.plugin.tool_dialog.ToolDialogMixin`` pour la rangée de boutons, l'installation des
+paquets optionnels, le thread worker et le toast de résultat : elle définit ``output_suffix`` et
+les clés du toast, et renvoie la transformation depuis ``_transform()``. Un plugin qui importe du
+code du programme principal ajouté après d'anciennes versions indique la version de l'API de
+plugins dont il a besoin dans un fichier ``plugin.json`` placé à côté de son ``__init__.py``
+(``{"min_api_version": 2}``). ``Plugins`` > ``Download Plugins`` refuse un tel plugin sur un
+Imervue trop ancien et conserve toute copie déjà installée, en indiquant la version requise dans
+la ligne d'état ; le chargeur de plugins l'ignore sans l'importer et consigne la raison dans le
+journal.
+
 .. list-table::
    :header-rows: 1
    :widths: 28 40 32
