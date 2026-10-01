@@ -43,9 +43,10 @@ jobs:
       with:
         python-version: "3.12"
     - name: Install Sphinx
-      # The same requirements Read the Docs installs (.readthedocs.yaml).
+      # The pins Read the Docs installs (docs/requirements.txt), named here so the job
+      # installs exact versions; tests/test_workflow_actions.py keeps the two equal.
       run: |
-        python -m pip install --only-binary :all: -r docs/requirements.txt
+        python -m pip install --only-binary :all: "sphinx==9.1.0" "sphinx-rtd-theme==3.1.0"
     - name: Build
       # ``-W`` turns every docutils / Sphinx warning into a failure, so a
       # translation that breaks inline markup next to CJK text is caught here.

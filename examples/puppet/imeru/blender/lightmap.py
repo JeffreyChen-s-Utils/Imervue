@@ -91,25 +91,24 @@ def _occlusion(obj: bpy.types.Object, tree: BVHTree, directions: list[Vector]) -
     return values
 
 
+def _meshes(collections: dict[str, bpy.types.Collection], layers) -> list[bpy.types.Object]:
+    """The mesh objects of *layers* (names missing from *collections* are skipped)."""
+    return [obj for name in layers if name in collections
+            for obj in collections[name].all_objects if obj.type == "MESH"]
+
+
 def bake(collections: dict[str, bpy.types.Collection]) -> None:
     """Give every mesh an ``ao`` attribute: baked for the layers in :data:`GROUPS`, else 1."""
     directions = _directions(RAYS)
     baked: set[str] = set()
     for receivers, occluders in GROUPS:
-        sources = [obj for name in occluders if name in collections
-                   for obj in collections[name].all_objects if obj.type == "MESH"]
-        tree = _tree(sources)
-        for name in receivers:
-            if name not in collections:
-                continue
-            for obj in collections[name].all_objects:
-                if obj.type == "MESH":
-                    _store(obj, _smooth(obj.data, _occlusion(obj, tree, directions)))
-                    baked.add(obj.name)
-    for collection in collections.values():
-        for obj in collection.all_objects:
-            if obj.type == "MESH" and obj.name not in baked:
-                _store(obj, [1.0] * len(obj.data.vertices))
+        tree = _tree(_meshes(collections, occluders))
+        for obj in _meshes(collections, receivers):
+            _store(obj, _smooth(obj.data, _occlusion(obj, tree, directions)))
+            baked.add(obj.name)
+    for obj in _meshes(collections, collections):
+        if obj.name not in baked:
+            _store(obj, [1.0] * len(obj.data.vertices))
 
 
 def _smooth(mesh: bpy.types.Mesh, values: list[float]) -> list[float]:

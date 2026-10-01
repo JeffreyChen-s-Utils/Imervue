@@ -12,6 +12,7 @@ inverted hulls: a Solidify shell with flipped normals and back faces culled.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import bpy
 from mathutils import Vector
@@ -20,6 +21,8 @@ from common import H, PX, W, hexrgb, px
 
 #: Render at this multiple of the canvas size; the build downsamples for clean edges.
 SCALE = 2
+#: How far above the shadow line the terminator band of ``toon(edge=...)`` reaches.
+EDGE_WIDTH = 0.07
 #: Where the key light travels: from the viewer's upper left, slightly from the front.
 LIGHT_DIRECTION = Vector((0.34, 0.86, -0.38))
 
@@ -57,6 +60,25 @@ def setup_scene(samples: int = 48) -> bpy.types.Scene:
     sun.rotation_euler = LIGHT_DIRECTION.normalized().to_track_quat("-Z", "Y").to_euler()
     scene.collection.objects.link(sun)
     return scene
+
+
+@dataclass(frozen=True)
+class Rim:
+    """A rim light: *colour* screened over the silhouette where Layer Weight's facing
+    passes *split*, at *strength*."""
+
+    colour: str
+    split: float = 0.74
+    strength: float = 0.55
+
+
+@dataclass(frozen=True)
+class Gloss:
+    """A specular highlight: *colour* where a glossy lobe of *roughness* passes *split*."""
+
+    colour: str
+    split: float = 0.55
+    roughness: float = 0.3
 
 
 class _Graph:
@@ -165,15 +187,15 @@ def _tone(g: _Graph, stops: list, y_socket):
 
 def toon(name: str, lit: str, shade: str, *, deep: str | None = None,
          split: float = 0.42, deep_split: float = 0.12, stops: list | None = None,
-         rim: str | None = None, rim_split: float = 0.74, rim_strength: float = 0.55,
-         spec: str | None = None, spec_split: float = 0.55, roughness: float = 0.3,
-         edge: str | None = None, edge_width: float = 0.07, occlusion: float = 0.0,
-         strands: dict | None = None, streak: dict | None = None) -> bpy.types.Material:
+         rim: Rim | None = None, spec: Gloss | None = None, edge: str | None = None,
+         occlusion: float = 0.0, strands: dict | None = None,
+         streak: dict | None = None) -> bpy.types.Material:
     """A cel material.
 
     *lit* / *shade* / *deep* are ``#RRGGBB``. *stops* overrides them down the canvas:
-    ``[(y, lit, shade, deep), ...]`` from the top. *edge* tints a thin band of the lit side
-    along the shadow line (the saturated terminator of anime shading). *occlusion* (0-1)
+    ``[(y, lit, shade, deep), ...]`` from the top. *rim* and *spec* add a rim light and a
+    highlight. *edge* tints a thin band of the lit side along the shadow line (the saturated
+    terminator of anime shading). *occlusion* (0-1)
     is how much the baked ``ao`` attribute darkens the light (see ``lightmap.py``).
     *strands* paints lines along a lock of hair and *streak* its highlight stroke; see
     :func:`_strands` and :func:`_streak`.
@@ -199,23 +221,28 @@ def toon(name: str, lit: str, shade: str, *, deep: str | None = None,
         colour = g.mix(g.math("GREATER_THAN", light, deep_split), tone("deep"), colour)
     colour = g.mix(lit_mask, colour, tone("lit"))
     if edge:
-        band = g.math("MULTIPLY", lit_mask, g.math("LESS_THAN", light, split + edge_width))
+        band = g.math("MULTIPLY", lit_mask, g.math("LESS_THAN", light, split + EDGE_WIDTH))
         colour = g.mix(band, colour, g.mix(0.6, tone("shade"), edge))
     if strands:
         colour = _strands(g, colour, strands, g.mix(lit_mask, tone("deep"), tone("shade")))
     if rim:
-        weight = g.node("ShaderNodeLayerWeight", Blend=0.35)
-        rim_mask = g.math("GREATER_THAN", weight.outputs["Facing"], rim_split)
-        rim_mask = g.math("MULTIPLY", rim_mask, g.math("GREATER_THAN", light, deep_split))
-        colour = g.mix(g.math("MULTIPLY", rim_mask, rim_strength), colour, rim, "SCREEN")
+        colour = _rim(g, colour, rim, g.math("GREATER_THAN", light, deep_split))
     if spec:
-        gloss = g.light("ShaderNodeBsdfGlossy", Roughness=roughness)
-        colour = g.mix(g.math("GREATER_THAN", gloss, spec_split), colour, spec, "SCREEN")
+        gloss = g.light("ShaderNodeBsdfGlossy", Roughness=spec.roughness)
+        colour = g.mix(g.math("GREATER_THAN", gloss, spec.split), colour, spec.colour, "SCREEN")
     if streak:
         colour = _streak(g, colour, streak, (y_px, split_xyz), light)
     g.emit(colour)
     material.use_backface_culling = False
     return material
+
+
+def _rim(g: _Graph, colour, rim: Rim, lit_enough):
+    """Screen the rim colour over the silhouette, where the surface is not in deep shade."""
+    weight = g.node("ShaderNodeLayerWeight", Blend=0.35)
+    rim_mask = g.math("GREATER_THAN", weight.outputs["Facing"], rim.split)
+    rim_mask = g.math("MULTIPLY", rim_mask, lit_enough)
+    return g.mix(g.math("MULTIPLY", rim_mask, rim.strength), colour, rim.colour, "SCREEN")
 
 
 def _lock_random(g: _Graph):

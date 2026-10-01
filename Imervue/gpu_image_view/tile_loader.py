@@ -436,7 +436,8 @@ def _drop_tile_path(view: GPUImageView, path: str) -> None:
 def file_signature(path: str) -> tuple[int, int, str] | None:
     """``(size, mtime_ns, suffix)`` of *path*, or None when it can't be stat'ed."""
     try:
-        st = os.stat(path)
+        # *path* is the picture the viewer is showing, from the user's own folder.
+        st = os.stat(path)  # NOSONAR
     except OSError:
         return None
     return (st.st_size, st.st_mtime_ns, Path(path).suffix.lower())

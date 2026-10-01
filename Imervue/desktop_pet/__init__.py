@@ -16,7 +16,6 @@ window, its workspace and the Puppet canvas with it.
 """
 from __future__ import annotations
 
-import importlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -32,17 +31,9 @@ if TYPE_CHECKING:
     from Imervue.desktop_pet.pet_workspace import PetWorkspace
     from Imervue.desktop_pet.tray_icon import PetTrayIcon
 
-_EXPORTS: dict[str, str] = {
-    "PetScript": "Imervue.desktop_pet.pet_script",
-    "PetScriptEngine": "Imervue.desktop_pet.pet_script",
-    "PetScriptError": "Imervue.desktop_pet.pet_script",
-    "PetTrayIcon": "Imervue.desktop_pet.tray_icon",
-    "PetWindow": "Imervue.desktop_pet.pet_window",
-    "PetWorkspace": "Imervue.desktop_pet.pet_workspace",
-    "load_script": "Imervue.desktop_pet.pet_script",
-    "save_script": "Imervue.desktop_pet.pet_script",
-    "snap_to_screen_edges": "Imervue.desktop_pet.edge_snap",
-}
+#: The exports that live in ``pet_script``; every other one has a module of its own.
+_SCRIPT_NAMES = frozenset({"PetScript", "PetScriptEngine", "PetScriptError", "load_script",
+                           "save_script"})
 
 __all__ = [
     "PetScript",
@@ -57,8 +48,22 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
-    module = _EXPORTS.get(name)
-    if module is None:
+def _home(name: str):
+    """The submodule that defines export *name*, imported on this first use."""
+    if name in _SCRIPT_NAMES:
+        from Imervue.desktop_pet import pet_script as home
+    elif name == "PetTrayIcon":
+        from Imervue.desktop_pet import tray_icon as home
+    elif name == "PetWindow":
+        from Imervue.desktop_pet import pet_window as home
+    elif name == "PetWorkspace":
+        from Imervue.desktop_pet import pet_workspace as home
+    elif name == "snap_to_screen_edges":
+        from Imervue.desktop_pet import edge_snap as home
+    else:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    return getattr(importlib.import_module(module), name)
+    return home
+
+
+def __getattr__(name: str):
+    return getattr(_home(name), name)

@@ -21,8 +21,8 @@ TOWARD_VIEWER = Vector((0.0, -1.0, 0.0))
 
 def link(obj: bpy.types.Object, collection: bpy.types.Collection) -> bpy.types.Object:
     """Put *obj* in *collection* (and nowhere else)."""
-    for owner in list(obj.users_collection):
-        owner.objects.unlink(obj)
+    while obj.users_collection:
+        obj.users_collection[0].objects.unlink(obj)
     collection.objects.link(obj)
     return obj
 
@@ -69,21 +69,9 @@ def tube(name: str, path: Sequence[Sequence[float]], radii: Sequence[Sequence[fl
     across_layer = bm.verts.layers.float.new("across")
     rings: list[list] = []
     last = max(1, len(points) - 1)
-    for i, (point, (side, up), r) in enumerate(zip(points, frames, radii, strict=True)):
-        across, front = r[0] / PX, r[1] / PX
-        back = (r[2] if len(r) > 2 else r[1]) / PX
-        if across < 1e-7 and front < 1e-7:
-            pole = bm.verts.new(point)
-            pole[along], pole[across_layer] = i / last, 0.0
-            rings.append([pole])
-            continue
+    for i, (point, frame, radius) in enumerate(zip(points, frames, radii, strict=True)):
         ring = []
-        for k in range(segments):
-            theta = 2 * math.pi * k / segments
-            c, s = math.cos(theta), math.sin(theta)
-            scale = squash(k, theta) if squash else 1.0
-            depth = front if s >= 0 else back
-            offset = side * (across * c * scale) + up * (depth * s * scale)
+        for offset, c in _ring_offsets(frame, radius, segments, squash) or [(Vector(), 0.0)]:
             vert = bm.verts.new(point + offset)
             vert[along], vert[across_layer] = i / last, c
             ring.append(vert)
@@ -96,6 +84,25 @@ def tube(name: str, path: Sequence[Sequence[float]], radii: Sequence[Sequence[fl
                 bm.faces.new(ring)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     return _object(name, bm, material)
+
+
+def _ring_offsets(frame: tuple[Vector, Vector], radius: Sequence[float], segments: int,
+                  squash: Callable[[int, float], float] | None) -> list[tuple[Vector, float]]:
+    """One ring's vertices as (offset from the path, ``across`` value); empty when the
+    radius closes the tube to a point."""
+    side, up = frame
+    across, front = radius[0] / PX, radius[1] / PX
+    back = (radius[2] if len(radius) > 2 else radius[1]) / PX
+    if across < 1e-7 and front < 1e-7:
+        return []
+    out = []
+    for k in range(segments):
+        theta = 2 * math.pi * k / segments
+        c, s = math.cos(theta), math.sin(theta)
+        scale = squash(k, theta) if squash else 1.0
+        depth = front if s >= 0 else back
+        out.append((side * (across * c * scale) + up * (depth * s * scale), c))
+    return out
 
 
 def _bridge(bm: bmesh.types.BMesh, a: list, b: list) -> None:

@@ -25,7 +25,7 @@ from common import W, bez, resample
 from geo import ellipsoid, tube
 from head import SKIN, SKIN_EDGE, SKIN_LINE, SKIN_SHADE
 from ornament import gold
-from toon import add_outline, toon
+from toon import Rim, add_outline, toon
 
 ARM_DEPTH = -30.0
 
@@ -40,7 +40,7 @@ def _path(points, side: str):
 
 def _sleeve():
     return toon("sleeve", WHITE, WHITE_SHADE, deep=WHITE_DEEP, split=0.52, deep_split=0.12,
-                rim="#FFFFFF", rim_split=0.8, rim_strength=0.4, edge=WHITE_EDGE, occlusion=0.8)
+                rim=Rim("#FFFFFF", 0.8, 0.4), edge=WHITE_EDGE, occlusion=0.8)
 
 
 def _skin():
@@ -77,8 +77,8 @@ def build_forearm(side: str, collection_for) -> None:
     arm = tube(f"forearm_{side}", _path(curve, side), radii, _sleeve(), segments=32)
     add_outline(arm, WHITE_LINE, 2.3)
     collection_for(f"forearm_{side}", arm)
-    navy = toon("cuff", NAVY, NAVY_SHADE, deep=NAVY_DEEP, split=0.4, rim="#6F86D8",
-                rim_split=0.78, edge=NAVY_EDGE, occlusion=0.8)
+    navy = toon("cuff", NAVY, NAVY_SHADE, deep=NAVY_DEEP, split=0.4, rim=Rim("#6F86D8", 0.78),
+                edge=NAVY_EDGE, occlusion=0.8)
     cuff_path = [(288, float(y), ARM_DEPTH) for y in range(1336, 1395, 4)]
     cuff = tube(f"cuff_{side}", _path(cuff_path, side), [(35.5, 31.0)] * len(cuff_path), navy,
                 segments=32)

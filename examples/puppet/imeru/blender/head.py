@@ -15,7 +15,7 @@ from common import CX, bez, chain, mirror, resample, smoothstep
 from geo import ellipsoid, sheet, tube
 from normals import blend_fields, borrow, column_field, ellipsoid_field, face_light
 from ornament import jewel
-from toon import LIGHT_DIRECTION, add_outline, toon
+from toon import LIGHT_DIRECTION, Rim, add_outline, toon
 
 # ---- palette (the 2D layers use the same colours) --------------------------------------
 SKIN, SKIN_SHADE, SKIN_LINE = "#FFEFE6", "#F7CDC1", "#C9857A"
@@ -124,11 +124,11 @@ STREAK = {"y": 340.0, "bend": 78.0, "spread": 190.0, "half": 7.0, "jitter": 16.0
 
 
 def hair_material(name: str, *, split: float = 0.46, stops: list | None = None,
-                  streak: dict | None = None, strands: dict | None = STRANDS):
+                  streak: dict | None = None, strands: bool = True):
     """Cel-shaded hair: the colour gradient, baked occlusion, painted strands and streak."""
     return toon(name, HAIR, HAIR_SHADE, deep=HAIR_DEEP, split=split, deep_split=0.14,
-                stops=stops or HAIR_STOPS, rim="#FFFFFF", rim_split=0.8, rim_strength=0.4,
-                edge="#8F78F0", occlusion=0.85, strands=strands, streak=streak)
+                stops=stops or HAIR_STOPS, rim=Rim("#FFFFFF", 0.8, 0.4), edge="#8F78F0",
+                occlusion=0.85, strands=STRANDS if strands else None, streak=streak)
 
 
 def lock(name: str, curve, width: float, material, *, lift: float = 14.0,
@@ -219,7 +219,7 @@ def _fringe_lock(name, root_x, tip, width, mat, lift):
 def build_bangs(collection_for):
     """The ``bangs`` layer: the hair over the crown down to the hairline, and the fringe."""
     mat = hair_material("bangs_hair", streak=STREAK)
-    scalp_mat = hair_material("scalp_hair", strands=None)
+    scalp_mat = hair_material("scalp_hair", strands=False)
     scalp = sheet("scalp", _scalp_outline(), scalp_depth, scalp_mat, thickness=4.0, step=10.0)
     borrow(scalp, HEAD_FIELD)
     add_outline(scalp, HAIR_LINE, 2.2, even=False)

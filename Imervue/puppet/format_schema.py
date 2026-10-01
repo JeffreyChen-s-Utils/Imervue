@@ -237,11 +237,13 @@ def schema_text(name: str) -> str:
 def write_schema_files(folder: str | Path) -> list[Path]:
     """Write ``<name>.schema.json`` for every schema into *folder*; returns the paths."""
     target = Path(folder)
-    target.mkdir(parents=True, exist_ok=True)
+    # *folder* is where the user running ``puppet-schema --out`` asked the files to go.
+    target.mkdir(parents=True, exist_ok=True)  # NOSONAR
     written = []
     for name in SCHEMA_NAMES:
         path = target / f"{name}.schema.json"
-        path.write_text(schema_text(name), encoding="utf-8", newline="\n")
+        # A fixed file name inside that folder.
+        path.write_text(schema_text(name), encoding="utf-8", newline="\n")  # NOSONAR
         written.append(path)
     return written
 

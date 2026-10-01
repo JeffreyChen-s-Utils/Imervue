@@ -5,6 +5,11 @@ from __future__ import annotations
 from Imervue.puppet.document import Expression, ExpressionParam, Motion, MotionSegment, MotionTrack
 
 
+#: Per-side parameter names, filled in with "L" / "R" by :func:`both`.
+EYE_SMILE = "ParamEye{}Smile"
+BROW_Y = "ParamBrow{}Y"
+
+
 def track(param: str, *keys: tuple[float, float]) -> MotionTrack:
     """A track through *keys* ``(time, value)``, easing in and out of every key."""
     segments = []
@@ -82,11 +87,11 @@ def motions() -> list[Motion]:
             fade_out_duration=0.4,
             tracks=[
                 track("ParamAngleZ", (0, 0), (0.35, 0.7), (1.2, 0.6), (1.8, -0.2), (2.4, 0)),
-                *both("ParamEye{}Smile", (0, 0), (0.25, 1), (1.8, 1), (2.4, 0)),
+                *both(EYE_SMILE, (0, 0), (0.25, 1), (1.8, 1), (2.4, 0)),
                 track("ParamMouthForm", (0, 0), (0.3, 1), (1.9, 1), (2.4, 0)),
                 track("ParamMouthOpenY", (0, 0), (0.3, 0.35), (1.6, 0.3), (2.4, 0)),
                 track("ParamCheek", (0, 0), (0.4, 1), (2.0, 0.8), (2.4, 0)),
-                *both("ParamBrow{}Y", (0, 0), (0.3, 0.4), (2.4, 0)),
+                *both(BROW_Y, (0, 0), (0.3, 0.4), (2.4, 0)),
             ],
         ),
         Motion(
@@ -111,7 +116,7 @@ def motions() -> list[Motion]:
                     (2.8, 0),
                 ),
                 track("ParamMouthForm", (0, 0.4), (2.8, 0.8)),
-                *both("ParamEye{}Smile", (0, 0), (1.4, 0), (1.8, 1), (2.5, 1), (2.8, 0)),
+                *both(EYE_SMILE, (0, 0), (1.4, 0), (1.8, 1), (2.5, 1), (2.8, 0)),
                 track("ParamAngleZ", (0, 0), (1.6, 0.3), (2.8, 0)),
                 track("ParamCheek", (0, 0), (1.6, 0.6), (2.8, 0)),
             ],
@@ -141,7 +146,7 @@ def motions() -> list[Motion]:
                 ),
                 track("ParamAngleZ", (0, 0), (0.5, -0.35), (2.6, -0.3), (3.2, 0)),
                 track("ParamBodyAngleX", (0, 0), (0.5, -0.25), (2.6, -0.2), (3.2, 0)),
-                *both("ParamEye{}Smile", (0, 0), (0.4, 1), (2.6, 1), (3.2, 0)),
+                *both(EYE_SMILE, (0, 0), (0.4, 1), (2.6, 1), (3.2, 0)),
                 track(
                     "ParamMouthOpenY",
                     (0, 0),
@@ -163,7 +168,7 @@ def motions() -> list[Motion]:
             fade_in_duration=0.1,
             fade_out_duration=0.4,
             tracks=[
-                *both("ParamBrow{}Y", (0, 0), (0.15, 1), (1.6, 1), (2.2, 0)),
+                *both(BROW_Y, (0, 0), (0.15, 1), (1.6, 1), (2.2, 0)),
                 track("ParamMouthOpenY", (0, 0), (0.15, 0.8), (1.5, 0.6), (2.2, 0)),
                 track("ParamMouthForm", (0, 0), (0.15, -0.4), (2.2, 0)),
                 track("ParamAngleY", (0, 0), (0.15, 0.35), (1.5, 0.2), (2.2, 0)),
@@ -203,7 +208,7 @@ def motions() -> list[Motion]:
                 ),
                 track("ParamAngleZ", (0, 0), (1.6, -0.6), (3.0, -0.5), (4, 0)),
                 track("ParamAngleY", (0, 0), (1.6, 0.3), (3.0, 0), (4, 0)),
-                *both("ParamBrow{}Y", (0, 0), (1.0, 0), (1.6, 0.5), (3.0, 0), (4, 0)),
+                *both(BROW_Y, (0, 0), (1.0, 0), (1.6, 0.5), (3.0, 0), (4, 0)),
             ],
         ),
     ]

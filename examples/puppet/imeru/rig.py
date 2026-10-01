@@ -32,8 +32,8 @@ from Imervue.puppet.standard_params import standard_parameters
 
 CX, PIVOT_X, PIVOT_Y = 512.0, 512.0, 760.0
 TURN_X, TURN_Y = 44.0, 26.0  # px a feature at depth 1 moves at ParamAngleX / Y = ±1
-ROLL = math.radians(9.0)  # head roll at ParamAngleZ = ±1
-BODY_ROLL = 0.05  # rad, ParamBodyAngleZ = ±1
+ROLL = math.radians(9.0)  # head roll at either end of ParamAngleZ
+BODY_ROLL = 0.05  # body roll in radians at either end of ParamBodyAngleZ
 
 # character side of each drawn side: the eye drawn on the viewer's left is her right eye
 SIDE = {"l": "R", "r": "L"}
@@ -111,7 +111,7 @@ def drawable_id(layer_id: str) -> str:
 # ---- meshes ---------------------------------------------------------------------------------
 def _bbox(rgba: np.ndarray) -> tuple[int, int, int, int]:
     alpha = rgba[..., 3] > 0
-    rows, cols = np.where(alpha.any(axis=1))[0], np.where(alpha.any(axis=0))[0]
+    rows, cols = np.nonzero(alpha.any(axis=1))[0], np.nonzero(alpha.any(axis=0))[0]
     return int(cols[0]), int(rows[0]), int(cols[-1]) + 1, int(rows[-1]) + 1
 
 

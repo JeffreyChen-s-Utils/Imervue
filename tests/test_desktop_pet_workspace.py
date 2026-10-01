@@ -243,6 +243,7 @@ def test_size_combo_offers_each_preset(qapp, preset):
 def test_the_drivers_the_pet_starts_show_as_ticked(qapp):
     """Auto idle, idle motions and auto-blink start with the pet but their boxes stayed empty."""
     ws = PetWorkspace()
+    window = None
     try:
         window = ws._ensure_pet_window()  # noqa: SLF001
         assert ws._idle_check.isChecked()  # noqa: SLF001
@@ -250,8 +251,9 @@ def test_the_drivers_the_pet_starts_show_as_ticked(qapp):
         assert ws._blink_check.isChecked()  # noqa: SLF001
         assert not ws._drag_check.isChecked()  # noqa: SLF001
     finally:
-        window.hide()
-        window.deleteLater()
+        if window is not None:
+            window.hide()
+            window.deleteLater()
         ws.deleteLater()
 
 

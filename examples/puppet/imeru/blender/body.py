@@ -11,7 +11,7 @@ import math
 from common import CX, bez, chain, mirror, smoothstep
 from geo import ellipsoid, sheet, tube
 from ornament import button, jewel
-from toon import add_outline, toon
+from toon import Gloss, Rim, add_outline, toon
 
 WHITE, WHITE_SHADE, WHITE_DEEP, WHITE_LINE = "#FBFBFF", "#D5D9F1", "#AEB5DC", "#565C8C"
 NAVY, NAVY_SHADE, NAVY_DEEP, NAVY_LINE = "#34437E", "#232E5C", "#171E40", "#0E1430"
@@ -54,13 +54,13 @@ def torso_front(x: float, y: float) -> float:
 
 def _blouse():
     return toon("blouse", WHITE, WHITE_SHADE, deep=WHITE_DEEP, split=0.36, deep_split=0.1,
-                rim="#FFFFFF", rim_split=0.8, rim_strength=0.4, edge=WHITE_EDGE,
+                rim=Rim("#FFFFFF", 0.8, 0.4), edge=WHITE_EDGE,
                 occlusion=0.8)
 
 
 def _navy(name: str = "navy", edge: str | None = NAVY_EDGE):
     return toon(name, NAVY, NAVY_SHADE, deep=NAVY_DEEP, split=0.4, deep_split=0.12,
-                rim="#6F86D8", rim_split=0.8, rim_strength=0.45, edge=edge, occlusion=0.8)
+                rim=Rim("#6F86D8", 0.8, 0.45), edge=edge, occlusion=0.8)
 
 
 def build_torso(collection_for):
@@ -214,8 +214,8 @@ def _tail(name, side: str, coral):
 def build_ribbon(collection_for):
     """``ribbon``: the coral bow with two tails, held by the star-lens brooch."""
     coral = toon("coral", CORAL, CORAL_SHADE, deep=CORAL_DEEP, split=0.4, deep_split=0.12,
-                 rim="#FFD2C8", rim_split=0.76, rim_strength=0.5, spec="#FFE6DF",
-                 spec_split=0.84, roughness=0.3, edge=CORAL_EDGE, occlusion=0.8)
+                 rim=Rim("#FFD2C8", 0.76, 0.5), spec=Gloss("#FFE6DF", 0.84, 0.3),
+                 edge=CORAL_EDGE, occlusion=0.8)
     for side in ("l", "r"):
         collection_for("ribbon", _tail(f"bow_tail_{side}", side, coral))
         collection_for("ribbon", _loop(f"bow_loop_{side}", side, coral))

@@ -128,7 +128,7 @@ def paint(layer: Image.Image, mask: Image.Image, color, alpha: float = 1.0) -> N
     if box is None:
         return
     region = mask.crop(box)
-    if alpha != 1.0:
+    if alpha < 1.0:
         region = scale_mask(region, alpha)
     solid = Image.new("RGBA", region.size, _rgba(color))
     solid.putalpha(ImageChops.multiply(region, Image.new("L", region.size, _rgba(color)[3])))

@@ -62,7 +62,7 @@ def _downsample(rgba: np.ndarray) -> np.ndarray:
     a = rgba[..., 3:4].astype(np.float32) / 255.0
     pre = np.concatenate([rgba[..., :3].astype(np.float32) * a, a * 255.0], axis=-1)
     h, w = pre.shape[0] // SCALE, pre.shape[1] // SCALE
-    pre = pre.reshape(h, SCALE, w, SCALE, 4).mean(axis=(1, 3))
+    pre = pre.reshape((h, SCALE, w, SCALE, 4)).mean(axis=(1, 3))
     alpha = pre[..., 3:4] / 255.0
     rgb = np.where(alpha > 1e-4, pre[..., :3] / np.maximum(alpha, 1e-4), 0.0)
     return np.clip(np.concatenate([rgb, pre[..., 3:4]], axis=-1) + 0.5, 0, 255).astype(np.uint8)

@@ -4,7 +4,7 @@ from __future__ import annotations
 from functools import cache
 
 from geo import ellipsoid, star, torus
-from toon import add_outline, toon
+from toon import Gloss, Rim, add_outline, toon
 
 GOLD, GOLD_SHADE, GOLD_DEEP, GOLD_LINE = "#F7DA92", "#D3A24A", "#99692A", "#7A5220"
 GEM, GEM_SHADE, GEM_LINE = "#7CC4FF", "#3A6CD6", "#22357F"
@@ -13,15 +13,15 @@ GEM, GEM_SHADE, GEM_LINE = "#7CC4FF", "#3A6CD6", "#22357F"
 @cache
 def gold():
     """Polished gold: three tones, a hard highlight and a warm rim."""
-    return toon("gold", GOLD, GOLD_SHADE, deep=GOLD_DEEP, split=0.4, spec="#FFFBEA",
-                spec_split=0.5, roughness=0.2, rim="#FFF4CC", rim_split=0.7)
+    return toon("gold", GOLD, GOLD_SHADE, deep=GOLD_DEEP, split=0.4,
+                spec=Gloss("#FFFBEA", 0.5, 0.2), rim=Rim("#FFF4CC", 0.7))
 
 
 @cache
 def gem():
     """A blue lens: bright rim, a sharp white glint."""
-    return toon("gem", GEM, GEM_SHADE, split=0.35, spec="#FFFFFF", spec_split=0.45,
-                roughness=0.15, rim="#D6F2FF", rim_split=0.6, rim_strength=0.7)
+    return toon("gem", GEM, GEM_SHADE, split=0.35, spec=Gloss("#FFFFFF", 0.45, 0.15),
+                rim=Rim("#D6F2FF", 0.6, 0.7))
 
 
 def jewel(prefix: str, x: float, y: float, depth: float, scale: float = 1.0,
