@@ -51,7 +51,9 @@ Compatibility gate — :func:`_gpu_supported` reports False for:
 * pixel-art snapping (the integer-snap rule lives in the CPU stroke
   state machine; not worth duplicating in GLSL),
 * per-dab kernel restyling (``pencil`` / ``airbrush``) — re-uploading
-  a kernel texture every dab erases the GPU win.
+  a kernel texture every dab erases the GPU win,
+* per-dab scatter, colour jitter or pen-tilt shaping (the session stamps
+  one colour and one kernel per stroke).
 
 Coordinate convention matches the rest of the paint workspace:
 canvas is Y-down (``glOrtho(0, w, h, 0, ...)``), so canvas pixel
@@ -199,6 +201,8 @@ def _gpu_supported(options) -> bool:
     if options.selection is not None:
         return False
     if options.pixel_art:
+        return False
+    if options.scatter > 0 or options.color_jitter > 0 or options.follow_tilt:
         return False
     return options.kind not in ("pencil", "airbrush")
 
@@ -657,9 +661,10 @@ def _subclass():
                 logger.warning("GPU read_back failed, dropping session: %s", exc)
                 self.dispose()
 
-        def _paint_dab(self, canvas, x, y, kernel, *, fade):  # type: ignore[override]
+        def _paint_dab(self, canvas, dab, *, fade):
             if self._gpu is None or canvas is not self._gpu_layer:
-                return super()._paint_dab(canvas, x, y, kernel, fade=fade)
+                return super()._paint_dab(canvas, dab, fade=fade)
+            x, y, kernel, color = dab
             opacity = self._taper_start_opacity() * float(fade)
             if opacity <= 0.0:
                 return DabResult(0, 0, 0, 0)
@@ -667,7 +672,7 @@ def _subclass():
             if bbox is None:
                 return DabResult(0, 0, 0, 0)
             cx0, cy0, cx1, cy1, *_ = bbox
-            self._gpu.stamp(kernel, self._options.color, opacity, x, y)
+            self._gpu.stamp(kernel, color, opacity, x, y)
             return DabResult(cx0, cy0, cx1 - cx0, cy1 - cy0)
 
     return _GPUStroke

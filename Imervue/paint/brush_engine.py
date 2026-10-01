@@ -407,6 +407,14 @@ class BrushStrokeOptions:
     # end-tapering needs lookahead the engine itself doesn't have.
     taper_start_dabs: int = 0
     taper_end_dabs: int = 0
+    # Per-dab randomisation (``Imervue.paint.brush_random``): ``scatter``
+    # moves each dab up to that fraction of ``size`` off the stroke,
+    # ``color_jitter`` shifts each dab's colour in HSV, and ``follow_tilt``
+    # shapes the kernel by the pen tilt given to :meth:`BrushStroke.set_tilt`.
+    # Pixel-art strokes keep their hard square kernel and ignore the tilt.
+    scatter: float = 0.0
+    color_jitter: float = 0.0
+    follow_tilt: bool = False
 
 
 def square_brush_kernel(size: int) -> np.ndarray:
@@ -417,6 +425,10 @@ def square_brush_kernel(size: int) -> np.ndarray:
     """
     size = max(KERNEL_SIZE_MIN, min(KERNEL_SIZE_MAX, int(size)))
     return np.ones((size, size), dtype=np.float32)
+
+
+#: One dab of a stroke: ``(x, y, kernel, rgb)``.
+_Dab = tuple[float, float, np.ndarray, tuple[int, int, int]]
 
 
 class BrushStroke:
@@ -437,8 +449,12 @@ class BrushStroke:
         # recent N dabs are queued here. Each new dab flushes the
         # oldest at full opacity; on stroke end the buffer is
         # replayed with progressively lower opacity so the tail
-        # fades out smoothly. Each entry is ``(x, y, kernel)``.
-        self._tail_buffer: list[tuple[float, float, np.ndarray]] = []
+        # fades out smoothly. Each entry is ``(x, y, kernel, color)``.
+        self._tail_buffer: list[_Dab] = []
+        # Pen tilt for ``follow_tilt`` and the kernel shaped for it, kept
+        # until the tilt changes (shaping resamples the whole kernel).
+        self._tilt = (0.0, 0.0)
+        self._tilted: tuple[tuple[float, float], np.ndarray, np.ndarray] | None = None
         base = _resolve_base_kernel(options)
         # Pixel-art mode bypasses the per-kind noise shaping — the
         # kernel is the hard square already and we don't want any
@@ -472,6 +488,10 @@ class BrushStroke:
     @property
     def is_active(self) -> bool:
         return self._active
+
+    def set_tilt(self, tilt_x: float, tilt_y: float) -> None:
+        """Set the pen tilt (each axis in ``[-1, 1]``) that ``follow_tilt`` dabs follow."""
+        self._tilt = (float(tilt_x), float(tilt_y))
 
     def begin(self, canvas: np.ndarray, x: float, y: float) -> DabResult:
         if self._active:
@@ -508,35 +528,37 @@ class BrushStroke:
     ) -> DabResult:
         """Apply a dab — directly when no end-taper, otherwise via the
         tail buffer that defers the most recent N dabs."""
-        kernel = self._next_kernel()
+        dab = self._next_dab(x, y)
         end_taper = int(self._options.taper_end_dabs)
         if end_taper <= 0:
-            damage = self._paint_dab(canvas, x, y, kernel, fade=1.0)
+            damage = self._paint_dab(canvas, dab, fade=1.0)
             self._dab_index += 1
             return damage
         # Buffer this dab. If the buffer is full, the oldest one
         # gets painted at full opacity (it's no longer in the tail
         # window) and the new dab takes its slot.
         damage = DabResult(0, 0, 0, 0)
-        self._tail_buffer.append((x, y, kernel))
+        self._tail_buffer.append(dab)
         if len(self._tail_buffer) > end_taper:
-            old_x, old_y, old_kernel = self._tail_buffer.pop(0)
-            damage = self._paint_dab(
-                canvas, old_x, old_y, old_kernel, fade=1.0,
-            )
+            damage = self._paint_dab(canvas, self._tail_buffer.pop(0), fade=1.0)
             self._dab_index += 1
         return damage
 
-    def _paint_dab(
-        self,
-        canvas: np.ndarray,
-        x: float, y: float,
-        kernel: np.ndarray,
-        *,
-        fade: float,
-    ) -> DabResult:
+    def _next_dab(self, x: float, y: float) -> _Dab:
+        """Position, kernel and colour of the next dab, randomised as the options ask."""
+        from Imervue.paint.brush_random import jitter_color, scatter_offset
+        options = self._options
+        kernel = self._next_kernel()
+        if options.scatter > 0:
+            dx, dy = scatter_offset(options.size, options.scatter, self._rng)
+            x, y = self._snap_position(x + dx, y + dy)
+        color = jitter_color(options.color, options.color_jitter, self._rng)
+        return (x, y, kernel, color)
+
+    def _paint_dab(self, canvas: np.ndarray, dab: _Dab, *, fade: float) -> DabResult:
+        x, y, kernel, color = dab
         return apply_dab(
-            canvas, x, y, kernel, self._options.color,
+            canvas, x, y, kernel, color,
             opacity=self._taper_start_opacity() * float(fade),
             blend_mode=self._options.blend_mode,
             selection=self._options.selection,
@@ -557,12 +579,12 @@ class BrushStroke:
         if not self._tail_buffer:
             return damage
         n = len(self._tail_buffer)
-        for i, (x, y, kernel) in enumerate(self._tail_buffer):
+        for i, dab in enumerate(self._tail_buffer):
             # Fade from near-full at the first buffered dab down to
             # near-zero at the last; (n - i) / (n + 1) keeps both
             # endpoints non-trivial so the transition is smooth.
             fade = max(0.0, (n - i) / float(n + 1))
-            d = self._paint_dab(canvas, x, y, kernel, fade=fade)
+            d = self._paint_dab(canvas, dab, fade=fade)
             damage = _union(damage, d)
             self._dab_index += 1
         self._tail_buffer = []
@@ -590,8 +612,22 @@ class BrushStroke:
         """
         from Imervue.paint.brush_dynamics import stylise_kernel
         if self._restyle_each_dab:
-            return stylise_kernel(self._base_kernel, self._options.kind, self._rng)
-        return self._kernel
+            kernel = stylise_kernel(self._base_kernel, self._options.kind, self._rng)
+        else:
+            kernel = self._kernel
+        if not self._options.follow_tilt or self._options.pixel_art:
+            return kernel
+        return self._tilted_kernel(kernel)
+
+    def _tilted_kernel(self, kernel: np.ndarray) -> np.ndarray:
+        """*kernel* shaped by the current pen tilt, reusing the last result while both hold."""
+        from Imervue.paint.brush_random import tilt_kernel
+        cached = self._tilted
+        if cached is not None and cached[0] == self._tilt and cached[1] is kernel:
+            return cached[2]
+        shaped = tilt_kernel(kernel, *self._tilt)
+        self._tilted = (self._tilt, kernel, shaped)
+        return shaped
 
     def end(self, canvas: np.ndarray, x: float, y: float) -> DabResult:
         if not self._active:

@@ -407,7 +407,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ### 브러시
 
-브러시 종류 6가지 — 연필 / 펜 / 마커 / 에어브러시 / 수채화 / 먹(Sumi) — 와 이를 기반으로 한 프리셋(Crayon, Highlight, Sumi calligraphy …). Brush 도크에서 Size / Opacity / Hardness / Density / 블렌드 모드를 설정하고, 옵션 바에는 Size / Opacity / Hardness가 있습니다. 태블릿 펜 필압이 **Settings > Pressure Curve…** 에서 설정한 커브에 따라 크기와 불투명도를 조절하며, 마우스는 항상 최대 필압으로 그립니다. 선택 영역으로부터 브러시 팁 캡처, **File > Import brush preset…**.
+브러시 종류 6가지 — 연필 / 펜 / 마커 / 에어브러시 / 수채화 / 먹(Sumi) — 와 이를 기반으로 한 프리셋(Crayon, Highlight, Sumi calligraphy …). Brush 도크에서 Size / Opacity / Hardness / Density / 블렌드 모드를 설정하고, 옵션 바에는 Size / Opacity / Hardness가 있습니다. 태블릿 펜 필압이 **Settings > Pressure Curve…** 에서 설정한 커브에 따라 크기와 불투명도를 조절하며, 마우스는 항상 최대 필압으로 그립니다. Brush 도크의 **Scatter** 는 각 브러시 자국을 최대 브러시 크기에 설정 비율을 곱한 거리까지 획에서 벗어나게 하고, **Colour jitter** 는 자국마다 색조·채도·명도를 바꾸며, **Follow pen tilt** 는 태블릿 펜이 기울어진 방향과 수직인 방향으로 브러시 팁을 좁히고 기울기를 따라 팁을 돌립니다(Sumi calligraphy 프리셋은 이 옵션이 켜져 있습니다). 픽셀 아트 브러시는 정사각형 팁을 그대로 유지합니다. 선택 영역으로부터 브러시 팁 캡처, **File > Import brush preset…**.
 
 ### 레이어
 

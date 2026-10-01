@@ -28,7 +28,7 @@ _KNOWN_UNWIRED = {
     "Imervue.export.contact_sheet_layouts", "Imervue.image.caption",
     "Imervue.library.capture_time", "Imervue.library.gpx_geotag",
     "Imervue.multi_language.translation_validation",
-    "Imervue.paint.animation_export", "Imervue.paint.auto_base_color", "Imervue.paint.brush_random",
+    "Imervue.paint.animation_export", "Imervue.paint.auto_base_color",
     "Imervue.paint.canvas_presets", "Imervue.paint.catmull_rom_spline",
     "Imervue.paint.color_palette", "Imervue.paint.color_wheel_widget",
     "Imervue.paint.filter_preview_dialog", "Imervue.paint.gradient_editor",

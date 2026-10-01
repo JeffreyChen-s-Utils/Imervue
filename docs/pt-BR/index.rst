@@ -678,7 +678,13 @@ Tamanho / Opacidade / Dureza. A pressão da caneta da mesa digitalizadora escala
 o tamanho e a opacidade do pincel pela curva definida em ``Configurações`` >
 ``Curva de Pressão…`` (arraste um ponto, clique para adicionar um, clique com o
 botão direito para remover um, ou comece por Linear / Suave / Dura); um mouse
-desenha com pressão total. Use ``Editar`` >
+desenha com pressão total. No dock Pincel, **Dispersão** desloca cada toque do
+pincel para fora do traço em até a fração do tamanho do pincel que ela define,
+**Variação de cor** altera o matiz, a saturação e o brilho de cada toque, e
+**Seguir inclinação da caneta** estreita a ponta no sentido transversal à
+direção em que a caneta da mesa digitalizadora se inclina e a gira para
+acompanhar essa inclinação (o preset caligrafia Sumi vem com essa opção
+ativada); um pincel de pixel art mantém sua ponta quadrada. Use ``Editar`` >
 ``Capturar Ponta de Pincel…`` para transformar uma seleção em uma ponta de
 pincel personalizada.
 

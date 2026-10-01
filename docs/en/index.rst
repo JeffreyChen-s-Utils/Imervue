@@ -673,7 +673,11 @@ the **Brush dock**; the top **Options bar** carries Size / Opacity / Hardness.
 Tablet pen pressure scales the brush size and opacity through the curve set in
 ``Settings`` > ``Pressure Curve…`` (drag a point, click to add one, right-click
 to remove one, or start from Linear / Soft / Hard); a mouse draws at full
-pressure. Use ``Edit`` >
+pressure. The Brush dock's **Scatter** moves each dab off the stroke by up to
+that share of the brush size, **Colour jitter** shifts each dab's hue,
+saturation and brightness, and **Follow pen tilt** narrows the tip across the
+direction a tablet pen leans and turns it to follow (the Sumi calligraphy
+preset has it on); a pixel-art brush keeps its square tip. Use ``Edit`` >
 ``Capture Brush Tip…`` to turn a marquee selection into a custom brush tip.
 
 Layers

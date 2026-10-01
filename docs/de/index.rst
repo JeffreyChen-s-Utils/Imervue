@@ -674,6 +674,12 @@ Arten aufbauen. Jeder Brush bietet Größe / Deckkraft / Härte / Dichte / Misch
 Der Stiftdruck des Tabletts skaliert Größe und Deckkraft des Brushs über die Kurve aus
 ``Einstellungen`` > ``Druckkurve…`` (Punkte ziehen, per Klick hinzufügen, per Rechtsklick
 entfernen oder mit Linear / Weich / Hart beginnen); eine Maus zeichnet mit vollem Druck.
+**Streuung** im Brush-Dock versetzt jeden Tupfer um bis zu den eingestellten Anteil
+der Brush-Größe neben den Strich, **Farbvariation** verschiebt Farbton, Sättigung und
+Helligkeit jedes Tupfers, und **Stiftneigung folgen** verschmälert die Spitze quer zu
+der Richtung, in die sich ein Tablett-Stift neigt, und dreht sie mit (beim Preset
+Sumi-Kalligrafie ist es eingeschaltet); ein Pixel-Art-Brush behält seine quadratische
+Spitze.
 ``Bearbeiten`` > ``Brush-Spitze erfassen…`` verwandelt eine Auswahl in eine eigene
 Brush-Spitze.
 

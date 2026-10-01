@@ -682,7 +682,12 @@ pincel expone Size / Opacity / Hardness / Density / Blend-mode en el **dock Brus
 tableta escala el tamaño y la opacidad del pincel según la curva definida en
 ``Settings`` > ``Pressure Curve…`` (arrastre un punto, haga clic para añadir uno, haga
 clic derecho para quitar uno, o parta de Linear / Soft / Hard); un ratón dibuja a plena
-presión. Use ``Edit`` >
+presión. En el dock Brush, **Scatter** aparta cada toque del trazo hasta la fracción
+indicada del tamaño del pincel, **Colour jitter** altera el tono, la saturación y el
+brillo de cada toque, y **Follow pen tilt** estrecha la punta en sentido transversal a
+la dirección en que se inclina el lápiz de la tableta y la gira para seguirla (el preset
+Caligrafía sumi lo tiene activado); un pincel de pixel art conserva su punta cuadrada.
+Use ``Edit`` >
 ``Capture Brush Tip…`` para convertir una selección de marquesina en una punta de pincel
 personalizada.
 

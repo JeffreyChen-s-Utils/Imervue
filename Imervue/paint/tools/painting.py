@@ -62,6 +62,7 @@ class BrushTool:
         # Press-point of the active stroke — fed to the perspective
         # ruler so its snap line passes through where the user pressed.
         self._stroke_anchor: tuple[float, float] | None = None
+        self._follow_tilt = False
         self.last_damage = _EMPTY_DAMAGE
 
     def _panel_clipped_selection(
@@ -92,6 +93,7 @@ class BrushTool:
         if evt.phase == "move" and self._strokes:
             x, y = self._snap(evt.x, evt.y)
             x, y = self._smoothed_xy(x, y)
+            self._pass_tilt(evt)
             self._extend_all(canvas, x, y)
             self.last_damage = self._collect_damage()
             return True
@@ -216,7 +218,11 @@ class BrushTool:
             seed=int(time.monotonic_ns() & 0xFFFFFFFF),
             tip_path=brush.tip_path,
             pixel_art=self._state.snap_to_pixel,
+            scatter=brush.scatter,
+            color_jitter=brush.color_jitter,
+            follow_tilt=brush.follow_tilt,
         )
+        self._follow_tilt = brush.follow_tilt
         from Imervue.paint.gpu_brush import make_brush_stroke
         # GPU stroke uses a per-stroke FBO that can't see sibling
         # strokes' updates without an expensive per-extend re-upload —
@@ -225,12 +231,18 @@ class BrushTool:
         # GPU when GL is current and the options qualify.
         mirror_positions = list(self._mirror(sx, sy))
         prefer_gpu = len(mirror_positions) == 1
-        self._strokes = []
-        for px, py in mirror_positions:
-            stroke = make_brush_stroke(options, prefer_gpu=prefer_gpu)
+        self._strokes = [make_brush_stroke(options, prefer_gpu=prefer_gpu)
+                         for _ in mirror_positions]
+        self._pass_tilt(evt)
+        for stroke, (px, py) in zip(self._strokes, mirror_positions, strict=True):
             stroke.begin(canvas, px, py)
-            self._strokes.append(stroke)
         return True
+
+    def _pass_tilt(self, evt: PointerEvent) -> None:
+        """Hand the pen tilt to the strokes when the brush follows it (CPU strokes only then)."""
+        if self._follow_tilt:
+            for stroke in self._strokes:
+                stroke.set_tilt(evt.tilt_x, evt.tilt_y)
 
 
 # ---------------------------------------------------------------------------

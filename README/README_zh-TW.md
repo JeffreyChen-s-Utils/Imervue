@@ -406,7 +406,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ### 筆刷
 
-六種筆刷類型 — 鉛筆 / 原子筆 / 麥克筆 / 噴槍 / 水彩 / 水墨 — 以及以它們為基礎的預設（Crayon、Highlight、Sumi calligraphy …）。筆刷面板可調大小 / 不透明度 / 硬度 / 密度 / 混合模式；選項列提供大小 / 不透明度 / 硬度。繪圖板筆壓會依 **Settings > Pressure Curve…** 設定的曲線縮放大小與不透明度；滑鼠一律以最大筆壓繪製。從選取捕獲筆尖、**File > Import brush preset…**。
+六種筆刷類型 — 鉛筆 / 原子筆 / 麥克筆 / 噴槍 / 水彩 / 水墨 — 以及以它們為基礎的預設（Crayon、Highlight、Sumi calligraphy …）。筆刷面板可調大小 / 不透明度 / 硬度 / 密度 / 混合模式；選項列提供大小 / 不透明度 / 硬度。繪圖板筆壓會依 **Settings > Pressure Curve…** 設定的曲線縮放大小與不透明度；滑鼠一律以最大筆壓繪製。筆刷面板的 **散佈** 讓每個筆觸點偏離筆畫，偏移量最多為筆刷大小乘上所設比例；**顏色抖動** 改變每個筆觸點的色相、飽和度與亮度；**跟隨筆的傾斜** 會在與繪圖板筆傾斜方向垂直的方向上讓筆尖變窄，並讓筆尖跟著傾斜方向轉動（Sumi calligraphy 預設已開啟此項）；像素畫筆刷仍維持方形筆尖。從選取捕獲筆尖、**File > Import brush preset…**。
 
 ### 圖層
 

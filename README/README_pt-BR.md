@@ -411,7 +411,7 @@ Atalhos de tecla única: `B / E / G / I / M / L / W / V / T / U / R / P / S / C 
 
 ### Pincéis
 
-Seis tipos de pincel — Lápis / Caneta / Marcador / Aerógrafo / Aquarela / Sumi — mais presets construídos sobre eles (Giz de cera, Marca-texto, caligrafia Sumi …). O dock Pincel define Tamanho / Opacidade / Dureza / Densidade / Modo de mesclagem; a barra de opções traz Tamanho / Opacidade / Dureza. A pressão da caneta da mesa digitalizadora escala o tamanho e a opacidade pela curva definida em **Settings > Pressure Curve…**; um mouse desenha com pressão total. Captura de ponta de pincel a partir de seleção, **File > Import brush preset…**.
+Seis tipos de pincel — Lápis / Caneta / Marcador / Aerógrafo / Aquarela / Sumi — mais presets construídos sobre eles (Giz de cera, Marca-texto, caligrafia Sumi …). O dock Pincel define Tamanho / Opacidade / Dureza / Densidade / Modo de mesclagem; a barra de opções traz Tamanho / Opacidade / Dureza. A pressão da caneta da mesa digitalizadora escala o tamanho e a opacidade pela curva definida em **Settings > Pressure Curve…**; um mouse desenha com pressão total. No dock Pincel, **Dispersão** desloca cada toque do pincel para fora do traço em até a fração do tamanho do pincel que ela define, **Variação de cor** altera o matiz, a saturação e o brilho de cada toque, e **Seguir inclinação da caneta** estreita a ponta no sentido transversal à direção em que a caneta da mesa digitalizadora se inclina e a gira para acompanhar essa inclinação (o preset caligrafia Sumi vem com essa opção ativada); um pincel de pixel art mantém sua ponta quadrada. Captura de ponta de pincel a partir de seleção, **File > Import brush preset…**.
 
 ### Camadas
 

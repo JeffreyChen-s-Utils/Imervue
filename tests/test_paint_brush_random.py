@@ -169,3 +169,57 @@ def test_brush_settings_round_trip_via_tool_state_dict():
     assert rebuilt.brush.scatter == pytest.approx(0.6)
     assert rebuilt.brush.color_jitter == pytest.approx(0.2)
     assert rebuilt.brush.follow_tilt is True
+
+
+# ---------------------------------------------------------------------------
+# tilt_kernel — the nib narrows across the lean and turns with it
+# ---------------------------------------------------------------------------
+
+def _round(size: int = 31) -> np.ndarray:
+    from Imervue.paint.brush_engine import round_brush_kernel
+    return round_brush_kernel(size, 1.0)
+
+
+def _extent(kernel: np.ndarray) -> tuple[int, int]:
+    ys, xs = np.nonzero(kernel > 0.5)
+    return int(np.ptp(ys)) + 1, int(np.ptp(xs)) + 1
+
+
+def test_tilt_kernel_upright_pen_keeps_the_kernel():
+    from Imervue.paint.brush_random import tilt_kernel
+    kernel = _round()
+    out = tilt_kernel(kernel, 0.0, 0.0)
+    np.testing.assert_array_equal(out, kernel.astype(np.float32))
+    assert out.flags["C_CONTIGUOUS"] and out.dtype == np.float32
+
+
+def test_tilt_kernel_full_lean_narrows_to_the_minimum_width():
+    from Imervue.paint.brush_random import _MIN_TILT_WIDTH, tilt_kernel
+    height, width = _extent(tilt_kernel(_round(), 1.0, 0.0))
+    assert width == _extent(_round())[1]
+    assert height == pytest.approx(width * _MIN_TILT_WIDTH, abs=2)
+
+
+def test_tilt_kernel_turns_with_the_lean():
+    from Imervue.paint.brush_random import tilt_kernel
+    across = _extent(tilt_kernel(_round(), 1.0, 0.0))
+    down = _extent(tilt_kernel(_round(), 0.0, -1.0))
+    assert across == down[::-1]
+
+
+def test_tilt_kernel_narrows_less_for_a_smaller_lean():
+    from Imervue.paint.brush_random import tilt_kernel
+    full = _extent(tilt_kernel(_round(), 1.0, 0.0))[0]
+    half = _extent(tilt_kernel(_round(), 0.5, 0.0))[0]
+    assert full < half < _extent(_round())[0]
+
+
+def test_tilt_kernel_clamps_a_lean_past_one():
+    from Imervue.paint.brush_random import tilt_kernel
+    np.testing.assert_array_equal(tilt_kernel(_round(), 3.0, 0.0), tilt_kernel(_round(), 1.0, 0.0))
+
+
+def test_tilt_kernel_rejects_non_2d():
+    from Imervue.paint.brush_random import tilt_kernel
+    with pytest.raises(ValueError, match="2-D"):
+        tilt_kernel(np.zeros((3, 3, 3), np.float32), 1.0, 0.0)

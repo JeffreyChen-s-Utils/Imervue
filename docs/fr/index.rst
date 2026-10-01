@@ -675,7 +675,13 @@ le **dock Pinceau** ; la **barre d'options** supérieure porte Taille / Opacité
 La pression du stylet de tablette module la taille et l'opacité du pinceau selon la courbe
 définie dans ``Paramètres`` > ``Courbe de pression…`` (faites glisser un point, cliquez pour
 en ajouter un, faites un clic droit pour en retirer un, ou partez de Linéaire / Douce /
-Dure) ; une souris dessine à pleine pression.
+Dure) ; une souris dessine à pleine pression. Dans le dock Pinceau, **Dispersion** écarte
+chaque empreinte du tracé jusqu'à la fraction réglée de la taille du pinceau,
+**Variation de couleur** décale la teinte, la saturation et la luminosité de chaque
+empreinte, et **Suivre l'inclinaison du stylet** affine la pointe perpendiculairement à
+la direction dans laquelle penche le stylet de tablette et la fait pivoter pour la suivre
+(le préréglage Calligraphie sumi l'active) ; un pinceau pixel art conserve sa pointe
+carrée.
 Utilisez ``Édition`` > ``Capturer une pointe de pinceau…`` pour transformer une sélection en
 rectangle en pointe de pinceau personnalisée.
 
