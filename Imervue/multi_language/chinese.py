@@ -328,6 +328,10 @@ chinese_word_dict = {
     # EXIF 编辑器
     "exif_edit_button": "编辑 EXIF",
     "exif_editor_title": "编辑 EXIF 元数据",
+    "exif_describe": "描述",
+    "exif_describe_tooltip": "用本地视觉模型（localhost:11434 上的 Ollama 加 llava）写一句描述；图片不会离开这台电脑",
+    "exif_describing": "描述中…",
+    "exif_describe_failed": "本地模型没有给出描述（{error}）。请启动 Ollama 并下载视觉模型：ollama pull llava",
     "exif_editor_unsupported": "只能编辑 JPEG 与 WebP 文件的 EXIF。",
     "exif_editor_fields": "元数据字段",
     "exif_editor_save": "保存",

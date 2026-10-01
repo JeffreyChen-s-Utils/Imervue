@@ -2905,7 +2905,7 @@ permite editar ou definir novas coordenadas em graus decimais. Um JPEG é gravad
 sem pacote extra: só o bloco EXIF muda, então os pixels, as outras tags e a miniatura
 continuam iguais. Um WebP é tratado da mesma forma; outros formatos não podem ser marcados.
 
-O **editor EXIF** (botão ``Edit EXIF`` do painel lateral EXIF) altera descrição, artista, copyright, marca / modelo da câmera e comentário. Um JPEG ou WebP não precisa de pacote extra e só o bloco EXIF é reescrito; os outros formatos mostram por que não podem ser editados.
+O **editor EXIF** (botão ``Edit EXIF`` do painel lateral EXIF) altera descrição, artista, copyright, marca / modelo da câmera e comentário. Um JPEG ou WebP não precisa de pacote extra e só o bloco EXIF é reescrito; os outros formatos mostram por que não podem ser editados. **Describe**, ao lado da descrição, pede a um modelo de visão no seu próprio computador um texto alternativo de uma frase e o coloca no campo para você editar antes de **Save**: é preciso ter o `Ollama <https://ollama.com>`__ rodando em ``localhost:11434`` com um modelo de visão (``ollama pull llava``), e quando nenhum responde o diálogo avisa e deixa o campo como está. A imagem é enviada só para esse servidor local.
 
 Galeria Web
 ^^^^^^^^^^^

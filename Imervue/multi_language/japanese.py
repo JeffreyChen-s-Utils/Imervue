@@ -339,6 +339,10 @@ japanese_word_dict = {
     # EXIF エディター
     "exif_edit_button": "EXIF を編集",
     "exif_editor_title": "EXIF メタデータを編集",
+    "exif_describe": "説明を生成",
+    "exif_describe_tooltip": "ローカルの画像認識モデル（localhost:11434 の Ollama と llava）で一文の説明を書きます。画像はこのコンピューターの外に出ません",
+    "exif_describing": "生成中…",
+    "exif_describe_failed": "ローカルモデルから説明が得られませんでした（{error}）。Ollama を起動して画像認識モデルを取得してください：ollama pull llava",
     "exif_editor_unsupported": "EXIF を編集できるのは JPEG と WebP ファイルです。",
     "exif_editor_fields": "メタデータフィールド",
     "exif_editor_save": "保存",

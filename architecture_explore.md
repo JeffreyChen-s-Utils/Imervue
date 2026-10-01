@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `d3fb302` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `6f9eb66` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 911 | 151,862 |
+| `tests/` | 911 | 151,933 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
-| `Imervue/gui/` | 169 | 33,780 |
+| `Imervue/gui/` | 169 | 33,857 |
 | `Imervue/puppet/` | 60 | 16,391 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,832 |
+| `Imervue/multi_language/` | 8 | 14,852 |
 | `Imervue/desktop_pet/` | 29 | 7,084 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,757** | **334,545** |
+| **總計** | **1,757** | **334,713** |
 
-其中 `Imervue/` 套件本身 766 檔 / 166,662 行。
+其中 `Imervue/` 套件本身 766 檔 / 166,759 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -403,7 +403,7 @@ ImervueMainWindow
 
 `browser_state.py`(400) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
 `batch_move_planner.py`(114) 無碰撞批次搬移規劃 · `animation_edit.py`(95) GIF/APNG 反轉/回力鏢/速度 ·
-`caption.py`(91) 本地視覺 LLM 產生 alt-text（經 `system/local_llm.post_json`） · `ocr.py`(159) Tesseract · `portrait_retouch.py`(177) ·
+`caption.py`(91) 本地視覺 LLM 產生 alt-text（經 `system/local_llm.post_json`；EXIF 編輯器的 Describe 用它） · `ocr.py`(159) Tesseract · `portrait_retouch.py`(177) ·
 `speech_*`／`text_*` 相關在 `paint/`
 
 ### 6.10 `Imervue/gpu_image_view/`
@@ -538,7 +538,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-169 個檔、33,780 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+169 個檔、33,857 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -637,7 +637,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `library_search_dialog.py`(227) · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(221) ·
 `similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(523) ·
 `tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(190) · `auto_tag_dialog.py`(172) ·
-`keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(139) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明） ·
+`keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(216) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明；Describe 以 `CaptionWorker`〔QRunnable〕向本機 Ollama 要描述填入 Description） ·
 `gps_geotag_dialog.py`(90) · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
 `events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(126) ·
 `bookmark_dialog.py`(345) · `staging_tray_dialog.py`(180) · `reference_panel_dialog.py`(298) ·
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-911 個檔、151,862 行。`pyproject.toml` 定義三個互斥層級 marker：
+911 個檔、151,933 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1210,7 +1210,7 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 6 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+11. **有 5 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
     `paint/`、`puppet/`、`desktop_pet/` 已全部接上）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。

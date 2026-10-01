@@ -351,6 +351,10 @@ english_word_dict = {
     # EXIF editor
     "exif_edit_button": "Edit EXIF",
     "exif_editor_title": "Edit EXIF Metadata",
+    "exif_describe": "Describe",
+    "exif_describe_tooltip": "Write a one-sentence description with a local vision model (Ollama at localhost:11434 with llava); the image never leaves this computer",
+    "exif_describing": "Describing…",
+    "exif_describe_failed": "No description from the local model ({error}). Start Ollama and pull a vision model: ollama pull llava",
     "exif_editor_unsupported": "EXIF can be edited in JPEG and WebP files.",
     "exif_editor_fields": "Metadata Fields",
     "exif_editor_save": _ENGLISH_SAVE,

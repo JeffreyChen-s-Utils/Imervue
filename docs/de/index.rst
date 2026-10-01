@@ -2987,7 +2987,7 @@ EXIF-GPS-Tags und lässt Sie neue Dezimalgrad-Koordinaten bearbeiten oder setzen
 Ein JPEG wird ohne Zusatzpaket direkt beschrieben: nur sein EXIF-Block ändert sich, Pixel,
 übrige Tags und Vorschaubild bleiben erhalten. WebP wird genauso behandelt; andere Formate lassen sich nicht taggen.
 
-Der **EXIF-Editor** (Schaltfläche ``Edit EXIF`` in der EXIF-Seitenleiste) ändert Beschreibung, Künstler, Copyright, Kamerahersteller / -modell und Kommentar. Ein JPEG oder WebP braucht kein Zusatzpaket, nur sein EXIF-Block wird neu geschrieben; andere Formate zeigen an, warum sie nicht bearbeitbar sind.
+Der **EXIF-Editor** (Schaltfläche ``Edit EXIF`` in der EXIF-Seitenleiste) ändert Beschreibung, Künstler, Copyright, Kamerahersteller / -modell und Kommentar. Ein JPEG oder WebP braucht kein Zusatzpaket, nur sein EXIF-Block wird neu geschrieben; andere Formate zeigen an, warum sie nicht bearbeitbar sind. **Describe** neben der Beschreibung bittet ein Vision-Modell auf Ihrem eigenen Computer um einen Alternativtext aus einem Satz und setzt ihn ins Feld, wo Sie ihn bearbeiten können, bevor Sie auf **Save** klicken: Dafür muss `Ollama <https://ollama.com>`__ auf ``localhost:11434`` mit einem Vision-Modell laufen (``ollama pull llava``); antwortet keines, meldet der Dialog das und lässt das Feld unverändert. Das Bild wird nur an diesen lokalen Server gesendet.
 
 Web-Galerie
 ^^^^^^^^^^^

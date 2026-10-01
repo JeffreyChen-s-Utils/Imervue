@@ -289,7 +289,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### 메타데이터
 
 - **EXIF 사이드바** — 접을 수 있는 그룹 + 인라인 0-5 별점 스트립
-- **EXIF 편집기** 다이얼로그 — 설명·작성자·저작권·카메라·코멘트(유니코드 포함)를 추가 패키지 없이 JPEG / WebP에 기록하며 픽셀과 다른 태그는 그대로
+- **EXIF 편집기** 다이얼로그 — 설명·작성자·저작권·카메라·코멘트(유니코드 포함)를 추가 패키지 없이 JPEG / WebP에 기록하며 픽셀과 다른 태그는 그대로. **설명 생성** 버튼은 로컬 비전 모델(`localhost:11434`의 Ollama와 `llava`)이 쓴 한 문장으로 설명을 채우므로 이미지가 내 컴퓨터 밖으로 나가지 않음
 - **키워드 편집기** — 제목 / 작성자 / 설명 / 키워드, 태그 동시 출현에서 도출한 **연관 태그 제안** 포함, 그리고 **통제 어휘 확장**(리프 키워드가 편집 가능한 계층 어휘에서 그 조상 + 동의어를 자동으로 적용)
 - **이미지 정보** 다이얼로그 (크기 / 용량 / 날짜)
 - **XMP 사이드카** (`.xmp` 동반 파일) — 별점 / 제목 / 설명 / 키워드 / 컬러 라벨을 다른 XMP 지원 사진 관리 프로그램과 양방향 동기화 (`defusedxml`을 통한 안전한 XML 파싱). 저장할 때는 기존 sidecar에 병합합니다. 이 항목들만 바뀌므로 RAW 현상 프로그램이 저장한 현상 설정·자르기·기록은 유지되며, 읽을 수 없는 sidecar는 덮어쓰지 않습니다. `photo.xmp`(Lightroom, Bridge) 외에 darktable과 digiKam이 쓰는 `photo.jpg.xmp`도 그것이 유일한 sidecar이면 읽고 갱신합니다. 컬러 라벨은 Lightroom 표기(`Red` … `Purple`)와 Bridge 표기(`Select`, `Second`, `Approved`, `Review`, `To Do`)를 이해하며, 내보낼 때는 Lightroom 표기로 씁니다. 거부된 사진(Lightroom, Bridge, darktable의 `xmp:Rating` -1)은 선별의 '거부'가 되고, '거부'는 -1로 내보냅니다. 사이드카가 없는 파일은 파일에 포함된 XMP와 EXIF 별점(JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF)을 읽고 가져옵니다. Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기는 별점을 이렇게 저장합니다.

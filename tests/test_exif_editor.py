@@ -164,3 +164,75 @@ def test_unreadable_jpeg_opens_empty(qapp, tmp_path, caplog):
         assert any("Could not read EXIF" in r.getMessage() for r in caplog.records)
     finally:
         dlg.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Describe: a local vision model writes the Description (image/caption.py)
+# ---------------------------------------------------------------------------
+
+_DESCRIPTION = 0x010E
+
+
+@pytest.fixture
+def inline_pool(monkeypatch):
+    """Run the caption worker on the calling thread so the test sees its result."""
+    monkeypatch.setattr(mod.QThreadPool, "globalInstance",
+                        staticmethod(lambda: SimpleNamespace(start=lambda worker: worker.run())))
+
+
+def test_describe_fills_the_description_from_the_local_model(editor, inline_pool, monkeypatch):
+    from Imervue.image import caption
+    seen = []
+    monkeypatch.setattr(caption, "generate_caption",
+                        lambda path, **kw: seen.append(path) or "A green square.")
+    dlg, path, _toast, _sidebar = editor
+    dlg._describe_btn.click()  # noqa: SLF001
+    assert seen == [str(path)]
+    assert dlg._fields[_DESCRIPTION].text() == "A green square."  # noqa: SLF001
+    assert dlg._describe_btn.isEnabled() and dlg._describe_btn.text() == "Describe"  # noqa: SLF001
+    assert dlg._caption_note.text() == ""  # noqa: SLF001
+
+
+def test_an_unreachable_model_leaves_the_field_and_says_how_to_start_one(editor, inline_pool,
+                                                                         monkeypatch):
+    import urllib.error
+
+    from Imervue.system import local_llm
+
+    def refuse(url, payload, timeout):
+        raise urllib.error.URLError("connection refused")
+
+    monkeypatch.setattr(local_llm, "post_json", refuse)
+    dlg, _path, _toast, _sidebar = editor
+    dlg._fields[_DESCRIPTION].setText("kept")  # noqa: SLF001
+    dlg._describe_btn.click()  # noqa: SLF001
+    assert dlg._fields[_DESCRIPTION].text() == "kept"  # noqa: SLF001
+    note = dlg._caption_note.text()  # noqa: SLF001
+    assert "connection refused" in note and "ollama pull llava" in note
+    assert dlg._describe_btn.isEnabled()  # noqa: SLF001
+
+
+@pytest.mark.parametrize("error", [ValueError("empty caption"), OSError("disk"),
+                                   mod.http.client.IncompleteRead(b"")])
+def test_the_worker_reports_every_failure_instead_of_raising(qapp, monkeypatch, error):
+    from Imervue.image import caption
+
+    def fail(path, **kw):
+        raise error
+
+    monkeypatch.setattr(caption, "generate_caption", fail)
+    reports = []
+    worker = mod.CaptionWorker("x.jpg")
+    worker.signals.done.connect(lambda text, err: reports.append((text, err)))
+    worker.run()
+    assert reports == [("", str(error))]
+
+
+def test_the_button_waits_while_the_model_works(editor, monkeypatch):
+    started = []
+    monkeypatch.setattr(mod.QThreadPool, "globalInstance",
+                        staticmethod(lambda: SimpleNamespace(start=started.append)))
+    dlg, _path, _toast, _sidebar = editor
+    dlg._describe_btn.click()  # noqa: SLF001
+    assert len(started) == 1 and isinstance(started[0], mod.CaptionWorker)
+    assert not dlg._describe_btn.isEnabled() and dlg._describe_btn.text() == "Describing…"  # noqa: SLF001

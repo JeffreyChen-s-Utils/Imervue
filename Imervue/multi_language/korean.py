@@ -336,6 +336,10 @@ korean_word_dict = {
     # EXIF 편집기
     "exif_edit_button": "EXIF 편집",
     "exif_editor_title": "EXIF 메타데이터 편집",
+    "exif_describe": "설명 생성",
+    "exif_describe_tooltip": "로컬 비전 모델(localhost:11434의 Ollama와 llava)로 한 문장 설명을 씁니다. 이미지는 이 컴퓨터 밖으로 나가지 않습니다",
+    "exif_describing": "생성 중…",
+    "exif_describe_failed": "로컬 모델에서 설명을 받지 못했습니다({error}). Ollama를 실행하고 비전 모델을 받으세요: ollama pull llava",
     "exif_editor_unsupported": "EXIF는 JPEG와 WebP 파일에서만 편집할 수 있습니다.",
     "exif_editor_fields": "메타데이터 필드",
     "exif_editor_save": "저장",

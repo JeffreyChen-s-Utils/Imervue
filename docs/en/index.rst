@@ -2865,7 +2865,7 @@ lets you edit or set new decimal-degree coordinates. A JPEG is written in place 
 extra package: only its EXIF block changes, so the pixels, the other tags and the thumbnail
 stay as they were. A WebP is handled the same way; other formats can't be tagged.
 
-The **EXIF editor** (the ``Edit EXIF`` button in the EXIF sidebar) changes the description, artist, copyright, camera make / model and user comment. A JPEG or WebP needs no extra package and only its EXIF block is rewritten; other formats show why they can't be edited.
+The **EXIF editor** (the ``Edit EXIF`` button in the EXIF sidebar) changes the description, artist, copyright, camera make / model and user comment. A JPEG or WebP needs no extra package and only its EXIF block is rewritten; other formats show why they can't be edited. **Describe**, next to the description, asks a vision model on your own computer for a one-sentence alt text and puts it in the field for you to edit before **Save**: it needs `Ollama <https://ollama.com>`__ running on ``localhost:11434`` with a vision model (``ollama pull llava``), and when none answers the dialog says so and leaves the field alone. The image is sent only to that local server.
 
 Web Gallery
 ^^^^^^^^^^^

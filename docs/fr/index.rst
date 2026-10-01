@@ -2956,7 +2956,7 @@ vous laisse modifier ou définir de nouvelles coordonnées en degrés décimaux.
 sur place sans paquet supplémentaire : seul son bloc EXIF change, les pixels, les autres tags et
 la vignette restent intacts. Un WebP est traité de la même façon ; les autres formats ne peuvent pas être géotagués.
 
-L'**éditeur EXIF** (bouton ``Edit EXIF`` de la barre latérale EXIF) modifie la description, l'artiste, le copyright, la marque / le modèle de l'appareil et le commentaire. Un JPEG ou un WebP ne nécessite aucun paquet supplémentaire et seul son bloc EXIF est réécrit ; les autres formats indiquent pourquoi ils ne sont pas modifiables.
+L'**éditeur EXIF** (bouton ``Edit EXIF`` de la barre latérale EXIF) modifie la description, l'artiste, le copyright, la marque / le modèle de l'appareil et le commentaire. Un JPEG ou un WebP ne nécessite aucun paquet supplémentaire et seul son bloc EXIF est réécrit ; les autres formats indiquent pourquoi ils ne sont pas modifiables. **Describe**, à côté de la description, demande à un modèle de vision installé sur votre propre ordinateur un texte alternatif d'une phrase et le place dans le champ pour que vous le retouchiez avant **Save** : il faut que `Ollama <https://ollama.com>`__ tourne sur ``localhost:11434`` avec un modèle de vision (``ollama pull llava``), et quand aucun ne répond, la boîte de dialogue le signale et laisse le champ tel quel. L'image n'est envoyée qu'à ce serveur local.
 
 Galerie web
 ^^^^^^^^^^^

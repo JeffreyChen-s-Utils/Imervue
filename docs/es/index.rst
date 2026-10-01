@@ -2941,7 +2941,7 @@ de EXIF y le permite editar o establecer nuevas coordenadas en grados decimales.
 escribe in situ sin paquetes extra: solo cambia su bloque EXIF, así que los píxeles, las demás
 etiquetas y la miniatura quedan igual. Un WebP se trata igual; los demás formatos no se pueden etiquetar.
 
-El **editor EXIF** (botón ``Edit EXIF`` de la barra lateral EXIF) cambia la descripción, el artista, el copyright, la marca / modelo de la cámara y el comentario. Un JPEG o WebP no necesita paquetes extra y solo se reescribe su bloque EXIF; los demás formatos explican por qué no se pueden editar.
+El **editor EXIF** (botón ``Edit EXIF`` de la barra lateral EXIF) cambia la descripción, el artista, el copyright, la marca / modelo de la cámara y el comentario. Un JPEG o WebP no necesita paquetes extra y solo se reescribe su bloque EXIF; los demás formatos explican por qué no se pueden editar. **Describe**, junto a la descripción, pide a un modelo de visión de su propio equipo un texto alternativo de una frase y lo coloca en el campo para que lo edite antes de **Save**: necesita `Ollama <https://ollama.com>`__ en ejecución en ``localhost:11434`` con un modelo de visión (``ollama pull llava``) y, cuando ninguno responde, el diálogo lo indica y deja el campo como estaba. La imagen solo se envía a ese servidor local.
 
 Galería web
 ^^^^^^^^^^^

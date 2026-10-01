@@ -285,7 +285,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 ### 元数据
 
 - **EXIF 侧栏** 含可折叠组 + 内嵌 0-5 星评级行
-- **EXIF 编辑器** 对话框 — 描述、作者、版权、相机与注释（支持 Unicode）无需额外套件即可写入 JPEG / WebP，像素与其他标签不变
+- **EXIF 编辑器** 对话框 — 描述、作者、版权、相机与注释（支持 Unicode）无需额外套件即可写入 JPEG / WebP，像素与其他标签不变；**描述** 按钮用本地视觉模型（`localhost:11434` 上的 Ollama 加 `llava`）写一句话填入描述，图片不会离开你的电脑
 - **关键字编辑器** — 标题 / 创作者 / 描述 / 关键字，含从标签共现得出的 **相关标签建议**，以及 **受控词汇展开**（输入叶节点关键字会自动套用其祖先＋同义词，词汇为可编辑的层级结构）
 - **图像信息** 对话框（尺寸 / 大小 / 日期）
 - **XMP 边车文件**（`.xmp` 同伴文件）— 评级 / 标题 / 描述 / 关键字 / 颜色标签与其他支持 XMP 的照片管理软件双向同步（通过 `defusedxml` 安全解析）。保存时会合并进既有的 sidecar：只改这些字段，RAW 显影软件存在里面的显影设置、裁剪与历史记录都会保留，无法解析的 sidecar 不会被覆写。除了 `photo.xmp`（Lightroom、Bridge），darktable 与 digiKam 写的 `photo.jpg.xmp` 在它是唯一的 sidecar 时也会读取并更新；颜色标签看得懂 Lightroom 的写法（`Red` … `Purple`）与 Bridge 的写法（`Select`、`Second`、`Approved`、`Review`、`To Do`），导出时按 Lightroom 的写法写入。被拒绝的照片（Lightroom、Bridge、darktable 的 `xmp:Rating` -1）会成为筛选的「拒绝」，「拒绝」导出时写成 -1。没有 sidecar 的文件会读取并导入文件本身内嵌的 XMP 与 EXIF 评级（JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF）：Lightroom 就是这样保存 JPEG 的评级与关键字，Windows 文件资源管理器的星级也是。

@@ -24,7 +24,6 @@ ROOT = Path(__file__).resolve().parent.parent
 _ENTRY_POINTS = {"Imervue.__main__", "Imervue.cli", "Imervue.mcp_server.__main__"}
 
 _KNOWN_UNWIRED = {
-    "Imervue.image.caption",
     "Imervue.library.capture_time", "Imervue.library.gpx_geotag",
     "Imervue.multi_language.translation_validation",
     "Imervue.user_settings.metadata_template", "Imervue.user_settings.tag_validator",

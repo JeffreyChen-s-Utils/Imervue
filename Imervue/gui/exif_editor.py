@@ -4,14 +4,18 @@ Edit a handful of EXIF text fields and save them back to the file.
 
 The reading, encoding and writing live in :mod:`Imervue.image.exif_fields`:
 a JPEG or WebP is edited through Pillow alone (only its EXIF block is
-rewritten), and other formats get an explanation instead.
+rewritten), and other formats get an explanation instead. **Describe** next
+to the Description field asks a local vision model (Ollama, see
+:mod:`Imervue.image.caption`) for an alt-text sentence, off the GUI thread.
 """
 from __future__ import annotations
 
+import http.client
 import logging
 from typing import TYPE_CHECKING
 
 from PIL import Image
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QLineEdit,
     QPushButton, QLabel, QGroupBox,
@@ -30,6 +34,35 @@ if TYPE_CHECKING:
 logger = logging.getLogger("Imervue.exif_editor")
 
 _GPS_IFD = 0x8825
+_DESCRIPTION_TAG = 0x010E
+
+
+class _CaptionSignals(QObject):
+    done = Signal(str, str)  # (caption, error or empty string)
+
+
+class CaptionWorker(QRunnable):
+    """Ask the local vision model for an alt-text caption of one image, off the GUI thread.
+
+    ``signals.done`` carries ``(caption, "")`` or ``("", error)``; a model that
+    is not running, a refused URL or an empty reply all end as an error.
+    """
+
+    def __init__(self, path: str):
+        super().__init__()
+        self.path = path
+        self.signals = _CaptionSignals()
+
+    def run(self) -> None:
+        """Call the model and report; never raises."""
+        from Imervue.image.caption import generate_caption
+        try:
+            caption = generate_caption(self.path)
+        except (OSError, ValueError, http.client.HTTPException) as exc:
+            logger.info("Local caption failed for %s: %s", self.path, exc)
+            self.signals.done.emit("", str(exc))
+            return
+        self.signals.done.emit(caption, "")
 
 
 class ExifEditorDialog(QDialog):
@@ -52,6 +85,10 @@ class ExifEditorDialog(QDialog):
 
         exif = self._load_exif(path)
         layout.addWidget(self._build_fields_group(lang, read_fields(exif)))
+        self._caption_note = QLabel("")
+        self._caption_note.setWordWrap(True)
+        self._caption_note.setStyleSheet("color: #888;")
+        layout.addWidget(self._caption_note)
         self._append_gps_label(layout, exif)
         layout.addLayout(self._build_button_row(lang))
 
@@ -79,10 +116,50 @@ class ExifEditorDialog(QDialog):
         for field in EDITABLE_FIELDS:
             edit = QLineEdit(values.get(field.tag, ""))
             self._fields[field.tag] = edit
-            form.addRow(lang.get(field.label_key, field.label) + ":", edit)
+            label = lang.get(field.label_key, field.label) + ":"
+            if field.tag == _DESCRIPTION_TAG:
+                form.addRow(label, self._description_row(lang, edit))
+            else:
+                form.addRow(label, edit)
         grp = QGroupBox(lang.get("exif_editor_fields", "Metadata Fields"))
         grp.setLayout(form)
         return grp
+
+    def _description_row(self, lang, edit: QLineEdit) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.addWidget(edit, 1)
+        self._describe_btn = QPushButton(lang.get("exif_describe", "Describe"))
+        self._describe_btn.setToolTip(lang.get(
+            "exif_describe_tooltip",
+            "Write a one-sentence description with a local vision model "
+            "(Ollama at localhost:11434 with llava); the image never leaves this computer"))
+        self._describe_btn.clicked.connect(self._describe)
+        row.addWidget(self._describe_btn)
+        return row
+
+    def _describe(self) -> None:
+        """Ask the local model for a description in the background; the button waits meanwhile."""
+        lang = language_wrapper.language_word_dict
+        self._describe_btn.setEnabled(False)
+        self._describe_btn.setText(lang.get("exif_describing", "Describing…"))
+        self._caption_note.setText("")
+        worker = CaptionWorker(self._path)
+        worker.signals.done.connect(self._on_described)
+        QThreadPool.globalInstance().start(worker)
+
+    def _on_described(self, caption: str, error: str) -> None:
+        """Put the caption in the Description field, or say why there is none."""
+        lang = language_wrapper.language_word_dict
+        self._describe_btn.setEnabled(True)
+        self._describe_btn.setText(lang.get("exif_describe", "Describe"))
+        if caption:
+            self._fields[_DESCRIPTION_TAG].setText(caption)
+            return
+        self._caption_note.setText(lang.get(
+            "exif_describe_failed",
+            "No description from the local model ({error}). Start Ollama and pull a "
+            "vision model: ollama pull llava",
+        ).format(error=error))
 
     @staticmethod
     def _append_gps_label(layout, exif: Image.Exif) -> None:
