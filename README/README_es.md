@@ -440,7 +440,7 @@ Cada panel es movible / flotante y se puede activar por separado desde el menú 
 ### E/S de archivos
 
 - **Open PSD…** aplana el archivo en una sola capa en una pestaña nueva; **Save as PSD…** escribe las capas con sus modos de mezcla (sin máscaras ni efectos de capa)
-- **Export image…** escribe PNG, JPEG, WebP, TIFF o BMP, según el tipo de archivo elegido (JPEG y BMP, que no admiten transparencia, sobre fondo blanco); los proyectos de cómic exportan sus páginas a **CBZ** o **PDF**. Solo **Save as PSD…** cuenta como guardar la pestaña: tras una exportación, al cerrar se sigue preguntando por sus cambios sin guardar
+- **Export image…** escribe PNG, JPEG, WebP, TIFF o BMP, según el tipo de archivo elegido (JPEG y BMP, que no admiten transparencia, sobre fondo blanco); los proyectos de cómic exportan sus páginas a **CBZ** o **PDF**. **Save Comic Project…** guarda un cómic entero, cada página con sus capas, en un solo archivo `.imervue-proj`, y **Open Comic Project…** lo recupera. Solo **Save as PSD…** cuenta como guardar la pestaña: tras una exportación, al cerrar se sigue preguntando por sus cambios sin guardar
 - **Autoguardado** — una instantánea cada 2 minutos mientras la pestaña activa tenga ediciones sin guardar; en el siguiente inicio un toast ofrece las instantáneas y **File > Restore Autosave** carga la más reciente en la pestaña activa, y la barra de estado muestra cuándo se tomó la última. Al cerrar Imervue se pregunta por las pestañas Paint con cambios sin guardar.
 
 ### UX para usuarios avanzados

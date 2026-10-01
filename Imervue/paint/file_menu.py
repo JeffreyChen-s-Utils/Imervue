@@ -9,6 +9,7 @@ the actual reading / writing.
 from __future__ import annotations
 
 import logging
+import zipfile
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
@@ -53,6 +54,10 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
          bridge.new_tab, "Ctrl+N"),
         ("paint_file_new_project", "New Comic Project…",
          bridge.new_comic_project, "Ctrl+Alt+N"),
+        ("paint_file_open_project", "Open Comic Project…",
+         bridge.open_comic_project, ""),
+        ("paint_file_save_project", "Save Comic Project…",
+         bridge.save_comic_project, ""),
         ("paint_file_close_tab", "Close Tab",
          bridge.close_active_tab, "Ctrl+W"),
         (None, None, None, None),
@@ -147,6 +152,60 @@ class _FileMenuBridge:
             author=choice.author,
         )
         self._workspace.set_paint_project(project)
+
+    def open_comic_project(self) -> None:  # pragma: no cover - QFileDialog
+        path = self._pick_file(
+            title_key="paint_file_open_project",
+            title_fallback="Open Comic Project",
+            filters=[_project_filter()],
+        )
+        if path:
+            self.open_comic_project_at(path)
+
+    def open_comic_project_at(self, path: str) -> bool:
+        """Load the ``.imervue-proj`` at *path* and make it the workspace's project."""
+        from Imervue.paint.paint_project_io import load_project
+        try:
+            project = load_project(path)
+        except (OSError, ValueError, zipfile.BadZipFile) as exc:
+            self._warn("paint_file_open_project", exc)
+            return False
+        self._workspace.set_paint_project(project)
+        self._notify_success("paint_file_open_project_done", "Opened comic project", path)
+        return True
+
+    def save_comic_project(self) -> None:  # pragma: no cover - QFileDialog
+        if self._current_project() is None:
+            self._warn("paint_file_save_project", language_wrapper.language_word_dict.get(
+                "paint_file_no_project",
+                "No comic project is open; File > New Comic Project… starts one."))
+            return
+        path = self._pick_save_file(
+            title_key="paint_file_save_project",
+            title_fallback="Save Comic Project",
+            name_filter=_project_filter(),
+        )
+        if path:
+            self.save_comic_project_to(path)
+
+    def save_comic_project_to(self, path: str) -> bool:
+        """Write the workspace's project, every page with its layers, to *path*.
+
+        Adds the ``.imervue-proj`` extension when *path* has another one.
+        """
+        from Imervue.paint.paint_project_io import PROJECT_FILE_EXTENSION, save_project
+        project = self._current_project()
+        if project is None:
+            return False
+        if not path.lower().endswith(PROJECT_FILE_EXTENSION):
+            path += PROJECT_FILE_EXTENSION
+        try:
+            save_project(project, path)
+        except (OSError, ValueError) as exc:
+            self._warn("paint_file_save_project", exc)
+            return False
+        self._notify_success("paint_file_save_project_done", "Saved comic project", path)
+        return True
 
     def close_active_tab(self) -> None:
         # ``_tabs`` is the workspace-private QTabWidget — bridge talks
@@ -454,8 +513,8 @@ class _FileMenuBridge:
         if status is not None:
             status.showMessage(msg, 3000)
 
-    def _warn(self, title_key: str, exc: Exception) -> None:
-        """Surface a file-operation error.
+    def _warn(self, title_key: str, exc: Exception | str) -> None:
+        """Surface a file-operation error (an exception, or the reason as text).
 
         Prefers a non-blocking toast notification when the workspace
         has one (every paint workspace built since the toast wiring
@@ -484,6 +543,13 @@ _EXPORT_SUFFIX_FORMATS = {
     ".tif": "tiff", ".tiff": "tiff", ".bmp": "bmp",
 }
 _EXPORT_QUALITY = 95
+
+
+def _project_filter() -> str:
+    """The file-dialog filter for comic project bundles."""
+    from Imervue.paint.paint_project_io import PROJECT_FILE_EXTENSION
+    return translated_filter("file_filter_comic_project", "Comic project",
+                             (PROJECT_FILE_EXTENSION.lstrip("."),))
 
 
 def export_format_for(path: str) -> tuple[str, str]:

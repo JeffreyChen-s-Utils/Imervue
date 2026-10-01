@@ -772,7 +772,7 @@ Datei-I/O
 
 - **PSD öffnen…** (``Ctrl + O``) reduziert die Datei auf einen Layer in einem neuen Tab; **Als PSD speichern…** (``Ctrl + S``) schreibt die Layer mit ihren Mischmodi (ohne Masken oder Layereffekte)
 - **Bild exportieren…** — flachlegen und als PNG, JPEG, WebP, TIFF oder BMP speichern, je nach gewähltem Dateityp (JPEG und BMP, die keine Transparenz kennen, auf Weiß). Nur **Als PSD speichern…** markiert den Tab als gespeichert; nach einem Export fragt Imervue beim Schließen weiterhin nach den ungespeicherten Änderungen des Tabs
-- **Seiten exportieren → CBZ** / **→ PDF** — die Seiten eines Comic-Projekts exportieren
+- **Seiten exportieren → CBZ** / **→ PDF** — die Seiten eines Comic-Projekts exportieren; **Comic-Projekt speichern…** speichert den ganzen Comic, jede Seite mit ihren Layern, in einer einzigen ``.imervue-proj``-Datei, und **Comic-Projekt öffnen…** holt ihn zurück
 - **Brush-Preset importieren…**, **Palette importieren…** — Brushes und Paletten aus anderen Installationen oder Anwendungen übernehmen
 - **Autosave** — alle 2 Minuten wird ein Snapshot geschrieben, solange der aktive Tab ungespeicherte Änderungen hat; beim nächsten Start bietet ein Toast die Snapshots an, und **Datei > Autosave wiederherstellen** lädt den neuesten in den aktiven Tab. Die Statusleiste zeigt, wann der letzte Snapshot aufgenommen wurde, und beim Schließen von Imervue wird für Paint-Tabs mit ungespeicherten Änderungen nachgefragt.
 

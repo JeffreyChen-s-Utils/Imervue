@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-24 | 2026-10-01 | Paint's File menu saves and opens whole comic projects; paint_project_io is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-23 | 2026-10-01 | Paint's Scatter, Colour jitter and Follow pen tilt shape every dab; brush_random is wired | #done #bugfix #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-22 | 2026-10-01 | 27 modules no user could reach are deleted with their tests; 29 remain to be wired | #refactor #cleanup #decision #paint | [2026-10](2026-10.md) |
 | U-20261001-21 | 2026-10-01 | Plugin tool dialogs share ToolDialogMixin; plugin.json declares the plugin API a plugin needs | #done #refactor #plugin #decision #docs #i18n #Imervue_Plugins | [2026-10](2026-10.md) |
@@ -489,4 +490,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 23 |
+| [2026-10.md](2026-10.md) | 2026-10 | 24 |
