@@ -405,6 +405,8 @@ La **Pluma** une los puntos en los que haces clic con líneas rectas, o con curv
 
 El trío de tonificación de cuarto oscuro — **Dodge** (aclarar), **Burn** (oscurecer) y **Sponge** (desaturar) — pinta ajustes locales ponderados por el pincel; Dodge y Burn actúan sobre los medios tonos. Ninguno de los tres tiene opciones.
 
+**Base colours on a new layer** del panel **Cubo** da a cada región cerrada del dibujo lineal su propio color plano (los colores del Muestrario, cuando el panel muestra alguno) en una capa nueva debajo de él — el paso de colores planos previo al sombreado — y deja vacíos las líneas y el espacio alrededor del dibujo.
+
 La herramienta **Gradiente** pinta primer plano → fondo, o un degradado propio: elígelo en **Colores** en la barra de opciones, y **Editar…** allí abre el editor de degradados, donde cada degradado tiene un nombre y paradas de color (cada una con una posición y un color con opacidad) que puedes añadir, mover, recolorear y quitar. Tus degradados se conservan entre sesiones.
 
 Atajos de una letra: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.

@@ -613,7 +613,15 @@ Paleta de herramientas (Banda izquierda)
      - Borrado alfa de la capa activa
    * - Relleno (cubo)
      - ``G``
-     - Relleno por inundación con tolerancia / contiguo / muestrear todas las capas
+     - Relleno por inundación con tolerancia / contiguo / muestrear todas las capas.
+       En el dock Bucket, **Auto-fill closed regions** rellena cada región
+       cerrada del dibujo lineal (la capa de referencia o, si no hay, la
+       activa) con el color de primer plano; **Base colours on a new layer**
+       da a cada región su propio color plano — los colores del dock Swatches
+       cuando muestra alguno — en una capa nueva bajo el dibujo lineal, y
+       deja vacíos las líneas y el espacio alrededor del dibujo. Las líneas
+       oscuras sobre papel blanco funcionan tan bien como las líneas sobre
+       transparencia
    * - Cuentagotas
      - ``I``
      - Toma el color de primer plano del lienzo

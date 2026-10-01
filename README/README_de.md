@@ -402,6 +402,8 @@ Das **Pen**-Tool verbindet die angeklickten Punkte mit geraden Linien oder mit K
 
 Das Dunkelkammer-Toning-Trio — **Dodge** (Aufhellen), **Burn** (Abdunkeln) und **Sponge** (Entsättigen) — malt lokale Anpassungen, gewichtet durch den Brush; Dodge und Burn wirken auf die Mitteltöne. Keines der drei Tools hat Optionen.
 
+**Base colours on a new layer** im **Bucket**-Dock gibt jedem geschlossenen Bereich der Linienzeichnung eine eigene flache Farbe (die Swatches-Farben, sofern das Dock welche zeigt) auf einem neuen Layer darunter — der Flatting-Schritt vor dem Schattieren — und lässt die Linien und den Raum um die Zeichnung leer.
+
 Das **Gradient**-Tool malt Vordergrund → Hintergrund oder einen eigenen Verlauf: Wählen Sie ihn unter **Colours** in der Options-Bar; **Edit…** dort öffnet den Verlaufseditor, in dem jeder Verlauf einen Namen und Farbstopps hat (jeder mit einer Position und einer Farbe mit Opazität), die Sie hinzufügen, verschieben, umfärben und entfernen. Ihre Verläufe bleiben zwischen Sitzungen erhalten.
 
 Einzelbuchstaben-Shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` für Shape-Varianten.

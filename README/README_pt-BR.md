@@ -409,6 +409,8 @@ A **Caneta** liga os pontos que você clica com linhas retas, ou com curvas onde
 
 O trio de tonalização de câmara escura — **Dodge** (clarear), **Burn** (escurecer) e **Sponge** (dessaturar) — pinta ajustes locais ponderados pelo pincel; Dodge e Burn atuam nos meios-tons. Nenhum dos três tem opções.
 
+O botão **Base colours on a new layer** do dock **Balde** dá a cada região fechada da arte-final (line art) sua própria cor chapada (as cores do dock Amostras, quando ele mostra alguma) numa nova camada abaixo dela — a etapa de cores chapadas antes do sombreamento — e deixa vazios os traços e o espaço ao redor do desenho.
+
 A ferramenta **Gradiente** pinta da cor de primeiro plano → cor de fundo, ou com um gradiente seu: escolha-o em **Colours** na barra de opções, e **Edit…** ali abre o editor de gradientes, onde cada gradiente tem um nome e paradas de cor (cada uma com uma posição e uma cor com opacidade) que você adiciona, move, recolore e remove. Seus gradientes são mantidos entre sessões.
 
 Atalhos de tecla única: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` para variantes de forma.

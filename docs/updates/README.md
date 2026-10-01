@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-34 | 2026-10-01 | Paint's Bucket dock flat-colours the line art's regions on a new layer; auto_base_color is wired and 19x faster | #feature #paint #performance #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-33 | 2026-10-01 | Paint's Pen draws one smooth curve through the clicked points with Smooth; catmull_rom_spline is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-32 | 2026-10-01 | Paint's File menu opens canvases of preset or typed sizes; canvas_presets is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-31 | 2026-10-01 | Paint's Swatches dock shows named palettes and keeps your own; color_palette is wired | #feature #paint #docs #i18n | [2026-10](2026-10.md) |
@@ -499,4 +500,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 33 |
+| [2026-10.md](2026-10.md) | 2026-10 | 34 |

@@ -402,6 +402,8 @@ Le **Stylo** relie les points sur lesquels vous cliquez par des lignes droites, 
 
 Le trio de virage de chambre noire — **Dodge** (éclaircir), **Burn** (assombrir) et **Sponge** (désaturer) — peint des ajustements locaux pondérés par le pinceau ; Dodge et Burn agissent sur les tons moyens. Aucun des trois n'a d'options.
 
+**Base colours on a new layer** du dock **Pot de peinture** donne à chaque zone fermée du dessin au trait sa propre couleur en aplat (les couleurs du Nuancier, quand le dock en affiche) sur un nouveau calque placé dessous — l'étape des aplats avant l'ombrage — et laisse vides les traits et l'espace autour du dessin.
+
 L'outil **Dégradé** peint premier plan → arrière-plan, ou un dégradé personnalisé : choisissez-le sous **Couleurs** dans la barre d'options, et **Modifier…** y ouvre l'éditeur de dégradés, où chaque dégradé a un nom et des points de couleur (chacun avec une position et une couleur avec opacité) que vous ajoutez, déplacez, recolorez et supprimez. Vos dégradés sont conservés d'une session à l'autre.
 
 Raccourcis à une lettre : `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H` ; `Shift+R/E/I/P` pour les variantes de forme.

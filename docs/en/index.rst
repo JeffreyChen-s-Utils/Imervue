@@ -603,7 +603,14 @@ Tool Palette (Left Strip)
      - Alpha-erase the active layer
    * - Fill (bucket)
      - ``G``
-     - Flood-fill with tolerance / contiguous / sample-all-layers
+     - Flood-fill with tolerance / contiguous / sample-all-layers. The
+       Bucket dock's **Auto-fill closed regions** fills every closed region
+       of the line art (the reference layer, else the active one) with the
+       foreground colour; **Base colours on a new layer** gives each region
+       its own flat colour — the Swatches colours when the dock shows any —
+       on a new layer under the line art, leaving the lines and the space
+       around the drawing empty. Dark lines on white paper work as well as
+       lines on transparency
    * - Eyedropper
      - ``I``
      - Pick foreground colour from canvas

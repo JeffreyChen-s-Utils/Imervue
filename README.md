@@ -413,6 +413,8 @@ The **Pen** joins the points you click with straight lines, or curves where you 
 
 The darkroom-toning trio — **Dodge** (lighten), **Burn** (darken) and **Sponge** (desaturate) — paint local adjustments weighted by the brush; Dodge and Burn work on the midtones. None of the three has options.
 
+The **Bucket** dock's **Base colours on a new layer** gives every closed region of the line art its own flat colour (the Swatches colours, when the dock shows any) on a new layer under it — the flatting step before shading — and leaves the lines and the space around the drawing empty.
+
 The **Gradient** tool paints foreground → background, or a gradient of your own: pick it under **Colours** in the Options bar, and **Edit…** there opens the gradient editor, where each gradient has a name and colour stops (each with a position and a colour with opacity) that you add, move, recolour and remove. Your gradients are kept between sessions.
 
 Single-letter shortcuts: `B / E / G / I / M / L / W / V / T / U / R / P / S / C / Z / H`; `Shift+R/E/I/P` for shape variants.

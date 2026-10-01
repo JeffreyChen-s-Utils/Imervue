@@ -85,6 +85,7 @@ class DockBuilder:
         ws._brush_dock = BrushDock(ws._state, ws)
         ws._fill_dock = FillDock(ws._state, ws)
         ws._fill_dock.set_auto_fill_callback(ws._auto_fill_closed_regions)
+        ws._fill_dock.set_base_colours_callback(ws._auto_base_colours)
         ws._layer_dock = LayerDock(ws._canvas.document(), ws)
         ws._navigator_dock = NavigatorDock(ws)
         ws._history_dock = HistoryDock(ws)

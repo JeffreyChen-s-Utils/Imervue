@@ -607,7 +607,17 @@ Palette d'outils (bande de gauche)
      - Effacement alpha du calque actif
    * - Pot de peinture
      - ``G``
-     - Remplissage avec tolérance / contigu / échantillonner tous les calques
+     - Remplissage avec tolérance / contigu / échantillonner tous les calques.
+       Dans le dock Pot de peinture,
+       **Remplir automatiquement les zones fermées** remplit chaque zone
+       fermée du dessin au trait (le calque de référence, sinon le calque
+       actif) avec la couleur de premier plan ;
+       **Couleurs de base sur un nouveau calque** donne à chaque zone sa
+       propre couleur en aplat — les couleurs du dock Échantillons quand il
+       en affiche — sur un nouveau calque placé sous le dessin au trait, en
+       laissant vides les traits et l'espace autour du dessin. Des traits
+       sombres sur papier blanc fonctionnent aussi bien que des traits sur
+       fond transparent
    * - Pipette
      - ``I``
      - Sélectionner la couleur de premier plan depuis le canevas

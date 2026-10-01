@@ -606,7 +606,14 @@ Paleta de Ferramentas (Tira Esquerda)
      - Apagar alfa na camada ativa
    * - Preenchimento (balde)
      - ``G``
-     - Preenchimento por inundação com tolerância / contíguo / amostrar todas as camadas
+     - Preenchimento por inundação com tolerância / contíguo / amostrar todas as camadas.
+       No dock Balde, **Auto-fill closed regions** preenche com a cor de primeiro
+       plano cada região fechada da arte-final (a camada de referência, ou então a
+       ativa); **Base colours on a new layer** dá a cada região sua própria cor
+       chapada — as cores do dock Amostras, quando ele mostra alguma — numa nova
+       camada abaixo da arte-final, deixando vazios os traços e o espaço ao redor
+       do desenho. Linhas escuras em papel branco funcionam tão bem quanto linhas
+       sobre transparência
    * - Conta-gotas
      - ``I``
      - Selecionar cor de primeiro plano a partir da tela

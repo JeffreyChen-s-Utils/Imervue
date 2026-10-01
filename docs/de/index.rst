@@ -605,7 +605,15 @@ Werkzeugpalette (linke Leiste)
      - Aktiven Layer alphabasiert löschen
    * - Füllen (Eimer)
      - ``G``
-     - Flutfüllen mit Toleranz / zusammenhängend / alle Layer abtasten
+     - Flutfüllen mit Toleranz / zusammenhängend / alle Layer abtasten. Im
+       Bucket-Dock füllt **Geschlossene Bereiche automatisch füllen** jeden
+       geschlossenen Bereich der Linienzeichnung (des Referenz-Layers, sonst
+       des aktiven) mit der Vordergrundfarbe; **Grundfarben auf neuem Layer**
+       gibt jedem Bereich eine eigene flache Farbe — die Swatches-Farben,
+       sofern das Dock welche zeigt — auf einem neuen Layer unter der
+       Linienzeichnung und lässt die Linien und den Raum um die Zeichnung
+       leer. Dunkle Linien auf weißem Papier funktionieren ebenso gut wie
+       Linien auf Transparenz
    * - Pipette
      - ``I``
      - Vordergrundfarbe von der Leinwand aufnehmen
