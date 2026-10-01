@@ -228,6 +228,8 @@ class ToolState:
     color_history: list[tuple[int, int, int]] = field(default_factory=list)
     # Lasso outlines snap to the strongest nearby edge (paint/magnetic_lasso).
     lasso_magnetic: bool = False
+    # Palette the Swatches dock shows (paint/color_palette); "" = the recent colours.
+    swatch_palette: str = ""
     snap_to_pixel: bool = False
     snap_to_edges: bool = False
     # When ``True`` and the workspace has a manga panel layout
@@ -455,6 +457,15 @@ class ToolState:
         self._emit(EVENT_SELECTION_MODE)
         return True
 
+    def set_swatch_palette(self, name: str) -> bool:
+        """Show the named palette in the Swatches dock (``""`` = recent). True if changed."""
+        if str(name) == self.swatch_palette:
+            return False
+        self.swatch_palette = str(name)
+        self._persist()
+        self._emit(EVENT_HISTORY)
+        return True
+
     def set_lasso_magnetic(self, enabled: bool) -> bool:
         """Turn edge snapping of lasso outlines on or off. True if it changed."""
         if bool(enabled) == self.lasso_magnetic:
@@ -650,6 +661,7 @@ class ToolState:
             },
             "selection_mode": self.selection_mode,
             "lasso_magnetic": bool(self.lasso_magnetic),
+            "swatch_palette": self.swatch_palette,
             "gradient_kind": self.gradient_kind,
             "gradient_reverse": self.gradient_reverse,
             "gradient_repeat": self.gradient_repeat,
@@ -708,6 +720,7 @@ class ToolState:
             tool=tool, foreground=fg, background=bg,
             brush=brush, fill=fill, selection_mode=selection_mode,
             lasso_magnetic=bool(raw.get("lasso_magnetic", False)),
+            swatch_palette=str(raw.get("swatch_palette", "") or ""),
             gradient_kind=gradient_kind, gradient_reverse=gradient_reverse,
             gradient_repeat=gradient_repeat,
             gradient_name=str(raw.get("gradient_name", "") or ""),

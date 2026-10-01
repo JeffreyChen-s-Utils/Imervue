@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `2e6926c` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `4e6933e` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 901 | 150,673 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 168 | 41,963 |
+| `tests/` | 902 | 150,798 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 168 | 42,102 |
 | `Imervue/gui/` | 169 | 33,728 |
 | `Imervue/puppet/` | 59 | 16,018 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 14,552 |
+| `Imervue/multi_language/` | 8 | 14,587 |
 | `Imervue/desktop_pet/` | 29 | 7,036 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,681 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,745** | **331,951** |
+| **總計** | **1,746** | **332,250** |
 
-其中 `Imervue/` 套件本身 764 檔 / 165,292 行。
+其中 `Imervue/` 套件本身 764 檔 / 165,466 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -670,7 +670,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-168 個檔、41,963 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+168 個檔、42,102 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -726,8 +726,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 顏色
 
-`color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) 色相環 + SV 三角（Color dock 上方）· `color_palette.py`(168) +
-`color_palette_io.py`(303) 外部調色盤格式 · `swatch_panel.py`(245) ·
+`color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) 色相環 + SV 三角（Color dock 上方）· `color_palette.py`(189) 具名調色盤（內建 Standard／Pastel／Manga + 自訂；Swatches dock 的選單、Match Swatches 用它）+
+`color_palette_io.py`(303) 外部調色盤格式 · `swatch_panel.py`(348) ·
 `palette_extract.py`(168) median-cut 抽色 · `match_color.py`(96) Filter > Match Colour…（參考圖片的色調）· `match_palette.py`(108) Filter > Match Swatches…（換成最近的色票顏色）·
 `color_blindness.py`(118) CVD 模擬 ·
 `adjustments.py`(739) 純 NumPy 非破壞性調整種類與套用管線 · `histogram.py`(128) + `histogram_dock.py`(141)
@@ -765,7 +765,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | --- | ---: | --- |
 | `paint_workspace.py` | 764 | 頂層 `PaintWorkspace` widget；`confirm_close()` 由主視窗關閉時呼叫（它是分頁，收不到自己的 closeEvent） |
 | `tool_dispatcher.py` | 449 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
-| `tool_state.py` | 947 | **無 Qt** 的工具狀態模型 |
+| `tool_state.py` | 960 | **無 Qt** 的工具狀態模型 |
 | `tool_bar.py` | 461 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
 | `workspace_tabs.py` | 332 | 多文件分頁 |
 | `workspace_docks.py` | 418 | dock 建構與佈局持久化 |
@@ -778,7 +778,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(624)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(517)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(624)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(519)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
 
 #### `paint/docks/`（7 檔 · 1,921 行）
 
@@ -983,7 +983,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-901 個檔、150,673 行。`pyproject.toml` 定義三個互斥層級 marker：
+902 個檔、150,798 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1209,8 +1209,8 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 20 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    6 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+11. **有 19 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    5 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 

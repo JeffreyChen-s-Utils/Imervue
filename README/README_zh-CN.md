@@ -433,7 +433,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 | 画布 | 图层 · 导航 · 历史 · 页面 · 动画 · 直方图 |
 | 素材库 | 素材 · 印章 · 姿势 · 参考 |
 
-色彩面板开头是色相环与饱和度 / 亮度三角形：在色环上拖动可选取色相，在三角形内拖动可选取深浅，下方的滑杆与 HEX 输入框会随之更新。素材面板会把你自己的素材列在内置网点与纹理之前：Imervue 程序文件夹下 `materials` 文件夹中的图片（放在名为 `texture`、`tone`、`pattern`、`brush_tip` 或 `pose` 的第一层子文件夹中的图片会归入对应分类），以及你捕获的笔刷笔尖。**Edit > Save Selection as Material…** 会把画面中选取的部分保存到那里，绝不会覆盖之前保存的同名素材。每个面板都可移动 / 浮动，并可在 **Window** 菜单单独开关。**Settings > Workspace Layouts…** 提供内置的 Default / Drawing / Comic / Compact 布局；**Save current…** 以一个名称保存 图层 / 色彩 / 笔刷 / 导航 / 历史 / 参考 这几个面板中哪些处于显示状态，套用布局时会显示或隐藏这些面板。工具选项与面板尺寸不会保存。
+色彩面板开头是色相环与饱和度 / 亮度三角形：在色环上拖动可选取色相，在三角形内拖动可选取深浅，下方的滑杆与 HEX 输入框会随之更新。素材面板会把你自己的素材列在内置网点与纹理之前：Imervue 程序文件夹下 `materials` 文件夹中的图片（放在名为 `texture`、`tone`、`pattern`、`brush_tip` 或 `pose` 的第一层子文件夹中的图片会归入对应分类），以及你捕获的笔刷笔尖。**Edit > Save Selection as Material…** 会把画面中选取的部分保存到那里，绝不会覆盖之前保存的同名素材。色板面板会显示最近使用的颜色，或一组调色板（内置的 Standard、Pastel、Manga，或你自己的调色板）：**Save as Palette…** 会把最近使用的颜色以一个名称保存下来，**Delete Palette** 则删除一组你自己的调色板；**Filter > Match Swatches…** 使用的就是色板面板显示的颜色。每个面板都可移动 / 浮动，并可在 **Window** 菜单单独开关。**Settings > Workspace Layouts…** 提供内置的 Default / Drawing / Comic / Compact 布局；**Save current…** 以一个名称保存 图层 / 色彩 / 笔刷 / 导航 / 历史 / 参考 这几个面板中哪些处于显示状态，套用布局时会显示或隐藏这些面板。工具选项与面板尺寸不会保存。
 
 ### 文件 I/O
 

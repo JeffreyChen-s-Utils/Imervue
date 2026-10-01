@@ -561,7 +561,13 @@ les limites alpha, de sorte que les pixels effacés cessent de baver lors d'une 
 Sous les emplacements de couleur se trouve un anneau de teinte entourant un triangle
 saturation / luminosité : faites glisser sur l'anneau pour choisir la teinte et dans
 le triangle pour choisir la nuance ; les curseurs HSB / RGB et le champ hexadécimal
-suivent, et une couleur définie ailleurs déplace les repères de la roue.
+suivent, et une couleur définie ailleurs déplace les repères de la roue. Le
+**dock Échantillons** affiche vos couleurs récentes, ou une palette choisie dans la liste
+déroulante au-dessus : les palettes intégrées Standard, Pastel et Manga, ou l'une des
+vôtres. **Enregistrer comme palette…** conserve les couleurs récentes sous un nom,
+**Supprimer la palette** retire l'une des vôtres (les palettes intégrées restent), et
+``Filtre`` > ``Correspondance avec les échantillons…`` repeint dans les couleurs
+qu'affiche le dock.
 
 ::
 

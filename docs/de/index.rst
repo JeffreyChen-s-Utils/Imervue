@@ -560,7 +560,12 @@ gelöschte Pixel beim Neumalen nicht mehr ausbluten. Unter den Farb-Slots sitzt
 ein Farbtonring um ein Sättigungs- / Helligkeitsdreieck: Ziehen auf dem Ring
 wählt den Farbton, Ziehen im Dreieck die Abstufung; die HSB- / RGB-Regler und
 das Hex-Feld folgen, und eine anderswo gesetzte Farbe verschiebt die Markierungen
-des Farbrads.
+des Farbrads. Das **Swatches-Dock** zeigt Ihre zuletzt verwendeten Farben oder eine
+in der Auswahlliste darüber gewählte Palette: die eingebauten Standard, Pastel und
+Manga oder eine eigene. **Als Palette speichern…** speichert die zuletzt verwendeten
+Farben unter einem Namen, **Palette löschen** entfernt eine Ihrer eigenen (die
+eingebauten bleiben erhalten), und ``Filter`` > ``An Swatches angleichen…`` malt in
+genau den Farben neu, die das Dock zeigt.
 
 ::
 

@@ -560,7 +560,11 @@ so erased pixels stop bleeding into a re-paint. Under the colour slots sits
 a hue ring around a saturation / brightness triangle: drag on the ring to
 pick the hue and in the triangle to pick the shade; the HSB / RGB sliders
 and the hex field follow, and a colour set elsewhere moves the wheel's
-markers.
+markers. The **Swatches dock** shows your recent colours, or a palette
+picked in the box above them: the built-in Standard, Pastel and Manga, or
+one of your own. **Save as Palette…** keeps the recent colours under a name,
+**Delete Palette** removes one of yours (the built-in ones stay), and
+``Filter`` > ``Match Swatches…`` repaints in whatever colours the dock shows.
 
 ::
 

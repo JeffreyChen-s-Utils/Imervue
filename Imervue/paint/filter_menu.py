@@ -455,7 +455,9 @@ def _run_match_colour(workspace: PaintWorkspace) -> None:  # pragma: no cover - 
 
 
 def _run_match_swatches(workspace: PaintWorkspace) -> None:  # pragma: no cover - Qt UI
-    swatches = list(workspace._state.color_history)  # noqa: SLF001
+    from Imervue.paint.color_palette import palette_colours
+    state = workspace._state  # noqa: SLF001
+    swatches = palette_colours(state.swatch_palette, state.color_history)
     if not swatches:
         _warn(workspace, language_wrapper.language_word_dict.get(
             "paint_filter_no_swatches",

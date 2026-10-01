@@ -562,7 +562,11 @@ pixels apagados não vazam para uma nova pintura. Abaixo dos slots de cor fica u
 anel de matiz em volta de um triângulo de saturação / brilho: arraste no anel para
 escolher o matiz e dentro do triângulo para escolher a tonalidade; os sliders HSB /
 RGB e o campo HEX acompanham, e uma cor definida em outro lugar move os marcadores
-da roda.
+da roda. O **dock Amostras** mostra suas cores recentes, ou uma paleta escolhida na
+caixa acima delas: as embutidas Standard, Pastel e Manga, ou uma das suas.
+**Salvar como Paleta…** guarda as cores recentes com um nome, **Excluir Paleta**
+remove uma das suas (as embutidas continuam), e ``Filtro`` >
+``Corresponder Amostras…`` repinta com as cores que o dock estiver mostrando.
 
 ::
 

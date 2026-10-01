@@ -569,7 +569,12 @@ que los píxeles borrados dejan de filtrarse en un repintado. Bajo las ranuras d
 color hay un anillo de tono alrededor de un triángulo de saturación / brillo:
 arrastrar sobre el anillo elige el tono y dentro del triángulo, la saturación y el
 brillo; los controles deslizantes HSB / RGB y el campo hexadecimal se actualizan a
-la par, y un color fijado en otro lugar mueve los marcadores de la rueda.
+la par, y un color fijado en otro lugar mueve los marcadores de la rueda. El
+**dock Swatches** muestra sus colores recientes, o una paleta elegida en la lista
+desplegable de encima: las integradas Standard, Pastel y Manga, o una propia.
+**Save as Palette…** guarda los colores recientes con un nombre, **Delete Palette**
+elimina una de las suyas (las integradas se conservan) y ``Filter`` >
+``Match Swatches…`` vuelve a pintar con los colores que muestre el dock.
 
 ::
 
