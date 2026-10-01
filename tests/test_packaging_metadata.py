@@ -70,11 +70,16 @@ def test_the_include_patterns_leave_out_every_other_top_level_package():
             if any(fnmatchcase(name, pattern) for pattern in include)] == ["Imervue"]
 
 
-def test_the_sdist_keeps_the_whole_test_suite():
-    # tests/ is no longer a discovered package, and setuptools alone adds only tests/test_*.py
-    # to an sdist: conftest.py and the helper modules would be missing.
+def _manifest_commands() -> list[list[str]]:
     lines = (_REPO / "MANIFEST.in").read_text(encoding="utf-8").splitlines()
-    assert "recursive-include tests *.py" in lines
+    return [line.split() for line in lines if line.strip() and not line.lstrip().startswith("#")]
+
+
+def test_the_sdist_carries_no_tests():
+    # On its own setuptools adds tests/test_*.py to an sdist. MANIFEST.in commands apply in
+    # order, so the prune comes last: nothing after it can put a test file back.
+    assert (_REPO / "tests").is_dir()
+    assert _manifest_commands()[-1] == ["prune", "tests"]
 
 
 def test_every_package_directory_under_imervue_is_shipped():
