@@ -556,7 +556,11 @@ Auswahl aufheben / Einpassen / 100 %.
 
 Der Farb-Dock zeigt jetzt einen "Transparent / keine Farbe"-Slot (Standard
 BG = transparent), und Füllen + Zauberstab respektieren beide Alpha-Grenzen, sodass
-gelöschte Pixel beim Neumalen nicht mehr ausbluten.
+gelöschte Pixel beim Neumalen nicht mehr ausbluten. Unter den Farb-Slots sitzt
+ein Farbtonring um ein Sättigungs- / Helligkeitsdreieck: Ziehen auf dem Ring
+wählt den Farbton, Ziehen im Dreieck die Abstufung; die HSB- / RGB-Regler und
+das Hex-Feld folgen, und eine anderswo gesetzte Farbe verschiebt die Markierungen
+des Farbrads.
 
 ::
 

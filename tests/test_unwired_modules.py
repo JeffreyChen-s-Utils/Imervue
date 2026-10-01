@@ -30,7 +30,7 @@ _KNOWN_UNWIRED = {
     "Imervue.multi_language.translation_validation",
     "Imervue.paint.animation_export", "Imervue.paint.auto_base_color",
     "Imervue.paint.canvas_presets", "Imervue.paint.catmull_rom_spline",
-    "Imervue.paint.color_palette", "Imervue.paint.color_wheel_widget",
+    "Imervue.paint.color_palette",
     "Imervue.paint.filter_preview_dialog", "Imervue.paint.gradient_editor",
     "Imervue.paint.magnetic_lasso", "Imervue.paint.match_color", "Imervue.paint.match_palette",
     "Imervue.paint.save_region_as_material",

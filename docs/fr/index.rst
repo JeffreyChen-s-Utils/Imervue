@@ -558,6 +558,10 @@ Annuler / Rétablir / Tout sélectionner / Désélectionner / Ajuster / 100 %.
 Le dock des couleurs expose désormais un emplacement "transparent / sans couleur" (par défaut
 arrière-plan = transparent), et le pot de peinture + la baguette magique respectent tous deux
 les limites alpha, de sorte que les pixels effacés cessent de baver lors d'une nouvelle application.
+Sous les emplacements de couleur se trouve un anneau de teinte entourant un triangle
+saturation / luminosité : faites glisser sur l'anneau pour choisir la teinte et dans
+le triangle pour choisir la nuance ; les curseurs HSB / RGB et le champ hexadécimal
+suivent, et une couleur définie ailleurs déplace les repères de la roue.
 
 ::
 

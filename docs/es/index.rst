@@ -565,7 +565,11 @@ hacer clic derecho en el lienzo abre un menú rápido de Deshacer / Rehacer / Se
 
 El dock de color ahora expone una ranura "transparente / sin color" (BG por defecto =
 transparente), y tanto el relleno como la varita mágica respetan los límites alfa, de modo
-que los píxeles borrados dejan de filtrarse en un repintado.
+que los píxeles borrados dejan de filtrarse en un repintado. Bajo las ranuras de
+color hay un anillo de tono alrededor de un triángulo de saturación / brillo:
+arrastrar sobre el anillo elige el tono y dentro del triángulo, la saturación y el
+brillo; los controles deslizantes HSB / RGB y el campo hexadecimal se actualizan a
+la par, y un color fijado en otro lugar mueve los marcadores de la rueda.
 
 ::
 

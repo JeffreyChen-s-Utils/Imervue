@@ -432,7 +432,7 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 | Leinwand | Layers · Navigator · History · Pages · Animation · Histogram |
 | Bibliothek | Materials · Stamps · Pose · Reference |
 
-Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ein- und ausschaltbar. **Settings > Workspace Layouts…** bietet die eingebauten Layouts Default / Drawing / Comic / Compact; **Save current…** speichert unter einem Namen, welche der Docks Layers / Color / Brush / Navigator / History / Reference angezeigt werden, und das Anwenden eines Layouts blendet diese Docks ein oder aus. Tool-Optionen und Dock-Größen werden nicht gespeichert.
+Das Color-Dock öffnet sich mit einem Farbtonring und einem Sättigungs- / Helligkeitsdreieck: Ziehen auf dem Ring wählt den Farbton, Ziehen im Dreieck die Abstufung, und die Regler und das Hex-Feld darunter folgen. Jedes Dock ist verschiebbar / floatbar und einzeln über das Menü **Window** ein- und ausschaltbar. **Settings > Workspace Layouts…** bietet die eingebauten Layouts Default / Drawing / Comic / Compact; **Save current…** speichert unter einem Namen, welche der Docks Layers / Color / Brush / Navigator / History / Reference angezeigt werden, und das Anwenden eines Layouts blendet diese Docks ein oder aus. Tool-Optionen und Dock-Größen werden nicht gespeichert.
 
 ### Datei-I/O
 

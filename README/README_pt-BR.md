@@ -439,7 +439,7 @@ Retângulo / Laço / Varinha / Seleção Rápida com modos **Substituir / Adicio
 | Tela | Camada · Navegador · Histórico · Páginas · Animação · Histograma |
 | Biblioteca | Materiais · Carimbos · Pose · Referência |
 
-Cada dock é móvel / flutuante e pode ser alternado individualmente pelo menu **Window**. **Settings > Workspace Layouts…** oferece os layouts embutidos Default / Drawing / Comic / Compact; **Save current…** guarda, com um nome, quais dos docks Camada / Cor / Pincel / Navegador / Histórico / Referência estão visíveis, e aplicar um layout mostra ou oculta esses docks. Opções de ferramenta e tamanhos dos docks não são guardados.
+O dock Cor abre com um anel de matiz e um triângulo de saturação / brilho: arraste no anel para escolher o matiz e no triângulo para escolher a tonalidade, e os sliders e o campo HEX logo abaixo acompanham. Cada dock é móvel / flutuante e pode ser alternado individualmente pelo menu **Window**. **Settings > Workspace Layouts…** oferece os layouts embutidos Default / Drawing / Comic / Compact; **Save current…** guarda, com um nome, quais dos docks Camada / Cor / Pincel / Navegador / Histórico / Referência estão visíveis, e aplicar um layout mostra ou oculta esses docks. Opções de ferramenta e tamanhos dos docks não são guardados.
 
 ### I/O de arquivos
 

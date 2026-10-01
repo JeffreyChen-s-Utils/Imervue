@@ -26,6 +26,7 @@ from Imervue.paint.color_math import (
     rgb_to_hex,
     rgb_to_hsv,
 )
+from Imervue.paint.color_wheel_widget import ColorWheelWidget
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -41,7 +42,7 @@ from Imervue.paint.docks._helpers import (
 
 
 class ColorDock(QDockWidget):
-    """HSB + RGB sliders, hex input, fg/bg swap, recent-colour history."""
+    """Hue-ring wheel, HSB + RGB sliders, hex input, fg/bg swap, recent-colour history."""
 
     def __init__(self, state: ToolState, parent=None):
         lang = language_wrapper.language_word_dict
@@ -57,6 +58,9 @@ class ColorDock(QDockWidget):
         layout = QVBoxLayout(body)
 
         layout.addLayout(self._build_swatches(lang))
+        self._wheel = ColorWheelWidget(self._state.foreground or DEFAULT_FG_FALLBACK)
+        self._wheel.color_chosen.connect(self._on_wheel_changed)
+        layout.addWidget(self._wheel)
         layout.addLayout(self._build_hsv_form(lang))
         layout.addLayout(self._build_rgb_form(lang))
         layout.addLayout(self._build_hex_row(lang))
@@ -278,6 +282,10 @@ class ColorDock(QDockWidget):
                 self._s_slider.setValue(int(round(s * 100)))
                 self._v_slider.setValue(int(round(v * 100)))
                 self._hex_edit.setText(rgb_to_hex(fg))
+                # Echoing the wheel's own pick back would reset its hue on a grey
+                # (no saturation, so no hue to recover) in the middle of a drag.
+                if self._wheel.color() != fg:
+                    self._wheel.set_color(fg)
             _paint_swatch(self._fg_swatch, fg)
             _paint_swatch(self._bg_swatch, self._state.background)
             self._refresh_history()
@@ -336,6 +344,11 @@ class ColorDock(QDockWidget):
             self._v_slider.value() / 100.0,
         ))
         self._state.set_foreground(rgb)
+
+    def _on_wheel_changed(self, r: int, g: int, b: int) -> None:
+        if self._suspend:
+            return
+        self._state.set_foreground((r, g, b))
 
     def _on_rgb_changed(self) -> None:
         if self._suspend:

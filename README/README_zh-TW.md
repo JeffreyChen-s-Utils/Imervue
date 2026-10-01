@@ -434,7 +434,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 | 畫布 | 圖層 · 導航 · 歷史 · 頁面 · 動畫 · 直方圖 |
 | 素材庫 | 素材 · 印章 · 姿勢 · 參考 |
 
-每個面板都可移動 / 浮動，並可在 **Window** 選單個別開關。**Settings > Workspace Layouts…** 提供內建的 Default / Drawing / Comic / Compact 配置；**Save current…** 會以一個名稱記下 圖層 / 色彩 / 筆刷 / 導航 / 歷史 / 參考 這幾個面板中哪些正在顯示，套用配置時就顯示或隱藏這些面板。工具選項與面板大小不會儲存。
+色彩面板開頭是色相環與飽和度 / 亮度三角形：在色環上拖曳可選取色相，在三角形內拖曳可選取深淺，下方的滑桿與 HEX 欄位會跟著更新。每個面板都可移動 / 浮動，並可在 **Window** 選單個別開關。**Settings > Workspace Layouts…** 提供內建的 Default / Drawing / Comic / Compact 配置；**Save current…** 會以一個名稱記下 圖層 / 色彩 / 筆刷 / 導航 / 歷史 / 參考 這幾個面板中哪些正在顯示，套用配置時就顯示或隱藏這些面板。工具選項與面板大小不會儲存。
 
 ### 檔案 I/O
 

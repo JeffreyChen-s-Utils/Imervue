@@ -443,7 +443,7 @@ Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect**
 | Canvas | Layers · Navigator · History · Pages · Animation · Histogram |
 | Library | Materials · Stamps · Pose · Reference |
 
-Each dock is movable / floatable and individually toggleable from the **Window** menu. **Settings > Workspace Layouts…** offers the built-in Default / Drawing / Comic / Compact layouts; **Save current…** stores which of the Layers / Color / Brush / Navigator / History / Reference docks are shown under a name, and applying a layout shows or hides those docks. Tool options and dock sizes are not stored.
+The Color dock opens with a hue ring and saturation / brightness triangle: drag on the ring to pick the hue and in the triangle to pick the shade, and the sliders and hex field below follow. Each dock is movable / floatable and individually toggleable from the **Window** menu. **Settings > Workspace Layouts…** offers the built-in Default / Drawing / Comic / Compact layouts; **Save current…** stores which of the Layers / Color / Brush / Navigator / History / Reference docks are shown under a name, and applying a layout shows or hides those docks. Tool options and dock sizes are not stored.
 
 ### File I/O
 

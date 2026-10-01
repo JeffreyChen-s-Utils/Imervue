@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `5563995` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `da1609a` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 895 | 149,917 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 167 | 41,282 |
+| `tests/` | 896 | 149,981 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 167 | 41,295 |
 | `Imervue/gui/` | 169 | 33,728 |
 | `Imervue/puppet/` | 59 | 16,018 |
 | `Imervue/image/` | 128 | 15,249 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,158 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 15,986 |
-| **總計** | **1,738** | **330,359** |
+| **總計** | **1,739** | **330,436** |
 
-其中 `Imervue/` 套件本身 763 檔 / 164,456 行。
+其中 `Imervue/` 套件本身 763 檔 / 164,469 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -670,7 +670,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-167 個檔、41,282 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+167 個檔、41,295 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -726,7 +726,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 顏色
 
-`color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) · `color_palette.py`(168) +
+`color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) 色相環 + SV 三角（Color dock 上方）· `color_palette.py`(168) +
 `color_palette_io.py`(303) 外部調色盤格式 · `swatch_panel.py`(245) ·
 `palette_extract.py`(168) median-cut 抽色 · `match_color.py`(96) · `match_palette.py`(108) ·
 `color_blindness.py`(118) CVD 模擬 ·
@@ -780,9 +780,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `canvas_presets.py` | 184 | New Canvas 尺寸預設 |
 | 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(624)、`edit_menu.py`(259)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(440)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(179) |
 
-#### `paint/docks/`（7 檔 · 1,863 行）
+#### `paint/docks/`（7 檔 · 1,921 行）
 
-`brushes.py`(445) 筆刷與填色 dock · `layers.py`(431) 圖層 dock · `color.py`(369) 顏色 dock ·
+`brushes.py`(445) 筆刷與填色 dock · `layers.py`(431) 圖層 dock · `color.py`(382) 顏色 dock（色輪、HSB／RGB 滑桿、hex）·
 `materials.py`(265) 素材庫 dock · `navigators.py`(247) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
@@ -983,7 +983,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-895 個檔、149,917 行。`pyproject.toml` 定義三個互斥層級 marker：
+896 個檔、149,981 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1209,8 +1209,8 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 27 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
-    13 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
+11. **有 26 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+    12 個在 `paint/`）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。
 

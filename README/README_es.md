@@ -435,7 +435,7 @@ Rect / Lazo / Varita / Selección rápida con modos **Reemplazar / Añadir / Res
 | Lienzo | Capa · Navegador · Historial · Páginas · Animación · Histograma |
 | Biblioteca | Materiales · Sellos · Pose · Referencia |
 
-Cada panel es movible / flotante y se puede activar por separado desde el menú **Window**. **Settings > Workspace Layouts…** ofrece los diseños integrados Default / Drawing / Comic / Compact; **Save current…** guarda bajo un nombre cuáles de los docks Capa / Color / Pincel / Navegador / Historial / Referencia se muestran, y aplicar un diseño muestra u oculta esos docks. No se guardan las opciones de herramienta ni los tamaños de los docks.
+El panel Color se abre con un anillo de tono y un triángulo de saturación / brillo: arrastrar sobre el anillo elige el tono y arrastrar dentro del triángulo elige la saturación y el brillo, y los controles deslizantes y el campo hexadecimal de debajo se actualizan a la par. Cada panel es movible / flotante y se puede activar por separado desde el menú **Window**. **Settings > Workspace Layouts…** ofrece los diseños integrados Default / Drawing / Comic / Compact; **Save current…** guarda bajo un nombre cuáles de los docks Capa / Color / Pincel / Navegador / Historial / Referencia se muestran, y aplicar un diseño muestra u oculta esos docks. No se guardan las opciones de herramienta ni los tamaños de los docks.
 
 ### E/S de archivos
 

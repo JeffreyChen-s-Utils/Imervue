@@ -558,7 +558,11 @@ a camada ativa, e o clique com o botão direito na tela abre um menu rápido com
 
 O dock de cores agora expõe um slot "transparente / sem cor" (BG padrão = transparente),
 e tanto preenchimento quanto varinha mágica respeitam limites de alfa, de forma que
-pixels apagados não vazam para uma nova pintura.
+pixels apagados não vazam para uma nova pintura. Abaixo dos slots de cor fica um
+anel de matiz em volta de um triângulo de saturação / brilho: arraste no anel para
+escolher o matiz e dentro do triângulo para escolher a tonalidade; os sliders HSB /
+RGB e o campo HEX acompanham, e uma cor definida em outro lugar move os marcadores
+da roda.
 
 ::
 

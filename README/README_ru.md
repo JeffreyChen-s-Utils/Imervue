@@ -435,7 +435,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 | Холст | Layers · Navigator · History · Pages · Animation · Histogram |
 | Библиотека | Materials · Stamps · Pose · Reference |
 
-Каждый док перемещаем / плавающий и включается по отдельности из меню **Window**. **Settings > Workspace Layouts…** предлагает встроенные раскладки Default / Drawing / Comic / Compact; **Save current…** сохраняет под именем, какие из доков Layers / Color / Brush / Navigator / History / Reference показаны, а применение раскладки показывает или скрывает эти доки. Параметры инструментов и размеры доков не сохраняются.
+Док Color открывается кольцом цветового тона и треугольником насыщенности / яркости: перетаскивание по кольцу выбирает цветовой тон, а внутри треугольника — оттенок; ползунки и поле HEX под ними следуют за выбором. Каждый док перемещаем / плавающий и включается по отдельности из меню **Window**. **Settings > Workspace Layouts…** предлагает встроенные раскладки Default / Drawing / Comic / Compact; **Save current…** сохраняет под именем, какие из доков Layers / Color / Brush / Navigator / History / Reference показаны, а применение раскладки показывает или скрывает эти доки. Параметры инструментов и размеры доков не сохраняются.
 
 ### Ввод-вывод файлов
 

@@ -556,7 +556,11 @@ Undo / Redo / Select-All / Deselect / Fit / 100 % menu.
 
 The colour dock now exposes a "transparent / no colour" slot (default
 BG = transparent), and fill + magic-wand both respect alpha boundaries
-so erased pixels stop bleeding into a re-paint.
+so erased pixels stop bleeding into a re-paint. Under the colour slots sits
+a hue ring around a saturation / brightness triangle: drag on the ring to
+pick the hue and in the triangle to pick the shade; the HSB / RGB sliders
+and the hex field follow, and a colour set elsewhere moves the wheel's
+markers.
 
 ::
 

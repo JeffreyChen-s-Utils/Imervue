@@ -435,7 +435,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 | 캔버스 | Layers · Navigator · History · Pages · Animation · Histogram |
 | 라이브러리 | Materials · Stamps · Pose · Reference |
 
-각 도크는 이동 / 플로팅 가능하며 **Window** 메뉴에서 개별로 켜고 끌 수 있습니다. **Settings > Workspace Layouts…** 메뉴는 내장된 Default / Drawing / Comic / Compact 레이아웃을 제공합니다. **Save current…** 버튼은 Layers / Color / Brush / Navigator / History / Reference 도크 중 어떤 것이 표시되어 있는지를 이름으로 저장하며, 레이아웃을 적용하면 해당 도크들을 표시하거나 숨깁니다. 도구 옵션과 도크 크기는 저장되지 않습니다.
+Color 도크를 열면 색조 링과 채도 / 명도 삼각형이 표시됩니다. 링 위를 드래그해 색조를, 삼각형 안을 드래그해 채도와 명도를 고르면 아래의 슬라이더와 HEX 입력란도 함께 따라갑니다. 각 도크는 이동 / 플로팅 가능하며 **Window** 메뉴에서 개별로 켜고 끌 수 있습니다. **Settings > Workspace Layouts…** 메뉴는 내장된 Default / Drawing / Comic / Compact 레이아웃을 제공합니다. **Save current…** 버튼은 Layers / Color / Brush / Navigator / History / Reference 도크 중 어떤 것이 표시되어 있는지를 이름으로 저장하며, 레이아웃을 적용하면 해당 도크들을 표시하거나 숨깁니다. 도구 옵션과 도크 크기는 저장되지 않습니다.
 
 ### 파일 입출력
 

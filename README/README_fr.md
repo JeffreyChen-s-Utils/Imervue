@@ -432,7 +432,7 @@ Rect / Lasso / Baguette / Sélection rapide avec modes **Remplacer / Ajouter / S
 | Toile | Calque · Navigateur · Historique · Pages · Animation · Histogramme |
 | Bibliothèque | Matériaux · Tampons · Pose · Référence |
 
-Chaque dock est déplaçable / flottant et activable individuellement depuis le menu **Window**. **Settings > Workspace Layouts…** propose les dispositions intégrées Default / Drawing / Comic / Compact ; **Save current…** enregistre sous un nom lesquels des docks Calque / Couleur / Pinceau / Navigateur / Historique / Référence sont affichés, et appliquer une disposition affiche ou masque ces docks. Les options d'outil et la taille des docks ne sont pas enregistrées.
+Le dock Couleur s'ouvre sur un anneau de teinte et un triangle saturation / luminosité : faites glisser sur l'anneau pour choisir la teinte et dans le triangle pour choisir la nuance, et les curseurs et le champ hexadécimal en dessous suivent. Chaque dock est déplaçable / flottant et activable individuellement depuis le menu **Window**. **Settings > Workspace Layouts…** propose les dispositions intégrées Default / Drawing / Comic / Compact ; **Save current…** enregistre sous un nom lesquels des docks Calque / Couleur / Pinceau / Navigateur / Historique / Référence sont affichés, et appliquer une disposition affiche ou masque ces docks. Les options d'outil et la taille des docks ne sont pas enregistrées.
 
 ### E/S de fichiers
 
