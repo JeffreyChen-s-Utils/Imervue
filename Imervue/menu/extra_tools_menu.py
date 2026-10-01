@@ -102,6 +102,8 @@ def _build_library_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
                 lambda: _open_gpx_geotag(ui))
     _add_action(sub, lang, "capture_time_title", "Edit Capture Time",
                 lambda: _open_capture_time(ui))
+    _add_action(sub, lang, "metadata_template_title", "Metadata Template",
+                lambda: _open_metadata_template(ui))
     _add_action(sub, lang, "cache_maintenance_title", "Thumbnail Cache",
                 lambda: _open_cache_maintenance(ui))
 
@@ -810,6 +812,11 @@ def _open_gpx_geotag(ui: ImervueMainWindow):
 def _open_capture_time(ui: ImervueMainWindow):
     from Imervue.gui.capture_time_dialog import open_capture_time
     open_capture_time(ui)
+
+
+def _open_metadata_template(ui: ImervueMainWindow):
+    from Imervue.gui.metadata_template_dialog import open_metadata_template
+    open_metadata_template(ui)
 
 
 def _open_cache_maintenance(ui: ImervueMainWindow):

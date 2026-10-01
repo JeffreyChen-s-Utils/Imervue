@@ -3095,6 +3095,14 @@ Biblioteca y metadatos (Library & Metadata)
        días, horas, minutos y segundos, o según cuándo se tomó realmente la primera foto,
        reescribiendo DateTimeOriginal, DateTimeDigitized y DateTime; las fotos sin hora de captura
        EXIF no se modifican, y solo se pueden reescribir JPEG y WebP.
+   * - ``Metadata Template``
+     - Estampa un título, una descripción y palabras clave separadas por comas en las imágenes
+       seleccionadas (o en toda la vista). ``{filename}``, ``{name}``, ``{folder}``, ``{date}`` y
+       ``{year}`` se rellenan por foto; con **Only fill empty fields** activado, una foto conserva
+       su propio título y descripción y recibe las palabras clave; desactivado, la plantilla los
+       sustituye y sus palabras clave sustituyen las etiquetas de la foto. Pregunta antes de
+       aplicar y recuerda la plantilla; ``XMP Sidecars`` y ``Export Metadata`` escriben el
+       resultado.
    * - ``Thumbnail Cache``
      - Muestra cuánto espacio en disco ocupa la caché de miniaturas y la vacía.
 

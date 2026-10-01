@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `4d0fca28` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `d2f68e76` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,27 +66,27 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 914 | 152,318 |
+| `tests/` | 915 | 152,443 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,580 |
-| `Imervue/gui/` | 171 | 34,291 |
+| `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,391 |
 | `Imervue/image/` | 128 | 15,249 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,173 |
-| `Imervue/multi_language/` | 8 | 15,007 |
+| `Imervue/multi_language/` | 8 | 15,067 |
 | `Imervue/desktop_pet/` | 29 | 7,084 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,750 |
-| `Imervue/menu/` | 11 | 3,609 |
+| `Imervue/menu/` | 11 | 3,616 |
 | `Imervue/` 根層 | 6 | 1,930 |
 | `Imervue/plugin/` | 12 | 2,617 |
 | `Imervue/system/` | 32 | 3,031 |
 | `Imervue/export/` | 8 | 1,006 |
-| `Imervue/user_settings/` | 10 | 1,211 |
+| `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,762** | **335,823** |
+| **總計** | **1,764** | **336,216** |
 
-其中 `Imervue/` 套件本身 768 檔 / 167,484 行。
+其中 `Imervue/` 套件本身 769 檔 / 167,752 行。
 
 測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -258,7 +258,7 @@ ImervueMainWindow
 | `bookmark.py` | 90 | 跨資料夾書籤 / 收藏集合 |
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
-| `metadata_template.py` | 72 | IPTC/XMP 欄位範本（stationery pad） |
+| `metadata_template.py` | 95 | IPTC/XMP 欄位範本（stationery pad；`photo_tokens` 給每張的代換值，Metadata Template 對話框用） |
 | `path_metadata.py` | 140 | 設定裡以圖片路徑為鍵的資料（評分、色標籤、標題、描述、收藏、書籤、staging tray、參考圖釘選、最近圖片、標籤與相簿成員）跟著改名／搬移的檔案走：`move_path_metadata(mapping, *, keep_existing)` 同時改鍵（`a→b` 與 `b→c` 並存也只搬一次），新路徑上前一個檔案留下的資料清掉；`folder_moves` 把資料夾搬移展開成其下每個路徑；`stored_paths` |
 | `recent_image.py` | 65 | 最近資料夾 / 圖片追蹤，上限由設定控制 |
 | `tag_validator.py` | 159 | 標籤 / 相簿集合的完整性檢查與清理（`name_problem` 擋只差大小寫的新名稱；`plan_cleanup` / `clean_collection` 給 Tags & Albums 的 Clean Up…） |
@@ -538,7 +538,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-171 個檔、34,291 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+172 個檔、34,469 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -638,7 +638,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(580) Tags & Albums（新增／改名檢查名稱、Clean Up… 清掉已不存在的檔案並合併只差大小寫的名稱） ·
 `tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(190) · `auto_tag_dialog.py`(172) ·
 `keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(216) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明；Describe 以 `CaptionWorker`〔QRunnable〕向本機 Ollama 要描述填入 Description） ·
-`gps_geotag_dialog.py`(90) · `gpx_geotag_dialog.py`(184) 用 GPX 軌跡對整批相片寫 GPS（時區、間隔上限、內插） · `capture_time_dialog.py`(193) 整批位移 EXIF 拍攝時間（輸入位移或第一張的正確時間） · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
+`gps_geotag_dialog.py`(90) · `gpx_geotag_dialog.py`(184) 用 GPX 軌跡對整批相片寫 GPS（時區、間隔上限、內插） · `capture_time_dialog.py`(193) 整批位移 EXIF 拍攝時間（輸入位移或第一張的正確時間） · `metadata_template_dialog.py`(178) 把記住的標題／描述／關鍵字範本（含 `{token}`）蓋到整批相片 · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
 `events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(126) ·
 `bookmark_dialog.py`(345) · `staging_tray_dialog.py`(180) · `reference_panel_dialog.py`(298) ·
 `image_statistics_dialog.py`(90) · `quality_report_dialog.py`(61) · `image_inspector_dialog.py`(84) 波形/parade/false colour/focus peaking ·
@@ -657,7 +657,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `extra_tools_menu.py` | 842 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
+| `extra_tools_menu.py` | 849 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
 | `right_click_menu.py` | 874 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
 | `file_menu.py` | 524 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-914 個檔、152,318 行。`pyproject.toml` 定義三個互斥層級 marker：
+915 個檔、152,443 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1210,7 +1210,7 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
     no-op，呼叫端照常回報「已儲存」。PDF 輸出一律用 `export/pdf_output.py:begin_pdf_painter`，
     它在失敗時丟 `OSError`。`QImage.save` / `QPixmap.save` 同理只回傳 `bool`，回傳值一定要檢查。
 
-11. **有 2 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
+11. **有 1 個模組沒有任何正式程式 import**（清單在 `tests/test_unwired_modules.py` 的 `_KNOWN_UNWIRED`，
     `paint/`、`puppet/`、`desktop_pet/` 已全部接上）。它們都有測試，也列在本地圖的各套件表裡，但使用者從 UI 碰不到。看到表裡的功能描述，
     不代表它已經接上選單。擁有者決定把它們逐一接上（`progress.md` #22）；新增模組若沒被 import，該測試會失敗
     （根目錄 `*.spec` 打包腳本的 import 也算，`Imervue_mac.spec` 用 `system/macos_bundle.py`）。

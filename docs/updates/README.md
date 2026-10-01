@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-49 | 2026-10-01 | Extra Tools stamps a remembered title, description and keywords template on a selection; metadata_template is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-48 | 2026-10-01 | Tags & Albums refuses names that clash by case and cleans up stale entries; tag_validator is wired | #feature #library #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-47 | 2026-10-01 | Extra Tools shifts the EXIF capture time of a selection; capture_time is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
 | U-20261001-46 | 2026-10-01 | Extra Tools geotags a selection from a GPX track; gpx_geotag is wired | #feature #metadata #docs #i18n | [2026-10](2026-10.md) |
@@ -514,4 +515,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 48 |
+| [2026-10.md](2026-10.md) | 2026-10 | 49 |

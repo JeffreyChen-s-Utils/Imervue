@@ -3008,6 +3008,13 @@ Library & Metadata
        minutes and seconds, or by when the first photo was really taken, rewriting
        DateTimeOriginal, DateTimeDigitized and DateTime; photos without an EXIF capture time are
        left alone, and only JPEG and WebP can be rewritten.
+   * - ``Metadata Template``
+     - Stamps a title, description and comma-separated keywords on the selected images (or the
+       whole view). ``{filename}``, ``{name}``, ``{folder}``, ``{date}`` and ``{year}`` are filled in
+       per photo; with **Only fill empty fields** on, a photo keeps its own title and description
+       and gains the keywords, with it off the template replaces them and its keywords replace the
+       photo's tags. It asks before applying and remembers the template; ``XMP Sidecars`` and
+       ``Export Metadata`` write the result out.
    * - ``Thumbnail Cache``
      - Shows how much disk space the thumbnail cache uses and clears it.
 

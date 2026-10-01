@@ -2443,6 +2443,12 @@ GPS 地理標記
      - 把選取圖片（或整個目前檢視）的 EXIF 拍攝時間平移若干天、小時、分鐘與秒，或依第一張照片的
        實際拍攝時間調整，改寫 DateTimeOriginal、DateTimeDigitized 與 DateTime；沒有 EXIF
        拍攝時間的照片維持不變，且只有 JPEG 與 WebP 能改寫。
+   * - ``Metadata Template``
+     - 把標題、描述與以逗號分隔的關鍵字套用到選取的圖片（或整個目前檢視）。``{filename}``、
+       ``{name}``、``{folder}``、``{date}`` 與 ``{year}`` 會依每張照片填入；勾選
+       **只填空白欄位（關鍵字為新增）** 時，照片保留自己的標題與描述並加上這些關鍵字，不勾選時
+       範本會取代它們，範本的關鍵字也會取代照片的標籤。套用前會先確認，並記住這個範本；
+       ``XMP Sidecars`` 與 ``Export Metadata`` 會把結果寫出。
    * - ``Thumbnail Cache``
      - 顯示縮圖快取占用的磁碟空間，並可清除。
 

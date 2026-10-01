@@ -7,11 +7,18 @@ token-expanded from each photo's metadata; scalar fields can either fill only
 the blanks or overwrite, and keyword lists merge instead of clobbering.
 
 Pure dict transformation reusing the ``code_replacements`` variable expander —
-no I/O, no optional deps. Feeds the existing ``image.xmp_sidecar`` writer.
+no I/O, no optional deps. **Extra Tools > Library & Metadata > Metadata
+Template** applies it to a selection's title, description and keywords (which
+the XMP sidecar export then writes), with :func:`photo_tokens` for the tokens.
 """
 from __future__ import annotations
 
+from datetime import datetime
+from pathlib import Path
+
 from Imervue.user_settings.code_replacements import expand_variables
+
+TOKENS = ("filename", "name", "folder", "date", "year")
 
 
 def apply_template(
@@ -33,6 +40,22 @@ def apply_template(
         value = _expand_value(raw_value, meta)
         result[key] = _merge_field(result.get(key), value, fill_empty_only)
     return result
+
+
+
+def photo_tokens(path: str | Path, captured: datetime | None) -> dict[str, str]:
+    """The ``{token}`` values of one photo: file stem, file name, folder, capture date and year.
+
+    ``date`` (``YYYY-MM-DD``) and ``year`` are empty when the capture time is unknown.
+    """
+    p = Path(path)
+    return {
+        "filename": p.stem,
+        "name": p.name,
+        "folder": p.parent.name,
+        "date": captured.strftime("%Y-%m-%d") if captured else "",
+        "year": captured.strftime("%Y") if captured else "",
+    }
 
 
 def _expand_value(value: object, meta: dict[str, object]) -> object:

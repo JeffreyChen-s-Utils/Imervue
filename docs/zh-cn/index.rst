@@ -2622,6 +2622,12 @@ GPS 地理标记
      - 把选中图片（或整个当前视图）的 EXIF 拍摄时间平移若干天、小时、分钟与秒，或按第一张照片的
        实际拍摄时间调整，改写 DateTimeOriginal、DateTimeDigitized 与 DateTime；没有 EXIF
        拍摄时间的照片保持不变，且只有 JPEG 与 WebP 能改写。
+   * - ``Metadata Template``
+     - 把标题、描述与以逗号分隔的关键词应用到选中的图片（或整个当前视图）。``{filename}``、
+       ``{name}``、``{folder}``、``{date}`` 与 ``{year}`` 会按每张照片填入；勾选
+       **只填写空白字段（关键词为添加）** 时，照片保留自己的标题与描述并加上这些关键词，不勾选时
+       模板会替换它们，模板的关键词也会替换照片的标签。应用前会先确认，并记住这个模板；
+       ``XMP Sidecars`` 与 ``Export Metadata`` 会把结果写出。
    * - ``Thumbnail Cache``
      - 显示缩略图缓存占用的磁盘空间，并可清除缓存。
 

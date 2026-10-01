@@ -293,6 +293,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Éditeur de géotag GPS** — lecture des coordonnées EXIF GPS existantes, écriture de nouvelles latitudes/longitudes dans un JPEG ou un WebP sans paquet supplémentaire, sans toucher aux pixels, aux autres tags ni à la vignette
 - **Géotag depuis une trace GPX** — mise en correspondance des heures de prise de vue EXIF de la sélection avec un journal `.gpx` issu d'un téléphone ou d'un enregistreur GPS, avec le fuseau horaire de l'appareil, un écart maximal et une interpolation entre les points, puis écriture des positions dans les fichiers JPEG / WebP
 - **Modifier l'heure de prise de vue** — décalage de l'heure de prise de vue EXIF de la sélection de jours / heures / minutes / secondes, ou en indiquant quand la première photo a réellement été prise ; DateTimeOriginal, DateTimeDigitized et DateTime sont réécrits dans les fichiers JPEG / WebP
+- **Modèle de métadonnées** — un titre, une description et des mots-clés mémorisés, avec les jetons `{filename}` / `{name}` / `{folder}` / `{date}` / `{year}`, appliqués à la sélection soit dans les champs vides uniquement (les mots-clés sont ajoutés), soit par-dessus l'existant ; Fichiers annexes XMP et Export des métadonnées écrivent le résultat
 - **Renommage par lot avec jetons** — modèles avec aperçu en direct comme `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Exporter les métadonnées CSV / JSON** — une ligne par image avec tri / note / étiquettes / notes
 
@@ -302,7 +303,7 @@ Accessibles depuis le menu **Tools** ; organisés en sous-menus groupés par fon
 
 - **Batch** — Conversion de format · Suppression EXIF · Image Sanitizer (re-rendu pour effacer les données cachées) · Image Organizer (tri en sous-dossiers par date / résolution / type / taille) · Renommage par lot avec jetons
 - **Retouche et transformation** — Agrandissement d'image IA (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Détection de visages (cascade Haar) · correcteur, clonage, recadrage / redressement et correction d'objectif
-- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées · Fichiers annexes XMP · Géotag GPS · Géotag depuis une trace GPX · Modifier l'heure de prise de vue
+- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées · Fichiers annexes XMP · Géotag GPS · Géotag depuis une trace GPX · Modifier l'heure de prise de vue · Modèle de métadonnées
 
 ### Intégration système
 
@@ -807,7 +808,7 @@ Un exemple fonctionnel se trouve à [`examples/desktop_pet/imeru.petscript.json`
 ### Tools (outils supplémentaires — organisés en 8 sous-menus groupés)
 
 - **Batch** — Conversion de format · Suppression EXIF · Image Sanitizer · Image Organizer · Renommage par lot avec jetons · Deflicker (time-lapse) · Binarisation de documents · Seuil d'Otsu · Édition d'animation · Optimisation à une taille cible · Légende de mème · Stéganographie
-- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées (CSV / JSON) · Fichiers annexes XMP · Géotag GPS · Géotag depuis une trace GPX · Modifier l'heure de prise de vue · Cache des vignettes
+- **Photothèque et métadonnées** — Recherche dans la photothèque · Albums intelligents · Trouver des images similaires · Recherche sémantique · Trouver les doublons · Auto-Tag · Étiquettes hiérarchiques · Export des métadonnées (CSV / JSON) · Fichiers annexes XMP · Géotag GPS · Géotag depuis une trace GPX · Modifier l'heure de prise de vue · Modèle de métadonnées · Cache des vignettes
 - **Vues** — Timeline (par jour / mois / année) · Calendar · Map · Scopes & Inspector · Tiny Planet (360°) · Statistiques d'image · Rapport de qualité · Mire de test · Aperçu du daltonisme (protanopie / deutéranopie / tritanopie / achromatopsie)
 - **Workflow** — Tri · Plateau de travail · Panneau de référence · Copies virtuelles · Gestionnaire de fichiers à deux volets · Macros · Dossier surveillé
 - **Export** — PDF planche-contact · Galerie web · Diaporama vidéo (MP4) · Mise en page d'impression · Collage · Planche de photos d'identité

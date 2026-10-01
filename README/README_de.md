@@ -293,6 +293,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **GPS-Geotag-Editor** — vorhandene EXIF-GPS lesen, neue Lat/Lon ohne Zusatzpaket in JPEGs und WebPs schreiben, Pixel, übrige Tags und Vorschaubild bleiben unverändert
 - **Geotag from GPX Track** — die EXIF-Aufnahmezeiten der Auswahl mit einem `.gpx`-Log eines Smartphones oder GPS-Loggers abgleichen, mit der Zeitzone der Kamera, einer Lückengrenze und Interpolation zwischen Punkten, dann die Positionen in die JPEG- / WebP-Dateien schreiben
 - **Edit Capture Time** — die EXIF-Aufnahmezeit der Auswahl um Tage / Stunden / Minuten / Sekunden verschieben oder durch Angabe, wann das erste Foto tatsächlich aufgenommen wurde; DateTimeOriginal, DateTimeDigitized und DateTime werden in JPEG- / WebP-Dateien neu geschrieben
+- **Metadata Template** — ein gemerkter Titel, eine Beschreibung und Stichwörter mit den Tokens `{filename}` / `{name}` / `{folder}` / `{date}` / `{year}`, auf die Auswahl gestempelt, entweder nur in leere Felder (Stichwörter werden ergänzt) oder über das Vorhandene; XMP-Sidecars und Export Metadata schreiben das Ergebnis heraus
 - **Token Batch Rename** — Live-Preview-Templates wie `{date:yyyymmdd}_{camera}_{counter:04}{ext}`
 - **Export Metadata CSV / JSON** — eine Zeile pro Bild inkl. Cull / Rating / Tags / Notes
 
@@ -302,7 +303,7 @@ Aufrufbar im **Tools**-Menü; in funktionsgruppierte Untermenüs organisiert:
 
 - **Batch** — Format Conversion · EXIF Strip · Image Sanitizer (Re-Render, um versteckte Daten zu entfernen) · Image Organizer (in Unterordner nach Datum / Auflösung / Typ / Größe sortieren) · Token Batch Rename
 - **Retouch & Transform** — AI Image Upscale (Real-ESRGAN x2 / x4 + ONNX Runtime CUDA/DML/CPU) · Face Detection (Haar Cascade) · Heilen, Klonen, Zuschneiden / Begradigen und Objektivkorrektur
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag · Hierarchical Tags · Export Metadata · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time · Metadata Template
 
 ### Systemintegration
 
@@ -854,7 +855,7 @@ Ein funktionierendes Beispiel liegt unter [`examples/desktop_pet/imeru.petscript
 ### Tools (Extra-Tools — in 8 gruppierte Untermenüs organisiert)
 
 - **Batch** — Format Conversion · EXIF Strip · Image Sanitizer · Image Organizer · Token Batch Rename · Deflicker (Time-lapse) · Document Binarize · Otsu Threshold · Edit Animation · Optimize to Target Size · Meme Caption · Steganography
-- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time · Thumbnail Cache
+- **Library & Metadata** — Library Search · Smart Albums · Find Similar Images · Semantic Search · Find Duplicate Images · Auto-Tag Images · Hierarchical Tags · Export Metadata (CSV / JSON) · XMP Sidecars · GPS Geotag · Geotag from GPX Track · Edit Capture Time · Metadata Template · Thumbnail Cache
 - **Views** — Timeline View (nach Tag / Monat / Jahr) · Calendar View · Map View · Scopes & Inspector · Tiny Planet (360°) · Image Statistics · Quality Report · Test Chart · Color blindness preview (Protanopie / Deuteranopie / Tritanopie / Achromatopsie)
 - **Workflow** — Culling · Staging Tray · Reference Panel · Virtual Copies · Dual-Pane File Manager · Macros · Watched Folder
 - **Export** — Contact Sheet PDF · Web Gallery · Slideshow Video (MP4) · Print Layout · Collage · ID Photo Sheet

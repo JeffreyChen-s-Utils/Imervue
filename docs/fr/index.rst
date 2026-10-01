@@ -3118,6 +3118,14 @@ Sous-menu Library & Metadata
        été prise, en réécrivant DateTimeOriginal, DateTimeDigitized et DateTime ; les photos sans
        heure de prise de vue EXIF ne sont pas modifiées, et seuls les JPEG et WebP peuvent être
        réécrits.
+   * - ``Metadata Template``
+     - Appose un titre, une description et des mots-clés séparés par des virgules sur les images
+       sélectionnées (ou toute la vue). ``{filename}``, ``{name}``, ``{folder}``, ``{date}`` et
+       ``{year}`` sont remplis pour chaque photo ; avec **Only fill empty fields** activé, une photo
+       garde son propre titre et sa description et reçoit les mots-clés ; désactivé, le modèle les
+       remplace et ses mots-clés remplacent les étiquettes de la photo. Une confirmation est
+       demandée avant l'application et le modèle est mémorisé ; ``XMP Sidecars`` et
+       ``Export Metadata`` écrivent le résultat.
    * - ``Thumbnail Cache``
      - Affiche l'espace disque utilisé par le cache de vignettes et permet de le vider.
 

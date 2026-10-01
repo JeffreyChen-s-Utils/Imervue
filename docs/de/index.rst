@@ -3146,6 +3146,14 @@ Library & Metadata — Bibliothek und Metadaten
        aufgenommen wurde, und schreibt dabei DateTimeOriginal, DateTimeDigitized und DateTime neu;
        Fotos ohne EXIF-Aufnahmezeit bleiben unverändert, und nur JPEG und WebP lassen sich neu
        schreiben.
+   * - ``Metadata Template``
+     - Stempelt einen Titel, eine Beschreibung und kommagetrennte Stichwörter auf die ausgewählten
+       Bilder (oder die ganze Ansicht). ``{filename}``, ``{name}``, ``{folder}``, ``{date}`` und
+       ``{year}`` werden pro Foto ausgefüllt; mit aktiviertem **Only fill empty fields** behält ein
+       Foto seinen eigenen Titel und seine Beschreibung und erhält die Stichwörter dazu, ohne diese
+       Option ersetzt die Vorlage beides, und ihre Stichwörter ersetzen die Tags des Fotos. Vor dem
+       Anwenden wird nachgefragt, und die Vorlage bleibt gespeichert; ``XMP Sidecars`` und
+       ``Export Metadata`` schreiben das Ergebnis heraus.
    * - ``Thumbnail Cache``
      - Zeigt, wie viel Speicherplatz der Miniaturansicht-Cache belegt, und leert ihn.
 
