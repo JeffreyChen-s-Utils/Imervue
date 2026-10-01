@@ -1,0 +1,5 @@
+# The sdist carries the whole test suite; the wheel carries none of it.
+# Package discovery is limited to Imervue (pyproject.toml, dev.toml), and on its
+# own setuptools adds only tests/test_*.py to an sdist, without conftest.py and
+# the helper modules the tests import.
+recursive-include tests *.py

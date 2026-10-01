@@ -54,7 +54,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `Imervue/mcp_server/` | MCP JSON-RPC 2.0 stdio server; no Qt, no optional dependencies |
 | `Imervue/cli.py` | Headless batch CLI (NumPy + Pillow paths only, never starts Qt) |
 | `plugins/` | Plugin sources (gitignored; tracked files need `git add -f`), mirrored to Imervue_Plugins |
-| `tests/` | pytest suite; shared fixtures in `tests/conftest.py`, GL skip marker in `tests/_qt_skip.py` |
+| `tests/` | pytest suite, in the sdist and never in the wheel; shared fixtures in `tests/conftest.py`, GL skip marker in `tests/_qt_skip.py` |
 | `examples/` | The bundled `.puppet` character Imeru, the code that builds it (`examples/puppet/imeru/build.py`: a Blender cel-shaded render plus painted face features, then the rig) and her desktop-pet script |
 | `docs/`, `README.md`, `README/` | Sphinx docs and translated READMEs; `README.md` and `docs/en` are canonical |
 | `Imervue.spec`, `Imervue_mac.spec`, `packaging/`, `exe/` | PyInstaller specs, AppImage / auto-py-to-exe config, frozen launch shim (`nuitka.md`, `pyinstaller.md` document builds) |
@@ -69,7 +69,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `py -m Imervue.cli <subcommand>` | `Imervue/cli.py` | Headless batch; `list-ops` lists subcommands; every MCP tool is also a subcommand (`Imervue/cli_tools.py`) |
 | `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | Calls `run()` in `Imervue/mcp_server/server.py` |
 | `exe/start_Imervue.py` | — | Launch shim for frozen builds |
-| PyPI packages `Imervue` (stable), `Imervue_dev` (dev channel) | `pyproject.toml`, `dev.toml` | Stable: a pull request merged into `main` runs `release.yml`, which bumps `pyproject.toml`, tags and uploads. Dev: the `publish-dev` job of `test.yml` runs after `lint`, `docs`, `fast` and `extended` on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back |
+| PyPI packages `Imervue` (stable), `Imervue_dev` (dev channel) | `pyproject.toml`, `dev.toml`, `MANIFEST.in` | Both wheels install one top-level package, `Imervue`: package discovery includes `Imervue` and `Imervue.*` only, and `MANIFEST.in` puts the test suite in the sdist. Stable: a pull request merged into `main` runs `release.yml`, which bumps `pyproject.toml`, tags and uploads. Dev: the `publish-dev` job of `test.yml` runs after `lint`, `docs`, `fast` and `extended` on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back |
 
 Public interfaces other code or users depend on:
 

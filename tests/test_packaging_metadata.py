@@ -52,6 +52,40 @@ def test_dev_toml_ships_what_pyproject_ships():
     assert dev["tool"]["setuptools"] == main["tool"]["setuptools"]
 
 
+@pytest.mark.parametrize("name", ["pyproject.toml", "dev.toml"])
+def test_only_the_imervue_package_is_discovered(name):
+    # tests/ has an __init__.py: unrestricted discovery installed it as a top-level ``tests``
+    # package, which collides with any other project that ships one.
+    find = _toml(name)["tool"]["setuptools"]["packages"]["find"]
+    assert find == {"include": ["Imervue", "Imervue.*"], "namespaces": False}
+
+
+def test_the_include_patterns_leave_out_every_other_top_level_package():
+    from fnmatch import fnmatchcase
+    include = _toml("pyproject.toml")["tool"]["setuptools"]["packages"]["find"]["include"]
+    # What discovery starts from: each top-level directory that is a regular package.
+    top_level = {init.parent.name for init in _REPO.glob("*/__init__.py")}
+    assert {"Imervue", "tests"} <= top_level
+    assert [name for name in sorted(top_level)
+            if any(fnmatchcase(name, pattern) for pattern in include)] == ["Imervue"]
+
+
+def test_the_sdist_keeps_the_whole_test_suite():
+    # tests/ is no longer a discovered package, and setuptools alone adds only tests/test_*.py
+    # to an sdist: conftest.py and the helper modules would be missing.
+    lines = (_REPO / "MANIFEST.in").read_text(encoding="utf-8").splitlines()
+    assert "recursive-include tests *.py" in lines
+
+
+def test_every_package_directory_under_imervue_is_shipped():
+    # ``namespaces = false`` drops a directory without an __init__.py, with every module in it.
+    missing = sorted(
+        directory.relative_to(_REPO).as_posix()
+        for directory in {path.parent for path in (_REPO / "Imervue").rglob("*.py")}
+        if not (directory / "__init__.py").is_file())
+    assert missing == []
+
+
 def test_requirements_txt_lists_runtime_dependencies_then_the_package():
     assert _requirements("requirements.txt") == [*_runtime_dependencies(), "Imervue"]
 

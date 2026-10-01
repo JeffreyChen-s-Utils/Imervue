@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261001-58 | 2026-10-01 | Both wheels install only the Imervue package: the test suite stays out of site-packages | #bugfix #packaging #release #done | [2026-10](2026-10.md) |
 | U-20261001-57 | 2026-10-01 | The Fast jobs pass again: the six tests they had been failing unseen are fixed at their causes | #bugfix #ci #tests #cli #done | [2026-10](2026-10.md) |
 | U-20261001-56 | 2026-10-01 | Imeru is modelled and cel-shaded in Blender, layer by layer, with repainted eyes | #feature #puppet #art #docs | [2026-10](2026-10.md) |
 | U-20261001-55 | 2026-10-01 | A CI test job exits with pytest's status: the Fast jobs passed with failed tests | #incident #ci #tests | [2026-10](2026-10.md) |
@@ -523,4 +524,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 57 |
+| [2026-10.md](2026-10.md) | 2026-10 | 58 |
