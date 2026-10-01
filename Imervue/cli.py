@@ -650,7 +650,7 @@ def _add_row(subs, name: str, help_text: str, arguments: tuple) -> None:
             _add_common(sub)
         else:
             flags, kwargs = argument
-            sub.add_argument(*flags, **kwargs)
+            cli_tools.add_argument_as_written(sub, *flags, **kwargs)
 
 
 def _add_bridged(subs, bridged: cli_tools.BridgedCommand) -> None:

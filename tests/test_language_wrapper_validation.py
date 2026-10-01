@@ -9,6 +9,7 @@ the strings that would break, so the built-in text shows instead.
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
 
 import pytest
 
@@ -18,9 +19,39 @@ from Imervue.multi_language.language_wrapper import LanguageWrapper, usable_stri
 _KEY = "contact_sheet_source"          # English: "{count} image(s) will be included."
 
 
+@contextmanager
+def _built_in_tables_restored():
+    """Put the built-in language tables back as they were on the way out.
+
+    Every ``LanguageWrapper`` holds the module-level dictionaries themselves, so
+    a string merged into one of them stays for the rest of the test session.
+    """
+    tables = LanguageWrapper().choose_language_dict
+    saved = {code: dict(table) for code, table in tables.items()}
+    try:
+        yield
+    finally:
+        for code, table in tables.items():
+            table.clear()
+            table.update(saved[code])
+
+
 @pytest.fixture
 def wrapper():
-    return LanguageWrapper()
+    with _built_in_tables_restored():
+        yield LanguageWrapper()
+
+
+def test_what_a_test_merges_is_taken_out_of_the_built_in_tables():
+    tables = LanguageWrapper().choose_language_dict
+    before = {code: dict(table) for code, table in tables.items()}
+    with pytest.raises(RuntimeError, match="stop"), _built_in_tables_restored():
+        LanguageWrapper().merge_translations(
+            {"English": {"leak_probe": "Saved {path}"}, "Korean": {"leak_probe": "{path}"}})
+        assert "leak_probe" in english_word_dict and "leak_probe" in tables["Korean"]
+        raise RuntimeError("stop")
+    assert tables == before
+    assert [list(table) for table in tables.values()] == [list(table) for table in before.values()]
 
 
 def test_usable_strings_drops_empty_and_mismatched_values():

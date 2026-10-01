@@ -104,30 +104,45 @@ def test_model_id_names_repo_commit_and_variant():
 
 # --- model files -------------------------------------------------------------
 
-def test_model_file_downloads_the_pinned_revision(monkeypatch):
-    import huggingface_hub
+@pytest.fixture
+def fake_hub(monkeypatch):
+    """A stand-in ``huggingface_hub``: the package is optional and CI does not install it.
+
+    Its two errors derive from ``Exception`` alone, so a test passes only when
+    ``model_file`` catches them by name.
+    """
+    errors = types.ModuleType("huggingface_hub.errors")
+    errors.HfHubHTTPError = type("HfHubHTTPError", (Exception,), {})
+    errors.LocalEntryNotFoundError = type("LocalEntryNotFoundError", (Exception,), {})
+    hub = types.ModuleType("huggingface_hub")
+    hub.errors = errors
+    monkeypatch.setitem(sys.modules, "huggingface_hub", hub)
+    monkeypatch.setitem(sys.modules, "huggingface_hub.errors", errors)
+    return hub
+
+
+def test_model_file_downloads_the_pinned_revision(fake_hub):
     calls = []
 
     def fake_download(**kwargs):
         calls.append(kwargs)
         return "/cache/" + kwargs["filename"]
 
-    monkeypatch.setattr(huggingface_hub, "hf_hub_download", fake_download)
+    fake_hub.hf_hub_download = fake_download
     assert clip_onnx.model_file(CLIP_VIT_B32, "vocab.json", download=True) == "/cache/vocab.json"
     assert calls == [{"repo_id": CLIP_VIT_B32.repo, "filename": "vocab.json",
                       "revision": CLIP_VIT_B32.revision, "local_files_only": False}]
 
 
-def test_model_file_not_cached_is_an_oserror(monkeypatch):
-    import huggingface_hub
-    from huggingface_hub.errors import LocalEntryNotFoundError
-
+@pytest.mark.parametrize("error", ["LocalEntryNotFoundError", "HfHubHTTPError"])
+def test_model_file_not_cached_is_an_oserror(fake_hub, monkeypatch, error):
     def missing(**_kwargs):
-        raise LocalEntryNotFoundError("not cached")
+        raise getattr(fake_hub.errors, error)("not cached")
 
-    monkeypatch.setattr(huggingface_hub, "hf_hub_download", missing)
+    fake_hub.hf_hub_download = missing
     with pytest.raises(OSError, match="unavailable"):
         clip_onnx.model_file(CLIP_VIT_B32, "vocab.json", download=False)
+    monkeypatch.setattr(clip_onnx, "backend_importable", lambda: True)
     assert clip_onnx.model_downloaded() is False
 
 

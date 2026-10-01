@@ -16,6 +16,7 @@ from Imervue.cli_tools import (
     SINGLE,
     WRITER,
     ToolError,
+    add_argument_as_written,
     bridged_commands,
     first_sentence,
     option_flag,
@@ -140,6 +141,37 @@ def test_option_kwargs_boolean_defaults_to_false_and_offers_the_negation():
     kwargs = option_kwargs({"type": "boolean"}, required=False)
     assert kwargs["action"] is argparse.BooleanOptionalAction
     assert kwargs["default"] is False
+
+
+class _HelpAppendingAction(argparse.BooleanOptionalAction):
+    """What Python 3.10's ``BooleanOptionalAction`` does, on every version: append to the help."""
+
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(option_strings, dest, **kwargs)
+        self.help = f"{kwargs['help']} (default: %(default)s)"
+
+
+def test_an_argument_keeps_its_help_as_written_whatever_the_action_appends():
+    parser = argparse.ArgumentParser()
+    shadow = add_argument_as_written(parser, "--shadow", action=_HelpAppendingAction,
+                                     default=True, help="drop shadow")
+    size = add_argument_as_written(parser, "--size", type=int, default=3)
+    assert (shadow.help, size.help) == ("drop shadow", None)
+    assert parser.parse_args([]) == argparse.Namespace(shadow=True, size=3)
+    assert parser.parse_args(["--no-shadow", "--size", "4"]) == argparse.Namespace(
+        shadow=False, size=4)
+
+
+def test_no_subcommand_option_shows_a_default_argparse_added():
+    """Python 3.10 would add `` (default: ...)`` to every ``--flag`` / ``--no-flag`` help."""
+    sub = next(a for a in build_parser()._actions  # noqa: SLF001
+               if isinstance(a, argparse._SubParsersAction))  # noqa: SLF001
+    switches = [(name, action) for name, parser in sub.choices.items()
+                for action in parser._actions  # noqa: SLF001
+                if isinstance(action, argparse.BooleanOptionalAction)]
+    assert {name for name, _action in switches} >= {"watermark", "emboss"}
+    assert [(name, action.dest) for name, action in switches
+            if "default" in (action.help or "")] == []
 
 
 def test_option_kwargs_fixed_array_takes_that_many_values():

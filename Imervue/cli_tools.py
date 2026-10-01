@@ -202,6 +202,19 @@ def option_kwargs(spec: dict[str, Any], *, required: bool) -> dict[str, Any]:
     return kwargs
 
 
+def add_argument_as_written(parser: argparse.ArgumentParser, *flags: str,
+                            **kwargs: Any) -> argparse.Action:
+    """``parser.add_argument`` whose help stays the text that was passed.
+
+    Python 3.10 appends `` (default: %(default)s)`` to the help of a
+    ``BooleanOptionalAction`` and later versions do not, so ``--help`` would
+    read differently on 3.10.
+    """
+    action = parser.add_argument(*flags, **kwargs)
+    action.help = kwargs.get("help")
+    return action
+
+
 def add_bridged_arguments(sub: argparse.ArgumentParser, command: BridgedCommand) -> None:
     """Add *command*'s schema-derived arguments (not the shared ``inputs`` ones)."""
     schema = _tool_definitions()[command.tool]["input_schema"]
@@ -210,8 +223,8 @@ def add_bridged_arguments(sub: argparse.ArgumentParser, command: BridgedCommand)
         sub.add_argument(command.positional, help=properties[command.positional].get(
             "description", command.positional))
     for name in command.options:
-        sub.add_argument(option_flag(name), dest=name,
-                         **option_kwargs(properties[name], required=name in required))
+        add_argument_as_written(sub, option_flag(name), dest=name,
+                                **option_kwargs(properties[name], required=name in required))
 
 
 def _params(command: BridgedCommand, args: argparse.Namespace) -> dict[str, Any]:
