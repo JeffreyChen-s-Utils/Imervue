@@ -889,9 +889,13 @@ Try a worked example
 
 The repository ships a fully-rigged demo at
 ``examples/puppet/imeru.puppet`` — **Imeru**, Imervue's original
-mascot. She is drawn and rigged entirely by
-``examples/puppet/imeru/build.py`` (``py -3`` rebuilds the file), so
-the demo carries no third-party rights: 40 drawables on a 1024 × 1336
+mascot. She is made entirely by
+``examples/puppet/imeru/build.py`` (``py -3`` rebuilds the file; it needs
+Blender 4.2 or newer): her hair, body, outfit and arms are modelled and
+cel-shaded in Blender and rendered one puppet layer at a time, her eyes,
+brows and mouth are painted on like a 3D game character's, and the
+layers are then rigged, so the demo carries no third-party rights: 40
+drawables on a 1024 × 1336
 canvas, head turns made of Live2D-style parallax vertex morphs, irises
 clipped to the eye whites, two-joint arms built from rotation
 deformers, and three physics chains that swing the hair.

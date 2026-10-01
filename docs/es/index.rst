@@ -904,9 +904,13 @@ Pruebe un ejemplo completo
 
 El repositorio incluye una demo totalmente riggeada en
 ``examples/puppet/imeru.puppet`` — **Imeru**, la mascota original de
-Imervue. Está dibujada y riggeada enteramente por
-``examples/puppet/imeru/build.py`` (``py -3`` reconstruye el archivo), de modo que
-la demo no conlleva derechos de terceros: 40 drawables sobre un lienzo de 1024 × 1336,
+Imervue. Está hecha enteramente por
+``examples/puppet/imeru/build.py`` (``py -3`` reconstruye el archivo; necesita
+Blender 4.2 o posterior): su pelo, su cuerpo, su atuendo y sus brazos se modelan y
+se sombrean con cel-shading en Blender y se renderizan capa a capa de la marioneta,
+sus ojos, cejas y boca se pintan encima como los de un personaje de juego en 3D, y
+después se riggean las capas, de modo que la demo no conlleva derechos de terceros:
+40 drawables sobre un lienzo de 1024 × 1336,
 giros de cabeza hechos con morfos de vértices de paralaje al estilo Live2D, iris
 recortados al blanco de los ojos, brazos de dos articulaciones construidos con
 deformadores de rotación y tres cadenas de física que balancean el pelo.

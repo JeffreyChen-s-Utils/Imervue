@@ -894,10 +894,14 @@ Ein durchgearbeitetes Beispiel ausprobieren
 
 Das Repository liefert ein vollständig geriggtes Demo unter
 ``examples/puppet/imeru.puppet`` — **Imeru**, das originale Maskottchen
-von Imervue. Sie wird vollständig von ``examples/puppet/imeru/build.py``
-gezeichnet und geriggt (``py -3`` erzeugt die Datei neu), sodass das Demo
-keine Rechte Dritter enthält: 40 Drawables auf einer 1024 × 1336 großen
-Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im Live2D-Stil, auf das
+von Imervue. Sie entsteht vollständig durch
+``examples/puppet/imeru/build.py`` (``py -3`` erzeugt die Datei neu; dafür
+ist Blender 4.2 oder neuer nötig): Haare, Körper, Outfit und Arme werden
+in Blender modelliert, mit Cel-Shading versehen und Puppet-Ebene für
+Puppet-Ebene gerendert, Augen, Brauen und Mund werden wie bei einer
+3D-Spielfigur aufgemalt, und danach werden die Ebenen geriggt, sodass das
+Demo keine Rechte Dritter enthält: 40 Drawables auf einer 1024 × 1336
+großen Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im Live2D-Stil, auf das
 Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
 drei Physikketten, die das Haar schwingen lassen.
 

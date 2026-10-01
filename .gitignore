@@ -232,6 +232,8 @@ CubismSdkForNative*/
 
 # March 7th character drop — proprietary Hoyoverse content
 examples/puppet/char/
+# Blender renders of Imeru's layers (examples/puppet/imeru/render3d.py); rebuilt on demand
+examples/puppet/imeru/render/
 
 # Cubism SDK drop folder — local-only
 /sdk/

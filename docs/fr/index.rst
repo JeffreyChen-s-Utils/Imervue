@@ -902,9 +902,13 @@ Essayer un exemple complet
 
 Le dépôt fournit une démo entièrement riggée à
 ``examples/puppet/imeru.puppet`` — **Imeru**, la mascotte originale
-d'Imervue. Elle est entièrement dessinée et riggée par
-``examples/puppet/imeru/build.py`` (``py -3`` reconstruit le fichier), de sorte
-que la démo ne porte aucun droit de tiers : 40 drawables sur un canevas de
+d'Imervue. Elle est entièrement fabriquée par
+``examples/puppet/imeru/build.py`` (``py -3`` reconstruit le fichier ; il faut
+Blender 4.2 ou plus récent) : ses cheveux, son corps, sa tenue et ses bras sont
+modélisés et ombrés en cel-shading dans Blender, puis rendus un calque de
+marionnette à la fois, ses yeux, ses sourcils et sa bouche sont peints par-dessus
+comme ceux d'un personnage de jeu en 3D, et les calques sont ensuite riggés, de
+sorte que la démo ne porte aucun droit de tiers : 40 drawables sur un canevas de
 1024 × 1336, des rotations de tête faites de morphs de sommets en parallaxe façon
 Live2D, des iris découpés aux blancs des yeux, des bras à deux articulations
 construits à partir de déformeurs de rotation, et trois chaînes physiques qui font

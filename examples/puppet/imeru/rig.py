@@ -481,7 +481,7 @@ def arm_deformers() -> list[Deformer]:
     hand are listed in both deformers and the forearm's runs first: they bend
     at the elbow, then turn with the upper arm, which is forward kinematics.
     """
-    from body_arms import ELBOW, SHOULDER
+    from art import ELBOW, SHOULDER
 
     forearms, uppers = [], []
     for drawn, char in (("l", "r"), ("r", "l")):

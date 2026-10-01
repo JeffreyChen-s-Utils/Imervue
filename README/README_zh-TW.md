@@ -592,7 +592,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 ### 範例
 
-內附的 rig 是 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**，Imervue 的原創吉祥物：1024 × 1336 畫布上的 40 個 drawable、所有 Cubism 標準參數外加雙關節手臂、Live2D 式視差轉頭、虹膜裁切在眼白內的眨眼、頭髮物理、8 個動作（兩個 Idle 循環、TapHead、TapBody，以及含揮手在內的四個 Gesture）和 7 個表情。從 **File > Examples > Imeru** 或 **Open Puppet…** 開啟，點她的頭或身體就能看到她的反應。她從繪製到 rig 全部由程式碼完成，所以檔案不涉及任何第三方權利；執行 `py -3 examples/puppet/imeru/build.py` 即可重新產生。
+內附的 rig 是 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**，Imervue 的原創吉祥物：1024 × 1336 畫布上的 40 個 drawable、所有 Cubism 標準參數外加雙關節手臂、Live2D 式視差轉頭、虹膜裁切在眼白內的眨眼、頭髮物理、8 個動作（兩個 Idle 循環、TapHead、TapBody，以及含揮手在內的四個 Gesture）和 7 個表情。從 **File > Examples > Imeru** 或 **Open Puppet…** 開啟，點她的頭或身體就能看到她的反應。她完全由程式碼打造，做法就跟 3D 動漫風遊戲製作角色一樣：頭髮、身體、服裝和手臂在 Blender 裡建模並以卡通渲染（三渲二）著色，再一次一個 puppet 圖層渲染出來；眼睛、眉毛和嘴巴則是畫上去的，最後再替各圖層綁上 rig，所以檔案不涉及任何第三方權利；執行 `py -3 examples/puppet/imeru/build.py` 即可重新產生（需要 Blender 4.2 以上版本）。
 
 ---
 

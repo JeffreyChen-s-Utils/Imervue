@@ -110,17 +110,6 @@ def clip(mask: Image.Image, by: Image.Image) -> Image.Image:
     return ImageChops.multiply(mask, by)
 
 
-def union(*masks: Image.Image) -> Image.Image:
-    out = masks[0]
-    for m in masks[1:]:
-        out = ImageChops.lighter(out, m)
-    return out
-
-
-def minus(mask: Image.Image, cut: Image.Image) -> Image.Image:
-    return ImageChops.subtract(mask, cut)
-
-
 def scale_mask(mask: Image.Image, factor: float) -> Image.Image:
     return mask.point(lambda v: int(v * factor))
 

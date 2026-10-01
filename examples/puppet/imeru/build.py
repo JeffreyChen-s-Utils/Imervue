@@ -1,13 +1,16 @@
 """Build ``examples/puppet/imeru.puppet``, Imervue's bundled example character, from code.
 
-Run ``py -3 examples/puppet/imeru/build.py`` from anywhere. It draws every layer
-(``art.py`` with ``body_arms.py`` and ``refine.py``, on ``draw.py``; about 25 s),
-rigs them (``rig.py``), adds the motions and expressions (``motions.py``), saves
-the file and checks it against the ``.puppet`` format. The artwork is drawn
-entirely by this code, so the character carries no third-party rights.
+Run ``py -3 examples/puppet/imeru/build.py`` from anywhere (``--no-render`` reuses the last
+render). It models and cel-shades the body, outfit, arms, head and hair in Blender
+(``blender/``, through ``render3d.py``; Blender 4.2 or newer, about a minute), paints the
+face features (``features.py``, on ``draw.py``), rigs every layer (``rig.py``), adds the
+motions and expressions (``motions.py``), saves the file and checks it against the
+``.puppet`` format. All of the artwork comes from this code, so the character carries no
+third-party rights.
 """
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -19,6 +22,7 @@ for _path in (HERE, ROOT):
 
 import art  # noqa: E402
 import motions  # noqa: E402
+import render3d  # noqa: E402
 import rig  # noqa: E402
 from Imervue.puppet.document import PuppetDocument  # noqa: E402
 from Imervue.puppet.document_io import save_puppet  # noqa: E402
@@ -48,8 +52,13 @@ def trim_top(doc: PuppetDocument, top: int) -> None:
     doc.size = (doc.size[0], doc.size[1] - top)
 
 
-def build(output: Path = OUTPUT) -> dict:
-    """Draw, rig and save Imeru to *output*; return the format check of the written file."""
+def build(output: Path = OUTPUT, *, render: bool = True) -> dict:
+    """Render, rig and save Imeru to *output*; return the format check of the written file.
+
+    With *render* False the layers come from the last render in ``render3d.CACHE``.
+    """
+    if render:
+        render3d.render(render3d.CACHE)
     doc = rig.build(art.all_layers())
     trim_top(doc, TOP_MARGIN)
     doc.motions = motions.motions()
@@ -60,6 +69,9 @@ def build(output: Path = OUTPUT) -> dict:
 
 
 if __name__ == "__main__":
-    report = build()
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--no-render", action="store_true",
+                        help="reuse the last Blender render instead of rendering again")
+    report = build(render=not parser.parse_args().no_render)
     print(f"{OUTPUT}: valid={report['valid']}, issues={len(report['issues'])}")
     sys.exit(0 if report["valid"] and not report["issues"] else 1)

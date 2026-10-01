@@ -799,7 +799,7 @@ Puppet 工作區（Puppet 分頁）
 範例
 ^^^^
 
-倉庫內附完整 rig：``examples/puppet/imeru.puppet`` — **Imeru**，Imervue 的原創吉祥物。她從繪製到 rig 全部由 ``examples/puppet/imeru/build.py`` 完成（用 ``py -3`` 執行即可重新產生檔案），所以這個範例不涉及任何第三方權利：1024 × 1336 畫布上的 40 個 drawable、以 Live2D 式視差頂點 morph 組成的轉頭、裁切在眼白內的虹膜、由旋轉變形器組成的雙關節手臂，以及三條擺動頭髮的物理鏈。
+倉庫內附完整 rig：``examples/puppet/imeru.puppet`` — **Imeru**，Imervue 的原創吉祥物。她完全由 ``examples/puppet/imeru/build.py`` 打造（用 ``py -3`` 執行即可重新產生檔案，需要 Blender 4.2 以上版本）：頭髮、身體、服裝和手臂在 Blender 裡建模並以卡通渲染（三渲二）著色，再一次一個 puppet 圖層渲染出來；眼睛、眉毛和嘴巴則像 3D 遊戲角色那樣畫上去，最後再替各圖層綁上 rig，所以這個範例不涉及任何第三方權利：1024 × 1336 畫布上的 40 個 drawable、以 Live2D 式視差頂點 morph 組成的轉頭、裁切在眼白內的虹膜、由旋轉變形器組成的雙關節手臂，以及三條擺動頭髮的物理鏈。
 
 該 rig 帶有所有 Cubism 標準參數（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），外加控制手臂的 ``ParamArmLA/LB/RA/RB``，所以所有標準輸入驅動（攝影機、眨眼、對嘴、游標追蹤）不必逐一設定 rig 就能驅動。檔案內附 8 個動作：``Idle`` 群組有 2 個循環播放的 idle 動作，``TapHead`` 有 ``tap_head``、``TapBody`` 有 ``shy``\ （點她的頭或身體就會播放），``Gesture`` 則有 ``greet``、``wave``、``surprised`` 與 ``sleepy``；另外隨附 7 個表情（smile、happy、surprised、sad、angry、blush、sleepy）。
 

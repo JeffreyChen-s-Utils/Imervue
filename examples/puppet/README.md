@@ -11,17 +11,28 @@ built in (see `Imervue/puppet/`); there is nothing to enable.
 
 ## `imeru.puppet`
 
-Imeru is drawn and rigged entirely by the code in [`imeru/`](imeru/):
-no third-party artwork, model or SDK is involved, so the file can be
-shared and modified like the rest of Imervue. Rebuild it with
+Imeru is made entirely by the code in [`imeru/`](imeru/), the way 3D
+anime games build their characters: no third-party artwork, model or SDK
+is involved, so the file can be shared and modified like the rest of
+Imervue. Rebuild it with
 
 ```
-py -3 examples/puppet/imeru/build.py
+py -3 examples/puppet/imeru/build.py              # render in Blender, then rig
+py -3 examples/puppet/imeru/build.py --no-render  # rig the last render again
 ```
 
-which draws every layer (about 25 seconds), rigs it, adds the motions
-and expressions, writes `imeru.puppet` and checks it against the
-`.puppet` format (`Imervue/puppet/FORMAT.md`).
+It needs Blender 4.2 or newer, found through `$BLENDER_EXE`, `PATH`,
+`D:/Tools/blender-*/` or `C:/Program Files/Blender Foundation/`. The
+build models her hair, body, sailor outfit and arms in Blender
+(`imeru/blender/`), cel-shades them (two or three tones, a rim light, an
+angel ring on the hair, inverted-hull lines) and renders every puppet
+layer on its own at twice the canvas size (`imeru/render3d.py`; about a
+minute, into the ignored `imeru/render/`), cutting the bang and neck
+shadows from extra passes in which the hair and head only cast shadows.
+It then paints her eyes, brows, blush, nose and mouth
+(`imeru/features.py`), rigs every layer (`imeru/rig.py`), adds the
+motions and expressions, writes `imeru.puppet` and checks it against
+the `.puppet` format (`Imervue/puppet/FORMAT.md`).
 
 **What the rig shows off:**
 
@@ -95,7 +106,7 @@ Toggle the toolbar features to drive the rig live:
 6. **Save** — **Save As…** writes the whole rig to a `.puppet` zip
    you can share.
 
-Or build one in code the way `imeru/` does: draw layers, mesh them with
+Or build one in code the way `imeru/` does: render or draw layers, mesh them with
 `Imervue.puppet.auto_mesh.triangulate_alpha_grid`, add vertex morphs,
 deformers, motions and expressions to a `PuppetDocument`, and save it
 with `Imervue.puppet.document_io.save_puppet`.
