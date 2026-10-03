@@ -2272,7 +2272,7 @@ sidecar 里。
 「选用」则不受影响。
 
 没有 sidecar 的文件会读取（并导入）文件本身内嵌的数据：先读 XMP（JPEG、PNG、WebP、
-TIFF、CR3、RW2、ORF、RAF），再读 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的评级与关键字
+TIFF、CR3、RW2、RWL、ORF、RAF），再读 EXIF 的 ``Rating``／``RatingPercent``。Lightroom 把 JPEG 的评级与关键字
 存在这里，Windows 文件资源管理器与部分相机的星级也在这里。有 sidecar 时以 sidecar 为准。
 
 ``Extra Tools`` > ``Library & Metadata`` > ``XMP Sidecars`` 有两个按钮，作用于当前视图中的每张图片：

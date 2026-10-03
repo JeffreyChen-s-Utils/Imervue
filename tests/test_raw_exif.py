@@ -8,7 +8,7 @@ import struct
 import pytest
 from PIL import ExifTags, Image
 
-from Imervue.image.raw_exif import RAW_EXIF_EXTENSIONS, raw_exif
+from Imervue.image.raw_exif import RAW_EXIF_EXTENSIONS, raw_exif, raw_xmp
 
 _CANON_UUID = bytes.fromhex("85c0b687820f11e08111f4ce462b6a48")
 _TAKEN = "2021:05:10 20:11:06"
@@ -252,3 +252,165 @@ def test_metadata_export_fills_the_camera_fields_of_an_orf(tmp_path, monkeypatch
     metadata_export._populate_image_fields(str(_orf(tmp_path / "P1.ORF")), rec)  # noqa: SLF001
     assert rec["exif_Model"] == "E-M10"
     assert rec["exif_DateTimeOriginal"] == _TAKEN
+
+
+# ---------------------------------------------------------------------------
+# raw_xmp: the packet a camera keeps its in-camera rating in
+# ---------------------------------------------------------------------------
+
+_XMP_UUID = bytes.fromhex("be7acfcb97a942e89c71999491e3afac")
+_PACKET = (b'<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/">'
+           b'<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+           b'<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">'
+           b'<xmp:Rating>4</xmp:Rating></rdf:Description></rdf:RDF></x:xmpmeta>'
+           + b" " * 200 + b'<?xpacket end="w"?>')
+
+
+def _cr3_with_xmp(path, packet=_PACKET):
+    _cr3(path)
+    data = path.read_bytes()
+    path.write_bytes(data + _box(b"uuid", _XMP_UUID + packet))
+    return path
+
+
+def _orf_with_xmp(path):
+    tiff = _with_exif_ifd({271: "OLYMPUS", 272: "E-M10", 700: _PACKET}, {0x9003: _TAKEN})
+    path.write_bytes(b"IIRO" + tiff[4:])
+    return path
+
+
+def _raf_with_xmp(path):
+    jpeg = io.BytesIO()
+    Image.new("RGB", (16, 8)).save(jpeg, "JPEG", xmp=_PACKET)
+    header = b"FUJIFILMCCD-RAW 0201FF383501".ljust(84, b"\0") + struct.pack(">II", 148, len(jpeg.getvalue()))
+    path.write_bytes(header.ljust(148, b"\0") + jpeg.getvalue())
+    return path
+
+
+@pytest.mark.parametrize(("make", "name"), [
+    (_cr3_with_xmp, "IMG_1.CR3"), (_orf_with_xmp, "P1.ORF"), (_raf_with_xmp, "DSCF1.RAF"),
+])
+def test_raw_xmp_finds_the_packet(tmp_path, make, name):
+    packet = raw_xmp(make(tmp_path / name))
+    assert b"<xmp:Rating>4</xmp:Rating>" in packet
+
+
+@pytest.mark.parametrize(("make", "name"), [
+    (_cr3, "IMG_1.CR3"), (_orf, "P1.ORF"), (_raf, "DSCF1.RAF"), (_rw2, "P1.RW2"),
+])
+def test_raw_xmp_without_a_packet_is_none(tmp_path, make, name):
+    assert raw_xmp(make(tmp_path / name)) is None
+
+
+def test_raw_xmp_of_another_format_is_none(tmp_path):
+    path = tmp_path / "a.jpg"
+    Image.new("RGB", (4, 4)).save(path, xmp=_PACKET)
+    assert raw_xmp(path) is None
+
+
+@pytest.mark.parametrize(("make", "name"), [
+    (_cr3_with_xmp, "IMG_1.CR3"), (_orf_with_xmp, "P1.ORF"), (_raf_with_xmp, "DSCF1.RAF"),
+])
+def test_an_in_camera_rating_shows(tmp_path, make, name):
+    """Rated on the camera, a CR3 / ORF / RAF showed no stars: Pillow can't open it."""
+    from Imervue.image import xmp_sidecar
+    assert xmp_sidecar.load(str(make(tmp_path / name))).rating == 4
+
+
+def test_an_exif_rating_of_a_cr3_fills_in(tmp_path):
+    from Imervue.image import xmp_sidecar
+    path = tmp_path / "IMG_1.CR3"
+    boxes = _box(b"CMT1", _tiff({271: "Canon", 272: "Canon EOS R6", 0x4746: 3}))
+    moov = _box(b"moov", _box(b"uuid", _CANON_UUID + boxes))
+    path.write_bytes(_box(b"ftyp", b"crx ") + moov)
+    assert xmp_sidecar.load(str(path)).rating == 3
+
+
+def test_a_missing_raw_has_no_embedded_metadata(tmp_path):
+    from Imervue.image import xmp_sidecar
+    assert xmp_sidecar.load(str(tmp_path / "gone.cr3")).is_empty()
+    with pytest.raises(OSError):
+        raw_xmp(tmp_path / "gone.orf")
+
+
+def test_cr3_xmp_in_an_extended_size_box(tmp_path):
+    path = tmp_path / "extended.cr3"
+    payload = _XMP_UUID + _PACKET
+    path.write_bytes(struct.pack(">I4sQ", 1, b"uuid", 16 + len(payload)) + payload)
+    assert raw_xmp(path) == _PACKET
+
+
+@pytest.mark.parametrize("size", [8, 16, 23])
+def test_cr3_xmp_box_smaller_than_its_uuid_header_is_ignored(tmp_path, size):
+    path = tmp_path / "broken.cr3"
+    path.write_bytes(struct.pack(">I4s", size, b"uuid") + _XMP_UUID + _PACKET)
+    assert raw_xmp(path) is None
+
+
+@pytest.mark.parametrize("extension", [".orf", ".rw2", ".rwl"])
+@pytest.mark.parametrize("big_endian", [False, True])
+def test_tiff_raw_xmp_without_an_exif_sub_ifd(tmp_path, extension, big_endian):
+    path = tmp_path / f"packet{extension}"
+    tiff = _tiff({700: _PACKET}, big_endian=big_endian)
+    magic = (b"OR" if big_endian else b"RO") if extension == ".orf" else (b"\x00U" if big_endian else b"U\x00")
+    path.write_bytes(tiff[:2] + magic + tiff[4:])
+    assert raw_xmp(path) == _PACKET
+
+
+@pytest.mark.parametrize("count", [1, 2])
+def test_a_tiff_raw_xmp_tag_with_the_wrong_type_is_ignored(tmp_path, count):
+    path = tmp_path / "invalid.orf"
+    # A corrupt tag 700 encoded as SHORT instead of a byte packet.
+    path.write_bytes(b"IIRO" + struct.pack("<IH", 8, 1)
+                     + struct.pack("<HHIHHI", 700, 3, count, 17, 18, 0))
+    assert raw_xmp(path) is None
+
+
+def test_cr3_xmp_in_a_truncated_box_is_ignored(tmp_path):
+    path = tmp_path / "truncated.cr3"
+    data = _box(b"uuid", _XMP_UUID + _PACKET)
+    path.write_bytes(data[:-1])
+    assert raw_xmp(path) is None
+
+
+@pytest.mark.parametrize("extension", sorted(RAW_EXIF_EXTENSIONS))
+def test_damaged_raw_xmp_is_ignored(tmp_path, extension):
+    path = tmp_path / f"damaged{extension}"
+    path.write_bytes(b"FUJIFILMCCD-RAW " if extension == ".raf" else b"broken")
+    assert raw_xmp(path) is None
+
+
+def test_cr3_xmp_size_limit_and_unrelated_uuid(tmp_path, monkeypatch):
+    from Imervue.image import raw_exif as module
+
+    path = tmp_path / "bounded.cr3"
+    path.write_bytes(_box(b"uuid", b"x" * 16 + b"other metadata")
+                     + _box(b"uuid", _XMP_UUID + _PACKET))
+    monkeypatch.setattr(module, "_MAX_METADATA_BYTES", len(_PACKET))
+    assert raw_xmp(path) == _PACKET
+    monkeypatch.setattr(module, "_MAX_METADATA_BYTES", len(_PACKET) - 1)
+    assert raw_xmp(path) is None
+
+
+def test_empty_cr3_xmp_is_none(tmp_path):
+    assert raw_xmp(_cr3_with_xmp(tmp_path / "empty.cr3", packet=b"")) is None
+
+
+@pytest.mark.parametrize("packet", [_PACKET, b"not XML",
+                                  b'<!DOCTYPE x [<!ENTITY e SYSTEM "file:///no-file">]><x>&e;</x>'])
+def test_raw_xmp_rating_precedes_exif_and_bad_xml_falls_back(tmp_path, packet):
+    from Imervue.image import xmp_sidecar
+
+    path = tmp_path / "rated.cr3"
+    boxes = _box(b"CMT1", _tiff({0x4749: 50}))  # EXIF RatingPercent: three stars
+    path.write_bytes(_box(b"moov", _box(b"uuid", _CANON_UUID + boxes))
+                     + _box(b"uuid", _XMP_UUID + packet))
+    assert xmp_sidecar.load(path).rating == (4 if packet == _PACKET else 3)
+
+
+def test_a_sidecar_rating_precedes_the_camera_rating(tmp_path):
+    from Imervue.image import xmp_sidecar
+
+    path = _cr3_with_xmp(tmp_path / "rated.cr3")
+    xmp_sidecar.save(path, xmp_sidecar.XmpData(rating=1))
+    assert xmp_sidecar.load(path).rating == 1

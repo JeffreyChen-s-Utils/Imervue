@@ -2170,7 +2170,7 @@ sidecar に残します。
 sidecar は「除外」を解除し、「採用」はそのままです。
 
 サイドカーのないファイルは、ファイル自体に埋め込まれた内容を読み込み(取り込み)ます。
-まず XMP パケット(JPEG、PNG、WebP、TIFF、CR3、RW2、ORF、RAF)、次に EXIF の ``Rating``／``RatingPercent``
+まず XMP パケット(JPEG、PNG、WebP、TIFF、CR3、RW2、RWL、ORF、RAF)、次に EXIF の ``Rating``／``RatingPercent``
 です。Lightroom は JPEG の評価とキーワードを、Windows エクスプローラーや一部の
 カメラは星をここに保存します。サイドカーがあればサイドカーが優先です。
 

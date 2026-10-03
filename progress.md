@@ -5,5 +5,3 @@ Item numbers (`#n`) are never reused. Tags: [DECIDE] needs the owner's decision,
 Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-10, X-9, X-10, X-18).
 
 ## Open
-
-- **#57** Finish the pending RAW embedded-XMP rating reader in `image/raw_exif.py` and `image/xmp_sidecar.py`: extended UUID headers, truncated boxes and non-packet TIFF tags need regression coverage. Next: pass the targeted tests and full suite, update the architecture map and update log, then commit the completed change.

@@ -2755,7 +2755,7 @@ Bridge (``Select``, ``Second``, ``Approved``, ``Review``, ``To Do``). Новый
 -1. Неотклонённый sidecar снимает Reject; Pick остаётся без изменений.
 
 Файл без sidecar читается — и импортируется — из того, что встроено в него самого:
-из XMP-пакета (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), затем из EXIF ``Rating`` / ``RatingPercent``.
+из XMP-пакета (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), затем из EXIF ``Rating`` / ``RatingPercent``.
 Там Lightroom хранит оценку и ключевые слова JPEG, а Проводник Windows и некоторые
 камеры — звёзды. Если sidecar есть, он главнее.
 

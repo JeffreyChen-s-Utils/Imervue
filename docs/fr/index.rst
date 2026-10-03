@@ -2695,7 +2695,7 @@ importée comme **Reject** du tri, sans étoiles, et un Reject est exporté en -
 Un sidecar non rejeté lève un Reject ; un Pick reste tel quel.
 
 Un fichier sans sidecar est lu — et importé — depuis ce qu'il embarque lui-même :
-son paquet XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), puis son ``Rating`` / ``RatingPercent``
+son paquet XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), puis son ``Rating`` / ``RatingPercent``
 EXIF. C'est là que Lightroom garde la note et les mots-clés d'un JPEG, et que
 l'Explorateur Windows et certains appareils gardent leurs étoiles. Un sidecar,
 s'il existe, l'emporte.

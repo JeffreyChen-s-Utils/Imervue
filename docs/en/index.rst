@@ -2605,7 +2605,7 @@ imported as a culling **Reject** with no stars, and a Reject is exported as -1.
 A sidecar that isn't rejected lifts a Reject; a Pick is left alone.
 
 A file without a sidecar is read — and imported — from what it embeds itself: its
-XMP packet (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), then its EXIF ``Rating`` / ``RatingPercent``.
+XMP packet (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), then its EXIF ``Rating`` / ``RatingPercent``.
 That is where Lightroom keeps a JPEG's rating and keywords, and where Windows
 Explorer and some cameras keep their stars. A sidecar, when there is one, wins.
 

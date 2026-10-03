@@ -2350,7 +2350,7 @@ Lightroom 표기(``Red`` … ``Purple``)와 Bridge 표기(``Select``, ``Second``
 해제하며, '선택'은 그대로 둡니다.
 
 사이드카가 없는 파일은 파일 자체에 포함된 내용을 읽고 가져옵니다. 먼저 XMP
-패킷(JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), 다음으로 EXIF ``Rating``/``RatingPercent``\ 입니다.
+패킷(JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), 다음으로 EXIF ``Rating``/``RatingPercent``\ 입니다.
 Lightroom은 JPEG의 별점과 키워드를, Windows 탐색기와 일부 카메라는 별점을 여기에
 저장합니다. 사이드카가 있으면 사이드카가 우선입니다.
 

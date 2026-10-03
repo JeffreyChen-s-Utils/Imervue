@@ -2720,7 +2720,7 @@ exportiert. Eine nicht abgelehnte Sidecar-Datei hebt ein Reject auf; ein Pick
 bleibt unberührt.
 
 Eine Datei ohne Sidecar wird aus dem gelesen — und importiert —, was sie selbst
-einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), dann ihrem EXIF-``Rating`` /
+einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), dann ihrem EXIF-``Rating`` /
 ``RatingPercent``. Dort speichert Lightroom Bewertung und Stichwörter eines JPEG,
 und dort legen der Windows-Explorer und manche Kameras ihre Sterne ab. Eine
 vorhandene Sidecar-Datei hat Vorrang.
