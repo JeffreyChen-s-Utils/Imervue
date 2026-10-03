@@ -6,4 +6,4 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- **#56** [UNVERIFIED] Three Paint text tests fail on a local run with `QT_QPA_PLATFORM=offscreen`, on `6200aa5f` already: `tests/test_paint_page_numbering.py::test_start_at_offsets_the_first_page_number`, `tests/test_paint_text.py::test_preview_font_follows_combo_box` (the font family comes back as `Sans Serif`, not `Courier New`) and `tests/test_paint_text_along_selection.py::test_the_text_is_drawn_on_a_new_layer_along_the_outline`. CI's `gui` job passes all three; it does not set `QT_QPA_PLATFORM`. Unconfirmed: the offscreen platform finds no system fonts on Windows. Next: confirm the cause, then give these tests a font that platform can load, or skip them there with a reason.
+- **#57** Finish the pending RAW embedded-XMP rating reader in `image/raw_exif.py` and `image/xmp_sidecar.py`: extended UUID headers, truncated boxes and non-packet TIFF tags need regression coverage. Next: pass the targeted tests and full suite, update the architecture map and update log, then commit the completed change.

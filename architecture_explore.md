@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-01 · 對應 commit `cc59edc4` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-03 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 921 | 153,441 |
+| `tests/` | 921 | 153,456 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,626 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,393 |
@@ -84,11 +84,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,770** | **337,339** |
+| **總計** | **1,770** | **337,354** |
 
 其中 `Imervue/` 套件本身 769 檔 / 167,877 行。
 
-測試碼與產品碼比約 **0.83 : 1**（155k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.83 : 1**（153k vs 183k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -984,7 +984,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-921 個檔、153,441 行。`pyproject.toml` 定義三個互斥層級 marker：
+921 個檔、153,456 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -998,6 +998,8 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 **共用 fixture**：`qapp`、`tmp_path`、`sample_*_array`、`image_folder`、`pump_until`（等候排隊中的 Qt 訊號）、
 `fake_clipboard`（行程內剪貼簿），以及 autouse 的 `_isolate_user_settings`（把設定路徑導開，測試絕不寫真的
 `user_setting.json`）、`os_trash`（以行程內假回收筒取代 `send2trash`，測試絕不碰系統資源回收筒）和 `_restore_app_appearance`（還原測試改過的 QApplication 字型與樣式表，避免同一 xdist worker 後續檔案的元件尺寸被改變）。
+
+Windows 的 `offscreen` 平台不會自動列出系統字型；`qapp` 在字型資料庫為空時載入系統的 Segoe UI 與 Courier New，並沿用原字級把預設字型設為 Segoe UI，讓頁碼、沿選取範圍文字、字型預覽與介面縮放測試使用真實字形。字型預覽測試切換到資料庫內另一個字型，不假設某個字型在所有作業系統都有安裝。
 
 **輔助模組**：`_qt_skip.py`（GL widget 的 CI skip marker）、`_instant_worker.py`、`_toast_spy.py`、`_app_appearance.py`（`app_appearance_restored`：字型與樣式表還原 context manager）。
 
