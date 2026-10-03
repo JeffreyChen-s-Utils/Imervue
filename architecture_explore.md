@@ -1240,3 +1240,11 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
 
 
 
+
+
+## FrontEngine puppet consumer
+
+FrontEngine optionally reuses the public puppet reader/Canvas/controllers and desktop-pet
+script engine in its own windows. It does not instantiate PetWindow or modify Imervue
+preferences. Archive v1 and runtime import contracts are listed in architecture.md §6.
+FrontEngine validates containers and tests reference reader round trips plus real GL frames.

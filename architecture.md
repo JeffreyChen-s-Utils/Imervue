@@ -138,6 +138,17 @@ Public interfaces other code or users depend on:
 
 ## 6. Cross-project boundaries
 
+- **FrontEngine (optional downstream)** consumes the version 1 `.puppet` archive through
+  `Imervue.puppet.document_io.load_puppet`, `Imervue.puppet.canvas.PuppetCanvas`,
+  `MotionPlayer`, `IdleDriver`, `InputEngine`, and
+  `Imervue.desktop_pet.pet_script` loader/engine. FrontEngine's `puppet` extra requires
+  `Imervue>=1.0.90`; it validates container versions/resources before loading and owns
+  window geometry, timers and settings without creating Imervue's PetWindow.
+  PUPPET entries in FrontEngine scene v1 reference these archives; `.fescene` packages
+  copy the referenced assets. Imervue does not read the FrontEngine scene envelope.
+  Renaming these runtime imports or changing the container requires coordinated updates
+  to `FrontEngine/frontengine/utils/imervue/` and its interchange tests.
+
 - **Imervue_Plugins (distribution repo).** `Imervue/plugin/plugin_downloader.py` lists the repo with
   one recursive git-tree call on `main` (`REPO_TREE_URL`), accepts only the categories `plugins` and
   `languages` (`PLUGIN_CATEGORIES`), and downloads only the files directly inside

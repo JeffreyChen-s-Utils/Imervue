@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261003-01 | 2026-10-03 | Document FrontEngine puppet consumer contract | #done #interop | [2026-10](2026-10.md) |
 | U-20261001-64 | 2026-10-01 | Imeru's build uses fixed sequences and checks what reaches Blender; Codacy skips the accepted patterns | #fix #ci #puppet | [2026-10](2026-10.md) |
 | U-20261001-63 | 2026-10-01 | Refactor: PR #93's static-analysis findings that keep behaviour are cleared | #refactor #ci #puppet | [2026-10](2026-10.md) |
 | U-20261001-62 | 2026-10-01 | The sdist carries no tests either: MANIFEST.in prunes tests/ | #decision #packaging #release #X-13 #done | [2026-10](2026-10.md) |
@@ -523,6 +524,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260922-02 | 2026-09-22 | Imervue_Plugins mirror drift found | #snapshot #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260922-01 | 2026-09-22 | Adopt progress/architecture/docs-updates rules | #docs #migration | [2026-09](2026-09.md) |
 
+
 ## Batches
 
 | File | Period | Entries |
@@ -530,4 +532,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 64 |
+| [2026-10.md](2026-10.md) | 2026-10 | 65 |
