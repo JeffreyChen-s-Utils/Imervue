@@ -19,6 +19,9 @@ SCRIPT = REPO_ROOT / "scripts" / "dev_release.py"
 WORKFLOW = REPO_ROOT / ".github" / "workflows" / "test.yml"
 RELEASE_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "release.yml"
 FILES_HOST = "https://files.pythonhosted.org/"
+LOCKED_INSTALL = ("python -m pip install --require-hashes --only-binary :all: "
+                  "-r .github/requirements/publish.txt")
+BUILD_COMMAND = "python -m build --no-isolation"
 
 
 def _load_script():
@@ -194,7 +197,7 @@ def test_the_workflow_publishes_only_a_tested_push_to_dev():
 def test_the_workflow_uploads_only_a_changed_build_and_keeps_no_credentials():
     job = _publish_job()
     upload = job.index("twine upload")
-    assert job.index("dev_release.py prepare") < job.index("python -m build") < upload
+    assert job.index("dev_release.py prepare") < job.index(BUILD_COMMAND) < upload
     assert job.index("twine check dist/*") < upload
     assert job.index("dev_release.py changed dist") < upload
     assert job.index("git ls-remote origin refs/heads/dev") < upload
@@ -204,12 +207,14 @@ def test_the_workflow_uploads_only_a_changed_build_and_keeps_no_credentials():
 
 
 def test_the_workflow_builds_with_the_tooling_of_the_stable_release():
-    # release.yml pins pip, build and twine; a dev package built by other versions would not
-    # be the package the stable release builds.
-    release = RELEASE_WORKFLOW.read_text(encoding="utf-8")
-    job = _publish_job()
-    for tool in ("pip", "build", "twine"):
-        pin = re.search(rf'"{tool}==[^"]+"', release)
-        assert pin is not None, tool
-        assert pin.group(0) in job, tool
-    assert "--only-binary :all:" in job
+    # Both jobs install the one hash-locked file and build without isolation, so build, twine
+    # and the build backend are the same versions; a dev package built by other versions
+    # would not be the package the stable release builds.
+    release = RELEASE_WORKFLOW.read_text(encoding="utf-8").split("\njobs:\n", 1)[1]
+    release_job = release.split("\n  build-exe-windows:", 1)[0]
+    for job in (_publish_job(), release_job):
+        assert job.count(LOCKED_INSTALL) == 1
+        assert job.count("python -m build") == job.count(BUILD_COMMAND) == 1
+        assert job.index(LOCKED_INSTALL) < job.index(BUILD_COMMAND) < job.index("twine check")
+        # No version named beside the lock: a second pin would be a second truth.
+        assert re.findall(r'"(?:pip|build|twine|setuptools)==[^"]+"', job) == []

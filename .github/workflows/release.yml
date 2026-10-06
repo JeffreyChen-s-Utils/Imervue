@@ -91,6 +91,16 @@ jobs:
         with:
           python-version: "3.12"
 
+      # This job holds the PyPI token, so it installs one file and nothing else:
+      # build, twine and the build backend, wheels only, at locked hashes. The
+      # publish-dev job of test.yml installs the same file. The command that
+      # regenerates it is at the top of .github/requirements/publish.in.
+      # Installed before the version bump: a lock that fails to install stops
+      # the job before a tag is pushed.
+      - name: Install build tooling
+        run: |
+          python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt
+
       - name: Determine bump type from PR labels
         id: bump
         env:
@@ -149,17 +159,16 @@ jobs:
           git push origin main
           git push origin "v${{ steps.version.outputs.new }}"
 
+      # --no-isolation: the backend is the setuptools locked in publish.txt, not
+      # a fresh download.
       - name: Build sdist and wheel
-        run: |
-          python -m pip install --upgrade --only-binary :all: "pip==26.2.1" "build==1.5.0"
-          python -m build
+        run: python -m build --no-isolation
 
       - name: Upload to PyPI with twine
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          python -m pip install --upgrade --only-binary :all: "twine==6.2.0"
           python -m twine check dist/*
           python -m twine upload dist/*
 

@@ -151,16 +151,19 @@ jobs:
       with:
         python-version: "3.12"
     - name: Install build tooling
-      # The versions release.yml builds the stable package with
-      # (tests/test_dev_release.py keeps the two in step). Wheels only: an sdist
-      # would run its setup script on the runner.
+      # This job holds the PyPI token, so it installs one file and nothing else:
+      # build, twine and the build backend, wheels only, at locked hashes. The
+      # release job of release.yml installs the same file. The command that
+      # regenerates it is at the top of .github/requirements/publish.in.
       run: |
-        python -m pip install --upgrade --only-binary :all: "pip==26.2.1" "build==1.5.0" "twine==6.2.0"
+        python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt
     - name: Write pyproject.toml from dev.toml with the next version
       run: python scripts/dev_release.py prepare
     - name: Build sdist and wheel
-      # Building does not import the package, so PySide6 is not installed here.
-      run: python -m build
+      # --no-isolation: the backend is the setuptools locked in publish.txt, not
+      # a fresh download. Building does not import the package, so PySide6 is
+      # not installed here.
+      run: python -m build --no-isolation
     - name: Verify distribution metadata
       run: python -m twine check dist/*
     - name: Compare with the newest published wheel
