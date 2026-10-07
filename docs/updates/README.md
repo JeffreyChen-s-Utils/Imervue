@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-25 | 2026-10-07 | Complete optimization plan and publish GPU safeguards to plugin main | #done #Imervue #Imervue_Plugins #performance #color | [2026-10](2026-10.md) |
 | U-20261007-24 | 2026-10-07 | Canonical export default and measured GPU color safeguards | #done #Imervue #performance #GPU #color | [2026-10](2026-10.md) |
 | U-20261007-23 | 2026-10-07 | Independent WAL readers and indexed limited library searches | #done #Imervue #performance #library #SQLite | [2026-10](2026-10.md) |
 | U-20261007-22 | 2026-10-07 | Background thumbnail inventory and atomic concurrent cache writes | #done #Imervue #performance #cache | [2026-10](2026-10.md) |
@@ -559,4 +560,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 92 |
+| [2026-10.md](2026-10.md) | 2026-10 | 93 |
