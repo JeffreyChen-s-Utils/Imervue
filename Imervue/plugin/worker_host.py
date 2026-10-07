@@ -39,6 +39,10 @@ def _stop_and_null(host: object, attr: str) -> QThread | None:
         with contextlib.suppress(RuntimeError, TypeError):
             worker.disconnect()
         worker.wait()
+    state = getattr(worker, "job_state", None)
+    if state is not None and not running:
+        state.request_cancel()
+        state.finish()
     setattr(host, attr, None)
     return None
 

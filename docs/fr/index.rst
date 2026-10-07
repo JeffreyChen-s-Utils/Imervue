@@ -45,6 +45,8 @@ Modify garde les commandes réactives grâce à un aperçu de moindre résolutio
 
 Annuler ou fermer un outil en cours en arrière-plan rend la main immédiatement. Le dialogue affiche l’annulation et désactive ses commandes jusqu’à la fin du travail non interruptible et du nettoyage, puis se ferme avec le résultat initial. Une phase de finalisation peut brièvement apparaître à la fin normale. Une réouverture ne reçoit aucun ancien résultat. À la fermeture finale, l’application attend la fin sûre des travaux restants.
 
+Ouvrez ``Extra Tools`` > ``Workflow`` > ``Background Jobs`` pour consulter les exports par lots, analyses de bibliothèque, agrandissements IA/transformations partagées des plugins et téléchargements de plugins de toutes les fenêtres. Les sorties enregistrées et les erreurs restent disponibles après fermeture du dialogue initial. L’annulation est coopérative ; les opérations restent en vie jusqu’à leur fin réelle. Réessayer lance une nouvelle tentative uniquement pour les éléments en échec et conserve les sorties réussies. Un téléchargement de plugin constitue une installation atomique. Le panneau affiche au plus 500 détails, erreurs en premier ; le rapport complet enregistre tous les résultats en JSON. Effacer les tâches terminées libère leur historique.
+
 .. contents:: Table des matières
    :depth: 2
    :local:

@@ -8,6 +8,7 @@ Dependencies: onnxruntime, huggingface_hub, numpy (all lightweight).
 from __future__ import annotations
 
 import logging
+from functools import partial
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -28,6 +29,8 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.system.image_listing import list_images
+from Imervue.system.job_state import JobState
+from Imervue.gui.background_jobs import job_registry
 from Imervue.gui.export_source import upright_image
 from Imervue.image.in_place_save import (
     can_rewrite_in_place, in_place_format, save_edited_copy, save_over_source,
@@ -235,12 +238,13 @@ class _UpscaleWorker(QThread):
                  model_key: str, overwrite: bool,
                  scale_override: int = 0):
         super().__init__()
-        self._paths = paths
+        self._paths = list(dict.fromkeys(paths))
         self._output_dir = output_dir
         self._model_key = model_key
         self._overwrite = overwrite
         # For traditional methods the caller supplies the scale explicitly.
         self._scale_override = scale_override
+        self.job_state = JobState(self._paths)
 
     # -- helpers -------------------------------------------------------------
 
@@ -290,7 +294,12 @@ class _UpscaleWorker(QThread):
             # stranding the dialog on "Downloading…" with Apply disabled forever.
             # Report all-failed so _on_finished resets the UI and toasts.
             logger.exception("Upscale run failed: %s", exc)
+            self.job_state.finish(error=str(exc) or type(exc).__name__)
             self.result_ready.emit(0, len(self._paths))
+        finally:
+            if self.isInterruptionRequested():
+                self.job_state.request_cancel()
+            self.job_state.finish()
 
     def _run_traditional(self):
         from PIL import Image
@@ -322,21 +331,28 @@ class _UpscaleWorker(QThread):
         total = len(self._paths)
         success = failed = 0
         for i, src in enumerate(self._paths):
-            if self.isInterruptionRequested():
+            if self.isInterruptionRequested() or self.job_state.cancelled:
+                self.job_state.request_cancel()
                 break
             self.progress.emit(i, total, Path(src).name)
             if self._skip_unwritable(src):
+                self.job_state.record(src, error="Source cannot be rewritten without losing frames")
                 failed += 1
                 continue
             try:
                 out_img = upscale(upright_image(src))
+                if self.isInterruptionRequested() or self.job_state.cancelled:
+                    self.job_state.request_cancel()
+                    break
                 dst = self._output_path(
                     src, self._output_dir, scale, self._overwrite)
                 self._save(src, out_img, dst)
+                self.job_state.record(src, output=dst)
                 success += 1
             except Exception as exc:
                 logger.exception("Upscale failed for %s: %s", src, exc,
                                  exc_info=True)
+                self.job_state.record(src, error=str(exc) or type(exc).__name__)
                 failed += 1
         self.result_ready.emit(success, failed)
 
@@ -601,6 +617,9 @@ class AIUpscaleDialog(WorkerHostMixin, QDialog):
             self._worker = _UpscaleWorker(
                 self._paths, output_dir, model_key, overwrite,
                 scale_override=scale_override)
+            job_registry().add(self._worker, self.windowTitle(),
+                               partial(_UpscaleWorker, output_dir=output_dir, model_key=model_key,
+                                       overwrite=overwrite, scale_override=scale_override))
             self._worker.progress.connect(self._on_progress)
             self._worker.tile_progress.connect(self._on_tile_progress)
             self._worker.result_ready.connect(self._on_finished)

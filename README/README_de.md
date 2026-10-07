@@ -78,6 +78,8 @@ Designprinzipien:
 
 Das Abbrechen oder Schließen eines laufenden Hintergrundwerkzeugs kehrt sofort zurück. Der Dialog zeigt den Abbruch an und sperrt seine Bedienung, bis die aktuell nicht unterbrechbare Arbeit und die Bereinigung beendet sind; danach schließt er mit dem ursprünglichen Ergebnis. Bei normalem Abschluss kann kurz die Abschlussphase erscheinen. Nach erneutem Öffnen kommen keine alten Ergebnisse an. Beim endgültigen Beenden wartet die Anwendung auf das sichere Ende verbliebener Arbeit.
 
+Unter `Extra Tools` > `Workflow` > `Background Jobs` sehen Sie Batch-Exporte, Bibliotheksscans, KI-Vergrößerung/gemeinsame Plugin-Transformationen und Plugin-Downloads aller Fenster. Gespeicherte Ausgaben und Fehlergründe bleiben nach dem Schließen des ursprünglichen Dialogs erhalten. Abbrechen ist kooperativ; laufende Operationen bleiben bis zum tatsächlichen Ende erhalten. Wiederholen startet einen neuen Versuch nur für fehlgeschlagene Einträge und bewahrt erfolgreiche Ausgaben. Ein Plugin-Download ist ein atomarer Installationsauftrag. Das Panel zeigt höchstens 500 Details, Fehler zuerst; der vollständige Bericht speichert alle Ergebnisse als JSON. Abgeschlossene Einträge löschen gibt deren Historie frei.
+
 ## Installation
 
 ### Voraussetzungen

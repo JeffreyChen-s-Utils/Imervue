@@ -19,6 +19,7 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.free_names import free_names
+from Imervue.system.job_state import JobState
 
 logger = logging.getLogger("Imervue.apply_save")
 
@@ -40,11 +41,16 @@ class EffectWorker(QThread):
         self._path = path
         self._transform = transform
         self._out = out_path
+        self.job_state = JobState([path])
 
     def run(self) -> None:
         try:
             result = self._transform(load_rgba(self._path))
+            if self.isInterruptionRequested() or self.job_state.cancelled:
+                self.job_state.request_cancel()
+                return
             Image.fromarray(result, mode="RGBA").save(self._out)
+            self.job_state.record(self._path, output=self._out)
             self.done.emit(True, self._out)
         except Exception as exc:  # a worker must always report
             # The transform can raise anything: ImportError for an optional
@@ -53,7 +59,10 @@ class EffectWorker(QThread):
             # escape, so ``done`` never fired and the calling dialog hung with its
             # Apply button disabled forever. Always report the failure instead.
             logger.exception("Effect failed: %s", exc)
+            self.job_state.record(self._path, error=str(exc) or type(exc).__name__)
             self.done.emit(False, str(exc))
+        finally:
+            self.job_state.finish()
 
 
 def finalize_worker(dialog) -> None:

@@ -45,6 +45,8 @@ Modify mantiene los controles ágiles con una vista previa de menor resolución 
 
 Cancelar o cerrar una herramienta en segundo plano vuelve de inmediato. El diálogo indica la cancelación y desactiva sus controles hasta que terminen el trabajo actual que no puede interrumpirse y la limpieza; después se cierra con el resultado original. Al completar normalmente puede mostrar brevemente la finalización. Al volver a abrirlo no recibe resultados antiguos. Al salir definitivamente, la aplicación espera a que termine de forma segura el trabajo pendiente.
 
+Abra ``Extra Tools`` > ``Workflow`` > ``Background Jobs`` para ver exportaciones por lotes, escaneos de biblioteca, ampliación IA/transformaciones compartidas de plugins y descargas de plugins de todas las ventanas. Los resultados conservan salidas guardadas y motivos de fallo al cerrar el diálogo original. La cancelación es cooperativa; las operaciones siguen vivas hasta terminar. Reintentar crea otro intento solo para elementos fallidos y conserva las salidas correctas. Una descarga de plugin es una instalación atómica. El panel muestra hasta 500 detalles, primero los fallos; guardar el informe completo escribe todos los resultados en JSON. Limpiar finalizados libera su historial.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:

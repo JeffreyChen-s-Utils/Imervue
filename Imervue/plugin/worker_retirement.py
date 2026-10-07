@@ -20,6 +20,11 @@ def _drain_on_exit() -> None:
         retirement.wait()
 
 
+def drain_retiring_workers() -> None:
+    """Drain before explicit process exit, which does not emit QApplication.aboutToQuit."""
+    _drain_on_exit()
+
+
 class WorkerRetirement(QThread):
     """Keep workers/owner alive until cancellation hooks and actual thread exit complete."""
 

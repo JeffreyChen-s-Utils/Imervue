@@ -25,6 +25,7 @@ from Imervue.library import image_index
 from Imervue.library.maintenance import scan_image_files
 from Imervue.library.bloom_filter import BloomFilter, fingerprint
 from Imervue.library.phash import compute_phash
+from Imervue.system.job_state import JobState
 
 logger = logging.getLogger("Imervue.library.scanner")
 
@@ -148,23 +149,24 @@ class LibraryScanner(QObject):
     done = Signal(int)                 # total_indexed
     error = Signal(str)
 
-    def __init__(self, roots: list[str], *, with_phash: bool = True):
+    def __init__(self, roots: list[str], *, with_phash: bool = True,
+                 paths: list[str] | None = None):
         super().__init__()
         self._roots = list(roots)
         self._with_phash = with_phash
         self._cancel = False
         self._reported = 0
+        self._exact_paths = paths
+        self.job_state = JobState()
 
     def cancel(self) -> None:
         self._cancel = True
+        self.job_state.request_cancel()
 
     def run(self) -> None:
         try:
-            paths: list[Path] = []
-            for root in self._roots:
-                if not Path(root).is_dir():
-                    continue
-                paths.extend(_iter_images(root))
+            paths = self._discover_paths()
+            self.job_state.set_items([str(path) for path in paths])
             total = len(paths)
             # Hydrate the skip-bloom once before walking — on a
             # re-scan of an unchanged library this lets ~all files
@@ -174,7 +176,18 @@ class LibraryScanner(QObject):
             self.done.emit(total)
         except Exception as exc:
             logger.exception("library scan failed")
+            self.job_state.finish(error=str(exc) or type(exc).__name__)
             self.error.emit(str(exc))
+        finally:
+            self.job_state.finish()
+
+    def _discover_paths(self) -> list[Path]:
+        if self._exact_paths is not None:
+            return [Path(path) for path in self._exact_paths]
+        return [path for root in self._roots if Path(root).is_dir() for path in _iter_images(root)]
+
+    def _cancelled(self) -> bool:
+        return self._cancel or self.job_state.cancelled
 
     def _scan_paths(self, paths: list[Path], total: int, bloom) -> None:
         """Index *paths*, committing one transaction per chunk so a large
@@ -182,7 +195,7 @@ class LibraryScanner(QObject):
         with ThreadPoolExecutor(max_workers=probe_workers(),
                                 thread_name_prefix="library-probe") as pool:
             for start in range(0, total, _SCAN_COMMIT_CHUNK):
-                if self._cancel:
+                if self._cancelled():
                     return
                 chunk = paths[start:start + _SCAN_COMMIT_CHUNK]
                 self._scan_chunk(pool, chunk, start, total, bloom)
@@ -200,7 +213,9 @@ class LibraryScanner(QObject):
         with image_index.write_batch():
             for row in rows:
                 _store(row)
-        if chunk and not self._cancel:
+        for row in rows:
+            self.job_state.record(row.path)
+        if chunk and not self._cancelled():
             self._report(start + len(chunk), total, chunk[-1], force=True)
 
     def _changed(self, chunk: list[Path], start: int, bloom) -> list[_Pending]:
@@ -209,14 +224,17 @@ class LibraryScanner(QObject):
         for offset, path in enumerate(chunk):
             try:
                 stat = path.stat()
-            except OSError:
+            except OSError as exc:
+                self.job_state.record(str(path), error=str(exc))
                 continue
             if not _can_skip_via_bloom(path, stat, bloom, need_phash=self._with_phash):
                 pending.append(_Pending(start + offset, path, stat))
+            else:
+                self.job_state.record(str(path))
         return pending
 
     def _probe_unless_cancelled(self, item: _Pending) -> ScanRow | None:
-        if self._cancel:
+        if self._cancelled():
             return None
         return _probe(item.path, item.stat, with_phash=self._with_phash)
 
@@ -235,15 +253,21 @@ class LibraryScanThread(QThread):
     done = Signal(int)
     error = Signal(str)
 
-    def __init__(self, roots: list[str], *, with_phash: bool = True, parent=None):
+    def __init__(self, roots: list[str], *, with_phash: bool = True, parent=None,
+                 paths: list[str] | None = None):
         super().__init__(parent)
-        self._scanner = LibraryScanner(roots, with_phash=with_phash)
+        self._scanner = LibraryScanner(roots, with_phash=with_phash, paths=paths)
+        self.job_state = self._scanner.job_state
         self._scanner.progress.connect(self.progress)
         self._scanner.done.connect(self.done)
         self._scanner.error.connect(self.error)
 
     def cancel(self) -> None:
         self._scanner.cancel()
+
+    def stop(self) -> None:
+        """WorkerHost cancellation hook; only sets the shared cancellation flag."""
+        self.cancel()
 
     def run(self) -> None:
         self._scanner.run()

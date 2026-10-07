@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -18,6 +19,8 @@ from PySide6.QtWidgets import (
 from PIL import Image
 
 from Imervue.system.qt_timers import call_later
+from Imervue.system.job_state import JobState
+from Imervue.gui.background_jobs import job_registry
 from Imervue.gui.export_metadata_combo import metadata_row
 from Imervue.gui.export_source import open_export_source
 from Imervue.image.export_metadata import DEFAULT_METADATA_POLICY, export_save_options
@@ -77,21 +80,31 @@ class _ExportWorker(QThread):
 
     def __init__(self, paths: list[str], output_dir: str, settings: ExportSettings):
         super().__init__()
-        self._paths = paths
+        self._paths = list(dict.fromkeys(paths))
         self._output_dir = output_dir
         self._settings = settings
         self._abort = False
+        self.job_state = JobState(self._paths)
 
     def abort(self) -> None:
         """Ask the export loop to stop before the next image (Cancel / close)."""
         self._abort = True
+        self.job_state.request_cancel()
 
     def run(self):
-        renderer = develop_backends.open_renderer(self._settings.backend)
+        renderer = None
         counts = (0, 0)
         try:
+            renderer = develop_backends.open_renderer(self._settings.backend)
             counts = self._export_all(renderer)
+        except Exception as exc:
+            logger.exception("Batch export backend failed")
+            self.job_state.finish(error=str(exc) or type(exc).__name__)
+            counts = (0, len(self._paths))
         finally:
+            if self._abort or self.isInterruptionRequested():
+                self.job_state.request_cancel()
+            self.job_state.finish()
             self.result_ready.emit(*counts)
             if renderer is not None:
                 renderer.close()
@@ -100,7 +113,8 @@ class _ExportWorker(QThread):
         success = failed = 0
         total = len(self._paths)
         for i, src in enumerate(self._paths):
-            if self._abort:
+            if self._abort or self.isInterruptionRequested() or self.job_state.cancelled:
+                self.job_state.request_cancel()
                 break
             if self._process_one(src, renderer):
                 success += 1
@@ -124,9 +138,11 @@ class _ExportWorker(QThread):
             if s.dpi > 0:
                 extra["dpi"] = (s.dpi, s.dpi)
             save_image(img, str(out_path), s.fmt, s.quality, extra)
+            self.job_state.record(src, output=str(out_path))
             return True
         except Exception as exc:
             logger.exception(f"Batch export failed for {src}: {exc}")
+            self.job_state.record(src, error=str(exc) or type(exc).__name__)
             return False
 
     def _resize_if_needed(self, img):
@@ -347,7 +363,10 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         self._progress.setMaximum(len(self._paths))
         self._progress.setValue(0)
 
-        self._worker = _ExportWorker(self._paths, output_dir, self._collect_settings())
+        settings = self._collect_settings()
+        self._worker = _ExportWorker(self._paths, output_dir, settings)
+        job_registry().add(self._worker, self.windowTitle(),
+                           partial(_ExportWorker, output_dir=output_dir, settings=settings))
         self._worker.progress.connect(self._on_progress)
         self._worker.result_ready.connect(self._on_finished)
         self._worker.finished.connect(self._cleanup_worker)

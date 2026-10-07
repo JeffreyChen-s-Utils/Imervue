@@ -5,6 +5,7 @@ and query the indexed images by name / extension / dimensions / size.
 from __future__ import annotations
 
 from pathlib import Path
+from functools import partial
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.gui.background_jobs import job_registry
 from Imervue.library import image_index
 from Imervue.library.scanner import LibraryScanThread
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -161,6 +163,8 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         self._progress.setVisible(True)
         self._progress.setRange(0, 0)
         self._thread = LibraryScanThread(roots, with_phash=self._phash_check.isChecked())
+        job_registry().add(self._thread, self.windowTitle(),
+                           partial(_retry_scan, with_phash=self._phash_check.isChecked()))
         self._thread.progress.connect(self._on_progress)
         self._thread.done.connect(self._on_done)
         self._thread.error.connect(self._on_error)
@@ -170,8 +174,12 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         self._progress.setVisible(False)
         self._scan_btn.setEnabled(True)
         if self._thread is not None:
-            self._thread.wait()
+            worker = self._thread
             self._thread = None
+            if isinstance(worker, LibraryScanThread) and not worker.wait(0):
+                self._retire_workers([worker], cancel=False)
+            else:
+                worker.wait()
 
     def _on_progress(self, current: int, total: int, path: str) -> None:
         if total > 0:
@@ -225,3 +233,8 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
 
 def open_library_search(ui: ImervueMainWindow) -> None:
     LibrarySearchDialog(ui).exec()
+
+
+def _retry_scan(paths: tuple[str, ...], *, with_phash: bool) -> LibraryScanThread:
+    """Retry exact failed paths; other roots and committed rows are not reprocessed."""
+    return LibraryScanThread([], paths=list(paths), with_phash=with_phash)

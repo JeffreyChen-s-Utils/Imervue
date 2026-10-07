@@ -15,6 +15,7 @@ names the saved file or the failure, and a success closes the dialog.
 from __future__ import annotations
 
 from collections.abc import Callable
+from functools import partial
 
 import numpy as np
 from PySide6.QtCore import Qt
@@ -29,6 +30,7 @@ from Imervue.gui._apply_save import (
     show_toast,
     slider_row,
 )
+from Imervue.gui.background_jobs import job_registry
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.worker_host import WorkerHostMixin
 
@@ -97,6 +99,10 @@ class ToolDialogMixin(WorkerHostMixin):
             return
         self._worker = EffectWorker(
             self._path, self._transform(), output_path(self._path, self.output_suffix))
+        transform = self._worker._transform
+        suffix = self.output_suffix
+        job_registry().add(self._worker, self.windowTitle(),
+                           partial(_retry_effect, transform=transform, suffix=suffix))
         self._worker.done.connect(self._on_done)
         self._worker.start()
 
@@ -111,3 +117,9 @@ class ToolDialogMixin(WorkerHostMixin):
     def _notify_failure(self, message: str) -> None:
         """Toast *message* after the dialog's failure prefix."""
         notify_saved(self._viewer, False, message, self.failed_key, self.failed_text)
+
+
+def _retry_effect(paths: tuple[str, ...], *, transform: Transform, suffix: str) -> EffectWorker:
+    """Recompute a free output name when retrying one failed transform."""
+    path = paths[0]
+    return EffectWorker(path, transform, output_path(path, suffix))

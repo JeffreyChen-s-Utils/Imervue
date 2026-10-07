@@ -96,3 +96,5 @@ and results under cache pressure. A target is a requirement, not a claim that it
 sample validation, native RSS, sampler cleanup, atomic reports, partial-failure continuation,
 real child indexing/history/cache and actual GL source-pixel rendering. Real GL cases use the existing
 headless skip policy; unavailable GL is a benchmark failure, not a fabricated successful result.
+
+[Shared job-state library checks](jobs-library-20261007.md) retain the first and intermediate cancellation regressions and the final 100k scanner/index/search results. Pending records resolve lazily, committed results remain available for failed-only retry, and the original absolute cancellation/index limits and unchanged-path regression limits are retained.

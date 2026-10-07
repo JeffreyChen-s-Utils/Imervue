@@ -78,6 +78,8 @@ Design principles:
 
 Cancelling or closing a running worker-based tool returns immediately. The dialog shows Cancelling and pauses its controls until current uninterruptible work and cleanup finish, then closes with the original result. Normal completion can briefly show Finishing. Reopening starts clean. Final application exit waits for outstanding work to finish safely.
 
+Open `Extra Tools` > `Workflow` > `Background Jobs` to inspect batch export, library scans, AI upscale/shared plugin transforms and plugin downloads across windows. Results retain committed outputs and failure reasons after the original dialog closes. Cancel is cooperative; active operations remain alive until they finish. Retry starts a separate attempt for failed items only and preserves successful outputs. A plugin download is one atomic install item. The panel shows at most 500 detailed results, with failures first; Save full report writes all item results as JSON. Clear finished releases completed histories.
+
 ## Installation
 
 ### Requirements

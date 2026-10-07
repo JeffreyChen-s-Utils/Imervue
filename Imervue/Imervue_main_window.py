@@ -20,6 +20,8 @@ from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # no
 from Imervue.gui.settings_notice import warn_if_settings_unreadable
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gui.toast import ToastManager
+from Imervue.gui.background_jobs import drain_background_jobs
+from Imervue.plugin.worker_retirement import drain_retiring_workers
 from Imervue.image.browser_state import (
     ImageMetadataIndex,
 )
@@ -612,6 +614,12 @@ class ImervueMainWindow(
             super().closeEvent(event)
             self.deleteLater()
             return
+
+        # This path uses os._exit, so aboutToQuit is not guaranteed to run.
+        with best_effort("finish retained background jobs", _logger):
+            drain_background_jobs()
+        with best_effort("finish retiring dialog workers", _logger):
+            drain_retiring_workers()
 
         # Plugin hook: app closing
         if hasattr(self, "plugin_manager"):

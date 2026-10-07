@@ -160,6 +160,9 @@ def _set_cvd_mode(ui: ImervueMainWindow, mode: str | None) -> None:
 
 def _build_workflow_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
     sub = _add_submenu(menu, lang, "workflow_submenu", "Workflow")
+    from Imervue.gui.background_jobs import open_background_jobs
+    _add_action(sub, lang, "background_jobs", "Background Jobs",
+                lambda: open_background_jobs(ui))
     _add_action(sub, lang, "culling_title", "Culling",
                 lambda: _open_culling(ui))
     _add_action(sub, lang, "staging_tray_title", "Staging Tray",

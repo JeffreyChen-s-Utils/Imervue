@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-16 | 2026-10-07 | Retain shared task results and retry failed items across windows | #done #jobs #stability #performance #i18n | [2026-10](2026-10.md) |
 | U-20261007-15 | 2026-10-07 | Confirm Linux Mesa regressions and all required remote checks | #done #ci #gpu #stability | [2026-10](2026-10.md) |
 | U-20261007-14 | 2026-10-07 | Diagnose Linux Qt startup before actual GL regression execution | #incident #ci #gpu | [2026-10](2026-10.md) |
 | U-20261007-13 | 2026-10-07 | Exercise workspace/crash regressions and gate dev with actual OpenGL | #done #tests #ci #recovery #gpu | [2026-10](2026-10.md) |
@@ -550,4 +551,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 73 |
+| [2026-10.md](2026-10.md) | 2026-10 | 74 |

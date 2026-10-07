@@ -78,6 +78,8 @@ Princípios de design:
 
 Cancelar ou fechar uma ferramenta em segundo plano retorna imediatamente. O diálogo indica o cancelamento e pausa seus controles até terminar o trabalho atual que não pode ser interrompido e a limpeza; depois fecha com o resultado original. Na conclusão normal, pode indicar brevemente a finalização. Ao reabrir, não recebe resultados antigos. Ao sair definitivamente, o aplicativo espera que o trabalho restante termine com segurança.
 
+Abra `Extra Tools` > `Workflow` > `Background Jobs` para consultar exportações em lote, varreduras da biblioteca, ampliação por IA/transformações compartilhadas de plugins e downloads de plugins de todas as janelas. As saídas gravadas e os motivos de falha permanecem após fechar o diálogo original. O cancelamento é cooperativo; operações continuam vivas até terminar. Repetir inicia outra tentativa somente para itens com falha e preserva saídas bem-sucedidas. Um download de plugin é uma instalação atômica. O painel mostra até 500 detalhes, falhas primeiro; salvar o relatório completo grava todos os resultados em JSON. Limpar concluídos libera seus históricos.
+
 ## Instalação
 
 ### Requisitos

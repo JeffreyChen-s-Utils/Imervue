@@ -153,6 +153,16 @@ Public interfaces other code or users depend on:
    renderer, or `Recipe.apply` on the CPU, also when the renderer fails on that image) →
    `image/save_formats.save_image()`; the renderer is closed when the loop ends.
 
+Background task results use pure `system/job_state.JobState` and the application-owned
+`gui/background_jobs.JobRegistry`. Batch export, library scans, AI upscale, shared plugin
+transforms and plugin downloads publish committed items and failure reasons. Registration
+detaches QWidget parenting; polling preserves actual thread lifetime even after dialog destruction
+or WorkerHost signal disconnection. Failed-only retries capture settings, create separate attempts,
+and exclude successful or cancelled items. The shared modeless panel opens outputs and exports
+complete JSON reports while bounding visible details to 500 rows. Plugin installs are atomic items.
+The last main window explicitly drains retained jobs and retiring workers before plugin unload
+and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs running.
+
 ## 5. Extension points
 
 | To add | Touch |

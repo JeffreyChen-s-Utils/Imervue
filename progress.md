@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第三階段：一致的功能流程與狀態（P2）
 
-- **#70** 匯出、索引、AI 處理及下載的工作狀態分散於各對話框：`Imervue/gui/`、`Imervue/library/scanner.py`、`Imervue/plugin/`。
-  下一步：盤點現有進度與取消介面，建立共用工作狀態及背景工作面板，提供失敗明細、取消狀態與只重試失敗項目，驗證重試不重複處理已完成輸出。
-
 - **#71** 文件來源、髒狀態、保存位置及最後自動儲存狀態缺少一致呈現；Paint 多文件關閉流程尚缺「儲存全部」：`Imervue/paint/workspace_tabs.py`、`Imervue/paint/workspace_status.py`。
   下一步：統一文件狀態顯示並補儲存全部流程，區分可繼續編輯的原生文件與扁平輸出；驗證儲存後 Undo／Redo 會重新標記修改，取消選檔或保存失敗時不清除髒狀態、不關閉未保存文件。
 
