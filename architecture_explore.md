@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 958 | 159,548 |
+| `tests/` | 958 | 159,747 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 174 | 43,523 |
 | `Imervue/gui/` | 176 | 35,549 |
 | `Imervue/puppet/` | 60 | 16,393 |
-| `Imervue/image/` | 130 | 15,593 |
+| `Imervue/image/` | 130 | 15,686 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 70 | 13,661 |
 | `Imervue/multi_language/` | 8 | 15,485 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
@@ -84,12 +84,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,025 |
-| `scripts/`（開發與發佈工具） | 8 | 1,194 |
-| **總計** | **1,835** | **348,738** |
+| `scripts/`（開發與發佈工具） | 8 | 1,216 |
+| **總計** | **1,835** | **349,052** |
 
-其中 `Imervue/` 套件本身 789 檔 / 171,971 行。
+其中 `Imervue/` 套件本身 789 檔 / 172,064 行。
 
-測試碼與產品碼比約 **0.85 : 1**（159k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.85 : 1**（159k vs 188k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -318,6 +318,9 @@ ImervueMainWindow
 | `pdf_output.py` | 21 | `begin_pdf_painter`：在 `QPdfWriter` 上開啟 `QPainter`，目標無法寫入時丟 `OSError`（`QPdfWriter` 本身不丟例外，只讓 `begin` 回傳 `False`） |
 
 ### 6.9 `Imervue/image/`（純運算核心）
+
+| `thumbnail_disk_cache.py` | 337 | 背景 PNG/legacy 盤點與 provisional bytes；atomic puts、mutation/generation 防 stale resurrection、quota/clear/locked-file accounting |
+
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
@@ -1278,6 +1281,8 @@ Registry 與原始對話框互相獨立，Qt ownership／retirement 完成後才
 輸出入口共用 `image/output_policy.py`：跨視窗 process-wide 預約、取消在 commit 前檢查、唯一同格式暫存檔；來源 replace 須 caller 同意。CLI defaults preserve legacy encoder/skip semantics，optional metadata may re-encode；報告只連結 committed outputs。`export_metadata` 以 sRGB ICC 取代原來源 profile，none 不帶 metadata。Composite PDF/MP4 atomic、gallery originals byte-copy retain metadata；整個 gallery directory 並非單一交易。
 
 外掛狀態由 pure `plugin/status.py` 統一保存：window load scope 與 global dependencies/downloads/CLIP files/backends/tool selected options 分開，Manage Plugins 500ms 刷新；loaded 不等於 optional ready。`installation.py` 互斥與 rollback 保護既有插件/models/assets；不同 process 不在互斥契約內。依賴 worker 實際 import 失敗不再報成功，pip child cancellation 在 reaper 執行。Plugin API 3 新增 status 與 provider-specific unregister，GPU Develop reload 保留其他 generation。
+
+縮圖磁碟快取建構不等 full inventory：背景盤點以 mutation set／generation 保護 foreground put/get/purge/clear；PNG unique atomic rewrite，corrupt reader 不刪除已換成正常檔的新版本。clear 包含未盤點檔案，locked readable files 仍計入；totals 完成前 provisional，OS拒絕刪除可能無法達 quota。`wait_ready/close` 只供 explicit owners／tests／benchmark，startup 不呼叫 join。
 
 ## 11. 持久化檔案一覽
 

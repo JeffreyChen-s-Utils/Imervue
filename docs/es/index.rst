@@ -55,6 +55,8 @@ Exportación individual, por lotes y conversión escriben atómicamente; ``Backg
 
 ``Manage Plugins`` muestra fallos por ventana y estados compartidos de dependencias, descarga, modelos y backend con causas. Cargado implica comprobar opciones al usarlas; herramientas conservan modelo/backend y motivo del fallback CPU. Descarga/reintento conserva instalación, modelos y recursos; instalación simultánea del mismo plugin/intérprete se rechaza. Cancelar no bloquea; importaciones fallidas no indican éxito. ``Reload Plugins`` lee código nuevo por ventana; GPU Develop conserva otros proveedores y requiere API 3. Tras descargar/reintentar, recargue cada ventana o reinicie.
 
+El inventario de miniaturas corre en segundo plano; lectura/escritura inmediata. Escritura atómica y cambios de primer plano prevalecen sobre datos antiguos; limpiar incluye archivos aún sin explorar. Inicio limpia NPY antiguos y reconcilia cuota; totales provisionales hasta terminar. Archivos bloqueados legibles siguen contando y pueden impedir la cuota. Con 100.000 archivos, p95 de construcción inferior a 10 ms; duración/coste del inventario se mide aparte.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:

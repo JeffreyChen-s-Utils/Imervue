@@ -88,6 +88,8 @@ Export simple, par lots et conversion écrivent atomiquement ; `Background Jobs`
 
 `Manage Plugins` affiche échecs par fenêtre et états communs des dépendances, téléchargements, modèles et backends avec raisons. Chargé signifie vérification optionnelle à l’usage ; résultats gardent modèle/backend et repli CPU. Téléchargement/reprise préserve installation, modèles et ressources ; installation simultanée du même plugin/interpréteur refusée. Annulation sans blocage ; import échoué sans faux succès. `Reload Plugins` relit le code par fenêtre ; GPU Develop conserve les autres fournisseurs et exige API 3. Après téléchargement/reprise, rechargez chaque fenêtre ou redémarrez.
 
+L’inventaire des miniatures passe en arrière-plan ; lecture/écriture immédiate. Écritures atomiques et modifications prioritaires sur données périmées ; vider inclut les fichiers non inventoriés. Initialisation supprime anciens NPY et ajuste quota ; totaux provisoires jusqu’à la fin. Fichiers verrouillés lisibles comptent et peuvent empêcher le quota. À 100 000 fichiers, p95 du constructeur sous 10 ms ; durée/coût d’inventaire mesurés séparément.
+
 ## Installation
 
 ### Prérequis

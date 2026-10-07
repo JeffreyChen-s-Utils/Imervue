@@ -100,6 +100,8 @@ Per-image CLI writers and GUI export/conversion share image.output_policy reserv
 
 Manage Plugins includes window-scoped import/load outcomes and process-shared observed resource states. Pure plugin.status is safe from workers; normal load does not probe every optional dependency/model. Installations reserve destinations, preserve models/assets and roll back directory swaps. Dependency dialogs use WorkerHost retirement; application-owned dependency check helpers survive parent destruction. Explicit reload invalidates only plugin modules/bytecode, while provider-specific leases retain other window generations.
 
+ThumbnailDiskCache construction starts a background inventory rather than enumerating all files on startup. Reads/writes remain usable; mutation tombstones and generations prevent stale accounting after rewrite/purge/clear. PNG writes use unique atomic siblings. Diagnostics can wait_ready/close explicitly; production startup does not join. Benchmark separates constructor latency from sequentially joined inventory/RSS.
+
 ## 4. Main flows
 
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`

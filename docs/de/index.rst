@@ -53,6 +53,8 @@ Einzel-, Batch-Export und Konvertierung schreiben atomar; Pfade/Fehler bleiben i
 
 ``Manage Plugins`` zeigt Ladefehler pro Fenster und gemeinsame Abhängigkeits-, Download-, Modell- und Backend-Zustände mit Gründen. Geladen bedeutet optionale Prüfung bei Nutzung; Tool-Ergebnisse enthalten Modell/Backend und CPU-Fallback. Downloads/Wiederholungen erhalten Installation, Modelle und Assets; parallele Installation desselben Plugins/Interpreters wird verweigert. Abbruch blockiert nicht; Importfehler melden keinen Erfolg. ``Reload Plugins`` liest neuen Code pro Fenster; GPU Develop erhält fremde Provider und braucht Plugin-API 3. Nach Download/Wiederholung jedes Fenster neu laden oder neu starten.
 
+Die Thumbnail-Inventur läuft im Hintergrund; Lesen/Schreiben ist sofort möglich. Atomare Writes und Vordergrundänderungen gewinnen gegen veraltete Scandaten; Cache leeren umfasst ungescannte Dateien. Initialisierung entfernt alte NPY und gleicht Quota ab; Größen bleiben bis zum Ende vorläufig. Lesbare gesperrte Dateien zählen weiter und können Quota verhindern. Bei 100.000 Dateien liegt Konstruktor-p95 unter 10 ms; Inventurdauer/Mehrarbeit werden separat gemessen.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:

@@ -10,9 +10,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 後續階段：依基準結果安排（P3）
 
-- **#75** 大量縮圖磁碟快取在啟動路徑同步盤點：`Imervue/image/thumbnail_disk_cache.py:88`、`:244`；固定基準見 `docs/performance/baseline-20261007.md`。
-  下一步：依基準門檻改為背景盤點或持久化索引，驗證盤點期間讀寫、配額與舊快取清理的一致性。
-
 - **#76** [UNVERIFIED] 圖庫背景掃描與前景搜尋／標籤修改共用 SQLite 連線，需驗證並行交易行為與延遲：`Imervue/library/image_index.py:145`、`:182`、`Imervue/library/scanner.py:190`。
   下一步：壓測掃描同時搜尋與寫入、批次回滾及關閉；依結果決定獨立讀取連線與單一寫入佇列，並保持既有 schema、WAL 與批次交易能力。
 

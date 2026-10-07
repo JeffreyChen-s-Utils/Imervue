@@ -10,6 +10,18 @@ from PIL import Image
 from Imervue.image import thumbnail_disk_cache as tdc
 
 
+@pytest.fixture(autouse=True)
+def _join_inventories(monkeypatch):
+    original, instances = tdc.ThumbnailDiskCache.__init__, []
+    def initialize(cache, *args, **kwargs):
+        original(cache, *args, **kwargs)
+        instances.append(cache)
+    monkeypatch.setattr(tdc.ThumbnailDiskCache, "__init__", initialize)
+    yield
+    for cache in instances:
+        cache.close()
+
+
 @pytest.fixture
 def cache_dir(tmp_path, monkeypatch):
     """Point the cache at a per-test temp directory."""
@@ -174,10 +186,11 @@ class TestEviction:
         big = tdc.ThumbnailDiskCache(max_total_bytes=10 * 1024 * 1024)
         big.put(source_image, 128, _thumb(128))
         big.put(source_image, 256, _thumb(128))
-        del big
+        big.close()
 
         # New instance with a tiny limit must evict on scan.
         tiny = tdc.ThumbnailDiskCache(max_total_bytes=1)
+        assert tiny.wait_ready(5)
         assert tiny.total_bytes() <= 1
 
 
@@ -207,7 +220,8 @@ class TestLegacyCleanup:
         cache_dir.mkdir(parents=True, exist_ok=True)
         legacy = cache_dir / "abc123.npy"
         legacy.write_bytes(b"legacy payload")
-        tdc.ThumbnailDiskCache()  # constructing scans the dir and removes legacy .npy files
+        cache = tdc.ThumbnailDiskCache()
+        assert cache.wait_ready(5)
         assert not legacy.exists()
 
 
@@ -280,3 +294,188 @@ def test_a_grey_thumbnail_baked_before_the_grey_fixes_is_not_served(cache_dir, t
     monkeypatch.setattr(tdc, "_KEY_VERSION", shipped)   # the cache folder stays the test's
     assert shipped > 3
     assert tdc.ThumbnailDiskCache().get(str(scan), 128) is None
+
+
+def _pause_inventory(monkeypatch):
+    from threading import Event
+    entered, release = Event(), Event()
+    original = tdc.ThumbnailDiskCache._index_entry
+    def paused(cache, entry, generation):
+        # Capture the old stat before a foreground put/get/clear changes the file.
+        if entry.name.endswith(".png"):
+            observed = entry.stat(follow_symlinks=False)
+            entered.set()
+            release.wait(5)
+            class Entry:
+                name = entry.name
+                def is_file(self, **_kwargs):
+                    return True
+                def stat(self, **_kwargs):
+                    return observed
+            return original(cache, Entry(), generation)
+        return original(cache, entry, generation)
+    monkeypatch.setattr(tdc.ThumbnailDiskCache, "_index_entry", paused)
+    return entered, release
+
+
+def test_reads_and_rewrites_win_over_stale_inventory(cache_dir, source_image, monkeypatch):
+    seed = tdc.ThumbnailDiskCache()
+    seed.put(source_image, 128, _thumb())
+    seed.close()
+    entered, release = _pause_inventory(monkeypatch)
+    cache = tdc.ThumbnailDiskCache()
+    try:
+        assert entered.wait(2) and not cache.wait_ready(0)
+        assert cache.get(source_image, 128).shape == (32, 32, 4)
+        cache.put(source_image, 128, _thumb(64))
+        assert cache.get(source_image, 128).shape == (64, 64, 4)
+        release.set()
+        assert cache.wait_ready(3)
+        assert cache.total_bytes() == sum(p.stat().st_size for p in cache_dir.glob("*.png"))
+        assert len(cache._files) == 1
+    finally:
+        release.set()
+        cache.close()
+
+
+@pytest.mark.parametrize("action", ["clear", "corrupt"])
+def test_stale_scan_cannot_resurrect_removed_files(cache_dir, source_image, monkeypatch, action):
+    seed = tdc.ThumbnailDiskCache()
+    seed.put(source_image, 128, _thumb())
+    seed.close()
+    entered, release = _pause_inventory(monkeypatch)
+    cache = tdc.ThumbnailDiskCache()
+    try:
+        assert entered.wait(2)
+        if action == "clear":
+            cache.clear()
+        else:
+            next(cache_dir.glob("*.png")).write_bytes(b"corrupt")
+            assert cache.get(source_image, 128) is None
+        release.set()
+        assert cache.wait_ready(3)
+        assert cache.total_bytes() == 0 and not cache._files
+        assert not list(cache_dir.glob("*.png"))
+    finally:
+        release.set()
+        cache.close()
+
+
+def test_scan_respects_quota_and_cleans_legacy_files(cache_dir, source_image):
+    seed = tdc.ThumbnailDiskCache()
+    seed.put(source_image, 128, _thumb())
+    seed.put(source_image, 256, _thumb())
+    seed.close()
+    (cache_dir / "old.npy").write_bytes(b"legacy")
+    (cache_dir / "unmanaged.txt").write_bytes(b"keep")
+    (cache_dir / "directory.png").mkdir()
+    cache = tdc.ThumbnailDiskCache(max_total_bytes=1)
+    assert cache.wait_ready(3)
+    assert cache.total_bytes() == 0
+    assert not (cache_dir / "old.npy").exists()
+    assert (cache_dir / "unmanaged.txt").read_bytes() == b"keep"
+    assert (cache_dir / "directory.png").is_dir()
+
+
+def test_clear_failure_retains_actual_accounting(cache_dir, source_image, monkeypatch):
+    cache = tdc.ThumbnailDiskCache()
+    cache.put(source_image, 128, _thumb())
+    assert cache.wait_ready(3)
+    real = Path.unlink
+    def locked(path, **kwargs):
+        if path.suffix == ".png":
+            raise PermissionError("locked")
+        return real(path, **kwargs)
+    monkeypatch.setattr(Path, "unlink", locked)
+    cache.clear()
+    assert cache.total_bytes() == sum(p.stat().st_size for p in cache_dir.glob("*.png"))
+    assert cache.total_bytes() > 0
+
+
+def test_failed_atomic_rewrite_keeps_previous_thumbnail(cache_dir, source_image, monkeypatch):
+    cache = tdc.ThumbnailDiskCache()
+    cache.put(source_image, 128, _thumb())
+    assert cache.wait_ready(3)
+    before = cache.total_bytes()
+    def fail(image, stage, **_kwargs):
+        Path(stage).write_bytes(b"partial")
+        raise OSError("disk full")
+    monkeypatch.setattr(Image.Image, "save", fail)
+    cache.put(source_image, 128, _thumb(64))
+    assert cache.get(source_image, 128).shape == (32, 32, 4)
+    assert cache.total_bytes() == before
+    assert len(list(cache_dir.iterdir())) == 1
+
+
+def test_negative_quota_and_inventory_error(cache_dir, monkeypatch, caplog):
+    with pytest.raises(ValueError, match="nonnegative"):
+        tdc.ThumbnailDiskCache(-1)
+    def fail(_path):
+        raise OSError("offline")
+    monkeypatch.setattr(tdc.os, "scandir", fail)
+    with caplog.at_level("DEBUG", logger="Imervue.thumbnail_cache"):
+        cache = tdc.ThumbnailDiskCache()
+        assert cache.wait_ready(3) and cache.total_bytes() == 0
+    assert "offline" in caplog.text
+
+
+def test_corruption_error_cannot_delete_parallel_valid_rewrite(cache_dir, source_image, monkeypatch):
+    cache = tdc.ThumbnailDiskCache()
+    cache.put(source_image, 128, _thumb())
+    assert cache.wait_ready(3)
+    original = Image.open
+    def raced(*_args, **_kwargs):
+        cache.put(source_image, 128, _thumb(64))
+        raise OSError("old corrupt image")
+    monkeypatch.setattr(Image, "open", raced)
+    assert cache.get(source_image, 128) is None
+    monkeypatch.setattr(Image, "open", original)
+    assert cache.get(source_image, 128).shape == (64, 64, 4)
+    assert cache.total_bytes() == sum(p.stat().st_size for p in cache_dir.glob("*.png"))
+
+
+def test_locked_corrupt_and_legacy_files_remain_accounted(cache_dir, source_image, monkeypatch):
+    cache = tdc.ThumbnailDiskCache()
+    cache.put(source_image, 128, _thumb())
+    assert cache.wait_ready(3)
+    next(cache_dir.glob("*.png")).write_bytes(b"bad")
+    (cache_dir / "old.npy").write_bytes(b"legacy")
+    real = Path.unlink
+    def locked(path, **kwargs):
+        if path.suffix in {".png", ".npy"}:
+            raise PermissionError("locked")
+        return real(path, **kwargs)
+    monkeypatch.setattr(Path, "unlink", locked)
+    assert cache.get(source_image, 128) is None
+    assert cache.total_bytes() == 3
+    resumed = tdc.ThumbnailDiskCache()
+    assert resumed.wait_ready(3)
+    assert resumed.total_bytes() == 9
+
+
+def test_new_put_after_clear_survives_old_scanner(cache_dir, source_image, monkeypatch):
+    seed = tdc.ThumbnailDiskCache()
+    seed.put(source_image, 128, _thumb())
+    seed.close()
+    entered, release = _pause_inventory(monkeypatch)
+    cache = tdc.ThumbnailDiskCache()
+    try:
+        assert entered.wait(2)
+        cache.clear()
+        cache.put(source_image, 128, _thumb(64))
+        release.set()
+        assert cache.wait_ready(3)
+        assert cache.get(source_image, 128).shape == (64, 64, 4)
+        assert cache.total_bytes() == sum(p.stat().st_size for p in cache_dir.glob("*.png"))
+    finally:
+        release.set()
+        cache.close()
+
+
+def test_unexpected_inventory_error_is_logged_and_finishes(cache_dir, monkeypatch, caplog):
+    def bug(_path):
+        raise RuntimeError("inventory bug")
+    monkeypatch.setattr(tdc.os, "scandir", bug)
+    cache = tdc.ThumbnailDiskCache()
+    assert cache.wait_ready(3)
+    assert "inventory failed unexpectedly" in caplog.text

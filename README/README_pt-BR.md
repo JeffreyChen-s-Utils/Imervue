@@ -88,6 +88,8 @@ Exportação individual, em lote e conversão gravam atomicamente; `Background J
 
 `Manage Plugins` mostra falhas por janela e estados compartilhados de dependências, downloads, modelos e backend com razões. Carregado significa verificar opções ao usar; ferramentas mantêm modelo/backend e motivo de fallback CPU. Download/tentativa preserva instalação, modelos e recursos; instalação simultânea do mesmo plugin/intérprete é recusada. Cancelar não bloqueia; importação falha não indica sucesso. `Reload Plugins` relê código por janela; GPU Develop mantém outros provedores e exige API 3. Após baixar/tentar, recarregue cada janela ou reinicie.
 
+Inventário de miniaturas em segundo plano; leitura/gravação imediata. Escritas atômicas e mudanças atuais prevalecem sobre dados antigos; limpar inclui arquivos não inventariados. Inicialização limpa NPY antigos e ajusta quota; totais provisórios até terminar. Arquivos bloqueados legíveis continuam contando e podem impedir a quota. Com 100.000 arquivos, p95 do construtor abaixo de 10 ms; duração/custo do inventário medidos separadamente.
+
 ## Instalação
 
 ### Requisitos

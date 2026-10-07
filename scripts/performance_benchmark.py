@@ -244,22 +244,44 @@ def paint(fixture: Path, profile: Path, repeats: int) -> dict:
                          "compression easier than photographic noise")}
 
 
+def _cache_measure(factory, repeats: int) -> tuple[dict, dict, int]:
+    """Measure each constructor separately and join its inventory before the next sample."""
+    import time
+    from performance_support import summarize
+    constructor_ms, instances = [], []
+
+    def complete():
+        start = time.perf_counter()
+        instance = factory()
+        constructor_ms.append((time.perf_counter() - start) * 1000)
+        ready = getattr(instance, "wait_ready", None)
+        try:
+            if ready is not None and not ready(60):
+                raise TimeoutError("Thumbnail inventory did not finish")
+        finally:
+            close = getattr(instance, "close", None)
+            if close is not None:
+                close()
+        instances[:] = [instance]
+
+    phase = measure(complete, repeats=repeats)
+    return {**phase, **summarize(constructor_ms)}, phase, len(instances[-1]._files)
+
+
 def cache(fixture: Path, profile: Path, repeats: int) -> dict:
     from unittest.mock import patch
     from Imervue.image import thumbnail_disk_cache as module
     empty = profile / "empty-cache"
     empty.mkdir()
     with patch.object(module, "_get_cache_dir", return_value=empty):
-        cold = measure(module.ThumbnailDiskCache, repeats=1)
-        warm = measure(module.ThumbnailDiskCache, repeats=repeats)
-    instances = []
+        cold, _cold_phase, _ = _cache_measure(module.ThumbnailDiskCache, 1)
+        warm, _warm_phase, _ = _cache_measure(module.ThumbnailDiskCache, repeats)
     with patch.object(module, "_get_cache_dir", return_value=fixture / "large-cache"):
-        def construct():
-            instances[:] = [module.ThumbnailDiskCache()]
-        full = measure(construct, repeats=repeats)
+        full, phase, entries = _cache_measure(module.ThumbnailDiskCache, repeats)
     return {"empty_cold": cold, "empty_warm": warm, "large_cache": full,
-            "entries": len(instances[-1]._files),
-            "boundary": "constructor scan/stat cost; read-only quota fits all tiny PNG fixtures"}
+            "inventory_completion": phase, "entries": entries,
+            "boundary": "constructor latency excludes scanner join; inventories run sequentially; "
+                        "phase RSS includes inventory; quota fits all tiny PNG fixtures"}
 
 
 def _wall_view(context, surface, count: int):
