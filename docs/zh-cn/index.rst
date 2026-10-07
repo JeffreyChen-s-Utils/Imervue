@@ -40,6 +40,8 @@ Paint 的 File > ``Open Document…``、``Save Document…``、``Save Document A
 
 使用 ``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` 串联搜索 → 比较 → 保留／拒绝 → 显影预设 → 批量导出。Library Search 加入高亮结果，未高亮时加入全部结果；重开搜索保留查询和结果。每个窗口在关闭或返回后保留跨文件夹的有序集合、勾选、过滤和预设名称。过滤只改变显示：隐藏但勾选的照片仍是批量目标，计数会明确显示。保留勾选照片，拒绝取消勾选而不删除。比较预览长边最多 800 像素。显影沿用命名预设；Batch Export 接收同一组已勾选且非拒绝来源和导出预设。每页 500 条，应用／导出前同步外部挑片状态；清除流程明确重置。
 
+单张导出、批量导出和批量转换共用原子写入，在 ``Background Jobs`` 保留已完成路径与错误。批量重名自动改名，同格式转换也另存；单张替换需确认。GUI 保留 metadata 时嵌入正确的 sRGB ICC；转换保留描述信息，导出默认移除位置。CLI 逐张输出支持 ``--output-conflict``（``rename``、``skip``、``replace``）、``--export-metadata``（``all``、``no_location``、``none``）和含输出链接的 JSON ``--result-report``。默认沿用跳过／``--overwrite`` 和编码行为；指定 metadata 可能重新编码。``strip`` 始终移除 metadata。Ctrl+C 保留完成输出并报告取消。PDF、MP4 和图库文件原子发布；图库原件副本保留 metadata。
+
 .. contents:: 目录
    :depth: 2
    :local:

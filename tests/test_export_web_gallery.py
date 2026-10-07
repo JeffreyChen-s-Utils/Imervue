@@ -145,7 +145,7 @@ class TestGenerateWebGalleryReviewMode:
         is shared) but must not emit the actual element / script."""
         self._stub_thumbnail(monkeypatch, wg)
         src = tmp_path / "a.jpg"
-        src.write_bytes(b"")
+        src.write_bytes(b"original")
         out = tmp_path / "gallery"
         wg.generate_web_gallery([str(src)], out)
         html = (out / "index.html").read_text(encoding="utf-8")
@@ -158,7 +158,7 @@ class TestGenerateWebGalleryReviewMode:
     ):
         self._stub_thumbnail(monkeypatch, wg)
         src = tmp_path / "a.jpg"
-        src.write_bytes(b"")
+        src.write_bytes(b"original")
         out = tmp_path / "gallery"
         wg.generate_web_gallery(
             [str(src)], out,
@@ -176,7 +176,7 @@ class TestGenerateWebGalleryReviewMode:
         output folder doesn't invalidate the reviewer's progress."""
         self._stub_thumbnail(monkeypatch, wg)
         src = tmp_path / "kitten.jpg"
-        src.write_bytes(b"")
+        src.write_bytes(b"original")
         out = tmp_path / "gallery"
         wg.generate_web_gallery(
             [str(src)], out, wg.WebGalleryOptions(review_mode=True),
@@ -192,7 +192,7 @@ class TestGenerateWebGalleryReviewMode:
         produce so reloads round-trip."""
         self._stub_thumbnail(monkeypatch, wg)
         src = tmp_path / "a.jpg"
-        src.write_bytes(b"")
+        src.write_bytes(b"original")
         out = tmp_path / "gallery"
         wg.generate_web_gallery(
             [str(src)], out,

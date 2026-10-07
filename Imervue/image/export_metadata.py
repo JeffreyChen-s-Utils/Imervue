@@ -7,6 +7,9 @@ everything descriptive, everything but the location, or nothing. Pure logic
 """
 from __future__ import annotations
 
+from functools import lru_cache
+from PIL import ImageCms
+
 from pathlib import Path
 
 from PIL import Image
@@ -47,17 +50,26 @@ def export_exif(source_path: str | Path, policy: str) -> Image.Exif | None:
 
 
 def export_save_options(source_path: str | Path, policy: str) -> dict:
-    """``save_image`` extras for *policy*: ``{"exif": <bytes>}``, or ``{}`` when nothing is carried.
+    """``save_image`` extras for *policy*: EXIF plus a normalized sRGB profile, or ``{}`` for none.
 
     Bytes rather than an ``Image.Exif``: every writer takes them, the
     pillow-heif and JPEG XL plugins included. The entry types Pillow's
     serialiser gets wrong are put back from the source.
     """
-    carried = _carried(source_path, policy)
-    if carried is None:
+    if policy_or_default(policy) == METADATA_NONE:
         return {}
-    exif, original = carried
-    return {"exif": restore_types(exif.tobytes(), original)}
+    options = {"icc_profile": srgb_profile()}
+    carried = _carried(source_path, policy)
+    if carried is not None:
+        exif, original = carried
+        options["exif"] = restore_types(exif.tobytes(), original)
+    return options
+
+
+@lru_cache(maxsize=1)
+def srgb_profile() -> bytes:
+    """Profile for already decoded sRGB output pixels, never the source profile."""
+    return ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes()
 
 
 def _carried(source_path: str | Path, policy: str) -> tuple[Image.Exif, bytes | None] | None:

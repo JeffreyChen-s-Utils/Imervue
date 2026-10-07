@@ -96,6 +96,8 @@ Public interfaces other code or users depend on:
   `Imervue/puppet/format_schema.py` into `docs/schemas/`, conformance check `puppet-validate`
   (MCP `puppet_validate`), stdlib reference reader `docs/examples/read_puppet.py`.
 
+Per-image CLI writers and GUI export/conversion share image.output_policy reservations and atomic commit. CLI cohort destinations are assigned before threads; explicit metadata uses the same EXIF/sRGB extras. Completed inline exports join JobRegistry; Batch Convert registers retryable workers (retry keeps originals). Composite PDF/MP4 and gallery members commit individually; a gallery directory is not an all-or-nothing transaction.
+
 ## 4. Main flows
 
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`

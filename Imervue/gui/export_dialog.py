@@ -14,6 +14,9 @@ from PySide6.QtWidgets import (
 from Imervue.gui.export_metadata_combo import metadata_row
 from Imervue.gui.export_source import open_export_source
 from Imervue.image.export_metadata import export_save_options
+from Imervue.image.output_policy import OutputPolicy, write_output
+from Imervue.gui.background_jobs import job_registry
+from Imervue.system.job_state import JobState
 from Imervue.gui.dialog_rows import ask_to_replace, may_replace, path_browse_row, save_path_into
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image.save_formats import (
@@ -225,19 +228,30 @@ class ExportDialog(WorkerHostMixin, QDialog):
             return
 
         fmt = self._selected_format()
+        state = JobState([self.source_path])
         try:
             img = open_export_source(self.source_path)
             extra = export_save_options(self.source_path, self.metadata_combo.currentData())
-            save_image(img, output_path, fmt, self._quality_for(fmt), extra)
+            result = write_output(
+                self.source_path, output_path,
+                lambda path: save_image(img, str(path), fmt, self._quality_for(fmt), extra),
+                OutputPolicy("replace", allow_source=True),
+            )
+            state.record(self.source_path, output=result.path)
         except Exception as exc:
             # Whatever the cause (a full disk, a codec error, an unreadable
             # source), say so: a failure that is only logged looks like a Save
             # button that does nothing. The dialog stays open to try again.
             logger.exception("Exporting %s to %s failed", self.source_path, output_path)
+            state.record(self.source_path, error=str(exc) or type(exc).__name__)
+            state.finish()
+            job_registry().add_completed(self.windowTitle(), state)
             QMessageBox.warning(
                 self, self._lang.get("export_title", "Export Image"),
                 self._lang.get("generic_error", "Error: {error}").format(error=exc))
             return
+        state.finish()
+        job_registry().add_completed(self.windowTitle(), state)
         logger.info("Exported image to %s as %s", output_path, fmt)
         self.accept()
 

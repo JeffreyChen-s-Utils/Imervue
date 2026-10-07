@@ -271,3 +271,16 @@ def test_explicit_exit_drain_joins_actual_work_and_does_not_create_registry(
         release.set()
         assert worker.wait(5000)
         timer.join(3)
+
+
+def test_completed_inline_job_is_retained_and_validation_is_explicit(registry):
+    state = JobState(["a"])
+    with pytest.raises(ValueError):
+        registry.add_completed("Export", state)
+    state.record("a", output="result.png")
+    state.finish()
+    job = registry.add_completed("Export", state)
+    assert job.settled and registry.jobs[-1] is job
+    assert job.state.snapshot().items[0].output == "result.png"
+    registry.clear_finished()
+    assert not registry.jobs

@@ -49,6 +49,8 @@ No Paint, File > ``Open Document…``, ``Save Document…``, ``Save Document As�
 
 ``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` conecta busca, comparação, seleção/rejeição, preset de revelação e exportação em lote. Library Search adiciona resultados destacados, ou todos sem destaque; consulta e resultados ficam ao reabrir. Cada janela mantém ordem entre pastas, caixas marcadas, filtro e presets após fechar ou voltar. Filtrar só muda a exibição: fotos marcadas ocultas continuam como alvos e são contadas. Selecionar marca; rejeitar desmarca sem excluir. Comparação com lado máximo de 800 pixels. Presets existentes e as mesmas fontes marcadas não rejeitadas passam ao Batch Export. Páginas mostram 500 linhas; alterações externas são sincronizadas antes de aplicar/exportar. Limpar reinicia explicitamente.
 
+Exportação individual, em lote e conversão gravam atomicamente; ``Background Jobs`` mantém caminhos/erros. Lotes renomeiam conflitos, inclusive mesmo formato; substituição individual pede confirmação. GUI inclui ICC sRGB ao preservar metadata; conversão mantém descrições, exportação remove localização por padrão. CLI por imagem: ``--output-conflict`` (``rename``, ``skip``, ``replace``), ``--export-metadata`` (``all``, ``no_location``, ``none``), JSON ``--result-report`` com links. Padrão mantém pular/``--overwrite`` e codificador; metadata explícita pode recodificar. ``strip`` sempre remove metadata. Ctrl+C preserva saídas completas e relata cancelamento. PDF, MP4 e arquivos de galeria publicam atomicamente; cópias originais mantêm metadata.
+
 .. contents:: Sumário
    :depth: 2
    :local:

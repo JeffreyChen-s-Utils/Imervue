@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第三階段：一致的功能流程與狀態（P2）
 
-- **#73** 各輸出入口的檔名衝突、metadata、色彩描述檔、覆寫與結果回報需要一致性稽核：`Imervue/export/`、`Imervue/gui/batch_export_dialog.py`、`Imervue/cli.py`。
-  下一步：盤點 GUI／CLI／批次工具的差異，建立共用輸出政策及可點擊的成功／失敗結果；補同名來源、部分失敗、取消及 metadata 保留的跨入口測試。
-
 - **#74** 外掛相依、模型下載、運算後端與失敗回復資訊缺少一致呈現：`Imervue/plugin/`、`plugins/`。
   下一步：盤點各外掛現有能力與降級流程，提供一致的可用／缺相依／下載中／失敗狀態及原因；驗證重試、重載及多視窗，實作外掛變更時同步發佈來源。
 

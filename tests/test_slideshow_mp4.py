@@ -95,19 +95,23 @@ def _install_fake_imageio(monkeypatch, writer):
     import types
     parent = types.ModuleType("imageio")
     v2 = types.ModuleType("imageio.v2")
-    v2.get_writer = lambda *a, **k: writer
+    def get_writer(path, **_kwargs):
+        from pathlib import Path
+        Path(path).write_bytes(b"encoded-container")
+        return writer
+    v2.get_writer = get_writer
     parent.v2 = v2
     monkeypatch.setitem(sys.modules, "imageio", parent)
     monkeypatch.setitem(sys.modules, "imageio.v2", v2)
 
 
 class TestGenerateFrameGuard:
-    def test_zero_decodable_images_raises_and_removes_file(self, tmp_path, monkeypatch):
+    def test_zero_decodable_images_preserves_previous_file(self, tmp_path, monkeypatch):
         """Regression: when every image fails to decode the writer finalised a
         valid-but-unplayable 0-frame container and the path was returned as a
-        success. It must now raise and delete the empty file."""
+        success. It must raise, clean the stage and preserve existing output."""
         out = tmp_path / "out.mp4"
-        out.write_bytes(b"stub")   # stand in for the writer's 0-frame container
+        out.write_bytes(b"previous-video")
         writer = _FakeWriter()
         _install_fake_imageio(monkeypatch, writer)
         monkeypatch.setattr(sm, "_load_as_rgb", lambda path: None)
@@ -117,7 +121,8 @@ class TestGenerateFrameGuard:
 
         assert writer.closed is True     # writer always closed
         assert writer.appended == []     # nothing written
-        assert not out.exists()          # empty file cleaned up
+        assert out.read_bytes() == b"previous-video"
+        assert list(tmp_path.iterdir()) == [out]
 
     def test_returns_path_when_at_least_one_image_decodes(self, tmp_path, monkeypatch):
         out = tmp_path / "ok.mp4"

@@ -11,6 +11,8 @@ for an output path before delegating here.
 """
 from __future__ import annotations
 
+from Imervue.system.atomic_write import replace_atomically
+
 import logging
 from dataclasses import dataclass
 
@@ -142,7 +144,7 @@ def _format_key_combo(key: int, modifiers: int) -> str:
 # ---------------------------------------------------------------------------
 
 
-def generate_cheat_sheet(out_path: str, options: CheatSheetOptions) -> str:
+def _generate_cheat_sheet(out_path: str, options: CheatSheetOptions) -> str:
     """Write a printable shortcut PDF to ``out_path``. Returns the path.
 
     Raises ``OSError`` if the file cannot be written.
@@ -235,3 +237,9 @@ def _draw_row(
                      label_w, _ROW_HEIGHT_PX,
                      int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),
                      combo)
+
+
+def generate_cheat_sheet(out_path: str, options: CheatSheetOptions) -> str:
+    """Atomically publish the shortcut PDF; rendering failure preserves the previous file."""
+    replace_atomically(out_path, lambda stage: _generate_cheat_sheet(str(stage), options))
+    return out_path

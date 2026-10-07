@@ -84,6 +84,8 @@ In Paint verwenden File > `Open Document…`, `Save Document…`, `Save Document
 
 `Extra Tools` > `Workflow` > `Photo Workflow` verbindet Suche, Vergleich, Auswahl/Ablehnung, Entwicklungsvorgabe und Batch-Export. Library Search fügt markierte Ergebnisse hinzu, ohne Markierung alle; Suchabfrage und Ergebnisse bleiben beim Wiederöffnen erhalten. Pro Fenster bleiben Ordner übergreifende Reihenfolge, Häkchen, Filter und Vorgabennamen erhalten. Filter ändern nur die Anzeige: verborgene angehakte Fotos bleiben Bulk-Ziele und werden gezählt. Auswahl setzt das Häkchen, Ablehnung entfernt es ohne Löschen. Vergleichsvorschauen sind maximal 800 Pixel groß. Vorhandene Entwicklungsvorgaben und identische angehakte, nicht abgelehnte Exportquellen werden genutzt. Seiten zeigen 500 Einträge; externe Auswahländerungen werden vor Anwenden/Export synchronisiert. Workflow leeren setzt ausdrücklich zurück.
 
+Einzel-, Batch-Export und Konvertierung schreiben atomar; Pfade/Fehler bleiben in `Background Jobs`. Batches benennen Konflikte um, auch beim gleichen Format; Einzelersatz verlangt Bestätigung. GUI-Metadaten erhalten sRGB ICC; Konvertierung bewahrt Beschreibungen, Export entfernt standardmäßig Positionen. CLI pro Bild: `--output-conflict` (`rename`, `skip`, `replace`), `--export-metadata` (`all`, `no_location`, `none`), JSON `--result-report` mit Ausgabelinks. Standard bleibt Überspringen/`--overwrite` und bisheriger Encoder; explizite Metadaten können neu kodieren. `strip` entfernt immer Metadaten. Ctrl+C erhält fertige Ausgaben und meldet Abbruch. PDF, MP4 und Galeriedateien werden atomar veröffentlicht; Originalkopien behalten Metadaten.
+
 ## Installation
 
 ### Voraussetzungen

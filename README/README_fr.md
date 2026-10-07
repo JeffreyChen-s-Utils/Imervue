@@ -84,6 +84,8 @@ Dans Paint, File > `Open Document…`, `Save Document…`, `Save Document As…`
 
 `Extra Tools` > `Workflow` > `Photo Workflow` relie recherche, comparaison, sélection/rejet, préréglage de développement et export par lots. Library Search ajoute les résultats surlignés, ou tous sans surlignage ; requête et résultats restent à la réouverture. Chaque fenêtre conserve ordre entre dossiers, cases, filtre et préréglages. Le filtre ne change que l’affichage : les photos cochées masquées restent ciblées et comptées. Sélectionner coche ; rejeter décoche sans supprimer. Comparaison limitée à 800 pixels sur le grand côté. Les préréglages existants et mêmes sources cochées non rejetées alimentent Batch Export. Pages de 500 lignes ; changements externes synchronisés avant application/export. Vider réinitialise explicitement le flux.
 
+Export simple, par lots et conversion écrivent atomiquement ; `Background Jobs` conserve chemins/erreurs. Les lots renomment les conflits, même au même format ; remplacement individuel confirmé. La GUI inclut ICC sRGB avec les métadonnées ; conversion conserve descriptions, export retire par défaut la position. CLI par image : `--output-conflict` (`rename`, `skip`, `replace`), `--export-metadata` (`all`, `no_location`, `none`), JSON `--result-report` avec liens. Saut/`--overwrite` et encodeur restent par défaut ; métadonnées explicites peuvent réencoder. `strip` retire toujours les métadonnées. Ctrl+C conserve les sorties terminées et signale l’annulation. PDF, MP4 et fichiers galerie sont publiés atomiquement ; copies originales gardent les métadonnées.
+
 ## Installation
 
 ### Prérequis

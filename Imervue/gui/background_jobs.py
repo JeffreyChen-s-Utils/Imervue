@@ -94,6 +94,16 @@ class JobRegistry(QObject):
         self.changed.emit()
         return job
 
+    def add_completed(self, title: str, state: JobState) -> Job:
+        """Retain synchronous output results in the same cross-window report/open panel."""
+        if (not isinstance(state, JobState)
+                or state.snapshot(include_items=False).status not in TERMINAL):
+            raise ValueError("A completed result requires terminal JobState")
+        job = Job(title, state, None)
+        self.jobs.append(job)
+        self.changed.emit()
+        return job
+
     def poll(self) -> None:
         """Poll immutable progress, retaining finishing threads until wait(0) succeeds."""
         for job in self.jobs:

@@ -40,6 +40,8 @@ Paint 的 File > ``Open Document…``、``Save Document…``、``Save Document A
 
 使用 ``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` 串接搜尋 → 比較 → 保留／拒絕 → 顯影預設 → 批次匯出。Library Search 可加入反白結果，未反白時加入全部結果；重新開啟搜尋會保留查詢與結果。每個視窗的流程在關閉或返回後保留跨資料夾的排序集合、勾選、過濾及預設名稱。過濾只改變顯示：隱藏但勾選的照片仍是批次目標，數量會明示。保留會勾選，拒絕會取消勾選而不刪檔。比較反白照片的預覽長邊最多 800 像素。顯影沿用具名預設；Batch Export 接收相同的已勾選、非拒絕來源與匯出預設。每頁顯示 500 筆，套用／匯出前同步外部挑片狀態；清除流程才會明確重設。
 
+單張匯出、批次匯出與批次轉換共用原子影像寫入，已完成路徑與錯誤保留在 ``Background Jobs``。批次遇同名自動改名，相同格式轉換也另存；單張取代須確認。GUI 保留 metadata 時附上正確的 sRGB ICC；轉換保留描述資訊，匯出預設移除位置。CLI 逐張輸出支援 ``--output-conflict``（``rename``、``skip``、``replace``）、``--export-metadata``（``all``、``no_location``、``none``）及含輸出連結的 JSON ``--result-report``。預設沿用跳過／``--overwrite`` 與編碼行為；指定 metadata 可能重新編碼。``strip`` 一律移除 metadata。Ctrl+C 保留已完成輸出並回報取消。PDF、MP4 與圖庫檔案完成後才原子替換；圖庫原檔副本保留 metadata。
+
 .. contents:: 目錄
    :depth: 2
    :local:

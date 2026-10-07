@@ -25,6 +25,10 @@ import numpy as np
 from PIL import Image
 
 from Imervue import cli_tools
+from Imervue.cli_output import plan_targets, process_output, result_message, write_report
+from Imervue.image.output_policy import OutputPolicy, path_key, write_output
+from Imervue.system.job_state import JobItem
+from threading import Event, Lock
 from Imervue.image.dimensions import probe_image
 from Imervue.image.formats import RASTER_EXTENSIONS, RAW_EXTENSIONS
 from Imervue.image.high_bit_depth import to_eight_bit
@@ -32,7 +36,7 @@ from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.shown import load_shown_rgba, open_shown
 from Imervue.system.image_listing import list_images
 
-# The outputs are written without EXIF or ICC, so every input is decoded as the
+# Every input is decoded as the
 # viewer shows it (shown.open_shown): sRGB, turned upright, a camera RAW
 # developed. Otherwise a portrait phone photo comes out sideways, a Display P3
 # one washed out and a NEF as its 160x120 embedded preview.
@@ -162,7 +166,9 @@ def op_autoorient(src: Path, target: Path, _args) -> None:
 def op_strip(src: Path, target: Path, _args) -> None:
     # Re-save without forwarding exif/icc/xmp — Pillow omits metadata by default.
     # The orientation and colour profile go with them, so bake both in first.
-    open_shown(src).save(target)
+    image = open_shown(src)
+    image.info.clear()
+    image.save(target)
 
 
 # --- pipeline (chain several operations from a JSON file) -------------------
@@ -353,19 +359,7 @@ def _validated_out_dir(raw: str | None) -> Path | None:
 def _process_one(src: Path, out_dir, operation, suffix: str, ext_fn, args) -> tuple[str, str]:
     """Process one file; return ``(status, message)`` — pure of shared state."""
     target = output_path(src, str(out_dir) if out_dir else None, suffix, ext_fn(args))
-    if args.dry_run:
-        return ("dry", f"would write {target}")
-    try:
-        if out_dir is not None:
-            # out_dir is validated (no '..'); writing to a user-chosen directory
-            # is the intended CLI behaviour, so the path-escape rule is N/A here.
-            out_dir.mkdir(parents=True, exist_ok=True)  # NOSONAR
-        if target.exists() and not args.overwrite:
-            return ("skip", f"skip (exists): {target}")
-        operation(src, target, args)
-    except IMAGE_READ_ERRORS as exc:
-        return ("error", f"error: {src}: {exc}")
-    return ("ok", f"{src} -> {target}")
+    return result_message(process_output(src, target, operation, args, lambda: False))
 
 
 def _resolve_workers(jobs: int, count: int) -> int:
@@ -379,29 +373,65 @@ def _resolve_workers(jobs: int, count: int) -> int:
 def _write(args, paths: Sequence[Path], operation, suffix: str, ext_fn) -> int:
     try:
         out_dir = _validated_out_dir(args.out)
+        targets = plan_targets([output_path(src, out_dir, suffix, ext_fn(args)) for src in paths])
+        report = _checked_path(args.result_report) if getattr(args, "result_report", None) else None
+        if report and path_key(report) in {path_key(p) for p in [*paths, *targets]}:
+            raise ValueError("Result report must differ from every source and output")
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    cancelled, lock, completed = Event(), Lock(), {}
 
-    def work(src: Path) -> tuple[str, str]:
-        return _process_one(src, out_dir, operation, suffix, ext_fn, args)
+    def work(pair):
+        src, target = pair
+        result = process_output(src, target, operation, args, cancelled.is_set)
+        with lock:
+            completed[str(src)] = result
+        return result
 
-    workers = _resolve_workers(getattr(args, "jobs", 1), len(paths))
-    if workers == 1:
-        results = [work(src) for src in paths]
-    else:
-        from concurrent.futures import ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            # map preserves input order, so output is deterministic.
-            results = list(pool.map(work, paths))
-
-    tally = {"ok": 0, "skip": 0, "error": 0, "dry": 0}
-    for status, message in results:
+    interrupted = _run_outputs(list(zip(paths, targets, strict=True)), work,
+                               _resolve_workers(getattr(args, "jobs", 1), len(paths)), cancelled)
+    results = [completed.get(str(src), JobItem(str(src), "cancelled")) for src in paths]
+    tally = {"ok": 0, "skip": 0, "error": 0, "dry": 0, "cancelled": 0}
+    for item in results:
+        status, message = result_message(item)
         tally[status] += 1
         print(message, file=sys.stderr if status == "error" else sys.stdout)
     print(f"{tally['ok'] + tally['dry']} processed, {tally['skip']} skipped, "
           f"{tally['error']} errors", file=sys.stderr)
-    return 1 if tally["error"] else 0
+    if report:
+        try:
+            if path_key(report) in {path_key(r.output) for r in results if r.output}:
+                raise OSError("Result report conflicts with an actual output")
+            write_report(report, results)
+        except OSError as exc:
+            print(f"error: result report: {exc}", file=sys.stderr)
+            return 1
+    return 130 if interrupted else 1 if tally["error"] else 0
+
+
+def _run_outputs(pairs, work, workers: int, cancelled: Event) -> bool:
+    """Set cancellation before joining active encoders after Ctrl+C."""
+    from concurrent.futures import ThreadPoolExecutor
+    if workers == 1:
+        try:
+            for pair in pairs:
+                work(pair)
+        except KeyboardInterrupt:
+            cancelled.set()
+            return True
+        return False
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(work, pair) for pair in pairs]
+        try:
+            for future in futures:
+                future.result()
+        except KeyboardInterrupt:
+            cancelled.set()
+            for future in futures:
+                future.cancel()
+            return True
+    return False
 
 
 def _checked_path(raw: str) -> Path:
@@ -444,7 +474,8 @@ def cmd_collage(args) -> int:
     _ensure_parent(out)
     collage = build_collage(images, args.columns, cell=(args.cell_width, args.cell_height),
                             gap=args.gap, margin=args.margin, background=_rgb(args.background))
-    Image.fromarray(collage, mode="RGBA").save(out)
+    write_output("", out, lambda stage: Image.fromarray(collage, mode="RGBA").save(stage),
+                 OutputPolicy("replace"))
     print(f"{len(images)} images -> {out}")
     return 1 if errors else 0
 
@@ -469,7 +500,8 @@ def cmd_anaglyph(args) -> int:
         return 1
     result = anaglyph(*pair, args.method)
     _ensure_parent(out)
-    Image.fromarray(result, mode="RGBA").save(out)
+    write_output("", out, lambda stage: Image.fromarray(result, mode="RGBA").save(stage),
+                 OutputPolicy("replace"))
     print(f"{left} + {right} -> {out}")
     return 0
 
@@ -548,6 +580,13 @@ def _add_common(sub: argparse.ArgumentParser) -> None:
     sub.add_argument("--overwrite", action="store_true", help="overwrite existing outputs")
     sub.add_argument("-j", "--jobs", type=int, default=1,
                      help="parallel workers (1=inline, 0=auto/all cores)")
+    sub.add_argument("--output-conflict", choices=("rename", "skip", "replace"),
+                     help="output conflict policy (default: skip, or replace with --overwrite)")
+    sub.add_argument("--export-metadata", choices=("all", "no_location", "none"),
+                     help="explicit metadata policy (may re-encode; strip always removes metadata)")
+    sub.add_argument("--result-report",
+                     help="write atomic JSON results with committed output links")
+
 
 
 # Stands for ``_add_common(sub)`` (inputs, --out, --recursive, ...) in an argument list.

@@ -381,3 +381,33 @@ def test_a_jpeg_under_any_name_is_listed_and_skipped_as_already_jpeg(tmp_path, n
     worker = _ConvertWorker(paths=[], output_dir=str(tmp_path), fmt="JPEG", quality=90,
                             delete_originals=False, skip_same_fmt=True)
     assert worker._should_skip(str(tmp_path / name), ".jpg")
+
+
+def test_same_format_conversion_renames_and_retains_job_result(qapp, tmp_path):
+    src = tmp_path / "a.png"
+    Image.new("RGB", (4, 4), "red").save(src)
+    before = src.read_bytes()
+    worker = _ConvertWorker([str(src)], str(tmp_path), "PNG", 90, False, False)
+    worker.run()
+    snapshot = worker.job_state.snapshot()
+    assert snapshot.status == "succeeded"
+    assert snapshot.items[0].output == str(tmp_path / "a_1.png")
+    assert src.read_bytes() == before
+    assert Image.open(tmp_path / "a_1.png").info["icc_profile"]
+    worker.deleteLater()
+
+
+def test_cancel_during_conversion_does_not_commit(qapp, tmp_path, monkeypatch):
+    from Imervue.gui import batch_convert_dialog as mod
+    src = tmp_path / "a.png"
+    Image.new("RGB", (4, 4)).save(src)
+    worker = _ConvertWorker([str(src)], str(tmp_path), "JPEG", 90, False, False)
+    def encode(_img, target, *_args):
+        from pathlib import Path
+        Path(target).write_bytes(b"complete")
+        worker.job_state.request_cancel()
+    monkeypatch.setattr(mod, "save_image", encode)
+    worker.run()
+    assert worker.job_state.snapshot().status == "cancelled"
+    assert list(tmp_path.iterdir()) == [src]
+    worker.deleteLater()

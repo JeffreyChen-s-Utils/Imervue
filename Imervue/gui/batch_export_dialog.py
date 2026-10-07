@@ -24,6 +24,7 @@ from Imervue.gui.background_jobs import job_registry
 from Imervue.gui.export_metadata_combo import metadata_row
 from Imervue.gui.export_source import open_export_source
 from Imervue.image.export_metadata import DEFAULT_METADATA_POLICY, export_save_options
+from Imervue.image.output_policy import OutputPolicy, free_output_path, write_output
 from Imervue.gui.dialog_rows import action_button_row, path_browse_row, quality_slider
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.image import develop_backends, export_presets
@@ -116,14 +117,18 @@ class _ExportWorker(QThread):
             if self._abort or self.isInterruptionRequested() or self.job_state.cancelled:
                 self.job_state.request_cancel()
                 break
-            if self._process_one(src, renderer):
+            result = self._process_one(src, renderer)
+            if result is None:
+                self.job_state.request_cancel()
+                break
+            if result:
                 success += 1
             else:
                 failed += 1
             self.progress.emit(i + 1, total)
         return success, failed
 
-    def _process_one(self, src: str, renderer=None) -> bool:
+    def _process_one(self, src: str, renderer=None) -> bool | None:
         s = self._settings
         try:
             img = open_export_source(src, renderer)
@@ -137,13 +142,21 @@ class _ExportWorker(QThread):
             extra = export_save_options(src, s.metadata)
             if s.dpi > 0:
                 extra["dpi"] = (s.dpi, s.dpi)
-            save_image(img, str(out_path), s.fmt, s.quality, extra)
-            self.job_state.record(src, output=str(out_path))
+            result = write_output(
+                src, out_path, lambda path: save_image(img, str(path), s.fmt, s.quality, extra),
+                OutputPolicy("rename"), cancelled=self._cancelled,
+            )
+            if result.status == "cancelled":
+                return None
+            self.job_state.record(src, output=result.path)
             return True
         except Exception as exc:
             logger.exception(f"Batch export failed for {src}: {exc}")
             self.job_state.record(src, error=str(exc) or type(exc).__name__)
             return False
+
+    def _cancelled(self) -> bool:
+        return self._abort or self.isInterruptionRequested() or self.job_state.cancelled
 
     def _resize_if_needed(self, img):
         s = self._settings
@@ -159,13 +172,7 @@ class _ExportWorker(QThread):
 
 def _build_output_path(src: Path, output_dir: str, ext: str) -> Path:
     """Return a non-colliding output path for ``src`` inside ``output_dir``."""
-    base = src.stem + ext
-    out_path = Path(output_dir) / base
-    counter = 1
-    while out_path.exists():
-        out_path = Path(output_dir) / f"{src.stem}_{counter}{ext}"
-        counter += 1
-    return out_path
+    return free_output_path(Path(output_dir) / (src.stem + ext))
 
 
 class BatchExportDialog(WorkerHostMixin, QDialog):

@@ -9,6 +9,8 @@ inputs pads to the canvas with black borders rather than stretching.
 """
 from __future__ import annotations
 
+from Imervue.image.output_policy import OutputPolicy, write_output
+
 import contextlib
 import logging
 from dataclasses import dataclass
@@ -78,7 +80,7 @@ def _write_fade(
         writer.append_data(transition_frame(prev, nxt, transition, t))
 
 
-def generate_slideshow_mp4(
+def _generate_slideshow_mp4(
     images: list[str],
     output_path: str | Path,
     opts: SlideshowOptions | None = None,
@@ -138,3 +140,12 @@ def generate_slideshow_mp4(
         )
     logger.info("Slideshow written: %s", out)
     return out
+
+
+def generate_slideshow_mp4(images: list[str], output_path: str | Path,
+                            opts: SlideshowOptions | None = None) -> Path:
+    """Atomically publish the complete composite; failed encoding preserves existing output."""
+    result = write_output("", output_path,
+                          lambda stage: _generate_slideshow_mp4(images, stage, opts),
+                          OutputPolicy("replace"))
+    return Path(result.path)

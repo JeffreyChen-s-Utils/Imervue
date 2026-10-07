@@ -66,7 +66,8 @@ class JobState:
         with self._lock:
             return self._cancel
 
-    def record(self, source: str, *, output: str = "", error: str = "") -> None:
+    def record(self, source: str, *, output: str = "", error: str = "",
+               skipped: bool = False) -> None:
         """Publish an item after its output/transaction commits, never before."""
         with self._lock:
             if (
@@ -75,9 +76,10 @@ class JobState:
                 or self._status in TERMINAL
             ):
                 return
-            self._items[source] = JobItem(source, "failed" if error else "succeeded", output, error)
+            status = "skipped" if skipped else "failed" if error else "succeeded"
+            self._items[source] = JobItem(source, status, output, error)
             self._pending -= 1
-            if error:
+            if error and not skipped:
                 self._failures += 1
             else:
                 self._successes += 1

@@ -1165,7 +1165,21 @@ def test_subcommands_and_arguments_are_unchanged():
               if name not in generated}
     assert list(actual) == list(_EXPECTED)
     for name, expected in _EXPECTED.items():
-        assert actual[name] == expected, name
+        help_text, rows = expected
+        rows = list(rows)
+        jobs = next((i for i, row in enumerate(rows) if row[1] == "jobs"), None)
+        if jobs is not None:
+            rows[jobs + 1:jobs + 1] = [
+                (("--output-conflict",), "output_conflict", None, None, False, None,
+                 "output conflict policy (default: skip, or replace with --overwrite)",
+                 "_StoreAction"),
+                (("--export-metadata",), "export_metadata", None, None, False, None,
+                 "explicit metadata policy (may re-encode; strip always removes metadata)",
+                 "_StoreAction"),
+                (("--result-report",), "result_report", None, None, False, None,
+                 "write atomic JSON results with committed output links", "_StoreAction"),
+            ]
+        assert actual[name] == (help_text, rows), name
 
 
 def test_top_level_parser():
