@@ -80,6 +80,8 @@ Cancelling or closing a running worker-based tool returns immediately. The dialo
 
 Open `Extra Tools` > `Workflow` > `Background Jobs` to inspect batch export, library scans, AI upscale/shared plugin transforms and plugin downloads across windows. Results retain committed outputs and failure reasons after the original dialog closes. Cancel is cooperative; active operations remain alive until they finish. Retry starts a separate attempt for failed items only and preserves successful outputs. A plugin download is one atomic install item. The panel shows at most 500 detailed results, with failures first; Save full report writes all item results as JSON. Clear finished releases completed histories.
 
+In Paint, File > `Open Document…`, `Save Document…`, `Save Document As…` and `Save All Documents` use editable `.imervue` bundles. Save All processes modified tabs without changing the active tab; cancellation or failure stops the sequence and leaves unsaved documents open. The window-close prompt offers Save All, while a tab-close save targets that tab. Undo/Redo after saving marks the document modified again. Flat image exports remain separate and do not clear modifications. Tab and status tooltips show source, document destination, flat export and recovery autosave state/time/error. Native open and drops preserve existing edits. Existing PSD shortcuts remain unchanged; explicit native saving is synchronous.
+
 ## Installation
 
 ### Requirements

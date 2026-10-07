@@ -47,6 +47,8 @@ Annuler ou fermer un outil en cours en arrière-plan rend la main immédiatement
 
 Ouvrez ``Extra Tools`` > ``Workflow`` > ``Background Jobs`` pour consulter les exports par lots, analyses de bibliothèque, agrandissements IA/transformations partagées des plugins et téléchargements de plugins de toutes les fenêtres. Les sorties enregistrées et les erreurs restent disponibles après fermeture du dialogue initial. L’annulation est coopérative ; les opérations restent en vie jusqu’à leur fin réelle. Réessayer lance une nouvelle tentative uniquement pour les éléments en échec et conserve les sorties réussies. Un téléchargement de plugin constitue une installation atomique. Le panneau affiche au plus 500 détails, erreurs en premier ; le rapport complet enregistre tous les résultats en JSON. Effacer les tâches terminées libère leur historique.
 
+Dans Paint, File > ``Open Document…``, ``Save Document…``, ``Save Document As…`` et ``Save All Documents`` utilisent des documents ``.imervue`` modifiables. Tout enregistrer traite les onglets modifiés sans changer l’onglet actif ; annulation ou erreur arrête la séquence et laisse les documents non enregistrés ouverts. Fermer la fenêtre permet de tout enregistrer ; fermer un onglet enregistre cet onglet. Undo/Redo après enregistrement signale à nouveau des modifications. L’export aplati ne les efface pas. Les infobulles indiquent source, destination, export et état/heure/erreur de récupération automatique. Ouverture et dépôt préservent les éditions. Raccourcis PSD inchangés ; enregistrement natif explicite synchrone.
+
 .. contents:: Table des matières
    :depth: 2
    :local:

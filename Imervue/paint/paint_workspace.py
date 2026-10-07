@@ -312,7 +312,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
     # ---- drag-and-drop file open ---------------------------------------
 
     SUPPORTED_DROP_EXTS = tuple(sorted(
-        {".psd", ".png", ".tif", ".tiff", ".bmp", ".webp"} | JPEG_EXTENSIONS))
+        {".imervue", ".psd", ".png", ".tif", ".tiff", ".bmp", ".webp"} | JPEG_EXTENSIONS))
 
     def dragEnterEvent(self, event) -> None:  # noqa: N802 - Qt override
         """Accept file URL drops the workspace knows how to open."""
@@ -361,6 +361,9 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         return any(lowered.endswith(ext) for ext in self.SUPPORTED_DROP_EXTS)
 
     def _open_dropped_path(self, path: str) -> None:
+        if path.lower().endswith(".imervue"):
+            self._file_menu_bridge.open_document_at(path)
+            return
         if path.lower().endswith(".psd"):
             bridge = getattr(self, "_file_menu_bridge", None)
             if bridge is not None and hasattr(bridge, "open_psd_at"):
@@ -373,7 +376,9 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             # Route through the wrapper (not self._canvas.load_image) so the layer
             # dock is rebound to the new document; the bare canvas call left the
             # dock showing / mutating the replaced document.
-            self.load_image(rgba)
+            if self._tab_dirty.get(self._canvas, False):
+                self.new_tab(width=1, height=1)
+            self.load_image(rgba, source_path=path)
             from Imervue.paint import recent_files
             recent_files.add(path)
             bridge = getattr(self, "_file_menu_bridge", None)
@@ -422,6 +427,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         if self._pointer_stroke_active():
             return
         if self._undo_stack.undo():
+            self._set_tab_dirty(self._canvas, True)
             self._canvas.invalidate_texture()
             self._canvas.update()
             self._notify_history_action("undo")
@@ -433,6 +439,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         if self._pointer_stroke_active():
             return
         if self._undo_stack.redo():
+            self._set_tab_dirty(self._canvas, True)
             self._canvas.invalidate_texture()
             self._canvas.update()
             self._notify_history_action("redo")
@@ -493,7 +500,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     # ---- load image -----------------------------------------------------
 
-    def load_image(self, arr) -> None:
+    def load_image(self, arr, *, source_path: str = "") -> None:
         """Forward an HxWx4 RGBA buffer to the central canvas.
 
         ``None`` resets to a fresh blank canvas — never to an empty
@@ -509,6 +516,9 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         # so it re-subscribes and refreshes against the new stack.
         self._layer_dock.set_document(self._canvas.document())
         self._ensure_undo_stack()
+        from Imervue.paint.document_status import document_status, refresh_document_status
+        document_status(self._canvas).source = str(source_path)
+        refresh_document_status(self, self._canvas)
 
     def _ensure_undo_stack(self) -> None:
         """Force the active canvas's undo stack into existence at bind time.

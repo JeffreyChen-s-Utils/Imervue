@@ -129,6 +129,14 @@ Public interfaces other code or users depend on:
    Paint: entering its tab preserves the open documents; File > Open Current Image in Paint
    and image navigation from the Paint main-tab bar decode first, then open a new document.
    A failed decode leaves every document unchanged. The Deep Zoom E key opens annotations.
+   Paint file state: document_status belongs to the canvas's actual document identity and
+   keeps source, editable save destination, flat export and per-document recovery result
+   separate from the canonical tab dirty map. document_files saves a specified tab or all
+   modified tabs as atomic .imervue bundles, without switching selection. Close prompts use
+   native saves; cancellation/failure leaves remaining modified documents open. Successful
+   Undo/Redo always marks modifications again. Native open creates a new tab after decoding;
+   PSD imports install full documents, and raster drops preserve a dirty active document.
+   Explicit native saves are synchronous; periodic recovery remains on its background queue.
    Paint history: dispatcher gestures and explicit layer/material commands commit complete
    editable content per document; restore keeps the document's listeners and surviving
    layer identities while restoring structure, properties, masks, vectors and selections.

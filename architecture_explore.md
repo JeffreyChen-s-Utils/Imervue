@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 949 | 158,466 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 172 | 43,251 |
+| `tests/` | 951 | 158,731 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 174 | 43,523 |
 | `Imervue/gui/` | 175 | 35,158 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 129 | 15,444 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 70 | 13,661 |
-| `Imervue/multi_language/` | 8 | 15,240 |
+| `Imervue/multi_language/` | 8 | 15,330 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,774 |
@@ -84,10 +84,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| `scripts/`（開發與發佈工具） | 8 | 1,189 |
-| **總計** | **1,818** | **346,058** |
+| `scripts/`（開發與發佈工具） | 8 | 1,194 |
+| **總計** | **1,822** | **346,690** |
 
-其中 `Imervue/` 套件本身 781 檔 / 170,382 行。
+其中 `Imervue/` 套件本身 783 檔 / 170,744 行。
 
 測試碼與產品碼比約 **0.85 : 1**（158k vs 186k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -679,7 +679,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-172 個檔、43,251 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+174 個檔、43,523 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -773,25 +773,27 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 778 | 頂層 PaintWorkspace；筆刷／橡皮擦手勢提交完整 damage hints，dock 與未知操作保守完整捕捉；confirm_close 由主視窗呼叫 |
+| `paint_workspace.py` | 788 | 頂層 PaintWorkspace；完整 history/damage 提交與 Undo／Redo 修改標記；來源路徑傳遞、髒文件拖放保護、confirm_close 由主視窗呼叫 |
 | `tool_dispatcher.py` | 478 | 工具事件路由與手勢提交；累計筆刷／橡皮擦 damage，僅提交回呼期間提供區域 hints；切頁、切工具與部分失敗保守捕捉 |
 | `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
 | `tool_bar.py` | 491 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
-| `workspace_tabs.py` | 339 | 多文件分頁、髒狀態；切頁更新該文件最後自動存檔時間，關閉清除該文件快照與歷史 |
+| `document_status.py` | 64 | 無 Qt 的文件來源／原生或 PSD 保存／扁平輸出／快照状态；文件替換重設、共用分頁及狀態提示 |
+| `document_files.py` | 120 | 原生 .imervue 開啟／指定分頁保存／另存／依序儲存全部；原子保存後才清除修改，取消／失敗保留文件，重複目标保護 |
+| `workspace_tabs.py` | 326 | 多文件分頁與唯一髒狀態；非作用分頁關閉儲存指定文件，視窗關閉原生儲存全部；來源／保存／快照共用提示 |
 | `workspace_docks.py` | 417 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 469 | 文件內容命令；姿勢與材質插入透過 workspace_history 提交 Undo 與髒狀態 |
 | `workspace_history.py` | 15 | 圖層選單、漫畫圖層與素材插入共用的完整編輯提交邊界 |
-| `workspace_status.py` | 320 | 狀態列與縮放指示 |
+| `workspace_status.py` | 349 | 狀態列與縮放指示；文件修改／保存位置、快照結果與上次時間；完整提示共用 document_status |
 | `workspace_shortcuts.py` | 317 | 快捷鍵、筆刷調整、歡迎提示；圖層排序完成時提交 Undo，邊界不建立空步驟 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
-| `workspace_autosave.py` | 352 | dirty tabs 定時共用 immutable committed snapshots 至背景 queue，超過歷史 cap 時 UI 獨立複製；結果在 UI 記錄 owned paths／timestamps，替換與關閉取消 late output；原有同步 explicit API／復原保留 |
+| `workspace_autosave.py` | 367 | dirty tabs 共用 immutable committed snapshots 至背景 queue；每文件 pending／saved／failed 與時間／原因，late output 取消；同步 explicit API／復原保留 |
 | `autosave_jobs.py` | 159 | 一個背景 writer／每文件最新 pending；immutable materialization／NPZ 壓縮／file IO，application-owned QObject signals 與取消後清除 late snapshots，queued UI 完成與 sender retirement |
 | `auto_save.py` | 268 | Qt-free 原生快照／原子 metadata、每文件八份 quota、排序與損壞快照回復，供同步入口與背景 writer 共用 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |
 | `canvas_presets.py` | 184 + `new_canvas_dialog.py`(136) | File > New Canvas… 的尺寸預設（紙張／漫畫／螢幕 + 自訂，存在設定）與對話框（尺寸、白或透明背景）|
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(635)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(322)、`filter_menu.py`(563)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(198) 單一滑桿濾鏡的即時預覽（圖層中央 480×480 原尺寸裁切） |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(683) 原生文件保存及格式分流的 Recent、保留完整 PSD 圖層匯入、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(322)、`filter_menu.py`(563)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(198) 單一滑桿濾鏡的即時預覽（圖層中央 480×480 原尺寸裁切） |
 
 #### `paint/docks/`（7 檔 · 1,955 行）
 

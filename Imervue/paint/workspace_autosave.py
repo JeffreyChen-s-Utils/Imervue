@@ -17,6 +17,7 @@ import uuid
 from PySide6.QtCore import QObject, QTimer, Qt
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.paint.document_status import document_status, refresh_document_status
 
 logger = logging.getLogger("Imervue")
 
@@ -75,7 +76,9 @@ class AutosaveMixin:
         except (OSError, ValueError, RuntimeError, MemoryError) as exc:
             # RuntimeError: the canvas's C++ object was deleted between this timer
             # tick being queued and firing (the window closed / a tab torn down).
-            AutosaveMixin._report_autosave_error(self, str(exc))
+            AutosaveMixin._report_autosave_error(
+                self, str(exc) or type(exc).__name__, canvas=canvas,
+            )
             return None
         if snapshot is None:
             return None
@@ -85,6 +88,8 @@ class AutosaveMixin:
     def _record_autosave_success(self, canvas, snapshot) -> None:
         """Record owned files and UI timestamps for either an explicit or periodic save."""
         last = time.monotonic()
+        state = document_status(canvas)
+        state.autosave, state.autosave_error, state.autosave_at = "saved", "", last
         stamps = getattr(self, "_autosave_last_by_canvas", None)
         if stamps is None:
             stamps = self._autosave_last_by_canvas = {}
@@ -96,7 +101,7 @@ class AutosaveMixin:
             written = self._autosave_written = set()
         written.add(snapshot.bundle_path)
         self._autosave_paths_for(canvas).add(snapshot.bundle_path)
-        self._refresh_status_line()
+        refresh_document_status(self, canvas)
 
     def _autosave_record(self, canvas):
         """Return a stable identity for this canvas's current document."""
@@ -293,11 +298,21 @@ class AutosaveMixin:
             jobs.request(SaveRequest(record[1], content,
                                      getattr(self, "_autosave_target_dir", None),
                                      self._autosave_title(canvas)))
+            state = document_status(canvas)
+            state.autosave, state.autosave_error = "pending", ""
+            refresh_document_status(self, canvas)
         except (OSError, ValueError, RuntimeError, MemoryError) as exc:
-            self._report_autosave_error(str(exc))
+            self._report_autosave_error(str(exc) or type(exc).__name__, canvas=canvas)
 
-    def _report_autosave_error(self, message: str) -> None:
+    def _report_autosave_error(self, message: str, *, canvas=None) -> None:
         logger.warning("Paint autosave failed: %s", message)
+        if canvas is not None:
+            try:
+                state = document_status(canvas)
+                state.autosave, state.autosave_error = "failed", message
+                refresh_document_status(self, canvas)
+            except RuntimeError as exc:
+                logger.debug("Autosave status canvas already deleted: %s", exc)
         toast = getattr(self, "toast", None)
         if toast is not None:
             toast.warning(language_wrapper.language_word_dict.get(
@@ -319,7 +334,7 @@ class AutosaveMixin:
                 self._autosave_jobs.discard_result(snapshot)
             return
         if message:
-            self._report_autosave_error(message)
+            self._report_autosave_error(message, canvas=record[0])
         if snapshot is not None:
             self._record_autosave_success(record[0], snapshot)
 

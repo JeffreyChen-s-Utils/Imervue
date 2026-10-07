@@ -9,6 +9,7 @@ from shiboken6 import isValid
 
 from Imervue.paint import auto_save, autosave_jobs
 from Imervue.paint.document import PaintDocument
+from Imervue.paint.document_status import document_status
 from Imervue.paint.undo_stack import UndoStack
 from Imervue.paint.workspace_autosave import AutosaveMixin
 
@@ -34,6 +35,10 @@ class _Host(QObject, AutosaveMixin):
         self.toast = SimpleNamespace(warning=self.warnings.append)
 
     def _refresh_status_line(self):
+        pass
+
+    def _record_autosave_success(self, canvas, snapshot):
+        super()._record_autosave_success(canvas, snapshot)
         self.callback_threads.append(QThread.currentThread())
 
 
@@ -80,6 +85,7 @@ def test_tick_never_reads_mutating_live_pixels_on_worker(qapp, tmp_path, pump_un
     try:
         host._on_autosave_tick()
         assert pump_until(entered.is_set)
+        assert document_status(host._canvas).autosave == "pending"
         # A subsequent in-progress stroke mutates both layers and selection;
         # the writer owns the earlier immutable committed version.
         live = host._canvas.document()
@@ -89,6 +95,8 @@ def test_tick_never_reads_mutating_live_pixels_on_worker(qapp, tmp_path, pump_un
         assert pump_until(lambda: bool(host.callback_threads))
         snapshots = auto_save.list_snapshots(tmp_path)
         restored = auto_save.recover_snapshot(snapshots[0])
+        assert document_status(host._canvas).autosave == "saved"
+        assert document_status(host._canvas).autosave_at is not None
         np.testing.assert_array_equal(restored.active_layer().image,
                                       np.full((4, 5, 4), 17, dtype=np.uint8))
         assert restored.selection() is None
@@ -167,6 +175,9 @@ def test_failed_background_save_reports_error_and_keeps_previous_snapshot(
         host._on_autosave_tick()
         assert pump_until(lambda: bool(host.warnings))
         assert str(error) in host.warnings[0]
+        status = document_status(host._canvas)
+        assert status.autosave == "failed" and status.autosave_error == str(error)
+        assert status.autosave_at is not None
         assert [s.bundle_path for s in auto_save.list_snapshots(tmp_path)] == [valid]
         restored = auto_save.recover_snapshot(auto_save.list_snapshots(tmp_path)[0])
         assert restored.active_layer().image[0, 0, 0] == 17

@@ -26,7 +26,8 @@ class _Workspace:
         self.documents.append(self.document)
         self.stack = UndoStack(self.document)
 
-    def load_image(self, arr):
+    def load_image(self, arr, *, source_path=""):
+        self.source_path = source_path
         self.document = PaintDocument()
         self.document.load_image(
             np.zeros((8, 8, 4), dtype=np.uint8) if arr is None else arr,
@@ -92,6 +93,7 @@ def test_explicit_handoff_opens_a_new_document(window, monkeypatch):
     np.testing.assert_array_equal(workspace.document.layer_at(0).image, image)
     assert workspace.documents[0] is original
     assert window.tab_changes == [2]
+    assert workspace.source_path == window.viewer.model.images[0]
 
 
 @pytest.mark.parametrize(("images", "index"), [([], 0), (["a.png"], -1), (["a.png"], 1)])

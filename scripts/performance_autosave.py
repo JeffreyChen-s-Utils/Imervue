@@ -31,9 +31,14 @@ class _Host(QObject, AutosaveMixin):
         self.warnings = []
 
     def _refresh_status_line(self):
+        pass
+
+    def _record_autosave_success(self, canvas, snapshot):
+        super()._record_autosave_success(canvas, snapshot)
         self.completed += 1
 
-    def _report_autosave_error(self, message):
+    def _report_autosave_error(self, message, *, canvas=None):
+        super()._report_autosave_error(message, canvas=canvas)
         self.warnings.append(message)
 
 

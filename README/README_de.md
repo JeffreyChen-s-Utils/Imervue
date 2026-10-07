@@ -80,6 +80,8 @@ Das Abbrechen oder Schließen eines laufenden Hintergrundwerkzeugs kehrt sofort 
 
 Unter `Extra Tools` > `Workflow` > `Background Jobs` sehen Sie Batch-Exporte, Bibliotheksscans, KI-Vergrößerung/gemeinsame Plugin-Transformationen und Plugin-Downloads aller Fenster. Gespeicherte Ausgaben und Fehlergründe bleiben nach dem Schließen des ursprünglichen Dialogs erhalten. Abbrechen ist kooperativ; laufende Operationen bleiben bis zum tatsächlichen Ende erhalten. Wiederholen startet einen neuen Versuch nur für fehlgeschlagene Einträge und bewahrt erfolgreiche Ausgaben. Ein Plugin-Download ist ein atomarer Installationsauftrag. Das Panel zeigt höchstens 500 Details, Fehler zuerst; der vollständige Bericht speichert alle Ergebnisse als JSON. Abgeschlossene Einträge löschen gibt deren Historie frei.
 
+In Paint verwenden File > `Open Document…`, `Save Document…`, `Save Document As…` und `Save All Documents` bearbeitbare `.imervue`-Dateien. Alle speichern verarbeitet geänderte Tabs ohne Tabwechsel; Abbruch oder Fehler beendet die Folge und lässt ungespeicherte Dokumente offen. Beim Fensterschließen können alle gespeichert werden, beim Tabschließen der betroffene Tab. Undo/Redo nach dem Speichern markiert Änderungen erneut. Flache Bildexporte löschen diesen Status nicht. Tab- und Statushinweise zeigen Quelle, Dokumentziel, Export und Wiederherstellungsstatus/Zeit/Fehler. Öffnen und Ablegen schützen vorhandene Bearbeitungen. PSD-Tastenkürzel bleiben bestehen; explizites natives Speichern ist synchron.
+
 ## Installation
 
 ### Voraussetzungen

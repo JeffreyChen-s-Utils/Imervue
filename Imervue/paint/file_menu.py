@@ -29,6 +29,8 @@ from Imervue.paint.color_palette_io import (
     import_palette,
 )
 from Imervue.paint.paint_menu_bar import menu_for
+from Imervue.paint.document_files import DocumentFiles
+from Imervue.paint.document_status import document_status, refresh_document_status
 
 if TYPE_CHECKING:
     from Imervue.paint.paint_workspace import PaintWorkspace
@@ -63,6 +65,10 @@ def populate_file_menu(workspace: PaintWorkspace) -> None:
         ("paint_file_close_tab", "Close Tab",
          bridge.close_active_tab, "Ctrl+W"),
         (None, None, None, None),
+        ("paint_file_open_document", "Open Document…", bridge.open_document, ""),
+        ("paint_file_save_document", "Save Document…", bridge.save_document, ""),
+        ("paint_file_save_document_as", "Save Document As…", bridge.save_document_as, ""),
+        ("paint_file_save_all", "Save All Documents", bridge.save_all_documents, ""),
         ("paint_file_open_psd", "Open PSD…",
          bridge.open_psd, "Ctrl+O"),
         ("paint_file_save_psd", "Save as PSD…",
@@ -118,6 +124,27 @@ class _FileMenuBridge:
 
     def __init__(self, workspace: PaintWorkspace):
         self._workspace = workspace
+        self._documents = DocumentFiles(self)
+
+    def open_document(self) -> bool:
+        """Open an editable native bundle in a fresh tab."""
+        return self._documents.open()
+
+    def open_document_at(self, path: str) -> bool:
+        """Open a native bundle selected by recent-files or drag and drop."""
+        return self._documents.open(path)
+
+    def save_document(self, canvas=None) -> bool:
+        """Save the specified tab, including a non-active tab being closed."""
+        return self._documents.save(None if isinstance(canvas, bool) else canvas)
+
+    def save_document_as(self) -> bool:
+        """Pick a new native save destination for the active document."""
+        return self._documents.save(save_as=True)
+
+    def save_all_documents(self) -> bool:
+        """Save every modified tab without switching the active document."""
+        return self._documents.save_all()
 
     # ---- multi-document tabs --------------------------------------------
 
@@ -252,7 +279,7 @@ class _FileMenuBridge:
             label = self._format_recent_label(path)
             action = recent_menu.addAction(label)
             action.triggered.connect(
-                lambda _checked=False, p=path: self.open_psd_at(p),
+                lambda _checked=False, p=path: self.open_recent_at(p),
             )
         recent_menu.addSeparator()
         clear_action = recent_menu.addAction(
@@ -306,9 +333,22 @@ class _FileMenuBridge:
         the recent list through one code path.
         """
         from Imervue.paint import recent_files
-        commit_open_psd(self._workspace, path)
+        if not commit_open_psd(self._workspace, path):
+            self._warn("paint_file_open_psd", path)
+            return
+        document_status(self._workspace.canvas()).source = str(path)
+        refresh_document_status(self._workspace, self._workspace.canvas())
         recent_files.add(str(path))
         self.refresh_recent_menu()
+
+    def open_recent_at(self, path: str) -> None:
+        """Dispatch recent files by their real format instead of treating all as PSD."""
+        if path.lower().endswith(".imervue"):
+            self.open_document_at(path)
+        elif path.lower().endswith(".psd"):
+            self.open_psd_at(path)
+        else:
+            self._workspace._open_dropped_path(path)
 
     def save_psd(self) -> None:  # pragma: no cover - QFileDialog
         from PySide6.QtWidgets import QFileDialog
@@ -332,6 +372,9 @@ class _FileMenuBridge:
             self._warn("paint_file_save_psd", exc)
             return
         self._notify_success("paint_file_save_psd_done", "Saved PSD", path, saved=True)
+        state = document_status(self._workspace.canvas())
+        state.saved_path, state.saved_format = path, "psd"
+        refresh_document_status(self._workspace, self._workspace.canvas())
 
     # ---- import paths ----------------------------------------------------
 
@@ -417,6 +460,8 @@ class _FileMenuBridge:
             self._warn("paint_file_export_image", exc)
             return
         self._notify_success("paint_file_export_image_done", "Exported", path)
+        document_status(self._workspace.canvas()).exported_path = path
+        refresh_document_status(self._workspace, self._workspace.canvas())
 
     def export_pages_cbz(self) -> None:  # pragma: no cover - QFileDialog
         project = self._current_project()
@@ -616,7 +661,9 @@ def commit_open_psd(workspace, path: str) -> bool:
         return False
     if hasattr(workspace, "new_tab"):
         canvas = workspace.new_tab()
-        canvas.load_image(composite)
+        canvas.set_document(new_doc)
+        workspace._ensure_undo_stack()
+        workspace._layer_dock.set_document(new_doc)
     else:
         workspace.load_image(composite)
     return True

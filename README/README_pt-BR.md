@@ -80,6 +80,8 @@ Cancelar ou fechar uma ferramenta em segundo plano retorna imediatamente. O diá
 
 Abra `Extra Tools` > `Workflow` > `Background Jobs` para consultar exportações em lote, varreduras da biblioteca, ampliação por IA/transformações compartilhadas de plugins e downloads de plugins de todas as janelas. As saídas gravadas e os motivos de falha permanecem após fechar o diálogo original. O cancelamento é cooperativo; operações continuam vivas até terminar. Repetir inicia outra tentativa somente para itens com falha e preserva saídas bem-sucedidas. Um download de plugin é uma instalação atômica. O painel mostra até 500 detalhes, falhas primeiro; salvar o relatório completo grava todos os resultados em JSON. Limpar concluídos libera seus históricos.
 
+No Paint, File > `Open Document…`, `Save Document…`, `Save Document As…` e `Save All Documents` usam documentos `.imervue` editáveis. Salvar todos processa abas modificadas sem mudar a ativa; cancelamento ou falha interrompe a sequência e mantém documentos pendentes abertos. Ao fechar a janela, pode salvar todos; ao fechar uma aba, salva essa aba. Undo/Redo após salvar marca alterações novamente. Exportar imagem plana não limpa esse estado. As dicas mostram origem, destino, exportação e estado/hora/erro do salvamento de recuperação. Abrir e arrastar preservam edições. Atalhos PSD permanecem; salvamento nativo explícito é síncrono.
+
 ## Instalação
 
 ### Requisitos

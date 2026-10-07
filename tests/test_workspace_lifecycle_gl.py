@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from OpenGL import GL
 from PySide6.QtCore import QThreadPool
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from shiboken6 import isValid
 
 from Imervue.Imervue_main_window import ImervueMainWindow
@@ -91,6 +91,19 @@ def test_edit_switch_autosave_recover_and_cancel_close(windows, tmp_path, pump_u
     assert workspace.tab_count() == 2 and workspace._tab_dirty[first]
     assert workspace.restore_all_autosaves() == 2
     assert workspace.tab_count() == 4 and first.document() is documents[0]
+    # Save all writes native editable content without changing the active tab.
+    active = workspace.canvas()
+    targets = iter(str(tmp_path / f"document-{i}.imervue") for i in range(4))
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_: (next(targets), ""))
+    assert workspace._file_menu_bridge.save_all_documents()
+    assert workspace.canvas() is active and not workspace._has_unsaved_tabs()
+    workspace._tabs.setCurrentIndex(0)
+    workspace.undo()
+    assert workspace._tab_dirty[first]
+    assert workspace._file_menu_bridge.save_document()
+    assert not workspace._tab_dirty[first]
+    workspace.redo()
+    assert workspace._tab_dirty[first]
 
 
 @pytest.mark.parametrize("error", [OSError("disk full"), PermissionError("read only")])

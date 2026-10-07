@@ -315,7 +315,7 @@ class ImervueMainWindow(
         workspace = self.paint_workspace
         # load_image replaces the blank document; avoid a second full-size allocation.
         workspace.new_tab(width=1, height=1)
-        workspace.load_image(arr)
+        workspace.load_image(arr, source_path=path)
         self._main_tabs.setCurrentIndex(2)
 
     def eventFilter(self, obj, event):

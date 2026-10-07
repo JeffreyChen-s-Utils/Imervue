@@ -42,8 +42,11 @@ def test_dropped_raster_routes_through_the_load_image_wrapper(tmp_path):
     path = tmp_path / "x.png"
     Image.fromarray(np.zeros((4, 4, 4), dtype=np.uint8), "RGBA").save(str(path))
     loaded: list = []
+    sources: list = []
+    canvas = _FakeCanvas(PaintDocument())
     ws = SimpleNamespace(
-        load_image=lambda arr: loaded.append(arr),   # the wrapper (rebinds dock)
+        load_image=lambda arr, *, source_path="": (loaded.append(arr), sources.append(source_path)),
+        _canvas=canvas, _tab_dirty={canvas: False},
         _file_menu_bridge=None,
     )
     PaintWorkspace._open_dropped_path(ws, str(path))
@@ -51,6 +54,7 @@ def test_dropped_raster_routes_through_the_load_image_wrapper(tmp_path):
     # left the layer dock bound to the replaced document).
     assert len(loaded) == 1
     assert loaded[0].shape == (4, 4, 4)
+    assert sources == [str(path)]
 
 
 # ---------------------------------------------------------------------------
@@ -85,16 +89,19 @@ def test_undo_deferred_while_pointer_button_held():
 def test_undo_proceeds_when_no_button_held():
     undo_calls: list = []
     actions: list = []
+    dirty_calls: list = []
     ws = SimpleNamespace(
         _pointer_stroke_active=lambda: False,
         _undo_stack=SimpleNamespace(undo=lambda: undo_calls.append(True) or True),
         _canvas=SimpleNamespace(invalidate_texture=lambda: None, update=lambda: None),
         _notify_history_action=lambda k: actions.append(k),
         _notify_history_empty=lambda k: None,
+        _set_tab_dirty=lambda canvas, dirty: dirty_calls.append(dirty),
     )
     PaintWorkspace.undo(ws)
     assert undo_calls == [True]
     assert actions == ["undo"]
+    assert dirty_calls == [True]
 
 
 def test_dropped_tagged_photo_opens_upright(tmp_path):
@@ -104,6 +111,8 @@ def test_dropped_tagged_photo_opens_upright(tmp_path):
     path = tmp_path / "portrait.jpg"
     Image.new("RGB", (40, 20)).save(path, exif=exif)
     loaded: list = []
-    ws = SimpleNamespace(load_image=loaded.append, _file_menu_bridge=None)
+    canvas = _FakeCanvas(PaintDocument())
+    ws = SimpleNamespace(load_image=lambda arr, **_kwargs: loaded.append(arr),
+                         _file_menu_bridge=None, _canvas=canvas, _tab_dirty={canvas: False})
     PaintWorkspace._open_dropped_path(ws, str(path))
     assert loaded[0].shape == (40, 20, 4)

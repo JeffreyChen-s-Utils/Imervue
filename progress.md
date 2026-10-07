@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第三階段：一致的功能流程與狀態（P2）
 
-- **#71** 文件來源、髒狀態、保存位置及最後自動儲存狀態缺少一致呈現；Paint 多文件關閉流程尚缺「儲存全部」：`Imervue/paint/workspace_tabs.py`、`Imervue/paint/workspace_status.py`。
-  下一步：統一文件狀態顯示並補儲存全部流程，區分可繼續編輯的原生文件與扁平輸出；驗證儲存後 Undo／Redo 會重新標記修改，取消選檔或保存失敗時不清除髒狀態、不關閉未保存文件。
-
 - **#72** 搜尋、比較、挑片、顯影及批次輸出的選取集合與預設缺少連貫流程：`Imervue/library/`、`Imervue/gui/`。
   下一步：以「搜尋 → 比較 → 保留／拒絕 → 套用顯影 → 批次輸出」建立整合案例，沿用同一選取集合與既有預設，驗證過濾、跨資料夾與返回上一步時的狀態。
 
