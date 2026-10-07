@@ -7,6 +7,11 @@ than hardware GPU throughput. Windows fast/gui/integration jobs retain the
 existing offscreen crash guard. The independent job sets `CI=false` and the
 `xcb` platform only within its own environment.
 
+The job explicitly installs the XCB runtime extensions and uses `ldd` on the
+Qt XCB/GLX plugins before constructing QApplication. Missing shared libraries
+fail this preflight; uncaptured test output retains Qt platform diagnostics.
+The library categories follow [Qt's Linux platform requirements](https://doc.qt.io/qt-6/linux-requirements.html).
+
 The selected ten cases cover full-budget thumbnail scrolling in both directions,
 100k zoom/hit geometry, actual texture-handle release, two real viewer windows,
 Paint edits across Viewer/Modify/Paint, independent document history and masks,

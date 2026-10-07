@@ -153,13 +153,28 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y xvfb xauth mesa-utils libgl1-mesa-dri libegl1 libopengl0 \
           libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-          libxcb-render-util0 libxcb-randr0 libxcb-xinerama0 libxcb-xfixes0
+          libxcb-render-util0 libxcb-randr0 libxcb-xinerama0 libxcb-xfixes0 \
+          libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-glx0 libx11-xcb1
     - name: Install core test dependencies
       run: >-
         python -m pip install --only-binary :all:
         PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest
     - name: Record actual GL capability
       run: xvfb-run -a glxinfo -B
+    - name: Verify Qt platform runtime dependencies
+      run: |
+        python - <<'PY'
+        import subprocess
+        from pathlib import Path
+        from PySide6.QtCore import QLibraryInfo
+        plugin = Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath))
+        for relative in ("platforms/libqxcb.so", "xcbglintegrations/libqxcb-glx-integration.so"):
+            result = subprocess.run(["ldd", str(plugin / relative)], capture_output=True,
+                                    text=True, check=True)
+            print(result.stdout, flush=True)
+            if "not found" in result.stdout:
+                raise SystemExit("Qt platform runtime has missing shared libraries")
+        PY
     - name: Run real rendering and workspace lifecycle regressions
       run: >-
         xvfb-run -a -s "-screen 0 1920x1080x24 +extension GLX"
@@ -167,7 +182,7 @@ jobs:
         tests/test_tile_textures_gl.py tests/test_workspace_lifecycle_gl.py
         tests/test_paint_auto_save.py::test_background_dirty_tab_and_multiple_document_recovery
         tests/test_main_window_layout.py::test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo
-        -v --tb=short -o junit_family=xunit1 --junitxml=real-gl.xml
+        -v -s --tb=short -o junit_family=xunit1 --junitxml=real-gl.xml
         -p no:unraisableexception
     - name: Require executed GL cases and renderer evidence
       run: python scripts/verify_gl_report.py real-gl.xml

@@ -98,6 +98,8 @@ def test_real_gl_job_is_separate_requires_actual_rendering_and_gates_publication
     assert 'CI: "false"' in gl and 'QT_QPA_PLATFORM: xcb' in gl
     assert 'LIBGL_ALWAYS_SOFTWARE: "1"' in gl
     assert 'xvfb-run' in gl and 'glxinfo -B' in gl
+    assert 'platforms/libqxcb.so' in gl and 'xcbglintegrations/libqxcb-glx-integration.so' in gl
+    assert '"not found" in result.stdout' in gl
     assert 'scripts/verify_gl_report.py real-gl.xml' in gl
     for case in ("tests/test_tile_textures_gl.py", "tests/test_workspace_lifecycle_gl.py",
                  "test_background_dirty_tab_and_multiple_document_recovery",
