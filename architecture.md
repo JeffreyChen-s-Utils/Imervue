@@ -138,7 +138,12 @@ Public interfaces other code or users depend on:
    states are pruned; an oversized baseline clears history while preserving live content.
    Snapshot materialization makes independent arrays for background consumers.
    Paint recovery: periodic autosave covers every dirty tab, with stable document identities
-   and independent eight-version retention. Restore opens new modified tabs, falling back
+   and independent eight-version retention. Timers enqueue immutable committed snapshots to
+   one background writer per workspace, coalescing the latest pending version per document.
+   Materialization/compression/writing leave the UI; history-disabled documents first capture
+   an independent UI copy. Application-owned senders survive destruction and cancelled late
+   files are discarded; explicit synchronous snapshot APIs remain available.
+   Restore opens new modified tabs, falling back
    to older readable versions without replacing edits. Native metadata keeps panel layouts.
    Delete: soft delete in `gpu_image_view/actions/delete.py` → `commit_pending_deletions()` →
    one batch through `system/trash_ops.py`.

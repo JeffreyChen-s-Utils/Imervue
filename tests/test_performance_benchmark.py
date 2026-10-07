@@ -179,6 +179,10 @@ def test_real_child_index_history_cache_report(tmp_path):
     assert result["failures"] == {}
     assert result["scenarios"]["library-small"]["count"] == 100
     assert result["scenarios"]["paint"]["layer_bytes"] == 384 * 216 * 4 * 6
+    background = result["scenarios"]["paint"]["background_autosave"]
+    assert len(background["ui_enqueue"]["samples_ms"]) == 3
+    assert len(background["worker_compress_write"]["samples_ms"]) == 3
+    assert background["memory"]["rss_peak_bytes"] > 0
     assert result["scenarios"]["cache"]["entries"] == 1000
     assert result["environment"]["tool_sha256"]["performance_gl.py"]
 

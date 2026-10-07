@@ -71,6 +71,11 @@ class UndoStack:
         """Share immutable committed content; its materializer owns all new arrays."""
         return self._baseline if self._baseline is not None else self._capture()
 
+    @property
+    def available_snapshot(self) -> _Snapshot | None:
+        """Already immutable committed state, or None when the history byte cap disabled it."""
+        return self._baseline
+
     def commit(self, *, regions: tuple[tuple[np.ndarray, DamageRect], ...] | None = None) -> None:
         """Commit content; optional hints must cover EVERY array changed by the edit."""
         current = self._capture(regions=regions)

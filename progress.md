@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第二階段：效能基準、操作回應與記憶體（P1）
 
-- **#67** 自動儲存於 UI timer 路徑同步壓縮及寫入：`Imervue/paint/workspace_autosave.py:47`、`Imervue/paint/auto_save.py:69`，大文件可能造成卡頓。
-  下一步：接續 #60 量測快照與壓縮耗時；以一致的文件版本背景保存並合併重複請求，驗證保存期間繪圖不產生混合版本，失敗可回報且既有有效快照仍可恢復。
-
 - **#68** 工作取消與對話框關閉可能長時間阻塞 UI：`Imervue/plugin/worker_host.py` 的停止流程同步等待 worker 完成。
   下一步：量測不可立即中斷的解碼、推論及 I/O；補執行中取消／關閉／再次開啟測試，顯示取消狀態並以完成訊號協調釋放，保留 worker 與宿主生命週期。
 

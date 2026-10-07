@@ -229,11 +229,16 @@ def paint(fixture: Path, profile: Path, repeats: int) -> dict:
     save = measure(lambda: snapshots.append(write_snapshot(
         document, directory=profile / "autosaves", document_id="benchmark")), repeats=repeats)
     recover = measure(lambda: recover_snapshot(snapshots[-1]), repeats=1)
+    from scripts.performance_autosave import background_autosave
+    background = background_autosave(
+        _application(), document, stack, profile / "background-autosaves", repeats,
+    )
     return {"shape": [height, width], "layers": document.layer_count,
             "layer_bytes": sum(layer.image.nbytes for layer in document.layers()),
             "history_bytes_after_strokes": history_bytes,
             "undo_seed": seed, "stroke_commit": commit, "undo": undo, "redo": redo,
             "autosave_compress_write": save, "autosave_recover": recover,
+            "background_autosave": background,
             "bundle_bytes": snapshots[-1].bundle_path.stat().st_size,
             "boundary": ("six gradient RGBA layers; 32x32 edit; "
                          "compression easier than photographic noise")}

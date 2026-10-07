@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 939 | 156,718 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 171 | 43,019 |
+| `tests/` | 940 | 157,135 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 172 | 43,251 |
 | `Imervue/gui/` | 174 | 34,770 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 129 | 15,444 |
@@ -84,12 +84,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| `scripts/`（開發與發佈工具） | 5 | 936 |
-| **總計** | **1,801** | **342,969** |
+| `scripts/`（開發與發佈工具） | 6 | 1,042 |
+| **總計** | **1,804** | **343,724** |
 
-其中 `Imervue/` 套件本身 777 檔 / 169,294 行。
+其中 `Imervue/` 套件本身 778 檔 / 169,526 行。
 
-測試碼與產品碼比約 **0.85 : 1**（156k vs 185k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.85 : 1**（157k vs 185k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -677,7 +677,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.14 `Imervue/paint/`
 
-169 個檔、42,626 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+172 個檔、43,251 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -697,7 +697,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
 | `document_io.py` | 453 | 原生 .imervue NPZ 文件讀寫、圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
 | `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
-| `undo_stack.py` | 184 | 每文件 512 MiB／50 步驟容量歷史；不可變像素區塊共用、結構與完整 metadata 復原，保留存活圖層身分，提供背景消費者的獨立實體化快照 |
+| `undo_stack.py` | 189 | 每文件 512 MiB／50 步驟容量歷史；不可變共用像素與完整 metadata 復原、存活圖層身分；available_snapshot 提供已持有快照，背景保存不在 timer 捕捉整張陣列 |
 | `history_pixels.py` | 151 | 純運算 256px 不可變 tile、弱 interning 索引、完整／區域 capture 與差異 patch，計算唯一資料及 Python 狀態容量 |
 | `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
 | `blend_modes.py` | 63 | 共用 RGB 混色模式數學 |
@@ -782,8 +782,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
 | `workspace_shortcuts.py` | 317 | 快捷鍵、筆刷調整、歡迎提示；圖層排序完成時提交 Undo，邊界不建立空步驟 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
-| `workspace_autosave.py` | 284 | 所有已修改分頁各自自動存檔、每文件獨立識別與最後保存時間；多文件復原到新分頁、損壞快照降級、關閉只清自己的快照 |
-| `auto_save.py` | 268 | 原生快照與原子 metadata、無碰撞檔名、每文件八份保留配額、排序與損壞快照回復 |
+| `workspace_autosave.py` | 352 | dirty tabs 定時共用 immutable committed snapshots 至背景 queue，超過歷史 cap 時 UI 獨立複製；結果在 UI 記錄 owned paths／timestamps，替換與關閉取消 late output；原有同步 explicit API／復原保留 |
+| `autosave_jobs.py` | 159 | 一個背景 writer／每文件最新 pending；immutable materialization／NPZ 壓縮／file IO，application-owned QObject signals 與取消後清除 late snapshots，queued UI 完成與 sender retirement |
+| `auto_save.py` | 268 | Qt-free 原生快照／原子 metadata、每文件八份 quota、排序與損壞快照回復，供同步入口與背景 writer 共用 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |
@@ -1050,7 +1051,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | 跨平台說明 | `packaging/CROSS_PLATFORM.md` | |
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
-| 開發效能基準 | `scripts/performance_benchmark.py`（423 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
+| 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
@@ -1213,6 +1214,16 @@ cancel 只退休 identity／設 abort，不提前歸還仍執行的 ticket；所
 owner destruction 回收已完成但未送達的票券；仍執行的 worker 持有 budget，abort 返回時自行歸還。被提升為前景的 refused job 走一般 foreground load。
 新視窗縮小 quota 後，舊 cache 在下一次 schedule 淘汰；既有 reservation 不改名、不失蹤，超額時停止新 admission。
 這是估算與快取 admission，不是 allocator 或整個 process RSS 上限；foreground image／縮圖牆／編輯器與第三方 decoder scratch 不冒稱受此 speculative quota 控制。
+
+### 10.17 背景 autosave 與一致文件版本
+
+QObject 工作區 timer 取 UndoStack.available_snapshot 的 immutable committed content，O(1) 建立 SaveRequest，不在 worker 讀 live pixels；正在進行的 stroke 不混入舊版本。
+缺少／超出歷史 cap 的 document 先在 UI 深複製為獨立 OwnedContent；此 fallback 可能有複製停頓，不能冒稱所有文件都是 O(1) enqueue。
+AutosaveJobs 每 workspace 只有一個 writer、每 document_id 一個最新 pending；duplicate active version 清除 obsolete pending，Undo 回正在寫入的版本不會留下較新的錯誤待存版本。
+worker materialize、NPZ 壓縮、metadata 寫入／quota 輪替都離開 UI，沿用 auto_save 的 atomic／每文件 quota。失敗保留舊有效檔並在 UI toast，空文件不冒稱成功。
+request 與 writer 不持有 canvas，signals／Jobs 由 QApplication 持有到 queued 完成；UI 直接記錄 timestamps／owned paths，避免中間另一事件 close 造成 unowned 檔案。
+替換 document／關閉 tab／discard all 標記取消；已執行 compression 不等待，在 writer 結束或 UI delivery 檢查後另派 discard job 清除 late snapshot。
+explicit take_autosave_snapshot_now 仍同步回傳 path，非 QObject adapter 保留同步行為；一般 GUI timer 走 background queue。
 
 ## 11. 持久化檔案一覽
 

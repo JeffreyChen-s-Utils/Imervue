@@ -3,17 +3,18 @@
 Extracted from :mod:`paint_workspace` so the workspace stays under the
 file-length budget. :class:`AutosaveMixin` is composed into
 :class:`Imervue.paint.paint_workspace.PaintWorkspace`; it owns the
-periodic snapshot timer and the recovery prompt. All Qt-resource
-lifetimes (the ``QTimer``) are created lazily and reused, matching the
-pre-refactor behaviour exactly.
+periodic snapshot timer, background save queue and recovery prompt.
+The timer is reused; application-owned workers survive canvas/workspace
+destruction long enough to discard cancelled late snapshots.
 """
 from __future__ import annotations
 
 import logging
+import copy
 import time
 import uuid
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QObject, QTimer, Qt
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 
@@ -71,18 +72,18 @@ class AutosaveMixin:
             title = self._autosave_title(canvas)
             snapshot = write_snapshot(document, directory=target,
                                       document_id=record[1], project_name=title)
-        except (OSError, ValueError, RuntimeError) as exc:
+        except (OSError, ValueError, RuntimeError, MemoryError) as exc:
             # RuntimeError: the canvas's C++ object was deleted between this timer
             # tick being queued and firing (the window closed / a tab torn down).
-            logger.warning("Paint autosave failed: %s", exc)
-            toast = getattr(self, "toast", None)
-            if toast is not None:
-                toast.warning(language_wrapper.language_word_dict.get(
-                    "paint_autosave_failed", "Autosave failed: {error}",
-                ).format(error=exc))
+            AutosaveMixin._report_autosave_error(self, str(exc))
             return None
         if snapshot is None:
             return None
+        self._record_autosave_success(canvas, snapshot)
+        return snapshot.bundle_path
+
+    def _record_autosave_success(self, canvas, snapshot) -> None:
+        """Record owned files and UI timestamps for either an explicit or periodic save."""
         last = time.monotonic()
         stamps = getattr(self, "_autosave_last_by_canvas", None)
         if stamps is None:
@@ -96,7 +97,6 @@ class AutosaveMixin:
         written.add(snapshot.bundle_path)
         self._autosave_paths_for(canvas).add(snapshot.bundle_path)
         self._refresh_status_line()
-        return snapshot.bundle_path
 
     def _autosave_record(self, canvas):
         """Return a stable identity for this canvas's current document."""
@@ -106,6 +106,9 @@ class AutosaveMixin:
         document = canvas.document()
         record = records.get(canvas)
         if record is None or record[0] is not document:
+            jobs = getattr(self, "_autosave_jobs", None)
+            if jobs is not None and record is not None:
+                jobs.cancel(record[1])
             record = records[canvas] = (document, uuid.uuid4().hex)
             getattr(self, "_autosave_last_by_canvas", {}).pop(canvas, None)
         return record
@@ -117,6 +120,10 @@ class AutosaveMixin:
 
     def discard_canvas_autosaves(self, canvas) -> int:
         """Release one closed tab's snapshots and tracking, leaving others alone."""
+        jobs = getattr(self, "_autosave_jobs", None)
+        record = getattr(self, "_autosave_records", {}).get(canvas)
+        if jobs is not None and record is not None:
+            jobs.cancel(record[1])
         getattr(self, "_autosave_records", {}).pop(canvas, None)
         getattr(self, "_autosave_last_by_canvas", {}).pop(canvas, None)
         paths = getattr(self, "_autosave_paths_by_canvas", {}).pop(canvas, set())
@@ -149,6 +156,9 @@ class AutosaveMixin:
         chose to discard), so the next launch doesn't offer to recover them.
         Another window's snapshots in the same folder are left alone.
         """
+        jobs = getattr(self, "_autosave_jobs", None)
+        if jobs is not None:
+            jobs.cancel_all()
         written = getattr(self, "_autosave_written", None) or set()
         return self._discard_autosave_paths(written)
 
@@ -242,18 +252,76 @@ class AutosaveMixin:
         return self.restore_snapshot(snapshots[0])
 
     def _on_autosave_tick(self) -> None:
-        """Snapshot every dirty document without changing the active tab.
+        """Queue each dirty document's latest committed version without changing the active tab.
 
         An untouched canvas (the viewer's picture loaded into Paint) is nothing to
         recover; snapshotting it would offer a recovery on every launch.
+        Non-QObject hosts retain the synchronous adapter for headless callers.
         """
         for canvas, dirty in list(getattr(self, "_tab_dirty", {}).items()):
             if not dirty:
                 continue
-            if canvas is self._canvas:
+            if isinstance(self, QObject):
+                self._request_autosave(canvas)
+            elif canvas is self._canvas:
                 self.take_autosave_snapshot_now()
             else:
                 self.take_autosave_snapshot_now(canvas=canvas)
+
+    def _request_autosave(self, canvas) -> None:
+        """Enqueue committed history in O(1), copying only when no immutable state exists."""
+        from Imervue.paint.autosave_jobs import AutosaveJobs, OwnedContent, SaveRequest
+        try:
+            document = canvas.document()
+            record = self._autosave_record(canvas)
+            stack = getattr(self, "_undo_stacks", {}).get(canvas)
+            content = (stack.available_snapshot if stack is not None
+                       and stack.document is document else None)
+            if content is None:
+                # A document above its history cap still needs recovery. This
+                # fallback captures a coherent UI-thread copy; compression and
+                # all file writes remain on the worker.
+                content = OwnedContent(copy.deepcopy(document))
+            jobs = getattr(self, "_autosave_jobs", None)
+            if jobs is None:
+                jobs = self._autosave_jobs = AutosaveJobs(self)
+                # AutosaveJobs._done is a queued UI-thread slot. Record ownership
+                # before another UI event can close the tab or discard its files.
+                jobs.saved.connect(
+                    self._on_async_autosave_saved, Qt.ConnectionType.DirectConnection,
+                )
+            jobs.request(SaveRequest(record[1], content,
+                                     getattr(self, "_autosave_target_dir", None),
+                                     self._autosave_title(canvas)))
+        except (OSError, ValueError, RuntimeError, MemoryError) as exc:
+            self._report_autosave_error(str(exc))
+
+    def _report_autosave_error(self, message: str) -> None:
+        logger.warning("Paint autosave failed: %s", message)
+        toast = getattr(self, "toast", None)
+        if toast is not None:
+            toast.warning(language_wrapper.language_word_dict.get(
+                "paint_autosave_failed", "Autosave failed: {error}",
+            ).format(error=message))
+
+    def _on_async_autosave_saved(self, document_id, snapshot, message) -> None:
+        record = next(((canvas, record[0]) for canvas, record in
+                       getattr(self, "_autosave_records", {}).items()
+                       if record[1] == document_id), None)
+        current = False
+        if record is not None:
+            try:
+                current = record[0].document() is record[1]
+            except RuntimeError as exc:
+                logger.debug("Canvas disappeared before autosave delivery: %s", exc)
+        if not current:
+            if snapshot is not None:
+                self._autosave_jobs.discard_result(snapshot)
+            return
+        if message:
+            self._report_autosave_error(message)
+        if snapshot is not None:
+            self._record_autosave_success(record[0], snapshot)
 
     def _maybe_offer_autosave_recovery(self) -> None:
         """Probe the autosave directory and prompt if anything is there.

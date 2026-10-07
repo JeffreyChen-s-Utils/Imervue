@@ -61,6 +61,12 @@ tiles favor interning, so a separate non-repeating six-layer pixel test guards t
 reduction without that advantage. [Paint history results](paint-history-20261007.md)
 include this workload boundary.
 
+[Background autosave results](autosave-background-20261007.md) retain the same
+six-layer Paint fixture and separately record UI enqueue, worker materialization,
+compression/write, request-to-recorded success and a 10ms UI heartbeat. The normal
+timer shares immutable committed history; history-disabled documents first copy
+on the UI thread, and explicit synchronous snapshot APIs remain available.
+
 [Thumbnail wall results](wall-viewport-20261007.md) compare the same 10k/100k actual GL
 frames with shared row/column candidates, retaining two independent runs and the earlier
 overloaded-host anomaly. Decode admission and cancellation are guarded by separate real

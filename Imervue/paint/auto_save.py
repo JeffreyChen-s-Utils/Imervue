@@ -1,7 +1,7 @@
 """Auto-save + crash recovery for the Paint workspace.
 
-The workspace runs an :class:`AutoSaver` in the background that
-periodically writes a snapshot of the current document to a hidden
+The workspace queues immutable committed versions on background workers that
+periodically write snapshots to a hidden
 directory (``~/.imervue_autosave/`` by default). On the next
 workspace open, :func:`pending_recovery_snapshots` returns any
 snapshot not paired with a clean shutdown — those are the candidates
