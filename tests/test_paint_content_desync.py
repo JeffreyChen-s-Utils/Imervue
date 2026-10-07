@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 
 from Imervue.paint.tool_dispatcher import ToolDispatcher
+from Imervue.paint.damage import EMPTY
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +44,12 @@ def _dispatcher_fake(pending):
         _SINGLE_SHOT_TOOLS=ToolDispatcher._SINGLE_SHOT_TOOLS,
         _gesture_pending_commit=pending,
         _commit_undo=lambda: commits.append(True),
+        _history_regional=True,
+        _history_damage=EMPTY,
+        _history_array=None,
+        history_regions=None,
     )
+    fake._commit_gesture = lambda: ToolDispatcher._commit_gesture(fake)
     return fake, commits
 
 

@@ -550,6 +550,8 @@ Le troisième onglet principal — **Paint** — est un espace de travail de pei
 avec documents à onglets multiples, calques vectoriels et matriciels, outils manga, images
 Undo / Redo restaure la création, la suppression, l’ordre et la fusion des calques, ainsi que leurs propriétés, masques, vecteurs, groupes, sélections et calque de référence. Les commandes du menu et du panneau des calques, les calques manga et l’insertion de matériaux créent des étapes d’annulation ; chaque document conserve son propre historique.
 
+Chaque document Paint conserve jusqu’à 50 étapes dans une limite de 512 MiB, état de référence actuel et branches Undo/Redo compris. Les pixels inchangés sont partagés ; le pinceau et la gomme ne stockent que les blocs modifiés. Les anciennes étapes sont supprimées lorsque la limite est atteinte. Si un seul instantané dépasse cette limite, l’historique est vidé et le document reste modifiable.
+
 clés d'animation, et import/export PSD. Passer à Paint conserve les documents, les calques, les modifications non enregistrées et l’historique d’annulation ; la première visite affiche un canevas vierge. ``File > Open Current Image in Paint`` ouvre l’image de la visionneuse dans un nouveau document. Gauche/Droite sur la barre des onglets principaux de Paint ouvre aussi l’image précédente/suivante dans un nouveau document. ``E`` depuis Deep Zoom ouvre l’éditeur d’annotation séparé.
 
 Points forts en matière d'ergonomie — l'espace de travail Paint dispose d'un curseur

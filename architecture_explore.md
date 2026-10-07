@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 929 | 155,412 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 170 | 42,752 |
+| `tests/` | 931 | 155,733 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 171 | 43,019 |
 | `Imervue/gui/` | 174 | 34,770 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 129 | 15,444 |
@@ -84,12 +84,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| `scripts/`（開發與發佈工具） | 4 | 825 |
-| **總計** | **1,786** | **340,805** |
+| `scripts/`（開發與發佈工具） | 4 | 829 |
+| **總計** | **1,789** | **341,397** |
 
-其中 `Imervue/` 套件本身 773 檔 / 168,547 行。
+其中 `Imervue/` 套件本身 774 檔 / 168,814 行。
 
-測試碼與產品碼比約 **0.84 : 1**（154k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.84 : 1**（155k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -694,7 +694,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
 | `document_io.py` | 453 | 原生 .imervue NPZ 文件讀寫、圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
 | `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
-| `undo_stack.py` | 103 | 每文件完整內容快照的 Undo／Redo；恢復圖層結構、所有屬性、遮罩、向量、群組與選取，保留存活圖層的身分 |
+| `undo_stack.py` | 184 | 每文件 512 MiB／50 步驟容量歷史；不可變像素區塊共用、結構與完整 metadata 復原，保留存活圖層身分，提供背景消費者的獨立實體化快照 |
+| `history_pixels.py` | 151 | 純運算 256px 不可變 tile、弱 interning 索引、完整／區域 capture 與差異 patch，計算唯一資料及 Python 狀態容量 |
 | `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
 | `blend_modes.py` | 63 | 共用 RGB 混色模式數學 |
 | `blend_if.py` | 333 | Blend-If：依亮度範圍決定逐像素可見度 |
@@ -767,8 +768,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 774 | 頂層 `PaintWorkspace`；dispatcher 手勢與圖層 dock 的 edit_committed 各建立一個 Undo 步驟；confirm_close 由主視窗呼叫 |
-| `tool_dispatcher.py` | 452 | 工具事件路由與手勢提交；commit_external_edit 將畫布素材拖放接到同一個 Undo 邊界 |
+| `paint_workspace.py` | 778 | 頂層 PaintWorkspace；筆刷／橡皮擦手勢提交完整 damage hints，dock 與未知操作保守完整捕捉；confirm_close 由主視窗呼叫 |
+| `tool_dispatcher.py` | 478 | 工具事件路由與手勢提交；累計筆刷／橡皮擦 damage，僅提交回呼期間提供區域 hints；切頁、切工具與部分失敗保守捕捉 |
 | `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
 | `tool_bar.py` | 491 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
 | `workspace_tabs.py` | 339 | 多文件分頁、髒狀態；切頁更新該文件最後自動存檔時間，關閉清除該文件快照與歷史 |
@@ -794,7 +795,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### `paint/tools/`（6 檔 · 1,911 行）
 
-`painting.py`(438) 筆刷/橡皮/填色/滴管 · `shapes.py`(444) 形狀與裁切 ·
+`painting.py`(443) 筆刷/橡皮/填色/滴管；橡皮逐 dab 回報 damage · `shapes.py`(444) 形狀與裁切 ·
 `special.py`(357) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(314) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
 `retouch.py`(357) 漸層（前景→背景或存下的多色標漸層）/塗抹/模糊/加深減淡/海綿
 
@@ -1046,7 +1047,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | 跨平台說明 | `packaging/CROSS_PLATFORM.md` | |
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
-| 開發效能基準 | `scripts/performance_benchmark.py`（419 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
+| 開發效能基準 | `scripts/performance_benchmark.py`（423 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
@@ -1180,6 +1181,14 @@ worker 只讀共享來源與獨立 recipe，於具名 CPU 階段間檢查取消�
 尚未完成時的明確保存可同步等待，不能把近似預覽烘焙進原檔。
 
 ---
+
+### 10.14 Paint 歷史的容量與增量像素
+
+`UndoStack` 保留完整結構／屬性 metadata 與弱圖層身分，像素由 `PixelStore` 切為 256px 不可變區塊並共用。
+筆刷／橡皮擦的 dispatcher 僅在提交回呼期間提供完整 damage；未知操作、來源更換與部分失敗比較所有陣列，
+不以相同陣列身分推論像素未改變。Undo／Redo patch 存活的可寫陣列；刪除／重建與幾何操作可實體化完整狀態。
+容量計算包含 baseline、Undo、Redo、唯一 tile payload、Python metadata 與弱索引；512 MiB 超額淘汰最舊步驟並重建索引。
+單一狀態超額清除歷史，保留 live 文件。`committed_snapshot().materialize()` 產生獨立可編輯陣列，callback／Qt／composite 不入歷史。
 
 ## 11. 持久化檔案一覽
 

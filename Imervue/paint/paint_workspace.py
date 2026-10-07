@@ -410,7 +410,11 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         brush stroke counts as one undoable action rather than every
         dab. Also flips the active tab to "modified".
         """
-        self._undo_stack.commit()
+        regions = getattr(getattr(self, "_dispatcher", None), "history_regions", None)
+        if regions is None:
+            self._undo_stack.commit()
+        else:
+            self._undo_stack.commit(regions=regions)
         self._set_tab_dirty(self._canvas, True)
 
     def undo(self) -> None:

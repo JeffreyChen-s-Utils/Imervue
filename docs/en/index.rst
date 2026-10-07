@@ -549,6 +549,8 @@ The third top-level tab — **Paint** — is a full-featured painting workspace
 with multi-tab documents, vector and raster layers, manga tools, animation
 Undo / Redo restores layer creation, deletion, ordering and merging, as well as layer properties, masks, vectors, groups, selections and reference-layer state. Layer-menu, Layers-panel, manga-layer and material-insertion commands create undo steps; each document keeps its own history.
 
+Each Paint document keeps up to 50 history steps within a 512 MiB history budget, including its current baseline and Undo/Redo branches. Unchanged pixels are shared; brush and eraser strokes store only changed tiles. Older steps are removed when the budget is reached. If one document snapshot exceeds the budget, its history is cleared while the editable document is preserved.
+
 frames, and PSD import/export. Switching to Paint preserves its documents, layers, unsaved changes and undo history; the first visit starts with a blank canvas. Use ``File > Open Current Image in Paint`` to open the viewer image in a new document. Left/Right on the Paint main-tab bar opens the previous/next viewer image in a new document too. ``E`` from Deep Zoom opens the separate annotation editor.
 
 UX-affordance highlights — the Paint workspace ships with a full-featured

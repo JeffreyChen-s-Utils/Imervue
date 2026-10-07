@@ -123,6 +123,11 @@ Public interfaces other code or users depend on:
    Paint history: dispatcher gestures and explicit layer/material commands commit complete
    editable content per document; restore keeps the document's listeners and surviving
    layer identities while restoring structure, properties, masks, vectors and selections.
+   Immutable 256px tiles share unchanged pixels; instrumented brush/eraser commits only
+   scan damaged tiles, while unknown edits compare every array. The 512 MiB budget counts
+   baseline, both branches, pixel payloads, Python metadata and the weak tile index. Older
+   states are pruned; an oversized baseline clears history while preserving live content.
+   Snapshot materialization makes independent arrays for background consumers.
    Paint recovery: periodic autosave covers every dirty tab, with stable document identities
    and independent eight-version retention. Restore opens new modified tabs, falling back
    to older readable versions without replacing edits. Native metadata keeps panel layouts.

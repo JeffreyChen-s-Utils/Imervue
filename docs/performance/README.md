@@ -54,6 +54,13 @@ Small smoke images may already be full quality and have no reduced metric. The r
 changed production-source hashes when measuring a working tree before its commit; source hashes
 normalize checkout line endings. [Modify results](modify-preview-20261007.md) document the boundaries.
 
+Paint now also records retained history bytes after the same three 32x32 edits. The
+benchmark supplies the complete damage rectangle, as the production brush/eraser
+dispatcher does; unknown edits retain full-array comparison. Repeated synthetic gradient
+tiles favor interning, so a separate non-repeating six-layer pixel test guards the storage
+reduction without that advantage. [Paint history results](paint-history-20261007.md)
+include this workload boundary.
+
 ## Acceptance policy
 
 The fixed baseline and stage-specific targets are recorded in [baseline-20261007.md](baseline-20261007.md).

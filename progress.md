@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第二階段：效能基準、操作回應與記憶體（P1）
 
-- **#64** Paint Undo 以次數限制完整圖層快照，缺少總位元組預算：`Imervue/paint/undo_stack.py:33`、`:140`。
-  下一步：在 #59 的完整復原語意上加入容量預算；先量測筆畫快照成本，再讓區域修改保存差異、結構操作保存可逆命令，複雜操作保留完整快照，驗證容量及 Undo／Redo 正確性。
-
 - **#65** 縮圖牆每幀仍遍歷全部圖片：`Imervue/gpu_image_view/tile_grid_renderer.py:268`；`Imervue/gpu_image_view/tile_textures.py:68` 的可見性計算也掃完整清單。
   下一步：先量測大量圖片的繪製成本；依可見列範圍加緩衝區計算候選項目，讓繪製、載入及淘汰共用可見範圍，驗證縮放、捲動、選取與命中測試。
 

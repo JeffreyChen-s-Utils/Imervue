@@ -466,6 +466,8 @@ Das Color-Dock öffnet sich mit einem Farbtonring und einem Sättigungs- / Helli
 
 Undo / Redo stellt das Erstellen, Löschen, Sortieren und Zusammenführen von Ebenen sowie Ebeneneigenschaften, Masken, Vektoren, Gruppen, Auswahlen und die Referenzebene wieder her. Befehle im Ebenenmenü und Ebenenbereich sowie Manga-Ebenen und Materialeinfügungen erzeugen Rückgängig-Schritte; jedes Dokument behält seinen eigenen Verlauf.
 
+Jedes Paint-Dokument behält bis zu 50 Verlaufsschritte innerhalb eines Budgets von 512 MiB, einschließlich des aktuellen Basiszustands und der Undo/Redo-Zweige. Unveränderte Pixel werden gemeinsam gespeichert; Pinsel und Radierer speichern nur geänderte Kacheln. Bei Erreichen des Budgets entfallen ältere Schritte. Überschreitet ein einzelner Dokumentzustand das Budget, wird der Verlauf geleert; das bearbeitbare Dokument bleibt erhalten.
+
 Beim Wechsel zu Paint bleiben Dokumente, Ebenen, ungespeicherte Änderungen und der Rückgängig-Verlauf erhalten; beim ersten Besuch erscheint eine leere Leinwand. **File > Open Current Image in Paint** öffnet das Bild im Viewer als neues Dokument. Links/Rechts auf der Paint-Haupttableiste öffnet auch das vorherige/nächste Viewer-Bild als neues Dokument. `E` aus Deep Zoom öffnet den separaten Annotationseditor.
 
 ---

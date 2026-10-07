@@ -202,6 +202,7 @@ def _measure_modify(panel, app, repeats: int) -> dict:
 def paint(fixture: Path, profile: Path, repeats: int) -> dict:
     from Imervue.paint.document import PaintDocument
     from Imervue.paint.undo_stack import UndoStack
+    from Imervue.paint.damage import DamageRect
     from Imervue.paint.auto_save import write_snapshot, recover_snapshot
     manifest = json.loads((fixture / "manifest.json").read_text())
     width, height = manifest["paint_dimensions"]
@@ -216,10 +217,12 @@ def paint(fixture: Path, profile: Path, repeats: int) -> dict:
     stack = stacks[0]
 
     def stroke():
-        document.active_layer().image[10:42, 10:42, 0] ^= 1
-        stack.commit()
+        array = document.active_layer().image
+        array[10:42, 10:42, 0] ^= 1
+        stack.commit(regions=((array, DamageRect(10, 10, 32, 32)),))
 
     commit = measure(stroke, repeats=repeats)
+    history_bytes = stack.history_bytes
     undo = measure(stack.undo, repeats=repeats)
     redo = measure(stack.redo, repeats=repeats)
     snapshots = []
@@ -228,6 +231,7 @@ def paint(fixture: Path, profile: Path, repeats: int) -> dict:
     recover = measure(lambda: recover_snapshot(snapshots[-1]), repeats=1)
     return {"shape": [height, width], "layers": document.layer_count,
             "layer_bytes": sum(layer.image.nbytes for layer in document.layers()),
+            "history_bytes_after_strokes": history_bytes,
             "undo_seed": seed, "stroke_commit": commit, "undo": undo, "redo": redo,
             "autosave_compress_write": save, "autosave_recover": recover,
             "bundle_bytes": snapshots[-1].bundle_path.stat().st_size,

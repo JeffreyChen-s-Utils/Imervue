@@ -18,6 +18,7 @@ from Imervue.paint.brush_engine import (
 )
 from Imervue.paint.canvas import PointerEvent
 from Imervue.paint.damage import EMPTY as _EMPTY_DAMAGE
+from Imervue.paint.damage import from_dab_result
 from Imervue.paint.fill import flood_fill
 
 if TYPE_CHECKING:
@@ -267,8 +268,10 @@ class EraserTool:
         self._selection_snapshot: np.ndarray | None = None
         self._last: tuple[float, float] | None = None
         self._active = False
+        self.last_damage = _EMPTY_DAMAGE
 
     def handle(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
+        self.last_damage = _EMPTY_DAMAGE
         if evt.phase == "press":
             return self._begin(evt, canvas)
         if evt.phase == "move" and self._active:
@@ -293,10 +296,11 @@ class EraserTool:
         self._selection_snapshot = self._selection_provider()
         self._last = (evt.x, evt.y)
         self._active = True
-        apply_erase_dab(
+        result = apply_erase_dab(
             canvas, evt.x, evt.y, self._kernel,
             opacity=self._opacity, selection=self._selection_snapshot,
         )
+        self.last_damage = from_dab_result(result)
         return True
 
     def _extend(self, evt: PointerEvent, canvas: np.ndarray) -> bool:
@@ -304,10 +308,11 @@ class EraserTool:
             return False
         from Imervue.paint.brush_engine import stroke_dab_positions
         for px, py in stroke_dab_positions(self._last, (evt.x, evt.y), self._spacing):
-            apply_erase_dab(
+            result = apply_erase_dab(
                 canvas, px, py, self._kernel,
                 opacity=self._opacity, selection=self._selection_snapshot,
             )
+            self.last_damage = self.last_damage.union(from_dab_result(result))
         self._last = (evt.x, evt.y)
         return True
 

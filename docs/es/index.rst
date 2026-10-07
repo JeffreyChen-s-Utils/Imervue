@@ -558,6 +558,8 @@ La tercera pestaña de nivel superior — **Paint** — es un espacio de trabajo
 con todas las funciones, con documentos en múltiples pestañas, capas vectoriales y raster,
 Undo / Redo restaura la creación, eliminación, orden y combinación de capas, además de sus propiedades, máscaras, vectores, grupos, selecciones y capa de referencia. Los comandos del menú y panel de capas, las capas de manga y la inserción de materiales crean pasos de deshacer; cada documento mantiene su propio historial.
 
+Cada documento de Paint conserva hasta 50 pasos de historial dentro de un presupuesto de 512 MiB, incluidos el estado base actual y las ramas Undo/Redo. Los píxeles sin cambios se comparten; el pincel y el borrador guardan solo los bloques modificados. Al alcanzar el límite se eliminan los pasos antiguos. Si una sola instantánea supera el límite, se vacía el historial y se conserva el documento editable.
+
 herramientas de manga, fotogramas de animación e importación/exportación de PSD. Al cambiar a Paint se conservan los documentos, las capas, los cambios sin guardar y el historial de deshacer; la primera visita muestra un lienzo vacío. ``File > Open Current Image in Paint`` abre la imagen del visor en un documento nuevo. Izquierda/Derecha en la barra de pestañas principal de Paint también abre la imagen anterior/siguiente del visor en un documento nuevo. ``E`` desde Deep Zoom abre el editor de anotaciones independiente.
 
 Aspectos destacados de la experiencia de usuario — el espacio de trabajo Paint incluye un
