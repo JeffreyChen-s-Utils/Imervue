@@ -43,6 +43,8 @@ Le préchargement des images voisines comptabilise les octets réels des pyramid
 
 Modify garde les commandes réactives grâce à un aperçu de moindre résolution en arrière-plan pendant les réglages, puis calcule la pleine qualité après une pause. Les réglages rapides et les changements de photo écartent les anciens résultats ; les annotations gardent les coordonnées de l’image complète. Enregistrer ou appliquer des effets destructifs termine d’abord le calcul en pleine qualité.
 
+Annuler ou fermer un outil en cours en arrière-plan rend la main immédiatement. Le dialogue affiche l’annulation et désactive ses commandes jusqu’à la fin du travail non interruptible et du nettoyage, puis se ferme avec le résultat initial. Une phase de finalisation peut brièvement apparaître à la fin normale. Une réouverture ne reçoit aucun ancien résultat. À la fermeture finale, l’application attend la fin sûre des travaux restants.
+
 .. contents:: Table des matières
    :depth: 2
    :local:

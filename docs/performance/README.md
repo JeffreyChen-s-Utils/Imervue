@@ -78,6 +78,12 @@ threads in a fresh isolated profile, retaining native RSS, actual arrays, quota
 reservations and decoded/refused counts. RAM admission is separate from VRAM;
 skipping speculation is reported separately from completing the same workload.
 
+Worker dialog cancel/close and custom-result retirement are measured separately
+from actual codec/model throughput in
+[the retirement report](worker-retirement-20261007.md). Controlled 250ms real
+QThread/stop boundaries verify UI request latency and continuing heartbeat;
+final process-exit drain remains explicit.
+
 ## Acceptance policy
 
 The fixed baseline and stage-specific targets are recorded in [baseline-20261007.md](baseline-20261007.md).

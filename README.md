@@ -76,6 +76,8 @@ Design principles:
 
 ---
 
+Cancelling or closing a running worker-based tool returns immediately. The dialog shows Cancelling and pauses its controls until current uninterruptible work and cleanup finish, then closes with the original result. Normal completion can briefly show Finishing. Reopening starts clean. Final application exit waits for outstanding work to finish safely.
+
 ## Installation
 
 ### Requirements

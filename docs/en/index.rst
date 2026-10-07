@@ -41,6 +41,8 @@ Neighbor prefetch budgets actual pyramid bytes together with in-flight decode re
 
 Modify keeps controls responsive with a background preview at a lower resolution while adjusting, then renders full quality after a pause. Rapid edits and photo changes discard older results; annotation coordinates keep the full image size. Saving or applying destructive effects first completes full-quality rendering.
 
+Cancelling or closing a running worker-based tool returns immediately. The dialog shows Cancelling and pauses its controls until current uninterruptible work and cleanup finish, then closes with the original result. Normal completion can briefly show Finishing. Reopening starts clean. Final application exit waits for outstanding work to finish safely.
+
 .. contents:: Table of Contents
    :depth: 2
    :local:

@@ -2956,4 +2956,6 @@ chinese_word_dict = {
     "trash_left_in_place_title": "未移到回收站",
     "trash_left_in_place": "有 {count} 个已删除的文件无法移到回收站，仍然留在磁盘上：它们所在的磁盘没有回收站（存储卡、U 盘或网络驱动器），或正被其他程序使用。\n\n{paths}\n\n要永久删除它们吗？此操作无法撤销。",
     "trash_keep_files": "保留",
+    "worker_cancelling": "正在取消…",
+    "worker_finishing": "正在完成…",
 }

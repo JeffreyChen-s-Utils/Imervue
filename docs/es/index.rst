@@ -43,6 +43,8 @@ La precarga de imágenes vecinas suma los bytes reales de las pirámides y las r
 
 Modify mantiene los controles ágiles con una vista previa de menor resolución en segundo plano durante los ajustes y calcula la calidad completa tras una pausa. Los cambios rápidos y de foto descartan resultados anteriores; las anotaciones conservan las coordenadas del tamaño completo. Guardar o aplicar efectos destructivos completa primero el cálculo a calidad completa.
 
+Cancelar o cerrar una herramienta en segundo plano vuelve de inmediato. El diálogo indica la cancelación y desactiva sus controles hasta que terminen el trabajo actual que no puede interrumpirse y la limpieza; después se cierra con el resultado original. Al completar normalmente puede mostrar brevemente la finalización. Al volver a abrirlo no recibe resultados antiguos. Al salir definitivamente, la aplicación espera a que termine de forma segura el trabajo pendiente.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:

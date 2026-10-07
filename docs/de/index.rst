@@ -41,6 +41,8 @@ Das Vorladen benachbarter Bilder berücksichtigt tatsächliche Pyramidenbytes un
 
 Modify zeigt während der Anpassung eine Vorschau mit geringerer Auflösung im Hintergrund und berechnet nach einer Pause die volle Qualität, damit die Bedienung reagiert. Schnelle Änderungen und Bildwechsel verwerfen ältere Ergebnisse; Anmerkungskoordinaten behalten die volle Bildgröße. Speichern und destruktive Effekte schließen zuerst die Berechnung in voller Qualität ab.
 
+Das Abbrechen oder Schließen eines laufenden Hintergrundwerkzeugs kehrt sofort zurück. Der Dialog zeigt den Abbruch an und sperrt seine Bedienung, bis die aktuell nicht unterbrechbare Arbeit und die Bereinigung beendet sind; danach schließt er mit dem ursprünglichen Ergebnis. Bei normalem Abschluss kann kurz die Abschlussphase erscheinen. Nach erneutem Öffnen kommen keine alten Ergebnisse an. Beim endgültigen Beenden wartet die Anwendung auf das sichere Ende verbliebener Arbeit.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:

@@ -6,10 +6,7 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-### 第二階段：效能基準、操作回應與記憶體（P1）
-
-- **#68** 工作取消與對話框關閉可能長時間阻塞 UI：`Imervue/plugin/worker_host.py` 的停止流程同步等待 worker 完成。
-  下一步：量測不可立即中斷的解碼、推論及 I/O；補執行中取消／關閉／再次開啟測試，顯示取消狀態並以完成訊號協調釋放，保留 worker 與宿主生命週期。
+### 第二階段：跨工作區與 OpenGL 回歸（P1）
 
 - **#69** 缺少跨工作區、異常結束及真實 OpenGL 的完整回歸流程：`tests/` 與 `.github/workflows/test.yml`。
   下一步：補編輯切頁、多文件恢復、執行中關閉及損壞圖片／磁碟滿／無寫入權限流程；獨立安排真實 GL 測試，涵蓋貼圖淘汰、縮放、多視窗及資源釋放。

@@ -41,6 +41,8 @@ A pré-carga de imagens vizinhas soma os bytes reais das pirâmides e as reserva
 
 Modify mantém os controles responsivos com uma prévia de menor resolução em segundo plano durante os ajustes e calcula a qualidade completa após uma pausa. Alterações rápidas e trocas de foto descartam resultados antigos; as anotações mantêm as coordenadas do tamanho completo. Salvar ou aplicar efeitos destrutivos conclui primeiro o cálculo em qualidade completa.
 
+Cancelar ou fechar uma ferramenta em segundo plano retorna imediatamente. O diálogo indica o cancelamento e pausa seus controles até terminar o trabalho atual que não pode ser interrompido e a limpeza; depois fecha com o resultado original. Na conclusão normal, pode indicar brevemente a finalização. Ao reabrir, não recebe resultados antigos. Ao sair definitivamente, o aplicativo espera que o trabalho restante termine com segurança.
+
 .. contents:: Sumário
    :depth: 2
    :local:

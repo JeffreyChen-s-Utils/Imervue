@@ -66,28 +66,28 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 940 | 157,135 |
+| `tests/` | 942 | 157,465 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 172 | 43,251 |
-| `Imervue/gui/` | 174 | 34,770 |
+| `Imervue/gui/` | 174 | 34,771 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 129 | 15,444 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 70 | 13,661 |
-| `Imervue/multi_language/` | 8 | 15,150 |
+| `Imervue/multi_language/` | 8 | 15,160 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,750 |
 | `Imervue/menu/` | 11 | 3,624 |
 | `Imervue/` 根層 | 6 | 1,951 |
-| `Imervue/plugin/` | 12 | 2,617 |
+| `Imervue/plugin/` | 13 | 2,732 |
 | `Imervue/system/` | 32 | 3,031 |
 | `Imervue/export/` | 8 | 1,006 |
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| `scripts/`（開發與發佈工具） | 6 | 1,042 |
-| **總計** | **1,804** | **343,724** |
+| `scripts/`（開發與發佈工具） | 7 | 1,149 |
+| **總計** | **1,808** | **344,287** |
 
-其中 `Imervue/` 套件本身 778 檔 / 169,526 行。
+其中 `Imervue/` 套件本身 779 檔 / 169,652 行。
 
 測試碼與產品碼比約 **0.85 : 1**（157k vs 185k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -543,7 +543,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-172 個檔、34,469 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+174 個檔、34,771 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -597,7 +597,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `settle_poll.py` | 58 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題）；`owner=` 讓鏈隨物件銷毀而停 |
 | `workspace_manager.py` | 154 | 具名工作區預設（幾何 + 佈局快照） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
-| `_apply_save.py` | 197 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
+| `_apply_save.py` | 198 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`finalize_worker()` 在 custom done 提前送達時 passive 背景退場，保留 owner／actual worker lifetime；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
 
@@ -929,7 +929,8 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `plugin_api.py` | 73 | **外掛 API 版本**（純函式）：`PLUGIN_API_VERSION`、讀外掛目錄的 `plugin.json`（`min_api_version`，沒有檔案視為 1）、`check_compatible` 對需要較新版本的外掛丟 `IncompatiblePluginError`；docstring 列出每一版新增的主程式介面 |
 | `tool_dialog.py` | 113 | **`ToolDialogMixin`**（外掛 API 2）：外掛單次影像工具對話框的共用流程，OK → `_required_packages` 的套件安裝詢問 → `EffectWorker` 跑 `_transform()` → 存 `<stem>_<output_suffix>.png` → toast 結果並在成功時關閉；含 `WorkerHostMixin`。並轉出 `make_slider`、`slider_row`、`output_path`、`show_toast` 給外掛用 |
 | `subprocess_util.py` | 36 | 外掛 worker 呼叫子 Python 的共用 helper |
-| `worker_host.py` | 78 | **`WorkerHostMixin`**：擁有背景 `QThread` 的 `QDialog` 共用拆卸邏輯，修掉「QThread destroyed while running」當機；覆寫 `done()` 與 `closeEvent`，OK、Cancel、關閉視窗都會先停止並等待執行緒（約 90 個對話框使用） |
+| `worker_host.py` | 108 | **`WorkerHostMixin`**：QDialog 共用非阻塞拆卸；中斷／斷開輸出，標題取消狀態與 disabled controls，背景退場完成後才完成原始結果；non-Qt adapter 保留同步契約 |
+| `worker_retirement.py` | 85 | 獨立 QThread 持有 owner／reparented workers；背景 stop／abort／wait，queued terminal slot 以 wait(0) 確认 TLS exit 後釋放；owner destroyed 保護與 final app-exit drain |
 
 ### 6.18 `Imervue/mcp_server/`
 
@@ -995,7 +996,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-929 個檔、155,412 行。`pyproject.toml` 定義三個互斥層級 marker：
+942 個檔、157,465 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1051,7 +1052,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | 跨平台說明 | `packaging/CROSS_PLATFORM.md` | |
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
-| 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
+| 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行）、`performance_workers.py`（107 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。worker 工具以真實 QDialog／QThread 驗證不可中斷與 blocking stop 下 UI／actual retirement／heartbeat。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
@@ -1094,7 +1095,9 @@ SonarCloud（`JeffreyChen-s-Utils_Imervue`）。
 ### 10.3 `WorkerHostMixin`
 
 `Imervue/plugin/worker_host.py`。凡是擁有背景 `QThread` 的 `QDialog` 都繼承它，
-解決關閉對話框時 `QThread destroyed while still running` 的當機。它覆寫 `done()`（`accept()`、`reject()` 都走到這裡）與 `closeEvent`，兩條路都先停止並等待背景執行緒。**不要手寫 `closeEvent` / `accept` 拆卸邏輯。**
+解決關閉對話框時 `QThread destroyed while still running` 的當機。它覆寫 `done()`（`accept()`、`reject()` 都走到這裡）與 `closeEvent`；UI 只要求中斷、斷開 worker 輸出、暫停 controls 並更新標題，立即返回。`worker_retirement.py` 持有宿主並將 worker reparent 到獨立 retirement QThread，在背景呼叫 stop／abort 與 wait。所有 worker 確實退出後，以 queued signal 完成第一個 dialog result；晚到的 accept 不可覆寫 cancel，關閉事件在等待中 ignore。宿主提前 destroyed 仍保留執行緒，不再觸碰 UI。retirement 自身 finished 之後也以 wait(0) 檢查 TLS 退場，不在 UI join。**不要手寫 `closeEvent` / `accept` 拆卸邏輯。**
+
+取消 hooks 必須只操作 thread-safe flags／子程序，不能操作 GUI；現有 bundled consumers 的 hooks 符合此契約。`_apply_save.finalize_worker` 對共享工具的 custom done 也使用 passive retirement（不取消成功輸出），避免 result signal 早於 run／TLS 結束時 UI 等待。non-Qt adapters 保留同步 duck-typed teardown。最終 application event-loop exit 才 drain 尚未退出的 retirement threads，這個終止等待不在可繼續操作的 dialog-cancel 延遲門檻內。
 
 ### 10.4 Collaborator 拆解
 

@@ -2956,4 +2956,6 @@ traditional_chinese_word_dict = {
     "trash_left_in_place_title": "未移到資源回收筒",
     "trash_left_in_place": "有 {count} 個已刪除的檔案無法移到資源回收筒，仍然留在磁碟上：它們所在的磁碟沒有資源回收筒（記憶卡、USB 隨身碟或網路磁碟），或正被其他程式使用。\n\n{paths}\n\n要永久刪除它們嗎？此動作無法復原。",
     "trash_keep_files": "保留",
+    "worker_cancelling": "正在取消…",
+    "worker_finishing": "正在完成…",
 }

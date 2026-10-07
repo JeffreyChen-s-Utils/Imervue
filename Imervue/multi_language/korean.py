@@ -2967,4 +2967,6 @@ korean_word_dict = {
     "trash_left_in_place_title": "휴지통으로 이동하지 못함",
     "trash_left_in_place": "삭제한 파일 {count}개를 휴지통으로 옮기지 못해 디스크에 그대로 남아 있습니다. 드라이브에 휴지통이 없거나(메모리 카드, USB 메모리, 네트워크 드라이브) 다른 프로그램이 사용 중입니다.\n\n{paths}\n\n영구적으로 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
     "trash_keep_files": "보관",
+    "worker_cancelling": "취소 중…",
+    "worker_finishing": "마무리 중…",
 }

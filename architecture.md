@@ -158,7 +158,7 @@ Public interfaces other code or users depend on:
 | To add | Touch |
 | --- | --- |
 | A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_menu.py` |
-| A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; do not hand-write teardown |
+| A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; cancellation hooks and joins run on a retained retirement thread, with controls paused and dialog completion deferred until actual exit. Hooks must cancel flags/subprocesses without GUI access; final application exit drains remaining threads. Do not hand-write teardown |
 | A plugin dialog that runs one image transform on OK | Inherit `ToolDialogMixin` from `Imervue/plugin/tool_dialog.py` (it includes `WorkerHostMixin`): set `output_suffix` and the toast keys, return the transform from `_transform()`, name optional packages in `_required_packages()`; the plugin then needs plugin API 2 in its `plugin.json` |
 | Main-program code that plugins import | Raise `PLUGIN_API_VERSION` in `Imervue/plugin/plugin_api.py` and list what the version adds in its docstring; plugins using it declare `{"min_api_version": N}` in `plugin.json` (`tests/test_plugin_api.py` checks the bundled ones) |
 | A develop step | A row in `_STAGES` of `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip). A stage between `white_balance` and `tone_curve` also needs the GPU Develop plugin (`plugins/gpu_develop/params.py` `GPU_STAGES`), which renders nothing on the GPU until its span matches |
@@ -227,7 +227,12 @@ Public interfaces other code or users depend on:
   `ai_style_transfer` `slider_row`. Keep these names, the mixin's attributes (`output_suffix`,
   `failed_key`, `failed_text`, `done_key`, `done_text`) and hooks (`_transform`,
   `_required_packages`, `_commit`, `_notify_failure`) working, or change the plugins in the same
-  round.
+  round. `WorkerHostMixin` defers dialog completion until actual worker exit; its
+  cancellation hooks now run off the UI thread and must operate only thread-safe
+  flags/subprocesses. Existing bundled consumers satisfy that contract without
+  changed import paths or constructor arguments. `finalize_worker` retains the
+  same callable surface and uses passive background retirement for successful
+  custom done packets; non-Qt adapters retain their synchronous contract.
 - **Desktop pet plugin surface.** `pet_integrations` (Desktop Pet Integrations) subclasses
   `IntegrationController` from `Imervue.desktop_pet.pet_feature_base` and calls
   `Imervue.system.local_origin.is_allowed_origin`; it relies on the `on_pet_created` hook and on the

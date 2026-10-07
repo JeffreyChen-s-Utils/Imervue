@@ -76,6 +76,8 @@ Principes de conception :
 
 ---
 
+Annuler ou fermer un outil en cours en arrière-plan rend la main immédiatement. Le dialogue affiche l’annulation et désactive ses commandes jusqu’à la fin du travail non interruptible et du nettoyage, puis se ferme avec le résultat initial. Une phase de finalisation peut brièvement apparaître à la fin normale. Une réouverture ne reçoit aucun ancien résultat. À la fermeture finale, l’application attend la fin sûre des travaux restants.
+
 ## Installation
 
 ### Prérequis

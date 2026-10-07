@@ -2969,4 +2969,6 @@ japanese_word_dict = {
     "trash_left_in_place_title": "ごみ箱に移動できませんでした",
     "trash_left_in_place": "削除した {count} 個のファイルをごみ箱に移動できず、ディスクに残っています。ドライブにごみ箱がない(メモリーカード、USB メモリ、ネットワークドライブ)か、ほかのプログラムが使用中です。\n\n{paths}\n\n完全に削除しますか？この操作は元に戻せません。",
     "trash_keep_files": "残す",
+    "worker_cancelling": "キャンセル中…",
+    "worker_finishing": "終了処理中…",
 }

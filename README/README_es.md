@@ -76,6 +76,8 @@ Principios de diseño:
 
 ---
 
+Cancelar o cerrar una herramienta en segundo plano vuelve de inmediato. El diálogo indica la cancelación y desactiva sus controles hasta que terminen el trabajo actual que no puede interrumpirse y la limpieza; después se cierra con el resultado original. Al completar normalmente puede mostrar brevemente la finalización. Al volver a abrirlo no recibe resultados antiguos. Al salir definitivamente, la aplicación espera a que termine de forma segura el trabajo pendiente.
+
 ## Instalación
 
 ### Requisitos

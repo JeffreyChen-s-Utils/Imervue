@@ -2991,4 +2991,6 @@ english_word_dict = {
     "trash_left_in_place_title": "Not moved to the Recycle Bin",
     "trash_left_in_place": "{count} deleted file(s) could not go to the Recycle Bin and are still on disk: their drive has none (a memory card, USB stick or network share), or another program is using them.\n\n{paths}\n\nDelete them permanently? This cannot be undone.",
     "trash_keep_files": "Keep Them",
+    "worker_cancelling": "Cancelling…",
+    "worker_finishing": "Finishing…",
 }
