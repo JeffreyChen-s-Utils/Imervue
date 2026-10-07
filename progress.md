@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第三階段：一致的功能流程與狀態（P2）
 
-- **#74** GPU Develop API 3 變更的外掛發佈來源尚需同步：`D:/Codes/Imervue_Plugins/plugins/gpu_develop/`。
-  下一步：鏡像已驗證的程式與 manifest，提交推送 main，核對所有外掛 flat files 與工作區契約文件。
-
 ### 後續階段：依基準結果安排（P3）
 
 - **#75** 大量縮圖磁碟快取在啟動路徑同步盤點：`Imervue/image/thumbnail_disk_cache.py:88`、`:244`；固定基準見 `docs/performance/baseline-20261007.md`。

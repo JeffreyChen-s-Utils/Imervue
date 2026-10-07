@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-21 | 2026-10-07 | Publish GPU status and reload contract to plugin distribution | #done #Imervue_Plugins #plugin #docs | [2026-10](2026-10.md) |
 | U-20261007-20 | 2026-10-07 | Expose plugin resource states and protect installation and reload | #done #plugin #stability #i18n | [2026-10](2026-10.md) |
 | U-20261007-19 | 2026-10-07 | Unify output transactions conflicts metadata and durable results | #done #export #stability #cli #i18n | [2026-10](2026-10.md) |
 | U-20261007-18 | 2026-10-07 | Retain cross-folder photo choices through compare develop and export | #done #workflow #library #stability #i18n | [2026-10](2026-10.md) |
@@ -555,4 +556,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 88 |
+| [2026-10.md](2026-10.md) | 2026-10 | 89 |
