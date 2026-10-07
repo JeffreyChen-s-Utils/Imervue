@@ -44,3 +44,7 @@ between the native bundle write and metadata commit. A fresh process recovers
 both prior coherent versions into independent dirty tabs, ignores the orphan
 bundle and does not restore them twice. Only the supplied test scratch directory
 and isolated settings/plugin profile are touched.
+
+## Confirmed remote execution
+
+On 2026-10-07, commit `1431a2e7a56c48fe370332c1a3cccd960a8a0b58` passed all required CI jobs, including [actual Linux OpenGL](https://github.com/JeffreyChen-s-Utils/Imervue/actions/runs/37616163546/job/112774884736). The downloaded JUnit artifact passed `verify_gl_report.py`: ten executed cases, zero skipped/failed/errored, with `llvmpipe (LLVM 20.1.2, 256 bits)` recorded by the actual test contexts. Remote test execution took 4.99s. XCB and GLX wheel dependency preflight reported no missing libraries. This confirms the added platform runtime configuration; it does not establish which individual missing component caused the earlier abort.

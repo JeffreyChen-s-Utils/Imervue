@@ -6,11 +6,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-### 第二階段：跨工作區與 OpenGL 回歸（P1）
-
-- **#69** 獨立 Linux／Mesa OpenGL CI 與跨工作區回歸仍待遠端執行確認：`.github/workflows/test.yml`、`tests/test_workspace_lifecycle_gl.py`。
-  下一步：首次 Linux job 在 QApplication 初始化時中止；以 XCB／GLX ldd 與 uncaptured Qt 診斷定位並排除平台問題，重跑十個 real-gl 案例及其他 CI，保存零跳過的 renderer 證據後完成。
-
 ### 第三階段：一致的功能流程與狀態（P2）
 
 - **#70** 匯出、索引、AI 處理及下載的工作狀態分散於各對話框：`Imervue/gui/`、`Imervue/library/scanner.py`、`Imervue/plugin/`。
