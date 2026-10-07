@@ -5,3 +5,71 @@ Item numbers (`#n`) are never reused. Tags: [DECIDE] needs the owner's decision,
 Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-10, X-9, X-10, X-18).
 
 ## Open
+
+### 第一階段：編輯成果與復原可靠性（P0）
+
+- **#58** [UNVERIFIED] Paint 主分頁切換可能替換未儲存畫布：`Imervue/Imervue_main_window.py:278` 每次切回 Paint 都重新綁定瀏覽圖片，`Imervue/paint/paint_workspace.py:491` 直接載入作用中的畫布。
+  下一步：先補「編輯 → 離開 Paint → 換瀏覽圖片 → 返回」整合測試；切分頁保留文件，明確送到 Paint 的動作預設開新文件，驗證圖層、髒狀態及復原紀錄均保留。
+
+- **#59** Paint 復原尚未涵蓋完整文件狀態：`Imervue/paint/undo_stack.py:140` 只擷取圖層像素與選取範圍，新增／刪除／排序／合併及圖層屬性缺少完整復原。
+  下一步：為結構、遮罩、透明度、混合模式與圖層屬性建立可逆操作；補連續 Undo／Redo 測試，比較完整文件狀態及序列化結果。
+
+- **#60** 多文件自動儲存只涵蓋作用中的髒文件：`Imervue/paint/workspace_autosave.py:136` 未輪流保存其他已修改分頁。
+  下一步：為每份文件建立獨立快照與保留配額；補修改 A 後停留 B、異常結束、重新啟動及多文件恢復測試，驗證所有髒文件都可還原。
+
+- **#61** 縮圖 VRAM 容量邊界無法為新貼圖騰出空間：`Imervue/gpu_image_view/tile_textures.py:25` 拒絕超過剩餘預算的配置，但 `:51` 僅在已超過上限時淘汰。
+  下一步：先補「用量未超標，但新貼圖放不下」回歸測試；配置前優先淘汰畫面外貼圖，維持容量記帳與可見貼圖，於真實 GPU 驗證滿載捲動不出現空白縮圖。
+
+### 第二階段：效能基準、操作回應與記憶體（P1）
+
+- **#62** 缺少固定硬體與資料集的效能基準，無法判斷各項優化的實際收益；涵蓋 `Imervue/gpu_image_view/`、`Imervue/gui/develop_panel.py`、`Imervue/paint/` 及 `Imervue/library/`。
+  下一步：建立 1 萬／10 萬張圖庫、24MP／60MP 圖片及 4K 多圖層情境，量測冷／暖啟動、首次顯示、預覽延遲、幀時間、RAM 峰值、索引耗時及取消回應，據此設定驗收門檻。
+
+- **#63** Modify 預覽在 UI 執行緒套用完整圖片的 recipe：`Imervue/gui/develop_panel.py:366`、`:910`，防抖後仍可能阻塞操作。
+  下一步：先量測滑桿預覽耗時；背景運算採最新請求版本，拖曳時提供低解析度預覽、停止後補高品質結果，保持幾何座標一致，驗證切圖與快速調整不套用過期結果。
+
+- **#64** Paint Undo 以次數限制完整圖層快照，缺少總位元組預算：`Imervue/paint/undo_stack.py:33`、`:140`。
+  下一步：在 #59 的完整復原語意上加入容量預算；先量測筆畫快照成本，再讓區域修改保存差異、結構操作保存可逆命令，複雜操作保留完整快照，驗證容量及 Undo／Redo 正確性。
+
+- **#65** 縮圖牆每幀仍遍歷全部圖片：`Imervue/gpu_image_view/tile_grid_renderer.py:268`；`Imervue/gpu_image_view/tile_textures.py:68` 的可見性計算也掃完整清單。
+  下一步：先量測大量圖片的繪製成本；依可見列範圍加緩衝區計算候選項目，讓繪製、載入及淘汰共用可見範圍，驗證縮放、捲動、選取與命中測試。
+
+- **#66** 預取以張數為主，解碼中的容量未納入統一預算：`Imervue/gpu_image_view/prefetch_scheduler.py:142`、`Imervue/gpu_image_view/prefetch_memory.py:68`。
+  下一步：量測 RAW／全景圖並行解碼的峰值；依實際陣列大小與解碼預留容量調節預取，分開管理 RAM、VRAM 及各視窗配額，補缺少選用記憶體偵測相依時的降級測試。
+
+- **#67** 自動儲存於 UI timer 路徑同步壓縮及寫入：`Imervue/paint/workspace_autosave.py:47`、`Imervue/paint/auto_save.py:69`，大文件可能造成卡頓。
+  下一步：接續 #60 量測快照與壓縮耗時；以一致的文件版本背景保存並合併重複請求，驗證保存期間繪圖不產生混合版本，失敗可回報且既有有效快照仍可恢復。
+
+- **#68** 工作取消與對話框關閉可能長時間阻塞 UI：`Imervue/plugin/worker_host.py` 的停止流程同步等待 worker 完成。
+  下一步：量測不可立即中斷的解碼、推論及 I/O；補執行中取消／關閉／再次開啟測試，顯示取消狀態並以完成訊號協調釋放，保留 worker 與宿主生命週期。
+
+- **#69** 缺少跨工作區、異常結束及真實 OpenGL 的完整回歸流程：`tests/` 與 `.github/workflows/test.yml`。
+  下一步：補編輯切頁、多文件恢復、執行中關閉及損壞圖片／磁碟滿／無寫入權限流程；獨立安排真實 GL 測試，涵蓋貼圖淘汰、縮放、多視窗及資源釋放。
+
+### 第三階段：一致的功能流程與狀態（P2）
+
+- **#70** 匯出、索引、AI 處理及下載的工作狀態分散於各對話框：`Imervue/gui/`、`Imervue/library/scanner.py`、`Imervue/plugin/`。
+  下一步：盤點現有進度與取消介面，建立共用工作狀態及背景工作面板，提供失敗明細、取消狀態與只重試失敗項目，驗證重試不重複處理已完成輸出。
+
+- **#71** 文件來源、髒狀態、保存位置及最後自動儲存狀態缺少一致呈現；Paint 多文件關閉流程尚缺「儲存全部」：`Imervue/paint/workspace_tabs.py`、`Imervue/paint/workspace_status.py`。
+  下一步：統一文件狀態顯示並補儲存全部流程，區分可繼續編輯的原生文件與扁平輸出；驗證取消選檔或保存失敗時不清除髒狀態、不關閉未保存文件。
+
+- **#72** 搜尋、比較、挑片、顯影及批次輸出的選取集合與預設缺少連貫流程：`Imervue/library/`、`Imervue/gui/`。
+  下一步：以「搜尋 → 比較 → 保留／拒絕 → 套用顯影 → 批次輸出」建立整合案例，沿用同一選取集合與既有預設，驗證過濾、跨資料夾與返回上一步時的狀態。
+
+- **#73** 各輸出入口的檔名衝突、metadata、色彩描述檔、覆寫與結果回報需要一致性稽核：`Imervue/export/`、`Imervue/gui/batch_export_dialog.py`、`Imervue/cli.py`。
+  下一步：盤點 GUI／CLI／批次工具的差異，建立共用輸出政策及可點擊的成功／失敗結果；補同名來源、部分失敗、取消及 metadata 保留的跨入口測試。
+
+- **#74** 外掛相依、模型下載、運算後端與失敗回復資訊缺少一致呈現：`Imervue/plugin/`、`plugins/`。
+  下一步：盤點各外掛現有能力與降級流程，提供一致的可用／缺相依／下載中／失敗狀態及原因；驗證重試、重載及多視窗，實作外掛變更時同步發佈來源。
+
+### 後續階段：依基準結果安排（P3）
+
+- **#75** [UNVERIFIED] 大量縮圖磁碟快取可能拖慢啟動：`Imervue/image/thumbnail_disk_cache.py:88`、`:244` 在模組單例建立時同步掃描快取目錄。
+  下一步：接續 #62 分別量測空快取及大量快取的啟動成本；確認瓶頸後評估背景盤點或持久化索引，驗證讀寫、配額與舊快取清理的一致性。
+
+- **#76** [UNVERIFIED] 圖庫背景掃描與前景搜尋／標籤修改共用 SQLite 連線，需驗證並行交易行為與延遲：`Imervue/library/image_index.py:145`、`:182`、`Imervue/library/scanner.py:190`。
+  下一步：壓測掃描同時搜尋與寫入、批次回滾及關閉；依結果決定獨立讀取連線與單一寫入佇列，並保持既有 schema、WAL 與批次交易能力。
+
+- **#77** GPU 即時顯影與進階色彩流程仍需評估，現有 GPU Develop 後端主要服務批次輸出：`plugins/gpu_develop/`、`Imervue/image/develop_backends.py`。
+  下一步：先完成 #62、#63 的量測與預覽改善，再評估沿用既有後端的收益；建立 CPU／GPU、預覽／匯出的色彩及像素一致性案例，確認降級與模型外掛邊界後安排實作。
