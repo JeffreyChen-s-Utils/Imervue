@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 942 | 157,465 |
+| `tests/` | 946 | 157,838 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 172 | 43,251 |
 | `Imervue/gui/` | 174 | 34,771 |
 | `Imervue/puppet/` | 60 | 16,393 |
@@ -84,8 +84,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| `scripts/`（開發與發佈工具） | 7 | 1,149 |
-| **總計** | **1,808** | **344,287** |
+| `scripts/`（開發與發佈工具） | 8 | 1,189 |
+| **總計** | **1,813** | **344,700** |
 
 其中 `Imervue/` 套件本身 779 檔 / 169,652 行。
 
@@ -996,7 +996,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-942 個檔、157,465 行。`pyproject.toml` 定義三個互斥層級 marker：
+946 個檔、157,838 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1039,6 +1039,10 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 
 驗證：`CI=true py -m pytest <file> -q` — 檔內每個測試都必須是 `s`。
 
+`.github/workflows/test.yml` 的獨立 `real-gl` job 在 Ubuntu 24.04／Mesa software GL／Xvfb 使用 `CI=false`、`QT_QPA_PLATFORM=xcb`，不改 Windows guard。實際 shader／FBO／像素與 GL handles 驗證、完整工作區切頁／多文件復原／異常與 multiwindow close 選取十個案例；JUnit 必須至少十個通過、零 skipped／failed／error 且有 actual renderer property。`scripts/verify_gl_report.py` 拒絕未執行／只有 skip 的假成功，artifact 保留七天；此 job 也是 dev 發佈必要條件。GL CI 是實際 API correctness，不是硬體 GPU throughput。詳見 `docs/testing-real-gl.md`。
+
+一般 suite 的 `test_autosave_crash_integration.py` 以 fresh child／isolated profile 實跑兩份背景 autosave，再於第三份 bundle 與 metadata commit 之間 os._exit(23)；新的復原子程序只還原兩份 coherent versions 到 dirty tabs、忽略 orphan 且不可重複復原。`test_workspace_lifecycle_gl.py` 的 five cases 在實際 windows／workers 驗證切頁、Undo／Redo／mask、關閉取消、寫入中關閉、磁碟滿／permission、damaged image handoff、多視窗 GL release；所有 GL 模組仍保留 shared skip marker。
+
 ---
 
 ## 9. 建置、封裝與 CI
@@ -1051,7 +1055,8 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | AppImage | `packaging/build_appimage.sh` | Linux |
 | 跨平台說明 | `packaging/CROSS_PLATFORM.md` | |
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
-| dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
+| dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended`／`real-gl` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
+| 實際 GL regression | `scripts/verify_gl_report.py`、`tests/test_workspace_lifecycle_gl.py`、`tests/test_tile_textures_gl.py` | 獨立 Linux／Mesa／Xvfb job 的 no-skip／case count／renderer evidence gate；像素、貼圖容量／zoom／handles 與跨工作區／多文件／異常／多視窗行為；正常 Windows headless jobs 仍 skip GL construction |
 | 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行）、`performance_workers.py`（107 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。worker 工具以真實 QDialog／QThread 驗證不可中斷與 blocking stop 下 UI／actual retirement／heartbeat。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |

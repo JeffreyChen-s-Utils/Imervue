@@ -8,8 +8,8 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第二階段：跨工作區與 OpenGL 回歸（P1）
 
-- **#69** 缺少跨工作區、異常結束及真實 OpenGL 的完整回歸流程：`tests/` 與 `.github/workflows/test.yml`。
-  下一步：補編輯切頁、多文件恢復、執行中關閉及損壞圖片／磁碟滿／無寫入權限流程；獨立安排真實 GL 測試，涵蓋貼圖淘汰、縮放、多視窗及資源釋放。
+- **#69** 獨立 Linux／Mesa OpenGL CI 與跨工作區回歸仍待遠端執行確認：`.github/workflows/test.yml`、`tests/test_workspace_lifecycle_gl.py`。
+  下一步：推送通過本機檢查的回歸階段，確認 real-gl job 十個案例零跳過且有 renderer 紀錄；排除 Linux 相依／渲染或其他 CI 失敗，再保存遠端證據與完成紀錄。
 
 ### 第三階段：一致的功能流程與狀態（P2）
 

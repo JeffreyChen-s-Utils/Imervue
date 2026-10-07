@@ -91,6 +91,22 @@ def test_the_docs_job_installs_the_pins_read_the_docs_installs():
     assert inline == listed
 
 
+def test_real_gl_job_is_separate_requires_actual_rendering_and_gates_publication():
+    jobs = dict(_jobs(_ROOT / ".github/workflows/test.yml"))
+    gl = jobs["real-gl"]
+    assert 'runs-on: ubuntu-24.04' in gl
+    assert 'CI: "false"' in gl and 'QT_QPA_PLATFORM: xcb' in gl
+    assert 'LIBGL_ALWAYS_SOFTWARE: "1"' in gl
+    assert 'xvfb-run' in gl and 'glxinfo -B' in gl
+    assert 'scripts/verify_gl_report.py real-gl.xml' in gl
+    for case in ("tests/test_tile_textures_gl.py", "tests/test_workspace_lifecycle_gl.py",
+                 "test_background_dirty_tab_and_multiple_document_recovery",
+                 "test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo"):
+        assert case in gl
+    assert 'continue-on-error:' not in gl
+    assert 'needs: [lint, docs, fast, extended, real-gl]' in jobs["publish-dev"]
+
+
 _REQUIREMENTS = _ROOT / ".github" / "requirements"
 _LOCKED_INSTALL = ("python -m pip install --require-hashes --only-binary :all: "
                    "-r .github/requirements/publish.txt")

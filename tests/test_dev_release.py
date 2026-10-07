@@ -189,8 +189,8 @@ def test_the_workflow_publishes_only_a_tested_push_to_dev():
     # test.yml also runs for main and for pull requests; the condition keeps both out.
     job = _publish_job()
     assert re.findall(r"^  ([\w-]+):\s*$", _jobs(), flags=re.MULTILINE) == [
-        "lint", "docs", "fast", "extended", "publish-dev"]
-    assert "needs: [lint, docs, fast, extended]" in job
+        "lint", "docs", "fast", "extended", "real-gl", "publish-dev"]
+    assert "needs: [lint, docs, fast, extended, real-gl]" in job
     assert "if: github.event_name == 'push' && github.ref == 'refs/heads/dev'" in job
 
 

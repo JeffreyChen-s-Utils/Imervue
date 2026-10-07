@@ -128,13 +128,64 @@ jobs:
         PYTHONUNBUFFERED: "1"
       run: python -X faulthandler -u -m pytest tests/ --test-layer=${{ matrix.layer }} -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception
 
+  real-gl:
+    runs-on: ubuntu-24.04
+    name: Actual OpenGL / Linux Mesa / Python 3.12
+    timeout-minutes: 15
+    env:
+      # Windows retains its offscreen crash guard. This independent X server
+      # uses actual Mesa contexts; a skipped or missing GL case fails the job.
+      CI: "false"
+      QT_QPA_PLATFORM: xcb
+      QT_XCB_GL_INTEGRATION: xcb_glx
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      PYTHONFAULTHANDLER: "1"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+    - name: Set up Python 3.12
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: "3.12"
+    - name: Install X server and Mesa
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb xauth mesa-utils libgl1-mesa-dri libegl1 libopengl0 \
+          libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-render-util0 libxcb-randr0 libxcb-xinerama0 libxcb-xfixes0
+    - name: Install core test dependencies
+      run: >-
+        python -m pip install --only-binary :all:
+        PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest
+    - name: Record actual GL capability
+      run: xvfb-run -a glxinfo -B
+    - name: Run real rendering and workspace lifecycle regressions
+      run: >-
+        xvfb-run -a -s "-screen 0 1920x1080x24 +extension GLX"
+        python -X faulthandler -u -m pytest
+        tests/test_tile_textures_gl.py tests/test_workspace_lifecycle_gl.py
+        tests/test_paint_auto_save.py::test_background_dirty_tab_and_multiple_document_recovery
+        tests/test_main_window_layout.py::test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo
+        -v --tb=short -o junit_family=xunit1 --junitxml=real-gl.xml
+        -p no:unraisableexception
+    - name: Require executed GL cases and renderer evidence
+      run: python scripts/verify_gl_report.py real-gl.xml
+    - name: Keep actual GL results
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: real-gl-linux-python312
+        path: real-gl.xml
+        retention-days: 7
+
   publish-dev:
     # The dev channel. A push to dev that passes every job above is built from dev.toml and
     # uploaded when it is still the tip of dev and ships something the newest Imervue_dev does
     # not. scripts/dev_release.py picks the version from PyPI, so nothing is committed back.
     # This workflow also runs for main and for pull requests: the condition keeps both out.
     name: Publish Imervue_dev to PyPI
-    needs: [lint, docs, fast, extended]
+    needs: [lint, docs, fast, extended, real-gl]
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     timeout-minutes: 15

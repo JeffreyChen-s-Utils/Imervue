@@ -277,6 +277,12 @@ Summaries only; `CLAUDE.md` is the source of truth.
   `user_setting.json` (CLAUDE.md "Unit Tests").
 - Test modules that build `QOpenGLWidget` subclasses import the `tests/_qt_skip.py` marker
   (CLAUDE.md "Qt / OpenGL tests on headless CI").
+  The separate `test.yml` real-gl job uses Linux/Xvfb/Mesa with actual contexts;
+  it requires ten successful, unskipped rendering/workspace lifecycle cases and
+  renderer evidence before dev publication. Windows keeps its headless guard.
+  Fresh isolated-process probes cover background document saves and a crash
+  between bundle/metadata commits. See `docs/testing-real-gl.md` for the selection
+  and report verification; software GL establishes correctness, not GPU speed.
 - A feature becomes a plugin only for heavy optional dependencies, failure isolation or independent
   release cadence (CLAUDE.md "Plugins vs Main Program").
 - Plugin changes are mirrored to Imervue_Plugins `main` (CLAUDE.md "Mirror plugin changes to the
