@@ -115,6 +115,9 @@ Public interfaces other code or users depend on:
    Paint: entering its tab preserves the open documents; File > Open Current Image in Paint
    and image navigation from the Paint main-tab bar decode first, then open a new document.
    A failed decode leaves every document unchanged. The Deep Zoom E key opens annotations.
+   Paint history: dispatcher gestures and explicit layer/material commands commit complete
+   editable content per document; restore keeps the document's listeners and surviving
+   layer identities while restoring structure, properties, masks, vectors and selections.
    Delete: soft delete in `gpu_image_view/actions/delete.py` → `commit_pending_deletions()` →
    one batch through `system/trash_ops.py`.
 4. **Batch export** — `gui/batch_export_dialog.py` `_ExportWorker` opens the renderer chosen under

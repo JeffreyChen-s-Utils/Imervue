@@ -13,15 +13,18 @@ import numpy as np
 from Imervue.paint.document import PaintDocument
 from Imervue.paint.manga_menu import commit_text_along_selection
 from Imervue.paint.text_render import TextRenderOptions
+from Imervue.paint.undo_stack import UndoStack
 
 
 def _workspace(selection):
     doc = PaintDocument()
     doc.load_image(np.full((120, 160, 4), 255, np.uint8))
     doc.set_selection(selection)
+    stack = UndoStack(doc)
     updates = []
     canvas = SimpleNamespace(document=lambda: doc, update=lambda: updates.append(1))
-    return SimpleNamespace(canvas=lambda: canvas), doc, updates
+    return SimpleNamespace(canvas=lambda: canvas, _on_dispatcher_commit=stack.commit,
+                           _undo_stack=stack), doc, updates
 
 
 def _ring() -> np.ndarray:
@@ -41,6 +44,12 @@ def test_the_text_is_drawn_on_a_new_layer_along_the_outline(qapp):
     near_edge = (np.abs(ys - 20) < 20) | (np.abs(ys - 100) < 20) | (np.abs(xs - 30) < 20) | (np.abs(xs - 130) < 20)
     assert near_edge.mean() > 0.9                              # glyphs hug the outline
     assert updates == [1]
+    pixels = layer.image.copy()
+    assert workspace._undo_stack.undo()
+    assert doc.layer_count == 1
+    assert workspace._undo_stack.redo()
+    assert doc.layer_count == 2
+    np.testing.assert_array_equal(doc.active_layer().image, pixels)
 
 
 def test_without_a_selection_or_text_nothing_is_added(qapp):

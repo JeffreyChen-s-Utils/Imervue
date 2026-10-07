@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-03 | 2026-10-07 | Isolate exit-status probes from unrelated Temp directories | #incident #tests #ci | [2026-10](2026-10.md) |
+| U-20261007-02 | 2026-10-07 | Restore complete document state in Paint history | #done #paint #stability | [2026-10](2026-10.md) |
 | U-20261007-01 | 2026-10-07 | Preserve Paint documents when switching workspaces | #done #paint #stability #i18n | [2026-10](2026-10.md) |
 | U-20261003-03 | 2026-10-03 | Import camera RAW embedded XMP ratings and reject damaged boxes | #done #metadata #raw | [2026-10](2026-10.md) |
 | U-20261003-02 | 2026-10-03 | Windows offscreen Paint tests use real system fonts | #done #tests #qt | [2026-10](2026-10.md) |

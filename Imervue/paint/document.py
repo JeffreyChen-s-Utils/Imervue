@@ -45,6 +45,12 @@ __all__ = [
 ]
 
 
+_CONTENT_FIELDS = (
+    "_layers", "_active_index", "_selection", "_groups", "_named_selections",
+    "_reference_layer_index", "panel_layout",
+)
+
+
 class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMixin):
     """Layer stack + active-layer pointer + selection mask.
 
@@ -90,18 +96,18 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
         """
         clone = type(self)()
         memo[id(self)] = clone
-        clone._layers = copy.deepcopy(self._layers, memo)
-        clone._active_index = self._active_index
-        clone._selection = (
-            None if self._selection is None else self._selection.copy()
-        )
-        clone._groups = copy.deepcopy(self._groups, memo)
-        clone._named_selections = {
-            name: mask.copy() for name, mask in self._named_selections.items()
-        }
-        clone._reference_layer_index = self._reference_layer_index
-        clone.panel_layout = self.panel_layout
+        for name in _CONTENT_FIELDS:
+            setattr(clone, name, copy.deepcopy(getattr(self, name), memo))
         return clone
+
+    def adopt_content(self, source: PaintDocument) -> None:
+        """Install owned content and notify once, keeping identity and listeners.
+
+        The caller transfers an independent copy and must not mutate it again.
+        """
+        for name in _CONTENT_FIELDS:
+            setattr(self, name, getattr(source, name))
+        self._notify()
 
     # ---- listeners -------------------------------------------------------
 

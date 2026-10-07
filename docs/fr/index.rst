@@ -544,6 +544,8 @@ Espace de travail Paint (onglet Paint)
 
 Le troisième onglet principal — **Paint** — est un espace de travail de peinture complet
 avec documents à onglets multiples, calques vectoriels et matriciels, outils manga, images
+Undo / Redo restaure la création, la suppression, l’ordre et la fusion des calques, ainsi que leurs propriétés, masques, vecteurs, groupes, sélections et calque de référence. Les commandes du menu et du panneau des calques, les calques manga et l’insertion de matériaux créent des étapes d’annulation ; chaque document conserve son propre historique.
+
 clés d'animation, et import/export PSD. Passer à Paint conserve les documents, les calques, les modifications non enregistrées et l’historique d’annulation ; la première visite affiche un canevas vierge. ``File > Open Current Image in Paint`` ouvre l’image de la visionneuse dans un nouveau document. Gauche/Droite sur la barre des onglets principaux de Paint ouvre aussi l’image précédente/suivante dans un nouveau document. ``E`` depuis Deep Zoom ouvre l’éditeur d’annotation séparé.
 
 Points forts en matière d'ergonomie — l'espace de travail Paint dispose d'un curseur

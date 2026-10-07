@@ -80,9 +80,9 @@ def test_undo_survives_a_dimension_change_after_snapshot():
     document.active_layer().image[0, 0] = (255, 0, 0, 255)
     stack.commit()                        # snapshot captured at 4x6
     assert document.rotate_90_cw() is True  # layers become 6x4
-    # The 4x6 snapshot no longer matches the 6x4 layers -- np.copyto would raise
-    # a broadcast ValueError. _restore must skip the mismatched layer instead.
-    assert stack.undo() is True           # must not raise
+    assert stack.undo() is True
+    assert document.shape == (4, 6)
+    assert tuple(document.active_layer().image[0, 0]) == (0, 0, 0, 0)
 
 
 def test_reset_undo_stack_clears_and_is_guarded():
@@ -163,7 +163,7 @@ def test_redo_returns_false_when_stack_empty():
 
 
 # ---------------------------------------------------------------------------
-# Structural layer changes between commits — snapshots map by identity
+# Structural changes restore order and content while preserving live identities
 # ---------------------------------------------------------------------------
 
 
@@ -184,8 +184,8 @@ def test_undo_after_layer_add_restores_by_identity_not_index():
     stack.undo()
     # A keeps its stroke (it predates the restored snapshot)...
     assert tuple(layer_a.image[0, 0]) == (255, 0, 0, 255)
-    # ...B stays empty, and the newcomer must NOT receive B's captured
-    # pixels — the snapshot simply has nothing for it.
+    # The inserted layer leaves the stack and cannot receive B's pixels.
+    assert [layer.name for layer in document.layers()] == ["Background", "A", "B"]
     assert tuple(layer_b.image[1, 1]) == (0, 0, 0, 0)
     assert tuple(new_layer.image[1, 1]) == (9, 9, 9, 255)
 
@@ -203,12 +203,12 @@ def test_undo_after_layer_move_restores_moved_layer_pixels():
     document.move_active_layer(up=False)          # stack: [A, BG]
     stack.undo()
     assert tuple(layer_a.image[0, 0]) == (255, 0, 0, 255)
-    assert tuple(document.layer_at(1).image[0, 0]) == (0, 0, 0, 0)
+    assert document.layer_at(1) is layer_a
+    assert tuple(document.layer_at(0).image[0, 0]) == (0, 0, 0, 0)
 
 
-def test_undo_after_layer_delete_skips_the_dead_layer():
-    """Deleting a layer between commits must not shift its captured
-    pixels into the next layer down the old index order."""
+def test_undo_after_layer_delete_restores_the_deleted_layer():
+    """A collected layer is recreated in the right position with its own pixels."""
     document = _doc()
     layer_a = document.add_layer(name="A")
     layer_b = document.add_layer(name="B")        # stack: [BG, A, B]
@@ -222,6 +222,8 @@ def test_undo_after_layer_delete_skips_the_dead_layer():
     document.remove_active_layer()                # stack: [BG, B]
     del layer_a
     stack.undo()                                  # must not raise
+    assert [layer.name for layer in document.layers()] == ["Background", "A", "B"]
+    assert tuple(document.layer_at(1).image[0, 0]) == (255, 0, 0, 255)
     assert tuple(layer_b.image[0, 0]) == (0, 0, 255, 255)
     assert tuple(document.layer_at(0).image[0, 0]) == (0, 0, 0, 0)
 

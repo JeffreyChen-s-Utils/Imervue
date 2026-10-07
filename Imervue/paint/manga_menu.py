@@ -14,6 +14,8 @@ non-uniform layouts.
 """
 from __future__ import annotations
 
+from Imervue.paint.workspace_history import commit_document_edit
+
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -288,8 +290,7 @@ def commit_speedlines_layer(workspace: PaintWorkspace, options) -> bool:
     rendered = render_speedlines((h, w), options)
     layer = document.add_layer(name=f"Speedlines ({options.kind})")
     np.copyto(layer.image, rendered)
-    document.invalidate_composite()
-    workspace.canvas().update()
+    commit_document_edit(workspace)
     return True
 
 
@@ -316,8 +317,7 @@ def commit_text_along_selection(workspace: PaintWorkspace, options) -> bool:
         return False
     layer = document.add_layer(name="Text")
     np.copyto(layer.image, rendered)
-    document.invalidate_composite()
-    workspace.canvas().update()
+    commit_document_edit(workspace)
     return True
 
 
@@ -333,8 +333,7 @@ def commit_flash_layer(workspace: PaintWorkspace, options) -> bool:
     rendered = render_flash((h, w), options)
     layer = document.add_layer(name="Flash")
     np.copyto(layer.image, rendered)
-    document.invalidate_composite()
-    workspace.canvas().update()
+    commit_document_edit(workspace)
     return True
 
 
@@ -622,6 +621,5 @@ def commit_panel_layout(
     layer = document.add_layer(name="Panels")
     np.copyto(layer.image, layer_canvas)
     document.panel_layout = layout          # what the brush's Snap to panel clips to
-    document.invalidate_composite()
-    workspace.canvas().update()
+    commit_document_edit(workspace)
     return True

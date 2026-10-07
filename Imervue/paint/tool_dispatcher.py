@@ -324,6 +324,10 @@ class ToolDispatcher:
         if evt.phase in ("press", "move") and handled:
             self._gesture_pending_commit = True
 
+    def commit_external_edit(self) -> None:
+        """Commit an explicit canvas edit, such as inserting a dropped material."""
+        self._commit_undo()
+
     @property
     def last_damage(self):
         """Union damage rect from the most-recent positive ``__call__``."""
@@ -445,5 +449,4 @@ def _build_text_tool(state, selection_provider, parent_widget):
 # ---------------------------------------------------------------------------
 # Move tool
 # ---------------------------------------------------------------------------
-
 

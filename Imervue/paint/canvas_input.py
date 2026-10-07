@@ -332,10 +332,12 @@ class PaintCanvasInputMixin:
         sx = float(pos.x())
         sy = float(pos.y())
         ix, iy = self._screen_to_image(sx, sy)
-        commit_material_to_document(
+        layer = commit_material_to_document(
             self._document, tile,
             drop_x=int(round(ix)), drop_y=int(round(iy)),
         )
+        if layer is not None and self._dispatcher is not None:
+            self._dispatcher.commit_external_edit()
         self.document_changed.emit()
         self._needs_upload = True
         self.update()

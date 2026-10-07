@@ -543,6 +543,8 @@ Paint Workspace (Paint Tab)
 
 The third top-level tab — **Paint** — is a full-featured painting workspace
 with multi-tab documents, vector and raster layers, manga tools, animation
+Undo / Redo restores layer creation, deletion, ordering and merging, as well as layer properties, masks, vectors, groups, selections and reference-layer state. Layer-menu, Layers-panel, manga-layer and material-insertion commands create undo steps; each document keeps its own history.
+
 frames, and PSD import/export. Switching to Paint preserves its documents, layers, unsaved changes and undo history; the first visit starts with a blank canvas. Use ``File > Open Current Image in Paint`` to open the viewer image in a new document. Left/Right on the Paint main-tab bar opens the previous/next viewer image in a new document too. ``E`` from Deep Zoom opens the separate annotation editor.
 
 UX-affordance highlights — the Paint workspace ships with a full-featured

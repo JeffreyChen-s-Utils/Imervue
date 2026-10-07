@@ -259,6 +259,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     def _finish_construction(self) -> None:
         """Final wiring once every collaborator exists."""
+        self._layer_dock.edit_committed.connect(self._on_dispatcher_commit)
         self._unsubscribe = self._state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())
         self._refresh_cursor_for_tool()

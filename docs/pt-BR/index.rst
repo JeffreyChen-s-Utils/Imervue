@@ -544,6 +544,8 @@ Espaço de Trabalho Paint (Aba Paint)
 
 A terceira aba principal — **Paint** — é um espaço de trabalho completo para pintura
 com documentos em múltiplas abas, camadas vetoriais e raster, ferramentas para mangá,
+Undo / Redo restaura a criação, exclusão, ordenação e mesclagem de camadas, além de propriedades, máscaras, vetores, grupos, seleções e camada de referência. Os comandos do menu e painel de camadas, camadas de mangá e inserção de materiais criam etapas de desfazer; cada documento mantém seu próprio histórico.
+
 quadros de animação e importação/exportação PSD. Mudar para Paint preserva os documentos, as camadas, as alterações não salvas e o histórico de desfazer; a primeira visita mostra uma tela em branco. ``File > Open Current Image in Paint`` abre a imagem do visualizador em um novo documento. Esquerda/Direita na barra de abas principal de Paint também abre a imagem anterior/seguinte em um novo documento. ``E`` no Deep Zoom abre o editor de anotações separado.
 
 Destaques de usabilidade — o espaço de trabalho Paint vem com um cursor completo de

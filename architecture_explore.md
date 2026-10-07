@@ -66,8 +66,8 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 922 | 154,024 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,626 |
+| `tests/` | 923 | 154,277 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 170 | 42,580 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 128 | 15,295 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,771** | **337,989** |
+| **總計** | **1,773** | **338,196** |
 
-其中 `Imervue/` 套件本身 769 檔 / 167,944 行。
+其中 `Imervue/` 套件本身 770 檔 / 167,898 行。
 
 測試碼與產品碼比約 **0.84 : 1**（154k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -676,13 +676,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `document.py` | 899 | `PaintDocument`：圖層堆疊 + 選取範圍 + 作用中圖層（幾何、合併、群組操作來自下面三個 mixin；`Layer` / `LayerGroup` 等由 `layer_model` re-export，見 `__all__`） |
+| `document.py` | 905 | `PaintDocument`：圖層、群組、選取與參考索引；deepcopy 複製可編輯內容並排除 listener，adopt_content 保留文件身分與 listener、一次通知 |
 | `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
 | `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
 | `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
 | `canvas.py` | 855 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
 | `canvas_overlays.py` | 538 | `PaintCanvasOverlaysMixin`：棋盤背景（`build_checker_pattern`）、行進螞蟻選取框、工具預覽、多邊形預覽、出血線、洋蔥皮、尺寸 HUD、拖放高亮、像素格線 VBO |
-| `canvas_input.py` | 363 | `PaintCanvasInputMixin`：滑鼠／繪圖板事件轉成 `PointerEvent` 交給工具、平移、滾輪縮放、鋼筆 Enter/Esc、拖放開檔 |
+| `canvas_input.py` | 365 | `PaintCanvasInputMixin`：指標與繪圖板事件、平移縮放、鋼筆與拖放；素材插入完成時經 dispatcher 建立 Undo 步驟 |
 | `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
 | `pointer_event.py` | 35 | `PointerEvent`（工具收到的指標快照）與 `ToolDispatcher` 型別；不依賴 Qt widget |
 | `compositing.py` | 438 | 純 NumPy 圖層合成 |
@@ -690,7 +690,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
 | `document_io.py` | 450 | 原生 `.imervue` NPZ bundle 存讀 |
 | `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
-| `undo_stack.py` | 192 | 每文件的 undo / redo |
+| `undo_stack.py` | 103 | 每文件完整內容快照的 Undo／Redo；恢復圖層結構、所有屬性、遮罩、向量、群組與選取，保留存活圖層的身分 |
 | `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
 | `blend_modes.py` | 63 | 共用 RGB 混色模式數學 |
 | `blend_if.py` | 333 | Blend-If：依亮度範圍決定逐像素可見度 |
@@ -734,7 +734,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 漫畫 / 網點
 
-`manga_menu.py`(627) · `manga_panels.py`(273) 分鏡版面（Panel Cutter 把版面存在 `document.panel_layout`，筆刷的 Snap to panel 經 `ToolDispatcher` 的 `panel_layout_provider` 依它裁切；`layout_for_canvas` 在畫布尺寸變了後不再套用） ·
+`manga_menu.py`(625) · `manga_panels.py`(273) 分鏡版面（Panel Cutter 把版面存在 `document.panel_layout`，筆刷的 Snap to panel 經 `ToolDispatcher` 的 `panel_layout_provider` 依它裁切；`layout_for_canvas` 在畫布尺寸變了後不再套用） ·
 `halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) 對話框氣泡 ·
 `comic_stamps.py`(266) + `stamp_dock.py`(88) · `flash_effect.py`(132) 爆炸效果 ·
 `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
@@ -763,26 +763,27 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 773 | 頂層 `PaintWorkspace` widget；`confirm_close()` 由主視窗關閉時呼叫（它是分頁，收不到自己的 closeEvent） |
-| `tool_dispatcher.py` | 449 | 把 `PointerEvent` 路由到作用中工具的處理器；工具本體都在 `tools/`，在這裡 re-export（`__all__`） |
+| `paint_workspace.py` | 774 | 頂層 `PaintWorkspace`；dispatcher 手勢與圖層 dock 的 edit_committed 各建立一個 Undo 步驟；confirm_close 由主視窗呼叫 |
+| `tool_dispatcher.py` | 452 | 工具事件路由與手勢提交；commit_external_edit 將畫布素材拖放接到同一個 Undo 邊界 |
 | `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
 | `tool_bar.py` | 491 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
 | `workspace_tabs.py` | 337 | 多文件分頁 |
 | `workspace_docks.py` | 417 | dock 建構與佈局持久化 |
-| `workspace_content.py` | 469 | 文件內容命令 |
+| `workspace_content.py` | 469 | 文件內容命令；姿勢與材質插入透過 workspace_history 提交 Undo 與髒狀態 |
+| `workspace_history.py` | 15 | 圖層選單、漫畫圖層與素材插入共用的完整編輯提交邊界 |
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
-| `workspace_shortcuts.py` | 313 | 快捷鍵（登錄表管理的鍵經 `shortcut_binding` 建立，`apply_shortcut_registry` 套用重新指定）、筆刷調整、歡迎提示 |
+| `workspace_shortcuts.py` | 317 | 快捷鍵、筆刷調整、歡迎提示；圖層排序完成時提交 Undo，邊界不建立空步驟 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
 | `workspace_autosave.py` | 171 + `auto_save.py`(242) | 自動存檔（作用中分頁未儲存時才寫快照）、當機復原、`discard_own_autosaves` 關閉時刪掉自己的快照 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |
 | `canvas_presets.py` | 184 + `new_canvas_dialog.py`(136) | File > New Canvas… 的尺寸預設（紙張／漫畫／螢幕 + 自訂，存在設定）與對話框（尺寸、白或透明背景）|
-| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(635)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(323)、`filter_menu.py`(563)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(198) 單一滑桿濾鏡的即時預覽（圖層中央 480×480 原尺寸裁切） |
+| 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(635)、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(322)、`filter_menu.py`(563)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(198) 單一滑桿濾鏡的即時預覽（圖層中央 480×480 原尺寸裁切） |
 
-#### `paint/docks/`（7 檔 · 1,940 行）
+#### `paint/docks/`（7 檔 · 1,955 行）
 
-`brushes.py`(464) 筆刷與填色 dock · `layers.py`(431) 圖層 dock · `color.py`(382) 顏色 dock（色輪、HSB／RGB 滑桿、hex）·
+`brushes.py`(464) 筆刷與填色 dock · `layers.py`(446) 圖層 dock（完整操作後發出 edit_committed，列選取不建立 Undo 步驟） · `color.py`(382) 顏色 dock（色輪、HSB／RGB 滑桿、hex）·
 `materials.py`(265) 素材庫 dock · `navigators.py`(247) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
@@ -1010,6 +1011,8 @@ pytest 回報的那一個。`pytest_sessionfinish` 把它記在該次執行的 `
 測試要用它一律寫 `from tests import conftest` 或 `from tests.conftest import …`；裸的 `import conftest` 會把同一個檔
 再執行一份。`tests/test_conftest_exit_status.py` 以子行程實跑三種結束碼（有失敗、全過、選項錯誤），並掃描 `tests/`
 不得出現裸 import。
+子程序同時將 rootdir 與 confcutdir 設為自己的測試目錄，保留專案設定與 fixture 插件；
+跨磁碟的單檔 probe 不再掃描系統暫存目錄的相鄰路徑。消失目錄的回歸測試驗證隔離邊界。
 
 ### Qt / OpenGL 在無頭 CI 上的硬規則
 

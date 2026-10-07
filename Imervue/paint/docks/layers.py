@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QDockWidget,
@@ -65,6 +65,8 @@ class LayerDock(QDockWidget):
     external changes (e.g. a tool that adds a layer) refresh the
     visible state automatically.
     """
+
+    edit_committed = Signal()
 
     def __init__(self, document=None, parent=None):
         from Imervue.paint.layer_thumbnail import (
@@ -315,14 +317,19 @@ class LayerDock(QDockWidget):
         # the colour-chip glyph prefix (added by ``_label_with_color_chip``)
         # so the persisted layer name doesn't accumulate emoji.
         new_name = _strip_color_chip(item.text())
+        layer = self._document.layer_at(layer_idx)
+        if layer.name == new_name and layer.visible == new_visible:
+            return
         self._document.set_layer_attribute(
             layer_idx, visible=new_visible, name=new_name,
         )
+        self.edit_committed.emit()
 
     def _on_add(self) -> None:
         if self._document is None or self._document.layer_count == 0:
             return
         self._document.add_layer()
+        self.edit_committed.emit()
 
     def _build_adjustment_menu(self) -> QMenu:
         """Build the Adjustment-Layer popup menu lazily.
@@ -360,6 +367,7 @@ class LayerDock(QDockWidget):
         layer.name = self._unique_adjustment_name(kind)
         self._document.invalidate_composite()
         self.refresh()
+        self.edit_committed.emit()
 
     def _unique_adjustment_name(self, kind: str) -> str:
         """Return ``"<Kind> 1"`` (or 2/3/...) so successive adjustment
@@ -376,14 +384,16 @@ class LayerDock(QDockWidget):
             i += 1
 
     def _on_remove(self) -> None:
-        if self._document is None:
+        if self._document is None or self._document.layer_count <= 1:
             return
         self._document.remove_active_layer()
+        self.edit_committed.emit()
 
     def _on_duplicate(self) -> None:
-        if self._document is None:
+        if self._document is None or self._document.active_layer() is None:
             return
         self._document.duplicate_active_layer()
+        self.edit_committed.emit()
 
     def show_shortcuts(self, shortcuts) -> None:
         """Re-label the button tooltips with ``shortcuts`` (a ``ShortcutRegistry``)."""
@@ -393,30 +403,37 @@ class LayerDock(QDockWidget):
     def _on_move(self, *, up: bool) -> None:
         if self._document is None:
             return
+        before = self._document.active_layer_index()
         self._document.move_active_layer(up=up)
+        if self._document.active_layer_index() != before:
+            self.edit_committed.emit()
 
     def _on_opacity_changed(self, value: int) -> None:
         if self._suspend or self._document is None:
             return
         active_idx = self._document.active_layer_index()
-        if active_idx >= 0:
+        if active_idx >= 0 and self._document.active_layer().opacity != value / 100.0:
             self._document.set_layer_attribute(active_idx, opacity=value / 100.0)
+            self.edit_committed.emit()
 
     def _on_blend_changed(self) -> None:
         if self._suspend or self._document is None:
             return
         active_idx = self._document.active_layer_index()
-        if active_idx >= 0:
+        if (active_idx >= 0
+                and self._document.active_layer().blend_mode != self._blend.currentData()):
             self._document.set_layer_attribute(
                 active_idx, blend_mode=self._blend.currentData(),
             )
+            self.edit_committed.emit()
 
     def _on_lock_alpha_toggled(self, checked: bool) -> None:
         if self._suspend or self._document is None:
             return
         active_idx = self._document.active_layer_index()
-        if active_idx >= 0:
-            self._document.set_layer_lock_alpha(active_idx, lock_alpha=checked)
+        if (active_idx >= 0
+                and self._document.set_layer_lock_alpha(active_idx, lock_alpha=checked)):
+            self.edit_committed.emit()
 
     def _row_to_layer_index(self, row: int) -> int:
         if self._document is None:
@@ -427,5 +444,3 @@ class LayerDock(QDockWidget):
 # ---------------------------------------------------------------------------
 # Navigator dock — minimap of the canvas
 # ---------------------------------------------------------------------------
-
-
