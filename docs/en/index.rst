@@ -33,6 +33,8 @@ across all five tabs.
 
 **Puppet** and **Desktop Pet** are optional: turn either off under ``File`` > ``Preferences`` > **Optional tabs** and, from the next start, its tab is not added and its code is not loaded, so Imervue starts faster and uses less memory. Both are on by default; each one is built the first time you open its tab, and the Desktop Pet tab at startup when its pet is set to show on launch.
 
+The thumbnail wall makes room for new GPU textures by evicting tiles outside the viewport first, while preserving visible tiles and staying within its memory budget. Tiles touching only the viewport edge do not reserve capacity.
+
 .. contents:: Table of Contents
    :depth: 2
    :local:

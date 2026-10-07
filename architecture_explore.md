@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 924 | 154,506 |
+| `tests/` | 925 | 154,738 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 170 | 42,752 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 128 | 15,295 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,174 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,181 |
 | `Imervue/multi_language/` | 8 | 15,140 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,774** | **338,607** |
+| **總計** | **1,775** | **338,846** |
 
-其中 `Imervue/` 套件本身 770 檔 / 168,080 行。
+其中 `Imervue/` 套件本身 770 檔 / 168,087 行。
 
 測試碼與產品碼比約 **0.84 : 1**（154k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -423,7 +423,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `prefetch_memory.py` | 123 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
 | `view_mouse.py` | 148 | `ViewMouseMixin`：滾輪縮放（含放大鏡倍率、格線與閱讀模式捲動）、按壓／拖曳／放開、雙擊切換 |
 | `gl_renderer.py` | 349 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
-| `tile_grid_renderer.py` | 279 | 縮圖牆 GL 繪製 |
+| `tile_grid_renderer.py` | 279 | 縮圖牆 GL 繪製；忽略與 viewport 只有零面積接觸的縮圖及 placeholder |
 | `deep_zoom_renderer.py` | 277 | Deep-zoom 圖磚 + minimap GL 繪製 |
 | `overlay_painter.py` | 885 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
 | `tile_badges.py` | 93 | 圖磚徽章繪製：色彩標籤條、收藏、書籤、星等、堆疊數、日期、影片播放圓鈕（純 `QPainter`，不需 GL） |
@@ -460,7 +460,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `tile_loader.py` | 603 | 縮圖牆非同步載入：距離感知優先權、grid mutex 下收集結果、進度合併；每 4 秒的背景 stat 掃描（`scan_folder_paths`）標出消失的檔案，也找出縮圖解碼後被其他程式改寫（大小或修改時間變了）的檔案，重解它的縮圖（`refresh_rewritten_tile`：新縮圖到之前照畫舊的，到了換掉舊材質；filmstrip 與預取也丟掉）；改寫、消失、復原的路徑整批交給 `refetch_list_rows`，清單檢視的列一起更新 |
-| `tile_textures.py` | 138 | 圖磚 GPU 材質配置與 VRAM 預算淘汰 |
+| `tile_textures.py` | 145 | GPU 貼圖配置前保留 incoming mipmap 容量，優先淘汰畫面外貼圖；零面積邊界不保留，GL 刪除成功才更新記帳 |
 | `tile_wall_loading.py` | 99 | 牆面 loading 狀態與轉圈幾何（大資料夾/網路磁碟不再空白） |
 | `prefetch_scheduler.py` | 176 | Deep-zoom 鄰居預載排程、取消過期 worker、淘汰快取 |
 | `deep_zoom_priority.py` | 40 | 圖磚渲染優先權 |

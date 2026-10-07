@@ -198,6 +198,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ## Imervue — Visualiseur d'images et photothèque
 
+La grille de miniatures libère de la place pour les nouvelles textures GPU en retirant d’abord celles hors du champ, tout en conservant les images visibles et en respectant le budget mémoire. Celles qui touchent seulement le bord ne réservent pas de capacité.
+
 L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visualiseur d'images à l'arborescence des dossiers, à la barre latérale EXIF et aux outils d'organisation de la photothèque.
 
 ### Visualiseur

@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第一階段：編輯成果與復原可靠性（P0）
 
-- **#61** 縮圖 VRAM 容量邊界無法為新貼圖騰出空間：`Imervue/gpu_image_view/tile_textures.py:25` 拒絕超過剩餘預算的配置，但 `:51` 僅在已超過上限時淘汰。
-  下一步：先補「用量未超標，但新貼圖放不下」回歸測試；配置前優先淘汰畫面外貼圖，維持容量記帳與可見貼圖，於真實 GPU 驗證滿載捲動不出現空白縮圖。
-
 ### 第二階段：效能基準、操作回應與記憶體（P1）
 
 - **#62** 缺少固定硬體與資料集的效能基準，無法判斷各項優化的實際收益；涵蓋 `Imervue/gpu_image_view/`、`Imervue/gui/develop_panel.py`、`Imervue/paint/` 及 `Imervue/library/`。

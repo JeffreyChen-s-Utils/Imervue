@@ -201,6 +201,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ## Imervue — Visor y biblioteca de imágenes
 
+La cuadrícula de miniaturas libera espacio para nuevas texturas GPU eliminando primero las que están fuera de la vista, preservando las visibles y respetando el presupuesto de memoria. Las que solo tocan el borde no reservan capacidad.
+
 La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina el visor de imágenes con el árbol de carpetas, la barra lateral EXIF y las herramientas de biblioteca/organización.
 
 ### Visor

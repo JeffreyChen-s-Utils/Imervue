@@ -198,6 +198,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ## Imervue — Bildbetrachter & Bibliothek
 
+Die Thumbnail-Wand schafft Platz für neue GPU-Texturen, indem sie zuerst Kacheln außerhalb des Bildausschnitts entfernt. Sichtbare Kacheln bleiben erhalten und das Speicherbudget wird eingehalten. Kacheln, die nur den Rand berühren, reservieren keine Kapazität.
+
 Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetrachter mit Ordnerbaum, EXIF-Sidebar und Bibliotheks-/Organisationstools.
 
 ### Viewer

@@ -35,6 +35,10 @@ def ensure_tile_texture(view: GPUImageView, path: str, img_data) -> bool:
         return True
     from Imervue.gpu_image_view.vram_budget import mipmap_texture_bytes
     tex_bytes = mipmap_texture_bytes(img_data.shape[1], img_data.shape[0])
+    if tex_bytes > view._vram_limit:
+        return False
+    if view._vram_usage + tex_bytes > view._vram_limit:
+        _evict_invisible(view, compute_visible_tile_paths(view), required_bytes=tex_bytes)
     if view._vram_usage + tex_bytes > view._vram_limit:
         return False
     tex = upload_rgba_texture(  # pragma: no cover - GL upload path
@@ -85,7 +89,7 @@ def compute_visible_tile_paths(view: GPUImageView) -> set[str]:
         img = view.tile_cache[path]
         x1 = x0 + img.shape[1] * draw_scale
         y1 = y0 + img.shape[0] * draw_scale
-        if x1 >= 0 and x0 <= vw and y1 >= 0 and y0 <= vh:
+        if x1 > 0 and x0 < vw and y1 > 0 and y0 < vh:
             visible.add(path)
     return visible
 
@@ -115,15 +119,18 @@ def free_tile_textures(view: GPUImageView, paths) -> None:
     view._vram_usage = max(0, view._vram_usage - freed_bytes)
 
 
-def _evict_invisible(view: GPUImageView, visible: set[str]) -> None:  # pragma: no cover - GL delete
-    """Delete GPU textures for paths not in ``visible`` until under VRAM cap."""
+def _evict_invisible(
+    view: GPUImageView, visible: set[str], *, required_bytes: int = 0,
+) -> None:
+    """Under the current GL context, make room without deleting visible textures."""
     # list() required because we mutate the dict inside the loop.
     for path in list(view.tile_textures):  # NOSONAR S7504 — iterating a list() copy
-        if view._vram_usage <= view._vram_limit:
+        if view._vram_usage + required_bytes <= view._vram_limit:
             return
         if path not in visible:
-            glDeleteTextures([view.tile_textures.pop(path)])
-            view._vram_usage -= view._tile_tex_sizes.pop(path, 0)
+            glDeleteTextures([view.tile_textures[path]])
+            view.tile_textures.pop(path)
+            view._vram_usage = max(0, view._vram_usage - view._tile_tex_sizes.pop(path, 0))
 
 
 def delete_all_tile_textures(view: GPUImageView) -> None:  # pragma: no cover - GL delete

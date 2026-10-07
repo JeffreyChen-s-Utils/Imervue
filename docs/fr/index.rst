@@ -35,6 +35,8 @@ et *Serveur MCP* sont transversales — elles s'appliquent à l'ensemble des cin
 
 **Puppet** et **Desktop Pet** sont facultatifs : désactivez l'un ou l'autre dans ``File`` > ``Preferences`` > **Optional tabs** et, dès le démarrage suivant, son onglet n'est pas ajouté et son code n'est pas chargé, si bien qu'Imervue démarre plus vite et consomme moins de mémoire. Les deux sont activés par défaut ; chacun est construit la première fois que vous ouvrez son onglet, et l'onglet Desktop Pet dès le démarrage quand son compagnon doit s'afficher au lancement.
 
+La grille de miniatures libère de la place pour les nouvelles textures GPU en retirant d’abord celles hors du champ, tout en conservant les images visibles et en respectant le budget mémoire. Celles qui touchent seulement le bord ne réservent pas de capacité.
+
 .. contents:: Table des matières
    :depth: 2
    :local:

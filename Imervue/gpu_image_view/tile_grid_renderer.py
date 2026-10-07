@@ -81,7 +81,7 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
     def _draw_placeholder(self, x0: float, y0: float,
                           scaled_tile: float, vw: int, vh: int) -> None:
         x1, y1 = x0 + scaled_tile, y0 + scaled_tile
-        if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
+        if x1 <= 0 or x0 >= vw or y1 <= 0 or y0 >= vh:
             return
         renderer = self._view.renderer
         renderer.draw_colored_rect((x0, y0, x1, y1), (0.14, 0.14, 0.14, 1.0), filled=True)
@@ -110,7 +110,7 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         img_data = view.tile_cache[path]
         x1 = x0 + img_data.shape[1] * view._tile_draw_scale
         y1 = y0 + img_data.shape[0] * view._tile_draw_scale
-        if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
+        if x1 <= 0 or x0 >= vw or y1 <= 0 or y0 >= vh:
             return
         view.tile_rects.append((x0, y0, x1, y1, path))
         if not view._ensure_tile_texture(path, img_data):

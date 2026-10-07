@@ -205,6 +205,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ## Imervue — Visualizador de imagens e biblioteca
 
+A grade de miniaturas libera espaço para novas texturas GPU removendo primeiro as que estão fora da área visível, preservando as visíveis e respeitando o orçamento de memória. As que apenas tocam a borda não reservam capacidade.
+
 A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens com árvore de pastas, painel lateral EXIF e ferramentas de biblioteca/organização.
 
 ### Visualizador

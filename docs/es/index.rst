@@ -35,6 +35,8 @@ transversales y se aplican a las cinco pestañas.
 
 **Puppet** y **Desktop Pet** son opcionales: desactiva cualquiera de los dos en ``File`` > ``Preferences`` > **Optional tabs** y, desde el siguiente inicio, su pestaña no se añade y su código no se carga, así que Imervue arranca más rápido y usa menos memoria. Ambos vienen activados; cada uno se construye la primera vez que abres su pestaña, y la de Desktop Pet al iniciar cuando su mascota está configurada para mostrarse al arrancar.
 
+La cuadrícula de miniaturas libera espacio para nuevas texturas GPU eliminando primero las que están fuera de la vista, preservando las visibles y respetando el presupuesto de memoria. Las que solo tocan el borde no reservan capacidad.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:

@@ -209,6 +209,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 ## Imervue — Image viewer & library
 
+The thumbnail wall makes room for new GPU textures by evicting tiles outside the viewport first, while preserving visible tiles and staying within its memory budget. Tiles touching only the viewport edge do not reserve capacity.
+
 The **Imervue** tab is the default landing surface. It pairs the image viewer with the folder tree, EXIF sidebar, and library/organization tools.
 
 ### Viewer

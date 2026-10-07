@@ -33,6 +33,8 @@ für alle fünf Tabs.
 
 **Puppet** und **Desktop Pet** sind optional: Schalten Sie einen der beiden unter ``File`` > ``Preferences`` > **Optional tabs** aus, dann wird ab dem nächsten Start sein Tab nicht angelegt und sein Code nicht geladen, sodass Imervue schneller startet und weniger Speicher braucht. Beide sind standardmäßig an; jeder wird erst beim ersten Öffnen seines Tabs aufgebaut, der Desktop-Pet-Tab schon beim Start, wenn sein Pet beim Start erscheinen soll.
 
+Die Thumbnail-Wand schafft Platz für neue GPU-Texturen, indem sie zuerst Kacheln außerhalb des Bildausschnitts entfernt. Sichtbare Kacheln bleiben erhalten und das Speicherbudget wird eingehalten. Kacheln, die nur den Rand berühren, reservieren keine Kapazität.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:
