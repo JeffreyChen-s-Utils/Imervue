@@ -6,12 +6,7 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-### 第一階段：編輯成果與復原可靠性（P0）
-
 ### 第二階段：效能基準、操作回應與記憶體（P1）
-
-- **#62** 缺少固定硬體與資料集的效能基準，無法判斷各項優化的實際收益；涵蓋 `Imervue/gpu_image_view/`、`Imervue/gui/develop_panel.py`、`Imervue/paint/` 及 `Imervue/library/`。
-  下一步：建立 1 萬／10 萬張圖庫、24MP／60MP 圖片及 4K 多圖層情境，量測冷／暖啟動、首次顯示、預覽延遲、幀時間、RAM 峰值、索引耗時及取消回應，據此設定驗收門檻。
 
 - **#63** Modify 預覽在 UI 執行緒套用完整圖片的 recipe：`Imervue/gui/develop_panel.py:366`、`:910`，防抖後仍可能阻塞操作。
   下一步：先量測滑桿預覽耗時；背景運算採最新請求版本，拖曳時提供低解析度預覽、停止後補高品質結果，保持幾何座標一致，驗證切圖與快速調整不套用過期結果。
@@ -53,8 +48,8 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 後續階段：依基準結果安排（P3）
 
-- **#75** [UNVERIFIED] 大量縮圖磁碟快取可能拖慢啟動：`Imervue/image/thumbnail_disk_cache.py:88`、`:244` 在模組單例建立時同步掃描快取目錄。
-  下一步：接續 #62 分別量測空快取及大量快取的啟動成本；確認瓶頸後評估背景盤點或持久化索引，驗證讀寫、配額與舊快取清理的一致性。
+- **#75** 大量縮圖磁碟快取在啟動路徑同步盤點：`Imervue/image/thumbnail_disk_cache.py:88`、`:244`；固定基準見 `docs/performance/baseline-20261007.md`。
+  下一步：依基準門檻改為背景盤點或持久化索引，驗證盤點期間讀寫、配額與舊快取清理的一致性。
 
 - **#76** [UNVERIFIED] 圖庫背景掃描與前景搜尋／標籤修改共用 SQLite 連線，需驗證並行交易行為與延遲：`Imervue/library/image_index.py:145`、`:182`、`Imervue/library/scanner.py:190`。
   下一步：壓測掃描同時搜尋與寫入、批次回滾及關閉；依結果決定獨立讀取連線與單一寫入佇列，並保持既有 schema、WAL 與批次交易能力。

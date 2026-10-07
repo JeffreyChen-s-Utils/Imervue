@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-01 against `b5921f8` on `dev`.
+> Last verified: 2026-10-07 on `dev`; corresponding commit: `git log -1 -- architecture.md`.
 
 ## 1. Purpose
 
@@ -49,6 +49,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `Imervue/system/` | App/OS infrastructure: frozen-safe paths (`app_paths.py`), logging, themes, UI scale, file association, batched trash |
 | `Imervue/user_settings/` | Global settings dict (profiles, migration, debounced atomic save), tags, bookmarks, colour labels |
 | `Imervue/multi_language/` | `language_wrapper` singleton and built-in dictionaries (`english.py` is the canonical key set) |
+| `scripts/performance_*.py`, `docs/performance/` | Checkout-only benchmark entry point, isolated fixture/profile and native RSS helpers, actual GL frames; raw fixed-hardware baseline and acceptance targets. These tools are not shipped application commands |
 | `Imervue/sessions/`, `Imervue/macros/`, `Imervue/external/` | Session/workspace save-restore, macro record/replay, external-editor launcher |
 | `Imervue/plugin/` | Plugin base class, manager, downloader, pip installer, `WorkerHostMixin`, the plugin API version (`plugin_api.py`) and the shared tool dialog (`tool_dialog.py`) |
 | `Imervue/mcp_server/` | MCP JSON-RPC 2.0 stdio server; no Qt, no optional dependencies |
