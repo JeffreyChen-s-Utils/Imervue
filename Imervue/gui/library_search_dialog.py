@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QAbstractItemView,
     QListWidget, QFileDialog, QSpinBox, QCheckBox, QProgressBar, QSplitter,
     QWidget,
 )
@@ -119,8 +119,14 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         col.addWidget(search_btn)
 
         self._results_list = QListWidget()
+        self._results_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._results_list.itemDoubleClicked.connect(self._open_selected)
         col.addWidget(self._results_list, stretch=1)
+        workflow = QPushButton(lang.get(
+            "photo_workflow_add_results", "Add results to Photo Workflow",
+        ))
+        workflow.clicked.connect(self._send_to_workflow)
+        col.addWidget(workflow)
         return w
 
     # ---------- Actions ----------
@@ -230,9 +236,26 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         open_path(main_gui=self._ui.viewer, path=path)
         self.accept()
 
+    def _send_to_workflow(self) -> None:
+        """Append highlighted results (all if none), preserving the viewer's folder."""
+        from Imervue.gui.photo_workflow_dialog import open_photo_workflow
+        items = self._results_list.selectedItems()
+        if not items:
+            items = [self._results_list.item(i) for i in range(self._results_list.count())]
+        if not items:
+            return
+        open_photo_workflow(self._ui, [item.text() for item in items])
+        self.accept()
+
 
 def open_library_search(ui: ImervueMainWindow) -> None:
-    LibrarySearchDialog(ui).exec()
+    dialog = getattr(ui, "_library_search_dialog", None)
+    if dialog is None:
+        dialog = ui._library_search_dialog = LibrarySearchDialog(ui)
+    dialog._refresh_roots()
+    if dialog._thread is None:
+        dialog._finish_scan()
+    dialog.exec()
 
 
 def _retry_scan(paths: tuple[str, ...], *, with_phash: bool) -> LibraryScanThread:

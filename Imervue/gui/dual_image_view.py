@@ -27,9 +27,10 @@ if TYPE_CHECKING:
 class _Panel(QLabel):
     """Self-scaling pixmap panel used for each half of the dual view."""
 
-    def __init__(self):
+    def __init__(self, *, max_edge: int | None = None):
         super().__init__()
         self._pixmap: QPixmap | None = None
+        self._max_edge = max_edge
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -45,7 +46,9 @@ class _Panel(QLabel):
             self.setPixmap(QPixmap())
             self.setText("—")
             return
-        pm = QPixmap.fromImage(shown_qimage(path))
+        image = (shown_qimage(path) if self._max_edge is None
+                 else shown_qimage(path, max_edge=self._max_edge))
+        pm = QPixmap.fromImage(image)
         if pm.isNull():
             self._pixmap = None
             self.setText("—")
@@ -82,7 +85,7 @@ class DualImageView(QWidget):
     MODE_MANGA = "manga"
     MODE_MANGA_RTL = "manga_rtl"
 
-    def __init__(self, main_window: ImervueMainWindow):
+    def __init__(self, main_window: ImervueMainWindow, *, max_edge: int | None = None):
         super().__init__()
         self._main_window = main_window
         self._mode: str = self.MODE_SPLIT
@@ -102,8 +105,8 @@ class DualImageView(QWidget):
         root.addWidget(self._title)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
-        self._panel_a = _Panel()
-        self._panel_b = _Panel()
+        self._panel_a = _Panel(max_edge=max_edge)
+        self._panel_b = _Panel(max_edge=max_edge)
         self._splitter.addWidget(self._panel_a)
         self._splitter.addWidget(self._panel_b)
         self._splitter.setChildrenCollapsible(False)

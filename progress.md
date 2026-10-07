@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第三階段：一致的功能流程與狀態（P2）
 
-- **#72** 搜尋、比較、挑片、顯影及批次輸出的選取集合與預設缺少連貫流程：`Imervue/library/`、`Imervue/gui/`。
-  下一步：以「搜尋 → 比較 → 保留／拒絕 → 套用顯影 → 批次輸出」建立整合案例，沿用同一選取集合與既有預設，驗證過濾、跨資料夾與返回上一步時的狀態。
-
 - **#73** 各輸出入口的檔名衝突、metadata、色彩描述檔、覆寫與結果回報需要一致性稽核：`Imervue/export/`、`Imervue/gui/batch_export_dialog.py`、`Imervue/cli.py`。
   下一步：盤點 GUI／CLI／批次工具的差異，建立共用輸出政策及可點擊的成功／失敗結果；補同名來源、部分失敗、取消及 metadata 保留的跨入口測試。
 

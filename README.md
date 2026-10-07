@@ -82,6 +82,8 @@ Open `Extra Tools` > `Workflow` > `Background Jobs` to inspect batch export, lib
 
 In Paint, File > `Open Document…`, `Save Document…`, `Save Document As…` and `Save All Documents` use editable `.imervue` bundles. Save All processes modified tabs without changing the active tab; cancellation or failure stops the sequence and leaves unsaved documents open. The window-close prompt offers Save All, while a tab-close save targets that tab. Undo/Redo after saving marks the document modified again. Flat image exports remain separate and do not clear modifications. Tab and status tooltips show source, document destination, flat export and recovery autosave state/time/error. Native open and drops preserve existing edits. Existing PSD shortcuts remain unchanged; explicit native saving is synchronous.
 
+Use `Extra Tools` > `Workflow` > `Photo Workflow` for search → compare → pick/reject → develop preset → batch export. Library Search can append highlighted results (all results if none are highlighted); reopening search retains its query and results. The per-window workflow keeps an ordered cross-folder cohort, checked choices, filter and preset names after closing or returning. Filters only change visibility: hidden checked photos remain bulk targets, shown in the count. Pick checks a photo; Reject unchecks it without deleting it. Compare highlighted photos at a maximum preview edge of 800 pixels. Develop uses existing named presets; Batch Export receives the same checked non-rejected sources and export preset. Pages show 500 rows; external cull changes are reconciled before apply/export. Clear workflow resets it explicitly.
+
 ## Installation
 
 ### Requirements

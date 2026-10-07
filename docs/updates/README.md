@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-18 | 2026-10-07 | Retain cross-folder photo choices through compare develop and export | #done #workflow #library #stability #i18n | [2026-10](2026-10.md) |
 | U-20261007-17 | 2026-10-07 | Save native Paint documents consistently across tabs and close prompts | #done #paint #stability #i18n | [2026-10](2026-10.md) |
 | U-20261007-16 | 2026-10-07 | Retain shared task results and retry failed items across windows | #done #jobs #stability #performance #i18n | [2026-10](2026-10.md) |
 | U-20261007-15 | 2026-10-07 | Confirm Linux Mesa regressions and all required remote checks | #done #ci #gpu #stability | [2026-10](2026-10.md) |
@@ -552,4 +553,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 75 |
+| [2026-10.md](2026-10.md) | 2026-10 | 76 |

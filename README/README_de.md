@@ -82,6 +82,8 @@ Unter `Extra Tools` > `Workflow` > `Background Jobs` sehen Sie Batch-Exporte, Bi
 
 In Paint verwenden File > `Open Document…`, `Save Document…`, `Save Document As…` und `Save All Documents` bearbeitbare `.imervue`-Dateien. Alle speichern verarbeitet geänderte Tabs ohne Tabwechsel; Abbruch oder Fehler beendet die Folge und lässt ungespeicherte Dokumente offen. Beim Fensterschließen können alle gespeichert werden, beim Tabschließen der betroffene Tab. Undo/Redo nach dem Speichern markiert Änderungen erneut. Flache Bildexporte löschen diesen Status nicht. Tab- und Statushinweise zeigen Quelle, Dokumentziel, Export und Wiederherstellungsstatus/Zeit/Fehler. Öffnen und Ablegen schützen vorhandene Bearbeitungen. PSD-Tastenkürzel bleiben bestehen; explizites natives Speichern ist synchron.
 
+`Extra Tools` > `Workflow` > `Photo Workflow` verbindet Suche, Vergleich, Auswahl/Ablehnung, Entwicklungsvorgabe und Batch-Export. Library Search fügt markierte Ergebnisse hinzu, ohne Markierung alle; Suchabfrage und Ergebnisse bleiben beim Wiederöffnen erhalten. Pro Fenster bleiben Ordner übergreifende Reihenfolge, Häkchen, Filter und Vorgabennamen erhalten. Filter ändern nur die Anzeige: verborgene angehakte Fotos bleiben Bulk-Ziele und werden gezählt. Auswahl setzt das Häkchen, Ablehnung entfernt es ohne Löschen. Vergleichsvorschauen sind maximal 800 Pixel groß. Vorhandene Entwicklungsvorgaben und identische angehakte, nicht abgelehnte Exportquellen werden genutzt. Seiten zeigen 500 Einträge; externe Auswahländerungen werden vor Anwenden/Export synchronisiert. Workflow leeren setzt ausdrücklich zurück.
+
 ## Installation
 
 ### Voraussetzungen

@@ -82,6 +82,8 @@ Ouvrez `Extra Tools` > `Workflow` > `Background Jobs` pour consulter les exports
 
 Dans Paint, File > `Open Document…`, `Save Document…`, `Save Document As…` et `Save All Documents` utilisent des documents `.imervue` modifiables. Tout enregistrer traite les onglets modifiés sans changer l’onglet actif ; annulation ou erreur arrête la séquence et laisse les documents non enregistrés ouverts. Fermer la fenêtre permet de tout enregistrer ; fermer un onglet enregistre cet onglet. Undo/Redo après enregistrement signale à nouveau des modifications. L’export aplati ne les efface pas. Les infobulles indiquent source, destination, export et état/heure/erreur de récupération automatique. Ouverture et dépôt préservent les éditions. Raccourcis PSD inchangés ; enregistrement natif explicite synchrone.
 
+`Extra Tools` > `Workflow` > `Photo Workflow` relie recherche, comparaison, sélection/rejet, préréglage de développement et export par lots. Library Search ajoute les résultats surlignés, ou tous sans surlignage ; requête et résultats restent à la réouverture. Chaque fenêtre conserve ordre entre dossiers, cases, filtre et préréglages. Le filtre ne change que l’affichage : les photos cochées masquées restent ciblées et comptées. Sélectionner coche ; rejeter décoche sans supprimer. Comparaison limitée à 800 pixels sur le grand côté. Les préréglages existants et mêmes sources cochées non rejetées alimentent Batch Export. Pages de 500 lignes ; changements externes synchronisés avant application/export. Vider réinitialise explicitement le flux.
+
 ## Installation
 
 ### Prérequis

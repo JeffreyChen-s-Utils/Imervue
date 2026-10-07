@@ -82,6 +82,8 @@ Abra `Extra Tools` > `Workflow` > `Background Jobs` para ver exportaciones por l
 
 En Paint, File > `Open Document…`, `Save Document…`, `Save Document As…` y `Save All Documents` usan documentos `.imervue` editables. Guardar todos procesa las pestañas modificadas sin cambiar la activa; cancelar o fallar detiene la secuencia y mantiene abiertos los documentos pendientes. Al cerrar la ventana se pueden guardar todos; al cerrar una pestaña se guarda esa pestaña. Undo/Redo tras guardar vuelve a marcar cambios. La exportación plana no borra ese estado. Las ayudas muestran origen, destino, exportación y estado/hora/error del autoguardado de recuperación. Abrir y arrastrar preservan ediciones. Se mantienen los atajos PSD; el guardado nativo explícito es síncrono.
 
+`Extra Tools` > `Workflow` > `Photo Workflow` conecta búsqueda, comparación, selección/rechazo, preset de revelado y exportación por lotes. Library Search añade resultados resaltados o todos si no hay resaltados; conserva consulta y resultados al reabrir. Cada ventana retiene orden entre carpetas, casillas, filtro y presets. Filtrar solo cambia la vista: fotos marcadas ocultas siguen siendo destinos y se cuentan. Seleccionar marca; rechazar desmarca sin borrar. Comparación con lado máximo de 800 píxeles. Se reutilizan presets existentes y las mismas fuentes marcadas no rechazadas en Batch Export. Hay 500 filas por página; se sincronizan cambios externos antes de aplicar/exportar. Limpiar reinicia el flujo explícitamente.
+
 ## Instalación
 
 ### Requisitos

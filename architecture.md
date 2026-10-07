@@ -129,6 +129,13 @@ Public interfaces other code or users depend on:
    Paint: entering its tab preserves the open documents; File > Open Current Image in Paint
    and image navigation from the Paint main-tab bar decode first, then open a new document.
    A failed decode leaves every document unchanged. The Deep Zoom E key opens annotations.
+   Photo workflow: a modeless per-window review dialog retains a pure PhotoWorkflow cohort,
+   ordered checked paths, presentation-only cull filter and existing develop/export preset names.
+   Library Search appends highlighted results (or all), preserving folder browsing and its own
+   retained query/results. Pick/reject flags commit in the existing index; external flags are
+   reconciled before bulk actions. Bounded 500-row pages and optional 800px source comparison
+   keep presentation separate from full checked targets. Preset application and Batch Export
+   receive the same non-rejected sources without changing viewer selection or folder context.
    Paint file state: document_status belongs to the canvas's actual document identity and
    keeps source, editable save destination, flat export and per-document recovery result
    separate from the canonical tab dirty map. document_files saves a specified tab or all
