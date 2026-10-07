@@ -59,6 +59,8 @@ El inventario de miniaturas corre en segundo plano; lectura/escritura inmediata.
 
 La biblioteca consulta una conexión WAL separada de solo lectura: ve datos confirmados durante un lote de escaneo. Notas, etiquetas jerárquicas, selección y álbumes comparten una instantánea por llamada. Escrituras serializadas; revertir un lote no pierde un cambio posterior de etiqueta. Las páginas de huellas liberan el lector; cerrar espera consultas activas. Compatibilidad con esquema 2 y bibliotecas existentes.
 
+GPU Develop sigue como acelerador opcional de exportación por lotes. Nuevos diálogos eligen CPU; seleccionar GPU explícitamente en Procesar en. Las etapas de color mixtas pueden diferir en bytes; umbral o posterización activados procesan toda la receta en CPU para evitar amplificar redondeos. Modify y exportación CPU usan sRGB de 8 bits; perfiles incrustados se normalizan una vez y las salidas llevan sRGB salvo al quitar metadatos. No es edición HDR lineal ni de gama amplia. wgpu opcional en el plugin, sin pesos de modelos; fallos/dispositivos ausentes usan CPU. Informes 640k/24MP/60MP documentan mantener vistas previas CPU.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:
@@ -1932,17 +1934,14 @@ Seleccione varias imágenes, después clic derecho > ``Batch Operations`` > ``Ba
 Plugin GPU Develop
 ^^^^^^^^^^^^^^^^^^
 
-El plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, categoría ``plugins``, nombre
-``gpu_develop``) permite que la exportación por lotes procese las recetas de revelado en una GPU
-dedicada. ``Plugins`` > ``GPU Develop…`` instala ``wgpu`` la primera vez y después indica la GPU
-que va a usar; a partir de entonces la exportación por lotes muestra **Procesar en** con esa GPU
-elegida (elija **CPU** para procesar como antes).
+El plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, categoría ``plugins``, nombre ``gpu_develop``) acelera opcionalmente la exportación por lotes. ``Plugins`` > ``GPU Develop…`` instala ``wgpu`` la primera vez e identifica el dispositivo. CPU predeterminada; elegir GPU explícitamente en **Procesar en**.
+
 
 - El balance de blancos, la exposición, las luces / sombras, los blancos / negros, el brillo, el contraste, la vibrancia, la saturación y la curva tonal se ejecutan en la GPU; la rotación, los volteos, el recorte y todo lo que viene después de la curva tonal (Split Toning, LUT, máscaras, niveles y el resto) se quedan en la CPU
-- Una foto de 24 MP tarda unos 0,1 s en la GPU en lugar de unos 7 s en la CPU, sin contar la decodificación ni el guardado
+- Velocidad según hardware/receta; mediciones fijas 640k/24MP/60MP: docs/performance/gpu-develop-20261007.md
 - Solo se usa una GPU dedicada, nunca una GPU integrada ni un renderizador por software; en Windows, primero mediante Vulkan y después mediante Direct3D 12
 - Una imagen con la que falla la GPU se procesa en la CPU, de modo que la exportación se completa igualmente
-- El resultado coincide con el del renderizador de CPU con una diferencia de unos pocos niveles como máximo en una pequeña parte de los píxeles
+- CPU predeterminada conserva píxeles canónicos; GPU es aproximación explícita. Umbral/posterización activados usan CPU para toda la receta
 
 Crear GIF / Vídeo
 ^^^^^^^^^^^^^^^^^

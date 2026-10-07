@@ -59,6 +59,8 @@ L’inventaire des miniatures passe en arrière-plan ; lecture/écriture immédi
 
 La bibliothèque utilise une connexion WAL séparée en lecture seule : les données validées restent consultables pendant un lot de scan. Notes, tags hiérarchiques, sélection et albums partagent un instantané par appel. Écritures sérialisées ; un rollback ne perd pas une modification de tag ultérieure. Les pages d’empreintes libèrent le lecteur ; fermeture attend les requêtes actives. Schéma 2 et fichiers existants compatibles.
 
+GPU Develop reste un accélérateur optionnel d’export par lots. Les nouveaux dialogues choisissent CPU ; GPU à sélectionner explicitement sous Render on. Les opérations couleur mixtes peuvent différer en octets ; seuil ou postérisation activés rendent toute la recette sur CPU pour éviter l’amplification des arrondis. Modify et export CPU partagent sRGB 8 bits ; profils incorporés normalisés une fois, export avec sRGB sauf suppression des métadonnées. Pas d’édition HDR linéaire ni large gamut. wgpu optionnel dans le plugin, sans poids de modèle ; appareil absent/erreur utilisent CPU. Rapports 640k/24MP/60MP justifient les aperçus CPU.
+
 .. contents:: Table des matières
    :depth: 2
    :local:
@@ -1945,17 +1947,14 @@ Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``E
 Plugin GPU Develop
 ^^^^^^^^^^^^^^^^^^
 
-Le plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, catégorie ``plugins``, nom
-``gpu_develop``) permet à l'export par lots de rendre les recettes de développement sur un GPU
-dédié. ``Plugins`` > ``GPU Develop…`` installe ``wgpu`` la première fois, puis indique le GPU
-qu'il utilisera ; l'export par lots affiche ensuite **Render on** avec ce GPU sélectionné
-(choisissez **CPU** pour rendre comme avant).
+Le plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, catégorie ``plugins``, nom ``gpu_develop``) accélère facultativement l’export par lots. ``Plugins`` > ``GPU Develop…`` installe ``wgpu`` au premier usage et identifie l’appareil. CPU par défaut ; GPU à choisir explicitement sous **Render on**.
+
 
 - La balance des blancs, l'exposition, les hautes lumières / ombres, les blancs / noirs, la luminosité, le contraste, la vibrance, la saturation et la courbe tonale s'exécutent sur le GPU ; la rotation, les retournements, le recadrage et tout ce qui suit la courbe tonale (virage partiel, LUT, masques, niveaux et le reste) restent sur le CPU
-- Une photo de 24 MP prend environ 0,1 s sur le GPU au lieu d'environ 7 s sur le CPU, sans compter le décodage et l'enregistrement
+- Vitesse selon matériel/recette ; mesures fixes 640k/24MP/60MP : docs/performance/gpu-develop-20261007.md
 - Seul un GPU dédié est utilisé, jamais un GPU intégré ni un moteur de rendu logiciel ; sous Windows, via Vulkan d'abord, puis Direct3D 12
 - Une image sur laquelle le GPU échoue est rendue sur le CPU, si bien que l'export se termine quand même
-- Le résultat correspond à celui du moteur de rendu CPU à quelques niveaux près sur une faible part des pixels
+- CPU par défaut conserve les pixels de référence ; GPU est une approximation explicite. Seuil/postérisation activés utilisent CPU pour toute la recette
 
 Créer un GIF / une vidéo
 ^^^^^^^^^^^^^^^^^^^^^^^^

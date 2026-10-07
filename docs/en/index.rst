@@ -57,6 +57,8 @@ Thumbnail disk-cache inventory now runs in the background; browsing can read or 
 
 Library search now uses a separate query-only WAL connection: it sees committed data while a background scan holds a batch. Notes, hierarchical tags, culling and album queries share the same snapshot per call. Writes remain serialized; batch rollback cannot discard a later foreground tag change. Fingerprint pages release the reader between pages, and close waits for active queries. Schema 2 and existing library files remain compatible.
 
+GPU Develop remains an optional batch-export accelerator. New Batch Export dialogs default to CPU; choose the GPU explicitly under Render on. Mixed GPU color stages may differ from CPU byte values; enabled threshold or posterize now render the entire recipe on CPU to avoid amplified rounding differences. Modify previews and canonical CPU exports share the same 8-bit sRGB pipeline; embedded wider-gamut profiles are normalized once and exports carry an sRGB profile unless metadata is removed. This is not a linear HDR or wide-gamut editing pipeline. wgpu stays optional in the plugin, which has no model weights; missing devices or runtime failures fall back to CPU. Fixed 640k/24MP/60MP timing and pixel reports document the decision to keep CPU previews.
+
 .. contents:: Table of Contents
    :depth: 2
    :local:
@@ -1877,17 +1879,14 @@ Select multiple images, then right-click > ``Batch Operations`` > ``Batch Export
 GPU Develop Plugin
 ^^^^^^^^^^^^^^^^^^
 
-The **GPU Develop** plugin (``Plugins`` > ``Download Plugins``, category ``plugins``, name
-``gpu_develop``) lets Batch Export render Develop recipes on a discrete GPU.
-``Plugins`` > ``GPU Develop…`` installs ``wgpu`` the first time and then names the GPU it will
-use; Batch Export then shows **Render on** with that GPU chosen (pick **CPU** to render as
-before).
+The **GPU Develop** plugin (``Plugins`` > ``Download Plugins``, category ``plugins``, name ``gpu_develop``) optionally accelerates Batch Export. Open ``Plugins`` > ``GPU Develop…`` to install ``wgpu`` on first use and identify the device. CPU is selected by default; choose the GPU explicitly under **Render on**.
+
 
 - White balance, exposure, highlights / shadows, whites / blacks, brightness, contrast, vibrance, saturation and the tone curve run on the GPU; rotation, flips, the crop and everything after the tone curve (split toning, LUT, masks, levels and the rest) stay on the CPU
-- A 24 MP photo takes about 0.1 s on the GPU instead of about 7 s on the CPU, not counting decoding and saving
+- Speed depends on hardware and recipe; fixed 640k/24MP/60MP measurements are recorded in docs/performance/gpu-develop-20261007.md
 - Only a discrete GPU is used, never an integrated GPU or a software renderer; on Windows through Vulkan first, then Direct3D 12
 - An image the GPU fails on is rendered on the CPU, so the export still completes
-- The output matches the CPU renderer to within a few levels on a small share of pixels
+- CPU is the default and preserves canonical pixels; GPU is an explicit optional approximation. Enabled threshold/posterize use CPU for the entire recipe
 
 Create GIF / Video
 ^^^^^^^^^^^^^^^^^^^

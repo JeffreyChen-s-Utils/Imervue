@@ -262,7 +262,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
         return preset_row
 
     def _build_render_row(self) -> QHBoxLayout | None:
-        """"Render on": the CPU, then each develop backend that can run here, the first chosen.
+        """"Render on": the reference CPU by default, with optional backends offered.
 
         ``None`` (no row) when only the CPU can render; the combo exists either way.
         """
@@ -274,7 +274,7 @@ class BatchExportDialog(WorkerHostMixin, QDialog):
             self._render_combo.addItem(label, key)
         if not backends:
             return None
-        self._render_combo.setCurrentIndex(1)
+        self._render_combo.setCurrentIndex(0)
         row = QHBoxLayout()
         row.addWidget(QLabel(self._lang.get("batch_export_render_on", "Render on:")))
         row.addWidget(self._render_combo, 1)

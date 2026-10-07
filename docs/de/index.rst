@@ -57,6 +57,8 @@ Die Thumbnail-Inventur läuft im Hintergrund; Lesen/Schreiben ist sofort möglic
 
 Die Bibliothek sucht über eine separate schreibgeschützte WAL-Verbindung und liest bestätigte Daten während eines Scan-Batches. Notizen, hierarchische Tags, Auswahl und Alben verwenden pro Aufruf einen konsistenten Snapshot. Schreibzugriffe bleiben serialisiert; Rollback verwirft keine spätere Tag-Änderung. Fingerprint-Seiten geben den Leser frei; Schließen wartet auf aktive Abfragen. Schema 2 und bestehende Dateien bleiben kompatibel.
 
+GPU Develop bleibt optional für Batch-Export. Neue Dialoge wählen CPU; GPU unter Render on ausdrücklich auswählen. Gemischte GPU-Farboperationen können andere Bytewerte liefern; aktiver Threshold oder Posterize rendert das ganze Rezept auf CPU, damit Rundungsfehler nicht verstärkt werden. Modify und CPU-Export teilen die 8-Bit-sRGB-Pipeline; eingebettete Profile werden einmal normalisiert, Exporte erhalten sRGB außer bei entfernten Metadaten. Keine lineare HDR-/Wide-Gamut-Bearbeitung. wgpu bleibt optional im Plugin, ohne Modellgewichte; fehlende Geräte/Laufzeitfehler fallen auf CPU zurück. Messungen für 640k/24MP/60MP dokumentieren die Entscheidung für CPU-Vorschauen.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:
@@ -1962,17 +1964,14 @@ Mehrere Bilder auswählen, dann Rechtsklick > ``Stapeloperationen`` > ``Stapelex
 GPU-Develop-Plugin
 ^^^^^^^^^^^^^^^^^^
 
-Das Plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, Kategorie ``plugins``, Name
-``gpu_develop``) lässt den Stapelexport Develop-Rezepte auf einer dedizierten GPU rendern.
-``Plugins`` > ``GPU Develop…`` installiert beim ersten Mal ``wgpu`` und nennt danach die GPU, die
-es verwenden wird; der Stapelexport zeigt dann **Render on** mit dieser GPU ausgewählt (wählen Sie
-**CPU**, um wie bisher zu rendern).
+Das Plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, Kategorie ``plugins``, Name ``gpu_develop``) beschleunigt den Batch-Export optional. ``Plugins`` > ``GPU Develop…`` installiert beim ersten Mal ``wgpu`` und nennt das Gerät. CPU ist Standard; die GPU unter **Render on** ausdrücklich wählen.
+
 
 - Weißabgleich, Belichtung, Lichter / Schatten, Weiß / Schwarz, Helligkeit, Kontrast, Dynamik, Sättigung und die Tonwertkurve laufen auf der GPU; Drehung, Spiegelungen, der Zuschnitt und alles nach der Tonwertkurve (Split-Toning, LUT, Masken, Tonwerte und der Rest) bleiben auf der CPU
-- Ein 24-MP-Foto braucht auf der GPU etwa 0,1 s statt etwa 7 s auf der CPU, Dekodieren und Speichern nicht mitgerechnet
+- Geschwindigkeit hängt von Hardware/Rezept ab; feste 640k/24MP/60MP-Messungen: docs/performance/gpu-develop-20261007.md
 - Verwendet wird nur eine dedizierte GPU, nie eine integrierte GPU oder ein Software-Renderer; unter Windows zuerst über Vulkan, dann über Direct3D 12
 - Ein Bild, bei dem die GPU scheitert, wird auf der CPU gerendert, sodass der Export trotzdem abgeschlossen wird
-- Die Ausgabe stimmt mit der des CPU-Renderers bis auf wenige Stufen bei einem kleinen Anteil der Pixel überein
+- CPU ist Standard für Referenzpixel; GPU ist eine ausdrücklich gewählte Näherung. Aktiver Threshold/Posterize nutzt CPU für das ganze Rezept
 
 GIF / Video erstellen
 ^^^^^^^^^^^^^^^^^^^^^

@@ -26,6 +26,7 @@ from gpu_develop.params import (
     GpuPlan,
     contrast_mean,
     gpu_plan,
+    requires_cpu_reference,
     stages_supported,
 )
 
@@ -146,6 +147,9 @@ class GpuDevelopRenderer:
         if arr.ndim != 3 or arr.shape[2] != 4:
             raise ValueError(f"Recipe.apply expects HxWx4 RGBA, got shape={arr.shape}")
         recipe = recipe.normalized()
+        if requires_cpu_reference(recipe):
+            logger.debug("CPU reference for a recipe with threshold or posterize")
+            return recipe.apply(arr)
         arr = recipe.apply_stages(np.ascontiguousarray(arr, dtype=np.uint8), last=_before(FIRST_STAGE))
         plan = gpu_plan(recipe)
         if not plan.empty:

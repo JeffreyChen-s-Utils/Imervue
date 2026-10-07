@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 958 | 160,086 |
+| `tests/` | 959 | 160,240 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 174 | 43,523 |
 | `Imervue/gui/` | 176 | 35,549 |
 | `Imervue/puppet/` | 60 | 16,393 |
@@ -83,9 +83,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/export/` | 8 | 1,035 |
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
-| `plugins/`（19 個外掛） | 80 | 16,025 |
-| `scripts/`（開發與發佈工具） | 9 | 1,301 |
-| **總計** | **1,836** | **349,574** |
+| `plugins/`（19 個外掛） | 80 | 16,040 |
+| `scripts/`（開發與發佈工具） | 10 | 1,477 |
+| **總計** | **1,838** | **349,919** |
 
 其中 `Imervue/` 套件本身 789 檔 / 172,162 行。
 
@@ -558,6 +558,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
+| `batch_export_dialog.py` | 456 | 輸出政策／durable job／metadata：新 dialog 預設 CPU reference，GPU explicit opt-in；設定與 retry 保留所選 backend |
+
+
 176 個檔、35,549 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
@@ -1001,7 +1004,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 832 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
 | `object_splitter` | 4 / 701 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
-| `gpu_develop` | 7 / 664 | 批次匯出在獨立顯示卡上套用顯影 recipe：登錄 `develop_backends` 後端（多個視窗各有實例，最後一個卸載才取消登錄）；`adapter_policy` 只選 `DiscreteGPU`（Windows 先 Vulkan 再 D3D12：wgpu 的 D3D12 經 FXC 編譯，浮點運算被重排，與 CPU 差得較多），內建顯示卡與軟體算繪器一律不用，wgpu instance 也只啟用這些 API（Vulkan 與 OpenGL 一起探測曾讓 `wgpuCreateInstance` 當掉）；`params` 把逐通道階段（白平衡、曝光、白黑場、亮度、對比、色調曲線）用 CPU 階段本身跑過 0..255 斜坡做成查表，只有亮部/陰影、vibrance、飽和度在 shader 裡算；對比要整張圖的平均亮度，所以分兩次 dispatch；`develop_shader` 不用 workgroup 記憶體與 barrier（某 D3D12 驅動因此整批不處理），亮度總和用每個 workgroup 一格的全域 atomic；`renderer` 大圖分段、wgpu 錯誤轉 `RuntimeError`（該張改回 CPU），主程式的階段表與 `GPU_STAGES` 不符時不提供 GPU。24MP 約 0.12 秒（CPU 約 7 秒），單一階段與 CPU 差最多 1 階 | wgpu（首次使用時安裝） |
+| `gpu_develop` | 7 / 683 | 可選 API-3 wgpu batch provider；只選 discrete GPU，Vulkan/D3D12/Metal policy、bounded buffer slices、whole-image contrast two-pass、GPU table/mixed math 與 CPU remainder。threshold/posterize enabled 時整個 recipe CPU reference，避免 1-byte rounding 經 discontinuity 放大。新匯出 dialog 預設 CPU；GPU explicit opt-in，normal mixed recipes approximation 非 byte exact，裝置／runtime 失敗 CPU fallback。actual fixed 640k/24MP/60MP reports 見 docs/performance/gpu-develop-20261007.md；無模型權重、不是 HDR/wide-gamut editor | wgpu（首次使用時安裝） |
 | `video_source` | 3 / 612 | 瀏覽影片並抽出靜幀 | imageio-ffmpeg |
 | `cloud_share` | 3 / 484 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛，僅在使用者按下上傳時執行） | — |
 | `ai_motion_deblur` | 3 / 480 | Wiener 反捲積 + 選用 ONNX | onnxruntime |
@@ -1015,7 +1018,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `png_to_icon` | 2 / 195 | PNG → 多尺寸 `.ico` + `.png`（純函式 `write_icon_set`，測試 `tests/test_png_to_icon.py`） | — (Pillow 為預設相依) |
 | `ai_outpaint` | 3 / 192 | 擴張畫布 + 擴散填補邊界 | — |
 
-上表的 `ai_colorize`、`ai_denoise`、`ai_motion_deblur`、`ai_portrait_relight`、`ai_smart_resize`、`ai_style_transfer`、`npr_filters`、`portrait_mode`、`ai_outpaint` 這 9 個單圖工具都以主程式的 `ToolDialogMixin` 建對話框（只留 `_transform()` / `_required_packages()` 與 toast 鍵），`ai_object_remove`、`cloud_share` 用它的 `show_toast` / `output_path`；這 11 個與 `gpu_develop` 都帶 `plugin.json`（`{"min_api_version": 2}`）。
+上表的 `ai_colorize`、`ai_denoise`、`ai_motion_deblur`、`ai_portrait_relight`、`ai_smart_resize`、`ai_style_transfer`、`npr_filters`、`portrait_mode`、`ai_outpaint` 這 9 個單圖工具都以主程式的 `ToolDialogMixin` 建對話框（只留 `_transform()` / `_required_packages()` 與 toast 鍵），`ai_object_remove`、`cloud_share` 用它的 `show_toast` / `output_path`；這 11 個都帶 `plugin.json`（`{"min_api_version": 2}`）；`gpu_develop` 使用 API 3 的 provider-specific unregister，manifest 為 `min_api_version: 3`。
 
 **發佈規則（硬性要求）**：`/plugins/` 在本 repo 是 gitignored（新檔要 `git add -f`），
 且外掛透過另一個公開 repo `D:\Codes\Imervue_Plugins`（remote `Jeffrey-Plugin-Repos/Imervue_Plugins`）
@@ -1086,7 +1089,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended`／`real-gl` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
 | 實際 GL regression | `scripts/verify_gl_report.py`、`tests/test_workspace_lifecycle_gl.py`、`tests/test_tile_textures_gl.py` | 獨立 Linux／Mesa／Xvfb job；先 ldd 檢查 XCB／GLX runtime，uncaptured Qt diagnostics，再 no-skip／case count／renderer evidence gate；像素、貼圖容量／zoom／handles 與跨工作區／多文件／異常／多視窗行為；正常 Windows headless jobs 仍 skip GL construction |
-| 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行）、`performance_workers.py`（107 行）、`library_concurrency_benchmark.py`（85 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。worker 工具以真實 QDialog／QThread 驗證不可中斷與 blocking stop 下 UI／actual retirement／heartbeat。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
+| 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行）、`performance_workers.py`（107 行）、`library_concurrency_benchmark.py`（85 行）、`gpu_develop_benchmark.py`（176 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。worker 工具以真實 QDialog／QThread 驗證不可中斷與 blocking stop 下 UI／actual retirement／heartbeat。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
@@ -1285,6 +1288,8 @@ Registry 與原始對話框互相獨立，Qt ownership／retirement 完成後才
 縮圖磁碟快取建構不等 full inventory：背景盤點以 mutation set／generation 保護 foreground put/get/purge/clear；PNG unique atomic rewrite，corrupt reader 不刪除已換成正常檔的新版本。clear 包含未盤點檔案，locked readable files 仍計入；totals 完成前 provisional，OS拒絕刪除可能無法達 quota。`wait_ready/close` 只供 explicit owners／tests／benchmark，startup 不呼叫 join。
 
 圖庫 SQLite：writer RLock held through batch；獨立 query-only reader 以 read RLock 保護 eager result／multi-query snapshot。讀取不在 read lock 內取得 writer lock；close/init 為 writer→reader，避免生命週期 deadlock。write_batch owning thread 保有 read-own-writes；fingerprint keyset 1000/page 不 yield live cursor，也不 pin WAL；每頁 snapshot，不宣稱整個 generator frozen。現有 schema 2、WAL、raw conn() contract 保持，raw callers 仍須自行鎖定。
+
+GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readback 與 CPU remainder；混合色彩有少量 rounding 差，threshold／posterize 的 discontinuity 可放大至 255，因此 enabled quantizers 整個 recipe CPU reference。新 BatchExportDialog 預設 CPU，GPU explicit opt-in；Modify full preview／CPU export pixel exact，reduced preview 仍 approximate 不用作存檔。GPU no weights／optional wgpu；probe/open/runtime failures、integrated/software adapter exclusion 與 provider generation leases 保持。
 
 ## 11. 持久化檔案一覽
 

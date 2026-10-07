@@ -104,6 +104,8 @@ ThumbnailDiskCache construction starts a background inventory rather than enumer
 
 The library keeps one serialized writer and one query-only WAL reader. Foreground calls read committed data without taking the scanner write lock; compound tag queries share a snapshot, while single SQL statements avoid extra transactions. An additive capture-time/mtime sort index removes full temporary sorts for limited searches; write-batch reads use the owning writer. Close/path switch acquire writer then reader locks. Fingerprint traversal uses bounded keyset pages rather than yielding a live SQL cursor. Public conn() remains the writer; callers using it directly own transaction/locking discipline.
 
+GPU Develop stays an optional batch provider with CPU as the default of new export dialogs. Threshold/posterize recipes use the full CPU reference to prevent amplified upstream GPU rounding. Modify previews remain CPU; embedded ICC/EXIF are normalized by core decoding, then full preview/CPU export share the canonical uint8 sRGB recipe. wgpu and device ownership stay in the flat plugin, no model weights or mandatory dependency added.
+
 ## 4. Main flows
 
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`

@@ -103,3 +103,8 @@ The independent-WAL-reader experiment uses a deterministic 100k file DB and a he
 rolled-back writer transaction. It runs separately from the full fixed-fixture scanner;
 [reader isolation results](library-concurrency-20261007.md) retain before/after latency and
 real-scan results, including an interleaved run that failed the incremental-scan gate.
+
+The optional GPU assessment runs each 640k/24MP/60MP case in a fresh process, including host
+transfer/readback and CPU remainder. [GPU color/latency decision](gpu-develop-20261007.md)
+distinguishes exact CPU preview/export tests from approximate GPU bytes and CPU quantizer guards.
+It measures no GUI event-loop/display latency or dedicated VRAM and introduces no core dependency.

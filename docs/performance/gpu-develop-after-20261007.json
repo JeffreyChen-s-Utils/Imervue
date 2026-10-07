@@ -1,0 +1,593 @@
+{
+  "environment": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.14.4",
+    "logical_cpus": 12,
+    "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "hardware": {
+      "cpu": "AMD Ryzen 5 240 w/ Radeon 760M Graphics        ",
+      "ram_bytes": 33617924096,
+      "gpus": [
+        "AMD Radeon 760M Graphics",
+        "NVIDIA GeForce RTX 5060 Laptop GPU"
+      ]
+    },
+    "versions": {
+      "numpy": "2.4.4",
+      "Pillow": "12.2.0",
+      "PySide6": "6.11.2",
+      "PyOpenGL": "3.1.10"
+    },
+    "product_revision": "3f03725e18d4cd1073784681342ba7e18cf1b66c",
+    "tool_sha256": {
+      "performance_autosave.py": "d78aa454d5107ffb526f835a00fe976367d4327dc79f5e36bce1ddcdc84daca4",
+      "performance_benchmark.py": "9914da1f242d8dbc9bc581af1c21be7dc30d34ef349b8b0772fbe8b860ef47c3",
+      "performance_gl.py": "fc9b3bd9129446c35048c74d115460f0d13db3eddb5886b68cd5b6261deb28fe",
+      "performance_ram.py": "fc2b4f7dc8af78dfe9207612c65895e6a384cddc2e7c622f84006898278cecc9",
+      "performance_support.py": "70f3de21686d54ea99f51d2ed407c758edebca084c331e1c795e89383ece47ba",
+      "performance_workers.py": "16bf447f24a9a4dd8682cac1e44991aadd0df66ea830b8f118d6385b9f61cedf"
+    },
+    "product_changed_sources_sha256": {
+      "Imervue/gui/batch_export_dialog.py": "f31f7d329feff40d4c3a3d320418f51a464e50e527899a39e8fbb2d86fae071f"
+    },
+    "source_hash_newlines": "LF",
+    "cold_definition": "fresh child/profile/index; OS page cache is NOT flushed",
+    "rss_definition": "5ms sampled resident working set plus process lifetime high-water mark"
+  },
+  "wgpu_version": "0.32.0",
+  "cases": {
+    "preview": {
+      "adapter": "NVIDIA GeForce RTX 5060 Laptop GPU (Vulkan)",
+      "shape": [
+        800,
+        800,
+        4
+      ],
+      "open_device": {
+        "samples_ms": [
+          1347.0077000092715
+        ],
+        "median_ms": 1347.0077000092715,
+        "p95_ms": 1347.0077000092715,
+        "min_ms": 1347.0077000092715,
+        "max_ms": 1347.0077000092715,
+        "rss_before_bytes": 70533120,
+        "rss_peak_bytes": 186830848,
+        "rss_growth_bytes": 116297728,
+        "process_peak_bytes": 229515264
+      },
+      "color_cases": {
+        "identity": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "identity"
+        },
+        "table_exposure": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "gpu"
+        },
+        "basic": {
+          "max_rgb_byte_error": 1,
+          "changed_rgb_channels": 3,
+          "changed_rgb_fraction": 3.0517578125e-05,
+          "mean_rgb_byte_error": 3.0517578125e-05,
+          "alpha_equal": true,
+          "byte_exact": false,
+          "render_mode": "gpu"
+        },
+        "advanced": {
+          "max_rgb_byte_error": 3,
+          "changed_rgb_channels": 862,
+          "changed_rgb_fraction": 0.008768717447916666,
+          "mean_rgb_byte_error": 0.011383056640625,
+          "alpha_equal": true,
+          "byte_exact": false,
+          "render_mode": "gpu"
+        },
+        "threshold_after_mixed": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "cpu_reference"
+        }
+      },
+      "recipes": {
+        "basic": {
+          "cpu": {
+            "samples_ms": [
+              98.9550999365747,
+              108.947700005956,
+              110.0086000515148
+            ],
+            "median_ms": 108.947700005956,
+            "p95_ms": 110.0086000515148,
+            "min_ms": 98.9550999365747,
+            "max_ms": 110.0086000515148,
+            "rss_before_bytes": 239108096,
+            "rss_peak_bytes": 282058752,
+            "rss_growth_bytes": 42950656,
+            "process_peak_bytes": 282730496
+          },
+          "first_gpu_render": {
+            "samples_ms": [
+              4.7694999957457185
+            ],
+            "median_ms": 4.7694999957457185,
+            "p95_ms": 4.7694999957457185,
+            "min_ms": 4.7694999957457185,
+            "max_ms": 4.7694999957457185,
+            "rss_before_bytes": 239136768,
+            "rss_peak_bytes": 241795072,
+            "rss_growth_bytes": 2658304,
+            "process_peak_bytes": 282730496
+          },
+          "warm_gpu": {
+            "samples_ms": [
+              3.0895998934283853,
+              4.258999950252473,
+              3.410400007851422
+            ],
+            "median_ms": 3.410400007851422,
+            "p95_ms": 4.258999950252473,
+            "min_ms": 3.0895998934283853,
+            "max_ms": 4.258999950252473,
+            "rss_before_bytes": 241770496,
+            "rss_peak_bytes": 244387840,
+            "rss_growth_bytes": 2617344,
+            "process_peak_bytes": 282730496
+          },
+          "difference": {
+            "max_rgb_byte_error": 1,
+            "changed_rgb_channels": 95,
+            "changed_rgb_fraction": 4.9479166666666665e-05,
+            "mean_rgb_byte_error": 4.9479166666666665e-05,
+            "alpha_equal": true,
+            "byte_exact": false
+          },
+          "median_speedup": 31.945724769861787
+        },
+        "advanced": {
+          "cpu": {
+            "samples_ms": [
+              217.62720006518066,
+              285.58110003359616,
+              269.7417000308633
+            ],
+            "median_ms": 269.7417000308633,
+            "p95_ms": 285.58110003359616,
+            "min_ms": 217.62720006518066,
+            "max_ms": 285.58110003359616,
+            "rss_before_bytes": 237903872,
+            "rss_peak_bytes": 289464320,
+            "rss_growth_bytes": 51560448,
+            "process_peak_bytes": 299810816
+          },
+          "first_gpu_render": {
+            "samples_ms": [
+              101.10489989165217
+            ],
+            "median_ms": 101.10489989165217,
+            "p95_ms": 101.10489989165217,
+            "min_ms": 101.10489989165217,
+            "max_ms": 101.10489989165217,
+            "rss_before_bytes": 238301184,
+            "rss_peak_bytes": 284794880,
+            "rss_growth_bytes": 46493696,
+            "process_peak_bytes": 299810816
+          },
+          "warm_gpu": {
+            "samples_ms": [
+              113.22329996619374,
+              110.59699999168515,
+              108.58769994229078
+            ],
+            "median_ms": 110.59699999168515,
+            "p95_ms": 113.22329996619374,
+            "min_ms": 108.58769994229078,
+            "max_ms": 113.22329996619374,
+            "rss_before_bytes": 240943104,
+            "rss_peak_bytes": 286564352,
+            "rss_growth_bytes": 45621248,
+            "process_peak_bytes": 300007424
+          },
+          "difference": {
+            "max_rgb_byte_error": 3,
+            "changed_rgb_channels": 27924,
+            "changed_rgb_fraction": 0.01454375,
+            "mean_rgb_byte_error": 0.018638020833333335,
+            "alpha_equal": true,
+            "byte_exact": false
+          },
+          "median_speedup": 2.4389603700927047
+        }
+      },
+      "boundary": "owned uint8 sRGB RGBA; full host upload/readback and CPU remainder; no GUI, decoder timing, QImage/display or event-loop latency; RSS includes retained CPU reference; dedicated VRAM not measured"
+    },
+    "24mp": {
+      "adapter": "NVIDIA GeForce RTX 5060 Laptop GPU (Vulkan)",
+      "shape": [
+        4000,
+        6000,
+        4
+      ],
+      "open_device": {
+        "samples_ms": [
+          1274.3405998917297
+        ],
+        "median_ms": 1274.3405998917297,
+        "p95_ms": 1274.3405998917297,
+        "min_ms": 1274.3405998917297,
+        "max_ms": 1274.3405998917297,
+        "rss_before_bytes": 165720064,
+        "rss_peak_bytes": 282087424,
+        "rss_growth_bytes": 116367360,
+        "process_peak_bytes": 324231168
+      },
+      "color_cases": {
+        "identity": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "identity"
+        },
+        "table_exposure": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "gpu"
+        },
+        "basic": {
+          "max_rgb_byte_error": 1,
+          "changed_rgb_channels": 3,
+          "changed_rgb_fraction": 3.0517578125e-05,
+          "mean_rgb_byte_error": 3.0517578125e-05,
+          "alpha_equal": true,
+          "byte_exact": false,
+          "render_mode": "gpu"
+        },
+        "advanced": {
+          "max_rgb_byte_error": 3,
+          "changed_rgb_channels": 862,
+          "changed_rgb_fraction": 0.008768717447916666,
+          "mean_rgb_byte_error": 0.011383056640625,
+          "alpha_equal": true,
+          "byte_exact": false,
+          "render_mode": "gpu"
+        },
+        "threshold_after_mixed": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "cpu_reference"
+        }
+      },
+      "recipes": {
+        "basic": {
+          "cpu": {
+            "samples_ms": [
+              4721.959899994545,
+              5079.219500068575,
+              5692.422199994326
+            ],
+            "median_ms": 5079.219500068575,
+            "p95_ms": 5692.422199994326,
+            "min_ms": 4721.959899994545,
+            "max_ms": 5692.422199994326,
+            "rss_before_bytes": 425488384,
+            "rss_peak_bytes": 2060095488,
+            "rss_growth_bytes": 1634607104,
+            "process_peak_bytes": 2063421440
+          },
+          "first_gpu_render": {
+            "samples_ms": [
+              309.09589992370456
+            ],
+            "median_ms": 309.09589992370456,
+            "p95_ms": 309.09589992370456,
+            "min_ms": 309.09589992370456,
+            "max_ms": 309.09589992370456,
+            "rss_before_bytes": 428736512,
+            "rss_peak_bytes": 755113984,
+            "rss_growth_bytes": 326377472,
+            "process_peak_bytes": 2063421440
+          },
+          "warm_gpu": {
+            "samples_ms": [
+              158.54169998783618,
+              127.80340004246682,
+              113.79510001279414
+            ],
+            "median_ms": 127.80340004246682,
+            "p95_ms": 158.54169998783618,
+            "min_ms": 113.79510001279414,
+            "max_ms": 158.54169998783618,
+            "rss_before_bytes": 659357696,
+            "rss_peak_bytes": 851435520,
+            "rss_growth_bytes": 192077824,
+            "process_peak_bytes": 2063421440
+          },
+          "difference": {
+            "max_rgb_byte_error": 1,
+            "changed_rgb_channels": 1587,
+            "changed_rgb_fraction": 2.2041666666666666e-05,
+            "mean_rgb_byte_error": 2.2041666666666666e-05,
+            "alpha_equal": true,
+            "byte_exact": false
+          },
+          "median_speedup": 39.74244424155257
+        },
+        "advanced": {
+          "cpu": {
+            "samples_ms": [
+              10459.475200041197,
+              11870.721700019203,
+              11573.51340004243
+            ],
+            "median_ms": 11573.51340004243,
+            "p95_ms": 11870.721700019203,
+            "min_ms": 10459.475200041197,
+            "max_ms": 11870.721700019203,
+            "rss_before_bytes": 427859968,
+            "rss_peak_bytes": 2717954048,
+            "rss_growth_bytes": 2290094080,
+            "process_peak_bytes": 2738110464
+          },
+          "first_gpu_render": {
+            "samples_ms": [
+              4803.644699975848
+            ],
+            "median_ms": 4803.644699975848,
+            "p95_ms": 4803.644699975848,
+            "min_ms": 4803.644699975848,
+            "max_ms": 4803.644699975848,
+            "rss_before_bytes": 435544064,
+            "rss_peak_bytes": 2734804992,
+            "rss_growth_bytes": 2299260928,
+            "process_peak_bytes": 2779889664
+          },
+          "warm_gpu": {
+            "samples_ms": [
+              4897.065400029533,
+              4759.32610000018,
+              4834.850799990818
+            ],
+            "median_ms": 4834.850799990818,
+            "p95_ms": 4897.065400029533,
+            "min_ms": 4759.32610000018,
+            "max_ms": 4897.065400029533,
+            "rss_before_bytes": 669339648,
+            "rss_peak_bytes": 2853306368,
+            "rss_growth_bytes": 2183966720,
+            "process_peak_bytes": 2870620160
+          },
+          "difference": {
+            "max_rgb_byte_error": 3,
+            "changed_rgb_channels": 1239970,
+            "changed_rgb_fraction": 0.017221805555555556,
+            "mean_rgb_byte_error": 0.022284527777777778,
+            "alpha_equal": true,
+            "byte_exact": false
+          },
+          "median_speedup": 2.3937684695594763
+        }
+      },
+      "boundary": "owned uint8 sRGB RGBA; full host upload/readback and CPU remainder; no GUI, decoder timing, QImage/display or event-loop latency; RSS includes retained CPU reference; dedicated VRAM not measured"
+    },
+    "60mp": {
+      "adapter": "NVIDIA GeForce RTX 5060 Laptop GPU (Vulkan)",
+      "shape": [
+        6000,
+        10000,
+        4
+      ],
+      "open_device": {
+        "samples_ms": [
+          1443.8946000300348
+        ],
+        "median_ms": 1443.8946000300348,
+        "p95_ms": 1443.8946000300348,
+        "min_ms": 1443.8946000300348,
+        "max_ms": 1443.8946000300348,
+        "rss_before_bytes": 309686272,
+        "rss_peak_bytes": 426508288,
+        "rss_growth_bytes": 116822016,
+        "process_peak_bytes": 669564928
+      },
+      "color_cases": {
+        "identity": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "identity"
+        },
+        "table_exposure": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "gpu"
+        },
+        "basic": {
+          "max_rgb_byte_error": 1,
+          "changed_rgb_channels": 3,
+          "changed_rgb_fraction": 3.0517578125e-05,
+          "mean_rgb_byte_error": 3.0517578125e-05,
+          "alpha_equal": true,
+          "byte_exact": false,
+          "render_mode": "gpu"
+        },
+        "advanced": {
+          "max_rgb_byte_error": 3,
+          "changed_rgb_channels": 862,
+          "changed_rgb_fraction": 0.008768717447916666,
+          "mean_rgb_byte_error": 0.011383056640625,
+          "alpha_equal": true,
+          "byte_exact": false,
+          "render_mode": "gpu"
+        },
+        "threshold_after_mixed": {
+          "max_rgb_byte_error": 0,
+          "changed_rgb_channels": 0,
+          "changed_rgb_fraction": 0.0,
+          "mean_rgb_byte_error": 0.0,
+          "alpha_equal": true,
+          "byte_exact": true,
+          "render_mode": "cpu_reference"
+        }
+      },
+      "recipes": {
+        "basic": {
+          "cpu": {
+            "samples_ms": [
+              19814.211699995212,
+              14282.30339998845,
+              14176.955200033262
+            ],
+            "median_ms": 14282.30339998845,
+            "p95_ms": 19814.211699995212,
+            "min_ms": 14176.955200033262,
+            "max_ms": 19814.211699995212,
+            "rss_before_bytes": 364875776,
+            "rss_peak_bytes": 4691865600,
+            "rss_growth_bytes": 4326989824,
+            "process_peak_bytes": 4694286336
+          },
+          "first_gpu_render": {
+            "samples_ms": [
+              471.91369999200106
+            ],
+            "median_ms": 471.91369999200106,
+            "p95_ms": 471.91369999200106,
+            "min_ms": 471.91369999200106,
+            "max_ms": 471.91369999200106,
+            "rss_before_bytes": 614309888,
+            "rss_peak_bytes": 1336197120,
+            "rss_growth_bytes": 721887232,
+            "process_peak_bytes": 4694286336
+          },
+          "warm_gpu": {
+            "samples_ms": [
+              418.7167000491172,
+              272.17969996854663,
+              252.58759991265833
+            ],
+            "median_ms": 272.17969996854663,
+            "p95_ms": 418.7167000491172,
+            "min_ms": 252.58759991265833,
+            "max_ms": 418.7167000491172,
+            "rss_before_bytes": 1097158656,
+            "rss_peak_bytes": 1818423296,
+            "rss_growth_bytes": 721264640,
+            "process_peak_bytes": 4694286336
+          },
+          "difference": {
+            "max_rgb_byte_error": 1,
+            "changed_rgb_channels": 3902,
+            "changed_rgb_fraction": 2.1677777777777777e-05,
+            "mean_rgb_byte_error": 2.1677777777777777e-05,
+            "alpha_equal": true,
+            "byte_exact": false
+          },
+          "median_speedup": 52.47380095443903
+        },
+        "advanced": {
+          "cpu": {
+            "samples_ms": [
+              26822.280899970792,
+              24884.513199911453,
+              24866.452199989
+            ],
+            "median_ms": 24884.513199911453,
+            "p95_ms": 26822.280899970792,
+            "min_ms": 24866.452199989,
+            "max_ms": 26822.280899970792,
+            "rss_before_bytes": 511815680,
+            "rss_peak_bytes": 6280187904,
+            "rss_growth_bytes": 5768372224,
+            "process_peak_bytes": 6317125632
+          },
+          "first_gpu_render": {
+            "samples_ms": [
+              9684.779300005175
+            ],
+            "median_ms": 9684.779300005175,
+            "p95_ms": 9684.779300005175,
+            "min_ms": 9684.779300005175,
+            "max_ms": 9684.779300005175,
+            "rss_before_bytes": 556269568,
+            "rss_peak_bytes": 6293282816,
+            "rss_growth_bytes": 5737013248,
+            "process_peak_bytes": 6317674496
+          },
+          "warm_gpu": {
+            "samples_ms": [
+              10080.19200002309,
+              10282.428600010462,
+              10340.316700050607
+            ],
+            "median_ms": 10282.428600010462,
+            "p95_ms": 10340.316700050607,
+            "min_ms": 10080.19200002309,
+            "max_ms": 10340.316700050607,
+            "rss_before_bytes": 797188096,
+            "rss_peak_bytes": 6557491200,
+            "rss_growth_bytes": 5760303104,
+            "process_peak_bytes": 6561685504
+          },
+          "difference": {
+            "max_rgb_byte_error": 3,
+            "changed_rgb_channels": 3076162,
+            "changed_rgb_fraction": 0.017089788888888888,
+            "mean_rgb_byte_error": 0.022260483333333334,
+            "alpha_equal": true,
+            "byte_exact": false
+          },
+          "median_speedup": 2.420100753229265
+        }
+      },
+      "boundary": "owned uint8 sRGB RGBA; full host upload/readback and CPU remainder; no GUI, decoder timing, QImage/display or event-loop latency; RSS includes retained CPU reference; dedicated VRAM not measured"
+    }
+  },
+  "failures": {},
+  "source_sha256_lf": {
+    "Imervue/image/recipe.py": "c1734a014f89b9112f35bfa6d70ed22761f857692a2847057951fe4949b96190",
+    "Imervue/image/develop_preview.py": "09f7838323994032ef02427948ef688b3148e7075acad5f290a73002a598d148",
+    "Imervue/image/develop_backends.py": "72b3d7c7f1639b0fd62a7b82d8394eadec44c0bb7f703add40b6c358b4453103",
+    "scripts/gpu_develop_benchmark.py": "414ea2507d52b80f2be3f0335e0d73477f06cf17acdd989f067ef6f328ad6ace",
+    "plugins/gpu_develop/adapter_policy.py": "ba013649e8386597595c0cb05e44647a3b4015573037b8209bf86830f6eecc74",
+    "plugins/gpu_develop/develop_shader.py": "78d49d4deb128962b9b0d769d9628c3c624dd3f158d3d651a4c7a8d9bc07a07f",
+    "plugins/gpu_develop/gpu_develop_plugin.py": "e04d98bcac776431cad9723eb20dd3937efd20644b9291b31b6c0c80fb8f6fc4",
+    "plugins/gpu_develop/params.py": "7aafa9d105414f174639cd3f861c9e2dd71447235f527df10174618f3d95caf3",
+    "plugins/gpu_develop/renderer.py": "88c698c0c0e2e3d25a01db68c4958db00d6c3f7df57b36646f0701e61942a21e",
+    "plugins/gpu_develop/translations.py": "7b0e0f4b3efa6745f6b699d6523b922e3f4a9eb01dfd5b287f64893bf72c95e7",
+    "plugins/gpu_develop/__init__.py": "004276075b6a286461d8b569d3d6f7f3897b0782a068b181920e9f1215e4f13e"
+  },
+  "measurement_tool_AST_sha256": "c393911bdd33c051c2965011167c293a237cbcbc5556041ae87f6790606b22c9",
+  "tool_note": "Raw tool text hash captured at measurement start; final lint-only line wrapping preserves the recorded AST hash."
+}

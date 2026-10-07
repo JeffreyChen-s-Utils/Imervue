@@ -33,3 +33,10 @@ Dependency cancellation retains running QThreads off the UI thread and terminate
 children there; uninterruptible package imports/downloads are retained until actual exit.
 Installing into an interpreter is not globally transactional and cancellation may leave packages
 already successfully installed. Import failure or callback failure keeps the dialog retryable.
+
+GPU Develop has no model weights and keeps wgpu optional in its flat plugin. CPU is now
+the default of new Batch Export dialogs, matching Modify’s canonical 8-bit sRGB preview.
+GPU color mixing is an approximation: enabled threshold/posterize force the entire recipe
+through the CPU reference because a 1-byte intermediate error can become a 255-byte edge
+difference. GPU open/per-image runtime errors retain CPU fallback; integrated/software devices
+remain excluded. See performance/gpu-develop-20261007.md for actual hardware and limits.

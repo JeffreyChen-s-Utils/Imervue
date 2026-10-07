@@ -1,0 +1,174 @@
+{
+  "adapter": "NVIDIA GeForce RTX 5060 Laptop GPU (Vulkan)",
+  "shape": [
+    6000,
+    10000,
+    4
+  ],
+  "open_device": {
+    "samples_ms": [
+      1605.591000057757
+    ],
+    "median_ms": 1605.591000057757,
+    "p95_ms": 1605.591000057757,
+    "min_ms": 1605.591000057757,
+    "max_ms": 1605.591000057757,
+    "rss_before_bytes": 309891072,
+    "rss_peak_bytes": 439123968,
+    "rss_growth_bytes": 129232896,
+    "process_peak_bytes": 669757440
+  },
+  "color_cases": {
+    "identity": {
+      "max_rgb_byte_error": 0,
+      "changed_rgb_channels": 0,
+      "changed_rgb_fraction": 0.0,
+      "mean_rgb_byte_error": 0.0,
+      "alpha_equal": true,
+      "byte_exact": true
+    },
+    "table_exposure": {
+      "max_rgb_byte_error": 0,
+      "changed_rgb_channels": 0,
+      "changed_rgb_fraction": 0.0,
+      "mean_rgb_byte_error": 0.0,
+      "alpha_equal": true,
+      "byte_exact": true
+    },
+    "basic": {
+      "max_rgb_byte_error": 1,
+      "changed_rgb_channels": 3,
+      "changed_rgb_fraction": 3.0517578125e-05,
+      "mean_rgb_byte_error": 3.0517578125e-05,
+      "alpha_equal": true,
+      "byte_exact": false
+    },
+    "advanced": {
+      "max_rgb_byte_error": 3,
+      "changed_rgb_channels": 862,
+      "changed_rgb_fraction": 0.008768717447916666,
+      "mean_rgb_byte_error": 0.011383056640625,
+      "alpha_equal": true,
+      "byte_exact": false
+    },
+    "threshold_after_mixed": {
+      "max_rgb_byte_error": 255,
+      "changed_rgb_channels": 6,
+      "changed_rgb_fraction": 6.103515625e-05,
+      "mean_rgb_byte_error": 0.01556396484375,
+      "alpha_equal": true,
+      "byte_exact": false
+    }
+  },
+  "recipes": {
+    "basic": {
+      "cpu": {
+        "samples_ms": [
+          11853.079700027592,
+          12330.273699946702,
+          12583.89399992302
+        ],
+        "median_ms": 12330.273699946702,
+        "p95_ms": 12583.89399992302,
+        "min_ms": 11853.079700027592,
+        "max_ms": 12583.89399992302,
+        "rss_before_bytes": 707997696,
+        "rss_peak_bytes": 4769251328,
+        "rss_growth_bytes": 4061253632,
+        "process_peak_bytes": 4769316864
+      },
+      "first_gpu_render": {
+        "samples_ms": [
+          479.19340000953525
+        ],
+        "median_ms": 479.19340000953525,
+        "p95_ms": 479.19340000953525,
+        "min_ms": 479.19340000953525,
+        "max_ms": 479.19340000953525,
+        "rss_before_bytes": 624943104,
+        "rss_peak_bytes": 1348079616,
+        "rss_growth_bytes": 723136512,
+        "process_peak_bytes": 4769316864
+      },
+      "warm_gpu": {
+        "samples_ms": [
+          484.0472999494523,
+          291.7451999383047,
+          273.0959999607876
+        ],
+        "median_ms": 291.7451999383047,
+        "p95_ms": 484.0472999494523,
+        "min_ms": 273.0959999607876,
+        "max_ms": 484.0472999494523,
+        "rss_before_bytes": 1110044672,
+        "rss_peak_bytes": 1827508224,
+        "rss_growth_bytes": 717463552,
+        "process_peak_bytes": 4769316864
+      },
+      "difference": {
+        "max_rgb_byte_error": 1,
+        "changed_rgb_channels": 3902,
+        "changed_rgb_fraction": 2.1677777777777777e-05,
+        "mean_rgb_byte_error": 2.1677777777777777e-05,
+        "alpha_equal": true,
+        "byte_exact": false
+      },
+      "median_speedup": 42.263844281085625
+    },
+    "advanced": {
+      "cpu": {
+        "samples_ms": [
+          27855.380300083198,
+          30021.241300040856,
+          28951.982499915175
+        ],
+        "median_ms": 28951.982499915175,
+        "p95_ms": 30021.241300040856,
+        "min_ms": 27855.380300083198,
+        "max_ms": 30021.241300040856,
+        "rss_before_bytes": 634380288,
+        "rss_peak_bytes": 6281322496,
+        "rss_growth_bytes": 5646942208,
+        "process_peak_bytes": 6316957696
+      },
+      "first_gpu_render": {
+        "samples_ms": [
+          11395.218100049533
+        ],
+        "median_ms": 11395.218100049533,
+        "p95_ms": 11395.218100049533,
+        "min_ms": 11395.218100049533,
+        "max_ms": 11395.218100049533,
+        "rss_before_bytes": 558026752,
+        "rss_peak_bytes": 6269886464,
+        "rss_growth_bytes": 5711859712,
+        "process_peak_bytes": 6322130944
+      },
+      "warm_gpu": {
+        "samples_ms": [
+          11326.777799986303,
+          11421.331399935298,
+          12954.44610004779
+        ],
+        "median_ms": 11421.331399935298,
+        "p95_ms": 12954.44610004779,
+        "min_ms": 11326.777799986303,
+        "max_ms": 12954.44610004779,
+        "rss_before_bytes": 802996224,
+        "rss_peak_bytes": 6547943424,
+        "rss_growth_bytes": 5744947200,
+        "process_peak_bytes": 6563954688
+      },
+      "difference": {
+        "max_rgb_byte_error": 3,
+        "changed_rgb_channels": 3076162,
+        "changed_rgb_fraction": 0.017089788888888888,
+        "mean_rgb_byte_error": 0.022260483333333334,
+        "alpha_equal": true,
+        "byte_exact": false
+      },
+      "median_speedup": 2.534904336991674
+    }
+  },
+  "boundary": "owned uint8 sRGB RGBA; full host upload/readback and CPU remainder; no GUI, decoder timing, QImage/display or event-loop latency; RSS includes retained CPU reference; dedicated VRAM not measured"
+}

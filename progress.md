@@ -10,5 +10,5 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 後續階段：依基準結果安排（P3）
 
-- **#77** GPU 即時顯影與進階色彩流程仍需評估，現有 GPU Develop 後端主要服務批次輸出：`plugins/gpu_develop/`、`Imervue/image/develop_backends.py`。
-  下一步：先完成 #62、#63 的量測與預覽改善，再評估沿用既有後端的收益；建立 CPU／GPU、預覽／匯出的色彩及像素一致性案例，確認降級與模型外掛邊界後安排實作。
+- **#77** GPU 色彩保護、CPU 匯出預設與實機評估已通過檢查，尚未同步外掛發佈 repo：`plugins/gpu_develop/`。
+  下一步：依鏡像規範同步 Imervue_Plugins main 的 flat files、十語 README 與架構，確認全部外掛內容一致後刪除本項並記錄完成。
