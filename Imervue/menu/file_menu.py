@@ -68,6 +68,14 @@ def _add_open_entries(ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, la
     open_folder_action = file_menu.addAction(lang.get("main_window_open_folder"))
     open_folder_action.triggered.connect(lambda: open_folder(ui_we_want_to_set))
 
+    paint_action = file_menu.addAction(lang.get(
+        "file_open_in_paint", "Open Current Image in Paint",
+    ))
+    paint_action.setObjectName("file.open_in_paint")
+    paint_action.triggered.connect(
+        lambda: ui_we_want_to_set._bind_paint_workspace_to_current_image(),
+    )
+
     build_recent_menu(ui_we_want_to_set=ui_we_want_to_set, menu=file_menu)
 
     # 書籤管理

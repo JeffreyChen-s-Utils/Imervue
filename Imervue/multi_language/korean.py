@@ -103,6 +103,7 @@ korean_word_dict = {
     "main_window_current_filename": "현재 파일 이름:",
     "main_window_current_file": "파일",
     "main_window_open_folder": _KOREAN_OPEN_FOLDER,
+    "file_open_in_paint": "현재 이미지를 Paint에서 열기",
     "main_window_exit": "종료",
     "main_window_tile_size": "썸네일 크기",
     "main_window_select_folder": "폴더 선택",

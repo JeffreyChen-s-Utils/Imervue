@@ -544,8 +544,7 @@ Paint-Arbeitsbereich (Paint-Tab)
 
 Die dritte Hauptregisterkarte — **Paint** — ist ein voll ausgestatteter Mal-Arbeitsbereich
 mit Multi-Tab-Dokumenten, Vektor- und Raster-Layern, Manga-Werkzeugen, Animationsframes
-und PSD-Import/Export. Beim Wechsel über die Tab-Leiste wird das Bild, das der Viewer
-gerade zeigt, auf die Leinwand geladen.
+und PSD-Import/Export. Beim Wechsel zu Paint bleiben Dokumente, Ebenen, ungespeicherte Änderungen und der Rückgängig-Verlauf erhalten; beim ersten Besuch erscheint eine leere Leinwand. ``File > Open Current Image in Paint`` öffnet das Bild im Viewer als neues Dokument. Links/Rechts auf der Paint-Haupttableiste öffnet auch das vorherige/nächste Viewer-Bild als neues Dokument. ``E`` aus Deep Zoom öffnet den separaten Annotationseditor.
 
 UX-Highlights — der Paint-Arbeitsbereich bietet einen voll ausgestatteten Brush-Größen-Cursor,
 der mit dem Zoom skaliert, unterschiedliche Cursor-Symbole pro Werkzeug, ein

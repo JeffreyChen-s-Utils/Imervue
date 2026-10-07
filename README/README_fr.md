@@ -460,7 +460,7 @@ Le dock Couleur s'ouvre sur un anneau de teinte et un triangle saturation / lumi
 - Clic droit sur le canevas ouvre un menu rapide Undo / Redo / Tout sélectionner / Désélectionner / Ajuster / 100 %
 - Astérisque de modification par onglet, toasts de confirmation pour annuler / refaire, invite de récupération de sauvegarde automatique au lancement
 
-Appuyez sur `E` depuis Deep Zoom pour envoyer l'image actuelle directement dans un nouvel onglet Paint.
+Passer à Paint conserve les documents, les calques, les modifications non enregistrées et l’historique d’annulation ; la première visite affiche un canevas vierge. **File > Open Current Image in Paint** ouvre l’image de la visionneuse dans un nouveau document. Gauche/Droite sur la barre des onglets principaux de Paint ouvre aussi l’image précédente/suivante dans un nouveau document. `E` depuis Deep Zoom ouvre l’éditeur d’annotation séparé.
 
 ---
 

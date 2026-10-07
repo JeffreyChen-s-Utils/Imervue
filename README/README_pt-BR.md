@@ -467,7 +467,7 @@ O dock Cor abre com um anel de matiz e um triângulo de saturação / brilho: ar
 - Clique direito no canvas abre menu rápido de Undo / Redo / Selecionar tudo / Desmarcar / Ajustar / 100 %
 - Asterisco de modificação por aba, confirmações toast de undo / redo, prompt de recuperação de autosave na inicialização
 
-Pressione `E` a partir do Deep Zoom para enviar a imagem atual direto para uma nova aba Paint.
+Mudar para Paint preserva os documentos, as camadas, as alterações não salvas e o histórico de desfazer; a primeira visita mostra uma tela em branco. **File > Open Current Image in Paint** abre a imagem do visualizador em um novo documento. Esquerda/Direita na barra de abas principal de Paint também abre a imagem anterior/seguinte em um novo documento. `E` no Deep Zoom abre o editor de anotações separado.
 
 ---
 

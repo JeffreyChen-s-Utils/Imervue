@@ -95,6 +95,7 @@ chinese_word_dict = {
     "main_window_current_filename": "当前文件名：",
     "main_window_current_file": "文件",
     "main_window_open_folder": "打开文件夹",
+    "file_open_in_paint": "在 Paint 打开当前图片",
     "main_window_exit": "退出",
     "main_window_tile_size": "缩略图大小",
     "main_window_select_folder": "选择文件夹",

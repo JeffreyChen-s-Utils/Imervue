@@ -112,6 +112,9 @@ Public interfaces other code or users depend on:
 3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_menu.py` →
    `gui/<feature>_dialog.py` → `EffectWorker` (`gui/_apply_save.py`) → `image/<feature>.py` → saved
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.
+   Paint: entering its tab preserves the open documents; File > Open Current Image in Paint
+   and image navigation from the Paint main-tab bar decode first, then open a new document.
+   A failed decode leaves every document unchanged. The Deep Zoom E key opens annotations.
    Delete: soft delete in `gpu_image_view/actions/delete.py` → `commit_pending_deletions()` →
    one batch through `system/trash_ops.py`.
 4. **Batch export** — `gui/batch_export_dialog.py` `_ExportWorker` opens the renderer chosen under

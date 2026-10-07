@@ -462,7 +462,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - 畫布右鍵打開快速 Undo / Redo / 全選 / 取消選 / Fit / 100 %
 - 每分頁修改星號、復原 / 重做 toast、啟動時還原自動儲存對話框
 
-從深度縮放按 `E` 把目前圖片直接送入新的 Paint 分頁。
+切換到 Paint 會保留文件、圖層、未儲存修改與復原紀錄；第一次開啟時顯示空白畫布。使用 **File > Open Current Image in Paint** 將檢視器圖片開成新文件。Paint 主分頁列的左右鍵也會將上一張／下一張檢視器圖片開成新文件。深度縮放中的 `E` 會開啟獨立的註解編輯器。
 
 ---
 

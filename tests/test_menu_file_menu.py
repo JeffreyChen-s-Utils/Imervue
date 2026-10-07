@@ -62,6 +62,7 @@ def test_file_menu_entries_in_order(window):
     expected = [
         _lang("menu_new_window", "New Window"), "",
         _lang("main_window_open_image"), _lang("main_window_open_folder"),
+        _lang("file_open_in_paint", "Open Current Image in Paint"),
         _lang("recent_menu_title", "Recent"),
         _lang("bookmark_title", "Bookmarks"), _lang("tag_album_title", "Tags & Albums"), "",
         _lang("recycle_bin_title", "Recycle Bin"), _lang("main_window_remove_undo_stack"), "",

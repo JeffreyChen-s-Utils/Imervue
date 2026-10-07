@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第一階段：編輯成果與復原可靠性（P0）
 
-- **#58** [UNVERIFIED] Paint 主分頁切換可能替換未儲存畫布：`Imervue/Imervue_main_window.py:278` 每次切回 Paint 都重新綁定瀏覽圖片，`Imervue/paint/paint_workspace.py:491` 直接載入作用中的畫布。
-  下一步：先補「編輯 → 離開 Paint → 換瀏覽圖片 → 返回」整合測試；切分頁保留文件，明確送到 Paint 的動作預設開新文件，驗證圖層、髒狀態及復原紀錄均保留。
-
 - **#59** Paint 復原尚未涵蓋完整文件狀態：`Imervue/paint/undo_stack.py:140` 只擷取圖層像素與選取範圍，新增／刪除／排序／合併及圖層屬性缺少完整復原。
   下一步：為結構、遮罩、透明度、混合模式與圖層屬性建立可逆操作；補連續 Undo／Redo 測試，比較完整文件狀態及序列化結果。
 

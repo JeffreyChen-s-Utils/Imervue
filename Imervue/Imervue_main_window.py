@@ -287,16 +287,16 @@ class ImervueMainWindow(
                 path = images[self.viewer.current_index]
             self.modify_panel.bind_to_path(path)
         elif idx == 2:
-            # Paint 分頁 — 把目前圖片載入畫布
-            self._bind_paint_workspace_to_current_image()
+            # Opening the workspace must preserve its documents and undo stacks.
+            _ = self.paint_workspace
         else:
             # 切回 Imervue 主頁
             self.exif_sidebar.update_info()
 
     def _bind_paint_workspace_to_current_image(self) -> None:
+        """Decode the viewer's current image into a new Paint document and show it."""
         images = self.viewer.model.images
         if not images or not (0 <= self.viewer.current_index < len(images)):
-            self.paint_workspace.load_image(None)
             return
         path = images[self.viewer.current_index]
         try:
@@ -304,9 +304,17 @@ class ImervueMainWindow(
             # a RAW's small embedded preview and ignores orientation and profile.
             from Imervue.gpu_image_view.images.image_loader import decode_image_file
             arr = decode_image_file(path)
-            self.paint_workspace.load_image(arr)
-        except IMAGE_READ_ERRORS:
-            self.paint_workspace.load_image(None)
+        except IMAGE_READ_ERRORS as exc:
+            _logger.exception("Could not open %s in Paint", path)
+            self.toast.error(language_wrapper.language_word_dict.get(
+                "annotation_load_failed", "Load failed: {error}",
+            ).format(error=exc))
+            return
+        workspace = self.paint_workspace
+        # load_image replaces the blank document; avoid a second full-size allocation.
+        workspace.new_tab(width=1, height=1)
+        workspace.load_image(arr)
+        self._main_tabs.setCurrentIndex(2)
 
     def eventFilter(self, obj, event):
         """Route Left/Right on the Modify / Paint tab bars to image nav.
@@ -333,7 +341,7 @@ class ImervueMainWindow(
         return super().eventFilter(obj, event)
 
     def _navigate_paint_image(self, direction: int) -> None:
-        """Page the viewer's current image and reload it into the paint canvas."""
+        """Page the viewer's current image and open it in a new Paint document."""
         from Imervue.gpu_image_view.actions.select import (
             switch_to_next_image,
             switch_to_previous_image,

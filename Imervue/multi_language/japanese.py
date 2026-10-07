@@ -106,6 +106,7 @@ japanese_word_dict = {
     "main_window_current_filename": "現在のファイル名:",
     "main_window_current_file": _JAPANESE_TR30D530A130A430EB,
     "main_window_open_folder": "フォルダーを開く",
+    "file_open_in_paint": "現在の画像を Paint で開く",
     "main_window_exit": "終了",
     "main_window_tile_size": "サムネイルサイズ",
     "main_window_select_folder": "フォルダーを選択",

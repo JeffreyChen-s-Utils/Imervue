@@ -459,7 +459,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 - 画布右键打开快速 Undo / Redo / 全选 / 取消选 / Fit / 100 %
 - 每标签修改星号、撤销 / 重做 toast、启动时还原自动保存对话框
 
-从深度缩放按 `E` 把当前图片直接送入新的 Paint 标签。
+切换到 Paint 会保留文件、图层、未保存的修改与撤销历史；第一次打开时显示空白画布。使用 **File > Open Current Image in Paint** 将查看器图片打开为新文件。Paint 主标签栏的左右键也会将上一张／下一张查看器图片打开为新文件。深度缩放中的 `E` 会打开独立的注释编辑器。
 
 ---
 

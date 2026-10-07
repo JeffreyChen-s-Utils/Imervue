@@ -471,7 +471,7 @@ The Color dock opens with a hue ring and saturation / brightness triangle: drag 
 - Right-click on canvas opens a quick Undo / Redo / Select All / Deselect / Fit / 100 % menu
 - Per-tab modified asterisk, undo / redo toast confirmations, autosave-recovery prompt on launch
 
-Press `E` from Deep Zoom to send the current image straight into a new Paint tab.
+Switching to Paint preserves its documents, layers, unsaved changes and undo history; the first visit starts with a blank canvas. Use **File > Open Current Image in Paint** to open the viewer image in a new document. Left/Right on the Paint main-tab bar opens the previous/next viewer image in a new document too. `E` from Deep Zoom opens the separate annotation editor.
 
 ---
 

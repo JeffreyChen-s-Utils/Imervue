@@ -118,6 +118,7 @@ english_word_dict = {
     "main_window_current_filename": "Current Filename:",
     "main_window_current_file": _ENGLISH_FILE,
     "main_window_open_folder": "Open Folder",
+    "file_open_in_paint": "Open Current Image in Paint",
     "main_window_exit": "Exit",
     "main_window_tile_size": "Thumbnail Size",
     "main_window_select_folder": "Select Folder",

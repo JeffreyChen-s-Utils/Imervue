@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-03 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-07 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,29 +66,29 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 921 | 153,618 |
+| `tests/` | 922 | 154,024 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 169 | 42,626 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 128 | 15,295 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,174 |
-| `Imervue/multi_language/` | 8 | 15,125 |
+| `Imervue/multi_language/` | 8 | 15,130 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,750 |
-| `Imervue/menu/` | 11 | 3,616 |
-| `Imervue/` 根層 | 6 | 1,943 |
+| `Imervue/menu/` | 11 | 3,624 |
+| `Imervue/` 根層 | 6 | 1,951 |
 | `Imervue/plugin/` | 12 | 2,617 |
 | `Imervue/system/` | 32 | 3,031 |
 | `Imervue/export/` | 8 | 1,006 |
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,770** | **337,562** |
+| **總計** | **1,771** | **337,989** |
 
-其中 `Imervue/` 套件本身 769 檔 / 167,923 行。
+其中 `Imervue/` 套件本身 769 檔 / 167,944 行。
 
-測試碼與產品碼比約 **0.84 : 1**（153k vs 183k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.84 : 1**（154k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -131,7 +131,7 @@ py -m Imervue [--debug] [--software_opengl] [file]
 
 ## 4. 頂層結構：一個主視窗、五個分頁
 
-`ImervueMainWindow(QMainWindow)`（`Imervue/Imervue_main_window.py`，924 行）是唯一的協調者；篩選列、遺失檔、資料夾監看、分頁、螢幕、檢視模式、狀態列、瀏覽模式各由 `Imervue/gui/main_window_*.py` 的 mixin 提供。
+`ImervueMainWindow(QMainWindow)`（`Imervue/Imervue_main_window.py`，714 行）是唯一的協調者；篩選列、遺失檔、資料夾監看、分頁、螢幕、檢視模式、狀態列、瀏覽模式各由 `Imervue/gui/main_window_*.py` 的 mixin 提供。
 中央是一個 `QTabWidget`：
 
 ```
@@ -149,7 +149,7 @@ ImervueMainWindow
 │   │                    ├── QStackedWidget   0=GPUImageView 1=ImageListView 2=DualImageView
 │   │                    └── ExifSidebar
 │   ├── Tab 1  "Modify"        ← QSplitter：左工具列 | AnnotationCanvas | 右顯影滑桿
-│   ├── Tab 2  "Paint"         ← `_paint_page`；PaintWorkspace 第一次用到才建立（`paint_workspace` property），有待還原的自動存檔時啟動就建
+│   ├── Tab 2  "Paint"         ← `_paint_page`；PaintWorkspace 第一次用到才建立（`paint_workspace` property），有待還原的自動存檔時啟動就建；切回分頁保留現有文件，首次進入顯示空白畫布
 │   ├── Tab 3  "Puppet"        ← 選用（`gui/optional_tabs.py`）；`_puppet_page`，第一次打開才建 PuppetWorkspace (QMainWindow-in-tab)
 │   └── Tab 4  "Desktop Pet"   ← 選用；`_pet_page`，第一次打開（或寵物設定為啟動時顯示）才建 PetWorkspace（控制面板；角色在另一個 top-level PetWindow）
 ├── QStatusBar  ← 訊息 + 色標籤 chip + index/解析度/大小/縮放/游標 + MemoryPressureIndicator + 進度條
@@ -207,7 +207,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 706 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、Paint 綁定、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 714 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 688 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑；`build_parser` 依序加手寫子指令、`cli_tools` 由 MCP 工具產生的 46 個、最後 `list-ops` |
 | `cli_tools.py` | 273 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 48 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤；`add_argument_as_written` 加選項後把 help 設回原文（Python 3.10 會替 `--x/--no-x` 的 help 補上 ` (default: …)`，之後的版本不會），`cli.py` 的手寫子指令也經它加選項 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
@@ -659,7 +659,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | --- | ---: | --- |
 | `extra_tools_menu.py` | 849 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
 | `right_click_menu.py` | 874 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
-| `file_menu.py` | 524 | 開啟資料夾/圖片、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
+| `file_menu.py` | 532 | 開啟資料夾/圖片、將目前圖片開成新的 Paint 文件、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 334 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
@@ -1243,6 +1243,11 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
 
 
 
+
+15. **切換到 Paint 不得載入瀏覽圖片。** `_on_main_tab_changed` 只確保工作區已建立；
+    主視窗 File 選單的 `Open Current Image in Paint` 與 Paint 主分頁列的左右翻圖，
+    才呼叫 `_bind_paint_workspace_to_current_image`。先解碼成功，再開新文件；沒有目前圖片
+    或解碼失敗時保留全部文件、髒狀態與復原紀錄。`E` 仍開啟獨立的註解編輯器。
 
 ## FrontEngine puppet consumer
 

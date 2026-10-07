@@ -133,6 +133,79 @@ def test_layout_builders_come_from_the_mixin():
         assert getattr(ImervueMainWindow, name) is getattr(MainWindowLayoutMixin, name), name
 
 
+def test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo(window, tmp_path):
+    import numpy as np
+    from PIL import Image
+
+    image = tmp_path / "next.png"
+    Image.new("RGBA", (6, 6), "blue").save(image)
+    tabs = window._main_tabs  # noqa: SLF001
+    tabs.setCurrentIndex(2)
+    workspace = window.paint_workspace
+    workspace.load_image(np.zeros((8, 8, 4), dtype=np.uint8))
+    canvas = workspace.canvas()
+    document = canvas.document()
+    stack = workspace._undo_stack  # noqa: SLF001
+    document.add_layer(name="extra")
+    document.layer_at(0).image[2, 3] = (20, 30, 40, 255)
+    workspace._on_dispatcher_commit()  # noqa: SLF001
+    tabs.setCurrentIndex(0)
+    window.viewer.model.images = [str(image)]
+    window.viewer.current_index = 0
+    tabs.setCurrentIndex(2)
+    assert workspace.canvas() is canvas
+    assert canvas.document() is document
+    assert workspace._undo_stack is stack  # noqa: SLF001
+    assert document.layer_count == 2
+    assert workspace._tab_dirty[canvas] is True  # noqa: SLF001
+    assert workspace._tabs.tabText(0).endswith(" *")  # noqa: SLF001
+    np.testing.assert_array_equal(document.layer_at(0).image[2, 3], (20, 30, 40, 255))
+    assert stack.undo() is True
+    np.testing.assert_array_equal(document.layer_at(0).image[2, 3], (0, 0, 0, 0))
+
+
+def test_opening_viewer_image_in_paint_keeps_the_existing_dirty_tab(window, tmp_path):
+    import numpy as np
+    from PIL import Image
+
+    image = tmp_path / "source.png"
+    Image.new("RGBA", (10, 6), (20, 40, 60, 255)).save(image)
+    workspace = window.paint_workspace
+    original = workspace.canvas()
+    document = original.document()
+    workspace._on_dispatcher_commit()  # noqa: SLF001
+    stack = workspace._undo_stack  # noqa: SLF001
+    window.viewer.model.images = [str(image)]
+    window.viewer.current_index = 0
+    window._bind_paint_workspace_to_current_image()  # noqa: SLF001
+    assert window._main_tabs.currentIndex() == 2  # noqa: SLF001
+    assert workspace.tab_count() == 2
+    assert workspace.canvas() is not original
+    assert workspace.canvas().document().layer_at(0).image.shape == (6, 10, 4)
+    np.testing.assert_array_equal(
+        workspace.canvas().document().layer_at(0).image[0, 0], (20, 40, 60, 255),
+    )
+    workspace._tabs.setCurrentIndex(0)  # noqa: SLF001
+    assert workspace.canvas() is original
+    assert original.document() is document
+    assert workspace._undo_stack is stack  # noqa: SLF001
+    assert workspace._tab_dirty[original] is True  # noqa: SLF001
+
+
+def test_first_paint_visit_does_not_decode_the_viewer_image(window, monkeypatch):
+    from Imervue.gpu_image_view.images import image_loader
+
+    def unexpected_decode(_path):
+        raise AssertionError("Visiting Paint must not decode a browse image")
+
+    monkeypatch.setattr(image_loader, "decode_image_file", unexpected_decode)
+    window.viewer.model.images = ["unreadable.png"]
+    window.viewer.current_index = 0
+    window._main_tabs.setCurrentIndex(2)  # noqa: SLF001
+    assert window.paint_workspace.tab_count() == 1
+    assert window.paint_workspace.canvas().document().layer_count == 1
+
+
 def test_file_tree_shows_every_format_the_viewer_opens(window):
     """The tree used to hide HEIC, AVIF, JPEG XL and video files."""
     from Imervue.image.formats import VIEWER_EXTENSIONS

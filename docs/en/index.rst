@@ -543,8 +543,7 @@ Paint Workspace (Paint Tab)
 
 The third top-level tab — **Paint** — is a full-featured painting workspace
 with multi-tab documents, vector and raster layers, manga tools, animation
-frames, and PSD import/export. Switching to it from the tab bar loads the
-picture the viewer is showing onto the canvas.
+frames, and PSD import/export. Switching to Paint preserves its documents, layers, unsaved changes and undo history; the first visit starts with a blank canvas. Use ``File > Open Current Image in Paint`` to open the viewer image in a new document. Left/Right on the Paint main-tab bar opens the previous/next viewer image in a new document too. ``E`` from Deep Zoom opens the separate annotation editor.
 
 UX-affordance highlights — the Paint workspace ships with a full-featured
 brush-size cursor that scales with zoom, distinct cursor icons per tool,
