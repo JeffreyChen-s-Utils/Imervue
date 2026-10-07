@@ -86,6 +86,8 @@ In Paint verwenden File > `Open Document…`, `Save Document…`, `Save Document
 
 Einzel-, Batch-Export und Konvertierung schreiben atomar; Pfade/Fehler bleiben in `Background Jobs`. Batches benennen Konflikte um, auch beim gleichen Format; Einzelersatz verlangt Bestätigung. GUI-Metadaten erhalten sRGB ICC; Konvertierung bewahrt Beschreibungen, Export entfernt standardmäßig Positionen. CLI pro Bild: `--output-conflict` (`rename`, `skip`, `replace`), `--export-metadata` (`all`, `no_location`, `none`), JSON `--result-report` mit Ausgabelinks. Standard bleibt Überspringen/`--overwrite` und bisheriger Encoder; explizite Metadaten können neu kodieren. `strip` entfernt immer Metadaten. Ctrl+C erhält fertige Ausgaben und meldet Abbruch. PDF, MP4 und Galeriedateien werden atomar veröffentlicht; Originalkopien behalten Metadaten.
 
+`Manage Plugins` zeigt Ladefehler pro Fenster und gemeinsame Abhängigkeits-, Download-, Modell- und Backend-Zustände mit Gründen. Geladen bedeutet optionale Prüfung bei Nutzung; Tool-Ergebnisse enthalten Modell/Backend und CPU-Fallback. Downloads/Wiederholungen erhalten Installation, Modelle und Assets; parallele Installation desselben Plugins/Interpreters wird verweigert. Abbruch blockiert nicht; Importfehler melden keinen Erfolg. `Reload Plugins` liest neuen Code pro Fenster; GPU Develop erhält fremde Provider und braucht Plugin-API 3. Nach Download/Wiederholung jedes Fenster neu laden oder neu starten.
+
 ## Installation
 
 ### Voraussetzungen

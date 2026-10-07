@@ -51,6 +51,8 @@ Use ``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` for search â†’ compare â
 
 Single Export, Batch Export and Batch Convert share atomic image writes and retain committed paths/errors in ``Background Jobs``. Batches rename conflicts, including same-format conversions; single export confirms replacement. GUI metadata preservation embeds normalized sRGB ICC; conversion preserves descriptive metadata, while export defaults to no location. Per-image CLI writers accept ``--output-conflict`` (``rename``, ``skip``, ``replace``), ``--export-metadata`` (``all``, ``no_location``, ``none``) and ``--result-report`` for JSON with output links. Defaults keep existing skip/``--overwrite`` and encoder behavior; explicit metadata may re-encode. ``strip`` always removes metadata. Ctrl+C preserves completed outputs and reports cancellation. PDF, MP4 and gallery files publish atomically; copied gallery originals retain their metadata.
 
+``Manage Plugins`` shows per-window load failures and shared dependency, download, model and backend states with reasons. Loaded means optional capabilities are checked on use; shared tool results retain selected model/backend options and CPU fallback reasons. Downloads and retries preserve working installations, models and assets; concurrent installs of the same plugin/interpreter are refused. Dependency dialogs cancel without blocking, and failed imports cannot report success. ``Reload Plugins`` reads fresh code in each window; GPU Develop retains providers used by other windows and requires plugin API 3. After downloading or retrying, reload each open window (or restart).
+
 .. contents:: Table of Contents
    :depth: 2
    :local:

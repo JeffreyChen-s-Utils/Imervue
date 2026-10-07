@@ -18,6 +18,9 @@ Versions:
 2. ``Imervue.plugin.tool_dialog`` (``ToolDialogMixin``, ``show_toast``) and the
    develop-renderer registry ``Imervue.image.develop_backends``.
 
+3. ``Imervue.plugin.status`` observed resource states and provider-specific
+   ``develop_backends.unregister(key, provider=...)`` for reload across windows.
+
 Raise :data:`PLUGIN_API_VERSION` when the main program gains something plugins
 import, and list it here.
 """
@@ -26,7 +29,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-PLUGIN_API_VERSION = 2
+PLUGIN_API_VERSION = 3
 MANIFEST_NAME = "plugin.json"
 MIN_API_KEY = "min_api_version"
 

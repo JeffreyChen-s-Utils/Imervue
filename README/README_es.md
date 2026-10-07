@@ -86,6 +86,8 @@ En Paint, File > `Open Document…`, `Save Document…`, `Save Document As…` y
 
 Exportación individual, por lotes y conversión escriben atómicamente; `Background Jobs` conserva rutas/errores. Los lotes renombran conflictos, incluso mismo formato; reemplazo individual requiere confirmación. GUI incluye ICC sRGB al conservar metadata; conversión conserva descripciones, exportación omite ubicación por defecto. CLI por imagen: `--output-conflict` (`rename`, `skip`, `replace`), `--export-metadata` (`all`, `no_location`, `none`), JSON `--result-report` con enlaces. Se mantienen omitir/`--overwrite` y codificador por defecto; metadata explícita puede recodificar. `strip` siempre elimina metadata. Ctrl+C conserva salidas completas y informa cancelación. PDF, MP4 y archivos de galería se publican atómicamente; copias originales conservan metadata.
 
+`Manage Plugins` muestra fallos por ventana y estados compartidos de dependencias, descarga, modelos y backend con causas. Cargado implica comprobar opciones al usarlas; herramientas conservan modelo/backend y motivo del fallback CPU. Descarga/reintento conserva instalación, modelos y recursos; instalación simultánea del mismo plugin/intérprete se rechaza. Cancelar no bloquea; importaciones fallidas no indican éxito. `Reload Plugins` lee código nuevo por ventana; GPU Develop conserva otros proveedores y requiere API 3. Tras descargar/reintentar, recargue cada ventana o reinicie.
+
 ## Instalación
 
 ### Requisitos

@@ -50,6 +50,8 @@ Paint의 File > ``Open Document…``, ``Save Document…``, ``Save Document As�
 
 단일/일괄 내보내기와 변환은 원자적으로 저장하고 ``Background Jobs`` 에 완료 경로와 오류를 유지합니다. 일괄 충돌과 같은 형식은 새 이름으로 저장하며 단일 교체는 확인합니다. GUI 메타데이터 보존 시 sRGB ICC를 포함하고 변환은 설명 정보를 보존하며 내보내기는 기본으로 위치를 제거합니다. 이미지별 CLI: ``--output-conflict`` (``rename``, ``skip``, ``replace``), ``--export-metadata`` (``all``, ``no_location``, ``none``), 링크 포함 JSON ``--result-report``. 기본 건너뛰기/``--overwrite`` 및 인코더 동작은 유지하고 명시적 메타데이터는 재인코딩할 수 있습니다. ``strip`` 은 항상 제거합니다. Ctrl+C는 완료 출력을 보존하며 취소를 보고합니다. PDF, MP4, 갤러리는 원자적으로 게시하고 원본 복사본은 메타데이터를 보존합니다.
 
+``Manage Plugins`` 는 창별 로드 실패와 공유 의존성, 다운로드, 모델, 백엔드 상태 및 이유를 표시합니다. 로드된 선택 기능은 사용 시 확인하고 도구 결과는 모델/백엔드와 CPU 대체 이유를 유지합니다. 다운로드/재시도는 설치, 모델, 리소스를 보존하며 같은 플러그인/인터프리터의 동시 설치는 거부합니다. 취소는 UI를 막지 않고 import 실패는 성공으로 표시하지 않습니다. ``Reload Plugins`` 는 창별로 코드를 다시 읽고 GPU Develop은 다른 공급자를 유지하며 API 3을 요구합니다. 다운로드/재시도 뒤 각 창에서 다시 로드하거나 재시작하세요.
+
 .. contents:: 목차
    :depth: 2
    :local:

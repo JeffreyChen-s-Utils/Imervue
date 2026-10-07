@@ -85,6 +85,8 @@ Paint 的 File > `Open Document…`、`Save Document…`、`Save Document As…`
 
 单张导出、批量导出和批量转换共用原子写入，在 `Background Jobs` 保留已完成路径与错误。批量重名自动改名，同格式转换也另存；单张替换需确认。GUI 保留 metadata 时嵌入正确的 sRGB ICC；转换保留描述信息，导出默认移除位置。CLI 逐张输出支持 `--output-conflict`（`rename`、`skip`、`replace`）、`--export-metadata`（`all`、`no_location`、`none`）和含输出链接的 JSON `--result-report`。默认沿用跳过／`--overwrite` 和编码行为；指定 metadata 可能重新编码。`strip` 始终移除 metadata。Ctrl+C 保留完成输出并报告取消。PDF、MP4 和图库文件原子发布；图库原件副本保留 metadata。
 
+`Manage Plugins` 显示各窗口的加载失败，以及共享依赖、下载、模型和后端状态及原因。已加载表示可选能力在使用时检查；共享工具结果保留所选模型／后端和 CPU 降级原因。下载和重试保留正常安装、模型和素材，同一插件／解释器的并行安装被拒绝。依赖窗口取消不阻塞，导入失败不会误报成功。`Reload Plugins` 重新读取各窗口代码；GPU Develop 保留其他窗口仍使用的后端，要求插件 API 3。下载或重试后，在每个窗口重载或重启。
+
 ## 安装
 
 ### 需求

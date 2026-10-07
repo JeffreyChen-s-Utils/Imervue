@@ -20,6 +20,8 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.free_names import free_names
 from Imervue.system.job_state import JobState
+from Imervue.plugin.status import status_registry
+from Imervue.image.output_policy import OutputPolicy, write_output
 
 logger = logging.getLogger("Imervue.apply_save")
 
@@ -42,14 +44,26 @@ class EffectWorker(QThread):
         self._transform = transform
         self._out = out_path
         self.job_state = JobState([path])
+        self.resource_key = self.resource_name = self.resource_details = ""
 
     def run(self) -> None:
         try:
+            self._resource_status("running")
             result = self._transform(load_rgba(self._path))
             if self.isInterruptionRequested() or self.job_state.cancelled:
                 self.job_state.request_cancel()
                 return
-            Image.fromarray(result, mode="RGBA").save(self._out)
+            output = write_output(
+                self._path, self._out,
+                lambda stage: Image.fromarray(result, mode="RGBA").save(stage),
+                OutputPolicy("rename"),
+                cancelled=lambda: self.isInterruptionRequested() or self.job_state.cancelled,
+            )
+            if output.status == "cancelled":
+                self.job_state.request_cancel()
+                return
+            self._out = output.path
+            self._resource_status("available")
             self.job_state.record(self._path, output=self._out)
             self.done.emit(True, self._out)
         except Exception as exc:  # a worker must always report
@@ -58,11 +72,19 @@ class EffectWorker(QThread):
             # or PIL's DecompressionBombError. Narrowing the except let those
             # escape, so ``done`` never fired and the calling dialog hung with its
             # Apply button disabled forever. Always report the failure instead.
+            self._resource_status("failed", str(exc) or type(exc).__name__)
             logger.exception("Effect failed: %s", exc)
             self.job_state.record(self._path, error=str(exc) or type(exc).__name__)
             self.done.emit(False, str(exc))
         finally:
+            if self.job_state.cancelled:
+                self._resource_status("cancelled")
             self.job_state.finish()
+
+    def _resource_status(self, state: str, error: str = "") -> None:
+        if self.resource_key:
+            details = self.resource_details + ("; " + error if error else "")
+            status_registry.publish(self.resource_key, self.resource_name, state, details)
 
 
 def finalize_worker(dialog) -> None:

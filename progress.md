@@ -8,8 +8,8 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第三階段：一致的功能流程與狀態（P2）
 
-- **#74** 外掛相依、模型下載、運算後端與失敗回復資訊缺少一致呈現：`Imervue/plugin/`、`plugins/`。
-  下一步：盤點各外掛現有能力與降級流程，提供一致的可用／缺相依／下載中／失敗狀態及原因；驗證重試、重載及多視窗，實作外掛變更時同步發佈來源。
+- **#74** GPU Develop API 3 變更的外掛發佈來源尚需同步：`D:/Codes/Imervue_Plugins/plugins/gpu_develop/`。
+  下一步：鏡像已驗證的程式與 manifest，提交推送 main，核對所有外掛 flat files 與工作區契約文件。
 
 ### 後續階段：依基準結果安排（P3）
 

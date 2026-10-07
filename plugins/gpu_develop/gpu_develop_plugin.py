@@ -19,6 +19,7 @@ from Imervue.image import develop_backends
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.pip_installer import ensure_dependencies
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.status import status_registry
 
 from gpu_develop.renderer import GpuDevelopRenderer, probe
 from gpu_develop.translations import TRANSLATIONS
@@ -73,7 +74,7 @@ class GpuDevelopPlugin(ImervuePlugin):
     def on_plugin_unloaded(self) -> None:
         _live.discard(id(self))
         if not _live:
-            develop_backends.unregister(BACKEND_KEY)
+            develop_backends.unregister(BACKEND_KEY, provider=PROVIDER)
 
     def get_translations(self) -> dict[str, dict[str, str]]:
         return TRANSLATIONS
@@ -90,5 +91,8 @@ class GpuDevelopPlugin(ImervuePlugin):
         self._report()
 
     def _report(self) -> None:
+        gpu = probe()
+        status_registry.publish("backend:" + BACKEND_KEY, "GPU Develop",
+                                "available" if gpu else "missing", status_text(gpu))
         QMessageBox.information(self.main_window, _tr("gpu_develop_title", "GPU Develop"),
-                                status_text(probe()))
+                                status_text(gpu))

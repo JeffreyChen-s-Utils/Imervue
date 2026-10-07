@@ -22,6 +22,8 @@ from Imervue.system.app_paths import plugins_dir as _plugins_dir
 from Imervue.system.job_state import JobState
 from Imervue.gui.background_jobs import job_registry
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.installation import installation_stage, commit_installation
+from Imervue.plugin.status import status_registry
 
 
 def _https_urlopen(req: urllib.request.Request, timeout: int):
@@ -179,10 +181,9 @@ class DownloadPluginWorker(QThread):
         self.plugin_name = plugin_name
         self.file_infos = [dict(info) for info in file_infos]
         self.job_state = JobState([plugin_name])
+        self._status_key = "download:" + plugin_name
 
     def run(self):
-        import os
-        import shutil
         try:
             names = [self.plugin_name, *(info["name"] for info in self.file_infos)]
             unsafe = [n for n in names if not is_safe_path_component(n)]
@@ -191,15 +192,8 @@ class DownloadPluginWorker(QThread):
             plugin_root = _get_plugin_dir()
             plugin_root.mkdir(parents=True, exist_ok=True)
             final_dir = plugin_root / self.plugin_name
-            # Download into a sibling temp dir and only swap it into place once
-            # every file lands. A mid-download failure (network drop, a null
-            # download_url) used to leave a half-written plugin dir behind, which
-            # reported as "Installed" (it keys on __init__.py existing) but was
-            # broken — and a failed re-download clobbered the working install.
-            tmp_dir = plugin_root / f".{self.plugin_name}.partial"
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-            tmp_dir.mkdir(parents=True, exist_ok=True)
-            try:
+            with installation_stage(final_dir) as tmp_dir:
+                status_registry.publish(self._status_key, self.plugin_name, "downloading")
                 total = len(self.file_infos)
                 for i, info in enumerate(self.file_infos):
                     self._check_cancelled()
@@ -214,15 +208,14 @@ class DownloadPluginWorker(QThread):
                 # Refused before the swap, so a working install stays as it was.
                 self._check_cancelled()
                 check_compatible(tmp_dir, self.plugin_name)
-                shutil.rmtree(final_dir, ignore_errors=True)
-                os.replace(tmp_dir, final_dir)
-            except Exception:
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-                raise
+                commit_installation(tmp_dir, final_dir, before_commit=self._check_cancelled)
+            status_registry.publish(self._status_key, self.plugin_name, "installed",
+                                    "Reload Plugins in each open window to activate the new code")
             self.job_state.record(self.plugin_name, output=str(final_dir))
             self.result_ready.emit(self.plugin_name)
         except InterruptedError:
             self.job_state.request_cancel()
+            status_registry.publish(self._status_key, self.plugin_name, "cancelled")
         except IncompatiblePluginError as e:
             self._report_error(needs_newer_text(e))
         except _EXPECTED_FETCH_ERRORS as e:
@@ -234,6 +227,7 @@ class DownloadPluginWorker(QThread):
             self.job_state.finish()
 
     def _report_error(self, message: str) -> None:
+        status_registry.publish(self._status_key, self.plugin_name, "failed", message)
         self.job_state.record(self.plugin_name, error=message)
         self.error.emit(message)
 

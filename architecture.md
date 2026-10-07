@@ -98,6 +98,8 @@ Public interfaces other code or users depend on:
 
 Per-image CLI writers and GUI export/conversion share image.output_policy reservations and atomic commit. CLI cohort destinations are assigned before threads; explicit metadata uses the same EXIF/sRGB extras. Completed inline exports join JobRegistry; Batch Convert registers retryable workers (retry keeps originals). Composite PDF/MP4 and gallery members commit individually; a gallery directory is not an all-or-nothing transaction.
 
+Manage Plugins includes window-scoped import/load outcomes and process-shared observed resource states. Pure plugin.status is safe from workers; normal load does not probe every optional dependency/model. Installations reserve destinations, preserve models/assets and roll back directory swaps. Dependency dialogs use WorkerHost retirement; application-owned dependency check helpers survive parent destruction. Explicit reload invalidates only plugin modules/bytecode, while provider-specific leases retain other window generations.
+
 ## 4. Main flows
 
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`
@@ -332,3 +334,5 @@ Update it in the same commit when:
 
 Module-level changes (new module, changed purpose, line counts, traps) belong in
 `architecture_explore.md`, not here. Refresh the "Last verified" line whenever this file is edited.
+
+Plugin API 3 adds `Imervue.plugin.status` and optional `develop_backends.unregister(key, provider=...)`. Legacy unregister(key) still clears the key; provider-specific unregister releases only its generation. GPU Develop declares min_api_version 3 in the mirrored manifest. No new heavy dependency enters core startup.

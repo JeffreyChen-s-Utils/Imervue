@@ -42,6 +42,8 @@ Paint 的 File > ``Open Document…``、``Save Document…``、``Save Document A
 
 單張匯出、批次匯出與批次轉換共用原子影像寫入，已完成路徑與錯誤保留在 ``Background Jobs``。批次遇同名自動改名，相同格式轉換也另存；單張取代須確認。GUI 保留 metadata 時附上正確的 sRGB ICC；轉換保留描述資訊，匯出預設移除位置。CLI 逐張輸出支援 ``--output-conflict``（``rename``、``skip``、``replace``）、``--export-metadata``（``all``、``no_location``、``none``）及含輸出連結的 JSON ``--result-report``。預設沿用跳過／``--overwrite`` 與編碼行為；指定 metadata 可能重新編碼。``strip`` 一律移除 metadata。Ctrl+C 保留已完成輸出並回報取消。PDF、MP4 與圖庫檔案完成後才原子替換；圖庫原檔副本保留 metadata。
 
+``Manage Plugins`` 顯示各視窗的載入失敗，以及共用的相依、下載、模型與後端狀態和原因。已載入表示選用能力在使用時檢查；共用工具結果保留所選模型／後端及 CPU 降級原因。下載與重試保留正常安裝、模型及素材，同一外掛／直譯器的並行安裝會被拒絕。相依視窗取消不阻塞，匯入失敗不會誤報成功。``Reload Plugins`` 會重新讀取各視窗的程式碼；GPU Develop 保留其他視窗仍使用的後端，需要外掛 API 3。下載或重試後，請在每個視窗重載，或重新啟動。
+
 .. contents:: 目錄
    :depth: 2
    :local:

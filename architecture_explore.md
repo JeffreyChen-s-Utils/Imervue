@@ -66,28 +66,28 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 955 | 159,284 |
+| `tests/` | 958 | 159,548 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 174 | 43,523 |
-| `Imervue/gui/` | 176 | 35,527 |
+| `Imervue/gui/` | 176 | 35,549 |
 | `Imervue/puppet/` | 60 | 16,393 |
-| `Imervue/image/` | 130 | 15,568 |
+| `Imervue/image/` | 130 | 15,593 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 70 | 13,661 |
-| `Imervue/multi_language/` | 8 | 15,420 |
+| `Imervue/multi_language/` | 8 | 15,485 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
-| `Imervue/library/` | 34 | 4,846 |
-| `Imervue/menu/` | 11 | 3,630 |
+| `Imervue/library/` | 34 | 4,854 |
+| `Imervue/menu/` | 11 | 3,671 |
 | `Imervue/` 根層 | 6 | 1,951 |
-| `Imervue/plugin/` | 13 | 2,788 |
+| `Imervue/plugin/` | 15 | 3,036 |
 | `Imervue/system/` | 33 | 3,208 |
 | `Imervue/export/` | 8 | 1,035 |
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
-| `plugins/`（19 個外掛） | 80 | 16,021 |
+| `plugins/`（19 個外掛） | 80 | 16,025 |
 | `scripts/`（開發與發佈工具） | 8 | 1,194 |
-| **總計** | **1,830** | **348,061** |
+| **總計** | **1,835** | **348,738** |
 
-其中 `Imervue/` 套件本身 787 檔 / 171,562 行。
+其中 `Imervue/` 套件本身 789 檔 / 171,971 行。
 
 測試碼與產品碼比約 **0.85 : 1**（159k vs 187k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -324,7 +324,7 @@ ImervueMainWindow
 | `output_policy.py` | 110 | process-wide 目的地預約、rename/skip/replace、來源取代同意與取消前 atomic commit |
 
 
-130 個模組、15,568 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
+130 個模組、15,593 行，**只有 `info.py` import Qt**（用 `QMessageBox` 顯示圖片資訊對話框），其餘都可在 worker
 執行緒直接呼叫，也是 `cli.py`、`mcp_server/`、`plugins/` 共用的演算法庫。
 
 #### 非破壞性顯影核心（最重要的三個檔）
@@ -335,7 +335,7 @@ ImervueMainWindow
 | `develop_preview.py` | 149 | Modify 的純 CPU 預覽：共享不變來源、快取完整幾何／低解析像素、縮放局部遮罩座標；全尺寸模式與 `Recipe.apply` 像素相同，每個具名階段之間檢查取消 |
 | `recipe_store.py` | 477 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`identity_for(path)` 查詢前先把存在舊版 identity 下的 recipe 搬到新 identity（每個檔案只搬一次）；`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案；讀不到的 store 檔由 `UnreadableFileGuard` 看守，解不開的單筆原樣寫回 |
 | `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
-| `develop_backends.py` | 106 | 顯影後端登錄表：外掛以 `register(BackendProvider(key, probe, open))` 提供另一個 recipe 算繪器（`probe()` 回報標籤或 `None`、`open()` 建立 `DevelopRenderer`）；`available()` 列出這台機器能跑的後端（probe 丟 `RuntimeError`/`OSError`/`ImportError` 就略過），`open_renderer(key)` 開不起來回 `None`（`"cpu"` 保留給內建），`render(arr, recipe, renderer)` 沒有算繪器或算繪器丟 `RuntimeError` 時改用 `Recipe.apply`。批次匯出的「運算裝置」用它 |
+| `develop_backends.py` | 131 | CPU fallback reason 與 generation-specific provider leases，保留其他視窗 GPU registration |
 | `recipe_diff.py` | 63 | 兩個 recipe 的 diff 與選擇性合併 |
 | `develop_presets.py` | 102 | 具名顯影預設與批次 recipe 同步 |
 
@@ -527,7 +527,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `search_query.py` | 219 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
 | `clip_search.py` | 373 | CLIP 語意搜尋（「找出符合這句話的照片」）；後端是 `clip_onnx` 的 ONNX 模型（不用 torch），快取另記模型 id，別的模型寫的快取不載入；向量連同檔案的大小與修改時間快取在 `clip_cache.npz`，`is_current` 判斷可沿用，`query_text(within=)` 只在指定路徑裡排名 |
-| `clip_onnx.py` | 232 | CLIP ViT-B/32 的 onnxruntime 後端：Hugging Face `Xenova/clip-vit-base-patch32` 固定 commit 的 int8 量化文字 / 影像編碼器（約 150 MB，首次使用下載）；影像前處理（短邊 224 bicubic、中心裁切、OpenAI mean/std）；provider 只用 CUDA（一定是獨顯）或 CPU，不用 DirectML（混合筆電預設裝置常是內顯）；`rank_labels` 零樣本標籤；`default_embedder()` 讓語意搜尋與 Auto-Tag 共用一份模型 |
+| `clip_onnx.py` | 240 | CLIP ViT-B/32 的 onnxruntime 後端：Hugging Face `Xenova/clip-vit-base-patch32` 固定 commit 的 int8 量化文字 / 影像編碼器（約 150 MB，首次使用下載）；影像前處理（短邊 224 bicubic、中心裁切、OpenAI mean/std）；provider 只用 CUDA（一定是獨顯）或 CPU，不用 DirectML（混合筆電預設裝置常是內顯）；`rank_labels` 零樣本標籤；`default_embedder()` 讓語意搜尋與 Auto-Tag 共用一份模型 |
 | `clip_tokenizer.py` | 151 | 純 Python 的 CLIP byte-level BPE 斷詞器（讀模型的 `vocab.json` / `merges.txt`，NFC、空白合併、小寫、依 Unicode 類別切段、`<|startoftext|>` / `<|endoftext|>` 任何位置都先切出），與 `tokenizers` 參考實作 5000 句隨機字串逐 id 相同 |
 | `auto_tag.py` | 153 | 啟發式內容分類；CLIP 模型已下載時改用 `clip_onnx` 零樣本標籤（最多三個，提示詞向量依模型與標籤組快取），Auto-Tag 自己不觸發下載 |
 | `phash.py` | 85 | 64-bit DCT pHash（轉正後經 `perceptual_hash.grey_levels` 取灰階） |
@@ -555,7 +555,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.12 `Imervue/gui/`
 
-176 個檔、35,527 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+176 個檔、35,549 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -611,7 +611,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
 | `photo_workflow_dialog.py` | 296 | 每視窗 modeless 搜尋→比較→挑片→既有顯影 preset→既有批次匯出；500 筆分頁、保留隱藏勾選／preset／回程，外部 DB 挑片同步，800px 來源比較 |
 | `background_jobs.py` | 337 | 跨視窗持有執行緒及單張 completed results、failure-only retry、bounded clickable 明細與完整報告 |
-| `_apply_save.py` | 207 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`finalize_worker()` 在 custom done 提前送達時 passive 背景退場，保留 owner／actual worker lifetime；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
+| `_apply_save.py` | 229 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`finalize_worker()` 在 custom done 提前送達時 passive 背景退場，保留 owner／actual worker lifetime；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
 
@@ -683,7 +683,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_menu.py` | 532 | 開啟資料夾/圖片、將目前圖片開成新的 Paint 文件、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 290 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
-| `plugin_menu.py` | 334 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
+| `plugin_menu.py` | 375 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
 | `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 185 | 依名稱 / 修改日期 / 建立日期 / 拍攝日期（`library.calendar_index.capture_datetime`：EXIF 拍攝時間，沒有就用修改時間；同一秒的連拍依檔名）/ 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
@@ -935,15 +935,25 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
+| `installation.py` | 68 | process-wide installer 互斥、唯一 staging、保留 models/assets 與 directory swap rollback |
+
+
+| 模組 | 行數 | 功用 |
+| --- | ---: | --- |
+| `status.py` | 46 | pure observed resource registry，per-window load scopes／shared dependency/model/backend outcomes，immutable snapshots |
+
+
+| 模組 | 行數 | 功用 |
+| --- | ---: | --- |
 | `plugin_base.py` | 264 | `ImervuePlugin` 基底類別，13 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_pet_created`（寵物視窗建立時，或外掛載入時寵物已存在）、`on_app_closing` |
-| `plugin_manager.py` | 337 | 探索與載入（把 `plugins/` 插進 `sys.path`，找 `plugin_class`；匯入前先用 `plugin_api.check_compatible` 檢查 `plugin.json`，需要較新外掛 API 或讀不懂的就記 log 跳過、不匯入）、hook 分派（`connect_pet_hooks` 接上桌面寵物分頁的 `pet_created`，載入 / 重新載入時補發給已存在的寵物）、統一 try/except 隔離（單一外掛炸掉不會拖垮主程式）；`apply_saved_language()` / `register_plugin_languages()`：主視窗建立前只匯入外掛並呼叫 `register_languages()`，讓存下的外掛語言套用得到 |
-| `plugin_downloader.py` | 579 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme）；one atomic plugin job／failure retry 與 cooperative cancellation；dialog 使用非阻塞 WorkerHost retirement，已完成安裝保留 |
-| `pip_installer.py` | 850 | 外掛相依安裝器：下載內嵌 Python、安裝 pip 套件（凍結環境亦可），每次安裝都帶 `pip_constraints` 的約束檔；再匯出 `python_finder` 的名稱（外掛依賴 `pip_installer._find_python`） |
+| `plugin_manager.py` | 380 | discover/load failures 報狀態、partial-load cleanup 與 explicit fresh module reload；各視窗 instance 獨立 |
+| `plugin_downloader.py` | 573 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme）；one atomic plugin job／failure retry 與 cooperative cancellation；dialog 使用非阻塞 WorkerHost retirement，已完成安裝保留 |
+| `pip_installer.py` | 935 | nonblocking dependency gate／dialog worker retirement、interpreter install 互斥與 import fail false-success guard |
 | `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
-| `plugin_api.py` | 73 | **外掛 API 版本**（純函式）：`PLUGIN_API_VERSION`、讀外掛目錄的 `plugin.json`（`min_api_version`，沒有檔案視為 1）、`check_compatible` 對需要較新版本的外掛丟 `IncompatiblePluginError`；docstring 列出每一版新增的主程式介面 |
-| `tool_dialog.py` | 125 | **`ToolDialogMixin`**（外掛 API 2）：外掛單次影像工具對話框的共用流程，OK → `_required_packages` 的套件安裝詢問 → `EffectWorker` 跑 `_transform()` → 存 `<stem>_<output_suffix>.png` → toast 結果並在成功時關閉；含 `WorkerHostMixin`。並轉出 `make_slider`、`slider_row`、`output_path`、`show_toast` 給外掛用；shared transform jobs／settings-only retry factory，原生 cross-project constructors 不變 |
+| `plugin_api.py` | 76 | **外掛 API 版本**（純函式）：`PLUGIN_API_VERSION`、讀外掛目錄的 `plugin.json`（`min_api_version`，沒有檔案視為 1）、`check_compatible` 對需要較新版本的外掛丟 `IncompatiblePluginError`；docstring 列出每一版新增的主程式介面 |
+| `tool_dialog.py` | 134 | **`ToolDialogMixin`**（外掛 API 2）：外掛單次影像工具對話框的共用流程，OK → `_required_packages` 的套件安裝詢問 → `EffectWorker` 跑 `_transform()` → 存 `<stem>_<output_suffix>.png` → toast 結果並在成功時關閉；含 `WorkerHostMixin`。並轉出 `make_slider`、`slider_row`、`output_path`、`show_toast` 給外掛用；shared transform jobs／settings-only retry factory，原生 cross-project constructors 不變 |
 | `subprocess_util.py` | 36 | 外掛 worker 呼叫子 Python 的共用 helper |
 | `worker_host.py` | 112 | **`WorkerHostMixin`**：QDialog 共用非阻塞拆卸；中斷／斷開輸出，標題取消狀態與 disabled controls，背景退場完成後才完成原始結果；non-Qt adapter 保留同步契約 |
 | `worker_retirement.py` | 90 | 獨立 QThread 持有 owner／reparented workers；背景 stop／abort／wait，queued terminal slot 以 wait(0) 確认 TLS exit 後釋放；owner destroyed 保護與 final app-exit drain |
@@ -1266,6 +1276,8 @@ Registry 與原始對話框互相獨立，Qt ownership／retirement 完成後才
 
 
 輸出入口共用 `image/output_policy.py`：跨視窗 process-wide 預約、取消在 commit 前檢查、唯一同格式暫存檔；來源 replace 須 caller 同意。CLI defaults preserve legacy encoder/skip semantics，optional metadata may re-encode；報告只連結 committed outputs。`export_metadata` 以 sRGB ICC 取代原來源 profile，none 不帶 metadata。Composite PDF/MP4 atomic、gallery originals byte-copy retain metadata；整個 gallery directory 並非單一交易。
+
+外掛狀態由 pure `plugin/status.py` 統一保存：window load scope 與 global dependencies/downloads/CLIP files/backends/tool selected options 分開，Manage Plugins 500ms 刷新；loaded 不等於 optional ready。`installation.py` 互斥與 rollback 保護既有插件/models/assets；不同 process 不在互斥契約內。依賴 worker 實際 import 失敗不再報成功，pip child cancellation 在 reaper 執行。Plugin API 3 新增 status 與 provider-specific unregister，GPU Develop reload 保留其他 generation。
 
 ## 11. 持久化檔案一覽
 

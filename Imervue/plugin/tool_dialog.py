@@ -19,7 +19,7 @@ from functools import partial
 
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialogButtonBox
+from PySide6.QtWidgets import QDialogButtonBox, QComboBox
 
 from Imervue.gui._apply_save import (
     EffectWorker,
@@ -99,10 +99,16 @@ class ToolDialogMixin(WorkerHostMixin):
             return
         self._worker = EffectWorker(
             self._path, self._transform(), output_path(self._path, self.output_suffix))
+        self._worker.resource_key = "tool:" + self.output_suffix
+        self._worker.resource_name = self.windowTitle()
+        self._worker.resource_details = "; ".join(
+            combo.currentText() for combo in self.findChildren(QComboBox))
         transform = self._worker._transform
         suffix = self.output_suffix
         job_registry().add(self._worker, self.windowTitle(),
-                           partial(_retry_effect, transform=transform, suffix=suffix))
+                           partial(_retry_effect, transform=transform, suffix=suffix,
+                                   resource=(self._worker.resource_key, self._worker.resource_name,
+                                             self._worker.resource_details)))
         self._worker.done.connect(self._on_done)
         self._worker.start()
 
@@ -119,7 +125,10 @@ class ToolDialogMixin(WorkerHostMixin):
         notify_saved(self._viewer, False, message, self.failed_key, self.failed_text)
 
 
-def _retry_effect(paths: tuple[str, ...], *, transform: Transform, suffix: str) -> EffectWorker:
+def _retry_effect(paths: tuple[str, ...], *, transform: Transform, suffix: str,
+                  resource: tuple[str, str, str] = ("", "", "")) -> EffectWorker:
     """Recompute a free output name when retrying one failed transform."""
     path = paths[0]
-    return EffectWorker(path, transform, output_path(path, suffix))
+    worker = EffectWorker(path, transform, output_path(path, suffix))
+    worker.resource_key, worker.resource_name, worker.resource_details = resource
+    return worker

@@ -137,3 +137,14 @@ def test_wgpu_installed_follows_find_spec(monkeypatch):
 def test_the_package_exposes_the_plugin_class():
     import gpu_develop
     assert gpu_develop.plugin_class is GpuDevelopPlugin
+
+
+def test_other_provider_generation_survives_reload_unload():
+    first = _plugin()
+    first.on_plugin_loaded()
+    following = develop_backends.BackendProvider(BACKEND_KEY, lambda: "replacement", lambda: None)
+    develop_backends.register(following)
+    first.on_plugin_unloaded()
+    assert develop_backends._providers[BACKEND_KEY] is following
+    develop_backends.unregister(BACKEND_KEY, provider=following)
+    assert not _registered()
