@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 958 | 159,747 |
+| `tests/` | 958 | 160,086 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 174 | 43,523 |
 | `Imervue/gui/` | 176 | 35,549 |
 | `Imervue/puppet/` | 60 | 16,393 |
@@ -75,7 +75,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/multi_language/` | 8 | 15,485 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
-| `Imervue/library/` | 34 | 4,854 |
+| `Imervue/library/` | 34 | 4,952 |
 | `Imervue/menu/` | 11 | 3,671 |
 | `Imervue/` 根層 | 6 | 1,951 |
 | `Imervue/plugin/` | 15 | 3,036 |
@@ -84,12 +84,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,025 |
-| `scripts/`（開發與發佈工具） | 8 | 1,216 |
-| **總計** | **1,835** | **349,052** |
+| `scripts/`（開發與發佈工具） | 9 | 1,301 |
+| **總計** | **1,836** | **349,574** |
 
-其中 `Imervue/` 套件本身 789 檔 / 172,064 行。
+其中 `Imervue/` 套件本身 789 檔 / 172,162 行。
 
-測試碼與產品碼比約 **0.85 : 1**（159k vs 188k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.85 : 1**（160k vs 188k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -522,7 +522,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_index.py` | 752 | **核心 SQLite 索引**：跨資料夾中繼資料、註記、階層標籤、smart album、pHash、挑片旗標；`move_paths(mapping, *, keep_existing)` 在一個交易內把 images／notes／culling／image_tags 的路徑改到新位置（檔案改名、搬移、重新連結時），`stored_paths()` 列出所有表的路徑 |
+| `image_index.py` | 850 | schema 2 WAL：serialized writer/query-only reader；per-call committed reads、multi-query snapshot、additive sort index、batch read-own-writes、paged fingerprints、lifecycle locks |
 | `photo_workflow.py` | 72 | 無 Qt 的排序跨資料夾 cohort／勾選集合／挑片與預設狀態；過濾不改批次目標，拒絕排除而不刪檔 |
 | `scanner.py` | 273 | 背景掃描器，走訪 library roots 填索引（走訪沿用 `maintenance.scan_image_files`，HEIC / JXL 先註冊解碼器）；增量：mtime + size 相同就跳過（要 pHash 而列上沒有時不跳過，補算）；要讀的檔在 `probe_workers()` 條執行緒（核心數 − 1，最多 8）上解碼、不持 DB 鎖，每 256 檔一個交易寫入；寫入時尺寸與 pHash 以這次讀到的為準（`set_decoded_fields`，沒讀就清空）；JobState 只在 chunk commit 後紀錄成功；exact-path failure retry，cancel hook 接共享生命週期 |
 | `maintenance.py` | 46 | 索引與檔案系統對帳；`scan_image_files()` 經 `list_images(recursive=True)` 收 `formats.STILL_IMAGE_EXTENSIONS`，跳過隱藏檔與隱藏資料夾（磁碟根目錄的 `$RECYCLE.BIN`、Mac 的 `.Trashes`），也是掃描器的走訪 |
@@ -1086,7 +1086,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended`／`real-gl` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
 | 實際 GL regression | `scripts/verify_gl_report.py`、`tests/test_workspace_lifecycle_gl.py`、`tests/test_tile_textures_gl.py` | 獨立 Linux／Mesa／Xvfb job；先 ldd 檢查 XCB／GLX runtime，uncaptured Qt diagnostics，再 no-skip／case count／renderer evidence gate；像素、貼圖容量／zoom／handles 與跨工作區／多文件／異常／多視窗行為；正常 Windows headless jobs 仍 skip GL construction |
-| 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行）、`performance_workers.py`（107 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。worker 工具以真實 QDialog／QThread 驗證不可中斷與 blocking stop 下 UI／actual retirement／heartbeat。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
+| 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行）、`performance_workers.py`（107 行）、`library_concurrency_benchmark.py`（85 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。worker 工具以真實 QDialog／QThread 驗證不可中斷與 blocking stop 下 UI／actual retirement／heartbeat。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
@@ -1283,6 +1283,8 @@ Registry 與原始對話框互相獨立，Qt ownership／retirement 完成後才
 外掛狀態由 pure `plugin/status.py` 統一保存：window load scope 與 global dependencies/downloads/CLIP files/backends/tool selected options 分開，Manage Plugins 500ms 刷新；loaded 不等於 optional ready。`installation.py` 互斥與 rollback 保護既有插件/models/assets；不同 process 不在互斥契約內。依賴 worker 實際 import 失敗不再報成功，pip child cancellation 在 reaper 執行。Plugin API 3 新增 status 與 provider-specific unregister，GPU Develop reload 保留其他 generation。
 
 縮圖磁碟快取建構不等 full inventory：背景盤點以 mutation set／generation 保護 foreground put/get/purge/clear；PNG unique atomic rewrite，corrupt reader 不刪除已換成正常檔的新版本。clear 包含未盤點檔案，locked readable files 仍計入；totals 完成前 provisional，OS拒絕刪除可能無法達 quota。`wait_ready/close` 只供 explicit owners／tests／benchmark，startup 不呼叫 join。
+
+圖庫 SQLite：writer RLock held through batch；獨立 query-only reader 以 read RLock 保護 eager result／multi-query snapshot。讀取不在 read lock 內取得 writer lock；close/init 為 writer→reader，避免生命週期 deadlock。write_batch owning thread 保有 read-own-writes；fingerprint keyset 1000/page 不 yield live cursor，也不 pin WAL；每頁 snapshot，不宣稱整個 generator frozen。現有 schema 2、WAL、raw conn() contract 保持，raw callers 仍須自行鎖定。
 
 ## 11. 持久化檔案一覽
 

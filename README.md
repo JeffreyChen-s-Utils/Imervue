@@ -90,6 +90,8 @@ Single Export, Batch Export and Batch Convert share atomic image writes and reta
 
 Thumbnail disk-cache inventory now runs in the background; browsing can read or write thumbnails immediately. Writes are atomic, foreground changes win over stale scan data, and Clear Cache includes files not yet scanned. Background initialization cleans legacy NPY files and reconciles quota; byte totals are provisional until it ends. Locked files remain accounted when readable and may prevent reaching quota. Fixed 100,000-file measurements put constructor p95 below 10 ms; inventory completion and its extra work are measured separately.
 
+Library search now uses a separate query-only WAL connection: it sees committed data while a background scan holds a batch. Notes, hierarchical tags, culling and album queries share the same snapshot per call. Writes remain serialized; batch rollback cannot discard a later foreground tag change. Fingerprint pages release the reader between pages, and close waits for active queries. Schema 2 and existing library files remain compatible.
+
 ## Installation
 
 ### Requirements

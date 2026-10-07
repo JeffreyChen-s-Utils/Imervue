@@ -102,6 +102,8 @@ Manage Plugins includes window-scoped import/load outcomes and process-shared ob
 
 ThumbnailDiskCache construction starts a background inventory rather than enumerating all files on startup. Reads/writes remain usable; mutation tombstones and generations prevent stale accounting after rewrite/purge/clear. PNG writes use unique atomic siblings. Diagnostics can wait_ready/close explicitly; production startup does not join. Benchmark separates constructor latency from sequentially joined inventory/RSS.
 
+The library keeps one serialized writer and one query-only WAL reader. Foreground calls read committed data without taking the scanner write lock; compound tag queries share a snapshot, while single SQL statements avoid extra transactions. An additive capture-time/mtime sort index removes full temporary sorts for limited searches; write-batch reads use the owning writer. Close/path switch acquire writer then reader locks. Fingerprint traversal uses bounded keyset pages rather than yielding a live SQL cursor. Public conn() remains the writer; callers using it directly own transaction/locking discipline.
+
 ## 4. Main flows
 
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`

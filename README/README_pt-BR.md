@@ -90,6 +90,8 @@ Exportação individual, em lote e conversão gravam atomicamente; `Background J
 
 Inventário de miniaturas em segundo plano; leitura/gravação imediata. Escritas atômicas e mudanças atuais prevalecem sobre dados antigos; limpar inclui arquivos não inventariados. Inicialização limpa NPY antigos e ajusta quota; totais provisórios até terminar. Arquivos bloqueados legíveis continuam contando e podem impedir a quota. Com 100.000 arquivos, p95 do construtor abaixo de 10 ms; duração/custo do inventário medidos separadamente.
 
+A biblioteca consulta uma conexão WAL separada, somente leitura, com dados confirmados durante lotes de varredura. Notas, tags hierárquicas, seleção e álbuns compartilham um snapshot por chamada. Escritas serializadas; rollback não perde mudanças de tag posteriores. Páginas de impressões liberam o leitor; fechar espera consultas ativas. Esquema 2 e arquivos existentes compatíveis.
+
 ## Instalação
 
 ### Requisitos

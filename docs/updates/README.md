@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-23 | 2026-10-07 | Independent WAL readers and indexed limited library searches | #done #Imervue #performance #library #SQLite | [2026-10](2026-10.md) |
 | U-20261007-22 | 2026-10-07 | Background thumbnail inventory and atomic concurrent cache writes | #done #Imervue #performance #cache | [2026-10](2026-10.md) |
 | U-20261007-21 | 2026-10-07 | Publish GPU status and reload contract to plugin distribution | #done #Imervue_Plugins #plugin #docs | [2026-10](2026-10.md) |
 | U-20261007-20 | 2026-10-07 | Expose plugin resource states and protect installation and reload | #done #plugin #stability #i18n | [2026-10](2026-10.md) |
@@ -557,4 +558,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 90 |
+| [2026-10.md](2026-10.md) | 2026-10 | 91 |

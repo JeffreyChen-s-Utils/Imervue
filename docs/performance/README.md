@@ -98,3 +98,8 @@ real child indexing/history/cache and actual GL source-pixel rendering. Real GL 
 headless skip policy; unavailable GL is a benchmark failure, not a fabricated successful result.
 
 [Shared job-state library checks](jobs-library-20261007.md) retain the first and intermediate cancellation regressions and the final 100k scanner/index/search results. Pending records resolve lazily, committed results remain available for failed-only retry, and the original absolute cancellation/index limits and unchanged-path regression limits are retained.
+
+The independent-WAL-reader experiment uses a deterministic 100k file DB and a held,
+rolled-back writer transaction. It runs separately from the full fixed-fixture scanner;
+[reader isolation results](library-concurrency-20261007.md) retain before/after latency and
+real-scan results, including an interleaved run that failed the incremental-scan gate.

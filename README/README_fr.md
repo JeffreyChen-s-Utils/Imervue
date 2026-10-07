@@ -90,6 +90,8 @@ Export simple, par lots et conversion écrivent atomiquement ; `Background Jobs`
 
 L’inventaire des miniatures passe en arrière-plan ; lecture/écriture immédiate. Écritures atomiques et modifications prioritaires sur données périmées ; vider inclut les fichiers non inventoriés. Initialisation supprime anciens NPY et ajuste quota ; totaux provisoires jusqu’à la fin. Fichiers verrouillés lisibles comptent et peuvent empêcher le quota. À 100 000 fichiers, p95 du constructeur sous 10 ms ; durée/coût d’inventaire mesurés séparément.
 
+La bibliothèque utilise une connexion WAL séparée en lecture seule : les données validées restent consultables pendant un lot de scan. Notes, tags hiérarchiques, sélection et albums partagent un instantané par appel. Écritures sérialisées ; un rollback ne perd pas une modification de tag ultérieure. Les pages d’empreintes libèrent le lecteur ; fermeture attend les requêtes actives. Schéma 2 et fichiers existants compatibles.
+
 ## Installation
 
 ### Prérequis

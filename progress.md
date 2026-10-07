@@ -10,8 +10,5 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 後續階段：依基準結果安排（P3）
 
-- **#76** [UNVERIFIED] 圖庫背景掃描與前景搜尋／標籤修改共用 SQLite 連線，需驗證並行交易行為與延遲：`Imervue/library/image_index.py:145`、`:182`、`Imervue/library/scanner.py:190`。
-  下一步：壓測掃描同時搜尋與寫入、批次回滾及關閉；依結果決定獨立讀取連線與單一寫入佇列，並保持既有 schema、WAL 與批次交易能力。
-
 - **#77** GPU 即時顯影與進階色彩流程仍需評估，現有 GPU Develop 後端主要服務批次輸出：`plugins/gpu_develop/`、`Imervue/image/develop_backends.py`。
   下一步：先完成 #62、#63 的量測與預覽改善，再評估沿用既有後端的收益；建立 CPU／GPU、預覽／匯出的色彩及像素一致性案例，確認降級與模型外掛邊界後安排實作。

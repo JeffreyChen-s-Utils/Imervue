@@ -57,6 +57,8 @@ Exportación individual, por lotes y conversión escriben atómicamente; ``Backg
 
 El inventario de miniaturas corre en segundo plano; lectura/escritura inmediata. Escritura atómica y cambios de primer plano prevalecen sobre datos antiguos; limpiar incluye archivos aún sin explorar. Inicio limpia NPY antiguos y reconcilia cuota; totales provisionales hasta terminar. Archivos bloqueados legibles siguen contando y pueden impedir la cuota. Con 100.000 archivos, p95 de construcción inferior a 10 ms; duración/coste del inventario se mide aparte.
 
+La biblioteca consulta una conexión WAL separada de solo lectura: ve datos confirmados durante un lote de escaneo. Notas, etiquetas jerárquicas, selección y álbumes comparten una instantánea por llamada. Escrituras serializadas; revertir un lote no pierde un cambio posterior de etiqueta. Las páginas de huellas liberan el lector; cerrar espera consultas activas. Compatibilidad con esquema 2 y bibliotecas existentes.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:

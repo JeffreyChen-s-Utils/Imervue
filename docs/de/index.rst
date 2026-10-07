@@ -55,6 +55,8 @@ Einzel-, Batch-Export und Konvertierung schreiben atomar; Pfade/Fehler bleiben i
 
 Die Thumbnail-Inventur läuft im Hintergrund; Lesen/Schreiben ist sofort möglich. Atomare Writes und Vordergrundänderungen gewinnen gegen veraltete Scandaten; Cache leeren umfasst ungescannte Dateien. Initialisierung entfernt alte NPY und gleicht Quota ab; Größen bleiben bis zum Ende vorläufig. Lesbare gesperrte Dateien zählen weiter und können Quota verhindern. Bei 100.000 Dateien liegt Konstruktor-p95 unter 10 ms; Inventurdauer/Mehrarbeit werden separat gemessen.
 
+Die Bibliothek sucht über eine separate schreibgeschützte WAL-Verbindung und liest bestätigte Daten während eines Scan-Batches. Notizen, hierarchische Tags, Auswahl und Alben verwenden pro Aufruf einen konsistenten Snapshot. Schreibzugriffe bleiben serialisiert; Rollback verwirft keine spätere Tag-Änderung. Fingerprint-Seiten geben den Leser frei; Schließen wartet auf aktive Abfragen. Schema 2 und bestehende Dateien bleiben kompatibel.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:
