@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第二階段：效能基準、操作回應與記憶體（P1）
 
-- **#63** Modify 預覽在 UI 執行緒套用完整圖片的 recipe：`Imervue/gui/develop_panel.py:366`、`:910`，防抖後仍可能阻塞操作。
-  下一步：先量測滑桿預覽耗時；背景運算採最新請求版本，拖曳時提供低解析度預覽、停止後補高品質結果，保持幾何座標一致，驗證切圖與快速調整不套用過期結果。
-
 - **#64** Paint Undo 以次數限制完整圖層快照，缺少總位元組預算：`Imervue/paint/undo_stack.py:33`、`:140`。
   下一步：在 #59 的完整復原語意上加入容量預算；先量測筆畫快照成本，再讓區域修改保存差異、結構操作保存可逆命令，複雜操作保留完整快照，驗證容量及 Undo／Redo 正確性。
 

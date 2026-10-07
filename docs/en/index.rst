@@ -35,6 +35,8 @@ across all five tabs.
 
 The thumbnail wall makes room for new GPU textures by evicting tiles outside the viewport first, while preserving visible tiles and staying within its memory budget. Tiles touching only the viewport edge do not reserve capacity.
 
+Modify keeps controls responsive with a background preview at a lower resolution while adjusting, then renders full quality after a pause. Rapid edits and photo changes discard older results; annotation coordinates keep the full image size. Saving or applying destructive effects first completes full-quality rendering.
+
 .. contents:: Table of Contents
    :depth: 2
    :local:

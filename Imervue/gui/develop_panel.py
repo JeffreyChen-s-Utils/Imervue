@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.gpu_image_view.images.image_loader import decode_image_file
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
+from Imervue.gui.develop_preview_panel import DevelopPreviewMixin
 from Imervue.gui.modify_splitter import ModifySplitterMixin
 from Imervue.image.in_place_save import can_rewrite_in_place, save_over_source
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
@@ -69,7 +70,7 @@ _CROP_CANNOT_OVERWRITE = (
 )
 
 
-class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
+class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
     """Controller that builds the left/right panels for the Modify tab.
 
     Emits ``recipe_committed(path, old_recipe, new_recipe)`` whenever a
@@ -160,6 +161,7 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         # (path, EXIF-upright?) of the cached decode — see _decode_source.
         self._decoded_source_key: tuple[str, bool] | None = None
         self._decoded_source: Image.Image | None = None
+        self._init_preview_controller()
 
     # ------------------------------------------------------------------
     # Panel builders — called by ImervueMainWindow
@@ -382,7 +384,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         """Load *path* as PIL and create a fresh AnnotationCanvas."""
         from Imervue.gui.annotation_dialog import AnnotationCanvas
 
-        img = self._load_image_with_recipe(path)
+        self._preview.cancel()
+        img = self._decode_source(path)
         if img is None:
             self._destroy_canvas()
             return
@@ -392,6 +395,10 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
 
         self._canvas = AnnotationCanvas(img, self._canvas_undo_stack)
         self._canvas_source_path = path
+        self._canvas_recipe = (Recipe.from_dict(self._current.to_dict())
+                               if self._current.is_identity() else None)
+        self._canvas.full_base_resolver = self._ensure_full_canvas
+        self._canvas.base_changed.connect(self._on_canvas_base_changed)
 
         # Re-apply the full drawing state so the active tool (mosaic, blur, …),
         # brush, colour, stroke, opacity and font keep working after an image
@@ -419,6 +426,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         # Focus the canvas so key shortcuts (Delete, arrows, Ctrl+S) land on it
         # rather than a develop slider that ignores them.
         self._canvas.setFocus()
+        if not self._current.is_identity():
+            self._request_preview(final=True)
 
 
     def _cleanup_old_canvas(self) -> None:
@@ -436,8 +445,12 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
            the wrapper; shiboken sees no parent → deletes the C++ QWidget
            deterministically, all within normal execution.
         """
+        self._preview.cancel()
+        self._set_preview_status("")
         self._canvas_undo_stack.clear()
         if self._canvas is not None:
+            self._canvas.full_base_resolver = None
+            self._canvas.base_changed.disconnect(self._on_canvas_base_changed)
             # Disconnect signals we connected
             with contextlib.suppress(RuntimeError, TypeError):
                 self._canvas.navigate_image.disconnect(self._on_navigate_image)
@@ -464,27 +477,6 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         self._debounce.stop()
         self._cleanup_old_canvas()
         self._canvas_source_path = None
-
-    def _refresh_canvas_base(self) -> None:
-        """Re-apply the current recipe to the raw image and update the canvas.
-
-        Called when recipe sliders change without a path change.  If the
-        image geometry (dimensions) changed — e.g. after a rotation — any
-        existing annotations are cleared because their coordinates would be
-        invalid in the new coordinate space.
-        """
-        if self._canvas is None or self._canvas_source_path is None:
-            return
-        img = self._load_image_with_recipe(self._canvas_source_path)
-        if img is None:
-            return
-
-        old_w, old_h = self._canvas._base.width, self._canvas._base.height
-        if (img.width, img.height) != (old_w, old_h):
-            self._canvas.set_annotations([])
-            self._canvas.clear_crop()
-
-        self._canvas._set_base_image(img)
 
     # ------------------------------------------------------------------
     # Left-panel tool selection
@@ -547,6 +539,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
 
     def _apply_crop(self) -> None:
         if self._canvas is None or self._canvas_source_path is None:
+            return
+        if not self._ensure_full_canvas():
             return
         crop_rect = self._canvas.get_crop_rect()
         if crop_rect is None:
@@ -729,6 +723,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         """Bake annotations into the image and save back to the source file."""
         if self._canvas is None or self._canvas_source_path is None:
             return
+        if not self._ensure_full_canvas():
+            return
         from Imervue.gui.annotation_models import bake
 
         path = self._canvas_source_path
@@ -901,23 +897,6 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
     # ------------------------------------------------------------------
     # Preview + commit logic — debounced canvas refresh, then write-back
     # ------------------------------------------------------------------
-
-    def _schedule_preview(self) -> None:
-        """Debounce canvas refresh so rapid slider drags don't reload on
-        every tick."""
-        self._debounce.start()
-
-    def _preview_debounced(self) -> None:
-        """Refresh the inline preview, then finalise the edit.
-
-        Firing the debounce timer is the signal that the user has paused —
-        the working recipe is now considered committed. We update the canvas
-        preview first (cheap, local) and then push the recipe to the store and
-        notify the viewer via ``recipe_committed`` so the edit survives a tab
-        or image switch.
-        """
-        self._refresh_canvas_base()
-        self._commit_recipe()
 
     def _commit_recipe(self) -> None:
         """Persist the working recipe and emit ``recipe_committed``.

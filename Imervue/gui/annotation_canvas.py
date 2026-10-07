@@ -9,6 +9,7 @@ re-exports the canvas and commands for older import sites.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 
 from PIL import Image
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
@@ -167,6 +168,7 @@ class AnnotationCanvas(
     # Emitted when Delete is pressed with no annotation selected — the Modify
     # tab wires this to trash the current image, matching the Imervue tab.
     delete_image_requested = Signal()
+    base_changed = Signal()
 
     def __init__(self, base: Image.Image, undo_stack: QUndoStack, parent=None):
         super().__init__(parent)
@@ -177,6 +179,7 @@ class AnnotationCanvas(
 
         self._base = base if base.mode == "RGBA" else base.convert("RGBA")
         self._base_qimg = pil_to_qimage(self._base)
+        self.full_base_resolver: Callable[[], bool] | None = None
         self._annotations: list[Annotation] = []
         self._undo_stack = undo_stack
 
@@ -309,16 +312,29 @@ class AnnotationCanvas(
         return self._brush_spacing
 
     def get_base_pil(self) -> Image.Image:
+        if not self.ensure_full_base():
+            raise ValueError("The current full-quality image is unavailable")
         return self._base
 
-    def _set_base_image(self, img: Image.Image) -> None:
+    def ensure_full_base(self) -> bool:
+        """Resolve current canonical pixels before a destructive effect or save."""
+        return self.full_base_resolver is None or self.full_base_resolver()
+
+    def _set_preview_image(self, geometry_base: Image.Image, qimage: QImage) -> None:
+        """Display reduced pixels while coordinates retain full logical geometry."""
+        self._base = geometry_base
+        self._base_qimg = qimage
+        self.update()
+
+    def _set_base_image(self, img: Image.Image, *, qimage: QImage | None = None) -> None:
         """Swap the underlying PIL image (used by _BakeDestructiveCommand
         for undo/redo of mosaic/blur bakes). Callers must own ``img`` —
         we don't copy it here.
         """
         self._base = img if img.mode == "RGBA" else img.convert(_MODE_RGBA)
-        self._base_qimg = pil_to_qimage(self._base)
+        self._base_qimg = qimage if qimage is not None else pil_to_qimage(self._base)
         self.update()
+        self.base_changed.emit()
 
     def get_annotations(self) -> list[Annotation]:
         return list(self._annotations)
@@ -841,5 +857,4 @@ def _point_segment_distance(
     proj_x = ax + t * dx
     proj_y = ay + t * dy
     return math.hypot(px - proj_x, py - proj_y)
-
 

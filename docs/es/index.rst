@@ -37,6 +37,8 @@ transversales y se aplican a las cinco pestañas.
 
 La cuadrícula de miniaturas libera espacio para nuevas texturas GPU eliminando primero las que están fuera de la vista, preservando las visibles y respetando el presupuesto de memoria. Las que solo tocan el borde no reservan capacidad.
 
+Modify mantiene los controles ágiles con una vista previa de menor resolución en segundo plano durante los ajustes y calcula la calidad completa tras una pausa. Los cambios rápidos y de foto descartan resultados anteriores; las anotaciones conservan las coordenadas del tamaño completo. Guardar o aplicar efectos destructivos completa primero el cálculo a calidad completa.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:

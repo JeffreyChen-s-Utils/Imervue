@@ -35,6 +35,8 @@ für alle fünf Tabs.
 
 Die Thumbnail-Wand schafft Platz für neue GPU-Texturen, indem sie zuerst Kacheln außerhalb des Bildausschnitts entfernt. Sichtbare Kacheln bleiben erhalten und das Speicherbudget wird eingehalten. Kacheln, die nur den Rand berühren, reservieren keine Kapazität.
 
+Modify zeigt während der Anpassung eine Vorschau mit geringerer Auflösung im Hintergrund und berechnet nach einer Pause die volle Qualität, damit die Bedienung reagiert. Schnelle Änderungen und Bildwechsel verwerfen ältere Ergebnisse; Anmerkungskoordinaten behalten die volle Bildgröße. Speichern und destruktive Effekte schließen zuerst die Berechnung in voller Qualität ab.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:

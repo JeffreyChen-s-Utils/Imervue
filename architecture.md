@@ -113,6 +113,10 @@ Public interfaces other code or users depend on:
 3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_menu.py` →
    `gui/<feature>_dialog.py` → `EffectWorker` (`gui/_apply_save.py`) → `image/<feature>.py` → saved
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.
+   Modify preview: a per-panel latest-generation scheduler coalesces requests, renders reduced
+   then full pixels on the global pool, and installs prepared QImages through queued UI signals.
+   Geometry stays full-size; saves/destructive effects resolve canonical pixels first. Jobs own
+   immutable source/recipe data and their application-owned signal sender survives panel destruction.
    Paint: entering its tab preserves the open documents; File > Open Current Image in Paint
    and image navigation from the Paint main-tab bar decode first, then open a new document.
    A failed decode leaves every document unchanged. The Deep Zoom E key opens annotations.

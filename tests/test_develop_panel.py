@@ -293,7 +293,7 @@ class TestCanvasRecipeSync:
         canvas_arr = np.array(p._canvas.get_base_pil())
         assert np.array_equal(raw_arr, canvas_arr)
 
-    def test_geometry_change_clears_annotations(self, panel, real_image):
+    def test_geometry_change_clears_annotations(self, panel, real_image, pump_until):
         """Rotation changes dimensions — annotations must be cleared."""
         p, _ = panel
         p.bind_to_path(str(real_image))
@@ -306,6 +306,7 @@ class TestCanvasRecipeSync:
         # Simulate a 90° rotation recipe refresh
         p._current = Recipe(rotate_steps=1)
         p._refresh_canvas_base()
+        pump_until(lambda: p._preview.is_idle)
         # Image is now 80x100 (was 100x80) → annotations cleared
         assert len(p._canvas.get_annotations()) == 0
 

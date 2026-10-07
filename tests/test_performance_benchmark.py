@@ -135,6 +135,16 @@ def test_unknown_scenario_rejected(tmp_path):
         benchmark.dispatch("unknown", tmp_path, tmp_path, 1)
 
 
+def test_source_fingerprint_ignores_checkout_line_endings(tmp_path):
+    source = tmp_path / "module.py"
+    source.write_bytes(b"first\r\nsecond\r\n")
+    expected = benchmark._source_digest(source)
+    source.write_bytes(b"first\nsecond\n")
+    assert benchmark._source_digest(source) == expected
+    source.write_bytes(b"changed\nsecond\n")
+    assert benchmark._source_digest(source) != expected
+
+
 def test_parent_records_partial_failure_and_continues(tmp_path, monkeypatch):
     monkeypatch.setattr(benchmark, "prepare_fixtures", lambda *a, **k: {"quick": True})
     monkeypatch.setattr(benchmark, "environment", lambda: {})

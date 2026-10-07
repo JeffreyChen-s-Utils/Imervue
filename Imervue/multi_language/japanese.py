@@ -584,6 +584,8 @@ japanese_word_dict = {
     "develop_blacks": "黒レベル",
     "develop_vibrance": "自然な彩度",
     "develop_reset": "リセット",
+    "develop_preview_working": "プレビューを生成中…",
+    "develop_preview_failed": "プレビューに失敗しました：{error}",
     "develop_undo": _JAPANESE_TR5143306B623B3059,
     "develop_redo": _JAPANESE_TR3084308A76F43057,
     # DeepZoom モード「修正」メニュー

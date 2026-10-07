@@ -138,15 +138,65 @@ def image(fixture: Path, profile: Path, repeats: int, *, label: str) -> dict:
     panel.build_right_panel(splitter)
     first = measure(lambda: panel.bind_to_path(str(source)), repeats=1)
     panel._current = Recipe(exposure=.25, temperature=.1, shadows=.1, vibrance=.1)
-    preview = measure(panel._refresh_canvas_base, repeats=repeats)
+    preview = _measure_modify(panel, app, repeats)
     # Event-loop service gap: the synchronous refresh prevents any pending Qt
     # event from being serviced for at least its call duration.
     result = {"shape": shape, "cold_decode": cold, "warm_decode": warm, "gl_display": display,
-              "first_modify_canvas": first, "modify_preview": preview,
+              "first_modify_canvas": first, **preview,
               "boundary": "real DevelopPanel refresh, advanced recipe; QImage ready, hidden canvas"}
     panel._destroy_canvas()
     app.processEvents()
     return result
+
+
+def _measure_modify(panel, app, repeats: int) -> dict:
+    """Time requests, accepted reduced results and the final installed full image."""
+    from PySide6.QtCore import QTimer
+    request_times, low_times, full_times, gaps = [], [], [], []
+    started = [0.0]
+    last_tick = [time.perf_counter()]
+
+    def tick():
+        now = time.perf_counter()
+        gaps.append((now - last_tick[0]) * 1000)
+        last_tick[0] = now
+
+    def ready(result):
+        if not result.pixels.full_quality:
+            low_times.append((time.perf_counter() - started[0]) * 1000)
+        else:
+            full_times.append(result.render_ms)
+
+    heartbeat = QTimer()
+    heartbeat.setInterval(10)
+    heartbeat.timeout.connect(tick)
+    heartbeat.start()
+    panel._preview.result_ready.connect(ready)
+    iteration = [0]
+
+    def refresh():
+        panel._current.exposure = .25 + iteration[0] * .01
+        iteration[0] += 1
+        started[0] = time.perf_counter()
+        panel._schedule_preview()
+        request_times.append((time.perf_counter() - started[0]) * 1000)
+        deadline = time.perf_counter() + 90
+        while panel._canvas_recipe != panel._current or not panel._preview.is_idle:
+            if time.perf_counter() > deadline:
+                raise TimeoutError("Modify preview did not finish")
+            app.processEvents()
+            time.sleep(.001)
+
+    try:
+        complete = measure(refresh, repeats=repeats)
+        return {"modify_preview": complete, "modify_ui_request": summarize(request_times),
+                "modify_reduced_ready": summarize(low_times) if low_times else None,
+                "modify_full_compute": summarize(full_times),
+                "modify_heartbeat_gap": summarize(gaps) if gaps else None,
+                "preview_recipe": "exposure .25/.26/.27; temperature .1, shadows .1, vibrance .1"}
+    finally:
+        heartbeat.stop()
+        panel._preview.result_ready.disconnect(ready)
 
 
 def paint(fixture: Path, profile: Path, repeats: int) -> dict:
@@ -291,8 +341,15 @@ def environment() -> dict:
     versions = {name: importlib.metadata.version(name)
                 for name in ("numpy", "Pillow", "PySide6", "PyOpenGL")}
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    source_hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+    source_hashes = {p.name: _source_digest(p)
                      for p in Path(__file__).parent.glob("performance_*.py")}
+    changes = subprocess.check_output(
+        ["git", "diff", "--name-only", "HEAD", "--", "Imervue"], cwd=ROOT, text=True).splitlines()
+    changes += subprocess.check_output(
+        ["git", "ls-files", "--others", "--exclude-standard", "Imervue"],
+        cwd=ROOT, text=True).splitlines()
+    changed_sources = {name: _source_digest(ROOT / name) for name in sorted(set(changes))
+                       if name.endswith(".py") and (ROOT / name).is_file()}
     hardware = {}
     if os.name == "nt":
         command = ("[PSCustomObject]@{cpu=(Get-CimInstance Win32_Processor).Name; "
@@ -305,9 +362,16 @@ def environment() -> dict:
             "logical_cpus": os.cpu_count(), "processor": platform.processor(),
             "hardware": hardware,
             "versions": versions, "product_revision": revision, "tool_sha256": source_hashes,
+            "product_changed_sources_sha256": changed_sources,
+            "source_hash_newlines": "LF",
             "cold_definition": "fresh child/profile/index; OS page cache is NOT flushed",
             "rss_definition": ("5ms sampled resident working set "
                                "plus process lifetime high-water mark")}
+
+
+def _source_digest(path: Path) -> str:
+    """Normalize checkout line endings so identical source has the same identity."""
+    return hashlib.sha256(path.read_text(encoding="utf-8").encode("utf-8")).hexdigest()
 
 
 def main() -> None:

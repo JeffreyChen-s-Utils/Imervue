@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 926 | 154,933 |
+| `tests/` | 929 | 155,412 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 170 | 42,752 |
-| `Imervue/gui/` | 172 | 34,469 |
+| `Imervue/gui/` | 174 | 34,770 |
 | `Imervue/puppet/` | 60 | 16,393 |
-| `Imervue/image/` | 128 | 15,295 |
+| `Imervue/image/` | 129 | 15,444 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,181 |
-| `Imervue/multi_language/` | 8 | 15,140 |
+| `Imervue/multi_language/` | 8 | 15,150 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,750 |
@@ -84,10 +84,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| `scripts/`（開發與發佈工具） | 4 | 761 |
-| **總計** | **1,780** | **339,802** |
+| `scripts/`（開發與發佈工具） | 4 | 825 |
+| **總計** | **1,786** | **340,805** |
 
-其中 `Imervue/` 套件本身 770 檔 / 168,087 行。
+其中 `Imervue/` 套件本身 773 檔 / 168,547 行。
 
 測試碼與產品碼比約 **0.84 : 1**（154k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -321,6 +321,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `recipe.py` | 707 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線，定義成具名階段表 `_STAGES`（名稱依序在 `STAGE_NAMES`）：幾何(旋轉/翻轉/裁切) → 白平衡 → 曝光 → 亮部/陰影 → 白場/黑場 → 亮度對比 → vibrance → 飽和度 → 色調曲線，再依 `extra` 套用 split toning / LUT / masks / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack；`apply_stages(arr, first, last)` 只跑其中一段（GPU 顯影外掛把中間一段放到 GPU，其餘交給它）。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`、`exif_oriented` / `base_is_oriented()`（舊存檔缺這個鍵、又帶幾何時，仍套在未轉正的像素上），以及 `file_identity()`（md5(前、中、後各 4KB \| 檔案大小)，避免 mtime 改變就失效；只看前 4KB 時，同尺寸的未壓縮掃描檔會共用一個 identity）與 `file_identities()`（連同舊版只含前 4KB 的 identity，供遷移）；`turned_with_file(recipe, clockwise, size)`：檔案轉 90° 後的 recipe（翻轉互換、裁切框隨之旋轉；帶位置的 extra 不轉） |
+| `develop_preview.py` | 149 | Modify 的純 CPU 預覽：共享不變來源、快取完整幾何／低解析像素、縮放局部遮罩座標；全尺寸模式與 `Recipe.apply` 像素相同，每個具名階段之間檢查取消 |
 | `recipe_store.py` | 477 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`identity_for(path)` 查詢前先把存在舊版 identity 下的 recipe 搬到新 identity（每個檔案只搬一次）；`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案；讀不到的 store 檔由 `UnreadableFileGuard` 看守，解不開的單筆原樣寫回 |
 | `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
 | `develop_backends.py` | 106 | 顯影後端登錄表：外掛以 `register(BackendProvider(key, probe, open))` 提供另一個 recipe 算繪器（`probe()` 回報標籤或 `None`、`open()` 建立 `DevelopRenderer`）；`available()` 列出這台機器能跑的後端（probe 丟 `RuntimeError`/`OSError`/`ImportError` 就略過），`open_renderer(key)` 開不起來回 `None`（`"cpu"` 保留給內建），`render(arr, recipe, renderer)` 沒有算繪器或算繪器丟 `RuntimeError` 時改用 `Recipe.apply`。批次匯出的「運算裝置」用它 |
@@ -545,13 +546,15 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 941 | **Modify 分頁面板**：`build_left_panel()` 工具列、內嵌 `AnnotationCanvas`、recipe 預覽與提交。發出 `recipe_committed` signal；右側面板與 splitter 尺寸來自下面兩個 mixin |
-| `develop_right_panel.py` | 327 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原），每段一個 `_build_*` 方法 |
+| `develop_panel.py` | 920 | **Modify 分頁面板**：工具列、內嵌 `AnnotationCanvas`、來源解碼／存檔與 recipe 提交。背景預覽由 `DevelopPreviewMixin` 協作，右側面板與 splitter 尺寸由既有 mixin 提供；發出 `recipe_committed` signal |
+| `develop_preview.py` | 169 | `PreviewScheduler`：每面板至多一個低解析與一個完整 worker，最新請求覆蓋等待項目，版本與取消雙重守衛；QImage 在背景準備，UI queued signal 安装；sender 由 application 持有至 queued delete |
+| `develop_preview_panel.py` | 132 | `DevelopPreviewMixin`：拖曳低解析／防抖完整品質、幾何座標與狀態、過期結果檢查；儲存／破壞性效果先取得完整像素，避免保存暫時預覽 |
+| `develop_right_panel.py` | 331 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原）與預覽工作／失敗標籤，每段一個 `_build_*` 方法 |
 | `modify_splitter.py` | 131 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
-| `annotation_canvas.py` | 845 | 註解畫布 widget + `QUndoCommand`（新增／刪除／修改），工具狀態、座標換算、選取與拖曳、文字編輯、鍵盤；繪製、裁切、馬賽克／模糊來自下面三個 mixin |
+| `annotation_canvas.py` | 860 | 註解畫布 widget + `QUndoCommand`、座標／選取／文字／鍵盤；可用低解析 QImage 配完整幾何，原生底圖改變訊號與完整品質 resolver 保護烘焙／存檔；繪製、裁切、馬賽克／模糊由 mixin 提供 |
 | `annotation_drawing.py` | 417 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
-| `annotation_destructive.py` | 250 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：馬賽克／模糊的強度對話框、即時預覽與烘焙進底圖 |
+| `annotation_destructive.py` | 252 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：先解析完整品質，再顯示馬賽克／模糊強度對話框、區域預覽與烘焙進底圖 |
 | `annotation_dialog.py` | 805 | macOS Preview 式標註對話框（編輯器版面、工具、快捷鍵、狀態列） |
 | `annotation_file_actions.py` | 202 | `AnnotationFileActionsMixin`：標註的存檔／另存（`.tmp` 原子寫入；寫回原檔時經 `save_over_source` 保留 metadata）；模組層 `ask_save_as_path`（無法寫出的副檔名補 `.png`）/ `write_annotated` 也供 Modify 分頁在 RAW／HEIC／多影格上改存副本、複製到剪貼簿、存／讀 `.imervue_annot.json` 專案 |
 | `dialog_rows.py` | 135 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框；`save_path_into` 也回傳它，取消時回傳 None）、`may_replace()`（目標已存在又不是存檔對話框確認過的，經 `ask_to_replace()` 問要不要取代，預設不取代）、`confirm(parent, title, text)`（刪除、清空、覆寫前的是／否確認，預設「否」；Qt 自己會把「是」設成預設，所有 `QMessageBox.question` 都要指定預設按鈕，`test_questions_default_to_no` 守著）、`image_save_filter()`（PNG / JPEG / TIFF 存檔篩選）；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
@@ -987,7 +990,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-926 個檔、154,933 行。`pyproject.toml` 定義三個互斥層級 marker：
+929 個檔、155,412 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1043,7 +1046,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | 跨平台說明 | `packaging/CROSS_PLATFORM.md` | |
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
-| 開發效能基準 | `scripts/performance_benchmark.py`（355 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行） | 每個情境以新子程序與隔離 profile 執行；固定合成圖庫／大圖／多圖層、原生 RSS、完整原始樣本與真實 GL 像素驗證。只限 checkout 開發工具，不進產品 CLI。`docs/performance/` 保存固定硬體基準、邊界及後續門檻；`tests/test_performance_benchmark.py` 驗證目錄擁有權／雜湊、失敗報告與真實子程序／GL |
+| 開發效能基準 | `scripts/performance_benchmark.py`（419 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
@@ -1168,6 +1171,14 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
 新增以路徑為鍵的 DB 表時，加進 `library/image_index._PATH_TABLES`。測試一律透過 `conftest` 的 `_isolate_library_db`
 使用暫存 DB。
 
+### 10.13 Modify 的最新版本背景預覽
+
+`gui/develop_preview.PreviewScheduler` 合併等待請求，每面板至多一個低解析與一個完整 worker。
+worker 只讀共享來源與獨立 recipe，於具名 CPU 階段間檢查取消；版本檢查再擋掉無法立即停止的舊結果。
+完整 QImage 在背景準備，queued QObject slot 才更新 canvas；signal sender 由 application 保留至 UI queued delete，
+面板銷毀時不等待 thread pool。低解析顯示配完整幾何，保存／破壞性效果先解析完整品質；
+尚未完成時的明確保存可同步等待，不能把近似預覽烘焙進原檔。
+
 ---
 
 ## 11. 持久化檔案一覽
@@ -1208,7 +1219,7 @@ sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`）則靠檔名�
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
-   最大的是 `gui/develop_panel.py`(941)、`gui/file_tree_view.py`(944) 與 `mcp_server/tool_defs_edit.py`(929)；要在接近 1000 行的檔案
+   接近上限的包括 `gui/file_tree_view.py`(944)、`mcp_server/tool_defs_edit.py`(929) 與 `gui/develop_panel.py`(920)；要在接近 1000 行的檔案
    加程式，先把一組內聚的方法拆成模組（mixin 或模組函式），並先補特性測試。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。

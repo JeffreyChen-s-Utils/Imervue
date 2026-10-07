@@ -596,6 +596,8 @@ english_word_dict = {
     "develop_blacks": "Blacks",
     "develop_vibrance": "Vibrance",
     "develop_reset": "Reset",
+    "develop_preview_working": "Rendering preview…",
+    "develop_preview_failed": "Preview failed: {error}",
     "develop_undo": _ENGLISH_UNDO,
     "develop_redo": _ENGLISH_REDO,
     # Deep Zoom "Modify" menu

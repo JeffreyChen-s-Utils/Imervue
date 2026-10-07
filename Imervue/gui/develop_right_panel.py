@@ -211,6 +211,10 @@ class DevelopRightPanelMixin:
         self._interactive_widgets.append(self._btn_ann_redo)
 
         layout.addLayout(ann_btn_row)
+        self._preview_status = QLabel("")
+        self._preview_status.setWordWrap(True)
+        self._preview_status.hide()
+        layout.addWidget(self._preview_status)
 
     def _build_develop_sliders(self, layout: QVBoxLayout, lang: dict) -> None:
         """Exposure / brightness / contrast / saturation plus the advanced sliders."""

@@ -47,6 +47,13 @@ reports before declaring a small speedup; no hardware-specific timing assertion 
 RAW camera files, model inference, SSD cold-cache behavior, photographic entropy and a physical UI session
 need separate supplied workloads; the synthetic fixture does not establish their performance.
 
+After the background-preview change, Modify measurements separately retain UI request time,
+accepted reduced-preview latency, full recipe/QImage compute time and request-to-installed-full
+latency (including idle debounce). A 10ms Qt heartbeat records service gaps, including maximum stalls.
+Small smoke images may already be full quality and have no reduced metric. The reports include
+changed production-source hashes when measuring a working tree before its commit; source hashes
+normalize checkout line endings. [Modify results](modify-preview-20261007.md) document the boundaries.
+
 ## Acceptance policy
 
 The fixed baseline and stage-specific targets are recorded in [baseline-20261007.md](baseline-20261007.md).

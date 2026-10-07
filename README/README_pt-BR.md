@@ -325,6 +325,8 @@ Acessadas a partir do menu **Tools**; organizadas em submenus agrupados por fun�
 
 ## Modify — Revelação não destrutiva
 
+Modify mantém os controles responsivos com uma prévia de menor resolução em segundo plano durante os ajustes e calcula a qualidade completa após uma pausa. Alterações rápidas e trocas de foto descartam resultados antigos; as anotações mantêm as coordenadas do tamanho completo. Salvar ou aplicar efeitos destrutivos conclui primeiro o cálculo em qualidade completa.
+
 A aba **Modify** é a estação de revelação. Toda alteração vive em uma **recipe** por imagem armazenada ao lado do arquivo — os pixels originais em disco nunca são sobrescritos até você **Exportar** ou usar **Salvar Como** explicitamente. **Apply Crop** e o **Save** de anotações são as duas exceções: gravam o resultado sobre o arquivo e mantêm seu EXIF (câmera, data de captura, GPS), XMP e DPI. Um RAW de câmera, um HEIC ou um arquivo animado / de várias páginas nunca é sobrescrito — o recorte pede que você exporte e o salvamento de anotações pede um arquivo novo. As ferramentas de uso único (CLAHE, mixer HSL, moldura, endireitamento automático…) salvam o resultado ao lado do original como `photo_clahe.png`; executá-las de novo salva `photo_clahe_1.png` em vez de substituir o último resultado. **Auto-Rotate by EXIF**, as cópias do **Batch EXIF Strip** e **Split Pages…** numeram seus arquivos da mesma forma. A receita e as cópias virtuais de uma foto a acompanham quando o Imervue a gira sem perda (o recorte gira junto) ou reescreve o EXIF (geotag GPS, editor EXIF); uma receita com máscaras locais, camadas, reflexo de lente ou tags de rostos fica com a versão sem giro até que seja girada de volta.
 
 ### Sliders de revelação

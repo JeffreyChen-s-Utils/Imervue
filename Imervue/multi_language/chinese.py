@@ -573,6 +573,8 @@ chinese_word_dict = {
     "develop_blacks": "黑色",
     "develop_vibrance": "鲜艳度",
     "develop_reset": "重置",
+    "develop_preview_working": "正在生成预览…",
+    "develop_preview_failed": "预览失败：{error}",
     "develop_undo": "撤销",
     "develop_redo": "重做",
     # DeepZoom 模式"修改"菜单

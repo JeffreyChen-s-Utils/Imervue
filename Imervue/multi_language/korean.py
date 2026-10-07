@@ -581,6 +581,8 @@ korean_word_dict = {
     "develop_blacks": "검정 계열",
     "develop_vibrance": "생동감",
     "develop_reset": "재설정",
+    "develop_preview_working": "미리 보기 생성 중…",
+    "develop_preview_failed": "미리 보기 실패: {error}",
     "develop_undo": _KOREAN_TRC2E4D58920CDE8C1,
     "develop_redo": _KOREAN_TRB2E4C2DC20C2E4D5,
     # DeepZoom 모드 "수정" 메뉴
