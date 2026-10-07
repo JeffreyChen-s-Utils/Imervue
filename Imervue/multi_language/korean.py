@@ -2425,6 +2425,8 @@ korean_word_dict = {
     "paint_autosave_recovery_available": "자동 저장 스냅샷 {n}개 사용 가능 — 파일 ▸ 자동 저장 복원",
     "paint_file_restore_autosave": "자동 저장 복원",
     "paint_autosave_restored": "가장 최근 자동 저장을 복원했습니다",
+    "paint_autosave_restored_documents": "자동 저장한 문서 {n}개를 복원했습니다",
+    "paint_autosave_failed": "자동 저장 실패: {error}",
     "paint_autosave_none": "복원할 자동 저장이 없습니다",
     "paint_brush_blend_tooltip": "각 브러시 찍기에 적용되는 합성 모드 — '표준'은 알파 오버입니다",
     "paint_brush_color_jitter": "색상 지터:",

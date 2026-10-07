@@ -357,17 +357,18 @@ class _FileMenuBridge:
             save_brush_presets(presets)
 
     def restore_autosave(self) -> bool:
-        """Load the newest autosave snapshot into the active tab and say what happened."""
+        """Recover every document's latest valid snapshot in separate tabs."""
         workspace = self._workspace
-        restored = workspace.restore_latest_autosave()
+        count = workspace.restore_all_autosaves()
         lang = language_wrapper.language_word_dict
         toast = getattr(workspace, "toast", None)
         if toast is not None:
-            if restored:
-                toast.info(lang.get("paint_autosave_restored", "Restored the latest autosave"))
+            if count:
+                toast.info(lang.get("paint_autosave_restored_documents",
+                                    "Restored {n} autosaved document(s)").format(n=count))
             else:
                 toast.info(lang.get("paint_autosave_none", "No autosave to restore"))
-        return restored
+        return bool(count)
 
     def import_palette(self) -> None:  # pragma: no cover - QFileDialog
         path = self._pick_file(

@@ -822,7 +822,7 @@ File I/O
 - **Export image…** — flatten and save as PNG, JPEG, WebP, TIFF or BMP, by the file type you pick (JPEG and BMP, which have no transparency, on white). Only **Save as PSD…** marks the tab saved; after an export, closing Imervue still asks about the tab's unsaved changes
 - **Export pages → CBZ** / **→ PDF** — export the pages of a comic project; **Save Comic Project…** keeps the whole comic, every page with its layers, in one ``.imervue-proj`` file, and **Open Comic Project…** brings it back
 - **Import brush preset…**, **Import palette…** — bring in brushes and palettes from other installs or apps
-- **Autosave** — every 2 minutes while the active tab has unsaved edits a snapshot is written; on the next launch a toast offers the snapshots and **File > Restore Autosave** loads the newest into the active tab. The status bar shows when the last snapshot was taken, and closing Imervue asks about Paint tabs with unsaved changes.
+- **Autosave** — Every 2 minutes, each modified document keeps its own eight latest snapshots. **File > Restore Autosave** opens each document’s newest readable version in a new modified tab, preserving current edits and trying an older snapshot if the newest is damaged. Native snapshots preserve manga panel clipping. The status bar shows the active document’s last autosave, write failures are reported, and closing a tab removes only its own snapshots.
 
 Workspace Layouts
 ^^^^^^^^^^^^^^^^^

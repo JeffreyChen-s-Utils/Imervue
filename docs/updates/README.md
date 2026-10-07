@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261007-04 | 2026-10-07 | Autosave and recover every modified Paint document | #done #paint #recovery #i18n | [2026-10](2026-10.md) |
 | U-20261007-03 | 2026-10-07 | Isolate exit-status probes from unrelated Temp directories | #incident #tests #ci | [2026-10](2026-10.md) |
 | U-20261007-02 | 2026-10-07 | Restore complete document state in Paint history | #done #paint #stability | [2026-10](2026-10.md) |
 | U-20261007-01 | 2026-10-07 | Preserve Paint documents when switching workspaces | #done #paint #stability #i18n | [2026-10](2026-10.md) |

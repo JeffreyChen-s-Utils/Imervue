@@ -45,6 +45,7 @@ from Imervue.paint.document import (
     PaintDocument,
 )
 from Imervue.paint.layer_effects import LayerEffect
+from Imervue.paint.manga_panels import panel_layout_from_dict, panel_layout_to_dict
 
 FORMAT_VERSION = 1
 FILE_EXTENSION = ".imervue"
@@ -110,6 +111,7 @@ def _document_to_arrays(document: PaintDocument) -> dict[str, np.ndarray]:
         "layers": layers_meta,
         "groups": [_group_meta(grp) for grp in document.groups()],
         "named_selections": named_selection_names,
+        "panel_layout": panel_layout_to_dict(document.panel_layout),
         "reference_layer": (
             None
             if document.reference_layer_index() is None
@@ -219,6 +221,7 @@ def _document_from_npz(data) -> PaintDocument:
         named_selections=named_selections,
         reference_layer_index=reference_index,
     )
+    document.panel_layout = panel_layout_from_dict(metadata.get("panel_layout"))
     return document
 
 

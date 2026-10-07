@@ -2449,6 +2449,8 @@ english_word_dict = {
     "paint_autosave_recovery_available": "{n} autosave snapshot(s) available — File ▸ Restore Autosave",
     "paint_file_restore_autosave": "Restore Autosave",
     "paint_autosave_restored": "Restored the latest autosave",
+    "paint_autosave_restored_documents": "Restored {n} autosaved document(s)",
+    "paint_autosave_failed": "Autosave failed: {error}",
     "paint_autosave_none": "No autosave to restore",
     "paint_brush_blend_tooltip": "Compositing mode applied at every dab — Normal is alpha-over",
     "paint_brush_color_jitter": "Colour jitter:",

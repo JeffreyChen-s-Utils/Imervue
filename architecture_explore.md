@@ -66,13 +66,13 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 923 | 154,277 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 170 | 42,580 |
+| `tests/` | 924 | 154,506 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 170 | 42,752 |
 | `Imervue/gui/` | 172 | 34,469 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 128 | 15,295 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,174 |
-| `Imervue/multi_language/` | 8 | 15,130 |
+| `Imervue/multi_language/` | 8 | 15,140 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 33 | 4,750 |
@@ -84,9 +84,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| **總計** | **1,773** | **338,196** |
+| **總計** | **1,774** | **338,607** |
 
-其中 `Imervue/` 套件本身 770 檔 / 167,898 行。
+其中 `Imervue/` 套件本身 770 檔 / 168,080 行。
 
 測試碼與產品碼比約 **0.84 : 1**（154k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -269,11 +269,11 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `language_wrapper.py` | 140 | 單例 `language_wrapper`（外掛字串進來前先經 `translation_validation` 檢查、記錄問題，空字串或 `{placeholder}` 與英文不符的丟掉，改顯示內建文字）。內建 5 語言；`register_language()` 供外掛新增語言（重複註冊就地更新同一個字典），`merge_translations()` 供外掛補鍵（不覆寫既有鍵） |
-| `english.py` | 2,806 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
-| `traditional_chinese.py` | 2,771 | 繁體中文 |
-| `chinese.py` | 2,772 | 簡體中文 |
-| `japanese.py` | 2,785 | 日文 |
-| `korean.py` | 2,783 | 韓文 |
+| `english.py` | 2,992 | 英文字典（**正規來源**，其他語言以它為鍵集基準） |
+| `traditional_chinese.py` | 2,957 | 繁體中文 |
+| `chinese.py` | 2,957 | 簡體中文 |
+| `japanese.py` | 2,970 | 日文 |
+| `korean.py` | 2,968 | 韓文 |
 | `translation_validation.py` | 156 | 字典進入 `LanguageWrapper` 前的驗證（缺鍵 / 空值 / placeholder；`register_language` 與 `merge_translations` 都會跑） |
 
 > 第 6 個語言（西班牙文）以 `plugins/spanish_translation/` 形式提供，示範外掛語言註冊流程。
@@ -688,7 +688,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `compositing.py` | 438 | 純 NumPy 圖層合成 |
 | `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
-| `document_io.py` | 450 | 原生 `.imervue` NPZ bundle 存讀 |
+| `document_io.py` | 453 | 原生 .imervue NPZ 文件讀寫、圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
 | `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
 | `undo_stack.py` | 103 | 每文件完整內容快照的 Undo／Redo；恢復圖層結構、所有屬性、遮罩、向量、群組與選取，保留存活圖層的身分 |
 | `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
@@ -734,7 +734,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 漫畫 / 網點
 
-`manga_menu.py`(625) · `manga_panels.py`(273) 分鏡版面（Panel Cutter 把版面存在 `document.panel_layout`，筆刷的 Snap to panel 經 `ToolDispatcher` 的 `panel_layout_provider` 依它裁切；`layout_for_canvas` 在畫布尺寸變了後不再套用） ·
+`manga_menu.py`(625) · `manga_panels.py`(300) 分鏡版面與 PanelLayout JSON 編解碼（原生文件與自動快照保留配置；Panel Cutter 把版面存在 `document.panel_layout`，筆刷的 Snap to panel 經 `ToolDispatcher` 的 `panel_layout_provider` 依它裁切；`layout_for_canvas` 在畫布尺寸變了後不再套用） ·
 `halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) 對話框氣泡 ·
 `comic_stamps.py`(266) + `stamp_dock.py`(88) · `flash_effect.py`(132) 爆炸效果 ·
 `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
@@ -767,14 +767,15 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `tool_dispatcher.py` | 452 | 工具事件路由與手勢提交；commit_external_edit 將畫布素材拖放接到同一個 Undo 邊界 |
 | `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
 | `tool_bar.py` | 491 | 工具列：按鈕只在提示顯示按鍵，工具按鍵由 `tools_menu.py`（`tool_shortcut`）獨佔；上方選項列 `PaintOptionsBar` 的筆刷／填色／選取／漸層頁與 `ToolState` 雙向同步 |
-| `workspace_tabs.py` | 337 | 多文件分頁 |
+| `workspace_tabs.py` | 339 | 多文件分頁、髒狀態；切頁更新該文件最後自動存檔時間，關閉清除該文件快照與歷史 |
 | `workspace_docks.py` | 417 | dock 建構與佈局持久化 |
 | `workspace_content.py` | 469 | 文件內容命令；姿勢與材質插入透過 workspace_history 提交 Undo 與髒狀態 |
 | `workspace_history.py` | 15 | 圖層選單、漫畫圖層與素材插入共用的完整編輯提交邊界 |
 | `workspace_status.py` | 320 | 狀態列與縮放指示 |
 | `workspace_shortcuts.py` | 317 | 快捷鍵、筆刷調整、歡迎提示；圖層排序完成時提交 Undo，邊界不建立空步驟 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
-| `workspace_autosave.py` | 171 + `auto_save.py`(242) | 自動存檔（作用中分頁未儲存時才寫快照）、當機復原、`discard_own_autosaves` 關閉時刪掉自己的快照 |
+| `workspace_autosave.py` | 284 | 所有已修改分頁各自自動存檔、每文件獨立識別與最後保存時間；多文件復原到新分頁、損壞快照降級、關閉只清自己的快照 |
+| `auto_save.py` | 268 | 原生快照與原子 metadata、無碰撞檔名、每文件八份保留配額、排序與損壞快照回復 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
 | `recent_files.py` | 72 | 最近開啟清單 |
 | `export_presets.py` | 278 | 批次匯出設定檔 |

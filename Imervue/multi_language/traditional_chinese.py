@@ -2414,6 +2414,8 @@ traditional_chinese_word_dict = {
     "paint_autosave_recovery_available": "有 {n} 份自動儲存快照可用 — 檔案 ▸ 還原自動儲存",
     "paint_file_restore_autosave": "還原自動儲存",
     "paint_autosave_restored": "已還原最近一次的自動儲存",
+    "paint_autosave_restored_documents": "已還原 {n} 份自動儲存文件",
+    "paint_autosave_failed": "自動儲存失敗：{error}",
     "paint_autosave_none": "沒有可還原的自動儲存",
     "paint_brush_blend_tooltip": "每一筆觸點套用的混合模式 — 「正常」為一般 Alpha 疊加",
     "paint_brush_color_jitter": "顏色抖動：",

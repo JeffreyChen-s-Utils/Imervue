@@ -2427,6 +2427,8 @@ japanese_word_dict = {
     "paint_autosave_recovery_available": "{n} 件の自動保存スナップショットがあります — ファイル ▸ 自動保存から復元",
     "paint_file_restore_autosave": "自動保存から復元",
     "paint_autosave_restored": "最新の自動保存を復元しました",
+    "paint_autosave_restored_documents": "自動保存した文書を {n} 件復元しました",
+    "paint_autosave_failed": "自動保存に失敗しました: {error}",
     "paint_autosave_none": "復元できる自動保存はありません",
     "paint_brush_blend_tooltip": "各ダブに適用する合成モード — 通常はアルファ合成",
     "paint_brush_color_jitter": "カラージッター:",

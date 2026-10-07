@@ -118,6 +118,9 @@ Public interfaces other code or users depend on:
    Paint history: dispatcher gestures and explicit layer/material commands commit complete
    editable content per document; restore keeps the document's listeners and surviving
    layer identities while restoring structure, properties, masks, vectors and selections.
+   Paint recovery: periodic autosave covers every dirty tab, with stable document identities
+   and independent eight-version retention. Restore opens new modified tabs, falling back
+   to older readable versions without replacing edits. Native metadata keeps panel layouts.
    Delete: soft delete in `gpu_image_view/actions/delete.py` → `commit_pending_deletions()` →
    one batch through `system/trash_ops.py`.
 4. **Batch export** — `gui/batch_export_dialog.py` `_ExportWorker` opens the renderer chosen under

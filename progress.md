@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第一階段：編輯成果與復原可靠性（P0）
 
-- **#60** 多文件自動儲存只涵蓋作用中的髒文件：`Imervue/paint/workspace_autosave.py:136` 未輪流保存其他已修改分頁。
-  下一步：為每份文件建立獨立快照與保留配額；補修改 A 後停留 B、異常結束、重新啟動及多文件恢復測試，驗證所有髒文件都可還原。
-
 - **#61** 縮圖 VRAM 容量邊界無法為新貼圖騰出空間：`Imervue/gpu_image_view/tile_textures.py:25` 拒絕超過剩餘預算的配置，但 `:51` 僅在已超過上限時淘汰。
   下一步：先補「用量未超標，但新貼圖放不下」回歸測試；配置前優先淘汰畫面外貼圖，維持容量記帳與可見貼圖，於真實 GPU 驗證滿載捲動不出現空白縮圖。
 

@@ -837,7 +837,7 @@ Entrada/Salida de archivos
 - **Export image…** — aplana y guarda como PNG, JPEG, WebP, TIFF o BMP, según el tipo de archivo elegido (JPEG y BMP, que no admiten transparencia, sobre fondo blanco). Solo **Save as PSD…** marca la pestaña como guardada; tras una exportación, al cerrar Imervue se sigue preguntando por los cambios sin guardar de la pestaña
 - **Export pages → CBZ** / **→ PDF** — exporta las páginas de un proyecto de cómic; **Save Comic Project…** guarda el cómic entero, cada página con sus capas, en un solo archivo ``.imervue-proj``, y **Open Comic Project…** lo recupera
 - **Import brush preset…**, **Import palette…** — trae pinceles y paletas de otras instalaciones o aplicaciones
-- **Autoguardado** — cada 2 minutos, mientras la pestaña activa tenga ediciones sin guardar, se escribe una instantánea; en el siguiente inicio un toast ofrece las instantáneas y **File > Restore Autosave** carga la más reciente en la pestaña activa. La barra de estado muestra cuándo se tomó la última instantánea, y al cerrar Imervue se pregunta por las pestañas Paint con cambios sin guardar.
+- **Autoguardado** — Cada 2 minutos, cada documento modificado conserva sus ocho instantáneas más recientes. **File > Restore Autosave** abre la última versión legible en una nueva pestaña modificada, preservando las ediciones actuales; si está dañada, intenta una versión anterior. Las instantáneas nativas conservan el recorte de paneles de manga. La barra de estado indica el último autoguardado del documento activo, se notifican los errores de escritura y cerrar una pestaña elimina solo sus propias instantáneas.
 
 Diseños de espacio de trabajo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

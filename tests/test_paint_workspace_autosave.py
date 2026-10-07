@@ -105,13 +105,13 @@ def test_confirm_close(unsaved, discard, allowed, log):
 
 
 @pytest.mark.parametrize(("restored", "message"), [
-    (True, "Restored the latest autosave"),
+    (True, "Restored 1 autosaved document(s)"),
     (False, "No autosave to restore"),
 ])
 def test_restore_autosave_from_the_file_menu(restored, message):
     """The recovery toast pointed at File > Restore, which did not exist."""
     shown = []
-    workspace = SimpleNamespace(restore_latest_autosave=lambda: restored,
+    workspace = SimpleNamespace(restore_all_autosaves=lambda: int(restored),
                                 toast=SimpleNamespace(info=shown.append))
     assert _FileMenuBridge(workspace).restore_autosave() is restored
     assert shown == [message]

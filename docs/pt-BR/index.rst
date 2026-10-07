@@ -832,7 +832,7 @@ I/O de Arquivos
 - **Exportar imagem…** — achatar e salvar como PNG, JPEG, WebP, TIFF ou BMP, conforme o tipo de arquivo escolhido (JPEG e BMP, que não têm transparência, sobre fundo branco). Só **Salvar como PSD…** marca a aba como salva; depois de uma exportação, fechar o Imervue ainda pergunta sobre as alterações não salvas da aba
 - **Exportar páginas → CBZ** / **→ PDF** — exportar as páginas de um projeto de quadrinhos; **Salvar projeto de quadrinhos…** salva o quadrinho inteiro, cada página com suas camadas, em um único arquivo ``.imervue-proj``, e **Abrir projeto de quadrinhos…** o reabre
 - **Importar preset de pincel…**, **Importar paleta…** — trazer pincéis e paletas de outras instalações ou aplicativos
-- **Autosalvamento** — a cada 2 minutos, enquanto a aba ativa tiver edições não salvas, um snapshot é gravado; na próxima inicialização um toast oferece os snapshots e **Arquivo > Restaurar Autosalvamento** carrega o mais recente na aba ativa. A barra de status mostra quando o último snapshot foi feito, e ao fechar o Imervue ele pergunta sobre abas Paint com alterações não salvas.
+- **Autosave** — A cada 2 minutos, cada documento modificado mantém seus oito snapshots mais recentes. **File > Restore Autosave** abre a última versão legível em uma nova aba modificada, preservando as edições atuais; se estiver danificada, tenta uma versão anterior. Os snapshots nativos preservam o recorte dos painéis de mangá. A barra de status mostra o último autosave do documento ativo, falhas de gravação são informadas e fechar uma aba remove apenas seus próprios snapshots.
 
 Layouts de Espaço de Trabalho
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

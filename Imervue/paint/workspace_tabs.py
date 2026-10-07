@@ -148,6 +148,7 @@ class TabManagerMixin:
         )
         if needs_prompt and not self._confirm_discard_unsaved(widget):
             return False
+        self.discard_canvas_autosaves(widget)
         self._tab_dirty.pop(widget, None)
         # Drop the closed canvas's undo stack (and its snapshots) so it doesn't
         # linger with the deleted canvas.
@@ -284,6 +285,7 @@ class TabManagerMixin:
             self.exit_quick_mask()
         self._rebind_canvas_signals(self._canvas, new_canvas)
         self._canvas = new_canvas
+        self._last_autosave_at = getattr(self, "_autosave_last_by_canvas", {}).get(new_canvas)
         self._canvas.set_tool_dispatcher(self._dispatcher)
         if hasattr(self, "_layer_dock"):
             self._layer_dock.set_document(self._canvas.document())

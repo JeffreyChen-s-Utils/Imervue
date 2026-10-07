@@ -80,7 +80,7 @@ class PaintDocument(DocumentGroupsMixin, DocumentMergeMixin, DocumentGeometryMix
         # reorderings via the helpers below.
         self._reference_layer_index: int | None = None
         # The manga panel layout Panel Cutter drew last (``manga_panels.PanelLayout``),
-        # which the brush's Snap to panel clips strokes to. Not saved with the file.
+        # which the brush's Snap to panel clips strokes to; native saves preserve it.
         self.panel_layout = None
 
     def __deepcopy__(self, memo: dict) -> PaintDocument:
