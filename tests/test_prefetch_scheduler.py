@@ -18,7 +18,7 @@ class _FakeSignals:
     def __init__(self):
         self._slots = []
 
-    def connect(self, slot):
+    def connect(self, slot, *_args):
         self._slots.append(slot)
 
     def disconnect(self):
@@ -26,9 +26,9 @@ class _FakeSignals:
 
 
 class _FakeWorker:
-    def __init__(self, path, recipe=None):
+    def __init__(self, path, recipe=None, *, memory_budget=None):
         self.path = path
-        self.signals = SimpleNamespace(finished=_FakeSignals())
+        self.signals = SimpleNamespace(finished=_FakeSignals(), completed=_FakeSignals())
         self.aborted = False
 
     def abort(self):

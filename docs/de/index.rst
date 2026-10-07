@@ -37,6 +37,8 @@ Die Thumbnail-Wand schafft Platz für neue GPU-Texturen, indem sie zuerst Kachel
 
 Darstellung, Thumbnail-Anfragen und Texturfreigabe nutzen denselben sichtbaren Rasterbereich mit einer zusätzlichen Zeile/Spalte. Normale Thumbnail-Größen werden bei Bedarf dekodiert; höchstens so viele Aufgaben wie Worker im Thumbnail-Pool laufen gleichzeitig. Scrollen ersetzt noch nicht gestartete Anfragen. Der Vollauflösungsmodus entdeckt über Zellgrenzen reichende Bilder mit begrenzter Hintergrundarbeit. Der Fortschritt zählt den aktuellen Ausschnitt und gezielte Anfragen. Die Rückkehr aus Deep Zoom behält den warmen Cache und die Rasterposition.
 
+Das Vorladen benachbarter Bilder berücksichtigt tatsächliche Pyramidenbytes und Reservierungen laufender Dekodierungen. Alle offenen Ansichtsfenster teilen sich gleichmäßig 20% des physischen RAM (256 MiB–8 GiB); ohne optionale Speichererkennung gilt ein gemeinsames Ersatzbudget von 2 GiB. Abgebrochene Dekodierungen geben ihre Reservierung erst nach ihrem Ende frei; beim Öffnen eines wegen des Budgets übersprungenen Bildes wird regulär im Vordergrund geladen. Das RAM-Budget ist vom GPU-Texturbudget getrennt und begrenzt weder den gesamten Prozess noch das Vordergrundbild.
+
 Modify zeigt während der Anpassung eine Vorschau mit geringerer Auflösung im Hintergrund und berechnet nach einer Pause die volle Qualität, damit die Bedienung reagiert. Schnelle Änderungen und Bildwechsel verwerfen ältere Ergebnisse; Anmerkungskoordinaten behalten die volle Bildgröße. Speichern und destruktive Effekte schließen zuerst die Berechnung in voller Qualität ab.
 
 .. contents:: Inhaltsverzeichnis

@@ -115,6 +115,10 @@ Public interfaces other code or users depend on:
    coalesces filmstrip/retry work and validates generation plus indexed membership.
    Full-size mode keeps bounded discovery of overlapping image extents. Escape preserves
    the managed warm cache and saved grid position; cold or stale sources initialize a queue.
+   Neighbor prefetch uses actual pyramid bytes plus decoder/queued-result tickets under a
+   shared process RAM cap and fair window quotas, independently of texture VRAM. Cancelled
+   workers retain tickets until completion; stale identities and destroyed owners cannot
+   deliver results. Refused promoted requests fall back to ordinary foreground loading.
 3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_menu.py` →
    `gui/<feature>_dialog.py` → `EffectWorker` (`gui/_apply_save.py`) → `image/<feature>.py` → saved
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.

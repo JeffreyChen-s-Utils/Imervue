@@ -213,6 +213,8 @@ The thumbnail wall makes room for new GPU textures by evicting tiles outside the
 
 Rendering, thumbnail requests and texture eviction share the visible grid range plus one row/column of buffer. Normal thumbnail sizes decode on demand with at most the thumbnail pool’s worker count in flight; scrolling replaces unstarted requests. Full-resolution mode keeps bounded background discovery for images extending beyond their cells. Progress counts the current viewport and explicit requests. Returning from Deep Zoom keeps the warm cache and saved grid position.
 
+Neighbor prefetch budgets actual pyramid bytes together with in-flight decode reservations. Speculative loading shares 20% of physical RAM (256 MiB–8 GiB) fairly across open viewer windows; when optional memory detection is unavailable, it shares a 2 GiB fallback. Reservations remain until cancelled decoders actually finish, and quota refusal falls back to normal foreground loading when that image is opened. RAM admission is separate from the GPU texture budget; it does not cap the entire process or the foreground image.
+
 The **Imervue** tab is the default landing surface. It pairs the image viewer with the folder tree, EXIF sidebar, and library/organization tools.
 
 ### Viewer

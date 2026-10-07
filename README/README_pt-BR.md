@@ -209,6 +209,8 @@ A grade de miniaturas libera espaço para novas texturas GPU removendo primeiro 
 
 Desenho, solicitações de miniaturas e liberação de texturas compartilham a área visível com uma linha/coluna extra. Os tamanhos normais são decodificados sob demanda, sem exceder o número de workers do grupo de miniaturas; rolar substitui solicitações ainda não iniciadas. O modo de resolução completa continua descobrindo imagens que ultrapassam as células com trabalho de fundo limitado. O progresso conta a vista atual e as solicitações explícitas. Ao voltar do Deep Zoom, o cache e a posição são mantidos.
 
+A pré-carga de imagens vizinhas soma os bytes reais das pirâmides e as reservas das decodificações em andamento. As janelas abertas compartilham igualmente 20% da RAM física (256 MiB–8 GiB); sem detecção opcional de memória, compartilham um orçamento alternativo de 2 GiB. As reservas de decodificações canceladas permanecem até o término real; ao abrir uma imagem ignorada pelo orçamento, ela é carregada normalmente em primeiro plano. O orçamento de RAM é separado do de texturas GPU e não limita o processo inteiro nem a imagem em primeiro plano.
+
 A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens com árvore de pastas, painel lateral EXIF e ferramentas de biblioteca/organização.
 
 ### Visualizador

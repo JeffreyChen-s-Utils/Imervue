@@ -205,6 +205,8 @@ La cuadrícula de miniaturas libera espacio para nuevas texturas GPU eliminando 
 
 El dibujo, las solicitudes de miniaturas y la liberación de texturas comparten el rango visible con una fila/columna adicional. Los tamaños normales se decodifican bajo demanda, con tantas tareas simultáneas como trabajadores del grupo de miniaturas; al desplazarse se sustituyen las solicitudes aún no iniciadas. El modo de resolución completa descubre en segundo plano, con concurrencia limitada, imágenes que superan sus celdas. El progreso cuenta la vista actual y las solicitudes explícitas. Al volver de Deep Zoom se conservan la caché y la posición.
 
+La precarga de imágenes vecinas suma los bytes reales de las pirámides y las reservas de las decodificaciones en curso. Las ventanas abiertas comparten equitativamente el 20% de la RAM física (256 MiB–8 GiB); sin detección opcional de memoria comparten un presupuesto de respaldo de 2 GiB. Las reservas de decodificaciones canceladas se liberan cuando estas terminan; al abrir una imagen omitida por el presupuesto se carga normalmente en primer plano. El presupuesto de RAM es independiente del de texturas GPU y no limita todo el proceso ni la imagen en primer plano.
+
 La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina el visor de imágenes con el árbol de carpetas, la barra lateral EXIF y las herramientas de biblioteca/organización.
 
 ### Visor

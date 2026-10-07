@@ -15,13 +15,13 @@ stateful glue that wires that policy to the worker pool and the cache.
 
 from __future__ import annotations
 
-import contextlib
 from collections import OrderedDict
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QMutex, QMutexLocker
+from PySide6.QtCore import QMutex, QMutexLocker, QObject, Qt, Slot
 
 from Imervue.gpu_image_view.images.image_loader import LoadDeepZoomWorker
+from Imervue.gpu_image_view.ram_budget import RamBudget, image_bytes
 from Imervue.gpu_image_view.images.prefetch import (
     NavigationDirectionTracker,
     compute_prefetch_targets,
@@ -40,11 +40,17 @@ PREFETCH_MAX = PREFETCH_RANGE * 2 + 1
 _MISSING_DISTANCE = 99
 
 
-class PrefetchScheduler:
+class PrefetchScheduler(QObject):
     """Own and orchestrate the deep-zoom neighbour prefetch."""
 
     def __init__(self, view: GPUImageView) -> None:
+        super().__init__(view if isinstance(view, QObject) else None)
         self._view = view
+        self.budget = RamBudget()
+        self._landing_worker = None
+        self._retired: set[LoadDeepZoomWorker] = set()
+        if isinstance(view, QObject):
+            view.destroyed.connect(self._owner_destroyed)
         self._mutex = QMutex()
         self.cache: OrderedDict[str, object] = OrderedDict()  # path -> DeepZoomImage
         self.workers: dict[str, LoadDeepZoomWorker] = {}  # path -> worker
@@ -62,6 +68,7 @@ class PrefetchScheduler:
             needed_set = set(needed)
             self._cancel_outdated_workers(needed_set)
             self._evict_outdated_cache(needed_set)
+            self._trim_bytes()
             self._spawn_workers(needed)
 
     def _compute_targets(self, images: list[str]) -> list[str]:
@@ -90,13 +97,15 @@ class PrefetchScheduler:
         # list() required: we mutate self.workers in-loop.
         for path in list(self.workers):  # NOSONAR S7504 — iterating a list() copy
             if path not in needed:
-                self.workers.pop(path).abort()
+                worker = self.workers.pop(path)
+                self._retired.add(worker)
+                worker.abort()
 
     def _evict_outdated_cache(self, needed: set[str]) -> None:
         # list() required: we del from self.cache in-loop.
         for path in list(self.cache):  # NOSONAR S7504 — iterating a list() copy
             if path not in needed:
-                del self.cache[path]
+                self.discard(path)
 
     def _distance_for(self, path: str) -> int:
         """Return |index(path) - current_index| for the priority helper.
@@ -116,10 +125,10 @@ class PrefetchScheduler:
         for path in sorted(needed, key=self._prefetch_priority):
             if path in self.cache or path in self.workers:
                 continue
-            worker = LoadDeepZoomWorker(path, recipe=recipe_store.get_for_path(path))
-            worker.signals.finished.connect(self._view._on_prefetch_loaded)
-            if hasattr(worker.signals, "error"):
-                worker.signals.error.connect(self._view._on_prefetch_error)
+            worker = LoadDeepZoomWorker(
+                path, recipe=recipe_store.get_for_path(path), memory_budget=self.budget,
+            )
+            worker.signals.completed.connect(self._on_completed, Qt.ConnectionType.QueuedConnection)
             self.workers[path] = worker
             # Distance-aware priority: the next neighbour the user might
             # press lands before the far-out ones, so when the pool
@@ -134,23 +143,73 @@ class PrefetchScheduler:
 
     # -- worker completion -------------------------------------------
 
+    @Slot(object, object, str)
+    def _on_completed(self, worker, result, message: str) -> None:
+        """Deliver only the current worker and release tickets after real completion."""
+        self._retired.discard(worker)
+        current = self.workers.get(worker.path) is worker
+        self._landing_worker = worker
+        try:
+            if not current:
+                return
+            if result is not None:
+                self._view._on_prefetch_loaded(result, worker.path)
+            elif message:
+                self._view._on_prefetch_error(worker.path, message)
+            else:
+                self.pop_worker(worker.path)
+                # A promoted prefetch can be refused by RAM admission. The
+                # foreground image must still load through the regular path.
+                if getattr(self._view, "_deep_zoom_loading", None) == worker.path:
+                    self._view._start_deep_zoom_worker(
+                        worker.path, self._view._deep_zoom_request_id,
+                    )
+        finally:
+            self._landing_worker = None
+            self.budget.release(worker)
+
+    def _trim_bytes(self) -> None:
+        """Drain old cache entries when a newly opened window reduces the fair share."""
+        while self.cache and self.budget.used_bytes > self.budget.limit_bytes:
+            self.discard(next(iter(self.cache)))
+
     def pop_worker(self, path: str) -> None:
         """Drop the finished worker for ``path`` under the lock."""
         with QMutexLocker(self._mutex):
             self.workers.pop(path, None)
 
     def store(self, path: str, dzi: object) -> None:
-        """Cache a freshly prefetched image, trimming to PREFETCH_MAX."""
+        """Admit actual pyramid bytes, evicting old entries before the count ceiling."""
         with QMutexLocker(self._mutex):
+            size = image_bytes(dzi)
+            if size > self.budget.limit_bytes:
+                return
+            key = ("prefetch", path)
+            while not self.budget.store(key, size, ticket=self._landing_worker):
+                if not self.cache:
+                    return
+                self.discard(next(iter(self.cache)))
             self.cache[path] = dzi
             while len(self.cache) > PREFETCH_MAX:
-                self.cache.popitem(last=False)
+                self.discard(next(iter(self.cache)))
 
     # -- cache access / teardown -------------------------------------
 
+    @Slot()
+    def _owner_destroyed(self) -> None:
+        """Release undelivered completed results; running decoders retain their tickets."""
+        self.cancel_all()
+        for worker in self._retired:
+            if worker.completed.is_set():
+                self.budget.release(worker)
+        self._retired.clear()
+        self._view = None
+
     def take(self, path: str) -> object | None:
         """Pop and return a cached image, or None on miss."""
-        return self.cache.pop(path, None)
+        image = self.cache.pop(path, None)
+        self.budget.discard(("prefetch", path))
+        return image
 
     def has(self, path: str) -> bool:
         return path in self.cache
@@ -160,17 +219,17 @@ class PrefetchScheduler:
 
     def discard(self, path: str) -> None:
         """Drop a single cached image (e.g. after a recipe edit)."""
-        with contextlib.suppress(KeyError):
-            del self.cache[path]
+        self.cache.pop(path, None)
+        self.budget.discard(("prefetch", path))
 
     def cancel_all(self) -> None:
         """Cancel all in-flight workers, clear the cache, reset direction."""
         for worker in self.workers.values():
-            with contextlib.suppress(RuntimeError, TypeError):
-                worker.signals.finished.disconnect()
+            self._retired.add(worker)
             worker.abort()
         self.workers.clear()
-        self.cache.clear()
+        for path in list(self.cache):
+            self.discard(path)
         # Folder change → forget the previous folder's navigation history
         # so the new folder starts with a symmetric window.
         self._nav_tracker.reset()

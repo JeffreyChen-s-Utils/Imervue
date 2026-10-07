@@ -8,9 +8,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ### 第二階段：效能基準、操作回應與記憶體（P1）
 
-- **#66** 預取以張數為主，解碼中的容量未納入統一預算：`Imervue/gpu_image_view/prefetch_scheduler.py:142`、`Imervue/gpu_image_view/prefetch_memory.py:68`。
-  下一步：量測 RAW／全景圖並行解碼的峰值；依實際陣列大小與解碼預留容量調節預取，分開管理 RAM、VRAM 及各視窗配額，補缺少選用記憶體偵測相依時的降級測試。
-
 - **#67** 自動儲存於 UI timer 路徑同步壓縮及寫入：`Imervue/paint/workspace_autosave.py:47`、`Imervue/paint/auto_save.py:69`，大文件可能造成卡頓。
   下一步：接續 #60 量測快照與壓縮耗時；以一致的文件版本背景保存並合併重複請求，驗證保存期間繪圖不產生混合版本，失敗可回報且既有有效快照仍可恢復。
 

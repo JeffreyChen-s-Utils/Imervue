@@ -66,6 +66,12 @@ frames with shared row/column candidates, retaining two independent runs and the
 overloaded-host anomaly. Decode admission and cancellation are guarded by separate real
 pool tests; the frame workload continues to exclude disk decode and widget/HUD drawing.
 
+[Prefetch RAM results](ram-budget-20261007.md) use a supplied real camera RAW and
+a synthetic 60MP panorama. `scripts/performance_ram.py` measures two real decoder
+threads in a fresh isolated profile, retaining native RSS, actual arrays, quota
+reservations and decoded/refused counts. RAM admission is separate from VRAM;
+skipping speculation is reported separately from completing the same workload.
+
 ## Acceptance policy
 
 The fixed baseline and stage-specific targets are recorded in [baseline-20261007.md](baseline-20261007.md).

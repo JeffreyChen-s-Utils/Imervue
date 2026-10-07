@@ -202,6 +202,8 @@ La grille de miniatures libère de la place pour les nouvelles textures GPU en r
 
 Le dessin, les demandes de miniatures et la libération des textures partagent la zone visible avec une ligne/colonne de marge. Les tailles normales sont décodées à la demande, sans dépasser le nombre de workers du pool ; le défilement remplace les demandes non démarrées. Le mode pleine résolution poursuit une découverte en arrière-plan limitée pour les images dépassant leurs cellules. La progression compte la vue actuelle et les demandes explicites. Le retour de Deep Zoom conserve le cache et la position de la grille.
 
+Le préchargement des images voisines comptabilise les octets réels des pyramides et les réservations des décodages en cours. Les fenêtres ouvertes se partagent équitablement 20% de la RAM physique (256 MiB–8 GiB) ; sans détection optionnelle de mémoire, elles partagent un budget de secours de 2 GiB. Les réservations des décodages annulés restent jusqu’à leur fin ; ouvrir une image ignorée faute de budget déclenche son chargement normal au premier plan. Ce budget RAM est distinct de celui des textures GPU et ne limite ni tout le processus ni l’image au premier plan.
+
 L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visualiseur d'images à l'arborescence des dossiers, à la barre latérale EXIF et aux outils d'organisation de la photothèque.
 
 ### Visualiseur

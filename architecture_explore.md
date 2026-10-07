@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 936 | 156,293 |
+| `tests/` | 939 | 156,718 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 171 | 43,019 |
 | `Imervue/gui/` | 174 | 34,770 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 129 | 15,444 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,434 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 70 | 13,661 |
 | `Imervue/multi_language/` | 8 | 15,150 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
@@ -84,12 +84,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
-| `scripts/`（開發與發佈工具） | 4 | 829 |
-| **總計** | **1,796** | **342,210** |
+| `scripts/`（開發與發佈工具） | 5 | 936 |
+| **總計** | **1,801** | **342,969** |
 
-其中 `Imervue/` 套件本身 776 檔 / 169,067 行。
+其中 `Imervue/` 套件本身 777 檔 / 169,294 行。
 
-測試碼與產品碼比約 **0.84 : 1**（156k vs 185k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.85 : 1**（156k vs 185k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -410,7 +410,7 @@ ImervueMainWindow
 
 ### 6.10 `Imervue/gpu_image_view/`
 
-OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生命週期與 Qt 事件覆寫，
+OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（774 行）只保留 GL 生命週期與 Qt 事件覆寫，
 其餘拆成約 40 個協作者。有兩種顯示狀態：**tile wall**（縮圖牆）與 **deep zoom**（單張深縮放）。
 
 #### 檢視器主體與渲染
@@ -422,7 +422,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `deep_zoom_loading.py` | 306 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知；全尺寸圖上螢幕後分派外掛的 `on_image_loaded`） |
 | `shown_file_watch.py` | 87 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看；`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間，之後每 `POLL_MS`（500 ms）用 `os.stat` 量一次，變了之後又連續一次沒變（寫完了）才經 `_reload_rewritten_image` 重新載入並重解縮圖；外部編輯器就地覆寫、寫副本再改名蓋過去、保留原修改時間的存檔都看得到。刻意不用 `QFileSystemWatcher` 監看檔案：在 Windows 上它讓其他程式改名蓋過去的存檔約一成被拒絕存取（實測 600 次 54 次），資料夾監看與 `os.stat` 都不會 |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
-| `prefetch_memory.py` | 123 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
+| `prefetch_memory.py` | 127 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 壓力清理；CPU 陣列以視窗 RAM 配額判斷，不混用 VRAM |
 | `view_mouse.py` | 148 | `ViewMouseMixin`：滾輪縮放（含放大鏡倍率、格線與閱讀模式捲動）、按壓／拖曳／放開、雙擊切換 |
 | `gl_renderer.py` | 349 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
 | `tile_grid_renderer.py` | 282 | 只依共享 TileViewport 候選列／欄繪製；繪製、載入與淘汰使用同一 frame geometry，失敗也清除 transient geometry；零面積 tile／placeholder 不繪製 |
@@ -466,8 +466,9 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 | `tile_loader.py` | 649 | bounded viewport 縮圖排程與 generation／O(1) membership 驗證；visible buffer／filmstrip／retry 共用 slots，重複請求合併、source rewrite 另排一次；每 4 秒背景 stat 與清單 refetch 保留 |
 | `tile_textures.py` | 136 | incoming mipmap 容量前先淘汰畫面外貼圖；使用共享 viewport 候選計算精確 cached visibility，GL 刪除成功才記帳 |
 | `tile_wall_loading.py` | 99 | 牆面 loading 狀態與轉圈幾何（大資料夾/網路磁碟不再空白） |
-| `prefetch_scheduler.py` | 176 | Deep-zoom 鄰居預載排程、取消過期 worker、淘汰快取 |
+| `prefetch_scheduler.py` | 235 | QObject 預取協作者：實際 pyramid bytes／解碼 ticket 共用 RAM 配額、過期退休與 queued terminal identity 驗證、owner destruction 回收未送達結果 |
 | `deep_zoom_priority.py` | 40 | 圖磚渲染優先權 |
+| `ram_budget.py` | 135 | 純運算、thread-safe RAM admission；sensor/header 解碼估算、actual NumPy buffer 去重、cache／reservation 原子轉移、process cap 與公平視窗份額、optional psutil fallback |
 | `vram_budget.py` | 67 | 純函式：使用者覆寫值 + 夾限策略 |
 | `vram_detect.py` | 104 | 廠商 GL 探測實際 VRAM（`glGetIntegerv`） |
 | `memory_pressure.py` | 246 | 狀態列記憶體壓力指示器（綠/黃/紅 + 百分比，點擊清快取） |
@@ -479,7 +480,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_loader.py` | 525 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔）、`FolderScanWorker`（分批掃描大資料夾；兩種掃描都經 `_is_listed` 跳過隱藏檔，直接開啟的隱藏檔仍加進清單；依解析度或拍攝日期這類要逐檔讀標頭的排序（`_HEADER_SORTS`）走 `folder_index` 快取）、`open_path()` 對外入口；點陣圖（大圖與縮圖）先經 `to_eight_bit` 把 16 位元與浮點灰階縮成 8 位元、再轉 sRGB，並依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
+| `image_loader.py` | 554 | **核心載入路徑**：`decode_image_file()`（解碼成檢視器看到的 RGBA，不套 recipe 與檢視模擬；Modify 與 Paint 用它當底圖）、`decode_image(path, *, max_edge=None)`（同一份解碼成 Pillow 影像，全不透明轉 RGB，可縮到長邊；輸出與預覽共用）、`load_image_file()`（RAW/SVG/HEIF/JXL/一般點陣 → RGBA，可套 recipe）、`LoadDeepZoomWorker`（背景建金字塔；預取模式在 worker 讀 header、先預留解碼 scratch、queued 結果保留 actual bytes，所有退出路徑都發 completed）、`FolderScanWorker`（分批掃描大資料夾；兩種掃描都經 `_is_listed` 跳過隱藏檔，直接開啟的隱藏檔仍加進清單；依解析度或拍攝日期這類要逐檔讀標頭的排序（`_HEADER_SORTS`）走 `folder_index` 快取）、`open_path()` 對外入口；點陣圖（大圖與縮圖）先經 `to_eight_bit` 把 16 位元與浮點灰階縮成 8 位元、再轉 sRGB，並依 EXIF Orientation 轉正（舊 recipe 帶幾何時例外，見 `Recipe.base_is_oriented`）；能開的副檔名取自 `image/formats.py` |
 | `load_thumbnail_worker.py` | 149 | 單張縮圖解碼 `QRunnable`（點陣圖交給 `image_loader._load_raster_thumbnail`／`_load_raster`，和檢視器同一條解碼：EXIF 轉正、sRGB、16 位元灰階縮放、巨圖一次一張的 `decode_slot`；RAW 取 `raw_loader.develop_raw(thumbnail=True)` 的轉正預覽） |
 | `image_model.py` | 24 | `ImageModel`：目前資料夾的圖片路徑清單 |
 | `prefetch.py` | 178 | 預載視窗大小與方向追蹤（`NavigationDirectionTracker`） |
@@ -1049,7 +1050,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | 跨平台說明 | `packaging/CROSS_PLATFORM.md` | |
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
-| 開發效能基準 | `scripts/performance_benchmark.py`（423 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
+| 開發效能基準 | `scripts/performance_benchmark.py`（423 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
 
@@ -1201,6 +1202,17 @@ renderer 保留 frame geometry 供 texture admission／loader 共用，`finally`
 進度只計目前可見／buffer、仍執行與明確請求；舊世代 completion 不會啟動新世代工作或清除 filmstrip 標記。
 full-resolution mode 為可能跨 cell 的圖片保留 bounded background discovery；普通尺寸只按需載入。
 filmstrip／retry 共用 slots 並合併 active 請求；source rewrite 保留一個新版本再解碼。Esc 保留有效 queue／warm cache／原捲動位置。
+
+### 10.16 預取 RAM admission 與實際 worker 生命週期
+
+`RamBudget` 的 process cap 為 physical RAM 20%（256 MiB–8 GiB），psutil 缺少／失敗共用 2 GiB fallback；live budgets 公平分配視窗份額。
+只管理 speculative Deep Zoom 預取：actual pyramid NumPy buffers 加所有 in-flight／queued result tickets，與 VRAM 材質預算獨立。
+RAW header 取 libraw sensor dimensions，不把 embedded preview 或檔案大小當成解碼大小；24／48 bytes-per-pixel 估一般／RAW scratch，非 identity recipe 160，unknown 512 MiB。
+Header 與 admission 在 worker 執行，拒絕不等待；result ticket 換 actual bytes 後 queued 回 UI，store 原子轉為 cache bytes，淘汰最舊 cache，同時保留張數 ceiling。
+cancel 只退休 identity／設 abort，不提前歸還仍執行的 ticket；所有成功／拒絕／失敗／abort 都發 completed，stale 同路徑 worker 不影響 replacement。
+owner destruction 回收已完成但未送達的票券；仍執行的 worker 持有 budget，abort 返回時自行歸還。被提升為前景的 refused job 走一般 foreground load。
+新視窗縮小 quota 後，舊 cache 在下一次 schedule 淘汰；既有 reservation 不改名、不失蹤，超額時停止新 admission。
+這是估算與快取 admission，不是 allocator 或整個 process RSS 上限；foreground image／縮圖牆／編輯器與第三方 decoder scratch 不冒稱受此 speculative quota 控制。
 
 ## 11. 持久化檔案一覽
 
