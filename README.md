@@ -211,6 +211,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 The thumbnail wall makes room for new GPU textures by evicting tiles outside the viewport first, while preserving visible tiles and staying within its memory budget. Tiles touching only the viewport edge do not reserve capacity.
 
+Rendering, thumbnail requests and texture eviction share the visible grid range plus one row/column of buffer. Normal thumbnail sizes decode on demand with at most the thumbnail pool’s worker count in flight; scrolling replaces unstarted requests. Full-resolution mode keeps bounded background discovery for images extending beyond their cells. Progress counts the current viewport and explicit requests. Returning from Deep Zoom keeps the warm cache and saved grid position.
+
 The **Imervue** tab is the default landing surface. It pairs the image viewer with the folder tree, EXIF sidebar, and library/organization tools.
 
 ### Viewer

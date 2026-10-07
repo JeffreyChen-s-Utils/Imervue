@@ -35,6 +35,8 @@ across all five tabs.
 
 The thumbnail wall makes room for new GPU textures by evicting tiles outside the viewport first, while preserving visible tiles and staying within its memory budget. Tiles touching only the viewport edge do not reserve capacity.
 
+Rendering, thumbnail requests and texture eviction share the visible grid range plus one row/column of buffer. Normal thumbnail sizes decode on demand with at most the thumbnail pool’s worker count in flight; scrolling replaces unstarted requests. Full-resolution mode keeps bounded background discovery for images extending beyond their cells. Progress counts the current viewport and explicit requests. Returning from Deep Zoom keeps the warm cache and saved grid position.
+
 Modify keeps controls responsive with a background preview at a lower resolution while adjusting, then renders full quality after a pause. Rapid edits and photo changes discard older results; annotation coordinates keep the full image size. Saving or applying destructive effects first completes full-quality rendering.
 
 .. contents:: Table of Contents

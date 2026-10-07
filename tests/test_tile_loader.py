@@ -1,8 +1,8 @@
 """Tests for the lazy filmstrip / deep-zoom-preview thumbnail loading.
 
 The filmstrip and the low-res deep-zoom loading preview both read their pixmaps
-from ``tile_cache``. Some paths into single-image view never run the tile-wall
-loader that fills it (opening a file directly, a folder auto-refresh while
+from ``tile_cache``. Some paths into single-image view never warm the tile-wall
+buffer (opening a file directly, a folder auto-refresh while
 zoomed), so the cache is cold and those overlays render blank. ``tile_loader``
 now requests the missing thumbnail on demand; these tests pin the dedup policy
 and the generation-checked landing without a Qt widget or GL context.

@@ -35,6 +35,8 @@ aplicam-se a todas as cinco abas.
 
 A grade de miniaturas libera espaço para novas texturas GPU removendo primeiro as que estão fora da área visível, preservando as visíveis e respeitando o orçamento de memória. As que apenas tocam a borda não reservam capacidade.
 
+Desenho, solicitações de miniaturas e liberação de texturas compartilham a área visível com uma linha/coluna extra. Os tamanhos normais são decodificados sob demanda, sem exceder o número de workers do grupo de miniaturas; rolar substitui solicitações ainda não iniciadas. O modo de resolução completa continua descobrindo imagens que ultrapassam as células com trabalho de fundo limitado. O progresso conta a vista atual e as solicitações explícitas. Ao voltar do Deep Zoom, o cache e a posição são mantidos.
+
 Modify mantém os controles responsivos com uma prévia de menor resolução em segundo plano durante os ajustes e calcula a qualidade completa após uma pausa. Alterações rápidas e trocas de foto descartam resultados antigos; as anotações mantêm as coordenadas do tamanho completo. Salvar ou aplicar efeitos destrutivos conclui primeiro o cálculo em qualidade completa.
 
 .. contents:: Sumário

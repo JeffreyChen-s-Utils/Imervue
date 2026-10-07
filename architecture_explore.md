@@ -66,12 +66,12 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 931 | 155,733 |
+| `tests/` | 936 | 156,293 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 171 | 43,019 |
 | `Imervue/gui/` | 174 | 34,770 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 129 | 15,444 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 67 | 13,181 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 69 | 13,434 |
 | `Imervue/multi_language/` | 8 | 15,150 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,021 |
 | `scripts/`（開發與發佈工具） | 4 | 829 |
-| **總計** | **1,789** | **341,397** |
+| **總計** | **1,796** | **342,210** |
 
-其中 `Imervue/` 套件本身 774 檔 / 168,814 行。
+其中 `Imervue/` 套件本身 776 檔 / 169,067 行。
 
-測試碼與產品碼比約 **0.84 : 1**（155k vs 184k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.84 : 1**（156k vs 185k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -196,7 +196,7 @@ ImervueMainWindow
   「Pure math in :mod:`Imervue.image.xxx`; this is the Qt shell」。
 - 從 Qt 類別抽出的純函式（`vram_budget.py`、`layers.py`、`tile_layout.py`、`edge_snap.py`…）
   可以不開 GL context、不建 widget 就直接單元測試。
-- `gpu_image_view.py`（1,758 行）本身只留 GL 生命週期與 Qt 事件轉發，
+- `gpu_image_view.py`（774 行）本身只留 GL 生命週期與 Qt 事件轉發，
   其餘全部委派給約 40 個 collaborator 模組。
 
 ---
@@ -417,15 +417,17 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `gpu_image_view.py` | 772 | 主 widget：GL 初始化、`paintGL`、tile grid、鍵盤與拖放事件；deep-zoom 載入、視圖適配、預取／記憶體、滑鼠來自下面四個 mixin；`run_shortcut_action(action)` 讓別的元件以按鍵的方式執行快捷鍵動作 |
-| `view_state_init.py` | 278 | 建構子呼叫的狀態初始化函式（tile grid、deep zoom、瀏覽、互動、顯示），只設定屬性、不碰 GL |
+| `gpu_image_view.py` | 774 | 主 GL widget 與 Qt 事件轉發；cancel 退休 viewport queue／pending markers，實際解碼仍由 pool 持有到結束；快捷鍵橋接與下面四個 mixin |
+| `view_state_init.py` | 279 | 建構子狀態初始化（tile grid、deep zoom、互動、顯示）；追蹤 cached tile 最大尺寸供 O(1) viewport bound，不碰 GL |
 | `deep_zoom_loading.py` | 306 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知；全尺寸圖上螢幕後分派外掛的 `on_image_loaded`） |
 | `shown_file_watch.py` | 87 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看；`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間，之後每 `POLL_MS`（500 ms）用 `os.stat` 量一次，變了之後又連續一次沒變（寫完了）才經 `_reload_rewritten_image` 重新載入並重解縮圖；外部編輯器就地覆寫、寫副本再改名蓋過去、保留原修改時間的存檔都看得到。刻意不用 `QFileSystemWatcher` 監看檔案：在 Windows 上它讓其他程式改名蓋過去的存檔約一成被拒絕存取（實測 600 次 54 次），資料夾監看與 `os.stat` 都不會 |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
 | `prefetch_memory.py` | 123 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 超限時釋放快取與材質 |
 | `view_mouse.py` | 148 | `ViewMouseMixin`：滾輪縮放（含放大鏡倍率、格線與閱讀模式捲動）、按壓／拖曳／放開、雙擊切換 |
 | `gl_renderer.py` | 349 | 現代 OpenGL 渲染器（VBO + GLSL），shader 編譯失敗時退回 immediate mode |
-| `tile_grid_renderer.py` | 279 | 縮圖牆 GL 繪製；忽略與 viewport 只有零面積接觸的縮圖及 placeholder |
+| `tile_grid_renderer.py` | 282 | 只依共享 TileViewport 候選列／欄繪製；繪製、載入與淘汰使用同一 frame geometry，失敗也清除 transient geometry；零面積 tile／placeholder 不繪製 |
+| `tile_viewport.py` | 112 | 純運算格線 viewport、列／欄 buffer 候選、cell origin 與 cached 最大尺寸；繪製／載入／淘汰共用 |
+| `thumbnail_queue.py` | 92 | 純運算 bounded 工作計畫；捲動替換 unstarted work、source membership 索引、current workload 進度、filmstrip／retry 與 full-size extent 的 bounded backfill |
 | `deep_zoom_renderer.py` | 277 | Deep-zoom 圖磚 + minimap GL 繪製 |
 | `overlay_painter.py` | 885 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
 | `tile_badges.py` | 93 | 圖磚徽章繪製：色彩標籤條、收藏、書籤、星等、堆疊數、日期、影片播放圓鈕（純 `QPainter`，不需 GL） |
@@ -446,8 +448,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `input_controller.py` | 434 | 滑鼠 / 滾輪 / 手勢：滾輪縮放、minimap 點擊導航、圖磚框選、中鍵平移 |
-| `key_input_handler.py` | 299 | 鍵盤事件路由（F8 HUD、F1-F5 色標籤、Esc、方向鍵） |
+| `input_controller.py` | 437 | 滑鼠／滾輪／手勢、minimap、框選與平移；可見 tile 命中後以載入索引驗證路徑與 Deep Zoom 位置 |
+| `key_input_handler.py` | 303 | 鍵盤事件路由；Esc 回縮圖牆保留有效 viewport queue、warm cache 與 grid offsets；cold／stale 與尺寸變更仍初始化重載 |
 | `key_action_dispatcher.py` | 359 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
@@ -461,8 +463,8 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（1,758 行）只保留 GL 生�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `tile_loader.py` | 603 | 縮圖牆非同步載入：距離感知優先權、grid mutex 下收集結果、進度合併；每 4 秒的背景 stat 掃描（`scan_folder_paths`）標出消失的檔案，也找出縮圖解碼後被其他程式改寫（大小或修改時間變了）的檔案，重解它的縮圖（`refresh_rewritten_tile`：新縮圖到之前照畫舊的，到了換掉舊材質；filmstrip 與預取也丟掉）；改寫、消失、復原的路徑整批交給 `refetch_list_rows`，清單檢視的列一起更新 |
-| `tile_textures.py` | 145 | GPU 貼圖配置前保留 incoming mipmap 容量，優先淘汰畫面外貼圖；零面積邊界不保留，GL 刪除成功才更新記帳 |
+| `tile_loader.py` | 649 | bounded viewport 縮圖排程與 generation／O(1) membership 驗證；visible buffer／filmstrip／retry 共用 slots，重複請求合併、source rewrite 另排一次；每 4 秒背景 stat 與清單 refetch 保留 |
+| `tile_textures.py` | 136 | incoming mipmap 容量前先淘汰畫面外貼圖；使用共享 viewport 候選計算精確 cached visibility，GL 刪除成功才記帳 |
 | `tile_wall_loading.py` | 99 | 牆面 loading 狀態與轉圈幾何（大資料夾/網路磁碟不再空白） |
 | `prefetch_scheduler.py` | 176 | Deep-zoom 鄰居預載排程、取消過期 worker、淘汰快取 |
 | `deep_zoom_priority.py` | 40 | 圖磚渲染優先權 |
@@ -1189,6 +1191,16 @@ worker 只讀共享來源與獨立 recipe，於具名 CPU 階段間檢查取消�
 不以相同陣列身分推論像素未改變。Undo／Redo patch 存活的可寫陣列；刪除／重建與幾何操作可實體化完整狀態。
 容量計算包含 baseline、Undo、Redo、唯一 tile payload、Python metadata 與弱索引；512 MiB 超額淘汰最舊步驟並重建索引。
 單一狀態超額清除歷史，保留 live 文件。`committed_snapshot().materialize()` 產生獨立可編輯陣列，callback／Qt／composite 不入歷史。
+
+### 10.15 縮圖牆共用可見範圍與 bounded jobs
+
+`TileViewport` 依 row／column 間距計算候選索引，不遍歷 model；buffer 為周邊一列／欄，精確淘汰只保護有正面積交集的 cached tiles。
+已載入大 SVG／full-size tile 的實際尺寸也入 conservative bound，正常 landing 在 O(1) 更新最大尺寸。
+renderer 保留 frame geometry 供 texture admission／loader 共用，`finally` 清除，下一幀重新反映捲動／縮放／DPR。
+`ThumbnailQueue` 不為未拜訪列建立 QRunnable；完成訊號釋出 slot，重新優先載入目前 viewport。
+進度只計目前可見／buffer、仍執行與明確請求；舊世代 completion 不會啟動新世代工作或清除 filmstrip 標記。
+full-resolution mode 為可能跨 cell 的圖片保留 bounded background discovery；普通尺寸只按需載入。
+filmstrip／retry 共用 slots 並合併 active 請求；source rewrite 保留一個新版本再解碼。Esc 保留有效 queue／warm cache／原捲動位置。
 
 ## 11. 持久化檔案一覽
 

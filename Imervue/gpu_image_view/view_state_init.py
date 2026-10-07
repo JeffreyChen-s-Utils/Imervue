@@ -50,6 +50,7 @@ def init_grid_state(view: GPUImageView) -> None:
     view.focus_ring_visible = False
     view.tile_textures = {}
     view.tile_cache = {}  # path -> img_data
+    view._tile_max_dimensions = (0, 0)
     view.tile_errors: dict[str, str] = {}
     view._tile_error_toasted: set[str] = set()
     view._tile_retry_counts: dict[str, int] = {}

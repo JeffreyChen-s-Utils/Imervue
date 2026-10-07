@@ -35,6 +35,8 @@ für alle fünf Tabs.
 
 Die Thumbnail-Wand schafft Platz für neue GPU-Texturen, indem sie zuerst Kacheln außerhalb des Bildausschnitts entfernt. Sichtbare Kacheln bleiben erhalten und das Speicherbudget wird eingehalten. Kacheln, die nur den Rand berühren, reservieren keine Kapazität.
 
+Darstellung, Thumbnail-Anfragen und Texturfreigabe nutzen denselben sichtbaren Rasterbereich mit einer zusätzlichen Zeile/Spalte. Normale Thumbnail-Größen werden bei Bedarf dekodiert; höchstens so viele Aufgaben wie Worker im Thumbnail-Pool laufen gleichzeitig. Scrollen ersetzt noch nicht gestartete Anfragen. Der Vollauflösungsmodus entdeckt über Zellgrenzen reichende Bilder mit begrenzter Hintergrundarbeit. Der Fortschritt zählt den aktuellen Ausschnitt und gezielte Anfragen. Die Rückkehr aus Deep Zoom behält den warmen Cache und die Rasterposition.
+
 Modify zeigt während der Anpassung eine Vorschau mit geringerer Auflösung im Hintergrund und berechnet nach einer Pause die volle Qualität, damit die Bedienung reagiert. Schnelle Änderungen und Bildwechsel verwerfen ältere Ergebnisse; Anmerkungskoordinaten behalten die volle Bildgröße. Speichern und destruktive Effekte schließen zuerst die Berechnung in voller Qualität ab.
 
 .. contents:: Inhaltsverzeichnis

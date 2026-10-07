@@ -207,6 +207,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 A grade de miniaturas libera espaço para novas texturas GPU removendo primeiro as que estão fora da área visível, preservando as visíveis e respeitando o orçamento de memória. As que apenas tocam a borda não reservam capacidade.
 
+Desenho, solicitações de miniaturas e liberação de texturas compartilham a área visível com uma linha/coluna extra. Os tamanhos normais são decodificados sob demanda, sem exceder o número de workers do grupo de miniaturas; rolar substitui solicitações ainda não iniciadas. O modo de resolução completa continua descobrindo imagens que ultrapassam as células com trabalho de fundo limitado. O progresso conta a vista atual e as solicitações explícitas. Ao voltar do Deep Zoom, o cache e a posição são mantidos.
+
 A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens com árvore de pastas, painel lateral EXIF e ferramentas de biblioteca/organização.
 
 ### Visualizador

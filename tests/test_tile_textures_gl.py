@@ -14,6 +14,7 @@ from Imervue.gpu_image_view.gl_renderer import GLRenderer
 from Imervue.gpu_image_view.texture_upload import upload_rgba_texture
 from Imervue.gpu_image_view.tile_grid_renderer import TileGridRenderer
 from Imervue.gpu_image_view.vram_budget import mipmap_texture_bytes
+from Imervue.gpu_image_view.input_controller import InputController
 
 from _qt_skip import pytestmark  # noqa: E402,F401
 
@@ -123,5 +124,45 @@ def test_texture_release_frees_actual_gl_handles(gl_surface):
         assert view._vram_usage == 0
         assert view._tile_tex_sizes == {}
         assert GL.glGetError() == GL.GL_NO_ERROR
+    finally:
+        _release(view)
+
+
+def test_large_library_scroll_zoom_and_hit_testing_share_visible_geometry(gl_surface):
+    view = _view(*gl_surface)
+    view.model.images = [f"tile-{i}" for i in range(100_000)]
+    view.tile_cache.clear()
+    view._tile_max_dimensions = (16, 16)
+    view.selected_tiles = {"tile-99998"}
+    wall = TileGridRenderer(view)
+    try:
+        for scale, index in [(1., 0), (1., 50_000), (1., 99_998),
+                             (2., 50_000), (.5, 50_000), (1., 0)]:
+            cols = max(1, int(32 // (16 * scale)))
+            row = index // cols
+            view.tile_scale = scale
+            view.grid_offset_y = -row * 16 * scale
+            # Only the current buffer is decoded; old textures remain for
+            # admission to evict under the real tiny GL budget.
+            view.tile_cache.clear()
+            for offset in range(cols * 3):
+                i = row * cols + offset
+                if i >= len(view.model.images):
+                    continue
+                array = np.empty((16, 16, 4), dtype=np.uint8)
+                array[:] = (80 + i % 100, 50, 25, 255)
+                view.tile_cache[view.model.images[i]] = array
+            GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+            wall.paint()
+            path = view.model.images[row * cols]
+            assert InputController(view).tile_at(4 * scale, 4 * scale) == path
+            pixel = GL.glReadPixels(int(4 * scale), 14 - int(4 * scale),
+                                   1, 1, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE)
+            np.testing.assert_allclose(np.frombuffer(pixel, dtype=np.uint8),
+                                       view.tile_cache[path][4, 4], atol=1)
+            assert view._vram_usage <= view._vram_limit
+            assert view.selected_tiles == {"tile-99998"}
+            assert view._frame_tile_viewport is None
+            assert GL.glGetError() == GL.GL_NO_ERROR
     finally:
         _release(view)

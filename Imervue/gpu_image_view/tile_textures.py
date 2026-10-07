@@ -14,12 +14,11 @@ from typing import TYPE_CHECKING
 from OpenGL.GL import glDeleteTextures
 
 from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
-from Imervue.gpu_image_view.tile_layout import tile_grid_layout
+from Imervue.gpu_image_view.tile_viewport import base_tile_size, viewport_for
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-_DEFAULT_TILE_BASE = 256
 
 
 def ensure_tile_texture(view: GPUImageView, path: str, img_data) -> bool:
@@ -60,32 +59,24 @@ def evict_if_needed(view: GPUImageView) -> None:
     _evict_invisible(view, visible)
 
 
-def _base_tile_size(view: GPUImageView) -> int:
+def _base_tile_size(view: GPUImageView) -> float:
     """Return the tile-grid cell base size for visibility computation."""
-    if view.model.images and view.thumbnail_size is not None:
-        return view.thumbnail_size
-    if view.tile_cache:
-        return next(iter(view.tile_cache.values())).shape[1]
-    return _DEFAULT_TILE_BASE
+    return base_tile_size(view)
 
 
 def compute_visible_tile_paths(view: GPUImageView) -> set[str]:
     """Return the subset of cached tiles whose rect intersects the viewport."""
     images = view.model.images
-    base_tile = _base_tile_size(view)
-    draw_scale, cell, cols = tile_grid_layout(
-        view.width(), base_tile, view.tile_scale,
-        view.tile_padding, view.devicePixelRatio(),
-    )
+    viewport = viewport_for(view)
+    draw_scale = viewport.draw_scale
     vw, vh = view.width(), view.height()
 
     visible: set[str] = set()
-    for i, path in enumerate(images):
+    for i in viewport.indices(buffer=0):
+        path = images[i]
         if path not in view.tile_cache:
             continue
-        row, col = divmod(i, cols)
-        x0 = col * cell + view.grid_offset_x
-        y0 = row * cell + view.grid_offset_y
+        x0, y0 = viewport.origin(i)
         img = view.tile_cache[path]
         x1 = x0 + img.shape[1] * draw_scale
         y1 = y0 + img.shape[0] * draw_scale

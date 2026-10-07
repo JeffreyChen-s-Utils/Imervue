@@ -61,6 +61,11 @@ tiles favor interning, so a separate non-repeating six-layer pixel test guards t
 reduction without that advantage. [Paint history results](paint-history-20261007.md)
 include this workload boundary.
 
+[Thumbnail wall results](wall-viewport-20261007.md) compare the same 10k/100k actual GL
+frames with shared row/column candidates, retaining two independent runs and the earlier
+overloaded-host anomaly. Decode admission and cancellation are guarded by separate real
+pool tests; the frame workload continues to exclude disk decode and widget/HUD drawing.
+
 ## Acceptance policy
 
 The fixed baseline and stage-specific targets are recorded in [baseline-20261007.md](baseline-20261007.md).

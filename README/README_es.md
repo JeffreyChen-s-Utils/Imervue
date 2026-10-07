@@ -203,6 +203,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 La cuadrícula de miniaturas libera espacio para nuevas texturas GPU eliminando primero las que están fuera de la vista, preservando las visibles y respetando el presupuesto de memoria. Las que solo tocan el borde no reservan capacidad.
 
+El dibujo, las solicitudes de miniaturas y la liberación de texturas comparten el rango visible con una fila/columna adicional. Los tamaños normales se decodifican bajo demanda, con tantas tareas simultáneas como trabajadores del grupo de miniaturas; al desplazarse se sustituyen las solicitudes aún no iniciadas. El modo de resolución completa descubre en segundo plano, con concurrencia limitada, imágenes que superan sus celdas. El progreso cuenta la vista actual y las solicitudes explícitas. Al volver de Deep Zoom se conservan la caché y la posición.
+
 La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina el visor de imágenes con el árbol de carpetas, la barra lateral EXIF y las herramientas de biblioteca/organización.
 
 ### Visor

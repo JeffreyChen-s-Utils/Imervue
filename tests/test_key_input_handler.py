@@ -293,6 +293,29 @@ class TestRestoreGridState:
         assert view._reloads == []
         assert view.tile_grid_mode is True
 
+    def test_live_viewport_queue_preserves_partial_cache_and_saved_offsets(self):
+        from Imervue.gpu_image_view.thumbnail_queue import ThumbnailQueue
+        view = _grid_restore_view(
+            ["a.png", "b.png"], {"a.png": object()},
+            saved_state={"grid_offset_x": 12, "grid_offset_y": -234, "tile_scale": 1.5},
+        )
+        view._load_generation = 7
+        view._tile_queue = ThumbnailQueue(view.model.images, 7)
+        KeyInputHandler(view)._restore_grid_state()
+        assert view._reloads == []
+        assert view._cleared == [True]
+        assert view.tile_grid_mode
+        assert (view.grid_offset_x, view.grid_offset_y, view.tile_scale) == (12, -234, 1.5)
+        assert "a.png" in view.tile_cache
+
+    def test_stale_queue_does_not_suppress_a_cold_cache_reload(self):
+        from Imervue.gpu_image_view.thumbnail_queue import ThumbnailQueue
+        view = _grid_restore_view(["a.png"], {})
+        view._load_generation = 7
+        view._tile_queue = ThumbnailQueue(view.model.images, 6)
+        KeyInputHandler(view)._restore_grid_state()
+        assert view._reloads == [["a.png"]]
+
 
 
 def _key_event(key, modifiers=Qt.KeyboardModifier.NoModifier):

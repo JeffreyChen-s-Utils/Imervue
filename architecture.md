@@ -110,6 +110,11 @@ Public interfaces other code or users depend on:
    `FolderScanWorker` + `gpu_image_view/tile_loader.py` fill the tile wall → selecting an image
    starts `LoadDeepZoomWorker` with the stored recipe (`recipe_store.get_for_path()`) →
    `GPUImageView` renders deep zoom; plugins receive `on_folder_opened` / `on_image_loaded`.
+   The wall shares `TileViewport` candidates across drawing, decoding and texture admission.
+   `ThumbnailQueue` admits only current viewport/buffer and explicit jobs within pool slots,
+   coalesces filmstrip/retry work and validates generation plus indexed membership.
+   Full-size mode keeps bounded discovery of overlapping image extents. Escape preserves
+   the managed warm cache and saved grid position; cold or stale sources initialize a queue.
 3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_menu.py` →
    `gui/<feature>_dialog.py` → `EffectWorker` (`gui/_apply_save.py`) → `image/<feature>.py` → saved
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.

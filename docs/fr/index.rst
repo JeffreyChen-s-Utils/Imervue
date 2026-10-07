@@ -37,6 +37,8 @@ et *Serveur MCP* sont transversales — elles s'appliquent à l'ensemble des cin
 
 La grille de miniatures libère de la place pour les nouvelles textures GPU en retirant d’abord celles hors du champ, tout en conservant les images visibles et en respectant le budget mémoire. Celles qui touchent seulement le bord ne réservent pas de capacité.
 
+Le dessin, les demandes de miniatures et la libération des textures partagent la zone visible avec une ligne/colonne de marge. Les tailles normales sont décodées à la demande, sans dépasser le nombre de workers du pool ; le défilement remplace les demandes non démarrées. Le mode pleine résolution poursuit une découverte en arrière-plan limitée pour les images dépassant leurs cellules. La progression compte la vue actuelle et les demandes explicites. Le retour de Deep Zoom conserve le cache et la position de la grille.
+
 Modify garde les commandes réactives grâce à un aperçu de moindre résolution en arrière-plan pendant les réglages, puis calcule la pleine qualité après une pause. Les réglages rapides et les changements de photo écartent les anciens résultats ; les annotations gardent les coordonnées de l’image complète. Enregistrer ou appliquer des effets destructifs termine d’abord le calcul en pleine qualité.
 
 .. contents:: Table des matières

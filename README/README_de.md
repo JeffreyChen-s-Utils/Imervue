@@ -200,6 +200,8 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 Die Thumbnail-Wand schafft Platz für neue GPU-Texturen, indem sie zuerst Kacheln außerhalb des Bildausschnitts entfernt. Sichtbare Kacheln bleiben erhalten und das Speicherbudget wird eingehalten. Kacheln, die nur den Rand berühren, reservieren keine Kapazität.
 
+Darstellung, Thumbnail-Anfragen und Texturfreigabe nutzen denselben sichtbaren Rasterbereich mit einer zusätzlichen Zeile/Spalte. Normale Thumbnail-Größen werden bei Bedarf dekodiert; höchstens so viele Aufgaben wie Worker im Thumbnail-Pool laufen gleichzeitig. Scrollen ersetzt noch nicht gestartete Anfragen. Der Vollauflösungsmodus entdeckt über Zellgrenzen reichende Bilder mit begrenzter Hintergrundarbeit. Der Fortschritt zählt den aktuellen Ausschnitt und gezielte Anfragen. Die Rückkehr aus Deep Zoom behält den warmen Cache und die Rasterposition.
+
 Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetrachter mit Ordnerbaum, EXIF-Sidebar und Bibliotheks-/Organisationstools.
 
 ### Viewer

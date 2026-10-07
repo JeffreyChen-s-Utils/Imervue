@@ -486,6 +486,8 @@ class GPUImageView(
     # Worker 取消
     # ---------------------------
     def _cancel_tile_workers(self):
+        self._tile_queue = None
+        getattr(self, "_filmstrip_pending", set()).clear()
         for worker in self.active_tile_workers:
             with contextlib.suppress(RuntimeError, TypeError):
                 worker.signals.finished.disconnect()
