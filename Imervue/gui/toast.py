@@ -7,6 +7,8 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
 from PySide6.QtWidgets import QLabel, QWidget, QGraphicsOpacityEffect
 
+from Imervue.system.ui_scale import font_px, scaled_px
+
 
 class ToastWidget(QLabel):
     """半透明浮動通知標籤"""
@@ -38,7 +40,8 @@ class ToastWidget(QLabel):
     def show_message(self, text: str, level: str = "info", duration_ms: int = 2500):
         base = self._STYLE.get(level, self._STYLE["info"])
         self.setStyleSheet(
-            f"{base} border-radius: 6px; padding: 8px 18px; font-size: 13px;"
+            f"{base} border-radius: 6px; padding: {scaled_px(8)}px {scaled_px(18)}px;"
+            f" {font_px(13)}"
         )
         self.setText(text)
         self.adjustSize()

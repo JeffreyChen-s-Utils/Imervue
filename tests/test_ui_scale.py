@@ -163,3 +163,63 @@ def test_main_imports_apply_helper_without_circular_deps():
     from Imervue.system import ui_scale as mod
     importlib.reload(mod)  # ensure module is re-importable after change
     assert callable(mod.load_and_apply_from_settings)
+
+
+# ---------------------------------------------------------------------------
+# scale_factor / scaled_px / font_px — pixel sizes that follow the scale
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("saved", "factor"), [
+    (None, 1.0), (100, 1.0), (80, 0.8), (150, 1.5), (200, 2.0),
+    (10, 0.8), (9999, 2.0), ("abc", 1.0), ("120", 1.2),
+])
+def test_scale_factor_reads_and_clamps_the_setting(saved, factor):
+    from Imervue.system.ui_scale import scale_factor
+    if saved is None:
+        user_setting_dict.pop("ui_scale_percent", None)
+    else:
+        user_setting_dict["ui_scale_percent"] = saved
+    assert scale_factor() == pytest.approx(factor)
+
+
+@pytest.mark.parametrize(("percent", "px", "expected"), [
+    (100, 24, 24), (150, 24, 36), (200, 24, 48), (80, 24, 19),
+    (80, 1, 1), (80, 0, 1), (150, 0.4, 1), (150, 11, 16),
+])
+def test_scaled_px(percent, px, expected):
+    from Imervue.system.ui_scale import scaled_px
+    user_setting_dict["ui_scale_percent"] = percent
+    assert scaled_px(px) == expected
+
+
+@pytest.mark.parametrize(("percent", "expected"), [
+    (100, "font-size: 11px;"), (200, "font-size: 22px;"), (80, "font-size: 9px;"),
+])
+def test_font_px_is_a_stylesheet_declaration(percent, expected):
+    from Imervue.system.ui_scale import font_px
+    user_setting_dict["ui_scale_percent"] = percent
+    assert font_px(11) == expected
+
+
+def test_no_stylesheet_in_the_app_hard_codes_a_pixel_font_size():
+    """A literal ``font-size: Npx`` stays the same size when the UI scale grows the rest."""
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "Imervue"
+    literal = re.compile(r"font-size:\s*\d+px")
+    offenders = [
+        f"{path.relative_to(root)}:{number}"
+        for path in sorted(root.rglob("*.py"))
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1)
+        if literal.search(line)
+    ]
+    assert offenders == []
+
+
+def test_a_hint_label_built_at_a_larger_scale_gets_larger_text(qapp):
+    from Imervue.gui.preferences_dialog import _hint_label_style
+    user_setting_dict["ui_scale_percent"] = 100
+    assert _hint_label_style() == "color: #888; font-size: 11px;"
+    user_setting_dict["ui_scale_percent"] = 200
+    assert _hint_label_style() == "color: #888; font-size: 22px;"

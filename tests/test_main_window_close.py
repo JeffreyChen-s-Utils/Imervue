@@ -45,7 +45,8 @@ class _Window(_Base):
     def __init__(self, log, failing):
         self._log = log
         for name in ("_save_current_folder_session", "_main_tabs", "tree", "modify_panel",
-                     "viewer", "_save_window_geometry", "plugin_manager", "deleteLater",
+                     "viewer", "_save_window_geometry", "_save_dock_layouts",
+                     "plugin_manager", "deleteLater",
                      "_folder_watcher"):
             setattr(self, name, _Rec(log, name, failing))
         self._on_main_tab_changed = object()
@@ -96,6 +97,7 @@ _TEARDOWN = [
     "viewer._clear_deep_zoom",
     "viewer.doneCurrent",
     "_save_window_geometry",
+    "_save_dock_layouts",
     "cancel_pending_save",
     "write_user_setting",
     "commit_pending_deletions",

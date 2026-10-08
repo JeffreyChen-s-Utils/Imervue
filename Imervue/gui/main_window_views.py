@@ -85,13 +85,12 @@ class MainWindowViewsMixin:
         widgets = [
             self.menuBar(),
             self.statusBar(),
-            getattr(self, "_tree_panel", self.tree),
             self._tab_bar,
             self.filename_label,
+            self._tree_dock,
+            self._info_dock,
+            self._image_issue_dock,
         ]
-        sidebar = getattr(self, "exif_sidebar", None)
-        if sidebar is not None:
-            widgets.append(sidebar)
         main_tab_bar = self._main_tabs.tabBar()
         if main_tab_bar is not None:
             widgets.append(main_tab_bar)

@@ -5,9 +5,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QSplitter, QMenu, QTabWidget,
+    QApplication, QMainWindow, QMenu, QTabWidget,
 )
-from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.system.qt_timers import call_later
@@ -45,6 +44,7 @@ from Imervue.gui.main_window_missing import MainWindowMissingMixin
 from Imervue.gui.main_window_folders import MainWindowFoldersMixin
 from Imervue.gui.main_window_tabs import MainWindowTabsMixin
 from Imervue.gui.main_window_layout import MainWindowLayoutMixin
+from Imervue.gui.main_window_docks import MainWindowDocksMixin, make_dock_host
 from Imervue.gui.main_window_screens import MainWindowScreensMixin
 from Imervue.gui.main_window_views import MainWindowViewsMixin
 from Imervue.gui.main_window_status import MainWindowStatusMixin
@@ -66,7 +66,8 @@ def _other_live_windows_remain(registry, closing) -> bool:
 
 
 class ImervueMainWindow(
-        MainWindowLayoutMixin, MainWindowBrowseMixin, MainWindowStatusMixin, MainWindowViewsMixin,
+        MainWindowLayoutMixin, MainWindowDocksMixin, MainWindowBrowseMixin,
+        MainWindowStatusMixin, MainWindowViewsMixin,
         MainWindowScreensMixin, MainWindowTabsMixin, MainWindowFoldersMixin,
         MainWindowMissingMixin, MainWindowFilterMixin, QMainWindow):
     # Every live main window registers here so closeEvent can tell whether it is
@@ -96,37 +97,24 @@ class ImervueMainWindow(
 
         # ===== 頂層 QTabWidget =====
         # Tab 0: Imervue 主頁面（不可關閉）
-        # Tab 1: 修改面板（左面板 | 圖片 | 右面板）
+        # Tab 1: 修改面板（工具 dock | 圖片 | 調整 dock）
         self._main_tabs = QTabWidget()
         self._main_tabs.setTabsClosable(False)
         self._main_tabs.setMovable(False)
         self.setCentralWidget(self._main_tabs)
 
         # --------------------------------------------------------
-        # Tab 0: Imervue 主頁面
+        # Tab 0: Imervue 主頁面 — 巢狀 QMainWindow：檢視器欄在中央，
+        # 檔案樹 / 圖片資訊 / 載入問題是它的 dock（見 main_window_docks）。
         # --------------------------------------------------------
-        imervue_page = QWidget()
-        imervue_layout = QVBoxLayout(imervue_page)
-        imervue_layout.setContentsMargins(0, 0, 0, 0)
-        imervue_layout.setSpacing(0)
-
-        # Saved workspaces store and restore this tree | viewer split.
-        splitter = self._main_splitter = QSplitter()
-        imervue_layout.addWidget(splitter)
-
+        self._browse_window = make_dock_host()
         self._build_file_tree()
-
-        right_widget = self._build_viewer_column()
-
-        # ===== 組裝 Tab 0：檔案樹 | 檢視器欄 =====
-        splitter.addWidget(self._tree_panel)
-        splitter.addWidget(right_widget)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([400, 1000])
-
-        self._main_tabs.addTab(imervue_page, "Imervue")
+        self._browse_window.setCentralWidget(self._build_viewer_column())
+        self._build_browse_docks()
+        self._main_tabs.addTab(self._browse_window, "Imervue")
 
         self._build_workspace_tabs()
+        self._restore_dock_layouts()
 
         self._build_status_bar()
 
@@ -282,7 +270,7 @@ class ImervueMainWindow(
         for shortcut in self._folder_tab_shortcuts:
             shortcut.setEnabled(idx == 0)
         if idx == 1:
-            # 切到修改分頁 → 綁定圖片，canvas 會自動插入 splitter 中間
+            # 切到修改分頁 → 綁定圖片，canvas 會放進中央的 CanvasHost
             images = self.viewer.model.images
             path = None
             if images and 0 <= self.viewer.current_index < len(images):
@@ -689,6 +677,8 @@ class ImervueMainWindow(
         # 儲存視窗位置與大小（在寫入設定之前）
         with best_effort("save the window geometry", _logger):
             self._save_window_geometry()
+        with best_effort("save the panel layout", _logger):
+            self._save_dock_layouts()
 
         # 最優先：儲存使用者設定（在任何可能失敗的操作之前）
         # 先取消任何待處理的 debounced save，避免背景 timer 在關閉過程中

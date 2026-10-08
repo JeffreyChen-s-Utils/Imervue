@@ -80,7 +80,7 @@ When you open Imervue, you will see three areas:
 
 - **Left**: Folder tree. Click a folder to browse the images inside.
 - **Center**: Image display area. Shows all images as a thumbnail grid.
-- **Right**: EXIF sidebar, folded into a thin strip at start: click it to open it. It shows the shooting information of the picture that is open.
+- **Right**: Image Info panel. It shows the shooting information, rating and notes of the picture that is open. The folder tree and this panel are docks: drag a title bar to move, float or tab one, show or hide them under ``Thumbnail Size`` > ``Panels``, and ``Reset Panel Layout`` there puts every panel back. The default look is the **Modern Dark** theme; ``File`` > ``Preferences`` offers **Modern Light**, the system look and four more.
 
 Imervue writes a log of each session to ``imervue.log`` next to the program (in
 ``%LOCALAPPDATA%\Imervue``, or ``~/.cache/imervue`` outside Windows, when that folder is
@@ -2118,7 +2118,7 @@ Workspace Layout Presets
 
 ``File`` > ``Workspaces…`` captures the current window geometry, dock / toolbar
 arrangement, the tree / viewer split, and active root folder under a name — then lets
-you flip between saved layouts. The active tab and the Modify tab's panel split are not stored. The dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
+you flip between saved layouts. The dock layouts of the Imervue and Modify tabs are stored too; the active tab is not. The dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
 ``user_setting.json`` (under the ``workspaces`` key) and survive across
 sessions.
 

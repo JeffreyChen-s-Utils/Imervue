@@ -32,13 +32,12 @@ class MainWindowScreensMixin:
         self._reflow_modify_canvas()
 
     def _reflow_modify_canvas(self) -> None:
-        """Re-flow the Modify splitter and re-fit its canvas after a window /
-        screen size change.
+        """Re-fit the Modify canvas after a window / screen size change.
 
-        The splitter holds absolute pane sizes, so without this the centre
-        canvas kept its old width when the window shrank and the image
-        overflowed / was cropped. Only the Modify canvas is touched — NOT the
-        deep-zoom viewer, whose user zoom must survive a plain window resize.
+        Its width comes from the dock layout, which follows the window by
+        itself; the repaint re-fits the image to it. Only the Modify canvas is
+        touched — NOT the deep-zoom viewer, whose user zoom must survive a
+        plain window resize.
         """
         if getattr(self, "_main_tabs", None) is None:
             return
@@ -46,9 +45,6 @@ class MainWindowScreensMixin:
         canvas = getattr(getattr(self, "modify_panel", None), "_canvas", None)
         if should_refit_modify_canvas(
                 self._main_tabs.currentIndex(), canvas is not None):
-            splitter = getattr(self, "_modify_splitter", None)
-            if splitter is not None:
-                self.modify_panel._size_modify_splitter(splitter, _retries=0)
             canvas.update()
 
     def _connect_screen_change_signal(self, _retries: int = 20) -> None:
@@ -87,14 +83,7 @@ class MainWindowScreensMixin:
         canvas = getattr(self.modify_panel, "_canvas", None)
         if should_refit_modify_canvas(
                 self._main_tabs.currentIndex(), canvas is not None):
-            splitter = getattr(self, "_modify_splitter", None)
-            if splitter is not None:
-                # Two chains, as on the deep-zoom path: the first drains Qt's
-                # queued layout, the second spans the window actually landing on
-                # the new monitor. setSizes has no per-paint net behind it, so
-                # without the second an intermediate width is locked in.
-                self.modify_panel._size_modify_splitter(splitter)
-                self.modify_panel.schedule_modify_splitter_settle(splitter)
+            # The dock layout hands the canvas its new width; repaint once it has.
             call_later(0, canvas, canvas.update)
 
     def _adapt_to_current_screen(self) -> None:

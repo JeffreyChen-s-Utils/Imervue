@@ -82,7 +82,7 @@ Au lancement d'Imervue, vous découvrez trois zones :
 
 - **Gauche** : arbre des dossiers. Cliquez sur un dossier pour parcourir les images qu'il contient.
 - **Centre** : zone d'affichage des images. Présente toutes les images sous forme de grille de vignettes.
-- **Droite** : barre latérale EXIF, repliée en une fine bande au démarrage : cliquez dessus pour l'ouvrir. Elle affiche les informations de prise de vue de l'image ouverte.
+- **Droite** : panneau d'informations de l'image. Il affiche les informations de prise de vue, la note et les remarques de l'image ouverte. L'arborescence des dossiers et ce panneau sont des docks : faites glisser une barre de titre pour en déplacer, détacher ou empiler un en onglets, affichez-les ou masquez-les dans ``Thumbnail Size`` > ``Panels``, et ``Reset Panel Layout`` y remet chaque panneau à sa place. L'apparence par défaut est le thème **Modern Dark** ; ``File`` > ``Preferences`` propose **Modern Light**, l'apparence du système et quatre autres.
 
 Imervue écrit le journal de chaque session dans ``imervue.log`` à côté du programme (dans ``%LOCALAPPDATA%\Imervue``, ou ``~/.cache/imervue`` hors de Windows, lorsque ce dossier est en lecture seule). Le journal de la session précédente est conservé sous le nom ``imervue.previous.log``, si bien qu'après un plantage le journal qui l'explique est toujours là une fois Imervue relancé — joignez les deux lorsque vous signalez un problème.
 
@@ -2188,8 +2188,8 @@ Préréglages de disposition d'espace de travail
 
 ``Fichier`` > ``Espaces de travail…`` capture la géométrie courante de la fenêtre, la disposition
 des docks / barres d'outils, la séparation arbre / visionneuse et le dossier racine actif sous un nom — puis
-vous laisse basculer entre les dispositions enregistrées. L'onglet actif et la séparation des panneaux de l'onglet Modify ne sont pas
-enregistrés. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
+vous laisse basculer entre les dispositions enregistrées. Les dispositions des docks des onglets Imervue et Modify sont enregistrées aussi ; l'onglet actif ne l'est
+pas. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
 et Supprimer. Les espaces de travail sont conservés dans ``user_setting.json`` (sous la clé
 ``workspaces``) et survivent aux sessions.
 

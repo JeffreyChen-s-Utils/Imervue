@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-07 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.90`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-08 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.90`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,20 +66,20 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 959 | 160,240 |
+| `tests/` | 961 | 160,996 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 174 | 43,523 |
-| `Imervue/gui/` | 176 | 35,549 |
+| `Imervue/gui/` | 176 | 35,606 |
 | `Imervue/puppet/` | 60 | 16,393 |
 | `Imervue/image/` | 130 | 15,686 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 70 | 13,661 |
-| `Imervue/multi_language/` | 8 | 15,485 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 70 | 13,663 |
+| `Imervue/multi_language/` | 8 | 15,535 |
 | `Imervue/desktop_pet/` | 29 | 7,089 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 34 | 4,952 |
-| `Imervue/menu/` | 11 | 3,671 |
-| `Imervue/` 根層 | 6 | 1,951 |
+| `Imervue/menu/` | 11 | 3,689 |
+| `Imervue/` 根層 | 7 | 2,075 |
 | `Imervue/plugin/` | 15 | 3,036 |
-| `Imervue/system/` | 33 | 3,208 |
+| `Imervue/system/` | 34 | 3,498 |
 | `Imervue/export/` | 8 | 1,035 |
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
@@ -138,23 +138,23 @@ py -m Imervue [--debug] [--software_opengl] [file]
 ```
 ImervueMainWindow
 ├── QTabWidget (self._main_tabs)
-│   ├── Tab 0  "Imervue"       ← QSplitter
-│   │      ├── 左：_FileTreeView  (FileTreeSortProxy → FolderThumbnailModel)
-│   │      │        + tree_search (QLineEdit)
-│   │      └── 右：QVBoxLayout
-│   │             ├── QTabBar          ← 瀏覽器式圖片分頁（每頁 = 一張 deep-zoom 圖）
-│   │             ├── BreadcrumbBar    ← 可點擊路徑列
-│   │             ├── filter row       ← 檔名 / tag / rating / date 過濾
-│   │             ├── filename_label
-│   │             └── QSplitter
-│   │                    ├── QStackedWidget   0=GPUImageView 1=ImageListView 2=DualImageView
-│   │                    └── ExifSidebar
-│   ├── Tab 1  "Modify"        ← QSplitter：左工具列 | AnnotationCanvas | 右顯影滑桿
+│   ├── Tab 0  "Imervue"       ← 巢狀 QMainWindow `_browse_window`（`gui/main_window_docks.py`）
+│   │      ├── 左 dock「Folders」`_tree_dock`：tree_search (QLineEdit) + _FileTreeView
+│   │      │        (FileTreeSortProxy → FolderThumbnailModel)
+│   │      ├── 中央：QVBoxLayout
+│   │      │      ├── QTabBar          ← 瀏覽器式圖片分頁（每頁 = 一張 deep-zoom 圖）
+│   │      │      ├── BreadcrumbBar    ← 可點擊路徑列
+│   │      │      ├── filter row       ← 檔名 / tag / rating / date 過濾
+│   │      │      ├── filename_label
+│   │      │      └── QStackedWidget   0=GPUImageView 1=ImageListView 2=DualImageView
+│   │      ├── 右 dock「Image Info」`_info_dock`：ExifSidebar（dock 顯示時才讀 EXIF）
+│   │      └── 右 dock「Image load issues」`_image_issue_dock`：ImageIssuePanel（有問題時才顯示）
+│   ├── Tab 1  "Modify"        ← 巢狀 QMainWindow `_modify_window`：左 dock「Tools」| 中央 `CanvasHost`
+│   │                             （提示文字 ↔ AnnotationCanvas）| 右 dock「Adjustments」
 │   ├── Tab 2  "Paint"         ← `_paint_page`；PaintWorkspace 第一次用到才建立（`paint_workspace` property），有待還原的自動存檔時啟動就建；切回分頁保留現有文件，首次進入顯示空白畫布
 │   ├── Tab 3  "Puppet"        ← 選用（`gui/optional_tabs.py`）；`_puppet_page`，第一次打開才建 PuppetWorkspace (QMainWindow-in-tab)
 │   └── Tab 4  "Desktop Pet"   ← 選用；`_pet_page`，第一次打開（或寵物設定為啟動時顯示）才建 PetWorkspace（控制面板；角色在另一個 top-level PetWindow）
 ├── QStatusBar  ← 訊息 + 色標籤 chip + index/解析度/大小/縮放/游標 + MemoryPressureIndicator + 進度條
-├── QDockWidget "Image load issues"  ← ImageIssuePanel
 └── 系統匣 PetTrayIcon（平台支援、且 Desktop Pet 分頁已建立時）
 ```
 
@@ -213,7 +213,7 @@ ImervueMainWindow
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 722 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 712 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 727 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑；`build_parser` 依序加手寫子指令、`cli_tools` 由 MCP 工具產生的 46 個、最後 `list-ops` |
 | `cli_tools.py` | 273 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 48 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤；`add_argument_as_written` 加選項後把 help 設回原文（Python 3.10 會替 `--x/--no-x` 的 help 補上 ` (default: …)`，之後的版本不會），`cli.py` 的手寫子指令也經它加選項 |
 | `integration_guide.py` | 145 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
@@ -234,7 +234,8 @@ ImervueMainWindow
 | `macos_bundle.py` | 74 | macOS `.app` Info.plist 文件型別關聯；每種相機 RAW 對到 `public.camera-raw-image` |
 | `onboarding.py` | 81 | 首次啟動導覽步驟註冊表 |
 | `release_notes.py` | 111 | What's-New 對話框的版本說明資料 |
-| `themes.py` | 175 | 內建配色主題 |
+| `themes.py` | 246 | 內建配色主題：`modern_dark`（預設）、`modern_light`、`default`（系統外觀）與四個只有 QSS 的舊主題；`apply_theme` 對 modern 主題套 Fusion + 調色盤 + QSS，回到系統外觀時還原啟動時的 style 與調色盤；`offer_modern_theme` 把仍在系統外觀的設定檔一次性換成預設主題；`theme_label` 取翻譯後的名稱 |
+| `modern_theme.py` | 197 | Modern Dark / Modern Light：`ThemeColours` 色票、`build_palette()`（Fusion 用的 `QPalette`，停用文字用 muted）、`build_stylesheet()`（只塑形外框：分頁、dock 標題、捲軸、輸入框、按鈕；長度用 `em` 所以跟著 UI 縮放；刻意不碰 QComboBox / QSpinBox 以保留箭頭） |
 | `best_effort.py` | 29 | `best_effort(step)`：不中斷呼叫端地執行一段收尾步驟，失敗時以 warning 帶 traceback 記錄（取代無聲的 `suppress(Exception)`） |
 | `qt_translations.py` | 60 | `install_qt_translations(app, language)`：依介面語言載入 PySide6 附帶的 `qtbase_<locale>.qm`，讓 Qt 內建字串（確定 / 取消、是 / 否、檔案對話框、分頁關閉提示）跟著翻譯；英文或外掛語言不裝 |
 | `job_state.py` | 174 | thread-safe durable 成功／失敗／跳過結果與 O(1) summary/finish |
@@ -254,7 +255,7 @@ ImervueMainWindow
 | `natural_sort.py` | 29 | `natural_key(name)`：和檔案總管一樣的自然排序鍵（`img2` 在 `img10` 之前，不分大小寫，全形數字也算數字；相等時依小寫、原名定序）；檢視器的名稱排序（縮圖格、上下張、資料夾快取）、`sort_menu`、網頁相簿與各批次對話框的清單都用它，和檔案樹的 numeric `QCollator` 一致 |
 | `pillow_setup.py` | 25 | `configure_pillow()`：GUI（`__main__.main`）、直接執行的 CLI、MCP server 啟動時套用的 Pillow 設定：`raise_pixel_limit()` 加上 `ImageFile.LOAD_TRUNCATED_IMAGES`，中途截斷的 JPEG／PNG／TIFF／GIF／BMP（下載或複製中斷、從故障記憶卡救回）像瀏覽器一樣讀到截斷處，不再整張打不開；整個行程生效，測試不經過這裡，所以測試裡仍是 Pillow 預設 |
 | `pixel_limit.py` | 87 | `raise_pixel_limit()`：把 Pillow 的 `MAX_IMAGE_PIXELS` 依實體記憶體放寬（`total_memory_bytes()`；拒絕點落在解碼需要全部記憶體處，16 GB 約 13 億像素，不低於 Pillow 預設），由 `pillow_setup.configure_pillow()` 呼叫；`decode_slot(pixels)`：超過 Pillow 預設的巨圖一次只解一張（`image_loader` 的點陣解碼與縮圖使用），避免縮圖 worker 同時解多張全景圖耗盡記憶體 |
-| `ui_scale.py` | 61 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用） |
+| `ui_scale.py` | 83 | 應用程式全域 UI 縮放係數（必須在任何 widget 佈局前套用）；`scale_factor()` / `scaled_px()` / `font_px()` 讓以像素寫死的寬高與 `font-size` 跟著縮放 |
 | `watch_folder.py` | 138 | 監控資料夾自動化：新檔案進來自動套用動作；預設收檢視器能開的每種靜態格式（連線拍攝的 RAW 也算）；經 `list_images` 列舉，Mac 複製進來的 `._` 檔不觸發動作 |
 
 ### 6.3 `Imervue/user_settings/`
@@ -567,11 +568,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 920 | **Modify 分頁面板**：工具列、內嵌 `AnnotationCanvas`、來源解碼／存檔與 recipe 提交。背景預覽由 `DevelopPreviewMixin` 協作，右側面板與 splitter 尺寸由既有 mixin 提供；發出 `recipe_committed` signal |
+| `develop_panel.py` | 933 | **Modify 分頁面板**：工具列（按鈕尺寸依標籤文字與 UI 縮放計算）、內嵌 `AnnotationCanvas`（綁定圖片時放進主視窗的 `CanvasHost`）、來源解碼／存檔與 recipe 提交。背景預覽由 `DevelopPreviewMixin` 協作，右側面板由 `DevelopRightPanelMixin` 提供；發出 `recipe_committed` signal |
 | `develop_preview.py` | 169 | `PreviewScheduler`：每面板至多一個低解析與一個完整 worker，最新請求覆蓋等待項目，版本與取消雙重守衛；QImage 在背景準備，UI queued signal 安装；sender 由 application 持有至 queued delete |
 | `develop_preview_panel.py` | 132 | `DevelopPreviewMixin`：拖曳低解析／防抖完整品質、幾何座標與狀態、過期結果檢查；儲存／破壞性效果先取得完整像素，避免保存暫時預覽 |
-| `develop_right_panel.py` | 331 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原）與預覽工作／失敗標籤，每段一個 `_build_*` 方法 |
-| `modify_splitter.py` | 131 | `ModifySplitterMixin` + 純函式 `canvas_splitter_sizes()` / `splitter_is_alive()`：把剩餘寬度給中央畫布，並在換螢幕時以 `settle_poll` 持續重算 |
+| `develop_right_panel.py` | 342 | `DevelopRightPanelMixin`：Modify 右側屬性面板（裁切、繪圖屬性、標註存檔、顯影滑桿、recipe 重設／復原）與預覽工作／失敗標籤，每段一個 `_build_*` 方法 |
 | `annotation_canvas.py` | 860 | 註解畫布 widget + `QUndoCommand`、座標／選取／文字／鍵盤；可用低解析 QImage 配完整幾何，原生底圖改變訊號與完整品質 resolver 保護烘焙／存檔；繪製、裁切、馬賽克／模糊由 mixin 提供 |
 | `annotation_drawing.py` | 417 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
@@ -581,15 +581,16 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `dialog_rows.py` | 135 | 批次／資料夾／單張工具對話框共用的列與路徑挑選：`save_path_into()` / `open_path_into()`（檔案對話框選到的路徑寫入輸入框；`save_path_into` 也回傳它，取消時回傳 None）、`may_replace()`（目標已存在又不是存檔對話框確認過的，經 `ask_to_replace()` 問要不要取代，預設不取代）、`confirm(parent, title, text)`（刪除、清空、覆寫前的是／否確認，預設「否」；Qt 自己會把「是」設成預設，所有 `QMessageBox.question` 都要指定預設按鈕，`test_questions_default_to_no` 守著）、`image_save_filter()`（PNG / JPEG / TIFF 存檔篩選）；`path_browse_row()`（路徑輸入框＋瀏覽…）、`folder_picker_row()`（再加前置標籤）、`quality_slider()`（「品質：N」標籤＋0–100 滑桿）、`action_button_row()`（靠右按鈕列）；檔案對話框與顯示切換由呼叫端負責 |
 | `color_swatch.py` | 46 | `ColorSwatchButton`：以目前顏色填滿的按鈕，點擊開啟 `QColorDialog`，`rgb()` 讀回（邊框與說明文字對話框用） |
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
-| `slider_spin.py` | 75 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
+| `slider_spin.py` | 77 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
 | `main_window_filter.py` | 262 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
 | `main_window_folders.py` | 306 | `MainWindowFoldersMixin`：輪詢目前資料夾（回到前景時立刻檢查並 refresh 資料夾樹）、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
 | `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
-| `main_window_screens.py` | 205 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
-| `main_window_views.py` | 124 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
+| `main_window_screens.py` | 194 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
+| `main_window_views.py` | 123 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
 | `main_window_status.py` | 94 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
-| `main_window_layout.py` | 372 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
+| `main_window_layout.py` | 353 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
+| `main_window_docks.py` | 186 | `MainWindowDocksMixin`：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
 | `optional_tabs.py` | 34 | 選用分頁的設定：`tab_enabled`／`set_tab_enabled`（`puppet_tab_enabled`、`desktop_pet_tab_enabled`，預設開、下次啟動生效）、`pet_shows_on_launch` |
 | `main_window_browse.py` | 147 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
 | `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
@@ -598,8 +599,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `folder_thumbnail_model.py` | 173 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（`folder_preview_path` 經 `list_images`：自然排序、跳過 `._` 等隱藏檔，和縮圖牆的第一張一致；取代不穩定的 Windows shell 縮圖） |
 | `image_list_view.py` | 723 | 清單檢視（`QTableView`，縮圖牆的替代）；名稱自然排序，使用者點選的排序欄在 `set_paths` 重建後照樣套用（沒點過時維持檢視器的順序、不顯示箭頭）；點星等欄依點到的星（`star_at`）評分；`refetch(paths)` 讓外部改寫、刪除或復原的列重新讀取（舊縮圖留到新的到為止，讀取中途檔案變了就丟掉那次結果重讀）；Delete／Undo 與評分、我的最愛、挑片、色彩標籤（F1–F5）照「快捷鍵設定」解讀（`_handle_edit_key`），刪除、復原、標記選取列都交給主視窗 |
 | `dual_image_view.py` | 199 | 雙圖 Split / Manga / RTL；可選 max_edge 限制來源預覽，原本完整尺寸 constructor 保持相容 |
-| `exif_sidebar.py` | 438 | 可收合的 EXIF 側邊欄（含星等元件） |
-| `breadcrumb_bar.py` | 147 | 麵包屑路徑列 |
+| `exif_sidebar.py` | 415 | 圖片資訊面板（EXIF、星等元件、備註），由主視窗放進「Image Info」dock；`set_active()` 跟著 dock 的顯示狀態開關 EXIF 讀取；尺寸經 `scaled_px` 跟著 UI 縮放，顏色取自主題調色盤 |
+| `breadcrumb_bar.py` | 154 | 麵包屑路徑列（無捲軸；路徑比列寬時捲到尾端，顏色取自調色盤） |
 | `timeline_view.py` | 362 | 時間軸檢視（年/月/日分組） |
 | `toast.py` | 96 | Toast / snackbar 通知 |
 | `settings_notice.py` | 40 | `warn_if_settings_unreadable(parent)`：啟動時設定檔讀不到，就用非阻塞 `QMessageBox` 說明已改用預設值、副本會存在哪、怎麼取回（主視窗啟動後 800 ms 呼叫） |
@@ -613,7 +614,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_tab_nav.py` | 47 | Modify/Paint 分頁左右鍵的純路由決策 |
 | `screen_fit.py` | 62 | 換螢幕時主視窗自適應的純幾何 |
 | `settle_poll.py` | 58 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題）；`owner=` 讓鏈隨物件銷毀而停 |
-| `workspace_manager.py` | 154 | 具名工作區預設（幾何 + 佈局快照） |
+| `workspace_manager.py` | 158 | 具名工作區預設（幾何 + 佈局快照，含 Imervue / Modify 兩個分頁的 dock 版面） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
 | `photo_workflow_dialog.py` | 296 | 每視窗 modeless 搜尋→比較→挑片→既有顯影 preset→既有批次匯出；500 筆分頁、保留隱藏勾選／preset／回程，外部 DB 挑片同步，800px 來源比較 |
 | `background_jobs.py` | 337 | 跨視窗持有執行緒及單張 completed results、failure-only retry、bounded clickable 明細與完整報告 |
@@ -674,7 +675,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 設定 / 系統
 
 `preferences_dialog.py`(295) 偏好設定（VRAM、UI 縮放、主題、瀏覽輔助、選用分頁） · `shortcut_settings_dialog.py`(407) · `profiles_dialog.py`(206) 多帳號 ·
-`workspace_dialog.py`(231) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(358) 軟刪除回收桶 ·
+`workspace_dialog.py`(236) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(358) 軟刪除回收桶 ·
 `cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(334) ·
 `dual_pane_dialog.py`(167) 雙窗格檔案管理 · `onboarding_dialog.py`(135) 首次導覽 · `whats_new_dialog.py`(143)
 
@@ -1147,6 +1148,8 @@ SonarCloud（`JeffreyChen-s-Utils_Imervue`）。
 `singleShot(0)` 的重試鏈跨不過作業系統的視窗變更（換螢幕、還原幾何）。
 正解是 `gui/settle_poll.py` 的 `poll_settle`：有界地重跑佈局步驟直到穩定。
 新增類似邏輯時必須同時檢查所有呼叫端。
+能交給 Qt 佈局的就不要自己算：Modify 分頁原本用 `QSplitter.setSizes` 加 `poll_settle` 維持中央畫布寬度，
+改成巢狀 `QMainWindow` 的 dock 之後中央 widget 的寬度由佈局決定，那條重算鏈整個移除。
 
 延遲呼叫一律走 `system/qt_timers.call_later(ms, owner, fn)`，不寫 `QTimer.singleShot(ms, lambda: …)` 或 `QTimer.singleShot(ms, obj.method)`：
 lambda 與綁定方法都不會隨物件刪除而取消（PySide6 6.11 實測：Python 方法與 `widget.update` 這類 C++ 槽都照樣執行），只有帶 context 的多載
@@ -1309,9 +1312,11 @@ GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readb
 
 ## 12. 架構注意事項與已知陷阱
 
-1. **Modify 分頁的中央不是 viewer。** 中央是 `develop_panel` 在綁定圖片時插進 splitter 第 1 格的
-   `AnnotationCanvas`；`GPUImageView` 一直留在 Imervue 分頁，在 Modify 分頁是隱藏的、沒有 reparent，
-   所以收不到鍵盤與 resize。鍵盤、resize、fit 行為都掛在 canvas 上。
+1. **Modify 分頁的中央不是 viewer。** 中央是 `CanvasHost`（`gui/main_window_docks.py`），`develop_panel` 在綁定
+   圖片時把 `AnnotationCanvas` 放進去；`GPUImageView` 一直留在 Imervue 分頁，在 Modify 分頁是隱藏的、沒有 reparent，
+   所以收不到鍵盤與 resize。鍵盤、resize、fit 行為都掛在 canvas 上。Imervue 與 Modify 分頁的側邊面板是巢狀
+   `QMainWindow` 的 dock，不屬於外層主視窗：外層的 `saveState()` 不含它們，版面另存在 `browse_dock_state` /
+   `modify_dock_state`。
 
 2. **`plugins/` 是 gitignored。** 新增外掛檔案要 `git add -f`，否則會靜默漏掉。
    而且改完必須鏡像到 `D:\Codes\Imervue_Plugins` 的 `main` 分支才會到使用者手上；
@@ -1329,7 +1334,7 @@ GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readb
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
-   接近上限的包括 `gui/file_tree_view.py`(944)、`mcp_server/tool_defs_edit.py`(929) 與 `gui/develop_panel.py`(920)；要在接近 1000 行的檔案
+   接近上限的包括 `gui/file_tree_view.py`(944)、`mcp_server/tool_defs_edit.py`(929) 與 `gui/develop_panel.py`(933)；要在接近 1000 行的檔案
    加程式，先把一組內聚的方法拆成模組（mixin 或模組函式），並先補特性測試。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。

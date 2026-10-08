@@ -49,8 +49,8 @@ def panel(main_window, monkeypatch, tmp_path):
 
     # Build the left/right panels into a temporary splitter so widgets exist
     splitter = QSplitter(Qt.Orientation.Horizontal)
-    p.build_left_panel(splitter)
-    p.build_right_panel(splitter)
+    splitter.addWidget(p.build_left_panel())
+    splitter.addWidget(p.build_right_panel())
 
     # Start with no image bound (controls disabled)
     p.bind_to_path(None)
@@ -913,187 +913,113 @@ class TestCanvasContextMenu:
         p._show_canvas_menu(None)       # must not raise / exec
 
 
-class TestCanvasSplitterSizes:
-    """The centre canvas must get the width left over after the side panels."""
+class TestCanvasHost:
+    """The canvas sits in the centre of the Modify tab, between its docks."""
 
-    def test_canvas_gets_the_leftover_width(self):
-        from Imervue.gui.modify_splitter import canvas_splitter_sizes
-        assert canvas_splitter_sizes(1200, 80, 260) == [80, 860, 260]
-
-    def test_canvas_floored_on_a_narrow_window(self):
-        from Imervue.gui.modify_splitter import canvas_splitter_sizes
-        # Side panels alone exceed the width → canvas clamps to its floor.
-        assert canvas_splitter_sizes(500, 80, 260, min_canvas=400) == [80, 400, 260]
-
-    def test_negative_side_widths_are_clamped_to_zero(self):
-        from Imervue.gui.modify_splitter import canvas_splitter_sizes
-        sizes = canvas_splitter_sizes(1000, -10, -20)
-        assert sizes[0] == 0
-        assert sizes[2] == 0
-        assert sizes[1] == 1000
-
-    def test_canvas_is_the_widest_pane(self):
-        from Imervue.gui.modify_splitter import canvas_splitter_sizes
-        left, canvas, right = canvas_splitter_sizes(1600, 80, 260)
-        assert canvas > left
-        assert canvas > right
-
-    def test_size_modify_splitter_gives_canvas_the_majority(self, panel, qapp):
-        from PySide6.QtCore import Qt
-        from PySide6.QtWidgets import QSplitter, QWidget
-        p, _ = panel
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        left = QWidget()
-        left.setFixedWidth(80)
-        splitter.addWidget(left)
-        splitter.addWidget(QWidget())            # centre canvas stand-in
-        right = QWidget()
-        right.setMinimumWidth(260)
-        splitter.addWidget(right)
-        splitter.resize(1200, 700)
-
-        p._size_modify_splitter(splitter)
-
-        sizes = splitter.sizes()
-        assert sizes[1] == max(sizes)            # canvas is the widest pane
-        splitter.setParent(None)
-        splitter.deleteLater()
-
-
-class TestModifySplitterSettle:
-    """The Modify splitter's screen-change settle watch.
-
-    ``setSizes`` is one-shot — a later resize rescales the proportions already
-    in place rather than recomputing them — so unlike the deep-zoom canvas there
-    is no per-paint net behind it. The ``singleShot(0)`` chain in
-    ``_size_modify_splitter`` drains Qt's queued layout and nothing slower, so a
-    cross-monitor move (hundreds of ms) would otherwise lock in the width the
-    window had on the screen it left.
-    """
+    @pytest.fixture
+    def sample_file(self, tmp_path):
+        from PIL import Image
+        path = tmp_path / "real.png"
+        Image.new("RGB", (12, 8), "red").save(path)
+        return path
 
     @staticmethod
-    def _splitter(width=1200):
-        from PySide6.QtCore import Qt
-        from PySide6.QtWidgets import QSplitter, QWidget
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        left = QWidget()
-        left.setFixedWidth(80)
-        splitter.addWidget(left)
-        splitter.addWidget(QWidget())
-        right = QWidget()
-        right.setMinimumWidth(260)
-        splitter.addWidget(right)
-        splitter.resize(width, 700)
-        return splitter
+    def _host(panel):
+        from Imervue.gui.main_window_docks import CanvasHost
+        host = CanvasHost("nothing open")
+        panel._main_gui.main_window._modify_canvas_host = host  # noqa: SLF001
+        return host
 
-    @staticmethod
-    def _drain(qapp, passes=20):
-        for _ in range(passes):
-            qapp.processEvents()
-
-    def test_single_pass_returns_the_width_it_used(self, panel, qapp):
+    def test_binding_an_image_shows_its_canvas_in_the_host(self, panel, sample_file):
         p, _ = panel
-        splitter = self._splitter()
-        assert p._apply_modify_splitter_sizes(splitter) == splitter.width()
-        assert splitter.sizes()[1] == max(splitter.sizes())
-        splitter.setParent(None)
-        splitter.deleteLater()
+        host = self._host(p)
+        assert host.shows_hint()
+        p.bind_to_path(str(sample_file))
+        assert host.currentWidget() is p.canvas()
+        assert not host.shows_hint()
 
-    def test_single_pass_reports_zero_for_too_few_panes(self, panel, qapp):
-        from PySide6.QtCore import Qt
-        from PySide6.QtWidgets import QSplitter, QWidget
+    def test_unbinding_shows_the_hint_again(self, panel, sample_file):
         p, _ = panel
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(QWidget())
-        assert p._apply_modify_splitter_sizes(splitter) == 0
-        splitter.setParent(None)
-        splitter.deleteLater()
+        host = self._host(p)
+        p.bind_to_path(str(sample_file))
+        p.bind_to_path(None)
+        assert p.canvas() is None
+        assert host.shows_hint()
+        assert host.count() == 1
 
-    def test_single_pass_reports_zero_for_an_unlaid_out_splitter(self, panel, qapp):
+    def test_a_second_image_replaces_the_first_canvas(self, panel, sample_file, tmp_path):
+        from PIL import Image
+        other = tmp_path / "other.png"
+        Image.new("RGB", (8, 8), "green").save(other)
         p, _ = panel
-        splitter = self._splitter()
-        splitter.resize(0, 0)
-        assert p._apply_modify_splitter_sizes(splitter) == 0
-        splitter.setParent(None)
-        splitter.deleteLater()
+        host = self._host(p)
+        p.bind_to_path(str(sample_file))
+        first = p.canvas()
+        p.bind_to_path(str(other))
+        assert p.canvas() is not first
+        assert host.currentWidget() is p.canvas()
+        assert host.count() == 2          # the hint and the one live canvas
 
-    def test_settle_watch_keeps_resizing_across_the_interval(self, panel, qapp):
-        # The regression: it must keep re-applying while the window settles,
-        # not stop the moment the width looks unchanged.
+    def test_a_window_without_a_host_still_gets_a_canvas(self, panel, sample_file):
         p, _ = panel
-        splitter = self._splitter()
-        applied: list[int] = []
-        original = p._apply_modify_splitter_sizes
-        p._apply_modify_splitter_sizes = lambda sp: applied.append(original(sp))
-        p.schedule_modify_splitter_settle(splitter, retries=4, interval_ms=0)
-        self._drain(qapp)
-        assert len(applied) == 4
-        splitter.setParent(None)
-        splitter.deleteLater()
+        p.bind_to_path(str(sample_file))
+        assert p.canvas() is not None
 
-    def test_settle_watch_reads_a_width_that_arrives_late(self, panel, qapp):
-        # The new screen's width lands after the first pass; the last pass must
-        # size against it, which the singleShot(0) chain never got to see.
-        p, _ = panel
-        splitter = self._splitter(800)
-        widths: list[int] = []
-        original = p._apply_modify_splitter_sizes
-        p._apply_modify_splitter_sizes = lambda sp: widths.append(original(sp))
-        p.schedule_modify_splitter_settle(splitter, retries=4, interval_ms=0)
-        qapp.processEvents()
-        splitter.resize(1600, 700)
-        self._drain(qapp)
-        assert widths[-1] == 1600
-        splitter.setParent(None)
-        splitter.deleteLater()
 
-    def test_settle_watch_stops_when_the_splitter_dies(self, panel, qapp):
-        import Imervue.gui.modify_splitter as ms
+class TestToolStripSizing:
+    """Strip buttons are sized from their labels, so none is cut at any UI scale."""
+
+    def test_every_button_has_one_size_that_fits_its_label(self, panel):
         p, _ = panel
-        splitter = self._splitter()
-        applied: list[int] = []
-        original = p._apply_modify_splitter_sizes
-        p._apply_modify_splitter_sizes = lambda sp: applied.append(original(sp))
-        alive = {"ok": True}
-        original_alive = ms.splitter_is_alive
-        ms.splitter_is_alive = lambda sp: alive["ok"]
+        buttons = list(p._tool_buttons.values())  # noqa: SLF001
+        sizes = {(b.width(), b.height()) for b in buttons}
+        assert len(sizes) == 1
+        for button in buttons:
+            hint = button.sizeHint()
+            assert button.width() >= hint.width()
+            assert button.height() >= hint.height()
+
+    def test_buttons_are_no_smaller_than_the_designed_size(self, panel):
+        p, _ = panel
+        button = p._tool_buttons["select"]  # noqa: SLF001
+        assert button.width() >= p._TOOL_BTN_SIZE.width()  # noqa: SLF001
+        assert button.height() >= p._TOOL_BTN_SIZE.height()  # noqa: SLF001
+
+    def test_a_larger_ui_scale_enlarges_the_buttons(self, qapp):
+        from PySide6.QtWidgets import QToolButton
+
+        from Imervue.gui.develop_panel import DevelopPanel
+        from Imervue.user_settings.user_setting_dict import user_setting_dict
+        base = DevelopPanel._size_tool_buttons([QToolButton()])  # noqa: SLF001
+        user_setting_dict["ui_scale_percent"] = 200
+        doubled = DevelopPanel._size_tool_buttons([QToolButton()])  # noqa: SLF001
+        assert doubled.width() == 2 * base.width()
+        assert doubled.height() == 2 * base.height()
+
+    def test_the_strip_is_wide_enough_for_its_buttons(self, qapp):
+        from unittest.mock import MagicMock
+
+        from Imervue.gui.develop_panel import DevelopPanel
+        p = DevelopPanel(MagicMock())
+        strip = p.build_left_panel()
         try:
-            p.schedule_modify_splitter_settle(splitter, retries=5, interval_ms=0)
-            qapp.processEvents()
-            alive["ok"] = False          # Modify tab torn down mid-watch
-            self._drain(qapp)
+            assert strip.minimumWidth() > p._tool_buttons["select"].width()  # noqa: SLF001
         finally:
-            ms.splitter_is_alive = original_alive
-        assert len(applied) == 1
-        splitter.setParent(None)
-        splitter.deleteLater()
+            strip.deleteLater()
+            p.deleteLater()
 
-    def test_settle_watch_zero_retries_schedules_nothing(self, panel, qapp):
-        p, _ = panel
-        splitter = self._splitter()
-        applied: list[int] = []
-        original = p._apply_modify_splitter_sizes
-        p._apply_modify_splitter_sizes = lambda sp: applied.append(original(sp))
-        p.schedule_modify_splitter_settle(splitter, retries=0, interval_ms=0)
-        self._drain(qapp)
-        assert applied == []
-        splitter.setParent(None)
-        splitter.deleteLater()
+    def test_the_adjustment_panel_is_never_narrower_than_its_controls(self, qapp):
+        from unittest.mock import MagicMock
 
-
-def test_splitter_is_alive_detects_a_freed_object():
-    from Imervue.gui.modify_splitter import splitter_is_alive
-
-    class _Dead:
-        def count(self):
-            raise RuntimeError("wrapped C/C++ object has been deleted")
-
-    class _Live:
-        def count(self):
-            return 3
-
-    assert splitter_is_alive(_Dead()) is False
-    assert splitter_is_alive(_Live()) is True
+        from Imervue.gui.develop_panel import DevelopPanel
+        p = DevelopPanel(MagicMock())
+        scroll = p.build_right_panel()
+        try:
+            assert scroll.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            assert scroll.minimumWidth() > scroll.widget().minimumSizeHint().width()
+        finally:
+            scroll.deleteLater()
+            p.deleteLater()
 
 
 class TestDrawingPropertyPairs:

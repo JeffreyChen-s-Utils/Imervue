@@ -222,7 +222,7 @@ Darstellung, Thumbnail-Anfragen und Texturfreigabe nutzen denselben sichtbaren R
 
 Das Vorladen benachbarter Bilder berücksichtigt tatsächliche Pyramidenbytes und Reservierungen laufender Dekodierungen. Alle offenen Ansichtsfenster teilen sich gleichmäßig 20% des physischen RAM (256 MiB–8 GiB); ohne optionale Speichererkennung gilt ein gemeinsames Ersatzbudget von 2 GiB. Abgebrochene Dekodierungen geben ihre Reservierung erst nach ihrem Ende frei; beim Öffnen eines wegen des Budgets übersprungenen Bildes wird regulär im Vordergrund geladen. Das RAM-Budget ist vom GPU-Texturbudget getrennt und begrenzt weder den gesamten Prozess noch das Vordergrundbild.
 
-Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetrachter mit Ordnerbaum, EXIF-Sidebar und Bibliotheks-/Organisationstools.
+Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetrachter mit Ordnerbaum, Bildinfo-Panel und Bibliotheks-/Organisationstools. Der Ordnerbaum, das Bildinfo-Panel sowie die Panels Tools und Adjustments des Modify-Tabs sind Docks: Ziehen Sie eine Titelleiste, um ein Panel zu verschieben, abzulösen oder als Tab zu stapeln, blenden Sie sie unter **Thumbnail Size > Panels** ein oder aus, und **Reset Panel Layout** setzt sie zurück. Das Standard-Erscheinungsbild ist das Theme **Modern Dark**; **File > Preferences** bietet **Modern Light**, das Systemaussehen und vier weitere.
 
 ### Viewer
 
@@ -309,7 +309,7 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 ### Metadaten
 
-- **EXIF-Sidebar** mit aufklappbaren Gruppen + Inline-0-5-Sterne-Strip
+- **Bildinfo-Panel** (Dock) — EXIF, Inline-0-5-Sterne-Strip und Notizen zum geöffneten Bild
 - **EXIF-Editor**-Dialog — Beschreibung, Künstler, Copyright, Kamera und Kommentar (auch Unicode) ohne Zusatzpaket in ein JPEG oder WebP schreiben, Pixel und übrige Tags bleiben unverändert; **Describe** füllt die Beschreibung mit einem Satz aus einem lokalen Vision-Modell (Ollama mit `llava` auf `localhost:11434`), sodass das Bild Ihren Computer nie verlässt
 - **Keyword-Editor** — Title / Creator / Description / Keywords, mit **Vorschlägen verwandter Tags** aus der Tag-Ko-Okkurrenz und Controlled-Vocabulary-Erweiterung (ein Blatt-Keyword wendet automatisch seine Vorfahren + Synonyme aus einem editierbaren hierarchischen Vokabular an)
 - **Image-Info**-Dialog (Maße / Größe / Datums)

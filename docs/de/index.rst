@@ -80,7 +80,7 @@ Wenn Sie Imervue öffnen, sehen Sie drei Bereiche:
 
 - **Links**: Ordnerbaum. Klicken Sie auf einen Ordner, um die darin enthaltenen Bilder zu durchsuchen.
 - **Mitte**: Bildanzeigebereich. Zeigt alle Bilder als Miniaturansicht-Raster an.
-- **Rechts**: EXIF-Seitenleiste, beim Start zu einem schmalen Streifen eingeklappt: Klicken Sie darauf, um sie zu öffnen. Sie zeigt die Aufnahmeinformationen des geöffneten Bildes an.
+- **Rechts**: Bildinfo-Panel. Es zeigt Aufnahmeinformationen, Bewertung und Notizen des geöffneten Bildes an. Der Ordnerbaum und dieses Panel sind Docks: Ziehen Sie eine Titelleiste, um ein Panel zu verschieben, abzulösen oder als Tab zu stapeln, blenden Sie sie unter ``Thumbnail Size`` > ``Panels`` ein oder aus, und ``Reset Panel Layout`` dort setzt jedes Panel zurück. Das Standard-Erscheinungsbild ist das Theme **Modern Dark**; ``Datei`` > ``Preferences`` bietet **Modern Light**, das Systemaussehen und vier weitere.
 
 Imervue schreibt das Protokoll jeder Sitzung in ``imervue.log`` neben dem Programm (in ``%LOCALAPPDATA%\Imervue`` bzw. außerhalb von Windows in ``~/.cache/imervue``, wenn dieser Ordner schreibgeschützt ist). Das Protokoll der vorherigen Sitzung bleibt als ``imervue.previous.log`` erhalten, sodass nach einem Absturz das Protokoll, das ihn erklärt, noch vorhanden ist, sobald Imervue wieder läuft — hängen Sie beim Melden eines Problems beide an.
 
@@ -2213,8 +2213,8 @@ Workspace-Layout-Presets
 
 ``Datei`` > ``Workspaces…`` erfasst die aktuelle Fenstergeometrie, Dock- / Toolbar-
 Anordnung, die Aufteilung zwischen Baum und Betrachter und den aktiven Wurzelordner unter einem Namen — und
-lässt Sie dann zwischen gespeicherten Layouts wechseln. Der aktive Tab und die Panel-Aufteilung des Modify-Tabs
-werden nicht gespeichert. Der Dialog unterstützt Aktuelles speichern,
+lässt Sie dann zwischen gespeicherten Layouts wechseln. Die Dock-Layouts der Tabs Imervue und Modify
+werden ebenfalls gespeichert, der aktive Tab nicht. Der Dialog unterstützt Aktuelles speichern,
 Laden, Umbenennen und Löschen. Workspaces bleiben in ``user_setting.json``
 (unter dem Schlüssel ``workspaces``) erhalten und überstehen Sitzungen hinweg.
 

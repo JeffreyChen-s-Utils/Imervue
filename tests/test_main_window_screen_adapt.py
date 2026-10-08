@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from PySide6.QtCore import QRect
+from PySide6.QtCore import QObject, QRect
 
 from Imervue.Imervue_main_window import ImervueMainWindow
 from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -277,54 +277,40 @@ def test_missing_screen_is_safe(qapp):
 # ---------------------------------------------------------------
 # _refit_current_view_for_screen: the Modify-tab branch
 # ---------------------------------------------------------------
-# Regression: setSizes is one-shot with no per-paint net behind it, so the
-# singleShot(0) chain alone locked in the width the window had on the screen it
-# left. The branch must arm the slow settle watch too.
+# The Modify canvas is the centre of a dock layout, which hands it its new
+# width by itself; a screen change only has to repaint it once that happened.
 
 
 class _ModifyStub(_StubMainWindow):
-    """Main window sitting on the Modify tab with a live canvas + splitter."""
+    """Main window sitting on the Modify tab with a live canvas."""
 
-    def __init__(self, *, tab_index: int = 1, has_canvas: bool = True,
-                 splitter=None):
+    def __init__(self, *, tab_index: int = 1, has_canvas: bool = True):
         super().__init__()
-        self.fast_passes: list = []
-        self.settle_watches: list = []
-        canvas = SimpleNamespace(update=lambda: None) if has_canvas else None
-        self.modify_panel = SimpleNamespace(
-            _canvas=canvas,
-            _size_modify_splitter=lambda sp: self.fast_passes.append(sp),
-            schedule_modify_splitter_settle=(
-                lambda sp: self.settle_watches.append(sp)),
-        )
+        self.repaints: list = []
+        self.canvas = QObject() if has_canvas else None
+        if has_canvas:
+            self.canvas.update = lambda: self.repaints.append(True)
+        self.modify_panel = SimpleNamespace(_canvas=self.canvas)
         self._main_tabs = SimpleNamespace(currentIndex=lambda: tab_index)
-        self._modify_splitter = splitter
 
 
-def test_screen_change_on_modify_arms_both_splitter_chains(qapp):
-    splitter = object()
-    win = _ModifyStub(splitter=splitter)
+def test_screen_change_on_modify_repaints_the_canvas_after_the_layout(qapp, pump_until):
+    win = _ModifyStub()
     win._refit_current_view_for_screen()
-    assert win.fast_passes == [splitter]
-    assert win.settle_watches == [splitter]
+    assert win.repaints == []            # deferred: the dock layout runs first
+    assert pump_until(lambda: win.repaints == [True])
 
 
-def test_screen_change_off_the_modify_tab_touches_no_splitter(qapp):
-    win = _ModifyStub(tab_index=0, splitter=object())
+def test_screen_change_off_the_modify_tab_leaves_the_canvas_alone(qapp):
+    win = _ModifyStub(tab_index=0)
     win._refit_current_view_for_screen()
-    assert (win.fast_passes, win.settle_watches) == ([], [])
+    qapp.processEvents()
+    assert win.repaints == []
 
 
-def test_screen_change_without_a_modify_canvas_touches_no_splitter(qapp):
-    win = _ModifyStub(has_canvas=False, splitter=object())
+def test_screen_change_without_a_modify_canvas_still_refits_the_viewer(qapp):
+    win = _ModifyStub(has_canvas=False)
     win._refit_current_view_for_screen()
-    assert (win.fast_passes, win.settle_watches) == ([], [])
-
-
-def test_screen_change_without_a_splitter_still_refits_the_viewer(qapp):
-    win = _ModifyStub(splitter=None)
-    win._refit_current_view_for_screen()
-    assert (win.fast_passes, win.settle_watches) == ([], [])
     qapp.processEvents()
     assert win.viewer.fit_calls == 1
 

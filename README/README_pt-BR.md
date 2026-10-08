@@ -229,7 +229,7 @@ Desenho, solicitações de miniaturas e liberação de texturas compartilham a �
 
 A pré-carga de imagens vizinhas soma os bytes reais das pirâmides e as reservas das decodificações em andamento. As janelas abertas compartilham igualmente 20% da RAM física (256 MiB–8 GiB); sem detecção opcional de memória, compartilham um orçamento alternativo de 2 GiB. As reservas de decodificações canceladas permanecem até o término real; ao abrir uma imagem ignorada pelo orçamento, ela é carregada normalmente em primeiro plano. O orçamento de RAM é separado do de texturas GPU e não limita o processo inteiro nem a imagem em primeiro plano.
 
-A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens com árvore de pastas, painel lateral EXIF e ferramentas de biblioteca/organização.
+A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens com árvore de pastas, painel de informações da imagem e ferramentas de biblioteca/organização. A árvore de pastas, o painel de informações e os painéis Tools e Adjustments da aba Modify são docks: arraste uma barra de título para mover, destacar ou empilhar um em abas, mostre-os ou oculte-os em **Thumbnail Size > Panels**, e **Reset Panel Layout** os recoloca no lugar. A aparência padrão é o tema **Modern Dark**; **File > Preferences** oferece **Modern Light**, a aparência do sistema e mais quatro.
 
 ### Visualizador
 
@@ -316,7 +316,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 ### Metadados
 
-- **Painel lateral EXIF** com grupos colapsáveis + faixa inline de 0-5 estrelas
+- **Painel de informações da imagem** (dock) — EXIF, faixa inline de 0-5 estrelas e notas da imagem aberta
 - Diálogo de **editor EXIF** — descrição, artista, copyright, câmera e comentário (Unicode incluído) gravados em um JPEG ou WebP sem pacote extra, sem alterar pixels nem as outras tags; **Describe** preenche a descrição com uma frase de um modelo de visão local (Ollama com `llava` em `localhost:11434`), então a imagem nunca sai do seu computador
 - **Editor de palavras-chave** — título / autor / descrição / palavras-chave, com **sugestões de tags relacionadas** extraídas da coocorrência de tags e expansão de vocabulário controlado (uma palavra-chave folha aplica automaticamente seus ancestrais + sinônimos de um vocabulário hierárquico editável)
 - Diálogo de **informações da imagem** (dimensões / tamanho / datas)

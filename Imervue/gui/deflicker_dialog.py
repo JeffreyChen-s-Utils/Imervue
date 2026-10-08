@@ -38,6 +38,7 @@ from Imervue.image.deflicker import (
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.image.formats import JPEG_EXTENSIONS
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -81,7 +82,7 @@ class DeflickerDialog(WorkerHostMixin, QDialog):
                 "{count} frames will be processed.",
             ).format(count=len(self._paths))
         )
-        self._frame_count_label.setStyleSheet("color: #888; font-size: 11px;")
+        self._frame_count_label.setStyleSheet(f"color: #888; {font_px(11)}")
 
         layout = QVBoxLayout(self)
         layout.addLayout(self._build_form(lang))

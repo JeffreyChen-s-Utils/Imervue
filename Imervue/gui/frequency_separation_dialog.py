@@ -31,6 +31,7 @@ from Imervue.image.frequency_separation import (
     separate_frequencies,
 )
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -61,7 +62,7 @@ class FrequencySeparationDialog(QDialog):
             )
         )
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #888; font-size: 11px;")
+        hint.setStyleSheet(f"color: #888; {font_px(11)}")
 
         form = QFormLayout()
         form.addRow(

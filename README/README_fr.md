@@ -222,7 +222,7 @@ Le dessin, les demandes de miniatures et la libération des textures partagent l
 
 Le préchargement des images voisines comptabilise les octets réels des pyramides et les réservations des décodages en cours. Les fenêtres ouvertes se partagent équitablement 20% de la RAM physique (256 MiB–8 GiB) ; sans détection optionnelle de mémoire, elles partagent un budget de secours de 2 GiB. Les réservations des décodages annulés restent jusqu’à leur fin ; ouvrir une image ignorée faute de budget déclenche son chargement normal au premier plan. Ce budget RAM est distinct de celui des textures GPU et ne limite ni tout le processus ni l’image au premier plan.
 
-L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visualiseur d'images à l'arborescence des dossiers, à la barre latérale EXIF et aux outils d'organisation de la photothèque.
+L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visualiseur d'images à l'arborescence des dossiers, au panneau d'informations de l'image et aux outils d'organisation de la photothèque. L'arborescence des dossiers, le panneau d'informations et les panneaux Tools et Adjustments de l'onglet Modify sont des docks : faites glisser une barre de titre pour en déplacer, détacher ou empiler un en onglets, affichez-les ou masquez-les dans **Thumbnail Size > Panels**, et **Reset Panel Layout** les remet en place. L'apparence par défaut est le thème **Modern Dark** ; **File > Preferences** propose **Modern Light**, l'apparence du système et quatre autres.
 
 ### Visualiseur
 
@@ -309,7 +309,7 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 ### Métadonnées
 
-- **Barre latérale EXIF** avec groupes repliables + bande de notation 0-5 étoiles intégrée
+- **Panneau d'informations de l'image** (dock) — EXIF, bande de notation 0-5 étoiles intégrée et remarques sur l'image ouverte
 - Boîte de dialogue **Éditeur EXIF** — description, artiste, copyright, appareil et commentaire (Unicode compris) écrits dans un JPEG ou un WebP sans paquet supplémentaire, sans toucher aux pixels ni aux autres tags ; **Describe** remplit la description avec une phrase produite par un modèle de vision local (Ollama avec `llava` sur `localhost:11434`), si bien que l'image ne quitte jamais votre ordinateur
 - **Éditeur de mots-clés** — titre / créateur / description / mots-clés, avec **suggestions d'étiquettes liées** issues de la cooccurrence des étiquettes et expansion de vocabulaire contrôlé (un mot-clé feuille applique automatiquement ses ancêtres + synonymes depuis un vocabulaire hiérarchique éditable)
 - Boîte de dialogue **Informations sur l'image** (dimensions / taille / dates)

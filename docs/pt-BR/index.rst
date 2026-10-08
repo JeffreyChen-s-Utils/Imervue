@@ -80,7 +80,7 @@ Ao abrir o Imervue, você verá três áreas:
 
 - **Esquerda**: Árvore de pastas. Clique em uma pasta para navegar pelas imagens internas.
 - **Centro**: Área de exibição de imagens. Mostra todas as imagens em uma grade de miniaturas.
-- **Direita**: Barra lateral EXIF, recolhida em uma faixa fina ao iniciar: clique nela para abri-la. Mostra as informações de captura da imagem aberta.
+- **Direita**: Painel de informações da imagem. Mostra as informações de captura, a classificação e as notas da imagem aberta. A árvore de pastas e este painel são docks: arraste uma barra de título para mover, destacar ou empilhar um em abas, mostre-os ou oculte-os em ``Thumbnail Size`` > ``Panels``, e ``Reset Panel Layout`` ali recoloca cada painel no lugar. A aparência padrão é o tema **Modern Dark**; ``File`` > ``Preferences`` oferece **Modern Light**, a aparência do sistema e mais quatro.
 
 O Imervue grava um log de cada sessão em ``imervue.log`` ao lado do programa (em ``%LOCALAPPDATA%\Imervue``, ou em ``~/.cache/imervue`` fora do Windows, quando essa pasta é somente leitura). O log da sessão anterior é mantido como ``imervue.previous.log``, então, depois de um travamento, o log que o explica continua lá quando o Imervue volta a rodar — anexe os dois ao relatar um problema.
 
@@ -2148,7 +2148,7 @@ Presets de Layout de Espaço de Trabalho
 ``Arquivo`` > ``Espaços de Trabalho…`` captura a geometria atual da janela, o
 arranjo de docks / barras de ferramentas, a divisão árvore / visualizador e
 pasta raiz ativa sob um nome — depois permite alternar entre layouts salvos.
-A aba ativa e a divisão de painéis da aba Modify não são guardadas. A
+Os layouts de docks das abas Imervue e Modify também são guardados; a aba ativa não. A
 caixa de diálogo suporta Salvar Atual, Carregar, Renomear e Excluir. Espaços
 de trabalho persistem em ``user_setting.json`` (sob a chave ``workspaces``)
 e sobrevivem entre sessões.

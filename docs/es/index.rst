@@ -82,7 +82,7 @@ Cuando abra Imervue, verá tres áreas:
 
 - **Izquierda**: Árbol de carpetas. Haga clic en una carpeta para examinar las imágenes que contiene.
 - **Centro**: Área de visualización. Muestra todas las imágenes como una cuadrícula de miniaturas.
-- **Derecha**: Barra lateral EXIF, plegada en una franja estrecha al iniciar: haga clic en ella para abrirla. Muestra la información de captura de la imagen abierta.
+- **Derecha**: Panel de información de la imagen. Muestra la información de captura, la valoración y las notas de la imagen abierta. El árbol de carpetas y este panel son docks: arrastre una barra de título para mover, separar o apilar uno en pestañas, muéstrelos u ocúltelos en ``Thumbnail Size`` > ``Panels``, y ``Reset Panel Layout`` allí devuelve cada panel a su sitio. El aspecto predeterminado es el tema **Modern Dark**; ``File`` > ``Preferences`` ofrece **Modern Light**, el aspecto del sistema y cuatro más.
 
 Imervue escribe un registro de cada sesión en ``imervue.log`` junto al programa (en ``%LOCALAPPDATA%\Imervue``, o en ``~/.cache/imervue`` fuera de Windows, cuando esa carpeta es de solo lectura). El registro de la sesión anterior se conserva como ``imervue.previous.log``, así que tras una caída el registro que la explica sigue ahí cuando Imervue vuelve a ejecutarse — adjunte ambos al informar de un problema.
 
@@ -2183,7 +2183,7 @@ Presets de diseño de espacio de trabajo
 
 ``File`` > ``Workspaces…`` captura la geometría actual de la ventana, la disposición de docks
 / barras de herramientas, la división entre árbol y visor y la carpeta raíz activa bajo un nombre
-— después le permite alternar entre diseños guardados. La pestaña activa y la división de paneles de la pestaña Modify no se guardan. El diálogo admite Save Current, Load, Rename y Delete. Los
+— después le permite alternar entre diseños guardados. Las disposiciones de docks de las pestañas Imervue y Modify también se guardan; la pestaña activa no. El diálogo admite Save Current, Load, Rename y Delete. Los
 espacios de trabajo persisten en ``user_setting.json`` (bajo la clave ``workspaces``) y
 sobreviven entre sesiones.
 

@@ -15,6 +15,7 @@ from PySide6.QtCore import QTimer
 from _qt_skip import pytestmark  # noqa: E402,F401
 
 _EXPECTED = {'_browse_mode': ('str', 'grid'),
+ '_browse_window': ('QMainWindow',),
  '_dual_active': ('bool', False),
  '_filter_menu': ('QMenu',),
  '_folder_change_events': ('int', 0),
@@ -28,13 +29,16 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_image_metadata_index': ('ImageMetadataIndex',),
  '_image_tabs': ('list',),
  '_last_screen_avail': ('NoneType', None),
- '_main_splitter': ('QSplitter',),
+ '_info_dock': ('QDockWidget',),
  '_main_tabs': ('QTabWidget',),
  '_memory_pressure': ('MemoryPressureIndicator',),
  '_mode_action_grid': ('QAction',),
  '_mode_action_list': ('QAction',),
  '_modify_menu_action': ('QAction',),
- '_modify_splitter': ('QSplitter',),
+ '_modify_canvas_host': ('CanvasHost',),
+ '_modify_properties_dock': ('QDockWidget',),
+ '_modify_tools_dock': ('QDockWidget',),
+ '_modify_window': ('QMainWindow',),
  '_paint_page': ('QWidget',),
  '_pet_page': ('QWidget',),
  '_pet_tray': ('NoneType', None),
@@ -60,6 +64,7 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_status_label': ('QLabel',),
  '_tab_bar': ('QTabBar',),
  '_tab_switching': ('bool', False),
+ '_tree_dock': ('QDockWidget',),
  '_tree_panel': ('QWidget',),
  '_view_stack': ('QStackedWidget',),
  'breadcrumb': ('BreadcrumbBar',),
@@ -267,12 +272,106 @@ def test_pending_autosaves_are_read_from_the_paint_autosave_folder(monkeypatch):
 
 
 def test_a_saved_workspace_records_the_tree_and_viewer_split(window):
-    """Workspaces read ``_main_splitter``, which the window never set, so no split was saved."""
+    """A workspace keeps the folder | viewer widths, and both tabs' dock layouts."""
     from Imervue.gui.workspace_dialog import capture_current_workspace
-    window._main_splitter.setSizes([250, 750])  # noqa: SLF001
     saved = capture_current_workspace(window, "narrow tree")
+    assert saved.splitter_sizes == window.browse_split_widths()
     assert len(saved.splitter_sizes) == 2
-    assert saved.splitter_sizes == window._main_splitter.sizes()  # noqa: SLF001
+    assert saved.browse_state_b64 and saved.modify_state_b64
+
+
+def test_a_workspace_restores_the_dock_layout(window):
+    from Imervue.gui.workspace_dialog import apply_workspace, capture_current_workspace
+    window._tree_dock.hide()  # noqa: SLF001
+    saved = capture_current_workspace(window, "no tree")
+    window.reset_panel_layout()
+    assert not window._tree_dock.isHidden()  # noqa: SLF001
+    apply_workspace(window, saved)
+    assert window._tree_dock.isHidden()  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# Docks of the Imervue and Modify tabs
+# ---------------------------------------------------------------------------
+
+def test_the_two_tabs_are_dock_hosts_with_their_panels(window):
+    from PySide6.QtCore import Qt
+    tabs = window._main_tabs  # noqa: SLF001
+    browse, modify = window._browse_window, window._modify_window  # noqa: SLF001
+    assert tabs.widget(0) is browse and tabs.widget(1) is modify
+    left, right = Qt.DockWidgetArea.LeftDockWidgetArea, Qt.DockWidgetArea.RightDockWidgetArea
+    assert window._tree_dock.widget() is window._tree_panel  # noqa: SLF001
+    assert window._info_dock.widget() is window.exif_sidebar  # noqa: SLF001
+    assert window._image_issue_dock.widget() is window.image_issue_panel  # noqa: SLF001
+    assert browse.dockWidgetArea(window._tree_dock) == left  # noqa: SLF001
+    assert browse.dockWidgetArea(window._info_dock) == right  # noqa: SLF001
+    assert modify.dockWidgetArea(window._modify_tools_dock) == left  # noqa: SLF001
+    assert modify.dockWidgetArea(window._modify_properties_dock) == right  # noqa: SLF001
+    assert modify.centralWidget() is window._modify_canvas_host  # noqa: SLF001
+    assert window._image_issue_dock.isHidden()  # noqa: SLF001
+    # The outer window has no dock of its own left: every panel belongs to a tab.
+    from PySide6.QtWidgets import QDockWidget
+    assert all(d.parent() is not window for d in window.findChildren(QDockWidget)
+               if d in (window._tree_dock, window._info_dock,  # noqa: SLF001
+                        window._image_issue_dock))  # noqa: SLF001
+
+
+def test_the_viewer_column_is_the_centre_of_the_imervue_tab(window):
+    centre = window._browse_window.centralWidget()  # noqa: SLF001
+    assert centre.isAncestorOf(window.viewer)
+    assert centre.isAncestorOf(window.breadcrumb)
+    assert not centre.isAncestorOf(window.exif_sidebar)
+
+
+def test_the_view_menu_has_the_panels_entries(window):
+    from PySide6.QtWidgets import QMenu
+    panels = window.findChild(QMenu, "view.panels")
+    texts = [a.text() for a in panels.actions() if not a.isSeparator()]
+    assert texts[:5] == [d.windowTitle() for _tab, docks in window.panel_docks() for d in docks]
+    assert len(texts) == 6
+
+
+def test_theater_mode_hides_and_restores_the_docks(window):
+    window.show()
+    try:
+        window._info_dock.hide()  # noqa: SLF001
+        window.toggle_theater_mode()
+        assert window._tree_dock.isHidden() and window._info_dock.isHidden()  # noqa: SLF001
+        window.toggle_theater_mode()
+        assert not window._tree_dock.isHidden()  # noqa: SLF001
+        assert window._info_dock.isHidden()      # was hidden before  # noqa: SLF001
+    finally:
+        window.hide()
+
+
+def test_opening_modify_puts_the_canvas_in_the_centre(window, tmp_path):
+    from PIL import Image
+    image = tmp_path / "pic.png"
+    Image.new("RGB", (16, 12), "red").save(image)
+    host = window._modify_canvas_host  # noqa: SLF001
+    assert host.shows_hint()
+    window.viewer.model.images = [str(image)]
+    window.viewer.current_index = 0
+    window._main_tabs.setCurrentIndex(1)  # noqa: SLF001
+    assert host.currentWidget() is window.modify_panel.canvas()
+    window.modify_panel.bind_to_path(None)
+    assert host.shows_hint()
+
+
+def test_the_dock_layout_is_saved_on_close_and_restored_at_launch(window, qapp):
+    from Imervue.Imervue_main_window import ImervueMainWindow
+    from Imervue.gui.main_window_docks import BROWSE_DOCK_STATE_KEY
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    window._tree_dock.hide()  # noqa: SLF001
+    window._save_dock_layouts()  # noqa: SLF001
+    assert user_setting_dict[BROWSE_DOCK_STATE_KEY]
+    second = ImervueMainWindow()
+    try:
+        assert second._tree_dock.isHidden()  # noqa: SLF001
+    finally:
+        second._release_for_close()  # noqa: SLF001
+        ImervueMainWindow._live_windows.discard(second)  # noqa: SLF001
+        second.deleteLater()
 
 
 # ---------------------------------------------------------------------------

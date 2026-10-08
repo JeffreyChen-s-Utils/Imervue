@@ -49,7 +49,7 @@ class _Window:
         self.paint_workspace = _Workspace()
         self._folder_tab_shortcuts = []
         self._build_optional_tab_on_open = lambda _idx: None
-        self.exif_sidebar = SimpleNamespace(update_info=lambda: None)
+        self.exif_sidebar = SimpleNamespace(update_info=lambda: None, schedule_update=lambda: None)
         self._main_tabs = SimpleNamespace(setCurrentIndex=lambda idx: self.tab_changes.append(idx))
         self.tab_changes = []
         self.errors = []

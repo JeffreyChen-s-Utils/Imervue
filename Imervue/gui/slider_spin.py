@@ -12,6 +12,8 @@ from collections.abc import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QSlider, QSpinBox, QWidget
 
+from Imervue.system.ui_scale import scaled_px
+
 _SPIN_WIDTH = 70
 _ROW_SPACING = 6
 # Narrow side panels (Develop / Modify) use a tighter row.
@@ -68,7 +70,7 @@ def make_slider_spin(
     spin.setValue(value)
     if suffix:
         spin.setSuffix(suffix)
-    spin.setFixedWidth(spin_width)
+    spin.setFixedWidth(scaled_px(spin_width))   # designed at 100 % UI scale
     row.addWidget(spin)
 
     link_slider_spin(slider, spin, on_change)

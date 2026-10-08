@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.dialog_rows import confirm
+from Imervue.gui.main_window_docks import BROWSE_DOCK_STATE_KEY, MODIFY_DOCK_STATE_KEY
 from Imervue.gui.workspace_manager import (
     Workspace,
     decode_bytes,
@@ -41,10 +42,7 @@ logger = logging.getLogger("Imervue.workspace_dialog")
 
 def capture_current_workspace(ui: ImervueMainWindow, name: str) -> Workspace:
     """Snapshot the live main-window layout into a :class:`Workspace`."""
-    splitter_sizes: list[int] = []
-    splitter = getattr(ui, "_main_splitter", None)
-    if splitter is not None:
-        splitter_sizes = list(splitter.sizes())
+    docks = ui.dock_layout_states()
     root_folder = ""
     tree_model = getattr(ui.tree, "model", lambda: None)()
     root_index = ui.tree.rootIndex() if hasattr(ui, "tree") else None
@@ -54,9 +52,12 @@ def capture_current_workspace(ui: ImervueMainWindow, name: str) -> Workspace:
         name=name,
         geometry_b64=encode_bytes(bytes(ui.saveGeometry())),
         state_b64=encode_bytes(bytes(ui.saveState())),
+        browse_state_b64=docks.get(BROWSE_DOCK_STATE_KEY, ""),
+        modify_state_b64=docks.get(MODIFY_DOCK_STATE_KEY, ""),
         maximized=ui.isMaximized(),
         root_folder=root_folder,
-        splitter_sizes=splitter_sizes,
+        # Folder dock | viewer widths: what a build from before the docks restores.
+        splitter_sizes=ui.browse_split_widths(),
     )
 
 
@@ -72,9 +73,13 @@ def apply_workspace(ui: ImervueMainWindow, workspace: Workspace) -> None:
         ui.showMaximized()
     else:
         ui.showNormal()
-    splitter = getattr(ui, "_main_splitter", None)
-    if splitter is not None and workspace.splitter_sizes:
-        splitter.setSizes(workspace.splitter_sizes)
+    ui.apply_dock_layout_states({
+        BROWSE_DOCK_STATE_KEY: workspace.browse_state_b64,
+        MODIFY_DOCK_STATE_KEY: workspace.modify_state_b64,
+    })
+    if not workspace.browse_state_b64 and workspace.splitter_sizes:
+        # Saved before the docks: only the tree | viewer split was recorded.
+        ui.set_tree_dock_width(workspace.splitter_sizes[0])
     if workspace.root_folder:
         tree_model = getattr(ui.tree, "model", lambda: None)()
         if tree_model is not None:

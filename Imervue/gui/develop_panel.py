@@ -1,10 +1,9 @@
 """Modify panel — inline annotation + non-destructive image adjustments.
 
 A QWidget that provides ``build_left_panel()``, ``build_right_panel()``,
-and an inline ``AnnotationCanvas`` to populate the Modify tab's
-three-column layout:
+and an inline ``AnnotationCanvas`` to populate the Modify tab:
 
-    left tool strip | annotation canvas | right properties
+    tool dock | annotation canvas (centre) | adjustment dock
 
 - **Left panel**: annotation tool buttons (select, shapes, freehand,
   text, mosaic, blur) + orientation (rotate/flip)
@@ -28,7 +27,7 @@ from PySide6.QtWidgets import (
     QColorDialog,
     QMenu,
     QScrollArea,
-    QSplitter,
+    QStyle,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -37,13 +36,13 @@ from PySide6.QtWidgets import (
 from Imervue.gpu_image_view.images.image_loader import decode_image_file
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
 from Imervue.gui.develop_preview_panel import DevelopPreviewMixin
-from Imervue.gui.modify_splitter import ModifySplitterMixin
 from Imervue.image.in_place_save import can_rewrite_in_place, save_over_source
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
+from Imervue.system.ui_scale import scaled_px
 import contextlib
 
 if TYPE_CHECKING:
@@ -70,7 +69,7 @@ _CROP_CANNOT_OVERWRITE = (
 )
 
 
-class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
+class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
     """Controller that builds the left/right panels for the Modify tab.
 
     Emits ``recipe_committed(path, old_recipe, new_recipe)`` whenever a
@@ -119,7 +118,8 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMi
         ("crop_ratio_9_16",  "9 : 16",   9, 16),
     ]
 
-    # Size of each tool button in the vertical strip.
+    # Smallest tool button in the vertical strip, at 100 % UI scale; a longer
+    # label widens every button (see ``_size_tool_buttons``).
     _TOOL_BTN_SIZE = QSize(86, 66)
 
     def __init__(self, main_gui: GPUImageView):
@@ -167,8 +167,8 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMi
     # Panel builders — called by ImervueMainWindow
     # ------------------------------------------------------------------
 
-    def build_left_panel(self, parent_splitter: QSplitter) -> None:
-        """Build a narrow vertical tool strip (annotation + orientation) with a scroll bar."""
+    def build_left_panel(self) -> QWidget:
+        """Build the vertical tool strip (annotation + orientation); returns its scroll area."""
         lang = language_wrapper.language_word_dict
 
         panel = QWidget()
@@ -184,12 +184,12 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMi
             btn.setText(f"{glyph}\n{label}")
             btn.setToolTip(label)
             btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-            btn.setFixedSize(self._TOOL_BTN_SIZE)
             btn.setCheckable(True)
             btn.clicked.connect(lambda _checked=False, t=tool_key: self._set_tool(t))
             layout.addWidget(btn, 0, Qt.AlignmentFlag.AlignHCenter)
             self._interactive_widgets.append(btn)
             self._tool_buttons[tool_key] = btn
+        strip_buttons = list(self._tool_buttons.values())
 
         # Default: select tool checked
         if "select" in self._tool_buttons:
@@ -214,19 +214,36 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMi
             btn.setText(f"{glyph}\n{label}")
             btn.setToolTip(label)
             btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-            btn.setFixedSize(self._TOOL_BTN_SIZE)
             btn.clicked.connect(handler)
             layout.addWidget(btn, 0, Qt.AlignmentFlag.AlignHCenter)
             self._interactive_widgets.append(btn)
+            strip_buttons.append(btn)
 
         layout.addStretch(1)
+        button_size = self._size_tool_buttons(strip_buttons)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(panel)
-        scroll.setFixedWidth(self._TOOL_BTN_SIZE.width() + 24)
-        parent_splitter.addWidget(scroll)
+        # Room for the buttons, the layout margins and a vertical scroll bar.
+        bar = scroll.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
+        scroll.setMinimumWidth(button_size.width() + 8 + bar + 2 * scroll.frameWidth())
+        return scroll
+
+    @classmethod
+    def _size_tool_buttons(cls, buttons: list[QToolButton]) -> QSize:
+        """Give every strip button one size that fits the longest label; returns it.
+
+        A size fixed in pixels cut long translations ("Rotat…° CCW") and stayed
+        the same when the UI scale enlarged the text.
+        """
+        size = QSize(scaled_px(cls._TOOL_BTN_SIZE.width()), scaled_px(cls._TOOL_BTN_SIZE.height()))
+        for btn in buttons:
+            size = size.expandedTo(btn.sizeHint())
+        for btn in buttons:
+            btn.setFixedSize(size)
+        return size
 
 
     # ------------------------------------------------------------------
@@ -415,14 +432,10 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMi
         # the Imervue tab — the viewer is hidden here so it can't receive keys.
         self._canvas.delete_image_requested.connect(self._delete_current_image)
 
-        # Insert the canvas into the modify splitter (index 1).
-        splitter = getattr(self._main_gui.main_window, "_modify_splitter", None)
-        if splitter is not None:
-            splitter.insertWidget(1, self._canvas)
-            splitter.setStretchFactor(0, 0)   # fixed tool strip
-            splitter.setStretchFactor(1, 1)    # canvas takes the slack
-            splitter.setStretchFactor(2, 0)    # properties panel
-            self._size_modify_splitter(splitter)
+        # Show the canvas in the centre of the Modify tab, between its docks.
+        host = getattr(self._main_gui.main_window, "_modify_canvas_host", None)
+        if host is not None:
+            host.set_canvas(self._canvas)
         # Focus the canvas so key shortcuts (Delete, arrows, Ctrl+S) land on it
         # rather than a develop slider that ignores them.
         self._canvas.setFocus()
@@ -440,7 +453,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, ModifySplitterMi
         1. Clear shiboken-managed Python attrs on the canvas so their C++
            counterparts are freed NOW (while Qt is still alive), rather than
            during Python-shutdown GC when Qt is half-destroyed.
-        2. Detach from the splitter (``setParent(None)``).
+        2. Detach from the canvas host (``setParent(None)``), which shows its hint again.
         3. Drop the Python reference — CPython's refcount immediately frees
            the wrapper; shiboken sees no parent → deletes the C++ QWidget
            deterministically, all within normal execution.

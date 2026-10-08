@@ -12,8 +12,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QDockWidget, QFileSystemModel, QHBoxLayout, QLabel, QLineEdit, QProgressBar, QSizePolicy,
-    QSplitter,
+    QFileSystemModel, QLabel, QLineEdit, QProgressBar, QSizePolicy,
     QStackedWidget, QStatusBar, QTabBar, QVBoxLayout, QWidget,
 )
 
@@ -22,8 +21,10 @@ from Imervue.gui.exif_sidebar import ExifSidebar
 from Imervue.gui.file_tree_sort import FileTreeSortProxy
 from Imervue.gui.file_tree_view import _FileTreeView
 from Imervue.gui.folder_thumbnail_model import DEFAULT_ICON_SIZE, FolderThumbnailModel
+from Imervue.gui.main_window_docks import CanvasHost, make_dock_host
 from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import scaled_px
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
@@ -100,9 +101,12 @@ class MainWindowLayoutMixin:
         self.tree_search.textChanged.connect(self.tree.set_search_text)
 
         self._tree_panel = QWidget()
+        # A dock squeezed below this cut the search box and the names to nothing.
+        self._tree_panel.setMinimumWidth(scaled_px(160))
         tree_layout = QVBoxLayout(self._tree_panel)
-        tree_layout.setContentsMargins(4, 4, 4, 4)
-        tree_layout.setSpacing(4)
+        gap = scaled_px(4)
+        tree_layout.setContentsMargins(gap, gap, gap, gap)
+        tree_layout.setSpacing(gap)
         tree_layout.addWidget(self.tree_search)
         tree_layout.addWidget(self.tree)
 
@@ -130,7 +134,8 @@ class MainWindowLayoutMixin:
         self.filename_label = QLabel(
             language_wrapper.language_word_dict.get("main_window_current_filename")
         )
-        self.filename_label.setMinimumHeight(16)  # 保證有高度
+        side, edge = scaled_px(6), scaled_px(2)
+        self.filename_label.setContentsMargins(side, edge, side, edge)
         self.filename_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.filename_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.filename_label.setWordWrap(False)
@@ -146,16 +151,6 @@ class MainWindowLayoutMixin:
 
         from Imervue.gui.image_issue_panel import ImageIssuePanel
         self.image_issue_panel = ImageIssuePanel(self)
-        self._image_issue_dock = QDockWidget(
-            language_wrapper.language_word_dict.get(
-                "image_issues_title",
-                "Image load issues",
-            ),
-            self,
-        )
-        self._image_issue_dock.setWidget(self.image_issue_panel)
-        self._image_issue_dock.hide()
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._image_issue_dock)
 
         self.viewer.on_filename_changed = self._on_viewer_filename_changed
         return right_widget
@@ -183,8 +178,8 @@ class MainWindowLayoutMixin:
         self._tab_bar.customContextMenuRequested.connect(self._on_tab_context_menu)
         return self._tab_bar
 
-    def _build_view_stack(self) -> QSplitter:
-        """Grid / list / dual view stack beside the EXIF sidebar; returns the row splitter."""
+    def _build_view_stack(self) -> QStackedWidget:
+        """Grid / list / dual view stack; returns it for the viewer column."""
         # ===== 檢視模式堆疊 (Grid/List/Dual) =====
         # viewer 在 index 0，ImageListView 在 index 1，DualImageView 在 index 2。
         from Imervue.gui.image_list_view import ImageListView
@@ -202,18 +197,12 @@ class MainWindowLayoutMixin:
         self._browse_mode: str = "grid"  # "grid" | "list"
         self._dual_active: bool = False
         self._pre_dual_mode: str = "grid"
-
-        viewer_row = QSplitter(Qt.Orientation.Horizontal)
-        viewer_row.addWidget(self._view_stack)
-        viewer_row.addWidget(self.exif_sidebar)
-        viewer_row.setStretchFactor(0, 1)
-        viewer_row.setStretchFactor(1, 0)
-        return viewer_row
+        return self._view_stack
 
 
     def _build_workspace_tabs(self) -> None:
         """Tabs 1-4: Modify panel, Paint, Puppet and Desktop Pet, plus the tab-bar key filter."""
-        # Tab 1: 修改面板 — 左面板 | 圖片 | 右面板
+        # Tab 1: 修改面板 — 工具 dock | 圖片 | 調整 dock
         # --------------------------------------------------------
         from Imervue.gui.develop_panel import DevelopPanel
         lang = language_wrapper.language_word_dict
@@ -223,27 +212,18 @@ class MainWindowLayoutMixin:
         )
         self.modify_panel.use_undo_stack(self.viewer.undo_manager)
 
-        modify_page = QWidget()
-        modify_layout = QHBoxLayout(modify_page)
-        modify_layout.setContentsMargins(0, 0, 0, 0)
-        modify_layout.setSpacing(0)
-
-        modify_splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        # 左面板：註解 + 方向
-        self.modify_panel.build_left_panel(modify_splitter)
-        # 右面板：顯影滑桿 + 重設。中間的 AnnotationCanvas 由 modify_panel 在綁定圖片時
-        # 插進 splitter 第 1 格；主檢視器留在 Imervue 分頁，Modify 分頁不會用到它。
-        self.modify_panel.build_right_panel(modify_splitter)
-
-        modify_splitter.setStretchFactor(0, 0)
-        modify_splitter.setStretchFactor(1, 0)
-
-        modify_layout.addWidget(modify_splitter)
-        self._modify_splitter = modify_splitter
+        # 巢狀 QMainWindow：中央的 CanvasHost 在綁定圖片時換上 AnnotationCanvas，
+        # 並永遠拿到兩側 dock 剩下的寬度；主檢視器留在 Imervue 分頁。
+        self._modify_window = make_dock_host()
+        self._modify_canvas_host = CanvasHost(
+            lang.get("modify_no_image", "Open an image in the Imervue tab to edit it here."))
+        self._modify_window.setCentralWidget(self._modify_canvas_host)
+        # 左 dock：註解工具 + 方向；右 dock：繪圖屬性 + 顯影滑桿 + 重設。
+        self._build_modify_docks(
+            self.modify_panel.build_left_panel(), self.modify_panel.build_right_panel())
 
         self._main_tabs.addTab(
-            modify_page,
+            self._modify_window,
             lang.get("modify_menu_title", "Modify"),
         )
 
@@ -332,7 +312,7 @@ class MainWindowLayoutMixin:
         self.setStatusBar(self._status_bar)
         self._status_label = QLabel("")
         self._progress_bar = QProgressBar()
-        self._progress_bar.setFixedWidth(180)
+        self._progress_bar.setFixedWidth(scaled_px(180))
         self._progress_bar.setVisible(False)
         # Permanent-side info slots: index · resolution · size · zoom · cursor
         # These are only populated by the viewer; empty strings keep the
@@ -348,9 +328,10 @@ class MainWindowLayoutMixin:
                 self._status_info_size, self._status_info_zoom,
                 self._status_info_cursor,
         ):
-            lbl.setStyleSheet("color: #aaa; padding: 0 6px;")
+            lbl.setStyleSheet(f"padding: 0 {scaled_px(6)}px;")
+            lbl.setEnabled(False)   # the palette's muted text, in any theme
         self._status_info_label.setStyleSheet(
-            "padding: 0 8px; border-radius: 3px;"
+            f"padding: 0 {scaled_px(8)}px; border-radius: 3px;"
         )
         self._status_bar.addWidget(self._status_label, stretch=1)
         self._status_bar.addPermanentWidget(self._status_info_label)

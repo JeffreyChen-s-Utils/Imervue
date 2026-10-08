@@ -21,6 +21,7 @@ from Imervue.gui.menu_tree import submenu_index, submenu_of
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_or_warn
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from PySide6.QtGui import QAction
@@ -175,7 +176,7 @@ class _PluginManageDialog(QDialog):
         header = QLabel(
             lang.get("plugin_manage_count", "{count} plugin(s) loaded").format(count=count)
         )
-        header.setStyleSheet("font-size: 14px; font-weight: bold; padding: 4px 0;")
+        header.setStyleSheet(f"{font_px(14)} font-weight: bold; padding: 4px 0;")
         layout.addWidget(header)
 
         # 插件樹

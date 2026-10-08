@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 from Imervue.library.token_rename import RenamePlan, preview, rename_plans
 from Imervue.gpu_image_view.actions.select import selection_or_all
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -52,7 +53,7 @@ class TokenRenameDialog(QDialog):
         layout.addLayout(tpl_row)
 
         help_label = QLabel(_TOKENS_HELP)
-        help_label.setStyleSheet("color: #888; font-size: 10px;")
+        help_label.setStyleSheet(f"color: #888; {font_px(10)}")
         help_label.setWordWrap(True)
         layout.addWidget(help_label)
 

@@ -18,6 +18,7 @@ from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.batch_rename import rename_files
 from Imervue.system.file_transfer import transfer_into
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -71,7 +72,7 @@ class BatchRenameDialog(QDialog):
         # 預覽
         self._preview_label = QLabel()
         self._preview_label.setWordWrap(True)
-        self._preview_label.setStyleSheet("color: #888; font-size: 11px;")
+        self._preview_label.setStyleSheet(f"color: #888; {font_px(11)}")
         layout.addWidget(self._preview_label)
         self._template.textChanged.connect(self._update_preview)
         self._start_num.textChanged.connect(self._update_preview)

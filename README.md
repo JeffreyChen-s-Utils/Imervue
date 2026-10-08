@@ -233,7 +233,7 @@ Rendering, thumbnail requests and texture eviction share the visible grid range 
 
 Neighbor prefetch budgets actual pyramid bytes together with in-flight decode reservations. Speculative loading shares 20% of physical RAM (256 MiB–8 GiB) fairly across open viewer windows; when optional memory detection is unavailable, it shares a 2 GiB fallback. Reservations remain until cancelled decoders actually finish, and quota refusal falls back to normal foreground loading when that image is opened. RAM admission is separate from the GPU texture budget; it does not cap the entire process or the foreground image.
 
-The **Imervue** tab is the default landing surface. It pairs the image viewer with the folder tree, EXIF sidebar, and library/organization tools.
+The **Imervue** tab is the default landing surface. It pairs the image viewer with the folder tree, the Image Info panel, and library/organization tools. The folder tree, Image Info and the Modify tab's Tools and Adjustments panels are docks: drag a title bar to move, float or tab one, show or hide them under **Thumbnail Size > Panels**, and **Reset Panel Layout** puts them back. The default look is the **Modern Dark** theme; **File > Preferences** offers **Modern Light**, the system look and four more.
 
 ### Viewer
 
@@ -320,7 +320,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 ### Metadata
 
-- **EXIF sidebar** with collapsible groups + inline 0-5 star strip
+- **Image Info panel** (dock) — EXIF, inline 0-5 star strip and notes for the open image
 - **EXIF editor** dialog — description, artist, copyright, camera and comment (Unicode included) written into a JPEG or WebP with no extra package, pixels and other tags untouched; **Describe** fills the description with one sentence from a local vision model (Ollama with `llava` on `localhost:11434`), so the image never leaves your computer
 - **Keyword editor** — title / creator / description / keywords, with **related-tag suggestions** drawn from tag co-occurrence and **controlled-vocabulary expansion** (a leaf keyword auto-applies its ancestors + synonyms from an editable hierarchical vocabulary)
 - **Image info** dialog (dimensions / size / dates)

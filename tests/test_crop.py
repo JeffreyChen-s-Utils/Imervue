@@ -154,8 +154,8 @@ class TestCropWidgetPlacement:
         from Imervue.gui.develop_panel import DevelopPanel
         dp = DevelopPanel(main_gui)
         splitter = QSplitter()
-        dp.build_left_panel(splitter)
-        dp.build_right_panel(splitter)
+        splitter.addWidget(dp.build_left_panel())
+        splitter.addWidget(dp.build_right_panel())
         dp._test_splitter = splitter  # prevent GC
         return dp
 

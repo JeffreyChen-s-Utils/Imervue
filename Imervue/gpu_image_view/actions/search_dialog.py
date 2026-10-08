@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.gpu_image_view.tile_layout import tile_grid_layout
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import font_px
 
 
 class _HighlightDelegate(QStyledItemDelegate):
@@ -137,7 +138,7 @@ class ImageSearchDialog(QDialog):
         search_row.addWidget(self._input)
 
         self._count_label = QLabel("")
-        self._count_label.setStyleSheet("color: #888; font-size: 12px; padding: 0 6px;")
+        self._count_label.setStyleSheet(f"color: #888; {font_px(12)} padding: 0 6px;")
         search_row.addWidget(self._count_label)
         layout.addLayout(search_row)
 

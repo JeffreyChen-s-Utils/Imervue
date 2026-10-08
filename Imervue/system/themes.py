@@ -1,17 +1,28 @@
 """Built-in colour themes for the main window.
 
-A theme is just a Qt stylesheet (QSS) string registered under a name. The
-active theme name lives in ``user_setting_dict["theme"]`` and is applied
-to the ``QApplication`` instance at startup. Switching themes requires
-a restart because already-laid-out widgets cache their palette.
+A theme is a Qt stylesheet (QSS) registered under a name, and for the two
+modern themes also a colour set that becomes the application palette on the
+Fusion style (:mod:`Imervue.system.modern_theme`). The active theme name lives
+in ``user_setting_dict["theme"]`` and is applied to the ``QApplication``
+instance at startup. Switching themes requires a restart because
+already-laid-out widgets cache their palette.
 
-The default theme is the empty string, meaning "use the platform's native
-look" — that keeps existing users on whatever they had before this
-feature shipped.
+A profile that never chose a theme gets ``DEFAULT_THEME_NAME`` (Modern Dark).
+``SYSTEM_THEME_NAME`` is the platform's native look: no stylesheet, and the
+style and palette the application started with.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from Imervue.system.modern_theme import (
+    FUSION_STYLE,
+    MODERN_DARK,
+    MODERN_LIGHT,
+    ThemeColours,
+    build_palette,
+    build_stylesheet,
+)
 
 
 @dataclass(frozen=True)
@@ -19,8 +30,10 @@ class Theme:
     """One named theme. Stylesheet is QSS applied to the QApplication."""
 
     name: str
-    label: str          # human-readable name shown in the Preferences combo
+    label: str          # English name shown in the Preferences combo
     stylesheet: str     # full QSS string; empty means "no override"
+    colours: ThemeColours | None = None   # set: Fusion style with this palette
+    label_key: str = ""                   # translation key of the label, if it has one
 
 
 # ---------------------------------------------------------------------------
@@ -136,8 +149,21 @@ QStatusBar { background-color: #eee8d5; color: #586e75; }
 """
 
 
+SYSTEM_THEME_NAME = "default"
+
 THEMES: dict[str, Theme] = {
-    "default": Theme(name="default", label="System default", stylesheet=""),
+    "modern_dark": Theme(
+        name="modern_dark", label="Modern Dark", stylesheet=build_stylesheet(MODERN_DARK),
+        colours=MODERN_DARK, label_key="theme_modern_dark",
+    ),
+    "modern_light": Theme(
+        name="modern_light", label="Modern Light", stylesheet=build_stylesheet(MODERN_LIGHT),
+        colours=MODERN_LIGHT, label_key="theme_modern_light",
+    ),
+    SYSTEM_THEME_NAME: Theme(
+        name=SYSTEM_THEME_NAME, label="System default", stylesheet="",
+        label_key="theme_system_default",
+    ),
     "dracula": Theme(name="dracula", label="Dracula", stylesheet=_DRACULA),
     "nord": Theme(name="nord", label="Nord", stylesheet=_NORD),
     "solarized_dark": Theme(
@@ -148,7 +174,13 @@ THEMES: dict[str, Theme] = {
     ),
 }
 
-DEFAULT_THEME_NAME = "default"
+DEFAULT_THEME_NAME = "modern_dark"
+# Settings flag: this profile has been moved to the modern default once.
+MODERN_OFFERED_KEY = "theme_modern_offered"
+
+# Style name and palette the application started with, kept the first time a
+# theme replaces them so the system theme can put them back.
+_native_look: dict = {}
 
 
 def list_themes() -> list[Theme]:
@@ -161,15 +193,54 @@ def get_theme(name: str) -> Theme:
     return THEMES.get(name) or THEMES[DEFAULT_THEME_NAME]
 
 
+def theme_label(theme: Theme) -> str:
+    """The theme's name in the current language (its English label without a translation)."""
+    if not theme.label_key:
+        return theme.label
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    return language_wrapper.language_word_dict.get(theme.label_key, theme.label)
+
+
 def apply_theme(app, name: str) -> str:
     """Apply the named theme to ``app`` and return the name actually used."""
     theme = get_theme(name)
+    # While a stylesheet is set, ``app.style()`` is Qt's stylesheet proxy and has
+    # no name to restore later, so the old sheet goes before the style is read.
+    app.setStyleSheet("")
+    if theme.colours is not None:
+        if not _native_look:
+            _native_look["style"] = app.style().objectName()
+            _native_look["palette"] = app.palette()
+        app.setStyle(FUSION_STYLE)
+        app.setPalette(build_palette(theme.colours))
+    elif _native_look:
+        app.setStyle(_native_look["style"])
+        app.setPalette(_native_look["palette"])
+        _native_look.clear()
     app.setStyleSheet(theme.stylesheet)
     return theme.name
+
+
+def offer_modern_theme(settings: dict) -> bool:
+    """Move a profile still on the system look to the modern default, once.
+
+    Preferences stored ``"default"`` on every OK, so that value does not show
+    the system look was chosen. The first launch with the modern themes
+    switches it; the flag set here makes a later pick of *System default* in
+    Preferences stay. Returns whether the theme was changed.
+    """
+    if settings.get(MODERN_OFFERED_KEY):
+        return False
+    settings[MODERN_OFFERED_KEY] = True
+    if settings.get("theme", SYSTEM_THEME_NAME) != SYSTEM_THEME_NAME:
+        return False
+    settings["theme"] = DEFAULT_THEME_NAME
+    return True
 
 
 def load_and_apply_theme(app) -> str:
     """Read ``theme`` from user settings and apply to ``app``."""
     from Imervue.user_settings.user_setting_dict import user_setting_dict
+    offer_modern_theme(user_setting_dict)
     name = user_setting_dict.get("theme", DEFAULT_THEME_NAME)
     return apply_theme(app, str(name))

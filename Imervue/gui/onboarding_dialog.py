@@ -24,6 +24,7 @@ from Imervue.user_settings.user_setting_dict import (
     schedule_save,
     user_setting_dict,
 )
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -53,7 +54,7 @@ class OnboardingDialog(QDialog):
         self._body_label.setWordWrap(True)
 
         self._progress_label = QLabel()
-        self._progress_label.setStyleSheet("color: #888; font-size: 11px;")
+        self._progress_label.setStyleSheet(f"color: #888; {font_px(11)}")
 
         self._back_btn = QPushButton(lang.get("onboarding_back", "Back"))
         self._next_btn = QPushButton(lang.get("onboarding_next", "Next"))

@@ -225,7 +225,7 @@ El dibujo, las solicitudes de miniaturas y la liberación de texturas comparten 
 
 La precarga de imágenes vecinas suma los bytes reales de las pirámides y las reservas de las decodificaciones en curso. Las ventanas abiertas comparten equitativamente el 20% de la RAM física (256 MiB–8 GiB); sin detección opcional de memoria comparten un presupuesto de respaldo de 2 GiB. Las reservas de decodificaciones canceladas se liberan cuando estas terminan; al abrir una imagen omitida por el presupuesto se carga normalmente en primer plano. El presupuesto de RAM es independiente del de texturas GPU y no limita todo el proceso ni la imagen en primer plano.
 
-La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina el visor de imágenes con el árbol de carpetas, la barra lateral EXIF y las herramientas de biblioteca/organización.
+La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina el visor de imágenes con el árbol de carpetas, el panel de información de la imagen y las herramientas de biblioteca/organización. El árbol de carpetas, el panel de información y los paneles Tools y Adjustments de la pestaña Modify son docks: arrastre una barra de título para mover, separar o apilar uno en pestañas, muéstrelos u ocúltelos en **Thumbnail Size > Panels**, y **Reset Panel Layout** los devuelve a su sitio. El aspecto predeterminado es el tema **Modern Dark**; **File > Preferences** ofrece **Modern Light**, el aspecto del sistema y cuatro más.
 
 ### Visor
 
@@ -312,7 +312,7 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 ### Metadatos
 
-- **Barra lateral EXIF** con grupos colapsables + tira en línea de 0-5 estrellas
+- **Panel de información de la imagen** (dock) — EXIF, tira en línea de 0-5 estrellas y notas de la imagen abierta
 - Diálogo **editor EXIF** — descripción, artista, copyright, cámara y comentario (Unicode incluido) escritos en un JPEG o WebP sin paquetes extra, sin tocar los píxeles ni las demás etiquetas; **Describe** rellena la descripción con una frase de un modelo de visión local (Ollama con `llava` en `localhost:11434`), así que la imagen nunca sale de tu equipo
 - **Editor de palabras clave** — título / autor / descripción / palabras clave, con **sugerencias de etiquetas relacionadas** derivadas de la coocurrencia de etiquetas y expansión de vocabulario controlado (una palabra clave hoja aplica automáticamente sus ancestros + sinónimos desde un vocabulario jerárquico editable)
 - Diálogo de **información de imagen** (dimensiones / tamaño / fechas)
