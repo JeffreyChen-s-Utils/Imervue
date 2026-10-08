@@ -187,6 +187,27 @@ def test_real_child_index_history_cache_report(tmp_path):
     assert result["environment"]["tool_sha256"]["performance_gl.py"]
 
 
+def test_modify_scenario_builds_a_working_develop_panel(qapp, tmp_path):
+    """The image scenario still passed a splitter to builders that no longer take one."""
+    from PIL import Image
+
+    from Imervue.gui import develop_panel
+    source = tmp_path / "source.png"
+    Image.new("RGB", (16, 12), "red").save(source)
+    saved_store = develop_panel.recipe_store
+    panel = benchmark._modify_panel(tmp_path)  # noqa: SLF001
+    try:
+        assert develop_panel.recipe_store is not saved_store     # isolated from the real store
+        assert panel._tool_buttons and panel._exposure is not None  # noqa: SLF001
+        panel.bind_to_path(str(source))
+        assert panel.canvas() is not None
+    finally:
+        panel._destroy_canvas()  # noqa: SLF001
+        develop_panel.recipe_store = saved_store
+        panel.benchmark_window.deleteLater()
+        panel.deleteLater()
+
+
 class TestActualFrames:
     pytestmark = real_gl_mark
 

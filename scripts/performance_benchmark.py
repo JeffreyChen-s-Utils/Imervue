@@ -110,11 +110,7 @@ def library(fixture: Path, profile: Path, repeats: int, *, large: bool) -> dict:
 
 
 def image(fixture: Path, profile: Path, repeats: int, *, label: str) -> dict:
-    from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QMainWindow, QSplitter
-    from Imervue.gui import develop_panel
     from Imervue.image.recipe import Recipe
-    from Imervue.image.recipe_store import RecipeStore
     from Imervue.gpu_image_view.images.image_loader import decode_image_file
     app = _application()
     source = fixture / f"{label}.jpg"
@@ -129,13 +125,7 @@ def image(fixture: Path, profile: Path, repeats: int, *, label: str) -> dict:
     decoded.clear()
     from scripts.performance_gl import first_image_frames
     display = first_image_frames(str(source), repeats)
-    develop_panel.recipe_store = RecipeStore(store_path=profile / "recipes.json")
-    window = QMainWindow()
-    panel = develop_panel.DevelopPanel(SimpleNamespace(
-        main_window=window, reload_current_image_with_recipe=lambda: None))
-    splitter = QSplitter(Qt.Orientation.Horizontal)
-    panel.build_left_panel(splitter)
-    panel.build_right_panel(splitter)
+    panel = _modify_panel(profile)
     first = measure(lambda: panel.bind_to_path(str(source)), repeats=1)
     panel._current = Recipe(exposure=.25, temperature=.1, shadows=.1, vibrance=.1)
     preview = _measure_modify(panel, app, repeats)
@@ -147,6 +137,28 @@ def image(fixture: Path, profile: Path, repeats: int, *, label: str) -> dict:
     panel._destroy_canvas()
     app.processEvents()
     return result
+
+
+def _modify_panel(profile: Path):
+    """A real DevelopPanel with both side panels built, on a recipe store under *profile*.
+
+    The panels are parented to a window kept on the panel, as the Modify tab's
+    docks hold them in the application.
+    """
+    from types import SimpleNamespace
+
+    from PySide6.QtWidgets import QMainWindow
+
+    from Imervue.gui import develop_panel
+    from Imervue.image.recipe_store import RecipeStore
+    develop_panel.recipe_store = RecipeStore(store_path=profile / "recipes.json")
+    window = QMainWindow()
+    panel = develop_panel.DevelopPanel(SimpleNamespace(
+        main_window=window, reload_current_image_with_recipe=lambda: None))
+    for side in (panel.build_left_panel(), panel.build_right_panel()):
+        side.setParent(window)
+    panel.benchmark_window = window
+    return panel
 
 
 def _measure_modify(panel, app, repeats: int) -> dict:
