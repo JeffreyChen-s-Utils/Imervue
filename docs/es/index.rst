@@ -35,6 +35,32 @@ transversales y se aplican a las cinco pestañas.
 
 **Puppet** y **Desktop Pet** son opcionales: desactiva cualquiera de los dos en ``File`` > ``Preferences`` > **Optional tabs** y, desde el siguiente inicio, su pestaña no se añade y su código no se carga, así que Imervue arranca más rápido y usa menos memoria. Ambos vienen activados; cada uno se construye la primera vez que abres su pestaña, y la de Desktop Pet al iniciar cuando su mascota está configurada para mostrarse al arrancar.
 
+La cuadrícula de miniaturas libera espacio para nuevas texturas GPU eliminando primero las que están fuera de la vista, preservando las visibles y respetando el presupuesto de memoria. Las que solo tocan el borde no reservan capacidad.
+
+El dibujo, las solicitudes de miniaturas y la liberación de texturas comparten el rango visible con una fila/columna adicional. Los tamaños normales se decodifican bajo demanda, con tantas tareas simultáneas como trabajadores del grupo de miniaturas; al desplazarse se sustituyen las solicitudes aún no iniciadas. El modo de resolución completa descubre en segundo plano, con concurrencia limitada, imágenes que superan sus celdas. El progreso cuenta la vista actual y las solicitudes explícitas. Al volver de Deep Zoom se conservan la caché y la posición.
+
+La precarga de imágenes vecinas suma los bytes reales de las pirámides y las reservas de las decodificaciones en curso. Las ventanas abiertas comparten equitativamente el 20% de la RAM física (256 MiB–8 GiB); sin detección opcional de memoria comparten un presupuesto de respaldo de 2 GiB. Las reservas de decodificaciones canceladas se liberan cuando estas terminan; al abrir una imagen omitida por el presupuesto se carga normalmente en primer plano. El presupuesto de RAM es independiente del de texturas GPU y no limita todo el proceso ni la imagen en primer plano.
+
+Modify mantiene los controles ágiles con una vista previa de menor resolución en segundo plano durante los ajustes y calcula la calidad completa tras una pausa. Los cambios rápidos y de foto descartan resultados anteriores; las anotaciones conservan las coordenadas del tamaño completo. Guardar o aplicar efectos destructivos completa primero el cálculo a calidad completa.
+
+Cancelar o cerrar una herramienta en segundo plano vuelve de inmediato. El diálogo indica la cancelación y desactiva sus controles hasta que terminen el trabajo actual que no puede interrumpirse y la limpieza; después se cierra con el resultado original. Al completar normalmente puede mostrar brevemente la finalización. Al volver a abrirlo no recibe resultados antiguos. Al salir definitivamente, la aplicación espera a que termine de forma segura el trabajo pendiente.
+
+Abra ``Extra Tools`` > ``Workflow`` > ``Background Jobs`` para ver exportaciones por lotes, escaneos de biblioteca, ampliación IA/transformaciones compartidas de plugins y descargas de plugins de todas las ventanas. Los resultados conservan salidas guardadas y motivos de fallo al cerrar el diálogo original. La cancelación es cooperativa; las operaciones siguen vivas hasta terminar. Reintentar crea otro intento solo para elementos fallidos y conserva las salidas correctas. Una descarga de plugin es una instalación atómica. El panel muestra hasta 500 detalles, primero los fallos; guardar el informe completo escribe todos los resultados en JSON. Limpiar finalizados libera su historial.
+
+En Paint, File > ``Open Document…``, ``Save Document…``, ``Save Document As…`` y ``Save All Documents`` usan documentos ``.imervue`` editables. Guardar todos procesa las pestañas modificadas sin cambiar la activa; cancelar o fallar detiene la secuencia y mantiene abiertos los documentos pendientes. Al cerrar la ventana se pueden guardar todos; al cerrar una pestaña se guarda esa pestaña. Undo/Redo tras guardar vuelve a marcar cambios. La exportación plana no borra ese estado. Las ayudas muestran origen, destino, exportación y estado/hora/error del autoguardado de recuperación. Abrir y arrastrar preservan ediciones. Se mantienen los atajos PSD; el guardado nativo explícito es síncrono.
+
+``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` conecta búsqueda, comparación, selección/rechazo, preset de revelado y exportación por lotes. Library Search añade resultados resaltados o todos si no hay resaltados; conserva consulta y resultados al reabrir. Cada ventana retiene orden entre carpetas, casillas, filtro y presets. Filtrar solo cambia la vista: fotos marcadas ocultas siguen siendo destinos y se cuentan. Seleccionar marca; rechazar desmarca sin borrar. Comparación con lado máximo de 800 píxeles. Se reutilizan presets existentes y las mismas fuentes marcadas no rechazadas en Batch Export. Hay 500 filas por página; se sincronizan cambios externos antes de aplicar/exportar. Limpiar reinicia el flujo explícitamente.
+
+Exportación individual, por lotes y conversión escriben atómicamente; ``Background Jobs`` conserva rutas/errores. Los lotes renombran conflictos, incluso mismo formato; reemplazo individual requiere confirmación. GUI incluye ICC sRGB al conservar metadata; conversión conserva descripciones, exportación omite ubicación por defecto. CLI por imagen: ``--output-conflict`` (``rename``, ``skip``, ``replace``), ``--export-metadata`` (``all``, ``no_location``, ``none``), JSON ``--result-report`` con enlaces. Se mantienen omitir/``--overwrite`` y codificador por defecto; metadata explícita puede recodificar. ``strip`` siempre elimina metadata. Ctrl+C conserva salidas completas y informa cancelación. PDF, MP4 y archivos de galería se publican atómicamente; copias originales conservan metadata.
+
+``Manage Plugins`` muestra fallos por ventana y estados compartidos de dependencias, descarga, modelos y backend con causas. Cargado implica comprobar opciones al usarlas; herramientas conservan modelo/backend y motivo del fallback CPU. Descarga/reintento conserva instalación, modelos y recursos; instalación simultánea del mismo plugin/intérprete se rechaza. Cancelar no bloquea; importaciones fallidas no indican éxito. ``Reload Plugins`` lee código nuevo por ventana; GPU Develop conserva otros proveedores y requiere API 3. Tras descargar/reintentar, recargue cada ventana o reinicie.
+
+El inventario de miniaturas corre en segundo plano; lectura/escritura inmediata. Escritura atómica y cambios de primer plano prevalecen sobre datos antiguos; limpiar incluye archivos aún sin explorar. Inicio limpia NPY antiguos y reconcilia cuota; totales provisionales hasta terminar. Archivos bloqueados legibles siguen contando y pueden impedir la cuota. Con 100.000 archivos, p95 de construcción inferior a 10 ms; duración/coste del inventario se mide aparte.
+
+La biblioteca consulta una conexión WAL separada de solo lectura: ve datos confirmados durante un lote de escaneo. Notas, etiquetas jerárquicas, selección y álbumes comparten una instantánea por llamada. Escrituras serializadas; revertir un lote no pierde un cambio posterior de etiqueta. Las páginas de huellas liberan el lector; cerrar espera consultas activas. Compatibilidad con esquema 2 y bibliotecas existentes.
+
+GPU Develop sigue como acelerador opcional de exportación por lotes. Nuevos diálogos eligen CPU; seleccionar GPU explícitamente en Procesar en. Las etapas de color mixtas pueden diferir en bytes; umbral o posterización activados procesan toda la receta en CPU para evitar amplificar redondeos. Modify y exportación CPU usan sRGB de 8 bits; perfiles incrustados se normalizan una vez y las salidas llevan sRGB salvo al quitar metadatos. No es edición HDR lineal ni de gama amplia. wgpu opcional en el plugin, sin pesos de modelos; fallos/dispositivos ausentes usan CPU. Informes 640k/24MP/60MP documentan mantener vistas previas CPU.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:
@@ -56,7 +82,7 @@ Cuando abra Imervue, verá tres áreas:
 
 - **Izquierda**: Árbol de carpetas. Haga clic en una carpeta para examinar las imágenes que contiene.
 - **Centro**: Área de visualización. Muestra todas las imágenes como una cuadrícula de miniaturas.
-- **Derecha**: Barra lateral EXIF, plegada en una franja estrecha al iniciar: haga clic en ella para abrirla. Muestra la información de captura de la imagen abierta.
+- **Derecha**: Panel de información de la imagen. Muestra la información de captura, la valoración y las notas de la imagen abierta. El árbol de carpetas y este panel son docks: arrastre una barra de título para mover, separar o apilar uno en pestañas, muéstrelos u ocúltelos en ``Thumbnail Size`` > ``Panels``, y ``Reset Panel Layout`` allí devuelve cada panel a su sitio. El aspecto predeterminado es el tema **Modern Dark**; ``File`` > ``Preferences`` ofrece **Modern Light**, el aspecto del sistema y cuatro más.
 
 Imervue escribe un registro de cada sesión en ``imervue.log`` junto al programa (en ``%LOCALAPPDATA%\Imervue``, o en ``~/.cache/imervue`` fuera de Windows, cuando esa carpeta es de solo lectura). El registro de la sesión anterior se conserva como ``imervue.previous.log``, así que tras una caída el registro que la explica sigue ahí cuando Imervue vuelve a ejecutarse — adjunte ambos al informar de un problema.
 
@@ -552,8 +578,11 @@ Espacio de trabajo Paint (Pestaña Paint)
 
 La tercera pestaña de nivel superior — **Paint** — es un espacio de trabajo de pintura
 con todas las funciones, con documentos en múltiples pestañas, capas vectoriales y raster,
-herramientas de manga, fotogramas de animación e importación/exportación de PSD. Al cambiar
-a ella desde la barra de pestañas, la imagen que muestra el visor se carga en el lienzo.
+Undo / Redo restaura la creación, eliminación, orden y combinación de capas, además de sus propiedades, máscaras, vectores, grupos, selecciones y capa de referencia. Los comandos del menú y panel de capas, las capas de manga y la inserción de materiales crean pasos de deshacer; cada documento mantiene su propio historial.
+
+Cada documento de Paint conserva hasta 50 pasos de historial dentro de un presupuesto de 512 MiB, incluidos el estado base actual y las ramas Undo/Redo. Los píxeles sin cambios se comparten; el pincel y el borrador guardan solo los bloques modificados. Al alcanzar el límite se eliminan los pasos antiguos. Si una sola instantánea supera el límite, se vacía el historial y se conserva el documento editable.
+
+herramientas de manga, fotogramas de animación e importación/exportación de PSD. Al cambiar a Paint se conservan los documentos, las capas, los cambios sin guardar y el historial de deshacer; la primera visita muestra un lienzo vacío. ``File > Open Current Image in Paint`` abre la imagen del visor en un documento nuevo. Izquierda/Derecha en la barra de pestañas principal de Paint también abre la imagen anterior/siguiente del visor en un documento nuevo. ``E`` desde Deep Zoom abre el editor de anotaciones independiente.
 
 Aspectos destacados de la experiencia de usuario — el espacio de trabajo Paint incluye un
 cursor de tamaño de pincel con todas las funciones que se escala con el zoom, iconos de cursor
@@ -836,7 +865,7 @@ Entrada/Salida de archivos
 - **Export image…** — aplana y guarda como PNG, JPEG, WebP, TIFF o BMP, según el tipo de archivo elegido (JPEG y BMP, que no admiten transparencia, sobre fondo blanco). Solo **Save as PSD…** marca la pestaña como guardada; tras una exportación, al cerrar Imervue se sigue preguntando por los cambios sin guardar de la pestaña
 - **Export pages → CBZ** / **→ PDF** — exporta las páginas de un proyecto de cómic; **Save Comic Project…** guarda el cómic entero, cada página con sus capas, en un solo archivo ``.imervue-proj``, y **Open Comic Project…** lo recupera
 - **Import brush preset…**, **Import palette…** — trae pinceles y paletas de otras instalaciones o aplicaciones
-- **Autoguardado** — cada 2 minutos, mientras la pestaña activa tenga ediciones sin guardar, se escribe una instantánea; en el siguiente inicio un toast ofrece las instantáneas y **File > Restore Autosave** carga la más reciente en la pestaña activa. La barra de estado muestra cuándo se tomó la última instantánea, y al cerrar Imervue se pregunta por las pestañas Paint con cambios sin guardar.
+- **Autoguardado** — Cada 2 minutos, cada documento modificado conserva sus ocho instantáneas más recientes. **File > Restore Autosave** abre la última versión legible en una nueva pestaña modificada, preservando las ediciones actuales; si está dañada, intenta una versión anterior. Las instantáneas nativas conservan el recorte de paneles de manga. La barra de estado indica el último autoguardado del documento activo, se notifican los errores de escritura y cerrar una pestaña elimina solo sus propias instantáneas. El guardado periódico usa la última edición completada y reconstruye, comprime y escribe la instantánea en segundo plano. Cada espacio tiene un único escritor y solo la versión pendiente más reciente por documento; cerrar o sustituir un documento cancela las salidas tardías. Si el historial no puede conservar un estado inmutable, se captura una copia coherente del documento en el hilo de interfaz antes de escribirla en segundo plano.
 
 Diseños de espacio de trabajo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1905,17 +1934,14 @@ Seleccione varias imágenes, después clic derecho > ``Batch Operations`` > ``Ba
 Plugin GPU Develop
 ^^^^^^^^^^^^^^^^^^
 
-El plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, categoría ``plugins``, nombre
-``gpu_develop``) permite que la exportación por lotes procese las recetas de revelado en una GPU
-dedicada. ``Plugins`` > ``GPU Develop…`` instala ``wgpu`` la primera vez y después indica la GPU
-que va a usar; a partir de entonces la exportación por lotes muestra **Procesar en** con esa GPU
-elegida (elija **CPU** para procesar como antes).
+El plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, categoría ``plugins``, nombre ``gpu_develop``) acelera opcionalmente la exportación por lotes. ``Plugins`` > ``GPU Develop…`` instala ``wgpu`` la primera vez e identifica el dispositivo. CPU predeterminada; elegir GPU explícitamente en **Procesar en**.
+
 
 - El balance de blancos, la exposición, las luces / sombras, los blancos / negros, el brillo, el contraste, la vibrancia, la saturación y la curva tonal se ejecutan en la GPU; la rotación, los volteos, el recorte y todo lo que viene después de la curva tonal (Split Toning, LUT, máscaras, niveles y el resto) se quedan en la CPU
-- Una foto de 24 MP tarda unos 0,1 s en la GPU en lugar de unos 7 s en la CPU, sin contar la decodificación ni el guardado
+- Velocidad según hardware/receta; mediciones fijas 640k/24MP/60MP: docs/performance/gpu-develop-20261007.md
 - Solo se usa una GPU dedicada, nunca una GPU integrada ni un renderizador por software; en Windows, primero mediante Vulkan y después mediante Direct3D 12
 - Una imagen con la que falla la GPU se procesa en la CPU, de modo que la exportación se completa igualmente
-- El resultado coincide con el del renderizador de CPU con una diferencia de unos pocos niveles como máximo en una pequeña parte de los píxeles
+- CPU predeterminada conserva píxeles canónicos; GPU es aproximación explícita. Umbral/posterización activados usan CPU para toda la receta
 
 Crear GIF / Vídeo
 ^^^^^^^^^^^^^^^^^
@@ -2157,7 +2183,7 @@ Presets de diseño de espacio de trabajo
 
 ``File`` > ``Workspaces…`` captura la geometría actual de la ventana, la disposición de docks
 / barras de herramientas, la división entre árbol y visor y la carpeta raíz activa bajo un nombre
-— después le permite alternar entre diseños guardados. La pestaña activa y la división de paneles de la pestaña Modify no se guardan. El diálogo admite Save Current, Load, Rename y Delete. Los
+— después le permite alternar entre diseños guardados. Las disposiciones de docks de las pestañas Imervue y Modify también se guardan; la pestaña activa no. El diálogo admite Save Current, Load, Rename y Delete. Los
 espacios de trabajo persisten en ``user_setting.json`` (bajo la clave ``workspaces``) y
 sobreviven entre sesiones.
 
@@ -2684,7 +2710,7 @@ importa como **Reject** de la selección sin estrellas, y un Reject se exporta c
 -1. Un sidecar no rechazado quita un Reject; un Pick no cambia.
 
 Un archivo sin sidecar se lee — y se importa — desde lo que él mismo incrusta: su
-paquete XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF) y luego su ``Rating`` / ``RatingPercent``
+paquete XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF) y luego su ``Rating`` / ``RatingPercent``
 EXIF. Ahí guarda Lightroom la valoración y las palabras clave de un JPEG, y ahí
 guardan sus estrellas el Explorador de Windows y algunas cámaras. Si hay sidecar,
 manda el sidecar.

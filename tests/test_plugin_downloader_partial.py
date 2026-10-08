@@ -166,3 +166,33 @@ def test_a_plugin_with_a_broken_manifest_is_refused(qapp, tmp_path, monkeypatch)
     errors, done, installed = _manifest_download(tmp_path, monkeypatch, b"{broken")
     assert done == [] and len(errors) == 1
     assert (installed / "__init__.py").read_bytes() == b"working copy"
+
+
+def test_same_plugin_concurrent_download_cannot_clobber_stage(qapp, tmp_path, monkeypatch):
+    from threading import Event
+    monkeypatch.setattr(pd, "_get_plugin_dir", lambda: tmp_path)
+    entered, release = Event(), Event()
+    def blocked(_request, timeout=30):
+        entered.set()
+        release.wait(5)
+        return _FakeResp(b"working code")
+    monkeypatch.setattr(pd, "_https_urlopen", blocked)
+    first, second = _worker(), _worker()
+    errors = []
+    second.error.connect(errors.append)
+    first.start()
+    try:
+        assert entered.wait(2)
+        second.run()
+        assert errors and "in progress" in errors[0]
+        release.set()
+        assert first.wait(3000)
+        assert (tmp_path / "myplugin" / "__init__.py").read_bytes() == b"working code"
+        assert list(tmp_path.iterdir()) == [tmp_path / "myplugin"]
+        assert first.job_state.snapshot().status == "succeeded"
+        assert second.job_state.snapshot().status == "failed"
+    finally:
+        release.set()
+        first.wait()
+        first.deleteLater()
+        second.deleteLater()

@@ -11,6 +11,10 @@ Pillow doesn't look:
   carries the maker's own magic number instead of 42.
 * RAF (Fujifilm) embeds the camera's JPEG, whose APP1 segment is the EXIF.
 
+:func:`raw_xmp` finds their XMP packet (where a camera keeps its in-camera
+rating) the same way: CR3's XMP ``uuid`` box, IFD0's XMP tag, the JPEG's XMP
+APP1 segment.
+
 Only the metadata is read, by seeking to it: a folder of RAW files is not read
 through. Qt-free, so the MCP server can use it.
 """
@@ -29,6 +33,9 @@ RAW_EXIF_EXTENSIONS: frozenset[str] = frozenset({".cr3", ".rw2", ".rwl", ".orf",
 """The RAW formats whose EXIF :func:`raw_exif` reads."""
 
 _CANON_METADATA_UUID = bytes.fromhex("85c0b687820f11e08111f4ce462b6a48")
+_XMP_UUID = bytes.fromhex("be7acfcb97a942e89c71999491e3afac")   # Adobe's, CR3 uses it
+_JPEG_XMP_SIGNATURE = b"http://ns.adobe.com/xap/1.0/" + bytes(1)
+_TIFF_XMP_TAG = 700
 # A metadata box or JPEG header larger than this is not metadata.
 _MAX_METADATA_BYTES = 4 * 1024 * 1024
 # The JPEG markers before the image data: APP segments are 64 KB at most.
@@ -60,6 +67,32 @@ def raw_exif(path: str | Path) -> Image.Exif | None:
             if ext == ".raf":
                 return _raf_exif(handle)
             return _tiff_exif(handle, drop_private=ext in {".rw2", ".rwl"})
+        except _BAD_METADATA:
+            return None
+
+
+def raw_xmp(path: str | Path) -> bytes | None:
+    """Return the XMP packet of the CR3 / RW2 / RWL / ORF / RAF at *path*.
+
+    ``None`` for another format and for a file without one or with damaged
+    metadata; ``OSError`` only when the file itself can't be read.
+    """
+    ext = Path(path).suffix.lower()
+    if ext not in RAW_EXIF_EXTENSIONS:
+        return None
+    if ext not in (".cr3", ".raf"):
+        exif = raw_exif(path)
+        packet = None if exif is None else exif.get(_TIFF_XMP_TAG)
+        if isinstance(packet, str):
+            packet = packet.encode("utf-8")
+        return packet if isinstance(packet, bytes) and packet else None
+    with open(path, "rb") as handle:
+        try:
+            if ext == ".cr3":
+                return top_level_box(handle, b"uuid", _XMP_UUID) or None
+            jpeg = raf_jpeg_header(handle)
+            app1 = None if jpeg is None else jpeg_app1(jpeg, _JPEG_XMP_SIGNATURE)
+            return None if app1 is None else app1[len(_JPEG_XMP_SIGNATURE):] or None
         except _BAD_METADATA:
             return None
 
@@ -125,7 +158,7 @@ def top_level_box(handle: BinaryIO, kind: bytes, uuid: bytes | None = None) -> b
     pos = 0
     while pos + 8 <= end:
         handle.seek(pos)
-        header = handle.read(24)
+        header = handle.read(32)   # extended size plus a UUID needs all 32 bytes
         size, found = struct.unpack_from(">I4s", header)
         skip = 8
         if size == 1:
@@ -133,11 +166,11 @@ def top_level_box(handle: BinaryIO, kind: bytes, uuid: bytes | None = None) -> b
             skip = 16
         elif size == 0:
             size = end - pos
-        if size < skip:
+        if size < skip or pos + size > end:
             return None
         if found == kind and (uuid is None or header[skip:skip + 16] == uuid):
             skip += 0 if uuid is None else 16
-            if size - skip > _MAX_METADATA_BYTES:
+            if size < skip or size - skip > _MAX_METADATA_BYTES:
                 return None
             handle.seek(pos + skip)
             return handle.read(size - skip)

@@ -168,3 +168,13 @@ class TestBytesHelpers:
 
     def test_decode_non_ascii_returns_empty(self):
         assert decode_bytes("caf\u00e9") == b""
+
+
+def test_dock_layouts_round_trip_and_default_to_empty():
+    """The Imervue and Modify dock layouts travel with a preset; an older one has none."""
+    from Imervue.gui.workspace_manager import Workspace
+    full = Workspace(name="Docked", browse_state_b64="QlJPV1NF", modify_state_b64="TU9ESUZZ")
+    assert Workspace.from_dict(full.to_dict()) == full
+    old = Workspace.from_dict({"name": "Old", "splitter_sizes": [250, 900]})
+    assert (old.browse_state_b64, old.modify_state_b64) == ("", "")
+    assert old.splitter_sizes == [250, 900]

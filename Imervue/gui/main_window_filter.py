@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QHBoxLayout, QWidget
 from Imervue.image.browser_state import ImageFilterSpec, filter_paths, refilter_keeping_current
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
+from Imervue.system.ui_scale import scaled_px
 
 
 def _any_tag_label() -> str:
@@ -29,8 +30,9 @@ class MainWindowFilterMixin:
         """Build the filename/tag/rating/date filter bar above the viewer."""
         filter_row = QWidget()
         filter_layout = QHBoxLayout(filter_row)
-        filter_layout.setContentsMargins(0, 0, 0, 0)
-        filter_layout.setSpacing(6)
+        gap = scaled_px(6)
+        filter_layout.setContentsMargins(gap, scaled_px(4), gap, scaled_px(4))
+        filter_layout.setSpacing(gap)
 
         self.image_filter = QLineEdit()
         self.image_filter.setClearButtonEnabled(True)
@@ -45,13 +47,13 @@ class MainWindowFilterMixin:
 
         self.tag_filter = QComboBox()
         self.tag_filter.setEditable(True)
-        self.tag_filter.setMinimumWidth(120)
+        self.tag_filter.setMinimumWidth(scaled_px(120))
         self.tag_filter.addItem(_any_tag_label(), "")
         self.tag_filter.currentTextChanged.connect(self._on_image_filter_changed)
         filter_layout.addWidget(self.tag_filter, stretch=1)
 
         self.rating_filter = QComboBox()
-        self.rating_filter.setMinimumWidth(110)
+        self.rating_filter.setMinimumWidth(scaled_px(110))
         self.rating_filter.addItem(
             language_wrapper.language_word_dict.get("image_filter_any_rating", "Any rating"),
             "",
@@ -102,7 +104,7 @@ class MainWindowFilterMixin:
         self.filename_label.setText(
             base_template + ("  " + " ".join(extras) if extras else ""),
         )
-        self.exif_sidebar.update_info()
+        self.exif_sidebar.schedule_update()
         # Keep the tab bar in lockstep with whatever image the viewer
         # now shows. Only sync in deep-zoom mode — tile grid / folder
         # browsing intentionally doesn't create tabs.

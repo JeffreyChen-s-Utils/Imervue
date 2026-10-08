@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from threading import Event
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QRunnable, Signal, QObject, QThreadPool
@@ -164,26 +165,30 @@ def load_image_file(path, thumbnail=False, recipe=None):
 class _DeepZoomWorkerSignals(QObject):
     finished = Signal(object, str)  # (DeepZoomImage, path)
     error = Signal(str, str)  # (path, message)
+    completed = Signal(object, object, str)  # worker, result-or-None, error; always emitted
 
 
 class LoadDeepZoomWorker(QRunnable):
     """在背景執行緒載入全解析度圖片並建立金字塔，避免凍結 UI"""
 
-    def __init__(self, path: str, recipe=None, preview: bool = False):
+    def __init__(self, path: str, recipe=None, preview: bool = False, *, memory_budget=None):
         super().__init__()
         self.path = path
         self.recipe = recipe
         self.preview = preview
         self.signals = _DeepZoomWorkerSignals()
         self._abort = False
+        self.memory_budget = memory_budget
+        self.completed = Event()
 
     def abort(self):
         self._abort = True
 
     def run(self):
-        if self._abort:
-            return
+        result, message = None, ""
         try:
+            if self._abort or not self._reserve_decode() or self._abort:
+                return
             img_data = load_image_file(
                 self.path,
                 thumbnail=self.preview,
@@ -193,12 +198,36 @@ class LoadDeepZoomWorker(QRunnable):
                 return
             dzi = DeepZoomImage(img_data)
             del img_data  # 釋放原始圖片記憶體，金字塔已持有降採樣副本
-            if not self._abort:
+            if not self._abort and self._reserve_result(dzi):
+                result = dzi
+            if result is not None and self.memory_budget is None:
                 self.signals.finished.emit(dzi, self.path)
         except Exception as e:
             logger.exception(f"DeepZoom load failed: {self.path} - {e}")
+            message = str(e)
             if not self._abort:
-                self.signals.error.emit(self.path, str(e))
+                self.signals.error.emit(self.path, message)
+        finally:
+            self.completed.set()
+            if self._abort:
+                result = None
+            if result is None and self.memory_budget is not None:
+                self.memory_budget.release(self)
+            self.signals.completed.emit(self, result, message)
+
+    def _reserve_decode(self) -> bool:
+        """Read headers off the UI thread and skip speculation when its quota is full."""
+        if self.memory_budget is None:
+            return True
+        from Imervue.gpu_image_view.ram_budget import decode_reservation
+        return self.memory_budget.reserve(self, decode_reservation(self.path, self.recipe))
+
+    def _reserve_result(self, result: DeepZoomImage) -> bool:
+        """Keep queued result pixels accounted until their UI receiver releases the ticket."""
+        if self.memory_budget is None:
+            return True
+        from Imervue.gpu_image_view.ram_budget import image_bytes
+        return self.memory_budget.reserve(self, image_bytes(result))
 
 
 class _FolderScanSignals(QObject):

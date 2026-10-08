@@ -191,8 +191,12 @@ class KeyInputHandler:
         # A deep zoom reached through a cache-clearing route (open file, recent
         # image, bookmark, drag-drop) leaves the tile cache cold, so restoring
         # the saved grid state would show a wall of blank placeholders. Reload
-        # the wall instead whenever the cache no longer covers the folder.
-        if tile_grid_needs_reload(view.tile_cache, view.model.images):
+        # Managed viewport loading refills missing tiles; keep its warm cache
+        # and saved offsets instead of testing every unvisited library path.
+        queue = getattr(view, "_tile_queue", None)
+        managed = (queue is not None and queue.images is view.model.images
+                   and queue.generation == getattr(view, "_load_generation", None))
+        if not managed and tile_grid_needs_reload(view.tile_cache, view.model.images):
             view._saved_tile_state = None
             view.load_tile_grid_async(image_paths=view.model.images)
             return

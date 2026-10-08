@@ -85,3 +85,12 @@ def test_parent_may_be_none(qapp):
     slider, spin, row = make_slider_spin(None, 0, 10, 5)
     assert slider.parent() is None and spin.parent() is None
     row.deleteLater()
+
+
+@pytest.mark.parametrize(("compact", "width"), [(False, 140), (True, 120)])
+def test_spin_width_follows_the_ui_scale(parent, compact, width):
+    """A width fixed in pixels cut "100 %" off once the UI scale enlarged the font."""
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    user_setting_dict["ui_scale_percent"] = 200
+    _slider, spin, _row = make_slider_spin(parent, 0, 100, 100, suffix=" %", compact=compact)
+    assert spin.minimumWidth() == spin.maximumWidth() == width

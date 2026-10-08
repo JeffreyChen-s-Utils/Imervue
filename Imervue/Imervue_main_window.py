@@ -5,9 +5,8 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QSplitter, QMenu, QTabWidget,
+    QApplication, QMainWindow, QMenu, QTabWidget,
 )
-from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.system.qt_timers import call_later
@@ -20,6 +19,8 @@ from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # no
 from Imervue.gui.settings_notice import warn_if_settings_unreadable
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gui.toast import ToastManager
+from Imervue.gui.background_jobs import drain_background_jobs
+from Imervue.plugin.worker_retirement import drain_retiring_workers
 from Imervue.image.browser_state import (
     ImageMetadataIndex,
 )
@@ -43,6 +44,7 @@ from Imervue.gui.main_window_missing import MainWindowMissingMixin
 from Imervue.gui.main_window_folders import MainWindowFoldersMixin
 from Imervue.gui.main_window_tabs import MainWindowTabsMixin
 from Imervue.gui.main_window_layout import MainWindowLayoutMixin
+from Imervue.gui.main_window_docks import MainWindowDocksMixin, make_dock_host
 from Imervue.gui.main_window_screens import MainWindowScreensMixin
 from Imervue.gui.main_window_views import MainWindowViewsMixin
 from Imervue.gui.main_window_status import MainWindowStatusMixin
@@ -64,7 +66,8 @@ def _other_live_windows_remain(registry, closing) -> bool:
 
 
 class ImervueMainWindow(
-        MainWindowLayoutMixin, MainWindowBrowseMixin, MainWindowStatusMixin, MainWindowViewsMixin,
+        MainWindowLayoutMixin, MainWindowDocksMixin, MainWindowBrowseMixin,
+        MainWindowStatusMixin, MainWindowViewsMixin,
         MainWindowScreensMixin, MainWindowTabsMixin, MainWindowFoldersMixin,
         MainWindowMissingMixin, MainWindowFilterMixin, QMainWindow):
     # Every live main window registers here so closeEvent can tell whether it is
@@ -94,37 +97,24 @@ class ImervueMainWindow(
 
         # ===== 頂層 QTabWidget =====
         # Tab 0: Imervue 主頁面（不可關閉）
-        # Tab 1: 修改面板（左面板 | 圖片 | 右面板）
+        # Tab 1: 修改面板（工具 dock | 圖片 | 調整 dock）
         self._main_tabs = QTabWidget()
         self._main_tabs.setTabsClosable(False)
         self._main_tabs.setMovable(False)
         self.setCentralWidget(self._main_tabs)
 
         # --------------------------------------------------------
-        # Tab 0: Imervue 主頁面
+        # Tab 0: Imervue 主頁面 — 巢狀 QMainWindow：檢視器欄在中央，
+        # 檔案樹 / 圖片資訊 / 載入問題是它的 dock（見 main_window_docks）。
         # --------------------------------------------------------
-        imervue_page = QWidget()
-        imervue_layout = QVBoxLayout(imervue_page)
-        imervue_layout.setContentsMargins(0, 0, 0, 0)
-        imervue_layout.setSpacing(0)
-
-        # Saved workspaces store and restore this tree | viewer split.
-        splitter = self._main_splitter = QSplitter()
-        imervue_layout.addWidget(splitter)
-
+        self._browse_window = make_dock_host()
         self._build_file_tree()
-
-        right_widget = self._build_viewer_column()
-
-        # ===== 組裝 Tab 0：檔案樹 | 檢視器欄 =====
-        splitter.addWidget(self._tree_panel)
-        splitter.addWidget(right_widget)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([400, 1000])
-
-        self._main_tabs.addTab(imervue_page, "Imervue")
+        self._browse_window.setCentralWidget(self._build_viewer_column())
+        self._build_browse_docks()
+        self._main_tabs.addTab(self._browse_window, "Imervue")
 
         self._build_workspace_tabs()
+        self._restore_dock_layouts()
 
         self._build_status_bar()
 
@@ -280,23 +270,23 @@ class ImervueMainWindow(
         for shortcut in self._folder_tab_shortcuts:
             shortcut.setEnabled(idx == 0)
         if idx == 1:
-            # 切到修改分頁 → 綁定圖片，canvas 會自動插入 splitter 中間
+            # 切到修改分頁 → 綁定圖片，canvas 會放進中央的 CanvasHost
             images = self.viewer.model.images
             path = None
             if images and 0 <= self.viewer.current_index < len(images):
                 path = images[self.viewer.current_index]
             self.modify_panel.bind_to_path(path)
         elif idx == 2:
-            # Paint 分頁 — 把目前圖片載入畫布
-            self._bind_paint_workspace_to_current_image()
+            # Opening the workspace must preserve its documents and undo stacks.
+            _ = self.paint_workspace
         else:
             # 切回 Imervue 主頁
             self.exif_sidebar.update_info()
 
     def _bind_paint_workspace_to_current_image(self) -> None:
+        """Decode the viewer's current image into a new Paint document and show it."""
         images = self.viewer.model.images
         if not images or not (0 <= self.viewer.current_index < len(images)):
-            self.paint_workspace.load_image(None)
             return
         path = images[self.viewer.current_index]
         try:
@@ -304,9 +294,17 @@ class ImervueMainWindow(
             # a RAW's small embedded preview and ignores orientation and profile.
             from Imervue.gpu_image_view.images.image_loader import decode_image_file
             arr = decode_image_file(path)
-            self.paint_workspace.load_image(arr)
-        except IMAGE_READ_ERRORS:
-            self.paint_workspace.load_image(None)
+        except IMAGE_READ_ERRORS as exc:
+            _logger.exception("Could not open %s in Paint", path)
+            self.toast.error(language_wrapper.language_word_dict.get(
+                "annotation_load_failed", "Load failed: {error}",
+            ).format(error=exc))
+            return
+        workspace = self.paint_workspace
+        # load_image replaces the blank document; avoid a second full-size allocation.
+        workspace.new_tab(width=1, height=1)
+        workspace.load_image(arr, source_path=path)
+        self._main_tabs.setCurrentIndex(2)
 
     def eventFilter(self, obj, event):
         """Route Left/Right on the Modify / Paint tab bars to image nav.
@@ -333,7 +331,7 @@ class ImervueMainWindow(
         return super().eventFilter(obj, event)
 
     def _navigate_paint_image(self, direction: int) -> None:
-        """Page the viewer's current image and reload it into the paint canvas."""
+        """Page the viewer's current image and open it in a new Paint document."""
         from Imervue.gpu_image_view.actions.select import (
             switch_to_next_image,
             switch_to_previous_image,
@@ -605,6 +603,12 @@ class ImervueMainWindow(
             self.deleteLater()
             return
 
+        # This path uses os._exit, so aboutToQuit is not guaranteed to run.
+        with best_effort("finish retained background jobs", _logger):
+            drain_background_jobs()
+        with best_effort("finish retiring dialog workers", _logger):
+            drain_retiring_workers()
+
         # Plugin hook: app closing
         if hasattr(self, "plugin_manager"):
             with best_effort("notify plugins the app is closing and unload them", _logger):
@@ -673,6 +677,8 @@ class ImervueMainWindow(
         # 儲存視窗位置與大小（在寫入設定之前）
         with best_effort("save the window geometry", _logger):
             self._save_window_geometry()
+        with best_effort("save the panel layout", _logger):
+            self._save_dock_layouts()
 
         # 最優先：儲存使用者設定（在任何可能失敗的操作之前）
         # 先取消任何待處理的 debounced save，避免背景 timer 在關閉過程中

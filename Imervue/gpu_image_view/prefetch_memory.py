@@ -72,14 +72,18 @@ class PrefetchMemoryMixin:
             return
         base_bytes = int(base.nbytes)
         ram_bytes = self._process_rss_bytes()
-        if base_bytes > self._vram_limit * 0.35:
+        # Decoded NumPy buffers consume RAM, not texture VRAM. Each window's
+        # speculative quota shrinks as other windows open; hardware VRAM must
+        # never change the decision to keep a CPU-side pyramid.
+        ram_limit = self._prefetch.budget.limit_bytes
+        if base_bytes > ram_limit * 0.35:
             self._cancel_all_prefetch()
-        if base_bytes > self._vram_limit * 0.20:
+        if base_bytes > ram_limit * 0.20:
             self._filmstrip_thumb_cache.clear()
             self._filmstrip_pending.clear()
         manager = self.tile_manager
         cache = getattr(manager, "cache", None)
-        if cache is not None and base_bytes > self._vram_limit * 0.50:
+        if cache is not None and base_bytes > ram_limit * 0.50:
             manager.max_cache = 64
             from OpenGL.GL import glDeleteTextures
             # Trim runs from the display path, off paintGL — free in-context.

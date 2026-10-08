@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import sys
+from types import SimpleNamespace
+
+import numpy as np
 
 import pytest
 
@@ -41,3 +44,21 @@ def test_unexpected_psutil_error_propagates(monkeypatch):
     monkeypatch.setattr(psutil, "Process", bug)
     with pytest.raises(RuntimeError):
         M._process_rss_bytes()  # noqa: SLF001
+
+
+def test_ram_cache_decisions_do_not_depend_on_vram_capacity():
+    calls = []
+    view = SimpleNamespace(
+        deep_zoom=SimpleNamespace(levels=[np.zeros(30, dtype=np.uint8)]),
+        _prefetch=SimpleNamespace(budget=SimpleNamespace(limit_bytes=100)),
+        _filmstrip_thumb_cache={"cached": object()}, _filmstrip_pending={"pending"},
+        _vram_limit=1, tile_manager=None,
+        _process_rss_bytes=lambda: 0, _cancel_all_prefetch=lambda: calls.append("cancel"),
+    )
+    M.enforce_memory_pressure(view)
+    assert not calls
+    assert not view._filmstrip_thumb_cache
+    view.deep_zoom.levels = [np.zeros(36, dtype=np.uint8)]
+    view._vram_limit = 1000000
+    M.enforce_memory_pressure(view)
+    assert calls == ["cancel"]

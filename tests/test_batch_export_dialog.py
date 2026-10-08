@@ -319,17 +319,17 @@ def test_no_render_row_when_only_the_cpu_can_render(dialog, export):
     assert export()._settings.backend == develop_backends.CPU  # noqa: SLF001
 
 
-def test_a_gpu_backend_adds_the_render_row_under_metadata_and_is_chosen(qapp, tmp_path, fake_gpu):
+def test_a_gpu_backend_is_available_but_requires_explicit_selection(qapp, tmp_path, fake_gpu):
     dlg = BatchExportDialog(SimpleNamespace(main_window=None), [str(tmp_path / "a.png")])
     try:
         label, combo = _row(_items(dlg)[6])
         assert label.text() == "Render on:" and combo is dlg._render_combo  # noqa: SLF001
         assert [combo.itemText(i) for i in range(combo.count())] == ["CPU", "Fake GPU (Vulkan)"]
         assert [combo.itemData(i) for i in range(combo.count())] == [develop_backends.CPU, "fake"]
-        assert combo.currentData() == "fake"
-        assert dlg._collect_settings().backend == "fake"  # noqa: SLF001
-        combo.setCurrentIndex(0)
+        assert combo.currentData() == develop_backends.CPU
         assert dlg._collect_settings().backend == develop_backends.CPU  # noqa: SLF001
+        combo.setCurrentIndex(1)
+        assert dlg._collect_settings().backend == "fake"  # noqa: SLF001
     finally:
         dlg.deleteLater()
 
@@ -362,3 +362,13 @@ def test_the_worker_renders_on_the_chosen_backend_and_closes_it(qapp, tmp_path, 
 def test_the_worker_on_the_cpu_opens_no_backend(qapp, tmp_path, fake_gpu):
     _results, _img = _run_worker(tmp_path, mod.ExportSettings("PNG", 90))
     assert fake_gpu == []
+
+
+
+def test_new_export_keeps_reference_default_and_does_not_open_gpu(qapp, tmp_path, fake_gpu):
+    dialog = BatchExportDialog(SimpleNamespace(main_window=None), [str(tmp_path / "a.png")])
+    try:
+        assert dialog._collect_settings().backend == develop_backends.CPU
+        assert fake_gpu == []
+    finally:
+        dialog.deleteLater()

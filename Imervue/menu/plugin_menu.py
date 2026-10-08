@@ -8,18 +8,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import shiboken6
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QMessageBox, QDialog, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTreeWidget, QTreeWidgetItem,
     QHeaderView, QTextEdit, QMenu,
 )
 
+from Imervue.plugin.status import status_registry
 from Imervue.gui.dialog_rows import confirm
 from Imervue.gui.menu_tree import submenu_index, submenu_of
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_or_warn
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from PySide6.QtGui import QAction
@@ -174,7 +176,7 @@ class _PluginManageDialog(QDialog):
         header = QLabel(
             lang.get("plugin_manage_count", "{count} plugin(s) loaded").format(count=count)
         )
-        header.setStyleSheet("font-size: 14px; font-weight: bold; padding: 4px 0;")
+        header.setStyleSheet(f"{font_px(14)} font-weight: bold; padding: 4px 0;")
         layout.addWidget(header)
 
         # 插件樹
@@ -212,6 +214,43 @@ class _PluginManageDialog(QDialog):
         layout.addLayout(btn_row)
 
         self._populate()
+        self._build_status_panel(layout)
+
+    def _build_status_panel(self, layout) -> None:
+        self._status_tree = QTreeWidget()
+        self._status_tree.setHeaderLabels([
+            self._lang.get("plugin_component", "Component"),
+            self._lang.get("plugin_dl_col_status", "Status"),
+            self._lang.get("plugin_reason", "Reason / model / backend"),
+        ])
+        layout.addWidget(self._status_tree)
+        self._reload_btn = QPushButton(self._lang.get("plugin_menu_reload", "Reload Plugins"))
+        self._reload_btn.clicked.connect(self._reload_and_refresh)
+        layout.addWidget(self._reload_btn)
+        self._last_status = None
+        self._status_timer = QTimer(self)
+        self._status_timer.setInterval(500)
+        self._status_timer.timeout.connect(self._refresh_status)
+        self._status_timer.start()
+        self._refresh_status()
+
+    def _reload_and_refresh(self) -> None:
+        _reload_plugins(self._ui)
+        self._populate()
+        self._refresh_status()
+
+    def _refresh_status(self) -> None:
+        manager = getattr(self._ui, "plugin_manager", None)
+        rows = status_registry.snapshot(getattr(manager, "status_scope", "unmanaged"))
+        if rows == self._last_status:
+            return
+        self._last_status = rows
+        self._status_tree.clear()
+        for row in rows:
+            label = self._lang.get("plugin_state_" + row.status, row.status)
+            item = QTreeWidgetItem([row.name, label, row.reason])
+            item.setToolTip(2, row.reason)
+            self._status_tree.addTopLevelItem(item)
 
     def _populate(self):
         self._tree.clear()
@@ -310,6 +349,9 @@ def _reload_plugins(ui: ImervueMainWindow):
     # calling the unloaded plugin instances.
     remove_plugin_menu_entries(ui)
     manager.unload_all()
+    refresh = getattr(manager, "refresh_imports", None)
+    if callable(refresh):
+        refresh()
     manager.discover_and_load()
 
     # 重新讓插件加到 Plugin 選單

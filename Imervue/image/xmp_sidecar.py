@@ -246,10 +246,12 @@ def load_embedded(image_path: str | Path) -> XmpData:
     """The metadata the image file carries itself: its XMP packet, then its EXIF rating.
 
     The XMP packet is the one Pillow finds in a JPEG's APP1, a PNG's iTXt, a
-    WebP chunk or TIFF tag 700. A photo rated in Windows Explorer or in camera
-    may only have the EXIF ``Rating`` (0x4746) or ``RatingPercent`` (0x4749);
-    that fills in the rating when the packet has none. Empty for a file
-    Pillow can't open or one without either.
+    WebP chunk or TIFF tag 700, or the one a CR3 / RW2 / ORF / RAF carries
+    (:func:`~Imervue.image.raw_exif.raw_xmp`), where the camera puts its
+    in-camera rating. A photo rated in Windows Explorer or in camera may only
+    have the EXIF ``Rating`` (0x4746) or ``RatingPercent`` (0x4749); that
+    fills in the rating when the packet has none. Empty for an unreadable
+    file or one without either.
     """
     packet, exif_rating = _embedded_metadata(image_path)
     data = XmpData()
@@ -268,13 +270,24 @@ def _embedded_metadata(image_path: str | Path) -> tuple[bytes | None, int]:
     from PIL import Image
 
     from Imervue.image.metadata_sync import percent_to_rating
+    from Imervue.image.raw_exif import RAW_EXIF_EXTENSIONS
     from Imervue.image.read_errors import IMAGE_READ_ERRORS
-    try:
-        with Image.open(image_path) as img:
-            packet = img.info.get("xmp")
-            exif = img.getexif()
-    except IMAGE_READ_ERRORS:
-        return None, 0
+    if Path(image_path).suffix.lower() in RAW_EXIF_EXTENSIONS:
+        # CR3 / RW2 / ORF / RAF: Pillow can't open them; a camera keeps its rating here.
+        from Imervue.image.exif_merge import read_exif
+        from Imervue.image.raw_exif import raw_xmp
+        try:
+            packet = raw_xmp(image_path)
+        except OSError:
+            return None, 0
+        exif = read_exif(image_path)
+    else:
+        try:
+            with Image.open(image_path) as img:
+                packet = img.info.get("xmp")
+                exif = img.getexif()
+        except IMAGE_READ_ERRORS:
+            return None, 0
     if isinstance(packet, str):
         packet = packet.encode("utf-8")
     rating = exif.get(_EXIF_RATING)

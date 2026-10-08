@@ -360,8 +360,8 @@ class ContentOpsMixin:
         fitted = fit_pose_to_canvas(pose, canvas_doc.shape)
         layer = canvas_doc.add_layer(name=f"Pose · {entry.name}")
         np.copyto(layer.image, fitted)
-        canvas_doc.invalidate_composite()
-        self._canvas.update()
+        from Imervue.paint.workspace_history import commit_document_edit
+        commit_document_edit(self)
 
     def _drop_tile_material(self, entry) -> None:
         """Tile a procedural / on-disk material across the canvas as a
@@ -382,8 +382,8 @@ class ContentOpsMixin:
             np.copyto(layer.image, filled)
         else:
             layer.image[selection] = filled[selection]
-        canvas_doc.invalidate_composite()
-        self._canvas.update()
+        from Imervue.paint.workspace_history import commit_document_edit
+        commit_document_edit(self)
 
     @staticmethod
     def _load_material_tile(entry):

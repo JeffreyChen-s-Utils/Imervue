@@ -53,6 +53,17 @@ _IDENTITY = np.tile(np.arange(256, dtype=np.uint32), 3)
 _UNIT_BITS = (np.arange(256, dtype=np.float32) / np.float32(255.0)).view(np.uint32)
 
 
+def requires_cpu_reference(recipe: Recipe) -> bool:
+    """Discontinuous downstream quantizers must consume the exact CPU bytes.
+
+    A one-level GPU rounding difference can cross a threshold or posterize
+    boundary and become a large visible difference. Render these entire recipes
+    on the reference CPU rather than quantizing an approximate GPU intermediate.
+    """
+    return any(isinstance(setting := recipe.extra.get(key), dict) and setting.get("enabled")
+               for key in ("threshold", "posterize"))
+
+
 def stages_supported(names: tuple[str, ...] = STAGE_NAMES) -> bool:
     """Whether the pipeline *names* runs exactly :data:`GPU_STAGES` from the first to the last."""
     if FIRST_STAGE not in names or LAST_STAGE not in names:

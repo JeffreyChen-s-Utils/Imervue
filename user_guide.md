@@ -33,7 +33,7 @@
 | 最近開啟 | `檔案` → `最近開啟`，快速回到之前看過的資料夾 |
 
 **支援的圖片格式：**
-PNG、JPEG、BMP、TIFF、WebP、GIF、APNG、SVG、RAW（CR2、NEF、ARW、DNG、RAF、ORF）
+PNG、JPEG、BMP、TIFF、WebP、GIF / APNG（動畫）、AVIF、SVG、PSD、QOI、TGA、ICO、DDS、JPEG 2000、PCX、PBM / PGM / PPM；HEIC / HEIF 與 JPEG XL 需另外安裝 `pillow-heif` / `pillow-jxl-plugin`；相機 RAW 共 23 種（CR2、CR3、NEF、ARW、DNG、RAF、ORF、RW2、PEF 等）。
 
 ---
 
@@ -48,7 +48,7 @@ PNG、JPEG、BMP、TIFF、WebP、GIF、APNG、SVG、RAW（CR2、NEF、ARW、DNG�
 | 瀏覽圖片 | 滑鼠滾輪上下捲動 |
 | 移動畫面 | 按住滑鼠中鍵拖曳 |
 | 進入大圖模式 | 左鍵點擊任一張縮圖 |
-| 調整縮圖大小 | 上方選單 `縮圖大小` → 選擇 128 / 256 / 512 / 1024 |
+| 調整縮圖大小 | 上方選單 `縮圖大小` → 選擇 128 / 256 / 512 / 1024 或原始大小 |
 | 調整縮圖密度 | `縮圖大小` → `縮圖排列密度` → 緊湊 / 標準 / 寬鬆 |
 | 框選多張圖片 | 左鍵拖曳框選 |
 | 鍵盤瀏覽縮圖 | `↑` `↓` `←` `→` 移動高亮游標（牆面自動捲動保持游標可見）；`Enter` 開啟游標所在縮圖 |
@@ -543,6 +543,8 @@ Imervue 支援外掛擴充功能。
 | `Esc` | 回到縮圖模式 / 退出全螢幕 / 關閉雙圖或清單模式 |
 | `W` | 適應寬度 |
 | `Shift + W` | 適應高度 |
+| `Shift + F` | 適應視窗 |
+| `=` / `-` | 放大 / 縮小 |
 | `Home` | 重設縮放 |
 
 ### 編輯
@@ -553,7 +555,7 @@ Imervue 支援外掛擴充功能。
 | `R` | 順時針旋轉 |
 | `Shift + R` | 逆時針旋轉 |
 | `Ctrl + Z` | 復原 |
-| `Ctrl + Shift + Z` | 重做 |
+| `Ctrl + Y` 或 `Ctrl + Shift + Z` | 重做 |
 | `Delete` | 刪除圖片 |
 
 ### 整理
@@ -565,6 +567,7 @@ Imervue 支援外掛擴充功能。
 | `F1`～`F5` | 色彩標籤：紅 / 黃 / 綠 / 藍 / 紫（再按清除） |
 | `B` | 加入／取消書籤 |
 | `T` | 標籤與相簿管理 |
+| `P` / `Shift + X` / `U` | 篩選：保留 / 淘汰 / 清除旗標 |
 
 ### 工具 / 疊加層
 
@@ -593,7 +596,7 @@ Imervue 支援外掛擴充功能。
 
 ---
 
-## 進階功能（v2 新增）
+## 進階功能
 
 ### 命令面板（Ctrl+Shift+P）
 
@@ -636,14 +639,14 @@ Imervue 支援外掛擴充功能。
 
 ## Puppet 工作區（Puppet 分頁）
 
-第四個頂層分頁 **Puppet** 是從零打造的 2D 綁骨偶動畫系統，功能對標 Live2D（網格變形、參數、動作、物理、表情、姿勢群組、對嘴、攝影機追蹤），但**不依賴任何專利 SDK**、不使用 `live2d-py`，採用完全開放的 `.puppet` 檔案格式。
+第四個頂層分頁 **Puppet** 是從零打造的 2D 綁骨偶動畫系統：網格變形、參數、動作、物理、表情、姿勢群組、對嘴、攝影機追蹤，**不依賴任何專有 SDK**、不使用 `live2d-py`，採用完全開放的 `.puppet` 檔案格式（規格見 [`Imervue/puppet/FORMAT.md`](Imervue/puppet/FORMAT.md)）。
 
-> **完整教學**：倉庫根目錄的 [`puppet_guide.zh-TW.md`](puppet_guide.zh-TW.md) 是從全新安裝到 OBS 直播或產出 MP4 的端到端逐步走讀；本章作為參考。
+> **完整教學**：倉庫根目錄的 [`puppet_guide.zh-TW.md`](puppet_guide.zh-TW.md) 是從全新安裝到 OBS 直播或產出 MP4 的端到端逐步走讀；本章只做摘要。以下選單名稱以英文介面為準。
 
 ### 快速開始
 
 1. 啟動 Imervue → 點視窗頂端的 **Puppet** 分頁。
-2. **檔案 > Examples > Imeru**（或工具列 **Examples ▾** 下拉）載入內附的 rig — Imervue 的吉祥物 Imeru。
+2. **File > Examples > Imeru**（或工具列 **Examples ▾** 下拉）載入內附的 rig — Imervue 的吉祥物 Imeru。
 3. 底部 **Motions** 擺放欄點任一個動作 — rig 立刻動起來。
 4. 工具列 **Reset to rest** 把 rig 拉回靜止姿勢。
 
@@ -653,28 +656,31 @@ Imervue 支援外掛擴充功能。
 
 | 用途 | 流程 |
 |---|---|
-| **直播**（VTuber 風） | 攝影機 / 麥克風 / 滑鼠驅動 rig → Virtual Camera 或 NDI 送進 OBS → 直播 |
-| **製作動畫** | 即時 take 錄製 / 手動 keyframe 編輯 → 匯出 GIF / WebM / MP4 |
+| **直播**（VTuber 風） | 攝影機 / 麥克風 / 滑鼠驅動 rig → Virtual Camera、NDI 或視窗擷取送進 OBS → 直播 |
+| **製作動畫** | 錄下即時 take、在時間軸微調關鍵點 → 匯出 GIF / WebM / MP4 |
 
 ### 直播 — 即時輸入
 
-工具列五個即時輸入 toggle（可以同時開、不衝突）：
+工具列（以及 **Live** 選單）有六個即時輸入 toggle，只要驅動不同參數就可以同時開：
 
 | Toggle | 驅動什麼 | 需要的選用依賴 |
 |---|---|---|
-| **Drag-track head** | 頭部跟著滑鼠 | 無 |
-| **Auto-blink** | 自動眨眼 | 無 |
-| **Mic lip-sync** | 麥克風帶動嘴型 | `sounddevice` |
-| **Webcam tracking** | 攝影機臉部追蹤 → 頭 / 眼 / 嘴 | `opencv-python` + `mediapipe` |
-| **Auto idle** + **Idle motions** | 呼吸 + 漂移 + 隨機 idle 動作循環 | 無 |
+| **Drag-track head** | 頭部與眼睛跟著在 canvas 上移動的滑鼠游標 | 無 |
+| **Auto-blink** | 約每 4.5 秒眨一次眼 | 無 |
+| **Mic lip-sync** | 麥克風音量帶動張嘴（`ParamMouthOpenY`），母音音色帶動嘴型（`ParamMouthForm`） | `sounddevice` |
+| **Webcam tracking** | 臉部 landmark 驅動頭部轉向、眼睛開合、視線與張嘴 | `opencv-python` + `mediapipe` |
+| **Auto idle** | 呼吸 + 頭部與身體的輕微漂移 | 無 |
+| **Idle motions** | 每 8 秒從 `Idle` 群組隨機播一個動作 | 無 |
 
 典型 VTuber 設定：開 **Webcam tracking** + **Auto-blink** + **Mic lip-sync**。攝影機追蹤打開時會跳出預覽視窗顯示 landmark 偵測，用來確認 tracker 真的看到你。
 
-首次啟用 Webcam tracking 會自動下載 mediapipe 的 face-landmark 模型（~3.7 MB）到 `<app_dir>/models/face_landmarker.task`，之後直接用快取。
+首次啟用 Webcam tracking 會自動下載 mediapipe 的 face-landmark 模型到 `<app_dir>/models/face_landmarker.task`，之後直接用快取。
+
+**Output > VTS API** 是另一種輸入：在 `ws://127.0.0.1:8001`（只限本機）開一個精簡版 VTube Studio Public API 伺服器，支援這個協定的臉部追蹤程式可以列出 rig 的參數並寫入數值。
 
 ### 直播 — OBS 整合
 
-兩條路。新手用 A，要 pixel-perfect alpha 合成用 B。
+三條路。新手用 A，要 pixel-perfect alpha 合成用 B，C 完全不用安裝。
 
 #### A. Virtual Camera（推薦給新手）
 
@@ -689,11 +695,11 @@ pip install pyvirtualcam
 - **macOS**：OBS for Mac 自帶 system extension，首次啟動會要求啟用。
 - **Linux**：`sudo modprobe v4l2loopback exclusive_caps=1 card_label="Imervue"`。
 
-打開工具列 **Output > Virtual camera**、OBS 加「視訊擷取裝置」選 OBS Virtual Camera。
+打開 **Output > Virtual camera**、OBS 加「視訊擷取裝置」選 OBS Virtual Camera。
 
 **為什麼背景是洋紅色？**
 
-虛擬攝影機底層走 RGB only，OBS 把進來的影像當不透明處理，所以 Imervue 在角色以外填 `#FF00FF` 當色鍵。OBS 端去背：
+虛擬攝影機底層只有 RGB，OBS 把進來的影像當不透明處理，所以 Imervue 在角色以外填 `#FF00FF` 當色鍵。OBS 端去背：
 
 1. 視訊擷取裝置來源右鍵 → **Filters**。
 2. **Effect Filters → + → Color Key**。
@@ -703,79 +709,80 @@ pip install pyvirtualcam
 
 #### B. NDI（推薦給專業用戶）
 
-NDI 在 LAN 上 < 50 ms 延遲、原生帶 RGBA，OBS 直接合成不用色鍵。
+NDI 在區域網路上低延遲、原生帶 RGBA，OBS 直接合成不用色鍵。
 
 ```
 pip install ndi-python
 ```
 
-加上 [NDI Tools](https://ndi.video/tools/) + [obs-ndi](https://github.com/obs-ndi/obs-ndi/releases) 插件。打開工具列 **Output > NDI output**、OBS 加「NDI Source」選 *Imervue Puppet*。
+加上 NDI 執行環境與 OBS 的 NDI 外掛（細節見 `puppet_guide.zh-TW.md`）。打開 **Output > NDI output**、OBS 加「NDI Source」選 *Imervue Puppet*。
 
 `ndi-python` 在 Windows 編譯需要：Visual Studio Build Tools 2022（含 C++ 工作負載）、CMake 加到 PATH、NDI SDK 裝在預設位置、`NDI_SDK_DIR` 環境變數指向 SDK。
 
+#### C. 視窗擷取（免安裝）
+
+OBS 加「視窗擷取」來源、選 Imervue 視窗，再裁切到 canvas 範圍。不需要任何額外套件，但會帶到 canvas 的背景。
+
 ### 製作動畫 — 錄製即時 take
 
-最快路徑：用臉 / 麥克風 / 滑鼠驅動 rig、即時錄下參數，Imervue 烘焙成可重播的 `Motion`。
+最快路徑：用臉 / 麥克風 / 滑鼠（或自己拖 **Parameters** 擺放欄的滑桿）驅動 rig、即時錄下參數，Imervue 烘焙成可重播的 `Motion`。
 
 1. 啟用想驅動 rig 的即時輸入。
-2. 工具列 **Output > Record motion** 打勾。
+2. **Output > Record motion**。對話框先問動作名稱（預設 `user_motion`），確認後開始錄製。
 3. 表演 — 任意長度。
-4. **Record motion** 取消勾。對話框問動作名稱跟群組標籤。
-5. 新動作出現在 **Motions** 擺放欄，可以播 / 循環 / 存檔。
+4. 再選一次 **Output > Record motion** 停止。
+5. 新動作出現在 **Motions** 擺放欄（跟既有動作同名時會取代它），可以播放、循環或存檔。
 
-錄製速率 30 Hz、整段都不變的軌自動丟掉，檔案不會爆。
+錄製速率 30 Hz，整段都不變的軌自動丟掉；每個保留的軌在每兩個相鄰取樣之間產生一個 linear segment。錄的是參數本身的值，表情疊加與物理輸出不會錄進去。
 
 ### 製作動畫 — 編輯 motion 時間軸
 
-**Motions** 擺放欄右鍵動作 → **Edit timeline…** 進入時間軸對話框：
+在 **Motions** 擺放欄點選動作讓播放器載入它，再選 **Edit > Edit motion…**：
 
-- 每個參數一條曲線，X 軸時間、Y 軸值範圍。
-- 點 keyframe 選取、拖曳移動、右鍵 *delete* / *insert* / *change segment type*。
-- 四種 segment：`linear`、`stepped`、`inverse-stepped`、`cubic-bezier`。
-- 對話框內建播放 / 循環 / 拖曳預覽。
-
-提示：自然臉部動作建議 `ParamEyeLOpen/ROpen` 跟 `ParamMouthOpenY` 用 cubic-bezier，其他用 linear。
+- 從 **Track** 清單挑一個參數，圖表顯示該軌的關鍵點：X 軸是時間，Y 軸是該參數自己的範圍（rig 沒定義時為 −1 到 1）。
+- 拖黃色的點移動關鍵點的時間與數值；`cubic-bezier` segment 可以拖紫色控制把手。
+- 對話框不能新增或刪除關鍵點，也不能改 segment 類型；四種類型（`linear`、`stepped`、`inverse-stepped`、`cubic-bezier`）來自動作檔本身。
+- 每次拖曳都會更新記憶體中的動作；**File > Save As…** 才會寫進 `.puppet` 檔。
 
 ### 製作動畫 — 匯出
 
 | 動作 | 輸出 |
 |---|---|
-| **Output > Capture frame…** | 單張 PNG |
-| **Output > Record…** | GIF / WebM / MP4（codec 看副檔名）|
-| **Output > Export all motions…** | 每個動作各別 render 一個檔，例如 `wave.mp4` |
+| **Output > Capture frame…** | 透明背景的單張 PNG，保留 rig 的尺寸（長邊上限 4096 px） |
+| **Output > Record…** | 選好 GIF / WebM / MP4 檔後以 30 fps 錄製，直到再次切換關閉；codec 依副檔名決定 |
+| **Output > Export all motions…** | 選資料夾與容器格式，每個動作從頭播放並錄滿它的長度，各存成 `<動作名稱>.<副檔名>` |
 
-錄影跟串流走同一條「角色獨立 off-screen render」路徑 — 不會抓到棋盤格背景或編輯器外殼。
+錄影跟串流走同一條「角色獨立 off-screen render」路徑 — 不會抓到棋盤格背景或編輯器外殼。GIF / WebM / MP4 的影格把角色縮進長邊 1080 px、白色背景（這些格式不帶 alpha）。
 
 ### 匯入 rig
 
 | 來源 | 命令 | 適用 |
 |---|---|---|
-| PNG | **檔案 > Import PNG…** | 快速 prototype、單張無分層的角色圖 |
-| PSD | **檔案 > Import PSD…** | 多圖層的角色檔，每層自動拆 drawable |
-| Cubism `.moc3` / `.model3.json` | **檔案 > Import Cubism…** | 已有 Live2D Cubism rig 的話。檔案選擇器同時接受 `.moc3` 跟 `.model3.json` — 工作區還沒開 rig 時兩條路徑都跑完整 `.moc3 → .puppet` 轉換；已經開了 rig 時挑 `.model3.json` 會把 motions / expressions / physics 疊到既有文件。需使用者自備 Cubism Native SDK，放在 `<cwd>/sdk/` 或設 `CUBISM_CORE_DLL` 環境變數 |
+| PNG | **File > Import PNG…** | 快速 prototype、單張無分層的角色圖。先問網格格子大小（預設 64 px），產生單一 drawable、還沒有變形器的 rig |
+| PSD | **File > Import PSD…** | 多圖層的角色檔：每個可見圖層變成 drawable，再依圖層名稱自動綁眼睛、嘴巴、頭部傾斜與頭髮擺動 |
+| Cubism `.moc3` / `.model3.json` | **File > Import Cubism…** | 已有 Cubism rig 的話。工作區還沒開 rig 時兩種檔案都跑完整的 `.moc3 → .puppet` 轉換，結果開在 canvas 上，用 **File > Save As…** 存成 `.puppet`；已經開了 rig 時挑 `.model3.json` 會把其中的動作、表情、物理、hit area 與姿勢群組疊到既有文件。需使用者自備 Cubism Native SDK，放在 `<cwd>/sdk/` 或設 `CUBISM_CORE_DLL` 環境變數 |
 
 Cubism 轉換器會 sample-and-reconstruct 每個參數的 vertex morph 跟可見度切換，所以比耶 / 捂臉 / 照相等手勢切換能完整保留。
 
 ### 進階功能
 
-- **參數綁定**：每個會動的值都是 parameter，有 min / max / default + key 列表。
-- **變形器**：Rotation（錨點 + 角度）、Warp（rows × cols Bezier 格子）、Vertex morphs（per-drawable delta 陣列）。
-- **Pose groups**：互斥的 drawable 可見度（武器切換、嘴型變體）。
-- **物理**：Verlet 鐘擺鏈用於頭髮 / 衣物 / 緞帶。
-- **表情**：參數覆寫堆疊（additive / multiply / overwrite 三種模式）。
-- **Hit areas**：rig 上的命名點擊區，可綁到動作群組或表情切換。
+- **參數**：每個會動的值都是 parameter，有 min / max / default；它的 key 記錄某個參數值下各變形器的 form，runtime 在相鄰兩個 key 之間線性內插。
+- **變形器**：Rotation（錨點 + 角度）、Warp（`bounds` 範圍上 rows × cols 的雙線性格子）、Bone rotation（依 `bone_weights` 蒙皮）、Vertex morphs（per-drawable delta 陣列）。`parent` 只決定執行順序，不會把父層的變換傳給子層。
+- **姿勢群組**：互斥的 drawable 可見度（武器切換、嘴型變體）；在 **Pose** 擺放欄挑每個群組要顯示的成員，預設顯示第一個。
+- **物理**：Verlet 鐘擺鏈用於頭髮 / 衣物 / 緞帶。Puppet 分頁顯示中且 rig 有物理鏈時，canvas 以固定步長每秒推進約 60 次；**Reset to rest** 讓鏈回到靜止。Puppet 分頁沒有物理編輯器。
+- **表情**：在 **Expressions** 擺放欄逐一開關的參數覆寫堆疊（additive / multiply / overwrite 三種模式）。
+- **Hit areas**：rig 上的命名點擊區；`motion` 是群組名稱時隨機播放該群組的一個動作，否則播放同名動作，`expression` 則切換該表情。
 
-### Puppet 分頁鍵盤快捷鍵
+### 滑鼠操作
 
-| 快捷鍵 | 動作 |
+Puppet 分頁沒有自己的鍵盤快捷鍵，所有指令都在選單與工具列上。canvas 的滑鼠操作：
+
+| 操作 | 動作 |
 |---|---|
-| Canvas 上滑鼠拖曳 | 平移（drag-track 關掉時） |
-| 滑鼠滾輪 | 縮放（以游標為中心） |
-| Canvas 上右鍵 | 清除 bone 選取 overlay |
-| E | 切換 Edit Mesh 模式 |
-| Space | 播放 / 暫停選取的動作 |
-| Esc | 停止目前動作（淡出） |
-| Ctrl+R | Reset to rest |
+| 中鍵拖曳 | 平移 |
+| 滑鼠滾輪 | 縮放（以游標為中心）；**Tools > Fit to Window** 重新置中 |
+| 左鍵 | 觸發游標下的 hit area；**Edit mesh** 開啟時改為抓取 8 px 內最近的頂點並拖曳 |
+| 右鍵 | 清除 bone 選取 overlay |
 
 ### 選用依賴一覽
 
@@ -788,7 +795,7 @@ Cubism 轉換器會 sample-and-reconstruct 每個參數的 vertex morph 跟可�
 | Cubism 匯入 | 使用者自備 Cubism Native SDK DLL |
 | 動作音訊 | `PySide6.QtMultimedia`（通常隨 PySide6） |
 
-**檔案 > Install dependencies…** 可一次裝齊所有 Python 選用包；Cubism SDK 跟 NDI runtime 需手動裝（授權限制）。
+打開一個缺少 Python 套件的功能時，會跳出安裝器，裝好後自動啟用。**File > Install dependencies…** 可一次裝齊所有 Python 選用包；Cubism SDK 跟 NDI runtime 需手動安裝（授權限制）。
 
 ---
 

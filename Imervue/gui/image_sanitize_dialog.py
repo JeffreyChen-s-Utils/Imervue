@@ -43,6 +43,7 @@ from Imervue.gui.dialog_rows import folder_picker_row
 from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
 from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -591,7 +592,7 @@ class ImageSanitizeDialog(WorkerHostMixin, QDialog):
 
         # Auto-select model hint
         self._model_hint = QLabel("")
-        self._model_hint.setStyleSheet("color: gray; font-size: 11px;")
+        self._model_hint.setStyleSheet(f"color: gray; {font_px(11)}")
         upscale_layout.addWidget(self._model_hint)
         self._res_combo.currentIndexChanged.connect(self._on_res_changed)
         self._on_res_changed()

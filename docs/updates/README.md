@@ -58,6 +58,37 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-02 | 2026-10-08 | Clear the SonarCloud and Codacy findings on the release PR | #done #sonarcloud #codacy #paint #tests | [2026-10](2026-10.md) |
+| U-20261008-01 | 2026-10-08 | Dock panels on the Imervue and Modify tabs, Modern Dark default theme, UI-scale layout fixes | #done #ui #docks #theme #ui-scale #docs #i18n | [2026-10](2026-10.md) |
+| U-20261007-25 | 2026-10-07 | Complete optimization plan and publish GPU safeguards to plugin main | #done #Imervue #Imervue_Plugins #performance #color | [2026-10](2026-10.md) |
+| U-20261007-24 | 2026-10-07 | Canonical export default and measured GPU color safeguards | #done #Imervue #performance #GPU #color | [2026-10](2026-10.md) |
+| U-20261007-23 | 2026-10-07 | Independent WAL readers and indexed limited library searches | #done #Imervue #performance #library #SQLite | [2026-10](2026-10.md) |
+| U-20261007-22 | 2026-10-07 | Background thumbnail inventory and atomic concurrent cache writes | #done #Imervue #performance #cache | [2026-10](2026-10.md) |
+| U-20261007-21 | 2026-10-07 | Publish GPU status and reload contract to plugin distribution | #done #Imervue_Plugins #plugin #docs | [2026-10](2026-10.md) |
+| U-20261007-20 | 2026-10-07 | Expose plugin resource states and protect installation and reload | #done #plugin #stability #i18n | [2026-10](2026-10.md) |
+| U-20261007-19 | 2026-10-07 | Unify output transactions conflicts metadata and durable results | #done #export #stability #cli #i18n | [2026-10](2026-10.md) |
+| U-20261007-18 | 2026-10-07 | Retain cross-folder photo choices through compare develop and export | #done #workflow #library #stability #i18n | [2026-10](2026-10.md) |
+| U-20261007-17 | 2026-10-07 | Save native Paint documents consistently across tabs and close prompts | #done #paint #stability #i18n | [2026-10](2026-10.md) |
+| U-20261007-16 | 2026-10-07 | Retain shared task results and retry failed items across windows | #done #jobs #stability #performance #i18n | [2026-10](2026-10.md) |
+| U-20261007-15 | 2026-10-07 | Confirm Linux Mesa regressions and all required remote checks | #done #ci #gpu #stability | [2026-10](2026-10.md) |
+| U-20261007-14 | 2026-10-07 | Diagnose Linux Qt startup before actual GL regression execution | #incident #ci #gpu | [2026-10](2026-10.md) |
+| U-20261007-13 | 2026-10-07 | Exercise workspace/crash regressions and gate dev with actual OpenGL | #done #tests #ci #recovery #gpu | [2026-10](2026-10.md) |
+| U-20261007-12 | 2026-10-07 | Retire dialog workers without UI cancellation or result-slot waits | #done #stability #workers #performance #i18n | [2026-10](2026-10.md) |
+| U-20261007-11 | 2026-10-07 | Save coherent Paint versions in a coalesced background queue | #done #paint #performance #recovery #i18n | [2026-10](2026-10.md) |
+| U-20261007-10 | 2026-10-07 | Admit neighbor prefetch by actual RAM bytes and retained decode tickets | #done #viewer #memory #performance #i18n | [2026-10](2026-10.md) |
+| U-20261007-09 | 2026-10-07 | Share viewport candidates across thumbnail rendering and bounded loading | #done #viewer #performance #i18n | [2026-10](2026-10.md) |
+| U-20261007-08 | 2026-10-07 | Bound Paint history by shared pixel tiles and a total byte budget | #done #paint #performance #i18n | [2026-10](2026-10.md) |
+| U-20261007-07 | 2026-10-07 | Render latest Modify previews in the background at full logical geometry | #done #modify #performance #i18n | [2026-10](2026-10.md) |
+| U-20261007-06 | 2026-10-07 | Record reproducible performance baselines and acceptance targets | #done #performance #tests | [2026-10](2026-10.md) |
+| U-20261007-05 | 2026-10-07 | Make room for incoming thumbnail textures without evicting visible tiles | #done #viewer #gpu #stability | [2026-10](2026-10.md) |
+| U-20261007-04 | 2026-10-07 | Autosave and recover every modified Paint document | #done #paint #recovery #i18n | [2026-10](2026-10.md) |
+| U-20261007-03 | 2026-10-07 | Isolate exit-status probes from unrelated Temp directories | #incident #tests #ci | [2026-10](2026-10.md) |
+| U-20261007-02 | 2026-10-07 | Restore complete document state in Paint history | #done #paint #stability | [2026-10](2026-10.md) |
+| U-20261007-01 | 2026-10-07 | Preserve Paint documents when switching workspaces | #done #paint #stability #i18n | [2026-10](2026-10.md) |
+| U-20261003-03 | 2026-10-03 | Import camera RAW embedded XMP ratings and reject damaged boxes | #done #metadata #raw | [2026-10](2026-10.md) |
+| U-20261003-02 | 2026-10-03 | Windows offscreen Paint tests use real system fonts | #done #tests #qt | [2026-10](2026-10.md) |
+| U-20261003-01 | 2026-10-03 | Document FrontEngine puppet consumer contract | #done #interop | [2026-10](2026-10.md) |
+| U-20261001-65 | 2026-10-01 | The publish jobs install one hash-locked file and build with the locked setuptools | #ci #packaging #X-13 #done | [2026-10](2026-10.md) |
 | U-20261001-64 | 2026-10-01 | Imeru's build uses fixed sequences and checks what reaches Blender; Codacy skips the accepted patterns | #fix #ci #puppet | [2026-10](2026-10.md) |
 | U-20261001-63 | 2026-10-01 | Refactor: PR #93's static-analysis findings that keep behaviour are cleared | #refactor #ci #puppet | [2026-10](2026-10.md) |
 | U-20261001-62 | 2026-10-01 | The sdist carries no tests either: MANIFEST.in prunes tests/ | #decision #packaging #release #X-13 #done | [2026-10](2026-10.md) |
@@ -523,6 +554,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20260922-02 | 2026-09-22 | Imervue_Plugins mirror drift found | #snapshot #Imervue_Plugins | [2026-09](2026-09.md) |
 | U-20260922-01 | 2026-09-22 | Adopt progress/architecture/docs-updates rules | #docs #migration | [2026-09](2026-09.md) |
 
+
 ## Batches
 
 | File | Period | Entries |
@@ -530,4 +562,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 64 |
+| [2026-10.md](2026-10.md) | 2026-10 | 95 |

@@ -19,6 +19,9 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.free_names import free_names
+from Imervue.system.job_state import JobState
+from Imervue.plugin.status import status_registry
+from Imervue.image.output_policy import OutputPolicy, write_output
 
 logger = logging.getLogger("Imervue.apply_save")
 
@@ -40,11 +43,28 @@ class EffectWorker(QThread):
         self._path = path
         self._transform = transform
         self._out = out_path
+        self.job_state = JobState([path])
+        self.resource_key = self.resource_name = self.resource_details = ""
 
     def run(self) -> None:
         try:
+            self._resource_status("running")
             result = self._transform(load_rgba(self._path))
-            Image.fromarray(result, mode="RGBA").save(self._out)
+            if self.isInterruptionRequested() or self.job_state.cancelled:
+                self.job_state.request_cancel()
+                return
+            output = write_output(
+                self._path, self._out,
+                lambda stage: Image.fromarray(result, mode="RGBA").save(stage),
+                OutputPolicy("rename"),
+                cancelled=lambda: self.isInterruptionRequested() or self.job_state.cancelled,
+            )
+            if output.status == "cancelled":
+                self.job_state.request_cancel()
+                return
+            self._out = output.path
+            self._resource_status("available")
+            self.job_state.record(self._path, output=self._out)
             self.done.emit(True, self._out)
         except Exception as exc:  # a worker must always report
             # The transform can raise anything: ImportError for an optional
@@ -52,26 +72,38 @@ class EffectWorker(QThread):
             # or PIL's DecompressionBombError. Narrowing the except let those
             # escape, so ``done`` never fired and the calling dialog hung with its
             # Apply button disabled forever. Always report the failure instead.
+            self._resource_status("failed", str(exc) or type(exc).__name__)
             logger.exception("Effect failed: %s", exc)
+            self.job_state.record(self._path, error=str(exc) or type(exc).__name__)
             self.done.emit(False, str(exc))
+        finally:
+            if self.job_state.cancelled:
+                self._resource_status("cancelled")
+            self.job_state.finish()
+
+    def _resource_status(self, state: str, error: str = "") -> None:
+        if self.resource_key:
+            details = self.resource_details + ("; " + error if error else "")
+            status_registry.publish(self.resource_key, self.resource_name, state, details)
 
 
 def finalize_worker(dialog) -> None:
-    """Wait for ``dialog._worker``'s thread to stop, then drop the reference.
+    """Retain a real worker until thread exit without waiting in its UI result slot.
 
-    Call this instead of ``self._worker = None`` in a worker's ``done`` slot.
-    These dialogs are usually temporaries (``Dialog(...).exec()``), so dropping
-    the last reference the moment ``done`` fires — while the OS thread is still
-    returning from ``run()`` — lets the QThread be garbage-collected mid-flight,
-    which Qt aborts with "QThread: Destroyed while thread is still running". The
-    custom ``done`` signal is emitted as the worker's final act, so ``wait()``
-    returns near-instantly; it just guarantees the thread has truly exited
-    before the reference is released. Mirrors the existing auto-straighten / OCR
-    dialogs, which already wait before nulling.
+    A custom done signal can precede actual thread/TLS cleanup. WorkerHostMixin
+    keeps that worker and defers dialog completion; non-Qt adapters retain their
+    existing synchronous wait contract. Cancellation hooks are not run here.
     """
     worker = getattr(dialog, "_worker", None)
     if worker is not None:
-        worker.wait()
+        retire = getattr(dialog, "_retire_workers", None)
+        if isinstance(worker, QThread) and callable(retire):
+            if not worker.wait(0):
+                dialog._worker = None
+                retire([worker], cancel=False)
+                return
+        else:
+            worker.wait()
     dialog._worker = None
 
 

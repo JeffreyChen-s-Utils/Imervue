@@ -28,19 +28,6 @@ from Imervue.gui.workspace_manager import (
 # ---------------------------------------------------------------------------
 
 
-class _FakeSplitter:
-    def __init__(self, sizes):
-        self._sizes = list(sizes)
-        self.set_calls: list[list[int]] = []
-
-    def sizes(self):
-        return list(self._sizes)
-
-    def setSizes(self, sizes):  # noqa: N802  # NOSONAR mirrors Qt QSplitter API
-        self.set_calls.append(list(sizes))
-        self._sizes = list(sizes)
-
-
 class _FakeIndex:
     def __init__(self, path: str, valid: bool = True):
         self._path = path
@@ -92,19 +79,35 @@ class _FakeMainWindow:
         geometry: bytes = b"GEOM-v1",
         state: bytes = b"STATE-v1",
         maximized: bool = True,
-        splitter_sizes=(200, 800, 300),
+        splitter_sizes=(200, 800),
         root_folder: str = "/photos/shoot",
+        dock_states: dict | None = None,
     ):
         self._geometry = geometry
         self._state = state
         self._maximized = maximized
-        self._main_splitter = _FakeSplitter(splitter_sizes)
+        self._split_widths = list(splitter_sizes)
+        self._dock_states = dict(dock_states or {})
+        self.applied_dock_states: list[dict] = []
+        self.tree_dock_widths: list[int] = []
         self.tree = _FakeTree(root_folder)
 
         self.show_maximized_count = 0
         self.show_normal_count = 0
         self.restored_geometry: bytes | None = None
         self.restored_state: bytes | None = None
+
+    def dock_layout_states(self):
+        return dict(self._dock_states)
+
+    def apply_dock_layout_states(self, states):
+        self.applied_dock_states.append(dict(states))
+
+    def browse_split_widths(self):
+        return list(self._split_widths)
+
+    def set_tree_dock_width(self, width):
+        self.tree_dock_widths.append(width)
 
     def saveGeometry(self):  # noqa: N802  # NOSONAR mirrors Qt QMainWindow API
         return bytes(self._geometry)
@@ -150,8 +153,9 @@ class TestCaptureSaveLoadApplyRoundtrip:
             geometry=b"G-SESSION-01",
             state=b"S-DOCKSTATE-01",
             maximized=False,
-            splitter_sizes=[250, 900, 320],
+            splitter_sizes=[250, 900],
             root_folder="/library/A",
+            dock_states={"browse_dock_state": "QlJPV1NF", "modify_dock_state": "TU9ESUZZ"},
         )
         manager = WorkspaceManager()
 
@@ -167,14 +171,15 @@ class TestCaptureSaveLoadApplyRoundtrip:
         assert preset is not None
         assert decode_bytes(preset.geometry_b64) == b"G-SESSION-01"
         assert decode_bytes(preset.state_b64) == b"S-DOCKSTATE-01"
-        assert preset.splitter_sizes == [250, 900, 320]
+        assert preset.splitter_sizes == [250, 900]
+        assert (preset.browse_state_b64, preset.modify_state_b64) == ("QlJPV1NF", "TU9ESUZZ")
         assert preset.root_folder == "/library/A"
         assert preset.maximized is False
 
         # Apply to a brand-new window and confirm every surface was poked.
         target = _FakeMainWindow(
             geometry=b"OTHER", state=b"OTHER",
-            maximized=True, splitter_sizes=[1, 1, 1],
+            maximized=True, splitter_sizes=[1, 1],
             root_folder="/somewhere/else",
         )
         apply_workspace(cast(Any, target), preset)
@@ -183,7 +188,9 @@ class TestCaptureSaveLoadApplyRoundtrip:
         assert target.restored_state == b"S-DOCKSTATE-01"
         assert target.show_normal_count == 1
         assert target.show_maximized_count == 0
-        assert target._main_splitter.set_calls[-1] == [250, 900, 320]
+        assert target.applied_dock_states == [
+            {"browse_dock_state": "QlJPV1NF", "modify_dock_state": "TU9ESUZZ"}]
+        assert target.tree_dock_widths == []      # the dock layout carries the widths
         assert target.tree.model().set_root_calls == ["/library/A"]
 
     def test_roundtrip_preserves_maximized_flag(self, fresh_store):
@@ -196,7 +203,17 @@ class TestCaptureSaveLoadApplyRoundtrip:
         assert target.show_maximized_count == 1
         assert target.show_normal_count == 0
 
-    def test_apply_skips_splitter_when_no_sizes(self, fresh_store):
+    def test_a_preset_from_before_the_docks_restores_the_tree_width(self, fresh_store):
+        manager = WorkspaceManager()
+        manager.save(Workspace(name="Old", splitter_sizes=[250, 900, 320]))
+
+        target = _FakeMainWindow()
+        apply_workspace(cast(Any, target), manager.get("Old"))
+        assert target.tree_dock_widths == [250]
+        assert target.applied_dock_states == [
+            {"browse_dock_state": "", "modify_dock_state": ""}]
+
+    def test_apply_leaves_the_tree_width_alone_without_sizes(self, fresh_store):
         manager = WorkspaceManager()
         manager.save(Workspace(
             name="NoSplit",
@@ -207,10 +224,9 @@ class TestCaptureSaveLoadApplyRoundtrip:
             splitter_sizes=[],
         ))
 
-        target = _FakeMainWindow(splitter_sizes=[10, 20, 30])
+        target = _FakeMainWindow()
         apply_workspace(cast(Any, target), manager.get("NoSplit"))
-        # Nothing should have reached the splitter — only original value stands.
-        assert target._main_splitter.set_calls == []
+        assert target.tree_dock_widths == []
 
     def test_apply_skips_tree_when_root_empty(self, fresh_store):
         manager = WorkspaceManager()
@@ -287,13 +303,13 @@ class TestManagerPersistenceAcrossInstances:
 
 
 class TestCaptureOmittedAttributes:
-    """Older windows may not expose every attribute — capture must not crash."""
+    """Capture records what the window reports, whatever is missing from it."""
 
-    def test_capture_without_splitter(self, fresh_store):
-        ui = _FakeMainWindow()
-        del ui._main_splitter
+    def test_capture_records_the_tree_and_viewer_widths(self, fresh_store):
+        ui = _FakeMainWindow(splitter_sizes=[300, 1100])
         captured = capture_current_workspace(cast(Any, ui), "Minimal")
-        assert captured.splitter_sizes == []
+        assert captured.splitter_sizes == [300, 1100]
+        assert (captured.browse_state_b64, captured.modify_state_b64) == ("", "")
 
     def test_capture_with_invalid_root_index(self, fresh_store):
         ui = _FakeMainWindow(root_folder="/photos")

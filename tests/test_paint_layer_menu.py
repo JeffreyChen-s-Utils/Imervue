@@ -77,6 +77,87 @@ def test_layer_menu_actions_have_shortcuts_or_documented_omission(qapp):
 # Bridge actions
 # ---------------------------------------------------------------------------
 
+@pytest.mark.parametrize("source", ["menu", "dock", "shortcut", "manga", "material", "drag"])
+def test_layer_edits_are_committed_and_undoable(qapp, source, tmp_path, monkeypatch):
+    ws = PaintWorkspace()
+    try:
+        ws.load_image(np.zeros((4, 6, 4), dtype=np.uint8))
+        document = ws.canvas().document()
+        if source == "menu":
+            ws._layer_menu_bridge.add_raster_layer()
+        elif source == "manga":
+            from Imervue.paint.manga_menu import commit_panel_layout
+            assert commit_panel_layout(ws, {
+                "rows": 1, "cols": 1, "gutter": 0, "border": 1, "margin": 0,
+            })
+        elif source == "material":
+            from Imervue.paint.material_library import default_material_index
+            entry = next(e for e in default_material_index().entries if e.category == "tone")
+            ws._drop_tile_material(entry)
+        elif source == "drag":
+            from types import SimpleNamespace
+
+            from PIL import Image
+            from PySide6.QtCore import QMimeData, QPointF
+
+            from Imervue.paint.material_drop import MATERIAL_MIME_TYPE
+            path = tmp_path / "tile.png"
+            Image.new("RGBA", (2, 2), "red").save(path)
+            mime = QMimeData()
+            mime.setData(MATERIAL_MIME_TYPE, str(path).encode("utf-8"))
+            monkeypatch.setattr(ws.canvas(), "_screen_to_image", lambda _x, _y: (1, 1))
+            ws.canvas().dropEvent(SimpleNamespace(
+                mimeData=lambda: mime, position=lambda: QPointF(),
+                acceptProposedAction=lambda: None,
+            ))
+        else:
+            ws._layer_dock._on_add()
+        assert document.layer_count == 2
+        if source == "shortcut":
+            ws._move_active_layer(up=False)
+            ws.undo()
+            assert document.active_layer_index() == 1
+        ws.undo()
+        assert document.layer_count == 1
+        ws.redo()
+        assert document.layer_count == 2
+    finally:
+        ws.deleteLater()
+
+
+@pytest.mark.parametrize("operation", [
+    lambda dock: dock._on_opacity_changed(30),
+    lambda dock: dock._blend.setCurrentIndex(dock._blend.findData("multiply")),
+    lambda dock: dock._on_lock_alpha_toggled(True),
+    lambda dock: dock._list.item(0).setText("renamed"),
+    lambda dock: dock._on_remove(),
+    lambda dock: dock._on_duplicate(),
+    lambda dock: dock._on_move(up=False),
+    lambda dock: dock._add_adjustment_layer("brightness_contrast", {"brightness": 0.2}),
+])
+def test_dock_operations_restore_content_without_committing_selection(qapp, operation):
+    from Imervue.paint.document_io import _document_to_arrays
+
+    ws = PaintWorkspace()
+    try:
+        ws.load_image(np.zeros((4, 6, 4), dtype=np.uint8))
+        ws._layer_dock._on_add()
+        stack = ws._undo_stack
+        document = ws.canvas().document()
+        before = {key: value.copy() for key, value in _document_to_arrays(document).items()}
+        depth = len(stack._undo)
+        operation(ws._layer_dock)
+        assert len(stack._undo) == depth + 1
+        ws.undo()
+        for key, value in before.items():
+            np.testing.assert_array_equal(_document_to_arrays(document)[key], value)
+        assert len(stack._undo) == depth
+        ws._layer_dock._on_row_changed(1)
+        assert len(stack._undo) == depth
+    finally:
+        ws.deleteLater()
+
+
 
 def test_add_raster_layer_grows_stack(qapp):
     ws = PaintWorkspace()

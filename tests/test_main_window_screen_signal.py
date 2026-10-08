@@ -87,41 +87,32 @@ def test_noop_when_already_connected(fake_timer):
 # ---------------------------------------------------------------------------
 
 
-def _reflow_fake(tab_index, has_canvas, splitter=None):
-    sized: list = []
+def _reflow_fake(tab_index, has_canvas):
     updated: list = []
     canvas = (SimpleNamespace(update=lambda: updated.append(True))
               if has_canvas else None)
-    panel = SimpleNamespace(
-        _canvas=canvas,
-        _size_modify_splitter=lambda sp, _retries=8: sized.append((sp, _retries)),
-    )
     fake = SimpleNamespace(
         _main_tabs=SimpleNamespace(currentIndex=lambda: tab_index),
-        modify_panel=panel,
-        _modify_splitter=splitter,
+        modify_panel=SimpleNamespace(_canvas=canvas),
     )
-    return fake, sized, updated
+    return fake, updated
 
 
-def test_reflow_on_modify_tab_resizes_splitter_and_repaints():
-    splitter = object()
-    fake, sized, updated = _reflow_fake(1, has_canvas=True, splitter=splitter)
+def test_reflow_on_modify_tab_repaints_the_canvas():
+    fake, updated = _reflow_fake(1, has_canvas=True)
     ImervueMainWindow._reflow_modify_canvas(fake)
-    assert sized == [(splitter, 0)]   # single-pass reflow (no resize-drag retry storm)
-    assert updated == [True]          # canvas repainted -> re-fits
+    assert updated == [True]          # canvas repainted -> re-fits to its new width
 
 
 def test_reflow_noop_off_the_modify_tab():
-    fake, sized, updated = _reflow_fake(0, has_canvas=True, splitter=object())
+    fake, updated = _reflow_fake(0, has_canvas=True)
     ImervueMainWindow._reflow_modify_canvas(fake)
-    assert sized == [] and updated == []
+    assert updated == []
 
 
 def test_reflow_noop_when_no_canvas():
-    fake, sized, updated = _reflow_fake(1, has_canvas=False, splitter=object())
-    ImervueMainWindow._reflow_modify_canvas(fake)
-    assert sized == [] and updated == []
+    fake, updated = _reflow_fake(1, has_canvas=False)
+    ImervueMainWindow._reflow_modify_canvas(fake)   # no raise
 
 
 def test_reflow_safe_before_tabs_exist():

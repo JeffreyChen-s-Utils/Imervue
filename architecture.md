@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-01 against `b5921f8` on `dev`.
+> Last verified: 2026-10-08 on `dev`; corresponding commit: `git log -1 -- architecture.md`.
 
 ## 1. Purpose
 
@@ -36,7 +36,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | Path | Responsibility |
 | --- | --- |
 | `Imervue/__main__.py` | Process entry: frozen-build fixes, UTF-8 I/O, settings/theme/UI-scale before any widget, main window |
-| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar and browse modes come from the `Imervue/gui/main_window_*.py` mixins |
+| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar, browse modes and dock panels come from the `Imervue/gui/main_window_*.py` mixins. The Imervue and Modify tabs are each a nested `QMainWindow` whose side panels are docks (`main_window_docks.py`) |
 | `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` holds the `_open_<feature>()` entry points |
 | `Imervue/gui/` | Qt dialogs and main-window widgets (develop panel, file tree, list/dual views, EXIF sidebar); most dialogs are shells over `Imervue/image/` |
 | `Imervue/gpu_image_view/` | `GPUImageView` (tile wall + deep zoom) and its collaborators; `images/` is the load path, `actions/` the viewer actions |
@@ -49,6 +49,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `Imervue/system/` | App/OS infrastructure: frozen-safe paths (`app_paths.py`), logging, themes, UI scale, file association, batched trash |
 | `Imervue/user_settings/` | Global settings dict (profiles, migration, debounced atomic save), tags, bookmarks, colour labels |
 | `Imervue/multi_language/` | `language_wrapper` singleton and built-in dictionaries (`english.py` is the canonical key set) |
+| `scripts/performance_*.py`, `docs/performance/` | Checkout-only benchmark entry point, isolated fixture/profile and native RSS helpers, actual GL frames; raw fixed-hardware baseline and acceptance targets. These tools are not shipped application commands |
 | `Imervue/sessions/`, `Imervue/macros/`, `Imervue/external/` | Session/workspace save-restore, macro record/replay, external-editor launcher |
 | `Imervue/plugin/` | Plugin base class, manager, downloader, pip installer, `WorkerHostMixin`, the plugin API version (`plugin_api.py`) and the shared tool dialog (`tool_dialog.py`) |
 | `Imervue/mcp_server/` | MCP JSON-RPC 2.0 stdio server; no Qt, no optional dependencies |
@@ -59,6 +60,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `docs/`, `README.md`, `README/` | Sphinx docs and translated READMEs; `README.md` and `docs/en` are canonical |
 | `Imervue.spec`, `Imervue_mac.spec`, `packaging/`, `exe/` | PyInstaller specs, AppImage / auto-py-to-exe config, frozen launch shim (`nuitka.md`, `pyinstaller.md` document builds) |
 | `.github/workflows/` | `test.yml` (ruff + bandit lint job, Sphinx docs build with `-W`, pytest by layer, then the `publish-dev` job on a push to `dev`), `release.yml` (stable release on a pull request merged into `main`) |
+| `.github/requirements/` | `publish.in` and the hash-locked `publish.txt` generated from it: the only thing the two jobs that hold the PyPI token install (the regenerating command is at the top of `publish.in`) |
 | `scripts/` | Stdlib-only helpers CI runs, never shipped in the wheel: `dev_release.py` numbers the `Imervue_dev` release and decides whether a build differs from the published one |
 
 ## 3. Entry points and public interfaces
@@ -69,7 +71,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `py -m Imervue.cli <subcommand>` | `Imervue/cli.py` | Headless batch; `list-ops` lists subcommands; every MCP tool is also a subcommand (`Imervue/cli_tools.py`) |
 | `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | Calls `run()` in `Imervue/mcp_server/server.py` |
 | `exe/start_Imervue.py` | — | Launch shim for frozen builds |
-| PyPI packages `Imervue` (stable), `Imervue_dev` (dev channel) | `pyproject.toml`, `dev.toml`, `MANIFEST.in` | Both wheels install one top-level package, `Imervue`: package discovery includes `Imervue` and `Imervue.*` only. Neither distribution carries the test suite: `MANIFEST.in` prunes `tests/` from the sdist. Stable: a pull request merged into `main` runs `release.yml`, which bumps `pyproject.toml`, tags and uploads. Dev: the `publish-dev` job of `test.yml` runs after `lint`, `docs`, `fast` and `extended` on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back |
+| PyPI packages `Imervue` (stable), `Imervue_dev` (dev channel) | `pyproject.toml`, `dev.toml`, `MANIFEST.in` | Both wheels install one top-level package, `Imervue`: package discovery includes `Imervue` and `Imervue.*` only. Neither distribution carries the test suite: `MANIFEST.in` prunes `tests/` from the sdist. Stable: a pull request merged into `main` runs `release.yml`, which bumps `pyproject.toml`, tags and uploads. Dev: the `publish-dev` job of `test.yml` runs after `lint`, `docs`, `fast` and `extended` on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back. Both jobs hold the PyPI token and install nothing but the hash-locked `.github/requirements/publish.txt` (`build`, `twine` and `setuptools`, wheels only; generated from `publish.in` beside it), then build with `python -m build --no-isolation`, so the build backend is the locked `setuptools` too; `tests/test_workflow_actions.py` fails on any other `pip install` in them, on an isolated build, and on a `build-system.requires` the lock does not satisfy |
 
 Public interfaces other code or users depend on:
 
@@ -94,11 +96,22 @@ Public interfaces other code or users depend on:
   `Imervue/puppet/format_schema.py` into `docs/schemas/`, conformance check `puppet-validate`
   (MCP `puppet_validate`), stdlib reference reader `docs/examples/read_puppet.py`.
 
+Per-image CLI writers and GUI export/conversion share image.output_policy reservations and atomic commit. CLI cohort destinations are assigned before threads; explicit metadata uses the same EXIF/sRGB extras. Completed inline exports join JobRegistry; Batch Convert registers retryable workers (retry keeps originals). Composite PDF/MP4 and gallery members commit individually; a gallery directory is not an all-or-nothing transaction.
+
+Manage Plugins includes window-scoped import/load outcomes and process-shared observed resource states. Pure plugin.status is safe from workers; normal load does not probe every optional dependency/model. Installations reserve destinations, preserve models/assets and roll back directory swaps. Dependency dialogs use WorkerHost retirement; application-owned dependency check helpers survive parent destruction. Explicit reload invalidates only plugin modules/bytecode, while provider-specific leases retain other window generations.
+
+ThumbnailDiskCache construction starts a background inventory rather than enumerating all files on startup. Reads/writes remain usable; mutation tombstones and generations prevent stale accounting after rewrite/purge/clear. PNG writes use unique atomic siblings. Diagnostics can wait_ready/close explicitly; production startup does not join. Benchmark separates constructor latency from sequentially joined inventory/RSS.
+
+The library keeps one serialized writer and one query-only WAL reader. Foreground calls read committed data without taking the scanner write lock; compound tag queries share a snapshot, while single SQL statements avoid extra transactions. An additive capture-time/mtime sort index removes full temporary sorts for limited searches; write-batch reads use the owning writer. Close/path switch acquire writer then reader locks. Fingerprint traversal uses bounded keyset pages rather than yielding a live SQL cursor. Public conn() remains the writer; callers using it directly own transaction/locking discipline.
+
+GPU Develop stays an optional batch provider with CPU as the default of new export dialogs. Threshold/posterize recipes use the full CPU reference to prevent amplified upstream GPU rounding. Modify previews remain CPU; embedded ICC/EXIF are normalized by core decoding, then full preview/CPU export share the canonical uint8 sRGB recipe. wgpu and device ownership stay in the flat plugin, no model weights or mandatory dependency added.
+
 ## 4. Main flows
 
 1. **Startup** — `Imervue/__main__.py` `main()` → `setup_logging()` + `install_exception_logging()`
    (before the first PySide6 import) → `read_user_setting()` → `load_and_apply_theme()` /
-   `load_and_apply_from_settings()` → `ImervueMainWindow` (`apply_saved_language()` registers
+   `load_and_apply_from_settings()` (a profile still on the system look is moved to the Modern Dark
+   default once) → `ImervueMainWindow` (`apply_saved_language()` registers
    plugin languages first when the saved language is not built in; builds the tabs, Puppet and Desktop Pet
    only when they are on in Preferences (`gui/optional_tabs.py`) and then as empty pages whose workspace is
    built when the tab is first opened; `create_menu()`) →
@@ -108,9 +121,56 @@ Public interfaces other code or users depend on:
    `FolderScanWorker` + `gpu_image_view/tile_loader.py` fill the tile wall → selecting an image
    starts `LoadDeepZoomWorker` with the stored recipe (`recipe_store.get_for_path()`) →
    `GPUImageView` renders deep zoom; plugins receive `on_folder_opened` / `on_image_loaded`.
+   The wall shares `TileViewport` candidates across drawing, decoding and texture admission.
+   `ThumbnailQueue` admits only current viewport/buffer and explicit jobs within pool slots,
+   coalesces filmstrip/retry work and validates generation plus indexed membership.
+   Full-size mode keeps bounded discovery of overlapping image extents. Escape preserves
+   the managed warm cache and saved grid position; cold or stale sources initialize a queue.
+   Neighbor prefetch uses actual pyramid bytes plus decoder/queued-result tickets under a
+   shared process RAM cap and fair window quotas, independently of texture VRAM. Cancelled
+   workers retain tickets until completion; stale identities and destroyed owners cannot
+   deliver results. Refused promoted requests fall back to ordinary foreground loading.
 3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_menu.py` →
    `gui/<feature>_dialog.py` → `EffectWorker` (`gui/_apply_save.py`) → `image/<feature>.py` → saved
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.
+   Modify preview: a per-panel latest-generation scheduler coalesces requests, renders reduced
+   then full pixels on the global pool, and installs prepared QImages through queued UI signals.
+   Geometry stays full-size; saves/destructive effects resolve canonical pixels first. Jobs own
+   immutable source/recipe data and their application-owned signal sender survives panel destruction.
+   Paint: entering its tab preserves the open documents; File > Open Current Image in Paint
+   and image navigation from the Paint main-tab bar decode first, then open a new document.
+   A failed decode leaves every document unchanged. The Deep Zoom E key opens annotations.
+   Photo workflow: a modeless per-window review dialog retains a pure PhotoWorkflow cohort,
+   ordered checked paths, presentation-only cull filter and existing develop/export preset names.
+   Library Search appends highlighted results (or all), preserving folder browsing and its own
+   retained query/results. Pick/reject flags commit in the existing index; external flags are
+   reconciled before bulk actions. Bounded 500-row pages and optional 800px source comparison
+   keep presentation separate from full checked targets. Preset application and Batch Export
+   receive the same non-rejected sources without changing viewer selection or folder context.
+   Paint file state: document_status belongs to the canvas's actual document identity and
+   keeps source, editable save destination, flat export and per-document recovery result
+   separate from the canonical tab dirty map. document_files saves a specified tab or all
+   modified tabs as atomic .imervue bundles, without switching selection. Close prompts use
+   native saves; cancellation/failure leaves remaining modified documents open. Successful
+   Undo/Redo always marks modifications again. Native open creates a new tab after decoding;
+   PSD imports install full documents, and raster drops preserve a dirty active document.
+   Explicit native saves are synchronous; periodic recovery remains on its background queue.
+   Paint history: dispatcher gestures and explicit layer/material commands commit complete
+   editable content per document; restore keeps the document's listeners and surviving
+   layer identities while restoring structure, properties, masks, vectors and selections.
+   Immutable 256px tiles share unchanged pixels; instrumented brush/eraser commits only
+   scan damaged tiles, while unknown edits compare every array. The 512 MiB budget counts
+   baseline, both branches, pixel payloads, Python metadata and the weak tile index. Older
+   states are pruned; an oversized baseline clears history while preserving live content.
+   Snapshot materialization makes independent arrays for background consumers.
+   Paint recovery: periodic autosave covers every dirty tab, with stable document identities
+   and independent eight-version retention. Timers enqueue immutable committed snapshots to
+   one background writer per workspace, coalescing the latest pending version per document.
+   Materialization/compression/writing leave the UI; history-disabled documents first capture
+   an independent UI copy. Application-owned senders survive destruction and cancelled late
+   files are discarded; explicit synchronous snapshot APIs remain available.
+   Restore opens new modified tabs, falling back
+   to older readable versions without replacing edits. Native metadata keeps panel layouts.
    Delete: soft delete in `gpu_image_view/actions/delete.py` → `commit_pending_deletions()` →
    one batch through `system/trash_ops.py`.
 4. **Batch export** — `gui/batch_export_dialog.py` `_ExportWorker` opens the renderer chosen under
@@ -119,12 +179,22 @@ Public interfaces other code or users depend on:
    renderer, or `Recipe.apply` on the CPU, also when the renderer fails on that image) →
    `image/save_formats.save_image()`; the renderer is closed when the loop ends.
 
+Background task results use pure `system/job_state.JobState` and the application-owned
+`gui/background_jobs.JobRegistry`. Batch export, library scans, AI upscale, shared plugin
+transforms and plugin downloads publish committed items and failure reasons. Registration
+detaches QWidget parenting; polling preserves actual thread lifetime even after dialog destruction
+or WorkerHost signal disconnection. Failed-only retries capture settings, create separate attempts,
+and exclude successful or cancelled items. The shared modeless panel opens outputs and exports
+complete JSON reports while bounding visible details to 500 rows. Plugin installs are atomic items.
+The last main window explicitly drains retained jobs and retiring workers before plugin unload
+and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs running.
+
 ## 5. Extension points
 
 | To add | Touch |
 | --- | --- |
 | A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_menu.py` |
-| A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; do not hand-write teardown |
+| A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; cancellation hooks and joins run on a retained retirement thread, with controls paused and dialog completion deferred until actual exit. Hooks must cancel flags/subprocesses without GUI access; final application exit drains remaining threads. Do not hand-write teardown |
 | A plugin dialog that runs one image transform on OK | Inherit `ToolDialogMixin` from `Imervue/plugin/tool_dialog.py` (it includes `WorkerHostMixin`): set `output_suffix` and the toast keys, return the transform from `_transform()`, name optional packages in `_required_packages()`; the plugin then needs plugin API 2 in its `plugin.json` |
 | Main-program code that plugins import | Raise `PLUGIN_API_VERSION` in `Imervue/plugin/plugin_api.py` and list what the version adds in its docstring; plugins using it declare `{"min_api_version": N}` in `plugin.json` (`tests/test_plugin_api.py` checks the bundled ones) |
 | A develop step | A row in `_STAGES` of `Imervue/image/recipe.py` (keep the `to_dict` / `from_dict` round trip). A stage between `white_balance` and `tone_curve` also needs the GPU Develop plugin (`plugins/gpu_develop/params.py` `GPU_STAGES`), which renders nothing on the GPU until its span matches |
@@ -134,9 +204,21 @@ Public interfaces other code or users depend on:
 | An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
 | A CLI subcommand | `Imervue/cli.py` (`_SUBCOMMANDS` row plus a `_WRITE_SPEC`, `_REPORTERS` or `_MULTI_COMMANDS` entry); one that mirrors an MCP tool comes from `Imervue/cli_tools.py` instead |
 | A Paint tool or dock | `Imervue/paint/tools/`, `Imervue/paint/docks/`, routed by `Imervue/paint/tool_dispatcher.py` |
-| A theme | `Imervue/system/themes.py` |
+| A theme | `Imervue/system/themes.py`; a theme with a full palette adds its `ThemeColours` in `Imervue/system/modern_theme.py` |
+| A panel of the Imervue or Modify tab | `add_dock()` in `Imervue/gui/main_window_docks.py` (a stable object name, its group in `panel_docks()`, its place in `reset_panel_layout()`) |
 
 ## 6. Cross-project boundaries
+
+- **FrontEngine (optional downstream)** consumes the version 1 `.puppet` archive through
+  `Imervue.puppet.document_io.load_puppet`, `Imervue.puppet.canvas.PuppetCanvas`,
+  `MotionPlayer`, `IdleDriver`, `InputEngine`, and
+  `Imervue.desktop_pet.pet_script` loader/engine. FrontEngine's `puppet` extra requires
+  `Imervue>=1.0.90`; it validates container versions/resources before loading and owns
+  window geometry, timers and settings without creating Imervue's PetWindow.
+  PUPPET entries in FrontEngine scene v1 reference these archives; `.fescene` packages
+  copy the referenced assets. Imervue does not read the FrontEngine scene envelope.
+  Renaming these runtime imports or changing the container requires coordinated updates
+  to `FrontEngine/frontengine/utils/imervue/` and its interchange tests.
 
 - **Imervue_Plugins (distribution repo).** `Imervue/plugin/plugin_downloader.py` lists the repo with
   one recursive git-tree call on `main` (`REPO_TREE_URL`), accepts only the categories `plugins` and
@@ -182,7 +264,12 @@ Public interfaces other code or users depend on:
   `ai_style_transfer` `slider_row`. Keep these names, the mixin's attributes (`output_suffix`,
   `failed_key`, `failed_text`, `done_key`, `done_text`) and hooks (`_transform`,
   `_required_packages`, `_commit`, `_notify_failure`) working, or change the plugins in the same
-  round.
+  round. `WorkerHostMixin` defers dialog completion until actual worker exit; its
+  cancellation hooks now run off the UI thread and must operate only thread-safe
+  flags/subprocesses. Existing bundled consumers satisfy that contract without
+  changed import paths or constructor arguments. `finalize_worker` retains the
+  same callable surface and uses passive background retirement for successful
+  custom done packets; non-Qt adapters retain their synchronous contract.
 - **Desktop pet plugin surface.** `pet_integrations` (Desktop Pet Integrations) subclasses
   `IntegrationController` from `Imervue.desktop_pet.pet_feature_base` and calls
   `Imervue.system.local_origin.is_allowed_origin`; it relies on the `on_pet_created` hook and on the
@@ -227,6 +314,12 @@ Summaries only; `CLAUDE.md` is the source of truth.
   `user_setting.json` (CLAUDE.md "Unit Tests").
 - Test modules that build `QOpenGLWidget` subclasses import the `tests/_qt_skip.py` marker
   (CLAUDE.md "Qt / OpenGL tests on headless CI").
+  The separate `test.yml` real-gl job uses Linux/Xvfb/Mesa with actual contexts;
+  it requires ten successful, unskipped rendering/workspace lifecycle cases and
+  renderer evidence before dev publication. Windows keeps its headless guard.
+  Fresh isolated-process probes cover background document saves and a crash
+  between bundle/metadata commits. See `docs/testing-real-gl.md` for the selection
+  and report verification; software GL establishes correctness, not GPU speed.
 - A feature becomes a plugin only for heavy optional dependencies, failure isolation or independent
   release cadence (CLAUDE.md "Plugins vs Main Program").
 - Plugin changes are mirrored to Imervue_Plugins `main` (CLAUDE.md "Mirror plugin changes to the
@@ -249,3 +342,5 @@ Update it in the same commit when:
 
 Module-level changes (new module, changed purpose, line counts, traps) belong in
 `architecture_explore.md`, not here. Refresh the "Last verified" line whenever this file is edited.
+
+Plugin API 3 adds `Imervue.plugin.status` and optional `develop_backends.unregister(key, provider=...)`. Legacy unregister(key) still clears the key; provider-specific unregister releases only its generation. GPU Develop declares min_api_version 3 in the mirrored manifest. No new heavy dependency enters core startup.

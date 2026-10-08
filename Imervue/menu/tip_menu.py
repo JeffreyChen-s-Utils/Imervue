@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -148,7 +149,7 @@ class ShortcutDialog(QDialog):
                 "  background: #3a3a3a; color: #e0e0e0;"
                 "  border: 1px solid #555; border-radius: 4px;"
                 "  padding: 4px 10px; font-family: 'Consolas', 'Courier New', monospace;"
-                "  font-size: 13px; font-weight: bold;"
+                f"  {font_px(13)} font-weight: bold;"
                 "}"
             )
             key_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -158,7 +159,7 @@ class ShortcutDialog(QDialog):
             desc_label = QLabel(desc_text)
             desc_label.setWordWrap(True)
             desc_label.setStyleSheet(
-                "QLabel { padding: 6px 12px; font-size: 13px; color: #ccc; }"
+                f"QLabel {{ padding: 6px 12px; {font_px(13)} }}"
             )
 
             grid.addWidget(key_label, row, 0, Qt.AlignmentFlag.AlignTop)

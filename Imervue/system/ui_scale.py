@@ -31,6 +31,28 @@ def scaled_point_size(base_point_size: float, percent: int) -> float:
     return max(1.0, float(base_point_size) * factor)
 
 
+def scale_factor() -> float:
+    """The saved UI scale as a factor: 1.0 at 100 %."""
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    percent = user_setting_dict.get("ui_scale_percent", UI_SCALE_DEFAULT_PERCENT)
+    return clamp_scale_percent(percent) / 100.0
+
+
+def scaled_px(px: float) -> int:
+    """A pixel size designed at 100 %, at the saved UI scale (never below 1).
+
+    The scale only changes the application font, so a width, height or
+    ``font-size`` written in pixels has to be multiplied by hand or it stays
+    the same size while the text around it grows.
+    """
+    return max(1, int(round(float(px) * scale_factor())))
+
+
+def font_px(px: float) -> str:
+    """A stylesheet ``font-size`` declaration for a size designed at 100 %."""
+    return f"font-size: {scaled_px(px)}px;"
+
+
 def apply_ui_scale(app, percent: int) -> int:
     """Apply ``percent`` scale to ``app``'s default font.
 

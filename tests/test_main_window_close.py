@@ -45,7 +45,8 @@ class _Window(_Base):
     def __init__(self, log, failing):
         self._log = log
         for name in ("_save_current_folder_session", "_main_tabs", "tree", "modify_panel",
-                     "viewer", "_save_window_geometry", "plugin_manager", "deleteLater",
+                     "viewer", "_save_window_geometry", "_save_dock_layouts",
+                     "plugin_manager", "deleteLater",
                      "_folder_watcher"):
             setattr(self, name, _Rec(log, name, failing))
         self._on_main_tab_changed = object()
@@ -71,7 +72,7 @@ def run(monkeypatch):
         log: list[str] = []
         fail = set(failing)
         for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
-                     "offer_permanent_delete"):
+                     "offer_permanent_delete", "drain_background_jobs", "drain_retiring_workers"):
             monkeypatch.setattr(mod, name, _Rec(log, name, fail))
         monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: not last)
         monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
@@ -96,6 +97,7 @@ _TEARDOWN = [
     "viewer._clear_deep_zoom",
     "viewer.doneCurrent",
     "_save_window_geometry",
+    "_save_dock_layouts",
     "cancel_pending_save",
     "write_user_setting",
     "commit_pending_deletions",
@@ -105,6 +107,7 @@ _TEARDOWN = [
 
 def test_last_window_runs_the_app_teardown_and_exits(run):
     assert run(last=True) == _TEARDOWN + [
+        "drain_background_jobs", "drain_retiring_workers",
         "plugin_manager.dispatch_app_closing", "plugin_manager.unload_all",
         "event.accept", "super.closeEvent", "os._exit(0)"]
 
@@ -133,6 +136,7 @@ def test_a_failing_step_skips_only_the_rest_of_its_group(run):
     assert log == [s for s in _TEARDOWN if s not in {
         "modify_panel.recipe_committed.disconnect", "viewer._delete_all_tile_textures",
         "viewer._clear_deep_zoom", "viewer.doneCurrent"}] + [
+        "drain_background_jobs", "drain_retiring_workers",
         "plugin_manager.dispatch_app_closing", "event.accept", "super.closeEvent", "os._exit(0)"]
 
 
@@ -170,7 +174,7 @@ def test_cancelling_paints_unsaved_prompt_keeps_the_window_open(run, monkeypatch
 def test_paint_agreeing_lets_the_close_go_on(run, monkeypatch):
     log: list[str] = []
     for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
-                 "offer_permanent_delete"):
+                 "offer_permanent_delete", "drain_background_jobs", "drain_retiring_workers"):
         monkeypatch.setattr(mod, name, _Rec(log, name, set()))
     monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: False)
     monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
@@ -179,5 +183,15 @@ def test_paint_agreeing_lets_the_close_go_on(run, monkeypatch):
     _close(window, _Rec(log, "event", set()))
     assert log[0] == "_paint.confirm_close"
     assert log[1:] == _TEARDOWN + [
+        "drain_background_jobs", "drain_retiring_workers",
         "plugin_manager.dispatch_app_closing", "plugin_manager.unload_all",
         "event.accept", "super.closeEvent", "os._exit(0)"]
+
+
+def test_retirement_drain_still_runs_when_job_drain_fails(run, caplog):
+    with caplog.at_level("WARNING"):
+        calls = run(failing={"drain_background_jobs"})
+    assert calls.index("drain_background_jobs") < calls.index("drain_retiring_workers")
+    assert calls.index("drain_retiring_workers") < calls.index("plugin_manager.unload_all")
+    assert calls[-1] == "os._exit(0)"
+    assert "finish retained background jobs" in caplog.text

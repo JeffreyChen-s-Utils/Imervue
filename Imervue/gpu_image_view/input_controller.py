@@ -282,6 +282,7 @@ class InputController:
         return None
 
     def enter_deep_zoom(self, path: str) -> None:
+        from Imervue.gpu_image_view.tile_loader import image_is_current
         view = self._view
         # The clicked tile can already be gone from the model — the folder
         # dropped it (delete / filter / stack collapse / watch-folder refresh)
@@ -289,7 +290,7 @@ class InputController:
         # lingers one frame. Opening the vanished path would leave the wall to
         # start a load the completion guard then discards, stranding a stuck
         # "Loading…" view. Ignore the stale click and stay on the wall.
-        if path not in view.model.images:
+        if not image_is_current(view, path):
             return
         view._saved_tile_state = {
             "grid_offset_x": view.grid_offset_x,
@@ -297,7 +298,9 @@ class InputController:
             "tile_scale": view.tile_scale,
         }
         view.tile_grid_mode = False
-        view.current_index = view.model.images.index(path)
+        queue = getattr(view, "_tile_queue", None)
+        view.current_index = (queue.positions[path] if queue is not None
+                              else view.model.images.index(path))
         view.load_deep_zoom_image(path)
 
     def toggle_tile_selection(self, path: str) -> None:

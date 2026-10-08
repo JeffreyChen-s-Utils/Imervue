@@ -334,3 +334,27 @@ class TestMovePaths:
         image_index.set_cull_state("c", "reject")
         image_index.add_image_tag("t", "tag")
         assert sorted(image_index.stored_paths()) == ["c", "i", "n", "t"]
+
+
+
+def test_default_limited_search_does_not_sort_all_equal_dates():
+    plan = image_index.conn().execute(
+        "EXPLAIN QUERY PLAN SELECT path FROM images WHERE LOWER(name) LIKE ? "
+        "ORDER BY taken_at DESC, mtime DESC LIMIT 100", ("%image-%",)
+    ).fetchall()
+    text = " ".join(row["detail"] for row in plan)
+    assert "TEMP B-TREE" not in text
+    assert "idx_images_sort" in text
+
+
+
+def test_existing_schema_two_catalog_gets_additive_sort_index():
+    image_index.upsert_image("retained.jpg")
+    image_index.conn().execute("DROP INDEX idx_images_sort")
+    image_index.close()
+    assert image_index.get_image("retained.jpg") is not None
+    row = image_index.conn().execute("SELECT value FROM meta WHERE key = 'schema_version'").fetchone()
+    assert row["value"] == "2"
+    assert image_index.conn().execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'idx_images_sort'"
+    ).fetchone() is not None

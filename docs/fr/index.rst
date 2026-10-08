@@ -35,6 +35,32 @@ et *Serveur MCP* sont transversales — elles s'appliquent à l'ensemble des cin
 
 **Puppet** et **Desktop Pet** sont facultatifs : désactivez l'un ou l'autre dans ``File`` > ``Preferences`` > **Optional tabs** et, dès le démarrage suivant, son onglet n'est pas ajouté et son code n'est pas chargé, si bien qu'Imervue démarre plus vite et consomme moins de mémoire. Les deux sont activés par défaut ; chacun est construit la première fois que vous ouvrez son onglet, et l'onglet Desktop Pet dès le démarrage quand son compagnon doit s'afficher au lancement.
 
+La grille de miniatures libère de la place pour les nouvelles textures GPU en retirant d’abord celles hors du champ, tout en conservant les images visibles et en respectant le budget mémoire. Celles qui touchent seulement le bord ne réservent pas de capacité.
+
+Le dessin, les demandes de miniatures et la libération des textures partagent la zone visible avec une ligne/colonne de marge. Les tailles normales sont décodées à la demande, sans dépasser le nombre de workers du pool ; le défilement remplace les demandes non démarrées. Le mode pleine résolution poursuit une découverte en arrière-plan limitée pour les images dépassant leurs cellules. La progression compte la vue actuelle et les demandes explicites. Le retour de Deep Zoom conserve le cache et la position de la grille.
+
+Le préchargement des images voisines comptabilise les octets réels des pyramides et les réservations des décodages en cours. Les fenêtres ouvertes se partagent équitablement 20% de la RAM physique (256 MiB–8 GiB) ; sans détection optionnelle de mémoire, elles partagent un budget de secours de 2 GiB. Les réservations des décodages annulés restent jusqu’à leur fin ; ouvrir une image ignorée faute de budget déclenche son chargement normal au premier plan. Ce budget RAM est distinct de celui des textures GPU et ne limite ni tout le processus ni l’image au premier plan.
+
+Modify garde les commandes réactives grâce à un aperçu de moindre résolution en arrière-plan pendant les réglages, puis calcule la pleine qualité après une pause. Les réglages rapides et les changements de photo écartent les anciens résultats ; les annotations gardent les coordonnées de l’image complète. Enregistrer ou appliquer des effets destructifs termine d’abord le calcul en pleine qualité.
+
+Annuler ou fermer un outil en cours en arrière-plan rend la main immédiatement. Le dialogue affiche l’annulation et désactive ses commandes jusqu’à la fin du travail non interruptible et du nettoyage, puis se ferme avec le résultat initial. Une phase de finalisation peut brièvement apparaître à la fin normale. Une réouverture ne reçoit aucun ancien résultat. À la fermeture finale, l’application attend la fin sûre des travaux restants.
+
+Ouvrez ``Extra Tools`` > ``Workflow`` > ``Background Jobs`` pour consulter les exports par lots, analyses de bibliothèque, agrandissements IA/transformations partagées des plugins et téléchargements de plugins de toutes les fenêtres. Les sorties enregistrées et les erreurs restent disponibles après fermeture du dialogue initial. L’annulation est coopérative ; les opérations restent en vie jusqu’à leur fin réelle. Réessayer lance une nouvelle tentative uniquement pour les éléments en échec et conserve les sorties réussies. Un téléchargement de plugin constitue une installation atomique. Le panneau affiche au plus 500 détails, erreurs en premier ; le rapport complet enregistre tous les résultats en JSON. Effacer les tâches terminées libère leur historique.
+
+Dans Paint, File > ``Open Document…``, ``Save Document…``, ``Save Document As…`` et ``Save All Documents`` utilisent des documents ``.imervue`` modifiables. Tout enregistrer traite les onglets modifiés sans changer l’onglet actif ; annulation ou erreur arrête la séquence et laisse les documents non enregistrés ouverts. Fermer la fenêtre permet de tout enregistrer ; fermer un onglet enregistre cet onglet. Undo/Redo après enregistrement signale à nouveau des modifications. L’export aplati ne les efface pas. Les infobulles indiquent source, destination, export et état/heure/erreur de récupération automatique. Ouverture et dépôt préservent les éditions. Raccourcis PSD inchangés ; enregistrement natif explicite synchrone.
+
+``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` relie recherche, comparaison, sélection/rejet, préréglage de développement et export par lots. Library Search ajoute les résultats surlignés, ou tous sans surlignage ; requête et résultats restent à la réouverture. Chaque fenêtre conserve ordre entre dossiers, cases, filtre et préréglages. Le filtre ne change que l’affichage : les photos cochées masquées restent ciblées et comptées. Sélectionner coche ; rejeter décoche sans supprimer. Comparaison limitée à 800 pixels sur le grand côté. Les préréglages existants et mêmes sources cochées non rejetées alimentent Batch Export. Pages de 500 lignes ; changements externes synchronisés avant application/export. Vider réinitialise explicitement le flux.
+
+Export simple, par lots et conversion écrivent atomiquement ; ``Background Jobs`` conserve chemins/erreurs. Les lots renomment les conflits, même au même format ; remplacement individuel confirmé. La GUI inclut ICC sRGB avec les métadonnées ; conversion conserve descriptions, export retire par défaut la position. CLI par image : ``--output-conflict`` (``rename``, ``skip``, ``replace``), ``--export-metadata`` (``all``, ``no_location``, ``none``), JSON ``--result-report`` avec liens. Saut/``--overwrite`` et encodeur restent par défaut ; métadonnées explicites peuvent réencoder. ``strip`` retire toujours les métadonnées. Ctrl+C conserve les sorties terminées et signale l’annulation. PDF, MP4 et fichiers galerie sont publiés atomiquement ; copies originales gardent les métadonnées.
+
+``Manage Plugins`` affiche échecs par fenêtre et états communs des dépendances, téléchargements, modèles et backends avec raisons. Chargé signifie vérification optionnelle à l’usage ; résultats gardent modèle/backend et repli CPU. Téléchargement/reprise préserve installation, modèles et ressources ; installation simultanée du même plugin/interpréteur refusée. Annulation sans blocage ; import échoué sans faux succès. ``Reload Plugins`` relit le code par fenêtre ; GPU Develop conserve les autres fournisseurs et exige API 3. Après téléchargement/reprise, rechargez chaque fenêtre ou redémarrez.
+
+L’inventaire des miniatures passe en arrière-plan ; lecture/écriture immédiate. Écritures atomiques et modifications prioritaires sur données périmées ; vider inclut les fichiers non inventoriés. Initialisation supprime anciens NPY et ajuste quota ; totaux provisoires jusqu’à la fin. Fichiers verrouillés lisibles comptent et peuvent empêcher le quota. À 100 000 fichiers, p95 du constructeur sous 10 ms ; durée/coût d’inventaire mesurés séparément.
+
+La bibliothèque utilise une connexion WAL séparée en lecture seule : les données validées restent consultables pendant un lot de scan. Notes, tags hiérarchiques, sélection et albums partagent un instantané par appel. Écritures sérialisées ; un rollback ne perd pas une modification de tag ultérieure. Les pages d’empreintes libèrent le lecteur ; fermeture attend les requêtes actives. Schéma 2 et fichiers existants compatibles.
+
+GPU Develop reste un accélérateur optionnel d’export par lots. Les nouveaux dialogues choisissent CPU ; GPU à sélectionner explicitement sous Render on. Les opérations couleur mixtes peuvent différer en octets ; seuil ou postérisation activés rendent toute la recette sur CPU pour éviter l’amplification des arrondis. Modify et export CPU partagent sRGB 8 bits ; profils incorporés normalisés une fois, export avec sRGB sauf suppression des métadonnées. Pas d’édition HDR linéaire ni large gamut. wgpu optionnel dans le plugin, sans poids de modèle ; appareil absent/erreur utilisent CPU. Rapports 640k/24MP/60MP justifient les aperçus CPU.
+
 .. contents:: Table des matières
    :depth: 2
    :local:
@@ -56,7 +82,7 @@ Au lancement d'Imervue, vous découvrez trois zones :
 
 - **Gauche** : arbre des dossiers. Cliquez sur un dossier pour parcourir les images qu'il contient.
 - **Centre** : zone d'affichage des images. Présente toutes les images sous forme de grille de vignettes.
-- **Droite** : barre latérale EXIF, repliée en une fine bande au démarrage : cliquez dessus pour l'ouvrir. Elle affiche les informations de prise de vue de l'image ouverte.
+- **Droite** : panneau d'informations de l'image. Il affiche les informations de prise de vue, la note et les remarques de l'image ouverte. L'arborescence des dossiers et ce panneau sont des docks : faites glisser une barre de titre pour en déplacer, détacher ou empiler un en onglets, affichez-les ou masquez-les dans ``Thumbnail Size`` > ``Panels``, et ``Reset Panel Layout`` y remet chaque panneau à sa place. L'apparence par défaut est le thème **Modern Dark** ; ``File`` > ``Preferences`` propose **Modern Light**, l'apparence du système et quatre autres.
 
 Imervue écrit le journal de chaque session dans ``imervue.log`` à côté du programme (dans ``%LOCALAPPDATA%\Imervue``, ou ``~/.cache/imervue`` hors de Windows, lorsque ce dossier est en lecture seule). Le journal de la session précédente est conservé sous le nom ``imervue.previous.log``, si bien qu'après un plantage le journal qui l'explique est toujours là une fois Imervue relancé — joignez les deux lorsque vous signalez un problème.
 
@@ -544,8 +570,11 @@ Espace de travail Paint (onglet Paint)
 
 Le troisième onglet principal — **Paint** — est un espace de travail de peinture complet
 avec documents à onglets multiples, calques vectoriels et matriciels, outils manga, images
-clés d'animation, et import/export PSD. Y basculer depuis la barre d'onglets charge sur le
-canevas l'image affichée par la visionneuse.
+Undo / Redo restaure la création, la suppression, l’ordre et la fusion des calques, ainsi que leurs propriétés, masques, vecteurs, groupes, sélections et calque de référence. Les commandes du menu et du panneau des calques, les calques manga et l’insertion de matériaux créent des étapes d’annulation ; chaque document conserve son propre historique.
+
+Chaque document Paint conserve jusqu’à 50 étapes dans une limite de 512 MiB, état de référence actuel et branches Undo/Redo compris. Les pixels inchangés sont partagés ; le pinceau et la gomme ne stockent que les blocs modifiés. Les anciennes étapes sont supprimées lorsque la limite est atteinte. Si un seul instantané dépasse cette limite, l’historique est vidé et le document reste modifiable.
+
+clés d'animation, et import/export PSD. Passer à Paint conserve les documents, les calques, les modifications non enregistrées et l’historique d’annulation ; la première visite affiche un canevas vierge. ``File > Open Current Image in Paint`` ouvre l’image de la visionneuse dans un nouveau document. Gauche/Droite sur la barre des onglets principaux de Paint ouvre aussi l’image précédente/suivante dans un nouveau document. ``E`` depuis Deep Zoom ouvre l’éditeur d’annotation séparé.
 
 Points forts en matière d'ergonomie — l'espace de travail Paint dispose d'un curseur
 de taille de pinceau complet qui s'adapte au zoom, d'icônes de curseur distinctes par outil,
@@ -834,7 +863,7 @@ E/S de fichiers
 - **Exporter l'image…** — aplatir et enregistrer en PNG, JPEG, WebP, TIFF ou BMP, selon le type de fichier choisi (JPEG et BMP, qui ne gèrent pas la transparence, sur fond blanc). Seul **Enregistrer sous PSD…** marque l'onglet comme enregistré ; après un export, la fermeture d'Imervue demande toujours quoi faire des modifications non enregistrées de l'onglet
 - **Exporter les pages → CBZ** / **→ PDF** — exporter les pages d'un projet BD ; **Enregistrer le projet BD…** conserve la BD entière, chaque page avec ses calques, dans un seul fichier ``.imervue-proj``, et **Ouvrir un projet BD…** la rouvre
 - **Importer un préréglage de pinceau…**, **Importer une palette…** — importer des pinceaux et des palettes depuis d'autres installations ou applications
-- **Enregistrement automatique** — toutes les 2 minutes, tant que l'onglet actif a des modifications non enregistrées, un instantané est écrit ; au lancement suivant, un toast propose les instantanés et **Fichier > Restaurer l'enregistrement automatique** charge le plus récent dans l'onglet actif. La barre d'état indique quand le dernier instantané a été pris, et à la fermeture, Imervue demande quoi faire des onglets Paint ayant des modifications non enregistrées.
+- **Sauvegarde automatique** — Toutes les 2 minutes, chaque document modifié conserve ses huit derniers instantanés. **File > Restore Autosave** ouvre la dernière version lisible dans un nouvel onglet modifié, en préservant les éditions actuelles ; si elle est endommagée, une version antérieure est essayée. Les instantanés natifs conservent le découpage des cases manga. La barre d’état indique la dernière sauvegarde du document actif, les erreurs d’écriture sont signalées et fermer un onglet supprime seulement ses propres instantanés. Les sauvegardes périodiques utilisent la dernière modification terminée ; reconstruction, compression et écriture s’effectuent en arrière-plan. Chaque espace possède un seul écrivain et uniquement la dernière version en attente par document ; fermer ou remplacer un document annule les sorties tardives. Si l’historique ne peut conserver un état immuable, une copie cohérente du document est capturée sur le thread de l’interface avant l’écriture en arrière-plan.
 
 Dispositions d'espace de travail
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1918,17 +1947,14 @@ Sélectionnez plusieurs images, puis clic droit > ``Opérations par lots`` > ``E
 Plugin GPU Develop
 ^^^^^^^^^^^^^^^^^^
 
-Le plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, catégorie ``plugins``, nom
-``gpu_develop``) permet à l'export par lots de rendre les recettes de développement sur un GPU
-dédié. ``Plugins`` > ``GPU Develop…`` installe ``wgpu`` la première fois, puis indique le GPU
-qu'il utilisera ; l'export par lots affiche ensuite **Render on** avec ce GPU sélectionné
-(choisissez **CPU** pour rendre comme avant).
+Le plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, catégorie ``plugins``, nom ``gpu_develop``) accélère facultativement l’export par lots. ``Plugins`` > ``GPU Develop…`` installe ``wgpu`` au premier usage et identifie l’appareil. CPU par défaut ; GPU à choisir explicitement sous **Render on**.
+
 
 - La balance des blancs, l'exposition, les hautes lumières / ombres, les blancs / noirs, la luminosité, le contraste, la vibrance, la saturation et la courbe tonale s'exécutent sur le GPU ; la rotation, les retournements, le recadrage et tout ce qui suit la courbe tonale (virage partiel, LUT, masques, niveaux et le reste) restent sur le CPU
-- Une photo de 24 MP prend environ 0,1 s sur le GPU au lieu d'environ 7 s sur le CPU, sans compter le décodage et l'enregistrement
+- Vitesse selon matériel/recette ; mesures fixes 640k/24MP/60MP : docs/performance/gpu-develop-20261007.md
 - Seul un GPU dédié est utilisé, jamais un GPU intégré ni un moteur de rendu logiciel ; sous Windows, via Vulkan d'abord, puis Direct3D 12
 - Une image sur laquelle le GPU échoue est rendue sur le CPU, si bien que l'export se termine quand même
-- Le résultat correspond à celui du moteur de rendu CPU à quelques niveaux près sur une faible part des pixels
+- CPU par défaut conserve les pixels de référence ; GPU est une approximation explicite. Seuil/postérisation activés utilisent CPU pour toute la recette
 
 Créer un GIF / une vidéo
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2162,8 +2188,8 @@ Préréglages de disposition d'espace de travail
 
 ``Fichier`` > ``Espaces de travail…`` capture la géométrie courante de la fenêtre, la disposition
 des docks / barres d'outils, la séparation arbre / visionneuse et le dossier racine actif sous un nom — puis
-vous laisse basculer entre les dispositions enregistrées. L'onglet actif et la séparation des panneaux de l'onglet Modify ne sont pas
-enregistrés. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
+vous laisse basculer entre les dispositions enregistrées. Les dispositions des docks des onglets Imervue et Modify sont enregistrées aussi ; l'onglet actif ne l'est
+pas. La boîte de dialogue prend en charge Enregistrer l'actuel, Charger, Renommer
 et Supprimer. Les espaces de travail sont conservés dans ``user_setting.json`` (sous la clé
 ``workspaces``) et survivent aux sessions.
 
@@ -2695,7 +2721,7 @@ importée comme **Reject** du tri, sans étoiles, et un Reject est exporté en -
 Un sidecar non rejeté lève un Reject ; un Pick reste tel quel.
 
 Un fichier sans sidecar est lu — et importé — depuis ce qu'il embarque lui-même :
-son paquet XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), puis son ``Rating`` / ``RatingPercent``
+son paquet XMP (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), puis son ``Rating`` / ``RatingPercent``
 EXIF. C'est là que Lightroom garde la note et les mots-clés d'un JPEG, et que
 l'Explorateur Windows et certains appareils gardent leurs étoiles. Un sidecar,
 s'il existe, l'emporte.

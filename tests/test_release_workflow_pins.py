@@ -22,10 +22,11 @@ _REQUIREMENTS = _ROOT / "requirements.txt"
 # requirements.txt ends with a self-reference so end users installing from it
 # also get the app itself. The build must never install it.
 _SELF_REFS = {"imervue", "imervue_dev"}
-# Build-only tooling that legitimately appears in the workflow but not in the
-# runtime requirements.
-_BUILD_TOOLS = {"pip", "wheel", "build", "twine", "nuitka", "ordered_set",
-                "zstandard"}
+# Build-only tooling that legitimately appears in the Windows job but not in the
+# runtime requirements. ``build`` and ``twine`` are not among them: only the
+# release job runs those, from the hash-locked .github/requirements/publish.txt
+# (tests/test_workflow_actions.py).
+_BUILD_TOOLS = {"pip", "wheel", "nuitka", "ordered_set", "zstandard"}
 _PIN_RE = re.compile(r'"([A-Za-z0-9_.-]+)==([0-9][^"]*)"')
 _BINARY_ONLY = "--only-binary"
 _SDIST_EXEMPT = "--no-binary"
@@ -160,10 +161,12 @@ def test_every_installed_package_carries_an_exact_version():
 
 def test_no_requirements_file_is_installed_unhashed():
     # ``pip install -r`` without --require-hashes is the unlocked-resolve hole
-    # this workflow deliberately avoids.
-    for args in _install_commands(_workflow_text()):
-        if "-r" in args:
-            assert "--require-hashes" in args
+    # this workflow deliberately avoids. The release job installs its build
+    # tooling from a file (.github/requirements/publish.txt): hashes required,
+    # wheels only.
+    from_file = [args for args in _install_commands(_workflow_text()) if "-r" in args]
+    assert from_file == [["--require-hashes", _BINARY_ONLY, ":all:", "-r",
+                          ".github/requirements/publish.txt"]]
 
 
 def _installed_names(args: list[str]) -> set[str]:

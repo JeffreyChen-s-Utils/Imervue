@@ -36,6 +36,8 @@ class Workspace:
     maximized: bool = True
     root_folder: str = ""
     splitter_sizes: list[int] = field(default_factory=list)
+    browse_state_b64: str = ""
+    modify_state_b64: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -52,6 +54,8 @@ class Workspace:
             maximized=bool(data.get("maximized", True)),
             root_folder=str(data.get("root_folder", "")),
             splitter_sizes=[int(v) for v in (data.get("splitter_sizes") or [])],
+            browse_state_b64=str(data.get("browse_state_b64", "")),
+            modify_state_b64=str(data.get("modify_state_b64", "")),
         )
 
 

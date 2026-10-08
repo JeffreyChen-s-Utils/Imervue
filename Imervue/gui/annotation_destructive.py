@@ -66,6 +66,8 @@ class AnnotationDestructiveMixin:
         """Ask the user for mosaic block size / blur radius with a live
         preview of the effect painted on the canvas.
         """
+        if not self.ensure_full_base():
+            return False
         cfg = self._destructive_prompt_config(ann)
         if cfg is None:
             return True

@@ -170,6 +170,10 @@ class ToolDispatcher:
         # upload only the dirty pixels via glTexSubImage2D instead of
         # full-frame glTexImage2D.
         self._last_damage = _EMPTY_DAMAGE
+        self._history_damage = _EMPTY_DAMAGE
+        self._history_array = None
+        self._history_regional = True
+        self.history_regions = None
         """``image_provider`` is a callable returning the live numpy
         canvas (or ``None`` if no image is loaded); every optional
         collaborator comes in ``hooks`` (see :class:`DispatcherHooks`)."""
@@ -248,6 +252,10 @@ class ToolDispatcher:
         if canvas is None:
             return False
         tool_name, evt = self._resolve_tool(evt)
+        if evt.phase == "press" and not self._gesture_pending_commit:
+            self._history_damage = _EMPTY_DAMAGE
+            self._history_array = canvas
+            self._history_regional = True
         if tool_name != self._active_tool and self._active_tool in self._handlers:
             # User flipped tools mid-stroke — give the old handler a
             # chance to clean up internal state if it cares.
@@ -257,11 +265,14 @@ class ToolDispatcher:
         self._active_tool = tool_name
         handler = self._handlers.get(tool_name)
         if handler is None:
+            self._maybe_commit_undo(tool_name, evt, False)
             return False
         try:
             handled = handler.handle(evt, canvas)
         except (ValueError, RuntimeError) as exc:
             logger.warning("tool %r raised: %s", tool_name, exc)
+            self._history_regional = False
+            self._maybe_commit_undo(tool_name, evt, False)
             return False
         # After a successful event, snapshot the tool's damage rect so
         # the canvas can do a sub-region texture upload. Tools without
@@ -273,6 +284,11 @@ class ToolDispatcher:
             )
         else:
             self._last_damage = _EMPTY_DAMAGE
+        if handled and tool_name in self._MUTATING_TOOLS:
+            if (tool_name not in ("brush", "eraser") or canvas is not self._history_array
+                    or self._last_damage.is_empty):
+                self._history_regional = False
+            self._history_damage = self._history_damage.union(self._last_damage)
         self._maybe_commit_undo(tool_name, evt, handled)
         return handled
 
@@ -308,13 +324,13 @@ class ToolDispatcher:
         # one's undo step. Checked before the mutating-tool guard for that reason.
         if evt.phase in ("release", "leave") and self._gesture_pending_commit:
             self._gesture_pending_commit = False
-            self._commit_undo()
+            self._commit_gesture()
             return
         if tool_name not in self._MUTATING_TOOLS:
             return
         if tool_name in self._SINGLE_SHOT_TOOLS:
             if handled and evt.phase == "press":
-                self._commit_undo()
+                self._commit_gesture()
             return
         # Arm on the first handled press OR move. Gesture tools (gradient,
         # smudge, move) return handled=False on press and only do their work
@@ -323,6 +339,21 @@ class ToolDispatcher:
         # work was silently discarded on close.
         if evt.phase in ("press", "move") and handled:
             self._gesture_pending_commit = True
+
+    def commit_external_edit(self) -> None:
+        """Commit an explicit canvas edit, such as inserting a dropped material."""
+        self._commit_undo()
+
+    def _commit_gesture(self) -> None:
+        if self._history_regional and not self._history_damage.is_empty:
+            self.history_regions = ((self._history_array, self._history_damage),)
+        try:
+            self._commit_undo()
+        finally:
+            self.history_regions = None
+            self._history_damage = _EMPTY_DAMAGE
+            self._history_array = None
+            self._history_regional = True
 
     @property
     def last_damage(self):
@@ -445,5 +476,3 @@ def _build_text_tool(state, selection_provider, parent_widget):
 # ---------------------------------------------------------------------------
 # Move tool
 # ---------------------------------------------------------------------------
-
-

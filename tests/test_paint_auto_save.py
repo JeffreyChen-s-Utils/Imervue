@@ -377,6 +377,28 @@ def test_pending_autosaves_passes_through(workspace, tmp_path):
     assert len(snaps) == 1
 
 
+def test_background_dirty_tab_and_multiple_document_recovery(workspace, tmp_path, pump_until):
+    workspace.load_image(np.full((4, 5, 4), 11, dtype=np.uint8))
+    first = workspace.canvas()
+    workspace._set_tab_dirty(first, True)  # noqa: SLF001
+    second = workspace.new_tab(width=5, height=4)
+    second.document().active_layer().image.fill(22)
+    workspace._on_dispatcher_commit()  # noqa: SLF001 - the actual completed edit boundary
+    workspace._autosave_target_dir = tmp_path  # noqa: SLF001
+    workspace._on_autosave_tick()  # noqa: SLF001
+    assert workspace.canvas() is second
+    assert pump_until(lambda: len(getattr(workspace, "_autosave_written", ())) == 2)
+    assert len(workspace.pending_autosaves()) == 2
+    assert workspace.restore_all_autosaves() == 2
+    assert workspace.tab_count() == 4
+    assert first.document().active_layer().image[0, 0, 0] == 11
+    assert second.document().active_layer().image[0, 0, 0] == 22
+    assert workspace._undo_stack.document is workspace.canvas().document()  # noqa: SLF001
+    assert workspace._tab_dirty[workspace.canvas()]  # noqa: SLF001
+    assert workspace.close_tab(0, force=True)
+    assert len(workspace.pending_autosaves()) == 1
+
+
 def test_restore_snapshot_returns_false_for_corrupt_bundle(workspace, tmp_path):
     layer = workspace.canvas().document().active_layer()
     layer.image[..., :3] = (10, 20, 30)

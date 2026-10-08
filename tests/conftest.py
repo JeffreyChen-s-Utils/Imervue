@@ -415,6 +415,19 @@ def qapp():
     """
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
+    if sys.platform == "win32" and app.platformName() == "offscreen":
+        from PySide6.QtGui import QFontDatabase
+
+        # Windows' offscreen plugin does not discover the system font directory.
+        # Real glyphs are needed for text layout and font-selector tests.
+        if not QFontDatabase.families():
+            font_dir = Path(os.environ.get("SYSTEMROOT", "C:/Windows")) / "Fonts"
+            for filename in ("segoeui.ttf", "cour.ttf"):
+                if QFontDatabase.addApplicationFont(str(font_dir / filename)) < 0:
+                    pytest.fail(f"Cannot load offscreen test font: {font_dir / filename}")
+            font = app.font()
+            font.setFamily("Segoe UI")
+            app.setFont(font)
     return app
     # Don't quit the app here — quitting it makes subsequent tests in the
     # same session unable to recreate it on some platforms. The dedicated

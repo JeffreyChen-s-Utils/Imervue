@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+from functools import partial
 import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,6 +19,11 @@ from PySide6.QtWidgets import (
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_api import PLUGIN_API_VERSION, IncompatiblePluginError, check_compatible
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
+from Imervue.system.job_state import JobState
+from Imervue.gui.background_jobs import job_registry
+from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.installation import installation_stage, commit_installation
+from Imervue.plugin.status import status_registry
 
 
 def _https_urlopen(req: urllib.request.Request, timeout: int):
@@ -173,11 +179,11 @@ class DownloadPluginWorker(QThread):
     def __init__(self, plugin_name: str, file_infos: list[dict], parent=None):
         super().__init__(parent)
         self.plugin_name = plugin_name
-        self.file_infos = file_infos
+        self.file_infos = [dict(info) for info in file_infos]
+        self.job_state = JobState([plugin_name])
+        self._status_key = "download:" + plugin_name
 
     def run(self):
-        import os
-        import shutil
         try:
             names = [self.plugin_name, *(info["name"] for info in self.file_infos)]
             unsafe = [n for n in names if not is_safe_path_component(n)]
@@ -186,46 +192,59 @@ class DownloadPluginWorker(QThread):
             plugin_root = _get_plugin_dir()
             plugin_root.mkdir(parents=True, exist_ok=True)
             final_dir = plugin_root / self.plugin_name
-            # Download into a sibling temp dir and only swap it into place once
-            # every file lands. A mid-download failure (network drop, a null
-            # download_url) used to leave a half-written plugin dir behind, which
-            # reported as "Installed" (it keys on __init__.py existing) but was
-            # broken — and a failed re-download clobbered the working install.
-            tmp_dir = plugin_root / f".{self.plugin_name}.partial"
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-            tmp_dir.mkdir(parents=True, exist_ok=True)
-            try:
+            with installation_stage(final_dir) as tmp_dir:
+                status_registry.publish(self._status_key, self.plugin_name, "downloading")
                 total = len(self.file_infos)
                 for i, info in enumerate(self.file_infos):
+                    self._check_cancelled()
                     url = info["download_url"]
                     dest = tmp_dir / info["name"]
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     req = urllib.request.Request(url)
                     with _https_urlopen(req, timeout=30) as resp:
                         dest.write_bytes(resp.read())
+                    self.job_state.progress(i + 1, total)
                     self.progress.emit(i + 1, total)
                 # Refused before the swap, so a working install stays as it was.
+                self._check_cancelled()
                 check_compatible(tmp_dir, self.plugin_name)
-                shutil.rmtree(final_dir, ignore_errors=True)
-                os.replace(tmp_dir, final_dir)
-            except Exception:
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-                raise
+                commit_installation(tmp_dir, final_dir, before_commit=self._check_cancelled)
+            status_registry.publish(self._status_key, self.plugin_name, "installed",
+                                    "Reload Plugins in each open window to activate the new code")
+            self.job_state.record(self.plugin_name, output=str(final_dir))
             self.result_ready.emit(self.plugin_name)
+        except InterruptedError:
+            self.job_state.request_cancel()
+            status_registry.publish(self._status_key, self.plugin_name, "cancelled")
         except IncompatiblePluginError as e:
-            self.error.emit(needs_newer_text(e))
+            self._report_error(needs_newer_text(e))
         except _EXPECTED_FETCH_ERRORS as e:
-            self.error.emit(str(e))
+            self._report_error(str(e) or type(e).__name__)
         except Exception as e:
             logger.exception("Downloading plugin %s failed unexpectedly", self.plugin_name)
-            self.error.emit(str(e))
+            self._report_error(str(e) or type(e).__name__)
+        finally:
+            self.job_state.finish()
+
+    def _report_error(self, message: str) -> None:
+        status_registry.publish(self._status_key, self.plugin_name, "failed", message)
+        self.job_state.record(self.plugin_name, error=message)
+        self.error.emit(message)
+
+    def _check_cancelled(self) -> None:
+        if self.isInterruptionRequested() or self.job_state.cancelled:
+            raise InterruptedError("Plugin download cancelled")
+
+    def stop(self) -> None:
+        """Request cancellation between requests without removing a working plugin."""
+        self.job_state.request_cancel()
 
 
 # ================================================================
 # Dialog
 # ================================================================
 
-class PluginDownloaderDialog(QDialog):
+class PluginDownloaderDialog(WorkerHostMixin, QDialog):
     def __init__(self, main_window: ImervueMainWindow, parent=None):
         super().__init__(parent or main_window)
         self.main_window = main_window
@@ -296,12 +315,13 @@ class PluginDownloaderDialog(QDialog):
     # Cleanup
     # ========================
 
-    def closeEvent(self, event):
-        for w in self._workers:
-            if w.isRunning():
-                w.wait(5000)
+    def _stop_worker(self) -> bool:
+        # Expose list-held threads to the shared nonblocking retirement contract.
+        self._worker_attrs = tuple(f"_download_worker_{i}" for i in range(len(self._workers)))
+        for attr, worker in zip(self._worker_attrs, self._workers, strict=True):
+            setattr(self, attr, worker)
         self._workers.clear()
-        super().closeEvent(event)
+        return super()._stop_worker()
 
     # ========================
     # Fetch plugin list
@@ -426,6 +446,9 @@ class PluginDownloaderDialog(QDialog):
 
         self._cleanup_finished_workers()
         worker = DownloadPluginWorker(plugin_name, file_infos, self)
+        job_registry().add(worker, self.windowTitle(),
+                           partial(_retry_download,
+                                   file_infos=tuple(dict(info) for info in file_infos)))
         worker.progress.connect(self._on_download_progress)
         worker.result_ready.connect(self._on_download_finished)
         worker.error.connect(self._on_download_error)
@@ -542,3 +565,9 @@ class PluginDownloaderDialog(QDialog):
                     )
 
         self._on_selection_changed()
+
+
+def _retry_download(paths: tuple[str, ...], *,
+                    file_infos: tuple[dict, ...]) -> DownloadPluginWorker:
+    """A plugin is one atomic install item; committed plugins are never retried."""
+    return DownloadPluginWorker(paths[0], list(file_infos))

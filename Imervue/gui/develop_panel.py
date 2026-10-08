@@ -1,10 +1,9 @@
 """Modify panel — inline annotation + non-destructive image adjustments.
 
 A QWidget that provides ``build_left_panel()``, ``build_right_panel()``,
-and an inline ``AnnotationCanvas`` to populate the Modify tab's
-three-column layout:
+and an inline ``AnnotationCanvas`` to populate the Modify tab:
 
-    left tool strip | annotation canvas | right properties
+    tool dock | annotation canvas (centre) | adjustment dock
 
 - **Left panel**: annotation tool buttons (select, shapes, freehand,
   text, mosaic, blur) + orientation (rotate/flip)
@@ -28,7 +27,7 @@ from PySide6.QtWidgets import (
     QColorDialog,
     QMenu,
     QScrollArea,
-    QSplitter,
+    QStyle,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -36,13 +35,14 @@ from PySide6.QtWidgets import (
 
 from Imervue.gpu_image_view.images.image_loader import decode_image_file
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
-from Imervue.gui.modify_splitter import ModifySplitterMixin
+from Imervue.gui.develop_preview_panel import DevelopPreviewMixin
 from Imervue.image.in_place_save import can_rewrite_in_place, save_over_source
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
+from Imervue.system.ui_scale import scaled_px
 import contextlib
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ _CROP_CANNOT_OVERWRITE = (
 )
 
 
-class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
+class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
     """Controller that builds the left/right panels for the Modify tab.
 
     Emits ``recipe_committed(path, old_recipe, new_recipe)`` whenever a
@@ -118,7 +118,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         ("crop_ratio_9_16",  "9 : 16",   9, 16),
     ]
 
-    # Size of each tool button in the vertical strip.
+    # Smallest tool button in the vertical strip, at 100 % UI scale; a longer
+    # label widens every button (see ``_size_tool_buttons``).
     _TOOL_BTN_SIZE = QSize(86, 66)
 
     def __init__(self, main_gui: GPUImageView):
@@ -160,13 +161,14 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         # (path, EXIF-upright?) of the cached decode — see _decode_source.
         self._decoded_source_key: tuple[str, bool] | None = None
         self._decoded_source: Image.Image | None = None
+        self._init_preview_controller()
 
     # ------------------------------------------------------------------
     # Panel builders — called by ImervueMainWindow
     # ------------------------------------------------------------------
 
-    def build_left_panel(self, parent_splitter: QSplitter) -> None:
-        """Build a narrow vertical tool strip (annotation + orientation) with a scroll bar."""
+    def build_left_panel(self) -> QWidget:
+        """Build the vertical tool strip (annotation + orientation); returns its scroll area."""
         lang = language_wrapper.language_word_dict
 
         panel = QWidget()
@@ -182,12 +184,12 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
             btn.setText(f"{glyph}\n{label}")
             btn.setToolTip(label)
             btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-            btn.setFixedSize(self._TOOL_BTN_SIZE)
             btn.setCheckable(True)
             btn.clicked.connect(lambda _checked=False, t=tool_key: self._set_tool(t))
             layout.addWidget(btn, 0, Qt.AlignmentFlag.AlignHCenter)
             self._interactive_widgets.append(btn)
             self._tool_buttons[tool_key] = btn
+        strip_buttons = list(self._tool_buttons.values())
 
         # Default: select tool checked
         if "select" in self._tool_buttons:
@@ -212,19 +214,36 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
             btn.setText(f"{glyph}\n{label}")
             btn.setToolTip(label)
             btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-            btn.setFixedSize(self._TOOL_BTN_SIZE)
             btn.clicked.connect(handler)
             layout.addWidget(btn, 0, Qt.AlignmentFlag.AlignHCenter)
             self._interactive_widgets.append(btn)
+            strip_buttons.append(btn)
 
         layout.addStretch(1)
+        button_size = self._size_tool_buttons(strip_buttons)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(panel)
-        scroll.setFixedWidth(self._TOOL_BTN_SIZE.width() + 24)
-        parent_splitter.addWidget(scroll)
+        # Room for the buttons, the layout margins and a vertical scroll bar.
+        bar = scroll.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
+        scroll.setMinimumWidth(button_size.width() + 8 + bar + 2 * scroll.frameWidth())
+        return scroll
+
+    @classmethod
+    def _size_tool_buttons(cls, buttons: list[QToolButton]) -> QSize:
+        """Give every strip button one size that fits the longest label; returns it.
+
+        A size fixed in pixels cut long translations ("Rotat…° CCW") and stayed
+        the same when the UI scale enlarged the text.
+        """
+        size = QSize(scaled_px(cls._TOOL_BTN_SIZE.width()), scaled_px(cls._TOOL_BTN_SIZE.height()))
+        for btn in buttons:
+            size = size.expandedTo(btn.sizeHint())
+        for btn in buttons:
+            btn.setFixedSize(size)
+        return size
 
 
     # ------------------------------------------------------------------
@@ -382,7 +401,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         """Load *path* as PIL and create a fresh AnnotationCanvas."""
         from Imervue.gui.annotation_dialog import AnnotationCanvas
 
-        img = self._load_image_with_recipe(path)
+        self._preview.cancel()
+        img = self._decode_source(path)
         if img is None:
             self._destroy_canvas()
             return
@@ -392,6 +412,10 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
 
         self._canvas = AnnotationCanvas(img, self._canvas_undo_stack)
         self._canvas_source_path = path
+        self._canvas_recipe = (Recipe.from_dict(self._current.to_dict())
+                               if self._current.is_identity() else None)
+        self._canvas.full_base_resolver = self._ensure_full_canvas
+        self._canvas.base_changed.connect(self._on_canvas_base_changed)
 
         # Re-apply the full drawing state so the active tool (mosaic, blur, …),
         # brush, colour, stroke, opacity and font keep working after an image
@@ -408,17 +432,15 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         # the Imervue tab — the viewer is hidden here so it can't receive keys.
         self._canvas.delete_image_requested.connect(self._delete_current_image)
 
-        # Insert the canvas into the modify splitter (index 1).
-        splitter = getattr(self._main_gui.main_window, "_modify_splitter", None)
-        if splitter is not None:
-            splitter.insertWidget(1, self._canvas)
-            splitter.setStretchFactor(0, 0)   # fixed tool strip
-            splitter.setStretchFactor(1, 1)    # canvas takes the slack
-            splitter.setStretchFactor(2, 0)    # properties panel
-            self._size_modify_splitter(splitter)
+        # Show the canvas in the centre of the Modify tab, between its docks.
+        host = getattr(self._main_gui.main_window, "_modify_canvas_host", None)
+        if host is not None:
+            host.set_canvas(self._canvas)
         # Focus the canvas so key shortcuts (Delete, arrows, Ctrl+S) land on it
         # rather than a develop slider that ignores them.
         self._canvas.setFocus()
+        if not self._current.is_identity():
+            self._request_preview(final=True)
 
 
     def _cleanup_old_canvas(self) -> None:
@@ -431,13 +453,17 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         1. Clear shiboken-managed Python attrs on the canvas so their C++
            counterparts are freed NOW (while Qt is still alive), rather than
            during Python-shutdown GC when Qt is half-destroyed.
-        2. Detach from the splitter (``setParent(None)``).
+        2. Detach from the canvas host (``setParent(None)``), which shows its hint again.
         3. Drop the Python reference — CPython's refcount immediately frees
            the wrapper; shiboken sees no parent → deletes the C++ QWidget
            deterministically, all within normal execution.
         """
+        self._preview.cancel()
+        self._set_preview_status("")
         self._canvas_undo_stack.clear()
         if self._canvas is not None:
+            self._canvas.full_base_resolver = None
+            self._canvas.base_changed.disconnect(self._on_canvas_base_changed)
             # Disconnect signals we connected
             with contextlib.suppress(RuntimeError, TypeError):
                 self._canvas.navigate_image.disconnect(self._on_navigate_image)
@@ -464,27 +490,6 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         self._debounce.stop()
         self._cleanup_old_canvas()
         self._canvas_source_path = None
-
-    def _refresh_canvas_base(self) -> None:
-        """Re-apply the current recipe to the raw image and update the canvas.
-
-        Called when recipe sliders change without a path change.  If the
-        image geometry (dimensions) changed — e.g. after a rotation — any
-        existing annotations are cleared because their coordinates would be
-        invalid in the new coordinate space.
-        """
-        if self._canvas is None or self._canvas_source_path is None:
-            return
-        img = self._load_image_with_recipe(self._canvas_source_path)
-        if img is None:
-            return
-
-        old_w, old_h = self._canvas._base.width, self._canvas._base.height
-        if (img.width, img.height) != (old_w, old_h):
-            self._canvas.set_annotations([])
-            self._canvas.clear_crop()
-
-        self._canvas._set_base_image(img)
 
     # ------------------------------------------------------------------
     # Left-panel tool selection
@@ -547,6 +552,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
 
     def _apply_crop(self) -> None:
         if self._canvas is None or self._canvas_source_path is None:
+            return
+        if not self._ensure_full_canvas():
             return
         crop_rect = self._canvas.get_crop_rect()
         if crop_rect is None:
@@ -729,6 +736,8 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
         """Bake annotations into the image and save back to the source file."""
         if self._canvas is None or self._canvas_source_path is None:
             return
+        if not self._ensure_full_canvas():
+            return
         from Imervue.gui.annotation_models import bake
 
         path = self._canvas_source_path
@@ -901,23 +910,6 @@ class DevelopPanel(DevelopRightPanelMixin, ModifySplitterMixin, QWidget):
     # ------------------------------------------------------------------
     # Preview + commit logic — debounced canvas refresh, then write-back
     # ------------------------------------------------------------------
-
-    def _schedule_preview(self) -> None:
-        """Debounce canvas refresh so rapid slider drags don't reload on
-        every tick."""
-        self._debounce.start()
-
-    def _preview_debounced(self) -> None:
-        """Refresh the inline preview, then finalise the edit.
-
-        Firing the debounce timer is the signal that the user has paused —
-        the working recipe is now considered committed. We update the canvas
-        preview first (cheap, local) and then push the recipe to the store and
-        notify the viewer via ``recipe_committed`` so the edit survives a tab
-        or image switch.
-        """
-        self._refresh_canvas_base()
-        self._commit_recipe()
 
     def _commit_recipe(self) -> None:
         """Persist the working recipe and emit ``recipe_committed``.

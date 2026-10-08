@@ -1,6 +1,7 @@
 """
-EXIF 資訊側邊欄
-Collapsible sidebar showing EXIF metadata for the current image.
+EXIF 資訊面板
+Panel showing EXIF metadata, rating and notes for the current image. The main
+window docks it (``gui/main_window_docks.py``) and tells it when it is shown.
 """
 from __future__ import annotations
 
@@ -13,14 +14,15 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QToolButton,
-    QPushButton, QSizePolicy, QPlainTextEdit,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea,
+    QPushButton, QPlainTextEdit,
 )
 
 from Imervue.image.exif_merge import get_exif_data
 from Imervue.image.info import get_file_times
 from Imervue.image.video_frames import is_video_path, probe_video_meta
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import scaled_px
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -32,21 +34,27 @@ _MAP_LINK = "imervue:open-map"
 
 
 class ExifSidebar(QWidget):
-    """可摺疊的 EXIF 資訊面板"""
+    """EXIF 資訊面板 — idle until :meth:`set_active` says it is on screen."""
 
     def __init__(self, main_window: ImervueMainWindow):
         super().__init__(main_window)
         self._main_window = main_window
-        self._collapsed = True
+        # Reading EXIF is a file read per image: skipped while the panel is hidden.
+        self._active = False
 
-        self.setMaximumWidth(300)
-        self.setMinimumWidth(0)
+        # Paging through images asks for a refresh per image; only the one the
+        # user stops on is read.
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setSingleShot(True)
+        self._refresh_timer.setInterval(_REFRESH_DELAY_MS)
+        self._refresh_timer.timeout.connect(self.update_info)
+
+        self.setMinimumWidth(scaled_px(_MIN_WIDTH_PX))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._toggle_btn = self._build_toggle_button()
         self._content = self._build_scroll_area()
         self._info_label = self._build_info_label()
         lang = language_wrapper.language_word_dict
@@ -59,38 +67,15 @@ class ExifSidebar(QWidget):
         self._rating_widget = _RatingStars(self._on_rating_clicked)
         self._build_notes(lang)
         self._content.setWidget(self._build_content_column())
-
-        h_layout = QHBoxLayout()
-        h_layout.setContentsMargins(0, 0, 0, 0)
-        h_layout.setSpacing(0)
-        h_layout.addWidget(self._toggle_btn)
-        h_layout.addWidget(self._content)
-
-        layout.addLayout(h_layout)
-
-    def _build_toggle_button(self) -> QToolButton:
-        """摺疊按鈕 — the narrow strip that collapses and expands the panel."""
-        btn = QToolButton()
-        btn.setText("\u276f")  # ❯
-        btn.setCheckable(True)
-        btn.setChecked(False)
-        btn.setFixedWidth(24)
-        btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-        btn.setStyleSheet(
-            "QToolButton { background: #222; color: #aaa; border: none; font-size: 14px; }"
-            "QToolButton:checked { background: #333; }"
-        )
-        btn.clicked.connect(self._toggle)
-        return btn
+        layout.addWidget(self._content)
 
     @staticmethod
     def _build_scroll_area() -> QScrollArea:
-        """內容面板 — vertical-only scroll area, hidden while collapsed."""
+        """內容面板 — vertical-only scroll area."""
         area = QScrollArea()
         area.setWidgetResizable(True)
         area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        area.setStyleSheet("QScrollArea { background: #1e1e1e; border: none; }")
-        area.setVisible(False)
+        area.setFrameShape(QScrollArea.Shape.NoFrame)
         return area
 
     def _build_info_label(self) -> QLabel:
@@ -98,9 +83,7 @@ class ExifSidebar(QWidget):
         label = QLabel()
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        label.setStyleSheet(
-            "QLabel { color: #ccc; padding: 8px; font-size: 12px; background: #1e1e1e; }"
-        )
+        label.setStyleSheet(f"QLabel {{ padding: {scaled_px(8)}px; }}")
         label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
             | Qt.TextInteractionFlag.LinksAccessibleByMouse,
@@ -113,26 +96,22 @@ class ExifSidebar(QWidget):
     def _action_button(text: str, slot) -> QPushButton:
         """Full-width panel button with a small margin, wired to ``slot``."""
         button = QPushButton(text)
-        button.setStyleSheet("QPushButton { margin: 4px; }")
+        button.setStyleSheet(f"QPushButton {{ margin: {scaled_px(4)}px; }}")
         button.clicked.connect(slot)
         return button
 
     def _build_notes(self, lang) -> None:
         """備註區 — heading, editor and the debounce timer that saves to the library index."""
         self._notes_label = QLabel(lang.get("notes_title", "Notes"))
+        pad = scaled_px(8)
         self._notes_label.setStyleSheet(
-            "QLabel { color: #ddd; padding: 8px 8px 2px 8px;"
-            " font-weight: bold; background: #1e1e1e; }"
+            f"QLabel {{ padding: {pad}px {pad}px {scaled_px(2)}px {pad}px; font-weight: bold; }}"
         )
         self._notes_edit = QPlainTextEdit()
         self._notes_edit.setPlaceholderText(
             lang.get("notes_placeholder", "Write notes for this image…")
         )
-        self._notes_edit.setFixedHeight(120)
-        self._notes_edit.setStyleSheet(
-            "QPlainTextEdit { background: #262626; color: #ddd; border: none;"
-            " padding: 6px; font-size: 12px; }"
-        )
+        self._notes_edit.setMinimumHeight(scaled_px(_NOTES_MIN_HEIGHT_PX))
         self._notes_current_path: str | None = None
         self._notes_save_timer = QTimer(self)
         self._notes_save_timer.setSingleShot(True)
@@ -141,28 +120,31 @@ class ExifSidebar(QWidget):
         self._notes_edit.textChanged.connect(self._notes_save_timer.start)
 
     def _build_content_column(self) -> QWidget:
-        """Info, the two buttons, rating, then the notes, top-aligned."""
+        """Info, the two buttons, rating, then the notes, which take the spare height."""
         content_widget = QWidget()
         content_layout = QVBoxLayout(content_widget)
         content_layout.setContentsMargins(0, 0, 0, 0)
         for widget in (self._info_label, self._edit_btn, self._keywords_btn,
-                       self._rating_widget, self._notes_label, self._notes_edit):
+                       self._rating_widget, self._notes_label):
             content_layout.addWidget(widget)
-        content_layout.addStretch()
+        content_layout.addWidget(self._notes_edit, 1)
         return content_widget
 
-    def _toggle(self):
-        self._collapsed = not self._collapsed
-        self._content.setVisible(not self._collapsed)
-        self._toggle_btn.setText("\u276e" if not self._collapsed else "\u276f")
-
-        if not self._collapsed:
-            self.setMinimumWidth(260)
-            self.setMaximumWidth(300)
+    def set_active(self, active: bool) -> None:
+        """Start (and refresh) or stop following the current image; the dock's visibility."""
+        active = bool(active)
+        if active == self._active:
+            return
+        self._active = active
+        if active:
             self.update_info()
         else:
-            self.setMinimumWidth(0)
-            self.setMaximumWidth(24)
+            self._refresh_timer.stop()
+
+    def schedule_update(self) -> None:
+        """Refresh for the current image shortly; quick image switches become one read."""
+        if self._active:
+            self._refresh_timer.start()
 
     def _open_editor(self):
         from Imervue.gui.exif_editor import open_exif_editor
@@ -174,7 +156,7 @@ class ExifSidebar(QWidget):
 
     def update_info(self, path: str | None = None):
         """更新 EXIF 面板內容"""
-        if self._collapsed:
+        if not self._active:
             return
 
         if path is None:
@@ -362,6 +344,15 @@ class ExifSidebar(QWidget):
             viewer.update()
 
 
+# Sizes designed at 100 % UI scale; ``scaled_px`` applies the saved scale.
+_MIN_WIDTH_PX = 200
+# Pause after the last image switch before the panel reads the new image.
+_REFRESH_DELAY_MS = 120
+_NOTES_MIN_HEIGHT_PX = 120
+_STAR_FONT_PX = 18
+_STAR_WIDTH_PX = 20
+_STAR_FILLED_COLOUR = "#ffd450"
+
 _STAR_FILLED = "\u2605"
 _STAR_EMPTY = "\u2606"
 _RATING_MAX = 5
@@ -413,9 +404,10 @@ class _RatingStars(QWidget):
         for idx, lbl in enumerate(self._labels):
             filled = (idx + 1) <= self._value
             lbl.setText(_STAR_FILLED if filled else _STAR_EMPTY)
-            colour = "#ffd450" if filled else "#555"
+            colour = _STAR_FILLED_COLOUR if filled else "palette(mid)"
             lbl.setStyleSheet(
-                f"QLabel {{ color: {colour}; font-size: 18px; padding: 0 1px; }}"
+                f"QLabel {{ color: {colour}; font-size: {scaled_px(_STAR_FONT_PX)}px;"
+                " padding: 0 1px; }"
             )
             lbl.setEnabled(self._path is not None)
 
@@ -429,7 +421,7 @@ class _StarLabel(QLabel):
         self._on_click = on_click
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setMinimumWidth(20)
+        self.setMinimumWidth(scaled_px(_STAR_WIDTH_PX))
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802 (Qt override)
         if event.button() == Qt.MouseButton.LeftButton and self.isEnabled():

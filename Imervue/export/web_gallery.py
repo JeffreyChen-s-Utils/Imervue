@@ -11,6 +11,8 @@ from __future__ import annotations
 import html
 import logging
 import shutil
+from Imervue.image.output_policy import OutputPolicy, write_output
+from Imervue.system.atomic_write import replace_atomically, write_text_atomically
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -53,7 +55,8 @@ def _make_thumbnail(src: str, dest: Path, max_side: int, quality: int) -> bool:
     try:
         img = decode_image(src, max_edge=max_side)
         dest.parent.mkdir(parents=True, exist_ok=True)
-        img.convert("RGB").save(dest, "JPEG", quality=quality)
+        replace_atomically(dest, lambda stage: img.convert("RGB").save(
+            stage, "JPEG", quality=quality))
     except IMAGE_READ_ERRORS:
         logger.debug("Thumbnail of %s failed", src, exc_info=True)
         return False
@@ -198,13 +201,9 @@ def _place_original(src: Path, output_dir: Path, copy: bool) -> str:
         images_dir = output_dir / "images"
         images_dir.mkdir(parents=True, exist_ok=True)
         dest = images_dir / src.name
-        # Suffix disambiguation when multiple sources share a filename.
-        counter = 1
-        while dest.exists():
-            dest = images_dir / f"{src.stem}_{counter}{src.suffix}"
-            counter += 1
-        shutil.copy2(src, dest)
-        return f"images/{dest.name}"
+        result = write_output(src, dest, lambda stage: shutil.copy2(src, stage),
+                              OutputPolicy("rename"))
+        return f"images/{Path(result.path).name}"
     # Reference original absolute path — only useful for local viewing.
     return src.as_uri()
 
@@ -257,6 +256,6 @@ def generate_web_gallery(
         review_script=review_script,
     )
     index_path = out_dir / "index.html"
-    index_path.write_text(index_html, encoding="utf-8")
+    write_text_atomically(index_path, index_html)
     logger.info("Web gallery written: %s", index_path)
     return index_path

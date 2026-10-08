@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.plugin.plugin_api import MANIFEST_NAME, IncompatiblePluginError, check_compatible
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.status import status_registry
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 logger = logging.getLogger("Imervue.plugin")
@@ -40,6 +41,7 @@ class PluginManager:
     """
 
     def __init__(self, main_window: ImervueMainWindow):
+        self.status_scope = f"window:{id(self)}"
         self.main_window = main_window
         self._plugins: list[ImervuePlugin] = []
         self._plugin_dirs: list[Path] = []
@@ -65,7 +67,7 @@ class PluginManager:
 
         self._plugin_dirs = plugin_dirs
 
-        for plugin_class in _plugin_classes(plugin_dirs):
+        for plugin_class in _plugin_classes(plugin_dirs, scope=self.status_scope):
             self._instantiate(plugin_class)
 
     def _instantiate(self, plugin_class: type[ImervuePlugin]) -> None:
@@ -78,22 +80,53 @@ class PluginManager:
                 return
 
         _register_languages_of(plugin_class)
+        instance = None
         try:
             instance = plugin_class(self.main_window)
-            self._plugins.append(instance)
             instance.on_plugin_loaded()
+            self._plugins.append(instance)
 
             # Merge plugin translations into the language system
             translations = instance.get_translations()
             if translations:
                 language_wrapper.merge_translations(translations)
 
+            status_registry.publish(self.status_scope + ":" + plugin_class.__name__,
+                                    instance.plugin_name, "loaded",
+                                    "Optional dependencies, models and backends are checked on use",
+                                    scope=self.status_scope)
             logger.info(
                 f"Loaded plugin: {instance.plugin_name} v{instance.plugin_version}"
                 f" by {instance.plugin_author}"
             )
         except Exception as e:
+            if instance is not None:
+                if instance in self._plugins:
+                    self._plugins.remove(instance)
+                try:
+                    instance.on_plugin_unloaded()
+                except Exception:
+                    logger.exception("Failed to clean up partially loaded plugin")
+            status_registry.publish(self.status_scope + ":" + plugin_class.__name__,
+                                    plugin_class.plugin_name, "failed", str(e) or type(e).__name__,
+                                    scope=self.status_scope)
             logger.exception(f"Failed to instantiate plugin '{plugin_class.__name__}': {e}")
+
+    def refresh_imports(self) -> None:
+        """Forget only this manager's plugin modules before explicit reload (not other windows)."""
+        roots = tuple(path.resolve() for path in self._plugin_dirs)
+        for name, module in list(sys.modules.items()):
+            origin = getattr(module, "__file__", None)
+            if not origin or not any(Path(origin).resolve().is_relative_to(root) for root in roots):
+                continue
+            cached = getattr(module, "__cached__", None)
+            if cached and any(Path(cached).resolve().is_relative_to(root) for root in roots):
+                try:
+                    Path(cached).unlink(missing_ok=True)
+                except OSError:
+                    logger.warning("Could not remove plugin bytecode %s", cached, exc_info=True)
+            del sys.modules[name]
+        importlib.invalidate_caches()
 
     # ===========================
     # Hook Dispatch
@@ -194,6 +227,7 @@ class PluginManager:
             except Exception as e:
                 logger.exception(f"[{plugin.plugin_name}] on_plugin_unloaded error: {e}")
         self._plugins.clear()
+        status_registry.clear(self.status_scope)
 
 
 def _plugin_candidates(plugin_dirs: list[Path]) -> Iterator[Path]:
@@ -285,7 +319,8 @@ def _plugin_class_in(module: ModuleType, source: Path) -> type[ImervuePlugin] | 
     return plugin_class
 
 
-def _plugin_classes(plugin_dirs: list[Path]) -> Iterator[type[ImervuePlugin]]:
+def _plugin_classes(plugin_dirs: list[Path], *,
+                    scope: str = "startup") -> Iterator[type[ImervuePlugin]]:
     """Import every plugin under ``plugin_dirs`` and yield its plugin class.
 
     A plugin that fails to import, or needs a newer plugin API
@@ -294,15 +329,23 @@ def _plugin_classes(plugin_dirs: list[Path]) -> Iterator[type[ImervuePlugin]]:
     """
     for candidate in _plugin_candidates(plugin_dirs):
         if not _api_compatible(candidate):
+            status_registry.publish(scope + ":" + candidate.name, candidate.name, "failed",
+                                    "Incompatible plugin API; update Imervue or the plugin",
+                                    scope=scope)
             continue
         try:
             module = _import_plugin(candidate)
             plugin_class = None if module is None else _plugin_class_in(module, candidate)
         except Exception as e:  # plugin sandboxing: any import-time error
+            status_registry.publish(scope + ":" + candidate.name, candidate.name, "failed",
+                                    str(e) or type(e).__name__, scope=scope)
             logger.exception(f"Failed to load plugin '{candidate.name}': {e}")
             continue
         if plugin_class is not None:
             yield plugin_class
+        else:
+            status_registry.publish(scope + ":" + candidate.name, candidate.name, "failed",
+                                    "No valid ImervuePlugin class", scope=scope)
 
 
 def _register_languages_of(plugin_class: type[ImervuePlugin]) -> None:

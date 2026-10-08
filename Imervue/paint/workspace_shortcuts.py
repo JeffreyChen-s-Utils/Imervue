@@ -115,7 +115,11 @@ class ShortcutMixin:
         canvas = getattr(self, "_canvas", None)
         if canvas is None:
             return
-        canvas.document().move_active_layer(up=up)
+        document = canvas.document()
+        before = document.active_layer_index()
+        document.move_active_layer(up=up)
+        if document.active_layer_index() != before:
+            self._on_dispatcher_commit()
 
     def _fit_view(self) -> None:
         canvas = getattr(self, "_canvas", None)

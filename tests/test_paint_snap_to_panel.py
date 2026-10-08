@@ -21,6 +21,7 @@ from Imervue.paint.manga_menu import commit_panel_layout
 from Imervue.paint.manga_panels import layout_for_canvas, panel_grid
 from Imervue.paint.tool_bar import PaintOptionsBar
 from Imervue.paint.tool_dispatcher import DispatcherHooks, ToolDispatcher
+from Imervue.paint.undo_stack import UndoStack
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
@@ -41,13 +42,21 @@ def _two_panels():
 def test_panel_cutter_keeps_its_layout_on_the_document():
     doc = PaintDocument()
     doc.load_image(np.full((60, 100, 4), 255, np.uint8))
+    stack = UndoStack(doc)
     workspace = SimpleNamespace(canvas=lambda: SimpleNamespace(document=lambda: doc,
-                                                               update=lambda: None))
+                                                               update=lambda: None),
+                                _on_dispatcher_commit=stack.commit)
     assert commit_panel_layout(workspace, {"rows": 1, "cols": 2, "gutter": 20,
                                            "border": 2, "margin": 0}) is True
     assert doc.panel_layout is not None and len(doc.panel_layout.cells) == 2
     import copy
     assert copy.deepcopy(doc).panel_layout == doc.panel_layout
+    assert stack.undo()
+    assert doc.panel_layout is None
+    assert doc.layer_count == 1
+    assert stack.redo()
+    assert len(doc.panel_layout.cells) == 2
+    assert doc.layer_count == 2
 
 
 def test_a_layout_only_counts_on_a_canvas_of_its_size():

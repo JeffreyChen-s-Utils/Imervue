@@ -33,6 +33,32 @@ für alle fünf Tabs.
 
 **Puppet** und **Desktop Pet** sind optional: Schalten Sie einen der beiden unter ``File`` > ``Preferences`` > **Optional tabs** aus, dann wird ab dem nächsten Start sein Tab nicht angelegt und sein Code nicht geladen, sodass Imervue schneller startet und weniger Speicher braucht. Beide sind standardmäßig an; jeder wird erst beim ersten Öffnen seines Tabs aufgebaut, der Desktop-Pet-Tab schon beim Start, wenn sein Pet beim Start erscheinen soll.
 
+Die Thumbnail-Wand schafft Platz für neue GPU-Texturen, indem sie zuerst Kacheln außerhalb des Bildausschnitts entfernt. Sichtbare Kacheln bleiben erhalten und das Speicherbudget wird eingehalten. Kacheln, die nur den Rand berühren, reservieren keine Kapazität.
+
+Darstellung, Thumbnail-Anfragen und Texturfreigabe nutzen denselben sichtbaren Rasterbereich mit einer zusätzlichen Zeile/Spalte. Normale Thumbnail-Größen werden bei Bedarf dekodiert; höchstens so viele Aufgaben wie Worker im Thumbnail-Pool laufen gleichzeitig. Scrollen ersetzt noch nicht gestartete Anfragen. Der Vollauflösungsmodus entdeckt über Zellgrenzen reichende Bilder mit begrenzter Hintergrundarbeit. Der Fortschritt zählt den aktuellen Ausschnitt und gezielte Anfragen. Die Rückkehr aus Deep Zoom behält den warmen Cache und die Rasterposition.
+
+Das Vorladen benachbarter Bilder berücksichtigt tatsächliche Pyramidenbytes und Reservierungen laufender Dekodierungen. Alle offenen Ansichtsfenster teilen sich gleichmäßig 20% des physischen RAM (256 MiB–8 GiB); ohne optionale Speichererkennung gilt ein gemeinsames Ersatzbudget von 2 GiB. Abgebrochene Dekodierungen geben ihre Reservierung erst nach ihrem Ende frei; beim Öffnen eines wegen des Budgets übersprungenen Bildes wird regulär im Vordergrund geladen. Das RAM-Budget ist vom GPU-Texturbudget getrennt und begrenzt weder den gesamten Prozess noch das Vordergrundbild.
+
+Modify zeigt während der Anpassung eine Vorschau mit geringerer Auflösung im Hintergrund und berechnet nach einer Pause die volle Qualität, damit die Bedienung reagiert. Schnelle Änderungen und Bildwechsel verwerfen ältere Ergebnisse; Anmerkungskoordinaten behalten die volle Bildgröße. Speichern und destruktive Effekte schließen zuerst die Berechnung in voller Qualität ab.
+
+Das Abbrechen oder Schließen eines laufenden Hintergrundwerkzeugs kehrt sofort zurück. Der Dialog zeigt den Abbruch an und sperrt seine Bedienung, bis die aktuell nicht unterbrechbare Arbeit und die Bereinigung beendet sind; danach schließt er mit dem ursprünglichen Ergebnis. Bei normalem Abschluss kann kurz die Abschlussphase erscheinen. Nach erneutem Öffnen kommen keine alten Ergebnisse an. Beim endgültigen Beenden wartet die Anwendung auf das sichere Ende verbliebener Arbeit.
+
+Unter ``Extra Tools`` > ``Workflow`` > ``Background Jobs`` sehen Sie Batch-Exporte, Bibliotheksscans, KI-Vergrößerung/gemeinsame Plugin-Transformationen und Plugin-Downloads aller Fenster. Gespeicherte Ausgaben und Fehlergründe bleiben nach dem Schließen des ursprünglichen Dialogs erhalten. Abbrechen ist kooperativ; laufende Operationen bleiben bis zum tatsächlichen Ende erhalten. Wiederholen startet einen neuen Versuch nur für fehlgeschlagene Einträge und bewahrt erfolgreiche Ausgaben. Ein Plugin-Download ist ein atomarer Installationsauftrag. Das Panel zeigt höchstens 500 Details, Fehler zuerst; der vollständige Bericht speichert alle Ergebnisse als JSON. Abgeschlossene Einträge löschen gibt deren Historie frei.
+
+In Paint verwenden File > ``Open Document…``, ``Save Document…``, ``Save Document As…`` und ``Save All Documents`` bearbeitbare ``.imervue``-Dateien. Alle speichern verarbeitet geänderte Tabs ohne Tabwechsel; Abbruch oder Fehler beendet die Folge und lässt ungespeicherte Dokumente offen. Beim Fensterschließen können alle gespeichert werden, beim Tabschließen der betroffene Tab. Undo/Redo nach dem Speichern markiert Änderungen erneut. Flache Bildexporte löschen diesen Status nicht. Tab- und Statushinweise zeigen Quelle, Dokumentziel, Export und Wiederherstellungsstatus/Zeit/Fehler. Öffnen und Ablegen schützen vorhandene Bearbeitungen. PSD-Tastenkürzel bleiben bestehen; explizites natives Speichern ist synchron.
+
+``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` verbindet Suche, Vergleich, Auswahl/Ablehnung, Entwicklungsvorgabe und Batch-Export. Library Search fügt markierte Ergebnisse hinzu, ohne Markierung alle; Suchabfrage und Ergebnisse bleiben beim Wiederöffnen erhalten. Pro Fenster bleiben Ordner übergreifende Reihenfolge, Häkchen, Filter und Vorgabennamen erhalten. Filter ändern nur die Anzeige: verborgene angehakte Fotos bleiben Bulk-Ziele und werden gezählt. Auswahl setzt das Häkchen, Ablehnung entfernt es ohne Löschen. Vergleichsvorschauen sind maximal 800 Pixel groß. Vorhandene Entwicklungsvorgaben und identische angehakte, nicht abgelehnte Exportquellen werden genutzt. Seiten zeigen 500 Einträge; externe Auswahländerungen werden vor Anwenden/Export synchronisiert. Workflow leeren setzt ausdrücklich zurück.
+
+Einzel-, Batch-Export und Konvertierung schreiben atomar; Pfade/Fehler bleiben in ``Background Jobs``. Batches benennen Konflikte um, auch beim gleichen Format; Einzelersatz verlangt Bestätigung. GUI-Metadaten erhalten sRGB ICC; Konvertierung bewahrt Beschreibungen, Export entfernt standardmäßig Positionen. CLI pro Bild: ``--output-conflict`` (``rename``, ``skip``, ``replace``), ``--export-metadata`` (``all``, ``no_location``, ``none``), JSON ``--result-report`` mit Ausgabelinks. Standard bleibt Überspringen/``--overwrite`` und bisheriger Encoder; explizite Metadaten können neu kodieren. ``strip`` entfernt immer Metadaten. Ctrl+C erhält fertige Ausgaben und meldet Abbruch. PDF, MP4 und Galeriedateien werden atomar veröffentlicht; Originalkopien behalten Metadaten.
+
+``Manage Plugins`` zeigt Ladefehler pro Fenster und gemeinsame Abhängigkeits-, Download-, Modell- und Backend-Zustände mit Gründen. Geladen bedeutet optionale Prüfung bei Nutzung; Tool-Ergebnisse enthalten Modell/Backend und CPU-Fallback. Downloads/Wiederholungen erhalten Installation, Modelle und Assets; parallele Installation desselben Plugins/Interpreters wird verweigert. Abbruch blockiert nicht; Importfehler melden keinen Erfolg. ``Reload Plugins`` liest neuen Code pro Fenster; GPU Develop erhält fremde Provider und braucht Plugin-API 3. Nach Download/Wiederholung jedes Fenster neu laden oder neu starten.
+
+Die Thumbnail-Inventur läuft im Hintergrund; Lesen/Schreiben ist sofort möglich. Atomare Writes und Vordergrundänderungen gewinnen gegen veraltete Scandaten; Cache leeren umfasst ungescannte Dateien. Initialisierung entfernt alte NPY und gleicht Quota ab; Größen bleiben bis zum Ende vorläufig. Lesbare gesperrte Dateien zählen weiter und können Quota verhindern. Bei 100.000 Dateien liegt Konstruktor-p95 unter 10 ms; Inventurdauer/Mehrarbeit werden separat gemessen.
+
+Die Bibliothek sucht über eine separate schreibgeschützte WAL-Verbindung und liest bestätigte Daten während eines Scan-Batches. Notizen, hierarchische Tags, Auswahl und Alben verwenden pro Aufruf einen konsistenten Snapshot. Schreibzugriffe bleiben serialisiert; Rollback verwirft keine spätere Tag-Änderung. Fingerprint-Seiten geben den Leser frei; Schließen wartet auf aktive Abfragen. Schema 2 und bestehende Dateien bleiben kompatibel.
+
+GPU Develop bleibt optional für Batch-Export. Neue Dialoge wählen CPU; GPU unter Render on ausdrücklich auswählen. Gemischte GPU-Farboperationen können andere Bytewerte liefern; aktiver Threshold oder Posterize rendert das ganze Rezept auf CPU, damit Rundungsfehler nicht verstärkt werden. Modify und CPU-Export teilen die 8-Bit-sRGB-Pipeline; eingebettete Profile werden einmal normalisiert, Exporte erhalten sRGB außer bei entfernten Metadaten. Keine lineare HDR-/Wide-Gamut-Bearbeitung. wgpu bleibt optional im Plugin, ohne Modellgewichte; fehlende Geräte/Laufzeitfehler fallen auf CPU zurück. Messungen für 640k/24MP/60MP dokumentieren die Entscheidung für CPU-Vorschauen.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:
@@ -54,7 +80,7 @@ Wenn Sie Imervue öffnen, sehen Sie drei Bereiche:
 
 - **Links**: Ordnerbaum. Klicken Sie auf einen Ordner, um die darin enthaltenen Bilder zu durchsuchen.
 - **Mitte**: Bildanzeigebereich. Zeigt alle Bilder als Miniaturansicht-Raster an.
-- **Rechts**: EXIF-Seitenleiste, beim Start zu einem schmalen Streifen eingeklappt: Klicken Sie darauf, um sie zu öffnen. Sie zeigt die Aufnahmeinformationen des geöffneten Bildes an.
+- **Rechts**: Bildinfo-Panel. Es zeigt Aufnahmeinformationen, Bewertung und Notizen des geöffneten Bildes an. Der Ordnerbaum und dieses Panel sind Docks: Ziehen Sie eine Titelleiste, um ein Panel zu verschieben, abzulösen oder als Tab zu stapeln, blenden Sie sie unter ``Thumbnail Size`` > ``Panels`` ein oder aus, und ``Reset Panel Layout`` dort setzt jedes Panel zurück. Das Standard-Erscheinungsbild ist das Theme **Modern Dark**; ``Datei`` > ``Preferences`` bietet **Modern Light**, das Systemaussehen und vier weitere.
 
 Imervue schreibt das Protokoll jeder Sitzung in ``imervue.log`` neben dem Programm (in ``%LOCALAPPDATA%\Imervue`` bzw. außerhalb von Windows in ``~/.cache/imervue``, wenn dieser Ordner schreibgeschützt ist). Das Protokoll der vorherigen Sitzung bleibt als ``imervue.previous.log`` erhalten, sodass nach einem Absturz das Protokoll, das ihn erklärt, noch vorhanden ist, sobald Imervue wieder läuft — hängen Sie beim Melden eines Problems beide an.
 
@@ -544,8 +570,11 @@ Paint-Arbeitsbereich (Paint-Tab)
 
 Die dritte Hauptregisterkarte — **Paint** — ist ein voll ausgestatteter Mal-Arbeitsbereich
 mit Multi-Tab-Dokumenten, Vektor- und Raster-Layern, Manga-Werkzeugen, Animationsframes
-und PSD-Import/Export. Beim Wechsel über die Tab-Leiste wird das Bild, das der Viewer
-gerade zeigt, auf die Leinwand geladen.
+Undo / Redo stellt das Erstellen, Löschen, Sortieren und Zusammenführen von Ebenen sowie Ebeneneigenschaften, Masken, Vektoren, Gruppen, Auswahlen und die Referenzebene wieder her. Befehle im Ebenenmenü und Ebenenbereich sowie Manga-Ebenen und Materialeinfügungen erzeugen Rückgängig-Schritte; jedes Dokument behält seinen eigenen Verlauf.
+
+Jedes Paint-Dokument behält bis zu 50 Verlaufsschritte innerhalb eines Budgets von 512 MiB, einschließlich des aktuellen Basiszustands und der Undo/Redo-Zweige. Unveränderte Pixel werden gemeinsam gespeichert; Pinsel und Radierer speichern nur geänderte Kacheln. Bei Erreichen des Budgets entfallen ältere Schritte. Überschreitet ein einzelner Dokumentzustand das Budget, wird der Verlauf geleert; das bearbeitbare Dokument bleibt erhalten.
+
+und PSD-Import/Export. Beim Wechsel zu Paint bleiben Dokumente, Ebenen, ungespeicherte Änderungen und der Rückgängig-Verlauf erhalten; beim ersten Besuch erscheint eine leere Leinwand. ``File > Open Current Image in Paint`` öffnet das Bild im Viewer als neues Dokument. Links/Rechts auf der Paint-Haupttableiste öffnet auch das vorherige/nächste Viewer-Bild als neues Dokument. ``E`` aus Deep Zoom öffnet den separaten Annotationseditor.
 
 UX-Highlights — der Paint-Arbeitsbereich bietet einen voll ausgestatteten Brush-Größen-Cursor,
 der mit dem Zoom skaliert, unterschiedliche Cursor-Symbole pro Werkzeug, ein
@@ -825,7 +854,7 @@ Datei-I/O
 - **Bild exportieren…** — flachlegen und als PNG, JPEG, WebP, TIFF oder BMP speichern, je nach gewähltem Dateityp (JPEG und BMP, die keine Transparenz kennen, auf Weiß). Nur **Als PSD speichern…** markiert den Tab als gespeichert; nach einem Export fragt Imervue beim Schließen weiterhin nach den ungespeicherten Änderungen des Tabs
 - **Seiten exportieren → CBZ** / **→ PDF** — die Seiten eines Comic-Projekts exportieren; **Comic-Projekt speichern…** speichert den ganzen Comic, jede Seite mit ihren Layern, in einer einzigen ``.imervue-proj``-Datei, und **Comic-Projekt öffnen…** holt ihn zurück
 - **Brush-Preset importieren…**, **Palette importieren…** — Brushes und Paletten aus anderen Installationen oder Anwendungen übernehmen
-- **Autosave** — alle 2 Minuten wird ein Snapshot geschrieben, solange der aktive Tab ungespeicherte Änderungen hat; beim nächsten Start bietet ein Toast die Snapshots an, und **Datei > Autosave wiederherstellen** lädt den neuesten in den aktiven Tab. Die Statusleiste zeigt, wann der letzte Snapshot aufgenommen wurde, und beim Schließen von Imervue wird für Paint-Tabs mit ungespeicherten Änderungen nachgefragt.
+- **Autosave** — Alle 2 Minuten behält jedes geänderte Dokument seine acht neuesten Snapshots. **File > Restore Autosave** öffnet die neueste lesbare Version in einem neuen geänderten Tab und erhält bestehende Bearbeitungen; bei Beschädigung wird eine ältere Version versucht. Native Snapshots erhalten Manga-Panel-Clipping. Die Statusleiste zeigt die letzte Autosave des aktiven Dokuments, Schreibfehler werden gemeldet und das Schließen eines Tabs entfernt nur seine eigenen Snapshots. Periodische Sicherungen verwenden die letzte abgeschlossene Bearbeitung; Wiederaufbau, Kompression und Schreiben erfolgen im Hintergrund. Jeder Arbeitsbereich hat einen Schreiber und nur die neueste wartende Version pro Dokument; Schließen oder Ersetzen verwirft verspätete Ausgaben. Kann der Verlauf keinen unveränderlichen Zustand behalten, wird vor dem Hintergrundschreiben eine konsistente Dokumentkopie im UI-Thread erstellt.
 
 Workspace-Layouts
 ^^^^^^^^^^^^^^^^^
@@ -1935,17 +1964,14 @@ Mehrere Bilder auswählen, dann Rechtsklick > ``Stapeloperationen`` > ``Stapelex
 GPU-Develop-Plugin
 ^^^^^^^^^^^^^^^^^^
 
-Das Plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, Kategorie ``plugins``, Name
-``gpu_develop``) lässt den Stapelexport Develop-Rezepte auf einer dedizierten GPU rendern.
-``Plugins`` > ``GPU Develop…`` installiert beim ersten Mal ``wgpu`` und nennt danach die GPU, die
-es verwenden wird; der Stapelexport zeigt dann **Render on** mit dieser GPU ausgewählt (wählen Sie
-**CPU**, um wie bisher zu rendern).
+Das Plugin **GPU Develop** (``Plugins`` > ``Download Plugins``, Kategorie ``plugins``, Name ``gpu_develop``) beschleunigt den Batch-Export optional. ``Plugins`` > ``GPU Develop…`` installiert beim ersten Mal ``wgpu`` und nennt das Gerät. CPU ist Standard; die GPU unter **Render on** ausdrücklich wählen.
+
 
 - Weißabgleich, Belichtung, Lichter / Schatten, Weiß / Schwarz, Helligkeit, Kontrast, Dynamik, Sättigung und die Tonwertkurve laufen auf der GPU; Drehung, Spiegelungen, der Zuschnitt und alles nach der Tonwertkurve (Split-Toning, LUT, Masken, Tonwerte und der Rest) bleiben auf der CPU
-- Ein 24-MP-Foto braucht auf der GPU etwa 0,1 s statt etwa 7 s auf der CPU, Dekodieren und Speichern nicht mitgerechnet
+- Geschwindigkeit hängt von Hardware/Rezept ab; feste 640k/24MP/60MP-Messungen: docs/performance/gpu-develop-20261007.md
 - Verwendet wird nur eine dedizierte GPU, nie eine integrierte GPU oder ein Software-Renderer; unter Windows zuerst über Vulkan, dann über Direct3D 12
 - Ein Bild, bei dem die GPU scheitert, wird auf der CPU gerendert, sodass der Export trotzdem abgeschlossen wird
-- Die Ausgabe stimmt mit der des CPU-Renderers bis auf wenige Stufen bei einem kleinen Anteil der Pixel überein
+- CPU ist Standard für Referenzpixel; GPU ist eine ausdrücklich gewählte Näherung. Aktiver Threshold/Posterize nutzt CPU für das ganze Rezept
 
 GIF / Video erstellen
 ^^^^^^^^^^^^^^^^^^^^^
@@ -2187,8 +2213,8 @@ Workspace-Layout-Presets
 
 ``Datei`` > ``Workspaces…`` erfasst die aktuelle Fenstergeometrie, Dock- / Toolbar-
 Anordnung, die Aufteilung zwischen Baum und Betrachter und den aktiven Wurzelordner unter einem Namen — und
-lässt Sie dann zwischen gespeicherten Layouts wechseln. Der aktive Tab und die Panel-Aufteilung des Modify-Tabs
-werden nicht gespeichert. Der Dialog unterstützt Aktuelles speichern,
+lässt Sie dann zwischen gespeicherten Layouts wechseln. Die Dock-Layouts der Tabs Imervue und Modify
+werden ebenfalls gespeichert, der aktive Tab nicht. Der Dialog unterstützt Aktuelles speichern,
 Laden, Umbenennen und Löschen. Workspaces bleiben in ``user_setting.json``
 (unter dem Schlüssel ``workspaces``) erhalten und überstehen Sitzungen hinweg.
 
@@ -2720,7 +2746,7 @@ exportiert. Eine nicht abgelehnte Sidecar-Datei hebt ein Reject auf; ein Pick
 bleibt unberührt.
 
 Eine Datei ohne Sidecar wird aus dem gelesen — und importiert —, was sie selbst
-einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), dann ihrem EXIF-``Rating`` /
+einbettet: ihrem XMP-Paket (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), dann ihrem EXIF-``Rating`` /
 ``RatingPercent``. Dort speichert Lightroom Bewertung und Stichwörter eines JPEG,
 und dort legen der Windows-Explorer und manche Kameras ihre Sterne ab. Eine
 vorhandene Sidecar-Datei hat Vorrang.

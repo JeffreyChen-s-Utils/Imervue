@@ -94,6 +94,8 @@ def save_image(
     if format_name == "JXL" and not ensure_jxl_opener():
         raise ValueError("JXL output requires the pillow-jxl-plugin package.")
     prepared = prepare_for_format(img, format_name)
+    if extra and extra.get("icc_profile") and prepared.mode in {"L", "LA"}:
+        prepared = prepared.convert("RGBA" if prepared.mode == "LA" else "RGB")
     kwargs: dict = {}
     if quality is not None and format_name in QUALITY_FORMATS:
         kwargs["quality"] = int(quality)

@@ -94,3 +94,43 @@ def test_segment_buttons_have_full_path_tooltips(qapp, tmp_path):
             assert tip
     finally:
         bar.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Long paths and the UI scale
+# ---------------------------------------------------------------------------
+
+def test_no_scroll_bar_can_cover_the_segments(bar):
+    from PySide6.QtCore import Qt
+    assert bar.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    assert bar.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+
+
+def test_a_path_wider_than_the_bar_shows_its_end(bar, tmp_path, pump_until):
+    deep = tmp_path / "one" / "two" / "three"     # tmp_path alone is many segments deep
+    deep.mkdir(parents=True)
+    bar.resize(120, bar.height())
+    bar.set_path(str(deep))
+    scroll = bar.horizontalScrollBar()
+    assert pump_until(lambda: scroll.maximum() > 0)
+    assert scroll.value() == scroll.maximum()     # the folder being browsed is in view
+
+
+def test_segments_take_the_theme_colours():
+    from Imervue.gui import breadcrumb_bar
+    for style in (breadcrumb_bar._SEGMENT_STYLE, breadcrumb_bar._SEP_STYLE):  # noqa: SLF001
+        assert "palette(" in style and "#" not in style
+
+
+@pytest.mark.parametrize("percent", [100, 200])
+def test_bar_is_tall_enough_for_its_text(qapp, percent):
+    from Imervue.gui.breadcrumb_bar import BreadcrumbBar
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    user_setting_dict["ui_scale_percent"] = percent
+    bc = BreadcrumbBar(MagicMock())
+    try:
+        assert bc.minimumHeight() == bc.maximumHeight()
+        assert bc.height() > bc.fontMetrics().height()
+        assert bc.height() >= 26 * percent // 100
+    finally:
+        bc.deleteLater()

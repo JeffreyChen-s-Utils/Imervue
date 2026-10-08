@@ -10,6 +10,8 @@ The GUI dialog picks page size / grid and delegates here.
 """
 from __future__ import annotations
 
+from Imervue.image.output_policy import OutputPolicy, write_output
+
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -127,7 +129,7 @@ def _configure_pdf(writer: QPdfWriter, opts: ContactSheetOptions) -> None:
     writer.setPageLayout(layout)
 
 
-def generate_contact_sheet(
+def _generate_contact_sheet(
     images: list[str],
     output_path: str | Path,
     opts: ContactSheetOptions | None = None,
@@ -187,3 +189,12 @@ def _render_pages(
                 cell_w - 8, cell_h - 8,
             )
             _draw_cell(painter, cell_rect, img_path, opts.caption)
+
+
+def generate_contact_sheet(images: list[str], output_path: str | Path,
+                            opts: ContactSheetOptions | None = None) -> Path:
+    """Atomically publish the complete composite; failed encoding preserves existing output."""
+    result = write_output("", output_path,
+                          lambda stage: _generate_contact_sheet(images, stage, opts),
+                          OutputPolicy("replace"))
+    return Path(result.path)

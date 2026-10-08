@@ -20,6 +20,8 @@ from Imervue.system.qt_timers import call_later
 from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.images.load_thumbnail_worker import LoadThumbnailWorker
 from Imervue.image.browser_state import is_missing_file_error, is_transient_load_error
+from Imervue.gpu_image_view.tile_viewport import record_tile_extent, viewport_for
+from Imervue.gpu_image_view.thumbnail_queue import ThumbnailQueue
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -31,7 +33,7 @@ OFFLINE_SWEEP_INTERVAL_MS = 4000
 
 
 def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
-    """Reset the wall and queue a thumbnail-decode worker per image."""
+    """Reset the wall and start bounded viewport-first thumbnail decoding."""
     view._cancel_tile_workers()
     view._cancel_deep_zoom_worker()
     view._cancel_all_prefetch()
@@ -45,6 +47,7 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
     reset_view_memory_on_switch(view, image_paths)
     view.model.set_images(image_paths)
     view.tile_cache.clear()
+    view._tile_max_dimensions = (0, 0)
     getattr(view, "tile_errors", {}).clear()
     getattr(view, "_tile_error_toasted", set()).clear()
     getattr(view, "offline_paths", set()).clear()
@@ -70,27 +73,49 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
 
 
 def _spawn_thumbnail_workers(view: GPUImageView, image_paths, gen: int) -> None:
-    from Imervue.gpu_image_view.worker_pools import priority_for_distance
-    model_positions = {path: i for i, path in enumerate(getattr(view.model, "images", []))}
-    hover_path = getattr(view, "_hover_tile_path", None)
-    ordered = sorted(
-        image_paths,
-        key=lambda p: (
-            0 if p == hover_path else 1,
-            abs(model_positions.get(p, 0) - getattr(view, "focused_tile_index", 0)),
-        ),
+    limit = getattr(view.thumbnail_pool, "maxThreadCount", lambda: 8)()
+    view._tile_queue = ThumbnailQueue(view.model.images, gen, limit=limit)
+    pump_thumbnail_workers(view)
+
+
+def image_is_current(view: GPUImageView, path: str) -> bool:
+    """Validate a worker source against the live model with indexed membership."""
+    queue = getattr(view, "_tile_queue", None)
+    images = getattr(getattr(view, "model", None), "images", [])
+    if queue is None:
+        return path in images
+    return queue.contains(images, path)
+
+
+def pump_thumbnail_workers(view: GPUImageView) -> None:
+    """Admit viewport or explicit jobs only when a real worker slot is free."""
+    queue = getattr(view, "_tile_queue", None)
+    if queue is None or queue.generation != view._load_generation:
+        return
+    queue.sync(view.model.images)
+    paths = queue.plan(
+        viewport_for(view), view.tile_cache, getattr(view, "tile_errors", {}),
+        getattr(view, "offline_paths", set()), wall=getattr(view, "tile_grid_mode", True),
+        hover=getattr(view, "_hover_tile_path", None),
+        full_resolution=view.thumbnail_size is None,
     )
-    for path in ordered:
-        worker = LoadThumbnailWorker(path, view.thumbnail_size, gen)
-        worker.signals.finished.connect(view._on_thumbnail_loaded)
+    slots = max(0, queue.limit - len(view.active_tile_workers))
+    for path in paths[:slots]:
+        if not image_is_current(view, path):
+            queue.urgent.pop(path, None)
+            queue.requested.discard(path)
+            continue
+        worker = LoadThumbnailWorker(path, view.thumbnail_size, queue.generation)
+        mode = queue.started(path, worker)
+        callback = (view._on_filmstrip_thumbnail_loaded if mode == "filmstrip"
+                    else view._on_thumbnail_loaded)
+        worker.signals.finished.connect(callback)
         if hasattr(worker.signals, "error"):
             worker.signals.error.connect(view._on_thumbnail_error)
         track_tile_worker(view, worker)
-        # Tiles near the current selection get higher priority so a fresh
-        # folder-open shows the user's viewport first even if the pool can't
-        # drain the full list before they start scrolling.
-        distance = abs(model_positions.get(path, 0) - getattr(view, "focused_tile_index", 0))
-        view.thumbnail_pool.start(worker, priority_for_distance(distance))
+        view.thumbnail_pool.start(worker, 10)
+    view._tile_load_total = len(queue.requested)
+    _bump_tile_progress(view)
 
 
 def track_tile_worker(view: GPUImageView, worker) -> None:
@@ -122,20 +147,26 @@ def discard_tile_worker(view: GPUImageView, worker) -> None:
     corruption.
     """
     view.active_tile_workers.discard(worker)
+    queue = getattr(view, "_tile_queue", None)
+    if queue is not None and queue.active.get(worker.path) is worker:
+        queue.active.pop(worker.path)
+        pump_thumbnail_workers(view)
 
 
 def on_thumbnail_loaded(view: GPUImageView, img_data, path, generation) -> None:
     """Worker callback: stash one decoded thumbnail and schedule a refresh."""
     if generation != view._load_generation:
         return
-    if path not in view.model.images:
+    if not image_is_current(view, path):
         return
+    _finish_filmstrip_request(view, path)
     if path in view.tile_cache and path in getattr(view, "tile_textures", {}):
         # A fresh decode of a rewritten file: the texture still holds the old pixels.
         from Imervue.gpu_image_view.tile_textures import free_tile_textures
         free_tile_textures(view, (path,))
     with QMutexLocker(view.grid_mutex):
         view.tile_cache[path] = img_data
+    record_tile_extent(view, img_data)
     getattr(view, "tile_errors", {}).pop(path, None)
     getattr(view, "_tile_error_toasted", set()).discard(path)
     getattr(view, "offline_paths", set()).discard(path)
@@ -165,16 +196,23 @@ def on_thumbnail_error(view: GPUImageView, path: str, message: str, generation: 
     """Worker callback: record a visible per-tile load failure."""
     if generation != view._load_generation:
         return
-    if path not in view.model.images:
+    if not image_is_current(view, path):
         return
     message = message or "Load failed"
     if is_missing_file_error(message):
         _record_missing_tile(view, path, message)
     else:
         _record_failed_tile(view, path, message, generation)
-    view._filmstrip_pending.discard(path)
+    _finish_filmstrip_request(view, path)
     _bump_tile_progress(view)
     view.update()
+
+
+def _finish_filmstrip_request(view: GPUImageView, path: str) -> None:
+    view._filmstrip_pending.discard(path)
+    queue = getattr(view, "_tile_queue", None)
+    if queue is not None and queue.urgent.get(path) == "filmstrip":
+        queue.urgent.pop(path)
 
 
 def _record_missing_tile(view: GPUImageView, path: str, message: str) -> None:
@@ -203,6 +241,10 @@ def _record_failed_tile(view: GPUImageView, path: str, message: str, generation:
 
 def _completed_tile_count(view: GPUImageView) -> int:
     """Tiles in a terminal state — decoded, failed, or missing on disk."""
+    queue = getattr(view, "_tile_queue", None)
+    if queue is not None:
+        return queue.completed_count(view.tile_cache, getattr(view, "tile_errors", {}),
+                                     getattr(view, "offline_paths", set()))
     done = set(view.tile_cache)
     done.update(getattr(view, "tile_errors", {}))
     done.update(getattr(view, "offline_paths", set()).intersection(view.model.images))
@@ -233,12 +275,19 @@ def _maybe_retry_thumbnail(view: GPUImageView, path: str, message: str, generati
     )
 
 
-def _retry_thumbnail(view: GPUImageView, path: str, generation: int) -> None:
+def _retry_thumbnail(
+    view: GPUImageView, path: str, generation: int, *, replay: bool = False,
+) -> None:
     if generation != getattr(view, "_load_generation", None):
         return
-    if path not in getattr(getattr(view, "model", None), "images", []):
+    if not image_is_current(view, path):
         return
     getattr(view, "tile_errors", {}).pop(path, None)
+    queue = getattr(view, "_tile_queue", None)
+    if queue is not None:
+        queue.request(path, replay=replay)
+        pump_thumbnail_workers(view)
+        return
     worker = LoadThumbnailWorker(path, view.thumbnail_size, generation)
     worker.signals.finished.connect(view._on_thumbnail_loaded)
     if hasattr(worker.signals, "error"):
@@ -257,30 +306,21 @@ def add_thumbnail(view: GPUImageView, img_data, path, generation=None) -> None:
     """Insert a thumbnail directly (undo_delete restore path)."""
     if generation is not None and generation != view._load_generation:
         return
-    if path not in view.model.images:
+    if not image_is_current(view, path):
         return
     view.tile_cache[path] = img_data
+    record_tile_extent(view, img_data)
     view._tile_load_times[path] = time.monotonic()
     view._overlay.ensure_fade_pump()
     view.update()
 
 
 def tile_grid_needs_reload(tile_cache, images) -> bool:
-    """Whether entering tile-grid mode must reload the wall instead of reusing
-    the cache.
+    """Whether an unmanaged legacy cache needs an initial wall load.
 
-    The thumbnail wall renders straight from ``tile_cache`` and has no per-tile
-    lazy refill — a tile missing from the cache stays a blank placeholder until
-    the whole wall is reloaded. Paths that reach grid mode over a cold or only
-    partially-warmed cache must therefore trigger a reload: pressing Esc out of
-    a deep zoom that was opened through a cache-clearing route (file-tree file
-    click, recent image, bookmark jump, drag-drop), restoring a grid-mode
-    session, or toggling back from the list view.
-
-    Returns ``False`` for an empty folder (a blank wall is the correct result)
-    and when every image already has a cached thumbnail (the warm common case),
-    so the warm path keeps its scroll/zoom state and never flickers. Pure so the
-    policy is unit-testable without a Qt widget.
+    A live viewport queue bypasses this fallback and refills only missing
+    candidates, keeping its warm cache and saved offsets on Escape. Direct
+    file/recent/bookmark paths without a queue still need initial scheduling.
     """
     if not images:
         return False
@@ -335,18 +375,21 @@ def needs_filmstrip_thumbnail(path, tile_cache, pending, images) -> bool:
 def ensure_filmstrip_thumbnail(view: GPUImageView, path: str) -> None:
     """Schedule one deduplicated thumbnail decode for a cold filmstrip path.
 
-    Normally the tile-wall loader fills ``tile_cache`` for the whole folder, but
-    paths that enter deep zoom without a wall pass — opening a file directly, or
-    a folder auto-refresh while zoomed — leave it cold, so the filmstrip and the
-    low-res loading preview render blank. This fills the gap on demand: at most
-    one worker per missing path, landing through the generation-checked
-    ``add_thumbnail`` so a folder change in flight can't insert a stale tile.
+    The wall warms its visible buffer; filmstrip paths outside it, direct file
+    opens and folder refreshes may still be cold. A managed queue admits these
+    explicit requests within its worker slots and shares an existing decode.
+    Legacy direct-open views retain one worker per missing path. Results land
+    through generation checks so a folder change cannot insert stale pixels.
     """
-    if not needs_filmstrip_thumbnail(
-        path, view.tile_cache, view._filmstrip_pending, view.model.images,
-    ):
+    if (not path or path in view.tile_cache or path in view._filmstrip_pending
+            or not image_is_current(view, path)):
         return
     view._filmstrip_pending.add(path)
+    queue = getattr(view, "_tile_queue", None)
+    if queue is not None:
+        queue.request(path, filmstrip=True)
+        pump_thumbnail_workers(view)
+        return
     worker = LoadThumbnailWorker(path, view.thumbnail_size, view._load_generation)
     worker.signals.finished.connect(view._on_filmstrip_thumbnail_loaded)
     if hasattr(worker.signals, "error"):
@@ -358,6 +401,8 @@ def ensure_filmstrip_thumbnail(view: GPUImageView, path: str) -> None:
 def on_filmstrip_thumbnail_loaded(view: GPUImageView, img_data, path,
                                   generation) -> None:
     """Worker callback: clear the in-flight marker then stash the thumbnail."""
+    if generation != view._load_generation and getattr(view, "_tile_queue", None) is not None:
+        return
     view._filmstrip_pending.discard(path)
     add_thumbnail(view, img_data, path, generation)
 
@@ -567,7 +612,7 @@ def refresh_rewritten_tile(view: GPUImageView, path: str, generation: int) -> No
     prefetch = getattr(view, "_prefetch", None)
     if prefetch is not None:
         prefetch.discard(path)
-    _retry_thumbnail(view, path, generation)
+    _retry_thumbnail(view, path, generation, replay=True)
 
 
 def refetch_list_rows(view: GPUImageView, paths) -> None:

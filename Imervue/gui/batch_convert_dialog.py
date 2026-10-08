@@ -21,6 +21,9 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
 )
+from Imervue.system.job_state import JobState
+from Imervue.gui.background_jobs import job_registry
+from Imervue.image.output_policy import OutputPolicy, free_output_path, write_output
 from Imervue.system.image_listing import list_images
 from Imervue.gui.export_source import upright_image
 from Imervue.image.export_metadata import METADATA_ALL, export_save_options
@@ -63,6 +66,7 @@ class _ConvertWorker(QThread):
     def __init__(self, paths: list[str], output_dir: str, fmt: str,
                  quality: int, delete_originals: bool, skip_same_fmt: bool):
         super().__init__()
+        self.job_state = JobState(paths)
         self._paths = paths
         self._output_dir = output_dir
         self._fmt = fmt
@@ -78,23 +82,31 @@ class _ConvertWorker(QThread):
         converted: dict[str, str] = {}
         total = len(self._paths)
         for i, src in enumerate(self._paths):
-            if self.isInterruptionRequested():
+            if self._cancelled():
+                self.job_state.request_cancel()
                 break
             self.progress.emit(i, total, Path(src).name)
             try:
                 if self._should_skip(src, target_ext):
                     skipped += 1
+                    self.job_state.record(src, skipped=True)
                     continue
                 out_path = self._convert_one(src, target_ext)
+                if not out_path:
+                    self.job_state.request_cancel()
+                    break
                 success += 1
+                self.job_state.record(src, output=out_path)
                 if self._may_delete(src, out_path):
                     converted[src] = out_path
             except IMAGE_READ_ERRORS as exc:
                 logger.exception("Batch convert failed for %s: %s", src, exc)
                 failed += 1
+                self.job_state.record(src, error=str(exc) or type(exc).__name__)
         trashed = self._trash_originals(list(converted))
         if trashed:
             self.originals_replaced.emit({src: converted[src] for src in trashed})
+        self.job_state.finish()
         self.result_ready.emit(success, failed, skipped)
 
     def _should_skip(self, src: str, target_ext: str) -> bool:
@@ -115,19 +127,19 @@ class _ConvertWorker(QThread):
         img = upright_image(src)
         out_path = self._resolve_output_path(src, target_ext)
         quality = self._quality if self._fmt in QUALITY_FORMATS else None
-        save_image(img, str(out_path), self._fmt, quality,
-                   export_save_options(src, METADATA_ALL))
-        return str(out_path)
+        result = write_output(
+            src, out_path,
+            lambda stage: save_image(img, str(stage), self._fmt, quality,
+                                     export_save_options(src, METADATA_ALL)),
+            OutputPolicy("rename"), cancelled=self._cancelled,
+        )
+        return result.path if result.status == "succeeded" else ""
+
+    def _cancelled(self) -> bool:
+        return self.isInterruptionRequested() or self.job_state.cancelled
 
     def _resolve_output_path(self, src: str, target_ext: str) -> Path:
-        out_path = Path(self._output_dir) / (Path(src).stem + target_ext)
-        if not (out_path.exists() and str(out_path) != src):
-            return out_path
-        counter = 1
-        while out_path.exists():
-            out_path = Path(self._output_dir) / f"{Path(src).stem}_{counter}{target_ext}"
-            counter += 1
-        return out_path
+        return free_output_path(Path(self._output_dir) / (Path(src).stem + target_ext))
 
     def _may_delete(self, src: str, out_path: str) -> bool:
         """Whether the original may go to the trash once *out_path* holds its conversion.
@@ -357,6 +369,10 @@ class BatchConvertDialog(WorkerHostMixin, QDialog):
         self._worker.result_ready.connect(self._on_finished)
         self._worker.originals_replaced.connect(self._on_originals_replaced)
         self._worker.finished.connect(self._cleanup)
+        settings = (output_dir, self._fmt_combo.currentText(),
+                    self._quality_slider.value(), False, self._skip_same.isChecked())
+        job_registry().add(self._worker, self.windowTitle(),
+                           lambda failed: _ConvertWorker(list(failed), *settings))
         self._worker.start()
 
     def _on_progress(self, current, total, name):

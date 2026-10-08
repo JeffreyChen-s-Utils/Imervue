@@ -91,7 +91,7 @@ def test_file_name_is_escaped(qapp, monkeypatch, tmp_path):
     monkeypatch.setattr(exif_sidebar, "get_exif_data", lambda _p: {})
     shown: list[str] = []
     fake = SimpleNamespace(
-        _collapsed=False, _load_note_for=lambda _p: None,
+        _active=True, _load_note_for=lambda _p: None,
         _rating_widget=SimpleNamespace(bind_path=lambda _p: None),
         _info_label=SimpleNamespace(setText=shown.append),
         _video_lines=ExifSidebar._video_lines, _exif_lines=ExifSidebar._exif_lines,

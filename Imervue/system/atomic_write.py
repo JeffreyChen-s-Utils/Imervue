@@ -8,6 +8,7 @@ which writes a ``.tmp`` sibling and swaps it in with ``os.replace``.
 from __future__ import annotations
 
 import os
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,7 +21,9 @@ def replace_atomically(path: str | Path, write: Callable[[Path], None]) -> None:
     extension is ``.tmp``, so a Pillow save must name its ``format=``.
     """
     target = Path(path)
-    tmp = target.with_name(target.name + ".tmp")
+    with tempfile.NamedTemporaryFile(prefix=".imervue-write-", suffix=".tmp",
+                                     dir=target.parent, delete=False) as stream:
+        tmp = Path(stream.name)
     try:
         write(tmp)
         os.replace(tmp, target)

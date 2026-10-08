@@ -128,13 +128,79 @@ jobs:
         PYTHONUNBUFFERED: "1"
       run: python -X faulthandler -u -m pytest tests/ --test-layer=${{ matrix.layer }} -v --tb=short -W ignore::DeprecationWarning -p no:unraisableexception
 
+  real-gl:
+    runs-on: ubuntu-24.04
+    name: Actual OpenGL / Linux Mesa / Python 3.12
+    timeout-minutes: 15
+    env:
+      # Windows retains its offscreen crash guard. This independent X server
+      # uses actual Mesa contexts; a skipped or missing GL case fails the job.
+      CI: "false"
+      QT_QPA_PLATFORM: xcb
+      QT_XCB_GL_INTEGRATION: xcb_glx
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      PYTHONFAULTHANDLER: "1"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+    - name: Set up Python 3.12
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      with:
+        python-version: "3.12"
+    - name: Install X server and Mesa
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb xauth mesa-utils libgl1-mesa-dri libegl1 libopengl0 \
+          libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+          libxcb-render-util0 libxcb-randr0 libxcb-xinerama0 libxcb-xfixes0 \
+          libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-glx0 libx11-xcb1
+    - name: Install core test dependencies
+      run: >-
+        python -m pip install --only-binary :all:
+        PySide6 Pillow PyOpenGL numpy rawpy imageio send2trash watchdog defusedxml pytest
+    - name: Record actual GL capability
+      run: xvfb-run -a glxinfo -B
+    - name: Verify Qt platform runtime dependencies
+      run: |
+        python - <<'PY'
+        import subprocess
+        from pathlib import Path
+        from PySide6.QtCore import QLibraryInfo
+        plugin = Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath))
+        for relative in ("platforms/libqxcb.so", "xcbglintegrations/libqxcb-glx-integration.so"):
+            result = subprocess.run(["ldd", str(plugin / relative)], capture_output=True,
+                                    text=True, check=True)
+            print(result.stdout, flush=True)
+            if "not found" in result.stdout:
+                raise SystemExit("Qt platform runtime has missing shared libraries")
+        PY
+    - name: Run real rendering and workspace lifecycle regressions
+      run: >-
+        xvfb-run -a -s "-screen 0 1920x1080x24 +extension GLX"
+        python -X faulthandler -u -m pytest
+        tests/test_tile_textures_gl.py tests/test_workspace_lifecycle_gl.py
+        tests/test_paint_auto_save.py::test_background_dirty_tab_and_multiple_document_recovery
+        tests/test_main_window_layout.py::test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo
+        -v -s --tb=short -o junit_family=xunit1 --junitxml=real-gl.xml
+        -p no:unraisableexception
+    - name: Require executed GL cases and renderer evidence
+      run: python scripts/verify_gl_report.py real-gl.xml
+    - name: Keep actual GL results
+      if: always()
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      with:
+        name: real-gl-linux-python312
+        path: real-gl.xml
+        retention-days: 7
+
   publish-dev:
     # The dev channel. A push to dev that passes every job above is built from dev.toml and
     # uploaded when it is still the tip of dev and ships something the newest Imervue_dev does
     # not. scripts/dev_release.py picks the version from PyPI, so nothing is committed back.
     # This workflow also runs for main and for pull requests: the condition keeps both out.
     name: Publish Imervue_dev to PyPI
-    needs: [lint, docs, fast, extended]
+    needs: [lint, docs, fast, extended, real-gl]
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -151,16 +217,19 @@ jobs:
       with:
         python-version: "3.12"
     - name: Install build tooling
-      # The versions release.yml builds the stable package with
-      # (tests/test_dev_release.py keeps the two in step). Wheels only: an sdist
-      # would run its setup script on the runner.
+      # This job holds the PyPI token, so it installs one file and nothing else:
+      # build, twine and the build backend, wheels only, at locked hashes. The
+      # release job of release.yml installs the same file. The command that
+      # regenerates it is at the top of .github/requirements/publish.in.
       run: |
-        python -m pip install --upgrade --only-binary :all: "pip==26.2.1" "build==1.5.0" "twine==6.2.0"
+        python -m pip install --require-hashes --only-binary :all: -r .github/requirements/publish.txt
     - name: Write pyproject.toml from dev.toml with the next version
       run: python scripts/dev_release.py prepare
     - name: Build sdist and wheel
-      # Building does not import the package, so PySide6 is not installed here.
-      run: python -m build
+      # --no-isolation: the backend is the setuptools locked in publish.txt, not
+      # a fresh download. Building does not import the package, so PySide6 is
+      # not installed here.
+      run: python -m build --no-isolation
     - name: Verify distribution metadata
       run: python -m twine check dist/*
     - name: Compare with the newest published wheel

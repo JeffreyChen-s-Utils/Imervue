@@ -318,6 +318,5 @@ class _LayerMenuBridge:
     # ---- internals ------------------------------------------------------
 
     def _refresh_canvas(self) -> None:
-        canvas = self._workspace.canvas()
-        canvas.document().invalidate_composite()
-        canvas.update()
+        from Imervue.paint.workspace_history import commit_document_edit
+        commit_document_edit(self._workspace)

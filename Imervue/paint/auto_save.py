@@ -1,7 +1,7 @@
 """Auto-save + crash recovery for the Paint workspace.
 
-The workspace runs an :class:`AutoSaver` in the background that
-periodically writes a snapshot of the current document to a hidden
+The workspace queues immutable committed versions on background workers that
+periodically write snapshots to a hidden
 directory (``~/.imervue_autosave/`` by default). On the next
 workspace open, :func:`pending_recovery_snapshots` returns any
 snapshot not paired with a clean shutdown — those are the candidates
@@ -21,7 +21,10 @@ event loop.
 from __future__ import annotations
 
 import json
+import logging
 import time
+import uuid
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,10 +33,14 @@ from Imervue.paint.document_io import (
     FILE_EXTENSION as NATIVE_DOCUMENT_EXTENSION,
 )
 from Imervue.paint.document_io import load_document, save_document
+from Imervue.system.atomic_write import write_text_atomically
+from Imervue.system.best_effort import best_effort
+
+logger = logging.getLogger("Imervue")
 
 AUTOSAVE_FILE_PREFIX = "snapshot-"
 AUTOSAVE_META_SUFFIX = ".json"
-AUTOSAVE_KEEP_MAX = 8       # keep at most N recent snapshots per directory
+AUTOSAVE_KEEP_MAX = 8       # keep at most N recent snapshots per document
 AUTOSAVE_STALE_AGE_S = 86400 * 7   # 7 days; older snapshots are silently dropped
 DEFAULT_INTERVAL_SEC = 120  # workspace's periodic snapshot cadence
 
@@ -47,6 +54,8 @@ class AutoSaveSnapshot:
     created_at: float
     project_name: str
     source_hint: str
+    document_id: str = ""
+    created_ns: int = 0
 
     @property
     def is_stale(self) -> bool:
@@ -71,12 +80,13 @@ def write_snapshot(
     directory: str | Path | None = None,
     project_name: str = "Untitled",
     source_hint: str = "",
+    document_id: str = "",
 ) -> AutoSaveSnapshot | None:
     """Write a fresh snapshot. Returns the snapshot or ``None`` on empty doc.
 
     Empty documents (no layers) are silently skipped — there's
     nothing to recover. The writer also rotates old snapshots in the
-    same directory: if more than :data:`AUTOSAVE_KEEP_MAX` exist,
+    document: if more than :data:`AUTOSAVE_KEEP_MAX` exist,
     the oldest are deleted to keep the directory size bounded.
     """
     if document.layer_count == 0:
@@ -84,26 +94,33 @@ def write_snapshot(
     target_dir = Path(directory) if directory else default_autosave_dir()
     target_dir.mkdir(parents=True, exist_ok=True)
     timestamp = time.time()
-    base = f"{AUTOSAVE_FILE_PREFIX}{int(timestamp * 1000):015d}"
+    created_ns = time.time_ns()
+    base = f"{AUTOSAVE_FILE_PREFIX}{int(timestamp * 1000):015d}-{uuid.uuid4().hex}"
     bundle_path = target_dir / f"{base}{NATIVE_DOCUMENT_EXTENSION}"
     meta_path = target_dir / f"{base}{AUTOSAVE_META_SUFFIX}"
     save_document(document, bundle_path)
-    meta_path.write_text(
-        json.dumps({
+    try:
+        write_text_atomically(meta_path, json.dumps({
             "created_at": timestamp,
             "project_name": project_name,
             "source_hint": source_hint,
-        }),
-        encoding="utf-8",
-    )
+            "document_id": document_id,
+            "created_ns": created_ns,
+        }))
+    except OSError:
+        with best_effort("remove incomplete autosave", logger):
+            bundle_path.unlink(missing_ok=True)
+        raise
     snapshot = AutoSaveSnapshot(
         bundle_path=bundle_path,
         meta_path=meta_path,
         created_at=timestamp,
         project_name=project_name,
         source_hint=source_hint,
+        document_id=document_id,
+        created_ns=created_ns,
     )
-    _rotate_old_snapshots(target_dir)
+    _rotate_old_snapshots(target_dir, document_id)
     return snapshot
 
 
@@ -132,14 +149,20 @@ def list_snapshots(
             created_at = float(meta_raw.get("created_at", path.stat().st_mtime))
         except (TypeError, ValueError):
             created_at = path.stat().st_mtime
+        try:
+            created_ns = int(meta_raw.get("created_ns", 0))
+        except (TypeError, ValueError):
+            created_ns = 0
         out.append(AutoSaveSnapshot(
             bundle_path=path,
             meta_path=meta_path,
             created_at=created_at,
             project_name=str(meta_raw.get("project_name", "Untitled")),
             source_hint=str(meta_raw.get("source_hint", "")),
+            document_id=str(meta_raw.get("document_id", "")),
+            created_ns=created_ns,
         ))
-    out.sort(key=lambda s: s.created_at, reverse=True)
+    out.sort(key=lambda s: (s.created_at, s.created_ns), reverse=True)
     return out
 
 
@@ -158,7 +181,10 @@ def pending_recovery_snapshots(
 
 def recover_snapshot(snapshot: AutoSaveSnapshot) -> PaintDocument:
     """Load the document bundled in ``snapshot``."""
-    return load_document(snapshot.bundle_path)
+    try:
+        return load_document(snapshot.bundle_path)
+    except (zipfile.BadZipFile, EOFError, KeyError, TypeError) as exc:
+        raise ValueError(f"damaged autosave: {snapshot.bundle_path.name}") from exc
 
 
 def discard_snapshot(snapshot: AutoSaveSnapshot) -> bool:
@@ -195,9 +221,9 @@ def clear_directory(directory: str | Path | None = None) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _rotate_old_snapshots(directory: Path) -> None:
-    """Trim a directory to the most recent ``AUTOSAVE_KEEP_MAX`` snapshots."""
-    snaps = list_snapshots(directory)
+def _rotate_old_snapshots(directory: Path, document_id: str = "") -> None:
+    """Trim only this document's snapshots, preserving other documents."""
+    snaps = [s for s in list_snapshots(directory) if s.document_id == document_id]
     overflow = snaps[AUTOSAVE_KEEP_MAX:]
     for snap in overflow:
         try:

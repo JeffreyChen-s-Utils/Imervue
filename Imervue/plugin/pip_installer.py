@@ -34,6 +34,13 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.worker_retirement import retire_workers
+from Imervue.plugin.status import status_registry
+from Imervue.plugin.installation import resource_reservation
+from Imervue.plugin.subprocess_util import terminate_process
+from PySide6.QtCore import QCoreApplication
+from shiboken6 import isValid
 from Imervue.plugin.pip_constraints import install_command, write_constraints_file
 # Plugins in Imervue_Plugins import ``_find_python`` from this module
 # (architecture.md §6), and tests reach the probe through it, so the finder's
@@ -51,7 +58,6 @@ from Imervue.system.app_paths import (
     is_frozen as _is_frozen,
     ensure_frozen_site_packages_on_path as _ensure_frozen_site_packages_on_path,
 )
-from Imervue.system.best_effort import best_effort
 
 
 def _https_urlopen(req: Request, timeout: int):
@@ -261,6 +267,9 @@ class _DownloadPythonWorker(QThread):
             cwd=cwd,
             **kw,
         )
+        self._proc = proc
+        if self.isInterruptionRequested():
+            terminate_process(proc)
         try:
             for line in proc.stdout:
                 text = line.rstrip("\n\r")
@@ -387,12 +396,20 @@ class _ImportWorker(QThread):
         super().__init__()
         self._names = import_names
 
+    error = Signal(str)
+
     def run(self):
+        errors = []
         for name in self._names:
-            # A freshly installed package can fail at import time in any way.
-            with best_effort(f"import the installed package {name}", logger):
+            try:
                 importlib.import_module(name)
-        self.result_ready.emit()
+            except Exception as exc:
+                logger.exception("Installed dependency %s cannot import", name)
+                errors.append(f"{name}: {exc or type(exc).__name__}")
+        if errors:
+            self.error.emit("; ".join(errors))
+        else:
+            self.result_ready.emit()
 
 
 # ===========================
@@ -408,6 +425,7 @@ class _InstallWorker(QThread):
         super().__init__()
         self._pip_names = pip_names
         self._python = python_path
+        self._proc = None
 
     def run(self):
         extra_args = self._frozen_target_args()
@@ -415,7 +433,8 @@ class _InstallWorker(QThread):
             with tempfile.TemporaryDirectory(
                     prefix="imervue_pip_", ignore_cleanup_errors=True) as tmp:
                 constraints = write_constraints_file(Path(tmp))
-                ok, message = self._install_all(constraints, extra_args)
+                with resource_reservation("pip:" + str(Path(self._python).resolve())):
+                    ok, message = self._install_all(constraints, extra_args)
         except OSError as exc:
             ok, message = False, str(exc)
         except Exception as exc:  # a worker must always report
@@ -438,6 +457,8 @@ class _InstallWorker(QThread):
     def _install_all(self, constraints: Path, extra_args: list[str]) -> tuple[bool, str]:
         """Install every package in turn under *constraints*; stop at the first failure."""
         for name in self._pip_names:
+            if self.isInterruptionRequested():
+                return False, "Dependency installation cancelled"
             self.log.emit(f"Installing {name} ...")
             cmd = install_command(self._python, name, constraints, extra_args)
             try:
@@ -477,13 +498,20 @@ class _InstallWorker(QThread):
             return -1
         return proc.returncode
 
+    def stop(self) -> None:
+        """Reap the pip child off the UI thread when its host is closing."""
+        self.requestInterruption()
+        terminate_process(self._proc)
+
 
 # ===========================
 # 安裝對話框
 # ===========================
 
-class InstallDependenciesDialog(QDialog):
-    """顯示缺少套件並自動安裝"""
+class InstallDependenciesDialog(WorkerHostMixin, QDialog):
+    """顯示缺少套件並自動安裝；關閉時非阻塞保留執行中的工作。"""
+
+    _worker_attrs = ("_worker", "_dl_worker", "_find_worker", "_import_worker")
 
     def __init__(
         self,
@@ -493,6 +521,8 @@ class InstallDependenciesDialog(QDialog):
     ):
         super().__init__(parent)
         self._missing = missing
+        self._status_key = "dependencies:" + ",".join(sorted(imp for imp, _pip in missing))
+        self._publish_status("missing", ", ".join(pip for _imp, pip in missing))
         self._on_success = on_success
         self._worker = None
         self._dl_worker = None
@@ -505,18 +535,30 @@ class InstallDependenciesDialog(QDialog):
         self.setMinimumSize(520, 360)
         self._build_ui()
 
-    def _wait_workers(self) -> None:
-        """Block until every background worker stops, so none is destroyed
-        mid-run when the (WA_DeleteOnClose) dialog closes -- that aborts with
-        'QThread: Destroyed while thread is still running'."""
-        for attr in ("_worker", "_dl_worker", "_find_worker", "_import_worker"):
-            worker = getattr(self, attr, None)
-            if worker is not None and worker.isRunning():
-                worker.wait()
+    def _publish_status(self, state: str, reason: str = "") -> None:
+        status_registry.publish(self._status_key, self.windowTitle() or "Dependencies",
+                                state, reason)
 
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
-        self._wait_workers()
-        super().closeEvent(event)
+    def done(self, result: int) -> None:
+        if result == QDialog.DialogCode.Rejected:
+            self._publish_status("cancelling")
+        super().done(result)
+        if result == QDialog.DialogCode.Rejected and not getattr(self, "_worker_retiring", False):
+            self._publish_status("cancelled")
+
+    def _worker_retired(self) -> None:
+        if getattr(self, "_worker_close_result", None) == QDialog.DialogCode.Rejected:
+            self._publish_status("cancelled")
+        super()._worker_retired()
+
+    def _track_finished(self, worker: QThread, attr: str) -> None:
+        worker.finished.connect(lambda: self._release_worker(worker, attr))
+
+    def _release_worker(self, worker: QThread, attr: str) -> None:
+        if getattr(self, attr, None) is not worker:
+            return
+        setattr(self, attr, None)
+        retire_workers(self, [worker], lambda: None, cancel=False)
 
     def _build_ui(self):
         lang = language_wrapper.language_word_dict
@@ -564,6 +606,7 @@ class InstallDependenciesDialog(QDialog):
     def _do_install(self):
         """按下安裝：先在背景搜尋 Python（不阻塞 UI）"""
         lang = language_wrapper.language_word_dict
+        self._publish_status("checking")
         self._install_btn.setEnabled(False)
         self._progress.setVisible(True)
         self._log.setVisible(True)
@@ -573,7 +616,7 @@ class InstallDependenciesDialog(QDialog):
 
         self._find_worker = _FindPythonWorker()
         self._find_worker.result_ready.connect(self._on_python_found)
-        self._find_worker.finished.connect(lambda: setattr(self, '_find_worker', None))
+        self._track_finished(self._find_worker, "_find_worker")
         self._find_worker.start()
 
     def _on_python_found(self, python: str | None):
@@ -591,6 +634,7 @@ class InstallDependenciesDialog(QDialog):
             self._show_no_python_error()
 
     def _show_no_python_error(self):
+        self._publish_status("failed", "No usable Python interpreter")
         lang = language_wrapper.language_word_dict
         self._log.setVisible(True)
         self._log.append(lang.get(
@@ -605,6 +649,7 @@ class InstallDependenciesDialog(QDialog):
         ))
 
     def _start_python_download(self):
+        self._publish_status("downloading", "Portable Python")
         lang = language_wrapper.language_word_dict
         self._log.append(lang.get(
             "pip_downloading_python",
@@ -614,7 +659,7 @@ class InstallDependenciesDialog(QDialog):
         self._dl_worker = _DownloadPythonWorker()
         self._dl_worker.log.connect(self._on_log)
         self._dl_worker.result_ready.connect(self._on_python_downloaded)
-        self._dl_worker.finished.connect(lambda: setattr(self, '_dl_worker', None))
+        self._track_finished(self._dl_worker, "_dl_worker")
         self._dl_worker.start()
 
     def _on_python_downloaded(self, success: bool, result: str):
@@ -626,8 +671,10 @@ class InstallDependenciesDialog(QDialog):
             self._install_btn.setEnabled(True)
             self._log.append(f"\nFailed to download Python: {result}")
             self._show_no_python_error()
+            self._publish_status("failed", result)
 
     def _start_package_install(self, python: str):
+        self._publish_status("running", ", ".join(pip for _imp, pip in self._missing))
         self._log.append(f"Using Python: {python}")
         if _is_frozen():
             self._log.append("(Frozen/packaged environment detected)")
@@ -636,12 +683,13 @@ class InstallDependenciesDialog(QDialog):
         self._worker = _InstallWorker(pip_names, python)
         self._worker.log.connect(self._on_log)
         self._worker.result_ready.connect(self._on_finished)
-        self._worker.finished.connect(lambda: setattr(self, '_worker', None))
+        self._track_finished(self._worker, "_worker")
         self._worker.start()
 
     def _on_log(self, text: str):
         self._log.append(text)
         self._status.setText(text.split("\n", maxsplit=1)[0][:80])
+        self._publish_status("running", text[:1000])
 
     def _on_finished(self, success: bool, message: str):
 
@@ -661,21 +709,35 @@ class InstallDependenciesDialog(QDialog):
                 names = [imp for imp, _ in self._missing]
                 self._import_worker = _ImportWorker(names)
                 self._import_worker.result_ready.connect(self._on_import_done)
-                self._import_worker.finished.connect(
-                    lambda: setattr(self, '_import_worker', None))
+                self._import_worker.error.connect(self._on_import_failed)
+                self._track_finished(self._import_worker, "_import_worker")
                 self._import_worker.start()
         else:
             self._progress.setVisible(False)
             self._install_btn.setEnabled(True)
+            self._publish_status("failed", message)
             self._status.setText(f"Error: {message[:100]}")
             self._log.append(f"\nError: {message}")
 
+    def _on_import_failed(self, reason: str) -> None:
+        self._publish_status("failed", reason)
+        self._progress.setVisible(False)
+        self._install_btn.setEnabled(True)
+        self._status.setText(reason)
+        self._log.append(reason)
+
     def _on_import_done(self):
+        self._publish_status("available")
         self._progress.setVisible(False)
         self._install_btn.setEnabled(True)
 
         if self._on_success:
-            self._on_success()
+            try:
+                self._on_success()
+            except Exception as exc:
+                logger.exception("Dependency-ready callback failed")
+                self._on_import_failed(str(exc) or type(exc).__name__)
+                return
         self.accept()
 
 
@@ -688,14 +750,16 @@ class _EnsureDepsHelper(QObject):
 
     用 QObject 包裝，讓所有 signal-slot 連接都在 QObject 之間進行，
     Qt 的 AutoConnection 會自動根據執行緒使用 QueuedConnection。
-    parent widget 持有此物件，確保不被 GC 回收。
+    QApplication 持有此物件，parent 被刪除也不會銷毀執行中的 QThread。
     """
     _relay = Signal(list)
 
     def __init__(self, parent: QWidget, packages, on_ready):
-        super().__init__(parent)
+        super().__init__(QCoreApplication.instance())
         self._parent_widget = parent
         self._on_ready = on_ready
+        self._status_key = "dependencies:" + ",".join(sorted(imp for imp, _pip in packages))
+        status_registry.publish(self._status_key, "Dependencies", "checking")
 
         logger.info("_EnsureDepsHelper.__init__: parent=%s, packages=%s", parent, packages)
 
@@ -714,14 +778,20 @@ class _EnsureDepsHelper(QObject):
         logger.info("_EnsureDepsHelper._handle_result: missing=%s (thread=%s)",
                      missing, QThread.currentThread())
         try:
+            if not isValid(self._parent_widget):
+                status_registry.publish(self._status_key, "Dependencies", "cancelled")
+                return
+            status_registry.publish(self._status_key, "Dependencies",
+                                    "missing" if missing else "available",
+                                    ", ".join(pip for _imp, pip in missing))
             if not missing:
                 logger.info("_EnsureDepsHelper: no missing deps, calling on_ready")
-                self._on_ready()
+                self._ready()
                 logger.info("_EnsureDepsHelper: on_ready returned")
                 return
             logger.info("_EnsureDepsHelper: missing deps found, opening install dialog")
             dlg = InstallDependenciesDialog(
-                self._parent_widget, missing, on_success=self._on_ready,
+                self._parent_widget, missing, on_success=self._ready,
             )
             dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
             dlg.open()
@@ -729,10 +799,25 @@ class _EnsureDepsHelper(QObject):
         except Exception:
             logger.exception("_EnsureDepsHelper._handle_result failed")
 
+    def _ready(self) -> None:
+        try:
+            if not isValid(self._parent_widget):
+                status_registry.publish(self._status_key, "Dependencies", "cancelled")
+                return
+            self._on_ready()
+        except Exception as exc:
+            status_registry.publish(self._status_key, "Dependencies", "failed",
+                                    str(exc) or type(exc).__name__)
+            raise
+        status_registry.publish(self._status_key, "Dependencies", "available")
+
     def _cleanup(self):
         logger.info("_EnsureDepsHelper._cleanup: worker finished")
-        self._worker = None
-        self.deleteLater()
+        worker, self._worker = self._worker, None
+        if worker is not None:
+            retire_workers(self, [worker], self.deleteLater, cancel=False)
+        else:
+            self.deleteLater()
 
 
 def ensure_dependencies(

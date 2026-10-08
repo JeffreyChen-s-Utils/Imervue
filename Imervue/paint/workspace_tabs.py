@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.paint.canvas import PaintCanvas
+from Imervue.paint.document_status import document_status, status_lines
 
 
 class TabManagerMixin:
@@ -33,8 +34,7 @@ class TabManagerMixin:
     def _unsaved_tab_titles(self) -> list[str]:
         """Return the titles of every tab carrying unsaved edits.
 
-        Pulled out of the close prompt so a future "save all" command
-        can surface the same list without re-walking the dirty map.
+        The close prompt and save-all flow use the same dirty map.
         """
         names: list[str] = []
         for i in range(self._tabs.count()):
@@ -47,7 +47,7 @@ class TabManagerMixin:
     def _confirm_discard_all_unsaved(self) -> bool:
         """Prompt the user before tearing down a window with dirty tabs.
 
-        Returns ``True`` for "Discard all" or "Save…"-then-clean,
+        Returns ``True`` for "Discard all" or "Save all"-then-clean,
         ``False`` for cancel. Lists the titles inline so the user
         can see exactly which tabs are about to be lost.
         """
@@ -65,7 +65,7 @@ class TabManagerMixin:
         ).format(count=len(names), names="\n• ".join(names)))
         box.setIcon(QMessageBox.Icon.Warning)
         save = box.addButton(
-            lang.get("paint_close_window_save_active", "Save active…"),
+            lang.get("paint_file_save_all", "Save All Documents"),
             QMessageBox.ButtonRole.AcceptRole,
         )
         discard = box.addButton(
@@ -76,28 +76,11 @@ class TabManagerMixin:
         box.exec()
         clicked = box.clickedButton()
         if clicked is save:
-            return self._save_active_then_close(lang)
+            bridge = getattr(self, "_file_menu_bridge", None)
+            if bridge is not None and hasattr(bridge, "save_all_documents"):
+                return bridge.save_all_documents() and not self._has_unsaved_tabs()
+            return False
         return clicked is discard
-
-    def _save_active_then_close(self, lang: dict) -> bool:
-        """Export the active tab, then report whether the window may close.
-
-        Returns ``True`` only when no dirty tabs remain after the
-        export. Surfaces a toast when the close is aborted so the user
-        knows the action wasn't silently eaten.
-        """
-        bridge = getattr(self, "_file_menu_bridge", None)
-        if bridge is not None and hasattr(bridge, "export_active_image"):
-            bridge.export_active_image()
-        still_dirty = self._has_unsaved_tabs()
-        if still_dirty:
-            toast = getattr(self, "toast", None)
-            if toast is not None:
-                toast.warning(lang.get(
-                    "paint_close_still_dirty",
-                    "Close cancelled — some tabs are still unsaved",
-                ))
-        return not still_dirty
 
     def tab_count(self) -> int:
         """Return how many open documents the workspace currently holds."""
@@ -148,6 +131,7 @@ class TabManagerMixin:
         )
         if needs_prompt and not self._confirm_discard_unsaved(widget):
             return False
+        self.discard_canvas_autosaves(widget)
         self._tab_dirty.pop(widget, None)
         # Drop the closed canvas's undo stack (and its snapshots) so it doesn't
         # linger with the deleted canvas.
@@ -164,7 +148,7 @@ class TabManagerMixin:
 
         Returns ``True`` when the user picks "Discard"; ``False``
         when they cancel. ``Save`` is offered as a third option that
-        triggers the active export and re-checks the dirty flag.
+        saves this specific document and re-checks its dirty flag.
         """
         from PySide6.QtWidgets import QMessageBox
         lang = language_wrapper.language_word_dict
@@ -190,8 +174,8 @@ class TabManagerMixin:
         clicked = box.clickedButton()
         if clicked is save:
             bridge = getattr(self, "_file_menu_bridge", None)
-            if bridge is not None and hasattr(bridge, "export_active_image"):
-                bridge.export_active_image()
+            if bridge is not None and hasattr(bridge, "save_document"):
+                bridge.save_document(widget)
             return not self._tab_dirty.get(widget, False)
         return clicked is discard
 
@@ -225,6 +209,8 @@ class TabManagerMixin:
             return
         self._tab_dirty[canvas] = dirty
         self._refresh_tab_title(canvas)
+        if canvas is self._canvas:
+            self._refresh_status_line()
 
     def _refresh_tab_title(self, canvas) -> None:
         index = self._tabs.indexOf(canvas)
@@ -259,10 +245,10 @@ class TabManagerMixin:
             lines.append(
                 lang.get("paint_tab_tooltip_size", "{w}×{h}").format(w=w, h=h),
             )
-        if self._tab_dirty.get(canvas, False):
-            lines.append(
-                lang.get("paint_tab_tooltip_modified", "Modified — unsaved"),
-            )
+        if document is not None:
+            lines.extend(status_lines(
+                document_status(canvas), self._tab_dirty.get(canvas, False), lang,
+            ))
         self._tabs.setTabToolTip(index, "\n".join(lines))
 
     def mark_active_tab_clean(self) -> None:
@@ -284,12 +270,15 @@ class TabManagerMixin:
             self.exit_quick_mask()
         self._rebind_canvas_signals(self._canvas, new_canvas)
         self._canvas = new_canvas
+        self._last_autosave_at = getattr(self, "_autosave_last_by_canvas", {}).get(new_canvas)
         self._canvas.set_tool_dispatcher(self._dispatcher)
         if hasattr(self, "_layer_dock"):
             self._layer_dock.set_document(self._canvas.document())
         if hasattr(self, "_navigator_dock"):
             self._navigator_dock.set_zoom(self._canvas.zoom_factor())
         self._refresh_navigator_preview()
+        self._refresh_tab_title(new_canvas)
+        self._refresh_status_line()
 
     def _rebind_canvas_signals(self, old_canvas, new_canvas) -> None:
         """Move the per-canvas hover / zoom / document hooks from the

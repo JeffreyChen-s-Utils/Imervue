@@ -41,14 +41,13 @@ import time
 
 from Imervue.gpu_image_view.texture_upload import prepare_rgba, upload_rgba_texture
 from Imervue.gpu_image_view.tile_focus import focus_ring_active, focus_tile_rect
-from Imervue.gpu_image_view.tile_layout import tile_grid_layout
+from Imervue.gpu_image_view.tile_viewport import base_tile_size, viewport_for
 from Imervue.gpu_image_view.view_animator import THUMB_FADE_MS, fade_opacity
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 # Default layout base when no thumbnail size and no cache sample exist.
-_DEFAULT_TILE_BASE = 256
 # Selection-marker geometry (blue check circle in the tile corner).
 _MARKER_CIRCLE_RADIUS = 9
 _MARKER_CIRCLE_SEGMENTS = 32
@@ -67,26 +66,21 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
 
     # -- layout -------------------------------------------------------
 
-    def base_size(self) -> int:
-        view = self._view
-        if view.thumbnail_size is not None:
-            return view.thumbnail_size
-        if view.tile_cache:
-            # 用第一張圖實際寬度當排版基準
-            return next(iter(view.tile_cache.values())).shape[1]
-        return _DEFAULT_TILE_BASE
+    def base_size(self) -> float:
+        return base_tile_size(self._view)
 
     # -- per-tile draw ------------------------------------------------
 
     def _draw_placeholder(self, x0: float, y0: float,
-                          scaled_tile: float, vw: int, vh: int) -> None:
+                          scaled_tile: float, vw: int, vh: int) -> bool:
         x1, y1 = x0 + scaled_tile, y0 + scaled_tile
-        if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
-            return
+        if x1 <= 0 or x0 >= vw or y1 <= 0 or y0 >= vh:
+            return False
         renderer = self._view.renderer
         renderer.draw_colored_rect((x0, y0, x1, y1), (0.14, 0.14, 0.14, 1.0), filled=True)
         renderer.draw_colored_rect((x0, y0, x1, y1), (0.28, 0.28, 0.28, 1.0), filled=False)
         self._view.placeholder_rects.append((x0, y0, x1, y1))
+        return True
 
     def _draw_single(self, i: int, path: str, cols: int, cell: float,
                      scaled_tile: float, vw: int, vh: int) -> None:
@@ -97,12 +91,12 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         # 存在檢查不在這裡做 I/O — offline_paths 由背景掃描與 worker 錯誤
         # 回報維護（tile_loader），paint 路徑只查記憶體中的 set。
         if path in view.offline_paths:
-            self._draw_placeholder(x0, y0, scaled_tile, vw, vh)
-            view.missing_tile_rects.append((x0, y0, x0 + scaled_tile, y0 + scaled_tile, path))
+            if self._draw_placeholder(x0, y0, scaled_tile, vw, vh):
+                view.missing_tile_rects.append((x0, y0, x0 + scaled_tile, y0 + scaled_tile, path))
             return
         if path in getattr(view, "tile_errors", {}):
-            self._draw_placeholder(x0, y0, scaled_tile, vw, vh)
-            view.error_tile_rects.append((x0, y0, x0 + scaled_tile, y0 + scaled_tile, path))
+            if self._draw_placeholder(x0, y0, scaled_tile, vw, vh):
+                view.error_tile_rects.append((x0, y0, x0 + scaled_tile, y0 + scaled_tile, path))
             return
         if path not in view.tile_cache:
             self._draw_placeholder(x0, y0, scaled_tile, vw, vh)
@@ -110,7 +104,7 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         img_data = view.tile_cache[path]
         x1 = x0 + img_data.shape[1] * view._tile_draw_scale
         y1 = y0 + img_data.shape[0] * view._tile_draw_scale
-        if x1 < 0 or x0 > vw or y1 < 0 or y0 > vh:
+        if x1 <= 0 or x0 >= vw or y1 <= 0 or y0 >= vh:
             return
         view.tile_rects.append((x0, y0, x1, y1, path))
         if not view._ensure_tile_texture(path, img_data):
@@ -241,19 +235,28 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
     # -- entry point --------------------------------------------------
 
     def paint(self) -> None:
-        """Draw the full thumbnail wall for the current frame."""
+        """Draw only viewport candidates with shared frame geometry."""
+        view = self._view
+        viewport = viewport_for(view)
+        view._frame_tile_viewport = viewport
+        try:
+            self._paint_viewport(viewport)
+        finally:
+            view._frame_tile_viewport = None
+
+    def _paint_viewport(self, viewport) -> None:
         view = self._view
         glLoadIdentity()
         # 預先淘汰超出 VRAM 上限的紋理（不在逐 tile 迴圈中做）
         view._evict_tile_textures_if_needed()
 
         images = view.model.images
-        base_tile = self.base_size()
-        view._tile_draw_scale, cell, cols = tile_grid_layout(
-            view.width(), base_tile, view.tile_scale,
-            view.tile_padding, view.devicePixelRatio(),
-        )
-        scaled_tile = base_tile * view._tile_draw_scale
+        view._tile_draw_scale = viewport.draw_scale
+        cell, cols = viewport.cell, viewport.cols
+        scaled_tile = viewport.base * view._tile_draw_scale
+        if getattr(view, "_tile_queue", None) is not None:
+            from Imervue.gpu_image_view.tile_loader import pump_thumbnail_workers
+            pump_thumbnail_workers(view)
         view.tile_rects = []
         # Placeholders for tiles whose thumbnail hasn't arrived yet — rendered
         # as dark squares so the grid layout is visible immediately. Stored in
@@ -265,8 +268,8 @@ class TileGridRenderer:  # pragma: no cover - GL drawing path
         # 在迴圈外設定一次 GL 狀態，避免每張 tile 都重複呼叫
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         vw, vh = view.width(), view.height()
-        for i, path in enumerate(images):
-            self._draw_single(i, path, cols, cell, scaled_tile, vw, vh)
+        for i in viewport.indices():
+            self._draw_single(i, images[i], cols, cell, scaled_tile, vw, vh)
 
         self._draw_grid_borders()
         self._draw_selection_overlay()

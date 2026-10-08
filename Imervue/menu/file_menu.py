@@ -48,6 +48,8 @@ def build_file_menu(ui_we_want_to_set: ImervueMainWindow) -> QMenu:
     _add_browse_mode_entries(ui_we_want_to_set, view_menu, lang)
     view_menu.addSeparator()
     _add_density_entries(ui_we_want_to_set, view_menu, lang)
+    view_menu.addSeparator()
+    _add_panel_entries(ui_we_want_to_set, view_menu, lang)
 
     return file_menu
 
@@ -67,6 +69,14 @@ def _add_open_entries(ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, la
 
     open_folder_action = file_menu.addAction(lang.get("main_window_open_folder"))
     open_folder_action.triggered.connect(lambda: open_folder(ui_we_want_to_set))
+
+    paint_action = file_menu.addAction(lang.get(
+        "file_open_in_paint", "Open Current Image in Paint",
+    ))
+    paint_action.setObjectName("file.open_in_paint")
+    paint_action.triggered.connect(
+        lambda: ui_we_want_to_set._bind_paint_workspace_to_current_image(),
+    )
 
     build_recent_menu(ui_we_want_to_set=ui_we_want_to_set, menu=file_menu)
 
@@ -261,6 +271,20 @@ def _add_density_entries(
         a.triggered.connect(
             lambda checked, p=pad: ui_we_want_to_set.change_tile_padding(p)
         )
+
+
+def _add_panel_entries(ui_we_want_to_set: ImervueMainWindow, view_menu: QMenu, lang) -> None:
+    """Panels submenu: a show / hide entry per dock, then Reset Panel Layout."""
+    panel_menu = view_menu.addMenu(lang.get("view_panels_menu", "Panels"))
+    panel_menu.setObjectName("view.panels")
+    for tab_title, docks in ui_we_want_to_set.panel_docks():
+        panel_menu.addSection(tab_title)
+        for dock in docks:
+            panel_menu.addAction(dock.toggleViewAction())
+    panel_menu.addSeparator()
+    reset_action = panel_menu.addAction(lang.get("view_panels_reset", "Reset Panel Layout"))
+    reset_action.setObjectName("view.panels.reset")
+    reset_action.triggered.connect(ui_we_want_to_set.reset_panel_layout)
 
 
 # ==========================

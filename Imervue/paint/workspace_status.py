@@ -38,6 +38,14 @@ class StatusLineMixin:
             self._status.clearMessage()
             return
         self._status.showMessage(line)
+        from Imervue.paint.document_status import document_status, status_lines
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None and hasattr(canvas, "document"):
+            lines = status_lines(
+                document_status(canvas), getattr(self, "_tab_dirty", {}).get(canvas, False),
+                language_wrapper.language_word_dict,
+            )
+            self._status.setToolTip("\n".join(lines))
 
     def _compose_status_line(self, hover: tuple[int, int] | None) -> str:
         """Build the rich status-bar string.
@@ -60,6 +68,22 @@ class StatusLineMixin:
         autosave_segment = self._format_autosave_segment(lang)
         if autosave_segment:
             segments.append(autosave_segment)
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None and hasattr(canvas, "document"):
+            from Imervue.paint.document_status import document_status
+            status = document_status(canvas)
+            if status.autosave in {"pending", "failed"}:
+                segments.append(lang.get(
+                    f"paint_document_autosave_{status.autosave}", status.autosave,
+                ))
+            if hasattr(self, "_tab_dirty"):
+                from pathlib import Path
+                label = (lang.get("paint_tab_tooltip_modified", "Modified — unsaved")
+                         if self._tab_dirty.get(canvas, False)
+                         else lang.get("paint_document_clean", "No unsaved changes"))
+                name = (Path(status.saved_path).name if status.saved_path
+                        else lang.get("paint_document_not_saved", "Not saved"))
+                segments.append(f"{label} · {name}")
         return "    ".join(segments)
 
     @staticmethod
@@ -168,10 +192,15 @@ class StatusLineMixin:
         Picks the coarsest unit that fits ("just now" / "Xs ago" /
         "Xm ago" / "Xh ago") so the line stays compact at every age.
         """
-        if self._last_autosave_at is None:
+        last = self._last_autosave_at
+        canvas = getattr(self, "_canvas", None)
+        if canvas is not None and hasattr(canvas, "_file_status"):
+            from Imervue.paint.document_status import document_status
+            last = document_status(canvas).autosave_at
+        if last is None:
             return None
         import time
-        elapsed = max(0.0, time.monotonic() - self._last_autosave_at)
+        elapsed = max(0.0, time.monotonic() - last)
         return _autosave_label(elapsed, lang)
 
     @staticmethod

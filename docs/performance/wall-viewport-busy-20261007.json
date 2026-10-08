@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "environment": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.14.4",
+    "logical_cpus": 12,
+    "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "hardware": {
+      "cpu": "AMD Ryzen 5 240 w/ Radeon 760M Graphics        ",
+      "ram_bytes": 33617924096,
+      "gpus": [
+        "AMD Radeon 760M Graphics",
+        "NVIDIA GeForce RTX 5060 Laptop GPU"
+      ]
+    },
+    "versions": {
+      "numpy": "2.4.4",
+      "Pillow": "12.2.0",
+      "PySide6": "6.11.2",
+      "PyOpenGL": "3.1.10"
+    },
+    "product_revision": "292641132dcea4e27aa2b257915e4c0898804df7",
+    "tool_sha256": {
+      "performance_benchmark.py": "16a95d37f45a598e3e0696a0fa2bcfbc5db3f3e4354e0d352b20ed63c48f928e",
+      "performance_gl.py": "fc9b3bd9129446c35048c74d115460f0d13db3eddb5886b68cd5b6261deb28fe",
+      "performance_support.py": "70f3de21686d54ea99f51d2ed407c758edebca084c331e1c795e89383ece47ba"
+    },
+    "product_changed_sources_sha256": {
+      "Imervue/gpu_image_view/gpu_image_view.py": "1eddacf3ea8e4b123ffae9faeac113095a428286eec18094098674b0c1ef32f3",
+      "Imervue/gpu_image_view/thumbnail_queue.py": "972d8f699c93761b4415850027ef5e8891440b20116297b67d92db04d34d5a50",
+      "Imervue/gpu_image_view/tile_grid_renderer.py": "1e5f2ca19fb4ad2dd5b012765b6b6b7751241d312a4ae603d643fb8eb95d9bb7",
+      "Imervue/gpu_image_view/tile_loader.py": "8d1384832496d0116efb580576b4957a7501f9b3682c722165c09cc4e95130c0",
+      "Imervue/gpu_image_view/tile_textures.py": "d4cfcda96d82084c8b4ac5f8de6e5d7273ab087fe193e4cb8bcd5232c5163203",
+      "Imervue/gpu_image_view/tile_viewport.py": "150aaad75b04625564954c3e7737cf6099d7ace66a7bc6cdf81ecbaffd3ee23a",
+      "Imervue/gpu_image_view/view_state_init.py": "1387e065f328a6dca81fddf32305746fb9102e5d3ee668b446029f8a1fba5be2"
+    },
+    "source_hash_newlines": "LF",
+    "cold_definition": "fresh child/profile/index; OS page cache is NOT flushed",
+    "rss_definition": "5ms sampled resident working set plus process lifetime high-water mark"
+  },
+  "fixture": {
+    "fixture_version": 1,
+    "quick": false,
+    "libraries": [
+      10000,
+      100000
+    ],
+    "dimensions": [
+      [
+        6000,
+        4000
+      ],
+      [
+        10000,
+        6000
+      ]
+    ],
+    "paint_dimensions": [
+      3840,
+      2160
+    ],
+    "paint_layers": 6,
+    "seed_sha256": {
+      "00.jpg": "7ad88dd92ed4ad749b3bd399d70ab02085d9316343771e6944e84a923519db9b",
+      "01.jpg": "27e1c174391655ac7bb8836be4edd22a1a5be1d441607d4f566b5659eb951f80",
+      "02.jpg": "fa86f54613899eeb0adcbaaac53a21809d1729089992c790cb9e9a4740d8d869",
+      "03.jpg": "cd4cc331e1d9721157317885ffd94d9e6a3e7ca756e962534a05418681f28e75",
+      "04.jpg": "673c1f084b95791cc7ee2eef2bc0a75c0af42cf3ec193978647a039a835a43c0",
+      "05.jpg": "d5a4be0f0e28a33b39806ac794434ff4c987330381808a39e8aa7e3631632b01",
+      "06.jpg": "39159f84ccb004f05f987c37f73617eaaa3671d9b59664f8605932a3e18715b8",
+      "07.jpg": "f4eeed80c36f615dc88a84e2388e1109a1b307424b1ca6f2e23723b78bc16100",
+      "08.jpg": "0341ac3c03cc1506f099c795945268e83587e5adcf2b0cf7350d5b4d3796550a",
+      "09.jpg": "1cc3c15c83b28f4cdad06f29c73e05d909824421b7c624af7bc95edd1a51574e",
+      "10.jpg": "0c813326c0558147871bafb9efcb3dfe4738d172056de244cd1982009d23fd69",
+      "11.jpg": "0b822b4417a80d0cb1fb8875caaad3a5b17c86318931944b0bb292f88923c8e4",
+      "12.jpg": "ed037d6c55ec0c423a38e3b78bed8f9887bc29b724f876c679a1843c7e7ebefa",
+      "13.jpg": "db9300064b920a5fa49d2b290713a601d6ab0434a49afdbec589fc65557251b7",
+      "14.jpg": "99ae909f4e1786d0aaf0d993457929c693d7902bce5e81146e7ef594378d0c39",
+      "15.jpg": "ca20768059f84ceaec899d7b002ed0c14eeaf4e6bd679daf5763b0ccd78a4be9",
+      "16.jpg": "643e1270962c0017e4fb43f5787fe3ce28f81de5720609041475bd6e0c068d40",
+      "17.jpg": "7b5446e17d197c5452479a910d6e898698d09af23695486db3cc2dd51d9b0937",
+      "18.jpg": "198380cfc351202f0bb1ec15248843767627122bf9aadc4b4ce45339c544270a",
+      "19.jpg": "73343ccc9606a720e0cc3b59f773d0c071df78eea18bd21b3254aa83bad0b1c1",
+      "20.jpg": "92eac287fa83c655c2ce02e44320d79d52a56d66f032d12ba227791c8d3b586c",
+      "21.jpg": "b75528464e61f1858f5eb1e1faec586bc66f3c7c691bfb39f16464d9dd723e04",
+      "22.jpg": "addf7c6d5ebde5c4ada5a5f1d429221deaf0ebbdd8752d2b89369c6208d0f408",
+      "23.jpg": "094c2863587c6e6b66057ad81c05c95068af30f1b2d8e551c1efebe2deb5a336",
+      "24.jpg": "634f0f2d65142dc3235635074a2914c942a35b53c787a40d66a20acc56b9d1e4",
+      "25.jpg": "b76d65b93505a78d7afb5f7de47bbb8e1f442276dfd814a2e9da14d0fd29fb1e",
+      "26.jpg": "039549fe6dd4b2f8aeacd40f823c7948ebb9fcc11373f8656c72c8304e08ff7b",
+      "27.jpg": "d0753c978d6c133dadeed821c331d2e594cceac34cc36025152c2cace36ab8ea",
+      "28.jpg": "d4261c13592c2a32ba623b303a046b954e4aa892d2fcd8093133c20a0c135087",
+      "29.jpg": "a8326567f1c4429f165932c6f5b706814665002fe0fa7afab409daaeb7e4055c",
+      "30.jpg": "65d66c133c65dbece39842d8d86ee1afc2cb6c6b1fac5d971880326e220d7afb",
+      "31.jpg": "d09f9308f731d6c5edaff165254ffc25ae54618c91c8c45fb9e0e8cd0961b74d"
+    },
+    "image_sha256": {
+      "24mp.jpg": "0f0257c06f55a7d4d34930e60b6b9036288fe91f84229a5d3f5bdc41eb221ea2",
+      "60mp.jpg": "63ff404624b58b112d30589eca6fc4690cfb88e4b0f580acb4305201cfc8a651"
+    },
+    "library_pixels": "32 repeated 32x24 JPEG seeds with unique names; hard links where supported",
+    "cache_pixels": "repeated 32x24 PNG; measures entry/stat overhead, not full-size thumbnails"
+  },
+  "scenarios": {
+    "wall-small": {
+      "count": 10000,
+      "viewport": [
+        1920,
+        1080
+      ],
+      "first_gl_frame": {
+        "samples_ms": [
+          203.07899999897927
+        ],
+        "median_ms": 203.07899999897927,
+        "p95_ms": 203.07899999897927,
+        "min_ms": 203.07899999897927,
+        "max_ms": 203.07899999897927,
+        "rss_before_bytes": 159739904,
+        "rss_peak_bytes": 165302272,
+        "rss_growth_bytes": 5562368,
+        "process_peak_bytes": 192958464
+      },
+      "steady_gl_frame": {
+        "samples_ms": [
+          5.65369997639209,
+          10.016700020059943,
+          28.419199981726706,
+          16.76290004979819,
+          4.309199983254075,
+          3.19580000359565,
+          2.9550999170169234,
+          3.363399999216199,
+          13.641500030644238,
+          3.738400060683489,
+          5.454599973745644,
+          3.9177999133244157,
+          3.548900014720857,
+          13.892299961298704,
+          7.163999951444566,
+          8.633899968117476,
+          8.651999989524484,
+          9.780399966984987,
+          8.97109997458756,
+          12.315900065004826,
+          18.01480003632605,
+          2.880499931052327,
+          4.373500007204711,
+          3.496199962683022,
+          5.688500008545816,
+          12.627099989913404,
+          4.342500003986061,
+          26.000000070780516,
+          3.256700001657009,
+          11.163700022734702
+        ],
+        "median_ms": 6.426249979995191,
+        "p95_ms": 26.000000070780516,
+        "min_ms": 2.880499931052327,
+        "max_ms": 28.419199981726706,
+        "rss_before_bytes": 165285888,
+        "rss_peak_bytes": 165634048,
+        "rss_growth_bytes": 348160,
+        "process_peak_bytes": 192958464
+      },
+      "vram_bytes": 12233410,
+      "visible_rects": 35,
+      "pixel_rgba": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "renderer": "NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2",
+      "version": "4.6.0 NVIDIA 616.92",
+      "boundary": "real shader/FBO/finish, bounded visible thumbnails; excludes QOpenGLWidget/HUD"
+    },
+    "wall-large": {
+      "count": 100000,
+      "viewport": [
+        1920,
+        1080
+      ],
+      "first_gl_frame": {
+        "samples_ms": [
+          720.0782999861985
+        ],
+        "median_ms": 720.0782999861985,
+        "p95_ms": 720.0782999861985,
+        "min_ms": 720.0782999861985,
+        "max_ms": 720.0782999861985,
+        "rss_before_bytes": 180191232,
+        "rss_peak_bytes": 182620160,
+        "rss_growth_bytes": 2428928,
+        "process_peak_bytes": 207396864
+      },
+      "steady_gl_frame": {
+        "samples_ms": [
+          73.6332000233233,
+          82.93659996706992,
+          391.00419997703284,
+          552.3897000821307,
+          197.09429994691163,
+          733.3651999942958,
+          559.9710000678897,
+          471.95090004242957,
+          134.37460002023727,
+          567.0771000441164,
+          903.9823000784963,
+          769.8225999483839,
+          939.0813999343663,
+          42.62129997368902,
+          104.74450001493096,
+          562.3870000708848,
+          746.1461999919266,
+          1012.1448000427336,
+          1293.0337999714538,
+          418.95199997816235,
+          837.5108999898657,
+          955.1231999648735,
+          1001.7097999807447,
+          1040.025299997069,
+          1011.3886999897659,
+          868.2616000296548,
+          1146.5790000511333,
+          1089.0181000577286,
+          448.6149000003934,
+          651.5665000770241
+        ],
+        "median_ms": 692.46585003566,
+        "p95_ms": 1146.5790000511333,
+        "min_ms": 42.62129997368902,
+        "max_ms": 1293.0337999714538,
+        "rss_before_bytes": 179900416,
+        "rss_peak_bytes": 181551104,
+        "rss_growth_bytes": 1650688,
+        "process_peak_bytes": 207396864
+      },
+      "vram_bytes": 12233410,
+      "visible_rects": 35,
+      "pixel_rgba": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "renderer": "NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2",
+      "version": "4.6.0 NVIDIA 616.92",
+      "boundary": "real shader/FBO/finish, bounded visible thumbnails; excludes QOpenGLWidget/HUD"
+    }
+  },
+  "failures": {}
+}

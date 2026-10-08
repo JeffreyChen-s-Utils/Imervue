@@ -34,6 +34,12 @@ class _StubMainWindow(QMainWindow):
     def change_tile_padding(self, pad):
         self.calls.append(("tile_padding", pad))
 
+    def panel_docks(self):
+        return []      # the Panels entries are covered in test_main_window_docks.py
+
+    def reset_panel_layout(self):
+        self.calls.append(("reset_panels",))
+
 
 @pytest.fixture
 def window(qapp):
@@ -62,6 +68,7 @@ def test_file_menu_entries_in_order(window):
     expected = [
         _lang("menu_new_window", "New Window"), "",
         _lang("main_window_open_image"), _lang("main_window_open_folder"),
+        _lang("file_open_in_paint", "Open Current Image in Paint"),
         _lang("recent_menu_title", "Recent"),
         _lang("bookmark_title", "Bookmarks"), _lang("tag_album_title", "Tags & Albums"), "",
         _lang("recycle_bin_title", "Recycle Bin"), _lang("main_window_remove_undo_stack"), "",
@@ -127,7 +134,17 @@ def test_view_menu_tile_sizes_then_submenus(window):
     assert texts == ["128 x 128", "256 x 256", "512 x 512", "1024 x 1024",
                      _lang("thumbnail_size_original", "Original size"), "",
                      _lang("view_browse_mode", "Browse Mode"), "",
-                     _lang("view_tile_density", "Thumbnail Density")]
+                     _lang("view_tile_density", "Thumbnail Density"), "",
+                     _lang("view_panels_menu", "Panels")]
+
+
+def test_panels_submenu_resets_the_layout(window):
+    panels = _view_menu(window).actions()[-1].menu()
+    assert panels.objectName() == "view.panels"
+    reset = panels.actions()[-1]
+    assert reset.text() == _lang("view_panels_reset", "Reset Panel Layout")
+    reset.trigger()
+    assert window.calls == [("reset_panels",)]
 
 
 def test_view_menu_checks_active_tile_size_and_triggers_change(window):

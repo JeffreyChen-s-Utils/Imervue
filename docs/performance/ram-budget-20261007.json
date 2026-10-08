@@ -1,0 +1,436 @@
+{
+  "date": "2026-10-07",
+  "scope": "speculative neighbour prefetch RAM; not total process memory",
+  "raw_source": "https://github.com/letmaik/rawpy/blob/a39c2e7a44911889c3360891012f862f904ba551/test/iss042e297200.NEF",
+  "raw_dimensions": [
+    4940,
+    3292
+  ],
+  "panorama_dimensions": [
+    30000,
+    2000
+  ],
+  "panorama_generator": "performance_support.gradient(30000,2000), Pillow RGB JPEG quality=90",
+  "host": "Ryzen 5 240, 6 cores/12 threads; 31.31 GiB usable RAM; Windows 11 build 26300",
+  "cases": {
+    "raw": {
+      "limit_bytes": null,
+      "metrics": {
+        "samples_ms": [
+          1407.1023999713361,
+          1549.8070999747142,
+          1726.9759000046179
+        ],
+        "median_ms": 1549.8070999747142,
+        "p95_ms": 1726.9759000046179,
+        "min_ms": 1407.1023999713361,
+        "max_ms": 1726.9759000046179,
+        "rss_before_bytes": 72925184,
+        "rss_peak_bytes": 287993856,
+        "rss_growth_bytes": 215068672,
+        "process_peak_bytes": 292474880
+      },
+      "runs": [
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 86392368
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 86392368
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 86392368
+        }
+      ],
+      "reservations": {
+        ".git/ram-sample.NEF": 780599040
+      },
+      "fixtures": {
+        ".git/ram-sample.NEF": "b21e9752aaf8e678fe4d8138986bc9819aa89b7b969a28d43c619af3bd6d58c1"
+      },
+      "source_sha256": {
+        "Imervue/gpu_image_view/ram_budget.py": "fccac48d9bb398ee310575cd5d1a6f12134276f268dfb99be5e4335b307d5934",
+        "Imervue/gpu_image_view/images/image_loader.py": "beb32f2e7fdda2e9a89e0a32cf7ade9b761239105e0a2c04cfa5ccf3371974cb",
+        "Imervue/gpu_image_view/prefetch_scheduler.py": "f26ca66b98a84017c15b299cf6ff5a478cfcd9110b441837c5922e0963e4bd33",
+        "Imervue/gpu_image_view/prefetch_memory.py": "507bde7e58891c62e30a6f6bd21f76b986a41d871f06ca1a569d3ad5103d135b",
+        "scripts/performance_ram.py": "fc2b4f7dc8af78dfe9207612c65895e6a384cddc2e7c622f84006898278cecc9"
+      },
+      "platform": "Windows-11-10.0.26300-SP0",
+      "python": "3.14.4",
+      "measurement": "fresh invocation/profile; native WorkingSet samples every 5ms; two decode threads; DirectConnection collector; retained pyramids"
+    },
+    "panorama": {
+      "limit_bytes": null,
+      "metrics": {
+        "samples_ms": [
+          2066.6250999784097,
+          2142.2647000290453,
+          2258.9778000256047
+        ],
+        "median_ms": 2142.2647000290453,
+        "p95_ms": 2258.9778000256047,
+        "min_ms": 2066.6250999784097,
+        "max_ms": 2258.9778000256047,
+        "rss_before_bytes": 72847360,
+        "rss_peak_bytes": 739811328,
+        "rss_growth_bytes": 666963968,
+        "process_peak_bytes": 739848192
+      },
+      "runs": [
+        {
+          "results": [
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 315000000
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 315000000
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 315000000
+        }
+      ],
+      "reservations": {
+        ".git/ram-panorama.jpg": 1440000000
+      },
+      "fixtures": {
+        ".git/ram-panorama.jpg": "59aa780ae5ebbb182a7d0e3f11270818fc698317cb1b2e4f9047937651ace891"
+      },
+      "source_sha256": {
+        "Imervue/gpu_image_view/ram_budget.py": "fccac48d9bb398ee310575cd5d1a6f12134276f268dfb99be5e4335b307d5934",
+        "Imervue/gpu_image_view/images/image_loader.py": "beb32f2e7fdda2e9a89e0a32cf7ade9b761239105e0a2c04cfa5ccf3371974cb",
+        "Imervue/gpu_image_view/prefetch_scheduler.py": "f26ca66b98a84017c15b299cf6ff5a478cfcd9110b441837c5922e0963e4bd33",
+        "Imervue/gpu_image_view/prefetch_memory.py": "507bde7e58891c62e30a6f6bd21f76b986a41d871f06ca1a569d3ad5103d135b",
+        "scripts/performance_ram.py": "fc2b4f7dc8af78dfe9207612c65895e6a384cddc2e7c622f84006898278cecc9"
+      },
+      "platform": "Windows-11-10.0.26300-SP0",
+      "python": "3.14.4",
+      "measurement": "fresh invocation/profile; native WorkingSet samples every 5ms; two decode threads; DirectConnection collector; retained pyramids"
+    },
+    "unbounded": {
+      "limit_bytes": null,
+      "metrics": {
+        "samples_ms": [
+          2131.5926000243053,
+          2438.9114000368863,
+          2352.3653000593185
+        ],
+        "median_ms": 2352.3653000593185,
+        "p95_ms": 2438.9114000368863,
+        "min_ms": 2131.5926000243053,
+        "max_ms": 2438.9114000368863,
+        "rss_before_bytes": 72994816,
+        "rss_peak_bytes": 824041472,
+        "rss_growth_bytes": 751046656,
+        "process_peak_bytes": 826241024
+      },
+      "runs": [
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 401392368
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 401392368
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 0,
+          "accounted_bytes_after": null,
+          "retained_array_bytes": 401392368
+        }
+      ],
+      "reservations": {
+        ".git/ram-sample.NEF": 780599040,
+        ".git/ram-panorama.jpg": 1440000000
+      },
+      "fixtures": {
+        ".git/ram-sample.NEF": "b21e9752aaf8e678fe4d8138986bc9819aa89b7b969a28d43c619af3bd6d58c1",
+        ".git/ram-panorama.jpg": "59aa780ae5ebbb182a7d0e3f11270818fc698317cb1b2e4f9047937651ace891"
+      },
+      "source_sha256": {
+        "Imervue/gpu_image_view/ram_budget.py": "fccac48d9bb398ee310575cd5d1a6f12134276f268dfb99be5e4335b307d5934",
+        "Imervue/gpu_image_view/images/image_loader.py": "beb32f2e7fdda2e9a89e0a32cf7ade9b761239105e0a2c04cfa5ccf3371974cb",
+        "Imervue/gpu_image_view/prefetch_scheduler.py": "f26ca66b98a84017c15b299cf6ff5a478cfcd9110b441837c5922e0963e4bd33",
+        "Imervue/gpu_image_view/prefetch_memory.py": "507bde7e58891c62e30a6f6bd21f76b986a41d871f06ca1a569d3ad5103d135b",
+        "scripts/performance_ram.py": "fc2b4f7dc8af78dfe9207612c65895e6a384cddc2e7c622f84006898278cecc9"
+      },
+      "platform": "Windows-11-10.0.26300-SP0",
+      "python": "3.14.4",
+      "measurement": "fresh invocation/profile; native WorkingSet samples every 5ms; two decode threads; DirectConnection collector; retained pyramids"
+    },
+    "bounded-2gib": {
+      "limit_bytes": 2147483648,
+      "metrics": {
+        "samples_ms": [
+          1666.0824000136927,
+          1853.0285999877378,
+          2132.069700048305
+        ],
+        "median_ms": 1853.0285999877378,
+        "p95_ms": 2132.069700048305,
+        "min_ms": 1666.0824000136927,
+        "max_ms": 2132.069700048305,
+        "rss_before_bytes": 73216000,
+        "rss_peak_bytes": 738365440,
+        "rss_growth_bytes": 665149440,
+        "process_peak_bytes": 740503552
+      },
+      "runs": [
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": false,
+              "actual_bytes": 0
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 1440000000,
+          "accounted_bytes_after": 315000000,
+          "retained_array_bytes": 315000000
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": false,
+              "actual_bytes": 0
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 1440000000,
+          "accounted_bytes_after": 315000000,
+          "retained_array_bytes": 315000000
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": false,
+              "actual_bytes": 0
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 1440000000,
+          "accounted_bytes_after": 315000000,
+          "retained_array_bytes": 315000000
+        }
+      ],
+      "reservations": {
+        ".git/ram-sample.NEF": 780599040,
+        ".git/ram-panorama.jpg": 1440000000
+      },
+      "fixtures": {
+        ".git/ram-sample.NEF": "b21e9752aaf8e678fe4d8138986bc9819aa89b7b969a28d43c619af3bd6d58c1",
+        ".git/ram-panorama.jpg": "59aa780ae5ebbb182a7d0e3f11270818fc698317cb1b2e4f9047937651ace891"
+      },
+      "source_sha256": {
+        "Imervue/gpu_image_view/ram_budget.py": "fccac48d9bb398ee310575cd5d1a6f12134276f268dfb99be5e4335b307d5934",
+        "Imervue/gpu_image_view/images/image_loader.py": "beb32f2e7fdda2e9a89e0a32cf7ade9b761239105e0a2c04cfa5ccf3371974cb",
+        "Imervue/gpu_image_view/prefetch_scheduler.py": "f26ca66b98a84017c15b299cf6ff5a478cfcd9110b441837c5922e0963e4bd33",
+        "Imervue/gpu_image_view/prefetch_memory.py": "507bde7e58891c62e30a6f6bd21f76b986a41d871f06ca1a569d3ad5103d135b",
+        "scripts/performance_ram.py": "fc2b4f7dc8af78dfe9207612c65895e6a384cddc2e7c622f84006898278cecc9"
+      },
+      "platform": "Windows-11-10.0.26300-SP0",
+      "python": "3.14.4",
+      "measurement": "fresh invocation/profile; native WorkingSet samples every 5ms; two decode threads; DirectConnection collector; retained pyramids"
+    },
+    "bounded-3gib": {
+      "limit_bytes": 3221225472,
+      "metrics": {
+        "samples_ms": [
+          1901.3777000363916,
+          2538.5353999445215,
+          2630.161999957636
+        ],
+        "median_ms": 2538.5353999445215,
+        "p95_ms": 2630.161999957636,
+        "min_ms": 1901.3777000363916,
+        "max_ms": 2630.161999957636,
+        "rss_before_bytes": 72933376,
+        "rss_peak_bytes": 841351168,
+        "rss_growth_bytes": 768417792,
+        "process_peak_bytes": 844226560
+      },
+      "runs": [
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 2220599040,
+          "accounted_bytes_after": 401392368,
+          "retained_array_bytes": 401392368
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 2220599040,
+          "accounted_bytes_after": 401392368,
+          "retained_array_bytes": 401392368
+        },
+        {
+          "results": [
+            {
+              "path": ".git/ram-sample.NEF",
+              "decoded": true,
+              "actual_bytes": 86392368
+            },
+            {
+              "path": ".git/ram-panorama.jpg",
+              "decoded": true,
+              "actual_bytes": 315000000
+            }
+          ],
+          "peak_accounted_bytes": 2220599040,
+          "accounted_bytes_after": 401392368,
+          "retained_array_bytes": 401392368
+        }
+      ],
+      "reservations": {
+        ".git/ram-sample.NEF": 780599040,
+        ".git/ram-panorama.jpg": 1440000000
+      },
+      "fixtures": {
+        ".git/ram-sample.NEF": "b21e9752aaf8e678fe4d8138986bc9819aa89b7b969a28d43c619af3bd6d58c1",
+        ".git/ram-panorama.jpg": "59aa780ae5ebbb182a7d0e3f11270818fc698317cb1b2e4f9047937651ace891"
+      },
+      "source_sha256": {
+        "Imervue/gpu_image_view/ram_budget.py": "fccac48d9bb398ee310575cd5d1a6f12134276f268dfb99be5e4335b307d5934",
+        "Imervue/gpu_image_view/images/image_loader.py": "beb32f2e7fdda2e9a89e0a32cf7ade9b761239105e0a2c04cfa5ccf3371974cb",
+        "Imervue/gpu_image_view/prefetch_scheduler.py": "f26ca66b98a84017c15b299cf6ff5a478cfcd9110b441837c5922e0963e4bd33",
+        "Imervue/gpu_image_view/prefetch_memory.py": "507bde7e58891c62e30a6f6bd21f76b986a41d871f06ca1a569d3ad5103d135b",
+        "scripts/performance_ram.py": "fc2b4f7dc8af78dfe9207612c65895e6a384cddc2e7c622f84006898278cecc9"
+      },
+      "platform": "Windows-11-10.0.26300-SP0",
+      "python": "3.14.4",
+      "measurement": "fresh invocation/profile; native WorkingSet samples every 5ms; two decode threads; DirectConnection collector; retained pyramids"
+    }
+  },
+  "limits": [
+    "Supplied RAW is a real camera file; panorama is a synthetic gradient, not photographic entropy.",
+    "Two-GiB admission skips one speculative decode per run; its duration is not the same workload as unbounded.",
+    "Three-GiB admission decodes both; timing variability does not establish a speedup.",
+    "Native per-process RSS includes runtime/scratch/retained pixels and differs from admission accounting.",
+    "5ms RSS sampling can miss brief transients; lifetime peak is retained separately.",
+    "UI/pool scheduling is covered by separate real Qt tests, not by this DirectConnection collector."
+  ]
+}

@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QPushButton, QLabel, QSizePolicy,
     QScrollArea,
 )
+from Imervue.system.ui_scale import scaled_px
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -22,13 +23,12 @@ if TYPE_CHECKING:
 
 _SEGMENT_STYLE = (
     "QPushButton {"
-    " border: none; padding: 2px 6px; color: #c8c8c8;"
+    " border: none; padding: 2px 6px; color: palette(window-text);"
     " background: transparent; text-align: left;"
     "}"
-    "QPushButton:hover { color: #ffffff; background: rgba(255,255,255,0.08);"
-    " border-radius: 3px; }"
+    "QPushButton:hover { background: palette(midlight); border-radius: 3px; }"
 )
-_SEP_STYLE = "color: #666; padding: 0 2px;"
+_SEP_STYLE = "color: palette(mid); padding: 0 2px;"
 
 
 class BreadcrumbBar(QScrollArea):
@@ -39,10 +39,14 @@ class BreadcrumbBar(QScrollArea):
         self._main_window = main_window
 
         self.setWidgetResizable(True)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # No scroll bar: it covered the segments. A path wider than the bar is
+        # kept scrolled to its end, where the folder being browsed is.
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.horizontalScrollBar().rangeChanged.connect(self._show_path_end)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameShape(QScrollArea.Shape.NoFrame)
-        self.setFixedHeight(26)
+        # Tall enough for a segment button at any font size, plus a scroll bar's room.
+        self.setFixedHeight(max(scaled_px(26), self.fontMetrics().height() + scaled_px(12)))
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self._container = QWidget()
@@ -98,6 +102,9 @@ class BreadcrumbBar(QScrollArea):
         self.setVisible(True)
 
     # -------- Internal --------
+    def _show_path_end(self, _minimum: int, maximum: int) -> None:
+        self.horizontalScrollBar().setValue(maximum)
+
     def _clear_segments(self) -> None:
         # Remove all widgets except the trailing stretch
         while self._layout.count() > 1:

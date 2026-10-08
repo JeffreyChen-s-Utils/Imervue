@@ -37,6 +37,8 @@ def _run_ci_session(tmp_path: Path, source: str, *options: str) -> subprocess.Co
     command = [
         sys.executable, "-X", "faulthandler", "-u", "-m", "pytest", str(probe),
         "-c", str(_REPO / "pyproject.toml"), "-p", "tests.conftest",
+        f"--rootdir={tmp_path}",
+        f"--confcutdir={tmp_path}",
         "-p", "no:unraisableexception", "-p", "no:cacheprovider",
         f"--basetemp={tmp_path / 'basetemp'}", "-q", *options,
     ]
@@ -55,6 +57,28 @@ def test_a_failed_test_fails_the_process_even_with_a_second_copy_of_conftest(tmp
 
 def test_a_passing_session_exits_zero_after_printing_its_summary(tmp_path):
     result = _run_ci_session(tmp_path, _PASSING)
+    assert "1 passed" in result.stdout, result.stdout + result.stderr
+    assert result.returncode == pytest.ExitCode.OK
+
+
+def test_probe_does_not_collect_a_vanishing_neighbour(tmp_path, monkeypatch):
+    """The subprocess must not stat unrelated directories in the system Temp tree."""
+    neighbour = tmp_path.parent / ("vanishing-" + tmp_path.name)
+    neighbour.mkdir()
+    plugin = tmp_path / "vanishing_probe.py"
+    plugin.write_text(
+        "from pathlib import Path\n"
+        "original = Path.lstat\n"
+        f"neighbour = Path({str(neighbour)!r})\n"
+        "def lstat(self, *args, **kwargs):\n"
+        "    if self == neighbour:\n"
+        "        raise FileNotFoundError('unrelated directory vanished')\n"
+        "    return original(self, *args, **kwargs)\n"
+        "Path.lstat = lstat\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PYTHONPATH", str(tmp_path) + os.pathsep + os.environ.get("PYTHONPATH", ""))
+    result = _run_ci_session(tmp_path, _PASSING, "-p", "vanishing_probe", "--tb=long")
     assert "1 passed" in result.stdout, result.stdout + result.stderr
     assert result.returncode == pytest.ExitCode.OK
 

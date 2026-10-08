@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "environment": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.14.4",
+    "logical_cpus": 12,
+    "processor": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "hardware": {
+      "cpu": "AMD Ryzen 5 240 w/ Radeon 760M Graphics        ",
+      "ram_bytes": 33617924096,
+      "gpus": [
+        "AMD Radeon 760M Graphics",
+        "NVIDIA GeForce RTX 5060 Laptop GPU"
+      ]
+    },
+    "versions": {
+      "numpy": "2.4.4",
+      "Pillow": "12.2.0",
+      "PySide6": "6.11.2",
+      "PyOpenGL": "3.1.10"
+    },
+    "product_revision": "b8142cddf08c66c88a483ee762b795565196135f",
+    "tool_sha256": {
+      "performance_autosave.py": "d78aa454d5107ffb526f835a00fe976367d4327dc79f5e36bce1ddcdc84daca4",
+      "performance_benchmark.py": "9914da1f242d8dbc9bc581af1c21be7dc30d34ef349b8b0772fbe8b860ef47c3",
+      "performance_gl.py": "fc9b3bd9129446c35048c74d115460f0d13db3eddb5886b68cd5b6261deb28fe",
+      "performance_ram.py": "fc2b4f7dc8af78dfe9207612c65895e6a384cddc2e7c622f84006898278cecc9",
+      "performance_support.py": "70f3de21686d54ea99f51d2ed407c758edebca084c331e1c795e89383ece47ba",
+      "performance_workers.py": "16bf447f24a9a4dd8682cac1e44991aadd0df66ea830b8f118d6385b9f61cedf"
+    },
+    "product_changed_sources_sha256": {
+      "Imervue/library/image_index.py": "996d73680d61c70ef265c09932ef9dc84daf9dfeccb236e0c017d264ce57d355"
+    },
+    "source_hash_newlines": "LF",
+    "cold_definition": "fresh child/profile/index; OS page cache is NOT flushed",
+    "rss_definition": "5ms sampled resident working set plus process lifetime high-water mark"
+  },
+  "fixture": {
+    "fixture_version": 1,
+    "quick": false,
+    "libraries": [
+      10000,
+      100000
+    ],
+    "dimensions": [
+      [
+        6000,
+        4000
+      ],
+      [
+        10000,
+        6000
+      ]
+    ],
+    "paint_dimensions": [
+      3840,
+      2160
+    ],
+    "paint_layers": 6,
+    "seed_sha256": {
+      "00.jpg": "7ad88dd92ed4ad749b3bd399d70ab02085d9316343771e6944e84a923519db9b",
+      "01.jpg": "27e1c174391655ac7bb8836be4edd22a1a5be1d441607d4f566b5659eb951f80",
+      "02.jpg": "fa86f54613899eeb0adcbaaac53a21809d1729089992c790cb9e9a4740d8d869",
+      "03.jpg": "cd4cc331e1d9721157317885ffd94d9e6a3e7ca756e962534a05418681f28e75",
+      "04.jpg": "673c1f084b95791cc7ee2eef2bc0a75c0af42cf3ec193978647a039a835a43c0",
+      "05.jpg": "d5a4be0f0e28a33b39806ac794434ff4c987330381808a39e8aa7e3631632b01",
+      "06.jpg": "39159f84ccb004f05f987c37f73617eaaa3671d9b59664f8605932a3e18715b8",
+      "07.jpg": "f4eeed80c36f615dc88a84e2388e1109a1b307424b1ca6f2e23723b78bc16100",
+      "08.jpg": "0341ac3c03cc1506f099c795945268e83587e5adcf2b0cf7350d5b4d3796550a",
+      "09.jpg": "1cc3c15c83b28f4cdad06f29c73e05d909824421b7c624af7bc95edd1a51574e",
+      "10.jpg": "0c813326c0558147871bafb9efcb3dfe4738d172056de244cd1982009d23fd69",
+      "11.jpg": "0b822b4417a80d0cb1fb8875caaad3a5b17c86318931944b0bb292f88923c8e4",
+      "12.jpg": "ed037d6c55ec0c423a38e3b78bed8f9887bc29b724f876c679a1843c7e7ebefa",
+      "13.jpg": "db9300064b920a5fa49d2b290713a601d6ab0434a49afdbec589fc65557251b7",
+      "14.jpg": "99ae909f4e1786d0aaf0d993457929c693d7902bce5e81146e7ef594378d0c39",
+      "15.jpg": "ca20768059f84ceaec899d7b002ed0c14eeaf4e6bd679daf5763b0ccd78a4be9",
+      "16.jpg": "643e1270962c0017e4fb43f5787fe3ce28f81de5720609041475bd6e0c068d40",
+      "17.jpg": "7b5446e17d197c5452479a910d6e898698d09af23695486db3cc2dd51d9b0937",
+      "18.jpg": "198380cfc351202f0bb1ec15248843767627122bf9aadc4b4ce45339c544270a",
+      "19.jpg": "73343ccc9606a720e0cc3b59f773d0c071df78eea18bd21b3254aa83bad0b1c1",
+      "20.jpg": "92eac287fa83c655c2ce02e44320d79d52a56d66f032d12ba227791c8d3b586c",
+      "21.jpg": "b75528464e61f1858f5eb1e1faec586bc66f3c7c691bfb39f16464d9dd723e04",
+      "22.jpg": "addf7c6d5ebde5c4ada5a5f1d429221deaf0ebbdd8752d2b89369c6208d0f408",
+      "23.jpg": "094c2863587c6e6b66057ad81c05c95068af30f1b2d8e551c1efebe2deb5a336",
+      "24.jpg": "634f0f2d65142dc3235635074a2914c942a35b53c787a40d66a20acc56b9d1e4",
+      "25.jpg": "b76d65b93505a78d7afb5f7de47bbb8e1f442276dfd814a2e9da14d0fd29fb1e",
+      "26.jpg": "039549fe6dd4b2f8aeacd40f823c7948ebb9fcc11373f8656c72c8304e08ff7b",
+      "27.jpg": "d0753c978d6c133dadeed821c331d2e594cceac34cc36025152c2cace36ab8ea",
+      "28.jpg": "d4261c13592c2a32ba623b303a046b954e4aa892d2fcd8093133c20a0c135087",
+      "29.jpg": "a8326567f1c4429f165932c6f5b706814665002fe0fa7afab409daaeb7e4055c",
+      "30.jpg": "65d66c133c65dbece39842d8d86ee1afc2cb6c6b1fac5d971880326e220d7afb",
+      "31.jpg": "d09f9308f731d6c5edaff165254ffc25ae54618c91c8c45fb9e0e8cd0961b74d"
+    },
+    "image_sha256": {
+      "24mp.jpg": "0f0257c06f55a7d4d34930e60b6b9036288fe91f84229a5d3f5bdc41eb221ea2",
+      "60mp.jpg": "63ff404624b58b112d30589eca6fc4690cfb88e4b0f580acb4305201cfc8a651"
+    },
+    "library_pixels": "32 repeated 32x24 JPEG seeds with unique names; hard links where supported",
+    "cache_pixels": "repeated 32x24 PNG; measures entry/stat overhead, not full-size thumbnails"
+  },
+  "scenarios": {
+    "library-large": {
+      "count": 100000,
+      "cold_index": {
+        "samples_ms": [
+          31861.228300025687
+        ],
+        "median_ms": 31861.228300025687,
+        "p95_ms": 31861.228300025687,
+        "min_ms": 31861.228300025687,
+        "max_ms": 31861.228300025687,
+        "rss_before_bytes": 53624832,
+        "rss_peak_bytes": 177885184,
+        "rss_growth_bytes": 124260352,
+        "process_peak_bytes": 177893376
+      },
+      "warm_index": {
+        "samples_ms": [
+          38606.13130009733,
+          31899.59590008948,
+          26272.798200021498
+        ],
+        "median_ms": 31899.59590008948,
+        "p95_ms": 38606.13130009733,
+        "min_ms": 26272.798200021498,
+        "max_ms": 38606.13130009733,
+        "rss_before_bytes": 128335872,
+        "rss_peak_bytes": 191152128,
+        "rss_growth_bytes": 62816256,
+        "process_peak_bytes": 191156224
+      },
+      "search": {
+        "samples_ms": [
+          48.56370005290955,
+          50.2335000783205,
+          48.70159993879497,
+          51.625699969008565,
+          49.39099994953722,
+          51.790200057439506,
+          53.19120001513511,
+          57.636699988506734,
+          56.76179996225983,
+          59.42209996283054,
+          56.59340007696301,
+          51.972600049339235,
+          50.446499953977764,
+          58.53179993573576,
+          51.864099921658635,
+          58.74440004117787,
+          76.64440001826733,
+          55.553399957716465,
+          56.66580004617572,
+          50.458200043067336,
+          52.30159999337047,
+          58.20780002977699,
+          62.69439996685833,
+          63.28540004324168,
+          64.80319995898753,
+          62.95179994776845,
+          60.0432000355795,
+          59.42180007696152,
+          53.93759999424219,
+          56.85980000998825
+        ],
+        "median_ms": 56.62960006156936,
+        "p95_ms": 64.80319995898753,
+        "min_ms": 48.56370005290955,
+        "max_ms": 76.64440001826733,
+        "rss_before_bytes": 155332608,
+        "rss_peak_bytes": 156446720,
+        "rss_growth_bytes": 1114112,
+        "process_peak_bytes": 191156224
+      },
+      "cancel_after_progress": {
+        "samples_ms": [
+          27.95629994943738,
+          34.44869990926236,
+          34.14680005516857
+        ],
+        "median_ms": 34.14680005516857,
+        "p95_ms": 34.44869990926236,
+        "min_ms": 27.95629994943738,
+        "max_ms": 34.44869990926236
+      },
+      "boundary": "metadata index (pHash disabled); cancel at first real chunk progress"
+    }
+  },
+  "failures": {}
+}

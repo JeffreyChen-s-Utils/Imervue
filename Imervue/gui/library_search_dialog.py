@@ -5,16 +5,18 @@ and query the indexed images by name / extension / dimensions / size.
 from __future__ import annotations
 
 from pathlib import Path
+from functools import partial
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QAbstractItemView,
     QListWidget, QFileDialog, QSpinBox, QCheckBox, QProgressBar, QSplitter,
     QWidget,
 )
 
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.gui.background_jobs import job_registry
 from Imervue.library import image_index
 from Imervue.library.scanner import LibraryScanThread
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -117,8 +119,14 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         col.addWidget(search_btn)
 
         self._results_list = QListWidget()
+        self._results_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._results_list.itemDoubleClicked.connect(self._open_selected)
         col.addWidget(self._results_list, stretch=1)
+        workflow = QPushButton(lang.get(
+            "photo_workflow_add_results", "Add results to Photo Workflow",
+        ))
+        workflow.clicked.connect(self._send_to_workflow)
+        col.addWidget(workflow)
         return w
 
     # ---------- Actions ----------
@@ -161,6 +169,8 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         self._progress.setVisible(True)
         self._progress.setRange(0, 0)
         self._thread = LibraryScanThread(roots, with_phash=self._phash_check.isChecked())
+        job_registry().add(self._thread, self.windowTitle(),
+                           partial(_retry_scan, with_phash=self._phash_check.isChecked()))
         self._thread.progress.connect(self._on_progress)
         self._thread.done.connect(self._on_done)
         self._thread.error.connect(self._on_error)
@@ -170,8 +180,12 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         self._progress.setVisible(False)
         self._scan_btn.setEnabled(True)
         if self._thread is not None:
-            self._thread.wait()
+            worker = self._thread
             self._thread = None
+            if isinstance(worker, LibraryScanThread) and not worker.wait(0):
+                self._retire_workers([worker], cancel=False)
+            else:
+                worker.wait()
 
     def _on_progress(self, current: int, total: int, path: str) -> None:
         if total > 0:
@@ -222,6 +236,28 @@ class LibrarySearchDialog(WorkerHostMixin, QDialog):
         open_path(main_gui=self._ui.viewer, path=path)
         self.accept()
 
+    def _send_to_workflow(self) -> None:
+        """Append highlighted results (all if none), preserving the viewer's folder."""
+        from Imervue.gui.photo_workflow_dialog import open_photo_workflow
+        items = self._results_list.selectedItems()
+        if not items:
+            items = [self._results_list.item(i) for i in range(self._results_list.count())]
+        if not items:
+            return
+        open_photo_workflow(self._ui, [item.text() for item in items])
+        self.accept()
+
 
 def open_library_search(ui: ImervueMainWindow) -> None:
-    LibrarySearchDialog(ui).exec()
+    dialog = getattr(ui, "_library_search_dialog", None)
+    if dialog is None:
+        dialog = ui._library_search_dialog = LibrarySearchDialog(ui)
+    dialog._refresh_roots()
+    if dialog._thread is None:
+        dialog._finish_scan()
+    dialog.exec()
+
+
+def _retry_scan(paths: tuple[str, ...], *, with_phash: bool) -> LibraryScanThread:
+    """Retry exact failed paths; other roots and committed rows are not reprocessed."""
+    return LibraryScanThread([], paths=list(paths), with_phash=with_phash)

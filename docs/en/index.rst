@@ -33,6 +33,32 @@ across all five tabs.
 
 **Puppet** and **Desktop Pet** are optional: turn either off under ``File`` > ``Preferences`` > **Optional tabs** and, from the next start, its tab is not added and its code is not loaded, so Imervue starts faster and uses less memory. Both are on by default; each one is built the first time you open its tab, and the Desktop Pet tab at startup when its pet is set to show on launch.
 
+The thumbnail wall makes room for new GPU textures by evicting tiles outside the viewport first, while preserving visible tiles and staying within its memory budget. Tiles touching only the viewport edge do not reserve capacity.
+
+Rendering, thumbnail requests and texture eviction share the visible grid range plus one row/column of buffer. Normal thumbnail sizes decode on demand with at most the thumbnail pool’s worker count in flight; scrolling replaces unstarted requests. Full-resolution mode keeps bounded background discovery for images extending beyond their cells. Progress counts the current viewport and explicit requests. Returning from Deep Zoom keeps the warm cache and saved grid position.
+
+Neighbor prefetch budgets actual pyramid bytes together with in-flight decode reservations. Speculative loading shares 20% of physical RAM (256 MiB–8 GiB) fairly across open viewer windows; when optional memory detection is unavailable, it shares a 2 GiB fallback. Reservations remain until cancelled decoders actually finish, and quota refusal falls back to normal foreground loading when that image is opened. RAM admission is separate from the GPU texture budget; it does not cap the entire process or the foreground image.
+
+Modify keeps controls responsive with a background preview at a lower resolution while adjusting, then renders full quality after a pause. Rapid edits and photo changes discard older results; annotation coordinates keep the full image size. Saving or applying destructive effects first completes full-quality rendering.
+
+Cancelling or closing a running worker-based tool returns immediately. The dialog shows Cancelling and pauses its controls until current uninterruptible work and cleanup finish, then closes with the original result. Normal completion can briefly show Finishing. Reopening starts clean. Final application exit waits for outstanding work to finish safely.
+
+Open ``Extra Tools`` > ``Workflow`` > ``Background Jobs`` to inspect batch export, library scans, AI upscale/shared plugin transforms and plugin downloads across windows. Results retain committed outputs and failure reasons after the original dialog closes. Cancel is cooperative; active operations remain alive until they finish. Retry starts a separate attempt for failed items only and preserves successful outputs. A plugin download is one atomic install item. The panel shows at most 500 detailed results, with failures first; Save full report writes all item results as JSON. Clear finished releases completed histories.
+
+In Paint, File > ``Open Document…``, ``Save Document…``, ``Save Document As…`` and ``Save All Documents`` use editable ``.imervue`` bundles. Save All processes modified tabs without changing the active tab; cancellation or failure stops the sequence and leaves unsaved documents open. The window-close prompt offers Save All, while a tab-close save targets that tab. Undo/Redo after saving marks the document modified again. Flat image exports remain separate and do not clear modifications. Tab and status tooltips show source, document destination, flat export and recovery autosave state/time/error. Native open and drops preserve existing edits. Existing PSD shortcuts remain unchanged; explicit native saving is synchronous.
+
+Use ``Extra Tools`` > ``Workflow`` > ``Photo Workflow`` for search → compare → pick/reject → develop preset → batch export. Library Search can append highlighted results (all results if none are highlighted); reopening search retains its query and results. The per-window workflow keeps an ordered cross-folder cohort, checked choices, filter and preset names after closing or returning. Filters only change visibility: hidden checked photos remain bulk targets, shown in the count. Pick checks a photo; Reject unchecks it without deleting it. Compare highlighted photos at a maximum preview edge of 800 pixels. Develop uses existing named presets; Batch Export receives the same checked non-rejected sources and export preset. Pages show 500 rows; external cull changes are reconciled before apply/export. Clear workflow resets it explicitly.
+
+Single Export, Batch Export and Batch Convert share atomic image writes and retain committed paths/errors in ``Background Jobs``. Batches rename conflicts, including same-format conversions; single export confirms replacement. GUI metadata preservation embeds normalized sRGB ICC; conversion preserves descriptive metadata, while export defaults to no location. Per-image CLI writers accept ``--output-conflict`` (``rename``, ``skip``, ``replace``), ``--export-metadata`` (``all``, ``no_location``, ``none``) and ``--result-report`` for JSON with output links. Defaults keep existing skip/``--overwrite`` and encoder behavior; explicit metadata may re-encode. ``strip`` always removes metadata. Ctrl+C preserves completed outputs and reports cancellation. PDF, MP4 and gallery files publish atomically; copied gallery originals retain their metadata.
+
+``Manage Plugins`` shows per-window load failures and shared dependency, download, model and backend states with reasons. Loaded means optional capabilities are checked on use; shared tool results retain selected model/backend options and CPU fallback reasons. Downloads and retries preserve working installations, models and assets; concurrent installs of the same plugin/interpreter are refused. Dependency dialogs cancel without blocking, and failed imports cannot report success. ``Reload Plugins`` reads fresh code in each window; GPU Develop retains providers used by other windows and requires plugin API 3. After downloading or retrying, reload each open window (or restart).
+
+Thumbnail disk-cache inventory now runs in the background; browsing can read or write thumbnails immediately. Writes are atomic, foreground changes win over stale scan data, and Clear Cache includes files not yet scanned. Background initialization cleans legacy NPY files and reconciles quota; byte totals are provisional until it ends. Locked files remain accounted when readable and may prevent reaching quota. Fixed 100,000-file measurements put constructor p95 below 10 ms; inventory completion and its extra work are measured separately.
+
+Library search now uses a separate query-only WAL connection: it sees committed data while a background scan holds a batch. Notes, hierarchical tags, culling and album queries share the same snapshot per call. Writes remain serialized; batch rollback cannot discard a later foreground tag change. Fingerprint pages release the reader between pages, and close waits for active queries. Schema 2 and existing library files remain compatible.
+
+GPU Develop remains an optional batch-export accelerator. New Batch Export dialogs default to CPU; choose the GPU explicitly under Render on. Mixed GPU color stages may differ from CPU byte values; enabled threshold or posterize now render the entire recipe on CPU to avoid amplified rounding differences. Modify previews and canonical CPU exports share the same 8-bit sRGB pipeline; embedded wider-gamut profiles are normalized once and exports carry an sRGB profile unless metadata is removed. This is not a linear HDR or wide-gamut editing pipeline. wgpu stays optional in the plugin, which has no model weights; missing devices or runtime failures fall back to CPU. Fixed 640k/24MP/60MP timing and pixel reports document the decision to keep CPU previews.
+
 .. contents:: Table of Contents
    :depth: 2
    :local:
@@ -54,7 +80,7 @@ When you open Imervue, you will see three areas:
 
 - **Left**: Folder tree. Click a folder to browse the images inside.
 - **Center**: Image display area. Shows all images as a thumbnail grid.
-- **Right**: EXIF sidebar, folded into a thin strip at start: click it to open it. It shows the shooting information of the picture that is open.
+- **Right**: Image Info panel. It shows the shooting information, rating and notes of the picture that is open. The folder tree and this panel are docks: drag a title bar to move, float or tab one, show or hide them under ``Thumbnail Size`` > ``Panels``, and ``Reset Panel Layout`` there puts every panel back. The default look is the **Modern Dark** theme; ``File`` > ``Preferences`` offers **Modern Light**, the system look and four more.
 
 Imervue writes a log of each session to ``imervue.log`` next to the program (in
 ``%LOCALAPPDATA%\Imervue``, or ``~/.cache/imervue`` outside Windows, when that folder is
@@ -543,8 +569,11 @@ Paint Workspace (Paint Tab)
 
 The third top-level tab — **Paint** — is a full-featured painting workspace
 with multi-tab documents, vector and raster layers, manga tools, animation
-frames, and PSD import/export. Switching to it from the tab bar loads the
-picture the viewer is showing onto the canvas.
+Undo / Redo restores layer creation, deletion, ordering and merging, as well as layer properties, masks, vectors, groups, selections and reference-layer state. Layer-menu, Layers-panel, manga-layer and material-insertion commands create undo steps; each document keeps its own history.
+
+Each Paint document keeps up to 50 history steps within a 512 MiB history budget, including its current baseline and Undo/Redo branches. Unchanged pixels are shared; brush and eraser strokes store only changed tiles. Older steps are removed when the budget is reached. If one document snapshot exceeds the budget, its history is cleared while the editable document is preserved.
+
+frames, and PSD import/export. Switching to Paint preserves its documents, layers, unsaved changes and undo history; the first visit starts with a blank canvas. Use ``File > Open Current Image in Paint`` to open the viewer image in a new document. Left/Right on the Paint main-tab bar opens the previous/next viewer image in a new document too. ``E`` from Deep Zoom opens the separate annotation editor.
 
 UX-affordance highlights — the Paint workspace ships with a full-featured
 brush-size cursor that scales with zoom, distinct cursor icons per tool,
@@ -821,7 +850,7 @@ File I/O
 - **Export image…** — flatten and save as PNG, JPEG, WebP, TIFF or BMP, by the file type you pick (JPEG and BMP, which have no transparency, on white). Only **Save as PSD…** marks the tab saved; after an export, closing Imervue still asks about the tab's unsaved changes
 - **Export pages → CBZ** / **→ PDF** — export the pages of a comic project; **Save Comic Project…** keeps the whole comic, every page with its layers, in one ``.imervue-proj`` file, and **Open Comic Project…** brings it back
 - **Import brush preset…**, **Import palette…** — bring in brushes and palettes from other installs or apps
-- **Autosave** — every 2 minutes while the active tab has unsaved edits a snapshot is written; on the next launch a toast offers the snapshots and **File > Restore Autosave** loads the newest into the active tab. The status bar shows when the last snapshot was taken, and closing Imervue asks about Paint tabs with unsaved changes.
+- **Autosave** — Every 2 minutes, each modified document keeps its own eight latest snapshots. **File > Restore Autosave** opens each document’s newest readable version in a new modified tab, preserving current edits and trying an older snapshot if the newest is damaged. Native snapshots preserve manga panel clipping. The status bar shows the active document’s last autosave, write failures are reported, and closing a tab removes only its own snapshots. Periodic saves use the latest completed edit, with snapshot reconstruction, compression and writing on a background worker. Each workspace has one writer and only the latest pending version per document; closing or replacing a document cancels late output. When history cannot retain an immutable state, a coherent document copy is captured on the UI thread before background writing.
 
 Workspace Layouts
 ^^^^^^^^^^^^^^^^^
@@ -1850,17 +1879,14 @@ Select multiple images, then right-click > ``Batch Operations`` > ``Batch Export
 GPU Develop Plugin
 ^^^^^^^^^^^^^^^^^^
 
-The **GPU Develop** plugin (``Plugins`` > ``Download Plugins``, category ``plugins``, name
-``gpu_develop``) lets Batch Export render Develop recipes on a discrete GPU.
-``Plugins`` > ``GPU Develop…`` installs ``wgpu`` the first time and then names the GPU it will
-use; Batch Export then shows **Render on** with that GPU chosen (pick **CPU** to render as
-before).
+The **GPU Develop** plugin (``Plugins`` > ``Download Plugins``, category ``plugins``, name ``gpu_develop``) optionally accelerates Batch Export. Open ``Plugins`` > ``GPU Develop…`` to install ``wgpu`` on first use and identify the device. CPU is selected by default; choose the GPU explicitly under **Render on**.
+
 
 - White balance, exposure, highlights / shadows, whites / blacks, brightness, contrast, vibrance, saturation and the tone curve run on the GPU; rotation, flips, the crop and everything after the tone curve (split toning, LUT, masks, levels and the rest) stay on the CPU
-- A 24 MP photo takes about 0.1 s on the GPU instead of about 7 s on the CPU, not counting decoding and saving
+- Speed depends on hardware and recipe; fixed 640k/24MP/60MP measurements are recorded in docs/performance/gpu-develop-20261007.md
 - Only a discrete GPU is used, never an integrated GPU or a software renderer; on Windows through Vulkan first, then Direct3D 12
 - An image the GPU fails on is rendered on the CPU, so the export still completes
-- The output matches the CPU renderer to within a few levels on a small share of pixels
+- CPU is the default and preserves canonical pixels; GPU is an explicit optional approximation. Enabled threshold/posterize use CPU for the entire recipe
 
 Create GIF / Video
 ^^^^^^^^^^^^^^^^^^^
@@ -2092,7 +2118,7 @@ Workspace Layout Presets
 
 ``File`` > ``Workspaces…`` captures the current window geometry, dock / toolbar
 arrangement, the tree / viewer split, and active root folder under a name — then lets
-you flip between saved layouts. The active tab and the Modify tab's panel split are not stored. The dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
+you flip between saved layouts. The dock layouts of the Imervue and Modify tabs are stored too; the active tab is not. The dialog supports Save Current, Load, Rename, and Delete. Workspaces persist in
 ``user_setting.json`` (under the ``workspaces`` key) and survive across
 sessions.
 
@@ -2605,7 +2631,7 @@ imported as a culling **Reject** with no stars, and a Reject is exported as -1.
 A sidecar that isn't rejected lifts a Reject; a Pick is left alone.
 
 A file without a sidecar is read — and imported — from what it embeds itself: its
-XMP packet (JPEG, PNG, WebP, TIFF, CR3, RW2, ORF, RAF), then its EXIF ``Rating`` / ``RatingPercent``.
+XMP packet (JPEG, PNG, WebP, TIFF, CR3, RW2, RWL, ORF, RAF), then its EXIF ``Rating`` / ``RatingPercent``.
 That is where Lightroom keeps a JPEG's rating and keywords, and where Windows
 Explorer and some cameras keep their stars. A sidecar, when there is one, wins.
 

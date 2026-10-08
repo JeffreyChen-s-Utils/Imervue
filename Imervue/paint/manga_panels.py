@@ -19,7 +19,7 @@ display server in unit tests.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 import numpy as np
 
@@ -49,6 +49,33 @@ class PanelLayout:
     cells: tuple[PanelCell, ...]
     gutter: int
     border_width: int
+
+
+def panel_layout_to_dict(layout: PanelLayout | None) -> dict | None:
+    """Encode a panel layout as native-document JSON metadata."""
+    return asdict(layout) if layout is not None else None
+
+
+def panel_layout_from_dict(raw: dict | None) -> PanelLayout | None:
+    """Decode optional panel metadata, rejecting malformed or out-of-bounds cells."""
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError("panel layout must be an object")
+    try:
+        width, height = int(raw["width"]), int(raw["height"])
+        gutter, border = int(raw["gutter"]), int(raw["border_width"])
+        cells = tuple(PanelCell(*(int(cell[k]) for k in ("x", "y", "w", "h")))
+                      for cell in raw["cells"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("invalid panel layout metadata") from exc
+    if width <= 0 or height <= 0 or gutter < 0 or border < 0:
+        raise ValueError("invalid panel layout dimensions")
+    for cell in cells:
+        if (cell.x < 0 or cell.y < 0 or cell.w <= 0 or cell.h <= 0
+                or cell.x + cell.w > width or cell.y + cell.h > height):
+            raise ValueError("panel cell outside canvas")
+    return PanelLayout(width, height, cells, gutter, border)
 
 
 def layout_for_canvas(layout: PanelLayout | None, shape: tuple[int, ...]) -> PanelLayout | None:

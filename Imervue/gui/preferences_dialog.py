@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 from Imervue.gui.optional_tabs import DESKTOP_PET_TAB, PUPPET_TAB, set_tab_enabled, tab_enabled
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
-from Imervue.system.themes import DEFAULT_THEME_NAME, list_themes
+from Imervue.system.themes import DEFAULT_THEME_NAME, list_themes, theme_label
 from Imervue.system.ui_scale import (
     UI_SCALE_DEFAULT_PERCENT,
     UI_SCALE_MAX_PERCENT,
@@ -41,6 +41,7 @@ from Imervue.user_settings.user_setting_dict import (
     schedule_save,
     user_setting_dict,
 )
+from Imervue.system.ui_scale import font_px
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -52,7 +53,9 @@ VRAM_STEP_MB = 128
 
 # Style sheet for the dim "hint" labels under each tunable —
 # centralised so a single edit recolours every hint.
-_HINT_LABEL_STYLE = "color: #888; font-size: 11px;"
+def _hint_label_style() -> str:
+    """Small grey text, sized for the UI scale in effect when the dialog is built."""
+    return f"color: #888; {font_px(11)}"
 
 
 class PreferencesDialog(QDialog):
@@ -106,7 +109,7 @@ class PreferencesDialog(QDialog):
                 "Tile-cache budget for the GPU viewer. Restart required.",
             )
         )
-        hint.setStyleSheet(_HINT_LABEL_STYLE)
+        hint.setStyleSheet(_hint_label_style())
         hint.setWordWrap(True)
 
         form.addRow(
@@ -135,7 +138,7 @@ class PreferencesDialog(QDialog):
                 "Scales every widget by adjusting the application font. Restart required.",
             )
         )
-        hint.setStyleSheet(_HINT_LABEL_STYLE)
+        hint.setStyleSheet(_hint_label_style())
         hint.setWordWrap(True)
 
         form.addRow(
@@ -152,7 +155,7 @@ class PreferencesDialog(QDialog):
         self._theme_combo = QComboBox()
         current = str(user_setting_dict.get("theme", DEFAULT_THEME_NAME))
         for theme in list_themes():
-            self._theme_combo.addItem(theme.label, userData=theme.name)
+            self._theme_combo.addItem(theme_label(theme), userData=theme.name)
             if theme.name == current:
                 self._theme_combo.setCurrentIndex(self._theme_combo.count() - 1)
 
@@ -162,7 +165,7 @@ class PreferencesDialog(QDialog):
                 "Restart required for the new theme to fully apply.",
             )
         )
-        hint.setStyleSheet(_HINT_LABEL_STYLE)
+        hint.setStyleSheet(_hint_label_style())
         hint.setWordWrap(True)
 
         form.addRow(lang.get("preferences_theme_label", "Theme:"), self._theme_combo)
@@ -196,7 +199,7 @@ class PreferencesDialog(QDialog):
             lang.get("preferences_browsing_hint",
                      "Deep-zoom browsing aids — applied immediately.")
         )
-        hint.setStyleSheet(_HINT_LABEL_STYLE)
+        hint.setStyleSheet(_hint_label_style())
         hint.setWordWrap(True)
 
         form.addRow("", self._filmstrip_check)
@@ -217,7 +220,7 @@ class PreferencesDialog(QDialog):
             "preferences_tabs_hint",
             "A tab that is off is not loaded at all, so Imervue starts faster and uses less "
             "memory. Restart required."))
-        hint.setStyleSheet(_HINT_LABEL_STYLE)
+        hint.setStyleSheet(_hint_label_style())
         hint.setWordWrap(True)
         form.addRow(lang.get("preferences_tabs_label", "Optional tabs:"), self._puppet_tab_check)
         form.addRow("", self._pet_tab_check)

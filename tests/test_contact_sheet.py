@@ -146,3 +146,15 @@ class TestThumbnailDecode:
         bad = tmp_path / "bad.png"
         bad.write_bytes(b"nope")
         assert contact_sheet._load_thumbnail(str(bad), 100) is None  # noqa: SLF001
+
+
+def test_failed_pdf_preserves_existing_output(qapp, tmp_path, monkeypatch):
+    from Imervue.export import contact_sheet as mod
+    out = tmp_path / "old.pdf"
+    out.write_bytes(b"previous PDF")
+    def fail(*_args):
+        raise OSError("disk full")
+    monkeypatch.setattr(mod, "_render_pages", fail)
+    with pytest.raises(OSError, match="disk full"):
+        mod.generate_contact_sheet(["missing.png"], out)
+    assert out.read_bytes() == b"previous PDF" and list(tmp_path.iterdir()) == [out]

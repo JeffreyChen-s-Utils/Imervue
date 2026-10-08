@@ -231,12 +231,14 @@ def test_text_dialog_has_preview_label(qapp):
 def test_preview_font_follows_combo_box(qapp):
     """Switching the font in the combo box must update the preview's
     font family — the live-preview wiring."""
-    from PySide6.QtGui import QFont
+    from PySide6.QtGui import QFont, QFontDatabase
 
     from Imervue.paint.text_tool import TextToolDialog
     dialog = TextToolDialog(initial_color=(0, 0, 0))
     try:
-        new_font = QFont("Courier New")
+        current_family = dialog._font_box.currentFont().family()  # noqa: SLF001
+        family = next(name for name in QFontDatabase.families() if name != current_family)
+        new_font = QFont(family)
         dialog._font_box.setCurrentFont(new_font)  # noqa: SLF001
         assert dialog._preview.font().family() == new_font.family()  # noqa: SLF001
     finally:

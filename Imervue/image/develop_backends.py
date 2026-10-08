@@ -16,6 +16,7 @@ from typing import Protocol
 import numpy as np
 
 from Imervue.image.recipe import Recipe
+from Imervue.plugin.status import status_registry
 
 logger = logging.getLogger("Imervue.image.develop_backends")
 
@@ -50,18 +51,32 @@ class BackendProvider:
 
 
 _providers: dict[str, BackendProvider] = {}
+_registrations: dict[str, dict[int, BackendProvider]] = {}
 
 
 def register(provider: BackendProvider) -> None:
     """Offer *provider*; a provider already under its key is replaced."""
     if provider.key == CPU:
         raise ValueError(f"{CPU!r} is the built-in renderer")
+    if provider.key not in _providers:
+        _registrations.pop(provider.key, None)
+    _registrations.setdefault(provider.key, {})[id(provider)] = provider
     _providers[provider.key] = provider
 
 
-def unregister(key: str) -> None:
-    """Stop offering the backend under *key* (unknown keys are ignored)."""
+def unregister(key: str, *, provider: BackendProvider | None = None) -> None:
+    """Remove all registrations, or only one provider generation during multi-window reload."""
+    registrations = _registrations.get(key, {})
+    if provider is not None:
+        registrations.pop(id(provider), None)
+        if registrations:
+            _providers[key] = next(reversed(registrations.values()))
+            status_registry.publish("backend:" + key, key, "checking",
+                                    "Another loaded window still provides this backend")
+            return
+    _registrations.pop(key, None)
     _providers.pop(key, None)
+    status_registry.publish("backend:" + key, key, "unloaded")
 
 
 def available() -> list[tuple[str, str]]:
@@ -71,8 +86,13 @@ def available() -> list[tuple[str, str]]:
         try:
             label = provider.probe()
         except (RuntimeError, OSError, ImportError) as exc:   # a broken driver or package
+            status_registry.publish("backend:" + provider.key, provider.key, "failed",
+                                    f"CPU fallback: {exc}")
             logger.warning("Develop backend %r cannot run: %s", provider.key, exc)
             continue
+        status_registry.publish("backend:" + provider.key, provider.key,
+                                "available" if label else "missing",
+                                label or "Device/dependencies unavailable; CPU remains available")
         if label:
             found.append((provider.key, label))
     return found
@@ -84,8 +104,11 @@ def open_renderer(key: str) -> DevelopRenderer | None:
     if key == CPU or provider is None:
         return None
     try:
-        return provider.open()
+        renderer = provider.open()
+        status_registry.publish("backend:" + key, key, "available", renderer.label)
+        return renderer
     except (RuntimeError, OSError, ImportError) as exc:
+        status_registry.publish("backend:" + key, key, "failed", f"CPU fallback: {exc}")
         logger.warning("Develop backend %r failed to open, rendering on the CPU: %s", key, exc)
         return None
 
@@ -102,5 +125,7 @@ def render(arr: np.ndarray, recipe: Recipe, renderer: DevelopRenderer | None = N
     try:
         return renderer.render(arr, recipe)
     except RuntimeError as exc:
+        status_registry.publish("renderer:" + renderer.label, renderer.label, "failed",
+                                f"CPU fallback: {exc}")
         logger.warning("%s failed on an image, rendering it on the CPU: %s", renderer.label, exc)
         return recipe.apply(arr)

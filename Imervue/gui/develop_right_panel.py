@@ -24,25 +24,26 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QSlider,
     QSpinBox,
-    QSplitter,
+    QStyle,
     QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from Imervue.gui.modify_splitter import RIGHT_PANEL_WIDTH
 from Imervue.gui.slider_spin import make_slider_spin
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import scaled_px
 
 
-# The Modify panel is narrower than the annotation dialog's properties panel.
+# Narrowest the adjustment dock gets at 100 % UI scale; the canvas takes the rest.
+RIGHT_PANEL_WIDTH = 260
 
 
 class DevelopRightPanelMixin:
     """Builds the right properties panel of :class:`DevelopPanel`."""
 
-    def build_right_panel(self, parent_splitter: QSplitter) -> None:
-        """Build the right panel (drawing props + develop sliders) into *parent_splitter*."""
+    def build_right_panel(self) -> QWidget:
+        """Build the right panel (drawing props + develop sliders); returns its scroll area."""
         lang = language_wrapper.language_word_dict
 
         panel = QWidget()
@@ -60,8 +61,14 @@ class DevelopRightPanelMixin:
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(panel)
-        scroll.setMinimumWidth(RIGHT_PANEL_WIDTH)
-        parent_splitter.addWidget(scroll)
+        # Never narrower than its controls: a dock squeezed below that cut them off.
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        bar = scroll.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
+        scroll.setMinimumWidth(max(
+            scaled_px(RIGHT_PANEL_WIDTH),
+            panel.minimumSizeHint().width() + bar + 2 * scroll.frameWidth(),
+        ))
+        return scroll
 
     def _build_crop_controls(self, lang: dict) -> QWidget:
         """Crop ratio picker and apply / cancel; hidden until the crop tool is picked."""
@@ -99,7 +106,7 @@ class DevelopRightPanelMixin:
         # --- Color ---
         self._color_btn = QToolButton()
         self._color_btn.setText(lang.get("annotation_color", "Color"))
-        self._color_btn.setFixedHeight(36)
+        self._color_btn.setMinimumHeight(scaled_px(36))
         self._color_btn.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
@@ -156,7 +163,7 @@ class DevelopRightPanelMixin:
             btn.setText(f"{glyph} {label}")
             btn.setCheckable(True)
             btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-            btn.setFixedHeight(26)
+            btn.setMinimumHeight(scaled_px(26))
             btn.clicked.connect(lambda _=False, k=key: self._on_brush_selected(k))
             row, col = divmod(idx, 2)
             brush_grid.addWidget(btn, row, col)
@@ -173,6 +180,10 @@ class DevelopRightPanelMixin:
         layout.addWidget(font_label)
 
         self._font_combo = QFontComboBox()
+        # Sized for a short name, not the longest family installed on the machine.
+        self._font_combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self._font_combo.setMinimumContentsLength(10)
         self._font_combo.currentFontChanged.connect(self._on_font_changed)
         layout.addWidget(self._font_combo)
         self._interactive_widgets.append(self._font_combo)
@@ -211,6 +222,10 @@ class DevelopRightPanelMixin:
         self._interactive_widgets.append(self._btn_ann_redo)
 
         layout.addLayout(ann_btn_row)
+        self._preview_status = QLabel("")
+        self._preview_status.setWordWrap(True)
+        self._preview_status.hide()
+        layout.addWidget(self._preview_status)
 
     def _build_develop_sliders(self, layout: QVBoxLayout, lang: dict) -> None:
         """Exposure / brightness / contrast / saturation plus the advanced sliders."""
