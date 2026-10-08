@@ -30,7 +30,7 @@ _TABLET_PHASE = {
 class PaintCanvasInputMixin:
     """Pointer, keyboard and drag-and-drop input of the paint canvas."""
 
-    def keyPressEvent(self, event) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def keyPressEvent(self, event) -> None:  # pragma: no cover  # NOSONAR
         """Bracket-key brush size + Enter pen-commit + HUD flash."""
         from PySide6.QtCore import Qt as _Qt
         key = event.key()
@@ -77,7 +77,7 @@ class PaintCanvasInputMixin:
             candidate = candidate.parent() if hasattr(candidate, "parent") else None
         return None
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # pragma: no cover  # NOSONAR
         if self._is_pan_button(event):
             self._panning = True
             self._pan_anchor = (event.position().x(), event.position().y())
@@ -114,7 +114,7 @@ class PaintCanvasInputMixin:
             return
         self._dispatch("press", event)
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # pragma: no cover  # NOSONAR
         x, y = self._screen_to_image(event.position().x(), event.position().y())
         self.hover_changed.emit(int(x), int(y))
         if self._panning:
@@ -129,7 +129,7 @@ class PaintCanvasInputMixin:
             return
         self._dispatch("move", event)
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # pragma: no cover  # NOSONAR
         if self._panning and self._is_pan_button(event):
             self._panning = False
             # Restore the active tool's cursor — the open-hand was only
@@ -145,18 +145,18 @@ class PaintCanvasInputMixin:
             return
         self._dispatch("release", event)
 
-    def leaveEvent(self, event) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def leaveEvent(self, event) -> None:  # pragma: no cover  # NOSONAR
         self.hover_changed.emit(-1, -1)
         super().leaveEvent(event)
 
-    def wheelEvent(self, event: QWheelEvent) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def wheelEvent(self, event: QWheelEvent) -> None:  # pragma: no cover  # NOSONAR
         delta = event.angleDelta().y()
         if delta == 0:
             return
         factor = ZOOM_STEP if delta > 0 else 1.0 / ZOOM_STEP
         self._apply_zoom(factor, event.position().x(), event.position().y())
 
-    def tabletEvent(self, event: QTabletEvent) -> None:  # pragma: no cover - tablet, NOSONAR
+    def tabletEvent(self, event: QTabletEvent) -> None:  # pragma: no cover  # NOSONAR
         # ``event.accept()`` suppresses Qt's synthesised mouse event,
         # so the brush would receive nothing if we only stored pressure
         # here — that is the original "下筆後沒顏色" symptom for tablet
@@ -272,7 +272,7 @@ class PaintCanvasInputMixin:
             self.document_changed.emit()
             self.update()
 
-    def dragEnterEvent(self, event) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def dragEnterEvent(self, event) -> None:  # pragma: no cover  # NOSONAR
         from Imervue.paint.material_drop import MATERIAL_MIME_TYPE
         mime = event.mimeData()
         if mime is None:
@@ -284,17 +284,17 @@ class PaintCanvasInputMixin:
         else:
             event.ignore()
 
-    def dragMoveEvent(self, event) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def dragMoveEvent(self, event) -> None:  # pragma: no cover  # NOSONAR
         # Re-affirm on every move so Qt keeps showing the move cursor.
         event.acceptProposedAction()
 
-    def dragLeaveEvent(self, event) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def dragLeaveEvent(self, event) -> None:  # pragma: no cover  # NOSONAR
         # Cursor left the canvas without dropping — clear the overlay
         # so the visual matches the actual drop-target state.
         self.set_drag_overlay_active(False)
         event.accept()
 
-    def dropEvent(self, event) -> None:  # pragma: no cover - Qt UI, NOSONAR
+    def dropEvent(self, event) -> None:  # pragma: no cover  # NOSONAR
         from Imervue.paint.material_drop import (
             MATERIAL_MIME_TYPE,
             commit_material_to_document,
