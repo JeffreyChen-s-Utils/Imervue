@@ -29,6 +29,13 @@ _EXPORT_FAILED = 'Export failed: {err}'
 # auto-balance dialogs; extracted so a single edit (e.g. switching
 # to "Strength:") propagates everywhere without missing a row.
 _ENGLISH_INTENSITY_LABEL = 'Intensity:'
+_ENGLISH_IMAGE_INFO = 'Image Info'
+_ENGLISH_PRESET = 'Preset:'
+_ENGLISH_WIDTH = 'Width:'
+_ENGLISH_HEIGHT = 'Height:'
+_ENGLISH_FIT_TO_WINDOW = 'Fit to Window'
+_ENGLISH_SATURATION = 'Saturation:'
+_ENGLISH_RADIUS_PX = 'Radius (px):'
 
 english_word_dict = {
     "heif_install_hint": "Install pillow-heif to view HEIC images.",
@@ -179,7 +186,7 @@ english_word_dict = {
     "right_click_menu_previous_image": "Previous Image",
     "right_click_menu_delete_current": "Delete Current Image",
     "right_click_menu_delete_selected": "Delete Selected Images",
-    "right_click_menu_image_info": "Image Info",
+    "right_click_menu_image_info": _ENGLISH_IMAGE_INFO,
     # Image info
     "image_info_filename": "Filename: {info}\n",
     "image_info_fullpath": "Full Path: {full_path}\n",
@@ -187,7 +194,7 @@ english_word_dict = {
     "image_info_file_size": "File Size: {file_size_mb} MB\n",
     "image_info_file_created_time": "Created Time: {created_time}\n",
     "image_info_file_modified_time": "Modified Time: {modified_time}\n",
-    "image_info_messagebox_title": "Image Info",
+    "image_info_messagebox_title": _ENGLISH_IMAGE_INFO,
     # Image info exif
     "image_info_exif_datatime_original": "Taken Time: {DateTimeOriginal}\n",
     "image_info_exif_camera_model": "Camera: {Make} {Model}\n",
@@ -484,7 +491,7 @@ english_word_dict = {
     "batch_export_render_on": "Render on:",
     "batch_export_render_cpu": "CPU",
     "batch_export_done": "Exported {success}/{total} image(s)",
-    "batch_export_preset": "Preset:",
+    "batch_export_preset": _ENGLISH_PRESET,
     "batch_export_preset_custom": "Custom",
     # Watermark
     "watermark_title": "Watermark",
@@ -503,8 +510,8 @@ english_word_dict = {
     "gif_video_move_down": "Move Down",
     "gif_video_settings": "Settings",
     "gif_video_fps": "FPS:",
-    "gif_video_width": "Width:",
-    "gif_video_height": "Height:",
+    "gif_video_width": _ENGLISH_WIDTH,
+    "gif_video_height": _ENGLISH_HEIGHT,
     "gif_video_auto": "Auto",
     "gif_video_loop": "Loop forever",
     "gif_video_create": "Create",
@@ -1187,7 +1194,7 @@ english_word_dict = {
     "shortcut_action_histogram": "Toggle Histogram",
     "shortcut_action_fit_width": "Fit to Width",
     "shortcut_action_fit_height": "Fit to Height",
-    "shortcut_action_fit_window": "Fit to Window",
+    "shortcut_action_fit_window": _ENGLISH_FIT_TO_WINDOW,
     "shortcut_action_zoom_in": "Zoom In",
     "shortcut_action_zoom_out": "Zoom Out",
     "shortcut_action_bookmark": "Toggle Bookmark",
@@ -1789,7 +1796,7 @@ english_word_dict = {
     # --- HSL / Color Mixer ---
     "hsl_title": "HSL / Color Mixer",
     "hsl_hue": "Hue:",
-    "hsl_saturation": "Saturation:",
+    "hsl_saturation": _ENGLISH_SATURATION,
     "hsl_luminance": "Luminance:",
     "hsl_failed": "Color mix failed",
     "hsl_band_red": "Red",
@@ -1935,8 +1942,8 @@ english_word_dict = {
     "stego_failed": "Hide message failed",
     "testchart_title": "Test Chart",
     "testchart_pattern": "Pattern:",
-    "testchart_width": "Width:",
-    "testchart_height": "Height:",
+    "testchart_width": _ENGLISH_WIDTH,
+    "testchart_height": _ENGLISH_HEIGHT,
     "testchart_generate": "Generate & Save",
     "testchart_smpte": "SMPTE Color Bars",
     "testchart_grayscale": "Grayscale Wedge",
@@ -2002,7 +2009,7 @@ english_word_dict = {
     "masks_exposure": "Exposure:",
     "masks_brightness": "Brightness:",
     "masks_contrast": "Contrast:",
-    "masks_saturation": "Saturation:",
+    "masks_saturation": _ENGLISH_SATURATION,
     "masks_temperature": "Temperature:",
     "masks_tint": "Tint:",
     "masks_feather": "Feather:",
@@ -2017,7 +2024,7 @@ english_word_dict = {
 
     # --- Clone Stamp ---
     "stamp_title": "Clone Stamp",
-    "stamp_radius": "Radius (px):",
+    "stamp_radius": _ENGLISH_RADIUS_PX,
     "stamp_hint": "Shift+click to set source \u2022 click to stamp \u2022 right-click to undo",
     "stamp_output": _ENGLISH_OUTPUT_LABEL,
     "stamp_run": "Apply",
@@ -2203,7 +2210,7 @@ english_word_dict = {
     # Gradient map
     "gradient_map_title": "Gradient Map",
     "gradient_map_enable": "Enable gradient map",
-    "gradient_map_preset": "Preset:",
+    "gradient_map_preset": _ENGLISH_PRESET,
     "gradient_map_intensity": _ENGLISH_INTENSITY_LABEL,
     "gradient_map_preset_mono": "Mono",
     "gradient_map_preset_sepia": "Sepia",
@@ -2311,7 +2318,7 @@ english_word_dict = {
     "solarize_failed": "Solarize failed",
     "glow_title": "Diffuse Glow",
     "glow_amount": "Amount (%):",
-    "glow_radius": "Radius (px):",
+    "glow_radius": _ENGLISH_RADIUS_PX,
     "glow_threshold": "Highlight threshold (%):",
     "glow_failed": "Glow failed",
     "gradient_map_perceptual": "Perceptual (OkLCH)",
@@ -2345,7 +2352,7 @@ english_word_dict = {
     "status_loading_full_image": "Loading full image...",
     "image_issues_title": "Image load issues",
     "dock_folders": "Folders",
-    "dock_image_info": "Image Info",
+    "dock_image_info": _ENGLISH_IMAGE_INFO,
     "dock_modify_tools": "Tools",
     "dock_modify_adjustments": "Adjustments",
     "view_panels_menu": "Panels",
@@ -2410,10 +2417,10 @@ english_word_dict = {
     "filmic_contrast": "Contrast:",
     "filmic_exposure": "Exposure (stops):",
     "filmic_mode": "Curve:",
-    "filmic_saturation": "Saturation:",
+    "filmic_saturation": _ENGLISH_SATURATION,
     "filmic_title": "Filmic Tone Map",
     "filmic_white": "White point:",
-    "frosted_radius": "Radius (px):",
+    "frosted_radius": _ENGLISH_RADIUS_PX,
     "frosted_seed": "Seed:",
     "frosted_title": "Frosted Glass",
     "graduated_density_angle": "Angle (°):",
@@ -2652,7 +2659,7 @@ english_word_dict = {
     "paint_text_size_tooltip": "Type size in points",
     "paint_text_vertical": "Vertical (top-to-bottom)",
     "paint_view_100": "100 %",
-    "paint_view_fit": "Fit to Window",
+    "paint_view_fit": _ENGLISH_FIT_TO_WINDOW,
     "paint_view_pixel_grid_dormant_suffix": "  (zoom in to {zoom_x}×)",
     "paint_welcome_new": "New tab",
     "paint_welcome_open": "Open file…",
@@ -2844,7 +2851,7 @@ english_word_dict = {
     "emboss_failed": "Emboss failed",
     "film_negative_failed": "Film negative failed",
     "filmic_failed": "Tone map failed",
-    "fit_window": "Fit to Window",
+    "fit_window": _ENGLISH_FIT_TO_WINDOW,
     "frosted_failed": "Frosted glass failed",
     "graduated_density_failed": "Graduated density failed",
     "kaleidoscope_failed": "Kaleidoscope failed",
@@ -2853,10 +2860,10 @@ english_word_dict = {
     "paint_file_export_pages_pdf_done": "Exported PDF",
     "paint_file_new_canvas": "New Canvas…",
     "paint_new_canvas_title": "New Canvas",
-    "paint_new_canvas_preset": "Preset:",
+    "paint_new_canvas_preset": _ENGLISH_PRESET,
     "paint_new_canvas_custom": "Custom",
-    "paint_new_canvas_width": "Width:",
-    "paint_new_canvas_height": "Height:",
+    "paint_new_canvas_width": _ENGLISH_WIDTH,
+    "paint_new_canvas_height": _ENGLISH_HEIGHT,
     "paint_new_canvas_background": "Background:",
     "paint_new_canvas_white": "White",
     "paint_new_canvas_transparent": "Transparent",

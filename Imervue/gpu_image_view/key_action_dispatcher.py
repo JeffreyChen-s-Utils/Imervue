@@ -71,7 +71,7 @@ class KeyActionDispatcher:
     # ------------------------------------------------------------------
     # Top-level dispatch
     # ------------------------------------------------------------------
-    def dispatch(self, action: str, modifiers) -> None:
+    def dispatch(self, action: str) -> None:
         if self._dispatch_simple(action):
             return
         if self._dispatch_toggle(action):

@@ -146,6 +146,24 @@ def _boxes(data: bytes, start: int, end: int) -> Iterator[tuple[bytes, int, int]
         pos += size
 
 
+def _box_span(header: bytes, remaining: int) -> tuple[int, int] | None:
+    """``(size, header length)`` of the ISO-BMFF box starting with *header*.
+
+    *remaining* is how many bytes are left from the box's start; ``None`` when
+    the box claims fewer bytes than its own header or more than are left.
+    """
+    (size,) = struct.unpack_from(">I", header)
+    skip = 8
+    if size == 1:
+        (size,) = struct.unpack_from(">Q", header, 8)
+        skip = 16
+    elif size == 0:
+        size = remaining
+    if size < skip or size > remaining:
+        return None
+    return size, skip
+
+
 def top_level_box(handle: BinaryIO, kind: bytes, uuid: bytes | None = None) -> bytes | None:
     """The payload of the first top-level ISO-BMFF box of type *kind* in the file *handle*.
 
@@ -159,16 +177,11 @@ def top_level_box(handle: BinaryIO, kind: bytes, uuid: bytes | None = None) -> b
     while pos + 8 <= end:
         handle.seek(pos)
         header = handle.read(32)   # extended size plus a UUID needs all 32 bytes
-        size, found = struct.unpack_from(">I4s", header)
-        skip = 8
-        if size == 1:
-            (size,) = struct.unpack_from(">Q", header, 8)
-            skip = 16
-        elif size == 0:
-            size = end - pos
-        if size < skip or pos + size > end:
+        span = _box_span(header, end - pos)
+        if span is None:
             return None
-        if found == kind and (uuid is None or header[skip:skip + 16] == uuid):
+        size, skip = span
+        if header[4:8] == kind and (uuid is None or header[skip:skip + 16] == uuid):
             skip += 0 if uuid is None else 16
             if size < skip or size - skip > _MAX_METADATA_BYTES:
                 return None

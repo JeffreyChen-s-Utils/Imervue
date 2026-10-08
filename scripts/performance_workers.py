@@ -20,12 +20,49 @@ def _beat(beats: list, last: list) -> None:
     last[0] = now
 
 
+def _reject_and_retire(app, dialog, beats: list) -> tuple[float, float]:
+    """Reject *dialog* while its worker is blocked; milliseconds until ``reject`` returned
+    and until the worker had retired. UI heartbeat gaps are appended to *beats*."""
+    from PySide6.QtCore import QTimer
+    from Imervue.plugin.worker_retirement import _RETIRING
+    worker = dialog._worker
+    finished = []
+    dialog.finished.connect(finished.append)
+    timer = QTimer()
+    timer.setInterval(10)
+    last = [perf_counter()]
+    timer.timeout.connect(partial(_beat, beats, last))
+    worker.start()
+    try:
+        if not worker.entered.wait(10):
+            raise TimeoutError("worker did not start")
+        last[0] = begin = perf_counter()
+        timer.start()
+        dialog.reject()
+        request = (perf_counter() - begin) * 1000
+        while not finished or _RETIRING:
+            if perf_counter() - begin > 30:
+                raise TimeoutError("worker did not retire")
+            app.processEvents()
+            sleep(0.001)
+        retirement = (perf_counter() - begin) * 1000
+        if finished != [0]:
+            raise RuntimeError("dialog lost original rejection")
+        return request, retirement
+    finally:
+        timer.stop()
+        worker.cancelled.set()
+        if not worker.wait(30000):
+            raise TimeoutError("worker join failed")
+        dialog.deleteLater()
+        app.processEvents()
+
+
 def measure_retirement(*, repeats: int = 3, blocked_ms: int = 250) -> dict:
     """Use controlled uninterruptible boundaries, not claims about codec/model throughput."""
-    from PySide6.QtCore import QThread, QTimer
+    from PySide6.QtCore import QThread
     from PySide6.QtWidgets import QApplication, QDialog
     from Imervue.plugin.worker_host import WorkerHostMixin
-    from Imervue.plugin.worker_retirement import _RETIRING
 
     app = QApplication.instance() or QApplication([])
 
@@ -53,37 +90,10 @@ def measure_retirement(*, repeats: int = 3, blocked_ms: int = 250) -> dict:
         requests, completed, beats = [], [], []
         for _ in range(repeats):
             dialog = Dialog()
-            worker = dialog._worker = Worker(slow_stop=slow_stop)
-            finished = []
-            dialog.finished.connect(finished.append)
-            timer = QTimer()
-            timer.setInterval(10)
-            last = [perf_counter()]
-
-            timer.timeout.connect(partial(_beat, beats, last))
-            worker.start()
-            try:
-                if not worker.entered.wait(10):
-                    raise TimeoutError("worker did not start")
-                last[0] = begin = perf_counter()
-                timer.start()
-                dialog.reject()
-                requests.append((perf_counter() - begin) * 1000)
-                while not finished or _RETIRING:
-                    if perf_counter() - begin > 30:
-                        raise TimeoutError("worker did not retire")
-                    app.processEvents()
-                    sleep(0.001)
-                completed.append((perf_counter() - begin) * 1000)
-                if finished != [0]:
-                    raise RuntimeError("dialog lost original rejection")
-            finally:
-                timer.stop()
-                worker.cancelled.set()
-                if not worker.wait(30000):
-                    raise TimeoutError("worker join failed")
-                dialog.deleteLater()
-                app.processEvents()
+            dialog._worker = Worker(slow_stop=slow_stop)
+            request, retirement = _reject_and_retire(app, dialog, beats)
+            requests.append(request)
+            completed.append(retirement)
         cases[name] = {"ui_request": summarize(requests), "actual_retirement": summarize(completed),
                        "ui_heartbeat": summarize(beats)}
     return {"blocked_ms": blocked_ms, "cases": cases,

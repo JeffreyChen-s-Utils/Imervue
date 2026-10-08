@@ -115,7 +115,7 @@ class PluginManager:
     def refresh_imports(self) -> None:
         """Forget only this manager's plugin modules before explicit reload (not other windows)."""
         roots = tuple(path.resolve() for path in self._plugin_dirs)
-        for name, module in list(sys.modules.items()):
+        for name, module in tuple(sys.modules.items()):   # entries are deleted below
             origin = getattr(module, "__file__", None)
             if not origin or not any(Path(origin).resolve().is_relative_to(root) for root in roots):
                 continue
@@ -270,7 +270,8 @@ def _api_compatible(candidate: Path) -> bool:
         logger.warning("%s", e)
         return False
     except (OSError, ValueError) as e:
-        logger.error("Skipping plugin '%s': unreadable %s: %s", candidate.name, MANIFEST_NAME, e)
+        logger.exception("Skipping plugin '%s': unreadable %s: %s",
+                         candidate.name, MANIFEST_NAME, e)
         return False
     return True
 

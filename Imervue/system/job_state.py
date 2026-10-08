@@ -76,7 +76,8 @@ class JobState:
                 or self._status in TERMINAL
             ):
                 return
-            status = "skipped" if skipped else "failed" if error else "succeeded"
+            outcome = "failed" if error else "succeeded"
+            status = "skipped" if skipped else outcome
             self._items[source] = JobItem(source, status, output, error)
             self._pending -= 1
             if error and not skipped:
@@ -103,15 +104,12 @@ class JobState:
                 return
             self._terminal_error = error or "Worker did not complete this item"
             failed = self._failures + self._pending
-            self._status = (
-                "cancelled"
-                if self._cancel
-                else "partial"
-                if failed and self._successes
-                else "failed"
-                if failed or error
-                else "succeeded"
-            )
+            if self._cancel:
+                self._status = "cancelled"
+            elif failed and self._successes:
+                self._status = "partial"
+            else:
+                self._status = "failed" if failed or error else "succeeded"
 
     def snapshot(self, *, include_items: bool = True) -> JobSnapshot:
         """Copy results only on demand; periodic progress polling is O(1)."""

@@ -14,6 +14,54 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from performance_support import isolated_profile, measure, write_json  # noqa: E402
 
 
+def _track_admissions(budget) -> list[int]:
+    """Record the accounted bytes after every admission; returns the list they land in.
+
+    Observed under the budget's own admission lock, without substituting the policy.
+    """
+    peaks: list[int] = []
+    reserve = budget.reserve
+
+    def tracked_reserve(ticket, size):
+        with budget._lock:
+            admitted = reserve(ticket, size)
+            peaks.append(budget.used_bytes)
+            return admitted
+
+    budget.reserve = tracked_reserve
+    return peaks
+
+
+class _Landing:
+    """Takes each finished decode on its worker thread: keeps the pixels, settles the budget."""
+
+    def __init__(self, budget) -> None:
+        self.budget = budget
+        self.results: list[dict] = []
+        self.retained: list = []
+        self.errors: list[str] = []
+        self._gate = threading.Lock()
+
+    def landed(self, worker, result, message) -> None:
+        from Imervue.gpu_image_view.ram_budget import image_bytes
+        with self._gate:
+            if message:
+                self.errors.append(f"{worker.path}: {message}")
+            size = image_bytes(result)
+            if result is not None:
+                self._retain(worker, result, size)
+            self.results.append({"path": worker.path, "decoded": result is not None,
+                                 "actual_bytes": size})
+            if self.budget is not None:
+                self.budget.release(worker)
+
+    def _retain(self, worker, result, size: int) -> None:
+        self.retained.append(result)
+        key = (worker.path, id(worker))
+        if self.budget is not None and not self.budget.store(key, size, ticket=worker):
+            self.errors.append(f"{worker.path}: result admission failed")
+
+
 def measure_decodes(paths: list[str], *, limit: int | None, repeats: int = 3) -> dict:
     """Run two decoder threads; retain pixels/RSS and record quota refusals separately."""
     from PySide6.QtCore import Qt
@@ -23,46 +71,19 @@ def measure_decodes(paths: list[str], *, limit: int | None, repeats: int = 3) ->
 
     def operation():
         budget = RamBudget(limit) if limit is not None else None
-        results, retained, errors, peaks = [], [], [], []
-        gate = threading.Lock()
-        if budget is not None:
-            reserve = budget.reserve
-
-            def tracked_reserve(ticket, size):
-                # Observe under the admission lock, without substituting the policy.
-                with budget._lock:
-                    admitted = reserve(ticket, size)
-                    peaks.append(budget.used_bytes)
-                    return admitted
-
-            budget.reserve = tracked_reserve
-
-        def landed(worker, result, message):
-            with gate:
-                if message:
-                    errors.append(f"{worker.path}: {message}")
-                size = image_bytes(result)
-                if result is not None:
-                    retained.append(result)
-                    key = (worker.path, id(worker))
-                    if budget is not None and not budget.store(key, size, ticket=worker):
-                        errors.append(f"{worker.path}: result admission failed")
-                results.append({"path": worker.path, "decoded": result is not None,
-                                "actual_bytes": size})
-                if budget is not None:
-                    budget.release(worker)
-
+        peaks = _track_admissions(budget) if budget is not None else []
+        landing = _Landing(budget)
         workers = [LoadDeepZoomWorker(path, memory_budget=budget) for path in paths]
         for worker in workers:
-            worker.signals.completed.connect(landed, Qt.ConnectionType.DirectConnection)
+            worker.signals.completed.connect(landing.landed, Qt.ConnectionType.DirectConnection)
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             for future in [pool.submit(worker.run) for worker in workers]:
                 future.result()
-        if errors:
-            raise RuntimeError("; ".join(errors))
-        runs.append({"results": results, "peak_accounted_bytes": max(peaks, default=0),
+        if landing.errors:
+            raise RuntimeError("; ".join(landing.errors))
+        runs.append({"results": landing.results, "peak_accounted_bytes": max(peaks, default=0),
                      "accounted_bytes_after": budget.used_bytes if budget is not None else None,
-                     "retained_array_bytes": sum(image_bytes(result) for result in retained)})
+                     "retained_array_bytes": sum(image_bytes(r) for r in landing.retained)})
 
     metrics = measure(operation, repeats=repeats)
     source_paths = ["Imervue/gpu_image_view/ram_budget.py",

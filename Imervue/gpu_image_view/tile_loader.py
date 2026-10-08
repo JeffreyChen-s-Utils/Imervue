@@ -60,7 +60,7 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
     view._tile_load_total = len(image_paths)
     view._tile_load_count = 0
 
-    _spawn_thumbnail_workers(view, image_paths, gen)
+    _spawn_thumbnail_workers(view, gen)
     start_offline_sweep(view)
 
     if hasattr(view.main_window, "show_progress"):
@@ -72,7 +72,7 @@ def load_tile_grid_async(view: GPUImageView, image_paths) -> None:
     view.update()
 
 
-def _spawn_thumbnail_workers(view: GPUImageView, image_paths, gen: int) -> None:
+def _spawn_thumbnail_workers(view: GPUImageView, gen: int) -> None:
     limit = getattr(view.thumbnail_pool, "maxThreadCount", lambda: 8)()
     view._tile_queue = ThumbnailQueue(view.model.images, gen, limit=limit)
     pump_thumbnail_workers(view)
@@ -455,7 +455,7 @@ def sync_tile_grid_incremental(view: GPUImageView, image_paths: list[str]) -> No
     view.tile_grid_mode = True
     view._tile_load_total = len(missing)
     view._tile_load_count = 0
-    _spawn_thumbnail_workers(view, missing, gen)
+    _spawn_thumbnail_workers(view, gen)
     start_offline_sweep(view)
     if hasattr(view.main_window, "refresh_list_view"):
         with best_effort("refresh the list view"):
