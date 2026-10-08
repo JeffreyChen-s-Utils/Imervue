@@ -110,3 +110,43 @@ def test_layer_list_supports_inline_rename(dock):
     # DoubleClicked stays unused so the gesture remains free for any
     # future layer-mask / layer-fx editor.
     assert not (triggers & QAbstractItemView.EditTrigger.DoubleClicked)
+
+
+# ---------------------------------------------------------------------------
+# Opacity slider: a change is committed only when the percentage differs
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("percent", [7, 29, 57, 58, 100])
+def test_opacity_slider_at_the_layers_percentage_commits_nothing(dock, doc, percent):
+    """``percent / 100`` and the stored opacity can differ in the last bit (0.07, 0.29, 0.57)."""
+    doc.active_layer().opacity = percent / 100.0
+    commits = []
+    dock.edit_committed.connect(lambda: commits.append(True))
+    dock._on_opacity_changed(percent)  # noqa: SLF001
+    assert commits == []
+    assert doc.active_layer().opacity == pytest.approx(percent / 100.0)
+
+
+def test_a_fractional_opacity_is_not_rewritten_by_its_own_percentage(dock, doc):
+    doc.active_layer().opacity = 0.333
+    commits = []
+    dock.edit_committed.connect(lambda: commits.append(True))
+    dock._on_opacity_changed(33)  # noqa: SLF001
+    assert commits == [] and doc.active_layer().opacity == pytest.approx(0.333)
+
+
+def test_opacity_slider_at_another_percentage_commits_once(dock, doc):
+    commits = []
+    dock.edit_committed.connect(lambda: commits.append(True))
+    dock._on_opacity_changed(40)  # noqa: SLF001
+    assert commits == [True]
+    assert doc.active_layer().opacity == pytest.approx(0.4)
+
+
+def test_opacity_slider_without_a_document_does_nothing(qapp):
+    panel = LayerDock(PaintDocument())
+    try:
+        panel._document = None  # noqa: SLF001
+        panel._on_opacity_changed(50)  # noqa: SLF001   # must not raise
+    finally:
+        panel.deleteLater()

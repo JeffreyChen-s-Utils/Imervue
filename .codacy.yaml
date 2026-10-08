@@ -68,6 +68,14 @@ engines:
       - 'plugins/safety_review/**'
       - 'plugins/ai_background_remover/ai_background_remover.py'
       - 'plugins/object_splitter/object_splitter.py'
+      # Checkout-only benchmark tools, never shipped: they read `git` state for
+      # the report and start one child process per scenario so each measurement
+      # gets a fresh interpreter (B404 / B603 / B607). Every argv is a list with
+      # no shell; the executable is `sys.executable` or `git`, and the remaining
+      # arguments are the developer's own command line (argparse `choices` for
+      # the scenario name).
+      - 'scripts/performance_benchmark.py'
+      - 'scripts/gpu_develop_benchmark.py'
   # Codacy's Semgrep engine is published under the "opengrep" slug.
   opengrep:
     enabled: true
@@ -81,6 +89,9 @@ engines:
       - 'plugins/safety_review/**'
       - 'plugins/ai_background_remover/ai_background_remover.py'
       - 'plugins/object_splitter/object_splitter.py'
+      # The benchmark tools' per-scenario child processes (see the bandit list).
+      - 'scripts/performance_benchmark.py'
+      - 'scripts/gpu_develop_benchmark.py'
       - 'Imervue/menu/right_click_menu.py'
       - 'Imervue/menu/plugin_menu.py'
       - 'Imervue/gui/gif_video_dialog.py'

@@ -412,7 +412,10 @@ class LayerDock(QDockWidget):
         if self._suspend or self._document is None:
             return
         active_idx = self._document.active_layer_index()
-        if active_idx >= 0 and self._document.active_layer().opacity != value / 100.0:
+        if active_idx < 0:
+            return
+        # Compared as the slider's whole percentage: 0.07 * 100 is 7.000000000000001.
+        if round(self._document.active_layer().opacity * 100) != value:
             self._document.set_layer_attribute(active_idx, opacity=value / 100.0)
             self.edit_committed.emit()
 

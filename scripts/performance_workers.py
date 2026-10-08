@@ -4,12 +4,20 @@ from __future__ import annotations
 import argparse
 import sys
 import tempfile
+from functools import partial
 from pathlib import Path
 from threading import Event
 from time import perf_counter, sleep
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from performance_support import isolated_profile, summarize, write_json  # noqa: E402
+
+
+def _beat(beats: list, last: list) -> None:
+    """Record the gap since the previous timer beat, in milliseconds."""
+    now = perf_counter()
+    beats.append((now - last[0]) * 1000)
+    last[0] = now
 
 
 def measure_retirement(*, repeats: int = 3, blocked_ms: int = 250) -> dict:
@@ -52,12 +60,7 @@ def measure_retirement(*, repeats: int = 3, blocked_ms: int = 250) -> dict:
             timer.setInterval(10)
             last = [perf_counter()]
 
-            def tick(beats=beats, last=last):
-                now = perf_counter()
-                beats.append((now - last[0]) * 1000)
-                last[0] = now
-
-            timer.timeout.connect(tick)
+            timer.timeout.connect(partial(_beat, beats, last))
             worker.start()
             try:
                 if not worker.entered.wait(10):

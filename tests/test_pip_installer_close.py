@@ -51,7 +51,8 @@ def test_ready_callback_failure_remains_retryable(qapp, monkeypatch):
     from PySide6.QtCore import QObject
     import pytest
     parent = QDialog()
-    helper = _EnsureDepsHelper.__new__(_EnsureDepsHelper)
+    # Built without __init__, which would start a dependency check.
+    helper = _EnsureDepsHelper.__new__(_EnsureDepsHelper)  # pylint: disable=no-value-for-parameter  # __new__ takes the class
     QObject.__init__(helper)
     helper._parent_widget, helper._status_key = parent, "test-callback"
     def fail():

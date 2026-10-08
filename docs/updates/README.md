@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261008-02 | 2026-10-08 | Clear the SonarCloud and Codacy findings on the release PR | #done #sonarcloud #codacy #paint #tests | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | Dock panels on the Imervue and Modify tabs, Modern Dark default theme, UI-scale layout fixes | #done #ui #docks #theme #ui-scale #docs #i18n | [2026-10](2026-10.md) |
 | U-20261007-25 | 2026-10-07 | Complete optimization plan and publish GPU safeguards to plugin main | #done #Imervue #Imervue_Plugins #performance #color | [2026-10](2026-10.md) |
 | U-20261007-24 | 2026-10-07 | Canonical export default and measured GPU color safeguards | #done #Imervue #performance #GPU #color | [2026-10](2026-10.md) |
@@ -561,4 +562,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 94 |
+| [2026-10.md](2026-10.md) | 2026-10 | 95 |

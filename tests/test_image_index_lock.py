@@ -217,6 +217,7 @@ def test_close_waits_for_active_reader_and_reopens_without_deadlock(catalog, mon
     catalog.upsert_image("persisted.jpg")
     ready, release, closed = (threading.Event() for _ in range(3))
     failures = []
+    found = []
     original = catalog._query_where
 
     def paused(query):
@@ -227,7 +228,7 @@ def test_close_waits_for_active_reader_and_reopens_without_deadlock(catalog, mon
 
     def read():
         try:
-            assert catalog.search_images() == ["persisted.jpg"]
+            found.append(catalog.search_images())
         except Exception as exc:  # noqa: BLE001 - collect thread failures
             failures.append(exc)
 
@@ -252,6 +253,7 @@ def test_close_waits_for_active_reader_and_reopens_without_deadlock(catalog, mon
         if closer.ident is not None:
             closer.join(5)
     assert not reader.is_alive() and not closer.is_alive() and not failures
+    assert found == [["persisted.jpg"]]
     assert catalog._reader is None and catalog._conn is None
     assert catalog.search_images() == ["persisted.jpg"]
 
