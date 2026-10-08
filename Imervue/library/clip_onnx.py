@@ -89,15 +89,16 @@ def model_file(model: ClipModel, name: str, *, download: bool) -> str:
     from huggingface_hub import hf_hub_download
     from huggingface_hub.errors import HfHubHTTPError, LocalEntryNotFoundError
     key = f"model:{model.repo}/{name}"
+    label = "CLIP " + name
     if download:
-        status_registry.publish(key, "CLIP " + name, "downloading", model.repo)
+        status_registry.publish(key, label, "downloading", model.repo)
     try:
         path = hf_hub_download(repo_id=model.repo, filename=name, revision=model.revision,
                                local_files_only=not download)
-        status_registry.publish(key, "CLIP " + name, "available", path)
+        status_registry.publish(key, label, "available", path)
         return path
     except (LocalEntryNotFoundError, HfHubHTTPError, ValueError) as exc:
-        status_registry.publish(key, "CLIP " + name, "failed" if download else "missing", str(exc))
+        status_registry.publish(key, label, "failed" if download else "missing", str(exc))
         raise OSError(f"CLIP model file {name} is unavailable: {exc}") from exc
 
 

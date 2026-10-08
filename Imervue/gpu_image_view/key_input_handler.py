@@ -107,7 +107,7 @@ class KeyInputHandler:
         action = shortcut_manager.get_action(*shortcut_combo(event))
         if action is None:
             return
-        view._key_dispatch.dispatch(action, modifiers)
+        view._key_dispatch.dispatch(action)
 
     def _handle_builtin(self, key, modifiers) -> bool:
         """Handle the hard-wired keys; returns True when consumed."""

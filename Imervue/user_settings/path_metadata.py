@@ -120,7 +120,7 @@ def move_path_metadata(mapping: Mapping[str, str], *, keep_existing: bool = Fals
     for key in _GROUP_KEYS:
         groups = user_setting_dict.get(key)
         if isinstance(groups, dict):
-            for name in list(groups):
+            for name in tuple(groups):   # a move can rename the group's key
                 changed |= _move_list_in(groups, name, pairs, keep_existing=keep_existing)
     if changed:
         schedule_save()

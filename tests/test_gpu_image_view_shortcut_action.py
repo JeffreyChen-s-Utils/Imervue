@@ -3,14 +3,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from PySide6.QtCore import Qt
-
 from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 
-def test_the_action_goes_to_the_key_dispatcher_without_modifiers():
+def test_the_action_goes_to_the_key_dispatcher():
     calls = []
     view = SimpleNamespace(_key_dispatch=SimpleNamespace(
-        dispatch=lambda action, modifiers: calls.append((action, modifiers))))
+        dispatch=calls.append))
     GPUImageView.run_shortcut_action(view, "undo")
-    assert calls == [("undo", Qt.KeyboardModifier.NoModifier)]
+    assert calls == ["undo"]

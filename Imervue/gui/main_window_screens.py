@@ -20,14 +20,14 @@ from Imervue.system.best_effort import best_effort
 class MainWindowScreensMixin:
     """Window geometry and screen changes of the main window."""
 
-    def moveEvent(self, event):  # noqa: N802 — Qt naming
+    def moveEvent(self, event):  # noqa: N802  # NOSONAR - Qt event override
         super().moveEvent(event)
         # __init__ 還沒跑完前 Qt 就可能送出第一個 moveEvent。
         timer = getattr(self, "_screen_adapt_timer", None)
         if timer is not None:
             timer.start()
 
-    def resizeEvent(self, event):  # noqa: N802 — Qt naming
+    def resizeEvent(self, event):  # noqa: N802  # NOSONAR - Qt event override
         super().resizeEvent(event)
         self._reflow_modify_canvas()
 

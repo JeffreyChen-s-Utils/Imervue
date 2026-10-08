@@ -12,7 +12,9 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from Imervue.puppet.format_schema import MEDIA_TYPE, MIMETYPE_ENTRY, SCHEMA_URLS
+from Imervue.puppet.format_schema import (
+    MEDIA_TYPE, MIMETYPE_ENTRY, SCHEMA_FIELD, SCHEMA_URLS,
+)
 from Imervue.system.atomic_write import replace_atomically
 from Imervue.puppet.document import (
     BLEND_MODES,
@@ -553,7 +555,7 @@ def _parse_physics_rig(raw: dict) -> PhysicsRig:
 
 def _puppet_json_bytes(doc: PuppetDocument) -> bytes:
     payload = {
-        "$schema": SCHEMA_URLS["puppet"],
+        SCHEMA_FIELD: SCHEMA_URLS["puppet"],
         "version": SCHEMA_VERSION,
         "size": [int(doc.size[0]), int(doc.size[1])],
         "drawables": [_drawable_to_json(d) for d in doc.drawables],
@@ -750,7 +752,7 @@ def _parameter_blend_to_json(b: ParameterBlend) -> dict:
 
 def _motion_json_bytes(motion: Motion) -> bytes:
     payload = {
-        "$schema": SCHEMA_URLS["motion"],
+        SCHEMA_FIELD: SCHEMA_URLS["motion"],
         "version": SCHEMA_VERSION,
         "duration": motion.duration,
         "loop": motion.loop,
@@ -788,7 +790,7 @@ def _segment_to_json(s: MotionSegment) -> dict:
 
 def _expression_json_bytes(expr: Expression) -> bytes:
     payload = {
-        "$schema": SCHEMA_URLS["expression"],
+        SCHEMA_FIELD: SCHEMA_URLS["expression"],
         "version": SCHEMA_VERSION,
         "params": [
             {"id": p.id, "value": p.value, "mode": p.mode}
@@ -800,7 +802,7 @@ def _expression_json_bytes(expr: Expression) -> bytes:
 
 def _physics_json_bytes(rigs: list[PhysicsRig]) -> bytes:
     payload = {
-        "$schema": SCHEMA_URLS["physics"],
+        SCHEMA_FIELD: SCHEMA_URLS["physics"],
         "version": SCHEMA_VERSION,
         "rigs": [
             {

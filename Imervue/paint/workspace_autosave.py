@@ -145,7 +145,7 @@ class AutosaveMixin:
         from Imervue.paint.auto_save import AUTOSAVE_META_SUFFIX, AutoSaveSnapshot, discard_snapshot
         written = getattr(self, "_autosave_written", set())
         gone = 0
-        for path in list(paths):
+        for path in tuple(paths):   # the caller's collection may shrink as files go
             snapshot = AutoSaveSnapshot(path, path.with_suffix(AUTOSAVE_META_SUFFIX), 0.0, "", "")
             try:
                 gone += int(discard_snapshot(snapshot))
@@ -263,7 +263,8 @@ class AutosaveMixin:
         recover; snapshotting it would offer a recovery on every launch.
         Non-QObject hosts retain the synchronous adapter for headless callers.
         """
-        for canvas, dirty in list(getattr(self, "_tab_dirty", {}).items()):
+        # A snapshot: saving a tab updates the dirty map.
+        for canvas, dirty in tuple(getattr(self, "_tab_dirty", {}).items()):
             if not dirty:
                 continue
             if isinstance(self, QObject):

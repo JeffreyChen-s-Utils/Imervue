@@ -99,6 +99,20 @@ def owned_bytes(values: object) -> int:
     return size
 
 
+
+def _tile_outside(region: DamageRect | None, x: int, y: int) -> bool:
+    """Whether the tile at ``(x, y)`` lies wholly outside the damaged *region*."""
+    return region is not None and (
+        x >= region.x2 or x + TILE_SIZE <= region.x
+        or y >= region.y2 or y + TILE_SIZE <= region.y
+    )
+
+
+def _same_pixels(tile: np.ndarray, chunk: _Chunk) -> bool:
+    """Whether *tile* still holds the pixels frozen in *chunk*."""
+    return np.array_equal(tile, np.frombuffer(chunk.data, dtype=tile.dtype).reshape(tile.shape))
+
+
 class PixelStore:
     """Intern identical tiles weakly so discarded history releases its payloads."""
 
@@ -133,19 +147,17 @@ class PixelStore:
             slices = (slice(y, y + TILE_SIZE), slice(x, x + TILE_SIZE))[:array.ndim]
             tile = array[slices]
             prior = old_chunks[index] if old_chunks else None
-            outside = region is not None and (
-                x >= region.x2 or x + TILE_SIZE <= region.x
-                or y >= region.y2 or y + TILE_SIZE <= region.y
-            )
-            if prior is not None and (outside or np.array_equal(
-                tile, np.frombuffer(prior.data, dtype=array.dtype).reshape(tile.shape),
-            )):
+            if prior is not None and (_tile_outside(region, x, y) or _same_pixels(tile, prior)):
                 chunks.append(prior)
-                continue
-            data = tile.tobytes()
-            chunk = self._chunks.get(data)
-            if chunk is None:
-                chunk = _Chunk(data)
-                self._chunks[data] = chunk
-            chunks.append(chunk)
+            else:
+                chunks.append(self._intern(tile))
         return FrozenPixels(layout.shape, layout.dtype, tuple(chunks))
+
+    def _intern(self, tile: np.ndarray) -> _Chunk:
+        """The shared chunk holding *tile*'s bytes, made on first sight."""
+        data = tile.tobytes()
+        chunk = self._chunks.get(data)
+        if chunk is None:
+            chunk = _Chunk(data)
+            self._chunks[data] = chunk
+        return chunk

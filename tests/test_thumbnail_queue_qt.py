@@ -86,7 +86,7 @@ def test_real_pool_drains_current_viewport_on_ui_thread(qapp, monkeypatch, pump_
     release, entered = threading.Event(), []
     monkeypatch.setattr(tile_loader, "LoadThumbnailWorker", _worker_type(release, entered))
     try:
-        tile_loader._spawn_thumbnail_workers(host, host.model.images, 1)
+        tile_loader._spawn_thumbnail_workers(host, 1)
         assert pump_until(lambda: len(entered) == 2)
         assert len(host.active_tile_workers) == 2
         assert all(t != threading.get_ident() for t in entered)
@@ -108,7 +108,7 @@ def test_cancel_blocked_jobs_does_not_wait_or_restart_queue(qapp, monkeypatch, p
     monkeypatch.setattr(tile_loader, "LoadThumbnailWorker", _worker_type(release, entered))
     real_wait = host.thumbnail_pool.waitForDone
     try:
-        tile_loader._spawn_thumbnail_workers(host, host.model.images, 1)
+        tile_loader._spawn_thumbnail_workers(host, 1)
         assert pump_until(lambda: len(entered) == 2)
 
         def forbidden(*args):

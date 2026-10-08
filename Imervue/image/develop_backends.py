@@ -20,6 +20,11 @@ from Imervue.plugin.status import status_registry
 
 logger = logging.getLogger("Imervue.image.develop_backends")
 
+
+def _status_key(key: str) -> str:
+    """The plugin-status id of the backend registered under *key*."""
+    return "backend:" + key
+
 #: The key of the built-in renderer, ``Recipe.apply`` on the CPU.
 CPU = "cpu"
 
@@ -71,26 +76,26 @@ def unregister(key: str, *, provider: BackendProvider | None = None) -> None:
         registrations.pop(id(provider), None)
         if registrations:
             _providers[key] = next(reversed(registrations.values()))
-            status_registry.publish("backend:" + key, key, "checking",
+            status_registry.publish(_status_key(key), key, "checking",
                                     "Another loaded window still provides this backend")
             return
     _registrations.pop(key, None)
     _providers.pop(key, None)
-    status_registry.publish("backend:" + key, key, "unloaded")
+    status_registry.publish(_status_key(key), key, "unloaded")
 
 
 def available() -> list[tuple[str, str]]:
     """``(key, label)`` for every registered backend that can run here, CPU first excluded."""
     found = []
-    for provider in list(_providers.values()):
+    for provider in tuple(_providers.values()):   # a probe may unregister its provider
         try:
             label = provider.probe()
         except (RuntimeError, OSError, ImportError) as exc:   # a broken driver or package
-            status_registry.publish("backend:" + provider.key, provider.key, "failed",
+            status_registry.publish(_status_key(provider.key), provider.key, "failed",
                                     f"CPU fallback: {exc}")
             logger.warning("Develop backend %r cannot run: %s", provider.key, exc)
             continue
-        status_registry.publish("backend:" + provider.key, provider.key,
+        status_registry.publish(_status_key(provider.key), provider.key,
                                 "available" if label else "missing",
                                 label or "Device/dependencies unavailable; CPU remains available")
         if label:
@@ -105,10 +110,10 @@ def open_renderer(key: str) -> DevelopRenderer | None:
         return None
     try:
         renderer = provider.open()
-        status_registry.publish("backend:" + key, key, "available", renderer.label)
+        status_registry.publish(_status_key(key), key, "available", renderer.label)
         return renderer
     except (RuntimeError, OSError, ImportError) as exc:
-        status_registry.publish("backend:" + key, key, "failed", f"CPU fallback: {exc}")
+        status_registry.publish(_status_key(key), key, "failed", f"CPU fallback: {exc}")
         logger.warning("Develop backend %r failed to open, rendering on the CPU: %s", key, exc)
         return None
 

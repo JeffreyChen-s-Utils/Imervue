@@ -37,6 +37,8 @@ SCHEMA_BASE_URL = "https://raw.githubusercontent.com/JeffreyChen-s-Utils/Imervue
 SCHEMA_NAMES = ("puppet", "motion", "expression", "physics")
 SCHEMA_URLS = {name: f"{SCHEMA_BASE_URL}{name}.schema.json" for name in SCHEMA_NAMES}
 _DRAFT = "https://json-schema.org/draft/2020-12/schema"
+# The member that names a document's schema, in the schemas and in every file written.
+SCHEMA_FIELD = "$schema"
 
 _STRING = {"type": "string", "minLength": 1}
 _NUMBER = {"type": "number"}
@@ -155,12 +157,12 @@ def _array_of(definition: str) -> dict[str, Any]:
 
 
 def _document(name: str, title: str, body: dict[str, Any]) -> dict[str, Any]:
-    return {"$schema": _DRAFT, "$id": SCHEMA_URLS[name], "title": title, **body}
+    return {SCHEMA_FIELD: _DRAFT, "$id": SCHEMA_URLS[name], "title": title, **body}
 
 
 PUPPET_SCHEMA: dict[str, Any] = _document("puppet", ".puppet puppet.json (v1)", {
     **_object(("version", "size", "drawables", "deformers", "parameters"), {
-        "$schema": _SCHEMA_KEY,
+        SCHEMA_FIELD: _SCHEMA_KEY,
         "version": _VERSION,
         "size": {"type": "array", "items": {"type": "integer", "minimum": 1},
                  "minItems": 2, "maxItems": 2},
@@ -181,7 +183,7 @@ PUPPET_SCHEMA: dict[str, Any] = _document("puppet", ".puppet puppet.json (v1)", 
 
 MOTION_SCHEMA: dict[str, Any] = _document("motion", ".puppet motions/<name>.json (v1)", {
     **_object(("duration", "tracks"), {
-        "$schema": _SCHEMA_KEY,
+        SCHEMA_FIELD: _SCHEMA_KEY,
         "version": _VERSION,
         "duration": _NON_NEGATIVE,
         "loop": {"type": "boolean"},
@@ -202,7 +204,7 @@ MOTION_SCHEMA: dict[str, Any] = _document("motion", ".puppet motions/<name>.json
 EXPRESSION_SCHEMA: dict[str, Any] = _document(
     "expression", ".puppet expressions/<name>.json (v1)", {
     **_object((), {
-        "$schema": _SCHEMA_KEY,
+        SCHEMA_FIELD: _SCHEMA_KEY,
         "version": _VERSION,
         "params": {"type": "array", "items": _object(("id", "value"), {
             "id": _STRING, "value": _NUMBER, "mode": {"enum": list(EXPRESSION_MODES)},
@@ -212,7 +214,7 @@ EXPRESSION_SCHEMA: dict[str, Any] = _document(
 
 PHYSICS_SCHEMA: dict[str, Any] = _document("physics", ".puppet physics.json (v1)", {
     **_object(("rigs",), {
-        "$schema": _SCHEMA_KEY,
+        SCHEMA_FIELD: _SCHEMA_KEY,
         "version": _VERSION,
         "rigs": {"type": "array", "items": _object(("id", "input_param", "output_param", "chain"), {
             "id": _STRING, "input_param": _STRING, "output_param": _STRING,

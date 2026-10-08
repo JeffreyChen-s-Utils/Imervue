@@ -13,7 +13,6 @@ commands ``ImervueMainWindow`` mixes in.
 """
 from __future__ import annotations
 
-import binascii
 from base64 import b64decode, b64encode
 
 from PySide6.QtCore import QByteArray, Qt
@@ -45,7 +44,7 @@ def decode_dock_state(encoded: object) -> bytes:
         return b""
     try:
         return b64decode(encoded, validate=True)
-    except (binascii.Error, ValueError):
+    except ValueError:   # binascii.Error, which b64decode raises, is one
         return b""
 
 

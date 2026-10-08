@@ -170,7 +170,7 @@ def remove_stop(gradient: MultiStopGradient, index: int) -> MultiStopGradient:
     """Drop the stop at *index*; the two end stops stay, so a gradient keeps both ends."""
     if not 0 < index < len(gradient.stops) - 1:
         return gradient
-    return replace(gradient, stops=gradient.stops[:index] + gradient.stops[index + 1:])
+    return MultiStopGradient(gradient.name, gradient.stops[:index] + gradient.stops[index + 1:])
 
 
 def move_stop(gradient: MultiStopGradient, index: int, position: float) -> MultiStopGradient:
@@ -180,7 +180,7 @@ def move_stop(gradient: MultiStopGradient, index: int, position: float) -> Multi
         return gradient
     position = max(stops[index - 1].position, min(stops[index + 1].position, float(position)))
     moved = GradientStop(position, stops[index].color)
-    return replace(gradient, stops=(*stops[:index], moved, *stops[index + 1:]))
+    return MultiStopGradient(gradient.name, (*stops[:index], moved, *stops[index + 1:]))
 
 
 def recolour_stop(
@@ -189,7 +189,7 @@ def recolour_stop(
     """Give the stop at *index* the RGBA *color*."""
     stops = gradient.stops
     changed = GradientStop(stops[index].position, tuple(int(c) for c in color))  # type: ignore[arg-type]
-    return replace(gradient, stops=(*stops[:index], changed, *stops[index + 1:]))
+    return MultiStopGradient(gradient.name, (*stops[:index], changed, *stops[index + 1:]))
 
 
 # ---------------------------------------------------------------------------

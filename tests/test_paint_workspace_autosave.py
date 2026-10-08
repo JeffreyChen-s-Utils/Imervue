@@ -44,9 +44,9 @@ class _Host(AutosaveMixin):
     def _refresh_status_line(self):
         pass
 
-    def take_autosave_snapshot_now(self):
+    def take_autosave_snapshot_now(self, *, canvas=None):
         self.snapshots.append(True)
-        return super().take_autosave_snapshot_now()
+        return super().take_autosave_snapshot_now(canvas=canvas)
 
 
 def test_a_tick_snapshots_only_unsaved_work(tmp_path):

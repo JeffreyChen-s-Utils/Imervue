@@ -103,24 +103,26 @@ def _reduced_geometry(request: PreviewRequest, cache: PreviewCache, recipe: Reci
     return entry
 
 
+def _scale_fields(target: dict, factors) -> None:
+    """Multiply each numeric field of *target* by the factor *factors* pairs it with."""
+    for name, factor in factors:
+        if isinstance(target.get(name), (int, float)):
+            target[name] *= factor
+
+
 def _scale_masks(recipe: Recipe, scale_x: float, scale_y: float) -> None:
     """Mask coordinates live in full post-geometry pixels; approximate them at preview size."""
+    shape_factors = (*((name, scale_x) for name in ("cx", "rx", "x0", "x1")),
+                     *((name, scale_y) for name in ("cy", "ry", "y0", "y1")))
+    point_factors = (("x", scale_x), ("y", scale_y), ("r", math.sqrt(scale_x * scale_y)))
     for mask in recipe.extra.get("masks", []) or []:
-        if not isinstance(mask, dict) or not isinstance(mask.get("params"), dict):
+        params = mask.get("params") if isinstance(mask, dict) else None
+        if not isinstance(params, dict):
             continue
-        params = mask["params"]
-        for names, factor in ((('cx', 'rx', 'x0', 'x1'), scale_x),
-                              (('cy', 'ry', 'y0', 'y1'), scale_y)):
-            for name in names:
-                if isinstance(params.get(name), (int, float)):
-                    params[name] *= factor
+        _scale_fields(params, shape_factors)
         for point in params.get("points", []) or []:
-            if not isinstance(point, dict):
-                continue
-            for name, factor in (("x", scale_x), ("y", scale_y),
-                                 ("r", math.sqrt(scale_x * scale_y))):
-                if isinstance(point.get(name), (int, float)):
-                    point[name] *= factor
+            if isinstance(point, dict):
+                _scale_fields(point, point_factors)
 
 
 def _apply(request: PreviewRequest, image: Image.Image, recipe: Recipe) -> Image.Image:

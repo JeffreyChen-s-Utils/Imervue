@@ -407,7 +407,9 @@ def _write(args, paths: Sequence[Path], operation, suffix: str, ext_fn) -> int:
         except OSError as exc:
             print(f"error: result report: {exc}", file=sys.stderr)
             return 1
-    return 130 if interrupted else 1 if tally["error"] else 0
+    if interrupted:
+        return 130
+    return 1 if tally["error"] else 0
 
 
 def _run_outputs(pairs, work, workers: int, cancelled: Event) -> bool:
