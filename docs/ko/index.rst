@@ -3115,8 +3115,8 @@ PDF 로 배치합니다. 페이지 크기, 방향, 그리드, 여백, 간격, �
    * - ``watermark`` / ``optimize``
      - 텍스트 워터마크(``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
        ``--color R G B``, ``--no-shadow``), ``--max-kb`` 예산 내 인코딩
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple, 유화 붓질 (``--seed``)
    * - ``auto-orient`` / ``strip``
      - EXIF 방향 플래그를 픽셀에 굽기, EXIF / XMP / ICC 없이 재저장
    * - ``collage`` / ``anaglyph``

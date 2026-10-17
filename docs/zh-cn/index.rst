@@ -2969,8 +2969,8 @@ GPS 地理标记
    * - ``watermark`` / ``optimize``
      - 文字水印(``--text``、``--corner``、``--opacity``、``--font-fraction``、
        ``--color R G B``、``--no-shadow``);在 ``--max-kb`` 预算内编码
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - 暗通道去雾、自适应均衡、Bayer 有序抖动、swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - 暗通道去雾、自适应均衡、Bayer 有序抖动、swirl / pinch / ripple、油画笔触（``--seed``）
    * - ``auto-orient`` / ``strip``
      - 把 EXIF 方向标记烘焙进像素;重存并移除 EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``

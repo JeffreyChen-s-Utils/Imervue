@@ -2788,8 +2788,8 @@ GPS 地理標記
    * - ``watermark`` / ``optimize``
      - 文字浮水印(``--text``、``--corner``、``--opacity``、``--font-fraction``、
        ``--color R G B``、``--no-shadow``);在 ``--max-kb`` 預算內編碼
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - 暗通道去霧、自適應等化、Bayer 有序抖動、swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - 暗通道去霧、自適應等化、Bayer 有序抖動、swirl / pinch / ripple、油畫筆觸（``--seed``）
    * - ``auto-orient`` / ``strip``
      - 把 EXIF 方向旗標烘焙進像素;重存並移除 EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``

@@ -182,7 +182,7 @@ py -m Imervue.cli list-ops          # 사용 가능한 모든 서브커맨드 �
 | `info` / `stats` | 크기와 포맷, 무참조 품질 지표(`--json`으로 기계 판독 출력) |
 | `convert` / `resize` / `thumbnail` | 포맷 변환(`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`), 긴 변(`--max`) 또는 정확한 `--width` / `--height`로 리사이즈, 썸네일 크기 |
 | `watermark` / `optimize` | 텍스트 워터마크(`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`), `--max-kb` 예산 내 인코딩 |
-| `dehaze` / `clahe` / `dither` / `distort` | 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | 다크 채널 안개 제거, 적응 평활화, Bayer 순서 디더, swirl / pinch / ripple, 유화 붓질 (`--seed`) |
 | `auto-orient` / `strip` | EXIF 방향 플래그를 픽셀에 굽기, EXIF / XMP / ICC 없이 재저장 |
 | `collage` / `anaglyph` | 그리드 몽타주(`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`), 스테레오 쌍에서 적청 3D(`--method`) |
 | `preset` / `pipeline` | 저장된 현상 프리셋을 이름으로 적용, 순서가 있는 JSON 파이프라인 실행 |

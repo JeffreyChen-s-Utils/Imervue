@@ -182,7 +182,7 @@ py -m Imervue.cli list-ops          # вывести все доступные �
 | `info` / `stats` | Размеры и формат; безэталонные метрики качества (`--json` для машиночитаемого вывода) |
 | `convert` / `resize` / `thumbnail` | Конвертация формата (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); масштаб по длинной стороне (`--max`) или до точных `--width` / `--height`; размер миниатюры |
 | `watermark` / `optimize` | Текстовый водяной знак (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); кодирование в рамках бюджета `--max-kb` |
-| `dehaze` / `clahe` / `dither` / `distort` | Удаление дымки по тёмному каналу, адаптивная эквализация, упорядоченный дизеринг Байера, swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | Удаление дымки по тёмному каналу, адаптивная эквализация, упорядоченный дизеринг Байера, swirl / pinch / ripple, мазки масляной живописи (`--seed`) |
 | `auto-orient` / `strip` | Запечь флаг ориентации EXIF в пиксели; пересохранить без EXIF / XMP / ICC |
 | `collage` / `anaglyph` | Сетчатый монтаж (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); красно-голубое 3D из стереопары (`--method`) |
 | `preset` / `pipeline` | Применить сохранённый пресет обработки по имени; выполнить упорядоченный JSON-конвейер |

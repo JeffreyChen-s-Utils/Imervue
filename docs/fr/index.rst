@@ -3559,8 +3559,8 @@ affichage::
      - Conversion de format (``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, ``--quality``) ; redimensionnement au grand côté (``--max``) ou à une ``--width`` / ``--height`` exacte ; boîte de vignette
    * - ``watermark`` / ``optimize``
      - Filigrane texte (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``, ``--color R G B``, ``--no-shadow``) ; encoder sous un budget ``--max-kb``
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - Défloutage par canal sombre, égalisation adaptative, tramage Bayer ordonné, swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - Défloutage par canal sombre, égalisation adaptative, tramage Bayer ordonné, swirl / pinch / ripple, coups de pinceau à l'huile (``--seed``)
    * - ``auto-orient`` / ``strip``
      - Appliquer l'orientation EXIF aux pixels ; réenregistrer sans EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``

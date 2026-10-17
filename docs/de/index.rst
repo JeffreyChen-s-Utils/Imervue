@@ -3577,8 +3577,8 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
    * - ``watermark`` / ``optimize``
      - Text-Wasserzeichen (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
        ``--color R G B``, ``--no-shadow``); Kodierung unter einem ``--max-kb``-Budget
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple, Ölmalerei-Pinselstriche (``--seed``)
    * - ``auto-orient`` / ``strip``
      - EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern
    * - ``collage`` / ``anaglyph``

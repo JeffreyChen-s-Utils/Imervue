@@ -182,7 +182,7 @@ py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
 | `info` / `stats` | Maße und Format; referenzfreie Qualitätsmetriken (`--json` für maschinenlesbare Ausgabe) |
 | `convert` / `resize` / `thumbnail` | Formatkonvertierung (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); Skalierung auf eine lange Kante (`--max`) oder exakt auf `--width` / `--height`; Thumbnail-Box |
 | `watermark` / `optimize` | Text-Wasserzeichen (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); Kodierung unter einem `--max-kb`-Budget |
-| `dehaze` / `clahe` / `dither` / `distort` | Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple, Ölmalerei-Pinselstriche (`--seed`) |
 | `auto-orient` / `strip` | EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern |
 | `collage` / `anaglyph` | Raster-Montage (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); Rot-Cyan-3D aus einem Stereopaar (`--method`) |
 | `preset` / `pipeline` | Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen |

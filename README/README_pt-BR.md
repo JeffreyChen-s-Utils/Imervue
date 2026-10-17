@@ -182,7 +182,7 @@ py -m Imervue.cli list-ops          # imprime todos os subcomandos disponíveis
 | `info` / `stats` | Dimensões e formato; métricas de qualidade sem referência (`--json` para saída legível por máquina) |
 | `convert` / `resize` / `thumbnail` | Conversão de formato (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); redimensionamento pelo lado maior (`--max`) ou para `--width` / `--height` exatos; caixa de miniatura |
 | `watermark` / `optimize` | Marca d'água de texto (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); codificar dentro de um orçamento `--max-kb` |
-| `dehaze` / `clahe` / `dither` / `distort` | Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple, pinceladas de tinta a óleo (`--seed`) |
 | `auto-orient` / `strip` | Gravar a orientação EXIF nos pixels; salvar novamente sem EXIF / XMP / ICC |
 | `collage` / `anaglyph` | Montagem em grade (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); 3D vermelho-ciano a partir de um par estéreo (`--method`) |
 | `preset` / `pipeline` | Aplicar uma predefinição de revelação salva pelo nome; executar um pipeline JSON ordenado |

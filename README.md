@@ -183,7 +183,7 @@ py -m Imervue.cli list-ops          # print every available subcommand
 | `info` / `stats` | Dimensions & format; no-reference quality metrics (`--json` for machine output) |
 | `convert` / `resize` / `thumbnail` | Format conversion (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); resize to a long edge (`--max`) or an exact `--width` / `--height`; thumbnail box |
 | `watermark` / `optimize` | Text watermark (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); encode under a `--max-kb` budget |
-| `dehaze` / `clahe` / `dither` / `distort` | Dark-channel dehaze, adaptive equalization, ordered Bayer dither, swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | Dark-channel dehaze, adaptive equalization, ordered Bayer dither, swirl / pinch / ripple, oil-paint brush strokes (`--seed`) |
 | `auto-orient` / `strip` | Bake the EXIF orientation flag into pixels; re-save without EXIF / XMP / ICC |
 | `collage` / `anaglyph` | Grid montage (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); red-cyan 3D from a stereo pair (`--method`) |
 | `preset` / `pipeline` | Apply a saved develop preset by name; run an ordered JSON pipeline of ops |

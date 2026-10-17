@@ -181,7 +181,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子命令
 | `info` / `stats` | 尺寸与格式；无参考质量指标（`--json` 输出机器可读格式） |
 | `convert` / `resize` / `thumbnail` | 格式转换（`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL、`--quality`）；缩放到指定长边（`--max`）或精确的 `--width` / `--height`；缩略图尺寸 |
 | `watermark` / `optimize` | 文字水印（`--text`、`--corner`、`--opacity`、`--font-fraction`、`--color R G B`、`--no-shadow`）；在 `--max-kb` 预算内编码 |
-| `dehaze` / `clahe` / `dither` / `distort` | 暗通道去雾、自适应均衡、Bayer 有序抖动、swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | 暗通道去雾、自适应均衡、Bayer 有序抖动、swirl / pinch / ripple、油画笔触（`--seed`） |
 | `auto-orient` / `strip` | 把 EXIF 方向标记烘焙进像素；重存并移除 EXIF / XMP / ICC |
 | `collage` / `anaglyph` | 网格拼贴（`--columns`、`--cell-width` / `--cell-height`、`--gap`、`--margin`、`--background R G B`）；立体对转红蓝 3D（`--method`） |
 | `preset` / `pipeline` | 按名称应用已保存的显影预设；执行有序的 JSON 运算管线 |

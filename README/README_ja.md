@@ -182,7 +182,7 @@ py -m Imervue.cli list-ops          # 利用可能なサブコマンドを一覧
 | `info` / `stats` | 寸法とフォーマット、無参照品質メトリクス(`--json` で機械可読出力) |
 | `convert` / `resize` / `thumbnail` | フォーマット変換(`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL、`--quality`)、長辺(`--max`)または正確な `--width` / `--height` へのリサイズ、サムネイルサイズ |
 | `watermark` / `optimize` | テキスト透かし(`--text`、`--corner`、`--opacity`、`--font-fraction`、`--color R G B`、`--no-shadow`)、`--max-kb` 予算内でのエンコード |
-| `dehaze` / `clahe` / `dither` / `distort` | ダークチャネル除霞、適応等化、Bayer 秩序ディザ、swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | ダークチャネル除霞、適応等化、Bayer 秩序ディザ、swirl / pinch / ripple、油絵の筆致（`--seed`） |
 | `auto-orient` / `strip` | EXIF 方向フラグをピクセルに焼き込み、EXIF / XMP / ICC を除いて再保存 |
 | `collage` / `anaglyph` | グリッドモンタージュ(`--columns`、`--cell-width` / `--cell-height`、`--gap`、`--margin`、`--background R G B`)、ステレオペアから赤シアン 3D(`--method`) |
 | `preset` / `pipeline` | 保存済み現像プリセットを名前で適用、順序付き JSON パイプラインを実行 |

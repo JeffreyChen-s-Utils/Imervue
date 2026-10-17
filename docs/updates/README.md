@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261017-01 | 2026-10-17 | Stroke-based oil painting for the WaywardCrown portraits | #done #paint #api | [2026-10](2026-10.md) |
 | U-20261009-01 | 2026-10-09 | Clear the 70 SonarCloud code smells and 2 Codacy findings open on main | #done #sonarcloud #codacy #refactor | [2026-10](2026-10.md) |
 | U-20261008-02 | 2026-10-08 | Clear the SonarCloud and Codacy findings on the release PR | #done #sonarcloud #codacy #paint #tests | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | Dock panels on the Imervue and Modify tabs, Modern Dark default theme, UI-scale layout fixes | #done #ui #docks #theme #ui-scale #docs #i18n | [2026-10](2026-10.md) |

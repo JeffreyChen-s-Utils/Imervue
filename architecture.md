@@ -209,6 +209,14 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
 
 ## 6. Cross-project boundaries
 
+- **WaywardCrown (portrait generator)** imports `Imervue.paint.painterly.paint` and
+  `PainterlyOptions` (`tools/artgen/portrait_paint.py` there), from an installed Imervue or
+  from this working tree on `sys.path`, to paint its rendered portrait busts over in oil. It
+  passes an RGB `uint8` image, the options by keyword (`radii`, `threshold`, `max_length`,
+  `impasto`, `bristle`, `seed`) and an `importance` map, and relies on the result being
+  deterministic for a seed. Renaming the module, the function or those options, or changing
+  what a seed paints, needs the same change there and a re-run of its portraits.
+
 - **FrontEngine (optional downstream)** consumes the version 1 `.puppet` archive through
   `Imervue.puppet.document_io.load_puppet`, `Imervue.puppet.canvas.PuppetCanvas`,
   `MotionPlayer`, `IdleDriver`, `InputEngine`, and

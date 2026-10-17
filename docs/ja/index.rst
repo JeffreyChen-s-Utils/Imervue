@@ -2942,8 +2942,8 @@ Web ギャラリー
    * - ``watermark`` / ``optimize``
      - テキスト透かし(``--text``、``--corner``、``--opacity``、``--font-fraction``、
        ``--color R G B``、``--no-shadow``)、``--max-kb`` 予算内でのエンコード
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - ダークチャネル除霞、適応等化、Bayer 秩序ディザ、swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - ダークチャネル除霞、適応等化、Bayer 秩序ディザ、swirl / pinch / ripple、油絵の筆致（``--seed``）
    * - ``auto-orient`` / ``strip``
      - EXIF 方向フラグをピクセルに焼き込み、EXIF / XMP / ICC を除いて再保存
    * - ``collage`` / ``anaglyph``

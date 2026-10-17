@@ -3409,9 +3409,9 @@ Qt**, which makes it usable from scripts, CI steps and servers with no display::
    * - ``watermark`` / ``optimize``
      - Text watermark (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
        ``--color R G B``, ``--no-shadow``); encode under a ``--max-kb`` budget
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
      - Dark-channel dehaze, adaptive equalization, ordered Bayer dither,
-       swirl / pinch / ripple
+       swirl / pinch / ripple, oil-paint brush strokes (``--seed``)
    * - ``auto-orient`` / ``strip``
      - Bake the EXIF orientation flag into pixels; re-save without EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``

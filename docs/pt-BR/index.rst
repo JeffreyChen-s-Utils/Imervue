@@ -3459,8 +3459,8 @@ o Qt**, o que o torna utilizável em scripts, etapas de CI e servidores sem disp
    * - ``watermark`` / ``optimize``
      - Marca d'água de texto (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
        ``--color R G B``, ``--no-shadow``); codificar sob um orçamento ``--max-kb``
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple, pinceladas de tinta a óleo (``--seed``)
    * - ``auto-orient`` / ``strip``
      - Gravar a orientação EXIF nos pixels; salvar novamente sem EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``
