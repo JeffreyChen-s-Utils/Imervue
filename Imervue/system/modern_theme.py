@@ -4,8 +4,8 @@ The older themes in :mod:`Imervue.system.themes` are a stylesheet that paints a
 background on every ``QWidget``. These two instead run on Qt's Fusion style with
 a full palette, so every control (check boxes, spin arrows, item views, custom
 painted widgets) takes the colours without a rule of its own, and the stylesheet
-only shapes the chrome: flat tabs with an accent underline, dock title bars,
-thin scroll bars, rounded inputs and buttons. Combo boxes and spin boxes are
+only shapes the chrome: pill-shaped workspace navigation, document-tab accents,
+dock title bars, thin scroll bars, rounded inputs and buttons. Combo boxes and spin boxes are
 left to Fusion on purpose: a stylesheet border on either replaces their arrows
 with blank boxes unless it ships arrow images of its own.
 
@@ -35,29 +35,37 @@ class ThemeColours:
 
 
 MODERN_DARK = ThemeColours(
-    window="#1f2023", surface="#2a2b2f", raised="#34363b", border="#43454b",
-    text="#e3e5e8", muted="#8d9199", accent="#4c8dff", accent_text="#ffffff",
-    link="#7fb0ff",
+    window="#10141d", surface="#191f2b", raised="#252e3e", border="#354158",
+    text="#edf2f8", muted="#a0afc4", accent="#4c80ef", accent_text="#ffffff",
+    link="#8eb7ff",
 )
 
 MODERN_LIGHT = ThemeColours(
-    window="#f4f5f7", surface="#ffffff", raised="#e9ebef", border="#d0d4da",
-    text="#1f2328", muted="#737a86", accent="#2f6feb", accent_text="#ffffff",
-    link="#1f5fd0",
+    window="#eef2f8", surface="#ffffff", raised="#e5edf8", border="#c8d3e3",
+    text="#202b3d", muted="#586b84", accent="#3268d6", accent_text="#ffffff",
+    link="#275abe",
 )
 
 _TEMPLATE = """
 QToolTip {{ color: {text}; background-color: {raised}; border: 1px solid {border};
            padding: 0.25em 0.5em; }}
 
-QMainWindow::separator {{ background: {window}; width: 5px; height: 5px; }}
+QMainWindow::separator {{ background: {window}; width: 6px; height: 6px; }}
 QMainWindow::separator:hover {{ background: {accent}; }}
 QSplitter::handle {{ background: {window}; }}
 QSplitter::handle:hover {{ background: {accent}; }}
 
-QDockWidget {{ font-weight: bold; }}
-QDockWidget::title {{ background: {surface}; padding: 0.45em 0.7em; text-align: left;
+QDockWidget {{ font-weight: 600; border: 1px solid {border}; }}
+QDockWidget::title {{ background: {surface}; padding: 0.6em 0.8em; text-align: left;
                      border-bottom: 1px solid {border}; }}
+QDockWidget::close-button, QDockWidget::float-button {{ border-radius: 3px; }}
+QDockWidget::close-button:hover, QDockWidget::float-button:hover {{ background: {raised}; }}
+QScrollArea#dockPanelScroll, QScrollArea#paintToolPalette {{ background: {surface}; border: 0; }}
+QFrame#toolGroupSeparator {{ color: {border}; }}
+
+QToolBar {{ background: {surface}; border: 0; spacing: 4px; padding: 0.25em; }}
+QToolBar#paint_toolbar_tools {{ border-right: 1px solid {border}; }}
+QToolBar#paint_toolbar_options {{ border-bottom: 1px solid {border}; }}
 
 QMenuBar {{ background: {window}; border-bottom: 1px solid {border}; }}
 QMenuBar::item {{ background: transparent; padding: 0.35em 0.75em; border-radius: 4px; }}
@@ -79,25 +87,40 @@ QTabBar::tab:hover {{ color: {text}; background: {raised}; }}
 QTabBar::tab:selected {{ color: {text}; }}
 QTabBar::tab:top:selected {{ border-bottom-color: {accent}; }}
 QTabBar::tab:bottom:selected {{ border-top-color: {accent}; }}
+QTabWidget#workspaceTabs > QTabBar {{ background: {surface}; }}
+QTabWidget#workspaceTabs > QTabBar::tab {{ padding: 0.7em 1.3em; margin: 0.35em 0.15em;
+    border: 0; border-radius: 6px; font-weight: 600; }}
+QTabWidget#workspaceTabs > QTabBar::tab:selected {{ background: {raised}; color: {link}; }}
+QTabWidget#workspaceTabs::pane {{ border: 0; border-top: 1px solid {border}; }}
+QLabel#workspaceBrand {{ color: {link}; font-weight: 600; padding: 0.4em 1em; }}
+QLabel#currentFilename {{ color: {muted}; padding: 0.35em 0.5em; }}
+QMainWindow QTabBar::tab:bottom {{ padding: 0.45em 0.65em; }}
 
-QPushButton {{ background: {raised}; border: 1px solid {border}; border-radius: 5px;
-              padding: 0.4em 1em; }}
+QPushButton {{ background: {raised}; border: 1px solid {border}; border-radius: 7px;
+              padding: 0.45em 1em; }}
 QPushButton:hover {{ border-color: {accent}; }}
+QPushButton:focus, QToolButton:focus {{ border-color: {accent}; }}
 QPushButton:pressed, QPushButton:checked {{ background: {accent}; color: {accent_text};
                                             border-color: {accent}; }}
 QPushButton:disabled {{ color: {muted}; border-color: {border}; background: {window}; }}
 QPushButton:default {{ border-color: {accent}; }}
+QPushButton[primary="true"] {{ background: {accent}; color: {accent_text};
+    border-color: {accent}; }}
+QPushButton[primary="true"]:hover, QPushButton[primary="true"]:focus {{ border-color: {text}; }}
+QPushButton[primary="true"]:pressed {{ background: {raised}; color: {text}; }}
 
-QToolButton {{ background: transparent; border: 1px solid transparent; border-radius: 5px;
+QToolButton {{ background: transparent; border: 1px solid transparent; border-radius: 6px;
               padding: 0.3em 0.5em; }}
 QToolButton:hover {{ background: {raised}; border-color: {border}; }}
 QToolButton:pressed, QToolButton:checked {{ background: {accent}; color: {accent_text};
                                             border-color: {accent}; }}
 QToolButton:disabled {{ color: {muted}; }}
+QToolButton[paintTool="true"] {{ padding: 0; }}
+QToolButton[paintTool="true"]:focus {{ border: 2px solid {text}; }}
 
 QLineEdit, QPlainTextEdit, QTextEdit {{
-    background: {surface}; border: 1px solid {border}; border-radius: 5px;
-    padding: 0.25em 0.45em; selection-background-color: {accent};
+    background: {surface}; border: 1px solid {border}; border-radius: 6px;
+    padding: 0.4em 0.6em; selection-background-color: {accent};
     selection-color: {accent_text};
 }}
 QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus {{ border-color: {accent}; }}
@@ -105,7 +128,8 @@ QLineEdit:disabled, QPlainTextEdit:disabled, QTextEdit:disabled {{
     color: {muted}; background: {window}; }}
 
 QAbstractItemView {{ background: {surface}; alternate-background-color: {window};
-                    border: 1px solid {border}; outline: 0; }}
+                    border: 1px solid {border}; border-radius: 5px; outline: 0; }}
+QAbstractItemView::item {{ padding: 0.2em; }}
 QHeaderView::section {{ background: {window}; color: {muted}; border: 0;
                        border-bottom: 1px solid {border}; padding: 0.35em 0.6em; }}
 
@@ -142,6 +166,21 @@ QGroupBox::title {{ subcontrol-origin: margin; left: 0.8em; padding: 0 0.3em;
 
 QStatusBar {{ background: {surface}; border-top: 1px solid {border}; }}
 QStatusBar::item {{ border: 0; }}
+QWidget#imageFilterBar {{ background: {surface}; border: 1px solid {border}; border-radius: 8px; }}
+QWidget#imageFilterBar QLabel {{ color: {muted}; }}
+QWidget#imageFilterBar QLabel#filterFeedback {{ color: {link}; }}
+QLabel#welcome_subtitle, QLabel#welcome_recent_label {{ color: {muted}; }}
+QFrame#browserWelcome {{ background: {surface}; border: 1px solid {border}; border-radius: 16px; }}
+QLabel#emptyStateSubtitle {{ color: {muted}; }}
+QFrame#workspaceWelcome {{ background: {surface}; border: 1px solid {border};
+    border-radius: 14px; }}
+QLabel#workspaceHeading {{ font-weight: 600; color: {text}; }}
+QLabel#workspaceDescription {{ color: {muted}; }}
+QTabWidget#petSettingsTabs > QTabBar::tab,
+QTabWidget#modifyPropertyTabs > QTabBar::tab {{ padding: 0.65em 0.9em; font-weight: 600; }}
+QWidget#petWorkspace QGroupBox {{ background: {surface}; }}
+QWidget#modifyToolPalette {{ background: {surface}; }}
+QToolBar#puppetWorkspaceToolbar {{ border-bottom: 1px solid {border}; }}
 """
 
 
@@ -151,6 +190,7 @@ def build_stylesheet(colours: ThemeColours) -> str:
         window=colours.window, surface=colours.surface, raised=colours.raised,
         border=colours.border, text=colours.text, muted=colours.muted,
         accent=colours.accent, accent_text=colours.accent_text,
+        link=colours.link,
     )
 
 

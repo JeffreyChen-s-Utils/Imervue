@@ -77,8 +77,7 @@ def blur_plane(plane: np.ndarray, radius: int) -> np.ndarray:
 
 
 def gaussian_plane(plane: np.ndarray, sigma: float) -> np.ndarray:
-    """Separable Gaussian blur of a single plane at ``sigma``, as float32; the kernel reaches 3 sigma
-    and the edges are replicated."""
+    """Blur a plane at ``sigma`` as float32, with a 3-sigma kernel and replicated edges."""
     kernel = _gaussian_kernel_1d(sigma)
     out = _convolve_axis(plane.astype(np.float32), kernel, axis=0)
     return _convolve_axis(out, kernel, axis=1)

@@ -447,13 +447,12 @@ def _open_folder(main_gui: GPUImageView, path_obj: Path) -> None:
 
 
 def _open_folder_progressive(main_gui: GPUImageView, path_obj: Path) -> None:
+    from Imervue.gpu_image_view.images.folder_scan_updates import FolderScanUpdates
     from Imervue.user_settings.user_setting_dict import user_setting_dict
     from Imervue.user_settings.recent_image import add_recent_folder
-    old_worker = getattr(main_gui, "_folder_scan_worker", None)
-    if old_worker is not None:
-        with best_effort("abort the previous folder scan"):
-            old_worker.abort()
-    main_gui._folder_scan_generation = getattr(main_gui, "_folder_scan_generation", 0) + 1
+    cancel_folder_scan(main_gui)
+    main_gui._folder_scan_updates = FolderScanUpdates(
+        lambda images: _apply_folder_scan_paths(main_gui, images), main_gui)
     generation = main_gui._folder_scan_generation
     main_gui.current_index = 0
     main_gui._unfiltered_images = []
@@ -481,14 +480,27 @@ def _open_folder_progressive(main_gui: GPUImageView, path_obj: Path) -> None:
     user_setting_dict["user_last_folder"] = str(path_obj)
 
 
+def cancel_folder_scan(main_gui: GPUImageView) -> None:
+    """Discard pending scan work before another path opens or the viewer is destroyed."""
+    main_gui._folder_scan_generation = getattr(main_gui, "_folder_scan_generation", 0) + 1
+    worker = getattr(main_gui, "_folder_scan_worker", None)
+    if worker is not None:
+        with best_effort("abort the previous folder scan"):
+            worker.abort()
+    updates = getattr(main_gui, "_folder_scan_updates", None)
+    if updates is not None:
+        updates.cancel()
+        updates.deleteLater()
+    main_gui._folder_scan_worker = None
+    main_gui._folder_scan_updates = None
+    main_gui._folder_scan_active = False
+
+
 def _on_folder_scan_batch(main_gui: GPUImageView, _folder: str, batch: list[str],
                           generation: int) -> None:
     if generation != getattr(main_gui, "_folder_scan_generation", None):
         return
-    merged = list(getattr(main_gui, "_unfiltered_images", []))
-    seen = set(merged)
-    merged.extend(path for path in batch if path not in seen)
-    _apply_folder_scan_paths(main_gui, merged)
+    main_gui._folder_scan_updates.add(batch)
 
 
 def _on_folder_scan_finished(main_gui: GPUImageView, folder: str, images: list[str],
@@ -500,7 +512,11 @@ def _on_folder_scan_finished(main_gui: GPUImageView, folder: str, images: list[s
     # one, so the spinner must stop rather than hang forever.
     main_gui._folder_scan_active = False
     _maybe_hint_heif(main_gui, images)
-    _apply_folder_scan_paths(main_gui, images)
+    main_gui._folder_scan_updates.finish(images)
+    if not main_gui.model.images:
+        hide_progress = getattr(main_gui.main_window, "_hide_progress", None)
+        if callable(hide_progress):
+            hide_progress()
     if hasattr(main_gui.main_window, "plugin_manager"):
         main_gui.main_window.plugin_manager.dispatch_folder_opened(
             folder, images, main_gui,
@@ -520,6 +536,7 @@ def _apply_folder_scan_paths(main_gui: GPUImageView, images: list[str]) -> None:
 def _open_file(main_gui: GPUImageView, path_obj: Path) -> None:
     from Imervue.user_settings.user_setting_dict import user_setting_dict
     from Imervue.user_settings.recent_image import add_recent_image
+    cancel_folder_scan(main_gui)
     dir_path = path_obj.parent
     images = _scan_images_for_user(str(dir_path))
     target = os.path.normpath(str(path_obj))

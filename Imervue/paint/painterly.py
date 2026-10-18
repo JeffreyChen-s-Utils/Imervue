@@ -257,7 +257,10 @@ def _smear(noise: np.ndarray, direction: np.ndarray) -> np.ndarray:
 
 def _blurred(image: np.ndarray, sigma: float) -> np.ndarray:
     """``image`` (HxWxC) blurred at ``sigma`` across its plane, each channel apart."""
-    return np.stack([gaussian_plane(image[..., channel], sigma) for channel in range(image.shape[2])], axis=2)
+    return np.stack(
+        [gaussian_plane(image[..., channel], sigma) for channel in range(image.shape[2])],
+        axis=2,
+    )
 
 
 def _sobel(plane: np.ndarray, axis: int) -> np.ndarray:

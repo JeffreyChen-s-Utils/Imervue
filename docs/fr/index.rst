@@ -61,6 +61,16 @@ La bibliothèque utilise une connexion WAL séparée en lecture seule : les donn
 
 GPU Develop reste un accélérateur optionnel d’export par lots. Les nouveaux dialogues choisissent CPU ; GPU à sélectionner explicitement sous Render on. Les opérations couleur mixtes peuvent différer en octets ; seuil ou postérisation activés rendent toute la recette sur CPU pour éviter l’amplification des arrondis. Modify et export CPU partagent sRGB 8 bits ; profils incorporés normalisés une fois, export avec sRGB sauf suppression des métadonnées. Pas d’édition HDR linéaire ni large gamut. wgpu optionnel dans le plugin, sans poids de modèle ; appareil absent/erreur utilisent CPU. Rapports 640k/24MP/60MP justifient les aperçus CPU.
 
+Les filtres de navigation ont des champs libellés sur deux lignes et un bouton pour les effacer. Les dates utilisent YYYY-MM-DD ; les dates invalides et les plages inversées sont expliquées puis ignorées. Les tags saisis sont conservés au retour dans un dossier. Au démarrage d’une autre analyse, son indicateur de progression reste visible. Faites glisser la poignée en haut de la barre d’outils gauche de Paint pour la déplacer, l’ancrer sur un autre bord ou la rendre flottante. Sa position est enregistrée ; Reset Workspace Layout la remet à gauche.
+
+Modern Dark et Modern Light offrent une navigation, des surfaces de panneau et un focus clavier plus clairs. Paint utilise une palette d’icônes défilante sur deux colonnes ; le survol affiche les noms traduits et les raccourcis, et l’ancrage horizontal la réorganise sur deux lignes. L’inspecteur pleine hauteur présente d’abord Couleur, Pinceau, Calques et Matériaux ; Color channels déplie les réglages RGB/HSV. Les vues vides proposent d’ouvrir un dossier ou d’effacer les filtres. Les dispositions enregistrées sont conservées ; Window > Reset Workspace Layout applique le nouvel inspecteur.
+
+Les cinq onglets utilisent le design moderne des espaces de travail. Modify propose une palette compacte d’icônes, des sections distinctes de développement et d’annotation et des réglages avancés dépliables. Puppet propose une carte de démarrage avec actions, des commandes en direct regroupées et des paramètres lisibles ; la lecture des mouvements apparaît après le chargement d’un rig. Desktop Pet conserve la sélection du rig en haut et répartit les réglages en quatre catégories défilantes : fenêtre, pilotes en direct, script et raccourcis globaux. Ouvrir les réglages seuls ne crée pas de superposition sur le bureau.
+
+Survolez les commandes, onglets, menus et éléments de listes ou de tableaux pour afficher des conseils. Les cinq espaces de travail et les dialogues ouverts ensuite complètent les conseils manquants en conservant les descriptions et chemins existants. Les commandes numériques indiquent leur plage autorisée et les menus les raccourcis disponibles. Les conseils générés suivent les changements de libellé, de plage et de langue sans recopier les valeurs saisies, y compris les mots de passe.
+
+L’ouverture de dossiers regroupe les résultats successifs de l’analyse au lieu de reconstruire la vue à chaque lot. Les comparaisons utilisent des recherches indexées ; la préparation des métadonnées lit les attributs sans ouvrir les en-têtes et la liste masquée ne se remplit qu’à sa sélection. Les premiers résultats restent progressifs, le tri final est conservé et l’indicateur d’activité s’arrête après l’analyse d’un dossier vide. Les aperçus du navigateur choisissent la première image sans trier toute la liste, utilisent au plus deux tâches et évitent les recherches d’icônes système personnalisées pour limiter les accès concurrents au disque.
+
 .. contents:: Table des matières
    :depth: 2
    :local:
@@ -612,8 +622,7 @@ qu'affiche le dock.
    |outils|                      | Matériaux · …  |
    +------+----------------------+----------------+
 
-Les quatorze docks de droite sont regroupés en onglets dans une colonne unique afin que le
-canevas conserve toute la hauteur visible, et répartis en trois groupes :
+Le menu Window regroupe les quatorze panneaux par flux de travail :
 
 - **Dessin** — Couleur, Pinceau, Pot de peinture, Échantillons
 - **Canevas** — Calques, Navigateur, Historique, Pages, Animation, Histogramme

@@ -41,6 +41,8 @@ from Imervue.paint import tool_state as ts
 from Imervue.paint.gradient import GRADIENT_KINDS
 from Imervue.paint.selection import SELECTION_MODES
 from Imervue.paint.tools_menu import tool_shortcut
+from Imervue.paint.tool_icons import tool_icon
+from Imervue.paint.tool_palette import ToolPalette
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -77,21 +79,27 @@ class PaintToolBar(QToolBar):
     def __init__(self, state: ToolState, parent=None):
         lang = language_wrapper.language_word_dict
         super().__init__(lang.get("paint_toolbar_title", "Paint Tools"), parent)
+        self.setObjectName("paint_toolbar_tools")
         self._state = state
         self.setOrientation(Qt.Orientation.Vertical)
-        self.setMovable(False)
-        self.setFloatable(False)
+        self.setMovable(True)
+        self.setFloatable(True)
+        self.setAllowedAreas(Qt.ToolBarArea.AllToolBarAreas)
 
         self._group = QActionGroup(self)
         self._group.setExclusive(True)
         self._actions: dict[str, QAction] = {}
+        self._palette = ToolPalette(self)
 
         for entry in TOOL_ORDER:
             if entry is None:
-                self.addSeparator()
+                self._palette.add_separator()
                 continue
             self._add_tool_action(entry, lang)
 
+        self.addWidget(self._palette)
+        self._palette.set_orientation(self.orientation())
+        self.orientationChanged.connect(self._palette.set_orientation)
         self.set_active_tool(state.tool)
         self._unsubscribe = state.subscribe(self._on_state_event)
         self.destroyed.connect(lambda *_: self._unsubscribe())
@@ -115,13 +123,14 @@ class PaintToolBar(QToolBar):
     def _add_tool_action(self, tool: str, lang: dict) -> None:
         label = lang.get(f"paint_tool_{tool}", tool.replace("_", " ").title())
         action = QAction(label, self)
+        action.setIcon(tool_icon(tool))
         action.setCheckable(True)
         action.setActionGroup(self._group)
         # The Tools menu owns the key (a second QAction on the same key makes
         # Qt treat it as ambiguous and fire neither); the button only shows it.
         _show_key(action, tool_shortcut(tool))
         action.triggered.connect(lambda checked=False, t=tool: self._on_tool_clicked(t))
-        self.addAction(action)
+        self._palette.add_tool_action(action)
         self._actions[tool] = action
 
     def _on_tool_clicked(self, tool: str) -> None:
@@ -149,6 +158,7 @@ class PaintOptionsBar(QToolBar):
     def __init__(self, state: ToolState, parent=None):
         lang = language_wrapper.language_word_dict
         super().__init__(lang.get("paint_options_title", "Tool Options"), parent)
+        self.setObjectName("paint_toolbar_options")
         self._state = state
         self._suspend = False
         self.setMovable(False)

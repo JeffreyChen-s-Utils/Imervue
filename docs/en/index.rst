@@ -59,6 +59,16 @@ Library search now uses a separate query-only WAL connection: it sees committed 
 
 GPU Develop remains an optional batch-export accelerator. New Batch Export dialogs default to CPU; choose the GPU explicitly under Render on. Mixed GPU color stages may differ from CPU byte values; enabled threshold or posterize now render the entire recipe on CPU to avoid amplified rounding differences. Modify previews and canonical CPU exports share the same 8-bit sRGB pipeline; embedded wider-gamut profiles are normalized once and exports carry an sRGB profile unless metadata is removed. This is not a linear HDR or wide-gamut editing pipeline. wgpu stays optional in the plugin, which has no model weights; missing devices or runtime failures fall back to CPU. Fixed 640k/24MP/60MP timing and pixel reports document the decision to keep CPU previews.
 
+Browse filters use labelled fields in two rows and a Clear filters button. Dates use YYYY-MM-DD; invalid dates and reversed ranges are explained and ignored. Typed tags persist when returning to a folder. Starting another scan keeps its progress indicator visible. Drag the handle at the top of the left Paint tool bar to move it, dock it on another edge or float it. Its position is saved; Reset Workspace Layout returns it to the left.
+
+Modern Dark and Modern Light now share clearer navigation, panel surfaces and keyboard focus. Paint uses a scrollable two-column icon palette; hover for translated tool names and shortcuts, or dock horizontally for two rows. The full-height inspector puts Color, Brush, Layers and Materials first; expand Color channels for RGB/HSV sliders. Empty browser states offer Open Folder or Clear filters. Saved layouts are preserved; Window > Reset Workspace Layout adopts the new inspector.
+
+All five tabs use the modern workspace design. Modify has a compact icon palette, separate Develop/Annotate sections and expandable advanced adjustments. Puppet offers an actionable start card, grouped live controls and a readable parameter inspector; motion playback appears after a rig is loaded. Desktop Pet keeps rig selection above four scrollable settings categories: Window, Live drivers, Pet script and Global hotkeys. Opening its settings alone does not create the desktop overlay.
+
+Hover over controls, workspace tabs, menus and list or table items for tips. Missing tips are filled in all five workspaces and dialogs opened later; existing authored help and file-path tips are preserved. Numeric controls explain their allowed range, menu actions include available shortcuts, and generated tips refresh when the label, range or language changes. Input values, including passwords, are not copied into tips.
+
+Folder browsing merges scan bursts instead of rebuilding for every batch. File-list comparisons use indexed membership, metadata priming reads attributes without image headers, and the hidden list is populated when selected. First results still appear progressively, final ordering is retained, and a completed empty folder stops the busy progress indicator. File-tree folder previews select the first image without sorting the full list, run at most two workers and skip custom system folder-icon queries to reduce competing disk work.
+
 .. contents:: Table of Contents
    :depth: 2
    :local:
@@ -608,8 +618,7 @@ one of your own. **Save as Palette…** keeps the recent colours under a name,
    |      |                      | Material · …   |
    +------+----------------------+----------------+
 
-The fourteen right-side docks are tabbed into a single column so the canvas
-keeps the full visible height, grouped into three clusters:
+The Window menu groups all fourteen panels by workflow:
 
 - **Drawing** — Color, Brush, Bucket, Swatches
 - **Canvas** — Layers, Navigator, History, Pages, Animation, Histogram

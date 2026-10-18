@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.system.ui_scale import scaled_px
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -118,26 +119,32 @@ class ParameterDock(QDockWidget):
     ) -> tuple[QWidget, QSlider, QLabel]:
         lang = language_wrapper.language_word_dict
         row = QWidget()
-        row_layout = QHBoxLayout(row)
+        row_layout = QVBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(8)
+        row_layout.setSpacing(scaled_px(4))
+        row.setMinimumWidth(scaled_px(240))
+        heading = QHBoxLayout()
+        row_layout.addLayout(heading)
 
         name = QLabel(param.id)
-        name.setMinimumWidth(140)
-        row_layout.addWidget(name)
+        name.setWordWrap(True)
+        heading.addWidget(name, 1)
 
         slider = QSlider(Qt.Orientation.Horizontal)
         slider.setRange(0, _SLIDER_STEPS)
         slider.setValue(_value_to_step(param, value))
+        slider.setToolTip(lang.get(
+            "puppet_parameter_range_tip", "{name}: adjust from {minimum} to {maximum}.",
+        ).format(name=param.id, minimum=param.min, maximum=param.max))
         slider.valueChanged.connect(
             lambda step, p=param: self._on_slider_changed(p, step),
         )
-        row_layout.addWidget(slider, stretch=1)
+        slider.setAccessibleName(param.id)
+        row_layout.addWidget(slider)
 
         value_label = QLabel(_format_value(value))
-        value_label.setMinimumWidth(60)
         value_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        row_layout.addWidget(value_label)
+        heading.addWidget(value_label)
 
         if self._workspace is not None:
             set_key_btn = QPushButton(lang.get("puppet_set_key", "Set key"))
@@ -150,7 +157,7 @@ class ParameterDock(QDockWidget):
             set_key_btn.clicked.connect(
                 lambda _checked=False, p=param: self._set_key(p),
             )
-            row_layout.addWidget(set_key_btn)
+            heading.addWidget(set_key_btn)
 
         return row, slider, value_label
 

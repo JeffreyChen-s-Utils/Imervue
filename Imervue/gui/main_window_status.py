@@ -7,7 +7,6 @@ info label (file name, size, zoom, index) kept in step with the viewer.
 from __future__ import annotations
 
 
-from Imervue.system.qt_timers import call_later
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
@@ -15,9 +14,15 @@ class MainWindowStatusMixin:
     """Status bar of the main window."""
 
     def set_status(self, text: str):
+        self._progress_hide_timer.stop()
+        if self._progress_bar.maximum() > 0 and (
+            self._progress_bar.value() >= self._progress_bar.maximum()
+        ):
+            self._progress_bar.setVisible(False)
         self._status_label.setText(text)
 
     def show_progress(self, current: int, total: int):
+        self._progress_hide_timer.stop()
         self._progress_bar.setVisible(True)
         self._progress_bar.setMaximum(total)
         self._progress_bar.setValue(current)
@@ -26,8 +31,8 @@ class MainWindowStatusMixin:
                 "status_loading_progress", "Loading {current}/{total}..."
             ).format(current=current, total=total)
         )
-        if current >= total:
-            call_later(800, self, self._hide_progress)
+        if total > 0 and current >= total:
+            self._progress_hide_timer.start()
 
     def _hide_progress(self):
         self._progress_bar.setVisible(False)

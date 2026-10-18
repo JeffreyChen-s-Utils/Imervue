@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QFileSystemModel, QLabel, QLineEdit, QProgressBar, QSizePolicy,
     QStackedWidget, QStatusBar, QTabBar, QVBoxLayout, QWidget,
@@ -136,7 +136,8 @@ class MainWindowLayoutMixin:
         )
         side, edge = scaled_px(6), scaled_px(2)
         self.filename_label.setContentsMargins(side, edge, side, edge)
-        self.filename_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.filename_label.setObjectName("currentFilename")
+        self.filename_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.filename_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.filename_label.setWordWrap(False)
         self.filename_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -144,6 +145,13 @@ class MainWindowLayoutMixin:
 
         from Imervue.gpu_image_view.gpu_image_view import GPUImageView
         self.viewer = GPUImageView(main_window=self)
+        from Imervue.gui.browser_empty_state import BrowserEmptyState
+        from Imervue.menu.file_menu import open_folder
+        self._browse_empty_state = BrowserEmptyState(
+            self.viewer, open_folder=lambda: open_folder(self),
+            clear_filters=self._reset_image_filters,
+            filter_active=lambda: any(self._filter_state().values()),
+            folder_open=lambda: not self.breadcrumb.isHidden())
 
         self.exif_sidebar = ExifSidebar(self)
 
@@ -216,7 +224,8 @@ class MainWindowLayoutMixin:
         # 並永遠拿到兩側 dock 剩下的寬度；主檢視器留在 Imervue 分頁。
         self._modify_window = make_dock_host()
         self._modify_canvas_host = CanvasHost(
-            lang.get("modify_no_image", "Open an image in the Imervue tab to edit it here."))
+            lang.get("modify_no_image", "Open an image in the Imervue tab to edit it here."),
+            on_browse=lambda: self._main_tabs.setCurrentIndex(0))
         self._modify_window.setCentralWidget(self._modify_canvas_host)
         # 左 dock：註解工具 + 方向；右 dock：繪圖屬性 + 顯影滑桿 + 重設。
         self._build_modify_docks(
@@ -314,6 +323,10 @@ class MainWindowLayoutMixin:
         self._progress_bar = QProgressBar()
         self._progress_bar.setFixedWidth(scaled_px(180))
         self._progress_bar.setVisible(False)
+        self._progress_hide_timer = QTimer(self)
+        self._progress_hide_timer.setSingleShot(True)
+        self._progress_hide_timer.setInterval(800)
+        self._progress_hide_timer.timeout.connect(self._hide_progress)
         # Permanent-side info slots: index · resolution · size · zoom · cursor
         # These are only populated by the viewer; empty strings keep the
         # separators from showing up when nothing is loaded yet.

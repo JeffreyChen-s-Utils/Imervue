@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.file_filters import translated_filter
+from Imervue.gui.control_tooltips import enable_control_tooltips
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 from Imervue.puppet.canvas import PuppetCanvas
@@ -102,6 +103,18 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
         self._build_controllers()
         self._build_status_bar()
         self._refresh_status_for_no_document()
+        from Imervue.puppet.workspace_ui import build_welcome, configure_inspectors
+        self._welcome = build_welcome(self)
+        configure_inspectors(self)
+        enable_control_tooltips(self)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self.property("initialInspectorSized"):
+            from Imervue.puppet.workspace_ui import size_inspectors
+            from Imervue.system.qt_timers import call_later
+            self.setProperty("initialInspectorSized", True)
+            call_later(0, self, lambda: size_inspectors(self))
 
     def _build_docks(self) -> None:
         """Parameters / Expressions / Bones tabbed on the right, Motions at the bottom."""

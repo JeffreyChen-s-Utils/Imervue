@@ -207,48 +207,52 @@ class PuppetMenusMixin:
         return bar
 
     def _build_toggle_toolbar(self) -> QToolBar:
-        """Slim toolbar carrying the live on/off toggles plus two
-        affordances that needed surfacing out of the File / Edit
-        menus: a one-click "Reset" (snap the rig back to neutral)
-        and an "Examples" dropdown that exposes the bundled demo
-        rigs without forcing the user to dig through File >
-        Examples."""
+        """Surface document and editing actions; group live toggles in one menu."""
+        from PySide6.QtCore import QSize, Qt
         from PySide6.QtWidgets import QToolButton
+        from Imervue.gui.tool_icons import tool_icon
+        from Imervue.system.ui_scale import scaled_px
 
         lang = language_wrapper.language_word_dict
         bar = QToolBar(lang.get("puppet_toolbar_title", "Puppet"), self)
+        bar.setObjectName("puppetWorkspaceToolbar")
         bar.setMovable(False)
-
-        # Examples — QToolButton with an attached menu so a single
-        # click pops the bundled-puppet list right next to the
-        # toolbar instead of buried under the File menu.
+        bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        bar.setIconSize(QSize(scaled_px(18), scaled_px(18)))
+        self._open_action.setIcon(tool_icon("folder"))
+        self._save_action.setIcon(tool_icon("save"))
+        bar.addAction(self._open_action)
         examples_btn = QToolButton(bar)
         examples_btn.setText(lang.get("puppet_examples", "Examples"))
         examples_btn.setMenu(self._examples_menu)
         examples_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        examples_btn.setToolTip(
-            lang.get(
-                "puppet_examples_tooltip",
-                "Open one of the bundled example rigs",
-            ),
-        )
         bar.addWidget(examples_btn)
+        bar.addAction(self._save_action)
         bar.addSeparator()
-
-        for action in (
-            self._drag_toggle,
-            self._blink_toggle,
-            self._lipsync_toggle,
-            self._webcam_toggle,
-            self._idle_toggle,
-            self._idle_motion_toggle,
-            self._mesh_edit_toggle,
-            self._record_action,
-        ):
-            bar.addAction(action)
-
-        bar.addSeparator()
+        bar.addAction(self._mesh_edit_toggle)
         bar.addAction(self._reset_action)
+        bar.addSeparator()
+        live_button = QToolButton(bar)
+        live_button.setObjectName("puppetLiveMenu")
+        live_menu = QMenu(live_button)
+        toggles = (self._drag_toggle, self._blink_toggle, self._lipsync_toggle,
+                   self._webcam_toggle, self._idle_toggle, self._idle_motion_toggle)
+        live_menu.addActions(toggles)
+        live_button.setMenu(live_menu)
+        live_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+
+        def refresh_live_label():
+            title = lang.get("puppet_menu_live", "Live")
+            count = sum(action.isChecked() for action in toggles)
+            live_button.setText(f"{title} · {count}" if count else title)
+            live_button.setAccessibleName(live_button.text())
+
+        for action in toggles:
+            action.toggled.connect(refresh_live_label)
+        refresh_live_label()
+        bar.addWidget(live_button)
+        bar.addAction(self._record_action)
+        bar.addAction(self._fit_action)
         return bar
 
     def _rebuild_examples_menu(self) -> None:
