@@ -169,8 +169,10 @@ class TestCropWidgetPlacement:
         assert not develop_panel._crop_widget.isVisible()
 
     def test_crop_widget_in_right_panel(self, develop_panel):
-        """Crop widget should be parented under the right panel, not the left."""
-        parent = develop_panel._crop_widget.parentWidget()
-        # The right panel inner widget has the color button, sliders, etc.
-        # Verify the crop widget shares a parent with the color button.
-        assert parent is develop_panel._color_btn.parentWidget()
+        """Crop stays above the property tabs in the right scrollable inspector."""
+        left = develop_panel._test_splitter.widget(0)
+        right = develop_panel._test_splitter.widget(1).widget()
+        assert develop_panel._crop_widget.parentWidget() is right
+        assert right.isAncestorOf(develop_panel._property_tabs)
+        assert develop_panel._property_tabs.widget(1).isAncestorOf(develop_panel._color_btn)
+        assert not left.isAncestorOf(develop_panel._crop_widget)

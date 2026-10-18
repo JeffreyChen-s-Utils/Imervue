@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QWidget,
+    QSizePolicy,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -27,6 +28,7 @@ from Imervue.paint.color_math import (
     rgb_to_hsv,
 )
 from Imervue.paint.color_wheel_widget import ColorWheelWidget
+from Imervue.system.ui_scale import scaled_px
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -59,11 +61,13 @@ class ColorDock(QDockWidget):
 
         layout.addLayout(self._build_swatches(lang))
         self._wheel = ColorWheelWidget(self._state.foreground or DEFAULT_FG_FALLBACK)
+        self._wheel.setMinimumSize(scaled_px(100), scaled_px(100))
+        self._wheel.setMaximumHeight(scaled_px(180))
+        self._wheel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._wheel.color_chosen.connect(self._on_wheel_changed)
-        layout.addWidget(self._wheel)
-        layout.addLayout(self._build_hsv_form(lang))
-        layout.addLayout(self._build_rgb_form(lang))
+        layout.addWidget(self._wheel, stretch=1)
         layout.addLayout(self._build_hex_row(lang))
+        self._build_channel_controls(layout, lang)
         layout.addWidget(self._build_history_label(lang))
         self._history_grid = self._build_history_grid()
         layout.addWidget(self._history_grid)
@@ -75,6 +79,27 @@ class ColorDock(QDockWidget):
         self.destroyed.connect(lambda *_: self._unsubscribe())
 
     # ---- builders --------------------------------------------------------
+
+    def _build_channel_controls(self, layout, lang) -> None:
+        self._channels_toggle = QToolButton()
+        self._channels_toggle.setText(lang.get("paint_color_channels", "Color channels"))
+        self._channels_toggle.setCheckable(True)
+        self._channels_toggle.setArrowType(Qt.ArrowType.RightArrow)
+        self._channels_toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        layout.addWidget(self._channels_toggle)
+        self._channel_controls = QWidget()
+        forms = QVBoxLayout(self._channel_controls)
+        forms.setContentsMargins(0, 0, 0, 0)
+        forms.addLayout(self._build_hsv_form(lang))
+        forms.addLayout(self._build_rgb_form(lang))
+        layout.addWidget(self._channel_controls)
+        self._channel_controls.hide()
+        self._channels_toggle.toggled.connect(self._set_channels_expanded)
+
+    def _set_channels_expanded(self, expanded: bool) -> None:
+        self._channel_controls.setVisible(expanded)
+        self._channels_toggle.setArrowType(
+            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
 
     def _build_swatches(self, lang: dict) -> QHBoxLayout:
         row = QHBoxLayout()

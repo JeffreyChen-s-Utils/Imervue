@@ -59,6 +59,16 @@ A biblioteca consulta uma conexão WAL separada, somente leitura, com dados conf
 
 GPU Develop continua opcional para exportação em lote. Novos diálogos escolhem CPU; selecionar GPU explicitamente em Render on. Etapas mistas de cor podem diferir em bytes; limiar ou posterização ativados renderizam a receita inteira em CPU para evitar amplificar arredondamentos. Modify e exportação CPU compartilham sRGB de 8 bits; perfis incorporados normalizados uma vez, saídas com sRGB salvo remoção dos metadados. Não é edição HDR linear ou de gamut amplo. wgpu opcional no plugin, sem pesos de modelos; dispositivos ausentes/falhas usam CPU. Relatórios 640k/24MP/60MP documentam manter prévias CPU.
 
+Os filtros de navegação têm campos identificados em duas linhas e um botão para limpá-los. As datas usam YYYY-MM-DD; datas inválidas e intervalos invertidos são explicados e ignorados. As tags digitadas são mantidas ao retornar a uma pasta. Ao iniciar outra varredura, seu indicador de progresso permanece visível. Arraste a alça no topo da barra de ferramentas esquerda do Paint para movê-la, encaixá-la em outra borda ou deixá-la flutuante. A posição é salva; Reset Workspace Layout a devolve à esquerda.
+
+Modern Dark e Modern Light oferecem navegação, superfícies de painel e foco de teclado mais claros. Paint usa uma paleta de ícones rolável em duas colunas; ao passar o mouse, mostra nomes traduzidos e atalhos, e ao encaixar na horizontal, reorganiza-se em duas linhas. O inspetor de altura completa mostra Cor, Pincel, Camadas e Materiais primeiro; Color channels expande os controles RGB/HSV. As telas vazias oferecem abrir pasta ou limpar filtros. Os layouts salvos são preservados; Window > Reset Workspace Layout aplica o novo inspetor.
+
+As cinco abas usam o design moderno dos espaços de trabalho. Modify oferece uma paleta compacta de ícones, seções separadas de revelação e anotação e ajustes avançados expansíveis. Puppet inclui um cartão inicial com ações, controles ao vivo agrupados e parâmetros legíveis; a reprodução de movimentos aparece após carregar um rig. Desktop Pet mantém a seleção do rig no topo e divide as configurações em quatro categorias com rolagem: janela, controladores ao vivo, roteiro e atalhos globais. Abrir apenas as configurações não cria a sobreposição na área de trabalho.
+
+Passe o mouse sobre controles, abas, menus e itens de listas ou tabelas para ver dicas. As dicas ausentes são preenchidas nos cinco espaços de trabalho e nos diálogos abertos depois, preservando a ajuda e os caminhos de arquivos existentes. Controles numéricos mostram o intervalo permitido e comandos de menu incluem os atalhos disponíveis. As dicas geradas acompanham mudanças de rótulo, intervalo e idioma, sem copiar valores digitados, incluindo senhas.
+
+Ao abrir pastas, os resultados consecutivos da varredura são agrupados, evitando reconstruir a visualização a cada lote. As comparações usam consultas indexadas, os metadados iniciais leem apenas atributos sem abrir cabeçalhos de imagens e a lista oculta só é preenchida quando selecionada. Os primeiros resultados continuam aparecendo progressivamente, a ordem final é mantida e o indicador de atividade para ao concluir uma pasta vazia. As prévias da árvore escolhem a primeira imagem sem ordenar toda a lista, usam no máximo dois trabalhadores e dispensam consultas a ícones personalizados de pastas do sistema para reduzir a disputa pelo disco.
+
 .. contents:: Sumário
    :depth: 2
    :local:
@@ -610,8 +620,7 @@ remove uma das suas (as embutidas continuam), e ``Filtro`` >
    | Ferr.|                      | Material · …   |
    +------+----------------------+----------------+
 
-Os catorze docks do lado direito são organizados em abas em uma única coluna para
-que a tela mantenha toda a altura visível, agrupados em três conjuntos:
+O menu Window agrupa os catorze painéis por fluxo de trabalho:
 
 - **Desenho** — Cor, Pincel, Balde, Amostras
 - **Tela** — Camadas, Navegador, Histórico, Páginas, Animação, Histograma
@@ -3459,8 +3468,8 @@ o Qt**, o que o torna utilizável em scripts, etapas de CI e servidores sem disp
    * - ``watermark`` / ``optimize``
      - Marca d'água de texto (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
        ``--color R G B``, ``--no-shadow``); codificar sob um orçamento ``--max-kb``
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - Remoção de neblina por canal escuro, equalização adaptativa, dithering Bayer ordenado, swirl / pinch / ripple, pinceladas de tinta a óleo (``--seed``)
    * - ``auto-orient`` / ``strip``
      - Gravar a orientação EXIF nos pixels; salvar novamente sem EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``

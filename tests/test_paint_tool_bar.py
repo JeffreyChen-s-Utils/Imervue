@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import pytest
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel, QMainWindow
 
 from Imervue.paint import tool_state as ts
 from Imervue.paint.tool_bar import (
@@ -103,6 +105,50 @@ def test_paint_toolbar_responds_to_external_state_change(qapp, state):
         assert bar.action_for("zoom").isChecked() is True
     finally:
         bar.deleteLater()
+
+
+@pytest.mark.parametrize("area", [Qt.ToolBarArea.LeftToolBarArea, Qt.ToolBarArea.RightToolBarArea,
+                                  Qt.ToolBarArea.TopToolBarArea, Qt.ToolBarArea.BottomToolBarArea])
+def test_tools_can_move_to_each_edge_and_still_select_tools(qapp, state, area):
+    host = QMainWindow()
+    host.setCentralWidget(QLabel("canvas"))
+    bar = PaintToolBar(state, host)
+    try:
+        host.addToolBar(Qt.ToolBarArea.LeftToolBarArea, bar)
+        assert bar.isMovable()
+        assert bar.isFloatable()
+        assert bar.isAreaAllowed(area)
+        host.addToolBar(area, bar)
+        assert host.toolBarArea(bar) == area
+        bar.action_for("eraser").trigger()
+        assert state.tool == "eraser"
+        assert bar.action_for("eraser").isChecked()
+    finally:
+        host.deleteLater()
+
+
+def test_toolbar_position_restores_with_stable_names_across_translated_titles(qapp, state):
+    original, restored = QMainWindow(), QMainWindow()
+    try:
+        tools = PaintToolBar(state, original)
+        options = PaintOptionsBar(state, original)
+        original.addToolBar(Qt.ToolBarArea.RightToolBarArea, tools)
+        original.addToolBar(Qt.ToolBarArea.TopToolBarArea, options)
+        saved = original.saveState()
+        next_tools = PaintToolBar(state, restored)
+        next_tools.setWindowTitle("繪圖工具")
+        next_options = PaintOptionsBar(state, restored)
+        next_options.setWindowTitle("工具選項")
+        restored.addToolBar(Qt.ToolBarArea.LeftToolBarArea, next_tools)
+        restored.addToolBar(Qt.ToolBarArea.TopToolBarArea, next_options)
+        assert tools.objectName() and options.objectName()
+        assert tools.objectName() != options.objectName()
+        assert restored.restoreState(saved)
+        assert restored.toolBarArea(next_tools) == Qt.ToolBarArea.RightToolBarArea
+        assert restored.toolBarArea(next_options) == Qt.ToolBarArea.TopToolBarArea
+    finally:
+        original.deleteLater()
+        restored.deleteLater()
 
 
 # ---------------------------------------------------------------------------

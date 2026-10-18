@@ -16,7 +16,7 @@ from __future__ import annotations
 from base64 import b64decode, b64encode
 
 from PySide6.QtCore import QByteArray, Qt
-from PySide6.QtWidgets import QDockWidget, QLabel, QMainWindow, QStackedWidget, QWidget
+from PySide6.QtWidgets import QDockWidget, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.user_settings.user_setting_dict import user_setting_dict
@@ -73,12 +73,19 @@ class CanvasHost(QStackedWidget):
     tool and adjustment docks leave, on every resize and screen change.
     """
 
-    def __init__(self, hint: str, parent: QWidget | None = None):
+    def __init__(self, hint: str, parent: QWidget | None = None, *, on_browse=None):
         super().__init__(parent)
-        self._hint = QLabel(hint)
-        self._hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._hint.setWordWrap(True)
-        self._hint.setEnabled(False)
+        from Imervue.gui.workspace_widgets import WorkspaceWelcome
+        lang = language_wrapper.language_word_dict
+        self._hint = QWidget()
+        layout = QVBoxLayout(self._hint)
+        card = WorkspaceWelcome(lang.get("modify_welcome_title", "Make the image your own"), hint)
+        if on_browse is not None:
+            card.add_action(
+                lang.get("modify_browse_images", "Browse images"), on_browse, primary=True)
+        layout.addStretch()
+        layout.addWidget(card, 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addStretch()
         self.addWidget(self._hint)
 
     def set_canvas(self, canvas: QWidget) -> None:
@@ -113,6 +120,7 @@ class MainWindowDocksMixin:
 
     def _build_modify_docks(self, tools: QWidget, properties: QWidget) -> None:
         """Annotation tools on the left of the canvas, adjustments on its right."""
+        from Imervue.gui.panel_scroll import scroll_dock_content
         lang = language_wrapper.language_word_dict
         host = self._modify_window
         self._modify_tools_dock = add_dock(
@@ -121,6 +129,8 @@ class MainWindowDocksMixin:
         self._modify_properties_dock = add_dock(
             host, PROPERTIES_DOCK_NAME, lang.get("dock_modify_adjustments", "Adjustments"),
             properties, Qt.DockWidgetArea.RightDockWidgetArea)
+        scroll_dock_content(self._modify_tools_dock)
+        scroll_dock_content(self._modify_properties_dock)
 
     def panel_docks(self) -> list[tuple[str, list[QDockWidget]]]:
         """The docks grouped under the title of the tab they belong to, in menu order."""

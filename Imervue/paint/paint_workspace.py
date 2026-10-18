@@ -9,10 +9,10 @@ behaviour that users expect from raster paint apps and PS-style apps.
 Layout:
 
 * Top: PaintOptionsBar — context-sensitive options strip.
-* Left: PaintToolBar — vertical icon bar (added as a regular toolbar).
+* Left: PaintToolBar — scrollable two-column icon palette in a movable toolbar.
 * Centre: PaintCanvas — the GL drawing surface.
-* Right: ColorDock + BrushDock + LayerDock + NavigatorDock + HistoryDock,
-  stacked top-to-bottom in dock area :data:`Qt.RightDockWidgetArea`.
+* Right: a full-height tabbed inspector, with Color, Brush, Layers and Materials
+  first. The Window menu groups all fourteen panels by workflow.
 
 The class is a thin coordinator: construction is delegated to
 :class:`~Imervue.paint.workspace_docks.DockBuilder`, and the behaviour
@@ -54,6 +54,7 @@ from Imervue.paint.workspace_shortcuts import ShortcutMixin
 from Imervue.paint.workspace_status import StatusLineMixin
 from Imervue.paint.workspace_tabs import TabManagerMixin
 from Imervue.system.best_effort import best_effort
+from Imervue.gui.control_tooltips import enable_control_tooltips
 
 if TYPE_CHECKING:
     from Imervue.paint.tool_state import ToolState
@@ -94,6 +95,10 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
 
     def __init__(self, state: ToolState | None = None, parent=None):
         super().__init__(parent)
+        if parent is not None:
+            # QMainWindow keeps Qt.Window even with a parent; a same-parent
+            # layout.addWidget() does not reparent it or clear that flag.
+            self.setWindowFlags(Qt.WindowType.Widget)
         self.setAcceptDrops(True)
         self._state = state if state is not None else ts.load_tool_state()
         self._seed_default_brush_presets()
@@ -109,6 +114,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         self._build_navigator_throttle()
         self._build_dispatcher()
         self._finish_construction()
+        enable_control_tooltips(self)
 
     # ---- construction helpers ------------------------------------------
 
@@ -274,6 +280,14 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         self.apply_shortcut_registry(load_shortcuts())
 
     # ---- public ----------------------------------------------------------
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if getattr(self, "_initial_dock_size_pending", False):
+            from Imervue.system.qt_timers import call_later
+            self._initial_dock_size_pending = False
+            # Nested tab/dock layouts finish polishing after the first show.
+            call_later(50, self, self._size_default_inspector)
 
     def canvas(self) -> PaintCanvas:
         return self._canvas

@@ -61,6 +61,16 @@ La biblioteca consulta una conexión WAL separada de solo lectura: ve datos conf
 
 GPU Develop sigue como acelerador opcional de exportación por lotes. Nuevos diálogos eligen CPU; seleccionar GPU explícitamente en Procesar en. Las etapas de color mixtas pueden diferir en bytes; umbral o posterización activados procesan toda la receta en CPU para evitar amplificar redondeos. Modify y exportación CPU usan sRGB de 8 bits; perfiles incrustados se normalizan una vez y las salidas llevan sRGB salvo al quitar metadatos. No es edición HDR lineal ni de gama amplia. wgpu opcional en el plugin, sin pesos de modelos; fallos/dispositivos ausentes usan CPU. Informes 640k/24MP/60MP documentan mantener vistas previas CPU.
 
+Los filtros de navegación tienen campos con etiquetas en dos filas y un botón para borrarlos. Las fechas usan YYYY-MM-DD; se explican e ignoran las fechas no válidas y los intervalos invertidos. Las etiquetas escritas se conservan al volver a una carpeta. Al iniciar otro análisis, su indicador de progreso permanece visible. Arrastra el asa superior de la barra de herramientas izquierda de Paint para moverla, acoplarla a otro borde o dejarla flotante. Su posición se guarda; Reset Workspace Layout la devuelve a la izquierda.
+
+Modern Dark y Modern Light ofrecen navegación, superficies de panel y foco de teclado más claros. Paint usa una paleta de iconos desplazable de dos columnas; al pasar el cursor muestra nombres traducidos y atajos, y al acoplarla horizontalmente se reorganiza en dos filas. El inspector de altura completa presenta primero Color, Pincel, Capas y Materiales; Color channels despliega los controles RGB/HSV. Las vistas vacías ofrecen abrir carpeta o borrar filtros. Se conservan los diseños guardados; Window > Reset Workspace Layout aplica el nuevo inspector.
+
+Las cinco pestañas usan el diseño moderno del espacio de trabajo. Modify ofrece una paleta compacta de iconos, secciones separadas de revelado y anotación y ajustes avanzados desplegables. Puppet incluye una tarjeta inicial con acciones, controles en vivo agrupados y parámetros legibles; la reproducción de movimientos aparece al cargar un rig. Desktop Pet mantiene la selección del rig arriba y divide los ajustes en cuatro categorías desplazables: ventana, controladores en vivo, guion y atajos globales. Abrir los ajustes por sí solo no crea la superposición del escritorio.
+
+Al situar el cursor sobre controles, pestañas, menús y elementos de listas o tablas aparecen consejos. Los cinco espacios de trabajo y los diálogos abiertos después completan los consejos ausentes, conservando la ayuda y las rutas existentes. Los controles numéricos indican el rango permitido y los comandos de menú incluyen los atajos disponibles. Los consejos generados se actualizan al cambiar la etiqueta, el rango o el idioma; no copian valores introducidos, incluidas las contraseñas.
+
+Al abrir carpetas se agrupan los resultados consecutivos del análisis, evitando reconstruir la vista por cada lote. Las comparaciones usan búsquedas indexadas, los metadatos iniciales solo leen atributos sin abrir las cabeceras de imagen y la lista oculta se llena al seleccionarla. Los primeros resultados siguen apareciendo progresivamente, se conserva el orden final y el indicador de actividad se detiene al terminar una carpeta vacía. Las vistas previas del árbol eligen la primera imagen sin ordenar toda la lista, usan como máximo dos trabajadores y omiten las consultas de iconos de carpeta personalizados del sistema para reducir la competencia por el disco.
+
 .. contents:: Tabla de contenidos
    :depth: 2
    :local:
@@ -619,8 +629,7 @@ elimina una de las suyas (las integradas se conservan) y ``Filter`` >
    | herr.|                      | Material · …   |
    +------+----------------------+----------------+
 
-Los catorce docks del lado derecho están organizados como pestañas en una sola columna,
-de modo que el lienzo mantiene la altura visible completa, y se agrupan en tres bloques:
+El menú Window agrupa los catorce paneles por flujo de trabajo:
 
 - **Dibujo** — Color, Brush, Bucket, Swatches
 - **Lienzo** — Layers, Navigator, History, Pages, Animation, Histogram
@@ -3522,8 +3531,8 @@ Qt**, lo que lo hace utilizable desde scripts, pasos de CI y servidores sin pant
      - Conversión de formato (``--format`` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, ``--quality``); redimensionado a un lado largo (``--max``) o a un ``--width`` / ``--height`` exacto; caja de miniatura
    * - ``watermark`` / ``optimize``
      - Marca de agua de texto (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``, ``--color R G B``, ``--no-shadow``); codificar bajo un presupuesto ``--max-kb``
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - Eliminación de neblina por canal oscuro, ecualización adaptativa, tramado Bayer ordenado, swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - Eliminación de neblina por canal oscuro, ecualización adaptativa, tramado Bayer ordenado, swirl / pinch / ripple, pinceladas de óleo (``--seed``)
    * - ``auto-orient`` / ``strip``
      - Fijar la orientación EXIF en los píxeles; volver a guardar sin EXIF / XMP / ICC
    * - ``collage`` / ``anaglyph``

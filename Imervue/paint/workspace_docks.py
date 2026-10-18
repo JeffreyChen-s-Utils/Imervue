@@ -4,8 +4,8 @@ Two collaborators live here:
 
 * :class:`DockBuilder` — a one-shot construction helper invoked from the
   workspace constructor. It instantiates every right-side dock, wires the
-  dock-owned signals back to the workspace, tabifies the three workflow
-  clusters, assigns stable ``objectName``s and restores any saved layout.
+  dock-owned signals back to the workspace, builds a tabbed inspector,
+  assigns stable ``objectName``s and restores any saved layout.
   Pulling this ~150-line block out of ``__init__`` is the main lever that
   brings the workspace under the file-length budget.
 * :class:`DockLayoutMixin` — the runtime layout commands (toggle-all,
@@ -55,7 +55,7 @@ class DockBuilder:
         self._ws = workspace
 
     def build(self) -> None:
-        """Create the docks, tabify the clusters, and restore saved state."""
+        """Create the inspector, logical menu groups, and restore saved state."""
         ws = self._ws
         self._create_docks()
         clusters = self._cluster_layout()
@@ -67,8 +67,9 @@ class DockBuilder:
         )
         ws._dock_clusters = clusters
         self._assign_object_names(all_right_docks)
+        ws._size_default_inspector()
         ws._populate_window_menu()
-        ws._restore_dock_state()
+        ws._initial_dock_size_pending = not ws._restore_dock_state()
 
     def _create_docks(self) -> None:
         """Instantiate every dock + wire its signals back to the workspace."""
@@ -133,13 +134,7 @@ class DockBuilder:
         ws._pose_dock.insert_requested.connect(ws._on_pose_insert)
 
     def _cluster_layout(self) -> dict:
-        """Group the docks into the three workflow clusters.
-
-        Three scannable tab rows ("drawing tools / canvas data /
-        libraries") rather than one fourteen-tab pile, while keeping the
-        same vertical budget (only the tallest dock drives the column's
-        minimum).
-        """
+        """Logical workflow groups used by the Window menu and visibility commands."""
         ws = self._ws
         return {
             "drawing": (
@@ -165,12 +160,14 @@ class DockBuilder:
         }
 
     def _assign_object_names(self, all_right_docks) -> None:
+        from Imervue.gui.panel_scroll import scroll_dock_content
         ws = self._ws
         attr_by_id = {
             id(getattr(ws, attr)): name
             for attr, name in _DOCK_OBJECT_NAMES.items()
         }
         for dock in all_right_docks:
+            scroll_dock_content(dock)
             dock.setObjectName(attr_by_id[id(dock)])
             dock.setFeatures(
                 dock.features()
@@ -189,16 +186,20 @@ class DockLayoutMixin:
     DOCK_STATE_SETTING_KEY = DOCK_STATE_SETTING_KEY
 
     def _install_dock_clusters(self, clusters: tuple) -> None:
-        """Anchor each cluster's first dock on the right edge and tabify
-        the rest behind it. Pulled out of ``__init__`` so the constructor
-        stays under the cognitive-complexity budget."""
-        for cluster in clusters:
-            anchor = cluster[0]
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
-            for dock in cluster[1:]:
-                self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        """One full-height inspector, with Color, Brush, Layers and Materials first."""
+        all_docks = tuple(dock for cluster in clusters for dock in cluster)
+        priority = tuple(dock for index, cluster in enumerate(clusters)
+                         for dock in cluster[:2 if index == 0 else 1])
+        ordered = priority + tuple(dock for dock in all_docks if dock not in priority)
+        if not ordered:
+            return
+        anchor = ordered[0]
+        for dock in ordered:
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+            if dock is not anchor:
                 self.tabifyDockWidget(anchor, dock)
-            anchor.raise_()
+            dock.show()
+        anchor.raise_()
 
     def _save_dock_state(self) -> None:
         """Serialise the current dock layout into ``user_setting_dict``.
@@ -215,14 +216,12 @@ class DockLayoutMixin:
         blob = bytes(self.saveState().data())
         user_setting_dict[self.DOCK_STATE_SETTING_KEY] = b64encode(blob).decode("ascii")
 
-    def _restore_dock_state(self) -> None:
+    def _restore_dock_state(self) -> bool:
         """Apply the saved dock layout from ``user_setting_dict``.
 
-        Returns silently when no saved layout exists (first run) or
-        when ``restoreState`` rejects the blob (after a dock was
-        added / removed in a newer build, the saved state references
-        unknown objects and Qt skips it). Either way the default
-        cluster layout configured in ``__init__`` stays in place.
+        Returns False when no saved layout exists or Qt rejects the blob,
+        keeping the default inspector. A successful restore returns True so
+        the first show does not resize a user's customized panels.
 
         Wrapped in try/except so a corrupt blob never crashes the
         workspace constructor — broken state is the user's local
@@ -234,16 +233,16 @@ class DockLayoutMixin:
 
         encoded = user_setting_dict.get(self.DOCK_STATE_SETTING_KEY)
         if not encoded:
-            return
+            return False
         try:
             blob = b64decode(encoded)
         except (ValueError, TypeError):
-            return
+            return False
         try:
             from PySide6.QtCore import QByteArray
-            self.restoreState(QByteArray(blob))
+            return self.restoreState(QByteArray(blob))
         except (RuntimeError, ValueError, TypeError):
-            return
+            return False
 
     def toggle_all_docks(self) -> bool:
         """Hide every right-side dock for distraction-free painting,
@@ -286,34 +285,45 @@ class DockLayoutMixin:
         )
 
     def reset_workspace_layout(self) -> None:
-        """Re-apply the default three-cluster layout.
+        """Restore the left tool bar and the default tabbed inspector.
 
         Drops any saved state (so the next launch also starts on the
         default), removes every right-side dock from its current home,
-        then re-tabifies the three clusters in their canonical order.
+        then re-tabifies the inspector in its default order.
         """
         from Imervue.user_settings.user_setting_dict import user_setting_dict
 
         user_setting_dict.pop(self.DOCK_STATE_SETTING_KEY, None)
+        tools = getattr(self, "_tool_bar", None)
+        if tools is not None:
+            self.addToolBar(Qt.ToolBarArea.LeftToolBarArea, tools)
+            tools.show()
         clusters = getattr(self, "_dock_clusters", None)
         if not clusters:
             return
+        self._docks_collapsed = None
         for dock in self._ordered_docks(clusters):
+            # addDockWidget/tabifyDockWidget do not clear Qt's floating flag.
+            dock.setFloating(False)
             self.removeDockWidget(dock)
-        for cluster_name in _CLUSTER_ORDER:
-            self._reinstall_cluster(clusters.get(cluster_name, ()))
+        self._install_dock_clusters(tuple(clusters.get(key, ()) for key in _CLUSTER_ORDER))
+        self._size_default_inspector()
 
-    def _reinstall_cluster(self, cluster: tuple) -> None:
-        if not cluster:
-            return
-        anchor = cluster[0]
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, anchor)
-        anchor.show()
-        for dock in cluster[1:]:
-            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
-            self.tabifyDockWidget(anchor, dock)
-            dock.show()
-        anchor.raise_()
+    def _size_default_inspector(self) -> None:
+        from PySide6.QtWidgets import QTabBar
+        from Imervue.system.ui_scale import scaled_px
+        clusters = getattr(self, "_dock_clusters", {})
+        if clusters.get("drawing"):
+            self.resizeDocks([clusters["drawing"][0]], [scaled_px(320)],
+                             Qt.Orientation.Horizontal)
+        for bar in self.findChildren(QTabBar):
+            if bar.parent() is self:
+                bar.setObjectName("inspectorTabs")
+                bar.setExpanding(False)
+                bar.setUsesScrollButtons(True)
+                bar.setElideMode(Qt.TextElideMode.ElideRight)
+                for index in range(bar.count()):
+                    bar.setTabToolTip(index, bar.tabText(index))
 
     def _populate_window_menu(self) -> None:
         """Checkable dock toggles grouped into three cluster submenus.
@@ -361,7 +371,7 @@ class DockLayoutMixin:
         action.setCheckable(True)
         action.setChecked(dock.isVisible() or True)
         action.triggered.connect(
-            lambda checked, d=dock: d.setVisible(bool(checked)),
+            lambda checked, d=dock: self._set_dock_visibility(d, checked),
         )
         # Reflect external close (dock corner X). Wrap the setChecked
         # call so a teardown that frees the QAction's C++ side before
@@ -371,6 +381,12 @@ class DockLayoutMixin:
             lambda visible, a=action: _safe_set_checked(a, visible),
         )
         self._window_dock_actions[key] = action
+
+    @staticmethod
+    def _set_dock_visibility(dock, visible: bool) -> None:
+        dock.setVisible(bool(visible))
+        if visible:
+            dock.raise_()
 
     def _add_window_view_actions(self, menu, lang) -> None:
         """Append the standalone-view + reset-layout entries below the

@@ -5,7 +5,7 @@ import os
 
 from _hidden_attr import hide, windows_only
 
-from Imervue.system.image_listing import list_images
+from Imervue.system.image_listing import first_image_path, list_images
 
 _EXTS = {".png", ".jpg"}
 
@@ -87,3 +87,29 @@ def test_windows_hidden_files_and_folders_are_left_out(tmp_path):
 def test_a_hidden_folder_picked_on_purpose_is_listed(tmp_path):
     _touch(tmp_path, ".stash/a.png")
     assert _names(list_images(str(tmp_path / ".stash"), _EXTS)) == ["a.png"]
+
+
+def test_first_image_matches_full_listing_without_descending_into_subfolders(tmp_path):
+    _touch(tmp_path, "img10.PNG", "img2.png", "._a.png", "sub/a.png", "notes.txt")
+    assert first_image_path(str(tmp_path), _EXTS) == list_images(str(tmp_path), _EXTS)[0]
+    assert first_image_path(str(tmp_path / "missing"), _EXTS) is None
+    assert first_image_path(str(tmp_path), {".jpg"}) is None
+
+
+def test_first_image_selection_uses_linear_comparisons(monkeypatch):
+    from Imervue.system import image_listing
+
+    class Counted(int):
+        comparisons = 0
+
+        def __lt__(self, other):
+            Counted.comparisons += 1
+            return int.__lt__(self, other)
+
+    count = 2000
+    # Permutation with no long sorted runs; full sorting needs far more work.
+    paths = (str((i * 997) % count) for i in range(count))
+    monkeypatch.setattr(image_listing, "_scan", lambda *_: paths)
+    monkeypatch.setattr(image_listing, "natural_key", lambda name: Counted(name))
+    assert first_image_path("folder", _EXTS) == "0"
+    assert Counted.comparisons == count - 1

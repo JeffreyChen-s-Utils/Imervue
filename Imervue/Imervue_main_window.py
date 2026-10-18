@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QMenu, QTabWidget,
+    QApplication, QLabel, QMainWindow, QMenu, QTabWidget,
 )
 
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
@@ -20,6 +20,7 @@ from Imervue.gui.settings_notice import warn_if_settings_unreadable
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gui.toast import ToastManager
 from Imervue.gui.background_jobs import drain_background_jobs
+from Imervue.gui.control_tooltips import enable_control_tooltips
 from Imervue.plugin.worker_retirement import drain_retiring_workers
 from Imervue.image.browser_state import (
     ImageMetadataIndex,
@@ -99,6 +100,10 @@ class ImervueMainWindow(
         # Tab 0: Imervue 主頁面（不可關閉）
         # Tab 1: 修改面板（工具 dock | 圖片 | 調整 dock）
         self._main_tabs = QTabWidget()
+        self._main_tabs.setObjectName("workspaceTabs")
+        brand = QLabel("IMERVUE")
+        brand.setObjectName("workspaceBrand")
+        self._main_tabs.setCornerWidget(brand, Qt.Corner.TopRightCorner)
         self._main_tabs.setTabsClosable(False)
         self._main_tabs.setMovable(False)
         self.setCentralWidget(self._main_tabs)
@@ -119,6 +124,7 @@ class ImervueMainWindow(
         self._build_status_bar()
 
         self._init_services()
+        enable_control_tooltips(self)
 
         self._restore_startup_geometry()
 
@@ -644,6 +650,9 @@ class ImervueMainWindow(
         # --- 停止資料夾輪詢與前景切換的通知 ---
         with best_effort("stop polling the open folder", _logger):
             self._folder_watcher.stop()
+        with best_effort("cancel the active folder scan", _logger):
+            from Imervue.gpu_image_view.images.image_loader import cancel_folder_scan
+            cancel_folder_scan(self.viewer)
         if getattr(self, "_follows_app_state", False):
             with best_effort("stop following the application state", _logger):
                 QApplication.instance().applicationStateChanged.disconnect(self._on_application_state_changed)

@@ -46,8 +46,40 @@ def test_workspace_constructs(qapp):
     try:
         assert ws.canvas() is not None
         assert ws.state() is ts.load_tool_state()
+        assert ws.isWindow()
     finally:
         ws.deleteLater()
+
+
+def test_workspace_embeds_in_its_existing_parent_and_follows_tab_visibility(qapp, monkeypatch):
+    from PySide6.QtWidgets import QMainWindow, QTabWidget, QVBoxLayout, QWidget
+
+    monkeypatch.delitem(user_setting_dict, PaintWorkspace.DOCK_STATE_SETTING_KEY, raising=False)
+    host = QMainWindow()
+    tabs = QTabWidget(host)
+    host.setCentralWidget(tabs)
+    page = QWidget()
+    layout = QVBoxLayout(page)
+    tabs.addTab(page, "Paint")
+    tabs.addTab(QWidget(), "Other")
+    workspace = PaintWorkspace(parent=page)
+    try:
+        assert not workspace.isWindow()
+        layout.addWidget(workspace)
+        host.show()
+        qapp.processEvents()
+        assert workspace.isVisible()
+        assert workspace.window() is host
+        assert workspace not in qapp.topLevelWidgets()
+        tabs.setCurrentIndex(1)
+        qapp.processEvents()
+        assert not workspace.isVisible()
+        tabs.setCurrentIndex(0)
+        qapp.processEvents()
+        assert workspace.isVisible()
+        assert layout.itemAt(0).widget() is workspace
+    finally:
+        host.deleteLater()
 
 
 def test_workspace_has_fourteen_dock_widgets(qapp):

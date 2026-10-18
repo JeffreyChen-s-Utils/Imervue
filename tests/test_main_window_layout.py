@@ -15,9 +15,11 @@ from PySide6.QtCore import QTimer
 from _qt_skip import pytestmark  # noqa: E402,F401
 
 _EXPECTED = {'_browse_mode': ('str', 'grid'),
+ '_browse_empty_state': ('BrowserEmptyState',),
  '_browse_window': ('QMainWindow',),
  '_dual_active': ('bool', False),
  '_filter_menu': ('QMenu',),
+ '_filter_bar': ('ImageFilterBar',),
  '_folder_change_events': ('int', 0),
  '_folder_change_last_path': ('str', ''),
  '_folder_refresh_timer': ('QTimer', 500, True),
@@ -46,6 +48,7 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_plugin_menu_entries': ('list',),
  '_pre_dual_mode': ('str', 'grid'),
  '_progress_bar': ('QProgressBar',),
+ '_progress_hide_timer': ('QTimer', 800, True),
  '_puppet_page': ('QWidget',),
  '_recent_folder_menu': ('QMenu',),
  '_recent_image_menu': ('QMenu',),
@@ -114,8 +117,9 @@ def _describe(value):
 
 
 @pytest.fixture
-def window(qapp):
+def window(qapp, monkeypatch):
     from Imervue.Imervue_main_window import ImervueMainWindow
+    monkeypatch.setattr(ImervueMainWindow, "_maybe_show_whats_new", lambda self: None)
     win = ImervueMainWindow()
     yield win
     win._release_for_close()  # noqa: SLF001 - stops the watchdog and tree workers
@@ -136,6 +140,27 @@ def test_layout_builders_come_from_the_mixin():
     for name in ("_build_file_tree", "_build_viewer_column", "_build_image_tab_bar",
                  "_build_view_stack", "_build_workspace_tabs", "_build_status_bar"):
         assert getattr(ImervueMainWindow, name) is getattr(MainWindowLayoutMixin, name), name
+
+
+def test_all_five_tabs_include_help_for_controls_and_menus(window, qapp):
+    from PySide6.QtWidgets import (
+        QAbstractButton, QAbstractSlider, QAbstractSpinBox, QComboBox,
+        QKeySequenceEdit, QLineEdit, QMenu, QPlainTextEdit, QTextEdit, QWidget,
+    )
+    kinds = (QAbstractButton, QAbstractSlider, QAbstractSpinBox, QComboBox,
+             QKeySequenceEdit, QLineEdit, QPlainTextEdit, QTextEdit)
+    for index in range(window._main_tabs.count()):
+        window._main_tabs.setCurrentIndex(index)
+        qapp.processEvents()
+        page = window._main_tabs.widget(index)
+        controls = [widget for widget in page.findChildren(QWidget) if isinstance(widget, kinds)]
+        assert controls
+        assert not [(type(widget).__name__, widget.objectName()) for widget in controls
+                    if not widget.toolTip()]
+        for menu in page.findChildren(QMenu):
+            assert menu.toolTipsVisible()
+            assert all(action.toolTip() for action in menu.actions()
+                       if action.text() and not action.isSeparator())
 
 
 def test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo(window, tmp_path):
@@ -234,12 +259,49 @@ def test_the_paint_tab_is_built_on_first_use(window):
     workspace = window._paint  # noqa: SLF001
     assert type(workspace).__name__ == "PaintWorkspace"
     assert workspace.parent() is page
+    assert not workspace.isWindow()
+    assert workspace.window() is window
     assert window.paint_workspace is workspace   # built once, then reused
 
 
 def test_asking_for_the_workspace_builds_it(window):
     assert type(window.paint_workspace).__name__ == "PaintWorkspace"
     assert window._paint_page.layout().indexOf(window.paint_workspace) == 0  # noqa: SLF001
+
+
+@pytest.mark.parametrize("percent", [100, 150])
+@pytest.mark.parametrize("theme", ["modern_dark", "modern_light"])
+@pytest.mark.parametrize("locale", ["English", "Traditional_Chinese"])
+def test_modern_workspaces_fit_a_small_window_at_supported_scales(
+    qapp, monkeypatch, percent, theme, locale,
+):
+    from Imervue.Imervue_main_window import ImervueMainWindow
+    from Imervue.system.themes import apply_theme
+    from Imervue.system.ui_scale import apply_ui_scale
+    from Imervue.multi_language.language_wrapper import language_wrapper
+    original_language = language_wrapper.language
+    monkeypatch.setattr(ImervueMainWindow, "_maybe_show_whats_new", lambda self: None)
+    apply_theme(qapp, theme)
+    apply_ui_scale(qapp, percent)
+    win = _build_window(language=locale, ui_scale_percent=percent, puppet_tab_enabled=True,
+                        desktop_pet_tab_enabled=True, desktop_pet={},
+                        paint_workspace_dock_state="",
+                        window_maximized=False, window_geometry="", window_state="")
+    try:
+        win.resize(1280, 800)
+        win.showNormal()
+        for index in range(5):
+            win._main_tabs.setCurrentIndex(index)
+            qapp.processEvents()
+            assert win.width() <= 1280 and win.height() <= 800
+        assert not win.paint_workspace.isWindow()
+        assert win.paint_workspace.window() is win
+        assert win.puppet_workspace.window() is win
+        assert win.pet_workspace.window() is win
+        assert win.pet_workspace.pet_window() is None
+    finally:
+        _close(win)
+        language_wrapper.reset_language(original_language)
 
 
 def test_a_crashed_paint_session_still_gets_its_recovery_offer_at_launch(qapp, monkeypatch):

@@ -37,6 +37,17 @@ def test_the_wheel_starts_on_the_foreground(dock):
     assert dock._wheel.color() == (200, 40, 40)
 
 
+def test_color_channels_expand_without_losing_the_current_color(dock):
+    assert dock._channel_controls.isHidden()
+    dock._channels_toggle.click()
+    assert not dock._channel_controls.isHidden()
+    dock._wheel.color_chosen.emit(30, 160, 90)
+    assert dock._state.foreground == (30, 160, 90)
+    dock._channels_toggle.click()
+    assert dock._channel_controls.isHidden()
+    assert dock._state.foreground == (30, 160, 90)
+
+
 def test_picking_on_the_wheel_sets_the_foreground_and_the_sliders(dock):
     dock._wheel.color_chosen.emit(30, 160, 90)
     assert dock._state.foreground == (30, 160, 90)
