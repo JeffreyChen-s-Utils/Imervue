@@ -954,7 +954,7 @@ sur un canevas de 1024 × 1336, des rotations de tête faites de morphs de somme
 en parallaxe façon Live2D, une ombre faciale qui change de forme à mesure qu'elle
 se détourne de la lumière, des iris découpés aux blancs des yeux, des bras à deux articulations
 construits à partir de déformeurs de rotation, et trois chaînes physiques qui font
-balancer les cheveux. Les mèches centrales de la frange se chevauchent pour couvrir le front tout en laissant les yeux visibles.
+balancer les cheveux. Les mèches centrales de la frange se chevauchent pour couvrir le front tout en laissant les yeux visibles. Les mèches visibles au sommet du crâne relient l’épi à la frange.
 
 Le rig comporte tous les paramètres standard Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
