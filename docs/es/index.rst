@@ -955,7 +955,7 @@ derechos de terceros: 45 drawables sobre un lienzo de 1024 × 1336,
 giros de cabeza hechos con morfos de vértices de paralaje al estilo Live2D, una
 sombra facial que cambia de forma a medida que aparta la cara de la luz, iris
 recortados al blanco de los ojos, brazos de dos articulaciones construidos con
-deformadores de rotación y tres cadenas de física que balancean el pelo.
+deformadores de rotación y tres cadenas de física que balancean el pelo. Los mechones centrales del flequillo se superponen para cubrir la frente sin ocultar los ojos.
 
 El rig lleva todos los parámetros estándar de Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) más

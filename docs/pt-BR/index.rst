@@ -952,7 +952,7 @@ terceiros: 45 drawables em um canvas de 1024 × 1336, giros de cabeça
 feitos de morphs de vértice com paralaxe no estilo Live2D, uma sombra no
 rosto que muda de forma conforme ela se vira para longe da luz, íris
 recortadas pelo branco dos olhos, braços com duas articulações construídos
-com rotation deformers, e três cadeias de física que balançam o cabelo.
+com rotation deformers, e três cadeias de física que balançam o cabelo. As mechas centrais da franja se sobrepõem para cobrir a testa e manter os olhos visíveis.
 
 O rig carrega todos os parâmetros padrão Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) mais

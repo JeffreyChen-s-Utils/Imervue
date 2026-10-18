@@ -36,6 +36,9 @@ canvas size (`imeru/render3d.py`; about a minute, into the ignored
 `imeru/render/`), cutting the bang and neck shadows from extra passes in
 which the hair and head only cast shadows.
 
+The centre fringe includes an overlapping lock over the forehead, so the
+parting stays narrow while the eyes remain visible.
+
 The face is shaded the way those games shade faces, not from its
 normals: `imeru/face_shadow.py` draws the shadow for light angles from
 0 to 90 degrees (the cheekbone holds the light longest, the nose throws a

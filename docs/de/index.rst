@@ -945,7 +945,7 @@ sodass das Demo keine Rechte Dritter enthält: 45 Drawables auf einer
 1024 × 1336 großen Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im
 Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich
 vom Licht abwendet, auf das Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
-drei Physikketten, die das Haar schwingen lassen.
+drei Physikketten, die das Haar schwingen lassen. Die überlappenden mittleren Ponysträhnen bedecken die Stirn und lassen die Augen sichtbar.
 
 Das Rig trägt jeden Cubism-Standardparameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
