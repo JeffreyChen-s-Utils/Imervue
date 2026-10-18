@@ -226,11 +226,15 @@ def build_bangs(collection_for):
     add_outline(scalp, HAIR_LINE, 2.2, even=False)
     collection_for("bangs", scalp)
     flow = toon("hair_flow", HAIR_SHADE, HAIR_DEEP, split=0.4, occlusion=0.85)
-    for k, x in enumerate((392, 432, 470, 548, 588, 628)):
-        top = (CX + (x - CX) * 0.25, CROWN_Y + 22)
+    for k, x in enumerate(range(350, 681, 30)):
+        top = (CX + (x - CX) * 0.22, CROWN_Y - 10 + abs(x - CX) * 0.04)
         curve = bez(top, (CX + (x - CX) * 0.6, CROWN_Y + 40), (x, 300),
                     (x + (x - PART_X) * 0.1, hairline_y(x) - 4), 30)
-        strand = lock(f"flow_{k}", curve, 3.2, flow, lift=17.5, root=1.0, belly=0.6, line=0.0)
+        # The scalp is thicker than the face. Follow its surface so the flow
+        # stays visible instead of sinking under the crown's smooth plate.
+        path = [(px, py, scalp_depth(px, py)) for px, py in curve]
+        strand = lock(f"flow_{k}", path, 2.0, flow, lift=2.5, root=0.2, belly=0.55,
+                      flat=0.18, line=0.0)
         collection_for("bangs", strand)
     for i, (root_x, tip, width) in enumerate(FRINGE):
         centre = 1 - abs(root_x - PART_X) / 180

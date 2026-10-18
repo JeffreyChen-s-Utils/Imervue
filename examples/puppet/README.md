@@ -37,7 +37,8 @@ canvas size (`imeru/render3d.py`; about a minute, into the ignored
 which the hair and head only cast shadows.
 
 The centre fringe includes an overlapping lock over the forehead, so the
-parting stays narrow while the eyes remain visible.
+parting stays narrow while the eyes remain visible. Crown flow lines follow
+the raised scalp surface from the hair whorl into the fringe.
 
 The face is shaded the way those games shade faces, not from its
 normals: `imeru/face_shadow.py` draws the shadow for light angles from

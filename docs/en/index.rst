@@ -940,7 +940,7 @@ rigged, so the demo carries no third-party rights: 45 drawables on a
 morphs, a face shadow that changes shape as she turns away from the
 light, irises
 clipped to the eye whites, two-joint arms built from rotation
-deformers, and three physics chains that swing the hair. Her overlapping centre bangs cover the forehead while leaving the eyes visible.
+deformers, and three physics chains that swing the hair. Her overlapping centre bangs cover the forehead while leaving the eyes visible. Visible crown strands connect the hair whorl to the fringe.
 
 The rig carries every Cubism-standard parameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
