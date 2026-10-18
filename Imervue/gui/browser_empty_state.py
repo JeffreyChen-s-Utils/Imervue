@@ -58,7 +58,9 @@ class BrowserEmptyState(QFrame):
             self.hide()
             return
         filtered = self._filter_active()
-        state = "filtered" if filtered else "folder" if self._folder_open() else "start"
+        state = "filtered"
+        if not filtered:
+            state = "folder" if self._folder_open() else "start"
         changed = state != self._state
         if changed:
             self._title.setText(self._word(f"browse_empty_{state}_title"))

@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261018-10 | 2026-10-18 | Simplify tooltip and tool-palette logic reported by PR analysis | #done #refactor #sonarcloud #codacy #tests | [2026-10-b](2026-10-b.md) |
 | U-20261018-09 | 2026-10-18 | Align crop and shutdown regression tests with the updated workspaces | #done #tests #ui #browser #ci | [2026-10-b](2026-10-b.md) |
 | U-20261018-08 | 2026-10-18 | Reduce drive and folder browsing scan overhead | #done #performance #browser #file-tree #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-07 | 2026-10-18 | Fill missing tooltips throughout workspaces, dialogs and menus | #done #ui #ux #tooltips #i18n #docs | [2026-10-b](2026-10-b.md) |
@@ -574,4 +575,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 101 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 5 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 6 |

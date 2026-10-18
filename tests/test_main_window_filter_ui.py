@@ -15,7 +15,7 @@ class FilterHost(QWidget, MainWindowFilterMixin):
         self.saved = []
         self.bar = self._build_filter_row()
 
-    def _apply_image_filter(self):
+    def _apply_image_filter(self, text: str | None = None) -> None:
         self.applied.append(self._current_filter_spec())
 
     def _save_current_folder_session(self):

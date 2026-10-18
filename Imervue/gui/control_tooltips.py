@@ -48,6 +48,16 @@ def _store(target, text: str) -> None:
         target.setProperty(_GENERATED, formatted)
 
 
+def _action_kind(action: QAction) -> str:
+    group = action.actionGroup()
+    if group is not None and group.isExclusive():
+        return "select"
+    parent = action.parent()
+    if isinstance(parent, QMenu) and parent.menuAction() is action:
+        return "submenu"
+    return "toggle" if action.isCheckable() else "action"
+
+
 def action_tip(action: QAction) -> str:
     """Describe an action with its authored help, current shortcut and menu semantics."""
     title = plain_label(action.text(), rich=False)
@@ -55,17 +65,28 @@ def action_tip(action: QAction) -> str:
         return ""
     text = action.statusTip() or existing_description(title, action)
     if not text:
-        parent = action.parent()
-        submenu = isinstance(parent, QMenu) and parent.menuAction() is action
-        kind = "submenu" if submenu else "toggle" if action.isCheckable() else "action"
-        if action.actionGroup() is not None and action.actionGroup().isExclusive():
-            kind = "select"
-        text = word(f"ui_tip_{kind}", name=title)
+        text = word(f"ui_tip_{_action_kind(action)}", name=title)
     shortcuts = ", ".join(shortcut.toString(QKeySequence.SequenceFormat.NativeText)
                           for shortcut in action.shortcuts() if not shortcut.isEmpty())
     if shortcuts:
         text += "\n" + word("ui_tip_shortcut", shortcut=shortcuts)
     return text
+
+
+def _tool_button_tip(widget: QAbstractButton) -> str:
+    if not isinstance(widget, QToolButton) or widget.defaultAction() is None:
+        return ""
+    action = widget.defaultAction()
+    authored = action.toolTip()
+    if authored and plain_label(authored) != plain_label(action.text()):
+        return plain_label(authored)
+    return action_tip(action)
+
+
+def _button_kind(widget: QAbstractButton) -> str:
+    if isinstance(widget, QRadioButton):
+        return "select"
+    return "toggle" if widget.isCheckable() else "action"
 
 
 def _button_tip(widget: QAbstractButton) -> str:
@@ -75,20 +96,22 @@ def _button_tip(widget: QAbstractButton) -> str:
             return word("ui_tip_clear_text")
         if isinstance(parent, QTabBar):
             return word("ui_tip_scroll_tabs")
-    if isinstance(widget, QToolButton) and widget.defaultAction() is not None:
-        action = widget.defaultAction()
-        authored = action.toolTip()
-        if authored and plain_label(authored) != plain_label(action.text()):
-            return plain_label(authored)
-        if description := action_tip(action):
-            return description
+    if description := _tool_button_tip(widget):
+        return description
     title = plain_label(widget.text()) or control_label(widget)
     if not title:
         return word("ui_tip_icon_button")
     description = widget.accessibleDescription() or existing_description(title, widget)
-    kind = ("select" if isinstance(widget, QRadioButton)
-            else "toggle" if widget.isCheckable() else "action")
-    return description or word(f"ui_tip_{kind}", name=title)
+    return description or word(f"ui_tip_{_button_kind(widget)}", name=title)
+
+
+def _numeric_tip(widget: QWidget, name: str, description: str) -> str:
+    if not (hasattr(widget, "minimum") and hasattr(widget, "maximum")):
+        return description or word("ui_tip_edit", name=name)
+    suffix = widget.suffix() if hasattr(widget, "suffix") else ""
+    limits = word("ui_tip_range", name=name, minimum=f"{widget.minimum()}{suffix}",
+                  maximum=f"{widget.maximum()}{suffix}")
+    return f"{description}\n{limits}" if description else limits
 
 
 def _field_tip(widget: QWidget) -> str:
@@ -99,12 +122,7 @@ def _field_tip(widget: QWidget) -> str:
         return plain_label(parent.toolTip()) if parent.toolTip() else _field_tip(parent)
     description = existing_description(name, widget)
     if isinstance(widget, (QAbstractSpinBox, QAbstractSlider)):
-        if hasattr(widget, "minimum") and hasattr(widget, "maximum"):
-            suffix = widget.suffix() if hasattr(widget, "suffix") else ""
-            limits = word("ui_tip_range", name=name, minimum=f"{widget.minimum()}{suffix}",
-                          maximum=f"{widget.maximum()}{suffix}")
-            return f"{description}\n{limits}" if description else limits
-        return description or word("ui_tip_edit", name=name)
+        return _numeric_tip(widget, name, description)
     if isinstance(widget, QKeySequenceEdit):
         return word("ui_tip_key_sequence", name=name)
     if isinstance(widget, QComboBox):

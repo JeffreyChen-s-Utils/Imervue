@@ -47,18 +47,27 @@ class ToolPalette(QScrollArea):
         slot = 0
         for item in self._items:
             if isinstance(item, QToolButton):
-                row, column = divmod(slot, 2)
-                self._grid.addWidget(item, row if self._vertical else column,
-                                     column if self._vertical else row)
-                slot += 1
+                slot = self._place_tool(item, slot)
             else:
-                row = (slot + 1) // 2
-                item.setFrameShape(QFrame.Shape.HLine if self._vertical else QFrame.Shape.VLine)
-                self._grid.addWidget(item, row if self._vertical else 0,
-                                     0 if self._vertical else row,
-                                     1 if self._vertical else 2, 2 if self._vertical else 1)
-                slot = (row + 1) * 2
+                slot = self._place_separator(item, slot)
         self._set_scroll_direction()
+
+    def _place_tool(self, item: QToolButton, slot: int) -> int:
+        row, column = divmod(slot, 2)
+        if not self._vertical:
+            row, column = column, row
+        self._grid.addWidget(item, row, column)
+        return slot + 1
+
+    def _place_separator(self, item: QFrame, slot: int) -> int:
+        row = (slot + 1) // 2
+        if self._vertical:
+            item.setFrameShape(QFrame.Shape.HLine)
+            self._grid.addWidget(item, row, 0, 1, 2)
+        else:
+            item.setFrameShape(QFrame.Shape.VLine)
+            self._grid.addWidget(item, 0, row, 2, 1)
+        return (row + 1) * 2
 
     def _set_scroll_direction(self) -> None:
         span = self._cross_extent()

@@ -13,6 +13,8 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 _description_source = None
 _description_count = 0
 _descriptions: dict[str, list[tuple[str, str]]] = {}
+_SCOPED = "scoped"
+_GENERIC = "generic"
 _SCOPES = {
     "list_col_rating": "imagefilterbar",
     "image_filter": "imagefilterbar",
@@ -45,44 +47,49 @@ def word(key: str, **values) -> str:
     return template.format(**values)
 
 
+def _description_index(lang: dict) -> dict[str, list[tuple[str, str]]]:
+    descriptions: dict[str, list[tuple[str, str]]] = {}
+    for key in english_word_dict.keys() | lang.keys():
+        suffix = next((s for s in ("_tooltip", "_tip") if key.endswith(s)), "")
+        if not suffix:
+            continue
+        value = lang.get(key[:-len(suffix)], english_word_dict.get(key[:-len(suffix)], ""))
+        description = lang.get(key, english_word_dict.get(key, ""))
+        if value and description and "{" not in description:
+            descriptions.setdefault(plain_label(value), []).append((key, description))
+    return descriptions
+
+
+def _description_context(owner) -> str:
+    context = []
+    node = owner
+    while node is not None:
+        context.extend((type(node).__name__.lower(), node.objectName().lower()))
+        node = node.parent()
+    return " ".join(context)
+
+
+def _description_priority(key: str, context: str) -> str:
+    scope = next((scope for prefix, scope in _SCOPES.items() if key.startswith(prefix)), "")
+    if scope:
+        return _SCOPED if any(name in context for name in scope.split()) else ""
+    return _SCOPED if key.split("_", 1)[0] in context else _GENERIC
+
+
 def existing_description(label: str, owner=None) -> str:
     """Reuse authored help associated with a translated control label, when available."""
     global _description_source, _description_count, _descriptions
     lang = language_wrapper.language_word_dict
     if lang is not _description_source or len(lang) != _description_count:
         _description_source, _description_count = lang, len(lang)
-        _descriptions = {}
-        for key in english_word_dict.keys() | lang.keys():
-            suffix = next((s for s in ("_tooltip", "_tip") if key.endswith(s)), "")
-            if not suffix:
-                continue
-            value = lang.get(key[:-len(suffix)], english_word_dict.get(key[:-len(suffix)], ""))
-            description = lang.get(key, english_word_dict.get(key, ""))
-            if value and description and "{" not in description:
-                _descriptions.setdefault(plain_label(value), []).append((key, description))
-    candidates = _descriptions.get(label, [])
-    context = []
-    node = owner
-    while node is not None:
-        context.extend((type(node).__name__.lower(), node.objectName().lower()))
-        node = node.parent()
-    context = " ".join(context)
-    scoped = []
-    generic = []
-    for key, description in candidates:
-        scope = next((scope for prefix, scope in _SCOPES.items() if key.startswith(prefix)), "")
-        if scope:
-            if any(name in context for name in scope.split()):
-                scoped.append(description)
-        else:
-            prefix = key.split("_")[0]
-            if prefix in context:
-                scoped.append(description)
-            else:
-                generic.append(description)
-    if scoped:
-        return scoped[0] if len(set(scoped)) == 1 else ""
-    return generic[0] if len(set(generic)) == 1 else ""
+        _descriptions = _description_index(lang)
+    context = _description_context(owner)
+    groups: dict[str, list[str]] = {_SCOPED: [], _GENERIC: []}
+    for key, description in _descriptions.get(label, []):
+        if priority := _description_priority(key, context):
+            groups[priority].append(description)
+    candidates = groups[_SCOPED] or groups[_GENERIC]
+    return candidates[0] if len(set(candidates)) == 1 else ""
 
 
 def _contains(item, widget) -> bool:
@@ -92,6 +99,21 @@ def _contains(item, widget) -> bool:
     nested = item.layout()
     return nested is not None and any(_contains(nested.itemAt(i), widget)
                                       for i in range(nested.count()))
+
+
+def _preceding_label(layout, index: int) -> str:
+    for previous in range(index - 1, -1, -1):
+        label = layout.itemAt(previous).widget()
+        if isinstance(layout, QGridLayout):
+            row, column, *_ = layout.getItemPosition(index)
+            other_row, other_column, *_ = layout.getItemPosition(previous)
+            if row != other_row or other_column >= column:
+                continue
+        if isinstance(label, QLabel) and label.text().strip():
+            return plain_label(label.text())
+        if label is not None:
+            break
+    return ""
 
 
 def _layout_label(layout, widget) -> str:
@@ -106,18 +128,22 @@ def _layout_label(layout, widget) -> str:
         nested = item.layout()
         if nested is not None and (label := _layout_label(nested, widget)):
             return label
-        for previous in range(index - 1, -1, -1):
-            label = layout.itemAt(previous).widget()
-            if isinstance(layout, QGridLayout):
-                row, column, *_ = layout.getItemPosition(index)
-                other_row, other_column, *_ = layout.getItemPosition(previous)
-                if row != other_row or other_column >= column:
-                    continue
-            if isinstance(label, QLabel) and label.text().strip():
-                return plain_label(label.text())
-            if label is not None:
-                break
+        if label := _preceding_label(layout, index):
+            return label
     return ""
+
+
+def _parent_label(parent: QWidget, widget: QWidget) -> str | None:
+    for label in parent.findChildren(QLabel, options=Qt.FindChildOption.FindDirectChildrenOnly):
+        if label.buddy() is widget:
+            return plain_label(label.text())
+    if parent.layout() is not None and (label := _layout_label(parent.layout(), widget)):
+        return label
+    if hasattr(parent, "title") and parent.title():
+        return plain_label(parent.title())
+    if parent.windowTitle():
+        return plain_label(parent.windowTitle())
+    return None
 
 
 def control_label(widget: QWidget) -> str:
@@ -128,14 +154,7 @@ def control_label(widget: QWidget) -> str:
     for _ in range(4):
         if parent is None:
             break
-        for label in parent.findChildren(QLabel, options=Qt.FindChildOption.FindDirectChildrenOnly):
-            if label.buddy() is widget:
-                return plain_label(label.text())
-        if parent.layout() is not None and (label := _layout_label(parent.layout(), widget)):
+        if (label := _parent_label(parent, widget)) is not None:
             return label
-        if hasattr(parent, "title") and parent.title():
-            return plain_label(parent.title())
-        if parent.windowTitle():
-            return plain_label(parent.windowTitle())
         parent = parent.parentWidget()
     return ""

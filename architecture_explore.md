@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 969 | 162,625 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,009 |
-| `Imervue/gui/` | 183 | 36,423 |
+| `tests/` | 969 | 162,644 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,018 |
+| `Imervue/gui/` | 183 | 36,462 |
 | `Imervue/puppet/` | 61 | 16,487 |
 | `Imervue/image/` | 130 | 15,744 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
@@ -85,9 +85,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 3 | 287 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 10 | 1,523 |
-| **總計** | **1,856** | **354,228** |
+| **總計** | **1,856** | **354,295** |
 
-其中 `Imervue/` 套件本身 802 檔 / 174,555 行。
+其中 `Imervue/` 套件本身 802 檔 / 174,603 行。
 
 測試碼與產品碼比約 **0.85 : 1**（163k vs 191k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -590,12 +590,12 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_filters.py` | 38 | 檔案對話框篩選字串：`name_filter(label, exts)`、`translated_filter(key, default, exts)`、`image_filter(exts)`（標籤走語言字典，副檔名樣式留在程式）；`viewer_filter()` 直接取 `formats.VIEWER_EXTENSIONS`，開啟圖片與重新定位遺失檔案的對話框因此列出檢視器能開的全部格式 |
 | `slider_spin.py` | 77 | `make_slider_spin()` / `link_slider_spin()`：滑桿與數字框雙向同步（訊號阻斷、每次編輯只回報一次）；取代各面板手寫的 `blockSignals` 配對 |
 | `image_filter_bar.py` | 104 | `ImageFilterBar`：兩排具標籤的瀏覽篩選欄位、日期格式與範圍提示、一鍵清除；內建英文補齊外掛語系缺少的字串 |
-| `browser_empty_state.py` | 88 | BrowserEmptyState：隨檢視器 paint／resize／show 更新開始瀏覽、空資料夾與無符合圖片提示；開啟資料夾／清除篩選沿用主視窗入口，不輪詢、不改模型 |
+| `browser_empty_state.py` | 90 | BrowserEmptyState：隨檢視器 paint／resize／show 更新開始瀏覽、空資料夾與無符合圖片提示；開啟資料夾／清除篩選沿用主視窗入口，不輪詢、不改模型 |
 | `panel_scroll.py` | 26 | PanelScrollArea：受控最小尺寸與可捲動 dock；既有 QScrollArea 不重複包裝，避免巢狀捲動 |
 | `tool_icons.py` | 108 | 共享 palette-aware SVG 線條圖示引擎，供 Paint／Modify／Puppet 使用 |
 | `workspace_widgets.py` | 40 | WorkspaceWelcome：跟隨主題與縮放的標題、說明及主次操作卡片 |
-| `control_tooltips.py` | 234 | 共用缺漏 Tip 補齊、Qt Show／ToolTip 事件濾鏡、選單／分頁／表格項目、快捷鍵及範圍更新；保留原文與模型角色，檢查短生命週期 wrapper |
-| `tooltip_text.py` | 141 | 多語言提示範本、既有說明的工作區範圍解析、buddy／表單／網格／巢狀列欄位名稱；不讀輸入值 |
+| `control_tooltips.py` | 252 | 共用缺漏 Tip 補齊、Qt Show／ToolTip 事件濾鏡、選單／分頁／表格項目、快捷鍵及範圍更新；保留原文與模型角色，檢查短生命週期 wrapper |
+| `tooltip_text.py` | 160 | 多語言提示範本、既有說明的工作區範圍解析、buddy／表單／網格／巢狀列欄位名稱；不讀輸入值 |
 | `main_window_filter.py` | 229 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
 | `main_window_folders.py` | 306 | `MainWindowFoldersMixin`：輪詢目前資料夾（回到前景時立刻檢查並 refresh 資料夾樹）、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
@@ -810,7 +810,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `tool_dispatcher.py` | 482 | 工具事件路由與手勢提交；累計筆刷／橡皮擦 damage，僅提交回呼期間提供區域 hints；切頁、切工具與部分失敗保守捕捉 |
 | `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
 | `tool_icons.py` | 4 | 共享 gui.tool_icons 的相容匯出，維持 Paint 工具 API |
-| `tool_palette.py` | 87 | ToolPalette：雙欄圖示工具盤，水平停靠時重排為兩列；可捲動、可存取名稱、各工具沿用 QAction 與快捷鍵提示 |
+| `tool_palette.py` | 96 | ToolPalette：雙欄圖示工具盤，水平停靠時重排為兩列；可捲動、可存取名稱、各工具沿用 QAction 與快捷鍵提示 |
 | `tool_bar.py` | 501 | 可移動／浮動的圖示工具盤與固定的上方選項列；按鈕、選取、提示沿用 QAction／ToolState，工具按鍵由 tools_menu 獨佔；兩個工具列具穩定 objectName 可保存位置 |
 | `document_status.py` | 64 | 無 Qt 的文件來源／原生或 PSD 保存／扁平輸出／快照状态；文件替換重設、共用分頁及狀態提示 |
 | `document_files.py` | 120 | 原生 .imervue 開啟／指定分頁保存／另存／依序儲存全部；原子保存後才清除修改，取消／失敗保留文件，重複目标保護 |

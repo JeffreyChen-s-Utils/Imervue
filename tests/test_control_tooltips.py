@@ -5,7 +5,7 @@ import pytest
 from PySide6.QtCore import QEvent, QPoint, Qt
 from PySide6.QtGui import QAction, QActionGroup, QHelpEvent, QKeySequence, QShowEvent
 from PySide6.QtWidgets import (
-    QComboBox, QDialog, QFormLayout, QHBoxLayout, QHeaderView, QKeySequenceEdit,
+    QComboBox, QDialog, QFormLayout, QGridLayout, QHBoxLayout, QHeaderView, QKeySequenceEdit,
     QLabel, QLineEdit, QListWidget, QMenu, QPushButton, QRadioButton, QSlider, QSpinBox,
     QTabBar, QTableWidget, QToolButton, QToolTip, QVBoxLayout, QWidget,
 )
@@ -105,6 +105,25 @@ def test_buddies_nested_rows_and_internal_editors_share_the_correct_field_name(q
             assert "Opacity" in control.toolTip()
         assert "Colour profile" in combo.toolTip()
         assert "user-entered-private-path" not in combo.lineEdit().toolTip()
+    finally:
+        root.deleteLater()
+
+
+def test_grid_labels_stay_on_their_row_and_do_not_cross_another_control(qapp):
+    root = QWidget()
+    root.setWindowTitle("Settings")
+    layout = QGridLayout(root)
+    width, height, other = QSpinBox(), QSpinBox(), QLineEdit()
+    layout.addWidget(QLabel("Width"), 0, 0)
+    layout.addWidget(width, 0, 1)
+    layout.addWidget(QLabel("Height"), 1, 0)
+    layout.addWidget(height, 1, 1)
+    layout.addWidget(other, 1, 2)
+    try:
+        fill_missing_tooltips(root)
+        assert "Width" in width.toolTip() and "Height" not in width.toolTip()
+        assert "Height" in height.toolTip() and "Width" not in height.toolTip()
+        assert "Settings" in other.toolTip() and "Height" not in other.toolTip()
     finally:
         root.deleteLater()
 
