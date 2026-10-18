@@ -70,6 +70,7 @@ _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_tree_dock': ('QDockWidget',),
  '_tree_panel': ('QWidget',),
  '_view_stack': ('QStackedWidget',),
+ '_workspace_tab_bar': ('QTabBar',),
  'breadcrumb': ('BreadcrumbBar',),
  'clipboard_monitor': ('ClipboardMonitor',),
  'customContextMenuRequested': ('SignalInstance',),
@@ -161,6 +162,45 @@ def test_all_five_tabs_include_help_for_controls_and_menus(window, qapp):
             assert menu.toolTipsVisible()
             assert all(action.toolTip() for action in menu.actions()
                        if action.text() and not action.isSeparator())
+
+
+def test_foreground_tree_refresh_with_paint_and_tooltips_does_not_reenter(
+    window, tmp_path, qapp, pump_until, monkeypatch,
+):
+    import sys
+    from pathlib import Path
+    from unittest.mock import MagicMock
+
+    from PySide6.QtCore import QEvent, Qt
+    from PySide6.QtGui import QShowEvent
+
+    (tmp_path / "album").mkdir()
+    window.model.setRootPath(str(tmp_path))
+    window.tree.setRootIndex(window.model.index(str(tmp_path)))
+    window.watch_folder(str(tmp_path))
+    window._main_tabs.setCurrentIndex(2)
+    workspace = window.paint_workspace
+    window.show()
+    assert pump_until(lambda: window.model.rowCount(window.tree.rootIndex()) == 1)
+    errors = []
+    monkeypatch.setattr(sys, "excepthook", lambda kind, error, _tb: errors.append((kind, error)))
+    refresh = MagicMock(wraps=window.tree.refresh)
+    monkeypatch.setattr(window.tree, "refresh", refresh)
+    for _ in range(10):
+        window._on_application_state_changed(Qt.ApplicationState.ApplicationInactive)
+        window._main_tabs.setCurrentIndex(0)
+        qapp.sendEvent(window._workspace_tab_bar, QEvent(QEvent.Type.StyleChange))
+        window._on_application_state_changed(Qt.ApplicationState.ApplicationActive)
+        window._main_tabs.setCurrentIndex(2)
+        qapp.sendEvent(workspace._canvas_tab_bar, QEvent(QEvent.Type.StyleChange))
+        qapp.sendEvent(window, QShowEvent())
+        qapp.processEvents()
+    assert refresh.call_count >= 10
+    assert not errors
+    assert Path(window.model.rootPath()) == tmp_path
+    assert window._workspace_tab_bar is window._main_tabs.tabBar()
+    assert workspace._canvas_tab_bar is workspace._tabs.tabBar()
+    assert not qapp._imervue_tooltip_filter._handling
 
 
 def test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo(window, tmp_path):

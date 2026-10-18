@@ -57,6 +57,32 @@ def test_deleted_transient_controls_are_skipped_during_a_help_walk(qapp, monkeyp
     assert not shiboken6.isValid(button)
 
 
+def test_action_deleted_during_description_lookup_is_skipped(qapp, monkeypatch):
+    import shiboken6
+    from Imervue.gui import control_tooltips
+    action = QAction("Transient action")
+
+    def replaces_action(_title, owner):
+        shiboken6.delete(owner)
+        return "Old action help"
+
+    monkeypatch.setattr(control_tooltips, "existing_description", replaces_action)
+    ensure_tooltip(action)
+    assert not shiboken6.isValid(action)
+
+
+def test_help_errors_on_live_objects_are_not_hidden(qapp, monkeypatch):
+    from Imervue.gui import control_tooltips
+    action = QAction("Live action")
+    monkeypatch.setattr(control_tooltips, "existing_description",
+                        MagicMock(side_effect=RuntimeError("Unexpected help error")))
+    try:
+        with pytest.raises(RuntimeError, match="Unexpected help error"):
+            ensure_tooltip(action)
+    finally:
+        action.deleteLater()
+
+
 def test_ranges_and_names_are_refreshed_without_exposing_entered_values(qapp):
     root = QWidget()
     form = QFormLayout(root)

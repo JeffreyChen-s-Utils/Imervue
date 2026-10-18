@@ -157,10 +157,12 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         so the signal doesn't fire into a half-built workspace.
         """
         self._tabs = QTabWidget(self)
+        # Native tab notifications must not reacquire a wrapper from inside the filter.
+        self._canvas_tab_bar = self._tabs.tabBar()
         self._tabs.setTabsClosable(True)
         self._tabs.setMovable(True)
         self._tabs.tabCloseRequested.connect(self._on_tab_close_requested)
-        self._tabs.tabBar().installEventFilter(self)
+        self._canvas_tab_bar.installEventFilter(self)
         self._install_new_tab_corner_button()
         self.setCentralWidget(self._tabs)
         self._canvas = PaintCanvas(self)
@@ -710,7 +712,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
             self._welcome_hint.position_centred(
                 self._canvas.width(), self._canvas.height(),
             )
-        if obj is self._tabs.tabBar() and self._handle_tab_bar_event(event):
+        if obj is self._canvas_tab_bar and self._handle_tab_bar_event(event):
             return True
         return super().eventFilter(obj, event)
 
@@ -725,7 +727,7 @@ class PaintWorkspace(  # noqa: PLR0904 - thin coordinator over focused mixins
         if event.button() != Qt.MouseButton.MiddleButton:
             return False
         pos = event.position() if hasattr(event, "position") else event.pos()
-        index = self._tabs.tabBar().tabAt(pos.toPoint())
+        index = self._canvas_tab_bar.tabAt(pos.toPoint())
         if index < 0:
             return False
         self.close_tab(index)

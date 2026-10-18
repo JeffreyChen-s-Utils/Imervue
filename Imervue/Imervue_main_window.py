@@ -100,6 +100,8 @@ class ImervueMainWindow(
         # Tab 0: Imervue 主頁面（不可關閉）
         # Tab 1: 修改面板（工具 dock | 圖片 | 調整 dock）
         self._main_tabs = QTabWidget()
+        # Keep the wrapper alive; event filters must not reacquire it during dispatch.
+        self._workspace_tab_bar = self._main_tabs.tabBar()
         self._main_tabs.setObjectName("workspaceTabs")
         brand = QLabel("IMERVUE")
         brand.setObjectName("workspaceBrand")
@@ -320,7 +322,7 @@ class ImervueMainWindow(
         falls through to Qt's default handling.
         """
         from PySide6.QtCore import QEvent, Qt
-        if (obj is self._main_tabs.tabBar()
+        if (obj is self._workspace_tab_bar
                 and event.type() == QEvent.Type.KeyPress):
             from Imervue.gui.main_tab_nav import tab_arrow_action
             action = tab_arrow_action(

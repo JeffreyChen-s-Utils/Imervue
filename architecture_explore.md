@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-18 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.96`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-18 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.97`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 969 | 162,644 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,018 |
-| `Imervue/gui/` | 183 | 36,462 |
+| `tests/` | 970 | 162,872 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,020 |
+| `Imervue/gui/` | 183 | 36,502 |
 | `Imervue/puppet/` | 61 | 16,487 |
 | `Imervue/image/` | 130 | 15,744 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
@@ -77,7 +77,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 34 | 4,963 |
 | `Imervue/menu/` | 11 | 3,693 |
-| `Imervue/` 根層 | 7 | 2,098 |
+| `Imervue/` 根層 | 7 | 2,100 |
 | `Imervue/plugin/` | 15 | 3,037 |
 | `Imervue/system/` | 34 | 3,540 |
 | `Imervue/export/` | 8 | 1,035 |
@@ -85,9 +85,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 3 | 287 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 10 | 1,523 |
-| **總計** | **1,856** | **354,295** |
+| **總計** | **1,857** | **354,567** |
 
-其中 `Imervue/` 套件本身 802 檔 / 174,603 行。
+其中 `Imervue/` 套件本身 802 檔 / 174,647 行。
 
 測試碼與產品碼比約 **0.85 : 1**（163k vs 191k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -160,7 +160,7 @@ ImervueMainWindow
 
 Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色階。Paint 左側為可捲動雙欄工具盤，水平停靠改為兩列；右側預設為單一全高度分頁檢查器，優先顯示顏色／筆刷／圖層／素材，Window 選單仍按三組工作流程分類。既有版面不強制遷移；重設才回到新 inspector，首次顯示的預設尺寸也不覆寫已還原版面。Paint／Modify 的內容透過 PanelScrollArea 保持小視窗可用；既有 QScrollArea 不再套第二層。Modify 採雙欄圖示工具、顯影／註解分類及展開式進階控制。Puppet 採起始操作卡片、直播選單、分行參數滑桿；首次顯示後設定 inspector 寬度，載入文件才展開動作面板。Desktop Pet 上方保留角色選擇，下方四個可捲動設定分類，僅開分頁不建立 overlay。
 
-所有工作區建好後呼叫 enable_control_tooltips，應用程式僅持有一個事件濾鏡；延遲對話框與動態選單由 Show／ToolTip 事件補齊，不使用輪詢。既有說明、路徑與模型 ToolTipRole 優先保留，生成提示可隨範圍、快捷鍵、分頁文字及語言更新，不讀取輸入欄位的值。
+所有工作區建好後呼叫 enable_control_tooltips，應用程式僅持有一個事件濾鏡；延遲對話框與動態選單由 Show／ToolTip 事件補齊，不使用輪詢。既有說明、路徑與模型 ToolTipRole 優先保留，生成提示可隨範圍、快捷鍵、分頁文字及語言更新，不讀取輸入欄位的值。全域提示濾鏡在首次 Qt 呼叫（含 event.type）前設重入保護，finally 還原；接收物件有效時，巢狀事件傳回 False 照常交 Qt 處理；接收物件已被刪除時則消耗事件。提示回呼中被刪除的 QObject／QAction 會略過，仍有效物件上的 RuntimeError 繼續拋出。主視窗與 Paint 各自保存強參照的分頁列，事件濾鏡不再呼叫 tabBar() 重取 wrapper。
 
 資料夾掃描透過 FolderScanUpdates 合併密集批次，避免每 256 張重新啟動縮圖；最終仍採使用者排序。detect_renamed_paths 用集合做差集；ImageMetadataIndex 的 stat-only 快取與完整尺寸快取分開，prime／篩選／改名比對不開啟影像標頭。隱藏的 list 不填滿，切入 list 時只取已快取欄位，可見列才交背景 worker 補讀。切換路徑與關閉均取消掃描，空目錄完成後停止 busy 進度。檔案樹預覽以 first_image_path 串流挑出自然排序首張圖（O(n) 比較、O(1) 額外記憶體），並行解碼限制兩個；FolderThumbnailModel 在列舉前啟用 DontUseCustomDirectoryIcons，避免系統自訂資料夾圖示探查與掃描爭用。
 
@@ -219,7 +219,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 721 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `Imervue_main_window.py` | 723 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 741 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑；`build_parser` 依序加手寫子指令、`cli_tools` 由 MCP 工具產生的 46 個、最後 `list-ops` |
 | `cli_tools.py` | 273 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 48 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤；`add_argument_as_written` 加選項後把 help 設回原文（Python 3.10 會替 `--x/--no-x` 的 help 補上 ` (default: …)`，之後的版本不會），`cli.py` 的手寫子指令也經它加選項 |
 | `integration_guide.py` | 146 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
@@ -594,7 +594,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `panel_scroll.py` | 26 | PanelScrollArea：受控最小尺寸與可捲動 dock；既有 QScrollArea 不重複包裝，避免巢狀捲動 |
 | `tool_icons.py` | 108 | 共享 palette-aware SVG 線條圖示引擎，供 Paint／Modify／Puppet 使用 |
 | `workspace_widgets.py` | 40 | WorkspaceWelcome：跟隨主題與縮放的標題、說明及主次操作卡片 |
-| `control_tooltips.py` | 252 | 共用缺漏 Tip 補齊、Qt Show／ToolTip 事件濾鏡、選單／分頁／表格項目、快捷鍵及範圍更新；保留原文與模型角色，檢查短生命週期 wrapper |
+| `control_tooltips.py` | 292 | 共用缺漏 Tip 補齊、Qt Show／ToolTip 事件濾鏡、選單／分頁／表格項目、快捷鍵及範圍更新；保留原文與模型角色，Qt 呼叫前防重入、短生命週期 wrapper 保護與已刪除事件接收者處理 |
 | `tooltip_text.py` | 160 | 多語言提示範本、既有說明的工作區範圍解析、buddy／表單／網格／巢狀列欄位名稱；不讀輸入值 |
 | `main_window_filter.py` | 229 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
@@ -806,7 +806,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 802 | 頂層 PaintWorkspace；完整 history/damage 提交與 Undo／Redo 修改標記；來源路徑傳遞、髒文件拖放保護、confirm_close 由主視窗呼叫 |
+| `paint_workspace.py` | 804 | 頂層 PaintWorkspace；完整 history/damage 提交與 Undo／Redo 修改標記；來源路徑傳遞、髒文件拖放保護、confirm_close 由主視窗呼叫 |
 | `tool_dispatcher.py` | 482 | 工具事件路由與手勢提交；累計筆刷／橡皮擦 damage，僅提交回呼期間提供區域 hints；切頁、切工具與部分失敗保守捕捉 |
 | `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
 | `tool_icons.py` | 4 | 共享 gui.tool_icons 的相容匯出，維持 Paint 工具 API |
