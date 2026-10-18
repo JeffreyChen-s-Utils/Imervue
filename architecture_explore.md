@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-18 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.97`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-18 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.98`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -907,6 +907,8 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `vts_api.py`(385) VTube Studio Public API server（最小子集）
 
 `workspace.py`(946) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(303，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(361，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
+
+內附 Imeru 模型由 `examples/puppet/imeru/build.py` 產生；`blender/head.py` 的中央前髮以重疊髮束覆蓋額頭，前髮與額頭投影一起渲染後重新綁定。`tests/test_example_imeru.py` 直接檢查已打包貼圖的額頭覆蓋率，避免髮束向兩側分開留下高三角缺口。
 
 ### 6.16 `Imervue/desktop_pet/`
 

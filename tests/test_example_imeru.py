@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 from pathlib import Path
 
 import numpy as np
 import pytest
+from PIL import Image
 
 from Imervue.puppet.document import PuppetDocument
 from Imervue.puppet.document_io import load_puppet
@@ -36,6 +38,23 @@ def test_the_bundled_file_passes_the_format_check_without_a_note():
 
 def test_it_is_the_only_bundled_rig():
     assert sorted(p.name for p in (_ROOT / "examples" / "puppet").glob("*.puppet")) == ["imeru.puppet"]
+
+
+def test_the_front_hair_covers_the_central_forehead(doc):
+    """The centre locks overlap above the brows instead of leaving a triangular hole."""
+    bangs = doc.drawable("bangs")
+    x0 = int(min(x for x, _ in bangs.vertices))
+    y0 = int(min(y for _, y in bangs.vertices))
+    with Image.open(io.BytesIO(doc.textures[bangs.texture])) as image:
+        alpha = np.asarray(image.convert("RGBA"))[..., 3]
+    # Canvas coordinates after the generator trims its 200-pixel top margin.
+    forehead = alpha[270 - y0:310 - y0, 486 - x0:514 - x0]
+    assert forehead.shape == (40, 28)
+    assert (forehead >= 240).mean() > 0.98
+    for eye_x in (444, 580):
+        iris = alpha[410 - y0:422 - y0, eye_x - 6 - x0:eye_x + 6 - x0]
+        assert iris.shape == (12, 12)
+        assert not iris.any()
 
 
 def test_every_standard_parameter_and_the_arm_parameters_are_there(doc):
