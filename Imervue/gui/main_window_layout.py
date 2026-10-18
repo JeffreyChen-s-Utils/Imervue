@@ -269,7 +269,7 @@ class MainWindowLayoutMixin:
         # DeepZoom) instead of the tab bar's default "switch tab". Filter the
         # tab bar's key events — it is the widget that holds focus after a tab
         # click and consumes the arrows.
-        self._main_tabs.tabBar().installEventFilter(self)
+        self._workspace_tab_bar.installEventFilter(self)
 
     def _add_optional_tab(self, key: str, title: str) -> QWidget | None:
         """An empty page for the optional tab under setting *key*; ``None`` when it is off."""

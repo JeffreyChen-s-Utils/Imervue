@@ -130,6 +130,12 @@ menus and dynamic controls without polling. `gui/tooltip_text.py` resolves local
 form context and authored descriptions. Custom help is preserved, generated numeric ranges,
 shortcuts and tab names can refresh, and item help reads model roles without writing them.
 Entered values are excluded. Transient Qt wrappers are checked before applying help.
+The application help filter guards re-entry before reading the Qt event and resets
+the guard in a finally block. Nested notifications on live receivers continue
+through Qt normally; events whose receiver was deleted are consumed.
+Help callbacks skip objects deleted while being inspected, while runtime errors on
+live objects still propagate. Main and Paint keep their tab-bar wrappers alive and
+use those references inside event filters instead of reacquiring them from Qt.
 
 Progressive folder scans publish their first batch immediately, then use the owned
 `images/folder_scan_updates.py` timer to merge bursts and publish the final sorted list once.

@@ -58,8 +58,24 @@ def _action_kind(action: QAction) -> str:
     return "toggle" if action.isCheckable() else "action"
 
 
+def _live_call(target, callback, *, default=None):
+    """Skip Qt objects deleted during callbacks; propagate errors on live objects."""
+    if not shiboken6.isValid(target):
+        return default
+    try:
+        return callback(target)
+    except RuntimeError:
+        if shiboken6.isValid(target):
+            raise
+    return default
+
+
 def action_tip(action: QAction) -> str:
     """Describe an action with its authored help, current shortcut and menu semantics."""
+    return _live_call(action, _action_tip, default="")
+
+
+def _action_tip(action: QAction) -> str:
     title = plain_label(action.text(), rich=False)
     if not title or action.isSeparator():
         return ""
@@ -158,8 +174,10 @@ def _widget_tip(widget: QWidget) -> str:
 
 def ensure_tooltip(target) -> None:
     """Keep authored help; refresh generated help when labels, language or ranges change."""
-    if not shiboken6.isValid(target):
-        return
+    _live_call(target, _ensure_tooltip)
+
+
+def _ensure_tooltip(target) -> None:
     previous = target.property(_GENERATED)
     current = target.toolTip()
     if (current and current != previous
@@ -173,8 +191,10 @@ def ensure_tooltip(target) -> None:
 
 
 def _tabs_and_menu(widget) -> None:
-    if not shiboken6.isValid(widget):
-        return
+    _live_call(widget, _update_tabs_and_menu)
+
+
+def _update_tabs_and_menu(widget) -> None:
     if isinstance(widget, QMenu):
         widget.setToolTipsVisible(True)
         for action in widget.actions():
@@ -219,16 +239,36 @@ def _item_tip(view: QAbstractItemView, event) -> bool:
 
 
 class _ToolTipFilter(QObject):
+    def __init__(self, parent: QObject | None = None):
+        super().__init__(parent)
+        self._handling = False
+
     def eventFilter(self, watched, event):
-        if event.type() not in (QEvent.Type.Show, QEvent.Type.ToolTip):
+        # Qt getters and help updates may synchronously deliver more events.
+        # Guard before touching Qt, including event.type(), and let nested
+        # events continue through Qt's normal dispatch.
+        if self._handling:
+            return not shiboken6.isValid(watched)
+        self._handling = True
+        try:
+            handled = _live_call(watched, lambda target: self._handle_event(target, event),
+                                 default=True)
+            # Qt must not deliver an event to a receiver deleted by a callback.
+            return handled or not shiboken6.isValid(watched)
+        finally:
+            self._handling = False
+
+    def _handle_event(self, watched, event) -> bool:
+        event_type = event.type()
+        if event_type not in (QEvent.Type.Show, QEvent.Type.ToolTip):
             return False
         if not isinstance(watched, QWidget):
             return False
         if watched.window().windowType() == Qt.WindowType.ToolTip:
             return False
-        if event.type() == QEvent.Type.Show and isinstance(watched, (QMainWindow, QDialog)):
+        if event_type == QEvent.Type.Show and isinstance(watched, (QMainWindow, QDialog)):
             fill_missing_tooltips(watched)
-        if event.type() == QEvent.Type.ToolTip:
+        if event_type == QEvent.Type.ToolTip:
             parent = watched.parentWidget()
             if (isinstance(parent, QAbstractItemView) and watched is parent.viewport()
                     and not watched.toolTip() and _item_tip(parent, event)):
