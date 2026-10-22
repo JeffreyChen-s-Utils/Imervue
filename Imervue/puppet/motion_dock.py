@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
 
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.puppet.motion_player import MotionPlayer
+from Imervue.system.ui_scale import scaled_px
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -52,6 +53,7 @@ class MotionDock(QDockWidget):
         layout.setSpacing(6)
 
         self._list = QListWidget()
+        self._list.setMinimumHeight(scaled_px(48))
         # Single-click binds the motion to the player and starts playback
         # right away — the most-asked-for UX in animation tools, matches
         # the brush-preset lists of raster paint apps / the preset previews of photo managers /
@@ -65,6 +67,8 @@ class MotionDock(QDockWidget):
         layout.addWidget(controls)
 
         self._scrub = QSlider(Qt.Orientation.Horizontal)
+        self._scrub.setToolTip(lang.get(
+            "puppet_scrub_tip", "Drag to move to another position in the current motion."))
         self._scrub.setRange(0, _SCRUB_STEPS)
         self._scrub.sliderMoved.connect(self._on_scrub_moved)
         layout.addWidget(self._scrub)

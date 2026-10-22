@@ -72,14 +72,18 @@ def _validate(arr: np.ndarray) -> None:
 # --- separable Gaussian (pure numpy) ---------------------------------------
 
 def blur_plane(plane: np.ndarray, radius: int) -> np.ndarray:
-    """Separable Gaussian blur of a single float plane."""
-    kernel = _gaussian_kernel_1d(radius)
+    """Separable Gaussian blur of a single float plane, sigma ``radius / 2`` (at least 1)."""
+    return gaussian_plane(plane, max(1.0, radius / 2.0))
+
+
+def gaussian_plane(plane: np.ndarray, sigma: float) -> np.ndarray:
+    """Blur a plane at ``sigma`` as float32, with a 3-sigma kernel and replicated edges."""
+    kernel = _gaussian_kernel_1d(sigma)
     out = _convolve_axis(plane.astype(np.float32), kernel, axis=0)
     return _convolve_axis(out, kernel, axis=1)
 
 
-def _gaussian_kernel_1d(radius: int) -> np.ndarray:
-    sigma = max(1.0, radius / 2.0)
+def _gaussian_kernel_1d(sigma: float) -> np.ndarray:
     half = max(1, int(round(sigma * 3)))
     idx = np.arange(-half, half + 1, dtype=np.float32)
     kernel = np.exp(-(idx ** 2) / (2.0 * sigma * sigma))

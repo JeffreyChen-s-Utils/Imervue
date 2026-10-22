@@ -17,6 +17,7 @@ import pytest
 
 from Imervue import Imervue_main_window as mod
 from Imervue.Imervue_main_window import ImervueMainWindow
+from Imervue.gpu_image_view.images import image_loader
 
 
 class _Rec:
@@ -66,14 +67,19 @@ def _close(window, event):
     rebound(window, event)
 
 
+def _record_collaborators(monkeypatch, log, failing):
+    for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
+                 "offer_permanent_delete", "drain_background_jobs", "drain_retiring_workers"):
+        monkeypatch.setattr(mod, name, _Rec(log, name, failing))
+    monkeypatch.setattr(image_loader, "cancel_folder_scan", _Rec(log, "cancel_folder_scan", failing))
+
+
 @pytest.fixture
 def run(monkeypatch):
     def _run(*, last=True, failing=()):
         log: list[str] = []
         fail = set(failing)
-        for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
-                     "offer_permanent_delete", "drain_background_jobs", "drain_retiring_workers"):
-            monkeypatch.setattr(mod, name, _Rec(log, name, fail))
+        _record_collaborators(monkeypatch, log, fail)
         monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: not last)
         monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
         window = _Window(log, fail)
@@ -87,6 +93,7 @@ _TEARDOWN = [
     "_save_current_folder_session",
     "_main_tabs.currentChanged.disconnect",
     "_folder_watcher.stop",
+    "cancel_folder_scan",
     "tree.shutdown",
     "modify_panel._debounce.stop",
     "modify_panel.recipe_committed.disconnect",
@@ -151,6 +158,15 @@ def test_failing_steps_are_logged_with_their_names(run, caplog):
     ]
 
 
+def test_scan_cancellation_failure_still_stops_tree_workers_and_closes(run, caplog):
+    with caplog.at_level("WARNING", logger="Imervue"):
+        calls = run(failing={"cancel_folder_scan"})
+    assert calls.index("cancel_folder_scan") < calls.index("tree.shutdown")
+    assert "write_user_setting" in calls
+    assert calls[-1] == "os._exit(0)"
+    assert "cancel the active folder scan" in caplog.text
+
+
 
 class _Paint:
     def __init__(self, log, answer):
@@ -173,9 +189,7 @@ def test_cancelling_paints_unsaved_prompt_keeps_the_window_open(run, monkeypatch
 
 def test_paint_agreeing_lets_the_close_go_on(run, monkeypatch):
     log: list[str] = []
-    for name in ("cancel_pending_save", "write_user_setting", "commit_pending_deletions",
-                 "offer_permanent_delete", "drain_background_jobs", "drain_retiring_workers"):
-        monkeypatch.setattr(mod, name, _Rec(log, name, set()))
+    _record_collaborators(monkeypatch, log, set())
     monkeypatch.setattr(mod, "_other_live_windows_remain", lambda _live, _me: False)
     monkeypatch.setattr(os, "_exit", lambda code: log.append(f"os._exit({code})"))
     window = _Window(log, set())

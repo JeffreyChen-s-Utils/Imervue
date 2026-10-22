@@ -182,13 +182,14 @@ jobs:
         tests/test_tile_textures_gl.py tests/test_workspace_lifecycle_gl.py
         tests/test_paint_auto_save.py::test_background_dirty_tab_and_multiple_document_recovery
         tests/test_main_window_layout.py::test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo
+        tests/test_main_window_layout.py::test_foreground_tree_refresh_with_paint_and_tooltips_does_not_reenter
         -v -s --tb=short -o junit_family=xunit1 --junitxml=real-gl.xml
         -p no:unraisableexception
     - name: Require executed GL cases and renderer evidence
       run: python scripts/verify_gl_report.py real-gl.xml
     - name: Keep actual GL results
       if: always()
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
       with:
         name: real-gl-linux-python312
         path: real-gl.xml

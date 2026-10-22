@@ -6,6 +6,7 @@ QFileSystemModel (a QObject, not a QOpenGLWidget) → no headless-CI skip.
 from __future__ import annotations
 
 import pytest
+import shiboken6
 from PIL import Image
 from PySide6.QtGui import QImage
 
@@ -22,6 +23,24 @@ from Imervue.gui.folder_thumbnail_model import (
 def _png(path, size=(8, 8)):
     Image.new("RGB", size, (120, 60, 30)).save(path)
     return str(path)
+
+
+@pytest.fixture(autouse=True)
+def _release_folder_models(qapp, monkeypatch):
+    """Destroy native directory gatherers before the shared QApplication exits."""
+    models = []
+    original = FolderThumbnailModel.__init__
+
+    def track(model, *args, **kwargs):
+        original(model, *args, **kwargs)
+        models.append(model)
+
+    monkeypatch.setattr(FolderThumbnailModel, "__init__", track)
+    yield
+    for model in models:
+        if shiboken6.isValid(model):
+            model._pool.waitForDone()
+            shiboken6.delete(model)
 
 
 class TestFolderPreviewPath:
@@ -107,6 +126,32 @@ class TestPreviewWorker:
 
 
 class TestFolderThumbnailModel:
+    def test_directory_enumeration_avoids_shell_probes_and_preview_storms(self, qapp):
+        from PySide6.QtWidgets import QFileSystemModel
+
+        model = FolderThumbnailModel()
+        assert model.testOption(QFileSystemModel.Option.DontUseCustomDirectoryIcons)
+        assert model._pool.maxThreadCount() == 2
+
+    def test_directory_load_and_async_preview_remain_functional(self, qapp, tmp_path, pump_until):
+        folder = tmp_path / "album"
+        folder.mkdir()
+        _png(folder / "img10.png")
+        _png(folder / "img2.png")
+        model = FolderThumbnailModel()
+        loaded = []
+        model.directoryLoaded.connect(loaded.append)
+        try:
+            model.setRootPath(str(tmp_path))
+            pump_until(lambda: str(tmp_path).replace("\\", "/") in loaded)
+            assert model.rowCount(model.index(str(tmp_path))) >= 1
+            model._request_preview(str(folder))
+            pump_until(lambda: str(folder) in model._cache)
+            assert model._cache[str(folder)] is not None
+        finally:
+            model._pool.waitForDone()
+            shiboken6.delete(model)
+
     def test_request_preview_is_idempotent(self, qapp, monkeypatch):
         model = FolderThumbnailModel()
         started = []

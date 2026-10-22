@@ -59,6 +59,20 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
 | U-20261022-03 | 2026-10-22 | Keep release dependencies aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
+| U-20261018-13 | 2026-10-18 | Keep Imeru crown hair flow above the scalp surface | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
+| U-20261018-12 | 2026-10-18 | Fill the central forehead gap in the bundled Imeru fringe | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
+| U-20261018-11 | 2026-10-18 | Prevent Qt tooltip and tab-filter reentry during foreground folder refresh | #done #bugfix #qt #tooltips #paint #tests | [2026-10-b](2026-10-b.md) |
+| U-20261018-10 | 2026-10-18 | Simplify tooltip and tool-palette logic reported by PR analysis | #done #refactor #sonarcloud #codacy #tests | [2026-10-b](2026-10-b.md) |
+| U-20261018-09 | 2026-10-18 | Align crop and shutdown regression tests with the updated workspaces | #done #tests #ui #browser #ci | [2026-10-b](2026-10-b.md) |
+| U-20261018-08 | 2026-10-18 | Reduce drive and folder browsing scan overhead | #done #performance #browser #file-tree #docs | [2026-10-b](2026-10-b.md) |
+| U-20261018-07 | 2026-10-18 | Fill missing tooltips throughout workspaces, dialogs and menus | #done #ui #ux #tooltips #i18n #docs | [2026-10-b](2026-10-b.md) |
+| U-20261018-06 | 2026-10-18 | Modernize the remaining Modify, Puppet and Desktop Pet tabs | #done #ui #ux #puppet #desktop-pet #i18n #docs | [2026-10-b](2026-10-b.md) |
+| U-20261018-05 | 2026-10-18 | Modern workspace navigation, tool palette and full-height inspector | #done #ui #ux #paint #theme #i18n #docs | [2026-10-b](2026-10-b.md) |
+| U-20261018-04 | 2026-10-18 | Allow moving and saving the left Paint tool bar | #done #paint #ui #toolbar #docs | [2026-10](2026-10.md) |
+| U-20261018-03 | 2026-10-18 | Keep the lazily created Paint workspace inside its tab | #done #paint #ui #bugfix | [2026-10](2026-10.md) |
+| U-20261018-02 | 2026-10-18 | Reset floating Paint docks into their default tab groups | #done #paint #ui #bugfix | [2026-10](2026-10.md) |
+| U-20261018-01 | 2026-10-18 | Browse filter usability and reliable scan progress | #done #ui #ux #tests #i18n | [2026-10](2026-10.md) |
+| U-20261017-01 | 2026-10-17 | Stroke-based oil painting for the WaywardCrown portraits | #done #paint #api | [2026-10](2026-10.md) |
 | U-20261009-01 | 2026-10-09 | Clear the 70 SonarCloud code smells and 2 Codacy findings open on main | #done #sonarcloud #codacy #refactor | [2026-10](2026-10.md) |
 | U-20261008-02 | 2026-10-08 | Clear the SonarCloud and Codacy findings on the release PR | #done #sonarcloud #codacy #paint #tests | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | Dock panels on the Imervue and Modify tabs, Modern Dark default theme, UI-scale layout fixes | #done #ui #docks #theme #ui-scale #docs #i18n | [2026-10](2026-10.md) |
@@ -564,4 +578,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 96 |
+| [2026-10.md](2026-10.md) | 2026-10 | 101 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 9 |

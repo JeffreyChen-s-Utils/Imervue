@@ -25,6 +25,7 @@ from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QUndoStack
 from PySide6.QtWidgets import (
     QColorDialog,
+    QGridLayout,
     QMenu,
     QScrollArea,
     QStyle,
@@ -118,9 +119,8 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         ("crop_ratio_9_16",  "9 : 16",   9, 16),
     ]
 
-    # Smallest tool button in the vertical strip, at 100 % UI scale; a longer
-    # label widens every button (see ``_size_tool_buttons``).
-    _TOOL_BTN_SIZE = QSize(86, 66)
+    # Compact icon buttons; translated labels remain in tooltips and accessible names.
+    _TOOL_BTN_SIZE = QSize(38, 38)
 
     def __init__(self, main_gui: GPUImageView):
         super().__init__()
@@ -168,7 +168,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
     # ------------------------------------------------------------------
 
     def build_left_panel(self) -> QWidget:
-        """Build the vertical tool strip (annotation + orientation); returns its scroll area."""
+        """Build the compact two-column tool palette and orientation controls."""
         lang = language_wrapper.language_word_dict
 
         panel = QWidget()
@@ -176,17 +176,29 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(2)
 
-        # --- Annotation tools (vertical single-column) ---
+        from Imervue.gui.tool_icons import tool_icon
+
+        panel.setObjectName("modifyToolPalette")
+        grid = QGridLayout()
+        grid.setSpacing(scaled_px(4))
+        layout.addLayout(grid)
+        icons = {"select": "select_rect", "rect": "shape_rect", "ellipse": "shape_ellipse",
+                 "line": "shape_line", "freehand": "brush"}
+        # Two compact columns keep the image in focus, with accessible tool names.
         self._tool_buttons: dict[str, QToolButton] = {}
-        for tool_key, glyph, i18n_key, fallback in self._ANNOTATION_TOOLS:
+        for index, (tool_key, _glyph, i18n_key, fallback) in enumerate(self._ANNOTATION_TOOLS):
             btn = QToolButton()
             label = lang.get(i18n_key, fallback)
-            btn.setText(f"{glyph}\n{label}")
+            btn.setText(label)
+            btn.setAccessibleName(label)
             btn.setToolTip(label)
-            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+            btn.setIcon(tool_icon(icons.get(tool_key, tool_key)))
+            btn.setIconSize(QSize(scaled_px(21), scaled_px(21)))
+            btn.setProperty("paintTool", True)
+            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
             btn.setCheckable(True)
             btn.clicked.connect(lambda _checked=False, t=tool_key: self._set_tool(t))
-            layout.addWidget(btn, 0, Qt.AlignmentFlag.AlignHCenter)
+            grid.addWidget(btn, *divmod(index, 2))
             self._interactive_widgets.append(btn)
             self._tool_buttons[tool_key] = btn
         strip_buttons = list(self._tool_buttons.values())
@@ -201,23 +213,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         # --- Separator ---
         layout.addSpacing(4)
 
-        # --- Orientation (also vertical) ---
-        orient_buttons: list[tuple[str, str, str, Callable]] = [
-            ("⟲", "develop_rotate_ccw", "Rotate 90° CCW", lambda: self._rotate(-1)),
-            ("⟳", "develop_rotate_cw",  "Rotate 90° CW",  lambda: self._rotate(1)),
-            ("⇆", "develop_flip_h",     "Flip Horizontal", self._flip_h),
-            ("⇅", "develop_flip_v",     "Flip Vertical",   self._flip_v),
-        ]
-        for glyph, i18n_key, fallback, handler in orient_buttons:
-            btn = QToolButton()
-            label = lang.get(i18n_key, fallback)
-            btn.setText(f"{glyph}\n{label}")
-            btn.setToolTip(label)
-            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-            btn.clicked.connect(handler)
-            layout.addWidget(btn, 0, Qt.AlignmentFlag.AlignHCenter)
-            self._interactive_widgets.append(btn)
-            strip_buttons.append(btn)
+        self._build_orientation_tools(layout, strip_buttons, lang)
 
         layout.addStretch(1)
         button_size = self._size_tool_buttons(strip_buttons)
@@ -228,16 +224,42 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         scroll.setWidget(panel)
         # Room for the buttons, the layout margins and a vertical scroll bar.
         bar = scroll.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
-        scroll.setMinimumWidth(button_size.width() + 8 + bar + 2 * scroll.frameWidth())
+        scroll.setMinimumWidth(
+            2 * button_size.width() + scaled_px(12) + bar + 2 * scroll.frameWidth())
+        scroll.setMinimumHeight(scaled_px(40))
         return scroll
+
+    def _build_orientation_tools(self, layout, strip_buttons, lang):
+        """Keep rotate and flip actions together below the drawing tools."""
+        from Imervue.gui.tool_icons import tool_icon
+        orient_buttons: list[tuple[str, str, str, Callable]] = [
+            ("⟲", "develop_rotate_ccw", "Rotate 90° CCW", lambda: self._rotate(-1)),
+            ("⟳", "develop_rotate_cw",  "Rotate 90° CW",  lambda: self._rotate(1)),
+            ("⇆", "develop_flip_h",     "Flip Horizontal", self._flip_h),
+            ("⇅", "develop_flip_v",     "Flip Vertical",   self._flip_v),
+        ]
+        orientation = QGridLayout()
+        orientation.setSpacing(scaled_px(4))
+        layout.addLayout(orientation)
+        for index, (_glyph, i18n_key, fallback, handler) in enumerate(orient_buttons):
+            btn = QToolButton()
+            label = lang.get(i18n_key, fallback)
+            btn.setText(label)
+            btn.setAccessibleName(label)
+            btn.setToolTip(label)
+            btn.setIcon(tool_icon(("rotate_ccw", "rotate_cw", "flip_h", "flip_v")[index]))
+            btn.setIconSize(QSize(scaled_px(21), scaled_px(21)))
+            btn.setProperty("paintTool", True)
+            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+            btn.clicked.connect(handler)
+            orientation.addWidget(btn, *divmod(index, 2))
+            self._interactive_widgets.append(btn)
+            strip_buttons.append(btn)
+
 
     @classmethod
     def _size_tool_buttons(cls, buttons: list[QToolButton]) -> QSize:
-        """Give every strip button one size that fits the longest label; returns it.
-
-        A size fixed in pixels cut long translations ("Rotat…° CCW") and stayed
-        the same when the UI scale enlarged the text.
-        """
+        """Size icon buttons consistently with the UI scale and native style hints."""
         size = QSize(scaled_px(cls._TOOL_BTN_SIZE.width()), scaled_px(cls._TOOL_BTN_SIZE.height()))
         for btn in buttons:
             size = size.expandedTo(btn.sizeHint())
@@ -532,6 +554,8 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
             canvas.set_crop_ratio(rw, rh)
 
     def _set_tool(self, tool: str) -> None:
+        if tool not in ("select", "crop"):
+            self._property_tabs.setCurrentIndex(1)
         # Update button checked state
         for key, btn in self._tool_buttons.items():
             btn.setChecked(key == tool)

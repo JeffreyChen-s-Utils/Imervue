@@ -159,6 +159,14 @@ def op_distort(src: Path, target: Path, args) -> None:
     Image.fromarray(distorted, mode="RGBA").save(target)
 
 
+def op_painterly(src: Path, target: Path, args) -> None:
+    """Repaint *src* in oil-paint brush strokes; the source's alpha is kept."""
+    from Imervue.paint.painterly import PainterlyOptions, paint
+    rgba = load_shown_rgba(src)
+    painted = paint(rgba, PainterlyOptions(seed=args.seed))
+    Image.fromarray(np.dstack([painted, rgba[..., 3]]), mode="RGBA").save(target)
+
+
 def op_autoorient(src: Path, target: Path, _args) -> None:
     Image.fromarray(load_shown_rgba(src), mode="RGBA").save(target)
 
@@ -294,6 +302,7 @@ _WRITE_SPEC = {
     "clahe": (op_clahe, "_clahe", lambda _a: ".png"),
     "dither": (op_dither, "_dither", lambda _a: ".png"),
     "distort": (op_distort, "_distort", lambda _a: ".png"),
+    "painterly": (op_painterly, "_painterly", lambda _a: ".png"),
     "auto-orient": (op_autoorient, "_oriented", lambda _a: ".png"),
     "strip": (op_strip, "_clean", lambda _a: None),
 }
@@ -652,6 +661,9 @@ _SUBCOMMANDS: tuple[tuple[str, str, tuple], ...] = (
         _COMMON,
         (("--mode",), {"default": "swirl", "help": "swirl / pinch / ripple"}),
         (("--strength",), {"type": float, "default": 0.5, "help": "-1..1"}),
+    )),
+    ("painterly", "repaint in oil-paint brush strokes", (
+        _COMMON, (("--seed",), {"type": int, "default": 0, "help": "stroke placement seed"}),
     )),
     ("auto-orient", "bake EXIF orientation into pixels", (_COMMON,)),
     ("strip", "re-save without metadata (EXIF/XMP/ICC)", (_COMMON,)),

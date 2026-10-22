@@ -59,6 +59,16 @@ Die Bibliothek sucht über eine separate schreibgeschützte WAL-Verbindung und l
 
 GPU Develop bleibt optional für Batch-Export. Neue Dialoge wählen CPU; GPU unter Render on ausdrücklich auswählen. Gemischte GPU-Farboperationen können andere Bytewerte liefern; aktiver Threshold oder Posterize rendert das ganze Rezept auf CPU, damit Rundungsfehler nicht verstärkt werden. Modify und CPU-Export teilen die 8-Bit-sRGB-Pipeline; eingebettete Profile werden einmal normalisiert, Exporte erhalten sRGB außer bei entfernten Metadaten. Keine lineare HDR-/Wide-Gamut-Bearbeitung. wgpu bleibt optional im Plugin, ohne Modellgewichte; fehlende Geräte/Laufzeitfehler fallen auf CPU zurück. Messungen für 640k/24MP/60MP dokumentieren die Entscheidung für CPU-Vorschauen.
 
+Die Suchfilter sind in zwei beschrifteten Zeilen angeordnet und bieten eine Schaltfläche zum Zurücksetzen. Datumsangaben verwenden YYYY-MM-DD; ungültige Daten und umgekehrte Zeiträume werden erklärt und ignoriert. Eingegebene Tags bleiben bei der Rückkehr zu einem Ordner erhalten. Beim Start eines weiteren Scans bleibt dessen Fortschrittsanzeige sichtbar. Ziehen Sie den Griff oben an der linken Paint-Werkzeugleiste, um sie zu verschieben, an einem anderen Rand anzudocken oder frei schweben zu lassen. Ihre Position wird gespeichert; Reset Workspace Layout setzt sie nach links zurück.
+
+Modern Dark und Modern Light bieten eine klarere Navigation, Panel-Flächen und Tastaturfokus. Paint nutzt eine scrollbare zweispaltige Symbolpalette; beim Überfahren erscheinen übersetzte Werkzeugnamen und Tastenkürzel, beim horizontalen Andocken entstehen zwei Zeilen. Der Inspektor über die volle Höhe zeigt Farbe, Pinsel, Ebenen und Materialien zuerst; Color channels klappt RGB/HSV-Regler aus. Leere Browseransichten bieten Ordner öffnen oder Filter löschen an. Gespeicherte Layouts bleiben erhalten; Window > Reset Workspace Layout übernimmt den neuen Inspektor.
+
+Alle fünf Tabs verwenden das moderne Workspace-Design. Modify bietet eine kompakte Symbolpalette, getrennte Bereiche für Entwicklung und Anmerkungen sowie ausklappbare erweiterte Anpassungen. Puppet bietet eine Startkarte mit Aktionen, gebündelte Live-Steuerung und übersichtliche Parameter; die Bewegungswiedergabe erscheint nach dem Laden eines Rigs. Desktop Pet hält die Rig-Auswahl oben und gliedert die Einstellungen in vier scrollbar erreichbare Kategorien: Fenster, Live-Treiber, Pet-Skript und globale Tastenkürzel. Das Öffnen der Einstellungen allein erstellt kein Desktop-Overlay.
+
+Beim Bewegen des Mauszeigers über Bedienelemente, Workspace-Tabs, Menüs sowie Listen- oder Tabelleneinträge erscheinen Hinweise. Fehlende Hinweise werden in allen fünf Workspaces und später geöffneten Dialogen ergänzt; vorhandene Hilfetexte und Dateipfade bleiben erhalten. Zahlenfelder zeigen den gültigen Bereich, Menübefehle verfügbare Tastenkürzel. Erzeugte Hinweise folgen Änderungen an Beschriftung, Bereich und Sprache; Eingabewerte einschließlich Passwörtern werden nicht übernommen. Auch bei geöffnetem Paint bleiben beim Zurückkehren zur Anwendung die Aktualisierung des Ordnerbaums, die Tab-Navigation und die Kurzinfos bedienbar.
+
+Beim Öffnen von Ordnern werden aufeinanderfolgende Scan-Ergebnisse gebündelt, statt die Ansicht für jeden Block neu aufzubauen. Listenvergleiche nutzen indizierte Abfragen, Metadaten werden zunächst ohne Bildheader gelesen, und die verborgene Listenansicht wird erst bei Auswahl gefüllt. Erste Ergebnisse erscheinen weiterhin schrittweise, die endgültige Sortierung bleibt erhalten und bei leeren Ordnern endet die Aktivitätsanzeige nach dem Scan. Ordnervorschauen im Dateibaum wählen das erste Bild ohne vollständige Sortierung, nutzen höchstens zwei Worker und verzichten auf Abfragen benutzerdefinierter Systemordnersymbole, um konkurrierende Datenträgerzugriffe zu verringern.
+
 .. contents:: Inhaltsverzeichnis
    :depth: 2
    :local:
@@ -610,9 +620,7 @@ genau den Farben neu, die das Dock zeigt.
    |leiste|                      | Material · …   |
    +------+----------------------+----------------+
 
-Die vierzehn Docks auf der rechten Seite sind als Tabs in einer einzigen Spalte
-gestapelt, sodass die Leinwand die volle sichtbare Höhe behält, und in drei Gruppen
-gegliedert:
+Das Window-Menü ordnet alle vierzehn Panels nach Arbeitsablauf:
 
 - **Zeichnen** — Farbe, Brush, Bucket, Swatches
 - **Leinwand** — Layers, Navigator, Verlauf, Pages, Animation, Histogramm
@@ -937,7 +945,7 @@ sodass das Demo keine Rechte Dritter enthält: 45 Drawables auf einer
 1024 × 1336 großen Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im
 Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich
 vom Licht abwendet, auf das Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
-drei Physikketten, die das Haar schwingen lassen.
+drei Physikketten, die das Haar schwingen lassen. Die überlappenden mittleren Ponysträhnen bedecken die Stirn und lassen die Augen sichtbar. Sichtbare Strähnen am Oberkopf verbinden den Haarwirbel mit dem Pony.
 
 Das Rig trägt jeden Cubism-Standardparameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus
@@ -3577,8 +3585,8 @@ starten**. Damit ist es aus Skripten, CI-Schritten und von Servern ohne Display 
    * - ``watermark`` / ``optimize``
      - Text-Wasserzeichen (``--text``, ``--corner``, ``--opacity``, ``--font-fraction``,
        ``--color R G B``, ``--no-shadow``); Kodierung unter einem ``--max-kb``-Budget
-   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort``
-     - Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple
+   * - ``dehaze`` / ``clahe`` / ``dither`` / ``distort`` / ``painterly``
+     - Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple, Ölmalerei-Pinselstriche (``--seed``)
    * - ``auto-orient`` / ``strip``
      - EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern
    * - ``collage`` / ``anaglyph``

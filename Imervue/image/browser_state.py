@@ -33,6 +33,7 @@ class ImageMetadataIndex:
 
     def __init__(self) -> None:
         self._items: dict[str, ImageMeta] = {}
+        self._stat_items: dict[str, ImageMeta] = {}
         self._hashes: dict[str, str] = {}
 
     def get(self, path: str) -> ImageMeta:
@@ -46,20 +47,38 @@ class ImageMetadataIndex:
         # unlocks). Re-read next time instead.
         if cacheable:
             self._items[path] = meta
+            self._stat_items.pop(path, None)
+        return meta
+
+    def peek(self, path: str) -> ImageMeta | None:
+        """Return already cached metadata without opening or stat-ing a file."""
+        return self._items.get(path) or self._stat_items.get(path)
+
+    def get_stat(self, path: str) -> ImageMeta:
+        """Read file attributes only; filtering and rename matching need no image headers."""
+        meta = self.peek(path)
+        if meta is not None:
+            return meta
+        meta, cacheable = self._read(path, with_dimensions=False)
+        if cacheable:
+            self._stat_items[path] = meta
         return meta
 
     def prime(self, paths: Iterable[str], *, limit: int | None = None) -> None:
         for i, path in enumerate(paths):
             if limit is not None and i >= limit:
                 break
-            self.get(path)
+            self.get_stat(path)
 
     def drop_missing(self) -> None:
-        for path in [p for p in self._items if not Path(p).exists()]:
+        for path in [p for p in self._items.keys() | self._stat_items.keys()
+                     if not Path(p).exists()]:
             self._items.pop(path, None)
+            self._stat_items.pop(path, None)
 
     def move(self, old_path: str, new_path: str) -> None:
         meta = self._items.pop(old_path, None)
+        stat_meta = self._stat_items.pop(old_path, None)
         if meta is not None:
             # Mirror get(): don't cache a transient stat-failure sentinel for the
             # rename target (mid-move / AV-locked) — re-read next time instead of
@@ -67,6 +86,10 @@ class ImageMetadataIndex:
             new_meta, cacheable = self._read(new_path)
             if cacheable:
                 self._items[new_path] = new_meta
+        elif stat_meta is not None:
+            new_meta, cacheable = self._read(new_path, with_dimensions=False)
+            if cacheable:
+                self._stat_items[new_path] = new_meta
         digest = self._hashes.pop(old_path, None)
         if digest is not None:
             self._hashes[new_path] = digest
@@ -81,7 +104,7 @@ class ImageMetadataIndex:
         return digest
 
     @staticmethod
-    def _read(path: str) -> tuple[ImageMeta, bool]:
+    def _read(path: str, *, with_dimensions: bool = True) -> tuple[ImageMeta, bool]:
         """Return ``(metadata, cacheable)``. ``cacheable`` is False when the
         ``stat`` failed transiently, so the caller shouldn't memoise the sentinel."""
         p = Path(path)
@@ -97,7 +120,7 @@ class ImageMetadataIndex:
             mtime_date = None
             cacheable = False
         width = height = None
-        if size:
+        if size and with_dimensions:
             from Imervue.image.dimensions import image_dimensions
             # Not a readable image: the dimensions stay unknown.
             width, height = image_dimensions(path) or (None, None)
@@ -135,7 +158,8 @@ class ImageFilterSpec:
 
 def match_filter(path: str, spec: ImageFilterSpec,
                  index: ImageMetadataIndex | None = None) -> bool:
-    meta = index.get(path) if index is not None else ImageMetadataIndex._read(path)[0]
+    meta = (index.get_stat(path) if index is not None
+            else ImageMetadataIndex._read(path, with_dimensions=False)[0])
     filename = spec.filename.strip().lower()
     if filename and filename not in meta.name:
         return False
@@ -277,8 +301,12 @@ def relocate_root(paths: Iterable[str], old_root: str, new_root: str) -> dict[st
 def detect_renamed_paths(old_paths: Iterable[str], new_paths: Iterable[str],
                          index: ImageMetadataIndex | None = None) -> dict[str, str]:
     """Infer same-file renames so thumbnail/metadata cache can migrate."""
-    old_only = [p for p in old_paths if p not in new_paths]
-    new_only = [p for p in new_paths if p not in old_paths]
+    old_paths, new_paths = list(old_paths), list(new_paths)
+    old_set, new_set = set(old_paths), set(new_paths)
+    old_only = [p for p in old_paths if p not in new_set]
+    new_only = [p for p in new_paths if p not in old_set]
+    if not old_only or not new_only:
+        return {}
     old_sig: dict[tuple[int, int, str], list[str]] = {}
     for path in old_only:
         sig = _rename_signature(path, index)
@@ -309,7 +337,7 @@ def _rename_signature(
     index: ImageMetadataIndex | None = None,
 ) -> tuple[int, int, str] | None:
     if index is not None:
-        meta = index.get(path)
+        meta = index.get_stat(path)
         if meta.size or meta.mtime_ns:
             return (meta.size, meta.mtime_ns, meta.suffix)
     try:
