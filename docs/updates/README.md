@@ -59,6 +59,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
 | U-20261022-01 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
+| U-20261022-03 | 2026-10-22 | Keep release dependencies aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261018-13 | 2026-10-18 | Keep Imeru crown hair flow above the scalp surface | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-12 | 2026-10-18 | Fill the central forehead gap in the bundled Imeru fringe | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-11 | 2026-10-18 | Prevent Qt tooltip and tab-filter reentry during foreground folder refresh | #done #bugfix #qt #tooltips #paint #tests | [2026-10-b](2026-10-b.md) |
