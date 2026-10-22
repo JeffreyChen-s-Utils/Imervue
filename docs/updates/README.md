@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261022-01 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261008-02 | 2026-10-08 | Clear the SonarCloud and Codacy findings on the release PR | #done #sonarcloud #codacy #paint #tests | [2026-10](2026-10.md) |
 | U-20261008-01 | 2026-10-08 | Dock panels on the Imervue and Modify tabs, Modern Dark default theme, UI-scale layout fixes | #done #ui #docks #theme #ui-scale #docs #i18n | [2026-10](2026-10.md) |
 | U-20261007-25 | 2026-10-07 | Complete optimization plan and publish GPU safeguards to plugin main | #done #Imervue #Imervue_Plugins #performance #color | [2026-10](2026-10.md) |
