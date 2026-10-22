@@ -103,7 +103,8 @@ def test_real_gl_job_is_separate_requires_actual_rendering_and_gates_publication
     assert 'scripts/verify_gl_report.py real-gl.xml' in gl
     for case in ("tests/test_tile_textures_gl.py", "tests/test_workspace_lifecycle_gl.py",
                  "test_background_dirty_tab_and_multiple_document_recovery",
-                 "test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo"):
+                 "test_returning_to_paint_keeps_edited_layers_dirty_state_and_undo",
+                 "test_foreground_tree_refresh_with_paint_and_tooltips_does_not_reenter"):
         assert case in gl
     assert 'continue-on-error:' not in gl
     assert 'needs: [lint, docs, fast, extended, real-gl]' in jobs["publish-dev"]

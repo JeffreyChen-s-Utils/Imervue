@@ -345,7 +345,7 @@ def test_shift_tab_toggles_theater_mode(qapp):
     """The press Qt delivers as Backtab found no binding, so Theater Mode never came."""
     view = _view()
     actions: list = []
-    view._key_dispatch = SimpleNamespace(dispatch=lambda action, _mods: actions.append(action))
+    view._key_dispatch = SimpleNamespace(dispatch=actions.append)
     KeyInputHandler(view).handle(_key_event(Qt.Key.Key_Backtab, Qt.KeyboardModifier.ShiftModifier))
     assert actions == ["theater"]
 
@@ -364,7 +364,7 @@ def test_the_viewer_keeps_a_bound_tab_from_qt_focus_handling(qapp):
 def _history_view(**kw):
     view = _view(**kw)
     view.actions = []
-    view._key_dispatch = SimpleNamespace(dispatch=lambda action, _mods: view.actions.append(action))
+    view._key_dispatch = SimpleNamespace(dispatch=view.actions.append)
     return view
 
 

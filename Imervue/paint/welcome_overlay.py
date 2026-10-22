@@ -27,6 +27,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from Imervue.paint.tool_icons import tool_icon
+from Imervue.system.ui_scale import scaled_px
 
 # Maximum number of recent-file rows surfaced in the panel. Beyond
 # that the panel grows tall enough to hide what's underneath.
@@ -50,42 +52,30 @@ class WelcomeHint(QFrame):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setObjectName("paintWelcome")
+        self.setMinimumWidth(scaled_px(340))
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(
             """
-            WelcomeHint {
-                background: rgba(40, 40, 40, 200);
-                border-radius: 12px;
+            QFrame#paintWelcome {
+                background: palette(base);
+                border: 1px solid palette(mid);
+                border-radius: 16px;
             }
             QLabel {
-                color: #eaeaea;
+                color: palette(text);
                 background: transparent;
             }
-            QLabel#welcome_title {
-                font-size: 12pt;
-            }
-            QLabel#welcome_subtitle {
-                color: #b0b0b0;
-                font-size: 9pt;
-            }
-            QLabel#welcome_recent_label {
-                color: #b0b0b0;
-                font-size: 8pt;
-            }
-            QPushButton {
-                background: rgba(255, 255, 255, 30);
-                color: #f0f0f0;
-                border: 1px solid rgba(255, 255, 255, 60);
+            QPushButton#welcome_create {
+                background: palette(highlight);
+                color: palette(highlighted-text);
+                border: 1px solid palette(highlight);
                 border-radius: 6px;
-                padding: 6px 14px;
-                font-size: 9pt;
-            }
-            QPushButton:hover {
-                background: rgba(255, 255, 255, 50);
+                padding: 0.5em 1em;
             }
             QPushButton#welcome_recent_row {
                 text-align: left;
-                padding: 4px 10px;
+                padding: 0.4em 0.8em;
             }
             """,
         )
@@ -94,7 +84,11 @@ class WelcomeHint(QFrame):
         self._title.setObjectName("welcome_title")
         self._title.setText("Drag an image or PSD here")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._title.setFont(QFont(self._title.font().family(), 12, QFont.Weight.Bold))
+        self._title.setWordWrap(True)
+        title_font = QFont(self.font())
+        title_font.setPointSizeF(max(1.0, title_font.pointSizeF()) + 3)
+        title_font.setWeight(QFont.Weight.DemiBold)
+        self._title.setFont(title_font)
 
         self._subtitle = QLabel(self)
         self._subtitle.setObjectName("welcome_subtitle")
@@ -102,6 +96,7 @@ class WelcomeHint(QFrame):
         self._subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._new_btn = QPushButton("New tab", self)
+        self._new_btn.setObjectName("welcome_create")
         self._new_btn.setToolTip("Open an empty canvas in a new tab (Ctrl+T)")
         self._open_btn = QPushButton("Open file…", self)
         self._open_btn.setToolTip(
@@ -200,13 +195,17 @@ class WelcomeHint(QFrame):
 
     def _build_layout(self) -> None:
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(28, 22, 28, 22)
-        outer.setSpacing(6)
+        outer.setContentsMargins(scaled_px(28), scaled_px(24), scaled_px(28), scaled_px(24))
+        outer.setSpacing(scaled_px(8))
+        mark = QLabel(self)
+        mark.setPixmap(tool_icon("brush").pixmap(scaled_px(32), scaled_px(32)))
+        mark.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        outer.addWidget(mark)
         outer.addWidget(self._title)
         outer.addWidget(self._subtitle)
 
         button_row = QHBoxLayout()
-        button_row.setSpacing(8)
+        button_row.setSpacing(scaled_px(8))
         button_row.addStretch(1)
         button_row.addWidget(self._new_btn)
         button_row.addWidget(self._open_btn)

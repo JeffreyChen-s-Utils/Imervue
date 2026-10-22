@@ -359,7 +359,9 @@ class ImageListModel(QAbstractTableModel):
         row = _RowMeta(path, missing=not Path(path).exists())
         if self._metadata_index is None:
             return row
-        meta = self._metadata_index.get(path)
+        meta = self._metadata_index.peek(path)
+        if meta is None:
+            return row
         row.size_kb = meta.size / 1024 if meta.size else None
         row.width = meta.width
         row.height = meta.height

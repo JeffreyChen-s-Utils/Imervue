@@ -20,9 +20,8 @@ def verify_report(path: Path, *, minimum_cases: int = 1) -> int:
     if any(case.find(tag) is not None for case in cases
            for tag in ("skipped", "failure", "error")):
         raise ValueError("GL job must pass every selected case without skips")
-    renderers = [p.get("value", "").strip() for p in root.iter("property")
-                 if p.get("name") == "gl_renderer"]
-    if not any(renderers):
+    if not any(p.get("value", "").strip() for p in root.iter("property")
+               if p.get("name") == "gl_renderer"):
         raise ValueError("No actual OpenGL renderer was recorded")
     return len(cases)
 

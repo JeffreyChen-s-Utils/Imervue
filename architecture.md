@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-08 on `dev`; corresponding commit: `git log -1 -- architecture.md`.
+> Last verified: 2026-10-18 on `dev`; corresponding commit: `git log -1 -- architecture.md`.
 
 ## 1. Purpose
 
@@ -63,6 +63,17 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `.github/requirements/` | `publish.in` and the hash-locked `publish.txt` generated from it: the only thing the two jobs that hold the PyPI token install (the regenerating command is at the top of `publish.in`) |
 | `scripts/` | Stdlib-only helpers CI runs, never shipped in the wheel: `dev_release.py` numbers the `Imervue_dev` release and decides whether a build differs from the published one |
 
+Modern Dark/Light share palette-based surfaces, focus states and workspace navigation.
+Paint embeds as `Qt.Widget` when parented, with a scrollable two-column `ToolPalette`
+(`tool_palette.py`) and scalable, palette-aware SVG icons (`tool_icons.py`). Its default
+right-side inspector tabs prioritize Color, Brush, Layers and Materials; the Window menu
+retains the three logical workflow groups. `gui/panel_scroll.py` keeps Paint and Modify
+dock contents accessible without forcing oversized windows. Saved layouts take precedence;
+reset rebuilds the inspector and returns the movable tools to the left. First-show sizing
+only runs when no saved layout was restored. `gui/browser_empty_state.py` follows viewer
+paint/resize/show events to offer welcome, empty-folder and no-match recovery actions,
+without polling or changing the image model.
+
 ## 3. Entry points and public interfaces
 
 | Entry | File | Notes |
@@ -105,6 +116,37 @@ ThumbnailDiskCache construction starts a background inventory rather than enumer
 The library keeps one serialized writer and one query-only WAL reader. Foreground calls read committed data without taking the scanner write lock; compound tag queries share a snapshot, while single SQL statements avoid extra transactions. An additive capture-time/mtime sort index removes full temporary sorts for limited searches; write-batch reads use the owning writer. Close/path switch acquire writer then reader locks. Fingerprint traversal uses bounded keyset pages rather than yielding a live SQL cursor. Public conn() remains the writer; callers using it directly own transaction/locking discipline.
 
 GPU Develop stays an optional batch provider with CPU as the default of new export dialogs. Threshold/posterize recipes use the full CPU reference to prevent amplified upstream GPU rounding. Modify previews remain CPU; embedded ICC/EXIF are normalized by core decoding, then full preview/CPU export share the canonical uint8 sRGB recipe. wgpu and device ownership stay in the flat plugin, no model weights or mandatory dependency added.
+
+Modify uses a two-column SVG tool palette, Develop/Annotate property tabs and collapsible
+advanced adjustments. Shared `gui/tool_icons.py` and `gui/workspace_widgets.py` provide scalable
+icons and actionable onboarding. Existing scroll areas are never wrapped again. Puppet's
+`workspace_ui.py` configures readable parameter rows and sizes its inspectors after first show;
+its motion panel appears after a document is loaded. Desktop Pet keeps rig selection above four
+independently scrollable settings categories, while its overlay remains lazy.
+
+Tooltips share a single application-owned event filter in `gui/control_tooltips.py`.
+Each workspace fills its constructed controls once; Show/ToolTip events cover late dialogs,
+menus and dynamic controls without polling. `gui/tooltip_text.py` resolves localized labels,
+form context and authored descriptions. Custom help is preserved, generated numeric ranges,
+shortcuts and tab names can refresh, and item help reads model roles without writing them.
+Entered values are excluded. Transient Qt wrappers are checked before applying help.
+The application help filter guards re-entry before reading the Qt event and resets
+the guard in a finally block. Nested notifications on live receivers continue
+through Qt normally; events whose receiver was deleted are consumed.
+Help callbacks skip objects deleted while being inspected, while runtime errors on
+live objects still propagate. Main and Paint keep their tab-bar wrappers alive and
+use those references inside event filters instead of reacquiring them from Qt.
+
+Progressive folder scans publish their first batch immediately, then use the owned
+`images/folder_scan_updates.py` timer to merge bursts and publish the final sorted list once.
+Switching paths or closing invalidates the scan generation and cancels pending updates.
+Rename membership comparisons use sets. `ImageMetadataIndex` separates stat-only priming
+from explicitly requested dimensions; list rows consume cached values and visible-row workers
+fetch the rest. Grid browsing leaves the hidden table unpopulated until list mode is selected.
+Completed empty scans clear the busy indicator.
+File-tree previews use streaming `first_image_path` selection instead of sorting
+all candidates, limit preview decoding to two workers, and disable custom system
+folder-icon queries before enumeration to reduce competing disk work.
 
 ## 4. Main flows
 
@@ -208,6 +250,14 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
 | A panel of the Imervue or Modify tab | `add_dock()` in `Imervue/gui/main_window_docks.py` (a stable object name, its group in `panel_docks()`, its place in `reset_panel_layout()`) |
 
 ## 6. Cross-project boundaries
+
+- **WaywardCrown (portrait generator)** imports `Imervue.paint.painterly.paint` and
+  `PainterlyOptions` (`tools/artgen/portrait_paint.py` there), from an installed Imervue or
+  from this working tree on `sys.path`, to paint its rendered portrait busts over in oil. It
+  passes an RGB `uint8` image, the options by keyword (`radii`, `threshold`, `max_length`,
+  `impasto`, `bristle`, `seed`) and an `importance` map, and relies on the result being
+  deterministic for a seed. Renaming the module, the function or those options, or changing
+  what a seed paints, needs the same change there and a re-run of its portraits.
 
 - **FrontEngine (optional downstream)** consumes the version 1 `.puppet` archive through
   `Imervue.puppet.document_io.load_puppet`, `Imervue.puppet.canvas.PuppetCanvas`,

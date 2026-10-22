@@ -93,6 +93,16 @@ Paint 的 File > `Open Document…`、`Save Document…`、`Save Document As…`
 
 GPU 顯影維持可選的批次加速。新的批次匯出對話框預設 CPU，需在運算裝置明確選擇 GPU。混合色彩階段可能與 CPU 的位元組值不同；啟用二值化或色階量化時，整個配方改由 CPU 渲染，避免放大捨入差異。Modify 預覽與標準 CPU 匯出使用相同的 8 位元 sRGB 流程，嵌入的廣色域描述檔只轉換一次，匯出附帶 sRGB 描述檔，移除中繼資料時除外。這不是線性 HDR 或廣色域編輯流程。wgpu 留在可選外掛中，外掛不下載模型權重；缺少裝置或執行失敗會降級 CPU。固定 64 萬／24MP／60MP 速度及像素報告記錄維持 CPU 預覽的決定。
 
+瀏覽篩選列以兩排具標籤的欄位呈現，並提供「清除篩選」按鈕。日期使用 YYYY-MM-DD 格式；無效日期與顛倒的日期範圍會顯示說明並略過。手動輸入的標籤會在返回資料夾時保留。開始下一次掃描時，進度列會持續顯示。 拖曳繪圖頁左側工具列頂端的把手，即可移動、停靠到其他邊緣或浮動。位置會保存；「重設工作區版面」會將工具列放回左側。
+
+Modern Dark 與 Modern Light 採用更清楚的導覽、面板層次與鍵盤焦點。繪圖工具改為可捲動的雙欄圖示工具盤；停留可看工具名稱與快捷鍵，水平停靠時改排為兩列。右側全高度檢查器優先排列顏色、筆刷、圖層與素材；展開「色彩通道」可調整 RGB／HSV。瀏覽頁的空白狀態提供開啟資料夾或清除篩選按鈕。已保存的版面會保留；Window > Reset Workspace Layout 可套用新的檢查器版面。
+
+五個分頁皆採用現代化工作區設計。修改頁提供精簡圖示工具盤、分開的顯影／註解區與可展開的進階調整。偶動畫頁提供可直接操作的起始卡片、集中式即時控制與清楚的參數檢查器，載入角色後才顯示動作播放面板。桌面寵物頁將角色選擇固定於上方，下方分為可捲動的視窗、即時驅動、寵物腳本與全域熱鍵四類設定；僅開啟設定頁不會建立桌面懸浮視窗。
+
+將滑鼠停在控制項、工作區分頁、選單或清單／表格項目上即可查看 Tip。五個工作區及後續開啟的對話框會補齊缺少的提示，並保留原有說明與檔案路徑提示。數值控制項會顯示可用範圍，選單指令會附上可用快捷鍵；自動提示會隨標籤、範圍或語言更新，且不會複製密碼等欄位輸入值。 在 Paint 開啟時切回應用程式，檔案樹重新整理、分頁導覽與提示仍可正常回應。
+
+開啟資料夾時會合併密集的掃描結果，不再每批重建畫面。檔案清單比對使用索引式查找，預先整理資料只讀取檔案屬性而不逐張開啟影像標頭，隱藏的圖片清單也只在切換時建立。首批結果仍會立即顯示，完成後保留最終排序；空資料夾掃描結束後會停止忙碌進度提示。 檔案樹的資料夾預覽不再排序整份清單來尋找首張圖片，同時最多執行兩個預覽工作，並略過系統自訂資料夾圖示查詢，減少磁碟爭用。
+
 ## 安裝
 
 ### 需求
@@ -181,7 +191,7 @@ py -m Imervue.cli list-ops          # 列出所有可用子指令
 | `info` / `stats` | 尺寸與格式；無參考品質指標（`--json` 輸出機器可讀格式） |
 | `convert` / `resize` / `thumbnail` | 格式轉換（`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL、`--quality`）；依長邊（`--max`）或指定的 `--width` / `--height` 縮放；縮圖尺寸 |
 | `watermark` / `optimize` | 文字浮水印（`--text`、`--corner`、`--opacity`、`--font-fraction`、`--color R G B`、`--no-shadow`）；在 `--max-kb` 預算內編碼 |
-| `dehaze` / `clahe` / `dither` / `distort` | 暗通道去霧、自適應等化、Bayer 有序抖動、swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | 暗通道去霧、自適應等化、Bayer 有序抖動、swirl / pinch / ripple、油畫筆觸（`--seed`） |
 | `auto-orient` / `strip` | 把 EXIF 方向旗標烘焙進像素；重存並移除 EXIF / XMP / ICC |
 | `collage` / `anaglyph` | 網格拼貼（`--columns`、`--cell-width` / `--cell-height`、`--gap`、`--margin`、`--background R G B`）；立體對轉紅藍 3D（`--method`） |
 | `preset` / `pipeline` | 依名稱套用已存的顯影預設；執行有序的 JSON 運算管線 |
@@ -461,7 +471,9 @@ Modify 以較低解析度的背景預覽保持調整時的操作回應，停止�
 - **濾鏡** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour（你選取的參考圖片的色彩氛圍）· Match Swatches（每個像素換成色票中最接近的顏色）（只有一個滑桿的濾鏡 — Posterize、Threshold、Halftone、Match Colour — 拖曳滑桿時會在圖層以原尺寸裁出的一塊區域上即時預覽；其他濾鏡開啟 OK / Cancel 參數對話框）
 - **檢視輔助** — 像素格 · 對齊像素 · 對齊邊緣 · 洋蔥皮 · 出血指引 · 畫布旋轉（`Ctrl+Shift+H` CCW 旋轉）
 
-### 擺放欄（14 個，分 3 群組以分頁排列）
+### 面板（14 個，分頁式檢查器）
+
+Window 選單依工作流程將十四個面板分為以下群組：
 
 | 群組 | 面板 |
 |---|---|
@@ -622,7 +634,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 視窗，零依賴�
 
 ### 範例
 
-內附的 rig 是 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**，Imervue 的原創吉祥物：1024 × 1336 畫布上的 45 個 drawable、所有 Cubism 標準參數外加雙關節手臂、Live2D 式視差轉頭、隨她轉頭背向光源而改變形狀的臉部陰影、虹膜裁切在眼白內的眨眼、頭髮物理、8 個動作（兩個 Idle 循環、TapHead、TapBody，以及含揮手在內的四個 Gesture）和 7 個表情。從 **File > Examples > Imeru** 或 **Open Puppet…** 開啟，點她的頭或身體就能看到她的反應。她完全由程式碼打造，做法就跟 3D 動漫風遊戲製作角色一樣：頭髮、身體、服裝和手臂在 Blender 裡建模，並以這類遊戲的著色技巧（借平滑代理形體的法線替頭髮打光、手繪髮絲與高光筆觸、烘焙遮蔽）做卡通渲染（三渲二）著色，再一次一個 puppet 圖層渲染出來；臉部以 SDF 臉部陰影圖著色；眼睛、眉毛和嘴巴則是畫上去的，最後再替各圖層綁上 rig，所以檔案不涉及任何第三方權利；執行 `py -3 examples/puppet/imeru/build.py` 即可重新產生（需要 Blender 4.2 以上版本）。
+內附的 rig 是 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**，Imervue 的原創吉祥物：1024 × 1336 畫布上的 45 個 drawable、所有 Cubism 標準參數外加雙關節手臂、Live2D 式視差轉頭、隨她轉頭背向光源而改變形狀的臉部陰影、虹膜裁切在眼白內的眨眼、頭髮物理、8 個動作（兩個 Idle 循環、TapHead、TapBody，以及含揮手在內的四個 Gesture）和 7 個表情。從 **File > Examples > Imeru** 或 **Open Puppet…** 開啟，點她的頭或身體就能看到她的反應。她完全由程式碼打造，做法就跟 3D 動漫風遊戲製作角色一樣：頭髮、身體、服裝和手臂在 Blender 裡建模，並以這類遊戲的著色技巧（借平滑代理形體的法線替頭髮打光、手繪髮絲與高光筆觸、烘焙遮蔽）做卡通渲染（三渲二）著色，再一次一個 puppet 圖層渲染出來；臉部以 SDF 臉部陰影圖著色；眼睛、眉毛和嘴巴則是畫上去的，最後再替各圖層綁上 rig，所以檔案不涉及任何第三方權利；執行 `py -3 examples/puppet/imeru/build.py` 即可重新產生（需要 Blender 4.2 以上版本）。 中央前髮互相搭接，覆蓋額頭並保留眼睛的可見範圍。 頭頂具有從髮旋延伸至瀏海的連續髮流。
 
 ---
 

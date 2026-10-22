@@ -20,11 +20,11 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QScrollArea,
     QSizePolicy,
     QSlider,
     QSpinBox,
     QStyle,
+    QTabWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -36,7 +36,7 @@ from Imervue.system.ui_scale import scaled_px
 
 
 # Narrowest the adjustment dock gets at 100 % UI scale; the canvas takes the rest.
-RIGHT_PANEL_WIDTH = 260
+RIGHT_PANEL_WIDTH = 300
 
 
 class DevelopRightPanelMixin:
@@ -52,15 +52,29 @@ class DevelopRightPanelMixin:
         layout.setSpacing(6)
 
         layout.addWidget(self._build_crop_controls(lang))
-        self._build_drawing_properties(layout, lang)
-        self._build_annotation_buttons(layout, lang)
-        self._build_develop_sliders(layout, lang)
-        self._build_recipe_buttons(layout, lang)
+        self._property_tabs = QTabWidget()
+        self._property_tabs.setObjectName("modifyPropertyTabs")
+        for key, fallback, builders in (
+            ("modify_adjustments_tab", "Develop",
+             (self._build_develop_sliders, self._build_recipe_buttons)),
+            ("annotation_title", "Annotate",
+             (self._build_drawing_properties, self._build_annotation_buttons)),
+        ):
+            page = QWidget()
+            page_layout = QVBoxLayout(page)
+            page_layout.setContentsMargins(0, 8, 0, 0)
+            page_layout.setSpacing(scaled_px(8))
+            for builder in builders:
+                builder(page_layout, lang)
+            page_layout.addStretch(1)
+            self._property_tabs.addTab(page, lang.get(key, fallback))
+        self._property_tabs.currentChanged.connect(self._refresh_property_page_geometry)
+        self._refresh_property_page_geometry()
+        layout.addWidget(self._property_tabs)
         layout.addStretch(1)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setWidget(panel)
+        from Imervue.gui.panel_scroll import PanelScrollArea
+        scroll = PanelScrollArea(panel)
         # Never narrower than its controls: a dock squeezed below that cut them off.
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         bar = scroll.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
@@ -69,6 +83,18 @@ class DevelopRightPanelMixin:
             panel.minimumSizeHint().width() + bar + 2 * scroll.frameWidth(),
         ))
         return scroll
+
+    def _refresh_property_page_geometry(self, _index=0):
+        """Only the active section contributes to the outer scroll area's height."""
+        tabs = self._property_tabs
+        for index in range(tabs.count()):
+            page = tabs.widget(index)
+            policy = page.sizePolicy()
+            policy.setVerticalPolicy(QSizePolicy.Policy.Preferred if index == tabs.currentIndex()
+                                     else QSizePolicy.Policy.Ignored)
+            page.setSizePolicy(policy)
+            page.updateGeometry()
+        tabs.updateGeometry()
 
     def _build_crop_controls(self, lang: dict) -> QWidget:
         """Crop ratio picker and apply / cancel; hidden until the crop tool is picked."""
@@ -92,6 +118,7 @@ class DevelopRightPanelMixin:
 
         crop_btn_row = QHBoxLayout()
         self._crop_apply_btn = QPushButton(lang.get("crop_apply", "Apply"))
+        self._crop_apply_btn.setProperty("primary", True)
         self._crop_apply_btn.clicked.connect(self._apply_crop)
         self._crop_cancel_btn = QPushButton(lang.get("crop_cancel", "Cancel"))
         self._crop_cancel_btn.clicked.connect(self._cancel_crop)
@@ -207,6 +234,7 @@ class DevelopRightPanelMixin:
         # --- Annotation Save ---
         ann_btn_row = QHBoxLayout()
         self._btn_ann_save = QPushButton(lang.get("annotation_save", "Save"))
+        self._btn_ann_save.setProperty("primary", True)
         self._btn_ann_save.clicked.connect(self._save_annotation)
         ann_btn_row.addWidget(self._btn_ann_save)
         self._interactive_widgets.append(self._btn_ann_save)
@@ -229,13 +257,6 @@ class DevelopRightPanelMixin:
 
     def _build_develop_sliders(self, layout: QVBoxLayout, lang: dict) -> None:
         """Exposure / brightness / contrast / saturation plus the advanced sliders."""
-        layout.addSpacing(8)
-        dev_label = QLabel(lang.get("modify_menu_develop", "Develop"))
-        dev_font = QFont(dev_label.font())
-        dev_font.setBold(True)
-        dev_label.setFont(dev_font)
-        layout.addWidget(dev_label)
-
         self._exposure, exp_label = self._make_slider(
             lang.get("develop_exposure", "Exposure"),
             self._EXPOSURE_RANGE,
@@ -268,7 +289,21 @@ class DevelopRightPanelMixin:
         layout.addLayout(self._label_over_slider(sat_label, self._saturation))
         self._saturation_label = sat_label
 
-        # --- Advanced sliders (white balance, tonal regions, vibrance) ---
+        # Advanced adjustments stay one click away without pushing basic edits off screen.
+        self._advanced_toggle = QToolButton()
+        self._advanced_toggle.setText(lang.get("modify_advanced", "Advanced adjustments"))
+        self._advanced_toggle.setCheckable(True)
+        self._advanced_toggle.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self._advanced_toggle.setArrowType(Qt.ArrowType.RightArrow)
+        layout.addWidget(self._advanced_toggle)
+        advanced = QWidget()
+        advanced_layout = QVBoxLayout(advanced)
+        advanced_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(advanced)
+        advanced.hide()
+        self._advanced_toggle.toggled.connect(advanced.setVisible)
+        self._advanced_toggle.toggled.connect(lambda checked: self._advanced_toggle.setArrowType(
+            Qt.ArrowType.DownArrow if checked else Qt.ArrowType.RightArrow))
         self._adv_sliders: dict[str, QSlider] = {}
         self._adv_labels: dict[str, QLabel] = {}
         for field_name, i18n_key, fallback in self._ADVANCED_SLIDERS:
@@ -278,7 +313,7 @@ class DevelopRightPanelMixin:
                 self._COLOR_RANGE,
                 self._make_advanced_handler(field_name),
             )
-            layout.addLayout(self._label_over_slider(label, slider))
+            advanced_layout.addLayout(self._label_over_slider(label, slider))
             self._adv_sliders[field_name] = slider
             self._adv_labels[field_name] = label
 

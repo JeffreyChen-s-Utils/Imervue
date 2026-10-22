@@ -239,6 +239,25 @@ def _query_connection() -> sqlite3.Connection:
     return reader if reader is not None else conn()
 
 
+def _inside_query() -> bool:
+    """Whether this thread is already writing or reading under a snapshot."""
+    return (getattr(_query_state, "writing", False)
+            or getattr(_query_state, "reader", None) is not None)
+
+
+def _on_snapshot(reader: sqlite3.Connection, call, transaction: bool):
+    """Run *call* with *reader* as this thread's snapshot; the caller holds ``_read_lock``."""
+    if transaction:
+        reader.execute("BEGIN")
+    _query_state.reader = reader
+    try:
+        return call()
+    finally:
+        _query_state.reader = None
+        if transaction:
+            reader.execute("ROLLBACK")  # ends snapshot, including error paths
+
+
 def _read_snapshot(function, *, transaction: bool = False):
     """Eager query results under one reader lock; nested reads share a snapshot.
 
@@ -247,25 +266,16 @@ def _read_snapshot(function, *, transaction: bool = False):
     """
     @wraps(function)
     def read(*args, **kwargs):
-        if (getattr(_query_state, "writing", False)
-                or getattr(_query_state, "reader", None) is not None):
+        if _inside_query():
             return function(*args, **kwargs)
         while True:
             if _reader is None:
                 conn()  # initialize before acquiring _read_lock
             with _read_lock:
-                if _reader is None:  # close/path switch won the initialization race
-                    continue
-                reader = _reader
-                if transaction:
-                    reader.execute("BEGIN")
-                _query_state.reader = reader
-                try:
-                    return function(*args, **kwargs)
-                finally:
-                    _query_state.reader = None
-                    if transaction:
-                        reader.execute("ROLLBACK")  # ends snapshot, including error paths
+                # None here: close/path switch won the initialization race, so retry.
+                if _reader is not None:
+                    return _on_snapshot(
+                        _reader, lambda: function(*args, **kwargs), transaction)
     return read
 
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 
 from Imervue.system.hidden_files import is_hidden
@@ -31,22 +31,26 @@ def list_images(folder: str, extensions: Iterable[str], *, recursive: bool = Fal
     can't be read lists what was read before the error; nothing raises.
     """
     exts = frozenset(extensions)
-    found = _walk(folder, exts, should_stop) if recursive else _scan(folder, exts)
+    found = _walk(folder, exts, should_stop) if recursive else list(_scan(folder, exts))
     found.sort(key=lambda path: natural_key(os.path.basename(path)))
     return found
 
 
-def _scan(folder: str, exts: frozenset[str]) -> list[str]:
-    found: list[str] = []
+def first_image_path(folder: str, extensions: Iterable[str]) -> str | None:
+    """Find the natural-first visible image with constant memory and no full sort."""
+    return min(_scan(folder, frozenset(extensions)),
+               key=lambda path: natural_key(os.path.basename(path)), default=None)
+
+
+def _scan(folder: str, exts: frozenset[str]) -> Iterator[str]:
     try:
         with os.scandir(folder) as entries:
             for entry in entries:
                 if (entry.is_file() and Path(entry.name).suffix.lower() in exts
                         and not is_hidden(entry)):
-                    found.append(entry.path)
+                    yield entry.path
     except OSError as exc:
         logger.debug("Listing %s stopped: %s", folder, exc)
-    return found
 
 
 def _walk(folder: str, exts: frozenset[str], should_stop: Callable[[], bool] | None) -> list[str]:

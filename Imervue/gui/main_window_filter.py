@@ -10,13 +10,12 @@ from __future__ import annotations
 import contextlib
 from datetime import date
 
-from PySide6.QtWidgets import QComboBox, QLineEdit, QPushButton
-from PySide6.QtWidgets import QHBoxLayout, QWidget
+from PySide6.QtWidgets import QWidget
 
+from Imervue.gui.image_filter_bar import ImageFilterBar, filter_date
 from Imervue.image.browser_state import ImageFilterSpec, filter_paths, refilter_keeping_current
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
-from Imervue.system.ui_scale import scaled_px
 
 
 def _any_tag_label() -> str:
@@ -28,63 +27,27 @@ class MainWindowFilterMixin:
 
     def _build_filter_row(self) -> QWidget:
         """Build the filename/tag/rating/date filter bar above the viewer."""
-        filter_row = QWidget()
-        filter_layout = QHBoxLayout(filter_row)
-        gap = scaled_px(6)
-        filter_layout.setContentsMargins(gap, scaled_px(4), gap, scaled_px(4))
-        filter_layout.setSpacing(gap)
-
-        self.image_filter = QLineEdit()
-        self.image_filter.setClearButtonEnabled(True)
-        self.image_filter.setPlaceholderText(
-            language_wrapper.language_word_dict.get(
-                "image_filter_filename_placeholder",
-                "Filename",
-            ),
-        )
-        self.image_filter.textChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.image_filter, stretch=2)
-
-        self.tag_filter = QComboBox()
-        self.tag_filter.setEditable(True)
-        self.tag_filter.setMinimumWidth(scaled_px(120))
-        self.tag_filter.addItem(_any_tag_label(), "")
-        self.tag_filter.currentTextChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.tag_filter, stretch=1)
-
-        self.rating_filter = QComboBox()
-        self.rating_filter.setMinimumWidth(scaled_px(110))
-        self.rating_filter.addItem(
-            language_wrapper.language_word_dict.get("image_filter_any_rating", "Any rating"),
-            "",
-        )
-        for rating in range(1, 6):
-            self.rating_filter.addItem(f">= {rating}", f">={rating}")
-        self.rating_filter.currentIndexChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.rating_filter, stretch=0)
-
-        self.date_from_filter = QLineEdit()
-        self.date_from_filter.setClearButtonEnabled(True)
-        self.date_from_filter.setPlaceholderText(
-            language_wrapper.language_word_dict.get("image_filter_date_from", "From date"),
-        )
-        self.date_from_filter.textChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.date_from_filter, stretch=1)
-
-        self.date_to_filter = QLineEdit()
-        self.date_to_filter.setClearButtonEnabled(True)
-        self.date_to_filter.setPlaceholderText(
-            language_wrapper.language_word_dict.get("image_filter_date_to", "To date"),
-        )
-        self.date_to_filter.textChanged.connect(self._on_image_filter_changed)
-        filter_layout.addWidget(self.date_to_filter, stretch=1)
-
-        self.missing_batch_button = QPushButton(
-            language_wrapper.language_word_dict.get("missing_batch_menu", "Missing"),
-        )
+        self._filter_bar = ImageFilterBar()
+        self.image_filter = self._filter_bar.filename
+        self.tag_filter = self._filter_bar.tag
+        self.rating_filter = self._filter_bar.rating
+        self.date_from_filter = self._filter_bar.date_from
+        self.date_to_filter = self._filter_bar.date_to
+        self.missing_batch_button = self._filter_bar.missing
+        self._filter_bar.changed.connect(self._on_image_filter_changed)
+        self._filter_bar.reset.clicked.connect(self._reset_image_filters)
         self.missing_batch_button.clicked.connect(self._show_missing_batch_menu)
-        filter_layout.addWidget(self.missing_batch_button, stretch=0)
-        return filter_row
+        return self._filter_bar
+
+    def _reset_image_filters(self) -> None:
+        self._restore_filter_state({})
+        self._on_image_filter_changed()
+        self.image_filter.setFocus()
+
+    def _update_filter_feedback(self) -> None:
+        bar = getattr(self, "_filter_bar", None)
+        if bar is not None:
+            bar.update_feedback(active=any(self._filter_state().values()))
 
     def _on_viewer_filename_changed(self, name) -> None:
         base_template = language_wrapper.language_word_dict.get(
@@ -104,6 +67,7 @@ class MainWindowFilterMixin:
         self.filename_label.setText(
             base_template + ("  " + " ".join(extras) if extras else ""),
         )
+        self.filename_label.setToolTip(self.filename_label.text())
         self.exif_sidebar.schedule_update()
         # Keep the tab bar in lockstep with whatever image the viewer
         # now shows. Only sync in deep-zoom mode — tile grid / folder
@@ -117,6 +81,7 @@ class MainWindowFilterMixin:
     def _on_image_filter_changed(self, *_args) -> None:
         if getattr(self, "_restoring_filter_controls", False):
             return
+        self._update_filter_feedback()
         self._apply_image_filter()
         self._save_current_folder_session()
 
@@ -176,40 +141,39 @@ class MainWindowFilterMixin:
         viewer.update()
 
     def _current_filter_spec(self) -> ImageFilterSpec:
-        tag = ""
-        if hasattr(self, "tag_filter"):
-            tag = self.tag_filter.currentData() or self.tag_filter.currentText()
-            if tag == _any_tag_label():
-                tag = ""
+        tag = self._current_filter_tag()
         rating = ""
         if hasattr(self, "rating_filter"):
             rating = self.rating_filter.currentData() or ""
+        start = self._parse_filter_date(
+            self.date_from_filter.text() if hasattr(self, "date_from_filter") else "")
+        end = self._parse_filter_date(
+            self.date_to_filter.text() if hasattr(self, "date_to_filter") else "")
+        if start and end and start > end:
+            start = end = None
         return ImageFilterSpec(
             filename=self.image_filter.text() if hasattr(self, "image_filter") else "",
             tag=str(tag or ""),
             rating=str(rating or ""),
-            date_from=self._parse_filter_date(
-                self.date_from_filter.text() if hasattr(self, "date_from_filter") else "",
-            ),
-            date_to=self._parse_filter_date(
-                self.date_to_filter.text() if hasattr(self, "date_to_filter") else "",
-            ),
+            date_from=start,
+            date_to=end,
         )
+
+    def _current_filter_tag(self) -> str:
+        if not hasattr(self, "tag_filter"):
+            return ""
+        # Editable combos retain currentData() from the previously selected row.
+        text = self.tag_filter.currentText()
+        return "" if text == _any_tag_label() else text.strip()
 
     @staticmethod
     def _parse_filter_date(value: str) -> date | None:
-        value = (value or "").strip()
-        if not value:
-            return None
-        try:
-            return date.fromisoformat(value)
-        except ValueError:
-            return None
+        return filter_date(value or "")
 
     def _filter_state(self) -> dict:
         return {
             "filename": self.image_filter.text() if hasattr(self, "image_filter") else "",
-            "tag": self.tag_filter.currentData() if hasattr(self, "tag_filter") else "",
+            "tag": self._current_filter_tag(),
             "rating": self.rating_filter.currentData() if hasattr(self, "rating_filter") else "",
             "date_from": self.date_from_filter.text() if hasattr(self, "date_from_filter") else "",
             "date_to": self.date_to_filter.text() if hasattr(self, "date_to_filter") else "",
@@ -239,12 +203,13 @@ class MainWindowFilterMixin:
                 self.date_to_filter.setText(str(state.get("date_to") or ""))
         finally:
             self._restoring_filter_controls = False
+        self._update_filter_feedback()
 
     def _refresh_tag_filter_options(self) -> None:
         if not hasattr(self, "tag_filter"):
             return
         from Imervue.user_settings.tags import get_all_tags
-        current = self.tag_filter.currentData() or self.tag_filter.currentText() or ""
+        current = self._current_filter_tag()
         self._restoring_filter_controls = True
         try:
             self.tag_filter.clear()

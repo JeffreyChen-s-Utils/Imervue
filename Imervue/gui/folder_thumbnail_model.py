@@ -19,7 +19,7 @@ from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtWidgets import QFileSystemModel
 
 from Imervue.gui.shown_qimage import shown_qimage
-from Imervue.system.image_listing import list_images
+from Imervue.system.image_listing import first_image_path
 from Imervue.image.formats import JPEG_EXTENSIONS
 
 logger = logging.getLogger("Imervue.gui.folder_thumbnail_model")
@@ -36,6 +36,8 @@ MAX_ICON_SIZE = 128
 # worker thread) is retried up to this many times before falling back to the
 # default icon, so a transient read race can't permanently blank its preview.
 MAX_PREVIEW_RETRIES = 2
+# Previews share the disk with the selected folder's scan and thumbnails.
+MAX_PREVIEW_WORKERS = 2
 
 
 def clamp_icon_size(px: int) -> int:
@@ -50,8 +52,7 @@ def folder_preview_path(folder: str, exts: Iterable[str] = PREVIEW_EXTS) -> str 
     recursive. An unreadable / missing directory yields None rather than
     raising, so a transient permission error just means "no preview".
     """
-    images = list_images(folder, {e.lower() for e in exts})
-    return images[0] if images else None
+    return first_image_path(folder, {e.lower() for e in exts})
 
 
 class _PreviewSignals(QObject):
@@ -86,11 +87,15 @@ class FolderThumbnailModel(QFileSystemModel):
 
     def __init__(self, parent=None, icon_size: int = DEFAULT_ICON_SIZE) -> None:
         super().__init__(parent)
+        # App-generated previews replace custom shell icons; probing those can
+        # stall enumeration on network and removable drives.
+        self.setOption(QFileSystemModel.Option.DontUseCustomDirectoryIcons, True)
         self._cache: dict[str, QIcon | None] = {}  # None = scanned, no preview
         self._pending: set[str] = set()
         # folder -> transient decode-failure retry count (see MAX_PREVIEW_RETRIES)
         self._retry: dict[str, int] = {}
         self._pool = QThreadPool(self)
+        self._pool.setMaxThreadCount(MAX_PREVIEW_WORKERS)
         self._icon_size = clamp_icon_size(icon_size)
 
     def icon_size(self) -> int:
