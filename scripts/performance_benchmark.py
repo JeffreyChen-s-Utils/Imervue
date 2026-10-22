@@ -20,6 +20,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
+MANIFEST = "manifest.json"   # written into a prepared fixture folder
 sys.path.insert(0, str(ROOT))
 
 from scripts.performance_support import (  # noqa: E402
@@ -61,7 +62,7 @@ def startup(_fixture: Path, _profile: Path, repeats: int) -> dict:
 def library(fixture: Path, profile: Path, repeats: int, *, large: bool) -> dict:
     from Imervue.library import image_index
     from Imervue.library.scanner import LibraryScanner
-    manifest = json.loads((fixture / "manifest.json").read_text())
+    manifest = json.loads((fixture / MANIFEST).read_text())
     count = manifest["libraries"][int(large)]
     source = fixture / f"library-{count}"
     image_index.set_db_path(profile / "catalog.db")
@@ -216,7 +217,7 @@ def paint(fixture: Path, profile: Path, repeats: int) -> dict:
     from Imervue.paint.undo_stack import UndoStack
     from Imervue.paint.damage import DamageRect
     from Imervue.paint.auto_save import write_snapshot, recover_snapshot
-    manifest = json.loads((fixture / "manifest.json").read_text())
+    manifest = json.loads((fixture / MANIFEST).read_text())
     width, height = manifest["paint_dimensions"]
     document = PaintDocument()
     document.load_image(gradient(width, height))
@@ -338,7 +339,7 @@ def wall(fixture: Path, _profile: Path, repeats: int, *, large: bool) -> dict:
     from Imervue.gpu_image_view import tile_textures
     from scripts.performance_gl import framebuffer, release_renderer
     app = _application()
-    count = json.loads((fixture / "manifest.json").read_text())["libraries"][int(large)]
+    count = json.loads((fixture / MANIFEST).read_text())["libraries"][int(large)]
     with framebuffer(1920, 1080) as (context, surface):
         view = _wall_view(context, surface, count)
         renderer = TileGridRenderer(view)
@@ -430,7 +431,7 @@ def main() -> None:
         parser.error("--repeats must be positive")
     fixture = args.fixtures.resolve()
     if args.child:
-        manifest = json.loads((fixture / "manifest.json").read_text(encoding="utf-8"))
+        manifest = json.loads((fixture / MANIFEST).read_text(encoding="utf-8"))
         if manifest.get("fixture_version") != 1 or "image_sha256" not in manifest:
             parser.error("child requires a prepared, owned fixture directory")
         profile = fixture / "runs" / uuid.uuid4().hex

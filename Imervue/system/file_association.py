@@ -37,7 +37,7 @@ _MIME_BY_EXT = {
     ".bmp": "image/bmp", ".tiff": "image/tiff", ".tif": "image/tiff",
     ".webp": "image/webp", ".gif": "image/gif", ".apng": "image/apng",
     ".svg": "image/svg+xml", ".avif": "image/avif", ".jxl": "image/jxl",
-    ".heic": "image/heif", ".heif": "image/heif", ".hif": "image/heif",
+    **dict.fromkeys((".heic", ".heif", ".hif"), "image/heif"),
     ".ico": "image/vnd.microsoft.icon", ".tga": "image/x-tga", ".dds": "image/x-dds",
     ".qoi": "image/qoi", ".jp2": "image/jp2", ".j2k": "image/x-jp2-codestream",
     ".jpf": "image/jpx", ".jpx": "image/jpx", ".ppm": "image/x-portable-pixmap",

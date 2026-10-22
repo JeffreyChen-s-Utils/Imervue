@@ -27,7 +27,7 @@ def queued_view(monkeypatch):
     view.tile_grid_mode = True
     view._on_thumbnail_error = lambda path, message, gen: tile_loader.on_thumbnail_error(
         view, path, message, gen)
-    tile_loader._spawn_thumbnail_workers(view, view.model.images, 1)
+    tile_loader._spawn_thumbnail_workers(view, 1)
     return view
 
 
@@ -145,7 +145,7 @@ def test_zero_pool_size_is_clamped_and_missing_urgent_path_is_discarded(monkeypa
     monkeypatch.setattr(tile_loader, "LoadThumbnailWorker", _FakeWorker)
     view = _fake_view(["a"])
     view.thumbnail_pool.maxThreadCount = lambda: 0
-    tile_loader._spawn_thumbnail_workers(view, ["a"], 1)
+    tile_loader._spawn_thumbnail_workers(view, 1)
     assert len(_FakeWorker.created) == 1
     view.tile_cache["a"] = object()
     view._tile_queue.request("stale")

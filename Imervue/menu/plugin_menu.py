@@ -23,6 +23,10 @@ from Imervue.system.file_manager import reveal_or_warn
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 from Imervue.system.ui_scale import font_px
 
+# The Reload entry appears in the menu, the manager dialog and the context menu.
+_RELOAD_KEY = "plugin_menu_reload"
+_RELOAD_TEXT = "Reload Plugins"
+
 if TYPE_CHECKING:
     from PySide6.QtGui import QAction
 
@@ -75,7 +79,7 @@ def build_plugin_menu(ui: ImervueMainWindow):
 
     # ===== 重新載入插件 =====
     reload_action = plugin_menu.addAction(
-        lang.get("plugin_menu_reload", "Reload Plugins")
+        lang.get(_RELOAD_KEY, _RELOAD_TEXT)
     )
     reload_action.triggered.connect(lambda: _reload_plugins(ui))
 
@@ -224,7 +228,7 @@ class _PluginManageDialog(QDialog):
             self._lang.get("plugin_reason", "Reason / model / backend"),
         ])
         layout.addWidget(self._status_tree)
-        self._reload_btn = QPushButton(self._lang.get("plugin_menu_reload", "Reload Plugins"))
+        self._reload_btn = QPushButton(self._lang.get(_RELOAD_KEY, _RELOAD_TEXT))
         self._reload_btn.clicked.connect(self._reload_and_refresh)
         layout.addWidget(self._reload_btn)
         self._last_status = None
@@ -335,7 +339,7 @@ def _reload_plugins(ui: ImervueMainWindow):
 
     agreed = confirm(
         ui,
-        lang.get("plugin_menu_reload", "Reload Plugins"),
+        lang.get(_RELOAD_KEY, _RELOAD_TEXT),
         lang.get(
             "plugin_reload_confirm",
             "Reload all plugins? This will unload current plugins and re-discover them.",

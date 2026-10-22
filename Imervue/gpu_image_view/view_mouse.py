@@ -16,7 +16,7 @@ from Imervue.menu.right_click_menu import right_click_context_menu
 class ViewMouseMixin:
     """Mouse and wheel input of the viewer."""
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event):  # NOSONAR - Qt event override
         delta = event.angleDelta().y()
         if self.tile_grid_mode:
             # 滾輪 → 上下捲動縮圖列表
@@ -53,7 +53,7 @@ class ViewMouseMixin:
             self.update()
             self._toast("fit_window", "Fit to Window")
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):  # NOSONAR - Qt event override
         self.last_pos = event.position()
         self._cancel_hover_preview()
         # 任何按下都中止進行中的平滑動畫，使用者重新取得控制權。
@@ -91,7 +91,7 @@ class ViewMouseMixin:
 
         super().mousePressEvent(event)
 
-    def mouseDoubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event):  # NOSONAR - Qt event override
         # Deep zoom: double-click toggles fit ↔ 100% centred on the cursor,
         # except inside the minimap (which owns clicks for navigation).
         if (event.button() == Qt.MouseButton.LeftButton
@@ -103,7 +103,7 @@ class ViewMouseMixin:
                 return
         super().mouseDoubleClickEvent(event)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event):  # NOSONAR - Qt event override
         self._input.update_hover_state(event)
 
         if self.last_pos is None:
@@ -127,7 +127,7 @@ class ViewMouseMixin:
 
         self._input.handle_left_drag_select(event)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event):  # NOSONAR - Qt event override
         if event.button() == Qt.MouseButton.MiddleButton:
             self._middle_dragging = False
             self._input.start_pan_momentum()

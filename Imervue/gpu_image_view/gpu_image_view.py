@@ -573,8 +573,7 @@ class GPUImageView(
 
     def run_shortcut_action(self, action: str) -> None:
         """Run a Shortcut Settings action (``"undo"``, ``"delete"``…) as if its key was pressed."""
-        from PySide6.QtCore import Qt
-        self._key_dispatch.dispatch(action, Qt.KeyboardModifier.NoModifier)
+        self._key_dispatch.dispatch(action)
 
     def _reload_rewritten_image(self, path: str) -> None:
         """Show *path* again, thumbnail and list row too: another program saved over it."""

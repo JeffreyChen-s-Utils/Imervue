@@ -148,8 +148,7 @@ def _attach_synthetic_motions(document: PuppetDocument) -> None:
 
     if len(document.motions) >= _SYNTH_MOTION_THRESHOLD:
         return
-    for motion in synthesise_idle_motions(document):
-        document.motions.append(motion)
+    document.motions.extend(synthesise_idle_motions(document))
 
 
 class _CanvasTransform:

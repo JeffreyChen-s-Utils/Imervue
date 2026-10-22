@@ -228,7 +228,7 @@ class PrefetchScheduler(QObject):
             self._retired.add(worker)
             worker.abort()
         self.workers.clear()
-        for path in list(self.cache):
+        for path in tuple(self.cache):   # discard() removes entries
             self.discard(path)
         # Folder change → forget the previous folder's navigation history
         # so the new folder starts with a symmetric window.

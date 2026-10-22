@@ -185,5 +185,6 @@ class UndoStack:
             else:
                 vars(layer).update(vars(stored))
             layers.append(layer)
-        state._layers = layers  # noqa: SLF001 - owned content, not runtime wiring
+        # Owned content, not runtime wiring.
+        state._layers = layers  # noqa: SLF001
         self._document.adopt_content(state)

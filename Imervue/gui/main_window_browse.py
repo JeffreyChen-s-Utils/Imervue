@@ -52,7 +52,9 @@ class MainWindowBrowseMixin:
         self.set_browse_mode("list" if self._browse_mode == "grid" else "grid")
 
     def refresh_list_view(self) -> None:
-        """Populate the list view from the viewer's current image list."""
+        """Populate the list only when used; a hidden table must not read the whole folder."""
+        if self._browse_mode != "list":
+            return
         self.image_list_view.set_paths(
             list(self.viewer.model.images),
             metadata_index=getattr(self, "_image_metadata_index", None),

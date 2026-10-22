@@ -94,6 +94,16 @@ Library search now uses a separate query-only WAL connection: it sees committed 
 
 GPU Develop remains an optional batch-export accelerator. New Batch Export dialogs default to CPU; choose the GPU explicitly under Render on. Mixed GPU color stages may differ from CPU byte values; enabled threshold or posterize now render the entire recipe on CPU to avoid amplified rounding differences. Modify previews and canonical CPU exports share the same 8-bit sRGB pipeline; embedded wider-gamut profiles are normalized once and exports carry an sRGB profile unless metadata is removed. This is not a linear HDR or wide-gamut editing pipeline. wgpu stays optional in the plugin, which has no model weights; missing devices or runtime failures fall back to CPU. Fixed 640k/24MP/60MP timing and pixel reports document the decision to keep CPU previews.
 
+Browse filters use labelled fields in two rows and a Clear filters button. Dates use YYYY-MM-DD; invalid dates and reversed ranges are explained and ignored. Typed tags persist when returning to a folder. Starting another scan keeps its progress indicator visible. Drag the handle at the top of the left Paint tool bar to move it, dock it on another edge or float it. Its position is saved; Reset Workspace Layout returns it to the left.
+
+Modern Dark and Modern Light now share clearer navigation, panel surfaces and keyboard focus. Paint uses a scrollable two-column icon palette; hover for translated tool names and shortcuts, or dock horizontally for two rows. The full-height inspector puts Color, Brush, Layers and Materials first; expand Color channels for RGB/HSV sliders. Empty browser states offer Open Folder or Clear filters. Saved layouts are preserved; Window > Reset Workspace Layout adopts the new inspector.
+
+All five tabs use the modern workspace design. Modify has a compact icon palette, separate Develop/Annotate sections and expandable advanced adjustments. Puppet offers an actionable start card, grouped live controls and a readable parameter inspector; motion playback appears after a rig is loaded. Desktop Pet keeps rig selection above four scrollable settings categories: Window, Live drivers, Pet script and Global hotkeys. Opening its settings alone does not create the desktop overlay.
+
+Hover over controls, workspace tabs, menus and list or table items for tips. Missing tips are filled in all five workspaces and dialogs opened later; existing authored help and file-path tips are preserved. Numeric controls explain their allowed range, menu actions include available shortcuts, and generated tips refresh when the label, range or language changes. Input values, including passwords, are not copied into tips. Returning to the app with Paint open keeps folder-tree refresh, tab navigation and tooltips responsive.
+
+Folder browsing merges scan bursts instead of rebuilding for every batch. File-list comparisons use indexed membership, metadata priming reads attributes without image headers, and the hidden list is populated when selected. First results still appear progressively, final ordering is retained, and a completed empty folder stops the busy progress indicator. File-tree folder previews select the first image without sorting the full list, run at most two workers and skip custom system folder-icon queries to reduce competing disk work.
+
 ## Installation
 
 ### Requirements
@@ -183,7 +193,7 @@ py -m Imervue.cli list-ops          # print every available subcommand
 | `info` / `stats` | Dimensions & format; no-reference quality metrics (`--json` for machine output) |
 | `convert` / `resize` / `thumbnail` | Format conversion (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); resize to a long edge (`--max`) or an exact `--width` / `--height`; thumbnail box |
 | `watermark` / `optimize` | Text watermark (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); encode under a `--max-kb` budget |
-| `dehaze` / `clahe` / `dither` / `distort` | Dark-channel dehaze, adaptive equalization, ordered Bayer dither, swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | Dark-channel dehaze, adaptive equalization, ordered Bayer dither, swirl / pinch / ripple, oil-paint brush strokes (`--seed`) |
 | `auto-orient` / `strip` | Bake the EXIF orientation flag into pixels; re-save without EXIF / XMP / ICC |
 | `collage` / `anaglyph` | Grid montage (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); red-cyan 3D from a stereo pair (`--method`) |
 | `preset` / `pipeline` | Apply a saved develop preset by name; run an ordered JSON pipeline of ops |
@@ -470,7 +480,9 @@ Rect / Lasso / Wand / Quick-select with **Replace / Add / Subtract / Intersect**
 - **Filters** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (the colour mood of a reference image you pick) · Match Swatches (each pixel in its nearest Swatches colour) (the one-slider filters — Posterize, Threshold, Halftone, Match Colour — preview live on a full-size crop of the layer as you drag; the others open an OK / Cancel parameter dialog)
 - **View aids** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` rotates CCW)
 
-### Docks (14, tabbed in 3 clusters)
+### Panels (14, tabbed inspector)
+
+The Window menu groups all fourteen panels by workflow:
 
 | Cluster | Docks |
 |---|---|
@@ -679,7 +691,7 @@ machines where you can't install drivers.
 
 ### Demo
 
-The bundled rig is [`examples/puppet/imeru.puppet`](examples/puppet/imeru.puppet) — **Imeru**, Imervue's original mascot: 45 drawables on a 1024 × 1336 canvas, every Cubism-standard parameter plus two-joint arms, Live2D-style parallax head turns, a face shadow that changes shape as she turns away from the light, blinking with the irises clipped to the eye whites, hair physics, 8 motions (two Idle loops, TapHead, TapBody and four Gestures including a wave) and 7 expressions. Open it via **File > Examples > Imeru** or **Open Puppet…**, and click her head or body to see her react. She is made entirely by code, the way 3D anime games build their characters: her hair, body, outfit and arms are modelled and cel-shaded in Blender with those games' shading tricks (hair lit through the normals of a smooth stand-in shape, painted strands and highlight strokes, baked occlusion) and rendered one puppet layer at a time, her face is shaded from an SDF face shadow map, her eyes, brows and mouth are painted on, and the layers are then rigged, so the file carries no third-party rights; `py -3 examples/puppet/imeru/build.py` rebuilds it (Blender 4.2 or newer).
+The bundled rig is [`examples/puppet/imeru.puppet`](examples/puppet/imeru.puppet) — **Imeru**, Imervue's original mascot: 45 drawables on a 1024 × 1336 canvas, every Cubism-standard parameter plus two-joint arms, Live2D-style parallax head turns, a face shadow that changes shape as she turns away from the light, blinking with the irises clipped to the eye whites, hair physics, 8 motions (two Idle loops, TapHead, TapBody and four Gestures including a wave) and 7 expressions. Open it via **File > Examples > Imeru** or **Open Puppet…**, and click her head or body to see her react. She is made entirely by code, the way 3D anime games build their characters: her hair, body, outfit and arms are modelled and cel-shaded in Blender with those games' shading tricks (hair lit through the normals of a smooth stand-in shape, painted strands and highlight strokes, baked occlusion) and rendered one puppet layer at a time, her face is shaded from an SDF face shadow map, her eyes, brows and mouth are painted on, and the layers are then rigged, so the file carries no third-party rights; `py -3 examples/puppet/imeru/build.py` rebuilds it (Blender 4.2 or newer). Her overlapping centre bangs cover the forehead while leaving the eyes visible. Visible crown strands connect the hair whorl to the fringe.
 
 ---
 

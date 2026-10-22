@@ -170,21 +170,27 @@ def carried_save_kwargs(source: Image.Image, fmt: str, file_path: str) -> dict:
             kwargs[key] = source.info[key]
     if source.info.get("xmp") and fmt in ("JPEG", "WEBP"):
         kwargs["xmp"] = strip_xmp_orientation(source.info["xmp"])
+    kwargs.update(_compression_kwargs(source, fmt, file_path, exif))
+    return kwargs
+
+
+def _compression_kwargs(source: Image.Image, fmt: str, file_path: str, exif: Image.Exif) -> dict:
+    """The save options that belong to *fmt* alone: its compression and its text chunks."""
     if fmt == "JPEG":
-        kwargs["qtables"] = source.quantization
-        kwargs["subsampling"] = JpegImagePlugin.get_sampling(source)
-    elif fmt == "PNG" and getattr(source, "text", None):
+        return {"qtables": source.quantization,
+                "subsampling": JpegImagePlugin.get_sampling(source)}
+    if fmt == "PNG" and getattr(source, "text", None):
         text = PngImagePlugin.PngInfo()
         for key, value in source.text.items():
             text.add_itxt(key, strip_xmp_orientation(value))
-        kwargs["pnginfo"] = text
-    elif fmt == "WEBP":
-        kwargs.update({"lossless": True} if webp_is_lossless(file_path) else {"quality": 90})
-    elif fmt == "TIFF" and any(pointer in exif for pointer in _SUB_IFDS):
+        return {"pnginfo": text}
+    if fmt == "WEBP":
+        return {"lossless": True} if webp_is_lossless(file_path) else {"quality": 90}
+    if fmt == "TIFF" and any(pointer in exif for pointer in _SUB_IFDS):
         # Pillow's compressing (libtiff) writer can't write the Exif / GPS IFDs;
         # a bigger file beats losing the capture date and location for good.
-        kwargs["compression"] = "raw"
-    return kwargs
+        return {"compression": "raw"}
+    return {}
 
 
 def save_over_source(path: str | Path, edited: Image.Image) -> None:

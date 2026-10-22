@@ -88,8 +88,8 @@ def test_canvas_host_starts_on_its_hint(qapp):
     try:
         assert host.shows_hint() and host.count() == 1
         hint = host.currentWidget()
-        assert hint.text() == "open something"
-        assert hint.alignment() == Qt.AlignmentFlag.AlignCenter and hint.wordWrap()
+        assert "open something" in [label.text() for label in hint.findChildren(QLabel)]
+        assert all(label.wordWrap() for label in hint.findChildren(QLabel))
     finally:
         host.deleteLater()
 

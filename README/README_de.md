@@ -94,6 +94,16 @@ Die Bibliothek sucht über eine separate schreibgeschützte WAL-Verbindung und l
 
 GPU Develop bleibt optional für Batch-Export. Neue Dialoge wählen CPU; GPU unter Render on ausdrücklich auswählen. Gemischte GPU-Farboperationen können andere Bytewerte liefern; aktiver Threshold oder Posterize rendert das ganze Rezept auf CPU, damit Rundungsfehler nicht verstärkt werden. Modify und CPU-Export teilen die 8-Bit-sRGB-Pipeline; eingebettete Profile werden einmal normalisiert, Exporte erhalten sRGB außer bei entfernten Metadaten. Keine lineare HDR-/Wide-Gamut-Bearbeitung. wgpu bleibt optional im Plugin, ohne Modellgewichte; fehlende Geräte/Laufzeitfehler fallen auf CPU zurück. Messungen für 640k/24MP/60MP dokumentieren die Entscheidung für CPU-Vorschauen.
 
+Die Suchfilter sind in zwei beschrifteten Zeilen angeordnet und bieten eine Schaltfläche zum Zurücksetzen. Datumsangaben verwenden YYYY-MM-DD; ungültige Daten und umgekehrte Zeiträume werden erklärt und ignoriert. Eingegebene Tags bleiben bei der Rückkehr zu einem Ordner erhalten. Beim Start eines weiteren Scans bleibt dessen Fortschrittsanzeige sichtbar. Ziehen Sie den Griff oben an der linken Paint-Werkzeugleiste, um sie zu verschieben, an einem anderen Rand anzudocken oder frei schweben zu lassen. Ihre Position wird gespeichert; Reset Workspace Layout setzt sie nach links zurück.
+
+Modern Dark und Modern Light bieten eine klarere Navigation, Panel-Flächen und Tastaturfokus. Paint nutzt eine scrollbare zweispaltige Symbolpalette; beim Überfahren erscheinen übersetzte Werkzeugnamen und Tastenkürzel, beim horizontalen Andocken entstehen zwei Zeilen. Der Inspektor über die volle Höhe zeigt Farbe, Pinsel, Ebenen und Materialien zuerst; Color channels klappt RGB/HSV-Regler aus. Leere Browseransichten bieten Ordner öffnen oder Filter löschen an. Gespeicherte Layouts bleiben erhalten; Window > Reset Workspace Layout übernimmt den neuen Inspektor.
+
+Alle fünf Tabs verwenden das moderne Workspace-Design. Modify bietet eine kompakte Symbolpalette, getrennte Bereiche für Entwicklung und Anmerkungen sowie ausklappbare erweiterte Anpassungen. Puppet bietet eine Startkarte mit Aktionen, gebündelte Live-Steuerung und übersichtliche Parameter; die Bewegungswiedergabe erscheint nach dem Laden eines Rigs. Desktop Pet hält die Rig-Auswahl oben und gliedert die Einstellungen in vier scrollbar erreichbare Kategorien: Fenster, Live-Treiber, Pet-Skript und globale Tastenkürzel. Das Öffnen der Einstellungen allein erstellt kein Desktop-Overlay.
+
+Beim Bewegen des Mauszeigers über Bedienelemente, Workspace-Tabs, Menüs sowie Listen- oder Tabelleneinträge erscheinen Hinweise. Fehlende Hinweise werden in allen fünf Workspaces und später geöffneten Dialogen ergänzt; vorhandene Hilfetexte und Dateipfade bleiben erhalten. Zahlenfelder zeigen den gültigen Bereich, Menübefehle verfügbare Tastenkürzel. Erzeugte Hinweise folgen Änderungen an Beschriftung, Bereich und Sprache; Eingabewerte einschließlich Passwörtern werden nicht übernommen. Auch bei geöffnetem Paint bleiben beim Zurückkehren zur Anwendung die Aktualisierung des Ordnerbaums, die Tab-Navigation und die Kurzinfos bedienbar.
+
+Beim Öffnen von Ordnern werden aufeinanderfolgende Scan-Ergebnisse gebündelt, statt die Ansicht für jeden Block neu aufzubauen. Listenvergleiche nutzen indizierte Abfragen, Metadaten werden zunächst ohne Bildheader gelesen, und die verborgene Listenansicht wird erst bei Auswahl gefüllt. Erste Ergebnisse erscheinen weiterhin schrittweise, die endgültige Sortierung bleibt erhalten und bei leeren Ordnern endet die Aktivitätsanzeige nach dem Scan. Ordnervorschauen im Dateibaum wählen das erste Bild ohne vollständige Sortierung, nutzen höchstens zwei Worker und verzichten auf Abfragen benutzerdefinierter Systemordnersymbole, um konkurrierende Datenträgerzugriffe zu verringern.
+
 ## Installation
 
 ### Voraussetzungen
@@ -182,7 +192,7 @@ py -m Imervue.cli list-ops          # alle verfügbaren Unterbefehle ausgeben
 | `info` / `stats` | Maße und Format; referenzfreie Qualitätsmetriken (`--json` für maschinenlesbare Ausgabe) |
 | `convert` / `resize` / `thumbnail` | Formatkonvertierung (`--format` JPEG / PNG / WEBP / TIFF / BMP / AVIF / HEIC / JXL, `--quality`); Skalierung auf eine lange Kante (`--max`) oder exakt auf `--width` / `--height`; Thumbnail-Box |
 | `watermark` / `optimize` | Text-Wasserzeichen (`--text`, `--corner`, `--opacity`, `--font-fraction`, `--color R G B`, `--no-shadow`); Kodierung unter einem `--max-kb`-Budget |
-| `dehaze` / `clahe` / `dither` / `distort` | Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple |
+| `dehaze` / `clahe` / `dither` / `distort` / `painterly` | Dunkelkanal-Dunstentfernung, adaptive Entzerrung, geordnetes Bayer-Dithering, swirl / pinch / ripple, Ölmalerei-Pinselstriche (`--seed`) |
 | `auto-orient` / `strip` | EXIF-Ausrichtung in die Pixel einbrennen; ohne EXIF / XMP / ICC neu speichern |
 | `collage` / `anaglyph` | Raster-Montage (`--columns`, `--cell-width` / `--cell-height`, `--gap`, `--margin`, `--background R G B`); Rot-Cyan-3D aus einem Stereopaar (`--method`) |
 | `preset` / `pipeline` | Gespeichertes Entwicklungs-Preset per Name anwenden; geordnete JSON-Pipeline ausführen |
@@ -459,7 +469,9 @@ Rect / Lasso / Wand / Quick-Select mit **Replace / Add / Subtract / Intersect**-
 - **Filter** — Levels · Curves · Posterize · Threshold · Auto Color Balance · Film Grain · Halftone · Match Colour (die Farbstimmung eines gewählten Referenzbilds) · Match Swatches (jedes Pixel in seiner nächstgelegenen Swatches-Farbe) (die Filter mit nur einem Schieberegler — Posterize, Threshold, Halftone, Match Colour — zeigen beim Ziehen eine Live-Vorschau auf einem Ausschnitt des Layers in voller Größe; die übrigen öffnen einen Parameter-Dialog mit OK / Cancel)
 - **Ansichts-Hilfen** — Pixel Grid · Snap to Pixel · Snap to Edges · Onion Skin · Bleed Guides · Canvas Rotation (`Ctrl+Shift+H` dreht CCW)
 
-### Docks (14, getabbed in 3 Clustern)
+### Panels (14, Inspektor mit Tabs)
+
+Das Window-Menü ordnet alle vierzehn Panels nach Arbeitsablauf:
 
 | Cluster | Docks |
 |---|---|
@@ -670,7 +682,7 @@ Maschinen, auf denen Sie keine Treiber installieren dürfen.
 
 ### Demo
 
-Das mitgelieferte Rig ist [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**, das originale Maskottchen von Imervue: 45 Drawables auf einer 1024 × 1336 großen Canvas, jeder Cubism-Standardparameter plus zweigelenkige Arme, Kopfdrehungen mit Parallaxe im Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich vom Licht abwendet, Blinzeln mit auf das Augenweiß geclippten Iriden, Haarphysik, 8 Motions (zwei Idle-Loops, TapHead, TapBody und vier Gestures, darunter ein Winken) und 7 Expressions. Öffnen Sie es über **File > Examples > Imeru** oder **Open Puppet…** und klicken Sie auf ihren Kopf oder Körper, um sie reagieren zu sehen. Sie entsteht vollständig per Code, so wie 3D-Anime-Spiele ihre Figuren bauen: Haare, Körper, Outfit und Arme werden in Blender modelliert, mit Cel-Shading samt den Shading-Tricks dieser Spiele versehen (Haar, das über die Normalen einer glatten Stellvertreterform beleuchtet wird, aufgemalte Strähnen und Glanzlicht-Striche, gebackene Okklusion) und Puppet-Ebene für Puppet-Ebene gerendert, ihr Gesicht wird über eine SDF-Gesichtsschatten-Map schattiert, Augen, Brauen und Mund werden aufgemalt, und danach werden die Ebenen geriggt, sodass die Datei keine Rechte Dritter enthält; `py -3 examples/puppet/imeru/build.py` erzeugt sie neu (Blender 4.2 oder neuer).
+Das mitgelieferte Rig ist [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**, das originale Maskottchen von Imervue: 45 Drawables auf einer 1024 × 1336 großen Canvas, jeder Cubism-Standardparameter plus zweigelenkige Arme, Kopfdrehungen mit Parallaxe im Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich vom Licht abwendet, Blinzeln mit auf das Augenweiß geclippten Iriden, Haarphysik, 8 Motions (zwei Idle-Loops, TapHead, TapBody und vier Gestures, darunter ein Winken) und 7 Expressions. Öffnen Sie es über **File > Examples > Imeru** oder **Open Puppet…** und klicken Sie auf ihren Kopf oder Körper, um sie reagieren zu sehen. Sie entsteht vollständig per Code, so wie 3D-Anime-Spiele ihre Figuren bauen: Haare, Körper, Outfit und Arme werden in Blender modelliert, mit Cel-Shading samt den Shading-Tricks dieser Spiele versehen (Haar, das über die Normalen einer glatten Stellvertreterform beleuchtet wird, aufgemalte Strähnen und Glanzlicht-Striche, gebackene Okklusion) und Puppet-Ebene für Puppet-Ebene gerendert, ihr Gesicht wird über eine SDF-Gesichtsschatten-Map schattiert, Augen, Brauen und Mund werden aufgemalt, und danach werden die Ebenen geriggt, sodass die Datei keine Rechte Dritter enthält; `py -3 examples/puppet/imeru/build.py` erzeugt sie neu (Blender 4.2 oder neuer). Die überlappenden mittleren Ponysträhnen bedecken die Stirn und lassen die Augen sichtbar. Sichtbare Strähnen am Oberkopf verbinden den Haarwirbel mit dem Pony.
 
 ---
 

@@ -12,7 +12,7 @@ import logging
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QKeySequence
+from PySide6.QtGui import QFont, QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -25,11 +25,13 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSlider,
     QSpinBox,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from Imervue.gui.file_filters import translated_filter
+from Imervue.gui.control_tooltips import enable_control_tooltips
 from Imervue.desktop_pet import settings as pet_settings
 from Imervue.desktop_pet.hotkey_conflicts import clashing_action, find_conflicts
 from Imervue.desktop_pet.hotkey_manager import (
@@ -116,7 +118,7 @@ def _set_quietly(box: QCheckBox, checked: bool) -> None:
         box.setChecked(bool(checked))
     finally:
         box.blockSignals(False)
-_MUTED_LABEL_STYLE = "color: #888;"
+
 
 DEFAULT_EXAMPLE_PUPPET = "examples/puppet/imeru.puppet"
 """Repo-root relative path used for the test that verifies the
@@ -165,6 +167,7 @@ class PetWorkspace(QWidget):
         self._tray = None  # set by the main window after construction
         self._build_ui()
         self._restore_persisted_session()
+        enable_control_tooltips(self)
 
     # ---- persisted session restore -----------------------------
 
@@ -212,26 +215,46 @@ class PetWorkspace(QWidget):
     # ---- construction ------------------------------------------
 
     def _build_ui(self) -> None:
+        from Imervue.gui.panel_scroll import PanelScrollArea
+        from Imervue.system.ui_scale import scaled_px
+
+        self.setObjectName("petWorkspace")
         layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        title = QLabel(
-            "<b>" + _tr(
-                "desktop_pet_section_title",
-                "Desktop Pet — overlay your puppet on the desktop",
-            ) + "</b>",
-        )
+        layout.setContentsMargins(*(scaled_px(18),) * 4)
+        layout.setSpacing(scaled_px(14))
+        title = QLabel(_tr("desktop_pet_tab_title", "Desktop Pet"))
+        title.setObjectName("workspaceHeading")
+        font = QFont(title.font())
+        font.setPointSizeF(max(1, font.pointSizeF()) + 5)
+        font.setWeight(QFont.Weight.DemiBold)
+        title.setFont(font)
         layout.addWidget(title)
-
+        description = QLabel(_tr(
+            "desktop_pet_workspace_hint",
+            "Choose a character, then adjust its appearance and behaviour.",
+        ))
+        description.setObjectName("workspaceDescription")
+        description.setWordWrap(True)
+        layout.addWidget(description)
         layout.addWidget(self._build_rig_group())
-        layout.addWidget(self._build_window_group())
-        layout.addWidget(self._build_drivers_group())
-        layout.addWidget(self._build_script_group())
-        layout.addWidget(self._build_hotkey_group())
-        layout.addStretch(1)
+
+        self._settings_tabs = QTabWidget()
+        self._settings_tabs.setObjectName("petSettingsTabs")
+        for builder in (self._build_window_group, self._build_drivers_group,
+                        self._build_script_group, self._build_hotkey_group):
+            group = builder()
+            title = group.title()
+            page = QWidget()
+            page_layout = QVBoxLayout(page)
+            page_layout.setContentsMargins(*(scaled_px(12),) * 4)
+            page_layout.addWidget(group)
+            page_layout.addStretch()
+            self._settings_tabs.addTab(PanelScrollArea(page), title)
+        layout.addWidget(self._settings_tabs, 1)
 
         self._status = QLabel(hotkey_conflict_notice(saved_hotkeys()))
-        self._status.setStyleSheet(_MUTED_LABEL_STYLE)
+        self._status.setObjectName("workspaceDescription")
+        self._status.setWordWrap(True)
         layout.addWidget(self._status)
 
     def _build_rig_group(self) -> QGroupBox:
@@ -242,6 +265,7 @@ class PetWorkspace(QWidget):
         self._open_button = QPushButton(
             _tr("desktop_pet_open_puppet", "Open Puppet…"),
         )
+        self._open_button.setProperty("primary", True)
         self._open_button.clicked.connect(self._on_open_puppet)
         row.addWidget(self._open_button)
         self._open_example_button = QPushButton(
@@ -255,7 +279,8 @@ class PetWorkspace(QWidget):
         self._current_rig_label = QLabel(
             _tr("desktop_pet_no_rig", "No rig loaded"),
         )
-        self._current_rig_label.setStyleSheet(_MUTED_LABEL_STYLE)
+        self._current_rig_label.setObjectName("workspaceDescription")
+        self._current_rig_label.setWordWrap(True)
         layout.addWidget(self._current_rig_label)
         return group
 
@@ -444,7 +469,8 @@ class PetWorkspace(QWidget):
         self._current_script_label = QLabel(
             self._format_script_label(settings.get("script_path", "")),
         )
-        self._current_script_label.setStyleSheet(_MUTED_LABEL_STYLE)
+        self._current_script_label.setObjectName("workspaceDescription")
+        self._current_script_label.setWordWrap(True)
         layout.addWidget(self._current_script_label)
         return group
 

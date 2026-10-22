@@ -59,6 +59,46 @@ def test_drawing_cluster_groups_color_brush_bucket_swatches(qapp):
         ws.deleteLater()
 
 
+def test_default_inspector_prioritizes_common_panels_and_window_menu_selects_others(qapp):
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QTabBar
+    ws = PaintWorkspace()
+    try:
+        ws.resize(1200, 800)
+        ws.show()
+        QTest.qWait(80)
+        bar = next(bar for bar in ws.findChildren(QTabBar) if bar.parent() is ws)
+        expected = [ws._color_dock, ws._brush_dock, ws._layer_dock, ws._material_dock]
+        assert [bar.tabText(i) for i in range(4)] == [dock.windowTitle() for dock in expected]
+        action = ws._window_dock_actions["paint_dock_history"]
+        action.setChecked(False)
+        action.trigger()
+        qapp.processEvents()
+        assert bar.tabText(bar.currentIndex()) == ws._history_dock.windowTitle()
+        assert bar.usesScrollButtons()
+    finally:
+        ws.deleteLater()
+
+
+def test_saved_panel_layout_is_not_resized_or_regrouped_on_first_show(qapp):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    original = PaintWorkspace()
+    restored = None
+    try:
+        original.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, original._layer_dock)
+        original._save_dock_state()
+        restored = PaintWorkspace()
+        assert not restored._initial_dock_size_pending
+        restored.show()
+        QTest.qWait(100)
+        assert restored.dockWidgetArea(restored._layer_dock) == Qt.DockWidgetArea.LeftDockWidgetArea
+    finally:
+        original.deleteLater()
+        if restored is not None:
+            restored.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # Dock layout persistence
 # ---------------------------------------------------------------------------

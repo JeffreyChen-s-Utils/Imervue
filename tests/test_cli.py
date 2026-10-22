@@ -146,6 +146,22 @@ def test_dither_two_levels_is_black_white(tmp_path):
     assert values <= {0, 255}
 
 
+def test_painterly_repaints_keeps_alpha_and_repeats_for_a_seed(tmp_path):
+    rng = np.random.default_rng(0)
+    rgba = rng.integers(0, 256, (40, 48, 4), dtype=np.uint8)
+    rgba[..., 3] = 200
+    Image.fromarray(rgba, "RGBA").save(tmp_path / "p.png")
+    outputs = []
+    for run in ("one", "two"):
+        out_dir = tmp_path / run
+        assert main(["painterly", str(tmp_path / "p.png"), "--seed", "3", "--out", str(out_dir)]) == 0
+        with Image.open(out_dir / "p.png") as result:
+            outputs.append(np.array(result.convert("RGBA")))
+    assert np.array_equal(outputs[0], outputs[1])
+    assert (outputs[0][..., 3] == 200).all()
+    assert not np.array_equal(outputs[0][..., :3], rgba[..., :3])
+
+
 def test_distort_writes_output(tmp_path):
     _save(tmp_path / "d.png", size=(64, 64))
     out_dir = tmp_path / "out"
@@ -848,6 +864,49 @@ _EXPECTED = {'info': ('print image dimensions / format',
                'swirl / pinch / ripple',
                '_StoreAction'),
               (('--strength',), 'strength', 0.5, 'float', False, None, '-1..1', '_StoreAction')]),
+ 'painterly': ('repaint in oil-paint brush strokes',
+               [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
+                (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),
+                (('--recursive',),
+                 'recursive',
+                 False,
+                 None,
+                 False,
+                 0,
+                 'recurse into folders',
+                 '_StoreTrueAction'),
+                (('--dry-run',),
+                 'dry_run',
+                 False,
+                 None,
+                 False,
+                 0,
+                 'list actions, write nothing',
+                 '_StoreTrueAction'),
+                (('--overwrite',),
+                 'overwrite',
+                 False,
+                 None,
+                 False,
+                 0,
+                 'overwrite existing outputs',
+                 '_StoreTrueAction'),
+                (('-j', '--jobs'),
+                 'jobs',
+                 1,
+                 'int',
+                 False,
+                 None,
+                 'parallel workers (1=inline, 0=auto/all cores)',
+                 '_StoreAction'),
+                (('--seed',),
+                 'seed',
+                 0,
+                 'int',
+                 False,
+                 None,
+                 'stroke placement seed',
+                 '_StoreAction')]),
  'auto-orient': ('bake EXIF orientation into pixels',
                  [((), 'inputs', None, None, True, '+', 'image files or folders', '_StoreAction'),
                   (('--out',), 'out', None, None, False, None, 'output directory', '_StoreAction'),

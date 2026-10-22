@@ -256,12 +256,7 @@ class ToolDispatcher:
             self._history_damage = _EMPTY_DAMAGE
             self._history_array = canvas
             self._history_regional = True
-        if tool_name != self._active_tool and self._active_tool in self._handlers:
-            # User flipped tools mid-stroke — give the old handler a
-            # chance to clean up internal state if it cares.
-            cancel = getattr(self._handlers[self._active_tool], "cancel", None)
-            if callable(cancel):
-                cancel()
+        self._cancel_tool_left_for(tool_name)
         self._active_tool = tool_name
         handler = self._handlers.get(tool_name)
         if handler is None:
@@ -274,23 +269,32 @@ class ToolDispatcher:
             self._history_regional = False
             self._maybe_commit_undo(tool_name, evt, False)
             return False
-        # After a successful event, snapshot the tool's damage rect so
-        # the canvas can do a sub-region texture upload. Tools without
-        # damage tracking expose ``last_damage`` via the protocol; the
-        # absence of that attribute falls through to "full upload".
-        if handled:
-            self._last_damage = getattr(
-                handler, "last_damage", _EMPTY_DAMAGE,
-            )
-        else:
-            self._last_damage = _EMPTY_DAMAGE
-        if handled and tool_name in self._MUTATING_TOOLS:
-            if (tool_name not in ("brush", "eraser") or canvas is not self._history_array
-                    or self._last_damage.is_empty):
-                self._history_regional = False
-            self._history_damage = self._history_damage.union(self._last_damage)
+        self._record_damage(tool_name, handler, canvas, handled)
         self._maybe_commit_undo(tool_name, evt, handled)
         return handled
+
+    def _cancel_tool_left_for(self, tool_name: str) -> None:
+        """User flipped tools mid-stroke — let the old handler clean up, if it cares."""
+        if tool_name == self._active_tool or self._active_tool not in self._handlers:
+            return
+        cancel = getattr(self._handlers[self._active_tool], "cancel", None)
+        if callable(cancel):
+            cancel()
+
+    def _record_damage(self, tool_name: str, handler, canvas, handled: bool) -> None:
+        """Keep the event's damage rect for the texture upload and the undo history.
+
+        Tools without damage tracking expose no ``last_damage``, which falls
+        through to a full upload.
+        """
+        self._last_damage = (
+            getattr(handler, "last_damage", _EMPTY_DAMAGE) if handled else _EMPTY_DAMAGE)
+        if not handled or tool_name not in self._MUTATING_TOOLS:
+            return
+        if (tool_name not in ("brush", "eraser") or canvas is not self._history_array
+                or self._last_damage.is_empty):
+            self._history_regional = False
+        self._history_damage = self._history_damage.union(self._last_damage)
 
     # Tools whose press alone commits the gesture (no follow-up
     # release expected to mutate). Single-shot mutations.
