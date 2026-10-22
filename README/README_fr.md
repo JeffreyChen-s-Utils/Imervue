@@ -48,6 +48,7 @@
 - [Prise en charge multilingue](#prise-en-charge-multilingue)
 - [Paramètres utilisateur](#paramètres-utilisateur)
 - [Architecture](#architecture)
+- [Sécurité](#sécurité)
 - [Licence](#licence)
 
 ---
@@ -1087,6 +1088,10 @@ Deux règles valent pour tout l'arbre :
 - Le convertisseur Cubism produit des courbes opacity_keys aux côtés des deltas de vertex-morph afin que les transitions de visibilité pilotées par paramètres survivent à la conversion `.moc3 → .puppet`
 
 ---
+
+## Sécurité
+
+Signalez les vulnérabilités en privé. La politique, les versions prises en charge et les notes destinées aux opérateurs se trouvent dans [SECURITY.md](../SECURITY.md).
 
 ## Licence
 

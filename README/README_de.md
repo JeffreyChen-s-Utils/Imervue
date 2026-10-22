@@ -48,6 +48,7 @@
 - [Mehrsprachigkeitsunterstützung](#mehrsprachigkeitsunterstützung)
 - [Benutzereinstellungen](#benutzereinstellungen)
 - [Architektur](#architektur)
+- [Sicherheit](#sicherheit)
 - [Lizenz](#lizenz)
 
 ---
@@ -1134,6 +1135,10 @@ Zwei Regeln gelten im gesamten Baum:
 - Cubism-Converter produziert opacity_keys-Kurven neben Vertex-Morph-Deltas, sodass parametergetriebene Sichtbarkeitsübergänge die `.moc3 → .puppet`-Konvertierung überleben
 
 ---
+
+## Sicherheit
+
+Bitte melden Sie Schwachstellen vertraulich. Die Richtlinie, die unterstützten Versionen und die Hinweise für Betreiber stehen in [SECURITY.md](../SECURITY.md).
 
 ## Lizenz
 

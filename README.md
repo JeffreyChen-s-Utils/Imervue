@@ -48,6 +48,7 @@
 - [Multi-Language Support](#multi-language-support)
 - [User Settings](#user-settings)
 - [Architecture](#architecture)
+- [Security](#security)
 - [License](#license)
 
 ---
@@ -1161,6 +1162,10 @@ Two rules hold across the tree:
 - Cubism converter produces opacity_keys curves alongside vertex-morph deltas so parameter-driven visibility transitions survive the `.moc3 → .puppet` conversion
 
 ---
+
+## Security
+
+Report vulnerabilities privately. The policy, supported versions, and operator notes are in [SECURITY.md](SECURITY.md).
 
 ## License
 
