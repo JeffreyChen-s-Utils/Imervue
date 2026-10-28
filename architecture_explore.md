@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 982 | 164,705 |
+| `tests/` | 984 | 164,941 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 201 | 44,191 |
-| `Imervue/gui/` | 203 | 36,766 |
+| `Imervue/gui/` | 214 | 36,955 |
 | `Imervue/puppet/` | 88 | 16,601 |
 | `Imervue/image/` | 130 | 15,746 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 792 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 11 | 1,846 |
-| **總計** | **1,946** | **357,779** |
+| **總計** | **1,969** | **358,403** |
 
-其中 `Imervue/` 套件本身 873 檔 / 175,188 行。
+其中 `Imervue/` 套件本身 894 檔 / 175,576 行。
 
-測試碼與產品碼比約 **0.86 : 1**（164,705 vs 191,228 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.86 : 1**（164,941 vs 191,616 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -631,7 +631,18 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `file_tree_viewer_delete.py` | 68 | 精確索引移除的共用 undo、cache、導覽與插件通知；保留單筆和批次重複項語意 |
 | `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
 | `folder_thumbnail_model.py` | 179 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（`folder_preview_path` 經串流 `first_image_path`：自然排序首張、兩個預覽 worker、略過系統自訂圖示查詢、跳過 `._` 等隱藏檔，和縮圖牆的第一張一致；取代不穩定的 Windows shell 縮圖） |
-| `image_list_view.py` | 725 | 清單檢視（`QTableView`，縮圖牆的替代）；名稱自然排序，使用者點選的排序欄在 `set_paths` 重建後照樣套用（沒點過時維持檢視器的順序、不顯示箭頭）；點星等欄依點到的星（`star_at`）評分；`refetch(paths)` 讓外部改寫、刪除或復原的列重新讀取（舊縮圖留到新的到為止，讀取中途檔案變了就丟掉那次結果重讀）；Delete／Undo 與評分、我的最愛、挑片、色彩標籤（F1–F5）照「快捷鍵設定」解讀（`_handle_edit_key`），刪除、復原、標記選取列都交給主視窗 |
+| `image_list_cells.py` | 72 | Map Qt item roles to row presentation. |
+| `image_list_context.py` | 63 | Build list context actions and relocate missing images. |
+| `image_list_display.py` | 57 | Render formatted image metadata without starting eager reads. |
+| `image_list_edit.py` | 56 | Apply list edit shortcuts while retaining selection after rebuilds. |
+| `image_list_fetch.py` | 85 | Track lazy reads, stale results, and bounded retries. |
+| `image_list_keyboard.py` | 33 | Route list activation and copy shortcuts after edit actions. |
+| `image_list_model.py` | 85 | Qt table identity, reset operations, and image-path access. |
+| `image_list_rows.py` | 60 | Cached image metadata and GUI-thread thumbnail conversion. |
+| `image_list_sort.py` | 67 | Sort cached rows and preserve persistent selection identity. |
+| `image_list_values.py` | 69 | Rating values, star geometry, and human-readable file sizes. |
+| `image_list_view.py` | 199 | Image-list Qt view and compatibility exports. |
+| `image_list_worker.py` | 68 | Decode detached thumbnail images away from the GUI thread. |
 | `dual_image_view.py` | 199 | 雙圖 Split / Manga / RTL；可選 max_edge 限制來源預覽，原本完整尺寸 constructor 保持相容 |
 | `exif_sidebar.py` | 431 | 圖片資訊面板（EXIF、星等元件、備註），由主視窗放進「Image Info」dock；`set_active()` 跟著 dock 的顯示狀態開關 EXIF 讀取；尺寸經 `scaled_px` 跟著 UI 縮放，顏色取自主題調色盤 |
 | `breadcrumb_bar.py` | 154 | 麵包屑路徑列（無捲軸；路徑比列寬時捲到尾端，顏色取自調色盤） |
@@ -720,7 +731,17 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `extra_tools_menu.py` | 855 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
-| `right_click_menu.py` | 874 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
+| `right_click_menu.py` | 180 | Compose the ordered context menu and preserve action entry points. |
+| `right_click_current.py` | 100 | Build current-image clipboard, reveal, export, wallpaper and OCR actions. |
+| `right_click_recovery.py` | 79 | Relocate missing images and retry failed deep-zoom or thumbnail loads. |
+| `right_click_navigation.py` | 80 | Build image navigation, parent-folder, comparison and slideshow actions. |
+| `right_click_library.py` | 74 | Build query, event, image-info, bookmark, tag and album actions. |
+| `right_click_maintenance.py` | 90 | Run library maintenance and ordered staging-tray operations. |
+| `right_click_pages.py` | 87 | Split and combine multipage documents with read-error reporting. |
+| `right_click_batch.py` | 75 | Build batch commands with trigger-time selection evaluation. |
+| `right_click_metadata.py` | 133 | Run metadata, culling, orientation and dated-import batches with count reporting. |
+| `right_click_edit.py` | 81 | Build editing and deletion actions and apply lossless rotation. |
+| `right_click_extra.py` | 94 | Build optional-tool actions and load their dialogs on activation. |
 | `file_menu.py` | 532 | 開啟資料夾/圖片、將目前圖片開成新的 Paint 文件、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 291 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
@@ -839,245 +860,20 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | --- | ---: | --- |
 | `paint_workspace.py` | 804 | 頂層 PaintWorkspace；完整 history/damage 提交與 Undo／Redo 修改標記；來源路徑傳遞、髒文件拖放保護、confirm_close 由主視窗呼叫 |
 | `tool_dispatcher.py` | 482 | 工具事件路由與手勢提交；累計筆刷／橡皮擦 damage，僅提交回呼期間提供區域 hints；切頁、切工具與部分失敗保守捕捉 |
-| `tool_icons.py` | 108 | 共享 palette-aware SVG 線條圖示引擎，供 Paint／Modify／Puppet 使用 |
-| `workspace_widgets.py` | 40 | WorkspaceWelcome：跟隨主題與縮放的標題、說明及主次操作卡片 |
-| `control_tooltips.py` | 292 | 共用缺漏 Tip 補齊、Qt Show／ToolTip 事件濾鏡、選單／分頁／表格項目、快捷鍵及範圍更新；保留原文與模型角色，Qt 呼叫前防重入、短生命週期 wrapper 保護與已刪除事件接收者處理 |
-| `tooltip_text.py` | 160 | 多語言提示範本、既有說明的工作區範圍解析、buddy／表單／網格／巢狀列欄位名稱；不讀輸入值 |
-| `main_window_filter.py` | 229 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
-| `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
-| `main_window_folders.py` | 306 | `MainWindowFoldersMixin`：輪詢目前資料夾（回到前景時立刻檢查並 refresh 資料夾樹）、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
-| `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
-| `main_window_screens.py` | 194 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
-| `main_window_views.py` | 123 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
-| `main_window_status.py` | 99 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
-| `main_window_layout.py` | 366 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
-| `main_window_docks.py` | 195 | `MainWindowDocksMixin`：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
-| `optional_tabs.py` | 34 | 選用分頁的設定：`tab_enabled`／`set_tab_enabled`（`puppet_tab_enabled`、`desktop_pet_tab_enabled`，預設開、下次啟動生效）、`pet_shows_on_launch` |
-| `main_window_browse.py` | 149 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
-| `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
-| `file_tree_view.py` | 186 | Qt 事件入口與明確方法綁定；保留選取、隱藏列及垃圾桶工作者狀態 |
-| `file_tree_commands.py` | 136 | 新增資料夾、重新命名、複製與預設程式開啟；保留 sidecar 搬移 |
-| `file_tree_delete.py` | 75 | 依檢視器影像、保留資料夾與外部檔案分派單筆或批次刪除 |
-| `file_tree_feedback.py` | 50 | 進度、單筆通知與批次結果；共用可選 toast 的延後訊息建立 |
-| `file_tree_filter.py` | 83 | 重新載入目錄與依名稱、符合項目的祖先篩選已載入列 |
-| `file_tree_menus.py` | 137 | 空白區、單筆及多選右鍵選單與動態方法回呼 |
-| `file_tree_paths.py` | 63 | 保序去重、刪除路徑分類與不覆蓋既有檔案的複本命名 |
-| `file_tree_recycle.py` | 50 | 資料夾軟刪除 undo 記錄與還原前後的隱藏列同步 |
-| `file_tree_sort_controls.py` | 112 | 檔案樹排序選單、模型排序與縮圖尺寸設定 |
-| `file_tree_textures.py` | 46 | 單次 GL context 切換釋放紋理並同步 VRAM 計量 |
-| `file_tree_trash.py` | 112 | 垃圾桶請求佇列、工作者完成結果與關閉時排空 |
-| `file_tree_viewer_delete.py` | 68 | 精確索引移除的共用 undo、cache、導覽與插件通知；保留單筆和批次重複項語意 |
-| `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
-| `folder_thumbnail_model.py` | 179 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（`folder_preview_path` 經串流 `first_image_path`：自然排序首張、兩個預覽 worker、略過系統自訂圖示查詢、跳過 `._` 等隱藏檔，和縮圖牆的第一張一致；取代不穩定的 Windows shell 縮圖） |
-| `image_list_view.py` | 725 | 清單檢視（`QTableView`，縮圖牆的替代）；名稱自然排序，使用者點選的排序欄在 `set_paths` 重建後照樣套用（沒點過時維持檢視器的順序、不顯示箭頭）；點星等欄依點到的星（`star_at`）評分；`refetch(paths)` 讓外部改寫、刪除或復原的列重新讀取（舊縮圖留到新的到為止，讀取中途檔案變了就丟掉那次結果重讀）；Delete／Undo 與評分、我的最愛、挑片、色彩標籤（F1–F5）照「快捷鍵設定」解讀（`_handle_edit_key`），刪除、復原、標記選取列都交給主視窗 |
-| `dual_image_view.py` | 199 | 雙圖 Split / Manga / RTL；可選 max_edge 限制來源預覽，原本完整尺寸 constructor 保持相容 |
-| `exif_sidebar.py` | 431 | 圖片資訊面板（EXIF、星等元件、備註），由主視窗放進「Image Info」dock；`set_active()` 跟著 dock 的顯示狀態開關 EXIF 讀取；尺寸經 `scaled_px` 跟著 UI 縮放，顏色取自主題調色盤 |
-| `breadcrumb_bar.py` | 154 | 麵包屑路徑列（無捲軸；路徑比列寬時捲到尾端，顏色取自調色盤） |
-| `timeline_view.py` | 362 | 時間軸檢視（年/月/日分組） |
-| `toast.py` | 99 | Toast / snackbar 通知 |
-| `settings_notice.py` | 40 | `warn_if_settings_unreadable(parent)`：啟動時設定檔讀不到，就用非阻塞 `QMessageBox` 說明已改用預設值、副本會存在哪、怎麼取回（主視窗啟動後 800 ms 呼叫） |
-| `trash_failure_notice.py` | 59 | `offer_permanent_delete(parent, paths)`：提交刪除後送不進回收筒、留在原處的檔案，列出來問使用者要不要永久刪除（預設保留；確定就 `delete_outright`，資料夾連內容、檔案連 sidecar 一起刪）；關閉時與 File 選單的立即提交都會呼叫 |
-| `hover_preview.py` | 192 | 縮圖懸停放大彈窗（預覽依 EXIF 轉正，標題列顯示圖片本身尺寸） |
-| `image_issue_panel.py` | 142 | 圖片載入問題面板（dock） |
-| `multi_monitor_window.py` | 295 | 多螢幕鏡像視窗 |
-| `command_palette.py` | 160 | Ctrl+Shift+P，走訪 `menuBar()` 展平所有 `QAction` 的模糊搜尋啟動器（經 `menu_tree`） |
-| `menu_tree.py` | 59 | 不經 `QAction.menu()` 走訪選單樹（`submenu_index` / `iter_menu_actions`），見 §10.10 |
-| `modify_actions_widget.py` | 203 | 共用的 Modify 動作按鈕組（選單與右鍵共用） |
-| `main_tab_nav.py` | 47 | Modify/Paint 分頁左右鍵的純路由決策 |
-| `screen_fit.py` | 62 | 換螢幕時主視窗自適應的純幾何 |
-| `settle_poll.py` | 58 | **有界重試**：視窗還在 settle 時反覆重跑佈局步驟（解決 `singleShot(0)` 跨不了 OS 視窗變更的問題）；`owner=` 讓鏈隨物件銷毀而停 |
-| `workspace_manager.py` | 158 | 具名工作區預設（幾何 + 佈局快照，含 Imervue / Modify 兩個分頁的 dock 版面） |
-| `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
-| `photo_workflow_dialog.py` | 296 | 每視窗 modeless 搜尋→比較→挑片→既有顯影 preset→既有批次匯出；500 筆分頁、保留隱藏勾選／preset／回程，外部 DB 挑片同步，800px 來源比較 |
-| `background_jobs.py` | 337 | 跨視窗持有執行緒及單張 completed results、failure-only retry、bounded clickable 明細與完整報告 |
-| `_apply_save.py` | 229 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`finalize_worker()` 在 custom done 提前送達時 passive 背景退場，保留 owner／actual worker lifetime；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
-
-#### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
-
-`tone_curve_dialog.py`(288) · `levels_dialog.py`(169) · `channel_mixer_dialog.py`(148) ·
-`hsl_mixer_dialog.py`(131) · `split_toning_dialog.py`(114) · `gradient_map_dialog.py`(165) ·
-`colormap_dialog.py`(92) · `lut_dialog.py`(111) · `posterize_dialog.py`(157) ·
-`solarize_dialog.py`(140) · `velvia_dialog.py`(84) · `film_negative_dialog.py`(81) ·
-`filmic_tonemap_dialog.py`(106) · `tone_equalizer_dialog.py`(96) · `detail_equalizer_dialog.py`(91) ·
-`auto_color_balance_dialog.py`(200) · `local_contrast_dialog.py`(121) · `clahe_dialog.py`(101) ·
-`defringe_dialog.py`(95) · `graduated_density_dialog.py`(113) · `soft_proof_dialog.py`(128) ·
-`develop_presets_dialog.py`(166) · `virtual_copies_dialog.py`(159) · `before_after_dialog.py`(174) 分割滑桿對照 ·
-`layers_dialog.py`(449) 疊加圖層堆疊管理 · `masks_dialog.py`(223) 局部調整遮罩
-
-#### 效果 / 濾鏡對話框
-
-`glow_dialog.py`(159) · `emboss_dialog.py`(96) · `film_grain_dialog.py`(135) · `lens_flare_dialog.py`(134) ·
-`frosted_glass_dialog.py`(85) · `dither_dialog.py`(92) · `distort_dialog.py`(102) · `polar_dialog.py`(80) ·
-`kaleidoscope_dialog.py`(81) · `pixel_sort_dialog.py`(107) · `meme_dialog.py`(95) ·
-`photo_frame_dialog.py`(120) · `scale_bar_dialog.py`(107) · `anaglyph_dialog.py`(112) ·
-`frequency_separation_dialog.py`(144) 輸出兩個圖層檔 · `binarize_dialog.py`(101) · `otsu_dialog.py`(90) ·
-`flatten_field_dialog.py`(96) · `test_charts_dialog.py`(101) · `steganography_dialog.py`(125)
-
-#### 幾何 / 修補 / 多圖
-
-`crop_straighten_dialog.py`(207) · `auto_straighten_dialog.py`(192) · `lens_correction_dialog.py`(153) ·
-`smart_crop_dialog.py`(126) 顯著性裁切建議 · `tiny_planet_dialog.py`(113) ·
-`clone_stamp_dialog.py`(205) · `healing_brush_dialog.py`(241) · `sky_replace_dialog.py`(139) ·
-`portrait_retouch_dialog.py`(163) · `noise_sharpen_dialog.py`(152) · `face_detection_dialog.py`(236) ·
-`hdr_merge_dialog.py`(148) · `panorama_dialog.py`(160) · `focus_stack_dialog.py`(148) ·
-`stack_blend_dialog.py`(168) · `collage_dialog.py`(87) · `deflicker_dialog.py`(241) 縮時去閃（檢視器解碼；輸出到 `deflickered/`，可寫回的格式沿用並帶 EXIF，RAW 存 PNG） ·
-`id_photo_sheet_dialog.py`(107) · `print_layout_dialog.py`(222)
-
-#### 批次 / 匯出 / 管理
-
-`batch_convert_dialog.py`(419) 批次格式轉換（registered JobState／failed-only retry、unique atomic 輸出／來源另存，經 `upright_image` 解碼、帶回描述性 EXIF 與 sRGB ICC；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(456) 批次匯出（格式、品質、縮放、浮水印、metadata；有顯影後端時多一列「運算裝置」，預設選第一個後端，worker 在自己的執行緒開啟算繪器、結束時關閉，`result_ready` 一定從 `finally` 發出） · `export_dialog.py`(270) 單張匯出（預設檔名經 `free_names` 挑還沒被占用的；目標就是原圖本身時另外詢問，其他既有檔案經 `dialog_rows.may_replace`，預設不取代） · `export_source.py`(55) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（`image_loader.decode_image` 的別名入口；AI 放大與批次轉換共用） · `shown_qimage.py`(33) `shown_qimage(path, *, max_edge)`：檢視器解碼成 QImage，讀不到回傳空 QImage（比較、雙圖、多螢幕、資料夾縮圖取代 `QPixmap(path)`）、`open_export_source(path, renderer=None)`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再經 `develop_backends.render` 套 recipe，批次匯出可傳入 GPU 算繪器；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
-`optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(420) 多張圖做 GIF／MP4（預設輸出經 `free_names` 挑沒被占用的 `output.gif`；既有檔案經 `dialog_rows.may_replace` 詢問） · `contact_sheet_dialog.py`(239) Layout 預設選單（選了填入格線，手動改就回到 Custom） ·
-`web_gallery_dialog.py`(160) · `slideshow_mp4_dialog.py`(194) · `image_organizer_dialog.py`(533) ·
-`duplicate_detection_dialog.py`(542) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(745) 淨化重繪（剝除所有隱藏資料）·
-`exif_strip_dialog.py`(309) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(125) · `culling_dialog.py`(247) 挑片 ·
-`ai_upscale_dialog.py`(712) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
-
-#### 相片庫 / 中繼資料 / 搜尋
-
-`library_search_dialog.py`(263) 多選或全部加入 Photo Workflow，重新開啟保留條件與結果 · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(221) ·
-`similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(580) Tags & Albums（新增／改名檢查名稱、Clean Up… 清掉已不存在的檔案並合併只差大小寫的名稱） ·
-`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(190) · `auto_tag_dialog.py`(172) ·
-`keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(216) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明；Describe 以 `CaptionWorker`〔QRunnable〕向本機 Ollama 要描述填入 Description） ·
-`gps_geotag_dialog.py`(90) · `gpx_geotag_dialog.py`(184) 用 GPX 軌跡對整批相片寫 GPS（時區、間隔上限、內插） · `capture_time_dialog.py`(193) 整批位移 EXIF 拍攝時間（輸入位移或第一張的正確時間） · `metadata_template_dialog.py`(178) 把記住的標題／描述／關鍵字範本（含 `{token}`）蓋到整批相片 · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
-`events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(125) ·
-`bookmark_dialog.py`(345) · `staging_tray_dialog.py`(180) · `reference_panel_dialog.py`(298) ·
-`image_statistics_dialog.py`(90) · `quality_report_dialog.py`(61) · `image_inspector_dialog.py`(84) 波形/parade/false colour/focus peaking ·
-`ocr_dialog.py`(118)
-
-#### 設定 / 系統
-
-`preferences_dialog.py`(298) 偏好設定（VRAM、UI 縮放、主題、瀏覽輔助、選用分頁） · `shortcut_settings_dialog.py`(407) · `profiles_dialog.py`(206) 多帳號 ·
-`workspace_dialog.py`(236) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(358) 軟刪除回收桶 ·
-`cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(334) ·
-`dual_pane_dialog.py`(167) 雙窗格檔案管理 · `onboarding_dialog.py`(136) 首次導覽 · `whats_new_dialog.py`(143)
-
-### 6.13 `Imervue/menu/`
-
-選單建構層 —— 只負責組 `QAction` 與呼叫對應對話框，不含業務邏輯。
-
-| 模組 | 行數 | 功用 |
-| --- | ---: | --- |
-| `extra_tools_menu.py` | 855 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
-| `right_click_menu.py` | 874 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
-| `file_menu.py` | 532 | 開啟資料夾/圖片、將目前圖片開成新的 Paint 文件、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
-| `tip_menu.py` | 291 | 操作說明選單 + 快捷鍵速查對話框 |
-| `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
-| `plugin_menu.py` | 380 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
-| `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
-| `sort_menu.py` | 185 | 依名稱 / 修改日期 / 建立日期 / 拍攝日期（`library.calendar_index.capture_datetime`：EXIF 拍攝時間，沒有就用修改時間；同一秒的連拍依檔名）/ 大小 / 解析度排序 |
-| `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
-| `modify_menu.py` | 29 | Deep-Zoom 專用的「修改」選單動作 |
-
-### 6.14 `Imervue/paint/`
-
-174 個檔、43,523 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
-
-#### 核心文件模型與畫布
-
-| 模組 | 行數 | 功用 |
-| --- | ---: | --- |
-| `document.py` | 152 | `PaintDocument` 的內容所有權與領域操作組合；deepcopy 排除 listener 與快取，adopt_content 保留文件身分；共用 listener 快照通知，避免回呼中訂閱／退訂改動本次通知 |
-| `document_layer_access.py` | 57 | 圖層與 active layer 查找、索引驗證及名稱 AND-token 搜尋 |
-| `document_layer_creation.py` | 87 | 建立 raster／adjustment／vector 圖層，共用插入與 active／reference 索引更新後的一次通知 |
-| `document_layer_order.py` | 63 | 移除、獨立複製與排序圖層，保持 mask／vector 可變資料所有權及 reference 指向 |
-| `document_layer_properties.py` | 108 | 圖層效果、鎖定、tone／binary、標籤與一般屬性；解析圖層後才轉換輸入，只在值改變時通知 |
-| `document_reference.py` | 68 | Bucket reference 指向與插入／移除／交換時的索引追蹤 |
-| `document_layer_visibility.py` | 15 | 圖層與所屬群組的有效可見性純判斷 |
-| `document_state.py` | 74 | 單影像載入與完整 state replacement；先驗證尺寸／selection，再安裝內容 |
-| `document_masks.py` | 98 | 圖層 mask 建立、selection 轉 mask、反轉、烘焙與啟用狀態 |
-| `document_selection.py` | 70 | Active selection 與幾何變換的全 selection remap；selection 更新只通知，不清除 composite |
-| `document_named_selections.py` | 48 | 具獨立陣列所有權的命名 selection 儲存、還原與刪除 |
-| `document_composite.py` | 108 | 不與 layer buffer 別名的 composite cache、bounded damage 合併及需要全圖時的重算 fallback |
-| `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
-| `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
-| `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
-| `canvas.py` | 855 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
-| `canvas_overlays.py` | 538 | `PaintCanvasOverlaysMixin`：棋盤背景（`build_checker_pattern`）、行進螞蟻選取框、工具預覽、多邊形預覽、出血線、洋蔥皮、尺寸 HUD、拖放高亮、像素格線 VBO |
-| `canvas_input.py` | 365 | `PaintCanvasInputMixin`：指標與繪圖板事件、平移縮放、鋼筆與拖放；素材插入完成時經 dispatcher 建立 Undo 步驟 |
-| `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
-| `pointer_event.py` | 35 | `PointerEvent`（工具收到的指標快照）與 `ToolDispatcher` 型別；不依賴 Qt widget |
-| `compositing.py` | 438 | 純 NumPy 圖層合成 |
-| `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
-| `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
-| `document_io.py` | 453 | 原生 .imervue NPZ 文件讀寫、圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
-| `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
-| `undo_stack.py` | 190 | 每文件 512 MiB／50 步驟容量歷史；不可變共用像素與完整 metadata 復原、存活圖層身分；available_snapshot 提供已持有快照，背景保存不在 timer 捕捉整張陣列 |
-| `history_pixels.py` | 163 | 純運算 256px 不可變 tile、弱 interning 索引、完整／區域 capture 與差異 patch，計算唯一資料及 Python 狀態容量 |
-| `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
-| `blend_modes.py` | 63 | 共用 RGB 混色模式數學 |
-| `blend_if.py` | 333 | Blend-If：依亮度範圍決定逐像素可見度 |
-
-#### 筆刷引擎
-
-`brush_engine.py`(686) 純 NumPy 光柵化 · `gpu_brush.py`(686) OpenGL FBO+GLSL 加速（散佈、色彩抖動、跟隨筆傾斜的筆畫留在 CPU）·
-`painterly.py`(310) 筆畫式油畫算繪（Hertzmann 的多尺寸彎曲筆畫；每筆用 `BrushStroke` 畫，沿筆向抹出刷毛紋、以高度打光做出厚塗；只用 NumPy：高斯模糊借 `image/local_contrast.gaussian_plane`；CLI 的 `painterly` 子指令與 WaywardCrown 的頭像產生器用它，見 `architecture.md` §6）· `brush_dynamics.py`(150) · `brush_random.py`(169) 每筆觸點的散佈 / 色彩抖動 / 依筆傾斜收窄並轉向筆尖（`BrushStroke` 依 Brush dock 設定套用）· `brush_cursor.py`(515) 筆跡游標預覽 ·
-`brush_presets.py`(349) · `default_brush_presets.py`(164) · `brush_preset_io.py`(240) 含外部格式匯入 ·
-`brush_preset_dialog.py`(264) · `brush_kind_preview.py`(89) · `brush_tip_capture.py`(137) 從選區擷取筆尖 ·
-`custom_brush.py`(97) · `pressure_curve.py`(146) + `pressure_curve_dialog.py`(255) 筆壓曲線 ·
-`stabilizer.py`(84) 筆畫穩定器 · `catmull_rom_spline.py`(80) 平滑重採樣（鋼筆 Options bar 的 Smooth：穿過各點的一條曲線）· `symmetry.py`(85) 對稱繪製 ·
-`smudge.py`(120) 塗抹/混色筆 · `blur.py`(74) · `dodge_burn.py`(100) · `sponge.py`(68) ·
-`stamp_tool.py`(151) + `stroke_along_path.py`(99)
-
-#### 選取 / 變形
-
-`selection.py`(295) · `selection_ops.py`(325) 選區精修 · `selection_transform.py`(202) 仿射變換 ·
-`marquee.py`(93) 選區邊界線段 · `quick_mask.py`(219) 快速遮罩 · `magnetic_lasso.py`(118) 磁性套索（Options bar 的 Magnetic，放開時把套索輪廓吸到 10 px 內最強邊緣）·
-`stroke_selection.py`(140) 描邊選區 · `transform_handles.py`(270) · `liquify.py`(262) + `liquify_dialog.py`(288) 液化 ·
-`crop.py`(93) + `crop_tool.py`(90) · `canvas_transforms.py`(76) · `image_resize.py`(149)
-
-#### 填色 / 形狀 / 向量 / 文字
-
-`fill.py`(372) 洪水填色 · `auto_region_fill.py`(253) 一次填滿所有封閉區 · `auto_base_color.py`(344) 線稿自動平塗（Bucket dock 的 Base colours：每個封閉區一色、放在線稿下的新圖層；以列段 union-find 標記區域，A4 300dpi 一頁不到一秒）·
-`divide_layer.py`(158) 依顏色拆圖層 · `gradient.py`(168) + `gradient_editor.py`(324) 多色標漸層（存在設定，增刪移改色標）+ `gradient_editor_dialog.py`(256) 漸層編輯器（Options bar 的 Edit…）+
-`gradient_map_presets.py`(88) · `shape_engine.py`(265) ·
-`bezier_path.py`(217) + `pen_commit.py`(130) 鋼筆工具 ·
-`vector_layer.py`(311) 非破壞性向量線條 · `binary_layer.py`(139) 1-bit 墨線圖層 ·
-`image_trace.py`(220) 遮罩 → 輪廓向量化 ·
-`text_render.py`(225) · `text_tool.py`(209) · `text_on_path.py`(173) 沿折線排字 ·
-`text_on_selection.py`(92) 沿選區輪廓排字（Manga > Text Along Selection…，新「Text」圖層）
-
-#### 顏色
-
-`color_math.py`(83) · `color_wheel.py`(262) + `color_wheel_widget.py`(204) 色相環 + SV 三角（Color dock 上方）· `color_palette.py`(189) 具名調色盤（內建 Standard／Pastel／Manga + 自訂；Swatches dock 的選單、Match Swatches 用它）+
-`color_palette_io.py`(303) 外部調色盤格式 · `swatch_panel.py`(348) ·
-`palette_extract.py`(168) median-cut 抽色 · `match_color.py`(96) Filter > Match Colour…（參考圖片的色調）· `match_palette.py`(108) Filter > Match Swatches…（換成最近的色票顏色）·
-`color_blindness.py`(118) CVD 模擬 ·
-`adjustments.py`(739) 純 NumPy 非破壞性調整種類與套用管線 · `histogram.py`(128) + `histogram_dock.py`(141)
-
-#### 漫畫 / 網點
-
-`manga_menu.py`(625) · `manga_panels.py`(300) 分鏡版面與 PanelLayout JSON 編解碼（原生文件與自動快照保留配置；Panel Cutter 把版面存在 `document.panel_layout`，筆刷的 Snap to panel 經 `ToolDispatcher` 的 `panel_layout_provider` 依它裁切；`layout_for_canvas` 在畫布尺寸變了後不再套用） ·
-`halftone.py`(357) 網點引擎 · `speedlines.py`(210) · `speech_bubble.py`(204) 對話框氣泡 ·
-`comic_stamps.py`(266) + `stamp_dock.py`(88) · `flash_effect.py`(132) 爆炸效果 ·
-`bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
-`page_numbering.py`(156) · `page_dock.py`(348) 頁面瀏覽 · `paint_project.py`(147) 多頁專案 +
-`paint_project_io.py`(114) `.imervue-proj` 整本漫畫存檔（File > Save / Open Comic Project…）+ `paint_project_export.py`(130) · `new_project_dialog.py`(105)
-
-#### 動畫
-
-`animation.py`(478) 時間軸 + 洋蔥皮 · `animation_timeline.py`(198) 純 NumPy 模型 ·
-`animation_dock.py`(350) 幀條 + 播放控制 + Export…（GIF／WebP／APNG）· `animation_export.py`(193) 動畫匯出，吃 dock 的 `AnimationTimeline` 或 `Animation`，`export_animation` 依副檔名選格式
-
-#### 素材 / 參考 / 姿勢
-
-`material_library.py`(330) 素材索引；`material_dock_index` = 使用者的 `<app_dir>/materials/` 與擷取的筆刷形狀 + 內建程序化素材 · `material_procedural.py`(221) 程序化材質 · `material_drop.py`(121) ·
-`save_region_as_material.py`(113) Edit > Save Selection as Material…（不覆寫同名素材） · `reference_dock.py`(258) Paint 參考圖 dock（經 `decode_image_file` 以檢視器的樣子顯示：轉正、sRGB、RAW 顯像） ·
-`pose_skeleton.py`(210) + `pose_dock.py`(185) + `pose_drop.py`(128) 2D 火柴人姿勢參考
-
-#### 輔助線 / 檢視
-
-`rulers.py`(492) 繪圖輔助尺 · `snap_guides.py`(124) ·
-`visual_guides.py`(262) 像素格線 · `multi_view.py`(246) 同文件第二視窗 ·
-`size_hud.py`(138) + `size_hud_bridge.py`(63) 筆刷大小 HUD · `welcome_overlay.py`(221) ·
-`layer_thumbnail.py`(183) · `layer_effects.py`(341) 陰影/外光暈/描邊
-
-#### 工作區骨架與選單
-
-| 模組 | 行數 | 功用 |
-| --- | ---: | --- |
-| `paint_workspace.py` | 804 | 頂層 PaintWorkspace；完整 history/damage 提交與 Undo／Redo 修改標記；來源路徑傳遞、髒文件拖放保護、confirm_close 由主視窗呼叫 |
-| `tool_dispatcher.py` | 482 | 工具事件路由與手勢提交；累計筆刷／橡皮擦 damage，僅提交回呼期間提供區域 hints；切頁、切工具與部分失敗保守捕捉 |
-| `tool_state.py` | 983 | **無 Qt** 的工具狀態模型 |
+| `tool_state.py` | 238 | Paint tool state, public settings exports, persistence, and listeners. |
+| `tool_state_brush_fill.py` | 43 | Apply atomic brush and fill snapshot changes. |
+| `tool_state_codec.py` | 116 | Encode whole tool state and recover defaults from persisted settings. |
+| `tool_state_color_values.py` | 50 | Validate RGB input and decode stored colors and recent history. |
+| `tool_state_colors.py` | 65 | Edit foreground/background colors and publish recent-color history. |
+| `tool_state_gradient.py` | 33 | Update gradient fields in their observable mutation order. |
+| `tool_state_history.py` | 50 | Maintain recent-color order and decode its persisted representation. |
+| `tool_state_normalize.py` | 65 | Normalize live brush and fill field values without changing snapshot identity. |
+| `tool_state_options.py` | 57 | Select tools, modes, and ordinary per-tool options. |
+| `tool_state_ruler.py` | 30 | Validate whole-ruler replacements and keyword ruler updates. |
+| `tool_state_settings.py` | 189 | Immutable tool snapshots, supported choices, defaults, and event channels. |
+| `tool_state_settings_codec.py` | 64 | Encode and recover brush/fill snapshots with their stored field sets. |
+| `tool_state_subtool_codec.py` | 42 | Encode named sub-tools and discard malformed stored presets. |
+| `tool_state_subtools.py` | 69 | Manage named preset buckets and apply snapshots in event order. |
 | `tool_icons.py` | 4 | 共享 gui.tool_icons 的相容匯出，維持 Paint 工具 API |
 | `tool_palette.py` | 96 | ToolPalette：雙欄圖示工具盤，水平停靠時重排為兩列；可捲動、可存取名稱、各工具沿用 QAction 與快捷鍵提示 |
 | `tool_bar.py` | 501 | 可移動／浮動的圖示工具盤與固定的上方選項列；按鈕、選取、提示沿用 QAction／ToolState，工具按鍵由 tools_menu 獨佔；兩個工具列具穩定 objectName 可保存位置 |

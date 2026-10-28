@@ -1,0 +1,11 @@
+# Third cohort comment and style review
+
+No blocking findings in the scoped image-list and context-menu changes against 54a4c89e. Read-only review; no production files changed, no comments deleted, no tests run, and no commits created.
+
+Tokenized comparison of the two original source files against all resulting modules found zero new inline comments. All inline comments and lint suppressions are retained text moved from baseline. New module and mixin docstrings describe their owners. The sort docstring now correctly states that missing numeric metadata compares as zero, matching the inspected key functions.
+
+The executable changes inspected are direct cell-role/alignment dispatch and shared count reporting. The previous per-cell dictionary/closure construction is absent. No new broad exception handlers, cast bypasses, defensive fallbacks or safety suppressions were introduced. The original thumbnail worker catches unexpected exceptions, logs them and emits failure completion; this worker-boundary policy is unchanged. Qt override naming suppressions remain style-only. Menu count reporting preserves the original hasattr guard and operation-before-report ordering rather than adding a new guard.
+
+Holds retained without deletion: the moved worker QImage/QPixmap thread rule and buffer-detachment explanation, and the persistent-index remapping explanation. They concern Qt contracts; this review inspected the code and installed type stubs but did not independently establish those platform rules from Qt implementation/documentation. The relevant sources for a deeper check are Qt QImage raw-buffer ownership, Threaded Pixmaps capability and GUI-thread restrictions, and QAbstractItemModel layoutChanged/changePersistentIndexList documentation. This is not new review debt introduced by the extraction.
+
+No MUST KILL application-code target is supported in this change. Existing narrative section banners and explanatory comments were not churned solely because their owning functions moved. No architecture sketch, encoding offer, rerun, restoration or source edit was needed. The independent correctness reviews, integrated suite and hosted analysis remain separate gates; this report does not certify the complete complexity program.

@@ -89,7 +89,7 @@ def test_auto_orient_gives_same_stem_photos_their_own_copies(qapp, tmp_path):
 
 def _combine(monkeypatch, paths, dest):
     from PySide6.QtWidgets import QFileDialog
-    monkeypatch.setattr(right_click_menu, "selected_in_view_order", lambda _gui: list(paths))
+    monkeypatch.setitem(right_click_menu._combine_multipage.__globals__, "selected_in_view_order", lambda _gui: list(paths))
     monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *_a, **_k: (str(dest), ""))
     toast = _Toast()
     toast.error = lambda msg: toast.calls.append(("error", msg))
@@ -125,7 +125,7 @@ def test_combine_pages_reports_an_image_over_the_pixel_limit(qapp, tmp_path, mon
 def test_show_in_explorer_reveals_the_shown_picture(qapp, monkeypatch, tmp_path):
     from PySide6.QtWidgets import QMenu
     revealed = []
-    monkeypatch.setattr(right_click_menu, "reveal_or_warn", revealed.append)
+    monkeypatch.setitem(right_click_menu._show_in_explorer_action.__globals__, "reveal_or_warn", revealed.append)
     path = str(tmp_path / "a.png")
     view = SimpleNamespace(model=SimpleNamespace(images=[path]), deep_zoom=True, current_index=0)
     menu = QMenu()
@@ -144,7 +144,7 @@ def test_set_as_wallpaper_runs_off_the_gui_thread(qapp, monkeypatch, tmp_path, p
 
     from PySide6.QtWidgets import QMenu
     calls = []
-    monkeypatch.setattr(right_click_menu, "set_desktop_wallpaper",
+    monkeypatch.setitem(right_click_menu._set_wallpaper_action.__globals__, "set_desktop_wallpaper",
                         lambda path: calls.append((path, threading.current_thread())))
     path = str(tmp_path / "a.nef")
     view = SimpleNamespace(model=SimpleNamespace(images=[path]), deep_zoom=True, current_index=0)
