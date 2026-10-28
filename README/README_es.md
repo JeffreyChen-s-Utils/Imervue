@@ -741,6 +741,8 @@ Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño
 
 El plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) añade **Plugins > Desktop Pet Integrations**: la mascota reacciona a OBS (transmisión, grabación, cambios de escena), a palabras clave del chat de Twitch (en cualquier parte de un mensaje, o `=hi` para el mensaje completo, `!dance*` para su inicio, `/go+al/` para una expresión regular), a un webhook local (`POST http://127.0.0.1:9876/trigger` con `{"group": "Wave", "speech": "Hi!"}`) y a las notificaciones de Windows. También es el ejemplo de un plugin de mascota construido sobre `on_pet_created`.
 
+El webhook local y la API de VTube Studio rechazan `Origin: null`, incluso con un token válido, porque las páginas web aisladas pueden enviar ese valor. Los clientes nativos sin encabezado `Origin` y las páginas servidas en localhost siguen siendo compatibles, con la autenticación configurada. El navegador también puede enviar `null` para páginas abiertas desde el disco; sirva esas páginas en localhost.
+
 ### Voz personalizada (pet script)
 
 El bocadillo de la mascota se nutre de un archivo JSON que puedes crear tú mismo. Haz clic en **Load script…** en el grupo **Pet script** de la pestaña Desktop Pet y elige un `.petscript.json`. El esquema:

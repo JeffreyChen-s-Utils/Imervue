@@ -1798,7 +1798,7 @@ aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plug
        ``{"group": "Wave", "speech": "Hi!"}`` — chaque champ peut être omis — envoyé par des
        scripts, un Stream Deck ou des outils d'automatisation. Si un jeton est défini, les
        requêtes doivent envoyer ``Authorization: Bearer <token>`` ; les requêtes provenant
-       d'une page web sont refusées
+       d'une page web distante sont refusées
      - Rien de plus
    * - Réagir aux notifications Windows
      - Joue le groupe ``Notify`` et prononce le titre de la notification lorsqu'une autre
@@ -1806,6 +1806,8 @@ aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plug
        identifiants d'application ignorés sont sautées. Windows demande l'accès aux
        notifications la première fois
      - Windows ; les paquets de notification ``winrt`` (installés à la première utilisation)
+
+Le webhook local et l'API VTube Studio refusent ``Origin: null``, même avec un jeton valide, car une page web isolée dans un bac à sable peut envoyer cette valeur. Les clients natifs sans en-tête ``Origin`` et les pages servies sur localhost restent pris en charge, selon l'authentification configurée. Le navigateur peut aussi envoyer ``null`` pour une page ouverte depuis le disque ; servez ces pages sur localhost.
 
 Un rig ne réagit qu'aux groupes de mouvements qu'il possède ; un groupe manquant ne joue rien.
 

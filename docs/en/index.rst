@@ -1735,13 +1735,15 @@ a plugin that extends the pet — see *Writing Plugins* and ``on_pet_created``.
      - Listens on ``http://127.0.0.1:9876/trigger`` (port in ``Settings…``) for a JSON POST
        ``{"group": "Wave", "speech": "Hi!"}`` — either field may be left out — from scripts,
        Stream Deck or automation tools. With a token set, requests must send
-       ``Authorization: Bearer <token>``; requests from a web page are refused
+       ``Authorization: Bearer <token>``; requests from a remote web page are refused
      - Nothing extra
    * - React to Windows notifications
      - Plays the ``Notify`` group and says the notification's title when another app shows a
        Windows notification; apps listed under ignored app ids are skipped. Windows asks for
        notification access the first time
      - Windows; the ``winrt`` notification packages (installed on first use)
+
+The local webhook and VTube Studio API reject ``Origin: null``, even with a valid token, because sandboxed web pages can send it. Native clients without an ``Origin`` header and pages served on localhost remain supported, subject to the configured authentication. A browser may also send ``null`` for a page opened from disk; serve such pages on localhost instead.
 
 A rig reacts only to the motion groups it has; a missing group plays nothing.
 

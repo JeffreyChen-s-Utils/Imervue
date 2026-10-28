@@ -691,6 +691,8 @@ OBS **Sources > + > Window Capture**는 Imervue 창을 직접 잡을 수 있으�
 
 **Desktop Pet Integrations** 플러그인(**Plugins > Download Plugins**)을 설치하면 **Plugins > Desktop Pet Integrations** 메뉴가 추가됩니다. 펫이 OBS(스트리밍, 녹화, 장면 전환), Twitch 채팅 키워드(메시지 어디에 있어도 일치하며, `=hi`는 메시지 전체, `!dance*`는 메시지 시작, `/go+al/`은 정규식으로 일치), 로컬 웹훅(`POST http://127.0.0.1:9876/trigger`에 `{"group": "Wave", "speech": "Hi!"}` 전송), Windows 알림에 반응합니다. 이 플러그인은 `on_pet_created`로 만든 펫 플러그인의 예제이기도 합니다.
 
+로컬 webhook과 VTube Studio API는 유효한 토큰이 있어도 `Origin: null`을 거부합니다. 샌드박스 웹 페이지도 이 값을 보낼 수 있기 때문입니다. `Origin` 헤더가 없는 네이티브 클라이언트와 localhost에서 제공하는 페이지는 기존 인증 설정에 따라 계속 사용할 수 있습니다. 디스크에서 직접 연 페이지도 브라우저가 `null`을 보낼 수 있으므로 localhost에서 제공하세요.
+
 ### 커스텀 음성 (펫 스크립트)
 
 펫의 말풍선은 직접 작성할 수 있는 JSON 파일에서 대사를 가져옵니다. Desktop Pet 탭의 **Pet script** 그룹에서 **Load script…**를 클릭하고 `.petscript.json` 파일을 선택하세요. 스키마:

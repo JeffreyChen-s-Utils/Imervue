@@ -1301,12 +1301,14 @@ Schema（有版本 — 未來的欄位會向前相容）：
    * - 本機 webhook（127.0.0.1）
      - 在 ``http://127.0.0.1:9876/trigger``\ （連接埠可在 ``Settings…`` 設定）接收來自腳本、
        Stream Deck 或自動化工具的 JSON POST ``{"group": "Wave", "speech": "Hi!"}`` — 兩個欄位都可省略。
-       設定權杖後，請求必須帶上 ``Authorization: Bearer <token>``；來自網頁的請求會被拒絕
+       設定權杖後，請求必須帶上 ``Authorization: Bearer <token>``；來自遠端網頁的請求會被拒絕
      - 不需額外安裝
    * - 對 Windows 通知做出反應
      - 其他 App 顯示 Windows 通知時，播放 ``Notify`` 群組並說出通知的標題；列在忽略的 App ID 中的
        App 會被略過。第一次使用時 Windows 會要求授予通知存取權
      - Windows；``winrt`` 通知套件（首次使用時安裝）
+
+本機 webhook 與 VTube Studio API 會拒絕 ``Origin: null``，即使提供正確權杖也一樣，因為沙箱網頁也能送出這種來源。不帶 ``Origin`` 的原生客戶端與 localhost 提供的網頁仍可使用，並須遵守既有驗證設定。瀏覽器直接開啟磁碟上的網頁時也可能送出 ``null``；這類網頁請改由 localhost 提供。
 
 rig 只會對自己擁有的動作群組做出反應；缺少的群組不會播放任何動作。
 

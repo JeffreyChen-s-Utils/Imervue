@@ -690,6 +690,8 @@ OBS **Sources > + > Window Capture** で Imervue ウィンドウを直接取り�
 
 **Desktop Pet Integrations** プラグイン(**Plugins > Download Plugins**)を入れると **Plugins > Desktop Pet Integrations** が追加されます:ペットが OBS(配信、録画、シーン切り替え)、Twitch チャットのキーワード(メッセージ内のどこにあっても一致。`=hi` はメッセージ全体、`!dance*` はメッセージの先頭、`/go+al/` は正規表現で照合)、ローカル webhook(`POST http://127.0.0.1:9876/trigger` に `{"group": "Wave", "speech": "Hi!"}` を送信)、Windows 通知に反応します。`on_pet_created` を使って作るペット用プラグインの例でもあります。
 
+ローカル webhook と VTube Studio API は、有効なトークンがあっても `Origin: null` を拒否します。サンドボックス化された Web ページもこの値を送信できるためです。`Origin` ヘッダーのないネイティブクライアントと localhost 上のページは、設定済みの認証条件に従って利用できます。ディスクから直接開いたページもブラウザーが `null` を送る場合があるため、localhost から配信してください。
+
 ### カスタムボイス(pet script)
 
 ペットのスピーチバブルは、自分で作成できる JSON ファイルから読み込まれます。Desktop Pet タブの **Pet script** グループで **Load script…** をクリックし、`.petscript.json` を選択します。スキーマは次のとおりです:

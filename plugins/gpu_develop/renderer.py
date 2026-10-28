@@ -83,10 +83,18 @@ def probe() -> str | None:
         logger.warning(_UNSUPPORTED)
         return None
     try:
-        adapter = _discrete_adapter()
+        gpu_errors = _gpu_errors()
     except ImportError:
         return None
-    return None if adapter is None else describe(dict(adapter.info))
+    except (RuntimeError, OSError) as exc:
+        logger.warning("GPU Develop probe failed; using CPU: %s", exc)
+        return None
+    try:
+        adapter = _discrete_adapter()
+        return None if adapter is None else describe(dict(adapter.info))
+    except (ImportError, RuntimeError, OSError, *gpu_errors) as exc:
+        logger.warning("GPU Develop probe failed; using CPU: %s", exc)
+        return None
 
 
 def dispatch_shape(groups: int) -> tuple[int, int]:

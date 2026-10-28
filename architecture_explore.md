@@ -66,10 +66,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 971 | 163,428 |
+| `tests/` | 972 | 163,767 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,020 |
-| `Imervue/gui/` | 187 | 37,131 |
-| `Imervue/puppet/` | 61 | 16,487 |
+| `Imervue/gui/` | 187 | 37,141 |
+| `Imervue/puppet/` | 61 | 16,490 |
 | `Imervue/image/` | 130 | 15,744 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,728 |
 | `Imervue/multi_language/` | 8 | 15,976 |
@@ -79,15 +79,15 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/menu/` | 11 | 3,688 |
 | `Imervue/` 根層 | 7 | 2,098 |
 | `Imervue/plugin/` | 15 | 3,064 |
-| `Imervue/system/` | 34 | 3,540 |
+| `Imervue/system/` | 34 | 3,549 |
 | `Imervue/export/` | 8 | 1,035 |
 | `Imervue/user_settings/` | 10 | 1,234 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
-| `plugins/`（19 個外掛） | 80 | 16,040 |
+| `plugins/`（19 個外掛） | 80 | 16,054 |
 | `scripts/`（開發與發佈工具） | 10 | 1,523 |
-| **總計** | **1,867** | **356,369** |
+| **總計** | **1,868** | **356,744** |
 
-其中 `Imervue/` 套件本身 806 檔 / 175,378 行。
+其中 `Imervue/` 套件本身 806 檔 / 175,400 行。
 
 測試碼與產品碼比約 **0.85 : 1**（163k vs 191k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -248,7 +248,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | `qt_timers.py` | 27 | `call_later(ms, owner, fn)`：延遲呼叫，`owner`（QObject）先被銷毀就由 Qt 取消；取代 `QTimer.singleShot(ms, lambda: …)` 與 `singleShot(ms, obj.method)`，兩者在物件刪除後都照樣執行 |
 | `file_manager.py` | 59 | `reveal_in_file_manager(path, select=)`：用 OS 的檔案總管開啟路徑（Windows `explorer`，命令列由 `explorer_command` 組成、路徑一律加引號，因為 Explorer 以逗號與 `=` 分隔參數；macOS `open [-R]`、Linux `xdg-open`），檔案總管啟動不了時丟 `OSError`；`reveal_or_warn` 包一層、失敗記警告，給沒有更好處理方式的選單動作用（檔案樹、右鍵選單、清單檢視、外掛選單） |
 | `wallpaper.py` | 161 | `set_desktop_wallpaper(path)`：設為桌布（Windows `SystemParametersInfoW`、macOS 以 argv 傳路徑給 `osascript`、GNOME `gsettings` 同時設亮／暗色）；JPEG／PNG／BMP 以外的格式與帶 EXIF 方向的照片先經 `wallpaper_file` 存成檢視器所見的 JPEG 副本（轉正、sRGB、透明處鋪黑，放在 `%LOCALAPPDATA%/Imervue/wallpaper`，檔名隨來源的大小與修改時間變、只留最新一份；做不出副本時交原檔），因為 Windows 拿到解不開的檔案會回報成功卻把桌面變黑；失敗只記錄；右鍵選單在 `QThreadPool` 裡呼叫 |
-| `local_origin.py` | 28 | `is_allowed_origin(origin)`：分辨瀏覽器裡的他站網頁與本機用戶端，桌寵 webhook 與 puppet VTS API 共用，擋掉跨站請求 |
+| `local_origin.py` | 37 | `is_allowed_origin(origin)`：桌寵 webhook 與 puppet VTS API 共用；拒絕遠端網頁、opaque `null`、無法解析的主機／連接埠與空白字元；保留無 Origin 的原生客戶端及明確的本機來源 |
 | `local_llm.py` | 46 | 對本機 LLM 伺服器（預設 Ollama）送 JSON：`validate_base_url`（loopback 的 http 或任何 https）、`post_json`；圖片說明與桌寵對話共用，不依賴 Qt |
 | `trash_ops.py` | 327 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果）；`recycle_bin_holds`：Windows 上只有固定磁碟才交給 shell（記憶卡、USB 隨身碟、網路磁碟會被直接永久刪除），其餘留在原處算失敗；`purge_batch` 裡這類「送回收筒」的項目改為直接刪除（使用者已確認永久刪除）；`delete_outright(paths)`：確認後直接刪，資料夾連內容一起（`_unlink_chunk` 仍只刪檔案，culling 不會清空資料夾） |
 | `file_transfer.py` | 251 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
@@ -672,7 +672,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 批次 / 匯出 / 管理
 
 `batch_convert_dialog.py`(419) 批次格式轉換（registered JobState／failed-only retry、unique atomic 輸出／來源另存，經 `upright_image` 解碼、帶回描述性 EXIF 與 sRGB ICC；「刪除原檔」只把單影格點陣靜態圖一次送進資源回收筒） · `batch_export_dialog.py`(456) 批次匯出（格式、品質、縮放、浮水印、metadata；有顯影後端時多一列「運算裝置」，預設選第一個後端，worker 在自己的執行緒開啟算繪器、結束時關閉，`result_ready` 一定從 `finally` 發出） · `export_dialog.py`(270) 單張匯出（預設檔名經 `free_names` 挑還沒被占用的；目標就是原圖本身時另外詢問，其他既有檔案經 `dialog_rows.may_replace`，預設不取代） · `export_source.py`(55) `recipe_base_image()`（recipe 套用的底圖：轉正，舊幾何 recipe 例外；智慧裁切、人臉偵測在它上面算座標）、`upright_image()`（`image_loader.decode_image` 的別名入口；AI 放大與批次轉換共用） · `shown_qimage.py`(33) `shown_qimage(path, *, max_edge)`：檢視器解碼成 QImage，讀不到回傳空 QImage（比較、雙圖、多螢幕、資料夾縮圖取代 `QPixmap(path)`）、`open_export_source(path, renderer=None)`：兩個匯出共用的來源（經 `decode_image_file`：RAW 全尺寸、SVG 點陣化、sRGB、依 EXIF 轉正，再經 `develop_backends.render` 套 recipe，批次匯出可傳入 GPU 算繪器；輸出不帶 ICC 與轉向標籤，所以都烘進像素）· `export_metadata_combo.py`(44) `metadata_row()`：兩個匯出對話框共用的「Metadata」下拉（全部／位置以外／無），選擇記在 user settings `export_metadata` ·
-`optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(420) 多張圖做 GIF／MP4（預設輸出經 `free_names` 挑沒被占用的 `output.gif`；既有檔案經 `dialog_rows.may_replace` 詢問） · `contact_sheet_dialog.py`(239) Layout 預設選單（選了填入格線，手動改就回到 Custom） ·
+`optimize_dialog.py`(112) 目標檔案大小 · `gif_video_dialog.py`(430) 多張圖做 GIF／MP4（預設輸出經 `free_names` 挑沒被占用的 `output.gif`；既有檔案經 `dialog_rows.may_replace` 詢問） · `contact_sheet_dialog.py`(239) Layout 預設選單（選了填入格線，手動改就回到 Custom） ·
 `web_gallery_dialog.py`(160) · `slideshow_mp4_dialog.py`(194) · `image_organizer_dialog.py`(533) ·
 `duplicate_detection_dialog.py`(542) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(745) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(309) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(125) · `culling_dialog.py`(247) 挑片 ·
@@ -863,7 +863,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `format_schema.py` | 331 | `.puppet` v1 的四份 JSON Schema（draft 2020-12：puppet / motion / expression / physics，`$id` 是 `docs/schemas/` 在 `main` 上的 raw URL；`python -m Imervue.puppet.format_schema docs/schemas` 重產）與 `check_puppet_file`：schema → 載入器規則 → `validator` 的 rig 檢查（CLI `puppet-validate`、MCP `puppet_validate`） |
 | `schema_check.py` | 124 | 只涵蓋上述 schema 所用子集的 JSON Schema 驗證器（`$ref`、type、enum、const、properties、required、additionalProperties、items、min/maxItems、minimum/maximum、minLength、allOf、anyOf、if/then），不依賴第三方套件；與 `jsonschema` 對拍 7200 個變造檔判定一致 |
 | `cubism_import.py` | 550 | Live2D Cubism v3 檔案格式匯入 |
-| `cubism_native_bridge.py` | 443 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
+| `cubism_native_bridge.py` | 445 | `Live2DCubismCore.dll` 的 ctypes 綁定；對齊的 moc 緩衝區先通過 `csmHasMocConsistency` 才能復活、初始化，失敗丟 `CubismBridgeError` |
 | `cubism_native_convert.py` | 645 | `.moc3` → `PuppetDocument` 轉換 |
 | `psd_import.py` | 186 | PSD 多圖層 → `PuppetDocument` |
 | `auto_mesh.py` | 172 | 從單張 PNG 自動生成網格 |
@@ -908,7 +908,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `recorder.py`(239) 幀擷取 · `batch_export.py`(186) 每個 motion 匯出成 MP4/GIF/WebM ·
 `spritesheet.py`(67) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
-`vts_api.py`(385) VTube Studio Public API server（最小子集）
+`vts_api.py`(386) VTube Studio Public API server（最小子集）
 
 `workspace.py`(946) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(303，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(361，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
 
@@ -1025,11 +1025,11 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | --- | --- | --- | --- |
 | `safety_review` | 15 / 4,622 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到）；存檔一律走 `_censor_core._save_as`（`.tmp` + `os.replace`，覆寫原檔模式失敗也不毀原圖） | nudenet, ultralytics, huggingface_hub |
 | `spanish_translation` | 3 / 1,824 | 西班牙文語言外掛，示範在 `register_languages()` 裡呼叫 `register_language()` | — |
-| `pet_integrations` | 9 / 1,735 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字〔`=hi` 整則、`!dance*` 開頭、`/re/` 正規式，經主程式 `desktop_pet.command_parser`〕、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
-| `ai_background_remover` | 3 / 915 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程 | rembg, onnxruntime |
+| `pet_integrations` | 9 / 1,736 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字〔`=hi` 整則、`!dance*` 開頭、`/re/` 正規式，經主程式 `desktop_pet.command_parser`〕、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
+| `ai_background_remover` | 3 / 928 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程；成功與失敗路徑均以 `finally` 回收子行程 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 832 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
 | `object_splitter` | 4 / 701 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
-| `gpu_develop` | 7 / 683 | 可選 API-3 wgpu batch provider；只選 discrete GPU，Vulkan/D3D12/Metal policy、bounded buffer slices、whole-image contrast two-pass、GPU table/mixed math 與 CPU remainder。threshold/posterize enabled 時整個 recipe CPU reference，避免 1-byte rounding 經 discontinuity 放大。新匯出 dialog 預設 CPU；GPU explicit opt-in，normal mixed recipes approximation 非 byte exact，裝置／runtime 失敗 CPU fallback。actual fixed 640k/24MP/60MP reports 見 docs/performance/gpu-develop-20261007.md；無模型權重、不是 HDR/wide-gamut editor | wgpu（首次使用時安裝） |
+| `gpu_develop` | 7 / 691 | 可選 API-3 wgpu batch provider；只選 discrete GPU，Vulkan/D3D12/Metal policy、bounded buffer slices、whole-image contrast two-pass、GPU table/mixed math 與 CPU remainder。threshold/posterize enabled 時整個 recipe CPU reference，避免 1-byte rounding 經 discontinuity 放大。新匯出 dialog 預設 CPU；GPU explicit opt-in，normal mixed recipes approximation 非 byte exact，裝置／runtime 失敗 CPU fallback。actual fixed 640k/24MP/60MP reports 見 docs/performance/gpu-develop-20261007.md；無模型權重、不是 HDR/wide-gamut editor | wgpu（首次使用時安裝） |
 | `video_source` | 3 / 612 | 瀏覽影片並抽出靜幀 | imageio-ffmpeg |
 | `cloud_share` | 3 / 484 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛，僅在使用者按下上傳時執行） | — |
 | `ai_motion_deblur` | 3 / 480 | Wiener 反捲積 + 選用 ONNX | onnxruntime |

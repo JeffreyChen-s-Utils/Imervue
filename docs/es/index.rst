@@ -1784,13 +1784,15 @@ También es el ejemplo práctico de un plugin que amplía la mascota — véase 
        ``{"group": "Wave", "speech": "Hi!"}`` — cualquiera de los dos campos puede omitirse —
        enviado desde scripts, Stream Deck o herramientas de automatización. Con un token
        configurado, las solicitudes deben enviar ``Authorization: Bearer <token>``; las
-       solicitudes procedentes de una página web se rechazan
+       solicitudes procedentes de una página web remota se rechazan
      - Nada adicional
    * - Reaccionar a notificaciones de Windows
      - Reproduce el grupo ``Notify`` y dice el título de la notificación cuando otra aplicación
        muestra una notificación de Windows; se omiten las aplicaciones indicadas en los ids de
        aplicación ignorados. Windows pide acceso a las notificaciones la primera vez
      - Windows; los paquetes de notificaciones ``winrt`` (se instalan en el primer uso)
+
+El webhook local y la API de VTube Studio rechazan ``Origin: null``, incluso con un token válido, porque las páginas web aisladas pueden enviar ese valor. Los clientes nativos sin encabezado ``Origin`` y las páginas servidas en localhost siguen siendo compatibles, con la autenticación configurada. El navegador también puede enviar ``null`` para páginas abiertas desde el disco; sirva esas páginas en localhost.
 
 Un rig solo reacciona a los grupos de movimientos que tiene; un grupo que falta no reproduce
 nada.

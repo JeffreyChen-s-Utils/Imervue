@@ -117,7 +117,7 @@ ThumbnailDiskCache construction starts a background inventory rather than enumer
 
 The library keeps one serialized writer and one query-only WAL reader. Foreground calls read committed data without taking the scanner write lock; compound tag queries share a snapshot, while single SQL statements avoid extra transactions. An additive capture-time/mtime sort index removes full temporary sorts for limited searches; write-batch reads use the owning writer. Close/path switch acquire writer then reader locks. Fingerprint traversal uses bounded keyset pages rather than yielding a live SQL cursor. Public conn() remains the writer; callers using it directly own transaction/locking discipline.
 
-GPU Develop stays an optional batch provider with CPU as the default of new export dialogs. Threshold/posterize recipes use the full CPU reference to prevent amplified upstream GPU rounding. Modify previews remain CPU; embedded ICC/EXIF are normalized by core decoding, then full preview/CPU export share the canonical uint8 sRGB recipe. wgpu and device ownership stay in the flat plugin, no model weights or mandatory dependency added.
+GPU Develop stays an optional batch provider with CPU as the default of new export dialogs. Threshold/posterize recipes use the full CPU reference to prevent amplified upstream GPU rounding. Modify previews remain CPU; embedded ICC/EXIF are normalized by core decoding, then full preview/CPU export share the canonical uint8 sRGB recipe. wgpu and device ownership stay in the flat plugin, no model weights or mandatory dependency added. Expected dependency and driver failures during probing are logged and return no device, so status menus and backend discovery keep CPU available.
 
 Modify uses a two-column SVG tool palette, Develop/Annotate property tabs and collapsible
 advanced adjustments. Shared `gui/tool_icons.py` and `gui/workspace_widgets.py` provide scalable
@@ -319,7 +319,9 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
   round. `WorkerHostMixin` defers dialog completion until actual worker exit; its
   cancellation hooks now run off the UI thread and must operate only thread-safe
   flags/subprocesses. Existing bundled consumers satisfy that contract without
-  changed import paths or constructor arguments. `finalize_worker` retains the
+  changed import paths or constructor arguments. The video worker retains its encoder
+  process for cancellation, including cancellation during startup. Video and background-removal
+  subprocess workers reap their child in `finally` on both success and failure. `finalize_worker` retains the
   same callable surface and uses passive background retirement for successful
   custom done packets; non-Qt adapters retain their synchronous contract.
 - **Desktop pet plugin surface.** `pet_integrations` (Desktop Pet Integrations) subclasses
@@ -328,7 +330,10 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
   pet window's `play_group`, `speak`, `speak_notification`, `speech_on`, `setting`, `persist`,
   `add_integration`, `remove_integration` and `integration`. It keeps its options in the pet's settings
   under `obs_*`, `twitch_*`, `webhook_*` and `win_notifications_*`. Keep these names, or change the
-  plugin in the same round. On an install older than `on_pet_created` the plugin loads but the pet
+  plugin in the same round. The shared origin policy rejects opaque `null` origins even with
+  a valid token; absent origins from native clients and localhost web origins remain allowed,
+  subject to each server's authentication. Browser tools opened from disk may send `null`
+  and should instead be served on localhost. On an install older than `on_pet_created` the plugin loads but the pet
   never gets the integrations.
 - **GPU Develop plugin surface.** `gpu_develop` (in Imervue_Plugins) registers a
   `BackendProvider` with `Imervue.image.develop_backends.register` / `unregister`, renders with

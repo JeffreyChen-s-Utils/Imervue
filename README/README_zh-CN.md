@@ -689,6 +689,8 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 **Desktop Pet Integrations** 插件（**Plugins > Download Plugins**）会新增 **Plugins > Desktop Pet Integrations** 菜单：宠物会响应 OBS（开始直播、录制、切换场景）、Twitch 聊天关键字（出现在消息任意位置即可，或用 `=hi` 匹配整条消息、`!dance*` 匹配开头、`/go+al/` 使用正则表达式）、本地 webhook（`POST http://127.0.0.1:9876/trigger`，内容为 `{"group": "Wave", "speech": "Hi!"}`）以及 Windows 通知。它同时也是基于 `on_pet_created` 编写宠物插件的示例。
 
+本地 webhook 与 VTube Studio API 会拒绝 `Origin: null`，即使提供正确令牌也一样，因为沙箱网页也能发送这种来源。不带 `Origin` 的原生客户端与 localhost 提供的网页仍可使用，并须遵守现有认证设置。浏览器直接打开磁盘上的网页时也可能发送 `null`；这类网页请改由 localhost 提供。
+
 ### 自定义语音（pet script）
 
 宠物的对话气泡取材自一个你可以自行编写的 JSON 文件。在 Desktop Pet 标签的 **Pet script** 分组中点击 **Load script…**，选择一个 `.petscript.json`。schema 如下：

@@ -1458,13 +1458,15 @@ key 也能在不认识它们的旧运行时上幸存。
    * - Local webhook (127.0.0.1)（本机 Webhook）
      - 在 ``http://127.0.0.1:9876/trigger``\ （端口在 ``Settings…`` 中设置）上监听来自脚本、
        Stream Deck 或自动化工具的 JSON POST ``{"group": "Wave", "speech": "Hi!"}`` — 两个字段
-       都可省略。设置了令牌时，请求必须带上 ``Authorization: Bearer <token>``；来自网页的请求会被
+       都可省略。设置了令牌时，请求必须带上 ``Authorization: Bearer <token>``；来自远程网页的请求会被
        拒绝
      - 无需额外依赖
    * - React to Windows notifications（响应 Windows 通知）
      - 其他应用弹出 Windows 通知时，播放 ``Notify`` 组并说出通知的标题；列在忽略应用 ID 中的应用会被
        跳过。首次使用时 Windows 会请求通知访问权限
      - Windows；\ ``winrt`` 通知相关包（首次使用时安装）
+
+本地 webhook 与 VTube Studio API 会拒绝 ``Origin: null``，即使提供正确令牌也一样，因为沙箱网页也能发送这种来源。不带 ``Origin`` 的原生客户端与 localhost 提供的网页仍可使用，并须遵守现有认证设置。浏览器直接打开磁盘上的网页时也可能发送 ``null``；这类网页请改由 localhost 提供。
 
 角色只会对自身拥有的动作组作出反应；缺少的组不会播放任何内容。
 

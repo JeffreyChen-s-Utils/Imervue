@@ -28,8 +28,9 @@ Security: the server binds ``127.0.0.1`` only (never ``0.0.0.0``).
 The auto-issued token grants full parameter-write access — this is
 a developer puppet plugin, not a public service. Binding to localhost
 does not keep out web pages: a browser lets any site open a WebSocket to
-``127.0.0.1``, so connections whose ``Origin`` is a remote ``http(s)``
-site are refused (see :mod:`Imervue.system.local_origin`). Messages are capped at
+``127.0.0.1``, so remote web origins, opaque ``null`` origins and malformed
+origins are refused (see :mod:`Imervue.system.local_origin`). Native clients
+may omit the origin; browser tools should be served from localhost. Messages are capped at
 :data:`MAX_MESSAGE_BYTES`.
 """
 from __future__ import annotations

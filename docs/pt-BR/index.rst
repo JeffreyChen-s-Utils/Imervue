@@ -1764,13 +1764,15 @@ também é o exemplo completo de um plugin que estende o pet — veja *Escrevend
        ``{"group": "Wave", "speech": "Hi!"}`` — qualquer um dos campos pode ser omitido — vindo de
        scripts, do Stream Deck ou de ferramentas de automação. Com um token definido, as
        requisições precisam enviar ``Authorization: Bearer <token>``; requisições vindas de uma
-       página web são recusadas
+       página web remota são recusadas
      - Nada extra
    * - Reagir a notificações do Windows
      - Toca o grupo ``Notify`` e fala o título da notificação quando outro app exibe uma
        notificação do Windows; apps listados nos ids de app ignorados são pulados. O Windows pede
        acesso às notificações na primeira vez
      - Windows; os pacotes de notificação ``winrt`` (instalados no primeiro uso)
+
+O webhook local e a API do VTube Studio rejeitam ``Origin: null``, mesmo com um token válido, pois páginas web em sandbox podem enviar esse valor. Clientes nativos sem o cabeçalho ``Origin`` e páginas servidas em localhost continuam compatíveis, conforme a autenticação configurada. O navegador também pode enviar ``null`` para páginas abertas do disco; sirva essas páginas em localhost.
 
 Um rig reage apenas aos grupos de motions que possui; um grupo ausente não toca nada.
 

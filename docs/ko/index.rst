@@ -1510,13 +1510,15 @@ rig 이 ``HitArea`` 항목을 정의하고 있다면, ``hit_responses`` 키가
      - 스크립트, Stream Deck, 자동화 도구가 보내는 JSON POST
        ``{"group": "Wave", "speech": "Hi!"}`` 를 ``http://127.0.0.1:9876/trigger``\ (포트는
        ``Settings…`` 에서 변경)에서 받습니다. 두 필드는 모두 생략할 수 있습니다. 토큰을 설정하면
-       요청에 ``Authorization: Bearer <token>`` 헤더가 있어야 하며, 웹 페이지에서 온 요청은
+       요청에 ``Authorization: Bearer <token>`` 헤더가 있어야 하며, 원격 웹 페이지에서 온 요청은
        거부됩니다
      - 추가로 필요한 것 없음
    * - Windows 알림에 반응
      - 다른 앱이 Windows 알림을 표시하면 ``Notify`` 그룹을 재생하고 알림 제목을 말합니다. 무시할
        앱 ID 목록에 있는 앱은 건너뜁니다. 처음에는 Windows 가 알림 접근 권한을 요청합니다
      - Windows, ``winrt`` 알림 패키지(처음 사용할 때 설치됨)
+
+로컬 webhook과 VTube Studio API는 유효한 토큰이 있어도 ``Origin: null``을 거부합니다. 샌드박스 웹 페이지도 이 값을 보낼 수 있기 때문입니다. ``Origin`` 헤더가 없는 네이티브 클라이언트와 localhost에서 제공하는 페이지는 기존 인증 설정에 따라 계속 사용할 수 있습니다. 디스크에서 직접 연 페이지도 브라우저가 ``null``을 보낼 수 있으므로 localhost에서 제공하세요.
 
 rig 은 자신이 가진 모션 그룹에만 반응하며, 없는 그룹은 아무것도 재생하지 않습니다.
 

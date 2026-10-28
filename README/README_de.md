@@ -740,6 +740,8 @@ Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größ
 
 Das Plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) fügt **Plugins > Desktop Pet Integrations** hinzu: Das Pet reagiert auf OBS (Streaming, Aufnahme, Szenenwechsel), auf Schlüsselwörter im Twitch-Chat (irgendwo in einer Nachricht, oder `=hi` für die ganze Nachricht, `!dance*` für ihren Anfang, `/go+al/` für einen regulären Ausdruck), auf einen lokalen Webhook (`POST http://127.0.0.1:9876/trigger` mit `{"group": "Wave", "speech": "Hi!"}`) und auf Windows-Benachrichtigungen. Es ist zugleich das Beispiel für ein Pet-Plugin, das auf `on_pet_created` aufbaut.
 
+Der lokale Webhook und die VTube Studio API lehnen `Origin: null` auch mit gültigem Token ab, da Webseiten in einer Sandbox diesen Wert senden können. Native Clients ohne `Origin`-Header und über localhost bereitgestellte Seiten bleiben unter den konfigurierten Authentifizierungsbedingungen unterstützt. Ein Browser kann auch bei direkt von der Festplatte geöffneten Seiten `null` senden; stellen Sie solche Seiten über localhost bereit.
+
 ### Eigene Stimme (Pet-Skript)
 
 Die Sprechblase des Pets greift auf eine JSON-Datei zurück, die Sie selbst verfassen können. Klicken Sie in der **Pet script**-Gruppe des Desktop Pet-Tabs auf **Load script…** und wählen Sie eine `.petscript.json`. Das Schema:

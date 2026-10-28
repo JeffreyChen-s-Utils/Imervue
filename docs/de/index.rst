@@ -1807,7 +1807,7 @@ erweitert — siehe *Plugins schreiben* und ``on_pet_created``.
      - Lauscht auf ``http://127.0.0.1:9876/trigger`` (Port in ``Settings…``) auf einen JSON-POST
        ``{"group": "Wave", "speech": "Hi!"}`` — jedes der beiden Felder darf fehlen — von
        Skripten, Stream Deck oder Automatisierungswerkzeugen. Ist ein Token gesetzt, müssen
-       Anfragen ``Authorization: Bearer <token>`` senden; Anfragen von einer Webseite werden
+       Anfragen ``Authorization: Bearer <token>`` senden; Anfragen von einer entfernten Webseite werden
        abgelehnt
      - Nichts weiter
    * - Auf Windows-Benachrichtigungen reagieren
@@ -1817,6 +1817,8 @@ erweitert — siehe *Plugins schreiben* und ``on_pet_created``.
        Benachrichtigungen
      - Windows; die ``winrt``-Benachrichtigungspakete (werden bei der ersten Verwendung
        installiert)
+
+Der lokale Webhook und die VTube Studio API lehnen ``Origin: null`` auch mit gültigem Token ab, da Webseiten in einer Sandbox diesen Wert senden können. Native Clients ohne ``Origin``-Header und über localhost bereitgestellte Seiten bleiben unter den konfigurierten Authentifizierungsbedingungen unterstützt. Ein Browser kann auch bei direkt von der Festplatte geöffneten Seiten ``null`` senden; stellen Sie solche Seiten über localhost bereit.
 
 Ein Rig reagiert nur auf die Bewegungsgruppen, die es hat; eine fehlende Gruppe spielt nichts ab.
 
