@@ -120,3 +120,7 @@
 - 針對性整合測試 265 passed；完整 `pytest tests/ -q -o faulthandler_timeout=90` 為 14,357 passed、1,431 skipped，跳過數與前次基準相同。
 - `ruff check .` 通過；`bandit -c pyproject.toml -r Imervue/ plugins/` 無問題；十語文件結構測試 22 passed。
 - 獨立程式審核未發現阻擋結案的問題。上述原生一致性檢查測試使用替代函式，驗證 Python 呼叫契約，不宣稱已實測 vendor 原生庫處理損壞模型的行為。
+
+### 後續全專案審核
+
+2026-10-28 另完成[全專案範圍審核](docs/reviews/2026-10-28-full-review.md)，新增 FR-01 至 FR-16 未關閉項目。原 CR-01 至 CR-05 的修復狀態不變；專案目前仍有新發現待修正，不能將前述五項結案解讀為完整程式沒有問題。

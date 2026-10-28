@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-04 | 2026-10-28 | Audit first-party program and plugin boundaries | #done #review #security | [2026-10](2026-10.md) |
 | U-20261028-03 | 2026-10-28 | Publish reviewed plugin fixes | #done #Imervue_Plugins #bugfix | [2026-10](2026-10.md) |
 | U-20261028-02 | 2026-10-28 | Resolve five code-review findings | #done #bugfix #security #tests | [2026-10](2026-10.md) |
 | U-20261028-01 | 2026-10-28 | Expand file-tree sorting, search and saved view state | #done #file-tree #ui #tests | [2026-10](2026-10.md) |
