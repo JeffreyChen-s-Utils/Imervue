@@ -6,5 +6,8 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- Main-branch production complexity reduction remains: 434 runtime Python modules in Imervue/ and plugins/ exceed Codacy's existing threshold of 20; external/editors.py has no hosted metric. The complete source inventory contains 882 Python files, including six literal-data or empty modules.
-  Next: finish the inventory stage's full test run and publish it, then integrate independently reviewed production reductions with full behavior checks and fresh hosted metrics. Puppet archive and annotation canvas refactors are underway in isolated worktrees; image output-format deduplication has passed focused tests and review. All remain unverified against fresh hosted metrics.
+- Complete runtime complexity repair remains. Hosted baseline e452ce80 now includes external/editors.py and has 435 Python files above the unchanged threshold of 20. Local reductions in archive, annotation, Paint, output-format, external-editor and runtime sampler code passed the integrated full suite (14,584 passed; 1,431 existing skips) and still need fresh hosted scores; further modules remain untouched.
+  Next: publish this validated batch and inspect fresh Sonar/Codacy checks and complete runtime metrics, then begin the assessed file-tree and tool-state reductions. Three external-editor process-execution audit findings remain unresolved; the environment repository token returns HTTP 401 even with the documented project-token header.
+
+- File-tree follow-up: image_issue_panel.py:95 still calls the absent _FileTreeView._open_in_explorer helper.
+  Next: confirm the reveal action reproduction and migrate the caller to the shared reveal API with a behavior test in the next validated stage.

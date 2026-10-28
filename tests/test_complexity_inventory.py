@@ -33,7 +33,8 @@ def project(tmp_path):
     revision = subprocess.check_output([
         "git", "-C", str(root), "rev-parse", "HEAD",
     ], text=True).strip()
-    snapshot = tmp_path / "snapshot.json"
+    (root / ".audit").mkdir()
+    snapshot = root / ".audit/snapshot.json"
     snapshot.write_text(json.dumps({"revision": revision, "files": [
         {"path": "Imervue/example.py", "complexity": 1},
     ]}), encoding="utf-8")
@@ -92,7 +93,7 @@ def test_missing_or_invalid_metrics_are_not_treated_as_zero(project, score):
     raw["files"][0]["complexity"] = score
     snapshot.write_text(json.dumps(raw), encoding="utf-8")
     with pytest.raises(ValueError, match="invalid complexity"):
-        read_snapshot(snapshot)
+        read_snapshot(snapshot, root=snapshot.parent.parent)
 
 
 def test_duplicate_pagination_rows_are_rejected(project):
@@ -101,18 +102,142 @@ def test_duplicate_pagination_rows_are_rejected(project):
     raw["files"] *= 2
     snapshot.write_text(json.dumps(raw), encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate snapshot path"):
-        read_snapshot(snapshot)
+        read_snapshot(snapshot, root=snapshot.parent.parent)
 
 
 def test_cli_reports_invalid_source_as_inconclusive(project, tmp_path):
     root, snapshot = project
     (root / "Imervue/example.py").write_text("def broken(:", encoding="utf-8")
-    output = tmp_path / "report.json"
+    output = root / ".audit/report.json"
     code = main(["--root", str(root), "--snapshot", str(snapshot), "--output", str(output)])
     assert code == 2
     report = json.loads(output.read_text(encoding="utf-8"))
     assert report["status"] == "inconclusive"
     assert "invalid syntax" in report["error"]
+
+
+@pytest.mark.parametrize("target", ["../outside.json", "Imervue/manifest.json", ".git/config"])
+def test_cli_cannot_overwrite_files_outside_metadata_directories(project, target, capsys):
+    root, snapshot = project
+    destination = root / target
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not destination.exists():
+        destination.write_bytes(b"preserved")
+    original = destination.read_bytes()
+    code = main(["--root", str(root), "--snapshot", str(snapshot), "--output", target])
+    assert code == 2
+    assert destination.read_bytes() == original
+    assert json.loads(capsys.readouterr().out)["status"] == "inconclusive"
+
+
+def test_snapshot_outside_worktree_is_rejected(project, tmp_path):
+    root, snapshot = project
+    outside = tmp_path / "outside.json"
+    outside.write_bytes(snapshot.read_bytes())
+    with pytest.raises(ValueError, match="inside the worktree"):
+        inventory(root, outside)
+
+
+def test_metadata_link_cannot_escape_worktree(project, tmp_path, monkeypatch):
+    root, _ = project
+    link = root / ".audit/link.json"
+    original = Path.resolve
+    monkeypatch.setattr(Path, "resolve", lambda path, **kw: (
+        tmp_path / "outside.json" if path == link else original(path, **kw)
+    ))
+    with pytest.raises(ValueError, match="inside the worktree"):
+        module.metadata_path(root, link)
+
+
+def test_relative_cli_paths_belong_to_selected_worktree(project, monkeypatch, tmp_path):
+    root, snapshot = project
+    monkeypatch.chdir(tmp_path)
+    assert main(["--root", str(root), "--snapshot", ".audit/snapshot.json",
+                 "--output", ".audit/report.json"]) == 0
+    assert json.loads((snapshot.parent / "report.json").read_text())["status"] == "verified"
+
+
+def test_report_cannot_replace_its_input_snapshot(project):
+    root, snapshot = project
+    original = snapshot.read_bytes()
+    assert main(["--root", str(root), "--snapshot", str(snapshot),
+                 "--output", str(snapshot)]) == 2
+    assert snapshot.read_bytes() == original
+
+
+def test_git_unavailable_produces_inconclusive_cli_result(project, monkeypatch, capsys):
+    root, snapshot = project
+    monkeypatch.setattr(module.shutil, "which", lambda name: None)
+    assert main(["--root", str(root), "--snapshot", str(snapshot),
+                 "--output", ".audit/report.json"]) == 2
+    assert "Git is required" in json.loads(capsys.readouterr().out)["error"]
+
+
+def test_git_helper_refuses_noninspection_commands(project):
+    root, _ = project
+    with pytest.raises(ValueError, match="read-only"):
+        module.git_output(root, "reset", "--hard")
+
+
+@pytest.mark.parametrize("arguments", [
+    ("hash-object", "-w", "--stdin"),
+    ("hash-object", "--stdin", "--path=../outside.py"),
+    ("rev-parse", "--git-dir"),
+    ("ls-tree", "-r", "-z", "HEAD", "--", "Imervue", "plugins"),
+])
+def test_git_inspection_rejects_write_flags_and_unvalidated_arguments(project, arguments):
+    with pytest.raises(ValueError):
+        module.git_output(project[0], *arguments)
+
+
+@pytest.mark.parametrize("target", [".audit/snapshot.json", "Imervue/example.py"])
+def test_report_cannot_modify_hard_linked_snapshot_or_source(project, target, capsys):
+    root, snapshot = project
+    original = (root / target).read_bytes()
+    output = root / ".audit/report.json"
+    output.hardlink_to(root / target)
+    assert main(["--root", str(root), "--snapshot", str(snapshot),
+                 "--output", str(output)]) == 2
+    assert (root / target).read_bytes() == original
+    assert output.read_bytes() == original
+    assert json.loads(capsys.readouterr().out)["status"] == "inconclusive"
+
+
+def test_refresh_cannot_modify_hard_linked_external_file(project, tmp_path, monkeypatch):
+    root, snapshot = project
+    raw = json.loads(snapshot.read_text(encoding="utf-8"))
+    outside = tmp_path / "original.json"
+    outside.write_bytes(b"preserved")
+    linked = root / ".audit/linked.json"
+    linked.hardlink_to(outside)
+    monkeypatch.setattr(module, "capture_snapshot", lambda branch: raw)
+    assert main(["--root", str(root), "--snapshot", str(linked),
+                 "--output", ".audit/report.json", "--refresh-from-branch", "test"]) == 2
+    assert outside.read_bytes() == b"preserved"
+    report = json.loads((root / ".audit/report.json").read_text(encoding="utf-8"))
+    assert "hard links" in report["error"]
+
+
+def test_missing_report_parent_returns_inconclusive(project, capsys):
+    root, snapshot = project
+    assert main(["--root", str(root), "--snapshot", str(snapshot),
+                 "--output", ".audit/missing/report.json"]) == 2
+    assert json.loads(capsys.readouterr().out)["status"] == "inconclusive"
+
+
+def test_report_write_failure_preserves_previous_report(project, monkeypatch, capsys):
+    root, snapshot = project
+    output = root / ".audit/report.json"
+    output.write_bytes(b"previous report")
+
+    def denied(*args):
+        raise PermissionError("write denied")
+
+    monkeypatch.setattr(module, "write_text_atomically", denied)
+    assert main(["--root", str(root), "--snapshot", str(snapshot),
+                 "--output", str(output)]) == 2
+    assert output.read_bytes() == b"previous report"
+    assert json.loads(capsys.readouterr().out)["error"] == "write denied"
 
 
 def test_unreadable_directory_cannot_disappear_from_source_inventory(project, monkeypatch):
@@ -153,7 +278,7 @@ def test_path_aliases_cannot_bypass_duplicate_detection(project, alias):
     raw["files"].append({"path": alias, "complexity": 1})
     snapshot.write_text(json.dumps(raw), encoding="utf-8")
     with pytest.raises(ValueError, match="noncanonical snapshot path"):
-        read_snapshot(snapshot)
+        read_snapshot(snapshot, root=snapshot.parent.parent)
 
 
 def test_python_code_in_cache_named_directory_is_still_in_scope(project):
@@ -242,3 +367,25 @@ def test_hosted_capture_cannot_certify_unanalyzed_branch_head():
     metadata["data"]["selectedBranch"]["lastCommit"] = "b" * 40
     with pytest.raises(ValueError, match="head has not finished analysis"):
         module.capture_snapshot("main", lambda _url: metadata)
+
+
+@pytest.mark.parametrize("page", [
+    {"data": [{"path": None, "complexity": 1}], "pagination": {}},
+    {"data": [], "pagination": []},
+    {"data": None, "pagination": {}},
+    {"data": [None], "pagination": {}},
+    [],
+])
+def test_malformed_hosted_pages_produce_inconclusive_cli_reports(project, monkeypatch, page):
+    root, snapshot = project
+    original = snapshot.read_bytes()
+    responses = iter([_metadata(), page])
+    capture = module.capture_snapshot
+    monkeypatch.setattr(module, "capture_snapshot", lambda branch: (
+        capture(branch, lambda _url: next(responses))))
+    assert main(["--root", str(root), "--snapshot", str(snapshot),
+                 "--output", ".audit/report.json", "--refresh-from-branch", "main"]) == 2
+    report = json.loads((root / ".audit/report.json").read_text(encoding="utf-8"))
+    assert report["status"] == "inconclusive"
+    assert "invalid hosted" in report["error"]
+    assert snapshot.read_bytes() == original

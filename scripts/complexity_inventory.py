@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -14,10 +15,15 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
 
+from Imervue.system.atomic_write import write_text_atomically
+
 THRESHOLD = 20
 RUNTIME_ROOTS = ("Imervue", "plugins")
 _REPOSITORY = "organizations/gh/JeffreyChen-s-Utils/repositories/Imervue"
 _API = "https://app.codacy.com/api/v3/"
+_REPORT_ERRORS = (
+    ValueError, KeyError, TypeError, OSError, SyntaxError, subprocess.CalledProcessError,
+)
 _DATA_NODES = {
     ast.Module, ast.Expr, ast.Assign, ast.Name, ast.Load, ast.Store, ast.Constant,
     ast.Dict, ast.List, ast.Tuple, ast.Set, ast.UnaryOp, ast.USub, ast.UAdd,
@@ -25,15 +31,75 @@ _DATA_NODES = {
 }
 
 
+def inspection_arguments(args: tuple[str, ...]) -> None:
+    """Accept only the exact Git argument forms used for source inspection."""
+    if args == ("rev-parse", "--show-toplevel"):
+        return
+    if len(args) == 3 and args[:2] == ("hash-object", "--stdin") and args[2].startswith("--path="):
+        snapshot_name(args[2].removeprefix("--path="))
+        return
+    if (len(args) == 7 and args[:3] == ("ls-tree", "-r", "-z")
+            and args[4:] == ("--", *RUNTIME_ROOTS) and re.fullmatch(r"[0-9a-f]{40}", args[3])):
+        return
+    raise ValueError("only fixed read-only Git inspection arguments are supported")
+
+
 def git_output(root: Path, *args: str, data: bytes | None = None) -> bytes:
+    inspection_arguments(args)
+    executable = shutil.which("git")
+    if executable is None:
+        raise FileNotFoundError("Git is required for source verification")
     return subprocess.run(
-        ["git", "-C", str(root), *args], input=data, capture_output=True, check=True,
+        [str(Path(executable).resolve(strict=True)), "-C", str(root), *args],
+        input=data, capture_output=True, check=True,
     ).stdout
 
 
-def read_snapshot(path: Path) -> tuple[str, dict[str, int]]:
-    raw = json.loads(path.read_text(encoding="utf-8-sig"))
+def metadata_path(root: Path, path: Path) -> Path:
+    """Confine JSON metadata to the worktree's audit and quality directories."""
+    candidate = (root / path).resolve()
+    if not candidate.is_relative_to(root):
+        raise ValueError("metadata path must stay inside the worktree")
+    relative = candidate.relative_to(root)
+    allowed = relative.parts[:1] == (".audit",) or relative.parts[:2] == ("docs", "quality")
+    if not allowed or candidate.suffix != ".json":
+        raise ValueError("metadata must be JSON inside .audit/ or docs/quality/")
+    return candidate
+
+
+def read_snapshot(path: Path, *, root: Path) -> tuple[str, dict[str, int]]:
+    safe_path = metadata_path(root, path)
+    raw = json.loads(safe_path.read_text(encoding="utf-8-sig"))
     return validate_snapshot(raw)
+
+
+def metadata_files(root: Path, snapshot: Path, output: Path) -> tuple[Path, Path]:
+    """Validate independent input and output files before reading or writing."""
+    snapshot, output = metadata_path(root, snapshot), metadata_path(root, output)
+    if snapshot == output or (snapshot.exists() and output.exists() and snapshot.samefile(output)):
+        raise ValueError("snapshot and output must be different files")
+    return snapshot, output
+
+
+def write_metadata(root: Path, path: Path, payload: dict) -> None:
+    """Replace metadata atomically without modifying linked files elsewhere."""
+    safe_path = metadata_path(root, path)
+    if safe_path.exists() and safe_path.stat().st_nlink > 1:
+        raise ValueError("metadata write destination must not have hard links")
+    write_text_atomically(safe_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+
+
+def snapshot_name(name: str) -> str:
+    """Validate a canonical runtime source path from hosted analysis."""
+    if not isinstance(name, str) or any(char in name for char in "\\\n\r\t\0"):
+        raise ValueError("snapshot paths must be relative POSIX paths")
+    canonical = PurePosixPath(name)
+    if canonical.as_posix() != name:
+        raise ValueError(f"noncanonical snapshot path: {name}")
+    parts = canonical.parts
+    if not parts or parts[0] not in RUNTIME_ROOTS or ".." in parts:
+        raise ValueError(f"snapshot path outside runtime roots: {name}")
+    return name
 
 
 def validate_snapshot(raw: dict) -> tuple[str, dict[str, int]]:
@@ -42,15 +108,7 @@ def validate_snapshot(raw: dict) -> tuple[str, dict[str, int]]:
         raise ValueError("snapshot requires a full analysis commit SHA")
     scores = {}
     for row in raw["files"]:
-        name, score = row["path"], row["complexity"]
-        if not isinstance(name, str) or any(char in name for char in "\\\n\r\t\0"):
-            raise ValueError("snapshot paths must be relative POSIX paths")
-        canonical = PurePosixPath(name)
-        if canonical.as_posix() != name:
-            raise ValueError(f"noncanonical snapshot path: {name}")
-        parts = canonical.parts
-        if not parts or parts[0] not in RUNTIME_ROOTS or ".." in parts:
-            raise ValueError(f"snapshot path outside runtime roots: {name}")
+        name, score = snapshot_name(row["path"]), row["complexity"]
         if name in scores:
             raise ValueError(f"duplicate snapshot path: {name}")
         if isinstance(score, bool) or not isinstance(score, int) or score < 0:
@@ -90,6 +148,22 @@ def analyzed_revision(metadata: dict, branch: str) -> str:
     return commit["sha"]
 
 
+def hosted_page(page: dict) -> tuple[list[dict], str | None, int]:
+    """Validate hosted page shapes before interpreting file names and cursors."""
+    if not isinstance(page, dict):
+        raise ValueError("invalid hosted page object")
+    rows, pagination = page["data"], page["pagination"]
+    if not isinstance(rows, list) or not isinstance(pagination, dict):
+        raise ValueError("invalid hosted file list or pagination object")
+    files = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("path"), str):
+            raise ValueError("invalid hosted file path")
+        if row["path"].endswith(".py"):
+            files.append({"path": row["path"], "complexity": row.get("complexity")})
+    return files, pagination.get("cursor"), len(rows)
+
+
 def capture_snapshot(branch: str, fetch=fetch_json) -> dict:
     metadata_url = _API + "analysis/" + _REPOSITORY + "?" + urlencode({"branch": branch})
     revision = analyzed_revision(fetch(metadata_url), branch)
@@ -101,13 +175,11 @@ def capture_snapshot(branch: str, fetch=fetch_json) -> dict:
                      "direction": "asc", "limit": 100}
             if cursor is not None:
                 query["cursor"] = cursor
-            page = fetch(_API + _REPOSITORY + "/files?" + urlencode(query))
-            rows = page["data"]
-            files.extend({"path": row["path"], "complexity": row.get("complexity")}
-                         for row in rows if row["path"].endswith(".py"))
-            following = page["pagination"].get("cursor")
+            rows, following, count = hosted_page(
+                fetch(_API + _REPOSITORY + "/files?" + urlencode(query)))
+            files.extend(rows)
             pages.append({"scope": area, "cursor": cursor,
-                          "next_cursor": following, "rows": len(rows)})
+                          "next_cursor": following, "rows": count})
             if following is None:
                 break
             if not isinstance(following, str) or not following or following in seen:
@@ -142,21 +214,25 @@ def _reject_link(path: Path) -> None:
         raise ValueError(f"runtime source link is not allowed: {path}")
 
 
-def current_sources(root: Path) -> list[Path]:
+def directory_sources(directory: Path) -> list[Path]:
+    """Scan one required runtime directory without suppressing read failures."""
+    if not directory.is_dir():
+        raise ValueError(f"missing runtime directory: {directory}")
+    _reject_link(directory)
     sources = []
-    for area in RUNTIME_ROOTS:
-        directory = root / area
-        if not directory.is_dir():
-            raise ValueError(f"missing runtime directory: {directory}")
-        _reject_link(directory)
-        for folder, directories, files in os.walk(directory, onerror=_scan_error):
-            for name in directories:
-                _reject_link(Path(folder) / name)
-            for name in files:
-                if name.endswith(".py"):
-                    path = Path(folder) / name
-                    _reject_link(path)
-                    sources.append(path)
+    for folder, directories, files in os.walk(directory, onerror=_scan_error):
+        for name in directories:
+            _reject_link(Path(folder) / name)
+        for name in files:
+            if name.endswith(".py"):
+                path = Path(folder) / name
+                _reject_link(path)
+                sources.append(path)
+    return sources
+
+
+def current_sources(root: Path) -> list[Path]:
+    sources = [path for area in RUNTIME_ROOTS for path in directory_sources(root / area)]
     if not sources:
         raise ValueError("empty source tree is not verification")
     return sorted(sources)
@@ -175,12 +251,18 @@ def inspect_source(source: bytes, *, name: str, score: int | None, unchanged: bo
             "sha256": hashlib.sha256(source).hexdigest()}
 
 
-def inventory(root: Path, snapshot: Path) -> dict:
+def worktree_root(root: Path) -> Path:
+    """Verify that the selected directory is the actual Git worktree root."""
     root = root.resolve()
     actual_root = Path(git_output(root, "rev-parse", "--show-toplevel").decode().strip())
     if actual_root.resolve() != root:
         raise ValueError("root must be the Git worktree root")
-    revision, scores = read_snapshot(snapshot)
+    return actual_root.resolve()
+
+
+def inventory(root: Path, snapshot: Path) -> dict:
+    root = worktree_root(root)
+    revision, scores = read_snapshot(snapshot, root=root)
     blobs = revision_blobs(root, revision)
     paths = current_sources(root)
     contents = {path.relative_to(root).as_posix(): path.read_bytes() for path in paths}
@@ -199,11 +281,22 @@ def inventory(root: Path, snapshot: Path) -> dict:
               for state in ("verified", "data_only", "over_threshold",
                             "missing_analysis", "changed_since_analysis")}
     incomplete = bool(groups["missing_analysis"] or groups["changed_since_analysis"])
-    status = "inconclusive" if incomplete else (
-        "not_verified" if groups["over_threshold"] else "verified")
+    status = "not_verified" if groups["over_threshold"] else "verified"
+    if incomplete:
+        status = "inconclusive"
     return {"status": status, "analysis_revision": revision, "threshold": THRESHOLD,
             "counts": {state: len(names) for state, names in groups.items()},
             "groups": groups, "files": files}
+
+
+def analysis_report(root: Path, snapshot: Path, branch: str | None) -> dict:
+    """Capture optional hosted evidence and turn analysis failures into a report."""
+    try:
+        if branch:
+            write_metadata(root, snapshot, capture_snapshot(branch))
+        return inventory(root, snapshot)
+    except _REPORT_ERRORS as exc:
+        return {"status": "inconclusive", "error": str(exc)}
 
 
 def main(argv=None) -> int:
@@ -214,17 +307,13 @@ def main(argv=None) -> int:
     parser.add_argument("--refresh-from-branch")
     args = parser.parse_args(argv)
     try:
-        if args.refresh_from_branch:
-            snapshot = capture_snapshot(args.refresh_from_branch)
-            args.snapshot.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
-                                     encoding="utf-8")
-        report = inventory(args.root, args.snapshot)
-    except (
-        ValueError, KeyError, TypeError, OSError, SyntaxError, subprocess.CalledProcessError,
-    ) as exc:
+        root = worktree_root(args.root)
+        snapshot, output = metadata_files(root, args.snapshot, args.output)
+        report = analysis_report(root, snapshot, args.refresh_from_branch)
+        metadata_files(root, snapshot, output)
+        write_metadata(root, output, report)
+    except _REPORT_ERRORS as exc:
         report = {"status": "inconclusive", "error": str(exc)}
-    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
-                           encoding="utf-8")
     print(json.dumps({key: value for key, value in report.items()
                       if key not in ("groups", "files")}, ensure_ascii=False))
     return {"verified": 0, "not_verified": 1, "inconclusive": 2}[report["status"]]

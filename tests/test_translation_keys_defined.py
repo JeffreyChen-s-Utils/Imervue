@@ -48,15 +48,37 @@ def _looks_like_text(value: str) -> bool:
             and (" " in value or any(c.isupper() for c in value)))
 
 
+def _export_containers(tree: ast.AST) -> set[ast.AST]:
+    """Literal __all__ entries name Python symbols, not translated labels."""
+    containers = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+            targets = [node.target]
+        else:
+            continue
+        if (isinstance(node.value, (ast.List, ast.Tuple))
+                and any(isinstance(target, ast.Name) and target.id == "__all__"
+                        for target in targets)):
+            containers.add(node.value)
+    return containers
+
+
 def _key_fallback_pairs(source: str) -> list[tuple[int, str]]:
     """Return ``(line, key)`` for each ``"a_key", "English text"`` literal pair.
 
     Pairs are adjacent arguments of a call or adjacent items of a tuple or
     list. A ``.get`` on anything but the language dictionary (``meta.get(
     "project_name", "Untitled")``) reads data, not a translation, and is skipped.
+    Literal ``__all__`` containers likewise contain symbol names rather than UI text.
     """
     found = []
-    for node in ast.walk(ast.parse(source)):
+    tree = ast.parse(source)
+    exports = _export_containers(tree)
+    for node in ast.walk(tree):
+        if node in exports:
+            continue
         if isinstance(node, ast.Call):
             if (isinstance(node.func, ast.Attribute) and node.func.attr == "get"
                     and ast.unparse(node.func.value) not in _DICT_NAMES):
@@ -92,6 +114,17 @@ def test_pair_detector():
     assert sorted(_key_fallback_pairs(source)) == [
         (1, "puppet_validate"), (2, "paint_layers_add_tooltip"), (4, "shown_key"),
     ]
+
+
+def test_export_symbols_are_not_translation_pairs_but_ui_rows_still_are():
+    source = "\n".join((
+        "__all__ = ['composite_stack', 'BACKGROUND_LAYER_NAME']",
+        "__all__: list[str] = ('other_symbol', 'OtherSymbol')",
+        "__all__ += ['another_symbol', 'ANOTHER_CONSTANT']",
+        "rows = [('actual_label', 'Actual label')]",
+        "lang.get('direct_label', 'Direct label')",
+    ))
+    assert sorted(_key_fallback_pairs(source)) == [(4, "actual_label"), (5, "direct_label")]
 
 
 def test_every_key_passed_with_a_fallback_is_in_the_english_dictionary():

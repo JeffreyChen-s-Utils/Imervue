@@ -80,6 +80,10 @@ engines:
       # the scenario name).
       - 'scripts/performance_benchmark.py'
       - 'scripts/gpu_develop_benchmark.py'
+      # Checkout-only source verifier: resolves Git to an absolute executable,
+      # permits inspection commands only, and passes argv without a shell.
+      # B404/B603 are the same accepted subprocess pattern as the tools above.
+      - 'scripts/complexity_inventory.py'
   # Codacy's Semgrep engine is published under the "opengrep" slug.
   opengrep:
     enabled: true

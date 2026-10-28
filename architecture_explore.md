@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 972 | 163,252 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,020 |
-| `Imervue/gui/` | 183 | 36,502 |
-| `Imervue/puppet/` | 61 | 16,467 |
-| `Imervue/image/` | 130 | 15,744 |
+| `tests/` | 979 | 164,232 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 188 | 44,063 |
+| `Imervue/gui/` | 192 | 36,589 |
+| `Imervue/puppet/` | 88 | 16,601 |
+| `Imervue/image/` | 130 | 15,746 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
 | `Imervue/multi_language/` | 8 | 15,891 |
 | `Imervue/desktop_pet/` | 29 | 7,115 |
@@ -82,14 +82,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/system/` | 34 | 3,540 |
 | `Imervue/export/` | 8 | 1,035 |
 | `Imervue/user_settings/` | 10 | 1,234 |
-| `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
+| `Imervue/sessions/` + `macros/` + `external/` | 8 | 792 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
-| `scripts/`（開發與發佈工具） | 11 | 1,757 |
-| **總計** | **1,865** | **355,676** |
+| `scripts/`（開發與發佈工具） | 11 | 1,846 |
+| **總計** | **1,919** | **357,001** |
 
-其中 `Imervue/` 套件本身 802 檔 / 174,627 行。
+其中 `Imervue/` 套件本身 849 檔 / 174,883 行。
 
-測試碼與產品碼比約 **0.86 : 1**（163,252 vs 190,667 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.86 : 1**（164,232 vs 190,923 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -310,7 +310,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `editors.py` | 103 | 外部編輯器啟動器。設定存在 `user_setting_dict["external_editors"]`，以非阻塞 `subprocess.Popen` 啟動 |
+| `editors.py` | 93 | 外部編輯器啟動器。設定存在 `user_setting_dict["external_editors"]`，過濾無效設定並統一解析參數，以非阻塞 `subprocess.Popen` 與 `shell=False` 啟動；Windows 批次檔仍可能由系統 shell 解讀 |
 
 ### 6.8 `Imervue/export/`
 
@@ -579,7 +579,16 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `develop_preview.py` | 169 | `PreviewScheduler`：每面板至多一個低解析與一個完整 worker，最新請求覆蓋等待項目，版本與取消雙重守衛；QImage 在背景準備，UI queued signal 安装；sender 由 application 持有至 queued delete |
 | `develop_preview_panel.py` | 132 | `DevelopPreviewMixin`：拖曳低解析／防抖完整品質、幾何座標與狀態、過期結果檢查；儲存／破壞性效果先取得完整像素，避免保存暫時預覽 |
 | `develop_right_panel.py` | 377 | DevelopRightPanelMixin：顯影／註解分類、可展開進階滑桿、裁切控制、各自的存檔／復原操作；單層可捲動面板 |
-| `annotation_canvas.py` | 860 | 註解畫布 widget + `QUndoCommand`、座標／選取／文字／鍵盤；可用低解析 QImage 配完整幾何，原生底圖改變訊號與完整品質 resolver 保護烘焙／存檔；繪製、裁切、馬賽克／模糊由 mixin 提供 |
+| `annotation_canvas.py` | 217 | 註解畫布的 Qt 訊號、狀態與公開 API；組合輸入、選取、樣式、視埠與既有繪製／裁切功能，保留舊 helper／undo command 匯入位置；完整品質 resolver 保護烘焙／存檔 |
+| `annotation_commands.py` | 86 | 新增、刪除與移動／縮放的 undo commands；保留順序、選取狀態與獨立座標快照 |
+| `annotation_geometry.py` | 110 | 原生尺寸 fit、線段距離、八方向控點、端點縮放與文字字型邊界的座標運算 |
+| `annotation_style.py` | 46 | 工具預設樣式與選取項樣式共用更新政策；字型只改文字、筆刷只改自由手繪，保留值域限制 |
+| `annotation_viewport.py` | 75 | 圖像／widget 座標互換與畫布圖層合成；底圖、效果預覽、標註、選取及裁切遮罩依序繪製 |
+| `annotation_input.py` | 131 | inline 文字編輯生命週期、可重入提交防護、鍵盤快捷鍵、圖片導覽與右鍵選單事件 |
+| `annotation_hit_test.py` | 81 | 最上層標註與選取控點命中；線段及自由手繪共用距離判斷，文字使用字型邊界 |
+| `annotation_selection_drag.py` | 75 | 選取、移動及縮放手勢；拖曳以起始快照計算，放開時僅提交一筆 undo command |
+| `annotation_creation.py` | 59 | 形狀與自由手繪建立／提交、退化筆畫判斷、馬賽克及模糊確認後的處理 |
+| `annotation_pointer.py` | 67 | Qt pointer 事件依 crop／select／text／drawing 狀態路由；組合選取拖曳與建立手勢，保留 cursor 座標訊號 |
 | `annotation_drawing.py` | 417 | `AnnotationDrawingMixin`：各種標註與九種筆刷的 QPainter 繪製、選取控點、裁切遮罩；`HANDLE_SIZE` |
 | `annotation_crop.py` | 172 | `AnnotationCropMixin`：裁切工具的比例、控點命中與拖曳；`handle_cursor()` |
 | `annotation_destructive.py` | 252 | `AnnotationDestructiveMixin` + `_BakeDestructiveCommand`：先解析完整品質，再顯示馬賽克／模糊強度對話框、區域預覽與烘焙進底圖 |
@@ -718,7 +727,18 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `document.py` | 905 | `PaintDocument`：圖層、群組、選取與參考索引；deepcopy 複製可編輯內容並排除 listener，adopt_content 保留文件身分與 listener、一次通知 |
+| `document.py` | 152 | `PaintDocument` 的內容所有權與領域操作組合；deepcopy 排除 listener 與快取，adopt_content 保留文件身分；共用 listener 快照通知，避免回呼中訂閱／退訂改動本次通知 |
+| `document_layer_access.py` | 57 | 圖層與 active layer 查找、索引驗證及名稱 AND-token 搜尋 |
+| `document_layer_creation.py` | 87 | 建立 raster／adjustment／vector 圖層，共用插入與 active／reference 索引更新後的一次通知 |
+| `document_layer_order.py` | 63 | 移除、獨立複製與排序圖層，保持 mask／vector 可變資料所有權及 reference 指向 |
+| `document_layer_properties.py` | 108 | 圖層效果、鎖定、tone／binary、標籤與一般屬性；解析圖層後才轉換輸入，只在值改變時通知 |
+| `document_reference.py` | 68 | Bucket reference 指向與插入／移除／交換時的索引追蹤 |
+| `document_layer_visibility.py` | 15 | 圖層與所屬群組的有效可見性純判斷 |
+| `document_state.py` | 74 | 單影像載入與完整 state replacement；先驗證尺寸／selection，再安裝內容 |
+| `document_masks.py` | 98 | 圖層 mask 建立、selection 轉 mask、反轉、烘焙與啟用狀態 |
+| `document_selection.py` | 70 | Active selection 與幾何變換的全 selection remap；selection 更新只通知，不清除 composite |
+| `document_named_selections.py` | 48 | 具獨立陣列所有權的命名 selection 儲存、還原與刪除 |
+| `document_composite.py` | 108 | 不與 layer buffer 別名的 composite cache、bounded damage 合併及需要全圖時的重算 fallback |
 | `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
 | `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
 | `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
@@ -855,7 +875,21 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `document.py` | 395 | `.puppet` v1 檔案格式的純 Python 資料模型（`Drawable` / `Deformer` / `Parameter` / `Motion` / `HitArea`） |
-| `document_io.py` | 866 | `.puppet` zip 容器讀寫；共用具名動作／表情項目載入與透明度／色彩曲線編解碼；第一個項目是未壓縮的 `mimetype`（`application/vnd.imervue.puppet+zip`），每個 JSON 帶 `$schema`；較新的格式版本以「請更新 Imervue」拒絕，布林 `true` 不算版本 1 |
+| `document_io.py` | 96 | `.puppet` 公開檔案／記憶體讀寫入口、原子儲存與結構錯誤正規化；維持既有例外類別與版本常數匯入介面 |
+| `archive_container.py` | 70 | ZIP 成員組裝與總解壓大小限制；先寫未壓縮 `mimetype`，依原順序載入 manifest、貼圖、動畫與物理資料 |
+| `archive_members.py` | 71 | ZIP JSON／貼圖讀取、具名動作／表情參照驗證與 physics 成員載入；保留 manifest 順序與重複參照 |
+| `manifest_collections.py` | 31 | 必填與選填 manifest 集合的有序解析／編碼對照，集中欄位名稱與對應 codec |
+| `manifest_decode.py` | 47 | 格式版本驗證與 document 建構；保留必填陣列錯誤、選填集合空值、pose 與 display names 行為 |
+| `manifest_encode.py` | 40 | 穩定 JSON 欄位順序與空值省略規則，每個 manifest 帶 `$schema` |
+| `format_values.py` | 50 | 共用 `PuppetFormatError`、必填鍵／列表、參數名稱、座標／尺寸驗證及穩定 JSON 輸出 |
+| `drawable_codec.py` | 101 | Drawable 網格與 UV／三角形索引驗證、幾何與顯示屬性編解碼；組合曲線及頂點變形 codec |
+| `drawable_curves.py` | 95 | 透明度與乘色色彩曲線；共用 stop 欄位驗證，保留不同欄位的錯誤位置與數值轉換 |
+| `drawable_deformation.py` | 62 | 骨骼頂點權重及 morph 端點編解碼；端點共用浮點轉換，記憶體 tuple 與 JSON list 分開表示 |
+| `parameter_codec.py` | 81 | 單參數鍵值與多參數 blend 座標／deformer form 編解碼 |
+| `rig_codec.py` | 90 | Deformer、pose group、hit area 與 part 的結構及互動中繼資料編解碼 |
+| `motion_codec.py` | 85 | Motion track／segment 幾何、淡入淡出、音效與群組欄位編解碼 |
+| `expression_codec.py` | 33 | Expression parameter 與混合模式驗證、表情 JSON 輸出 |
+| `physics_codec.py` | 47 | Physics rig／particle／gravity 編解碼與物理 JSON 輸出 |
 | `format_schema.py` | 331 | `.puppet` v1 的四份 JSON Schema（draft 2020-12：puppet / motion / expression / physics，`$id` 是 `docs/schemas/` 在 `main` 上的 raw URL；`python -m Imervue.puppet.format_schema docs/schemas` 重產）與 `check_puppet_file`：schema → 載入器規則 → `validator` 的 rig 檢查（CLI `puppet-validate`、MCP `puppet_validate`） |
 | `schema_check.py` | 124 | 只涵蓋上述 schema 所用子集的 JSON Schema 驗證器（`$ref`、type、enum、const、properties、required、additionalProperties、items、min/maxItems、minimum/maximum、minLength、allOf、anyOf、if/then），不依賴第三方套件；與 `jsonschema` 對拍 7200 個變造檔判定一致 |
 | `cubism_import.py` | 550 | Live2D Cubism v3 檔案格式匯入 |
@@ -871,7 +905,20 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `runtime.py` | 846 | **每幀參數取樣 + deformer 組合**（核心迴圈） |
+| `runtime.py` | 74 | Public per-frame puppet evaluation and batch composition. |
+| `runtime_appearance.py` | 52 | Evaluate drawable opacity and multiply-color curves. |
+| `runtime_blend_grid.py` | 83 | Collect sparse blend-grid corners and reduce their form maps by axis. |
+| `runtime_blends.py` | 36 | Bracket each parameter axis for multi-axis form sampling. |
+| `runtime_curves.py` | 39 | Sample valid parameter-driven scalar and RGB multiplier curves. |
+| `runtime_deformer_order.py` | 35 | Resolve parent-first deformer application order, including cycles. |
+| `runtime_forms.py` | 40 | Copy, interpolate, and overlay partial deformer forms. |
+| `runtime_geometry.py` | 84 | Compose morphs, bone skinning, and ordered rigid deformations. |
+| `runtime_interpolation.py` | 22 | Locate a clamped linear interval in sorted authored coordinates. |
+| `runtime_morphs.py` | 112 | Apply parameter-driven vertex offsets and cache rest geometry. |
+| `runtime_overlays.py` | 63 | Apply ordered expression overrides and exclusive pose selections. |
+| `runtime_parameters.py` | 68 | Sample single-parameter keys and merge overrides in document order. |
+| `runtime_parts.py` | 78 | Accumulate visibility and opacity through the authored part hierarchy. |
+| `runtime_skinning.py` | 61 | Resolve authored bone forms and apply weighted skeleton deformation. |
 | `deformers.py` | 262 | 純 NumPy deformer 實作 |
 | `physics.py` | 138 | Verlet 物理引擎（純浮點數積分，由 `PuppetCanvas` 的物理時鐘推進） |
 | `render_prep.py` | 103 | `PuppetDocument` → GL-ready draw list |
@@ -1110,7 +1157,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 | CI | `.github/workflows/test.yml`、`release.yml` | release.yml 釘死所有相依且 wheels-only；**Nuitka 只有 sdist，必須維持 `--no-binary` 豁免**。持有 PyPI token 的兩個 job（`release.yml` 的 `release`、`test.yml` 的 `publish-dev`）只安裝雜湊鎖定的 `.github/requirements/publish.txt`（`build`、`twine`、`setuptools`，由同目錄的 `publish.in` 產生，指令寫在 `publish.in` 開頭），並以 `python -m build --no-isolation` 建置，所以建置後端也是鎖定的那一版；這兩個 job 出現其他 `pip install`、隔離建置，或 `build-system.requires` 的下限高於鎖定版本時，`tests/test_workflow_actions.py` 會失敗 |
 | dev 頻道發佈 | `test.yml` 的 `publish-dev` job、`scripts/dev_release.py`、`dev.toml` | 推到 `dev` 且 `lint`／`docs`／`fast`／`extended`／`real-gl` 全過後，以 `dev.toml` 建出 `Imervue_dev` 上傳 PyPI；只在該 commit 仍是 `dev` 頂端、且 wheel 與 PyPI 上最新一版內容不同時才上傳。版號由 `dev_release.py` 取 PyPI 最新版加一個 patch（`dev.toml` 的版號只是下限），不回寫 repo。建置工具與 release.yml 相同：兩邊都只安裝 `.github/requirements/publish.txt`，並以 `python -m build --no-isolation` 建置（`tests/test_dev_release.py` 把關）；`dev.toml` 與 `pyproject.toml` 出貨內容一致由 `tests/test_packaging_metadata.py` 把關 |
 | 實際 GL regression | `scripts/verify_gl_report.py`、`tests/test_workspace_lifecycle_gl.py`、`tests/test_tile_textures_gl.py` | 獨立 Linux／Mesa／Xvfb job；先 ldd 檢查 XCB／GLX runtime，uncaptured Qt diagnostics，再 no-skip／case count／renderer evidence gate；像素、貼圖容量／zoom／handles 與跨工作區／多文件／異常／多視窗行為；正常 Windows headless jobs 仍 skip GL construction |
-| 正式程式碼複雜度盤點 | `scripts/complexity_inventory.py`（234 行）、`tests/test_complexity_inventory.py` | 依檔名分頁取得 Codacy 指定分支的完整分析，前後核對提交；逐一比對 Imervue 與 plugins 的來源雜湊。超標、缺漏、來源變更、讀取失敗均不可算通過；基準與執行規則記於 `docs/quality/`，不調高門檻或新增排除 |
+| 正式程式碼複雜度盤點 | `scripts/complexity_inventory.py`（323 行）、`tests/test_complexity_inventory.py` | 依檔名分頁取得 Codacy 指定分支的完整分析，前後核對提交；逐一比對 Imervue 與 plugins 的來源雜湊。超標、缺漏、來源變更、讀取失敗均不可算通過；基準與執行規則記於 `docs/quality/`，不調高門檻或新增排除 |
 | 開發效能基準 | `scripts/performance_benchmark.py`（428 行）、`performance_support.py`（187 行）、`performance_gl.py`（88 行）、`performance_ram.py`（107 行）、`performance_autosave.py`（101 行）、`performance_workers.py`（107 行）、`library_concurrency_benchmark.py`（85 行）、`gpu_develop_benchmark.py`（176 行） | 新子程序／隔離 profile、固定合成資料、RSS／原始樣本／真實 GL 像素；Modify 分別記錄 UI 請求、低解析／完整結果、CPU 與 heartbeat，來源雜湊辨識未提交工作樹。Paint 額外記錄同筆畫提交後的 retained history bytes 與明確 damage hints。背景 autosave 分開記錄 UI enqueue、worker materialize／compress-write、request-to-recorded、heartbeat 與 RSS。worker 工具以真實 QDialog／QThread 驗證不可中斷與 blocking stop 下 UI／actual retirement／heartbeat。RAM 工具以提供的 RAW／raster 跑兩個真實 decoder、保留結果、actual bytes／ticket peak／RSS 與 admission refusal，fresh profile 隔離使用者資料。只限 checkout，不進產品 CLI；`docs/performance/` 保存基準／門檻，測試涵蓋擁有權、報告、子程序／GL 與換行無關雜湊 |
 | PyPI 套件內容 | `pyproject.toml`、`dev.toml` 的 `[tool.setuptools.packages] find`，`MANIFEST.in` | 兩個 wheel 都只裝一個頂層套件 `Imervue`：`find` 的 `include = ["Imervue", "Imervue.*"]` 把套件探索限制在它底下，否則有 `__init__.py` 的 `tests/` 會被裝成頂層 `tests` 套件。sdist 也不帶測試（`MANIFEST.in` 最後一行的 `prune tests`；少了它 setuptools 會自動把 `tests/test_*.py` 收進 sdist），測試只從 repo 的 checkout 執行。`namespaces = false` 會丟掉沒有 `__init__.py` 的目錄。三件事都由 `tests/test_packaging_metadata.py` 把關 |
 | 文件 | `docs/`（Sphinx，10 語言）+ `README.md` 與 `README/`（9 語言） | `README.md` 與 `docs/en` 是正規來源；CI 以 `sphinx -W` 建置，警告即失敗。翻譯檔裡行內標記緊鄰中日韓文字時，要在標記與文字之間加 `\ `（跳脫空白），CJK 標題底線要以顯示寬度（全形算 2）計 |
