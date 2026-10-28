@@ -10,7 +10,7 @@ import threading
 
 import pytest
 
-from Imervue.library import image_index
+from Imervue.library import image_index, index_connection, index_search, index_tag_links
 
 
 class _StubConn:
@@ -19,7 +19,7 @@ class _StubConn:
 
 
 def test_lock_is_held_across_the_whole_body(monkeypatch):
-    monkeypatch.setattr(image_index, "conn", lambda: _StubConn())
+    monkeypatch.setattr(index_connection, "conn", lambda: _StubConn())
     other_thread_got_lock: list = []
 
     def _try_acquire():
@@ -201,14 +201,14 @@ def test_failed_query_releases_snapshot_and_reader_is_query_only(catalog, monkey
     import sqlite3
     catalog.upsert_image("before.jpg")
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
-        catalog._reader.execute("DELETE FROM images")
+        index_connection._reader.execute("DELETE FROM images")
     with monkeypatch.context() as patch:
         def bad_query(_query):
             raise ValueError("invalid query")
-        patch.setattr(catalog, "_query_where", bad_query)
+        patch.setattr(index_search, "_query_where", bad_query)
         with pytest.raises(ValueError, match="invalid query"):
             catalog.search_images()
-    assert not catalog._reader.in_transaction
+    assert not index_connection._reader.in_transaction
     catalog.upsert_image("after.jpg")
     assert sorted(catalog.search_images()) == ["after.jpg", "before.jpg"]
 
@@ -240,7 +240,7 @@ def test_close_waits_for_active_reader_and_reopens_without_deadlock(catalog, mon
         finally:
             closed.set()
 
-    monkeypatch.setattr(catalog, "_query_where", paused)
+    monkeypatch.setattr(index_search, "_query_where", paused)
     reader, closer = threading.Thread(target=read), threading.Thread(target=close)
     reader.start()
     try:
@@ -254,7 +254,7 @@ def test_close_waits_for_active_reader_and_reopens_without_deadlock(catalog, mon
             closer.join(5)
     assert not reader.is_alive() and not closer.is_alive() and not failures
     assert found == [["persisted.jpg"]]
-    assert catalog._reader is None and catalog._conn is None
+    assert index_connection._reader is None and index_connection._conn is None
     assert catalog.search_images() == ["persisted.jpg"]
 
 
@@ -264,7 +264,7 @@ def test_fingerprint_yield_does_not_pin_reader(catalog):
             catalog.upsert_image(f"{number:04}.jpg", mtime=1, size=2)
     iterator = catalog.iter_image_fingerprints()
     assert next(iterator) == ("0000.jpg", 1.0, 2)
-    assert not catalog._reader.in_transaction
+    assert not index_connection._reader.in_transaction
     catalog.close()
     assert len(list(iterator)) == 1002
 
@@ -308,13 +308,13 @@ def test_single_query_uses_sqlite_snapshot_without_extra_begin(catalog):
     catalog.upsert_image("photo.jpg")
     catalog.add_image_tag("photo.jpg", "trip/cat")
     statements = []
-    catalog._reader.set_trace_callback(statements.append)
+    index_connection._reader.set_trace_callback(statements.append)
     assert catalog.get_image("photo.jpg") is not None
     assert not any(sql in {"BEGIN", "ROLLBACK"} for sql in statements)
     statements.clear()
     assert catalog.tags_of_image("photo.jpg") == ["trip/cat"]
     assert statements.count("BEGIN") == statements.count("ROLLBACK") == 1
-    catalog._reader.set_trace_callback(None)
+    index_connection._reader.set_trace_callback(None)
 
 
 
@@ -330,7 +330,7 @@ def test_multi_query_tags_keep_one_snapshot_across_writer_commit(catalog, monkey
             raise TimeoutError("release tag reader")
         return original(tag_id)
 
-    monkeypatch.setattr(catalog, "tag_path_of", paused)
+    monkeypatch.setattr(index_tag_links, "tag_path_of", paused)
 
     def read():
         try:

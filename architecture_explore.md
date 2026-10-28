@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 988 | 165,840 |
+| `tests/` | 989 | 165,980 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 201 | 44,191 |
 | `Imervue/gui/` | 214 | 36,955 |
 | `Imervue/puppet/` | 107 | 16,624 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 792 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 11 | 1,846 |
-| **總計** | **2,011** | **359,594** |
+| **總計** | **2,023** | **359,912** |
 
-其中 `Imervue/` 套件本身 932 檔 / 175,868 行。
+其中 `Imervue/` 套件本身 943 檔 / 176,046 行。
 
-測試碼與產品碼比約 **0.86 : 1**（165,840 vs 191,908 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.86 : 1**（165,980 vs 192,086 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -549,7 +549,18 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `image_index.py` | 860 | schema 2 WAL：serialized writer/query-only reader；per-call committed reads、multi-query snapshot、additive sort index、batch read-own-writes、paged fingerprints、lifecycle locks |
+| `image_index.py` | 143 | 公開 catalog API 與既有匯入位置，整合各資料領域的操作。 |
+| `index_schema.py` | 93 | Additive schema 2 表格、索引與 schema version 寫入。 |
+| `index_connection.py` | 102 | 唯一 writer/reader、路徑、RLock 與 thread-local 狀態；連線初始化與關閉順序。 |
+| `index_snapshot.py` | 89 | Writer batch 與 reader snapshot；巢狀讀取共用快照，保持 read-own-writes 與 close/reopen 鎖順序。 |
+| `index_images.py` | 115 | 影像欄位更新、None 保留／清空政策，以及釋放 reader 的分頁 fingerprint 列舉。 |
+| `index_paths.py` | 75 | 跨 image/note/culling/tag-link 的路徑搬移交易與尚未建立 catalog 的短路行為。 |
+| `index_search.py` | 87 | ImageQuery 條件、排序及 pHash signed/unsigned 距離查詢。 |
+| `index_tags.py` | 85 | 共用 tag path 正規化、階層節點識別、建立與遞迴刪除。 |
+| `index_tag_links.py` | 84 | 影像 tag 指派、移除、路徑顯示與 descendant 查詢；多查詢共用一致快照。 |
+| `index_notes.py` | 37 | 影像備註、空值刪除與時間戳。 |
+| `index_culling.py` | 66 | Pick/reject/unflagged 持久化及保留順序與重複值的篩選。 |
+| `index_collections.py` | 62 | Smart album 原始 JSON 與 library roots 持久化。 |
 | `photo_workflow.py` | 72 | 無 Qt 的排序跨資料夾 cohort／勾選集合／挑片與預設狀態；過濾不改批次目標，拒絕排除而不刪檔 |
 | `scanner.py` | 273 | 背景掃描器，走訪 library roots 填索引（走訪沿用 `maintenance.scan_image_files`，HEIC / JXL 先註冊解碼器）；增量：mtime + size 相同就跳過（要 pHash 而列上沒有時不跳過，補算）；要讀的檔在 `probe_workers()` 條執行緒（核心數 − 1，最多 8）上解碼、不持 DB 鎖，每 256 檔一個交易寫入；寫入時尺寸與 pHash 以這次讀到的為準（`set_decoded_fields`，沒讀就清空）；JobState 只在 chunk commit 後紀錄成功；exact-path failure retry，cancel hook 接共享生命週期 |
 | `maintenance.py` | 46 | 索引與檔案系統對帳；`scan_image_files()` 經 `list_images(recursive=True)` 收 `formats.STILL_IMAGE_EXTENSIONS`，跳過隱藏檔與隱藏資料夾（磁碟根目錄的 `$RECYCLE.BIN`、Mac 的 `.Trashes`），也是掃描器的走訪 |

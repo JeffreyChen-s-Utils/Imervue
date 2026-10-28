@@ -1,860 +1,143 @@
-"""
-Library SQLite index — cross-folder image metadata, notes, hierarchical tags,
-smart albums, perceptual hashes, and culling flags.
-
-The DB lives at ``%LOCALAPPDATA%/Imervue/library.db`` (Windows) or
-``~/.cache/imervue/library.db`` (POSIX). A serialized writer and a separate
-query-only reader use WAL mode. Reads
-materialize a committed snapshot without acquiring the scanner's write lock;
-reads inside a write batch use that thread's writer and see its own changes.
-"""
-from __future__ import annotations
-
-import contextlib
-import logging
-import os
-import sqlite3
-import sys
-import threading
-import time
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
-from functools import wraps
-from pathlib import Path
-
-from Imervue.library.phash import hamming, to_signed64
-
-logger = logging.getLogger("Imervue.library")
-
-_SCHEMA_VERSION = 2
-# v1 → v2: added composite + partial indexes for facet queries.
-# The schema is purely additive (CREATE INDEX IF NOT EXISTS), so
-# v1 catalogs upgrade in place on first connect — no migration
-# script needed.
-
-
-def _default_db_path() -> Path:
-    if sys.platform == "win32":
-        base = Path(os.environ.get("LOCALAPPDATA", str(Path.home())))
-        return base / "Imervue" / "library.db"
-    return Path.home() / ".cache" / "imervue" / "library.db"
-
-
-# ---------------------------------------------------------------------------
-# Schema
-# ---------------------------------------------------------------------------
-
-_SCHEMA_SQL = """
-CREATE TABLE IF NOT EXISTS meta (
-    key TEXT PRIMARY KEY,
-    value TEXT
-);
-
-CREATE TABLE IF NOT EXISTS images (
-    path TEXT PRIMARY KEY,
-    parent TEXT,
-    name TEXT,
-    ext TEXT,
-    size INTEGER,
-    mtime REAL,
-    width INTEGER,
-    height INTEGER,
-    phash INTEGER,
-    taken_at REAL,
-    indexed_at REAL
-);
-CREATE INDEX IF NOT EXISTS idx_images_parent ON images(parent);
-CREATE INDEX IF NOT EXISTS idx_images_ext ON images(ext);
-CREATE INDEX IF NOT EXISTS idx_images_taken_at ON images(taken_at);
--- Complete the default ordering: equal/unknown capture times must not force
--- a temporary sort of the entire catalog before a small LIMIT can return.
-CREATE INDEX IF NOT EXISTS idx_images_sort ON images(taken_at DESC, mtime DESC);
--- Composite indexes for the facet queries in ``search_paths``: the
--- common shape is "filter by parent / ext + sort by taken_at desc".
--- Without the composites SQLite filters via the single-column index
--- then sorts a full result set into a temp table. With the composite,
--- the index iterator itself is already in taken_at order.
-CREATE INDEX IF NOT EXISTS idx_images_parent_taken_at
-    ON images(parent, taken_at);
-CREATE INDEX IF NOT EXISTS idx_images_ext_taken_at
-    ON images(ext, taken_at);
--- ``WHERE phash IS NOT NULL`` is the entry point for similarity /
--- dedupe scans. A partial index keeps the structure tiny (only rows
--- with a computed phash) and turns the scan into a direct lookup.
-CREATE INDEX IF NOT EXISTS idx_images_phash_notnull
-    ON images(phash) WHERE phash IS NOT NULL;
-
-CREATE TABLE IF NOT EXISTS notes (
-    path TEXT PRIMARY KEY,
-    note TEXT,
-    updated_at REAL
-);
-
-CREATE TABLE IF NOT EXISTS tag_nodes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    parent_id INTEGER,
-    name TEXT NOT NULL,
-    UNIQUE(parent_id, name)
-);
-
-CREATE TABLE IF NOT EXISTS image_tags (
-    path TEXT NOT NULL,
-    tag_id INTEGER NOT NULL,
-    PRIMARY KEY (path, tag_id)
-);
-CREATE INDEX IF NOT EXISTS idx_image_tags_tag ON image_tags(tag_id);
-
-CREATE TABLE IF NOT EXISTS culling (
-    path TEXT PRIMARY KEY,
-    state TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS smart_albums (
-    name TEXT PRIMARY KEY,
-    rules_json TEXT NOT NULL,
-    updated_at REAL
-);
-
-CREATE TABLE IF NOT EXISTS library_roots (
-    path TEXT PRIMARY KEY,
-    added_at REAL
-);
-"""
-
-
-# ---------------------------------------------------------------------------
-# Connection / singleton
-# ---------------------------------------------------------------------------
-
-_conn: sqlite3.Connection | None = None
-_db_path: Path | None = None
-_lock = threading.RLock()
-_read_lock = threading.RLock()
-_reader: sqlite3.Connection | None = None
-_query_state = threading.local()
-
-
-def set_db_path(path: Path | str) -> None:
-    """Override the DB path — must be called before first ``conn()``. Test-only."""
-    global _db_path
-    with _lock:
-        close()
-        _db_path = Path(path)
-
-
-def get_db_path() -> Path:
-    global _db_path
-    if _db_path is None:
-        _db_path = _default_db_path()
-    return _db_path
-
-
-def conn() -> sqlite3.Connection:
-    """Return the shared connection, creating and migrating the DB if needed."""
-    global _conn, _reader
-    with _lock:
-        if _conn is not None:
-            return _conn
-        path = get_db_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        c = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
-        c.row_factory = sqlite3.Row
-        c.execute("PRAGMA journal_mode = WAL")
-        c.execute("PRAGMA synchronous = NORMAL")
-        c.execute("PRAGMA foreign_keys = ON")
-        c.executescript(_SCHEMA_SQL)
-        _set_schema_version(c, _SCHEMA_VERSION)
-        try:
-            with _read_lock:
-                _reader = _open_reader(path)
-                _conn = c
-        except sqlite3.Error:
-            c.close()
-            raise
-        return c
-
-
-def _open_reader(path: Path) -> sqlite3.Connection:
-    reader = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
-    try:
-        reader.row_factory = sqlite3.Row
-        reader.execute("PRAGMA query_only = ON")
-        return reader
-    except sqlite3.Error:
-        reader.close()
-        raise
-
-
-def close() -> None:
-    global _conn, _reader
-    with _lock, _read_lock:
-        if _reader is not None:
-            _reader.close()
-            _reader = None
-        if _conn is not None:
-            # Hand SQLite a chance to update query-plan statistics
-            # before we drop the connection. ``PRAGMA optimize`` is
-            # the recommended on-close hook (since SQLite 3.18) —
-            # cheap when nothing's changed, applies an ANALYZE when
-            # tables have grown enough that the plan would shift.
-            with contextlib.suppress(sqlite3.Error):
-                _conn.execute("PRAGMA optimize")
-            _conn.close()
-            _conn = None
-
-
-@contextlib.contextmanager
-def write_batch():
-    """Group many writes into a single transaction.
-
-    The shared connection runs in autocommit mode, so without this each
-    ``upsert_image`` is its own transaction — a bulk scan of N files becomes N
-    commits. Wrapping a batch in one ``BEGIN`` … ``COMMIT`` collapses that into
-    a single commit. The transaction is rolled back if the body raises, so a
-    partially-applied chunk never lands.
-    """
-    # Hold the (reentrant) lock for the WHOLE transaction, not just BEGIN/COMMIT.
-    # Releasing it during the body let a concurrent UI-thread write (set_cull_state
-    # / add_image_tag, sharing this connection) execute INSIDE the scanner's open
-    # transaction and get rolled back with it. The RLock lets the batch's own
-    # upsert_image re-acquire on the same thread while blocking other threads.
-    with _lock:
-        c = conn()
-        c.execute("BEGIN")
-        _query_state.writing = True
-        committed = False
-        try:
-            yield
-            c.execute("COMMIT")
-            committed = True
-        finally:
-            _query_state.writing = False
-            if not committed:
-                c.execute("ROLLBACK")
-
-
-def _query_connection() -> sqlite3.Connection:
-    """The current snapshot, or the caller's serialized writer."""
-    reader = getattr(_query_state, "reader", None)
-    return reader if reader is not None else conn()
-
-
-def _inside_query() -> bool:
-    """Whether this thread is already writing or reading under a snapshot."""
-    return (getattr(_query_state, "writing", False)
-            or getattr(_query_state, "reader", None) is not None)
-
-
-def _on_snapshot(reader: sqlite3.Connection, call, transaction: bool):
-    """Run *call* with *reader* as this thread's snapshot; the caller holds ``_read_lock``."""
-    if transaction:
-        reader.execute("BEGIN")
-    _query_state.reader = reader
-    try:
-        return call()
-    finally:
-        _query_state.reader = None
-        if transaction:
-            reader.execute("ROLLBACK")  # ends snapshot, including error paths
-
-
-def _read_snapshot(function, *, transaction: bool = False):
-    """Eager query results under one reader lock; nested reads share a snapshot.
-
-    Lock order is writer then reader for initialization/close. A reader never
-    acquires the writer lock while holding its own lock. No cursor escapes.
-    """
-    @wraps(function)
-    def read(*args, **kwargs):
-        if _inside_query():
-            return function(*args, **kwargs)
-        while True:
-            if _reader is None:
-                conn()  # initialize before acquiring _read_lock
-            with _read_lock:
-                # None here: close/path switch won the initialization race, so retry.
-                if _reader is not None:
-                    return _on_snapshot(
-                        _reader, lambda: function(*args, **kwargs), transaction)
-    return read
-
-
-def _read_transaction(function):
-    """A shared snapshot for helpers that issue multiple queries."""
-    return _read_snapshot(function, transaction=True)
-
-
-def _set_schema_version(c: sqlite3.Connection, version: int) -> None:
-    c.execute(
-        "INSERT INTO meta(key, value) VALUES('schema_version', ?)"
-        " ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        (str(version),),
-    )
-
-
-# ---------------------------------------------------------------------------
-# Images
-# ---------------------------------------------------------------------------
-
-
-def upsert_image(
-    path: str,
-    *,
-    size: int | None = None,
-    mtime: float | None = None,
-    width: int | None = None,
-    height: int | None = None,
-    phash: int | None = None,
-    taken_at: float | None = None,
-) -> None:
-    """Insert or update an image row. Unknown fields are left untouched on update."""
-    p = Path(path)
-    now = time.time()
-    # A 64-bit pHash is unsigned and routinely has its high bit set, which
-    # overflows SQLite's signed INTEGER; store the identical bits as signed.
-    stored_phash = to_signed64(phash) if phash is not None else None
-    with _lock:
-        c = conn()
-        c.execute(
-            "INSERT INTO images(path, parent, name, ext, size, mtime,"
-            " width, height, phash, taken_at, indexed_at)"
-            " VALUES(?,?,?,?,?,?,?,?,?,?,?)"
-            " ON CONFLICT(path) DO UPDATE SET"
-            " parent=excluded.parent, name=excluded.name, ext=excluded.ext,"
-            " size=COALESCE(excluded.size, images.size),"
-            " mtime=COALESCE(excluded.mtime, images.mtime),"
-            " width=COALESCE(excluded.width, images.width),"
-            " height=COALESCE(excluded.height, images.height),"
-            " phash=COALESCE(excluded.phash, images.phash),"
-            " taken_at=COALESCE(excluded.taken_at, images.taken_at),"
-            " indexed_at=excluded.indexed_at",
-            (
-                str(p), str(p.parent), p.name, p.suffix.lower().lstrip("."),
-                size, mtime, width, height, stored_phash, taken_at, now,
-            ),
-        )
-
-
-def set_decoded_fields(
-    path: str, *, width: int | None, height: int | None, phash: int | None,
-) -> None:
-    """Replace the fields read from the file's pixels; ``None`` clears one.
-
-    Unlike :func:`upsert_image`, which keeps an old value where the new one is
-    ``None``, this makes a rescanned file's size and pHash describe its current
-    content, or nothing when it was not read or could not be.
-    """
-    stored_phash = to_signed64(phash) if phash is not None else None
-    with _lock:
-        conn().execute(
-            "UPDATE images SET width = ?, height = ?, phash = ? WHERE path = ?",
-            (width, height, stored_phash, str(path)),
-        )
-
-
-@_read_snapshot
-def get_image(path: str) -> dict | None:
-    row = _query_connection().execute(
-        "SELECT * FROM images WHERE path = ?", (str(path),)
-    ).fetchone()
-    return dict(row) if row else None
-
-
-def delete_image(path: str) -> None:
-    with _lock:
-        c = conn()
-        c.execute("DELETE FROM images WHERE path = ?", (str(path),))
-        c.execute("DELETE FROM notes WHERE path = ?", (str(path),))
-        c.execute("DELETE FROM culling WHERE path = ?", (str(path),))
-        c.execute("DELETE FROM image_tags WHERE path = ?", (str(path),))
-
-
-# The tables holding rows per image path: the index entry, the note, the cull
-# state and the hierarchical tags.
-_PATH_TABLES = ("images", "notes", "culling", "image_tags")
-# Rows are parked under this prefix mid-move, so ``a -> b`` beside ``b -> c``
-# moves each once. SQLite's substr() stops at a NUL, hence \u0001.
-_MOVING = "\u0001moving\u0001"
-
-
-def library_exists() -> bool:
-    """Whether the library DB is open or on disk — a rename or a read must not create one."""
-    return _conn is not None or get_db_path().exists()
-
-
-def _move_rows(c: sqlite3.Connection, table: str, pairs: dict[str, str], *,
-               keep_existing: bool) -> None:
-    for old, new in pairs.items():
-        if keep_existing and c.execute(
-                f"SELECT 1 FROM {table} WHERE path = ? LIMIT 1",  # noqa: S608  # nosec B608  # table from _PATH_TABLES
-                (new,)).fetchone():
-            continue
-        c.execute(f"UPDATE {table} SET path = ? WHERE path = ?",  # noqa: S608  # nosec B608  # table from _PATH_TABLES
-                  (_MOVING + new, old))
-    if not keep_existing:        # rows of a file that used to live at a new path
-        c.executemany(f"DELETE FROM {table} WHERE path = ?",  # noqa: S608  # nosec B608  # table from _PATH_TABLES
-                      [(new,) for new in pairs.values() if new not in pairs])
-    c.execute(f"UPDATE {table} SET path = substr(path, ?) WHERE substr(path, 1, ?) = ?",  # noqa: S608  # nosec B608  # table from _PATH_TABLES
-              (len(_MOVING) + 1, len(_MOVING), _MOVING))
-
-
-def move_paths(mapping: Mapping[str, str], *, keep_existing: bool = False) -> None:
-    """Re-key each old path's rows to its new path: index entry, note, cull state and tags.
-
-    For files Imervue renamed or moved, so a new path had no file of its own
-    a moment ago: rows found under one belonged to a file that used to live
-    there and are dropped. With *keep_existing* (relinking missing files) a
-    table that already has rows for a new path keeps them and leaves the old
-    rows alone. All in one transaction; nothing happens when the library was
-    never opened (no DB file is created for it).
-    """
-    pairs = {str(old): str(new) for old, new in mapping.items() if str(old) != str(new)}
-    if not pairs or not library_exists():
-        return
-    with write_batch():
-        c = conn()
-        for table in _PATH_TABLES:
-            _move_rows(c, table, pairs, keep_existing=keep_existing)
-        c.executemany(
-            "UPDATE images SET parent = ?, name = ?, ext = ? WHERE path = ?",
-            [(str(Path(new).parent), Path(new).name, Path(new).suffix.lower().lstrip("."), new)
-             for new in pairs.values()],
-        )
-
-
-def stored_paths() -> list[str]:
-    """Every distinct image path any table keeps rows for; empty without a library."""
-    if not library_exists():
-        return []
-    return _stored_paths()
-
-
-@_read_snapshot
-def _stored_paths() -> list[str]:
-    rows = _query_connection().execute(
-        " UNION ".join(f"SELECT path FROM {table}"  # noqa: S608  # nosec B608  # table from _PATH_TABLES
-                       for table in _PATH_TABLES)).fetchall()
-    return [row["path"] for row in rows]
-
-
-@_read_snapshot
-def all_image_paths() -> list[str]:
-    return [r["path"] for r in _query_connection().execute("SELECT path FROM images").fetchall()]
-
-
-@_read_snapshot
-def _fingerprint_page(after: str | None):
-    sql = "SELECT path, mtime, size FROM images WHERE mtime IS NOT NULL AND size IS NOT NULL"
-    args = ()
-    if after is not None:
-        sql += " AND path > ?"
-        args = (after,)
-    return _query_connection().execute(sql + " ORDER BY path LIMIT 1000", args).fetchall()
-
-
-def iter_image_fingerprints():
-    """Yield fingerprints in bounded pages, releasing the reader between pages.
-
-    Each page is a committed snapshot. Concurrent changes can cause an extra
-    filesystem rescan, but cannot leak a cursor or pin the WAL during yielding.
-    """
-    after = None
-    while rows := _fingerprint_page(after):
-        for row in rows:
-            yield row["path"], float(row["mtime"]), int(row["size"])
-        after = rows[-1]["path"]
-
-
-@_read_snapshot
-def count_images() -> int:
-    return _query_connection().execute("SELECT COUNT(*) AS n FROM images").fetchone()["n"]
-
-
-@dataclass(frozen=True)
-class ImageQuery:
-    """Filters for :func:`search_images`; a ``None`` / empty field leaves that filter off.
-
-    Sizes are in bytes, dimensions in pixels; ``exts`` match without the dot
-    and case-insensitively, ``name_contains`` case-insensitively.
-    """
-
-    parents: Sequence[str] | None = None
-    exts: Sequence[str] | None = None
-    min_width: int | None = None
-    min_height: int | None = None
-    max_size: int | None = None
-    min_size: int | None = None
-    name_contains: str | None = None
-    limit: int | None = None
-
-
-def _query_where(query: ImageQuery) -> tuple[list[str], list]:
-    """SQL ``WHERE`` terms and their bound values for ``query``."""
-    where: list[str] = []
-    args: list = []
-    if query.parents:
-        where.append(f"parent IN ({','.join('?' * len(query.parents))})")
-        args.extend(query.parents)
-    if query.exts:
-        where.append(f"ext IN ({','.join('?' * len(query.exts))})")
-        args.extend(e.lower().lstrip(".") for e in query.exts)
-    for value, term in ((query.min_width, "width >= ?"), (query.min_height, "height >= ?"),
-                        (query.min_size, "size >= ?"), (query.max_size, "size <= ?")):
-        if value is not None:
-            where.append(term)
-            args.append(value)
-    if query.name_contains:
-        where.append("LOWER(name) LIKE ?")
-        args.append(f"%{query.name_contains.lower()}%")
-    return where, args
-
-
-@_read_snapshot
-def search_images(query: ImageQuery | None = None) -> list[str]:
-    """Run a parameterised search over the index — returns matching paths, newest first."""
-    query = query or ImageQuery()
-    where, args = _query_where(query)
-    sql = "SELECT path FROM images"
-    if where:
-        sql += " WHERE " + " AND ".join(where)
-    sql += " ORDER BY taken_at DESC, mtime DESC"
-    if query.limit is not None:
-        sql += f" LIMIT {int(query.limit)}"  # nosec B608 - limit is int-coerced above
-    return [r["path"] for r in _query_connection().execute(sql, args).fetchall()]  # nosec B608
-
-
-# ---------------------------------------------------------------------------
-# Notes
-# ---------------------------------------------------------------------------
-
-
-def set_note(path: str, note: str) -> None:
-    with _lock:
-        c = conn()
-        if not note:
-            c.execute("DELETE FROM notes WHERE path = ?", (str(path),))
-            return
-        c.execute(
-            "INSERT INTO notes(path, note, updated_at) VALUES(?,?,?)"
-            " ON CONFLICT(path) DO UPDATE SET note=excluded.note,"
-            " updated_at=excluded.updated_at",
-            (str(path), note, time.time()),
-        )
-
-
-@_read_snapshot
-def get_note(path: str) -> str:
-    row = _query_connection().execute(
-        "SELECT note FROM notes WHERE path = ?", (str(path),)
-    ).fetchone()
-    return row["note"] if row else ""
-
-
-@_read_snapshot
-def paths_with_notes() -> list[str]:
-    return [r["path"] for r in _query_connection().execute(
-        "SELECT path FROM notes WHERE COALESCE(note, '') <> ''"
-    ).fetchall()]
-
-
-# ---------------------------------------------------------------------------
-# Hierarchical tags
-# ---------------------------------------------------------------------------
-
-
-def _tag_id(path_parts: Sequence[str], create: bool) -> int | None:
-    """Resolve ``a/b/c`` to a tag_nodes.id, creating rows along the way if asked."""
-    c = _query_connection()
-    parent_id: int | None = None
-    for name in path_parts:
-        row = c.execute(
-            "SELECT id FROM tag_nodes WHERE parent_id IS ? AND name = ?",
-            (parent_id, name),
-        ).fetchone()
-        if row is None:
-            if not create:
-                return None
-            cur = c.execute(
-                "INSERT INTO tag_nodes(parent_id, name) VALUES(?, ?)",
-                (parent_id, name),
-            )
-            parent_id = cur.lastrowid
-        else:
-            parent_id = row["id"]
-    return parent_id
-
-
-def create_tag_path(tag_path: str) -> int:
-    """Ensure a hierarchical tag like ``animal/cat/british`` exists; return its id."""
-    parts = [s.strip() for s in tag_path.split("/") if s.strip()]
-    if not parts:
-        raise ValueError("empty tag path")
-    with _lock:
-        tid = _tag_id(parts, create=True)
-        if tid is None:
-            raise RuntimeError("failed to create tag path")
-        return tid
-
-
-def delete_tag_path(tag_path: str) -> bool:
-    parts = [s.strip() for s in tag_path.split("/") if s.strip()]
-    if not parts:
-        return False
-    with _lock:
-        tid = _tag_id(parts, create=False)
-        if tid is None:
-            return False
-        c = conn()
-        # Remove the node and all descendants (recursive), plus links.
-        descendant_ids = _descendants_of(tid)
-        descendant_ids.append(tid)
-        placeholders = ",".join("?" * len(descendant_ids))
-        c.execute(
-            f"DELETE FROM image_tags WHERE tag_id IN ({placeholders})",  # noqa: S608  # nosec B608
-            descendant_ids,
-        )
-        c.execute(
-            f"DELETE FROM tag_nodes WHERE id IN ({placeholders})",  # noqa: S608  # nosec B608
-            descendant_ids,
-        )
-        return True
-
-
-def _descendants_of(tag_id: int) -> list[int]:
-    out: list[int] = []
-    frontier = [tag_id]
-    c = _query_connection()
-    while frontier:
-        placeholders = ",".join("?" * len(frontier))
-        rows = c.execute(
-            f"SELECT id FROM tag_nodes WHERE parent_id IN ({placeholders})",  # noqa: S608  # nosec B608
-            frontier,
-        ).fetchall()
-        next_frontier = [r["id"] for r in rows]
-        out.extend(next_frontier)
-        frontier = next_frontier
-    return out
-
-
-@_read_transaction
-def tag_path_of(tag_id: int) -> str:
-    """Return dotted path like ``animal/cat/british`` for a tag id."""
-    c = _query_connection()
-    parts: list[str] = []
-    current: int | None = tag_id
-    while current is not None:
-        row = c.execute(
-            "SELECT name, parent_id FROM tag_nodes WHERE id = ?", (current,)
-        ).fetchone()
-        if row is None:
-            break
-        parts.append(row["name"])
-        current = row["parent_id"]
-    parts.reverse()
-    return "/".join(parts)
-
-
-@_read_transaction
-def all_tag_paths() -> list[str]:
-    c = _query_connection()
-    rows = c.execute("SELECT id FROM tag_nodes").fetchall()
-    return sorted(tag_path_of(r["id"]) for r in rows)
-
-
-def add_image_tag(path: str, tag_path: str) -> None:
-    with _lock:
-        tid = create_tag_path(tag_path)
-        conn().execute(
-            "INSERT OR IGNORE INTO image_tags(path, tag_id) VALUES(?, ?)",
-            (str(path), tid),
-        )
-
-
-def remove_image_tag(path: str, tag_path: str) -> bool:
-    parts = [s.strip() for s in tag_path.split("/") if s.strip()]
-    if not parts:
-        return False
-    with _lock:
-        tid = _tag_id(parts, create=False)
-        if tid is None:
-            return False
-        cur = conn().execute(
-            "DELETE FROM image_tags WHERE path = ? AND tag_id = ?",
-            (str(path), tid),
-        )
-        return cur.rowcount > 0
-
-
-@_read_transaction
-def tags_of_image(path: str) -> list[str]:
-    rows = _query_connection().execute(
-        "SELECT tag_id FROM image_tags WHERE path = ?", (str(path),)
-    ).fetchall()
-    return sorted(tag_path_of(r["tag_id"]) for r in rows)
-
-
-@_read_transaction
-def images_with_tag(tag_path: str, *, include_descendants: bool = True) -> list[str]:
-    parts = [s.strip() for s in tag_path.split("/") if s.strip()]
-    if not parts:
-        return []
-    tid = _tag_id(parts, create=False)
-    if tid is None:
-        return []
-    ids = [tid] + (_descendants_of(tid) if include_descendants else [])
-    placeholders = ",".join("?" * len(ids))
-    rows = _query_connection().execute(
-        f"SELECT DISTINCT path FROM image_tags WHERE tag_id IN ({placeholders})",  # noqa: S608  # nosec B608
-        ids,
-    ).fetchall()
-    return sorted(r["path"] for r in rows)
-
-
-# ---------------------------------------------------------------------------
-# Culling (Pick / Reject)
-# ---------------------------------------------------------------------------
-
-CULL_PICK = "pick"
-CULL_REJECT = "reject"
-CULL_UNFLAGGED = "unflagged"
-_VALID_CULL = {CULL_PICK, CULL_REJECT, CULL_UNFLAGGED}
-
-
-def set_cull_state(path: str, state: str) -> None:
-    if state not in _VALID_CULL:
-        raise ValueError(f"invalid culling state: {state}")
-    with _lock:
-        c = conn()
-        if state == CULL_UNFLAGGED:
-            c.execute("DELETE FROM culling WHERE path = ?", (str(path),))
-            return
-        c.execute(
-            "INSERT INTO culling(path, state) VALUES(?, ?)"
-            " ON CONFLICT(path) DO UPDATE SET state=excluded.state",
-            (str(path), state),
-        )
-
-
-@_read_snapshot
-def get_cull_state(path: str) -> str:
-    row = _query_connection().execute(
-        "SELECT state FROM culling WHERE path = ?", (str(path),)
-    ).fetchone()
-    return row["state"] if row else CULL_UNFLAGGED
-
-
-@_read_snapshot
-def paths_with_cull_state(state: str) -> list[str]:
-    if state == CULL_UNFLAGGED:
-        return []
-    rows = _query_connection().execute(
-        "SELECT path FROM culling WHERE state = ?", (state,)
-    ).fetchall()
-    return [r["path"] for r in rows]
-
-
-@_read_snapshot
-def filter_by_cull(paths: Iterable[str], state: str | None) -> list[str]:
-    """Filter an image list by cull state; None means no filter."""
-    paths = list(paths)
-    if not state:
-        return paths
-    rows = _query_connection().execute("SELECT path, state FROM culling").fetchall()
-    states = {r["path"]: r["state"] for r in rows}
-    if state == CULL_UNFLAGGED:
-        return [p for p in paths if p not in states]
-    return [p for p in paths if states.get(p) == state]
-
-
-# ---------------------------------------------------------------------------
-# Smart albums (saved searches)
-# ---------------------------------------------------------------------------
-
-
-def save_smart_album(name: str, rules_json: str) -> None:
-    with _lock:
-        conn().execute(
-            "INSERT INTO smart_albums(name, rules_json, updated_at) VALUES(?,?,?)"
-            " ON CONFLICT(name) DO UPDATE SET rules_json=excluded.rules_json,"
-            " updated_at=excluded.updated_at",
-            (name, rules_json, time.time()),
-        )
-
-
-def delete_smart_album(name: str) -> bool:
-    with _lock:
-        cur = conn().execute("DELETE FROM smart_albums WHERE name = ?", (name,))
-        return cur.rowcount > 0
-
-
-@_read_snapshot
-def list_smart_albums() -> list[dict]:
-    rows = _query_connection().execute(
-        "SELECT name, rules_json, updated_at FROM smart_albums"
-        " ORDER BY name COLLATE NOCASE"
-    ).fetchall()
-    return [dict(r) for r in rows]
-
-
-@_read_snapshot
-def get_smart_album(name: str) -> dict | None:
-    row = _query_connection().execute(
-        "SELECT name, rules_json, updated_at FROM smart_albums WHERE name = ?",
-        (name,),
-    ).fetchone()
-    return dict(row) if row else None
-
-
-# ---------------------------------------------------------------------------
-# Library roots
-# ---------------------------------------------------------------------------
-
-
-def add_library_root(path: str) -> None:
-    with _lock:
-        conn().execute(
-            "INSERT OR IGNORE INTO library_roots(path, added_at) VALUES(?, ?)",
-            (str(path), time.time()),
-        )
-
-
-def remove_library_root(path: str) -> bool:
-    with _lock:
-        cur = conn().execute("DELETE FROM library_roots WHERE path = ?", (str(path),))
-        return cur.rowcount > 0
-
-
-@_read_snapshot
-def list_library_roots() -> list[str]:
-    rows = _query_connection().execute("SELECT path FROM library_roots ORDER BY path").fetchall()
-    return [r["path"] for r in rows]
-
-
-# ---------------------------------------------------------------------------
-# pHash similarity
-# ---------------------------------------------------------------------------
-
-
-@_read_snapshot
-def similar_by_phash(phash: int, max_distance: int = 10, limit: int = 100) -> list[tuple[str, int]]:
-    """Return (path, hamming_distance) rows with phash within ``max_distance`` bits.
-
-    Brute-force scan — fine up to tens of thousands of images; beyond that we'd
-    need a BK-tree. Returns sorted closest-first.
-    """
-    rows = _query_connection().execute(
-        "SELECT path, phash FROM images WHERE phash IS NOT NULL"
-    ).fetchall()
-    out: list[tuple[str, int]] = []
-    for r in rows:
-        other = r["phash"]
-        if other is None:
-            continue
-        # ``phash`` may be an in-memory unsigned hash and ``other`` the signed
-        # value read back from SQLite; ``hamming`` masks both to 64 bits so the
-        # two representations of the same pattern compare identically.
-        dist = hamming(phash, other)
-        if dist <= max_distance:
-            out.append((r["path"], dist))
-    out.sort(key=lambda x: x[1])
-    return out[:limit]
+"""Public catalog API for image metadata, tags, notes and saved collections."""
+
+from Imervue.library.index_schema import (
+    _set_schema_version,
+)
+from Imervue.library.index_connection import (
+    _default_db_path,
+    _lock,
+    set_db_path,
+    get_db_path,
+    conn,
+    _open_reader,
+    close,
+    library_exists,
+)
+from Imervue.library.index_snapshot import (
+    write_batch,
+    _query_connection,
+    _inside_query,
+    _on_snapshot,
+    _read_snapshot,
+    _read_transaction,
+)
+from Imervue.library.index_images import (
+    upsert_image,
+    set_decoded_fields,
+    get_image,
+    delete_image,
+    all_image_paths,
+    _fingerprint_page,
+    iter_image_fingerprints,
+    count_images,
+)
+from Imervue.library.index_paths import (
+    _move_rows,
+    move_paths,
+    stored_paths,
+    _stored_paths,
+)
+from Imervue.library.index_search import (
+    ImageQuery,
+    _query_where,
+    search_images,
+    similar_by_phash,
+)
+from Imervue.library.index_notes import (
+    set_note,
+    get_note,
+    paths_with_notes,
+)
+from Imervue.library.index_tags import (
+    _tag_id,
+    create_tag_path,
+    delete_tag_path,
+    _descendants_of,
+)
+from Imervue.library.index_tag_links import (
+    tag_path_of,
+    all_tag_paths,
+    add_image_tag,
+    remove_image_tag,
+    tags_of_image,
+    images_with_tag,
+)
+from Imervue.library.index_culling import (
+    CULL_PICK,
+    CULL_REJECT,
+    CULL_UNFLAGGED,
+    set_cull_state,
+    get_cull_state,
+    paths_with_cull_state,
+    filter_by_cull,
+)
+from Imervue.library.index_collections import (
+    save_smart_album,
+    delete_smart_album,
+    list_smart_albums,
+    get_smart_album,
+    add_library_root,
+    remove_library_root,
+    list_library_roots,
+)
+
+__all__ = [
+    "_default_db_path",
+    "set_db_path",
+    "get_db_path",
+    "conn",
+    "_open_reader",
+    "close",
+    "write_batch",
+    "_query_connection",
+    "_inside_query",
+    "_on_snapshot",
+    "_read_snapshot",
+    "_read_transaction",
+    "_set_schema_version",
+    "upsert_image",
+    "set_decoded_fields",
+    "get_image",
+    "delete_image",
+    "library_exists",
+    "_move_rows",
+    "move_paths",
+    "stored_paths",
+    "_stored_paths",
+    "all_image_paths",
+    "_fingerprint_page",
+    "iter_image_fingerprints",
+    "count_images",
+    "ImageQuery",
+    "_query_where",
+    "search_images",
+    "set_note",
+    "get_note",
+    "paths_with_notes",
+    "_tag_id",
+    "create_tag_path",
+    "delete_tag_path",
+    "_descendants_of",
+    "tag_path_of",
+    "all_tag_paths",
+    "add_image_tag",
+    "remove_image_tag",
+    "tags_of_image",
+    "images_with_tag",
+    "set_cull_state",
+    "get_cull_state",
+    "paths_with_cull_state",
+    "filter_by_cull",
+    "save_smart_album",
+    "delete_smart_album",
+    "list_smart_albums",
+    "get_smart_album",
+    "add_library_root",
+    "remove_library_root",
+    "list_library_roots",
+    "similar_by_phash",
+    "CULL_PICK",
+    "CULL_REJECT",
+    "CULL_UNFLAGGED",
+    "_lock",
+]
