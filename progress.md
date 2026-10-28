@@ -6,5 +6,5 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- Main-branch production complexity reduction: the first puppet/document_io.py batch passes all local gates; hosted analysis and the remaining ranked production modules remain. Baseline: 404 of 796 Imervue files exceed Codacy's threshold of 20.
-  Next: publish and verify the first batch, then inspect annotation_canvas.py (211) and paint/document.py (197) for repeated branching and cohesive responsibilities.
+- Main-branch production complexity reduction remains: puppet/document_io.py is still above the file threshold after the first batch, and other ranked production modules need review. Baseline: 404 of 796 Imervue files exceed Codacy's threshold of 20.
+  Next: inspect the remaining puppet/document_io.py responsibilities (224), annotation_canvas.py (211) and paint/document.py (197) for repeated branching and cohesive responsibilities, preserving public behavior.
