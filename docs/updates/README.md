@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-10 | 2026-10-28 | Verify native UX workflows and publish Spanish controls | #snapshot #ux #tests #Imervue_Plugins | [2026-10-b](2026-10-b.md) |
 | U-20261028-09 | 2026-10-28 | Clarify browsing, saves and background task results | #done #ux #ui #i18n #tests | [2026-10-b](2026-10-b.md) |
 | U-20261028-08 | 2026-10-28 | Resolve seven PR quality findings | #done #refactor #review | [2026-10-b](2026-10-b.md) |
 | U-20261028-07 | 2026-10-28 | Verify native startup and close full-review findings | #done #review #tests | [2026-10-b](2026-10-b.md) |
@@ -590,4 +591,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 105 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 14 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |

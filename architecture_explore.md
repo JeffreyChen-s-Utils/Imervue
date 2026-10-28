@@ -68,11 +68,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | --- | ---: | ---: |
 | `tests/` | 981 | 165,920 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,038 |
-| `Imervue/gui/` | 190 | 37,737 |
+| `Imervue/gui/` | 190 | 37,747 |
 | `Imervue/puppet/` | 62 | 16,833 |
 | `Imervue/image/` | 130 | 15,744 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,728 |
-| `Imervue/multi_language/` | 8 | 16,255 |
+| `Imervue/multi_language/` | 8 | 16,258 |
 | `Imervue/desktop_pet/` | 29 | 7,165 |
 | `Imervue/mcp_server/` | 16 | 4,762 |
 | `Imervue/library/` | 34 | 5,001 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 810 |
 | `plugins/`（19 個外掛） | 80 | 16,154 |
 | `scripts/`（開發與發佈工具） | 11 | 1,581 |
-| **總計** | **1,882** | **360,513** |
+| **總計** | **1,882** | **360,526** |
 
-其中 `Imervue/` 套件本身 810 檔 / 176,858 行。
+其中 `Imervue/` 套件本身 810 檔 / 176,871 行。
 
-測試碼與產品碼比約 **0.86 : 1**（165,920 vs 193,012 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.86 : 1**（165,920 vs 193,025 行，產品碼含 `plugins/`）。
 
 > 統計以 `CLAUDE.md`「Architecture Map」的方式掃描各區域 Python 檔案，排除 `__pycache__`；不包含 `.audit/`、虛擬環境或建置產物。
 
@@ -569,7 +569,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `batch_export_dialog.py` | 456 | 輸出政策／durable job／metadata：新 dialog 預設 CPU reference，GPU explicit opt-in；設定與 retry 保留所選 backend |
 
 
-190 個檔、37,737 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+190 個檔、37,747 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -612,7 +612,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 887 | `_FileTreeView`：檔案樹互動與檔案操作；`set_root_path` 統一切換根目錄、保存舊狀態並協調排序、搜尋與非同步還原 |
 | `file_tree_sort.py` | 179 | `FileTreeSortProxy`：名稱、時間、大小、類型排序與可切換資料夾優先；ToolTipRole 顯示實際建立／修改時間和檔案大小 |
-| `file_tree_search.py` | 361 | 可取消背景遞迴搜尋；檔名／相對路徑結果、收合、獨立定位與直接預覽訊號；保留查詢、選取與捲動位置，排除過期世代與目錄連結 |
+| `file_tree_search.py` | 363 | 可取消背景遞迴搜尋；檔名／相對路徑結果、收合、獨立定位與直接預覽訊號；保留查詢、選取與捲動位置，排除過期世代與目錄連結 |
 | `file_tree_state.py` | 154 | `FileTreeState`：以路徑保存展開、多選、目前項目及捲動位置；等待 directoryLoaded 後還原，重新整理時重設載入狀態 |
 | `file_tree_preferences.py` | 67 | `TreeSortSettings`：驗證全域設定與正規化根路徑的資料夾覆寫，統一序列化與持久化 |
 | `file_tree_sort_controls.py` | 196 | 上方完整顯示排序欄位、語意方向、全域／資料夾範圍與重設；右鍵選單共用有效設定 |
@@ -637,7 +637,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_manager.py` | 158 | 具名工作區預設（幾何 + 佈局快照，含 Imervue / Modify 兩個分頁的 dock 版面） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
 | `photo_workflow_dialog.py` | 296 | 每視窗 modeless 搜尋→比較→挑片→既有顯影 preset→既有批次匯出；500 筆分頁、保留隱藏勾選／preset／回程，外部 DB 挑片同步，800px 來源比較 |
-| `background_jobs.py` | 387 | 跨視窗保留 QThread 與錄影 activity；終端結果、失敗重試及成功輸出／資料夾入口；取消錄影會完成片段 |
+| `background_jobs.py` | 395 | 跨視窗保留 QThread 與錄影 activity；終端結果、失敗重試及成功輸出／資料夾入口；取消錄影會完成片段 |
 | `job_indicator.py` | 40 | 常駐狀態列工作／失敗數量入口；開啟共享工作記錄與輸出結果 |
 | `_apply_save.py` | 229 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`finalize_worker()` 在 custom done 提前送達時 passive 背景退場，保留 owner／actual worker lifetime；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
 

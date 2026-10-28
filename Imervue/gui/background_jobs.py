@@ -57,6 +57,20 @@ class Job:
         """True only after the registry observes actual worker exit."""
         return self.worker is None and self.state.snapshot(include_items=False).status in TERMINAL
 
+    def poll(self) -> None:
+        """Release a worker only after its actual exit, or a completed activity's callback."""
+        worker = self.worker
+        if worker is None:
+            if self.settled:
+                self.cancel_callback = None
+            return
+        terminal = self.state.snapshot(include_items=False).status in TERMINAL
+        if not isValid(worker) or ((worker.isFinished() or terminal) and worker.wait(0)):
+            self.state.finish()
+            self.worker = None
+            if self.owned and isValid(worker):
+                worker.deleteLater()
+
 
 class JobRegistry(QObject):
     """Keep cross-window progress and results independently of originating dialogs."""
@@ -118,17 +132,7 @@ class JobRegistry(QObject):
     def poll(self) -> None:
         """Poll immutable progress, retaining finishing threads until wait(0) succeeds."""
         for job in self.jobs:
-            worker = job.worker
-            if worker is None:
-                if job.settled:
-                    job.cancel_callback = None
-                continue
-            terminal = job.state.snapshot(include_items=False).status in TERMINAL
-            if not isValid(worker) or ((worker.isFinished() or terminal) and worker.wait(0)):
-                job.state.finish()
-                job.worker = None
-                if job.owned and isValid(worker):
-                    worker.deleteLater()
+            job.poll()
         summary = tuple((job.state.snapshot(include_items=False), job.settled) for job in self.jobs)
         if summary != self._last:
             self._last = summary
@@ -264,16 +268,20 @@ class BackgroundJobsDialog(QDialog):
             root.setData(0, Qt.ItemDataRole.UserRole, job)
             self.tree.addTopLevelItem(root)
             if job is selected:
-                self.tree.setCurrentItem(root)
-                self._details(root, job)
-                if selected_output:
-                    for index in range(root.childCount()):
-                        child = root.child(index)
-                        if child.data(1, Qt.ItemDataRole.UserRole) == selected_output:
-                            self.tree.setCurrentItem(child)
-                            break
+                self._select_job_result(root, job, selected_output)
         blocker.unblock()
         self._buttons()
+
+    def _select_job_result(self, root: QTreeWidgetItem, job: Job, output: str | None) -> None:
+        self.tree.setCurrentItem(root)
+        self._details(root, job)
+        if not output:
+            return
+        for index in range(root.childCount()):
+            child = root.child(index)
+            if child.data(1, Qt.ItemDataRole.UserRole) == output:
+                self.tree.setCurrentItem(child)
+                break
 
     def _details(self, root: QTreeWidgetItem, job: Job) -> None:
         results, total = job.state.visible_results(_VISIBLE_RESULTS)

@@ -1,3 +1,4 @@
+_OPEN_FOLDER = 'フォルダーを開く'
 _JAPANESE_TR30D530A130A430EB = 'ファイル'
 _JAPANESE_TR95893058308B = '閉じる'
 _JAPANESE_TR66428A0856DE308A = '時計回りに回転'
@@ -109,7 +110,7 @@ japanese_word_dict = {
     "main_window_open_image": "ファイルを開く",
     "main_window_current_filename": "現在のファイル名:",
     "main_window_current_file": _JAPANESE_TR30D530A130A430EB,
-    "main_window_open_folder": "フォルダーを開く",
+    "main_window_open_folder": _OPEN_FOLDER,
     "file_open_in_paint": "現在の画像を Paint で開く",
     "main_window_exit": "終了",
     "main_window_tile_size": "サムネイルサイズ",
@@ -241,7 +242,7 @@ japanese_word_dict = {
     "right_click_slideshow_stop": "スライドショーを停止",
     # ツリービュー右クリック
     "tree_open_in_explorer": "エクスプローラーで開く",
-    "tree_open_folder": "フォルダーを開く",
+    "tree_open_folder": _OPEN_FOLDER,
     "tree_delete": "削除",
     "tree_deleted": "ゴミ箱に移動しました：{name}",
     "tree_recycled": "ごみ箱に移動しました：{name}",
@@ -3171,7 +3172,7 @@ japanese_word_dict = {
     "jobs_indicator_hint": "タスクの進行状況と保存済み結果を開く",
     "jobs_indicator": "タスク: 実行中 {running}・失敗 {failed}",
     "jobs_open_output": "出力を開く",
-    "jobs_open_folder": "フォルダーを開く",
+    "jobs_open_folder": _OPEN_FOLDER,
     "webcam_stopped": "カメラ停止",
     "webcam_starting": "カメラを起動中…",
     "webcam_running": "カメラ動作中",

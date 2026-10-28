@@ -1,3 +1,4 @@
+_OPEN_FOLDER = '開啟資料夾'
 _TRADITIONAL_CHINESE_INCLUDE_SUBFOLDERS = '包含子資料夾'
 _TRADITIONAL_CHINESE_TR9806664291DD65CB = '順時針旋轉'
 _TRADITIONAL_CHINESE_TR9006664291DD65CB = '逆時針旋轉'
@@ -95,7 +96,7 @@ traditional_chinese_word_dict = {
     "main_window_open_image": "開啟檔案",
     "main_window_current_filename": "目前檔名：",
     "main_window_current_file": "檔案",
-    "main_window_open_folder": "開啟資料夾",
+    "main_window_open_folder": _OPEN_FOLDER,
     "file_open_in_paint": "在 Paint 開啟目前圖片",
     "main_window_exit": "離開",
     "main_window_tile_size": "縮圖大小",
@@ -2234,7 +2235,7 @@ traditional_chinese_word_dict = {
     "onboarding_progress": "第 {current} 步，共 {total} 步",
     "onboarding_step_welcome_title": "歡迎使用 Imervue",
     "onboarding_step_welcome_body": "五步快速導覽介紹主要功能。按「下一步」繼續，或「略過導覽」直接關閉。",
-    "onboarding_step_open_title": "開啟資料夾",
+    "onboarding_step_open_title": _OPEN_FOLDER,
     "onboarding_step_open_body": "從「檔案 > 開啟資料夾」，或點擊左側樹的任一資料夾。Imervue 會掃描影像並顯示為縮圖牆。",
     "onboarding_step_view_title": "瀏覽與放大",
     "onboarding_step_view_body": "雙擊縮圖（或 Enter 鍵）進入深度縮放，方向鍵切換相片，Esc 返回縮圖牆。",
@@ -3155,7 +3156,7 @@ traditional_chinese_word_dict = {
     "jobs_indicator_hint": "開啟工作進度與已儲存結果",
     "jobs_indicator": "工作：{running} 執行中・{failed} 失敗",
     "jobs_open_output": "開啟輸出檔案",
-    "jobs_open_folder": "開啟資料夾",
+    "jobs_open_folder": _OPEN_FOLDER,
     "webcam_stopped": "攝影機已停止",
     "webcam_starting": "正在啟動攝影機…",
     "webcam_running": "攝影機運作中",

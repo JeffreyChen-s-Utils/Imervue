@@ -13,6 +13,8 @@ from PySide6.QtWidgets import (
 from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.multi_language.language_wrapper import language_wrapper
 
+_MISSING_RESULT = "This result no longer exists"
+
 _running_scans: set = set()
 
 
@@ -284,7 +286,7 @@ class FileTreeSearch(QObject):
             path = item.data(Qt.ItemDataRole.UserRole)
             if self._hidden(path) or not Path(path).exists():
                 self.status.setText(language_wrapper.language_word_dict.get(
-                    "tree_search_missing", "This result no longer exists"))
+                    "tree_search_missing", _MISSING_RESULT))
                 return
             self.path_activated.emit(path)
 
@@ -307,7 +309,7 @@ class FileTreeSearch(QObject):
     def locate(self, path: str) -> None:
         if self._hidden(path) or not Path(path).exists():
             self.status.setText(language_wrapper.language_word_dict.get(
-                "tree_search_missing", "This result no longer exists"))
+                "tree_search_missing", _MISSING_RESULT))
             return
         self._locate_path = path
         self._locate_loading.clear()
@@ -327,7 +329,7 @@ class FileTreeSearch(QObject):
         if self._hidden(str(path)) or not path.exists():
             self._locate_path = ""
             self.status.setText(language_wrapper.language_word_dict.get(
-                "tree_search_missing", "This result no longer exists"))
+                "tree_search_missing", _MISSING_RESULT))
             return
         if not path.is_relative_to(root):
             self._locate_path = ""

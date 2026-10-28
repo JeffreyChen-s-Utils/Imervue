@@ -1,3 +1,4 @@
+_OPEN_FOLDER = '打开文件夹'
 _CHINESE_INCLUDE_SUBFOLDERS = '包含子文件夹'
 _CHINESE_TR987A65F6948865CB = '顺时针旋转'
 _CHINESE_TR900665F6948865CB = '逆时针旋转'
@@ -95,7 +96,7 @@ chinese_word_dict = {
     "main_window_open_image": "打开文件",
     "main_window_current_filename": "当前文件名：",
     "main_window_current_file": "文件",
-    "main_window_open_folder": "打开文件夹",
+    "main_window_open_folder": _OPEN_FOLDER,
     "file_open_in_paint": "在 Paint 打开当前图片",
     "main_window_exit": "退出",
     "main_window_tile_size": "缩略图大小",
@@ -2234,7 +2235,7 @@ chinese_word_dict = {
     "onboarding_progress": "第 {current} 步，共 {total} 步",
     "onboarding_step_welcome_title": "欢迎使用 Imervue",
     "onboarding_step_welcome_body": "五步快速导览介绍主要功能。按「下一步」继续，或「跳过导览」直接关闭。",
-    "onboarding_step_open_title": "打开文件夹",
+    "onboarding_step_open_title": _OPEN_FOLDER,
     "onboarding_step_open_body": "从「文件 > 打开文件夹」，或点击左侧树的任一文件夹。Imervue 会扫描图像并显示为缩略图墙。",
     "onboarding_step_view_title": "浏览与放大",
     "onboarding_step_view_body": "双击缩略图（或 Enter 键）进入深度缩放，方向键切换照片，Esc 返回缩略图墙。",
@@ -3155,7 +3156,7 @@ chinese_word_dict = {
     "jobs_indicator_hint": "打开任务进度与已保存结果",
     "jobs_indicator": "任务：{running} 运行中・{failed} 失败",
     "jobs_open_output": "打开输出文件",
-    "jobs_open_folder": "打开文件夹",
+    "jobs_open_folder": _OPEN_FOLDER,
     "webcam_stopped": "摄像头已停止",
     "webcam_starting": "正在启动摄像头…",
     "webcam_running": "摄像头运行中",
