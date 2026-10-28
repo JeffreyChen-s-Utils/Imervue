@@ -56,12 +56,13 @@ class PuppetCanvasFrameMixin:
         # backdrop — the host window is translucent and the desktop
         # itself fills the role of "background" — and also drops the
         # selection overlay since the pet has no editor UI.
-        if not self._pet_mode:
+        if self._pet_mode:
+            if self._pet_shadow_enabled:
+                self._draw_pet_shadow()
+            self._draw_drawables()
+        else:
             self._draw_transparency_backdrop()
-        if self._pet_mode and self._pet_shadow_enabled:
-            self._draw_pet_shadow()
-        self._draw_drawables()
-        if not self._pet_mode:
+            self._draw_drawables()
             self._draw_selection_overlay()
         glPopMatrix()
 

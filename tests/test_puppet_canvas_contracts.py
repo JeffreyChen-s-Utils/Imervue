@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import math
 from types import MethodType, SimpleNamespace
 
 import pytest
@@ -49,7 +50,7 @@ def test_parameter_redraw_contract(method, case):
     if case == "changed":
         assert host._parameter_values["A"] == 3.0
     if case == "nan":
-        assert host._parameter_values["A"] != host._parameter_values["A"]
+        assert math.isnan(host._parameter_values["A"])
 
 
 @pytest.mark.parametrize("method", ["set_parameter_values", "force_parameter_values"])
@@ -299,3 +300,36 @@ def test_recomposition_failure_keeps_values_and_does_not_schedule_update():
         host.force_parameter_values({"A": 3.0})
     assert host._parameter_values == {"A": 3.0, "B": 2.0}
     assert calls == ["recompute"]
+
+
+@pytest.mark.parametrize("document", [False, True])
+@pytest.mark.parametrize("pet", [False, True])
+@pytest.mark.parametrize("shadow", [False, True])
+def test_paint_profile_draw_order(monkeypatch, document, pet, shadow):
+    calls = []
+    host = Host(
+        _document=object() if document else None,
+        _pet_mode=pet, _pet_shadow_enabled=shadow,
+        _pan_x=2.0, _pan_y=3.0, _zoom=4.0,
+    )
+    for name in ("_maybe_refit_view", "_draw_transparency_backdrop", "_draw_pet_shadow",
+                 "_draw_drawables", "_draw_selection_overlay"):
+        setattr(host, name, lambda name=name: calls.append(name))
+    globals_ = PuppetCanvas.paintGL.__globals__
+    for name in ("glClear", "glPushMatrix", "glLoadIdentity", "glTranslatef",
+                 "glScalef", "glPopMatrix"):
+        monkeypatch.setitem(globals_, name, lambda *args, name=name: calls.append(name))
+    host.paintGL()
+    expected = ["glClear"]
+    if document:
+        expected += ["_maybe_refit_view", "glPushMatrix", "glLoadIdentity",
+                     "glTranslatef", "glScalef"]
+        if not pet:
+            expected.append("_draw_transparency_backdrop")
+        if pet and shadow:
+            expected.append("_draw_pet_shadow")
+        expected.append("_draw_drawables")
+        if not pet:
+            expected.append("_draw_selection_overlay")
+        expected.append("glPopMatrix")
+    assert calls == expected

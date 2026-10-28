@@ -244,7 +244,7 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
 | A language | Plugin calling `language_wrapper.register_language()` from its `register_languages()` class method (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
 | An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
-| A CLI subcommand | `Imervue/cli.py` (`_SUBCOMMANDS` row plus a `_WRITE_SPEC`, `_REPORTERS` or `_MULTI_COMMANDS` entry); one that mirrors an MCP tool comes from `Imervue/cli_tools.py` instead |
+| A CLI subcommand | A `_SUBCOMMANDS` row in `Imervue/cli_parser.py` plus a `_WRITE_SPEC` or `_MULTI_COMMANDS` entry in `Imervue/cli.py` or a `_REPORTERS` entry in `Imervue/cli_reports.py`; one that mirrors an MCP tool comes from `Imervue/cli_tools.py` instead |
 | A Paint tool or dock | `Imervue/paint/tools/`, `Imervue/paint/docks/`, routed by `Imervue/paint/tool_dispatcher.py` |
 | A theme | `Imervue/system/themes.py`; a theme with a full palette adds its `ThemeColours` in `Imervue/system/modern_theme.py` |
 | A panel of the Imervue or Modify tab | `add_dock()` in `Imervue/gui/main_window_docks.py` (a stable object name, its group in `panel_docks()`, its place in `reset_panel_layout()`) |

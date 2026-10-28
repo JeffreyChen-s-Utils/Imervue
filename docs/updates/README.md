@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-08 | 2026-10-29 | Simplify puppet workspace and CLI responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-07 | 2026-10-29 | Simplify recipe and puppet canvas responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-06 | 2026-10-29 | Verify third production cohort against hosted analysis | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-05 | 2026-10-29 | Separate image-list and context-menu responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |

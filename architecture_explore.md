@@ -66,10 +66,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 986 | 165,419 |
+| `tests/` | 988 | 165,840 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 201 | 44,191 |
 | `Imervue/gui/` | 214 | 36,955 |
-| `Imervue/puppet/` | 97 | 16,644 |
+| `Imervue/puppet/` | 107 | 16,624 |
 | `Imervue/image/` | 139 | 15,835 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
 | `Imervue/multi_language/` | 8 | 15,891 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 792 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 11 | 1,846 |
-| **總計** | **1,989** | **359,013** |
+| **總計** | **2,011** | **359,594** |
 
-其中 `Imervue/` 套件本身 912 檔 / 175,708 行。
+其中 `Imervue/` 套件本身 932 檔 / 175,868 行。
 
-測試碼與產品碼比約 **0.86 : 1**（165,419 vs 191,748 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.86 : 1**（165,840 vs 191,908 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -220,7 +220,17 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | --- | ---: | --- |
 | `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
 | `Imervue_main_window.py` | 723 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
-| `cli.py` | 741 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑；`build_parser` 依序加手寫子指令、`cli_tools` 由 MCP 工具產生的 46 個、最後 `list-ops` |
+| `cli.py` | 199 | Headless CLI 入口、原生／MCP 命令分派與 list-ops；保留公開函式與共用命令表的匯入路徑。 |
+| `cli_paths.py` | 70 | 輸入影像集合、RAW 輸出副檔名、目的路徑與共用 parent-traversal 驗證；保留各參數診斷。 |
+| `cli_native.py` | 105 | 原生影像 writer adapters：保留 upright/sRGB/high-bit-depth 解碼及各編碼器選項。 |
+| `cli_pipeline_steps.py` | 66 | JSON pipeline 的具名陣列轉換與參數 coercion；固定順序映射。 |
+| `cli_pipeline.py` | 67 | Pipeline 檔案讀取、完整錯誤集合、階段執行與命令驗證順序。 |
+| `cli_reports.py` | 47 | 唯讀 info/stats 與每檔錯誤隔離、JSON／文字報告順序。 |
+| `cli_batch.py` | 60 | 批次目的規劃、交易式影像輸出、結果順序與報告衝突／exit-code 優先順序。 |
+| `cli_workers.py` | 37 | Worker 數量選擇與取消協調；Ctrl+C 先設定 Event 再等待既有 encoder。 |
+| `cli_composites.py` | 67 | Collage 與 stereo-pair anaglyph 命令，保留個別輸入與輸出錯誤政策。 |
+| `cli_presets.py` | 33 | Develop preset 延後載入、查找與批次套用；保留 Namespace recipe 賦值時機。 |
+| `cli_parser.py` | 170 | 原生命令宣告與 argparse 組裝；原生列、MCP bridge、list-ops 的順序及選項不變。 |
 | `cli_tools.py` | 273 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 48 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤；`add_argument_as_written` 加選項後把 help 設回原文（Python 3.10 會替 `--x/--no-x` 的 help 補上 ` (default: …)`，之後的版本不會），`cli.py` 的手寫子指令也經它加選項 |
 | `integration_guide.py` | 146 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
 
@@ -1016,7 +1026,21 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `spritesheet.py`(67) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
 `vts_api.py`(385) VTube Studio Public API server（最小子集）
 
-`workspace.py`(946) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(303，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(361，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
+Workspace 的 Qt shell 與領域責任分列如下。既有 `workspace_menus.py`、`workspace_import.py`、`workspace_live.py` 與 `workspace_ui.py` 維持各自的選單、匯入、串流及版面責任。
+
+| 模組 | 行數 | 功用 |
+| --- | ---: | --- |
+| `workspace.py` | 202 | PuppetWorkspace Qt 身分、canvas/dock/controller 生命週期、共用 action 與 status label。 |
+| `workspace_files.py` | 104 | Puppet 開啟／儲存對話框、檔案錯誤回饋與最近路徑；保留直接儲存不補副檔名。 |
+| `workspace_authoring.py` | 49 | 新增 deformer／parameter 共用文件、識別碼、操作、重載及回饋流程；依命名空間選第一個可用編號。 |
+| `workspace_keyframes.py` | 58 | Parameter keyframe 設定／移除、mesh 編輯切換及骨架變更後重載通知。 |
+| `workspace_reset.py` | 86 | 停止輸入來源後依序還原表情、姿勢、物理與參數；關閉時逐一釋放 driver 並記錄失敗。 |
+| `workspace_input.py` | 89 | Live input／idle 開關、可選套件安裝與失敗時封鎖訊號的 toggle reset。 |
+| `workspace_validation.py` | 124 | Rig 驗證、修復、結果對話框與 mirrored drawable 命令。 |
+| `workspace_export.py` | 58 | Motion 批次匯出的目錄／格式選擇及進度、完成、失敗回饋。 |
+| `workspace_motion_edit.py` | 57 | 目前 motion timeline 編輯、定位既有 playhead 與 hit-area motion／expression 路由。 |
+| `workspace_motion_record.py` | 41 | Motion 錄製命名、開關失敗處理與完成後寫回文件。 |
+| `workspace_audio.py` | 57 | WAV lip-sync 匯入、mouth range 選擇、錯誤回饋及 motion 選取。 |
 
 內附 Imeru 模型由 `examples/puppet/imeru/build.py` 產生；`blender/head.py` 的中央前髮以重疊髮束覆蓋額頭，頭頂髮流沿較高的 `scalp_depth` 表面建模，從髮旋延伸到瀏海，避免使用臉部深度而埋入頭皮。前髮與額頭投影一起渲染後重新綁定。`tests/test_example_imeru.py` 直接檢查已打包貼圖的額頭覆蓋率、兩眼透明區及頭頂髮流的對比邊界，避免中央缺口及頭頂光滑區重新出現。
 

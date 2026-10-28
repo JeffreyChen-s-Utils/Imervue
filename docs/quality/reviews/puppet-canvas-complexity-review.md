@@ -15,3 +15,5 @@ The local Radon sum of Function blocks, including methods and excluding Class su
 Qt headless guard review found both changed test files SAFE. test_puppet_canvas_contracts.py binds production methods to a SimpleNamespace-based Host and replaces FBO construction with a Python fake. test_puppet_canvas_render_state.py only patches GL function symbols. Neither directly or indirectly constructs a QOpenGLWidget, PuppetCanvas, PetWindow or PuppetWorkspace. No skip marker should be added to these pure contracts. Existing widget test modules retain their markers, reflected in the 70 skips.
 
 The architecture diff adds the owning puppet rows with correct local file lengths. Its partial area totals still require parent integration to regenerate the combined global counts, as already planned. No source, test, manifest or architecture file was edited during this review.
+
+Subsequent evidence correction: the supplied canvas_render.py value of 67 was local. Both hosted snapshots 926d4a6d and 50186aa8 report 68 for that unchanged file. It remains outstanding.

@@ -113,7 +113,8 @@ engines:
       - 'Imervue/system/clipboard_monitor.py'
       # MD5 used only for cache keys / content identity (usedforsecurity=False),
       # never for security — semgrep's hash-md5 rule flags it regardless.
-      - 'Imervue/image/recipe.py'
+      - 'Imervue/image/recipe_codec.py'
+      - 'Imervue/image/recipe_file_identity.py'
       - 'Imervue/image/thumbnail_disk_cache.py'
       # SQL built with `?` placeholders (the only interpolation is the
       # placeholder count / an int-coerced LIMIT); values are bound separately.
