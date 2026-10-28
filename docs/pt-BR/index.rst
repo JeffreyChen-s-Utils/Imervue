@@ -357,6 +357,8 @@ Categorize suas imagens com tags e álbuns.
 Classificação e Filtragem
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Os controles acima da árvore ordenam por nome, modificação, criação, tamanho ou tipo de arquivo; a seta muda a direção. As opções permitem colocar pastas primeiro, salvar uma ordem própria para a pasta atual ou restaurar os padrões globais. Ao apontar para um item, aparecem as datas e o tamanho. Ative Incluir subpastas para pesquisar em segundo plano nas pastas ainda não abertas, cancelar a busca e localizar um resultado na árvore original. Itens ocultos e pendentes de exclusão são ignorados; links simbólicos e junções não são seguidos. Pastas expandidas, seleção e posição de rolagem são restauradas após atualizar ou reabrir a pasta.
+
 .. list-table::
    :header-rows: 1
    :widths: 40 60

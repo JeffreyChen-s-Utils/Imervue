@@ -306,6 +306,8 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 
 ### Ordenación y filtrado
 
+Los controles sobre el árbol permiten ordenar por nombre, modificación, creación, tamaño o tipo de archivo; la flecha cambia la dirección. Las opciones permiten mostrar primero las carpetas, guardar un orden propio para la carpeta actual o restablecer los valores globales. Al pasar el puntero se muestran las fechas y el tamaño. Active Incluir subcarpetas para buscar en segundo plano en carpetas sin abrir, cancelar el análisis y localizar un resultado en el árbol original. Se excluyen los elementos ocultos y pendientes de eliminación; no se siguen enlaces simbólicos ni uniones de directorios. Las carpetas expandidas, la selección y el desplazamiento se restauran al actualizar y volver a abrir la carpeta.
+
 - Ordena por nombre (orden natural, como el Explorador: `img2` antes que `img10`) / modificado / creado / fecha de captura (la hora EXIF de la cámara; si no, modificado) / tamaño / resolución (asc o desc)
 - Filtra por extensión, etiqueta de color, calificación, etiqueta/álbum, estado de culling
 - **Filtro avanzado** — resolución / tamaño de archivo / orientación / rango de fecha de modificación

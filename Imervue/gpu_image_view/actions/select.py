@@ -189,8 +189,7 @@ def _open_sibling(
 ) -> None:
     mw = main_gui.main_window
     lang = mw.language_wrapper.language_word_dict
-    mw.model.setRootPath(str(candidate))
-    mw.tree.setRootIndex(mw.model.index(str(candidate)))
+    mw.tree.set_root_path(str(candidate))
     main_gui.clear_tile_grid()
     open_path(main_gui=main_gui, path=str(candidate))
     mw.filename_label.setText(

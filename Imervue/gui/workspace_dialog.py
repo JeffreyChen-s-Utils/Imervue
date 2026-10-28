@@ -83,8 +83,7 @@ def apply_workspace(ui: ImervueMainWindow, workspace: Workspace) -> None:
     if workspace.root_folder:
         tree_model = getattr(ui.tree, "model", lambda: None)()
         if tree_model is not None:
-            tree_model.setRootPath(workspace.root_folder)
-            ui.tree.setRootIndex(tree_model.index(workspace.root_folder))
+            ui.tree.set_root_path(workspace.root_folder)
 
 
 class WorkspaceDialog(QDialog):

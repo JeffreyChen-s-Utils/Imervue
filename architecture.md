@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-18 on `dev`; corresponding commit: `git log -1 -- architecture.md`.
+> Last verified: 2026-10-28 on `feature/file-tree-sort-controls`; corresponding commit: `git log -1 -- architecture.md`.
 
 ## 1. Purpose
 
@@ -18,6 +18,8 @@ Context Protocol (MCP) stdio server. Heavy or crash-prone optional dependencies 
 rembg, OpenCV, downloaded model weights) are kept out of the main program and shipped as plugins;
 the exceptions, AI upscale and CLIP semantic search / auto-tag, offer to install onnxruntime on
 first use and download their models at pinned revisions.
+
+The file tree keeps filesystem comparison and metadata in `FileTreeSortProxy`, sort preferences in `file_tree_preferences`, and UI controls in `FileTreeSortMixin`. All main-window root changes use `tree.set_root_path` so per-folder sorting, cancellable recursive search and saved expansion/selection/scroll restore together. `FileTreeState` waits for directory loading; `FileTreeSearch` scans without touching Qt models from its worker and rejects stale result batches.
 
 ## 2. Layers and directories
 

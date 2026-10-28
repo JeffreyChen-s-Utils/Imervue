@@ -10,14 +10,15 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QActionGroup
+from PySide6.QtCore import QSize, Qt, Signal, QSignalBlocker
 from PySide6.QtWidgets import (
     QApplication, QTreeView, QFileSystemModel, QMenu,
 )
 
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
 from Imervue.gui.folder_thumbnail_model import clamp_icon_size
+from Imervue.gui.file_tree_sort_controls import FileTreeSortMixin
+from Imervue.gui.file_tree_state import FileTreeState
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -97,30 +98,18 @@ def _dedupe_paths(paths: Iterable[str]) -> list[str]:
     return out
 
 
-class _FileTreeView(QTreeView):
+class _FileTreeView(FileTreeSortMixin, QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
-    _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
-    # Raw-QFileSystemModel fallback columns, used only when the model isn't
-    # the FileTreeSortProxy (tests, plain models). "created" has no native
-    # column, so the fallback approximates it with the modified column.
-    _TREE_SORT_COLUMNS = {
-        "name": 0,
-        "size": 1,
-        "modified": 3,
-        "created": 3,
-    }
-    _TREE_SORT_LANG_KEYS = {
-        "name": "sort_by_name",
-        "size": "sort_by_size",
-        "modified": "sort_by_modified",
-        "created": "sort_by_created",
-    }
+    tree_sort_changed = Signal(str, bool)
 
+    _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
     def __init__(self, main_window: "ImervueMainWindow"):
         super().__init__()
         self._main_window = main_window
         self._search_text = ""
+        self._tree_state = FileTreeState(self)
+        self._recursive_search = None
         # Folders pending soft-deletion are kept on disk but hidden from the
         # tree until restored or committed at shutdown; track what we hid so a
         # restore can un-hide exactly those rows.
@@ -132,21 +121,47 @@ class _FileTreeView(QTreeView):
         self._pending_trash: list[_TrashRequest] = []
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
-        # Ctrl/Shift multi-select so batch delete / copy-paths can act on
-        # several files at once. A plain single click still selects and
-        # opens one file via the main window's ``clicked`` handler.
+        # Ctrl/Shift multi-select supports batch delete and copy-paths.
         self.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
+        self.setVerticalScrollMode(QTreeView.ScrollMode.ScrollPerPixel)
         self.setSortingEnabled(True)
+        self.header().sortIndicatorChanged.connect(self._on_sort_indicator_changed)
 
     def setModel(self, model) -> None:
-        super().setModel(model)
+        with QSignalBlocker(self.header()):
+            super().setModel(model)
         # Re-apply the pending-delete hidden rows whenever a directory finishes
         # (re)loading, so navigating away and back keeps deleted folders hidden.
         loaded = getattr(model, "directoryLoaded", None)
         if loaded is not None:
             loaded.connect(lambda _path: self.refresh_pending_hidden())
             loaded.connect(lambda _path: self.apply_search_filter())
+        with QSignalBlocker(self.header()):
+            self._apply_tree_sort_from_settings()
+        self._tree_state.bind_model(model)
+
+    def set_root_path(self, path: str, *, refresh: bool = False) -> None:
+        self._tree_state.save()
+        if self._recursive_search is not None:
+            self._recursive_search.cancel()
+        model = self.model()
+        if refresh:
+            self._tree_state.begin_refresh()
+            model.setRootPath("")
+        model.setRootPath(path)
+        self.setRootIndex(model.index(path))
+
+    def setRootIndex(self, index) -> None:
+        super().setRootIndex(index)
+        self._tree_state.set_root(self.model().filePath(index) if index.isValid() else "")
         self._apply_tree_sort_from_settings()
+        if self._recursive_search is not None:
+            self._recursive_search.root_changed()
+
+    def create_search_controls(self):
+        from Imervue.gui.file_tree_search import FileTreeSearch
+        self._recursive_search = FileTreeSearch(self)
+        return self._recursive_search.panel
 
     def refresh_pending_hidden(self) -> None:
         """Hide rows for folders pending soft-deletion; un-hide the rest."""
@@ -161,6 +176,8 @@ class _FileTreeView(QTreeView):
         for path in pending:
             self._set_row_hidden(model, path, hidden=True)
         self._hidden_paths = set(pending)
+        if self._recursive_search is not None:
+            self._recursive_search.exclude_hidden()
 
     def _set_row_hidden(self, model, path: str, *, hidden: bool) -> None:
         index = model.index(path)
@@ -248,9 +265,7 @@ class _FileTreeView(QTreeView):
             if callable(clear_missing):
                 clear_missing()
             # setRootPath() re-stats the directory even if the value is the same
-            model.setRootPath("")
-            model.setRootPath(path)
-            self.setRootIndex(model.index(path))
+            self.set_root_path(path, refresh=True)
             self.apply_search_filter()
 
     def _delete_selected(self):
@@ -393,90 +408,13 @@ class _FileTreeView(QTreeView):
 
         menu.exec(self.viewport().mapToGlobal(pos))
 
-    def _add_sort_menu(self, menu: QMenu) -> QMenu:
-        """Add file-tree sort controls to *menu*."""
-        lang = language_wrapper.language_word_dict
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-
-        sort_menu = menu.addMenu(lang.get("tree_sort_menu", "Sort Tree"))
-        current_sort = user_setting_dict.get("tree_sort_by", "name")
-        current_asc = bool(user_setting_dict.get("tree_sort_ascending", True))
-
-        sort_group = QActionGroup(sort_menu)
-        sort_group.setExclusive(True)
-        for key in ("name", "modified", "created", "size"):
-            action = sort_menu.addAction(
-                lang.get(self._TREE_SORT_LANG_KEYS[key], key.capitalize()),
-            )
-            action.setCheckable(True)
-            action.setChecked(key == current_sort)
-            sort_group.addAction(action)
-            action.triggered.connect(
-                lambda _checked=False, k=key: self.set_tree_sort(k, current_asc),
-            )
-
-        sort_menu.addSeparator()
-
-        order_group = QActionGroup(sort_menu)
-        order_group.setExclusive(True)
-        asc_action = sort_menu.addAction(lang.get("sort_ascending", "Ascending"))
-        asc_action.setCheckable(True)
-        asc_action.setChecked(current_asc)
-        order_group.addAction(asc_action)
-        asc_action.triggered.connect(
-            lambda: self.set_tree_sort(
-                user_setting_dict.get("tree_sort_by", "name"), True,
-            ),
-        )
-
-        desc_action = sort_menu.addAction(lang.get("sort_descending", "Descending"))
-        desc_action.setCheckable(True)
-        desc_action.setChecked(not current_asc)
-        order_group.addAction(desc_action)
-        desc_action.triggered.connect(
-            lambda: self.set_tree_sort(
-                user_setting_dict.get("tree_sort_by", "name"), False,
-            ),
-        )
-        return sort_menu
-
-    def set_tree_sort(self, sort_by: str, ascending: bool) -> None:
-        """Apply and persist sorting for the file tree only."""
-        if sort_by not in self._TREE_SORT_COLUMNS:
-            sort_by = "name"
-        from Imervue.user_settings.user_setting_dict import (
-            schedule_save,
-            user_setting_dict,
-        )
-        user_setting_dict["tree_sort_by"] = sort_by
-        user_setting_dict["tree_sort_ascending"] = bool(ascending)
-        schedule_save()
-        self._apply_tree_sort(sort_by, bool(ascending))
-
-    def _apply_tree_sort_from_settings(self) -> None:
-        from Imervue.user_settings.user_setting_dict import user_setting_dict
-        self._apply_tree_sort(
-            user_setting_dict.get("tree_sort_by", "name"),
-            bool(user_setting_dict.get("tree_sort_ascending", True)),
-        )
-
-    def _apply_tree_sort(self, sort_by: str, ascending: bool) -> None:
-        order = (
-            Qt.SortOrder.AscendingOrder
-            if ascending else Qt.SortOrder.DescendingOrder
-        )
-        model = self.model()
-        if hasattr(model, "set_sort_key"):
-            # FileTreeSortProxy sorts every key (incl. creation date, which
-            # QFileSystemModel has no column for) through column 0.
-            model.set_sort_key(sort_by)
-            self.sortByColumn(0, order)
-            return
-        self.sortByColumn(self._TREE_SORT_COLUMNS.get(sort_by, 0), order)
-
     def set_search_text(self, text: str) -> None:
         """Filter currently-loaded tree rows by basename substring."""
-        self._search_text = text.strip().lower()
+        if self._recursive_search is not None:
+            self._recursive_search.set_query(text)
+        self._search_text = text.strip().casefold()
+        if self._recursive_search is not None and self._recursive_search.recursive:
+            self._search_text = ""
         self.apply_search_filter()
 
     def apply_search_filter(self) -> None:
@@ -517,7 +455,7 @@ class _FileTreeView(QTreeView):
         if hasattr(model, "filePath"):
             path = model.filePath(index)
         name = Path(path).name if path else str(index.data() or "")
-        return self._search_text in name.lower()
+        return self._search_text in name.casefold()
 
     def _create_new_folder(self, parent_dir: str) -> None:
         """Prompt for a folder name and create it under ``parent_dir``."""
@@ -776,6 +714,9 @@ class _FileTreeView(QTreeView):
         the primary window's os._exit would abort an in-flight OS-trash batch
         partway. The main window calls this from closeEvent before teardown.
         """
+        self._tree_state.save()
+        if self._recursive_search is not None:
+            self._recursive_search.shutdown()
         # The list() copy is load-bearing, not redundant: ``_trash_workers`` is a
         # set, and a worker finishing inside wait() fires _on_trash_finished,
         # which discards it — mutating the set mid-iteration. Do not inline.

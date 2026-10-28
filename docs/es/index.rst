@@ -363,6 +363,8 @@ Categorice sus imágenes con etiquetas y álbumes.
 Ordenación y filtrado
 ^^^^^^^^^^^^^^^^^^^^^
 
+Los controles sobre el árbol permiten ordenar por nombre, modificación, creación, tamaño o tipo de archivo; la flecha cambia la dirección. Las opciones permiten mostrar primero las carpetas, guardar un orden propio para la carpeta actual o restablecer los valores globales. Al pasar el puntero se muestran las fechas y el tamaño. Active Incluir subcarpetas para buscar en segundo plano en carpetas sin abrir, cancelar el análisis y localizar un resultado en el árbol original. Se excluyen los elementos ocultos y pendientes de eliminación; no se siguen enlaces simbólicos ni uniones de directorios. Las carpetas expandidas, la selección y el desplazamiento se restauran al actualizar y volver a abrir la carpeta.
+
 .. list-table::
    :header-rows: 1
    :widths: 40 60

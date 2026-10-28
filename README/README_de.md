@@ -303,6 +303,8 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 
 ### Sortieren & Filtern
 
+Über dem Dateibaum können Sie nach Name, Änderungszeit, Erstellungszeit, Größe oder Dateityp sortieren; der Pfeil wechselt die Richtung. Die Sortieroptionen stellen Ordner voran, speichern eine eigene Reihenfolge für den aktuellen Ordner oder setzen sie auf die globalen Vorgaben zurück. Beim Zeigen auf einen Eintrag erscheinen Zeitangaben und Dateigröße. Mit Unterordner einbeziehen durchsuchen Sie ungeöffnete Ordner im Hintergrund, brechen die Suche ab und zeigen Treffer im ursprünglichen Baum an. Versteckte und zum Löschen vorgemerkte Einträge werden ausgeschlossen; symbolischen Links und Junctions wird nicht gefolgt. Geöffnete Ordner, Auswahl und Scrollposition werden nach dem Aktualisieren und erneuten Öffnen wiederhergestellt.
+
 - Sortieren nach Name (natürliche Reihenfolge wie im Explorer: `img2` vor `img10`) / Geändert / Erstellt / Aufnahmedatum (EXIF-Zeit der Kamera, sonst Geändert) / Größe / Auflösung (auf- oder absteigend)
 - Filter nach Endung, Color Label, Rating, Tag/Album, Cull-Zustand
 - **Erweiterter Filter** — Auflösung / Dateigröße / Orientierung / Modified-Date-Range

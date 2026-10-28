@@ -310,6 +310,8 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 ### Ordenação e filtragem
 
+Os controles acima da árvore ordenam por nome, modificação, criação, tamanho ou tipo de arquivo; a seta muda a direção. As opções permitem colocar pastas primeiro, salvar uma ordem própria para a pasta atual ou restaurar os padrões globais. Ao apontar para um item, aparecem as datas e o tamanho. Ative Incluir subpastas para pesquisar em segundo plano nas pastas ainda não abertas, cancelar a busca e localizar um resultado na árvore original. Itens ocultos e pendentes de exclusão são ignorados; links simbólicos e junções não são seguidos. Pastas expandidas, seleção e posição de rolagem são restauradas após atualizar ou reabrir a pasta.
+
 - Ordenar por nome (ordem natural, como o Explorer: `img2` antes de `img10`) / modificação / criação / data da foto (horário EXIF da câmera; senão, modificação) / tamanho / resolução (asc ou desc)
 - Filtrar por extensão, etiqueta de cor, avaliação, tag/álbum, estado de triagem
 - **Filtro avançado** — resolução / tamanho de arquivo / orientação / intervalo de data de modificação

@@ -303,6 +303,8 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 
 ### Tri et filtrage
 
+Les commandes au-dessus de l’arborescence trient par nom, modification, création, taille ou type de fichier ; la flèche change le sens. Les options placent les dossiers en premier, enregistrent un tri propre au dossier courant ou rétablissent les valeurs globales. Le survol affiche les dates et la taille. Activez Inclure les sous-dossiers pour rechercher en arrière-plan dans les dossiers non ouverts, annuler la recherche et retrouver un résultat dans l’arborescence initiale. Les éléments masqués et en attente de suppression sont exclus ; les liens symboliques et jonctions ne sont pas suivis. Les dossiers développés, la sélection et le défilement sont restaurés après actualisation et réouverture.
+
 - Tri par nom (ordre naturel, comme l'Explorateur : `img2` avant `img10`) / modifié / créé / date de prise de vue (heure EXIF de l'appareil, sinon modifié) / taille / résolution (croissant ou décroissant)
 - Filtrage par extension, étiquette de couleur, note, étiquette/album, état de tri
 - **Filtre avancé** — plage de résolution / taille de fichier / orientation / date de modification

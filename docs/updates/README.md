@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-01 | 2026-10-28 | Expand file-tree sorting, search and saved view state | #done #file-tree #ui #tests | [2026-10](2026-10.md) |
 | U-20261022-01 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261022-02 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261022-03 | 2026-10-22 | Keep release dependencies aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
@@ -580,5 +581,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 101 |
+| [2026-10.md](2026-10.md) | 2026-10 | 105 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 9 |

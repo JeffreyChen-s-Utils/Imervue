@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-18 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.99`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-28 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `feature/file-tree-sort-controls` · 版本 `1.0.99`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,28 +66,28 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 970 | 162,872 |
+| `tests/` | 971 | 163,428 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,020 |
-| `Imervue/gui/` | 183 | 36,502 |
+| `Imervue/gui/` | 187 | 37,131 |
 | `Imervue/puppet/` | 61 | 16,487 |
 | `Imervue/image/` | 130 | 15,744 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
-| `Imervue/multi_language/` | 8 | 15,891 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,728 |
+| `Imervue/multi_language/` | 8 | 15,976 |
 | `Imervue/desktop_pet/` | 29 | 7,115 |
 | `Imervue/mcp_server/` | 16 | 4,753 |
 | `Imervue/library/` | 34 | 4,963 |
-| `Imervue/menu/` | 11 | 3,693 |
-| `Imervue/` 根層 | 7 | 2,100 |
-| `Imervue/plugin/` | 15 | 3,037 |
+| `Imervue/menu/` | 11 | 3,688 |
+| `Imervue/` 根層 | 7 | 2,098 |
+| `Imervue/plugin/` | 15 | 3,064 |
 | `Imervue/system/` | 34 | 3,540 |
 | `Imervue/export/` | 8 | 1,035 |
 | `Imervue/user_settings/` | 10 | 1,234 |
-| `Imervue/sessions/` + `macros/` + `external/` | 3 | 287 |
+| `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 10 | 1,523 |
-| **總計** | **1,857** | **354,567** |
+| **總計** | **1,867** | **356,369** |
 
-其中 `Imervue/` 套件本身 802 檔 / 174,647 行。
+其中 `Imervue/` 套件本身 806 檔 / 175,378 行。
 
 測試碼與產品碼比約 **0.85 : 1**（163k vs 191k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
 
@@ -603,13 +603,17 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_screens.py` | 194 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
 | `main_window_views.py` | 123 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
 | `main_window_status.py` | 99 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤 |
-| `main_window_layout.py` | 366 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
+| `main_window_layout.py` | 367 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
 | `main_window_docks.py` | 195 | `MainWindowDocksMixin`：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
 | `optional_tabs.py` | 34 | 選用分頁的設定：`tab_enabled`／`set_tab_enabled`（`puppet_tab_enabled`、`desktop_pet_tab_enabled`，預設開、下次啟動生效）、`pet_shows_on_launch` |
 | `main_window_browse.py` | 149 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
 | `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
-| `file_tree_view.py` | 944 | `_FileTreeView`：左側檔案樹，含快捷鍵與右鍵選單、重名處理；model 不監看資料夾，`refresh()` 由主視窗在回到前景與資料夾變更時呼叫 |
-| `file_tree_sort.py` | 149 | `FileTreeSortProxy`：`QFileSystemModel` 沒有的「建立日期」等具名排序鍵 |
+| `file_tree_view.py` | 885 | `_FileTreeView`：檔案樹互動與檔案操作；`set_root_path` 統一切換根目錄、保存舊狀態並協調排序、搜尋與非同步還原 |
+| `file_tree_sort.py` | 179 | `FileTreeSortProxy`：名稱、時間、大小、類型排序與可切換資料夾優先；ToolTipRole 顯示實際建立／修改時間和檔案大小 |
+| `file_tree_search.py` | 288 | `FileTreeSearch`：可取消背景遞迴搜尋、分批結果與原樹定位；忽略過期世代、隱藏／待刪項目與目錄連結，獨立保留取消中的執行緒 |
+| `file_tree_state.py` | 154 | `FileTreeState`：以路徑保存展開、多選、目前項目及捲動位置；等待 directoryLoaded 後還原，重新整理時重設載入狀態 |
+| `file_tree_preferences.py` | 67 | `TreeSortSettings`：驗證全域設定與正規化根路徑的資料夾覆寫，統一序列化與持久化 |
+| `file_tree_sort_controls.py` | 150 | `FileTreeSortMixin`：上方控制項和右鍵排序選單共用局部有效設定，支援資料夾專用排序與重設 |
 | `folder_thumbnail_model.py` | 179 | `QFileSystemModel` 子類，用資料夾第一張圖當樹狀圖示（`folder_preview_path` 經串流 `first_image_path`：自然排序首張、兩個預覽 worker、略過系統自訂圖示查詢、跳過 `._` 等隱藏檔，和縮圖牆的第一張一致；取代不穩定的 Windows shell 縮圖） |
 | `image_list_view.py` | 725 | 清單檢視（`QTableView`，縮圖牆的替代）；名稱自然排序，使用者點選的排序欄在 `set_paths` 重建後照樣套用（沒點過時維持檢視器的順序、不顯示箭頭）；點星等欄依點到的星（`star_at`）評分；`refetch(paths)` 讓外部改寫、刪除或復原的列重新讀取（舊縮圖留到新的到為止，讀取中途檔案變了就丟掉那次結果重讀）；Delete／Undo 與評分、我的最愛、挑片、色彩標籤（F1–F5）照「快捷鍵設定」解讀（`_handle_edit_key`），刪除、復原、標記選取列都交給主視窗 |
 | `dual_image_view.py` | 199 | 雙圖 Split / Manga / RTL；可選 max_edge 限制來源預覽，原本完整尺寸 constructor 保持相容 |
@@ -976,7 +980,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `plugin_manager.py` | 381 | discover/load failures 報狀態、partial-load cleanup 與 explicit fresh module reload；各視窗 instance 獨立 |
 | `plugin_downloader.py` | 573 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme）；one atomic plugin job／failure retry 與 cooperative cancellation；dialog 使用非阻塞 WorkerHost retirement，已完成安裝保留 |
 | `pip_installer.py` | 935 | nonblocking dependency gate／dialog worker retirement、interpreter install 互斥與 import fail false-success guard |
-| `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
+| `python_finder.py` | 245 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
 | `plugin_api.py` | 76 | **外掛 API 版本**（純函式）：`PLUGIN_API_VERSION`、讀外掛目錄的 `plugin.json`（`min_api_version`，沒有檔案視為 1）、`check_compatible` 對需要較新版本的外掛丟 `IncompatiblePluginError`；docstring 列出每一版新增的主程式介面 |
@@ -1354,7 +1358,7 @@ GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readb
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
-   接近上限的包括 `gui/file_tree_view.py`(944)、`mcp_server/tool_defs_edit.py`(929) 與 `gui/develop_panel.py`(933)；要在接近 1000 行的檔案
+   接近上限的包括 `gui/file_tree_view.py`(885)、`mcp_server/tool_defs_edit.py`(929) 與 `gui/develop_panel.py`(933)；要在接近 1000 行的檔案
    加程式，先把一組內聚的方法拆成模組（mixin 或模組函式），並先補特性測試。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。

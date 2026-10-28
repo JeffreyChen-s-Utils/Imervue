@@ -357,6 +357,8 @@ Categorise your images with tags and albums.
 Sorting & Filtering
 ^^^^^^^^^^^^^^^^^^^
 
+Use the controls above the file tree to sort by name, modified time, creation time, size or file type; the arrow switches direction. Sorting options let you keep folders first, save a separate order for the current folder, or reset it to the global defaults. Hover over an item to see its timestamps and file size. Enable Include subfolders to search unopened folders in the background, cancel a scan, and locate a result in the original tree. Hidden entries and pending deletions are excluded; symbolic links and junctions are not followed. Expanded folders, selected items and scroll position are restored after refresh and on reopening the folder.
+
 .. list-table::
    :header-rows: 1
    :widths: 40 60

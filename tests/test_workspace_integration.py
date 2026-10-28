@@ -59,6 +59,10 @@ class _FakeTree:
         self._root_index = _FakeIndex(root, valid=bool(root))
         self.set_root_index_calls: list[_FakeIndex] = []
 
+    def set_root_path(self, path):
+        self._model.setRootPath(path)
+        self.setRootIndex(self._model.index(path))
+
     def model(self):
         return self._model
 
