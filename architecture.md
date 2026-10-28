@@ -119,7 +119,7 @@ Profile snapshots, CRUD, switches and persistence share one RLock transaction; f
 
 The main window explicitly calls idempotent Puppet/Desktop Pet shutdown after close confirmation, releasing live services, recording, timers and overlays before parent destruction. Auto-tag uses WorkerHost retirement and checks cancellation between images. Pip holds and reaps the real subprocess; cancellation and a deadline also cover silent stdout reads.
 
-The frozen-startup workflow builds Linux/macOS import probes from the unchanged entry source and checks its hash, native OpenGL backend and GL entry point without loading Qt. The native Windows probe passed on 2026-10-28; Linux/macOS CI remains pending. This does not verify the full GUI or rendering.
+The frozen-startup workflow builds Linux/macOS import probes from the unchanged entry source and checks its hash, native OpenGL backend and GL entry point without loading Qt. Native Windows, Linux and macOS probes passed on 2026-10-28; Linux/macOS artifacts were verified in CI run 40690538119. This does not verify the full GUI or rendering.
 
 ThumbnailDiskCache construction starts a background inventory rather than enumerating all files on startup. Reads/writes remain usable; mutation tombstones and generations prevent stale accounting after rewrite/purge/clear. PNG writes use unique atomic siblings. Diagnostics can wait_ready/close explicitly; production startup does not join. Benchmark separates constructor latency from sequentially joined inventory/RSS.
 

@@ -5,8 +5,3 @@ Item numbers (`#n`) are never reused. Tags: [DECIDE] needs the owner's decision,
 Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-10, X-9, X-10, X-18).
 
 ## Open
-### Resolve full-program review FR-01 through FR-16
-
-Verified findings are in `docs/reviews/2026-10-28-full-review.md`. P1: failed overwrite exports, colliding batch motion destinations and maintenance deleting existing images' metadata. P2: worker cancellation/teardown, profile save races, recording outcomes, transfer races, URL encoding, malformed inputs and frozen platform selection.
-
-Next: verify native Ubuntu/macOS frozen startup in PR #109 CI and close the report with final evidence. All 16 code fixes and focused regressions are integrated. Full pytest passes with 14,447 passed / 1,431 skipped; Ruff, Bandit and docs checks pass. WebDAV is published and full plugin parity verified. Native platform acceptance remains open.

@@ -1108,7 +1108,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 
 | 項目 | 檔案 | 說明 |
 | --- | --- | --- |
-| Frozen 啟動 probe | `.github/workflows/frozen-startup.yml`、`scripts/frozen_startup_probe.py`（58 行） | PyInstaller 將未改寫的入口檔封裝為 data；驗證入口 SHA-256、native GL backend／GL entry point，且不得載入 Qt。PR／手動 Linux、macOS matrix 保留 JSON 與 build log。2026-10-28 原生 Windows probe 已通過；Linux／macOS CI 尚待執行。只驗證 frozen import，未建立 GUI／GL context |
+| Frozen 啟動 probe | `.github/workflows/frozen-startup.yml`、`scripts/frozen_startup_probe.py`（58 行） | PyInstaller 將未改寫的入口檔封裝為 data；驗證入口 SHA-256、native GL backend／GL entry point，且不得載入 Qt。PR／手動 Linux、macOS matrix 保留 JSON 與 build log。2026-10-28 原生 Windows、Linux、macOS probes 均通過，後兩者以 CI run 40690538119 產物核對入口 hash 與 native backend。只驗證 frozen import，未建立 GUI／GL context |
 | PyInstaller | `Imervue.spec` / `Imervue_mac.spec` | Windows / macOS spec |
 | Nuitka | `build_nuitka/`、`nuitka.md` | 需在 import OpenGL 前關掉 `USE_ACCELERATE` |
 | auto-py-to-exe | `packaging/auto_py_to_exe_config.json` | |

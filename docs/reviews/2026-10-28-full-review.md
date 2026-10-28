@@ -4,7 +4,7 @@
 
 ## 結論
 
-初次審核確認 16 項問題，其中 P1 三項、P2 十三項。修復已整合，驗收進度見下方「修復驗收」；完整測試已通過，原生跨平台驗證及外掛發佈尚待完成。P1 表示優先處理的資料遺失風險；P2 表示有明確觸發條件的功能、生命週期或防護缺口。沒有確認 P0 問題，也不據此宣稱不存在。
+初次審核確認 16 項問題，其中 P1 三項、P2 十三項。FR-01 至 FR-16 均已修復並完成本報告所列驗收，證據見下方「修復驗收」。完整套件、原生 frozen 匯入與外掛發佈均已確認。P1 表示優先處理的資料遺失風險；P2 表示有明確觸發條件的功能、生命週期或防護缺口。沒有確認 P0 問題，也不據此宣稱不存在。
 
 初次審核只記錄問題；後續修復另附行為測試與驗收記錄。未將例外逸出等同整個行程崩潰，也未將模擬環境等同實機驗證。
 
@@ -20,22 +20,22 @@
 
 | ID | 優先 | 問題 | 狀態 |
 |---|---|---|---|
-| FR-01 | P1 | 部分 Paint／MCP 匯出失敗會破壞既有目標 | 已修復，驗收中 |
-| FR-02 | P1 | Puppet 動作名稱碰撞使批次輸出互相覆寫 | 已修復，驗收中 |
-| FR-03 | P1 | 資料庫清理誤刪仍存在圖片的索引與附屬資料 | 已修復，驗收中 |
-| FR-04 | P2 | pip 取消無法終止正在執行的子行程 | 已修復，驗收中 |
-| FR-05 | P2 | 背景設定儲存覆蓋新建 profile | 已修復，驗收中 |
-| FR-06 | P2 | 主視窗關閉未清理嵌入 Puppet／Pet 的工作 | 已修復，驗收中 |
-| FR-07 | P2 | 錄影結尾寫入失敗仍回報儲存成功 | 已修復，驗收中 |
-| FR-08 | P2 | 檔案搬移的存在檢查無法防止並行覆寫 | 已修復，驗收中 |
-| FR-09 | P2 | 關閉 Auto-Tag 同步等待剩餘批次，阻塞 GUI | 已修復，驗收中 |
-| FR-10 | P2 | 網頁相簿未編碼檔名 URL | 已修復，驗收中 |
-| FR-11 | P2 | WebDAV 未編碼檔名 URL | 已修復，驗收中 |
-| FR-12 | P2 | 損壞 Paint 文件的欄位例外穿出開啟錯誤處理 | 已修復，驗收中 |
-| FR-13 | P2 | 損壞工作階段 JSON 的型別例外穿出開啟錯誤處理 | 已修復，驗收中 |
-| FR-14 | P2 | VTS 未驗證訊息欄位型別，例外穿出 callback | 已修復，驗收中 |
-| FR-15 | P2 | MCP frame 未限制輸出配置大小 | 已修復，驗收中 |
-| FR-16 | P2 | 非 Windows frozen 啟動錯選 Windows OpenGL 平台 | 已修復，驗收中 |
+| FR-01 | P1 | 部分 Paint／MCP 匯出失敗會破壞既有目標 | 已關閉 |
+| FR-02 | P1 | Puppet 動作名稱碰撞使批次輸出互相覆寫 | 已關閉 |
+| FR-03 | P1 | 資料庫清理誤刪仍存在圖片的索引與附屬資料 | 已關閉 |
+| FR-04 | P2 | pip 取消無法終止正在執行的子行程 | 已關閉 |
+| FR-05 | P2 | 背景設定儲存覆蓋新建 profile | 已關閉 |
+| FR-06 | P2 | 主視窗關閉未清理嵌入 Puppet／Pet 的工作 | 已關閉 |
+| FR-07 | P2 | 錄影結尾寫入失敗仍回報儲存成功 | 已關閉 |
+| FR-08 | P2 | 檔案搬移的存在檢查無法防止並行覆寫 | 已關閉 |
+| FR-09 | P2 | 關閉 Auto-Tag 同步等待剩餘批次，阻塞 GUI | 已關閉 |
+| FR-10 | P2 | 網頁相簿未編碼檔名 URL | 已關閉 |
+| FR-11 | P2 | WebDAV 未編碼檔名 URL | 已關閉 |
+| FR-12 | P2 | 損壞 Paint 文件的欄位例外穿出開啟錯誤處理 | 已關閉 |
+| FR-13 | P2 | 損壞工作階段 JSON 的型別例外穿出開啟錯誤處理 | 已關閉 |
+| FR-14 | P2 | VTS 未驗證訊息欄位型別，例外穿出 callback | 已關閉 |
+| FR-15 | P2 | MCP frame 未限制輸出配置大小 | 已關閉 |
+| FR-16 | P2 | 非 Windows frozen 啟動錯選 Windows OpenGL 平台 | 已關閉 |
 
 ## 詳細發現與驗收方向
 
@@ -153,7 +153,7 @@
 
 驗收應只在 Windows 設定 nt，並在 macOS／Linux 打包環境驗證啟動。證據 `.audit/repro-root-frozen-platform.py.txt`／`.log`。
 
-## 驗證結果與證據限制
+## 初次審核的驗證結果與證據限制
 
 - 應用程式自完整測試後沒有改動，沿用該次結果 14,357 passed、1,431 skipped，沒有重新宣稱本次跑過完整套件。記錄 `.audit/code-review-full-tests.log`。
 - 本次重新執行 Ruff 與 Bandit 均通過。Bandit 依專案設定執行，含既有排除／抑制規則，不代表沒有安全或資料遺失問題。
@@ -169,7 +169,7 @@
 
 另由獨立審核者重讀證據與相關呼叫端，並重跑根模組重現程式。接受上述發現，要求保留失敗注入、平台模擬與未驗證硬體的限制；搬移／複製實測差異已修正。詳見本機 `.audit/full-review-independent.md`。
 
-審核完成後查詢目前分支 PR，沒有對應 PR，因此沒有外部 review-bot 討論可供比對。此次未推送或部署任何程式變更。
+初次審核完成時尚無對應 PR，該階段沒有推送或部署程式變更。後續修復與 PR 見下方驗收記錄。
 
 ## 修復驗收（2026-10-28）
 
@@ -192,8 +192,18 @@
 | FR-13 | Session 入口驗證 JSON object 與 tabs／selection 容器，錯誤由既有 GUI 錯誤處理接住。 |
 | FR-14 | VTS 入口驗證訊息、data、參數容器與數值，無效輸入回 APIError；後續合法認證請求仍可處理。 |
 | FR-15 | MCP frame 在配置前依 border 與 bottom_extra 的最終尺寸檢查 100 MP 上限。 |
-| FR-16 | frozen／compiled 初始化只在 Windows 預設 nt，保留使用者設定；本機 Windows PyInstaller 真實 executable 通過。Ubuntu／macOS 原生封裝及 OpenGL.GL 匯入由 frozen-startup.yml 驗證，尚待 CI 結果。 |
+| FR-16 | frozen／compiled 初始化只在 Windows 預設 nt，保留使用者設定；本機 Windows PyInstaller 真實 executable 通過。Ubuntu／macOS 原生 PyInstaller executable 已分別選到 GLXPlatform／DarwinPlatform，成功匯入 OpenGL.GL，未載入 Qt；產物入口雜湊與已提交來源一致。 |
 
 主要測試位於 `tests/test_full_review_boundaries.py`、`tests/test_full_review_ui_failures.py`、`tests/test_full_review_runtime.py`、`tests/test_review_puppet_fixes.py` 與 `tests/test_frozen_startup_probe.py`。整合針對性測試 99 passed；完整套件 14,447 passed、1,431 skipped、6 個 imageio fps 棄用警告，exit 0。跳過數與基準相同。Ruff 通過，Bandit 無問題；文件與 CI 針對性檢查 108 passed。第一輪完整測試發現舊 Auto-Tag 測試綁定已移除的實作，改以真實 worker 的 Esc／關閉按鈕行為驗證後重跑完整套件通過。記錄 `.audit/full-review-fixes-full-tests-final.log`。
 
 兩組獨立複核接受整合修復；大小寫目的路徑碰撞的追加修正已由複核者重跑真實 encoder。原生 frozen probe 僅涵蓋未修改應用入口的初始化與原生 OpenGL 匯入，不代表完整 GUI 或 GPU rendering 驗證。初次審核列出的其他證據限制仍適用。
+
+### 最終結案證據
+
+- 修復來源提交 `877e387a`；CI／文件格式修正提交 `e3d67753`。[PR #109](https://github.com/JeffreyChen-s-Utils/Imervue/pull/109) 指向 dev，尚未合併或發佈主程式套件。
+- [原生 frozen CI](https://github.com/JeffreyChen-s-Utils/Imervue/actions/runs/40690538119) 的 Ubuntu 與 macOS jobs 均成功。下載兩份 JSON artifact，確認 frozen=true、status=passed、原生 backend、入口 SHA-256 `8fc796420874105c30385be8d2c5dc287dde291ea660ae130cd66fad92944caf`；與 `git show e3d67753:Imervue/__main__.py` 相符。artifact 的 merge commit `164a4bbdc5604d6bb30ed9d9f1ef61cf8d7fb3a1` 包含 head `e3d67753923cf0a320378845382e11bb828993ee`。Windows 本機產物亦通過；Windows checkout 使用 CRLF，因此原始 bytes 雜湊不同。
+- 第一次 PR CI 的 Python 3.10～3.14、GUI、integration、實際 Linux OpenGL 與 lint jobs 全部成功；唯一文件標記錯誤已修正。後續 [CI run](https://github.com/JeffreyChen-s-Utils/Imervue/actions/runs/40690538185) 的文件與實際 OpenGL jobs 已通過；應用程式碼未再改動。
+- 全語言 Sphinx `-W --keep-going` 建置與 108 項文件／CI 測試通過。完整本機套件為 14,447 passed、1,431 既有 skips；未把跳過項目計為成功。
+- WebDAV 修復同步至外掛發佈庫 `main` 的 `25c4289010998246f4eee6a466180cd52f8f3fb2`，遠端 tip 與完整 plugin directory／flat-file 比對均一致。既有未追蹤 `test_coverage.md` 保留。
+
+上述結案限於已確認的 16 項問題與所列測試。未宣稱整個程式不存在其他缺陷，亦未把替身、受控故障注入或 native import probe 等同所有硬體與完整 GUI 實機驗證。
