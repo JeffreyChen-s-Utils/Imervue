@@ -1,3 +1,4 @@
+_CHINESE_INCLUDE_SUBFOLDERS = '包含子文件夹'
 _CHINESE_TR987A65F6948865CB = '顺时针旋转'
 _CHINESE_TR900665F6948865CB = '逆时针旋转'
 _CHINESE_TR91CD547D540D = '重命名'
@@ -1199,7 +1200,7 @@ chinese_word_dict = {
     "duplicate_perceptual": "感知比对（相似度）",
     "duplicate_threshold": "灵敏度：",
     "duplicate_threshold_tip": "汉明距离阈值（0=完全相同，越高越宽松）",
-    "duplicate_recursive": "包含子文件夹",
+    "duplicate_recursive": _CHINESE_INCLUDE_SUBFOLDERS,
     "duplicate_scan": "扫描",
     "duplicate_scanning": "扫描中：{name}",
     "duplicate_no_duplicates": "未找到重复图片。",
@@ -2688,7 +2689,7 @@ chinese_word_dict = {
     "recent_folders_title": "最近的文件夹",
     "recent_images_title": "最近的图片",
     "recent_missing": "{name} 已不存在",
-    "sanitize_recursive": "包含子文件夹",
+    "sanitize_recursive": _CHINESE_INCLUDE_SUBFOLDERS,
     "smart_albums_no_match": "没有符合的图片",
     "smart_albums_saved_toast": "已保存：{name}",
     "staging_tray_choose_dest": "选择目标文件夹",
@@ -3110,7 +3111,7 @@ chinese_word_dict = {
     "tree_metadata_created": "创建时间",
     "tree_metadata_modified": "修改时间",
     "tree_metadata_size": "大小",
-    "tree_search_recursive": "包含子文件夹",
+    "tree_search_recursive": _CHINESE_INCLUDE_SUBFOLDERS,
     "tree_search_cancel": "取消",
     "tree_search_locate": "在文件树中定位",
     "tree_search_cancelled": "已取消搜索",

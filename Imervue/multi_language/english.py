@@ -1,3 +1,4 @@
+_ENGLISH_INCLUDE_SUBFOLDERS = 'Include subfolders'
 _ENGLISH_FILE = 'File'
 _ENGLISH_CLOSE = 'Close'
 _ENGLISH_DELETE = 'Delete'
@@ -1232,7 +1233,7 @@ english_word_dict = {
     "duplicate_perceptual": "Perceptual (Similarity)",
     "duplicate_threshold": "Sensitivity:",
     "duplicate_threshold_tip": "Hamming distance threshold (0=exact, higher=more tolerant)",
-    "duplicate_recursive": "Include subfolders",
+    "duplicate_recursive": _ENGLISH_INCLUDE_SUBFOLDERS,
     "duplicate_scan": "Scan",
     "duplicate_scanning": "Scanning: {name}",
     "duplicate_no_duplicates": "No duplicates found.",
@@ -2730,7 +2731,7 @@ english_word_dict = {
     "recent_folders_title": "Recent Folders",
     "recent_images_title": "Recent Images",
     "recent_missing": "{name} is no longer available",
-    "sanitize_recursive": "Include subfolders",
+    "sanitize_recursive": _ENGLISH_INCLUDE_SUBFOLDERS,
     "smart_albums_no_match": "No images match",
     "smart_albums_saved_toast": "Saved: {name}",
     "staging_tray_choose_dest": "Choose destination folder",
@@ -3152,7 +3153,7 @@ english_word_dict = {
     "tree_metadata_created": "Created",
     "tree_metadata_modified": "Modified",
     "tree_metadata_size": "Size",
-    "tree_search_recursive": "Include subfolders",
+    "tree_search_recursive": _ENGLISH_INCLUDE_SUBFOLDERS,
     "tree_search_cancel": "Cancel",
     "tree_search_locate": "Locate in tree",
     "tree_search_cancelled": "Search cancelled",

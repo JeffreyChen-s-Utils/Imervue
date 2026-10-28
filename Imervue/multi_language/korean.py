@@ -1,3 +1,4 @@
+_KOREAN_INCLUDE_SUBFOLDERS = '하위 폴더 포함'
 _KOREAN_TRC2DCACC420BC29D5 = '시계 방향 회전'
 _KOREAN_TRBC18C2DCACC420BC = '반시계 방향 회전'
 _KOREAN_TRC2ACB77CC774B4DC = '슬라이드쇼'
@@ -1215,7 +1216,7 @@ korean_word_dict = {
     "duplicate_perceptual": "지각적 일치 (유사도)",
     "duplicate_threshold": "민감도:",
     "duplicate_threshold_tip": "해밍 거리 임계값 (0=정확히 동일, 높을수록 관대)",
-    "duplicate_recursive": "하위 폴더 포함",
+    "duplicate_recursive": _KOREAN_INCLUDE_SUBFOLDERS,
     "duplicate_scan": "스캔",
     "duplicate_scanning": "스캔 중: {name}",
     "duplicate_no_duplicates": "중복 이미지를 찾지 못했습니다.",
@@ -2704,7 +2705,7 @@ korean_word_dict = {
     "recent_folders_title": "최근 폴더",
     "recent_images_title": "최근 이미지",
     "recent_missing": "{name}을(를) 더 이상 사용할 수 없습니다",
-    "sanitize_recursive": "하위 폴더 포함",
+    "sanitize_recursive": _KOREAN_INCLUDE_SUBFOLDERS,
     "smart_albums_no_match": "일치하는 이미지가 없습니다",
     "smart_albums_saved_toast": "저장됨: {name}",
     "staging_tray_choose_dest": "대상 폴더 선택",
@@ -3126,7 +3127,7 @@ korean_word_dict = {
     "tree_metadata_created": "만든 시간",
     "tree_metadata_modified": "수정 시간",
     "tree_metadata_size": "크기",
-    "tree_search_recursive": "하위 폴더 포함",
+    "tree_search_recursive": _KOREAN_INCLUDE_SUBFOLDERS,
     "tree_search_cancel": "취소",
     "tree_search_locate": "트리에서 찾기",
     "tree_search_cancelled": "검색 취소됨",

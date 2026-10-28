@@ -16,45 +16,61 @@ from Imervue.multi_language.language_wrapper import language_wrapper
 _running_scans: set = set()
 
 
-def scan_matches(root: str, query: str, cancelled: Event, emit_batch, *,
-                 batch_size=100, excluded: frozenset[str] = frozenset()) -> int:
-    """Stream matching folders/images without following filesystem reparse points."""
-    pending = [root]
-    batch = []
-    unreadable = 0
-    extensions = {ext.casefold() for ext in VIEWER_EXTENSIONS}
-    query = query.casefold()
-    while pending and not cancelled.is_set():
-        folder = pending.pop()
+class _FilenameSearch:
+    def __init__(self, root, query, cancelled, emit_batch, batch_size, excluded):
+        self.pending = [root]
+        self.query = query.casefold()
+        self.cancelled = cancelled
+        self.emit_batch = emit_batch
+        self.batch_size = batch_size
+        self.excluded = excluded
+        self.extensions = {ext.casefold() for ext in VIEWER_EXTENSIONS}
+        self.batch = []
+        self.unreadable = 0
+
+    def run(self) -> int:
+        while self.pending and not self.cancelled.is_set():
+            self._scan_folder(self.pending.pop())
+        if self.batch and not self.cancelled.is_set():
+            self.emit_batch(self.batch)
+        return self.unreadable
+
+    def _scan_folder(self, folder: str) -> None:
         try:
             with os.scandir(folder) as entries:
                 for entry in entries:
-                    if cancelled.is_set():
+                    if self.cancelled.is_set():
                         break
-                    if entry.name.startswith(".") or os.path.normcase(entry.path) in excluded:
-                        continue
                     try:
-                        is_dir = entry.is_dir(follow_symlinks=False)
-                        attrs = getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0)
-                        if attrs & getattr(stat, "FILE_ATTRIBUTE_HIDDEN", 0):
-                            continue
-                        reparse = bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
-                        if is_dir and not entry.is_symlink() and not reparse:
-                            pending.append(entry.path)
-                        if query in entry.name.casefold() and (
-                            is_dir or Path(entry.name).suffix.casefold() in extensions
-                        ):
-                            batch.append(entry.path)
-                        if len(batch) >= batch_size:
-                            emit_batch(batch)
-                            batch = []
+                        self._visit_entry(entry)
                     except OSError:
-                        unreadable += 1
+                        self.unreadable += 1
         except OSError:
-            unreadable += 1
-    if batch and not cancelled.is_set():
-        emit_batch(batch)
-    return unreadable
+            self.unreadable += 1
+
+    def _visit_entry(self, entry: os.DirEntry) -> None:
+        if entry.name.startswith(".") or os.path.normcase(entry.path) in self.excluded:
+            return
+        is_dir = entry.is_dir(follow_symlinks=False)
+        attrs = getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0)
+        if attrs & getattr(stat, "FILE_ATTRIBUTE_HIDDEN", 0):
+            return
+        reparse = bool(attrs & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+        if is_dir and not entry.is_symlink() and not reparse:
+            self.pending.append(entry.path)
+        if self.query in entry.name.casefold() and (
+            is_dir or Path(entry.name).suffix.casefold() in self.extensions
+        ):
+            self.batch.append(entry.path)
+        if len(self.batch) >= self.batch_size:
+            self.emit_batch(self.batch)
+            self.batch = []
+
+
+def scan_matches(root: str, query: str, cancelled: Event, emit_batch, *,
+                 batch_size=100, excluded: frozenset[str] = frozenset()) -> int:
+    """Stream matching folders/images without following filesystem reparse points."""
+    return _FilenameSearch(root, query, cancelled, emit_batch, batch_size, excluded).run()
 
 
 class _Scan(QThread):
@@ -264,14 +280,7 @@ class FileTreeSearch(QObject):
             self._locate_path = ""
             return
         model = self.tree.model()
-        for parent in reversed(path.parents):
-            if parent != root and parent.is_relative_to(root):
-                index = model.index(str(parent))
-                if index.isValid():
-                    if model.canFetchMore(index):
-                        self._locate_loading.add(os.path.normcase(str(parent)))
-                        model.fetchMore(index)
-                    self.tree.expand(index)
+        self._expand_ancestors(path, root)
         index = model.index(str(path))
         self._locate_attempts += 1
         if index.isValid():
@@ -282,6 +291,17 @@ class FileTreeSearch(QObject):
         elif (not self._locate_loading and index.isValid()
               and not self.tree.visualRect(index).isEmpty()):
             self._locate_path = ""
+
+    def _expand_ancestors(self, path: Path, root: Path) -> None:
+        model = self.tree.model()
+        for parent in reversed(path.parents):
+            if parent != root and parent.is_relative_to(root):
+                index = model.index(str(parent))
+                if index.isValid():
+                    if model.canFetchMore(index):
+                        self._locate_loading.add(os.path.normcase(str(parent)))
+                        model.fetchMore(index)
+                    self.tree.expand(index)
 
     def shutdown(self) -> None:
         self.cancel()

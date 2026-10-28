@@ -1,3 +1,4 @@
+_TRADITIONAL_CHINESE_INCLUDE_SUBFOLDERS = '包含子資料夾'
 _TRADITIONAL_CHINESE_TR9806664291DD65CB = '順時針旋轉'
 _TRADITIONAL_CHINESE_TR9006664291DD65CB = '逆時針旋轉'
 _TRADITIONAL_CHINESE_TR91CD65B0547D540D = '重新命名'
@@ -1199,7 +1200,7 @@ traditional_chinese_word_dict = {
     "duplicate_perceptual": "感知比對（相似度）",
     "duplicate_threshold": "敏感度：",
     "duplicate_threshold_tip": "漢明距離閾值（0=完全相同，越高越寬鬆）",
-    "duplicate_recursive": "包含子資料夾",
+    "duplicate_recursive": _TRADITIONAL_CHINESE_INCLUDE_SUBFOLDERS,
     "duplicate_scan": "掃描",
     "duplicate_scanning": "掃描中：{name}",
     "duplicate_no_duplicates": "未找到重複圖片。",
@@ -2688,7 +2689,7 @@ traditional_chinese_word_dict = {
     "recent_folders_title": "最近開啟的資料夾",
     "recent_images_title": "最近開啟的圖片",
     "recent_missing": "{name} 已不存在",
-    "sanitize_recursive": "包含子資料夾",
+    "sanitize_recursive": _TRADITIONAL_CHINESE_INCLUDE_SUBFOLDERS,
     "smart_albums_no_match": "沒有符合的圖片",
     "smart_albums_saved_toast": "已儲存：{name}",
     "staging_tray_choose_dest": "選擇目的資料夾",
@@ -3110,7 +3111,7 @@ traditional_chinese_word_dict = {
     "tree_metadata_created": "建立時間",
     "tree_metadata_modified": "修改時間",
     "tree_metadata_size": "大小",
-    "tree_search_recursive": "包含子資料夾",
+    "tree_search_recursive": _TRADITIONAL_CHINESE_INCLUDE_SUBFOLDERS,
     "tree_search_cancel": "取消",
     "tree_search_locate": "在檔案樹定位",
     "tree_search_cancelled": "已取消搜尋",

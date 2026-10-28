@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-08 | 2026-10-28 | Resolve seven PR quality findings | #done #refactor #review | [2026-10-b](2026-10-b.md) |
 | U-20261028-07 | 2026-10-28 | Verify native startup and close full-review findings | #done #review #tests | [2026-10-b](2026-10-b.md) |
 | U-20261028-06 | 2026-10-28 | Publish WebDAV fix and repair validation configuration | #done #Imervue_Plugins #ci | [2026-10-b](2026-10-b.md) |
 | U-20261028-05 | 2026-10-28 | Repair full-program review findings | #done #bugfix #tests | [2026-10-b](2026-10-b.md) |
@@ -588,4 +589,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 105 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 12 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 13 |

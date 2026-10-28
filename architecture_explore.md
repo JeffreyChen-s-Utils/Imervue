@@ -68,28 +68,28 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | --- | ---: | ---: |
 | `tests/` | 977 | 164,784 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,038 |
-| `Imervue/gui/` | 187 | 37,126 |
+| `Imervue/gui/` | 187 | 37,146 |
 | `Imervue/puppet/` | 61 | 16,544 |
 | `Imervue/image/` | 130 | 15,744 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,728 |
-| `Imervue/multi_language/` | 8 | 15,976 |
+| `Imervue/multi_language/` | 8 | 15,980 |
 | `Imervue/desktop_pet/` | 29 | 7,165 |
 | `Imervue/mcp_server/` | 16 | 4,762 |
 | `Imervue/library/` | 34 | 5,001 |
 | `Imervue/menu/` | 11 | 3,688 |
 | `Imervue/` 根層 | 7 | 2,105 |
 | `Imervue/plugin/` | 15 | 3,081 |
-| `Imervue/system/` | 34 | 3,599 |
+| `Imervue/system/` | 34 | 3,606 |
 | `Imervue/export/` | 8 | 1,036 |
 | `Imervue/user_settings/` | 10 | 1,253 |
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 810 |
 | `plugins/`（19 個外掛） | 80 | 16,056 |
 | `scripts/`（開發與發佈工具） | 11 | 1,581 |
-| **總計** | **1,874** | **358,077** |
+| **總計** | **1,874** | **358,108** |
 
-其中 `Imervue/` 套件本身 806 檔 / 175,656 行。
+其中 `Imervue/` 套件本身 806 檔 / 175,687 行。
 
-測試碼與產品碼比約 **0.86 : 1**（164,784 vs 191,712 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.86 : 1**（164,784 vs 191,743 行，產品碼含 `plugins/`）。
 
 > 統計以 `CLAUDE.md`「Architecture Map」的方式掃描各區域 Python 檔案，排除 `__pycache__`；不包含 `.audit/`、虛擬環境或建置產物。
 
@@ -251,7 +251,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | `local_origin.py` | 37 | `is_allowed_origin(origin)`：桌寵 webhook 與 puppet VTS API 共用；拒絕遠端網頁、opaque `null`、無法解析的主機／連接埠與空白字元；保留無 Origin 的原生客戶端及明確的本機來源 |
 | `local_llm.py` | 46 | 對本機 LLM 伺服器（預設 Ollama）送 JSON：`validate_base_url`（loopback 的 http 或任何 https）、`post_json`；圖片說明與桌寵對話共用，不依賴 Qt |
 | `trash_ops.py` | 327 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果）；`recycle_bin_holds`：Windows 上只有固定磁碟才交給 shell（記憶卡、USB 隨身碟、網路磁碟會被直接永久刪除），其餘留在原處算失敗；`purge_batch` 裡這類「送回收筒」的項目改為直接刪除（使用者已確認永久刪除）；`delete_outright(paths)`：確認後直接刪，資料夾連內容一起（`_unlink_chunk` 仍只刪檔案，culling 不會清空資料夾） |
-| `file_transfer.py` | 301 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），以 Windows rename／硬連結發布或 exclusive-create fallback 拒絕已存在目標；跨磁碟與資料夾搬移僅在完整複製成功後刪來源，失敗保留來源與可能的部分目標，不清除其他 writer 的內容（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
+| `file_transfer.py` | 308 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），以 Windows rename／硬連結發布或 exclusive-create fallback 拒絕已存在目標；跨磁碟與資料夾搬移僅在完整複製成功後刪來源，失敗保留來源與可能的部分目標，不清除其他 writer 的內容（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
 | `atomic_write.py` | 36 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件、`save_image` 的匯出與轉檔、Paint 匯出預設）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本、註解專案） |
 | `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict`、`recipe_store` 使用） |
@@ -610,7 +610,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
 | `file_tree_view.py` | 885 | `_FileTreeView`：檔案樹互動與檔案操作；`set_root_path` 統一切換根目錄、保存舊狀態並協調排序、搜尋與非同步還原 |
 | `file_tree_sort.py` | 179 | `FileTreeSortProxy`：名稱、時間、大小、類型排序與可切換資料夾優先；ToolTipRole 顯示實際建立／修改時間和檔案大小 |
-| `file_tree_search.py` | 288 | `FileTreeSearch`：可取消背景遞迴搜尋、分批結果與原樹定位；忽略過期世代、隱藏／待刪項目與目錄連結，獨立保留取消中的執行緒 |
+| `file_tree_search.py` | 308 | `FileTreeSearch`：可取消背景遞迴搜尋、分批結果與原樹定位；純 `_FilenameSearch` 持有單次掃描狀態，分開處理目錄走訪與項目判斷；忽略過期世代、隱藏／待刪項目與目錄連結，獨立保留取消中的執行緒 |
 | `file_tree_state.py` | 154 | `FileTreeState`：以路徑保存展開、多選、目前項目及捲動位置；等待 directoryLoaded 後還原，重新整理時重設載入狀態 |
 | `file_tree_preferences.py` | 67 | `TreeSortSettings`：驗證全域設定與正規化根路徑的資料夾覆寫，統一序列化與持久化 |
 | `file_tree_sort_controls.py` | 150 | `FileTreeSortMixin`：上方控制項和右鍵排序選單共用局部有效設定，支援資料夾專用排序與重設 |

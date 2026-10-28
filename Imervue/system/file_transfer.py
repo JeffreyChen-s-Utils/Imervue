@@ -54,15 +54,22 @@ def _same_folder(source: str, dest_dir: Path) -> bool:
         return False
 
 
+def _try_windows_move(source: Path, target: Path) -> bool:
+    if os.name != "nt":
+        return False
+    try:
+        os.rename(source, target)
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
+        return False
+    return True
+
+
 def _transfer_one(source: str, target: Path, *, move: bool) -> None:
     source_path = Path(source)
-    if move and os.name == "nt":
-        try:
-            os.rename(source_path, target)
-            return
-        except OSError as exc:
-            if exc.errno != errno.EXDEV:
-                raise
+    if move and _try_windows_move(source_path, target):
+        return
     if source_path.is_symlink():
         os.symlink(os.readlink(source_path), target, target_is_directory=source_path.is_dir())
         if move:
