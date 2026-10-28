@@ -66,11 +66,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 984 | 164,941 |
+| `tests/` | 986 | 165,419 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 201 | 44,191 |
 | `Imervue/gui/` | 214 | 36,955 |
-| `Imervue/puppet/` | 88 | 16,601 |
-| `Imervue/image/` | 130 | 15,746 |
+| `Imervue/puppet/` | 97 | 16,644 |
+| `Imervue/image/` | 139 | 15,835 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
 | `Imervue/multi_language/` | 8 | 15,891 |
 | `Imervue/desktop_pet/` | 29 | 7,115 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 792 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 11 | 1,846 |
-| **總計** | **1,969** | **358,403** |
+| **總計** | **1,989** | **359,013** |
 
-其中 `Imervue/` 套件本身 894 檔 / 175,576 行。
+其中 `Imervue/` 套件本身 912 檔 / 175,708 行。
 
-測試碼與產品碼比約 **0.86 : 1**（164,941 vs 191,616 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.86 : 1**（165,419 vs 191,748 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -341,7 +341,16 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `recipe.py` | 707 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線，定義成具名階段表 `_STAGES`（名稱依序在 `STAGE_NAMES`）：幾何(旋轉/翻轉/裁切) → 白平衡 → 曝光 → 亮部/陰影 → 白場/黑場 → 亮度對比 → vibrance → 飽和度 → 色調曲線，再依 `extra` 套用 split toning / LUT / masks / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack；`apply_stages(arr, first, last)` 只跑其中一段（GPU 顯影外掛把中間一段放到 GPU，其餘交給它）。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`、`exif_oriented` / `base_is_oriented()`（舊存檔缺這個鍵、又帶幾何時，仍套在未轉正的像素上），以及 `file_identity()`（md5(前、中、後各 4KB \| 檔案大小)，避免 mtime 改變就失效；只看前 4KB 時，同尺寸的未壓縮掃描檔會共用一個 identity）與 `file_identities()`（連同舊版只含前 4KB 的 identity，供遷移）；`turned_with_file(recipe, clockwise, size)`：檔案轉 90° 後的 recipe（翻轉互換、裁切框隨之旋轉；帶位置的 extra 不轉） |
+| `recipe.py` | 189 | Recipe dataclass、固定具名階段與 inclusive 範圍執行；維持序列化、identity 與檔案旋轉的公開匯入路徑。 |
+| `recipe_codec.py` | 67 | Recipe 序列化、未知欄位向前相容、子類別建構與穩定 thumbnail hash。 |
+| `recipe_identity.py` | 45 | Recipe 幾何、slider、曲線與 extra 的 identity 判斷及舊 EXIF 方位相容。 |
+| `recipe_values.py` | 79 | Slider/curve 欄位分類、neutral extra 規則與 canonical 值轉換；normalized 固定建構 Recipe。 |
+| `recipe_geometry.py` | 58 | RGBA 旋轉、翻轉、裁切及檔案 quarter-turn 後的 recipe 座標轉換。 |
+| `recipe_pixels.py` | 80 | 白平衡、曝光、亮暗部、vibrance、PIL 色彩與 tone-curve 階段。 |
+| `recipe_optional_effects.py` | 76 | Levels、channel mixer、gradient map、lens flare、film grain 共用 lazy import/decode/apply 政策；decode 錯誤仍向外傳遞。 |
+| `recipe_color_effects.py` | 76 | Split toning、LUT 與 threshold/posterize 各自的轉換及例外政策；保留 threshold 部分結果。 |
+| `recipe_compositing.py` | 53 | Masks 與 layer stack 解碼、空集合短路及套用錯誤處理。 |
+| `recipe_file_identity.py` | 73 | 前中後 4KB 內容 identity、舊版 digest 與依 mtime/size 的程序內快取，供 recipe store 遷移。 |
 | `develop_preview.py` | 149 | Modify 的純 CPU 預覽：共享不變來源、快取完整幾何／低解析像素、縮放局部遮罩座標；全尺寸模式與 `Recipe.apply` 像素相同，每個具名階段之間檢查取消 |
 | `recipe_store.py` | 477 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`identity_for(path)` 查詢前先把存在舊版 identity 下的 recipe 搬到新 identity（每個檔案只搬一次）；`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案；讀不到的 store 檔由 `UnreadableFileGuard` 看守，解不開的單筆原樣寫回 |
 | `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
@@ -967,7 +976,16 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `deformers.py` | 262 | 純 NumPy deformer 實作 |
 | `physics.py` | 138 | Verlet 物理引擎（純浮點數積分，由 `PuppetCanvas` 的物理時鐘推進） |
 | `render_prep.py` | 103 | `PuppetDocument` → GL-ready draw list |
-| `canvas.py` | 943 | `PuppetCanvas`（`QOpenGLWidget`）：文件、參數、選取、網格編輯、`paintGL` / 離屏渲染與滑鼠互動，以及物理鏈自己的時鐘（顯示中且有鏈時約 60 Hz 推進）；實際繪製來自 `canvas_render.py` |
+| `canvas.py` | 214 | `PuppetCanvas` 的 Qt 身分、訊號與個別實例初始狀態；組合各領域 mixin 並保留既有 helper 匯入位置 |
+| `canvas_parameters.py` | 100 | 文件綁定與參數寫入：單一／強制更新及僅變更批次共用寫入規則；保留轉換失敗時的部分寫入與訊號順序 |
+| `canvas_rig.py` | 75 | 表情輸入、物理輸出覆蓋與頂點／可見性／透明度／色彩快取；共用重算後排程重繪 |
+| `canvas_physics.py` | 81 | 固定步長物理時鐘、輸出變動門檻、顯示／隱藏時的 timer 啟停 |
+| `canvas_overrides.py` | 57 | 表情堆疊與姿勢群組選擇；保留重複表情無動作及重選姿勢的通知 |
+| `canvas_editing.py` | 79 | Deformer 選取與網格頂點拖曳；移動成功才重建 draw list |
+| `canvas_view.py` | 75 | DPR 視埠尺寸、文件適配、平移／縮放座標與游標錨定縮放 |
+| `canvas_pointer.py` | 77 | 滑鼠事件路由：平移優先於網格拖曳，再送出游標座標；hit-area 點擊 |
+| `canvas_frame.py` | 176 | 畫面與離屏幀編排、桌寵陰影設定、GL context／FBO 生命週期；FBO 銷毀後才釋放 current context |
+| `canvas_gl_state.py` | 52 | 離屏渲染保存／還原清除色、viewport 與矩陣堆疊；深度／stencil FBO 格式 |
 | `canvas_render.py` | 565 | `PuppetCanvasRenderMixin`：棋盤背景、桌寵陰影、drawable 繪製與 stencil 裁切、選取框與錨點、頂點緩衝與貼圖（預乘 alpha 的 `_premultiply_alpha`）快取 |
 | `clip_masks.py` | 56 | `Drawable.clip_mask` 參照解析 |
 | `bone_weights.py` | 100 | 骨骼 LBS 權重驗證與修復（Repair Rig 的權重正規化） |

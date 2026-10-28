@@ -1,0 +1,13 @@
+# Fourth production complexity cohort
+
+Recipe data and stage ordering remain in the public Recipe module. Cohesive owners now handle serialization, neutral values, geometry, pixels, optional effects, compositing and file identity. Five optional effects share their import/decode/apply policy while retaining decode failures outside the application-error handler. Distinct LUT and threshold/posterize failure policies remain separate. The independent review matched 477 old/new records, including all 361 named stage ranges, and passed 292 candidate tests plus all 50 new contracts against the untouched baseline.
+
+PuppetCanvas retains its Qt identity, signals and constructor. Owners separate document/parameters, rig evaluation, physics, overrides, editing, view transforms, pointer routing, frame orchestration and GL state. Parameter writes share filtering and conversion while preserving no-op differences and partial writes on failure. Independent review passed 44 baseline contracts and 84 candidate tests with 70 existing headless skips. Fifty of sixty original method/helper ASTs remain unchanged, including construction and GL orchestration.
+
+Local Radon function/method sums exclude Class summary blocks. Recipe decreases from 161 to 137 across ten modules, each at most 19. Canvas decreases from 159 to 154 across ten modules, each at most 20. These are local measurements, not hosted completion evidence. Existing canvas_render.py remains unchanged and above threshold at its previous hosted score of 67.
+
+Independent comment/style review found no blocking finding. Its one recommended deletion, a test comment narrating method extraction, was applied during integration. No behavior changed in that cleanup. The headless guard review confirmed that both changed canvas test modules use fake hosts and mocked GL calls without constructing native widgets. Mocked resource-order checks cannot prove native Qt dispatch or C++ destruction; actual Linux Mesa CI remains required.
+
+Integration checked every frozen file hash and compared every replaced parent file against the worker baseline before writing. Architecture changes were applied as checked Git patches and combined area totals were regenerated. All twenty owning-section rows match actual source lengths, with no duplicate headings. The integrated recipe replay again matched all 477 records and its reviewed trace hash.
+
+Full integrated pytest completed with 14,823 passed, 1,431 existing skips and exit 0 in 463.84 seconds. Ruff, production Bandit and changed-runtime not-callable checks passed. Fresh hosted analysis and actual OpenGL CI remain pending. Complete runtime repair remains open in progress.md.

@@ -2,8 +2,8 @@
 
 A Recipe describes a series of edits to apply to a source image at load time
 without touching the file on disk. The recipe is keyed by ``file_identity``
-(first 4 KB + file size, md5'd) so renames and metadata-only changes don't
-invalidate it, but any actual pixel change does.
+(first, middle and last 4 KB plus file size, md5'd). Renames preserve it;
+metadata rewrites can change the sampled bytes and must carry the recipe over.
 
 Edit order matters and is fixed:
 
@@ -24,53 +24,61 @@ This order is baked into ``apply()`` and callers must not reorder without
 also updating the hash scheme — otherwise two recipes that produce the same
 pixels but were constructed in different orders would collide on cache lookup.
 """
+
 from __future__ import annotations
 
-import hashlib
-import json
-import logging
-import math
-from dataclasses import asdict, dataclass, field, fields, replace
-from pathlib import Path
+from dataclasses import dataclass, field
 from collections.abc import Callable
 from typing import Any
 
 import numpy as np
-from PIL import Image, ImageEnhance
 
-from Imervue.image.recipe_adjustments import (
-    apply_highlights_shadows,
-    apply_vibrance,
-    apply_white_balance,
-    apply_whites_blacks,
+from Imervue.image.recipe_identity import RecipeIdentity
+from Imervue.image.recipe_codec import RecipeCodec
+from Imervue.image.recipe_values import normalized
+from Imervue.image.recipe_geometry import (
+    _apply_geometry,
+    turned_with_file,
 )
-from Imervue.image.tone_curve import apply_tone_curve, is_identity_points
+from Imervue.image.recipe_file_identity import (
+    file_identities,
+    file_identity,
+    clear_identity_cache,
+)
+from Imervue.image.recipe_pixels import (
+    _apply_white_balance,
+    _apply_highlights_shadows,
+    _apply_whites_blacks,
+    _apply_vibrance,
+    _apply_tone_curve,
+    _apply_exposure,
+    _apply_brightness_contrast,
+    _apply_saturation,
+)
+from Imervue.image.recipe_optional_effects import (
+    _apply_levels,
+    _apply_channel_mixer,
+    _apply_gradient_map,
+    _apply_lens_flare,
+    _apply_film_grain,
+)
+from Imervue.image.recipe_color_effects import (
+    _apply_split_toning,
+    _apply_lut,
+    _apply_threshold_posterize,
+)
+from Imervue.image.recipe_compositing import (
+    _apply_layer_stack,
+    _apply_masks,
+)
 
-logger = logging.getLogger("Imervue.recipe")
 
-_IDENTITY_CHUNK = 4096
-# Tags the digest so it can never equal a first-4-KB-only (pre-2) identity.
-_IDENTITY_SALT = b"imervue-identity-2"
-# path -> (mtime_ns, size, identity, pre-2 identity)
-_IDENTITY_CACHE: dict[str, tuple[int, int, str, str]] = {}
-
-# Tolerance for treating slider adjustments as a no-op. Values below this are
-# below the visible quantisation threshold on a single 8-bit channel.
-_ADJUST_EPS = 1e-6
-
-
-def _is_zero(value: float) -> bool:
-    """Return True if *value* is effectively zero within adjust tolerance."""
-    return math.isclose(value, 0.0, abs_tol=_ADJUST_EPS)
-
-
-def _enabled_flag(entry: object) -> bool:
-    """Return True when ``entry`` is a dict whose ``enabled`` field is truthy."""
-    return bool(isinstance(entry, dict) and entry.get("enabled"))
+__all__ = ["Recipe", "STAGE_NAMES", "file_identities", "file_identity",
+           "clear_identity_cache", "turned_with_file"]
 
 
 @dataclass
-class Recipe:
+class Recipe(RecipeIdentity, RecipeCodec):
     """Non-destructive edit recipe for a single image.
 
     All fields default to the identity transform — a default-constructed
@@ -79,27 +87,27 @@ class Recipe:
     stops so callers can brighten dark RAW files properly.
     """
 
-    rotate_steps: int = 0          # 0, 1, 2, 3 = 0°, 90°, 180°, 270° CW
+    rotate_steps: int = 0  # 0, 1, 2, 3 = 0°, 90°, 180°, 270° CW
     flip_h: bool = False
     flip_v: bool = False
-    crop: tuple[int, int, int, int] | None = None   # (x, y, w, h) post-rotate
+    crop: tuple[int, int, int, int] | None = None  # (x, y, w, h) post-rotate
     # Whether the geometry above was set on the EXIF-upright image. Images load
     # upright now; a recipe saved before that (no such key, see ``from_dict``)
     # set its rotate / flip / crop on the sideways pixels, so those keep them.
     exif_oriented: bool = True
-    brightness: float = 0.0        # -1..+1
-    contrast: float = 0.0          # -1..+1
-    saturation: float = 0.0        # -1..+1
-    exposure: float = 0.0          # -2..+2 (stops)
+    brightness: float = 0.0  # -1..+1
+    contrast: float = 0.0  # -1..+1
+    saturation: float = 0.0  # -1..+1
+    exposure: float = 0.0  # -2..+2 (stops)
     # Advanced develop sliders (flag-based). All -1..+1 and default to
     # zero so existing recipes deserialise unchanged (see `from_dict`).
-    temperature: float = 0.0       # warm (+) / cool (-) white balance
-    tint: float = 0.0              # magenta (+) / green (-)
-    highlights: float = 0.0        # recover bright areas (negative darkens)
-    shadows: float = 0.0           # lift dark areas (positive brightens)
-    whites: float = 0.0            # endpoint stretch on the bright side
-    blacks: float = 0.0            # endpoint crush on the dark side
-    vibrance: float = 0.0          # saturation-protected colour boost
+    temperature: float = 0.0  # warm (+) / cool (-) white balance
+    tint: float = 0.0  # magenta (+) / green (-)
+    highlights: float = 0.0  # recover bright areas (negative darkens)
+    shadows: float = 0.0  # lift dark areas (positive brightens)
+    whites: float = 0.0  # endpoint stretch on the bright side
+    blacks: float = 0.0  # endpoint crush on the dark side
+    vibrance: float = 0.0  # saturation-protected colour boost
 
     # Tone curves — lists of (input, output) points in [0, 1]. Empty = identity.
     tone_curve_rgb: list[tuple[float, float]] = field(default_factory=list)
@@ -109,7 +117,7 @@ class Recipe:
 
     # .cube LUT path — applied after tone curves. Empty = disabled.
     lut_path: str = ""
-    lut_intensity: float = 1.0     # 0..1 blend between original and LUT
+    lut_intensity: float = 1.0  # 0..1 blend between original and LUT
 
     # Freeform metadata for forward-compat — callers may stuff additional
     # fields here (e.g. develop panel version) and they round-trip through
@@ -117,198 +125,30 @@ class Recipe:
     extra: dict[str, Any] = field(default_factory=dict)
 
     # ------------------------------------------------------------------
-    # Identity / validation
-    # ------------------------------------------------------------------
-
-    def is_identity(self) -> bool:
-        return (
-            self._geometry_is_identity()
-            and self._classic_sliders_are_zero()
-            and self._advanced_sliders_are_zero()
-            and self._curves_are_identity()
-            and not self.lut_path
-            and self._extra_is_identity()
-        )
-
-    def _extra_is_identity(self) -> bool:
-        """No layers / masks / split-toning / threshold / posterize configured."""
-        if not self.extra:
-            return True
-        if (self.extra.get("layers")
-                or self.extra.get("masks")
-                or self.extra.get("split_toning")):
-            return False
-        return not (
-            _enabled_flag(self.extra.get("threshold"))
-            or _enabled_flag(self.extra.get("posterize"))
-            or _enabled_flag(self.extra.get("levels"))
-            or _enabled_flag(self.extra.get("channel_mixer"))
-            or _enabled_flag(self.extra.get("gradient_map"))
-            or _enabled_flag(self.extra.get("film_grain"))
-            or _enabled_flag(self.extra.get("lens_flare"))
-        )
-
-    def _curves_are_identity(self) -> bool:
-        return (
-            is_identity_points(self.tone_curve_rgb)
-            and is_identity_points(self.tone_curve_r)
-            and is_identity_points(self.tone_curve_g)
-            and is_identity_points(self.tone_curve_b)
-        )
-
-    def base_is_oriented(self) -> bool:
-        """Whether this recipe applies to the EXIF-upright image.
-
-        True unless it is a recipe saved before images loaded upright AND it
-        carries geometry; tone-only edits don't depend on the orientation.
-        """
-        return self.exif_oriented or self._geometry_is_identity()
-
-    def _geometry_is_identity(self) -> bool:
-        return (
-            self.rotate_steps % 4 == 0
-            and not self.flip_h
-            and not self.flip_v
-            and self.crop is None
-        )
-
-    def _classic_sliders_are_zero(self) -> bool:
-        return (
-            _is_zero(self.brightness)
-            and _is_zero(self.contrast)
-            and _is_zero(self.saturation)
-            and _is_zero(self.exposure)
-        )
-
-    def _advanced_sliders_are_zero(self) -> bool:
-        return (
-            _is_zero(self.temperature)
-            and _is_zero(self.tint)
-            and _is_zero(self.highlights)
-            and _is_zero(self.shadows)
-            and _is_zero(self.whites)
-            and _is_zero(self.blacks)
-            and _is_zero(self.vibrance)
-        )
 
     def normalized(self) -> Recipe:
         """Return a copy with rotate_steps in [0, 3] and crop clamped to ints."""
-        crop = self.crop
-        if crop is not None:
-            crop = tuple(int(v) for v in crop)  # type: ignore[assignment]
-            if crop[2] <= 0 or crop[3] <= 0:
-                crop = None
-        return Recipe(
-            rotate_steps=int(self.rotate_steps) % 4,
-            flip_h=bool(self.flip_h),
-            flip_v=bool(self.flip_v),
-            crop=crop,
-            exif_oriented=bool(self.exif_oriented),
-            brightness=float(self.brightness),
-            contrast=float(self.contrast),
-            saturation=float(self.saturation),
-            exposure=float(self.exposure),
-            temperature=float(self.temperature),
-            tint=float(self.tint),
-            highlights=float(self.highlights),
-            shadows=float(self.shadows),
-            whites=float(self.whites),
-            blacks=float(self.blacks),
-            vibrance=float(self.vibrance),
-            tone_curve_rgb=[(float(x), float(y)) for x, y in self.tone_curve_rgb],
-            tone_curve_r=[(float(x), float(y)) for x, y in self.tone_curve_r],
-            tone_curve_g=[(float(x), float(y)) for x, y in self.tone_curve_g],
-            tone_curve_b=[(float(x), float(y)) for x, y in self.tone_curve_b],
-            lut_path=str(self.lut_path or ""),
-            lut_intensity=max(0.0, min(1.0, float(self.lut_intensity))),
-            extra=dict(self.extra),
-        )
-
-    # ------------------------------------------------------------------
-    # Serialization
-    # ------------------------------------------------------------------
-
-    def to_dict(self) -> dict[str, Any]:
-        d = asdict(self)
-        # JSON can't represent tuples as distinct from lists — normalise here
-        # so that a round-trip is idempotent.
-        if d.get("crop") is not None:
-            d["crop"] = list(d["crop"])
-        for key in ("tone_curve_rgb", "tone_curve_r", "tone_curve_g", "tone_curve_b"):
-            d[key] = [list(pt) for pt in d.get(key, [])]
-        return d
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Recipe:
-        known = {f.name for f in fields(cls)}
-        kwargs: dict[str, Any] = {}
-        extra: dict[str, Any] = dict(data.get("extra") or {})
-        for key, value in data.items():
-            if key == "extra":
-                continue
-            if key in known:
-                kwargs[key] = value
-            else:
-                # Unknown field — stash in extra so it survives round-trips.
-                extra[key] = value
-        if "crop" in kwargs and kwargs["crop"] is not None:
-            c = kwargs["crop"]
-            kwargs["crop"] = tuple(int(v) for v in c)
-        for curve_key in (
-            "tone_curve_rgb", "tone_curve_r", "tone_curve_g", "tone_curve_b",
-        ):
-            if curve_key in kwargs and kwargs[curve_key]:
-                kwargs[curve_key] = [
-                    (float(p[0]), float(p[1])) for p in kwargs[curve_key]
-                ]
-        kwargs["extra"] = extra
-        # Saved before images loaded EXIF-upright: its geometry is sideways-based.
-        kwargs.setdefault("exif_oriented", False)
-        return cls(**kwargs)
-
-    # ------------------------------------------------------------------
-    # Hash — used as part of thumbnail cache key
-    # ------------------------------------------------------------------
-
-    def recipe_hash(self) -> str:
-        """Short stable hash of the recipe (empty string for identity).
-
-        Identity recipes hash to "" so that callers (e.g. the thumbnail cache)
-        can keep their pre-recipe cache keys unchanged for untouched images.
-        """
-        if self.is_identity():
-            return ""
-        payload = json.dumps(
-            self.normalized().to_dict(),
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        return hashlib.md5(payload.encode(), usedforsecurity=False).hexdigest()[:16]
-
-    # ------------------------------------------------------------------
-    # Apply
-    # ------------------------------------------------------------------
+        return normalized(self)
 
     def apply(self, arr: np.ndarray) -> np.ndarray:
-        """Apply this recipe to an RGBA uint8 numpy array and return a new array.
+        """Apply this recipe to an RGBA numpy array without modifying the input.
 
-        Input must be HxWx4 uint8. The returned array is a new allocation;
-        the input is not modified.
+        Identity recipes return the input object without validation. Otherwise
+        input must be HxWx4 and is converted to uint8 before rendering.
         """
         if self.is_identity():
             return arr
 
         if arr.ndim != 3 or arr.shape[2] != 4:
-            raise ValueError(
-                f"Recipe.apply expects HxWx4 RGBA, got shape={arr.shape}"
-            )
+            raise ValueError(f"Recipe.apply expects HxWx4 RGBA, got shape={arr.shape}")
         if arr.dtype != np.uint8:
             arr = arr.astype(np.uint8, copy=False)
 
         return self.normalized().apply_stages(arr)
 
-    def apply_stages(self, arr: np.ndarray, first: str | None = None,
-                     last: str | None = None) -> np.ndarray:
+    def apply_stages(
+        self, arr: np.ndarray, first: str | None = None, last: str | None = None
+    ) -> np.ndarray:
         """Run the stages of :data:`STAGE_NAMES` from *first* to *last* (inclusive) on *arr*.
 
         ``apply`` runs them all on the normalised recipe; a renderer that does
@@ -320,270 +160,6 @@ class Recipe:
         for _name, stage in _STAGES[start:stop]:
             arr = stage(arr, self)
         return arr
-
-
-def _apply_white_balance(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    return apply_white_balance(arr, recipe.temperature, recipe.tint)
-
-
-def _apply_highlights_shadows(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    return apply_highlights_shadows(arr, recipe.highlights, recipe.shadows)
-
-
-def _apply_whites_blacks(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    return apply_whites_blacks(arr, recipe.whites, recipe.blacks)
-
-
-def _apply_vibrance(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    return apply_vibrance(arr, recipe.vibrance)
-
-
-def _apply_tone_curve(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    return apply_tone_curve(
-        arr,
-        recipe.tone_curve_rgb,
-        r_points=recipe.tone_curve_r,
-        g_points=recipe.tone_curve_g,
-        b_points=recipe.tone_curve_b,
-    )
-
-
-def _apply_split_toning(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply split toning from recipe.extra['split_toning'] if present."""
-    cfg = recipe.extra.get("split_toning") if recipe.extra else None
-    if not isinstance(cfg, dict):
-        return arr
-    try:
-        from Imervue.image.split_toning import apply_split_toning
-    except ImportError:
-        return arr
-    try:
-        return apply_split_toning(
-            arr,
-            shadow_hue=float(cfg.get("shadow_hue", 210.0)),
-            shadow_saturation=float(cfg.get("shadow_sat", 0.0)),
-            highlight_hue=float(cfg.get("highlight_hue", 45.0)),
-            highlight_saturation=float(cfg.get("highlight_sat", 0.0)),
-            balance=float(cfg.get("balance", 0.0)),
-        )
-    except (ValueError, TypeError) as err:
-        logger.warning("Split toning apply failed: %s", err)
-        return arr
-
-
-def _apply_levels(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply Levels (black/white/gamma) from recipe.extra if configured."""
-    if not recipe.extra:
-        return arr
-    try:
-        from Imervue.image.levels import LevelsOptions, apply_levels
-    except ImportError:
-        return arr
-    options = LevelsOptions.from_dict(recipe.extra.get("levels"))
-    try:
-        return apply_levels(arr, options)
-    except (ValueError, TypeError) as err:
-        logger.warning("Levels apply failed: %s", err)
-        return arr
-
-
-def _apply_channel_mixer(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply channel mixer matrix from recipe.extra if configured."""
-    if not recipe.extra:
-        return arr
-    try:
-        from Imervue.image.channel_mixer import (
-            ChannelMixerOptions,
-            apply_channel_mixer,
-        )
-    except ImportError:
-        return arr
-    options = ChannelMixerOptions.from_dict(recipe.extra.get("channel_mixer"))
-    try:
-        return apply_channel_mixer(arr, options)
-    except (ValueError, TypeError) as err:
-        logger.warning("Channel mixer apply failed: %s", err)
-        return arr
-
-
-def _apply_gradient_map(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply gradient map from recipe.extra if configured."""
-    if not recipe.extra:
-        return arr
-    try:
-        from Imervue.image.gradient_map import (
-            GradientMapOptions,
-            apply_gradient_map,
-        )
-    except ImportError:
-        return arr
-    options = GradientMapOptions.from_dict(recipe.extra.get("gradient_map"))
-    try:
-        return apply_gradient_map(arr, options)
-    except (ValueError, TypeError) as err:
-        logger.warning("Gradient map apply failed: %s", err)
-        return arr
-
-
-def _apply_threshold_posterize(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply threshold and posterize from recipe.extra if configured."""
-    if not recipe.extra:
-        return arr
-    try:
-        from Imervue.image.posterize import (
-            PosterizeOptions,
-            ThresholdOptions,
-            apply_posterize,
-            apply_threshold,
-        )
-    except ImportError:
-        return arr
-    threshold_opts = ThresholdOptions.from_dict(recipe.extra.get("threshold"))
-    posterize_opts = PosterizeOptions.from_dict(recipe.extra.get("posterize"))
-    try:
-        arr = apply_threshold(arr, threshold_opts)
-        arr = apply_posterize(arr, posterize_opts)
-    except (ValueError, TypeError) as err:
-        logger.warning("Threshold/posterize apply failed: %s", err)
-    return arr
-
-
-def _apply_lens_flare(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply procedural lens flare from recipe.extra if configured."""
-    if not recipe.extra:
-        return arr
-    try:
-        from Imervue.image.lens_flare import LensFlareOptions, apply_lens_flare
-    except ImportError:
-        return arr
-    options = LensFlareOptions.from_dict(recipe.extra.get("lens_flare"))
-    try:
-        return apply_lens_flare(arr, options)
-    except (ValueError, TypeError) as err:
-        logger.warning("Lens flare apply failed: %s", err)
-        return arr
-
-
-def _apply_film_grain(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply procedural film grain from recipe.extra if configured."""
-    if not recipe.extra:
-        return arr
-    try:
-        from Imervue.image.film_grain import FilmGrainOptions, apply_film_grain
-    except ImportError:
-        return arr
-    options = FilmGrainOptions.from_dict(recipe.extra.get("film_grain"))
-    try:
-        return apply_film_grain(arr, options)
-    except (ValueError, TypeError) as err:
-        logger.warning("Film grain apply failed: %s", err)
-        return arr
-
-
-def _apply_layer_stack(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply user-stacked overlay layers from recipe.extra['layers'] if present."""
-    raw = recipe.extra.get("layers") if recipe.extra else None
-    if not raw:
-        return arr
-    try:
-        from Imervue.image.layers import apply_layers, layers_from_dict_list
-    except ImportError:
-        return arr
-    layers = layers_from_dict_list(raw)
-    if not layers:
-        return arr
-    try:
-        return apply_layers(arr, layers)
-    except (ValueError, TypeError) as err:
-        logger.warning("Layer stack apply failed: %s", err)
-        return arr
-
-
-def _apply_masks(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply local adjustment masks from recipe.extra['masks'] if present."""
-    raw = recipe.extra.get("masks") if recipe.extra else None
-    if not raw:
-        return arr
-    try:
-        from Imervue.image.masks import apply_masks, masks_from_dict_list
-    except ImportError:
-        return arr
-    masks = masks_from_dict_list(raw)
-    if not masks:
-        return arr
-    try:
-        return apply_masks(arr, masks)
-    except (ValueError, TypeError) as err:
-        logger.warning("Mask apply failed: %s", err)
-        return arr
-
-
-def _apply_lut(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Apply a .cube LUT if one is configured; otherwise pass-through."""
-    if not recipe.lut_path:
-        return arr
-    try:
-        from Imervue.image.lut import apply_cube_lut
-    except ImportError:
-        return arr
-    try:
-        return apply_cube_lut(arr, recipe.lut_path, intensity=recipe.lut_intensity)
-    except (OSError, ValueError) as err:
-        logger.warning("LUT apply failed (%s): %s", recipe.lut_path, err)
-        return arr
-
-
-def _apply_geometry(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Rotate / flip / crop — steps 1-4 of the pipeline."""
-    if recipe.rotate_steps:
-        arr = np.ascontiguousarray(np.rot90(arr, k=-recipe.rotate_steps))
-    if recipe.flip_h:
-        arr = np.ascontiguousarray(arr[:, ::-1])
-    if recipe.flip_v:
-        arr = np.ascontiguousarray(arr[::-1, :])
-    if recipe.crop is not None:
-        h, w = arr.shape[:2]
-        cx, cy, cw, ch = recipe.crop
-        x0 = max(0, min(cx, w))
-        y0 = max(0, min(cy, h))
-        x1 = max(x0, min(cx + cw, w))
-        y1 = max(y0, min(cy + ch, h))
-        if x1 > x0 and y1 > y0:
-            arr = np.ascontiguousarray(arr[y0:y1, x0:x1])
-    return arr
-
-
-def _apply_exposure(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Step 5 — exposure in stops (2**exposure)."""
-    if _is_zero(recipe.exposure):
-        return arr
-    factor = 2.0 ** recipe.exposure
-    rgb = arr[..., :3].astype(np.float32) * factor
-    np.clip(rgb, 0.0, 255.0, out=rgb)
-    arr = arr.copy()
-    arr[..., :3] = rgb.astype(np.uint8)
-    return arr
-
-
-def _apply_brightness_contrast(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Brightness / contrast via PIL enhancements."""
-    if _is_zero(recipe.brightness) and _is_zero(recipe.contrast):
-        return arr
-    img = Image.fromarray(arr, mode="RGBA")
-    if not _is_zero(recipe.brightness):
-        img = ImageEnhance.Brightness(img).enhance(1.0 + recipe.brightness)
-    if not _is_zero(recipe.contrast):
-        img = ImageEnhance.Contrast(img).enhance(1.0 + recipe.contrast)
-    return np.array(img)
-
-
-def _apply_saturation(arr: np.ndarray, recipe: Recipe) -> np.ndarray:
-    """Final saturation pass — runs after vibrance."""
-    if _is_zero(recipe.saturation):
-        return arr
-    img = Image.fromarray(arr, mode="RGBA")
-    img = ImageEnhance.Color(img).enhance(1.0 + recipe.saturation)
-    return np.array(img)
 
 
 # The develop pipeline, in order: each stage takes and returns an HxWx4 uint8
@@ -611,97 +187,3 @@ _STAGES: tuple[tuple[str, Callable[[np.ndarray, Recipe], np.ndarray]], ...] = (
 )
 #: Names of the develop stages in the order ``Recipe.apply`` runs them.
 STAGE_NAMES: tuple[str, ...] = tuple(name for name, _stage in _STAGES)
-
-
-# ----------------------------------------------------------------------
-# File identity
-# ----------------------------------------------------------------------
-
-
-def _identity_chunks(path: Path, size: int) -> tuple[bytes, bytes, bytes]:
-    """The first, middle and last :data:`_IDENTITY_CHUNK` bytes of *path*."""
-    with open(path, "rb") as f:
-        head = f.read(_IDENTITY_CHUNK)
-        f.seek(max(0, size // 2 - _IDENTITY_CHUNK // 2))
-        middle = f.read(_IDENTITY_CHUNK)
-        f.seek(max(0, size - _IDENTITY_CHUNK))
-        tail = f.read(_IDENTITY_CHUNK)
-    return head, middle, tail
-
-
-def file_identities(path: str | Path) -> tuple[str, str]:
-    """``(identity, pre-2 identity)`` of *path*; ``("", "")`` when it can't be read.
-
-    The pre-2 identity (md5 of the first 4 KB and the size) is what recipes
-    were stored under before; ``recipe_store`` moves such an entry to the
-    current identity the first time the file is looked up.
-    """
-    p = Path(path)
-    try:
-        st = p.stat()
-    except OSError:
-        return "", ""
-    key = str(p)
-    cached = _IDENTITY_CACHE.get(key)
-    if cached is not None and cached[0] == st.st_mtime_ns and cached[1] == st.st_size:
-        return cached[2], cached[3]
-    try:
-        head, middle, tail = _identity_chunks(p, st.st_size)
-    except OSError:
-        return "", ""
-    size = st.st_size.to_bytes(8, "big")
-    identity = hashlib.md5(
-        _IDENTITY_SALT + head + middle + tail + size, usedforsecurity=False).hexdigest()
-    legacy = hashlib.md5(head + size, usedforsecurity=False).hexdigest()
-    _IDENTITY_CACHE[key] = (st.st_mtime_ns, st.st_size, identity, legacy)
-    return identity, legacy
-
-
-def file_identity(path: str | Path) -> str:
-    """Stable per-content identity: md5 of the first, middle and last 4 KB and the file size.
-
-    A pure mtime/path key would invalidate on every touch (backup tools, a
-    copy, a rename), so the identity comes from the bytes. The first 4 KB
-    alone were not enough: two scanned pages of one size in an uncompressed
-    format (BMP, TIFF) share their header, their white top rows and their
-    size, so every page showed the one recipe. The middle and the end of the
-    file tell them apart. The first bytes hold a JPEG's EXIF, so a metadata
-    rewrite or a lossless rotate changes the identity: Imervue's own rewrites
-    carry the recipe over with ``recipe_store.carry_recipe``.
-
-    Results are cached in-process keyed by (mtime_ns, size) so repeated
-    lookups during the same session are effectively free.
-    """
-    return file_identities(path)[0]
-
-
-def clear_identity_cache() -> None:
-    """Drop the in-process identity cache. Used by tests."""
-    _IDENTITY_CACHE.clear()
-
-
-# Extras that hold positions on the image. A quarter turn of the file would
-# have to move each of them, so a recipe carrying one does not follow the turn.
-_POSITIONED_EXTRAS = ("masks", "layers", "lens_flare", "face_tags")
-
-
-def turned_with_file(recipe: Recipe, *, clockwise: bool, size: tuple[int, int]) -> Recipe | None:
-    """*recipe* for the photo after its file turned a quarter; *size* = upright size before.
-
-    The new result is the old one turned the same way: the recipe's own
-    rotation stays, the flips trade axes and the crop box turns within the
-    rotated frame. ``None`` when the recipe can't follow: it was set on the
-    sideways pixels (``exif_oriented`` False), or it holds masks, layers, a
-    lens flare or face tags, whose positions would all need moving.
-    """
-    if not recipe.exif_oriented or any(recipe.extra.get(key) for key in _POSITIONED_EXTRAS):
-        return None
-    width, height = size
-    if recipe.rotate_steps % 2:
-        width, height = height, width          # the frame the crop is measured in
-    crop = recipe.crop
-    if crop is not None:
-        x, y, w, h = crop
-        crop = (height - y - h, x, h, w) if clockwise else (y, width - x - w, h, w)
-    return replace(  # NOSONAR  # dataclasses.replace returns the Recipe it copies
-        recipe, flip_h=recipe.flip_v, flip_v=recipe.flip_h, crop=crop)

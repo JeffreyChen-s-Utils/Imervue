@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from Imervue.puppet import canvas
+from Imervue.puppet import canvas_gl_state as canvas
 
 
 def _patch_gl(monkeypatch, *, clear, viewport, sink):
