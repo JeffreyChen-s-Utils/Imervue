@@ -6,8 +6,8 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- Complete runtime complexity repair remains: fresh c6ecd0f7 Codacy results cover all 929 runtime Python files, with 495 verified, five data-only and 429 above 20. All 53 production files changed in that cohort are within threshold. SonarCloud passed; Codacy lists three external-editor execution audits plus a verifier subprocess audit and an annotation callback inference warning.
-  Next: integrate the independently reviewed callback injection and developer-tool audit policy with the integrated file-tree and tool-state reductions; the second-cohort full suite passed with 14,650 tests and 1,431 existing skips; publish it and obtain fresh hosted analysis. The callback/verifier focused set passed 61 tests. The environment Codacy repository token still returns HTTP 401 with the documented header.
+- Complete runtime complexity repair remains. Fresh 27bf0693 analysis covers 953 runtime Python files: 521 verified, five data-only and 427 above 20, with no missing/stale scores. All file-tree/tool-state modules meet the threshold; develop_panel.py remains above it. SonarCloud and Codacy PR checks passed, but whole-branch Codacy still lists three external-editor execution audits.
+  Next: finish independently reviewed image-list/context-menu reductions and continue the remaining production inventory. The environment Codacy repository token still returns HTTP 401 with the documented header.
 
 - File-tree follow-up: image_issue_panel.py:95 still calls the absent _FileTreeView._open_in_explorer helper.
   Next: migrate the caller to the shared reveal API with a behavior test and synchronized user documentation. A direct call with one selected path reproduces AttributeError before any OS launch.
