@@ -116,6 +116,8 @@ class InputEngine(QObject):
         return self._lipsync_enabled
 
     def shutdown(self) -> None:
+        self._lipsync_enabled = False
+        self._blink_enabled = False
         self._blink_timer.stop()
         self._stop_mic()
 
@@ -193,7 +195,7 @@ class InputEngine(QObject):
     def _on_audio_block(self, indata, frames, time_info, status) -> None:  # noqa: ARG002
         if status:
             logger.debug("mic status %s", status)
-        if self._canvas.document() is None:
+        if not self._lipsync_enabled:
             return
         viseme = audio_to_viseme(indata, sample_rate=_AUDIO_SAMPLE_RATE)
         # Marshal onto the GUI thread. Qt slots aren't safe to call from

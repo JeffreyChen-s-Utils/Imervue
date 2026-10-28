@@ -4,8 +4,8 @@
 (on Windows ``move`` falls back to a copy when the rename fails), and camera
 files share names all the time: two cards both hold ``IMG_0001.JPG``. Every
 "move / copy into a folder" action goes through :func:`transfer_into`, which
-plans a unique name for each file with ``batch_move_planner`` and checks the
-target again right before writing it.
+plans a unique name for each file with ``batch_move_planner`` and publishes
+with exclusive filesystem operations so a competing writer is never replaced.
 
 A file's sidecars go with it (:func:`carry_along`): the XMP sidecar other
 editors keep their edits in, and Imervue's annotations.
@@ -13,10 +13,12 @@ editors keep their edits in, and Imervue's annotations.
 from __future__ import annotations
 
 import filecmp
+import errno
 import logging
 import os
 import shutil
 import sqlite3
+import tempfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -53,12 +55,59 @@ def _same_folder(source: str, dest_dir: Path) -> bool:
 
 
 def _transfer_one(source: str, target: Path, *, move: bool) -> None:
-    if move:
-        shutil.move(source, str(target))
-    elif Path(source).is_dir():
-        shutil.copytree(source, str(target))
+    source_path = Path(source)
+    if move and os.name == "nt":
+        try:
+            os.rename(source_path, target)
+            return
+        except OSError as exc:
+            if exc.errno != errno.EXDEV:
+                raise
+    if source_path.is_symlink():
+        os.symlink(os.readlink(source_path), target, target_is_directory=source_path.is_dir())
+        if move:
+            source_path.unlink()
+    elif source_path.is_dir():
+        if target.resolve().is_relative_to(source_path.resolve()):
+            raise OSError("Cannot transfer a directory inside itself")
+        shutil.copytree(source_path, target, symlinks=True, copy_function=_copy_exclusively)
+        if move:
+            shutil.rmtree(source_path)
     else:
-        shutil.copy2(source, str(target))
+        _copy_exclusively(source_path, target)
+        if move:
+            source_path.unlink()
+
+
+def _copy_exclusively(source: str | Path, target: str | Path) -> str:
+    """Publish a complete file without replacing a destination created by another writer."""
+    target = Path(target)
+    with tempfile.NamedTemporaryFile(prefix=".imervue-transfer-", dir=target.parent,
+                                     delete=False) as handle:
+        staged = Path(handle.name)
+    try:
+        shutil.copyfile(source, staged)
+        try:
+            os.link(staged, target)
+        except OSError as exc:
+            if exc.errno not in {errno.EPERM, errno.EACCES, errno.EXDEV,
+                                 errno.ENOSYS, errno.ENOTSUP, errno.EOPNOTSUPP}:
+                raise
+            _copy_without_links(staged, target)
+    finally:
+        staged.unlink(missing_ok=True)
+    shutil.copystat(source, target)
+    return str(target)
+
+
+def _copy_without_links(staged: Path, target: Path) -> None:
+    """Use exclusive creation on filesystems without links; failure retains the source.
+
+    A failed fallback may leave a partial target. Never unlink that path on failure:
+    another writer could have replaced it after our exclusive handle was opened.
+    """
+    with target.open("xb") as output, staged.open("rb") as source:
+        shutil.copyfileobj(source, output)
 
 
 def transfer_into(sources: Sequence[str], dest_dir: str | Path, *, move: bool) -> TransferResult:
@@ -130,6 +179,10 @@ def _shares_adobe_sidecar(source: Path) -> bool:
 
 def _carry_sidecar(side: Path, new_side: Path, *, move: bool) -> bool:
     """Move (or copy) *side* to *new_side* unless another file is there; True if it got there."""
+    if is_same_file(side, new_side) and _path_key(side) == _path_key(new_side):
+        if move:
+            os.rename(side, new_side)
+        return True
     if os.path.lexists(new_side) and not is_same_file(side, new_side):
         if not filecmp.cmp(side, new_side, shallow=False):
             logger.warning("Not overwriting %s; %s stays where it is", new_side, side)
@@ -137,10 +190,7 @@ def _carry_sidecar(side: Path, new_side: Path, *, move: bool) -> bool:
         if move:                               # the same sidecar already went ahead
             side.unlink()
         return True
-    if move:
-        shutil.move(str(side), str(new_side))
-    else:
-        shutil.copy2(side, new_side)
+    _transfer_one(str(side), new_side, move=move)
     return True
 
 

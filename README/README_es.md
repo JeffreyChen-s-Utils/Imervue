@@ -105,6 +105,8 @@ Al situar el cursor sobre controles, pestañas, menús y elementos de listas o t
 
 Al abrir carpetas se agrupan los resultados consecutivos del análisis, evitando reconstruir la vista por cada lote. Las comparaciones usan búsquedas indexadas, los metadatos iniciales solo leen atributos sin abrir las cabeceras de imagen y la lista oculta se llena al seleccionarla. Los primeros resultados siguen apareciendo progresivamente, se conserva el orden final y el indicador de actividad se detiene al terminar una carpeta vacía. Las vistas previas del árbol eligen la primera imagen sin ordenar toda la lista, usan como máximo dos trabajadores y omiten las consultas de iconos de carpeta personalizados del sistema para reducir la competencia por el disco.
 
+Los fallos al exportar imágenes desde Paint o MCP conservan el archivo de destino anterior. La exportación por lotes de Puppet distingue nombres de movimiento en conflicto e informa de los fallos de grabación. El mantenimiento solo elimina entradas cuya ausencia se confirma dentro de raíces de biblioteca legibles. Los guardados en segundo plano no sobrescriben cambios simultáneos de perfiles. Cancelar una instalación o Auto-Tag detiene el trabajo en segundo plano; cerrar una ventana también detiene sus servicios Puppet y Pet. Las galerías web y WebDAV codifican correctamente los nombres de archivo. Los documentos, sesiones y solicitudes VTS no válidos producen errores. Los marcos MCP aplican el mismo límite de salida de 100 millones de píxeles que otras herramientas de imagen limitadas. Las versiones empaquetadas conservan la plataforma OpenGL nativa del sistema.
+
 ## Instalación
 
 ### Requisitos

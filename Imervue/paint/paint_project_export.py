@@ -24,6 +24,8 @@ from pathlib import Path
 
 import numpy as np
 
+from Imervue.system.atomic_write import replace_atomically
+
 EXPORT_CBZ_EXTENSION = ".cbz"
 EXPORT_PDF_EXTENSION = ".pdf"
 DEFAULT_PNG_PAD_WIDTH = 3   # ``001.png`` / ``012.png`` / ``107.png``
@@ -48,12 +50,15 @@ def export_project_cbz(
     pad = max(2, int(pad_width))
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(target, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for index, page in enumerate(project.pages, start=1):
-            image = _composite_or_default(page)
-            buffer = io.BytesIO()
-            Image.fromarray(image, mode="RGBA").save(buffer, format="PNG")
-            zf.writestr(f"{index:0{pad}d}.png", buffer.getvalue())
+    def write(stage: Path) -> None:
+        with zipfile.ZipFile(stage, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for index, page in enumerate(project.pages, start=1):
+                image = _composite_or_default(page)
+                buffer = io.BytesIO()
+                Image.fromarray(image, mode="RGBA").save(buffer, format="PNG")
+                zf.writestr(f"{index:0{pad}d}.png", buffer.getvalue())
+
+    replace_atomically(target, write)
     return target.resolve()
 
 
@@ -84,12 +89,12 @@ def export_project_pdf(
         for page in project.pages
     ]
     head, *rest = flattened
-    head.save(
-        target,
+    replace_atomically(target, lambda stage: head.save(
+        stage,
         format="PDF",
         save_all=bool(rest),
         append_images=rest,
-    )
+    ))
     return target.resolve()
 
 

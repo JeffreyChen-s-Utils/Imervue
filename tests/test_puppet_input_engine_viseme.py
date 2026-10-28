@@ -25,6 +25,7 @@ def test_on_audio_block_emits_the_viseme_signal(qapp):
     ))
     received: list = []
     engine._viseme_ready.connect(received.append)
+    engine._lipsync_enabled = True  # Simulate an active microphone callback.
     engine._on_audio_block(np.zeros((256, 1), dtype=np.float32), 256, None, None)
     assert len(received) == 1
     assert isinstance(received[0], dict)

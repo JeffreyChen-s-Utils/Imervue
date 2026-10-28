@@ -51,7 +51,12 @@ def _save_image_to(dst: Path, img: Any) -> None:
     """Save a PIL image to ``dst``, flattening alpha for formats lacking it."""
     fmt = dst.suffix.lower().lstrip(".")
     to_save = img.convert("RGB") if fmt in NO_ALPHA_FORMATS else img
-    to_save.save(dst)
+    from PIL import Image
+    from Imervue.system.atomic_write import replace_atomically
+    image_format = Image.registered_extensions().get(dst.suffix.lower())
+    if image_format is None:
+        raise ValueError(f"unknown file extension: {dst.suffix}")
+    replace_atomically(dst, lambda temporary: to_save.save(temporary, format=image_format))
 
 
 def apply_watermark(
@@ -129,7 +134,11 @@ def apply_frame(
         bottom_extra=max(0, int(bottom_extra)),
         caption=str(caption), text_color=text_rgb,
     )
-    framed = add_frame(load_rgba_array(src), opts)
+    rgba = load_rgba_array(src)
+    height, width = rgba.shape[:2]
+    _guard_output_pixels(width + opts.border * 2,
+                         height + opts.border * 2 + opts.bottom_extra)
+    framed = add_frame(rgba, opts)
     with Image.fromarray(framed, "RGBA") as out:
         _save_image_to(dst, out)
     height, width = framed.shape[:2]

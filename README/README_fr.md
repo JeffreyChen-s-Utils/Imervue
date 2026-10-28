@@ -105,6 +105,8 @@ Survolez les commandes, onglets, menus et éléments de listes ou de tableaux po
 
 L’ouverture de dossiers regroupe les résultats successifs de l’analyse au lieu de reconstruire la vue à chaque lot. Les comparaisons utilisent des recherches indexées ; la préparation des métadonnées lit les attributs sans ouvrir les en-têtes et la liste masquée ne se remplit qu’à sa sélection. Les premiers résultats restent progressifs, le tri final est conservé et l’indicateur d’activité s’arrête après l’analyse d’un dossier vide. Les aperçus du navigateur choisissent la première image sans trier toute la liste, utilisent au plus deux tâches et évitent les recherches d’icônes système personnalisées pour limiter les accès concurrents au disque.
 
+Un échec d’export d’image Paint ou MCP préserve le fichier de destination existant. Les exports Puppet par lot distinguent les noms de mouvement en conflit et signalent les échecs d’enregistrement. La maintenance supprime uniquement les entrées dont l’absence est confirmée dans les racines lisibles de la bibliothèque. Les sauvegardes en arrière-plan n’écrasent pas les modifications simultanées des profils. Annuler une installation ou Auto-Tag arrête le travail en arrière-plan ; fermer une fenêtre arrête aussi ses services Puppet et Pet. Les galeries web et WebDAV encodent correctement les noms de fichiers. Les documents, sessions et requêtes VTS invalides produisent une erreur. Les cadres MCP respectent la même limite de sortie de 100 millions de pixels que les autres outils d’image limités. Les versions empaquetées conservent la plateforme OpenGL native du système.
+
 ## Installation
 
 ### Prérequis

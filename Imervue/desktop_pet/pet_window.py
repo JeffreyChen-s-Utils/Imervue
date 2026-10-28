@@ -373,6 +373,23 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         threads / OS hooks outlive the destroyed C++ QObject. Nothing is
         persisted, so re-spawning restores whatever the user had enabled.
         """
+        if getattr(self, "_shutdown_complete", False):
+            return
+        self._shutdown_complete = True
+        for name in ("_tick", "_script_tick", "_fullscreen_detector"):
+            timer = getattr(self, name, None)
+            if timer is not None:
+                with best_effort(f"stop {name}"):
+                    timer.stop()
+        for name in ("_click_sfx_ctl", "_idle_minigame"):
+            controller = getattr(self, name, None)
+            if controller is not None:
+                with best_effort(f"shut down {name}"):
+                    controller.shutdown()
+        speech = getattr(self, "_speech", None)
+        if speech is not None:
+            with best_effort("close pet speech"):
+                speech.close_bubble()
         for controller in self._features.values():
             with best_effort("shut down a feature controller"):
                 controller.shutdown()

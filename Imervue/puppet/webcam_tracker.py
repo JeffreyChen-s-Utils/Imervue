@@ -82,7 +82,12 @@ class WebcamTracker(QObject):
         return True
 
     def shutdown(self) -> None:
-        self._stop()
+        self._enabled = False
+        self._stop_evt.set()
+        self._pump_timer.stop()
+        # The worker owns only Python snapshots and releases its camera in finally.
+        # Retain its reference until it exits; a blocked device read must not block Qt.
+
 
     def current_preview_state(self) -> dict:
         """Snapshot of the most recent capture for the preview dialog.

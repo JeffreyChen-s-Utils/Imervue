@@ -105,6 +105,8 @@ Passe o mouse sobre controles, abas, menus e itens de listas ou tabelas para ver
 
 Ao abrir pastas, os resultados consecutivos da varredura são agrupados, evitando reconstruir a visualização a cada lote. As comparações usam consultas indexadas, os metadados iniciais leem apenas atributos sem abrir cabeçalhos de imagens e a lista oculta só é preenchida quando selecionada. Os primeiros resultados continuam aparecendo progressivamente, a ordem final é mantida e o indicador de atividade para ao concluir uma pasta vazia. As prévias da árvore escolhem a primeira imagem sem ordenar toda a lista, usam no máximo dois trabalhadores e dispensam consultas a ícones personalizados de pastas do sistema para reduzir a disputa pelo disco.
 
+Falhas na exportação de imagens pelo Paint ou MCP preservam o arquivo de destino anterior. As exportações em lote do Puppet distinguem nomes de movimento conflitantes e informam falhas de gravação. A manutenção remove apenas entradas comprovadamente ausentes em raízes de biblioteca legíveis. Salvamentos em segundo plano não sobrescrevem alterações simultâneas de perfis. Cancelar uma instalação ou o Auto-Tag encerra o trabalho em segundo plano; fechar uma janela também interrompe seus serviços Puppet e Pet. Galerias web e WebDAV codificam corretamente os nomes de arquivos. Documentos, sessões e solicitações VTS inválidos retornam erros. Molduras MCP seguem o mesmo limite de saída de 100 milhões de pixels das demais ferramentas de imagem limitadas. Versões empacotadas mantêm a plataforma OpenGL nativa do sistema.
+
 ## Instalação
 
 ### Requisitos

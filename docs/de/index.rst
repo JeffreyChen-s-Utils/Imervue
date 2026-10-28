@@ -1,6 +1,8 @@
 Imervue-Benutzerhandbuch
 ========================
 
+Fehlgeschlagene Bildexporte aus Paint und MCP erhalten die bisherige Zieldatei. Puppet-Stapelexporte trennen kollidierende Bewegungsnamen und melden Aufnahmefehler. Die Bibliothekswartung entfernt nur nachweislich fehlende Einträge innerhalb lesbarer Bibliothekswurzeln. Hintergrundspeicherungen überschreiben keine gleichzeitigen Profiländerungen. Das Abbrechen einer Installation oder von Auto-Tag beendet die Hintergrundarbeit; das Schließen eines Fensters stoppt auch dessen Puppet- und Pet-Dienste. Webgalerien und WebDAV kodieren Dateinamen korrekt. Ungültige Dokumente, Sitzungen und VTS-Anfragen liefern Fehler. Für MCP-Rahmen gilt dieselbe Ausgabegrenze von 100 Millionen Pixeln wie für andere begrenzte Bildwerkzeuge. Paketierte Builds behalten die native OpenGL-Plattform des Systems bei.
+
 Eine GPU-beschleunigte Bild-Workstation, die **fünf Hauptregisterkarten** bereitstellt.
 Der Großteil dieses Handbuchs ist um diese fünf Abschnitte herum strukturiert.
 

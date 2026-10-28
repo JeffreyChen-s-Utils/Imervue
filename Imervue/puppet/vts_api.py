@@ -93,7 +93,10 @@ class VTubeStudioHandler:
             return self._error_envelope("", "InvalidRequest", "message must be a JSON object")
         request_id = str(message.get("requestID", ""))
         message_type = message.get("messageType")
-        data = message.get("data") or {}
+        data = message.get("data", {})
+        if not isinstance(message_type, str) or not isinstance(data, dict):
+            return self._error_envelope(
+                request_id, "InvalidRequest", "messageType must be a string and data an object")
         handler = _MESSAGE_HANDLERS.get(message_type)
         if handler is None:
             return self._envelope(
@@ -199,7 +202,7 @@ class VTubeStudioHandler:
                 max_value=float(data.get("max", 1.0)),
                 default=float(data.get("defaultValue", 0.0)),
             )
-        except ValueError as exc:
+        except (TypeError, ValueError, OverflowError) as exc:
             return "APIError", {"errorID": 5, "message": str(exc)}
         if not ok:
             return "APIError", {"errorID": 6, "message": "parameter already exists"}
@@ -211,7 +214,9 @@ class VTubeStudioHandler:
         push the latest parameter values into our puppet."""
         if not self._require_auth():
             return "APIError", {"errorID": 50, "message": _NOT_AUTHENTICATED_MSG}
-        values = data.get("parameterValues") or []
+        values = data.get("parameterValues", [])
+        if not isinstance(values, list):
+            return "APIError", {"errorID": 1, "message": "parameterValues must be an array"}
         applied = 0
         for entry in values:
             if not isinstance(entry, dict):
@@ -221,7 +226,7 @@ class VTubeStudioHandler:
                 continue
             try:
                 value = float(entry.get("value", 0.0))
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, OverflowError):
                 continue
             self._canvas.set_parameter_value(param_id, value)
             applied += 1

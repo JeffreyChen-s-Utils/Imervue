@@ -1,6 +1,8 @@
 Imervue User Guide
 ==================
 
+Failed Paint and MCP image exports preserve the previous destination. Puppet batch exports keep colliding motion names separate and report recording failures. Library maintenance removes only confirmed missing entries within readable library roots. Background saves cannot overwrite concurrent profile changes. Cancelling installation or Auto-Tag retires background work; closing a window also shuts down its Puppet and Pet services. Web galleries and WebDAV encode filenames correctly. Invalid documents, sessions and VTS requests return errors, and MCP frames enforce the same 100-million-pixel output limit as other bounded image tools. Frozen builds retain the host OpenGL platform.
+
 A GPU-accelerated image workstation that ships **five top-level tabs**.
 Most of this guide is organised around those five sections.
 

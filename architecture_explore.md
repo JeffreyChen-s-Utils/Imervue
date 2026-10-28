@@ -66,32 +66,32 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 972 | 163,767 |
-| `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,020 |
-| `Imervue/gui/` | 187 | 37,141 |
-| `Imervue/puppet/` | 61 | 16,490 |
+| `tests/` | 977 | 164,784 |
+| `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,038 |
+| `Imervue/gui/` | 187 | 37,126 |
+| `Imervue/puppet/` | 61 | 16,544 |
 | `Imervue/image/` | 130 | 15,744 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,728 |
 | `Imervue/multi_language/` | 8 | 15,976 |
-| `Imervue/desktop_pet/` | 29 | 7,115 |
-| `Imervue/mcp_server/` | 16 | 4,753 |
-| `Imervue/library/` | 34 | 4,963 |
+| `Imervue/desktop_pet/` | 29 | 7,165 |
+| `Imervue/mcp_server/` | 16 | 4,762 |
+| `Imervue/library/` | 34 | 5,001 |
 | `Imervue/menu/` | 11 | 3,688 |
-| `Imervue/` 根層 | 7 | 2,098 |
-| `Imervue/plugin/` | 15 | 3,064 |
-| `Imervue/system/` | 34 | 3,549 |
-| `Imervue/export/` | 8 | 1,035 |
-| `Imervue/user_settings/` | 10 | 1,234 |
-| `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
-| `plugins/`（19 個外掛） | 80 | 16,054 |
-| `scripts/`（開發與發佈工具） | 10 | 1,523 |
-| **總計** | **1,868** | **356,744** |
+| `Imervue/` 根層 | 7 | 2,105 |
+| `Imervue/plugin/` | 15 | 3,081 |
+| `Imervue/system/` | 34 | 3,599 |
+| `Imervue/export/` | 8 | 1,036 |
+| `Imervue/user_settings/` | 10 | 1,253 |
+| `Imervue/sessions/` + `macros/` + `external/` | 8 | 810 |
+| `plugins/`（19 個外掛） | 80 | 16,056 |
+| `scripts/`（開發與發佈工具） | 11 | 1,581 |
+| **總計** | **1,874** | **358,077** |
 
-其中 `Imervue/` 套件本身 806 檔 / 175,400 行。
+其中 `Imervue/` 套件本身 806 檔 / 175,656 行。
 
-測試碼與產品碼比約 **0.85 : 1**（163k vs 191k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.86 : 1**（164,784 vs 191,712 行，產品碼含 `plugins/`）。
 
-> 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
+> 統計以 `CLAUDE.md`「Architecture Map」的方式掃描各區域 Python 檔案，排除 `__pycache__`；不包含 `.audit/`、虛擬環境或建置產物。
 
 ---
 
@@ -102,7 +102,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 ```
 py -m Imervue [--debug] [--software_opengl] [file]
    │
-   ├─ 1. 凍結環境偵測 → 關閉 OpenGL_accelerate（Nuitka 打包後 Cython 擴充會壞）
+   ├─ 1. 凍結環境偵測 → 僅 Windows 預設 PYOPENGL_PLATFORM=nt；關閉 OpenGL_accelerate（Nuitka 打包後 Cython 擴充會壞）
    ├─ 2. Windows：強制 UTF-8 I/O（避免 CJK 顯示成 ?）
    ├─ 3. main()：setup_logging() + install_exception_logging()（在 import PySide6 之前，
    │      所以連啟動期的例外也會進 imervue.log）→ configure_pillow()（Pillow 像素上限依記憶體放寬、中途截斷的檔案讀到截斷處）
@@ -132,7 +132,7 @@ py -m Imervue [--debug] [--software_opengl] [file]
 
 ## 4. 頂層結構：一個主視窗、五個分頁
 
-`ImervueMainWindow(QMainWindow)`（`Imervue/Imervue_main_window.py`，716 行）是唯一的協調者；篩選列、遺失檔、資料夾監看、分頁、螢幕、檢視模式、狀態列、瀏覽模式各由 `Imervue/gui/main_window_*.py` 的 mixin 提供。
+`ImervueMainWindow(QMainWindow)`（`Imervue/Imervue_main_window.py`，727 行）是唯一的協調者；篩選列、遺失檔、資料夾監看、分頁、螢幕、檢視模式、狀態列、瀏覽模式各由 `Imervue/gui/main_window_*.py` 的 mixin 提供。
 中央是一個 `QTabWidget`：
 
 ```
@@ -218,8 +218,8 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `__main__.py` | 130 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 723 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
+| `__main__.py` | 131 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境僅 Windows 預設 nt backend、QApplication 建立、主視窗啟動 |
+| `Imervue_main_window.py` | 727 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構、分頁切換、將瀏覽圖片開成新的 Paint 文件、記憶體壓力、拖放、關閉確認後明確 shutdown Puppet／Desktop Pet）；其餘職責來自 `gui/main_window_*.py` 的九個 mixin |
 | `cli.py` | 741 | headless 批次 CLI（resize / watermark / info / convert…），只走純 NumPy+Pillow 路徑；輸入一律經 `shown.open_shown` / `load_shown_rgba`（RAW 經 libraw 顯像、其餘轉 sRGB 並轉正），`info` 經 `dimensions.probe_image`，資料夾收 `RASTER_EXTENSIONS`，沿用副檔名的輸出遇到 RAW 改寫 PNG；讀不到的檔案記為錯誤、其餘照跑；`build_parser` 依序加手寫子指令、`cli_tools` 由 MCP 工具產生的 46 個、最後 `list-ops` |
 | `cli_tools.py` | 273 | 由 MCP 工具定義產生 CLI 子指令：`COVERED_BY`（10 個已有手寫子指令的工具）＋ `BRIDGED`（其餘 48 個的 CLI 名稱）；依 JSON schema 分三類（`source`+`destination` → 批次 writer、`path` → 每檔 reporter、其他 → 執行一次印 JSON），每個 schema 屬性變成 `--kebab-case` 選項（型別、預設、`enum` 照抄，布林用 `--x/--no-x`，定長陣列取 N 個值），直接呼叫 MCP 處理器；影片／OCR 後端的 `RuntimeError` 轉成 `ToolError`（`ValueError`）算單檔錯誤；`add_argument_as_written` 加選項後把 help 設回原文（Python 3.10 會替 `--x/--no-x` 的 help 補上 ` (default: …)`，之後的版本不會），`cli.py` 的手寫子指令也經它加選項 |
 | `integration_guide.py` | 146 | 外掛系統初始化：建立 `PluginManager`、dispatch 主分頁 hook、把外掛語言掛進語言選單（按 object name 找選單） |
@@ -251,7 +251,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | `local_origin.py` | 37 | `is_allowed_origin(origin)`：桌寵 webhook 與 puppet VTS API 共用；拒絕遠端網頁、opaque `null`、無法解析的主機／連接埠與空白字元；保留無 Origin 的原生客戶端及明確的本機來源 |
 | `local_llm.py` | 46 | 對本機 LLM 伺服器（預設 Ollama）送 JSON：`validate_base_url`（loopback 的 http 或任何 https）、`post_json`；圖片說明與桌寵對話共用，不依賴 Qt |
 | `trash_ops.py` | 327 | **背景批次刪除**：`send2trash` 單次呼叫成本 ~0.27s，因此所有刪除必須走這裡，禁止 per-file 迴圈；刪除後各檔的 sidecar 同路處理（不計進結果）；`recycle_bin_holds`：Windows 上只有固定磁碟才交給 shell（記憶卡、USB 隨身碟、網路磁碟會被直接永久刪除），其餘留在原處算失敗；`purge_batch` 裡這類「送回收筒」的項目改為直接刪除（使用者已確認永久刪除）；`delete_outright(paths)`：確認後直接刪，資料夾連內容一起（`_unlink_chunk` 仍只刪檔案，culling 不會清空資料夾） |
-| `file_transfer.py` | 251 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），寫入前再確認目標不存在，絕不覆蓋（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
+| `file_transfer.py` | 301 | `transfer_into(sources, dest_dir, *, move)`：搬移／複製進資料夾一律走這裡；以 `batch_move_planner` 規劃不重複的檔名（依檔案系統大小寫規則），以 Windows rename／硬連結發布或 exclusive-create fallback 拒絕已存在目標；跨磁碟與資料夾搬移僅在完整複製成功後刪來源，失敗保留來源與可能的部分目標，不清除其他 writer 的內容（Move/Copy 對話框、雙窗格、staging tray 共用）；`carry_along(pairs, *, move)`：檔案搬移／改名／複製後帶走 sidecar（`IMG.xmp`、`IMG.JPG.xmp`、`IMG.JPG.annotations.json`；RAW+JPEG 共用的 `IMG.xmp` 改用複製），搬移時再呼叫 `follow_saved_data`；`carry_sidecars`：只搬 sidecar，worker 執行緒可用；`follow_saved_data(files, folders, *, keep_existing)`：設定（`path_metadata`）與圖庫（`image_index.move_paths`）的每路徑資料改指新路徑，資料夾展開成其下每個檔；`sidecars_of(path)`：只屬於這個檔的 sidecar（刪除時一起帶走）；`is_same_file(a, b)`：兩個路徑是否指同一個檔（Windows 只改大小寫的改名不算衝突） |
 | `batch_rename.py` | 157 | `rename_files(pairs)`：一批改名，目標可以是批次內另一個檔目前的名稱（重新編號、互換）：依相依順序改，循環先借同資料夾的暫時名稱，失敗時放回原名；不覆蓋批次外的檔；sidecar 隨每次改名走，存的資料（評分、標籤、備註…）整批一次 `follow_saved_data`（Batch Rename、Token Batch Rename 共用） |
 | `atomic_write.py` | 36 | `replace_atomically(path, write)`：寫到 `.tmp` 兄弟檔再 `os.replace`，失敗時原檔完整、暫存檔刪除；所有覆寫使用者既有檔的存檔（EXIF 改寫、旋轉、套用裁切、PSD／puppet／paint 文件、`save_image` 的匯出與轉檔、Paint 匯出預設）都走它；`write_text_atomically(path, text)` 是文字版（XMP／註解 sidecar、素材庫索引、工作階段檔、桌寵腳本、註解專案） |
 | `unreadable_guard.py` | 63 | `UnreadableFileGuard`：存檔在啟動時讀不到（JSON 壞掉、被其他程式占用）就 `note_unreadable`；每次存檔前 `clear_to_save`，第一次覆寫前先另存 `<檔名>.unreadable-<日期>-<時間>`，存不了副本就回 False、不覆寫（`user_setting_dict`、`recipe_store` 使用） |
@@ -268,7 +268,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `user_setting_dict.py` | 363 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔、atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔交給 `UnreadableFileGuard` 看守（所有寫設定檔的路徑都走 `_save_settings`）；`unreadable_settings_file()` 給啟動時的警告用 |
+| `user_setting_dict.py` | 382 | **全域設定字典**。多帳號（profile）容器、v1→v2 自動遷移、去抖非同步存檔；RLock 序列化 profile 快照、CRUD／切換與持久化，寫入成功才更新記憶體狀態；atomic JSON writer（`.tmp` + `os.replace`）；啟動時讀不到的設定檔交給 `UnreadableFileGuard` 看守（所有寫設定檔的路徑都走 `_save_settings`）；`unreadable_settings_file()` 給啟動時的警告用 |
 | `bookmark.py` | 90 | 跨資料夾書籤 / 收藏集合 |
 | `code_replacements.py` | 69 | 片語展開（caption、keyword 用的縮寫） |
 | `color_labels.py` | 120 | 每圖色標籤（紅/黃/綠/藍/紫），與五星評分獨立 |
@@ -296,7 +296,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `session_manager.py` | 249 | Session / Workspace 存檔與還原（開啟的資料夾、圖片、視圖狀態） |
+| `session_manager.py` | 257 | Session / Workspace 存檔與還原；入口驗證 JSON object 與 tabs／selection list，再清理路徑 |
 | `folder_session.py` | 38 | 每資料夾視圖 session 的純函式助手 |
 
 ### 6.6 `Imervue/macros/`
@@ -318,7 +318,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | --- | ---: | --- |
 | `contact_sheet.py` | 200 | 索引表 PDF 產生器，用 `QPdfWriter`+`QPainter`（不需 reportlab）；格子影像經 `decode_image` |
 | `contact_sheet_layouts.py` | 55 | 具名版面預設（格線 / 邊界 / 說明文字；Contact Sheet 對話框的 Layout 選單用它） |
-| `web_gallery.py` | 261 | 靜態 HTML 相簿產生器，輸出自足資料夾（無外部 JS/CSS 相依）；縮圖經 `decode_image`（轉正、sRGB、RAW 可讀） |
+| `web_gallery.py` | 262 | 靜態 HTML 相簿產生器，成員 URL 逐路徑片段編碼，輸出自足資料夾（無外部 JS/CSS 相依）；縮圖經 `decode_image`（轉正、sRGB、RAW 可讀） |
 | `slideshow_mp4.py` | 151 | 幻燈片 MP4 產生器（imageio + ffmpeg） |
 | `slideshow_effects.py` | 101 | 純 NumPy 轉場效果（fade、dissolve、wipe…），逐幀決定性 |
 | `cheat_sheet.py` | 245 | 可列印的快捷鍵速查表 PDF，隨當前語言產生 |
@@ -342,7 +342,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `recipe.py` | 707 | **`Recipe` dataclass**：一張圖的完整非破壞性編輯描述。`apply()` 是固定順序的管線，定義成具名階段表 `_STAGES`（名稱依序在 `STAGE_NAMES`）：幾何(旋轉/翻轉/裁切) → 白平衡 → 曝光 → 亮部/陰影 → 白場/黑場 → 亮度對比 → vibrance → 飽和度 → 色調曲線，再依 `extra` 套用 split toning / LUT / masks / levels / channel mixer / gradient map / threshold+posterize / lens flare / film grain / layer stack；`apply_stages(arr, first, last)` 只跑其中一段（GPU 顯影外掛把中間一段放到 GPU，其餘交給它）。另提供 `to_dict`/`from_dict` 往返、`recipe_hash`、`is_identity`、`exif_oriented` / `base_is_oriented()`（舊存檔缺這個鍵、又帶幾何時，仍套在未轉正的像素上），以及 `file_identity()`（md5(前、中、後各 4KB \| 檔案大小)，避免 mtime 改變就失效；只看前 4KB 時，同尺寸的未壓縮掃描檔會共用一個 identity）與 `file_identities()`（連同舊版只含前 4KB 的 identity，供遷移）；`turned_with_file(recipe, clockwise, size)`：檔案轉 90° 後的 recipe（翻轉互換、裁切框隨之旋轉；帶位置的 extra 不轉） |
-| `develop_preview.py` | 149 | Modify 的純 CPU 預覽：共享不變來源、快取完整幾何／低解析像素、縮放局部遮罩座標；全尺寸模式與 `Recipe.apply` 像素相同，每個具名階段之間檢查取消 |
+| `develop_preview.py` | 151 | Modify 的純 CPU 預覽：共享不變來源、快取完整幾何／低解析像素、縮放局部遮罩座標；全尺寸模式與 `Recipe.apply` 像素相同，每個具名階段之間檢查取消 |
 | `recipe_store.py` | 477 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`identity_for(path)` 查詢前先把存在舊版 identity 下的 recipe 搬到新 identity（每個檔案只搬一次）；`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案；讀不到的 store 檔由 `UnreadableFileGuard` 看守，解不開的單筆原樣寫回 |
 | `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
 | `develop_backends.py` | 136 | CPU fallback reason 與 generation-specific provider leases，保留其他視窗 GPU registration |
@@ -474,7 +474,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（774 行）只保留 GL 生命
 | `key_action_dispatcher.py` | 359 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
 | `history_controller.py` | 119 | Alt+←/→ 瀏覽歷史堆疊 |
-| `drop_handler.py` | 75 | 拖放檔案/資料夾開啟 |
+| `drop_handler.py` | 73 | 拖放檔案/資料夾開啟 |
 | `clipboard_paste.py` | 109 | 剪貼簿貼上圖片並插入模型 |
 | `hover_preview_binding.py` | 55 | 縮圖懸停預覽彈窗綁定 |
 | `cull_actions.py` | 128 | 色標籤與 pick/reject 挑片狀態套用；`resolve_cull_targets` 決定按鍵作用的照片：多選的格子 → deep zoom 的圖 → 方向鍵焦點（焦點框顯示時）→ 滑鼠下的格子，評分與我的最愛也用它；`apply_color_label`／`apply_cull_state` 可用 `targets=` 指定照片（清單檢視的選取列） |
@@ -533,14 +533,14 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `image_index.py` | 860 | schema 2 WAL：serialized writer/query-only reader；per-call committed reads、multi-query snapshot、additive sort index、batch read-own-writes、paged fingerprints、lifecycle locks |
 | `photo_workflow.py` | 72 | 無 Qt 的排序跨資料夾 cohort／勾選集合／挑片與預設狀態；過濾不改批次目標，拒絕排除而不刪檔 |
 | `scanner.py` | 273 | 背景掃描器，走訪 library roots 填索引（走訪沿用 `maintenance.scan_image_files`，HEIC / JXL 先註冊解碼器）；增量：mtime + size 相同就跳過（要 pHash 而列上沒有時不跳過，補算）；要讀的檔在 `probe_workers()` 條執行緒（核心數 − 1，最多 8）上解碼、不持 DB 鎖，每 256 檔一個交易寫入；寫入時尺寸與 pHash 以這次讀到的為準（`set_decoded_fields`，沒讀就清空）；JobState 只在 chunk commit 後紀錄成功；exact-path failure retry，cancel hook 接共享生命週期 |
-| `maintenance.py` | 46 | 索引與檔案系統對帳；`scan_image_files()` 經 `list_images(recursive=True)` 收 `formats.STILL_IMAGE_EXTENSIONS`，跳過隱藏檔與隱藏資料夾（磁碟根目錄的 `$RECYCLE.BIN`、Mac 的 `.Trashes`），也是掃描器的走訪 |
+| `maintenance.py` | 82 | 索引與檔案系統對帳；僅刪除可讀 root 內經 lstat 確認不存在的項目，保留隱藏、範圍外與讀取失敗項目的 metadata；`scan_image_files()` 經 `list_images(recursive=True)` 收 `formats.STILL_IMAGE_EXTENSIONS`，跳過隱藏檔與隱藏資料夾（磁碟根目錄的 `$RECYCLE.BIN`、Mac 的 `.Trashes`），也是掃描器的走訪 |
 | `smart_album.py` | 361 | Smart Albums：保存查詢並重新套用 |
 | `search_query.py` | 219 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
 | `clip_search.py` | 373 | CLIP 語意搜尋（「找出符合這句話的照片」）；後端是 `clip_onnx` 的 ONNX 模型（不用 torch），快取另記模型 id，別的模型寫的快取不載入；向量連同檔案的大小與修改時間快取在 `clip_cache.npz`，`is_current` 判斷可沿用，`query_text(within=)` 只在指定路徑裡排名 |
 | `clip_onnx.py` | 241 | CLIP ViT-B/32 的 onnxruntime 後端：Hugging Face `Xenova/clip-vit-base-patch32` 固定 commit 的 int8 量化文字 / 影像編碼器（約 150 MB，首次使用下載）；影像前處理（短邊 224 bicubic、中心裁切、OpenAI mean/std）；provider 只用 CUDA（一定是獨顯）或 CPU，不用 DirectML（混合筆電預設裝置常是內顯）；`rank_labels` 零樣本標籤；`default_embedder()` 讓語意搜尋與 Auto-Tag 共用一份模型 |
 | `clip_tokenizer.py` | 151 | 純 Python 的 CLIP byte-level BPE 斷詞器（讀模型的 `vocab.json` / `merges.txt`，NFC、空白合併、小寫、依 Unicode 類別切段、`<|startoftext|>` / `<|endoftext|>` 任何位置都先切出），與 `tokenizers` 參考實作 5000 句隨機字串逐 id 相同 |
-| `auto_tag.py` | 153 | 啟發式內容分類；CLIP 模型已下載時改用 `clip_onnx` 零樣本標籤（最多三個，提示詞向量依模型與標籤組快取），Auto-Tag 自己不觸發下載 |
+| `auto_tag.py` | 155 | 啟發式內容分類；CLIP 模型已下載時改用 `clip_onnx` 零樣本標籤（最多三個，提示詞向量依模型與標籤組快取），Auto-Tag 自己不觸發下載；批次在圖片之間檢查取消 |
 | `phash.py` | 85 | 64-bit DCT pHash（轉正後經 `perceptual_hash.grey_levels` 取灰階） |
 | `bloom_filter.py` | 150 | 純 Python bloom filter，快速判斷「看過這個指紋沒」 |
 | `dedupe_resolver.py` | 60 | 從一組重複中挑出該保留的那張 |
@@ -569,7 +569,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `batch_export_dialog.py` | 456 | 輸出政策／durable job／metadata：新 dialog 預設 CPU reference，GPU explicit opt-in；設定與 retry 保留所選 backend |
 
 
-176 個檔、35,549 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
+187 個檔、37,126 行 —— 全部是 Qt 前端。多數對話框只是外殼，數學在 `image/`。
 
 #### 主視窗組件（非對話框）
 
@@ -598,7 +598,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `tooltip_text.py` | 160 | 多語言提示範本、既有說明的工作區範圍解析、buddy／表單／網格／巢狀列欄位名稱；不讀輸入值 |
 | `main_window_filter.py` | 229 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
-| `main_window_folders.py` | 306 | `MainWindowFoldersMixin`：輪詢目前資料夾（回到前景時立刻檢查並 refresh 資料夾樹）、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
+| `main_window_folders.py` | 305 | `MainWindowFoldersMixin`：輪詢目前資料夾（回到前景時立刻檢查並 refresh 資料夾樹）、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
 | `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
 | `main_window_screens.py` | 194 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
 | `main_window_views.py` | 123 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
@@ -682,7 +682,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 `library_search_dialog.py`(263) 多選或全部加入 Photo Workflow，重新開啟保留條件與結果 · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(221) ·
 `similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(580) Tags & Albums（新增／改名檢查名稱、Clean Up… 清掉已不存在的檔案並合併只差大小寫的名稱） ·
-`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(190) · `auto_tag_dialog.py`(172) ·
+`tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(190) · `auto_tag_dialog.py`(157，WorkerHost 非阻塞關閉與逐張取消) ·
 `keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(216) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明；Describe 以 `CaptionWorker`〔QRunnable〕向本機 Ollama 要描述填入 Description） ·
 `gps_geotag_dialog.py`(90) · `gpx_geotag_dialog.py`(184) 用 GPX 軌跡對整批相片寫 GPS（時區、間隔上限、內插） · `capture_time_dialog.py`(193) 整批位移 EXIF 拍攝時間（輸入位移或第一張的正確時間） · `metadata_template_dialog.py`(178) 把記住的標題／描述／關鍵字範本（含 `{token}`）蓋到整批相片 · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
 `events_dialog.py`(50) · `metadata_export_dialog.py`(94) · `xmp_sidecar_dialog.py`(125) ·
@@ -693,7 +693,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 設定 / 系統
 
 `preferences_dialog.py`(298) 偏好設定（VRAM、UI 縮放、主題、瀏覽輔助、選用分頁） · `shortcut_settings_dialog.py`(407) · `profiles_dialog.py`(206) 多帳號 ·
-`workspace_dialog.py`(236) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(358) 軟刪除回收桶 ·
+`workspace_dialog.py`(235) · `external_editors_settings.py`(151) · `recycle_bin_dialog.py`(358) 軟刪除回收桶 ·
 `cache_maintenance_dialog.py`(53) · `watch_folder_dialog.py`(111) · `macro_manager_dialog.py`(334) ·
 `dual_pane_dialog.py`(167) 雙窗格檔案管理 · `onboarding_dialog.py`(136) 首次導覽 · `whats_new_dialog.py`(143)
 
@@ -704,19 +704,19 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `extra_tools_menu.py` | 855 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
-| `right_click_menu.py` | 874 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
-| `file_menu.py` | 532 | 開啟資料夾/圖片、將目前圖片開成新的 Paint 文件、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
+| `right_click_menu.py` | 872 | 檢視器右鍵選單：在檔案總管顯示、複製路徑、遺失檔案重定位、重試載入、OCR、批次動作、staging tray、桌布、比較、書籤、標籤… |
+| `file_menu.py` | 547 | 開啟資料夾/圖片、將目前圖片開成新的 Paint 文件、新視窗、檔案關聯註冊、剪貼簿貼上、書籤、標籤相簿、快捷鍵設定、偏好設定、回收桶、多帳號、Session、工作區、外部編輯器 |
 | `tip_menu.py` | 291 | 操作說明選單 + 快捷鍵速查對話框 |
 | `filter_menu.py` | 281 | Filter 選單：依副檔名 / 色彩標籤 / 星等 / 標籤 / 相簿 / 分揀狀態過濾，多標籤與進階過濾，RAW+JPEG 堆疊，清除篩選 |
 | `plugin_menu.py` | 380 | 外掛管理：檢視已載入、下載、啟用/停用、開啟資料夾；記錄外掛加進選單的入口（`dispatch_plugin_menus`），重新載入前先移除（`remove_plugin_menu_entries`） |
-| `recent_menu.py` | 192 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
+| `recent_menu.py` | 190 | 最近資料夾 / 最近圖片子選單（teardown-safe，會自動剔除不存在路徑） |
 | `sort_menu.py` | 185 | 依名稱 / 修改日期 / 建立日期 / 拍攝日期（`library.calendar_index.capture_datetime`：EXIF 拍攝時間，沒有就用修改時間；同一秒的連拍依檔名）/ 大小 / 解析度排序 |
 | `language_menu.py` | 58 | 語言切換（提示重新啟動）；選單 object name `language_menu` |
 | `modify_menu.py` | 29 | Deep-Zoom 專用的「修改」選單動作 |
 
 ### 6.14 `Imervue/paint/`
 
-174 個檔、43,523 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
+177 個檔、44,038 行 —— 全樹最大的子系統，是一個完整的點陣繪圖 + 漫畫製作工作區。
 
 #### 核心文件模型與畫布
 
@@ -734,7 +734,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `compositing.py` | 438 | 純 NumPy 圖層合成 |
 | `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
-| `document_io.py` | 453 | 原生 .imervue NPZ 文件讀寫、圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
+| `document_io.py` | 465 | 原生 .imervue NPZ 文件讀寫；file／buffer 共用 metadata 型別驗證，格式錯誤統一 ValueError；圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
 | `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
 | `undo_stack.py` | 190 | 每文件 512 MiB／50 步驟容量歷史；不可變共用像素與完整 metadata 復原、存活圖層身分；available_snapshot 提供已持有快照，背景保存不在 timer 捕捉整張陣列 |
 | `history_pixels.py` | 163 | 純運算 256px 不可變 tile、弱 interning 索引、完整／區域 capture 與差異 patch，計算唯一資料及 Python 狀態容量 |
@@ -786,12 +786,12 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `comic_stamps.py`(266) + `stamp_dock.py`(88) · `flash_effect.py`(132) 爆炸效果 ·
 `bleed_guides.py`(154) 裁切/出血/安全線 · `page_templates.py`(266) ·
 `page_numbering.py`(156) · `page_dock.py`(348) 頁面瀏覽 · `paint_project.py`(147) 多頁專案 +
-`paint_project_io.py`(114) `.imervue-proj` 整本漫畫存檔（File > Save / Open Comic Project…）+ `paint_project_export.py`(130) · `new_project_dialog.py`(105)
+`paint_project_io.py`(114) `.imervue-proj` 整本漫畫存檔（File > Save / Open Comic Project…）+ `paint_project_export.py`(135，PNG／PDF 原子寫入，逐頁提交) · `new_project_dialog.py`(105)
 
 #### 動畫
 
 `animation.py`(478) 時間軸 + 洋蔥皮 · `animation_timeline.py`(198) 純 NumPy 模型 ·
-`animation_dock.py`(350) 幀條 + 播放控制 + Export…（GIF／WebP／APNG）· `animation_export.py`(193) 動畫匯出，吃 dock 的 `AnimationTimeline` 或 `Animation`，`export_animation` 依副檔名選格式
+`animation_dock.py`(350) 幀條 + 播放控制 + Export…（GIF／WebP／APNG）· `animation_export.py`(194) 動畫匯出透過 atomic sibling 寫入，成功才取代目的檔，吃 dock 的 `AnimationTimeline` 或 `Animation`，`export_animation` 依副檔名選格式
 
 #### 素材 / 參考 / 姿勢
 
@@ -848,7 +848,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 ### 6.15 `Imervue/puppet/`
 
-61 個檔、16,478 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
+61 個檔、16,544 行。2D 骨架人偶動畫，Live2D Cubism 相容。原本是外掛，因為核心路徑
 （GL / mesh / 純 NumPy 變形）跑在預設相依上，所以收進主程式當內建分頁；唯一的重量級選用相依
 是 Cubism Native SDK DLL，缺了會優雅降級。
 
@@ -899,34 +899,34 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 即時輸入驅動
 
-`input_engine.py`(213) 把即時輸入灌進 canvas · `input_drivers.py`(215) 純對應函式（游標→角度參數等）·
-`mouse_gaze_driver.py`(239) 頭+眼追游標 · `webcam_tracker.py`(393) 攝影機 → 參數 ·
+`input_engine.py`(215) 把即時輸入灌進 canvas · `input_drivers.py`(215) 純對應函式（游標→角度參數等）·
+`mouse_gaze_driver.py`(239) 頭+眼追游標 · `webcam_tracker.py`(398) 攝影機 → 參數 ·
 `webcam_preview_dialog.py`(224) · `face_landmark_mapper.py`(212) MediaPipe FaceMesh → 參數 ·
 `audio_lipsync.py`(139) 音檔驅動嘴型（Live > Lip-sync from Audio File…：`lipsync_motion` 把 WAV 響度做成 `ParamMouthOpenY` 動作、以該檔為配音）
 
 #### 輸出
 
-`recorder.py`(239) 幀擷取 · `batch_export.py`(186) 每個 motion 匯出成 MP4/GIF/WebM ·
+`recorder.py`(245) 幀擷取；append／close 失敗只發 failed，成功 close 才發 finished · `batch_export.py`(199) 每個 motion 匯出成 MP4/GIF/WebM；開始前保留整批唯一且符合檔案系統大小寫規則的目的名稱 ·
 `spritesheet.py`(67) · `virtual_camera.py`(243) 系統虛擬攝影機 · `ndi_output.py`(222) NDI 來源廣播 ·
-`vts_api.py`(386) VTube Studio Public API server（最小子集）
+`vts_api.py`(391) VTube Studio Public API server（最小子集）；驗證 messageType／data／parameterValues 容器；無效 envelope／建立參數回 APIError，注入清單的無效項目略過
 
-`workspace.py`(946) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；另外混入三個 mixin：`workspace_menus.py`(303，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(361，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
+`workspace.py`(969) 是頂層 `PuppetWorkspace`（`QMainWindow`），掛載 canvas 與各 dock、開存檔、rig 編輯、驅動開關、驗證與批次匯出；idempotent shutdown 供 parent teardown 與 closeEvent 共用；另外混入三個 mixin：`workspace_menus.py`(303，所有 `QAction`、選單列、切換工具列、範例／最近檔案子選單；`RECENT_KEY`)、`workspace_import.py`(361，PNG sprite sheet／PSD／Cubism 匯入)、`workspace_live.py`(222，錄影、webcam 追蹤與預覽、虛擬攝影機、NDI、VTube Studio API)。
 
 內附 Imeru 模型由 `examples/puppet/imeru/build.py` 產生；`blender/head.py` 的中央前髮以重疊髮束覆蓋額頭，頭頂髮流沿較高的 `scalp_depth` 表面建模，從髮旋延伸到瀏海，避免使用臉部深度而埋入頭皮。前髮與額頭投影一起渲染後重新綁定。`tests/test_example_imeru.py` 直接檢查已打包貼圖的額頭覆蓋率、兩眼透明區及頭頂髮流的對比邊界，避免中央缺口及頭頂光滑區重新出現。
 
 ### 6.16 `Imervue/desktop_pet/`
 
-29 個檔、7,089 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
+29 個檔、7,165 行。無邊框、透明、永遠置頂的桌面寵物懸浮視窗，**共用整個 Puppet 執行期**。
 Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。套件的 `__init__` 和 puppet 一樣用模組 `__getattr__` 延遲匯出 `PetWindow`／`PetWorkspace`／`PetTrayIcon` 等名稱，所以 import `desktop_pet.settings` 之類的輕量子模組不會載入視窗、工作區與 Puppet canvas。
 
 #### 視窗與互動
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `pet_window.py` | 867 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas`；`add_integration` / `remove_integration` / `integration` 讓外掛把 `IntegrationController` 掛進 `shutdown()` 會停的登錄表 |
+| `pet_window.py` | 884 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas`；idempotent shutdown 停止 timers、speech 與 controllers；`add_integration` / `remove_integration` / `integration` 讓外掛把 `IntegrationController` 掛進 `shutdown()` 會停的登錄表 |
 | `pet_window_flags.py` | 201 | `PetWindowFlagsMixin`：`PetWindow` 的視窗旗標組合（置頂／置底、點擊穿透）、鎖定位置、吸附門檻、透明度、全螢幕時隱藏 |
 | `pet_feature_toggles.py` | 188 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、虛擬攝影機、LLM、音樂律動、閒置小遊戲、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
-| `pet_workspace.py` | 843 | Desktop Pet 控制面板：固定角色選擇、四個可捲動設定分類、共用主題與狀態；維持延遲 overlay 建立、驅動和全域熱鍵同步 |
+| `pet_workspace.py` | 861 | Desktop Pet 控制面板：固定角色選擇、四個可捲動設定分類、共用主題與狀態；維持延遲 overlay 建立、驅動和全域熱鍵同步；shutdown 明確關閉 overlay 並釋放其服務 |
 | `pet_interaction.py` | 214 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
 | `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
 | `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
@@ -943,8 +943,8 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。�
 | --- | ---: | --- |
 | `pet_feature_base.py` | 159 | `FeatureHost` Protocol + `IntegrationController` 骨架 |
 | `pet_features.py` | 77 | 內建整合控制器：全域熱鍵；OBS / Twitch / Webhook / Windows 通知是 `plugins/pet_integrations` 外掛，經 `add_integration` 加進同一個登錄表 |
-| `pet_drivers.py` | 243 | canvas 驅動控制器：音樂律動 / 閒置小遊戲 / 點擊音效 / LLM 對話 |
-| `pet_canvas_drivers.py` | 168 | canvas 輸入驅動子系統（自動眨眼 / 拖曳追頭 / 麥克風對嘴） |
+| `pet_drivers.py` | 249 | canvas 驅動控制器：音樂律動 / 閒置小遊戲 / 點擊音效 / LLM 對話 |
+| `pet_canvas_drivers.py` | 177 | canvas 輸入驅動子系統（自動眨眼 / 拖曳追頭 / 麥克風對嘴） |
 
 > 這兩個家族的存在是為了把 `PetWindow` 從 god-object 拉回「協調者」。
 
@@ -979,7 +979,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `plugin_base.py` | 264 | `ImervuePlugin` 基底類別，13 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_pet_created`（寵物視窗建立時，或外掛載入時寵物已存在）、`on_app_closing` |
 | `plugin_manager.py` | 381 | discover/load failures 報狀態、partial-load cleanup 與 explicit fresh module reload；各視窗 instance 獨立 |
 | `plugin_downloader.py` | 573 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme）；one atomic plugin job／failure retry 與 cooperative cancellation；dialog 使用非阻塞 WorkerHost retirement，已完成安裝保留 |
-| `pip_installer.py` | 935 | nonblocking dependency gate／dialog worker retirement、interpreter install 互斥與 import fail false-success guard |
+| `pip_installer.py` | 952 | nonblocking dependency gate／dialog worker retirement、interpreter install 互斥；持有實際 pip 子行程，取消與 stdout 靜默期限可終止並 reap，finally 關閉管線與計時器；import fail false-success guard |
 | `python_finder.py` | 245 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
@@ -998,7 +998,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `server.py` | 439 | JSON-RPC 2.0 over stdio 的協定迴圈 |
 | `tools.py` | 176 | 工具集的對外門面：re-export 全部 58 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
 | `tools_read.py` | 662 | 22 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`、`puppet_validate`、`puppet_schema`… |
-| `tools_edit.py` | 883 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
+| `tools_edit.py` | 892 | 36 個寫出類處理器（讀 `source`、寫 `destination`）；共用 writer 原子替換輸出，frame 配置前限制輸出像素：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
 | `tool_support.py` | 77 | 兩組處理器共用：`IMAGE_EXTENSIONS`（即 `formats.RASTER_EXTENSIONS`）、`NO_ALPHA_FORMATS`、`open_upright` / `load_rgba_array`（委派 `shown.open_shown` / `load_shown_rgba`，RAW 經 libraw 顯像；每個工具都在依 EXIF 轉正後的影像上運作，尺寸與座標也以它為準）、`validated_dir`／`validated_file`、`json_safe` |
 | `tool_defs_read.py` | 387 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
 | `tool_defs_edit.py` | 929 | `EDIT_TOOL_DEFINITIONS`：寫出類工具的同上資料 |
@@ -1031,7 +1031,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `object_splitter` | 4 / 701 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
 | `gpu_develop` | 7 / 691 | 可選 API-3 wgpu batch provider；只選 discrete GPU，Vulkan/D3D12/Metal policy、bounded buffer slices、whole-image contrast two-pass、GPU table/mixed math 與 CPU remainder。threshold/posterize enabled 時整個 recipe CPU reference，避免 1-byte rounding 經 discontinuity 放大。新匯出 dialog 預設 CPU；GPU explicit opt-in，normal mixed recipes approximation 非 byte exact，裝置／runtime 失敗 CPU fallback。actual fixed 640k/24MP/60MP reports 見 docs/performance/gpu-develop-20261007.md；無模型權重、不是 HDR/wide-gamut editor | wgpu（首次使用時安裝） |
 | `video_source` | 3 / 612 | 瀏覽影片並抽出靜幀 | imageio-ffmpeg |
-| `cloud_share` | 3 / 484 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛，僅在使用者按下上傳時執行） | — |
+| `cloud_share` | 3 / 486 | 上傳到 WebDAV / Imgur（HTTPS-only 守衛）；uploaders.py 將 WebDAV 檔名編為單一路徑片段，保留 base query／fragment；僅在使用者按下上傳時執行 | — |
 | `ai_motion_deblur` | 3 / 480 | Wiener 反捲積 + 選用 ONNX | onnxruntime |
 | `ai_portrait_relight` | 3 / 464 | 啟發式 Lambert 打光 + 選用 ONNX | onnxruntime |
 | `ai_smart_resize` | 3 / 459 | Seam carving 內容感知縮放 | — (重運算) |
@@ -1053,7 +1053,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 ## 8. `tests/` 測試體系
 
-946 個檔、157,840 行。`pyproject.toml` 定義三個互斥層級 marker：
+977 個 Python 檔、164,784 行。`pyproject.toml` 定義三個互斥層級 marker：
 
 | 層級 | 定義 | 判定方式 |
 | --- | --- | --- |
@@ -1082,6 +1082,8 @@ pytest 回報的那一個。`pytest_sessionfinish` 把它記在該次執行的 `
 子程序同時將 rootdir 與 confcutdir 設為自己的測試目錄，保留專案設定與 fixture 插件；
 跨磁碟的單檔 probe 不再掃描系統暫存目錄的相鄰路徑。消失目錄的回歸測試驗證隔離邊界。
 
+本次完整審核回歸：`test_full_review_boundaries.py`（MCP 原子輸出／像素上限、maintenance、session、frozen 平台）、`test_full_review_runtime.py`（真實 pip 子行程、profile 同步競爭、跨程序搬移、無 hardlink 退路、WebDAV）、`test_full_review_ui_failures.py`（Paint 寫入失敗與壞文件、gallery URL）、`test_review_puppet_fixes.py`（輸出名稱、recorder、VTS、teardown）、`test_frozen_startup_probe.py`（probe 拒絕非 frozen 與預選平台）。既有 `test_file_transfer.py` 配合新的搬移呼叫更新；`test_auto_tag_dialog.py`、`test_reject_gap_dialogs.py`、`test_main_window_close.py`、`test_pet_shutdown.py` 與 `test_puppet_input_engine_viseme.py` 涵蓋取消與生命週期。
+
 ### Qt / OpenGL 在無頭 CI 上的硬規則
 
 GitHub Actions Windows runner 在同一個 pytest session 建太多 `QOpenGLWidget` 會
@@ -1106,6 +1108,7 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 
 | 項目 | 檔案 | 說明 |
 | --- | --- | --- |
+| Frozen 啟動 probe | `.github/workflows/frozen-startup.yml`、`scripts/frozen_startup_probe.py`（58 行） | PyInstaller 將未改寫的入口檔封裝為 data；驗證入口 SHA-256、native GL backend／GL entry point，且不得載入 Qt。PR／手動 Linux、macOS matrix 保留 JSON 與 build log。2026-10-28 原生 Windows probe 已通過；Linux／macOS CI 尚待執行。只驗證 frozen import，未建立 GUI／GL context |
 | PyInstaller | `Imervue.spec` / `Imervue_mac.spec` | Windows / macOS spec |
 | Nuitka | `build_nuitka/`、`nuitka.md` | 需在 import OpenGL 前關掉 `USE_ACCELERATE` |
 | auto-py-to-exe | `packaging/auto_py_to_exe_config.json` | |
@@ -1205,7 +1208,7 @@ HuggingFace 下載必須釘 `revision=`（bandit `B615`）。
 
 ### 10.9 設定寫入
 
-一律透過 `user_settings/user_setting_dict.py`：去抖非同步存檔 + atomic `.tmp` → `os.replace()`。啟動時讀不到的設定檔由 `system/unreadable_guard.UnreadableFileGuard` 看守：第一次覆寫前先另存 `<檔名>.unreadable-<時間>`，存不了副本就不覆寫，啟動後再以 `gui/settings_notice.py` 告知使用者。
+一律透過 `user_settings/user_setting_dict.py`：profile 的讀取、快照、CRUD／切換與落盤在同一 RLock transaction 中；失敗不得提前切換記憶體狀態。去抖非同步存檔 + atomic `.tmp` → `os.replace()`。啟動時讀不到的設定檔由 `system/unreadable_guard.UnreadableFileGuard` 看守：第一次覆寫前先另存 `<檔名>.unreadable-<時間>`，存不了副本就不覆寫，啟動後再以 `gui/settings_notice.py` 告知使用者。
 關閉前呼叫 `cancel_pending_save()` 再立即 flush。
 
 ### 10.10 選單走訪不可用 `QAction.menu()`
@@ -1317,6 +1320,14 @@ Registry 與原始對話框互相獨立，Qt ownership／retirement 完成後才
 圖庫 SQLite：writer RLock held through batch；獨立 query-only reader 以 read RLock 保護 eager result／multi-query snapshot。讀取不在 read lock 內取得 writer lock；close/init 為 writer→reader，避免生命週期 deadlock。write_batch owning thread 保有 read-own-writes；fingerprint keyset 1000/page 不 yield live cursor，也不 pin WAL；每頁 snapshot，不宣稱整個 generator frozen。現有 schema 2、WAL、raw conn() contract 保持，raw callers 仍須自行鎖定。
 
 GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readback 與 CPU remainder；混合色彩有少量 rounding 差，threshold／posterize 的 discontinuity 可放大至 255，因此 enabled quantizers 整個 recipe CPU reference。新 BatchExportDialog 預設 CPU，GPU explicit opt-in；Modify full preview／CPU export pixel exact，reduced preview 仍 approximate 不用作存檔。GPU no weights／optional wgpu；probe/open/runtime failures、integrated/software adapter exclusion 與 provider generation leases 保持。
+
+### 10.19 審核後的輸出與生命週期契約
+
+Paint `animation_export.py`、`paint_project_export.py` 與 MCP writer 使用 `replace_atomically`，失敗保留既有目的檔；漫畫的獨立圖片逐頁提交，CBZ／PDF 則完成整個檔案後才提交。搬移／複製的 exclusive publication 與覆寫匯出的 atomic replacement 是不同契約，sidecar 仍共用搬移規則。
+
+主視窗在確認可關閉後明確呼叫 Puppet／Desktop Pet `shutdown()`，不依賴 child closeEvent。`puppet/workspace.py` 釋放錄影／批次輸出、VTS、live drivers、idle／motion playback 與 preview；`pet_workspace.py`／`pet_window.py` 關閉 overlay、timers、speech 與 feature controllers。shutdown 可重複呼叫；input shutdown 先停用 audio callback；webcam shutdown 停用 pump 並設 stop event，保留 thread reference，由 worker finally 釋放 camera，阻塞 device read 不等待於 Qt 執行緒。`gui/auto_tag_dialog.py` 使用 WorkerHost retirement，close／Esc 不等待目前 classifier；取消於下一張圖片前生效。pip 另以實際子行程與 Timer 管理阻塞 stdout 的期限與清理。
+
+---
 
 ## 11. 持久化檔案一覽
 

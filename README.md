@@ -105,6 +105,8 @@ Hover over controls, workspace tabs, menus and list or table items for tips. Mis
 
 Folder browsing merges scan bursts instead of rebuilding for every batch. File-list comparisons use indexed membership, metadata priming reads attributes without image headers, and the hidden list is populated when selected. First results still appear progressively, final ordering is retained, and a completed empty folder stops the busy progress indicator. File-tree folder previews select the first image without sorting the full list, run at most two workers and skip custom system folder-icon queries to reduce competing disk work.
 
+Failed Paint and MCP image exports preserve the previous destination. Puppet batch exports keep colliding motion names separate and report recording failures. Library maintenance removes only confirmed missing entries within readable library roots. Background saves cannot overwrite concurrent profile changes. Cancelling installation or Auto-Tag retires background work; closing a window also shuts down its Puppet and Pet services. Web galleries and WebDAV encode filenames correctly. Invalid documents, sessions and VTS requests return errors, and MCP frames enforce the same 100-million-pixel output limit as other bounded image tools. Frozen builds retain the host OpenGL platform.
+
 ## Installation
 
 ### Requirements

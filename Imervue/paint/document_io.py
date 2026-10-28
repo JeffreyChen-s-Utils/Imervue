@@ -200,7 +200,15 @@ def load_document_from_buffer(blob: bytes) -> PaintDocument:
 
 
 def _document_from_npz(data) -> PaintDocument:
-    """Shared loader body — turn a loaded NpzFile into a PaintDocument."""
+    """Normalize malformed bundle fields at the shared file/buffer boundary."""
+    try:
+        return _decode_document_npz(data)
+    except (KeyError, TypeError, AttributeError, OverflowError) as exc:
+        raise ValueError(f"invalid document metadata: {exc}") from exc
+
+
+def _decode_document_npz(data) -> PaintDocument:
+    """Turn validated metadata and arrays into a PaintDocument."""
     metadata = _read_metadata(data)
     layers, active_index = _read_layers(data, metadata)
     selection = _read_selection(data, metadata)
@@ -248,6 +256,10 @@ def _read_metadata(data) -> dict:
         )
     if not isinstance(metadata.get("layers"), list) or not metadata["layers"]:
         raise ValueError("document metadata has no layers")
+    for key in ("width", "height"):
+        value = metadata.get(key)
+        if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+            raise ValueError(f"document {key} must be a positive integer")
     return metadata
 
 

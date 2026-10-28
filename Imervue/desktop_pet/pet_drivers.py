@@ -152,6 +152,12 @@ class ClickSfxController:
             self._player.shutdown()
             self._player = None
 
+    def shutdown(self) -> None:
+        """Stop sounds without changing the saved preference."""
+        player, self._player = self._player, None
+        if player is not None:
+            player.shutdown()
+
     def is_enabled(self) -> bool:
         return self._player is not None
 

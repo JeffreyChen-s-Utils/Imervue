@@ -1,6 +1,8 @@
 Guia do Usuário do Imervue
 ==========================
 
+Falhas na exportação de imagens pelo Paint ou MCP preservam o arquivo de destino anterior. As exportações em lote do Puppet distinguem nomes de movimento conflitantes e informam falhas de gravação. A manutenção remove apenas entradas comprovadamente ausentes em raízes de biblioteca legíveis. Salvamentos em segundo plano não sobrescrevem alterações simultâneas de perfis. Cancelar uma instalação ou o Auto-Tag encerra o trabalho em segundo plano; fechar uma janela também interrompe seus serviços Puppet e Pet. Galerias web e WebDAV codificam corretamente os nomes de arquivos. Documentos, sessões e solicitações VTS inválidos retornam erros. Molduras MCP seguem o mesmo limite de saída de 100 milhões de pixels das demais ferramentas de imagem limitadas. Versões empacotadas mantêm a plataforma OpenGL nativa do sistema.
+
 Uma estação de trabalho de imagens acelerada por GPU que oferece **cinco abas principais**.
 A maior parte deste guia está organizada em torno dessas cinco seções.
 

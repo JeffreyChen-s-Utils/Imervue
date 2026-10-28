@@ -4,9 +4,9 @@
 
 ## 結論
 
-需修正。確認 16 項未關閉問題，其中 P1 三項、P2 十三項。P1 表示優先處理的資料遺失風險；P2 表示有明確觸發條件的功能、生命週期或防護缺口。沒有確認 P0 問題，也不據此宣稱不存在。
+初次審核確認 16 項問題，其中 P1 三項、P2 十三項。修復已整合，驗收進度見下方「修復驗收」；完整測試已通過，原生跨平台驗證及外掛發佈尚待完成。P1 表示優先處理的資料遺失風險；P2 表示有明確觸發條件的功能、生命週期或防護缺口。沒有確認 P0 問題，也不據此宣稱不存在。
 
-本次只審核及記錄，未修改應用程式或測試。未將例外逸出等同整個行程崩潰，也未將模擬環境等同實機驗證。
+初次審核只記錄問題；後續修復另附行為測試與驗收記錄。未將例外逸出等同整個行程崩潰，也未將模擬環境等同實機驗證。
 
 ## 範圍與方法
 
@@ -20,22 +20,22 @@
 
 | ID | 優先 | 問題 | 狀態 |
 |---|---|---|---|
-| FR-01 | P1 | 部分 Paint／MCP 匯出失敗會破壞既有目標 | 未關閉 |
-| FR-02 | P1 | Puppet 動作名稱碰撞使批次輸出互相覆寫 | 未關閉 |
-| FR-03 | P1 | 資料庫清理誤刪仍存在圖片的索引與附屬資料 | 未關閉 |
-| FR-04 | P2 | pip 取消無法終止正在執行的子行程 | 未關閉 |
-| FR-05 | P2 | 背景設定儲存覆蓋新建 profile | 未關閉 |
-| FR-06 | P2 | 主視窗關閉未清理嵌入 Puppet／Pet 的工作 | 未關閉 |
-| FR-07 | P2 | 錄影結尾寫入失敗仍回報儲存成功 | 未關閉 |
-| FR-08 | P2 | 檔案搬移的存在檢查無法防止並行覆寫 | 未關閉 |
-| FR-09 | P2 | 關閉 Auto-Tag 同步等待剩餘批次，阻塞 GUI | 未關閉 |
-| FR-10 | P2 | 網頁相簿未編碼檔名 URL | 未關閉 |
-| FR-11 | P2 | WebDAV 未編碼檔名 URL | 未關閉 |
-| FR-12 | P2 | 損壞 Paint 文件的欄位例外穿出開啟錯誤處理 | 未關閉 |
-| FR-13 | P2 | 損壞工作階段 JSON 的型別例外穿出開啟錯誤處理 | 未關閉 |
-| FR-14 | P2 | VTS 未驗證訊息欄位型別，例外穿出 callback | 未關閉 |
-| FR-15 | P2 | MCP frame 未限制輸出配置大小 | 未關閉 |
-| FR-16 | P2 | 非 Windows frozen 啟動錯選 Windows OpenGL 平台 | 未關閉 |
+| FR-01 | P1 | 部分 Paint／MCP 匯出失敗會破壞既有目標 | 已修復，驗收中 |
+| FR-02 | P1 | Puppet 動作名稱碰撞使批次輸出互相覆寫 | 已修復，驗收中 |
+| FR-03 | P1 | 資料庫清理誤刪仍存在圖片的索引與附屬資料 | 已修復，驗收中 |
+| FR-04 | P2 | pip 取消無法終止正在執行的子行程 | 已修復，驗收中 |
+| FR-05 | P2 | 背景設定儲存覆蓋新建 profile | 已修復，驗收中 |
+| FR-06 | P2 | 主視窗關閉未清理嵌入 Puppet／Pet 的工作 | 已修復，驗收中 |
+| FR-07 | P2 | 錄影結尾寫入失敗仍回報儲存成功 | 已修復，驗收中 |
+| FR-08 | P2 | 檔案搬移的存在檢查無法防止並行覆寫 | 已修復，驗收中 |
+| FR-09 | P2 | 關閉 Auto-Tag 同步等待剩餘批次，阻塞 GUI | 已修復，驗收中 |
+| FR-10 | P2 | 網頁相簿未編碼檔名 URL | 已修復，驗收中 |
+| FR-11 | P2 | WebDAV 未編碼檔名 URL | 已修復，驗收中 |
+| FR-12 | P2 | 損壞 Paint 文件的欄位例外穿出開啟錯誤處理 | 已修復，驗收中 |
+| FR-13 | P2 | 損壞工作階段 JSON 的型別例外穿出開啟錯誤處理 | 已修復，驗收中 |
+| FR-14 | P2 | VTS 未驗證訊息欄位型別，例外穿出 callback | 已修復，驗收中 |
+| FR-15 | P2 | MCP frame 未限制輸出配置大小 | 已修復，驗收中 |
+| FR-16 | P2 | 非 Windows frozen 啟動錯選 Windows OpenGL 平台 | 已修復，驗收中 |
 
 ## 詳細發現與驗收方向
 
@@ -170,3 +170,30 @@
 另由獨立審核者重讀證據與相關呼叫端，並重跑根模組重現程式。接受上述發現，要求保留失敗注入、平台模擬與未驗證硬體的限制；搬移／複製實測差異已修正。詳見本機 `.audit/full-review-independent.md`。
 
 審核完成後查詢目前分支 PR，沒有對應 PR，因此沒有外部 review-bot 討論可供比對。此次未推送或部署任何程式變更。
+
+## 修復驗收（2026-10-28）
+
+下列修復以初次重現失敗為基準，新增可重跑的 regression tests。歷史發現中的行號與重現結果保留，代表修復前版本。
+
+| ID | 修復與驗證 |
+|---|---|
+| FR-01 | Paint GIF／WebP／APNG、CBZ／PDF 與 MCP 輸出共用同目錄暫存及原子替換；注入編碼／合成失敗後既有目標逐位元不變，含 MCP 同來源覆寫。 |
+| FR-02 | 批次啟動前保留整組唯一目的檔名，包含既有檔案、中文、符號清理及大小寫碰撞；實際 GIF 編碼後紅／藍動作各自保留。 |
+| FR-03 | 只清理可讀掃描範圍內、lstat 確認不存在的索引；隱藏、移除 root、權限失敗及範圍外圖片的 note／pick／tag 均保留。 |
+| FR-04 | 安裝 worker 持有 Popen，取消與逾時會終止並回收直接子行程；逾時涵蓋 stdout 消費，實際子行程測試包含啟動競態。 |
+| FR-05 | RLock 涵蓋設定快照、profile 狀態及整次讀改寫；建立／刪除／改名／切換與背景儲存交錯均有 barrier 測試。 |
+| FR-06 | 主視窗主動呼叫嵌入 Puppet／Pet 的冪等 shutdown，停用 driver、錄影器、計時器及服務；次要視窗關閉保留另一視窗。攝影機讀取可能延後返回，取消後不再碰觸 Qt 物件，返回後釋放資源；以阻塞 capture 替身與已銷毀 QObject 驗證，未使用真實裝置。 |
+| FR-07 | writer append／close 失敗只發 failed，成功只發 finished；先清除錄影狀態，避免批次提前前進。 |
+| FR-08 | 搬移使用不覆寫 rename 或暫存副本的排他發布，無 hardlink 時以 xb 建立目標；兩個程序與強制跨磁碟路徑驗證只有一方成功。失敗不刪來源；退路可能留下不完整目的檔。 |
+| FR-09 | Auto-Tag 使用 WorkerHostMixin 退休工作執行緒，取消在圖片之間生效，關閉不再同步等待剩餘批次；實際 Qt event loop 驗證。 |
+| FR-10 | 相簿的檔名先作 URL path segment 編碼，再作 HTML escaping；產出 HTML 的特殊字元連結可還原原檔名。 |
+| FR-11 | WebDAV 上傳與分享 URL 編碼檔名元件，保留 collection query／fragment；測試請求 URL，未呼叫真實雲端服務。 |
+| FR-12 | Paint 文件／buffer 入口把損壞欄位例外轉為 ValueError，尺寸必須為正整數；實際損壞 NPZ 測試。 |
+| FR-13 | Session 入口驗證 JSON object 與 tabs／selection 容器，錯誤由既有 GUI 錯誤處理接住。 |
+| FR-14 | VTS 入口驗證訊息、data、參數容器與數值，無效輸入回 APIError；後續合法認證請求仍可處理。 |
+| FR-15 | MCP frame 在配置前依 border 與 bottom_extra 的最終尺寸檢查 100 MP 上限。 |
+| FR-16 | frozen／compiled 初始化只在 Windows 預設 nt，保留使用者設定；本機 Windows PyInstaller 真實 executable 通過。Ubuntu／macOS 原生封裝及 OpenGL.GL 匯入由 frozen-startup.yml 驗證，尚待 CI 結果。 |
+
+主要測試位於 `tests/test_full_review_boundaries.py`、`tests/test_full_review_ui_failures.py`、`tests/test_full_review_runtime.py`、`tests/test_review_puppet_fixes.py` 與 `tests/test_frozen_startup_probe.py`。整合針對性測試 99 passed；完整套件 14,447 passed、1,431 skipped、6 個 imageio fps 棄用警告，exit 0。跳過數與基準相同。Ruff 通過，Bandit 無問題；文件與 CI 針對性檢查 108 passed。第一輪完整測試發現舊 Auto-Tag 測試綁定已移除的實作，改以真實 worker 的 Esc／關閉按鈕行為驗證後重跑完整套件通過。記錄 `.audit/full-review-fixes-full-tests-final.log`。
+
+兩組獨立複核接受整合修復；大小寫目的路徑碰撞的追加修正已由複核者重跑真實 encoder。原生 frozen probe 僅涵蓋未修改應用入口的初始化與原生 OpenGL 匯入，不代表完整 GUI 或 GPU rendering 驗證。初次審核列出的其他證據限制仍適用。
