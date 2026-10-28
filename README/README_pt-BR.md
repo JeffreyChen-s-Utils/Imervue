@@ -105,6 +105,8 @@ Passe o mouse sobre controles, abas, menus e itens de listas ou tabelas para ver
 
 Ao abrir pastas, os resultados consecutivos da varredura são agrupados, evitando reconstruir a visualização a cada lote. As comparações usam consultas indexadas, os metadados iniciais leem apenas atributos sem abrir cabeçalhos de imagens e a lista oculta só é preenchida quando selecionada. Os primeiros resultados continuam aparecendo progressivamente, a ordem final é mantida e o indicador de atividade para ao concluir uma pasta vazia. As prévias da árvore escolhem a primeira imagem sem ordenar toda a lista, usam no máximo dois trabalhadores e dispensam consultas a ícones personalizados de pastas do sistema para reduzir a disputa pelo disco.
 
+Falhas na exportação de imagens pelo Paint ou MCP preservam o arquivo de destino anterior. As exportações em lote do Puppet distinguem nomes de movimento conflitantes e informam falhas de gravação. A manutenção remove apenas entradas comprovadamente ausentes em raízes de biblioteca legíveis. Salvamentos em segundo plano não sobrescrevem alterações simultâneas de perfis. Cancelar uma instalação ou o Auto-Tag encerra o trabalho em segundo plano; fechar uma janela também interrompe seus serviços Puppet e Pet. Galerias web e WebDAV codificam corretamente os nomes de arquivos. Documentos, sessões e solicitações VTS inválidos retornam erros. Molduras MCP seguem o mesmo limite de saída de 100 milhões de pixels das demais ferramentas de imagem limitadas. Versões empacotadas mantêm a plataforma OpenGL nativa do sistema.
+
 ## Instalação
 
 ### Requisitos
@@ -309,6 +311,8 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 - **Pastas / imagens recentes** rastreadas; última pasta restaurada automaticamente na inicialização
 
 ### Ordenação e filtragem
+
+Os controles acima da árvore ordenam por nome, modificação, criação, tamanho ou tipo de arquivo; a seta muda a direção. As opções permitem colocar pastas primeiro, salvar uma ordem própria para a pasta atual ou restaurar os padrões globais. Ao apontar para um item, aparecem as datas e o tamanho. Ative Incluir subpastas para pesquisar em segundo plano nas pastas ainda não abertas, cancelar a busca e localizar um resultado na árvore original. Itens ocultos e pendentes de exclusão são ignorados; links simbólicos e junções não são seguidos. Pastas expandidas, seleção e posição de rolagem são restauradas após atualizar ou reabrir a pasta.
 
 - Ordenar por nome (ordem natural, como o Explorer: `img2` antes de `img10`) / modificação / criação / data da foto (horário EXIF da câmera; senão, modificação) / tamanho / resolução (asc ou desc)
 - Filtrar por extensão, etiqueta de cor, avaliação, tag/álbum, estado de triagem
@@ -718,6 +722,8 @@ Escolha qualquer combinação na aba ou no menu de clique direito. Auto idle, Id
 Tudo o que você configura — posição, drivers, opacidade, click-through, tamanho — é lembrado entre lançamentos.
 
 O plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) adiciona **Plugins > Desktop Pet Integrations**: o pet reage ao OBS (transmissão, gravação, troca de cena), a palavras-chave do chat da Twitch (em qualquer parte de uma mensagem, ou `=hi` para a mensagem inteira, `!dance*` para o início dela, `/go+al/` para uma expressão regular), a um webhook local (`POST http://127.0.0.1:9876/trigger` com `{"group": "Wave", "speech": "Hi!"}`) e às notificações do Windows. Ele também é o exemplo de um plugin de pet construído sobre `on_pet_created`.
+
+O webhook local e a API do VTube Studio rejeitam `Origin: null`, mesmo com um token válido, pois páginas web em sandbox podem enviar esse valor. Clientes nativos sem o cabeçalho `Origin` e páginas servidas em localhost continuam compatíveis, conforme a autenticação configurada. O navegador também pode enviar `null` para páginas abertas do disco; sirva essas páginas em localhost.
 
 ### Voz personalizada (pet script)
 

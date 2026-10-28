@@ -280,6 +280,8 @@ class CubismModel:
     def __init__(self, lib: ctypes.CDLL, moc_bytes: bytes):
         self._lib = lib
         self._moc_backing, moc_addr = _aligned_copy(moc_bytes, CSM_ALIGNOF_MOC)
+        if not lib.csmHasMocConsistency(ctypes.c_void_p(moc_addr), ctypes.c_uint(len(moc_bytes))):
+            raise CubismBridgeError("moc3 consistency check failed; model was not revived")
         moc_ptr = lib.csmReviveMocInPlace(
             ctypes.c_void_p(moc_addr), ctypes.c_uint(len(moc_bytes)),
         )

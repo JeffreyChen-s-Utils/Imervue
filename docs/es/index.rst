@@ -1,6 +1,8 @@
 Guía del Usuario de Imervue
 ===========================
 
+Los fallos al exportar imágenes desde Paint o MCP conservan el archivo de destino anterior. La exportación por lotes de Puppet distingue nombres de movimiento en conflicto e informa de los fallos de grabación. El mantenimiento solo elimina entradas cuya ausencia se confirma dentro de raíces de biblioteca legibles. Los guardados en segundo plano no sobrescriben cambios simultáneos de perfiles. Cancelar una instalación o Auto-Tag detiene el trabajo en segundo plano; cerrar una ventana también detiene sus servicios Puppet y Pet. Las galerías web y WebDAV codifican correctamente los nombres de archivo. Los documentos, sesiones y solicitudes VTS no válidos producen errores. Los marcos MCP aplican el mismo límite de salida de 100 millones de píxeles que otras herramientas de imagen limitadas. Las versiones empaquetadas conservan la plataforma OpenGL nativa del sistema.
+
 Una estación de trabajo de imágenes con aceleración GPU que incluye **cinco pestañas
 de nivel superior**. La mayor parte de esta guía está organizada en torno a esas cinco
 secciones.
@@ -362,6 +364,8 @@ Categorice sus imágenes con etiquetas y álbumes.
 
 Ordenación y filtrado
 ^^^^^^^^^^^^^^^^^^^^^
+
+Los controles sobre el árbol permiten ordenar por nombre, modificación, creación, tamaño o tipo de archivo; la flecha cambia la dirección. Las opciones permiten mostrar primero las carpetas, guardar un orden propio para la carpeta actual o restablecer los valores globales. Al pasar el puntero se muestran las fechas y el tamaño. Active Incluir subcarpetas para buscar en segundo plano en carpetas sin abrir, cancelar el análisis y localizar un resultado en el árbol original. Se excluyen los elementos ocultos y pendientes de eliminación; no se siguen enlaces simbólicos ni uniones de directorios. Las carpetas expandidas, la selección y el desplazamiento se restauran al actualizar y volver a abrir la carpeta.
 
 .. list-table::
    :header-rows: 1
@@ -1782,13 +1786,15 @@ También es el ejemplo práctico de un plugin que amplía la mascota — véase 
        ``{"group": "Wave", "speech": "Hi!"}`` — cualquiera de los dos campos puede omitirse —
        enviado desde scripts, Stream Deck o herramientas de automatización. Con un token
        configurado, las solicitudes deben enviar ``Authorization: Bearer <token>``; las
-       solicitudes procedentes de una página web se rechazan
+       solicitudes procedentes de una página web remota se rechazan
      - Nada adicional
    * - Reaccionar a notificaciones de Windows
      - Reproduce el grupo ``Notify`` y dice el título de la notificación cuando otra aplicación
        muestra una notificación de Windows; se omiten las aplicaciones indicadas en los ids de
        aplicación ignorados. Windows pide acceso a las notificaciones la primera vez
      - Windows; los paquetes de notificaciones ``winrt`` (se instalan en el primer uso)
+
+El webhook local y la API de VTube Studio rechazan ``Origin: null``, incluso con un token válido, porque las páginas web aisladas pueden enviar ese valor. Los clientes nativos sin encabezado ``Origin`` y las páginas servidas en localhost siguen siendo compatibles, con la autenticación configurada. El navegador también puede enviar ``null`` para páginas abiertas desde el disco; sirva esas páginas en localhost.
 
 Un rig solo reacciona a los grupos de movimientos que tiene; un grupo que falta no reproduce
 nada.

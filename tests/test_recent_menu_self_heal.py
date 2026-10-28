@@ -101,7 +101,7 @@ class _StubMainWindow:
 
 
 class _StubTree:
-    def setRootIndex(self, _index):   # noqa: N802  # NOSONAR — mirrors QTreeView.setRootIndex
+    def set_root_path(self, _path):
         """No-op — the test asserts on settings + toast, not on
         the tree's selection state."""
 

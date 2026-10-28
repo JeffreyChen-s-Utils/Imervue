@@ -58,6 +58,14 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261028-08 | 2026-10-28 | Resolve seven PR quality findings | #done #refactor #review | [2026-10-b](2026-10-b.md) |
+| U-20261028-07 | 2026-10-28 | Verify native startup and close full-review findings | #done #review #tests | [2026-10-b](2026-10-b.md) |
+| U-20261028-06 | 2026-10-28 | Publish WebDAV fix and repair validation configuration | #done #Imervue_Plugins #ci | [2026-10-b](2026-10-b.md) |
+| U-20261028-05 | 2026-10-28 | Repair full-program review findings | #done #bugfix #tests | [2026-10-b](2026-10-b.md) |
+| U-20261028-04 | 2026-10-28 | Audit first-party program and plugin boundaries | #done #review #security | [2026-10](2026-10.md) |
+| U-20261028-03 | 2026-10-28 | Publish reviewed plugin fixes | #done #Imervue_Plugins #bugfix | [2026-10](2026-10.md) |
+| U-20261028-02 | 2026-10-28 | Resolve five code-review findings | #done #bugfix #security #tests | [2026-10](2026-10.md) |
+| U-20261028-01 | 2026-10-28 | Expand file-tree sorting, search and saved view state | #done #file-tree #ui #tests | [2026-10](2026-10.md) |
 | U-20261022-01 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261022-02 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261022-03 | 2026-10-22 | Keep release dependencies aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
@@ -580,5 +588,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 101 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 9 |
+| [2026-10.md](2026-10.md) | 2026-10 | 105 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 13 |

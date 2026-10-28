@@ -13,9 +13,12 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-from PySide6.QtCore import Qt, Signal
+import pytest
+
+from PySide6.QtCore import Qt, Signal, QPoint
+from PySide6.QtTest import QTest
 from PySide6.QtGui import QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QMenu, QComboBox, QToolButton
 
 from Imervue.gui.file_tree_sort import (
     DEFAULT_TREE_SORT_KEY,
@@ -322,8 +325,8 @@ def test_sort_menu_offers_created_and_applies_it(qapp):
     try:
         sort_menu = tree._add_sort_menu(menu)  # noqa: SLF001
         sort_actions = [a for a in sort_menu.actions() if a.isCheckable()]
-        # 4 sort keys + Ascending/Descending order toggles.
-        assert len(sort_actions) == 6
+        # 5 sort keys + Ascending/Descending order toggles.
+        assert len(sort_actions) == 7
         created_action = sort_actions[list(
             ("name", "modified", "created", "size")).index("created")]
         created_action.trigger()
@@ -333,3 +336,114 @@ def test_sort_menu_offers_created_and_applies_it(qapp):
         _restore_sort_settings(old_sort, old_ascending)
         menu.deleteLater()
         tree.deleteLater()
+
+
+@pytest.fixture
+def sort_controls(qapp, monkeypatch):
+    from Imervue.gui.file_tree_view import _FileTreeView
+    from Imervue.user_settings import user_setting_dict as settings
+
+    monkeypatch.setattr(settings, "schedule_save", lambda: None)
+    tree = _FileTreeView(SimpleNamespace())
+    source = _FakeFsSource()
+    source.add(_Info("a.png", size=30, modified=20, birth=30))
+    source.add(_Info("b.png", size=10, modified=30, birth=10))
+    source.add(_Info("c.png", size=20, modified=10, birth=20))
+    proxy = FileTreeSortProxy(source)
+    tree.setModel(proxy)
+    controls = tree.create_sort_controls()
+    combo = controls.findChild(QComboBox, "treeSortBy")
+    direction = controls.findChild(QToolButton, "treeSortDirection")
+    yield tree, proxy, controls, combo, direction
+    controls.deleteLater()
+    tree.deleteLater()
+
+
+@pytest.mark.parametrize(("key", "expected"), [
+    ("name", ["a.png", "b.png", "c.png"]),
+    ("modified", ["c.png", "a.png", "b.png"]),
+    ("created", ["b.png", "c.png", "a.png"]),
+    ("size", ["b.png", "c.png", "a.png"]),
+])
+def test_visible_sort_controls_reorder_tree_and_persist(sort_controls, key, expected):
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+    tree, proxy, _controls, combo, direction = sort_controls
+    tree.set_tree_sort("name", True)
+    combo.setCurrentIndex(combo.findData(key))
+    assert _proxy_names(proxy) == expected
+    direction.click()
+    assert _proxy_names(proxy) == list(reversed(expected))
+    assert user_setting_dict["tree_sort_by"] == key
+    assert user_setting_dict["tree_sort_ascending"] is False
+    menu = QMenu()
+    sort_menu = tree._add_sort_menu(menu)  # noqa: SLF001
+    actions = [action for action in sort_menu.actions() if action.isCheckable()]
+    assert actions[TREE_SORT_KEYS.index(key)].isChecked()
+    assert actions[-1].isChecked()
+    menu.deleteLater()
+
+
+def test_context_menu_updates_visible_sort_controls(sort_controls):
+    tree, _proxy, _controls, combo, direction = sort_controls
+    tree.set_tree_sort("name", True)
+    menu = QMenu()
+    sort_menu = tree._add_sort_menu(menu)  # noqa: SLF001
+    actions = [action for action in sort_menu.actions() if action.isCheckable()]
+    actions[-1].trigger()
+    actions[TREE_SORT_KEYS.index("created")].trigger()
+    assert combo.currentData() == "created"
+    assert direction.isChecked()
+    assert direction.text() == "↓"
+    assert direction.toolTip()
+    menu.deleteLater()
+
+
+def test_header_click_updates_visible_sort_controls(sort_controls, qapp):
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+    tree, proxy, _controls, _combo, direction = sort_controls
+    tree.set_tree_sort("created", True)
+    tree.show()
+    qapp.processEvents()
+    QTest.mouseClick(tree.header().viewport(), Qt.MouseButton.LeftButton, pos=QPoint(30, 10))
+    assert direction.isChecked()
+    assert direction.text() == "↓"
+    assert user_setting_dict["tree_sort_ascending"] is False
+    assert _proxy_names(proxy) == ["a.png", "c.png", "b.png"]
+    tree.hide()
+
+
+def test_header_click_uses_local_sort_after_another_window_changes_settings(
+    sort_controls, qapp,
+):
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+    tree, proxy, _controls, combo, direction = sort_controls
+    tree.set_tree_sort("created", True)
+    user_setting_dict["tree_sort_by"] = "size"
+    user_setting_dict["tree_sort_ascending"] = False
+    tree.show()
+    qapp.processEvents()
+    QTest.mouseClick(tree.header().viewport(), Qt.MouseButton.LeftButton, pos=QPoint(30, 10))
+    assert direction.isChecked()
+    assert combo.currentData() == "created"
+    assert proxy.sort_key() == "created"
+    assert _proxy_names(proxy) == ["a.png", "c.png", "b.png"]
+    tree.hide()
+
+
+@pytest.mark.parametrize(("saved_key", "expected"), [
+    ("created", "created"), ("invalid", "name"), (None, "name"),
+])
+def test_visible_sort_controls_restore_settings(sort_controls, saved_key, expected):
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+
+    tree, _proxy, _controls, _combo, _direction = sort_controls
+    user_setting_dict["tree_sort_by"] = saved_key
+    user_setting_dict["tree_sort_ascending"] = False
+    tree._apply_tree_sort_from_settings()
+    restored = tree.create_sort_controls()
+    assert restored.findChild(QComboBox, "treeSortBy").currentData() == expected
+    assert restored.findChild(QToolButton, "treeSortDirection").isChecked()
+    restored.deleteLater()

@@ -29,9 +29,10 @@ Security stance:
   off — fine for purely local use, recommended on shared machines.
 * Loopback does not keep out web pages: a browser lets any site POST to
   localhost, and with the default empty token that would let it drive the
-  pet. A request whose ``Origin`` is a remote web site gets a 403
-  (:mod:`Imervue.system.local_origin`); curl, Stream Deck and other native
-  clients send no ``Origin``.
+  pet. Remote web origins, opaque ``Origin: null`` and malformed origins get
+  a 403 even with a valid token (:mod:`Imervue.system.local_origin`). Native
+  tools can omit ``Origin``. Browser tools should be served from localhost;
+  a local file page can send the same opaque origin as a sandboxed remote page.
 """
 from __future__ import annotations
 

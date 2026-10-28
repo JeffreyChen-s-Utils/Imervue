@@ -164,16 +164,23 @@ class RecordingSession(QObject):
         return True
 
     def stop(self) -> str | None:
+        return self._finish()
+
+    def _finish(self, error: str | None = None) -> str | None:
         if not self.is_recording():
             return None
         self._timer.stop()
-        try:
-            self._writer.close()
-        except Exception as exc:   # noqa: BLE001 - imageio raises a zoo
-            logger.warning("recording close failed: %s", exc)
-        out = self._path
+        writer, out = self._writer, self._path
         self._writer = None
         self._path = None
+        try:
+            writer.close()
+        except Exception as exc:   # noqa: BLE001 - imageio raises a zoo
+            logger.warning("recording close failed: %s", exc)
+            error = error or str(exc) or type(exc).__name__
+        if error is not None:
+            self.failed.emit(error)
+            return None
         if out is not None:
             self.finished.emit(out)
         return out
@@ -200,8 +207,7 @@ class RecordingSession(QObject):
             self._writer.append_data(frame)
         except Exception as exc:   # noqa: BLE001 - imageio writer error surface
             logger.warning("recording append failed: %s", exc)
-            self.stop()
-            self.failed.emit(str(exc))
+            self._finish(str(exc) or type(exc).__name__)
 
 
 def save_spritesheet_from_qimages(images, path, max_cols: int = 8) -> tuple[int, int]:

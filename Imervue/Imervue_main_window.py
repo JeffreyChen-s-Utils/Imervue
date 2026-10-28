@@ -427,8 +427,7 @@ class ImervueMainWindow(
         if Path(path).is_dir():
             # 點擊資料夾 → 導航進入並載入圖片
             self._save_current_folder_session()
-            self.model.setRootPath(path)
-            self.tree.setRootIndex(self.model.index(path))
+            self.tree.set_root_path(path)
             self.viewer.clear_tile_grid()
             open_path(main_gui=self.viewer, path=path)
             self._image_metadata_index.prime(
@@ -496,8 +495,7 @@ class ImervueMainWindow(
             pass
 
     def _open_startup_folder(self, folder: str):
-        self.model.setRootPath(folder)
-        self.tree.setRootIndex(self.model.index(folder))
+        self.tree.set_root_path(folder)
         open_path(main_gui=self.viewer, path=folder)
         self._image_metadata_index.prime(
             getattr(self.viewer, "_unfiltered_images", self.viewer.model.images),
@@ -665,6 +663,12 @@ class ImervueMainWindow(
         #  主視窗走 os._exit → 半途中止 OS 垃圾桶批次)
         with best_effort("stop the file-tree workers", _logger):
             self.tree.shutdown()
+
+        for name in ("puppet_workspace", "pet_workspace"):
+            workspace = getattr(self, name, None)
+            if workspace is not None:
+                with best_effort(f"shut down {name}", _logger):
+                    workspace.shutdown()
 
         # --- 安全關閉修改面板 ---
         # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄

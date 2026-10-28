@@ -1,3 +1,4 @@
+_KOREAN_INCLUDE_SUBFOLDERS = '하위 폴더 포함'
 _KOREAN_TRC2DCACC420BC29D5 = '시계 방향 회전'
 _KOREAN_TRBC18C2DCACC420BC = '반시계 방향 회전'
 _KOREAN_TRC2ACB77CC774B4DC = '슬라이드쇼'
@@ -1215,7 +1216,7 @@ korean_word_dict = {
     "duplicate_perceptual": "지각적 일치 (유사도)",
     "duplicate_threshold": "민감도:",
     "duplicate_threshold_tip": "해밍 거리 임계값 (0=정확히 동일, 높을수록 관대)",
-    "duplicate_recursive": "하위 폴더 포함",
+    "duplicate_recursive": _KOREAN_INCLUDE_SUBFOLDERS,
     "duplicate_scan": "스캔",
     "duplicate_scanning": "스캔 중: {name}",
     "duplicate_no_duplicates": "중복 이미지를 찾지 못했습니다.",
@@ -2704,7 +2705,7 @@ korean_word_dict = {
     "recent_folders_title": "최근 폴더",
     "recent_images_title": "최근 이미지",
     "recent_missing": "{name}을(를) 더 이상 사용할 수 없습니다",
-    "sanitize_recursive": "하위 폴더 포함",
+    "sanitize_recursive": _KOREAN_INCLUDE_SUBFOLDERS,
     "smart_albums_no_match": "일치하는 이미지가 없습니다",
     "smart_albums_saved_toast": "저장됨: {name}",
     "staging_tray_choose_dest": "대상 폴더 선택",
@@ -3117,4 +3118,21 @@ korean_word_dict = {
     'ui_tip_select': '“{name}”을 선택합니다.',
     'puppet_scrub_tip': '끌어서 현재 모션의 다른 재생 위치로 이동합니다.',
     'puppet_parameter_range_tip': '{name}: {minimum}~{maximum} 범위에서 조정합니다.',
+    "tree_sort_type": "파일 형식순",
+    "tree_sort_options": "정렬 옵션",
+    "tree_folders_first": "폴더 우선",
+    "tree_folder_sort": "이 폴더의 개별 정렬 사용",
+    "tree_sort_reset": "전체 정렬로 초기화",
+    "tree_metadata_unavailable": "사용 불가",
+    "tree_metadata_created": "만든 시간",
+    "tree_metadata_modified": "수정 시간",
+    "tree_metadata_size": "크기",
+    "tree_search_recursive": _KOREAN_INCLUDE_SUBFOLDERS,
+    "tree_search_cancel": "취소",
+    "tree_search_locate": "트리에서 찾기",
+    "tree_search_cancelled": "검색 취소됨",
+    "tree_search_choose_root": "검색할 폴더를 여세요",
+    "tree_search_running": "검색 중…",
+    "tree_search_complete": "결과 {count}개, 읽을 수 없는 항목 {skipped}개",
+    "tree_search_missing": "검색 결과가 더 이상 존재하지 않습니다",
 }

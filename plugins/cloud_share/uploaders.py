@@ -14,7 +14,7 @@ import json
 from base64 import b64encode
 from collections.abc import Callable
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 IMGUR_API = "https://api.imgur.com/3/image"
@@ -42,7 +42,9 @@ def basic_auth_header(username: str, password: str) -> str:
 
 def webdav_target_url(base_url: str, filename: str) -> str:
     """Join a WebDAV collection URL and a filename into a target URL."""
-    return base_url.rstrip("/") + "/" + filename
+    parts = urlsplit(base_url)
+    path = parts.path.rstrip("/") + "/" + quote(filename, safe="")
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
 
 
 def parse_imgur_link(payload: dict) -> str | None:

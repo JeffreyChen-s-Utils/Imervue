@@ -105,6 +105,8 @@ Hover over controls, workspace tabs, menus and list or table items for tips. Mis
 
 Folder browsing merges scan bursts instead of rebuilding for every batch. File-list comparisons use indexed membership, metadata priming reads attributes without image headers, and the hidden list is populated when selected. First results still appear progressively, final ordering is retained, and a completed empty folder stops the busy progress indicator. File-tree folder previews select the first image without sorting the full list, run at most two workers and skip custom system folder-icon queries to reduce competing disk work.
 
+Failed Paint and MCP image exports preserve the previous destination. Puppet batch exports keep colliding motion names separate and report recording failures. Library maintenance removes only confirmed missing entries within readable library roots. Background saves cannot overwrite concurrent profile changes. Cancelling installation or Auto-Tag retires background work; closing a window also shuts down its Puppet and Pet services. Web galleries and WebDAV encode filenames correctly. Invalid documents, sessions and VTS requests return errors, and MCP frames enforce the same 100-million-pixel output limit as other bounded image tools. Frozen builds retain the host OpenGL platform.
+
 ## Installation
 
 ### Requirements
@@ -313,6 +315,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Recent folders / images** tracked; last folder auto-restored on startup
 
 ### Sort & filter
+
+Use the controls above the file tree to sort by name, modified time, creation time, size or file type; the arrow switches direction. Sorting options let you keep folders first, save a separate order for the current folder, or reset it to the global defaults. Hover over an item to see its timestamps and file size. Enable Include subfolders to search unopened folders in the background, cancel a scan, and locate a result in the original tree. Hidden entries and pending deletions are excluded; symbolic links and junctions are not followed. Expanded folders, selected items and scroll position are restored after refresh and on reopening the folder.
 
 - Sort by name (natural order, like Explorer: `img2` before `img10`) / modified / created / date taken (the camera's EXIF time, else modified) / size / resolution (asc or desc)
 - Filter by extension, color label, rating, tag/album, cull state
@@ -746,6 +750,8 @@ Pick any combination from the tab or the right-click menu. Auto idle, Idle motio
 Everything you set — position, drivers, opacity, click-through, size — is remembered between launches.
 
 The **Desktop Pet Integrations** plugin (**Plugins > Download Plugins**) adds **Plugins > Desktop Pet Integrations**: the pet reacts to OBS (streaming, recording, scene changes), to Twitch chat keywords (anywhere in a message, or `=hi` for the whole message, `!dance*` for its start, `/go+al/` for a regular expression), to a local webhook (`POST http://127.0.0.1:9876/trigger` with `{"group": "Wave", "speech": "Hi!"}`) and to Windows notifications. It is also the example of a pet plugin built on `on_pet_created`.
+
+The local webhook and VTube Studio API reject `Origin: null`, even with a valid token, because sandboxed web pages can send it. Native clients without an `Origin` header and pages served on localhost remain supported, subject to the configured authentication. A browser may also send `null` for a page opened from disk; serve such pages on localhost instead.
 
 ### Custom voice (pet script)
 

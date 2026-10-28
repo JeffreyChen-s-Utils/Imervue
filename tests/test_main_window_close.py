@@ -209,3 +209,19 @@ def test_retirement_drain_still_runs_when_job_drain_fails(run, caplog):
     assert calls.index("drain_retiring_workers") < calls.index("plugin_manager.unload_all")
     assert calls[-1] == "os._exit(0)"
     assert "finish retained background jobs" in caplog.text
+
+def test_secondary_close_releases_only_its_owned_workspaces(monkeypatch):
+    log = []
+    _record_collaborators(monkeypatch, log, set())
+    monkeypatch.setattr(mod, '_other_live_windows_remain', lambda _live, _me: True)
+    monkeypatch.setattr(os, '_exit', lambda code: log.append('unexpected exit'))
+    owner, survivor = _Window(log, set()), _Window(log, set())
+    for window, prefix in ((owner, 'owner'), (survivor, 'survivor')):
+        window.puppet_workspace = _Rec(log, prefix + '.puppet', set())
+        window.pet_workspace = _Rec(log, prefix + '.pet', set())
+    _close(owner, _Rec(log, 'event', set()))
+    assert 'owner.puppet.shutdown' in log
+    assert 'owner.pet.shutdown' in log
+    assert not any(item.startswith('survivor.') for item in log)
+    assert 'unexpected exit' not in log
+    assert log[-1] == 'deleteLater'

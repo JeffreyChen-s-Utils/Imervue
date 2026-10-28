@@ -21,6 +21,7 @@ from Imervue.gui.dialog_rows import (
     action_button_row, may_replace, path_browse_row, save_path_into,
 )
 from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.plugin.subprocess_util import terminate_process
 from Imervue.gpu_image_view.actions.select import selected_in_view_order
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.free_names import free_names
@@ -66,10 +67,12 @@ class _CreateWorker(QThread):
         self._height = height
         self._loop = loop
         self._abort = False
+        self._proc = None
 
     def abort(self) -> None:
-        """Ask the encode loop to stop before the next frame (Cancel / close)."""
+        """Stop frame preparation and terminate an active video encoder."""
         self._abort = True
+        terminate_process(self._proc)
 
     def run(self):
         try:
@@ -144,6 +147,7 @@ class _CreateWorker(QThread):
 
         total = len(self._paths)
         tmpdir = tempfile.mkdtemp(prefix="imervue_video_")
+        proc = None
 
         try:
             # Write frames as numbered images
@@ -172,18 +176,24 @@ class _CreateWorker(QThread):
                 self._output,
             ]
             kw = {
-                "capture_output": True,
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.PIPE,
                 "encoding": "utf-8",
                 "errors": "replace",
-                "timeout": 300,
                 "stdin": subprocess.DEVNULL,
             }
             if sys.platform == "win32":
                 kw["creationflags"] = subprocess.CREATE_NO_WINDOW
-            result = subprocess.run(cmd, check=False, **kw)
-            if result.returncode != 0:
-                raise RuntimeError(f"ffmpeg error: {result.stderr[:200]}")
+            proc = subprocess.Popen(cmd, **kw)
+            self._proc = proc
+            if self._abort:
+                return
+            _stdout, stderr = proc.communicate(timeout=300)
+            if not self._abort and proc.returncode != 0:
+                raise RuntimeError(f"ffmpeg error: {stderr[:200]}")
         finally:
+            terminate_process(proc)
+            self._proc = None
             shutil.rmtree(tmpdir, ignore_errors=True)
 
 

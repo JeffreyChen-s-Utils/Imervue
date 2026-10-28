@@ -499,13 +499,36 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
             getattr(self, "_input_engine", None),
             getattr(self, "_virtual_camera", None),
             getattr(self, "_ndi_output", None),
+            getattr(self, "_vts_server", None),
+            getattr(self, "_idle_driver", None),
+            getattr(self, "_idle_motion_cycler", None),
         ):
             if driver is not None:
                 with best_effort(f"shut down {type(driver).__name__}", logger):
                     driver.shutdown()
 
-    def closeEvent(self, event):  # noqa: N802 - Qt naming
+    def shutdown(self) -> None:
+        """Release this workspace's live services before its parent deletes it."""
+        if getattr(self, "_shutdown_complete", False):
+            return
+        self._shutdown_complete = True
+        for name in ("_batch_exporter", "_recorder", "_motion_recorder"):
+            recorder = getattr(self, name, None)
+            if recorder is not None:
+                with best_effort(f"stop {name}", logger):
+                    recorder.stop()
         self._shutdown_drivers()
+        dock = getattr(self, "_motion_dock", None)
+        if dock is not None:
+            with best_effort("stop motion playback", logger):
+                dock.player().stop()
+        preview = getattr(self, "_webcam_preview_dialog", None)
+        if preview is not None:
+            with best_effort("close webcam preview", logger):
+                preview.close()
+
+    def closeEvent(self, event):  # noqa: N802 - Qt naming
+        self.shutdown()
         super().closeEvent(event)
 
     # ---- optional-dep install --------------------------------------

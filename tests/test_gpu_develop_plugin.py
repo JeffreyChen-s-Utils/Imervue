@@ -120,6 +120,26 @@ def test_the_entry_reports_the_gpu_when_wgpu_is_there(monkeypatch):
     assert "RTX 5060 (Vulkan)" in text
 
 
+def test_driver_probe_failure_keeps_menu_and_cpu_available(monkeypatch, caplog):
+    from gpu_develop import renderer
+
+    def unavailable():
+        raise OSError("adapter enumeration failed")
+
+    shown = []
+    monkeypatch.setattr(renderer, "_gpu_errors", lambda: ())
+    monkeypatch.setattr(renderer, "_discrete_adapter", unavailable)
+    monkeypatch.setattr(plugin_mod, "wgpu_installed", lambda: True)
+    monkeypatch.setattr(plugin_mod.QMessageBox, "information",
+                        lambda _parent, _title, text: shown.append(text))
+    plugin = _plugin()
+    plugin.on_plugin_loaded()
+    plugin._show_status()
+    assert len(shown) == 1 and "CPU" in shown[0]
+    assert develop_backends.available() == []
+    assert "adapter enumeration failed" in caplog.text
+
+
 def test_wgpu_installed_is_false_for_a_broken_spec(monkeypatch):
     def broken(_name):
         raise ValueError("wgpu.__spec__ is None")

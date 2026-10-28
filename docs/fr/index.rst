@@ -1,6 +1,8 @@
 Guide de l'utilisateur Imervue
 ==============================
 
+Un échec d’export d’image Paint ou MCP préserve le fichier de destination existant. Les exports Puppet par lot distinguent les noms de mouvement en conflit et signalent les échecs d’enregistrement. La maintenance supprime uniquement les entrées dont l’absence est confirmée dans les racines lisibles de la bibliothèque. Les sauvegardes en arrière-plan n’écrasent pas les modifications simultanées des profils. Annuler une installation ou Auto-Tag arrête le travail en arrière-plan ; fermer une fenêtre arrête aussi ses services Puppet et Pet. Les galeries web et WebDAV encodent correctement les noms de fichiers. Les documents, sessions et requêtes VTS invalides produisent une erreur. Les cadres MCP respectent la même limite de sortie de 100 millions de pixels que les autres outils d’image limités. Les versions empaquetées conservent la plateforme OpenGL native du système.
+
 Station de travail d'image accélérée par GPU offrant **cinq onglets principaux**.
 La majeure partie de ce guide est organisée autour de ces cinq sections.
 
@@ -355,6 +357,8 @@ Classez vos images par tags et albums.
 
 Tri et filtrage
 ^^^^^^^^^^^^^^^
+
+Les commandes au-dessus de l’arborescence trient par nom, modification, création, taille ou type de fichier ; la flèche change le sens. Les options placent les dossiers en premier, enregistrent un tri propre au dossier courant ou rétablissent les valeurs globales. Le survol affiche les dates et la taille. Activez Inclure les sous-dossiers pour rechercher en arrière-plan dans les dossiers non ouverts, annuler la recherche et retrouver un résultat dans l’arborescence initiale. Les éléments masqués et en attente de suppression sont exclus ; les liens symboliques et jonctions ne sont pas suivis. Les dossiers développés, la sélection et le défilement sont restaurés après actualisation et réouverture.
 
 .. list-table::
    :header-rows: 1
@@ -1796,7 +1800,7 @@ aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plug
        ``{"group": "Wave", "speech": "Hi!"}`` — chaque champ peut être omis — envoyé par des
        scripts, un Stream Deck ou des outils d'automatisation. Si un jeton est défini, les
        requêtes doivent envoyer ``Authorization: Bearer <token>`` ; les requêtes provenant
-       d'une page web sont refusées
+       d'une page web distante sont refusées
      - Rien de plus
    * - Réagir aux notifications Windows
      - Joue le groupe ``Notify`` et prononce le titre de la notification lorsqu'une autre
@@ -1804,6 +1808,8 @@ aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plug
        identifiants d'application ignorés sont sautées. Windows demande l'accès aux
        notifications la première fois
      - Windows ; les paquets de notification ``winrt`` (installés à la première utilisation)
+
+Le webhook local et l'API VTube Studio refusent ``Origin: null``, même avec un jeton valide, car une page web isolée dans un bac à sable peut envoyer cette valeur. Les clients natifs sans en-tête ``Origin`` et les pages servies sur localhost restent pris en charge, selon l'authentification configurée. Le navigateur peut aussi envoyer ``null`` pour une page ouverte depuis le disque ; servez ces pages sur localhost.
 
 Un rig ne réagit qu'aux groupes de mouvements qu'il possède ; un groupe manquant ne joue rien.
 

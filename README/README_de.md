@@ -105,6 +105,8 @@ Beim Bewegen des Mauszeigers über Bedienelemente, Workspace-Tabs, Menüs sowie 
 
 Beim Öffnen von Ordnern werden aufeinanderfolgende Scan-Ergebnisse gebündelt, statt die Ansicht für jeden Block neu aufzubauen. Listenvergleiche nutzen indizierte Abfragen, Metadaten werden zunächst ohne Bildheader gelesen, und die verborgene Listenansicht wird erst bei Auswahl gefüllt. Erste Ergebnisse erscheinen weiterhin schrittweise, die endgültige Sortierung bleibt erhalten und bei leeren Ordnern endet die Aktivitätsanzeige nach dem Scan. Ordnervorschauen im Dateibaum wählen das erste Bild ohne vollständige Sortierung, nutzen höchstens zwei Worker und verzichten auf Abfragen benutzerdefinierter Systemordnersymbole, um konkurrierende Datenträgerzugriffe zu verringern.
 
+Fehlgeschlagene Bildexporte aus Paint und MCP erhalten die bisherige Zieldatei. Puppet-Stapelexporte trennen kollidierende Bewegungsnamen und melden Aufnahmefehler. Die Bibliothekswartung entfernt nur nachweislich fehlende Einträge innerhalb lesbarer Bibliothekswurzeln. Hintergrundspeicherungen überschreiben keine gleichzeitigen Profiländerungen. Das Abbrechen einer Installation oder von Auto-Tag beendet die Hintergrundarbeit; das Schließen eines Fensters stoppt auch dessen Puppet- und Pet-Dienste. Webgalerien und WebDAV kodieren Dateinamen korrekt. Ungültige Dokumente, Sitzungen und VTS-Anfragen liefern Fehler. Für MCP-Rahmen gilt dieselbe Ausgabegrenze von 100 Millionen Pixeln wie für andere begrenzte Bildwerkzeuge. Paketierte Builds behalten die native OpenGL-Plattform des Systems bei.
+
 ## Installation
 
 ### Voraussetzungen
@@ -302,6 +304,8 @@ Der **Imervue**-Tab ist die Standard-Landing-Surface. Er kombiniert den Bildbetr
 - **Recent Folders / Images** werden verfolgt; letzter Ordner wird beim Start automatisch wiederhergestellt
 
 ### Sortieren & Filtern
+
+Über dem Dateibaum können Sie nach Name, Änderungszeit, Erstellungszeit, Größe oder Dateityp sortieren; der Pfeil wechselt die Richtung. Die Sortieroptionen stellen Ordner voran, speichern eine eigene Reihenfolge für den aktuellen Ordner oder setzen sie auf die globalen Vorgaben zurück. Beim Zeigen auf einen Eintrag erscheinen Zeitangaben und Dateigröße. Mit Unterordner einbeziehen durchsuchen Sie ungeöffnete Ordner im Hintergrund, brechen die Suche ab und zeigen Treffer im ursprünglichen Baum an. Versteckte und zum Löschen vorgemerkte Einträge werden ausgeschlossen; symbolischen Links und Junctions wird nicht gefolgt. Geöffnete Ordner, Auswahl und Scrollposition werden nach dem Aktualisieren und erneuten Öffnen wiederhergestellt.
 
 - Sortieren nach Name (natürliche Reihenfolge wie im Explorer: `img2` vor `img10`) / Geändert / Erstellt / Aufnahmedatum (EXIF-Zeit der Kamera, sonst Geändert) / Größe / Auflösung (auf- oder absteigend)
 - Filter nach Endung, Color Label, Rating, Tag/Album, Cull-Zustand
@@ -737,6 +741,8 @@ Wählen Sie eine beliebige Kombination aus dem Tab oder dem Rechtsklick-Menü. A
 Alles, was Sie einstellen — Position, Driver, Opazität, Click-Through, Größe — wird zwischen den Starts gespeichert.
 
 Das Plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) fügt **Plugins > Desktop Pet Integrations** hinzu: Das Pet reagiert auf OBS (Streaming, Aufnahme, Szenenwechsel), auf Schlüsselwörter im Twitch-Chat (irgendwo in einer Nachricht, oder `=hi` für die ganze Nachricht, `!dance*` für ihren Anfang, `/go+al/` für einen regulären Ausdruck), auf einen lokalen Webhook (`POST http://127.0.0.1:9876/trigger` mit `{"group": "Wave", "speech": "Hi!"}`) und auf Windows-Benachrichtigungen. Es ist zugleich das Beispiel für ein Pet-Plugin, das auf `on_pet_created` aufbaut.
+
+Der lokale Webhook und die VTube Studio API lehnen `Origin: null` auch mit gültigem Token ab, da Webseiten in einer Sandbox diesen Wert senden können. Native Clients ohne `Origin`-Header und über localhost bereitgestellte Seiten bleiben unter den konfigurierten Authentifizierungsbedingungen unterstützt. Ein Browser kann auch bei direkt von der Festplatte geöffneten Seiten `null` senden; stellen Sie solche Seiten über localhost bereit.
 
 ### Eigene Stimme (Pet-Skript)
 

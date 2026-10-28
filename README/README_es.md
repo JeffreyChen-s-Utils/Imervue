@@ -105,6 +105,8 @@ Al situar el cursor sobre controles, pestañas, menús y elementos de listas o t
 
 Al abrir carpetas se agrupan los resultados consecutivos del análisis, evitando reconstruir la vista por cada lote. Las comparaciones usan búsquedas indexadas, los metadatos iniciales solo leen atributos sin abrir las cabeceras de imagen y la lista oculta se llena al seleccionarla. Los primeros resultados siguen apareciendo progresivamente, se conserva el orden final y el indicador de actividad se detiene al terminar una carpeta vacía. Las vistas previas del árbol eligen la primera imagen sin ordenar toda la lista, usan como máximo dos trabajadores y omiten las consultas de iconos de carpeta personalizados del sistema para reducir la competencia por el disco.
 
+Los fallos al exportar imágenes desde Paint o MCP conservan el archivo de destino anterior. La exportación por lotes de Puppet distingue nombres de movimiento en conflicto e informa de los fallos de grabación. El mantenimiento solo elimina entradas cuya ausencia se confirma dentro de raíces de biblioteca legibles. Los guardados en segundo plano no sobrescriben cambios simultáneos de perfiles. Cancelar una instalación o Auto-Tag detiene el trabajo en segundo plano; cerrar una ventana también detiene sus servicios Puppet y Pet. Las galerías web y WebDAV codifican correctamente los nombres de archivo. Los documentos, sesiones y solicitudes VTS no válidos producen errores. Los marcos MCP aplican el mismo límite de salida de 100 millones de píxeles que otras herramientas de imagen limitadas. Las versiones empaquetadas conservan la plataforma OpenGL nativa del sistema.
+
 ## Instalación
 
 ### Requisitos
@@ -305,6 +307,8 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Carpetas / imágenes recientes** rastreadas; la última carpeta se restaura automáticamente al iniciar
 
 ### Ordenación y filtrado
+
+Los controles sobre el árbol permiten ordenar por nombre, modificación, creación, tamaño o tipo de archivo; la flecha cambia la dirección. Las opciones permiten mostrar primero las carpetas, guardar un orden propio para la carpeta actual o restablecer los valores globales. Al pasar el puntero se muestran las fechas y el tamaño. Active Incluir subcarpetas para buscar en segundo plano en carpetas sin abrir, cancelar el análisis y localizar un resultado en el árbol original. Se excluyen los elementos ocultos y pendientes de eliminación; no se siguen enlaces simbólicos ni uniones de directorios. Las carpetas expandidas, la selección y el desplazamiento se restauran al actualizar y volver a abrir la carpeta.
 
 - Ordena por nombre (orden natural, como el Explorador: `img2` antes que `img10`) / modificado / creado / fecha de captura (la hora EXIF de la cámara; si no, modificado) / tamaño / resolución (asc o desc)
 - Filtra por extensión, etiqueta de color, calificación, etiqueta/álbum, estado de culling
@@ -738,6 +742,8 @@ Elige cualquier combinación desde la pestaña o el menú del clic derecho. Auto
 Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño — se recuerda entre lanzamientos.
 
 El plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) añade **Plugins > Desktop Pet Integrations**: la mascota reacciona a OBS (transmisión, grabación, cambios de escena), a palabras clave del chat de Twitch (en cualquier parte de un mensaje, o `=hi` para el mensaje completo, `!dance*` para su inicio, `/go+al/` para una expresión regular), a un webhook local (`POST http://127.0.0.1:9876/trigger` con `{"group": "Wave", "speech": "Hi!"}`) y a las notificaciones de Windows. También es el ejemplo de un plugin de mascota construido sobre `on_pet_created`.
+
+El webhook local y la API de VTube Studio rechazan `Origin: null`, incluso con un token válido, porque las páginas web aisladas pueden enviar ese valor. Los clientes nativos sin encabezado `Origin` y las páginas servidas en localhost siguen siendo compatibles, con la autenticación configurada. El navegador también puede enviar `null` para páginas abiertas desde el disco; sirva esas páginas en localhost.
 
 ### Voz personalizada (pet script)
 

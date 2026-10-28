@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from Imervue.system.best_effort import best_effort
 from Imervue.gui.file_filters import translated_filter
 from Imervue.gui.control_tooltips import enable_control_tooltips
 from Imervue.desktop_pet import settings as pet_settings
@@ -506,6 +507,23 @@ class PetWorkspace(QWidget):
         return group
 
     # ---- pet-window lifecycle ----------------------------------
+
+    def shutdown(self) -> None:
+        """Release the independent overlay and tray owned by this workspace."""
+        pet, self._pet_window = self._pet_window, None
+        if pet is not None:
+            with best_effort("shut down desktop pet", logger):
+                pet.shutdown()
+            with best_effort("close desktop pet", logger):
+                pet.close()
+                pet.deleteLater()
+        tray = getattr(self, "_tray", None)
+        if tray is not None:
+            tray.hide()
+
+    def closeEvent(self, event) -> None:
+        self.shutdown()
+        super().closeEvent(event)
 
     def _ensure_pet_window(self) -> PetWindow:
         """Create the overlay on first need. Lazy so a user who

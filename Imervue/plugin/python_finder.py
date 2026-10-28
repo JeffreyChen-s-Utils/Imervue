@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 from Imervue.system.app_paths import (
@@ -187,6 +188,31 @@ def _read_install_path(winreg, key, ver: str) -> str | None:
 _VERIFY_TIMEOUT_S = 30.0
 
 
+@contextmanager
+def _probe_error_mode():
+    """Return Windows loader errors instead of waiting for an error dialog."""
+    if sys.platform != "win32":
+        yield
+        return
+
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.GetThreadErrorMode.restype = wintypes.DWORD
+    kernel.SetThreadErrorMode.argtypes = (wintypes.DWORD, ctypes.POINTER(wintypes.DWORD))
+    kernel.SetThreadErrorMode.restype = wintypes.BOOL
+    previous = kernel.GetThreadErrorMode()
+    # SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX.
+    if not kernel.SetThreadErrorMode(previous | 0x8003, None):
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        yield
+    finally:
+        if not kernel.SetThreadErrorMode(previous, None):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+
 def _verify_python(path: str) -> bool:
     """驗證該路徑確實是可用的 Python 且有 pip.
 
@@ -196,13 +222,14 @@ def _verify_python(path: str) -> bool:
     a bug and propagates.
     """
     try:
-        result = subprocess.run(
-            [path, "-m", "pip", "--version"],
-            capture_output=True,
-            timeout=_VERIFY_TIMEOUT_S,
-            check=False,
-            **_subprocess_kwargs(),
-        )
+        with _probe_error_mode():
+            result = subprocess.run(
+                [path, "-m", "pip", "--version"],
+                capture_output=True,
+                timeout=_VERIFY_TIMEOUT_S,
+                check=False,
+                **_subprocess_kwargs(),
+            )
     except subprocess.TimeoutExpired:
         logger.warning(
             "Python at %s did not answer `pip --version` within %.0f s",

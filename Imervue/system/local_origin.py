@@ -16,13 +16,22 @@ _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 def is_allowed_origin(origin: str | None) -> bool:
     """Whether a client with this ``Origin`` header may talk to a local server.
 
-    No origin (native clients), ``null`` or ``file://`` (pages opened from
-    disk), a localhost web origin (a tool served locally) and non-web schemes
-    are allowed. A web page on any other ``http(s)`` host is refused.
+    Native clients without an origin, explicit ``file://`` origins, localhost
+    web origins and non-web schemes are allowed. Opaque ``null`` origins are
+    refused: local files and remote sandboxed pages cannot be distinguished
+    from that header. Serve browser tools from localhost instead.
     """
-    if not origin or origin == "null":
+    if not origin:
         return True
-    parts = urlsplit(origin)
+    if origin == "null" or any(char.isspace() for char in origin):
+        return False
+    try:
+        parts = urlsplit(origin)
+        host, _ = parts.hostname, parts.port
+    except ValueError:
+        return False
+    if not parts.scheme:
+        return False
     if parts.scheme.lower() not in ("http", "https"):
         return True
-    return (parts.hostname or "").lower() in _LOCAL_HOSTS
+    return (host or "").lower() in _LOCAL_HOSTS

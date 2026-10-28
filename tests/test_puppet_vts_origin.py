@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from Imervue.puppet.vts_api import MAX_MESSAGE_BYTES, VTubeStudioServer
 
 
@@ -61,12 +63,13 @@ def test_native_tracker_gets_a_session_with_capped_messages():
     assert tracker.textMessageReceived.slots and tracker.disconnected.slots
 
 
-def test_web_page_is_closed_without_a_session(caplog):
-    page = _Socket("https://evil.example")
+@pytest.mark.parametrize("origin", ["https://evil.example", "null", "http://["])
+def test_web_page_is_closed_without_a_session(caplog, origin):
+    page = _Socket(origin)
     tracker = _Socket("http://localhost:3000")
     with caplog.at_level("DEBUG", logger="Imervue"):
         sessions = _accept(page, tracker)
     assert page not in sessions
     assert page.calls == ["close", "deleteLater"]
     assert tracker in sessions
-    assert any("evil.example" in r.getMessage() for r in caplog.records)
+    assert any(origin in r.getMessage() for r in caplog.records)

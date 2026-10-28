@@ -295,8 +295,7 @@ def open_folder(ui_we_want_to_set: ImervueMainWindow):
         ui_we_want_to_set, language_wrapper.language_word_dict.get("main_window_select_folder"))
 
     if folder:
-        ui_we_want_to_set.model.setRootPath(folder)
-        ui_we_want_to_set.tree.setRootIndex(ui_we_want_to_set.model.index(folder))
+        ui_we_want_to_set.tree.set_root_path(folder)
         ui_we_want_to_set.viewer.clear_tile_grid()
         open_path(main_gui=ui_we_want_to_set.viewer, path=folder)
 

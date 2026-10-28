@@ -7,7 +7,8 @@ import sys
 # 需在 import OpenGL 之前禁用 accelerate
 if "__compiled__" in dir() or getattr(sys, "frozen", False):
     os.environ["PYOPENGL_ERROR_ON_COPY"] = "0"
-    os.environ.setdefault("PYOPENGL_PLATFORM", "nt")
+    if sys.platform == "win32":
+        os.environ.setdefault("PYOPENGL_PLATFORM", "nt")
     try:
         import OpenGL
         OpenGL.USE_ACCELERATE = False

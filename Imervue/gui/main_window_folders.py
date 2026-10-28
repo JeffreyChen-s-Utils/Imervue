@@ -160,8 +160,7 @@ class MainWindowFoldersMixin:
 
         parent = self._nearest_existing_parent(Path(folder))
         if parent:
-            self.model.setRootPath(parent)
-            self.tree.setRootIndex(self.model.index(parent))
+            self.tree.set_root_path(parent)
             self._clear_view_folder_watch()
             self.breadcrumb.set_path(parent)
         else:

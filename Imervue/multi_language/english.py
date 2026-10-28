@@ -1,3 +1,4 @@
+_ENGLISH_INCLUDE_SUBFOLDERS = 'Include subfolders'
 _ENGLISH_FILE = 'File'
 _ENGLISH_CLOSE = 'Close'
 _ENGLISH_DELETE = 'Delete'
@@ -1232,7 +1233,7 @@ english_word_dict = {
     "duplicate_perceptual": "Perceptual (Similarity)",
     "duplicate_threshold": "Sensitivity:",
     "duplicate_threshold_tip": "Hamming distance threshold (0=exact, higher=more tolerant)",
-    "duplicate_recursive": "Include subfolders",
+    "duplicate_recursive": _ENGLISH_INCLUDE_SUBFOLDERS,
     "duplicate_scan": "Scan",
     "duplicate_scanning": "Scanning: {name}",
     "duplicate_no_duplicates": "No duplicates found.",
@@ -2730,7 +2731,7 @@ english_word_dict = {
     "recent_folders_title": "Recent Folders",
     "recent_images_title": "Recent Images",
     "recent_missing": "{name} is no longer available",
-    "sanitize_recursive": "Include subfolders",
+    "sanitize_recursive": _ENGLISH_INCLUDE_SUBFOLDERS,
     "smart_albums_no_match": "No images match",
     "smart_albums_saved_toast": "Saved: {name}",
     "staging_tray_choose_dest": "Choose destination folder",
@@ -3143,4 +3144,21 @@ english_word_dict = {
     'ui_tip_select': 'Select “{name}”.',
     'puppet_scrub_tip': 'Drag to move to another position in the current motion.',
     'puppet_parameter_range_tip': '{name}: adjust from {minimum} to {maximum}.',
+    "tree_sort_type": "By File Type",
+    "tree_sort_options": "Sorting options",
+    "tree_folders_first": "Folders first",
+    "tree_folder_sort": "Use folder-specific sorting",
+    "tree_sort_reset": "Reset to global sorting",
+    "tree_metadata_unavailable": "Unavailable",
+    "tree_metadata_created": "Created",
+    "tree_metadata_modified": "Modified",
+    "tree_metadata_size": "Size",
+    "tree_search_recursive": _ENGLISH_INCLUDE_SUBFOLDERS,
+    "tree_search_cancel": "Cancel",
+    "tree_search_locate": "Locate in tree",
+    "tree_search_cancelled": "Search cancelled",
+    "tree_search_choose_root": "Open a folder to search",
+    "tree_search_running": "Searching…",
+    "tree_search_complete": "{count} results; {skipped} unreadable entries",
+    "tree_search_missing": "This result no longer exists",
 }

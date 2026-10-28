@@ -165,4 +165,13 @@ class PetCanvasDrivers:
         ):
             if driver is not None:
                 with best_effort("disable a canvas driver"):
-                    driver.set_enabled(False)
+                    driver.shutdown()
+
+        engine = getattr(self, "input_engine", None)
+        if engine is not None:
+            with best_effort("shut down pet input"):
+                engine.shutdown()
+        player = getattr(self, "motion_player", None)
+        if player is not None:
+            with best_effort("stop pet motion"):
+                player.stop()
