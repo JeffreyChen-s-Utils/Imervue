@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-18 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.99`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-29 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `fix/main-quality` · 版本 `1.0.100`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,10 +66,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 970 | 162,872 |
+| `tests/` | 971 | 163,008 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 177 | 44,020 |
 | `Imervue/gui/` | 183 | 36,502 |
-| `Imervue/puppet/` | 61 | 16,487 |
+| `Imervue/puppet/` | 61 | 16,467 |
 | `Imervue/image/` | 130 | 15,744 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
 | `Imervue/multi_language/` | 8 | 15,891 |
@@ -82,14 +82,14 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/system/` | 34 | 3,540 |
 | `Imervue/export/` | 8 | 1,035 |
 | `Imervue/user_settings/` | 10 | 1,234 |
-| `Imervue/sessions/` + `macros/` + `external/` | 3 | 287 |
+| `Imervue/sessions/` + `macros/` + `external/` | 8 | 802 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 10 | 1,523 |
-| **總計** | **1,857** | **354,567** |
+| **總計** | **1,863** | **355,198** |
 
-其中 `Imervue/` 套件本身 802 檔 / 174,647 行。
+其中 `Imervue/` 套件本身 802 檔 / 174,627 行。
 
-測試碼與產品碼比約 **0.85 : 1**（163k vs 191k，產品碼含 `plugins/`），這是專案開發規範中「無測試即未完成」規則的直接體現。
+測試碼與產品碼比約 **0.85 : 1**（163,008 vs 190,667 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -855,7 +855,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `document.py` | 395 | `.puppet` v1 檔案格式的純 Python 資料模型（`Drawable` / `Deformer` / `Parameter` / `Motion` / `HitArea`） |
-| `document_io.py` | 886 | `.puppet` zip 容器讀寫；第一個項目是未壓縮的 `mimetype`（`application/vnd.imervue.puppet+zip`），每個 JSON 帶 `$schema`；較新的格式版本以「請更新 Imervue」拒絕，布林 `true` 不算版本 1 |
+| `document_io.py` | 866 | `.puppet` zip 容器讀寫；共用具名動作／表情項目載入與透明度／色彩曲線編解碼；第一個項目是未壓縮的 `mimetype`（`application/vnd.imervue.puppet+zip`），每個 JSON 帶 `$schema`；較新的格式版本以「請更新 Imervue」拒絕，布林 `true` 不算版本 1 |
 | `format_schema.py` | 331 | `.puppet` v1 的四份 JSON Schema（draft 2020-12：puppet / motion / expression / physics，`$id` 是 `docs/schemas/` 在 `main` 上的 raw URL；`python -m Imervue.puppet.format_schema docs/schemas` 重產）與 `check_puppet_file`：schema → 載入器規則 → `validator` 的 rig 檢查（CLI `puppet-validate`、MCP `puppet_validate`） |
 | `schema_check.py` | 124 | 只涵蓋上述 schema 所用子集的 JSON Schema 驗證器（`$ref`、type、enum、const、properties、required、additionalProperties、items、min/maxItems、minimum/maximum、minLength、allOf、anyOf、if/then），不依賴第三方套件；與 `jsonschema` 對拍 7200 個變造檔判定一致 |
 | `cubism_import.py` | 550 | Live2D Cubism v3 檔案格式匯入 |

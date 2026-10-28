@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-18 on `dev`; corresponding commit: `git log -1 -- architecture.md`.
+> Last verified: 2026-10-29 on `fix/main-quality`; corresponding commit: `git log -1 -- architecture.md`.
 
 ## 1. Purpose
 

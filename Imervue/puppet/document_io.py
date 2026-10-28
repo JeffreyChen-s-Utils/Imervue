@@ -9,8 +9,9 @@ from __future__ import annotations
 import io
 import json
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from Imervue.puppet.format_schema import (
     MEDIA_TYPE, MIMETYPE_ENTRY, SCHEMA_FIELD, SCHEMA_URLS,
@@ -56,6 +57,7 @@ _EXPRESSIONS_DIR = "expressions/"
 # zip bomb: zipfile never reads past an entry's declared size, so checking the
 # declared total before reading is enough.
 _MAX_UNCOMPRESSED_BYTES = 2 * 1024 ** 3
+_NamedEntry = TypeVar("_NamedEntry", Motion, Expression)
 
 
 # ---------------------------------------------------------------------------
@@ -151,8 +153,12 @@ def _load_from_zip(zf: zipfile.ZipFile) -> PuppetDocument:
         doc.pose_groups = [_parse_pose_group(g) for g in pose.get("groups", [])]
 
     doc.textures = _load_textures(zf)
-    doc.motions = _load_motions(zf, manifest.get("motions") or [])
-    doc.expressions = _load_expressions(zf, manifest.get("expressions") or [])
+    doc.motions = _load_named_entries(
+        zf, manifest.get("motions") or [], _MOTIONS_DIR, "motion", _parse_motion,
+    )
+    doc.expressions = _load_named_entries(
+        zf, manifest.get("expressions") or [], _EXPRESSIONS_DIR, "expression", _parse_expression,
+    )
     if manifest.get("physics"):
         doc.physics_rigs = _load_physics(zf, manifest["physics"])
     doc.hit_areas = [_parse_hit_area(h) for h in manifest.get("hit_areas") or []]
@@ -212,10 +218,12 @@ def _parse_drawable(raw: dict) -> Drawable:
     bone_weights = _parse_bone_weights(
         raw.get("bone_weights"), len(raw["vertices"]), raw["id"],
     )
-    opacity_keys = _parse_opacity_keys(raw.get("opacity_keys"), raw["id"])
+    opacity_keys = _parse_keys(
+        raw.get("opacity_keys"), raw["id"], "opacity_keys", _parse_alpha_stop,
+    )
     multiply_color = _parse_color3(raw.get("multiply_color"), default=(1.0, 1.0, 1.0))
-    multiply_color_keys = _parse_color_keys(
-        raw.get("multiply_color_keys"), raw["id"],
+    multiply_color_keys = _parse_keys(
+        raw.get("multiply_color_keys"), raw["id"], "multiply_color_keys", _parse_color_stop,
     )
     vertex_morphs = _parse_vertex_morphs(raw.get("vertex_morphs"), raw["id"])
     return Drawable(
@@ -286,21 +294,24 @@ def _validate_key_entry(
     return param, stops
 
 
-def _parse_opacity_keys(raw: Any, drawable_id: str) -> list[dict] | None:
+def _parse_keys(
+    raw: Any, drawable_id: str, key_label: str,
+    parse_stop: Callable[[Any, str, int, int], dict],
+) -> list[dict] | None:
     if raw is None:
         return None
     if not isinstance(raw, list):
+        detail = f", got {type(raw).__name__}" if key_label == "opacity_keys" else ""
         raise PuppetFormatError(
-            f"drawable {drawable_id!r} opacity_keys must be a list, got "
-            f"{type(raw).__name__}",
+            f"drawable {drawable_id!r} {key_label} must be a list{detail}",
         )
     out: list[dict] = []
     for idx, entry in enumerate(raw):
         param, stops = _validate_key_entry(
-            entry, drawable_id=drawable_id, key_label="opacity_keys", idx=idx,
+            entry, drawable_id=drawable_id, key_label=key_label, idx=idx,
         )
         parsed_stops = [
-            _parse_alpha_stop(stop, drawable_id, idx, s_idx)
+            parse_stop(stop, drawable_id, idx, s_idx)
             for s_idx, stop in enumerate(stops)
         ]
         out.append({"parameter": param, "stops": parsed_stops})
@@ -343,27 +354,6 @@ def _parse_color_stop(
         "value": float(stop["value"]),
         "color": _parse_color3(stop["color"], default=(1.0, 1.0, 1.0)),
     }
-
-
-def _parse_color_keys(raw: Any, drawable_id: str) -> list[dict] | None:
-    if raw is None:
-        return None
-    if not isinstance(raw, list):
-        raise PuppetFormatError(
-            f"drawable {drawable_id!r} multiply_color_keys must be a list",
-        )
-    out: list[dict] = []
-    for idx, entry in enumerate(raw):
-        param, stops = _validate_key_entry(
-            entry, drawable_id=drawable_id,
-            key_label="multiply_color_keys", idx=idx,
-        )
-        parsed = [
-            _parse_color_stop(stop, drawable_id, idx, s_idx)
-            for s_idx, stop in enumerate(stops)
-        ]
-        out.append({"parameter": param, "stops": parsed})
-    return out
 
 
 def _parse_vertex_morphs(raw: Any, drawable_id: str) -> list[dict] | None:
@@ -449,14 +439,18 @@ def _load_textures(zf: zipfile.ZipFile) -> dict[str, bytes]:
     return out
 
 
-def _load_motions(zf: zipfile.ZipFile, names: list[str]) -> list[Motion]:
-    out: list[Motion] = []
+def _load_named_entries(
+    zf: zipfile.ZipFile, names: list[str], directory: str, label: str,
+    parse: Callable[[str, dict], _NamedEntry],
+) -> list[_NamedEntry]:
+    out: list[_NamedEntry] = []
+    members = set(zf.namelist())
     for name in names:
-        path = f"{_MOTIONS_DIR}{name}.json"
-        if path not in zf.namelist():
-            raise PuppetFormatError(f"motion {name!r} listed but {path} missing")
+        path = f"{directory}{name}.json"
+        if path not in members:
+            raise PuppetFormatError(f"{label} {name!r} listed but {path} missing")
         raw = _read_json(zf, path)
-        out.append(_parse_motion(name, raw))
+        out.append(parse(name, raw))
     return out
 
 
@@ -493,17 +487,6 @@ def _parse_segment(raw: dict) -> MotionSegment:
         c0=_xy(raw["c0"]) if "c0" in raw else None,
         c1=_xy(raw["c1"]) if "c1" in raw else None,
     )
-
-
-def _load_expressions(zf: zipfile.ZipFile, names: list[str]) -> list[Expression]:
-    out: list[Expression] = []
-    for name in names:
-        path = f"{_EXPRESSIONS_DIR}{name}.json"
-        if path not in zf.namelist():
-            raise PuppetFormatError(f"expression {name!r} listed but {path} missing")
-        raw = _read_json(zf, path)
-        out.append(_parse_expression(name, raw))
-    return out
 
 
 def _parse_expression(name: str, raw: dict) -> Expression:
@@ -603,29 +586,11 @@ def _drawable_to_json(d: Drawable) -> dict:
             for bone_id, weights in d.bone_weights.items()
         }
     if d.opacity_keys:
-        out["opacity_keys"] = [
-            {
-                "parameter": entry["parameter"],
-                "stops": [
-                    {"value": float(s["value"]), "alpha": float(s["alpha"])}
-                    for s in entry["stops"]
-                ],
-            }
-            for entry in d.opacity_keys
-        ]
+        out["opacity_keys"] = _keys_to_json(d.opacity_keys, "alpha", float)
     if d.multiply_color != (1.0, 1.0, 1.0):
         out["multiply_color"] = list(d.multiply_color)
     if d.multiply_color_keys:
-        out["multiply_color_keys"] = [
-            {
-                "parameter": entry["parameter"],
-                "stops": [
-                    {"value": float(s["value"]), "color": list(s["color"])}
-                    for s in entry["stops"]
-                ],
-            }
-            for entry in d.multiply_color_keys
-        ]
+        out["multiply_color_keys"] = _keys_to_json(d.multiply_color_keys, "color", list)
     if d.vertex_morphs:
         out["vertex_morphs"] = [
             {
@@ -642,6 +607,21 @@ def _drawable_to_json(d: Drawable) -> dict:
             for entry in d.vertex_morphs
         ]
     return out
+
+
+def _keys_to_json(
+    keys: list[dict], value_key: str, encode_value: Callable[[Any], Any],
+) -> list[dict]:
+    return [
+        {
+            "parameter": entry["parameter"],
+            "stops": [
+                {"value": float(stop["value"]), value_key: encode_value(stop[value_key])}
+                for stop in entry["stops"]
+            ],
+        }
+        for entry in keys
+    ]
 
 
 def _deformer_to_json(d: Deformer) -> dict:
