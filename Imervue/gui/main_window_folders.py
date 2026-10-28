@@ -232,6 +232,7 @@ class MainWindowFoldersMixin:
 
         if not new_images:
             viewer._unfiltered_images = []
+            self._update_filter_results([], [])
             viewer.load_tile_grid_async([])
             viewer.current_index = 0
             if self._browse_mode == "list":
@@ -246,6 +247,7 @@ class MainWindowFoldersMixin:
             self._current_filter_spec(),
             self._image_metadata_index,
         )
+        self._update_filter_results(new_images, filtered_images)
 
         if viewer.tile_grid_mode:
             from Imervue.gpu_image_view.tile_loader import sync_tile_grid_incremental

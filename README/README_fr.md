@@ -31,6 +31,12 @@
 
 ---
 
+Les résultats de recherche de l’arborescence s’ouvrent avec Entrée ou un double-clic ; leur localisation reste une action distincte. Les noms et chemins relatifs sont séparés, et les résultats se replient sans effacer la requête. Les commandes supérieures indiquent si le tri est global ou propre au dossier, avec des sens explicites pour les dates et tailles et une réinitialisation visible. La recherche affiche le dossier et la portée des sous-dossiers ; les filtres d’images indépendants affichent les conditions supprimables, le nombre de correspondances et signalent une image ouverte explicitement conservée malgré les filtres.
+
+Modify distingue l’écrasement de l’original de l’enregistrement d’une copie et affiche la destination. Le recadrage précise aussi quand il écrit dans l’original. Les formats source en lecture seule utilisent une copie ; un échec d’écriture conserve les modifications et un enregistrement réussi affiche le chemin réel. L’envoi vers Paint propose l’original ou le résultat développé actuel en pleine qualité, avec un choix explicite des annotations, dans un nouveau document. Les documents Paint existants et leurs historiques d’annulation sont conservés.
+
+La barre d’état ouvre Background Jobs et affiche les tâches actives et échouées. Les captures et enregistrements Puppet y conservent les chemins de sortie ou les détails d’échec ; le résultat ou son dossier reste accessible ensuite. Les enregistrements ne proposent pas de nouvelle tentative inadaptée. La webcam affiche ses états réels de démarrage, fonctionnement, arrêt et erreur, avec choix du périphérique, nouvelle tentative et diagnostic ; l’installation est proposée si des dépendances manquent. La palette explique les commandes indisponibles et privilégie les commandes récentes ou fréquentes.
+
 ## Table des matières
 
 - [Aperçu](#aperçu)

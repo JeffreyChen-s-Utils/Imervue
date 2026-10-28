@@ -102,6 +102,7 @@ class _FileTreeView(FileTreeSortMixin, QTreeView):
     """QTreeView with Delete key and right-click context menu."""
 
     tree_sort_changed = Signal(str, bool)
+    search_path_activated = Signal(str)
 
     _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
     def __init__(self, main_window: "ImervueMainWindow"):
@@ -161,6 +162,7 @@ class _FileTreeView(FileTreeSortMixin, QTreeView):
     def create_search_controls(self):
         from Imervue.gui.file_tree_search import FileTreeSearch
         self._recursive_search = FileTreeSearch(self)
+        self._recursive_search.path_activated.connect(self.search_path_activated)
         return self._recursive_search.panel
 
     def refresh_pending_hidden(self) -> None:

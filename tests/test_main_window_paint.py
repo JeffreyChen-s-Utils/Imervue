@@ -146,7 +146,7 @@ def test_paint_handoff_menu_calls_the_window(qapp):
     from Imervue.multi_language.language_wrapper import language_wrapper
 
     calls = []
-    window = SimpleNamespace(_bind_paint_workspace_to_current_image=lambda: calls.append("paint"))
+    window = SimpleNamespace(choose_paint_handoff=lambda: calls.append("paint"))
     menu = QMenu()
     _add_open_entries(window, menu, language_wrapper.language_word_dict)
     action = next(a for a in menu.actions() if a.objectName() == "file.open_in_paint")

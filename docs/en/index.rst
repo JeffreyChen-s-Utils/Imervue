@@ -1,6 +1,12 @@
 Imervue User Guide
 ==================
 
+File-tree search results open with Enter or a double-click; Locate remains a separate action. Results distinguish filenames from relative paths and can be collapsed without clearing the query. The controls above the tree show whether sorting applies globally or to this folder, with meaningful date/size directions and a visible reset. Search shows its folder and descendant scope; the independent image filters show removable conditions, matching counts and when an explicitly opened image is kept despite not matching.
+
+Modify distinguishes overwriting the original from saving a copy and shows the destination. Crop also states when it writes the original. Read-only source formats use a copy; failed writes preserve edits, and successful saves report the actual path. Sending an image to Paint offers the original or the current full-quality developed result, with an explicit annotation choice, in a new document. Existing Paint documents and Undo histories remain intact.
+
+The status bar opens Background Jobs and shows running and failed counts. Puppet captures and recordings retain output paths or failure details there; open the output or its folder later. Recordings do not offer a misleading retry action. Webcam controls show actual startup, running, stopping and error states, with device selection, retry and diagnostics; installation is offered for missing dependencies. The command palette explains unavailable commands and prioritizes recently or frequently used commands.
+
 Failed Paint and MCP image exports preserve the previous destination. Puppet batch exports keep colliding motion names separate and report recording failures. Library maintenance removes only confirmed missing entries within readable library roots. Background saves cannot overwrite concurrent profile changes. Cancelling installation or Auto-Tag retires background work; closing a window also shuts down its Puppet and Pet services. Web galleries and WebDAV encode filenames correctly. Invalid documents, sessions and VTS requests return errors, and MCP frames enforce the same 100-million-pixel output limit as other bounded image tools. Frozen builds retain the host OpenGL platform.
 
 A GPU-accelerated image workstation that ships **five top-level tabs**.

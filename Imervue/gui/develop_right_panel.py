@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from Imervue.gui.slider_spin import make_slider_spin
+from Imervue.gui.develop_save_controls import DevelopSaveControlsMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.ui_scale import scaled_px
 
@@ -39,7 +40,7 @@ from Imervue.system.ui_scale import scaled_px
 RIGHT_PANEL_WIDTH = 300
 
 
-class DevelopRightPanelMixin:
+class DevelopRightPanelMixin(DevelopSaveControlsMixin):
     """Builds the right properties panel of :class:`DevelopPanel`."""
 
     def build_right_panel(self) -> QWidget:
@@ -52,6 +53,7 @@ class DevelopRightPanelMixin:
         layout.setSpacing(6)
 
         layout.addWidget(self._build_crop_controls(lang))
+        self._build_save_controls(layout, lang)
         self._property_tabs = QTabWidget()
         self._property_tabs.setObjectName("modifyPropertyTabs")
         for key, fallback, builders in (
@@ -117,7 +119,7 @@ class DevelopRightPanelMixin:
         crop_layout.addWidget(self._crop_ratio_combo)
 
         crop_btn_row = QHBoxLayout()
-        self._crop_apply_btn = QPushButton(lang.get("crop_apply", "Apply"))
+        self._crop_apply_btn = QPushButton(lang.get("modify_crop_apply", "Crop original"))
         self._crop_apply_btn.setProperty("primary", True)
         self._crop_apply_btn.clicked.connect(self._apply_crop)
         self._crop_cancel_btn = QPushButton(lang.get("crop_cancel", "Cancel"))
@@ -125,6 +127,9 @@ class DevelopRightPanelMixin:
         crop_btn_row.addWidget(self._crop_apply_btn)
         crop_btn_row.addWidget(self._crop_cancel_btn)
         crop_layout.addLayout(crop_btn_row)
+        self._crop_consequence = QLabel()
+        self._crop_consequence.setWordWrap(True)
+        crop_layout.addWidget(self._crop_consequence)
         self._crop_widget.hide()
         return self._crop_widget
 
@@ -231,14 +236,7 @@ class DevelopRightPanelMixin:
 
     def _build_annotation_buttons(self, layout: QVBoxLayout, lang: dict) -> None:
         """Annotation save / undo / redo row."""
-        # --- Annotation Save ---
         ann_btn_row = QHBoxLayout()
-        self._btn_ann_save = QPushButton(lang.get("annotation_save", "Save"))
-        self._btn_ann_save.setProperty("primary", True)
-        self._btn_ann_save.clicked.connect(self._save_annotation)
-        ann_btn_row.addWidget(self._btn_ann_save)
-        self._interactive_widgets.append(self._btn_ann_save)
-
         self._btn_ann_undo = QPushButton(lang.get("annotation_undo", "Undo"))
         self._btn_ann_undo.clicked.connect(self._canvas_undo_stack.undo)
         ann_btn_row.addWidget(self._btn_ann_undo)
@@ -318,22 +316,21 @@ class DevelopRightPanelMixin:
             self._adv_labels[field_name] = label
 
     def _build_recipe_buttons(self, layout: QVBoxLayout, lang: dict) -> None:
-        """Recipe reset / undo / redo row."""
-        # --- Recipe Reset / Undo / Redo ---
-        btn_row = QHBoxLayout()
+        """Keep reset and the paired history actions readable in narrow docks."""
+        btn_row = QGridLayout()
         self._btn_reset = QPushButton(lang.get("develop_reset", "Reset"))
         self._btn_reset.clicked.connect(self._reset)
-        btn_row.addWidget(self._btn_reset)
+        btn_row.addWidget(self._btn_reset, 0, 0, 1, 2)
         self._interactive_widgets.append(self._btn_reset)
 
         self._btn_undo = QPushButton(lang.get("develop_undo", "Undo"))
         self._btn_undo.clicked.connect(lambda: self.step_edit(backwards=True))
-        btn_row.addWidget(self._btn_undo)
+        btn_row.addWidget(self._btn_undo, 1, 0)
         self._interactive_widgets.append(self._btn_undo)
 
         self._btn_redo = QPushButton(lang.get("develop_redo", "Redo"))
         self._btn_redo.clicked.connect(lambda: self.step_edit(backwards=False))
-        btn_row.addWidget(self._btn_redo)
+        btn_row.addWidget(self._btn_redo, 1, 1)
         self._interactive_widgets.append(self._btn_redo)
 
         layout.addLayout(btn_row)

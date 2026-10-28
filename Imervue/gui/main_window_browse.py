@@ -6,11 +6,19 @@ settings. ``ImervueMainWindow`` mixes these methods in.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
 
 class MainWindowBrowseMixin:
     """Browse modes of the main window."""
+
+    def preview_search_result(self, path: str) -> None:
+        """Open a search result through the same path as a tree click."""
+        if Path(path).is_file():
+            self._view_stack.setCurrentIndex(0)
+        self.navigate_to_path(path)
 
     def is_list_mode(self) -> bool:
         return self._browse_mode == "list"

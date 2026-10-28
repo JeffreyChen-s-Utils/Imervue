@@ -1,4 +1,4 @@
-"""Cancellable recursive filename search with results that locate in the original tree."""
+"""Cancellable filename search with separate preview and tree-location actions."""
 import os
 import stat
 from pathlib import Path
@@ -12,6 +12,8 @@ from PySide6.QtWidgets import (
 
 from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.multi_language.language_wrapper import language_wrapper
+
+_MISSING_RESULT = "This result no longer exists"
 
 _running_scans: set = set()
 
@@ -93,6 +95,8 @@ class _Scan(QThread):
 
 
 class FileTreeSearch(QObject):
+    path_activated = Signal(str)
+
     def __init__(self, tree):
         super().__init__(tree)
         self.tree = tree
@@ -121,6 +125,13 @@ class FileTreeSearch(QObject):
         lang = language_wrapper.language_word_dict
         layout = QVBoxLayout(self.panel)
         layout.setContentsMargins(0, 0, 0, 0)
+        self.scope = QLabel()
+        self.scope.setObjectName("treeSearchScope")
+        self.scope.setTextFormat(Qt.TextFormat.PlainText)
+        self.scope.setWordWrap(True)
+        self.scope.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.scope.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        layout.addWidget(self.scope)
         row = QHBoxLayout()
         self.include = QCheckBox(lang.get("tree_search_recursive", "Include subfolders"))
         self.include.setObjectName("treeSearchRecursive")
@@ -137,6 +148,16 @@ class FileTreeSearch(QObject):
         row.addWidget(self.include, 1)
         row.addWidget(self.cancel_button)
         layout.addLayout(row)
+        self.collapse_button = QToolButton()
+        self.collapse_button.setObjectName("treeSearchCollapse")
+        self.collapse_button.setCheckable(True)
+        self.collapse_button.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.collapse_button.setChecked(True)
+        self.collapse_button.setText(lang.get("tree_search_results", "Search results"))
+        self.collapse_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.collapse_button.toggled.connect(self._update_visibility)
+        self.collapse_button.setVisible(False)
+        layout.addWidget(self.collapse_button)
         self.status = QLabel()
         self.status.setWordWrap(True)
         self.status.setVisible(False)
@@ -144,14 +165,17 @@ class FileTreeSearch(QObject):
         self.results = QListWidget()
         self.results.setObjectName("treeSearchResults")
         self.results.setMaximumHeight(220)
+        self.results.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding)
         self.results.setVisible(False)
         self.results.itemActivated.connect(self._activate)
         layout.addWidget(self.results)
         self.locate_button = QPushButton(lang.get("tree_search_locate", "Locate in tree"))
         self.locate_button.setObjectName("treeSearchLocate")
+        self.locate_button.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.locate_button.setVisible(False)
-        self.locate_button.clicked.connect(lambda: self._activate(self.results.currentItem()))
+        self.locate_button.clicked.connect(self._locate_selected)
         layout.addWidget(self.locate_button)
+        self._update_scope()
 
     @property
     def recursive(self) -> bool:
@@ -159,9 +183,25 @@ class FileTreeSearch(QObject):
 
     def _mode_changed(self, _checked: bool) -> None:
         self.tree.set_search_text(self.query)
+        self._update_visibility()
+        self._update_scope()
+
+    def _update_visibility(self) -> None:
         self.status.setVisible(self.recursive)
-        self.results.setVisible(self.recursive)
-        self.locate_button.setVisible(self.recursive)
+        self.collapse_button.setVisible(self.recursive)
+        expanded = self.collapse_button.isChecked()
+        self.collapse_button.setArrowType(
+            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
+        self.results.setVisible(self.recursive and expanded)
+        self.locate_button.setVisible(self.recursive and expanded)
+
+    def _update_scope(self) -> None:
+        lang = language_wrapper.language_word_dict
+        root = self.tree._tree_state.root
+        label = lang.get("tree_search_scope", "Search folder: {folder}")
+        self.scope.setText(label.format(folder=Path(root).name or root) if root else
+                           lang.get("tree_search_choose_root", "Open a folder to search"))
+        self.scope.setToolTip(root)
 
     def set_query(self, text: str) -> None:
         self.query = text.strip()
@@ -177,6 +217,7 @@ class FileTreeSearch(QObject):
         self._locate_path = ""
         self._locate_timer.stop()
         self.set_query(self.query)
+        self._update_scope()
 
     def cancel(self) -> None:
         self._timer.stop()
@@ -221,7 +262,11 @@ class FileTreeSearch(QObject):
         for path in paths:
             if any(Path(path).is_relative_to(folder) for folder in hidden):
                 continue
-            item = QListWidgetItem(str(Path(path).relative_to(root)))
+            relative = Path(path).relative_to(root)
+            label = relative.name
+            if relative.parent != Path("."):
+                label += "\n" + str(relative.parent)
+            item = QListWidgetItem(label)
             item.setData(Qt.ItemDataRole.UserRole, path)
             item.setToolTip(path)
             self.results.addItem(item)
@@ -237,6 +282,16 @@ class FileTreeSearch(QObject):
             count=self.results.count(), skipped=unreadable))
 
     def _activate(self, item) -> None:
+        if item is not None:
+            path = item.data(Qt.ItemDataRole.UserRole)
+            if self._hidden(path) or not Path(path).exists():
+                self.status.setText(language_wrapper.language_word_dict.get(
+                    "tree_search_missing", _MISSING_RESULT))
+                return
+            self.path_activated.emit(path)
+
+    def _locate_selected(self) -> None:
+        item = self.results.currentItem()
         if item is not None:
             self.locate(item.data(Qt.ItemDataRole.UserRole))
 
@@ -254,7 +309,7 @@ class FileTreeSearch(QObject):
     def locate(self, path: str) -> None:
         if self._hidden(path) or not Path(path).exists():
             self.status.setText(language_wrapper.language_word_dict.get(
-                "tree_search_missing", "This result no longer exists"))
+                "tree_search_missing", _MISSING_RESULT))
             return
         self._locate_path = path
         self._locate_loading.clear()
@@ -274,7 +329,7 @@ class FileTreeSearch(QObject):
         if self._hidden(str(path)) or not path.exists():
             self._locate_path = ""
             self.status.setText(language_wrapper.language_word_dict.get(
-                "tree_search_missing", "This result no longer exists"))
+                "tree_search_missing", _MISSING_RESULT))
             return
         if not path.is_relative_to(root):
             self._locate_path = ""

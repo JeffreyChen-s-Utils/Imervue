@@ -50,11 +50,26 @@ class Job:
     retry_factory: RetryFactory | None = None
     owned: bool = False
     retry_started: bool = False
+    cancel_callback: Callable[[], object] | None = None
 
     @property
     def settled(self) -> bool:
         """True only after the registry observes actual worker exit."""
-        return self.worker is None
+        return self.worker is None and self.state.snapshot(include_items=False).status in TERMINAL
+
+    def poll(self) -> None:
+        """Release a worker only after its actual exit, or a completed activity's callback."""
+        worker = self.worker
+        if worker is None:
+            if self.settled:
+                self.cancel_callback = None
+            return
+        terminal = self.state.snapshot(include_items=False).status in TERMINAL
+        if not isValid(worker) or ((worker.isFinished() or terminal) and worker.wait(0)):
+            self.state.finish()
+            self.worker = None
+            if self.owned and isValid(worker):
+                worker.deleteLater()
 
 
 class JobRegistry(QObject):
@@ -104,18 +119,20 @@ class JobRegistry(QObject):
         self.changed.emit()
         return job
 
+    def add_activity(self, title: str, state: JobState, cancel: Callable[[], object]) -> Job:
+        """Track a GUI-owned recording until its completion signal finishes the state."""
+        if state.snapshot(include_items=False).status in TERMINAL:
+            raise ValueError("An activity requires a running JobState")
+        job = Job(title, state, None, cancel_callback=cancel)
+        self.jobs.append(job)
+        self._timer.start()
+        self.changed.emit()
+        return job
+
     def poll(self) -> None:
         """Poll immutable progress, retaining finishing threads until wait(0) succeeds."""
         for job in self.jobs:
-            worker = job.worker
-            if worker is None:
-                continue
-            terminal = job.state.snapshot(include_items=False).status in TERMINAL
-            if not isValid(worker) or ((worker.isFinished() or terminal) and worker.wait(0)):
-                job.state.finish()
-                job.worker = None
-                if job.owned and isValid(worker):
-                    worker.deleteLater()
+            job.poll()
         summary = tuple((job.state.snapshot(include_items=False), job.settled) for job in self.jobs)
         if summary != self._last:
             self._last = summary
@@ -126,9 +143,12 @@ class JobRegistry(QObject):
     def cancel(self, job: Job) -> None:
         """Request cooperative cancellation; an uninterruptible operation remains retained."""
         if not job.settled:
-            job.state.request_cancel()
-            if isValid(job.worker):
-                job.worker.requestInterruption()
+            if job.worker is None and job.cancel_callback is not None:
+                job.cancel_callback()
+            else:
+                job.state.request_cancel()
+                if job.worker is not None and isValid(job.worker):
+                    job.worker.requestInterruption()
             self.changed.emit()
 
     def retry(self, job: Job) -> Job | None:
@@ -158,6 +178,8 @@ class JobRegistry(QObject):
                 job.state.request_cancel()
                 job.worker.requestInterruption()
                 job.worker.wait()
+            elif not job.settled and job.cancel_callback is not None:
+                job.cancel_callback()
 
 
 def job_registry() -> JobRegistry:
@@ -202,6 +224,10 @@ class BackgroundJobsDialog(QDialog):
         self.tree.itemDoubleClicked.connect(self._open_output)
         layout.addWidget(self.tree)
         row = QHBoxLayout()
+        self.open_button = QPushButton(self._text("jobs_open_output", "Open output"))
+        self.folder_button = QPushButton(self._text("jobs_open_folder", "Open folder"))
+        self.open_button.clicked.connect(self._open_selected)
+        self.folder_button.clicked.connect(self._open_folder)
         self.cancel_button = QPushButton(self._text("export_cancel", "Cancel"))
         self.retry_button = QPushButton(self._text("jobs_retry_failed", "Retry failed items"))
         clear = QPushButton(self._text("jobs_clear", "Clear finished"))
@@ -210,7 +236,8 @@ class BackgroundJobsDialog(QDialog):
         self.cancel_button.clicked.connect(self._cancel)
         self.retry_button.clicked.connect(self._retry)
         clear.clicked.connect(self._registry.clear_finished)
-        for button in (self.cancel_button, self.retry_button, clear, report):
+        for button in (self.open_button, self.folder_button, self.cancel_button,
+                       self.retry_button, clear, report):
             row.addWidget(button)
         layout.addLayout(row)
         self._registry.changed.connect(self.refresh)
@@ -228,6 +255,8 @@ class BackgroundJobsDialog(QDialog):
     def refresh(self) -> None:
         """Rebuild summaries; expand only the selected job's potentially large result list."""
         selected = self._selected()
+        item = self.tree.currentItem()
+        selected_output = item.data(1, Qt.ItemDataRole.UserRole) if item is not None else None
         blocker = QSignalBlocker(self.tree)
         self.tree.clear()
         for job in self._registry.jobs:
@@ -239,10 +268,20 @@ class BackgroundJobsDialog(QDialog):
             root.setData(0, Qt.ItemDataRole.UserRole, job)
             self.tree.addTopLevelItem(root)
             if job is selected:
-                self.tree.setCurrentItem(root)
-                self._details(root, job)
+                self._select_job_result(root, job, selected_output)
         blocker.unblock()
         self._buttons()
+
+    def _select_job_result(self, root: QTreeWidgetItem, job: Job, output: str | None) -> None:
+        self.tree.setCurrentItem(root)
+        self._details(root, job)
+        if not output:
+            return
+        for index in range(root.childCount()):
+            child = root.child(index)
+            if child.data(1, Qt.ItemDataRole.UserRole) == output:
+                self.tree.setCurrentItem(child)
+                break
 
     def _details(self, root: QTreeWidgetItem, job: Job) -> None:
         results, total = job.state.visible_results(_VISIBLE_RESULTS)
@@ -254,7 +293,8 @@ class BackgroundJobsDialog(QDialog):
                     result.error or result.output,
                 ]
             )
-            child.setData(1, Qt.ItemDataRole.UserRole, result.output)
+            child.setData(1, Qt.ItemDataRole.UserRole,
+                          result.output if result.status == "succeeded" else "")
             for column in range(3):
                 child.setToolTip(column, child.text(column))
             root.addChild(child)
@@ -293,6 +333,10 @@ class BackgroundJobsDialog(QDialog):
 
     def _buttons(self) -> None:
         job = self._selected()
+        activity = job is not None and job.cancel_callback is not None
+        self.cancel_button.setText(
+            self._text("jobs_stop", "Stop") if activity else self._text("export_cancel", "Cancel")
+        )
         self.cancel_button.setEnabled(job is not None and not job.settled)
         self.retry_button.setEnabled(
             job is not None
@@ -302,6 +346,9 @@ class BackgroundJobsDialog(QDialog):
             and bool(job.state.failed_paths())
         )
         item = self.tree.currentItem()
+        output = item.data(1, Qt.ItemDataRole.UserRole) if item is not None else None
+        self.open_button.setEnabled(bool(output))
+        self.folder_button.setEnabled(bool(output))
         if (
             job is not None
             and item is not None
@@ -324,6 +371,17 @@ class BackgroundJobsDialog(QDialog):
         output = item.data(1, Qt.ItemDataRole.UserRole)
         if output:
             QDesktopServices.openUrl(QUrl.fromLocalFile(output))
+
+    def _open_selected(self) -> None:
+        item = self.tree.currentItem()
+        if item is not None:
+            self._open_output(item, 0)
+
+    def _open_folder(self) -> None:
+        item = self.tree.currentItem()
+        output = item.data(1, Qt.ItemDataRole.UserRole) if item is not None else None
+        if output:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(output).parent)))
 
 
 def open_background_jobs(ui) -> None:

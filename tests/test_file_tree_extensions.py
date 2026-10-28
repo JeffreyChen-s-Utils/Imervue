@@ -161,7 +161,7 @@ def test_recursive_search_finds_unloaded_descendant_and_locates(make_tree, tmp_p
     assert search.worker is None
     search.include.setChecked(True)
     wait_for(lambda: search.results.count() == 1 and search.worker is None)
-    assert search.results.item(0).text() == str(Path("nested/deeper/Needle.png"))
+    assert search.results.item(0).text().splitlines() == ["Needle.png", str(Path("nested/deeper"))]
     search.results.setCurrentRow(0)
     search.locate_button.click()
     wait_for(lambda: not search._locate_path)
@@ -363,3 +363,135 @@ def test_shutdown_cancels_scan_without_waiting_for_blocked_io(qapp, tmp_path, mo
     finally:
         release.set()
         wait_for(lambda: worker not in module._running_scans)
+
+
+def test_enter_previews_deep_result_without_changing_search(make_tree, tmp_path, qapp):
+    folder = tmp_path / "nested" / "unloaded"
+    folder.mkdir(parents=True)
+    target = folder / "needle.png"
+    target.write_bytes(b"image")
+    tree = make_tree(tmp_path)
+    panel = tree.create_search_controls()
+    panel.show()
+    search = tree._recursive_search
+    opened = []
+    tree.search_path_activated.connect(opened.append)
+    search.include.setChecked(True)
+    tree.set_search_text("needle")
+    wait_for(lambda: search.results.count() == 1 and search.worker is None)
+    search.results.setCurrentRow(0)
+    search.results.setFocus()
+    scroll = search.results.verticalScrollBar().value()
+    QTest.keyClick(search.results, Qt.Key.Key_Return)
+    assert [Path(path) for path in opened] == [target]
+    assert search.query == "needle"
+    assert search.results.currentRow() == 0
+    assert search.results.verticalScrollBar().value() == scroll
+    assert Path(tree._tree_state.root) == tmp_path
+    search.collapse_button.click()
+    assert search.results.isHidden()
+    search.collapse_button.click()
+    assert not search.results.isHidden()
+    target.unlink()
+    QTest.keyClick(search.results, Qt.Key.Key_Return)
+    assert [Path(path) for path in opened] == [target]
+    assert search.status.text()
+    panel.deleteLater()
+
+
+def test_sort_scope_direction_and_reset_visible(make_tree, tmp_path, qapp):
+    from PySide6.QtWidgets import QComboBox, QToolButton
+    from Imervue.gui.file_tree_sort_controls import direction_label
+    tree = make_tree(tmp_path)
+    controls = tree.create_sort_controls()
+    controls.resize(160, controls.sizeHint().height())
+    controls.show()
+    qapp.processEvents()
+    scope = controls.findChild(QComboBox, "treeSortScope")
+    direction = controls.findChild(QToolButton, "treeSortDirection")
+    reset = controls.findChild(QToolButton, "treeSortReset")
+    assert not scope.currentData()
+    scope.setCurrentIndex(1)
+    assert root_key(str(tmp_path)) in settings.user_setting_dict["tree_folder_sort_overrides"]
+    tree.set_tree_sort("modified", False)
+    assert direction.text() == direction_label("modified", False)
+    assert reset.isEnabled()
+    for widget in (scope, direction, reset):
+        assert controls.rect().contains(widget.geometry())
+    reset.click()
+    assert not scope.currentData()
+    assert not reset.isEnabled()
+    controls.deleteLater()
+
+
+def test_search_keyboard_uses_real_navigation_and_decodes_image(make_tree, tmp_path, monkeypatch):
+    from PIL import Image
+    from PySide6.QtWidgets import QStackedWidget, QWidget
+    import Imervue.Imervue_main_window as main_module
+    from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+    from Imervue.gpu_image_view.images.image_loader import decode_image_file
+
+    folder = tmp_path / "deep"
+    folder.mkdir()
+    for index in range(40):
+        Image.new("RGB", (19, 13), (12, 34, index)).save(folder / f"photo-{index:02}.png")
+    tree = make_tree(tmp_path)
+    panel = tree.create_search_controls()
+    search = tree._recursive_search
+    stack = QStackedWidget()
+    stack.addWidget(QWidget())
+    stack.addWidget(QWidget())
+    stack.setCurrentIndex(1)
+    loaded = []
+    model = SimpleNamespace(images=[])
+    model.set_images = lambda paths: setattr(model, "images", paths)
+    viewer = SimpleNamespace(model=model, clear_tile_grid=lambda: None,
+                             load_deep_zoom_image=lambda path: loaded.append(
+                                 (Path(path), decode_image_file(path))))
+    host = SimpleNamespace(viewer=viewer, _view_stack=stack,
+                           _save_current_folder_session=lambda: None,
+                           breadcrumb=SimpleNamespace(set_path=lambda path: None))
+    viewer.main_window = host
+    host.navigate_to_path = lambda path: main_module.ImervueMainWindow.navigate_to_path(host, path)
+    monkeypatch.setattr(main_module, "rebuild_recent_menu", lambda _host: None)
+    tree.search_path_activated.connect(
+        lambda path: MainWindowBrowseMixin.preview_search_result(host, path))
+    panel.resize(300, 320)
+    search.results.setMaximumHeight(120)
+    panel.show()
+    search.include.setChecked(True)
+    tree.set_search_text("photo")
+    wait_for(lambda: search.results.count() == 40 and search.worker is None)
+    search.results.setCurrentRow(30)
+    selected = search.results.currentItem()
+    target = Path(selected.data(Qt.ItemDataRole.UserRole))
+    search.results.scrollToItem(selected)
+    wait_for(lambda: search.results.verticalScrollBar().value() > 0)
+    scroll = search.results.verticalScrollBar().value()
+
+    def assert_search_preserved():
+        assert search.results.currentItem() is selected
+        assert search.results.verticalScrollBar().value() == scroll
+        assert search.query == "photo"
+        assert search.results.count() == 40
+
+    QTest.keyClick(search.results, Qt.Key.Key_Return)
+    assert stack.currentIndex() == 0
+    assert len(loaded) == 1
+    assert loaded[0][0] == target
+    assert loaded[0][1].shape[:2] == (13, 19)
+    assert loaded[0][1][0, 0, :3].tolist() == [12, 34, int(target.stem.rsplit("-", 1)[1])]
+    assert Path(model.images[viewer.current_index]) == target
+    assert_search_preserved()
+    search.locate_button.click()
+    wait_for(lambda: not search._locate_path)
+    assert Path(tree.model().filePath(tree.currentIndex())) == target
+    assert_search_preserved()
+    search.collapse_button.click()
+    assert search.results.isHidden()
+    search.collapse_button.click()
+    QTest.qWait(20)
+    assert not search.results.isHidden()
+    assert_search_preserved()
+    panel.deleteLater()
+    stack.deleteLater()

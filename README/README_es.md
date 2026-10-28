@@ -31,6 +31,12 @@
 
 ---
 
+Los resultados de búsqueda del árbol se abren con Intro o doble clic; localizar sigue siendo una acción independiente. Se distinguen nombres y rutas relativas, y los resultados se pueden contraer sin borrar la consulta. Los controles superiores indican si el orden es global o de esta carpeta, con direcciones claras para fechas y tamaños y un restablecimiento visible. La búsqueda muestra la carpeta y el alcance de subcarpetas; los filtros de imágenes independientes muestran condiciones eliminables, recuentos de coincidencias y cuándo se conserva una imagen abierta explícitamente aunque no coincida.
+
+Modify distingue sobrescribir el original de guardar una copia y muestra el destino. El recorte también indica cuándo escribe en el original. Los formatos de origen de solo lectura usan una copia; los fallos de escritura conservan las ediciones y los guardados correctos muestran la ruta real. Al enviar a Paint se puede elegir el original o el resultado revelado actual a calidad completa, con una opción explícita para las anotaciones, en un documento nuevo. Los documentos de Paint existentes y sus historiales de deshacer se conservan.
+
+La barra de estado abre Background Jobs y muestra los trabajos activos y fallidos. Las capturas y grabaciones de Puppet conservan allí las rutas de salida o los detalles del fallo; después se puede abrir el resultado o su carpeta. Las grabaciones no ofrecen un reintento inaplicable. La cámara muestra los estados reales de inicio, ejecución, detención y error, con selección de dispositivo, reintento y diagnóstico; se ofrece instalación cuando faltan dependencias. La paleta explica los comandos no disponibles y prioriza los usados recientemente o con frecuencia.
+
 ## Tabla de contenidos
 
 - [Resumen](#resumen)

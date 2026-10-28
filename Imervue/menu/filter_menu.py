@@ -235,6 +235,8 @@ def _build_tag_filter(ui: ImervueMainWindow, menu):
         lang = language_wrapper.language_word_dict
         action = menu.addAction(lang.get("filter_no_tags", "(No tags)"))
         action.setEnabled(False)
+        action.setProperty("disabledReason", lang.get(
+            "command_no_tags", "Add a tag to an image before filtering by tag."))
         return
     for tag_name in sorted(tags.keys()):
         count = len(tags[tag_name])
@@ -262,6 +264,8 @@ def _build_album_filter(ui: ImervueMainWindow, menu):
         lang = language_wrapper.language_word_dict
         action = menu.addAction(lang.get("filter_no_albums", "(No albums)"))
         action.setEnabled(False)
+        action.setProperty("disabledReason", lang.get(
+            "command_no_albums", "Create an album before filtering by album."))
         return
     for album_name in sorted(albums.keys()):
         count = len(albums[album_name])

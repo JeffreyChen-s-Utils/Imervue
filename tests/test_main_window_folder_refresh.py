@@ -111,6 +111,7 @@ class _FakePoller:
 
 
 class _StubMainWindow:
+    _update_filter_results = ImervueMainWindow._update_filter_results
     _apply_refreshed_image_list = ImervueMainWindow._apply_refreshed_image_list
     _reconcile_deep_zoom_onto_list = ImervueMainWindow._reconcile_deep_zoom_onto_list
     _apply_image_filter = ImervueMainWindow._apply_image_filter

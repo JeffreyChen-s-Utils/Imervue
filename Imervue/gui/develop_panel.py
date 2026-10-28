@@ -297,6 +297,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
             self._set_enabled(False)
             self._sync_sliders()
             self._destroy_canvas()
+            self._sync_save_controls()
             return
 
         if self._canvas_source_path != path:
@@ -309,6 +310,8 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         else:
             # Same path — keep the working recipe to preserve unsaved edits.
             self._set_enabled(True)
+
+        self._sync_save_controls()
 
     def current_recipe(self) -> Recipe:
         return Recipe.from_dict(self._current.to_dict())
@@ -593,6 +596,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
             self._warn_cannot_overwrite()
             return
         if not self._write_over_source(path, cropped):
+            self._show_save_failure(path)
             return
         # The recipe adjustments are now baked into the saved file — reset
         # the recipe so they won't be applied again by the viewer.
@@ -613,6 +617,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
             open_path(main_gui=self._main_gui, path=path)
         except Exception:
             logger.exception("Viewer reload after crop failed")
+        self._show_save_result(path)
 
     def _cancel_crop(self) -> None:
         if self._canvas is not None:
@@ -697,8 +702,10 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         """Build the right-click image menu (save / navigate / delete)."""
         lang = language_wrapper.language_word_dict
         menu = QMenu(self._canvas)
-        menu.addAction(
-            lang.get("annotation_save", "Save"), self._save_annotation)
+        overwrite = menu.addAction(
+            lang.get("modify_overwrite", "Overwrite original"), self._save_annotation)
+        overwrite.setEnabled(bool(self._path and can_rewrite_in_place(self._path)))
+        menu.addAction(lang.get("modify_save_copy", "Save copy…"), self._save_copy)
         menu.addAction(
             lang.get("right_click_menu_previous_image", "Previous Image"),
             lambda: self._on_navigate_image(-1))
@@ -772,10 +779,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
             self._save_annotation_copy(path, img)
             return
         if not self._write_over_source(path, img):
-            self._toast(
-                language_wrapper.language_word_dict.get(
-                    "annotation_save_failed", "Save failed"),
-                "warning")
+            self._show_save_failure(path)
             return
 
         # The recipe adjustments are now baked into the saved file — reset
@@ -797,26 +801,29 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         except Exception:
             logger.exception("Viewer reload after annotation save failed")
 
-        # Toast AFTER the reload so it isn't torn down with the old canvas.
-        self._toast(
-            language_wrapper.language_word_dict.get("annotation_saved", "Saved"),
-            "success")
+        self._show_save_result(path)
 
     def _save_annotation_copy(self, source_path: str, img: Image.Image) -> None:
         """Save the annotated *img* to a file the user picks, leaving the source as it is."""
         from Imervue.gui.annotation_file_actions import ask_save_as_path, write_annotated
+        from Imervue.gui.develop_save_controls import is_source_destination
 
         target = ask_save_as_path(self, source_path)
         if not target:
             return
         lang = language_wrapper.language_word_dict
         try:
+            if is_source_destination(target, source_path):
+                self._toast(lang.get("modify_copy_same_source",
+                    "Choose a different file for the copy. The original was not changed."),
+                    "warning")
+                return
             write_annotated(img, target, source_path)
         except IMAGE_READ_ERRORS:
             logger.exception("Failed to save the annotated copy to %s", target)
-            self._toast(lang.get("annotation_save_failed", "Save failed"), "warning")
+            self._show_save_failure(target)
             return
-        self._toast(lang.get("annotation_saved", "Saved"), "success")
+        self._show_save_result(target)
 
     # ------------------------------------------------------------------
     # Slider → recipe mapping

@@ -109,6 +109,8 @@ def _populate_recent(ui_we_want_to_set, folder_menu, image_menu):
     if not valid_folders:
         empty = folder_menu.addAction(lang.get("recent_empty", "(Empty)"))
         empty.setEnabled(False)
+        empty.setProperty("disabledReason", lang.get(
+            "command_no_recent", "No recent items are available yet."))
 
     # ===== Images =====
     valid_images = []
@@ -129,6 +131,8 @@ def _populate_recent(ui_we_want_to_set, folder_menu, image_menu):
     if not valid_images:
         empty = image_menu.addAction(lang.get("recent_empty", "(Empty)"))
         empty.setEnabled(False)
+        empty.setProperty("disabledReason", lang.get(
+            "command_no_recent", "No recent items are available yet."))
     # QMenu hides ``setToolTip`` content by default; flip the attribute
     # so artists actually see the full path on hover.
     try:
