@@ -181,6 +181,7 @@ class PuppetWorkspace(PuppetMenusMixin, PuppetLiveMixin, PuppetImportMixin, QMai
         self._recorder.finished.connect(self._on_recording_finished)
         self._recorder.failed.connect(self._on_recording_failed)
         self._webcam = WebcamTracker(self._canvas, self)
+        self._webcam.state_changed.connect(self._on_webcam_state_changed)
         self._motion_recorder = MotionRecorder(self._canvas, self)
         self._motion_recorder.finished.connect(self._on_motion_recorded)
         self._canvas.hit_area_triggered.connect(self._on_hit_area_triggered)

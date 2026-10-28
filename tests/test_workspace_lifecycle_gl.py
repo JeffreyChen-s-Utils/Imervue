@@ -58,6 +58,49 @@ def _edit(workspace, value):
     workspace._on_dispatcher_commit()
 
 
+def test_developed_handoff_preserves_native_paint_tabs_and_undo(windows, tmp_path, pump_until):
+    from PIL import Image
+    from Imervue.gui.annotation_models import Annotation, bake
+    from Imervue.gui.paint_handoff import open_current_result
+    from Imervue.image.recipe import Recipe
+
+    path = tmp_path / "handoff.png"
+    pixels = np.full((120, 160, 4), (25, 50, 75, 255), dtype=np.uint8)
+    Image.fromarray(pixels).save(path)
+    window = windows()
+    window.navigate_to_path(str(path))
+    assert pump_until(lambda: window.viewer._current_path() == str(path))
+    window._main_tabs.setCurrentIndex(1)
+    panel = window.modify_panel
+    assert pump_until(lambda: panel._canvas_source_path == str(path))
+    panel._current = Recipe(exposure=.5, rotate_steps=1)
+    assert panel._ensure_full_canvas()
+    annotation = Annotation(kind="rect", points=[(4, 4), (20, 20)], filled=True)
+    panel.canvas().set_annotations([annotation])
+    expected = np.array(bake(Image.fromarray(panel._current.apply(pixels)), [annotation]))
+    workspace = window.paint_workspace
+    workspace.load_image(np.full((6, 7, 4), 17, dtype=np.uint8))
+    original = workspace.canvas()
+    _edit(workspace, 91)
+    stack = workspace._undo_stack
+    count = workspace.tab_count()
+
+    open_current_result(window, str(path), panel, include_annotations=True)
+
+    assert workspace.tab_count() == count + 1
+    assert workspace.canvas() is not original
+    assert workspace._tab_dirty[workspace.canvas()]
+    np.testing.assert_array_equal(workspace.canvas().document().layer_at(0).image, expected)
+    assert workspace._tab_dirty[original]
+    assert stack.undo()
+    assert np.all(original.document().layer_at(0).image == 17)
+    assert stack.redo()
+    assert np.all(original.document().layer_at(0).image == 91)
+    window._bind_paint_workspace_to_current_image(path=str(path))
+    assert workspace.tab_count() == count + 2
+    np.testing.assert_array_equal(workspace.canvas().document().layer_at(0).image, pixels)
+
+
 def test_edit_switch_autosave_recover_and_cancel_close(windows, tmp_path, pump_until, monkeypatch):
     window = windows()
     window._main_tabs.setCurrentIndex(2)

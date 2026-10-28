@@ -31,6 +31,12 @@
 
 ---
 
+File-tree search results open with Enter or a double-click; Locate remains a separate action. Results distinguish filenames from relative paths and can be collapsed without clearing the query. The controls above the tree show whether sorting applies globally or to this folder, with meaningful date/size directions and a visible reset. Search shows its folder and descendant scope; the independent image filters show removable conditions, matching counts and when an explicitly opened image is kept despite not matching.
+
+Modify distinguishes overwriting the original from saving a copy and shows the destination. Crop also states when it writes the original. Read-only source formats use a copy; failed writes preserve edits, and successful saves report the actual path. Sending an image to Paint offers the original or the current full-quality developed result, with an explicit annotation choice, in a new document. Existing Paint documents and Undo histories remain intact.
+
+The status bar opens Background Jobs and shows running and failed counts. Puppet captures and recordings retain output paths or failure details there; open the output or its folder later. Recordings do not offer a misleading retry action. Webcam controls show actual startup, running, stopping and error states, with device selection, retry and diagnostics; installation is offered for missing dependencies. The command palette explains unavailable commands and prioritizes recently or frequently used commands.
+
 ## Table of Contents
 
 - [Overview](#overview)

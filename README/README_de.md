@@ -31,6 +31,12 @@
 
 ---
 
+Suchergebnisse im Dateibaum lassen sich mit Eingabe oder Doppelklick öffnen; das Anzeigen ihrer Position bleibt eine eigene Aktion. Dateinamen und relative Pfade sind getrennt dargestellt, und Ergebnisse lassen sich ohne Löschen der Suchanfrage einklappen. Oberhalb des Baums stehen der globale oder ordnerbezogene Geltungsbereich, verständliche Sortierrichtungen für Datum und Größe sowie eine sichtbare Rücksetzfunktion. Die Suche zeigt Ordner und Unterordnerumfang; die unabhängigen Bildfilter zeigen einzeln entfernbare Bedingungen, Trefferzahlen und einen Hinweis, wenn ein ausdrücklich geöffnetes Bild trotz fehlender Übereinstimmung erhalten bleibt.
+
+Modify unterscheidet Original überschreiben und Kopie speichern und zeigt das Ziel. Auch beim Zuschneiden wird angegeben, ob das Original geschrieben wird. Nur lesbare Quellformate verwenden eine Kopie; bei Schreibfehlern bleiben Änderungen erhalten, erfolgreiche Speichervorgänge nennen den tatsächlichen Pfad. Bei der Übergabe an Paint lassen sich Original oder aktuelles Entwicklungsergebnis in voller Qualität sowie ausdrücklich die Übernahme von Anmerkungen wählen. Es entsteht ein neues Dokument; bestehende Paint-Dokumente und Rückgängig-Verläufe bleiben erhalten.
+
+Die Statusleiste öffnet Background Jobs und zeigt laufende und fehlgeschlagene Aufträge. Puppet-Aufnahmen und Bildschirmaufnahmen behalten dort Ausgabepfade oder Fehlerdetails; Ergebnis oder Ordner können später geöffnet werden. Aufzeichnungen bieten keine unpassende Wiederholung an. Die Webcam zeigt tatsächliches Starten, Laufen, Stoppen und Fehler mit Gerätewahl, erneutem Versuch und Diagnose; die Installation wird bei fehlenden Abhängigkeiten angeboten. Die Befehlspalette erklärt nicht verfügbare Befehle und bevorzugt zuletzt oder häufig verwendete Befehle.
+
 ## Inhaltsverzeichnis
 
 - [Überblick](#überblick)

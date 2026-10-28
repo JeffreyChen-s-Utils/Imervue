@@ -291,12 +291,18 @@ class ImervueMainWindow(
             # 切回 Imervue 主頁
             self.exif_sidebar.update_info()
 
-    def _bind_paint_workspace_to_current_image(self) -> None:
+    def choose_paint_handoff(self) -> None:
+        """Choose original or current pixels for a new Paint document."""
+        from Imervue.gui.paint_handoff import choose_paint_handoff
+        choose_paint_handoff(self)
+
+    def _bind_paint_workspace_to_current_image(self, *, path: str | None = None) -> None:
         """Decode the viewer's current image into a new Paint document and show it."""
-        images = self.viewer.model.images
-        if not images or not (0 <= self.viewer.current_index < len(images)):
-            return
-        path = images[self.viewer.current_index]
+        if path is None:
+            images = self.viewer.model.images
+            if not images or not (0 <= self.viewer.current_index < len(images)):
+                return
+            path = images[self.viewer.current_index]
         try:
             # The viewer's decode: RAW developed, sRGB, upright. Pillow alone reads
             # a RAW's small embedded preview and ignores orientation and profile.

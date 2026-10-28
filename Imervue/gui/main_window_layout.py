@@ -89,6 +89,7 @@ class MainWindowLayoutMixin:
         self.tree.setUniformRowHeights(True)
         self.tree.setAnimated(False)
         self.tree.clicked.connect(self.on_file_clicked)
+        self.tree.search_path_activated.connect(self.preview_search_result)
 
         self.tree_search = QLineEdit()
         self.tree_search.setClearButtonEnabled(True)
@@ -365,3 +366,5 @@ class MainWindowLayoutMixin:
         )
         self._status_bar.addPermanentWidget(self._memory_pressure)
         self._status_bar.addPermanentWidget(self._progress_bar)
+        from Imervue.gui.job_indicator import install_job_indicator
+        self._job_indicator = install_job_indicator(self)

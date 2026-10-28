@@ -75,7 +75,7 @@ def _add_open_entries(ui_we_want_to_set: ImervueMainWindow, file_menu: QMenu, la
     ))
     paint_action.setObjectName("file.open_in_paint")
     paint_action.triggered.connect(
-        lambda: ui_we_want_to_set._bind_paint_workspace_to_current_image(),
+        lambda: ui_we_want_to_set.choose_paint_handoff(),
     )
 
     build_recent_menu(ui_we_want_to_set=ui_we_want_to_set, menu=file_menu)
@@ -523,6 +523,8 @@ def _populate_open_in_editor_menu(ui: ImervueMainWindow, menu) -> None:
         placeholder = menu.addAction(
             lang.get("ext_editor_none_configured", "(None configured)"))
         placeholder.setEnabled(False)
+        placeholder.setProperty("disabledReason", lang.get(
+            "command_no_editors", "Configure an editor under File > External Editors first."))
         return
     for entry in editors:
         action = menu.addAction(entry.name)

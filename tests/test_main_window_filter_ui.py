@@ -114,6 +114,26 @@ def test_partial_plugin_language_uses_english_for_new_controls(qapp, monkeypatch
         widget.deleteLater()
 
 
+def test_conditions_remove_one_field_and_preserve_the_rest(host):
+    host._restore_filter_state({"filename": "cat", "tag": "animal", "rating": ">=3"})
+    assert set(host.bar.condition_buttons) == {"filename", "tag", "rating"}
+    host.bar.condition_buttons["tag"].click()
+    assert host._filter_state()["tag"] == ""
+    assert host._filter_state()["filename"] == "cat"
+    assert host._filter_state()["rating"] == ">=3"
+    assert len(host.applied) == 1
+
+
+def test_summary_counts_matches_separately_from_retained_image(host):
+    base = ["/photos/cat.png", "/photos/dog.png"]
+    host._update_filter_results(base, [base[0]], current=base[1])
+    assert "1 / 2" in host.bar.summary.text()
+    assert "photos" in host.bar.summary.text()
+    assert not host.bar.retained.isHidden()
+    host._update_filter_results(base, base, current=base[1])
+    assert host.bar.retained.isHidden()
+
+
 @pytest.mark.parametrize("percent", [100, 150])
 @pytest.mark.parametrize("locale", ["English", "Traditional_Chinese", "Chinese", "Japanese", "Korean"])
 def test_scaled_translated_filters_fit_with_long_tags(qapp, monkeypatch, percent, locale):

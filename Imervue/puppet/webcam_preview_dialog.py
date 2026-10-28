@@ -20,17 +20,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.puppet.webcam_status import WebcamPhase, status_text
 
 if TYPE_CHECKING:
     from Imervue.puppet.webcam_tracker import WebcamTracker
@@ -55,6 +57,8 @@ _LANDMARK_OVERLAY_INDICES: tuple[int, ...] = (
 class WebcamPreviewDialog(QDialog):
     """Floating preview window bound to a :class:`WebcamTracker`."""
 
+    install_requested = Signal()
+
     def __init__(self, tracker: WebcamTracker, parent=None):
         super().__init__(parent)
         self._tracker = tracker
@@ -68,10 +72,11 @@ class WebcamPreviewDialog(QDialog):
         self._frame_label = QLabel(self)
         self._frame_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._frame_label.setMinimumSize(*_PREVIEW_MIN_SIZE)
-        self._frame_label.setStyleSheet("background: #111;")
+        self._frame_label.setStyleSheet("background: #111; color: #eee; padding: 8px;")
 
         self._status_label = QLabel(self)
         self._status_label.setTextFormat(Qt.TextFormat.PlainText)
+        self._status_label.setWordWrap(True)
 
         self._stop_button = QPushButton(
             lang.get("puppet_webcam_preview_stop", "Stop tracking"), self,
@@ -85,11 +90,42 @@ class WebcamPreviewDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(self._frame_label, stretch=1)
         layout.addLayout(bottom_row)
+        self._build_recovery_controls(layout)
 
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(int(1000 / _POLL_HZ))
         self._poll_timer.timeout.connect(self._refresh)
         self._refresh()   # seed with a status line before the first poll
+
+    def _build_recovery_controls(self, layout: QVBoxLayout) -> None:
+        lang = language_wrapper.language_word_dict
+        row = QHBoxLayout()
+        device_label = QLabel(lang.get("webcam_device", "Camera index"))
+        self._device = QSpinBox()
+        self._device.setRange(0, 64)
+        self._device.setValue(self._tracker.status().device)
+        self._device.setToolTip(lang.get(
+            "webcam_device_hint",
+            "0 is the default camera. Try another index if it is unavailable.",
+        ))
+        device_label.setBuddy(self._device)
+        self._retry_button = QPushButton(lang.get("webcam_retry", "Start / retry"))
+        self._retry_button.clicked.connect(self._retry)
+        self._install_button = QPushButton(lang.get("webcam_install", "Install tracking packages"))
+        self._install_button.clicked.connect(self.install_requested)
+        for widget in (device_label, self._device, self._retry_button, self._install_button):
+            row.addWidget(widget)
+        layout.addLayout(row)
+        self._diagnostics = QLabel()
+        self._diagnostics.setTextFormat(Qt.TextFormat.PlainText)
+        self._diagnostics.setWordWrap(True)
+        self._diagnostics.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        layout.addWidget(self._diagnostics)
+
+    def _retry(self) -> None:
+        if self._tracker.set_device(self._device.value()):
+            self._tracker.set_enabled(True)
+        self._refresh()
 
     # ---- lifecycle -----------------------------------------------------
 
@@ -101,26 +137,38 @@ class WebcamPreviewDialog(QDialog):
         self._poll_timer.stop()
         super().hideEvent(event)
 
-    def closeEvent(self, event):   # pragma: no cover - Qt event plumbing
-        # Closing the dialog should also stop tracking — otherwise the
-        # camera light stays on with no UI to surface it. The workspace
-        # is wired to listen for this so it can also untick the
-        # Webcam-tracking toolbar toggle.
+    def done(self, result: int) -> None:
+        """Stop on every dismissal path, including Escape and window close."""
         self._tracker.set_enabled(False)
-        super().closeEvent(event)
+        super().done(result)
 
     # ---- private -------------------------------------------------------
 
     def _on_stop_clicked(self) -> None:
-        self._tracker.set_enabled(False)
-        self.close()
+        self.reject()
 
     def _refresh(self) -> None:
         state = self._tracker.current_preview_state()
         self._update_frame(state)
-        self._update_status(state)
+        status = self._tracker.status()
+        if status.phase == WebcamPhase.RUNNING:
+            self._update_status(state)
+        else:
+            self._status_label.setText(status_text(status, language_wrapper.language_word_dict))
+        configurable = self._tracker.can_configure()
+        self._device.setEnabled(configurable)
+        self._retry_button.setEnabled(configurable)
+        self._install_button.setVisible(status.phase == WebcamPhase.MISSING_DEPENDENCY)
+        self._stop_button.setEnabled(status.active)
+        self._diagnostics.setText(status.detail)
+        self._diagnostics.setVisible(bool(status.detail))
 
     def _update_frame(self, state: dict) -> None:
+        status = self._tracker.status()
+        if not status.active:
+            self._frame_label.setText(status_text(status, language_wrapper.language_word_dict))
+            self._frame_label.setWordWrap(True)
+            return
         frame = state.get("frame_bgr")
         if frame is None:
             self._frame_label.setText(

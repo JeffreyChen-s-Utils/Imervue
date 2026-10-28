@@ -394,7 +394,8 @@ def test_context_menu_updates_visible_sort_controls(sort_controls):
     actions[TREE_SORT_KEYS.index("created")].trigger()
     assert combo.currentData() == "created"
     assert direction.isChecked()
-    assert direction.text() == "↓"
+    from Imervue.gui.file_tree_sort_controls import direction_label
+    assert direction.text() == direction_label("created", False)
     assert direction.toolTip()
     menu.deleteLater()
 
@@ -408,7 +409,8 @@ def test_header_click_updates_visible_sort_controls(sort_controls, qapp):
     qapp.processEvents()
     QTest.mouseClick(tree.header().viewport(), Qt.MouseButton.LeftButton, pos=QPoint(30, 10))
     assert direction.isChecked()
-    assert direction.text() == "↓"
+    from Imervue.gui.file_tree_sort_controls import direction_label
+    assert direction.text() == direction_label("created", False)
     assert user_setting_dict["tree_sort_ascending"] is False
     assert _proxy_names(proxy) == ["a.png", "c.png", "b.png"]
     tree.hide()

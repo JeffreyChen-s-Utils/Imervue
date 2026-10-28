@@ -5,3 +5,6 @@ Item numbers (`#n`) are never reused. Tags: [DECIDE] needs the owner's decision,
 Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-10, X-9, X-10, X-18).
 
 ## Open
+
+- [UNVERIFIED] UX workflow delivery: implementation, translations and local validation are complete; native OpenGL CI and Spanish distribution publication remain.
+  Next: publish the tested changes, mirror the Spanish dictionary, verify the PR's native Paint flow and quality checks, then close this item.
