@@ -432,11 +432,12 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         # Tear down old canvas completely before creating a new one
         self._cleanup_old_canvas()
 
-        self._canvas = AnnotationCanvas(img, self._canvas_undo_stack)
+        self._canvas = AnnotationCanvas(
+            img, self._canvas_undo_stack, full_base_resolver=self._ensure_full_canvas,
+        )
         self._canvas_source_path = path
         self._canvas_recipe = (Recipe.from_dict(self._current.to_dict())
                                if self._current.is_identity() else None)
-        self._canvas.full_base_resolver = self._ensure_full_canvas
         self._canvas.base_changed.connect(self._on_canvas_base_changed)
 
         # Re-apply the full drawing state so the active tool (mosaic, blur, …),

@@ -1,4 +1,5 @@
 """The file tree's Open in Explorer and Open Containing Folder go through ``reveal_or_warn``."""
+
 from __future__ import annotations
 
 import pytest
@@ -6,14 +7,16 @@ from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QFileSystemModel, QMenu
 
 from Imervue.gui import file_tree_view as mod
+from Imervue.gui import file_tree_menus as menus
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
 @pytest.fixture
 def revealed(monkeypatch):
     calls: list = []
-    monkeypatch.setattr(mod, "reveal_or_warn",
-                        lambda path, *, select=True: calls.append((path, select)))
+    monkeypatch.setattr(
+        menus, "reveal_or_warn", lambda path, *, select=True: calls.append((path, select))
+    )
     return calls
 
 
@@ -29,12 +32,13 @@ def tree(qapp, tmp_path):
 
 def _choose(monkeypatch, key: str) -> None:
     """Make the tree's context menus pick the action labelled by *key* instead of opening."""
+
     class _PickingMenu(QMenu):
         def exec(self, *_args):
             text = language_wrapper.language_word_dict[key]
             next(action for action in self.actions() if action.text() == text).trigger()
 
-    monkeypatch.setattr(mod, "QMenu", _PickingMenu)
+    monkeypatch.setattr(menus, "QMenu", _PickingMenu)
 
 
 def test_open_in_explorer_selects_the_file(tree, tmp_path, monkeypatch, revealed):

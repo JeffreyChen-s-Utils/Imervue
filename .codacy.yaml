@@ -97,6 +97,9 @@ engines:
       - 'plugins/safety_review/**'
       - 'plugins/ai_background_remover/ai_background_remover.py'
       - 'plugins/object_splitter/object_splitter.py'
+      # Checkout-only verifier: absolute Git executable, exact inspection-only
+      # argument allowlist, no shell; same audited policy as the Bandit entry.
+      - 'scripts/complexity_inventory.py'
       # The benchmark tools' per-scenario child processes (see the bandit list).
       - 'scripts/performance_benchmark.py'
       - 'scripts/gpu_develop_benchmark.py'

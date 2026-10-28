@@ -74,7 +74,9 @@ class AnnotationCanvas(
     delete_image_requested = Signal()
     base_changed = Signal()
 
-    def __init__(self, base: Image.Image, undo_stack: QUndoStack, parent=None):
+    def __init__(
+            self, base: Image.Image, undo_stack: QUndoStack, parent=None,
+            *, full_base_resolver: Callable[[], bool] | None = None):
         super().__init__(parent)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
@@ -83,7 +85,7 @@ class AnnotationCanvas(
 
         self._base = base if base.mode == "RGBA" else base.convert("RGBA")
         self._base_qimg = pil_to_qimage(self._base)
-        self.full_base_resolver: Callable[[], bool] | None = None
+        self.full_base_resolver = full_base_resolver
         self._annotations: list[Annotation] = []
         self._undo_stack = undo_stack
 

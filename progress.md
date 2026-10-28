@@ -6,8 +6,8 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- Complete runtime complexity repair remains. Hosted baseline e452ce80 now includes external/editors.py and has 435 Python files above the unchanged threshold of 20. Local reductions in archive, annotation, Paint, output-format, external-editor and runtime sampler code passed the integrated full suite (14,584 passed; 1,431 existing skips) and still need fresh hosted scores; further modules remain untouched.
-  Next: publish this validated batch and inspect fresh Sonar/Codacy checks and complete runtime metrics, then begin the assessed file-tree and tool-state reductions. Three external-editor process-execution audit findings remain unresolved; the environment repository token returns HTTP 401 even with the documented project-token header.
+- Complete runtime complexity repair remains: fresh c6ecd0f7 Codacy results cover all 929 runtime Python files, with 495 verified, five data-only and 429 above 20. All 53 production files changed in that cohort are within threshold. SonarCloud passed; Codacy lists three external-editor execution audits plus a verifier subprocess audit and an annotation callback inference warning.
+  Next: integrate the independently reviewed callback injection and developer-tool audit policy with the integrated file-tree and tool-state reductions; the second-cohort full suite passed with 14,650 tests and 1,431 existing skips; publish it and obtain fresh hosted analysis. The callback/verifier focused set passed 61 tests. The environment Codacy repository token still returns HTTP 401 with the documented header.
 
 - File-tree follow-up: image_issue_panel.py:95 still calls the absent _FileTreeView._open_in_explorer helper.
-  Next: confirm the reveal action reproduction and migrate the caller to the shared reveal API with a behavior test in the next validated stage.
+  Next: migrate the caller to the shared reveal API with a behavior test and synchronized user documentation. A direct call with one selected path reproduces AttributeError before any OS launch.
