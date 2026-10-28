@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-06 | 2026-10-29 | Verify third production cohort against hosted analysis | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-05 | 2026-10-29 | Separate image-list and context-menu responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-04 | 2026-10-29 | Verify second production cohort against hosted analysis | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-03 | 2026-10-29 | Reduce file-tree and Paint tool-state complexity | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
@@ -584,4 +585,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 101 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 15 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 16 |
