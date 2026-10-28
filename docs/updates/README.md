@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-01 | 2026-10-29 | Verify complete runtime complexity inventory | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
 | U-20261028-12 | 2026-10-28 | Share puppet archive curve and named-entry processing | #done #refactor #quality #tests | [2026-10-b](2026-10-b.md) |
 | U-20261018-13 | 2026-10-18 | Keep Imeru crown hair flow above the scalp surface | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-12 | 2026-10-18 | Fill the central forehead gap in the bundled Imeru fringe | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
@@ -579,4 +580,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 101 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 10 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 11 |

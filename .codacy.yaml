@@ -1,4 +1,8 @@
 ---
+# This is first-party editor integration, not vendored code. Codacy's default
+# ignored-directory rules otherwise omit every directory named external.
+include_paths:
+  - 'Imervue/external/**'
 # Codacy per-engine configuration. Codacy's hosted Bandit / Semgrep (Opengrep)
 # engines honour neither the project's .bandit / pyproject [tool.bandit] skips
 # nor inline `# nosec` / `# noqa` suppressions, so accepted security patterns

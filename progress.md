@@ -6,5 +6,5 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 ## Open
 
-- Main-branch production complexity reduction remains: puppet/document_io.py is still above the file threshold after the first batch, and other ranked production modules need review. Baseline: 404 of 796 Imervue files exceed Codacy's threshold of 20.
-  Next: inspect the remaining puppet/document_io.py responsibilities (224), annotation_canvas.py (211) and paint/document.py (197) for repeated branching and cohesive responsibilities, preserving public behavior.
+- Main-branch production complexity reduction remains: 434 runtime Python modules in Imervue/ and plugins/ exceed Codacy's existing threshold of 20; external/editors.py has no hosted metric. The complete source inventory contains 882 Python files, including six literal-data or empty modules.
+  Next: finish the inventory stage's full test run and publish it, then integrate independently reviewed production reductions with full behavior checks and fresh hosted metrics. Puppet archive and annotation canvas refactors are underway in isolated worktrees; image output-format deduplication has passed focused tests and review. All remain unverified against fresh hosted metrics.
