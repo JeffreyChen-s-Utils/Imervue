@@ -874,7 +874,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 筆刷引擎
 
-`brush_engine.py`(686) 純 NumPy 光柵化 · `gpu_brush.py`(686) OpenGL FBO+GLSL 加速（散佈、色彩抖動、跟隨筆傾斜的筆畫留在 CPU）·
+`brush_engine.py`(341) 純 NumPy 光柵化：`BrushStroke` 筆畫狀態機與選項，並轉出下兩檔的名稱 · `brush_kernels.py`(134) 圓形 / 方形筆尖核、筆觸點間距與線段內插、依選項取筆畫基礎核 · `brush_dab.py`(294) 單一筆觸點合成（混色、橡皮擦、邊界裁切、取色、破損矩形聯集） · `gpu_brush.py`(686) OpenGL FBO+GLSL 加速（散佈、色彩抖動、跟隨筆傾斜的筆畫留在 CPU）·
 `painterly.py`(310) 筆畫式油畫算繪（Hertzmann 的多尺寸彎曲筆畫；每筆用 `BrushStroke` 畫，沿筆向抹出刷毛紋、以高度打光做出厚塗；只用 NumPy：高斯模糊借 `image/local_contrast.gaussian_plane`；CLI 的 `painterly` 子指令與 WaywardCrown 的頭像產生器用它，見 `architecture.md` §6）· `brush_dynamics.py`(150) · `brush_random.py`(169) 每筆觸點的散佈 / 色彩抖動 / 依筆傾斜收窄並轉向筆尖（`BrushStroke` 依 Brush dock 設定套用）· `brush_cursor.py`(515) 筆跡游標預覽 ·
 `brush_presets.py`(349) · `default_brush_presets.py`(164) · `brush_preset_io.py`(240) 含外部格式匯入 ·
 `brush_preset_dialog.py`(264) · `brush_kind_preview.py`(89) · `brush_tip_capture.py`(137) 從選區擷取筆尖 ·
