@@ -599,7 +599,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `smart_album_location.py` | 53 | Smart Album 地點：`place_matches` 比對城市／國家、GPS `place` 篩選、依最近城市分組 |
 | `search_query.py` | 219 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
-| `clip_search.py` | 373 | CLIP 語意搜尋（「找出符合這句話的照片」）；後端是 `clip_onnx` 的 ONNX 模型（不用 torch），快取另記模型 id，別的模型寫的快取不載入；向量連同檔案的大小與修改時間快取在 `clip_cache.npz`，`is_current` 判斷可沿用，`query_text(within=)` 只在指定路徑裡排名 |
+| `clip_search.py` | 207 | CLIP 語意搜尋（「找出符合這句話的照片」）：`SemanticEmbedder` 協定、`ClipSearchIndex`（混入下面兩個 mixin）、`query_text(within=)` 餘弦排名（只在指定路徑裡排名）、`get_default_index` 單例；後端是 `clip_onnx` 的 ONNX 模型（不用 torch） |
+| `clip_search_cache.py` | 93 | `ClipSearchIndex` 的 `save` / `load` mixin：`clip_cache.npz` 以 JSON bytes 存路徑與大小 / 修改時間簽章、另記模型 id（別的模型寫的快取不載入），`allow_pickle=False` 讀回，壞簽章逐筆作廢 |
+| `clip_search_store.py` | 114 | `ClipSearchIndex` 的列管理 mixin：`add` / `add_many` / `remove` / `clear`、路徑對列號同步、`is_current` 依檔案大小與修改時間判斷可沿用；`_l2_normalise` |
 | `clip_onnx.py` | 241 | CLIP ViT-B/32 的 onnxruntime 後端：Hugging Face `Xenova/clip-vit-base-patch32` 固定 commit 的 int8 量化文字 / 影像編碼器（約 150 MB，首次使用下載）；影像前處理（短邊 224 bicubic、中心裁切、OpenAI mean/std）；provider 只用 CUDA（一定是獨顯）或 CPU，不用 DirectML（混合筆電預設裝置常是內顯）；`rank_labels` 零樣本標籤；`default_embedder()` 讓語意搜尋與 Auto-Tag 共用一份模型 |
 | `clip_tokenizer.py` | 151 | 純 Python 的 CLIP byte-level BPE 斷詞器（讀模型的 `vocab.json` / `merges.txt`，NFC、空白合併、小寫、依 Unicode 類別切段、`<|startoftext|>` / `<|endoftext|>` 任何位置都先切出），與 `tokenizers` 參考實作 5000 句隨機字串逐 id 相同 |
 | `auto_tag.py` | 153 | 啟發式內容分類；CLIP 模型已下載時改用 `clip_onnx` 零樣本標籤（最多三個，提示詞向量依模型與標籤組快取），Auto-Tag 自己不觸發下載 |
