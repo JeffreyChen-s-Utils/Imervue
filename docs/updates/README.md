@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-20 | 2026-10-29 | Split the safety review and background remover plugins; close the 80+ complexity scope | #done #quality #refactor #tests #Imervue_Plugins | [2026-10-b](2026-10-b.md) |
 | U-20261029-19 | 2026-10-29 | Split layers dialog, background jobs, layers dock and CLIP search | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-18 | 2026-10-29 | Split twelve paint, image and main-window modules | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-17 | 2026-10-29 | Split MCP server, input controller, pet script editor and auto-rig | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
