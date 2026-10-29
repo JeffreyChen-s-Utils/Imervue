@@ -780,7 +780,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `extra_tools_menu.py` | 855 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單，約 100 個 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
+| `extra_tools_menu.py` | 432 | **最大的選單**：Batch / Library / Views / CVD / Workflow / Export / Develop / Retouch / Multi-image 九個子選單的完整樹（順序、標籤 key、分隔線、CVD 預覽），各項目接到 `extra_tools_open_*.py` 的 `_open_*` 進入點。子選單帶 `extra_tools.<key>` object name（`submenu_object_name`），外掛靠它 `findChild` 放入口，是對 Imervue_Plugins 的契約 |
+| `extra_tools_open_library.py` | 141 | Batch 與 Library & Metadata 子選單的 `_open_*` 進入點，各自延遲匯入對話框 |
+| `extra_tools_open_views.py` | 116 | Views（含 Timeline）、Workflow、Export 子選單的 `_open_*` 進入點 |
+| `extra_tools_open_develop.py` | 146 | Develop 子選單的色調／色彩項目進入點，含 `_open_layers`（圖層結果寫回 recipe 副本並重新載入） |
+| `extra_tools_open_effects.py` | 174 | Develop 的創意特效、Retouch & Transform、Multi-Image 子選單的 `_open_*` 進入點 |
 | `right_click_menu.py` | 180 | Compose the ordered context menu and preserve action entry points. |
 | `right_click_current.py` | 100 | Build current-image clipboard, reveal, export, wallpaper and OCR actions. |
 | `right_click_recovery.py` | 79 | Relocate missing images and retry failed deep-zoom or thumbnail loads. |
@@ -1308,7 +1312,7 @@ SonarCloud（`JeffreyChen-s-Utils_Imervue`）。
 ### 10.1 Pure logic / Qt shell 二分
 
 單圖工具的標準形狀：`Imervue/image/<feature>.py`（純 NumPy）+ `Imervue/gui/<feature>_dialog.py`（Qt 外殼）
-+ `Imervue/menu/extra_tools_menu.py` 的一個 `_open_<feature>()`。
++ `Imervue/menu/extra_tools_open_*.py` 的一個 `_open_<feature>()`，再由 `extra_tools_menu.py` 掛上選單項目。
 
 ### 10.2 `_apply_save.py` 骨架
 

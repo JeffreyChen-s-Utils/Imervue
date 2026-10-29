@@ -37,7 +37,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | --- | --- |
 | `Imervue/__main__.py` | Process entry: frozen-build fixes, UTF-8 I/O, settings/theme/UI-scale before any widget, main window |
 | `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar, browse modes and dock panels come from the `Imervue/gui/main_window_*.py` mixins. The Imervue and Modify tabs are each a nested `QMainWindow` whose side panels are docks (`main_window_docks.py`) |
-| `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` holds the `_open_<feature>()` entry points |
+| `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` builds the Extra Tools tree, `extra_tools_open_*.py` hold the `_open_<feature>()` entry points |
 | `Imervue/gui/` | Qt dialogs and main-window widgets (develop panel, file tree, list/dual views, EXIF sidebar); most dialogs are shells over `Imervue/image/` |
 | `Imervue/gpu_image_view/` | `GPUImageView` (tile wall + deep zoom) and its collaborators; `images/` is the load path, `actions/` the viewer actions |
 | `Imervue/image/` | Pure image algorithms: develop `Recipe`, tone/colour, geometry, effects, I/O, metadata, caches |
@@ -172,7 +172,7 @@ folder-icon queries before enumeration to reduce competing disk work.
    shared process RAM cap and fair window quotas, independently of texture VRAM. Cancelled
    workers retain tickets until completion; stale identities and destroyed owners cannot
    deliver results. Refused promoted requests fall back to ordinary foreground loading.
-3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_menu.py` →
+3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_open_*.py` →
    `gui/<feature>_dialog.py` → `EffectWorker` (`gui/_apply_save.py`) → `image/<feature>.py` → saved
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.
    Modify preview: a per-panel latest-generation scheduler coalesces requests, renders reduced
@@ -235,7 +235,7 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
 
 | To add | Touch |
 | --- | --- |
-| A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_menu.py` |
+| A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_open_*.py`, wired in `Imervue/menu/extra_tools_menu.py` |
 | A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; cancellation hooks and joins run on a retained retirement thread, with controls paused and dialog completion deferred until actual exit. Hooks must cancel flags/subprocesses without GUI access; final application exit drains remaining threads. Do not hand-write teardown |
 | A plugin dialog that runs one image transform on OK | Inherit `ToolDialogMixin` from `Imervue/plugin/tool_dialog.py` (it includes `WorkerHostMixin`): set `output_suffix` and the toast keys, return the transform from `_transform()`, name optional packages in `_required_packages()`; the plugin then needs plugin API 2 in its `plugin.json` |
 | Main-program code that plugins import | Raise `PLUGIN_API_VERSION` in `Imervue/plugin/plugin_api.py` and list what the version adds in its docstring; plugins using it declare `{"min_api_version": N}` in `plugin.json` (`tests/test_plugin_api.py` checks the bundled ones) |

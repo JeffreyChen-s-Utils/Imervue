@@ -5,6 +5,116 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
+from Imervue.menu.extra_tools_open_library import (  # dialog openers wired below
+    _open_animation_edit,
+    _open_auto_tag,
+    _open_batch_convert,
+    _open_binarize,
+    _open_cache_maintenance,
+    _open_capture_time,
+    _open_deflicker,
+    _open_duplicate_detection,
+    _open_exif_strip,
+    _open_gps_geotag,
+    _open_gpx_geotag,
+    _open_hierarchical_tags,
+    _open_image_organizer,
+    _open_image_sanitize,
+    _open_library_search,
+    _open_meme,
+    _open_metadata_export,
+    _open_metadata_template,
+    _open_optimize,
+    _open_otsu,
+    _open_semantic_search,
+    _open_similar_search,
+    _open_smart_albums,
+    _open_steganography,
+    _open_token_rename,
+    _open_xmp_sidecar,
+)
+from Imervue.menu.extra_tools_open_views import (  # dialog openers wired below
+    _open_calendar_view,
+    _open_collage,
+    _open_contact_sheet,
+    _open_culling,
+    _open_dual_pane,
+    _open_id_photo_sheet,
+    _open_image_inspector,
+    _open_image_statistics,
+    _open_macro_manager,
+    _open_map_view,
+    _open_print_layout,
+    _open_quality_report,
+    _open_reference_panel,
+    _open_slideshow_mp4,
+    _open_staging_tray,
+    _open_test_charts,
+    _open_timeline,
+    _open_tiny_planet,
+    _open_virtual_copies,
+    _open_watch_folder,
+    _open_web_gallery,
+)
+from Imervue.menu.extra_tools_open_develop import (  # dialog openers wired below
+    _open_auto_balance,
+    _open_before_after,
+    _open_channel_mixer,
+    _open_clahe,
+    _open_defringe,
+    _open_detail_equalizer,
+    _open_develop_presets,
+    _open_film_negative,
+    _open_filmic_tonemap,
+    _open_flatten_field,
+    _open_gradient_map,
+    _open_graduated_density,
+    _open_hsl_mixer,
+    _open_layers,
+    _open_levels,
+    _open_local_contrast,
+    _open_lut,
+    _open_masks,
+    _open_soft_proof,
+    _open_split_toning,
+    _open_tone_curve,
+    _open_tone_equalizer,
+    _open_velvia,
+)
+from Imervue.menu.extra_tools_open_effects import (  # dialog openers wired below
+    _open_ai_upscale,
+    _open_anaglyph,
+    _open_auto_straighten,
+    _open_clone_stamp,
+    _open_colormap,
+    _open_crop_straighten,
+    _open_distort,
+    _open_dither,
+    _open_emboss,
+    _open_face_detection,
+    _open_film_grain,
+    _open_focus_stack,
+    _open_frequency_separation,
+    _open_frosted_glass,
+    _open_glow,
+    _open_hdr_merge,
+    _open_healing_brush,
+    _open_kaleidoscope,
+    _open_lens_correction,
+    _open_lens_flare,
+    _open_noise_sharpen,
+    _open_panorama,
+    _open_photo_frame,
+    _open_pixel_sort,
+    _open_polar,
+    _open_portrait_retouch,
+    _open_posterize,
+    _open_scale_bar,
+    _open_sky_replace,
+    _open_smart_crop,
+    _open_solarize,
+    _open_stack_blend,
+)
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 # Plugins place their entries with ``main_window.findChild(QMenu, name)`` using
@@ -320,536 +430,3 @@ def _build_multi_image_submenu(menu, ui: ImervueMainWindow, lang: dict) -> None:
     _add_action(sub, lang, "anaglyph_title", "Anaglyph 3D",
                 lambda: _open_anaglyph(ui))
 
-
-# --- Dialog openers ---------------------------------------------------------
-
-def _open_batch_convert(ui: ImervueMainWindow):
-    from Imervue.gui.batch_convert_dialog import open_batch_convert
-    open_batch_convert(ui.viewer)
-
-
-def _open_ai_upscale(ui: ImervueMainWindow):
-    from Imervue.gui.ai_upscale_dialog import open_ai_upscale
-    open_ai_upscale(ui.viewer)
-
-
-def _open_duplicate_detection(ui: ImervueMainWindow):
-    from Imervue.gui.duplicate_detection_dialog import open_duplicate_detection
-    open_duplicate_detection(ui.viewer)
-
-
-def _open_image_organizer(ui: ImervueMainWindow):
-    from Imervue.gui.image_organizer_dialog import open_image_organizer
-    open_image_organizer(ui.viewer)
-
-
-def _open_exif_strip(ui: ImervueMainWindow):
-    from Imervue.gui.exif_strip_dialog import open_exif_strip
-    open_exif_strip(ui.viewer)
-
-
-def _open_image_sanitize(ui: ImervueMainWindow):
-    from Imervue.gui.image_sanitize_dialog import open_image_sanitize
-    open_image_sanitize(ui.viewer)
-
-
-def _open_library_search(ui: ImervueMainWindow):
-    from Imervue.gui.library_search_dialog import open_library_search
-    open_library_search(ui)
-
-
-def _open_smart_albums(ui: ImervueMainWindow):
-    from Imervue.gui.smart_albums_dialog import open_smart_albums
-    open_smart_albums(ui)
-
-
-def _open_similar_search(ui: ImervueMainWindow):
-    from Imervue.gui.similar_search_dialog import open_similar_search
-    open_similar_search(ui)
-
-
-def _open_auto_tag(ui: ImervueMainWindow):
-    from Imervue.gui.auto_tag_dialog import open_auto_tag
-    open_auto_tag(ui)
-
-
-def _open_hierarchical_tags(ui: ImervueMainWindow):
-    from Imervue.gui.hierarchical_tags_dialog import open_hierarchical_tags
-    open_hierarchical_tags(ui)
-
-
-def _open_token_rename(ui: ImervueMainWindow):
-    from Imervue.gui.token_rename_dialog import open_token_rename
-    open_token_rename(ui)
-
-
-def _open_metadata_export(ui: ImervueMainWindow):
-    from Imervue.gui.metadata_export_dialog import open_metadata_export
-    open_metadata_export(ui)
-
-
-def _open_xmp_sidecar(ui: ImervueMainWindow):
-    from Imervue.gui.xmp_sidecar_dialog import open_xmp_sidecar
-    open_xmp_sidecar(ui)
-
-
-def _open_culling(ui: ImervueMainWindow):
-    from Imervue.gui.culling_dialog import open_culling
-    open_culling(ui)
-
-
-def _open_staging_tray(ui: ImervueMainWindow):
-    from Imervue.gui.staging_tray_dialog import open_staging_tray
-    open_staging_tray(ui)
-
-
-def _open_reference_panel(ui: ImervueMainWindow):
-    from Imervue.gui.reference_panel_dialog import open_reference_panel
-    open_reference_panel(ui)
-
-
-def _open_dual_pane(ui: ImervueMainWindow):
-    from Imervue.gui.dual_pane_dialog import open_dual_pane
-    open_dual_pane(ui)
-
-
-def _open_timeline(ui: ImervueMainWindow, granularity: str):
-    from Imervue.gui.timeline_view import open_timeline
-    open_timeline(ui, granularity)
-
-
-def _open_macro_manager(ui: ImervueMainWindow):
-    from Imervue.gui.macro_manager_dialog import open_macro_manager_dialog
-    open_macro_manager_dialog(ui)
-
-
-def _open_watch_folder(ui: ImervueMainWindow):
-    from Imervue.gui.watch_folder_dialog import open_watch_folder
-    open_watch_folder(ui.viewer)
-
-
-def _open_contact_sheet(ui: ImervueMainWindow):
-    from Imervue.gui.contact_sheet_dialog import open_contact_sheet_dialog
-    open_contact_sheet_dialog(ui)
-
-
-def _open_web_gallery(ui: ImervueMainWindow):
-    from Imervue.gui.web_gallery_dialog import open_web_gallery_dialog
-    open_web_gallery_dialog(ui)
-
-
-def _open_slideshow_mp4(ui: ImervueMainWindow):
-    from Imervue.gui.slideshow_mp4_dialog import open_slideshow_mp4_dialog
-    open_slideshow_mp4_dialog(ui)
-
-
-def _open_calendar_view(ui: ImervueMainWindow):
-    from Imervue.gui.calendar_view_dialog import open_calendar_view
-    open_calendar_view(ui)
-
-
-def _open_map_view(ui: ImervueMainWindow):
-    from Imervue.gui.map_view_dialog import open_map_view
-    open_map_view(ui)
-
-
-def _open_image_inspector(ui: ImervueMainWindow):
-    from Imervue.gui.image_inspector_dialog import open_image_inspector
-    open_image_inspector(ui.viewer)
-
-
-def _open_tiny_planet(ui: ImervueMainWindow):
-    from Imervue.gui.tiny_planet_dialog import open_tiny_planet
-    open_tiny_planet(ui.viewer)
-
-
-def _open_before_after(ui: ImervueMainWindow):
-    from Imervue.gui.before_after_dialog import open_before_after_dialog
-    open_before_after_dialog(ui.viewer)
-
-
-def _open_semantic_search(ui: ImervueMainWindow):
-    from Imervue.gui.semantic_search_dialog import open_semantic_search_dialog
-    open_semantic_search_dialog(ui.viewer)
-
-
-def _open_develop_presets(ui: ImervueMainWindow):
-    from Imervue.gui.develop_presets_dialog import open_develop_presets_dialog
-    open_develop_presets_dialog(ui.viewer)
-
-
-def _open_tone_curve(ui: ImervueMainWindow):
-    from Imervue.gui.tone_curve_dialog import open_tone_curve
-    open_tone_curve(ui.viewer)
-
-
-def _open_lut(ui: ImervueMainWindow):
-    from Imervue.gui.lut_dialog import open_lut
-    open_lut(ui.viewer)
-
-
-def _open_posterize(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.posterize_dialog import open_posterize_dialog
-    open_posterize_dialog(ui.viewer)
-
-
-def _open_solarize(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.solarize_dialog import open_solarize
-    open_solarize(ui.viewer)
-
-
-def _open_glow(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.glow_dialog import open_glow
-    open_glow(ui.viewer)
-
-
-def _open_graduated_density(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.graduated_density_dialog import open_graduated_density
-    open_graduated_density(ui.viewer)
-
-
-def _open_velvia(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.velvia_dialog import open_velvia
-    open_velvia(ui.viewer)
-
-
-def _open_emboss(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.emboss_dialog import open_emboss
-    open_emboss(ui.viewer)
-
-
-def _open_defringe(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.defringe_dialog import open_defringe
-    open_defringe(ui.viewer)
-
-
-def _open_film_negative(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.film_negative_dialog import open_film_negative
-    open_film_negative(ui.viewer)
-
-
-def _open_filmic_tonemap(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.filmic_tonemap_dialog import open_filmic_tonemap
-    open_filmic_tonemap(ui.viewer)
-
-
-def _open_tone_equalizer(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.tone_equalizer_dialog import open_tone_equalizer
-    open_tone_equalizer(ui.viewer)
-
-
-def _open_detail_equalizer(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.detail_equalizer_dialog import open_detail_equalizer
-    open_detail_equalizer(ui.viewer)
-
-
-def _open_polar(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.polar_dialog import open_polar
-    open_polar(ui.viewer)
-
-
-def _open_kaleidoscope(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.kaleidoscope_dialog import open_kaleidoscope
-    open_kaleidoscope(ui.viewer)
-
-
-def _open_frosted_glass(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.frosted_glass_dialog import open_frosted_glass
-    open_frosted_glass(ui.viewer)
-
-
-def _open_levels(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.levels_dialog import open_levels_dialog
-    open_levels_dialog(ui.viewer)
-
-
-def _open_channel_mixer(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.channel_mixer_dialog import open_channel_mixer_dialog
-    open_channel_mixer_dialog(ui.viewer)
-
-
-def _open_gradient_map(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.gradient_map_dialog import open_gradient_map_dialog
-    open_gradient_map_dialog(ui.viewer)
-
-
-def _open_auto_balance(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.auto_color_balance_dialog import open_auto_color_balance_dialog
-    open_auto_color_balance_dialog(ui.viewer)
-
-
-def _open_local_contrast(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.local_contrast_dialog import open_local_contrast
-    open_local_contrast(ui.viewer)
-
-
-def _open_hsl_mixer(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.hsl_mixer_dialog import open_hsl_mixer
-    open_hsl_mixer(ui.viewer)
-
-
-def _open_clahe(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.clahe_dialog import open_clahe
-    open_clahe(ui.viewer)
-
-
-def _open_flatten_field(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.flatten_field_dialog import open_flatten_field
-    open_flatten_field(ui.viewer)
-
-
-def _open_binarize(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.binarize_dialog import open_binarize
-    open_binarize(ui.viewer)
-
-
-def _open_otsu(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.otsu_dialog import open_otsu
-    open_otsu(ui.viewer)
-
-
-def _open_animation_edit(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.animation_edit_dialog import open_animation_edit
-    open_animation_edit(ui.viewer)
-
-
-def _open_optimize(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.optimize_dialog import open_optimize
-    open_optimize(ui.viewer)
-
-
-def _open_meme(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.meme_dialog import open_meme
-    open_meme(ui.viewer)
-
-
-def _open_steganography(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.steganography_dialog import open_steganography
-    open_steganography(ui.viewer)
-
-
-def _open_test_charts(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.test_charts_dialog import open_test_charts
-    open_test_charts(ui.viewer)
-
-
-def _open_quality_report(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.quality_report_dialog import open_quality_report
-    open_quality_report(ui.viewer)
-
-
-def _open_colormap(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.colormap_dialog import open_colormap
-    open_colormap(ui.viewer)
-
-
-def _open_distort(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.distort_dialog import open_distort
-    open_distort(ui.viewer)
-
-
-def _open_pixel_sort(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.pixel_sort_dialog import open_pixel_sort
-    open_pixel_sort(ui.viewer)
-
-
-def _open_anaglyph(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.anaglyph_dialog import open_anaglyph
-    open_anaglyph(ui.viewer)
-
-
-def _open_image_statistics(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.image_statistics_dialog import open_image_statistics
-    open_image_statistics(ui.viewer)
-
-
-def _open_film_grain(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.film_grain_dialog import open_film_grain_dialog
-    open_film_grain_dialog(ui.viewer)
-
-
-def _open_lens_flare(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.lens_flare_dialog import open_lens_flare_dialog
-    open_lens_flare_dialog(ui.viewer)
-
-
-def _open_frequency_separation(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.frequency_separation_dialog import (
-        open_frequency_separation_dialog,
-    )
-    open_frequency_separation_dialog(ui.viewer)
-
-
-def _open_smart_crop(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.smart_crop_dialog import open_smart_crop_dialog
-    open_smart_crop_dialog(ui.viewer)
-
-
-def _open_portrait_retouch(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.portrait_retouch_dialog import open_portrait_retouch_dialog
-    open_portrait_retouch_dialog(ui.viewer)
-
-
-def _open_deflicker(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.deflicker_dialog import open_deflicker_dialog
-    open_deflicker_dialog(ui.viewer)
-
-
-def _open_layers(ui: ImervueMainWindow) -> None:
-    from Imervue.gui.layers_dialog import open_layers_dialog
-    from Imervue.image.recipe import Recipe
-    from Imervue.image.recipe_store import recipe_store
-    viewer = ui.viewer
-    images = getattr(viewer.model, "images", [])
-    idx = getattr(viewer, "current_index", -1)
-    if not (0 <= idx < len(images)):
-        return
-    path = images[idx]
-    recipe = recipe_store.get_for_path(path) or Recipe()
-    new_layers = open_layers_dialog(recipe, parent=ui)
-    if new_layers is None:
-        return
-    new_recipe = Recipe(
-        **{f.name: getattr(recipe, f.name) for f in recipe.__dataclass_fields__.values()}
-    )
-    new_recipe.extra = dict(recipe.extra)
-    new_recipe.extra["layers"] = new_layers
-    recipe_store.set_for_path(path, new_recipe)
-    hook = getattr(viewer, "reload_current_image_with_recipe", None)
-    if callable(hook):
-        hook(path)
-
-
-def _open_virtual_copies(ui: ImervueMainWindow):
-    from Imervue.gui.virtual_copies_dialog import open_virtual_copies
-    open_virtual_copies(ui.viewer)
-
-
-def _open_face_detection(ui: ImervueMainWindow):
-    from Imervue.gui.face_detection_dialog import open_face_detection
-    open_face_detection(ui.viewer)
-
-
-def _open_lens_correction(ui: ImervueMainWindow):
-    from Imervue.gui.lens_correction_dialog import open_lens_correction
-    open_lens_correction(ui.viewer)
-
-
-def _open_scale_bar(ui: ImervueMainWindow):
-    from Imervue.gui.scale_bar_dialog import open_scale_bar
-    open_scale_bar(ui.viewer)
-
-
-def _open_healing_brush(ui: ImervueMainWindow):
-    from Imervue.gui.healing_brush_dialog import open_healing_brush
-    open_healing_brush(ui.viewer)
-
-
-def _open_hdr_merge(ui: ImervueMainWindow):
-    from Imervue.gui.hdr_merge_dialog import open_hdr_merge
-    open_hdr_merge(ui.viewer)
-
-
-def _open_panorama(ui: ImervueMainWindow):
-    from Imervue.gui.panorama_dialog import open_panorama
-    open_panorama(ui.viewer)
-
-
-def _open_focus_stack(ui: ImervueMainWindow):
-    from Imervue.gui.focus_stack_dialog import open_focus_stack
-    open_focus_stack(ui.viewer)
-
-
-def _open_stack_blend(ui: ImervueMainWindow):
-    from Imervue.gui.stack_blend_dialog import open_stack_blend
-    open_stack_blend(ui.viewer)
-
-
-def _open_masks(ui: ImervueMainWindow):
-    from Imervue.gui.masks_dialog import open_masks
-    open_masks(ui.viewer)
-
-
-def _open_split_toning(ui: ImervueMainWindow):
-    from Imervue.gui.split_toning_dialog import open_split_toning
-    open_split_toning(ui.viewer)
-
-
-def _open_clone_stamp(ui: ImervueMainWindow):
-    from Imervue.gui.clone_stamp_dialog import open_clone_stamp
-    open_clone_stamp(ui.viewer)
-
-
-def _open_crop_straighten(ui: ImervueMainWindow):
-    from Imervue.gui.crop_straighten_dialog import open_crop_straighten
-    open_crop_straighten(ui.viewer)
-
-
-def _open_auto_straighten(ui: ImervueMainWindow):
-    from Imervue.gui.auto_straighten_dialog import open_auto_straighten
-    open_auto_straighten(ui.viewer)
-
-
-def _open_noise_sharpen(ui: ImervueMainWindow):
-    from Imervue.gui.noise_sharpen_dialog import open_noise_sharpen
-    open_noise_sharpen(ui.viewer)
-
-
-def _open_sky_replace(ui: ImervueMainWindow):
-    from Imervue.gui.sky_replace_dialog import open_sky_replace
-    open_sky_replace(ui.viewer)
-
-
-def _open_soft_proof(ui: ImervueMainWindow):
-    from Imervue.gui.soft_proof_dialog import open_soft_proof
-    open_soft_proof(ui.viewer)
-
-
-def _open_gps_geotag(ui: ImervueMainWindow):
-    from Imervue.gui.gps_geotag_dialog import open_gps_geotag
-    open_gps_geotag(ui.viewer)
-
-
-def _open_gpx_geotag(ui: ImervueMainWindow):
-    from Imervue.gui.gpx_geotag_dialog import open_gpx_geotag
-    open_gpx_geotag(ui)
-
-
-def _open_capture_time(ui: ImervueMainWindow):
-    from Imervue.gui.capture_time_dialog import open_capture_time
-    open_capture_time(ui)
-
-
-def _open_metadata_template(ui: ImervueMainWindow):
-    from Imervue.gui.metadata_template_dialog import open_metadata_template
-    open_metadata_template(ui)
-
-
-def _open_cache_maintenance(ui: ImervueMainWindow):
-    from Imervue.gui.cache_maintenance_dialog import open_cache_maintenance
-    open_cache_maintenance(ui)
-
-
-def _open_print_layout(ui: ImervueMainWindow):
-    from Imervue.gui.print_layout_dialog import open_print_layout
-    open_print_layout(ui)
-
-
-def _open_collage(ui: ImervueMainWindow):
-    from Imervue.gui.collage_dialog import open_collage
-    open_collage(ui.viewer)
-
-
-def _open_id_photo_sheet(ui: ImervueMainWindow):
-    from Imervue.gui.id_photo_sheet_dialog import open_id_photo_sheet
-    open_id_photo_sheet(ui.viewer)
-
-
-def _open_photo_frame(ui: ImervueMainWindow):
-    from Imervue.gui.photo_frame_dialog import open_photo_frame
-    open_photo_frame(ui.viewer)
-
-
-def _open_dither(ui: ImervueMainWindow):
-    from Imervue.gui.dither_dialog import open_dither
-    open_dither(ui.viewer)
