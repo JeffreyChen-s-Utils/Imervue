@@ -19,6 +19,7 @@ from Imervue.gui.annotation_models import (
 )
 from Imervue.gui import annotation_fonts as fonts
 from Imervue.gui.annotation_brushes import _apply_opacity
+from Imervue.gui.annotation_brushes import jitter_seed as brushes_jitter_seed
 
 _WHITE = (255, 255, 255, 255)
 _RED = (220, 20, 40, 255)
@@ -195,7 +196,9 @@ def test_text_needs_text_and_anchor():
 
 def test_models_module_still_exposes_bake_and_helpers():
     assert models.bake is bake
-    assert models.jitter_seed("a") == models.jitter_seed("a")
+    assert models.jitter_seed is brushes_jitter_seed
+    seed = models.jitter_seed("a")
+    assert models.jitter_seed("a") == seed  # stable across calls, not hash()-randomised
 
 
 def test_unknown_kind_draws_nothing():

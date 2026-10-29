@@ -84,6 +84,14 @@ def _recording_plugins(manager, names, journal):
     return plugins
 
 
+
+@pytest.fixture(autouse=True)
+def _isolated_status_rows(monkeypatch):
+    """Give every test an empty registry: status_scope is derived from id(), which a
+    collected manager from another test can leave behind under the same value."""
+    monkeypatch.setattr(status_registry, "_rows", {})
+
+
 def _rows(manager):
     # snapshot(scope) also returns process-wide "global" rows other tests may have published.
     return {row.name: row for row in status_registry.snapshot(manager.status_scope)
