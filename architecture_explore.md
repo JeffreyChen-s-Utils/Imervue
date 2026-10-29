@@ -66,7 +66,7 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 1,043 | 188,954 |
+| `tests/` | 1,043 | 189,000 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 235 | 44,949 |
 | `Imervue/gui/` | 245 | 37,896 |
 | `Imervue/puppet/` | 121 | 16,920 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 792 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 11 | 1,846 |
-| **總計** | **2,240** | **386,941** |
+| **總計** | **2,240** | **386,992** |
 
 其中 `Imervue/` 套件本身 1,092 檔 / 179,558 行。
 
-測試碼與產品碼比約 **0.96 : 1**（188,954 vs 196,141 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.96 : 1**（189,000 vs 196,146 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
@@ -1279,7 +1279,7 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `safety_review` | 27 / 5,094 | NSFW 偵測與馬賽克（僅生殖器與肛門，**絕不處理乳頭/胸部**）。含手動編輯器、YOLO 資料集匯出、fine-tune 腳本；對話框以 `_dialogs.py` 為對外匯入位置（擁有 Scan All 介面），其餘拆到 `_dialogs_common.py`（`_ensure_deps` 依賴閘門、時間／摘要格式、檢視器重載、`_WorkerHostMixin` 收尾）、`_dialogs_widgets.py`（模式／樣式／範圍／類別設定列與 `_SettingsDialogBase`）、`_dialogs_scan_run.py`（Scan All 鎖定、建 worker、進度與摘要 mixin）、`_dialogs_single.py`／`_dialogs_batch.py`（單張／批次對話框）；手動編輯器 `_manual_dialog.py`（對話框與 `_DetectWorker`）另拆 `_manual_dialog_canvas.py`（畫布狀態與繪製）、`_manual_dialog_input.py`（滑鼠／鍵盤編輯 mixin）、`_manual_dialog_actions.py`（資料集資料夾、YOLO 匯出與套用 mixin）；打碼幾何與繪製集中在 `_censor_core.py`，App 內偵測與凍結環境的 `_runner.py`（以同層檔案載入）共用；`_runner.py` 的 argv 解析在 `_runner_args.py`、批次逐張記帳（輸出路徑、形狀重試/降級、失敗資料夾與 `censor_failed.log`）在 `_runner_batch.py`，同樣以同層檔案載入並由 `_runner` 再匯出；`_workers.py` 留 App 內 `_SingleWorker` / `_BatchWorker` 並再匯出全部 worker 名稱，輸出/失敗路徑在 `_workers_paths.py`，凍結環境的子行程 worker（固定 argv、無 shell，讀 stdout 協定）在 `_workers_subprocess.py`；NudeNet 偵測器一律包成 `_AnyPathDetector`（先 `np.fromfile` + `cv2.imdecode` 解碼再交給它，Windows 上路徑含非 ASCII 字元也讀得到）；存檔一律走 `_censor_core._save_as`（`.tmp` + `os.replace`，覆寫原檔模式失敗也不毀原圖） | nudenet, ultralytics, huggingface_hub |
 | `spanish_translation` | 3 / 1,824 | 西班牙文語言外掛，示範在 `register_languages()` 裡呼叫 `register_language()` | — |
 | `pet_integrations` | 9 / 1,735 | 桌面寵物整合（OBS 事件、Twitch 聊天關鍵字〔`=hi` 整則、`!dance*` 開頭、`/re/` 正規式，經主程式 `desktop_pet.command_parser`〕、本機 webhook `127.0.0.1:9876/trigger`、Windows 通知），也是寵物外掛的範例：`on_pet_created` 把四個 `IntegrationController` 交給寵物（`add_integration`）並恢復存成開啟的；外掛選單的核取項目（缺套件先 `ensure_dependencies`）與設定對話框；卸載時 `remove_integration` | obs-websocket-py、winrt（首次使用時安裝） |
-| `ai_background_remover` | 5 / 999 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程（`_rembg_runner.py`，stdout `PROGRESS:` / `OK:` / `BATCH_OK:` / `ERROR:` 協定）。`ai_background_remover.py` 是外掛本體（選單 / 右鍵 hook、凍結環境偵測、`ensure_dependencies`）並 re-export 其餘名稱；`ai_background_remover_workers.py` 擁有 runner / `models/` 路徑與 `U2NET_HOME`，放子行程與行程內兩組 worker；`ai_background_remover_dialogs.py` 是單張 / 批次對話框與模型清單 | rembg, onnxruntime |
+| `ai_background_remover` | 5 / 1,004 | rembg (U²-Net) 去背，單張 + 批次，凍結環境走子行程（`_rembg_runner.py`，stdout `PROGRESS:` / `OK:` / `BATCH_OK:` / `ERROR:` 協定）。`ai_background_remover.py` 是外掛本體（選單 / 右鍵 hook、凍結環境偵測、`ensure_dependencies`）並 re-export 其餘名稱；`ai_background_remover_workers.py` 擁有 runner / `models/` 路徑與 `U2NET_HOME`，放子行程與行程內兩組 worker；`ai_background_remover_dialogs.py` 是單張 / 批次對話框與模型清單 | rembg, onnxruntime |
 | `ai_object_remove` | 4 / 832 | 點選物件 → 洪水填色遮罩 → 擴散修補；另有 SAM ONNX point-prompt 路徑 | onnxruntime (SAM) |
 | `object_splitter` | 4 / 701 | 去背 + 連通元件（`_components.py`，scipy 為主、BFS 後備，外掛與 `_runner.py` 共用）→ 每個物件存成透明 PNG | rembg |
 | `gpu_develop` | 7 / 683 | 可選 API-3 wgpu batch provider；只選 discrete GPU，Vulkan/D3D12/Metal policy、bounded buffer slices、whole-image contrast two-pass、GPU table/mixed math 與 CPU remainder。threshold/posterize enabled 時整個 recipe CPU reference，避免 1-byte rounding 經 discontinuity 放大。新匯出 dialog 預設 CPU；GPU explicit opt-in，normal mixed recipes approximation 非 byte exact，裝置／runtime 失敗 CPU fallback。actual fixed 640k/24MP/60MP reports 見 docs/performance/gpu-develop-20261007.md；無模型權重、不是 HDR/wide-gamut editor | wgpu（首次使用時安裝） |

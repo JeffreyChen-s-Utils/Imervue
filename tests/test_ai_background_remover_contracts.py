@@ -47,6 +47,31 @@ class _FakeProc:
         self.waited += 1
         return self.returncode
 
+    def poll(self):
+        return self.returncode
+
+
+class _StuckProc:
+    """A child still running whose stdout fails mid-read; records the reaping calls."""
+
+    returncode = None
+
+    def __init__(self):
+        self.terminated = 0
+
+    @property
+    def stdout(self):
+        raise OSError("stdout read failed")
+
+    def poll(self):
+        return None if not self.terminated else -15
+
+    def terminate(self):
+        self.terminated += 1
+
+    def wait(self, timeout=None):
+        return -15
+
 
 @pytest.fixture
 def popen(monkeypatch):
@@ -94,7 +119,7 @@ class TestSubprocessRemoveWorker:
         assert kwargs["stderr"] is subprocess.STDOUT
         assert {k: v for k, v in kwargs.items() if k not in ("stdout", "stderr")} \
             == _subprocess_kwargs()
-        assert worker._proc is popen.state["proc"]
+        assert worker._proc is None  # the finished child is reaped and released
 
     def test_progress_then_ok_stops_reading(self, qapp, popen):
         proc = _FakeProc(["PROGRESS:Loading\r\n", "\n", "PROGRESS:Model\n",
@@ -678,3 +703,21 @@ class TestPluginHooks:
         assert mod._RUNNER_SCRIPT.is_file()
         assert mod._RUNNER_SCRIPT.parent == mod._PLUGIN_DIR
         assert mod._MODELS_DIR.is_dir()
+
+
+@pytest.mark.parametrize("batch", [False, True])
+def test_failed_subprocess_worker_reaps_its_child(popen, tmp_path, batch):
+    stuck = _StuckProc()
+    popen.state["proc"] = stuck
+    if batch:
+        worker = mod._SubprocessBatchWorker(
+            sys.executable, "", ["a.png"], str(tmp_path), "u2net", False)
+    else:
+        worker = mod._SubprocessRemoveWorker(
+            sys.executable, "", "a.png", str(tmp_path / "out.png"), "u2net", False)
+    results = []
+    worker.result_ready.connect(lambda *result: results.append(result))
+    worker.run()
+    assert stuck.terminated == 1
+    assert worker._proc is None
+    assert results == ([(0, 1)] if batch else [(False, "stdout read failed")])

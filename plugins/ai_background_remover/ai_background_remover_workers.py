@@ -104,6 +104,9 @@ class _SubprocessRemoveWorker(QThread):
         except Exception as exc:
             logger.error("_SubprocessRemoveWorker failed: %s", exc, exc_info=True)
             self.result_ready.emit(False, str(exc))
+        finally:
+            terminate_process(self._proc)
+            self._proc = None
 
 
 class _SubprocessBatchWorker(QThread):
@@ -173,6 +176,8 @@ class _SubprocessBatchWorker(QThread):
             logger.error("_SubprocessBatchWorker failed: %s", exc, exc_info=True)
             self.result_ready.emit(0, len(self._paths))
         finally:
+            terminate_process(self._proc)
+            self._proc = None
             # Removed on every path, including a Popen that never started.
             if list_path is not None:
                 with contextlib.suppress(OSError):
