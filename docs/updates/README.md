@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-18 | 2026-10-29 | Split twelve paint, image and main-window modules | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-17 | 2026-10-29 | Split MCP server, input controller, pet script editor and auto-rig | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-16 | 2026-10-29 | Split paint File menu, plugin downloader, duplicate finder and MCP edit tools | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-15 | 2026-10-29 | Split upscale, sanitize and compare dialogs and the plugin manager | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |

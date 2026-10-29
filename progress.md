@@ -18,3 +18,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 - Pre-existing quirks pinned (not fixed) by the complexity-split contract tests: pip_install_workers._ImportWorker formats `{exc or type(exc).__name__}`, so an exception with an empty message shows as "name: "; control_tooltips_fields reuses an owner's help with its `&` read as a mnemonic, giving a double space; control_tooltips.ensure_tooltip raises AttributeError for a plain QObject.
   Next: fix each with a regression test and update the contract test that pins it (tests/test_pip_installer_contracts.py, tests/test_control_tooltips_contracts.py).
+
+- More pre-existing quirks pinned (not fixed) by the split contracts: a press exactly at (0, 0) never starts a GPU-view drag-select (input_controller_tiles); with a selection, normal brush blend writes the brush RGB into fully transparent pixels outside it (alpha stays 0; brush_dab). The .codacy.yaml bandit entry for clip_search.py and the .bandit B403 comment about its torch pickle loading look stale (no subprocess or pickle code remains there).
+  Next: confirm each with a focused test, fix or drop it, and update the contract that pins it.
