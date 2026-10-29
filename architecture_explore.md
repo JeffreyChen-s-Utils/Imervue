@@ -617,7 +617,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `develop_panel.py` | 958 | Modify 控制器：雙欄向量工具盤、方向工具、內嵌 AnnotationCanvas、來源解碼／存檔與 recipe 提交；選取繪圖工具切至註解屬性 |
+| `develop_panel.py` | 366 | Modify 控制器 `DevelopPanel`：狀態與綁定、undo／redo 步進、左右鍵切圖、右鍵選單與刪除、recipe 提交；擁有 `recipe_store`（測試在此替換），覆寫後重設 recipe 並重載畫布與 viewer；行為組合自下列 mixin |
+| `develop_drawing_tools.py` | 208 | `DevelopDrawingToolsMixin`：雙欄向量工具盤與方向工具列、目前工具與切換（選取繪圖工具切至註解屬性）、裁切比例／取消、顏色／筆刷／字型轉送到畫布 |
+| `develop_canvas_lifecycle.py` | 205 | `DevelopCanvasLifecycleMixin`：依路徑與 EXIF 方向快取的來源解碼、套 recipe 載入、建立內嵌 AnnotationCanvas 並重套繪圖狀態、確定性拆除舊畫布 |
+| `develop_canvas_save.py` | 130 | `DevelopCanvasSaveMixin`：套用裁切、註解烘焙存回原檔（無法原地改寫的格式另存副本或提示）、畫布上的存檔 toast |
+| `develop_adjustments.py` | 130 | `DevelopAdjustmentsMixin`：顯影／進階滑桿對應 recipe 與標籤、抑制回授、旋轉／翻轉／重設（僅預覽，重設才提交） |
 | `develop_preview.py` | 169 | `PreviewScheduler`：每面板至多一個低解析與一個完整 worker，最新請求覆蓋等待項目，版本與取消雙重守衛；QImage 在背景準備，UI queued signal 安装；sender 由 application 持有至 queued delete |
 | `develop_preview_panel.py` | 132 | `DevelopPreviewMixin`：拖曳低解析／防抖完整品質、幾何座標與狀態、過期結果檢查；儲存／破壞性效果先取得完整像素，避免保存暫時預覽 |
 | `develop_right_panel.py` | 377 | DevelopRightPanelMixin：顯影／註解分類、可展開進階滑桿、裁切控制、各自的存檔／復原操作；單層可捲動面板 |
@@ -1512,7 +1516,7 @@ GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readb
    `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
-   接近上限的包括 `mcp_server/tool_defs_edit.py`(929) 與 `gui/develop_panel.py`(933)；要在接近 1000 行的檔案
+   接近上限的包括 `mcp_server/tool_defs_edit.py`(929)；要在接近 1000 行的檔案
    加程式，先把一組內聚的方法拆成模組（mixin 或模組函式），並先補特性測試。
    大型 Qt 類別的拆法：把內聚的方法群原封不動搬進 `<類別>…Mixin`，類別繼承它們，對外方法名不變；
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。
