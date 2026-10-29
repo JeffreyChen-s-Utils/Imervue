@@ -1020,7 +1020,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `cubism_import_physics.py` | 102 | `.physics3.json` → `PhysicsRig`；Cubism 頂點係數對應到粒子的 spring / damping / mass |
 | `cubism_import_parts.py` | 78 | `.pose3.json` 互斥 part 群組（含 Link）與 `.cdi3.json` 顯示名稱匯入 |
 | `cubism_native_bridge.py` | 443 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
-| `cubism_native_convert.py` | 645 | `.moc3` → `PuppetDocument` 轉換 |
+| `cubism_native_convert.py` | 228 | `.moc3` → `PuppetDocument` 轉換的公開入口：`cubism_to_puppet`（讀 manifest、載入 DLL 與 moc、可選存檔）、依序組裝文件、動作過少時補 `synth_*` 待機動作；轉出各子模組的名稱 |
+| `cubism_native_mesh.py` | 147 | 靜止姿態接線：Cubism 置中 Y 向上單位 → 像素的 `_CanvasTransform`、貼圖、drawable（UV 翻轉、遮罩、render order、混合模式）、參數 |
+| `cubism_native_morphs.py` | 207 | 取樣重建：逐參數掃到 min / max 產生 `vertex_morphs`（低於 epsilon 丟棄）、`IsVisible` 翻轉產生 `opacity_keys` 曲線，掃完還原靜止姿態 |
+| `cubism_native_motions.py` | 86 | manifest 引用的 motion（群組、淡入淡出、音效）與 `motions/` 下 manifest 漏列的孤兒 motion |
+| `cubism_native_bundle.py` | 122 | 組裝 `CubismBundle`：motion、expression（含 `exp/` 備援路徑）、physics、cdi 顯示名稱、hit area，壞檔記錄後略過，再 `apply_bundle` |
 | `psd_import.py` | 186 | PSD 多圖層 → `PuppetDocument` |
 | `auto_mesh.py` | 172 | 從單張 PNG 自動生成網格 |
 | `auto_rig.py` | 429 | 依圖層命名慣例自動推導 Cubism 式綁定 |
