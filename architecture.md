@@ -36,7 +36,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | Path | Responsibility |
 | --- | --- |
 | `Imervue/__main__.py` | Process entry: frozen-build fixes, UTF-8 I/O, settings/theme/UI-scale before any widget, main window |
-| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar, browse modes and dock panels come from the `Imervue/gui/main_window_*.py` mixins. The Imervue and Modify tabs are each a nested `QMainWindow` whose side panels are docks (`main_window_docks.py`) |
+| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar, browse modes, dock panels, workspace-tab switching and folder/file navigation with drag-and-drop come from the `Imervue/gui/main_window_*.py` mixins. The Imervue and Modify tabs are each a nested `QMainWindow` whose side panels are docks (`main_window_docks.py`) |
 | `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` builds the Extra Tools tree, `extra_tools_open_*.py` hold the `_open_<feature>()` entry points |
 | `Imervue/gui/` | Qt dialogs and main-window widgets (develop panel, file tree, list/dual views, EXIF sidebar); most dialogs are shells over `Imervue/image/` |
 | `Imervue/gpu_image_view/` | `GPUImageView` (tile wall + deep zoom) and its collaborators; `images/` is the load path, `actions/` the viewer actions |

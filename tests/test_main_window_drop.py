@@ -92,7 +92,7 @@ def test_open_dropped_image_calls_open_path(qapp, tmp_path, monkeypatch):
         captured["path"] = path
 
     monkeypatch.setattr(
-        "Imervue.Imervue_main_window.open_path", fake_open_path,
+        "Imervue.gui.main_window_navigation.open_path", fake_open_path,
     )
     main._open_dropped_path(str(src))   # noqa: SLF001
     assert captured["path"] == str(src)
@@ -109,7 +109,7 @@ def test_open_dropped_image_failure_surfaces_toast(qapp, tmp_path, monkeypatch):
         raise RuntimeError("decoder boom")
 
     monkeypatch.setattr(
-        "Imervue.Imervue_main_window.open_path", fake_open_path,
+        "Imervue.gui.main_window_navigation.open_path", fake_open_path,
     )
     main._open_dropped_path(str(src))   # noqa: SLF001
     assert main.toast.calls and main.toast.calls[0][0] == "error"
@@ -121,7 +121,7 @@ def test_open_dropped_path_silent_for_missing_file(qapp, tmp_path, monkeypatch):
     the dispatch should bail out without raising."""
     main = _StubMainWindow()
     monkeypatch.setattr(
-        "Imervue.Imervue_main_window.open_path",
+        "Imervue.gui.main_window_navigation.open_path",
         lambda **_: pytest.fail("open_path should not run for missing files"),
     )
     main._open_dropped_path(str(tmp_path / "ghost.png"))   # noqa: SLF001

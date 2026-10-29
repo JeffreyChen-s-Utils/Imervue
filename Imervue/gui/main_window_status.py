@@ -97,3 +97,35 @@ class MainWindowStatusMixin:
         self.update_status_info(
             index="", resolution="", size="", zoom="", cursor="", label="",
         )
+
+    def _collect_memory_pressure(self) -> dict:
+        """Source callable for the status-bar memory-pressure widget.
+        Returns the current ``(used, limit)`` byte counts plus a few
+        cache-population numbers for the tooltip. Returns zeros when
+        the viewer isn't ready yet so the widget shows ``--``."""
+        viewer = getattr(self, "viewer", None)
+        if viewer is None:
+            return {"used_bytes": 0, "limit_bytes": 0}
+        return {
+            "used_bytes": int(getattr(viewer, "_vram_usage", 0)),
+            "limit_bytes": int(getattr(viewer, "_vram_limit", 0)),
+            "tile_count": len(getattr(viewer, "tile_textures", {})),
+            "prefetch_count": len(getattr(viewer, "_prefetch_cache", {})),
+        }
+
+    def _on_memory_pressure_clear(self) -> None:
+        """Click handler for the indicator. Drops the prefetch cache
+        and the tile-texture cache so the user can recover the
+        budget without restarting the app."""
+        viewer = getattr(self, "viewer", None)
+        if viewer is None:
+            return
+        cancel = getattr(viewer, "_cancel_all_prefetch", None)
+        if callable(cancel):
+            cancel()
+        clear_tiles = getattr(viewer, "_delete_all_tile_textures", None)
+        if callable(clear_tiles):
+            clear_tiles()
+        tile_cache = getattr(viewer, "tile_cache", None)
+        if isinstance(tile_cache, dict):
+            tile_cache.clear()
