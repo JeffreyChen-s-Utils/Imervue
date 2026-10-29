@@ -447,7 +447,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 
 #### 其他
 
-`browser_state.py`(428) 共用瀏覽狀態（過濾規格、中繼資料索引、遺失檔案偵測與重定位）·
+`browser_state.py`(49) 共用瀏覽狀態的公開匯入位置（再匯出下列 `browser_state_*` 兄弟模組的名稱）· `browser_state_index.py`(153) `ImageMeta` 與 `ImageMetadataIndex`：以 stat 為主的中繼資料快取（尺寸按需讀、暫時性 stat 失敗不快取、改名搬移、取樣雜湊）· `browser_state_filter.py`(94) `ImageFilterSpec`、`match_filter`／`filter_paths`、日期區間、`refilter_keeping_current`（明確開啟的圖依資料夾順序保留）· `browser_state_query.py`(55) 過濾用的逐張判斷：標籤、評分運算式（`>=`／`<=`／`>`／`<`／等於）、原始查詢 token（`tag:`／`rating:`／`date:`／檔名）· `browser_state_repair.py`(83) 遺失檔案偵測、同名配對、根目錄重定位、遺失／暫時性載入錯誤分類 · `browser_state_renames.py`(86) 依大小＋mtime＋副檔名推斷同檔改名（取最相近檔名）與檢視器逐路徑快取搬移 ·
 `batch_move_planner.py`(114) 無碰撞批次搬移規劃 · `animation_edit.py`(95) GIF/APNG 反轉/回力鏢/速度 ·
 `caption.py`(91) 本地視覺 LLM 產生 alt-text（經 `system/local_llm.post_json`；EXIF 編輯器的 Describe 用它） · `ocr.py`(159) Tesseract · `portrait_retouch.py`(177) ·
 `speech_*`／`text_*` 相關在 `paint/`
