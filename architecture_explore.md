@@ -504,7 +504,9 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（351 行）只保留 GL 生命
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `input_controller.py` | 437 | 滑鼠／滾輪／手勢、minimap、框選與平移；可見 tile 命中後以載入索引驗證路徑與 Deep Zoom 位置 |
+| `input_controller.py` | 119 | `InputController` 外殼：組合縮放與 tile 兩個 mixin，持有觸控板 pinch／swipe 手勢；re-export 縮放上下限與步進常數 |
+| `input_controller_zoom.py` | 218 | `InputZoomMixin`：滾輪／鍵盤縮放與縮放極限 toast、雙擊 fit↔100%、minimap 點擊導航、框選放大；擁有 `ZOOM_MIN`/`ZOOM_MAX` 與步進常數 |
+| `input_controller_tiles.py` | 161 | `InputTileMixin`：hover 座標、中鍵平移與慣性、縮圖牆拖曳框選／拖出、放開時 tile 命中後以載入索引驗證路徑與 Deep Zoom 位置 |
 | `key_input_handler.py` | 303 | 鍵盤事件路由；Esc 回縮圖牆保留有效 viewport queue、warm cache 與 grid offsets；cold／stale 與尺寸變更仍初始化重載 |
 | `key_action_dispatcher.py` | 359 | 把 shortcut_manager 解析出的**動作名稱**表格化派送到檢視器操作 |
 | `browse_features.py` | 195 | Deep-zoom 瀏覽行為：filmstrip 導航、閱讀模式捲動、平移夾限 |
