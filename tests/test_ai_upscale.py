@@ -445,6 +445,7 @@ def test_the_ai_run_upscales_through_the_session_and_keeps_alpha(qapp, tmp_path,
     from types import SimpleNamespace
     from PIL import Image
     from Imervue.gui import ai_upscale_dialog as mod
+    from Imervue.gui import ai_upscale_engine, ai_upscale_worker
 
     sessions = []
 
@@ -455,8 +456,8 @@ def test_the_ai_run_upscales_through_the_session_and_keeps_alpha(qapp, tmp_path,
     monkeypatch.setitem(sys.modules, "onnxruntime", SimpleNamespace(
         get_available_providers=lambda: ["DmlExecutionProvider", "CPUExecutionProvider"],
         InferenceSession=_Session))
-    monkeypatch.setattr(mod, "_download_model", lambda key: f"C:/models/{key}.onnx")
-    monkeypatch.setattr(mod, "_upscale_image", lambda session, arr, scale, progress_cb=None:
+    monkeypatch.setattr(ai_upscale_worker, "_download_model", lambda key: f"C:/models/{key}.onnx")
+    monkeypatch.setattr(ai_upscale_engine, "_upscale_image", lambda session, arr, scale, progress_cb=None:
                         np.repeat(np.repeat(arr, scale, axis=0), scale, axis=1))
     paths, out = _worker_pictures(tmp_path)
     progress, results = _run(mod._UpscaleWorker(paths, str(out), "realesrgan-x2plus", False))

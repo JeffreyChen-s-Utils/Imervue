@@ -769,7 +769,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `web_gallery_dialog.py`(160) · `slideshow_mp4_dialog.py`(194) · `image_organizer_dialog.py`(533) ·
 `duplicate_detection_dialog.py`(542) 檔案雜湊 + pHash · `image_sanitize_dialog.py`(745) 淨化重繪（剝除所有隱藏資料）·
 `exif_strip_dialog.py`(309) EXIF 批次清除（覆寫原檔走 `replace_atomically`；另存的 `_clean` 副本經 `free_names` 挑名） · `token_rename_dialog.py`(125) · `culling_dialog.py`(247) 挑片 ·
-`ai_upscale_dialog.py`(712) Real-ESRGAN via ONNX（模型自 HuggingFace 下載）
+`ai_upscale_dialog.py`(303) AI 放大對話框外殼：來源／模型／倍率／覆寫／輸出各列與 `open_ai_upscale*` 入口；re-export 引擎與 worker 的名稱 · `ai_upscale_dialog_run.py`(121) `UpscaleRunMixin` 執行流程：檢查選項、AI 模型先經 `ensure_dependencies`、啟動 worker 並向 `job_registry` 登記重試 factory、結束時重設控制項、toast、覆寫後重載檢視器 · `ai_upscale_engine.py`(216) 純邏輯（不 import Qt）：Real-ESRGAN 模型登錄（固定 HuggingFace revision）、傳統重取樣方法、資料夾掃描、模型下載、ONNX 分塊推論與 provider 順序 · `ai_upscale_worker.py`(155) `_UpscaleWorker` QThread：逐張放大、記錄 `JobState`、模型下載或 session 建立失敗也一定發出 `result_ready`
 
 #### 相片庫 / 中繼資料 / 搜尋
 

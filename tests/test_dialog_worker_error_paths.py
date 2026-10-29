@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 from PIL import Image
 
-from Imervue.gui import ai_upscale_dialog, noise_sharpen_dialog
+from Imervue.gui import ai_upscale_dialog, ai_upscale_worker, noise_sharpen_dialog
 
 
 def _make_image(path):
@@ -59,7 +59,7 @@ def test_upscale_worker_reports_all_failed_when_model_setup_raises(tmp_path, qap
     def _boom(*_a, **_k):
         raise ConnectionError("HF unreachable")
 
-    monkeypatch.setattr(ai_upscale_dialog, "_download_model", _boom)
+    monkeypatch.setattr(ai_upscale_worker, "_download_model", _boom)
     ai_key = next(
         k for k in ai_upscale_dialog.UPSCALE_MODELS
         if not k.startswith(ai_upscale_dialog._TRAD_PREFIX)
