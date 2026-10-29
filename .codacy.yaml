@@ -108,7 +108,7 @@ engines:
       - 'Imervue/menu/right_click_menu.py'
       - 'Imervue/menu/plugin_menu.py'
       - 'Imervue/gui/gif_video_dialog.py'
-      - 'Imervue/gui/duplicate_detection_dialog.py'
+      - 'Imervue/gui/duplicate_detection_scan.py'
       - 'Imervue/plugin/pip_installer.py'
       - 'Imervue/plugin/pip_embed_python.py'
       - 'Imervue/plugin/pip_install_workers.py'
