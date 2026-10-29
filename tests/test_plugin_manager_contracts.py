@@ -85,7 +85,9 @@ def _recording_plugins(manager, names, journal):
 
 
 def _rows(manager):
-    return {row.name: row for row in status_registry.snapshot(manager.status_scope)}
+    # snapshot(scope) also returns process-wide "global" rows other tests may have published.
+    return {row.name: row for row in status_registry.snapshot(manager.status_scope)
+            if row.scope == manager.status_scope}
 
 
 # ---------------------------------------------------------------- public surface
@@ -169,7 +171,7 @@ def test_unload_all_runs_in_reverse_order_clears_and_drops_the_status_rows(caplo
     assert journal == [("third", "on_plugin_unloaded"), ("second", "on_plugin_unloaded")]
     assert "[first] on_plugin_unloaded error: stuck" in caplog.text
     assert manager.plugins == []
-    assert not status_registry.snapshot(manager.status_scope)
+    assert not _rows(manager)
 
 
 def test_connect_pet_hooks_routes_later_pets_through_dispatch():

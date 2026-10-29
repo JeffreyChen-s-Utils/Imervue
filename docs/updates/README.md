@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-15 | 2026-10-29 | Split upscale, sanitize and compare dialogs and the plugin manager | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-14 | 2026-10-29 | Split image loader, GPU image view, Cubism native converter and annotation models | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-13 | 2026-10-29 | Split pet workspace, tag/album dialog, control tooltips and recipe store | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-12 | 2026-10-29 | Split pip installer, PSD I/O, paint workspace and Cubism import | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |

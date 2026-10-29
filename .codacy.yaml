@@ -112,7 +112,7 @@ engines:
       - 'Imervue/plugin/pip_installer.py'
       - 'Imervue/plugin/pip_embed_python.py'
       - 'Imervue/plugin/pip_install_workers.py'
-      - 'Imervue/plugin/plugin_manager.py'
+      - 'Imervue/plugin/plugin_discovery.py'
       - 'Imervue/plugin/python_finder.py'
       - 'Imervue/system/clipboard_monitor.py'
       # MD5 used only for cache keys / content identity (usedforsecurity=False),
