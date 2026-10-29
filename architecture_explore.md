@@ -1169,7 +1169,10 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 #### 個性與行為
 
-`pet_script.py`(437) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(521) 內建編輯器 ·
+`pet_script.py`(437) JSON 支撐的台詞 + 排程事件引擎 · `pet_script_editor.py`(159) 內建編輯器對話框（分頁組裝、快照，並轉出下列名稱） ·
+`pet_script_form.py`(90) 無 Qt 的表單資料 → `PetScript` 轉換（略過壞的排程項目、保留規則） ·
+`pet_script_string_list.py`(100) 共用字串清單編輯器（新增 / 編輯 / 刪除）+ `_tr` ·
+`pet_script_sections.py`(241) `{key: [字串]}` 區段與排程清單編輯器 ·
 `schedule_rules.py`(101) 時段 / 星期閘門 · `idle_minigame.py`(278) 閒置好奇 / 打呵欠 ·
 `llm_dialogue.py`(206) 本地 LLM（預設 Ollama）對話（URL 規則與 POST 在 `system/local_llm`） · `music_rhythm.py`(463) WASAPI loopback 抓系統音訊隨節奏擺動 ·
 `click_sfx.py`(168) 事件音效
