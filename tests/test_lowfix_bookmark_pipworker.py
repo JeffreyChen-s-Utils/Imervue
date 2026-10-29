@@ -25,12 +25,12 @@ def test_bookmark_cache_resyncs_when_list_replaced_wholesale():
 
 
 def test_find_python_worker_reports_none_on_failure(qapp, monkeypatch):
-    from Imervue.plugin import pip_installer
+    from Imervue.plugin import pip_install_workers, pip_installer
 
     def _boom():
         raise PermissionError("registry / dir locked")
 
-    monkeypatch.setattr(pip_installer, "_find_python", _boom)
+    monkeypatch.setattr(pip_install_workers, "_find_python", _boom)
     results: list = []
     worker = pip_installer._FindPythonWorker()
     worker.result_ready.connect(results.append)

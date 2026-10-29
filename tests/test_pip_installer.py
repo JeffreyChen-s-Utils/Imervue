@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from Imervue.plugin import pip_installer
+from Imervue.plugin import pip_install_workers, pip_installer
 from Imervue.plugin.pip_constraints import PIP_CONSTRAINTS
 
 
@@ -106,8 +106,8 @@ def test_check_missing_counts_any_import_failure_as_missing(monkeypatch):
         if name == "native_pkg":
             raise RuntimeError("DLL init failed")
         return object()
-    monkeypatch.setattr(pip_installer, "_is_frozen", lambda: False)
-    monkeypatch.setattr(pip_installer.importlib, "import_module", fake_import)
+    monkeypatch.setattr(pip_install_workers, "_is_frozen", lambda: False)
+    monkeypatch.setattr(pip_install_workers.importlib, "import_module", fake_import)
     assert pip_installer.check_missing_packages(
         [("ok_pkg", "ok-pkg"), ("native_pkg", "native-pkg")]) == [("native_pkg", "native-pkg")]
 
@@ -121,7 +121,7 @@ def test_no_packages_still_succeeds(run_worker):
 def test_temp_dir_failure_is_reported(run_worker, monkeypatch):
     def boom(*_args, **_kwargs):
         raise OSError("no temp dir")
-    monkeypatch.setattr(pip_installer.tempfile, "TemporaryDirectory", boom)
+    monkeypatch.setattr(pip_install_workers.tempfile, "TemporaryDirectory", boom)
     commands, _texts, results = run_worker(["a"])
     assert commands == []
     assert results == [(False, "no temp dir")]
@@ -130,13 +130,13 @@ def test_temp_dir_failure_is_reported(run_worker, monkeypatch):
 def test_frozen_build_installs_into_the_target_dir(run_worker, monkeypatch, tmp_path):
     from Imervue.system import app_paths
     target = tmp_path / "site"
-    monkeypatch.setattr(pip_installer, "_is_frozen", lambda: True)
+    monkeypatch.setattr(pip_install_workers, "_is_frozen", lambda: True)
     monkeypatch.setattr(app_paths, "frozen_site_packages", lambda: target)
-    monkeypatch.setattr(pip_installer.sys, "path", list(pip_installer.sys.path))
+    monkeypatch.setattr(pip_install_workers.sys, "path", list(pip_install_workers.sys.path))
     commands, _texts, results = run_worker(["a"])
     assert commands[0][-3:] == ["a", "--target", str(target)]
     assert target.is_dir()
-    assert str(target) in pip_installer.sys.path
+    assert str(target) in pip_install_workers.sys.path
     assert results[0][0] is True
 
 
@@ -166,9 +166,9 @@ def _fake_run(outcome):
     (ValueError("embedded null byte"), False),
 ])
 def test_verify_python_outcomes(monkeypatch, caplog, outcome, expected):
-    from Imervue.plugin import pip_installer
+    from Imervue.plugin import pip_installer, python_finder
     run, calls = _fake_run(outcome)
-    monkeypatch.setattr(pip_installer.subprocess, "run", run)
+    monkeypatch.setattr(python_finder.subprocess, "run", run)
     with caplog.at_level("INFO", logger="Imervue"):
         assert pip_installer._verify_python("C:/py/python.exe") is expected  # noqa: SLF001
     (args, kwargs), = calls
@@ -184,9 +184,9 @@ def test_verify_python_allows_a_slow_cold_start():
 
 
 def test_verify_python_does_not_swallow_unexpected_errors(monkeypatch):
-    from Imervue.plugin import pip_installer
+    from Imervue.plugin import pip_installer, python_finder
     run, _calls = _fake_run(RuntimeError("bug"))
-    monkeypatch.setattr(pip_installer.subprocess, "run", run)
+    monkeypatch.setattr(python_finder.subprocess, "run", run)
     with pytest.raises(RuntimeError):
         pip_installer._verify_python("C:/py/python.exe")  # noqa: SLF001
 
@@ -199,7 +199,7 @@ def test_import_worker_reports_failure_without_false_success(qapp, caplog, monke
             raise RuntimeError("package init failed")
         imported.append(name)
 
-    monkeypatch.setattr(pip_installer.importlib, "import_module", fake_import)
+    monkeypatch.setattr(pip_install_workers.importlib, "import_module", fake_import)
     worker = pip_installer._ImportWorker(["broken_pkg", "fine_pkg"])
     done: list[bool] = []
     worker.result_ready.connect(lambda: done.append(True))

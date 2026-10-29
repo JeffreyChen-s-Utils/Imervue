@@ -1147,7 +1147,10 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `plugin_base.py` | 264 | `ImervuePlugin` 基底類別，13 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_pet_created`（寵物視窗建立時，或外掛載入時寵物已存在）、`on_app_closing` |
 | `plugin_manager.py` | 381 | discover/load failures 報狀態、partial-load cleanup 與 explicit fresh module reload；各視窗 instance 獨立 |
 | `plugin_downloader.py` | 573 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme）；one atomic plugin job／failure retry 與 cooperative cancellation；dialog 使用非阻塞 WorkerHost retirement，已完成安裝保留 |
-| `pip_installer.py` | 935 | nonblocking dependency gate／dialog worker retirement、interpreter install 互斥與 import fail false-success guard |
+| `pip_installer.py` | 330 | 外掛相依的公開入口：`ensure_dependencies` nonblocking dependency gate（`_EnsureDepsHelper` 背景檢查、parent 已刪則 cancelled、缺套件開安裝對話框）、標準 `_https_urlopen` 守衛（拒絕非 https scheme）、`register_translations`；以 `__all__` 轉出下列 sibling 模組與 `python_finder` 的名稱（外掛與測試仍從這裡 import） |
+| `pip_embed_python.py` | 224 | 找不到 Python 時（Windows）下載 embeddable Python：釘選 SHA-256 驗證 zip 與 pip wheel、拒絕 zip-slip、啟用 `import site`、從 wheel 安裝 pip；下載在呼叫時經 `pip_installer._https_urlopen` |
+| `pip_install_workers.py` | 251 | `check_missing_packages`（凍結時查檔案系統，不在背景 import native DLL）與背景 worker：找 Python、檢查套件、安裝後 import（失敗不回報假成功）、`_InstallWorker` 逐套件在 constraints 下 `pip install`，interpreter install 互斥 |
+| `pip_install_dialog.py` | 269 | `InstallDependenciesDialog`：搜尋／下載 Python → 安裝 → import → 成功 callback（callback 失敗可重試），發布 status，關閉時以 WorkerHost 非阻塞 retirement |
 | `python_finder.py` | 218 | 找有 pip 的 Python 直譯器：非凍結用 `sys.executable`，凍結時依序查 PATH、registry／安裝資料夾（或 Unix 路徑）、內嵌 Python；`_verify_python` 以 `pip --version` 驗證 |
 | `pip_constraints.py` | 50 | 外掛相依安裝的 pip 約束（純函式）：所有 OpenCV 發行版鎖在 5 以下（共用同一個 `cv2` 目錄；OpenCV 5 移除了 Haar 分類器），組 `pip install -c` 指令 |
 | `model_dir.py` | 50 | 外掛模型目錄的共用解析 |
