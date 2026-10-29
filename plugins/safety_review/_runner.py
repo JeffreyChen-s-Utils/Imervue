@@ -18,6 +18,10 @@ Protocol — stdout lines:
     BATCH_PROGRESS:<current>:<total>:<filename>
     BATCH_OK:<success>:<failed>
     ERROR:<message>
+
+The argv parsing lives in ``_runner_args`` and the per-image batch bookkeeping
+(destinations, shape fallback, failed folder) in ``_runner_batch``; both are
+loaded as siblings like ``_censor_core`` and re-exported here.
 """
 from __future__ import annotations
 
@@ -45,7 +49,6 @@ if __package__:   # imported as part of the plugin package (tests)
     )
     from safety_review._constants import (
         MIN_CONFIDENCE,
-        SHAPE_ELLIPSE,
         SHAPE_RECT,
         STYLE_MOSAIC,
         _ERAX_MODEL,
@@ -53,6 +56,19 @@ if __package__:   # imported as part of the plugin package (tests)
         _ERAX_REVISION,
         _categories_to_anime_classes,
         _categories_to_real_labels,
+    )
+    from safety_review._runner_args import (
+        _batch_options,
+        _bootstrap_site_packages,
+        _parse_categories,
+        _single_options,
+    )
+    from safety_review._runner_batch import (
+        _batch_destination,
+        _copy_failed,
+        _failed_dest,
+        _process_one_with_fallback,
+        _write_failed_log,
     )
 else:             # run as a script next to its siblings
     from _censor_core import (
@@ -70,7 +86,6 @@ else:             # run as a script next to its siblings
     )
     from _constants import (
         MIN_CONFIDENCE,
-        SHAPE_ELLIPSE,
         SHAPE_RECT,
         STYLE_MOSAIC,
         _ERAX_MODEL,
@@ -79,63 +94,48 @@ else:             # run as a script next to its siblings
         _categories_to_anime_classes,
         _categories_to_real_labels,
     )
+    from _runner_args import (
+        _batch_options,
+        _bootstrap_site_packages,
+        _parse_categories,
+        _single_options,
+    )
+    from _runner_batch import (
+        _batch_destination,
+        _copy_failed,
+        _failed_dest,
+        _process_one_with_fallback,
+        _write_failed_log,
+    )
 
-
-def _parse_categories(cats_str):
-    """Parse comma-separated categories string → frozenset or None."""
-    if not cats_str:
-        return None
-    return frozenset(c.strip() for c in cats_str.split(",") if c.strip())
-
-
-def _batch_destination(src, output_dir, overwrite, source_root):
-    """Resolve one batch destination, mirroring subfolders under *source_root*
-    when given so a recursive scan keeps its tree instead of flattening.
-
-    Only computes the path; the directory is created on demand at write time
-    so a skipped (clean) image leaves no empty output folder behind.
-    """
-    if overwrite:
-        return src
-    target_dir = output_dir
-    if source_root:
-        rel = os.path.relpath(os.path.dirname(src), source_root)
-        if rel != os.curdir and not rel.startswith(os.pardir):
-            target_dir = os.path.join(output_dir, rel)
-    stem = Path(src).stem
-    suffix = Path(src).suffix or ".png"
-    dst = os.path.join(target_dir, f"{stem}_censored{suffix}")
-    counter = 1
-    while os.path.exists(dst):
-        dst = os.path.join(target_dir, f"{stem}_censored_{counter}{suffix}")
-        counter += 1
-    return dst
-
-
-def _failed_dest(src, failed_dir, scan_root):
-    """Mirrored path for a failed image under *failed_dir*, keeping its name."""
-    target_dir = failed_dir
-    if scan_root:
-        rel = os.path.relpath(os.path.dirname(src), scan_root)
-        if rel != os.curdir and not rel.startswith(os.pardir):
-            target_dir = os.path.join(failed_dir, rel)
-    return os.path.join(target_dir, os.path.basename(src))
-
-
-def _copy_failed(src, failed_dir, scan_root):
-    """Best-effort copy of a failed original into the mirrored failed folder."""
-    import shutil
-    try:
-        dst = _failed_dest(src, failed_dir, scan_root)
-        _ensure_parent(dst)
-        shutil.copy2(src, dst)
-    except OSError:
-        pass
-
-
-def _bootstrap_site_packages(site_packages: str) -> None:
-    if site_packages and site_packages not in sys.path:
-        sys.path.insert(0, site_packages)
+__all__ = [
+    "_ERAX_MODEL",
+    "_ERAX_REPO",
+    "_ERAX_REVISION",
+    "_AnyPathDetector",
+    "_batch_destination",
+    "_bootstrap_site_packages",
+    "_censor_region",
+    "_copy_failed",
+    "_detect_boxes_anime",
+    "_detect_boxes_real",
+    "_detect_image_mode",
+    "_expand_box",
+    "_failed_dest",
+    "_junction_bridges",
+    "_load_anime_model",
+    "_load_detectors",
+    "_merge_gap",
+    "_parse_categories",
+    "_process_one",
+    "_process_one_with_fallback",
+    "_run_batch",
+    "_run_single",
+    "_save_as",
+    "_shrink_box_center",
+    "_write_failed_log",
+    "main",
+]
 
 
 def _detect_boxes_real(detector, src, confidence, labels):
@@ -233,53 +233,24 @@ def _load_detectors(det_mode):
     return _AnyPathDetector(NudeDetector()), None
 
 
-def _process_one_with_fallback(run_for_shape, shape, retries=1):
-    """Run *run_for_shape(shape)*, retrying then downgrading to ellipse before
-    surfacing the error, so only a genuinely unprocessable image fails."""
-    attempts = [shape] * (1 + max(0, retries))
-    if shape != SHAPE_ELLIPSE:
-        attempts.append(SHAPE_ELLIPSE)
-    last_exc = None
-    for attempt_shape in attempts:
-        try:
-            return run_for_shape(attempt_shape)
-        except Exception as exc:  # noqa: BLE001 - detector/torch fail in any way; re-raised below
-            last_exc = exc
-    raise last_exc
-
-
-def _write_failed_log(failed_dir, failures):
-    if failures and failed_dir:
-        with open(os.path.join(failed_dir, "censor_failed.log"),
-                  "w", encoding="utf-8") as fh:
-            for fname, reason in failures:
-                fh.write(f"{fname}: {reason}\n")
-
-
 def _run_single(args):
     if len(args) < 6:
         print("ERROR:single mode requires: input output block_size padding",
               flush=True)
         sys.exit(1)
-    input_path, output_path = args[2], args[3]
-    block_size, padding = int(args[4]), int(args[5])
-    det_mode = args[6] if len(args) > 6 else "real"
-    confidence = float(args[7]) if len(args) > 7 else MIN_CONFIDENCE
-    expand_pct = int(args[8]) if len(args) > 8 else 0
-    style = args[9] if len(args) > 9 else STYLE_MOSAIC
-    categories = _parse_categories(args[10]) if len(args) > 10 else None
-    shape = args[11] if len(args) > 11 else SHAPE_RECT
+    opts = _single_options(args)
     try:
-        detector, anime_model = _load_detectors(det_mode)
+        detector, anime_model = _load_detectors(opts.det_mode)
         print("PROGRESS:Detecting...", flush=True)
-        count = _process_one(detector, input_path, output_path,
-                             block_size=block_size, padding=padding, confidence=confidence,
-                             expand_pct=expand_pct, det_mode=det_mode,
-                             anime_model=anime_model, style=style,
-                             categories=categories, shape=shape)
+        count = _process_one(detector, opts.input_path, opts.output_path,
+                             block_size=opts.block_size, padding=opts.padding,
+                             confidence=opts.confidence,
+                             expand_pct=opts.expand_pct, det_mode=opts.det_mode,
+                             anime_model=anime_model, style=opts.style,
+                             categories=opts.categories, shape=opts.shape)
         print("PROGRESS:No genitalia detected" if count == 0
               else f"PROGRESS:Censored {count} region(s)", flush=True)
-        print(f"OK:{output_path}", flush=True)
+        print(f"OK:{opts.output_path}", flush=True)
     except Exception as exc:  # noqa: BLE001 - child-process boundary: report over the protocol
         print(f"ERROR:{exc}", flush=True)
         sys.exit(1)
@@ -290,24 +261,11 @@ def _run_batch(args):
         print("ERROR:batch mode requires: json_paths output_dir "
               "block_size padding overwrite", flush=True)
         sys.exit(1)
-    json_paths, output_dir = args[2], args[3]
-    block_size, padding = int(args[4]), int(args[5])
-    overwrite = args[6].lower() == "true"
-    det_mode = args[7] if len(args) > 7 else "real"
-    confidence = float(args[8]) if len(args) > 8 else MIN_CONFIDENCE
-    expand_pct = int(args[9]) if len(args) > 9 else 0
-    style = args[10] if len(args) > 10 else STYLE_MOSAIC
-    categories = _parse_categories(args[11]) if len(args) > 11 else None
-    source_root = args[12] if len(args) > 12 else ""
-    only_censored = args[13].lower() == "true" if len(args) > 13 else False
-    shape = args[14] if len(args) > 14 else SHAPE_RECT
-    failed_dir = args[15] if len(args) > 15 else ""
-    scan_root = args[16] if len(args) > 16 else ""
-    merge_regions = args[17].lower() != "false" if len(args) > 17 else True
+    opts = _batch_options(args)
 
-    with open(json_paths, encoding="utf-8") as f:
+    with open(opts.json_paths, encoding="utf-8") as f:
         paths = json.load(f)
-    detector, anime_model = _load_detectors(det_mode)
+    detector, anime_model = _load_detectors(opts.det_mode)
 
     success = 0
     failures = []
@@ -316,24 +274,26 @@ def _run_batch(args):
         name = Path(src).name
         print(f"BATCH_PROGRESS:{i}:{total}:{name}", flush=True)
         try:
-            dst = _batch_destination(src, output_dir, overwrite, source_root)
+            dst = _batch_destination(src, opts.output_dir, opts.overwrite,
+                                     opts.source_root)
             _process_one_with_fallback(
                 lambda shp, _s=src, _d=dst: _process_one(
-                    detector, _s, _d, block_size=block_size, padding=padding,
-                    confidence=confidence, expand_pct=expand_pct,
-                    det_mode=det_mode, anime_model=anime_model,
-                    style=style, categories=categories,
-                    only_censored=only_censored, shape=shp,
-                    merge_regions=merge_regions),
-                shape)
+                    detector, _s, _d, block_size=opts.block_size,
+                    padding=opts.padding, confidence=opts.confidence,
+                    expand_pct=opts.expand_pct, det_mode=opts.det_mode,
+                    anime_model=anime_model, style=opts.style,
+                    categories=opts.categories,
+                    only_censored=opts.only_censored, shape=shp,
+                    merge_regions=opts.merge_regions),
+                opts.shape)
             success += 1
         except Exception as exc:  # noqa: BLE001 - one bad image must not end the batch; recorded
             print(f"PROGRESS:Error on {name}: {exc}", flush=True)
             failures.append((name, str(exc)))
-            if failed_dir:
-                _copy_failed(src, failed_dir, scan_root)
+            if opts.failed_dir:
+                _copy_failed(src, opts.failed_dir, opts.scan_root)
 
-    _write_failed_log(failed_dir, failures)
+    _write_failed_log(opts.failed_dir, failures)
     print(f"BATCH_OK:{success}:{len(failures)}", flush=True)
 
 

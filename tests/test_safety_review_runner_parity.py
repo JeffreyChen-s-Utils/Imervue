@@ -24,7 +24,8 @@ from safety_review._constants import SHAPE_ELLIPSE, SHAPE_PRECISE, STYLE_BLACK
 
 _PLUGIN_DIR = Path(_runner.__file__).resolve().parent
 
-_RUNNER_FILES = ("_runner.py", "_censor_core.py", "_constants.py")
+_RUNNER_FILES = ("_runner.py", "_runner_args.py", "_runner_batch.py",
+                 "_censor_core.py", "_constants.py")
 
 SHARED = ["_AnyPathDetector", "_censor_region", "_save_as", "_detect_image_mode", "_ensure_parent", "_expand_box",
           "_junction_bridges", "_merge_gap", "_shrink_box_center"]
@@ -81,7 +82,8 @@ def test_finetune_runs_as_a_script_with_sibling_imports(tmp_path):
     assert "usage" in result.stdout.lower()
 
 
-@pytest.mark.parametrize("module", ["_constants", "_censor_core", "_runner"])
+@pytest.mark.parametrize("module", ["_constants", "_censor_core", "_runner_args",
+                                    "_runner_batch", "_runner"])
 def test_loading_needs_no_third_party_package(tmp_path, module):
     # The runner puts the environment's site-packages on sys.path only after it
     # has loaded its siblings, so none of them may import NumPy or Pillow then.
