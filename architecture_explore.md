@@ -758,7 +758,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 #### 相片庫 / 中繼資料 / 搜尋
 
 `library_search_dialog.py`(263) 多選或全部加入 Photo Workflow，重新開啟保留條件與結果 · `smart_albums_dialog.py`(298) · `semantic_search_dialog.py`(221) ·
-`similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(580) Tags & Albums（新增／改名檢查名稱、Clean Up… 清掉已不存在的檔案並合併只差大小寫的名稱） ·
+`similar_search_dialog.py`(104) · `advanced_filter_dialog.py`(286) · `tag_album_dialog.py`(128) Tags & Albums 外殼（新增／改名檢查名稱、Clean Up… 清掉已不存在的檔案並合併只差大小寫的名稱；re-export 右鍵子選單 `build_*`） · `tag_album_tags.py`(178) `TagTabMixin` Tags 分頁（建立／改名／刪除、移除圖片後保留選取、Show in Viewer） · `tag_album_albums.py`(169) `AlbumTabMixin` Albums 分頁 · `tag_album_menus.py`(179) 右鍵 Tags／Albums 子選單與批次加入（切換、+ New…、toast） · `tag_album_logic.py`(66) 純邏輯：列標籤、名稱輸入、可檢視檔案、Clean Up 摘要與共用翻譯鍵 ·
 `tag_filter_dialog.py`(165) · `hierarchical_tags_dialog.py`(190) · `auto_tag_dialog.py`(172) ·
 `keyword_editor_dialog.py`(217) · `keyword_vocabulary_dialog.py`(70) · `exif_editor.py`(216) EXIF 編輯對話框（外殼；讀寫在 `image/exif_fields`，不支援的格式顯示說明；Describe 以 `CaptionWorker`〔QRunnable〕向本機 Ollama 要描述填入 Description） ·
 `gps_geotag_dialog.py`(90) · `gpx_geotag_dialog.py`(184) 用 GPX 軌跡對整批相片寫 GPS（時區、間隔上限、內插） · `capture_time_dialog.py`(193) 整批位移 EXIF 拍攝時間（輸入位移或第一張的正確時間） · `metadata_template_dialog.py`(178) 把記住的標題／描述／關鍵字範本（含 `{token}`）蓋到整批相片 · `map_view_dialog.py`(180) OSM 底圖 · `calendar_view_dialog.py`(108) ·
