@@ -161,8 +161,8 @@ def test_cancelled_scan_drops_queued_batches_and_completion(qapp):
 
 @pytest.mark.parametrize("images", [[], ["image.png"]])
 def test_empty_finished_scan_stops_unknown_total_progress(qapp, monkeypatch, images):
-    from Imervue.gpu_image_view.images import image_loader
-    monkeypatch.setattr(image_loader, "_maybe_hint_heif", lambda *_: None)
+    from Imervue.gpu_image_view.images import image_loader, image_loader_open
+    monkeypatch.setattr(image_loader_open, "_maybe_hint_heif", lambda *_: None)
     model = SimpleNamespace(images=[])
     updates = FolderScanUpdates(lambda paths: setattr(model, "images", paths))
     window = SimpleNamespace(_hide_progress=MagicMock())
