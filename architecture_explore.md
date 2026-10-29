@@ -512,7 +512,10 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（774 行）只保留 GL 生命
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `tile_loader.py` | 649 | bounded viewport 縮圖排程與 generation／O(1) membership 驗證；visible buffer／filmstrip／retry 共用 slots，重複請求合併、source rewrite 另排一次；每 4 秒背景 stat 與清單 refetch 保留 |
+| `tile_loader.py` | 281 | bounded viewport 縮圖排程：visible buffer／filmstrip／retry 共用 worker slots，重複請求合併、source rewrite 另排一次；持有 `LoadThumbnailWorker`／`QThreadPool` 的唯一使用點與每 4 秒離線掃描計時器；三個 `tile_loader_*` 兄弟模組的公開名稱都由此 re-export（外部與測試 patch 點不變） |
+| `tile_loader_results.py` | 178 | worker 結果落地：generation／O(1) membership 驗證、grid mutex 下寫入 tile cache 與檔案簽章、Missing／失敗狀態與一次性 toast、暫時性錯誤最多兩次退避重試、進度列合併更新、undo／filmstrip 直接插入 |
+| `tile_loader_sync.py` | 171 | 圖片清單變動：增量同步保留暖快取、依簽章遷移改名檔案、焦點與選取帶過；換資料夾重置 view memory、冷快取 reload 與 filmstrip 去重的純函式判斷 |
+| `tile_loader_offline.py` | 135 | 背景 stat 掃描 worker 與結果套用：消失／恢復／被他程式覆寫的檔案切換狀態、重新解碼並批次 refetch 清單列 |
 | `tile_textures.py` | 136 | incoming mipmap 容量前先淘汰畫面外貼圖；使用共享 viewport 候選計算精確 cached visibility，GL 刪除成功才記帳 |
 | `tile_wall_loading.py` | 99 | 牆面 loading 狀態與轉圈幾何（大資料夾/網路磁碟不再空白） |
 | `prefetch_scheduler.py` | 235 | QObject 預取協作者：實際 pyramid bytes／解碼 ticket 共用 RAM 配額、過期退休與 queued terminal identity 驗證、owner destruction 回收未送達結果 |
