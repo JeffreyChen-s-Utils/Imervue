@@ -47,7 +47,7 @@ engines:
       - 'Imervue/menu/plugin_menu.py'
       - 'Imervue/gui/gif_video_dialog.py'
       - 'Imervue/gui/timeline_view.py'
-      - 'Imervue/gui/annotation_models.py'
+      - 'Imervue/gui/annotation_brushes.py'
       - 'Imervue/library/metadata_export.py'
       - 'Imervue/library/clip_search.py'
       # "Reveal in file manager": static argv (explorer /select, / open /
@@ -122,7 +122,10 @@ engines:
       - 'Imervue/image/thumbnail_disk_cache.py'
       # SQL built with `?` placeholders (the only interpolation is the
       # placeholder count / an int-coerced LIMIT); values are bound separately.
-      - 'Imervue/library/image_index.py'
+      - 'Imervue/library/index_paths.py'
+      - 'Imervue/library/index_search.py'
+      - 'Imervue/library/index_tag_links.py'
+      - 'Imervue/library/index_tags.py'
       # stdlib xml.etree is used for *writing* XML from typed values only;
       # all *parsing* of untrusted input goes through defusedxml.
-      - 'Imervue/image/xmp_sidecar.py'
+      - 'Imervue/image/xmp_sidecar_write.py'

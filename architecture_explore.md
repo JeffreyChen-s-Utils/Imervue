@@ -66,10 +66,10 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 1,006 | 172,663 |
+| `tests/` | 1,010 | 174,312 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 210 | 44,512 |
-| `Imervue/gui/` | 225 | 37,214 |
-| `Imervue/puppet/` | 112 | 16,689 |
+| `Imervue/gui/` | 228 | 37,262 |
+| `Imervue/puppet/` | 116 | 16,834 |
 | `Imervue/image/` | 151 | 16,071 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 71 | 13,731 |
 | `Imervue/multi_language/` | 8 | 15,891 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 792 |
 | `plugins/`（19 個外掛） | 80 | 16,040 |
 | `scripts/`（開發與發佈工具） | 11 | 1,846 |
-| **總計** | **2,103** | **368,224** |
+| **總計** | **2,121** | **370,206** |
 
-其中 `Imervue/` 套件本身 1,006 檔 / 177,675 行。
+其中 `Imervue/` 套件本身 1,020 檔 / 178,008 行。
 
-測試碼與產品碼比約 **0.89 : 1**（172,663 vs 193,715 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.90 : 1**（174,312 vs 194,048 行，產品碼含 `plugins/`）。
 
 > 數字以 `CLAUDE.md`「Architecture Map」章節裡的指令重新產生，不要手改。
 
