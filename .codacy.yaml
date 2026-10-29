@@ -62,6 +62,8 @@ engines:
       # pip install runs in a controlled subprocess (no shell, _https_urlopen
       # guard); the B404/B603 hits are the accepted installer pattern.
       - 'Imervue/plugin/pip_installer.py'
+      - 'Imervue/plugin/pip_embed_python.py'
+      - 'Imervue/plugin/pip_install_workers.py'
       # Shared terminate-then-kill helper: imports subprocess only to reap an
       # already-spawned Popen (terminate/kill/wait) — never spawns one itself.
       # The B404 import hit is the accepted infra pattern, skipped in .bandit.
@@ -108,6 +110,8 @@ engines:
       - 'Imervue/gui/gif_video_dialog.py'
       - 'Imervue/gui/duplicate_detection_dialog.py'
       - 'Imervue/plugin/pip_installer.py'
+      - 'Imervue/plugin/pip_embed_python.py'
+      - 'Imervue/plugin/pip_install_workers.py'
       - 'Imervue/plugin/plugin_manager.py'
       - 'Imervue/plugin/python_finder.py'
       - 'Imervue/system/clipboard_monitor.py'
