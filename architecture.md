@@ -99,7 +99,8 @@ Public interfaces other code or users depend on:
   `register_languages()`) and `merge_translations()`
   (`Imervue/multi_language/language_wrapper.py`).
 - **MCP tools** — `Imervue/mcp_server/tools.py` re-exports every handler and registers the tool set;
-  handlers live in `tools_read.py` / `tools_edit.py`, definitions in `tool_defs_read.py` /
+  handlers live in `tools_read.py` / `tools_edit.py` (write-side effects in
+  `tools_edit_effects.py` / `tools_edit_grading.py`, re-exported by `tools_edit.py`), definitions in `tool_defs_read.py` /
   `tool_defs_edit.py`, output schemas in `tool_schemas.py`.
 - **On-disk formats** — `.imervue` (Paint bundle), `.puppet`, `.imervue-session.json`, XMP
   sidecars, `user_setting.json`; locations in `architecture_explore.md` §11. `.puppet` is a public
@@ -243,7 +244,7 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
 | A develop renderer (another device for the recipe) | A `BackendProvider` registered with `Imervue.image.develop_backends.register()` from a plugin's `on_plugin_loaded`; it must return what `Recipe.apply` does and may run any span through `Recipe.apply_stages()` (reference: `plugins/gpu_develop/`) |
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
 | A language | Plugin calling `language_wrapper.register_language()` from its `register_languages()` class method (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
-| An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
+| An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py` (an edit-side effect in `tools_edit_effects.py` / `tools_edit_grading.py`, re-exported from `tools_edit.py`; shared edit helpers in `tools_edit_support.py`), its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
 | A CLI subcommand | A `_SUBCOMMANDS` row in `Imervue/cli_parser.py` plus a `_WRITE_SPEC` or `_MULTI_COMMANDS` entry in `Imervue/cli.py` or a `_REPORTERS` entry in `Imervue/cli_reports.py`; one that mirrors an MCP tool comes from `Imervue/cli_tools.py` instead |
 | A Paint tool or dock | `Imervue/paint/tools/`, `Imervue/paint/docks/`, routed by `Imervue/paint/tool_dispatcher.py` |
 | A theme | `Imervue/system/themes.py`; a theme with a full palette adds its `ThemeColours` in `Imervue/system/modern_theme.py` |

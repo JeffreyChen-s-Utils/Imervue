@@ -1216,7 +1216,10 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `server.py` | 439 | JSON-RPC 2.0 over stdio 的協定迴圈 |
 | `tools.py` | 176 | 工具集的對外門面：re-export 全部 58 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
 | `tools_read.py` | 662 | 22 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`、`puppet_validate`、`puppet_schema`… |
-| `tools_edit.py` | 883 | 36 個寫出類處理器（讀 `source`、寫 `destination`）：浮水印、外框、拼貼、裁切／縮放／旋轉與各種效果（`levels_image`、`curve_image`、`clahe_image`、`lens_correction_image`…） |
+| `tools_edit.py` | 415 | 寫出類處理器的匯入位置（`tool_defs_edit`、`tools.py`、`cli_native` 都從這裡取），re-export 全部 36 個；本身持有浮水印、外框、拼貼、裁切／縮放（`_resize_dims`）／旋轉 |
+| `tools_edit_effects.py` | 304 | 20 個色調／色彩／風格化／細節效果處理器（`solarize_image`、`glow_image`、`velvia_image`、`tone_equalizer_image`、`kaleidoscope_image`、`clahe_image`、`local_contrast_image`…） |
+| `tools_edit_grading.py` | 196 | 10 個調色／曲線／鏡頭效果處理器（`posterize_image`、`levels_image`、`channel_mixer_image`、`curve_image`、`lens_correction_image`…） |
+| `tools_edit_support.py` | 87 | 寫出類處理器共用：`_validated_destination`、`_validated_rgb_triplet`、`_guard_output_pixels`（100 MP 上限）、`_save_image_to`（無 alpha 格式先轉 RGB）、`_apply_effect_and_save` |
 | `tool_support.py` | 77 | 兩組處理器共用：`IMAGE_EXTENSIONS`（即 `formats.RASTER_EXTENSIONS`）、`NO_ALPHA_FORMATS`、`open_upright` / `load_rgba_array`（委派 `shown.open_shown` / `load_shown_rgba`，RAW 經 libraw 顯像；每個工具都在依 EXIF 轉正後的影像上運作，尺寸與座標也以它為準）、`validated_dir`／`validated_file`、`json_safe` |
 | `tool_defs_read.py` | 387 | `READ_TOOL_DEFINITIONS`：讀取類工具的名稱、描述、輸入 schema、處理器 |
 | `tool_defs_edit.py` | 929 | `EDIT_TOOL_DEFINITIONS`：寫出類工具的同上資料 |
@@ -1583,7 +1586,7 @@ GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readb
    原模組若是別處的匯入來源，用 `__all__` 保住 re-export（自動移除未用 import 會把只為轉手存在的名稱刪掉）。
    測試若在原模組上 monkeypatch 某個名稱，要改到實際查找它的新模組。
 
-7. **MCP 工具新增流程**：處理器寫在 `tools_read.py` 或 `tools_edit.py`，定義加進對應的 `tool_defs_*.py`，並從 `tools.py` re-export（加進 import 與 `__all__`）；同時必須在 `tool_schemas.py` 加 schema，並在 `cli_tools.py` 的 `BRIDGED` 給它一個 CLI 名稱（`tests/test_cli_tools.py` 強制每個 MCP 工具都有 CLI 子指令）
+7. **MCP 工具新增流程**：處理器寫在 `tools_read.py`，或寫出類的 `tools_edit.py`（覆蓋／幾何）、`tools_edit_effects.py`／`tools_edit_grading.py`（效果，並從 `tools_edit.py` re-export），定義加進對應的 `tool_defs_*.py`，並從 `tools.py` re-export（加進 import 與 `__all__`）；同時必須在 `tool_schemas.py` 加 schema，並在 `cli_tools.py` 的 `BRIDGED` 給它一個 CLI 名稱（`tests/test_cli_tools.py` 強制每個 MCP 工具都有 CLI 子指令）
    （有 parity test 強制），且工具必須保持無 Qt、無選用相依。
 
 8. **Qt 對話框測試**：在 `qapp` fixture 下建立對話框時 parent 傳 `None`，
