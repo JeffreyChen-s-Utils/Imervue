@@ -16,7 +16,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Imervue.paint import canvas as canvas_module
+from Imervue.paint import canvas_gl as canvas_module
 from Imervue.paint.canvas import PaintCanvas
 from Imervue.paint.damage import DamageRect
 
@@ -38,7 +38,7 @@ def composite():
 
 
 def _patch_gl(monkeypatch, recorded):
-    """Replace the canvas-module GL calls with no-op recorders."""
+    """Replace the GL calls of the module owning the upload with no-op recorders."""
     monkeypatch.setattr(canvas_module, "glBindTexture", lambda *_a: None)
     monkeypatch.setattr(canvas_module, "glGenTextures", lambda _n: 1)
     monkeypatch.setattr(canvas_module, "glDeleteTextures", lambda *_a: None)

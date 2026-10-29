@@ -21,73 +21,35 @@ Public API:
 """
 from __future__ import annotations
 
-import logging
-import math
-
 import numpy as np
-from OpenGL.GL import (
-    GL_BLEND,
-    GL_CLAMP_TO_EDGE,
-    GL_COLOR_BUFFER_BIT,
-    GL_LINEAR,
-    GL_NEAREST,
-    GL_ONE_MINUS_SRC_ALPHA,
-    GL_QUADS,
-    GL_REPEAT,
-    GL_RGBA,
-    GL_SRC_ALPHA,
-    GL_TEXTURE_2D,
-    GL_TEXTURE_MAG_FILTER,
-    GL_TEXTURE_MIN_FILTER,
-    GL_TEXTURE_WRAP_S,
-    GL_TEXTURE_WRAP_T,
-    GL_UNSIGNED_BYTE,
-    glBegin,
-    glBindTexture,
-    glBlendFunc,
-    glClear,
-    glClearColor,
-    glColor4f,
-    glDeleteTextures,
-    glEnable,
-    glEnd,
-    glGenTextures,
-    glLoadIdentity,
-    glMatrixMode,
-    glOrtho,
-    glPopMatrix,
-    glPushMatrix,
-    glRotatef,
-    glScalef,
-    glTexCoord2f,
-    glTexImage2D,
-    glTexParameterf,
-    glTexParameteri,
-    glTexSubImage2D,
-    glTranslatef,
-    glVertex2f,
-    glViewport,
-    GL_MODELVIEW,
-    GL_PROJECTION,
-)
+from OpenGL.GL import glDeleteTextures
 from OpenGL.error import GLError
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
-from Imervue.system.qt_timers import call_later
 from Imervue.paint.damage import EMPTY as EMPTY_DAMAGE
 from Imervue.paint.damage import DamageRect
 from Imervue.paint.document import PaintDocument
-from Imervue.paint.marquee import selection_outline_segments
 from Imervue.paint.pointer_event import PointerEvent, ToolDispatcher
 from Imervue.paint.canvas_overlays import PaintCanvasOverlaysMixin, build_checker_pattern
 from Imervue.paint.canvas_input import PaintCanvasInputMixin
 from Imervue.paint.canvas_view import ZOOM_MAX, ZOOM_MIN, PaintCanvasViewMixin, clamp_zoom
+from Imervue.paint.canvas_document import (
+    DEFAULT_CANVAS_FILL,
+    DEFAULT_CANVAS_HEIGHT,
+    DEFAULT_CANVAS_WIDTH,
+    PaintCanvasDocumentMixin,
+)
+from Imervue.paint.canvas_gl import PaintCanvasGLMixin
 
 # Other modules and the tests import these from here; the pointer event lives
-# in ``pointer_event`` and the checker pattern in ``canvas_overlays``.
+# in ``pointer_event``, the checker pattern in ``canvas_overlays`` and the
+# blank-canvas defaults in ``canvas_document``.
 __all__ = [
+    "DEFAULT_CANVAS_FILL",
+    "DEFAULT_CANVAS_HEIGHT",
+    "DEFAULT_CANVAS_WIDTH",
     "ZOOM_MAX",
     "ZOOM_MIN",
     "PaintCanvas",
@@ -97,13 +59,6 @@ __all__ = [
     "clamp_zoom",
     "cursor_for_tool",
 ]
-
-logger = logging.getLogger("Imervue.paint.canvas")
-
-
-DEFAULT_CANVAS_WIDTH = 1024
-DEFAULT_CANVAS_HEIGHT = 1024
-DEFAULT_CANVAS_FILL = (255, 255, 255, 255)
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +101,7 @@ def cursor_for_tool(tool: str) -> Qt.CursorShape:
 
 class PaintCanvas(
         PaintCanvasViewMixin, PaintCanvasInputMixin, PaintCanvasOverlaysMixin,
-        QOpenGLWidget):
+        PaintCanvasDocumentMixin, PaintCanvasGLMixin, QOpenGLWidget):
     """GPU canvas for the Paint tab. See module docstring for the API."""
 
     hover_changed = Signal(int, int)
@@ -298,160 +253,6 @@ class PaintCanvas(
         self._tool_overlay: dict | None = None
 
     # ---- public API ------------------------------------------------------
-
-    def new_blank_document(
-        self,
-        width: int = DEFAULT_CANVAS_WIDTH,
-        height: int = DEFAULT_CANVAS_HEIGHT,
-        fill: tuple[int, int, int, int] = DEFAULT_CANVAS_FILL,
-    ) -> None:
-        """Replace the canvas with a fresh ``height``×``width`` Background
-        layer filled with ``fill`` (RGBA, 0–255).
-
-        Without this helper a freshly-constructed PaintCanvas has zero
-        layers, so :meth:`current_image` returns ``None`` and the tool
-        dispatcher silently no-ops on the first brush stroke. The
-        workspace calls this from ``__init__`` so the user can paint
-        immediately, matching raster paint apps' "open with a blank canvas"
-        behaviour.
-        """
-        if width <= 0 or height <= 0:
-            raise ValueError(
-                f"canvas size must be positive, got {width}×{height}",
-            )
-        if len(fill) != 4 or any(not 0 <= int(c) <= 255 for c in fill):
-            raise ValueError(
-                f"fill must be a 4-tuple of 0..255 ints, got {fill!r}",
-            )
-        arr = np.empty((int(height), int(width), 4), dtype=np.uint8)
-        arr[..., :] = fill
-        self.load_image(arr)
-
-    def load_image(self, arr: np.ndarray | None) -> None:
-        """Replace the canvas with a single-layer document of ``arr``.
-
-        ``None`` clears the document — the canvas paints empty until
-        another image is loaded.
-        """
-        if arr is None:
-            # Re-subscribe to the new empty document so wholesale
-            # mutations on it (a fresh add_layer, etc.) trigger the
-            # texture-upload listener.
-            self._document_unsubscribe()
-            self._document = PaintDocument()
-            self._document_unsubscribe = self._document.listen(
-                self._on_document_changed,
-            )
-            self._needs_upload = True
-            self._pending_damage = EMPTY_DAMAGE
-            self._marquee_segments = None
-            self._marquee_timer.stop()
-            self._user_view_locked = False
-            self._rotation_deg = 0.0
-            self.update()
-            return
-        if arr.ndim != 3 or arr.shape[2] != 4 or arr.dtype != np.uint8:
-            raise ValueError(
-                f"PaintCanvas.load_image expects HxWx4 uint8 RGBA, "
-                f"got {arr.shape} {arr.dtype}",
-            )
-        self._document_unsubscribe()
-        self._document = PaintDocument()
-        self._document_unsubscribe = self._document.listen(
-            self._on_document_changed,
-        )
-        self._document.load_image(arr)
-        self._marquee_segments = None
-        self._marquee_timer.stop()
-        self._needs_upload = True
-        self._pending_damage = EMPTY_DAMAGE
-        self._user_view_locked = False
-        self._reset_view_to_fit()
-        self.image_loaded.emit(arr.shape[1], arr.shape[0])
-        self.document_changed.emit()
-        self.update()
-
-    def document(self) -> PaintDocument:
-        return self._document
-
-    def set_document(self, document: PaintDocument) -> None:
-        """Swap the canvas's bound :class:`PaintDocument`.
-
-        Used by the comic-project page browser so picking a different
-        page hands the canvas a different document without going
-        through the load-image path. The composite cache, marquee
-        animation, and texture upload are all reset because the new
-        document's pixels are distinct from the previous one's.
-        """
-        if document is self._document:
-            return
-        self._document_unsubscribe()
-        self._document = document
-        self._document_unsubscribe = document.listen(
-            self._on_document_changed,
-        )
-        self._marquee_segments = None
-        self._marquee_timer.stop()
-        self._needs_upload = True
-        self._pending_damage = EMPTY_DAMAGE
-        shape = document.shape
-        if shape is not None:
-            self.image_loaded.emit(shape[1], shape[0])
-        self.update()
-
-    def current_image(self) -> np.ndarray | None:
-        """Return the *active layer's* image — the buffer tools paint into.
-
-        Returning the active layer (rather than the composited frame)
-        is what makes layer-aware painting work: every tool mutates the
-        active layer in place, and the canvas re-composites on the
-        next paint.
-        """
-        layer = self._document.active_layer()
-        return None if layer is None else layer.image
-
-    def current_selection(self) -> np.ndarray | None:
-        return self._document.selection()
-
-    def invalidate_texture(self) -> None:
-        """Mark the GL texture for full re-upload on the next paint.
-
-        Used after wholesale document mutations (undo / redo, file
-        load) so the canvas's GL texture reflects the new pixels
-        instead of the previous frame's cache.
-        """
-        self._needs_upload = True
-        self._pending_damage = EMPTY_DAMAGE
-
-    def _on_document_changed(self) -> None:
-        """Subscriber for the active PaintDocument's _notify pulses.
-
-        Forces a full texture re-upload on the next paint and queues
-        a repaint. Triggered by add / remove / move / duplicate
-        layer, set_layer_attribute, merge / flatten, transform, and
-        any other wholesale mutation the document signals through
-        :meth:`PaintDocument.listen`.
-        """
-        self._needs_upload = True
-        self._pending_damage = EMPTY_DAMAGE
-        self.update()
-
-    def set_selection(self, mask: np.ndarray | None) -> None:
-        if mask is not None and (mask.ndim != 2 or mask.dtype != np.bool_):
-            raise ValueError(
-                f"selection mask must be HxW bool, got {mask.shape} {mask.dtype}",
-            )
-        self._document.set_selection(mask)
-        if mask is None:
-            self._marquee_segments = None
-            self._marquee_timer.stop()
-        else:
-            self._marquee_segments = selection_outline_segments(mask)
-            if self._marquee_segments.shape[0] > 0:
-                self._marquee_timer.start()
-            else:
-                self._marquee_timer.stop()
-        self.update()
 
     def set_tool_dispatcher(self, dispatcher: ToolDispatcher | None) -> None:
         self._dispatcher = dispatcher
@@ -605,251 +406,3 @@ class PaintCanvas(
         """
         from Imervue.paint.visual_guides import should_show_pixel_grid
         return self._pixel_grid_visible and should_show_pixel_grid(self._zoom)
-
-    # ---- GL lifecycle ----------------------------------------------------
-
-    def initializeGL(self) -> None:  # pragma: no cover - GL needs display server
-        glClearColor(0.12, 0.12, 0.12, 1.0)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glEnable(GL_TEXTURE_2D)
-
-    def showEvent(self, event) -> None:  # pragma: no cover - Qt UI
-        """Defer a fit-to-window until after Qt's first layout pass.
-
-        The canvas is hosted inside a QTabWidget that lays out its
-        pages asynchronously: the first ``resizeGL`` lands while the
-        widget is still at an intermediate size (the tab bar hasn't
-        finished sizing the page area), so the fit math anchors to
-        that smaller dimension and the canvas ends up half off-
-        screen once the layout settles.
-
-        ``QTimer.singleShot(0, …)`` runs after Qt drains its layout
-        queue; reasserting ``_fit_pending`` and forcing the next
-        ``resizeGL`` / ``paintGL`` to refit catches the post-layout
-        size. Cheap because the timer fires once per show.
-        """
-        super().showEvent(event)
-        self._fit_pending = True
-        call_later(0, self, self._deferred_fit_after_show)
-
-    def _deferred_fit_after_show(self) -> None:  # pragma: no cover - Qt UI
-        """Recompute the fit once Qt has finalised the widget layout."""
-        widget_w, widget_h = self._last_resize_size
-        if (widget_w, widget_h) == (0, 0):
-            widget_w = self.width()
-            widget_h = self.height()
-        if widget_w <= 0 or widget_h <= 0:
-            # Still degenerate — leave _fit_pending set so paintGL's
-            # safety net retries on the next paint.
-            return
-        if self._user_view_locked:
-            self._fit_pending = False
-            return
-        self._reset_view_to_fit(widget_size=(widget_w, widget_h))
-        self.update()
-
-    def resizeGL(self, w: int, h: int) -> None:  # pragma: no cover - GL
-        # Qt 6 passes ``w`` / ``h`` here in DEVICE pixels (the framebuffer
-        # size, computed internally as ``size() * devicePixelRatio()``).
-        # We don't trust the parameter convention across Qt minor versions,
-        # so the layout math reads ``self.width() / height()`` instead —
-        # those are guaranteed logical pixels regardless of Qt version,
-        # which keeps the fit calculation in the same coordinate space as
-        # the pan / zoom values it produces. Mixing the two (treating
-        # device-pixel ``h`` as if it were logical) is what previously
-        # left the document anchored at the bottom of the canvas on HiDPI
-        # screens — pan_y = (device_h - logical_displayed) / 2 over-shot
-        # by a factor of dpr.
-        log_w = max(1, int(self.width()))
-        log_h = max(1, int(self.height()))
-        dev_w = max(1, int(w))
-        dev_h = max(1, int(h))
-        glViewport(0, 0, dev_w, dev_h)
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        # Ortho stays in logical pixels so pan / zoom math draws to the
-        # right region — the GL pipeline rescales to the device-pixel
-        # framebuffer automatically via the viewport.
-        glOrtho(0, log_w, log_h, 0, -1, 1)
-        glMatrixMode(GL_MODELVIEW)
-        self._last_resize_size = (log_w, log_h)
-        # Re-fit on every resize until the user manually controls the
-        # view. ``_fit_pending`` covers the deferred-init case (widget
-        # was too small earlier); ``_user_view_locked`` is the user-took-
-        # control flag that pins the view once they wheel-zoom or pan.
-        if self._fit_pending or not self._user_view_locked:
-            self._reset_view_to_fit(widget_size=(log_w, log_h))
-
-    def paintGL(self) -> None:  # pragma: no cover - GL needs display server
-        if not self._gl_context_alive():
-            return
-        composite = self._document.composite()
-        if composite is None:
-            return
-        self._maybe_refit_view()
-        if self._needs_upload:
-            self._upload_texture(composite)
-            self._needs_upload = False
-        if self._texture is None:
-            return
-
-        h, w = composite.shape[:2]
-        glPushMatrix()
-        glLoadIdentity()
-        glTranslatef(self._pan_x, self._pan_y, 0.0)
-        glScalef(self._zoom, self._zoom, 1.0)
-        # Rotation pivots about the canvas centre so the visual mid
-        # stays put — matches the screen↔image conversion math in
-        # ``_screen_to_image`` and the View-menu rotate action.
-        # ``isclose`` covers tiny accumulated drift from repeated
-        # ±15° increments rather than a strict ``!= 0.0``.
-        if not math.isclose(self._rotation_deg, 0.0, abs_tol=1e-6):
-            glTranslatef(w / 2.0, h / 2.0, 0.0)
-            glRotatef(self._rotation_deg, 0.0, 0.0, 1.0)
-            glTranslatef(-w / 2.0, -h / 2.0, 0.0)
-
-        self._draw_transparency_backdrop(w, h)
-        glBindTexture(GL_TEXTURE_2D, self._texture)
-        glColor4f(1.0, 1.0, 1.0, 1.0)
-        glBegin(GL_QUADS)
-        glTexCoord2f(0.0, 0.0); glVertex2f(0.0, 0.0)
-        glTexCoord2f(1.0, 0.0); glVertex2f(w, 0.0)
-        glTexCoord2f(1.0, 1.0); glVertex2f(w, h)
-        glTexCoord2f(0.0, 1.0); glVertex2f(0.0, h)
-        glEnd()
-        glBindTexture(GL_TEXTURE_2D, 0)
-        self._draw_overlays(w, h)
-        glPopMatrix()
-        # HUD overlay sits in widget-space (un-rotated) so the user
-        # always sees a circular ring at the canvas centre regardless
-        # of the canvas rotation. Drawn AFTER popping the modelview.
-        if self._size_hud is not None:
-            self._draw_size_hud()
-
-    @staticmethod
-    def _gl_context_alive() -> bool:  # pragma: no cover - GL needs display server
-        """Return False (and clear safely) when no GL context is current.
-
-        Happens on teardown when a queued paint event fires after the
-        canvas was detached. Without this guard ``glClear`` returns
-        ``GL_INVALID_OPERATION`` which PyOpenGL turns into a GLError
-        that can take other tests down with it.
-        """
-        from PySide6.QtGui import QOpenGLContext
-        if QOpenGLContext.currentContext() is None:
-            return False
-        try:
-            glClear(GL_COLOR_BUFFER_BIT)
-        except GLError:   # GL context torn down
-            return False
-        return True
-
-    def _maybe_refit_view(self) -> None:  # pragma: no cover - GL needs display server
-        """Recovery path for the deferred-fit case: re-fit when the
-        widget grew between the last fit and now while the user hasn't
-        taken view control. Handles the QTabWidget intermediate-size
-        scenario where the first ``resizeGL`` fired before the tab
-        page reached its real width.
-        """
-        widget_w, widget_h = self._last_resize_size
-        if (widget_w, widget_h) == (0, 0):
-            widget_w = self.width()
-            widget_h = self.height()
-        if widget_w <= 0 or widget_h <= 0:
-            return
-        needs_refit = self._fit_pending or (
-            not self._user_view_locked
-            and self._fitted_widget_size != (widget_w, widget_h)
-        )
-        if needs_refit:
-            self._reset_view_to_fit(widget_size=(widget_w, widget_h))
-
-    # ---- mouse / tablet --------------------------------------------------
-
-    # ---- internal helpers ------------------------------------------------
-
-    # ---- material drag-drop ---------------------------------------------
-
-
-    def _upload_checker_texture(self) -> None:  # pragma: no cover - GL only
-        """Build / upload the transparency-checker tile to the GPU.
-
-        Called from ``paintGL`` the first time the canvas paints. The
-        tile is tiny (``2 * _CHECKER_CELL_PX`` square) so we don't
-        bother with sub-uploads — a single ``glTexImage2D`` plus the
-        wrap / filter state is enough. ``GL_REPEAT`` makes the same
-        tile cover the entire canvas via the texcoord scaling in
-        ``paintGL``; ``GL_NEAREST`` keeps the cell edges crisp under
-        any zoom.
-        """
-        try:
-            tile = build_checker_pattern()
-            tex = int(glGenTextures(1))
-            glBindTexture(GL_TEXTURE_2D, tex)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-            glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RGBA,
-                tile.shape[1], tile.shape[0], 0,
-                GL_RGBA, GL_UNSIGNED_BYTE, tile.tobytes(),
-            )
-            glBindTexture(GL_TEXTURE_2D, 0)
-            self._checker_texture = tex
-        except GLError:
-            logger.warning("Could not upload the checker texture; using a plain backdrop",
-                           exc_info=True)
-            # Fallback path in paintGL renders the legacy white quad
-            # if this stays None.
-            self._checker_texture = None
-
-    def _upload_texture(  # pragma: no cover - GL needs display server
-        self, composite: np.ndarray,
-    ) -> None:
-        if composite is None:
-            if self._texture is not None:
-                glDeleteTextures(1, [self._texture])
-                self._texture = None
-            return
-        h, w = composite.shape[:2]
-        first_upload = self._texture is None
-        if first_upload:
-            self._texture = int(glGenTextures(1))
-        glBindTexture(GL_TEXTURE_2D, self._texture)
-        if first_upload:
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-        damage = self._pending_damage.clipped_to((h, w))
-        if (
-            first_upload
-            or damage.is_empty
-            or damage.covers_full((h, w))
-        ):
-            glTexImage2D(
-                GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                GL_RGBA, GL_UNSIGNED_BYTE, composite.tobytes(),
-            )
-        else:
-            # Sub-region upload — only the dirty pixels move across
-            # the bus. The slice is materialised into a packed buffer
-            # via ``ascontiguousarray`` so the bytes handed to OpenGL
-            # are exactly damage.h * damage.w * 4 long; we therefore
-            # leave UNPACK_ROW_LENGTH at the default (0 = packed
-            # rows). Setting it to ``w`` here would tell GL that each
-            # source row is the full canvas wide and trigger a read
-            # past the end of the packed buffer.
-            sub = np.ascontiguousarray(
-                composite[damage.y:damage.y2, damage.x:damage.x2, :],
-            )
-            glTexSubImage2D(
-                GL_TEXTURE_2D, 0,
-                damage.x, damage.y, damage.w, damage.h,
-                GL_RGBA, GL_UNSIGNED_BYTE,
-                sub.tobytes(),
-            )
-        glBindTexture(GL_TEXTURE_2D, 0)
-        self._pending_damage = EMPTY_DAMAGE

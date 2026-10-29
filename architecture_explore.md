@@ -850,7 +850,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `document_geometry.py` | 214 | `DocumentGeometryMixin`：裁切（矩形／選取／非透明）、翻轉、90/180° 旋轉、縮放、自由變形，圖層、遮罩與已存選取一起改 |
 | `document_merge.py` | 201 | `DocumentMergeMixin`：依色塊拆分作用中圖層、向下合併、合併可見、平面化 |
 | `document_groups.py` | 136 | `DocumentGroupsMixin`：圖層群組的建立／刪除／改名、成員與群組屬性 |
-| `canvas.py` | 855 | `PaintCanvas`：GPU 加速的中央繪圖表面——文件與選取、GL 生命週期與 `paintGL`、材質上傳；疊加繪製、輸入、視圖變換來自下面三個 mixin，`PointerEvent` 等由 `__all__` re-export |
+| `canvas.py` | 408 | `PaintCanvas`：GPU 加速的中央繪圖表面——Qt 訊號、建構與初始狀態、工具游標（`cursor_for_tool`）、工具預覽／出血線／洋蔥皮／尺寸 HUD／像素格線設定；文件、GL 生命週期、疊加繪製、輸入、視圖變換來自下面五個 mixin，`PointerEvent`、`DEFAULT_CANVAS_*` 等由 `__all__` re-export |
+| `canvas_document.py` | 177 | `PaintCanvasDocumentMixin` + `DEFAULT_CANVAS_*`：載入影像／空白畫布、換頁換文件、文件變更觸發整張重傳、選取遮罩與行進螞蟻外框 |
+| `canvas_gl.py` | 310 | `PaintCanvasGLMixin`：`initializeGL`／`resizeGL`／`paintGL`、顯示後與繪製時的適配補救、GL context 存活檢查、文件貼圖（整張或損壞矩形子區域）與棋盤格貼圖上傳 |
 | `canvas_overlays.py` | 538 | `PaintCanvasOverlaysMixin`：棋盤背景（`build_checker_pattern`）、行進螞蟻選取框、工具預覽、多邊形預覽、出血線、洋蔥皮、尺寸 HUD、拖放高亮、像素格線 VBO |
 | `canvas_input.py` | 365 | `PaintCanvasInputMixin`：指標與繪圖板事件、平移縮放、鋼筆與拖放；素材插入完成時經 dispatcher 建立 Undo 步驟 |
 | `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
@@ -1586,8 +1588,8 @@ GPU 顯影以固定 640k/24MP/60MP actual Vulkan device 量測 host upload/readb
 
 5. **OpenGL 符號一律明確列名匯入**（`from OpenGL.GL import (glBindTexture, ...)`），全樹沒有 wildcard
    import，所以也沒有 `F403/F405` 豁免。測試會在模組上 monkeypatch 這些 GL 符號（例如
-   `paint/canvas.py` 的貼圖上傳），搬動用到它們的程式碼時 patch 目標要跟著改。僅 `gl_renderer.py`、
-   `paint/canvas.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
+   `paint/canvas_gl.py` 的貼圖上傳），搬動用到它們的程式碼時 patch 目標要跟著改。僅 `gl_renderer.py`、
+   `paint/canvas_gl.py`、`paint/canvas_overlays.py` 保留 `E702`（`glTexCoord`/`glVertex` 成對寫在同一行）。
 
 6. **檔案長度上限 1000 行**是專案規則，目前所有模組都符合（`multi_language/*.py` 是資料字典，不適用）。
    接近上限的包括 `mcp_server/tool_defs_edit.py`(929)；要在接近 1000 行的檔案
