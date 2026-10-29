@@ -837,7 +837,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
 | `document_io.py` | 453 | 原生 .imervue NPZ 文件讀寫、圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
-| `psd_io.py` | 873 | Photoshop `.psd` 匯入 / 匯出（互通子集） |
+| `psd_io.py` | 258 | Photoshop `.psd` 匯入 / 匯出（互通子集）公開入口：`save_psd`（原子取代寫入）/ `load_psd` 與檔頭驗證；再匯出 `psd_io_*` 所有名稱，`_pack_layer_and_mask_section` 等步驟經本模組 globals 解析故 patch 仍有效 |
+| `psd_io_format.py` | 171 | PSD 格式常數（檔頭、通道、混合模式鍵、圖層旗標、壓縮、區段分隔）、有界 `_Cursor`、PackBits RLE 解碼、Pascal 字串讀寫、通道 ID → RGBA 平面 |
+| `psd_io_write.py` | 272 | PSD 寫入各區段：檔頭、圖層 + 遮罩區段（`lsct` 群組分隔、`luni` Unicode 名稱）、原始未壓縮通道與合成影像，位元組完全決定性 |
+| `psd_io_read_layers.py` | 204 | PSD 讀取：圖層記錄與附加資訊（`luni` / `lsct`）解析，由下而上走訪記錄並依區段分隔重建圖層群組 |
+| `psd_io_read_pixels.py` | 177 | PSD 讀取：原始 / PackBits 通道平面解碼、圖層貼到全畫布（裁切超出畫布部分）、尾端合成影像區段 |
 | `undo_stack.py` | 190 | 每文件 512 MiB／50 步驟容量歷史；不可變共用像素與完整 metadata 復原、存活圖層身分；available_snapshot 提供已持有快照，背景保存不在 timer 捕捉整張陣列 |
 | `history_pixels.py` | 163 | 純運算 256px 不可變 tile、弱 interning 索引、完整／區域 capture 與差異 patch，計算唯一資料及 Python 狀態容量 |
 | `damage.py` | 151 | 破損矩形記帳，供部分材質上傳；另有 `(x, y, w, h)` 元組版的 `union_rects()` / `from_rect()` 給修飾工具累積筆畫用 |
