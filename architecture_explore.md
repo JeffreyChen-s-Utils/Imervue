@@ -907,7 +907,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `color_palette_io.py`(303) 外部調色盤格式 · `swatch_panel.py`(348) ·
 `palette_extract.py`(168) median-cut 抽色 · `match_color.py`(96) Filter > Match Colour…（參考圖片的色調）· `match_palette.py`(108) Filter > Match Swatches…（換成最近的色票顏色）·
 `color_blindness.py`(118) CVD 模擬 ·
-`adjustments.py`(739) 純 NumPy 非破壞性調整種類與套用管線 · `histogram.py`(128) + `histogram_dock.py`(141)
+`adjustments.py`(278) 純 NumPy 非破壞性調整：`Adjustment`、依種類分派的 `apply_adjustment` 與色調種類（levels／curves／亮度對比／posterize／threshold），並轉出下列模組的公開名稱 + `adjustments_params.py`(111) 調整種類登錄、`DEFAULT_PARAMS` 與 selective color 色相區段 + `adjustments_color.py`(322) 色彩種類（HSV／色彩平衡／selective color／photo filter／HSL／channel mixer）與向量化 HSV／HSL 轉換 + `adjustments_gradient.py`(88) Gradient Map（亮度經多色標 LUT） · `histogram.py`(128) + `histogram_dock.py`(141)
 
 #### 漫畫 / 網點
 
