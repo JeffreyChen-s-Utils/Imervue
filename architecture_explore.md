@@ -473,7 +473,12 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（774 行）只保留 GL 生命
 | `tile_viewport.py` | 112 | 純運算格線 viewport、列／欄 buffer 候選、cell origin 與 cached 最大尺寸；繪製／載入／淘汰共用 |
 | `thumbnail_queue.py` | 92 | 純運算 bounded 工作計畫；捲動替換 unstarted work、source membership 索引、current workload 進度、filmstrip／retry 與 full-size extent 的 bounded backfill |
 | `deep_zoom_renderer.py` | 277 | Deep-zoom 圖磚 + minimap GL 繪製 |
-| `overlay_painter.py` | 885 | 所有 `QPainter` 疊層：OSD、HUD、直方圖、filmstrip、letterbox（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
+| `overlay_painter.py` | 207 | `OverlayPainter`：`QPainter` 疊層的編排——依狀態挑出啟用的疊層並固定繪製順序、逐層隔離例外、合成到離屏 `QImage`；各疊層由下列四個 mixin 提供（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
+| `overlay_tiles.py` | 226 | `OverlayTilesMixin`：圖磚牆疊層——檔名標題、徽章、placeholder 轉圈、掃描中整牆轉圈、載入失敗／遺失面板，以及 placeholder／淡入的重繪計時器 |
+| `overlay_hud.py` | 225 | `OverlayHudMixin`：縮放百分比、RGB 直方圖與裁切讀數、動畫幀指示、F3 OSD（EXIF 行快取）、Ctrl+F3 Debug HUD、短暫的快速中繼資料 HUD |
+| `overlay_inspect.py` | 173 | `OverlayInspectMixin`：像素格線與 hover RGB HUD、deep zoom 與圖磚牆放大鏡、橡皮筋縮放框 |
+| `overlay_filmstrip.py` | 143 | `OverlayFilmstripMixin`：底部 filmstrip（縮圖 pixmap 快取、缺圖時要求縮圖）、載入中低解析預覽與「Loading…」膠囊、載入失敗面板 |
+| `overlay_style.py` | 26 | 疊層共用的字型與顏色常數，以及 numpy RGBA → `QPixmap` 轉換 |
 | `tile_badges.py` | 93 | 圖磚徽章繪製：色彩標籤條、收藏、書籤、星等、堆疊數、日期、影片播放圓鈕（純 `QPainter`，不需 GL） |
 | `texture_upload.py` | 162 | 統一 RGBA 材質上傳（含 RGB→RGBA padding） |
 | `pbo_uploader.py` | 243 | Pixel-Buffer-Object 串流上傳，避免 GUI 執行緒卡在驅動 staging copy |
