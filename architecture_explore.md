@@ -916,7 +916,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `paint_workspace.py` | 804 | 頂層 PaintWorkspace；完整 history/damage 提交與 Undo／Redo 修改標記；來源路徑傳遞、髒文件拖放保護、confirm_close 由主視窗呼叫 |
+| `paint_workspace.py` | 373 | 頂層 PaintWorkspace 協調者：建構順序、畫布／dispatcher 接線、load_image 來源路徑傳遞、confirm_close 由主視窗呼叫、選單列；行為交給下列 workspace_* mixin（新 mixin 排在既有 mixin 之前，保持原方法優先序）；再匯出 `_pointer_button_held` |
 | `tool_dispatcher.py` | 482 | 工具事件路由與手勢提交；累計筆刷／橡皮擦 damage，僅提交回呼期間提供區域 hints；切頁、切工具與部分失敗保守捕捉 |
 | `tool_state.py` | 238 | Paint tool state, public settings exports, persistence, and listeners. |
 | `tool_state_brush_fill.py` | 43 | Apply atomic brush and fill snapshot changes. |
@@ -941,6 +941,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_docks.py` | 433 | 分頁式全高度 inspector、Window 選單三組邏輯分類、可捲動 dock 與穩定 objectName 的版面存還原；重設解除浮動並把工具列放回左側；未還原版面時首次顯示後才設定預設寬度 |
 | `workspace_content.py` | 469 | 文件內容命令；姿勢與材質插入透過 workspace_history 提交 Undo 與髒狀態 |
 | `workspace_history.py` | 15 | 圖層選單、漫畫圖層與素材插入共用的完整編輯提交邊界 |
+| `workspace_undo.py` | 155 | 每畫布一個 Undo 堆疊（文件物件替換時重建）；完整 history/damage 提交與修改標記；按住滑鼠時延後 Undo／Redo；剩餘步數 toast，無 toast 時退回狀態列 |
+| `workspace_drop.py` | 99 | 拖放開檔的 Qt 覆寫：.imervue／PSD 經 file-menu bridge，點陣圖解碼後經 load_image 包裝，髒分頁先開新分頁，更新最近清單；解碼失敗記錄警告 |
+| `workspace_canvas_events.py` | 139 | 工具狀態事件、筆刷環游標、依工具升起 dock、hover／載入狀態訊息；導覽器預覽與直方圖以 160 ms 計時器合併並推送副視窗 |
+| `workspace_canvas_menu.py` | 84 | 畫布右鍵快速選單（Undo／Redo／全選／取消選取／符合視窗／100 %）與選取輔助 |
+| `workspace_tab_strip.py` | 66 | 分頁列「+」角落按鈕；eventFilter：畫布縮放時置中歡迎提示，分頁列中鍵關閉分頁，其餘交給 Qt 基底 |
 | `workspace_status.py` | 349 | 狀態列與縮放指示；文件修改／保存位置、快照結果與上次時間；完整提示共用 document_status |
 | `workspace_shortcuts.py` | 317 | 快捷鍵、筆刷調整、歡迎提示；圖層排序完成時提交 Undo，邊界不建立空步驟 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
