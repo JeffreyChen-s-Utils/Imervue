@@ -202,8 +202,8 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
   「Pure math in :mod:`Imervue.image.xxx`; this is the Qt shell」。
 - 從 Qt 類別抽出的純函式（`vram_budget.py`、`layers.py`、`tile_layout.py`、`edge_snap.py`…）
   可以不開 GL context、不建 widget 就直接單元測試。
-- `gpu_image_view.py`（774 行）本身只留 GL 生命週期與 Qt 事件轉發，
-  其餘全部委派給約 40 個 collaborator 模組。
+- `gpu_image_view.py`（351 行）本身只留 GL 生命週期與 Qt 事件轉發，
+  其餘由八個 `view_*`／載入 mixin 與約 40 個 collaborator 模組分擔。
 
 ---
 
@@ -457,14 +457,18 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 
 ### 6.10 `Imervue/gpu_image_view/`
 
-OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（774 行）只保留 GL 生命週期與 Qt 事件覆寫，
+OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（351 行）只保留 GL 生命週期與 Qt 事件覆寫，
 其餘拆成約 40 個協作者。有兩種顯示狀態：**tile wall**（縮圖牆）與 **deep zoom**（單張深縮放）。
 
 #### 檢視器主體與渲染
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `gpu_image_view.py` | 773 | 主 GL widget 與 Qt 事件轉發；cancel 退休 viewport queue／pending markers，實際解碼仍由 pool 持有到結束；快捷鍵橋接與下面四個 mixin |
+| `gpu_image_view.py` | 351 | 主 GL widget：建構子、worker pool／collaborator 初始化、`initializeGL`／`resizeGL`／`paintGL`、show／hide／key／gesture／drag-drop 等 Qt 事件覆寫；其餘方法來自下面八個 mixin（皆排在 `QOpenGLWidget` 之前、不定義 `__init__`） |
+| `view_recipe.py` | 83 | `ViewRecipeMixin`：開「修改」分頁並綁定當前圖、recipe commit 推入 undo、recipe／CVD 檢視模式改變後丟掉預取並重載當前圖（先存縮放位置再拆 deep zoom） |
+| `view_browse_actions.py` | 100 | `ViewBrowseActionsMixin`：當前路徑、狀態列同步、書籤切換、剪貼簿貼上、快捷鍵動作、瀏覽歷史、色標／cull、隨機跳圖、縮放位置記憶與本地化 toast |
+| `view_resources.py` | 158 | `ViewResourcesMixin`：tile wall／deep zoom 紋理釋放（含 make-current 守衛與 minimap）、tile／deep-zoom／預取 worker 取消（cancel 退休 viewport queue／pending markers，實際解碼仍由 pool 持有到結束）、動畫播放起停、清空 tile wall |
+| `view_tile_grid.py` | 123 | `ViewTileGridMixin`：縮圖尺寸變更（牆上重建、deep zoom 中延後）、`tile_loader` 入口與 worker 回呼、hover 預覽、縮圖牆捲動夾限 |
 | `view_state_init.py` | 279 | 建構子狀態初始化（tile grid、deep zoom、互動、顯示）；追蹤 cached tile 最大尺寸供 O(1) viewport bound，不碰 GL |
 | `deep_zoom_loading.py` | 306 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知；全尺寸圖上螢幕後分派外掛的 `on_image_loaded`） |
 | `shown_file_watch.py` | 87 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看；`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間，之後每 `POLL_MS`（500 ms）用 `os.stat` 量一次，變了之後又連續一次沒變（寫完了）才經 `_reload_rewritten_image` 重新載入並重解縮圖；外部編輯器就地覆寫、寫副本再改名蓋過去、保留原修改時間的存檔都看得到。刻意不用 `QFileSystemWatcher` 監看檔案：在 Windows 上它讓其他程式改名蓋過去的存檔約一成被拒絕存取（實測 600 次 54 次），資料夾監看與 `os.stat` 都不會 |
