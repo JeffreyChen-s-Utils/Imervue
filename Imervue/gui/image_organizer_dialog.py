@@ -2,238 +2,64 @@
 圖片整理工具
 Image Organizer — sort images into subfolders by date, resolution,
 file type, file size, or fixed count.
+
+The planning lives in :mod:`Imervue.gui.image_organizer_plan`, the worker in
+:mod:`Imervue.gui.image_organizer_worker` and the layout in
+:mod:`Imervue.gui.image_organizer_ui`; their names are re-exported here.
 """
 from __future__ import annotations
 
-import logging
 import os
-import shutil
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QButtonGroup,
-    QComboBox,
-    QDialog,
-    QFileDialog,
-    QHBoxLayout,
-    QLabel,
-    QProgressBar,
-    QPushButton,
-    QRadioButton,
-    QSpinBox,
-    QTreeWidget,
-    QTreeWidgetItem,
-    QVBoxLayout,
-)
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QFileDialog, QTreeWidgetItem
 
-from Imervue.system.image_listing import list_images
-from Imervue.gui.dialog_rows import folder_picker_row
-from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.image.dimensions import image_dimensions
-from Imervue.image.formats import JPEG_EXTENSIONS, STILL_IMAGE_EXTENSIONS
-from Imervue.library.calendar_index import UNKNOWN_DATETIME, capture_datetime
+from Imervue.gui.image_organizer_plan import (
+    RULE_COUNT,
+    RULE_DATE,
+    RULE_RESOLUTION,
+    RULE_SIZE,
+    RULE_TYPE,
+    _get_image_date,
+    _get_resolution_bucket,
+    _get_size_bucket,
+    _get_type_bucket,
+    _scan_folder,
+    plan_organization,
+)
+from Imervue.gui.image_organizer_ui import OrganizerLayoutMixin
+from Imervue.gui.image_organizer_worker import _OrganizerWorker
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.system.file_transfer import carry_sidecars, follow_saved_data
+from Imervue.plugin.worker_host import WorkerHostMixin
+from Imervue.system.file_transfer import follow_saved_data
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-logger = logging.getLogger("Imervue.image_organizer")
-
-RULE_DATE = "date"
-RULE_RESOLUTION = "resolution"
-RULE_TYPE = "type"
-RULE_SIZE = "size"
-RULE_COUNT = "count"
-
-
-# ---------------------------------------------------------------------------
-# Folder scanning
-# ---------------------------------------------------------------------------
-
-def _scan_folder(folder: str) -> list[str]:
-    """Return image paths in *folder* (non-recursive), in natural name order."""
-    return list_images(folder, STILL_IMAGE_EXTENSIONS)
-
-
-# ---------------------------------------------------------------------------
-# Planning — pure function, no side effects
-# ---------------------------------------------------------------------------
-
-def _get_image_date(path: str, year_only: bool) -> str:
-    """Return a date-based subfolder name for *path*."""
-    taken = capture_datetime(path)
-    if taken == UNKNOWN_DATETIME:
-        return "unknown"
-    return taken.strftime("%Y" if year_only else "%Y-%m")
-
-
-def _get_resolution_bucket(path: str) -> str:
-    """Classify image by its longer edge."""
-    dims = image_dimensions(path)
-    if dims is None:
-        return "unknown"
-    longest = max(dims)
-    if longest >= 3840:
-        return "4K+"
-    if longest >= 1920:
-        return "1080p+"
-    if longest >= 1280:
-        return "720p+"
-    return "small"
-
-
-def _get_type_bucket(path: str) -> str:
-    """Return a normalised extension group name."""
-    ext = Path(path).suffix.lower()
-    if ext in JPEG_EXTENSIONS:
-        return "JPG"
-    return ext.lstrip(".").upper() or "OTHER"
-
-
-def _get_size_bucket(path: str, large_mb: float, small_mb: float) -> str:
-    """Classify by file size."""
-    try:
-        size = os.path.getsize(path)
-    except OSError:
-        return "unknown"
-    if size >= large_mb * 1024 * 1024:
-        return "large"
-    if size >= small_mb * 1024 * 1024:
-        return "medium"
-    return "small"
-
-
-def plan_organization(
-    paths: list[str],
-    rule: str,
-    *,
-    year_only: bool = False,
-    large_mb: float = 5.0,
-    small_mb: float = 1.0,
-    count_per_folder: int = 100,
-) -> dict[str, list[str]]:
-    """Return ``{subfolder_name: [paths]}`` without touching the filesystem."""
-    plan: dict[str, list[str]] = {}
-    for i, p in enumerate(paths):
-        if rule == RULE_DATE:
-            bucket = _get_image_date(p, year_only)
-        elif rule == RULE_RESOLUTION:
-            bucket = _get_resolution_bucket(p)
-        elif rule == RULE_TYPE:
-            bucket = _get_type_bucket(p)
-        elif rule == RULE_SIZE:
-            bucket = _get_size_bucket(p, large_mb, small_mb)
-        elif rule == RULE_COUNT:
-            bucket = f"{(i // count_per_folder) + 1:03d}"
-        else:
-            bucket = "other"
-        plan.setdefault(bucket, []).append(p)
-    return plan
-
-
-# ---------------------------------------------------------------------------
-# Worker thread
-# ---------------------------------------------------------------------------
-
-class _OrganizerWorker(QThread):
-    progress = Signal(int, int, str)   # current, total, filename
-    result_ready = Signal(int, int)    # success, failed
-    # {old: new} of the files moved, for their saved data to follow on the GUI thread
-    files_moved = Signal(dict)
-
-    def __init__(
-        self,
-        plan: dict[str, list[str]],
-        output_dir: str,
-        move: bool,
-        parent=None,
-    ):
-        super().__init__(parent)
-        self._plan = plan
-        self._output_dir = output_dir
-        self._move = move
-        self._abort = False
-        self._moved: dict[str, str] = {}
-
-    def abort(self):
-        self._abort = True
-
-    def run(self):
-        total = sum(len(v) for v in self._plan.values())
-        state = {"done": 0, "success": 0, "failed": 0}
-        for subfolder, paths in self._plan.items():
-            dest_dir = os.path.join(self._output_dir, subfolder)
-            try:
-                os.makedirs(dest_dir, exist_ok=True)
-            except OSError:
-                # An unwritable output folder fails the group; escaping, the error
-                # left the dialog waiting for a result that never came.
-                logger.exception("Could not create %s", dest_dir)
-                state["done"] += len(paths)
-                state["failed"] += len(paths)
-                continue
-            if self._process_group(paths, dest_dir, total, state):
-                break
-        if self._moved:
-            self.files_moved.emit(dict(self._moved))
-        self.result_ready.emit(state["success"], state["failed"])
-
-    def _process_group(self, paths, dest_dir: str, total: int, state: dict) -> bool:
-        """Return True if we aborted mid-way."""
-        for src in paths:
-            if self._abort:
-                return True
-            state["done"] += 1
-            name = os.path.basename(src)
-            self.progress.emit(state["done"], total, name)
-            dest = self._resolve_collision(os.path.join(dest_dir, name))
-            if self._transfer(src, dest):
-                state["success"] += 1
-            else:
-                state["failed"] += 1
-        return False
-
-    @staticmethod
-    def _resolve_collision(dest: str) -> str:
-        if not os.path.exists(dest):
-            return dest
-        dir_name = os.path.dirname(dest)
-        name = os.path.basename(dest)
-        stem = Path(name).stem
-        ext = Path(name).suffix
-        counter = 1
-        candidate = dest
-        while os.path.exists(candidate):
-            candidate = os.path.join(dir_name, f"{stem}_{counter}{ext}")
-            counter += 1
-        return candidate
-
-    def _transfer(self, src: str, dest: str) -> bool:
-        try:
-            if self._move:
-                shutil.move(src, dest)
-            else:
-                shutil.copy2(src, dest)
-        except OSError:
-            # shutil.Error inherits from OSError, so the bare OSError catches both.
-            logger.exception("Failed to %s %s", "move" if self._move else "copy", src)
-            return False
-        # The XMP / annotation sidecars go along; the saved rating, tags and
-        # library rows are re-keyed on the GUI thread (files_moved).
-        carry_sidecars([(src, dest)], move=self._move)
-        if self._move:
-            self._moved[src] = dest
-        return True
+__all__ = [
+    "RULE_COUNT",
+    "RULE_DATE",
+    "RULE_RESOLUTION",
+    "RULE_SIZE",
+    "RULE_TYPE",
+    "ImageOrganizerDialog",
+    "_OrganizerWorker",
+    "_get_image_date",
+    "_get_resolution_bucket",
+    "_get_size_bucket",
+    "_get_type_bucket",
+    "_scan_folder",
+    "open_image_organizer",
+    "plan_organization",
+]
 
 
 # ---------------------------------------------------------------------------
 # Dialog
 # ---------------------------------------------------------------------------
 
-class ImageOrganizerDialog(WorkerHostMixin, QDialog):
+class ImageOrganizerDialog(WorkerHostMixin, OrganizerLayoutMixin, QDialog):
     def __init__(self, main_gui: GPUImageView, folder: str | None = None):
         super().__init__(main_gui.main_window)
         self._gui = main_gui
@@ -246,144 +72,6 @@ class ImageOrganizerDialog(WorkerHostMixin, QDialog):
 
         if folder and os.path.isdir(folder):
             self._src_edit.setText(folder)
-
-    # ---- UI ----
-
-    def _build_ui(self):
-        lang = self._lang
-        layout = QVBoxLayout(self)
-
-        src_row, self._src_edit = folder_picker_row(
-            lang.get("organizer_source", "Source folder:"), self._browse_src)
-        self._src_edit.textChanged.connect(self._invalidate_plan)
-        layout.addLayout(src_row)
-        layout.addLayout(self._build_rule_row(lang))
-
-        # --- Rule-specific options ---
-        layout.addLayout(self._build_date_row(lang))
-        layout.addLayout(self._build_size_row(lang))
-        layout.addLayout(self._build_count_row(lang))
-
-        out_row, self._out_edit = folder_picker_row(
-            lang.get("organizer_output", "Output folder:"), self._browse_out)
-        layout.addLayout(out_row)
-        layout.addLayout(self._build_mode_row(lang))
-
-        # Preview tree
-        self._tree = QTreeWidget()
-        self._tree.setHeaderLabels(["Subfolder / File", "Count"])
-        self._tree.setColumnWidth(0, 450)
-        layout.addWidget(self._tree, 1)
-
-        # Progress
-        self._progress = QProgressBar()
-        self._progress.hide()
-        layout.addWidget(self._progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-        layout.addLayout(self._build_button_row(lang))
-
-        # Initial visibility
-        self._on_rule_changed(0)
-
-    def _build_rule_row(self, lang) -> QHBoxLayout:
-        """The "Organize by" combo listing the five rules."""
-        rule_row = QHBoxLayout()
-        rule_row.addWidget(QLabel(lang.get("organizer_rule", "Organize by:")))
-        self._rule_combo = QComboBox()
-        self._rule_combo.addItem(lang.get("organizer_rule_date", "Date"), RULE_DATE)
-        self._rule_combo.addItem(
-            lang.get("organizer_rule_resolution", "Resolution"), RULE_RESOLUTION
-        )
-        self._rule_combo.addItem(lang.get("organizer_rule_type", "File Type"), RULE_TYPE)
-        self._rule_combo.addItem(lang.get("organizer_rule_size", "File Size"), RULE_SIZE)
-        self._rule_combo.addItem(lang.get("organizer_rule_count", "Fixed Count"), RULE_COUNT)
-        self._rule_combo.currentIndexChanged.connect(self._on_rule_changed)
-        rule_row.addWidget(self._rule_combo, 1)
-        return rule_row
-
-    @staticmethod
-    def _option_row(widgets: list) -> QHBoxLayout:
-        """Left-aligned row of ``widgets``; the list is kept to toggle them per rule."""
-        row = QHBoxLayout()
-        for widget in widgets:
-            row.addWidget(widget)
-        row.addStretch()
-        return row
-
-    def _plan_spin(self, minimum: int, maximum: int, value: int) -> QSpinBox:
-        """Spin box whose every change invalidates the previewed plan."""
-        spin = QSpinBox()
-        spin.setRange(minimum, maximum)
-        spin.setValue(value)
-        spin.valueChanged.connect(self._invalidate_plan)
-        return spin
-
-    def _build_date_row(self, lang) -> QHBoxLayout:
-        """Year-Month / Year-only grouping, shown for the date rule."""
-        self._date_combo = QComboBox()
-        self._date_combo.addItem(lang.get("organizer_date_year_month", "Year-Month"), False)
-        self._date_combo.addItem(lang.get("organizer_date_year", "Year only"), True)
-        self._date_combo.currentIndexChanged.connect(self._invalidate_plan)
-        self._date_row_widgets: list = [
-            QLabel(lang.get("organizer_date_granularity", "Group by:")),
-            self._date_combo,
-        ]
-        return self._option_row(self._date_row_widgets)
-
-    def _build_size_row(self, lang) -> QHBoxLayout:
-        """Large / small thresholds in MB, shown for the file-size rule."""
-        self._size_large_spin = self._plan_spin(1, 1000, 5)
-        self._size_small_spin = self._plan_spin(0, 999, 1)
-        self._size_row_widgets: list = [
-            QLabel(lang.get("organizer_size_large", "Large threshold (MB):")),
-            self._size_large_spin,
-            QLabel(lang.get("organizer_size_small", "Small threshold (MB):")),
-            self._size_small_spin,
-        ]
-        return self._option_row(self._size_row_widgets)
-
-    def _build_count_row(self, lang) -> QHBoxLayout:
-        """Images per subfolder, shown for the fixed-count rule."""
-        self._count_spin = self._plan_spin(1, 10000, 100)
-        self._count_row_widgets: list = [
-            QLabel(lang.get("organizer_count_per_folder", "Images per subfolder:")),
-            self._count_spin,
-        ]
-        return self._option_row(self._count_row_widgets)
-
-    def _build_mode_row(self, lang) -> QHBoxLayout:
-        """Exclusive Copy / Move choice, Copy checked."""
-        mode_row = QHBoxLayout()
-        self._copy_radio = QRadioButton(lang.get("organizer_mode_copy", "Copy files"))
-        self._move_radio = QRadioButton(lang.get("organizer_mode_move", "Move files"))
-        self._copy_radio.setChecked(True)
-        grp = QButtonGroup(self)
-        grp.addButton(self._copy_radio)
-        grp.addButton(self._move_radio)
-        mode_row.addWidget(self._copy_radio)
-        mode_row.addWidget(self._move_radio)
-        mode_row.addStretch()
-        return mode_row
-
-    def _build_button_row(self, lang) -> QHBoxLayout:
-        """Preview and Start (disabled until a preview) on the left, Close on the right."""
-        btn_row = QHBoxLayout()
-        self._preview_btn = QPushButton(lang.get("organizer_preview", "Preview"))
-        self._preview_btn.clicked.connect(self._do_preview)
-        btn_row.addWidget(self._preview_btn)
-
-        self._start_btn = QPushButton(lang.get("organizer_start", "Start"))
-        self._start_btn.clicked.connect(self._do_start)
-        self._start_btn.setEnabled(False)
-        btn_row.addWidget(self._start_btn)
-
-        btn_row.addStretch()
-        close_btn = QPushButton(lang.get("export_cancel", "Close"))
-        close_btn.clicked.connect(self.close)
-        btn_row.addWidget(close_btn)
-        return btn_row
 
     # ---- Helpers ----
 
