@@ -736,7 +736,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_manager.py` | 158 | 具名工作區預設（幾何 + 佈局快照，含 Imervue / Modify 兩個分頁的 dock 版面） |
 | `query_search.py` | 41 | 查詢字串輸入 → 過濾縮圖牆 |
 | `photo_workflow_dialog.py` | 296 | 每視窗 modeless 搜尋→比較→挑片→既有顯影 preset→既有批次匯出；500 筆分頁、保留隱藏勾選／preset／回程，外部 DB 挑片同步，800px 來源比較 |
-| `background_jobs.py` | 337 | 跨視窗持有執行緒及單張 completed results、failure-only retry、bounded clickable 明細與完整報告 |
+| `background_jobs.py` | 143 | 跨視窗背景工作面板外殼：`job_registry()` 每個 QApplication 一份（存在 app 屬性）、`drain_background_jobs()`、`BackgroundJobsDialog`（取消／重試／完整 JSON 報告／雙擊開啟輸出）與 `open_background_jobs()`；re-export `Job` / `JobRegistry` / `RetryFactory` |
+| `background_jobs_registry.py` | 135 | `Job` + `JobRegistry`：register 時 setParent(None) 持有執行緒直到 actual exit、100ms 輪詢 immutable summaries、cooperative cancel、failure-only 單次 retry、單張 completed results、Clear finished、結束時 drain |
+| `background_jobs_rows.py` | 85 | `JobRowsMixin`：工作摘要列（未 settle 的 terminal 顯示 finishing）、選取工作的 bounded 500 筆明細列與按鈕啟用狀態 |
 | `_apply_save.py` | 229 | **共用的「載入 → 套用 → 另存副本」骨架**（`EffectWorker(QThread)`），約 30 個單圖工具對話框與外掛的 `ToolDialogMixin` 共用；`load_rgba()` 回傳檢視器看到的陣列（RAW 全尺寸顯像、sRGB、依 EXIF 轉正）；`output_path(s)` 給出原圖旁不存在的檔名（`photo_clahe.png` → `_1` …，一組共用編號，由 `system/free_names` 挑名），工具再跑一次不會蓋掉上次結果；`finalize_worker()` 在 custom done 提前送達時 passive 背景退場，保留 owner／actual worker lifetime；`show_toast()` / `notify_saved()`（成功字串可換鍵）回報結果（外掛也 import，見 architecture.md §6） |
 
 #### 顯影 / 調色對話框（多為 `_apply_save` 外殼）
@@ -1544,7 +1546,7 @@ explicit take_autosave_snapshot_now 仍同步回傳 path，非 QObject adapter �
 
 `system/job_state.py` 是 pure thread-safe state；export／scanner／AI upscale／shared plugin
 EffectWorker／plugin downloader 在輸出或 chunk transaction 成功後才 record item。
-`gui/background_jobs.py` 以 100ms O(1) immutable summaries 輪詢，不依賴可能被 WorkerHost
+`gui/background_jobs_registry.py` 以 100ms O(1) immutable summaries 輪詢，不依賴可能被 WorkerHost
 斷開的 worker signals；register 時 setParent(None)，避免 QWidget 的 C++ destruction
 摧毀活著的 QThread。Terminal packet 不等於 actual exit，wait(0) 成功才 release／retry。
 原始與每次 retry 都是不同 job，factory 只取 failed_paths，不碰已完成輸出；未完成且取消
