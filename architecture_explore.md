@@ -973,7 +973,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `workspace_status.py` | 349 | 狀態列與縮放指示；文件修改／保存位置、快照結果與上次時間；完整提示共用 document_status |
 | `workspace_shortcuts.py` | 317 | 快捷鍵、筆刷調整、歡迎提示；圖層排序完成時提交 Undo，邊界不建立空步驟 |
 | `workspace_presets.py` | 265 + `workspace_preset_dialog.py`(332) | 具名 dock 佈局預設 |
-| `workspace_autosave.py` | 368 | dirty tabs 共用 immutable committed snapshots 至背景 queue；每文件 pending／saved／failed 與時間／原因，late output 取消；同步 explicit API／復原保留 |
+| `workspace_autosave.py` | 144 | AutosaveMixin 組合下列三個 mixin；週期 timer（最少 1 秒、重用）、同步 explicit snapshot、每文件 saved／failed 狀態與時間、失敗 toast |
+| `workspace_autosave_queue.py` | 90 | dirty tabs 共用 immutable committed snapshots 至背景 queue（無 QObject 時同步寫入）；每文件 pending 狀態，late output 取消並丟棄 |
+| `workspace_autosave_recovery.py` | 136 | 復原候選列表、每文件最新可讀快照開新髒分頁、只認領未被其他分頁擁有的檔案、啟動時 toast／狀態列提示 |
+| `workspace_autosave_files.py` | 60 | 每分頁擁有的快照路徑；關閉分頁／放棄時只刪自己的檔案，無法刪除記錄警告 |
 | `autosave_jobs.py` | 159 | 一個背景 writer／每文件最新 pending；immutable materialization／NPZ 壓縮／file IO，application-owned QObject signals 與取消後清除 late snapshots，queued UI 完成與 sender retirement |
 | `auto_save.py` | 268 | Qt-free 原生快照／原子 metadata、每文件八份 quota、排序與損壞快照回復，供同步入口與背景 writer 共用 |
 | `shortcut_registry.py` | 183 + `shortcut_binding.py`(111) + `shortcut_dialog.py`(180) + `shortcuts_dialog.py`(107) | 可自訂快捷鍵登錄；`shortcut_binding.py` 標記擁有各登錄項的 `QAction` / `QShortcut`，把使用者重新指定的鍵套上去（只換登錄表的那個鍵，保留別名）；`fixed_shortcut_keys` 列出登錄表外動作已占用的鍵，對話框把撞到的列標紅並說明被誰占用 |
