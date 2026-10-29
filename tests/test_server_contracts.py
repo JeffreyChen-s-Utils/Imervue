@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import io
 import json
-import time
+from types import SimpleNamespace
 
 import pytest
 from PIL import Image
@@ -388,18 +388,39 @@ def test_resource_watcher_none_for_missing_root(tmp_path):
     assert server_module._start_resource_watcher(srv) is None
 
 
-def test_resource_watcher_pushes_list_changed(tmp_path):
+class _FakeObserver:
+    """Stands in for watchdog's Observer so the test needs no real file-system event."""
+
+    def __init__(self):
+        self.scheduled = []
+        self.daemon = False
+        self.started = False
+
+    def schedule(self, handler, path, recursive):
+        self.scheduled.append((handler, path, recursive))
+
+    def start(self):
+        self.started = True
+
+
+def test_resource_watcher_pushes_updated_and_list_changed(tmp_path, monkeypatch):
+    import watchdog.observers
+    monkeypatch.setattr(watchdog.observers, "Observer", _FakeObserver)
     srv = MCPServer(resource_root=str(tmp_path))
     stream = io.StringIO()
     srv.notifier = Notifier(stream)
     observer = server_module._start_resource_watcher(srv)
-    assert observer is not None
-    try:
-        (tmp_path / "new.png").write_bytes(b"x")
-        deadline = time.monotonic() + 5.0
-        while "list_changed" not in stream.getvalue() and time.monotonic() < deadline:
-            time.sleep(0.02)
-        assert "notifications/resources/list_changed" in stream.getvalue()
-    finally:
-        observer.stop()
-        observer.join(timeout=5.0)
+    assert isinstance(observer, _FakeObserver)
+    assert observer.started and observer.daemon
+    [(handler, path, recursive)] = observer.scheduled
+    from Imervue.mcp_server.resources import image_uri
+    srv.subscriptions.subscribe(image_uri(str(tmp_path / "new.png")))
+    assert (path, recursive) == (str(tmp_path), False)
+    handler.on_any_event(SimpleNamespace(is_directory=False, src_path=str(tmp_path / "new.png")))
+    file_output = stream.getvalue()
+    assert "notifications/resources/updated" in file_output
+    assert "notifications/resources/list_changed" in file_output
+    handler.on_any_event(SimpleNamespace(is_directory=True, src_path=str(tmp_path / "sub")))
+    dir_output = stream.getvalue()[len(file_output):]
+    assert "notifications/resources/updated" not in dir_output
+    assert "notifications/resources/list_changed" in dir_output
