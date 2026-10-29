@@ -653,7 +653,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `panel_scroll.py` | 26 | PanelScrollArea：受控最小尺寸與可捲動 dock；既有 QScrollArea 不重複包裝，避免巢狀捲動 |
 | `tool_icons.py` | 108 | 共享 palette-aware SVG 線條圖示引擎，供 Paint／Modify／Puppet 使用 |
 | `workspace_widgets.py` | 40 | WorkspaceWelcome：跟隨主題與縮放的標題、說明及主次操作卡片 |
-| `control_tooltips.py` | 292 | 共用缺漏 Tip 補齊、Qt Show／ToolTip 事件濾鏡、選單／分頁／表格項目、快捷鍵及範圍更新；保留原文與模型角色，Qt 呼叫前防重入、短生命週期 wrapper 保護與已刪除事件接收者處理 |
+| `control_tooltips.py` | 117 | 共用缺漏 Tip 補齊入口、Qt Show／ToolTip 事件濾鏡、選單與分頁走訪、生成提示的儲存與更新；保留原文，Qt 呼叫前防重入與已刪除事件接收者處理；`_widget_tip` 為欄位模組的別名（測試修補點） |
+| `control_tooltips_actions.py` | 82 | 已刪除 Qt 物件略過的 `live_call` 防護、QAction 提示（選擇／子選單／切換／動作及即時快捷鍵）與按鈕提示（清除欄位、分頁捲動、預設動作、圖示按鈕） |
+| `control_tooltips_fields.py` | 84 | 畫布類別名稱對照提示、數值範圍／下拉／按鍵序列／文字欄位、標籤與停駐面板提示；不讀輸入值 |
+| `control_tooltips_views.py` | 47 | 分頁提示生成與改名追蹤（保留自訂分頁提示）、項目檢視列與表頭的顯示文字提示，保留模型 ToolTipRole |
 | `tooltip_text.py` | 160 | 多語言提示範本、既有說明的工作區範圍解析、buddy／表單／網格／巢狀列欄位名稱；不讀輸入值 |
 | `main_window_filter.py` | 229 | `MainWindowFilterMixin`：檢視器上方的篩選列（檔名／副檔名／標籤／日期／評分）、套用並盡量保住目前圖片、狀態存回 |
 | `main_window_missing.py` | 160 | `MainWindowMissingMixin`：遺失檔批次處理（依檔名自動配對、移除、整個根目錄搬移）與每路徑中繼資料的遷移 |
