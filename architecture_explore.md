@@ -555,7 +555,11 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（351 行）只保留 GL 生命
 | `delete.py` | 227 | **軟刪除 / 復原**：先隱藏不落地，`commit_pending_deletions()` 在關閉時一次送 `trash_ops`，回傳留在原處的檔案 |
 | `select.py` | 239 | 上下張切換（含 wrap-around toast）、跳到上/下一個有圖的兄弟資料夾（和資料夾樹同一個順序：自然排序、略過隱藏資料夾）、框選圖磚；`selected_in_view_order` / `selection_or_all` 依瀏覽順序回傳選取（`selected_tiles` 是 set） |
 | `batch_ops.py` | 290 | 批次重新命名（經 `batch_rename.rename_files`）/ 移動 / 複製（經 `file_transfer.transfer_into`，不覆蓋）/ 旋轉（逐檔走 `lossless_rotate`） |
-| `compare_dialog.py` | 601 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost) |
+| `compare_dialog.py` | 235 | 圖片比對：並排(2/4)、疊加(alpha)、差異(gain-boost)、A\|B 分割；`CompareDialog` 建構挑選面板與分頁、選取檢查與 `_warn`，`open_compare_dialog` 入口；仍是檢視與影像運算各名稱的匯入位置 |
+| `compare_dialog_image_label.py` | 122 | `_ImageLabel`：比對用的單張檢視，等比縮放置中、滾輪縮放、拖曳平移並發出 `view_changed` 讓並排圖磚同步 |
+| `compare_dialog_split_label.py` | 119 | `_SplitLabel`：A\|B 分割檢視，可拖曳分隔線（`split_changed`）與把手繪製 |
+| `compare_dialog_math.py` | 79 | 比對影像運算：長邊上限的 RGBA 載入、`compute_overlay`、`compute_difference`、ndarray → QImage 複製 |
+| `compare_dialog_modes.py` | 115 | `CompareModesMixin`：並排（含縮放/平移同步）、疊加、差異、分割四種模式與其滑桿處理 |
 | `slideshow.py` | 211 | 幻燈片播放控制器 + 對話框 |
 | `animation_player.py` | 341 | GIF / APNG / Animated WebP 播放器；只有 `_ANIMATED_FORMATS`（GIF、PNG、WebP、AVIF、JXL）會播放，多頁 TIFF（`_PAGED_FORMATS`）是 `paged`：不播放、用逐格鍵翻頁、OSD 顯示「第 2/5 頁」（`anim_indicator_text`），其他 Pillow 回報多格的檔案（相機 JPEG 的 MPF 預覽被開成 MPO、PSD 的圖層）不當動畫；APNG 的預設影像（Pillow 的第 0 格、`default_image`）不播放，逐格與串流都從第 1 格起算（`_first`），載入後先把第一格放上畫面；每格和靜態圖一樣經 `to_eight_bit` 與 `to_srgb`；解碼後超過 `_DECODED_FRAMES_BUDGET`（512 MB）就改為串流：留住檔案位元組（BytesIO，不鎖檔），播到哪格才解哪格，只快取最後一格 |
 | `search_dialog.py` | 281 | 檔名即時搜尋 |

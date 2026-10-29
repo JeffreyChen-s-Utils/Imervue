@@ -15,317 +15,52 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PIL import Image
-from PySide6.QtCore import QPointF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QImage, QMouseEvent, QPainter, QPen, QPixmap
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel,
     QPushButton, QListWidget, QListWidgetItem, QWidget,
-    QSizePolicy, QTabWidget, QSlider, QMessageBox,
+    QTabWidget, QSlider, QMessageBox,
 )
 
-from Imervue.gui.shown_qimage import shown_qimage
-from Imervue.image.shown import as_shown_8bit
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gpu_image_view.actions.compare_dialog_image_label import _ImageLabel
+from Imervue.gpu_image_view.actions.compare_dialog_math import (
+    _load_rgba_array,
+    _match_sizes,
+    _ndarray_to_qimage,
+    compute_difference,
+    compute_overlay,
+)
+from Imervue.gpu_image_view.actions.compare_dialog_modes import CompareModesMixin
+from Imervue.gpu_image_view.actions.compare_dialog_split_label import (
+    _draw_split_handle,
+    _SplitLabel,
+)
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-
-class _ImageLabel(QLabel):
-    """QLabel that keeps a source QPixmap and re-scales on resize."""
-
-    view_changed = Signal(float, float, float)
-
-    def __init__(self, path: str | None = None):
-        super().__init__()
-        self._pixmap: QPixmap | None = None
-        self._zoom = 1.0
-        self._pan_x = 0.0
-        self._pan_y = 0.0
-        self._drag_pos: QPointF | None = None
-        self._syncing = False
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.setMinimumSize(200, 200)
-        self.setStyleSheet("background-color: #1a1a1a; border: 1px solid #333;")
-        self.setMouseTracking(True)
-        if path:
-            self.load(path)
-
-    def load(self, path: str) -> None:
-        self._pixmap = QPixmap.fromImage(shown_qimage(path))
-        self.reset_view()
-        self.update()
-
-    def set_qimage(self, qimg: QImage) -> None:
-        self._pixmap = QPixmap.fromImage(qimg)
-        self.reset_view()
-        self.update()
-
-    def reset_view(self) -> None:
-        self._zoom = 1.0
-        self._pan_x = 0.0
-        self._pan_y = 0.0
-
-    def sync_view(self, zoom: float, pan_x: float, pan_y: float) -> None:
-        self._syncing = True
-        try:
-            self._zoom = zoom
-            self._pan_x = pan_x
-            self._pan_y = pan_y
-            self.update()
-        finally:
-            self._syncing = False
-
-    def paintEvent(self, event):  # noqa: N802
-        super().paintEvent(event)
-        if self._pixmap is None or self._pixmap.isNull():
-            return
-        painter = QPainter(self)
-        try:
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
-            scaled = self._pixmap.scaled(
-                QSize(
-                    max(1, int(self.width() * self._zoom)),
-                    max(1, int(self.height() * self._zoom)),
-                ),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            x = (self.width() - scaled.width()) / 2 + self._pan_x
-            y = (self.height() - scaled.height()) / 2 + self._pan_y
-            painter.drawPixmap(int(x), int(y), scaled)
-        finally:
-            painter.end()
-
-    def wheelEvent(self, event):  # noqa: N802
-        old = self._zoom
-        factor = 1.15 if event.angleDelta().y() > 0 else 1 / 1.15
-        self._zoom = max(1.0, min(12.0, self._zoom * factor))
-        if self._zoom != old:
-            self._emit_view_changed()
-            self.update()
-
-    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.position()
-            event.accept()
-            return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if self._drag_pos is not None:
-            delta = event.position() - self._drag_pos
-            self._drag_pos = event.position()
-            self._pan_x += delta.x()
-            self._pan_y += delta.y()
-            self._emit_view_changed()
-            self.update()
-            event.accept()
-            return
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = None
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
-
-    def _emit_view_changed(self) -> None:
-        if not self._syncing:
-            self.view_changed.emit(self._zoom, self._pan_x, self._pan_y)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.update()
-
-
-class _SplitLabel(QWidget):
-    """A/B split viewer: left half is image A, right half is image B.
-
-    The vertical divider is draggable — click or drag anywhere on the widget
-    to move it. Both images are rendered scaled-to-fit using A's aspect
-    ratio so the two halves always align on the same pixel grid.
-    """
-
-    split_changed = Signal(float)
-
-    def __init__(self):
-        super().__init__()
-        self._pm_a: QPixmap | None = None
-        self._pm_b: QPixmap | None = None
-        self._split: float = 0.5
-        self._dragging = False
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding,
-        )
-        self.setMinimumSize(200, 200)
-        self.setAutoFillBackground(True)
-        self.setCursor(Qt.CursorShape.SplitHCursor)
-        self.setMouseTracking(True)
-
-    # --- Public API ---
-    def set_pair(self, a_path: str, b_path: str) -> None:
-        self._pm_a = QPixmap.fromImage(shown_qimage(a_path))
-        self._pm_b = QPixmap.fromImage(shown_qimage(b_path))
-        self.update()
-
-    def set_split(self, fraction: float) -> None:
-        new_value = max(0.0, min(1.0, float(fraction)))
-        if new_value == self._split:
-            return
-        self._split = new_value
-        self.update()
-        self.split_changed.emit(new_value)
-
-    def split(self) -> float:
-        return self._split
-
-    # --- Paint ---
-    def paintEvent(self, _event) -> None:  # noqa: N802 (Qt override)
-        painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor(26, 26, 26))
-        if self._pm_a is None or self._pm_b is None:
-            return
-        if self._pm_a.isNull() or self._pm_b.isNull():
-            return
-
-        scaled_a = self._pm_a.scaled(
-            self.size(),
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        scaled_b = self._pm_b.scaled(
-            scaled_a.size(),
-            Qt.AspectRatioMode.IgnoreAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        x_off = (self.width() - scaled_a.width()) // 2
-        y_off = (self.height() - scaled_a.height()) // 2
-        split_x = int(self.width() * self._split)
-
-        painter.setClipRect(0, 0, split_x, self.height())
-        painter.drawPixmap(x_off, y_off, scaled_a)
-        painter.setClipRect(split_x, 0, self.width() - split_x, self.height())
-        painter.drawPixmap(x_off, y_off, scaled_b)
-        painter.setClipping(False)
-        _draw_split_handle(painter, split_x, self.height())
-
-    # --- Mouse ---
-    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._dragging = True
-            self._set_from_event(event)
-            event.accept()
-            return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if self._dragging:
-            self._set_from_event(event)
-            event.accept()
-            return
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if event.button() == Qt.MouseButton.LeftButton and self._dragging:
-            self._dragging = False
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
-
-    def _set_from_event(self, event: QMouseEvent) -> None:
-        self.set_split(event.position().x() / max(1, self.width()))
-
-
-def _draw_split_handle(painter: QPainter, split_x: int, height: int) -> None:
-    """Paint the divider line plus a pill-shaped grab handle at its midpoint."""
-    painter.setPen(QPen(QColor(255, 255, 255, 220), 2))
-    painter.drawLine(split_x, 0, split_x, height)
-    painter.setPen(QPen(QColor(0, 0, 0, 180), 1))
-    painter.setBrush(QColor(255, 255, 255, 220))
-    cy = height / 2.0
-    painter.drawEllipse(QPointF(split_x, cy), 10.0, 10.0)
-
-
-# ===========================
-# Image math helpers
-# ===========================
-
-def _load_rgba_array(path: str, max_edge: int = 2048) -> np.ndarray | None:
-    """Load an image and return it as an RGBA uint8 ndarray, downscaled if huge.
-
-    We cap the long edge at ``max_edge`` so overlay/difference operations stay
-    fast on very large source images — the compare UI itself never shows more
-    than ~1000 px on screen anyway.
-    """
-    try:
-        with Image.open(path) as src:
-            im = as_shown_8bit(src)
-            w, h = im.size
-            long_edge = max(w, h)
-            if long_edge > max_edge:
-                scale = max_edge / long_edge
-                im = im.resize(
-                    (int(w * scale), int(h * scale)),
-                    Image.Resampling.LANCZOS,
-                )
-            return np.asarray(im, dtype=np.uint8)
-    except IMAGE_READ_ERRORS:
-        return None
-
-
-def _match_sizes(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Resize ``b`` to match ``a``'s shape via PIL's high-quality Lanczos."""
-    if a.shape == b.shape:
-        return a, b
-    target_h, target_w = a.shape[:2]
-    im_b = Image.fromarray(b, mode="RGBA").resize(
-        (target_w, target_h), Image.Resampling.LANCZOS,
-    )
-    return a, np.asarray(im_b, dtype=np.uint8)
-
-
-def compute_overlay(a: np.ndarray, b: np.ndarray, alpha: float) -> np.ndarray:
-    """Blend ``a`` and ``b`` by alpha (0 → a, 1 → b), ignoring alpha channels."""
-    a, b = _match_sizes(a, b)
-    alpha = float(max(0.0, min(1.0, alpha)))
-    out = a.astype(np.float32) * (1.0 - alpha) + b.astype(np.float32) * alpha
-    result = np.clip(out, 0, 255).astype(np.uint8)
-    # Force opaque alpha — the overlay is a preview, not a transparent asset
-    result[..., 3] = 255
-    return result
-
-
-def compute_difference(a: np.ndarray, b: np.ndarray, gain: float = 1.0) -> np.ndarray:
-    """Per-pixel |a - b| on RGB, scaled by ``gain`` and clipped to [0, 255]."""
-    a, b = _match_sizes(a, b)
-    diff = np.abs(a.astype(np.int16) - b.astype(np.int16))[:, :, :3]
-    scaled = np.clip(diff.astype(np.float32) * gain, 0, 255).astype(np.uint8)
-    # Build a solid-alpha RGBA image for QImage consumption
-    h, w, _ = scaled.shape
-    out = np.empty((h, w, 4), dtype=np.uint8)
-    out[..., :3] = scaled
-    out[..., 3] = 255
-    return out
-
-
-def _ndarray_to_qimage(arr: np.ndarray) -> QImage:
-    """Copy an RGBA ndarray into a fresh QImage (safe against Python GC)."""
-    h, w, _ = arr.shape
-    # RGBA → QImage.Format_RGBA8888 lays out bytes the same way
-    qimg = QImage(arr.data, w, h, w * 4, QImage.Format.Format_RGBA8888)
-    return qimg.copy()
+# The views and image math live in sibling modules; this stays their import path.
+__all__ = [
+    "CompareDialog",
+    "_ImageLabel",
+    "_SplitLabel",
+    "_draw_split_handle",
+    "_load_rgba_array",
+    "_match_sizes",
+    "_ndarray_to_qimage",
+    "compute_difference",
+    "compute_overlay",
+    "open_compare_dialog",
+    "preselected_paths",
+]
 
 
 # ===========================
 # Dialog
 # ===========================
 
-class CompareDialog(QDialog):
+class CompareDialog(CompareModesMixin, QDialog):
 
     def __init__(self, main_gui: GPUImageView):
         super().__init__(main_gui.main_window)
@@ -485,107 +220,6 @@ class CompareDialog(QDialog):
             self._warn("compare_load_failed", "Failed to load one of the images.")
             return None
         return a, b
-
-    # -----------------------------------------------------------------
-    # Mode handlers
-    # -----------------------------------------------------------------
-    def _run_side_by_side(self, count: int) -> None:
-        paths = self._selected_paths()
-        if len(paths) < count:
-            self._warn(
-                "compare_need_n",
-                "Select at least {n} images.",
-                n=count,
-            )
-            return
-        paths = paths[:count]
-
-        # Clear previous labels
-        for lbl in self._sbs_labels:
-            self._sbs_layout.removeWidget(lbl)
-            lbl.deleteLater()
-        self._sbs_labels.clear()
-
-        _, cols = (1, 2) if count == 2 else (2, 2)
-        for i, p in enumerate(paths):
-            r, c = divmod(i, cols)
-            lbl = _ImageLabel(p)
-            lbl.view_changed.connect(
-                lambda zoom, pan_x, pan_y, source=lbl: self._sync_sbs_labels(
-                    source, zoom, pan_x, pan_y,
-                )
-            )
-            self._sbs_layout.addWidget(lbl, r, c)
-            self._sbs_labels.append(lbl)
-
-        self._tabs.setCurrentWidget(self._sbs_widget)
-
-    def _sync_sbs_labels(self, source: _ImageLabel, zoom: float,
-                         pan_x: float, pan_y: float) -> None:
-        for label in self._sbs_labels:
-            if label is not source:
-                label.sync_view(zoom, pan_x, pan_y)
-
-    def _run_overlay(self) -> None:
-        pair = self._load_pair()
-        if pair is None:
-            return
-        self._overlay_arrs = pair
-        self._refresh_overlay()
-        self._tabs.setCurrentWidget(self._overlay_widget)
-
-    def _on_overlay_slider(self, _val: int) -> None:
-        if self._overlay_arrs is not None:
-            self._refresh_overlay()
-
-    def _refresh_overlay(self) -> None:
-        if self._overlay_arrs is None:
-            return
-        alpha = self._overlay_slider.value() / 100.0
-        a, b = self._overlay_arrs
-        blended = compute_overlay(a, b, alpha)
-        self._overlay_label.set_qimage(_ndarray_to_qimage(blended))
-
-    def _run_difference(self) -> None:
-        pair = self._load_pair()
-        if pair is None:
-            return
-        self._diff_arrs = pair
-        self._refresh_difference()
-        self._tabs.setCurrentWidget(self._diff_widget)
-
-    def _on_diff_slider(self, val: int) -> None:
-        gain = val / 100.0
-        self._diff_gain_label.setText(f"{gain:.1f}\u00d7")
-        if self._diff_arrs is not None:
-            self._refresh_difference()
-
-    def _refresh_difference(self) -> None:
-        if self._diff_arrs is None:
-            return
-        gain = self._diff_slider.value() / 100.0
-        a, b = self._diff_arrs
-        diff = compute_difference(a, b, gain)
-        self._diff_label.set_qimage(_ndarray_to_qimage(diff))
-
-    def _run_split(self) -> None:
-        paths = self._selected_paths()
-        if len(paths) != 2:
-            self._warn("compare_need_two", "Select exactly 2 images.")
-            return
-        self._split_label.set_pair(paths[0], paths[1])
-        self._split_slider.blockSignals(True)
-        self._split_slider.setValue(int(self._split_label.split() * 100))
-        self._split_slider.blockSignals(False)
-        self._tabs.setCurrentWidget(self._split_widget)
-
-    def _on_split_slider(self, val: int) -> None:
-        self._split_label.set_split(val / 100.0)
-
-    def _on_split_widget_changed(self, fraction: float) -> None:
-        self._split_slider.blockSignals(True)
-        self._split_slider.setValue(int(round(fraction * 100)))
-        self._split_slider.blockSignals(False)
 
 
 def preselected_paths(main_gui) -> list[str]:
