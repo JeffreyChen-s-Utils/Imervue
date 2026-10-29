@@ -18,19 +18,25 @@ runs a symmetric ease back to each parameter's default. Both default
 to ``0.0`` on freshly-constructed players so behaviour stays snap
 unless callers opt in — keeps the existing per-motion-snap tests
 green.
+
+The playhead (seek / tick / frame application), the fade-out machinery and
+the sound hooks live in the ``motion_player_timeline`` /
+``motion_player_fade`` / ``motion_player_sound`` mixins; this module keeps the
+class, its state, binding and transport.
 """
 from __future__ import annotations
 
 import logging
 import secrets
 import time
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from Imervue.puppet.document import Motion
-from Imervue.puppet.motion_sampler import sample_motion
+from Imervue.puppet.motion_player_fade import MotionPlayerFadeMixin
+from Imervue.puppet.motion_player_sound import MotionPlayerSoundMixin
+from Imervue.puppet.motion_player_timeline import MotionPlayerTimelineMixin
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -40,7 +46,12 @@ logger = logging.getLogger("Imervue.plugin.puppet.motion_player")
 _PLAYBACK_FPS: int = 60
 
 
-class MotionPlayer(QObject):
+class MotionPlayer(
+    MotionPlayerTimelineMixin,
+    MotionPlayerFadeMixin,
+    MotionPlayerSoundMixin,
+    QObject,
+):
     """Drives a :class:`Motion` against a :class:`PuppetCanvas`."""
 
     state_changed = Signal()
@@ -199,183 +210,3 @@ class MotionPlayer(QObject):
         self._timer.stop()
         self._stop_sound()
         self.state_changed.emit()
-
-    def seek(self, t_sec: float) -> None:
-        """Jump to ``t_sec`` and apply that frame to the canvas. Keeps
-        playback running if it was running."""
-        was_playing = self._is_playing
-        self._elapsed = max(0.0, float(t_sec))
-        if self._motion is not None and not self._loop:
-            self._elapsed = min(self._elapsed, self.duration())
-        self._apply_at(self._elapsed)
-        if was_playing:
-            self._wall_anchor = time.monotonic() - self._elapsed
-        self.state_changed.emit()
-
-    def step(self, dt: float) -> None:
-        """Advance the playhead by ``dt`` seconds without using the
-        timer. Used by tests to drive deterministic frames."""
-        self.seek(self._elapsed + dt)
-
-    # ---- timer ---------------------------------------------------------
-
-    def _on_tick(self) -> None:
-        if self._fading_out:
-            self._advance_fade_out()
-            return
-        if self._motion is None:
-            self.pause()
-            return
-        now = time.monotonic()
-        self._elapsed = now - self._wall_anchor
-        if not self._loop and self._elapsed >= self.duration():
-            self._elapsed = self.duration()
-            self._apply_at(self._elapsed)
-            self.pause()
-            return
-        self._apply_at(self._elapsed)
-
-    def _apply_at(self, t_sec: float) -> None:
-        if self._motion is None:
-            return
-        sampled = sample_motion(self._motion, t_sec, loop=self._loop)
-        if self._fade_in_total > 0.0 and t_sec < self._fade_in_total:
-            progress = max(0.0, min(1.0, t_sec / self._fade_in_total))
-            batch = {
-                pid: self._fade_source.get(pid, value) + (
-                    value - self._fade_source.get(pid, value)
-                ) * progress
-                for pid, value in sampled.items()
-            }
-            self._canvas.set_parameter_values(batch)
-            return
-        if self._fade_in_total > 0.0 and t_sec >= self._fade_in_total:
-            # First post-fade application — clear the fade so future
-            # seeks back into the fade window don't reintroduce it.
-            self._fade_in_total = 0.0
-            self._fade_source = {}
-        self._canvas.set_parameter_values(sampled)
-
-    # ---- fade-out helpers ----------------------------------------------
-
-    def _can_start_fade_out(self) -> bool:
-        return (
-            self._motion is not None
-            and self._effective_fade_out(self._motion) > 0.0
-            and bool(self._motion.tracks)
-        )
-
-    def _start_fade_out(self) -> None:
-        # ``_can_start_fade_out`` is the only caller and gates on
-        # ``self._motion is not None``; defensively re-check so
-        # ``python -O`` (which strips asserts) still bails safely.
-        if self._motion is None:
-            return
-        self._fade_out_total = self._effective_fade_out(self._motion)
-        self._fade_out_anchor = time.monotonic()
-        self._fade_out_source = dict(self._canvas.parameter_values())
-        self._fade_out_target = self._fade_out_defaults_for_motion()
-        self._is_playing = False
-        self._fading_out = True
-        if not self._timer.isActive():
-            self._timer.start()
-        self.state_changed.emit()
-
-    def _advance_fade_out(self) -> None:
-        elapsed = time.monotonic() - self._fade_out_anchor
-        progress = (
-            min(1.0, elapsed / self._fade_out_total)
-            if self._fade_out_total > 0.0 else 1.0
-        )
-        batch = {
-            pid: source + (
-                self._fade_out_target.get(pid, source) - source
-            ) * progress
-            for pid, source in self._fade_out_source.items()
-        }
-        self._canvas.set_parameter_values(batch)
-        if progress >= 1.0:
-            self._snap_stop()
-
-    def _fade_out_defaults_for_motion(self) -> dict[str, float]:
-        doc = self._canvas.document()
-        out: dict[str, float] = {}
-        if doc is None or self._motion is None:
-            return out
-        for track in self._motion.tracks:
-            param = doc.parameter(track.param_id)
-            if param is not None:
-                out[track.param_id] = float(param.default)
-        return out
-
-    def _snap_stop(self) -> None:
-        was_fading = self._fading_out
-        self._is_playing = False
-        self._fading_out = False
-        self._timer.stop()
-        self._stop_sound()
-        self._elapsed = 0.0
-        self._reset_fade_state()
-        if not was_fading and self._motion is not None:
-            # Legacy behaviour: when stop() runs without a fade-out
-            # window, the canvas snaps to the motion's frame 0. The
-            # fade-out path already wrote final-frame values so it
-            # skips this.
-            self._apply_at(0.0)
-        self.state_changed.emit()
-
-    def _reset_fade_state(self) -> None:
-        self._fade_in_total = 0.0
-        self._fade_source = {}
-        self._fading_out = False
-        self._fade_out_total = 0.0
-        self._fade_out_source = {}
-        self._fade_out_target = {}
-
-    def _effective_fade_in(self, motion: Motion) -> float:
-        return float(motion.fade_in_duration) or self._default_fade_in
-
-    def _effective_fade_out(self, motion: Motion) -> float:
-        return float(motion.fade_out_duration) or self._default_fade_out
-
-    # ---- sound playback ------------------------------------------------
-
-    def _maybe_play_sound(self) -> None:
-        """If the bound motion has a ``sound_path``, start playback.
-        Failures (missing file, missing QtMultimedia, codec issues) are
-        logged at debug level and never raised — the motion's visual
-        timeline must keep running even when audio is unavailable."""
-        if self._motion is None or not self._motion.sound_path:
-            return
-        path = Path(self._motion.sound_path)
-        if not path.is_file():
-            logger.debug("motion sound %s missing on disk", path)
-            return
-        effect = self._ensure_sound_effect()
-        if effect is None:
-            return
-        effect.setSource(QUrl.fromLocalFile(str(path)))
-        effect.play()
-
-    def _stop_sound(self) -> None:
-        if self._sound_effect is None:
-            return
-        try:
-            self._sound_effect.stop()
-        except RuntimeError as exc:
-            # The C++ side may already be deleted during teardown.
-            logger.debug("sound stop failed: %s", exc)
-
-    def _ensure_sound_effect(self):
-        """Lazy-create a QSoundEffect on first use. Returns ``None`` if
-        ``PySide6.QtMultimedia`` isn't available — keeps the player
-        usable in headless test environments without the audio module."""
-        if self._sound_effect is not None:
-            return self._sound_effect
-        try:
-            from PySide6.QtMultimedia import QSoundEffect
-        except ImportError:
-            logger.info("PySide6.QtMultimedia not available; motion audio disabled")
-            return None
-        self._sound_effect = QSoundEffect(self)
-        return self._sound_effect

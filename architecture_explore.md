@@ -1086,7 +1086,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 
 #### 動作 / 表情 / 閒置
 
-`motion_sampler.py`(148) 純取樣 · `motion_player.py`(381) Qt 播放驅動（循環依動作自己的 `loop`） · `motion_recorder.py`(166) 錄製 ·
+`motion_sampler.py`(148) 純取樣 · `motion_player.py`(212) Qt 播放驅動：狀態、綁定（循環依動作自己的 `loop`、淡入來源擷取）、播放／暫停／停止與群組隨機挑選 · `motion_player_timeline.py`(70) 播放頭 seek／step／計時 tick 與每幀取樣寫入（淡入混合） · `motion_player_fade.py`(95) 淡出往參數預設值緩動、snap-stop 與淡入淡出狀態重置 · `motion_player_sound.py`(58) 動作音效延遲建立與播放／停止（缺 QtMultimedia 時停用） · `motion_recorder.py`(166) 錄製 ·
 `motion_timeline.py`(460) 曲線圖編輯（數值軸用參數自己的範圍；Ease 把整軌改成具名緩動、Simplify Keys 依參數範圍百分比精簡關鍵幀） · `motion_compress.py`(113) 移除冗餘關鍵幀（Simplify Keys） ·
 `motion_picker.py`(53) 群組隨機挑選 · `synth_motions.py`(286) 為轉檔 rig 合成閒置動作 ·
 `idle_driver.py`(143) · `idle_motion_cycler.py`(151) · `easing.py`(250) 緩動預設（`ease_track`：單一 bezier 或 elastic／bounce 取樣成線段，時間軸的 Ease 用它） ·
