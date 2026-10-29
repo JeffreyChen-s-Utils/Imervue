@@ -1036,7 +1036,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `cubism_native_bundle.py` | 122 | 組裝 `CubismBundle`：motion、expression（含 `exp/` 備援路徑）、physics、cdi 顯示名稱、hit area，壞檔記錄後略過，再 `apply_bundle` |
 | `psd_import.py` | 186 | PSD 多圖層 → `PuppetDocument` |
 | `auto_mesh.py` | 172 | 從單張 PNG 自動生成網格 |
-| `auto_rig.py` | 429 | 依圖層命名慣例自動推導 Cubism 式綁定 |
+| `auto_rig.py` | 269 | 依圖層命名慣例自動推導 Cubism 式綁定：`auto_rig` 入口與眨眼、嘴型 viseme、頭部傾斜旋轉、頭髮擺動 warp + 物理鏈四條規則；轉出偵測函式 |
+| `auto_rig_detect.py` | 81 | 自動綁定的圖層名稱偵測（純 Python）：id 正規化（含 camelCase 拆分）、眼睛左右 / 開闔、嘴型母音、頭部（排除 forehead）、頭髮 |
+| `auto_rig_mutators.py` | 111 | 自動綁定共用的文件修改：取代式 `opacity_keys` 曲線、補參數與合併 key、唯一 deformer / physics id、drawable 群組邊界與中心 |
 | `standard_params.py` | 116 | Cubism 標準參數目錄 |
 | `requirements.py` | 75 | 選用相依清單 |
 
