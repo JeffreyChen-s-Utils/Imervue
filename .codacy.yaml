@@ -72,7 +72,7 @@ engines:
       # isolated Python subprocess (no shell, controlled args) for frozen-build
       # native-DLL safety — the accepted isolation pattern, skipped in .bandit.
       - 'plugins/safety_review/**'
-      - 'plugins/ai_background_remover/ai_background_remover.py'
+      - 'plugins/ai_background_remover/ai_background_remover_workers.py'
       - 'plugins/object_splitter/object_splitter.py'
       # Checkout-only benchmark tools, never shipped: they read `git` state for
       # the report and start one child process per scenario so each measurement
@@ -97,7 +97,7 @@ engines:
       - 'examples/puppet/imeru/render3d.py'
       # Same controlled-subprocess isolation pattern as the bandit list above.
       - 'plugins/safety_review/**'
-      - 'plugins/ai_background_remover/ai_background_remover.py'
+      - 'plugins/ai_background_remover/ai_background_remover_workers.py'
       - 'plugins/object_splitter/object_splitter.py'
       # Checkout-only verifier: absolute Git executable, exact inspection-only
       # argument allowlist, no shell; same audited policy as the Bandit entry.
