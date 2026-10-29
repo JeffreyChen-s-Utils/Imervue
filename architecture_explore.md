@@ -860,7 +860,9 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `compositing.py` | 438 | 純 NumPy 圖層合成 |
 | `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
-| `document_io.py` | 453 | 原生 .imervue NPZ 文件讀寫、圖層／遮罩／向量／選取與漫畫 PanelLayout metadata（可選欄位相容既有 version 1） |
+| `document_io.py` | 225 | 原生 .imervue NPZ 文件公開讀寫入口（檔案／記憶體、原子保存、`allow_pickle=False`）與 metadata／群組／具名選取／選取解碼；再匯出 `FORMAT_VERSION`、`_document_to_arrays` |
+| `document_io_write.py` | 110 | .imervue 編碼端：擁有 `FORMAT_VERSION`，把 PaintDocument 轉成 NPZ 陣列與 metadata JSON（圖層／群組／具名選取／PanelLayout／reference） |
+| `document_io_layers.py` | 146 | .imervue 圖層解碼：圖片／遮罩形狀與 dtype 驗證，blend／調整／效果／tone／binary／blend-if／向量／色標容錯還原 |
 | `psd_io.py` | 258 | Photoshop `.psd` 匯入 / 匯出（互通子集）公開入口：`save_psd`（原子取代寫入）/ `load_psd` 與檔頭驗證；再匯出 `psd_io_*` 所有名稱，`_pack_layer_and_mask_section` 等步驟經本模組 globals 解析故 patch 仍有效 |
 | `psd_io_format.py` | 171 | PSD 格式常數（檔頭、通道、混合模式鍵、圖層旗標、壓縮、區段分隔）、有界 `_Cursor`、PackBits RLE 解碼、Pascal 字串讀寫、通道 ID → RGBA 平面 |
 | `psd_io_write.py` | 272 | PSD 寫入各區段：檔頭、圖層 + 遮罩區段（`lsct` 群組分隔、`luni` Unicode 名稱）、原始未壓縮通道與合成影像，位元組完全決定性 |
