@@ -38,6 +38,29 @@ class TestEditorEntry:
 
 
 class TestBuildArgv:
+    @pytest.mark.parametrize("platform", ["win32", "linux"])
+    @pytest.mark.parametrize("arguments", [
+        "", "   ", "--flag", '--title "two words"',
+        "--open={path} {path}", '--title "{path}"',
+        "--flag ; & | > $(echo)",
+    ])
+    def test_argument_contract(self, editors_mod, monkeypatch, platform, arguments):
+        import shlex
+
+        monkeypatch.setattr(editors_mod.sys, "platform", platform)
+        image = "/my pics/a b.jpg"
+        entry = editors_mod.EditorEntry("E", "/bin/e", arguments)
+        tokens = shlex.split(arguments.strip(), posix=platform != "win32")
+        expected = [token.replace("{path}", image) for token in tokens]
+        if "{path}" not in arguments:
+            expected.append(image)
+        assert editors_mod._build_argv(entry, image) == ["/bin/e", *expected]
+
+    def test_unclosed_quote_raises(self, editors_mod):
+        entry = editors_mod.EditorEntry("E", "/bin/e", '"unfinished')
+        with pytest.raises(ValueError, match="No closing quotation"):
+            editors_mod._build_argv(entry, "/img.jpg")
+
     def test_no_extra_args_appends_path(self, editors_mod):
         e = editors_mod.EditorEntry(name="E", executable="/bin/e")
         argv = editors_mod._build_argv(e, "/img.jpg")
@@ -63,6 +86,21 @@ class TestBuildArgv:
 
 
 class TestLoadSaveRoundTrip:
+    @pytest.mark.parametrize("raw", [None, {}, "invalid", [], [None, 1]])
+    def test_empty_or_invalid_settings(self, editors_mod, monkeypatch, raw):
+        monkeypatch.setitem(editors_mod.user_setting_dict, "external_editors", raw)
+        assert editors_mod.load_editors() == []
+
+    def test_save_preserves_fields_and_schedules_persistence(self, editors_mod, monkeypatch):
+        saved = []
+        monkeypatch.setattr(editors_mod, "schedule_save", lambda: saved.append(True))
+        monkeypatch.setattr(editors_mod, "user_setting_dict", {})
+        entry = editors_mod.EditorEntry("Editor", "/bin/editor", "--open={path}")
+        editors_mod.save_editors([entry])
+        assert editors_mod.user_setting_dict["external_editors"] == [entry.to_dict()]
+        assert editors_mod.load_editors() == [entry]
+        assert saved == [True]
+
     def test_save_then_load(self, editors_mod):
         entries = [
             editors_mod.EditorEntry("Editor A", "/usr/bin/editor-a"),
@@ -96,3 +134,41 @@ class TestLaunchGuards:
         image.write_bytes(b"")
         e = editors_mod.EditorEntry("E", str(tmp_path / "not-an-exe"))
         assert editors_mod.launch_editor(e, str(image)) is False
+
+    def test_launch_preserves_configured_program_and_arguments(
+        self, editors_mod, monkeypatch, tmp_path,
+    ):
+        from unittest.mock import Mock
+
+        monkeypatch.chdir(tmp_path)
+        image = tmp_path / "image ; &.jpg"
+        image.touch()
+        executable = tmp_path / "my editor.exe"
+        executable.touch()
+        process = Mock()
+        launch = Mock(return_value=process)
+        monkeypatch.setattr(editors_mod.subprocess, "Popen", launch)
+        entry = editors_mod.EditorEntry("Editor", executable.name, "--open={path} ; &")
+
+        assert editors_mod.launch_editor(entry, str(image)) is True
+        launch.assert_called_once_with(
+            [executable.name, f"--open={image}", ";", "&"], shell=False,
+        )
+        process.wait.assert_not_called()
+        process.communicate.assert_not_called()
+
+    def test_launch_error_is_logged_without_retry(
+        self, editors_mod, monkeypatch, tmp_path, caplog,
+    ):
+        from unittest.mock import Mock
+
+        image = tmp_path / "image.jpg"
+        image.touch()
+        executable = tmp_path / "editor.exe"
+        executable.touch()
+        launch = Mock(side_effect=OSError("elevation required"))
+        monkeypatch.setattr(editors_mod.subprocess, "Popen", launch)
+        entry = editors_mod.EditorEntry("Editor", str(executable))
+        assert editors_mod.launch_editor(entry, str(image)) is False
+        launch.assert_called_once_with([str(executable), str(image)], shell=False)
+        assert "Failed to launch Editor: elevation required" in caplog.text

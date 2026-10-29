@@ -1,6 +1,9 @@
 """Tests for the shared output-format helpers (incl. HEIC / AVIF / JXL)."""
 from __future__ import annotations
 
+import io
+from itertools import product
+
 import pytest
 from PIL import Image
 
@@ -12,6 +15,53 @@ from Imervue.image.save_formats import (
     prepare_for_format,
     save_image,
 )
+
+
+@pytest.mark.parametrize("availability", list(product((False, True), repeat=3)))
+def test_optional_format_combinations_keep_order_and_probe_once(monkeypatch, availability):
+    probes = ("ensure_heif_opener", "avif_available", "ensure_jxl_opener")
+    names = ("HEIC", "AVIF", "JXL")
+    calls = []
+    for name, probe, supported in zip(names, probes, availability, strict=True):
+        def available(name=name, supported=supported):
+            calls.append(name)
+            return supported
+        monkeypatch.setattr(save_formats, probe, available)
+    expected = ["PNG", "JPEG", "WebP", "BMP", "TIFF"]
+    expected.extend(name for name, supported in zip(names, availability, strict=True) if supported)
+    assert available_formats() == expected
+    assert calls == list(names)
+
+
+@pytest.mark.parametrize("format_name", ["PNG", "HEIC", "AVIF", "JXL"])
+def test_save_probes_only_requested_backend(monkeypatch, format_name):
+    probes = {"HEIC": "ensure_heif_opener", "AVIF": "avif_available", "JXL": "ensure_jxl_opener"}
+    calls, saved = [], []
+    for name, probe in probes.items():
+        def available(name=name):
+            calls.append(name)
+            return True
+        monkeypatch.setattr(save_formats, probe, available)
+    monkeypatch.setattr(Image.Image, "save", lambda self, fp, **kwargs: saved.append((fp, kwargs)))
+    output = io.BytesIO()
+    save_image(Image.new("RGB", (2, 2)), output, format_name)
+    assert calls == ([] if format_name == "PNG" else [format_name])
+    assert saved == [(output, {"format": "HEIF" if format_name == "HEIC" else format_name})]
+
+
+@pytest.mark.parametrize(("format_name", "probe", "message"), [
+    ("HEIC", "ensure_heif_opener", "HEIC output requires the pillow-heif package."),
+    ("AVIF", "avif_available", "AVIF output requires a Pillow built with libavif."),
+    ("JXL", "ensure_jxl_opener", "JXL output requires the pillow-jxl-plugin package."),
+])
+def test_missing_backend_preserves_existing_output(monkeypatch, tmp_path, format_name, probe, message):
+    monkeypatch.setattr(save_formats, probe, lambda: False)
+    output = tmp_path / "existing.image"
+    output.write_bytes(b"original")
+    with pytest.raises(ValueError) as error:
+        save_image(Image.new("RGB", (2, 2)), output, format_name)
+    assert str(error.value) == message
+    assert output.read_bytes() == b"original"
 
 
 # ---------------------------------------------------------------------------

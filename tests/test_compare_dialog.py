@@ -114,11 +114,12 @@ class TestLoadRgbaArray:
 
     def test_unexpected_error_propagates(self, monkeypatch):
         from Imervue.gpu_image_view.actions import compare_dialog as mod
+        from Imervue.gpu_image_view.actions import compare_dialog_math as math_mod
 
         def boom(_path):
             raise RuntimeError("bug")
 
-        monkeypatch.setattr(mod.Image, "open", boom)
+        monkeypatch.setattr(math_mod.Image, "open", boom)
         with pytest.raises(RuntimeError):
             mod._load_rgba_array("x.png")
 

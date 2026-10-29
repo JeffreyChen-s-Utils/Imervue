@@ -1,4 +1,8 @@
 ---
+# This is first-party editor integration, not vendored code. Codacy's default
+# ignored-directory rules otherwise omit every directory named external.
+include_paths:
+  - 'Imervue/external/**'
 # Codacy per-engine configuration. Codacy's hosted Bandit / Semgrep (Opengrep)
 # engines honour neither the project's .bandit / pyproject [tool.bandit] skips
 # nor inline `# nosec` / `# noqa` suppressions, so accepted security patterns
@@ -43,7 +47,7 @@ engines:
       - 'Imervue/menu/plugin_menu.py'
       - 'Imervue/gui/gif_video_dialog.py'
       - 'Imervue/gui/timeline_view.py'
-      - 'Imervue/gui/annotation_models.py'
+      - 'Imervue/gui/annotation_brushes.py'
       - 'Imervue/library/metadata_export.py'
       - 'Imervue/library/clip_search.py'
       # "Reveal in file manager": static argv (explorer /select, / open /
@@ -58,6 +62,8 @@ engines:
       # pip install runs in a controlled subprocess (no shell, _https_urlopen
       # guard); the B404/B603 hits are the accepted installer pattern.
       - 'Imervue/plugin/pip_installer.py'
+      - 'Imervue/plugin/pip_embed_python.py'
+      - 'Imervue/plugin/pip_install_workers.py'
       # Shared terminate-then-kill helper: imports subprocess only to reap an
       # already-spawned Popen (terminate/kill/wait) — never spawns one itself.
       # The B404 import hit is the accepted infra pattern, skipped in .bandit.
@@ -66,7 +72,7 @@ engines:
       # isolated Python subprocess (no shell, controlled args) for frozen-build
       # native-DLL safety — the accepted isolation pattern, skipped in .bandit.
       - 'plugins/safety_review/**'
-      - 'plugins/ai_background_remover/ai_background_remover.py'
+      - 'plugins/ai_background_remover/ai_background_remover_workers.py'
       - 'plugins/object_splitter/object_splitter.py'
       # Checkout-only benchmark tools, never shipped: they read `git` state for
       # the report and start one child process per scenario so each measurement
@@ -76,6 +82,10 @@ engines:
       # the scenario name).
       - 'scripts/performance_benchmark.py'
       - 'scripts/gpu_develop_benchmark.py'
+      # Checkout-only source verifier: resolves Git to an absolute executable,
+      # permits inspection commands only, and passes argv without a shell.
+      # B404/B603 are the same accepted subprocess pattern as the tools above.
+      - 'scripts/complexity_inventory.py'
   # Codacy's Semgrep engine is published under the "opengrep" slug.
   opengrep:
     enabled: true
@@ -87,26 +97,35 @@ engines:
       - 'examples/puppet/imeru/render3d.py'
       # Same controlled-subprocess isolation pattern as the bandit list above.
       - 'plugins/safety_review/**'
-      - 'plugins/ai_background_remover/ai_background_remover.py'
+      - 'plugins/ai_background_remover/ai_background_remover_workers.py'
       - 'plugins/object_splitter/object_splitter.py'
+      # Checkout-only verifier: absolute Git executable, exact inspection-only
+      # argument allowlist, no shell; same audited policy as the Bandit entry.
+      - 'scripts/complexity_inventory.py'
       # The benchmark tools' per-scenario child processes (see the bandit list).
       - 'scripts/performance_benchmark.py'
       - 'scripts/gpu_develop_benchmark.py'
       - 'Imervue/menu/right_click_menu.py'
       - 'Imervue/menu/plugin_menu.py'
       - 'Imervue/gui/gif_video_dialog.py'
-      - 'Imervue/gui/duplicate_detection_dialog.py'
+      - 'Imervue/gui/duplicate_detection_scan.py'
       - 'Imervue/plugin/pip_installer.py'
-      - 'Imervue/plugin/plugin_manager.py'
+      - 'Imervue/plugin/pip_embed_python.py'
+      - 'Imervue/plugin/pip_install_workers.py'
+      - 'Imervue/plugin/plugin_discovery.py'
       - 'Imervue/plugin/python_finder.py'
       - 'Imervue/system/clipboard_monitor.py'
       # MD5 used only for cache keys / content identity (usedforsecurity=False),
       # never for security — semgrep's hash-md5 rule flags it regardless.
-      - 'Imervue/image/recipe.py'
+      - 'Imervue/image/recipe_codec.py'
+      - 'Imervue/image/recipe_file_identity.py'
       - 'Imervue/image/thumbnail_disk_cache.py'
       # SQL built with `?` placeholders (the only interpolation is the
       # placeholder count / an int-coerced LIMIT); values are bound separately.
-      - 'Imervue/library/image_index.py'
+      - 'Imervue/library/index_paths.py'
+      - 'Imervue/library/index_search.py'
+      - 'Imervue/library/index_tag_links.py'
+      - 'Imervue/library/index_tags.py'
       # stdlib xml.etree is used for *writing* XML from typed values only;
       # all *parsing* of untrusted input goes through defusedxml.
-      - 'Imervue/image/xmp_sidecar.py'
+      - 'Imervue/image/xmp_sidecar_write.py'

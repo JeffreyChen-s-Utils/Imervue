@@ -1,0 +1,3862 @@
+{
+  "revision": "27bf069338515db19073ab96800c582573f5725c",
+  "branch": "fix/main-quality",
+  "captured_at": "2026-10-28T19:16:17.962466+00:00",
+  "source": "https://app.codacy.com/api/v3/organizations/gh/JeffreyChen-s-Utils/repositories/Imervue/files",
+  "pages": [
+    {
+      "scope": "Imervue",
+      "cursor": null,
+      "next_cursor": "2",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "2",
+      "next_cursor": "3",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "3",
+      "next_cursor": "4",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "4",
+      "next_cursor": "5",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "5",
+      "next_cursor": "6",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "6",
+      "next_cursor": "7",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "7",
+      "next_cursor": "8",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "8",
+      "next_cursor": "9",
+      "rows": 100
+    },
+    {
+      "scope": "Imervue",
+      "cursor": "9",
+      "next_cursor": null,
+      "rows": 69
+    },
+    {
+      "scope": "plugins",
+      "cursor": null,
+      "next_cursor": null,
+      "rows": 92
+    }
+  ],
+  "files": [
+    {
+      "path": "Imervue/cli_output.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/cli.py",
+      "complexity": 151
+    },
+    {
+      "path": "Imervue/cli_tools.py",
+      "complexity": 50
+    },
+    {
+      "path": "Imervue/desktop_pet/click_sfx.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/desktop_pet/command_parser.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/desktop_pet/edge_snap.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/desktop_pet/fullscreen_detector.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/desktop_pet/hotkey_conflicts.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/desktop_pet/hotkey_manager.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/desktop_pet/idle_minigame.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/desktop_pet/__init__.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/desktop_pet/llm_dialogue.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/desktop_pet/music_rhythm.py",
+      "complexity": 67
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_canvas_drivers.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_context_menu.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_drivers.py",
+      "complexity": 40
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_feature_base.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_features.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_feature_toggles.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_interaction.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_placement.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_script_editor.py",
+      "complexity": 90
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_script.py",
+      "complexity": 65
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_shadow_controller.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_shadow.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_window_flags.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_window.py",
+      "complexity": 129
+    },
+    {
+      "path": "Imervue/desktop_pet/pet_workspace.py",
+      "complexity": 122
+    },
+    {
+      "path": "Imervue/desktop_pet/schedule_rules.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/desktop_pet/settings.py",
+      "complexity": 50
+    },
+    {
+      "path": "Imervue/desktop_pet/speech_bubble.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/desktop_pet/tray_icon.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/export/cheat_sheet.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/export/contact_sheet_layouts.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/export/contact_sheet.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/export/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/export/pdf_output.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/export/slideshow_effects.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/export/slideshow_mp4.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/export/web_gallery.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/external/editors.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/external/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/animation_player.py",
+      "complexity": 70
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/batch_ops.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/compare_dialog.py",
+      "complexity": 99
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/delete.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/drag_out.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/goto_dialog.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/keyboard_actions.py",
+      "complexity": 49
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/lossless_rotate.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/recipe_commands.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/search_dialog.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/select.py",
+      "complexity": 58
+    },
+    {
+      "path": "Imervue/gpu_image_view/actions/slideshow.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/gpu_image_view/browse_features.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/gpu_image_view/clipboard_paste.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/gpu_image_view/cull_actions.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/gpu_image_view/cvd_view_mode.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gpu_image_view/deep_zoom_loading.py",
+      "complexity": 59
+    },
+    {
+      "path": "Imervue/gpu_image_view/deep_zoom_priority.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/gpu_image_view/deep_zoom_renderer.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gpu_image_view/drop_handler.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gpu_image_view/filmstrip.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gpu_image_view/fit_view.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gpu_image_view/gl_context.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gpu_image_view/gl_renderer.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/gpu_image_view/gpu_image_view.py",
+      "complexity": 112
+    },
+    {
+      "path": "Imervue/gpu_image_view/history_controller.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/gpu_image_view/hover_preview_binding.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gpu_image_view/hud_geometry.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/gpu_image_view/images/folder_scan_updates.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gpu_image_view/images/image_loader.py",
+      "complexity": 112
+    },
+    {
+      "path": "Imervue/gpu_image_view/images/image_model.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gpu_image_view/images/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/gpu_image_view/images/load_thumbnail_worker.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/gpu_image_view/images/prefetch.py",
+      "complexity": 29
+    },
+    {
+      "path": "Imervue/gpu_image_view/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/gpu_image_view/input_controller.py",
+      "complexity": 90
+    },
+    {
+      "path": "Imervue/gpu_image_view/key_action_dispatcher.py",
+      "complexity": 79
+    },
+    {
+      "path": "Imervue/gpu_image_view/key_input_handler.py",
+      "complexity": 66
+    },
+    {
+      "path": "Imervue/gpu_image_view/memory_pressure.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/gpu_image_view/minimap.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/gpu_image_view/osd_text.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/gpu_image_view/overlay_painter.py",
+      "complexity": 146
+    },
+    {
+      "path": "Imervue/gpu_image_view/pbo_uploader.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/gpu_image_view/prefetch_memory.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/gpu_image_view/prefetch_scheduler.py",
+      "complexity": 49
+    },
+    {
+      "path": "Imervue/gpu_image_view/ram_budget.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/gpu_image_view/shown_file_watch.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gpu_image_view/signal_coalescer.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gpu_image_view/status_info.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gpu_image_view/texture_upload.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/gpu_image_view/thumbnail_queue.py",
+      "complexity": 44
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_badges.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_focus.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_grid_renderer.py",
+      "complexity": 49
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_layout.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_loader.py",
+      "complexity": 144
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_textures.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_viewport.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/gpu_image_view/tile_wall_loading.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/gpu_image_view/video_badge.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/gpu_image_view/view_animator.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/gpu_image_view/view_fitting.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/gpu_image_view/view_mouse.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/gpu_image_view/view_nav.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gpu_image_view/viewport_math.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/gpu_image_view/view_state_init.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/gpu_image_view/view_state.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gpu_image_view/vram_budget.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gpu_image_view/vram_detect.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gpu_image_view/worker_pools.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/gui/advanced_filter_dialog.py",
+      "complexity": 56
+    },
+    {
+      "path": "Imervue/gui/ai_upscale_dialog.py",
+      "complexity": 101
+    },
+    {
+      "path": "Imervue/gui/anaglyph_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/animation_edit_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/annotation_canvas.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/annotation_commands.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/gui/annotation_creation.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/annotation_crop.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/gui/annotation_destructive.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/gui/annotation_dialog.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/gui/annotation_drawing.py",
+      "complexity": 62
+    },
+    {
+      "path": "Imervue/gui/annotation_file_actions.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/gui/annotation_geometry.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gui/annotation_hit_test.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/annotation_input.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/annotation_models.py",
+      "complexity": 102
+    },
+    {
+      "path": "Imervue/gui/annotation_pointer.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/annotation_selection_drag.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gui/annotation_style.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/annotation_viewport.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/_apply_save.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/gui/auto_color_balance_dialog.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/gui/auto_straighten_dialog.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/gui/auto_tag_dialog.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/gui/background_jobs.py",
+      "complexity": 81
+    },
+    {
+      "path": "Imervue/gui/batch_convert_dialog.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/gui/batch_export_dialog.py",
+      "complexity": 78
+    },
+    {
+      "path": "Imervue/gui/before_after_dialog.py",
+      "complexity": 32
+    },
+    {
+      "path": "Imervue/gui/binarize_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/bookmark_dialog.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/gui/breadcrumb_bar.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/browser_empty_state.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gui/cache_maintenance_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/calendar_view_dialog.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/gui/capture_time_dialog.py",
+      "complexity": 29
+    },
+    {
+      "path": "Imervue/gui/channel_mixer_dialog.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/gui/clahe_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/clone_stamp_dialog.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/gui/collage_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/colormap_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/color_swatch.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gui/command_palette.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/gui/contact_sheet_dialog.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/gui/control_tooltips.py",
+      "complexity": 117
+    },
+    {
+      "path": "Imervue/gui/crop_straighten_dialog.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/gui/culling_dialog.py",
+      "complexity": 42
+    },
+    {
+      "path": "Imervue/gui/deflicker_dialog.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gui/defringe_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/detail_equalizer_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/develop_panel.py",
+      "complexity": 148
+    },
+    {
+      "path": "Imervue/gui/develop_presets_dialog.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/gui/develop_preview_panel.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gui/develop_preview.py",
+      "complexity": 43
+    },
+    {
+      "path": "Imervue/gui/develop_right_panel.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/gui/dialog_rows.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gui/distort_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/dither_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/dual_image_view.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gui/dual_pane_dialog.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/gui/duplicate_detection_dialog.py",
+      "complexity": 92
+    },
+    {
+      "path": "Imervue/gui/emboss_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/events_dialog.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gui/exif_editor.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/gui/exif_sidebar.py",
+      "complexity": 78
+    },
+    {
+      "path": "Imervue/gui/exif_strip_dialog.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/gui/export_dialog.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gui/export_metadata_combo.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/gui/export_source.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/gui/external_editors_settings.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/gui/face_detection_dialog.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/gui/file_filters.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/gui/file_tree_commands.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gui/file_tree_delete.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gui/file_tree_feedback.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/file_tree_filter.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gui/file_tree_menus.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/gui/file_tree_paths.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/file_tree_recycle.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/file_tree_sort_controls.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/gui/file_tree_sort.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/gui/file_tree_textures.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/file_tree_trash.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/file_tree_viewer_delete.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/gui/file_tree_view.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gui/film_grain_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/filmic_tonemap_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/film_negative_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/flatten_field_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/focus_stack_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/folder_thumbnail_model.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/gui/frequency_separation_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/frosted_glass_dialog.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gui/gif_video_dialog.py",
+      "complexity": 70
+    },
+    {
+      "path": "Imervue/gui/glow_dialog.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/gui/gps_geotag_dialog.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/gui/gpx_geotag_dialog.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/gui/gradient_map_dialog.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/gui/graduated_density_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/hdr_merge_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/healing_brush_dialog.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/gui/hierarchical_tags_dialog.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/gui/hover_preview.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/gui/hsl_mixer_dialog.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/gui/id_photo_sheet_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/image_filter_bar.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gui/image_inspector_dialog.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/gui/image_issue_panel.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/gui/image_list_view.py",
+      "complexity": 162
+    },
+    {
+      "path": "Imervue/gui/image_organizer_dialog.py",
+      "complexity": 84
+    },
+    {
+      "path": "Imervue/gui/image_sanitize_dialog.py",
+      "complexity": 99
+    },
+    {
+      "path": "Imervue/gui/image_statistics_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/gui/kaleidoscope_dialog.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gui/keyword_editor_dialog.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gui/keyword_vocabulary_dialog.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/gui/layers_dialog.py",
+      "complexity": 81
+    },
+    {
+      "path": "Imervue/gui/lens_correction_dialog.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/gui/lens_flare_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/levels_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/library_search_dialog.py",
+      "complexity": 43
+    },
+    {
+      "path": "Imervue/gui/local_contrast_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/lut_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/macro_manager_dialog.py",
+      "complexity": 59
+    },
+    {
+      "path": "Imervue/gui/main_tab_nav.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/gui/main_window_browse.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/gui/main_window_docks.py",
+      "complexity": 29
+    },
+    {
+      "path": "Imervue/gui/main_window_filter.py",
+      "complexity": 69
+    },
+    {
+      "path": "Imervue/gui/main_window_folders.py",
+      "complexity": 69
+    },
+    {
+      "path": "Imervue/gui/main_window_layout.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/gui/main_window_missing.py",
+      "complexity": 43
+    },
+    {
+      "path": "Imervue/gui/main_window_screens.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/gui/main_window_status.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/gui/main_window_tabs.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/gui/main_window_views.py",
+      "complexity": 29
+    },
+    {
+      "path": "Imervue/gui/map_view_dialog.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gui/masks_dialog.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/gui/meme_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/menu_tree.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gui/metadata_export_dialog.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/gui/metadata_template_dialog.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/gui/modify_actions_widget.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/gui/multi_monitor_window.py",
+      "complexity": 58
+    },
+    {
+      "path": "Imervue/gui/noise_sharpen_dialog.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gui/ocr_dialog.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gui/onboarding_dialog.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/gui/optimize_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/optional_tabs.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/gui/otsu_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/panel_scroll.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/gui/panorama_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/photo_frame_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/photo_workflow_dialog.py",
+      "complexity": 65
+    },
+    {
+      "path": "Imervue/gui/pixel_sort_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/polar_dialog.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/gui/portrait_retouch_dialog.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gui/posterize_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/preferences_dialog.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gui/print_layout_dialog.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/gui/profiles_dialog.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gui/quality_report_dialog.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/gui/query_search.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/gui/recycle_bin_dialog.py",
+      "complexity": 56
+    },
+    {
+      "path": "Imervue/gui/reference_panel_dialog.py",
+      "complexity": 48
+    },
+    {
+      "path": "Imervue/gui/scale_bar_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/screen_fit.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/gui/semantic_search_dialog.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/gui/settings_notice.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/gui/settle_poll.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/gui/shortcut_settings_dialog.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/gui/shown_qimage.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/gui/similar_search_dialog.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gui/sky_replace_dialog.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gui/slider_spin.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/gui/slideshow_mp4_dialog.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/gui/smart_albums_dialog.py",
+      "complexity": 65
+    },
+    {
+      "path": "Imervue/gui/smart_crop_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/soft_proof_dialog.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/gui/solarize_dialog.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/gui/split_toning_dialog.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/gui/stack_blend_dialog.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/gui/staging_tray_dialog.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/gui/steganography_dialog.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gui/tag_album_dialog.py",
+      "complexity": 119
+    },
+    {
+      "path": "Imervue/gui/tag_filter_dialog.py",
+      "complexity": 32
+    },
+    {
+      "path": "Imervue/gui/test_charts_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/timeline_view.py",
+      "complexity": 73
+    },
+    {
+      "path": "Imervue/gui/tiny_planet_dialog.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/gui/toast.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/gui/token_rename_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/tone_curve_dialog.py",
+      "complexity": 50
+    },
+    {
+      "path": "Imervue/gui/tone_equalizer_dialog.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/gui/tool_icons.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/gui/tooltip_text.py",
+      "complexity": 62
+    },
+    {
+      "path": "Imervue/gui/trash_failure_notice.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/gui/velvia_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/virtual_copies_dialog.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/gui/watch_folder_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/web_gallery_dialog.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/gui/whats_new_dialog.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/gui/workspace_dialog.py",
+      "complexity": 39
+    },
+    {
+      "path": "Imervue/gui/workspace_manager.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/gui/workspace_widgets.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/gui/xmp_sidecar_dialog.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/image/anaglyph.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/image/animation_edit.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/image/auto_color_balance.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/image/auto_straighten.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/image/avif_support.py",
+      "complexity": 1
+    },
+    {
+      "path": "Imervue/image/batch_move_planner.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/image/binarize.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/image/browser_state.py",
+      "complexity": 132
+    },
+    {
+      "path": "Imervue/image/caption.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/image/channel_mixer.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/image/clahe.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/image/clone_stamp.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/image/collage.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/colormap.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/color_profile.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/image/copy_move.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/image/crop_geometry.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/curves.py",
+      "complexity": 42
+    },
+    {
+      "path": "Imervue/image/deflicker.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/image/defringe.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/dehaze.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/image/denoise.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/detail_equalizer.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/develop_backends.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/image/develop_presets.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/image/develop_preview.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/image/dimensions.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/distort.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/image/dither.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/image/ela.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/image/emboss.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/image/equirectangular.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/image/exif_fields.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/image/exif_merge.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/exif_types.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/image/export_metadata.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/image/export_presets.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/image/face_detection.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/image/false_color.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/image/film_grain.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/image/filmic_tonemap.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/film_negative.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/image/flatten_field.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/image/focus_peaking.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/image/focus_stack.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/image/folder_index.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/image/formats.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/image/frequency_separation.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/frosted_glass.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/image/geo_keywords.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/image/geometry.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/image/glow.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/gps_geotag.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/image/gps.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/image/gradient_map.py",
+      "complexity": 40
+    },
+    {
+      "path": "Imervue/image/gradient_perceptual.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/image/graduated_density.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/image/hdr_merge.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/image/healing.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/image/heif_support.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/high_bit_depth.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/histogram.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/image/hsl_mixer.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/image/id_photo_sheet.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/info.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/image/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/image/inpaint.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/in_place_save.py",
+      "complexity": 63
+    },
+    {
+      "path": "Imervue/image/jpeg_exif.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/image/jpeg_orientation.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/image/jxl_support.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/image/kaleidoscope.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/layers.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/image/lens_correction.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/image/lens_flare.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/image/levels.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/image/local_contrast.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/image/lut.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/image/masks.py",
+      "complexity": 45
+    },
+    {
+      "path": "Imervue/image/meme.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/image/metadata_sync.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/image/multipage.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/image/ocr.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/image/optimize.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/orientation.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/image/otsu.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/output_policy.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/image/panorama.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/image/perceptual_hash.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/image/photo_frame.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/image/pixel_sort.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/image/polar.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/image/portrait_retouch.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/image/posterize.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/image/print_layout.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/image/pyramid.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/quality_metrics.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/image/quality_score.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/image/raw_exif.py",
+      "complexity": 88
+    },
+    {
+      "path": "Imervue/image/raw_loader.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/image/read_errors.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/image/recipe_adjustments.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/image/recipe_diff.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/recipe.py",
+      "complexity": 160
+    },
+    {
+      "path": "Imervue/image/recipe_store.py",
+      "complexity": 115
+    },
+    {
+      "path": "Imervue/image/resample.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/image/reverse_geocode.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/saliency.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/image/save_formats.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/image/scale_bar.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/image/scopes.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/segmentation.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/image/sharpness.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/image/shown.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/image/soft_proof.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/image/solarize.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/image/split_toning.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/image/stack_blend.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/image/statistics.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/steganography.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/image/test_charts.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/thumbnail_disk_cache.py",
+      "complexity": 70
+    },
+    {
+      "path": "Imervue/image/tile_manager.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/image/tone_curve.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/image/tone_equalizer.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/image/velvia.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/image/video_frames.py",
+      "complexity": 50
+    },
+    {
+      "path": "Imervue/image/watermark.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/image/webp_exif.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/image/xmp_sidecar.py",
+      "complexity": 145
+    },
+    {
+      "path": "Imervue/Imervue_main_window.py",
+      "complexity": 84
+    },
+    {
+      "path": "Imervue/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/integration_guide.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/library/album_io.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/library/auto_cull.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/library/auto_tag.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/library/bloom_filter.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/library/calendar_index.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/library/capture_time.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/library/clip_onnx.py",
+      "complexity": 32
+    },
+    {
+      "path": "Imervue/library/clip_search.py",
+      "complexity": 80
+    },
+    {
+      "path": "Imervue/library/clip_tokenizer.py",
+      "complexity": 40
+    },
+    {
+      "path": "Imervue/library/collection_stats.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/library/date_import.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/library/dedupe_resolver.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/library/events.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/library/gpx_geotag.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/library/group_cull.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/library/image_index.py",
+      "complexity": 151
+    },
+    {
+      "path": "Imervue/library/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/library/keyword_index.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/library/keyword_vocabulary.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/library/keyword_vocabulary_store.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/library/maintenance.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/library/metadata_audit.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/library/metadata_export.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/library/phash.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/library/photo_workflow.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/library/quality_cull.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/library/reference_pins.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/library/scanner.py",
+      "complexity": 63
+    },
+    {
+      "path": "Imervue/library/search_query.py",
+      "complexity": 53
+    },
+    {
+      "path": "Imervue/library/smart_album.py",
+      "complexity": 130
+    },
+    {
+      "path": "Imervue/library/stacks.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/library/staging_tray.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/library/tag_relations.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/library/token_rename.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/macros/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/macros/macro_manager.py",
+      "complexity": 77
+    },
+    {
+      "path": "Imervue/macros/macro_step_validator.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/__main__.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/mcp_server/completion.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/mcp_server/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/mcp_server/logging.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/mcp_server/__main__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/mcp_server/notifications.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/mcp_server/progress.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/mcp_server/prompts.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/mcp_server/resources.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/mcp_server/server.py",
+      "complexity": 90
+    },
+    {
+      "path": "Imervue/mcp_server/tool_defs_edit.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/mcp_server/tool_defs_read.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/mcp_server/tool_schemas.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/mcp_server/tools_edit.py",
+      "complexity": 90
+    },
+    {
+      "path": "Imervue/mcp_server/tools.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/mcp_server/tools_read.py",
+      "complexity": 61
+    },
+    {
+      "path": "Imervue/mcp_server/tool_support.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/menu/extra_tools_menu.py",
+      "complexity": 128
+    },
+    {
+      "path": "Imervue/menu/file_menu.py",
+      "complexity": 75
+    },
+    {
+      "path": "Imervue/menu/filter_menu.py",
+      "complexity": 59
+    },
+    {
+      "path": "Imervue/menu/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/menu/language_menu.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/menu/modify_menu.py",
+      "complexity": 1
+    },
+    {
+      "path": "Imervue/menu/plugin_menu.py",
+      "complexity": 44
+    },
+    {
+      "path": "Imervue/menu/recent_menu.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/menu/right_click_menu.py",
+      "complexity": 162
+    },
+    {
+      "path": "Imervue/menu/sort_menu.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/menu/tip_menu.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/multi_language/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/multi_language/language_wrapper.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/multi_language/translation_validation.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/paint/adjustments.py",
+      "complexity": 88
+    },
+    {
+      "path": "Imervue/paint/animation_dock.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/paint/animation_export.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/paint/animation.py",
+      "complexity": 77
+    },
+    {
+      "path": "Imervue/paint/animation_timeline.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/paint/auto_base_color.py",
+      "complexity": 55
+    },
+    {
+      "path": "Imervue/paint/auto_region_fill.py",
+      "complexity": 42
+    },
+    {
+      "path": "Imervue/paint/autosave_jobs.py",
+      "complexity": 42
+    },
+    {
+      "path": "Imervue/paint/auto_save.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/paint/bezier_path.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/paint/binary_layer.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/paint/bleed_guides.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/paint/blend_if.py",
+      "complexity": 49
+    },
+    {
+      "path": "Imervue/paint/blend_modes.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/paint/blur.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/paint/brush_cursor.py",
+      "complexity": 40
+    },
+    {
+      "path": "Imervue/paint/brush_dynamics.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/paint/brush_engine.py",
+      "complexity": 87
+    },
+    {
+      "path": "Imervue/paint/brush_kind_preview.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/paint/brush_preset_dialog.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/paint/brush_preset_io.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/paint/brush_presets.py",
+      "complexity": 50
+    },
+    {
+      "path": "Imervue/paint/brush_random.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/paint/brush_tip_capture.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/paint/canvas_input.py",
+      "complexity": 65
+    },
+    {
+      "path": "Imervue/paint/canvas_overlays.py",
+      "complexity": 74
+    },
+    {
+      "path": "Imervue/paint/canvas_presets.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/paint/canvas.py",
+      "complexity": 88
+    },
+    {
+      "path": "Imervue/paint/canvas_transforms.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/paint/canvas_view.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/paint/catmull_rom_spline.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/paint/color_blindness.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/paint/color_math.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/paint/color_palette_io.py",
+      "complexity": 56
+    },
+    {
+      "path": "Imervue/paint/color_palette.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/paint/color_wheel.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/paint/color_wheel_widget.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/paint/comic_stamps.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/paint/compositing.py",
+      "complexity": 83
+    },
+    {
+      "path": "Imervue/paint/crop.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/paint/crop_tool.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/paint/custom_brush.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/paint/damage.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/paint/default_brush_presets.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/paint/divide_layer.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/paint/dock_panels.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/paint/docks/brushes.py",
+      "complexity": 63
+    },
+    {
+      "path": "Imervue/paint/docks/color.py",
+      "complexity": 51
+    },
+    {
+      "path": "Imervue/paint/docks/_helpers.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/docks/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/paint/docks/layers.py",
+      "complexity": 80
+    },
+    {
+      "path": "Imervue/paint/docks/materials.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/paint/docks/navigators.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/paint/document_composite.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/paint/document_files.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/paint/document_geometry.py",
+      "complexity": 44
+    },
+    {
+      "path": "Imervue/paint/document_groups.py",
+      "complexity": 39
+    },
+    {
+      "path": "Imervue/paint/document_io.py",
+      "complexity": 86
+    },
+    {
+      "path": "Imervue/paint/document_layer_access.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/paint/document_layer_creation.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/paint/document_layer_order.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/paint/document_layer_properties.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/paint/document_layer_visibility.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/paint/document_masks.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/paint/document_merge.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/paint/document_named_selections.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/paint/document.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/paint/document_reference.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/paint/document_selection.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/paint/document_state.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/paint/document_status.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/paint/dodge_burn.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/paint/edit_menu.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/paint/export_presets.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/paint/file_menu.py",
+      "complexity": 95
+    },
+    {
+      "path": "Imervue/paint/fill.py",
+      "complexity": 59
+    },
+    {
+      "path": "Imervue/paint/filter_menu.py",
+      "complexity": 65
+    },
+    {
+      "path": "Imervue/paint/filter_preview_dialog.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/paint/flash_effect.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/paint/gpu_brush.py",
+      "complexity": 70
+    },
+    {
+      "path": "Imervue/paint/gradient_editor_dialog.py",
+      "complexity": 44
+    },
+    {
+      "path": "Imervue/paint/gradient_editor.py",
+      "complexity": 70
+    },
+    {
+      "path": "Imervue/paint/gradient_map_presets.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/paint/gradient.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/paint/halftone.py",
+      "complexity": 42
+    },
+    {
+      "path": "Imervue/paint/histogram_dock.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/histogram.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/paint/history_pixels.py",
+      "complexity": 55
+    },
+    {
+      "path": "Imervue/paint/image_menu.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/paint/image_resize.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/paint/image_trace.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/paint/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/paint/layer_effects.py",
+      "complexity": 50
+    },
+    {
+      "path": "Imervue/paint/layer_menu.py",
+      "complexity": 57
+    },
+    {
+      "path": "Imervue/paint/layer_model.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/paint/layer_ops.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/paint/layer_thumbnail.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/paint/liquify_dialog.py",
+      "complexity": 40
+    },
+    {
+      "path": "Imervue/paint/liquify.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/paint/magnetic_lasso.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/paint/manga_menu.py",
+      "complexity": 62
+    },
+    {
+      "path": "Imervue/paint/manga_panels.py",
+      "complexity": 67
+    },
+    {
+      "path": "Imervue/paint/marquee.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/match_color.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/paint/match_palette.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/paint/material_drop.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/paint/material_library.py",
+      "complexity": 54
+    },
+    {
+      "path": "Imervue/paint/material_procedural.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/paint/multi_view.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/paint/new_canvas_dialog.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/paint/new_project_dialog.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/paint/page_dock.py",
+      "complexity": 53
+    },
+    {
+      "path": "Imervue/paint/page_numbering.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/page_templates.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/paint/painterly.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/paint/paint_menu_bar.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/paint/paint_project_export.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/paint/paint_project_io.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/paint_project.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/paint/paint_workspace.py",
+      "complexity": 124
+    },
+    {
+      "path": "Imervue/paint/palette_extract.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/paint/pen_commit.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/pointer_event.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/paint/pose_dock.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/paint/pose_drop.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/pose_skeleton.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/paint/pressure_curve_dialog.py",
+      "complexity": 40
+    },
+    {
+      "path": "Imervue/paint/pressure_curve.py",
+      "complexity": 30
+    },
+    {
+      "path": "Imervue/paint/psd_io.py",
+      "complexity": 126
+    },
+    {
+      "path": "Imervue/paint/quick_mask.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/paint/recent_files.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/paint/reference_dock.py",
+      "complexity": 34
+    },
+    {
+      "path": "Imervue/paint/rulers.py",
+      "complexity": 68
+    },
+    {
+      "path": "Imervue/paint/save_region_as_material.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/paint/selection_ops.py",
+      "complexity": 54
+    },
+    {
+      "path": "Imervue/paint/selection.py",
+      "complexity": 50
+    },
+    {
+      "path": "Imervue/paint/selection_transform.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/paint/settings_menu.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/paint/shape_engine.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/paint/shortcut_binding.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/paint/shortcut_dialog.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/paint/shortcut_registry.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/paint/shortcuts_dialog.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/paint/size_hud_bridge.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/paint/size_hud.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/paint/smudge.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/snap_guides.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/paint/speech_bubble.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/paint/speedlines.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/paint/sponge.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/paint/stabilizer.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/stamp_dock.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/paint/stamp_tool.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/paint/stroke_along_path.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/paint/stroke_selection.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/paint/swatch_panel.py",
+      "complexity": 49
+    },
+    {
+      "path": "Imervue/paint/symmetry.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/paint/text_on_path.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/paint/text_on_selection.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/paint/text_render.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/paint/text_tool.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/paint/tool_bar.py",
+      "complexity": 64
+    },
+    {
+      "path": "Imervue/paint/tool_dispatcher.py",
+      "complexity": 56
+    },
+    {
+      "path": "Imervue/paint/tool_icons.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/paint/tool_palette.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/paint/tools/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/paint/tools_menu.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/paint/tools/painting.py",
+      "complexity": 75
+    },
+    {
+      "path": "Imervue/paint/tools/retouch.py",
+      "complexity": 84
+    },
+    {
+      "path": "Imervue/paint/tools/select.py",
+      "complexity": 67
+    },
+    {
+      "path": "Imervue/paint/tools/shapes.py",
+      "complexity": 70
+    },
+    {
+      "path": "Imervue/paint/tools/special.py",
+      "complexity": 56
+    },
+    {
+      "path": "Imervue/paint/tool_state_brush_fill.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/paint/tool_state_codec.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/paint/tool_state_colors.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/paint/tool_state_color_values.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/paint/tool_state_gradient.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/paint/tool_state_history.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/paint/tool_state_normalize.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/paint/tool_state_options.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/paint/tool_state.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/paint/tool_state_ruler.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/paint/tool_state_settings_codec.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/paint/tool_state_settings.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/paint/tool_state_subtool_codec.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/paint/tool_state_subtools.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/paint/transform_handles.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/paint/undo_stack.py",
+      "complexity": 54
+    },
+    {
+      "path": "Imervue/paint/vector_layer.py",
+      "complexity": 58
+    },
+    {
+      "path": "Imervue/paint/view_menu.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/paint/visual_guides.py",
+      "complexity": 44
+    },
+    {
+      "path": "Imervue/paint/welcome_overlay.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/paint/workspace_autosave.py",
+      "complexity": 86
+    },
+    {
+      "path": "Imervue/paint/workspace_content.py",
+      "complexity": 83
+    },
+    {
+      "path": "Imervue/paint/workspace_docks.py",
+      "complexity": 56
+    },
+    {
+      "path": "Imervue/paint/workspace_history.py",
+      "complexity": 1
+    },
+    {
+      "path": "Imervue/paint/workspace_preset_dialog.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/paint/workspace_presets.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/paint/workspace_shortcuts.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/paint/workspace_status.py",
+      "complexity": 77
+    },
+    {
+      "path": "Imervue/paint/workspace_tabs.py",
+      "complexity": 58
+    },
+    {
+      "path": "Imervue/plugin/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/plugin/installation.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/plugin/model_dir.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/plugin/pip_constraints.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/plugin/pip_installer.py",
+      "complexity": 126
+    },
+    {
+      "path": "Imervue/plugin/plugin_api.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/plugin/plugin_base.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/plugin/plugin_downloader.py",
+      "complexity": 92
+    },
+    {
+      "path": "Imervue/plugin/plugin_manager.py",
+      "complexity": 98
+    },
+    {
+      "path": "Imervue/plugin/python_finder.py",
+      "complexity": 48
+    },
+    {
+      "path": "Imervue/plugin/status.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/plugin/subprocess_util.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/plugin/tool_dialog.py",
+      "complexity": 15
+    },
+    {
+      "path": "Imervue/plugin/worker_host.py",
+      "complexity": 27
+    },
+    {
+      "path": "Imervue/plugin/worker_retirement.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/puppet/archive_container.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/puppet/archive_members.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/puppet/audio_lipsync.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/puppet/auto_mesh.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/auto_rig.py",
+      "complexity": 88
+    },
+    {
+      "path": "Imervue/puppet/batch_export.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/puppet/bone_tree_dock.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/puppet/bone_weights.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/puppet/canvas.py",
+      "complexity": 162
+    },
+    {
+      "path": "Imervue/puppet/canvas_render.py",
+      "complexity": 68
+    },
+    {
+      "path": "Imervue/puppet/clip_masks.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/puppet/cubism_import.py",
+      "complexity": 122
+    },
+    {
+      "path": "Imervue/puppet/cubism_native_bridge.py",
+      "complexity": 48
+    },
+    {
+      "path": "Imervue/puppet/cubism_native_convert.py",
+      "complexity": 103
+    },
+    {
+      "path": "Imervue/puppet/deformers.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/puppet/document_io.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/puppet/document.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/puppet/drawable_codec.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/puppet/drawable_curves.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/drawable_deformation.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/easing.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/puppet/expression_codec.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/puppet/expression_dock.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/puppet/face_landmark_mapper.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/puppet/format_schema.py",
+      "complexity": 41
+    },
+    {
+      "path": "Imervue/puppet/format_values.py",
+      "complexity": 17
+    },
+    {
+      "path": "Imervue/puppet/hit_test.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/puppet/idle_driver.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/puppet/idle_motion_cycler.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/puppet/__init__.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/puppet/input_drivers.py",
+      "complexity": 24
+    },
+    {
+      "path": "Imervue/puppet/input_engine.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/puppet/manifest_collections.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/puppet/manifest_decode.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/puppet/manifest_encode.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/puppet/mesh_edit.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/puppet/mesh_repair.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/puppet/motion_codec.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/puppet/motion_compress.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/puppet/motion_dock.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/puppet/motion_picker.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/puppet/motion_player.py",
+      "complexity": 87
+    },
+    {
+      "path": "Imervue/puppet/motion_recorder.py",
+      "complexity": 28
+    },
+    {
+      "path": "Imervue/puppet/motion_sampler.py",
+      "complexity": 32
+    },
+    {
+      "path": "Imervue/puppet/motion_timeline.py",
+      "complexity": 64
+    },
+    {
+      "path": "Imervue/puppet/mouse_gaze_driver.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/puppet/ndi_output.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/puppet/operations.py",
+      "complexity": 33
+    },
+    {
+      "path": "Imervue/puppet/parameter_codec.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/parameter_dock.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/puppet/physics_codec.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/puppet/physics.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/puppet/pose_dock.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/psd_import.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/puppet/recorder.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/puppet/render_prep.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/puppet/requirements.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/puppet/rig_codec.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/rig_repair.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/puppet/runtime_appearance.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/puppet/runtime_blend_grid.py",
+      "complexity": 16
+    },
+    {
+      "path": "Imervue/puppet/runtime_blends.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/puppet/runtime_curves.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/puppet/runtime_deformer_order.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/puppet/runtime_forms.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/puppet/runtime_geometry.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/puppet/runtime_interpolation.py",
+      "complexity": 8
+    },
+    {
+      "path": "Imervue/puppet/runtime_morphs.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/runtime_overlays.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/puppet/runtime_parameters.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/puppet/runtime_parts.py",
+      "complexity": 18
+    },
+    {
+      "path": "Imervue/puppet/runtime.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/puppet/runtime_skinning.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/puppet/schema_check.py",
+      "complexity": 52
+    },
+    {
+      "path": "Imervue/puppet/spritesheet.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/puppet/standard_params.py",
+      "complexity": 4
+    },
+    {
+      "path": "Imervue/puppet/symmetrize.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/puppet/synth_motions.py",
+      "complexity": 36
+    },
+    {
+      "path": "Imervue/puppet/validator.py",
+      "complexity": 78
+    },
+    {
+      "path": "Imervue/puppet/virtual_camera.py",
+      "complexity": 37
+    },
+    {
+      "path": "Imervue/puppet/vts_api.py",
+      "complexity": 60
+    },
+    {
+      "path": "Imervue/puppet/webcam_preview_dialog.py",
+      "complexity": 20
+    },
+    {
+      "path": "Imervue/puppet/webcam_tracker.py",
+      "complexity": 51
+    },
+    {
+      "path": "Imervue/puppet/workspace_import.py",
+      "complexity": 40
+    },
+    {
+      "path": "Imervue/puppet/workspace_live.py",
+      "complexity": 44
+    },
+    {
+      "path": "Imervue/puppet/workspace_menus.py",
+      "complexity": 25
+    },
+    {
+      "path": "Imervue/puppet/workspace.py",
+      "complexity": 157
+    },
+    {
+      "path": "Imervue/puppet/workspace_ui.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/sessions/folder_session.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/sessions/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/sessions/session_manager.py",
+      "complexity": 71
+    },
+    {
+      "path": "Imervue/system/app_paths.py",
+      "complexity": 14
+    },
+    {
+      "path": "Imervue/system/atomic_write.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/system/batch_rename.py",
+      "complexity": 38
+    },
+    {
+      "path": "Imervue/system/best_effort.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/system/clipboard_monitor.py",
+      "complexity": 22
+    },
+    {
+      "path": "Imervue/system/error_report.py",
+      "complexity": 35
+    },
+    {
+      "path": "Imervue/system/file_association.py",
+      "complexity": 42
+    },
+    {
+      "path": "Imervue/system/file_manager.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/system/file_transfer.py",
+      "complexity": 63
+    },
+    {
+      "path": "Imervue/system/folder_poll.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/system/free_names.py",
+      "complexity": 9
+    },
+    {
+      "path": "Imervue/system/hidden_files.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/system/image_listing.py",
+      "complexity": 19
+    },
+    {
+      "path": "Imervue/system/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/system/job_state.py",
+      "complexity": 58
+    },
+    {
+      "path": "Imervue/system/local_llm.py",
+      "complexity": 6
+    },
+    {
+      "path": "Imervue/system/local_origin.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/system/log_setup.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/system/macos_bundle.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/system/modern_theme.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/system/natural_sort.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/system/onboarding.py",
+      "complexity": 1
+    },
+    {
+      "path": "Imervue/system/pillow_setup.py",
+      "complexity": 1
+    },
+    {
+      "path": "Imervue/system/pixel_limit.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/system/qimage_convert.py",
+      "complexity": 3
+    },
+    {
+      "path": "Imervue/system/qt_timers.py",
+      "complexity": 2
+    },
+    {
+      "path": "Imervue/system/qt_translations.py",
+      "complexity": 5
+    },
+    {
+      "path": "Imervue/system/release_notes.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/system/themes.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/system/trash_ops.py",
+      "complexity": 54
+    },
+    {
+      "path": "Imervue/system/ui_scale.py",
+      "complexity": 11
+    },
+    {
+      "path": "Imervue/system/unreadable_guard.py",
+      "complexity": 7
+    },
+    {
+      "path": "Imervue/system/wallpaper.py",
+      "complexity": 26
+    },
+    {
+      "path": "Imervue/system/watch_folder.py",
+      "complexity": 21
+    },
+    {
+      "path": "Imervue/user_settings/bookmark.py",
+      "complexity": 13
+    },
+    {
+      "path": "Imervue/user_settings/code_replacements.py",
+      "complexity": 12
+    },
+    {
+      "path": "Imervue/user_settings/color_labels.py",
+      "complexity": 31
+    },
+    {
+      "path": "Imervue/user_settings/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "Imervue/user_settings/metadata_template.py",
+      "complexity": 23
+    },
+    {
+      "path": "Imervue/user_settings/path_metadata.py",
+      "complexity": 58
+    },
+    {
+      "path": "Imervue/user_settings/recent_image.py",
+      "complexity": 10
+    },
+    {
+      "path": "Imervue/user_settings/tags.py",
+      "complexity": 29
+    },
+    {
+      "path": "Imervue/user_settings/tag_validator.py",
+      "complexity": 46
+    },
+    {
+      "path": "Imervue/user_settings/user_setting_dict.py",
+      "complexity": 76
+    },
+    {
+      "path": "plugins/ai_background_remover/ai_background_remover.py",
+      "complexity": 96
+    },
+    {
+      "path": "plugins/ai_background_remover/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_background_remover/_rembg_runner.py",
+      "complexity": 5
+    },
+    {
+      "path": "plugins/ai_colorize/ai_colorize_plugin.py",
+      "complexity": 19
+    },
+    {
+      "path": "plugins/ai_colorize/colorize.py",
+      "complexity": 22
+    },
+    {
+      "path": "plugins/ai_colorize/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_denoise/ai_denoise_plugin.py",
+      "complexity": 16
+    },
+    {
+      "path": "plugins/ai_denoise/denoise.py",
+      "complexity": 18
+    },
+    {
+      "path": "plugins/ai_denoise/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_motion_deblur/ai_motion_deblur_plugin.py",
+      "complexity": 22
+    },
+    {
+      "path": "plugins/ai_motion_deblur/deblur.py",
+      "complexity": 25
+    },
+    {
+      "path": "plugins/ai_motion_deblur/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_object_remove/ai_object_remove_plugin.py",
+      "complexity": 68
+    },
+    {
+      "path": "plugins/ai_object_remove/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_object_remove/object_removal.py",
+      "complexity": 44
+    },
+    {
+      "path": "plugins/ai_object_remove/sam.py",
+      "complexity": 21
+    },
+    {
+      "path": "plugins/ai_outpaint/ai_outpaint_plugin.py",
+      "complexity": 9
+    },
+    {
+      "path": "plugins/ai_outpaint/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_outpaint/outpaint.py",
+      "complexity": 8
+    },
+    {
+      "path": "plugins/ai_portrait_relight/ai_portrait_relight_plugin.py",
+      "complexity": 18
+    },
+    {
+      "path": "plugins/ai_portrait_relight/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_portrait_relight/relight.py",
+      "complexity": 21
+    },
+    {
+      "path": "plugins/ai_smart_resize/ai_smart_resize_plugin.py",
+      "complexity": 14
+    },
+    {
+      "path": "plugins/ai_smart_resize/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_smart_resize/seam_carving.py",
+      "complexity": 44
+    },
+    {
+      "path": "plugins/ai_style_transfer/ai_style_transfer_plugin.py",
+      "complexity": 17
+    },
+    {
+      "path": "plugins/ai_style_transfer/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/ai_style_transfer/style_transfer.py",
+      "complexity": 14
+    },
+    {
+      "path": "plugins/cloud_share/cloud_share_plugin.py",
+      "complexity": 38
+    },
+    {
+      "path": "plugins/cloud_share/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/cloud_share/uploaders.py",
+      "complexity": 26
+    },
+    {
+      "path": "plugins/gpu_develop/adapter_policy.py",
+      "complexity": 11
+    },
+    {
+      "path": "plugins/gpu_develop/develop_shader.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/gpu_develop/gpu_develop_plugin.py",
+      "complexity": 14
+    },
+    {
+      "path": "plugins/gpu_develop/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/gpu_develop/params.py",
+      "complexity": 25
+    },
+    {
+      "path": "plugins/gpu_develop/renderer.py",
+      "complexity": 43
+    },
+    {
+      "path": "plugins/gpu_develop/translations.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/npr_filters/filters.py",
+      "complexity": 20
+    },
+    {
+      "path": "plugins/npr_filters/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/npr_filters/npr_filters_plugin.py",
+      "complexity": 15
+    },
+    {
+      "path": "plugins/object_splitter/_components.py",
+      "complexity": 13
+    },
+    {
+      "path": "plugins/object_splitter/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/object_splitter/object_splitter.py",
+      "complexity": 57
+    },
+    {
+      "path": "plugins/object_splitter/_runner.py",
+      "complexity": 6
+    },
+    {
+      "path": "plugins/pet_integrations/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/pet_integrations/integrations.py",
+      "complexity": 29
+    },
+    {
+      "path": "plugins/pet_integrations/obs_event_hook.py",
+      "complexity": 29
+    },
+    {
+      "path": "plugins/pet_integrations/pet_integrations_plugin.py",
+      "complexity": 42
+    },
+    {
+      "path": "plugins/pet_integrations/settings_dialog.py",
+      "complexity": 26
+    },
+    {
+      "path": "plugins/pet_integrations/translations.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/pet_integrations/twitch_chat_hook.py",
+      "complexity": 47
+    },
+    {
+      "path": "plugins/pet_integrations/webhook_server.py",
+      "complexity": 47
+    },
+    {
+      "path": "plugins/pet_integrations/windows_notification_hook.py",
+      "complexity": 49
+    },
+    {
+      "path": "plugins/png_to_icon/icon_converter_plugin.py",
+      "complexity": 17
+    },
+    {
+      "path": "plugins/png_to_icon/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/portrait_mode/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/portrait_mode/portrait_blur.py",
+      "complexity": 14
+    },
+    {
+      "path": "plugins/portrait_mode/portrait_mode.py",
+      "complexity": 14
+    },
+    {
+      "path": "plugins/safety_review/_censor_core.py",
+      "complexity": 51
+    },
+    {
+      "path": "plugins/safety_review/_class_config.py",
+      "complexity": 24
+    },
+    {
+      "path": "plugins/safety_review/_constants.py",
+      "complexity": 6
+    },
+    {
+      "path": "plugins/safety_review/_dataset.py",
+      "complexity": 12
+    },
+    {
+      "path": "plugins/safety_review/_detection.py",
+      "complexity": 76
+    },
+    {
+      "path": "plugins/safety_review/_dialogs.py",
+      "complexity": 141
+    },
+    {
+      "path": "plugins/safety_review/finetune.py",
+      "complexity": 12
+    },
+    {
+      "path": "plugins/safety_review/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/safety_review/_manual_dialog.py",
+      "complexity": 94
+    },
+    {
+      "path": "plugins/safety_review/_manual.py",
+      "complexity": 16
+    },
+    {
+      "path": "plugins/safety_review/_model_settings_dialog.py",
+      "complexity": 20
+    },
+    {
+      "path": "plugins/safety_review/_runner.py",
+      "complexity": 81
+    },
+    {
+      "path": "plugins/safety_review/safety_review.py",
+      "complexity": 42
+    },
+    {
+      "path": "plugins/safety_review/_translations.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/safety_review/_workers.py",
+      "complexity": 81
+    },
+    {
+      "path": "plugins/spanish_translation/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/spanish_translation/spanish.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/spanish_translation/spanish_translation_plugin.py",
+      "complexity": 3
+    },
+    {
+      "path": "plugins/video_source/__init__.py",
+      "complexity": 0
+    },
+    {
+      "path": "plugins/video_source/video_frames.py",
+      "complexity": 13
+    },
+    {
+      "path": "plugins/video_source/video_source_plugin.py",
+      "complexity": 61
+    }
+  ]
+}

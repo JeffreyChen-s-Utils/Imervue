@@ -21,14 +21,39 @@ A rules dict supports these keys (all optional):
 """
 from __future__ import annotations
 
-import fnmatch
 import json
-import re
 import time
 from collections.abc import Iterable
 from pathlib import Path
 
 from Imervue.library import image_index
+from Imervue.library.smart_album_catalog import (
+    _apply_index_filters,
+    _apply_user_setting_filters,
+)
+from Imervue.library.smart_album_dimensions import _apply_dimension_filters
+from Imervue.library.smart_album_files import (
+    _apply_exif_filters,
+    _apply_name_pattern_filters,
+    _apply_size_filters,
+)
+from Imervue.library.smart_album_location import (
+    _apply_place_filter,
+    auto_location_albums,
+    place_matches,
+)
+
+__all__ = [
+    "apply_to_paths",
+    "auto_location_albums",
+    "delete",
+    "generate_location_albums",
+    "get",
+    "list_all",
+    "place_matches",
+    "save",
+    "touch",
+]
 
 
 def save(name: str, rules: dict) -> None:
@@ -41,30 +66,31 @@ def delete(name: str) -> bool:
     return image_index.delete_smart_album(name)
 
 
+def _decode_rules(rules_json) -> dict:
+    """Decode a stored ``rules_json``; anything unreadable is the empty rule set."""
+    try:
+        return json.loads(rules_json)
+    except (TypeError, ValueError):
+        return {}
+
+
 def list_all() -> list[dict]:
     """Return [{name, rules, updated_at}]."""
-    out: list[dict] = []
-    for row in image_index.list_smart_albums():
-        try:
-            rules = json.loads(row["rules_json"])
-        except (TypeError, ValueError):
-            rules = {}
-        out.append({
+    return [
+        {
             "name": row["name"],
-            "rules": rules,
+            "rules": _decode_rules(row["rules_json"]),
             "updated_at": row["updated_at"] or 0.0,
-        })
-    return out
+        }
+        for row in image_index.list_smart_albums()
+    ]
 
 
 def get(name: str) -> dict | None:
     row = image_index.get_smart_album(name)
     if row is None:
         return None
-    try:
-        rules = json.loads(row["rules_json"])
-    except (TypeError, ValueError):
-        rules = {}
+    rules = _decode_rules(row["rules_json"])
     return {"name": row["name"], "rules": rules, "updated_at": row["updated_at"]}
 
 
@@ -96,80 +122,6 @@ def apply_to_paths(paths: Iterable[str], rules: dict) -> list[str]:
     return result
 
 
-def _contains_ci(needle: str, haystack: str) -> bool:
-    return needle.lower() in haystack.lower()
-
-
-def _apply_exif_filters(paths: list[str], rules: dict) -> list[str]:
-    """Keep paths whose EXIF make/model (``camera``) or lens (``lens``) match.
-
-    Runs late (after the cheap filters) because it reads EXIF per file.
-    Untagged images carry no camera/lens, so a camera/lens rule drops them.
-    """
-    camera = rules.get("camera")
-    lens = rules.get("lens")
-    if not camera and not lens:
-        return paths
-    from Imervue.image.exif_merge import get_exif_data
-    out: list[str] = []
-    for path in paths:
-        exif = get_exif_data(Path(path))
-        body = f"{exif.get('Make', '')} {exif.get('Model', '')}"
-        if camera and not _contains_ci(camera, body):
-            continue
-        if lens and not _contains_ci(lens, str(exif.get("LensModel", ""))):
-            continue
-        out.append(path)
-    return out
-
-
-def place_matches(found: str | None, wanted: str) -> bool:
-    """Whether the geocoded *found* (``"City, Country"``) is the *wanted* place.
-
-    *wanted* names the city, the country or both, in any case: ``Paris``,
-    ``france`` and ``Paris, France`` all match ``"Paris, France"``. A typed
-    ``place:Paris`` compared the whole string and never matched.
-    """
-    if not found:
-        return False
-    parts = [part.strip().lower() for part in found.split(",")]
-    asked = [part.strip().lower() for part in wanted.split(",") if part.strip()]
-    return asked == parts or (len(asked) == 1 and asked[0] in parts)
-
-
-def _apply_place_filter(paths: list[str], place: str) -> list[str]:
-    """Keep paths whose GPS reverse-geocodes to *place* (see :func:`place_matches`).
-
-    Runs last (after the cheap filters narrow the set) because it extracts EXIF
-    GPS per file. Untagged images can't match a place, so they drop out.
-    """
-    from Imervue.image.gps import extract_gps
-    from Imervue.image.reverse_geocode import reverse_geocode
-    out: list[str] = []
-    for path in paths:
-        coords = extract_gps(path)
-        if coords is not None and place_matches(reverse_geocode(coords[0], coords[1]), place):
-            out.append(path)
-    return out
-
-
-def auto_location_albums(
-    path_coords: list[tuple[str, float, float]],
-) -> list[tuple[str, dict]]:
-    """Group ``(path, lat, lon)`` into one ``(album_name, rules)`` per city.
-
-    Pure: the album name is the nearest-city place and its rule is a matching
-    ``place`` filter. Returned sorted by name for stable output.
-    """
-    from Imervue.image.reverse_geocode import reverse_geocode
-    buckets: dict[str, list[str]] = {}
-    for path, lat, lon in path_coords:
-        place = reverse_geocode(lat, lon)
-        if place:
-            buckets.setdefault(place, []).append(path)
-    return [(place, {"place": place}) for place in sorted(buckets)]
-
-
 def generate_location_albums(paths: Iterable[str]) -> int:
     """Create a smart album per nearest-city for the geotagged *paths*.
 
@@ -180,176 +132,6 @@ def generate_location_albums(paths: Iterable[str]) -> int:
     for name, rules in albums:
         save(name, rules)
     return len(albums)
-
-
-def _apply_name_pattern_filters(paths: list[str], rules: dict) -> list[str]:
-    """Filter by a filename regex (``name_regex``) and/or glob (``name_glob``)."""
-    name_regex = rules.get("name_regex")
-    if name_regex:
-        try:
-            compiled = re.compile(name_regex)
-        except re.error:
-            return []  # an unparsable pattern matches nothing
-        paths = [p for p in paths if compiled.search(Path(p).name)]
-    name_glob = rules.get("name_glob")
-    if name_glob:
-        pattern = name_glob.lower()
-        paths = [p for p in paths if fnmatch.fnmatch(Path(p).name.lower(), pattern)]
-    return paths
-
-
-def _apply_user_setting_filters(paths: list[str], rules: dict) -> list[str]:
-    from Imervue.user_settings.color_labels import filter_by_color
-    from Imervue.user_settings.user_setting_dict import user_setting_dict
-
-    colors = rules.get("color_labels")
-    if colors:
-        keep: set[str] = set()
-        for c in colors:
-            keep.update(filter_by_color(paths, c))
-        paths = [p for p in paths if p in keep]
-
-    min_rating = rules.get("min_rating")
-    if min_rating:
-        ratings = user_setting_dict.get("image_ratings", {})
-        paths = [p for p in paths if int(ratings.get(p, 0)) >= int(min_rating)]
-
-    max_rating = rules.get("max_rating")
-    if max_rating is not None:
-        ratings = user_setting_dict.get("image_ratings", {})
-        paths = [p for p in paths if int(ratings.get(p, 0)) <= int(max_rating)]
-
-    if rules.get("favorites_only"):
-        favs = user_setting_dict.get("image_favorites", [])
-        fav_set = set(favs) if isinstance(favs, list | set | tuple) else set()
-        paths = [p for p in paths if p in fav_set]
-    return paths
-
-
-def _apply_index_filters(paths: list[str], rules: dict) -> list[str]:
-    cull = rules.get("cull")
-    if cull:
-        paths = image_index.filter_by_cull(paths, cull)
-
-    tags_any = rules.get("tags_any") or []
-    if tags_any:
-        allowed: set[str] = set()
-        for t in tags_any:
-            allowed.update(image_index.images_with_tag(t))
-        paths = [p for p in paths if p in allowed]
-
-    tags_all = rules.get("tags_all") or []
-    if tags_all:
-        for t in tags_all:
-            tagged = set(image_index.images_with_tag(t))
-            paths = [p for p in paths if p in tagged]
-
-    tags_exclude = rules.get("tags_exclude") or []
-    if tags_exclude:
-        excluded: set[str] = set()
-        for t in tags_exclude:
-            excluded.update(image_index.images_with_tag(t))
-        paths = [p for p in paths if p not in excluded]
-
-    date_from = rules.get("date_from")
-    date_to = rules.get("date_to")
-    if date_from or date_to:
-        paths = _apply_date_filter(paths, date_from, date_to)
-    return paths
-
-
-def _apply_size_filters(paths: list[str], rules: dict) -> list[str]:
-    """Filter by file size in bytes (``min_size`` / ``max_size``) via stat."""
-    min_size = rules.get("min_size")
-    max_size = rules.get("max_size")
-    if not min_size and not max_size:
-        return paths
-    out: list[str] = []
-    for p in paths:
-        try:
-            size = Path(p).stat().st_size
-        except OSError:
-            continue
-        if min_size and size < int(min_size):
-            continue
-        if max_size and size > int(max_size):
-            continue
-        out.append(p)
-    return out
-
-
-def _aspect_ok(
-    width: int, height: int, min_aspect, max_aspect,
-) -> bool:
-    """True when ``width / height`` falls within the aspect bounds (if any)."""
-    if min_aspect is None and max_aspect is None:
-        return True
-    if height == 0:
-        return False
-    aspect = width / height
-    if min_aspect is not None and aspect < float(min_aspect):
-        return False
-    return not (max_aspect is not None and aspect > float(max_aspect))
-
-
-_DIMENSION_KEYS = (
-    "min_width", "max_width", "min_height", "max_height",
-    "min_aspect", "max_aspect",
-)
-
-
-def _dims_ok(width: int, height: int, rules: dict) -> bool:
-    """True when ``width`` / ``height`` satisfy the min/max pixel bounds."""
-    min_w, max_w = rules.get("min_width"), rules.get("max_width")
-    min_h, max_h = rules.get("min_height"), rules.get("max_height")
-    if min_w and width < int(min_w):
-        return False
-    if max_w and width > int(max_w):
-        return False
-    if min_h and height < int(min_h):
-        return False
-    return not (max_h and height > int(max_h))
-
-
-def _apply_dimension_filters(paths: list[str], rules: dict) -> list[str]:
-    """Filter by pixel dimensions (min/max width & height) and aspect.
-
-    Reads only the image header (no full decode) and runs after the cheaper
-    filters, so it touches the smallest possible set. Unreadable images can't
-    satisfy a dimension rule, so they're dropped.
-    """
-    if not any(rules.get(key) for key in _DIMENSION_KEYS):
-        return paths
-    min_aspect, max_aspect = rules.get("min_aspect"), rules.get("max_aspect")
-    from Imervue.image.dimensions import image_dimensions
-    out: list[str] = []
-    for p in paths:
-        dims = image_dimensions(p)
-        if dims is None:
-            continue
-        width, height = dims
-        if _dims_ok(width, height, rules) and _aspect_ok(
-            width, height, min_aspect, max_aspect,
-        ):
-            out.append(p)
-    return out
-
-
-def _apply_date_filter(
-    paths: list[str], date_from: float | None, date_to: float | None,
-) -> list[str]:
-    out: list[str] = []
-    for p in paths:
-        try:
-            mtime = Path(p).stat().st_mtime
-        except OSError:
-            continue
-        if date_from and mtime < float(date_from):
-            continue
-        if date_to and mtime > float(date_to):
-            continue
-        out.append(p)
-    return out
 
 
 def touch(name: str) -> None:

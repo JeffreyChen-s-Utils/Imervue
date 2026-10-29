@@ -6,30 +6,52 @@ Dependencies are auto-installed on first use via the main app's pip installer.
 """
 from __future__ import annotations
 
-import contextlib
-import json
 import logging
-import os
-import subprocess
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QThread, QTimer, Signal
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
-    QPushButton, QFileDialog, QLineEdit, QProgressBar,
-    QCheckBox, QMenu,
-)
+from PySide6.QtWidgets import QMenu
 
-from Imervue.plugin.pip_installer import _subprocess_kwargs
 from Imervue.plugin.plugin_base import ImervuePlugin
 from Imervue.plugin.pip_installer import ensure_dependencies
-from Imervue.plugin.model_dir import ensure_model_dir
-from Imervue.plugin.subprocess_util import terminate_process
-from Imervue.plugin.worker_host import WorkerHostMixin
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.app_paths import is_frozen as _is_frozen
+
+# The workers, dialogs and paths live in sibling modules; they are re-exported
+# here because this module stays the plugin's public import location.
+from ai_background_remover.ai_background_remover_workers import (
+    _MODELS_DIR,
+    _PLUGIN_DIR,
+    _RUNNER_SCRIPT,
+    _BatchRemoveWorker,
+    _RemoveBackgroundWorker,
+    _SubprocessBatchWorker,
+    _SubprocessRemoveWorker,
+)
+from ai_background_remover.ai_background_remover_dialogs import (
+    MODEL_DESCRIPTIONS,
+    MODELS,
+    BatchRemoveBackgroundDialog,
+    RemoveBackgroundDialog,
+)
+
+__all__ = [
+    "MODELS",
+    "MODEL_DESCRIPTIONS",
+    "REQUIRED_PACKAGES",
+    "AIBackgroundRemoverPlugin",
+    "BatchRemoveBackgroundDialog",
+    "RemoveBackgroundDialog",
+    "_BatchRemoveWorker",
+    "_MODELS_DIR",
+    "_PLUGIN_DIR",
+    "_RUNNER_SCRIPT",
+    "_RemoveBackgroundWorker",
+    "_SubprocessBatchWorker",
+    "_SubprocessRemoveWorker",
+    "_ensure_deps",
+    "_find_external_python",
+]
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -39,20 +61,6 @@ logger = logging.getLogger("Imervue.plugin.ai_bg_remover")
 # hijacked all propagated logging into a truncated CWD file, and constructing the
 # FileHandler raised (aborting plugin load) when the CWD was read-only (a frozen
 # install under Program Files). Use the named module logger above instead.
-
-# ===========================
-# \u8def\u5f91
-# ===========================
-
-_PLUGIN_DIR = Path(__file__).resolve().parent
-_RUNNER_SCRIPT = _PLUGIN_DIR / "_rembg_runner.py"
-logger.info("AI BG Remover: module loading, plugin dir = %s", _PLUGIN_DIR)
-
-# \u6a21\u578b\u5b58\u653e\u5728\u63d2\u4ef6\u76ee\u9304\u4e0b\u7684 models/\u3002Created at import time so the user
-# can find the folder in their file manager and drop weights in.
-_MODELS_DIR = ensure_model_dir(_PLUGIN_DIR / "models")
-os.environ["U2NET_HOME"] = str(_MODELS_DIR)
-logger.info("AI BG Remover: U2NET_HOME = %s", _MODELS_DIR)
 
 # Frozen \u74b0\u5883 DLL \u8def\u5f91\u8a2d\u5b9a\uff08\u50c5\u4f9b\u975e subprocess \u6a21\u5f0f\u4f7f\u7528\uff09
 if _is_frozen():
@@ -74,21 +82,6 @@ REQUIRED_PACKAGES = [
     ("onnxruntime", "onnxruntime"),
 ]
 
-MODELS = [
-    "u2net", "u2netp", "u2net_human_seg", "u2net_cloth_seg",
-    "silueta", "isnet-general-use", "isnet-anime",
-]
-
-MODEL_DESCRIPTIONS = {
-    "u2net": "General purpose (173 MB)",
-    "u2netp": "Lightweight (4 MB, faster)",
-    "u2net_human_seg": "Human segmentation",
-    "u2net_cloth_seg": "Clothing segmentation",
-    "silueta": "General purpose (compact)",
-    "isnet-general-use": "IS-Net general (high quality)",
-    "isnet-anime": "IS-Net anime/illustration",
-}
-
 
 # ===========================
 # Python \u641c\u5c0b\uff08\u51cd\u7d50\u74b0\u5883\u7528\uff09
@@ -98,519 +91,6 @@ def _find_external_python() -> str | None:
     """Find the external Python used by pip_installer (cached)."""
     from Imervue.plugin.pip_installer import _find_python
     return _find_python()
-
-
-# ===========================
-# Subprocess Workers (\u51cd\u7d50\u74b0\u5883)
-# ===========================
-
-class _SubprocessRemoveWorker(QThread):
-    """Runs rembg in an external Python process — safe in frozen builds."""
-    progress = Signal(str)
-    result_ready = Signal(bool, str)
-
-    def __init__(self, python: str, site_packages: str,
-                 input_path: str, output_path: str,
-                 model_name: str, alpha_matting: bool):
-        super().__init__()
-        self._python = python
-        self._site_packages = site_packages
-        self._input = input_path
-        self._output = output_path
-        self._model = model_name
-        self._alpha_matting = alpha_matting
-        self._proc = None
-
-    def stop(self):
-        """Terminate the child process so a cancelled worker's run loop (blocked
-        reading the child's stdout) unblocks and wait() returns promptly."""
-        terminate_process(self._proc)
-
-    def run(self):
-        try:
-            logger.info("_SubprocessRemoveWorker: starting, python=%s, site_packages=%s",
-                         self._python, self._site_packages)
-            cmd = [
-                self._python, str(_RUNNER_SCRIPT),
-                self._site_packages, "single",
-                self._input, self._output, self._model,
-                str(self._alpha_matting), str(_MODELS_DIR),
-            ]
-            kw = _subprocess_kwargs()
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kw,
-            )
-            self._proc = proc
-            for raw_line in proc.stdout:
-                line = raw_line.rstrip("\n\r")
-                if not line:
-                    continue
-                logger.info("_SubprocessRemoveWorker: %s", line)
-                if line.startswith("PROGRESS:"):
-                    self.progress.emit(line[9:])
-                elif line.startswith("OK:"):
-                    self.result_ready.emit(True, line[3:])
-                    proc.wait()
-                    return
-                elif line.startswith("ERROR:"):
-                    self.result_ready.emit(False, line[6:])
-                    proc.wait()
-                    return
-
-            proc.wait()
-            if proc.returncode != 0:
-                self.result_ready.emit(False, f"Process exited with code {proc.returncode}")
-            else:
-                # Shouldn't reach here if protocol is correct
-                self.result_ready.emit(True, self._output)
-        except Exception as exc:
-            logger.error("_SubprocessRemoveWorker failed: %s", exc, exc_info=True)
-            self.result_ready.emit(False, str(exc))
-
-
-class _SubprocessBatchWorker(QThread):
-    """Runs batch rembg in an external Python process."""
-    progress = Signal(int, int, str)
-    result_ready = Signal(int, int)
-
-    def __init__(self, python: str, site_packages: str,
-                 paths: list[str], output_dir: str,
-                 model_name: str, alpha_matting: bool):
-        super().__init__()
-        self._python = python
-        self._site_packages = site_packages
-        self._paths = paths
-        self._output_dir = output_dir
-        self._model = model_name
-        self._alpha_matting = alpha_matting
-        self._proc = None
-
-    def stop(self):
-        """Terminate the child process so a cancelled worker's run loop (blocked
-        reading the child's stdout) unblocks and wait() returns promptly."""
-        terminate_process(self._proc)
-
-    def run(self):
-        list_path = None
-        try:
-            # Hand the path list to the child through a temp file.
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".json", delete=False, encoding="utf-8",
-            ) as tmp:
-                list_path = tmp.name
-                json.dump(self._paths, tmp)
-
-            cmd = [
-                self._python, str(_RUNNER_SCRIPT),
-                self._site_packages, "batch",
-                list_path, self._output_dir, self._model,
-                str(self._alpha_matting), str(_MODELS_DIR),
-            ]
-            kw = _subprocess_kwargs()
-            proc = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, **kw,
-            )
-            self._proc = proc
-            for raw_line in proc.stdout:
-                line = raw_line.rstrip("\n\r")
-                if not line:
-                    continue
-                if line.startswith("BATCH_PROGRESS:"):
-                    parts = line[15:].split(":", 2)
-                    if len(parts) == 3:
-                        self.progress.emit(int(parts[0]), int(parts[1]), parts[2])
-                elif line.startswith("BATCH_OK:"):
-                    parts = line[9:].split(":")
-                    self.result_ready.emit(int(parts[0]), int(parts[1]))
-                    proc.wait()
-                    return
-                elif line.startswith("ERROR:"):
-                    self.result_ready.emit(0, len(self._paths))
-                    proc.wait()
-                    return
-
-            proc.wait()
-            self.result_ready.emit(0, len(self._paths))
-        except Exception as exc:
-            logger.error("_SubprocessBatchWorker failed: %s", exc, exc_info=True)
-            self.result_ready.emit(0, len(self._paths))
-        finally:
-            # Removed on every path, including a Popen that never started.
-            if list_path is not None:
-                with contextlib.suppress(OSError):
-                    os.unlink(list_path)
-
-
-# ===========================
-# In-process Workers (\u958b\u767c\u74b0\u5883)
-# ===========================
-
-class _RemoveBackgroundWorker(QThread):
-    progress = Signal(str)
-    result_ready = Signal(bool, str)
-
-    def __init__(self, input_path: str, output_path: str, model_name: str,
-                 alpha_matting: bool):
-        super().__init__()
-        self._input = input_path
-        self._output = output_path
-        self._model = model_name
-        self._alpha_matting = alpha_matting
-
-    def run(self):
-        try:
-            self.progress.emit("Loading rembg...")
-            _MODELS_DIR.mkdir(parents=True, exist_ok=True)
-            from rembg import remove, new_session
-
-            self.progress.emit(f"Loading model: {self._model}...")
-            session = new_session(self._model)
-
-            self.progress.emit("Processing image...")
-            input_img = self._load_image(self._input)
-
-            output_img = remove(
-                input_img,
-                session=session,
-                alpha_matting=self._alpha_matting,
-                alpha_matting_foreground_threshold=240,
-                alpha_matting_background_threshold=10,
-                alpha_matting_erode_size=10,
-            )
-
-            self.progress.emit("Saving result...")
-            output_img.save(self._output)
-            self.result_ready.emit(True, self._output)
-        except Exception as exc:
-            logger.error("Background removal failed: %s", exc, exc_info=True)
-            self.result_ready.emit(False, str(exc))
-
-    @staticmethod
-    def _load_image(path: str):
-        from PIL import Image, ImageOps
-        if Path(path).suffix.lower() == ".svg":
-            from Imervue.gpu_image_view.images.image_loader import _load_svg
-            arr = _load_svg(path, thumbnail=False)
-            return Image.fromarray(arr)
-        # Upright, as the viewer shows it: the cut-out is saved without EXIF.
-        return ImageOps.exif_transpose(Image.open(path))
-
-
-class _BatchRemoveWorker(QThread):
-    progress = Signal(int, int, str)
-    result_ready = Signal(int, int)
-
-    def __init__(self, paths: list[str], output_dir: str, model_name: str,
-                 alpha_matting: bool):
-        super().__init__()
-        self._paths = paths
-        self._output_dir = output_dir
-        self._model = model_name
-        self._alpha_matting = alpha_matting
-
-    def run(self):
-        try:
-            _MODELS_DIR.mkdir(parents=True, exist_ok=True)
-            from rembg import remove, new_session
-            session = new_session(self._model)   # downloads the model on first use
-        except Exception:  # a worker must always report: no network, no onnxruntime
-            logger.exception("Loading the background-removal model %s failed", self._model)
-            self.result_ready.emit(0, len(self._paths))
-            return
-        from PIL import Image, ImageOps
-
-        success = 0
-        failed = 0
-        total = len(self._paths)
-
-        for i, src in enumerate(self._paths):
-            if self.isInterruptionRequested():
-                break
-            try:
-                self.progress.emit(i, total, Path(src).name)
-
-                if Path(src).suffix.lower() == ".svg":
-                    from Imervue.gpu_image_view.images.image_loader import _load_svg
-                    arr = _load_svg(src, thumbnail=False)
-                    input_img = Image.fromarray(arr)
-                else:
-                    input_img = ImageOps.exif_transpose(Image.open(src))
-
-                output_img = remove(
-                    input_img,
-                    session=session,
-                    alpha_matting=self._alpha_matting,
-                    alpha_matting_foreground_threshold=240,
-                    alpha_matting_background_threshold=10,
-                    alpha_matting_erode_size=10,
-                )
-
-                out_name = Path(src).stem + "_nobg.png"
-                out_path = Path(self._output_dir) / out_name
-                counter = 1
-                while out_path.exists():
-                    out_name = f"{Path(src).stem}_nobg_{counter}.png"
-                    out_path = Path(self._output_dir) / out_name
-                    counter += 1
-
-                output_img.save(str(out_path))
-                success += 1
-            except Exception as exc:  # noqa: BLE001 - rembg/onnx fail in any way; log, go on
-                logger.error("Batch bg removal failed for %s: %s", src, exc)
-                failed += 1
-
-        self.result_ready.emit(success, failed)
-
-
-# ===========================
-# \u5c0d\u8a71\u6846
-# ===========================
-
-class RemoveBackgroundDialog(WorkerHostMixin, QDialog):
-
-    def __init__(self, main_gui: GPUImageView, image_path: str,
-                 frozen_env: tuple[str, str] | None = None):
-        super().__init__(main_gui.main_window)
-        self._gui = main_gui
-        self._image_path = image_path
-        self._lang = language_wrapper.language_word_dict
-        self._worker = None
-        self._frozen_env = frozen_env  # (python_path, site_packages_path)
-
-        self.setWindowTitle(self._lang.get("bg_remove_title", "AI Background Removal"))
-        self.setMinimumWidth(480)
-        self._build_ui()
-
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
-
-        layout.addWidget(QLabel(
-            self._lang.get("bg_remove_source", "Source:") + f"  {Path(self._image_path).name}"
-        ))
-
-        model_row = QHBoxLayout()
-        model_row.addWidget(QLabel(self._lang.get("bg_remove_model", "Model:")))
-        self._model_combo = QComboBox()
-        for m in MODELS:
-            desc = MODEL_DESCRIPTIONS.get(m, "")
-            self._model_combo.addItem(f"{m}  \u2014  {desc}", m)
-        self._model_combo.setCurrentIndex(0)
-        model_row.addWidget(self._model_combo, 1)
-        layout.addLayout(model_row)
-
-        self._alpha_check = QCheckBox(
-            self._lang.get("bg_remove_alpha_matting", "Alpha matting (smoother edges, slower)")
-        )
-        self._alpha_check.setChecked(False)
-        layout.addWidget(self._alpha_check)
-
-        path_row = QHBoxLayout()
-        self._path_edit = QLineEdit()
-        default_out = Path(self._image_path).parent / (Path(self._image_path).stem + "_nobg.png")
-        self._path_edit.setText(str(default_out))
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse)
-        path_row.addWidget(self._path_edit, 1)
-        path_row.addWidget(browse_btn)
-        layout.addLayout(path_row)
-
-        self._progress_bar = QProgressBar()
-        self._progress_bar.setRange(0, 0)
-        self._progress_bar.setVisible(False)
-        layout.addWidget(self._progress_bar)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
-        cancel_btn.clicked.connect(self.reject)
-        self._run_btn = QPushButton(self._lang.get("bg_remove_run", "Remove Background"))
-        self._run_btn.clicked.connect(self._do_remove)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self._run_btn)
-        layout.addLayout(btn_row)
-
-    def _browse(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, self._lang.get("export_save", "Save"),
-            self._path_edit.text(), "PNG (*.png)",
-        )
-        if path:
-            self._path_edit.setText(path)
-
-    def _do_remove(self):
-        output = self._path_edit.text().strip()
-        if not output:
-            return
-
-        self._run_btn.setEnabled(False)
-        self._progress_bar.setVisible(True)
-
-        model = self._model_combo.currentData()
-        alpha = self._alpha_check.isChecked()
-
-        if self._frozen_env:
-            # Frozen: use subprocess
-            python, site_pkgs = self._frozen_env
-            self._worker = _SubprocessRemoveWorker(
-                python, site_pkgs, self._image_path, output, model, alpha,
-            )
-        else:
-            # Dev: use in-process
-            self._worker = _RemoveBackgroundWorker(
-                self._image_path, output, model, alpha,
-            )
-        self._worker.progress.connect(self._on_progress)
-        self._worker.result_ready.connect(self._on_finished)
-        self._worker.finished.connect(self._cleanup_worker)
-        self._worker.start()
-
-    def _on_progress(self, msg: str):
-        self._status_label.setText(msg)
-
-    def _cleanup_worker(self):
-        self._worker = None
-
-    def _on_finished(self, success: bool, result: str):
-        self._progress_bar.setVisible(False)
-        self._run_btn.setEnabled(True)
-
-        if success:
-            self._status_label.setText(
-                self._lang.get("bg_remove_done", "Done! Saved to: {path}").format(path=result)
-            )
-            if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.success(
-                    self._lang.get("bg_remove_done_short", "Background removed!")
-                )
-            QTimer.singleShot(0, self.accept)
-        else:
-            text = self._lang.get("generic_error", "Error: {error}").format(error=result)
-            self._status_label.setText(text)
-            if hasattr(self._gui.main_window, "toast"):
-                self._gui.main_window.toast.info(text)
-
-
-class BatchRemoveBackgroundDialog(WorkerHostMixin, QDialog):
-
-    def __init__(self, main_gui: GPUImageView, paths: list[str],
-                 frozen_env: tuple[str, str] | None = None):
-        super().__init__(main_gui.main_window)
-        self._gui = main_gui
-        self._paths = paths
-        self._lang = language_wrapper.language_word_dict
-        self._worker = None
-        self._frozen_env = frozen_env
-
-        self.setWindowTitle(self._lang.get("bg_remove_batch_title", "Batch AI Background Removal"))
-        self.setMinimumWidth(480)
-        self._build_ui()
-
-    def _build_ui(self):
-        layout = QVBoxLayout(self)
-
-        layout.addWidget(QLabel(
-            self._lang.get("batch_export_count", "{count} image(s) selected").format(
-                count=len(self._paths))
-        ))
-
-        model_row = QHBoxLayout()
-        model_row.addWidget(QLabel(self._lang.get("bg_remove_model", "Model:")))
-        self._model_combo = QComboBox()
-        for m in MODELS:
-            desc = MODEL_DESCRIPTIONS.get(m, "")
-            self._model_combo.addItem(f"{m}  \u2014  {desc}", m)
-        model_row.addWidget(self._model_combo, 1)
-        layout.addLayout(model_row)
-
-        self._alpha_check = QCheckBox(
-            self._lang.get("bg_remove_alpha_matting", "Alpha matting (smoother edges, slower)")
-        )
-        layout.addWidget(self._alpha_check)
-
-        dir_row = QHBoxLayout()
-        self._dir_edit = QLineEdit()
-        if self._paths:
-            self._dir_edit.setText(str(Path(self._paths[0]).parent))
-        browse_btn = QPushButton(self._lang.get("export_browse", "Browse..."))
-        browse_btn.clicked.connect(self._browse)
-        dir_row.addWidget(self._dir_edit, 1)
-        dir_row.addWidget(browse_btn)
-        layout.addLayout(dir_row)
-
-        self._progress = QProgressBar()
-        self._progress.setVisible(False)
-        layout.addWidget(self._progress)
-
-        self._status_label = QLabel("")
-        layout.addWidget(self._status_label)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
-        cancel_btn = QPushButton(self._lang.get("export_cancel", "Cancel"))
-        cancel_btn.clicked.connect(self.reject)
-        self._run_btn = QPushButton(self._lang.get("bg_remove_run", "Remove Background"))
-        self._run_btn.clicked.connect(self._do_remove)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(self._run_btn)
-        layout.addLayout(btn_row)
-
-    def _browse(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Output Folder")
-        if folder:
-            self._dir_edit.setText(folder)
-
-    def _do_remove(self):
-        output_dir = self._dir_edit.text().strip()
-        if not output_dir or not Path(output_dir).is_dir():
-            return
-
-        self._run_btn.setEnabled(False)
-        self._progress.setVisible(True)
-        self._progress.setMaximum(len(self._paths))
-        self._progress.setValue(0)
-
-        model = self._model_combo.currentData()
-        alpha = self._alpha_check.isChecked()
-
-        if self._frozen_env:
-            python, site_pkgs = self._frozen_env
-            self._worker = _SubprocessBatchWorker(
-                python, site_pkgs, self._paths, output_dir, model, alpha,
-            )
-        else:
-            self._worker = _BatchRemoveWorker(
-                self._paths, output_dir, model, alpha,
-            )
-        self._worker.progress.connect(self._on_progress)
-        self._worker.result_ready.connect(self._on_finished)
-        self._worker.finished.connect(self._cleanup_worker)
-        self._worker.start()
-
-    def _on_progress(self, current, total, name):
-        self._progress.setValue(current)
-        self._status_label.setText(f"{current}/{total}  {name}")
-
-    def _cleanup_worker(self):
-        self._worker = None
-
-    def _on_finished(self, success, failed):
-        self._progress.setVisible(False)
-        self._run_btn.setEnabled(True)
-
-        msg = self._lang.get(
-            "bg_remove_batch_done", "Processed {success}/{total} image(s)"
-        ).format(success=success, total=success + failed)
-        self._status_label.setText(msg)
-
-        if hasattr(self._gui.main_window, "toast"):
-            if failed:
-                self._gui.main_window.toast.info(msg)
-            else:
-                self._gui.main_window.toast.success(msg)
-        QTimer.singleShot(0, self.accept)
 
 
 # ===========================

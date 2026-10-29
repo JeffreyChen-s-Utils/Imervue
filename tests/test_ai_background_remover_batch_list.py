@@ -28,6 +28,9 @@ class _FakeProc:
     def wait(self, timeout=None):
         return self.returncode
 
+    def poll(self):
+        return self.returncode
+
 
 @pytest.fixture
 def worker_run(qapp, monkeypatch):

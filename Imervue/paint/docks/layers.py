@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMenu,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -24,8 +23,9 @@ from Imervue.paint.docks._helpers import (
     _blend_mode_combo,
     _label_with_color_chip,
     _slider,
-    _strip_color_chip,
 )
+from Imervue.paint.docks.layers_edits import LayerEditHandlersMixin
+from Imervue.paint.docks.layers_stack import LayerStackActionsMixin
 
 
 def _layer_index_for_row(visible_indices, row: int) -> int:
@@ -56,7 +56,7 @@ def _with_shortcut(label: str, shortcuts, action_id: str) -> str:
     return f"{label} ({hotkey})" if hotkey else label
 
 
-class LayerDock(QDockWidget):
+class LayerDock(LayerStackActionsMixin, LayerEditHandlersMixin, QDockWidget):
     """Layer list bound to a :class:`Imervue.paint.document.PaintDocument`.
 
     Reflects the document's stack, lets the user reorder / add / remove
@@ -295,148 +295,10 @@ class LayerDock(QDockWidget):
             return set(range(self._document.layer_count))
         return set(self._document.find_layers(self._search_query))
 
-    def _on_search_changed(self, text: str) -> None:  # pragma: no cover - Qt UI
-        self._search_query = text
-        self.refresh()
-
-    # ---- handlers --------------------------------------------------------
-
-    def _on_row_changed(self, row: int) -> None:
-        if self._suspend or self._document is None or row < 0:
-            return
-        layer_idx = self._row_to_layer_index(row)
-        if 0 <= layer_idx < self._document.layer_count:
-            self._document.set_active_layer(layer_idx)
-
-    def _on_item_changed(self, item: QListWidgetItem) -> None:
-        if self._suspend or self._document is None:
-            return
-        layer_idx = int(item.data(Qt.ItemDataRole.UserRole))
-        new_visible = item.checkState() == Qt.CheckState.Checked
-        # Editing the row inline writes back the displayed text — strip
-        # the colour-chip glyph prefix (added by ``_label_with_color_chip``)
-        # so the persisted layer name doesn't accumulate emoji.
-        new_name = _strip_color_chip(item.text())
-        layer = self._document.layer_at(layer_idx)
-        if layer.name == new_name and layer.visible == new_visible:
-            return
-        self._document.set_layer_attribute(
-            layer_idx, visible=new_visible, name=new_name,
-        )
-        self.edit_committed.emit()
-
-    def _on_add(self) -> None:
-        if self._document is None or self._document.layer_count == 0:
-            return
-        self._document.add_layer()
-        self.edit_committed.emit()
-
-    def _build_adjustment_menu(self) -> QMenu:
-        """Build the Adjustment-Layer popup menu lazily.
-
-        Each entry adds a fresh layer with the matching ``Adjustment``
-        instance pre-installed using the catalogue's documented
-        defaults — the user can then tweak the parameters in the
-        Adjustments dialog without first having to pick a kind.
-        """
-        from Imervue.paint.adjustments import (
-            ADJUSTMENT_KINDS,
-            DEFAULT_PARAMS,
-        )
-        lang = language_wrapper.language_word_dict
-        menu = QMenu(self)
-        for kind in ADJUSTMENT_KINDS:
-            label = lang.get(
-                f"paint_adjustment_{kind}",
-                kind.replace("_", " ").title(),
-            )
-            action = menu.addAction(label)
-            action.triggered.connect(
-                lambda _checked=False, k=kind: self._add_adjustment_layer(
-                    k, dict(DEFAULT_PARAMS.get(k, {})),
-                ),
-            )
-        return menu
-
-    def _add_adjustment_layer(self, kind: str, params: dict) -> None:
-        from Imervue.paint.adjustments import Adjustment
-        if self._document is None or self._document.layer_count == 0:
-            return
-        layer = self._document.add_layer()
-        layer.adjustment = Adjustment(kind=kind, params=params)
-        layer.name = self._unique_adjustment_name(kind)
-        self._document.invalidate_composite()
-        self.refresh()
-        self.edit_committed.emit()
-
-    def _unique_adjustment_name(self, kind: str) -> str:
-        """Return ``"<Kind> 1"`` (or 2/3/...) so successive adjustment
-        layers of the same kind get sortable, non-clashing names."""
-        prefix = kind.replace("_", " ").title()
-        if self._document is None:
-            return prefix
-        existing = {layer.name for layer in self._document.layers()}
-        i = 1
-        while True:
-            candidate = f"{prefix} {i}"
-            if candidate not in existing:
-                return candidate
-            i += 1
-
-    def _on_remove(self) -> None:
-        if self._document is None or self._document.layer_count <= 1:
-            return
-        self._document.remove_active_layer()
-        self.edit_committed.emit()
-
-    def _on_duplicate(self) -> None:
-        if self._document is None or self._document.active_layer() is None:
-            return
-        self._document.duplicate_active_layer()
-        self.edit_committed.emit()
-
     def show_shortcuts(self, shortcuts) -> None:
         """Re-label the button tooltips with ``shortcuts`` (a ``ShortcutRegistry``)."""
         for button, label, action_id in self._shortcut_buttons:
             button.setToolTip(_with_shortcut(label, shortcuts, action_id))
-
-    def _on_move(self, *, up: bool) -> None:
-        if self._document is None:
-            return
-        before = self._document.active_layer_index()
-        self._document.move_active_layer(up=up)
-        if self._document.active_layer_index() != before:
-            self.edit_committed.emit()
-
-    def _on_opacity_changed(self, value: int) -> None:
-        if self._suspend or self._document is None:
-            return
-        active_idx = self._document.active_layer_index()
-        if active_idx < 0:
-            return
-        # Compared as the slider's whole percentage: 0.07 * 100 is 7.000000000000001.
-        if round(self._document.active_layer().opacity * 100) != value:
-            self._document.set_layer_attribute(active_idx, opacity=value / 100.0)
-            self.edit_committed.emit()
-
-    def _on_blend_changed(self) -> None:
-        if self._suspend or self._document is None:
-            return
-        active_idx = self._document.active_layer_index()
-        if (active_idx >= 0
-                and self._document.active_layer().blend_mode != self._blend.currentData()):
-            self._document.set_layer_attribute(
-                active_idx, blend_mode=self._blend.currentData(),
-            )
-            self.edit_committed.emit()
-
-    def _on_lock_alpha_toggled(self, checked: bool) -> None:
-        if self._suspend or self._document is None:
-            return
-        active_idx = self._document.active_layer_index()
-        if (active_idx >= 0
-                and self._document.set_layer_lock_alpha(active_idx, lock_alpha=checked)):
-            self.edit_committed.emit()
 
     def _row_to_layer_index(self, row: int) -> int:
         if self._document is None:

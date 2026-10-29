@@ -58,6 +58,27 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-20 | 2026-10-29 | Split the safety review and background remover plugins; close the 80+ complexity scope | #done #quality #refactor #tests #Imervue_Plugins | [2026-10-b](2026-10-b.md) |
+| U-20261029-19 | 2026-10-29 | Split layers dialog, background jobs, layers dock and CLIP search | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-18 | 2026-10-29 | Split twelve paint, image and main-window modules | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-17 | 2026-10-29 | Split MCP server, input controller, pet script editor and auto-rig | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-16 | 2026-10-29 | Split paint File menu, plugin downloader, duplicate finder and MCP edit tools | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-15 | 2026-10-29 | Split upscale, sanitize and compare dialogs and the plugin manager | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-14 | 2026-10-29 | Split image loader, GPU image view, Cubism native converter and annotation models | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-13 | 2026-10-29 | Split pet workspace, tag/album dialog, control tooltips and recipe store | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-12 | 2026-10-29 | Split pip installer, PSD I/O, paint workspace and Cubism import | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-11 | 2026-10-29 | Split browser state, smart albums, Extra Tools menu and pet window | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-10 | 2026-10-29 | Split develop panel, overlay painter, XMP sidecar and tile loader | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-09 | 2026-10-29 | Split the image catalog into domain owners | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-08 | 2026-10-29 | Simplify puppet workspace and CLI responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-07 | 2026-10-29 | Simplify recipe and puppet canvas responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-06 | 2026-10-29 | Verify third production cohort against hosted analysis | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-05 | 2026-10-29 | Separate image-list and context-menu responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-04 | 2026-10-29 | Verify second production cohort against hosted analysis | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-03 | 2026-10-29 | Reduce file-tree and Paint tool-state complexity | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-02 | 2026-10-29 | Reduce complexity across six production responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
+| U-20261029-01 | 2026-10-29 | Verify complete runtime complexity inventory | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
+| U-20261028-12 | 2026-10-28 | Share puppet archive curve and named-entry processing | #done #refactor #quality #tests | [2026-10-b](2026-10-b.md) |
 | U-20261018-13 | 2026-10-18 | Keep Imeru crown hair flow above the scalp surface | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-12 | 2026-10-18 | Fill the central forehead gap in the bundled Imeru fringe | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-11 | 2026-10-18 | Prevent Qt tooltip and tab-filter reentry during foreground folder refresh | #done #bugfix #qt #tooltips #paint #tests | [2026-10-b](2026-10-b.md) |
@@ -578,4 +599,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 101 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 9 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 17 |

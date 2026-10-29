@@ -594,11 +594,23 @@ class TestVerifyPython:
         from Imervue.plugin.pip_installer import _verify_python
         assert _verify_python("/no/such/python") is False
 
-    def test_verify_invalid_executable(self, tmp_path):
-        from Imervue.plugin.pip_installer import _verify_python
+    def test_verify_invalid_executable(self, tmp_path, monkeypatch, caplog):
+        import errno
+        from Imervue.plugin import python_finder
+
         fake = tmp_path / "not_python.exe"
         fake.write_text("not a real executable")
-        assert _verify_python(str(fake)) is False
+        launches = []
+
+        def reject_process(args, **kwargs):
+            launches.append(args)
+            raise OSError(errno.ENOEXEC, "Exec format error", str(fake))
+
+        monkeypatch.setattr(python_finder.subprocess, "Popen", reject_process)
+        with caplog.at_level("INFO", logger="Imervue"):
+            assert python_finder._verify_python(str(fake)) is False
+        assert launches == [[str(fake), "-m", "pip", "--version"]]
+        assert str(fake) in caplog.text
 
 
 # ===========================

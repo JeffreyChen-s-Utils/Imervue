@@ -8,13 +8,10 @@ from PySide6.QtWidgets import (
     QApplication, QLabel, QMainWindow, QMenu, QTabWidget,
 )
 
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.system.qt_timers import call_later
-from Imervue.image.formats import VIEWER_EXTENSIONS
 from Imervue.system.app_paths import icon_path as _app_icon_path
 from Imervue.system.best_effort import best_effort
 from Imervue.gpu_image_view.actions.delete import commit_pending_deletions
-from Imervue.gpu_image_view.images.image_loader import open_path
 from Imervue.gui.file_tree_view import _FileTreeView, _next_duplicate_name  # noqa: F401  # _next_duplicate_name re-exported for tests
 from Imervue.gui.settings_notice import warn_if_settings_unreadable
 from Imervue.gui.trash_failure_notice import offer_permanent_delete
@@ -31,7 +28,6 @@ from Imervue.menu.file_menu import build_file_menu
 from Imervue.menu.filter_menu import build_filter_menu
 from Imervue.menu.language_menu import build_language_menu
 from Imervue.menu.modify_menu import build_modify_menu
-from Imervue.menu.recent_menu import rebuild_recent_menu
 from Imervue.menu.sort_menu import build_sort_menu
 from Imervue.menu.tip_menu import build_tip_menu
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -50,6 +46,8 @@ from Imervue.gui.main_window_screens import MainWindowScreensMixin
 from Imervue.gui.main_window_views import MainWindowViewsMixin
 from Imervue.gui.main_window_status import MainWindowStatusMixin
 from Imervue.gui.main_window_browse import MainWindowBrowseMixin
+from Imervue.gui.main_window_navigation import MainWindowNavigationMixin
+from Imervue.gui.main_window_workspaces import MainWindowWorkspacesMixin
 
 # 拖曳視窗時 moveEvent 連續觸發；停止移動這麼久後才檢查螢幕是否改變。
 _SCREEN_ADAPT_DEBOUNCE_MS = 300
@@ -67,6 +65,7 @@ def _other_live_windows_remain(registry, closing) -> bool:
 
 
 class ImervueMainWindow(
+        MainWindowWorkspacesMixin, MainWindowNavigationMixin,
         MainWindowLayoutMixin, MainWindowDocksMixin, MainWindowBrowseMixin,
         MainWindowStatusMixin, MainWindowViewsMixin,
         MainWindowScreensMixin, MainWindowTabsMixin, MainWindowFoldersMixin,
@@ -162,7 +161,6 @@ class ImervueMainWindow(
             app.setWindowIcon(self.icon)
         self.setWindowIcon(self.icon)
 
-
     def _init_services(self) -> None:
         """Toasts, clipboard monitor, menus, What's New, tab shortcuts, folder / screen watching."""
         # ===== Toast 通知 =====
@@ -238,119 +236,6 @@ class ImervueMainWindow(
         call_later(0, self, self._connect_screen_change_signal)
 
     # ==========================
-    # 主分頁切換（Imervue ↔ 修改）
-    # ==========================
-    def _collect_memory_pressure(self) -> dict:
-        """Source callable for the status-bar memory-pressure widget.
-        Returns the current ``(used, limit)`` byte counts plus a few
-        cache-population numbers for the tooltip. Returns zeros when
-        the viewer isn't ready yet so the widget shows ``--``."""
-        viewer = getattr(self, "viewer", None)
-        if viewer is None:
-            return {"used_bytes": 0, "limit_bytes": 0}
-        return {
-            "used_bytes": int(getattr(viewer, "_vram_usage", 0)),
-            "limit_bytes": int(getattr(viewer, "_vram_limit", 0)),
-            "tile_count": len(getattr(viewer, "tile_textures", {})),
-            "prefetch_count": len(getattr(viewer, "_prefetch_cache", {})),
-        }
-
-    def _on_memory_pressure_clear(self) -> None:
-        """Click handler for the indicator. Drops the prefetch cache
-        and the tile-texture cache so the user can recover the
-        budget without restarting the app."""
-        viewer = getattr(self, "viewer", None)
-        if viewer is None:
-            return
-        cancel = getattr(viewer, "_cancel_all_prefetch", None)
-        if callable(cancel):
-            cancel()
-        clear_tiles = getattr(viewer, "_delete_all_tile_textures", None)
-        if callable(clear_tiles):
-            clear_tiles()
-        tile_cache = getattr(viewer, "tile_cache", None)
-        if isinstance(tile_cache, dict):
-            tile_cache.clear()
-
-    def _on_main_tab_changed(self, idx: int) -> None:
-        """Switch between Imervue (viewer), Modify and Paint tabs."""
-        self._build_optional_tab_on_open(idx)
-        for shortcut in self._folder_tab_shortcuts:
-            shortcut.setEnabled(idx == 0)
-        if idx == 1:
-            # 切到修改分頁 → 綁定圖片，canvas 會放進中央的 CanvasHost
-            images = self.viewer.model.images
-            path = None
-            if images and 0 <= self.viewer.current_index < len(images):
-                path = images[self.viewer.current_index]
-            self.modify_panel.bind_to_path(path)
-        elif idx == 2:
-            # Opening the workspace must preserve its documents and undo stacks.
-            _ = self.paint_workspace
-        else:
-            # 切回 Imervue 主頁
-            self.exif_sidebar.update_info()
-
-    def _bind_paint_workspace_to_current_image(self) -> None:
-        """Decode the viewer's current image into a new Paint document and show it."""
-        images = self.viewer.model.images
-        if not images or not (0 <= self.viewer.current_index < len(images)):
-            return
-        path = images[self.viewer.current_index]
-        try:
-            # The viewer's decode: RAW developed, sRGB, upright. Pillow alone reads
-            # a RAW's small embedded preview and ignores orientation and profile.
-            from Imervue.gpu_image_view.images.image_loader import decode_image_file
-            arr = decode_image_file(path)
-        except IMAGE_READ_ERRORS as exc:
-            _logger.exception("Could not open %s in Paint", path)
-            self.toast.error(language_wrapper.language_word_dict.get(
-                "annotation_load_failed", "Load failed: {error}",
-            ).format(error=exc))
-            return
-        workspace = self.paint_workspace
-        # load_image replaces the blank document; avoid a second full-size allocation.
-        workspace.new_tab(width=1, height=1)
-        workspace.load_image(arr, source_path=path)
-        self._main_tabs.setCurrentIndex(2)
-
-    def eventFilter(self, obj, event):
-        """Route Left/Right on the Modify / Paint tab bars to image nav.
-
-        On those tabs the default tab-switch is unwanted — the user wants the
-        arrows to page images like the browse view. Every other tab / key
-        falls through to Qt's default handling.
-        """
-        from PySide6.QtCore import QEvent, Qt
-        if (obj is self._workspace_tab_bar
-                and event.type() == QEvent.Type.KeyPress):
-            from Imervue.gui.main_tab_nav import tab_arrow_action
-            action = tab_arrow_action(
-                self._main_tabs.currentIndex(), event.key(),
-                Qt.Key.Key_Left, Qt.Key.Key_Right,
-            )
-            if action is not None:
-                target, direction = action
-                if target == "modify":
-                    self.modify_panel.navigate_image(direction)
-                else:
-                    self._navigate_paint_image(direction)
-                return True
-        return super().eventFilter(obj, event)
-
-    def _navigate_paint_image(self, direction: int) -> None:
-        """Page the viewer's current image and open it in a new Paint document."""
-        from Imervue.gpu_image_view.actions.select import (
-            switch_to_next_image,
-            switch_to_previous_image,
-        )
-        if direction > 0:
-            switch_to_next_image(main_gui=self.viewer)
-        else:
-            switch_to_previous_image(main_gui=self.viewer)
-        self._bind_paint_workspace_to_current_image()
-
-    # ==========================
     # 選單
     # ==========================
     def create_menu(self):
@@ -410,54 +295,6 @@ class ImervueMainWindow(
     # 資料夾監控
     # ==========================
 
-    # ==========================
-    # 點擊檔案
-    # ==========================
-    def on_file_clicked(self, index):
-        self.navigate_to_path(self.model.filePath(index))
-
-    def navigate_to_path(self, path: str) -> None:
-        """Open a folder (tile grid) or a file (deep zoom) and sync the chrome.
-
-        The single entry point the file tree AND the breadcrumb both call, so
-        navigation is identical from either: same root, viewer reset, path bar,
-        folder watch and recent menu. (The breadcrumb used to duplicate this and
-        drifted — it stopped updating the path bar.)
-        """
-        if Path(path).is_dir():
-            # 點擊資料夾 → 導航進入並載入圖片
-            self._save_current_folder_session()
-            self.model.setRootPath(path)
-            self.tree.setRootIndex(self.model.index(path))
-            self.viewer.clear_tile_grid()
-            open_path(main_gui=self.viewer, path=path)
-            self._image_metadata_index.prime(
-                getattr(self.viewer, "_unfiltered_images", self.viewer.model.images),
-                limit=512,
-            )
-            self._refresh_tag_filter_options()
-            self._restore_folder_session(path)
-            self.filename_label.setText(
-                language_wrapper.language_word_dict.get(
-                    "main_window_current_folder_format"
-                ).format(path=path)
-            )
-            self.breadcrumb.set_path(path)
-            self.watch_folder(path)
-        elif Path(path).is_file():
-            self._save_current_folder_session()
-            self.viewer.clear_tile_grid()
-            open_path(main_gui=self.viewer, path=path)
-            self.breadcrumb.set_path(str(Path(path).parent))
-
-        rebuild_recent_menu(self)
-
-    def _on_directory_loaded(self, directory: str):
-        """QFileSystemModel 目錄載入完成回調，確保樹狀圖正確顯示"""
-        idx = self.model.index(directory)
-        if idx.isValid():
-            self.tree.update(idx)
-
     def _maybe_show_whats_new(self) -> None:
         """Pop up the What's New dialog if the user just upgraded.
 
@@ -495,83 +332,9 @@ class ImervueMainWindow(
         except (ImportError, AttributeError):
             pass
 
-    def _open_startup_folder(self, folder: str):
-        self.model.setRootPath(folder)
-        self.tree.setRootIndex(self.model.index(folder))
-        open_path(main_gui=self.viewer, path=folder)
-        self._image_metadata_index.prime(
-            getattr(self.viewer, "_unfiltered_images", self.viewer.model.images),
-            limit=512,
-        )
-        self._refresh_tag_filter_options()
-        self._restore_folder_session(folder)
-        # Startup-only: reopen the last deep-zoom image if the session recorded
-        # one, so relaunching returns to where the user left off.
-        self._restore_deep_zoom_if_saved(self._folder_view_sessions.get(folder) or {})
-        self.filename_label.setText(
-            language_wrapper.language_word_dict.get(
-                "main_window_current_folder_format"
-            ).format(path=folder)
-        )
-        if hasattr(self, "breadcrumb"):
-            self.breadcrumb.set_path(folder)
-        self.watch_folder(folder)
-
     # ==========================
     # 圖片分頁 (Image tabs)
     # ==========================
-
-    # ===== Drag-and-drop on the main window =====
-
-    @classmethod
-    def _is_supported_drop(cls, path: str) -> bool:
-        """Return True iff the dropped path is a folder or an image with
-        a recognised extension."""
-        p = Path(path)
-        if p.is_dir():
-            return True
-        return p.suffix.lower() in VIEWER_EXTENSIONS
-
-    def dragEnterEvent(self, event):  # noqa: N802 — Qt naming
-        urls = event.mimeData().urls() if event.mimeData() else []
-        if any(self._is_supported_drop(u.toLocalFile()) for u in urls if u.isLocalFile()):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
-
-    def dropEvent(self, event):  # noqa: N802 — Qt naming
-        urls = event.mimeData().urls() if event.mimeData() else []
-        for url in urls:
-            if not url.isLocalFile():
-                continue
-            path = url.toLocalFile()
-            if self._is_supported_drop(path):
-                self._open_dropped_path(path)
-                event.acceptProposedAction()
-                return
-        event.ignore()
-
-    def _open_dropped_path(self, path: str) -> None:
-        """Open a dropped file or folder via the viewer's existing
-        load path. Folders re-root the file tree; image files load
-        into the deep-zoom viewer."""
-        target = Path(path)
-        if target.is_dir():
-            self._open_startup_folder(str(target))
-            return
-        if target.is_file():
-            try:
-                open_path(main_gui=self.viewer, path=str(target))
-            except Exception:   # load surface raises a wide variety
-                logger = logging.getLogger("Imervue")
-                logger.exception("drop-load failed: %s", target)
-                if hasattr(self, "toast"):
-                    lang = language_wrapper.language_word_dict
-                    self.toast.error(
-                        lang.get("drop_load_failed", "Couldn't open {name}").format(
-                            name=target.name,
-                        ),
-                    )
 
     # ==========================
     # 拖到別的螢幕 → 自動適配

@@ -7,32 +7,29 @@ exactly the boxes the user drew — no detection — so the result is fully
 predictable.
 
 The interaction geometry lives in :mod:`_manual` (pure, unit-tested); the
-canvas here is a thin Qt shell over it. ``ManualReviewDialog`` is a plain
+canvas is a thin Qt shell over it that lives in ``_manual_dialog_canvas``
+(its mouse / keyboard editing in ``_manual_dialog_input``); the dataset and
+apply actions live in ``_manual_dialog_actions``. ``ManualReviewDialog`` is a plain
 ``QDialog`` / ``QWidget`` (no ``QOpenGLWidget``), so it needs no headless-CI
 skip marker.
 """
 from __future__ import annotations
 
-import logging
-from pathlib import Path
-
 import contextlib
-import os
+import logging
 
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtGui import QColor, QImage, QImageReader, QPainter, QPen, QPixmap
+from PySide6.QtCore import QThread, Signal
+from PySide6.QtGui import QImage, QImageReader, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QScrollArea,
     QSpinBox,
     QVBoxLayout,
-    QWidget,
 )
 
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -49,23 +46,10 @@ from safety_review._constants import (
     STYLE_MOSAIC,
     _MODE_DEFAULTS,
 )
-from safety_review._detection import _process_manual_image
-from safety_review._runner import _batch_destination
-from safety_review._manual import (
-    clamp_region,
-    fit_scale,
-    is_valid_region,
-    move_region,
-    normalize_rect,
-    region_at,
-    to_display_rect,
-    to_image_point,
-)
+from safety_review._manual_dialog_actions import _ManualReviewActionsMixin
+from safety_review._manual_dialog_canvas import _ManualCanvas
 
 logger = logging.getLogger("Imervue.plugin.safety_review")
-
-_MAX_CANVAS_W = 1100
-_MAX_CANVAS_H = 720
 
 
 def _load_pixmap(path: str) -> QPixmap:
@@ -92,172 +76,6 @@ def _load_pixmap(path: str) -> QPixmap:
         return QPixmap()
 
 
-class _ManualCanvas(QWidget):
-    """Image + hand-drawn censor boxes; delegates geometry to :mod:`_manual`."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._pixmap: QPixmap | None = None
-        self._scale = 1.0
-        self._regions: list = []          # image-space (x1,y1,x2,y2)
-        self._classes: list = []          # class id per region (parallel)
-        self._current_class = 0           # class assigned to newly drawn boxes
-        self._selected = -1
-        self._drawing = False
-        self._moving = False
-        self._draw_start = None           # display-space
-        self._draw_cur = None
-        self._move_last = None
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
-    # -- state -------------------------------------------------------
-
-    def set_image(self, pixmap: QPixmap) -> None:
-        self._pixmap = pixmap
-        self._scale = fit_scale(pixmap.width(), pixmap.height(),
-                                _MAX_CANVAS_W, _MAX_CANVAS_H)
-        self.setFixedSize(max(1, int(pixmap.width() * self._scale)),
-                          max(1, int(pixmap.height() * self._scale)))
-        self.update()
-
-    def image_size(self):
-        return (self._pixmap.width(), self._pixmap.height()) if self._pixmap else (0, 0)
-
-    def regions(self):
-        return list(self._regions)
-
-    def labeled_regions(self):
-        """[(box, class_id), …] for training-label export."""
-        return list(zip(self._regions, self._classes, strict=False))
-
-    def set_current_class(self, cls: int):
-        """Class assigned to boxes drawn from now on; re-classes the selection."""
-        self._current_class = cls
-        if 0 <= self._selected < len(self._classes):
-            self._classes[self._selected] = cls
-            self.update()
-
-    def selected_class(self):
-        if 0 <= self._selected < len(self._classes):
-            return self._classes[self._selected]
-        return None
-
-    def add_regions(self, boxes, classes=None) -> int:
-        """Append detected *boxes* (image coords), clamped and speck-filtered.
-
-        *classes* (aligned with *boxes*) sets each box's class; without it the
-        current class is used.
-        """
-        iw, ih = self.image_size()
-        added = 0
-        for i, box in enumerate(boxes):
-            region = clamp_region(tuple(box), iw, ih)
-            if is_valid_region(region):
-                self._regions.append(region)
-                self._classes.append(
-                    classes[i] if classes is not None else self._current_class)
-                added += 1
-        self.update()
-        return added
-
-    def clear_regions(self):
-        self._regions = []
-        self._classes = []
-        self._selected = -1
-        self.update()
-
-    def _remove_region(self, idx: int):
-        if 0 <= idx < len(self._regions):
-            self._regions.pop(idx)
-            if idx < len(self._classes):
-                self._classes.pop(idx)
-
-    # -- painting ----------------------------------------------------
-
-    def paintEvent(self, event):  # noqa: N802 - Qt override
-        painter = QPainter(self)
-        if self._pixmap is not None:
-            painter.drawPixmap(self.rect(), self._pixmap)
-        for i, region in enumerate(self._regions):
-            selected = i == self._selected
-            x, y, w, h = to_display_rect(region, self._scale)
-            painter.fillRect(x, y, w, h,
-                             QColor(0, 120, 255, 90) if selected
-                             else QColor(255, 0, 0, 70))
-            painter.setPen(QPen(QColor(0, 120, 255) if selected
-                                else QColor(255, 0, 0), 2))
-            painter.drawRect(x, y, w, h)
-        if self._drawing and self._draw_start and self._draw_cur:
-            x0, y0 = self._draw_start
-            x1, y1 = self._draw_cur
-            painter.setPen(QPen(QColor(255, 200, 0), 2))
-            painter.drawRect(int(min(x0, x1)), int(min(y0, y1)),
-                             int(abs(x1 - x0)), int(abs(y1 - y0)))
-
-    # -- mouse / keyboard -------------------------------------------
-
-    def mousePressEvent(self, event):  # noqa: N802 - Qt override
-        pos = event.position()
-        ix, iy = to_image_point(pos.x(), pos.y(), self._scale)
-        if event.button() == Qt.MouseButton.RightButton:
-            idx = region_at(self._regions, ix, iy)
-            if idx >= 0:
-                self._remove_region(idx)
-                self._selected = -1
-                self.update()
-            return
-        if event.button() == Qt.MouseButton.LeftButton:
-            idx = region_at(self._regions, ix, iy)
-            if idx >= 0:
-                self._selected = idx
-                self._moving = True
-                self._move_last = (pos.x(), pos.y())
-            else:
-                self._selected = -1
-                self._drawing = True
-                self._draw_start = (pos.x(), pos.y())
-                self._draw_cur = (pos.x(), pos.y())
-            self.update()
-
-    def mouseMoveEvent(self, event):  # noqa: N802 - Qt override
-        pos = event.position()
-        if self._drawing:
-            self._draw_cur = (pos.x(), pos.y())
-            self.update()
-        elif self._moving and self._selected >= 0:
-            last_x, last_y = self._move_last
-            dx = (pos.x() - last_x) / (self._scale or 1.0)
-            dy = (pos.y() - last_y) / (self._scale or 1.0)
-            iw, ih = self.image_size()
-            self._regions[self._selected] = clamp_region(
-                move_region(self._regions[self._selected], dx, dy), iw, ih)
-            self._move_last = (pos.x(), pos.y())
-            self.update()
-
-    def mouseReleaseEvent(self, event):  # noqa: N802 - Qt override
-        if self._drawing and self._draw_start and self._draw_cur:
-            ix0, iy0 = to_image_point(*self._draw_start, self._scale)
-            ix1, iy1 = to_image_point(*self._draw_cur, self._scale)
-            iw, ih = self.image_size()
-            region = clamp_region(normalize_rect(ix0, iy0, ix1, iy1), iw, ih)
-            if is_valid_region(region):
-                self._regions.append(region)
-                self._classes.append(self._current_class)
-                self._selected = len(self._regions) - 1
-        self._drawing = self._moving = False
-        self._draw_start = self._draw_cur = self._move_last = None
-        self.update()
-
-    def keyPressEvent(self, event):  # noqa: N802 - Qt override
-        if (event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace)
-                and self._selected >= 0):
-            self._remove_region(self._selected)
-            self._selected = -1
-            self.update()
-        else:
-            super().keyPressEvent(event)
-
-
 class _DetectWorker(QThread):
     """Run the detector once (off the GUI thread) to prefill labelled boxes."""
 
@@ -282,7 +100,7 @@ class _DetectWorker(QThread):
             self.failed.emit(str(exc))
 
 
-class ManualReviewDialog(QDialog):
+class ManualReviewDialog(_ManualReviewActionsMixin, QDialog):
     """Draw / edit censor boxes over one image, then apply them."""
 
     def __init__(self, main_gui, image_path: str, get_frozen_env=None):
@@ -470,73 +288,3 @@ class ManualReviewDialog(QDialog):
     def closeEvent(self, event):  # noqa: N802 - Qt override
         self._stop_detect_worker()
         super().closeEvent(event)
-
-    _DATASET_SETTING = "safety_review_dataset_dir"
-
-    def _dataset_dir(self):
-        """Remembered dataset folder, prompting for one the first time."""
-        from Imervue.user_settings.user_setting_dict import (
-            schedule_save,
-            user_setting_dict,
-        )
-        remembered = user_setting_dict.get(self._DATASET_SETTING)
-        if remembered and os.path.isdir(remembered):
-            return remembered
-        path = QFileDialog.getExistingDirectory(
-            self, self._lang.get("safety_review_dataset_dir", "Dataset folder"))
-        if path:
-            user_setting_dict[self._DATASET_SETTING] = path
-            schedule_save()
-            return path
-        return None
-
-    def _add_to_dataset(self):
-        """Export the current image + hand-labelled boxes as a YOLO sample."""
-        from safety_review._class_config import get_classes
-        from safety_review._dataset import export_label
-        dataset_dir = self._dataset_dir()
-        if not dataset_dir:
-            return
-        iw, ih = self._canvas.image_size()
-        try:
-            count = export_label(dataset_dir, self._image_path,
-                                 self._canvas.labeled_regions(), iw, ih,
-                                 get_classes())
-        except OSError:
-            logger.error("Dataset export failed", exc_info=True)
-            return
-        if hasattr(self._gui.main_window, "toast"):
-            self._gui.main_window.toast.success(
-                self._lang.get("safety_review_dataset_added",
-                               "Added to dataset ({count} labels)").format(
-                                   count=count))
-
-    def _output_path(self) -> str:
-        if self._overwrite_check.isChecked():
-            return self._image_path
-        # Numbered like a batch run's output, so a second pass keeps the first result.
-        return _batch_destination(self._image_path, str(Path(self._image_path).parent),
-                                  False, None)
-
-    def _apply(self):
-        regions = self._canvas.regions()
-        if not regions:
-            return
-        try:
-            _process_manual_image(
-                self._image_path, self._output_path(), regions,
-                self._block_spin.value(),
-                style=self._style_combo.currentData(),
-                shape=self._shape_combo.currentData())
-        except Exception:
-            logger.error("Manual censor apply failed", exc_info=True)
-            return
-        if self._overwrite_check.isChecked():
-            from safety_review._dialogs import _reload_grid_or_deepzoom
-            _reload_grid_or_deepzoom(self._gui)
-        if hasattr(self._gui.main_window, "toast"):
-            self._gui.main_window.toast.success(
-                self._lang.get("safety_review_manual_done",
-                               "Applied {count} censor region(s)").format(
-                                   count=len(regions)))
-        self.accept()

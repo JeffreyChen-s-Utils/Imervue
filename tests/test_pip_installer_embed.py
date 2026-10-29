@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from Imervue.plugin import pip_embed_python as pe
 from Imervue.plugin import pip_installer as pi
 
 
@@ -47,10 +48,10 @@ class _Resp:
 @pytest.fixture
 def worker(qapp, tmp_path, monkeypatch):
     """A worker wired to fakes; ``served`` maps a URL to the bytes it returns."""
-    monkeypatch.setattr(pi, "_embedded_python_dir", lambda: tmp_path / "py")
-    monkeypatch.setattr(pi, "_EMBED_PYTHON_SHA256", hashlib.sha256(_ZIP).hexdigest())
-    monkeypatch.setattr(pi, "_PIP_WHEEL_SHA256", hashlib.sha256(_WHEEL).hexdigest())
-    monkeypatch.setattr(pi, "_verify_python", lambda _exe: True)
+    monkeypatch.setattr(pe, "_embedded_python_dir", lambda: tmp_path / "py")
+    monkeypatch.setattr(pe, "_EMBED_PYTHON_SHA256", hashlib.sha256(_ZIP).hexdigest())
+    monkeypatch.setattr(pe, "_PIP_WHEEL_SHA256", hashlib.sha256(_WHEEL).hexdigest())
+    monkeypatch.setattr(pe, "_verify_python", lambda _exe: True)
     served = {pi._EMBED_PYTHON_URL: _ZIP, pi._PIP_WHEEL_URL: _WHEEL}
     monkeypatch.setattr(pi, "_https_urlopen", lambda req, timeout: _Resp(served[req.full_url]))
     w = pi._DownloadPythonWorker()

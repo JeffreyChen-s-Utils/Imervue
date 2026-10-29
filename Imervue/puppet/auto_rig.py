@@ -25,23 +25,36 @@ naming patterns Cubism artists already use, then bolting on:
   the top row stays put) + a physics rig from ``ParamAngleX`` to
   ``ParamHairFront`` so they swing as the head moves.
 
-All rule predicates are pure-Python and live next to the patches so
-tests can exercise the detection without going through a PSD.
+All rule predicates are pure-Python (:mod:`Imervue.puppet.auto_rig_detect`,
+re-exported here) so tests can exercise the detection without going
+through a PSD; the shared document edits live in
+:mod:`Imervue.puppet.auto_rig_mutators`.
 """
 from __future__ import annotations
 
 import math
-import re
 
+from Imervue.puppet.auto_rig_detect import (
+    detect_eye,
+    detect_hair,
+    detect_head,
+    detect_mouth_variant,
+)
+from Imervue.puppet.auto_rig_mutators import (
+    _drawable_group_bounds,
+    _drawable_group_centre,
+    _ensure_opacity_keys,
+    _ensure_parameter,
+    _set_param_keys,
+    _unique_deformer_id,
+    _unique_physics_id,
+)
 from Imervue.puppet.deformers import (
     default_rotation_form,
     default_warp_form,
 )
 from Imervue.puppet.document import (
     Deformer,
-    Drawable,
-    Parameter,
-    ParameterKey,
     PhysicsParticle,
     PhysicsRig,
     PuppetDocument,
@@ -55,6 +68,14 @@ from Imervue.puppet.standard_params import (
     PARAM_MOUTH_FORM,
     PARAM_MOUTH_OPEN_Y,
 )
+
+__all__ = [
+    "auto_rig",
+    "detect_eye",
+    "detect_hair",
+    "detect_head",
+    "detect_mouth_variant",
+]
 
 _HEAD_TILT_RAD: float = math.radians(15.0)
 """Maximum head-roll angle the auto-rigger keys at ``ParamAngleZ=±1``."""
@@ -81,83 +102,6 @@ def auto_rig(document: PuppetDocument) -> dict[str, int]:
         "hair_swing": _rig_hair_swing(document),
     }
     return counts
-
-
-# ---------------------------------------------------------------------------
-# Detection helpers
-# ---------------------------------------------------------------------------
-
-
-def _normalise(drawable_id: str) -> str:
-    """Lower-case + collapse dashes/spaces into underscores so the
-    pattern matchers can use one canonical form. Splits camelCase
-    boundaries so Cubism-style ``EyeLOpen`` resolves the same as the
-    snake-cased ``eye_l_open`` used in most PSDs."""
-    s = re.sub(r"(?<=[a-z])(?=[A-Z])", "_", drawable_id)
-    s = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", "_", s)
-    return re.sub(r"[\s\-]+", "_", s.lower())
-
-
-def detect_eye(drawable_id: str) -> tuple[str, str] | None:
-    """Return ``(side, state)`` where side is ``'l'`` or ``'r'`` and
-    state is ``'open'`` or ``'close'``. ``None`` when the id isn't an
-    eye layer."""
-    norm = _normalise(drawable_id)
-    if "eye" not in norm:
-        return None
-    side = _detect_side(norm)
-    state = _detect_eye_state(norm)
-    if side and state:
-        return side, state
-    return None
-
-
-def _detect_side(norm: str) -> str | None:
-    """Pull a left/right side out of a normalised id. Matches
-    ``_l_``, ``_l$``, ``left``, and short prefix forms like ``l_eye``."""
-    if re.search(r"(?:^|_)(l|left)(?:_|$)", norm):
-        return "l"
-    if re.search(r"(?:^|_)(r|right)(?:_|$)", norm):
-        return "r"
-    return None
-
-
-def _detect_eye_state(norm: str) -> str | None:
-    if any(t in norm for t in ("open", "opened")):
-        return "open"
-    if any(t in norm for t in ("close", "closed", "shut")):
-        return "close"
-    return None
-
-
-def detect_mouth_variant(drawable_id: str) -> str | None:
-    """Return ``'open'`` / ``'close'`` / ``'a'`` / ``'i'`` / ``'u'`` /
-    ``'e'`` / ``'o'`` or ``None``. Recognises common variants like
-    ``mouth_a`` / ``mouth_open_a`` / ``mouth_aa`` and matches Cubism's
-    convention of vowel-tagged mouth shapes."""
-    norm = _normalise(drawable_id)
-    if "mouth" not in norm and "lip" not in norm:
-        return None
-    if any(t in norm for t in ("close", "closed", "shut")):
-        return "close"
-    for vowel in ("a", "i", "u", "e", "o"):
-        if re.search(rf"(?:^|_)(?:mouth_)?{vowel}{vowel}?(?:_|$)", norm):
-            return vowel
-    if "open" in norm:
-        return "open"
-    return None
-
-
-def detect_head(drawable_id: str) -> bool:
-    norm = _normalise(drawable_id)
-    if "forehead" in norm:
-        return False
-    return any(t in norm for t in ("head", "face"))
-
-
-def detect_hair(drawable_id: str) -> bool:
-    norm = _normalise(drawable_id)
-    return any(t in norm for t in ("hair", "bang", "fringe"))
 
 
 # ---------------------------------------------------------------------------
@@ -323,107 +267,3 @@ def _swayed_grid(form: dict, shift: float) -> list[list[list[float]]]:
         [[float(x) + shift * r / last_row, float(y)] for x, y in row]
         for r, row in enumerate(form["grid"])
     ]
-
-
-# ---------------------------------------------------------------------------
-# Mutators
-# ---------------------------------------------------------------------------
-
-
-def _ensure_opacity_keys(
-    drawable: Drawable, parameter: str, stops: list[dict],
-) -> None:
-    if drawable.opacity_keys is None:
-        drawable.opacity_keys = []
-    # Replace an existing curve for the same parameter rather than
-    # stacking duplicates — re-running the auto-rigger on the same
-    # document should be idempotent.
-    drawable.opacity_keys = [
-        entry for entry in drawable.opacity_keys
-        if entry.get("parameter") != parameter
-    ]
-    drawable.opacity_keys.append({
-        "parameter": parameter,
-        "stops": [dict(s) for s in stops],
-    })
-
-
-def _ensure_parameter(document: PuppetDocument, param_id: str) -> None:
-    if document.parameter(param_id) is not None:
-        return
-    # Fall back to the Cubism-standard range for these well-known ids.
-    document.parameters.append(
-        Parameter(id=param_id, min=-1.0, max=1.0, default=0.0),
-    )
-
-
-def _set_param_keys(
-    document: PuppetDocument,
-    param_id: str,
-    values_to_forms: dict[float, dict[str, dict]],
-) -> None:
-    parameter = document.parameter(param_id)
-    if parameter is None:
-        return
-    for value, forms in values_to_forms.items():
-        replaced = False
-        for key in parameter.keys:
-            if abs(key.value - value) < 1e-6:
-                key.forms.update({k: dict(v) for k, v in forms.items()})
-                replaced = True
-                break
-        if not replaced:
-            parameter.keys.append(
-                ParameterKey(
-                    value=float(value),
-                    forms={k: dict(v) for k, v in forms.items()},
-                ),
-            )
-    parameter.keys.sort(key=lambda k: k.value)
-
-
-def _unique_deformer_id(document: PuppetDocument, prefix: str) -> str:
-    existing = {d.id for d in document.deformers}
-    if prefix not in existing:
-        return prefix
-    i = 2
-    while f"{prefix}_{i}" in existing:
-        i += 1
-    return f"{prefix}_{i}"
-
-
-def _unique_physics_id(document: PuppetDocument, prefix: str) -> str:
-    existing = {r.id for r in document.physics_rigs}
-    if prefix not in existing:
-        return prefix
-    i = 2
-    while f"{prefix}_{i}" in existing:
-        i += 1
-    return f"{prefix}_{i}"
-
-
-def _drawable_group_centre(
-    document: PuppetDocument, ids: list[str],
-) -> tuple[float, float]:
-    bounds = _drawable_group_bounds(document, ids)
-    if bounds is None:
-        return (document.size[0] / 2.0, document.size[1] / 2.0)
-    x0, y0, x1, y1 = bounds
-    return ((x0 + x1) / 2.0, (y0 + y1) / 2.0)
-
-
-def _drawable_group_bounds(
-    document: PuppetDocument, ids: list[str],
-) -> tuple[float, float, float, float] | None:
-    xs: list[float] = []
-    ys: list[float] = []
-    for drawable_id in ids:
-        drawable = document.drawable(drawable_id)
-        if drawable is None or not drawable.vertices:
-            continue
-        for x, y in drawable.vertices:
-            xs.append(float(x))
-            ys.append(float(y))
-    if not xs or not ys:
-        return None
-    return (min(xs), min(ys), max(xs), max(ys))

@@ -340,14 +340,14 @@ def test_empty_dirty_document_finishes_without_claiming_a_save(qapp, tmp_path, p
 
 
 def test_fallback_copy_failure_reports_without_touching_the_document(qapp, tmp_path, monkeypatch):
-    from Imervue.paint import workspace_autosave
+    from Imervue.paint import workspace_autosave_queue
     host = _Host(tmp_path)
     host._undo_stacks.clear()
 
     def fail(_document):
         raise MemoryError("snapshot copy failed")
 
-    monkeypatch.setattr(workspace_autosave.copy, "deepcopy", fail)
+    monkeypatch.setattr(workspace_autosave_queue.copy, "deepcopy", fail)
     try:
         host._on_autosave_tick()
         assert "snapshot copy failed" in host.warnings[0]

@@ -12,39 +12,34 @@ and an inline ``AnnotationCanvas`` to populate the Modify tab:
 - **Right panel**: drawing properties (color, stroke width, brush,
   opacity, spacing), annotation undo/redo + save, develop sliders
   (exposure/brightness/contrast/saturation), recipe reset/undo/redo.
+
+This module keeps the controller state, binding, undo stepping, navigation,
+deletion and the recipe commit; the behaviour lives in sibling mixins:
+``develop_drawing_tools`` (tool palette + drawing properties),
+``develop_canvas_lifecycle`` (decode + canvas creation / teardown),
+``develop_canvas_save`` (crop / annotation saves), ``develop_adjustments``
+(sliders + rotate / flip), ``develop_right_panel`` and ``develop_preview_panel``.
 """
 from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
-from collections.abc import Callable
 
-import numpy as np
 from PIL import Image
-from PySide6.QtCore import QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QUndoStack
-from PySide6.QtWidgets import (
-    QColorDialog,
-    QGridLayout,
-    QMenu,
-    QScrollArea,
-    QStyle,
-    QToolButton,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import QSize, QTimer, Signal
+from PySide6.QtGui import QUndoStack
+from PySide6.QtWidgets import QMenu, QWidget
 
-from Imervue.gpu_image_view.images.image_loader import decode_image_file
-from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
+from Imervue.gui.develop_adjustments import DevelopAdjustmentsMixin
+from Imervue.gui.develop_canvas_lifecycle import DevelopCanvasLifecycleMixin
+from Imervue.gui.develop_canvas_save import DevelopCanvasSaveMixin
+from Imervue.gui.develop_drawing_tools import DevelopDrawingToolsMixin
 from Imervue.gui.develop_preview_panel import DevelopPreviewMixin
-from Imervue.image.in_place_save import can_rewrite_in_place, save_over_source
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.best_effort import best_effort
-from Imervue.system.ui_scale import scaled_px
-import contextlib
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
@@ -64,13 +59,16 @@ def _rebind_target_after_delete(images: list[str], current_index: int) -> str | 
         return images[current_index]
     return None
 
-_CROP_CANNOT_OVERWRITE = (
-    "This file can't be overwritten in place (camera RAW, HEIC, animated or "
-    "multi-page). Export the crop instead."
-)
 
-
-class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
+class DevelopPanel(
+    DevelopPreviewMixin,
+    DevelopRightPanelMixin,
+    DevelopDrawingToolsMixin,
+    DevelopCanvasLifecycleMixin,
+    DevelopCanvasSaveMixin,
+    DevelopAdjustmentsMixin,
+    QWidget,
+):
     """Controller that builds the left/right panels for the Modify tab.
 
     Emits ``recipe_committed(path, old_recipe, new_recipe)`` whenever a
@@ -164,116 +162,6 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         self._init_preview_controller()
 
     # ------------------------------------------------------------------
-    # Panel builders — called by ImervueMainWindow
-    # ------------------------------------------------------------------
-
-    def build_left_panel(self) -> QWidget:
-        """Build the compact two-column tool palette and orientation controls."""
-        lang = language_wrapper.language_word_dict
-
-        panel = QWidget()
-        layout = QVBoxLayout(panel)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(2)
-
-        from Imervue.gui.tool_icons import tool_icon
-
-        panel.setObjectName("modifyToolPalette")
-        grid = QGridLayout()
-        grid.setSpacing(scaled_px(4))
-        layout.addLayout(grid)
-        icons = {"select": "select_rect", "rect": "shape_rect", "ellipse": "shape_ellipse",
-                 "line": "shape_line", "freehand": "brush"}
-        # Two compact columns keep the image in focus, with accessible tool names.
-        self._tool_buttons: dict[str, QToolButton] = {}
-        for index, (tool_key, _glyph, i18n_key, fallback) in enumerate(self._ANNOTATION_TOOLS):
-            btn = QToolButton()
-            label = lang.get(i18n_key, fallback)
-            btn.setText(label)
-            btn.setAccessibleName(label)
-            btn.setToolTip(label)
-            btn.setIcon(tool_icon(icons.get(tool_key, tool_key)))
-            btn.setIconSize(QSize(scaled_px(21), scaled_px(21)))
-            btn.setProperty("paintTool", True)
-            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-            btn.setCheckable(True)
-            btn.clicked.connect(lambda _checked=False, t=tool_key: self._set_tool(t))
-            grid.addWidget(btn, *divmod(index, 2))
-            self._interactive_widgets.append(btn)
-            self._tool_buttons[tool_key] = btn
-        strip_buttons = list(self._tool_buttons.values())
-
-        # Default: select tool checked
-        if "select" in self._tool_buttons:
-            self._tool_buttons["select"].setChecked(True)
-
-        # Crop controls are built in build_right_panel() where there is
-        # enough width for the combo box and buttons.
-
-        # --- Separator ---
-        layout.addSpacing(4)
-
-        self._build_orientation_tools(layout, strip_buttons, lang)
-
-        layout.addStretch(1)
-        button_size = self._size_tool_buttons(strip_buttons)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setWidget(panel)
-        # Room for the buttons, the layout margins and a vertical scroll bar.
-        bar = scroll.style().pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent)
-        scroll.setMinimumWidth(
-            2 * button_size.width() + scaled_px(12) + bar + 2 * scroll.frameWidth())
-        scroll.setMinimumHeight(scaled_px(40))
-        return scroll
-
-    def _build_orientation_tools(self, layout, strip_buttons, lang):
-        """Keep rotate and flip actions together below the drawing tools."""
-        from Imervue.gui.tool_icons import tool_icon
-        orient_buttons: list[tuple[str, str, str, Callable]] = [
-            ("⟲", "develop_rotate_ccw", "Rotate 90° CCW", lambda: self._rotate(-1)),
-            ("⟳", "develop_rotate_cw",  "Rotate 90° CW",  lambda: self._rotate(1)),
-            ("⇆", "develop_flip_h",     "Flip Horizontal", self._flip_h),
-            ("⇅", "develop_flip_v",     "Flip Vertical",   self._flip_v),
-        ]
-        orientation = QGridLayout()
-        orientation.setSpacing(scaled_px(4))
-        layout.addLayout(orientation)
-        for index, (_glyph, i18n_key, fallback, handler) in enumerate(orient_buttons):
-            btn = QToolButton()
-            label = lang.get(i18n_key, fallback)
-            btn.setText(label)
-            btn.setAccessibleName(label)
-            btn.setToolTip(label)
-            btn.setIcon(tool_icon(("rotate_ccw", "rotate_cw", "flip_h", "flip_v")[index]))
-            btn.setIconSize(QSize(scaled_px(21), scaled_px(21)))
-            btn.setProperty("paintTool", True)
-            btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
-            btn.clicked.connect(handler)
-            orientation.addWidget(btn, *divmod(index, 2))
-            self._interactive_widgets.append(btn)
-            strip_buttons.append(btn)
-
-
-    @classmethod
-    def _size_tool_buttons(cls, buttons: list[QToolButton]) -> QSize:
-        """Size icon buttons consistently with the UI scale and native style hints."""
-        size = QSize(scaled_px(cls._TOOL_BTN_SIZE.width()), scaled_px(cls._TOOL_BTN_SIZE.height()))
-        for btn in buttons:
-            size = size.expandedTo(btn.sizeHint())
-        for btn in buttons:
-            btn.setFixedSize(size)
-        return size
-
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-
-    # ------------------------------------------------------------------
     # Public API — called by GPUImageView / ImervueMainWindow
     # ------------------------------------------------------------------
 
@@ -346,254 +234,12 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         self._sync_sliders()
         self._refresh_canvas_base()
 
-    # ------------------------------------------------------------------
-    # Inline AnnotationCanvas management
-    # ------------------------------------------------------------------
+    def _reload_after_overwrite(self, path: str, failure_message: str) -> None:
+        """Reset the recipe now baked into *path*, then reload the canvas and the viewer.
 
-    def _decode_source(self, path: str) -> Image.Image | None:
-        """Return the raw RGBA source image for *path*, decoding once.
-
-        The decoded image (post-decode, pre-recipe) is cached keyed by *path*
-        so repeated recipe previews for the same image reuse it instead of
-        re-reading and re-decoding the file on every debounce tick. Only the
-        current path is retained; binding to a different path discards it.
-
-        The source is turned upright by its EXIF orientation, as the viewer
-        loads it, unless the working recipe's geometry predates that
-        (``Recipe.base_is_oriented``).
+        Kept here because this module owns ``recipe_store`` (tests and the
+        benchmark rebind it on this module).
         """
-        orient = self._current.base_is_oriented()
-        if self._decoded_source_key == (path, orient) and self._decoded_source is not None:
-            return self._decoded_source
-
-        try:
-            # The viewer's decode: RAW developed (Pillow alone reads a RAW's small
-            # embedded preview), sRGB, and upright unless a legacy recipe says not.
-            img = Image.fromarray(decode_image_file(path, orient=orient), "RGBA")
-        except Exception:
-            logger.exception("Failed to load image: %s", path)
-            self._invalidate_decoded_source()
-            return None
-
-        if img.mode != "RGBA":
-            img = img.convert("RGBA")
-
-        self._decoded_source_key = (path, orient)
-        self._decoded_source = img
-        return img
-
-    def _warn_cannot_overwrite(self) -> None:
-        toast = getattr(getattr(self._main_gui, "main_window", None), "toast", None)
-        if toast is None:
-            return
-        toast.info(language_wrapper.language_word_dict.get(
-            "modify_crop_cannot_overwrite", _CROP_CANNOT_OVERWRITE))
-
-    @staticmethod
-    def _write_over_source(path: str, img: Image.Image) -> bool:
-        """Save edited *img* over *path*, keeping its metadata; False when the save failed."""
-        try:
-            save_over_source(path, img)
-        except IMAGE_READ_ERRORS:
-            logger.exception("Failed to save the edit over %s", path)
-            return False
-        return True
-
-    def _invalidate_decoded_source(self) -> None:
-        """Drop the cached decoded source so the next load re-decodes."""
-        self._decoded_source_key = None
-        self._decoded_source = None
-
-    def _load_image_with_recipe(self, path: str) -> Image.Image | None:
-        """Load *path* (cached decode) and apply the current recipe.
-
-        Returns an RGBA PIL image or None on failure. The decode step is
-        cached by path; only the recipe re-application runs on every call.
-        """
-        img = self._decode_source(path)
-        if img is None:
-            return None
-
-        if not self._current.is_identity():
-            arr = self._current.apply(np.array(img))
-            img = Image.fromarray(arr, "RGBA")
-        return img
-
-    def _create_canvas(self, path: str) -> None:
-        """Load *path* as PIL and create a fresh AnnotationCanvas."""
-        from Imervue.gui.annotation_dialog import AnnotationCanvas
-
-        self._preview.cancel()
-        img = self._decode_source(path)
-        if img is None:
-            self._destroy_canvas()
-            return
-
-        # Tear down old canvas completely before creating a new one
-        self._cleanup_old_canvas()
-
-        self._canvas = AnnotationCanvas(img, self._canvas_undo_stack)
-        self._canvas_source_path = path
-        self._canvas_recipe = (Recipe.from_dict(self._current.to_dict())
-                               if self._current.is_identity() else None)
-        self._canvas.full_base_resolver = self._ensure_full_canvas
-        self._canvas.base_changed.connect(self._on_canvas_base_changed)
-
-        # Re-apply the full drawing state so the active tool (mosaic, blur, …),
-        # brush, colour, stroke, opacity and font keep working after an image
-        # switch instead of silently resetting to the fresh canvas's defaults.
-        self._apply_state_to_canvas()
-
-        # Allow Left/Right arrow keys to switch images
-        self._canvas.navigate_image.connect(self._on_navigate_image)
-        # Ctrl+S saves (with a toast), matching the Save button.
-        self._canvas.save_requested.connect(self._save_annotation)
-        # Right-click → image operations (save / navigate / delete).
-        self._canvas.context_menu_requested.connect(self._show_canvas_menu)
-        # Delete (no annotation selected) trashes the current image, matching
-        # the Imervue tab — the viewer is hidden here so it can't receive keys.
-        self._canvas.delete_image_requested.connect(self._delete_current_image)
-
-        # Show the canvas in the centre of the Modify tab, between its docks.
-        host = getattr(self._main_gui.main_window, "_modify_canvas_host", None)
-        if host is not None:
-            host.set_canvas(self._canvas)
-        # Focus the canvas so key shortcuts (Delete, arrows, Ctrl+S) land on it
-        # rather than a develop slider that ignores them.
-        self._canvas.setFocus()
-        if not self._current.is_identity():
-            self._request_preview(final=True)
-
-
-    def _cleanup_old_canvas(self) -> None:
-        """Disconnect signals, clear undo stack, and detach the old canvas.
-
-        Avoids both ``shiboken_delete`` and ``deleteLater`` — both of them
-        race with Qt's widget-tree teardown on Windows and cause heap
-        corruption (0xC0000374).  Instead we:
-
-        1. Clear shiboken-managed Python attrs on the canvas so their C++
-           counterparts are freed NOW (while Qt is still alive), rather than
-           during Python-shutdown GC when Qt is half-destroyed.
-        2. Detach from the canvas host (``setParent(None)``), which shows its hint again.
-        3. Drop the Python reference — CPython's refcount immediately frees
-           the wrapper; shiboken sees no parent → deletes the C++ QWidget
-           deterministically, all within normal execution.
-        """
-        self._preview.cancel()
-        self._set_preview_status("")
-        self._canvas_undo_stack.clear()
-        if self._canvas is not None:
-            self._canvas.full_base_resolver = None
-            self._canvas.base_changed.disconnect(self._on_canvas_base_changed)
-            # Disconnect signals we connected
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._canvas.navigate_image.disconnect(self._on_navigate_image)
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._canvas.save_requested.disconnect(self._save_annotation)
-            with contextlib.suppress(RuntimeError, TypeError):
-                self._canvas.context_menu_requested.disconnect(self._show_canvas_menu)
-            # Cancel any in-flight text editor (its deleteLater would
-            # otherwise outlive the canvas).
-            with best_effort("cancel the canvas text edit", logger):
-                self._canvas._cancel_text_edit()
-            # Release shiboken-tracked objects held by the canvas so they
-            # are freed deterministically right now.
-            self._canvas._base_qimg = None
-            self._canvas._preview_qimg = None
-            self._canvas.hide()
-            self._canvas.setParent(None)
-            self._canvas = None
-            # The toast was a child of the now-detached canvas — drop the stale
-            # reference so the next one is re-created on the new canvas.
-            self._canvas_toast = None
-
-    def _destroy_canvas(self) -> None:
-        self._debounce.stop()
-        self._cleanup_old_canvas()
-        self._canvas_source_path = None
-
-    # ------------------------------------------------------------------
-    # Left-panel tool selection
-    # ------------------------------------------------------------------
-
-    def _current_tool(self) -> str:
-        """The annotation tool whose button is checked (default ``select``)."""
-        for key, btn in self._tool_buttons.items():
-            if btn.isChecked():
-                return key
-        return "select"
-
-    def _current_brush(self) -> str:
-        """The freehand brush whose button is checked (default ``pen``)."""
-        for key, btn in self._brush_buttons.items():
-            if btn.isChecked():
-                return key
-        return "pen"
-
-    def _apply_state_to_canvas(self) -> None:
-        """Push the full current drawing state onto the live canvas.
-
-        Called after a fresh canvas is created (image switch / reload) so the
-        active tool, brush, colour, stroke, opacity and font survive instead of
-        resetting to the new canvas's defaults.
-        """
-        canvas = self._canvas
-        if canvas is None:
-            return
-        canvas.set_color(self._draw_color)
-        canvas.set_stroke_width(self._width_slider.value())
-        canvas.set_brush_opacity(self._opacity_slider.value())
-        canvas.set_brush_type(self._current_brush())
-        canvas.set_font_family(self._font_combo.currentFont().family())
-        canvas.set_font_size(self._font_size_spin.value())
-        tool = self._current_tool()
-        canvas.set_tool(tool)
-        if tool == "crop":
-            rw, rh = self._crop_ratio_combo.currentData() or (0, 0)
-            canvas.set_crop_ratio(rw, rh)
-
-    def _set_tool(self, tool: str) -> None:
-        if tool not in ("select", "crop"):
-            self._property_tabs.setCurrentIndex(1)
-        # Update button checked state
-        for key, btn in self._tool_buttons.items():
-            btn.setChecked(key == tool)
-        # Show/hide crop controls
-        self._crop_widget.setVisible(tool == "crop")
-        if tool != "crop" and self._canvas is not None:
-            self._canvas.clear_crop()
-        if self._canvas is not None:
-            self._canvas.set_tool(tool)
-            if tool == "crop":
-                rw, rh = self._crop_ratio_combo.currentData() or (0, 0)
-                self._canvas.set_crop_ratio(rw, rh)
-
-    def _on_crop_ratio_changed(self, _index: int) -> None:
-        rw, rh = self._crop_ratio_combo.currentData() or (0, 0)
-        if self._canvas is not None:
-            self._canvas.set_crop_ratio(rw, rh)
-
-    def _apply_crop(self) -> None:
-        if self._canvas is None or self._canvas_source_path is None:
-            return
-        if not self._ensure_full_canvas():
-            return
-        crop_rect = self._canvas.get_crop_rect()
-        if crop_rect is None:
-            return
-        x, y, w, h = crop_rect
-        if w < 2 or h < 2:
-            return
-        base = self._canvas.get_base_pil()
-        cropped = base.crop((x, y, x + w, y + h))
-        path = self._canvas_source_path
-        if not can_rewrite_in_place(path):
-            # RAW, HEIC, animated or multi-page: a save over it would destroy it.
-            self._warn_cannot_overwrite()
-            return
-        if not self._write_over_source(path, cropped):
-            return
         # The recipe adjustments are now baked into the saved file — reset
         # the recipe so they won't be applied again by the viewer.
         self._current = Recipe()
@@ -604,60 +250,14 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         # The on-disk pixels changed — the cached decode for this path is stale.
         self._invalidate_decoded_source()
 
-        # Reload
-        self._canvas.clear_crop()
+        # Reload the image in both the canvas and the main viewer
         self._create_canvas(path)
         try:
             from Imervue.gpu_image_view.images.image_loader import open_path
             self._main_gui._clear_deep_zoom()
             open_path(main_gui=self._main_gui, path=path)
         except Exception:
-            logger.exception("Viewer reload after crop failed")
-
-    def _cancel_crop(self) -> None:
-        if self._canvas is not None:
-            self._canvas.clear_crop()
-        self._set_tool("select")
-
-    # ------------------------------------------------------------------
-    # Right-panel drawing controls
-    # ------------------------------------------------------------------
-
-    def _pick_color(self) -> None:
-        r, g, b, a = self._draw_color
-        color = QColorDialog.getColor(
-            QColor(r, g, b, a),
-            self,
-            language_wrapper.language_word_dict.get("annotation_color", "Color"),
-            QColorDialog.ColorDialogOption.ShowAlphaChannel,
-        )
-        if color.isValid():
-            self._draw_color = (color.red(), color.green(), color.blue(), color.alpha())
-            self._update_color_button_style()
-            if self._canvas is not None:
-                self._canvas.set_color(self._draw_color)
-
-    def _update_color_button_style(self) -> None:
-        r, g, b, a = self._draw_color
-        self._color_btn.setStyleSheet(
-            f"QToolButton {{ background-color: rgba({r},{g},{b},{a}); "
-            f"color: {'#000' if (r + g + b) > 384 else '#fff'}; "
-            f"border: 1px solid #555; border-radius: 3px; }}"
-        )
-
-
-    def _on_brush_selected(self, key: str) -> None:
-        if self._canvas is not None:
-            self._canvas.set_brush_type(key)
-
-
-    def _on_font_changed(self, font: QFont) -> None:
-        if self._canvas is not None:
-            self._canvas.set_font_family(font.family())
-
-    def _on_font_size_changed(self, v: int) -> None:
-        if self._canvas is not None:
-            self._canvas.set_font_size(v)
+            logger.exception(failure_message)
 
     # ------------------------------------------------------------------
     # Image navigation (Left / Right arrow in canvas)
@@ -690,7 +290,7 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         self.bind_to_path(path)
 
     # ------------------------------------------------------------------
-    # Save annotation
+    # Canvas context menu + delete current image
     # ------------------------------------------------------------------
 
     def _build_canvas_menu(self) -> QMenu:
@@ -739,197 +339,6 @@ class DevelopPanel(DevelopPreviewMixin, DevelopRightPanelMixin, QWidget):
         target = _rebind_target_after_delete(
             list(viewer.model.images), viewer.current_index)
         self.bind_to_path(target)
-
-    def _toast(self, message: str, level: str = "info") -> None:
-        """Show a status toast on the (visible) Modify canvas.
-
-        The shared window toast is parented to the viewer, which is hidden
-        while the Modify tab is active, so its notifications wouldn't be seen
-        here. Parent our own toast to the canvas instead — a plain widget on
-        the active tab — so save feedback is actually visible.
-        """
-        canvas = self._canvas
-        if canvas is None:
-            return
-        from Imervue.gui.toast import ToastWidget
-        if self._canvas_toast is None:
-            self._canvas_toast = ToastWidget(canvas)
-        self._canvas_toast.show_message(message, level)
-
-    def _save_annotation(self) -> None:
-        """Bake annotations into the image and save back to the source file."""
-        if self._canvas is None or self._canvas_source_path is None:
-            return
-        if not self._ensure_full_canvas():
-            return
-        from Imervue.gui.annotation_models import bake
-
-        path = self._canvas_source_path
-        img = bake(self._canvas.get_base_pil(), self._canvas.get_annotations())
-        if not can_rewrite_in_place(path):
-            # RAW, HEIC, animated or multi-page: a save over it would destroy
-            # it, so the annotated image goes to a new file instead.
-            self._save_annotation_copy(path, img)
-            return
-        if not self._write_over_source(path, img):
-            self._toast(
-                language_wrapper.language_word_dict.get(
-                    "annotation_save_failed", "Save failed"),
-                "warning")
-            return
-
-        # The recipe adjustments are now baked into the saved file — reset
-        # the recipe so they won't be applied again by the viewer.
-        self._current = Recipe()
-        self._committed = Recipe()
-        recipe_store.set_for_path(path, Recipe())
-        self._sync_sliders()
-
-        # The on-disk pixels changed — the cached decode for this path is stale.
-        self._invalidate_decoded_source()
-
-        # Reload the image in both the canvas and the main viewer
-        self._create_canvas(path)
-        try:
-            from Imervue.gpu_image_view.images.image_loader import open_path
-            self._main_gui._clear_deep_zoom()
-            open_path(main_gui=self._main_gui, path=path)
-        except Exception:
-            logger.exception("Viewer reload after annotation save failed")
-
-        # Toast AFTER the reload so it isn't torn down with the old canvas.
-        self._toast(
-            language_wrapper.language_word_dict.get("annotation_saved", "Saved"),
-            "success")
-
-    def _save_annotation_copy(self, source_path: str, img: Image.Image) -> None:
-        """Save the annotated *img* to a file the user picks, leaving the source as it is."""
-        from Imervue.gui.annotation_file_actions import ask_save_as_path, write_annotated
-
-        target = ask_save_as_path(self, source_path)
-        if not target:
-            return
-        lang = language_wrapper.language_word_dict
-        try:
-            write_annotated(img, target, source_path)
-        except IMAGE_READ_ERRORS:
-            logger.exception("Failed to save the annotated copy to %s", target)
-            self._toast(lang.get("annotation_save_failed", "Save failed"), "warning")
-            return
-        self._toast(lang.get("annotation_saved", "Saved"), "success")
-
-    # ------------------------------------------------------------------
-    # Slider → recipe mapping
-    # ------------------------------------------------------------------
-
-    def _set_enabled(self, enabled: bool) -> None:
-        for w in self._interactive_widgets:
-            w.setEnabled(enabled)
-
-    def _sync_sliders(self) -> None:
-        """Push recipe values into the sliders without triggering emissions."""
-        self._suppress_signals = True
-        try:
-            self._exposure.setValue(int(round(self._current.exposure * 100)))
-            self._brightness.setValue(int(round(self._current.brightness * 100)))
-            self._contrast.setValue(int(round(self._current.contrast * 100)))
-            self._saturation.setValue(int(round(self._current.saturation * 100)))
-            for field_name, slider in self._adv_sliders.items():
-                value = getattr(self._current, field_name)
-                slider.setValue(int(round(value * 100)))
-        finally:
-            self._suppress_signals = False
-        self._refresh_labels()
-
-    def _refresh_labels(self) -> None:
-        lang = language_wrapper.language_word_dict
-        self._exposure_label.setText(
-            f"{lang.get('develop_exposure', 'Exposure')}: {self._current.exposure:+.2f}"
-        )
-        bri = int(self._current.brightness * 100)
-        con = int(self._current.contrast * 100)
-        sat = int(self._current.saturation * 100)
-        self._brightness_label.setText(
-            f"{lang.get('develop_brightness', 'Brightness')}: {bri:+d}"
-        )
-        self._contrast_label.setText(
-            f"{lang.get('develop_contrast', 'Contrast')}: {con:+d}"
-        )
-        self._saturation_label.setText(
-            f"{lang.get('develop_saturation', 'Saturation')}: {sat:+d}"
-        )
-        for field_name, i18n_key, fallback in self._ADVANCED_SLIDERS:
-            value_pct = int(round(getattr(self._current, field_name) * 100))
-            title = lang.get(i18n_key, fallback)
-            self._adv_labels[field_name].setText(f"{title}: {value_pct:+d}")
-
-    def _make_advanced_handler(self, field_name: str) -> Callable[[int], None]:
-        """Return a slider handler that writes to ``self._current.<field_name>``."""
-        def handler(v: int) -> None:
-            if self._suppress_signals:
-                return
-            setattr(self._current, field_name, v / 100.0)
-            self._refresh_labels()
-            self._schedule_preview()
-        return handler
-
-    def _on_exposure(self, v: int) -> None:
-        if self._suppress_signals:
-            return
-        self._current.exposure = v / 100.0
-        self._refresh_labels()
-        self._schedule_preview()
-
-    def _on_brightness(self, v: int) -> None:
-        if self._suppress_signals:
-            return
-        self._current.brightness = v / 100.0
-        self._refresh_labels()
-        self._schedule_preview()
-
-    def _on_contrast(self, v: int) -> None:
-        if self._suppress_signals:
-            return
-        self._current.contrast = v / 100.0
-        self._refresh_labels()
-        self._schedule_preview()
-
-    def _on_saturation(self, v: int) -> None:
-        if self._suppress_signals:
-            return
-        self._current.saturation = v / 100.0
-        self._refresh_labels()
-        self._schedule_preview()
-
-    # ------------------------------------------------------------------
-    # Rotate / flip — preview only (no commit until save)
-    # ------------------------------------------------------------------
-
-    def _rotate(self, delta: int) -> None:
-        if self._path is None:
-            return
-        self._current.rotate_steps = (self._current.rotate_steps + delta) % 4
-        self._refresh_canvas_base()
-
-    def _flip_h(self) -> None:
-        if self._path is None:
-            return
-        self._current.flip_h = not self._current.flip_h
-        self._refresh_canvas_base()
-
-    def _flip_v(self) -> None:
-        if self._path is None:
-            return
-        self._current.flip_v = not self._current.flip_v
-        self._refresh_canvas_base()
-
-    def _reset(self) -> None:
-        if self._path is None:
-            return
-        self._current = Recipe()
-        self._sync_sliders()
-        self._refresh_canvas_base()
-        self._commit_recipe()
 
     # ------------------------------------------------------------------
     # Preview + commit logic — debounced canvas refresh, then write-back

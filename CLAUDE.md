@@ -272,7 +272,7 @@ pure logic inside the plugin directory** (`plugins/ai_denoise/denoise.py`) — n
 `Imervue/image/`. Bundled models go in `plugins/<name>/models/` (gitignored) and are discovered
 at runtime so users can drop in their own.
 
-**Testing.** `Imervue/plugin/plugin_manager.py` prepends `plugins/` to `sys.path` at runtime and
+**Testing.** `Imervue/plugin/plugin_discovery.py` (run by the plugin manager) prepends `plugins/` to `sys.path` at runtime and
 `tests/conftest.py` mirrors that at collection time, so tests import plugin modules as
 `from <plugin_name>.<module> import …`. Don't duplicate the path injection per test file.
 

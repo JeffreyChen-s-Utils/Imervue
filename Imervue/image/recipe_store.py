@@ -21,7 +21,6 @@ single ``json.load`` is faster than iterating lines for that size class.
 """
 from __future__ import annotations
 
-import json
 import logging
 import os
 import sys
@@ -30,14 +29,16 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from Imervue.image.recipe import Recipe, file_identities, file_identity
+from Imervue.image.recipe import Recipe, file_identity
+from Imervue.image.recipe_store_identity import RecipeStoreIdentityMixin
+from Imervue.image.recipe_store_persistence import (
+    _RECIPE_DECODE_ERRORS,
+    RecipeStorePersistenceMixin,
+)
+from Imervue.image.recipe_store_variants import RecipeStoreVariantsMixin
 from Imervue.system.unreadable_guard import UnreadableFileGuard
 
 logger = logging.getLogger("Imervue.recipe_store")
-
-# What ``Recipe.from_dict`` raises on malformed stored data: wrong types
-# (``int(None)``, a non-mapping ``extra``), unparsable numbers, short curve points.
-_RECIPE_DECODE_ERRORS = (TypeError, ValueError, IndexError)
 
 _STORE_FILENAME = "recipes.json"
 
@@ -49,13 +50,19 @@ def _default_store_path() -> Path:
     return Path.home() / ".config" / "imervue" / "recipes" / _STORE_FILENAME
 
 
-class RecipeStore:
+class RecipeStore(
+    RecipeStorePersistenceMixin,
+    RecipeStoreVariantsMixin,
+    RecipeStoreIdentityMixin,
+):
     """In-memory recipe index backed by a single JSON file.
 
     The public API is path-oriented (``get_for_path``, ``set_for_path``) —
     callers never deal with file identities directly. Internally we compute
     the identity on each call, which is cheap thanks to the mtime/size cache
-    in ``recipe.file_identity``.
+    in ``recipe.file_identity``. Loading and saving, virtual copies and
+    re-keying live in the mixins of ``recipe_store_persistence``,
+    ``recipe_store_variants`` and ``recipe_store_identity``.
     """
 
     def __init__(self, store_path: Path | None = None):
@@ -72,120 +79,9 @@ class RecipeStore:
         self._guard = UnreadableFileGuard(logger)
         self._loaded = False
 
-    # ------------------------------------------------------------------
-    # Persistence
-    # ------------------------------------------------------------------
-
     @property
     def path(self) -> Path:
         return self._path
-
-    def _ensure_loaded(self) -> None:
-        if self._loaded:
-            return
-        with self._lock:
-            if self._loaded:
-                return
-            self._load_locked()
-
-    def _read_store_file(self) -> dict | None:
-        """Return the parsed on-disk store, or None on any read / format error."""
-        try:
-            if not self._path.exists():
-                return None
-            with open(self._path, encoding="utf-8-sig") as f:   # a BOM from a text editor is fine
-                data = json.load(f)
-        except (OSError, ValueError, RecursionError) as exc:   # ValueError: bad JSON or UTF-8
-            logger.warning(f"Recipe store read failed ({self._path}): {exc}")
-            self._guard.note_unreadable(self._path)
-            return None
-        if not isinstance(data, dict):
-            logger.warning(f"Recipe store at {self._path} is not a dict; ignoring")
-            self._guard.note_unreadable(self._path)
-            return None
-        return data
-
-    @staticmethod
-    def _parse_variants(variants_raw: Any) -> dict[str, dict[str, Any]]:
-        variants: dict[str, dict[str, Any]] = {}
-        if not isinstance(variants_raw, dict):
-            return variants
-        for name, v in variants_raw.items():
-            if not isinstance(v, dict):
-                continue
-            try:
-                Recipe.from_dict(v)
-            except Exception as exc:  # noqa: BLE001 - tolerate any decode error
-                logger.debug(f"Dropping unreadable variant '{name}': {exc}")
-                continue
-            variants[str(name)] = v
-        return variants
-
-    @classmethod
-    def _parse_entry(cls, entry: Any) -> dict[str, Any] | None:
-        if not isinstance(entry, dict):
-            return None
-        recipe_data = entry.get("recipe")
-        if not isinstance(recipe_data, dict):
-            return None
-        try:
-            Recipe.from_dict(recipe_data)
-        except _RECIPE_DECODE_ERRORS:
-            logger.debug("Dropping undecodable recipe store entry", exc_info=True)
-            return None
-        return {
-            "recipe": recipe_data,
-            "last_path": entry.get("last_path", ""),
-            "variants": cls._parse_variants(entry.get("variants")),
-        }
-
-    def _load_locked(self) -> None:
-        self._entries = {}
-        self._undecodable = {}
-        data = self._read_store_file()
-        if data is None:
-            self._loaded = True
-            return
-        for identity, entry in data.items():
-            parsed = self._parse_entry(entry)
-            if parsed is None:
-                logger.debug(f"Keeping undecodable recipe entry for {identity} as it is")
-                self._undecodable[identity] = entry
-                continue
-            self._entries[identity] = parsed
-        self._loaded = True
-
-    def _save_locked(self) -> None:
-        """Atomic write via tmp + os.replace. Caller must hold the lock.
-
-        Undecodable entries go back as they were read; a store file that
-        could not be read is only replaced once a copy of it is kept.
-        """
-        if not self._guard.clear_to_save(self._path):
-            return
-        try:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            logger.warning(f"Cannot create recipe store dir {self._path.parent}: {exc}")
-            return
-        tmp = self._path.with_suffix(self._path.suffix + ".tmp")
-        try:
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(
-                    {**self._undecodable, **self._entries},
-                    f,
-                    ensure_ascii=False,
-                    indent=2,
-                    sort_keys=True,
-                )
-            os.replace(tmp, self._path)
-        except OSError as exc:
-            logger.warning(f"Recipe store write failed ({self._path}): {exc}")
-            try:
-                if tmp.exists():
-                    tmp.unlink()
-            except OSError:
-                pass
 
     # ------------------------------------------------------------------
     # Public API — identity-based
@@ -246,162 +142,6 @@ class RecipeStore:
                 self._save_locked()
 
     # ------------------------------------------------------------------
-    # Virtual copies — named recipe variants stored alongside the master.
-    # ------------------------------------------------------------------
-
-    def list_variants(self, identity: str) -> list[str]:
-        """Return the names of saved variants (excluding the active master)."""
-        if not identity:
-            return []
-        self._ensure_loaded()
-        with self._lock:
-            entry = self._entries.get(identity)
-            if not entry:
-                return []
-            return sorted((entry.get("variants") or {}).keys())
-
-    def get_variant(self, identity: str, name: str) -> Recipe | None:
-        if not identity or not name:
-            return None
-        self._ensure_loaded()
-        with self._lock:
-            entry = self._entries.get(identity)
-            if not entry:
-                return None
-            variants = entry.get("variants") or {}
-            data = variants.get(name)
-            if not isinstance(data, dict):
-                return None
-            try:
-                return Recipe.from_dict(data)
-            except _RECIPE_DECODE_ERRORS:
-                logger.debug("Variant %r of %s failed to decode", name, identity,
-                             exc_info=True)
-                return None
-
-    def save_variant(
-        self, identity: str, name: str, recipe: Recipe, last_path: str = "",
-    ) -> None:
-        name = name.strip()
-        if not identity or not name:
-            return
-        self._ensure_loaded()
-        with self._lock:
-            entry = self._entries.get(identity) or {
-                "recipe": Recipe().to_dict(),
-                "last_path": last_path,
-                "variants": {},
-            }
-            variants = dict(entry.get("variants") or {})
-            variants[name] = recipe.normalized().to_dict()
-            entry["variants"] = variants
-            if last_path:
-                entry["last_path"] = last_path
-            self._entries[identity] = entry
-            self._save_locked()
-
-    def delete_variant(self, identity: str, name: str) -> None:
-        if not identity or not name:
-            return
-        self._ensure_loaded()
-        with self._lock:
-            entry = self._entries.get(identity)
-            if not entry:
-                return
-            variants = dict(entry.get("variants") or {})
-            if name in variants:
-                del variants[name]
-                entry["variants"] = variants
-                self._save_locked()
-
-    def rename_variant(self, identity: str, old_name: str, new_name: str) -> bool:
-        new_name = new_name.strip()
-        if not identity or not old_name or not new_name or old_name == new_name:
-            return False
-        self._ensure_loaded()
-        with self._lock:
-            entry = self._entries.get(identity)
-            if not entry:
-                return False
-            variants = dict(entry.get("variants") or {})
-            if old_name not in variants or new_name in variants:
-                return False
-            variants[new_name] = variants.pop(old_name)
-            entry["variants"] = variants
-            self._save_locked()
-            return True
-
-    # ------------------------------------------------------------------
-    # Keeping a recipe with a file whose identity bytes changed
-    # ------------------------------------------------------------------
-
-    def rekey(self, old_identity: str, new_identity: str,
-              transform: Callable[[Recipe], Recipe | None] | None = None) -> bool:
-        """Move *old_identity*'s recipe and variants to *new_identity*; True if they moved.
-
-        For a file Imervue rewrote without touching its pixels — new EXIF,
-        a quarter turn — whose identity (its first bytes) changed. With
-        *transform* every recipe, the variants included, is passed through
-        it first; if it returns ``None`` for any of them nothing moves, so
-        the recipe stays where it was rather than half-adapted.
-        """
-        if not old_identity or not new_identity or old_identity == new_identity:
-            return False
-        self._ensure_loaded()
-        with self._lock:
-            entry = self._entries.get(old_identity)
-            if entry is None:
-                return False
-            if transform is not None:
-                entry = _transformed_entry(entry, transform)
-                if entry is None:
-                    return False
-            self._entries[new_identity] = entry
-            del self._entries[old_identity]
-            self._save_locked()
-            return True
-
-    def identity_for(self, path: str | Path) -> str:
-        """*path*'s identity, first moving a recipe stored under its pre-2 identity to it.
-
-        Identities used to hash only the first 4 KB and the size, which two
-        scanned pages of one size (BMP, uncompressed TIFF) shared: every page
-        showed one recipe. An entry still under a file's old identity moves to
-        the new one the first time the file is looked up, so nobody's edits
-        disappear with the upgrade; a second file that shared it starts clean.
-        """
-        identity, legacy = file_identities(path)
-        if not identity:
-            return ""
-        self._ensure_loaded()
-        with self._lock:
-            if identity not in self._entries and legacy in self._entries:
-                self._entries[identity] = self._entries.pop(legacy)
-                self._save_locked()
-        return identity
-
-    def list_variants_for_path(self, path: str) -> list[str]:
-        return self.list_variants(self.identity_for(path))
-
-    def get_variant_for_path(self, path: str, name: str) -> Recipe | None:
-        return self.get_variant(self.identity_for(path), name)
-
-    def save_variant_for_path(
-        self, path: str, name: str, recipe: Recipe,
-    ) -> None:
-        identity = self.identity_for(path)
-        if identity:
-            self.save_variant(identity, name, recipe, last_path=str(path))
-
-    def delete_variant_for_path(self, path: str, name: str) -> None:
-        self.delete_variant(self.identity_for(path), name)
-
-    def rename_variant_for_path(
-        self, path: str, old_name: str, new_name: str,
-    ) -> bool:
-        return self.rename_variant(self.identity_for(path), old_name, new_name)
-
-    # ------------------------------------------------------------------
     # Public API — path-based convenience wrappers
     # ------------------------------------------------------------------
 
@@ -440,24 +180,6 @@ class RecipeStore:
 # Module-level singleton. Tests that need an isolated store should instantiate
 # RecipeStore directly with a tmp path instead of poking at this global.
 recipe_store = RecipeStore()
-
-
-def _transformed_entry(entry: dict[str, Any],
-                       transform: Callable[[Recipe], Recipe | None]) -> dict[str, Any] | None:
-    """*entry* with its recipe and each variant passed through *transform*; None if one can't be."""
-    try:
-        recipe = transform(Recipe.from_dict(entry["recipe"]))
-        variants = {name: (transform(Recipe.from_dict(data)) if isinstance(data, dict) else data)
-                    for name, data in (entry.get("variants") or {}).items()}
-    except _RECIPE_DECODE_ERRORS:
-        logger.debug("A recipe failed to decode while following its file", exc_info=True)
-        return None
-    if recipe is None or any(variant is None for variant in variants.values()):
-        return None
-    return {**entry, "recipe": recipe.normalized().to_dict(),
-            "variants": {name: (variant.normalized().to_dict()
-                                if isinstance(variant, Recipe) else variant)
-                         for name, variant in variants.items()}}
 
 
 def carry_recipe(path: str | Path, change: Callable[[], bool],

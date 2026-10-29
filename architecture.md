@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-18 on `dev`; corresponding commit: `git log -1 -- architecture.md`.
+> Last verified: 2026-10-29 on `fix/main-quality`; corresponding commit: `git log -1 -- architecture.md`.
 
 ## 1. Purpose
 
@@ -36,8 +36,8 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | Path | Responsibility |
 | --- | --- |
 | `Imervue/__main__.py` | Process entry: frozen-build fixes, UTF-8 I/O, settings/theme/UI-scale before any widget, main window |
-| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar, browse modes and dock panels come from the `Imervue/gui/main_window_*.py` mixins. The Imervue and Modify tabs are each a nested `QMainWindow` whose side panels are docks (`main_window_docks.py`) |
-| `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` holds the `_open_<feature>()` entry points |
+| `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar, browse modes, dock panels, workspace-tab switching and folder/file navigation with drag-and-drop come from the `Imervue/gui/main_window_*.py` mixins. The Imervue and Modify tabs are each a nested `QMainWindow` whose side panels are docks (`main_window_docks.py`) |
+| `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` builds the Extra Tools tree, `extra_tools_open_*.py` hold the `_open_<feature>()` entry points |
 | `Imervue/gui/` | Qt dialogs and main-window widgets (develop panel, file tree, list/dual views, EXIF sidebar); most dialogs are shells over `Imervue/image/` |
 | `Imervue/gpu_image_view/` | `GPUImageView` (tile wall + deep zoom) and its collaborators; `images/` is the load path, `actions/` the viewer actions |
 | `Imervue/image/` | Pure image algorithms: develop `Recipe`, tone/colour, geometry, effects, I/O, metadata, caches |
@@ -80,7 +80,7 @@ without polling or changing the image model.
 | --- | --- | --- |
 | `py -m Imervue [--debug] [--software_opengl] [file]` | `Imervue/__main__.py` | GUI application |
 | `py -m Imervue.cli <subcommand>` | `Imervue/cli.py` | Headless batch; `list-ops` lists subcommands; every MCP tool is also a subcommand (`Imervue/cli_tools.py`) |
-| `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | Calls `run()` in `Imervue/mcp_server/server.py` |
+| `py -m Imervue.mcp_server` | `Imervue/mcp_server/__main__.py` | Calls `run()` from `Imervue/mcp_server/server.py` (defined in `server_transport.py`) |
 | `exe/start_Imervue.py` | — | Launch shim for frozen builds |
 | PyPI packages `Imervue` (stable), `Imervue_dev` (dev channel) | `pyproject.toml`, `dev.toml`, `MANIFEST.in` | Both wheels install one top-level package, `Imervue`: package discovery includes `Imervue` and `Imervue.*` only. Neither distribution carries the test suite: `MANIFEST.in` prunes `tests/` from the sdist. Stable: a pull request merged into `main` runs `release.yml`, which bumps `pyproject.toml`, tags and uploads. Dev: the `publish-dev` job of `test.yml` runs after `lint`, `docs`, `fast` and `extended` on a push to `dev`, builds from `dev.toml` and uploads when the commit is still the tip of `dev` and the wheel differs from the newest published one; `scripts/dev_release.py` takes the version from PyPI (newest release plus one patch), so nothing is committed back. Both jobs hold the PyPI token and install nothing but the hash-locked `.github/requirements/publish.txt` (`build`, `twine` and `setuptools`, wheels only; generated from `publish.in` beside it), then build with `python -m build --no-isolation`, so the build backend is the locked `setuptools` too; `tests/test_workflow_actions.py` fails on any other `pip install` in them, on an isolated build, and on a `build-system.requires` the lock does not satisfy |
 
@@ -99,7 +99,8 @@ Public interfaces other code or users depend on:
   `register_languages()`) and `merge_translations()`
   (`Imervue/multi_language/language_wrapper.py`).
 - **MCP tools** — `Imervue/mcp_server/tools.py` re-exports every handler and registers the tool set;
-  handlers live in `tools_read.py` / `tools_edit.py`, definitions in `tool_defs_read.py` /
+  handlers live in `tools_read.py` / `tools_edit.py` (write-side effects in
+  `tools_edit_effects.py` / `tools_edit_grading.py`, re-exported by `tools_edit.py`), definitions in `tool_defs_read.py` /
   `tool_defs_edit.py`, output schemas in `tool_schemas.py`.
 - **On-disk formats** — `.imervue` (Paint bundle), `.puppet`, `.imervue-session.json`, XMP
   sidecars, `user_setting.json`; locations in `architecture_explore.md` §11. `.puppet` is a public
@@ -172,7 +173,7 @@ folder-icon queries before enumeration to reduce competing disk work.
    shared process RAM cap and fair window quotas, independently of texture VRAM. Cancelled
    workers retain tickets until completion; stale identities and destroyed owners cannot
    deliver results. Refused promoted requests fall back to ordinary foreground loading.
-3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_menu.py` →
+3. **Edit and delete** — single-image tool: `_open_<feature>()` in `menu/extra_tools_open_*.py` →
    `gui/<feature>_dialog.py` → `EffectWorker` (`gui/_apply_save.py`) → `image/<feature>.py` → saved
    copy. Modify tab: slider edits → `Recipe` (`image/recipe.py`) persisted by `image/recipe_store.py`.
    Modify preview: a per-panel latest-generation scheduler coalesces requests, renders reduced
@@ -235,7 +236,7 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
 
 | To add | Touch |
 | --- | --- |
-| A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_menu.py` |
+| A main-program image tool | `Imervue/image/<feature>.py` (pure) + `Imervue/gui/<feature>_dialog.py` (shell, usually on `Imervue/gui/_apply_save.py`) + `_open_<feature>()` in `Imervue/menu/extra_tools_open_*.py`, wired in `Imervue/menu/extra_tools_menu.py` |
 | A dialog that owns a `QThread` | Inherit `WorkerHostMixin` from `Imervue/plugin/worker_host.py`; cancellation hooks and joins run on a retained retirement thread, with controls paused and dialog completion deferred until actual exit. Hooks must cancel flags/subprocesses without GUI access; final application exit drains remaining threads. Do not hand-write teardown |
 | A plugin dialog that runs one image transform on OK | Inherit `ToolDialogMixin` from `Imervue/plugin/tool_dialog.py` (it includes `WorkerHostMixin`): set `output_suffix` and the toast keys, return the transform from `_transform()`, name optional packages in `_required_packages()`; the plugin then needs plugin API 2 in its `plugin.json` |
 | Main-program code that plugins import | Raise `PLUGIN_API_VERSION` in `Imervue/plugin/plugin_api.py` and list what the version adds in its docstring; plugins using it declare `{"min_api_version": N}` in `plugin.json` (`tests/test_plugin_api.py` checks the bundled ones) |
@@ -243,8 +244,8 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
 | A develop renderer (another device for the recipe) | A `BackendProvider` registered with `Imervue.image.develop_backends.register()` from a plugin's `on_plugin_loaded`; it must return what `Recipe.apply` does and may run any span through `Recipe.apply_stages()` (reference: `plugins/gpu_develop/`) |
 | A plugin | `plugins/<name>/__init__.py` (sets `plugin_class`) + `plugins/<name>/<name>_plugin.py`; all pure logic inside the plugin directory |
 | A language | Plugin calling `language_wrapper.register_language()` from its `register_languages()` class method (reference: `plugins/spanish_translation/`); new UI keys go into `Imervue/multi_language/english.py` first |
-| An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py`, its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
-| A CLI subcommand | `Imervue/cli.py` (`_SUBCOMMANDS` row plus a `_WRITE_SPEC`, `_REPORTERS` or `_MULTI_COMMANDS` entry); one that mirrors an MCP tool comes from `Imervue/cli_tools.py` instead |
+| An MCP tool | Handler in `Imervue/mcp_server/tools_read.py` or `tools_edit.py` (an edit-side effect in `tools_edit_effects.py` / `tools_edit_grading.py`, re-exported from `tools_edit.py`; shared edit helpers in `tools_edit_support.py`), its entry in the matching `tool_defs_*.py`, a re-export in `tools.py`, and `Imervue/mcp_server/tool_schemas.py` (parity enforced by `tests/test_mcp_tool_schemas.py`); its CLI name in `BRIDGED` in `Imervue/cli_tools.py`, which builds the subcommand from the schema (`tests/test_cli_tools.py` fails until every MCP tool has one) |
+| A CLI subcommand | A `_SUBCOMMANDS` row in `Imervue/cli_parser.py` plus a `_WRITE_SPEC` or `_MULTI_COMMANDS` entry in `Imervue/cli.py` or a `_REPORTERS` entry in `Imervue/cli_reports.py`; one that mirrors an MCP tool comes from `Imervue/cli_tools.py` instead |
 | A Paint tool or dock | `Imervue/paint/tools/`, `Imervue/paint/docks/`, routed by `Imervue/paint/tool_dispatcher.py` |
 | A theme | `Imervue/system/themes.py`; a theme with a full palette adds its `ThemeColours` in `Imervue/system/modern_theme.py` |
 | A panel of the Imervue or Modify tab | `add_dock()` in `Imervue/gui/main_window_docks.py` (a stable object name, its group in `panel_docks()`, its place in `reset_panel_layout()`) |

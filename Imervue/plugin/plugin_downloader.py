@@ -1,29 +1,35 @@
+"""Plugin downloader: the public import location for the distribution-repo contract.
+
+Holds the repository URL and branch, the one-call recursive tree listing and its
+walk (``parse_plugin_tree``), path-component validation and the ``_https_urlopen``
+guard. The workers live in :mod:`plugin_downloader_workers` and the dialog in
+:mod:`plugin_downloader_dialog`; both read ``_https_urlopen``, ``_github_get`` and
+``_get_plugin_dir`` from this module at call time, so patching them here reaches
+every request and file write.
+"""
 from __future__ import annotations
 
 import json
-import logging
-from functools import partial
 import urllib.request
 from pathlib import Path
-from typing import TYPE_CHECKING
 from urllib.parse import quote, urlparse
 
-
-from PySide6.QtCore import Qt, QThread, Signal
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QTreeWidget, QTreeWidgetItem, QLabel, QProgressBar,
-    QMessageBox, QHeaderView,
-)
-
-from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.plugin.plugin_api import PLUGIN_API_VERSION, IncompatiblePluginError, check_compatible
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
-from Imervue.system.job_state import JobState
-from Imervue.gui.background_jobs import job_registry
-from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.plugin.installation import installation_stage, commit_installation
-from Imervue.plugin.status import status_registry
+from Imervue.plugin.plugin_downloader_workers import (
+    _EXPECTED_FETCH_ERRORS,
+    DownloadPluginWorker,
+    FetchPluginListWorker,
+    _retry_download,
+    needs_newer_text,
+)
+from Imervue.plugin.plugin_downloader_dialog import PluginDownloaderDialog
+
+__all__ = [
+    "_EXPECTED_FETCH_ERRORS", "PLUGIN_CATEGORIES", "RAW_BASE_URL", "REPO_BRANCH", "REPO_TREE_URL",
+    "DownloadPluginWorker", "FetchPluginListWorker", "PluginDownloaderDialog", "PluginListing",
+    "_get_plugin_dir", "_github_get", "_https_urlopen", "_is_hidden", "_retry_download",
+    "is_safe_path_component", "needs_newer_text", "parse_plugin_tree",
+]
 
 
 def _https_urlopen(req: urllib.request.Request, timeout: int):
@@ -38,16 +44,6 @@ def _https_urlopen(req: urllib.request.Request, timeout: int):
         raise ValueError(f"Refusing non-https URL scheme: {scheme!r}")
     return urllib.request.urlopen(req, timeout=timeout)  # nosec B310  # scheme validated above
 
-if TYPE_CHECKING:
-    from Imervue.Imervue_main_window import ImervueMainWindow
-
-logger = logging.getLogger("Imervue.plugin.downloader")
-
-# Failures a fetch or download is expected to meet: network and HTTP errors and
-# disk errors (``OSError``), bad JSON or a truncated listing (``ValueError``), a
-# listing of the wrong shape (``TypeError``, ``KeyError``). Anything else is a bug
-# and is logged with its traceback.
-_EXPECTED_FETCH_ERRORS = (OSError, ValueError, TypeError, KeyError)
 
 REPO_BRANCH = "main"
 # One recursive tree listing replaces a Contents API call per directory, which
@@ -66,15 +62,6 @@ RAW_BASE_URL = (
 PLUGIN_CATEGORIES: tuple[str, ...] = ("plugins", "languages")
 
 PluginListing = tuple[str, str, list[dict]]
-
-
-def needs_newer_text(error: IncompatiblePluginError) -> str:
-    """The status-line text for a plugin this Imervue is too old to run."""
-    return language_wrapper.language_word_dict.get(
-        "plugin_dl_needs_newer",
-        "{name} needs a newer Imervue (plugin API {needed}; this one has {have}). "
-        "Update Imervue, then download it again.",
-    ).format(name=error.plugin, needed=error.needed, have=PLUGIN_API_VERSION)
 
 
 def _get_plugin_dir() -> Path:
@@ -143,431 +130,3 @@ def parse_plugin_tree(tree: dict) -> list[PluginListing]:
         (category, name, sorted(grouped[(category, name)], key=lambda f: f["name"]))
         for category, name in ordered
     ]
-
-
-# ================================================================
-# Worker: fetch available plugins list from GitHub
-# ================================================================
-
-class FetchPluginListWorker(QThread):
-    result_ready = Signal(list)  # [(category, plugin_name, [file_info, ...])]
-    error = Signal(str)
-
-    def run(self):
-        try:
-            tree = _github_get(REPO_TREE_URL)
-            if not isinstance(tree, dict):
-                raise TypeError("Unexpected plugin repository listing")
-            self.result_ready.emit(parse_plugin_tree(tree))
-        except _EXPECTED_FETCH_ERRORS as e:
-            self.error.emit(str(e))
-        except Exception as e:
-            # Worker boundary: the dialog waits on a signal, so report even a bug.
-            logger.exception("Fetching the plugin list failed unexpectedly")
-            self.error.emit(str(e))
-
-
-# ================================================================
-# Worker: download a single plugin
-# ================================================================
-
-class DownloadPluginWorker(QThread):
-    progress = Signal(int, int)  # (current, total)
-    result_ready = Signal(str)       # plugin_name
-    error = Signal(str)
-
-    def __init__(self, plugin_name: str, file_infos: list[dict], parent=None):
-        super().__init__(parent)
-        self.plugin_name = plugin_name
-        self.file_infos = [dict(info) for info in file_infos]
-        self.job_state = JobState([plugin_name])
-        self._status_key = "download:" + plugin_name
-
-    def run(self):
-        try:
-            names = [self.plugin_name, *(info["name"] for info in self.file_infos)]
-            unsafe = [n for n in names if not is_safe_path_component(n)]
-            if unsafe:
-                raise ValueError(f"Refusing unsafe plugin path: {unsafe[0]!r}")
-            plugin_root = _get_plugin_dir()
-            plugin_root.mkdir(parents=True, exist_ok=True)
-            final_dir = plugin_root / self.plugin_name
-            with installation_stage(final_dir) as tmp_dir:
-                status_registry.publish(self._status_key, self.plugin_name, "downloading")
-                total = len(self.file_infos)
-                for i, info in enumerate(self.file_infos):
-                    self._check_cancelled()
-                    url = info["download_url"]
-                    dest = tmp_dir / info["name"]
-                    dest.parent.mkdir(parents=True, exist_ok=True)
-                    req = urllib.request.Request(url)
-                    with _https_urlopen(req, timeout=30) as resp:
-                        dest.write_bytes(resp.read())
-                    self.job_state.progress(i + 1, total)
-                    self.progress.emit(i + 1, total)
-                # Refused before the swap, so a working install stays as it was.
-                self._check_cancelled()
-                check_compatible(tmp_dir, self.plugin_name)
-                commit_installation(tmp_dir, final_dir, before_commit=self._check_cancelled)
-            status_registry.publish(self._status_key, self.plugin_name, "installed",
-                                    "Reload Plugins in each open window to activate the new code")
-            self.job_state.record(self.plugin_name, output=str(final_dir))
-            self.result_ready.emit(self.plugin_name)
-        except InterruptedError:
-            self.job_state.request_cancel()
-            status_registry.publish(self._status_key, self.plugin_name, "cancelled")
-        except IncompatiblePluginError as e:
-            self._report_error(needs_newer_text(e))
-        except _EXPECTED_FETCH_ERRORS as e:
-            self._report_error(str(e) or type(e).__name__)
-        except Exception as e:
-            logger.exception("Downloading plugin %s failed unexpectedly", self.plugin_name)
-            self._report_error(str(e) or type(e).__name__)
-        finally:
-            self.job_state.finish()
-
-    def _report_error(self, message: str) -> None:
-        status_registry.publish(self._status_key, self.plugin_name, "failed", message)
-        self.job_state.record(self.plugin_name, error=message)
-        self.error.emit(message)
-
-    def _check_cancelled(self) -> None:
-        if self.isInterruptionRequested() or self.job_state.cancelled:
-            raise InterruptedError("Plugin download cancelled")
-
-    def stop(self) -> None:
-        """Request cancellation between requests without removing a working plugin."""
-        self.job_state.request_cancel()
-
-
-# ================================================================
-# Dialog
-# ================================================================
-
-class PluginDownloaderDialog(WorkerHostMixin, QDialog):
-    def __init__(self, main_window: ImervueMainWindow, parent=None):
-        super().__init__(parent or main_window)
-        self.main_window = main_window
-        self._plugin_data: list[tuple[str, str, list[dict]]] = []
-        self._workers: list[QThread] = []
-
-        lang = language_wrapper.language_word_dict
-        self.setWindowTitle(lang.get("plugin_dl_title", "Download Plugins"))
-        self.setMinimumSize(560, 420)
-
-        layout = QVBoxLayout(self)
-
-        # --- Top buttons ---
-        top_bar = QHBoxLayout()
-        self.refresh_btn = QPushButton(lang.get("plugin_dl_refresh", "Refresh"))
-        self.refresh_btn.clicked.connect(self._fetch_list)
-        top_bar.addWidget(self.refresh_btn)
-        top_bar.addStretch()
-        layout.addLayout(top_bar)
-
-        # --- Tree ---
-        self.tree = QTreeWidget()
-        self.tree.setHeaderLabels([
-            lang.get("plugin_dl_col_name", "Plugin"),
-            lang.get("plugin_dl_col_status", "Status"),
-        ])
-        self.tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        self.tree.header().setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        self.tree.setRootIsDecorated(True)
-        self.tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
-        layout.addWidget(self.tree)
-
-        # --- Progress ---
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
-
-        # --- Status ---
-        self.status_label = QLabel(lang.get("plugin_dl_status_ready", "Ready"))
-        layout.addWidget(self.status_label)
-
-        # --- Bottom buttons ---
-        bottom_bar = QHBoxLayout()
-        self.download_btn = QPushButton(lang.get("plugin_dl_download", "Download"))
-        self.download_btn.setEnabled(False)
-        self.download_btn.clicked.connect(self._download_selected)
-        bottom_bar.addWidget(self.download_btn)
-
-        self.delete_btn = QPushButton(lang.get("plugin_dl_delete", "Delete"))
-        self.delete_btn.setEnabled(False)
-        self.delete_btn.clicked.connect(self._delete_selected)
-        bottom_bar.addWidget(self.delete_btn)
-
-        bottom_bar.addStretch()
-
-        self.close_btn = QPushButton(lang.get("plugin_dl_close", "Close"))
-        self.close_btn.clicked.connect(self.close)
-        bottom_bar.addWidget(self.close_btn)
-        layout.addLayout(bottom_bar)
-
-        # --- Signals ---
-        self.tree.itemSelectionChanged.connect(self._on_selection_changed)
-
-        # Auto fetch on open
-        self._fetch_list()
-
-    # ========================
-    # Cleanup
-    # ========================
-
-    def _stop_worker(self) -> bool:
-        # Expose list-held threads to the shared nonblocking retirement contract.
-        self._worker_attrs = tuple(f"_download_worker_{i}" for i in range(len(self._workers)))
-        for attr, worker in zip(self._worker_attrs, self._workers, strict=True):
-            setattr(self, attr, worker)
-        self._workers.clear()
-        return super()._stop_worker()
-
-    # ========================
-    # Fetch plugin list
-    # ========================
-
-    def _fetch_list(self):
-        lang = language_wrapper.language_word_dict
-        self.refresh_btn.setEnabled(False)
-        self.download_btn.setEnabled(False)
-        self.delete_btn.setEnabled(False)
-        self.status_label.setText(lang.get("plugin_dl_status_fetching", "Fetching plugin list..."))
-        self.tree.clear()
-
-        self._cleanup_finished_workers()
-        worker = FetchPluginListWorker(self)
-        worker.result_ready.connect(self._on_list_fetched)
-        worker.error.connect(self._on_list_error)
-        self._workers.append(worker)
-        worker.start()
-
-    def _on_list_fetched(self, results: list):
-        lang = language_wrapper.language_word_dict
-        self._plugin_data = results
-        self.tree.clear()
-
-        installed = self._get_installed_plugins()
-
-        # Group by category
-        categories: dict[str, list] = {}
-        for cat, name, files in results:
-            categories.setdefault(cat, []).append((name, files))
-
-        for cat_name, plugins in categories.items():
-            cat_item = QTreeWidgetItem(self.tree, [cat_name, ""])
-            cat_item.setFlags(cat_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
-            font = cat_item.font(0)
-            font.setBold(True)
-            cat_item.setFont(0, font)
-
-            for plugin_name, files in plugins:
-                is_installed = plugin_name in installed
-                status = (
-                    lang.get("plugin_dl_installed", "Installed")
-                    if is_installed
-                    else lang.get("plugin_dl_not_installed", "Not Installed")
-                )
-                child = QTreeWidgetItem(cat_item, [plugin_name, status])
-                child.setData(0, Qt.ItemDataRole.UserRole, (plugin_name, files))
-
-            cat_item.setExpanded(True)
-
-        count = sum(len(v) for v in categories.values())
-        self.status_label.setText(
-            lang.get("plugin_dl_status_found", "Found {count} plugin(s)").format(count=count)
-        )
-        self.refresh_btn.setEnabled(True)
-
-    def _on_list_error(self, error_msg: str):
-        lang = language_wrapper.language_word_dict
-        self.status_label.setText(
-            lang.get("plugin_dl_status_error", "Error: {error}").format(error=error_msg)
-        )
-        self.refresh_btn.setEnabled(True)
-
-    # ========================
-    # Selection
-    # ========================
-
-    def _on_selection_changed(self):
-        items = self.tree.selectedItems()
-        if not items:
-            self.download_btn.setEnabled(False)
-            self.delete_btn.setEnabled(False)
-            return
-
-        item = items[0]
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        if data is None:
-            self.download_btn.setEnabled(False)
-            self.delete_btn.setEnabled(False)
-            return
-
-        plugin_name, _ = data
-        installed = self._get_installed_plugins()
-        is_installed = plugin_name in installed
-
-        self.download_btn.setEnabled(True)
-        self.delete_btn.setEnabled(is_installed)
-
-        lang = language_wrapper.language_word_dict
-        if is_installed:
-            self.download_btn.setText(lang.get("plugin_dl_reinstall", "Reinstall"))
-        else:
-            self.download_btn.setText(lang.get("plugin_dl_download", "Download"))
-
-    # ========================
-    # Download
-    # ========================
-
-    def _download_selected(self):
-        items = self.tree.selectedItems()
-        if not items:
-            return
-
-        data = items[0].data(0, Qt.ItemDataRole.UserRole)
-        if data is None:
-            return
-
-        plugin_name, file_infos = data
-        lang = language_wrapper.language_word_dict
-
-        self.download_btn.setEnabled(False)
-        self.delete_btn.setEnabled(False)
-        self.refresh_btn.setEnabled(False)
-        self.progress_bar.setVisible(True)
-        self.progress_bar.setValue(0)
-        self.progress_bar.setMaximum(len(file_infos))
-        self.status_label.setText(
-            lang.get("plugin_dl_status_downloading", "Downloading {name}...")
-                .format(name=plugin_name)
-        )
-
-        self._cleanup_finished_workers()
-        worker = DownloadPluginWorker(plugin_name, file_infos, self)
-        job_registry().add(worker, self.windowTitle(),
-                           partial(_retry_download,
-                                   file_infos=tuple(dict(info) for info in file_infos)))
-        worker.progress.connect(self._on_download_progress)
-        worker.result_ready.connect(self._on_download_finished)
-        worker.error.connect(self._on_download_error)
-        self._workers.append(worker)
-        worker.start()
-
-    def _on_download_progress(self, current: int, total: int):
-        self.progress_bar.setMaximum(total)
-        self.progress_bar.setValue(current)
-
-    def _on_download_finished(self, plugin_name: str):
-        lang = language_wrapper.language_word_dict
-        self.progress_bar.setVisible(False)
-        self.refresh_btn.setEnabled(True)
-        self.status_label.setText(
-            lang.get("plugin_dl_status_done", "Downloaded {name} successfully!")
-                .format(name=plugin_name)
-        )
-
-        # Refresh tree status
-        self._refresh_installed_status()
-
-        QMessageBox.information(
-            self,
-            lang.get("plugin_dl_title", "Download Plugins"),
-            lang.get(
-                "plugin_dl_restart_hint",
-                "Plugin '{name}' downloaded. Restart Imervue to activate it.",
-            ).format(name=plugin_name),
-        )
-        self.accept()
-
-    def _on_download_error(self, error_msg: str):
-        lang = language_wrapper.language_word_dict
-        self.progress_bar.setVisible(False)
-        self.refresh_btn.setEnabled(True)
-        self._on_selection_changed()
-        self.status_label.setText(
-            lang.get("plugin_dl_status_error", "Error: {error}").format(error=error_msg)
-        )
-
-    # ========================
-    # Delete
-    # ========================
-
-    def _delete_selected(self):
-        items = self.tree.selectedItems()
-        if not items:
-            return
-
-        data = items[0].data(0, Qt.ItemDataRole.UserRole)
-        if data is None:
-            return
-
-        plugin_name, _ = data
-        lang = language_wrapper.language_word_dict
-
-        reply = QMessageBox.question(
-            self,
-            lang.get("plugin_dl_delete_confirm_title", "Delete Plugin"),
-            lang.get("plugin_dl_delete_confirm", "Delete plugin '{name}'?")
-                .format(name=plugin_name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        import shutil
-        plugin_path = _get_plugin_dir() / plugin_name
-        if plugin_path.is_dir():
-            shutil.rmtree(plugin_path)
-
-        self.status_label.setText(
-            lang.get("plugin_dl_status_deleted", "Deleted {name}.").format(name=plugin_name)
-        )
-        self._refresh_installed_status()
-
-    # ========================
-    # Helpers
-    # ========================
-
-    def _cleanup_finished_workers(self):
-        self._workers = [w for w in self._workers if w.isRunning()]
-
-    @staticmethod
-    def _get_installed_plugins() -> set[str]:
-        plugin_dir = _get_plugin_dir()
-        if not plugin_dir.is_dir():
-            return set()
-        return {
-            p.name for p in plugin_dir.iterdir()
-            if p.is_dir() and (p / "__init__.py").exists()
-        }
-
-    def _refresh_installed_status(self):
-        lang = language_wrapper.language_word_dict
-        installed = self._get_installed_plugins()
-
-        root = self.tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            cat_item = root.child(i)
-            for j in range(cat_item.childCount()):
-                child = cat_item.child(j)
-                data = child.data(0, Qt.ItemDataRole.UserRole)
-                if data:
-                    plugin_name, _ = data
-                    is_installed = plugin_name in installed
-                    child.setText(1,
-                        lang.get("plugin_dl_installed", "Installed")
-                        if is_installed
-                        else lang.get("plugin_dl_not_installed", "Not Installed")
-                    )
-
-        self._on_selection_changed()
-
-
-def _retry_download(paths: tuple[str, ...], *,
-                    file_infos: tuple[dict, ...]) -> DownloadPluginWorker:
-    """A plugin is one atomic install item; committed plugins are never retried."""
-    return DownloadPluginWorker(paths[0], list(file_infos))

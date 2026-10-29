@@ -1,478 +1,63 @@
-"""
-圖片清單檢視
-Image list view — QTableView alternative to the tile grid.
+"""Image-list Qt view and compatibility exports."""
 
-Columns: thumbnail · filename · resolution · size · type · modified.
-Double-click opens deep zoom in the GPU viewer. Columns are sortable
-and the view uses on-demand metadata fetching to stay responsive for
-large folders.
-"""
 from __future__ import annotations
-
-import logging
-import os
-from dataclasses import dataclass
-from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PIL import Image
 from PySide6.QtCore import (
-    QAbstractTableModel, QModelIndex, Qt, QSize, QThreadPool, QRunnable,
-    Signal, QObject,
+    QModelIndex,
+    Qt,
+    QSize,
+    Signal,
 )
-from PySide6.QtGui import QIcon, QImage, QPixmap, QColor
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QTableView, QHeaderView, QAbstractItemView, QStyledItemDelegate,
+    QTableView,
+    QHeaderView,
+    QAbstractItemView,
+    QStyledItemDelegate,
 )
-
-from Imervue.image.shown import as_shown_8bit
-from Imervue.gui.file_filters import viewer_filter
-from Imervue.image.dimensions import image_dimensions
-from Imervue.image.formats import ensure_pillow_opener
-from Imervue.image.orientation import exif_orientation
-from Imervue.image.read_errors import IMAGE_READ_ERRORS
 from Imervue.multi_language.language_wrapper import language_wrapper
 from Imervue.system.file_manager import reveal_or_warn
-from Imervue.system.natural_sort import natural_key
+
+from Imervue.gui.image_list_model import ImageListModel
+from Imervue.gui.image_list_edit import ImageListEditMixin
+from Imervue.gui.image_list_keyboard import ImageListKeyboardMixin
+from Imervue.gui.image_list_context import ImageListContextMixin
+from Imervue.gui.image_list_rows import _RowMeta
+from Imervue.gui.image_list_worker import _ThumbWorker, _ThumbWorkerSignals
+from Imervue.gui.image_list_values import (
+    _THUMB_SIZE,
+    LIST_MARK_ACTIONS,
+    _MAX_THUMB_RETRIES,
+    _STAR_FILLED,
+    _STAR_EMPTY,
+    _RATING_MAX,
+    _rating_for,
+    _format_rating,
+    star_at,
+    _fmt_size,
+)
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
 
-logger = logging.getLogger("Imervue.gui.image_list_view")
 
-_THUMB_SIZE = 48
-# Keys that mark the selected rows: ratings, favourite, cull flags, colour labels (F1-F5).
-LIST_MARK_ACTIONS = frozenset({
-    "rate_1", "rate_2", "rate_3", "rate_4", "rate_5", "favorite",
-    "cull_pick", "cull_reject", "cull_unflag",
-    "label_red", "label_yellow", "label_green", "label_blue", "label_purple",
-})
-# A row whose thumbnail fails to load (stat/decode error — usually the file is
-# mid-move/delete or briefly locked) is retried up to this many times before it
-# falls back to a placeholder, so a transient read race can't permanently blank
-# a row or strand it forever in the in-flight set.
-_MAX_THUMB_RETRIES = 2
-
-
-@dataclass
-class _RowMeta:
-    path: str
-    missing: bool = False
-    size_kb: float | None = None
-    width: int | None = None
-    height: int | None = None
-    mtime: float | None = None
-    icon: QIcon | None = None
-    fetched: bool = False
-
-
-class _ThumbWorkerSignals(QObject):
-    # path, img, w, h, size_kb, mtime, ok. Carries a QImage (safe to build on a
-    # worker thread) — NOT a QPixmap, which is a QPaintDevice and undefined to
-    # create off the GUI thread. The receiving slot converts it. ``ok`` is False
-    # when the stat/decode failed (transient read race), so the model can retry
-    # instead of caching a permanent placeholder or stranding the in-flight row.
-    done = Signal(str, QImage, int, int, float, float, bool)
-
-
-class _ThumbWorker(QRunnable):
-    """Fetch file stat + a scaled thumbnail off the UI thread."""
-
-    def __init__(self, path: str):
-        super().__init__()
-        self.path = path
-        self.signals = _ThumbWorkerSignals()
-
-    def run(self) -> None:
-        try:
-            stat = os.stat(self.path)
-            size_kb = stat.st_size / 1024
-            mtime = stat.st_mtime
-            ensure_pillow_opener(Path(self.path).suffix)
-            with Image.open(self.path) as src:
-                w, h = src.size
-                code = exif_orientation(src)
-                src.thumbnail((_THUMB_SIZE, _THUMB_SIZE), Image.Resampling.LANCZOS)
-                im = as_shown_8bit(src, code)
-            # The upright size, and the developed size for RAW (Pillow sees its preview).
-            w, h = image_dimensions(self.path) or (w, h)
-            data = im.tobytes("raw", "RGBA")
-            qimg = QImage(data, im.width, im.height, QImage.Format.Format_RGBA8888)
-            # .copy() detaches from the soon-freed `data` buffer; the GUI
-            # thread turns this QImage into a QPixmap in _on_fetched.
-            img = qimg.copy()
-        # Any failure must still emit so the model clears the in-flight marker
-        # and can retry rather than leaving the row stuck forever. A null QImage
-        # tells the slot to build the placeholder pixmap on the GUI thread.
-        except IMAGE_READ_ERRORS:   # missing or unreadable file: expected
-            self.signals.done.emit(self.path, QImage(), 0, 0, 0.0, 0.0, False)
-            return
-        except Exception:  # noqa: BLE001 - worker boundary logs the bug and still emits
-            logger.exception("Thumbnail worker failed for %s", self.path)
-            self.signals.done.emit(self.path, QImage(), 0, 0, 0.0, 0.0, False)
-            return
-
-        self.signals.done.emit(self.path, img, w, h, size_kb, mtime, True)
-
-
-class ImageListModel(QAbstractTableModel):
-    """Table model over a list of image paths.
-
-    Metadata (thumbnail / dimensions / size / mtime) is loaded lazily via
-    a thread pool; rows that haven't been fetched yet render with
-    placeholder values and re-emit ``dataChanged`` when loading completes.
-    """
-
-    COL_THUMB = 0
-    COL_LABEL = 1
-    COL_RATING = 2
-    COL_NAME = 3
-    COL_RES = 4
-    COL_SIZE = 5
-    COL_TYPE = 6
-    COL_MTIME = 7
-    COL_COUNT = 8
-
-    def __init__(self, paths: list[str] | None = None, metadata_index=None):
-        super().__init__()
-        self._metadata_index = metadata_index
-        self._rows: list[_RowMeta] = [self._row_for_path(p) for p in (paths or [])]
-        self._pool = QThreadPool.globalInstance()
-        self._in_flight: set[str] = set()
-        # path -> transient fetch-failure retry count (see _MAX_THUMB_RETRIES)
-        self._retry: dict[str, int] = {}
-        # In-flight reads that began before the file changed on disk (see refetch)
-        self._stale: set[str] = set()
-
-    # --- QAbstractItemModel API ---
-    def rowCount(self, parent: QModelIndex | None = None) -> int:
-        if parent is None:
-            parent = QModelIndex()
-        return 0 if parent.isValid() else len(self._rows)
-
-    def columnCount(self, parent: QModelIndex | None = None) -> int:
-        if parent is None:
-            parent = QModelIndex()
-        return 0 if parent.isValid() else self.COL_COUNT
-
-    def headerData(self, section: int, orientation, role: int = Qt.ItemDataRole.DisplayRole):
-        if role != Qt.ItemDataRole.DisplayRole or orientation != Qt.Orientation.Horizontal:
-            return None
-        lang = language_wrapper.language_word_dict
-        keys = {
-            self.COL_THUMB: ("list_col_thumb", "Preview"),
-            self.COL_LABEL: ("list_col_label", "Label"),
-            self.COL_RATING: ("list_col_rating", "Rating"),
-            self.COL_NAME: ("list_col_name", "Name"),
-            self.COL_RES: ("list_col_resolution", "Resolution"),
-            self.COL_SIZE: ("list_col_size", "Size"),
-            self.COL_TYPE: ("list_col_type", "Type"),
-            self.COL_MTIME: ("list_col_modified", "Modified"),
-        }
-        key, fallback = keys[section]
-        return lang.get(key, fallback)
-
-    @staticmethod
-    def _label_value(row) -> str:
-        from Imervue.user_settings.color_labels import get_color_label
-        return (get_color_label(row.path) or "").title()
-
-    def _resolution_value(self, row) -> str:
-        self._ensure_fetched(row)
-        if row.width and row.height:
-            return f"{row.width}\u00d7{row.height}"
-        return ""
-
-    def _size_value(self, row) -> str:
-        self._ensure_fetched(row)
-        if row.size_kb is None:
-            return ""
-        return _fmt_size(row.size_kb)
-
-    def _mtime_value(self, row) -> str:
-        self._ensure_fetched(row)
-        if row.mtime is None:
-            return ""
-        return datetime.fromtimestamp(row.mtime).strftime("%Y-%m-%d %H:%M")
-
-    def _display_value(self, row, col: int):
-        handlers = {
-            self.COL_LABEL: self._label_value,
-            self.COL_RATING: lambda r: _format_rating(_rating_for(r.path)),
-            self.COL_NAME: self._name_value,
-            self.COL_RES: self._resolution_value,
-            self.COL_SIZE: self._size_value,
-            self.COL_TYPE: lambda r: Path(r.path).suffix.lstrip(".").upper() or "",
-            self.COL_MTIME: self._mtime_value,
-        }
-        handler = handlers.get(col)
-        return handler(row) if handler else ""
-
-    @staticmethod
-    def _name_value(row) -> str:
-        name = Path(row.path).name
-        if row.missing:
-            lang = language_wrapper.language_word_dict
-            return f"{name}  [{lang.get('tile_missing', 'Missing')}]"
-        return name
-
-    def _background_value(self, row, col: int):
-        if row.missing:
-            return QColor(90, 36, 36, 140)
-        if col != self.COL_LABEL:
-            return None
-        from Imervue.user_settings.color_labels import get_color_label, COLOR_RGB
-        color = get_color_label(row.path)
-        if color and color in COLOR_RGB:
-            r, g, b = COLOR_RGB[color]
-            return QColor(r, g, b, 200)
-        return None
-
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
-        if not index.isValid():
-            return None
-        row = self._rows[index.row()]
-        col = index.column()
-
-        if role == Qt.ItemDataRole.UserRole:
-            return row.path
-        if role == Qt.ItemDataRole.DecorationRole and col == self.COL_THUMB:
-            self._ensure_fetched(row)
-            return row.icon
-        if role == Qt.ItemDataRole.BackgroundRole:
-            return self._background_value(row, col)
-        if role == Qt.ItemDataRole.DisplayRole:
-            return self._display_value(row, col)
-        if (
-            role == Qt.ItemDataRole.TextAlignmentRole
-            and col in (self.COL_RES, self.COL_SIZE)
-        ):
-            return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        if (
-            role == Qt.ItemDataRole.TextAlignmentRole
-            and col == self.COL_RATING
-        ):
-            return int(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-        if role == Qt.ItemDataRole.ToolTipRole:
-            if row.missing:
-                return language_wrapper.language_word_dict.get(
-                    "missing_relocate_hint",
-                    "This file is missing. Relocate it or remove it from the view.",
-                )
-            return row.path
-        return None
-
-    def sort(self, column: int, order: Qt.SortOrder = Qt.SortOrder.AscendingOrder) -> None:
-        """Sort rows in-place by the chosen column.
-
-        Uses already-fetched metadata where available; unfetched rows compare
-        by path so they stay stable until their data arrives. Names sort
-        naturally (``img2`` before ``img10``), like the wall and the folder tree.
-        Column -1 (no sort chosen) keeps the rows as they are.
-        """
-        if column < 0:
-            return
-        def _color_key(r):
-            from Imervue.user_settings.color_labels import get_color_label, COLORS
-            c = get_color_label(r.path)
-            if c is None:
-                return (1, "")  # Unlabelled sorts after labelled
-            try:
-                return (0, COLORS.index(c))
-            except ValueError:
-                return (1, c)
-
-        key_funcs = {
-            self.COL_NAME: lambda r: natural_key(Path(r.path).name),
-            self.COL_RES: lambda r: ((r.width or 0) * (r.height or 0)),
-            self.COL_SIZE: lambda r: (r.size_kb or 0),
-            self.COL_TYPE: lambda r: Path(r.path).suffix.lower(),
-            self.COL_MTIME: lambda r: (r.mtime or 0),
-            self.COL_THUMB: lambda r: natural_key(Path(r.path).name),
-            self.COL_LABEL: _color_key,
-            self.COL_RATING: lambda r: _rating_for(r.path),
-        }
-        key = key_funcs.get(column, key_funcs[self.COL_NAME])
-        reverse = order == Qt.SortOrder.DescendingOrder
-
-        self.layoutAboutToBeChanged.emit()
-        old_indexes = self.persistentIndexList()
-        rows_before = self._rows[:]
-        self._rows.sort(key=key, reverse=reverse)
-        # Remap persistent indexes (selection / current) to their rows' new
-        # positions — without this the layoutChanged contract leaves them mapped
-        # to the old rows, so after a header sort the selection points at the
-        # wrong image. Rows keep their identity, so track by object id.
-        new_row_of = {id(r): i for i, r in enumerate(self._rows)}
-        from_indexes, to_indexes = [], []
-        for idx in old_indexes:
-            if not idx.isValid() or not 0 <= idx.row() < len(rows_before):
-                continue
-            from_indexes.append(idx)
-            to_indexes.append(
-                self.index(new_row_of[id(rows_before[idx.row()])], idx.column()))
-        self.changePersistentIndexList(from_indexes, to_indexes)
-        self.layoutChanged.emit()
-
-    # --- Public helpers ---
-    def set_paths(self, paths: list[str], metadata_index=None) -> None:
-        if metadata_index is not None:
-            self._metadata_index = metadata_index
-        self.beginResetModel()
-        self._rows = [self._row_for_path(p) for p in paths]
-        self._in_flight.clear()
-        self._retry.clear()
-        self._stale.clear()
-        self.endResetModel()
-
-    def refetch(self, paths) -> None:
-        """Read *paths* again: another program rewrote, removed or restored them.
-
-        Each row keeps its old thumbnail until the new read lands, and is read
-        again only once it is on screen. A read already under way may have
-        seen the old file, so its result is dropped and the row read afresh.
-        """
-        wanted = set(paths)
-        for i, row in enumerate(self._rows):
-            if row.path not in wanted:
-                continue
-            self._retry.pop(row.path, None)
-            if row.path in self._in_flight:
-                self._stale.add(row.path)
-                continue
-            row.fetched = False
-            self.dataChanged.emit(self.index(i, self.COL_THUMB), self.index(i, self.COL_THUMB),
-                                  [Qt.ItemDataRole.DecorationRole])
-
-    def path_at(self, row: int) -> str | None:
-        if 0 <= row < len(self._rows):
-            return self._rows[row].path
-        return None
-
-    def is_missing_at(self, row: int) -> bool:
-        if 0 <= row < len(self._rows):
-            return self._rows[row].missing
-        return False
-
-    def _row_for_path(self, path: str) -> _RowMeta:
-        row = _RowMeta(path, missing=not Path(path).exists())
-        if self._metadata_index is None:
-            return row
-        meta = self._metadata_index.peek(path)
-        if meta is None:
-            return row
-        row.size_kb = meta.size / 1024 if meta.size else None
-        row.width = meta.width
-        row.height = meta.height
-        row.mtime = meta.mtime_ns / 1_000_000_000 if meta.mtime_ns else None
-        return row
-
-    # --- Lazy loading ---
-    def _ensure_fetched(self, row: _RowMeta) -> None:
-        if row.fetched or row.path in self._in_flight:
-            return
-        self._in_flight.add(row.path)
-        worker = _ThumbWorker(row.path)
-        worker.signals.done.connect(self._on_fetched)
-        self._pool.start(worker)
-
-    def _row_index(self, path: str) -> tuple[int, _RowMeta] | None:
-        for i, row in enumerate(self._rows):
-            if row.path == path:
-                return i, row
-        return None
-
-    def _bump_retry(self, path: str) -> bool:
-        """Increment *path*'s retry counter; True while still under the cap."""
-        count = self._retry.get(path, 0)
-        if count >= _MAX_THUMB_RETRIES:
-            return False
-        self._retry[path] = count + 1
-        return True
-
-    @staticmethod
-    def _pixmap_from_image(img: QImage) -> QPixmap:
-        """Build the thumbnail QPixmap on the GUI thread (QPixmap is a
-        QPaintDevice, so it must not be created on the worker thread). A null
-        image — the worker's failure marker — yields the dark placeholder."""
-        if img.isNull():
-            pm = QPixmap(_THUMB_SIZE, _THUMB_SIZE)
-            pm.fill(QColor(40, 40, 40))
-            return pm
-        return QPixmap.fromImage(img)
-
-    @staticmethod
-    def _apply_row_meta(row: _RowMeta, pm: QPixmap, w: int, h: int,
-                        size_kb: float, mtime: float, ok: bool) -> None:
-        row.missing = not ok and not Path(row.path).exists()
-        row.width = w or None
-        row.height = h or None
-        row.size_kb = size_kb if ok else None
-        row.mtime = mtime if ok else None
-        row.icon = QIcon(pm)
-        row.fetched = True
-
-    def _on_fetched(self, path: str, img: QImage, w: int, h: int,
-                    size_kb: float, mtime: float, ok: bool) -> None:
-        self._in_flight.discard(path)
-        found = self._row_index(path)
-        if found is None:
-            return
-        i, row = found
-        if path in self._stale:
-            # Read before another program saved over the file: read it again.
-            self._stale.discard(path)
-            self._ensure_fetched(row)
-            return
-        if not ok and self._bump_retry(path):
-            # Transient stat/decode failure (file mid-move/locked) — retry
-            # instead of caching a permanent placeholder.
-            self._ensure_fetched(row)
-            return
-        self._retry.pop(path, None)
-        self._apply_row_meta(row, self._pixmap_from_image(img), w, h, size_kb, mtime, ok)
-        self.dataChanged.emit(
-            self.index(i, 0), self.index(i, self.COL_COUNT - 1),
-            [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.DisplayRole],
-        )
-
-
-_STAR_FILLED = "\u2605"
-_STAR_EMPTY = "\u2606"
-_RATING_MAX = 5
-
-
-def _rating_for(path: str) -> int:
-    from Imervue.user_settings.user_setting_dict import user_setting_dict
-    ratings = user_setting_dict.get("image_ratings") or {}
-    try:
-        return int(ratings.get(path, 0))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _format_rating(rating: int) -> str:
-    if rating <= 0:
-        return ""
-    rating = min(max(int(rating), 0), _RATING_MAX)
-    return _STAR_FILLED * rating + _STAR_EMPTY * (_RATING_MAX - rating)
-
-
-def star_at(x: float, center_x: float, strip_width: float) -> int:
-    """The star (1-5) under *x* in a strip of five stars *strip_width* wide centred on *center_x*.
-
-    A click left or right of the strip counts as the nearest end star.
-    """
-    step = max(strip_width, 1.0) / _RATING_MAX
-    left = center_x - step * _RATING_MAX / 2
-    return min(max(int((x - left) // step) + 1, 1), _RATING_MAX)
-
-
-def _fmt_size(kb: float) -> str:
-    if kb >= 1024:
-        return f"{kb / 1024:.2f} MB"
-    return f"{kb:.1f} KB"
+__all__ = [
+    "ImageListModel",
+    "ImageListView",
+    "star_at",
+    "LIST_MARK_ACTIONS",
+    "_RowMeta",
+    "_ThumbWorker",
+    "_ThumbWorkerSignals",
+    "_MAX_THUMB_RETRIES",
+    "_STAR_EMPTY",
+    "_rating_for",
+    "_format_rating",
+    "_fmt_size",
+    "Image",
+]
 
 
 class _RowDelegate(QStyledItemDelegate):
@@ -483,7 +68,7 @@ class _RowDelegate(QStyledItemDelegate):
         return QSize(s.width(), max(s.height(), _THUMB_SIZE + 4))
 
 
-class ImageListView(QTableView):
+class ImageListView(ImageListKeyboardMixin, ImageListEditMixin, ImageListContextMixin, QTableView):
     """QTableView configured for image browsing.
 
     Renders an "empty state" hint overlay when the model carries no
@@ -555,41 +140,6 @@ class ImageListView(QTableView):
         if path:
             self.image_activated.emit(path)
 
-    def keyPressEvent(self, event):
-        if self._handle_edit_key(event):
-            return
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
-            idx = self.currentIndex()
-            if idx.isValid():
-                path = self._model.path_at(idx.row())
-                if path:
-                    self.image_activated.emit(path)
-                    return
-        # Ctrl+C copies the selected paths to the clipboard so the
-        # user can paste them into a terminal / file dialog without
-        # round-tripping through the OS file manager.
-        if (
-            event.key() == Qt.Key.Key_C
-            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
-        ):
-            paths = self.selected_paths()
-            if paths:
-                from PySide6.QtWidgets import QApplication
-                QApplication.clipboard().setText("\n".join(paths))
-                event.accept()
-                return
-        super().keyPressEvent(event)
-
-    @staticmethod
-    def _list_action(event, action: str | None) -> str | None:
-        """The Shortcut Settings action, or ``label_<colour>`` for the fixed F1-F5 keys."""
-        from Imervue.gpu_image_view.key_input_handler import COLOR_LABEL_KEYS
-        no_ctrl_alt = not (event.modifiers() & (
-            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier))
-        if event.key() in COLOR_LABEL_KEYS and no_ctrl_alt:
-            return f"label_{COLOR_LABEL_KEYS[event.key()]}"
-        return action
-
     def mousePressEvent(self, event):  # noqa: N802 - Qt override
         """A left click in the Rating column rates that row by the star it lands on.
 
@@ -597,8 +147,12 @@ class ImageListView(QTableView):
         selects the row.
         """
         index = self.indexAt(event.position().toPoint())
-        if (event.button() == Qt.MouseButton.LeftButton and index.isValid()
-                and index.column() == ImageListModel.COL_RATING and self._main_window is not None):
+        if (
+            event.button() == Qt.MouseButton.LeftButton
+            and index.isValid()
+            and index.column() == ImageListModel.COL_RATING
+            and self._main_window is not None
+        ):
             rect = self.visualRect(index)
             strip = self.fontMetrics().horizontalAdvance(_STAR_FILLED * _RATING_MAX)
             star = star_at(event.position().x(), rect.center().x(), strip)
@@ -607,91 +161,10 @@ class ImageListView(QTableView):
                 self._main_window.mark_list_selection(f"rate_{star}", [path])
         super().mousePressEvent(event)
 
-    def _handle_edit_key(self, event) -> bool:
-        """Delete, Undo, ratings, favourite, cull flags and colours act on the list as on the wall.
-
-        Delete removes the selected rows (undoable, sent to the Recycle Bin
-        later) and puts the cursor on the row that takes their place.
-        """
-        from Imervue.gui.shortcut_settings_dialog import shortcut_manager
-        window = self._main_window
-        if window is None:
-            return False
-        if event.key() == Qt.Key.Key_Escape and not event.modifiers():
-            window.escape_from_list()
-            event.accept()
-            return True
-        bound = shortcut_manager.get_action(event.key(), event.modifiers())
-        action = self._list_action(event, bound)
-        if action in LIST_MARK_ACTIONS and self.selected_paths():
-            window.mark_list_selection(action, self.selected_paths())
-        elif action == "undo":
-            window.undo_from_list()
-        elif action == "delete" and self.selected_paths():
-            row = min(index.row() for index in self.selectionModel().selectedRows())
-            window.delete_list_selection(self.selected_paths())
-            if self._model.rowCount():
-                self.selectRow(min(row, self._model.rowCount() - 1))
-        else:
-            return False
-        event.accept()
-        return True
-
-    def contextMenuEvent(self, event):  # noqa: N802 - Qt override
-        """Right-click → quick actions: Open / Reveal / Copy path.
-
-        The menu mirrors what users expect from a file browser
-        (Finder / Explorer / Nautilus) so we don't make them leave
-        the app to perform housekeeping verbs."""
-        from PySide6.QtWidgets import QApplication, QMenu
-        paths = self.selected_paths()
-        if not paths:
-            return
-        lang = language_wrapper.language_word_dict
-        menu = QMenu(self)
-        open_action = menu.addAction(
-            lang.get("image_list_action_open", "Open"),
-        )
-        missing = [p for p in paths if not Path(p).exists()]
-        relocate_action = None
-        if missing:
-            relocate_action = menu.addAction(
-                lang.get("missing_relocate", "Relocate Missing File..."),
-            )
-        copy_action = menu.addAction(
-            lang.get("image_list_action_copy_path", "Copy path"),
-        )
-        reveal_action = menu.addAction(
-            lang.get("image_list_action_reveal", "Reveal in folder"),
-        )
-        chosen = menu.exec(event.globalPos())
-        if chosen is open_action:
-            self.image_activated.emit(paths[0])
-        elif relocate_action is not None and chosen is relocate_action:
-            self._relocate_missing(missing[0])
-        elif chosen is copy_action:
-            QApplication.clipboard().setText("\n".join(paths))
-        elif chosen is reveal_action:
-            self._reveal_path(paths[0])
-
     @staticmethod
     def _reveal_path(path: str) -> None:
         """Open the OS file manager with ``path`` selected, as Show in Explorer does."""
         reveal_or_warn(path)
-
-    def _relocate_missing(self, old_path: str) -> None:
-        from PySide6.QtWidgets import QFileDialog
-        lang = language_wrapper.language_word_dict
-        new_path, _ = QFileDialog.getOpenFileName(
-            self,
-            lang.get("missing_relocate", "Relocate Missing File..."),
-            str(Path(old_path).parent),
-            viewer_filter(),
-        )
-        if not new_path:
-            return
-        if hasattr(self._main_window, "_apply_missing_replacements"):
-            self._main_window._apply_missing_replacements({old_path: new_path})
 
     def paintEvent(self, event):  # noqa: N802 - Qt override
         """Draw an empty-state hint when the model has no rows.
@@ -703,7 +176,8 @@ class ImageListView(QTableView):
         super().paintEvent(event)
         if self._model.rowCount() > 0:
             return
-        from PySide6.QtGui import QPainter, QColor, QFont
+        from PySide6.QtGui import QPainter, QFont
+
         lang = language_wrapper.language_word_dict
         msg = lang.get(
             "image_list_empty_hint",

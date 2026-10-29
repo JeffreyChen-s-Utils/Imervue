@@ -14,6 +14,7 @@ written with the ``HEIF`` plugin id, hence :func:`pil_format`.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from typing import BinaryIO
 
 from PIL import Image
@@ -44,16 +45,20 @@ _NO_ALPHA_FORMATS: frozenset[str] = frozenset({"JPEG", "BMP"})
 _PIL_FORMAT_OVERRIDE: dict[str, str] = {"HEIC": "HEIF"}
 
 
+def _optional_formats() -> dict[str, tuple[Callable[[], bool], str]]:
+    """Availability probes and failure messages shared by listing and saving."""
+    return {
+        "HEIC": (ensure_heif_opener, "HEIC output requires the pillow-heif package."),
+        "AVIF": (avif_available, "AVIF output requires a Pillow built with libavif."),
+        "JXL": (ensure_jxl_opener, "JXL output requires the pillow-jxl-plugin package."),
+    }
+
+
 def available_formats() -> list[str]:
     """Output formats offered to the user: HEIC, AVIF and JXL only when they can be written."""
-    formats = list(_BASE_FORMATS)
-    if ensure_heif_opener():
-        formats.append("HEIC")
-    if avif_available():
-        formats.append("AVIF")
-    if ensure_jxl_opener():
-        formats.append("JXL")
-    return formats
+    return list(_BASE_FORMATS) + [
+        name for name, (available, _) in _optional_formats().items() if available()
+    ]
 
 
 def pil_format(format_name: str) -> str:
@@ -87,12 +92,9 @@ def save_image(
     Pillow opens it with ``w+b``, so a save that failed over an existing file
     — an export over its own source, say — left that file truncated.
     """
-    if format_name == "HEIC" and not ensure_heif_opener():
-        raise ValueError("HEIC output requires the pillow-heif package.")
-    if format_name == "AVIF" and not avif_available():
-        raise ValueError("AVIF output requires a Pillow built with libavif.")
-    if format_name == "JXL" and not ensure_jxl_opener():
-        raise ValueError("JXL output requires the pillow-jxl-plugin package.")
+    backend = _optional_formats().get(format_name)
+    if backend is not None and not backend[0]():
+        raise ValueError(backend[1])
     prepared = prepare_for_format(img, format_name)
     if extra and extra.get("icc_profile") and prepared.mode in {"L", "LA"}:
         prepared = prepared.convert("RGBA" if prepared.mode == "LA" else "RGB")

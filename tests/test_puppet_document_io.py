@@ -843,7 +843,7 @@ def test_limit_is_checked_before_any_entry_is_read(monkeypatch):
 
 
 def test_a_save_that_fails_midway_keeps_the_old_puppet(tmp_path, monkeypatch):
-    from Imervue.puppet import document_io
+    from Imervue.puppet import archive_container
     path = tmp_path / "rig.puppet"
     save_puppet(_build_full_doc(), path)
     before = path.read_bytes()
@@ -851,7 +851,7 @@ def test_a_save_that_fails_midway_keeps_the_old_puppet(tmp_path, monkeypatch):
     def boom(_motion):
         raise OSError("disk full")
 
-    monkeypatch.setattr(document_io, "_motion_json_bytes", boom)
+    monkeypatch.setattr(archive_container, "_motion_json_bytes", boom)
     with pytest.raises(OSError, match="disk full"):
         save_puppet(_build_full_doc(), path)
     assert path.read_bytes() == before

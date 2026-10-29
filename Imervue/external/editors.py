@@ -3,8 +3,8 @@ External editor launcher.
 
 Configured editors are stored in ``user_setting_dict["external_editors"]`` as a
 list of plain dicts (JSON-safe). Each entry pairs a display name with an
-executable path. Launching is a non-blocking ``subprocess.Popen`` — Imervue
-does not wait for the external program, and no shell is involved.
+executable path. Launching uses non-blocking ``subprocess.Popen`` with
+``shell=False``. Windows may still interpret batch files through a shell.
 """
 from __future__ import annotations
 
@@ -54,12 +54,7 @@ def load_editors() -> list[EditorEntry]:
     raw = user_setting_dict.get(_SETTINGS_KEY, [])
     if not isinstance(raw, list):
         return []
-    out: list[EditorEntry] = []
-    for item in raw:
-        entry = EditorEntry.from_dict(item)
-        if entry is not None:
-            out.append(entry)
-    return out
+    return list(filter(None, map(EditorEntry.from_dict, raw)))
 
 
 def save_editors(editors: list[EditorEntry]) -> None:
@@ -69,17 +64,14 @@ def save_editors(editors: list[EditorEntry]) -> None:
 
 
 def _build_argv(entry: EditorEntry, image_path: str) -> list[str]:
-    """Build the argv for Popen, substituting ``{path}`` if the user set it."""
+    """Build the argument vector, substituting ``{path}`` if the user set it."""
     extra = entry.arguments.strip()
-    if not extra:
-        return [entry.executable, image_path]
-    if "{path}" in extra:
-        # shlex.split then substitute each token so paths with spaces still work.
-        tokens = shlex.split(extra, posix=sys.platform != "win32")
-        argv = [tok.replace("{path}", image_path) for tok in tokens]
-        return [entry.executable, *argv]
     tokens = shlex.split(extra, posix=sys.platform != "win32")
-    return [entry.executable, *tokens, image_path]
+    if "{path}" in extra:
+        tokens = [tok.replace("{path}", image_path) for tok in tokens]
+    else:
+        tokens.append(image_path)
+    return [entry.executable, *tokens]
 
 
 def launch_editor(entry: EditorEntry, image_path: str) -> bool:
@@ -94,8 +86,6 @@ def launch_editor(entry: EditorEntry, image_path: str) -> bool:
         return False
     argv = _build_argv(entry, str(path_obj))
     try:
-        # shell=False is the default and required here — argv comes from user
-        # config, but we still never want a shell interpreter rewriting it.
         subprocess.Popen(argv, shell=False)  # noqa: S603 - user-configured path
     except OSError as exc:
         logger.exception("Failed to launch %s: %s", entry.name, exc)

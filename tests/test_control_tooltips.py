@@ -59,22 +59,22 @@ def test_deleted_transient_controls_are_skipped_during_a_help_walk(qapp, monkeyp
 
 def test_action_deleted_during_description_lookup_is_skipped(qapp, monkeypatch):
     import shiboken6
-    from Imervue.gui import control_tooltips
+    from Imervue.gui import control_tooltips_actions
     action = QAction("Transient action")
 
     def replaces_action(_title, owner):
         shiboken6.delete(owner)
         return "Old action help"
 
-    monkeypatch.setattr(control_tooltips, "existing_description", replaces_action)
+    monkeypatch.setattr(control_tooltips_actions, "existing_description", replaces_action)
     ensure_tooltip(action)
     assert not shiboken6.isValid(action)
 
 
 def test_help_errors_on_live_objects_are_not_hidden(qapp, monkeypatch):
-    from Imervue.gui import control_tooltips
+    from Imervue.gui import control_tooltips_actions
     action = QAction("Live action")
-    monkeypatch.setattr(control_tooltips, "existing_description",
+    monkeypatch.setattr(control_tooltips_actions, "existing_description",
                         MagicMock(side_effect=RuntimeError("Unexpected help error")))
     try:
         with pytest.raises(RuntimeError, match="Unexpected help error"):

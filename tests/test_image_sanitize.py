@@ -758,7 +758,7 @@ class TestSanitizeWorker:
         # disruption assertion is deterministic and can't flake under shuffled
         # test ordering; production behaviour is unchanged.
         monkeypatch.setattr(
-            "Imervue.gui.image_sanitize_dialog._make_unseeded_rng",
+            "Imervue.gui.image_sanitize_core._make_unseeded_rng",
             lambda: np.random.default_rng(0x5A4117),
         )
         src = str(tmp_path / "stego.png")
@@ -860,7 +860,7 @@ class TestGetImageDateFailures:
         os.remove(path)   # fails on Windows while a handle is still open
 
     def test_unexpected_error_propagates(self, tmp_path, monkeypatch):
-        from Imervue.gui import image_sanitize_dialog as mod
+        from Imervue.gui import image_sanitize_core as mod
         path = tmp_path / "a.png"
         Image.new("RGB", (4, 4)).save(path)
 

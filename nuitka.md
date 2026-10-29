@@ -533,7 +533,7 @@ Nuitka standalone 啟動後 import 這類含 C extension 的套件通常沒問�
 - Python 的 `importlib` 會用一般的 FileFinder 從 `sys.path` 找；
 - Nuitka 的 frozen importer 只處理編譯時就打包進去的模組，對執行期新增的檔案不會干擾。
 
-但**絕對不要在背景執行緒 import 這類套件**——在 frozen 環境下 onnxruntime 的原生初始化必須在主執行緒跑，否則會直接 segfault。`pip_installer.py:_check_missing_frozen()` 已經特別針對這點改用檔案系統檢查，而不是真的 `import`。plugin 自己寫的 `ensure_dependencies` callback 請務必放在主執行緒。
+但**絕對不要在背景執行緒 import 這類套件**——在 frozen 環境下 onnxruntime 的原生初始化必須在主執行緒跑，否則會直接 segfault。`pip_install_workers.py:_check_missing_frozen()` 已經特別針對這點改用檔案系統檢查，而不是真的 `import`。plugin 自己寫的 `ensure_dependencies` callback 請務必放在主執行緒。
 
 ### 5.4 平台特有的原生函式庫坑
 
@@ -546,7 +546,7 @@ Nuitka standalone 啟動後 import 這類含 C extension 的套件通常沒問�
 
 - **Linux**：pip 安裝的 `.so` 檔會帶自己的 `rpath`，有時候跟 Nuitka 給 Imervue 本體設的 `rpath` 衝突。遇到 `symbol not found` 類錯誤，先用 `ldd lib/site-packages/onnxruntime/capi/*.so` 看缺什麼，通常是系統層級的 `libstdc++` 版本太舊。
 
-- **Windows**：`.pyd` / `.dll` 載入通常 straightforward，但要注意 plugin 用 `subprocess` 呼叫外部 Python 時，**不要把 `<app_dir>\python_embedded\python.exe` 當成「可以隨便 pip 的 Python」**——embedded Python 的 `._pth` 機制會鎖 `sys.path`，要改的話見 `pip_installer.py:_DownloadPythonWorker` 裡的 `._pth` patch 邏輯。
+- **Windows**：`.pyd` / `.dll` 載入通常 straightforward，但要注意 plugin 用 `subprocess` 呼叫外部 Python 時，**不要把 `<app_dir>\python_embedded\python.exe` 當成「可以隨便 pip 的 Python」**——embedded Python 的 `._pth` 機制會鎖 `sys.path`，要改的話見 `pip_embed_python.py:_DownloadPythonWorker` 裡的 `._pth` patch 邏輯。
 
 ### 5.5 驗證清單
 

@@ -2,16 +2,18 @@
 重複圖片偵測
 Duplicate Image Detection — scan a folder for identical or visually similar
 images using file hash (exact) and perceptual hash (pHash) comparison.
+
+The scan worker lives in ``duplicate_detection_scan``, its clustering helpers in
+``duplicate_detection_clusters`` and the select / delete flows in
+``duplicate_detection_actions``; their names are re-exported here.
 """
 from __future__ import annotations
 
-import hashlib
-import logging
 import os
 from typing import TYPE_CHECKING
 
 from PIL import Image
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -29,187 +31,45 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from Imervue.gui.dialog_rows import confirm
-from Imervue.system.image_listing import list_images
-from Imervue.gui.trash_failure_notice import offer_permanent_delete
-from Imervue.image.shown import as_shown_8bit
-from Imervue.image.orientation import exif_orientation
 from Imervue.gui.dialog_rows import folder_picker_row
-from Imervue.image.dimensions import image_dimensions
-from Imervue.plugin.worker_host import WorkerHostMixin
-from Imervue.image.perceptual_hash import dhash as _dhash
-from Imervue.image.perceptual_hash import upright
-from Imervue.image.perceptual_hash import hamming_distance as _hamming_distance
+from Imervue.gui.duplicate_detection_actions import _COUNT_PLACEHOLDER, DuplicateActionsMixin
+from Imervue.gui.duplicate_detection_clusters import (
+    _build_clusters,
+    _find_root,
+    _flatten_hash_map,
+    _union,
+)
+from Imervue.gui.duplicate_detection_scan import (
+    _IMAGE_EXTS,
+    _METHOD_EXACT,
+    _dhash,
+    _hamming_distance,
+    _ScanWorker,
+)
+from Imervue.image.orientation import exif_orientation
 from Imervue.image.read_errors import IMAGE_READ_ERRORS
+from Imervue.image.shown import as_shown_8bit
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.image.formats import JPEG_EXTENSIONS
+from Imervue.plugin.worker_host import WorkerHostMixin
 
 if TYPE_CHECKING:
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-logger = logging.getLogger("Imervue.duplicate_detection")
-
-_IMAGE_EXTS = frozenset({
-    ".png", ".bmp", ".tiff", ".tif", ".webp", ".gif", ".apng",
-}) | JPEG_EXTENSIONS
-
-
-_METHOD_EXACT = "exact"
-_COUNT_PLACEHOLDER = "{count}"
-
-
-def _flatten_hash_map(
-    hash_map: dict[str, list[tuple[str, int]]],
-) -> list[tuple[int, str, int]]:
-    return [
-        (int(h_str), path, size)
-        for h_str, items in hash_map.items()
-        for path, size in items
-    ]
-
-
-def _find_root(parent: list[int], x: int) -> int:
-    while parent[x] != x:
-        parent[x] = parent[parent[x]]
-        x = parent[x]
-    return x
-
-
-def _union(parent: list[int], a: int, b: int) -> None:
-    ra, rb = _find_root(parent, a), _find_root(parent, b)
-    if ra != rb:
-        parent[ra] = rb
-
-
-def _build_clusters(
-    entries: list[tuple[int, str, int]],
-    parent: list[int],
-) -> list[list[tuple[str, int]]]:
-    from collections import defaultdict
-    clusters: dict[int, list[tuple[str, int]]] = defaultdict(list)
-    for i, (_h, path, size) in enumerate(entries):
-        clusters[_find_root(parent, i)].append((path, size))
-    return [g for g in clusters.values() if len(g) > 1]
-
-
-# ---------------------------------------------------------------------------
-# Worker thread
-# ---------------------------------------------------------------------------
-
-class _ScanWorker(QThread):
-    """Scans a folder for duplicate images."""
-    progress = Signal(int, int, str)      # current, total, filename
-    result_ready = Signal(list)           # list of groups: [(path, hash, size), ...]
-    error = Signal(str)
-
-    def __init__(
-        self,
-        folder: str,
-        method: str,           # "exact" or "perceptual"
-        threshold: int,        # hamming distance threshold for perceptual
-        recursive: bool,
-        parent=None,
-    ):
-        super().__init__(parent)
-        self._folder = folder
-        self._method = method
-        self._threshold = threshold
-        self._recursive = recursive
-        self._abort = False
-
-    def abort(self):
-        self._abort = True
-
-    def run(self):
-        try:
-            paths = self._collect_paths()
-            if not paths:
-                self.result_ready.emit([])
-                return
-
-            hash_map = self._build_hash_map(paths)
-            if self._abort:
-                return
-
-            if self._method == _METHOD_EXACT:
-                groups = [g for g in hash_map.values() if len(g) > 1]
-            else:
-                groups = self._cluster_perceptual(hash_map)
-
-            self.result_ready.emit(groups)
-        except Exception as e:
-            logger.exception("Duplicate scan failed")
-            self.error.emit(str(e))
-
-    def _build_hash_map(
-        self, paths: list[str],
-    ) -> dict[str, list[tuple[str, int]]]:
-        total = len(paths)
-        hash_map: dict[str, list[tuple[str, int]]] = {}
-        for i, path in enumerate(paths):
-            if self._abort:
-                return hash_map
-            self.progress.emit(i + 1, total, os.path.basename(path))
-            entry = self._hash_one(path)
-            if entry is not None:
-                key, size = entry
-                hash_map.setdefault(key, []).append((path, size))
-        return hash_map
-
-    def _hash_one(self, path: str) -> tuple[str, int] | None:
-        try:
-            size = os.path.getsize(path)
-            key = (self._file_hash(path) if self._method == _METHOD_EXACT
-                   else self._perceptual_hash(path))
-            return key, size
-        except IMAGE_READ_ERRORS:
-            logger.debug("Skipping %s", path, exc_info=True)
-            return None
-
-    def _collect_paths(self) -> list[str]:
-        """The folder's images in natural name order; a cancel ends a recursive walk early."""
-        return list_images(self._folder, _IMAGE_EXTS, recursive=self._recursive,
-                           should_stop=lambda: self._abort)
-
-    @staticmethod
-    def _file_hash(path: str) -> str:
-        # MD5 used purely for de-duplication, not security.
-        h = hashlib.md5(usedforsecurity=False)
-        with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                h.update(chunk)
-        return h.hexdigest()
-
-    @staticmethod
-    def _perceptual_hash(path: str) -> str:
-        with Image.open(path) as img:
-            return str(_dhash(upright(img)))
-
-    def _cluster_perceptual(
-        self,
-        hash_map: dict[str, list[tuple[str, int]]],
-    ) -> list[list[tuple[str, int]]]:
-        """Cluster perceptual hashes by hamming distance."""
-        entries = _flatten_hash_map(hash_map)
-        parent = list(range(len(entries)))
-        if not self._union_similar(entries, parent):
-            return []
-        return _build_clusters(entries, parent)
-
-    def _union_similar(
-        self,
-        entries: list[tuple[int, str, int]],
-        parent: list[int],
-    ) -> bool:
-        n = len(entries)
-        for i in range(n):
-            if self._abort:
-                return False
-            for j in range(i + 1, n):
-                if _hamming_distance(entries[i][0], entries[j][0]) <= self._threshold:
-                    _union(parent, i, j)
-        return True
-
+# The scan worker and clustering names stay importable from here (callers, tests).
+__all__ = [
+    "_IMAGE_EXTS",
+    "_METHOD_EXACT",
+    "DuplicateDetectionDialog",
+    "_ScanWorker",
+    "_build_clusters",
+    "_dhash",
+    "_find_root",
+    "_flatten_hash_map",
+    "_hamming_distance",
+    "_make_thumbnail",
+    "_union",
+    "open_duplicate_detection",
+]
 
 # ---------------------------------------------------------------------------
 # Thumbnail helper
@@ -235,7 +95,7 @@ def _make_thumbnail(path: str, size: int = 64) -> QPixmap:
 # Dialog
 # ---------------------------------------------------------------------------
 
-class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
+class DuplicateDetectionDialog(DuplicateActionsMixin, WorkerHostMixin, QDialog):
     """Scan a folder for duplicate images."""
 
     # The scan worker (abortable) and the trash-delete worker; the mixin joins
@@ -431,98 +291,6 @@ class DuplicateDetectionDialog(WorkerHostMixin, QDialog):
         self._progress.hide()
         self._scan_btn.setEnabled(True)
         self._worker = None
-
-    def _delete_selected(self):
-        items = self._tree.selectedItems()
-        paths = []
-        for item in items:
-            path = item.data(0, Qt.ItemDataRole.UserRole)
-            if path and os.path.isfile(path):
-                paths.append((item, path))
-        if not paths:
-            return
-        question = self._lang.get(
-            "duplicate_confirm_msg", "Move {count} file(s) to trash?",
-        ).replace(_COUNT_PLACEHOLDER, str(len(paths)))
-        if not confirm(self, self._lang.get("duplicate_confirm_title", "Confirm Delete"), question):
-            return
-        # 移到垃圾桶是逐檔的 shell 呼叫，大量重複檔在 UI 執行緒跑會凍住
-        # 整個視窗 — 交給背景 worker，完成後再更新樹與狀態列。
-        from Imervue.system.trash_ops import FileDeleteWorker
-        self._delete_btn.setEnabled(False)
-        # Disable Scan too: a scan mid-delete clears the tree, destroying the
-        # QTreeWidgetItems held in _pending_delete_items, so _on_delete_finished
-        # would then touch deleted C++ objects and crash.
-        self._scan_btn.setEnabled(False)
-        self._select_redundant_btn.setEnabled(False)
-        self._pending_delete_items = {path: item for item, path in paths}
-        self._delete_worker = FileDeleteWorker([p for _item, p in paths], self)
-        self._delete_worker.finished_with.connect(self._on_delete_finished)
-        self._delete_worker.start()
-
-    def _on_delete_finished(self, trashed: list, failed: list):
-        import contextlib
-        pending = getattr(self, "_pending_delete_items", {})
-        # What the Recycle Bin could not take (a memory card, a network share)
-        # goes for good only if the user says so.
-        removed = offer_permanent_delete(self, failed)
-        for path in [*trashed, *removed]:
-            item = pending.pop(path, None)
-            if item is None:
-                continue
-            # The item's C++ object may already be gone (defensive); a live
-            # scan can no longer clear the tree here, but guard anyway.
-            with contextlib.suppress(RuntimeError):
-                parent = item.parent()
-                if parent is not None:
-                    parent.removeChild(item)
-        for path in failed:
-            if path not in removed:
-                logger.warning("Failed to delete %s", path)
-        self._pending_delete_items = {}
-        if self._delete_worker is not None:
-            self._delete_worker.deleteLater()
-            self._delete_worker = None
-        self._delete_btn.setEnabled(True)
-        self._scan_btn.setEnabled(True)
-        self._select_redundant_btn.setEnabled(True)
-        self._status_label.setText(
-            self._lang.get("duplicate_deleted", "{count} file(s) deleted").replace(
-                _COUNT_PLACEHOLDER, str(len(trashed) + len(removed))
-            ))
-
-    def _select_redundant(self):
-        """Keep the best image per group (most pixels, then largest file) and
-        select the rest, so the user can review before Delete Selected."""
-        from Imervue.library.dedupe_resolver import Candidate, plan_discards
-        groups = [
-            [Candidate(path, *self._probe_dims(path), size) for path, size in group]
-            for group in self._groups
-        ]
-        discards = set(plan_discards(groups))
-        self._tree.clearSelection()
-        count = self._select_paths(discards)
-        self._status_label.setText(
-            self._lang.get(
-                "duplicate_selected_redundant",
-                "{count} redundant file(s) selected — review, then Delete Selected",
-            ).replace(_COUNT_PLACEHOLDER, str(count)))
-
-    def _select_paths(self, paths: set[str]) -> int:
-        count = 0
-        for gi in range(self._tree.topLevelItemCount()):
-            group_item = self._tree.topLevelItem(gi)
-            for ci in range(group_item.childCount()):
-                child = group_item.child(ci)
-                if child.data(0, Qt.ItemDataRole.UserRole) in paths:
-                    child.setSelected(True)
-                    count += 1
-        return count
-
-    @staticmethod
-    def _probe_dims(path: str) -> tuple[int, int]:
-        """Pixel dimensions read from the header; (0, 0) if unreadable."""
-        return image_dimensions(path) or (0, 0)
 
     @staticmethod
     def _format_size(size: int) -> str:

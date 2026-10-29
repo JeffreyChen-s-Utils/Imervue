@@ -159,12 +159,13 @@ def test_a_cr3_box_walk_skips_large_boxes_without_reading_them(tmp_path):
 
 def test_a_metadata_box_too_large_to_be_metadata_is_not_read(tmp_path):
     from Imervue.image import raw_exif as module
+    from Imervue.image import raw_exif_cr3
     path = tmp_path / "IMG_1.CR3"
     path.write_bytes(_box(b"moov", b"\x00" * 64))
     with open(path, "rb") as handle:
         assert module.top_level_box(handle, b"moov") == b"\x00" * 64
     with open(path, "rb") as handle, pytest.MonkeyPatch.context() as mp:
-        mp.setattr(module, "_MAX_METADATA_BYTES", 63)
+        mp.setattr(raw_exif_cr3, "_MAX_METADATA_BYTES", 63)
         assert module.top_level_box(handle, b"moov") is None
 
 
@@ -381,7 +382,7 @@ def test_damaged_raw_xmp_is_ignored(tmp_path, extension):
 
 
 def test_cr3_xmp_size_limit_and_unrelated_uuid(tmp_path, monkeypatch):
-    from Imervue.image import raw_exif as module
+    from Imervue.image import raw_exif_cr3 as module
 
     path = tmp_path / "bounded.cr3"
     path.write_bytes(_box(b"uuid", b"x" * 16 + b"other metadata")

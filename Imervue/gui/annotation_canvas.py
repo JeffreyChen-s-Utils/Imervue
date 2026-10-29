@@ -1,151 +1,55 @@
 """Annotation canvas widget and its add / delete / modify undo commands.
 
 The interactive markup canvas (freehand, shapes, text, mosaic/blur, crop,
-selection). Painting lives in ``annotation_drawing``, the crop tool in
-``annotation_crop`` and the mosaic / blur prompt and bake command in
-``annotation_destructive``; the canvas mixes them in. ``annotation_dialog``
-re-exports the canvas and commands for older import sites.
+selection). Painting, crop, destructive effects and style updates have
+dedicated mixins; coordinate and handle calculations live in
+``annotation_geometry``. ``annotation_dialog`` re-exports the canvas and
+commands for older import sites.
 """
 from __future__ import annotations
 
-import math
 from collections.abc import Callable
 
 from PIL import Image
-from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import (
-    QColor, QFont, QImage, QMouseEvent,
-    QPainter, QUndoCommand, QUndoStack,
+    QImage,
+    QUndoStack,
 )
 from PySide6.QtWidgets import (
     QLineEdit,
     QSizePolicy, QWidget,
 )
 
-from Imervue.gui.annotation_models import (
-    ALL_BRUSHES,
-    KIND_BLUR,
-    KIND_FREEHAND,
-    KIND_MOSAIC,
-    KIND_TEXT,
-    TOOL_CROP,
-    TOOL_MOVE,
-    TOOL_SELECT,
-    Annotation,
-    AnnotationKind,
-)
+from Imervue.gui.annotation_models import Annotation
 from Imervue.system.qimage_convert import pil_to_qimage
-from Imervue.gui.annotation_drawing import HANDLE_SIZE, AnnotationDrawingMixin
+from Imervue.gui.annotation_drawing import AnnotationDrawingMixin
 from Imervue.gui.annotation_destructive import AnnotationDestructiveMixin
-from Imervue.gui.annotation_crop import AnnotationCropMixin, handle_cursor
+from Imervue.gui.annotation_crop import AnnotationCropMixin
+from Imervue.gui.annotation_style import AnnotationStyleMixin
+from Imervue.gui.annotation_hit_test import AnnotationHitTestMixin
+from Imervue.gui.annotation_pointer import AnnotationPointerMixin
+from Imervue.gui.annotation_input import AnnotationInputMixin
+from Imervue.gui.annotation_viewport import AnnotationViewportMixin
+from Imervue.gui import annotation_commands as _commands
+from Imervue.gui import annotation_geometry as _geometry
+
+
+_AddAnnotationCommand = _commands._AddAnnotationCommand
+_DeleteAnnotationCommand = _commands._DeleteAnnotationCommand
+_ModifyAnnotationCommand = _commands._ModifyAnnotationCommand
+_fit_display_scale = _geometry.fit_display_scale
+_point_segment_distance = _geometry.point_segment_distance
 
 
 _MODE_RGBA = "RGBA"
 
 
-# ---------------------------------------------------------------------------
-# PIL <-> QImage helpers
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Undo commands
-# ---------------------------------------------------------------------------
-
-class _AddAnnotationCommand(QUndoCommand):
-    def __init__(self, canvas: AnnotationCanvas, annotation: Annotation):
-        super().__init__("Add annotation")
-        self._canvas = canvas
-        self._ann = annotation
-
-    def redo(self):
-        self._canvas._annotations.append(self._ann)
-        self._canvas._selected_id = self._ann.id
-        self._canvas.update()
-
-    def undo(self):
-        self._canvas._annotations = [
-            a for a in self._canvas._annotations if a.id != self._ann.id
-        ]
-        if self._canvas._selected_id == self._ann.id:
-            self._canvas._selected_id = None
-        self._canvas.update()
-
-
-class _DeleteAnnotationCommand(QUndoCommand):
-    def __init__(self, canvas: AnnotationCanvas, annotation: Annotation):
-        super().__init__("Delete annotation")
-        self._canvas = canvas
-        self._ann = annotation
-        self._index = -1
-
-    def redo(self):
-        self._index = next(
-            (i for i, a in enumerate(self._canvas._annotations) if a.id == self._ann.id),
-            -1,
-        )
-        if self._index >= 0:
-            self._canvas._annotations.pop(self._index)
-        if self._canvas._selected_id == self._ann.id:
-            self._canvas._selected_id = None
-        self._canvas.update()
-
-    def undo(self):
-        if self._index < 0:
-            self._canvas._annotations.append(self._ann)
-        else:
-            self._canvas._annotations.insert(self._index, self._ann)
-        self._canvas.update()
-
-
-class _ModifyAnnotationCommand(QUndoCommand):
-    def __init__(
-        self,
-        canvas: AnnotationCanvas,
-        annotation_id: str,
-        old_points: list[tuple[int, int]],
-        new_points: list[tuple[int, int]],
-    ):
-        super().__init__("Move/resize annotation")
-        self._canvas = canvas
-        self._id = annotation_id
-        self._old = [tuple(p) for p in old_points]
-        self._new = [tuple(p) for p in new_points]
-
-    def _set(self, pts: list[tuple[int, int]]) -> None:
-        for a in self._canvas._annotations:
-            if a.id == self._id:
-                a.points = [tuple(p) for p in pts]
-                break
-        self._canvas.update()
-
-    def redo(self):
-        self._set(self._new)
-
-    def undo(self):
-        self._set(self._old)
-
-
-# ---------------------------------------------------------------------------
-# Canvas widget
-# ---------------------------------------------------------------------------
-
-
-def _fit_display_scale(bw: int, bh: int, cw: int, ch: int) -> float:
-    """Scale to fit a ``bw×bh`` image into a ``cw×ch`` canvas, capped at 1.0.
-
-    Never upscales — an image smaller than the canvas stays at native size and
-    is centred, matching the deep-zoom fit so the Modify view doesn't blow a
-    small image up to fill the (now full-width) canvas. Returns 0 for a
-    degenerate image / canvas so the caller can skip painting.
-    """
-    if bw <= 0 or bh <= 0 or cw <= 0 or ch <= 0:
-        return 0.0
-    return min(cw / bw, ch / bh, 1.0)
-
-
 class AnnotationCanvas(
-        AnnotationCropMixin, AnnotationDestructiveMixin, AnnotationDrawingMixin, QWidget):
+        AnnotationPointerMixin, AnnotationHitTestMixin, AnnotationInputMixin,
+        AnnotationViewportMixin, AnnotationStyleMixin,
+        AnnotationCropMixin, AnnotationDestructiveMixin,
+        AnnotationDrawingMixin, QWidget):
     """Interactive canvas that renders a PIL base image + annotation overlay.
 
     All Annotation.points are stored in image coordinates; the canvas maps
@@ -170,7 +74,9 @@ class AnnotationCanvas(
     delete_image_requested = Signal()
     base_changed = Signal()
 
-    def __init__(self, base: Image.Image, undo_stack: QUndoStack, parent=None):
+    def __init__(
+            self, base: Image.Image, undo_stack: QUndoStack, parent=None,
+            *, full_base_resolver: Callable[[], bool] | None = None):
         super().__init__(parent)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
@@ -179,7 +85,7 @@ class AnnotationCanvas(
 
         self._base = base if base.mode == "RGBA" else base.convert("RGBA")
         self._base_qimg = pil_to_qimage(self._base)
-        self.full_base_resolver: Callable[[], bool] | None = None
+        self.full_base_resolver = full_base_resolver
         self._annotations: list[Annotation] = []
         self._undo_stack = undo_stack
 
@@ -236,63 +142,6 @@ class AnnotationCanvas(
     def current_tool(self) -> str:
         return self._tool
 
-    def set_color(self, color: tuple[int, int, int, int]) -> None:
-        self._color = color
-        if self._selected_id is not None:
-            for a in self._annotations:
-                if a.id == self._selected_id:
-                    a.color = color
-            self.update()
-
-    def set_stroke_width(self, w: int) -> None:
-        self._stroke_width = max(1, w)
-        if self._selected_id is not None:
-            for a in self._annotations:
-                if a.id == self._selected_id:
-                    a.stroke_width = self._stroke_width
-            self.update()
-
-    def set_brush_type(self, brush: str) -> None:
-        if brush not in ALL_BRUSHES:
-            return
-        self._brush_type = brush
-        if self._selected_id is not None:
-            for a in self._annotations:
-                if a.id == self._selected_id and a.kind == KIND_FREEHAND:
-                    a.brush_type = brush  # type: ignore[assignment]
-            self.update()
-
-    def set_brush_opacity(self, opacity: int) -> None:
-        self._brush_opacity = max(0, min(100, int(opacity)))
-        if self._selected_id is not None:
-            for a in self._annotations:
-                if a.id == self._selected_id and a.kind == KIND_FREEHAND:
-                    a.opacity = self._brush_opacity
-            self.update()
-
-    def set_brush_spacing(self, spacing: int) -> None:
-        self._brush_spacing = max(1, int(spacing))
-        if self._selected_id is not None:
-            for a in self._annotations:
-                if a.id == self._selected_id and a.kind == KIND_FREEHAND:
-                    a.spacing = self._brush_spacing
-            self.update()
-
-    def set_font_family(self, family: str) -> None:
-        self._font_family = family
-        if self._selected_id is not None:
-            for a in self._annotations:
-                if a.id == self._selected_id and a.kind == KIND_TEXT:
-                    a.font_family = family
-            self.update()
-
-    def set_font_size(self, size: int) -> None:
-        self._font_size = max(6, size)
-        if self._selected_id is not None:
-            for a in self._annotations:
-                if a.id == self._selected_id and a.kind == KIND_TEXT:
-                    a.font_size = self._font_size
-            self.update()
 
     def current_font_family(self) -> str:
         return self._font_family
@@ -345,68 +194,6 @@ class AnnotationCanvas(
         self._undo_stack.clear()
         self.update()
 
-    # ---------- Coordinate mapping ----------
-
-    def _display_rect(self) -> QRectF:
-        bw, bh = self._base.width, self._base.height
-        cw, ch = self.width(), self.height()
-        scale = _fit_display_scale(bw, bh, cw, ch)
-        if scale <= 0:
-            return QRectF(0, 0, 0, 0)
-        dw, dh = bw * scale, bh * scale
-        return QRectF((cw - dw) / 2, (ch - dh) / 2, dw, dh)
-
-    def _screen_to_image(self, x: float, y: float) -> tuple[int, int]:
-        rect = self._display_rect()
-        if rect.width() <= 0 or rect.height() <= 0:
-            return (0, 0)
-        ix = (x - rect.x()) * self._base.width / rect.width()
-        iy = (y - rect.y()) * self._base.height / rect.height()
-        return (int(round(ix)), int(round(iy)))
-
-    def _image_to_screen(self, ix: float, iy: float) -> QPointF:
-        rect = self._display_rect()
-        if self._base.width == 0 or self._base.height == 0:
-            return QPointF(0, 0)
-        sx = rect.x() + ix * rect.width() / self._base.width
-        sy = rect.y() + iy * rect.height() / self._base.height
-        return QPointF(sx, sy)
-
-    # ---------- Painting ----------
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.fillRect(self.rect(), QColor(30, 30, 30))
-        rect = self._display_rect()
-        if rect.width() > 0:
-            self._paint_image_and_annotations(painter, rect)
-        if self._selected_id is not None:
-            sel = self._find(self._selected_id)
-            if sel is not None:
-                self._draw_selection(painter, sel)
-        if (self._tool == TOOL_CROP and self._crop_rect is not None
-                and rect.width() > 0):
-            self._paint_crop_overlay(painter, rect)
-        painter.end()
-
-    def _paint_image_and_annotations(self, painter: QPainter, rect: QRectF) -> None:
-        painter.drawImage(rect, self._base_qimg)
-        painter.save()
-        painter.translate(rect.x(), rect.y())
-        painter.scale(
-            rect.width() / self._base.width,
-            rect.height() / self._base.height,
-        )
-        if (self._preview_qimg is not None
-                and self._preview_rect_image is not None):
-            px, py, pw, ph = self._preview_rect_image
-            painter.drawImage(QRectF(px, py, pw, ph), self._preview_qimg)
-        for ann in self._annotations:
-            self._draw_annotation_qt(painter, ann)
-        if self._drawing is not None:
-            self._draw_annotation_qt(painter, self._drawing)
-        painter.restore()
 
     # (alpha_scale, width_factor) — multiplier applied to stroke_width.
     _BRUSH_PRESETS = {
@@ -418,443 +205,15 @@ class AnnotationCanvas(
         "pen":         (1.0, 1.0),
     }
 
-    @staticmethod
-    def _handle_positions(r: QRectF) -> list[tuple[float, float]]:
-        cx = (r.left() + r.right()) / 2
-        cy = (r.top() + r.bottom()) / 2
-        return [
-            (r.left(), r.top()),      # nw
-            (cx, r.top()),            # n
-            (r.right(), r.top()),     # ne
-            (r.right(), cy),          # e
-            (r.right(), r.bottom()),  # se
-            (cx, r.bottom()),         # s
-            (r.left(), r.bottom()),   # sw
-            (r.left(), cy),           # w
-        ]
+    _handle_positions = staticmethod(_geometry.handle_positions)
 
     _HANDLE_NAMES = ("nw", "n", "ne", "e", "se", "s", "sw", "w")
 
     # ---------- Hit testing ----------
 
-    def _find(self, ann_id: str) -> Annotation | None:
-        for a in self._annotations:
-            if a.id == ann_id:
-                return a
-        return None
-
-    def _hit_handle(self, pt: QPointF) -> str | None:
-        if self._selected_id is None:
-            return None
-        sel = self._find(self._selected_id)
-        if sel is None:
-            return None
-        if sel.kind == KIND_TEXT:
-            x1, y1, x2, y2 = self._text_bounding_box(sel)
-        else:
-            x1, y1, x2, y2 = sel.bounding_box()
-        sel_rect = QRectF(
-            self._image_to_screen(x1, y1),
-            self._image_to_screen(x2, y2),
-        )
-        h = HANDLE_SIZE
-        for name, (hx, hy) in zip(
-            self._HANDLE_NAMES, self._handle_positions(sel_rect), strict=False,
-        ):
-            box = QRectF(hx - h, hy - h, h * 2, h * 2)
-            if box.contains(pt):
-                return name
-        return None
-
-    def _text_bounding_box(self, ann: Annotation) -> tuple[int, int, int, int]:
-        """Compute (x1, y1, x2, y2) for a text annotation using QFontMetrics."""
-        if not ann.text or not ann.points:
-            return ann.bounding_box()
-        from PySide6.QtGui import QFontMetrics
-        font = QFont(ann.font_family) if ann.font_family else QFont()
-        font.setPixelSize(max(6, ann.font_size))
-        fm = QFontMetrics(font)
-        rect = fm.boundingRect(ann.text)
-        ax, ay = ann.points[0]
-        # QFontMetrics bounding rect: x offset can be negative, y is above baseline
-        x1 = ax + rect.x()
-        y1 = ay + rect.y()
-        x2 = x1 + rect.width()
-        y2 = y1 + rect.height()
-        return (x1, y1, x2, y2)
-
-    def _hit_annotation(self, pt: QPointF) -> Annotation | None:
-        """Find the topmost annotation under ``pt`` (widget coords).
-
-        Uses bounding-box hit for shape annotations and segment-distance
-        hit for line-like annotations — a diagonal line's bounding box can
-        be huge, and picking anywhere inside it would make selection feel
-        broken.
-        """
-        ix, iy = self._screen_to_image(pt.x(), pt.y())
-        for a in reversed(self._annotations):  # topmost first
-            if self._annotation_hits_point(a, ix, iy):
-                return a
-        return None
-
-    def _annotation_hits_point(self, a: Annotation, ix: int, iy: int) -> bool:
-        """Hit-test ``a`` at image-space (ix, iy) using a kind-aware metric."""
-        tol = max(5, a.stroke_width + 2)
-        if a.kind in ("line", "arrow"):
-            return self._line_annotation_hits(a, ix, iy, tol)
-        if a.kind == KIND_FREEHAND:
-            return self._freehand_annotation_hits(a, ix, iy, tol)
-        return self._bbox_annotation_hits(a, ix, iy, tol)
-
-    @staticmethod
-    def _line_annotation_hits(a: Annotation, ix: int, iy: int, tol: float) -> bool:
-        if len(a.points) < 2:
-            return False
-        return _point_segment_distance(ix, iy, a.points[0], a.points[-1]) <= tol
-
-    @staticmethod
-    def _freehand_annotation_hits(a: Annotation, ix: int, iy: int, tol: float) -> bool:
-        if len(a.points) < 2:
-            return False
-        return any(
-            _point_segment_distance(ix, iy, p, q) <= tol
-            for p, q in zip(a.points, a.points[1:], strict=False)
-        )
-
-    def _bbox_annotation_hits(
-        self, a: Annotation, ix: int, iy: int, tol: float,
-    ) -> bool:
-        if a.kind == KIND_TEXT:
-            x1, y1, x2, y2 = self._text_bounding_box(a)
-        else:
-            x1, y1, x2, y2 = a.bounding_box()
-        return x1 - tol <= ix <= x2 + tol and y1 - tol <= iy <= y2 + tol
-
-    # ---------- Mouse events ----------
-
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() != Qt.MouseButton.LeftButton:
-            return
-        pt = event.position()
-        ix, iy = self._screen_to_image(pt.x(), pt.y())
-
-        if self._tool == TOOL_CROP:
-            self._press_crop(pt, ix, iy)
-            return
-        if self._tool == TOOL_SELECT:
-            self._press_select(pt, ix, iy)
-            return
-        if self._tool == KIND_TEXT:
-            self._begin_text_edit(ix, iy)
-            return
-        self._begin_shape(ix, iy)
-
-    def _press_select(self, pt, ix: int, iy: int) -> None:
-        handle = self._hit_handle(pt)
-        if handle is not None:
-            sel = self._find(self._selected_id)
-            if sel is not None:
-                self._drag_mode = f"resize_{handle}"
-                self._drag_start_image = (ix, iy)
-                self._drag_orig_points = list(sel.points)
-                return
-        hit = self._hit_annotation(pt)
-        if hit is not None:
-            self._selected_id = hit.id
-            self._drag_mode = TOOL_MOVE
-            self._drag_start_image = (ix, iy)
-            self._drag_orig_points = list(hit.points)
-            self.update()
-            return
-        self._selected_id = None
-        self.update()
-
-    def _begin_shape(self, ix: int, iy: int) -> None:
-        kind: AnnotationKind = self._tool  # type: ignore[assignment]
-        if kind == "freehand":
-            self._drawing = Annotation(
-                kind=KIND_FREEHAND,
-                points=[(ix, iy)],
-                color=self._color,
-                stroke_width=self._stroke_width,
-                brush_type=self._brush_type,  # type: ignore[arg-type]
-                opacity=self._brush_opacity,
-                spacing=self._brush_spacing,
-            )
-        else:
-            self._drawing = Annotation(
-                kind=kind,
-                points=[(ix, iy), (ix, iy)],
-                color=self._color,
-                stroke_width=self._stroke_width,
-            )
-        self.update()
-
-    def _update_select_cursor(self, pt) -> None:
-        handle = self._hit_handle(pt)
-        if handle is not None:
-            self.setCursor(handle_cursor(handle))
-        elif self._hit_annotation(pt) is not None:
-            self.setCursor(Qt.CursorShape.SizeAllCursor)
-        else:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
-
-    def _drag_selected_annotation(self, ix: int, iy: int) -> None:
-        sel = self._find(self._selected_id or "")
-        if sel is None:
-            return
-        sx, sy = self._drag_start_image  # type: ignore[misc]
-        dx, dy = ix - sx, iy - sy
-        if self._drag_mode == TOOL_MOVE:
-            sel.points = [(p[0] + dx, p[1] + dy) for p in self._drag_orig_points]
-        elif self._drag_mode.startswith("resize_"):
-            handle = self._drag_mode.split("_", 1)[1]
-            sel.points = self._resize_points(
-                self._drag_orig_points, handle, dx, dy
-            )
-        self.update()
-
-    def mouseMoveEvent(self, event: QMouseEvent):
-        pt = event.position()
-        ix, iy = self._screen_to_image(pt.x(), pt.y())
-        self.cursor_image_pos.emit(ix, iy)
-
-        if self._tool == TOOL_CROP:
-            self._handle_crop_move(pt, ix, iy)
-            return
-
-        if self._tool == TOOL_SELECT and self._drag_mode is None:
-            self._update_select_cursor(pt)
-
-        if self._drag_mode is not None and self._drag_orig_points is not None:
-            self._drag_selected_annotation(ix, iy)
-            return
-
-        if self._drawing is not None:
-            if self._drawing.kind == KIND_FREEHAND:
-                self._drawing.points.append((ix, iy))
-            else:
-                self._drawing.points[-1] = (ix, iy)
-            self.update()
-
-    def _finish_annotation_drag(self) -> None:
-        sel = self._find(self._selected_id or "")
-        if sel is not None:
-            new_points = list(sel.points)
-            if new_points != self._drag_orig_points:
-                # Revert then push command so redo/undo both go through it
-                sel.points = [tuple(p) for p in self._drag_orig_points]
-                cmd = _ModifyAnnotationCommand(
-                    self, sel.id, self._drag_orig_points, new_points
-                )
-                self._undo_stack.push(cmd)
-        self._drag_mode = None
-        self._drag_orig_points = None
-        self._drag_start_image = None
-        self.annotation_changed.emit()
-
-    def _is_degenerate(self, drawing: Annotation) -> bool:
-        if drawing.kind == KIND_FREEHAND:
-            return len(drawing.points) < 2
-        x1, y1 = drawing.points[0]
-        x2, y2 = drawing.points[-1]
-        return abs(x2 - x1) < 2 and abs(y2 - y1) < 2
-
-    def _finish_drawing(self) -> None:
-        drawing = self._drawing
-        self._drawing = None
-        if self._is_degenerate(drawing):
-            self.update()
-            return
-        # 馬賽克/模糊：框選完立刻問使用者要多強，確認後把像素烤進 base
-        # image（不存檔）。取消就什麼事也不做。
-        if drawing.kind in (KIND_MOSAIC, KIND_BLUR):
-            if self._prompt_destructive_strength(drawing):
-                self.annotation_changed.emit()
-            else:
-                self.update()
-            return
-        cmd = _AddAnnotationCommand(self, drawing)
-        self._undo_stack.push(cmd)
-        self.annotation_changed.emit()
-
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() != Qt.MouseButton.LeftButton:
-            return
-        if self._tool == TOOL_CROP and self._crop_dragging:
-            self._finish_crop_drag()
-            return
-        if self._drag_mode is not None and self._drag_orig_points is not None:
-            self._finish_annotation_drag()
-            return
-        if self._drawing is not None:
-            self._finish_drawing()
-
-    @staticmethod
-    def _resize_points(
-        orig: list[tuple[int, int]],
-        handle: str,
-        dx: int,
-        dy: int,
-    ) -> list[tuple[int, int]]:
-        """Apply a resize-handle drag to a 2-point bounding annotation.
-
-        For freehand / multi-point annotations we only remap the *endpoints*,
-        which is imperfect but keeps the interaction simple. A real scale
-        around the bounding box centroid would be nicer — worth a follow-up.
-        """
-        if len(orig) < 2:
-            return orig
-        x1, y1 = orig[0]
-        x2, y2 = orig[-1]
-        mnx, mxx = min(x1, x2), max(x1, x2)
-        mny, mxy = min(y1, y2), max(y1, y2)
-        if "w" in handle:
-            mnx += dx
-        if "e" in handle:
-            mxx += dx
-        if "n" in handle:
-            mny += dy
-        if "s" in handle:
-            mxy += dy
-        return [(mnx, mny)] + orig[1:-1] + [(mxx, mxy)]
-
-    # ---------- Inline text editor ----------
-
-    def _begin_text_edit(self, ix: int, iy: int) -> None:
-        self._cancel_text_edit()
-        self._text_anchor_image = (ix, iy)
-        edit = QLineEdit(self)
-        edit.setStyleSheet(
-            "QLineEdit { background: rgba(255,255,255,230); "
-            "border: 1px solid #0080ff; padding: 2px; }"
-        )
-        font = edit.font()
-        font.setPointSize(14)
-        edit.setFont(font)
-        pt = self._image_to_screen(ix, iy)
-        edit.setGeometry(int(pt.x()), int(pt.y()), 220, 28)
-        edit.returnPressed.connect(self._commit_text_edit)
-        edit.editingFinished.connect(self._commit_text_edit)
-        edit.show()
-        edit.setFocus()
-        self._text_edit = edit
-
-    def _commit_text_edit(self) -> None:
-        if self._text_edit is None or self._text_anchor_image is None:
-            return
-        text = self._text_edit.text().strip()
-        edit = self._text_edit
-        anchor = self._text_anchor_image
-        # Clear state first so reentrant editingFinished (fires on
-        # deleteLater focus-out) doesn't double-commit
-        self._text_edit = None
-        self._text_anchor_image = None
-        edit.deleteLater()
-        if text:
-            ix, iy = anchor
-            ann = Annotation(
-                kind=KIND_TEXT,
-                points=[(ix, iy)],
-                color=self._color,
-                stroke_width=self._stroke_width,
-                text=text,
-                font_size=self._font_size,
-                font_family=self._font_family,
-            )
-            cmd = _AddAnnotationCommand(self, ann)
-            self._undo_stack.push(cmd)
-            self.annotation_changed.emit()
-
-    def _cancel_text_edit(self) -> None:
-        if self._text_edit is not None:
-            edit = self._text_edit
-            self._text_edit = None
-            self._text_anchor_image = None
-            edit.deleteLater()
-
-    # ---------- Keyboard ----------
-
-    def _handle_ctrl_key(self, key: int, shift: bool) -> bool:
-        """Ctrl-modified shortcuts (save / undo / redo). Returns True when
-        consumed.
-
-        The inline Modify panel has no menu bar, so these chords reach the
-        canvas; the host wires ``save_requested`` to its save + toast. In the
-        standalone dialog the Save/Undo/Redo QActions claim the chords first,
-        so this only takes effect where nothing else does.
-        """
-        if key == Qt.Key.Key_S:
-            self.save_requested.emit()
-            return True
-        if key == Qt.Key.Key_Z and not shift:
-            self._undo_stack.undo()
-            return True
-        if key == Qt.Key.Key_Y or (key == Qt.Key.Key_Z and shift):
-            self._undo_stack.redo()
-            return True
-        return False
-
-    def contextMenuEvent(self, event):
-        """Right-click → let the host (DevelopPanel) show its image menu.
-
-        The canvas only draws with the left button, so the right button is free
-        for a context menu. The standalone dialog leaves the signal unconnected,
-        so nothing pops up there."""
-        self.context_menu_requested.emit(event.globalPos())
-        event.accept()
-
-    def keyPressEvent(self, event):
-        key = event.key()
-        mods = event.modifiers()
-        if mods & Qt.KeyboardModifier.ControlModifier and self._handle_ctrl_key(
-                key, bool(mods & Qt.KeyboardModifier.ShiftModifier)):
-            return
-        if key in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
-            if self._selected_id is not None:
-                sel = self._find(self._selected_id)
-                if sel is not None:
-                    cmd = _DeleteAnnotationCommand(self, sel)
-                    self._undo_stack.push(cmd)
-                    self.annotation_changed.emit()
-                return
-            # Nothing selected: Delete acts on the image itself (trash it),
-            # like the Imervue tab. Backspace is left alone to avoid surprises.
-            if key == Qt.Key.Key_Delete:
-                self.delete_image_requested.emit()
-                return
-        elif key == Qt.Key.Key_Escape:
-            self._selected_id = None
-            self._cancel_text_edit()
-            self.update()
-            return
-        elif key == Qt.Key.Key_Left and self._text_edit is None:
-            self.navigate_image.emit(-1)
-            return
-        elif key == Qt.Key.Key_Right and self._text_edit is None:
-            self.navigate_image.emit(1)
-            return
-        super().keyPressEvent(event)
 
 
-def _point_segment_distance(
-    px: float, py: float,
-    a: tuple[int, int], b: tuple[int, int],
-) -> float:
-    """Shortest distance from point ``(px,py)`` to segment ``a-b``.
+    _text_bounding_box = staticmethod(_geometry.text_bounding_box)
 
-    Used for line/arrow/freehand hit testing so the user can click near
-    a diagonal line without having to hit the (much larger) bounding box.
-    """
-    ax, ay = a
-    bx, by = b
-    dx, dy = bx - ax, by - ay
-    length_sq = dx * dx + dy * dy
-    if length_sq == 0:
-        return math.hypot(px - ax, py - ay)
-    t = ((px - ax) * dx + (py - ay) * dy) / length_sq
-    t = max(0.0, min(1.0, t))
-    proj_x = ax + t * dx
-    proj_y = ay + t * dy
-    return math.hypot(px - proj_x, py - proj_y)
 
+    _resize_points = staticmethod(_geometry.resize_points)

@@ -14,6 +14,7 @@ import pytest
 from OpenGL.error import GLError
 
 from Imervue.paint import canvas as canvas_mod
+from Imervue.paint import canvas_gl as canvas_gl_mod
 from Imervue.paint import canvas_overlays as overlays_mod
 from Imervue.paint.canvas import PaintCanvas
 from Imervue.paint.canvas_overlays import PaintCanvasOverlaysMixin
@@ -80,19 +81,19 @@ class _LiveContext:
 
 def test_context_check_reports_a_torn_down_context(monkeypatch):
     monkeypatch.setattr("PySide6.QtGui.QOpenGLContext", _LiveContext)
-    monkeypatch.setattr(canvas_mod, "glClear", _raise(GLError(1282, None)))
+    monkeypatch.setattr(canvas_gl_mod, "glClear", _raise(GLError(1282, None)))
     assert PaintCanvas._gl_context_alive() is False
 
 
 def test_context_check_propagates_an_unexpected_error(monkeypatch):
     monkeypatch.setattr("PySide6.QtGui.QOpenGLContext", _LiveContext)
-    monkeypatch.setattr(canvas_mod, "glClear", _raise(TypeError("bad mask")))
+    monkeypatch.setattr(canvas_gl_mod, "glClear", _raise(TypeError("bad mask")))
     with pytest.raises(TypeError):
         PaintCanvas._gl_context_alive()
 
 
 def test_checker_upload_failure_is_logged_and_falls_back(monkeypatch, caplog):
-    monkeypatch.setattr(canvas_mod, "glGenTextures", _raise(GLError(1282, None)))
+    monkeypatch.setattr(canvas_gl_mod, "glGenTextures", _raise(GLError(1282, None)))
     fake = SimpleNamespace(_checker_texture=5)
     with caplog.at_level("DEBUG", logger="Imervue"):
         PaintCanvas._upload_checker_texture(fake)
@@ -101,6 +102,6 @@ def test_checker_upload_failure_is_logged_and_falls_back(monkeypatch, caplog):
 
 
 def test_checker_upload_propagates_an_unexpected_error(monkeypatch):
-    monkeypatch.setattr(canvas_mod, "glGenTextures", _raise(TypeError("bad count")))
+    monkeypatch.setattr(canvas_gl_mod, "glGenTextures", _raise(TypeError("bad count")))
     with pytest.raises(TypeError):
         PaintCanvas._upload_checker_texture(SimpleNamespace(_checker_texture=None))
