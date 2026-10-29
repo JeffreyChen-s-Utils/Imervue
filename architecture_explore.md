@@ -859,7 +859,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `canvas_input.py` | 365 | `PaintCanvasInputMixin`：指標與繪圖板事件、平移縮放、鋼筆與拖放；素材插入完成時經 dispatcher 建立 Undo 步驟 |
 | `canvas_view.py` | 187 | `PaintCanvasViewMixin` + `ZOOM_MIN`/`ZOOM_MAX`、`clamp_zoom()`、`wrap_rotation()`：縮放、繞中心旋轉、適配、螢幕↔影像座標 |
 | `pointer_event.py` | 35 | `PointerEvent`（工具收到的指標快照）與 `ToolDispatcher` 型別；不依賴 Qt widget |
-| `compositing.py` | 438 | 純 NumPy 圖層合成 |
+| `compositing.py` | 147 | 純 NumPy 圖層合成公開入口：`composite_stack`（單圖層快速路徑 + 逐層合成）；再匯出 `LAYER_BLEND_MODES`、`composite_layer_pair`、`composite_region` |
+| `compositing_pair.py` | 102 | `composite_layer_pair`：兩張 RGBA 依混色模式、不透明度與遮罩做 straight-alpha 合成，輸入形狀／dtype 驗證；`LAYER_BLEND_MODES` 擁有者 |
+| `compositing_layer.py` | 108 | 逐層前處理（全圖與區域合成共用）：群組可見／不透明度、向量快取重繪、tone / binary 渲染、剪裁遮罩、blend-if 遮罩、調整圖層 |
+| `compositing_region.py` | 145 | `composite_region`：只重合成髒矩形；含效果或調整圖層、矩形越界、圖層尺寸不符時回傳 `None` 讓呼叫端改用全圖合成 |
 | `layer_model.py` | 116 | 圖層與圖層群組資料模型 |
 | `layer_ops.py` | 171 | 向下合併 / 合併可見 / 平面化的純函式 |
 | `document_io.py` | 225 | 原生 .imervue NPZ 文件公開讀寫入口（檔案／記憶體、原子保存、`allow_pickle=False`）與 metadata／群組／具名選取／選取解碼；再匯出 `FORMAT_VERSION`、`_document_to_arrays` |
