@@ -1187,7 +1187,9 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `plugin_base.py` | 264 | `ImervuePlugin` 基底類別，13 個 hook 加上類別方法 `register_languages()`（主視窗建立前註冊外掛語言）：`on_plugin_loaded/unloaded`、`on_build_menu_bar`、`on_build_context_menu`、`on_build_main_tabs`、`on_image_loaded/folder_opened/image_switched/image_deleted`、`on_key_press`、`get_translations`、`on_pet_created`（寵物視窗建立時，或外掛載入時寵物已存在）、`on_app_closing` |
-| `plugin_manager.py` | 381 | discover/load failures 報狀態、partial-load cleanup 與 explicit fresh module reload；各視窗 instance 獨立 |
+| `plugin_manager.py` | 158 | `PluginManager`（混入 `PluginDispatchMixin`）：discover/load，instantiate failures 報狀態、partial-load cleanup 與 explicit fresh module reload；`unload_all` 反向順序；各視窗 instance 獨立；`register_plugin_languages`／`apply_saved_language` 啟動前註冊外掛語言（預設目錄經 `_plugins_dir`，測試 patch 此名稱） |
+| `plugin_discovery.py` | 148 | 外掛探索管線：依目錄再依名稱列候選（目錄 prepend 到 `sys.path`）、`plugin.json` API gate、import package／單檔外掛、找 `plugin_class` 或第一個 `ImervuePlugin` 子類；每步失敗都記 log、發 `failed` 狀態並跳過 |
+| `plugin_dispatch.py` | 113 | `PluginDispatchMixin`：`dispatch_*` hook 依載入順序送給各外掛，單一外掛 hook 例外記 log 後繼續下一個；`dispatch_key_press` 第一個吃下事件即停；`connect_pet_hooks` 只連一次 Desktop Pet 訊號 |
 | `plugin_downloader.py` | 573 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme）；one atomic plugin job／failure retry 與 cooperative cancellation；dialog 使用非阻塞 WorkerHost retirement，已完成安裝保留 |
 | `pip_installer.py` | 330 | 外掛相依的公開入口：`ensure_dependencies` nonblocking dependency gate（`_EnsureDepsHelper` 背景檢查、parent 已刪則 cancelled、缺套件開安裝對話框）、標準 `_https_urlopen` 守衛（拒絕非 https scheme）、`register_translations`；以 `__all__` 轉出下列 sibling 模組與 `python_finder` 的名稱（外掛與測試仍從這裡 import） |
 | `pip_embed_python.py` | 224 | 找不到 Python 時（Windows）下載 embeddable Python：釘選 SHA-256 驗證 zip 與 pip wheel、拒絕 zip-slip、啟用 `import site`、從 wheel 安裝 pip；下載在呼叫時經 `pip_installer._https_urlopen` |

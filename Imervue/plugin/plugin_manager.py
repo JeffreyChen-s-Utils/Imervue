@@ -1,30 +1,25 @@
 from __future__ import annotations
 
 import importlib
-import importlib.util
 import logging
 import sys
-from collections.abc import Iterator
 from pathlib import Path
-from types import ModuleType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PySide6.QtCore import Qt
-    from PySide6.QtWidgets import QMenu
     from Imervue.Imervue_main_window import ImervueMainWindow
-    from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.plugin.plugin_api import MANIFEST_NAME, IncompatiblePluginError, check_compatible
 from Imervue.plugin.plugin_base import ImervuePlugin
+from Imervue.plugin.plugin_discovery import _plugin_classes, _register_languages_of
+from Imervue.plugin.plugin_dispatch import PluginDispatchMixin
 from Imervue.plugin.status import status_registry
 from Imervue.system.app_paths import plugins_dir as _plugins_dir
 
 logger = logging.getLogger("Imervue.plugin")
 
 
-class PluginManager:
+class PluginManager(PluginDispatchMixin):
     """Discovers, loads, and manages Imervue plugins.
 
     Plugins are Python packages placed in the ``plugins/`` directory
@@ -128,97 +123,6 @@ class PluginManager:
             del sys.modules[name]
         importlib.invalidate_caches()
 
-    # ===========================
-    # Hook Dispatch
-    # ===========================
-
-    def dispatch_build_menu_bar(self, plugin_menu) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_build_menu_bar(plugin_menu)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_build_menu_bar error: {e}")
-
-    def dispatch_build_context_menu(self, menu: QMenu, viewer: GPUImageView) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_build_context_menu(menu, viewer)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_build_context_menu error: {e}")
-
-    def dispatch_image_loaded(self, image_path: str, viewer: GPUImageView) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_image_loaded(image_path, viewer)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_image_loaded error: {e}")
-
-    def dispatch_folder_opened(
-        self, folder_path: str, image_paths: list[str], viewer: GPUImageView,
-    ) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_folder_opened(folder_path, image_paths, viewer)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_folder_opened error: {e}")
-
-    def dispatch_image_switched(self, image_path: str, viewer: GPUImageView) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_image_switched(image_path, viewer)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_image_switched error: {e}")
-
-    def dispatch_image_deleted(self, deleted_paths: list[str], viewer: GPUImageView) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_image_deleted(deleted_paths, viewer)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_image_deleted error: {e}")
-
-    def dispatch_key_press(
-        self, key: int, modifiers: Qt.KeyboardModifier, viewer: GPUImageView,
-    ) -> bool:
-        """Dispatch key press to plugins. Returns True if any plugin consumed the event."""
-        for plugin in self._plugins:
-            try:
-                if plugin.on_key_press(key, modifiers, viewer):
-                    return True
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_key_press error: {e}")
-        return False
-
-    def dispatch_pet_created(self, pet) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_pet_created(pet)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_pet_created error: {e}")
-
-    def connect_pet_hooks(self) -> None:
-        """Send ``on_pet_created`` for the pet that exists now and each one created later.
-
-        Called after the plugins load and again after Reload Plugins; the
-        connection to the Desktop Pet tab is made once. A window without the
-        tab (or a test double) is left alone.
-        """
-        workspace = getattr(self.main_window, "pet_workspace", None)
-        if workspace is None:
-            return
-        if not self._pet_hook_connected:
-            workspace.pet_created.connect(self.dispatch_pet_created)
-            self._pet_hook_connected = True
-        pet = workspace.pet_window()
-        if pet is not None:
-            self.dispatch_pet_created(pet)
-
-    def dispatch_app_closing(self, main_window: ImervueMainWindow) -> None:
-        for plugin in self._plugins:
-            try:
-                plugin.on_app_closing(main_window)
-            except Exception as e:
-                logger.exception(f"[{plugin.plugin_name}] on_app_closing error: {e}")
-
     def unload_all(self) -> None:
         """Unload all plugins (called on app shutdown)."""
         for plugin in reversed(self._plugins):
@@ -228,133 +132,6 @@ class PluginManager:
                 logger.exception(f"[{plugin.plugin_name}] on_plugin_unloaded error: {e}")
         self._plugins.clear()
         status_registry.clear(self.status_scope)
-
-
-def _plugin_candidates(plugin_dirs: list[Path]) -> Iterator[Path]:
-    """Yield each plugin package directory and single-file plugin, in name order.
-
-    Each existing directory is put on ``sys.path`` first, so plugins import
-    their own modules as ``<plugin_name>.<module>``.
-    """
-    for plugin_dir in plugin_dirs:
-        if not plugin_dir.is_dir():
-            logger.info(f"Plugin directory does not exist, skipping: {plugin_dir}")
-            continue
-
-        # Add plugin dir to sys.path so imports work
-        dir_str = str(plugin_dir)
-        if dir_str not in sys.path:
-            sys.path.insert(0, dir_str)
-
-        yield from filter(_is_plugin_candidate, sorted(plugin_dir.iterdir()))
-
-
-def _is_plugin_candidate(path: Path) -> bool:
-    """A package directory with an ``__init__.py``, or a ``.py`` file other than ``__init__``."""
-    if path.is_dir():
-        return (path / "__init__.py").exists()
-    return path.is_file() and path.suffix == ".py" and path.stem != "__init__"
-
-
-def _api_compatible(candidate: Path) -> bool:
-    """False, with the reason logged, for a plugin package this Imervue is too old for.
-
-    A ``plugin.json`` that cannot be read or parsed also keeps the plugin out:
-    what it needs is unknown.
-    """
-    if not candidate.is_dir():
-        return True
-    try:
-        check_compatible(candidate)
-    except IncompatiblePluginError as e:
-        logger.warning("%s", e)
-        return False
-    except (OSError, ValueError) as e:
-        logger.exception("Skipping plugin '%s': unreadable %s: %s",
-                         candidate.name, MANIFEST_NAME, e)
-        return False
-    return True
-
-
-def _import_plugin(candidate: Path) -> ModuleType | None:
-    """Import a plugin package (cached by ``importlib``) or execute a single-file plugin."""
-    if candidate.is_dir():
-        module_name = candidate.name
-        logger.info("Importing plugin package '%s' from %s", module_name, candidate)
-        module = importlib.import_module(module_name)
-        logger.info("Successfully imported '%s', registering...", module_name)
-        return module
-    module_name = candidate.stem
-    spec = importlib.util.spec_from_file_location(module_name, candidate)
-    if not (spec and spec.loader):
-        return None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-def _plugin_class_in(module: ModuleType, source: Path) -> type[ImervuePlugin] | None:
-    """Return the module's ``plugin_class``, else its first ImervuePlugin subclass."""
-    plugin_class = getattr(module, "plugin_class", None)
-
-    if plugin_class is None:
-        # Search for ImervuePlugin subclasses in the module
-        for attr_name in dir(module):
-            attr = getattr(module, attr_name)
-            if (isinstance(attr, type)
-                    and issubclass(attr, ImervuePlugin)
-                    and attr is not ImervuePlugin):
-                plugin_class = attr
-                break
-
-    if plugin_class is None:
-        logger.warning(f"No plugin class found in '{source}', skipping.")
-        return None
-
-    if not (isinstance(plugin_class, type) and issubclass(plugin_class, ImervuePlugin)):
-        logger.warning(
-            f"plugin_class in '{source}' is not a subclass of ImervuePlugin, skipping."
-        )
-        return None
-    return plugin_class
-
-
-def _plugin_classes(plugin_dirs: list[Path], *,
-                    scope: str = "startup") -> Iterator[type[ImervuePlugin]]:
-    """Import every plugin under ``plugin_dirs`` and yield its plugin class.
-
-    A plugin that fails to import, or needs a newer plugin API
-    (``Imervue.plugin.plugin_api``), is logged and skipped, so one broken plugin
-    never stops the others from loading.
-    """
-    for candidate in _plugin_candidates(plugin_dirs):
-        if not _api_compatible(candidate):
-            status_registry.publish(scope + ":" + candidate.name, candidate.name, "failed",
-                                    "Incompatible plugin API; update Imervue or the plugin",
-                                    scope=scope)
-            continue
-        try:
-            module = _import_plugin(candidate)
-            plugin_class = None if module is None else _plugin_class_in(module, candidate)
-        except Exception as e:  # plugin sandboxing: any import-time error
-            status_registry.publish(scope + ":" + candidate.name, candidate.name, "failed",
-                                    str(e) or type(e).__name__, scope=scope)
-            logger.exception(f"Failed to load plugin '{candidate.name}': {e}")
-            continue
-        if plugin_class is not None:
-            yield plugin_class
-        else:
-            status_registry.publish(scope + ":" + candidate.name, candidate.name, "failed",
-                                    "No valid ImervuePlugin class", scope=scope)
-
-
-def _register_languages_of(plugin_class: type[ImervuePlugin]) -> None:
-    """Run ``plugin_class.register_languages``; a failure is logged and the plugin still loads."""
-    try:
-        plugin_class.register_languages()
-    except Exception as e:  # plugin sandboxing
-        logger.exception(f"[{plugin_class.plugin_name}] register_languages error: {e}")
 
 
 def register_plugin_languages(plugin_dirs: list[Path] | None = None) -> None:
