@@ -1088,7 +1088,10 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。�
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `pet_window.py` | 867 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas`；`add_integration` / `remove_integration` / `integration` 讓外掛把 `IntegrationController` 掛進 `shutdown()` 會停的登錄表 |
+| `pet_window.py` | 430 | `PetWindow`：無邊框透明視窗，host 一個 pet 模式的 `PuppetCanvas`；只留建構、canvas-driver 存取屬性、顯示／隱藏、`shutdown`、載入 rig 與 canvas 事件過濾，其餘行為由下列 mixin 提供，並 re-export 移出去的常數與 `classify_drop_paths` |
+| `pet_window_voice.py` | 143 | `PetVoiceMixin`：點擊回應（腳本台詞優先、LLM 並行）、對話泡泡開關與顯示、`.petscript.json` 載入／重設／啟動還原與每秒排程台詞 |
+| `pet_window_playback.py` | 161 | `PetPlaybackMixin` + `classify_drop_paths`：動作播放（指定／依名稱／群組隨機）、表情切換、拖放檔案分派（`.puppet` 換 rig，其他播 Drop 群組） |
+| `pet_window_host.py` | 230 | `PetHostMixin`：`_persist` 設定寫入（寫進本寵物 slot 並發 `setting_changed`）、`FeatureHost` 轉接、`add_integration` / `remove_integration` / `integration` 外掛整合登錄表、右鍵選單列、尺寸預設、啟動時還原位置與已存 driver |
 | `pet_window_flags.py` | 201 | `PetWindowFlagsMixin`：`PetWindow` 的視窗旗標組合（置頂／置底、點擊穿透）、鎖定位置、吸附門檻、透明度、全螢幕時隱藏 |
 | `pet_feature_toggles.py` | 188 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、虛擬攝影機、LLM、音樂律動、閒置小遊戲、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
 | `pet_workspace.py` | 843 | Desktop Pet 控制面板：固定角色選擇、四個可捲動設定分類、共用主題與狀態；維持延遲 overlay 建立、驅動和全域熱鍵同步 |

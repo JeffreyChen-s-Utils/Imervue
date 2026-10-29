@@ -13,20 +13,21 @@ sibling controllers: pointer interaction (:mod:`pet_interaction`),
 canvas-input drivers (:mod:`pet_canvas_drivers`), drop shadow
 (:mod:`pet_shadow_controller`), integration hooks (:mod:`pet_features`),
 and the lazy LLM / SFX / rhythm / minigame controllers
-(:mod:`pet_drivers`). Every user-tweakable knob round-trips through
+(:mod:`pet_drivers`). Its own surface is split across mixins: window
+flags (:mod:`pet_window_flags`), feature toggles
+(:mod:`pet_feature_toggles`), speech and script (:mod:`pet_window_voice`),
+motion playback and file drops (:mod:`pet_window_playback`), and
+persistence / integrations / menu rows / sizing (:mod:`pet_window_host`).
+Every user-tweakable knob round-trips through
 :mod:`Imervue.desktop_pet.settings` so the pet restores on next launch.
 """
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QPoint, QTimer, Signal
-from PySide6.QtGui import (
-    QDragEnterEvent,
-    QDropEvent,
-)
 from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
@@ -35,9 +36,7 @@ from PySide6.QtWidgets import (
 from Imervue.system.qt_timers import call_later
 from Imervue.system.best_effort import best_effort
 from Imervue.desktop_pet import settings as pet_settings
-from Imervue.desktop_pet import pet_placement
 from Imervue.desktop_pet.fullscreen_detector import FullscreenDetector
-from Imervue.desktop_pet.pet_context_menu import build_context_menu
 from Imervue.desktop_pet.pet_drivers import (
     ClickSfxController,
     IdleMinigameController,
@@ -45,22 +44,27 @@ from Imervue.desktop_pet.pet_drivers import (
     MusicRhythmController,
 )
 from Imervue.desktop_pet.pet_canvas_drivers import PetCanvasDrivers
-from Imervue.desktop_pet.pet_interaction import PetInteraction, llm_situation_tag
+from Imervue.desktop_pet.pet_interaction import PetInteraction
 from Imervue.desktop_pet.pet_shadow_controller import PetShadowController
-from Imervue.desktop_pet.pet_feature_base import IntegrationController
 from Imervue.desktop_pet.pet_features import build_integration_controllers
 from Imervue.desktop_pet.pet_feature_toggles import PetFeatureTogglesMixin
 from Imervue.desktop_pet.pet_window_flags import PetWindowFlagsMixin
-from Imervue.desktop_pet.pet_script import (
-    PetScript,
-    PetScriptEngine,
-    PetScriptError,
-    load_script,
+from Imervue.desktop_pet.pet_window_host import (
+    PET_IDLE_CYCLE_DURATION_S,
+    SIZE_PRESETS,
+    PetHostMixin,
 )
+from Imervue.desktop_pet.pet_window_playback import (
+    DROP_MOTION_GROUP,
+    PUPPET_FILE_SUFFIX,
+    PetPlaybackMixin,
+    classify_drop_paths,
+)
+from Imervue.desktop_pet.pet_window_voice import PetVoiceMixin
+from Imervue.desktop_pet.pet_script import PetScriptEngine
 from Imervue.desktop_pet.speech_bubble import SpeechBubble
 from Imervue.puppet.canvas import PuppetCanvas
 from Imervue.puppet.document_io import load_puppet
-from Imervue.puppet.motion_picker import pick_random_motion_in_group
 
 if TYPE_CHECKING:
     from Imervue.puppet.document import PuppetDocument
@@ -74,28 +78,31 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.desktop_pet.pet_window")
 
+__all__ = [
+    "DEFAULT_GREETINGS",
+    "DEFAULT_PET_SIZE",
+    "DRAG_MOTION_GROUP",
+    "DROP_MOTION_GROUP",
+    "LAND_MOTION_GROUP",
+    "PAINT_TICK_INTERVAL_MS",
+    "PET_IDLE_CYCLE_DURATION_S",
+    "PUPPET_FILE_SUFFIX",
+    "SCRIPT_TICK_INTERVAL_MS",
+    "SIZE_PRESETS",
+    "PetWindow",
+    "classify_drop_paths",
+]
+
 DEFAULT_PET_SIZE: tuple[int, int] = (320, 480)
 """Initial overlay size, in screen pixels. Vertical 3:4 slot
 matches the typical aspect of a rigged character; resize presets
 swap into other slots without losing this proportion."""
-
-SIZE_PRESETS: dict[str, tuple[int, int]] = {
-    "small": (200, 300),
-    "medium": (320, 480),
-    "large": (480, 720),
-}
 
 PAINT_TICK_INTERVAL_MS: int = 33
 """≈ 30 FPS canvas repaint cadence while the overlay is visible."""
 
 SCRIPT_TICK_INTERVAL_MS: int = 1000
 """1 Hz heartbeat that fires the script engine's scheduled chimes."""
-
-PET_IDLE_CYCLE_DURATION_S: float = 4.0
-"""Override the puppet module's 8s default for the desktop overlay.
-On the desktop the pet is decorative and benefits from livelier
-turnover; the editor workspace still uses the slower default so
-authoring previews aren't constantly interrupted."""
 
 DRAG_MOTION_GROUP: str = "Drag"
 """Cubism-convention group name played the moment the user starts
@@ -107,43 +114,16 @@ LAND_MOTION_GROUP: str = "Land"
 to bracket a drag interaction; either or both can be absent without
 breaking the drag flow."""
 
-DROP_MOTION_GROUP: str = "Drop"
-"""Played when the user drops *external content* (a file from
-Explorer / Finder) onto the pet. Distinct from ``LAND_MOTION_GROUP``
-so rigs can react differently to "moved the pet" vs "fed the pet
-something"."""
-
-PUPPET_FILE_SUFFIX: str = ".puppet"
-"""Extension treated as "drop this and the pet loads it as its new
-rig". Anything else triggers the generic Drop reaction instead."""
-
-
-def classify_drop_paths(paths: list[Path]) -> tuple[str, Path | None]:
-    """Decide what the pet should do with a file-drop payload.
-
-    Returns ``("puppet", path)`` when the drop contains at least one
-    ``.puppet`` archive (the first one wins — multiple-file drops
-    aren't a use case worth solving), ``("other", path_or_None)``
-    when the drop has files but none are a rig (the first path is
-    handed back so callers can log / display it), or ``("none", None)``
-    for an empty payload.
-
-    Pure helper so the dispatcher logic is tested without spinning
-    up a QMimeData — Qt's drop machinery is hard to fake."""
-    if not paths:
-        return ("none", None)
-    for path in paths:
-        if path.suffix.lower() == PUPPET_FILE_SUFFIX:
-            return ("puppet", path)
-    return ("other", paths[0])
-
 from Imervue.desktop_pet.pet_script import DEFAULT_GREETINGS  # noqa: F401, E402
 """Re-export so callers / tests that imported the old constant
 keep working. The authoritative copy lives in
 :mod:`Imervue.desktop_pet.pet_script` alongside the engine."""
 
 
-class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
+class PetWindow(
+    PetWindowFlagsMixin, PetFeatureTogglesMixin, PetVoiceMixin,
+    PetPlaybackMixin, PetHostMixin, QWidget,
+):
     """The on-desktop puppet overlay.
 
     Long-lived: constructed once per Imervue session, the pet
@@ -448,420 +428,3 @@ class PetWindow(PetWindowFlagsMixin, PetFeatureTogglesMixin, QWidget):
         if obj is self._canvas and self._interaction.handle_canvas_event(event):
             return True
         return super().eventFilter(obj, event)
-
-    def reanchor_speech(self) -> None:   # pragma: no cover - Qt UI
-        """Re-anchor the speech bubble to the current geometry — the
-        interaction controller calls this mid-drag so the bubble tracks
-        the pet."""
-        if self._speech is not None:
-            self._speech.anchor_to(self.geometry())
-
-    def speak_click_response(
-        self, area_id: str, motion_name: str | None,
-    ) -> None:
-        """Show the scripted speech line for a click (if speech is
-        on) and fire the LLM in parallel if enabled. The scripted
-        line shows immediately for snappy feedback; the LLM reply
-        replaces it via ``_on_llm_line`` if/when it lands."""
-        if not self._speech_enabled:
-            return
-        line = (
-            self._script_engine.pick_for_hit_area(area_id or None)
-            or self._script_engine.pick_for_motion(motion_name)
-            or self._script_engine.pick_time_of_day_greeting()
-            or self._script_engine.pick_greeting()
-        )
-        if line:
-            self._show_speech(line)
-        if not self.llm_dialogue_enabled():
-            return
-        try:
-            self._llm.request_line(llm_situation_tag(area_id, motion_name))
-        except ValueError:
-            return
-
-    def _apply_edge_snap(self) -> None:   # pragma: no cover - Qt geometry
-        pet_placement.apply_edge_snap(self)
-
-    # =====================================================================
-    # Context menu
-    # =====================================================================
-
-    def _show_context_menu(self, global_pos: QPoint) -> None:   # pragma: no cover - Qt UI
-        build_context_menu(self, global_pos)
-
-    def driver_menu_entries(
-        self,
-    ) -> list[tuple[str, str, bool, Any]]:   # pragma: no cover - Qt UI
-        """Rows for the "Live drivers" submenu: ``(label_key,
-        default_label, currently_running, setter)``. Each running
-        flag is sourced from the driver's own object so the menu
-        check-state always matches the world."""
-        drivers = self._canvas_drivers
-        return [
-            ("desktop_pet_auto_idle", "Auto idle (breath + drift)",
-             drivers.idle_running(), self.set_auto_idle_enabled),
-            ("desktop_pet_idle_motion", "Idle motions",
-             drivers.idle_motion_running(), self.set_idle_motion_enabled),
-            ("desktop_pet_auto_blink", "Auto-blink",
-             self._input_engine.blink_enabled(), self.set_auto_blink_enabled),
-            ("desktop_pet_drag_track", "Drag-track head",
-             self._input_engine.drag_enabled(), self.set_drag_track_enabled),
-            ("desktop_pet_mouse_gaze", "Mouse gaze (eyes follow cursor)",
-             drivers.gaze_running(), self.set_mouse_gaze_enabled),
-            ("desktop_pet_mic_lipsync", "Mic lip-sync",
-             self._input_engine.lipsync_enabled(), self.set_mic_lipsync_enabled),
-            ("desktop_pet_webcam", "Webcam tracking",
-             drivers.webcam_running(), self.set_webcam_tracking_enabled),
-        ]
-
-    def toggle_menu_entries(
-        self,
-    ) -> list[tuple[str, str, bool, Any]]:   # pragma: no cover - Qt UI
-        """Rows for the five top-level checkable toggles: ``(label_key,
-        default_label, current_state, setter)``."""
-        return [
-            ("desktop_pet_anchor", "Lock position",
-             self._anchor_locked, self.set_anchor_locked),
-            ("desktop_pet_click_through", "Click-through (let mouse pass)",
-             self._click_through, self.set_click_through),
-            ("desktop_pet_on_bottom", "Always on bottom (desktop widget)",
-             self._always_on_bottom, self.set_always_on_bottom),
-            ("desktop_pet_hide_fullscreen", "Hide when other app is fullscreen",
-             self._hide_on_fullscreen, self.set_hide_on_fullscreen),
-            ("desktop_pet_speech", "Speech bubble on click",
-             self._speech_enabled, self.set_speech_enabled),
-        ]
-
-    def current_size_preset(self) -> str:   # pragma: no cover - Qt UI
-        """Public alias of the active size-preset name for the menu."""
-        return self._current_size_preset()
-
-    # =====================================================================
-    # Live drivers
-    # =====================================================================
-
-    def set_idle_motion_enabled(self, enabled: bool) -> None:
-        self._canvas_drivers.set_idle_motion_enabled(
-            bool(enabled), PET_IDLE_CYCLE_DURATION_S,
-        )
-        self._persist_driver("idle_motion", bool(enabled))
-
-    def _persist_driver(self, key: str, value: bool) -> None:
-        drivers = dict(self._settings.get("drivers", {}))
-        drivers[key] = bool(value)
-        self._settings["drivers"] = drivers
-        self._persist(drivers=drivers)
-
-    def _persist(self, **fields: Any) -> None:
-        """Thread the pet's own id through :func:`pet_settings.update`
-        so each instance writes to its own slot. Single seam for the
-        whole window — every persist call goes through here, which
-        keeps the multi-pet refactor from sprawling across 20+ call
-        sites."""
-        pet_settings.update(self._pet_id, **fields)
-        for key, value in fields.items():
-            self.setting_changed.emit(key, value)
-
-    # ---- FeatureHost adapter ------------------------------------
-    # The thin surface the integration controllers depend on (see
-    # pet_feature_base.FeatureHost). Each call forwards to the
-    # window's existing machinery so controller behaviour stays
-    # identical to the old inline implementations.
-
-    def persist(self, **fields: Any) -> None:
-        self._persist(**fields)
-
-    def setting(self, key: str, default: Any) -> Any:
-        return self._settings.get(key, default)
-
-    def persist_driver(self, key: str, value: bool) -> None:
-        self._persist_driver(key, value)
-
-    def play_group(self, group: str) -> bool:
-        return self.play_random_motion_in_group(group)
-
-    def speak(self, line: str) -> None:
-        self._show_speech(line)
-
-    def on_hotkey_action(self, action: str) -> None:
-        self._on_hotkey_action(action)
-
-    @property
-    def speech_on(self) -> bool:
-        return self._speech_enabled
-
-    def pet_id(self) -> str:
-        """The id this pet persists under — useful for the registry
-        and tests that need to verify isolation."""
-        return self._pet_id
-
-    # ---- integrations added by plugins ---------------------------------
-
-    def add_integration(self, key: str, controller: IntegrationController) -> None:
-        """Register a plugin's integration so :meth:`shutdown` stops it.
-
-        A controller already under *key* is shut down (its enabled setting
-        kept) and replaced.
-        """
-        self.remove_integration(key)
-        self._features[key] = controller
-
-    def remove_integration(self, key: str) -> None:
-        """Stop and forget the integration under *key*, keeping its enabled setting."""
-        controller = self._features.pop(key, None)
-        if controller is not None:
-            with best_effort("shut down a removed integration"):
-                controller.shutdown()
-
-    def integration(self, key: str) -> IntegrationController | None:
-        """The integration registered under *key*, if any."""
-        return self._features.get(key)
-
-    # =====================================================================
-    # Motion / expression playback (context menu + hit-area)
-    # =====================================================================
-
-    def _play_motion(self, motion) -> None:
-        """Bind ``motion`` on the player and start playback. Used
-        from the context-menu motions submenu."""
-        self._motion_player.set_motion(motion)
-        self._motion_player.play()
-
-    def play_motion(self, motion) -> None:
-        """Public alias used by the context-menu motions submenu."""
-        self._play_motion(motion)
-
-    def apply_expression(self, name: str) -> None:
-        """Toggle ``name`` on or off (the context-menu expressions submenu)."""
-        self._apply_expression(name)
-
-    # ---- file drag-drop -------------------------------------------
-
-    def dragEnterEvent(self, event: QDragEnterEvent) -> None:   # noqa: N802 - Qt override
-        """Accept drops that carry file URLs. Anything else (text,
-        in-app drags) is ignored so we don't intercept random
-        events from elsewhere in the app."""
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-        else:
-            event.ignore()
-
-    def dropEvent(self, event: QDropEvent) -> None:   # noqa: N802 - Qt override
-        """Thin glue over :meth:`handle_dropped_paths` — Qt's drop
-        event class is awkward to construct in tests, so all the
-        real dispatch logic sits in the path-based helper that
-        tests can drive directly."""
-        if not event.mimeData().hasUrls():
-            event.ignore()
-            return
-        paths = [
-            Path(url.toLocalFile())
-            for url in event.mimeData().urls()
-            if url.isLocalFile() and url.toLocalFile()
-        ]
-        self.handle_dropped_paths(paths)
-        event.acceptProposedAction()
-
-    def handle_dropped_paths(self, paths: list[Path]) -> str:
-        """Dispatch a list of dropped paths. Returns the same kind
-        string :func:`classify_drop_paths` produces so callers (and
-        tests) can verify which branch ran. Side effects:
-
-        * ``"puppet"`` → loads the rig and emits ``hit_triggered("")``.
-        * ``"other"``  → plays the Drop motion group + a greeting.
-        * ``"none"``   → no-op.
-        """
-        kind, target = classify_drop_paths(paths)
-        if kind == "puppet" and target is not None:
-            self.load_puppet_file(target)
-            self.hit_triggered.emit("")
-        elif kind == "other":
-            self.play_random_motion_in_group(DROP_MOTION_GROUP)
-            if self._speech_enabled:
-                line = (
-                    self._script_engine.pick_time_of_day_greeting()
-                    or self._script_engine.pick_greeting()
-                )
-                if line:
-                    self._show_speech(line)
-        return kind
-
-    def play_random_motion_in_group(self, group: str) -> bool:
-        """Pick + play a random motion from ``group``. Returns ``True``
-        when the rig had at least one motion in the group and playback
-        was started; ``False`` is a silent no-op (rigs without authored
-        Drag / Land groups still work)."""
-        last_name = (
-            self._motion_player.motion().name
-            if self._motion_player.motion() is not None
-            else None
-        )
-        motion = pick_random_motion_in_group(
-            self.document(), group, exclude_name=last_name,
-        )
-        if motion is None:
-            return False
-        self._play_motion(motion)
-        return True
-
-    def _play_motion_by_name(self, name: str) -> None:
-        document = self.document()
-        if document is None:
-            return
-        for motion in document.motions:
-            if motion.name == name:
-                self._play_motion(motion)
-                return
-
-    def _apply_expression(self, name: str) -> None:
-        """Toggle an expression: add it, or take it off when it is already on.
-
-        The context menu shows each expression checked while it is active;
-        before, an applied expression stayed until the rig was reloaded.
-        """
-        canvas = self._canvas
-        if name in canvas.active_expressions():
-            canvas.remove_expression(name)
-        else:
-            canvas.add_expression(name)
-
-    # =====================================================================
-    # Speech bubble
-    # =====================================================================
-
-    def set_speech_enabled(self, enabled: bool) -> None:
-        self._speech_enabled = bool(enabled)
-        self._persist(speech_enabled=self._speech_enabled)
-        if not enabled and self._speech is not None:
-            self._speech.close_bubble()
-
-    def speech_enabled(self) -> bool:
-        return self._speech_enabled
-
-    def _show_speech(self, text: str) -> None:
-        # Webhook, notification and hotkey lines keep arriving while the pet is
-        # hidden (hotkey, tray, hide-on-fullscreen); a bubble then would float
-        # alone over whatever the pet was hidden for.
-        if not self._speech_enabled or not text or not self.isVisible():
-            return
-        if self._speech is None:
-            self._speech = SpeechBubble()
-        self._speech.anchor_to(self.geometry())
-        self._speech.show_message(text)
-
-    # =====================================================================
-    # Pet script (user-customisable voice)
-    # =====================================================================
-
-    def load_script_file(self, path: str | Path) -> bool:
-        """Load a ``.petscript.json`` and bind it to the engine.
-        Returns ``True`` on success; failure writes the path to
-        the settings so the workspace can show a useful message
-        but doesn't crash the pet."""
-        try:
-            script = load_script(path)
-        except PetScriptError as exc:
-            logger.warning("pet script %s failed: %s", path, exc)
-            return False
-        self._script_engine.set_script(script)
-        self._persist(script_path=str(path))
-        return True
-
-    def reset_script_to_default(self) -> None:
-        """Drop the user script and revert to the built-in
-        greeting set. Clears the persisted path so the next
-        launch doesn't reload the now-rejected script."""
-        self._script_engine.set_script(PetScript.default())
-        self._persist(script_path="")
-
-    def script_engine(self) -> PetScriptEngine:
-        """Test / advanced caller hook — exposes the engine so
-        external code can read the active script without poking
-        the private attribute."""
-        return self._script_engine
-
-    def _restore_persisted_script(self) -> None:
-        """Apply the script the previous session ended with. A
-        missing / unreadable file falls back silently to the
-        default voice — the workspace's status label is the
-        user-facing reporting channel."""
-        path = str(self._settings.get("script_path", "") or "")
-        if not path:
-            return
-        try:
-            self._script_engine.set_script(load_script(path))
-        except PetScriptError as exc:
-            logger.info("ignoring stale pet script %s: %s", path, exc)
-
-    def _restore_drivers(self) -> None:
-        """Wake every persisted driver the user had running last
-        session. Without this, drivers only started when the user
-        opened the workspace tab (its ``_reapply_persisted_toggles``
-        re-ticks the checkboxes, which fires the signal chain).
-        Pets launched directly from the tray / hotkey / autorun
-        went static."""
-        drivers = self._settings.get("drivers", {}) or {}
-        if not isinstance(drivers, dict):
-            return
-        # Zero-dep drivers we can flip on confidently. The rest
-        # (mic_lipsync, webcam_tracking) need optional packages and
-        # might fail loudly; let the user re-enable them via the
-        # workspace, which has the status-label surface for the
-        # "missing dep" message.
-        if drivers.get("auto_idle"):
-            self.set_auto_idle_enabled(True)
-        if drivers.get("idle_motion"):
-            self.set_idle_motion_enabled(True)
-        if drivers.get("auto_blink"):
-            self.set_auto_blink_enabled(True)
-        if drivers.get("drag_track"):
-            self.set_drag_track_enabled(True)
-        if drivers.get("mouse_gaze"):
-            self.set_mouse_gaze_enabled(True)
-        if drivers.get("music_rhythm"):
-            self.set_music_rhythm_enabled(True)
-        if drivers.get("idle_minigame"):
-            self.set_idle_minigame_enabled(True)
-
-    def _on_script_tick(self) -> None:   # pragma: no cover - Qt timer
-        """1 Hz heartbeat that fires any due
-        :class:`ScheduledEvent` from the active script."""
-        if not self._speech_enabled:
-            return
-        line = self._script_engine.due_scheduled_message()
-        if line:
-            self._show_speech(line)
-
-    # =====================================================================
-    # Size presets
-    # =====================================================================
-
-    def set_size_preset(self, preset: str) -> None:
-        size = SIZE_PRESETS.get(preset)
-        if size is None:
-            return
-        old_centre = self.geometry().center()
-        self.resize(*size)
-        new_geom = self.geometry()
-        new_geom.moveCenter(old_centre)
-        self.setGeometry(new_geom)
-        self._apply_edge_snap()
-        self._persist(size_preset=preset)
-
-    def _current_size_preset(self) -> str:
-        w, h = self.width(), self.height()
-        for name, (pw, ph) in SIZE_PRESETS.items():
-            if (pw, ph) == (w, h):
-                return name
-        return "medium"
-
-    # =====================================================================
-    # Position restore
-    # =====================================================================
-
-    def _restore_position(self) -> None:   # pragma: no cover - Qt geometry
-        pet_placement.restore_position(self)
-
-    def _current_screen_name(self) -> str:   # pragma: no cover - Qt geometry
-        return pet_placement.current_screen_name(self)
