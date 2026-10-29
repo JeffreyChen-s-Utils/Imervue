@@ -1000,7 +1000,12 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `physics_codec.py` | 47 | Physics rig／particle／gravity 編解碼與物理 JSON 輸出 |
 | `format_schema.py` | 331 | `.puppet` v1 的四份 JSON Schema（draft 2020-12：puppet / motion / expression / physics，`$id` 是 `docs/schemas/` 在 `main` 上的 raw URL；`python -m Imervue.puppet.format_schema docs/schemas` 重產）與 `check_puppet_file`：schema → 載入器規則 → `validator` 的 rig 檢查（CLI `puppet-validate`、MCP `puppet_validate`） |
 | `schema_check.py` | 124 | 只涵蓋上述 schema 所用子集的 JSON Schema 驗證器（`$ref`、type、enum、const、properties、required、additionalProperties、items、min/maxItems、minimum/maximum、minLength、allOf、anyOf、if/then），不依賴第三方套件；與 `jsonschema` 對拍 7200 個變造檔判定一致 |
-| `cubism_import.py` | 550 | Live2D Cubism v3 檔案格式匯入 |
+| `cubism_import.py` | 150 | Live2D Cubism v3 匯入的公開入口：`CubismBundle`、`load_model3` 組裝 `.model3.json` 引用的檔案、`apply_bundle` 依名稱／id 去重合併進文件；轉出各子模組的載入器與 `CubismFormatError` |
+| `cubism_import_common.py` | 21 | `CubismFormatError` 與容忍 BOM 的 JSON 讀取（壞 JSON 轉成格式錯誤、缺檔拋 `FileNotFoundError`） |
+| `cubism_import_motion.py` | 166 | `.motion3.json`（扁平 segment 陣列 → linear / bezier / stepped / inverse-stepped，截斷與未知型別報錯）與 `.exp3.json`（Blend → 混合模式）匯入 |
+| `cubism_import_model.py` | 98 | `.model3.json` 條目讀取：引用的 motion（淡入淡出覆寫、音效路徑、群組）與 expression、參數群組、hit area |
+| `cubism_import_physics.py` | 102 | `.physics3.json` → `PhysicsRig`；Cubism 頂點係數對應到粒子的 spring / damping / mass |
+| `cubism_import_parts.py` | 78 | `.pose3.json` 互斥 part 群組（含 Link）與 `.cdi3.json` 顯示名稱匯入 |
 | `cubism_native_bridge.py` | 443 | `Live2DCubismCore.dll` 的 ctypes 綁定（官方 Cubism SDK for Native） |
 | `cubism_native_convert.py` | 645 | `.moc3` → `PuppetDocument` 轉換 |
 | `psd_import.py` | 186 | PSD 多圖層 → `PuppetDocument` |
