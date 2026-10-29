@@ -1,5 +1,5 @@
 """
-AI 去背插件 — workers
+AI \u53bb\u80cc\u63d2\u4ef6 \u2014 workers
 Background-removal workers of the AI Background Remover plugin: the subprocess
 pair that runs ``_rembg_runner.py`` in an external Python (frozen builds) and the
 in-process pair that calls rembg directly (development runs). Also owns the

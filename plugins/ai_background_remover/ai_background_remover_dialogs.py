@@ -1,5 +1,5 @@
 """
-AI 去背插件 — dialogs
+AI \u53bb\u80cc\u63d2\u4ef6 \u2014 dialogs
 Single-image and batch dialogs of the AI Background Remover plugin. Each picks
 the subprocess worker when given a frozen environment and the in-process one
 otherwise.
