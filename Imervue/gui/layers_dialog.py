@@ -6,8 +6,10 @@ mode, and kind-specific parameters. The dialog hands the modified recipe
 back to the caller via ``accepted`` so the caller decides how to commit
 (usually through ``recipe_store.set`` and a deep-zoom reload).
 
-Pure-data helpers (``move_layer_up``, ``move_layer_down``) are split out
-so they can be unit-tested without instantiating Qt.
+Pure-data helpers (``move_layer_up``, ``move_layer_down``,
+``add_default_layer``) live in ``layers_dialog_model`` so they can be
+unit-tested without instantiating Qt, and are re-exported here; the form's
+editor handlers and pickers live in ``layers_dialog_editor``.
 """
 from __future__ import annotations
 
@@ -16,11 +18,9 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QColorDialog,
     QComboBox,
     QDialog,
     QDoubleSpinBox,
-    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -33,12 +33,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from Imervue.gui.file_filters import image_filter
+from Imervue.gui.layers_dialog_editor import LayersEditorMixin
+from Imervue.gui.layers_dialog_model import (
+    _describe_layer,
+    add_default_layer,
+    move_layer_down,
+    move_layer_up,
+)
 from Imervue.image.layers import (
     BLEND_MODES,
-    DEFAULT_OPACITY,
     LAYER_KINDS,
-    MAX_LAYERS,
     Layer,
     layers_from_dict_list,
     layers_to_dict_list,
@@ -50,67 +54,12 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("Imervue.layers_dialog")
 
-
-# ---------------------------------------------------------------------------
-# Pure helpers
-# ---------------------------------------------------------------------------
-
-
-def move_layer_up(layers: list[Layer], idx: int) -> int:
-    """Swap ``layers[idx]`` with ``layers[idx-1]``. Returns the new index."""
-    if idx <= 0 or idx >= len(layers):
-        return idx
-    layers[idx - 1], layers[idx] = layers[idx], layers[idx - 1]
-    return idx - 1
-
-
-def move_layer_down(layers: list[Layer], idx: int) -> int:
-    """Swap ``layers[idx]`` with ``layers[idx+1]``. Returns the new index."""
-    if idx < 0 or idx >= len(layers) - 1:
-        return idx
-    layers[idx + 1], layers[idx] = layers[idx], layers[idx + 1]
-    return idx + 1
-
-
-def add_default_layer(layers: list[Layer], kind: str = "text") -> Layer | None:
-    """Append a default-configured layer of ``kind``. Respects MAX_LAYERS."""
-    if len(layers) >= MAX_LAYERS:
-        return None
-    if kind not in LAYER_KINDS:
-        kind = "text"
-    layer = Layer(
-        kind=kind,
-        enabled=True,
-        opacity=DEFAULT_OPACITY,
-        blend_mode="normal",
-        params=_default_params(kind),
-    )
-    layers.append(layer)
-    return layer
-
-
-def _default_params(kind: str) -> dict:
-    if kind == "text":
-        return {
-            "text": "",
-            "corner": "bottom-right",
-            "color": [255, 255, 255],
-            "font_fraction": 0.035,
-            "shadow": True,
-        }
-    if kind == "image":
-        return {"path": ""}
-    if kind == "lut":
-        return {"path": "", "intensity": 1.0}
-    return {}
-
-
 # ---------------------------------------------------------------------------
 # Dialog
 # ---------------------------------------------------------------------------
 
 
-class LayersDialog(QDialog):
+class LayersDialog(LayersEditorMixin, QDialog):
     """Edit the layer stack stored on a recipe and emit the new layers."""
 
     layers_changed = Signal(list)  # list[dict] — serialised layers
@@ -290,98 +239,6 @@ class LayersDialog(QDialog):
         self._param_field.blockSignals(False)
 
     # ------------------------------------------------------------------
-    # Editor → model
-    # ------------------------------------------------------------------
-
-    def _on_kind_changed(self, _idx: int) -> None:
-        layer = self._current_layer()
-        if layer is None:
-            return
-        new_kind = self._kind_combo.currentData()
-        if new_kind == layer.kind:
-            return
-        layer.kind = new_kind
-        layer.params = _default_params(new_kind)
-        self._sync_param_from_layer(layer)
-        self._refresh_current_row_label()
-
-    def _on_opacity_changed(self, value: float) -> None:
-        layer = self._current_layer()
-        if layer is not None:
-            layer.opacity = float(value)
-            self._refresh_current_row_label()
-
-    def _on_blend_changed(self, _idx: int) -> None:
-        layer = self._current_layer()
-        if layer is None:
-            return
-        layer.blend_mode = self._blend_combo.currentData()
-        self._refresh_current_row_label()
-
-    def _on_param_text_changed(self) -> None:
-        layer = self._current_layer()
-        if layer is None:
-            return
-        text = self._param_field.text()
-        if layer.kind == "text":
-            layer.params["text"] = text
-        elif layer.kind in ("image", "lut"):
-            layer.params["path"] = text
-        self._refresh_current_row_label()
-
-    def _on_param_button_clicked(self) -> None:
-        layer = self._current_layer()
-        if layer is None:
-            return
-        if layer.kind == "text":
-            self._pick_color_for(layer)
-        elif layer.kind == "image":
-            self._pick_image_path_for(layer)
-        elif layer.kind == "lut":
-            self._pick_lut_path_for(layer)
-
-    def _pick_color_for(self, layer: Layer) -> None:
-        current = layer.params.get("color") or [255, 255, 255]
-        from PySide6.QtGui import QColor
-        initial = QColor(int(current[0]), int(current[1]), int(current[2]))
-        chosen = QColorDialog.getColor(initial, self)
-        if chosen.isValid():
-            layer.params["color"] = [chosen.red(), chosen.green(), chosen.blue()]
-
-    def _pick_image_path_for(self, layer: Layer) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            language_wrapper.language_word_dict.get("layers_pick_image", "Choose image"),
-            "",
-            image_filter(("png", "jpg", "jpeg", "webp", "bmp", "tiff")),
-        )
-        if path:
-            layer.params["path"] = path
-            self._param_field.setText(path)
-            self._refresh_current_row_label()
-
-    def _pick_lut_path_for(self, layer: Layer) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            language_wrapper.language_word_dict.get("layers_pick_lut", "Choose LUT"),
-            "",
-            "Cube LUT (*.cube)",
-        )
-        if path:
-            layer.params["path"] = path
-            self._param_field.setText(path)
-            self._refresh_current_row_label()
-
-    def _refresh_current_row_label(self) -> None:
-        idx = self._list.currentRow()
-        layer = self._current_layer()
-        if layer is None or idx < 0:
-            return
-        item = self._list.item(idx)
-        if item is not None:
-            item.setText(_describe_layer(layer))
-
-    # ------------------------------------------------------------------
     # Add / remove / reorder
     # ------------------------------------------------------------------
 
@@ -421,22 +278,6 @@ class LayersDialog(QDialog):
     def _apply(self) -> None:
         self.layers_changed.emit(layers_to_dict_list(self._layers))
         self.accept()
-
-
-def _describe_layer(layer: Layer) -> str:
-    """Human-readable one-line summary for the list row."""
-    suffix = ""
-    if layer.kind == "text":
-        suffix = layer.params.get("text", "") or "(empty)"
-    elif layer.kind in ("image", "lut"):
-        path = layer.params.get("path", "") or "(none)"
-        # Show only the filename to keep the row narrow
-        suffix = path.replace("\\", "/").rsplit("/", 1)[-1] or path
-    enabled_marker = "" if layer.enabled else " [off]"
-    return (
-        f"{layer.kind.title()} • {layer.blend_mode} • "
-        f"{int(layer.opacity * 100)}% — {suffix}{enabled_marker}"
-    )
 
 
 def open_layers_dialog(recipe: Recipe, parent=None):

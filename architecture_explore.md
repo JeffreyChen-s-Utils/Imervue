@@ -749,7 +749,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `auto_color_balance_dialog.py`(200) · `local_contrast_dialog.py`(121) · `clahe_dialog.py`(101) ·
 `defringe_dialog.py`(95) · `graduated_density_dialog.py`(113) · `soft_proof_dialog.py`(128) ·
 `develop_presets_dialog.py`(166) · `virtual_copies_dialog.py`(159) · `before_after_dialog.py`(174) 分割滑桿對照 ·
-`layers_dialog.py`(449) 疊加圖層堆疊管理 · `masks_dialog.py`(223) 局部調整遮罩
+`layers_dialog.py`(290) 疊加圖層堆疊管理（清單、表單同步、增刪排序、Apply 送出序列化堆疊）· `layers_dialog_model.py`(78) 無 Qt 的圖層上下移、依種類預設參數新增、清單列摘要 · `layers_dialog_editor.py`(101) `LayersEditorMixin` 表單編輯寫回圖層與顏色／圖片／LUT 選取器 · `masks_dialog.py`(223) 局部調整遮罩
 
 #### 效果 / 濾鏡對話框
 
