@@ -1108,7 +1108,11 @@ Tab 4 本身只是控制面板，角色住在獨立的 top-level `PetWindow`。�
 | `pet_window_host.py` | 230 | `PetHostMixin`：`_persist` 設定寫入（寫進本寵物 slot 並發 `setting_changed`）、`FeatureHost` 轉接、`add_integration` / `remove_integration` / `integration` 外掛整合登錄表、右鍵選單列、尺寸預設、啟動時還原位置與已存 driver |
 | `pet_window_flags.py` | 201 | `PetWindowFlagsMixin`：`PetWindow` 的視窗旗標組合（置頂／置底、點擊穿透）、鎖定位置、吸附門檻、透明度、全螢幕時隱藏 |
 | `pet_feature_toggles.py` | 188 | `PetFeatureTogglesMixin`：`PetWindow` 的各功能開關（眨眼、對嘴、webcam、熱鍵、虛擬攝影機、LLM、音樂律動、閒置小遊戲、陰影、音效、滑鼠注視），只轉給對應控制器並存設定 |
-| `pet_workspace.py` | 843 | Desktop Pet 控制面板：固定角色選擇、四個可捲動設定分類、共用主題與狀態；維持延遲 overlay 建立、驅動和全域熱鍵同步 |
+| `pet_workspace.py` | 192 | `PetWorkspace`：Desktop Pet 控制面板；只留建構、延遲建立 overlay（建立後補同步已自行重啟的 driver 並發 `pet_created`）、把 `setting_changed` 鏡射回勾選框／尺寸下拉／系統匣、啟動時靜默重載 rig 與勾選已存 driver，其餘行為由下列 mixin 提供，並 re-export `saved_hotkeys`、`hotkey_conflict_notice`、`DEFAULT_EXAMPLE_PUPPET` |
+| `pet_workspace_ui.py` | 292 | `PetWorkspaceUiMixin`：標題、Rig 群組與 Window／Live drivers／Pet script／Global hotkeys 四個可捲動分頁的建構，從已存設定還原每個控制項並接上對應 slot |
+| `pet_workspace_files.py` | 205 | `PetWorkspaceFilesMixin` + `_resolve_bundled_example`：開啟 `.puppet`／內附 Imeru 範例、載入／編輯／重設 `.petscript.json`，更新 rig／腳本標籤與狀態列 |
+| `pet_workspace_toggles.py` | 127 | `PetWorkspaceTogglesMixin` + 分頁共用的 `_tr`／`_set_quietly`：視窗與 driver 勾選框、透明度／吸附／尺寸的 slot，選用依賴（麥克風、webcam）缺件時靜默取消勾選並提示 |
+| `pet_workspace_hotkeys.py` | 135 | `PetWorkspaceHotkeysMixin` + `saved_hotkeys`／`hotkey_conflict_notice`：Global hotkeys 群組建構、啟用 OS 層監聽、拒絕已被其他動作佔用的按鍵並即時重啟監聽 |
 | `pet_interaction.py` | 214 | 指標互動控制器：拖曳移動、點擊路由、命中偵測 |
 | `pet_placement.py` | 153 | 邊緣吸附、多螢幕位置還原、預設角落停靠 |
 | `edge_snap.py` | 165 | 純 Python 邊緣吸附數學 |
