@@ -10,16 +10,22 @@ elsewhere in the project becomes instantly discoverable without registration.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
+import time
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QPalette
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLineEdit, QListWidget, QListWidgetItem,
+    QDialog, QVBoxLayout, QLineEdit, QListWidget, QListWidgetItem, QLabel,
 )
 
 from Imervue.gui.menu_tree import iter_menu_actions, submenu_index
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.user_settings import user_setting_dict as settings
+
+_HISTORY_KEY = "command_palette_history"
+_MAX_HISTORY = 64
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -30,6 +36,46 @@ class _Entry:
     action: QAction
     display: str   # "File > Open File"
     search: str    # lowercased display for matching
+    identity: str
+
+
+def _command_identity(action: QAction, path: tuple[str, ...], keys: dict[str, str]) -> str:
+    """Prefer explicit command IDs; translated labels use their language keys."""
+    if action.objectName():
+        return action.objectName()
+    parts = (*path, action.text().replace("&", "").strip())
+    return "/".join(keys.get(part, part) for part in parts)
+
+
+def _history() -> dict[str, tuple[int, float]]:
+    value = settings.user_setting_dict.get(_HISTORY_KEY, {})
+    if not isinstance(value, dict):
+        return {}
+    valid = {key: (row[0], row[1]) for key, row in value.items()
+             if isinstance(key, str) and isinstance(row, (list, tuple)) and len(row) == 2
+             and type(row[0]) is int and row[0] > 0 and type(row[1]) in (int, float)
+             and math.isfinite(row[1]) and row[1] >= 0}
+    return dict(sorted(valid.items(), key=lambda item: item[1][1], reverse=True)[:_MAX_HISTORY])
+
+
+def _record_command(identity: str) -> None:
+    history = _history()
+    count, _ = history.get(identity, (0, 0))
+    history[identity] = (count + 1, time.time())
+    settings.user_setting_dict[_HISTORY_KEY] = dict(
+        sorted(history.items(), key=lambda item: item[1][1], reverse=True)[:_MAX_HISTORY])
+    settings.schedule_save()
+
+
+def _usage_score(usage: tuple[int, float], now: float) -> float:
+    count, last_used = usage
+    age_days = max(0, now - last_used) / 86400
+    return min(count, 20) / (1 + age_days)
+
+
+def _unavailable_reason(action: QAction) -> str:
+    return str(action.property("disabledReason") or language_wrapper.language_word_dict.get(
+        "command_palette_unavailable", "Unavailable in the current context"))
 
 
 def _collect_all_entries(ui: ImervueMainWindow) -> list[_Entry]:
@@ -41,12 +87,20 @@ def _collect_all_entries(ui: ImervueMainWindow) -> list[_Entry]:
     invalidated menu wrappers cached elsewhere in the window.
     """
     entries: list[_Entry] = []
+    occurrences: dict[str, int] = {}
+    keys = {str(value).replace("&", "").strip(): key for key, value in
+            sorted(language_wrapper.language_word_dict.items(), reverse=True)}
     for path, action in iter_menu_actions(ui.menuBar(), submenu_index(ui)):
         text = action.text().replace("&", "").strip()
         if not path or not text:
             continue
         label = " > ".join(part for part in (*path, text) if part)
-        entries.append(_Entry(action=action, display=label, search=label.lower()))
+        identity = _command_identity(action, path, keys)
+        if not action.objectName():
+            occurrences[identity] = occurrences.get(identity, 0) + 1
+            identity = f"{identity}#{occurrences[identity]}"
+        entries.append(_Entry(action=action, display=label, search=label.lower(),
+                              identity=identity))
     return entries
 
 
@@ -106,6 +160,12 @@ class CommandPaletteDialog(QDialog):
         self._list = QListWidget()
         self._list.itemActivated.connect(self._trigger_item)
         layout.addWidget(self._list, 1)
+        self._feedback = QLabel()
+        self._feedback.setObjectName("commandPaletteFeedback")
+        self._feedback.setTextFormat(Qt.TextFormat.PlainText)
+        self._feedback.setWordWrap(True)
+        layout.addWidget(self._feedback)
+        self._list.currentItemChanged.connect(self._describe_item)
 
         self._refresh("")
 
@@ -141,19 +201,37 @@ class CommandPaletteDialog(QDialog):
             if s < 0:
                 continue
             scored.append((s, entry))
-        scored.sort(key=lambda x: (-x[0], x[1].display))
+        history = _history()
+        now = time.time()
+        scored.sort(key=lambda x: (-x[0], -_usage_score(history.get(x[1].identity, (0, 0)), now),
+                                  -history.get(x[1].identity, (0, 0))[1], x[1].display))
         for _, entry in scored[:self._MAX_VISIBLE]:
             item = QListWidgetItem(entry.display)
             item.setData(Qt.ItemDataRole.UserRole, entry.action)
+            item.setData(Qt.ItemDataRole.UserRole + 1, entry.identity)
+            if not entry.action.isEnabled():
+                reason = _unavailable_reason(entry.action)
+                item.setText(f"{entry.display}\n{reason}")
+                item.setToolTip(reason)
+                item.setForeground(self.palette().brush(
+                    QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text))
             self._list.addItem(item)
         if self._list.count() > 0:
             self._list.setCurrentRow(0)
 
+    def _describe_item(self, item, _previous=None) -> None:
+        action = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        self._feedback.setText(_unavailable_reason(action)
+                               if isinstance(action, QAction) and not action.isEnabled() else "")
+
     def _trigger_item(self, item: QListWidgetItem) -> None:
         action = item.data(Qt.ItemDataRole.UserRole)
-        self.accept()
         if isinstance(action, QAction) and action.isEnabled():
+            _record_command(item.data(Qt.ItemDataRole.UserRole + 1))
+            self.accept()
             action.trigger()
+        elif isinstance(action, QAction):
+            self._feedback.setText(_unavailable_reason(action))
 
 
 def open_command_palette(ui: ImervueMainWindow) -> None:

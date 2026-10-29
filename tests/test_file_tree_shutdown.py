@@ -29,7 +29,9 @@ class _FakeWorker:
 
 def _fake_view(workers=(), pending=()) -> SimpleNamespace:
     """Namespace exposing exactly the attributes ``shutdown`` touches."""
-    view = SimpleNamespace(_trash_workers=set(workers), _pending_trash=list(pending))
+    view = SimpleNamespace(_trash_workers=set(workers), _pending_trash=list(pending),
+                           _tree_state=SimpleNamespace(save=lambda: None),
+                           _recursive_search=None)
     view._flush_pending_trash = lambda: _FileTreeView._flush_pending_trash(view)
     return view
 

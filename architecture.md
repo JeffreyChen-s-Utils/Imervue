@@ -5,7 +5,7 @@
 > persisted files in §11, known traps in §12) is [`architecture_explore.md`](architecture_explore.md),
 > written in Traditional Chinese. This file does not repeat its tables.
 >
-> Last verified: 2026-10-29 on `fix/main-quality`; corresponding commit: `git log -1 -- architecture.md`.
+> Last verified: 2026-10-29 on `merge/dev-into-main`; corresponding commit: `git log -1 -- architecture.md`.
 
 ## 1. Purpose
 
@@ -18,6 +18,14 @@ Context Protocol (MCP) stdio server. Heavy or crash-prone optional dependencies 
 rembg, OpenCV, downloaded model weights) are kept out of the main program and shipped as plugins;
 the exceptions, AI upscale and CLIP semantic search / auto-tag, offer to install onnxruntime on
 first use and download their models at pinned revisions.
+
+The file tree keeps filesystem comparison and metadata in `FileTreeSortProxy`, sort preferences in `file_tree_preferences`, and UI controls in `FileTreeSortMixin`. All main-window root changes use `tree.set_root_path` so per-folder sorting, cancellable recursive search and saved expansion/selection/scroll restore together. `FileTreeState` waits for directory loading; `FileTreeSearch` scans without touching Qt models from its worker and rejects stale result batches.
+
+Search result activation uses the main window's existing navigation path while tree location remains a separate operation. Sorting controls expose global/folder scope; image-filter feedback derives match counts and retained-current notices from the same filtered lists used by the viewer. Command-palette history stores bounded usage by command identity, and disabled actions explain their availability without closing the palette.
+
+Modify save controls derive overwrite capability from the source format and keep explicit copy destinations separate. `paint_handoff` selects original pixels or the canonical full-resolution develop result, optionally baking annotations into a new Paint document. The existing original-image handoff remains available to programmatic callers.
+
+`JobIndicator` opens the shared `JobRegistry` from the status bar. Puppet captures and recordings retain results in that registry, including failure details and actual output paths. `WebcamStatus` carries immutable lifecycle snapshots from the capture thread; the GUI pump updates controls, and stop retains a live worker until capture cleanup completes without blocking the UI.
 
 ## 2. Layers and directories
 
@@ -35,7 +43,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 
 | Path | Responsibility |
 | --- | --- |
-| `Imervue/__main__.py` | Process entry: frozen-build fixes, UTF-8 I/O, settings/theme/UI-scale before any widget, main window |
+| `Imervue/__main__.py` | Process entry: frozen-build fixes (default OpenGL nt backend only on Windows), UTF-8 I/O, settings/theme/UI-scale before any widget, main window |
 | `Imervue/Imervue_main_window.py` | `ImervueMainWindow`: owns the tab widget and coordinates the five workspaces; its filter row, missing-file handling, folder watching, folder tabs, screen handling, view modes, status bar, browse modes, dock panels, workspace-tab switching and folder/file navigation with drag-and-drop come from the `Imervue/gui/main_window_*.py` mixins. The Imervue and Modify tabs are each a nested `QMainWindow` whose side panels are docks (`main_window_docks.py`) |
 | `Imervue/menu/` | Menu construction only; `extra_tools_menu.py` builds the Extra Tools tree, `extra_tools_open_*.py` hold the `_open_<feature>()` entry points |
 | `Imervue/gui/` | Qt dialogs and main-window widgets (develop panel, file tree, list/dual views, EXIF sidebar); most dialogs are shells over `Imervue/image/` |
@@ -61,7 +69,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `Imervue.spec`, `Imervue_mac.spec`, `packaging/`, `exe/` | PyInstaller specs, AppImage / auto-py-to-exe config, frozen launch shim (`nuitka.md`, `pyinstaller.md` document builds) |
 | `.github/workflows/` | `test.yml` (ruff + bandit lint job, Sphinx docs build with `-W`, pytest by layer, then the `publish-dev` job on a push to `dev`), `release.yml` (stable release on a pull request merged into `main`) |
 | `.github/requirements/` | `publish.in` and the hash-locked `publish.txt` generated from it: the only thing the two jobs that hold the PyPI token install (the regenerating command is at the top of `publish.in`) |
-| `scripts/` | Stdlib-only helpers CI runs, never shipped in the wheel: `dev_release.py` numbers the `Imervue_dev` release and decides whether a build differs from the published one |
+| `scripts/` | Checkout-only helpers, never shipped in the wheel; `frozen_startup_probe.py` exercises frozen entry/native OpenGL import without Qt or a GL context. `dev_release.py` numbers the `Imervue_dev` release and decides whether a build differs from the published one |
 
 Modern Dark/Light share palette-based surfaces, focus states and workspace navigation.
 Paint embeds as `Qt.Widget` when parented, with a scrollable two-column `ToolPalette`
@@ -108,15 +116,23 @@ Public interfaces other code or users depend on:
   `Imervue/puppet/format_schema.py` into `docs/schemas/`, conformance check `puppet-validate`
   (MCP `puppet_validate`), stdlib reference reader `docs/examples/read_puppet.py`.
 
+Paint animation/comic exports and MCP image writes use atomic replacement, preserving existing output on failure; Separate page-image exports commit individually; each CBZ or PDF commits as one file. Puppet batch exports reserve unique destinations before starting, and recording reports success only after writer close succeeds. File transfers publish without clobbering another writer, using exclusive creation when hardlinks are unsupported; moves delete the source only after the complete copy succeeds. Failed directory copies may retain partial destinations. Sidecars follow the same transfer rules.
+
 Per-image CLI writers and GUI export/conversion share image.output_policy reservations and atomic commit. CLI cohort destinations are assigned before threads; explicit metadata uses the same EXIF/sRGB extras. Completed inline exports join JobRegistry; Batch Convert registers retryable workers (retry keeps originals). Composite PDF/MP4 and gallery members commit individually; a gallery directory is not an all-or-nothing transaction.
 
 Manage Plugins includes window-scoped import/load outcomes and process-shared observed resource states. Pure plugin.status is safe from workers; normal load does not probe every optional dependency/model. Installations reserve destinations, preserve models/assets and roll back directory swaps. Dependency dialogs use WorkerHost retirement; application-owned dependency check helpers survive parent destruction. Explicit reload invalidates only plugin modules/bytecode, while provider-specific leases retain other window generations.
+
+Profile snapshots, CRUD, switches and persistence share one RLock transaction; failed writes do not advance in-memory profile state. Library maintenance prunes only confirmed missing paths inside readable roots. Paint/session/VTS validate input shapes at their entry boundaries, MCP frames check output pixels before allocation, and gallery/WebDAV encode filename URL segments.
+
+The main window explicitly calls idempotent Puppet/Desktop Pet shutdown after close confirmation, releasing live services, recording, timers and overlays before parent destruction. Auto-tag uses WorkerHost retirement and checks cancellation between images. Pip holds and reaps the real subprocess; cancellation and a deadline also cover silent stdout reads.
+
+The frozen-startup workflow builds Linux/macOS import probes from the unchanged entry source and checks its hash, native OpenGL backend and GL entry point without loading Qt. Native Windows, Linux and macOS probes passed on 2026-10-28; Linux/macOS artifacts were verified in CI run 40690538119. This does not verify the full GUI or rendering.
 
 ThumbnailDiskCache construction starts a background inventory rather than enumerating all files on startup. Reads/writes remain usable; mutation tombstones and generations prevent stale accounting after rewrite/purge/clear. PNG writes use unique atomic siblings. Diagnostics can wait_ready/close explicitly; production startup does not join. Benchmark separates constructor latency from sequentially joined inventory/RSS.
 
 The library keeps one serialized writer and one query-only WAL reader. Foreground calls read committed data without taking the scanner write lock; compound tag queries share a snapshot, while single SQL statements avoid extra transactions. An additive capture-time/mtime sort index removes full temporary sorts for limited searches; write-batch reads use the owning writer. Close/path switch acquire writer then reader locks. Fingerprint traversal uses bounded keyset pages rather than yielding a live SQL cursor. Public conn() remains the writer; callers using it directly own transaction/locking discipline.
 
-GPU Develop stays an optional batch provider with CPU as the default of new export dialogs. Threshold/posterize recipes use the full CPU reference to prevent amplified upstream GPU rounding. Modify previews remain CPU; embedded ICC/EXIF are normalized by core decoding, then full preview/CPU export share the canonical uint8 sRGB recipe. wgpu and device ownership stay in the flat plugin, no model weights or mandatory dependency added.
+GPU Develop stays an optional batch provider with CPU as the default of new export dialogs. Threshold/posterize recipes use the full CPU reference to prevent amplified upstream GPU rounding. Modify previews remain CPU; embedded ICC/EXIF are normalized by core decoding, then full preview/CPU export share the canonical uint8 sRGB recipe. wgpu and device ownership stay in the flat plugin, no model weights or mandatory dependency added. Expected dependency and driver failures during probing are logged and return no device, so status menus and backend discovery keep CPU available.
 
 Modify uses a two-column SVG tool palette, Develop/Annotate property tabs and collapsible
 advanced adjustments. Shared `gui/tool_icons.py` and `gui/workspace_widgets.py` provide scalable
@@ -318,7 +334,9 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
   round. `WorkerHostMixin` defers dialog completion until actual worker exit; its
   cancellation hooks now run off the UI thread and must operate only thread-safe
   flags/subprocesses. Existing bundled consumers satisfy that contract without
-  changed import paths or constructor arguments. `finalize_worker` retains the
+  changed import paths or constructor arguments. The video worker retains its encoder
+  process for cancellation, including cancellation during startup. Video and background-removal
+  subprocess workers reap their child in `finally` on both success and failure. `finalize_worker` retains the
   same callable surface and uses passive background retirement for successful
   custom done packets; non-Qt adapters retain their synchronous contract.
 - **Desktop pet plugin surface.** `pet_integrations` (Desktop Pet Integrations) subclasses
@@ -327,7 +345,10 @@ and os._exit, which bypasses aboutToQuit; secondary windows keep other jobs runn
   pet window's `play_group`, `speak`, `speak_notification`, `speech_on`, `setting`, `persist`,
   `add_integration`, `remove_integration` and `integration`. It keeps its options in the pet's settings
   under `obs_*`, `twitch_*`, `webhook_*` and `win_notifications_*`. Keep these names, or change the
-  plugin in the same round. On an install older than `on_pet_created` the plugin loads but the pet
+  plugin in the same round. The shared origin policy rejects opaque `null` origins even with
+  a valid token; absent origins from native clients and localhost web origins remain allowed,
+  subject to each server's authentication. Browser tools opened from disk may send `null`
+  and should instead be served on localhost. On an install older than `on_pet_created` the plugin loads but the pet
   never gets the integrations.
 - **GPU Develop plugin surface.** `gpu_develop` (in Imervue_Plugins) registers a
   `BackendProvider` with `Imervue.image.develop_backends.register` / `unregister`, renders with

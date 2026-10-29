@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-21 | 2026-10-29 | Merge dev into main onto the complexity splits | #done #merge #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-20 | 2026-10-29 | Split the safety review and background remover plugins; close the 80+ complexity scope | #done #quality #refactor #tests #Imervue_Plugins | [2026-10-b](2026-10-b.md) |
 | U-20261029-19 | 2026-10-29 | Split layers dialog, background jobs, layers dock and CLIP search | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-18 | 2026-10-29 | Split twelve paint, image and main-window modules | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
@@ -79,6 +80,20 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | U-20261029-02 | 2026-10-29 | Reduce complexity across six production responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-01 | 2026-10-29 | Verify complete runtime complexity inventory | #snapshot #quality #tests | [2026-10-b](2026-10-b.md) |
 | U-20261028-12 | 2026-10-28 | Share puppet archive curve and named-entry processing | #done #refactor #quality #tests | [2026-10-b](2026-10-b.md) |
+| U-20261028-11 | 2026-10-28 | Close UX workflow delivery after final verification | #done #ux #review #tests #Imervue_Plugins | [2026-10-b](2026-10-b.md) |
+| U-20261028-10 | 2026-10-28 | Verify native UX workflows and publish Spanish controls | #snapshot #ux #tests #Imervue_Plugins | [2026-10-b](2026-10-b.md) |
+| U-20261028-09 | 2026-10-28 | Clarify browsing, saves and background task results | #done #ux #ui #i18n #tests | [2026-10-b](2026-10-b.md) |
+| U-20261028-08 | 2026-10-28 | Resolve seven PR quality findings | #done #refactor #review | [2026-10-b](2026-10-b.md) |
+| U-20261028-07 | 2026-10-28 | Verify native startup and close full-review findings | #done #review #tests | [2026-10-b](2026-10-b.md) |
+| U-20261028-06 | 2026-10-28 | Publish WebDAV fix and repair validation configuration | #done #Imervue_Plugins #ci | [2026-10-b](2026-10-b.md) |
+| U-20261028-05 | 2026-10-28 | Repair full-program review findings | #done #bugfix #tests | [2026-10-b](2026-10-b.md) |
+| U-20261028-04 | 2026-10-28 | Audit first-party program and plugin boundaries | #done #review #security | [2026-10](2026-10.md) |
+| U-20261028-03 | 2026-10-28 | Publish reviewed plugin fixes | #done #Imervue_Plugins #bugfix | [2026-10](2026-10.md) |
+| U-20261028-02 | 2026-10-28 | Resolve five code-review findings | #done #bugfix #security #tests | [2026-10](2026-10.md) |
+| U-20261028-01 | 2026-10-28 | Expand file-tree sorting, search and saved view state | #done #file-tree #ui #tests | [2026-10](2026-10.md) |
+| U-20261022-01 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
+| U-20261022-02 | 2026-10-22 | Preserve complete dependency locks | #bugfix #deps #ci | [2026-10](2026-10.md) |
+| U-20261022-03 | 2026-10-22 | Keep release dependencies aligned | #bugfix #deps #ci | [2026-10](2026-10.md) |
 | U-20261018-13 | 2026-10-18 | Keep Imeru crown hair flow above the scalp surface | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-12 | 2026-10-18 | Fill the central forehead gap in the bundled Imeru fringe | #done #bugfix #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261018-11 | 2026-10-18 | Prevent Qt tooltip and tab-filter reentry during foreground folder refresh | #done #bugfix #qt #tooltips #paint #tests | [2026-10-b](2026-10-b.md) |
@@ -598,5 +613,5 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-10.md](2026-10.md) | 2026-10 | 101 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 17 |
+| [2026-10.md](2026-10.md) | 2026-10 | 108 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 37 |

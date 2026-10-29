@@ -241,6 +241,7 @@ class _NavWindow:
         self.tree = SimpleNamespace(
             setRootIndex=lambda idx: log.append(("tree_root", idx.path)),
             update=lambda idx: log.append(("tree_update", idx.path)),
+            set_root_path=lambda p: log.append(("set_root", p)),
         )
         self.viewer = SimpleNamespace(
             clear_tile_grid=lambda: log.append("clear"),
@@ -294,7 +295,7 @@ def test_navigate_to_folder_runs_the_full_sequence(nav, tmp_path):
     window.navigate_to_path(str(tmp_path))
     p = str(tmp_path)
     assert window.log == [
-        "save_session", ("root", p), ("tree_root", p), "clear", ("open", p),
+        "save_session", ("set_root", p), "clear", ("open", p),
         ("prime", ["m.png"], 512), "tags", ("restore", p), ("label", f"Folder: {p}"),
         ("crumb", p), ("watch", p), "recent",
     ]
@@ -342,7 +343,7 @@ def test_open_startup_folder_restores_deep_zoom_session(nav, breadcrumb):
     window._folder_view_sessions = {"F": {"deep": 1}}
     window._open_startup_folder("F")
     expected = [
-        ("root", "F"), ("tree_root", "F"), ("open", "F"), ("prime", ["m.png"], 512),
+        ("set_root", "F"), ("open", "F"), ("prime", ["m.png"], 512),
         "tags", ("restore", "F"), ("deep_zoom", {"deep": 1}), ("label", "Folder: F"),
     ]
     if breadcrumb:

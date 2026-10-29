@@ -65,6 +65,48 @@ def test_probe_is_none_without_a_discrete_gpu(monkeypatch):
     assert renderer_mod.probe() is None
 
 
+@pytest.mark.parametrize("failure", ["runtime", "os", "gpu", "pipeline"])
+@pytest.mark.parametrize("stage", ["enumerate", "describe"])
+def test_probe_contains_driver_failures_and_logs(monkeypatch, caplog, failure, stage):
+    wgpu = pytest.importorskip("wgpu")
+    errors = {
+        "runtime": RuntimeError("driver unavailable"),
+        "os": OSError("driver unavailable"),
+        "gpu": wgpu.GPUInternalError("driver unavailable"),
+        "pipeline": wgpu.GPUPipelineError("driver unavailable", {"reason": "internal"}),
+    }
+
+    def unavailable(*_args):
+        raise errors[failure]
+
+    monkeypatch.setattr(renderer_mod, "_discrete_adapter", unavailable if stage == "enumerate"
+                        else lambda: _fake_adapter())
+    if stage == "describe":
+        monkeypatch.setattr(renderer_mod, "describe", unavailable)
+    assert renderer_mod.probe() is None
+    assert "driver unavailable" in caplog.text
+
+
+def test_probe_does_not_hide_programming_errors(monkeypatch):
+    def invalid_adapter():
+        raise ValueError("invalid adapter data")
+
+    monkeypatch.setattr(renderer_mod, "_gpu_errors", lambda: ())
+    monkeypatch.setattr(renderer_mod, "_discrete_adapter", invalid_adapter)
+    with pytest.raises(ValueError, match="invalid adapter data"):
+        renderer_mod.probe()
+
+
+@pytest.mark.parametrize("failure", [RuntimeError, OSError])
+def test_probe_contains_dependency_initialization_failures(monkeypatch, caplog, failure):
+    def unavailable():
+        raise failure("GPU dependency could not initialize")
+
+    monkeypatch.setattr(renderer_mod, "_gpu_errors", unavailable)
+    assert renderer_mod.probe() is None
+    assert "GPU dependency could not initialize" in caplog.text
+
+
 def test_a_changed_pipeline_is_never_rendered_on_the_gpu(monkeypatch, caplog):
     monkeypatch.setattr(renderer_mod, "stages_supported", lambda: False)
     monkeypatch.setattr(renderer_mod, "_discrete_adapter", lambda: pytest.fail("probed the GPU"))

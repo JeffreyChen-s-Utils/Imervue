@@ -174,5 +174,5 @@ class TestCrossFolder:
         nav.switch_to_next_folder(main_gui=gui)
 
         # Main window's model/tree/filename_label/watch_folder should have been touched
-        gui.main_window.model.setRootPath.assert_called()
+        gui.main_window.tree.set_root_path.assert_called()
         gui.main_window.watch_folder.assert_called()

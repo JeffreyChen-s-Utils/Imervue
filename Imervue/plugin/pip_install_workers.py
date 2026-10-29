@@ -17,6 +17,7 @@ import logging
 import subprocess
 import sys
 import tempfile
+from threading import Event, Timer
 from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
@@ -232,18 +233,34 @@ class _InstallWorker(QThread):
             stderr=subprocess.STDOUT,
             **kw,
         )
+        self._proc = proc
+        expired = Event()
+
+        def expire() -> None:
+            expired.set()
+            terminate_process(proc)
+
+        deadline = Timer(timeout, expire)
+        deadline.daemon = True
+        deadline.start()
         try:
+            if self.isInterruptionRequested():
+                return -1
             for line in proc.stdout:
                 text = line.rstrip("\n\r")
                 if text:
                     self.log.emit(text)
-            proc.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            proc.kill()
             proc.wait()
-            self.log.emit(_PROCESS_TIMEOUT_MSG)
-            return -1
-        return proc.returncode
+            if expired.is_set():
+                self.log.emit(_PROCESS_TIMEOUT_MSG)
+                return -1
+            return -1 if self.isInterruptionRequested() else proc.returncode
+        finally:
+            deadline.cancel()
+            terminate_process(proc)
+            deadline.join()
+            proc.stdout.close()
+            self._proc = None
 
     def stop(self) -> None:
         """Reap the pip child off the UI thread when its host is closing."""

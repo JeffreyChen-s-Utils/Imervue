@@ -48,8 +48,31 @@ class MainWindowFilterMixin:
         bar = getattr(self, "_filter_bar", None)
         if bar is not None:
             bar.update_feedback(active=any(self._filter_state().values()))
+            bar.update_conditions(self._filter_state(), self._clear_filter_condition)
+
+    def _clear_filter_condition(self, key: str) -> None:
+        state = self._filter_state()
+        state[key] = ""
+        self._restore_filter_state(state)
+        self._on_image_filter_changed()
+        self.image_filter.setFocus()
+
+    def _update_filter_results(self, base: list[str], matches: list[str], *,
+                               current: str = "") -> None:
+        bar = getattr(self, "_filter_bar", None)
+        if bar is None:
+            return
+        from pathlib import Path
+        folder = str(Path(base[0]).parent) if base else self.tree._tree_state.root
+        retained = bool(current and current in base and current not in matches)
+        self._retained_filter_path = current if retained else ""
+        bar.update_results(folder, len(matches), len(base), retained=retained)
 
     def _on_viewer_filename_changed(self, name) -> None:
+        if hasattr(self, "_filter_bar"):
+            retained = getattr(self, "_retained_filter_path", "")
+            self._filter_bar.retained.setVisible(
+                bool(retained and retained == self.viewer._current_path()))
         base_template = language_wrapper.language_word_dict.get(
             "main_window_current_filename_format",
         ).format(name=name)
@@ -100,6 +123,7 @@ class MainWindowFilterMixin:
         else:
             filtered = self._filter_image_paths(base, text)
         current = viewer._current_path()
+        self._update_filter_results(base, filtered)
         if viewer.tile_grid_mode:
             from Imervue.gpu_image_view.tile_loader import sync_tile_grid_incremental
             sync_tile_grid_incremental(viewer, filtered)
@@ -133,6 +157,7 @@ class MainWindowFilterMixin:
         filtered = filter_paths(base, self._current_filter_spec(),
                                 self._image_metadata_index)
         current = viewer._current_path()
+        self._update_filter_results(base, filtered, current=current)
         filtered = refilter_keeping_current(base, filtered, current)
         viewer.model.set_images(filtered)
         if current in filtered:

@@ -47,7 +47,7 @@ def test_canvas_drivers_shutdown_disables_each_optional_driver():
     disabled: list = []
 
     def _driver(name):
-        return SimpleNamespace(set_enabled=lambda v, n=name: disabled.append((n, v)))
+        return SimpleNamespace(shutdown=lambda n=name: disabled.append((n, False)))
 
     fake = SimpleNamespace(
         webcam_tracker=_driver("webcam"),

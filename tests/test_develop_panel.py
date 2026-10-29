@@ -425,26 +425,23 @@ class TestDecodedSourceCache:
     the same image skip the disk read + decode."""
 
     @staticmethod
-    def _spy_image_open(monkeypatch):
-        """Wrap ``Image.open`` in the develop_panel module with a call counter.
-
-        Returns a list whose length equals the number of decode calls.
-        """
-        import Imervue.gui.develop_panel as mod
+    def _spy_decode(monkeypatch):
+        """Count full decodes separately from the save policy's frame-header probe."""
+        import Imervue.gui.develop_canvas_lifecycle as mod
 
         calls: list[str] = []
-        real_open = mod.Image.open
+        real_open = mod.decode_image_file
 
         def _counting_open(path, *args, **kwargs):
             calls.append(str(path))
             return real_open(path, *args, **kwargs)
 
-        monkeypatch.setattr(mod.Image, "open", _counting_open)
+        monkeypatch.setattr(mod, "decode_image_file", _counting_open)
         return calls
 
     def test_repeated_preview_decodes_once(self, panel, real_image, monkeypatch):
         p, _ = panel
-        calls = self._spy_image_open(monkeypatch)
+        calls = self._spy_decode(monkeypatch)
         p.bind_to_path(str(real_image))
         decodes_after_bind = len(calls)
         # bind decodes once to build the canvas.
@@ -471,7 +468,7 @@ class TestDecodedSourceCache:
         clear_identity_cache()
 
         p, _ = panel
-        calls = self._spy_image_open(monkeypatch)
+        calls = self._spy_decode(monkeypatch)
         p.bind_to_path(str(real_image))
         assert len(calls) == 1
         assert calls[-1] == str(real_image)
@@ -491,7 +488,7 @@ class TestDecodedSourceCache:
         assert p._decoded_source_key is None
 
         # Re-binding must decode again (cache was cleared).
-        calls = self._spy_image_open(monkeypatch)
+        calls = self._spy_decode(monkeypatch)
         p.bind_to_path(str(real_image))
         assert len(calls) == 1
 
@@ -903,7 +900,7 @@ class TestCanvasContextMenu:
         p.bind_to_path(str(real_image))
         menu = p._build_canvas_menu()
         texts = [a.text() for a in menu.actions() if a.text()]
-        assert len(texts) == 4          # save, previous, next, delete
+        assert len(texts) == 5          # overwrite, copy, previous, next, delete
         menu.setParent(None)
         menu.deleteLater()
 

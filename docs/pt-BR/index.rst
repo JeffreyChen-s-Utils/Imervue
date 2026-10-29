@@ -1,6 +1,14 @@
 Guia do Usuário do Imervue
 ==========================
 
+Os resultados da busca na árvore de arquivos abrem com Enter ou clique duplo; localizar continua sendo uma ação separada. Nomes e caminhos relativos são apresentados separadamente, e os resultados podem ser recolhidos sem apagar a consulta. Os controles superiores indicam se a ordenação é global ou desta pasta, com direções claras para datas e tamanhos e uma opção visível de redefinição. A busca mostra a pasta e o alcance das subpastas; os filtros de imagem independentes mostram condições removíveis, contagens de correspondências e avisam quando uma imagem aberta explicitamente é mantida mesmo sem corresponder.
+
+Modify diferencia sobrescrever o original de salvar uma cópia e mostra o destino. O recorte também indica quando grava no original. Formatos de origem somente para leitura usam uma cópia; falhas de gravação preservam as edições e salvamentos bem-sucedidos mostram o caminho real. O envio para Paint permite escolher o original ou o resultado revelado atual em qualidade completa, com uma opção explícita para anotações, em um novo documento. Os documentos Paint existentes e seus históricos de desfazer são preservados.
+
+A barra de status abre Background Jobs e mostra tarefas em execução e com falha. Capturas e gravações do Puppet mantêm ali caminhos de saída ou detalhes da falha; depois é possível abrir o resultado ou sua pasta. Gravações não oferecem uma repetição inadequada. A webcam mostra os estados reais de inicialização, execução, parada e erro, com seleção de dispositivo, nova tentativa e diagnóstico; a instalação é oferecida quando faltam dependências. A paleta explica comandos indisponíveis e prioriza os usados recentemente ou com frequência.
+
+Falhas na exportação de imagens pelo Paint ou MCP preservam o arquivo de destino anterior. As exportações em lote do Puppet distinguem nomes de movimento conflitantes e informam falhas de gravação. A manutenção remove apenas entradas comprovadamente ausentes em raízes de biblioteca legíveis. Salvamentos em segundo plano não sobrescrevem alterações simultâneas de perfis. Cancelar uma instalação ou o Auto-Tag encerra o trabalho em segundo plano; fechar uma janela também interrompe seus serviços Puppet e Pet. Galerias web e WebDAV codificam corretamente os nomes de arquivos. Documentos, sessões e solicitações VTS inválidos retornam erros. Molduras MCP seguem o mesmo limite de saída de 100 milhões de pixels das demais ferramentas de imagem limitadas. Versões empacotadas mantêm a plataforma OpenGL nativa do sistema.
+
 Uma estação de trabalho de imagens acelerada por GPU que oferece **cinco abas principais**.
 A maior parte deste guia está organizada em torno dessas cinco seções.
 
@@ -356,6 +364,8 @@ Categorize suas imagens com tags e álbuns.
 
 Classificação e Filtragem
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Os controles acima da árvore ordenam por nome, modificação, criação, tamanho ou tipo de arquivo; a seta muda a direção. As opções permitem colocar pastas primeiro, salvar uma ordem própria para a pasta atual ou restaurar os padrões globais. Ao apontar para um item, aparecem as datas e o tamanho. Ative Incluir subpastas para pesquisar em segundo plano nas pastas ainda não abertas, cancelar a busca e localizar um resultado na árvore original. Itens ocultos e pendentes de exclusão são ignorados; links simbólicos e junções não são seguidos. Pastas expandidas, seleção e posição de rolagem são restauradas após atualizar ou reabrir a pasta.
 
 .. list-table::
    :header-rows: 1
@@ -1762,13 +1772,15 @@ também é o exemplo completo de um plugin que estende o pet — veja *Escrevend
        ``{"group": "Wave", "speech": "Hi!"}`` — qualquer um dos campos pode ser omitido — vindo de
        scripts, do Stream Deck ou de ferramentas de automação. Com um token definido, as
        requisições precisam enviar ``Authorization: Bearer <token>``; requisições vindas de uma
-       página web são recusadas
+       página web remota são recusadas
      - Nada extra
    * - Reagir a notificações do Windows
      - Toca o grupo ``Notify`` e fala o título da notificação quando outro app exibe uma
        notificação do Windows; apps listados nos ids de app ignorados são pulados. O Windows pede
        acesso às notificações na primeira vez
      - Windows; os pacotes de notificação ``winrt`` (instalados no primeiro uso)
+
+O webhook local e a API do VTube Studio rejeitam ``Origin: null``, mesmo com um token válido, pois páginas web em sandbox podem enviar esse valor. Clientes nativos sem o cabeçalho ``Origin`` e páginas servidas em localhost continuam compatíveis, conforme a autenticação configurada. O navegador também pode enviar ``null`` para páginas abertas do disco; sirva essas páginas em localhost.
 
 Um rig reage apenas aos grupos de motions que possui; um grupo ausente não toca nada.
 

@@ -64,6 +64,55 @@ class ImageFilterBar(QWidget):
         self._layout.addWidget(self.feedback, 4, 0, 1, 4)
         for column in range(3):
             self._layout.setColumnStretch(column, 1)
+        self.summary = QLabel()
+        self.summary.setObjectName("filterSummary")
+        self.summary.setTextFormat(Qt.TextFormat.PlainText)
+        self.summary.setWordWrap(True)
+        self._layout.addWidget(self.summary, 5, 0, 1, 4)
+        self.retained = QLabel(lang.get("image_filter_retained",
+                                       "The opened image is outside these filters."))
+        self.retained.setObjectName("filterRetainedImage")
+        self.retained.setWordWrap(True)
+        self.retained.hide()
+        self._layout.addWidget(self.retained, 6, 0, 1, 4)
+        self._conditions = QGridLayout()
+        self._layout.addLayout(self._conditions, 7, 0, 1, 4)
+        self.condition_buttons: dict[str, QPushButton] = {}
+
+    def update_conditions(self, state: dict[str, str], clear_condition) -> None:
+        """Show each active input as a removable condition without losing others."""
+        labels = {"filename": self.filename.accessibleName(), "tag": self.tag.accessibleName(),
+                  "rating": self.rating.accessibleName(),
+                  "date_from": self.date_from.accessibleName(),
+                  "date_to": self.date_to.accessibleName()}
+        for button in self.condition_buttons.values():
+            self._conditions.removeWidget(button)
+            button.deleteLater()
+        self.condition_buttons.clear()
+        for key, value in state.items():
+            if not value:
+                continue
+            label = f"{labels[key]}: {value}"
+            button = QPushButton(f"{label} ×")
+            button.setObjectName(f"filterRemove_{key}")
+            button.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+            button.setToolTip(label)
+            remove_label = self._lang.get("image_filter_remove", "Remove {condition}")
+            button.setAccessibleName(remove_label.format(condition=label))
+            button.clicked.connect(lambda _checked=False, field=key: clear_condition(field))
+            position = len(self.condition_buttons)
+            self._conditions.addWidget(button, position // 2, position % 2)
+            self.condition_buttons[key] = button
+
+    def update_results(self, folder: str, matched: int, total: int, *, retained: bool) -> None:
+        """Describe the central image list independently from file-tree search."""
+        from pathlib import Path
+        name = Path(folder).name or folder
+        template = self._lang.get("image_filter_summary",
+                                 "Images in {folder}: {matched} / {total} match")
+        self.summary.setText(template.format(folder=name, matched=matched, total=total))
+        self.summary.setToolTip(folder)
+        self.retained.setVisible(retained)
 
     def _field(self, widget: QWidget, key: str, row: int, column: int) -> None:
         title = self._lang[key]

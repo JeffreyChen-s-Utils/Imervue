@@ -153,6 +153,7 @@ def test_recorder_emits_finished_on_clean_stop(qapp, tmp_path):
         ok = rec.start(out)
         if not ok:
             return   # imageio backend unavailable on this CI box
+        rec._on_tick()
         rec.stop()
         assert captured and captured[-1] == str(out)
     finally:

@@ -20,6 +20,8 @@ def refresh_pending_hidden(self) -> None:
     for path in pending:
         self._set_row_hidden(model, path, hidden=True)
     self._hidden_paths = set(pending)
+    if self._recursive_search is not None:
+        self._recursive_search.exclude_hidden()
 
 
 def _set_row_hidden(self, model, path: str, *, hidden: bool) -> None:

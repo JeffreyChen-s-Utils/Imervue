@@ -27,15 +27,21 @@ def _refresh_tree(self) -> None:
         if callable(clear_missing):
             clear_missing()
         # setRootPath() re-stats the directory even if the value is the same
-        model.setRootPath("")
-        model.setRootPath(path)
-        self.setRootIndex(model.index(path))
+        self.set_root_path(path, refresh=True)
         self.apply_search_filter()
 
 
 def set_search_text(self, text: str) -> None:
-    """Filter currently-loaded tree rows by basename substring."""
-    self._search_text = text.strip().lower()
+    """Filter currently-loaded tree rows by basename substring.
+
+    A recursive search owns the query instead, so the loaded-row filter clears.
+    """
+    search = self._recursive_search
+    if search is not None:
+        search.set_query(text)
+    self._search_text = text.strip().casefold()
+    if search is not None and search.recursive:
+        self._search_text = ""
     self.apply_search_filter()
 
 
@@ -80,4 +86,4 @@ def _index_matches_search(self, index) -> bool:
     if hasattr(model, "filePath"):
         path = model.filePath(index)
     name = Path(path).name if path else str(index.data() or "")
-    return self._search_text in name.lower()
+    return self._search_text in name.casefold()

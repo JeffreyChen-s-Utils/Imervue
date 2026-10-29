@@ -13,6 +13,8 @@ the API contract.
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -97,20 +99,20 @@ def save_canvas_png(canvas: PuppetCanvas, path: str | Path) -> bool:
     paint cycle anyway.
     """
     try:
-        image = capture_canvas_image(canvas)
-    except (GLError, RuntimeError) as exc:   # includes CaptureError
-        logger.warning("capture failed: %s", exc)
-        return False
-    p = Path(path)
-    try:
-        p.parent.mkdir(parents=True, exist_ok=True)
-    except OSError as exc:
+        write_canvas_png(canvas, path)
+    except (GLError, RuntimeError, OSError) as exc:
         logger.warning("png save failed: %s", exc)
         return False
-    if not image.save(str(p), "PNG"):
-        logger.warning("png save failed: %s", p)
-        return False
     return True
+
+
+def write_canvas_png(canvas: PuppetCanvas, path: str | Path) -> None:
+    """Write a captured frame, preserving the actual failure for result history."""
+    image = capture_canvas_image(canvas)
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if not image.save(str(destination), "PNG"):
+        raise OSError(f"Could not write PNG to {destination}")
 
 
 class RecordingSession(QObject):
@@ -131,6 +133,8 @@ class RecordingSession(QObject):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._on_tick)
         self._path: str | None = None
+        self._temporary_path: Path | None = None
+        self._frame_count = 0
         self._fps: int = DEFAULT_RECORD_FPS
 
     def is_recording(self) -> bool:
@@ -148,32 +152,61 @@ class RecordingSession(QObject):
             self.failed.emit("imageio is not installed")
             return False
         try:
-            self._writer = imageio.get_writer(str(path), fps=int(fps))
+            target = Path(path)
+            if target.is_dir():
+                raise ValueError("Recording destination is a directory")
+            with tempfile.NamedTemporaryFile(
+                prefix=".imervue-record-", suffix=target.suffix,
+                dir=target.parent, delete=False,
+            ) as stream:
+                self._temporary_path = Path(stream.name)
+            self._writer = imageio.get_writer(str(self._temporary_path), fps=int(fps))
         except (OSError, ValueError) as exc:
             # imageio raises ValueError for directories / unknown
             # extensions and OSError for permission / path failures —
             # treat both as a clean failure rather than crashing the
             # workspace.
             logger.warning("recording open failed: %s", exc)
+            _discard_recording(self._temporary_path)
+            self._temporary_path = None
             self.failed.emit(str(exc))
             return False
         self._path = str(path)
+        self._frame_count = 0
         self._fps = max(1, int(fps))
         self._timer.setInterval(int(1000 / self._fps))
         self._timer.start()
         return True
 
     def stop(self) -> str | None:
+        return self._finish()
+
+    def _finish(self, error: str | None = None) -> str | None:
         if not self.is_recording():
             return None
         self._timer.stop()
-        try:
-            self._writer.close()
-        except Exception as exc:   # noqa: BLE001 - imageio raises a zoo
-            logger.warning("recording close failed: %s", exc)
-        out = self._path
+        writer, out = self._writer, self._path
+        temporary, frames = self._temporary_path, self._frame_count
         self._writer = None
         self._path = None
+        self._temporary_path = None
+        self._frame_count = 0
+        try:
+            writer.close()
+        except Exception as exc:   # noqa: BLE001 - imageio raises a zoo
+            logger.warning("recording close failed: %s", exc)
+            error = error or str(exc) or type(exc).__name__
+        try:
+            if error is None:
+                _commit_recording(temporary, out, frames)
+        except (OSError, CaptureError) as exc:
+            logger.warning("recording output failed: %s", exc)
+            error = str(exc)
+        finally:
+            _discard_recording(temporary)
+        if error is not None:
+            self.failed.emit(error)
+            return None
         if out is not None:
             self.finished.emit(out)
         return out
@@ -198,10 +231,30 @@ class RecordingSession(QObject):
             return
         try:
             self._writer.append_data(frame)
+            self._frame_count += 1
         except Exception as exc:   # noqa: BLE001 - imageio writer error surface
             logger.warning("recording append failed: %s", exc)
-            self.stop()
-            self.failed.emit(str(exc))
+            self._finish(str(exc) or type(exc).__name__)
+
+
+def _commit_recording(temporary: Path | None, destination: str | None, frames: int) -> None:
+    if not frames:
+        raise CaptureError(
+            "No frames were captured. Wait for the canvas to render before recording.",
+        )
+    if temporary is None or destination is None or not temporary.is_file():
+        raise CaptureError("The encoder did not create a recording file")
+    if temporary.stat().st_size == 0:
+        raise CaptureError("The encoder produced an empty recording file")
+    os.replace(temporary, destination)
+
+
+def _discard_recording(temporary: Path | None) -> None:
+    if temporary is not None:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError as exc:
+            logger.warning("unable to remove temporary recording %s: %s", temporary, exc)
 
 
 def save_spritesheet_from_qimages(images, path, max_cols: int = 8) -> tuple[int, int]:

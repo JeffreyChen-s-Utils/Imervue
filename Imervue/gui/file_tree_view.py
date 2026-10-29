@@ -7,10 +7,14 @@ functions retain normal method dispatch, including instance and subclass overrid
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSignalBlocker, QSize, Qt, Signal
 from PySide6.QtWidgets import QFileSystemModel, QTreeView
 from Imervue.gui.file_tree_paths import _dedupe_paths, _next_duplicate_name, _partition_delete_batch
+from Imervue.gui.file_tree_preferences import sort_settings
+from Imervue.gui.file_tree_sort_controls import FileTreeSortMixin
+from Imervue.gui.file_tree_state import FileTreeState
 from Imervue.gui.file_tree_trash import _TrashRequest
+from Imervue.gui.folder_thumbnail_model import clamp_icon_size
 
 if TYPE_CHECKING:
     from Imervue.Imervue_main_window import ImervueMainWindow
@@ -24,37 +28,23 @@ __all__ = [
 ]
 
 
-class _FileTreeView(QTreeView):
-    """File-tree widget with selection-aware commands and queued deletion."""
+class _FileTreeView(FileTreeSortMixin, QTreeView):
+    """File-tree widget with selection-aware commands and queued deletion.
+
+    Sorting (``_TREE_SORT_COLUMNS``, ``set_tree_sort``, the sort menu and
+    controls) comes from ``FileTreeSortMixin``; nothing below redefines it.
+    """
+
+    tree_sort_changed = Signal(str, bool)
+    search_path_activated = Signal(str)
 
     _ZOOM_STEP = 8  # px per Ctrl+wheel notch when resizing folder thumbnails
-
-    _TREE_SORT_COLUMNS = {
-        "name": 0,
-        "size": 1,
-        "modified": 3,
-        "created": 3,
-    }
-
-    _TREE_SORT_LANG_KEYS = {
-        "name": "sort_by_name",
-        "size": "sort_by_size",
-        "modified": "sort_by_modified",
-        "created": "sort_by_created",
-    }
 
     from Imervue.gui.file_tree_menus import (
         _show_context_menu,
         _show_tree_context_menu,
         _show_multi_context_menu,
         _show_single_context_menu,
-    )
-    from Imervue.gui.file_tree_sort_controls import (
-        set_thumbnail_size,
-        _add_sort_menu,
-        set_tree_sort,
-        _apply_tree_sort_from_settings,
-        _apply_tree_sort,
     )
     from Imervue.gui.file_tree_filter import (
         _refresh_tree,
@@ -112,6 +102,10 @@ class _FileTreeView(QTreeView):
         super().__init__()
         self._main_window = main_window
         self._search_text = ""
+        self._tree_state = FileTreeState(self)
+        self._recursive_search = None
+        # Global defaults until a root is shown; setModel/setRootIndex reload them.
+        self._sort_settings = sort_settings(self._sort_root())
         # Folders pending soft-deletion are kept on disk but hidden from the
         # tree until restored or committed at shutdown; track what we hid so a
         # restore can un-hide exactly those rows.
@@ -127,17 +121,69 @@ class _FileTreeView(QTreeView):
         # several files at once. A plain single click still selects and
         # opens one file via the main window's ``clicked`` handler.
         self.setSelectionMode(QTreeView.SelectionMode.ExtendedSelection)
+        self.setVerticalScrollMode(QTreeView.ScrollMode.ScrollPerPixel)
         self.setSortingEnabled(True)
+        self.header().sortIndicatorChanged.connect(self._on_sort_indicator_changed)
 
     def setModel(self, model) -> None:
-        super().setModel(model)
+        with QSignalBlocker(self.header()):
+            super().setModel(model)
         # Re-apply the pending-delete hidden rows whenever a directory finishes
         # (re)loading, so navigating away and back keeps deleted folders hidden.
         loaded = getattr(model, "directoryLoaded", None)
         if loaded is not None:
             loaded.connect(lambda _path: self.refresh_pending_hidden())
             loaded.connect(lambda _path: self.apply_search_filter())
+        with QSignalBlocker(self.header()):
+            self._apply_tree_sort_from_settings()
+        self._tree_state.bind_model(model)
+
+    def set_root_path(self, path: str, *, refresh: bool = False) -> None:
+        """Show *path* as the tree root, saving the old root's view state first.
+
+        ``refresh`` clears the model root first: setRootPath() only re-stats
+        a directory when the value changes.
+        """
+        self._tree_state.save()
+        if self._recursive_search is not None:
+            self._recursive_search.cancel()
+        model = self.model()
+        if refresh:
+            self._tree_state.begin_refresh()
+            model.setRootPath("")
+        model.setRootPath(path)
+        self.setRootIndex(model.index(path))
+
+    def setRootIndex(self, index) -> None:
+        super().setRootIndex(index)
+        self._tree_state.set_root(self.model().filePath(index) if index.isValid() else "")
         self._apply_tree_sort_from_settings()
+        if self._recursive_search is not None:
+            self._recursive_search.root_changed()
+
+    def create_search_controls(self):
+        """Build the recursive-search panel bound to this tree."""
+        from Imervue.gui.file_tree_search import FileTreeSearch
+
+        self._recursive_search = FileTreeSearch(self)
+        self._recursive_search.path_activated.connect(self.search_path_activated)
+        return self._recursive_search.panel
+
+    def set_thumbnail_size(self, px: int) -> None:
+        """Resize the folder preview icons (view + model) and remember it."""
+        size = clamp_icon_size(px)
+        self.setIconSize(QSize(size, size))
+        model = self.model()
+        if hasattr(model, "set_icon_size"):
+            model.set_icon_size(size)
+        from Imervue.user_settings.user_setting_dict import (
+            schedule_save,
+            user_setting_dict,
+        )
+
+        user_setting_dict["tree_thumbnail_size"] = size
+        schedule_save()
+        self.viewport().update()
 
     def wheelEvent(self, event):
         # Ctrl+wheel dynamically grows / shrinks the folder thumbnails; a plain

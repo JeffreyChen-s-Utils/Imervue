@@ -80,3 +80,38 @@ def test_plugins_can_still_import_the_finder_from_pip_installer():
     for name in ("_find_python", "_verify_python", "_VERIFY_TIMEOUT_S", "_embedded_python_dir",
                  "_embedded_python_exe", "_subprocess_kwargs"):
         assert getattr(pip_installer, name) is getattr(mod, name), name
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows thread error modes")
+@pytest.mark.parametrize("outcome", [0, 1, OSError("invalid executable"), RuntimeError("bug")])
+def test_probe_error_mode_is_thread_local_and_restored(monkeypatch, outcome):
+    import ctypes
+    from concurrent.futures import ThreadPoolExecutor
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    original = kernel.GetThreadErrorMode()
+    process_mode = kernel.GetErrorMode()
+    prior = original | 0x8000
+    assert kernel.SetThreadErrorMode(prior, None)
+
+    def run(args, **_kwargs):
+        assert kernel.GetThreadErrorMode() & 0x8003 == 0x8003
+        assert kernel.GetErrorMode() == process_mode
+        assert pool.submit(kernel.GetThreadErrorMode).result(timeout=5) == other_thread_mode
+        if isinstance(outcome, Exception):
+            raise outcome
+        return mod.subprocess.CompletedProcess(args, outcome)
+
+    monkeypatch.setattr(mod.subprocess, "run", run)
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            other_thread_mode = pool.submit(kernel.GetThreadErrorMode).result(timeout=5)
+            if isinstance(outcome, RuntimeError):
+                with pytest.raises(RuntimeError, match="bug"):
+                    mod._verify_python("python.exe")
+            else:
+                assert mod._verify_python("python.exe") is (outcome == 0)
+            assert kernel.GetThreadErrorMode() == prior
+            assert pool.submit(kernel.GetThreadErrorMode).result(timeout=5) == other_thread_mode
+    finally:
+        assert kernel.SetThreadErrorMode(original, None)

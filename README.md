@@ -31,6 +31,12 @@
 
 ---
 
+File-tree search results open with Enter or a double-click; Locate remains a separate action. Results distinguish filenames from relative paths and can be collapsed without clearing the query. The controls above the tree show whether sorting applies globally or to this folder, with meaningful date/size directions and a visible reset. Search shows its folder and descendant scope; the independent image filters show removable conditions, matching counts and when an explicitly opened image is kept despite not matching.
+
+Modify distinguishes overwriting the original from saving a copy and shows the destination. Crop also states when it writes the original. Read-only source formats use a copy; failed writes preserve edits, and successful saves report the actual path. Sending an image to Paint offers the original or the current full-quality developed result, with an explicit annotation choice, in a new document. Existing Paint documents and Undo histories remain intact.
+
+The status bar opens Background Jobs and shows running and failed counts. Puppet captures and recordings retain output paths or failure details there; open the output or its folder later. Recordings do not offer a misleading retry action. Webcam controls show actual startup, running, stopping and error states, with device selection, retry and diagnostics; installation is offered for missing dependencies. The command palette explains unavailable commands and prioritizes recently or frequently used commands.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -48,6 +54,7 @@
 - [Multi-Language Support](#multi-language-support)
 - [User Settings](#user-settings)
 - [Architecture](#architecture)
+- [Security](#security)
 - [License](#license)
 
 ---
@@ -103,6 +110,8 @@ All five tabs use the modern workspace design. Modify has a compact icon palette
 Hover over controls, workspace tabs, menus and list or table items for tips. Missing tips are filled in all five workspaces and dialogs opened later; existing authored help and file-path tips are preserved. Numeric controls explain their allowed range, menu actions include available shortcuts, and generated tips refresh when the label, range or language changes. Input values, including passwords, are not copied into tips. Returning to the app with Paint open keeps folder-tree refresh, tab navigation and tooltips responsive.
 
 Folder browsing merges scan bursts instead of rebuilding for every batch. File-list comparisons use indexed membership, metadata priming reads attributes without image headers, and the hidden list is populated when selected. First results still appear progressively, final ordering is retained, and a completed empty folder stops the busy progress indicator. File-tree folder previews select the first image without sorting the full list, run at most two workers and skip custom system folder-icon queries to reduce competing disk work.
+
+Failed Paint and MCP image exports preserve the previous destination. Puppet batch exports keep colliding motion names separate and report recording failures. Library maintenance removes only confirmed missing entries within readable library roots. Background saves cannot overwrite concurrent profile changes. Cancelling installation or Auto-Tag retires background work; closing a window also shuts down its Puppet and Pet services. Web galleries and WebDAV encode filenames correctly. Invalid documents, sessions and VTS requests return errors, and MCP frames enforce the same 100-million-pixel output limit as other bounded image tools. Frozen builds retain the host OpenGL platform.
 
 ## Installation
 
@@ -312,6 +321,8 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 - **Recent folders / images** tracked; last folder auto-restored on startup
 
 ### Sort & filter
+
+Use the controls above the file tree to sort by name, modified time, creation time, size or file type; the arrow switches direction. Sorting options let you keep folders first, save a separate order for the current folder, or reset it to the global defaults. Hover over an item to see its timestamps and file size. Enable Include subfolders to search unopened folders in the background, cancel a scan, and locate a result in the original tree. Hidden entries and pending deletions are excluded; symbolic links and junctions are not followed. Expanded folders, selected items and scroll position are restored after refresh and on reopening the folder.
 
 - Sort by name (natural order, like Explorer: `img2` before `img10`) / modified / created / date taken (the camera's EXIF time, else modified) / size / resolution (asc or desc)
 - Filter by extension, color label, rating, tag/album, cull state
@@ -746,6 +757,8 @@ Everything you set — position, drivers, opacity, click-through, size — is re
 
 The **Desktop Pet Integrations** plugin (**Plugins > Download Plugins**) adds **Plugins > Desktop Pet Integrations**: the pet reacts to OBS (streaming, recording, scene changes), to Twitch chat keywords (anywhere in a message, or `=hi` for the whole message, `!dance*` for its start, `/go+al/` for a regular expression), to a local webhook (`POST http://127.0.0.1:9876/trigger` with `{"group": "Wave", "speech": "Hi!"}`) and to Windows notifications. It is also the example of a pet plugin built on `on_pet_created`.
 
+The local webhook and VTube Studio API reject `Origin: null`, even with a valid token, because sandboxed web pages can send it. Native clients without an `Origin` header and pages served on localhost remain supported, subject to the configured authentication. A browser may also send `null` for a page opened from disk; serve such pages on localhost instead.
+
 ### Custom voice (pet script)
 
 The pet's speech bubble draws from a JSON file you can author yourself. Click **Load script…** in the **Pet script** group of the Desktop Pet tab and pick a `.petscript.json`. The schema:
@@ -1161,6 +1174,10 @@ Two rules hold across the tree:
 - Cubism converter produces opacity_keys curves alongside vertex-morph deltas so parameter-driven visibility transitions survive the `.moc3 → .puppet` conversion
 
 ---
+
+## Security
+
+Report vulnerabilities privately. The policy, supported versions, and operator notes are in [SECURITY.md](SECURITY.md).
 
 ## License
 

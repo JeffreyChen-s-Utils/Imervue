@@ -1,6 +1,14 @@
 Imervue User Guide
 ==================
 
+File-tree search results open with Enter or a double-click; Locate remains a separate action. Results distinguish filenames from relative paths and can be collapsed without clearing the query. The controls above the tree show whether sorting applies globally or to this folder, with meaningful date/size directions and a visible reset. Search shows its folder and descendant scope; the independent image filters show removable conditions, matching counts and when an explicitly opened image is kept despite not matching.
+
+Modify distinguishes overwriting the original from saving a copy and shows the destination. Crop also states when it writes the original. Read-only source formats use a copy; failed writes preserve edits, and successful saves report the actual path. Sending an image to Paint offers the original or the current full-quality developed result, with an explicit annotation choice, in a new document. Existing Paint documents and Undo histories remain intact.
+
+The status bar opens Background Jobs and shows running and failed counts. Puppet captures and recordings retain output paths or failure details there; open the output or its folder later. Recordings do not offer a misleading retry action. Webcam controls show actual startup, running, stopping and error states, with device selection, retry and diagnostics; installation is offered for missing dependencies. The command palette explains unavailable commands and prioritizes recently or frequently used commands.
+
+Failed Paint and MCP image exports preserve the previous destination. Puppet batch exports keep colliding motion names separate and report recording failures. Library maintenance removes only confirmed missing entries within readable library roots. Background saves cannot overwrite concurrent profile changes. Cancelling installation or Auto-Tag retires background work; closing a window also shuts down its Puppet and Pet services. Web galleries and WebDAV encode filenames correctly. Invalid documents, sessions and VTS requests return errors, and MCP frames enforce the same 100-million-pixel output limit as other bounded image tools. Frozen builds retain the host OpenGL platform.
+
 A GPU-accelerated image workstation that ships **five top-level tabs**.
 Most of this guide is organised around those five sections.
 
@@ -356,6 +364,8 @@ Categorise your images with tags and albums.
 
 Sorting & Filtering
 ^^^^^^^^^^^^^^^^^^^
+
+Use the controls above the file tree to sort by name, modified time, creation time, size or file type; the arrow switches direction. Sorting options let you keep folders first, save a separate order for the current folder, or reset it to the global defaults. Hover over an item to see its timestamps and file size. Enable Include subfolders to search unopened folders in the background, cancel a scan, and locate a result in the original tree. Hidden entries and pending deletions are excluded; symbolic links and junctions are not followed. Expanded folders, selected items and scroll position are restored after refresh and on reopening the folder.
 
 .. list-table::
    :header-rows: 1
@@ -1733,13 +1743,15 @@ a plugin that extends the pet — see *Writing Plugins* and ``on_pet_created``.
      - Listens on ``http://127.0.0.1:9876/trigger`` (port in ``Settings…``) for a JSON POST
        ``{"group": "Wave", "speech": "Hi!"}`` — either field may be left out — from scripts,
        Stream Deck or automation tools. With a token set, requests must send
-       ``Authorization: Bearer <token>``; requests from a web page are refused
+       ``Authorization: Bearer <token>``; requests from a remote web page are refused
      - Nothing extra
    * - React to Windows notifications
      - Plays the ``Notify`` group and says the notification's title when another app shows a
        Windows notification; apps listed under ignored app ids are skipped. Windows asks for
        notification access the first time
      - Windows; the ``winrt`` notification packages (installed on first use)
+
+The local webhook and VTube Studio API reject ``Origin: null``, even with a valid token, because sandboxed web pages can send it. Native clients without an ``Origin`` header and pages served on localhost remain supported, subject to the configured authentication. A browser may also send ``null`` for a page opened from disk; serve such pages on localhost instead.
 
 A rig reacts only to the motion groups it has; a missing group plays nothing.
 
