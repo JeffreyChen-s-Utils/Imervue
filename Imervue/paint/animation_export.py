@@ -27,6 +27,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from Imervue.system.atomic_write import replace_atomically
 from Imervue.paint.animation import Animation
 from Imervue.paint.animation_timeline import AnimationTimeline
 
@@ -51,15 +52,15 @@ def export_gif(
     frames, durations = _render_frames(animation)
     palette_frames = [_to_gif_frame(f, transparency_threshold) for f in frames]
     head, *rest = palette_frames
-    head.save(
-        target,
+    replace_atomically(target, lambda stage: head.save(
+        stage,
         format="GIF",
         save_all=True,
         append_images=rest,
         duration=durations,
         loop=0 if loop else 1,
         disposal=2,
-    )
+    ))
 
 
 def export_webp(
@@ -81,8 +82,8 @@ def export_webp(
         raise ValueError(f"quality must be in [0, 100], got {quality!r}")
     frames, durations = _render_frames(animation)
     head, *rest = frames
-    head.save(
-        target,
+    replace_atomically(target, lambda stage: head.save(
+        stage,
         format="WEBP",
         save_all=True,
         append_images=rest,
@@ -90,7 +91,7 @@ def export_webp(
         loop=0 if loop else 1,
         quality=int(quality),
         lossless=bool(lossless),
-    )
+    ))
 
 
 def export_apng(
@@ -103,14 +104,14 @@ def export_apng(
     target = _validate_target(animation, path)
     frames, durations = _render_frames(animation)
     head, *rest = frames
-    head.save(
-        target,
+    replace_atomically(target, lambda stage: head.save(
+        stage,
         format="PNG",
         save_all=True,
         append_images=rest,
         duration=durations,
         loop=0 if loop else 1,
-    )
+    ))
 
 
 def export_animation(animation: AnimationSource, path: str | Path) -> None:

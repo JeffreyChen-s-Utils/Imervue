@@ -23,6 +23,8 @@ class JobRowsMixin:
     def refresh(self) -> None:
         """Rebuild summaries; expand only the selected job's potentially large result list."""
         selected = self._selected()
+        item = self.tree.currentItem()
+        selected_output = item.data(1, Qt.ItemDataRole.UserRole) if item is not None else None
         blocker = QSignalBlocker(self.tree)
         self.tree.clear()
         for job in self._registry.jobs:
@@ -34,10 +36,20 @@ class JobRowsMixin:
             root.setData(0, Qt.ItemDataRole.UserRole, job)
             self.tree.addTopLevelItem(root)
             if job is selected:
-                self.tree.setCurrentItem(root)
-                self._details(root, job)
+                self._select_job_result(root, job, selected_output)
         blocker.unblock()
         self._buttons()
+
+    def _select_job_result(self, root: QTreeWidgetItem, job: Job, output: str | None) -> None:
+        self.tree.setCurrentItem(root)
+        self._details(root, job)
+        if not output:
+            return
+        for index in range(root.childCount()):
+            child = root.child(index)
+            if child.data(1, Qt.ItemDataRole.UserRole) == output:
+                self.tree.setCurrentItem(child)
+                break
 
     def _details(self, root: QTreeWidgetItem, job: Job) -> None:
         results, total = job.state.visible_results(_VISIBLE_RESULTS)
@@ -49,7 +61,8 @@ class JobRowsMixin:
                     result.error or result.output,
                 ]
             )
-            child.setData(1, Qt.ItemDataRole.UserRole, result.output)
+            child.setData(1, Qt.ItemDataRole.UserRole,
+                          result.output if result.status == "succeeded" else "")
             for column in range(3):
                 child.setToolTip(column, child.text(column))
             root.addChild(child)
@@ -67,6 +80,10 @@ class JobRowsMixin:
 
     def _buttons(self) -> None:
         job = self._selected()
+        activity = job is not None and job.cancel_callback is not None
+        self.cancel_button.setText(
+            self._text("jobs_stop", "Stop") if activity else self._text("export_cancel", "Cancel")
+        )
         self.cancel_button.setEnabled(job is not None and not job.settled)
         self.retry_button.setEnabled(
             job is not None
@@ -76,6 +93,9 @@ class JobRowsMixin:
             and bool(job.state.failed_paths())
         )
         item = self.tree.currentItem()
+        output = item.data(1, Qt.ItemDataRole.UserRole) if item is not None else None
+        self.open_button.setEnabled(bool(output))
+        self.folder_button.setEnabled(bool(output))
         if (
             job is not None
             and item is not None

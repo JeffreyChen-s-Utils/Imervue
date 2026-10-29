@@ -78,6 +78,10 @@ class BackgroundJobsDialog(JobRowsMixin, QDialog):
         self.tree.itemDoubleClicked.connect(self._open_output)
         layout.addWidget(self.tree)
         row = QHBoxLayout()
+        self.open_button = QPushButton(self._text("jobs_open_output", "Open output"))
+        self.folder_button = QPushButton(self._text("jobs_open_folder", "Open folder"))
+        self.open_button.clicked.connect(self._open_selected)
+        self.folder_button.clicked.connect(self._open_folder)
         self.cancel_button = QPushButton(self._text("export_cancel", "Cancel"))
         self.retry_button = QPushButton(self._text("jobs_retry_failed", "Retry failed items"))
         clear = QPushButton(self._text("jobs_clear", "Clear finished"))
@@ -86,7 +90,8 @@ class BackgroundJobsDialog(JobRowsMixin, QDialog):
         self.cancel_button.clicked.connect(self._cancel)
         self.retry_button.clicked.connect(self._retry)
         clear.clicked.connect(self._registry.clear_finished)
-        for button in (self.cancel_button, self.retry_button, clear, report):
+        for button in (self.open_button, self.folder_button, self.cancel_button,
+                       self.retry_button, clear, report):
             row.addWidget(button)
         layout.addLayout(row)
         self._registry.changed.connect(self.refresh)
@@ -130,6 +135,17 @@ class BackgroundJobsDialog(JobRowsMixin, QDialog):
         output = item.data(1, Qt.ItemDataRole.UserRole)
         if output:
             QDesktopServices.openUrl(QUrl.fromLocalFile(output))
+
+    def _open_selected(self) -> None:
+        item = self.tree.currentItem()
+        if item is not None:
+            self._open_output(item, 0)
+
+    def _open_folder(self) -> None:
+        item = self.tree.currentItem()
+        output = item.data(1, Qt.ItemDataRole.UserRole) if item is not None else None
+        if output:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(output).parent)))
 
 
 def open_background_jobs(ui) -> None:

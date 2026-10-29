@@ -21,3 +21,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 - More pre-existing quirks pinned (not fixed) by the split contracts: a press exactly at (0, 0) never starts a GPU-view drag-select (input_controller_tiles); with a selection, normal brush blend writes the brush RGB into fully transparent pixels outside it (alpha stays 0; brush_dab). The .codacy.yaml bandit entry for clip_search.py and the .bandit B403 comment about its torch pickle loading look stale (no subprocess or pickle code remains there).
   Next: confirm each with a focused test, fix or drop it, and update the contract that pins it.
+
+- After the dev merge, user_setting_dict.py and puppet/webcam_tracker.py measure 83 locally (dev added code to both); hosted Codacy scored them 76 and below 80 before the merge.
+  Next: check their hosted scores once the merge lands on main and split either one that reaches 80.

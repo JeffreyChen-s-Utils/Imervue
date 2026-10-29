@@ -80,7 +80,12 @@ def test_completion_callback_can_queue_another_delete(qapp, tmp_path, monkeypatc
 
 
 def test_shutdown_tolerates_completion_mutating_worker_registry():
-    view = SimpleNamespace(_trash_workers=set(), _pending_trash=[])
+    view = SimpleNamespace(
+        _trash_workers=set(),
+        _pending_trash=[],
+        _tree_state=SimpleNamespace(save=lambda: None),
+        _recursive_search=None,
+    )
     flushed = []
     view._flush_pending_trash = lambda: flushed.append(True)
 

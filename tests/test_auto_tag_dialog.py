@@ -19,7 +19,7 @@ from Imervue.gui.auto_tag_dialog import AutoTagDialog, _AutoTagWorker
 # ---------------------------------------------------------------------------
 
 def test_worker_emits_error_when_batch_raises(qapp, monkeypatch):
-    def _boom(paths, progress_cb=None):
+    def _boom(paths, progress_cb=None, should_stop=None):
         raise RuntimeError("database is locked")
 
     monkeypatch.setattr(auto_tag_dialog, "auto_tag_batch", _boom)
@@ -35,7 +35,7 @@ def test_worker_emits_error_when_batch_raises(qapp, monkeypatch):
 
 def test_worker_emits_done_on_success(qapp, monkeypatch):
     monkeypatch.setattr(auto_tag_dialog, "auto_tag_batch",
-                        lambda paths, progress_cb=None: None)
+                        lambda paths, progress_cb=None, should_stop=None: dict.fromkeys(paths, []))
     worker = _AutoTagWorker(["a.png", "b.png", "c.png"])
     dones: list = []
     worker.done.connect(dones.append)
@@ -57,25 +57,8 @@ class _FakeUi(QWidget):
 def test_run_is_a_noop_while_a_run_is_in_flight(qapp):
     ui = _FakeUi()
     dlg = AutoTagDialog(ui)
-    sentinel = object()
+    sentinel = SimpleNamespace(isRunning=lambda: True)
     dlg._worker = sentinel
-    dlg._thread = SimpleNamespace(isRunning=lambda: True)
     dlg._run()                       # a second Run must be ignored
     assert dlg._worker is sentinel   # first run's worker not clobbered
-    dlg._thread = None               # avoid touching the fake on teardown
-
-
-def test_close_tears_down_a_running_thread(qapp):
-    ui = _FakeUi()
-    dlg = AutoTagDialog(ui)
-    calls: list = []
-    dlg._thread = SimpleNamespace(
-        quit=lambda: calls.append("quit"),
-        wait=lambda: calls.append("wait"),
-        isRunning=lambda: True,
-    )
-    dlg._worker = object()
-    dlg.close()
-    assert calls == ["quit", "wait"]
-    assert dlg._thread is None
-    assert dlg._worker is None
+    dlg._worker = None              # avoid touching the fake on teardown

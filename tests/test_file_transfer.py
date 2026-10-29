@@ -183,14 +183,14 @@ class TestSidecarsFollowTheirImage:
         image = _file(tmp_path / "card" / "IMG.JPG", "jpg")
         _file(tmp_path / "card" / "IMG.xmp", "edits")
         (tmp_path / "album").mkdir()
-        real_move = file_transfer.shutil.move
+        real_transfer = file_transfer._transfer_one
 
-        def refuse_sidecars(src, dst):
+        def refuse_sidecars(src, dst, *, move):
             if src.endswith(".xmp"):
                 raise PermissionError("locked")
-            return real_move(src, dst)
+            return real_transfer(src, dst, move=move)
 
-        monkeypatch.setattr(file_transfer.shutil, "move", refuse_sidecars)
+        monkeypatch.setattr(file_transfer, "_transfer_one", refuse_sidecars)
         with caplog.at_level("WARNING", logger="Imervue"):
             result = transfer_into([str(image)], tmp_path / "album", move=True)
         assert result.done == [(str(image), str(tmp_path / "album" / "IMG.JPG"))]

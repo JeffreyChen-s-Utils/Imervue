@@ -25,11 +25,26 @@ class Job:
     retry_factory: RetryFactory | None = None
     owned: bool = False
     retry_started: bool = False
+    cancel_callback: Callable[[], object] | None = None
 
     @property
     def settled(self) -> bool:
         """True only after the registry observes actual worker exit."""
-        return self.worker is None
+        return self.worker is None and self.state.snapshot(include_items=False).status in TERMINAL
+
+    def poll(self) -> None:
+        """Release a worker only after its actual exit, or a completed activity's callback."""
+        worker = self.worker
+        if worker is None:
+            if self.settled:
+                self.cancel_callback = None
+            return
+        terminal = self.state.snapshot(include_items=False).status in TERMINAL
+        if not isValid(worker) or ((worker.isFinished() or terminal) and worker.wait(0)):
+            self.state.finish()
+            self.worker = None
+            if self.owned and isValid(worker):
+                worker.deleteLater()
 
 
 class JobRegistry(QObject):
@@ -79,18 +94,20 @@ class JobRegistry(QObject):
         self.changed.emit()
         return job
 
+    def add_activity(self, title: str, state: JobState, cancel: Callable[[], object]) -> Job:
+        """Track a GUI-owned recording until its completion signal finishes the state."""
+        if state.snapshot(include_items=False).status in TERMINAL:
+            raise ValueError("An activity requires a running JobState")
+        job = Job(title, state, None, cancel_callback=cancel)
+        self.jobs.append(job)
+        self._timer.start()
+        self.changed.emit()
+        return job
+
     def poll(self) -> None:
         """Poll immutable progress, retaining finishing threads until wait(0) succeeds."""
         for job in self.jobs:
-            worker = job.worker
-            if worker is None:
-                continue
-            terminal = job.state.snapshot(include_items=False).status in TERMINAL
-            if not isValid(worker) or ((worker.isFinished() or terminal) and worker.wait(0)):
-                job.state.finish()
-                job.worker = None
-                if job.owned and isValid(worker):
-                    worker.deleteLater()
+            job.poll()
         summary = tuple((job.state.snapshot(include_items=False), job.settled) for job in self.jobs)
         if summary != self._last:
             self._last = summary
@@ -101,9 +118,12 @@ class JobRegistry(QObject):
     def cancel(self, job: Job) -> None:
         """Request cooperative cancellation; an uninterruptible operation remains retained."""
         if not job.settled:
-            job.state.request_cancel()
-            if isValid(job.worker):
-                job.worker.requestInterruption()
+            if job.worker is None and job.cancel_callback is not None:
+                job.cancel_callback()
+            else:
+                job.state.request_cancel()
+                if job.worker is not None and isValid(job.worker):
+                    job.worker.requestInterruption()
             self.changed.emit()
 
     def retry(self, job: Job) -> Job | None:
@@ -133,3 +153,5 @@ class JobRegistry(QObject):
                 job.state.request_cancel()
                 job.worker.requestInterruption()
                 job.worker.wait()
+            elif not job.settled and job.cancel_callback is not None:
+                job.cancel_callback()

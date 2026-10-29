@@ -142,11 +142,13 @@ def auto_tag_image(path: str) -> list[str]:
     return tag_paths
 
 
-def auto_tag_batch(paths: list[str], *, progress_cb=None) -> dict[str, list[str]]:
-    """Tag a batch of images; optional ``progress_cb(current, total, path)``."""
+def auto_tag_batch(paths: list[str], *, progress_cb=None, should_stop=None) -> dict[str, list[str]]:
+    """Tag images until cancelled, reporting completed files through ``progress_cb``."""
     results: dict[str, list[str]] = {}
     total = len(paths)
     for i, p in enumerate(paths, start=1):
+        if should_stop is not None and should_stop():
+            break
         results[p] = auto_tag_image(p)
         if progress_cb is not None:
             progress_cb(i, total, p)

@@ -1,6 +1,14 @@
 Guide de l'utilisateur Imervue
 ==============================
 
+Les résultats de recherche de l’arborescence s’ouvrent avec Entrée ou un double-clic ; leur localisation reste une action distincte. Les noms et chemins relatifs sont séparés, et les résultats se replient sans effacer la requête. Les commandes supérieures indiquent si le tri est global ou propre au dossier, avec des sens explicites pour les dates et tailles et une réinitialisation visible. La recherche affiche le dossier et la portée des sous-dossiers ; les filtres d’images indépendants affichent les conditions supprimables, le nombre de correspondances et signalent une image ouverte explicitement conservée malgré les filtres.
+
+Modify distingue l’écrasement de l’original de l’enregistrement d’une copie et affiche la destination. Le recadrage précise aussi quand il écrit dans l’original. Les formats source en lecture seule utilisent une copie ; un échec d’écriture conserve les modifications et un enregistrement réussi affiche le chemin réel. L’envoi vers Paint propose l’original ou le résultat développé actuel en pleine qualité, avec un choix explicite des annotations, dans un nouveau document. Les documents Paint existants et leurs historiques d’annulation sont conservés.
+
+La barre d’état ouvre Background Jobs et affiche les tâches actives et échouées. Les captures et enregistrements Puppet y conservent les chemins de sortie ou les détails d’échec ; le résultat ou son dossier reste accessible ensuite. Les enregistrements ne proposent pas de nouvelle tentative inadaptée. La webcam affiche ses états réels de démarrage, fonctionnement, arrêt et erreur, avec choix du périphérique, nouvelle tentative et diagnostic ; l’installation est proposée si des dépendances manquent. La palette explique les commandes indisponibles et privilégie les commandes récentes ou fréquentes.
+
+Un échec d’export d’image Paint ou MCP préserve le fichier de destination existant. Les exports Puppet par lot distinguent les noms de mouvement en conflit et signalent les échecs d’enregistrement. La maintenance supprime uniquement les entrées dont l’absence est confirmée dans les racines lisibles de la bibliothèque. Les sauvegardes en arrière-plan n’écrasent pas les modifications simultanées des profils. Annuler une installation ou Auto-Tag arrête le travail en arrière-plan ; fermer une fenêtre arrête aussi ses services Puppet et Pet. Les galeries web et WebDAV encodent correctement les noms de fichiers. Les documents, sessions et requêtes VTS invalides produisent une erreur. Les cadres MCP respectent la même limite de sortie de 100 millions de pixels que les autres outils d’image limités. Les versions empaquetées conservent la plateforme OpenGL native du système.
+
 Station de travail d'image accélérée par GPU offrant **cinq onglets principaux**.
 La majeure partie de ce guide est organisée autour de ces cinq sections.
 
@@ -355,6 +363,8 @@ Classez vos images par tags et albums.
 
 Tri et filtrage
 ^^^^^^^^^^^^^^^
+
+Les commandes au-dessus de l’arborescence trient par nom, modification, création, taille ou type de fichier ; la flèche change le sens. Les options placent les dossiers en premier, enregistrent un tri propre au dossier courant ou rétablissent les valeurs globales. Le survol affiche les dates et la taille. Activez Inclure les sous-dossiers pour rechercher en arrière-plan dans les dossiers non ouverts, annuler la recherche et retrouver un résultat dans l’arborescence initiale. Les éléments masqués et en attente de suppression sont exclus ; les liens symboliques et jonctions ne sont pas suivis. Les dossiers développés, la sélection et le défilement sont restaurés après actualisation et réouverture.
 
 .. list-table::
    :header-rows: 1
@@ -1796,7 +1806,7 @@ aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plug
        ``{"group": "Wave", "speech": "Hi!"}`` — chaque champ peut être omis — envoyé par des
        scripts, un Stream Deck ou des outils d'automatisation. Si un jeton est défini, les
        requêtes doivent envoyer ``Authorization: Bearer <token>`` ; les requêtes provenant
-       d'une page web sont refusées
+       d'une page web distante sont refusées
      - Rien de plus
    * - Réagir aux notifications Windows
      - Joue le groupe ``Notify`` et prononce le titre de la notification lorsqu'une autre
@@ -1804,6 +1814,8 @@ aussi l'exemple complet d'un plugin qui étend le pet — voir *Écrire des plug
        identifiants d'application ignorés sont sautées. Windows demande l'accès aux
        notifications la première fois
      - Windows ; les paquets de notification ``winrt`` (installés à la première utilisation)
+
+Le webhook local et l'API VTube Studio refusent ``Origin: null``, même avec un jeton valide, car une page web isolée dans un bac à sable peut envoyer cette valeur. Les clients natifs sans en-tête ``Origin`` et les pages servies sur localhost restent pris en charge, selon l'authentification configurée. Le navigateur peut aussi envoyer ``null`` pour une page ouverte depuis le disque ; servez ces pages sur localhost.
 
 Un rig ne réagit qu'aux groupes de mouvements qu'il possède ; un groupe manquant ne joue rien.
 

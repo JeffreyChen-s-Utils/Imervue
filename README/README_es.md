@@ -31,6 +31,12 @@
 
 ---
 
+Los resultados de búsqueda del árbol se abren con Intro o doble clic; localizar sigue siendo una acción independiente. Se distinguen nombres y rutas relativas, y los resultados se pueden contraer sin borrar la consulta. Los controles superiores indican si el orden es global o de esta carpeta, con direcciones claras para fechas y tamaños y un restablecimiento visible. La búsqueda muestra la carpeta y el alcance de subcarpetas; los filtros de imágenes independientes muestran condiciones eliminables, recuentos de coincidencias y cuándo se conserva una imagen abierta explícitamente aunque no coincida.
+
+Modify distingue sobrescribir el original de guardar una copia y muestra el destino. El recorte también indica cuándo escribe en el original. Los formatos de origen de solo lectura usan una copia; los fallos de escritura conservan las ediciones y los guardados correctos muestran la ruta real. Al enviar a Paint se puede elegir el original o el resultado revelado actual a calidad completa, con una opción explícita para las anotaciones, en un documento nuevo. Los documentos de Paint existentes y sus historiales de deshacer se conservan.
+
+La barra de estado abre Background Jobs y muestra los trabajos activos y fallidos. Las capturas y grabaciones de Puppet conservan allí las rutas de salida o los detalles del fallo; después se puede abrir el resultado o su carpeta. Las grabaciones no ofrecen un reintento inaplicable. La cámara muestra los estados reales de inicio, ejecución, detención y error, con selección de dispositivo, reintento y diagnóstico; se ofrece instalación cuando faltan dependencias. La paleta explica los comandos no disponibles y prioriza los usados recientemente o con frecuencia.
+
 ## Tabla de contenidos
 
 - [Resumen](#resumen)
@@ -48,6 +54,7 @@
 - [Soporte multilingüe](#soporte-multilingüe)
 - [Configuración del usuario](#configuración-del-usuario)
 - [Arquitectura](#arquitectura)
+- [Seguridad](#seguridad)
 - [Licencia](#licencia)
 
 ---
@@ -103,6 +110,8 @@ Las cinco pestañas usan el diseño moderno del espacio de trabajo. Modify ofrec
 Al situar el cursor sobre controles, pestañas, menús y elementos de listas o tablas aparecen consejos. Los cinco espacios de trabajo y los diálogos abiertos después completan los consejos ausentes, conservando la ayuda y las rutas existentes. Los controles numéricos indican el rango permitido y los comandos de menú incluyen los atajos disponibles. Los consejos generados se actualizan al cambiar la etiqueta, el rango o el idioma; no copian valores introducidos, incluidas las contraseñas. Al volver a la aplicación con Paint abierto, la actualización del árbol de carpetas, la navegación por pestañas y las ayudas siguen respondiendo.
 
 Al abrir carpetas se agrupan los resultados consecutivos del análisis, evitando reconstruir la vista por cada lote. Las comparaciones usan búsquedas indexadas, los metadatos iniciales solo leen atributos sin abrir las cabeceras de imagen y la lista oculta se llena al seleccionarla. Los primeros resultados siguen apareciendo progresivamente, se conserva el orden final y el indicador de actividad se detiene al terminar una carpeta vacía. Las vistas previas del árbol eligen la primera imagen sin ordenar toda la lista, usan como máximo dos trabajadores y omiten las consultas de iconos de carpeta personalizados del sistema para reducir la competencia por el disco.
+
+Los fallos al exportar imágenes desde Paint o MCP conservan el archivo de destino anterior. La exportación por lotes de Puppet distingue nombres de movimiento en conflicto e informa de los fallos de grabación. El mantenimiento solo elimina entradas cuya ausencia se confirma dentro de raíces de biblioteca legibles. Los guardados en segundo plano no sobrescriben cambios simultáneos de perfiles. Cancelar una instalación o Auto-Tag detiene el trabajo en segundo plano; cerrar una ventana también detiene sus servicios Puppet y Pet. Las galerías web y WebDAV codifican correctamente los nombres de archivo. Los documentos, sesiones y solicitudes VTS no válidos producen errores. Los marcos MCP aplican el mismo límite de salida de 100 millones de píxeles que otras herramientas de imagen limitadas. Las versiones empaquetadas conservan la plataforma OpenGL nativa del sistema.
 
 ## Instalación
 
@@ -304,6 +313,8 @@ La pestaña **Imervue** es la superficie de aterrizaje predeterminada. Combina e
 - **Carpetas / imágenes recientes** rastreadas; la última carpeta se restaura automáticamente al iniciar
 
 ### Ordenación y filtrado
+
+Los controles sobre el árbol permiten ordenar por nombre, modificación, creación, tamaño o tipo de archivo; la flecha cambia la dirección. Las opciones permiten mostrar primero las carpetas, guardar un orden propio para la carpeta actual o restablecer los valores globales. Al pasar el puntero se muestran las fechas y el tamaño. Active Incluir subcarpetas para buscar en segundo plano en carpetas sin abrir, cancelar el análisis y localizar un resultado en el árbol original. Se excluyen los elementos ocultos y pendientes de eliminación; no se siguen enlaces simbólicos ni uniones de directorios. Las carpetas expandidas, la selección y el desplazamiento se restauran al actualizar y volver a abrir la carpeta.
 
 - Ordena por nombre (orden natural, como el Explorador: `img2` antes que `img10`) / modificado / creado / fecha de captura (la hora EXIF de la cámara; si no, modificado) / tamaño / resolución (asc o desc)
 - Filtra por extensión, etiqueta de color, calificación, etiqueta/álbum, estado de culling
@@ -738,6 +749,8 @@ Todo lo que ajustes — posición, drivers, opacidad, clic transparente, tamaño
 
 El plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) añade **Plugins > Desktop Pet Integrations**: la mascota reacciona a OBS (transmisión, grabación, cambios de escena), a palabras clave del chat de Twitch (en cualquier parte de un mensaje, o `=hi` para el mensaje completo, `!dance*` para su inicio, `/go+al/` para una expresión regular), a un webhook local (`POST http://127.0.0.1:9876/trigger` con `{"group": "Wave", "speech": "Hi!"}`) y a las notificaciones de Windows. También es el ejemplo de un plugin de mascota construido sobre `on_pet_created`.
 
+El webhook local y la API de VTube Studio rechazan `Origin: null`, incluso con un token válido, porque las páginas web aisladas pueden enviar ese valor. Los clientes nativos sin encabezado `Origin` y las páginas servidas en localhost siguen siendo compatibles, con la autenticación configurada. El navegador también puede enviar `null` para páginas abiertas desde el disco; sirva esas páginas en localhost.
+
 ### Voz personalizada (pet script)
 
 El bocadillo de la mascota se nutre de un archivo JSON que puedes crear tú mismo. Haz clic en **Load script…** en el grupo **Pet script** de la pestaña Desktop Pet y elige un `.petscript.json`. El esquema:
@@ -1135,6 +1148,10 @@ Dos reglas se mantienen en todo el árbol:
 - El convertidor de Cubism produce curvas opacity_keys junto con los deltas de vertex-morph para que las transiciones de visibilidad accionadas por parámetro sobrevivan a la conversión `.moc3 → .puppet`
 
 ---
+
+## Seguridad
+
+Informe las vulnerabilidades en privado. La política, las versiones compatibles y las notas para operadores están en [SECURITY.md](../SECURITY.md).
 
 ## Licencia
 

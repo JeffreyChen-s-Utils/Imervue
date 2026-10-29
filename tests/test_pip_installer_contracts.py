@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import io
 import subprocess
+import threading
 import sys
 import zipfile
 
@@ -189,8 +190,49 @@ def fake_popen(monkeypatch):
     return factory
 
 
+class _Stdout:
+    """Iterable pipe stand-in that records being closed."""
+
+    def __init__(self, lines):
+        self._lines = iter(lines)
+        self.closed = False
+
+    def __iter__(self):
+        return self._lines
+
+    def close(self):
+        self.closed = True
+
+
+class _InstallProc:
+    """A pip child for the deadline-timer worker: exits on its own unless ``hang``."""
+
+    def __init__(self, lines, *, returncode=0, hang=False):
+        self.stdout = _Stdout(lines)
+        self.returncode = None if hang else returncode
+        self._released = threading.Event()
+        if not hang:
+            self._released.set()
+        self.waits = []
+        self.terminated = 0
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.waits.append(timeout)
+        if not self._released.wait(5):
+            raise subprocess.TimeoutExpired("pip", 5)
+        return self.returncode
+
+    def terminate(self):
+        self.terminated += 1
+        self.returncode = -15
+        self._released.set()
+
+
 def test_install_worker_streams_non_blank_lines(qapp, fake_popen):
-    fake_popen.proc = _FakeProc(["one\n", "\n", "two\r\n"], returncode=4)
+    fake_popen.proc = _InstallProc(["one\n", "\n", "two\r\n"], returncode=4)
     worker = pi._InstallWorker([], "python.exe")
     logs = []
     worker.log.connect(logs.append)
@@ -199,18 +241,21 @@ def test_install_worker_streams_non_blank_lines(qapp, fake_popen):
     ((cmd, kwargs),) = fake_popen.calls
     assert cmd == ["pip"] and "cwd" not in kwargs
     assert kwargs["stdout"] is subprocess.PIPE and kwargs["stderr"] is subprocess.STDOUT
-    assert fake_popen.proc.waits == [7]
+    assert fake_popen.proc.waits == [None]
+    assert fake_popen.proc.stdout.closed and fake_popen.proc.terminated == 0
+    assert worker._proc is None
     worker.deleteLater()
 
 
-def test_install_worker_kills_a_timed_out_child(qapp, fake_popen):
-    fake_popen.proc = _FakeProc([], time_out=True)
+def test_install_worker_terminates_a_child_past_its_deadline(qapp, fake_popen):
+    fake_popen.proc = _InstallProc([], hang=True)
     worker = pi._InstallWorker([], "python.exe")
     logs = []
     worker.log.connect(logs.append)
-    assert worker._run_with_live_output(["pip"]) == -1
-    assert fake_popen.proc.killed and fake_popen.proc.waits == [600, None]
+    assert worker._run_with_live_output(["pip"], timeout=0.01) == -1
+    assert fake_popen.proc.terminated == 1
     assert logs == ["Process timed out"]
+    assert fake_popen.proc.stdout.closed and worker._proc is None
     worker.deleteLater()
 
 

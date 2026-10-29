@@ -15,6 +15,7 @@ from Imervue.image.output_policy import OutputPolicy, write_output
 from Imervue.system.atomic_write import replace_atomically, write_text_atomically
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import quote
 
 logger = logging.getLogger("Imervue.export.web_gallery")
 
@@ -203,7 +204,7 @@ def _place_original(src: Path, output_dir: Path, copy: bool) -> str:
         dest = images_dir / src.name
         result = write_output(src, dest, lambda stage: shutil.copy2(src, stage),
                               OutputPolicy("rename"))
-        return f"images/{Path(result.path).name}"
+        return f"images/{quote(Path(result.path).name, safe='')}"
     # Reference original absolute path — only useful for local viewing.
     return src.as_uri()
 
@@ -237,7 +238,7 @@ def generate_web_gallery(
             continue
         full_href = _place_original(src, out_dir, options.copy_originals)
         tiles_html.append(_build_tile_html(
-            thumb_rel=f"thumbs/{thumb_name}",
+            thumb_rel=f"thumbs/{quote(thumb_name, safe='')}",
             full_rel=full_href,
             caption=src.name,
             review_key=src.name if options.review_mode else None,

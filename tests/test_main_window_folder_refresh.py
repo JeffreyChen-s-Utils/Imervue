@@ -77,11 +77,13 @@ class _FakeModel:
 
 
 class _FakeTree:
-    def __init__(self):
+    def __init__(self, model):
         self.roots = []
+        self._model = model
 
-    def setRootIndex(self, index):  # noqa: N802 - Qt API  # NOSONAR
-        self.roots.append(index)
+    def set_root_path(self, path):
+        self._model.setRootPath(path)
+        self.roots.append(path)
 
 
 class _FakeStack:
@@ -109,6 +111,7 @@ class _FakePoller:
 
 
 class _StubMainWindow:
+    _update_filter_results = ImervueMainWindow._update_filter_results
     _apply_refreshed_image_list = ImervueMainWindow._apply_refreshed_image_list
     _reconcile_deep_zoom_onto_list = ImervueMainWindow._reconcile_deep_zoom_onto_list
     _apply_image_filter = ImervueMainWindow._apply_image_filter
@@ -126,7 +129,7 @@ class _StubMainWindow:
         self.refresh_list_calls = 0
         self._view_stack = _FakeStack()
         self.model = _FakeModel()
-        self.tree = _FakeTree()
+        self.tree = _FakeTree(self.model)
         self.breadcrumb = SimpleNamespace(paths=[], set_path=lambda p: self.breadcrumb.paths.append(p))
         self.filename_label = SimpleNamespace(text="", setText=lambda t: setattr(self.filename_label, "text", t))
         self.toast = _FakeToast()

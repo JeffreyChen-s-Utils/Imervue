@@ -1,6 +1,14 @@
 Imervue-Benutzerhandbuch
 ========================
 
+Suchergebnisse im Dateibaum lassen sich mit Eingabe oder Doppelklick öffnen; das Anzeigen ihrer Position bleibt eine eigene Aktion. Dateinamen und relative Pfade sind getrennt dargestellt, und Ergebnisse lassen sich ohne Löschen der Suchanfrage einklappen. Oberhalb des Baums stehen der globale oder ordnerbezogene Geltungsbereich, verständliche Sortierrichtungen für Datum und Größe sowie eine sichtbare Rücksetzfunktion. Die Suche zeigt Ordner und Unterordnerumfang; die unabhängigen Bildfilter zeigen einzeln entfernbare Bedingungen, Trefferzahlen und einen Hinweis, wenn ein ausdrücklich geöffnetes Bild trotz fehlender Übereinstimmung erhalten bleibt.
+
+Modify unterscheidet Original überschreiben und Kopie speichern und zeigt das Ziel. Auch beim Zuschneiden wird angegeben, ob das Original geschrieben wird. Nur lesbare Quellformate verwenden eine Kopie; bei Schreibfehlern bleiben Änderungen erhalten, erfolgreiche Speichervorgänge nennen den tatsächlichen Pfad. Bei der Übergabe an Paint lassen sich Original oder aktuelles Entwicklungsergebnis in voller Qualität sowie ausdrücklich die Übernahme von Anmerkungen wählen. Es entsteht ein neues Dokument; bestehende Paint-Dokumente und Rückgängig-Verläufe bleiben erhalten.
+
+Die Statusleiste öffnet Background Jobs und zeigt laufende und fehlgeschlagene Aufträge. Puppet-Aufnahmen und Bildschirmaufnahmen behalten dort Ausgabepfade oder Fehlerdetails; Ergebnis oder Ordner können später geöffnet werden. Aufzeichnungen bieten keine unpassende Wiederholung an. Die Webcam zeigt tatsächliches Starten, Laufen, Stoppen und Fehler mit Gerätewahl, erneutem Versuch und Diagnose; die Installation wird bei fehlenden Abhängigkeiten angeboten. Die Befehlspalette erklärt nicht verfügbare Befehle und bevorzugt zuletzt oder häufig verwendete Befehle.
+
+Fehlgeschlagene Bildexporte aus Paint und MCP erhalten die bisherige Zieldatei. Puppet-Stapelexporte trennen kollidierende Bewegungsnamen und melden Aufnahmefehler. Die Bibliothekswartung entfernt nur nachweislich fehlende Einträge innerhalb lesbarer Bibliothekswurzeln. Hintergrundspeicherungen überschreiben keine gleichzeitigen Profiländerungen. Das Abbrechen einer Installation oder von Auto-Tag beendet die Hintergrundarbeit; das Schließen eines Fensters stoppt auch dessen Puppet- und Pet-Dienste. Webgalerien und WebDAV kodieren Dateinamen korrekt. Ungültige Dokumente, Sitzungen und VTS-Anfragen liefern Fehler. Für MCP-Rahmen gilt dieselbe Ausgabegrenze von 100 Millionen Pixeln wie für andere begrenzte Bildwerkzeuge. Paketierte Builds behalten die native OpenGL-Plattform des Systems bei.
+
 Eine GPU-beschleunigte Bild-Workstation, die **fünf Hauptregisterkarten** bereitstellt.
 Der Großteil dieses Handbuchs ist um diese fünf Abschnitte herum strukturiert.
 
@@ -356,6 +364,8 @@ Bilder mit Tags und Alben kategorisieren.
 
 Sortieren und Filtern
 ^^^^^^^^^^^^^^^^^^^^^
+
+Über dem Dateibaum können Sie nach Name, Änderungszeit, Erstellungszeit, Größe oder Dateityp sortieren; der Pfeil wechselt die Richtung. Die Sortieroptionen stellen Ordner voran, speichern eine eigene Reihenfolge für den aktuellen Ordner oder setzen sie auf die globalen Vorgaben zurück. Beim Zeigen auf einen Eintrag erscheinen Zeitangaben und Dateigröße. Mit Unterordner einbeziehen durchsuchen Sie ungeöffnete Ordner im Hintergrund, brechen die Suche ab und zeigen Treffer im ursprünglichen Baum an. Versteckte und zum Löschen vorgemerkte Einträge werden ausgeschlossen; symbolischen Links und Junctions wird nicht gefolgt. Geöffnete Ordner, Auswahl und Scrollposition werden nach dem Aktualisieren und erneuten Öffnen wiederhergestellt.
 
 .. list-table::
    :header-rows: 1
@@ -1805,7 +1815,7 @@ erweitert — siehe *Plugins schreiben* und ``on_pet_created``.
      - Lauscht auf ``http://127.0.0.1:9876/trigger`` (Port in ``Settings…``) auf einen JSON-POST
        ``{"group": "Wave", "speech": "Hi!"}`` — jedes der beiden Felder darf fehlen — von
        Skripten, Stream Deck oder Automatisierungswerkzeugen. Ist ein Token gesetzt, müssen
-       Anfragen ``Authorization: Bearer <token>`` senden; Anfragen von einer Webseite werden
+       Anfragen ``Authorization: Bearer <token>`` senden; Anfragen von einer entfernten Webseite werden
        abgelehnt
      - Nichts weiter
    * - Auf Windows-Benachrichtigungen reagieren
@@ -1815,6 +1825,8 @@ erweitert — siehe *Plugins schreiben* und ``on_pet_created``.
        Benachrichtigungen
      - Windows; die ``winrt``-Benachrichtigungspakete (werden bei der ersten Verwendung
        installiert)
+
+Der lokale Webhook und die VTube Studio API lehnen ``Origin: null`` auch mit gültigem Token ab, da Webseiten in einer Sandbox diesen Wert senden können. Native Clients ohne ``Origin``-Header und über localhost bereitgestellte Seiten bleiben unter den konfigurierten Authentifizierungsbedingungen unterstützt. Ein Browser kann auch bei direkt von der Festplatte geöffneten Seiten ``null`` senden; stellen Sie solche Seiten über localhost bereit.
 
 Ein Rig reagiert nur auf die Bewegungsgruppen, die es hat; eine fehlende Gruppe spielt nichts ab.
 

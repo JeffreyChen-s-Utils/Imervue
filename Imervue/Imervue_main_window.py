@@ -429,6 +429,12 @@ class ImervueMainWindow(
         with best_effort("stop the file-tree workers", _logger):
             self.tree.shutdown()
 
+        for name in ("puppet_workspace", "pet_workspace"):
+            workspace = getattr(self, name, None)
+            if workspace is not None:
+                with best_effort(f"shut down {name}", _logger):
+                    workspace.shutdown()
+
         # --- 安全關閉修改面板 ---
         # 停止預覽防抖計時器 — 未儲存的 recipe 變更在關閉時丟棄
         with best_effort("stop the Modify panel's preview debounce", _logger):

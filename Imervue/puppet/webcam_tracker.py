@@ -19,6 +19,7 @@ import numpy as np
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from Imervue.puppet.face_landmark_mapper import landmarks_to_params
+from Imervue.puppet.webcam_status import WebcamPhase, WebcamStatus
 
 if TYPE_CHECKING:
     from Imervue.puppet.canvas import PuppetCanvas
@@ -54,6 +55,8 @@ class WebcamTracker(QObject):
         self._camera_open: bool = False
         self._error_message: str | None = None
         self._preview_lock = threading.Lock()
+        self._status = WebcamStatus()
+        self._published_status = self._status
         self._pump_timer = QTimer(self)
         self._pump_timer.setInterval(int(1000 / _TARGET_FPS))
         self._pump_timer.timeout.connect(self._pump_to_canvas)
@@ -64,25 +67,63 @@ class WebcamTracker(QObject):
         return self._enabled
 
     def set_enabled(self, enabled: bool) -> bool:
-        """Toggle tracking. Returns ``True`` if the requested state
-        was reached. Returns ``False`` and stays off if the optional
-        deps (cv2 / mediapipe) are missing or the camera open failed."""
+        """Request tracking; True accepts startup, while status reports actual readiness."""
         if enabled == self._enabled:
             return True
         if enabled:
             ok = self._start()
             if not ok:
                 self._enabled = False
-                self.state_changed.emit()
+                self._publish_status()
                 return False
         else:
             self._stop()
         self._enabled = bool(enabled)
-        self.state_changed.emit()
+        self._publish_status()
         return True
 
     def shutdown(self) -> None:
-        self._stop()
+        self._enabled = False
+        self._stop_evt.set()
+        self._set_status(
+            WebcamPhase.STOPPING if self._thread is not None and self._thread.is_alive()
+            else WebcamPhase.STOPPED,
+        )
+        self._pump_timer.stop()
+        # The worker owns only Python snapshots and releases its camera in finally.
+        # Retain its reference until it exits; a blocked device read must not block Qt.
+
+    def status(self) -> WebcamStatus:
+        """Read the worker's immutable lifecycle snapshot without copying video frames."""
+        with self._preview_lock:
+            return self._status
+
+    def set_device(self, index: int) -> bool:
+        """Select a camera only after the previous capture has released its device."""
+        if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+            raise ValueError("Camera index must be a nonnegative integer")
+        if self._enabled or (self._thread is not None and self._thread.is_alive()):
+            return False
+        with self._preview_lock:
+            self._status = WebcamStatus(device=index)
+        self._publish_status()
+        return True
+
+    def can_configure(self) -> bool:
+        """Whether device selection and restart are safe after worker cleanup."""
+        return not self._enabled and (self._thread is None or not self._thread.is_alive())
+
+    def _set_status(self, phase: WebcamPhase, detail: str = "") -> None:
+        with self._preview_lock:
+            self._status = WebcamStatus(phase, self._status.device, detail)
+            self._error_message = detail or None
+
+    def _publish_status(self) -> None:
+        status = self.status()
+        if status != self._published_status:
+            self._published_status = status
+            self._enabled = status.active
+            self.state_changed.emit()
 
     def current_preview_state(self) -> dict:
         """Snapshot of the most recent capture for the preview dialog.
@@ -95,7 +136,7 @@ class WebcamTracker(QObject):
         coords, or ``None`` when no face is detected
         ``face_detected`` — bool, mirrors the last frame's outcome
         ``fps`` — measured capture FPS (EMA over recent frames)
-        ``camera_open`` — True once VideoCapture(0) opened cleanly
+        ``camera_open`` — True once the selected camera opened cleanly
         ``error`` — optional one-line error string from the worker
         """
         with self._preview_lock:
@@ -117,22 +158,30 @@ class WebcamTracker(QObject):
     # ---- start / stop --------------------------------------------------
 
     def _start(self) -> bool:
-        # A previous _stop whose join timed out (a stuck cap.read on a
-        # disconnected camera) leaves the old thread still winding down. Starting
+        # A previous stop can leave a blocked device read winding down. Starting
         # here would clear the stop event and spawn a second thread contending
         # for VideoCapture(0) and racing the shared _latest_* buffers. Refuse
         # until the old thread has actually exited; the stop event is still set,
         # so it will.
         if self._thread is not None and self._thread.is_alive():
             logger.warning("previous webcam thread still winding down; not restarting")
+            self._set_status(WebcamPhase.STOPPING)
             return False
         try:
             import cv2   # noqa: F401 - probe import
             import mediapipe   # noqa: F401 - probe import
-        except ImportError:
+        except ImportError as exc:
             logger.info("cv2 / mediapipe not installed; webcam tracking unavailable")
+            self._set_status(WebcamPhase.MISSING_DEPENDENCY, str(exc))
             return False
         self._stop_evt.clear()
+        with self._preview_lock:
+            self._latest_frame_bgr = self._latest_landmarks_norm = None
+            self._camera_open = self._face_detected = False
+            self._fps = 0.0
+        with self._params_lock:
+            self._latest_params = {}
+        self._set_status(WebcamPhase.STARTING)
         try:
             self._thread = threading.Thread(
                 target=self._tracking_loop, daemon=True,
@@ -140,6 +189,7 @@ class WebcamTracker(QObject):
             self._thread.start()
         except RuntimeError as exc:
             logger.warning("webcam thread failed: %s", exc)
+            self._set_status(WebcamPhase.FAILED, str(exc))
             return False
         self._pump_timer.start()
         return True
@@ -148,78 +198,103 @@ class WebcamTracker(QObject):
         self._stop_evt.set()
         thread = self._thread
         if thread is not None and thread.is_alive():
-            thread.join(timeout=1.0)
-        # Only drop the reference once the thread has actually exited. A timed-out
-        # join leaves a zombie still reading the camera; clearing the reference
+            thread.join(timeout=0)
+        # Only drop the reference once the thread has actually exited. A blocked
+        # read keeps the camera alive; clearing the reference
         # here would hide it from _start, which would then revive it into a
         # second capture thread. Keeping the reference makes _start refuse until
         # it dies (the stop event stays set, so it will).
         if thread is None or not thread.is_alive():
             self._thread = None
-        self._pump_timer.stop()
+            self._set_status(WebcamPhase.STOPPED)
+            self._pump_timer.stop()
+        else:
+            self._set_status(WebcamPhase.STOPPING)
+            self._pump_timer.start()
 
     # ---- background loop -----------------------------------------------
 
-    def _tracking_loop(self) -> None:  # pragma: no cover - needs camera + mediapipe
-        import cv2
-        import mediapipe as mp
+    def _tracking_loop(self) -> None:
+        cap = landmarker = None
         try:
+            import cv2
+            import mediapipe as mp
             landmarker = _build_face_landmarker()
-        except _WebcamSetupError as exc:
+            if self._stop_evt.is_set():
+                return
+            device = self.status().device
+            cap = _camera_operation(cv2.VideoCapture, device)
+            if not cap.isOpened():
+                self._set_status(
+                    WebcamPhase.DEVICE_UNAVAILABLE,
+                    f"VideoCapture({device}) could not open the device",
+                )
+                return
             with self._preview_lock:
-                self._camera_open = False
-                self._error_message = str(exc)
-            return
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            logger.warning("webcam open failed")
-            with self._preview_lock:
-                self._camera_open = False
-                self._error_message = "VideoCapture(0) returned no device"
-            landmarker.close()
-            return
-        with self._preview_lock:
-            self._camera_open = True
-            self._error_message = None
-        # EMA-smoothed FPS so the preview status doesn't jitter every
-        # frame; alpha 0.1 gives a ~10-frame window. None marks "no
-        # sample yet" so the first measurement seeds the EMA directly.
-        fps_ema: float | None = None
-        try:
-            while not self._stop_evt.is_set():
-                start = time.monotonic()
-                ok, frame = cap.read()
-                if not ok or frame is None:
-                    time.sleep(_FRAME_INTERVAL_S)
-                    continue
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                landmarks_norm = _detect_face(landmarker, mp, rgb)
-                if landmarks_norm is not None:
-                    params = landmarks_to_params(landmarks_norm)
-                    with self._params_lock:
-                        self._latest_params = params
-                elapsed = time.monotonic() - start
-                inst_fps = 1.0 / elapsed if elapsed > 0 else 0.0
-                fps_ema = inst_fps if fps_ema is None else (0.9 * fps_ema + 0.1 * inst_fps)
-                # Mirror the latest capture under the preview lock so
-                # the dialog (running on the GUI thread) can paint it.
-                with self._preview_lock:
-                    self._latest_frame_bgr = frame
-                    self._latest_landmarks_norm = landmarks_norm
-                    self._face_detected = landmarks_norm is not None
-                    self._fps = float(fps_ema)
-                remaining = _FRAME_INTERVAL_S - elapsed
-                if remaining > 0:
-                    time.sleep(remaining)
+                self._camera_open = True
+            self._capture_frames(cap, landmarker, cv2, mp)
+        except ImportError as exc:
+            logger.warning("webcam dependency failed: %s", exc)
+            self._set_status(WebcamPhase.MISSING_DEPENDENCY, str(exc))
+        except _CameraAccessDeniedError as exc:
+            logger.warning("webcam access denied: %s", exc)
+            self._set_status(WebcamPhase.PERMISSION_DENIED, str(exc))
+        except Exception as exc:  # third-party capture and inference boundary
+            logger.exception("webcam tracking failed")
+            self._set_status(WebcamPhase.FAILED, str(exc) or type(exc).__name__)
         finally:
-            cap.release()
-            landmarker.close()
+            self._release_capture(cap, landmarker)
             with self._preview_lock:
                 self._camera_open = False
+            if self._stop_evt.is_set():
+                self._set_status(WebcamPhase.STOPPING)
+
+    def _release_capture(self, cap, landmarker) -> None:
+        for resource, method in ((cap, "release"), (landmarker, "close")):
+            if resource is None:
+                continue
+            try:
+                getattr(resource, method)()
+            except Exception as exc:  # independent third-party cleanup boundaries
+                logger.exception("webcam resource cleanup failed")
+                self._set_status(WebcamPhase.FAILED, str(exc) or type(exc).__name__)
+
+    def _capture_frames(self, cap, landmarker, cv2, mp) -> None:
+        fps_ema: float | None = None
+        while not self._stop_evt.is_set():
+            start = time.monotonic()
+            ok, frame = _camera_operation(cap.read)
+            if self._stop_evt.is_set():
+                break
+            if not ok or frame is None:
+                self._set_status(WebcamPhase.FAILED, "Camera stopped delivering frames")
+                return
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            landmarks_norm = _detect_face(landmarker, mp, rgb)
+            with self._params_lock:
+                self._latest_params = (
+                    landmarks_to_params(landmarks_norm) if landmarks_norm is not None else {}
+                )
+            elapsed = time.monotonic() - start
+            inst_fps = 1.0 / elapsed if elapsed > 0 else 0.0
+            fps_ema = inst_fps if fps_ema is None else (0.9 * fps_ema + 0.1 * inst_fps)
+            with self._preview_lock:
+                self._latest_frame_bgr = frame
+                self._latest_landmarks_norm = landmarks_norm
+                self._face_detected = landmarks_norm is not None
+                self._fps = float(fps_ema)
+            self._set_status(WebcamPhase.RUNNING)
+            self._stop_evt.wait(max(0, _FRAME_INTERVAL_S - elapsed))
 
     # ---- GUI thread pump -----------------------------------------------
 
     def _pump_to_canvas(self) -> None:
+        if self._thread is not None and not self._thread.is_alive():
+            self._thread = None
+            if self.status().phase == WebcamPhase.STOPPING:
+                self._set_status(WebcamPhase.STOPPED)
+            self._pump_timer.stop()
+        self._publish_status()
         if not self._enabled or self._canvas.document() is None:
             return
         with self._params_lock:
@@ -231,6 +306,17 @@ class WebcamTracker(QObject):
         # frame), collapsing the frame rate on a large rig; set_parameter_values
         # recomputes once for the batch.
         self._canvas.set_parameter_values(params)
+
+
+class _CameraAccessDeniedError(PermissionError):
+    """Permission denial from a camera operation, rather than a model-file operation."""
+
+
+def _camera_operation(operation, *args):
+    try:
+        return operation(*args)
+    except PermissionError as exc:
+        raise _CameraAccessDeniedError(str(exc)) from exc
 
 
 def _landmarks_to_array(face_landmarks) -> np.ndarray:  # pragma: no cover - mediapipe types

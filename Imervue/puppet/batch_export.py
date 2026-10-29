@@ -10,6 +10,7 @@ signals into a status bar without writing the loop manually.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -64,6 +65,7 @@ class BatchMotionExporter(QObject):
         self._index: int = 0
         self._total: int = 0
         self._written: list[str] = []
+        self._destinations: list[str] = []
         self._active: bool = False
         # Bumped on every motion + on stop, so a stale stop-timer from a
         # cancelled run can't fire into a freshly started batch and truncate it.
@@ -107,6 +109,7 @@ class BatchMotionExporter(QObject):
         self._index = 0
         self._total = len(self._queue)
         self._written = []
+        self._destinations = _plan_destinations(self._queue, out, self._extension)
         self._active = True
         self._record_next()
         return True
@@ -129,7 +132,7 @@ class BatchMotionExporter(QObject):
             return
         motion = self._queue[self._index]
         self.progress.emit(self._index, self._total, motion.name)
-        path = self._destination_for(motion)
+        path = self._destinations[self._index]
         # Drive the player to render this motion from frame 0.
         self._player.set_motion(motion)
         self._player.seek(0.0)
@@ -165,17 +168,27 @@ class BatchMotionExporter(QObject):
 
     def _on_recorder_failed(self, reason: str) -> None:
         self._active = False
+        self._record_seq += 1
+        self._player.pause()
         self.failed.emit(reason)
 
     def _finish_clean(self) -> None:
         self._active = False
         self.finished.emit(list(self._written))
 
-    def _destination_for(self, motion: Motion) -> str:
-        if self._directory is None:
-            raise RuntimeError("destination unset — start() not called")
-        safe = _safe_filename(motion.name)
-        return str(self._directory / f"{safe}{self._extension}")
+def _plan_destinations(motions, directory: Path, extension: str) -> list[str]:
+    used: set[str] = set()
+    paths = []
+    for motion in motions:
+        stem = _safe_filename(motion.name)
+        target = directory / f"{stem}{extension}"
+        suffix = 1
+        while str(target).casefold() in used or os.path.lexists(target):
+            target = directory / f"{stem}_{suffix}{extension}"
+            suffix += 1
+        used.add(str(target).casefold())
+        paths.append(str(target))
+    return paths
 
 
 def _safe_filename(name: str) -> str:

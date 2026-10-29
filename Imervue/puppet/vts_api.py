@@ -28,8 +28,9 @@ Security: the server binds ``127.0.0.1`` only (never ``0.0.0.0``).
 The auto-issued token grants full parameter-write access — this is
 a developer puppet plugin, not a public service. Binding to localhost
 does not keep out web pages: a browser lets any site open a WebSocket to
-``127.0.0.1``, so connections whose ``Origin`` is a remote ``http(s)``
-site are refused (see :mod:`Imervue.system.local_origin`). Messages are capped at
+``127.0.0.1``, so remote web origins, opaque ``null`` origins and malformed
+origins are refused (see :mod:`Imervue.system.local_origin`). Native clients
+may omit the origin; browser tools should be served from localhost. Messages are capped at
 :data:`MAX_MESSAGE_BYTES`.
 """
 from __future__ import annotations
@@ -92,7 +93,10 @@ class VTubeStudioHandler:
             return self._error_envelope("", "InvalidRequest", "message must be a JSON object")
         request_id = str(message.get("requestID", ""))
         message_type = message.get("messageType")
-        data = message.get("data") or {}
+        data = message.get("data", {})
+        if not isinstance(message_type, str) or not isinstance(data, dict):
+            return self._error_envelope(
+                request_id, "InvalidRequest", "messageType must be a string and data an object")
         handler = _MESSAGE_HANDLERS.get(message_type)
         if handler is None:
             return self._envelope(
@@ -198,7 +202,7 @@ class VTubeStudioHandler:
                 max_value=float(data.get("max", 1.0)),
                 default=float(data.get("defaultValue", 0.0)),
             )
-        except ValueError as exc:
+        except (TypeError, ValueError, OverflowError) as exc:
             return "APIError", {"errorID": 5, "message": str(exc)}
         if not ok:
             return "APIError", {"errorID": 6, "message": "parameter already exists"}
@@ -210,7 +214,9 @@ class VTubeStudioHandler:
         push the latest parameter values into our puppet."""
         if not self._require_auth():
             return "APIError", {"errorID": 50, "message": _NOT_AUTHENTICATED_MSG}
-        values = data.get("parameterValues") or []
+        values = data.get("parameterValues", [])
+        if not isinstance(values, list):
+            return "APIError", {"errorID": 1, "message": "parameterValues must be an array"}
         applied = 0
         for entry in values:
             if not isinstance(entry, dict):
@@ -220,7 +226,7 @@ class VTubeStudioHandler:
                 continue
             try:
                 value = float(entry.get("value", 0.0))
-            except (TypeError, ValueError):
+            except (TypeError, ValueError, OverflowError):
                 continue
             self._canvas.set_parameter_value(param_id, value)
             applied += 1

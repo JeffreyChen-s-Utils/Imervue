@@ -109,6 +109,8 @@ def _populate_recent(ui_we_want_to_set, folder_menu, image_menu):
     if not valid_folders:
         empty = folder_menu.addAction(lang.get("recent_empty", "(Empty)"))
         empty.setEnabled(False)
+        empty.setProperty("disabledReason", lang.get(
+            "command_no_recent", "No recent items are available yet."))
 
     # ===== Images =====
     valid_images = []
@@ -129,6 +131,8 @@ def _populate_recent(ui_we_want_to_set, folder_menu, image_menu):
     if not valid_images:
         empty = image_menu.addAction(lang.get("recent_empty", "(Empty)"))
         empty.setEnabled(False)
+        empty.setProperty("disabledReason", lang.get(
+            "command_no_recent", "No recent items are available yet."))
     # QMenu hides ``setToolTip`` content by default; flip the attribute
     # so artists actually see the full path on hover.
     try:
@@ -163,12 +167,10 @@ def open_recent(ui_we_want_to_set, path: str):
 
     # 更新檔案樹定位
     if Path(path).is_dir():
-        ui_we_want_to_set.model.setRootPath(path)
-        ui_we_want_to_set.tree.setRootIndex(ui_we_want_to_set.model.index(path))
+        ui_we_want_to_set.tree.set_root_path(path)
     else:
         parent = str(Path(path).parent)
-        ui_we_want_to_set.model.setRootPath(parent)
-        ui_we_want_to_set.tree.setRootIndex(ui_we_want_to_set.model.index(parent))
+        ui_we_want_to_set.tree.set_root_path(parent)
 
     ui_we_want_to_set.viewer.clear_tile_grid()
     open_path(main_gui=ui_we_want_to_set.viewer, path=path)

@@ -17,9 +17,12 @@ without a Qt model.
 """
 from __future__ import annotations
 
+from html import escape
+from pathlib import Path
+
 from PySide6.QtCore import QCollator, QModelIndex, QSortFilterProxyModel, Qt
 
-TREE_SORT_KEYS = ("name", "modified", "created", "size")
+TREE_SORT_KEYS = ("name", "modified", "created", "size", "type")
 DEFAULT_TREE_SORT_KEY = "name"
 
 
@@ -51,6 +54,8 @@ def file_sort_value(info, key: str):
     sensible order. ``name`` returns ``None`` — the caller's locale-aware
     filename comparison is both the key and the tie-breaker there.
     """
+    if key == "type":
+        return Path(info.fileName()).suffix.casefold()
     if key == "size":
         return info.size()
     if key == "modified":
@@ -67,6 +72,7 @@ class FileTreeSortProxy(QSortFilterProxyModel):
     def __init__(self, source, parent=None) -> None:
         super().__init__(parent)
         self._sort_key = DEFAULT_TREE_SORT_KEY
+        self._folders_first = True
         # Locale-aware, numeric-mode name comparison (img2 < img10), matching
         # what users expect from Explorer.
         self._collator = QCollator()
@@ -89,6 +95,30 @@ class FileTreeSortProxy(QSortFilterProxyModel):
             self._sort_key = key
             self.invalidate()
 
+    def set_folders_first(self, enabled: bool) -> None:
+        if self._folders_first != enabled:
+            self._folders_first = enabled
+            self.invalidate()
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.ToolTipRole and index.isValid():
+            from Imervue.multi_language.language_wrapper import language_wrapper
+            info = self.sourceModel().fileInfo(self.mapToSource(index))
+            lang = language_wrapper.language_word_dict
+            missing = lang.get("tree_metadata_unavailable", "Unavailable")
+            def stamp(value):
+                return value.toString("yyyy-MM-dd HH:mm:ss") if value.isValid() else missing
+            rows = [escape(info.filePath()),
+                    escape(lang.get("tree_metadata_created", "Created")) + ": "
+                    + escape(stamp(info.birthTime())),
+                    escape(lang.get("tree_metadata_modified", "Modified")) + ": "
+                    + escape(stamp(info.lastModified()))]
+            if not info.isDir():
+                rows.append(escape(lang.get("tree_metadata_size", "Size"))
+                            + f": {info.size():,} bytes")
+            return "<qt>" + "<br>".join(rows) + "</qt>"
+        return super().data(index, role)
+
     def lessThan(self, left, right) -> bool:  # noqa: N802 - Qt override
         src = self.sourceModel()
         left_info = src.fileInfo(left)
@@ -96,7 +126,7 @@ class FileTreeSortProxy(QSortFilterProxyModel):
         ascending = self.sortOrder() == Qt.SortOrder.AscendingOrder
         grouped = dirs_first_precedence(
             left_info.isDir(), right_info.isDir(), ascending)
-        if grouped is not None:
+        if self._folders_first and grouped is not None:
             return grouped
         left_val = file_sort_value(left_info, self._sort_key)
         right_val = file_sort_value(right_info, self._sort_key)

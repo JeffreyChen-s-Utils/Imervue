@@ -45,8 +45,7 @@ def _open_dropped_folder(view: GPUImageView, folder: str) -> None:
 
     mw = view.main_window
     lang = mw.language_wrapper.language_word_dict
-    mw.model.setRootPath(folder)
-    mw.tree.setRootIndex(mw.model.index(folder))
+    mw.tree.set_root_path(folder)
     open_path(main_gui=view, path=folder)
     mw.filename_label.setText(
         lang.get(_FOLDER_LABEL_KEY, _FOLDER_LABEL_FALLBACK).format(path=folder)
@@ -65,8 +64,7 @@ def _open_dropped_file(view: GPUImageView, file_path: str) -> None:
 
     mw = view.main_window
     folder = str(Path(file_path).parent)
-    mw.model.setRootPath(folder)
-    mw.tree.setRootIndex(mw.model.index(folder))
+    mw.tree.set_root_path(folder)
     open_path(main_gui=view, path=file_path)
     if hasattr(mw, "breadcrumb"):
         mw.breadcrumb.set_path(folder)

@@ -9,16 +9,24 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from OpenGL.error import GLError
 from PySide6.QtWidgets import QFileDialog
 
 from Imervue.multi_language.language_wrapper import language_wrapper
-from Imervue.puppet.recorder import save_canvas_png
+from Imervue.puppet.recorder import write_canvas_png
+from Imervue.puppet.webcam_status import WebcamPhase, status_text
+from Imervue.gui.background_jobs import job_registry
+from Imervue.system.job_state import JobState
 from Imervue.puppet.requirements import (
     NDI_PACKAGES,
     VIRTUAL_CAMERA_PACKAGES,
     WEBCAM_PACKAGES,
     missing_packages,
 )
+
+
+_RECORD_TITLE_KEY = "puppet_record_dialog_title"
+_RECORD_TITLE = "Record Animation"
 
 
 class PuppetLiveMixin:
@@ -38,16 +46,18 @@ class PuppetLiveMixin:
             return
         if not path.lower().endswith(".png"):
             path = f"{path}.png"
-        ok = save_canvas_png(self._canvas, path)
-        if ok:
-            self._announce(
-                "puppet_capture_saved", "Saved frame to {name}",
-                name=Path(path).name,
-            )
+        error = ""
+        try:
+            write_canvas_png(self._canvas, path)
+        except (GLError, RuntimeError, OSError) as exc:
+            error = str(exc) or type(exc).__name__
+        self._retain_output_result("puppet_capture_dialog_title", "Capture Frame", path, error)
+        if error:
+            self._announce("puppet_capture_error", "Capture failed: {error}", error=error)
         else:
             self._announce(
-                "puppet_capture_failed",
-                "Capture failed (canvas not yet rendered)",
+                "puppet_capture_saved", "Saved frame to {name}",
+                name=str(Path(path).absolute()),
             )
 
     def _toggle_recording(self, enabled: bool) -> None:
@@ -57,33 +67,43 @@ class PuppetLiveMixin:
             self._recorder.stop()
 
     def _start_recording(self) -> None:
+        if self._recorder.is_recording():
+            return
         if self._canvas.document() is None:
             self._record_action.setChecked(False)
             return
         lang = language_wrapper.language_word_dict
         path, _ = QFileDialog.getSaveFileName(
             self,
-            lang.get("puppet_record_dialog_title", "Record Animation"),
+            lang.get(_RECORD_TITLE_KEY, _RECORD_TITLE),
             "",
             "GIF (*.gif);;WebM (*.webm);;MP4 (*.mp4)",
         )
         if not path:
             self._record_action.setChecked(False)
             return
+        self._recording_destination = str(Path(path).absolute())
+        self._recording_job = job_registry().add_activity(
+            lang.get(_RECORD_TITLE_KEY, _RECORD_TITLE),
+            JobState([self._recording_destination]), self._recorder.stop,
+        )
         ok = self._recorder.start(path)
         if not ok:
             self._record_action.setChecked(False)
 
     def _on_recording_finished(self, path: str) -> None:
+        self._finish_recording_result(path)
         self._announce(
             "puppet_record_saved", "Recording saved to {name}",
-            name=Path(path).name,
+            name=str(Path(path).absolute()),
         )
         self._record_action.blockSignals(True)
         self._record_action.setChecked(False)
         self._record_action.blockSignals(False)
 
     def _on_recording_failed(self, reason: str) -> None:
+        path = getattr(self, "_recording_destination", "")
+        self._finish_recording_result(path, reason)
         self._announce(
             "puppet_record_failed", "Recording failed: {error}",
             error=reason,
@@ -91,6 +111,31 @@ class PuppetLiveMixin:
         self._record_action.blockSignals(True)
         self._record_action.setChecked(False)
         self._record_action.blockSignals(False)
+
+    def _finish_recording_result(self, path: str, error: str = "") -> None:
+        job = getattr(self, "_recording_job", None)
+        if job is None:
+            self._retain_output_result(
+                _RECORD_TITLE_KEY, _RECORD_TITLE, path, error,
+            )
+        else:
+            source = self._recording_destination
+            job.state.record(source, output=str(Path(path).absolute()) if not error else "",
+                             error=error)
+            job.state.finish()
+            job.cancel_callback = None
+            job_registry().poll()
+        self._recording_job = None
+        self._recording_destination = ""
+
+    @staticmethod
+    def _retain_output_result(key: str, title: str, path: str, error: str = "") -> None:
+        title = language_wrapper.language_word_dict.get(key, title)
+        source = str(Path(path).absolute()) if path else title
+        state = JobState([source])
+        state.record(source, output=source if not error else "", error=error)
+        state.finish()
+        job_registry().add_completed(title, state)
 
     def _toggle_webcam(self, enabled: bool) -> None:
         if enabled and missing_packages(WEBCAM_PACKAGES):
@@ -103,14 +148,8 @@ class PuppetLiveMixin:
             )
             self._reset_toggle(self._webcam_toggle)
             return
-        ok = self._webcam.set_enabled(enabled)
-        if enabled and not ok:
-            self._reset_toggle(self._webcam_toggle)
-            self._announce(
-                "puppet_webcam_unavailable",
-                "Webcam tracking unavailable (install opencv-python + mediapipe)",
-            )
-            return
+        self._webcam.set_enabled(enabled)
+        self._on_webcam_state_changed()
         # Pop a live preview window so the user can see what the
         # camera is producing. The dialog polls the tracker via timer;
         # we keep one instance around to avoid re-creating it every
@@ -120,10 +159,24 @@ class PuppetLiveMixin:
         else:
             self._hide_webcam_preview()
 
+    def _on_webcam_state_changed(self) -> None:
+        status = self._webcam.status()
+        toggle = getattr(self, "_webcam_toggle", None)
+        if toggle is not None:
+            toggle.blockSignals(True)
+            toggle.setChecked(status.active)
+            toggle.setEnabled(status.phase != WebcamPhase.STOPPING)
+            toggle.setToolTip(status_text(status, language_wrapper.language_word_dict))
+            toggle.blockSignals(False)
+
+    def _install_webcam_packages(self) -> None:
+        self._prompt_install(WEBCAM_PACKAGES, on_ready=lambda: self._toggle_webcam(True))
+
     def _show_webcam_preview(self) -> None:
         from Imervue.puppet.webcam_preview_dialog import WebcamPreviewDialog
         if getattr(self, "_webcam_preview_dialog", None) is None:
             dlg = WebcamPreviewDialog(self._webcam, self)
+            dlg.install_requested.connect(self._install_webcam_packages)
             # Closing the dialog (X button or "Stop tracking") needs to
             # also untick the toolbar toggle — otherwise the toggle
             # stays "on" while the tracker is actually stopped.

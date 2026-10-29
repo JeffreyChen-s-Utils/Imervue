@@ -31,6 +31,12 @@
 
 ---
 
+Les résultats de recherche de l’arborescence s’ouvrent avec Entrée ou un double-clic ; leur localisation reste une action distincte. Les noms et chemins relatifs sont séparés, et les résultats se replient sans effacer la requête. Les commandes supérieures indiquent si le tri est global ou propre au dossier, avec des sens explicites pour les dates et tailles et une réinitialisation visible. La recherche affiche le dossier et la portée des sous-dossiers ; les filtres d’images indépendants affichent les conditions supprimables, le nombre de correspondances et signalent une image ouverte explicitement conservée malgré les filtres.
+
+Modify distingue l’écrasement de l’original de l’enregistrement d’une copie et affiche la destination. Le recadrage précise aussi quand il écrit dans l’original. Les formats source en lecture seule utilisent une copie ; un échec d’écriture conserve les modifications et un enregistrement réussi affiche le chemin réel. L’envoi vers Paint propose l’original ou le résultat développé actuel en pleine qualité, avec un choix explicite des annotations, dans un nouveau document. Les documents Paint existants et leurs historiques d’annulation sont conservés.
+
+La barre d’état ouvre Background Jobs et affiche les tâches actives et échouées. Les captures et enregistrements Puppet y conservent les chemins de sortie ou les détails d’échec ; le résultat ou son dossier reste accessible ensuite. Les enregistrements ne proposent pas de nouvelle tentative inadaptée. La webcam affiche ses états réels de démarrage, fonctionnement, arrêt et erreur, avec choix du périphérique, nouvelle tentative et diagnostic ; l’installation est proposée si des dépendances manquent. La palette explique les commandes indisponibles et privilégie les commandes récentes ou fréquentes.
+
 ## Table des matières
 
 - [Aperçu](#aperçu)
@@ -48,6 +54,7 @@
 - [Prise en charge multilingue](#prise-en-charge-multilingue)
 - [Paramètres utilisateur](#paramètres-utilisateur)
 - [Architecture](#architecture)
+- [Sécurité](#sécurité)
 - [Licence](#licence)
 
 ---
@@ -103,6 +110,8 @@ Les cinq onglets utilisent le design moderne des espaces de travail. Modify prop
 Survolez les commandes, onglets, menus et éléments de listes ou de tableaux pour afficher des conseils. Les cinq espaces de travail et les dialogues ouverts ensuite complètent les conseils manquants en conservant les descriptions et chemins existants. Les commandes numériques indiquent leur plage autorisée et les menus les raccourcis disponibles. Les conseils générés suivent les changements de libellé, de plage et de langue sans recopier les valeurs saisies, y compris les mots de passe. Au retour dans l’application avec Paint ouvert, l’actualisation de l’arborescence, la navigation par onglets et les infobulles restent réactives.
 
 L’ouverture de dossiers regroupe les résultats successifs de l’analyse au lieu de reconstruire la vue à chaque lot. Les comparaisons utilisent des recherches indexées ; la préparation des métadonnées lit les attributs sans ouvrir les en-têtes et la liste masquée ne se remplit qu’à sa sélection. Les premiers résultats restent progressifs, le tri final est conservé et l’indicateur d’activité s’arrête après l’analyse d’un dossier vide. Les aperçus du navigateur choisissent la première image sans trier toute la liste, utilisent au plus deux tâches et évitent les recherches d’icônes système personnalisées pour limiter les accès concurrents au disque.
+
+Un échec d’export d’image Paint ou MCP préserve le fichier de destination existant. Les exports Puppet par lot distinguent les noms de mouvement en conflit et signalent les échecs d’enregistrement. La maintenance supprime uniquement les entrées dont l’absence est confirmée dans les racines lisibles de la bibliothèque. Les sauvegardes en arrière-plan n’écrasent pas les modifications simultanées des profils. Annuler une installation ou Auto-Tag arrête le travail en arrière-plan ; fermer une fenêtre arrête aussi ses services Puppet et Pet. Les galeries web et WebDAV encodent correctement les noms de fichiers. Les documents, sessions et requêtes VTS invalides produisent une erreur. Les cadres MCP respectent la même limite de sortie de 100 millions de pixels que les autres outils d’image limités. Les versions empaquetées conservent la plateforme OpenGL native du système.
 
 ## Installation
 
@@ -301,6 +310,8 @@ L'onglet **Imervue** est la surface d'accueil par défaut. Il associe le visuali
 - **Dossiers / images récents** suivis ; le dernier dossier est restauré automatiquement au démarrage
 
 ### Tri et filtrage
+
+Les commandes au-dessus de l’arborescence trient par nom, modification, création, taille ou type de fichier ; la flèche change le sens. Les options placent les dossiers en premier, enregistrent un tri propre au dossier courant ou rétablissent les valeurs globales. Le survol affiche les dates et la taille. Activez Inclure les sous-dossiers pour rechercher en arrière-plan dans les dossiers non ouverts, annuler la recherche et retrouver un résultat dans l’arborescence initiale. Les éléments masqués et en attente de suppression sont exclus ; les liens symboliques et jonctions ne sont pas suivis. Les dossiers développés, la sélection et le défilement sont restaurés après actualisation et réouverture.
 
 - Tri par nom (ordre naturel, comme l'Explorateur : `img2` avant `img10`) / modifié / créé / date de prise de vue (heure EXIF de l'appareil, sinon modifié) / taille / résolution (croissant ou décroissant)
 - Filtrage par extension, étiquette de couleur, note, étiquette/album, état de tri
@@ -689,6 +700,8 @@ Choisissez n'importe quelle combinaison depuis l'onglet ou le menu clic-droit. A
 Tout ce que vous réglez — position, pilotes, opacité, clic traversant, taille — est mémorisé entre les lancements.
 
 Le plugin **Desktop Pet Integrations** (**Plugins > Download Plugins**) ajoute **Plugins > Desktop Pet Integrations** : le pet réagit à OBS (diffusion, enregistrement, changements de scène), aux mots-clés du chat Twitch (n'importe où dans un message, ou `=hi` pour le message entier, `!dance*` pour son début, `/go+al/` pour une expression régulière), à un webhook local (`POST http://127.0.0.1:9876/trigger` avec `{"group": "Wave", "speech": "Hi!"}`) et aux notifications Windows. C'est aussi l'exemple d'un plugin de pet construit sur `on_pet_created`.
+
+Le webhook local et l'API VTube Studio refusent `Origin: null`, même avec un jeton valide, car une page web isolée dans un bac à sable peut envoyer cette valeur. Les clients natifs sans en-tête `Origin` et les pages servies sur localhost restent pris en charge, selon l'authentification configurée. Le navigateur peut aussi envoyer `null` pour une page ouverte depuis le disque ; servez ces pages sur localhost.
 
 ### Voix personnalisée (script du pet)
 
@@ -1087,6 +1100,10 @@ Deux règles valent pour tout l'arbre :
 - Le convertisseur Cubism produit des courbes opacity_keys aux côtés des deltas de vertex-morph afin que les transitions de visibilité pilotées par paramètres survivent à la conversion `.moc3 → .puppet`
 
 ---
+
+## Sécurité
+
+Signalez les vulnérabilités en privé. La politique, les versions prises en charge et les notes destinées aux opérateurs se trouvent dans [SECURITY.md](../SECURITY.md).
 
 ## Licence
 

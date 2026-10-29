@@ -75,13 +75,12 @@ class MainWindowLayoutMixin:
         # 設定起始路徑：有上次資料夾就用，否則從根開始
         last_folder = user_setting_dict.get("user_last_folder", "")
         start_path = last_folder if last_folder and Path(last_folder).is_dir() else ""
-        self.model.setRootPath(start_path)
 
         self.tree = _FileTreeView(self)
         self.tree.setModel(self.model)
         self.tree.set_thumbnail_size(
             user_setting_dict.get("tree_thumbnail_size", DEFAULT_ICON_SIZE))
-        self.tree.setRootIndex(self.model.index(start_path))
+        self.tree.set_root_path(start_path)
         # 只顯示「名稱」欄，隱藏大小/類型/日期（省掉大量 stat() 呼叫）
         for col in (1, 2, 3):
             self.tree.hideColumn(col)
@@ -90,6 +89,7 @@ class MainWindowLayoutMixin:
         self.tree.setUniformRowHeights(True)
         self.tree.setAnimated(False)
         self.tree.clicked.connect(self.on_file_clicked)
+        self.tree.search_path_activated.connect(self.preview_search_result)
 
         self.tree_search = QLineEdit()
         self.tree_search.setClearButtonEnabled(True)
@@ -108,6 +108,8 @@ class MainWindowLayoutMixin:
         tree_layout.setContentsMargins(gap, gap, gap, gap)
         tree_layout.setSpacing(gap)
         tree_layout.addWidget(self.tree_search)
+        tree_layout.addWidget(self.tree.create_search_controls())
+        tree_layout.addWidget(self.tree.create_sort_controls())
         tree_layout.addWidget(self.tree)
 
         # 目錄載入完成後確保樹狀圖更新
@@ -364,3 +366,5 @@ class MainWindowLayoutMixin:
         )
         self._status_bar.addPermanentWidget(self._memory_pressure)
         self._status_bar.addPermanentWidget(self._progress_bar)
+        from Imervue.gui.job_indicator import install_job_indicator
+        self._job_indicator = install_job_indicator(self)

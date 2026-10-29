@@ -44,7 +44,7 @@ def _make_view():
     mw = SimpleNamespace(
         language_wrapper=SimpleNamespace(language_word_dict={}),
         model=SimpleNamespace(setRootPath=lambda p: None, index=lambda p: p),
-        tree=SimpleNamespace(setRootIndex=lambda i: None),
+        tree=SimpleNamespace(set_root_path=lambda p: None),
         filename_label=SimpleNamespace(setText=lambda t: None),
         watch_folder=lambda p: None,
     )

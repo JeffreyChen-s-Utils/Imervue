@@ -112,9 +112,15 @@ def _sanitize_loaded(data: dict[str, Any]) -> dict[str, Any]:
     explicit sanitiser boundary between ``json.loads`` and the rest of the
     module — downstream code never sees a raw attacker-controlled string.
     """
-    raw_tabs = data.get("tabs") or []
+    raw_tabs = data.get("tabs")
+    raw_selection = data.get("selection")
+    if raw_tabs is not None and not isinstance(raw_tabs, list):
+        raise ValueError("session tabs must be a list")
+    if raw_selection is not None and not isinstance(raw_selection, list):
+        raise ValueError("session selection must be a list")
+    raw_tabs = raw_tabs or []
     tabs = [_sanitize_tab(t) for t in raw_tabs if isinstance(t, dict)]
-    selection = [clean for clean in map(_sanitize_path, data.get("selection") or []) if clean]
+    selection = [clean for clean in map(_sanitize_path, raw_selection or []) if clean]
     active_tab_raw = data.get("active_tab", 0)
     active_tab = active_tab_raw if isinstance(active_tab_raw, int) else 0
     return {
@@ -133,7 +139,9 @@ def load_session_from_path(path: str | Path) -> dict[str, Any]:
     """Read + validate a session file. Raises ValueError on schema mismatch."""
     raw = Path(path).read_text(encoding="utf-8-sig")   # a BOM from a text editor is fine
     data = json.loads(raw)
-    if not isinstance(data, dict) or data.get("version") != SESSION_VERSION:
+    if not isinstance(data, dict):
+        raise ValueError("session must be a JSON object")
+    if data.get("version") != SESSION_VERSION:
         raise ValueError(f"Unsupported session version: {data.get('version')!r}")
     return _sanitize_loaded(data)
 

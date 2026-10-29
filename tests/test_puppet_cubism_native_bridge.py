@@ -190,3 +190,66 @@ def test_bind_signatures_declares_every_function_exactly():
     actual = {name: (_describe(fn.restype), [_describe(a) for a in fn.argtypes])
               for name, fn in sorted(vars(lib).items())}
     assert actual == _EXPECTED_SIGNATURES
+
+
+class _ModelLibrary:
+    def __init__(self, consistency=1, *, revive=True, initialize=True):
+        self.consistency = consistency
+        self.revive = revive
+        self.initialize = initialize
+        self.calls = []
+        self.moc_address = None
+
+    def csmHasMocConsistency(self, address, size):
+        self.calls.append("check")
+        self.moc_address = address.value
+        assert address.value % 64 == 0
+        assert ctypes.string_at(address, size.value) == b"test moc bytes"
+        return self.consistency
+
+    def csmReviveMocInPlace(self, address, size):
+        self.calls.append("revive")
+        self.revived_address = address.value
+        return address.value if self.revive else None
+
+    def csmGetSizeofModel(self, _moc):
+        self.calls.append("size")
+        return 32
+
+    def csmInitializeModelInPlace(self, _moc, address, size):
+        self.calls.append("initialize")
+        assert address.value % 16 == 0 and size.value == 32
+        return address.value if self.initialize else None
+
+    def csmUpdateModel(self, _model):
+        self.calls.append("update")
+
+
+def test_inconsistent_moc_is_rejected_before_native_revival():
+    from Imervue.puppet.cubism_native_bridge import CubismBridgeError, CubismModel
+    lib = _ModelLibrary(consistency=0)
+    with pytest.raises(CubismBridgeError, match="consistency"):
+        CubismModel(lib, b"test moc bytes")
+    assert lib.calls == ["check"]
+
+
+def test_consistent_moc_is_checked_then_initialized_with_live_aligned_buffers():
+    from Imervue.puppet.cubism_native_bridge import CubismModel
+    lib = _ModelLibrary()
+    model = CubismModel(lib, b"test moc bytes")
+    assert lib.calls == ["check", "revive", "size", "initialize", "update"]
+    assert lib.revived_address == lib.moc_address
+    assert ctypes.string_at(model._moc_ptr, 14) == b"test moc bytes"
+    assert ctypes.string_at(model._model_ptr, 32) == bytes(32)
+
+
+@pytest.mark.parametrize(("options", "message", "calls"), [
+    ({"revive": False}, "csmReviveMocInPlace", ["check", "revive"]),
+    ({"initialize": False}, "csmInitializeModelInPlace", ["check", "revive", "size", "initialize"]),
+])
+def test_consistent_moc_still_reports_native_initialization_failures(options, message, calls):
+    from Imervue.puppet.cubism_native_bridge import CubismBridgeError, CubismModel
+    lib = _ModelLibrary(**options)
+    with pytest.raises(CubismBridgeError, match=message):
+        CubismModel(lib, b"test moc bytes")
+    assert lib.calls == calls

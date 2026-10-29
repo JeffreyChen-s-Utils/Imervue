@@ -1,0 +1,64 @@
+name: Frozen startup
+
+on:
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-startup:
+    name: Frozen import (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Install smoke-test dependencies
+        run: |
+          python -m pip install --only-binary :all: "pyinstaller==6.22.3" "PyOpenGL==3.1.10"
+      - name: Install native Linux GL loader
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libgl1
+      - name: Freeze the import probe with the unchanged application entry
+        run: |
+          mkdir -p .audit
+          python -m PyInstaller --clean --noconfirm --onedir --name frozen-startup \
+            --distpath .audit/frozen-ci-dist --workpath .audit/frozen-ci-build \
+            --specpath .audit --add-data "$PWD/Imervue/__main__.py:imervue-entry" \
+            scripts/frozen_startup_probe.py 2>&1 | tee .audit/frozen-ci-build.log
+      - name: Run native frozen initialization without a display or GL context
+        run: |
+          env -u PYOPENGL_PLATFORM -u XDG_SESSION_TYPE -u WAYLAND_DISPLAY \
+            .audit/frozen-ci-dist/frozen-startup/frozen-startup \
+            | tee .audit/frozen-ci-result.json
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          result = json.loads(Path('.audit/frozen-ci-result.json').read_text())
+          expected = hashlib.sha256(Path('Imervue/__main__.py').read_bytes()).hexdigest()
+          assert result['entry_sha256'] == expected, 'Frozen entry differs from checkout'
+          PY
+      - name: Preserve native startup evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: frozen-startup-${{ runner.os }}
+          path: |
+            .audit/frozen-ci-result.json
+            .audit/frozen-ci-build.log
+          if-no-files-found: warn

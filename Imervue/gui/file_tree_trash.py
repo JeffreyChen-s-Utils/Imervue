@@ -85,6 +85,9 @@ def shutdown(self) -> None:
     the primary window's os._exit would abort an in-flight OS-trash batch
     partway. The main window calls this from closeEvent before teardown.
     """
+    self._tree_state.save()
+    if self._recursive_search is not None:
+        self._recursive_search.shutdown()
     # The list() copy is load-bearing, not redundant: ``_trash_workers`` is a
     # set, and a worker finishing inside wait() fires _on_trash_finished,
     # which discards it — mutating the set mid-iteration. Do not inline.

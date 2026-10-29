@@ -185,7 +185,11 @@ def apply_frame(
         bottom_extra=max(0, int(bottom_extra)),
         caption=str(caption), text_color=text_rgb,
     )
-    framed = add_frame(load_rgba_array(src), opts)
+    rgba = load_rgba_array(src)
+    height, width = rgba.shape[:2]
+    _guard_output_pixels(width + opts.border * 2,
+                         height + opts.border * 2 + opts.bottom_extra)
+    framed = add_frame(rgba, opts)
     with Image.fromarray(framed, "RGBA") as out:
         _save_image_to(dst, out)
     height, width = framed.shape[:2]

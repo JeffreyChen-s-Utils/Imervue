@@ -75,6 +75,4 @@ def jump_to_folder(main_gui: GPUImageView, folder_path: Path):
 
     index = model.index(str(folder_path))
     if index.isValid():
-        tree.setCurrentIndex(index)
-        tree.scrollTo(index)
-        tree.setRootIndex(index)
+        tree.set_root_path(str(folder_path))

@@ -36,6 +36,7 @@ from Imervue.gui.develop_canvas_save import DevelopCanvasSaveMixin
 from Imervue.gui.develop_drawing_tools import DevelopDrawingToolsMixin
 from Imervue.gui.develop_preview_panel import DevelopPreviewMixin
 from Imervue.gui.develop_right_panel import DevelopRightPanelMixin
+from Imervue.image.in_place_save import can_rewrite_in_place
 from Imervue.image.recipe import Recipe
 from Imervue.image.recipe_store import recipe_store
 from Imervue.multi_language.language_wrapper import language_wrapper
@@ -185,6 +186,7 @@ class DevelopPanel(
             self._set_enabled(False)
             self._sync_sliders()
             self._destroy_canvas()
+            self._sync_save_controls()
             return
 
         if self._canvas_source_path != path:
@@ -197,6 +199,8 @@ class DevelopPanel(
         else:
             # Same path — keep the working recipe to preserve unsaved edits.
             self._set_enabled(True)
+
+        self._sync_save_controls()
 
     def current_recipe(self) -> Recipe:
         return Recipe.from_dict(self._current.to_dict())
@@ -297,8 +301,10 @@ class DevelopPanel(
         """Build the right-click image menu (save / navigate / delete)."""
         lang = language_wrapper.language_word_dict
         menu = QMenu(self._canvas)
-        menu.addAction(
-            lang.get("annotation_save", "Save"), self._save_annotation)
+        overwrite = menu.addAction(
+            lang.get("modify_overwrite", "Overwrite original"), self._save_annotation)
+        overwrite.setEnabled(bool(self._path and can_rewrite_in_place(self._path)))
+        menu.addAction(lang.get("modify_save_copy", "Save copy…"), self._save_copy)
         menu.addAction(
             lang.get("right_click_menu_previous_image", "Previous Image"),
             lambda: self._on_navigate_image(-1))

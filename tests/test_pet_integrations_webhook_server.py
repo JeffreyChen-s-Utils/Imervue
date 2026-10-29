@@ -261,6 +261,52 @@ def test_e2e_web_page_origin_is_refused(qapp, running_receiver):
     assert captured == []
 
 
+@pytest.mark.parametrize("token", ["", "test-token"])
+def test_e2e_opaque_origin_is_refused_even_with_valid_token(qapp, token):
+    receiver = WebhookReceiver()
+    port = _start_on_free_port(receiver, token=token)
+    captured = []
+    receiver.command_received.connect(lambda *args: captured.append(args))
+    try:
+        headers = {"Origin": "null", "Authorization": f"Bearer {token}"}
+        status, body = _post_json(port, "/trigger", {"group": "Wave"}, headers=headers)
+        assert status == 403
+        assert json.loads(body) == {"error": "forbidden origin"}
+        qapp.processEvents()
+        assert captured == []
+    finally:
+        receiver.stop()
+        receiver.deleteLater()
+
+
+@pytest.mark.parametrize("token", ["", "test-token"])
+@pytest.mark.parametrize(("origin", "expected_status"), [
+    (None, 200), ("file://", 200), ("http://localhost:5173", 200),
+    ("https://evil.example", 403), ("http://[", 403), ("http://localhost:bad", 403),
+])
+def test_e2e_origin_policy_with_optional_auth(qapp, token, origin, expected_status):
+    receiver = WebhookReceiver()
+    port = _start_on_free_port(receiver, token=token)
+    captured = []
+    receiver.command_received.connect(lambda *args: captured.append(args))
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        if origin is not None:
+            headers["Origin"] = origin
+        status, body = _post_json(port, "/trigger", {"group": "Wave"}, headers=headers)
+        assert status == expected_status
+        if expected_status == 200:
+            assert _wait_for(qapp, lambda: bool(captured))
+            assert captured == [("Wave", "")]
+        else:
+            assert json.loads(body) == {"error": "forbidden origin"}
+            qapp.processEvents()
+            assert captured == []
+    finally:
+        receiver.stop()
+        receiver.deleteLater()
+
+
 def test_e2e_local_origin_is_accepted(qapp, running_receiver):
     receiver, port = running_receiver
     captured: list = []
