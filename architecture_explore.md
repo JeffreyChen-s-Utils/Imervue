@@ -576,7 +576,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `photo_workflow.py` | 72 | 無 Qt 的排序跨資料夾 cohort／勾選集合／挑片與預設狀態；過濾不改批次目標，拒絕排除而不刪檔 |
 | `scanner.py` | 273 | 背景掃描器，走訪 library roots 填索引（走訪沿用 `maintenance.scan_image_files`，HEIC / JXL 先註冊解碼器）；增量：mtime + size 相同就跳過（要 pHash 而列上沒有時不跳過，補算）；要讀的檔在 `probe_workers()` 條執行緒（核心數 − 1，最多 8）上解碼、不持 DB 鎖，每 256 檔一個交易寫入；寫入時尺寸與 pHash 以這次讀到的為準（`set_decoded_fields`，沒讀就清空）；JobState 只在 chunk commit 後紀錄成功；exact-path failure retry，cancel hook 接共享生命週期 |
 | `maintenance.py` | 46 | 索引與檔案系統對帳；`scan_image_files()` 經 `list_images(recursive=True)` 收 `formats.STILL_IMAGE_EXTENSIONS`，跳過隱藏檔與隱藏資料夾（磁碟根目錄的 `$RECYCLE.BIN`、Mac 的 `.Trashes`），也是掃描器的走訪 |
-| `smart_album.py` | 361 | Smart Albums：保存查詢並重新套用 |
+| `smart_album.py` | 143 | Smart Albums：規則 JSON 保存／解碼（壞 JSON 視為空規則）與 `apply_to_paths` 的篩選順序（便宜的先、逐檔讀 EXIF／GPS 的後），依城市產生地點相簿；重新匯出各子模組的函式 |
+| `smart_album_files.py` | 90 | Smart Album 逐檔規則：檔名 regex／glob、檔案大小與 mtime（stat）、EXIF 相機／鏡頭 |
+| `smart_album_dimensions.py` | 59 | Smart Album 像素寬高與長寬比規則（只讀檔頭，讀不到就剔除） |
+| `smart_album_catalog.py` | 70 | Smart Album 走使用者設定（色標、評分、最愛）與 `image_index` facade（cull、tag、日期）的規則 |
+| `smart_album_location.py` | 53 | Smart Album 地點：`place_matches` 比對城市／國家、GPS `place` 篩選、依最近城市分組 |
 | `search_query.py` | 219 | 自由文字查詢 → Smart Album 規則 |
 | `album_io.py` | 74 | Smart Album 匯出 / 匯入為可攜 JSON |
 | `clip_search.py` | 373 | CLIP 語意搜尋（「找出符合這句話的照片」）；後端是 `clip_onnx` 的 ONNX 模型（不用 torch），快取另記模型 id，別的模型寫的快取不載入；向量連同檔案的大小與修改時間快取在 `clip_cache.npz`，`is_current` 判斷可沿用，`query_text(within=)` 只在指定路徑裡排名 |
