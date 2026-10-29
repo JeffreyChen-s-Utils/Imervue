@@ -1190,7 +1190,10 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 | `plugin_manager.py` | 158 | `PluginManager`（混入 `PluginDispatchMixin`）：discover/load，instantiate failures 報狀態、partial-load cleanup 與 explicit fresh module reload；`unload_all` 反向順序；各視窗 instance 獨立；`register_plugin_languages`／`apply_saved_language` 啟動前註冊外掛語言（預設目錄經 `_plugins_dir`，測試 patch 此名稱） |
 | `plugin_discovery.py` | 148 | 外掛探索管線：依目錄再依名稱列候選（目錄 prepend 到 `sys.path`）、`plugin.json` API gate、import package／單檔外掛、找 `plugin_class` 或第一個 `ImervuePlugin` 子類；每步失敗都記 log、發 `failed` 狀態並跳過 |
 | `plugin_dispatch.py` | 113 | `PluginDispatchMixin`：`dispatch_*` hook 依載入順序送給各外掛，單一外掛 hook 例外記 log 後繼續下一個；`dispatch_key_press` 第一個吃下事件即停；`connect_pet_hooks` 只連一次 Desktop Pet 訊號 |
-| `plugin_downloader.py` | 573 | 從公開發佈 repo 下載外掛：一次遞迴 git-tree 呼叫列出清單（純函式 `parse_plugin_tree`，只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔），檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛（保留已安裝版本，狀態列顯示 `needs_newer_text`）。含 `_https_urlopen` 守衛（拒絕非 https scheme）；one atomic plugin job／failure retry 與 cooperative cancellation；dialog 使用非阻塞 WorkerHost retirement，已完成安裝保留 |
+| `plugin_downloader.py` | 132 | 外掛下載的公開入口與發佈 repo 契約：`REPO_BRANCH`（`main`）／`REPO_TREE_URL`／`RAW_BASE_URL`／`PLUGIN_CATEGORIES`、一次遞迴 git-tree 呼叫的純函式 `parse_plugin_tree`（只收 `plugins`/`languages` 類別、只收外掛目錄下的扁平檔，跳過 dot／dunder 目錄）、`is_safe_path_component` 路徑檢查、`_github_get`、`_get_plugin_dir`，以及 `_https_urlopen` 守衛（拒絕非 https scheme）；以 `__all__` 轉出 workers 與 dialog（`plugin_menu`、測試仍從這裡 import，並 patch 這裡的網路 helper） |
+| `plugin_downloader_workers.py` | 140 | `FetchPluginListWorker`（列清單）與 `DownloadPluginWorker`（檔案走 raw.githubusercontent，先下載到暫存目錄，換上前用 `plugin_api.check_compatible` 拒絕需要較新 Imervue 的外掛並保留已安裝版本，狀態列顯示 `needs_newer_text`；one atomic plugin job／failure retry `_retry_download` 與 cooperative cancellation）；`_https_urlopen`／`_github_get`／`_get_plugin_dir` 在呼叫時經 `plugin_downloader` 讀取 |
+| `plugin_downloader_dialog.py` | 257 | `PluginDownloaderDialog`（混入 `PluginDownloaderInstalledMixin`）：開啟即抓清單、依類別建樹、下載（登記 background job）與進度／完成／錯誤回報；關閉時以非阻塞 WorkerHost retirement，已完成安裝保留 |
+| `plugin_downloader_installed.py` | 123 | `PluginDownloaderInstalledMixin`：已安裝外掛偵測（含 `__init__.py` 的目錄）、選取列決定下載／重裝／刪除按鈕、確認後刪除、刷新狀態欄；`_get_plugin_dir` 在呼叫時經 `plugin_downloader` 讀取 |
 | `pip_installer.py` | 330 | 外掛相依的公開入口：`ensure_dependencies` nonblocking dependency gate（`_EnsureDepsHelper` 背景檢查、parent 已刪則 cancelled、缺套件開安裝對話框）、標準 `_https_urlopen` 守衛（拒絕非 https scheme）、`register_translations`；以 `__all__` 轉出下列 sibling 模組與 `python_finder` 的名稱（外掛與測試仍從這裡 import） |
 | `pip_embed_python.py` | 224 | 找不到 Python 時（Windows）下載 embeddable Python：釘選 SHA-256 驗證 zip 與 pip wheel、拒絕 zip-slip、啟用 `import site`、從 wheel 安裝 pip；下載在呼叫時經 `pip_installer._https_urlopen` |
 | `pip_install_workers.py` | 251 | `check_missing_packages`（凍結時查檔案系統，不在背景 import native DLL）與背景 worker：找 Python、檢查套件、安裝後 import（失敗不回報假成功）、`_InstallWorker` 逐套件在 constraints 下 `pip install`，interpreter install 互斥 |
@@ -1443,7 +1446,7 @@ ruff 啟用 `BLE`（flake8-blind-except），`except Exception` 必須收窄，�
   `tests/test_image_reads_catch_every_read_error.py` 檢查每個包住解碼呼叫的 `try` 都接得住它。
 - **Worker 邊界**：對話框在等 worker 的訊號，所以預期的失敗照常回報；最後一層 `except Exception`
   先 `logger.exception` 再回報，不能讓例外跑出執行緒，否則對話框會永遠卡住（範本見 `gui/_apply_save.py`、
-  `plugin/plugin_downloader.py`）。`tests/test_workers_always_report.py` 檢查每個 `QThread.run` 最上層的 `try`
+  `plugin/plugin_downloader_workers.py`）。`tests/test_workers_always_report.py` 檢查每個 `QThread.run` 最上層的 `try`
   都以這種處理收尾（或在 `finally` 發訊號）。
 - **第三方失敗型別沒有邊界時**（piexif 的編碼器、GL 驅動、外掛 import），才保留寬鬆捕捉，寫
   `# noqa: BLE001 - <理由>`，並附 traceback 紀錄。
