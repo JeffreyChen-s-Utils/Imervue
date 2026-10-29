@@ -679,7 +679,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_docks.py` | 195 | `MainWindowDocksMixin`：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
 | `optional_tabs.py` | 34 | 選用分頁的設定：`tab_enabled`／`set_tab_enabled`（`puppet_tab_enabled`、`desktop_pet_tab_enabled`，預設開、下次啟動生效）、`pet_shows_on_launch` |
 | `main_window_browse.py` | 149 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
-| `annotation_models.py` | 603 | 註解資料模型 + **無 Qt 的 PIL 渲染路徑**（可在 worker / 測試中使用）；`jitter_seed()` 給噴槍／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
+| `annotation_models.py` | 183 | 註解資料模型（`Annotation`、`AnnotationProject` 的 dict／JSON 存讀、種類／筆刷／工具常數），無 Qt；保留 `bake`、`jitter_seed` 的匯入位置 |
+| `annotation_render.py` | 156 | **無 Qt 的 PIL 渲染路徑** `bake()`（可在 worker / 測試中使用）：先套馬賽克／模糊，再把框、橢圓、線、箭頭、自由手繪、文字疊到透明層合成 |
+| `annotation_brushes.py` | 207 | 九種自由手繪筆刷的 PIL 繪製與分派（未知筆刷退回 pen）、不透明度套用；`jitter_seed()` 給噴槍／水彩／炭筆／蠟筆穩定的亂數種子（CRC32，不受行程的 str hash 隨機化影響） |
+| `annotation_fonts.py` | 105 | 烘焙文字的字型解析：Windows 字型登錄 → 各平台常見字型 → PIL 預設字型，依 (family, size) 快取 |
 | `file_tree_view.py` | 186 | Qt 事件入口與明確方法綁定；保留選取、隱藏列及垃圾桶工作者狀態 |
 | `file_tree_commands.py` | 136 | 新增資料夾、重新命名、複製與預設程式開啟；保留 sidecar 搬移 |
 | `file_tree_delete.py` | 75 | 依檢視器影像、保留資料夾與外部檔案分派單筆或批次刪除 |
