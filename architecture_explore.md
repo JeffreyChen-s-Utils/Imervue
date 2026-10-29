@@ -997,9 +997,11 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `canvas_presets.py` | 184 + `new_canvas_dialog.py`(136) | File > New Canvas… 的尺寸預設（紙張／漫畫／螢幕 + 自訂，存在設定）與對話框（尺寸、白或透明背景）|
 | 選單 | — | `paint_menu_bar.py`(90)、`file_menu.py`(271) 建 File 選單並保留共用的選檔對話框與成功/錯誤回饋（`_FileMenuBridge` 由下列 mixin 組成）、`file_menu_projects.py`(166) 漫畫專案的新建/開啟/儲存與頁面匯出 CBZ/PDF、`file_menu_recent.py`(83) 原生文件保存及格式分流的 Recent 子選單、`file_menu_psd.py`(123) 保留完整 PSD 圖層的開啟/儲存與純邏輯 commit 輔助、`file_menu_transfer.py`(141) 筆刷預設/調色盤匯入與依副檔名決定格式的 Export image…、`edit_menu.py`(327)、`image_menu.py`(265)、`layer_menu.py`(322)、`filter_menu.py`(563)、`view_menu.py`(311)、`tools_menu.py`(158)、`settings_menu.py`(147)、`filter_preview_dialog.py`(198) 單一滑桿濾鏡的即時預覽（圖層中央 480×480 原尺寸裁切） |
 
-#### `paint/docks/`（7 檔 · 1,955 行）
+#### `paint/docks/`（9 檔 · 2,002 行）
 
-`brushes.py`(464) 筆刷與填色 dock · `layers.py`(446) 圖層 dock（完整操作後發出 edit_committed，列選取不建立 Undo 步驟） · `color.py`(407) 顏色 dock（色輪、HSB／RGB 滑桿、hex）·
+`brushes.py`(464) 筆刷與填色 dock · `layers.py`(311) 圖層 dock 本體：建構、列刷新（新到舊、搜尋過濾、縮圖、可見勾選）、換文件與快捷鍵提示（完整操作後發出 edit_committed，列選取不建立 Undo 步驟） ·
+`layers_stack.py`(88) 圖層 dock 堆疊動作 mixin：新增／刪除／複製／上下移與調整圖層選單（不重名命名） ·
+`layers_edits.py`(69) 圖層 dock 編輯 mixin：列選取、行內改名／可見度、不透明度、混合模式、透明度鎖定寫回文件 · `color.py`(407) 顏色 dock（色輪、HSB／RGB 滑桿、hex）·
 `materials.py`(265) 素材庫 dock · `navigators.py`(247) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
