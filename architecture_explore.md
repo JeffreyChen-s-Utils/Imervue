@@ -362,7 +362,10 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | `recipe_compositing.py` | 53 | Masks 與 layer stack 解碼、空集合短路及套用錯誤處理。 |
 | `recipe_file_identity.py` | 73 | 前中後 4KB 內容 identity、舊版 digest 與依 mtime/size 的程序內快取，供 recipe store 遷移。 |
 | `develop_preview.py` | 149 | Modify 的純 CPU 預覽：共享不變來源、快取完整幾何／低解析像素、縮放局部遮罩座標；全尺寸模式與 `Recipe.apply` 像素相同，每個具名階段之間檢查取消 |
-| `recipe_store.py` | 477 | 單一 JSON 檔支撐的記憶體 recipe 索引。以路徑為主的 API（`get_for_path`/`set_for_path`），並支援 **virtual copies**（同一張圖的具名 recipe 變體）；`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動），`identity_for(path)` 查詢前先把存在舊版 identity 下的 recipe 搬到新 identity（每個檔案只搬一次）；`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案；讀不到的 store 檔由 `UnreadableFileGuard` 看守，解不開的單筆原樣寫回 |
+| `recipe_store.py` | 199 | 單一 JSON 檔支撐的記憶體 recipe 索引 `RecipeStore`（組合下列三個 mixin）：以 identity 為主的 `get`/`set`/`delete`（identity recipe 只清掉主 recipe、保留虛擬副本）與以路徑為主的 `get_for_path`/`set_for_path`/`delete_for_path`；模組層單例 `recipe_store`（測試在此替換），`carry_recipe(path, change, transform)` 在改寫檔案（EXIF、無損旋轉）後讓 recipe 跟著檔案，於呼叫時讀取單例 |
+| `recipe_store_identity.py` | 83 | `RecipeStoreIdentityMixin`：`rekey(old, new, transform)` 把 recipe 與虛擬副本搬到新 identity（不能全部轉換就不動，`_transformed_entry`），`identity_for(path)` 查詢前先把存在舊版 identity 下的 recipe 搬到新 identity（每個檔案只搬一次） |
+| `recipe_store_persistence.py` | 133 | `RecipeStorePersistenceMixin`：延遲首次載入、逐筆與逐個變體的解碼過濾（解不開的單筆原樣寫回）、tmp + `os.replace` 原子存檔（排序鍵、縮排 2、保留非 ASCII）；讀不到的 store 檔由 `UnreadableFileGuard` 看守；`_RECIPE_DECODE_ERRORS` 與 `Imervue.recipe_store` logger 的擁有者 |
+| `recipe_store_variants.py` | 117 | `RecipeStoreVariantsMixin`：**virtual copies**（同一張圖的具名 recipe 變體）的 list／get／save／delete／rename 與其路徑版包裝 |
 | `recipe_adjustments.py` | 125 | `Recipe.apply` 用到的逐通道色調調整 |
 | `develop_backends.py` | 136 | CPU fallback reason 與 generation-specific provider leases，保留其他視窗 GPU registration |
 | `recipe_diff.py` | 63 | 兩個 recipe 的 diff 與選擇性合併 |
