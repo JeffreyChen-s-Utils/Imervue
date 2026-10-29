@@ -967,7 +967,10 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `document_files.py` | 120 | 原生 .imervue 開啟／指定分頁保存／另存／依序儲存全部；原子保存後才清除修改，取消／失敗保留文件，重複目标保護 |
 | `workspace_tabs.py` | 326 | 多文件分頁與唯一髒狀態；非作用分頁關閉儲存指定文件，視窗關閉原生儲存全部；來源／保存／快照共用提示 |
 | `workspace_docks.py` | 433 | 分頁式全高度 inspector、Window 選單三組邏輯分類、可捲動 dock 與穩定 objectName 的版面存還原；重設解除浮動並把工具列放回左側；未還原版面時首次顯示後才設定預設寬度 |
-| `workspace_content.py` | 469 | 文件內容命令；姿勢與材質插入透過 workspace_history 提交 Undo 與髒狀態 |
+| `workspace_content.py` | 240 | 文件內容命令（動畫影格／洋蔥皮、姿勢／貼章插入、自動區域填色與底色、漫畫頁切換）；ContentOpsMixin 組合下列三個 mixin |
+| `workspace_quick_mask.py` | 86 | QuickMaskMixin：快速遮罩進出；以圖層身分與進入時的文件還原原始像素並轉回選取 |
+| `workspace_materials.py` | 128 | MaterialDropMixin：素材依類別分派（姿勢貼成圖層、紋理／網點／圖樣平鋪並遵守選取、筆刷筆尖綁定）；透過 workspace_history 提交 Undo 與髒狀態 |
+| `workspace_secondary_views.py` | 69 | SecondaryViewMixin：總覽／鏡像／平鋪預覽副視窗的開啟、關閉追蹤與合成影像推送 |
 | `workspace_history.py` | 15 | 圖層選單、漫畫圖層與素材插入共用的完整編輯提交邊界 |
 | `workspace_undo.py` | 155 | 每畫布一個 Undo 堆疊（文件物件替換時重建）；完整 history/damage 提交與修改標記；按住滑鼠時延後 Undo／Redo；剩餘步數 toast，無 toast 時退回狀態列 |
 | `workspace_drop.py` | 99 | 拖放開檔的 Qt 覆寫：.imervue／PSD 經 file-menu bridge，點陣圖解碼後經 load_image 包裝，髒分頁先開新分頁，更新最近清單；解碼失敗記錄警告 |

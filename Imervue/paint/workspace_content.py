@@ -2,15 +2,20 @@
 
 Groups the dock-driven content operations that mutate the active
 document: animation frames + onion skin, pose / stamp insertion, the
-auto-region fill, comic-project page swapping, quick-mask mode, material
-drops, and the secondary preview windows. Extracted from
-:mod:`paint_workspace` and composed via :class:`ContentOpsMixin`.
+auto-region fill and comic-project page swapping. Quick-mask mode,
+material drops and the secondary preview windows live in
+:mod:`workspace_quick_mask`, :mod:`workspace_materials` and
+:mod:`workspace_secondary_views`; :class:`ContentOpsMixin` composes them.
+Extracted from :mod:`paint_workspace`.
 """
 from __future__ import annotations
 
 import numpy as np
 
 from Imervue.multi_language.language_wrapper import language_wrapper
+from Imervue.paint.workspace_materials import MaterialDropMixin
+from Imervue.paint.workspace_quick_mask import QuickMaskMixin
+from Imervue.paint.workspace_secondary_views import SecondaryViewMixin
 
 POSE_LAYER_NAME = "Pose"
 
@@ -20,10 +25,8 @@ _STAMP_WIDTH_FRACTION = 0.35
 _STAMP_HEIGHT_FRACTION = 0.30
 _STAMP_MIN_PX = 64
 
-_TILE_CATEGORIES = ("texture", "tone", "pattern")
 
-
-class ContentOpsMixin:
+class ContentOpsMixin(QuickMaskMixin, MaterialDropMixin, SecondaryViewMixin):
     """Dock-driven operations that add / replace document content.
 
     Expects the host to provide ``_canvas``, ``_state``, ``_undo_stack``,
@@ -235,235 +238,3 @@ class ContentOpsMixin:
         if hasattr(self._layer_dock, "set_document"):
             self._layer_dock.set_document(document)
         self._canvas.update()
-
-    # ---- quick mask mode -----------------------------------------------
-
-    def is_quick_mask_active(self) -> bool:
-        return getattr(self, "_quick_mask_state", None) is not None
-
-    def enter_quick_mask(self) -> bool:
-        """Toggle the active layer into a paintable selection overlay.
-
-        Returns ``True`` if the mode was entered. Refuses gracefully
-        when there's no active layer (the user has nothing to paint
-        on); the caller can ignore the return.
-        """
-        if self.is_quick_mask_active():
-            return False
-        from Imervue.paint.quick_mask import enter_mode
-        canvas = self.canvas()
-        document = canvas.document()
-        layer = document.active_layer()
-        if layer is None:
-            return False
-        layer_index = document._active_index   # noqa: SLF001
-        state = enter_mode(
-            layer.image, document.selection(), layer_index=layer_index,
-        )
-        # Swap the layer's pixels for the proxy buffer so brushes paint
-        # into the overlay rather than the underlying art.
-        layer.image = state.buffer
-        self._quick_mask_state = state
-        # Remember the layer by identity, not index — a layer added / removed /
-        # reordered while in quick-mask shifts indices, so restoring by index
-        # would write the overlay back into the wrong layer.
-        self._quick_mask_layer = layer
-        # Remember the owning document too. exit_quick_mask must restore against
-        # THIS document, not whatever the active canvas shows — the user can
-        # switch tabs (a different canvas/document) while masked, and restoring
-        # against the wrong document fails the identity guard and drops the saved
-        # original pixels, leaving this layer as the red proxy (artwork lost).
-        self._quick_mask_document = document
-        document.invalidate_composite()
-        canvas.update()
-        return True
-
-    def exit_quick_mask(self) -> bool:
-        """Convert the painted overlay back into a selection and
-        restore the layer's original pixels."""
-        if not self.is_quick_mask_active():
-            return False
-        from Imervue.paint.quick_mask import exit_mode
-        state = self._quick_mask_state   # noqa: SLF001
-        # Restore against the document the mask was entered on, not the active
-        # canvas's — they differ once the user switches tabs while masked.
-        document = getattr(self, "_quick_mask_document", None) or self.canvas().document()
-        layer = getattr(self, "_quick_mask_layer", None)
-        if layer is None or not any(layer is lyr for lyr in document.layers()):
-            # The masked layer was removed while in quick-mask mode; drop the
-            # state without touching anything (restoring by index could hit a
-            # different, reordered layer).
-            self._quick_mask_state = None
-            self._quick_mask_layer = None
-            self._quick_mask_document = None
-            return False
-        restored, selection = exit_mode(state)
-        layer.image = restored
-        document.set_selection(selection)
-        self._quick_mask_state = None
-        self._quick_mask_layer = None
-        self._quick_mask_document = None
-        document.invalidate_composite()
-        self.canvas().update()
-        return True
-
-    # ---- material drops ------------------------------------------------
-
-    def _on_material_chosen(self, path: str) -> None:
-        """Drop a material onto the canvas based on its category.
-
-        * ``pose`` — load full image, fit to canvas, paste into a new layer.
-        * ``texture`` / ``tone`` / ``pattern`` — tile across the canvas.
-        * ``brush_tip`` — bind the tip PNG to the active brush.
-        """
-        from pathlib import Path
-
-        from Imervue.paint.material_library import MaterialEntry
-
-        entry = next(
-            (e for e in self._material_dock.index().entries
-             if str(e.path) == path),
-            None,
-        )
-        if entry is None:
-            entry = MaterialEntry(name=Path(path).stem, path=Path(path))
-        if entry.category == "pose":
-            self._drop_pose_material(entry)
-        elif entry.category in _TILE_CATEGORIES:
-            self._drop_tile_material(entry)
-        elif entry.category == "brush_tip":
-            self._drop_brush_tip_material(entry)
-
-    def _drop_brush_tip_material(self, entry) -> None:
-        """Bind the picked tip's PNG path to the active brush.
-
-        Procedural ``brush_tip`` entries that don't have an on-disk
-        path are silently ignored — the brush engine reads tips from
-        a file path, so a virtual entry has nothing to point at.
-        """
-        if entry.is_procedural():
-            return
-        path = str(entry.path)
-        if not path or path.startswith("procedural://"):
-            return
-        self._state.set_brush(tip_path=path)
-
-    def _drop_pose_material(self, entry) -> None:
-        from Imervue.paint.pose_drop import fit_pose_to_canvas, load_pose_image
-        canvas_doc = self._canvas.document()
-        if canvas_doc.shape is None:
-            return
-        try:
-            pose = load_pose_image(entry.path)
-        except (OSError, ValueError):
-            return
-        fitted = fit_pose_to_canvas(pose, canvas_doc.shape)
-        layer = canvas_doc.add_layer(name=f"Pose · {entry.name}")
-        np.copyto(layer.image, fitted)
-        from Imervue.paint.workspace_history import commit_document_edit
-        commit_document_edit(self)
-
-    def _drop_tile_material(self, entry) -> None:
-        """Tile a procedural / on-disk material across the canvas as a
-        fresh layer. Honours the active selection: if one exists, the
-        tiled fill is masked to it."""
-        from Imervue.paint.material_procedural import tile_to_canvas
-        canvas_doc = self._canvas.document()
-        if canvas_doc.shape is None:
-            return
-        tile = self._load_material_tile(entry)
-        if tile is None:
-            return
-        h, w = canvas_doc.shape
-        filled = tile_to_canvas(tile, (h, w))
-        selection = self._canvas.current_selection()
-        layer = canvas_doc.add_layer(name=f"{entry.category.title()} · {entry.name}")
-        if selection is None:
-            np.copyto(layer.image, filled)
-        else:
-            layer.image[selection] = filled[selection]
-        from Imervue.paint.workspace_history import commit_document_edit
-        commit_document_edit(self)
-
-    @staticmethod
-    def _load_material_tile(entry):
-        """Return an HxWx4 RGBA tile for ``entry``, or ``None`` on failure.
-
-        Procedural entries call their provider; path entries are
-        decoded via PIL. Both paths validate the array shape before
-        returning so the caller can treat ``None`` as "nothing to paste".
-        """
-        if entry.is_procedural():
-            try:
-                tile = entry.render()
-            except (ValueError, RuntimeError):
-                return None
-        else:
-            from Imervue.image.read_errors import IMAGE_READ_ERRORS
-            from Imervue.image.shown import load_shown_rgba
-            try:
-                tile = load_shown_rgba(entry.path)   # upright and sRGB, like the viewer
-            except IMAGE_READ_ERRORS:
-                return None
-        if (
-            tile is None
-            or tile.ndim != 3
-            or tile.shape[2] != 4
-            or tile.dtype != np.uint8
-        ):
-            return None
-        return tile
-
-    # ---- secondary preview windows -------------------------------------
-
-    def open_secondary_view(self):
-        """Spawn an independent overview window onto the same composite."""
-        return self._open_secondary_view(mirror_horizontal=False)
-
-    def open_mirror_preview(self):
-        """Spawn a horizontally-flipped read-only preview window.
-
-        The flip is a view-only transform on the composite so the
-        underlying document is unaffected — the "anatomy check" workflow.
-        """
-        return self._open_secondary_view(mirror_horizontal=True)
-
-    def open_tile_preview(self):
-        """Spawn a 3×3 tiled preview window for seamless-tile checking."""
-        return self._open_secondary_view(tile_preview=True)
-
-    def _open_secondary_view(
-        self, *,
-        mirror_horizontal: bool = False,
-        tile_preview: bool = False,
-    ):
-        from Imervue.paint.multi_view import SecondaryView, composite_to_pixmap
-        view = SecondaryView(
-            self,
-            mirror_horizontal=mirror_horizontal,
-            tile_preview=tile_preview,
-        )
-        if not hasattr(self, "_secondary_views"):
-            self._secondary_views = []
-        self._secondary_views.append(view)
-        view.closed.connect(lambda v=view: self._on_secondary_view_closed(v))
-        composite = self._canvas.document().composite()
-        view.set_composite(composite_to_pixmap(composite))
-        view.show()
-        return view
-
-    def secondary_view_count(self) -> int:
-        return len(getattr(self, "_secondary_views", ()))
-
-    def _on_secondary_view_closed(self, view) -> None:
-        if hasattr(self, "_secondary_views") and view in self._secondary_views:
-            self._secondary_views.remove(view)
-
-    def _push_composite_to_secondary_views(self, composite) -> None:
-        from Imervue.paint.multi_view import composite_to_pixmap
-        views = getattr(self, "_secondary_views", ())
-        if not views:
-            return
-        pixmap = composite_to_pixmap(composite)
-        for view in views:
-            view.set_composite(pixmap)
