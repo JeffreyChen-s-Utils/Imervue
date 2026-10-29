@@ -993,11 +993,12 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 `materials.py`(265) 素材庫 dock · `navigators.py`(247) 導覽器 / 歷史 / 頁面導覽 dock ·
 `_helpers.py`(150) 共用元件、圖示與混合模式下拉選單
 
-#### `paint/tools/`（6 檔 · 1,911 行）
+#### `paint/tools/`（7 檔 · 1,842 行）
 
 `painting.py`(443) 筆刷/橡皮/填色/滴管；橡皮逐 dab 回報 damage · `shapes.py`(444) 形狀與裁切 ·
 `special.py`(357) 鋼筆/仿製印章/變形控點/對話氣泡 · `select.py`(314) 矩形/套索/魔術棒/快速選取、選取區搬移 ·
-`retouch.py`(357) 漸層（前景→背景或存下的多色標漸層）/塗抹/模糊/加深減淡/海綿
+`retouch.py`(127) 漸層（前景→背景或存下的多色標漸層）/塗抹；轉出模糊/加深減淡/海綿 ·
+`retouch_dab.py`(156) 模糊/加深減淡/海綿：共用 `_DabStrokeTool` 的按下/拖曳/放開 dab 筆觸協定與 damage，各工具只提供 `_dab`
 
 ### 6.15 `Imervue/puppet/`
 
