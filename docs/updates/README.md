@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261029-11 | 2026-10-29 | Split browser state, smart albums, Extra Tools menu and pet window | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-10 | 2026-10-29 | Split develop panel, overlay painter, XMP sidecar and tile loader | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-09 | 2026-10-29 | Split the image catalog into domain owners | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-08 | 2026-10-29 | Simplify puppet workspace and CLI responsibilities | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
