@@ -1213,7 +1213,10 @@ OBS / Twitch 聊天 / webhook / Windows 通知已是外掛 `plugins/pet_integrat
 
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
-| `server.py` | 439 | JSON-RPC 2.0 over stdio 的協定迴圈 |
+| `server.py` | 200 | MCP 伺服器的對外匯入點：`Tool`／`MCPServer`（工具註冊、`handle_message` 分派、resource／log 推播通知、progress 注入）與 `_METHOD_HANDLERS`（已註冊的 JSON-RPC 方法名稱）；re-export 其餘三個 `server_*` 模組的名稱 |
+| `server_methods.py` | 147 | `MethodHandlersMixin`：`initialize`、`ping`、`tools/*`、`prompts/*`、`resources/*`、`completion/complete`、`logging/setLevel` 各方法的 `_on_*` 處理器（驗證 params，以 `_MCPError` 回協定錯誤） |
+| `server_jsonrpc.py` | 93 | 協定常數（`PROTOCOL_VERSION`、`SERVER_NAME`…）、JSON-RPC 成功／錯誤信封、`tools/list` 描述、`tools/call` 的 `content` 信封、`_MCPError`、`_required_uri` |
+| `server_transport.py` | 116 | stdio 傳輸：`run()` 讀換行分隔的 JSON-RPC、回覆走共用鎖的 `Notifier`，`_force_utf8`，以及監看 resource root 的 watchdog `_start_resource_watcher` |
 | `tools.py` | 176 | 工具集的對外門面：re-export 全部 58 個處理器，`_TOOL_DEFINITIONS`（讀取類在前、編輯類在後，即 `tools/list` 順序）與 `register_default_tools` |
 | `tools_read.py` | 662 | 22 個讀取／分析類處理器：`list_images`、`read_image_metadata`、`read_xmp_tags`、`extract_gps`、`image_statistics`、`quality_metrics`、`ocr_text`、`find_similar`、`search_images`、`convert_format`、`puppet_inspect`、`puppet_validate`、`puppet_schema`… |
 | `tools_edit.py` | 415 | 寫出類處理器的匯入位置（`tool_defs_edit`、`tools.py`、`cli_native` 都從這裡取），re-export 全部 36 個；本身持有浮水印、外框、拼貼、裁切／縮放（`_resize_dims`）／旋轉 |
