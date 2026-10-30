@@ -1,0 +1,3 @@
+simulated platform darwin frozen True
+PYOPENGL_PLATFORM nt
+selected OpenGL platform Win32Platform

@@ -241,3 +241,4 @@ examples/puppet/imeru/render/
 # Local scratch: verification logs, repro runs and build output. Evidence a tracked document
 # cites is copied into docs/reviews/evidence/ instead.
 /.audit/
+!/docs/reviews/evidence/**/*.log

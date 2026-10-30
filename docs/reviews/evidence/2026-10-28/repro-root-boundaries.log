@@ -1,0 +1,7 @@
+maintenance {"pruned": 2, "hidden_exists": true, "hidden_indexed": false, "outside_exists": true, "outside_indexed": false}
+session [] AttributeError 'list' object has no attribute 'get'
+session {'version': 1, 'tabs': 42} TypeError 'int' object is not iterable
+session {'version': 1, 'selection': 42} TypeError 'int' object is not iterable
+frame attempted allocation RGBA (100002, 100002) pixels 10000400004
+frame safe allocation intercept
+mcp output preserved False bytes_after b'partial-image'
