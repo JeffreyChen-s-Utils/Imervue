@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261031-01 | 2026-10-31 | Rebuild Imeru from full-body modern anime illustrations | #done #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261030-03 | 2026-10-30 | Restyle the bundled Imeru in retro cel anime | #done #puppet #art #tests #docs | [2026-10-b](2026-10-b.md) |
 | U-20261030-02 | 2026-10-30 | Fix the two GUI tests failing on main after the dev merge | #done #tests #puppet #ui | [2026-10-b](2026-10-b.md) |
 | U-20261030-01 | 2026-10-30 | Track cited audit evidence and ignore local scratch | #decision #docs #review | [2026-10-b](2026-10-b.md) |
@@ -617,4 +618,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 108 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 41 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 42 |

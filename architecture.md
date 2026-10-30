@@ -64,7 +64,7 @@ system/ user_settings/ multi_language/ plugin/   infrastructure
 | `Imervue/cli.py` | Headless batch CLI (NumPy + Pillow paths only, never starts Qt) |
 | `plugins/` | Plugin sources (gitignored; tracked files need `git add -f`), mirrored to Imervue_Plugins |
 | `tests/` | pytest suite, run from a checkout: neither the wheel nor the sdist carries it; shared fixtures in `tests/conftest.py`, GL skip marker in `tests/_qt_skip.py` |
-| `examples/` | The bundled `.puppet` character Imeru, the code that builds it (`examples/puppet/imeru/build.py`: a Blender cel-shaded render, an SDF face shadow map and painted face features, then the rig) and her desktop-pet script |
+| `examples/` | The bundled illustrated `.puppet` character Imeru; `examples/puppet/imeru/build.py` packs stored artwork through `illustrated.py`, `illustrated_mesh.py` and `illustrated_rig.py`; continuous sleeves use elbow skinning followed by shoulder rotation; also her desktop-pet script |
 | `docs/`, `README.md`, `README/` | Sphinx docs and translated READMEs; `README.md` and `docs/en` are canonical |
 | `Imervue.spec`, `Imervue_mac.spec`, `packaging/`, `exe/` | PyInstaller specs, AppImage / auto-py-to-exe config, frozen launch shim (`nuitka.md`, `pyinstaller.md` document builds) |
 | `.github/workflows/` | `test.yml` (ruff + bandit lint job, Sphinx docs build with `-W`, pytest by layer, then the `publish-dev` job on a push to `dev`), `release.yml` (stable release on a pull request merged into `main`) |

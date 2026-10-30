@@ -1,0 +1,10 @@
+[
+  {
+    "path": "examples\\puppet\\imeru.puppet",
+    "valid": true,
+    "version": 1,
+    "schema_errors": [],
+    "load_error": null,
+    "issues": []
+  }
+]

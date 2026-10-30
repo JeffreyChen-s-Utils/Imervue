@@ -939,24 +939,7 @@ End-to-End-Workflow
 Ein durchgearbeitetes Beispiel ausprobieren
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Das Repository liefert ein vollständig geriggtes Demo unter
-``examples/puppet/imeru.puppet`` — **Imeru**, das originale Maskottchen
-von Imervue. Sie entsteht vollständig durch
-``examples/puppet/imeru/build.py`` (``py -3`` erzeugt die Datei neu; dafür
-ist Blender 4.2 oder neuer nötig): Haare, Körper, Outfit und Arme werden
-in Blender modelliert, mit Cel-Shading samt den Shading-Tricks von
-3D-Anime-Spielen versehen (Haar, das über die Normalen einer glatten
-Stellvertreterform beleuchtet wird, aufgemalte Strähnen und
-Glanzlicht-Striche, gebackene Okklusion) und Puppet-Ebene für
-Puppet-Ebene gerendert, ihr Gesicht wird über eine
-SDF-Gesichtsschatten-Map schattiert, Augen, Brauen und Mund werden wie
-bei einer 3D-Spielfigur aufgemalt, und danach werden die Ebenen geriggt,
-sodass das Demo keine Rechte Dritter enthält: 45 Drawables auf einer
-1024 × 1336 großen Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im
-Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich
-vom Licht abwendet, auf das Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
-drei Physikketten, die das Haar schwingen lassen. Die überlappenden mittleren Ponysträhnen bedecken die Stirn und lassen die Augen sichtbar. Sichtbare Strähnen am Oberkopf verbinden den Haarwirbel mit dem Pony.
-Ihr Retro-Cel-Anime-Design kombiniert einen mitternachtsblauen Petrol-Bob mit einer elfenbeinfarbenen Strähne, bernsteinfarbenen Augen, einer elfenbeinfarbenen Akademieuniform, einem rostroten Halstuch und Sternbilddetails aus Messing. Bestehende Bewegungen, Ausdrücke und Eingabeparameter bleiben kompatibel.
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru ist Imervues eigene Ganzkörperfigur, neu gezeichnet im modernen Anime-Stil mit fließendem petrolfarbenem Haar, taillierter asymmetrischer Jacke, gerafften Ärmeln, mehrlagiger Seitenschärpe und detaillierten Stiefeln. Das Modell mit 1024 × 1664 Pixeln verwendet die transparenten Originalillustrationen unter ``examples/puppet/imeru/artwork/``. Durchgehende Körper- und Ärmelnetze erhalten die Zeichnung bei Kopf-, Haar- und Armbewegungen; separate Gesichtsgrafiken ermöglichen Blinzeln, Blickbewegungen und Sprechen. Standard-Eingabeparameter, acht Bewegungen, sieben Ausdrücke sowie Kopf- und Körperinteraktionen bleiben erhalten. ``py -3 examples/puppet/imeru/build.py`` erstellt das Archiv aus den gespeicherten Grafiken. Öffnen über **File > Examples > Imeru** oder **Open Puppet…**.
 
 Das Rig trägt jeden Cubism-Standardparameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

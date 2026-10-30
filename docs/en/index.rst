@@ -935,23 +935,7 @@ End-to-end workflow
 Try a worked example
 ^^^^^^^^^^^^^^^^^^^^
 
-The repository ships a fully-rigged demo at
-``examples/puppet/imeru.puppet`` — **Imeru**, Imervue's original
-mascot. She is made entirely by
-``examples/puppet/imeru/build.py`` (``py -3`` rebuilds the file; it needs
-Blender 4.2 or newer): her hair, body, outfit and arms are modelled and
-cel-shaded in Blender with the shading tricks of 3D anime games (hair lit
-through the normals of a smooth stand-in shape, painted strands and
-highlight strokes, baked occlusion) and rendered one puppet layer at a
-time, her face is shaded from an SDF face shadow map, her eyes, brows and
-mouth are painted on like a 3D game character's, and the layers are then
-rigged, so the demo carries no third-party rights: 45 drawables on a
-1024 × 1336 canvas, head turns made of Live2D-style parallax vertex
-morphs, a face shadow that changes shape as she turns away from the
-light, irises
-clipped to the eye whites, two-joint arms built from rotation
-deformers, and three physics chains that swing the hair. Her overlapping centre bangs cover the forehead while leaving the eyes visible. Visible crown strands connect the hair whorl to the fringe.
-Her retro cel-anime design pairs a midnight-teal bob and an ivory accent lock with amber eyes, an ivory academy uniform, a rust-red neck bow and brass constellation details. The existing motions, expressions and input parameters remain compatible.
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru is Imervue's original full-body mascot, redrawn in a modern anime style with flowing teal hair, a fitted asymmetric jacket, gathered sleeves, a layered side sash and detailed boots. The 1024 × 1664 model uses the original transparent illustrations stored in ``examples/puppet/imeru/artwork/``. Continuous body and sleeve meshes preserve the drawing while animating the head, hair and arms; separate facial artwork supplies blinking, gaze and speech. It retains the standard input parameters, eight motions, seven expressions and head/body interactions. ``py -3 examples/puppet/imeru/build.py`` rebuilds the bundled archive from these stored assets. Open it through **File > Examples > Imeru** or **Open Puppet…**.
 
 The rig carries every Cubism-standard parameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

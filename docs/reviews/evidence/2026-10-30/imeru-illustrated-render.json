@@ -1,0 +1,11 @@
+{
+  "renderer": "NVIDIA GeForce RTX 5060 Laptop GPU/PCIe/SSE2",
+  "images": 74,
+  "drawables": 23,
+  "motions": 8,
+  "expressions": 7,
+  "foreground_before": 18028276,
+  "foreground_after": 18028276,
+  "visible_windows_created": 0,
+  "input_injected": false
+}

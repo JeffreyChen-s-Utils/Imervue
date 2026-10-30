@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-29 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `merge/dev-into-main` · 版本 `1.0.100`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-31 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.100`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -1149,7 +1149,7 @@ Workspace 的 Qt shell 與領域責任分列如下。既有 `workspace_menus.py`
 | `workspace_motion_record.py` | 41 | Motion 錄製命名、開關失敗處理與完成後寫回文件。 |
 | `workspace_audio.py` | 57 | WAV lip-sync 匯入、mouth range 選擇、錯誤回饋及 motion 選取。 |
 
-內附 Imeru 模型由 `examples/puppet/imeru/build.py` 產生；`blender/head.py` 的中央前髮以重疊髮束覆蓋額頭，頭頂髮流沿較高的 `scalp_depth` 表面建模，從髮旋延伸到瀏海，避免使用臉部深度而埋入頭皮。前髮與額頭投影一起渲染後重新綁定。`tests/test_example_imeru.py` 直接檢查已打包貼圖的額頭覆蓋率、兩眼透明區及頭頂髮流的對比邊界，避免中央缺口及頭頂光滑區重新出現。
+內附 Imeru 模型由 `examples/puppet/imeru/build.py` 打包 `artwork/` 的透明插畫。`illustrated.py` 組合角色與五官素材、配準手臂座標；`illustrated_mesh.py` 建立區域網格及 UV，直接引用原始 PNG，不重畫像素；`illustrated_rig.py` 定義頭髮、五官、呼吸與肢體變形。身體、頭部和頭髮共用連續網格，每隻袖子也保留連續表面。手肘先以固定骨骼和彎曲骨骼的權重混合，再執行肩部旋轉，避免手肘切線。原圖為 1024 × 1536，上下各留 64 像素動作空間，畫布為 1024 × 1664；呼吸不影響腳底。既有 Blender 製作程式保留為獨立的原生重建路徑，不是預設插畫模型的素材來源。
 
 ### 6.16 `Imervue/desktop_pet/`
 
@@ -1680,11 +1680,21 @@ Paint `animation_export.py`、`paint_project_export.py` 與 MCP writer 使用 `r
 
 ## FrontEngine puppet consumer
 
-The bundled Imeru artwork uses a dark teal bob, ivory forelock, amber almond-shaped
-eyes and a constellation academy uniform. Its native builders remain under
-`examples/puppet/imeru/`; `art.py` supplies the revised eye geometry to both the
-painted features and the rig. The 45 layer IDs, parameter IDs, eight motions,
-seven expressions and desktop-pet script contract are unchanged. The example
+| Imeru authoring module | Lines | Responsibility |
+|---|---:|---|
+| `examples/puppet/imeru/build.py` | 84 | Pack and validate the illustrated archive; retain the previous native builder separately |
+| `examples/puppet/imeru/illustrated.py` | 104 | Assemble artwork regions, register arm landmarks and reserve motion margins |
+| `examples/puppet/imeru/illustrated_mesh.py` | 85 | Build alpha-aware meshes and authored feature contours with original texture UVs |
+| `examples/puppet/imeru/illustrated_rig.py` | 183 | Bind facial and body motion, continuous sleeves and shoulder-attached ribbon weights |
+
+The bundled Imeru uses detailed full-body anime illustrations stored under
+`examples/puppet/imeru/artwork/`. The illustrated builder references their original
+pixels through UV meshes. The body, head and full hair remain connected, and each
+sleeve bends as a continuous surface. Runtime skinning precedes shoulder rotation.
+The canvas is 1024 × 1664, with 64 pixels of motion room above and below the
+1024 × 1536 artwork. Internal drawable IDs change with this authoring model;
+standard parameter inputs, eight motions, seven expressions and the desktop-pet
+script contract remain available. Breathing leaves the feet planted. The example
 README links production-rendered neutral and waving previews.
 
 FrontEngine optionally reuses the public puppet reader/Canvas/controllers and desktop-pet
