@@ -956,6 +956,7 @@ sodass das Demo keine Rechte Dritter enthält: 45 Drawables auf einer
 Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich
 vom Licht abwendet, auf das Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
 drei Physikketten, die das Haar schwingen lassen. Die überlappenden mittleren Ponysträhnen bedecken die Stirn und lassen die Augen sichtbar. Sichtbare Strähnen am Oberkopf verbinden den Haarwirbel mit dem Pony.
+Ihr Retro-Cel-Anime-Design kombiniert einen mitternachtsblauen Petrol-Bob mit einer elfenbeinfarbenen Strähne, bernsteinfarbenen Augen, einer elfenbeinfarbenen Akademieuniform, einem rostroten Halstuch und Sternbilddetails aus Messing. Bestehende Bewegungen, Ausdrücke und Eingabeparameter bleiben kompatibel.
 
 Das Rig trägt jeden Cubism-Standardparameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

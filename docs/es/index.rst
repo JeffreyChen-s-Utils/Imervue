@@ -966,6 +966,7 @@ giros de cabeza hechos con morfos de vértices de paralaje al estilo Live2D, una
 sombra facial que cambia de forma a medida que aparta la cara de la luz, iris
 recortados al blanco de los ojos, brazos de dos articulaciones construidos con
 deformadores de rotación y tres cadenas de física que balancean el pelo. Los mechones centrales del flequillo se superponen para cubrir la frente sin ocultar los ojos. Los mechones visibles de la coronilla conectan el remolino con el flequillo.
+Su diseño de anime cel retro combina una melena corta verde petróleo oscuro con un mechón marfil, ojos ámbar, uniforme académico marfil, pañuelo rojo óxido y detalles de constelaciones en latón. Los movimientos, expresiones y parámetros de entrada existentes siguen siendo compatibles.
 
 El rig lleva todos los parámetros estándar de Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) más

@@ -1680,6 +1680,13 @@ Paint `animation_export.py`、`paint_project_export.py` 與 MCP writer 使用 `r
 
 ## FrontEngine puppet consumer
 
+The bundled Imeru artwork uses a dark teal bob, ivory forelock, amber almond-shaped
+eyes and a constellation academy uniform. Its native builders remain under
+`examples/puppet/imeru/`; `art.py` supplies the revised eye geometry to both the
+painted features and the rig. The 45 layer IDs, parameter IDs, eight motions,
+seven expressions and desktop-pet script contract are unchanged. The example
+README links production-rendered neutral and waving previews.
+
 FrontEngine optionally reuses the public puppet reader/Canvas/controllers and desktop-pet
 script engine in its own windows. It does not instantiate PetWindow or modify Imervue
 preferences. Archive v1 and runtime import contracts are listed in architecture.md §6.

@@ -963,6 +963,7 @@ feitos de morphs de vértice com paralaxe no estilo Live2D, uma sombra no
 rosto que muda de forma conforme ela se vira para longe da luz, íris
 recortadas pelo branco dos olhos, braços com duas articulações construídos
 com rotation deformers, e três cadeias de física que balançam o cabelo. As mechas centrais da franja se sobrepõem para cobrir a testa e manter os olhos visíveis. As mechas visíveis no topo da cabeça conectam o redemoinho à franja.
+O visual de anime cel retrô combina cabelo curto verde-petróleo escuro com uma mecha marfim, olhos âmbar, uniforme acadêmico marfim, lenço vermelho-ferrugem e detalhes de constelações em latão. Os movimentos, expressões e parâmetros de entrada existentes continuam compatíveis.
 
 O rig carrega todos os parâmetros padrão Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) mais

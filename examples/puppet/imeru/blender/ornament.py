@@ -1,13 +1,13 @@
-"""Gold and gem pieces shared by Imeru's hairpin and brooch: the star-lens motif."""
+"""Brass astrolabes shared by Imeru's hairpin and academy neck brooch."""
 from __future__ import annotations
 
 from functools import cache
 
-from geo import ellipsoid, star, torus
+from geo import ellipsoid, star, torus, tube
 from toon import Gloss, Rim, add_outline, toon
 
-GOLD, GOLD_SHADE, GOLD_DEEP, GOLD_LINE = "#F7DA92", "#D3A24A", "#99692A", "#7A5220"
-GEM, GEM_SHADE, GEM_LINE = "#7CC4FF", "#3A6CD6", "#22357F"
+GOLD, GOLD_SHADE, GOLD_DEEP, GOLD_LINE = "#DAB573", "#A57842", "#715039", "#46362E"
+GEM, GEM_SHADE, GEM_LINE = "#E9A84B", "#A95233", "#59342D"
 
 
 @cache
@@ -19,14 +19,14 @@ def gold():
 
 @cache
 def gem():
-    """A blue lens: bright rim, a sharp white glint."""
-    return toon("gem", GEM, GEM_SHADE, split=0.35, spec=Gloss("#FFFFFF", 0.45, 0.15),
-                rim=Rim("#D6F2FF", 0.6, 0.7))
+    """An amber lens with an ivory glint."""
+    return toon("gem", GEM, GEM_SHADE, split=0.35, spec=Gloss("#FFF4CC", 0.6, 0.2),
+                rim=Rim("#F9D99E", 0.75, 0.35))
 
 
 def jewel(prefix: str, x: float, y: float, depth: float, scale: float = 1.0,
           beads: tuple = ()) -> list:
-    """A gold ring round a blue lens with a little star on it, plus optional gold beads."""
+    """An amber astrolabe with a star and four projecting compass ticks."""
     s = scale
     ring = torus(f"{prefix}_ring", (x, y, depth), 21.0 * s, 4.6 * s, gold())
     add_outline(ring, GOLD_LINE, 1.6)
@@ -37,6 +37,10 @@ def jewel(prefix: str, x: float, y: float, depth: float, scale: float = 1.0,
                    turn=0.2)
     add_outline(sparkle, GOLD_LINE, 1.2)
     parts = [ring, lens, sparkle]
+    for k, (dx, dy) in enumerate(((0, -1), (1, 0), (0, 1), (-1, 0))):
+        tick = [(x + dx * r * s, y + dy * r * s, depth + 2 * s) for r in (23, 31)]
+        parts.append(tube(f"{prefix}_compass_{k}", tick, [(1.8 * s, 1.8 * s)] * 2,
+                          gold(), segments=8))
     for k, (bx, by) in enumerate(beads):
         bead = ellipsoid(f"{prefix}_bead_{k}", (bx, by, depth - 4 * s), (5.5 * s,) * 3, gold(),
                          segments=20)

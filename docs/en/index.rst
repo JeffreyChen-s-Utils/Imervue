@@ -951,6 +951,7 @@ morphs, a face shadow that changes shape as she turns away from the
 light, irises
 clipped to the eye whites, two-joint arms built from rotation
 deformers, and three physics chains that swing the hair. Her overlapping centre bangs cover the forehead while leaving the eyes visible. Visible crown strands connect the hair whorl to the fringe.
+Her retro cel-anime design pairs a midnight-teal bob and an ivory accent lock with amber eyes, an ivory academy uniform, a rust-red neck bow and brass constellation details. The existing motions, expressions and input parameters remain compatible.
 
 The rig carries every Cubism-standard parameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

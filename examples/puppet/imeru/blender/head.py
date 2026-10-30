@@ -17,10 +17,10 @@ from ornament import jewel
 from toon import LIGHT_DIRECTION, Rim, add_outline, toon
 
 # ---- palette (the 2D layers use the same colours) --------------------------------------
-SKIN, SKIN_SHADE, SKIN_LINE = "#FFEFE6", "#F7CDC1", "#C9857A"
-SKIN_EDGE = "#F79583"
-HAIR, HAIR_SHADE, HAIR_DEEP = "#D7D1F7", "#ABA0E6", "#8476CF"
-HAIR_SPEC, HAIR_LINE = "#FBFAFF", "#5B4DA6"
+SKIN, SKIN_SHADE, SKIN_LINE = "#FFF0D9", "#E8B7A0", "#A86658"
+SKIN_EDGE = "#E58D70"
+HAIR, HAIR_SHADE, HAIR_DEEP = "#37606A", "#172E3C", "#0D1727"
+HAIR_SPEC, HAIR_LINE = "#9FC9BD", "#0B1322"
 
 SKULL_Y, SKULL_R = 470.0, 194.0
 CHIN_Y = 754.0
@@ -101,12 +101,11 @@ def build_neck(collection_for):
     collection_for("body", neck)
 
 
-#: Hair tones down the canvas: (y, lit, shade, deep) — lavender crown, deeper lilac at the
-#: ends of the bangs, blue over the shoulders, cyan tips.
-HAIR_STOPS = [(300.0, "#DCD6F9", "#AEA3E9", "#8C7FD4"), (600.0, "#C4BAF1", "#9688DE", "#7466C6"),
-              (920.0, "#B4C3F1", "#8A9BDF", "#6A7DCA"), (1320.0, "#A6E6EE", "#72BAD2", "#5490C1")]
-BACK_STOPS = [(300.0, "#B4A9EA", "#8E80D8", "#6E61C2"), (700.0, "#A69AE2", "#7D70CF", "#6255B8"),
-              (1000.0, "#8FA2E0", "#6E83CF", "#5368BA"), (1320.0, "#86C9DE", "#5EA3C6", "#4880B4")]
+#: Restrained blue-green cel tones keep the bob readable as one dark silhouette.
+HAIR_STOPS = [(300.0, HAIR, HAIR_SHADE, HAIR_DEEP),
+              (980.0, "#315660", "#162A39", "#0D1727")]
+BACK_STOPS = [(300.0, "#284A55", "#132735", "#0B1424"),
+              (980.0, "#284A55", "#132735", "#0B1424")]
 
 
 #: The smooth shapes the hair borrows its shading normals from: a ball around the head,
@@ -118,15 +117,15 @@ BACK_FIELD = blend_fields(HEAD_FIELD, column_field(CX, -420.0, 280.0, 260.0), 42
 STRANDS = {"lines": ((-0.46, 0.05), (0.1, 0.04), (0.52, 0.045)), "jitter": 0.3,
            "strength": 0.7}
 #: The highlight band around the head, broken into one stroke per lock.
-STREAK = {"y": 340.0, "bend": 78.0, "spread": 190.0, "half": 7.0, "jitter": 16.0,
-          "edge": 0.72, "colour": HAIR_SPEC, "strength": 0.88}
+STREAK = {"y": 340.0, "bend": 78.0, "spread": 190.0, "half": 10.0, "jitter": 5.0,
+          "edge": 0.82, "colour": HAIR_SPEC, "strength": 0.9}
 
 
 def hair_material(name: str, *, split: float = 0.46, stops: list | None = None,
                   streak: dict | None = None, strands: bool = True):
     """Cel-shaded hair: the colour gradient, baked occlusion, painted strands and streak."""
     return toon(name, HAIR, HAIR_SHADE, deep=HAIR_DEEP, split=split, deep_split=0.14,
-                stops=stops or HAIR_STOPS, rim=Rim("#FFFFFF", 0.8, 0.4), edge="#8F78F0",
+                stops=stops or HAIR_STOPS, rim=Rim("#76ABA4", 0.85, 0.18), edge="#527C83",
                 occlusion=0.85, strands=STRANDS if strands else None, streak=streak)
 
 
@@ -225,7 +224,7 @@ def build_bangs(collection_for):
     borrow(scalp, HEAD_FIELD)
     add_outline(scalp, HAIR_LINE, 2.2, even=False)
     collection_for("bangs", scalp)
-    flow = toon("hair_flow", HAIR_SHADE, HAIR_DEEP, split=0.4, occlusion=0.85)
+    flow = toon("hair_flow", "#80AAA7", "#52737B", split=0.4, occlusion=0.6)
     for k, x in enumerate(range(350, 681, 30)):
         top = (CX + (x - CX) * 0.22, CROWN_Y - 10 + abs(x - CX) * 0.04)
         curve = bez(top, (CX + (x - CX) * 0.6, CROWN_Y + 40), (x, 300),
@@ -236,9 +235,12 @@ def build_bangs(collection_for):
         strand = lock(f"flow_{k}", path, 2.0, flow, lift=2.5, root=0.2, belly=0.55,
                       flat=0.18, line=0.0)
         collection_for("bangs", strand)
+    ivory = toon("ivory_forelock", "#F4E7C6", "#B9B59D", deep="#768B87", split=0.46,
+                 strands=STRANDS, streak={**STREAK, "colour": "#FFF5DA"})
     for i, (root_x, tip, width) in enumerate(FRINGE):
         centre = 1 - abs(root_x - PART_X) / 180
-        collection_for("bangs", _fringe_lock(f"bang_{i}", root_x, tip, width, mat,
+        material = ivory if root_x == 456 else mat
+        collection_for("bangs", _fringe_lock(f"bang_{i}", root_x, tip, width, material,
                                              lift=18 + 8 * max(0.0, centre)))
     for i, (root_x, tip, width) in enumerate(ACCENTS):
         collection_for("bangs", _fringe_lock(f"bang_accent_{i}", root_x, tip, width, mat,
@@ -246,11 +248,11 @@ def build_bangs(collection_for):
 
 
 def build_side_locks(collection_for):
-    """``side_lock_l`` / ``side_lock_r``: the long locks framing the face."""
+    """``side_lock_l`` / ``side_lock_r``: inward-cut bob tips framing the face."""
     mat = hair_material("side_hair", split=0.44, streak=STREAK)
-    strands = (((352, 352), (294, 470), (282, 720), (318, 990), 34.0, 60.0),
-               ((362, 372), (312, 540), (304, 760), (336, 930), 24.0, 74.0),
-               ((346, 372), (280, 540), (268, 760), (290, 880), 18.0, 50.0))
+    strands = (((352, 352), (282, 470), (256, 760), (340, 874), 37.0, 60.0),
+               ((362, 372), (302, 540), (292, 760), (360, 838), 25.0, 74.0),
+               ((346, 372), (258, 540), (246, 760), (308, 892), 23.0, 50.0))
     for side in ("l", "r"):
         for k, (a, b, c, d, width, depth) in enumerate(strands):
             curve = [(x, y, depth * min(1.0, (y - a[1]) / 160.0)) for x, y in bez(a, b, c, d, 40)]
@@ -265,10 +267,10 @@ def _back_locks(collection_for, mat, salt, *, count, spread, depth, width, prefi
     for i in range(count):
         u = -1 + 2 * i / (count - 1)
         root = (CX + u * 110, 300 + 40 * abs(u), depth + 60)
-        tip_x = CX + u * spread + 28 * scatter(i, salt) - 14
-        tip_y = length + 80 * math.cos(u * 2.0) + 66 * scatter(i, salt + 1) - 36
+        tip_x = CX + u * spread * 0.88 + 18 * scatter(i, salt) - 9
+        tip_y = length + 24 * math.cos(u * 2.0) + 24 * scatter(i, salt + 1) - 12
         curve = bez(root, (CX + u * (spread - 30), 520, depth + 30),
-                    (CX + u * spread, 900, depth), (tip_x, tip_y, depth - 20), 40)
+                    (CX + u * (spread + 18), length - 60, depth), (tip_x, tip_y, depth - 20), 40)
         lock_width = width + 16 * scatter(i, salt + 2) - 7
         collection_for("back_hair", lock(f"{prefix}_{i}", curve, lock_width, mat, lift=0.0,
                                          belly=0.2, root=0.8, follow=False, line=2.2,
@@ -276,8 +278,8 @@ def _back_locks(collection_for, mat, salt, *, count, spread, depth, width, prefi
 
 
 def build_back_hair(collection_for):
-    """``back_hair``: the hair behind the head and down her back, outer and darker inner locks."""
-    inner = toon("back_inner", HAIR_SHADE, HAIR_DEEP, deep="#6556B6", split=0.62,
+    """``back_hair``: a shoulder-length bob with a curved, tightly grouped hem."""
+    inner = toon("back_inner", HAIR_SHADE, HAIR_DEEP, deep="#091120", split=0.62,
                  stops=[(y, shade, deep, deep) for y, _, shade, deep in BACK_STOPS],
                  occlusion=0.85)
     outer = hair_material("back_hair", split=0.5, stops=BACK_STOPS, streak=STREAK)
@@ -285,9 +287,9 @@ def build_back_hair(collection_for):
     add_outline(shell, HAIR_LINE, 2.2)
     collection_for("back_hair", shell)
     _back_locks(collection_for, inner, 11, count=12, spread=210, depth=-260, width=46,
-                prefix="back_in", length=1330)
+                prefix="back_in", length=910)
     _back_locks(collection_for, outer, 23, count=18, spread=262, depth=-190, width=46,
-                prefix="back_out", length=1290)
+                prefix="back_out", length=890)
 
 
 def build_ahoge(collection_for):

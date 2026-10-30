@@ -40,7 +40,7 @@ def _path(points, side: str):
 
 def _sleeve():
     return toon("sleeve", WHITE, WHITE_SHADE, deep=WHITE_DEEP, split=0.52, deep_split=0.12,
-                rim=Rim("#FFFFFF", 0.8, 0.4), edge=WHITE_EDGE, occlusion=0.8)
+                rim=Rim("#FFF0CB", 0.85, 0.2), edge=WHITE_EDGE, occlusion=0.8)
 
 
 def _skin():
@@ -77,7 +77,7 @@ def build_forearm(side: str, collection_for) -> None:
     arm = tube(f"forearm_{side}", _path(curve, side), radii, _sleeve(), segments=32)
     add_outline(arm, WHITE_LINE, 2.3)
     collection_for(f"forearm_{side}", arm)
-    navy = toon("cuff", NAVY, NAVY_SHADE, deep=NAVY_DEEP, split=0.4, rim=Rim("#6F86D8", 0.78),
+    navy = toon("cuff", NAVY, NAVY_SHADE, deep=NAVY_DEEP, split=0.4, rim=Rim("#69948A", 0.85, 0.2),
                 edge=NAVY_EDGE, occlusion=0.8)
     cuff_path = [(288, float(y), ARM_DEPTH) for y in range(1336, 1395, 4)]
     cuff = tube(f"cuff_{side}", _path(cuff_path, side), [(35.5, 31.0)] * len(cuff_path), navy,

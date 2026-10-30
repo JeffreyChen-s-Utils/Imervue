@@ -24,7 +24,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 #: The skin's shadow colour (the 3D skin uses the same).
-SHADE = (247, 205, 193)
+SHADE = (232, 183, 160)
 #: Light angle off the face's forward axis at rest, from ``blender/toon.LIGHT_DIRECTION``
 #: (0.34 to the side for 0.86 toward the face).
 REST_ANGLE = math.degrees(math.atan2(0.34, 0.86))

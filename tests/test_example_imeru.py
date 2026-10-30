@@ -80,6 +80,23 @@ def test_every_standard_parameter_and_the_arm_parameters_are_there(doc):
     assert {"ParamArmRA", "ParamArmRB", "ParamArmLA", "ParamArmLB"} <= ids
 
 
+def test_the_bob_leaves_the_uniform_visible_below_the_shoulders(doc):
+    for name in ("back_hair", "side_lock_l", "side_lock_r"):
+        hair = doc.drawable(name)
+        assert max(y for _, y in hair.vertices) < 800, name
+
+
+def test_both_irises_keep_the_amber_colour_without_relying_on_highlights(doc):
+    for side in ("l", "r"):
+        iris = doc.drawable(f"iris_{side}")
+        with Image.open(io.BytesIO(doc.textures[iris.texture])) as image:
+            rgba = np.asarray(image.convert("RGBA"), dtype=np.int16)
+        red, green, blue, alpha = np.moveaxis(rgba, -1, 0)
+        opaque = alpha > 240
+        amber = (red > green + 10) & (green > blue + 20) & opaque
+        assert amber.sum() / opaque.sum() > 0.3, side
+
+
 def test_the_forearms_bend_before_the_arms_turn(doc):
     """No deformer passes its transform to another, so array order gives the arm its joints."""
     order = [d.id for d in doc.deformers]

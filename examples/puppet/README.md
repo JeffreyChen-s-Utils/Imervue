@@ -11,6 +11,16 @@ built in (see `Imervue/puppet/`); there is nothing to enable.
 
 ## `imeru.puppet`
 
+Imeru now wears a retro cel-anime academy design: a midnight-teal bob,
+an ivory forelock, amber eyes, an ivory uniform with a rust-red neck bow,
+and brass astrolabe and constellation details. The original layer IDs,
+input parameters, eight motions and seven expressions stay compatible.
+
+![Imeru in the retro cel-anime academy outfit](imeru/preview.png)
+
+[Waving pose rendered from the same rig](imeru/preview-wave.png).
+[Animated wave from the bundled motion](imeru/preview-wave.webp).
+
 Imeru is made entirely by the code in [`imeru/`](imeru/), the way 3D
 anime games build their characters: no third-party artwork, model or SDK
 is involved, so the file can be shared and modified like the rest of
@@ -23,7 +33,7 @@ py -3 examples/puppet/imeru/build.py --no-render  # rig the last render again
 
 It needs Blender 4.2 or newer, found through `$BLENDER_EXE`, `PATH`,
 `D:/Tools/blender-*/` or `C:/Program Files/Blender Foundation/`. The
-build models her hair, body, sailor outfit and arms in Blender
+build models her hair, body, academy outfit and arms in Blender
 (`imeru/blender/`) and cel-shades them the way 3D anime games do: two or
 three tones with a saturated band along the shadow line, a rim light and
 inverted-hull lines; hair lit through the normals of a smooth ball and

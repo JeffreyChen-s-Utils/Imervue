@@ -39,13 +39,13 @@ from draw import (
     taper,
 )
 
-LASH = "#211936"
-LASH_WARM = "#4A2E52"
-SKIN_LINE = "#C9857A"
-IRIS_DEEP, IRIS_TOP, IRIS_MID, IRIS_LOW = "#141F57", "#1F3C86", "#2C93B4", "#86F3E2"
-IRIS_RIM = "#121A4A"
-PUPIL = "#0E1236"
-GLOW = "#D2FFF7"
+LASH = "#18232C"
+LASH_WARM = "#57443C"
+SKIN_LINE = "#A86658"
+IRIS_DEEP, IRIS_TOP, IRIS_MID, IRIS_LOW = "#512F2B", "#7F442B", "#D79539", "#F5D77D"
+IRIS_RIM = "#392D2D"
+PUPIL = "#25232C"
+GLOW = "#FFF0B6"
 
 
 def _mx(x: float, side: str) -> float:
@@ -61,7 +61,7 @@ def _eye_white(side: str):
     layer = new_layer()
     paint(layer, sclera, "#FFFFFF")
     under_lid = poly([(x, y + 30) for x, y in upper_lid(side)] + upper_lid(side)[::-1])
-    paint(layer, clip(blur(under_lid, 7), sclera), "#BDB8E6", 0.85)
+    paint(layer, clip(blur(under_lid, 3), sclera), "#B6B9AA", 0.85)
     inner = _mx(EYE_INNER_L[0], side)
     paint(layer, clip(blur(poly(ellipse_pts(inner, 618, 12, 16)), 6), sclera), "#F7C9CF", 0.6)
     return layer
@@ -76,23 +76,23 @@ def _iris(side: str):
     paint_gradient(layer, clip(poly([(cx - rx, cy), (cx + rx, cy), (cx + rx, cy + ry),
                                      (cx - rx, cy + ry)]), mask),
                    (cx, cy), IRIS_MID, (cx, cy + ry), IRIS_LOW)
-    for angle in np.linspace(0, 2 * np.pi, 28, endpoint=False):
+    for angle in np.linspace(0, 2 * np.pi, 12, endpoint=False):
         inner = (cx + 13 * np.cos(angle), cy + 2 + 17 * np.sin(angle))
         outer = (cx + (rx - 4) * np.cos(angle), cy + (ry - 4) * np.sin(angle))
-        tone = "#A6FFF0" if np.sin(angle) > -0.2 else "#5FA6D6"
-        paint(layer, clip(line([inner, outer], 1.0), mask), tone, 0.35)
+        tone = "#FFE5A0" if np.sin(angle) > -0.2 else "#BD7336"
+        paint(layer, clip(line([inner, outer], 1.8), mask), tone, 0.65)
     glow = chain(bez((cx - rx * 0.78, cy + ry * 0.32), (cx - rx * 0.4, cy + ry * 0.62),
                      (cx + rx * 0.4, cy + ry * 0.62), (cx + rx * 0.78, cy + ry * 0.32), 24),
                  bez((cx + rx * 0.78, cy + ry * 0.32), (cx + rx * 0.5, cy + ry * 0.98),
                      (cx - rx * 0.5, cy + ry * 0.98), (cx - rx * 0.78, cy + ry * 0.32), 24))
-    paint(layer, clip(blur(poly(glow), 3), mask), GLOW, 0.75)
+    paint(layer, clip(poly(glow), mask), GLOW, 0.65)
     top_shadow = poly(ellipse_pts(cx, cy - ry * 0.75, rx * 1.2, ry * 0.62))
-    paint(layer, clip(blur(top_shadow, 5), mask), IRIS_DEEP, 0.75)
+    paint(layer, clip(top_shadow, mask), IRIS_DEEP, 0.8)
     ring = ellipse_pts(cx, cy + 2, 17.5, 22)
-    paint(layer, clip(line(ring + [ring[0]], 2.0), mask), "#4FD0D8", 0.7)
+    paint(layer, clip(line(ring + [ring[0]], 2.0), mask), "#EFC66D", 0.85)
     paint(layer, poly(ellipse_pts(cx, cy + 2, 11.5, 15.5)), PUPIL)
     paint(layer, clip(blur(poly(ellipse_pts(cx, cy + 9, 7, 6)), 3),
-                      poly(ellipse_pts(cx, cy + 2, 11.5, 15.5))), "#3B3F8F", 0.7)
+                      poly(ellipse_pts(cx, cy + 2, 11.5, 15.5))), "#74533C", 0.7)
     rim = ellipse_pts(cx, cy, rx, ry)
     paint(layer, line(rim + [rim[0]], 3.0), IRIS_RIM, 0.95)
     return layer
@@ -103,12 +103,11 @@ def _highlights(side: str):
     cx = _mx(cx, side)
     s = 1 if side == "l" else -1
     layer = new_layer()
-    paint(layer, poly(ellipse_pts(cx - 12 * s, cy - 17, 10, 13.5, rot=0.35 * s)), "#FFFFFF")
-    paint(layer, poly(ellipse_pts(cx + 13 * s, cy + 19, 4.6, 4.6)), "#FFFFFF")
-    paint(layer, poly(ellipse_pts(cx + 4 * s, cy + 27, 2.2, 2.2)), "#FFFFFF", 0.8)
-    arc = bez((cx - rx * 0.55, cy + ry * 0.62), (cx - rx * 0.2, cy + ry * 0.8),
-              (cx + rx * 0.2, cy + ry * 0.8), (cx + rx * 0.5, cy + ry * 0.6), 20)
-    paint(layer, stroke(arc, taper(20, 0.3, 1.8, 0.3)), "#FFFFFF", 0.65)
+    glint = [(cx - 20 * s, cy - 26), (cx - 7 * s, cy - 29),
+             (cx - 4 * s, cy - 12), (cx - 17 * s, cy - 9)]
+    paint(layer, poly(glint), "#FFF8E4")
+    paint(layer, poly([(cx + 8 * s, cy + 17), (cx + 15 * s, cy + 15),
+                       (cx + 15 * s, cy + 19), (cx + 8 * s, cy + 21)]), "#FFF8E4")
     sx, sy = cx + 15 * s, cy - 7
     star = [(sx, sy - 8), (sx + 2.2, sy - 2.2), (sx + 8, sy), (sx + 2.2, sy + 2.2),
             (sx, sy + 8), (sx - 2.2, sy + 2.2), (sx - 8, sy), (sx - 2.2, sy - 2.2)]
@@ -119,7 +118,7 @@ def _highlights(side: str):
 def _upper_lash(side: str):
     lid = upper_lid(side)
     layer = new_layer()
-    paint(layer, stroke(lid, taper(len(lid), 8.5, 7.8, 2.0, 0.22)), LASH)
+    paint(layer, stroke(lid, taper(len(lid), 10.0, 8.8, 2.0, 0.22)), LASH)
     paint(layer, stroke(lid[8:-4], taper(len(lid) - 12, 0.4, 1.6, 0.4)), LASH_WARM, 0.7)
     out = -1 if side == "l" else 1
     (ox, oy), (ax, ay) = lid[0], lid[5]
@@ -137,12 +136,12 @@ def _upper_lash(side: str):
 def _lower_lash(side: str):
     low = lower_lid(side)[5:-6]
     layer = new_layer()
-    paint(layer, stroke(low, taper(len(low), 0.5, 2.2, 1.2, 0.7)), "#6E4F7C", 0.8)
+    paint(layer, stroke(low, taper(len(low), 0.5, 2.2, 1.2, 0.7)), "#795D50", 0.8)
     out = -1 if side == "l" else 1
     (ox, oy) = lower_lid(side)[-4]
     paint(layer, stroke(bez((ox, oy), (ox + out * 4, oy + 3), (ox + out * 7, oy + 5),
                             (ox + out * 9, oy + 9), 10), taper(10, 1.6, 1.2, 0.3)),
-          "#6E4F7C", 0.8)
+          "#795D50", 0.8)
     return layer
 
 
@@ -186,7 +185,7 @@ def draw_brow(side: str) -> dict[str, np.ndarray]:
     if side == "r":
         pts = mirror(pts)
     layer = new_layer()
-    paint(layer, stroke(pts, taper(30, 2.0, 5.6, 3.6, 0.3)), "#6A58B4", 0.9)
+    paint(layer, stroke(pts, taper(30, 2.0, 6.2, 3.6, 0.3)), "#29424B", 0.95)
     return {f"brow_{side}": finish(layer)}
 
 

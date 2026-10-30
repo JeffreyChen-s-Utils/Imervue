@@ -965,6 +965,7 @@ en parallaxe façon Live2D, une ombre faciale qui change de forme à mesure qu'e
 se détourne de la lumière, des iris découpés aux blancs des yeux, des bras à deux articulations
 construits à partir de déformeurs de rotation, et trois chaînes physiques qui font
 balancer les cheveux. Les mèches centrales de la frange se chevauchent pour couvrir le front tout en laissant les yeux visibles. Les mèches visibles au sommet du crâne relient l’épi à la frange.
+Son style anime rétro en cel-shading associe un carré bleu pétrole sombre, une mèche ivoire, des yeux ambrés, un uniforme académique ivoire, une lavallière rouge rouille et des motifs de constellations en laiton. Les mouvements, expressions et paramètres d’entrée existants restent compatibles.
 
 Le rig comporte tous les paramètres standard Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

@@ -1,8 +1,8 @@
 """Imeru's body and outfit in 3D: blouse, waistband and pleated skirt, sailor collar, bow.
 
-Layers: ``body`` (torso in a white blouse with a gold-buttoned placket, navy waistband,
-pleated navy skirt; the neck comes from ``head.py``), ``collar`` (a navy sailor collar
-edged in white and gold) and ``ribbon`` (a coral bow held by the star-lens brooch).
+Layers: ``body`` (ivory blouse, brass-buttoned placket and dark teal pleated skirt;
+the neck comes from ``head.py``), ``collar`` (a star-chart academy collar) and
+``ribbon`` (a narrow rust-red bow held by an amber astrolabe brooch).
 """
 from __future__ import annotations
 
@@ -13,12 +13,12 @@ from geo import ellipsoid, sheet, tube
 from ornament import button, jewel
 from toon import Gloss, Rim, add_outline, toon
 
-WHITE, WHITE_SHADE, WHITE_DEEP, WHITE_LINE = "#FBFBFF", "#D5D9F1", "#AEB5DC", "#565C8C"
-NAVY, NAVY_SHADE, NAVY_DEEP, NAVY_LINE = "#34437E", "#232E5C", "#171E40", "#0E1430"
-CORAL, CORAL_SHADE, CORAL_DEEP, CORAL_LINE = "#FF8A78", "#E0604F", "#B2443A", "#7C2B2A"
-TRIM_WHITE = "#F2F3FF"
+WHITE, WHITE_SHADE, WHITE_DEEP, WHITE_LINE = "#F4E8CD", "#C1B79E", "#8E9588", "#45545B"
+NAVY, NAVY_SHADE, NAVY_DEEP, NAVY_LINE = "#294C54", "#172C38", "#101C2A", "#0A1320"
+CORAL, CORAL_SHADE, CORAL_DEEP, CORAL_LINE = "#C9583D", "#913A33", "#5F2930", "#43202C"
+TRIM_WHITE = "#EAD6A8"
 #: Terminator tints: the saturated band along each colour's shadow line.
-WHITE_EDGE, NAVY_EDGE, CORAL_EDGE = "#A29EEA", "#4F63C4", "#FF4F45"
+WHITE_EDGE, NAVY_EDGE, CORAL_EDGE = "#A9AD92", "#517C7A", "#E48A52"
 
 #: Torso half width and front bulge down the body: (y, half width, front depth).
 TORSO = ((834, 48, 34), (850, 120, 50), (872, 178, 70), (900, 204, 86), (940, 200, 100),
@@ -54,13 +54,13 @@ def torso_front(x: float, y: float) -> float:
 
 def _blouse():
     return toon("blouse", WHITE, WHITE_SHADE, deep=WHITE_DEEP, split=0.36, deep_split=0.1,
-                rim=Rim("#FFFFFF", 0.8, 0.4), edge=WHITE_EDGE,
+                rim=Rim("#FFF0CB", 0.85, 0.2), edge=WHITE_EDGE,
                 occlusion=0.8)
 
 
 def _navy(name: str = "navy", edge: str | None = NAVY_EDGE):
     return toon(name, NAVY, NAVY_SHADE, deep=NAVY_DEEP, split=0.4, deep_split=0.12,
-                rim=Rim("#6F86D8", 0.8, 0.45), edge=edge, occlusion=0.8)
+                rim=Rim("#69948A", 0.85, 0.2), edge=edge, occlusion=0.8)
 
 
 def build_torso(collection_for):
@@ -128,7 +128,7 @@ def build_skirt(collection_for):
                          TORSO_DEPTH + front * 0.975 * math.sin(a) + 3))
         line = tube(f"pleat_{k}", fold, [(1.2, 0.8)] * len(fold), crease, segments=6)
         collection_for("body", line)
-    stripe_mat = toon("skirt_stripe", TRIM_WHITE, "#C9CCE6", split=0.35)
+    stripe_mat = toon("skirt_stripe", TRIM_WHITE, "#B19F7E", split=0.35)
     for k, (y, width, mat) in enumerate(((1488, 4.2, stripe_mat), (1502, 2.4, _gold_trim()))):
         across, front = skirt_radius(y)
         ring = [(CX + (across + 6) * math.cos(a), y, TORSO_DEPTH + (front + 8) * math.sin(a))
@@ -174,7 +174,7 @@ def build_collar(collection_for):
                   y - 14 * smoothstep(1000, 1068, y) + 10 * (1 - smoothstep(880, 920, y)))
                  for x, y in side_points[5:-6]]
         stripe = [(x, y, depth(x, y) + 3.5) for x, y in inset]
-        white = toon("collar_stripe", TRIM_WHITE, "#C9CCE6", split=0.35)
+        white = toon("collar_stripe", TRIM_WHITE, "#B19F7E", split=0.35)
         line = tube(f"collar_stripe_{name}", stripe, [(3.4, 1.6)] * len(stripe), white,
                     segments=10)
         collection_for("collar", line)
@@ -182,12 +182,20 @@ def build_collar(collection_for):
         piping = tube(f"collar_piping_{name}", edge, [(2.4, 2.4)] * len(edge), _gold_trim(),
                       segments=10)
         collection_for("collar", piping)
+    stars = ((366, 902), (395, 918), (420, 906), (441, 941), (464, 967))
+    chart = [(x, y, depth(x, y) + 6) for x, y in stars]
+    thread = tube("collar_constellation", chart, [(1.3, 1.3)] * len(chart), _gold_trim(),
+                  segments=8)
+    collection_for("collar", thread)
+    for k, (x, y) in enumerate(stars):
+        collection_for("collar", button(f"chart_star_{k}", x, y, depth(x, y) + 7,
+                                       4.8 if k in (0, 3) else 3.2))
 
 
 def _loop(name, side: str, coral):
-    """One loop of the bow: a puffy teardrop plate."""
-    outline = chain(bez((CX - 6, 1050), (470, 1000), (420, 1000), (412, 1040), 20),
-                    bez((412, 1040), (404, 1080), (450, 1098), (CX - 6, 1066), 20))
+    """One narrow, angular loop of the academy neck bow."""
+    outline = chain(bez((CX - 6, 1050), (482, 1024), (449, 1020), (444, 1038), 20),
+                    bez((444, 1038), (440, 1058), (480, 1080), (CX - 6, 1066), 20))
     if side == "r":
         outline = mirror(outline)
     cx = sum(p[0] for p in outline) / len(outline)
@@ -202,7 +210,7 @@ def _loop(name, side: str, coral):
 
 
 def _tail(name, side: str, coral):
-    outline = [(496, 1060), (512, 1068), (474, 1186), (459, 1170), (440, 1180)]
+    outline = [(496, 1060), (512, 1068), (492, 1220), (479, 1205), (464, 1216)]
     if side == "r":
         outline = mirror(outline)
     plate = sheet(name, outline, lambda x, y: torso_front(CX, 1060) + 20 - (y - 1066) * 0.08,
@@ -212,9 +220,9 @@ def _tail(name, side: str, coral):
 
 
 def build_ribbon(collection_for):
-    """``ribbon``: the coral bow with two tails, held by the star-lens brooch."""
+    """``ribbon``: a rust-red neck bow with long tails and an astrolabe brooch."""
     coral = toon("coral", CORAL, CORAL_SHADE, deep=CORAL_DEEP, split=0.4, deep_split=0.12,
-                 rim=Rim("#FFD2C8", 0.76, 0.5), spec=Gloss("#FFE6DF", 0.84, 0.3),
+                 rim=Rim("#E9AE73", 0.85, 0.2), spec=Gloss("#F1BD86", 0.9, 0.3),
                  edge=CORAL_EDGE, occlusion=0.8)
     for side in ("l", "r"):
         collection_for("ribbon", _tail(f"bow_tail_{side}", side, coral))

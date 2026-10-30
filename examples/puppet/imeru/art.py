@@ -23,9 +23,9 @@ CX = W / 2
 HEAD_CENTRE = (CX, 520.0)
 NECK_PIVOT = (CX, 760.0)
 EYE_OUTER_L, EYE_INNER_L = (386.0, 606.0), (490.0, 616.0)
-EYE_UPPER_C_L = ((394.0, 548.0), (462.0, 544.0))
-EYE_LOWER_C_L = ((478.0, 654.0), (404.0, 658.0))
-IRIS_L = (444.0, 616.0, 31.0, 41.0)
+EYE_UPPER_C_L = ((398.0, 568.0), (462.0, 560.0))
+EYE_LOWER_C_L = ((476.0, 642.0), (407.0, 646.0))
+IRIS_L = (444.0, 615.0, 28.0, 33.0)
 MOUTH_Y = 707.0
 MOUTH_HALF = 21.0
 #: The joints the arm deformers turn about (the arm drawn on the viewer's left).
