@@ -1,0 +1,43 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
+import json
+from PIL import Image
+from Imervue.library import image_index
+from Imervue.library.maintenance import run_maintenance
+from Imervue.sessions.session_manager import load_session_from_path
+from Imervue.mcp_server.tools_edit import apply_frame, rotate_image
+
+with TemporaryDirectory(prefix='imervue_review_') as directory:
+    root = Path(directory)
+    image_index.set_db_path(root/'library.db')
+    a = root/'a'; b = root/'b'; a.mkdir(); b.mkdir()
+    visible=a/'visible.png'; hidden=a/'.hidden.png'; outside=b/'outside.png'
+    for p in (visible,hidden,outside):
+        Image.new('RGB',(2,2)).save(p)
+        image_index.upsert_image(str(p),size=p.stat().st_size)
+    report=run_maintenance([str(a)],prune=True)
+    print('maintenance', json.dumps({'pruned':report['pruned'], 'hidden_exists':hidden.exists(), 'hidden_indexed':image_index.get_image(str(hidden)) is not None, 'outside_exists':outside.exists(), 'outside_indexed':image_index.get_image(str(outside)) is not None}))
+    image_index.close()
+    for payload in ([], {'version':1,'tabs':42}, {'version':1,'selection':42}):
+        f=root/'bad-session.json'; f.write_text(json.dumps(payload),encoding='utf-8')
+        try: load_session_from_path(f)
+        except Exception as exc: print('session',repr(payload),type(exc).__name__,str(exc))
+    real_new = Image.new
+    def intercept(mode,size,*args,**kwargs):
+        if size[0]*size[1] < 100_000_000:
+            return real_new(mode,size,*args,**kwargs)
+        print('frame attempted allocation', mode,size,'pixels',size[0]*size[1])
+        raise RuntimeError('safe allocation intercept')
+    with patch('Imervue.image.photo_frame.Image.new',side_effect=intercept):
+        try: apply_frame(str(visible),str(root/'frame.png'),border=50000)
+        except RuntimeError as exc: print('frame',str(exc))
+    destination=root/'existing.png'; Image.new('RGB',(2,2),'red').save(destination)
+    original=destination.read_bytes()
+    def failed_encoder(im, fp, filename, **kwargs):
+        fp.write(b'partial-image')
+        raise OSError('simulated disk write failure')
+    with patch.dict(Image.SAVE, PNG=failed_encoder):
+        try: rotate_image(str(visible),str(destination),operation='rotate_90')
+        except OSError: pass
+    print('mcp output preserved',destination.read_bytes()==original,'bytes_after',destination.read_bytes())

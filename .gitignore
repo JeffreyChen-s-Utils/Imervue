@@ -237,3 +237,8 @@ examples/puppet/imeru/render/
 # Cubism SDK drop folder — local-only
 /sdk/
 
+
+# Local scratch: verification logs, repro runs and build output. Evidence a tracked document
+# cites is copied into docs/reviews/evidence/ instead.
+/.audit/
+!/docs/reviews/evidence/**/*.log

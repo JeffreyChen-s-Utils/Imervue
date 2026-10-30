@@ -1,0 +1,25 @@
+from pathlib import Path
+
+source_root = Path('<repo>/plugins')
+mirror_root = Path('<plugins-repo>')
+sources = {p.name: p for p in source_root.iterdir()
+           if p.is_dir() and not p.name.startswith(('.', '_'))}
+mirrors = {p.name: p for category in ('plugins', 'languages')
+           for p in (mirror_root / category).iterdir() if p.is_dir()}
+errors = [f'Plugin on one side only: {name}' for name in sources.keys() ^ mirrors.keys()]
+checked = 0
+for name in sorted(sources.keys() & mirrors.keys()):
+    source_files = {p.name: p for p in sources[name].iterdir()
+                    if p.is_file() and p.suffix != '.pyc'}
+    mirror_files = {p.name: p for p in mirrors[name].iterdir()
+                    if p.is_file() and p.suffix != '.pyc'}
+    errors.extend(f'File on one side only: {name}/{file}'
+                  for file in source_files.keys() ^ mirror_files.keys())
+    for file in source_files.keys() & mirror_files.keys():
+        checked += 1
+        if (source_files[file].read_bytes().replace(b'\r\n', b'\n')
+                != mirror_files[file].read_bytes().replace(b'\r\n', b'\n')):
+            errors.append(f'Content differs: {name}/{file}')
+if errors:
+    raise SystemExit('\n'.join(errors))
+print(f'Parity verified: {len(sources)} plugins, {checked} flat files')

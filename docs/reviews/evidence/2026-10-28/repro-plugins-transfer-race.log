@@ -1,0 +1,17 @@
+move= False success counts= [1, 0] destination files= [('same.jpg', 'A')] sources exist= [True, True]
+move= True success counts= [1, 1] destination files= [('same.jpg', 'A')] sources exist= [False, False]
+Could not copy <home>\AppData\Local\Temp\tmp2dcs2e1e\B\same.jpg to <home>\AppData\Local\Temp\tmp2dcs2e1e\target\same.jpg
+Traceback (most recent call last):
+  File "<repo>\Imervue\system\file_transfer.py", line 95, in transfer_into
+    _transfer_one(plan.source, target, move=move)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>\.audit\repro-plugins-transfer-race.py.txt", line 17, in synchronized
+    real_transfer(source,target,move=move)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<repo>\Imervue\system\file_transfer.py", line 61, in _transfer_one
+    shutil.copy2(source, str(target))
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "<home>\AppData\Local\Programs\Python\Python314\Lib\shutil.py", line 514, in copy2
+    _winapi.CopyFile2(src_, dst_, flags)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+PermissionError: [WinError 32] �{�ǵL�k�s���ɮסA�]���ɮץ��ѥt�@�ӵ{�ǨϥΡC

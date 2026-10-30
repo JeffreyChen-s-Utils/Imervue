@@ -1,0 +1,33 @@
+import sys, tempfile, json
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+sys.path.insert(0,str(Path.cwd()))
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtGui import QImage
+from Imervue.puppet.batch_export import BatchMotionExporter
+from Imervue.puppet.document import PuppetDocument,Motion
+import imageio.v3 as iio
+app=QCoreApplication.instance() or QCoreApplication([])
+class Player:
+    def set_motion(self,m): self.motion=m
+    def seek(self,t): pass
+    def play(self): pass
+    def pause(self): pass
+player=Player()
+doc=PuppetDocument(size=(16,16),motions=[Motion(name='idle/01',duration=1,tracks=[]),Motion(name='idle:01',duration=1,tracks=[])])
+class Canvas:
+    def document(self): return doc
+    def render_offscreen_puppet(self,w,h,**kw):
+        img=QImage(w,h,QImage.Format.Format_RGB888)
+        img.fill(0xffff0000 if player.motion is doc.motions[0] else 0xff0000ff)
+        return img
+with tempfile.TemporaryDirectory() as td:
+    exp=BatchMotionExporter(Canvas(),player); completed=[]; failed=[]
+    exp.finished.connect(completed.append); exp.failed.connect(failed.append)
+    with patch('Imervue.puppet.batch_export.call_later'):
+        assert exp.start(td,extension='.gif')
+        exp._recorder._on_tick(); exp._recorder.stop()
+        exp._recorder._on_tick(); exp._recorder.stop()
+    files=list(Path(td).glob('*.gif'))
+    print(json.dumps({'completed':completed,'failed':failed,'file_count':len(files),'last_pixel':iio.imread(files[0])[0,0,0].tolist()}))

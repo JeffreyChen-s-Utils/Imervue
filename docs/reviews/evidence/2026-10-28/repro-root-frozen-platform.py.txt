@@ -1,0 +1,11 @@
+import os
+import runpy
+import sys
+sys.frozen=True
+sys.platform='darwin'
+os.environ.pop('PYOPENGL_PLATFORM',None)
+runpy.run_path('Imervue/__main__.py',run_name='review_frozen_entry')
+from OpenGL import platform
+print('simulated platform',sys.platform,'frozen',sys.frozen)
+print('PYOPENGL_PLATFORM',os.environ['PYOPENGL_PLATFORM'])
+print('selected OpenGL platform',type(platform.PLATFORM).__name__)

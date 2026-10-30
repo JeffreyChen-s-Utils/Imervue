@@ -1,0 +1,24 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+import threading, json
+from Imervue.user_settings import user_setting_dict as s
+with TemporaryDirectory() as d:
+    p=Path(d)/'settings.json'
+    s._user_settings_path=lambda:p
+    s.user_setting_dict.clear(); s.user_setting_dict.update({'sentinel':'current data'})
+    s._profile_state.update(current='default',available=['default'])
+    s.write_user_setting()
+    original=s._read_existing_profiles
+    read=threading.Event(); resume=threading.Event()
+    def synchronized(path):
+        result=original(path)
+        if threading.current_thread().name=='inflight-save':
+            read.set(); assert resume.wait(5)
+        return result
+    s._read_existing_profiles=synchronized
+    t=threading.Thread(target=s._flush_save,name='inflight-save'); t.start(); assert read.wait(5)
+    assert s.create_profile('client',copy_from_current=True)
+    print('after create, disk profiles:',list(json.loads(p.read_text())['profiles']))
+    resume.set(); t.join(5)
+    print('after inflight save, disk profiles:',list(json.loads(p.read_text())['profiles']))
+    print('UI profile list:',s.list_profiles())

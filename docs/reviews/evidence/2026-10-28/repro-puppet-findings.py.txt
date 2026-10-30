@@ -1,0 +1,50 @@
+import sys, json, tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+sys.path.insert(0, str(Path.cwd()))
+from PySide6.QtCore import QCoreApplication
+from Imervue.puppet.batch_export import BatchMotionExporter
+from Imervue.puppet.document import Motion, PuppetDocument
+from Imervue.puppet.recorder import RecordingSession
+from Imervue.puppet.vts_api import VTubeStudioHandler, VTubeStudioServer
+app=QCoreApplication.instance() or QCoreApplication([])
+class Player:
+    def set_motion(self,m): self.motion=m
+    def seek(self,t): pass
+    def play(self): pass
+    def pause(self): pass
+player=Player()
+doc=PuppetDocument(size=(8,8), motions=[Motion(name='走路',duration=1,tracks=[]),Motion(name='跑步',duration=1,tracks=[])])
+canvas=SimpleNamespace(document=lambda:doc)
+with tempfile.TemporaryDirectory() as td:
+    exporter=BatchMotionExporter(canvas,player)
+    output=[]
+    def write(path,**kw):
+        Path(path).write_text(player.motion.name,encoding='utf-8')
+        return True
+    exporter._recorder.start=write
+    exporter.finished.connect(output.append)
+    with patch('Imervue.puppet.batch_export.call_later'):
+        exporter.start(td)
+        first=exporter._destination_for(doc.motions[0])
+        exporter._on_recorder_finished(first)
+        second=exporter._destination_for(doc.motions[1])
+        exporter._on_recorder_finished(second)
+    print('COLLISION',json.dumps({'paths':output,'files':len(list(Path(td).iterdir())),'final_content':Path(first).read_text(encoding='utf-8')},ensure_ascii=False))
+class BrokenWriter:
+    def close(self): raise OSError('disk full while finalizing')
+rec=RecordingSession(canvas)
+rec._writer=BrokenWriter(); rec._path='failed.gif'
+finished=[]; failed=[]
+rec.finished.connect(finished.append);rec.failed.connect(failed.append)
+print('FINALIZE',rec.stop(), 'finished=',finished,'failed=',failed)
+handler=VTubeStudioHandler(canvas)
+for payload in [{'messageType':[]},{'messageType':'AuthenticationTokenRequest','data':['bad']}]:
+    try: print('VTS',handler.handle_message(payload))
+    except Exception as exc: print('VTS_EXCEPTION',type(exc).__name__,str(exc))
+class Socket:
+    def sendTextMessage(self,text): print('SENT',text)
+sock=Socket(); server=VTubeStudioServer(canvas); server._sessions[sock]=handler
+try: server._on_text(sock,json.dumps({'messageType':'AuthenticationTokenRequest','data':['bad']}))
+except Exception as exc: print('VTS_CALLBACK_EXCEPTION',type(exc).__name__,str(exc))

@@ -1,0 +1,33 @@
+import sys, tempfile
+from pathlib import Path
+from types import SimpleNamespace
+sys.path.insert(0,str(Path.cwd()))
+import numpy as np
+from PIL import Image
+from Imervue.paint.animation_timeline import AnimationTimeline
+from Imervue.paint.animation_export import export_animation
+from Imervue.paint.paint_project_export import export_project_cbz
+
+with tempfile.TemporaryDirectory(prefix='imervue-audit-export-') as tmp:
+    root=Path(tmp)
+    target=root/'existing.gif'; target.write_bytes(b'valuable previous export')
+    animation=AnimationTimeline(); animation.add_frame(np.full((2,2,4),255,dtype=np.uint8))
+    Image.init(); original=Image.SAVE_ALL['GIF']
+    def failed_encoder(im,fp,filename):
+        raise OSError('simulated encoder or disk failure')
+    Image.SAVE_ALL['GIF']=failed_encoder
+    try:
+        try: export_animation(animation,target)
+        except OSError: pass
+    finally:
+        Image.SAVE_ALL['GIF']=original
+    print('animation export old bytes=',23,'remaining=',target.stat().st_size)
+    assert target.read_bytes()!=b'valuable previous export'
+    target=root/'existing.cbz'; target.write_bytes(b'valuable previous export')
+    def failed_composite(): raise MemoryError('simulated compositing memory exhaustion')
+    project=SimpleNamespace(page_count=1,pages=[SimpleNamespace(document=SimpleNamespace(composite=failed_composite))])
+    try: export_project_cbz(project,target)
+    except MemoryError: pass
+    print('CBZ old output preserved=',target.read_bytes()==b'valuable previous export','remaining=',target.stat().st_size)
+    assert target.read_bytes()!=b'valuable previous export'
+print('non-atomic Paint export failures confirmed')

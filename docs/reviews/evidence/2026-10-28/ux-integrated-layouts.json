@@ -1,0 +1,194 @@
+[
+  {
+    "locale": "English",
+    "width": 160,
+    "scale": 100,
+    "actual_width": 160,
+    "clipped": [],
+    "image": ".audit/ux-browse-English-160-100.png"
+  },
+  {
+    "locale": "English",
+    "width": 300,
+    "scale": 100,
+    "actual_width": 300,
+    "clipped": [],
+    "image": ".audit/ux-browse-English-300-100.png"
+  },
+  {
+    "locale": "English",
+    "width": 160,
+    "scale": 200,
+    "actual_width": 320,
+    "clipped": [],
+    "image": ".audit/ux-browse-English-160-200.png"
+  },
+  {
+    "locale": "English",
+    "width": 300,
+    "scale": 200,
+    "actual_width": 600,
+    "clipped": [],
+    "image": ".audit/ux-browse-English-300-200.png"
+  },
+  {
+    "locale": "Traditional_Chinese",
+    "width": 160,
+    "scale": 100,
+    "actual_width": 160,
+    "clipped": [],
+    "image": ".audit/ux-browse-Traditional_Chinese-160-100.png"
+  },
+  {
+    "locale": "Traditional_Chinese",
+    "width": 300,
+    "scale": 100,
+    "actual_width": 300,
+    "clipped": [],
+    "image": ".audit/ux-browse-Traditional_Chinese-300-100.png"
+  },
+  {
+    "locale": "Traditional_Chinese",
+    "width": 160,
+    "scale": 200,
+    "actual_width": 320,
+    "clipped": [],
+    "image": ".audit/ux-browse-Traditional_Chinese-160-200.png"
+  },
+  {
+    "locale": "Traditional_Chinese",
+    "width": 300,
+    "scale": 200,
+    "actual_width": 600,
+    "clipped": [],
+    "image": ".audit/ux-browse-Traditional_Chinese-300-200.png"
+  },
+  {
+    "locale": "Chinese",
+    "width": 160,
+    "scale": 100,
+    "actual_width": 160,
+    "clipped": [],
+    "image": ".audit/ux-browse-Chinese-160-100.png"
+  },
+  {
+    "locale": "Chinese",
+    "width": 300,
+    "scale": 100,
+    "actual_width": 300,
+    "clipped": [],
+    "image": ".audit/ux-browse-Chinese-300-100.png"
+  },
+  {
+    "locale": "Chinese",
+    "width": 160,
+    "scale": 200,
+    "actual_width": 320,
+    "clipped": [],
+    "image": ".audit/ux-browse-Chinese-160-200.png"
+  },
+  {
+    "locale": "Chinese",
+    "width": 300,
+    "scale": 200,
+    "actual_width": 600,
+    "clipped": [],
+    "image": ".audit/ux-browse-Chinese-300-200.png"
+  },
+  {
+    "locale": "Korean",
+    "width": 160,
+    "scale": 100,
+    "actual_width": 160,
+    "clipped": [],
+    "image": ".audit/ux-browse-Korean-160-100.png"
+  },
+  {
+    "locale": "Korean",
+    "width": 300,
+    "scale": 100,
+    "actual_width": 300,
+    "clipped": [],
+    "image": ".audit/ux-browse-Korean-300-100.png"
+  },
+  {
+    "locale": "Korean",
+    "width": 160,
+    "scale": 200,
+    "actual_width": 320,
+    "clipped": [],
+    "image": ".audit/ux-browse-Korean-160-200.png"
+  },
+  {
+    "locale": "Korean",
+    "width": 300,
+    "scale": 200,
+    "actual_width": 600,
+    "clipped": [],
+    "image": ".audit/ux-browse-Korean-300-200.png"
+  },
+  {
+    "locale": "Japanese",
+    "width": 160,
+    "scale": 100,
+    "actual_width": 160,
+    "clipped": [],
+    "image": ".audit/ux-browse-Japanese-160-100.png"
+  },
+  {
+    "locale": "Japanese",
+    "width": 300,
+    "scale": 100,
+    "actual_width": 300,
+    "clipped": [],
+    "image": ".audit/ux-browse-Japanese-300-100.png"
+  },
+  {
+    "locale": "Japanese",
+    "width": 160,
+    "scale": 200,
+    "actual_width": 320,
+    "clipped": [],
+    "image": ".audit/ux-browse-Japanese-160-200.png"
+  },
+  {
+    "locale": "Japanese",
+    "width": 300,
+    "scale": 200,
+    "actual_width": 600,
+    "clipped": [],
+    "image": ".audit/ux-browse-Japanese-300-200.png"
+  },
+  {
+    "locale": "Spanish",
+    "width": 160,
+    "scale": 100,
+    "actual_width": 160,
+    "clipped": [],
+    "image": ".audit/ux-browse-Spanish-160-100.png"
+  },
+  {
+    "locale": "Spanish",
+    "width": 300,
+    "scale": 100,
+    "actual_width": 300,
+    "clipped": [],
+    "image": ".audit/ux-browse-Spanish-300-100.png"
+  },
+  {
+    "locale": "Spanish",
+    "width": 160,
+    "scale": 200,
+    "actual_width": 320,
+    "clipped": [],
+    "image": ".audit/ux-browse-Spanish-160-200.png"
+  },
+  {
+    "locale": "Spanish",
+    "width": 300,
+    "scale": 200,
+    "actual_width": 600,
+    "clipped": [],
+    "image": ".audit/ux-browse-Spanish-300-200.png"
+  }
+]

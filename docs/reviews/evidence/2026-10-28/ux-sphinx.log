@@ -1,0 +1,52 @@
+Running Sphinx v9.1.0
+loading translations [en]... done
+making output directory... done
+building [mo]: targets for 0 po files that are out of date
+writing output... 
+building [html]: targets for 11 source files that are out of date
+updating environment: [new config] 11 added, 0 changed, 0 removed
+reading sources... [  9%] de/index
+reading sources... [ 18%] en/index
+reading sources... [ 27%] es/index
+reading sources... [ 36%] fr/index
+reading sources... [ 45%] index
+reading sources... [ 55%] ja/index
+reading sources... [ 64%] ko/index
+reading sources... [ 73%] pt-BR/index
+reading sources... [ 82%] ru/index
+reading sources... [ 91%] zh-cn/index
+reading sources... [100%] zh-tw/index
+
+looking for now-outdated files... none found
+pickling environment... done
+checking consistency... done
+preparing documents... done
+copying assets... 
+copying static files... 
+Writing evaluated template result to <repo>\.audit\ux-doc-build\_static\basic.css
+Writing evaluated template result to <repo>\.audit\ux-doc-build\_static\documentation_options.js
+Writing evaluated template result to <repo>\.audit\ux-doc-build\_static\language_data.js
+Writing evaluated template result to <repo>\.audit\ux-doc-build\_static\js\versions.js
+copying static files: done
+copying extra files... 
+copying extra files: done
+copying assets: done
+writing output... [  9%] de/index
+writing output... [ 18%] en/index
+writing output... [ 27%] es/index
+writing output... [ 36%] fr/index
+writing output... [ 45%] index
+writing output... [ 55%] ja/index
+writing output... [ 64%] ko/index
+writing output... [ 73%] pt-BR/index
+writing output... [ 82%] ru/index
+writing output... [ 91%] zh-cn/index
+writing output... [100%] zh-tw/index
+
+generating indices... genindex done
+writing additional pages... search done
+dumping search index in English (code: en)... done
+dumping object inventory... done
+build succeeded.
+
+The HTML pages are in .audit\ux-doc-build.

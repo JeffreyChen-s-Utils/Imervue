@@ -58,6 +58,8 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261030-02 | 2026-10-30 | Fix the two GUI tests failing on main after the dev merge | #done #tests #puppet #ui | [2026-10-b](2026-10-b.md) |
+| U-20261030-01 | 2026-10-30 | Track cited audit evidence and ignore local scratch | #decision #docs #review | [2026-10-b](2026-10-b.md) |
 | U-20261029-21 | 2026-10-29 | Merge dev into main onto the complexity splits | #done #merge #refactor #tests | [2026-10-b](2026-10-b.md) |
 | U-20261029-20 | 2026-10-29 | Split the safety review and background remover plugins; close the 80+ complexity scope | #done #quality #refactor #tests #Imervue_Plugins | [2026-10-b](2026-10-b.md) |
 | U-20261029-19 | 2026-10-29 | Split layers dialog, background jobs, layers dock and CLIP search | #snapshot #quality #refactor #tests | [2026-10-b](2026-10-b.md) |
@@ -614,4 +616,4 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
 | [2026-10.md](2026-10.md) | 2026-10 | 108 |
-| [2026-10-b.md](2026-10-b.md) | 2026-10 | 37 |
+| [2026-10-b.md](2026-10-b.md) | 2026-10 | 40 |

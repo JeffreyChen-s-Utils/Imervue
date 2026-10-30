@@ -1,0 +1,24 @@
+import os, sys, subprocess, threading
+os.environ['QT_QPA_PLATFORM']='offscreen'
+from PySide6.QtCore import QCoreApplication
+from Imervue.plugin import pip_installer as p
+from Imervue.plugin.subprocess_util import terminate_process
+app=QCoreApplication([])
+real_popen=subprocess.Popen
+children=[]; started=threading.Event()
+def launch(*args,**kwargs):
+    child=real_popen(*args,**kwargs); children.append(child); started.set(); return child
+p.subprocess.Popen=launch
+p.install_command=lambda *_args:[sys.executable,'-c','import time; time.sleep(60)']
+p._is_frozen=lambda:False
+worker=p._InstallWorker(['mock-package'],sys.executable)
+worker.start()
+try:
+    assert started.wait(5)
+    worker.stop()
+    print('worker holds subprocess:',worker._proc is not None)
+    print('worker exited after stop:',worker.wait(300))
+    print('child remains alive:',children[0].poll() is None)
+finally:
+    for child in children: terminate_process(child)
+    assert worker.wait(5000)

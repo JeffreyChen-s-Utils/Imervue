@@ -1,0 +1,49 @@
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: B110,B404,B606,B105,B603,B607,B403,B311
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	using config: pyproject.toml
+[main]	INFO	running on Python 3.14.4
+[manager]	WARNING	Test in comment: used is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: for is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: write is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: only is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: limit is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: is is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: int is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: coerced is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: above is not a test name or id, ignoring
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:389
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:392
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:395
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:397
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:435
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:522
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:523
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:613
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:617
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:630
+[tester]	WARNING	nosec encountered (B608), but no failed test on file Imervue/library\image_index.py:707
+Working... ---------------------------------------- 100% 0:00:44
+Run started:2026-10-28 14:52:09.197368+00:00
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 158394
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 16
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 0
+Files skipped (0):

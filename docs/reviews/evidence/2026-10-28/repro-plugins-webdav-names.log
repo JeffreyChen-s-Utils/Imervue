@@ -1,0 +1,5 @@
+'photo 1.png' selector= '/photos/photo 1.png' fragment= ''
+InvalidURL URL can't contain control characters. '/photos/photo 1.png' (found at least ' ')
+'�ȹC.png' selector= '/photos/�ȹC.png' fragment= ''
+UnicodeEncodeError 'ascii' codec can't encode characters in position 12-13: ordinal not in range(128)
+'photo#1.png' selector= '/photos/photo' fragment= '1.png'

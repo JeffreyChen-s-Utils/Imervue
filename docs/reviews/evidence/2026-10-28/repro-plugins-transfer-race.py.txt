@@ -1,0 +1,24 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+from Imervue.system import file_transfer as f
+real_transfer=f._transfer_one
+f.carry_along=lambda *_args,**_kwargs:{}
+for move in [False,True]:
+    with TemporaryDirectory() as d:
+        root=Path(d); dest=root/'target';dest.mkdir()
+        sources=[]
+        for label in ['A','B']:
+            folder=root/label;folder.mkdir();source=folder/'same.jpg';source.write_text(label);sources.append(str(source))
+        gate=Barrier(2)
+        def synchronized(source,target,*,move):
+            gate.wait(timeout=5)
+            real_transfer(source,target,move=move)
+        f._transfer_one=synchronized
+        with ThreadPoolExecutor(2) as pool:
+            tasks=[pool.submit(f.transfer_into,[source],dest,move=move) for source in sources]
+            results=[task.result(timeout=5) for task in tasks]
+        print('move=',move,'success counts=',[len(result.done) for result in results],
+              'destination files=',[(p.name,p.read_text()) for p in dest.iterdir()],
+              'sources exist=',[Path(source).exists() for source in sources])

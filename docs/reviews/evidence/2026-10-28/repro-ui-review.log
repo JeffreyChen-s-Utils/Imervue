@@ -1,0 +1,5 @@
+gallery 'thumbs/thumb_00000_a#b.jpg' browser path exists= False fragment= b.jpg
+gallery 'images/a#b.png' browser path exists= False fragment= b.png
+malformed document escaped= KeyError 'width' warnings= []
+auto-tag close blocked seconds= 0.352 GUI timer fired= False
+all three defect probes confirmed

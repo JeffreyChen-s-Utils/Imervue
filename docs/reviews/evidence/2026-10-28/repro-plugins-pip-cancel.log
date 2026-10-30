@@ -1,0 +1,3 @@
+worker holds subprocess: False
+worker exited after stop: False
+child remains alive: True

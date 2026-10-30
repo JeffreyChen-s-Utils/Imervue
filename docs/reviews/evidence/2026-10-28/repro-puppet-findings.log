@@ -1,0 +1,6 @@
+COLLISION {"paths": [["<home>\\AppData\\Local\\Temp\\tmpib01bpv1\\motion.mp4", "<home>\\AppData\\Local\\Temp\\tmpib01bpv1\\motion.mp4"]], "files": 1, "final_content": "�]�B"}
+recording close failed: disk full while finalizing
+FINALIZE failed.gif finished= ['failed.gif'] failed= []
+VTS_EXCEPTION TypeError cannot use 'list' as a dict key (unhashable type: 'list')
+VTS_EXCEPTION AttributeError 'list' object has no attribute 'get'
+VTS_CALLBACK_EXCEPTION AttributeError 'list' object has no attribute 'get'
