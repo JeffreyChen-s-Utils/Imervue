@@ -138,9 +138,14 @@ class WebcamPreviewDialog(QDialog):
         super().hideEvent(event)
 
     def done(self, result: int) -> None:
-        """Stop on every dismissal path, including Escape and window close."""
+        """Stop on Escape, the Stop button and a close while visible."""
         self._tracker.set_enabled(False)
         super().done(result)
+
+    def closeEvent(self, event) -> None:
+        """Stop on a close QDialog does not route through done(): a hidden or unshown dialog."""
+        self._tracker.set_enabled(False)
+        super().closeEvent(event)
 
     # ---- private -------------------------------------------------------
 

@@ -118,9 +118,40 @@ def test_dialog_constructs_and_shows_waiting_state(qapp):
         canvas.deleteLater()
 
 
-def test_dialog_close_disables_tracker(qapp):
-    """Closing the preview dialog must stop the tracker — otherwise
-    the camera light stays on with no UI to surface it."""
+def _close_unshown(dlg):
+    dlg.close()
+
+
+def _close_shown(dlg):
+    dlg.show()
+    dlg.close()
+
+
+def _close_after_hide(dlg):
+    dlg.show()
+    dlg.hide()
+    dlg.close()
+
+
+def _press_escape(dlg):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    dlg.show()
+    QTest.keyClick(dlg, Qt.Key.Key_Escape)
+
+
+def _click_stop(dlg):
+    dlg.show()
+    dlg._on_stop_clicked()   # noqa: SLF001
+
+
+@pytest.mark.parametrize("dismiss", [
+    _close_unshown, _close_shown, _close_after_hide, _press_escape, _click_stop,
+])
+def test_dialog_close_disables_tracker(qapp, dismiss):
+    """Every dismissal path must stop the tracker — otherwise the camera
+    light stays on with no UI to surface it. A hidden or unshown dialog's
+    close reaches only closeEvent, while Escape reaches only done()."""
     from Imervue.puppet.canvas import PuppetCanvas
     from Imervue.puppet.webcam_preview_dialog import WebcamPreviewDialog
     from Imervue.puppet.webcam_tracker import WebcamTracker
@@ -130,7 +161,8 @@ def test_dialog_close_disables_tracker(qapp):
     try:
         # Pretend the tracker is enabled.
         tracker._enabled = True   # noqa: SLF001
-        dlg.close()
+        dismiss(dlg)
+        qapp.processEvents()
         assert tracker.is_enabled() is False
     finally:
         dlg.deleteLater()
