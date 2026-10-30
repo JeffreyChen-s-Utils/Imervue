@@ -24,3 +24,6 @@ Cross-repo and workspace items live in `D:\Codes\progress.md` (relevant here: S-
 
 - After the dev merge, user_setting_dict.py and puppet/webcam_tracker.py measure 83 locally (dev added code to both); hosted Codacy scored them 76 and below 80 before the merge.
   Next: check their hosted scores once the merge lands on main and split either one that reaches 80.
+
+- Two local GUI tests fail on main as merged (CI skips them headless): test_main_window_layout::test_constructed_attributes_are_unchanged (the dev merge added `_job_indicator` to the window; `_EXPECTED` lacks it) and test_puppet_webcam_preview_dialog::test_dialog_close_disables_tracker (the tracker stays enabled after `close()`; [UNVERIFIED] the test never shows the dialog, and closing a hidden QDialog may never reach the `done()` override that stops it).
+  Next: add `_job_indicator` to the layout snapshot; confirm the webcam cause, then fix the dialog or the test with a regression test for an unshown close.

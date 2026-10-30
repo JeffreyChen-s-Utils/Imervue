@@ -1,0 +1,15 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from Imervue.library import image_index as db
+from Imervue.library.maintenance import run_maintenance
+with TemporaryDirectory() as folder:
+    base=Path(folder); a=base/'a'; b=base/'b'; a.mkdir(); b.mkdir()
+    p=b/'existing.png'; p.write_bytes(b'image')
+    db.set_db_path(base/'library.db')
+    db.add_library_root(str(a)); db.add_library_root(str(b))
+    db.upsert_image(str(p),size=5); db.set_note(str(p),'keep my note'); db.set_cull_state(str(p),'pick'); db.add_image_tag(str(p),'travel')
+    db.remove_library_root(str(b))
+    print('before',p.exists(),db.get_note(str(p)),db.get_cull_state(str(p)),db.conn().execute('SELECT count(*) FROM image_tags').fetchone()[0])
+    print('prune',run_maintenance(db.list_library_roots(),prune=True)['pruned'])
+    print('after',p.exists(),repr(db.get_note(str(p))),db.get_cull_state(str(p)),db.conn().execute('SELECT count(*) FROM image_tags').fetchone()[0])
+    db.close()

@@ -1,0 +1,16 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+import importlib.util
+from urllib.parse import urlsplit
+import http.client
+spec=importlib.util.spec_from_file_location('uploaders','plugins/cloud_share/uploaders.py')
+u=importlib.util.module_from_spec(spec);spec.loader.exec_module(u)
+with TemporaryDirectory() as d:
+    for name in ['photo 1.png','旅遊.png','photo#1.png']:
+        p=Path(d)/name;p.write_bytes(b'example image')
+        req=u.build_webdav_request('https://example.invalid/photos',str(p))
+        print(repr(name),'selector=',repr(req.selector),'fragment=',repr(urlsplit(req.full_url).fragment))
+        try:
+            http.client.HTTPConnection('example.invalid').putrequest('PUT',req.selector)
+        except (ValueError,http.client.InvalidURL) as e:
+            print(type(e).__name__,str(e))

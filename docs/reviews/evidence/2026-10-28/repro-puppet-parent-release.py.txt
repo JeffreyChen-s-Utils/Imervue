@@ -1,0 +1,32 @@
+import sys,json,threading
+from pathlib import Path
+from types import SimpleNamespace
+sys.path.insert(0,str(Path.cwd()))
+from PySide6.QtCore import QCoreApplication
+from unittest.mock import patch
+from Imervue.Imervue_main_window import ImervueMainWindow
+app=QCoreApplication.instance() or QCoreApplication([])
+noop=lambda *a,**k:None
+calls=[]
+stop=threading.Event()
+worker=threading.Thread(target=stop.wait,daemon=True);worker.start()
+class Workspace:
+    def _shutdown_drivers(self): calls.append('drivers');stop.set();worker.join(1)
+    def close(self): calls.append('workspace-close');self._shutdown_drivers()
+    def shutdown(self): calls.append('workspace-shutdown');self._shutdown_drivers()
+ws=SimpleNamespace(
+    _save_current_folder_session=noop,
+    _main_tabs=SimpleNamespace(currentChanged=SimpleNamespace(disconnect=noop)),
+    _on_main_tab_changed=noop,
+    _folder_watcher=SimpleNamespace(stop=noop),
+    viewer=SimpleNamespace(makeCurrent=noop,_delete_all_tile_textures=noop,_clear_deep_zoom=noop,doneCurrent=noop),
+    tree=SimpleNamespace(shutdown=noop),
+    modify_panel=SimpleNamespace(_debounce=SimpleNamespace(stop=noop),recipe_committed=SimpleNamespace(disconnect=noop),_destroy_canvas=noop,_undo_stack=SimpleNamespace(clear=noop)),
+    puppet_workspace=Workspace(),pet_workspace=Workspace(),
+)
+try:
+    with patch('Imervue.gpu_image_view.images.image_loader.cancel_folder_scan'):
+        ImervueMainWindow._release_for_close(ws)
+    print(json.dumps({'driver_cleanup_calls':calls,'worker_alive_after_actual_release':worker.is_alive()}))
+finally:
+    stop.set();worker.join(1)

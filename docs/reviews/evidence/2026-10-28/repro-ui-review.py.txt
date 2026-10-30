@@ -1,0 +1,52 @@
+import os, sys, json, tempfile, re, time, threading
+from pathlib import Path
+sys.path.insert(0, str(Path.cwd()))
+os.environ['QT_QPA_PLATFORM']='offscreen'
+import numpy as np
+from PIL import Image
+from urllib.parse import urlsplit, unquote
+from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import QTimer
+from types import SimpleNamespace
+from Imervue.export.web_gallery import generate_web_gallery
+from Imervue.paint.document_files import DocumentFiles
+from Imervue.gui import auto_tag_dialog as tag
+
+app=QApplication.instance() or QApplication([])
+with tempfile.TemporaryDirectory(prefix='imervue-audit-ui-') as tmp:
+    root=Path(tmp)
+    src=root/'a#b.png'; Image.new('RGB',(8,8),'red').save(src)
+    index=generate_web_gallery([str(src)],root/'gallery')
+    html=index.read_text(encoding='utf-8')
+    urls=[re.search(r'<img src="([^"]+)"', html).group(1),re.search(r'data-full="([^"]+)"',html).group(1)]
+    for url in urls:
+        requested=root/'gallery'/unquote(urlsplit(url).path)
+        print('gallery',repr(url),'browser path exists=',requested.exists(),'fragment=',urlsplit(url).fragment)
+        assert not requested.exists()
+    bad=root/'bad.imervue'
+    with bad.open('wb') as fh:
+        np.savez_compressed(fh,_metadata=np.array(json.dumps({'format_version':1,'height':1,'layers':[{}]})))
+    warnings=[]
+    bridge=SimpleNamespace(_workspace=SimpleNamespace(),_warn=lambda *args:warnings.append(args))
+    try:
+        DocumentFiles(bridge).open(str(bad))
+    except Exception as exc:
+        print('malformed document escaped=',type(exc).__name__,str(exc),'warnings=',warnings)
+        assert isinstance(exc,KeyError) and not warnings
+    else:
+        raise AssertionError('expected uncaught error')
+    parent=QWidget(); parent.viewer=SimpleNamespace(selected_tiles={'fake'},model=SimpleNamespace(images=['fake']))
+    started=threading.Event(); release=threading.Event()
+    def blocked_batch(*args,**kwargs):
+        started.set(); release.wait(3); return {}
+    tag.auto_tag_batch=blocked_batch
+    dialog=tag.AutoTagDialog(parent); dialog._run()
+    assert started.wait(2)
+    heartbeat=[]; QTimer.singleShot(20,lambda: heartbeat.append(True))
+    timer=threading.Timer(.35,release.set); timer.start()
+    before=time.monotonic(); dialog.reject(); elapsed=time.monotonic()-before
+    print('auto-tag close blocked seconds=',round(elapsed,3),'GUI timer fired=',bool(heartbeat))
+    assert elapsed>.25 and not heartbeat
+    timer.join(); app.processEvents()
+    dialog.deleteLater(); parent.deleteLater()
+print('all three defect probes confirmed')
