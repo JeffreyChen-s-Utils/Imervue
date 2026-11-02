@@ -10,7 +10,7 @@ import re
 import shutil
 import subprocess
 import time
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode, urlparse
 from urllib.request import urlopen
@@ -189,7 +189,7 @@ def capture_snapshot(branch: str, fetch=fetch_json) -> dict:
     if analyzed_revision(fetch(metadata_url), branch) != revision:
         raise ValueError("analysis revision changed during capture")
     snapshot = {"revision": revision, "branch": branch,
-                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "captured_at": datetime.now(UTC).isoformat(),
                 "source": _API + _REPOSITORY + "/files", "pages": pages, "files": files}
     validate_snapshot(snapshot)
     return snapshot

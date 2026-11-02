@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/python-%3E%3D3.10-blue" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
 </p>
@@ -116,7 +116,7 @@ Paint 與 MCP 圖片匯出失敗時會保留原有目標檔案。Puppet 批次�
 
 ### 需求
 
-- Python >= 3.10
+- Python >= 3.11
 - 支援 OpenGL 的 GPU（也提供軟體渲染備援）
 
 ### 從原始碼安裝
