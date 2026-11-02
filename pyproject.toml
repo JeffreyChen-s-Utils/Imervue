@@ -121,6 +121,9 @@ ignore = [
     # positional parameters at 7 instead (tests/test_code_size_limits.py, see
     # CLAUDE.md for the keyword-only exception).
     "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+    # UP042 wants StrEnum, whose str() is the value rather than Class.MEMBER. That changes
+    # runtime output, so it is a separate decision from the 3.11 floor that enabled the rule.
+    "UP042",
 ]
 # McCabe ≤ 15 is the workspace-wide ceiling (D:\Codes\CLAUDE.md, "可讀性"),
 # which a project may tighten but not relax. No module needs a per-file C901

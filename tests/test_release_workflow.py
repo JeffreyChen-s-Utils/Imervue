@@ -15,7 +15,7 @@ PyPI, EXE, and GitHub Release steps.
 """
 from __future__ import annotations
 
-import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -25,14 +25,6 @@ import pytest
 # install it. Skip the module cleanly rather than failing collection.
 yaml = pytest.importorskip("yaml")
 
-# ``tomllib`` is stdlib on Python 3.11+, the supported floor; the import
-# stays guarded. The one test that actually
-# parses ``pyproject.toml`` already skips on < 3.11, so a missing
-# parser doesn't take the rest of the suite down.
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    tomllib = None  # type: ignore[assignment]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "release.yml"
@@ -186,8 +178,6 @@ def test_version_bump_step_targets_pyproject_version(release_steps):
 def test_pyproject_version_is_extractable():
     """Live sanity check: the snippet's regex (``version = "..."``)
     must succeed against the current pyproject."""
-    if sys.version_info < (3, 11):
-        pytest.skip("tomllib needs Python 3.11+")
     with open(PYPROJECT, "rb") as f:
         data = tomllib.load(f)
     version = data["project"]["version"]
