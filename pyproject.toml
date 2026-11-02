@@ -19,10 +19,9 @@ keywords = [
     "image-viewer", "photo-viewer", "raw", "hdr", "panorama", "focus-stacking",
     "ai-upscale", "gpu", "opengl", "qt", "pyside6", "develop", "xmp", "lightroom",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license-files = ["LICENSE"]
 classifiers = [
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -72,7 +71,7 @@ markers = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 # ``examples/`` is exempt — demo scripts live there and aren't part
 # of the shipped package; tuning ruff for procedural-art helpers
 # would just add noise without affecting production code.

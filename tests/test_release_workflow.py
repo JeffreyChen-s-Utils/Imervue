@@ -25,8 +25,8 @@ import pytest
 # install it. Skip the module cleanly rather than failing collection.
 yaml = pytest.importorskip("yaml")
 
-# ``tomllib`` is stdlib only on Python 3.11+; the CI matrix still
-# includes 3.10, so guard the import. The one test that actually
+# ``tomllib`` is stdlib on Python 3.11+, the supported floor; the import
+# stays guarded. The one test that actually
 # parses ``pyproject.toml`` already skips on < 3.11, so a missing
 # parser doesn't take the rest of the suite down.
 if sys.version_info >= (3, 11):
