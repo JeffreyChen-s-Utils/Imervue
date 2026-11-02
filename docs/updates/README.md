@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261102-01 | 2026-11-02 | Require Python 3.11; stop supporting 3.10 | #migration #deps #ci | [2026-11](2026-11.md) |
 | U-20261030-02 | 2026-10-30 | Fix the two GUI tests failing on main after the dev merge | #done #tests #puppet #ui | [2026-10-b](2026-10-b.md) |
 | U-20261030-01 | 2026-10-30 | Track cited audit evidence and ignore local scratch | #decision #docs #review | [2026-10-b](2026-10-b.md) |
 | U-20261029-21 | 2026-10-29 | Merge dev into main onto the complexity splits | #done #merge #refactor #tests | [2026-10-b](2026-10-b.md) |
@@ -615,5 +616,6 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
+| [2026-11.md](2026-11.md) | 2026-11 | 1 |
 | [2026-10.md](2026-10.md) | 2026-10 | 108 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 40 |
