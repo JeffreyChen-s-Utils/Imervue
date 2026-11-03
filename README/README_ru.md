@@ -24,7 +24,7 @@
 
 <p align="center">
   <a href="https://imervue.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/imervue/badge/?version=latest" alt="Documentation Status"></a>
-  <img src="https://img.shields.io/badge/python-%3E%3D3.10-blue" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
 </p>
@@ -117,7 +117,7 @@ Modern Dark и Modern Light получили более ясную навига�
 
 ### Требования
 
-- Python >= 3.10
+- Python >= 3.11
 - GPU с поддержкой OpenGL (доступен запасной программный рендеринг)
 
 ### Установка из исходного кода

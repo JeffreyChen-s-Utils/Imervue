@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-Imervue is a PySide6 + OpenGL desktop application (Python >= 3.10; Windows, macOS, Linux) that
+Imervue is a PySide6 + OpenGL desktop application (Python >= 3.11; Windows, macOS, Linux) that
 puts five workspaces behind one main window: a GPU-accelerated image browser and photo library,
 a non-destructive "develop" editor (Modify tab), a raster paint / comic workspace, a 2D rigged
 puppet animator compatible with Live2D Cubism, and a desktop-pet overlay driven by the puppet

@@ -24,7 +24,7 @@
 
 <p align="center">
   <a href="https://imervue.readthedocs.io/en/latest/?badge=latest"><img src="https://readthedocs.org/projects/imervue/badge/?version=latest" alt="Documentation Status"></a>
-  <img src="https://img.shields.io/badge/python-%3E%3D3.10-blue" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/python-%3E%3D3.11-blue" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
 </p>
@@ -117,7 +117,7 @@ Paint와 MCP 이미지 내보내기가 실패해도 기존 대상 파일은 보�
 
 ### 요구 사항
 
-- Python >= 3.10
+- Python >= 3.11
 - OpenGL을 지원하는 GPU (소프트웨어 렌더링 대체도 가능)
 
 ### 소스에서 설치

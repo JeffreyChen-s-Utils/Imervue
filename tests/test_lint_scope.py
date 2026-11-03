@@ -14,7 +14,7 @@ _REPO = Path(__file__).resolve().parent.parent
 
 
 def _ruff_section() -> str:
-    # Read without tomllib, which needs Python 3.11 (the CI matrix starts at 3.10).
+    # Read as text: the [tool.ruff] section is all this needs.
     text = (_REPO / "pyproject.toml").read_text(encoding="utf-8")
     after = text.split("[tool.ruff]", 1)[1]
     return re.split(r"^\[", after, maxsplit=1, flags=re.MULTILINE)[0]

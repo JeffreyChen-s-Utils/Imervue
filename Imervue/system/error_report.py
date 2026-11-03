@@ -56,7 +56,7 @@ def collect_system_info() -> dict:
         "machine": platform.machine(),
         "qt_pyside6": qt_version,
         "is_frozen": getattr(sys, "frozen", False) or "__compiled__" in dir(sys),
-        "report_generated_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        "report_generated_at": _dt.datetime.now(_dt.UTC).isoformat(),
     }
 
 
