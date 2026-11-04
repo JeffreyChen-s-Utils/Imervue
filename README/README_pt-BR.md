@@ -272,7 +272,7 @@ A aba **Imervue** é a tela inicial padrão. Combina o visualizador de imagens c
 
 - **Grade** (padrão) — grade de tiles virtualizada com popup de pré-visualização ao passar o mouse (atraso de 500 ms)
 - **Lista (detalhe)** — alternar com `Ctrl+L`; colunas: Preview · Etiqueta · Avaliação · Nome · Resolução · Tamanho · Tipo · Modificação; `Delete` remove as linhas selecionadas e `Ctrl+Z` as traz de volta, e as teclas de avaliação (`1`–`5`), favorito (`0`), seleção (`P` / `Shift+X` / `U`) e cor (`F1`–`F5`) as marcam, como na grade
-- **Deep Zoom** — duplo clique em um tile; pan/zoom suave por GPU com overlay de minimapa
+- **Deep Zoom** — duplo clique em um tile; pan/zoom suave por GPU com overlay de minimapa. A imagem preenche a janela (uma pequena é ampliada); os painéis Folders e Image Info e a linha de filtros se recolhem em botões de ícone ao lado do nome do arquivo e voltam ao sair; o minimapa só aparece ao aproximar além da imagem inteira
 - **Vista dividida** (`Shift+S`) — duas imagens lado a lado
 - **Leitura em página dupla** (`Shift+D`, `Ctrl+Shift+D` para mangá da direita para a esquerda) — leitor de páginas opostas
 - **Espelhamento multi-monitor** (`Ctrl+Shift+M`) — janela em monitor secundário

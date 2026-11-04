@@ -17,9 +17,11 @@ from _qt_skip import pytestmark  # noqa: E402,F401
 _EXPECTED = {'_browse_mode': ('str', 'grid'),
  '_browse_empty_state': ('BrowserEmptyState',),
  '_browse_window': ('QMainWindow',),
+ '_deep_zoom_chrome': ('DeepZoomChrome',),
  '_dual_active': ('bool', False),
  '_filter_menu': ('QMenu',),
  '_filter_bar': ('ImageFilterBar',),
+ '_filename_row': ('QWidget',),
  '_folder_change_events': ('int', 0),
  '_folder_change_last_path': ('str', ''),
  '_folder_refresh_timer': ('QTimer', 500, True),
@@ -564,3 +566,23 @@ def test_the_folder_tree_holds_no_change_notification_handles(window):
     from PySide6.QtWidgets import QFileSystemModel
     source = window.model.sourceModel()
     assert source.testOption(QFileSystemModel.Option.DontWatchForChanges)
+
+
+def test_deep_zoom_folds_the_side_panels_and_filter_row(window, qapp, sample_png, pump_until):
+    """Opening an image folds Folders, Image Info and the filters; leaving restores them."""
+    window.show()
+    qapp.processEvents()
+    try:
+        panels = (window._tree_dock, window._info_dock, window._filter_bar)  # noqa: SLF001
+        chrome = window._deep_zoom_chrome  # noqa: SLF001
+        before = [panel.isHidden() for panel in panels]
+        window.viewer.load_deep_zoom_image(sample_png)
+        pump_until(lambda: chrome.collapsed)
+        assert all(panel.isHidden() for panel in panels)
+        assert all(not button.isHidden() for button in chrome.buttons.values())
+        window.viewer._clear_deep_zoom()  # noqa: SLF001 - what returning to the grid runs
+        pump_until(lambda: not chrome.collapsed)
+        assert [panel.isHidden() for panel in panels] == before
+        assert all(button.isHidden() for button in chrome.buttons.values())
+    finally:
+        window.hide()

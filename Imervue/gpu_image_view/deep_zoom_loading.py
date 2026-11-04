@@ -58,6 +58,7 @@ class DeepZoomLoadingMixin:
 
         # 進入 deep zoom 模式 → 顯示「修改」選單。
         self._set_modify_menu_visible(True)
+        self._notify_deep_zoom_chrome()
 
         if self.on_filename_changed:
             self.on_filename_changed(Path(path).name)

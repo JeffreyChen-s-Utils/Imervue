@@ -185,6 +185,8 @@ Deep-Zoom-Modus
 
 Klicken Sie auf eine Miniaturansicht, um in den Deep-Zoom-Modus für hochwertige Einzelbildbetrachtung zu wechseln.
 
+Im Deep-Zoom-Modus erhält das Bild das ganze Fenster: Die Bereiche **Folders** und **Image Info** sowie die Filterzeile klappen zu kleinen Symbolschaltflächen neben dem Dateinamen ein – ein Klick holt den jeweiligen Bereich zurück, solange das Bild geöffnet bleibt –, und beim Verlassen des Deep Zoom kehrt jeder Bereich so zurück, wie er war. „An Fenster anpassen“ füllt die Zeichenfläche und vergrößert dabei auch kleinere Bilder; die Minimap erscheint erst, wenn Sie über das ganze Bild hinaus hineinzoomen.
+
 Auch Panoramen weit über Pillows Sicherheitsgrenze von 179 Megapixeln öffnen sich: Die Grenze richtet sich nach dem Arbeitsspeicher (bei 16 GB etwa 1,4 Gigapixel), und solche Riesen werden nacheinander dekodiert.
 
 Ein abgeschnittenes JPEG, PNG, TIFF, GIF oder BMP — ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto — öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen.

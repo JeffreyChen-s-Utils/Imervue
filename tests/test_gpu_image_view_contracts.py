@@ -508,6 +508,18 @@ def test_modify_menu_toggle_tolerates_missing_and_failing_action(caplog):
     assert "toggle the Modify menu" in caplog.text
 
 
+def test_deep_zoom_chrome_notice_tolerates_a_window_without_it():
+    GPUImageView._notify_deep_zoom_chrome(SimpleNamespace(main_window=SimpleNamespace()))
+
+
+def test_deep_zoom_chrome_notice_schedules_a_sync():
+    calls = []
+    chrome = SimpleNamespace(schedule_sync=lambda: calls.append("sync"))
+    GPUImageView._notify_deep_zoom_chrome(
+        SimpleNamespace(main_window=SimpleNamespace(_deep_zoom_chrome=chrome)))
+    assert calls == ["sync"]
+
+
 def _deep_zoom_host(main_window, calls):
     host = SimpleNamespace(
         _deep_zoom_loading=object(), _deep_zoom_path="a",
@@ -517,7 +529,7 @@ def _deep_zoom_host(main_window, calls):
         _minimap_tex=42, _minimap_dzi=object(), deep_zoom=object(),
         _hover_image_xy=(1, 2), main_window=main_window,
     )
-    return _bind(host, "_set_modify_menu_visible")
+    return _bind(host, "_set_modify_menu_visible", "_notify_deep_zoom_chrome")
 
 
 def test_clear_deep_zoom_frees_everything_and_hides_the_modify_menu(monkeypatch):

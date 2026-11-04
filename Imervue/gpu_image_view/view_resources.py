@@ -62,11 +62,18 @@ class ViewResourcesMixin:
         self.deep_zoom = None
         # 離開 deep zoom → 收起「修改」選單（若主視窗還在）。
         self._set_modify_menu_visible(False)
+        self._notify_deep_zoom_chrome()
         # 清除 status bar 狀態槽 — 避免殘留上一張圖的資訊
         self._hover_image_xy = None
         if hasattr(self.main_window, "clear_status_info"):
             with best_effort("clear the status bar info", logger):
                 self.main_window.clear_status_info()
+
+    def _notify_deep_zoom_chrome(self) -> None:
+        """Let the main window fold its panels for Deep Zoom, or bring them back."""
+        chrome = getattr(self.main_window, "_deep_zoom_chrome", None)
+        if chrome is not None:
+            chrome.schedule_sync()
 
     def _set_modify_menu_visible(self, visible: bool) -> None:
         """Toggle the Deep-Zoom-only Modify menu on the main window's menubar.

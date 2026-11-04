@@ -276,7 +276,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - **Grid** (default) — virtualized tile grid with hover-preview popup (500 ms delay)
 - **List (detail)** — toggle with `Ctrl+L`; columns: Preview · Label · Rating · Name · Resolution · Size · Type · Modified; `Delete` removes the selected rows and `Ctrl+Z` brings them back, and the rating (`1`–`5`), favourite (`0`), cull (`P` / `Shift+X` / `U`) and colour (`F1`–`F5`) keys mark them, as on the thumbnail wall
-- **Deep Zoom** — double-click a tile; smooth GPU pan/zoom with minimap overlay
+- **Deep Zoom** — double-click a tile; smooth GPU pan/zoom with minimap overlay. The image fills the window (a small one is enlarged); the Folders and Image Info panels and the filter row fold into icon buttons beside the file name and come back when you leave; the minimap appears once you zoom in past the whole image
 - **Split View** (`Shift+S`) — two images side by side
 - **Dual-Page Reading** (`Shift+D`, `Ctrl+Shift+D` for right-to-left manga) — facing-page reader
 - **Multi-Monitor mirror** (`Ctrl+Shift+M`) — secondary-display window

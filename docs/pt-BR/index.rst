@@ -186,6 +186,8 @@ Modo Deep Zoom
 
 Clique em uma miniatura para entrar no modo Deep Zoom para visualização individual de alta qualidade.
 
+No Deep Zoom a imagem ocupa a janela inteira: os painéis **Folders** e **Image Info** e a linha de filtros se recolhem em pequenos botões de ícone ao lado do nome do arquivo (clique em um para trazer o painel de volta enquanto a imagem continuar aberta) e, ao sair do Deep Zoom, cada painel volta como estava. Ajustar à janela preenche a tela, ampliando também uma imagem menor que ela, e o minimapa só aparece depois de aproximar além da imagem inteira.
+
 Panoramas muito acima do limite de segurança de 179 megapixels do Pillow também abrem: o limite acompanha a memória do computador (com 16 GB, cerca de 1,4 gigapixel) e essas imagens gigantes são decodificadas uma de cada vez.
 
 Um JPEG, PNG, TIFF, GIF ou BMP incompleto — um download ou cópia interrompidos, uma foto recuperada de um cartão de memória com defeito — abre com a parte que foi lida, como no navegador, em vez de não abrir.

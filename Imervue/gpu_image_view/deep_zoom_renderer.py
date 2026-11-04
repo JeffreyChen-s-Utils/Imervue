@@ -27,7 +27,7 @@ from OpenGL.GL import (
     glTranslatef,
 )
 
-from Imervue.gpu_image_view.fit_view import canvas_size, reserved_overlay_height
+from Imervue.gpu_image_view.fit_view import canvas_size, minimap_visible, reserved_overlay_height
 from Imervue.gpu_image_view.deep_zoom_priority import prioritize_tiles
 from Imervue.gpu_image_view.minimap import minimap_geometry
 from Imervue.gpu_image_view.tile_grid_renderer import upload_minimap_texture
@@ -186,11 +186,12 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
     # -- minimap ------------------------------------------------------
 
     def current_minimap_rect(self) -> tuple[int, int, int, int] | None:
-        """Minimap rectangle (x, y, w, h) in widget coords, or None when no
-        deep-zoom image is loaded. Shared by the painter and the click handler
-        so the clickable area always matches what is drawn."""
+        """Minimap rectangle (x, y, w, h) in widget coords, or None when it is
+        not shown: no deep-zoom image, or the whole image is in view
+        (``fit_view.minimap_visible``). Shared by the painter and the click
+        handler so the clickable area always matches what is drawn."""
         view = self._view
-        if not view.deep_zoom:
+        if not minimap_visible(view):
             return None
         base = view.deep_zoom.levels[0]
         canvas_w, canvas_h = canvas_size(view)
@@ -199,13 +200,10 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
         )
 
     def paint_minimap(self) -> None:
+        """The filmstrip's letterbox band, then the minimap while it is shown."""
         view = self._view
-        rect = self.current_minimap_rect()
-        if rect is None:
+        if not view.deep_zoom:
             return
-
-        base = view.deep_zoom.levels[0]
-        img_w, img_h = base.shape[1], base.shape[0]
 
         # 確保 ortho 回到畫面座標
         if not view.renderer.use_shaders:
@@ -214,6 +212,12 @@ class DeepZoomRenderer:  # pragma: no cover - GL drawing path
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         self._draw_letterbox_band()
+        rect = self.current_minimap_rect()
+        if rect is None:
+            return
+
+        base = view.deep_zoom.levels[0]
+        img_w, img_h = base.shape[1], base.shape[0]
         self._draw_minimap_background(rect)
         self._draw_minimap_thumbnail(rect)
         self._draw_viewport_box(rect, img_w, img_h)

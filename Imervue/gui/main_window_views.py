@@ -87,6 +87,7 @@ class MainWindowViewsMixin:
             self.statusBar(),
             self._tab_bar,
             self.filename_label,
+            self._filename_row,
             self._tree_dock,
             self._info_dock,
             self._image_issue_dock,
@@ -114,6 +115,10 @@ class MainWindowViewsMixin:
                 w.setVisible(True)
         self._theater_prev_visibility = None
         self._theater_widgets = None
+        # Deep Zoom may have opened or closed while theater mode held the panels.
+        chrome = getattr(self, "_deep_zoom_chrome", None)
+        if chrome is not None:
+            chrome.schedule_sync()
         self._theater_toast("theater_off", "Theater mode off")
 
     def _theater_toast(self, key: str, default: str) -> None:

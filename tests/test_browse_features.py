@@ -14,9 +14,10 @@ import numpy as np
 from Imervue.gpu_image_view.browse_features import BrowseFeatures
 from Imervue.user_settings.user_setting_dict import user_setting_dict
 
-# Square image → minimap reserve of 140 + 12 margin keeps a 152 px bottom band
-# clear, so a 1000 px canvas centres pans inside an 848 px content height.
-_SQUARE_RESERVE = 152
+# The filmstrip (on, with more than one image) keeps an 88 px bottom band
+# clear, so a 1000 px canvas centres pans inside a 912 px content height. The
+# minimap reserves nothing: it only shows over an image that overflows.
+_BAND = 88
 
 
 def _view():
@@ -44,18 +45,18 @@ def _clamp_view(img_w, img_h, canvas, zoom, offset):
         dz_offset_y=offset[1],
         _last_resize_size=canvas,
         tile_grid_mode=False,
-        _filmstrip_enabled=False,
-        model=SimpleNamespace(images=[0]),
+        _filmstrip_enabled=True,
+        model=SimpleNamespace(images=[0, 1, 2]),
     )
 
 
 def test_clamp_pan_centres_fit_image_inside_content_area():
     # A fit image (smaller than the canvas) is re-centred; vertically it lands
-    # in the content area (848) above the band, not the full 1000 px canvas.
+    # in the content area (912) above the band, not the full 1000 px canvas.
     view = _clamp_view(500, 500, (1000, 1000), 1.0, (12.0, 12.0))
     BrowseFeatures(view).clamp_pan()
     assert view.dz_offset_x == (1000 - 500) / 2
-    assert view.dz_offset_y == (1000 - _SQUARE_RESERVE - 500) / 2
+    assert view.dz_offset_y == (1000 - _BAND - 500) / 2
 
 
 def test_clamp_pan_holds_zoomed_image_bottom_above_band():
@@ -65,8 +66,8 @@ def test_clamp_pan_holds_zoomed_image_bottom_above_band():
     # clamp to their minimum.
     view = _clamp_view(500, 500, (1000, 1000), 4.0, (-5000.0, -5000.0))
     BrowseFeatures(view).clamp_pan()
-    content_h = 1000 - _SQUARE_RESERVE
-    assert view.dz_offset_y == content_h - 2000  # image bottom rests at 848
+    content_h = 1000 - _BAND
+    assert view.dz_offset_y == content_h - 2000  # image bottom rests at 912
     assert view.dz_offset_x == 1000 - 2000  # x clamps over the full width
 
 
@@ -135,13 +136,13 @@ def test_reload_settings_no_refit_off_the_deep_zoom_view():
 # ---------------------------------------------------------------
 # Reading mode: scroll / bottom-anchor against the CONTENT area
 # ---------------------------------------------------------------
-# Regression: both measured the viewport as ``view.height()``. The minimap /
-# filmstrip band is drawn over the bottom of the canvas, so that stopped the
+# Regression: both measured the viewport as ``view.height()``. The filmstrip
+# band is drawn over the bottom of the canvas, so that stopped the
 # scroll a band-height short — the foot of every page stayed hidden behind the
 # overlay and the edge auto-advance fired against that same wrong edge.
 
 _CANVAS = (1000, 1000)
-_CONTENT_H = 1000 - _SQUARE_RESERVE          # 848
+_CONTENT_H = 1000 - _BAND          # 912
 
 
 def _reading_view(img_h, zoom=1.0, offset_y=0.0, img_w=500):
@@ -153,8 +154,8 @@ def _reading_view(img_h, zoom=1.0, offset_y=0.0, img_w=500):
         dz_offset_y=offset_y,
         _last_resize_size=_CANVAS,
         tile_grid_mode=False,
-        _filmstrip_enabled=False,
-        model=SimpleNamespace(images=[0]),
+        _filmstrip_enabled=True,
+        model=SimpleNamespace(images=[0, 1, 2]),
         updates=0,
         width=lambda: _CANVAS[0],
         height=lambda: _CANVAS[1],
@@ -166,10 +167,10 @@ def _reading_view(img_h, zoom=1.0, offset_y=0.0, img_w=500):
 
 def test_reading_scroll_bottom_stops_at_the_content_area_not_the_canvas():
     # Page 2000 px tall, already scrolled near its end. The lowest reachable
-    # offset must bottom the page at the content edge (848) so its last rows
-    # clear the band — against the raw 1000 px canvas it would stop 152 px early
-    # and those rows would sit under the minimap forever.
-    view = _reading_view(2000, offset_y=-1100.0)
+    # offset must bottom the page at the content edge (912) so its last rows
+    # clear the band — against the raw 1000 px canvas it would stop 88 px early
+    # and those rows would sit under the filmstrip forever.
+    view = _reading_view(2000, offset_y=-1000.0)
     BrowseFeatures(view).reading_wheel(-500.0)
     assert view.dz_offset_y == _CONTENT_H - 2000
 
@@ -190,10 +191,10 @@ def test_reading_scroll_advances_only_past_the_content_edge():
 
 
 def test_reading_page_taller_than_content_scrolls_instead_of_advancing():
-    # 900 px page: it fits the 1000 px canvas but NOT the 848 px content area,
+    # 950 px page: it fits the 1000 px canvas but NOT the 912 px content area,
     # so it must scroll. Measured against the canvas it counted as "fits" and
     # any scroll turned the page, skipping content hidden under the band.
-    view = _reading_view(900)
+    view = _reading_view(950)
     called = {}
     import Imervue.gpu_image_view.actions.select as select_mod
     original = select_mod.switch_to_next_image

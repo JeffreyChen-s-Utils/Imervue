@@ -331,3 +331,61 @@ def test_the_panels_menu_lists_every_dock_and_resets(window, monkeypatch):
         assert not window._tree_dock.isHidden()  # noqa: SLF001
     finally:
         window.hide()
+
+
+
+# ---------------------------------------------------------------------------
+# Deep Zoom folds the browse docks (``gui/deep_zoom_chrome``)
+# ---------------------------------------------------------------------------
+
+def _fold_in_deep_zoom(window, deep_zoom):
+    from Imervue.gui.deep_zoom_chrome import PANEL_FOLDERS, PANEL_INFO, DeepZoomChrome
+    chrome = DeepZoomChrome(
+        {PANEL_FOLDERS: window._tree_dock, PANEL_INFO: window._info_dock},  # noqa: SLF001
+        {}, lambda: deep_zoom[0], parent=window)
+    window._deep_zoom_chrome = chrome  # noqa: SLF001
+    chrome.sync()
+    assert window._tree_dock.isHidden() and window._info_dock.isHidden()  # noqa: SLF001
+    return chrome
+
+
+def _leave(chrome, deep_zoom):
+    deep_zoom[0] = False
+    chrome.sync()
+
+
+def test_a_layout_saved_in_deep_zoom_keeps_the_folded_panels(window):
+    _fold_in_deep_zoom(window, [True])
+    window._save_dock_layouts()  # noqa: SLF001
+    assert window._tree_dock.isHidden() and window._info_dock.isHidden()  # noqa: SLF001
+    window._deep_zoom_chrome = None  # noqa: SLF001
+    window._tree_dock.hide()  # noqa: SLF001
+    window._info_dock.hide()  # noqa: SLF001
+    window._restore_dock_layouts()  # noqa: SLF001
+    assert not window._tree_dock.isHidden()  # noqa: SLF001
+    assert not window._info_dock.isHidden()  # noqa: SLF001
+
+
+def test_applying_a_layout_in_deep_zoom_folds_it_and_restores_it_on_leave(window):
+    window._info_dock.hide()  # noqa: SLF001
+    states = window.dock_layout_states()
+    window._info_dock.show()  # noqa: SLF001
+    deep_zoom = [True]
+    chrome = _fold_in_deep_zoom(window, deep_zoom)
+    window.apply_dock_layout_states(states)
+    assert chrome.collapsed
+    assert window._tree_dock.isHidden() and window._info_dock.isHidden()  # noqa: SLF001
+    _leave(chrome, deep_zoom)
+    assert not window._tree_dock.isHidden()  # noqa: SLF001
+    assert window._info_dock.isHidden()  # noqa: SLF001   the applied layout, not the old one
+
+
+def test_reset_in_deep_zoom_folds_the_reset_layout(window):
+    window._info_dock.hide()  # noqa: SLF001
+    deep_zoom = [True]
+    chrome = _fold_in_deep_zoom(window, deep_zoom)
+    window.reset_panel_layout()
+    assert chrome.collapsed
+    assert window._tree_dock.isHidden() and window._info_dock.isHidden()  # noqa: SLF001
+    _leave(chrome, deep_zoom)
+    assert not window._tree_dock.isHidden() and not window._info_dock.isHidden()  # noqa: SLF001

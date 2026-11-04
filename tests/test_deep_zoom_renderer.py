@@ -12,6 +12,7 @@ import pytest
 
 from Imervue.gpu_image_view import fit_view
 from Imervue.gpu_image_view.deep_zoom_renderer import (
+    DeepZoomRenderer,
     letterbox_band_rect,
     visible_tile_range,
 )
@@ -53,7 +54,8 @@ def test_renderer_and_fit_agree_on_centre():
     # the image off-screen. Horizontally the margins stay symmetric; vertically
     # the image is letterboxed above the reserved overlay band, so the extra
     # space all sits at the bottom (bottom margin = top margin + the reserve).
-    img_w = img_h = 500
+    # A 2:1 image fills the width, leaving room above and below.
+    img_w, img_h = 500, 250
     view = _FakeView(img_w, img_h, widget=(10, 10), last_resize=(1000, 1000))
     fit_view.fit_to_window(view)
 
@@ -67,7 +69,7 @@ def test_renderer_and_fit_agree_on_centre():
     assert left_margin == pytest.approx(right_margin)
     assert bottom_margin - top_margin == pytest.approx(reserve)
     assert top_margin > 0
-    assert left_margin > 0  # the lagging width() would have pushed it off-screen
+    assert left_margin == pytest.approx(0)  # fills the width of 1000, not of 10
 
 
 class _FakeDeepZoom:
@@ -93,3 +95,42 @@ class _FakeView:
 
     def update(self):
         pass
+
+
+def test_minimap_rect_is_none_while_the_whole_image_is_in_view():
+    view = _FakeView(500, 250, widget=(1000, 1000), last_resize=(1000, 1000))
+    fit_view.fit_to_window(view)
+    assert DeepZoomRenderer(view).current_minimap_rect() is None
+
+
+def test_minimap_rect_appears_once_zoomed_in():
+    view = _FakeView(500, 250, widget=(1000, 1000), last_resize=(1000, 1000))
+    view.zoom = 4.0
+    x, y, w, h = DeepZoomRenderer(view).current_minimap_rect()
+    assert (w, h) == (180, 90)
+    assert (x + w, y + h) == (1000 - 12, 1000 - 12)   # bottom-right corner, over the image
+
+
+def test_paint_minimap_draws_the_filmstrip_band_without_the_minimap(monkeypatch):
+    from Imervue.gpu_image_view import deep_zoom_renderer as mod
+    monkeypatch.setattr(mod, "glEnable", lambda *_a: None)
+    monkeypatch.setattr(mod, "glBlendFunc", lambda *_a: None)
+    view = _FakeView(500, 250, widget=(1000, 1000), last_resize=(1000, 1000))
+    fit_view.fit_to_window(view)
+    renderer = DeepZoomRenderer(view)
+    view.renderer = type("R", (), {"use_shaders": True})()
+    calls = []
+    monkeypatch.setattr(renderer, "_draw_letterbox_band", lambda: calls.append("band"))
+    monkeypatch.setattr(renderer, "_draw_minimap_background", lambda _r: calls.append("mm"))
+    renderer.paint_minimap()
+    assert calls == ["band"]
+
+
+def test_paint_minimap_without_an_image_draws_nothing(monkeypatch):
+    view = _FakeView(500, 250, widget=(1000, 1000), last_resize=(1000, 1000))
+    view.deep_zoom = None
+    renderer = DeepZoomRenderer(view)
+    calls = []
+    monkeypatch.setattr(renderer, "_draw_letterbox_band", lambda: calls.append("band"))
+    renderer.paint_minimap()
+    assert calls == []

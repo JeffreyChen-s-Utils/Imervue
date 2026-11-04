@@ -11,12 +11,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from Imervue.gpu_image_view.filmstrip import BAND_VPAD, ITEM_HEIGHT
-from Imervue.gpu_image_view.minimap import MINIMAP_MARGIN, minimap_geometry
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from Imervue.gpu_image_view.gpu_image_view import GPUImageView
 
-_MAX_FIT_ZOOM = 1.0
+# The fit fills the canvas: a picture smaller than it is enlarged too, up to
+# the wheel-zoom ceiling (``input_controller_zoom.ZOOM_MAX``, 5000 %).
+_MAX_FIT_ZOOM = 50.0
 # Slack on the "whole image visible" test so a zoom a hair above the full-canvas
 # fit (rounding) still counts as a whole-image view to re-fit, not a zoom-in.
 _FIT_EPSILON = 1.001
@@ -105,20 +106,27 @@ def _filmstrip_overlaps(view: GPUImageView) -> bool:
 def reserved_overlay_height(view: GPUImageView) -> int:
     """Bottom band (logical px) kept clear of image pixels in deep zoom.
 
-    The minimap is always drawn and the filmstrip optionally, both flush with
-    the bottom edge; reserving the taller of the two lets the fit / centring /
-    pan-clamp math letterbox the image above them instead of under them. Zero
-    outside deep zoom — the tile wall reserves nothing.
+    Only the optional filmstrip reserves one, so the fit / centring / pan-clamp
+    math letterboxes the image above it instead of under it. The minimap
+    reserves nothing: it shows only while the image overflows the canvas
+    (:func:`minimap_visible`), where it sits over the image like any viewer's
+    navigator, so a whole-image view gets the full canvas height. Zero outside
+    deep zoom — the tile wall reserves nothing.
     """
     if not view.deep_zoom or getattr(view, "tile_grid_mode", False):
         return 0
-    img_w, img_h = _base_dimensions(view)
-    canvas_w, canvas_h = canvas_size(view)
-    _, _, _, minimap_h = minimap_geometry(canvas_w, canvas_h, img_w, img_h)
-    reserved = minimap_h + MINIMAP_MARGIN
-    if _filmstrip_overlaps(view):
-        reserved = max(reserved, ITEM_HEIGHT + 2 * BAND_VPAD)
-    return int(reserved)
+    return ITEM_HEIGHT + 2 * BAND_VPAD if _filmstrip_overlaps(view) else 0
+
+
+def minimap_visible(view: GPUImageView) -> bool:
+    """Whether the navigation minimap is drawn (and takes clicks).
+
+    Only while part of the image is off the canvas: with the whole image in
+    view there is nothing to navigate to, and the minimap would only cover it.
+    """
+    if not view.deep_zoom or getattr(view, "tile_grid_mode", False):
+        return False
+    return not fits_within_canvas(view)
 
 
 def content_size(view: GPUImageView) -> tuple[int, int]:
@@ -134,7 +142,7 @@ def content_size(view: GPUImageView) -> tuple[int, int]:
 
 
 def fit_zoom(view: GPUImageView) -> float:
-    """Zoom level that fits the whole image above the overlays (capped at 1.0)."""
+    """Zoom level that fits the whole image above the overlays, enlarging a small one."""
     img_w, img_h = _base_dimensions(view)
     w, h = content_size(view)
     return min(w / img_w, h / img_h, _MAX_FIT_ZOOM)

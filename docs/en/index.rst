@@ -188,6 +188,8 @@ Deep Zoom Mode
 
 Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
 
+In Deep Zoom the image gets the whole window: the **Folders** and **Image Info** panels and the filter row fold into small icon buttons beside the file name — click one to bring that panel back while the image stays open — and every panel returns as it was when you leave Deep Zoom. Fit to window fills the canvas, enlarging a picture smaller than it, and the minimap appears only once you zoom in past the whole image.
+
 Panoramas far larger than Pillow's 179-megapixel safety limit open too: the limit follows the computer's memory (with 16 GB, about 1.4 gigapixels), and such giants decode one at a time.
 
 A JPEG, PNG, TIFF, GIF or BMP cut short — an interrupted download or copy, a photo recovered from a failing memory card — opens with the part that was read, as in a browser, instead of not opening at all.
