@@ -58,6 +58,7 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 
 | ID | Date | Title | Tags | Batch |
 |---|---|---|---|---|
+| U-20261104-02 | 2026-11-04 | Keep the folder tree after Deep Zoom or theater mode | #fix #ui | [2026-11.md](2026-11.md) |
 | U-20261104-01 | 2026-11-04 | Deep Zoom gives the image the whole window | #feature #ui | [2026-11.md](2026-11.md) |
 
 ## Batches
@@ -67,6 +68,6 @@ In the same commit: delete the item from `progress.md`, add a `#done` entry here
 | [2026-09.md](2026-09.md) | 2026-09 | 278 |
 | [2026-09-b.md](2026-09-b.md) | 2026-09 | 86 |
 | [2026-09-c.md](2026-09-c.md) | 2026-09 | 36 |
-| [2026-11.md](2026-11.md) | 2026-11 | 2 |
+| [2026-11.md](2026-11.md) | 2026-11 | 3 |
 | [2026-10.md](2026-10.md) | 2026-10 | 108 |
 | [2026-10-b.md](2026-10-b.md) | 2026-10 | 42 |

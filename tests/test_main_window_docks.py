@@ -389,3 +389,80 @@ def test_reset_in_deep_zoom_folds_the_reset_layout(window):
     assert window._tree_dock.isHidden() and window._info_dock.isHidden()  # noqa: SLF001
     _leave(chrome, deep_zoom)
     assert not window._tree_dock.isHidden() and not window._info_dock.isHidden()  # noqa: SLF001
+
+
+# ---------------------------------------------------------------------------
+# Theater mode hides the docks only for the moment
+# ---------------------------------------------------------------------------
+
+def _theater_window():
+    from Imervue.gui.main_window_views import MainWindowViewsMixin
+
+    class _TheaterWindow(MainWindowViewsMixin, _Window):
+        def _theater_toast(self, *_args):
+            pass
+
+    return _TheaterWindow()
+
+
+@pytest.fixture
+def theater_window(qapp, monkeypatch):
+    monkeypatch.setattr(mod.language_wrapper, "language_word_dict", {})
+    win = _theater_window()
+    win.resize(1200, 700)
+    yield win
+    win.deleteLater()
+
+
+def _enter_theater(win):
+    win._theater_mode = True  # noqa: SLF001
+    win._enter_theater_mode([win._tree_dock, win._info_dock])  # noqa: SLF001
+
+
+def _saved_browse_docks_shown(win, states):
+    win.apply_dock_layout_states(states)
+    return not win._tree_dock.isHidden(), not win._info_dock.isHidden()  # noqa: SLF001
+
+
+def test_a_layout_saved_in_theater_mode_keeps_the_docks(theater_window):
+    win = theater_window
+    win._info_dock.hide()  # noqa: SLF001
+    _enter_theater(win)
+    states = win.dock_layout_states()
+    assert win._tree_dock.isHidden()  # noqa: SLF001   theater still hides it
+    win._theater_mode = False  # noqa: SLF001
+    win._tree_dock.hide()  # noqa: SLF001
+    assert _saved_browse_docks_shown(win, states) == (True, False)
+
+
+def test_theater_entered_from_another_tab_restores_the_browse_docks(theater_window):
+    win = theater_window
+    win.show()
+    try:
+        win._main_tabs.setCurrentIndex(1)  # noqa: SLF001   Modify: the browse docks are not visible
+        _enter_theater(win)
+        win._theater_mode = False  # noqa: SLF001
+        win._exit_theater_mode([])  # noqa: SLF001
+        assert not win._tree_dock.isHidden()  # noqa: SLF001
+        assert not win._info_dock.isHidden()  # noqa: SLF001
+    finally:
+        win.hide()
+
+
+def test_theater_docks_shown_outside_theater_changes_nothing(theater_window):
+    win = theater_window
+    win._info_dock.hide()  # noqa: SLF001
+    with win._theater_docks_shown():  # noqa: SLF001
+        assert win._info_dock.isHidden()  # noqa: SLF001
+    assert not win._tree_dock.isHidden()  # noqa: SLF001
+
+
+def test_a_layout_saved_in_theater_over_deep_zoom_keeps_the_docks(theater_window):
+    win = theater_window
+    _fold_in_deep_zoom(win, [True])
+    _enter_theater(win)
+    states = win.dock_layout_states()
+    assert win._tree_dock.isHidden() and win._info_dock.isHidden()  # noqa: SLF001
+    win._theater_mode = False  # noqa: SLF001
+    win._deep_zoom_chrome = None  # noqa: SLF001
+    assert _saved_browse_docks_shown(win, states) == (True, True)

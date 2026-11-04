@@ -586,3 +586,22 @@ def test_deep_zoom_folds_the_side_panels_and_filter_row(window, qapp, sample_png
         assert all(button.isHidden() for button in chrome.buttons.values())
     finally:
         window.hide()
+
+
+def test_closing_in_deep_zoom_saves_the_unfolded_panels(window, qapp, sample_png, pump_until):
+    """Regression: a session closed in Deep Zoom reopened without the folder tree."""
+    from Imervue.user_settings.user_setting_dict import user_setting_dict
+    window.show()
+    qapp.processEvents()
+    try:
+        window.viewer.load_deep_zoom_image(sample_png)
+        pump_until(lambda: window._deep_zoom_chrome.collapsed)  # noqa: SLF001
+        window._release_for_close()  # noqa: SLF001 - clears Deep Zoom first, as closeEvent does
+        window._save_dock_layouts()  # noqa: SLF001
+        window._tree_dock.hide()  # noqa: SLF001
+        window._info_dock.hide()  # noqa: SLF001
+        window.apply_dock_layout_states(user_setting_dict)
+        assert not window._tree_dock.isHidden()  # noqa: SLF001
+        assert not window._info_dock.isHidden()  # noqa: SLF001
+    finally:
+        window.hide()

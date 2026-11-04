@@ -66,9 +66,9 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 1,055 | 192,655 |
+| `tests/` | 1,055 | 192,752 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 235 | 44,967 |
-| `Imervue/gui/` | 253 | 39,410 |
+| `Imervue/gui/` | 253 | 39,440 |
 | `Imervue/puppet/` | 122 | 17,266 |
 | `Imervue/image/` | 154 | 16,107 |
 | `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 92 | 14,215 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 800 |
 | `plugins/`（19 個外掛） | 94 | 16,697 |
 | `scripts/`（開發與發佈工具） | 12 | 1,904 |
-| **總計** | **2,262** | **393,344** |
+| **總計** | **2,262** | **393,471** |
 
-其中 `Imervue/` 套件本身 1,101 檔 / 182,088 行。
+其中 `Imervue/` 套件本身 1,101 檔 / 182,118 行。
 
-測試碼與產品碼比約 **0.97 : 1**（192,655 vs 198,785 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.97 : 1**（192,752 vs 198,815 行，產品碼含 `plugins/`）。
 
 > 統計以 `CLAUDE.md`「Architecture Map」的方式掃描各區域 Python 檔案，排除 `__pycache__`；不包含 `.audit/`、虛擬環境或建置產物。
 
@@ -683,13 +683,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_folders.py` | 307 | `MainWindowFoldersMixin`：輪詢目前資料夾（回到前景時立刻檢查並 refresh 資料夾樹）、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
 | `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
 | `main_window_screens.py` | 194 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
-| `main_window_views.py` | 128 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式（離開劇院模式時請 `deep_zoom_chrome` 重新同步） |
+| `main_window_views.py` | 153 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式（快照用 `isHidden()`，別的分頁上的 dock 不會被當成隱藏；`_theater_docks_shown()` 讓存版面時劇院藏起的 dock 算顯示；離開劇院模式時請 `deep_zoom_chrome` 重新同步） |
 | `deep_zoom_chrome.py` | 194 | Deep zoom 讓圖片佔滿版面：進入時把 Folders／Image Info dock 與篩選列收成檔名列上的圖示按鈕（`DeepZoomChrome`，0 ms 單發計時器合併「清除→載入」），離開時還原進入前的可見狀態；浮動 dock 不動、劇院模式期間暫停；`uncollapsed()` 讓存 dock 版面時存的是未收合版面，`relayout()` 在套用版面後重新收合；純邏輯 `CollapseState` |
 | `main_window_status.py` | 131 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤、記憶體壓力指示器的資料來源與清快取 |
 | `main_window_workspaces.py` | 102 | `MainWindowWorkspacesMixin`：主分頁切換（Imervue／Modify／Paint；資料夾分頁快捷鍵只在 Imervue 分頁啟用）、`choose_paint_handoff` 經 `paint_handoff` 選原圖或顯影結果、把指定（預設目前）圖片解碼成新的 Paint 文件、Modify／Paint 主分頁列的左右鍵換圖（`eventFilter`） |
 | `main_window_navigation.py` | 134 | `MainWindowNavigationMixin`：檔案樹／breadcrumb 共用的 `navigate_to_path`（樹根一律經 `tree.set_root_path`）、啟動時開上次資料夾（含還原 deep zoom）、目錄載入後更新樹、整個視窗的拖放（只收資料夾與可檢視副檔名） |
 | `main_window_layout.py` | 408 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹與其上方的搜尋／排序控制、檢視器欄（檔名列 `_filename_row` 兼放 deep zoom 面板切換鈕，`_build_deep_zoom_chrome`）、圖片分頁列、視圖堆疊、工作區分頁、狀態列與常駐工作指示器 `job_indicator`）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
-| `main_window_docks.py` | 209 | `MainWindowDocksMixin`（deep zoom 收合中存版面先暫時還原、套用／重設版面後重新收合）：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
+| `main_window_docks.py` | 214 | `MainWindowDocksMixin`（存版面時劇院模式與 deep zoom 暫時藏起的 dock 先還原、套用／重設版面後重新收合）：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
 | `optional_tabs.py` | 34 | 選用分頁的設定：`tab_enabled`／`set_tab_enabled`（`puppet_tab_enabled`、`desktop_pet_tab_enabled`，預設開、下次啟動生效）、`pet_shows_on_launch` |
 | `main_window_browse.py` | 157 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`preview_search_result` 把檔案樹搜尋結果交給 `navigate_to_path`（檔案時切回檢視器）；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
 | `annotation_models.py` | 183 | 註解資料模型（`Annotation`、`AnnotationProject` 的 dict／JSON 存讀、種類／筆刷／工具常數），無 Qt；保留 `bake`、`jitter_seed` 的匯入位置 |

@@ -4,6 +4,11 @@
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
+from PySide6.QtWidgets import QDockWidget
+
 from Imervue.multi_language.language_wrapper import language_wrapper
 
 
@@ -98,7 +103,9 @@ class MainWindowViewsMixin:
         return widgets
 
     def _enter_theater_mode(self, widgets: list) -> None:
-        self._theater_prev_visibility = [w.isVisible() for w in widgets]
+        # ``isHidden``, not ``isVisible``: a dock on a tab that is not showing
+        # is not visible, and restoring that would hide it for good.
+        self._theater_prev_visibility = [not w.isHidden() for w in widgets]
         self._theater_widgets = widgets
         for w in widgets:
             w.setVisible(False)
@@ -120,6 +127,24 @@ class MainWindowViewsMixin:
         if chrome is not None:
             chrome.schedule_sync()
         self._theater_toast("theater_off", "Theater mode off")
+
+    @contextmanager
+    def _theater_docks_shown(self) -> Iterator[None]:
+        """Show the docks theater mode hid while the block runs (a dock layout is being saved)."""
+        widgets = getattr(self, "_theater_widgets", None) or []
+        before = getattr(self, "_theater_prev_visibility", None) or []
+        docks = [(w, shown) for w, shown in zip(widgets, before, strict=False)
+                 if isinstance(w, QDockWidget)]
+        if not self.is_theater_mode() or not docks:
+            yield
+            return
+        for dock, shown in docks:
+            dock.setVisible(shown)
+        try:
+            yield
+        finally:
+            for dock, _shown in docks:
+                dock.setVisible(False)
 
     def _theater_toast(self, key: str, default: str) -> None:
         if not hasattr(self, "toast"):

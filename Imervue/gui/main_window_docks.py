@@ -14,7 +14,7 @@ commands ``ImervueMainWindow`` mixes in.
 from __future__ import annotations
 
 from base64 import b64decode, b64encode
-from contextlib import nullcontext
+from contextlib import ExitStack
 
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
@@ -150,11 +150,16 @@ class MainWindowDocksMixin:
     def dock_layout_states(self) -> dict[str, str]:
         """Both tabs' dock layouts as base64 text, keyed by their settings key.
 
-        Saved from Deep Zoom, it is the layout from before Deep Zoom folded the
-        panels away, so the next launch or workspace does not open without them.
+        Docks that theater mode or Deep Zoom hid for the moment count as shown,
+        so the next launch or workspace does not open without them.
         """
         chrome = getattr(self, "_deep_zoom_chrome", None)
-        with chrome.uncollapsed() if chrome is not None else nullcontext():
+        theater = getattr(self, "_theater_docks_shown", None)
+        with ExitStack() as stack:
+            if theater is not None:     # first: theater's snapshot holds Deep Zoom's fold
+                stack.enter_context(theater())
+            if chrome is not None:
+                stack.enter_context(chrome.uncollapsed())
             return {key: encode_dock_state(host.saveState().data())
                     for key, host in self._dock_hosts()}
 
