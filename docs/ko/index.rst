@@ -893,7 +893,7 @@ Puppet 작업 공간 (Puppet 탭)
 예제
 ^^^^
 
-**Imeru** (``examples/puppet/imeru.puppet``). Imeru는 Imervue의 오리지널 전신 캐릭터로, 풍성하게 흐르는 청록색 머리, 허리선을 살린 비대칭 재킷, 주름 잡힌 소매, 겹쳐진 측면 장식과 정교한 부츠를 갖춘 현대 애니메이션 스타일로 다시 그렸습니다. 1024 × 1664 모델은 ``examples/puppet/imeru/artwork/``에 저장된 원본 투명 삽화를 사용합니다. 몸과 소매의 연속된 메시가 그림을 유지하면서 머리, 머리카락과 팔을 움직이며 별도 얼굴 소재가 눈 깜박임, 시선과 말하기를 표현합니다. 표준 입력 매개변수, 8개 모션, 7개 표정과 머리/몸 상호작용은 유지됩니다. ``py -3 examples/puppet/imeru/build.py``로 저장된 소재에서 모델을 다시 만들 수 있습니다. **File > Examples > Imeru** 또는 **Open Puppet…**로 엽니다.
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru는 Imervue의 오리지널 전신 캐릭터로, 풍성하게 흐르는 청록색 머리, 허리선을 살린 비대칭 재킷, 주름 잡힌 소매, 겹쳐진 측면 장식과 정교한 부츠를 갖춘 현대 애니메이션 스타일로 다시 그렸습니다. 1024 × 1664 모델은 ``examples/puppet/imeru/artwork/``\ 에 저장된 원본 투명 삽화를 사용합니다. 몸과 소매의 연속된 메시가 그림을 유지하면서 머리, 머리카락과 팔을 움직이며 별도 얼굴 소재가 눈 깜박임, 시선과 말하기를 표현합니다. 표준 입력 매개변수, 8개 모션, 7개 표정과 머리/몸 상호작용은 유지됩니다. ``py -3 examples/puppet/imeru/build.py``\ 로 저장된 소재에서 모델을 다시 만들 수 있습니다. **File > Examples > Imeru** 또는 **Open Puppet…**\ 로 엽니다.
 
 모든 Cubism 표준 매개변수 (``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …) 에 더해 팔용 ``ParamArmLA/LB/RA/RB`` 가 있어, 모든 표준 입력 드라이버 (웹캠, 깜빡임, 립싱크, 커서 추적) 가 rig 별 설정 없이 동작합니다. 파일에는 모션 8 개가 들어 있습니다. ``Idle`` 그룹에 반복 재생되는 idle 모션 2 개, ``TapHead`` 에 ``tap_head``, ``TapBody`` 에 ``shy`` (머리나 몸을 클릭하면 재생), ``Gesture`` 에 ``greet``, ``wave``, ``surprised``, ``sleepy`` 가 있으며, 표정 7 개 (smile, happy, surprised, sad, angry, blush, sleepy) 가 함께 들어 있습니다.
 
