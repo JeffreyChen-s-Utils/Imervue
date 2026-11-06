@@ -276,7 +276,7 @@ The **Imervue** tab is the default landing surface. It pairs the image viewer wi
 
 - **Grid** (default) — virtualized tile grid with hover-preview popup (500 ms delay)
 - **List (detail)** — toggle with `Ctrl+L`; columns: Preview · Label · Rating · Name · Resolution · Size · Type · Modified; `Delete` removes the selected rows and `Ctrl+Z` brings them back, and the rating (`1`–`5`), favourite (`0`), cull (`P` / `Shift+X` / `U`) and colour (`F1`–`F5`) keys mark them, as on the thumbnail wall
-- **Deep Zoom** — double-click a tile; smooth GPU pan/zoom with minimap overlay
+- **Deep Zoom** — double-click a tile; smooth GPU pan/zoom with minimap overlay. The image fills the window (a small one is enlarged); the Folders and Image Info panels and the filter row fold into icon buttons beside the file name and come back when you leave; the minimap appears once you zoom in past the whole image
 - **Split View** (`Shift+S`) — two images side by side
 - **Dual-Page Reading** (`Shift+D`, `Ctrl+Shift+D` for right-to-left manga) — facing-page reader
 - **Multi-Monitor mirror** (`Ctrl+Shift+M`) — secondary-display window
@@ -702,7 +702,7 @@ machines where you can't install drivers.
 
 ### Demo
 
-The bundled rig is [`examples/puppet/imeru.puppet`](examples/puppet/imeru.puppet) — **Imeru**, Imervue's original mascot: 45 drawables on a 1024 × 1336 canvas, every Cubism-standard parameter plus two-joint arms, Live2D-style parallax head turns, a face shadow that changes shape as she turns away from the light, blinking with the irises clipped to the eye whites, hair physics, 8 motions (two Idle loops, TapHead, TapBody and four Gestures including a wave) and 7 expressions. Open it via **File > Examples > Imeru** or **Open Puppet…**, and click her head or body to see her react. She is made entirely by code, the way 3D anime games build their characters: her hair, body, outfit and arms are modelled and cel-shaded in Blender with those games' shading tricks (hair lit through the normals of a smooth stand-in shape, painted strands and highlight strokes, baked occlusion) and rendered one puppet layer at a time, her face is shaded from an SDF face shadow map, her eyes, brows and mouth are painted on, and the layers are then rigged, so the file carries no third-party rights; `py -3 examples/puppet/imeru/build.py` rebuilds it (Blender 4.2 or newer). Her overlapping centre bangs cover the forehead while leaving the eyes visible. Visible crown strands connect the hair whorl to the fringe.
+**Imeru** (`examples/puppet/imeru.puppet`). Imeru is Imervue's original full-body mascot, redrawn in a modern anime style with flowing teal hair, a fitted asymmetric jacket, gathered sleeves, a layered side sash and detailed boots. The 1024 × 1664 model uses the original transparent illustrations stored in `examples/puppet/imeru/artwork/`. Continuous body and sleeve meshes preserve the drawing while animating the head, hair and arms; separate facial artwork supplies blinking, gaze and speech. It retains the standard input parameters, eight motions, seven expressions and head/body interactions. `py -3 examples/puppet/imeru/build.py` rebuilds the bundled archive from these stored assets. Open it through **File > Examples > Imeru** or **Open Puppet…**.
 
 ---
 

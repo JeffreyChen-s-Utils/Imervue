@@ -173,6 +173,8 @@ Imervue 会把每次会话的日志写到程序旁边的 ``imervue.log``\ （程
 
 点击缩略图后进入大图模式，可以高画质浏览单张图片。
 
+大图模式下图片占满整个窗口：「文件夹」「图片信息」面板与筛选栏收成文件名旁的小图标按钮（点击可在图片打开期间重新显示该面板），离开大图模式时各面板恢复原状。适合窗口会铺满画布，比画布小的图片也会放大；放大超过整张图后才会出现小地图。
+
 远超 Pillow 安全上限（1.79 亿像素）的全景图也能打开：上限依电脑内存而定（16 GB 约 14 亿像素），这类超大图像一次只解码一张。
 
 中途截断的 JPEG、PNG、TIFF、GIF、BMP（下载或复制中断、从故障存储卡救回的照片）会像浏览器一样显示已读到的部分，而不是完全打不开。
@@ -849,7 +851,7 @@ Puppet 工作区（Puppet 标签）
 示例
 ^^^^
 
-仓库内附完整 rig：``examples/puppet/imeru.puppet`` — **Imeru**，Imervue 的原创吉祥物。她完全由 ``examples/puppet/imeru/build.py`` 制作（用 ``py -3`` 执行即可重新生成该文件，需要 Blender 4.2 或更新版本）：头发、身体、服装和手臂在 Blender 中建模，并运用 3D 二次元游戏的着色技巧（借助平滑代理形体的法线为头发打光、手绘发丝与高光笔触、烘焙遮蔽）以卡通渲染着色，再逐个 puppet 图层渲染出来；脸部以 SDF 脸部阴影图着色；眼睛、眉毛和嘴巴像 3D 游戏角色那样画上去，最后为各图层绑定，所以这个示例不涉及任何第三方权利：1024 × 1336 画布上的 45 个 drawable、由 Live2D 式视差顶点 morph 构成的转头、随她转头背向光源而改变形状的脸部阴影、被裁切在眼白内的虹膜、由旋转变形器搭成的双关节手臂，以及让头发摆动的三条物理链。 中央刘海相互搭接，覆盖额头并保留眼睛的可见范围。 头顶具有从发旋延伸至刘海的连续发流。
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru 是 Imervue 的原创全身角色，重新绘制为现代动漫风，具有蓬松流动的深青发型、收腰不对称外套、宽松袖子、多层侧裙与精致靴子。1024 × 1664 模型使用保存在 ``examples/puppet/imeru/artwork/`` 的原创透明插画。连续的身体与袖面网格保留完整画风，带动头部、头发和手臂；独立五官素材提供眨眼、视线及说话动画。标准输入参数、八组动作、七种表情与头部／身体互动均保留。``py -3 examples/puppet/imeru/build.py`` 可从这些素材重建模型。通过 **File > Examples > Imeru** 或 **Open Puppet…** 打开。
 
 该 rig 带所有 Cubism 标准参数（``ParamAngleX/Y/Z``、``ParamEyeLOpen/ROpen``、``ParamBreath``、``ParamMouthOpenY`` …），外加控制手臂的 ``ParamArmLA/LB/RA/RB``，所以所有标准输入驱动（摄像头、眨眼、对嘴、光标追踪）不用逐个 rig 调整就能驱动。文件内附 8 个动作：``Idle`` 组有 2 个循环播放的 idle 动作，``TapHead`` 组有 ``tap_head``，``TapBody`` 组有 ``shy``\ （点她的头或身体就会播放），``Gesture`` 组则有 ``greet``、``wave``、``surprised`` 与 ``sleepy``；另附 7 个表情（smile、happy、surprised、sad、angry、blush、sleepy）。
 

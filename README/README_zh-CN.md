@@ -264,7 +264,7 @@ py -m Imervue.cli search photos/ --query "ext:jpg width:>1920"
 
 - **网格**（默认）— 虚拟化磁砖网格，悬停预览（500 ms 延迟）
 - **列表（详细）** — `Ctrl+L` 切换；列：预览 · 标签 · 评分 · 名称 · 分辨率 · 大小 · 类型 · 修改时间；`Delete` 删除选中的行，`Ctrl+Z` 撤销；评分（`1`–`5`）、收藏（`0`）、挑片（`P` / `Shift+X` / `U`）、色彩（`F1`–`F5`）键也作用于选中的行，与网格相同
-- **深度缩放** — 双击磁砖；GPU 流畅平移 / 缩放 + 小地图
+- **深度缩放** — 双击磁砖；GPU 流畅平移 / 缩放 + 小地图。图片铺满窗口（小图会放大）；「文件夹」「图片信息」面板与筛选栏收成文件名旁的小图标按钮，离开时恢复原状；放大超过整张图后才显示小地图
 - **分割视图**（`Shift+S`）— 两张图并列
 - **双页阅读**（`Shift+D`、`Ctrl+Shift+D` 为漫画从右至左）— 对页阅读器
 - **多屏镜像**（`Ctrl+Shift+M`）— 副屏窗口
@@ -642,7 +642,7 @@ OBS **Sources > + > Window Capture** 可以直接抓 Imervue 窗口，零依赖�
 
 ### 示例
 
-内置 rig 是 [`examples/puppet/imeru.puppet`](../examples/puppet/imeru.puppet) — **Imeru**，Imervue 的原创吉祥物：1024 × 1336 画布上的 45 个 drawable，具备所有 Cubism 标准参数外加双关节手臂、Live2D 式视差转头、随她转头背向光源而改变形状的脸部阴影、虹膜被裁切在眼白内的眨眼、头发物理、8 个动作（两个 Idle 循环、TapHead、TapBody 以及包含挥手在内的四个 Gesture）和 7 个表情。从 **File > Examples > Imeru** 或 **打开 puppet…** 打开，点她的头或身体即可看到她的反应。她完全由代码制作，做法与 3D 二次元游戏打造角色相同：头发、身体、服装和手臂在 Blender 中建模，并运用这类游戏的着色技巧（借助平滑代理形体的法线为头发打光、手绘发丝与高光笔触、烘焙遮蔽）以卡通渲染（cel shading）着色，再逐个 puppet 图层渲染出来；脸部以 SDF 脸部阴影图着色；眼睛、眉毛和嘴巴是画上去的，最后为各图层绑定，所以文件不涉及任何第三方权利；`py -3 examples/puppet/imeru/build.py` 可重新生成它（需要 Blender 4.2 或更新版本）。 中央刘海相互搭接，覆盖额头并保留眼睛的可见范围。 头顶具有从发旋延伸至刘海的连续发流。
+**Imeru** (`examples/puppet/imeru.puppet`). Imeru 是 Imervue 的原创全身角色，重新绘制为现代动漫风，具有蓬松流动的深青发型、收腰不对称外套、宽松袖子、多层侧裙与精致靴子。1024 × 1664 模型使用保存在 `examples/puppet/imeru/artwork/` 的原创透明插画。连续的身体与袖面网格保留完整画风，带动头部、头发和手臂；独立五官素材提供眨眼、视线及说话动画。标准输入参数、八组动作、七种表情与头部／身体互动均保留。`py -3 examples/puppet/imeru/build.py` 可从这些素材重建模型。通过 **File > Examples > Imeru** 或 **Open Puppet…** 打开。
 
 ---
 

@@ -117,6 +117,7 @@ class ImervueMainWindow(
         self._build_file_tree()
         self._browse_window.setCentralWidget(self._build_viewer_column())
         self._build_browse_docks()
+        self._build_deep_zoom_chrome()
         self._main_tabs.addTab(self._browse_window, "Imervue")
 
         self._build_workspace_tabs()

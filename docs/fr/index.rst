@@ -186,6 +186,8 @@ Mode Deep Zoom
 
 Cliquez sur une vignette pour passer en mode Deep Zoom et obtenir un affichage de haute qualité d'une seule image.
 
+En Deep Zoom, l'image dispose de toute la fenêtre : les panneaux **Folders** et **Image Info** et la ligne de filtres se replient en petits boutons-icônes à côté du nom de fichier (cliquez sur l'un d'eux pour rappeler ce panneau tant que l'image reste ouverte), et chaque panneau revient tel qu'il était en quittant le Deep Zoom. L'ajustement à la fenêtre remplit le canevas, en agrandissant aussi une image plus petite que lui, et la mini-carte n'apparaît qu'une fois zoomé au-delà de l'image entière.
+
 Les panoramas bien au-delà de la limite de sécurité de 179 mégapixels de Pillow s'ouvrent aussi : la limite suit la mémoire de l'ordinateur (avec 16 Go, environ 1,4 gigapixel) et ces images géantes sont décodées une à une.
 
 Un JPEG, PNG, TIFF, GIF ou BMP tronqué — un téléchargement ou une copie interrompus, une photo récupérée sur une carte mémoire défaillante — s'ouvre avec la partie lue, comme dans un navigateur, au lieu de ne pas s'ouvrir du tout.
@@ -948,23 +950,7 @@ Flux de travail de bout en bout
 Essayer un exemple complet
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Le dépôt fournit une démo entièrement riggée à
-``examples/puppet/imeru.puppet`` — **Imeru**, la mascotte originale
-d'Imervue. Elle est entièrement fabriquée par
-``examples/puppet/imeru/build.py`` (``py -3`` reconstruit le fichier ; il faut
-Blender 4.2 ou plus récent) : ses cheveux, son corps, sa tenue et ses bras sont
-modélisés et ombrés en cel-shading dans Blender avec les astuces d'ombrage des
-jeux d'anime en 3D (des cheveux éclairés via les normales d'une forme lisse de
-substitution, des mèches peintes et des traits de reflet, une occlusion
-précalculée), puis rendus un calque de marionnette à la fois, son visage est ombré
-à partir d'une carte SDF d'ombre faciale, ses yeux, ses sourcils et sa bouche sont
-peints par-dessus comme ceux d'un personnage de jeu en 3D, et les calques sont
-ensuite riggés, de sorte que la démo ne porte aucun droit de tiers : 45 drawables
-sur un canevas de 1024 × 1336, des rotations de tête faites de morphs de sommets
-en parallaxe façon Live2D, une ombre faciale qui change de forme à mesure qu'elle
-se détourne de la lumière, des iris découpés aux blancs des yeux, des bras à deux articulations
-construits à partir de déformeurs de rotation, et trois chaînes physiques qui font
-balancer les cheveux. Les mèches centrales de la frange se chevauchent pour couvrir le front tout en laissant les yeux visibles. Les mèches visibles au sommet du crâne relient l’épi à la frange.
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru est la mascotte originale en pied d’Imervue, redessinée dans un style anime moderne avec des cheveux bleu-vert souples, une veste asymétrique cintrée, des manches froncées, un pan latéral superposé et des bottes détaillées. Le modèle de 1024 × 1664 utilise les illustrations transparentes originales de ``examples/puppet/imeru/artwork/``. Des maillages continus du corps et des manches préservent le dessin pendant les mouvements de tête, de cheveux et de bras ; des éléments faciaux distincts assurent les clignements, le regard et la parole. Les paramètres d’entrée standard, huit mouvements, sept expressions et les interactions tête/corps sont conservés. ``py -3 examples/puppet/imeru/build.py`` reconstruit l’archive à partir de ces ressources. Ouvrez-la via **File > Examples > Imeru** ou **Open Puppet…**.
 
 Le rig comporte tous les paramètres standard Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

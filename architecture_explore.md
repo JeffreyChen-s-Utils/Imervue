@@ -1,6 +1,6 @@
 # Imervue 架構全覽 (architecture_explore)
 
-> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-10-29 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `merge/dev-into-main` · 版本 `1.0.100`
+> 產出日期：2026-08-03（全樹掃描）· 最後同步：2026-11-04 · 對應提交見 `git log -1 -- architecture_explore.md` · 分支 `dev` · 版本 `1.0.100`
 >
 > 本文件是一次「全樹掃描」的結果：以 AST 逐檔擷取模組 docstring、類別與公開函式，
 > 再交叉比對實際程式碼撰寫而成。散文用繁體中文，模組名 / 路徑 / 型別一律保留英文。
@@ -66,18 +66,18 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 
 | 區域 | 檔案數 | 行數 |
 | --- | ---: | ---: |
-| `tests/` | 1,054 | 192,072 |
+| `tests/` | 1,055 | 192,752 |
 | `Imervue/paint/`（含 `docks/`、`tools/`） | 235 | 44,967 |
-| `Imervue/gui/` | 252 | 39,157 |
+| `Imervue/gui/` | 253 | 39,440 |
 | `Imervue/puppet/` | 122 | 17,266 |
 | `Imervue/image/` | 154 | 16,107 |
-| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 92 | 14,195 |
-| `Imervue/multi_language/` | 8 | 16,258 |
+| `Imervue/gpu_image_view/`（含 `actions/`、`images/`） | 92 | 14,215 |
+| `Imervue/multi_language/` | 8 | 16,273 |
 | `Imervue/desktop_pet/` | 39 | 7,439 |
 | `Imervue/mcp_server/` | 22 | 4,998 |
 | `Imervue/library/` | 51 | 5,274 |
 | `Imervue/menu/` | 25 | 4,051 |
-| `Imervue/` 根層 | 17 | 2,050 |
+| `Imervue/` 根層 | 17 | 2,051 |
 | `Imervue/plugin/` | 23 | 3,337 |
 | `Imervue/system/` | 34 | 3,606 |
 | `Imervue/export/` | 8 | 1,036 |
@@ -85,11 +85,11 @@ rawpy、imageio(+ffmpeg)、defusedxml、watchdog。所有重量級 / ML 相依�
 | `Imervue/sessions/` + `macros/` + `external/` | 8 | 800 |
 | `plugins/`（19 個外掛） | 94 | 16,697 |
 | `scripts/`（開發與發佈工具） | 12 | 1,904 |
-| **總計** | **2,260** | **392,467** |
+| **總計** | **2,262** | **393,471** |
 
-其中 `Imervue/` 套件本身 1,100 檔 / 181,794 行。
+其中 `Imervue/` 套件本身 1,101 檔 / 182,118 行。
 
-測試碼與產品碼比約 **0.97 : 1**（192,072 vs 198,491 行，產品碼含 `plugins/`）。
+測試碼與產品碼比約 **0.97 : 1**（192,752 vs 198,815 行，產品碼含 `plugins/`）。
 
 > 統計以 `CLAUDE.md`「Architecture Map」的方式掃描各區域 Python 檔案，排除 `__pycache__`；不包含 `.audit/`、虛擬環境或建置產物。
 
@@ -219,7 +219,7 @@ Modern Dark／Light 共用有焦點提示的控制項、分頁導覽與表面色
 | 模組 | 行數 | 功用 |
 | --- | ---: | --- |
 | `__main__.py` | 131 | `main()`：先設定 logging 與 excepthook，再 import Qt；CLI 參數解析、凍結環境修補（僅 Windows 預設 nt backend）、QApplication 建立、主視窗啟動 |
-| `Imervue_main_window.py` | 492 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構與啟動順序、服務／選單、What's New、剪貼簿註解、關閉確認後明確 shutdown Puppet／Desktop Pet 工作區、最後一個視窗的收尾）；其餘職責來自 `gui/main_window_*.py` 的十二個 mixin |
+| `Imervue_main_window.py` | 493 | `ImervueMainWindow`：分頁協調者（3 個核心分頁 + 2 個選用分頁）（建構與啟動順序、服務／選單、What's New、剪貼簿註解、關閉確認後明確 shutdown Puppet／Desktop Pet 工作區、最後一個視窗的收尾）；其餘職責來自 `gui/main_window_*.py` 的十二個 mixin |
 | `cli.py` | 199 | Headless CLI 入口、原生／MCP 命令分派與 list-ops；保留公開函式與共用命令表的匯入路徑。 |
 | `cli_paths.py` | 70 | 輸入影像集合、RAW 輸出副檔名、目的路徑與共用 parent-traversal 驗證；保留各參數診斷。 |
 | `cli_native.py` | 105 | 原生影像 writer adapters：保留 upright/sRGB/high-bit-depth 解碼及各編碼器選項。 |
@@ -467,10 +467,10 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（351 行）只保留 GL 生命
 | `gpu_image_view.py` | 351 | 主 GL widget：建構子、worker pool／collaborator 初始化、`initializeGL`／`resizeGL`／`paintGL`、show／hide／key／gesture／drag-drop 等 Qt 事件覆寫；其餘方法來自下面八個 mixin（皆排在 `QOpenGLWidget` 之前、不定義 `__init__`） |
 | `view_recipe.py` | 83 | `ViewRecipeMixin`：開「修改」分頁並綁定當前圖、recipe commit 推入 undo、recipe／CVD 檢視模式改變後丟掉預取並重載當前圖（先存縮放位置再拆 deep zoom） |
 | `view_browse_actions.py` | 100 | `ViewBrowseActionsMixin`：當前路徑、狀態列同步、書籤切換、剪貼簿貼上、快捷鍵動作、瀏覽歷史、色標／cull、隨機跳圖、縮放位置記憶與本地化 toast |
-| `view_resources.py` | 158 | `ViewResourcesMixin`：tile wall／deep zoom 紋理釋放（含 make-current 守衛與 minimap）、tile／deep-zoom／預取 worker 取消（cancel 退休 viewport queue／pending markers，實際解碼仍由 pool 持有到結束）、動畫播放起停、清空 tile wall |
+| `view_resources.py` | 165 | `ViewResourcesMixin`：tile wall／deep zoom 紋理釋放（含 make-current 守衛與 minimap；進出 deep zoom 時通知主視窗的 `deep_zoom_chrome` 收合／還原面板）、tile／deep-zoom／預取 worker 取消（cancel 退休 viewport queue／pending markers，實際解碼仍由 pool 持有到結束）、動畫播放起停、清空 tile wall |
 | `view_tile_grid.py` | 123 | `ViewTileGridMixin`：縮圖尺寸變更（牆上重建、deep zoom 中延後）、`tile_loader` 入口與 worker 回呼、hover 預覽、縮圖牆捲動夾限 |
 | `view_state_init.py` | 279 | 建構子狀態初始化（tile grid、deep zoom、互動、顯示）；追蹤 cached tile 最大尺寸供 O(1) viewport bound，不碰 GL |
-| `deep_zoom_loading.py` | 306 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知；全尺寸圖上螢幕後分派外掛的 `on_image_loaded`） |
+| `deep_zoom_loading.py` | 307 | `DeepZoomLoadingMixin`：開一張圖的狀態機（預覽解碼→完整解碼、套 recipe、過期結果丟棄、失敗重試一次、首幀通知；全尺寸圖上螢幕後分派外掛的 `on_image_loaded`） |
 | `shown_file_watch.py` | 87 | `ShownFileWatch`：deep zoom 顯示中那張圖的檔案監看；`load_deep_zoom_image` 每次載入時 `follow` 並記下大小與修改時間，之後每 `POLL_MS`（500 ms）用 `os.stat` 量一次，變了之後又連續一次沒變（寫完了）才經 `_reload_rewritten_image` 重新載入並重解縮圖；外部編輯器就地覆寫、寫副本再改名蓋過去、保留原修改時間的存檔都看得到。刻意不用 `QFileSystemWatcher` 監看檔案：在 Windows 上它讓其他程式改名蓋過去的存檔約一成被拒絕存取（實測 600 次 54 次），資料夾監看與 `os.stat` 都不會 |
 | `view_fitting.py` | 304 | `ViewFittingMixin`：fit window/width/height、新圖初始視圖、版面／換螢幕／載入後的 settle 重算（`settle_poll`） |
 | `prefetch_memory.py` | 127 | `PrefetchMemoryMixin`：相鄰圖預取與 RSS 壓力清理；CPU 陣列以視窗 RAM 配額判斷，不混用 VRAM |
@@ -479,7 +479,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（351 行）只保留 GL 生命
 | `tile_grid_renderer.py` | 282 | 只依共享 TileViewport 候選列／欄繪製；繪製、載入與淘汰使用同一 frame geometry，失敗也清除 transient geometry；零面積 tile／placeholder 不繪製 |
 | `tile_viewport.py` | 112 | 純運算格線 viewport、列／欄 buffer 候選、cell origin 與 cached 最大尺寸；繪製／載入／淘汰共用 |
 | `thumbnail_queue.py` | 92 | 純運算 bounded 工作計畫；捲動替換 unstarted work、source membership 索引、current workload 進度、filmstrip／retry 與 full-size extent 的 bounded backfill |
-| `deep_zoom_renderer.py` | 277 | Deep-zoom 圖磚 + minimap GL 繪製 |
+| `deep_zoom_renderer.py` | 281 | Deep-zoom 圖磚 + minimap GL 繪製（minimap 只在圖片超出畫布時顯示，見 `fit_view.minimap_visible`；底片條的 letterbox 帶照畫） |
 | `overlay_painter.py` | 172 | `OverlayPainter`：`QPainter` 疊層的編排——依狀態挑出啟用的疊層並固定繪製順序、逐層隔離例外、合成到離屏 `QImage`；各疊層由下列四個 mixin 提供（文字與幾何在 `osd_text.py`、`hud_geometry.py`，圖磚徽章在 `tile_badges.py`） |
 | `overlay_tiles.py` | 226 | `OverlayTilesMixin`：圖磚牆疊層——檔名標題、徽章、placeholder 轉圈、掃描中整牆轉圈、載入失敗／遺失面板，以及 placeholder／淡入的重繪計時器 |
 | `overlay_hud.py` | 225 | `OverlayHudMixin`：縮放百分比、RGB 直方圖與裁切讀數、動畫幀指示、F3 OSD（EXIF 行快取）、Ctrl+F3 Debug HUD、短暫的快速中繼資料 HUD |
@@ -493,7 +493,7 @@ OpenGL 檢視器。`GPUImageView(QOpenGLWidget)`（351 行）只保留 GL 生命
 
 #### 視圖數學（純函式，可無 GL 測試）
 
-`viewport_math.py`(51) 螢幕↔影像座標 · `view_nav.py`(133) · `fit_view.py`(234) fit window/width/height ·
+`viewport_math.py`(51) 螢幕↔影像座標 · `view_nav.py`(133) · `fit_view.py`(242) fit window/width/height（fit 會放大小圖填滿畫布，上限 `ZOOM_MAX`；底部只為底片條保留空間） ·
 `view_state.py`(116) 每圖縮放記憶 + 隨機跳圖 · `view_animator.py`(206) 緩動（淡入、縮放、慣性平移）·
 `minimap.py`(108) · `tile_layout.py`(115) 格線佈局 · `tile_focus.py`(113) 鍵盤焦點游標 ·
 `filmstrip.py`(105) 底部縮圖帶佈局 · `video_badge.py`(57) ▶ 播放徽章幾何 ·
@@ -671,7 +671,7 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `image_filter_bar.py` | 153 | 獨立圖片篩選、可移除條件、符合／總數與保留目前圖片提示；日期驗證與清除 |
 | `browser_empty_state.py` | 90 | BrowserEmptyState：隨檢視器 paint／resize／show 更新開始瀏覽、空資料夾與無符合圖片提示；開啟資料夾／清除篩選沿用主視窗入口，不輪詢、不改模型 |
 | `panel_scroll.py` | 26 | PanelScrollArea：受控最小尺寸與可捲動 dock；既有 QScrollArea 不重複包裝，避免巢狀捲動 |
-| `tool_icons.py` | 108 | 共享 palette-aware SVG 線條圖示引擎，供 Paint／Modify／Puppet 使用 |
+| `tool_icons.py` | 110 | 共享 palette-aware SVG 線條圖示引擎，供 Paint／Modify／Puppet 與 deep zoom 面板切換鈕使用 |
 | `workspace_widgets.py` | 40 | WorkspaceWelcome：跟隨主題與縮放的標題、說明及主次操作卡片 |
 | `control_tooltips.py` | 117 | 共用缺漏 Tip 補齊入口、Qt Show／ToolTip 事件濾鏡、選單與分頁走訪、生成提示的儲存與更新；保留原文，Qt 呼叫前防重入與已刪除事件接收者處理；`_widget_tip` 為欄位模組的別名（測試修補點） |
 | `control_tooltips_actions.py` | 82 | 已刪除 Qt 物件略過的 `live_call` 防護、QAction 提示（選擇／子選單／切換／動作及即時快捷鍵）與按鈕提示（清除欄位、分頁捲動、預設動作、圖示按鈕） |
@@ -683,12 +683,13 @@ SQLite 支撐的跨資料夾相片庫索引與整理演算法（純邏輯，無 
 | `main_window_folders.py` | 307 | `MainWindowFoldersMixin`：輪詢目前資料夾（回到前景時立刻檢查並 refresh 資料夾樹）、重整清單時保住 deep-zoom 圖、資料夾消失時的復原、每資料夾工作階段存取 |
 | `main_window_tabs.py` | 219 | `MainWindowTabsMixin`：資料夾分頁的開關、移動、循環、右鍵選單，讓分頁、檔案樹與檢視器指向同一路徑 |
 | `main_window_screens.py` | 194 | `MainWindowScreensMixin`：視窗幾何存回（落在仍存在的螢幕上）、跨不同縮放比例螢幕時重算、移動／縮放後重新適配 |
-| `main_window_views.py` | 123 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式 |
+| `main_window_views.py` | 153 | `MainWindowViewsMixin`：雙視窗、多螢幕視窗、劇院模式（快照用 `isHidden()`，別的分頁上的 dock 不會被當成隱藏；`_theater_docks_shown()` 讓存版面時劇院藏起的 dock 算顯示；離開劇院模式時請 `deep_zoom_chrome` 重新同步） |
+| `deep_zoom_chrome.py` | 194 | Deep zoom 讓圖片佔滿版面：進入時把 Folders／Image Info dock 與篩選列收成檔名列上的圖示按鈕（`DeepZoomChrome`，0 ms 單發計時器合併「清除→載入」），離開時還原進入前的可見狀態；浮動 dock 不動、劇院模式期間暫停；`uncollapsed()` 讓存 dock 版面時存的是未收合版面，`relayout()` 在套用版面後重新收合；純邏輯 `CollapseState` |
 | `main_window_status.py` | 131 | `MainWindowStatusMixin`：狀態列訊息、掃描進度條、圖片資訊標籤、記憶體壓力指示器的資料來源與清快取 |
 | `main_window_workspaces.py` | 102 | `MainWindowWorkspacesMixin`：主分頁切換（Imervue／Modify／Paint；資料夾分頁快捷鍵只在 Imervue 分頁啟用）、`choose_paint_handoff` 經 `paint_handoff` 選原圖或顯影結果、把指定（預設目前）圖片解碼成新的 Paint 文件、Modify／Paint 主分頁列的左右鍵換圖（`eventFilter`） |
 | `main_window_navigation.py` | 134 | `MainWindowNavigationMixin`：檔案樹／breadcrumb 共用的 `navigate_to_path`（樹根一律經 `tree.set_root_path`）、啟動時開上次資料夾（含還原 deep zoom）、目錄載入後更新樹、整個視窗的拖放（只收資料夾與可檢視副檔名） |
-| `main_window_layout.py` | 370 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹與其上方的搜尋／排序控制、檢視器欄、圖片分頁列、視圖堆疊、工作區分頁、狀態列與常駐工作指示器 `job_indicator`）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
-| `main_window_docks.py` | 195 | `MainWindowDocksMixin`：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
+| `main_window_layout.py` | 408 | `MainWindowLayoutMixin`：主視窗建構子呼叫的 `_build_*`（檔案樹與其上方的搜尋／排序控制、檢視器欄（檔名列 `_filename_row` 兼放 deep zoom 面板切換鈕，`_build_deep_zoom_chrome`）、圖片分頁列、視圖堆疊、工作區分頁、狀態列與常駐工作指示器 `job_indicator`）；選用分頁 Puppet／Desktop Pet 只在開著時加一個空頁，第一次打開才建工作區（`_build_puppet_workspace`、`_build_pet_workspace`，後者另建系統匣圖示並重接外掛的 pet hook；寵物設定為啟動時顯示就在啟動時建） |
+| `main_window_docks.py` | 214 | `MainWindowDocksMixin`（存版面時劇院模式與 deep zoom 暫時藏起的 dock 先還原、套用／重設版面後重新收合）：Imervue 與 Modify 分頁各是一個巢狀 `QMainWindow`（`make_dock_host()`），側邊面板都是 dock（`add_dock()`，以固定 objectName 供 `saveState`）；版面存回設定（`browse_dock_state`、`modify_dock_state`）、`reset_panel_layout()`、給工作區預設用的 `dock_layout_states()` / `apply_dock_layout_states()`；`CanvasHost`：Modify 中央的提示文字 ↔ 畫布堆疊；純函式 `encode_dock_state()` / `decode_dock_state()` |
 | `optional_tabs.py` | 34 | 選用分頁的設定：`tab_enabled`／`set_tab_enabled`（`puppet_tab_enabled`、`desktop_pet_tab_enabled`，預設開、下次啟動生效）、`pet_shows_on_launch` |
 | `main_window_browse.py` | 157 | `MainWindowBrowseMixin`：縮圖牆／清單切換、清單啟動、從 deep zoom 返回、縮圖尺寸與間距；`preview_search_result` 把檔案樹搜尋結果交給 `navigate_to_path`（檔案時切回檢視器）；`refetch_list_rows` 把磁碟上變了的路徑轉給清單檢視；`delete_list_selection` 走縮圖牆的 `delete_selected_tiles`（可復原、之後整批進回收筒），`undo_from_list` 執行檢視器的 undo 後重建清單；`escape_from_list`：清單裡的 Esc 先離開全螢幕，否則回縮圖牆；`mark_list_selection` 把選取列交給評分、最愛、挑片、色彩標籤的同一組函式（`targets=`） |
 | `annotation_models.py` | 183 | 註解資料模型（`Annotation`、`AnnotationProject` 的 dict／JSON 存讀、種類／筆刷／工具常數），無 Qt；保留 `bake`、`jitter_seed` 的匯入位置 |
@@ -1149,7 +1150,7 @@ Workspace 的 Qt shell 與領域責任分列如下。既有 `workspace_menus.py`
 | `workspace_motion_record.py` | 41 | Motion 錄製命名、開關失敗處理與完成後寫回文件。 |
 | `workspace_audio.py` | 57 | WAV lip-sync 匯入、mouth range 選擇、錯誤回饋及 motion 選取。 |
 
-內附 Imeru 模型由 `examples/puppet/imeru/build.py` 產生；`blender/head.py` 的中央前髮以重疊髮束覆蓋額頭，頭頂髮流沿較高的 `scalp_depth` 表面建模，從髮旋延伸到瀏海，避免使用臉部深度而埋入頭皮。前髮與額頭投影一起渲染後重新綁定。`tests/test_example_imeru.py` 直接檢查已打包貼圖的額頭覆蓋率、兩眼透明區及頭頂髮流的對比邊界，避免中央缺口及頭頂光滑區重新出現。
+內附 Imeru 模型由 `examples/puppet/imeru/build.py` 打包 `artwork/` 的透明插畫。`illustrated.py` 組合角色與五官素材、配準手臂座標；`illustrated_mesh.py` 建立區域網格及 UV，直接引用原始 PNG，不重畫像素；`illustrated_rig.py` 定義頭髮、五官、呼吸與肢體變形。身體、頭部和頭髮共用連續網格，每隻袖子也保留連續表面。手肘先以固定骨骼和彎曲骨骼的權重混合，再執行肩部旋轉，避免手肘切線。原圖為 1024 × 1536，上下各留 64 像素動作空間，畫布為 1024 × 1664；呼吸不影響腳底。既有 Blender 製作程式保留為獨立的原生重建路徑，不是預設插畫模型的素材來源。
 
 ### 6.16 `Imervue/desktop_pet/`
 
@@ -1679,6 +1680,23 @@ Paint `animation_export.py`、`paint_project_export.py` 與 MCP writer 使用 `r
     或解碼失敗時保留全部文件、髒狀態與復原紀錄。`E` 仍開啟獨立的註解編輯器。
 
 ## FrontEngine puppet consumer
+
+| Imeru authoring module | Lines | Responsibility |
+|---|---:|---|
+| `examples/puppet/imeru/build.py` | 84 | Pack and validate the illustrated archive; retain the previous native builder separately |
+| `examples/puppet/imeru/illustrated.py` | 104 | Assemble artwork regions, register arm landmarks and reserve motion margins |
+| `examples/puppet/imeru/illustrated_mesh.py` | 85 | Build alpha-aware meshes and authored feature contours with original texture UVs |
+| `examples/puppet/imeru/illustrated_rig.py` | 183 | Bind facial and body motion, continuous sleeves and shoulder-attached ribbon weights |
+
+The bundled Imeru uses detailed full-body anime illustrations stored under
+`examples/puppet/imeru/artwork/`. The illustrated builder references their original
+pixels through UV meshes. The body, head and full hair remain connected, and each
+sleeve bends as a continuous surface. Runtime skinning precedes shoulder rotation.
+The canvas is 1024 × 1664, with 64 pixels of motion room above and below the
+1024 × 1536 artwork. Internal drawable IDs change with this authoring model;
+standard parameter inputs, eight motions, seven expressions and the desktop-pet
+script contract remain available. Breathing leaves the feet planted. The example
+README links production-rendered neutral and waving previews.
 
 FrontEngine optionally reuses the public puppet reader/Canvas/controllers and desktop-pet
 script engine in its own windows. It does not instantiate PetWindow or modify Imervue

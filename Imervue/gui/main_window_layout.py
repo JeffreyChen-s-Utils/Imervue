@@ -12,7 +12,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
-    QFileSystemModel, QLabel, QLineEdit, QProgressBar, QSizePolicy,
+    QFileSystemModel, QHBoxLayout, QLabel, QLineEdit, QProgressBar, QSizePolicy,
     QStackedWidget, QStatusBar, QTabBar, QVBoxLayout, QWidget,
 )
 
@@ -143,7 +143,14 @@ class MainWindowLayoutMixin:
         self.filename_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.filename_label.setWordWrap(False)
         self.filename_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        right_layout.addWidget(self.filename_label, stretch=0)
+        # The file name shares its row with the Deep Zoom panel toggles
+        # (``_build_deep_zoom_chrome``), which take no height of their own.
+        self._filename_row = QWidget()
+        row = QHBoxLayout(self._filename_row)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(0)
+        row.addWidget(self.filename_label, stretch=1)
+        right_layout.addWidget(self._filename_row, stretch=0)
 
         from Imervue.gpu_image_view.gpu_image_view import GPUImageView
         self.viewer = GPUImageView(main_window=self)
@@ -164,6 +171,37 @@ class MainWindowLayoutMixin:
 
         self.viewer.on_filename_changed = self._on_viewer_filename_changed
         return right_widget
+
+    def _build_deep_zoom_chrome(self) -> None:
+        """Deep Zoom folds the side docks and the filter row into icon buttons by the file name."""
+        from Imervue.gui.deep_zoom_chrome import (
+            PANEL_FILTERS, PANEL_FOLDERS, PANEL_INFO, DeepZoomChrome,
+        )
+        lang = language_wrapper.language_word_dict
+        tips = {
+            PANEL_FOLDERS: lang.get("deep_zoom_toggle_folders", "Show or hide the Folders panel"),
+            PANEL_FILTERS: lang.get("deep_zoom_toggle_filters", "Show or hide the filter bar"),
+            PANEL_INFO: lang.get("deep_zoom_toggle_info", "Show or hide the Image Info panel"),
+        }
+        self._deep_zoom_chrome = DeepZoomChrome(
+            {PANEL_FOLDERS: self._tree_dock, PANEL_FILTERS: self._filter_bar,
+             PANEL_INFO: self._info_dock},
+            tips, self._deep_zoom_chrome_wanted, parent=self)
+        buttons = self._deep_zoom_chrome.buttons
+        row = self._filename_row.layout()
+        row.insertWidget(0, buttons[PANEL_FOLDERS])
+        row.insertWidget(1, buttons[PANEL_FILTERS])
+        row.addWidget(buttons[PANEL_INFO])
+        self._view_stack.currentChanged.connect(self._deep_zoom_chrome.schedule_sync)
+
+    def _deep_zoom_chrome_wanted(self) -> bool | None:
+        """Fold the panels in Deep Zoom; ``None`` while theater mode owns them."""
+        if self.is_theater_mode():
+            return None
+        viewer = self.viewer
+        in_deep_zoom = any(getattr(viewer, name, None) is not None for name in (
+            "deep_zoom", "_deep_zoom_path", "_deep_zoom_loading"))
+        return in_deep_zoom and self._view_stack.currentWidget() is viewer
 
     def _build_image_tab_bar(self) -> QTabBar:
         """Browser-style bar of the open deep-zoom images; returns it for the layout."""

@@ -189,6 +189,8 @@ Modo Deep Zoom
 Haga clic en una miniatura para entrar en el modo Deep Zoom y ver imágenes individuales en
 alta calidad.
 
+En Deep Zoom la imagen ocupa toda la ventana: los paneles **Folders** e **Image Info** y la fila de filtros se pliegan en pequeños botones de icono junto al nombre del archivo (haga clic en uno para recuperar ese panel mientras la imagen siga abierta) y, al salir de Deep Zoom, cada panel vuelve tal como estaba. Ajustar a la ventana llena el lienzo, ampliando también las imágenes más pequeñas que él, y el minimapa aparece solo cuando se acerca más allá de la imagen completa.
+
 También se abren panoramas muy por encima del límite de seguridad de 179 megapíxeles de Pillow: el límite depende de la memoria del equipo (con 16 GB, unos 1,4 gigapíxeles) y esas imágenes gigantes se decodifican de una en una.
 
 Un JPEG, PNG, TIFF, GIF o BMP incompleto — una descarga o copia interrumpida, una foto recuperada de una tarjeta de memoria dañada — se abre con la parte que se pudo leer, como en un navegador, en lugar de no abrirse.
@@ -950,22 +952,7 @@ Flujo de trabajo de principio a fin
 Pruebe un ejemplo completo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-El repositorio incluye una demo totalmente riggeada en
-``examples/puppet/imeru.puppet`` — **Imeru**, la mascota original de
-Imervue. Está hecha enteramente por
-``examples/puppet/imeru/build.py`` (``py -3`` reconstruye el archivo; necesita
-Blender 4.2 o posterior): su pelo, su cuerpo, su atuendo y sus brazos se modelan y
-se sombrean con cel-shading en Blender aplicando los trucos de sombreado de los
-juegos de anime en 3D (pelo iluminado a través de las normales de una forma
-sustituta suave, mechones pintados y trazos de brillo, oclusión horneada) y se
-renderizan capa a capa de la marioneta, su cara se sombrea a partir de un mapa SDF
-de sombra facial, sus ojos, cejas y boca se pintan encima como los de un personaje
-de juego en 3D, y después se riggean las capas, de modo que la demo no conlleva
-derechos de terceros: 45 drawables sobre un lienzo de 1024 × 1336,
-giros de cabeza hechos con morfos de vértices de paralaje al estilo Live2D, una
-sombra facial que cambia de forma a medida que aparta la cara de la luz, iris
-recortados al blanco de los ojos, brazos de dos articulaciones construidos con
-deformadores de rotación y tres cadenas de física que balancean el pelo. Los mechones centrales del flequillo se superponen para cubrir la frente sin ocultar los ojos. Los mechones visibles de la coronilla conectan el remolino con el flequillo.
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru es la mascota original de cuerpo completo de Imervue, redibujada en estilo anime moderno con cabello verde azulado fluido, chaqueta asimétrica entallada, mangas fruncidas, faldón lateral en capas y botas detalladas. El modelo de 1024 × 1664 utiliza las ilustraciones transparentes originales de ``examples/puppet/imeru/artwork/``. Las mallas continuas del cuerpo y las mangas conservan el dibujo al animar cabeza, cabello y brazos; los elementos faciales separados permiten parpadear, mirar y hablar. Se mantienen los parámetros de entrada estándar, ocho movimientos, siete expresiones y las interacciones con cabeza y cuerpo. ``py -3 examples/puppet/imeru/build.py`` reconstruye el archivo desde estos recursos. Se abre mediante **File > Examples > Imeru** u **Open Puppet…**.
 
 El rig lleva todos los parámetros estándar de Cubism (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) más

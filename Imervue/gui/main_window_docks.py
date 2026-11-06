@@ -14,6 +14,7 @@ commands ``ImervueMainWindow`` mixes in.
 from __future__ import annotations
 
 from base64 import b64decode, b64encode
+from contextlib import ExitStack
 
 from PySide6.QtCore import QByteArray, Qt
 from PySide6.QtWidgets import QDockWidget, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
@@ -147,9 +148,25 @@ class MainWindowDocksMixin:
                 (MODIFY_DOCK_STATE_KEY, self._modify_window))
 
     def dock_layout_states(self) -> dict[str, str]:
-        """Both tabs' dock layouts as base64 text, keyed by their settings key."""
-        return {key: encode_dock_state(host.saveState().data())
-                for key, host in self._dock_hosts()}
+        """Both tabs' dock layouts as base64 text, keyed by their settings key.
+
+        Docks that theater mode or Deep Zoom hid for the moment count as shown,
+        so the next launch or workspace does not open without them.
+        """
+        chrome = getattr(self, "_deep_zoom_chrome", None)
+        theater = getattr(self, "_theater_docks_shown", None)
+        with ExitStack() as stack:
+            if theater is not None:     # first: theater's snapshot holds Deep Zoom's fold
+                stack.enter_context(theater())
+            if chrome is not None:
+                stack.enter_context(chrome.uncollapsed())
+            return {key: encode_dock_state(host.saveState().data())
+                    for key, host in self._dock_hosts()}
+
+    def _deep_zoom_chrome_relayout(self) -> None:
+        chrome = getattr(self, "_deep_zoom_chrome", None)
+        if chrome is not None:
+            chrome.relayout()
 
     def apply_dock_layout_states(self, states: dict) -> None:
         """Apply the layouts in *states*; a missing or rejected one keeps what is shown."""
@@ -157,6 +174,7 @@ class MainWindowDocksMixin:
             blob = decode_dock_state(states.get(key))
             if blob:
                 host.restoreState(QByteArray(blob))
+        self._deep_zoom_chrome_relayout()
 
     def browse_split_widths(self) -> list[int]:
         """Widths of the folder dock and the viewer column beside it."""
@@ -187,6 +205,7 @@ class MainWindowDocksMixin:
             dock.setVisible(visible)
         for key, _host in self._dock_hosts():
             user_setting_dict.pop(key, None)
+        self._deep_zoom_chrome_relayout()
 
     def set_tree_dock_width(self, width: int) -> None:
         """Give the folder dock *width* pixels (a workspace saved before the docks did)."""

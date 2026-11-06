@@ -185,6 +185,8 @@ Deep-Zoom-Modus
 
 Klicken Sie auf eine Miniaturansicht, um in den Deep-Zoom-Modus für hochwertige Einzelbildbetrachtung zu wechseln.
 
+Im Deep-Zoom-Modus erhält das Bild das ganze Fenster: Die Bereiche **Folders** und **Image Info** sowie die Filterzeile klappen zu kleinen Symbolschaltflächen neben dem Dateinamen ein – ein Klick holt den jeweiligen Bereich zurück, solange das Bild geöffnet bleibt –, und beim Verlassen des Deep Zoom kehrt jeder Bereich so zurück, wie er war. „An Fenster anpassen“ füllt die Zeichenfläche und vergrößert dabei auch kleinere Bilder; die Minimap erscheint erst, wenn Sie über das ganze Bild hinaus hineinzoomen.
+
 Auch Panoramen weit über Pillows Sicherheitsgrenze von 179 Megapixeln öffnen sich: Die Grenze richtet sich nach dem Arbeitsspeicher (bei 16 GB etwa 1,4 Gigapixel), und solche Riesen werden nacheinander dekodiert.
 
 Ein abgeschnittenes JPEG, PNG, TIFF, GIF oder BMP — ein abgebrochener Download oder Kopiervorgang, ein von einer defekten Speicherkarte gerettetes Foto — öffnet sich wie im Browser mit dem gelesenen Teil, statt gar nicht zu öffnen.
@@ -939,23 +941,7 @@ End-to-End-Workflow
 Ein durchgearbeitetes Beispiel ausprobieren
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Das Repository liefert ein vollständig geriggtes Demo unter
-``examples/puppet/imeru.puppet`` — **Imeru**, das originale Maskottchen
-von Imervue. Sie entsteht vollständig durch
-``examples/puppet/imeru/build.py`` (``py -3`` erzeugt die Datei neu; dafür
-ist Blender 4.2 oder neuer nötig): Haare, Körper, Outfit und Arme werden
-in Blender modelliert, mit Cel-Shading samt den Shading-Tricks von
-3D-Anime-Spielen versehen (Haar, das über die Normalen einer glatten
-Stellvertreterform beleuchtet wird, aufgemalte Strähnen und
-Glanzlicht-Striche, gebackene Okklusion) und Puppet-Ebene für
-Puppet-Ebene gerendert, ihr Gesicht wird über eine
-SDF-Gesichtsschatten-Map schattiert, Augen, Brauen und Mund werden wie
-bei einer 3D-Spielfigur aufgemalt, und danach werden die Ebenen geriggt,
-sodass das Demo keine Rechte Dritter enthält: 45 Drawables auf einer
-1024 × 1336 großen Leinwand, Kopfdrehungen aus Parallaxe-Vertex-Morphs im
-Live2D-Stil, ein Gesichtsschatten, der seine Form ändert, wenn sie sich
-vom Licht abwendet, auf das Augenweiß geclippte Iriden, zweigelenkige Arme aus Rotation-Deformern und
-drei Physikketten, die das Haar schwingen lassen. Die überlappenden mittleren Ponysträhnen bedecken die Stirn und lassen die Augen sichtbar. Sichtbare Strähnen am Oberkopf verbinden den Haarwirbel mit dem Pony.
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru ist Imervues eigene Ganzkörperfigur, neu gezeichnet im modernen Anime-Stil mit fließendem petrolfarbenem Haar, taillierter asymmetrischer Jacke, gerafften Ärmeln, mehrlagiger Seitenschärpe und detaillierten Stiefeln. Das Modell mit 1024 × 1664 Pixeln verwendet die transparenten Originalillustrationen unter ``examples/puppet/imeru/artwork/``. Durchgehende Körper- und Ärmelnetze erhalten die Zeichnung bei Kopf-, Haar- und Armbewegungen; separate Gesichtsgrafiken ermöglichen Blinzeln, Blickbewegungen und Sprechen. Standard-Eingabeparameter, acht Bewegungen, sieben Ausdrücke sowie Kopf- und Körperinteraktionen bleiben erhalten. ``py -3 examples/puppet/imeru/build.py`` erstellt das Archiv aus den gespeicherten Grafiken. Öffnen über **File > Examples > Imeru** oder **Open Puppet…**.
 
 Das Rig trägt jeden Cubism-Standardparameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

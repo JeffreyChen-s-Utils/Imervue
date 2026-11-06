@@ -188,6 +188,8 @@ Deep Zoom Mode
 
 Click a thumbnail to enter Deep Zoom mode for high-quality single-image viewing.
 
+In Deep Zoom the image gets the whole window: the **Folders** and **Image Info** panels and the filter row fold into small icon buttons beside the file name — click one to bring that panel back while the image stays open — and every panel returns as it was when you leave Deep Zoom. Fit to window fills the canvas, enlarging a picture smaller than it, and the minimap appears only once you zoom in past the whole image.
+
 Panoramas far larger than Pillow's 179-megapixel safety limit open too: the limit follows the computer's memory (with 16 GB, about 1.4 gigapixels), and such giants decode one at a time.
 
 A JPEG, PNG, TIFF, GIF or BMP cut short — an interrupted download or copy, a photo recovered from a failing memory card — opens with the part that was read, as in a browser, instead of not opening at all.
@@ -935,22 +937,7 @@ End-to-end workflow
 Try a worked example
 ^^^^^^^^^^^^^^^^^^^^
 
-The repository ships a fully-rigged demo at
-``examples/puppet/imeru.puppet`` — **Imeru**, Imervue's original
-mascot. She is made entirely by
-``examples/puppet/imeru/build.py`` (``py -3`` rebuilds the file; it needs
-Blender 4.2 or newer): her hair, body, outfit and arms are modelled and
-cel-shaded in Blender with the shading tricks of 3D anime games (hair lit
-through the normals of a smooth stand-in shape, painted strands and
-highlight strokes, baked occlusion) and rendered one puppet layer at a
-time, her face is shaded from an SDF face shadow map, her eyes, brows and
-mouth are painted on like a 3D game character's, and the layers are then
-rigged, so the demo carries no third-party rights: 45 drawables on a
-1024 × 1336 canvas, head turns made of Live2D-style parallax vertex
-morphs, a face shadow that changes shape as she turns away from the
-light, irises
-clipped to the eye whites, two-joint arms built from rotation
-deformers, and three physics chains that swing the hair. Her overlapping centre bangs cover the forehead while leaving the eyes visible. Visible crown strands connect the hair whorl to the fringe.
+**Imeru** (``examples/puppet/imeru.puppet``). Imeru is Imervue's original full-body mascot, redrawn in a modern anime style with flowing teal hair, a fitted asymmetric jacket, gathered sleeves, a layered side sash and detailed boots. The 1024 × 1664 model uses the original transparent illustrations stored in ``examples/puppet/imeru/artwork/``. Continuous body and sleeve meshes preserve the drawing while animating the head, hair and arms; separate facial artwork supplies blinking, gaze and speech. It retains the standard input parameters, eight motions, seven expressions and head/body interactions. ``py -3 examples/puppet/imeru/build.py`` rebuilds the bundled archive from these stored assets. Open it through **File > Examples > Imeru** or **Open Puppet…**.
 
 The rig carries every Cubism-standard parameter (``ParamAngleX/Y/Z``,
 ``ParamEyeLOpen/ROpen``, ``ParamBreath``, ``ParamMouthOpenY``, …) plus

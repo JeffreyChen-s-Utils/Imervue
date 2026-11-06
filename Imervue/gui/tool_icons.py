@@ -63,6 +63,8 @@ _WORKSPACE_GLYPHS = {
     "folder": '<path d="M2 7V4h7l3 3h10v13H2zM2 7h20"/>',
     "play": '<path d="m8 3 13 9-13 9z"/>',
     "save": '<path d="M3 3h15l3 3v15H3zM7 3v6h10V3M7 21v-8h10v8"/>',
+    "filter": '<path d="M3 4h18l-7 8v6l-4 3v-9z"/>',
+    "info": '<circle cx="12" cy="12" r="10"/><path d="M12 11v6M12 7v.5"/>',
 }
 
 
